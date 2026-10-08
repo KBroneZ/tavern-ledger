@@ -19,11 +19,11 @@ Objetivo: demostrar que se puede reconstruir una partida de Battlegrounds solo c
 
 **Notas T-002 (2026-10-08, sesión 002).** Sin partidas de Solo nuevas. Los tests de T-003 usan logs sintéticos; los fixtures recortados de logs propios quedan pendientes (necesitan OK del usuario antes de commitearlos).
 
-**Notas T-002 (2026-10-09, sesión 003).** Sin partidas de Solo nuevas (`check_logs.py`: las mismas 23 de Duos).
+**Notas T-002 (2026-10-09, sesión 003).** Primera partida de Solo (`GT_BATTLEGROUNDS`, build 253216, sesión `Hearthstone_2026_10_09_00_26_56`). `parse_bg.py` la lee en `ok` pero con dos fallos a investigar: la vida final sale 30 aunque el jugador quedó 7.º (eliminado), y la vida sube de 12 a 30 en la última ronda; además, otro jugador del lobby sale también con puesto 7. Sin tocar el parser en esta sesión.
 
 **Notas T-003 (2026-10-08).** `tools/parse_bg.py` + informe [`docs/research/parser-hslog.md`](../research/parser-hslog.md). 23 de 23 partidas reales (Duos, build 253216) en `ok`. Sale todo salvo el MMR y la lista exacta de tribus (solo inferida de la tienda); el 12 % de los combates del compañero en Duos no se ve en el log local. Solo sin probar con logs reales.
 
-**Notas T-004 (2026-10-09).** Informe [`docs/research/fuentes-mmr.md`](../research/fuentes-mmr.md). Ningún log local trae el valor del MMR; `Net.log` solo marca cuándo llega `NetCacheBaconRatingInfo` (tras cada partida). Leaderboard: endpoint, parámetros, corte en 8000 y cruce por nombre documentados. Propuestos: probar `[Net]` con `Verbose=true` (necesita OK del usuario) y P-008 (términos de la web). `log.config` sin tocar.
+**Notas T-004 (2026-10-09).** Informe [`docs/research/fuentes-mmr.md`](../research/fuentes-mmr.md). Ningún log local trae el valor del MMR; `Net.log` solo marca cuándo llega `NetCacheBaconRatingInfo` (tras cada partida). Leaderboard: endpoint, parámetros, corte en 8000 y cruce por nombre documentados. `[Net]` con `Verbose=true` probado con OK del usuario (cambio hecho por él): no expone el rating. Nuevo pendiente P-008 (términos de la web).
 
 ## F1 — Historial local y web mínima
 

@@ -6,10 +6,11 @@ Fecha: 2026-10-09. Logs del usuario (6 sesiones, 23 partidas, todas `GT_BATTLEGR
 
 - **Ningún log local trae el valor del MMR**, ni en Solo ni en Duos. Ni antes ni después de la partida.
 - Sí hay una **señal**: `Net.log` registra la llegada de `NetCacheBaconRatingInfo` dos veces al iniciar sesión y, normalmente, dos veces entre 4 y 9 s después de cada fin de partida. Dice *cuándo* cambia el rating, no *cuánto*.
-- Con la sección `[Net]` en `Verbose=true` el juego podría escribir el contenido de ese objeto. No está probado: necesita un cambio en `log.config` que el usuario no ha aprobado (ver [Experimento propuesto](#experimento-propuesto-net-verbose)).
+- Con la sección `[Net]` en `Verbose=true` **tampoco** aparece el valor: probado con una partida de Solo el 2026-10-09 (ver [Experimento: `[Net]` verbose](#experimento-net-verbose)).
 - El **leaderboard público** funciona como se describió en [`viabilidad.md`](viabilidad.md): 25 filas por página, solo nombre visible (BattleTag sin número) y rating, corte en 8000. No tiene búsqueda por nombre.
 - **Riesgo nuevo:** los términos de uso de las webs de Blizzard dan una licencia "personal use only" y excluyen el uso comercial y la descarga de partes del sitio salvo la caché de página. Afecta a cómo se usa el leaderboard (D-005). Queda como pendiente P-008.
 - Recomendación para P-007: leaderboard cuando el emparejamiento sea único; fuera de él, "sin datos" por defecto y, opcional, un valor introducido a mano y etiquetado como tal. **No inferir deltas.**
+- Primera partida de Solo (2026-10-09): `GT_BATTLEGROUNDS`, misma build. Tampoco hay MMR en ningún log.
 
 ## Tabla: dato → fuente
 
@@ -17,7 +18,7 @@ Fecha: 2026-10-09. Logs del usuario (6 sesiones, 23 partidas, todas `GT_BATTLEGR
 |------|--------|------|-----------|--------------|
 | MMR actual (Solo o Duos) | **Ninguna local** | — | Búsqueda de `mmr`, `rating`, `leaderboard`, `rank`, `medal`, `elo`, `season` en todos los logs de las 6 sesiones: solo nombres de clases (abajo), ningún valor | — |
 | MMR si está en el top | Leaderboard público | `rating` de la fila cuyo `accountid` coincide con el nombre local, en la región y el modo de la partida | 7 peticiones el 2026-10-09 (abajo) | Solo cubre ≥ 8000. Nombres repetidos. Hay que recorrer páginas. Términos de uso (P-008) |
-| "El rating ha cambiado" | `Net.log` | Línea `OnNetCacheObjReceived SAVE --> NetCacheBaconRatingInfo` | Líneas 33 y 54 (inicio de sesión); 57–58, 62–63… (una pareja tras cada partida, 4–9 s después de `Reason: EndGameScreen` en `GameNetLogger.log`, líneas 14, 28, 77…) | Sin valor. La pareja probablemente es Solo + Duos (sin verificar) |
+| "El rating ha cambiado" | `Net.log` | Línea `OnNetCacheObjReceived SAVE --> NetCacheBaconRatingInfo` | Líneas 33 y 54 (inicio de sesión); 57–58, 62–63… (una pareja tras cada partida, 4–9 s después de `Reason: EndGameScreen` en `GameNetLogger.log`, líneas 14, 28, 77…). También tras la partida de Solo (sesión `Hearthstone_2026_10_09_00_26_56`, líneas 57–58) | Sin valor, ni con `Verbose=true`. La pareja llega igual en Solo y en Duos: no distingue el modo |
 | Fin de partida | `GameNetLogger.log` | `Network.DisconnectFromGameServer() - Reason: EndGameScreen` | 8 en la sesión del 8-oct, igual que las 8 partidas de `Power.log` | `Power.log` ya da el fin de partida (`STATE=COMPLETE`) |
 | Región de la cuenta | `Hearthstone.log` | Línea `Region: EU` justo después del login | Línea 48 en las 6 sesiones | Formato no documentado |
 | Nombre del jugador local | `Power.log` | Nombre del `Player` local en `CREATE_GAME`. `tools/parse_bg.py` identifica al jugador local pero no saca su nombre (privacidad) | Ver [`parser-hslog.md`](parser-hslog.md) | Es un BattleTag con número: el leaderboard lo da sin número |
@@ -33,7 +34,7 @@ Fecha: 2026-10-09. Logs del usuario (6 sesiones, 23 partidas, todas `GT_BATTLEGR
 | Sección | `Verbose` | Archivo | Contenido útil para MMR |
 |---------|-----------|---------|-------------------------|
 | `[Power]` | true | `Power_old.log` (120–590 MB) | Nada (T-003) |
-| `[Net]` | **false** | `Net.log` (4–8 KB) | Señal `NetCacheBaconRatingInfo`, sin valor |
+| `[Net]` | false (true desde el 2026-10-09, para el experimento) | `Net.log` (4–8 KB) | Señal `NetCacheBaconRatingInfo`, sin valor |
 | `[Achievements]` | true | `Achievements_old.log` | Nada (solo `MERCENARIES_SEASON_ROLL`) |
 | `[LoadingScreen]` | false | `LoadingScreen_old.log` | Nada (cambios de escena) |
 | `[Decks]` | false | `Decks.log` | Nada |
@@ -62,22 +63,13 @@ El juego escribe estos archivos aunque no tengan sección en `log.config`. Tama�
 - Si lee algo de ellos, lo hace línea a línea con un patrón cerrado (p. ej. solo `Region: ([A-Z]+)`) y descarta el resto.
 - Nada de estos archivos entra en fixtures sin anonimizar.
 
-### Experimento propuesto: `[Net]` verbose
+### Experimento: `[Net]` verbose
 
-`NetCacheBaconRatingInfo` es un objeto de la sección `[Net]` y esa sección ya vuelca contenidos en otros casos (`Caching currency state: { … }` con los saldos). Con `Verbose=true` podría escribir también el rating. Si lo hiciera, sería una fuente local para todos los jugadores, no solo el top, y sin tocar el juego (D-004).
+`NetCacheBaconRatingInfo` es un objeto de la sección `[Net]` y esa sección ya vuelca contenidos en otros casos (`Caching currency state: { … }` con los saldos). Se probó si con `Verbose=true` escribía también el rating.
 
-**No se ha cambiado nada.** El cambio, solo si el usuario lo aprueba, con el juego cerrado:
-
-```
-[Net]
-LogLevel=1
-ScreenPrinting=false
-Verbose=true        <- antes: Verbose=false
-FilePrinting=true
-ConsolePrinting=false
-```
-
-Para deshacerlo, volver a `Verbose=false` en esa misma línea. Después hay que jugar una partida (Solo, mejor) y buscar en `Net.log` qué escribe junto a `NetCacheBaconRatingInfo`. Riesgo: `Net.log` puede crecer y llevar más datos sensibles; el script de comprobación solo imprimiría nombres de campos y recuentos.
+- Cambio hecho por el usuario el 2026-10-09: línea `Verbose=false` → `Verbose=true` de `[Net]`, guardado 8 s antes de arrancar el juego. Para deshacerlo, volver a `Verbose=false`.
+- Una partida de Solo (`GT_BATTLEGROUNDS`, build 253216) en la sesión `Hearthstone_2026_10_09_00_26_56`.
+- Resultado: **negativo**. `Net.log` tiene el mismo tamaño (≈ 4,3 KB) y las mismas líneas que con `Verbose=false`; las cuatro de `NetCacheBaconRatingInfo` (líneas 33, 54, 57, 58) siguen sin contenido. Ningún otro log de la sesión menciona rating, MMR o leaderboard.
 
 ## Leaderboard público
 
@@ -172,14 +164,13 @@ Lectura (no es asesoría legal): consultar la propia fila desde la app del jugad
 | A. A mano | El usuario escribe el MMR que ve en el juego; la app lo muestra como "entered by you" con fecha | Dato real, lo ve en su pantalla (regla 3) | Se queda viejo tras cada partida; depende del usuario |
 | B. Inferir deltas | Estimar la variación por puesto | Automático | Fuera del leaderboard no hay valor base, y la variación depende del MMR medio del lobby, que no está en el log. Sería un valor inventado (D-005) |
 | C. No mostrarlo | "No data" | Honesto, cero mantenimiento | Peor experiencia para la mayoría (fuera del top) |
-| D. `[Net]` verbose | Leer el rating si el juego lo escribe | Dato real y local para todos | Sin probar; necesita OK para tocar `log.config`; el juego puede quitarlo en cualquier parche |
+| D. `[Net]` verbose | Leer el rating si el juego lo escribe | — | **Descartada:** probado el 2026-10-09, el juego no lo escribe |
 
-**Recomendación:** C por defecto con A como opción (el usuario escribe su MMR si quiere, siempre etiquetado y con fecha, sin recalcularlo). Descartar B. Probar D si el usuario lo aprueba: si funciona, pasa a ser la fuente principal y el leaderboard queda como comprobación. Para cerrar P-007 decide el usuario.
+**Recomendación:** C por defecto con A como opción (el usuario escribe su MMR si quiere, siempre etiquetado y con fecha, sin recalcularlo). Descartar B y D. Para cerrar P-007 decide el usuario.
 
 ## Pendiente
 
-- Experimento D (`[Net]` verbose), con OK del usuario.
-- Partidas de Solo reales (T-002): confirmar que la pareja de `NetCacheBaconRatingInfo` es Solo + Duos.
+- Volver a `Verbose=false` en `[Net]` (el experimento no aportó nada).
 - P-008: uso del leaderboard frente a los términos de la web.
 - Frecuencia de actualización del leaderboard (comparar dos consultas separadas por horas, en T-006).
 - Mayúsculas y Unicode en `accountid` frente al nombre local.
