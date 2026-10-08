@@ -49,4 +49,5 @@ Objetivo: demostrar que se puede reconstruir una partida de Battlegrounds solo c
 ## Fuera de alcance por ahora
 
 - Simulador de combate (coste muy alto; solo si el proyecto sigue vivo tras F4).
-- Lectura de memoria e inyección en el cliente (D-004), incluido el "minion dance" (P-004).
+- Lectura de memoria (D-004).
+- Inyección o modificación del cliente, incluido el "minion dance": descartado para siempre (D-006).
