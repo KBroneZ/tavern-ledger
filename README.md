@@ -8,7 +8,9 @@ Free, open-source Battlegrounds tracker for Windows, plus a website to follow yo
 
 **Phase F0, feasibility proof.** Nothing to install yet. Plan in [docs/plan/plan.md](docs/plan/plan.md), decisions in [docs/decisions/DECISIONS.md](docs/decisions/DECISIONS.md), research in [docs/research/](docs/research/viabilidad.md) (project docs are in Spanish).
 
-Next task: T-002 (collect own Solo and Duos games as test fixtures), then T-003 (parser prototype).
+A prototype parser rebuilds each Battlegrounds game from `Power.log`: hero, Duos teammate, lobby, health per round, opponents, boards at the start of each combat and final place. It was checked against 23 real Duos games. MMR and the exact lobby tribes are not in the log. Findings: [docs/research/parser-hslog.md](docs/research/parser-hslog.md).
+
+Next tasks: T-004 (where MMR can come from) and T-002 (Solo games and trimmed fixtures).
 
 ## Check your log setup
 
@@ -20,9 +22,21 @@ python tools/check_logs.py
 
 Options: `--config PATH` and `--logs-dir PATH` if your install is not found automatically.
 
+## Parse a log (prototype)
+
+Needs Python 3.10+ and the pinned dependencies. Read-only; the output has card ids and lobby player numbers, never player names.
+
+```
+python -m pip install --require-hashes --only-binary=:all: -r requirements.txt
+python tools/parse_bg.py "<Hearthstone folder>\Logs\Hearthstone_<date>\Power_old.log"
+```
+
+Add `--json` for machine-readable output.
+
 ## Development
 
 ```
+python -m pip install --require-hashes --only-binary=:all: -r requirements.txt
 python -m unittest discover -s tests
 ```
 

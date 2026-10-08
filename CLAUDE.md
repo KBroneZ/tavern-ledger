@@ -61,8 +61,9 @@ docs/plan/plan.md        fases y tareas
 docs/decisions/          decisiones tomadas y pendientes
 docs/research/           investigación verificada
 prompts/sesiones/        prompts de sesión (solo si el usuario los pide)
-tools/                   scripts (p. ej. check_logs.py, solo lectura)
-tests/                   tests (unittest, sin dependencias)
+tools/                   scripts de solo lectura (check_logs.py, parse_bg.py)
+tests/                   tests (unittest; dependencias fijadas en requirements.txt)
+requirements.txt         dependencias Python con versión y hash
 .github/workflows/       CI: tests, enlaces y secretos
 .local/                  solo local, nunca en git
 ```
