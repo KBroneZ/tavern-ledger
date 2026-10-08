@@ -1,0 +1,23 @@
+# Decisiones
+
+## Tomadas
+
+| ID | Fecha | Decisión | Motivo |
+|----|-------|----------|--------|
+| D-001 | 2026-10-08 | Repo propio, separado de StartAICareer. | No mezclar con la CI, los PR ni los minutos de Actions del HQ; es un proyecto personal. |
+| D-002 | 2026-10-08 | La app de escritorio es open source (MIT). El premium vive en el servidor. | Confianza de los usuarios y firma de código gratis o barata (SignPath Foundation, Certum Open Source). |
+| D-003 | 2026-10-08 | Modelo: todo lo personal gratis (historial, stats por héroe, MMR, rivales, replays con límite). Extras de pago opcionales. Sin anuncios. | Objetivo de proyecto personal, no de lucro; diferenciarse de Firestone Premium y Tier7. |
+| D-004 | 2026-10-08 | MVP solo con logs locales: sin lectura de memoria, sin inyección, sin automatizar. | EULA de Blizzard y riesgo de ban para los usuarios. Ver `docs/research/viabilidad.md`. |
+| D-005 | 2026-10-08 | MMR desde el leaderboard público de Blizzard; fuera del leaderboard, "sin datos" (nunca un valor inventado). | El leaderboard solo cubre el top (~8000 de MMR, unas 4300 cuentas en EU); ver research. |
+
+## Pendientes
+
+| ID | Tema | Opciones | Recomendación |
+|----|------|----------|---------------|
+| P-001 | Nombre del proyecto | — | Elegir antes de crear el repo en GitHub y el dominio. Sin "Hearthstone" ni marcas de Blizzard en el nombre. |
+| P-002 | Stack de la app de escritorio | C#/.NET (WPF o Avalonia) · Rust + Tauri · Electron | Decidir en F0 tras probar el parser. C# encaja con el ecosistema (parser MIT de Firestone en C#); Tauri da instaladores pequeños. |
+| P-003 | Stack web y backend | p. ej. Astro/Next.js + Supabase/Postgres + almacenamiento S3/R2 | Decidir en F1, con costes reales de los planes gratuitos. |
+| P-004 | **Arreglar el "minion dance" como Nomi's Kitchen** | (a) No hacerlo · (b) Mod opcional aparte, con aviso de riesgo · (c) Dentro de la app | **(a) No en el MVP.** Nomi lo hace con un plugin BepInEx que se inyecta en el cliente del juego: modifica el cliente, lo que el EULA prohíbe, y pone en riesgo la cuenta del usuario. Contradice D-004. Si se quiere, decidirlo aparte y explícitamente; nunca a partir del código de Nomi (licencia "MIT NON-AI"). |
+| P-005 | Firma de código | SignPath Foundation (gratis, open source, build automatizada) · Certum Open Source in the Cloud (desde 49 €) · Certum Standard (desde 139–209 €) | SignPath primero; Certum OS como plan B. Azure Artifact Signing no admite particulares en España. |
+| P-006 | Cómo cobrar los extras | Polar · Ko-fi/Patreon (supporters) | Decidir en F4; Polar ya se usa en StartAICareer. |
+| P-007 | MMR fuera del leaderboard | Introducirlo a mano · inferir deltas · no mostrarlo | Investigar en F0 si algún log local lo expone. Leer memoria queda descartado por D-004. |

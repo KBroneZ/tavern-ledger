@@ -1,0 +1,10 @@
+.local/
+.env
+.env.*
+*.log
+bin/
+obj/
+node_modules/
+dist/
+.venv/
+__pycache__/
