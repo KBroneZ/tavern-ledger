@@ -10,12 +10,16 @@ Objetivo: demostrar que se puede reconstruir una partida de Battlegrounds solo c
 |----|-------|--------|------------------------|
 | T-001 | Elegir nombre (P-001) y crear el repo en GitHub (con OK del usuario) | hecho | Repo remoto con README, LICENSE MIT y `.gitignore`. |
 | T-002 | Activar logs (`log.config`) y recoger 10+ partidas propias como fixtures (Solo y Duos) | en curso | Fixtures en `fixtures/` sin datos de terceros que no sean públicos; anotados en `PROVENANCE.md`. |
-
-**Notas T-002 (2026-10-08).** `tools/check_logs.py` confirma que `log.config` ya activa `Power` (LogLevel=1, FilePrinting, Verbose). Los logs están en `C:\Battle.net\Battle.net\Hearthstone\Logs\Hearthstone_<fecha>\`. Inventario: 6 sesiones (2 a 8 de octubre), 23 inicios de partida, todos `GT_BATTLEGROUNDS_DUO`, build 253216. Ninguna de Solo. El juego deja `Power_old.log` (120–563 MB por sesión). Falta: jugar partidas de Solo y recortar cada partida a un fixture pequeño (necesita el parser de T-003) y quitar nombres de jugadores que no sean públicos.
-| T-003 | Prototipo de parser con `hslog` (Python, MIT) para ver qué expone `Power.log` en BG | pendiente | Informe: héroe, tribus del lobby, tableros por ronda, rivales, puesto final, Duos. Qué falta. |
+| T-003 | Prototipo de parser con `hslog` (Python, MIT) para ver qué expone `Power.log` en BG | hecho | Informe: héroe, tribus del lobby, tableros por ronda, rivales, puesto final, Duos. Qué falta. |
 | T-004 | Investigar fuentes de MMR (P-007): logs locales + leaderboard público | pendiente | Tabla de qué dato sale de dónde, con evidencia. |
 | T-005 | Decidir stack de escritorio (P-002) | pendiente | Decisión en `DECISIONS.md` con motivo. |
 | T-006 | Cliente del leaderboard con caché y límites | pendiente | Tests con respuestas grabadas; timeout, errores y "sin datos" explícitos. |
+
+**Notas T-002 (2026-10-08).** `tools/check_logs.py` confirma que `log.config` ya activa `Power` (LogLevel=1, FilePrinting, Verbose). Los logs están en `C:\Battle.net\Battle.net\Hearthstone\Logs\Hearthstone_<fecha>\`. Inventario: 6 sesiones (2 a 8 de octubre), 23 inicios de partida, todos `GT_BATTLEGROUNDS_DUO`, build 253216. Ninguna de Solo. El juego deja `Power_old.log` (120–563 MB por sesión). Falta: jugar partidas de Solo y recortar cada partida a un fixture pequeño (necesita el parser de T-003) y quitar nombres de jugadores que no sean públicos.
+
+**Notas T-002 (2026-10-08, sesión 002).** Sin partidas de Solo nuevas. Los tests de T-003 usan logs sintéticos; los fixtures recortados de logs propios quedan pendientes (necesitan OK del usuario antes de commitearlos).
+
+**Notas T-003 (2026-10-08).** `tools/parse_bg.py` + informe [`docs/research/parser-hslog.md`](../research/parser-hslog.md). 23 de 23 partidas reales (Duos, build 253216) en `ok`. Sale todo salvo el MMR y la lista exacta de tribus (solo inferida de la tienda); el 12 % de los combates del compañero en Duos no se ve en el log local. Solo sin probar con logs reales.
 
 ## F1 — Historial local y web mínima
 

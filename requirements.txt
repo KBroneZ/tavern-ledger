@@ -1,0 +1,19 @@
+# Pinned with hashes (pure-Python wheel only). Install with:
+#   python -m pip install --require-hashes --only-binary=:all: -r requirements.txt
+# Origin and license of each package: PROVENANCE.md
+hslog==1.20.0 \
+    --hash=sha256:30e52ce7c69dab13369443c70efd2bd99a7c7a3c12b71c81f300cfb29567b6bc  # hslog-1.20.0-py3-none-any.whl
+hearthstone==9.21.1 \
+    --hash=sha256:4bc6e9c38925d6b9a88e5d0535f36640f63455bfa5702e911db1f54f2d432161  # hearthstone-9.21.1-py3-none-any.whl
+aniso8601==10.0.1 \
+    --hash=sha256:eb19717fd4e0db6de1aab06f12450ab92144246b257423fe020af5748c0cb89e  # aniso8601-10.0.1-py2.py3-none-any.whl
+requests==2.34.2 \
+    --hash=sha256:2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0  # requests-2.34.2-py3-none-any.whl
+urllib3==2.8.0 \
+    --hash=sha256:0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3  # urllib3-2.8.0-py3-none-any.whl
+certifi==2026.7.22 \
+    --hash=sha256:62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775  # certifi-2026.7.22-py3-none-any.whl
+idna==3.20 \
+    --hash=sha256:ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c  # idna-3.20-py3-none-any.whl
+charset-normalizer==3.5.2 \
+    --hash=sha256:b6b751274acb69d77b3323d6b7dbaa3c7fdfc1eb829b7eb61d262f32e1af9685  # charset_normalizer-3.5.2-py3-none-any.whl

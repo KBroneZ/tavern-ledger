@@ -12,13 +12,15 @@
 | D-006 | 2026-10-08 | **Nada de inyección ni de modificar el cliente, nunca** (BepInEx, DLLs, parches de archivos del juego). El "minion dance" de Nomi queda descartado. Cierra P-004. | Decisión del usuario: nada que vaya contra las normas de Blizzard. |
 | D-007 | 2026-10-08 | Nombre: **Tavern Ledger** (repo `tavern-ledger`). Cierra P-001. | Elección del usuario. Sin tracker ni marca evidente con ese nombre; GitHub y dominios `.gg`/`.app` libres. Ver `docs/research/nombres.md`. |
 | D-008 | 2026-10-08 | Repo público en GitHub bajo la cuenta KBroneZ. Cambios a `main` solo por PR con la CI en verde. | Elección del usuario; Actions gratis en repos públicos. Aun así, la CI va en un solo job, con `concurrency` (cancela runs viejos) y timeout de 5 min, para no gastar minutos si el repo pasara a privado. |
+| D-009 | 2026-10-08 | Dependencias Python fijadas con versión y hash en `requirements.txt` (solo ruedas puras, `pip --require-hashes`). Primeras: `hslog` 1.20.0 y `hearthstone` 9.21.1 (MIT). | Aprobado por el usuario en la sesión 002. Builds reproducibles y protección frente a paquetes alterados; origen y licencia en `PROVENANCE.md`. |
+| D-010 | 2026-10-08 | El parser lee cada partida con un parser nuevo y solo muestra tableros que entran en juego; los combates que el log no reproduce salen como "no visible". | `hslog` falla con varias partidas de Duos en un log; las copias en `SETASIDE` de los combates ocultos no se ven en pantalla (regla 3). Ver `docs/research/parser-hslog.md`. |
 
 ## Pendientes
 
 | ID | Tema | Opciones | Recomendación |
 |----|------|----------|---------------|
-| P-002 | Stack de la app de escritorio | C#/.NET (WPF o Avalonia) · Rust + Tauri · Electron | Decidir en F0 tras probar el parser. C# encaja con el ecosistema (parser MIT de Firestone en C#); Tauri da instaladores pequeños. |
+| P-002 | Stack de la app de escritorio | C#/.NET (WPF o Avalonia) · Rust + Tauri · Electron | Decidir en F0 (T-005). El prototipo (T-003) muestra que la lógica sobre `Power.log` es pequeña y se puede reescribir en cualquier lenguaje a partir de `docs/research/parser-hslog.md`. Firestone no tiene licencia: no se usa como base. Tauri da instaladores pequeños. |
 | P-003 | Stack web y backend | p. ej. Astro/Next.js + Supabase/Postgres + almacenamiento S3/R2 | Decidir en F1, con costes reales de los planes gratuitos. |
 | P-005 | Firma de código | SignPath Foundation (gratis, open source, build automatizada) · Certum Open Source in the Cloud (desde 49 €) · Certum Standard (desde 139–209 €) | SignPath primero; Certum OS como plan B. Azure Artifact Signing no admite particulares en España. |
 | P-006 | Cómo cobrar los extras | Polar · Ko-fi/Patreon (supporters) | Decidir en F4; Polar ya se usa en StartAICareer. |
-| P-007 | MMR fuera del leaderboard | Introducirlo a mano · inferir deltas · no mostrarlo | Investigar en F0 si algún log local lo expone. Leer memoria queda descartado por D-004. |
+| P-007 | MMR fuera del leaderboard | Introducirlo a mano · inferir deltas · no mostrarlo | `Power.log` no lo expone (T-003). Falta mirar otros logs locales (T-004). Leer memoria queda descartado por D-004. |
