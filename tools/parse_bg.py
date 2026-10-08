@@ -37,7 +37,7 @@ from check_logs import BUILD_RE, GAME_TYPE_RE
 
 # Builds whose real logs this prototype was checked against.
 TESTED_BUILDS = frozenset({253216})
-TESTED_GAME_TYPES = frozenset({"GT_BATTLEGROUNDS_DUO"})
+TESTED_GAME_TYPES = frozenset({"GT_BATTLEGROUNDS", "GT_BATTLEGROUNDS_DUO"})
 MAX_LOBBY = 8
 OWN, OPPONENT = "own", "opponent"
 CREATE_GAME = "GameState.DebugPrintPower() - CREATE_GAME"
@@ -234,8 +234,9 @@ def is_golden(card_id: str | None) -> bool:
 
 
 def hero_health(hero) -> int:
+    """Health + armor - damage, never below 0: the killing blow can overshoot."""
     tags = hero.tags
-    return tags.get(GameTag.HEALTH, 0) + tags.get(GameTag.ARMOR, 0) - tags.get(GameTag.DAMAGE, 0)
+    return max(0, tags.get(GameTag.HEALTH, 0) + tags.get(GameTag.ARMOR, 0) - tags.get(GameTag.DAMAGE, 0))
 
 
 def board_of(game, controller: int) -> tuple[Minion, ...]:
@@ -255,13 +256,24 @@ def board_of(game, controller: int) -> tuple[Minion, ...]:
 
 
 def leaderboard_heroes(game) -> dict[int, object]:
-    """Lobby heroes by player id (the last entity wins if a hero was replaced)."""
+    """Lobby heroes by player id (the last entity wins if a hero was replaced).
+
+    When the local player is eliminated the game copies its leaderboard hero
+    (same PLAYER_ID, COPIED_FROM_ENTITY_ID = the original, stale place, DAMAGE
+    back to 0). The original keeps the real damage and gets the final place, so
+    a copy of another leaderboard hero is skipped. Other copies stay: the
+    opponents' leaderboard heroes are copies of entities that are not.
+    """
+    candidates = [
+        e for e in game.entities
+        if e.tags.get(GameTag.CARDTYPE) == CardType.HERO and e.tags.get(GameTag.PLAYER_ID)
+        and GameTag.PLAYER_LEADERBOARD_PLACE in e.tags
+    ]
+    ids = {e.id for e in candidates}
     heroes = {}
-    for e in game.entities:
-        tags = e.tags
-        if (tags.get(GameTag.CARDTYPE) == CardType.HERO and tags.get(GameTag.PLAYER_ID)
-                and GameTag.PLAYER_LEADERBOARD_PLACE in tags):
-            heroes[tags[GameTag.PLAYER_ID]] = e
+    for e in candidates:
+        if e.tags.get(GameTag.COPIED_FROM_ENTITY_ID) not in ids:
+            heroes[e.tags[GameTag.PLAYER_ID]] = e
     return heroes
 
 

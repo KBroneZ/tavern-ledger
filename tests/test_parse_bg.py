@@ -13,7 +13,8 @@ sys.path.insert(0, str(HERE.parent / "tools"))
 sys.path.insert(0, str(HERE))
 
 import parse_bg  # noqa: E402
-from bg_log_builder import LogBuilder, duo_game, duo_game_hidden_leg, solo_game  # noqa: E402
+from bg_log_builder import (  # noqa: E402
+    LogBuilder, duo_game, duo_game_hidden_leg, solo_game, solo_game_local_eliminated)
 
 
 def parse_text(text: str) -> list[parse_bg.GameReport]:
@@ -110,6 +111,7 @@ class SoloGameTest(unittest.TestCase):
     def test_solo_has_no_teammate_and_counts_armor(self):
         report = parse_text(solo_game())[0]
         self.assertEqual(report.status, "ok")
+        self.assertEqual(report.warnings, ())  # Solo checked against a real log
         self.assertIsNone(report.teammate_player_id)
         self.assertIsNone(report.teammate_hero)
         self.assertEqual(report.final_place, 3)
@@ -125,6 +127,35 @@ class SoloGameTest(unittest.TestCase):
         self.assertEqual(report.rounds[-1].own_health_after, 23)
 
 
+class LocalEliminatedTest(unittest.TestCase):
+    """The game copies the local hero when it dies; the copy must be ignored."""
+
+    def test_final_place_comes_from_the_original_hero_not_the_copy(self):
+        report = parse_text(solo_game_local_eliminated())[0]
+        self.assertEqual(report.status, "ok")
+        self.assertEqual(report.final_place, 4)
+
+    def test_final_health_is_zero_not_reset_or_negative(self):
+        report = parse_text(solo_game_local_eliminated())[0]
+        self.assertEqual(report.final_health, 0)
+        self.assertEqual([r.own_health_after for r in report.rounds], [18, 0])
+
+    def test_lobby_lists_each_player_once_with_unique_places(self):
+        report = parse_text(solo_game_local_eliminated())[0]
+        lobby = {p.player_id: p for p in report.lobby}
+        self.assertEqual(sorted(lobby), [2, 3, 4, 5])
+        self.assertEqual(sorted(p.final_place for p in report.lobby), [1, 2, 3, 4])
+        self.assertEqual(lobby[2].final_health, 0)
+
+    def test_opponent_eliminated_earlier_keeps_its_place(self):
+        report = parse_text(solo_game_local_eliminated(opponent_dies_first=True))[0]
+        lobby = {p.player_id: p for p in report.lobby}
+        self.assertEqual(report.final_place, 3)
+        self.assertEqual(lobby[5].final_place, 4)
+        self.assertEqual(lobby[5].final_health, 0)
+        self.assertEqual(sorted(p.final_place for p in report.lobby), [1, 2, 3, 4])
+
+
 class StatusTest(unittest.TestCase):
     def test_incomplete_game_has_unknown_place(self):
         report = parse_text(duo_game(complete=False))[0]
@@ -135,6 +166,12 @@ class StatusTest(unittest.TestCase):
         report = parse_text(duo_game(build=999999))[0]
         self.assertEqual(report.status, "ok")
         self.assertIn("build 999999 not tested", report.warnings)
+
+    def test_untested_battlegrounds_game_type_is_flagged(self):
+        text = solo_game().replace("GameType=GT_BATTLEGROUNDS", "GameType=GT_BATTLEGROUNDS_FRIENDLY")
+        report = parse_text(text)[0]
+        self.assertEqual(report.status, "ok")
+        self.assertIn("GT_BATTLEGROUNDS_FRIENDLY not tested with real logs", report.warnings)
 
     def test_non_battlegrounds_game_is_skipped(self):
         text = LogBuilder().create_game(game_type="GT_RANKED").turn(1).text()

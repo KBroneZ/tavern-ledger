@@ -8,13 +8,13 @@ Free, open-source Battlegrounds tracker for Windows, plus a website to follow yo
 
 **Phase F0, feasibility proof.** Nothing to install yet. Plan in [docs/plan/plan.md](docs/plan/plan.md), decisions in [docs/decisions/DECISIONS.md](docs/decisions/DECISIONS.md), research in [docs/research/](docs/research/viabilidad.md) (project docs are in Spanish).
 
-A prototype parser rebuilds each Battlegrounds game from `Power.log`: hero, Duos teammate, lobby, health per round, opponents, boards at the start of each combat and final place. It was checked against 23 real Duos games. MMR and the exact lobby tribes are not in the log. Findings: [docs/research/parser-hslog.md](docs/research/parser-hslog.md).
+A prototype parser rebuilds each Battlegrounds game from `Power.log`: hero, Duos teammate, lobby, health per round, opponents, boards at the start of each combat and final place. It was checked against 23 real games (22 Duos, 1 Solo). MMR and the exact lobby tribes are not in the log. Findings: [docs/research/parser-hslog.md](docs/research/parser-hslog.md).
 
 No local log has the MMR value. The public leaderboard only covers ratings of 8000 and above: players in it will see their rating, everyone else "below the leaderboard cut-off", never a made-up number. Findings: [docs/research/fuentes-mmr.md](docs/research/fuentes-mmr.md).
 
 A prototype client looks up your own row in the public leaderboard with a local cache and a small, capped number of requests. It never stores other players' rows. Strategy and measurements: [docs/research/cliente-leaderboard.md](docs/research/cliente-leaderboard.md).
 
-Next tasks: T-002 (Solo games and trimmed fixtures) and T-005 (desktop stack).
+Next tasks: T-002 (more Solo games and trimmed fixtures) and T-005 (desktop stack).
 
 ## Check your log setup
 

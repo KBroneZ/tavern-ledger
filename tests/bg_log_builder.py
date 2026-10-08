@@ -165,6 +165,61 @@ def solo_game(local_pid: int = 2) -> str:
     return b.text()
 
 
+def solo_game_local_eliminated(opponent_dies_first: bool = False) -> str:
+    """Solo game, 4-player lobby, where the local player (2) dies in round 2.
+
+    Mirrors the real sequence (Solo and Duos logs, build 253216): the killing
+    blow leaves DAMAGE above HEALTH on the local leaderboard hero; the game
+    then creates a copy of it with the same PLAYER_ID, a stale
+    PLAYER_LEADERBOARD_PLACE, COPIED_FROM_ENTITY_ID and DAMAGE reset to 0. The
+    original goes to the GRAVEYARD and gets the final place right before
+    STATE=COMPLETE. Players still alive get their standing at that moment.
+
+    With opponent_dies_first, player 5 is eliminated in round 1 (place 4), so
+    the local player finishes 3rd. Opponent deaths create no copy.
+
+    As in real logs, the opponents' leaderboard heroes are themselves copies
+    (COPIED_FROM_ENTITY_ID) of entities that are not leaderboard heroes.
+    """
+    b = LogBuilder().create_game(game_type="GT_BATTLEGROUNDS")
+    hero = {"CARDTYPE": "HERO", "HEALTH": 30}
+    b.full_entity(10, "TB_BaconShop_HERO_37", CONTROLLER=2, ZONE="PLAY", PLAYER_ID=2,
+                  PLAYER_LEADERBOARD_PLACE=1, **hero)
+    b.full_entity(11, "TB_BaconShopBob", CONTROLLER=10, ZONE="PLAY", **hero)
+    for entity_id, card, pid in ((21, "TB_BaconShop_HERO_60", 3), (22, "TB_BaconShop_HERO_18", 4),
+                                 (23, "TB_BaconShop_HERO_16", 5)):
+        b.full_entity(entity_id, card, CONTROLLER=10, ZONE="SETASIDE", PLAYER_ID=pid,
+                      PLAYER_LEADERBOARD_PLACE=1, COPIED_FROM_ENTITY_ID=entity_id + 70, **hero)
+
+    b.turn(1).turn(2)
+    b.full_entity(42, "TB_BaconShop_HERO_60", CONTROLLER=10, ZONE="PLAY", **hero)
+    b.tag(3, "HERO_ENTITY", 42).tag(3, "BACON_CURRENT_COMBAT_PLAYER_ID", 3)
+    b.attack(42)
+    b.tag(10, "DAMAGE", 12)
+    if opponent_dies_first:
+        b.tag(23, "DAMAGE", 31).tag(23, "PLAYER_LEADERBOARD_PLACE", 4)
+    b.tag(3, "HERO_ENTITY", 11)
+
+    b.turn(3).turn(4)
+    b.full_entity(44, "TB_BaconShop_HERO_18", CONTROLLER=10, ZONE="PLAY", **hero)
+    b.tag(3, "HERO_ENTITY", 44).tag(3, "BACON_CURRENT_COMBAT_PLAYER_ID", 4)
+    b.attack(44)
+    b.tag(10, "DAMAGE", 33)  # overkill: 30 health, 33 damage
+    stale_place, final_place = (2, 3) if opponent_dies_first else (3, 4)
+    b.full_entity(50, "TB_BaconShop_HERO_37", CARDTYPE="HERO", HEALTH=30, CONTROLLER=2,
+                  ZONE="SETASIDE")
+    b.tag(50, "PLAYER_LEADERBOARD_PLACE", stale_place).tag(50, "PLAYER_ID", 2)
+    b.tag(50, "DAMAGE", 33).tag(50, "COPIED_FROM_ENTITY_ID", 10).tag(50, "DAMAGE", 0)
+    b.tag(10, "ZONE", "GRAVEYARD").tag(2, "PLAYSTATE", "LOSING")
+    b.tag(2, "PLAYSTATE", "LOST")
+    b.tag(21, "PLAYER_LEADERBOARD_PLACE", 1).tag(22, "PLAYER_LEADERBOARD_PLACE", 2)
+    if not opponent_dies_first:
+        b.tag(23, "PLAYER_LEADERBOARD_PLACE", 3)
+    b.tag(10, "PLAYER_LEADERBOARD_PLACE", final_place)
+    b.tag("GameEntity", "STATE", "COMPLETE")
+    return b.text()
+
+
 def duo_game_hidden_leg() -> str:
     """Duos combat where the teammate's fight never plays out in the local log.
 
