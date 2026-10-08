@@ -159,7 +159,10 @@ class FullScanTest(unittest.TestCase):
         self.assertEqual(sleeps, [1.0, 1.0, 1.0])
         headers, timeout = server.headers[0]
         self.assertEqual(headers["User-Agent"], lb.USER_AGENT)
-        self.assertRegex(lb.USER_AGENT, r"^TavernLedger/\d+\.\d+\.\d+ \(\+https://github\.com/KBroneZ/tavern-ledger\)$")
+        self.assertRegex(
+            lb.USER_AGENT,
+            r"^TavernLedger/\d+\.\d+\.\d+ \(\+https://github\.com/KBroneZ/tavern-ledger\)$",
+        )
         self.assertEqual(headers["Accept-Encoding"], "gzip")
         self.assertNotIn("Cookie", headers)
         self.assertEqual(timeout, FAST.timeout)
