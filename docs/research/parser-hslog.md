@@ -82,7 +82,7 @@ Contando los esbirros ofrecidos por partida, solo en 17 de 23 partidas salen exa
 
 ## Pendiente
 
-- Partidas de Solo reales (T-002) para quitar el aviso de "no probado".
+- Partidas de Solo reales (T-002) para quitar el aviso de "no probado". La primera (2026-10-09) sale en `ok` pero con la vida final a 30 tras quedar 7.º, una subida de 12 a 30 en la última ronda y dos jugadores con puesto 7: hay que revisarlo antes de dar Solo por bueno.
 - Fixtures recortados de logs propios, sin nombres de terceros, con OK del usuario.
 - Fuente exacta de las tribus del lobby.
 - Reconexiones a mitad de partida: si el juego escribe un `CREATE_GAME` nuevo para la misma partida, el prototipo la contaría como dos. No ha pasado en los 23 logs (el recuento coincide con `check_logs.py`), pero no está probado.

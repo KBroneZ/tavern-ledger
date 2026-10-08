@@ -10,7 +10,9 @@ Free, open-source Battlegrounds tracker for Windows, plus a website to follow yo
 
 A prototype parser rebuilds each Battlegrounds game from `Power.log`: hero, Duos teammate, lobby, health per round, opponents, boards at the start of each combat and final place. It was checked against 23 real Duos games. MMR and the exact lobby tribes are not in the log. Findings: [docs/research/parser-hslog.md](docs/research/parser-hslog.md).
 
-Next tasks: T-004 (where MMR can come from) and T-002 (Solo games and trimmed fixtures).
+No local log has the MMR value. The public leaderboard only covers ratings of 8000 and above: players in it will see their rating, everyone else "below the leaderboard cut-off", never a made-up number. Findings: [docs/research/fuentes-mmr.md](docs/research/fuentes-mmr.md).
+
+Next tasks: T-002 (Solo games and trimmed fixtures) and T-005 (desktop stack).
 
 ## Check your log setup
 
