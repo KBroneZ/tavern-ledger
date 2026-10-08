@@ -182,5 +182,5 @@ Coste: afirmar que alguien **no** está obliga a recorrer todas las páginas (17
 ## Pendiente
 
 - Volver a `Verbose=false` en `[Net]` (el experimento no aportó nada).
-- Frecuencia de actualización del leaderboard: sin cambios en minutos (T-006); falta medirla en horas.
+- Frecuencia de actualización del leaderboard: por tandas, entre unos minutos y menos de una hora (T-006, medidas 9 y 10).
 - Mayúsculas y Unicode en `accountid` frente al nombre local (ver [`cliente-leaderboard.md`](cliente-leaderboard.md#riesgos-y-dudas-abiertas)).
