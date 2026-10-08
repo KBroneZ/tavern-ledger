@@ -8,7 +8,7 @@ Fecha: 2026-10-09. Logs del usuario (6 sesiones, 23 partidas, todas `GT_BATTLEGR
 - Sí hay una **señal**: `Net.log` registra la llegada de `NetCacheBaconRatingInfo` dos veces al iniciar sesión y, normalmente, dos veces entre 4 y 9 s después de cada fin de partida. Dice *cuándo* cambia el rating, no *cuánto*.
 - Con la sección `[Net]` en `Verbose=true` **tampoco** aparece el valor: probado con una partida de Solo el 2026-10-09 (ver [Experimento: `[Net]` verbose](#experimento-net-verbose)).
 - El **leaderboard público** funciona como se describió en [`viabilidad.md`](viabilidad.md): 25 filas por página, solo nombre visible (BattleTag sin número) y rating, corte en 8000. No tiene búsqueda por nombre.
-- **Riesgo nuevo:** los términos de uso de las webs de Blizzard dan una licencia "personal use only" y excluyen el uso comercial y la descarga de partes del sitio salvo la caché de página. Afecta a cómo se usa el leaderboard (D-005). Queda como pendiente P-008.
+- **Riesgo nuevo:** los términos de uso de las webs de Blizzard dan una licencia "personal use only" y excluyen el uso comercial y la descarga de partes del sitio salvo la caché de página. Afecta a cómo se usa el leaderboard (D-005). Cerrado con D-012: solo la fila propia, desde la app del usuario.
 - **Decisión (D-011, cierra P-007):** leaderboard como guía. Dentro, su rating; fuera, "por debajo del corte" (< 8000), nunca un número. **No inferir deltas.**
 - Primera partida de Solo (2026-10-09): `GT_BATTLEGROUNDS`, misma build. Tampoco hay MMR en ningún log.
 
@@ -17,7 +17,7 @@ Fecha: 2026-10-09. Logs del usuario (6 sesiones, 23 partidas, todas `GT_BATTLEGR
 | Dato | Fuente | Cómo | Evidencia | Limitaciones |
 |------|--------|------|-----------|--------------|
 | MMR actual (Solo o Duos) | **Ninguna local** | — | Búsqueda de `mmr`, `rating`, `leaderboard`, `rank`, `medal`, `elo`, `season` en todos los logs de las 6 sesiones: solo nombres de clases (abajo), ningún valor | — |
-| MMR si está en el top | Leaderboard público | `rating` de la fila cuyo `accountid` coincide con el nombre local, en la región y el modo de la partida | 7 peticiones el 2026-10-09 (abajo) | Solo cubre ≥ 8000. Nombres repetidos. Hay que recorrer páginas. Términos de uso (P-008) |
+| MMR si está en el top | Leaderboard público | `rating` de la fila cuyo `accountid` coincide con el nombre local, en la región y el modo de la partida | 7 peticiones el 2026-10-09 (abajo) | Solo cubre ≥ 8000. Nombres repetidos. Hay que recorrer páginas. Solo la fila propia (D-012) |
 | "El rating ha cambiado" | `Net.log` | Línea `OnNetCacheObjReceived SAVE --> NetCacheBaconRatingInfo` | Líneas 33 y 54 (inicio de sesión); 57–58, 62–63… (una pareja tras cada partida, 4–9 s después de `Reason: EndGameScreen` en `GameNetLogger.log`, líneas 14, 28, 77…). También tras la partida de Solo (sesión `Hearthstone_2026_10_09_00_26_56`, líneas 57–58) | Sin valor, ni con `Verbose=true`. La pareja llega igual en Solo y en Duos: no distingue el modo |
 | Fin de partida | `GameNetLogger.log` | `Network.DisconnectFromGameServer() - Reason: EndGameScreen` | 8 en la sesión del 8-oct, igual que las 8 partidas de `Power.log` | `Power.log` ya da el fin de partida (`STATE=COMPLETE`) |
 | Región de la cuenta | `Hearthstone.log` | Línea `Region: EU` justo después del login | Línea 48 en las 6 sesiones | Formato no documentado |
@@ -133,8 +133,8 @@ El corte en 8000 se confirma en Solo y Duos. La temporada 18 tiene muchas más f
 | Hallazgo | Implicación |
 |----------|-------------|
 | Página fuera de rango (`page=999`): HTTP 200 con `rows: []` y `totalPages: 0` | Una página vacía **no** significa "el jugador no está"; el cliente tiene que comparar con `totalPages` de la página 1 |
-| Sin búsqueda por nombre | Encontrar un nombre exige recorrer páginas: hasta 173 (≈ 52 MB) en Solo EU |
-| Respuestas en 0,7–1,8 s; sin cabeceras de rate limit ni `Cache-Control`; `ETag` débil | Límite real desconocido. Usar `If-None-Match` y caché propia |
+| Sin búsqueda por nombre | Encontrar un nombre exige recorrer páginas: hasta 173 (≈ 52 MB; ~3 MB con gzip, T-006) en Solo EU |
+| Respuestas en 0,7–1,8 s; sin cabeceras de rate limit ni `Cache-Control`; `ETag` débil | Límite real desconocido. Caché propia; `If-None-Match` no sirve: el `ETag` cambia en cada respuesta (T-006) |
 | Pone cookies `session` y `locale` | El cliente no las guarda ni las reenvía |
 | `robots.txt` no bloquea `/api/` | No es un permiso; los términos mandan |
 
@@ -144,7 +144,7 @@ El corte en 8000 se confirma en Solo y Duos. La temporada 18 tiene muchas más f
 - **EULA** (2024-03-21): prohíbe procesos no autorizados que "intercepts, collects, reads, or 'mines' information" de la *Platform* (app, servicio y juegos; las webs no están en la definición). [Fuente](https://www.blizzard.com/en-us/legal/fba4d00f-c7e4-4883-b8b9-1b4500a402ea/blizzard-end-user-license-agreement)
 - **Términos de la API de desarrolladores**: según foros (sin verificar en el texto oficial), prohíben scraping y consultas automáticas salvo por las APIs autorizadas. Solo obligan a quien se registra como desarrollador, pero indican la postura de Blizzard. [Foro](https://us.forums.blizzard.com/en/blizzard/t/questions-about-blizzard-developer-api-terms-of-use/57897)
 
-Lectura (no es asesoría legal): consultar la propia fila desde la app del jugador, a petición suya y con caché, se parece a usar la web en persona. Rastrear el leaderboard entero desde un servidor, guardarlo y mostrarlo en otra web, o meterlo en un extra de pago, choca con "personal use only" y con la prohibición de redistribuir. Decisión pendiente: P-008.
+Lectura (no es asesoría legal): consultar la propia fila desde la app del jugador, a petición suya y con caché, se parece a usar la web en persona. Rastrear el leaderboard entero desde un servidor, guardarlo y mostrarlo en otra web, o meterlo en un extra de pago, choca con "personal use only" y con la prohibición de redistribuir. Decisión: D-012 (cierra P-008).
 
 ## Cruce: usuario local ↔ fila del leaderboard
 
@@ -155,7 +155,7 @@ Lectura (no es asesoría legal): consultar la propia fila desde la app del jugad
    - Ninguna fila en todas las páginas → "not in the public leaderboard (top ~8000)", sin valor.
    - Dos o más filas con el mismo nombre → "ambiguous", sin valor. No se elige por rating parecido: sería inventar.
    - Error de red, respuesta inválida o páginas incoherentes → "unknown", distinto de "no está".
-4. **Coste:** si la app recuerda el último `rank` o rating conocido del usuario, puede ir directa a esa zona (las filas van por rating descendente) en 1–3 peticiones; si no, hay que recorrer desde la página 1. Con caché de al menos una hora por página, consultar tras cada partida y nunca recorrer el leaderboard entero más de una vez al día por usuario. Cifras a fijar en T-006.
+4. **Coste:** si la app recuerda el último `rank` o rating conocido del usuario, puede ir directa a esa zona (las filas van por rating descendente) en 1–3 peticiones; si no, hay que recorrer desde la página 1. Estrategia y cifras medidas: [`cliente-leaderboard.md`](cliente-leaderboard.md) (D-013).
 
 ## P-007: MMR fuera del leaderboard
 
@@ -177,11 +177,10 @@ Lectura (no es asesoría legal): consultar la propia fila desde la app del jugad
 | Su nombre aparece dos o más veces | "Ambiguous" |
 | Error de red, respuesta inválida o recorrido incompleto | "Unknown" |
 
-Coste: afirmar que alguien **no** está obliga a recorrer todas las páginas (173 en Solo EU, ≈ 52 MB). Para T-006: hacerlo como mucho una vez al día por región y modo, con caché e `If-None-Match`, y depende de cómo se cierre P-008.
+Coste: afirmar que alguien **no** está obliga a recorrer todas las páginas (173 en Solo EU, ≈ 52 MB). T-006 lo hace como mucho una vez al día por región y modo; con gzip son ~3 MB. `If-None-Match` no sirve (el `ETag` cambia en cada respuesta). Ver [`cliente-leaderboard.md`](cliente-leaderboard.md).
 
 ## Pendiente
 
 - Volver a `Verbose=false` en `[Net]` (el experimento no aportó nada).
-- P-008: uso del leaderboard frente a los términos de la web.
-- Frecuencia de actualización del leaderboard (comparar dos consultas separadas por horas, en T-006).
-- Mayúsculas y Unicode en `accountid` frente al nombre local.
+- Frecuencia de actualización del leaderboard: sin cambios en minutos (T-006); falta medirla en horas.
+- Mayúsculas y Unicode en `accountid` frente al nombre local (ver [`cliente-leaderboard.md`](cliente-leaderboard.md#riesgos-y-dudas-abiertas)).

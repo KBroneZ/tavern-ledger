@@ -12,6 +12,8 @@ A prototype parser rebuilds each Battlegrounds game from `Power.log`: hero, Duos
 
 No local log has the MMR value. The public leaderboard only covers ratings of 8000 and above: players in it will see their rating, everyone else "below the leaderboard cut-off", never a made-up number. Findings: [docs/research/fuentes-mmr.md](docs/research/fuentes-mmr.md).
 
+A prototype client looks up your own row in the public leaderboard with a local cache and a small, capped number of requests. It never stores other players' rows. Strategy and measurements: [docs/research/cliente-leaderboard.md](docs/research/cliente-leaderboard.md).
+
 Next tasks: T-002 (Solo games and trimmed fixtures) and T-005 (desktop stack).
 
 ## Check your log setup
@@ -34,6 +36,16 @@ python tools/parse_bg.py "<Hearthstone folder>\Logs\Hearthstone_<date>\Power_old
 ```
 
 Add `--json` for machine-readable output.
+
+## Look up your leaderboard rating (prototype)
+
+Python 3.10+, no dependencies. It asks the public leaderboard for your own row only and prints one of four states: your rating, below the leaderboard cut-off, ambiguous (your name appears more than once) or unknown. It never prints your name.
+
+```
+python tools/leaderboard.py --name "<your BattleTag>" --mode solo --region EU
+```
+
+Use `--mode duos` for Duos, `--hearthstone-log PATH` to read the region from the game's `Hearthstone.log` instead of `--region`, and `--json` for machine-readable output. To answer "below the cut-off" it must check every page (about 170 requests, a few minutes), so it does that at most once a day per region and mode and otherwise shows the last result with its time. The cache lives in `.local/leaderboard-cache.json`.
 
 ## Development
 
