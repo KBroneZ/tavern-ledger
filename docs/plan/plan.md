@@ -23,7 +23,7 @@ Objetivo: demostrar que se puede reconstruir una partida de Battlegrounds solo c
 
 **Notas T-003 (2026-10-08).** `tools/parse_bg.py` + informe [`docs/research/parser-hslog.md`](../research/parser-hslog.md). 23 de 23 partidas reales (Duos, build 253216) en `ok`. Sale todo salvo el MMR y la lista exacta de tribus (solo inferida de la tienda); el 12 % de los combates del compañero en Duos no se ve en el log local. Solo sin probar con logs reales.
 
-**Notas T-004 (2026-10-09).** Informe [`docs/research/fuentes-mmr.md`](../research/fuentes-mmr.md). Ningún log local trae el valor del MMR; `Net.log` solo marca cuándo llega `NetCacheBaconRatingInfo` (tras cada partida). Leaderboard: endpoint, parámetros, corte en 8000 y cruce por nombre documentados. `[Net]` con `Verbose=true` probado con OK del usuario (cambio hecho por él): no expone el rating. Nuevo pendiente P-008 (términos de la web).
+**Notas T-004 (2026-10-09).** Informe [`docs/research/fuentes-mmr.md`](../research/fuentes-mmr.md). Ningún log local trae el valor del MMR; `Net.log` solo marca cuándo llega `NetCacheBaconRatingInfo` (tras cada partida). Leaderboard: endpoint, parámetros, corte en 8000 y cruce por nombre documentados. `[Net]` con `Verbose=true` probado con OK del usuario (cambio hecho por él): no expone el rating. Nuevo pendiente P-008 (términos de la web). P-007 cerrado con D-011: rating del leaderboard si aparece; si no, "por debajo del corte" (< 8000).
 
 ## F1 — Historial local y web mínima
 

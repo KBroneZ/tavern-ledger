@@ -9,7 +9,7 @@ Fecha: 2026-10-09. Logs del usuario (6 sesiones, 23 partidas, todas `GT_BATTLEGR
 - Con la sección `[Net]` en `Verbose=true` **tampoco** aparece el valor: probado con una partida de Solo el 2026-10-09 (ver [Experimento: `[Net]` verbose](#experimento-net-verbose)).
 - El **leaderboard público** funciona como se describió en [`viabilidad.md`](viabilidad.md): 25 filas por página, solo nombre visible (BattleTag sin número) y rating, corte en 8000. No tiene búsqueda por nombre.
 - **Riesgo nuevo:** los términos de uso de las webs de Blizzard dan una licencia "personal use only" y excluyen el uso comercial y la descarga de partes del sitio salvo la caché de página. Afecta a cómo se usa el leaderboard (D-005). Queda como pendiente P-008.
-- Recomendación para P-007: leaderboard cuando el emparejamiento sea único; fuera de él, "sin datos" por defecto y, opcional, un valor introducido a mano y etiquetado como tal. **No inferir deltas.**
+- **Decisión (D-011, cierra P-007):** leaderboard como guía. Dentro, su rating; fuera, "por debajo del corte" (< 8000), nunca un número. **No inferir deltas.**
 - Primera partida de Solo (2026-10-09): `GT_BATTLEGROUNDS`, misma build. Tampoco hay MMR en ningún log.
 
 ## Tabla: dato → fuente
@@ -166,7 +166,18 @@ Lectura (no es asesoría legal): consultar la propia fila desde la app del jugad
 | C. No mostrarlo | "No data" | Honesto, cero mantenimiento | Peor experiencia para la mayoría (fuera del top) |
 | D. `[Net]` verbose | Leer el rating si el juego lo escribe | — | **Descartada:** probado el 2026-10-09, el juego no lo escribe |
 
-**Recomendación:** C por defecto con A como opción (el usuario escribe su MMR si quiere, siempre etiquetado y con fecha, sin recalcularlo). Descartar B y D. Para cerrar P-007 decide el usuario.
+**Recomendación inicial:** C por defecto con A como opción. Descartar B y D.
+
+**Decisión del usuario (D-011, 2026-10-09):** el leaderboard es la guía. Variante de C: en vez de "sin datos", quien no aparece se muestra como "por debajo del corte" (< 8000), porque juega poca gente y estar fuera del top ya es información. Condiciones para no inventar:
+
+| Situación | Se muestra |
+|-----------|-----------|
+| Una fila con su nombre | Su rating, `rank`, temporada y hora de consulta |
+| Ninguna fila, leaderboard entero revisado (todas las páginas de `totalPages`) | "Below the leaderboard cut-off (< 8000)", con el corte tomado de la última fila |
+| Su nombre aparece dos o más veces | "Ambiguous" |
+| Error de red, respuesta inválida o recorrido incompleto | "Unknown" |
+
+Coste: afirmar que alguien **no** está obliga a recorrer todas las páginas (173 en Solo EU, ≈ 52 MB). Para T-006: hacerlo como mucho una vez al día por región y modo, con caché e `If-None-Match`, y depende de cómo se cierre P-008.
 
 ## Pendiente
 
