@@ -22,7 +22,7 @@
 
 | ID | Tema | Opciones | Recomendación |
 |----|------|----------|---------------|
-| P-002 | Stack de la app de escritorio | C#/.NET (WPF o Avalonia) · Rust + Tauri · Electron | Decidir en F0 (T-005). El prototipo (T-003) muestra que la lógica sobre `Power.log` es pequeña y se puede reescribir en cualquier lenguaje a partir de `docs/research/parser-hslog.md`. Firestone no tiene licencia: no se usa como base. Informe de T-005: [`stack-escritorio.md`](../research/stack-escritorio.md). Recomendación: **Tauri 2** (Rust + TS); la prueba del overlay pasa (falta verla encima de Hearthstone); plan B WPF. |
+| P-002 | Stack de la app de escritorio | C#/.NET (WPF o Avalonia) · Rust + Tauri · Electron | Decidir en F0 (T-005). El prototipo (T-003) muestra que la lógica sobre `Power.log` es pequeña y se puede reescribir en cualquier lenguaje a partir de `docs/research/parser-hslog.md`. Firestone no tiene licencia: no se usa como base. Informe de T-005: [`stack-escritorio.md`](../research/stack-escritorio.md). Recomendación: **Tauri 2** (Rust + TS); la prueba del overlay pasa, también encima de Hearthstone en pantalla completa; plan B WPF. |
 | P-003 | Stack web y backend | p. ej. Astro/Next.js + Supabase/Postgres + almacenamiento S3/R2 | Decidir en F1, con costes reales de los planes gratuitos. |
 | P-005 | Firma de código | SignPath Foundation (gratis, open source, build automatizada) · Certum Open Source in the Cloud (desde 49 €) · Certum Standard (desde 139–209 €) | SignPath primero; Certum OS como plan B. Azure Artifact Signing no admite particulares en España. |
 | P-006 | Cómo cobrar los extras | Polar · Ko-fi/Patreon (supporters) | Decidir en F4; Polar ya se usa en StartAICareer. |

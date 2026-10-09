@@ -14,7 +14,7 @@ No local log has the MMR value. The public leaderboard only covers ratings of 80
 
 A prototype client looks up your own row in the public leaderboard with a local cache and a small, capped number of requests. It never stores other players' rows. Strategy and measurements: [docs/research/cliente-leaderboard.md](docs/research/cliente-leaderboard.md).
 
-Desktop stack (T-005): the comparison recommends Tauri 2. A minimal Tauri overlay (transparent, always on top, clicks pass through) works on Windows 11; it still has to be tried over the game, and the owner decides. Findings: [docs/research/stack-escritorio.md](docs/research/stack-escritorio.md).
+Desktop stack (T-005): the comparison recommends Tauri 2. A minimal Tauri overlay (transparent, always on top, clicks pass through) works on Windows 11, also over the game in borderless fullscreen; the owner decides. Findings: [docs/research/stack-escritorio.md](docs/research/stack-escritorio.md).
 
 Next tasks: T-002 (more Solo games and trimmed fixtures) and closing T-005.
 
