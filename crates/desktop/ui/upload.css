@@ -1,0 +1,40 @@
+/* Upload panel (T-104d). Uses the tokens from style.css. */
+.upload {
+  margin: 12px var(--space) 4px;
+  padding: 8px 14px;
+  border: 1px solid var(--wood-edge);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--parchment-dim);
+  font-size: 13px;
+}
+.upload summary {
+  cursor: pointer;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.upload summary span { margin-left: 6px; text-transform: none; letter-spacing: 0; color: var(--parchment); }
+.upload p { margin: 8px 0 0; }
+.upload [hidden] { display: none; }
+.upload form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.upload input[type="email"] {
+  min-width: 240px;
+  padding: 4px 8px;
+  border: 1px solid var(--wood-edge);
+  border-radius: 4px;
+  background: var(--parchment);
+  color: var(--ink);
+}
+.upload button {
+  padding: 4px 10px;
+  border: 1px solid var(--gold);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--parchment);
+  cursor: pointer;
+}
+.upload button:hover, .upload button:focus-visible { background: rgba(201, 150, 47, 0.2); }
+.upload .switch { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--parchment); }
+.upload .problem { color: #f2b9a8; }
+.upload .note { color: var(--muted); font-size: 12px; }

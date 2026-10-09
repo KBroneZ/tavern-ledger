@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tavern Ledger</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="upload.css">
 </head>
 <body>
   <header class="masthead">
@@ -19,6 +20,29 @@
     <h2>Game log setup</h2>
     <ul id="setup-list"></ul>
   </section>
+
+  <details id="upload" class="upload">
+    <summary>Upload to the website<span id="upload-summary">…</span></summary>
+    <p id="upload-unavailable" hidden></p>
+    <div id="upload-signed-out" hidden>
+      <form id="upload-sign-in">
+        <label for="upload-email">Email of your Tavern Ledger account</label>
+        <input id="upload-email" type="email" autocomplete="email" maxlength="254" required>
+        <button type="submit">Send sign-in link</button>
+      </form>
+      <p id="upload-waiting" hidden><span id="upload-waiting-text"></span> <button type="button" id="upload-cancel">Cancel</button></p>
+      <p class="note">The link opens in your browser and signs this app in; the app never asks for your password. Accounts are created on the website.</p>
+    </div>
+    <div id="upload-signed-in" hidden>
+      <p>Signed in as <span id="upload-email-shown"></span> <button type="button" id="upload-sign-out">Sign out</button></p>
+      <label class="switch"><input id="upload-enabled" type="checkbox"> Upload games</label>
+    </div>
+    <p id="upload-queue" hidden></p>
+    <p id="upload-last" hidden></p>
+    <p id="upload-problem" class="problem" role="status" hidden></p>
+    <p id="upload-notice" role="status" hidden></p>
+    <p class="note">Off until you turn it on. Each finished game's report goes up: heroes, card ids, places and boards. Never player names, BattleTags or ratings.</p>
+  </details>
 
   <main>
     <nav class="modes" aria-label="Game mode">
@@ -171,5 +195,6 @@
     Hero names come from your game's log, in your game's language. MMR is not in the game's log.
   </footer>
   <script src="app.js"></script>
+  <script src="upload.js"></script>
 </body>
 </html>

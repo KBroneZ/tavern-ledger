@@ -26,6 +26,8 @@ Robustness (session 014): the app and `check_logs.py` check that the game is set
 
 Website (T-104c): a static Astro site in `web/` with sign-in by email, an account page (display name, public profile switch, download all your data, delete your account) and a public profile page that only exists when you turn it on. It shows no ratings and no other players' names. **Online at [tavernledger.net](https://tavernledger.net) with accounts closed** (session 021): home, privacy and terms drafts; sign-in, account and profile say "Accounts are not open yet" until the hosted backend is wired in. Hosted on Cloudflare Pages from `main`, no scripts, no analytics. Contact mail: `contact@` and `privacy@tavernledger.net` (D-030); deploy notes in [docs/research/deploy.md](docs/research/deploy.md).
 
+Upload (T-104d): the desktop app can upload each finished game to your account. It is off until you sign in and turn it on. You sign in with a one-time link from your email, opened in your browser; the app never asks for your password and keeps the sign-in in Windows Credential Manager. Only the game's report goes up (heroes, card ids, places, boards), never player names, BattleTags or ratings, and the server checks that again before storing it. It works against the local stack; there is no online server yet.
+
 Game recap (T-202) and record against each opponent (T-203): a "Recap" button on each game, and it opens by itself when a new game ends. It shows hero (and teammate in Duos), place, health over the rounds, tribes seen in the tavern and the parser's warnings, and for each opponent in that game (by hero and seat, never by name) the combats won, lost, tied or unknown. The log never says who won, so results are worked out from health changes and marked inferred; when the numbers cannot say, the result is unknown. In Duos each round counts once for your team against the opposing team. Games saved before parser revision 2 show unknown results until re-read with `tavern-watch --reparse`.
 
 Where values come from (T-109): every number or label in the window says where it comes from. Values straight from the game's log carry no mark; inferred ones (tribes seen in the tavern, skins grouped under one hero) and unknown ones carry a mark, every value has a tooltip, and a legend explains them. "Report a problem" (T-110): a button on each game shows the whole report file (game report, parser version, game build, app version, log setup check, warnings) and saves it to your Downloads folder if you choose. The app refuses to make it if it finds anything that looks like a player name, and it never sends it anywhere; you send it yourself.
@@ -35,7 +37,7 @@ Lobby tribes by hand (T-303): the log never says which five tribes are in the lo
 
 Privacy and terms (T-104b): a data inventory written from the code, and drafts of the privacy policy and terms in [docs/legal/](docs/legal/), shown on the site at `/privacy/` and `/terms/`. They are not in force: the controller's name, some provider details and the legal checks of the email sender are still to be decided; the contact addresses exist. No analytics, minimum age 16.
 
-Next tasks: T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), the hosted Supabase project and the email sender (session 022), T-104b (fill in the open items of the privacy policy) and T-104d (upload from the desktop app).
+Next tasks: T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), the hosted Supabase project and the email sender (session 022) and T-104b (fill in the open items of the privacy policy).
 
 ## Check your log setup
 
@@ -95,6 +97,12 @@ cargo run --release -p tracker -- --reparse   # re-read saved sessions after a p
 cargo run --release -p bg-parser -- "<path>\Power_old.log" --json
 ```
 
+Upload to the website: the "Upload to the website" panel at the top of the window signs you in by email link, shows how many games are waiting, the last result and why uploading stopped, if it did, and holds the "Upload games" switch (off until you turn it on). Until the hosted server exists, the app only offers upload if the data folder has a `server.json` (`{"url": "...", "anon_key": "..."}`, the public key only). `--data-dir <folder>` makes the app use another folder for the history and the upload settings, e.g. to try a build:
+
+```
+cargo run -p desktop -- --data-dir "$env:TEMP\tl-try"
+```
+
 Each saved game records the parser version that read it (shown in the tooltip of its date in the app; older records say "unknown version"). `--reparse` saves only games whose report changed and lists the ones whose logs are gone; it does not run while the app is open.
 
 ### Replay a log (development only)
@@ -124,12 +132,15 @@ Needs Node.js and Docker Desktop. The CLI is pinned in `package.json`.
 npm ci
 npx supabase start                    # first run pulls the images (a few GB)
 npx supabase test db                  # pgTAP: schema, row-level security, export
-deno test supabase/functions/delete-account/
+deno test supabase/functions/        # delete-account, upload-game, sweep
 $env:TAVERN_SUPABASE_LOCAL = "1"; python -m unittest tests.test_supabase_local -v
+$env:TAVERN_SUPABASE_LOCAL = "1"; cargo test -p uploader --features http --test local_stack -- --nocapture
 pwsh tools/backup_supabase.ps1 -Local # backup into .local/backups/
 ```
 
-These run on the developer's machine, not in CI. Without `-Local`, the backup script backs up the linked hosted project, reading `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from `.local/supabase.env`.
+These run on the developer's machine, not in CI. The desktop end-to-end test sends one sign-in email; the local stack allows two an hour. The daily sweep (files with no row, audit entries of deleted accounts, expired counters) is the `sweep` function, run with the service-role key: `POST /functions/v1/sweep`.
+
+Left for the hosted project (needs the user's account): push the migrations; deploy `upload-game`, `sweep` and `delete-account`; schedule `sweep` once a day (for example `pg_cron` with `pg_net`, the key in Vault); check that the hosted auth version still accepts `127.0.0.1` redirects on any port (if not, add `http://127.0.0.1:*/desktop-callback/*` to the redirect URLs) and that magic-link emails come from the custom SMTP provider (the built-in sender allows very few emails); check which client IP the hosted gateway puts first in `X-Forwarded-For`; then build the server URL and public key into the app instead of `server.json`. The privacy policy (T-104b) must list the upload times (kept two days) and the hashed IP counters (kept one hour). Without `-Local`, the backup script backs up the linked hosted project, reading `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from `.local/supabase.env`.
 
 ### Website (`web/`)
 

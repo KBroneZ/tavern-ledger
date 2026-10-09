@@ -2,9 +2,11 @@
 //! the local game history. Only reads the game's log files (D-004).
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod upload;
+
 use std::collections::BTreeSet;
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -37,6 +39,10 @@ const LOBBY_TRIBES_CHANGED: &str = "lobby-tribes-changed";
 const GAME_FINISHED: &str = "game-finished";
 /// Added by the Windows start-up entry: open in the tray, not on screen.
 const MINIMIZED_ARG: &str = "--minimized";
+/// `--data-dir <folder>`: keep the history (and the upload settings) there
+/// instead of %APPDATA%\TavernLedger, e.g. to try a build without touching
+/// the real history.
+const DATA_DIR_ARG: &str = "--data-dir";
 const MENU_SHOW: &str = "show";
 const MENU_AUTOSTART: &str = "autostart";
 const MENU_QUIT: &str = "quit";
@@ -355,7 +361,7 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
         let msg = "Hearthstone's Logs folder was not found. Is the game installed?";
         return problem(&app, &state, msg.into());
     };
-    let data_dir = tracker::store::default_dir();
+    let data_dir = data_dir_from(std::env::args()).unwrap_or_else(tracker::store::default_dir);
     // Held while this thread runs: only one process writes the history.
     let _lock = match HistoryLock::acquire(&data_dir) {
         Ok(lock) => lock,
@@ -391,6 +397,7 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
         s.unreadable_lines = store.unreadable_lines;
     });
     publish_games(&app, &state, &store);
+    upload::start(&app, data_dir);
     let mut known: BTreeSet<GameKey> = store.games().map(|(key, _)| key.clone()).collect();
     let mut watcher = Watcher::new(&logs_dir, store);
     let mut starts = GameStarts::default();
@@ -419,6 +426,7 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
                 });
                 if !saved.is_empty() {
                     publish_games(&app, &state, watcher.store());
+                    upload::kick(&app);
                     // Only the newest: games found at start-up (played while the
                     // app was closed) must not each pop up a recap.
                     if let Some(key) = new_games(&mut known, saved.iter().map(|s| &s.key)).pop() {
@@ -445,6 +453,12 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
         }
         thread::sleep(POLL_INTERVAL);
     }
+}
+
+fn data_dir_from(args: impl IntoIterator<Item = String>) -> Option<PathBuf> {
+    let mut args = args.into_iter();
+    args.by_ref().find(|a| a == DATA_DIR_ARG)?;
+    args.next().filter(|d| !d.is_empty()).map(PathBuf::from)
 }
 
 /// Keeps the game in progress up to date for the window and gives a waiting
@@ -569,6 +583,7 @@ fn main() {
             Some(vec![MINIMIZED_ARG]),
         ))
         .manage(state.clone())
+        .manage(upload::Upload::default())
         .invoke_handler(tauri::generate_handler![
             list_games,
             game_stats,
@@ -577,7 +592,12 @@ fn main() {
             preview_problem_report,
             save_problem_report,
             lobby_tribes_view,
-            edit_lobby_tribes
+            edit_lobby_tribes,
+            upload::upload_status,
+            upload::upload_set_enabled,
+            upload::upload_sign_in,
+            upload::upload_cancel_sign_in,
+            upload::upload_sign_out,
         ])
         .on_window_event(|window, event| {
             // Closing the window hides it; "Quit" in the tray menu exits.
@@ -792,6 +812,16 @@ mod tests {
         assert!(starts_hidden(args(&["desktop.exe", MINIMIZED_ARG])));
         assert!(!starts_hidden(args(&["desktop.exe"])));
         assert!(!starts_hidden(args(&["desktop.exe", "--minimized-not"])));
+    }
+
+    #[test]
+    fn the_data_folder_can_be_chosen_on_the_command_line() {
+        assert_eq!(
+            data_dir_from(args(&["desktop.exe", DATA_DIR_ARG, r"C:\Temp\tl"])),
+            Some(PathBuf::from(r"C:\Temp\tl"))
+        );
+        assert_eq!(data_dir_from(args(&["desktop.exe"])), None);
+        assert_eq!(data_dir_from(args(&["desktop.exe", DATA_DIR_ARG])), None);
     }
 
     #[test]
