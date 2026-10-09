@@ -50,13 +50,6 @@ fn parse_args() -> Result<Args, String> {
     Ok(args)
 }
 
-/// %APPDATA%\TavernLedger on Windows; .local/ elsewhere (development).
-fn default_data_dir() -> PathBuf {
-    std::env::var_os("APPDATA")
-        .map(|d| PathBuf::from(d).join("TavernLedger"))
-        .unwrap_or_else(|| PathBuf::from(".local"))
-}
-
 fn describe(saved: &Saved) -> String {
     let r = &saved.report;
     let status = serde_json::to_value(r.status)
@@ -98,7 +91,7 @@ fn run(args: Args) -> Result<(), String> {
         .logs_dir
         .or_else(find_logs_dir)
         .ok_or("Hearthstone's Logs folder not found; pass --logs-dir")?;
-    let data_dir = args.data_dir.unwrap_or_else(default_data_dir);
+    let data_dir = args.data_dir.unwrap_or_else(tracker::store::default_dir);
     let mut store = Store::open(&data_dir).map_err(|e| format!("cannot open the history: {e}"))?;
     if store.unreadable_lines > 0 {
         println!(

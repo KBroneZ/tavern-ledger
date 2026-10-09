@@ -35,9 +35,16 @@ Objetivo: demostrar que se puede reconstruir una partida de Battlegrounds solo c
 
 ## F1 — Historial local y web mínima
 
+**Notas T-101 (2026-10-09, sesión 006/007).** Workspace de Rust con tres crates:
+- `crates/bg-parser`: port del parser de Python sin `hslog` (misma salida JSON). Paridad comprobada con 13 casos sintéticos (en tests y CI) y con las 23 partidas reales (en local, `tools/compare_parsers.py`): idénticas. Log de 590 MB: 2,6 s frente a 19,8 s en Python. Da cada partida en cuanto llega `STATE=COMPLETE`.
+- `crates/tracker` + CLI `tavern-watch`: encuentra la carpeta de logs (registro o `--logs-dir`), sigue `Power.log` de la sesión más reciente (solo líneas completas; rotación a `Power_old.log` y sesiones nuevas) y guarda en `%APPDATA%\TavernLedger\games.jsonl` (D-015). `--import` lee las sesiones antiguas: 23 partidas en 8 s; ninguno de los 149 nombres de jugador de los logs aparece en el historial.
+- `crates/desktop`: app Tauri (sin npm todavía) que sigue el log en segundo plano y muestra el historial con stats por modo (Solo 1–8, Duos 1–4 por equipo; top 4 / top 2). Probada con el historial real.
+
+Queda para cerrar T-101: probar el seguimiento en vivo durante una partida real, nombres de héroe en vez de ids de carta (fuente de datos con licencia compatible), arranque con Windows / bandeja y build firmada (T-105). La CI no compila `desktop` (necesita librerías del sistema en Linux).
+
 | ID | Tarea | Estado |
 |----|-------|--------|
-| T-101 | App de escritorio: vigilar `Power.log` y guardar partidas en local | pendiente |
+| T-101 | App de escritorio: vigilar `Power.log` y guardar partidas en local | en curso |
 | T-102 | Stats personales: héroes, puestos medios, tribus | pendiente |
 | T-103 | Decidir stack web y backend (P-003) | pendiente |
 | T-104 | Cuentas, subida de partidas, perfil público; privacidad y borrado (RGPD) | pendiente |

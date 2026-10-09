@@ -40,12 +40,14 @@ jobs:
         run: python -m unittest discover -s tests -v
 
       # Rust workspace on the runner's preinstalled stable toolchain: format,
-      # unit tests and parity of bg-parser with tools/parse_bg.py.
+      # unit tests and parity of bg-parser with tools/parse_bg.py. The Tauri
+      # app (desktop) needs Windows/WebKit system libraries and is built
+      # locally for now.
       - name: Rust format
         run: cargo fmt --all --check
 
       - name: Rust tests
-        run: cargo test --locked --workspace
+        run: cargo test --locked --workspace --exclude desktop
 
       - name: Parser fixtures match the Python prototype
         run: |
