@@ -74,6 +74,12 @@ class Api:
             except ValueError:
                 return e.code, None
 
+    def download(self, path, token):
+        req = urllib.request.Request(self.stack["url"] + path, headers={
+            "apikey": self.stack["anon"], "Authorization": f"Bearer {token}"})
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as res:
+            return res.read()
+
     def service(self, method, path, **kw):
         return self.request(method, path, key=self.stack["service"], **kw)
 
@@ -206,6 +212,109 @@ class LocalStackTests(unittest.TestCase):
     def test_delete_needs_a_valid_token(self):
         status, _ = self.api.request("DELETE", "/functions/v1/delete-account")
         self.assertEqual(status, 401)
+
+    # ------------------------------------------------------------ upload (T-104d)
+
+    def upload(self, token, record, index=1):
+        return self.api.request(
+            "PUT", f"/functions/v1/upload-game/v1/games/{SESSION}/{index}",
+            token=token, raw=gzip.compress(_compact(record)),
+            content_type="application/gzip")
+
+    def test_upload_stores_a_checked_game_once(self):
+        uid, _, token = self.make_user()
+        record = _record()
+        status, body = self.upload(token, record)
+        self.assertEqual(status, 201, body)
+        self.assertEqual(body["result"], "created")
+        status, body = self.upload(token, record)
+        self.assertEqual((status, body["result"]), (200, "unchanged"), "same bytes again")
+
+        _, rows = self.api.request("GET", f"/rest/v1/games?user_id=eq.{uid}", token=token)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["parser_version"], "0.1.0+r1")
+        self.assertEqual(rows[0]["final_place"], record["report"]["final_place"])
+        stored = self.api.download(f"/storage/v1/object/authenticated/games/"
+                                   f"{rows[0]['storage_path']}", token=token)
+        self.assertEqual(json.loads(gzip.decompress(stored)), record,
+                         "the owner reads back the record that was sent")
+
+        newer = _record(saved_at=record["saved_at"] + 10, final_place=2)
+        status, body = self.upload(token, newer)
+        self.assertEqual((status, body["result"]), (200, "replaced"))
+        status, body = self.upload(token, _record(saved_at=record["saved_at"] - 10))
+        self.assertEqual((status, body["code"]), (409, "older_revision"))
+
+        forged = _record()
+        forged["report"]["card_names"] = {forged["report"]["hero"]: "Someone#1234"}
+        status, body = self.upload(token, forged, index=2)
+        self.assertEqual((status, body["code"]), (400, "player_name"))
+        padded = json.dumps(_record(), indent=2).encode()
+        status, body = self.api.request(
+            "PUT", f"/functions/v1/upload-game/v1/games/{SESSION}/1", token=token,
+            raw=gzip.compress(padded), content_type="application/gzip")
+        self.assertEqual((status, body["code"]), (400, "invalid_json"), "only compact JSON")
+        forged = _record()
+        forged["report"]["lobby"][0]["battle_tag"] = "Someone"
+        status, body = self.upload(token, forged)
+        self.assertEqual((status, body["code"]), (400, "invalid_report"))
+        _, rows = self.api.request("GET", f"/rest/v1/games?user_id=eq.{uid}", token=token)
+        self.assertEqual([r["game_index"] for r in rows], [1], "nothing forged was stored")
+
+    def test_upload_limits(self):
+        uid, _, token = self.make_user()
+        _psql("insert into private.upload_events (user_id, at) select '{u}', now()"
+              " from generate_series(1, 600)".format(u=uid))
+        status, body = self.upload(token, _record())
+        self.assertEqual((status, body["code"]), (429, "rate_limited"))
+        status, body = self.upload(None, _record())
+        self.assertEqual(status, 401, "no user token")
+        status, body = self.api.request(
+            "PUT", f"/functions/v1/upload-game/v1/games/{SESSION}/1",
+            token=token, raw=b"x" * 70000, content_type="application/gzip")
+        self.assertEqual(status, 413)
+
+    def test_sweep_removes_orphan_files(self):
+        uid, _, token = self.make_user()
+        status, _ = self.upload(token, _record())
+        self.assertEqual(status, 201)
+        orphan = self.add_file_only(uid, index=7)
+        # Replica mode skips the trigger that would set updated_at back to now().
+        _psql("set session_replication_role = replica;"
+              " update storage.objects set created_at = now() - interval '2 hours',"
+              " updated_at = now() - interval '2 hours' where name = '{n}'".format(n=orphan))
+        status, body = self.api.service("POST", "/functions/v1/sweep", body={})
+        self.assertEqual(status, 200, body)
+        self.assertGreaterEqual(body["files"], 1)
+        left = _psql("select string_agg(name, ',' order by name) from storage.objects"
+                     " where name like '{u}/%'".format(u=uid))
+        self.assertEqual(left, f"{uid}/{SESSION}-1.json.gz", "the game with a row stays")
+        status, _ = self.api.request("POST", "/functions/v1/sweep", token=token, body={})
+        self.assertEqual(status, 401, "a user cannot run the sweep")
+
+    def add_file_only(self, uid, index):
+        path = f"{uid}/{SESSION}-{index}.json.gz"
+        status, _ = self.api.service(
+            "POST", f"/storage/v1/object/games/{path}", raw=gzip.compress(b"{}"),
+            content_type="application/gzip")
+        self.assertEqual(status, 200)
+        return path
+
+
+def _compact(record):
+    """The bytes the desktop app sends: compact JSON (serde_json's output)."""
+    return json.dumps(record, separators=(",", ":"), ensure_ascii=False).encode()
+
+
+def _record(saved_at=1791000000, final_place=None):
+    """A record as the desktop app keeps it, around a real parser report."""
+    with open(os.path.join(os.path.dirname(__file__), "..", "crates", "bg-parser", "tests",
+                           "data", "duo_game.json"), encoding="utf-8") as f:
+        report = json.load(f)[0]
+    if final_place is not None:
+        report["final_place"] = final_place
+    return {"session": SESSION, "index": 1, "saved_at": saved_at,
+            "parser": {"version": "0.1.0", "revision": 1}, "report": report}
 
 
 if __name__ == "__main__":

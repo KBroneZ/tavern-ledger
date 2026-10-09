@@ -1,0 +1,27 @@
+[package]
+name = "uploader"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Signs in through the browser and uploads finished games (T-104d)"
+
+[features]
+# The real HTTPS client (reqwest with Windows' own TLS). Off in CI: the queue,
+# the sign-in flow and the requests are tested against a fake server.
+http = ["dep:reqwest"]
+
+[dependencies]
+tracker = { path = "../tracker" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Already in Cargo.lock through Tauri (PROVENANCE.md).
+base64 = "0.22"
+flate2 = "1.1"
+getrandom = "0.3"
+sha2 = "0.10"
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "native-tls"], optional = true }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security_Credentials"] }

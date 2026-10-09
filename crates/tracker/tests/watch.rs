@@ -185,6 +185,32 @@ fn the_history_keeps_the_last_record_and_reports_broken_lines() {
 }
 
 #[test]
+fn the_history_keeps_when_each_game_was_last_saved() {
+    let (_, data) = setup();
+    fs::create_dir_all(&data).unwrap();
+    append(
+        &data.join("games.jsonl"),
+        "{\"session\":\"S\",\"index\":1,\"saved_at\":100,\"report\":{}}\n\
+         {\"session\":\"S\",\"index\":1,\"saved_at\":200,\"report\":{\"a\":1}}\n\
+         {\"session\":\"S\",\"index\":2,\"report\":{}}\n",
+    );
+    let mut store = Store::open(&data).unwrap();
+    let key = |index| tracker::store::GameKey {
+        session: "S".into(),
+        index,
+    };
+    assert_eq!(store.saved_at(&key(1)), Some(200), "the last record wins");
+    assert_eq!(
+        store.saved_at(&key(2)),
+        Some(0),
+        "a record without it reads as 0"
+    );
+    assert_eq!(store.saved_at(&key(3)), None);
+    store.save(key(3), serde_json::json!({})).unwrap();
+    assert!(store.saved_at(&key(3)).unwrap() > 1_700_000_000);
+}
+
+#[test]
 fn import_reads_old_then_current_log_of_a_session() {
     let (logs, data) = setup();
     let dir = logs.join(SESSION_A);

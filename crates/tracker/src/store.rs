@@ -52,6 +52,9 @@ pub struct Store {
     path: PathBuf,
     games: BTreeMap<GameKey, Value>,
     parsers: BTreeMap<GameKey, ParserStamp>,
+    /// When the latest record of each game was written (seconds since 1970);
+    /// the upload uses it as the game's revision (T-104d).
+    saved_at: BTreeMap<GameKey, u64>,
     /// Lines that could not be read (e.g. cut short by a crash). Reported,
     /// never silently dropped, and left in the file untouched.
     pub unreadable_lines: usize,
@@ -68,6 +71,7 @@ impl Store {
             path,
             games: BTreeMap::new(),
             parsers: BTreeMap::new(),
+            saved_at: BTreeMap::new(),
             unreadable_lines: 0,
             needs_newline: false,
         };
@@ -93,11 +97,12 @@ impl Store {
                 continue;
             }
             match parse_record(&line) {
-                Some((key, report, parser)) => {
+                Some((key, report, parser, saved_at)) => {
                     match parser {
                         Some(stamp) => self.parsers.insert(key.clone(), stamp),
                         None => self.parsers.remove(&key),
                     };
+                    self.saved_at.insert(key.clone(), saved_at);
                     self.games.insert(key, report);
                 }
                 None => self.unreadable_lines += 1,
@@ -139,6 +144,7 @@ impl Store {
         file.flush()?;
         self.needs_newline = false;
         self.parsers.insert(key.clone(), ParserStamp::current());
+        self.saved_at.insert(key.clone(), saved_at);
         self.games.insert(key, report);
         Ok(true)
     }
@@ -159,12 +165,20 @@ impl Store {
         self.parsers.get(key)
     }
 
+    /// When the latest record of a game was saved; 0 for a record without
+    /// the field.
+    pub fn saved_at(&self, key: &GameKey) -> Option<u64> {
+        self.saved_at.get(key).copied()
+    }
+
     pub fn path(&self) -> &Path {
         &self.path
     }
 }
 
-fn parse_record(line: &str) -> Option<(GameKey, Value, Option<ParserStamp>)> {
+type Record = (GameKey, Value, Option<ParserStamp>, u64);
+
+fn parse_record(line: &str) -> Option<Record> {
     let mut value: Value = serde_json::from_str(line).ok()?;
     let session = value.get("session")?.as_str()?.to_string();
     let index = value.get("index")?.as_u64()?;
@@ -172,8 +186,9 @@ fn parse_record(line: &str) -> Option<(GameKey, Value, Option<ParserStamp>)> {
     let parser = value
         .get("parser")
         .and_then(|p| serde_json::from_value(p.clone()).ok());
+    let saved_at = value.get("saved_at").and_then(Value::as_u64).unwrap_or(0);
     let report = value.get_mut("report")?.take();
     report
         .is_object()
-        .then_some((GameKey { session, index }, report, parser))
+        .then_some((GameKey { session, index }, report, parser, saved_at))
 }
