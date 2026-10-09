@@ -1,9 +1,13 @@
 //! `tavern-watch`: follows Power.log and saves each Battlegrounds game locally.
 //!
 //!     tavern-watch [--logs-dir PATH] [--data-dir PATH] [--once] [--import]
+//!     tavern-watch --reparse [--logs-dir PATH] [--data-dir PATH]
 //!
 //! --once     read what is there now, save it and exit
 //! --import   also read every older session folder first
+//! --reparse  re-read the sessions in the history whose logs are still on
+//!            disk, save the games whose report changed, list the games
+//!            whose logs are gone, and exit
 //!
 //! Prints card ids and places only, never player names. Only reads the
 //! game's log files; never touches the game (D-004).
@@ -15,8 +19,9 @@ use std::time::Duration;
 
 use tracker::discover::{find_logs_dir, is_session_name};
 use tracker::lock::{HistoryLock, LockError};
+use tracker::setup::{check_setup, client_config_path, default_log_config_path};
 use tracker::store::Store;
-use tracker::{import_session, Saved, Watcher};
+use tracker::{import_session, reparse, Saved, UnavailableReason, Watcher};
 
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
 
@@ -25,6 +30,7 @@ struct Args {
     data_dir: Option<PathBuf>,
     once: bool,
     import: bool,
+    reparse: bool,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -33,6 +39,7 @@ fn parse_args() -> Result<Args, String> {
         data_dir: None,
         once: false,
         import: false,
+        reparse: false,
     };
     let mut it = std::env::args().skip(1);
     while let Some(arg) = it.next() {
@@ -45,6 +52,7 @@ fn parse_args() -> Result<Args, String> {
             }
             "--once" => args.once = true,
             "--import" => args.import = true,
+            "--reparse" => args.reparse = true,
             other => return Err(format!("unknown argument: {other}")),
         }
     }
@@ -90,7 +98,42 @@ fn import_all(logs_dir: &std::path::Path, store: &mut Store) -> std::io::Result<
     Ok(())
 }
 
+fn why(reason: &UnavailableReason) -> String {
+    match reason {
+        UnavailableReason::LogsGone => "the logs are gone".into(),
+        UnavailableReason::LogsIncomplete => {
+            "the logs on disk are incomplete, so game numbers could have shifted".into()
+        }
+        UnavailableReason::Unreadable(kind) => format!("a log could not be read ({kind})"),
+    }
+}
+
+fn run_reparse(logs_dir: &std::path::Path, store: &mut Store) -> Result<(), String> {
+    let outcome = reparse(logs_dir, store).map_err(|e| format!("reparse failed: {e}"))?;
+    for saved in &outcome.changed {
+        println!("Updated {}", describe(saved));
+    }
+    for u in &outcome.unavailable {
+        println!(
+            "Could not re-read {} game {}: {}",
+            u.key.session,
+            u.key.index,
+            why(&u.reason)
+        );
+    }
+    println!(
+        "Reparsed {} sessions: {} games changed, {} could not be re-read",
+        outcome.sessions_read,
+        outcome.changed.len(),
+        outcome.unavailable.len()
+    );
+    Ok(())
+}
+
 fn run(args: Args) -> Result<(), String> {
+    // The config files belong to the installed game: with --logs-dir (a
+    // copy, a replay) they say nothing about that folder, so they are not checked.
+    let check_setup_files = args.logs_dir.is_none();
     let logs_dir = args
         .logs_dir
         .or_else(find_logs_dir)
@@ -111,7 +154,17 @@ fn run(args: Args) -> Result<(), String> {
         );
     }
     println!("Logs: {}", logs_dir.display());
+    if check_setup_files {
+        let log_config = default_log_config_path();
+        let client_config = client_config_path(&logs_dir);
+        for message in check_setup(log_config.as_deref(), client_config.as_deref()).messages() {
+            println!("Setup: {message}");
+        }
+    }
     println!("History: {}", store.path().display());
+    if args.reparse {
+        return run_reparse(&logs_dir, &mut store);
+    }
     if args.import {
         import_all(&logs_dir, &mut store).map_err(|e| format!("import failed: {e}"))?;
     }

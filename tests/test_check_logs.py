@@ -61,6 +61,81 @@ class PowerProblemsTest(unittest.TestCase):
         )
 
 
+class ClientProblemsTest(unittest.TestCase):
+    def test_unlimited_log_size_is_fine(self):
+        cfg = check_logs.parse_log_config("[Log]\nFileSizeLimit.Int=-1\n")
+        self.assertEqual(check_logs.client_problems(cfg), [])
+
+    def test_names_are_case_insensitive(self):
+        cfg = check_logs.parse_log_config("[log]\nfilesizelimit.int = -1\n")
+        self.assertEqual(check_logs.client_problems(cfg), [])
+
+    def test_missing_section_and_missing_key_and_wrong_value(self):
+        for text, expected in (
+            ("[Graphics]\nWidth=1\n", "[Log] FileSizeLimit.Int missing (expected -1)"),
+            ("[Log]\nOther=1\n", "[Log] FileSizeLimit.Int missing (expected -1)"),
+            ("[Log]\nFileSizeLimit.Int=10000\n", "[Log] FileSizeLimit.Int=10000 (expected -1)"),
+        ):
+            cfg = check_logs.parse_log_config(text)
+            self.assertEqual(check_logs.client_problems(cfg), [expected], text)
+
+
+class CheckConfigFileTest(unittest.TestCase):
+    """Missing file, missing setting and unreadable file are three states."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.dir = Path(tmp.name)
+
+    def test_missing_file(self):
+        result = check_logs.check_config_file(self.dir / "nope", check_logs.client_problems)
+        self.assertEqual(result.state, "file_missing")
+
+    def test_unreadable_file(self):
+        folder = self.dir / "client.config"
+        folder.mkdir()  # a folder where the file should be cannot be read
+        result = check_logs.check_config_file(folder, check_logs.client_problems)
+        self.assertEqual(result.state, "unreadable")
+        self.assertTrue(result.problems)
+
+    def test_missing_setting(self):
+        path = self.dir / "client.config"
+        path.write_text("[Log]\n", encoding="utf-8")
+        result = check_logs.check_config_file(path, check_logs.client_problems)
+        self.assertEqual(result.state, "settings_missing")
+        self.assertEqual(result.problems, ["[Log] FileSizeLimit.Int missing (expected -1)"])
+
+    def test_ok_and_file_is_not_modified(self):
+        path = self.dir / "client.config"
+        path.write_text("﻿[Log]\nFileSizeLimit.Int=-1\n", encoding="utf-8")
+        before = path.read_bytes()
+        result = check_logs.check_config_file(path, check_logs.client_problems)
+        self.assertEqual(result.state, "ok")
+        self.assertEqual(path.read_bytes(), before)
+
+    def test_no_path_counts_as_missing_file(self):
+        result = check_logs.check_config_file(None, check_logs.client_problems)
+        self.assertEqual(result.state, "file_missing")
+
+    def test_report_says_what_to_change_per_state(self):
+        client = check_logs.ConfigCheck(
+            Path("client.config"),
+            "settings_missing",
+            ["[Log] FileSizeLimit.Int missing (expected -1)"],
+        )
+        report = check_logs.format_report(None, None, None, [], client=client)
+        self.assertIn("client.config:", report)
+        self.assertIn("stops writing", report)
+        self.assertIn("FileSizeLimit.Int=-1", report)
+        missing = check_logs.ConfigCheck(None, "file_missing", [])
+        self.assertIn("not found", check_logs.format_report(None, None, None, [], client=missing))
+        broken = check_logs.ConfigCheck(Path("c"), "unreadable", ["locked"])
+        self.assertIn(
+            "could not be read", check_logs.format_report(None, None, None, [], client=broken)
+        )
+
+
 class SessionStartTest(unittest.TestCase):
     def test_parses_session_folder_name(self):
         self.assertEqual(

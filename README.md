@@ -22,6 +22,8 @@ Web stack (T-103): a static Astro site plus Supabase in the EU (Postgres, login,
 
 Backend (T-104a): the database schema, row-level security, export, account deletion and backups exist and are tested on a local Supabase stack. Clients can only read their own data and public profiles; game uploads will go through one server function. The hosted project is not created yet.
 
+Robustness (session 014): the app and `check_logs.py` check that the game is set up to write a complete log (`log.config` and `client.config`), every saved game records which parser version read it, `tavern-watch --reparse` re-reads old sessions after a parser fix, and a dev tool replays a saved log so the app can be tested without playing.
+
 Next tasks: T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), the hosted Supabase project (T-104a, needs the user) and T-104b to T-104d (privacy policy, website and upload).
 
 ## Check your log setup
@@ -32,7 +34,9 @@ Read-only script (Python 3.10+, no dependencies). It reports whether `log.config
 python tools/check_logs.py
 ```
 
-Options: `--config PATH` and `--logs-dir PATH` if your install is not found automatically.
+It also checks `client.config` next to `Hearthstone.exe`: without `[Log]` `FileSizeLimit.Int=-1` the game stops writing the log at about 10 MB. A missing file, an unreadable file and a missing setting are reported as three different problems, with the lines to add. The script never edits either file.
+
+Options: `--config PATH`, `--client-config PATH` and `--logs-dir PATH` if your install is not found automatically.
 
 ## Parse a log (prototype)
 
@@ -76,7 +80,19 @@ the lobby. Unfinished or unreadable games are counted apart, never as places.
 ```
 cargo run --release -p tracker -- --import    # follow live, after importing older sessions
 cargo run --release -p desktop                # the app
+cargo run --release -p tracker -- --reparse   # re-read saved sessions after a parser fix
 cargo run --release -p bg-parser -- "<path>\Power_old.log" --json
+```
+
+Each saved game records the parser version that read it (shown in the tooltip of its date in the app; older records say "unknown version"). `--reparse` saves only games whose report changed and lists the ones whose logs are gone; it does not run while the app is open.
+
+### Replay a log (development only)
+
+To try the app or `tavern-watch` without playing, replay a saved log into a temporary folder. Never shipped to users; it only writes under the folder you give it.
+
+```
+python tools/dev/replay_log.py "<path>\Power_old.log" --dest-dir "$env:TEMP\replay" --lines-per-second 500
+cargo run -p tracker -- --logs-dir "$env:TEMP\replay\Logs" --data-dir "$env:TEMP\replay\data"
 ```
 
 ## Development

@@ -4,11 +4,12 @@
 
 pub mod discover;
 pub mod lock;
+pub mod setup;
 pub mod stats;
 pub mod store;
 pub mod tail;
 
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fs::File;
 use std::io::{self, BufReader};
 use std::path::{Path, PathBuf};
@@ -140,13 +141,8 @@ fn save_report(
     }))
 }
 
-/// Reads one finished session folder (Power_old.log, then Power.log) and
-/// saves its games. For games played before the tracker existed.
-pub fn import_session(session_dir: &Path, store: &mut Store) -> io::Result<Vec<Saved>> {
-    let name = session_dir
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_default();
+/// Reads one session folder (Power_old.log, then Power.log) into reports.
+fn read_session(session_dir: &Path) -> io::Result<Vec<GameReport>> {
     let mut reader = LogReader::default();
     for file in [tail::POWER_OLD_LOG, tail::POWER_LOG] {
         let path = session_dir.join(file);
@@ -155,9 +151,108 @@ pub fn import_session(session_dir: &Path, store: &mut Store) -> io::Result<Vec<S
             for_each_chunk(input, &mut |chunk| reader.feed_chunk(chunk))?;
         }
     }
+    Ok(reader.finish())
+}
+
+fn session_name(session_dir: &Path) -> String {
+    session_dir
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
+/// Reads one finished session folder (Power_old.log, then Power.log) and
+/// saves its games. For games played before the tracker existed.
+pub fn import_session(session_dir: &Path, store: &mut Store) -> io::Result<Vec<Saved>> {
+    let name = session_name(session_dir);
     let mut saved = Vec::new();
-    for report in reader.finish() {
+    for report in read_session(session_dir)? {
         saved.extend(save_report(store, name.clone(), &report)?);
     }
     Ok(saved)
+}
+
+/// Why a stored game could not be re-read.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UnavailableReason {
+    /// The session folder or its Power logs are gone.
+    LogsGone,
+    /// The logs on disk hold fewer games than the history has for the
+    /// session (the game rotated part of them away), so game numbers could
+    /// have shifted. Nothing of the session is overwritten.
+    LogsIncomplete,
+    /// A log could not be read (the error kind).
+    Unreadable(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Unavailable {
+    pub key: GameKey,
+    pub reason: UnavailableReason,
+}
+
+#[derive(Debug, Default)]
+pub struct ReparseOutcome {
+    /// Sessions whose logs were on disk and complete enough to re-read.
+    pub sessions_read: usize,
+    /// Games whose report changed and were saved (the last record wins, D-015).
+    pub changed: Vec<Saved>,
+    pub unavailable: Vec<Unavailable>,
+}
+
+/// Re-reads every session in the history whose logs are still in
+/// `logs_dir` and saves the games whose report differs from the stored one.
+/// Games whose logs are gone are listed, never changed or deleted (T-107).
+pub fn reparse(logs_dir: &Path, store: &mut Store) -> io::Result<ReparseOutcome> {
+    let mut stored: BTreeMap<String, Vec<GameKey>> = BTreeMap::new();
+    for (key, _) in store.games() {
+        stored
+            .entry(key.session.clone())
+            .or_default()
+            .push(key.clone());
+    }
+    let mut outcome = ReparseOutcome::default();
+    for (session, keys) in stored {
+        let dir = logs_dir.join(&session);
+        let has_logs = [tail::POWER_OLD_LOG, tail::POWER_LOG]
+            .iter()
+            .any(|f| dir.join(f).is_file());
+        let mut skip = |reason: UnavailableReason, keys: Vec<GameKey>| {
+            let missing = keys.into_iter().map(|key| Unavailable {
+                key,
+                reason: reason.clone(),
+            });
+            outcome.unavailable.extend(missing);
+        };
+        if !has_logs {
+            skip(UnavailableReason::LogsGone, keys);
+            continue;
+        }
+        let reports = match read_session(&dir) {
+            Ok(reports) => reports,
+            Err(e) => {
+                skip(
+                    UnavailableReason::Unreadable(format!("{:?}", e.kind())),
+                    keys,
+                );
+                continue;
+            }
+        };
+        let found: BTreeSet<u64> = reports.iter().map(|r| r.index as u64).collect();
+        let missing: Vec<GameKey> = keys
+            .into_iter()
+            .filter(|k| !found.contains(&k.index))
+            .collect();
+        if !missing.is_empty() {
+            skip(UnavailableReason::LogsIncomplete, missing);
+            continue;
+        }
+        outcome.sessions_read += 1;
+        for report in &reports {
+            outcome
+                .changed
+                .extend(save_report(store, session.clone(), report)?);
+        }
+    }
+    Ok(outcome)
 }
