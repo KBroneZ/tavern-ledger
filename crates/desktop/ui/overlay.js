@@ -1,7 +1,7 @@
 // The overlay (T-301). The app decides every value and its source
-// (tracker::live); this file only shows them. The window is click-through, so
-// a source is always a word on the page, never a tooltip. Text is set with
-// textContent only: nothing from the log is ever treated as markup.
+// (tracker::live); this file only shows them. The window is click-through
+// while locked, so a source is always a word on the page, never a tooltip.
+// Text is set with textContent only: nothing from the log is ever treated as markup.
 "use strict";
 
 const { invoke } = window.__TAURI__.core;
@@ -11,6 +11,18 @@ const MODES = { GT_BATTLEGROUNDS: "Solo", GT_BATTLEGROUNDS_DUO: "Duos" };
 const SOURCES = ["log", "inferred", "entered", "leaderboard", "unknown"];
 
 let game = null;
+// While the layout is being edited and no game is on, the panels show the
+// example game so there is something to arrange (overlay-example.js).
+let editing = false;
+
+function current() {
+  return game || (editing ? EXAMPLE_GAME : null);
+}
+
+function setEditing(on) {
+  editing = on;
+  render();
+}
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -21,7 +33,8 @@ function el(tag, className, text) {
 
 function label(source) {
   const key = SOURCES.includes(source) ? source : "unknown";
-  const entry = game && game.legend.find((e) => e.source === key);
+  const shown = current();
+  const entry = shown && shown.legend.find((e) => e.source === key);
   return entry ? entry.label : key;
 }
 
@@ -84,6 +97,7 @@ function renderStatus(g) {
   }
   line.append(sep(), sourced(el("span"), g.own_health), " hp");
   panel.append(line);
+  if (g === EXAMPLE_GAME) panel.append(el("p", "notes", "Example data: no game is on."));
   const notes = [...g.warnings, ...g.problems].slice(0, 2);
   if (notes.length) panel.append(el("p", "notes", notes.join(" · ")));
 }
@@ -169,7 +183,8 @@ function renderOpponents(g) {
 
 function render() {
   const legend = document.getElementById("legend");
-  if (!game) {
+  const g = current();
+  if (!g) {
     const status = document.getElementById("status");
     status.className = "panel status";
     status.textContent = "Waiting for a game…";
@@ -178,14 +193,14 @@ function render() {
     legend.hidden = true;
     return;
   }
-  renderStatus(game);
-  const showPanels = game.phase === "playing" || game.phase === "over";
+  renderStatus(g);
+  const showPanels = g.phase === "playing" || g.phase === "over";
   document.getElementById("tribes").hidden = !showPanels;
   document.getElementById("opponents").hidden = !showPanels;
   legend.hidden = !showPanels;
   if (showPanels) {
-    renderTribes(game);
-    renderOpponents(game);
+    renderTribes(g);
+    renderOpponents(g);
   }
 }
 
@@ -215,5 +230,9 @@ function showError(error) {
   panel.textContent = `The overlay could not update (${error}).`;
   for (const id of ["tribes", "opponents", "legend"]) document.getElementById(id).hidden = true;
 }
+
+// A script error must show on the page too: nobody can open a console on this window.
+window.addEventListener("error", (e) => showError(e.message));
+window.addEventListener("unhandledrejection", (e) => showError(e.reason));
 
 start().catch(showError);

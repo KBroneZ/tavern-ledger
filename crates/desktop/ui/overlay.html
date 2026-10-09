@@ -7,10 +7,32 @@
 <link rel="stylesheet" href="overlay.css">
 </head>
 <body>
-  <section id="status" class="panel status" aria-label="Game status">Waiting for a game…</section>
-  <section id="tribes" class="panel" aria-label="Tribes" hidden></section>
-  <section id="opponents" class="panel" aria-label="Opponents" hidden></section>
-  <p id="legend" class="legend" hidden>No mark: from the log.</p>
+  <div id="scrim" hidden></div>
+  <div id="toolbar" class="toolbar" role="toolbar" aria-label="Overlay layout" hidden>
+    <strong class="toolbar-title">Layout editing</strong>
+    <span id="toolbar-note" class="toolbar-note">Clicks do not reach the game while unlocked. Drag a panel to move it, its corner to resize it. Example data is shown when no game is on.</span>
+    <span class="toolbar-row" id="theme-buttons" role="group" aria-label="Theme"></span>
+    <span class="toolbar-row" role="group" aria-label="Opacity">
+      <span class="toolbar-label">Opacity</span>
+      <button type="button" id="opacity-down" aria-label="Less opaque">&minus;</button>
+      <output id="opacity-value">90%</output>
+      <button type="button" id="opacity-up" aria-label="More opaque">+</button>
+    </span>
+    <span class="toolbar-row" id="panel-toggles" role="group" aria-label="Panels shown"></span>
+    <span class="toolbar-row">
+      <button type="button" id="reset-layout">Reset layout</button>
+      <button type="button" id="lock" class="primary">Lock overlay</button>
+    </span>
+    <span id="toolbar-warning" class="toolbar-warning" role="alert" hidden></span>
+  </div>
+  <div id="stack">
+    <div class="slot" data-panel="status"><section id="status" class="panel status" aria-label="Game status">Waiting for a game…</section><span class="grip" hidden></span></div>
+    <div class="slot" data-panel="tribes"><section id="tribes" class="panel" aria-label="Tribes" hidden></section><span class="grip" hidden></span></div>
+    <div class="slot" data-panel="opponents"><section id="opponents" class="panel" aria-label="Opponents" hidden></section><span class="grip" hidden></span></div>
+    <div class="slot" data-panel="legend"><p id="legend" class="panel legend" hidden>No mark: from the log.</p><span class="grip" hidden></span></div>
+  </div>
+  <script src="overlay-example.js"></script>
   <script src="overlay.js"></script>
+  <script src="overlay-layout.js"></script>
 </body>
 </html>
