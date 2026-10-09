@@ -1,0 +1,9 @@
+{
+  "name": "tavern-ledger",
+  "private": true,
+  "description": "Dev tooling only (Supabase CLI for the local stack).",
+  "license": "MIT",
+  "devDependencies": {
+    "supabase": "2.118.0"
+  }
+}
