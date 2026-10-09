@@ -104,6 +104,9 @@ fn why(reason: &UnavailableReason) -> String {
         UnavailableReason::LogsIncomplete => {
             "the logs on disk are incomplete, so game numbers could have shifted".into()
         }
+        UnavailableReason::Degraded => {
+            "the logs on disk give a worse reading than the saved game, which is kept".into()
+        }
         UnavailableReason::Unreadable(kind) => format!("a log could not be read ({kind})"),
     }
 }

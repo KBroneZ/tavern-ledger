@@ -183,6 +183,9 @@ pub enum UnavailableReason {
     LogsIncomplete,
     /// A log could not be read (the error kind).
     Unreadable(String),
+    /// The stored game is complete (`ok`) but the logs on disk only give a
+    /// worse reading (cut short, unsupported). The good record is kept.
+    Degraded,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -202,7 +205,9 @@ pub struct ReparseOutcome {
 
 /// Re-reads every session in the history whose logs are still in
 /// `logs_dir` and saves the games whose report differs from the stored one.
-/// Games whose logs are gone are listed, never changed or deleted (T-107).
+/// Games whose logs are gone or only give a worse reading are listed, never
+/// changed or deleted; games not in the history are not added (T-107). A
+/// game whose report is unchanged keeps its old parser stamp.
 pub fn reparse(logs_dir: &Path, store: &mut Store) -> io::Result<ReparseOutcome> {
     let mut stored: BTreeMap<String, Vec<GameKey>> = BTreeMap::new();
     for (key, _) in store.games() {
@@ -249,6 +254,22 @@ pub fn reparse(logs_dir: &Path, store: &mut Store) -> io::Result<ReparseOutcome>
         }
         outcome.sessions_read += 1;
         for report in &reports {
+            let key = GameKey {
+                session: session.clone(),
+                index: report.index as u64,
+            };
+            // Only games already in the history are updated.
+            let Some(stored) = store.report(&key) else {
+                continue;
+            };
+            let was_ok = stored.get("status").and_then(|s| s.as_str()) == Some("ok");
+            if was_ok && report.status != Status::Ok {
+                outcome.unavailable.push(Unavailable {
+                    key,
+                    reason: UnavailableReason::Degraded,
+                });
+                continue;
+            }
             outcome
                 .changed
                 .extend(save_report(store, session.clone(), report)?);

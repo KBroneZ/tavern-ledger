@@ -103,6 +103,9 @@ def main(argv: list[str] | None = None) -> int:
     if not args.source.is_file():
         print(f"Source not found: {args.source}", file=sys.stderr)
         return 2
+    if args.session_name and Path(args.session_name).name != args.session_name:
+        print("--session-name must be a plain folder name", file=sys.stderr)
+        return 2
     if args.lines_per_second < 0:
         print("--lines-per-second cannot be negative", file=sys.stderr)
         return 2

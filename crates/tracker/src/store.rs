@@ -148,6 +148,11 @@ impl Store {
         self.games.iter()
     }
 
+    /// Latest report of one game.
+    pub fn report(&self, key: &GameKey) -> Option<&Value> {
+        self.games.get(key)
+    }
+
     /// The parser that wrote the latest record of a game; `None` is
     /// "unknown version" (a record from before the version was saved).
     pub fn parser(&self, key: &GameKey) -> Option<&ParserStamp> {

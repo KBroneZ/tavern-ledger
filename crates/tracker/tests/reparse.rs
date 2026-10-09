@@ -164,6 +164,43 @@ fn incomplete_logs_never_overwrite_games_whose_numbers_could_shift() {
 }
 
 #[test]
+fn a_cut_short_log_never_replaces_a_complete_game() {
+    let (logs, data, mut store) = setup();
+    // Session B's log loses its end (the game stopped writing at its size limit).
+    let power = logs.join(SESSION_B).join("Power.log");
+    let text = fs::read_to_string(&power).unwrap();
+    let cut = text.find("STATE value=COMPLETE").unwrap();
+    fs::write(&power, &text[..cut]).unwrap();
+    let before = fs::read_to_string(data.join("games.jsonl")).unwrap();
+
+    let outcome = reparse(&logs, &mut store).unwrap();
+    assert!(outcome.changed.is_empty());
+    assert_eq!(outcome.unavailable.len(), 1);
+    assert_eq!(outcome.unavailable[0].key, key(SESSION_B, 1));
+    assert_eq!(outcome.unavailable[0].reason, UnavailableReason::Degraded);
+    assert_eq!(
+        fs::read_to_string(data.join("games.jsonl")).unwrap(),
+        before
+    );
+}
+
+#[test]
+fn games_missing_from_the_history_are_not_added() {
+    let (logs, data, mut store) = setup();
+    append(
+        &logs.join(SESSION_B).join("Power.log"),
+        &fixture("duo_game"),
+    );
+    let before = fs::read_to_string(data.join("games.jsonl")).unwrap();
+    let outcome = reparse(&logs, &mut store).unwrap();
+    assert!(outcome.changed.is_empty());
+    assert_eq!(
+        fs::read_to_string(data.join("games.jsonl")).unwrap(),
+        before
+    );
+}
+
+#[test]
 fn new_records_carry_the_parser_version_and_old_ones_load_as_unknown() {
     let (_, data, store) = setup();
     let current = ParserStamp {

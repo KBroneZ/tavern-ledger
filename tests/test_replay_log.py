@@ -85,6 +85,14 @@ class ReplayTest(unittest.TestCase):
             code = replay_log.main([str(self.dir / "nope.log")])
         self.assertEqual(code, 2)
 
+    def test_session_name_cannot_leave_the_destination(self):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code = replay_log.main(
+                [str(FIXTURE), "--dest-dir", str(self.dir), "--session-name", "../x"]
+            )
+        self.assertEqual(code, 2)
+
     def test_refuses_to_write_inside_the_game_folder(self):
         original = replay_log.check_logs.find_install_dir
         replay_log.check_logs.find_install_dir = lambda: self.dir / "Hearthstone"
