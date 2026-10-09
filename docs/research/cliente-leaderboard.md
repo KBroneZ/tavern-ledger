@@ -22,7 +22,7 @@ Ningún nombre de jugador sale de las medidas ni entra en el repo: los scripts d
 | 3 | 00:49 | Página 1, gzip, `If-None-Match` con el `ETag` del #1 | **200, no 304**, tercer `ETag` distinto con el mismo tamaño de cuerpo |
 | 4–8 | 00:50 | Páginas 173, 150, 125, 100 y 70, gzip | Reparto de ratings (abajo). 0 nombres repetidos dentro de cada página; 0–2 nombres no ASCII por página |
 | 9 | 00:53 | Página 150 otra vez | Filas idénticas (mismo hash) a las de 3 minutos antes |
-| 10 | (ver "Frecuencia de actualización") | Página 150 otra vez | — |
+| 10 | 01:49 | Página 150 otra vez | **Filas distintas** (otro hash, última fila 8018 en vez de 8017) y `totalSize` 4313 |
 
 ### Reparto de ratings (Solo EU, 4310 filas, 173 páginas)
 
@@ -43,7 +43,9 @@ Aparte del presupuesto de medidas: 4 peticiones del propio cliente (01:04) con u
 
 ### Frecuencia de actualización
 
-La página 150 (zona densa, donde cualquier cambio se nota) devolvió las mismas filas a las 00:50 y a las 00:53: el leaderboard no cambia cada pocos segundos. Entre la consulta de T-004 y la de esta sesión, `totalSize` pasó de 4305 a 4310. Petición 10: pendiente al cerrar la sesión (ver abajo).
+La página 150 (zona densa, donde cualquier cambio se nota) devolvió las mismas filas a las 00:50 y a las 00:53: el leaderboard no cambia cada pocos segundos. A las 01:49 (56 minutos después) ya había cambiado: otras filas y `totalSize` de 4310 a 4313. Entre la consulta de T-004 y la de esta sesión había pasado de 4305 a 4310.
+
+Conclusión: el leaderboard se actualiza por tandas, con una frecuencia entre unos minutos y menos de una hora. Afinarla exigiría muchas más peticiones y no cambia la estrategia: consultar más de una vez cada pocos minutos no aporta (de ahí la espera mínima de 5 min), y un recorrido completo (~7 min) puede coincidir con una tanda, caso que detecta la comprobación de la última página.
 
 ## Estrategia (D-013)
 
@@ -90,7 +92,7 @@ Todo lo raro da "unknown", nunca un valor:
 
 ## Riesgos y dudas abiertas
 
-- **Filas que cruzan de página durante un recorrido.** Si alguien sube o baja junto al jugador entre dos peticiones, este puede salir dos veces ("ambiguous" falso) o ninguna ("below" falso). La comprobación de la última página lo detecta si el leaderboard se actualiza durante el recorrido; la medida 9 indica que no cambia en minutos. Riesgo residual bajo; repasarlo cuando se conozca la frecuencia real.
+- **Filas que cruzan de página durante un recorrido.** Si alguien sube o baja junto al jugador entre dos peticiones, este puede salir dos veces ("ambiguous" falso) o ninguna ("below" falso). La comprobación de la última página detecta una tanda nueva durante el recorrido (medidas 9 y 10: el leaderboard cambia por tandas, entre minutos y menos de una hora). Si la tanda solo cambia páginas del medio y no la última, no se detecta; riesgo residual bajo, y el recorrido del día siguiente lo corrige.
 - **Mayúsculas y Unicode.** La comparación es exacta, sin normalizar (D-011). El 0–8 % de los nombres de cada página tiene caracteres no ASCII. Si el log local y la web escribieran un mismo nombre con otra normalización Unicode, el cliente diría "below" en vez del rating. Comprobar con la fila propia de un usuario que esté en el top antes de portarlo.
 - **Nombre repetido entre recorridos.** Si otro jugador con el mismo nombre entra después del último recorrido completo y fuera de la ventana, la búsqueda dirigida daría el rating propio sin ver al otro. El recorrido diario lo corrige; la confianza caduca a los 7 días.
 - **Un recorrido que falla gasta el del día.** A propósito: un día con la red inestable no se convierte en varios recorridos.
