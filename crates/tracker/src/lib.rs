@@ -3,6 +3,7 @@
 //! log files (D-004).
 
 pub mod discover;
+pub mod live;
 pub mod lobby_tribes;
 pub mod lock;
 pub mod provenance;
@@ -39,6 +40,10 @@ pub struct Watcher {
     /// Finished games not saved yet. They survive a failed poll or a failed
     /// write and are saved on the next poll.
     pending: VecDeque<(String, GameReport)>,
+    /// The game in progress as of the last poll that read lines (for the
+    /// overlay). Rebuilt only when the log moved.
+    live: Option<GameReport>,
+    live_stale: bool,
 }
 
 impl Watcher {
@@ -48,6 +53,8 @@ impl Watcher {
             reader: None,
             store,
             pending: VecDeque::new(),
+            live: None,
+            live_stale: true,
         }
     }
 
@@ -57,14 +64,17 @@ impl Watcher {
     pub fn poll(&mut self) -> io::Result<Vec<Saved>> {
         let reader = &mut self.reader;
         let pending = &mut self.pending;
+        let live_stale = &mut self.live_stale;
         let read = self.follower.poll(&mut |event| match event {
             Event::Session(name) => {
+                *live_stale = true;
                 if let Some((old, r)) = reader.take() {
                     pending.extend(r.finish().into_iter().map(|g| (old.clone(), g)));
                 }
                 *reader = Some((name.to_string(), LogReader::default()));
             }
             Event::Line(line) => {
+                *live_stale = true;
                 if let Some((session, r)) = reader.as_mut() {
                     r.feed(line);
                     let done = r
@@ -75,6 +85,7 @@ impl Watcher {
                 }
             }
             Event::TooLong => {
+                *live_stale = true;
                 if let Some((_, r)) = reader.as_mut() {
                     r.feed_too_long();
                 }
@@ -125,6 +136,24 @@ impl Watcher {
             session: session.clone(),
             index: reader.in_progress_index()? as u64,
         })
+    }
+
+    /// What the Battlegrounds game being played now looks like so far, for
+    /// the overlay; `None` when no game is on. Built by the same parser as the
+    /// saved report and kept until the log moves.
+    pub fn live_report(&mut self) -> Option<&GameReport> {
+        let snapshot = match self.reader.as_ref() {
+            Some((_, reader)) if reader.in_progress_index().is_some() => {
+                if !self.live_stale && self.live.is_some() {
+                    return self.live.as_ref();
+                }
+                reader.snapshot_current()
+            }
+            _ => None,
+        };
+        self.live_stale = false;
+        self.live = snapshot;
+        self.live.as_ref()
     }
 
     /// See [`Follower::has_power_log`].
