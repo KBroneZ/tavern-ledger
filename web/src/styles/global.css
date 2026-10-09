@@ -126,6 +126,7 @@ main {
 h1,
 h2,
 h3 {
+  overflow-wrap: anywhere;
   font-family: var(--font-display);
   font-weight: 800;
   line-height: 1.12;
@@ -615,7 +616,7 @@ input[type="text"] {
 input[type="email"]:focus,
 input[type="password"]:focus,
 input[type="text"]:focus {
-  outline: none;
+  outline: 2px solid transparent;
   border-color: var(--teal);
   box-shadow: 0 0 0 3px rgb(46 230 197 / 0.25);
 }

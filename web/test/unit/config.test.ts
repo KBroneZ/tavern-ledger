@@ -84,6 +84,7 @@ test("the CSP allows scripts and styles from the site only and connects to Supab
   assert.equal(directives["default-src"], "'none'");
   assert.equal(directives["script-src"], "'self'");
   assert.equal(directives["style-src"], "'self'");
+  assert.equal(directives["font-src"], "'self'");
   assert.equal(directives["connect-src"], "https://abcd.supabase.co");
   assert.equal(directives["base-uri"], "'none'");
   assert.equal(directives["form-action"], "'self'");
@@ -96,6 +97,7 @@ test("with accounts closed the CSP allows no script, form or connection", () => 
     assert.match(csp, new RegExp(`(^|; )${directive} 'none'(;|$)`), directive);
   }
   assert.match(csp, /(^|; )style-src 'self'(;|$)/);
+  assert.match(csp, /(^|; )font-src 'self'(;|$)/);
 });
 
 const BACKEND = { PUBLIC_SUPABASE_URL: "https://abcd.supabase.co", PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_x" };

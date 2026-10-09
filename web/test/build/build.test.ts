@@ -46,6 +46,7 @@ test("every page has the CSP as its first meta after the charset", () => {
     assert.match(csp, CONFIG ? /script-src 'self'(;|$)/ : /script-src 'none'(;|$)/, name(page));
     assert.match(csp, CONFIG ? /form-action 'self'(;|$)/ : /form-action 'none'(;|$)/, name(page));
     assert.match(csp, /style-src 'self'(;|$)/, name(page));
+    assert.match(csp, /font-src 'self'(;|$)/, name(page));
     if (CONFIG) assert.match(csp, /connect-src https?:\/\/[^\s;*]+(;|$)/, name(page));
     else assert.match(csp, /connect-src 'none'(;|$)/, name(page));
     assert.doesNotMatch(csp, /unsafe|\*/, name(page));
@@ -164,11 +165,13 @@ test("only the public key is in the files", () => {
 test("fonts and styles are our own files: every url() is a local font, none is external", () => {
   const css = ALL.filter((f) => f.endsWith(".css"));
   assert.ok(css.length > 0, "no stylesheet in dist");
+  const declared = css.flatMap((f) => [...readFileSync(f, "utf8").matchAll(/url\(/g)]);
+  assert.ok(declared.length >= 4, "the four font files are declared");
   for (const file of css) {
     const text = readFileSync(file, "utf8");
     assert.doesNotMatch(text, /@import|https?:\/\//i, name(file));
     const urls = [...text.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)].map((m) => m[1]);
-    assert.ok(urls.length >= 4, "the four font files are declared");
+
     for (const url of urls) {
       assert.match(url, /^\/fonts\/[a-z0-9-]+\.woff2$/, url);
       assert.ok(existsSync(join(DIST, url)), url);
