@@ -37,9 +37,11 @@ Lobby tribes by hand (T-303): the log never says which five tribes are in the lo
 
 Overlay (T-301): a small transparent window on top of the game with three panels: the tribes seen in the tavern (inferred) and the ones you entered (entered by you), each opponent by hero (health, the last board of theirs that entered play with the round it was seen, and your record against them, inferred from health), and a one-line status. It is off until you tick "Show overlay during a game" in the tray menu (the choice is kept), and it only shows while a Battlegrounds game is on and Hearthstone is the window in front (read from the front window's title and class only; nothing is opened or read in the game). Clicks go through it and it never takes focus. Every source is written on the panel (no mark: from the log); unknown values show `?`, an opponent not fought yet shows "not fought", and a game the parser cannot read says so instead of guessing. Boards show card ids and attack/health: the log names heroes only. **Exclusive fullscreen hides any overlay: run Hearthstone windowed or borderless.** Decision D-032.
 
+Customizable overlay (T-302): from the tray, "Unlock overlay to move and resize panels" lets you drag the panels, resize them by their corner, pick a theme (Tavern dark, Parchment light, High contrast), set the opacity (80-100%), choose which panels show and reset the layout; the bar at the top has a "Lock overlay" button. While unlocked the overlay takes every click on the screen (a dim layer says so) and shows example data if no game is on. It locks itself again when a game starts and is always locked when the app starts. Your layout is saved per screen resolution in `overlay.json` and kept on screen if the resolution changes; if that file is broken the defaults are used and the app says so. There is no hotkey. Decision D-033.
+
 Privacy and terms (T-104b): a data inventory written from the code, and drafts of the privacy policy and terms in [docs/legal/](docs/legal/), shown on the site at `/privacy/` and `/terms/`. They are not in force: the controller's name, some provider details and the legal checks of the email sender are still to be decided; the contact addresses exist. No analytics, minimum age 16.
 
-Next tasks: T-302 (movable and customizable overlay), T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), the hosted Supabase project and the email sender (session 022) and T-104b (fill in the open items of the privacy policy).
+Next tasks: T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), the hosted Supabase project and the email sender (session 022) and T-104b (fill in the open items of the privacy policy).
 
 ## Check your log setup
 
@@ -116,7 +118,7 @@ python tools/dev/replay_log.py "<path>\Power_old.log" --dest-dir "$env:TEMP\repl
 cargo run -p tracker -- --logs-dir "$env:TEMP\replay\Logs" --data-dir "$env:TEMP\replay\data"
 ```
 
-To see the overlay on a replayed game, follow the replayed folder with the app and force the overlay on (`--overlay-dev` turns it on, shows it whatever window is in front and saves no setting; `--logs-dir` is for this and nothing else):
+To see the overlay on a replayed game, follow the replayed folder with the app and force the overlay on (`--overlay-dev` turns it on, shows it whatever window is in front and does not save the on/off choice (layout and theme are saved in the data folder you give; `--overlay-unlock` starts it unlocked); `--logs-dir` is for this and nothing else):
 
 ```
 cargo run -p desktop -- --data-dir "$env:TEMP\replay\data" --logs-dir "$env:TEMP\replay\Logs" --overlay-dev

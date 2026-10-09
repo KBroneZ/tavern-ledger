@@ -4,6 +4,7 @@
 
 mod foreground;
 mod overlay;
+mod overlay_layout;
 mod upload;
 
 use std::collections::BTreeSet;
@@ -52,10 +53,15 @@ const DATA_DIR_ARG: &str = "--data-dir";
 /// Logs folder, e.g. a replayed log (development only, T-D02).
 const LOGS_DIR_ARG: &str = "--logs-dir";
 /// Development only: the overlay is on, shows whatever window is in front and
-/// saves no setting, so a replayed game can be checked without playing.
+/// does not save the on/off choice, so a replayed game can be checked without playing.
 const OVERLAY_DEV_ARG: &str = "--overlay-dev";
+/// Development only: starts with the layout unlocked, so a test can drive the
+/// mouse without opening the tray menu. A normal start is always locked.
+const OVERLAY_UNLOCK_ARG: &str = "--overlay-unlock";
 const MENU_SHOW: &str = "show";
 const MENU_OVERLAY: &str = "overlay";
+const MENU_UNLOCK: &str = "overlay-unlock";
+const MENU_RESET_LAYOUT: &str = "overlay-reset-layout";
 const MENU_AUTOSTART: &str = "autostart";
 const MENU_QUIT: &str = "quit";
 
@@ -644,9 +650,28 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
         state.overlay.enabled(),
         None::<&str>,
     )?;
+    let unlock = CheckMenuItem::with_id(
+        app,
+        MENU_UNLOCK,
+        "Unlock overlay to move and resize panels",
+        true,
+        false,
+        None::<&str>,
+    )?;
+    overlay::keep_unlock_item(&state, unlock.clone());
+    let reset_layout = MenuItem::with_id(
+        app,
+        MENU_RESET_LAYOUT,
+        "Reset overlay layout",
+        true,
+        None::<&str>,
+    )?;
     let show = MenuItem::with_id(app, MENU_SHOW, "Open Tavern Ledger", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, MENU_QUIT, "Quit", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&show, &overlay, &autostart, &quit])?;
+    let menu = Menu::with_items(
+        app,
+        &[&show, &overlay, &unlock, &reset_layout, &autostart, &quit],
+    )?;
     let mut tray = TrayIconBuilder::with_id("main")
         .tooltip("Tavern Ledger: following your Battlegrounds games")
         .menu(&menu)
@@ -655,6 +680,14 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
             MENU_SHOW => show_window(app),
             MENU_AUTOSTART => toggle_autostart(app, &autostart),
             MENU_OVERLAY => toggle_overlay(app, &overlay),
+            MENU_UNLOCK => {
+                let state = app.state::<Arc<AppState>>();
+                overlay::set_unlocked(app, &state, !state.overlay.unlocked());
+            }
+            MENU_RESET_LAYOUT => {
+                let state = app.state::<Arc<AppState>>();
+                overlay::change(app, &state, |s, _| s.reset_layout());
+            }
             MENU_QUIT => app.exit(0),
             _ => {}
         })
@@ -694,6 +727,13 @@ fn main() {
             lobby_tribes_view,
             edit_lobby_tribes,
             overlay_state,
+            overlay::overlay_settings,
+            overlay::overlay_save_layout,
+            overlay::overlay_set_theme,
+            overlay::overlay_set_opacity,
+            overlay::overlay_set_shown,
+            overlay::overlay_reset_layout,
+            overlay::overlay_set_unlocked,
             upload::upload_status,
             upload::upload_set_enabled,
             upload::upload_sign_in,
@@ -717,6 +757,10 @@ fn main() {
                 state.overlay.disable();
                 format!("The overlay could not be set up ({e}); it is off.")
             });
+            let unlock_asked = std::env::args().any(|a| a == OVERLAY_UNLOCK_ARG);
+            if overlay_dev(std::env::args()) && unlock_asked {
+                overlay::set_unlocked(app.handle(), &state, true);
+            }
             if let Some(message) = loaded.err().or(prepared.err()) {
                 set_status(app.handle(), &state, |s| s.notice = Some(message));
             }
