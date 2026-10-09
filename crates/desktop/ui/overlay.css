@@ -103,6 +103,7 @@ body {
 .src-entered { border-style: double; border-width: 3px; color: var(--info); }
 .src-leaderboard { border-style: solid; border-width: 2px; color: var(--info); }
 .src-unknown { border-style: dotted; color: var(--muted); }
+.src-card_data { border-style: solid; border-radius: 2px; color: var(--text); }
 
 .unknown-value {
   padding: 0 4px;
@@ -138,6 +139,22 @@ body {
 }
 .minion b { font-size: 12px; font-variant-numeric: tabular-nums; }
 .minion i { font: 9px/1.1 var(--font-body); color: var(--dim); font-style: normal; }
+.minion .art {
+  width: 34px;
+  height: 34px;
+  margin: 2px 0 1px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.minion i.unnamed { text-decoration: underline dotted; }
+.opponent .portrait {
+  flex: none;
+  align-self: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+}
 .minion.golden { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, transparent); }
 
 .legend {

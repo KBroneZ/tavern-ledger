@@ -54,6 +54,7 @@ const EXAMPLE_GAME = {
     { source: "inferred", label: "inferred" },
     { source: "entered", label: "entered by you" },
     { source: "leaderboard", label: "from the leaderboard" },
+    { source: "card_data", label: "card database" },
     { source: "unknown", label: "unknown" },
   ],
 };

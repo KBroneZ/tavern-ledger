@@ -27,7 +27,7 @@ function el(tag, className, text) {
 
 // Where a value comes from (T-109). The app decides the source (tracker::provenance)
 // and this file only shows it: a mark for every source but the log, and a tooltip on every value.
-const SOURCES = ["log", "inferred", "entered", "leaderboard", "unknown"];
+const SOURCES = ["log", "inferred", "entered", "leaderboard", "card_data", "unknown"];
 const sourceOf = (source) => (SOURCES.includes(source) ? source : "unknown");
 
 function sourceInfo(source) {
@@ -93,6 +93,14 @@ const shareText = (v) => dash(v, (x) => `${Math.round(x * 100)}%`);
 // The history is a local file; tolerate hand-edited or older records.
 const list = (value) => (Array.isArray(value) ? value : []);
 
+// The hero's portrait, looked up by the log's card id in the card data
+// (T-304); none when there is no id or no image (cards.js removes it).
+function portrait(id) {
+  const img = TLCards.art(id, "portrait");
+  if (img) img.title = `Picture: ${sourceInfo("card_data").label}. © Blizzard Entertainment.`;
+  return img;
+}
+
 // Hero name as the game's log printed it (in the game's language); the card
 // id when the log gave none. Never a guessed name.
 function heroCell(report, source) {
@@ -101,6 +109,8 @@ function heroCell(report, source) {
   const name = id && typeof names[id] === "string" ? names[id] : null;
   const cell = el("td", "hero", name || id || "—");
   if (name) cell.title = id;
+  const img = portrait(id);
+  if (img) cell.prepend(img);
   return withSource(cell, source);
 }
 
@@ -169,6 +179,8 @@ function heroRow(h, top) {
   const tr = el("tr");
   const cell = el("td", h.name ? "hero-name" : "hero", h.name || h.hero || "Unknown hero");
   if (h.variants.length) cell.title = h.variants.join("\n");
+  const img = portrait(h.hero);
+  if (img) cell.prepend(img);
   withSource(cell, h.name_source);
   withSource(cell, h.grouping);
   const t = h.tally;
@@ -500,6 +512,14 @@ function recapButton(game) {
 
 const heroText = (hero) => (hero && (hero.name || hero.id)) || "—";
 
+// The hero's name with its portrait in front, when there is one.
+function heroWithPortrait(hero) {
+  const node = el("span", "hero-with-portrait", heroText(hero));
+  const img = hero && portrait(hero.id);
+  if (img) node.prepend(img);
+  return node;
+}
+
 function fact(label, value, source) {
   const item = el("div", "fact");
   const dd = el("dd", null);
@@ -519,8 +539,8 @@ function recapFacts(r) {
   const facts = el("dl", "facts");
   const mode = MODES[r.game_type.value] || r.game_type.value || "—";
   facts.append(fact("Mode", mode, r.game_type.source));
-  facts.append(fact("Hero", heroText(r.hero.value), r.hero.source));
-  if (r.is_duos) facts.append(fact("Teammate", heroText(r.teammate_hero.value), r.teammate_hero.source));
+  facts.append(fact("Hero", heroWithPortrait(r.hero.value), r.hero.source));
+  if (r.is_duos) facts.append(fact("Teammate", heroWithPortrait(r.teammate_hero.value), r.teammate_hero.source));
   facts.append(fact("Place", placeBadge(r.place.value, r.top_half), r.place.source));
   facts.append(fact("Final health", r.final_health.value ?? "—", r.final_health.source));
   facts.append(fact("Rounds played", r.rounds_played.value ?? "—", r.rounds_played.source));
@@ -588,6 +608,7 @@ function countCell(n, source) {
 function opponentRow(o) {
   const tr = el("tr");
   const who = el("td", "opponent", o.heroes.map(heroText).join(" + ") || "Unknown hero");
+  who.prepend(...o.heroes.map((h) => portrait(h.id)).filter(Boolean));
   who.title = o.heroes.map((h) => h.id).concat(o.seats.map((s) => `seat ${s}`)).join("\n");
   if (o.final_place.value !== null) {
     const place = el("span", "finished", `finished ${o.final_place.value}`);
@@ -797,7 +818,22 @@ function renderSetup(s) {
   document.getElementById("setup").hidden = lines.length === 0;
 }
 
+// Where card pictures come from, and whether they are there (T-304).
+function renderCardStatus() {
+  const node = document.getElementById("card-status");
+  const s = TLCards.status();
+  node.classList.toggle("problem", Boolean(s && s.problem));
+  if (!s) node.textContent = "Card pictures: status not available.";
+  else if (s.problem) node.textContent = `Card pictures: ${s.problem} Card ids are shown instead.`;
+  else if (s.cards) node.textContent = `Card pictures: ${s.cards} cards known, checked ${new Date(s.fetched_at * 1000).toLocaleDateString()}.`;
+  else node.textContent = "Card pictures: getting the card data…";
+}
+
 async function main() {
+  TLCards.onChange(() => {
+    renderCardStatus();
+    render();
+  });
   await listen("games-changed", () => refreshGames().catch(showError));
   const showStatus = (s) => { renderStatus(s); renderSetup(s); };
   // The entries or the game in progress changed: the list, the stats and an open recap follow.
