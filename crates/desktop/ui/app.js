@@ -187,6 +187,209 @@ function heroRow(h, top) {
 const TRIBE_LABELS = { NEUTRAL: "No tribe", ALL: "All tribes" };
 const tribeLabel = (name) => TRIBE_LABELS[name] || name.charAt(0) + name.slice(1).toLowerCase();
 
+// Lobby tribes entered by hand (T-303). The app owns the fixed list, the rules
+// and the saving; this file shows them. Always marked "entered by you", and
+// never merged into the tribes seen in the tavern.
+let lobby = null;
+let tribesTarget = null; // { kind: "game", session, index } or { kind: "pending" }
+
+const gameKey = (g) => `${g.session}#${g.index}`;
+const sameList = (a, b) => a.length === b.length && a.every((t, i) => t === b[i]);
+
+function entryOf(target) {
+  if (!lobby) return null;
+  if (target.kind === "pending") return lobby.pending;
+  const found = lobby.games.find((g) => g.session === target.session && g.index === target.index);
+  return found ? found.tribes : null;
+}
+
+function tribeChips(tribes) {
+  return tribes.map((t) => {
+    const li = el("li", null, tribeLabel(t));
+    li.title = t;
+    return withSource(li, "entered");
+  });
+}
+
+function renderLobby() {
+  const state = document.getElementById("lobby-state");
+  const current = document.getElementById("lobby-current");
+  const enter = document.getElementById("lobby-enter");
+  const clear = document.getElementById("lobby-clear");
+  enter.hidden = clear.hidden = true;
+  current.replaceChildren();
+  if (!lobby) {
+    state.textContent = "Loading…";
+    return;
+  }
+  if (!lobby.available) {
+    state.textContent = lobby.problem || "Entering tribes is not available: this window does not own the history.";
+    return;
+  }
+  const target = lobby.in_progress
+    ? { kind: "game", session: lobby.in_progress.session, index: lobby.in_progress.index }
+    : { kind: "pending" };
+  const entered = entryOf(target);
+  if (lobby.in_progress) {
+    state.textContent = entered
+      ? "A game is in progress. Tribes entered by you for it:"
+      : "A game is in progress. Pick the five tribes you see on your screen at hero select.";
+  } else {
+    state.textContent = entered
+      ? "No game in progress. These tribes wait for the next game:"
+      : "No game in progress. You can pick the tribes now and they will go to the next game.";
+  }
+  current.replaceChildren(...(entered ? tribeChips(entered) : []));
+  enter.textContent = entered ? "Change" : lobby.in_progress ? "Enter tribes" : "Enter tribes for the next game";
+  enter.onclick = () => openTribesDialog(target);
+  enter.hidden = false;
+  clear.hidden = !entered;
+  clear.onclick = () => editTribes({ kind: target.kind === "pending" ? "clear_pending" : "clear", ...stripKind(target) }, "lobby-error");
+}
+
+const stripKind = ({ kind, ...rest }) => (kind === "pending" ? {} : rest);
+
+async function refreshLobby() {
+  lobby = await invoke("lobby_tribes_view");
+  renderLobby();
+  if (document.getElementById("tribes-dialog").open) renderTribesDialog();
+}
+
+async function editTribes(action, errorId) {
+  const error = document.getElementById(errorId);
+  error.hidden = true;
+  try {
+    lobby = await invoke("edit_lobby_tribes", { action });
+    renderLobby();
+    await refreshGames();
+    return true;
+  } catch (err) {
+    error.textContent = String(err);
+    error.hidden = false;
+    return false;
+  }
+}
+
+function tribesTargetText(target) {
+  if (target.kind === "pending") return "For the next game that starts.";
+  const game = allGames.find((g) => g.session === target.session && g.index === target.index);
+  return game ? `For game ${played(game.session, game.index)}.` : "For the game in progress.";
+}
+
+function pickedTribes() {
+  return [...document.querySelectorAll("#tribes-choices input:checked")].map((box) => box.value);
+}
+
+function updateTribesCount() {
+  const need = lobby ? lobby.lobby_size : 5;
+  const picked = pickedTribes().length;
+  document.getElementById("tribes-count").textContent = `${picked} of ${need} picked.`;
+  document.getElementById("tribes-save").disabled = picked !== need;
+  // At the limit, the rest stay off, so a sixth tribe cannot be picked by mistake.
+  document.querySelectorAll("#tribes-choices input").forEach((box) => {
+    box.disabled = picked >= need && !box.checked;
+  });
+}
+
+function moveTargets(target) {
+  const withEntry = new Set(lobby.games.map(gameKey));
+  const options = allGames
+    .filter((g) => !withEntry.has(gameKey(g)) && !(g.session === target.session && g.index === target.index))
+    .map((g) => ({ session: g.session, index: g.index, text: played(g.session, g.index) }));
+  const live = lobby.in_progress;
+  if (live && !withEntry.has(gameKey(live)) && !(live.session === target.session && live.index === target.index)) {
+    options.unshift({ session: live.session, index: live.index, text: "Game in progress" });
+  }
+  return options;
+}
+
+function renderTribesDialog() {
+  const target = tribesTarget;
+  if (!target || !lobby) return;
+  const entered = entryOf(target);
+  document.getElementById("tribes-target").textContent = tribesTargetText(target);
+  document.getElementById("tribes-need").textContent = lobby.lobby_size;
+  const keep = new Set(document.getElementById("tribes-choices").childElementCount ? pickedTribes() : entered || []);
+  document.getElementById("tribes-choices").replaceChildren(...lobby.choices.map((choice) => {
+    const label = el("label", "choice");
+    const box = el("input");
+    box.type = "checkbox";
+    box.value = choice.id;
+    box.checked = keep.has(choice.id);
+    box.addEventListener("change", updateTribesCount);
+    label.append(box, el("span", null, tribeLabel(choice.id)));
+    return label;
+  }));
+  document.getElementById("tribes-clear").hidden = !entered;
+  const moves = entered && target.kind === "game" ? moveTargets(target) : [];
+  document.getElementById("tribes-move").hidden = moves.length === 0;
+  document.getElementById("tribes-move-to").replaceChildren(...moves.map((m, i) => {
+    const option = el("option", null, m.text);
+    option.value = String(i);
+    return option;
+  }));
+  document.getElementById("tribes-move-to").moves = moves;
+  updateTribesCount();
+}
+
+function openTribesDialog(target) {
+  if (!lobby || !lobby.available) return;
+  tribesTarget = target;
+  document.getElementById("tribes-choices").replaceChildren();
+  const error = document.getElementById("tribes-error");
+  error.hidden = true;
+  renderTribesDialog();
+  const dialog = document.getElementById("tribes-dialog");
+  if (!dialog.open) dialog.showModal();
+}
+
+function tribesButton(game) {
+  const entered = entryOf({ kind: "game", session: game.session, index: game.index });
+  const button = el("button", "report-btn", entered ? "Tribes ✓" : "Tribes");
+  button.type = "button";
+  button.title = entered ? `Lobby tribes entered by you: ${entered.map(tribeLabel).join(", ")}` : "Enter the lobby tribes for this game";
+  button.setAttribute("aria-label", `Lobby tribes of game ${played(game.session, game.index)}`);
+  button.addEventListener("click", () => openTribesDialog({ kind: "game", session: game.session, index: game.index }));
+  return button;
+}
+
+async function saveTribes() {
+  const target = tribesTarget;
+  if (!target) return;
+  const tribes = pickedTribes();
+  const action = target.kind === "pending" ? { kind: "set_pending", tribes } : { kind: "set", ...stripKind(target), tribes };
+  if (await editTribes(action, "tribes-error")) document.getElementById("tribes-dialog").close();
+}
+
+document.getElementById("tribes-save").addEventListener("click", saveTribes);
+document.getElementById("tribes-close").addEventListener("click", () => document.getElementById("tribes-dialog").close());
+document.getElementById("tribes-dialog").addEventListener("close", () => { tribesTarget = null; });
+document.getElementById("tribes-clear").addEventListener("click", async () => {
+  const target = tribesTarget;
+  if (!target) return;
+  const action = target.kind === "pending" ? { kind: "clear_pending" } : { kind: "clear", ...stripKind(target) };
+  if (await editTribes(action, "tribes-error")) document.getElementById("tribes-dialog").close();
+});
+document.getElementById("tribes-move-go").addEventListener("click", async () => {
+  const target = tribesTarget;
+  const select = document.getElementById("tribes-move-to");
+  const to = (select.moves || [])[Number(select.value)];
+  if (!target || !to) return;
+  const action = { kind: "move", session: target.session, index: target.index, to_session: to.session, to_index: to.index };
+  if (await editTribes(action, "tribes-error")) document.getElementById("tribes-dialog").close();
+});
+document.getElementById("tribes-form").addEventListener("submit", (e) => e.preventDefault());
+
+function enteredRow(t, total, source) {
+  const tr = el("tr");
+  const cell = el("td", null, tribeLabel(t.tribe));
+  cell.title = t.tribe;
+  const count = el("td", "num", `${t.games} of ${total}`);
+  addTip(count, source);
+  tr.append(withSource(cell, source), count);
+  return tr;
+}
+
 function tribeRow(t, total, source) {
   const tr = el("tr");
   const cell = el("td", null, tribeLabel(t.tribe));
@@ -203,6 +406,11 @@ function renderBreakdown(m) {
   document.getElementById("heroes-empty").hidden = m.heroes.length > 0;
   document.getElementById("tribes").replaceChildren(...m.tribes.map((t) => tribeRow(t, m.games_with_tribes, m.tribes_source)));
   document.getElementById("tribes-empty").hidden = m.tribes.length > 0;
+  const entered = list(m.entered_tribes);
+  document.getElementById("entered-tribes-section").hidden = entered.length === 0;
+  document.getElementById("entered-tribes").replaceChildren(
+    ...entered.map((t) => enteredRow(t, m.games_with_entered_tribes, m.entered_tribes_source)),
+  );
 }
 
 // The legend comes from the app, so its words are the ones on the marks.
@@ -226,7 +434,7 @@ function reportCell(game) {
   button.setAttribute("aria-label", `Report a problem with game ${played(game.session, game.index)}`);
   button.addEventListener("click", () => openReport(game));
   const cell = el("td", "actions");
-  cell.append(recapButton(game), button);
+  cell.append(recapButton(game), tribesButton(game), button);
   return cell;
 }
 
@@ -448,6 +656,26 @@ function tribesSection(r) {
   return section;
 }
 
+// What the user entered for this game. Shown next to the tavern list, never
+// merged with it and never used to correct it, whether the two agree or not.
+function enteredSection(r) {
+  const section = el("section", "recap-part");
+  const heading = el("h3", null, "Lobby tribes");
+  heading.append(sourceMark(r.entered_tribes_source));
+  section.append(heading);
+  if (!r.entered_tribes.length) {
+    section.append(el("p", "empty", "You did not enter the lobby tribes for this game."));
+    return section;
+  }
+  const items = el("ul", "tribe-list");
+  items.append(...tribeChips(r.entered_tribes));
+  section.append(items);
+  if (r.tribes.length) {
+    section.append(el("p", "note", "The list above and the tavern offers are two separate sources. Tavern Ledger does not correct one with the other."));
+  }
+  return section;
+}
+
 function messagesSection(r) {
   const section = el("section", "recap-part");
   section.append(el("h3", null, "Parser warnings"));
@@ -465,7 +693,7 @@ function messagesSection(r) {
 function renderRecap(r) {
   const health = el("section", "recap-part");
   health.append(withSource(el("h3", null, "Your health over the rounds"), r.health_source), healthChart(r.health));
-  document.getElementById("recap-body").replaceChildren(recapFacts(r), health, recordSection(r), tribesSection(r), messagesSection(r));
+  document.getElementById("recap-body").replaceChildren(recapFacts(r), health, recordSection(r), enteredSection(r), tribesSection(r), messagesSection(r));
 }
 
 async function openRecap(game) {
@@ -528,10 +756,13 @@ async function refreshGames() {
   if (seq !== refreshSeq) return;
   allGames = games.slice().reverse(); // newest first
   stats = fresh;
+  if (!lobby) lobby = await invoke("lobby_tribes_view");
+  if (seq !== refreshSeq) return;
   // Until the user picks a mode, show the one with most games (the history
   // may still be opening on the first call, so this runs on every refresh).
   if (!userPicked) mode = pickDefaultMode();
   render();
+  renderLobby();
 }
 
 document.querySelectorAll(".modes button").forEach((button) => {
@@ -567,6 +798,12 @@ function renderSetup(s) {
 async function main() {
   await listen("games-changed", () => refreshGames().catch(showError));
   const showStatus = (s) => { renderStatus(s); renderSetup(s); };
+  // The entries or the game in progress changed: the list, the stats and an open recap follow.
+  await listen("lobby-tribes-changed", async () => {
+    await refreshLobby();
+    await refreshGames();
+    if (recapGame) openRecap(recapGame).catch(showError);
+  });
   await listen("game-finished", (e) => onGameFinished(e.payload).catch(showError));
   await listen("status-changed", (e) => showStatus(e.payload));
   showStatus(await invoke("status"));

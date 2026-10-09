@@ -3,6 +3,7 @@
 //! log files (D-004).
 
 pub mod discover;
+pub mod lobby_tribes;
 pub mod lock;
 pub mod provenance;
 pub mod recap;
@@ -114,6 +115,16 @@ impl Watcher {
 
     pub fn session(&self) -> Option<&str> {
         self.follower.session()
+    }
+
+    /// The Battlegrounds game being played now (not saved yet), from hero
+    /// select until the log marks it complete (T-303).
+    pub fn in_progress(&self) -> Option<GameKey> {
+        let (session, reader) = self.reader.as_ref()?;
+        Some(GameKey {
+            session: session.clone(),
+            index: reader.in_progress_index()? as u64,
+        })
     }
 
     /// See [`Follower::has_power_log`].

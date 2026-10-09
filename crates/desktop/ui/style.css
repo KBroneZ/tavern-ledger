@@ -353,3 +353,19 @@ table.record .opponent { font-weight: 600; }
 .tribe-list, .messages { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px 14px; }
 .messages { flex-direction: column; }
 .tribe-list li { padding: 1px 0; }
+
+/* Lobby tribes entered by hand (T-303) */
+.lobby { margin-bottom: calc(var(--space) * 1.2); }
+.lobby .note { margin: -4px 0 8px; }
+.lobby-actions { display: flex; gap: 8px; margin-top: 8px; }
+.lobby .tribe-list { margin-top: 6px; }
+.tribes-dialog { width: min(560px, calc(100vw - 32px)); }
+.tribes-dialog fieldset { margin: 0 0 8px; padding: 8px 12px; border: 1px solid var(--ink-soft); border-radius: 4px; }
+.tribes-dialog legend { padding: 0 6px; font-weight: 600; }
+.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 4px 12px; }
+.choice { display: flex; align-items: center; gap: 6px; padding: 2px 0; cursor: pointer; }
+.choice input { width: 16px; height: 16px; accent-color: var(--ink-soft); }
+.choice input:disabled + span { color: var(--muted); }
+.move-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.move-row select { padding: 2px 6px; font: 13px var(--font-body); }
+.actions .report-btn + .report-btn { margin-left: 6px; }
