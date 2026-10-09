@@ -756,8 +756,10 @@ async function refreshGames() {
   if (seq !== refreshSeq) return;
   allGames = games.slice().reverse(); // newest first
   stats = fresh;
-  if (!lobby) lobby = await invoke("lobby_tribes_view");
+  // Also on every refresh: the first one can run before the app opened the entries.
+  const freshLobby = await invoke("lobby_tribes_view");
   if (seq !== refreshSeq) return;
+  lobby = freshLobby;
   // Until the user picks a mode, show the one with most games (the history
   // may still be opening on the first call, so this runs on every refresh).
   if (!userPicked) mode = pickDefaultMode();

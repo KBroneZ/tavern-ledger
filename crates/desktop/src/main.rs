@@ -193,9 +193,16 @@ fn edit_lobby_tribes_of(state: &AppState, action: Action) -> Result<(), String> 
             .clone(),
     );
     let mut entries = state.entries.lock().unwrap_or_else(|e| e.into_inner());
-    let entries = entries
-        .as_mut()
-        .ok_or("Entering tribes is not available: this window does not own the history.")?;
+    let Some(entries) = entries.as_mut() else {
+        let why = state
+            .entries_problem
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone();
+        return Err(why.unwrap_or_else(|| {
+            "Entering tribes is not available: this window does not own the history.".into()
+        }));
+    };
     lobby_tribes::apply(entries, action, |key| known.contains(key)).map_err(|e| e.to_string())
 }
 

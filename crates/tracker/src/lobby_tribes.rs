@@ -303,6 +303,9 @@ pub fn apply(
 #[derive(Debug, Default)]
 pub struct GameStarts {
     seen: Option<GameKey>,
+    /// False until the first look: a game already running when the app
+    /// starts is not a game that just started.
+    looked: bool,
 }
 
 impl GameStarts {
@@ -313,17 +316,21 @@ impl GameStarts {
         entries: &mut Entries,
         in_progress: Option<GameKey>,
     ) -> Result<Option<GameKey>, EntryError> {
+        let first_look = !self.looked;
+        self.looked = true;
         let started = match &in_progress {
-            Some(key) if self.seen.as_ref() != Some(key) => Some(key.clone()),
+            Some(key) if self.seen.as_ref() != Some(key) && !first_look => Some(key.clone()),
             _ => None,
         };
-        // Remember the game in progress; between games nothing is in progress,
-        // so the next game always looks new.
+        let Some(key) = started else {
+            self.seen = in_progress;
+            return Ok(None);
+        };
+        // `seen` moves on only once the entry is attached, so a failed write
+        // is tried again for this game and never leaks to the next one.
+        let attached = entries.attach_pending(&key)?;
         self.seen = in_progress;
-        match started {
-            Some(key) => Ok(entries.attach_pending(&key)?.then_some(key)),
-            None => Ok(None),
-        }
+        Ok(attached.then_some(key))
     }
 }
 
@@ -662,10 +669,45 @@ mod tests {
     }
 
     #[test]
+    fn a_game_already_running_when_the_app_starts_does_not_take_the_waiting_entry() {
+        let dir = temp_dir();
+        let mut entries = Entries::open(&dir).unwrap();
+        entries.set_pending(&pick(&FIVE)).unwrap();
+        let mut starts = GameStarts::default();
+        assert_eq!(starts.observe(&mut entries, Some(key(1))).unwrap(), None);
+        assert!(entries.pending().is_some());
+        starts.observe(&mut entries, None).unwrap();
+        assert_eq!(
+            starts.observe(&mut entries, Some(key(2))).unwrap(),
+            Some(key(2))
+        );
+    }
+
+    #[test]
+    fn a_failed_attach_is_tried_again_for_the_same_game_not_given_to_the_next() {
+        let dir = temp_dir();
+        let mut entries = Entries::open(&dir).unwrap();
+        let mut starts = GameStarts::default();
+        starts.observe(&mut entries, None).unwrap();
+        entries.set_pending(&pick(&FIVE)).unwrap();
+        // Make the write fail: a folder sits where the temp file goes.
+        let tmp = dir.join("lobby_tribes.json.tmp");
+        fs::create_dir(&tmp).unwrap();
+        assert!(starts.observe(&mut entries, Some(key(2))).is_err());
+        assert!(entries.pending().is_some() && entries.entry(&key(2)).is_none());
+        fs::remove_dir(&tmp).unwrap();
+        assert_eq!(
+            starts.observe(&mut entries, Some(key(2))).unwrap(),
+            Some(key(2))
+        );
+    }
+
+    #[test]
     fn a_game_already_in_progress_does_not_take_an_entry_made_for_the_next_one() {
         let dir = temp_dir();
         let mut entries = Entries::open(&dir).unwrap();
         let mut starts = GameStarts::default();
+        starts.observe(&mut entries, None).unwrap();
         starts.observe(&mut entries, Some(key(1))).unwrap();
         entries.set_pending(&pick(&FIVE)).unwrap();
         assert_eq!(starts.observe(&mut entries, Some(key(1))).unwrap(), None);
