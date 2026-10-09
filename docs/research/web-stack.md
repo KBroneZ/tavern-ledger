@@ -159,7 +159,7 @@ ChatGPT (Codex CLI with web search, 2026-10-09) answered the same questions inde
 
 ## Upload design
 
-Design only; T-104 implements it.
+Design only; T-104 implements it. **As built (T-104d, D-025),** with three changes: the body is sent as `Content-Type: application/gzip` rather than `Content-Encoding: gzip` (so no proxy inflates it on the way), and the server stores the file re-compressed from the checked bytes; the desktop sign-in is a one-time email link with PKCE, which needs no Discord or GitHub account; and Supabase Auth accepts any `127.0.0.1` port as a redirect without an allow-list entry (GoTrue v2.197.0, local stack). A sign-in link works in any browser on the PC, since the verifier stays in the app.
 
 **What is sent.** One game per request: the record the desktop app already keeps (session, index, report), gzipped (`Content-Encoding: gzip`), about 2.5 KB. The server reads at most 64 KB of body and inflates it as a stream that stops at 512 KB, so a gzip bomb costs nothing (the largest real game is 28.8 KB). It checks the JSON against a schema (`schema_version`, known `game_type`, places in range, string lengths capped, only hero and card ids where ids are expected, no BattleTag-shaped strings, and no rating, MMR or leaderboard field at all, D-012) and stores it as untrusted data. The report never carries player names (D-017, T-101); the server checks that again. What a profile shows is self-reported by the user's app, and the site says so; every string is escaped when rendered.
 
