@@ -62,6 +62,8 @@ pub struct Overlay {
     /// The last problem saving the settings, until a save works.
     warning: Mutex<Option<String>>,
     unlock_item: Mutex<Option<CheckMenuItem<Wry>>>,
+    /// Held while a change is made and saved, so two saves cannot cross.
+    saving: Mutex<()>,
 }
 
 /// What the overlay page needs to draw itself.
@@ -143,6 +145,7 @@ impl Overlay {
     /// this run even if saving fails; the error says it will not survive a
     /// restart.
     pub fn change(&self, apply: impl FnOnce(&mut Settings, (f64, f64))) -> Result<(), String> {
+        let _one_at_a_time = lock(&self.saving);
         let screen = *lock(&self.screen);
         let text = {
             let mut settings = lock(&self.settings);
@@ -247,13 +250,15 @@ fn fit_window(app: &AppHandle) -> tauri::Result<bool> {
     let (origin, size) = (monitor.position(), monitor.size());
     let placed = (origin.x, origin.y, size.width, size.height);
     let state = app.state::<Arc<AppState>>();
-    if lock(&state.overlay.placed).replace(placed) == Some(placed) {
+    if *lock(&state.overlay.placed) == Some(placed) {
         return Ok(false);
     }
     window.set_position(Position::Physical(PhysicalPosition::new(
         origin.x, origin.y,
     )))?;
     window.set_size(Size::Physical(PhysicalSize::new(size.width, size.height)))?;
+    // Only now: a failed call is tried again on the next check.
+    *lock(&state.overlay.placed) = Some(placed);
     let scale = monitor.scale_factor();
     *lock(&state.overlay.screen) = (
         f64::from(size.width) / scale,
@@ -268,15 +273,25 @@ fn fit_window(app: &AppHandle) -> tauri::Result<bool> {
 /// run, never left over the game taking clicks.
 pub fn set_unlocked(app: &AppHandle, state: &AppState, on: bool) {
     if on && state.overlay.broken.load(Ordering::SeqCst) {
+        refresh_unlock_item(state);
         return;
     }
-    let done = app
-        .get_webview_window(WINDOW)
-        .ok_or(tauri::Error::WindowNotFound)
-        .and_then(|w| w.set_ignore_cursor_events(!on));
-    if done.is_ok() {
-        state.overlay.unlocked.store(on, Ordering::SeqCst);
-    } else {
+    // The flag is set first and the window is made to match it, then the flag
+    // is read again: if another caller changed it meanwhile, the window is
+    // set once more, so the two always end up the same. No lock is held over
+    // the window calls (they wait for the main thread).
+    state.overlay.unlocked.store(on, Ordering::SeqCst);
+    let done = loop {
+        let want = state.overlay.unlocked.load(Ordering::SeqCst);
+        let result = app
+            .get_webview_window(WINDOW)
+            .ok_or(tauri::Error::WindowNotFound)
+            .and_then(|w| w.set_ignore_cursor_events(!want));
+        if result.is_err() || state.overlay.unlocked.load(Ordering::SeqCst) == want {
+            break result;
+        }
+    };
+    if done.is_err() {
         state.overlay.disable();
         if let Some(window) = app.get_webview_window(WINDOW) {
             let _ = window.hide();
@@ -284,10 +299,15 @@ pub fn set_unlocked(app: &AppHandle, state: &AppState, on: bool) {
         let msg = "The overlay could not change between locked and unlocked; it is off until you restart the app.";
         crate::set_status(app, state, |s| s.notice = Some(msg.into()));
     }
+    refresh_unlock_item(state);
+    let _ = app.emit(SETTINGS_CHANGED, ());
+}
+
+/// The tray entry shows the real state, not what the click toggled it to.
+fn refresh_unlock_item(state: &AppState) {
     if let Some(item) = lock(&state.overlay.unlock_item).as_ref() {
         let _ = item.set_checked(state.overlay.unlocked());
     }
-    let _ = app.emit(SETTINGS_CHANGED, ());
 }
 
 /// The tray's "unlock" entry, so the menu can show the real state.

@@ -27,6 +27,8 @@
   let rects = {};
   let dragging = false;
   let pending = null;
+  // Stops the drag in progress without saving it (the overlay got locked under the mouse).
+  let abortDrag = null;
 
   function px(n) {
     return `${Math.round(n)}px`;
@@ -103,6 +105,7 @@
 
   // A change that arrives while a panel is being dragged waits for the drop.
   function show(v) {
+    if (dragging && !v.unlocked && abortDrag) abortDrag();
     if (dragging) pending = v;
     else draw(v);
   }
@@ -124,6 +127,7 @@
     if (!rects[id]) rects[id] = { x: box.left, y: box.top, w: box.width, h: null };
     const start = { ...rects[id], px: event.clientX, py: event.clientY, height: box.height };
     const resizing = event.target.classList.contains("grip");
+    let moved = false;
     dragging = true;
     slot.classList.add("dragging");
     event.preventDefault();
@@ -133,6 +137,7 @@
       const sh = window.innerHeight;
       const dx = e.clientX - start.px;
       const dy = e.clientY - start.py;
+      moved = moved || dx !== 0 || dy !== 0;
       const r = rects[id];
       if (resizing) {
         r.w = clamp(start.w + dx, MIN_W, Math.min(MAX_W, sw - r.x));
@@ -144,15 +149,22 @@
       place(id, slot);
       if (slot.parentElement !== document.body) document.body.append(slot);
     };
-    const end = () => {
+    const stop = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", end);
       window.removeEventListener("pointercancel", end);
       slot.classList.remove("dragging");
       dragging = false;
       pending = null;
-      send("overlay_save_layout", { panels: rects }).catch(fail);
+      abortDrag = null;
     };
+    const end = () => {
+      stop();
+      // A press with no movement changes nothing: it must not pin a stacked panel.
+      if (moved) send("overlay_save_layout", { panels: rects }).catch(fail);
+      else if (view) draw(view);
+    };
+    abortDrag = stop;
     // On the window, not the panel: the pointer can leave the panel faster than it follows.
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", end);
