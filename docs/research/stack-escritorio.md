@@ -37,14 +37,34 @@ SignPath Foundation pide que todos los componentes tengan licencia OSI, permite 
 - El parser y el cliente del leaderboard son lógica pura, fácil de portar a Rust con tests a partir de los prototipos y sus tests sintéticos.
 - Rust y Node ya están instalados; .NET no.
 
-**Riesgo principal: el overlay.** La API existe, pero no está probada en este proyecto. Antes de cerrar P-002 conviene una prueba corta: ventana Tauri transparente, siempre encima y que deje pasar los clics, encima de Hearthstone en ventana y en pantalla completa sin bordes. Si falla, el plan B es WPF solo para el overlay o para toda la app.
+**Riesgo principal: el overlay.** Probado el 2026-10-09 con una ventana mínima (abajo): funciona. Queda verlo encima de Hearthstone en ventana y en pantalla completa; si ahí falla, el plan B es WPF solo para el overlay o para toda la app.
+
+## Prueba del overlay
+
+Código en [`spikes/overlay-tauri/`](../../spikes/overlay-tauri/): Tauri 2.12.2, sin npm (HTML estático), una ventana sin bordes, `transparent`, `alwaysOnTop`, fuera de la barra de tareas y con `set_ignore_cursor_events(true)`. No toca el juego ni sus archivos.
+
+[`check_overlay.py`](../../spikes/overlay-tauri/check_overlay.py) abre una ventana Tk debajo, lee los estilos Win32 del overlay, hace hit testing y un clic real sobre el panel (devuelve el ratón a su sitio):
+
+| Comprobación | Debug | Release |
+|--------------|-------|---------|
+| `WS_EX_TOPMOST` (siempre encima) | OK | OK |
+| `WS_EX_LAYERED` + `WS_EX_TRANSPARENT` (no recibe ratón) | OK | OK |
+| `WindowFromPoint` sobre el panel devuelve la ventana de debajo | OK | OK |
+| El clic sobre el panel llega a la ventana de debajo | OK | OK |
+
+La captura muestra el fondo de la ventana de debajo alrededor del panel y a través de su fondo semitransparente: WebView2 pinta bien la transparencia en Windows 11.
+
+- **Tamaño:** el `.exe` de release ocupa 8,5 MB sin instalador ni compresión.
+- **Compilación:** 1 min (debug) y 1 min 16 s (release) desde cero; 407 crates en `Cargo.lock`, todas con licencias OSI (MIT, Apache-2.0, Zlib, BSD, ISC, Unicode-3.0 y 5 con MPL-2.0, que se usan sin modificar).
+- **Bloquear y desbloquear paneles** (idea del usuario para el futuro, T-302): `set_ignore_cursor_events` es un interruptor en tiempo de ejecución, así que "desbloqueado" puede recibir ratón para arrastrar y "bloqueado" dejar pasar los clics. Sin probar todavía.
+- **Pendiente:** probarlo encima de Hearthstone (ventana y pantalla completa) cuando el usuario esté en el equipo.
 
 Electron queda descartado salvo que Tauri falle: hace lo mismo con un instalador 20–50 veces más grande.
 
 ## Siguientes pasos propuestos
 
-1. El usuario decide P-002 (o pide antes la prueba del overlay).
-2. Si sale Tauri: prueba del overlay (no toca el juego ni sus archivos; solo una ventana encima), y luego T-101 con el parser portado a Rust y los tests sintéticos de `tests/` como referencia.
+1. El usuario prueba el overlay encima de Hearthstone: `cargo build` en `spikes/overlay-tauri/` y abrir `target/debug/overlay-spike.exe` con el juego abierto.
+2. El usuario decide P-002. Si sale Tauri: T-101 con el parser portado a Rust y los tests sintéticos de `tests/` como referencia.
 3. Las dependencias nuevas (crates de Tauri, paquetes npm) se fijan con lockfile y se anotan en `PROVENANCE.md` (R2: `/security-review`).
 
 ## Fuentes

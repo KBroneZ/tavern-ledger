@@ -62,6 +62,7 @@ docs/decisions/          decisiones tomadas y pendientes
 docs/research/           investigación verificada
 prompts/sesiones/        prompts de sesión (solo si el usuario los pide)
 tools/                   scripts de solo lectura (check_logs.py, parse_bg.py)
+spikes/                  pruebas desechables (overlay-tauri: prueba del overlay de T-005)
 tests/                   tests (unittest; dependencias fijadas en requirements.txt)
 requirements.txt         dependencias Python con versión y hash
 .github/workflows/       CI: tests, enlaces y secretos
