@@ -1,110 +1,110 @@
-# Prototipo de parser con hslog (T-003)
+# Parser prototype with hslog (T-003)
 
-Fecha: 2026-10-08. Prototipo: [`tools/parse_bg.py`](../../tools/parse_bg.py). Tests: [`tests/test_parse_bg.py`](../../tests/test_parse_bg.py) (logs sintéticos).
+Date: 2026-10-08. Prototype: [`tools/parse_bg.py`](../../tools/parse_bg.py). Tests: [`tests/test_parse_bg.py`](../../tests/test_parse_bg.py) (synthetic logs).
 
-## Resumen
+## Summary
 
-- **Se puede reconstruir una partida de Battlegrounds solo con `Power.log`.** Héroe propio y del compañero, lobby con héroes y equipos, vida por ronda, rivales de cada combate, tableros al empezar cada combate y puesto final salen del log sin lectura de memoria.
-- Probado con las **23 partidas reales** del usuario (6 sesiones, build 253216): 22 de Duos (`GT_BATTLEGROUNDS_DUO`) y 1 de Solo (`GT_BATTLEGROUNDS`). 23 de 23 en estado `ok`, lobby de 8 jugadores en todas, puestos sin repetir (en Duos, 1–4 por parejas), 0 rivales sin identificar.
-- Al ser eliminado, el juego **copia el héroe del jugador local** con un puesto viejo y la vida reiniciada. Hasta la sesión 005 el prototipo leía la copia: vida final 30 en las 13 partidas perdidas (12 de Duos y la de Solo) y puesto mal en 5 (ver "Eliminación del jugador local", abajo).
-- **No sale del log:** el MMR y la lista exacta de tribus del lobby. Las tribus solo se pueden inferir de lo que ofrece la taberna, y la inferencia no es fiable (ver abajo).
-- En Duos, **una parte de los combates del compañero no se ve** en el log local: 141 de 1145 entradas de combate (12 %). El prototipo las marca "no visible" en vez de mostrarlas vacías.
-- `hslog` tiene un fallo con logs de varias partidas de Duos (`InconsistentPlayerIdError`). Se evita con un parser nuevo por partida.
-- Rendimiento: 15 s para el log más grande (563 MB, 8 partidas), procesando una partida cada vez.
+- **A Battlegrounds game can be rebuilt from `Power.log` alone.** Own hero and teammate's hero, lobby with heroes and teams, health per round, opponent of each combat, boards at the start of each combat and final placement all come from the log, with no memory reading.
+- Tested with the user's **23 real games** (6 sessions, build 253216): 22 Duos (`GT_BATTLEGROUNDS_DUO`) and 1 Solo (`GT_BATTLEGROUNDS`). 23 of 23 in `ok` state, 8-player lobby in all, no repeated placements (in Duos, 1-4 by pairs), 0 unidentified opponents.
+- When eliminated, the game **copies the local player's hero** with an old placement and reset health. Until session 005 the prototype read the copy: final health 30 in the 13 lost games (12 Duos and the Solo one) and wrong placement in 5 (see "Local player elimination", below).
+- **Not in the log:** MMR and the exact list of lobby tribes. Tribes can only be inferred from what the tavern offers, and the inference is not reliable (see below).
+- In Duos, **some of the teammate's combats are not visible** in the local log: 141 of 1145 combat entries (12 %). The prototype marks them "not visible" instead of showing them empty.
+- `hslog` fails on logs with several Duos games (`InconsistentPlayerIdError`). Avoided with a new parser per game.
+- Performance: 15 s for the largest log (563 MB, 8 games), processing one game at a time.
 
-## Dependencias
+## Dependencies
 
-| Paquete | Versión | Licencia | Último release | Notas |
-|---------|---------|----------|----------------|-------|
-| `hslog` | 1.20.0 | MIT | 2026-08-15 | Parser de `Power.log` de HearthSim. |
-| `hearthstone` | 9.21.1 | MIT | 2026-09-23 | Enums (`GameTag`, `Race`, `GameType`). Ya conoce `GT_BATTLEGROUNDS_DUO` y los tags `BACON_*` de Duos; unos cuantos tags nuevos salen solo como número (p. ej. `4901`), sin efecto en el prototipo. |
+| Package | Version | License | Latest release | Notes |
+|---------|---------|---------|----------------|-------|
+| `hslog` | 1.20.0 | MIT | 2026-08-15 | HearthSim `Power.log` parser. |
+| `hearthstone` | 9.21.1 | MIT | 2026-09-23 | Enums (`GameTag`, `Race`, `GameType`). Already knows `GT_BATTLEGROUNDS_DUO` and the Duos `BACON_*` tags; a few new tags appear only as a number (e.g. `4901`), with no effect on the prototype. |
 
-Arrastran `aniso8601`, `requests`, `urllib3`, `certifi`, `idna` y `charset-normalizer` (licencias en [`PROVENANCE.md`](../../PROVENANCE.md)). El prototipo no hace peticiones de red; `requests` solo lo usa `hearthstone` para descargar la base de cartas, que aquí no se usa.
+They pull in `aniso8601`, `requests`, `urllib3`, `certifi`, `idna` and `charset-normalizer` (licenses in [`PROVENANCE.md`](../../PROVENANCE.md)). The prototype makes no network requests; `requests` is only used by `hearthstone` to download the card database, which is not used here.
 
-Las versiones van fijadas con hash en [`requirements.txt`](../../requirements.txt) (solo ruedas puras de Python, `--require-hashes`).
+Versions are pinned with hashes in [`requirements.txt`](../../requirements.txt) (pure Python wheels only, `--require-hashes`).
 
-## Qué sale del log
+## What comes out of the log
 
-Evidencia: partida del 2026-10-02 (`Hearthstone_2026_10_02_15_44_55/Power_old.log`, 1 partida). Las líneas son aproximadas y se refieren a ese archivo.
+Evidence: game of 2026-10-02 (`Hearthstone_2026_10_02_15_44_55/Power_old.log`, 1 game). Lines are approximate and refer to that file.
 
-| Dato | ¿Sale? | Cómo | Evidencia |
-|------|--------|------|-----------|
-| Tipo de partida y build | Sí | `GameState.DebugPrintGame()`: `GameType=`, `BuildNumber=` | líneas 250–251 |
-| Jugador local y jugador "tienda" | Sí | En `CREATE_GAME` hay dos `Player`: el local y uno ficticio (`BACON_DUMMY_PLAYER=1`, `lo=0`) que controla a Bob, la tienda y a los rivales en combate | líneas 2–97 |
-| Héroe propio | Sí | Héroe del leaderboard (`CARDTYPE=HERO` con `PLAYER_LEADERBOARD_PLACE`) cuyo `PLAYER_ID` es el del jugador local | línea 871 en adelante |
-| Compañero en Duos | Sí | `BACON_DUO_TEAMMATE_PLAYER_ID` en la entidad del jugador local → héroe del leaderboard con ese `PLAYER_ID` | línea 72 |
-| Lobby: héroes, equipo, nivel de taberna | Sí | Los 8 héroes del leaderboard: `PLAYER_ID`, `BACON_DUO_TEAM_ID`, `PLAYER_TECH_LEVEL`. El héroe propio no lleva `BACON_DUO_TEAM_ID`; está en la entidad del jugador | líneas 75, 871 |
-| Vida por ronda (propia y de cada rival) | Sí | `HEALTH + ARMOR − DAMAGE` de cada héroe del leaderboard al cerrar el combate, con mínimo 0 (el golpe final puede pasarse: `DAMAGE` 33 con `HEALTH` 30). Puede subir (curación, armadura) | 281 rondas, ninguna sin dato |
-| Puesto final | Sí | `PLAYER_LEADERBOARD_PLACE` del héroe propio con la partida en `STATE=COMPLETE`. En Duos es el puesto del equipo (1–4). Si el jugador fue eliminado, hay que ignorar la copia de su héroe (abajo) | línea 910647 |
-| Rondas | Sí | `TURN` de `GameEntity`: impar = taberna, par = combate; ronda = `TURN // 2`. `TURN` 0 es la elección de héroe | — |
-| Rival de cada combate | Sí | En combate, el jugador ficticio cambia su `HERO_ENTITY` a una copia del héroe rival; se identifica por el `card_id` del héroe del lobby y, si no casa (fantasmas de jugadores eliminados, p. ej. `TB_BaconShop_HERO_KelThuzad`), por `BACON_CURRENT_COMBAT_PLAYER_ID` | línea 7880 |
-| Quién pelea de tu lado (tú o tu compañero) | Sí | El jugador local cambia su `HERO_ENTITY` a la copia del héroe del compañero y vuelve al suyo | — |
-| Tablero propio y rival al empezar el combate | Sí, salvo combates ocultos | Esbirros en `ZONE=PLAY` de cada lado en el primer bloque `BLOCK_START BlockType=ATTACK` tras el cambio de héroe: `card_id`, `ATK`, `HEALTH − DAMAGE`, `ZONE_POSITION` | línea 9044 (primer ataque; 257 en la partida) |
-| Esbirro dorado | Sí | Por `card_id` (`…_G` o `TB_BaconUps_…`). **El tag `PREMIUM` no sirve**: es cosmético (aparece en esbirros de nivel 1 recién comprados) | 895 esbirros dorados vistos en las 23 partidas |
-| Tribus del lobby | Solo inferidas | `CARDRACE` de los esbirros de la tienda (`IS_BACON_POOL_MINION=1`, controlados por el jugador ficticio en turno de taberna) | líneas 2573, 2580 |
-| MMR | **No** | No aparece en `Power.log` (búsqueda de `MMR`, `Rating`: sin resultados). Ver T-004 | — |
+| Data | Available? | How | Evidence |
+|------|------------|-----|----------|
+| Game type and build | Yes | `GameState.DebugPrintGame()`: `GameType=`, `BuildNumber=` | lines 250-251 |
+| Local player and "shop" player | Yes | `CREATE_GAME` has two `Player` entries: the local one and a dummy one (`BACON_DUMMY_PLAYER=1`, `lo=0`) that controls Bob, the shop and the opponents in combat | lines 2-97 |
+| Own hero | Yes | Leaderboard hero (`CARDTYPE=HERO` with `PLAYER_LEADERBOARD_PLACE`) whose `PLAYER_ID` is the local player's | line 871 onward |
+| Teammate in Duos | Yes | `BACON_DUO_TEAMMATE_PLAYER_ID` on the local player entity → leaderboard hero with that `PLAYER_ID` | line 72 |
+| Lobby: heroes, team, tavern tier | Yes | The 8 leaderboard heroes: `PLAYER_ID`, `BACON_DUO_TEAM_ID`, `PLAYER_TECH_LEVEL`. The own hero has no `BACON_DUO_TEAM_ID`; it is on the player entity | lines 75, 871 |
+| Health per round (own and each opponent's) | Yes | `HEALTH + ARMOR − DAMAGE` of each leaderboard hero when the combat closes, with a minimum of 0 (the final hit can overshoot: `DAMAGE` 33 with `HEALTH` 30). It can go up (healing, armor) | 281 rounds, none without data |
+| Final placement | Yes | `PLAYER_LEADERBOARD_PLACE` of the own hero with the game in `STATE=COMPLETE`. In Duos it is the team's placement (1-4). If the player was eliminated, the copy of their hero must be ignored (below) | line 910647 |
+| Rounds | Yes | `TURN` of `GameEntity`: odd = tavern, even = combat; round = `TURN // 2`. `TURN` 0 is the hero pick | — |
+| Opponent of each combat | Yes | In combat, the dummy player changes its `HERO_ENTITY` to a copy of the opponent's hero; it is identified by the `card_id` of the lobby hero and, if that does not match (ghosts of eliminated players, e.g. `TB_BaconShop_HERO_KelThuzad`), by `BACON_CURRENT_COMBAT_PLAYER_ID` | line 7880 |
+| Who fights on your side (you or your teammate) | Yes | The local player changes its `HERO_ENTITY` to the copy of the teammate's hero and back to its own | — |
+| Own and opponent board at combat start | Yes, except hidden combats | Minions in `ZONE=PLAY` on each side in the first `BLOCK_START BlockType=ATTACK` block after the hero change: `card_id`, `ATK`, `HEALTH − DAMAGE`, `ZONE_POSITION` | line 9044 (first attack; 257 in the game) |
+| Golden minion | Yes | By `card_id` (`…_G` or `TB_BaconUps_…`). **The `PREMIUM` tag is no use**: it is cosmetic (it appears on freshly bought tier 1 minions) | 895 golden minions seen in the 23 games |
+| Lobby tribes | Inferred only | `CARDRACE` of the shop minions (`IS_BACON_POOL_MINION=1`, controlled by the dummy player in the tavern turn) | lines 2573, 2580 |
+| MMR | **No** | It does not appear in `Power.log` (search for `MMR`, `Rating`: no results). See T-004 | — |
 
-### Combates que no se ven (Duos)
+### Combats that are not visible (Duos)
 
-Antes de cada combate el juego crea en `SETASIDE` una copia de todos los participantes (héroe, baratijas, esbirros), con su `card_id` visible. Después, algunos combates del compañero no se reproducen: los esbirros rivales se ocultan (`HIDE_ENTITY`, línea 5309 en adelante) y pasan a `ZONE=HAND`, y no hay ningún `BLOCK_START BlockType=ATTACK`.
+Before each combat the game creates in `SETASIDE` a copy of all participants (hero, trinkets, minions), with their `card_id` visible. Afterwards, some of the teammate's combats are not played back: the opposing minions are hidden (`HIDE_ENTITY`, line 5309 onward) and moved to `ZONE=HAND`, and there is no `BLOCK_START BlockType=ATTACK`.
 
-- El prototipo **solo usa tableros que entran en juego** y los toma al primer ataque. No usa las copias de `SETASIDE`, aunque tengan los `card_id`, para no mostrar algo que el jugador no ve en pantalla (regla 3 de `CLAUDE.md`).
-- Un combate sin ningún ataque queda con `board = null` ("not visible in the log"), nunca como tablero vacío.
-- En las 23 partidas: 1145 entradas de combate, 141 no visibles.
+- The prototype **only uses boards that enter play** and takes them at the first attack. It does not use the `SETASIDE` copies, even though they have the `card_id`s, so as not to show something the player does not see on screen (rule 3 of `CLAUDE.md`).
+- A combat with no attack at all ends up with `board = null` ("not visible in the log"), never as an empty board.
+- In the 23 games: 1145 combat entries, 141 not visible.
 
-### Eliminación del jugador local
+### Local player elimination
 
-Sesión 005 (2026-10-09). Evidencia: partida de Solo `Hearthstone_2026_10_09_00_26_56/Power_old.log` (22 MB, 1 partida; líneas aproximadas) y las 22 de Duos. Sin nombres: entidades por número.
+Session 005 (2026-10-09). Evidence: Solo game `Hearthstone_2026_10_09_00_26_56/Power_old.log` (22 MB, 1 game; approximate lines) and the 22 Duos games. No names: entities by number.
 
-Secuencia cuando el jugador local muere (igual en Solo y en Duos):
+Sequence when the local player dies (same in Solo and Duos):
 
-1. El golpe final deja el héroe del leaderboard propio con más daño que vida: `DAMAGE=33` con `HEALTH=30`, `ARMOR=0` (línea 159936). En Duos, entre 31 y 59 de daño.
-2. El juego crea **una copia del héroe** (`FULL_ENTITY` nueva, línea 159967) y le pone `PLAYER_LEADERBOARD_PLACE` con el puesto que tenía en ese momento (7), el mismo `PLAYER_ID`, `DAMAGE=33`, `COPIED_FROM_ENTITY_ID` = el héroe original y después `DAMAGE=0` (líneas 159988–160005). Queda en `SETASIDE`.
-3. El original pasa a `ZONE=GRAVEYARD` y el jugador a `PLAYSTATE=LOSING` y luego `LOST` (líneas 160010–162403).
-4. Los demás héroes reciben su puesto en ese momento (líneas 162417–162427) y, justo antes de `STATE=COMPLETE`, **el original recibe el puesto final**: 8 (líneas 164051–164059). La copia se queda con el viejo.
+1. The final hit leaves the own leaderboard hero with more damage than health: `DAMAGE=33` with `HEALTH=30`, `ARMOR=0` (line 159936). In Duos, between 31 and 59 damage.
+2. The game creates **a copy of the hero** (new `FULL_ENTITY`, line 159967) and gives it `PLAYER_LEADERBOARD_PLACE` with the placement it had at that moment (7), the same `PLAYER_ID`, `DAMAGE=33`, `COPIED_FROM_ENTITY_ID` = the original hero, and then `DAMAGE=0` (lines 159988-160005). It stays in `SETASIDE`.
+3. The original moves to `ZONE=GRAVEYARD` and the player to `PLAYSTATE=LOSING` and then `LOST` (lines 160010-162403).
+4. The other heroes get their placement at that moment (lines 162417-162427) and, right before `STATE=COMPLETE`, **the original gets the final placement**: 8 (lines 164051-164059). The copy keeps the old one.
 
-Los dos fallos de la primera partida de Solo salían de ahí: `leaderboard_heroes()` se quedaba con la última entidad por `PLAYER_ID`, que era la copia. De ahí la vida 30 (copia con `DAMAGE=0`) y el puesto 7 (viejo), repetido con el del jugador que de verdad quedó 7.º. El jugador local quedó **8.º** (el primero eliminado; los otros 7 seguían con vida > 0), no 7.º.
+The two failures in the first Solo game came from there: `leaderboard_heroes()` kept the last entity per `PLAYER_ID`, which was the copy. Hence health 30 (copy with `DAMAGE=0`) and placement 7 (old), repeated with that of the player who really finished 7th. The local player finished **8th** (first eliminated; the other 7 still had health > 0), not 7th.
 
-En Duos pasa lo mismo cuando cae el equipo local: 12 de 22 partidas tienen la copia (todas las no ganadas) y en 4 el puesto de la copia era distinto del final (2 en vez de 3 tres veces, 1 en vez de 2 una vez). Con la copia, el jugador local salía con un puesto distinto del de su compañero; con el original, los puestos salen por parejas en las 22.
+In Duos the same happens when the local team falls: 12 of 22 games have the copy (all the non-won ones) and in 4 the copy's placement differed from the final one (2 instead of 3 three times, 1 instead of 2 once). With the copy, the local player got a different placement from their teammate; with the original, placements come out by pairs in all 22.
 
-Cómo distinguir la copia: `COPIED_FROM_ENTITY_ID` apunta a otro héroe del leaderboard. **No basta con que tenga `COPIED_FROM_ENTITY_ID`**: los héroes del leaderboard de los rivales también son copias (en Solo y en Duos), pero de entidades que no son héroes del leaderboard. El prototipo descarta solo las copias de otro héroe del leaderboard.
+How to tell the copy: `COPIED_FROM_ENTITY_ID` points to another leaderboard hero. **Having `COPIED_FROM_ENTITY_ID` is not enough**: the opponents' leaderboard heroes are also copies (in Solo and Duos), but of entities that are not leaderboard heroes. The prototype discards only copies of another leaderboard hero.
 
-Los rivales eliminados no generan copia (0 en las 23 partidas). Su vida quedaba negativa (hasta −36); ahora sale 0.
+Eliminated opponents do not generate a copy (0 in the 23 games). Their health used to come out negative (down to −36); now it is 0.
 
-### Tribus: por qué no basta con la tienda
+### Tribes: why the shop is not enough
 
-Contando los esbirros ofrecidos por partida, solo en 17 de 23 partidas salen exactamente 5 tribus con 5 o más apariciones. En el resto aparecen tribus con 1–4 apariciones que no son del lobby o que podrían serlo (efectos que generan esbirros de otras tribus, esbirros de doble tribu con un solo `CARDRACE`). El prototipo da los recuentos tal cual, etiquetados como inferidos. Para el producto hace falta otra fuente (otro log, otro tag) o mostrarlo como "probable".
+Counting the minions offered per game, only in 17 of 23 games do exactly 5 tribes appear with 5 or more appearances. In the rest, tribes with 1-4 appearances show up that are not in the lobby or that might be (effects that generate minions of other tribes, dual-tribe minions with a single `CARDRACE`). The prototype gives the counts as they are, labeled as inferred. The product needs another source (another log, another tag) or to show it as "probable".
 
-## Fallos y límites encontrados
+## Failures and limits found
 
-| Hallazgo | Impacto | Qué hace el prototipo |
-|----------|---------|-----------------------|
-| `hslog` lanza `InconsistentPlayerIdError` en el 2.º juego de un log con varias partidas de Duos: guarda el estado de jugadores para todo el archivo y el mismo nombre vuelve con otro `PlayerID` | 4 de 6 logs no se podían leer | Parte el log en cada `CREATE_GAME` y usa un `LogParser` nuevo por partida. Además, una partida rota no tapa las siguientes |
-| `hslog` solo trata como Battlegrounds `GT_BATTLEGROUNDS` en su heurística de nombres (`player.py`), no las variantes de Duos | Ninguno visto con un parser por partida | Nada; vigilar al subir de versión |
-| Miles de avisos `Broken option nesting` | Ruido | Se silencian (nivel `ERROR`) |
-| Tags nuevos sin nombre en `hearthstone` 9.21.1 | Ninguno para estos datos | Nada |
-| Las excepciones de `hslog` citan la línea del log, que puede llevar BattleTags | Fuga de nombres en errores | Solo se informa el tipo de excepción |
+| Finding | Impact | What the prototype does |
+|---------|--------|-------------------------|
+| `hslog` raises `InconsistentPlayerIdError` in the 2nd game of a log with several Duos games: it keeps player state for the whole file and the same name comes back with a different `PlayerID` | 4 of 6 logs could not be read | Splits the log at each `CREATE_GAME` and uses a new `LogParser` per game. Also, a broken game does not hide the following ones |
+| `hslog` treats only `GT_BATTLEGROUNDS` as Battlegrounds in its name heuristic (`player.py`), not the Duos variants | None seen with a per-game parser | Nothing; watch when upgrading |
+| Thousands of `Broken option nesting` warnings | Noise | Silenced (`ERROR` level) |
+| New unnamed tags in `hearthstone` 9.21.1 | None for this data | Nothing |
+| `hslog` exceptions quote the log line, which may contain BattleTags | Names leaking in errors | Only the exception type is reported |
 
-## Garantías del prototipo
+## Prototype guarantees
 
-- **Nada inventado.** Si falta algo que el informe necesita (jugador local, héroe del leaderboard, tamaño de lobby razonable) o `hslog` falla, la partida sale como `unsupported` sin datos. Una partida sin `STATE=COMPLETE` sale como `incomplete` y sin puesto.
-- **Build no probada** (≠ 253216) o **tipo de partida no probado** (cualquiera salvo `GT_BATTLEGROUNDS` y `GT_BATTLEGROUNDS_DUO`): se procesa, pero con aviso.
-- **Privacidad:** la salida solo lleva `card_id`, números de jugador del lobby (1–8) y números. Comprobado sobre la salida JSON de las 23 partidas: ni BattleTags, ni `PlayerName`, ni `GameAccountId`.
-- Solo lectura del archivo de log. Sin red.
+- **Nothing made up.** If something the report needs is missing (local player, leaderboard hero, reasonable lobby size) or `hslog` fails, the game comes out as `unsupported` with no data. A game without `STATE=COMPLETE` comes out as `incomplete` and with no placement.
+- **Untested build** (≠ 253216) or **untested game type** (anything except `GT_BATTLEGROUNDS` and `GT_BATTLEGROUNDS_DUO`): it is processed, but with a warning.
+- **Privacy:** the output only carries `card_id`, lobby player numbers (1-8) and numbers. Checked on the JSON output of the 23 games: no BattleTags, no `PlayerName`, no `GameAccountId`.
+- Read-only access to the log file. No network.
 
-## Qué implica para el producto
+## What it means for the product
 
-- **Historial y stats (F1):** viable ya. Héroe, compañero, puesto, vida por ronda, rivales.
-- **Replays (F2):** viables con tableros por combate. En Duos, los combates ocultos del compañero se mostrarán como "no visible". Los nombres de cartas e imágenes necesitan la base de cartas (HearthstoneJSON u otra fuente con licencia compatible), pendiente.
-- **Overlay (F3):** el último tablero visto de cada rival sale del log en tiempo real si se sigue el archivo mientras crece. Las tribus del lobby, no con seguridad.
-- **MMR:** no está en `Power.log`; queda para T-004 (otros logs y leaderboard público).
-- **Stack (P-002):** el formato del log se entiende bien y el prototipo cabe en un archivo de menos de 500 líneas. Portarla a C# o Rust es viable sin depender de `hslog`, escribiéndola desde este informe y no desde código de otros trackers. Python + `hslog` sirve para prototipos y tests.
+- **History and stats (F1):** viable now. Hero, teammate, placement, health per round, opponents.
+- **Replays (F2):** viable with boards per combat. In Duos, the teammate's hidden combats will be shown as "not visible". Card names and images need the card database (HearthstoneJSON or another source with a compatible license), pending.
+- **Overlay (F3):** the last board seen of each opponent comes from the log in real time if the file is followed while it grows. Lobby tribes, not reliably.
+- **MMR:** not in `Power.log`; left for T-004 (other logs and public leaderboard).
+- **Stack (P-002):** the log format is well understood and the prototype fits in a file under 500 lines. Porting it to C# or Rust is viable without depending on `hslog`, writing it from this report and not from other trackers' code. Python + `hslog` is fine for prototypes and tests.
 
-## Pendiente
+## Pending
 
-- Más partidas de Solo: solo hay una real, en la que el jugador local cae el primero. Falta ver un Solo ganado y uno con rivales eliminados antes que el jugador local (cubierto solo con logs sintéticos).
-- **Puesto de los rivales que siguen vivos** cuando cae el jugador local: el log les pone su puesto en ese momento, no el final (la partida sigue sin el jugador). El prototipo lo da como `final_place` igual que el de los ya eliminados. Hay que distinguirlos (p. ej. vida > 0 al acabar) y marcar el suyo como desconocido o "puesto al salir".
-- Fixtures recortados de logs propios, sin nombres de terceros, con OK del usuario.
-- Fuente exacta de las tribus del lobby.
-- Reconexiones a mitad de partida: si el juego escribe un `CREATE_GAME` nuevo para la misma partida, el prototipo la contaría como dos. No ha pasado en los 23 logs (el recuento coincide con `check_logs.py`), pero no está probado.
-- Modo espectador: no probado.
+- More Solo games: there is only one real one, in which the local player falls first. Still to see: a won Solo game and one with opponents eliminated before the local player (covered only with synthetic logs).
+- **Placement of opponents still alive** when the local player falls: the log gives them their placement at that moment, not the final one (the game goes on without the player). The prototype gives it as `final_place`, same as for those already eliminated. They need to be told apart (e.g. health > 0 at the end) and their placement marked as unknown or "placement at exit".
+- Trimmed fixtures from own logs, with no third-party names, with the user's OK.
+- Exact source of the lobby tribes.
+- Reconnections mid-game: if the game writes a new `CREATE_GAME` for the same game, the prototype would count it as two. It has not happened in the 23 logs (the count matches `check_logs.py`), but it is untested.
+- Spectator mode: untested.

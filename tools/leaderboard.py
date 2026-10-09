@@ -5,7 +5,7 @@ rating if the name appears once, "below the cut-off" only after every page
 was checked, "ambiguous" if the name appears more than once, and "unknown" on
 any error, odd response or incomplete scan. It paces and caps its requests
 and keeps a small local cache with the player's own state only, never other
-players' rows (D-012). Strategy and measurements: docs/research/fuentes-mmr.md.
+players' rows (D-012). Strategy and measurements: docs/research/mmr-sources.md.
 
 Usage:
     python tools/leaderboard.py --name NAME --mode solo|duos

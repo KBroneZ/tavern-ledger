@@ -1,4 +1,4 @@
-"""Tests de tools/check_logs.py con datos sintéticos (nada del juego real)."""
+"""Tests for tools/check_logs.py with synthetic data (nothing from the real game)."""
 
 import sys
 import tempfile

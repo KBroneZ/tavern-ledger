@@ -1,4 +1,4 @@
-"""Tests de tools/leaderboard.py con respuestas sintéticas (nombres inventados, sin red)."""
+"""Tests for tools/leaderboard.py with synthetic responses (made-up names, no network)."""
 
 import contextlib
 import gzip
