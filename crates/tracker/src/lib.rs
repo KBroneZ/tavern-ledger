@@ -4,6 +4,8 @@
 
 pub mod discover;
 pub mod lock;
+pub mod provenance;
+pub mod report_bundle;
 pub mod setup;
 pub mod stats;
 pub mod store;

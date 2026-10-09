@@ -27,10 +27,10 @@
       <button type="button" data-mode="OTHER" aria-pressed="false" hidden>Other</button>
     </nav>
     <section class="tally" aria-label="Summary">
-      <div class="stat"><span class="label">Games</span><span id="stat-games" class="value">—</span></div>
-      <div class="stat"><span class="label">Average place</span><span id="stat-avg" class="value">—</span></div>
-      <div class="stat"><span class="label" id="stat-top-label">Top half</span><span id="stat-top" class="value">—</span></div>
-      <div class="stat"><span class="label">Wins</span><span id="stat-wins" class="value">—</span></div>
+      <div class="stat"><span class="label">Games</span><span id="stat-games" class="value">—</span><span id="stat-games-src" class="src-slot"></span></div>
+      <div class="stat"><span class="label">Average place</span><span id="stat-avg" class="value">—</span><span id="stat-avg-src" class="src-slot"></span></div>
+      <div class="stat"><span class="label" id="stat-top-label">Top half</span><span id="stat-top" class="value">—</span><span id="stat-top-src" class="src-slot"></span></div>
+      <div class="stat"><span class="label">Wins</span><span id="stat-wins" class="value">—</span><span id="stat-wins-src" class="src-slot"></span></div>
     </section>
     <p id="not-counted" class="tally-note" hidden></p>
 
@@ -81,13 +81,32 @@
             <th scope="col" class="num">Health</th>
             <th scope="col" class="num">Rounds</th>
             <th scope="col">Note</th>
+            <th scope="col"><span class="visually-hidden">Report a problem</span></th>
           </tr>
         </thead>
         <tbody id="games"></tbody>
       </table>
       <p id="empty" class="empty" hidden>No games yet. Play a Battlegrounds game and it will appear here when it ends.</p>
     </section>
+
+    <section class="legend" aria-labelledby="legend-title">
+      <h2 id="legend-title">Where values come from</h2>
+      <p class="note">A value with no mark comes straight from the game's log. Every other value carries a mark, and hovering any value says where it comes from.</p>
+      <ul id="legend-list"></ul>
+    </section>
   </main>
+
+  <dialog id="report-dialog" aria-labelledby="report-title">
+    <h2 id="report-title">Report a problem</h2>
+    <p class="note">This is the file that will be saved (only its time stamp is set again when you save). It holds no player names: the app refuses to make it if it finds one. Nothing is sent anywhere. Saving puts the file in your Downloads folder, and you can send it yourself.</p>
+    <p id="report-error" class="report-error" role="alert" hidden></p>
+    <pre id="report-text" tabindex="0"></pre>
+    <p id="report-saved" class="note" role="status" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" id="report-save">Save to Downloads</button>
+      <button type="button" id="report-close">Close</button>
+    </div>
+  </dialog>
 
   <footer>
     Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.
