@@ -12,7 +12,7 @@ Objetivo: demostrar que se puede reconstruir una partida de Battlegrounds solo c
 | T-002 | Activar logs (`log.config`) y recoger 10+ partidas propias como fixtures (Solo y Duos) | en curso | Fixtures en `fixtures/` sin datos de terceros que no sean públicos; anotados en `PROVENANCE.md`. |
 | T-003 | Prototipo de parser con `hslog` (Python, MIT) para ver qué expone `Power.log` en BG | hecho | Informe: héroe, tribus del lobby, tableros por ronda, rivales, puesto final, Duos. Qué falta. |
 | T-004 | Investigar fuentes de MMR (P-007): logs locales + leaderboard público | hecho | Tabla de qué dato sale de dónde, con evidencia. |
-| T-005 | Decidir stack de escritorio (P-002) | pendiente | Decisión en `DECISIONS.md` con motivo. |
+| T-005 | Decidir stack de escritorio (P-002) | en curso | Decisión en `DECISIONS.md` con motivo. |
 | T-006 | Cliente del leaderboard con caché y límites | hecho | Tests con respuestas sintéticas (no se guardan respuestas reales, D-012); timeout, errores y los cuatro estados de D-011 explícitos. |
 
 **Notas T-002 (2026-10-08).** `tools/check_logs.py` confirma que `log.config` ya activa `Power` (LogLevel=1, FilePrinting, Verbose). Los logs están en `C:\Battle.net\Battle.net\Hearthstone\Logs\Hearthstone_<fecha>\`. Inventario: 6 sesiones (2 a 8 de octubre), 23 inicios de partida, todos `GT_BATTLEGROUNDS_DUO`, build 253216. Ninguna de Solo. El juego deja `Power_old.log` (120–563 MB por sesión). Falta: jugar partidas de Solo y recortar cada partida a un fixture pequeño (necesita el parser de T-003) y quitar nombres de jugadores que no sean públicos.
@@ -24,6 +24,8 @@ Objetivo: demostrar que se puede reconstruir una partida de Battlegrounds solo c
 **Notas T-002 (2026-10-09, sesión 004).** `check_logs.py`: sin partidas nuevas (6 sesiones, 22 de Duos y 1 de Solo).
 
 **Notas T-002 (2026-10-09, sesión 005).** `check_logs.py`: sin partidas nuevas (6 sesiones, 22 de Duos y 1 de Solo). Causa de los dos fallos de Solo: al ser eliminado, el juego copia el héroe del jugador local (`COPIED_FROM_ENTITY_ID`, puesto viejo, `DAMAGE=0`) y el parser leía la copia. El jugador quedó 8.º, no 7.º; el otro "7" era correcto. Lo mismo pasaba en las 12 partidas de Duos perdidas (vida 30; puesto mal en 4). Arreglado en `parse_bg.py` con tests sintéticos; vida mínima 0. Solo (`GT_BATTLEGROUNDS`) pasa a tipo probado. Detalle en [`parser-hslog.md`](../research/parser-hslog.md). Queda: más partidas de Solo y el puesto de los rivales que siguen vivos cuando cae el jugador (es el del momento, no el final).
+
+**Notas T-005 (2026-10-09, sesión 006).** Informe [`stack-escritorio.md`](../research/stack-escritorio.md): Tauri 2, .NET (WPF/Avalonia) y Electron comparados en instalador, overlay, interfaz compartida con la web, autoactualización y licencias para SignPath. Recomendación: Tauri 2 (Rust + TS), con una prueba corta del overlay antes de cerrar P-002; plan B WPF. Falta la decisión del usuario.
 
 **Notas T-003 (2026-10-08).** `tools/parse_bg.py` + informe [`docs/research/parser-hslog.md`](../research/parser-hslog.md). 23 de 23 partidas reales (Duos, build 253216) en `ok`. Sale todo salvo el MMR y la lista exacta de tribus (solo inferida de la tienda); el 12 % de los combates del compañero en Duos no se ve en el log local. Solo sin probar con logs reales.
 
