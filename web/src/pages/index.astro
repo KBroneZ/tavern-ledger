@@ -12,7 +12,7 @@ const accountsOpen = readConfig(import.meta.env) !== null;
   <section class="hero" aria-labelledby="hero-heading">
     <div>
       <p class="kicker">Battlegrounds tracker · Windows · free</p>
-      <h1 id="hero-heading">Every game you play, kept in your own ledger.</h1>
+      <h1 id="hero-heading">Every game you play, <span>on the record.</span></h1>
       <p class="lede">
         Tavern Ledger is a desktop app that reads Hearthstone's log files on your PC and keeps a
         history of your Battlegrounds games: hero, final place, the tribes the tavern offered and
@@ -20,26 +20,34 @@ const accountsOpen = readConfig(import.meta.env) !== null;
         choose, share a public profile.
       </p>
     </div>
-    <figure class="sample">
-      <table class="ledger">
-        <caption>What an uploaded game holds on the site</caption>
-        <thead>
-          <tr><th scope="col">Item</th><th scope="col">On the site</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>Hero and final place</td><td>yes</td></tr>
-          <tr><td>Mode (Solo or Duos) and date</td><td>yes</td></tr>
-          <tr><td>Tribes the tavern offered you</td><td>yes</td></tr>
-          <tr><td>Your rating or MMR</td><td>never</td></tr>
-          <tr><td>Other players' names</td><td>never</td></tr>
-        </tbody>
-      </table>
+    <figure class="live">
+      <div class="live-head"><span>Round</span><em>Example game</em></div>
+      <div class="live-round" aria-hidden="true"><b></b><span>of an example game</span></div>
+      <div class="live-hp" aria-hidden="true"><i></i></div>
+      <div class="live-lobby" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <figcaption>
-        Uploading comes with a later version of the desktop app, and only after you sign in and
-        turn it on. Your games stay private unless you make your profile public.
+        An illustration with made-up numbers: your health, and the lobby thinning out round by
+        round. Your real games appear here only after the desktop app uploads them, which comes
+        with a later version, and only after you sign in and turn it on.
       </figcaption>
     </figure>
   </section>
+
+  <div class="holds table-wrap">
+    <table class="ledger">
+      <caption>What an uploaded game holds on the site</caption>
+      <thead>
+        <tr><th scope="col">Item</th><th scope="col" class="num">On the site</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Hero and final place</td><td class="num">yes</td></tr>
+        <tr><td>Mode (Solo or Duos) and date</td><td class="num">yes</td></tr>
+        <tr><td>Tribes the tavern offered you</td><td class="num">yes</td></tr>
+        <tr><td>Your rating or MMR</td><td class="num never">never</td></tr>
+        <tr><td>Other players' names</td><td class="num never">never</td></tr>
+      </tbody>
+    </table>
+  </div>
 
   <div class="columns">
     <section aria-labelledby="does-heading">

@@ -42,7 +42,7 @@ Customizable overlay (T-302): from the tray, "Unlock overlay to move and resize 
 Privacy and terms (T-104b): a data inventory written from the code, and drafts of the privacy policy and terms in [docs/legal/](docs/legal/), shown on the site at `/privacy/` and `/terms/`. They are not in force: the controller's name, some provider details and the legal checks of the email sender are still to be decided; the contact addresses exist. No analytics, minimum age 16.
 
 
-Next tasks, in the user's order (2026-10-10; hub prompt [prompts/sessions/025-hub.md](prompts/sessions/025-hub.md)): (1) card and hero images in the overlay and the app (T-304, session 026); (2) redesign of the website (T-104e, session 028) and of the desktop app and overlay (T-305, session 027, after 026); (3) an auth email sender that does not rewrite links (T-104f, session 029), which blocks opening sign-ups (D-037); then the follow-ups from session 022, T-D01, T-108, and what waits on the user (T-101, T-105, opening sign-ups).
+Next tasks, in the user's order (2026-10-10; hub prompt [prompts/sessions/025-hub.md](prompts/sessions/025-hub.md)): (1) card and hero images in the overlay and the app (T-304, session 026); (2) redesign of the desktop app and overlay (T-305, session 027, after 026) — the website redesign (T-104e, session 028) is done: direction "Combat Round", D-040. Original wording: redesign of the desktop app and overlay (T-305, session 027, after 026); (3) an auth email sender that does not rewrite links (T-104f, session 029), which blocks opening sign-ups (D-037); then the follow-ups from session 022, T-D01, T-108, and what waits on the user (T-101, T-105, opening sign-ups).
 
 ## Check your log setup
 
