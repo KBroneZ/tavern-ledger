@@ -2,6 +2,7 @@
 //! the local game history. Only reads the game's log files (D-004).
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod card_data;
 mod foreground;
 mod overlay;
 mod overlay_layout;
@@ -717,6 +718,8 @@ fn main() {
         ))
         .manage(state.clone())
         .manage(upload::Upload::default())
+        .manage(card_data::Cards::default())
+        .register_asynchronous_uri_scheme_protocol(card_data::SCHEME, card_data::protocol)
         .invoke_handler(tauri::generate_handler![
             list_games,
             game_stats,
@@ -739,6 +742,8 @@ fn main() {
             upload::upload_sign_in,
             upload::upload_cancel_sign_in,
             upload::upload_sign_out,
+            card_data::card_names,
+            card_data::card_data_status,
         ])
         .on_window_event(|window, event| {
             // Closing the window hides it; "Quit" in the tray menu exits.
@@ -751,6 +756,7 @@ fn main() {
             let data_dir =
                 data_dir_from(std::env::args()).unwrap_or_else(tracker::store::default_dir);
             let loaded = state.overlay.load(&data_dir, overlay_dev(std::env::args()));
+            card_data::start(app.handle(), &data_dir);
             setup_tray(app)?;
             overlay::follow(app.handle().clone(), state.clone());
             let prepared = overlay::prepare(app.handle()).map_err(|e| {

@@ -4,7 +4,8 @@
 //! A value is *from the log* when the game's own log says it, *inferred*
 //! when we derive it (tribes seen in the tavern, skin grouping D-019),
 //! *entered by you* (the lobby tribes of T-303), *from the leaderboard*
-//! (not in the app yet) or *unknown* when there is nothing to show.
+//! (not in the app yet), *from the card database* (card names and art looked
+//! up by the log's card id, T-304) or *unknown* when there is nothing to show.
 
 use serde::Serialize;
 use serde_json::Value;
@@ -16,16 +17,19 @@ pub enum Source {
     Inferred,
     Entered,
     Leaderboard,
+    /// Card names and art looked up by the log's card id (T-304, D-038).
+    CardData,
     #[default]
     Unknown,
 }
 
 impl Source {
-    pub const ALL: [Source; 5] = [
+    pub const ALL: [Source; 6] = [
         Source::Log,
         Source::Inferred,
         Source::Entered,
         Source::Leaderboard,
+        Source::CardData,
         Source::Unknown,
     ];
 
@@ -36,6 +40,7 @@ impl Source {
             Source::Inferred => "inferred",
             Source::Entered => "entered by you",
             Source::Leaderboard => "from the leaderboard",
+            Source::CardData => "card database",
             Source::Unknown => "unknown",
         }
     }
@@ -51,6 +56,9 @@ impl Source {
             }
             Source::Entered => "You typed it in.",
             Source::Leaderboard => "Blizzard's public leaderboard says so.",
+            Source::CardData => {
+                "Card name or art looked up by the card id in the log, in HearthstoneJSON's copy of Blizzard's card data (English). It can lag behind a game patch."
+            }
             Source::Unknown => "Nothing in the log says. It is not zero.",
         }
     }
@@ -137,7 +145,7 @@ mod tests {
     #[test]
     fn every_source_has_a_label_and_a_sentence_for_the_legend() {
         let legend = legend();
-        assert_eq!(legend.len(), 5);
+        assert_eq!(legend.len(), 6);
         let labels: Vec<_> = legend.iter().map(|e| e.label).collect();
         assert_eq!(
             labels,
@@ -146,6 +154,7 @@ mod tests {
                 "inferred",
                 "entered by you",
                 "from the leaderboard",
+                "card database",
                 "unknown"
             ]
         );
@@ -157,6 +166,10 @@ mod tests {
         let json = serde_json::to_value(Source::Leaderboard).unwrap();
         assert_eq!(json, json!("leaderboard"));
         assert_eq!(serde_json::to_value(Source::Log).unwrap(), json!("log"));
+        assert_eq!(
+            serde_json::to_value(Source::CardData).unwrap(),
+            json!("card_data")
+        );
     }
 
     #[test]
