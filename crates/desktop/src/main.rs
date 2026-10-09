@@ -15,6 +15,8 @@ use tauri::{App, AppHandle, Emitter, Manager, State, WindowEvent, Wry};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tracker::discover::find_logs_dir;
 use tracker::lock::{HistoryLock, LockError};
+use tracker::provenance::{row_sources, RowSources};
+use tracker::report_bundle::{self, BundleInput};
 use tracker::setup::{check_setup, client_config_path, default_log_config_path};
 use tracker::stats::Stats;
 use tracker::store::{ParserStamp, Store};
@@ -57,6 +59,8 @@ struct GameRow {
     report: serde_json::Value,
     /// The parser that wrote the record; null is "unknown version".
     parser: Option<ParserStamp>,
+    /// Where each value of the row comes from (T-109).
+    sources: RowSources,
 }
 
 /// Shared with the window. The watcher itself lives only in the tracker
@@ -85,6 +89,71 @@ fn game_stats(state: State<'_, Arc<AppState>>) -> Stats {
 
 fn stats_of(rows: &[GameRow]) -> Stats {
     tracker::stats::compute(rows.iter().map(|row| &row.report))
+}
+
+/// The "report a problem" bundle of one game, as the text of the file. The
+/// window shows it before anything is saved; nothing is sent (T-110).
+#[tauri::command]
+fn preview_problem_report(
+    state: State<'_, Arc<AppState>>,
+    session: String,
+    index: u64,
+) -> Result<String, String> {
+    problem_report_text(&state, &session, index)
+}
+
+/// Builds the bundle again (never trusts text from the window) and saves it
+/// in the Downloads folder. Returns where it went.
+#[tauri::command]
+fn save_problem_report(
+    state: State<'_, Arc<AppState>>,
+    session: String,
+    index: u64,
+) -> Result<String, String> {
+    let text = problem_report_text(&state, &session, index)?;
+    let dir = report_bundle::downloads_dir()
+        .ok_or("The Downloads folder was not found, so nothing was saved.")?;
+    let name = report_bundle::file_name(&session, index);
+    report_bundle::save_in(&dir, &name, &text)
+        .map(|path| path.display().to_string())
+        .map_err(|e| format!("Could not save the report ({:?}).", e.kind()))
+}
+
+fn problem_report_text(state: &AppState, session: &str, index: u64) -> Result<String, String> {
+    let games = state.games.lock().unwrap_or_else(|e| e.into_inner());
+    let row = games
+        .iter()
+        .find(|g| g.session == session && g.index == index)
+        .ok_or("That game is not in the history.")?;
+    let logs_dir = state
+        .status
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .logs_dir
+        .clone();
+    let client_config = logs_dir
+        .as_deref()
+        .and_then(|dir| client_config_path(Path::new(dir)));
+    let setup = check_setup(
+        default_log_config_path().as_deref(),
+        client_config.as_deref(),
+    );
+    let input = BundleInput {
+        session: &row.session,
+        index: row.index,
+        report: &row.report,
+        parser: row.parser.as_ref(),
+        app_version: env!("CARGO_PKG_VERSION"),
+        setup: &setup,
+        created_unix: std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs()),
+    };
+    report_bundle::build(&input)
+        .map(|bundle| report_bundle::to_text(&bundle))
+        .map_err(|refusal| {
+            format!("No report was made: the game holds something that must not leave the app ({refusal}).")
+        })
 }
 
 #[tauri::command]
@@ -117,6 +186,7 @@ fn publish_games(app: &AppHandle, state: &AppState, store: &Store) {
             index: key.index,
             report: report.clone(),
             parser: store.parser(key).cloned(),
+            sources: row_sources(&key.session, report),
         })
         .collect();
     *state.games.lock().unwrap_or_else(|e| e.into_inner()) = rows;
@@ -307,7 +377,13 @@ fn main() {
             Some(vec![MINIMIZED_ARG]),
         ))
         .manage(state.clone())
-        .invoke_handler(tauri::generate_handler![list_games, game_stats, status])
+        .invoke_handler(tauri::generate_handler![
+            list_games,
+            game_stats,
+            status,
+            preview_problem_report,
+            save_problem_report
+        ])
         .on_window_event(|window, event| {
             // Closing the window hides it; "Quit" in the tray menu exits.
             if let WindowEvent::CloseRequested { api, .. } = event {
@@ -344,6 +420,7 @@ mod tests {
             session: "Hearthstone_2026_10_09_00_00_00".into(),
             index: 1,
             parser: None,
+            sources: row_sources("", &serde_json::Value::Null),
             report: serde_json::json!({
                 "status": "ok", "game_type": game_type, "hero": "H", "final_place": place,
             }),
@@ -356,6 +433,41 @@ mod tests {
         );
         assert_eq!(solo.totals.average_place, Some(3.0));
         assert_eq!(stats.modes[1].totals.wins, Some(1));
+    }
+
+    fn state_with(report: serde_json::Value) -> AppState {
+        let state = AppState::default();
+        state.games.lock().unwrap().push(GameRow {
+            session: "Hearthstone_2026_10_09_00_00_00".into(),
+            index: 1,
+            sources: row_sources("Hearthstone_2026_10_09_00_00_00", &report),
+            parser: None,
+            report,
+        });
+        state
+    }
+
+    #[test]
+    fn the_problem_report_of_a_listed_game_is_json_text() {
+        let state = state_with(serde_json::json!({"status": "ok", "build": 1}));
+        let text = problem_report_text(&state, "Hearthstone_2026_10_09_00_00_00", 1).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(parsed["game"]["build"], 1);
+        assert_eq!(parsed["app_version"], env!("CARGO_PKG_VERSION"));
+    }
+
+    #[test]
+    fn a_game_that_is_not_listed_has_no_report() {
+        let state = state_with(serde_json::json!({}));
+        assert!(problem_report_text(&state, "Hearthstone_2026_10_09_00_00_00", 2).is_err());
+    }
+
+    #[test]
+    fn a_game_with_a_name_in_it_gives_no_report_and_the_message_hides_it() {
+        let state = state_with(serde_json::json!({"warnings": ["Someone#4321 left"]}));
+        let err = problem_report_text(&state, "Hearthstone_2026_10_09_00_00_00", 1).unwrap_err();
+        assert!(err.starts_with("No report was made"));
+        assert!(!err.contains("Someone"));
     }
 
     #[test]
