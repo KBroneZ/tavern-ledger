@@ -21,7 +21,9 @@ function securityHeaders() {
           "  Referrer-Policy: no-referrer",
           "  Cross-Origin-Opener-Policy: same-origin",
           "  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()",
-          "  Strict-Transport-Security: max-age=31536000; includeSubDomains",
+          // One day while the site is new; raised to a year once it has run
+          // cleanly (docs/research/deploy.md, section 4).
+          "  Strict-Transport-Security: max-age=86400; includeSubDomains",
           "",
           // File names under /_astro/ carry a content hash, so they never change.
           "/_astro/*",

@@ -17,8 +17,8 @@ const config = readConfig(import.meta.env);
 // built site (and `npm run preview`) always carries it.
 const csp = import.meta.env.PROD ? contentSecurityPolicy(config?.url ?? null) : null;
 const path = Astro.url.pathname;
-// The 404 page answers on every missing address, so it names none.
-const canonical = path.startsWith("/404") ? null : new URL(path, Astro.site).href;
+// Pages kept out of search engines (404, sign-in, account) name no canonical address.
+const canonical = noindex ? null : new URL(path, Astro.site).href;
 ---
 
 <!doctype html>

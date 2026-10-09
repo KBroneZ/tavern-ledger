@@ -40,13 +40,13 @@ Pages project settings:
 | Root directory | `web` | the site's own lockfile; Pages clones the whole repo, so `docs/legal/*.md` (rendered by `/privacy/` and `/terms/`) are there |
 | Build command | `npm test && npm run build && npm run test:dist` | the same checks as CI; a failing check stops the deploy and the previous deployment stays live |
 | Output directory | `dist` | Astro's default |
-| Node version | `web/.node-version` (24.14.0) | Pages' build image reads it; `engines` needs ≥ 22.18 |
+| Node version | `web/.node-version` (24.14.0) | the build image should read it from the root directory; `engines` needs ≥ 22.18. Checked in the first build log, with the dependency install (`npm clean-install`, so the lockfile is enforced) |
 | Environment variables | `ASTRO_TELEMETRY_DISABLED=1` only | no Supabase settings: accounts closed. No secret ever goes here (the build refuses a non-public key anyway) |
 | Web Analytics | **off** | D-027: no analytics of any kind |
 
 Pages installs dependencies from `web/package-lock.json`; `web/.npmrc` keeps install scripts off there too.
 
-Rollback: Pages keeps every successful deployment; "Rollback to this deployment" restores an earlier production deployment (files and headers only, not DNS or zone settings). Then revert the bad commit on `main` so the next deploy does not bring it back; pause automatic production deployments while fixing if needed. Taking the site offline: remove both custom domains and the `www` record, then delete the Pages project (removing only the custom domains leaves `tavern-ledger.pages.dev` up).
+Rollback: Pages keeps every successful deployment; "Rollback to this deployment" restores an earlier production deployment (files and headers only, not DNS or zone settings). Then revert the bad commit on `main` so the next deploy does not bring it back; pause automatic production deployments while fixing if needed. Taking the site offline: remove both custom domains and the `www` record, then delete the Pages project (removing only the custom domains leaves `tavern-ledger.pages.dev` up). Always in that order: deleting the project while the apex record still points at `tavern-ledger.pages.dev` would leave a dangling name someone else could claim.
 
 ## 3. Domains, HTTPS and redirects
 
@@ -64,7 +64,7 @@ The build writes `dist/_headers` (`web/astro.config.mjs`), because the CSP depen
 | Header | Value | Note |
 |---|---|---|
 | `Content-Security-Policy` | `default-src 'none'; script-src 'none'; style-src 'self'; img-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'` | With accounts open: `script-src 'self'`, `form-action 'self'` and `connect-src` the Supabase origin. Also as `<meta>` in every page (all but `frame-ancestors`, which only works as a header). |
-| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | No `preload` yet: preload is hard to undo; add it once the site has run cleanly for a while. `includeSubDomains` commits every future web subdomain to HTTPS: any new one must be proxied through Cloudflare (covered by the universal certificate) or have its own certificate. |
+| `Strict-Transport-Security` | `max-age=86400; includeSubDomains` | One day while the site is new (security review): a mistake then locks returning visitors out for a day, not a year. Raise to `31536000` once the site has run cleanly for a couple of weeks (T-104c notes). No `preload` yet: preload is hard to undo; add it once the site has run cleanly for a while. `includeSubDomains` commits every future web subdomain to HTTPS: any new one must be proxied through Cloudflare (covered by the universal certificate) or have its own certificate. |
 | `X-Content-Type-Options` | `nosniff` | |
 | `X-Frame-Options` | `DENY` | For browsers without `frame-ancestors`. |
 | `Referrer-Policy` | `no-referrer` | Also as `<meta>`. |
@@ -152,6 +152,8 @@ Supabase Auth needs a sender for sign-up confirmation, email change and password
 8. Final checks (section 4) and `dig`/`Resolve-DnsName` of every record in section 5.
 
 ## Second opinion (ChatGPT, 2026-10-09)
+
+Code and security reviews (Claude subagents) found no CRITICAL or HIGH; applied: HSTS starts at one day, no canonical link on `noindex` pages, the open-mode build test checks that every script a page loads exists, the privacy draft names Cloudflare's possible security cookies, the takedown order above.
 
 Reviewed this plan and the site's code before any Cloudflare change. Applied: closed-mode CSP tightened to `script-src 'none'` and `form-action 'none'`; Speed Brain added to the features turned off; security cookies from Cloudflare's own protection noted; rollback and takedown steps completed (`pages.dev` stays up unless the project is deleted); canonical links to the apex; a test that no closed-build file holds a project URL or key; header checks for COOP and asset caching; wording on DNSSEC, forks and the `includeSubDomains` commitment corrected; an outside-sender forwarding test added. Not applied, with reasons: "do not publish while the privacy policy is a draft" (the user decided to publish with accounts closed; the site collects nothing itself, and the drafts say what is still open); "guard against accidental account opening" (opening means setting two build variables in the Pages project, a deliberate T-104a step owned by session 022, and the build refuses a half or non-public setting); "verify Brevo's branding" (moot: the user chose Cloudflare Email Sending).
 

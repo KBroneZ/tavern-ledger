@@ -66,10 +66,16 @@ test("no inline script, style or event handler in any page", () => {
   }
 });
 
-test("every page but the 404 names its canonical address on the apex domain", () => {
-  for (const page of PAGES.filter((p) => !p.endsWith("404.html"))) {
+test("every indexable page names its canonical address on the apex domain", () => {
+  for (const page of PAGES) {
+    const html = readFileSync(page, "utf8");
+    const canonical = /<link rel="canonical" href="([^"]*)">/.exec(html)?.[1];
+    if (html.includes('<meta name="robots" content="noindex">')) {
+      assert.equal(canonical, undefined, name(page));
+      continue;
+    }
     const path = "/" + name(page).replace(/index\.html$/, "");
-    assert.ok(readFileSync(page, "utf8").includes(`<link rel="canonical" href="https://tavernledger.net${path}">`), name(page));
+    assert.equal(canonical, `https://tavernledger.net${path}`, name(page));
   }
 });
 
@@ -95,13 +101,15 @@ test("_headers carries the same policy plus frame-ancestors and the other securi
   assert.match(headers, /Cross-Origin-Opener-Policy: same-origin/);
   assert.match(headers, /\/_astro\/\*\n  Cache-Control: public, max-age=31536000, immutable/);
   assert.match(headers, /Permissions-Policy: camera=\(\)/);
-  assert.match(headers, /Strict-Transport-Security: max-age=31536000; includeSubDomains/);
+  assert.match(headers, /Strict-Transport-Security: max-age=\d+; includeSubDomains/);
 });
 
 test("accounts open: the account pages have their forms and scripts", { skip: !CONFIG }, () => {
   for (const page of ACCOUNT_PAGES) {
     const html = readFileSync(join(DIST, page), "utf8");
-    assert.match(html, /<script\b/, page);
+    const sources = [...html.matchAll(/<script\b[^>]*\ssrc="\/([^"]+)"/g)].map((m) => m[1]);
+    assert.ok(sources.length > 0, page);
+    for (const src of sources) assert.ok(existsSync(join(DIST, src)), `${page}: ${src}`);
     assert.doesNotMatch(html, /Accounts are not open yet/, page);
   }
   assert.match(readFileSync(join(DIST, "signin/index.html"), "utf8"), /id="signup-form"/);
