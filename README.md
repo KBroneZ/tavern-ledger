@@ -26,7 +26,9 @@ Robustness (session 014): the app and `check_logs.py` check that the game is set
 
 Website (T-104c): a static Astro site in `web/` with sign-in by email, an account page (display name, public profile switch, download all your data, delete your account) and a public profile page that only exists when you turn it on. It shows no ratings and no other players' names. It runs against the local stack; it is not online yet.
 
-Next tasks: T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), the hosted Supabase project and the site's hosting (need the user), T-104b (privacy policy) and T-104d (upload from the desktop app).
+Privacy and terms (T-104b): a data inventory written from the code, and drafts of the privacy policy and terms in [docs/legal/](docs/legal/), shown on the site at `/privacy/` and `/terms/`. They are not in force: the controller's name and contact, the email sender and some provider details are still to be decided. No analytics, minimum age 16.
+
+Next tasks: T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), the hosted Supabase project and the site's hosting (need the user), T-104b (fill in the open items of the privacy policy) and T-104d (upload from the desktop app).
 
 ## Check your log setup
 

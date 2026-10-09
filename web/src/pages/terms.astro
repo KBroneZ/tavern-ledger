@@ -1,0 +1,12 @@
+---
+// The text lives in docs/legal/terms.md, so the repository and the site can
+// never say different things.
+import Base from "../layouts/Base.astro";
+import { Content } from "../../../docs/legal/terms.md";
+---
+
+<Base title="Terms" description="Tavern Ledger terms of use (draft, not in force yet).">
+  <article class="legal">
+    <Content />
+  </article>
+</Base>
