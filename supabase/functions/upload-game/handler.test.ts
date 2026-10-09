@@ -8,7 +8,7 @@ type Bytes = Uint8Array<ArrayBuffer>;
 
 const ENV: Env = { url: "http://api.test", serviceKey: "service-key-for-tests" };
 const USER = "00000000-0000-4000-8000-00000000000a";
-const TOKEN = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.c2lnbmF0dXJl";
+const TOKEN = "made-up-access-token-for-tests";
 const PATH = `/upload-game/v1/games/${SESSION}/1`;
 const FILE = `/storage/v1/object/games/${USER}/${SESSION}-1.json.gz`;
 
