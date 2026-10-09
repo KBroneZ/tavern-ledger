@@ -24,7 +24,9 @@ Backend (T-104a): the database schema, row-level security, export, account delet
 
 Robustness (session 014): the app and `check_logs.py` check that the game is set up to write a complete log (`log.config` and `client.config`), every saved game records which parser version read it, `tavern-watch --reparse` re-reads old sessions after a parser fix, and a dev tool replays a saved log so the app can be tested without playing.
 
-Next tasks: T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), the hosted Supabase project (T-104a, needs the user) and T-104b to T-104d (privacy policy, website and upload).
+Website (T-104c): a static Astro site in `web/` with sign-in by email, an account page (display name, public profile switch, download all your data, delete your account) and a public profile page that only exists when you turn it on. It shows no ratings and no other players' names. It runs against the local stack; it is not online yet.
+
+Next tasks: T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), the hosted Supabase project and the site's hosting (need the user), T-104b (privacy policy) and T-104d (upload from the desktop app).
 
 ## Check your log setup
 
@@ -119,6 +121,22 @@ pwsh tools/backup_supabase.ps1 -Local # backup into .local/backups/
 ```
 
 These run on the developer's machine, not in CI. Without `-Local`, the backup script backs up the linked hosted project, reading `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from `.local/supabase.env`.
+
+### Website (`web/`)
+
+Needs Node.js 22.12 or later. Copy `web/.env.example` to `web/.env` and fill in the local stack's API URL and anon key from `npx supabase status` (only the public key: the build refuses any other).
+
+```
+cd web
+npm ci
+npm test                    # unit tests (Node's built-in runner)
+npm run build               # static site in web/dist/
+npm run test:dist           # checks on the built files: CSP, nothing inlined, no secret key
+npm run preview             # http://127.0.0.1:3000, the address the local stack's auth expects
+$env:TAVERN_SUPABASE_LOCAL = "1"; npm run test:local   # end to end against the local stack
+```
+
+CI runs the unit tests, the build and the built-file checks.
 
 ## License
 

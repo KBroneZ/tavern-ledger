@@ -1,6 +1,7 @@
 .local/
 .env
 .env.*
+!.env.example
 *.log
 # Synthetic logs for the Rust parser tests (no real games).
 !crates/bg-parser/tests/data/*.log
@@ -8,6 +9,7 @@ bin/
 obj/
 node_modules/
 dist/
+.astro/
 .venv/
 __pycache__/
 target/

@@ -1,0 +1,87 @@
+---
+import Base from "../layouts/Base.astro";
+import { CONFIRM_PHRASE } from "../lib/deleteAccount.ts";
+---
+
+<Base title="Your account" description="Your Tavern Ledger account." noindex>
+  <h1>Your account</h1>
+  <p class="message" id="page-message" role="status" aria-live="polite">Loading…</p>
+
+  <section id="signed-out" hidden>
+    <p>You are not signed in. <a href="/signin/">Sign in</a> to see your account.</p>
+  </section>
+
+  <section id="deleted" hidden>
+    <p>Your account and all its data are deleted. Thank you for trying Tavern Ledger.</p>
+  </section>
+
+  <div id="signed-in" hidden>
+    <p class="meta">Signed in as <span id="account-email" class="mono"></span>.</p>
+
+    <div class="panels">
+      <section class="panel" aria-labelledby="profile-heading">
+        <h2 id="profile-heading">Profile</h2>
+        <form id="profile-form" novalidate>
+          <label>
+            Display name
+            <span class="hint">Up to 32 letters, digits, spaces, _ . or -. Not your BattleTag.</span>
+            <input type="text" name="display_name" maxlength="32" autocomplete="nickname" />
+          </label>
+          <label class="check">
+            <input type="checkbox" name="is_public" />
+            <span>
+              Public profile
+              <span class="hint">
+                Off by default. When on, anyone can find your profile and read your display name
+                and every game you uploaded in full: hero, place, mode, date, tribes offered and
+                the boards you saw. Never your rating or other players' names.
+              </span>
+            </span>
+          </label>
+          <button type="submit">Save</button>
+          <p class="message" id="profile-message" role="status" aria-live="polite"></p>
+        </form>
+        <p id="public-link-row" class="meta" hidden>
+          Your public page: <a id="public-link" href="/"></a>
+        </p>
+      </section>
+
+      <section class="panel" aria-labelledby="export-heading">
+        <h2 id="export-heading">Your data</h2>
+        <p>
+          Download everything this site holds about you as one JSON file: account, sign-in
+          history, profile, every game and the game files themselves.
+        </p>
+        <button type="button" id="export-button" class="secondary">Download my data</button>
+        <p class="message" id="export-message" role="status" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <section class="panel danger" aria-labelledby="delete-heading">
+      <h2 id="delete-heading">Delete account</h2>
+      <p>
+        This deletes your account, your profile, every uploaded game and file, and your sign-in
+        history. It cannot be undone. Download your data first if you want to keep it.
+      </p>
+      <form id="delete-form" novalidate>
+        <label>
+          <span>Type <span class="mono">{CONFIRM_PHRASE}</span> to confirm</span>
+          <input type="text" name="confirm" autocomplete="off" spellcheck="false" />
+        </label>
+        <div id="reauth" class="callout" hidden>
+          <label>
+            For your safety, enter your password again
+            <span class="hint">Deleting needs a sign-in from the last 10 minutes.</span>
+            <input type="password" name="password" autocomplete="current-password" />
+          </label>
+        </div>
+        <button type="submit" class="danger">Delete my account</button>
+        <p class="message" id="delete-message" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <p><button type="button" id="signout-button" class="secondary">Sign out</button></p>
+  </div>
+</Base>
+
+<script src="../scripts/account.ts"></script>

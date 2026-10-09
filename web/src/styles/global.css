@@ -1,0 +1,509 @@
+/* Tavern Ledger: an account book. Warm paper, ink, ruled lines and a brass
+   accent; tabular figures for anything that is a number. System fonts only:
+   no font is downloaded from a third party (privacy, and the CSP). */
+
+:root {
+  --paper: #f6f0e3;
+  --paper-deep: #ece3cf;
+  --ink: #241d14;
+  --ink-soft: #5c4f3d;
+  --rule: #d6c8a8;
+  --rule-strong: #b39c6c;
+  --brass: #8a5a12;
+  --brass-bright: #b07519;
+  --danger: #9b2c1f;
+  --danger-paper: #f6e1d9;
+  --ok: #2f5d34;
+  --focus: #1f4e8c;
+
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --font-sans: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, monospace;
+
+  --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.0625rem);
+  --text-hero: clamp(2.25rem, 1.4rem + 3.6vw, 4rem);
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2.5rem;
+  --space-6: clamp(3rem, 2rem + 4vw, 5.5rem);
+  --measure: 68ch;
+  --radius: 3px;
+  --duration: 150ms;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #1b1712;
+    --paper-deep: #241f18;
+    --ink: #efe6d4;
+    --ink-soft: #b9aa8f;
+    --rule: #3a3227;
+    --rule-strong: #5d4f39;
+    --brass: #d9a14a;
+    --brass-bright: #f0b95c;
+    --danger: #f08a78;
+    --danger-paper: #3a1d18;
+    --ok: #8cc792;
+    --focus: #8fb7f0;
+    color-scheme: dark;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  color: var(--ink);
+  font: var(--text-base) / 1.6 var(--font-sans);
+}
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-3) var(--space-6);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0 0 var(--space-3);
+}
+
+h1 {
+  font-size: clamp(1.9rem, 1.5rem + 1.6vw, 2.6rem);
+}
+
+h2 {
+  font-size: 1.45rem;
+}
+
+p {
+  margin: 0 0 var(--space-3);
+  max-width: var(--measure);
+}
+
+a {
+  color: var(--brass);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  color: var(--brass-bright);
+  text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.skip {
+  position: absolute;
+  left: -999px;
+}
+
+.skip:focus {
+  left: var(--space-3);
+  top: var(--space-3);
+  background: var(--paper);
+  padding: var(--space-2) var(--space-3);
+  z-index: 1;
+}
+
+/* Masthead and colophon */
+
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) max(var(--space-3), calc((100% - 64rem) / 2 + var(--space-3)));
+  border-bottom: 3px double var(--rule-strong);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1.5px solid var(--brass);
+  border-radius: var(--radius);
+  color: var(--brass);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+
+.masthead nav {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.masthead nav a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  padding-block: var(--space-1);
+  border-bottom: 2px solid transparent;
+  transition: color var(--duration), border-color var(--duration);
+}
+
+.masthead nav a:hover,
+.masthead nav a[aria-current="page"] {
+  color: var(--ink);
+  border-bottom-color: var(--brass);
+}
+
+.colophon {
+  border-top: 1px solid var(--rule);
+  padding: var(--space-4) var(--space-3);
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.colophon p {
+  margin: 0 auto var(--space-1);
+}
+
+.notice {
+  font-style: italic;
+}
+
+/* Home */
+
+.hero {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  align-items: end;
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: var(--space-5);
+}
+
+.hero h1 {
+  font-size: var(--text-hero);
+  margin-bottom: var(--space-4);
+}
+
+.hero .lede {
+  font-size: 1.15rem;
+  color: var(--ink-soft);
+}
+
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brass);
+  margin-bottom: var(--space-3);
+}
+
+/* A sample ledger page: it is a picture of the idea, not real data. */
+.sample {
+  background: var(--paper-deep);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  transform: rotate(-1.2deg);
+  box-shadow: 0 1px 0 var(--rule), 0 12px 28px -18px rgb(0 0 0 / 0.45);
+}
+
+.sample figcaption {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  margin-top: var(--space-2);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-5);
+}
+
+.columns ul {
+  padding-left: 1.1rem;
+  margin: 0;
+}
+
+.columns li {
+  margin-bottom: var(--space-2);
+}
+
+.columns li::marker {
+  color: var(--brass);
+}
+
+.status {
+  margin-top: var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border-left: 4px solid var(--brass);
+  background: var(--paper-deep);
+}
+
+.status p:last-child {
+  margin-bottom: 0;
+}
+
+/* Ledger tables */
+
+.ledger {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger caption {
+  text-align: left;
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  padding-bottom: var(--space-2);
+}
+
+.ledger th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border-bottom: 2px solid var(--rule-strong);
+  padding: var(--space-2) var(--space-3) var(--space-2) 0;
+}
+
+.ledger td {
+  border-bottom: 1px solid var(--rule);
+  padding: var(--space-2) var(--space-3) var(--space-2) 0;
+  vertical-align: top;
+}
+
+.ledger td.num,
+.ledger th.num {
+  text-align: right;
+  padding-right: 0;
+}
+
+.ledger .mono {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+/* Forms and panels */
+
+.panels {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  align-items: start;
+}
+
+.panel {
+  border-top: 3px double var(--rule-strong);
+  padding-top: var(--space-4);
+}
+
+.panel.danger {
+  border-top-color: var(--danger);
+}
+
+.panel.danger h2 {
+  color: var(--danger);
+}
+
+form {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 28rem;
+}
+
+label {
+  display: grid;
+  gap: var(--space-1);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.hint {
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+input[type="email"],
+input[type="password"],
+input[type="text"] {
+  font: inherit;
+  font-weight: 400;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1.5px solid var(--rule-strong);
+  border-radius: 0;
+  padding: var(--space-2) 0;
+  transition: border-color var(--duration);
+}
+
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="text"]:focus {
+  outline: none;
+  border-bottom-color: var(--focus);
+  box-shadow: 0 1px 0 var(--focus);
+}
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-weight: 400;
+}
+
+.check > span {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.check input {
+  margin-top: 0.35em;
+  accent-color: var(--brass);
+}
+
+button {
+  justify-self: start;
+  font: inherit;
+  font-weight: 600;
+  color: var(--paper);
+  background: var(--ink);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  transition: background var(--duration), transform var(--duration);
+}
+
+button:hover {
+  background: var(--brass);
+  border-color: var(--brass);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+button.secondary {
+  color: var(--ink);
+  background: transparent;
+}
+
+button.secondary:hover {
+  color: var(--paper);
+}
+
+button.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--paper);
+}
+
+button.danger:hover {
+  filter: brightness(1.1);
+}
+
+.message {
+  min-height: 1.6em;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.message.error {
+  color: var(--danger);
+}
+
+.message.ok {
+  color: var(--ok);
+}
+
+.callout {
+  background: var(--danger-paper);
+  border-left: 4px solid var(--danger);
+  padding: var(--space-3);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 44rem) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .sample {
+    transform: none;
+  }
+
+  .masthead nav {
+    gap: var(--space-3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

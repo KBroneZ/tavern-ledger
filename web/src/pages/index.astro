@@ -1,0 +1,74 @@
+---
+import Base from "../layouts/Base.astro";
+---
+
+<Base
+  title="Your Battlegrounds games, in your own ledger"
+  description="Free, open-source Battlegrounds tracker for Windows that only reads the game's log files, plus a website to follow your progress."
+>
+  <section class="hero" aria-labelledby="hero-heading">
+    <div>
+      <p class="kicker">Battlegrounds tracker · Windows · free</p>
+      <h1 id="hero-heading">Every game you play, kept in your own ledger.</h1>
+      <p class="lede">
+        Tavern Ledger is a desktop app that reads Hearthstone's log files on your PC and keeps a
+        history of your Battlegrounds games: hero, final place, the tribes the tavern offered and
+        the boards you saw. This website will let you keep that history in an account and, if you
+        choose, share a public profile.
+      </p>
+    </div>
+    <figure class="sample">
+      <table class="ledger">
+        <caption>What an uploaded game holds on the site</caption>
+        <thead>
+          <tr><th scope="col">Item</th><th scope="col">On the site</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Hero and final place</td><td>yes</td></tr>
+          <tr><td>Mode (Solo or Duos) and date</td><td>yes</td></tr>
+          <tr><td>Tribes the tavern offered you</td><td>yes</td></tr>
+          <tr><td>Your rating or MMR</td><td>never</td></tr>
+          <tr><td>Other players' names</td><td>never</td></tr>
+        </tbody>
+      </table>
+      <figcaption>
+        Uploading comes with a later version of the desktop app, and only after you sign in and
+        turn it on. Your games stay private unless you make your profile public.
+      </figcaption>
+    </figure>
+  </section>
+
+  <div class="columns">
+    <section aria-labelledby="does-heading">
+      <h2 id="does-heading">What the desktop app does</h2>
+      <ul>
+        <li>Rebuilds each Battlegrounds game from the game's own log file.</li>
+        <li>Shows your totals and your numbers per hero, Solo and Duos apart.</li>
+        <li>Says "unknown" when it does not know, never a made-up number.</li>
+      </ul>
+    </section>
+    <section aria-labelledby="never-heading">
+      <h2 id="never-heading">What it never does</h2>
+      <ul>
+        <li>Read the game's memory, inject code or change game files.</li>
+        <li>Act in the game for you.</li>
+        <li>Show anything you could not see on your own screen.</li>
+      </ul>
+    </section>
+    <section aria-labelledby="yours-heading">
+      <h2 id="yours-heading">Your data</h2>
+      <ul>
+        <li>Your profile is private until you make it public.</li>
+        <li>Download everything we hold about you as one file.</li>
+        <li>Delete your account and every file and row with it.</li>
+      </ul>
+    </section>
+  </div>
+
+  <aside class="status" aria-label="Project status">
+    <p>
+      <strong>Not open to the public yet.</strong> The desktop app is a prototype and the website
+      is being built. Accounts on this site are for testing only.
+    </p>
+  </aside>
+</Base>
