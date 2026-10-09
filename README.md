@@ -18,7 +18,9 @@ Desktop stack (T-005): the comparison recommends Tauri 2. A minimal Tauri overla
 
 Personal stats (T-102) are in the app: totals, per-hero numbers and tribes seen in the tavern, per mode.
 
-Next tasks: T-101 (desktop app: follow `Power.log`, store games locally; only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures) and T-103 (web stack).
+Web stack (T-103): a static Astro site plus Supabase in the EU (Postgres, login, file storage); the desktop app will upload each finished game, about 2.5 KB gzipped, only after you sign in and turn it on. No Battle.net login: Blizzard's developer terms do not allow it in an app with paid extras. Decision D-020; findings: [docs/research/web-stack.md](docs/research/web-stack.md). Nothing is online yet.
+
+Next tasks: T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures) and T-104a to T-104d (accounts, privacy policy, website and upload).
 
 ## Check your log setup
 

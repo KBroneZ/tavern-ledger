@@ -57,11 +57,18 @@ Remaining to close T-101: the live test (play a game with `cargo run --release -
 |----|------|--------|
 | T-101 | Desktop app: watch `Power.log` and save games locally | in progress |
 | T-102 | Personal stats: heroes, average placements, tribes | done |
-| T-103 | Decide web stack and backend (P-003) | pending |
-| T-104 | Accounts, game upload, public profile; privacy and deletion (GDPR) | pending |
+| T-103 | Decide web stack and backend (P-003) | done |
+| T-104a | Supabase project in the EU (with the user's OK: account, terms, DPA), schema with row-level security (clients read only; one Edge Function writes), export, deletion and weekly backups until Pro | pending |
+| T-104b | Privacy policy, processor list (Supabase, static host, email provider) and terms, before the first user | pending |
+| T-104c | Website (Astro): sign-in, account page with export and deletion, public profile (private by default) | pending |
+| T-104d | Desktop upload: sign-in through the browser (PKCE, loopback), upload queue with retries, upload off until the user turns it on | pending |
 | T-105 | Code signing (P-005) and installer with auto-update | pending |
 
 **Notes T-102 (2026-10-09, session 010).** `tracker::stats` computes, per mode (Solo and Duos apart, other types listed without place numbers): totals, per-hero numbers (games, average place, top-half share, wins; most played first) and tribes seen in the tavern (games and offers). The app gets them through the `game_stats` command; `app.js` only renders. Only finished games with a place inside the mode's range count; unfinished and unreadable games are counted apart and shown as "not counted"; with no counted game the numbers are "—", never 0. Skins grouped by dropping a trailing `_SKIN_<x>` only (D-019): in the real history every such group names the same hero, while ids that share a number but not a prefix (`BG20_HERO_102` and `TB_BaconShop_HERO_102_SKIN_G`) are not merged. `NEUTRAL` and `ALL` in the tavern counts are minions with no tribe and with every tribe. Checked with the real history (22 Duos and 1 Solo; totals match an independent count) and against the 21 `PlayerName` values of the logs: none in the history, code or tests. 16 new unit tests in `tracker` (empty history, incomplete and unsupported games, Solo vs Duos, places out of range, hand-edited records, names, tribes) and 1 in `desktop`. Review: no CRITICAL or HIGH; fixed the MEDIUM (tavern offer counts saturate instead of overflowing) and two LOW (an older refresh can no longer overwrite a newer one; the "does this place count" rule lives in one function).
+
+**Notes T-103 (2026-10-09, session 011).** Report [`web-stack.md`](../research/web-stack.md): requirements from the plan and decisions, four full stacks with free-plan limits, first paid step, EU region and DPA from the providers' pages, and the upload design (one gzipped game per `PUT /v1/games/{session}/{index}`, about 2.5 KB; idempotent by key and hash; backoff retries; nothing silent). Measured on the real history: 8.8-28.8 KB of JSON per game, 1.5-3.3 KB gzipped; the record already holds what the F2 viewer needs. Blizzard's Developer API terms rule out Battle.net login (no paid features, 30-day retention). The user picks Supabase (D-020), plan B Cloudflare. T-104 split into T-104a to T-104d.
+
+**Notes T-101 (2026-10-09, session 011).** Live test still not done: the history holds the same 23 games from 5 sessions (3, 7, 8, 1 and 4), no new game since session 010, with the app running.
 
 ## F2 — Replays and recaps
 
