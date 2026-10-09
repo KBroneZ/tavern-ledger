@@ -200,7 +200,7 @@ No secret anywhere and the same "merge is deploy" rule as Pages decided it. What
 | Cloudflare API token for SMTP (Email Sending: Edit, this account only) | Supabase's SMTP password field only (copied from Cloudflare's dashboard to Supabase's by clipboard, never shown in chat, logs or files) | Supabase, Cloudflare |
 | Publishable key, project URL | Pages build variables, the desktop default, docs | public by design |
 
-Not secrets: `delete-account` allows `https://tavernledger.net` when `SITE_ORIGINS` is unset (the local stack sets its own in `config.toml`), so the hosted project needs no function secret; the Vault entry `project_url` (`https://vgttflmexobrqhcyxjks.supabase.co`) for the sweep schedule is set once with SQL.
+Not secrets: `delete-account` reads `SITE_ORIGINS`, which `config.toml` sets to the live site and the local preview; the GitHub integration copies `[edge_runtime.secrets]` to the hosted project on every deploy (found on the first deploy, D-036), so that value is what production uses; the Vault entry `project_url` (`https://vgttflmexobrqhcyxjks.supabase.co`) for the sweep schedule is set once with SQL.
 
 ### 10.3 Auth settings (dashboard, mirroring `config.toml` where it applies)
 
@@ -248,7 +248,7 @@ Failures are not silent: every sweep that finishes leaves a row in `private.swee
 
 ### 10.6 Function secrets and checks
 
-- No function secret to set (`SITE_ORIGINS` defaults to the site). `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` come from the platform; they are the legacy service key while legacy keys stay enabled. Before the legacy keys are ever disabled, the functions must read the new secret key instead (follow-up, noted in the plan).
+- No function secret to set by hand: the integration sets `SITE_ORIGINS` from `config.toml` (D-036). `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` come from the platform; they are the legacy service key while legacy keys stay enabled. Before the legacy keys are ever disabled, the functions must read the new secret key instead (follow-up, noted in the plan).
 - Client IP on the hosted gateway: read one refused request's headers in the function logs to see whether `CF-Connecting-IP` or `X-Forwarded-For` carries the client (D-025 left it **unverified**).
 
 ### 10.7 Site and desktop
@@ -275,6 +275,7 @@ Failures are not silent: every sweep that finishes leaves a row in `private.swee
 4. 2026-10-10, Brevo (D-034, section 10.4b): Brevo is Sendinblue SAS, Paris (RCS 498 019 298); its help pages say data is stored in the EU (OVH in France and Germany, Google Cloud in Belgium); the DPA is Appendix 3 of its Terms of Service (version of 2025-10-01), with Standard Contractual Clauses and the EU-US Data Privacy Framework for sub-processors outside the EU; the Free plan sends 300 emails a day and always adds a "Sent with Brevo" mark (read on Brevo's pages on 2026-10-10). The user created the account (free plan; the login is the user's personal address, never shown on the site). Domain authenticated with **manual** records (not Brevo's automatic setup, which would have taken access to the Cloudflare zone): TXT `brevo-code:…` at the apex, CNAME `brevo1._domainkey` and `brevo2._domainkey` to `b1`/`b2.tavernledger-net.dkim.brevo.com` (DNS only). No SPF change was needed; DMARC stays `p=reject; sp=reject; adkim=s; aspf=s` (Brevo accepted it; its suggested `p=none` was not applied). Sender `Tavern Ledger <noreply@tavernledger.net>` verified (DKIM `tavernledger.net`). Transactional settings: tracking set to **anonymous** (opens and clicks cannot be switched off there; the end-to-end test checks whether sign-in links are rewritten), logs kept **1 month**, previews **never stored**. Branded tracking subdomain not set up. One SMTP key, `supabase-auth`, made by the user and pasted by the user into Supabase only.
 5. 2026-10-10, Supabase custom SMTP on: host `smtp-relay.brevo.com`, port 587, the Brevo SMTP login, sender `noreply@tavernledger.net`, name "Tavern Ledger", minimum interval 60 s.
 6. 2026-10-10, Supabase GitHub integration connected: app installed on `KBroneZ/tavern-ledger` only, working directory `.`, deploy to production on `main`, branching off (Pro only). No migration was applied by connecting; the first deploy is the next merge to `main`.
+7. 2026-10-10, first deploy (merge of PR #44): the four migrations applied and the three functions deployed. Public checks: `disable_signup: true`; sign-up and an email link for an unknown address refused (`signup_disabled`); with the publishable key, writes to `games` refused (`permission denied`), reads of `profiles` and `games` return nothing (granted `select`, filtered by RLS), the storage bucket lists nothing; GraphQL off; schema `net` not exposed; the three functions answer `401` without a token. **Found:** the integration copied `[edge_runtime.secrets]` from `config.toml` to the function secrets, so production's `SITE_ORIGINS` was the local `http://127.0.0.1:3000` and `delete-account` refused the live site (403 on its preflight). Fixed by D-036.
 
 ### 10.10 Second opinion on this plan (ChatGPT, 2026-10-09)
 

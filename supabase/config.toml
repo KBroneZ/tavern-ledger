@@ -383,11 +383,13 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
-# Not secrets, but this is how the local stack passes settings to functions.
-# SITE_ORIGINS: the website's origins that may call delete-account (T-104c).
-# The hosted project uses the function's default, https://tavernledger.net.
+# Not secrets: settings passed to the functions. The Supabase GitHub
+# integration copies this section to the hosted project's function secrets on
+# every deploy, so every value here must also be right in production (D-036).
+# SITE_ORIGINS: the website's origins that may call delete-account (T-104c):
+# the live site, and the local site served by `npm run preview`.
 [edge_runtime.secrets]
-SITE_ORIGINS = "http://127.0.0.1:3000"
+SITE_ORIGINS = "https://tavernledger.net,http://127.0.0.1:3000"
 
 # The Supabase GitHub integration deploys the functions declared here on each
 # push to main (docs/research/deploy.md, section 10.1). Each function checks
