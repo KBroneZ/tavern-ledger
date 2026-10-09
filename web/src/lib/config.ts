@@ -63,6 +63,23 @@ export function readConfig(env: ConfigSource): SiteConfig | null {
 }
 
 /**
+ * Whether the site offers sign-up: only when the build says exactly "true"
+ * (PUBLIC_SIGNUPS_OPEN) and has a backend. Closed by default, matching the
+ * hosted project, where sign-ups stay off until the owner opens them.
+ */
+export function signupsOpen(env: ConfigSource): boolean {
+  const raw = env.PUBLIC_SIGNUPS_OPEN ?? "";
+  if (raw !== "" && raw !== "true" && raw !== "false") {
+    throw new Error('PUBLIC_SIGNUPS_OPEN must be "true", "false" or unset');
+  }
+  if (raw !== "true") return false;
+  if (readConfig(env) === null) {
+    throw new Error("PUBLIC_SIGNUPS_OPEN needs PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY");
+  }
+  return true;
+}
+
+/**
  * Content-Security-Policy for every page: scripts and styles come only from
  * the site's own files (the build inlines none), and the only connection is
  * to the Supabase project. With accounts closed there is no script, form or
