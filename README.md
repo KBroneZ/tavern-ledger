@@ -42,7 +42,7 @@ Customizable overlay (T-302): from the tray, "Unlock overlay to move and resize 
 Privacy and terms (T-104b): a data inventory written from the code, and drafts of the privacy policy and terms in [docs/legal/](docs/legal/), shown on the site at `/privacy/` and `/terms/`. They are not in force: the controller's name, some provider details and the legal checks of the email sender are still to be decided; the contact addresses exist. No analytics, minimum age 16.
 
 
-Next tasks: T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), finishing the hosted backend (pending user decisions from session 022: email sender, GitHub connection, end-to-end test, opening sign-ups) and T-104b (fill in the open items of the privacy policy).
+Next tasks, in the user's order (2026-10-10; details in [prompts/sessions/025-hub.md](prompts/sessions/025-hub.md)): (1) card and hero images in the overlay and the app, once a source and its terms are cleared with the user; (2) a redesign of the desktop app and the website (T-104e), starting from GitHub UI repos and skills; (3) what is pending: the hosted backend go-live (user decisions from session 022: email sender, GitHub connection, end-to-end test, opening sign-ups), the follow-ups from session 022, T-101 (only a live test during a real game is left), T-002 and T-108 (more games and fixtures), T-105 (installer and signing) and T-104b (the open items of the privacy policy).
 
 ## Check your log setup
 
