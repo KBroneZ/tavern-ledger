@@ -58,7 +58,9 @@ the history. Both only read the log files. The history holds card ids,
 places and boards, never player names. Hero names come from the log itself,
 in your game's language; a hero the log does not name shows its card id.
 Only one of them can write the history at a time: a second copy says so and
-does not write.
+does not write. The app lives in the system tray: closing the window keeps it
+following the log, and "Quit" in the tray menu exits. "Start with Windows" in
+the same menu is off until you turn it on.
 
 ```
 cargo run --release -p tracker -- --import    # follow live, after importing older sessions

@@ -138,13 +138,14 @@ document.querySelectorAll(".modes button").forEach((button) => {
 
 function renderStatus(s) {
   const node = document.getElementById("status");
-  node.classList.toggle("problem", Boolean(s.problem));
+  node.classList.toggle("problem", Boolean(s.problem || s.notice));
   node.classList.toggle("live", !s.problem && Boolean(s.session) && Boolean(s.power_log));
   if (s.problem) node.textContent = s.problem;
   else if (s.session && !s.power_log) node.textContent = `Following ${s.session}: no Power.log yet (it appears with the first game; if it never does, check log.config)`;
   else if (s.session) node.textContent = `Following ${s.session}`;
   else if (s.logs_dir) node.textContent = "Waiting for the game to write a log…";
   else node.textContent = "Starting…";
+  if (s.notice) node.textContent += ` — ${s.notice}`;
   node.title = [s.logs_dir && `Logs: ${s.logs_dir}`, s.history && `History: ${s.history}`]
     .filter(Boolean).join("\n");
 }
