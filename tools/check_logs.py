@@ -1,6 +1,7 @@
 """Read-only check of the local Hearthstone logging setup.
 
-Reports whether log.config enables the Power log, where the game writes its
+Reports whether log.config enables the Power log, whether client.config
+(next to Hearthstone.exe) lifts the log size limit, where the game writes its
 logs on this machine, and an inventory of the Power logs found (date, size,
 game types). It never writes, copies or modifies anything, and never prints
 player names.
@@ -9,7 +10,9 @@ Usage:
     python tools/check_logs.py [--config PATH] [--logs-dir PATH]
 
 Exit codes: 0 = Power log enabled and all logs readable, 1 = problems found,
-2 = log.config or the logs folder could not be located.
+2 = log.config or the logs folder could not be located. A missing, unreadable
+or incomplete client.config counts as a problem (1): without
+FileSizeLimit.Int=-1 the game stops writing the log at about 10 MB.
 """
 
 from __future__ import annotations
@@ -38,7 +41,19 @@ FALLBACK_INSTALL_DIRS = (
     Path(r"C:\Program Files\Hearthstone"),
 )
 
+REQUIRED_CLIENT = {"FileSizeLimit.Int": "-1"}
+
 BYTES_PER_MB = 1024 * 1024
+
+
+@dataclass(frozen=True)
+class ConfigCheck:
+    """Result for one config file. state is one of ok, file_missing, unreadable,
+    settings_missing: three different problems, three different states."""
+
+    path: Path | None
+    state: str
+    problems: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -92,6 +107,38 @@ def power_problems(config: dict[str, dict[str, str]]) -> list[str]:
         elif value.lower() != expected:
             problems.append(f"[Power] {key}={value} (expected {expected})")
     return problems
+
+
+def client_problems(config: dict[str, dict[str, str]]) -> list[str]:
+    """What is missing or wrong in client.config's [Log] section (names are
+    compared ignoring case); empty if fine."""
+    log = {k.lower(): v for k, v in _section(config, "Log").items()}
+    problems = []
+    for key, expected in REQUIRED_CLIENT.items():
+        value = log.get(key.lower())
+        if value is None:
+            problems.append(f"[Log] {key} missing (expected {expected})")
+        elif value != expected:
+            problems.append(f"[Log] {key}={value} (expected {expected})")
+    return problems
+
+
+def _section(config: dict[str, dict[str, str]], name: str) -> dict[str, str]:
+    return next((v for k, v in config.items() if k.lower() == name.lower()), {})
+
+
+def check_config_file(path: Path | None, find_problems) -> ConfigCheck:
+    """Read-only check of one config file. Never writes it."""
+    if path is None:
+        return ConfigCheck(None, "file_missing")
+    try:
+        text = path.read_text(encoding="utf-8-sig", errors="replace")
+    except FileNotFoundError:
+        return ConfigCheck(path, "file_missing")
+    except OSError as exc:
+        return ConfigCheck(path, "unreadable", [str(exc)])
+    problems = find_problems(parse_log_config(text))
+    return ConfigCheck(path, "settings_missing" if problems else "ok", problems)
 
 
 def session_start(folder_name: str) -> str | None:
@@ -160,8 +207,30 @@ def find_install_dir() -> Path | None:
     return next((p for p in FALLBACK_INSTALL_DIRS if p.is_dir()), None)
 
 
+def format_client_check(client: ConfigCheck) -> list[str]:
+    where = client.path or "next to Hearthstone.exe"
+    lines = [f"client.config: {where}"]
+    if client.state == "ok":
+        lines.append("  Log size limit: lifted (FileSizeLimit.Int=-1)")
+        return lines
+    why = "Without it the game stops writing the log at about 10 MB and later games are lost."
+    if client.state == "file_missing":
+        lines.append("  NOT found. " + why)
+        lines.append("  Create client.config next to Hearthstone.exe with:")
+    elif client.state == "unreadable":
+        lines.append(f"  could not be read ({'; '.join(client.problems)}).")
+        return lines
+    else:
+        lines.append("  Log size limit NOT lifted. " + why)
+        lines.extend(f"    - {p}" for p in client.problems)
+        lines.append("  Add:")
+    lines.extend(["    [Log]", "    FileSizeLimit.Int=-1", "  Then restart the game."])
+    return lines
+
+
 def format_report(config_path: Path | None, problems: list[str] | None,
-                  logs_dir: Path | None, sessions: list[Session]) -> str:
+                  logs_dir: Path | None, sessions: list[Session],
+                  client: ConfigCheck | None = None) -> str:
     lines = [f"log.config: {config_path or 'not found'}"]
     if problems is None:
         lines.append("  Power log: unknown (log.config not found)")
@@ -170,6 +239,9 @@ def format_report(config_path: Path | None, problems: list[str] | None,
         lines.extend(f"    - {p}" for p in problems)
     else:
         lines.append("  Power log: enabled (LogLevel=1, FilePrinting=true, Verbose=true)")
+
+    if client is not None:
+        lines.extend(format_client_check(client))
 
     lines.append(f"Logs folder: {logs_dir or 'not found'}")
     totals: Counter[str] = Counter()
@@ -196,14 +268,18 @@ def format_report(config_path: Path | None, problems: list[str] | None,
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--config", type=Path, help="path to log.config")
+    parser.add_argument("--client-config", type=Path, help="path to client.config")
     parser.add_argument("--logs-dir", type=Path, help="path to the Hearthstone Logs folder")
     args = parser.parse_args(argv)
 
     config_path = args.config or default_config_path()
     problems = None
     if config_path and config_path.is_file():
-        text = config_path.read_text(encoding="utf-8-sig", errors="replace")
-        problems = power_problems(parse_log_config(text))
+        log_check = check_config_file(config_path, power_problems)
+        if log_check.state == "unreadable":
+            problems = [f"log.config could not be read ({log_check.problems[0]})"]
+        else:
+            problems = log_check.problems
     else:
         config_path = None
 
@@ -214,14 +290,21 @@ def main(argv: list[str] | None = None) -> int:
     if logs_dir is not None and not logs_dir.is_dir():
         logs_dir = None
 
+    client_path = args.client_config
+    if client_path is None:
+        install_dir = logs_dir.parent if logs_dir else find_install_dir()
+        client_path = install_dir / "client.config" if install_dir else None
+    client = check_config_file(client_path, client_problems)
+
     sessions = inventory(logs_dir) if logs_dir else []
-    print(format_report(config_path, problems, logs_dir, sessions))
+    print(format_report(config_path, problems, logs_dir, sessions, client=client))
 
     if config_path is None or logs_dir is None:
         return 2
     logs = [log for s in sessions for log in s.power_logs]
     all_readable = all(log.scan is not None for log in logs)
-    return 0 if not problems and logs and all_readable else 1
+    healthy = not problems and client.state == "ok" and logs and all_readable
+    return 0 if healthy else 1
 
 
 if __name__ == "__main__":

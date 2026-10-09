@@ -15,11 +15,15 @@ use tauri::{App, AppHandle, Emitter, Manager, State, WindowEvent, Wry};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tracker::discover::find_logs_dir;
 use tracker::lock::{HistoryLock, LockError};
+use tracker::setup::{check_setup, client_config_path, default_log_config_path};
 use tracker::stats::Stats;
-use tracker::store::Store;
+use tracker::store::{ParserStamp, Store};
 use tracker::Watcher;
 
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
+/// The setup is checked again every this many polls (the user may fix it
+/// while the app runs).
+const SETUP_CHECK_EVERY: u32 = 30;
 const GAMES_CHANGED: &str = "games-changed";
 const STATUS_CHANGED: &str = "status-changed";
 /// Added by the Windows start-up entry: open in the tray, not on screen.
@@ -41,6 +45,9 @@ struct Status {
     /// A one-off message from the tray menu; the tracker never clears it.
     notice: Option<String>,
     unreadable_lines: usize,
+    /// What to change in `log.config` / `client.config` (T-106); empty when
+    /// the game is set up to write a complete Power.log.
+    setup: Vec<String>,
 }
 
 #[derive(Clone, Serialize)]
@@ -48,6 +55,8 @@ struct GameRow {
     session: String,
     index: u64,
     report: serde_json::Value,
+    /// The parser that wrote the record; null is "unknown version".
+    parser: Option<ParserStamp>,
 }
 
 /// Shared with the window. The watcher itself lives only in the tracker
@@ -107,6 +116,7 @@ fn publish_games(app: &AppHandle, state: &AppState, store: &Store) {
             session: key.session.clone(),
             index: key.index,
             report: report.clone(),
+            parser: store.parser(key).cloned(),
         })
         .collect();
     *state.games.lock().unwrap_or_else(|e| e.into_inner()) = rows;
@@ -125,6 +135,14 @@ fn show_read_only(app: &AppHandle, state: &AppState, data_dir: &std::path::Path)
     }
     let msg = "Tavern Ledger is already running (or tavern-watch is). This window only shows the history; use the other one to follow your games.";
     problem(app, state, msg.into());
+}
+
+/// Reads both config files (read-only) and puts what to fix in the status.
+fn refresh_setup(app: &AppHandle, state: &AppState, logs_dir: &Path) {
+    let log_config = default_log_config_path();
+    let client_config = client_config_path(logs_dir);
+    let messages = check_setup(log_config.as_deref(), client_config.as_deref()).messages();
+    set_status(app, state, |s| s.setup = messages);
 }
 
 /// Opens the history and follows the log until the app quits.
@@ -158,7 +176,13 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
     publish_games(&app, &state, &store);
     let mut watcher = Watcher::new(&logs_dir, store);
 
+    let mut polls_until_setup_check: u32 = 0;
     loop {
+        if polls_until_setup_check == 0 {
+            refresh_setup(&app, &state, &logs_dir);
+            polls_until_setup_check = SETUP_CHECK_EVERY;
+        }
+        polls_until_setup_check -= 1;
         // A bug must not stop the tracker silently while the window looks fine.
         let Ok(result) = catch_unwind(AssertUnwindSafe(|| watcher.poll())) else {
             let msg = "The tracker stopped after an internal error. Restart the app; your history is safe.";
@@ -319,6 +343,7 @@ mod tests {
         let row = |game_type: &str, place: i64| GameRow {
             session: "Hearthstone_2026_10_09_00_00_00".into(),
             index: 1,
+            parser: None,
             report: serde_json::json!({
                 "status": "ok", "game_type": game_type, "hero": "H", "final_place": place,
             }),

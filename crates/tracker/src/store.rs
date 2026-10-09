@@ -11,6 +11,8 @@ use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use bg_parser::{PARSER_REVISION, PARSER_VERSION};
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 pub const FILE_NAME: &str = "games.jsonl";
@@ -20,6 +22,23 @@ pub fn default_dir() -> PathBuf {
     std::env::var_os("APPDATA")
         .map(|d| PathBuf::from(d).join("TavernLedger"))
         .unwrap_or_else(|| PathBuf::from(".local"))
+}
+
+/// Which parser wrote a record (T-107). Records from before this existed
+/// have none and load as "unknown version".
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ParserStamp {
+    pub version: String,
+    pub revision: u32,
+}
+
+impl ParserStamp {
+    pub fn current() -> Self {
+        ParserStamp {
+            version: PARSER_VERSION.to_string(),
+            revision: PARSER_REVISION,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -32,6 +51,7 @@ pub struct GameKey {
 pub struct Store {
     path: PathBuf,
     games: BTreeMap<GameKey, Value>,
+    parsers: BTreeMap<GameKey, ParserStamp>,
     /// Lines that could not be read (e.g. cut short by a crash). Reported,
     /// never silently dropped, and left in the file untouched.
     pub unreadable_lines: usize,
@@ -47,6 +67,7 @@ impl Store {
         let mut store = Store {
             path,
             games: BTreeMap::new(),
+            parsers: BTreeMap::new(),
             unreadable_lines: 0,
             needs_newline: false,
         };
@@ -72,7 +93,11 @@ impl Store {
                 continue;
             }
             match parse_record(&line) {
-                Some((key, report)) => {
+                Some((key, report, parser)) => {
+                    match parser {
+                        Some(stamp) => self.parsers.insert(key.clone(), stamp),
+                        None => self.parsers.remove(&key),
+                    };
                     self.games.insert(key, report);
                 }
                 None => self.unreadable_lines += 1,
@@ -94,6 +119,7 @@ impl Store {
             "session": key.session,
             "index": key.index,
             "saved_at": saved_at,
+            "parser": ParserStamp::current(),
             "report": report,
         });
         let mut line = if self.needs_newline {
@@ -112,6 +138,7 @@ impl Store {
         file.write_all(line.as_bytes())?;
         file.flush()?;
         self.needs_newline = false;
+        self.parsers.insert(key.clone(), ParserStamp::current());
         self.games.insert(key, report);
         Ok(true)
     }
@@ -121,17 +148,32 @@ impl Store {
         self.games.iter()
     }
 
+    /// Latest report of one game.
+    pub fn report(&self, key: &GameKey) -> Option<&Value> {
+        self.games.get(key)
+    }
+
+    /// The parser that wrote the latest record of a game; `None` is
+    /// "unknown version" (a record from before the version was saved).
+    pub fn parser(&self, key: &GameKey) -> Option<&ParserStamp> {
+        self.parsers.get(key)
+    }
+
     pub fn path(&self) -> &Path {
         &self.path
     }
 }
 
-fn parse_record(line: &str) -> Option<(GameKey, Value)> {
+fn parse_record(line: &str) -> Option<(GameKey, Value, Option<ParserStamp>)> {
     let mut value: Value = serde_json::from_str(line).ok()?;
     let session = value.get("session")?.as_str()?.to_string();
     let index = value.get("index")?.as_u64()?;
+    // A missing or malformed stamp is "unknown version", never an error.
+    let parser = value
+        .get("parser")
+        .and_then(|p| serde_json::from_value(p.clone()).ok());
     let report = value.get_mut("report")?.take();
     report
         .is_object()
-        .then_some((GameKey { session, index }, report))
+        .then_some((GameKey { session, index }, report, parser))
 }
