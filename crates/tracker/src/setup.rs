@@ -320,9 +320,10 @@ mod tests {
 
     #[test]
     fn client_config_is_next_to_the_game_not_in_logs() {
+        let game = Path::new("game").join("Hearthstone");
         assert_eq!(
-            client_config_path(Path::new(r"C:\Game\Hearthstone\Logs")),
-            Some(Path::new(r"C:\Game\Hearthstone").join(CLIENT_CONFIG_FILE))
+            client_config_path(&game.join("Logs")),
+            Some(game.join(CLIENT_CONFIG_FILE))
         );
     }
 }
