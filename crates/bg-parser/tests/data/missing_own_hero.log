@@ -1,0 +1,27 @@
+D 12:00:00.0000000 GameState.DebugPrintPower() - CREATE_GAME
+D 12:00:00.0000000 GameState.DebugPrintPower() -     GameEntity EntityID=1
+D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=CARDTYPE value=GAME
+D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
+D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=ENTITY_ID value=1
+D 12:00:00.0000000 GameState.DebugPrintPower() -     Player EntityID=2 PlayerID=2 GameAccountId=[hi=1 lo=1]
+D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=PLAYER_ID value=2
+D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=CARDTYPE value=PLAYER
+D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
+D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=HERO_ENTITY value=10
+D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
+D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=ENTITY_ID value=2
+D 12:00:00.0000000 GameState.DebugPrintPower() -     Player EntityID=3 PlayerID=10 GameAccountId=[hi=0 lo=0]
+D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=PLAYER_ID value=10
+D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=CARDTYPE value=PLAYER
+D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
+D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=HERO_ENTITY value=11
+D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=BACON_DUMMY_PLAYER value=1
+D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
+D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=ENTITY_ID value=3
+D 12:00:00.0000000 GameState.DebugPrintGame() - BuildNumber=253216
+D 12:00:00.0000000 GameState.DebugPrintGame() - GameType=GT_BATTLEGROUNDS
+D 12:00:00.0000000 GameState.DebugPrintGame() - FormatType=FT_UNKNOWN
+D 12:00:00.0000000 GameState.DebugPrintGame() - PlayerID=2, PlayerName=SyntheticPlayer#0001
+D 12:00:00.0000000 GameState.DebugPrintGame() - PlayerID=10, PlayerName=The Innkeeper
+D 12:00:00.0000000 GameState.DebugPrintPower() -     TAG_CHANGE Entity=GameEntity tag=TURN value=1 
+D 12:00:00.0000000 GameState.DebugPrintPower() -     TAG_CHANGE Entity=GameEntity tag=TURN value=2 
