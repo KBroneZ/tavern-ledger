@@ -50,6 +50,10 @@ pub struct Round {
     pub number: i64,
     pub entries: Vec<CombatEntry>,
     pub own_health_after: Option<i64>,
+    /// Health (health + armor - damage, never below 0) of every lobby hero by
+    /// player id once the combat closed. Empty when the log did not give it
+    /// (unknown, not zero). Rust-only: the Python prototype does not write it.
+    pub health_after: BTreeMap<i64, i64>,
 }
 
 impl Round {
@@ -64,11 +68,12 @@ impl Round {
 
 impl Serialize for Round {
     fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        let mut map = s.serialize_map(Some(4))?;
+        let mut map = s.serialize_map(Some(5))?;
         map.serialize_entry("number", &self.number)?;
         map.serialize_entry("entries", &self.entries)?;
         map.serialize_entry("own_health_after", &self.own_health_after)?;
         map.serialize_entry("opponents", &self.opponents())?;
+        map.serialize_entry("health_after", &self.health_after)?;
         map.end()
     }
 }
@@ -102,6 +107,9 @@ pub struct GameReport {
     #[serde(serialize_with = "pairs_as_map")]
     pub shop_tribes: Vec<(String, usize)>,
     pub rounds: Vec<Round>,
+    /// Health of every lobby hero by player id before the first combat. Empty
+    /// when the log did not give it. Rust-only, like `Round::health_after`.
+    pub start_health: BTreeMap<i64, i64>,
     pub warnings: Vec<String>,
     pub problems: Vec<String>,
     pub not_in_log: Vec<String>,
@@ -129,6 +137,7 @@ impl GameReport {
             lobby: Vec::new(),
             shop_tribes: Vec::new(),
             rounds: Vec::new(),
+            start_health: BTreeMap::new(),
             warnings: Vec::new(),
             problems: Vec::new(),
             not_in_log: NOT_IN_POWER_LOG.iter().map(|s| s.to_string()).collect(),

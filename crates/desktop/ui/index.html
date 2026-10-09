@@ -81,7 +81,7 @@
             <th scope="col" class="num">Health</th>
             <th scope="col" class="num">Rounds</th>
             <th scope="col">Note</th>
-            <th scope="col"><span class="visually-hidden">Report a problem</span></th>
+            <th scope="col"><span class="visually-hidden">Recap and report a problem</span></th>
           </tr>
         </thead>
         <tbody id="games"></tbody>
@@ -95,6 +95,15 @@
       <ul id="legend-list"></ul>
     </section>
   </main>
+
+  <dialog id="recap-dialog" class="recap" aria-labelledby="recap-title">
+    <h2 id="recap-title">Game recap</h2>
+    <p id="recap-error" class="report-error" role="alert" hidden></p>
+    <div id="recap-body"></div>
+    <div class="dialog-actions">
+      <button type="button" id="recap-close">Close</button>
+    </div>
+  </dialog>
 
   <dialog id="report-dialog" aria-labelledby="report-title">
     <h2 id="report-title">Report a problem</h2>

@@ -97,8 +97,10 @@ Remaining to close T-101: the live test (play a game with `cargo run --release -
 | ID | Task | Status |
 |----|------|--------|
 | T-201 | Turn-by-turn game viewer on the web (opponents' boards as seen) | pending |
-| T-202 | Recap after each game | pending |
-| T-203 | Record against each lobby opponent | pending |
+| T-202 | Recap after each game | done |
+| T-203 | Record against each lobby opponent | done |
+
+**Notes T-202 and T-203 (2026-10-09, session 019).** The log never says who won a combat, so results are worked out from health (D-028) and labelled inferred. The parser now also keeps every lobby hero's health before the first combat and after each one (`start_health`, `health_after`; Rust-only, parser revision 2). Games saved by revision 1 lack them: their results show as unknown until `tavern-watch --reparse` re-reads them. The recap (`tracker::recap`) is a window dialog opened by a button on each row and by itself when a new game is saved.
 
 ## F3 — Minimal overlay
 

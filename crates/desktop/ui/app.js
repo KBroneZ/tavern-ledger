@@ -225,8 +225,8 @@ function reportCell(game) {
   button.type = "button";
   button.setAttribute("aria-label", `Report a problem with game ${played(game.session, game.index)}`);
   button.addEventListener("click", () => openReport(game));
-  const cell = el("td");
-  cell.append(button);
+  const cell = el("td", "actions");
+  cell.append(recapButton(game), button);
   return cell;
 }
 
@@ -274,6 +274,226 @@ async function saveReport() {
 document.getElementById("report-save").addEventListener("click", saveReport);
 document.getElementById("report-close").addEventListener("click", () => document.getElementById("report-dialog").close());
 document.getElementById("report-dialog").addEventListener("close", () => { reportGame = null; });
+
+// Recap of one game (T-202, T-203). The app works everything out (tracker::recap),
+// including every source label; this file only draws it. Opponents are heroes
+// and seats of this one game, never names.
+let recapGame = null;
+const OUTCOME_WORDS = { won: "Won", lost: "Lost", tie: "Tie", unknown: "Unknown" };
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+function recapButton(game) {
+  const button = el("button", "report-btn", "Recap");
+  button.type = "button";
+  button.setAttribute("aria-label", `Recap of game ${played(game.session, game.index)}`);
+  button.addEventListener("click", () => openRecap(game));
+  return button;
+}
+
+const heroText = (hero) => (hero && (hero.name || hero.id)) || "—";
+
+function fact(label, value, source) {
+  const item = el("div", "fact");
+  const dd = el("dd", null);
+  dd.append(value);
+  item.append(el("dt", null, label), withSource(dd, source));
+  return item;
+}
+
+function statusText(status) {
+  if (status === "ok") return "Finished";
+  if (status === "incomplete") return "Not finished in the log";
+  if (status === "unsupported") return "Could not be read";
+  return "—";
+}
+
+function recapFacts(r) {
+  const facts = el("dl", "facts");
+  const mode = MODES[r.game_type.value] || r.game_type.value || "—";
+  facts.append(fact("Mode", mode, r.game_type.source));
+  facts.append(fact("Hero", heroText(r.hero.value), r.hero.source));
+  if (r.is_duos) facts.append(fact("Teammate", heroText(r.teammate_hero.value), r.teammate_hero.source));
+  facts.append(fact("Place", placeBadge(r.place.value, r.top_half), r.place.source));
+  facts.append(fact("Final health", r.final_health.value ?? "—", r.final_health.source));
+  facts.append(fact("Rounds played", r.rounds_played.value ?? "—", r.rounds_played.source));
+  facts.append(fact("State", statusText(r.status.value), r.status.source));
+  return facts;
+}
+
+function svg(tag, attrs) {
+  const node = document.createElementNS(SVG_NS, tag);
+  Object.entries(attrs).forEach(([k, v]) => node.setAttribute(k, String(v)));
+  return node;
+}
+
+const pointWords = (p) => (p.round === 0 ? "before the first combat" : `after round ${p.round}`);
+
+// Health after each round as a line; a round with no number breaks the line.
+function healthChart(points) {
+  const wrap = el("div", "chart");
+  const known = points.filter((p) => Number.isInteger(p.health));
+  if (!known.length) {
+    wrap.append(el("p", "empty", "The log has no health for this game."));
+    return wrap;
+  }
+  const width = 480, height = 110, pad = 14;
+  const top = Math.max(...known.map((p) => p.health), 1);
+  const last = Math.max(points.length - 1, 1);
+  const x = (i) => pad + (i * (width - 2 * pad)) / last;
+  const y = (h) => height - pad - (h * (height - 2 * pad)) / top;
+  const chart = svg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", class: "health-chart" });
+  chart.setAttribute("aria-label", "Health " + points.map((p) => `${pointWords(p)}: ${p.health ?? "unknown"}`).join(", "));
+  chart.append(svg("line", { x1: pad, y1: y(0), x2: width - pad, y2: y(0), class: "axis" }));
+  let run = [];
+  const flush = () => {
+    if (run.length > 1) chart.append(svg("polyline", { points: run.join(" "), class: "line" }));
+    run = [];
+  };
+  points.forEach((p, i) => {
+    if (!Number.isInteger(p.health)) return flush();
+    run.push(`${x(i)},${y(p.health)}`);
+    const dot = svg("circle", { cx: x(i), cy: y(p.health), r: 3, class: "dot" });
+    const tip = svg("title", {});
+    tip.textContent = `Health ${pointWords(p)}: ${p.health}`;
+    dot.append(tip);
+    chart.append(dot);
+  });
+  flush();
+  wrap.append(chart);
+  return wrap;
+}
+
+function combatChip(c) {
+  const word = OUTCOME_WORDS[c.outcome] || "Unknown";
+  const chip = el("span", `chip chip-${c.outcome} src-${sourceOf(c.source)}`, `R${c.round} ${word}`);
+  chip.title = c.reason ? `Round ${c.round}: unknown, ${c.reason}.` : `Round ${c.round}: ${word}.`;
+  addTip(chip, c.source);
+  return chip;
+}
+
+function countCell(n, source) {
+  const cell = el("td", "num", n);
+  addTip(cell, source);
+  return cell;
+}
+
+function opponentRow(o) {
+  const tr = el("tr");
+  const who = el("td", "opponent", o.heroes.map(heroText).join(" + ") || "Unknown hero");
+  who.title = o.heroes.map((h) => h.id).concat(o.seats.map((s) => `seat ${s}`)).join("\n");
+  if (o.final_place.value !== null) {
+    const place = el("span", "finished", `finished ${o.final_place.value}`);
+    who.append(" ", withSource(place, o.final_place.source));
+  }
+  const chips = el("td", "chips");
+  chips.append(...o.combats.map(combatChip));
+  // Won, lost and tie are our reading of health changes: inferred. An unknown count is not a result.
+  tr.append(who, countCell(o.won, "inferred"), countCell(o.lost, "inferred"), countCell(o.tie, "inferred"), countCell(o.unknown, "unknown"), chips);
+  return tr;
+}
+
+function recordTable(r) {
+  const head = el("tr");
+  head.append(el("th", null, r.is_duos ? "Opposing team" : "Opponent"));
+  ["Won", "Lost", "Tie"].forEach((word) => {
+    const th = el("th", "num", word);
+    th.append(sourceMark("inferred"));
+    head.append(th);
+  });
+  head.append(el("th", "num", "Unknown"), el("th", null, "Rounds"));
+  head.querySelectorAll("th").forEach((th) => th.setAttribute("scope", "col"));
+  const thead = el("thead");
+  thead.append(head);
+  const tbody = el("tbody");
+  tbody.append(...r.record.map(opponentRow));
+  const table = el("table", "record");
+  table.append(thead, tbody);
+  return table;
+}
+
+function recordSection(r) {
+  const section = el("section", "recap-part");
+  const heading = el("h3", null, "Record against each opponent");
+  heading.append(sourceMark("inferred"));
+  section.append(heading, el("p", "note", r.record_basis));
+  section.append(r.record.length ? recordTable(r) : el("p", "empty", "No combat could be matched to an opponent."));
+  if (r.unattributed.length) {
+    const reasons = [...new Set(r.unattributed.map((c) => c.reason).filter(Boolean))];
+    const rounds = r.unattributed.map((c) => c.round).join(", ");
+    section.append(withSource(el("p", "note", `Rounds ${rounds}: opponent unknown (${reasons.join("; ")}).`), "unknown"));
+  }
+  if (r.missing_rounds.length) {
+    section.append(withSource(el("p", "note", `Rounds the log does not have: ${r.missing_rounds.join(", ")}.`), "unknown"));
+  }
+  return section;
+}
+
+function tribesSection(r) {
+  const section = el("section", "recap-part");
+  const heading = el("h3", null, "Tribes seen in the tavern");
+  heading.append(sourceMark(r.tribes_source));
+  section.append(heading);
+  if (!r.tribes.length) {
+    section.append(el("p", "empty", "No tavern offers in the log."));
+    return section;
+  }
+  section.append(el("p", "note", "What the tavern offered you. The log does not say which tribes were in the lobby."));
+  const list = el("ul", "tribe-list");
+  list.append(...r.tribes.map((t) => {
+    const li = el("li", null, `${tribeLabel(t.tribe)} ${t.offers}`);
+    li.title = t.tribe;
+    return withSource(li, r.tribes_source);
+  }));
+  section.append(list);
+  return section;
+}
+
+function messagesSection(r) {
+  const section = el("section", "recap-part");
+  section.append(el("h3", null, "Parser warnings"));
+  const all = r.problems.map((m) => `Problem: ${m}`).concat(r.warnings);
+  if (!all.length) {
+    section.append(el("p", "note", "The parser reported no warnings for this game."));
+    return section;
+  }
+  const list = el("ul", "messages");
+  list.append(...all.map((m) => el("li", null, m)));
+  section.append(list);
+  return section;
+}
+
+function renderRecap(r) {
+  const health = el("section", "recap-part");
+  health.append(withSource(el("h3", null, "Your health over the rounds"), r.health_source), healthChart(r.health));
+  document.getElementById("recap-body").replaceChildren(recapFacts(r), health, recordSection(r), tribesSection(r), messagesSection(r));
+}
+
+async function openRecap(game) {
+  const target = { session: game.session, index: game.index };
+  recapGame = target;
+  document.getElementById("recap-title").textContent = `Game recap · ${played(game.session, game.index)}`;
+  document.getElementById("recap-body").replaceChildren();
+  showReportMessage("recap-error", "");
+  const dialog = document.getElementById("recap-dialog");
+  if (!dialog.open) dialog.showModal();
+  try {
+    const recap = await invoke("game_recap", target);
+    if (recapGame === target) renderRecap(recap);
+  } catch (err) {
+    if (recapGame === target) showReportMessage("recap-error", String(err));
+  }
+}
+
+document.getElementById("recap-close").addEventListener("click", () => document.getElementById("recap-dialog").close());
+document.getElementById("recap-dialog").addEventListener("close", () => { recapGame = null; });
+
+// A game that just ended: show its recap, unless another dialog is open.
+async function onGameFinished(finished) {
+  await refreshGames();
+  if (document.querySelector("dialog[open]")) return;
+  const game = allGames.find((g) => g.session === finished.session && g.index === finished.index);
+  if (game) openRecap(game);
+}
 
 // The mode with most games, Solo when there are none.
 function pickDefaultMode() {
@@ -347,6 +567,7 @@ function renderSetup(s) {
 async function main() {
   await listen("games-changed", () => refreshGames().catch(showError));
   const showStatus = (s) => { renderStatus(s); renderSetup(s); };
+  await listen("game-finished", (e) => onGameFinished(e.payload).catch(showError));
   await listen("status-changed", (e) => showStatus(e.payload));
   showStatus(await invoke("status"));
   await refreshGames();

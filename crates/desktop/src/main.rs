@@ -2,6 +2,7 @@
 //! the local game history. Only reads the game's log files (D-004).
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::collections::BTreeSet;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -16,10 +17,11 @@ use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tracker::discover::find_logs_dir;
 use tracker::lock::{HistoryLock, LockError};
 use tracker::provenance::{row_sources, RowSources};
+use tracker::recap::{recap, Recap};
 use tracker::report_bundle::{self, BundleInput};
 use tracker::setup::{check_setup, client_config_path, default_log_config_path};
 use tracker::stats::Stats;
-use tracker::store::{ParserStamp, Store};
+use tracker::store::{GameKey, ParserStamp, Store};
 use tracker::Watcher;
 
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
@@ -28,6 +30,8 @@ const POLL_INTERVAL: Duration = Duration::from_secs(1);
 const SETUP_CHECK_EVERY: u32 = 30;
 const GAMES_CHANGED: &str = "games-changed";
 const STATUS_CHANGED: &str = "status-changed";
+/// A game the history did not have before was saved: the window shows its recap.
+const GAME_FINISHED: &str = "game-finished";
 /// Added by the Windows start-up entry: open in the tray, not on screen.
 const MINIMIZED_ARG: &str = "--minimized";
 const MENU_SHOW: &str = "show";
@@ -89,6 +93,26 @@ fn game_stats(state: State<'_, Arc<AppState>>) -> Stats {
 
 fn stats_of(rows: &[GameRow]) -> Stats {
     tracker::stats::compute(rows.iter().map(|row| &row.report))
+}
+
+/// The recap of one game in the history: results, health, tribes and
+/// warnings, each with its source (T-202, T-203). The window renders it.
+#[tauri::command]
+fn game_recap(
+    state: State<'_, Arc<AppState>>,
+    session: String,
+    index: u64,
+) -> Result<Recap, String> {
+    recap_of(&state, &session, index)
+}
+
+fn recap_of(state: &AppState, session: &str, index: u64) -> Result<Recap, String> {
+    let games = state.games.lock().unwrap_or_else(|e| e.into_inner());
+    games
+        .iter()
+        .find(|g| g.session == session && g.index == index)
+        .map(|row| recap(&row.report))
+        .ok_or_else(|| "That game is not in the history.".to_string())
 }
 
 /// The "report a problem" bundle of one game, as the text of the file. The
@@ -193,6 +217,25 @@ fn publish_games(app: &AppHandle, state: &AppState, store: &Store) {
     let _ = app.emit(GAMES_CHANGED, ());
 }
 
+/// Which of the games just saved are new to the history. A game read again
+/// (a newer parser adds fields) is saved but is not a game that just ended.
+fn new_games<'a>(
+    known: &mut BTreeSet<GameKey>,
+    saved: impl IntoIterator<Item = &'a GameKey>,
+) -> Vec<GameKey> {
+    saved
+        .into_iter()
+        .filter(|key| known.insert((*key).clone()))
+        .cloned()
+        .collect()
+}
+
+#[derive(Clone, Serialize)]
+struct GameFinished {
+    session: String,
+    index: u64,
+}
+
 fn problem(app: &AppHandle, state: &AppState, message: String) {
     set_status(app, state, |s| s.problem = Some(message));
 }
@@ -244,6 +287,7 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
         s.unreadable_lines = store.unreadable_lines;
     });
     publish_games(&app, &state, &store);
+    let mut known: BTreeSet<GameKey> = store.games().map(|(key, _)| key.clone()).collect();
     let mut watcher = Watcher::new(&logs_dir, store);
 
     let mut polls_until_setup_check: u32 = 0;
@@ -269,6 +313,15 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
                 });
                 if !saved.is_empty() {
                     publish_games(&app, &state, watcher.store());
+                    // Only the newest: games found at start-up (played while the
+                    // app was closed) must not each pop up a recap.
+                    if let Some(key) = new_games(&mut known, saved.iter().map(|s| &s.key)).pop() {
+                        let finished = GameFinished {
+                            session: key.session,
+                            index: key.index,
+                        };
+                        let _ = app.emit(GAME_FINISHED, finished);
+                    }
                 }
             }
             Err(e) => {
@@ -381,6 +434,7 @@ fn main() {
             list_games,
             game_stats,
             status,
+            game_recap,
             preview_problem_report,
             save_problem_report
         ])
@@ -454,6 +508,42 @@ mod tests {
         let parsed: serde_json::Value = serde_json::from_str(&text).unwrap();
         assert_eq!(parsed["game"]["build"], 1);
         assert_eq!(parsed["app_version"], env!("CARGO_PKG_VERSION"));
+    }
+
+    fn key(session: &str, index: u64) -> GameKey {
+        GameKey {
+            session: session.into(),
+            index,
+        }
+    }
+
+    #[test]
+    fn only_games_new_to_the_history_count_as_just_finished() {
+        let mut known = BTreeSet::new();
+        known.insert(key("S1", 1));
+        let batch = [key("S1", 1), key("S1", 2), key("S2", 1)];
+        let fresh = new_games(&mut known, &batch);
+        let names: Vec<_> = fresh
+            .iter()
+            .map(|k| (k.session.as_str(), k.index))
+            .collect();
+        assert_eq!(names, [("S1", 2), ("S2", 1)]);
+        // Saved again later (read again): no longer new.
+        assert!(new_games(&mut known, &batch).is_empty());
+    }
+
+    #[test]
+    fn the_recap_of_a_listed_game_comes_from_its_report() {
+        let state = state_with(serde_json::json!({"status": "ok", "hero": "H"}));
+        let r = recap_of(&state, "Hearthstone_2026_10_09_00_00_00", 1).unwrap();
+        assert_eq!(r.hero.value.map(|h| h.id), Some("H".to_string()));
+    }
+
+    #[test]
+    fn a_game_that_is_not_listed_has_no_recap() {
+        let state = state_with(serde_json::json!({}));
+        assert!(recap_of(&state, "Hearthstone_2026_10_09_00_00_00", 2).is_err());
+        assert!(recap_of(&state, "other", 1).is_err());
     }
 
     #[test]
