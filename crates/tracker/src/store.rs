@@ -15,6 +15,13 @@ use serde_json::{json, Value};
 
 pub const FILE_NAME: &str = "games.jsonl";
 
+/// %APPDATA%\TavernLedger on Windows (D-015); .local/ elsewhere (development).
+pub fn default_dir() -> PathBuf {
+    std::env::var_os("APPDATA")
+        .map(|d| PathBuf::from(d).join("TavernLedger"))
+        .unwrap_or_else(|| PathBuf::from(".local"))
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GameKey {
     pub session: String,

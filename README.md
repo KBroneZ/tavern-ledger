@@ -49,11 +49,26 @@ python tools/leaderboard.py --name "<your BattleTag>" --mode solo --region EU
 
 Use `--mode duos` for Duos, `--hearthstone-log PATH` to read the region from the game's `Hearthstone.log` instead of `--region`, and `--json` for machine-readable output. To answer "below the cut-off" it must check every page (about 170 requests, a few minutes), so it does that at most once a day per region and mode and otherwise shows the last result with its time. The cache lives in `.local/leaderboard-cache.json`.
 
+## Desktop app and tracker (prototype)
+
+Rust workspace (Tauri 2, D-014). `tavern-watch` follows the game's `Power.log`
+and saves each Battlegrounds game to `%APPDATA%\TavernLedger\games.jsonl` as
+soon as it ends; the desktop app does the same in the background and shows
+the history. Both only read the log files. The history holds card ids,
+places and boards, never player names.
+
+```
+cargo run --release -p tracker -- --import    # follow live, after importing older sessions
+cargo run --release -p desktop                # the app
+cargo run --release -p bg-parser -- "<path>\Power_old.log" --json
+```
+
 ## Development
 
 ```
 python -m pip install --require-hashes --only-binary=:all: -r requirements.txt
 python -m unittest discover -s tests
+cargo test --workspace
 ```
 
 CI runs the tests, checks relative Markdown links and scans the history for secrets.
