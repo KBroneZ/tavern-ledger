@@ -33,6 +33,15 @@ function played(session, index) {
   return `${when} · ${index}`;
 }
 
+// Tooltip of a game: the game build and the parser that read it. A record
+// from before the parser was saved is "unknown version", not an error.
+function provenance(game) {
+  const p = game.parser;
+  const parser = p && typeof p.version === "string" ? `parser ${p.version} r${p.revision}` : "parser unknown version";
+  const build = Number.isInteger(game.report.build) ? `build ${game.report.build}` : "build unknown";
+  return `${build} · ${parser}`;
+}
+
 // Stats of the shown mode; an empty tally until the app answers.
 function modeStats() {
   return stats.modes.find((m) => m.mode === mode) || { top_half: null, totals: {}, heroes: [], tribes: [] };
@@ -72,8 +81,10 @@ function note(report) {
 function row(game, top) {
   const r = game.report;
   const tr = el("tr");
+  const playedCell = el("td", null, played(game.session, game.index));
+  playedCell.title = provenance(game);
   tr.append(
-    el("td", null, played(game.session, game.index)),
+    playedCell,
     el("td", null, MODES[r.game_type] || r.game_type || "—"),
     heroCell(r),
   );
@@ -207,10 +218,19 @@ function renderStatus(s) {
     .filter(Boolean).join("\n");
 }
 
+// What to change in log.config / client.config; hidden when the setup is fine.
+function renderSetup(s) {
+  const lines = Array.isArray(s.setup) ? s.setup : [];
+  const list = document.getElementById("setup-list");
+  list.replaceChildren(...lines.map((line) => el("li", null, String(line))));
+  document.getElementById("setup").hidden = lines.length === 0;
+}
+
 async function main() {
   await listen("games-changed", () => refreshGames().catch(showError));
-  await listen("status-changed", (e) => renderStatus(e.payload));
-  renderStatus(await invoke("status"));
+  const showStatus = (s) => { renderStatus(s); renderSetup(s); };
+  await listen("status-changed", (e) => showStatus(e.payload));
+  showStatus(await invoke("status"));
   await refreshGames();
 }
 
