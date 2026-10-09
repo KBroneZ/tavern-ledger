@@ -7,10 +7,20 @@
 //   4. the audit entry step 3 writes (it holds the email).
 // Every step can be repeated, so a failure halfway is fixed by calling again.
 // No dependencies: plain fetch against the project's own HTTP APIs.
+//
+// Before any step (T-104c): a browser request must come from the website's
+// own origin (SITE_ORIGINS), and the user must have signed in within the last
+// MAX_SIGN_IN_AGE_MS, so a stolen or forgotten session cannot delete the
+// account. Requests with no Origin header (not a browser) skip the CORS
+// check; they still need a valid token and a recent sign-in.
 
 export interface Env {
   url: string;
   serviceKey: string;
+  /** Exact origins of the website, e.g. https://example.org. Empty: none. */
+  allowedOrigins: readonly string[];
+  /** Milliseconds since 1970; injectable for tests. */
+  now?: () => number;
 }
 
 export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
@@ -21,6 +31,24 @@ const FILE_BATCH = 1000;
 // Upload quota is 10,000 games (web-stack.md), so 20 rounds is plenty.
 const MAX_FILE_ROUNDS = 20;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+export const MAX_SIGN_IN_AGE_MS = 10 * 60 * 1000;
+const CORS_ALLOW_HEADERS = "authorization, apikey, content-type, x-client-info";
+
+/** Comma-separated SITE_ORIGINS to a list of exact http(s) origins. */
+export function parseOrigins(value: string | undefined): string[] {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => {
+      try {
+        const u = new URL(s);
+        return (u.protocol === "https:" || u.protocol === "http:") && u.origin === s;
+      } catch (_e) {
+        return false;
+      }
+    });
+}
 
 class StepError extends Error {
   constructor(readonly step: string, readonly status: number) {
@@ -28,10 +56,10 @@ class StepError extends Error {
   }
 }
 
-function json(status: number, body: unknown): Response {
+function json(status: number, body: unknown, extra: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...extra },
   });
 }
 
@@ -73,12 +101,18 @@ async function send(fetchFn: Fetch, step: string, url: string, init: RequestInit
   await res.body?.cancel();
 }
 
-/** Id of the user the access token belongs to, or null if it is not valid. */
-async function currentUserId(
+interface CurrentUser {
+  id: string;
+  /** Milliseconds since 1970, or NaN if the answer had no usable time. */
+  lastSignInAt: number;
+}
+
+/** The user the access token belongs to, or null if it is not valid. */
+async function currentUser(
   env: Env,
   fetchFn: Fetch,
   authorization: string,
-): Promise<string | null> {
+): Promise<CurrentUser | null> {
   let res: Response;
   try {
     res = await fetchFn(`${env.url}/auth/v1/user`, {
@@ -98,7 +132,9 @@ async function currentUserId(
   }
   const user = await res.json();
   const id = user && typeof user.id === "string" ? user.id : null;
-  return id && UUID.test(id) ? id : null;
+  if (!id || !UUID.test(id)) return null;
+  const last = typeof user.last_sign_in_at === "string" ? Date.parse(user.last_sign_in_at) : NaN;
+  return { id, lastSignInAt: last };
 }
 
 async function fileNames(env: Env, fetchFn: Fetch, userId: string): Promise<string[]> {
@@ -132,18 +168,45 @@ async function deleteFiles(env: Env, fetchFn: Fetch, userId: string): Promise<nu
 }
 
 export async function handle(req: Request, env: Env, fetchFn: Fetch = fetch): Promise<Response> {
+  const origin = req.headers.get("Origin");
+  if (origin !== null && !env.allowedOrigins.includes(origin)) {
+    return json(403, { error: "origin not allowed" });
+  }
+  const cors: Record<string, string> = origin === null
+    ? {}
+    : { "Access-Control-Allow-Origin": origin, Vary: "Origin" };
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        ...cors,
+        "Access-Control-Allow-Methods": "DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": CORS_ALLOW_HEADERS,
+        "Access-Control-Max-Age": "600",
+      },
+    });
+  }
   if (req.method !== "DELETE") {
-    return json(405, { error: "method not allowed" });
+    return json(405, { error: "method not allowed" }, cors);
   }
   const authorization = req.headers.get("Authorization") ?? "";
   if (!/^Bearer [A-Za-z0-9._~+/-]+=*$/.test(authorization)) {
-    return json(401, { error: "sign in first" });
+    return json(401, { error: "sign in first" }, cors);
   }
   try {
-    const userId = await currentUserId(env, fetchFn, authorization);
-    if (userId === null) {
-      return json(401, { error: "sign in first" });
+    const user = await currentUser(env, fetchFn, authorization);
+    if (user === null) {
+      return json(401, { error: "sign in first" }, cors);
     }
+    const now = (env.now ?? Date.now)();
+    if (!Number.isFinite(user.lastSignInAt) || now - user.lastSignInAt > MAX_SIGN_IN_AGE_MS) {
+      return json(
+        403,
+        { error: "sign in again to delete your account", reason: "reauthenticate" },
+        cors,
+      );
+    }
+    const userId = user.id;
     const files = await deleteFiles(env, fetchFn, userId);
     const rowsRes = await call(fetchFn, "delete rows", `${env.url}/rest/v1/rpc/delete_user_data`, {
       method: "POST",
@@ -163,14 +226,14 @@ export async function handle(req: Request, env: Env, fetchFn: Fetch = fetch): Pr
     );
     const lateEvents = await eventsRes.json();
     const authEvents = Number(rows?.auth_events ?? 0) + Number(lateEvents ?? 0);
-    return json(200, { deleted: { files, ...rows, auth_events: authEvents, account: 1 } });
+    return json(200, { deleted: { files, ...rows, auth_events: authEvents, account: 1 } }, cors);
   } catch (e) {
     if (e instanceof StepError) {
       // Step and status only: no token, id or email in the logs.
       console.error(`delete-account: ${e.message}`);
-      return json(500, { error: "deletion did not finish; try again", step: e.step });
+      return json(500, { error: "deletion did not finish; try again", step: e.step }, cors);
     }
     console.error("delete-account: unexpected error");
-    return json(500, { error: "deletion did not finish; try again" });
+    return json(500, { error: "deletion did not finish; try again" }, cors);
   }
 }
