@@ -24,7 +24,7 @@ Backend (T-104a): the database schema, row-level security, export, account delet
 
 Robustness (session 014): the app and `check_logs.py` check that the game is set up to write a complete log (`log.config` and `client.config`), every saved game records which parser version read it, `tavern-watch --reparse` re-reads old sessions after a parser fix, and a dev tool replays a saved log so the app can be tested without playing.
 
-Website (T-104c): a static Astro site in `web/` with sign-in by email, an account page (display name, public profile switch, download all your data, delete your account) and a public profile page that only exists when you turn it on. It shows no ratings and no other players' names. It runs against the local stack; it is not online yet.
+Website (T-104c): a static Astro site in `web/` with sign-in by email, an account page (display name, public profile switch, download all your data, delete your account) and a public profile page that only exists when you turn it on. It shows no ratings and no other players' names. **Online at [tavernledger.net](https://tavernledger.net) with accounts closed** (session 021): home, privacy and terms drafts; sign-in, account and profile say "Accounts are not open yet" until the hosted backend is wired in. Hosted on Cloudflare Pages from `main`, no scripts, no analytics. Contact mail: `contact@` and `privacy@tavernledger.net` (D-030); deploy notes in [docs/research/deploy.md](docs/research/deploy.md).
 
 Upload (T-104d): the desktop app can upload each finished game to your account. It is off until you sign in and turn it on. You sign in with a one-time link from your email, opened in your browser; the app never asks for your password and keeps the sign-in in Windows Credential Manager. Only the game's report goes up (heroes, card ids, places, boards), never player names, BattleTags or ratings, and the server checks that again before storing it. It works against the local stack; there is no online server yet.
 
@@ -35,9 +35,9 @@ Where values come from (T-109): every number or label in the window says where i
 
 Lobby tribes by hand (T-303): the log never says which five tribes are in the lobby, so you can pick them yourself from a fixed list, at hero select or later from the history (`Tribes` button on each game; you can change, clear or move the entry). If no game is on when you pick them, they go to the next game that starts. They are saved on your computer next to the history, not inside the game's report, so re-reading a game keeps them. They are always marked "entered by you" and shown next to the tribes seen in the tavern, never mixed with them; the stats count them in a separate table. Decision D-029.
 
-Privacy and terms (T-104b): a data inventory written from the code, and drafts of the privacy policy and terms in [docs/legal/](docs/legal/), shown on the site at `/privacy/` and `/terms/`. They are not in force: the controller's name and contact, the email sender and some provider details are still to be decided. No analytics, minimum age 16.
+Privacy and terms (T-104b): a data inventory written from the code, and drafts of the privacy policy and terms in [docs/legal/](docs/legal/), shown on the site at `/privacy/` and `/terms/`. They are not in force: the controller's name, some provider details and the legal checks of the email sender are still to be decided; the contact addresses exist. No analytics, minimum age 16.
 
-Next tasks: T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), the hosted Supabase project and the site's hosting (need the user) and T-104b (fill in the open items of the privacy policy).
+Next tasks: T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), the hosted Supabase project and the email sender (session 022) and T-104b (fill in the open items of the privacy policy).
 
 ## Check your log setup
 

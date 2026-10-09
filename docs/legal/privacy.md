@@ -12,7 +12,7 @@ Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainmen
 
 The controller is [TO BE DECIDED: name of the person who runs Tavern Ledger, and country], a private person who runs this project in their spare time.
 
-Contact for anything about your data: [TO BE DECIDED: dedicated project email address].
+Contact for anything about your data: privacy@tavernledger.net.
 
 ## 2. The desktop app keeps your data on your PC
 
@@ -83,7 +83,7 @@ You can, at any time:
 - **Object** to processing based on legitimate interest, or ask us to **restrict** processing.
 - **Stop publishing** your profile by turning the switch off.
 
-Write to [TO BE DECIDED: contact email] for anything the site does not do by itself. We answer within one month.
+Write to privacy@tavernledger.net for anything the site does not do by itself. We answer within one month.
 
 You can also complain to a data protection authority, in particular in the EU country where you live or work or where you think the problem happened. [TO BE DECIDED: if the controller is in Spain, the Agencia Española de Protección de Datos (AEPD), www.aepd.es.]
 

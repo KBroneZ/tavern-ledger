@@ -8,7 +8,7 @@ These terms cover the Tavern Ledger website and the accounts on it. The desktop 
 
 ## 1. What Tavern Ledger is
 
-A free fan project, run by one person in their spare time: a Windows app that reads Hearthstone's log files on your PC, and a website to keep and share your Battlegrounds games. It is offered by [TO BE DECIDED: name of the person who runs Tavern Ledger, and country]; contact: [TO BE DECIDED: dedicated project email address].
+A free fan project, run by one person in their spare time: a Windows app that reads Hearthstone's log files on your PC, and a website to keep and share your Battlegrounds games. It is offered by [TO BE DECIDED: name of the person who runs Tavern Ledger, and country]; contact: contact@tavernledger.net.
 
 **Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.** Hearthstone is a trademark of Blizzard Entertainment, Inc.
 

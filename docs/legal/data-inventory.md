@@ -42,12 +42,12 @@ What is **not** collected server-side: player names, BattleTags, Battle.net ids,
 
 **Planned (#016, T-104d):** the `upload-game` Edge Function writes S7 and S8; per-user and per-IP quotas (IP used for rate limiting); a `parser_version` column; a daily sweep of files with no row. Re-check when merged.
 
-## 3. Website (static, Cloudflare Pages planned) — not online yet
+## 3. Website (static, Cloudflare Pages) — online at tavernledger.net with accounts closed
 
 | Data | Source (code) | Notes |
 |------|---------------|-------|
 | Supabase session in the browser's `localStorage` (access token, refresh token, user object incl. email) and a PKCE code verifier during sign-in | `web/src/lib/api.ts` (`persistSession: true`, `flowType: "pkce"`, default storage) | Strictly necessary for sign-in; removed on sign-out. No cookies are set by the site's code. |
-| Request data at the static host (IP address, user agent, URL, time) | Cloudflare Pages (planned) | Kept by Cloudflare as processor; see section 4. |
+| Request data at the static host (IP address, user agent, URL, time) | Cloudflare Pages (live since 2026-10-09) | Kept by Cloudflare as processor; see section 4. Cloudflare's own protection may set a security cookie on a challenged visit; its `NEL` header asks browsers to report failed connections to Cloudflare. `[TO BE CHECKED]`: retention of both. |
 | No analytics, no ads, no third-party scripts, no fonts from other servers | `web/src/lib/config.ts` CSP: scripts, styles and images from the site only; connections to the Supabase project only | |
 
 ## 4. Processors and sub-processors
@@ -57,16 +57,16 @@ None of these has an account or a signed DPA yet; each must be in place before t
 | Processor | Role | Region | DPA | Status |
 |-----------|------|--------|-----|--------|
 | Supabase | Database, auth, file storage, Edge Functions, logs | Frankfurt (AWS eu-central-1), D-020 | Supabase DPA (see the research notes in [web-stack.md](../research/web-stack.md)); sub-processors listed by Supabase | Not created |
-| Cloudflare | Static hosting of the site | Global network | Cloudflare Customer DPA | Not created |
-| Outbound email sender (custom SMTP for Supabase Auth) | Sends sign-up confirmation and account emails: recipient email, message content (confirmation link), delivery events | — | — | **Open.** The user picked Brevo in session 018; later the hub relayed that the provider is decided once the domain is bought, with Cloudflare's email features as the plan. Cloudflare Email Routing only forwards incoming mail (useful for a `privacy@` contact address) and cannot send Supabase's auth emails, so an outbound sender is still needed. |
-| Cloudflare Email Routing (planned) | Forwards mail sent to the project's contact address to the controller's mailbox: sender address, message | Global network | Cloudflare Customer DPA | Planned with the domain; not set up |
+| Cloudflare | Static hosting of the site | Global network | Cloudflare Customer DPA | In use since 2026-10-09 (Free plan; account and domain of the user); DPA version to check |
+| Outbound email sender (custom SMTP for Supabase Auth) | Sends sign-up confirmation and account emails: recipient email, message content (confirmation link), delivery events | — | — | **Cloudflare Email Sending** (user's choice, D-030; Cloudflare Customer DPA, beta). Set up by session 022 with the hosted project; region, retention and beta terms `[TO BE CHECKED]` then. |
+| Cloudflare Email Routing | Forwards mail sent to `contact@` and `privacy@tavernledger.net` to the controller's mailbox: sender address, message | Global network | Cloudflare Customer DPA | Set up 2026-10-09; catch-all off. Whether Cloudflare keeps anything beyond delivery logs: `[TO BE CHECKED]` |
 
 Read on the providers' pages on 2026-10-09: Supabase's DPA names Supabase Pte. Ltd. (Singapore), version 1 of 2026-08-01, EU SCCs (no Data Privacy Framework), data stored and primarily processed in the chosen region but processable wherever Supabase or its sub-processors have facilities; Cloudflare's Customer DPA v6.4 (2026-04-03) relies on the EU–US Data Privacy Framework with SCCs as fallback. Not confirmed (marked `[TO BE CHECKED]` in the policy): Supabase's log retention per plan and its sub-processor locations (the list is a PDF that could not be read), Cloudflare Pages request-log retention, and every Brevo fact (entity, DPA, data location, log retention), because Brevo's legal pages could not be read.
 
 ## 5. Open items before the first user
 
-- Controller name, country and contact email (user chose a dedicated project email; not created yet).
-- Accounts and DPAs with Supabase, Cloudflare and Brevo.
+- Controller name and country. (Contact addresses exist since session 021: `contact@` and `privacy@tavernledger.net`.)
+- DPAs with Supabase and Cloudflare (the sender is Cloudflare Email Sending, D-030; Brevo is no longer planned).
 - A sign-up notice on `/signin/` ("By creating an account you agree to the terms, confirm you are 16 or older, and confirm you have read the privacy policy"; the policy is information, not something to consent to), plus a password reset (T-104c notes).
 - The outbound email sender (see section 4) and its DPA.
 - Decide whether the security log (S5) should be trimmed after a fixed time instead of living as long as the account (second opinion, MEDIUM; kept for now because it is small and deleted with the account).

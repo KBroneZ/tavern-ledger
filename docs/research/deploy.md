@@ -23,11 +23,11 @@ When the hosted project exists, setting the two variables in the Pages project a
 |---|---|---|
 | Secrets | None in GitHub | A Cloudflare API token as a GitHub secret (R3, a token the user must create) |
 | New dependencies | None | `wrangler` (new dev dependency) |
-| Access granted | Cloudflare Pages GitHub app, installed on `KBroneZ/tavern-ledger` only | Token scoped to Pages edit on the account |
+| Access granted | Cloudflare Pages GitHub app, installed on `KBroneZ/tavern-ledger` only: read and write to code, checks, deployments, pull requests and administration of that repo | Token scoped to Pages edit on the account |
 | Build | Cloudflare's build image, from the same lockfile | Our CI runner |
-| Main risk | A compromised Cloudflare account can read the (public) repo and set commit statuses | A leaked token can deploy anything to the site |
+| Main risk | A compromised Cloudflare account could write to the repo through the app (branch protection and review of `main` still apply) | A leaked token can deploy anything to the site |
 
-Git integration has no long-lived secret anywhere and adds nothing to the dependency list; the repo is public, so the app's read access exposes nothing new. CI (GitHub Actions) keeps testing every PR as today; Pages only builds `main`.
+Git integration has no long-lived secret anywhere and adds nothing to the dependency list. Its cost is the app's write access to this one repo; the user approved it. CI (GitHub Actions) keeps testing every PR as today; Pages only builds `main`.
 
 Pages project settings:
 
@@ -150,6 +150,23 @@ Supabase Auth needs a sender for sign-up confirmation, email change and password
 6. DNSSEC on.
 7. Email Routing: destination address, `contact@` and `privacy@`, catch-all off; check MX, SPF, DKIM; add DMARC.
 8. Final checks (section 4) and `dig`/`Resolve-DnsName` of every record in section 5.
+
+## 9. Live state (2026-10-09, end of session 021)
+
+Done in this order, each checked:
+
+1. Zone: Always Use HTTPS on, minimum TLS 1.2 (a client-side TLS 1.1 test was inconclusive: the local clients no longer speak 1.1), TLS 1.3 on. Email Address Obfuscation turned off (it was on). Already off: Bot Fight Mode, AI Labyrinth, Real User Monitoring, Speed Brain. Automatic HTTPS Rewrites is on; it changes nothing today (the served pages are byte-for-byte the build).
+2. Pages project `tavern-ledger` from `main` with the settings in section 2; first build: Node 24.14.0, 56 unit tests, build, build checks, "Parsed 2 valid header rules". Preview deployments set to **None**.
+3. `https://tavern-ledger.pages.dev`: pages identical to `dist`, every header present, no script.
+4. Custom domain `tavernledger.net`: Active; the CNAME to `tavern-ledger.pages.dev` was created by Pages.
+5. `www`: `A 192.0.2.1` proxied; Bulk Redirect list `tavernledger_www` (preserve query string, subpath matching, preserve path suffix) and rule "tavernledger www to apex": `https://www.tavernledger.net/privacy/?a=1` → 301 `https://tavernledger.net/privacy/?a=1`; `http://www…` also 301.
+6. DNSSEC enabled; the DS record was still being added at the registrar at the end of the session. **Check later** that `dig DS tavernledger.net` answers and validating resolvers set the `ad` flag.
+7. Email Routing: `contact@` and `privacy@` → the user's mailbox (already verified on the account), catch-all disabled (drop). Records resolve: MX `route1/2/3.mx.cloudflare.net`, `v=spf1 include:_spf.mx.cloudflare.net ~all`, DKIM `cf2024-1._domainkey`, `_dmarc` `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s`.
+8. `https://tavernledger.net`: the six pages are byte-for-byte the build, no injected script, no `Set-Cookie` or `Speculation-Rules`, all security headers, 404 with the CSP, `http` → `https` 301.
+
+Seen in the responses and not ours: `Access-Control-Allow-Origin: *` (Pages default for static files; harmless for public pages with no credentials) and Cloudflare's `Report-To`/`NEL` headers (browsers report failed connections to Cloudflare; noted for the privacy policy, T-104b).
+
+Not done: a test message to `contact@` from an outside address (the user can send one from their phone), CAA, HSTS raised to a year (after a couple of clean weeks).
 
 ## Second opinion (ChatGPT, 2026-10-09)
 
