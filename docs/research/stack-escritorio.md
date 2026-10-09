@@ -1,6 +1,6 @@
 # Stack de la app de escritorio (T-005, P-002)
 
-Fecha: 2026-10-09. Informe para decidir P-002. La decisión es del usuario; aquí solo hay datos y una recomendación.
+Fecha: 2026-10-09. Informe para decidir P-002. **Decidido: Tauri 2 (D-014).**
 
 ## Qué tiene que hacer la app
 
