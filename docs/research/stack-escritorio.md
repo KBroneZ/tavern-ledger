@@ -37,7 +37,7 @@ SignPath Foundation pide que todos los componentes tengan licencia OSI, permite 
 - El parser y el cliente del leaderboard son lógica pura, fácil de portar a Rust con tests a partir de los prototipos y sus tests sintéticos.
 - Rust y Node ya están instalados; .NET no.
 
-**Riesgo principal: el overlay.** Probado el 2026-10-09 con una ventana mínima (abajo): funciona. Queda verlo encima de Hearthstone en ventana y en pantalla completa; si ahí falla, el plan B es WPF solo para el overlay o para toda la app.
+**Riesgo principal: el overlay.** Probado el 2026-10-09 con una ventana mínima, primero sobre otra ventana y luego encima de Hearthstone en pantalla completa (abajo): funciona. Plan B si algo falla más adelante: WPF solo para el overlay o para toda la app.
 
 ## Prueba del overlay
 
@@ -57,14 +57,26 @@ La captura muestra el fondo de la ventana de debajo alrededor del panel y a trav
 - **Tamaño:** el `.exe` de release ocupa 8,5 MB sin instalador ni compresión.
 - **Compilación:** 1 min (debug) y 1 min 16 s (release) desde cero; 407 crates en `Cargo.lock`, todas con licencias OSI (MIT, Apache-2.0, Zlib, BSD, ISC, Unicode-3.0 y 5 con MPL-2.0, que se usan sin modificar).
 - **Bloquear y desbloquear paneles** (idea del usuario para el futuro, T-302): `set_ignore_cursor_events` es un interruptor en tiempo de ejecución, así que "desbloqueado" puede recibir ratón para arrastrar y "bloqueado" dejar pasar los clics. Sin probar todavía.
-- **Pendiente:** probarlo encima de Hearthstone (ventana y pantalla completa) cuando el usuario esté en el equipo.
+### Encima de Hearthstone
+
+Con OK del usuario, Claude abrió el juego desde Battle.net (`--exec="launch WTCG"`) y lo dejó en el menú principal. No le mandó clics ni teclas (D-004); solo lo pasó a primer plano con `SetForegroundWindow`, que no es una acción dentro del juego. El juego se abrió con su configuración de siempre: pantalla completa **sin bordes** (ventana sin marco que ocupa los 3840×2160 del monitor).
+
+| Comprobación | Resultado |
+|--------------|-----------|
+| Hearthstone en primer plano y a pantalla completa | OK |
+| El overlay sigue siempre encima y no recibe ratón | OK |
+| `WindowFromPoint` sobre el panel devuelve la ventana del juego | OK |
+| Captura: el panel se ve encima del menú del juego | OK |
+
+- **Clic real sobre el juego:** no se probó para no mandar entrada al juego; el hit testing ya muestra que el clic iría al juego.
+- **Modo ventana:** sin probar (cambiarlo es tocar el menú del juego). Es el caso fácil: el overlay va encima de cualquier ventana normal, como en la primera prueba.
+- **Escala:** a 4K el panel de 420×260 px lógicos se ve pequeño. El overlay de verdad tendrá que escalar con la resolución del juego.
 
 Electron queda descartado salvo que Tauri falle: hace lo mismo con un instalador 20–50 veces más grande.
 
 ## Siguientes pasos propuestos
 
-1. El usuario prueba el overlay encima de Hearthstone: `cargo build` en `spikes/overlay-tauri/` y abrir `target/debug/overlay-spike.exe` con el juego abierto.
-2. El usuario decide P-002. Si sale Tauri: T-101 con el parser portado a Rust y los tests sintéticos de `tests/` como referencia.
+1. El usuario decide P-002. Si sale Tauri: T-101 con el parser portado a Rust y los tests sintéticos de `tests/` como referencia.
 3. Las dependencias nuevas (crates de Tauri, paquetes npm) se fijan con lockfile y se anotan en `PROVENANCE.md` (R2: `/security-review`).
 
 ## Fuentes
