@@ -16,7 +16,14 @@ fn check(name: &str) {
     )
     .expect("valid json");
     let reports = bg_parser::parse_reader(log.as_slice()).expect("in-memory read");
-    let actual = serde_json::to_value(&reports).expect("serializable");
+    let mut actual = serde_json::to_value(&reports).expect("serializable");
+    // Hero names are Rust-only (the Python prototype does not read them);
+    // tests/card_names.rs covers them.
+    for game in actual.as_array_mut().expect("list of games") {
+        game.as_object_mut()
+            .expect("report object")
+            .remove("card_names");
+    }
     assert_eq!(actual, expected, "case {name}");
 }
 

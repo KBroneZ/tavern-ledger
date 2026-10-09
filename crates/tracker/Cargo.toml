@@ -2,6 +2,7 @@
 name = "tracker"
 version = "0.1.0"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 description = "Follows Hearthstone's Power.log and stores finished Battlegrounds games locally"

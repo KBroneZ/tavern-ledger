@@ -13,11 +13,11 @@ pub mod power;
 pub mod report;
 pub mod state;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::io::BufRead;
 
 use collector::{hero_health, leaderboard_heroes, Collector};
-use power::{classify, parse_power, Line, ParseError};
+use power::{card_names, classify, parse_power, Line, ParseError};
 use report::{CombatEntry, GameReport, LobbyPlayer, Round, Status};
 use state::Entity;
 
@@ -26,6 +26,9 @@ pub const TESTED_BUILDS: &[i64] = &[253216];
 pub const TESTED_GAME_TYPES: &[&str] = &["GT_BATTLEGROUNDS", "GT_BATTLEGROUNDS_DUO"];
 const MAX_LOBBY: usize = 8;
 const CREATE_GAME: &str = "GameState.DebugPrintPower() - CREATE_GAME";
+/// Bounds on the card names kept per game, so a strange log cannot grow them.
+const MAX_NAMES: usize = 1_000;
+const MAX_NAME_LEN: usize = 100;
 
 /// One game being read.
 #[derive(Debug, Default)]
@@ -35,6 +38,8 @@ pub struct GameReader {
     build: Option<i64>,
     error: Option<&'static str>,
     reported_complete: bool,
+    /// Card id -> name as printed in the log; the report keeps heroes only.
+    names: HashMap<String, String>,
 }
 
 impl GameReader {
@@ -46,6 +51,7 @@ impl GameReader {
         match classify(line) {
             Line::Game(data) => self.feed_game(data),
             Line::Power(data) if self.error.is_none() => {
+                self.remember_names(data);
                 if let Err(ParseError(name)) =
                     parse_power(data).and_then(|p| self.collector.feed(p))
                 {
@@ -53,6 +59,22 @@ impl GameReader {
                 }
             }
             _ => {}
+        }
+    }
+
+    /// Keeps hero names only (their card ids hold "HERO"): the report shows
+    /// nothing else, and minions cannot fill the bounded map.
+    fn remember_names(&mut self, data: &str) {
+        for (card, name) in card_names(data) {
+            if !card.contains("HERO")
+                || self.names.len() >= MAX_NAMES
+                || name.chars().count() > MAX_NAME_LEN
+            {
+                continue;
+            }
+            self.names
+                .entry(card.to_string())
+                .or_insert_with(|| name.to_string());
         }
     }
 
@@ -203,7 +225,25 @@ fn build_report(index: usize, r: &GameReader) -> GameReport {
         base.problems.push(format!("parser error: {error}"));
         return base;
     }
-    summarize(base, c)
+    let mut report = summarize(base, c);
+    report.card_names = hero_names(&report, &r.names);
+    report
+}
+
+/// Names of the heroes the report mentions, when the log printed them.
+fn hero_names(report: &GameReport, names: &HashMap<String, String>) -> BTreeMap<String, String> {
+    let lobby = report.lobby.iter().map(|p| &p.hero);
+    let combats = report
+        .rounds
+        .iter()
+        .flat_map(|r| r.entries.iter().map(|e| &e.hero));
+    [&report.hero, &report.teammate_hero]
+        .into_iter()
+        .chain(lobby)
+        .chain(combats)
+        .flatten()
+        .filter_map(|card| Some((card.clone(), names.get(card)?.clone())))
+        .collect()
 }
 
 fn validate(c: &Collector, heroes: &[(i64, &Entity)]) -> Vec<String> {
