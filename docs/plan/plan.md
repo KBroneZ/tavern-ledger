@@ -62,7 +62,7 @@ Remaining to close T-101: the live test (play a game with `cargo run --release -
 | T-104b | Privacy policy, processor list (Supabase, static host, email provider) and terms, before the first user | draft updated in session 022 (Supabase DPA and TIA, upload data, sender, cookies, Bulgaria/CPDP); controller name and a few provider checks left |
 | T-104c | Website (Astro): sign-in, account page with export and deletion, public profile (private by default) | live at tavernledger.net with accounts closed; sign-in only (no sign-up form) once the Pages build has the hosted project (session 022) |
 | T-104d | Desktop upload: sign-in through the browser (PKCE, loopback), upload queue with retries, upload off until the user turns it on | done; the app has the hosted project built in (session 022) |
-| T-104e | Website redesign from open-source UI references; the user picks one of two or three directions (session 028, D-040) | pending |
+| T-104e | Website redesign from open-source UI references; the user picks one of two or three directions (session 028, D-040) | done in PR (direction D "Combat Round", D-040); HSTS stays at one day until 2026-10-23 |
 | T-104f | Auth email sender that does not rewrite links (replaces Brevo, D-037); blocks opening sign-ups (session 029, D-041) | pending |
 | T-105 | Code signing (P-005) and installer with auto-update | pending |
 | T-106 | Log setup check: `client.config` `[Log] FileSizeLimit.Int=-1` (without it the game stops writing a log at about 10 MB, one game) and `log.config` `[Power]`, in `check_logs.py` and in the app, with fix instructions; the app never edits them by itself | done |
