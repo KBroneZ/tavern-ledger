@@ -40,7 +40,9 @@ Objetivo: demostrar que se puede reconstruir una partida de Battlegrounds solo c
 - `crates/tracker` + CLI `tavern-watch`: encuentra la carpeta de logs (registro o `--logs-dir`), sigue `Power.log` de la sesión más reciente (solo líneas completas; rotación a `Power_old.log` y sesiones nuevas) y guarda en `%APPDATA%\TavernLedger\games.jsonl` (D-015). `--import` lee las sesiones antiguas: 23 partidas en 8 s; ninguno de los 149 nombres de jugador de los logs aparece en el historial.
 - `crates/desktop`: app Tauri (sin npm todavía) que sigue el log en segundo plano y muestra el historial con stats por modo (Solo 1–8, Duos 1–4 por equipo; top 4 / top 2). Probada con el historial real.
 
-Queda para cerrar T-101: probar el seguimiento en vivo durante una partida real, nombres de héroe en vez de ids de carta (fuente de datos con licencia compatible), arranque con Windows / bandeja y build firmada (T-105). La CI no compila `desktop` (necesita librerías del sistema en Linux).
+Revisiones de código y de seguridad: sin CRITICAL ni HIGH; los MEDIUM, arreglados (líneas de más de 1 MiB marcan la partida como `unsupported`; el seguimiento lee cada byte una vez, detecta la rotación también por los primeros bytes y no pierde la última línea; las partidas pendientes sobreviven a un error; el historial aguanta una escritura cortada y UTF-8 inválido; la app no se congela, avisa si el hilo de seguimiento cae o si falta `Power.log`; `reg.exe` con ruta fija; CSP más estricta).
+
+Queda para cerrar T-101 (sesión 008, `prompts/sesiones/008-cierre-t101.md`): probar el seguimiento en vivo durante una partida real, nombres de héroe en vez de ids de carta (fuente de datos con licencia compatible), una sola instancia de la app y, si sobra tiempo, bandeja y arranque con Windows. La build firmada es T-105. La CI no compila `desktop` (necesita librerías del sistema en Linux).
 
 | ID | Tarea | Estado |
 |----|-------|--------|
