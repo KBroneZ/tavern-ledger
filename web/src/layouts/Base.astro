@@ -10,12 +10,15 @@ interface Props {
 }
 
 const { title, description, noindex = false } = Astro.props;
-// Fails the build if the settings are missing or hold a non-public key.
+// Fails the build if only one setting is given or the key is not the public
+// one; null means accounts are closed (no backend).
 const config = readConfig(import.meta.env);
 // Dev mode injects styles from JavaScript, which the policy would block; the
 // built site (and `npm run preview`) always carries it.
-const csp = import.meta.env.PROD ? contentSecurityPolicy(config.url) : null;
+const csp = import.meta.env.PROD ? contentSecurityPolicy(config?.url ?? null) : null;
 const path = Astro.url.pathname;
+// Pages kept out of search engines (404, sign-in, account) name no canonical address.
+const canonical = noindex ? null : new URL(path, Astro.site).href;
 ---
 
 <!doctype html>
@@ -27,6 +30,7 @@ const path = Astro.url.pathname;
     <meta name="referrer" content="no-referrer" />
     <meta name="description" content={description} />
     {noindex && <meta name="robots" content="noindex" />}
+    {canonical && <link rel="canonical" href={canonical} />}
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{title} · Tavern Ledger</title>
   </head>
@@ -39,8 +43,12 @@ const path = Astro.url.pathname;
       </a>
       <nav aria-label="Main">
         <a href="/" aria-current={path === "/" ? "page" : undefined}>Home</a>
-        <a href="/account/" aria-current={path.startsWith("/account") ? "page" : undefined}>Account</a>
-        <a href="/signin/" aria-current={path.startsWith("/signin") ? "page" : undefined}>Sign in</a>
+        {config && (
+          <>
+            <a href="/account/" aria-current={path.startsWith("/account") ? "page" : undefined}>Account</a>
+            <a href="/signin/" aria-current={path.startsWith("/signin") ? "page" : undefined}>Sign in</a>
+          </>
+        )}
       </nav>
     </header>
     <main id="main">

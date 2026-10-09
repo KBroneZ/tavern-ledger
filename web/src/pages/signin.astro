@@ -1,55 +1,13 @@
 ---
 import Base from "../layouts/Base.astro";
-import { MIN_PASSWORD_LENGTH } from "../lib/auth.ts";
+import AccountsClosed from "../components/AccountsClosed.astro";
+import SignIn from "../components/SignIn.astro";
+import { readConfig } from "../lib/config.ts";
+
+// With accounts closed the page shows a notice instead: no form, no script.
+const accountsOpen = readConfig(import.meta.env) !== null;
 ---
 
 <Base title="Sign in" description="Sign in or create a Tavern Ledger account." noindex>
-  <h1>Sign in</h1>
-  <p class="meta">
-    Email and password. The site is <a href="/privacy/">not open to the public yet</a>: accounts
-    are for testing only.
-  </p>
-
-  <div class="panels">
-    <section class="panel" aria-labelledby="signin-heading">
-      <h2 id="signin-heading">I have an account</h2>
-      <form id="signin-form" novalidate>
-        <label>
-          Email
-          <input type="email" name="email" autocomplete="username" required />
-        </label>
-        <label>
-          Password
-          <input type="password" name="password" autocomplete="current-password" required />
-        </label>
-        <button type="submit">Sign in</button>
-        <p class="message" id="signin-message" role="status" aria-live="polite"></p>
-      </form>
-    </section>
-
-    <section class="panel" aria-labelledby="signup-heading">
-      <h2 id="signup-heading">Create an account</h2>
-      <form id="signup-form" novalidate>
-        <label>
-          Email
-          <input type="email" name="email" autocomplete="email" required />
-        </label>
-        <label>
-          Password
-          <span class="hint">At least {MIN_PASSWORD_LENGTH} characters.</span>
-          <input
-            type="password"
-            name="password"
-            autocomplete="new-password"
-            minlength={MIN_PASSWORD_LENGTH}
-            required
-          />
-        </label>
-        <button type="submit">Create account</button>
-        <p class="message" id="signup-message" role="status" aria-live="polite"></p>
-      </form>
-    </section>
-  </div>
+  {accountsOpen ? <SignIn /> : <AccountsClosed heading="Sign in" />}
 </Base>
-
-<script src="../scripts/signin.ts"></script>

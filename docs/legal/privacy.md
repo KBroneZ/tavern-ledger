@@ -89,7 +89,7 @@ You can also complain to a data protection authority, in particular in the EU co
 
 ## 8. Cookies and browser storage
 
-The website sets no cookies of its own and uses no tracking. When you sign in, the Supabase library stores your sign-in session in your browser's local storage (key `sb-<project>-auth-token`: access and refresh tokens and your account's basic details) and, during sign-in, a one-time code verifier (`…-code-verifier`). These are strictly necessary to keep you signed in and are removed when you sign out. [TO BE CHECKED: whether Cloudflare sets any security cookie on the site.]
+The website sets no cookies of its own and uses no tracking. When you sign in, the Supabase library stores your sign-in session in your browser's local storage (key `sb-<project>-auth-token`: access and refresh tokens and your account's basic details) and, during sign-in, a one-time code verifier (`…-code-verifier`). These are strictly necessary to keep you signed in and are removed when you sign out. Our hosting provider, Cloudflare, may set a strictly necessary security cookie (such as `__cf_bm` or `cf_clearance`) when its protection against attacks and abusive bots needs to check a visit; it is not used to track you. [TO BE CHECKED: the exact cookies and their lifetime on our plan.]
 
 ## 9. Children
 
