@@ -145,7 +145,7 @@ impl Http for NoHttp {
 
 fn engine_for(data_dir: PathBuf) -> Engine {
     let tokens = Box::new(CredentialManager::new(&credential_name(&data_dir)));
-    let mut server = config::load(&data_dir);
+    let mut server = config::load_or_hosted(&data_dir);
     let http: Arc<dyn Http> = match uploader::http::ReqwestHttp::new() {
         Ok(client) => Arc::new(client),
         Err(_) => {

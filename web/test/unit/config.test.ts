@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { contentSecurityPolicy, readConfig } from "../../src/lib/config.ts";
+import { contentSecurityPolicy, readConfig, signupsOpen } from "../../src/lib/config.ts";
 
 // Made-up keys with the shape of Supabase's (a JWT whose payload names the role).
 function fakeJwt(role: string): string {
@@ -96,4 +96,24 @@ test("with accounts closed the CSP allows no script, form or connection", () => 
     assert.match(csp, new RegExp(`(^|; )${directive} 'none'(;|$)`), directive);
   }
   assert.match(csp, /(^|; )style-src 'self'(;|$)/);
+});
+
+const BACKEND = { PUBLIC_SUPABASE_URL: "https://abcd.supabase.co", PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_x" };
+
+test("sign-ups are closed unless the build says exactly true", () => {
+  assert.equal(signupsOpen(BACKEND), false);
+  assert.equal(signupsOpen({ ...BACKEND, PUBLIC_SIGNUPS_OPEN: "" }), false);
+  assert.equal(signupsOpen({ ...BACKEND, PUBLIC_SIGNUPS_OPEN: "false" }), false);
+  assert.equal(signupsOpen({ ...BACKEND, PUBLIC_SIGNUPS_OPEN: "true" }), true);
+  assert.equal(signupsOpen({}), false);
+});
+
+test("a sign-up setting that is not true or false stops the build", () => {
+  for (const value of ["yes", "1", "TRUE", " true"]) {
+    assert.throws(() => signupsOpen({ ...BACKEND, PUBLIC_SIGNUPS_OPEN: value }), /PUBLIC_SIGNUPS_OPEN/, value);
+  }
+});
+
+test("open sign-ups without a backend stop the build", () => {
+  assert.throws(() => signupsOpen({ PUBLIC_SIGNUPS_OPEN: "true" }), /PUBLIC_SIGNUPS_OPEN/);
 });

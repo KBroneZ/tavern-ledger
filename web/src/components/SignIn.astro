@@ -1,5 +1,11 @@
 ---
 import { MIN_PASSWORD_LENGTH } from "../lib/auth.ts";
+
+interface Props {
+  /** False until the owner opens sign-ups (PUBLIC_SIGNUPS_OPEN). */
+  signupsOpen: boolean;
+}
+const { signupsOpen } = Astro.props;
 ---
 
 <h1>Sign in</h1>
@@ -27,25 +33,31 @@ import { MIN_PASSWORD_LENGTH } from "../lib/auth.ts";
 
   <section class="panel" aria-labelledby="signup-heading">
     <h2 id="signup-heading">Create an account</h2>
-    <form id="signup-form" novalidate>
-      <label>
-        Email
-        <input type="email" name="email" autocomplete="email" required />
-      </label>
-      <label>
-        Password
-        <span class="hint">At least {MIN_PASSWORD_LENGTH} characters.</span>
-        <input
-          type="password"
-          name="password"
-          autocomplete="new-password"
-          minlength={MIN_PASSWORD_LENGTH}
-          required
-        />
-      </label>
-      <button type="submit">Create account</button>
-      <p class="message" id="signup-message" role="status" aria-live="polite"></p>
-    </form>
+    {
+      signupsOpen ? (
+        <form id="signup-form" novalidate>
+          <label>
+            Email
+            <input type="email" name="email" autocomplete="email" required />
+          </label>
+          <label>
+            Password
+            <span class="hint">At least {MIN_PASSWORD_LENGTH} characters.</span>
+            <input
+              type="password"
+              name="password"
+              autocomplete="new-password"
+              minlength={MIN_PASSWORD_LENGTH}
+              required
+            />
+          </label>
+          <button type="submit">Create account</button>
+          <p class="message" id="signup-message" role="status" aria-live="polite"></p>
+        </form>
+      ) : (
+        <p class="meta">Sign-up is not open yet.</p>
+      )
+    }
   </section>
 </div>
 

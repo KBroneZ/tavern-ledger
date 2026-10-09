@@ -61,6 +61,8 @@ jobs:
           npm test
           npm run build
           npm run test:dist
+          PUBLIC_SIGNUPS_OPEN=true npm run build
+          PUBLIC_SIGNUPS_OPEN=true npm run test:dist
           env -u PUBLIC_SUPABASE_URL -u PUBLIC_SUPABASE_ANON_KEY npm run build
           env -u PUBLIC_SUPABASE_URL -u PUBLIC_SUPABASE_ANON_KEY npm run test:dist
 

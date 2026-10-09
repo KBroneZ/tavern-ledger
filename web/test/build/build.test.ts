@@ -8,11 +8,13 @@ import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { loadEnv } from "vite";
-import { readConfig } from "../../src/lib/config.ts";
+import { readConfig, signupsOpen } from "../../src/lib/config.ts";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const DIST = join(ROOT, "dist");
-const CONFIG = readConfig(loadEnv("production", ROOT, "PUBLIC_"));
+const ENV = loadEnv("production", ROOT, "PUBLIC_");
+const CONFIG = readConfig(ENV);
+const SIGNUPS = signupsOpen(ENV);
 const ACCOUNT_PAGES = ["signin/index.html", "account/index.html", "profile/index.html"];
 
 function files(dir: string): string[] {
@@ -112,7 +114,16 @@ test("accounts open: the account pages have their forms and scripts", { skip: !C
     for (const src of sources) assert.ok(existsSync(join(DIST, src)), `${page}: ${src}`);
     assert.doesNotMatch(html, /Accounts are not open yet/, page);
   }
-  assert.match(readFileSync(join(DIST, "signin/index.html"), "utf8"), /id="signup-form"/);
+  const signin = readFileSync(join(DIST, "signin/index.html"), "utf8");
+  if (SIGNUPS) {
+    assert.match(signin, /id="signup-form"/);
+  } else {
+    // Sign-ups closed (the hosted default): sign-in stays, no sign-up form is rendered.
+    // The real gate is the hosted project's disable_signup (deploy.md, section 10.9).
+    assert.doesNotMatch(signin, /id="signup-form"|autocomplete="new-password"/);
+    assert.match(signin, /Sign-up is not open yet/);
+    assert.match(signin, /id="signin-form"/);
+  }
 });
 
 test("accounts closed: no form, no script and no backend anywhere", { skip: !!CONFIG }, () => {
