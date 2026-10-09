@@ -1,4 +1,5 @@
-// Tavern Ledger window: shows the local history and the tracker's status.
+// Tavern Ledger window: shows the local history, its stats and the tracker's status.
+// It only renders: every number comes from the app (tracker::stats).
 // Values are set with textContent only; nothing from the history is parsed as HTML.
 "use strict";
 
@@ -6,10 +7,9 @@ const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 
 const MODES = { GT_BATTLEGROUNDS: "Solo", GT_BATTLEGROUNDS_DUO: "Duos" };
-// Solo places go 1-8; Duos places are per team, 1-4. Top half differs.
-const TOP_HALF = { GT_BATTLEGROUNDS: 4, GT_BATTLEGROUNDS_DUO: 2 };
 
 let allGames = [];
+let stats = { modes: [] };
 let mode = null; // chosen game type; defaults to the mode with most games
 let userPicked = false;
 const OTHER = "OTHER"; // any other Battlegrounds type, so no game is hidden
@@ -33,12 +33,21 @@ function played(session, index) {
   return `${when} · ${index}`;
 }
 
-function placeBadge(place, gameType) {
+// Stats of the shown mode; an empty tally until the app answers.
+function modeStats() {
+  return stats.modes.find((m) => m.mode === mode) || { top_half: null, totals: {}, heroes: [], tribes: [] };
+}
+
+// top is null when the mode's place rules are unknown: no colour then.
+function placeBadge(place, top) {
   if (place === null || place === undefined) return el("span", "place unknown", "—");
-  const top = TOP_HALF[gameType] || 4;
-  const kind = place === 1 ? "win" : place <= top ? "top4" : "bottom4";
+  const kind = top === null ? "plain" : place === 1 ? "win" : place <= top ? "top4" : "bottom4";
   return el("span", `place ${kind}`, place);
 }
+
+const dash = (value, format) => (value === null || value === undefined ? "—" : format(value));
+const avgText = (v) => dash(v, (x) => x.toFixed(2));
+const shareText = (v) => dash(v, (x) => `${Math.round(x * 100)}%`);
 
 // The history is a local file; tolerate hand-edited or older records.
 const list = (value) => (Array.isArray(value) ? value : []);
@@ -60,7 +69,7 @@ function note(report) {
   return list(report.warnings).join("; ");
 }
 
-function row(game) {
+function row(game, top) {
   const r = game.report;
   const tr = el("tr");
   tr.append(
@@ -69,7 +78,7 @@ function row(game) {
     heroCell(r),
   );
   const placeCell = el("td", "num");
-  placeCell.append(placeBadge(r.final_place, r.game_type));
+  placeCell.append(placeBadge(r.final_place, top));
   tr.append(
     placeCell,
     el("td", "num", r.final_health ?? "—"),
@@ -79,52 +88,100 @@ function row(game) {
   return tr;
 }
 
-// Only finished games with a known place count; never a made-up number.
-// Stats are per mode: Solo and Duos places are not comparable.
-function renderTally(games) {
-  const places = games.map((g) => g.report.final_place).filter((p) => Number.isInteger(p));
-  const set = (id, value) => { document.getElementById(id).textContent = value; };
-  const top = TOP_HALF[mode] || 4;
-  set("stat-top-label", `Top ${top}`);
-  set("stat-games", games.length || "—");
-  if (places.length === 0) {
-    ["stat-avg", "stat-top", "stat-wins"].forEach((id) => set(id, "—"));
-    return;
-  }
-  const avg = places.reduce((a, b) => a + b, 0) / places.length;
-  const topShare = places.filter((p) => p <= top).length / places.length;
-  set("stat-avg", avg.toFixed(2));
-  set("stat-top", `${Math.round(topShare * 100)}%`);
-  set("stat-wins", places.filter((p) => p === 1).length);
+function topLabel(top) {
+  return top === null ? "Top half" : `Top ${top}`;
 }
 
-function pickDefaultMode(games) {
-  const counts = {};
-  games.forEach((g) => { counts[g.report.game_type] = (counts[g.report.game_type] || 0) + 1; });
-  const known = Object.keys(MODES).filter((t) => counts[t]);
-  known.sort((a, b) => counts[b] - counts[a]);
-  return known[0] || "GT_BATTLEGROUNDS";
+// "—" when no game counts: no games is unknown, not 0.
+function renderTally(m) {
+  const t = m.totals;
+  const set = (id, value) => { document.getElementById(id).textContent = value; };
+  set("stat-top-label", topLabel(m.top_half));
+  set("stat-games", t.games || "—");
+  set("stat-avg", avgText(t.average_place));
+  set("stat-top", shareText(t.top_half_share));
+  set("stat-wins", dash(t.wins, String));
+  const notCounted = (t.games || 0) - (t.placed || 0);
+  const note = document.getElementById("not-counted");
+  note.hidden = notCounted === 0;
+  const parts = [
+    t.incomplete && `${t.incomplete} not finished in the log`,
+    t.unsupported && `${t.unsupported} could not be read`,
+  ].filter(Boolean);
+  const why = m.top_half === null ? "place rules unknown for this mode" : parts.join(", ");
+  note.textContent = `${notCounted} of ${t.games} games not counted for places` + (why ? ` (${why})` : "") + ".";
+}
+
+function heroRow(h, top) {
+  const tr = el("tr");
+  const cell = el("td", h.name ? "hero-name" : "hero", h.name || h.hero || "Unknown hero");
+  if (h.variants.length) cell.title = h.variants.join("\n");
+  const t = h.tally;
+  tr.append(
+    cell,
+    el("td", "num", t.games),
+    el("td", "num", avgText(t.average_place)),
+    el("td", "num", top === null ? "—" : shareText(t.top_half_share)),
+    el("td", "num", dash(t.wins, String)),
+  );
+  return tr;
+}
+
+// The log's race names: NEUTRAL is a minion with no tribe, ALL one with every tribe.
+const TRIBE_LABELS = { NEUTRAL: "No tribe", ALL: "All tribes" };
+const tribeLabel = (name) => TRIBE_LABELS[name] || name.charAt(0) + name.slice(1).toLowerCase();
+
+function tribeRow(t, total) {
+  const tr = el("tr");
+  const cell = el("td", null, tribeLabel(t.tribe));
+  cell.title = t.tribe;
+  tr.append(cell, el("td", "num", `${t.games} of ${total}`), el("td", "num", t.offers));
+  return tr;
+}
+
+function renderBreakdown(m) {
+  document.getElementById("heroes-top-label").textContent = topLabel(m.top_half);
+  document.getElementById("heroes").replaceChildren(...m.heroes.map((h) => heroRow(h, m.top_half)));
+  document.getElementById("heroes-empty").hidden = m.heroes.length > 0;
+  document.getElementById("tribes").replaceChildren(...m.tribes.map((t) => tribeRow(t, m.games_with_tribes)));
+  document.getElementById("tribes-empty").hidden = m.tribes.length > 0;
+}
+
+// The mode with most games, Solo when there are none.
+function pickDefaultMode() {
+  const known = stats.modes.filter((m) => MODES[m.mode] && m.totals.games > 0);
+  known.sort((a, b) => b.totals.games - a.totals.games);
+  return known.length ? known[0].mode : "GT_BATTLEGROUNDS";
 }
 
 function render() {
   const games = allGames.filter((g) => modeOf(g) === mode);
+  const m = modeStats();
   document.querySelector('.modes [data-mode="OTHER"]').hidden = !allGames.some((g) => modeOf(g) === OTHER);
-  document.getElementById("games").replaceChildren(...games.map(row));
+  document.getElementById("games").replaceChildren(...games.map((g) => row(g, m.top_half)));
   const empty = document.getElementById("empty");
   empty.hidden = games.length > 0;
   empty.textContent = `No ${MODES[mode] || "other"} games yet. Play one and it will appear here when it ends.`;
   document.querySelectorAll(".modes button").forEach((b) => {
     b.setAttribute("aria-pressed", String(b.dataset.mode === mode));
   });
-  renderTally(games);
+  renderTally(m);
+  renderBreakdown(m);
 }
 
+// Refreshes can overlap; only the latest one may paint, so an older answer
+// never replaces a newer one.
+let refreshSeq = 0;
+
 async function refreshGames() {
-  const games = await invoke("list_games");
+  const seq = ++refreshSeq;
+  const [games, fresh] = await Promise.all([invoke("list_games"), invoke("game_stats")]);
+  if (seq !== refreshSeq) return;
   allGames = games.slice().reverse(); // newest first
+  stats = fresh;
   // Until the user picks a mode, show the one with most games (the history
   // may still be opening on the first call, so this runs on every refresh).
-  if (!userPicked) mode = pickDefaultMode(allGames);
+  if (!userPicked) mode = pickDefaultMode();
   render();
 }
 
