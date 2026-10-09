@@ -1,0 +1,21 @@
+---
+// Shown in place of sign-in, account and profile while there is no hosted
+// backend (readConfig() is null): plain text, no form and no script.
+interface Props {
+  heading: string;
+}
+
+const { heading } = Astro.props;
+---
+
+<h1>{heading}</h1>
+<aside class="status" aria-label="Accounts">
+  <p>
+    <strong>Accounts are not open yet.</strong> You cannot sign up or sign in on this site for
+    now, and there are no public profiles. The desktop app works on its own and keeps your games on
+    your PC.
+  </p>
+  <p>
+    Until then, read about <a href="/">the project</a>, the draft <a href="/privacy/">privacy policy</a> and the <a href="/terms/">terms</a>.
+  </p>
+</aside>

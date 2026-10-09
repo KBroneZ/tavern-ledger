@@ -27,12 +27,17 @@ test("accepts a legacy anon JWT and a local http URL", () => {
   assert.equal(config.url, "http://127.0.0.1:54321");
 });
 
-test("a missing setting stops the build", () => {
-  assert.throws(() => readConfig({}), /PUBLIC_SUPABASE_URL/);
+test("no settings at all means accounts are closed: no backend", () => {
+  assert.equal(readConfig({}), null);
+  assert.equal(readConfig({ PUBLIC_SUPABASE_URL: "", PUBLIC_SUPABASE_ANON_KEY: "" }), null);
+});
+
+test("only one of the two settings stops the build", () => {
   assert.throws(
     () => readConfig({ PUBLIC_SUPABASE_URL: "https://abcd.supabase.co" }),
     /PUBLIC_SUPABASE_ANON_KEY/,
   );
+  assert.throws(() => readConfig({ PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_x" }), /PUBLIC_SUPABASE_URL/);
 });
 
 test("the URL must be a bare http(s) origin", () => {
@@ -83,4 +88,10 @@ test("the CSP allows scripts and styles from the site only and connects to Supab
   assert.equal(directives["base-uri"], "'none'");
   assert.equal(directives["form-action"], "'self'");
   assert.doesNotMatch(csp, /unsafe|\*|data:/);
+});
+
+test("with accounts closed the CSP allows no connection at all", () => {
+  const csp = contentSecurityPolicy(null);
+  assert.match(csp, /(^|; )connect-src 'none'(;|$)/);
+  assert.match(csp, /(^|; )default-src 'none'(;|$)/);
 });

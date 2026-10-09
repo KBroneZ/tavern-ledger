@@ -1,5 +1,7 @@
 // Build-time settings of the site. Only the project URL and the public (anon
 // or publishable) key may reach the browser; anything else stops the build.
+// With neither setting the site builds with accounts closed: no backend, no
+// forms, no scripts (until the hosted Supabase project exists).
 
 export interface SiteConfig {
   url: string;
@@ -51,7 +53,9 @@ function checkKey(raw: string | undefined): string {
   throw new Error("PUBLIC_SUPABASE_ANON_KEY must be the project's anon or publishable key");
 }
 
-export function readConfig(env: ConfigSource): SiteConfig {
+/** The site's settings, or null when accounts are closed (neither is set). */
+export function readConfig(env: ConfigSource): SiteConfig | null {
+  if (!env.PUBLIC_SUPABASE_URL && !env.PUBLIC_SUPABASE_ANON_KEY) return null;
   return {
     url: checkUrl(env.PUBLIC_SUPABASE_URL),
     anonKey: checkKey(env.PUBLIC_SUPABASE_ANON_KEY),
@@ -61,16 +65,16 @@ export function readConfig(env: ConfigSource): SiteConfig {
 /**
  * Content-Security-Policy for every page: scripts and styles come only from
  * the site's own files (the build inlines none), and the only connection is
- * to the Supabase project. frame-ancestors only works as a header: the build
- * writes it to dist/_headers (astro.config.mjs).
+ * to the Supabase project (none at all with accounts closed). frame-ancestors
+ * only works as a header: the build writes it to dist/_headers (astro.config.mjs).
  */
-export function contentSecurityPolicy(supabaseOrigin: string): string {
+export function contentSecurityPolicy(supabaseOrigin: string | null): string {
   return [
     "default-src 'none'",
     "script-src 'self'",
     "style-src 'self'",
     "img-src 'self'",
-    `connect-src ${supabaseOrigin}`,
+    `connect-src ${supabaseOrigin ?? "'none'"}`,
     "base-uri 'none'",
     "form-action 'self'",
   ].join("; ");

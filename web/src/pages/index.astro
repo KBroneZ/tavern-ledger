@@ -1,5 +1,8 @@
 ---
 import Base from "../layouts/Base.astro";
+import { readConfig } from "../lib/config.ts";
+
+const accountsOpen = readConfig(import.meta.env) !== null;
 ---
 
 <Base
@@ -68,7 +71,7 @@ import Base from "../layouts/Base.astro";
   <aside class="status" aria-label="Project status">
     <p>
       <strong>Not open to the public yet.</strong> The desktop app is a prototype and the website
-      is being built. Accounts on this site are for testing only.
+      is being built. {accountsOpen ? "Accounts on this site are for testing only." : "Accounts are not open yet."}
     </p>
   </aside>
 </Base>
