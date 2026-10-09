@@ -20,8 +20,8 @@ const PAGES = ALL.filter((f) => f.endsWith(".html"));
 const name = (f: string) => relative(DIST, f).replaceAll("\\", "/");
 
 test("the site was built", () => {
-  assert.ok(PAGES.length >= 5, "run `npm run build` first");
-  for (const page of ["index.html", "signin/index.html", "account/index.html", "profile/index.html", "privacy/index.html"]) {
+  assert.ok(PAGES.length >= 6, "run `npm run build` first");
+  for (const page of ["index.html", "signin/index.html", "account/index.html", "profile/index.html", "privacy/index.html", "terms/index.html"]) {
     assert.ok(PAGES.map(name).includes(page), page);
   }
 });

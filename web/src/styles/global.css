@@ -507,3 +507,63 @@ button.danger:hover {
     transition: none !important;
   }
 }
+
+/* Legal pages (privacy, terms): rendered from docs/legal/*.md */
+
+.legal {
+  max-width: var(--measure);
+}
+
+.legal h1 {
+  font-family: var(--font-serif);
+}
+
+.legal h2 {
+  font-family: var(--font-serif);
+  margin-top: var(--space-5);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--rule);
+}
+
+.legal blockquote {
+  margin: var(--space-4) 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--danger-paper);
+  border-left: 4px solid var(--danger);
+}
+
+.legal blockquote p {
+  margin: 0;
+}
+
+.legal code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  overflow-wrap: anywhere;
+}
+
+/* Wide tables scroll inside themselves, never the page. */
+.legal table {
+  display: block;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.legal th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border-bottom: 2px solid var(--rule-strong);
+  padding: var(--space-2) var(--space-3) var(--space-2) 0;
+}
+
+.legal td {
+  border-bottom: 1px solid var(--rule);
+  padding: var(--space-2) var(--space-3) var(--space-2) 0;
+  vertical-align: top;
+  min-width: 12ch;
+}
