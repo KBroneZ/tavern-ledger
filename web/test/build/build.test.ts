@@ -1,12 +1,19 @@
 // Checks on the built site (run after `npm run build`): every page carries
 // the Content-Security-Policy, nothing is inlined that the policy would have
-// to allow, and no key other than the public one is in the files.
+// to allow, and no key other than the public one is in the files. The site
+// is built in one of two ways, read from the same settings as the build:
+// accounts open (Supabase settings given) or closed (none given).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { loadEnv } from "vite";
+import { readConfig } from "../../src/lib/config.ts";
 
-const DIST = join(import.meta.dirname, "..", "..", "dist");
+const ROOT = join(import.meta.dirname, "..", "..");
+const DIST = join(ROOT, "dist");
+const CONFIG = readConfig(loadEnv("production", ROOT, "PUBLIC_"));
+const ACCOUNT_PAGES = ["signin/index.html", "account/index.html", "profile/index.html"];
 
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -20,8 +27,8 @@ const PAGES = ALL.filter((f) => f.endsWith(".html"));
 const name = (f: string) => relative(DIST, f).replaceAll("\\", "/");
 
 test("the site was built", () => {
-  assert.ok(PAGES.length >= 5, "run `npm run build` first");
-  for (const page of ["index.html", "signin/index.html", "account/index.html", "profile/index.html", "privacy/index.html"]) {
+  assert.ok(PAGES.length >= 6, "run `npm run build` first");
+  for (const page of ["index.html", "signin/index.html", "account/index.html", "profile/index.html", "privacy/index.html", "terms/index.html"]) {
     assert.ok(PAGES.map(name).includes(page), page);
   }
 });
@@ -34,9 +41,11 @@ test("every page has the CSP as its first meta after the charset", () => {
     assert.match(metas[1] ?? "", /http-equiv="Content-Security-Policy"/, name(page));
     const csp = /content="([^"]*)"/.exec(metas[1])?.[1] ?? "";
     assert.match(csp, /default-src 'none'/, name(page));
-    assert.match(csp, /script-src 'self'(;|$)/, name(page));
+    assert.match(csp, CONFIG ? /script-src 'self'(;|$)/ : /script-src 'none'(;|$)/, name(page));
+    assert.match(csp, CONFIG ? /form-action 'self'(;|$)/ : /form-action 'none'(;|$)/, name(page));
     assert.match(csp, /style-src 'self'(;|$)/, name(page));
-    assert.match(csp, /connect-src https?:\/\/[^\s;*]+(;|$)/, name(page));
+    if (CONFIG) assert.match(csp, /connect-src https?:\/\/[^\s;*]+(;|$)/, name(page));
+    else assert.match(csp, /connect-src 'none'(;|$)/, name(page));
     assert.doesNotMatch(csp, /unsafe|\*/, name(page));
   }
 });
@@ -57,6 +66,19 @@ test("no inline script, style or event handler in any page", () => {
   }
 });
 
+test("every indexable page names its canonical address on the apex domain", () => {
+  for (const page of PAGES) {
+    const html = readFileSync(page, "utf8");
+    const canonical = /<link rel="canonical" href="([^"]*)">/.exec(html)?.[1];
+    if (html.includes('<meta name="robots" content="noindex">')) {
+      assert.equal(canonical, undefined, name(page));
+      continue;
+    }
+    const path = "/" + name(page).replace(/index\.html$/, "");
+    assert.equal(canonical, `https://tavernledger.net${path}`, name(page));
+  }
+});
+
 test("every page shows the fan-project notice", () => {
   for (const page of PAGES) {
     assert.match(
@@ -67,11 +89,47 @@ test("every page shows the fan-project notice", () => {
   }
 });
 
-test("_headers carries the same policy plus frame-ancestors", () => {
+test("_headers carries the same policy plus frame-ancestors and the other security headers", () => {
   const headers = readFileSync(join(DIST, "_headers"), "utf8");
-  assert.match(headers, /Content-Security-Policy: default-src 'none';.*frame-ancestors 'none'/);
+  const page = readFileSync(join(DIST, "index.html"), "utf8");
+  const pageCsp = /http-equiv="Content-Security-Policy" content="([^"]*)"/.exec(page)?.[1];
+  assert.ok(pageCsp);
+  assert.ok(headers.includes(`Content-Security-Policy: ${pageCsp}; frame-ancestors 'none'`));
   assert.match(headers, /X-Content-Type-Options: nosniff/);
+  assert.match(headers, /X-Frame-Options: DENY/);
   assert.match(headers, /Referrer-Policy: no-referrer/);
+  assert.match(headers, /Cross-Origin-Opener-Policy: same-origin/);
+  assert.match(headers, /\/_astro\/\*\n  Cache-Control: public, max-age=31536000, immutable/);
+  assert.match(headers, /Permissions-Policy: camera=\(\)/);
+  assert.match(headers, /Strict-Transport-Security: max-age=\d+; includeSubDomains/);
+});
+
+test("accounts open: the account pages have their forms and scripts", { skip: !CONFIG }, () => {
+  for (const page of ACCOUNT_PAGES) {
+    const html = readFileSync(join(DIST, page), "utf8");
+    const sources = [...html.matchAll(/<script\b[^>]*\ssrc="\/([^"]+)"/g)].map((m) => m[1]);
+    assert.ok(sources.length > 0, page);
+    for (const src of sources) assert.ok(existsSync(join(DIST, src)), `${page}: ${src}`);
+    assert.doesNotMatch(html, /Accounts are not open yet/, page);
+  }
+  assert.match(readFileSync(join(DIST, "signin/index.html"), "utf8"), /id="signup-form"/);
+});
+
+test("accounts closed: no form, no script and no backend anywhere", { skip: !!CONFIG }, () => {
+  for (const page of ACCOUNT_PAGES) {
+    const html = readFileSync(join(DIST, page), "utf8");
+    assert.match(html, /Accounts are not open yet/, page);
+  }
+  for (const page of PAGES) {
+    const html = readFileSync(page, "utf8");
+    assert.doesNotMatch(html, /<script\b|<form\b|<input\b|href="\/(signin|account)\/"/, name(page));
+  }
+  assert.deepEqual(ALL.filter((f) => f.endsWith(".js")).map(name), []);
+  for (const file of ALL) {
+    const text = readFileSync(file, "utf8");
+    // No project URL (the policy links to supabase.com, which is fine) and no key of any kind.
+    assert.doesNotMatch(text, /\.supabase\.co(?![a-z])|127\.0\.0\.1:54321|sb_publishable_|eyJ[A-Za-z0-9_-]+\./, name(file));
+  }
 });
 
 function jwtRoles(text: string): string[] {

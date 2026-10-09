@@ -26,7 +26,7 @@ pub const PARSER_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Bump when a change makes the parser read the same log differently (new
 /// fields, fixed bugs). Saved with every game so `tavern-watch --reparse`
 /// and the server can tell which records an older parser wrote.
-pub const PARSER_REVISION: u32 = 1;
+pub const PARSER_REVISION: u32 = 2;
 
 /// Builds whose real logs this parser was checked against.
 pub const TESTED_BUILDS: &[i64] = &[253216];
@@ -108,6 +108,13 @@ impl GameReader {
         build_report(index, &self)
     }
 
+    /// True when the log says this is a Battlegrounds game (solo or Duos).
+    pub fn is_battlegrounds(&self) -> bool {
+        self.game_type
+            .as_deref()
+            .is_some_and(|t| TESTED_GAME_TYPES.contains(&t))
+    }
+
     /// True once the log marks the game as over (STATE=COMPLETE).
     pub fn is_complete(&self) -> bool {
         self.collector
@@ -185,6 +192,14 @@ impl LogReader {
         }
         reader.reported_complete = true;
         Some(build_report(index, reader))
+    }
+
+    /// Number of the Battlegrounds game being played right now (the `index`
+    /// its report will have), from hero select until the log marks it
+    /// complete. `None` when no such game is on.
+    pub fn in_progress_index(&self) -> Option<usize> {
+        let reader = self.current.as_ref()?;
+        (reader.is_battlegrounds() && !reader.is_complete()).then_some(self.count + 1)
     }
 
     /// Games finished so far (a new CREATE_GAME closes the previous one).
@@ -326,6 +341,7 @@ fn summarize(mut base: GameReport, c: &Collector) -> GameReport {
         .collect();
     base.shop_tribes = count_tribes(c);
     base.rounds = rounds_of(c, &heroes, complete.then(|| hero_health(own)));
+    base.start_health = c.lobby_health.get(&0).cloned().unwrap_or_default();
     base
 }
 
@@ -342,11 +358,25 @@ fn count_tribes(c: &Collector) -> Vec<(String, usize)> {
     counts
 }
 
+fn lobby_health_from(heroes: &[(i64, &Entity)]) -> BTreeMap<i64, i64> {
+    heroes
+        .iter()
+        .map(|(pid, hero)| (*pid, hero_health(hero)))
+        .collect()
+}
+
 fn rounds_of(c: &Collector, heroes: &[(i64, &Entity)], last_health: Option<i64>) -> Vec<Round> {
     let mut health: BTreeMap<i64, Option<i64>> = c.health.clone();
     if let (Some(h), Some(&last)) = (last_health, c.entries.keys().next_back()) {
         // The game ends right after the last combat: no shop turn records it.
         health.entry(last).or_insert(Some(h));
+    }
+    let mut lobby_health = c.lobby_health.clone();
+    if let (true, Some(&last)) = (last_health.is_some(), c.entries.keys().next_back()) {
+        // Same for everyone: the final heroes are the health after the last combat.
+        lobby_health
+            .entry(last)
+            .or_insert_with(|| lobby_health_from(heroes));
     }
     // Combat hero copies share the card id of the lobby hero. Ghosts of
     // eliminated players do not, so their id comes from the combat tag.
@@ -372,6 +402,7 @@ fn rounds_of(c: &Collector, heroes: &[(i64, &Entity)], last_health: Option<i64>)
                 })
                 .collect(),
             own_health_after: health.get(&n).copied().flatten(),
+            health_after: lobby_health.get(&n).cloned().unwrap_or_default(),
         })
         .collect()
 }

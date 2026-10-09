@@ -1,16 +1,12 @@
 ---
+// The text lives in docs/legal/privacy.md, so the repository and the site
+// can never say different things.
 import Base from "../layouts/Base.astro";
+import { Content } from "../../../docs/legal/privacy.md";
 ---
 
-<Base title="Privacy" description="Tavern Ledger privacy policy (placeholder).">
-  <h1>Privacy</h1>
-  <p>
-    <strong>The site is not open to the public yet.</strong> The privacy policy and the terms will
-    be published here before the first public user (task T-104b).
-  </p>
-  <p>
-    Until then, accounts on this site are for testing only. Whatever you store here you can
-    download from your <a href="/account/">account page</a>, and deleting your account removes it
-    all.
-  </p>
+<Base title="Privacy" description="Tavern Ledger privacy policy (draft, not in force yet).">
+  <article class="legal">
+    <Content />
+  </article>
 </Base>

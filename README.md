@@ -28,7 +28,16 @@ Website (T-104c): a static Astro site in `web/` with sign-in by email, an accoun
 
 Upload (T-104d): the desktop app can upload each finished game to your account. It is off until you sign in and turn it on. You sign in with a one-time link from your email, opened in your browser; the app never asks for your password and keeps the sign-in in Windows Credential Manager. Only the game's report goes up (heroes, card ids, places, boards), never player names, BattleTags or ratings, and the server checks that again before storing it. It works against the local stack; there is no online server yet.
 
-Next tasks: T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), the hosted Supabase project and the site's hosting (need the user) and T-104b (privacy policy).
+Game recap (T-202) and record against each opponent (T-203): a "Recap" button on each game, and it opens by itself when a new game ends. It shows hero (and teammate in Duos), place, health over the rounds, tribes seen in the tavern and the parser's warnings, and for each opponent in that game (by hero and seat, never by name) the combats won, lost, tied or unknown. The log never says who won, so results are worked out from health changes and marked inferred; when the numbers cannot say, the result is unknown. In Duos each round counts once for your team against the opposing team. Games saved before parser revision 2 show unknown results until re-read with `tavern-watch --reparse`.
+
+Where values come from (T-109): every number or label in the window says where it comes from. Values straight from the game's log carry no mark; inferred ones (tribes seen in the tavern, skins grouped under one hero) and unknown ones carry a mark, every value has a tooltip, and a legend explains them. "Report a problem" (T-110): a button on each game shows the whole report file (game report, parser version, game build, app version, log setup check, warnings) and saves it to your Downloads folder if you choose. The app refuses to make it if it finds anything that looks like a player name, and it never sends it anywhere; you send it yourself.
+
+
+Lobby tribes by hand (T-303): the log never says which five tribes are in the lobby, so you can pick them yourself from a fixed list, at hero select or later from the history (`Tribes` button on each game; you can change, clear or move the entry). If no game is on when you pick them, they go to the next game that starts. They are saved on your computer next to the history, not inside the game's report, so re-reading a game keeps them. They are always marked "entered by you" and shown next to the tribes seen in the tavern, never mixed with them; the stats count them in a separate table. Decision D-029.
+
+Privacy and terms (T-104b): a data inventory written from the code, and drafts of the privacy policy and terms in [docs/legal/](docs/legal/), shown on the site at `/privacy/` and `/terms/`. They are not in force: the controller's name and contact, the email sender and some provider details are still to be decided. No analytics, minimum age 16.
+
+Next tasks: T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), the hosted Supabase project and the site's hosting (need the user) and T-104b (fill in the open items of the privacy policy).
 
 ## Check your log setup
 

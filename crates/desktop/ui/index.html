@@ -51,12 +51,24 @@
       <button type="button" data-mode="OTHER" aria-pressed="false" hidden>Other</button>
     </nav>
     <section class="tally" aria-label="Summary">
-      <div class="stat"><span class="label">Games</span><span id="stat-games" class="value">—</span></div>
-      <div class="stat"><span class="label">Average place</span><span id="stat-avg" class="value">—</span></div>
-      <div class="stat"><span class="label" id="stat-top-label">Top half</span><span id="stat-top" class="value">—</span></div>
-      <div class="stat"><span class="label">Wins</span><span id="stat-wins" class="value">—</span></div>
+      <div class="stat"><span class="label">Games</span><span id="stat-games" class="value">—</span><span id="stat-games-src" class="src-slot"></span></div>
+      <div class="stat"><span class="label">Average place</span><span id="stat-avg" class="value">—</span><span id="stat-avg-src" class="src-slot"></span></div>
+      <div class="stat"><span class="label" id="stat-top-label">Top half</span><span id="stat-top" class="value">—</span><span id="stat-top-src" class="src-slot"></span></div>
+      <div class="stat"><span class="label">Wins</span><span id="stat-wins" class="value">—</span><span id="stat-wins-src" class="src-slot"></span></div>
     </section>
     <p id="not-counted" class="tally-note" hidden></p>
+
+    <section class="ledger lobby" aria-labelledby="lobby-title">
+      <h2 id="lobby-title">Lobby tribes</h2>
+      <p class="note">The game's log does not say which five tribes are in the lobby. If you want them in your stats, pick them here from the list; they are saved on your computer and always marked as entered by you. They are never mixed with the tribes seen in the tavern.</p>
+      <p id="lobby-state" role="status" aria-live="polite"></p>
+      <ul id="lobby-current" class="tribe-list"></ul>
+      <p id="lobby-error" class="report-error" role="alert" hidden></p>
+      <div class="lobby-actions">
+        <button type="button" id="lobby-enter" class="report-btn"></button>
+        <button type="button" id="lobby-clear" class="report-btn" hidden>Remove</button>
+      </div>
+    </section>
 
     <div class="breakdown">
       <section class="ledger heroes" aria-labelledby="heroes-title">
@@ -91,6 +103,20 @@
         </table>
         <p id="tribes-empty" class="empty" hidden>No tavern offers seen yet.</p>
       </section>
+
+      <section class="ledger tribes" id="entered-tribes-section" aria-labelledby="entered-tribes-title" hidden>
+        <h2 id="entered-tribes-title">Lobby tribes you entered</h2>
+        <p class="note">Typed by you, one pick of five per game. Separate from the tribes seen in the tavern.</p>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Tribe</th>
+              <th scope="col" class="num">Games</th>
+            </tr>
+          </thead>
+          <tbody id="entered-tribes"></tbody>
+        </table>
+      </section>
     </div>
 
     <section class="ledger" aria-labelledby="ledger-title">
@@ -105,13 +131,64 @@
             <th scope="col" class="num">Health</th>
             <th scope="col" class="num">Rounds</th>
             <th scope="col">Note</th>
+            <th scope="col"><span class="visually-hidden">Recap and report a problem</span></th>
           </tr>
         </thead>
         <tbody id="games"></tbody>
       </table>
       <p id="empty" class="empty" hidden>No games yet. Play a Battlegrounds game and it will appear here when it ends.</p>
     </section>
+
+    <section class="legend" aria-labelledby="legend-title">
+      <h2 id="legend-title">Where values come from</h2>
+      <p class="note">A value with no mark comes straight from the game's log. Every other value carries a mark, and hovering any value says where it comes from.</p>
+      <ul id="legend-list"></ul>
+    </section>
   </main>
+
+  <dialog id="recap-dialog" class="recap" aria-labelledby="recap-title">
+    <h2 id="recap-title">Game recap</h2>
+    <p id="recap-error" class="report-error" role="alert" hidden></p>
+    <div id="recap-body"></div>
+    <div class="dialog-actions">
+      <button type="button" id="recap-close">Close</button>
+    </div>
+  </dialog>
+
+  <dialog id="tribes-dialog" class="tribes-dialog" aria-labelledby="tribes-title-dialog">
+    <h2 id="tribes-title-dialog">Lobby tribes</h2>
+    <p id="tribes-target" class="note"></p>
+    <form id="tribes-form" method="dialog">
+      <fieldset>
+        <legend>Pick the <span id="tribes-need">5</span> tribes in the lobby</legend>
+        <div id="tribes-choices" class="choices"></div>
+      </fieldset>
+      <p id="tribes-count" class="note" role="status" aria-live="polite"></p>
+      <p id="tribes-error" class="report-error" role="alert" hidden></p>
+      <div id="tribes-move" class="move-row" hidden>
+        <label for="tribes-move-to">Move these tribes to</label>
+        <select id="tribes-move-to"></select>
+        <button type="button" id="tribes-move-go" class="report-btn">Move</button>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" id="tribes-save">Save</button>
+        <button type="button" id="tribes-clear" hidden>Remove</button>
+        <button type="button" id="tribes-close">Close</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="report-dialog" aria-labelledby="report-title">
+    <h2 id="report-title">Report a problem</h2>
+    <p class="note">This is the file that will be saved (only its time stamp is set again when you save). It holds no player names: the app refuses to make it if it finds one. Nothing is sent anywhere. Saving puts the file in your Downloads folder, and you can send it yourself.</p>
+    <p id="report-error" class="report-error" role="alert" hidden></p>
+    <pre id="report-text" tabindex="0"></pre>
+    <p id="report-saved" class="note" role="status" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" id="report-save">Save to Downloads</button>
+      <button type="button" id="report-close">Close</button>
+    </div>
+  </dialog>
 
   <footer>
     Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.

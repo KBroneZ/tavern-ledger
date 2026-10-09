@@ -44,6 +44,9 @@ pub struct Collector {
     pub shop_races: Vec<(i64, String)>,
     pub entries: BTreeMap<i64, Vec<RawEntry>>,
     pub health: BTreeMap<i64, Option<i64>>,
+    /// Round -> health of every lobby hero by player id when its combat
+    /// closed. Round 0 is the health before the first combat.
+    pub lobby_health: BTreeMap<i64, BTreeMap<i64, i64>>,
     open_own: Option<OpenLeg>,
     open_opp: Option<OpenLeg>,
 }
@@ -193,6 +196,10 @@ impl Collector {
         } else {
             self.open_own = None;
             self.open_opp = None;
+            let snapshot = lobby_health_now(&self.board);
+            if turn >= 1 && !snapshot.is_empty() {
+                self.lobby_health.insert(previous, snapshot);
+            }
             if turn > 1 {
                 let health = self.own_leaderboard_hero().map(hero_health);
                 self.health.insert(previous, health);
@@ -325,6 +332,14 @@ pub fn hero_health(hero: &Entity) -> i64 {
         .saturating_add(hero.int("ARMOR"))
         .saturating_sub(hero.int("DAMAGE"))
         .max(0)
+}
+
+/// Health of every leaderboard hero right now, by player id.
+pub fn lobby_health_now(board: &Board) -> BTreeMap<i64, i64> {
+    leaderboard_heroes(board)
+        .into_iter()
+        .map(|(pid, hero)| (pid, hero_health(hero)))
+        .collect()
 }
 
 pub fn board_of(board: &Board, controller: i64) -> Vec<Minion> {

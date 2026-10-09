@@ -1,38 +1,13 @@
 ---
 import Base from "../layouts/Base.astro";
+import AccountsClosed from "../components/AccountsClosed.astro";
+import PublicProfile from "../components/PublicProfile.astro";
+import { readConfig } from "../lib/config.ts";
+
+// With accounts closed the page shows a notice instead: no form, no script.
+const accountsOpen = readConfig(import.meta.env) !== null;
 ---
 
 <Base title="Player profile" description="A Tavern Ledger player's public games.">
-  <p class="message" id="profile-status" role="status" aria-live="polite">Loading…</p>
-
-  <section id="not-found" hidden>
-    <h1>Profile not found</h1>
-    <p>There is no public profile at this address. It may be private or may not exist.</p>
-  </section>
-
-  <section id="profile" hidden>
-    <p class="kicker">Public profile</p>
-    <h1 id="profile-name"></h1>
-    <p class="meta" id="profile-summary"></p>
-    <div class="table-wrap">
-      <table class="ledger">
-        <caption>Latest games</caption>
-        <thead>
-          <tr>
-            <th scope="col">Date</th>
-            <th scope="col">Mode</th>
-            <th scope="col">Hero</th>
-            <th scope="col" class="num">Place</th>
-          </tr>
-        </thead>
-        <tbody id="games"></tbody>
-      </table>
-    </div>
-    <p class="meta">
-      Self-reported by the player's desktop app. Heroes are shown by card id. The full game
-      records of a public profile are public too. No ratings and no other players' names.
-    </p>
-  </section>
+  {accountsOpen ? <PublicProfile /> : <AccountsClosed heading="Player profile" />}
 </Base>
-
-<script src="../scripts/profile.ts"></script>

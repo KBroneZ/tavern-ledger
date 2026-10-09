@@ -39,10 +39,11 @@ jobs:
       - name: Tests
         run: python -m unittest discover -s tests -v
 
-      # Website (web/): unit tests, a static build with placeholder settings
-      # (no Supabase in CI) and the checks on the built files (CSP, nothing
-      # inlined, no key but the public one). npm runs no install scripts
-      # (web/.npmrc).
+      # Website (web/): unit tests, then two static builds, each followed by
+      # the checks on the built files (CSP, nothing inlined, no key but the
+      # public one): accounts open with placeholder settings (no Supabase in
+      # CI), and accounts closed with no settings, as deployed today (no
+      # form, no script). npm runs no install scripts (web/.npmrc).
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24"
@@ -60,6 +61,8 @@ jobs:
           npm test
           npm run build
           npm run test:dist
+          env -u PUBLIC_SUPABASE_URL -u PUBLIC_SUPABASE_ANON_KEY npm run build
+          env -u PUBLIC_SUPABASE_URL -u PUBLIC_SUPABASE_ANON_KEY npm run test:dist
 
       # Rust workspace on the runner's preinstalled stable toolchain: format,
       # unit tests and parity of bg-parser with tools/parse_bg.py. The Tauri

@@ -355,7 +355,9 @@ fn sign_in_upload_quota_and_sign_out_against_the_local_stack() {
     let rows = psql(&format!(
         "select string_agg(session || '/' || game_index || ':' || coalesce(parser_version, '-'), ',' order by session) from public.games where user_id = '{uid}'"
     ));
-    assert_eq!(rows, format!("{S1}/1:0.1.0+r1,{S2}/1:0.1.0+r1"));
+    let stamp = tracker::store::ParserStamp::current();
+    let parser = format!("{}+r{}", stamp.version, stamp.revision);
+    assert_eq!(rows, format!("{S1}/1:{parser},{S2}/1:{parser}"));
     eprintln!("uploaded 2 games");
 
     // ---- upload again (marks lost): the server answers "unchanged"

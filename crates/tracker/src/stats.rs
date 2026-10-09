@@ -11,6 +11,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::Serialize;
 use serde_json::Value;
 
+use crate::provenance::{legend, LegendEntry, Source};
+
 pub const SOLO: &str = "GT_BATTLEGROUNDS";
 pub const DUOS: &str = "GT_BATTLEGROUNDS_DUO";
 /// Any other Battlegrounds game type: listed so no game is hidden, but its
@@ -34,6 +36,27 @@ pub struct Tally {
     pub wins: Option<usize>,
 }
 
+/// Where each number of a `Tally` comes from (T-109): the log when there is
+/// a number, unknown when there is none ("—" in the window).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+pub struct TallySources {
+    pub games: Source,
+    pub average_place: Source,
+    pub top_half_share: Source,
+    pub wins: Source,
+}
+
+impl TallySources {
+    fn of(tally: &Tally) -> Self {
+        TallySources {
+            games: Source::log_if(tally.games > 0),
+            average_place: Source::log_if(tally.average_place.is_some()),
+            top_half_share: Source::log_if(tally.top_half_share.is_some()),
+            wins: Source::log_if(tally.wins.is_some()),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct HeroStats {
     /// Hero card id without its skin suffix; None when the log gave no hero.
@@ -43,7 +66,12 @@ pub struct HeroStats {
     pub name: Option<String>,
     /// Every card id (skins included) grouped under this hero.
     pub variants: Vec<String>,
+    /// The name is printed by the log, or unknown (the id is shown instead).
+    pub name_source: Source,
+    /// Several card ids under one hero are grouped by us (D-019): inferred.
+    pub grouping: Source,
     pub tally: Tally,
+    pub tally_sources: TallySources,
 }
 
 /// A tribe offered in the tavern. Not the exact lobby tribes: the log does
@@ -57,6 +85,14 @@ pub struct TribeSeen {
     pub offers: u64,
 }
 
+/// A tribe the user entered as one of the lobby's five (T-303).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct TribeEntered {
+    pub tribe: String,
+    /// Games where the user entered it.
+    pub games: usize,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct ModeStats {
     /// SOLO, DUOS or OTHER.
@@ -64,18 +100,30 @@ pub struct ModeStats {
     /// Places that count as top half (4 in Solo, 2 in Duos); None for OTHER.
     pub top_half: Option<i64>,
     pub totals: Tally,
+    pub totals_sources: TallySources,
     /// Most played first.
     pub heroes: Vec<HeroStats>,
     /// Games with any tavern data, the denominator for `tribes`.
     pub games_with_tribes: usize,
     /// Seen in most games first.
     pub tribes: Vec<TribeSeen>,
+    /// Every tribe row is our reading of the tavern offers: inferred.
+    pub tribes_source: Source,
+    /// Games with lobby tribes entered by the user: the denominator for
+    /// `entered_tribes`. A separate count, never added to the tavern one.
+    pub games_with_entered_tribes: usize,
+    /// Entered in most games first.
+    pub entered_tribes: Vec<TribeEntered>,
+    /// Every row here was typed by the user: entered by you.
+    pub entered_tribes_source: Source,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Stats {
     /// Solo and Duos always (maybe with 0 games); OTHER only when it has games.
     pub modes: Vec<ModeStats>,
+    /// What each source label means; the window shows it as its legend.
+    pub legend: Vec<LegendEntry>,
 }
 
 /// The hero a card id belongs to: the id without a trailing `_SKIN_<x>`.
@@ -97,7 +145,7 @@ pub fn base_hero(card_id: &str) -> &str {
 const SKIN: &str = "_SKIN_";
 
 /// Place rules of a mode: the top half, and the worst possible place.
-fn rules(mode: &str) -> Option<(i64, i64)> {
+pub(crate) fn rules(mode: &str) -> Option<(i64, i64)> {
     match mode {
         SOLO => Some((4, 8)),
         DUOS => Some((2, 4)), // Duos places are per team
@@ -105,7 +153,7 @@ fn rules(mode: &str) -> Option<(i64, i64)> {
     }
 }
 
-fn mode_of(report: &Value) -> &'static str {
+pub(crate) fn mode_of(report: &Value) -> &'static str {
     match report.get("game_type").and_then(Value::as_str) {
         Some(SOLO) => SOLO,
         Some(DUOS) => DUOS,
@@ -115,7 +163,7 @@ fn mode_of(report: &Value) -> &'static str {
 
 /// The place of a game if it counts: a finished game with a place inside
 /// the mode's range. None for anything else.
-fn counted_place(mode: &str, status: Option<&str>, report: &Value) -> Option<i64> {
+pub(crate) fn counted_place(mode: &str, status: Option<&str>, report: &Value) -> Option<i64> {
     let (_, worst) = rules(mode)?;
     if status != Some("ok") {
         return None;
@@ -169,10 +217,18 @@ struct ModeCounts {
     heroes: BTreeMap<Option<String>, (BTreeSet<String>, Counts)>,
     games_with_tribes: usize,
     tribes: BTreeMap<String, (usize, u64)>,
+    games_with_entered_tribes: usize,
+    entered_tribes: BTreeMap<String, usize>,
 }
 
 impl ModeCounts {
-    fn add(&mut self, mode: &str, report: &Value) {
+    fn add(&mut self, mode: &str, report: &Value, entered: Option<&[String]>) {
+        if let Some(entered) = entered.filter(|e| !e.is_empty()) {
+            self.games_with_entered_tribes += 1;
+            for tribe in entered {
+                *self.entered_tribes.entry(tribe.clone()).or_default() += 1;
+            }
+        }
         let status = report.get("status").and_then(Value::as_str);
         let place = counted_place(mode, status, report);
         self.totals.add(status, place);
@@ -206,11 +262,22 @@ impl ModeCounts {
         let mut heroes: Vec<HeroStats> = self
             .heroes
             .into_iter()
-            .map(|(hero, (variants, counts))| HeroStats {
-                name: hero.as_deref().and_then(|h| names.for_hero(h, &variants)),
-                hero,
-                variants: variants.into_iter().collect(),
-                tally: counts.tally(top_half),
+            .map(|(hero, (variants, counts))| {
+                let name = hero.as_deref().and_then(|h| names.for_hero(h, &variants));
+                let tally = counts.tally(top_half);
+                HeroStats {
+                    name_source: Source::log_if(name.is_some()),
+                    grouping: if variants.len() > 1 {
+                        Source::Inferred
+                    } else {
+                        Source::Log
+                    },
+                    tally_sources: TallySources::of(&tally),
+                    name,
+                    hero,
+                    variants: variants.into_iter().collect(),
+                    tally,
+                }
             })
             .collect();
         // Most played first; ties by id, unknown hero last, so the order is stable.
@@ -236,13 +303,25 @@ impl ModeCounts {
                 .then(b.offers.cmp(&a.offers))
                 .then_with(|| a.tribe.cmp(&b.tribe))
         });
+        let mut entered_tribes: Vec<TribeEntered> = self
+            .entered_tribes
+            .into_iter()
+            .map(|(tribe, games)| TribeEntered { tribe, games })
+            .collect();
+        entered_tribes.sort_by(|a, b| b.games.cmp(&a.games).then_with(|| a.tribe.cmp(&b.tribe)));
+        let totals = self.totals.tally(top_half);
         ModeStats {
             mode: mode.to_string(),
             top_half,
-            totals: self.totals.tally(top_half),
+            totals_sources: TallySources::of(&totals),
+            totals,
             heroes,
             games_with_tribes: self.games_with_tribes,
             tribes,
+            tribes_source: Source::Inferred,
+            games_with_entered_tribes: self.games_with_entered_tribes,
+            entered_tribes,
+            entered_tribes_source: Source::Entered,
         }
     }
 }
@@ -285,18 +364,30 @@ impl Names {
 
 /// Stats for the latest report of every game in the history.
 pub fn compute<'a>(reports: impl IntoIterator<Item = &'a Value>) -> Stats {
+    compute_with_entered(reports.into_iter().map(|report| (report, None)))
+}
+
+/// Like [`compute`], with the lobby tribes the user entered for each game
+/// (T-303). They are counted on their own (`entered_tribes`); the tribes seen
+/// in the tavern are not changed by them.
+pub fn compute_with_entered<'a>(
+    games: impl IntoIterator<Item = (&'a Value, Option<&'a [String]>)>,
+) -> Stats {
     let mut names = Names::default();
     let mut modes: BTreeMap<&'static str, ModeCounts> = BTreeMap::new();
-    for report in reports {
+    for (report, entered) in games {
         names.add(report);
         let mode = mode_of(report);
-        modes.entry(mode).or_default().add(mode, report);
+        modes.entry(mode).or_default().add(mode, report, entered);
     }
     let other = modes.remove(OTHER);
     let mut take = |mode| modes.remove(mode).unwrap_or_default().finish(mode, &names);
     let mut out = vec![take(SOLO), take(DUOS)];
     out.extend(other.map(|counts| counts.finish(OTHER, &names)));
-    Stats { modes: out }
+    Stats {
+        modes: out,
+        legend: legend(),
+    }
 }
 
 #[cfg(test)]
@@ -317,6 +408,47 @@ mod tests {
 
     fn mode<'a>(stats: &'a Stats, name: &str) -> &'a ModeStats {
         stats.modes.iter().find(|m| m.mode == name).unwrap()
+    }
+
+    fn names(list: &[&str]) -> Vec<String> {
+        list.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn entered_tribes_are_counted_apart_from_the_tavern_ones() {
+        let mut seen = game(SOLO, "ok", "H1", Some(1));
+        seen["shop_tribes"] = json!({"MURLOC": 5, "BEAST": 2});
+        let none = game(SOLO, "ok", "H1", Some(2));
+        let beasts = names(&["BEAST", "DEMON", "DRAGON", "ELEMENTAL", "MECHANICAL"]);
+        let murlocs = names(&["BEAST", "MURLOC", "NAGA", "PIRATE", "UNDEAD"]);
+        let stats = compute_with_entered([
+            (&seen, Some(beasts.as_slice())),
+            (&none, Some(murlocs.as_slice())),
+            (&none, None),
+        ]);
+        let solo = mode(&stats, SOLO);
+        assert_eq!(solo.games_with_entered_tribes, 2);
+        assert_eq!(solo.entered_tribes_source, Source::Entered);
+        let counts: Vec<_> = solo
+            .entered_tribes
+            .iter()
+            .map(|t| (t.tribe.as_str(), t.games))
+            .collect();
+        assert_eq!(counts[0], ("BEAST", 2), "most games first");
+        assert_eq!(counts.len(), 9);
+        // The tavern list is what the log alone gives, whatever was entered.
+        let tavern = compute([&seen, &none, &none]);
+        assert_eq!(solo.tribes, mode(&tavern, SOLO).tribes);
+        assert_eq!(solo.games_with_tribes, 1);
+        assert_eq!(solo.tribes_source, Source::Inferred);
+    }
+
+    #[test]
+    fn no_entered_tribes_is_an_empty_list_not_a_count_of_zero_tribes() {
+        let stats = compute(&[game(SOLO, "ok", "H1", Some(1))]);
+        let solo = mode(&stats, SOLO);
+        assert_eq!(solo.games_with_entered_tribes, 0);
+        assert!(solo.entered_tribes.is_empty());
     }
 
     #[test]
@@ -515,6 +647,72 @@ mod tests {
         // A tie picks the first in alphabetical order, so it never flips.
         let stats = compute(&[named("B"), named("A")]);
         assert_eq!(mode(&stats, SOLO).heroes[0].name.as_deref(), Some("A"));
+    }
+
+    #[test]
+    fn stats_carry_the_legend() {
+        let stats = compute(&[]);
+        assert_eq!(stats.legend.len(), 5);
+        assert_eq!(stats.legend[0].source, Source::Log);
+    }
+
+    #[test]
+    fn counted_numbers_are_from_the_log_and_missing_ones_unknown() {
+        let stats = compute(&[game(SOLO, "ok", "H", Some(2))]);
+        let solo = mode(&stats, SOLO);
+        assert_eq!(solo.totals_sources.games, Source::Log);
+        assert_eq!(solo.totals_sources.average_place, Source::Log);
+        assert_eq!(solo.totals_sources.wins, Source::Log, "0 wins is a real 0");
+        // Duos has no games: every number is unknown, not 0.
+        let duos = mode(&stats, DUOS);
+        assert_eq!(duos.totals_sources.games, Source::Unknown);
+        assert_eq!(duos.totals_sources.average_place, Source::Unknown);
+        assert_eq!(duos.totals_sources.wins, Source::Unknown);
+    }
+
+    #[test]
+    fn modes_without_place_rules_have_unknown_place_numbers() {
+        let stats = compute(&[game("GT_BATTLEGROUNDS_FRIENDLY", "ok", "H", Some(1))]);
+        let other = mode(&stats, OTHER);
+        assert_eq!(other.totals_sources.games, Source::Log);
+        assert_eq!(other.totals_sources.average_place, Source::Unknown);
+        assert_eq!(
+            other.heroes[0].tally_sources.top_half_share,
+            Source::Unknown
+        );
+    }
+
+    #[test]
+    fn grouped_skins_are_inferred_and_a_single_id_is_from_the_log() {
+        let stats = compute(&[
+            game(SOLO, "ok", "BG20_HERO_202", Some(1)),
+            game(SOLO, "ok", "BG20_HERO_202_SKIN_C", Some(2)),
+            game(SOLO, "ok", "BG21_HERO_1", Some(3)),
+        ]);
+        let heroes = &mode(&stats, SOLO).heroes;
+        let grouped = heroes.iter().find(|h| h.variants.len() == 2).unwrap();
+        assert_eq!(grouped.grouping, Source::Inferred);
+        let single = heroes.iter().find(|h| h.variants.len() == 1).unwrap();
+        assert_eq!(single.grouping, Source::Log);
+    }
+
+    #[test]
+    fn a_hero_name_is_from_the_log_and_a_missing_one_unknown() {
+        let mut named = game(SOLO, "ok", "A", Some(1));
+        named["card_names"] = json!({"A": "Alpha"});
+        let stats = compute(&[named, game(SOLO, "ok", "B", Some(1))]);
+        let heroes = &mode(&stats, SOLO).heroes;
+        assert_eq!(heroes[0].name_source, Source::Log);
+        assert_eq!(heroes[1].name_source, Source::Unknown);
+    }
+
+    #[test]
+    fn tribes_are_always_inferred() {
+        let stats = compute(&[]);
+        assert!(stats
+            .modes
+            .iter()
+            .all(|m| m.tribes_source == Source::Inferred));
     }
 
     #[test]
