@@ -58,7 +58,7 @@ We do **not** collect player names, BattleTags, Battle.net accounts, ratings or 
 |----------|--------------|-------|--------------------------|
 | Supabase (contracting entity Supabase Pte. Ltd., Singapore) | Database, sign-in, file storage, server functions and their logs | Frankfurt, Germany (EU) | Data is stored in the EU, but Supabase and its sub-processors may access it from other countries; covered by the EU Standard Contractual Clauses in Supabase's DPA, which is part of its terms of service; Supabase also provides a transfer impact assessment. Sub-processors: list of 1 June 2026 at supabase.com/legal/subprocessors. |
 | Cloudflare, Inc. (USA) | Hosts the website's pages; forwards mail sent to our contact addresses | Worldwide network | EU–US Data Privacy Framework, with Standard Contractual Clauses as a fallback, in the Cloudflare Customer DPA. [TO BE CHECKED: DPA version] |
-| Cloudflare, Inc. (USA), Email Sending | Sends account emails from noreply@tavernledger.net (sign-up confirmation, sign-in links, email change and, once it exists, password reset) | [TO BE CHECKED: where Email Sending processes and logs messages] | As for Cloudflare above, if the Customer DPA covers Email Sending [TO BE CHECKED: the DPA annex we read does not name it] |
+| Brevo [TO BE CHECKED: legal entity and country] | Sends account emails from noreply@tavernledger.net (sign-up confirmation, sign-in links, email change and, once it exists, password reset) | [TO BE CHECKED: where Brevo processes and stores messages and logs] | [TO BE CHECKED: Brevo's DPA and transfer basis] |
 
 You can ask us for a copy of the transfer safeguards at the contact address above.
 
