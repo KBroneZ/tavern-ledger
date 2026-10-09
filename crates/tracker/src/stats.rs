@@ -85,6 +85,14 @@ pub struct TribeSeen {
     pub offers: u64,
 }
 
+/// A tribe the user entered as one of the lobby's five (T-303).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct TribeEntered {
+    pub tribe: String,
+    /// Games where the user entered it.
+    pub games: usize,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct ModeStats {
     /// SOLO, DUOS or OTHER.
@@ -101,6 +109,13 @@ pub struct ModeStats {
     pub tribes: Vec<TribeSeen>,
     /// Every tribe row is our reading of the tavern offers: inferred.
     pub tribes_source: Source,
+    /// Games with lobby tribes entered by the user: the denominator for
+    /// `entered_tribes`. A separate count, never added to the tavern one.
+    pub games_with_entered_tribes: usize,
+    /// Entered in most games first.
+    pub entered_tribes: Vec<TribeEntered>,
+    /// Every row here was typed by the user: entered by you.
+    pub entered_tribes_source: Source,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -202,10 +217,18 @@ struct ModeCounts {
     heroes: BTreeMap<Option<String>, (BTreeSet<String>, Counts)>,
     games_with_tribes: usize,
     tribes: BTreeMap<String, (usize, u64)>,
+    games_with_entered_tribes: usize,
+    entered_tribes: BTreeMap<String, usize>,
 }
 
 impl ModeCounts {
-    fn add(&mut self, mode: &str, report: &Value) {
+    fn add(&mut self, mode: &str, report: &Value, entered: Option<&[String]>) {
+        if let Some(entered) = entered.filter(|e| !e.is_empty()) {
+            self.games_with_entered_tribes += 1;
+            for tribe in entered {
+                *self.entered_tribes.entry(tribe.clone()).or_default() += 1;
+            }
+        }
         let status = report.get("status").and_then(Value::as_str);
         let place = counted_place(mode, status, report);
         self.totals.add(status, place);
@@ -280,6 +303,12 @@ impl ModeCounts {
                 .then(b.offers.cmp(&a.offers))
                 .then_with(|| a.tribe.cmp(&b.tribe))
         });
+        let mut entered_tribes: Vec<TribeEntered> = self
+            .entered_tribes
+            .into_iter()
+            .map(|(tribe, games)| TribeEntered { tribe, games })
+            .collect();
+        entered_tribes.sort_by(|a, b| b.games.cmp(&a.games).then_with(|| a.tribe.cmp(&b.tribe)));
         let totals = self.totals.tally(top_half);
         ModeStats {
             mode: mode.to_string(),
@@ -290,6 +319,9 @@ impl ModeCounts {
             games_with_tribes: self.games_with_tribes,
             tribes,
             tribes_source: Source::Inferred,
+            games_with_entered_tribes: self.games_with_entered_tribes,
+            entered_tribes,
+            entered_tribes_source: Source::Entered,
         }
     }
 }
@@ -332,12 +364,21 @@ impl Names {
 
 /// Stats for the latest report of every game in the history.
 pub fn compute<'a>(reports: impl IntoIterator<Item = &'a Value>) -> Stats {
+    compute_with_entered(reports.into_iter().map(|report| (report, None)))
+}
+
+/// Like [`compute`], with the lobby tribes the user entered for each game
+/// (T-303). They are counted on their own (`entered_tribes`); the tribes seen
+/// in the tavern are not changed by them.
+pub fn compute_with_entered<'a>(
+    games: impl IntoIterator<Item = (&'a Value, Option<&'a [String]>)>,
+) -> Stats {
     let mut names = Names::default();
     let mut modes: BTreeMap<&'static str, ModeCounts> = BTreeMap::new();
-    for report in reports {
+    for (report, entered) in games {
         names.add(report);
         let mode = mode_of(report);
-        modes.entry(mode).or_default().add(mode, report);
+        modes.entry(mode).or_default().add(mode, report, entered);
     }
     let other = modes.remove(OTHER);
     let mut take = |mode| modes.remove(mode).unwrap_or_default().finish(mode, &names);
@@ -367,6 +408,47 @@ mod tests {
 
     fn mode<'a>(stats: &'a Stats, name: &str) -> &'a ModeStats {
         stats.modes.iter().find(|m| m.mode == name).unwrap()
+    }
+
+    fn names(list: &[&str]) -> Vec<String> {
+        list.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn entered_tribes_are_counted_apart_from_the_tavern_ones() {
+        let mut seen = game(SOLO, "ok", "H1", Some(1));
+        seen["shop_tribes"] = json!({"MURLOC": 5, "BEAST": 2});
+        let none = game(SOLO, "ok", "H1", Some(2));
+        let beasts = names(&["BEAST", "DEMON", "DRAGON", "ELEMENTAL", "MECHANICAL"]);
+        let murlocs = names(&["BEAST", "MURLOC", "NAGA", "PIRATE", "UNDEAD"]);
+        let stats = compute_with_entered([
+            (&seen, Some(beasts.as_slice())),
+            (&none, Some(murlocs.as_slice())),
+            (&none, None),
+        ]);
+        let solo = mode(&stats, SOLO);
+        assert_eq!(solo.games_with_entered_tribes, 2);
+        assert_eq!(solo.entered_tribes_source, Source::Entered);
+        let counts: Vec<_> = solo
+            .entered_tribes
+            .iter()
+            .map(|t| (t.tribe.as_str(), t.games))
+            .collect();
+        assert_eq!(counts[0], ("BEAST", 2), "most games first");
+        assert_eq!(counts.len(), 9);
+        // The tavern list is what the log alone gives, whatever was entered.
+        let tavern = compute([&seen, &none, &none]);
+        assert_eq!(solo.tribes, mode(&tavern, SOLO).tribes);
+        assert_eq!(solo.games_with_tribes, 1);
+        assert_eq!(solo.tribes_source, Source::Inferred);
+    }
+
+    #[test]
+    fn no_entered_tribes_is_an_empty_list_not_a_count_of_zero_tribes() {
+        let stats = compute(&[game(SOLO, "ok", "H1", Some(1))]);
+        let solo = mode(&stats, SOLO);
+        assert_eq!(solo.games_with_entered_tribes, 0);
+        assert!(solo.entered_tribes.is_empty());
     }
 
     #[test]

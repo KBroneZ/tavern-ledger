@@ -34,6 +34,18 @@
     </section>
     <p id="not-counted" class="tally-note" hidden></p>
 
+    <section class="ledger lobby" aria-labelledby="lobby-title">
+      <h2 id="lobby-title">Lobby tribes</h2>
+      <p class="note">The game's log does not say which five tribes are in the lobby. If you want them in your stats, pick them here from the list; they are saved on your computer and always marked as entered by you. They are never mixed with the tribes seen in the tavern.</p>
+      <p id="lobby-state" role="status" aria-live="polite"></p>
+      <ul id="lobby-current" class="tribe-list"></ul>
+      <p id="lobby-error" class="report-error" role="alert" hidden></p>
+      <div class="lobby-actions">
+        <button type="button" id="lobby-enter" class="report-btn"></button>
+        <button type="button" id="lobby-clear" class="report-btn" hidden>Remove</button>
+      </div>
+    </section>
+
     <div class="breakdown">
       <section class="ledger heroes" aria-labelledby="heroes-title">
         <h2 id="heroes-title">Heroes</h2>
@@ -66,6 +78,20 @@
           <tbody id="tribes"></tbody>
         </table>
         <p id="tribes-empty" class="empty" hidden>No tavern offers seen yet.</p>
+      </section>
+
+      <section class="ledger tribes" id="entered-tribes-section" aria-labelledby="entered-tribes-title" hidden>
+        <h2 id="entered-tribes-title">Lobby tribes you entered</h2>
+        <p class="note">Typed by you, one pick of five per game. Separate from the tribes seen in the tavern.</p>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Tribe</th>
+              <th scope="col" class="num">Games</th>
+            </tr>
+          </thead>
+          <tbody id="entered-tribes"></tbody>
+        </table>
       </section>
     </div>
 
@@ -103,6 +129,29 @@
     <div class="dialog-actions">
       <button type="button" id="recap-close">Close</button>
     </div>
+  </dialog>
+
+  <dialog id="tribes-dialog" class="tribes-dialog" aria-labelledby="tribes-title-dialog">
+    <h2 id="tribes-title-dialog">Lobby tribes</h2>
+    <p id="tribes-target" class="note"></p>
+    <form id="tribes-form" method="dialog">
+      <fieldset>
+        <legend>Pick the <span id="tribes-need">5</span> tribes in the lobby</legend>
+        <div id="tribes-choices" class="choices"></div>
+      </fieldset>
+      <p id="tribes-count" class="note" role="status" aria-live="polite"></p>
+      <p id="tribes-error" class="report-error" role="alert" hidden></p>
+      <div id="tribes-move" class="move-row" hidden>
+        <label for="tribes-move-to">Move these tribes to</label>
+        <select id="tribes-move-to"></select>
+        <button type="button" id="tribes-move-go" class="report-btn">Move</button>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" id="tribes-save">Save</button>
+        <button type="button" id="tribes-clear" hidden>Remove</button>
+        <button type="button" id="tribes-close">Close</button>
+      </div>
+    </form>
   </dialog>
 
   <dialog id="report-dialog" aria-labelledby="report-title">

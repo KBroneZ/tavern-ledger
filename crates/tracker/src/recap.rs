@@ -133,6 +133,10 @@ pub struct Recap {
     /// Tavern offers, most common first. Not the lobby's tribes.
     pub tribes: Vec<TribeOffer>,
     pub tribes_source: Source,
+    /// The five lobby tribes the user picked (T-303); empty when none were
+    /// entered. Never merged with `tribes`: shown next to them.
+    pub entered_tribes: Vec<String>,
+    pub entered_tribes_source: Source,
     pub warnings: Vec<String>,
     pub problems: Vec<String>,
 }
@@ -436,6 +440,21 @@ fn tribes(report: &Value) -> Vec<TribeOffer> {
     offers
 }
 
+impl Recap {
+    /// Adds the tribes the user entered for this game, labelled as such. They
+    /// stay apart from the tribes seen in the tavern, whether or not the two
+    /// agree.
+    pub fn with_entered_tribes(mut self, entered: Option<&[String]>) -> Self {
+        self.entered_tribes = entered.map(<[String]>::to_vec).unwrap_or_default();
+        self.entered_tribes_source = if self.entered_tribes.is_empty() {
+            Source::Unknown
+        } else {
+            Source::Entered
+        };
+        self
+    }
+}
+
 /// The recap of one game's latest report.
 pub fn recap(report: &Value) -> Recap {
     let view = View::new(report);
@@ -471,6 +490,8 @@ pub fn recap(report: &Value) -> Recap {
             Source::Inferred
         },
         tribes,
+        entered_tribes: Vec::new(),
+        entered_tribes_source: Source::Unknown,
         status: Sourced::log(status),
         warnings: texts(report, "warnings"),
         problems: texts(report, "problems"),
@@ -789,6 +810,27 @@ mod tests {
         assert_eq!(r.status.value.as_deref(), Some("incomplete"));
         // Where the opponents finished is unknown too.
         assert_eq!(r.record[0].final_place.value, None);
+    }
+
+    #[test]
+    fn entered_tribes_are_labelled_and_never_merged_with_the_inferred_ones() {
+        let report = solo(&[(2, 40, 30)]);
+        let plain = recap(&report);
+        assert!(plain.entered_tribes.is_empty());
+        assert_eq!(plain.entered_tribes_source, Source::Unknown);
+
+        let entered: Vec<String> = ["BEAST", "DEMON", "DRAGON", "ELEMENTAL", "MECHANICAL"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let r = recap(&report).with_entered_tribes(Some(&entered));
+        assert_eq!(r.entered_tribes, entered);
+        assert_eq!(r.entered_tribes_source, Source::Entered);
+        // The inferred list is exactly what it was without the entry.
+        assert_eq!(r.tribes, plain.tribes);
+        assert_eq!(r.tribes_source, plain.tribes_source);
+        // An entry that differs from what the tavern offered is not corrected.
+        assert!(r.tribes.iter().all(|t| t.tribe != "ELEMENTAL"));
     }
 
     #[test]

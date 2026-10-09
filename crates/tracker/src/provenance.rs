@@ -3,7 +3,7 @@
 //!
 //! A value is *from the log* when the game's own log says it, *inferred*
 //! when we derive it (tribes seen in the tavern, skin grouping D-019),
-//! *entered by you* (nothing yet, ready for T-303), *from the leaderboard*
+//! *entered by you* (the lobby tribes of T-303), *from the leaderboard*
 //! (not in the app yet) or *unknown* when there is nothing to show.
 
 use serde::Serialize;

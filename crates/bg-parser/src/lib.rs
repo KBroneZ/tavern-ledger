@@ -108,6 +108,13 @@ impl GameReader {
         build_report(index, &self)
     }
 
+    /// True when the log says this is a Battlegrounds game (solo or Duos).
+    pub fn is_battlegrounds(&self) -> bool {
+        self.game_type
+            .as_deref()
+            .is_some_and(|t| TESTED_GAME_TYPES.contains(&t))
+    }
+
     /// True once the log marks the game as over (STATE=COMPLETE).
     pub fn is_complete(&self) -> bool {
         self.collector
@@ -185,6 +192,14 @@ impl LogReader {
         }
         reader.reported_complete = true;
         Some(build_report(index, reader))
+    }
+
+    /// Number of the Battlegrounds game being played right now (the `index`
+    /// its report will have), from hero select until the log marks it
+    /// complete. `None` when no such game is on.
+    pub fn in_progress_index(&self) -> Option<usize> {
+        let reader = self.current.as_ref()?;
+        (reader.is_battlegrounds() && !reader.is_complete()).then_some(self.count + 1)
     }
 
     /// Games finished so far (a new CREATE_GAME closes the previous one).
