@@ -1,6 +1,6 @@
 # Privacy policy (draft)
 
-> **Draft, not in force.** The website is not open to the public yet, and none of the providers below has been signed up yet. Items marked `[TO BE DECIDED: …]` or `[TO BE CHECKED: …]` must be settled before the first public user. This draft was written by the project, not by a lawyer, and is not legal advice. Source of every statement: the [data inventory](https://github.com/KBroneZ/tavern-ledger/blob/main/docs/legal/data-inventory.md).
+> **Draft, not in force.** The website is not open to the public yet: it is online with accounts closed. Of the providers below, only Cloudflare (hosting and contact mail) is in use so far. Items marked `[TO BE DECIDED: …]` or `[TO BE CHECKED: …]` must be settled before the first public user. This draft was written by the project, not by a lawyer, and is not legal advice. Source of every statement: the [data inventory](https://github.com/KBroneZ/tavern-ledger/blob/main/docs/legal/data-inventory.md).
 
 Last updated: [TO BE DECIDED: date it takes effect]
 
@@ -10,7 +10,7 @@ Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainmen
 
 ## 1. Who is responsible
 
-The controller is [TO BE DECIDED: name of the person who runs Tavern Ledger, and country], a private person who runs this project in their spare time.
+The controller is Andrew Rodrigo, Bulgaria, a private person who runs this project in their spare time.
 
 Contact for anything about your data: privacy@tavernledger.net.
 
@@ -85,7 +85,7 @@ You can, at any time:
 
 Write to privacy@tavernledger.net for anything the site does not do by itself. We answer within one month.
 
-You can also complain to a data protection authority, in particular in the EU country where you live or work or where you think the problem happened. [TO BE DECIDED: if the controller is in Spain, the Agencia Española de Protección de Datos (AEPD), www.aepd.es.]
+You can also complain to a data protection authority, in particular in the EU country where you live or work or where you think the problem happened. The controller's authority is the Bulgarian Commission for Personal Data Protection (Комисия за защита на личните данни), www.cpdp.bg.
 
 ## 8. Cookies and browser storage
 
