@@ -180,7 +180,7 @@ impl Collector {
 
     fn on_turn(&mut self, turn: i64) {
         // The previous turn's legs that never reached an attack were not visible.
-        let previous = (turn - 1).div_euclid(2);
+        let previous = turn.saturating_sub(1).div_euclid(2);
         self.close_unseen(Side::Own, previous);
         self.close_unseen(Side::Opponent, previous);
         if self.in_combat() {
@@ -321,7 +321,10 @@ pub fn is_golden(card_id: Option<&str>) -> bool {
 
 /// Health + armor - damage, never below 0: the killing blow can overshoot.
 pub fn hero_health(hero: &Entity) -> i64 {
-    (hero.int("HEALTH") + hero.int("ARMOR") - hero.int("DAMAGE")).max(0)
+    hero.int("HEALTH")
+        .saturating_add(hero.int("ARMOR"))
+        .saturating_sub(hero.int("DAMAGE"))
+        .max(0)
 }
 
 pub fn board_of(board: &Board, controller: i64) -> Vec<Minion> {
@@ -337,7 +340,7 @@ pub fn board_of(board: &Board, controller: i64) -> Vec<Minion> {
         .map(|e| Minion {
             card_id: e.card_id.clone(),
             atk: e.int("ATK"),
-            health: e.int("HEALTH") - e.int("DAMAGE"),
+            health: e.int("HEALTH").saturating_sub(e.int("DAMAGE")),
             position: e.int("ZONE_POSITION"),
             golden: is_golden(e.card_id.as_deref()),
         })

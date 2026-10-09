@@ -40,10 +40,13 @@ function placeBadge(place, gameType) {
   return el("span", `place ${kind}`, place);
 }
 
+// The history is a local file; tolerate hand-edited or older records.
+const list = (value) => (Array.isArray(value) ? value : []);
+
 function note(report) {
   if (report.status === "incomplete") return "Game not finished in the log";
-  if (report.status === "unsupported") return "Could not be read: " + (report.problems || []).join("; ");
-  return (report.warnings || []).join("; ");
+  if (report.status === "unsupported") return "Could not be read: " + list(report.problems).join("; ");
+  return list(report.warnings).join("; ");
 }
 
 function row(game) {
@@ -59,7 +62,7 @@ function row(game) {
   tr.append(
     placeCell,
     el("td", "num", r.final_health ?? "—"),
-    el("td", "num", (r.rounds || []).length || "—"),
+    el("td", "num", list(r.rounds).length || "—"),
     el("td", "note", note(r)),
   );
   return tr;
@@ -125,8 +128,9 @@ document.querySelectorAll(".modes button").forEach((button) => {
 function renderStatus(s) {
   const node = document.getElementById("status");
   node.classList.toggle("problem", Boolean(s.problem));
-  node.classList.toggle("live", !s.problem && Boolean(s.session));
+  node.classList.toggle("live", !s.problem && Boolean(s.session) && Boolean(s.power_log));
   if (s.problem) node.textContent = s.problem;
+  else if (s.session && !s.power_log) node.textContent = `Following ${s.session}: no Power.log yet (it appears with the first game; if it never does, check log.config)`;
   else if (s.session) node.textContent = `Following ${s.session}`;
   else if (s.logs_dir) node.textContent = "Waiting for the game to write a log…";
   else node.textContent = "Starting…";

@@ -130,3 +130,35 @@ fn an_incomplete_game_is_not_reported_early() {
         assert_eq!(reader.take_completed_current(), None);
     }
 }
+
+#[test]
+fn a_line_too_long_marks_its_game_unsupported_and_spares_the_next() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("data");
+    let solo = fs::read_to_string(dir.join("solo_game.log")).unwrap();
+    let cut = solo.find("STATE value=COMPLETE").unwrap();
+    let huge = "x".repeat(bg_parser::lines::MAX_LINE + 1);
+    let log = format!("{}{huge}\n{}{solo}", &solo[..cut], &solo[cut..]);
+    let reports = bg_parser::parse_reader(log.as_bytes()).unwrap();
+    let statuses: Vec<_> = reports.iter().map(|r| r.status).collect();
+    use bg_parser::report::Status;
+    assert_eq!(statuses, [Status::Unsupported, Status::Ok]);
+    assert_eq!(reports[0].problems, ["parser error: LineTooLong"]);
+}
+
+#[test]
+fn extreme_tag_values_do_not_panic() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("data");
+    let log = fs::read_to_string(dir.join("solo_game.log"))
+        .unwrap()
+        .replace("tag=TURN value=3", "tag=TURN value=-9223372036854775808")
+        .replace(
+            "tag=DAMAGE value=12",
+            "tag=DAMAGE value=-9223372036854775808",
+        );
+    let reports = bg_parser::parse_reader(log.as_bytes()).unwrap();
+    assert_eq!(reports.len(), 1);
+}

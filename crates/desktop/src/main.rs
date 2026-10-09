@@ -2,6 +2,7 @@
 //! the local game history. Only reads the game's log files (D-004).
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -17,44 +18,40 @@ const GAMES_CHANGED: &str = "games-changed";
 const STATUS_CHANGED: &str = "status-changed";
 
 /// What the window shows above the list. Plain words, no log text.
-#[derive(Clone, Debug, Default, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
 struct Status {
     logs_dir: Option<String>,
     history: Option<String>,
     session: Option<String>,
+    /// False while the followed session has no Power.log.
+    power_log: bool,
     /// Set when something is wrong; the app says so instead of showing nothing.
     problem: Option<String>,
     unreadable_lines: usize,
 }
 
-#[derive(Default)]
-struct AppState {
-    watcher: Mutex<Option<Watcher>>,
-    status: Mutex<Status>,
-}
-
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct GameRow {
     session: String,
     index: u64,
     report: serde_json::Value,
 }
 
+/// Shared with the window. The watcher itself lives only in the tracker
+/// thread, so reading a big log never blocks the window.
+#[derive(Default)]
+struct AppState {
+    games: Mutex<Vec<GameRow>>,
+    status: Mutex<Status>,
+}
+
 #[tauri::command]
 fn list_games(state: State<'_, Arc<AppState>>) -> Vec<GameRow> {
-    let watcher = state.watcher.lock().unwrap_or_else(|e| e.into_inner());
-    let Some(watcher) = watcher.as_ref() else {
-        return Vec::new();
-    };
-    watcher
-        .store()
-        .games()
-        .map(|(key, report)| GameRow {
-            session: key.session.clone(),
-            index: key.index,
-            report: report.clone(),
-        })
-        .collect()
+    state
+        .games
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone()
 }
 
 #[tauri::command]
@@ -66,32 +63,50 @@ fn status(state: State<'_, Arc<AppState>>) -> Status {
         .clone()
 }
 
+/// Updates the status and tells the window, only if something changed.
 fn set_status(app: &AppHandle, state: &AppState, update: impl FnOnce(&mut Status)) {
-    let snapshot = {
+    let changed = {
         let mut status = state.status.lock().unwrap_or_else(|e| e.into_inner());
+        let before = status.clone();
         update(&mut status);
-        status.clone()
+        (*status != before).then(|| status.clone())
     };
-    let _ = app.emit(STATUS_CHANGED, snapshot);
+    if let Some(snapshot) = changed {
+        let _ = app.emit(STATUS_CHANGED, snapshot);
+    }
+}
+
+fn publish_games(app: &AppHandle, state: &AppState, store: &Store) {
+    let rows = store
+        .games()
+        .map(|(key, report)| GameRow {
+            session: key.session.clone(),
+            index: key.index,
+            report: report.clone(),
+        })
+        .collect();
+    *state.games.lock().unwrap_or_else(|e| e.into_inner()) = rows;
+    let _ = app.emit(GAMES_CHANGED, ());
+}
+
+fn problem(app: &AppHandle, state: &AppState, message: String) {
+    set_status(app, state, |s| s.problem = Some(message));
 }
 
 /// Opens the history and follows the log until the app quits.
 fn run_tracker(app: AppHandle, state: Arc<AppState>) {
     let Some(logs_dir) = find_logs_dir() else {
-        set_status(&app, &state, |s| {
-            s.problem =
-                Some("Hearthstone's Logs folder was not found. Is the game installed?".into())
-        });
-        return;
+        let msg = "Hearthstone's Logs folder was not found. Is the game installed?";
+        return problem(&app, &state, msg.into());
     };
-    let dir = tracker::store::default_dir();
-    let store = match Store::open(&dir) {
+    let store = match Store::open(&tracker::store::default_dir()) {
         Ok(store) => store,
         Err(e) => {
-            set_status(&app, &state, |s| {
-                s.problem = Some(format!("Cannot open the game history ({:?}).", e.kind()))
-            });
-            return;
+            return problem(
+                &app,
+                &state,
+                format!("Cannot open the game history ({:?}).", e.kind()),
+            )
         }
     };
     set_status(&app, &state, |s| {
@@ -99,31 +114,40 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
         s.history = Some(store.path().display().to_string());
         s.unreadable_lines = store.unreadable_lines;
     });
-    *state.watcher.lock().unwrap_or_else(|e| e.into_inner()) = Some(Watcher::new(&logs_dir, store));
-    let _ = app.emit(GAMES_CHANGED, ());
+    publish_games(&app, &state, &store);
+    let mut watcher = Watcher::new(&logs_dir, store);
 
     loop {
-        let (result, session) = {
-            let mut guard = state.watcher.lock().unwrap_or_else(|e| e.into_inner());
-            let watcher = guard.as_mut().expect("set above");
-            (watcher.poll(), watcher.session().map(String::from))
+        // A bug must not stop the tracker silently while the window looks fine.
+        let Ok(result) = catch_unwind(AssertUnwindSafe(|| watcher.poll())) else {
+            let msg = "The tracker stopped after an internal error. Restart the app; your history is safe.";
+            return problem(&app, &state, msg.into());
         };
+        let session = watcher.session().map(String::from);
+        let power_log = watcher.has_power_log();
         match result {
             Ok(saved) => {
                 set_status(&app, &state, |s| {
                     s.session = session;
+                    s.power_log = power_log;
                     s.problem = None;
                 });
                 if !saved.is_empty() {
-                    let _ = app.emit(GAMES_CHANGED, ());
+                    publish_games(&app, &state, watcher.store());
                 }
             }
-            Err(e) => set_status(&app, &state, |s| {
-                s.problem = Some(format!(
-                    "Could not read the log right now ({:?}); retrying.",
-                    e.kind()
-                ))
-            }),
+            Err(e) => {
+                // Games read before the error are already saved.
+                publish_games(&app, &state, watcher.store());
+                problem(
+                    &app,
+                    &state,
+                    format!(
+                        "Could not read the log right now ({:?}); retrying.",
+                        e.kind()
+                    ),
+                );
+            }
         }
         thread::sleep(POLL_INTERVAL);
     }

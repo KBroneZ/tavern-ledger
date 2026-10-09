@@ -26,7 +26,10 @@ pub fn find_logs_dir() -> Option<PathBuf> {
 }
 
 fn install_location(key: &str) -> Option<PathBuf> {
-    let output = Command::new("reg")
+    // Full path: never a reg.exe found next to the app or on PATH.
+    let system_root = std::env::var_os("SystemRoot").unwrap_or_else(|| r"C:\Windows".into());
+    let reg = PathBuf::from(system_root).join("System32").join("reg.exe");
+    let output = Command::new(reg)
         .args(["query", key, "/v", "InstallLocation"])
         .output()
         .ok()?;

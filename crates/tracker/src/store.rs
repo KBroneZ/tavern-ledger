@@ -35,6 +35,9 @@ pub struct Store {
     /// Lines that could not be read (e.g. cut short by a crash). Reported,
     /// never silently dropped, and left in the file untouched.
     pub unreadable_lines: usize,
+    /// The file ends without a newline (a write cut short): the next record
+    /// must start on a new line or it would be glued to the broken one.
+    needs_newline: bool,
 }
 
 impl Store {
@@ -45,6 +48,7 @@ impl Store {
             path,
             games: BTreeMap::new(),
             unreadable_lines: 0,
+            needs_newline: false,
         };
         match File::open(&store.path) {
             Ok(file) => store.load(BufReader::new(file))?,
@@ -54,9 +58,16 @@ impl Store {
         Ok(store)
     }
 
-    fn load(&mut self, input: impl BufRead) -> io::Result<()> {
-        for line in input.lines() {
-            let line = line?;
+    fn load(&mut self, mut input: impl BufRead) -> io::Result<()> {
+        let mut raw = Vec::new();
+        loop {
+            raw.clear();
+            if input.read_until(b'\n', &mut raw)? == 0 {
+                return Ok(());
+            }
+            self.needs_newline = !raw.ends_with(b"\n");
+            // Invalid UTF-8 makes one unreadable line, not an unreadable history.
+            let line = String::from_utf8_lossy(&raw);
             if line.trim().is_empty() {
                 continue;
             }
@@ -67,7 +78,6 @@ impl Store {
                 None => self.unreadable_lines += 1,
             }
         }
-        Ok(())
     }
 
     /// Saves a report unless the same one is already stored. Returns whether
@@ -86,12 +96,22 @@ impl Store {
             "saved_at": saved_at,
             "report": report,
         });
+        let mut line = if self.needs_newline {
+            "\n".to_string()
+        } else {
+            String::new()
+        };
+        line.push_str(&record.to_string());
+        line.push('\n');
         let mut file = OpenOptions::new()
             .create(true)
             .append(true)
             .open(&self.path)?;
-        writeln!(file, "{record}")?;
+        // One write per record, so two processes appending at once cannot
+        // interleave pieces of their lines.
+        file.write_all(line.as_bytes())?;
         file.flush()?;
+        self.needs_newline = false;
         self.games.insert(key, report);
         Ok(true)
     }

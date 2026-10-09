@@ -8,6 +8,7 @@
 //! "unsupported" instead of showing wrong data.
 
 pub mod collector;
+pub mod lines;
 pub mod power;
 pub mod report;
 pub mod state;
@@ -121,6 +122,21 @@ impl LogReader {
         }
     }
 
+    /// A line longer than [`lines::MAX_LINE`] was skipped: the game it was in
+    /// cannot be trusted any more.
+    pub fn feed_too_long(&mut self) {
+        if let Some(reader) = self.current.as_mut() {
+            reader.error.get_or_insert("LineTooLong");
+        }
+    }
+
+    pub fn feed_chunk(&mut self, chunk: lines::Chunk<'_>) {
+        match chunk {
+            lines::Chunk::Line(line) => self.feed(&line),
+            lines::Chunk::TooLong => self.feed_too_long(),
+        }
+    }
+
     fn close_current(&mut self) {
         if let Some(reader) = self.current.take() {
             self.count += 1;
@@ -157,9 +173,7 @@ impl LogReader {
 /// Reads a whole log. Invalid UTF-8 is replaced, as the Python prototype does.
 pub fn parse_reader(input: impl BufRead) -> std::io::Result<Vec<GameReport>> {
     let mut reader = LogReader::default();
-    for line in input.split(b'\n') {
-        reader.feed(&String::from_utf8_lossy(&line?));
-    }
+    lines::for_each_chunk(input, &mut |chunk| reader.feed_chunk(chunk))?;
     Ok(reader.finish())
 }
 

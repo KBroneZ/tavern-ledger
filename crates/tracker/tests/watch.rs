@@ -214,3 +214,98 @@ fn the_history_never_contains_player_names() {
     assert!(!history.contains("SyntheticPlayer"));
     assert!(!history.contains("Innkeeper"));
 }
+
+#[test]
+fn a_history_cut_short_by_a_crash_keeps_the_next_record_readable() {
+    let (_, data) = setup();
+    fs::create_dir_all(&data).unwrap();
+    append(
+        &data.join("games.jsonl"),
+        "{\"session\":\"S\",\"index\":1,\"rep",
+    );
+    append(&data.join("games.jsonl"), "\n\u{0}");
+    let mut raw = fs::read(data.join("games.jsonl")).unwrap();
+    raw.extend_from_slice(&[0xff, 0xfe]); // invalid UTF-8, no newline at the end
+    fs::write(data.join("games.jsonl"), raw).unwrap();
+
+    let mut store = Store::open(&data).unwrap();
+    assert_eq!(store.unreadable_lines, 2);
+    let key = tracker::store::GameKey {
+        session: "S".into(),
+        index: 2,
+    };
+    assert!(store
+        .save(key, serde_json::json!({"final_place": 3}))
+        .unwrap());
+
+    let reopened = Store::open(&data).unwrap();
+    assert_eq!(reopened.unreadable_lines, 2);
+    assert_eq!(reopened.games().count(), 1);
+}
+
+#[test]
+fn a_rotation_is_seen_even_if_the_new_log_is_already_longer() {
+    let (logs, data) = setup();
+    let dir = logs.join(SESSION_A);
+    let first = format!(
+        "D 10:00:00.0000000 Other.Start() - a\n{}",
+        fixture("duo_game")
+    );
+    let cut = first
+        .find("TAG_CHANGE Entity=GameEntity tag=TURN value=3")
+        .unwrap();
+    append(&dir.join("Power.log"), &first[..cut]);
+    let mut watcher = Watcher::new(&logs, Store::open(&data).unwrap());
+    assert!(watcher.poll().unwrap().is_empty());
+
+    // Rotated and the new file outgrew the old offset before the next poll
+    // (NTFS may even keep the old creation time): the first bytes differ.
+    append(&dir.join("Power.log"), &first[cut..]);
+    fs::rename(dir.join("Power.log"), dir.join("Power_old.log")).unwrap();
+    let second = format!(
+        "D 11:00:00.0000000 Other.Start() - b\n{}{}",
+        fixture("solo_game"),
+        fixture("solo_game")
+    );
+    append(&dir.join("Power.log"), &second);
+    let saved = watcher.poll().unwrap();
+    assert_eq!(
+        statuses(&saved),
+        vec![(1, "ok".into()), (2, "ok".into()), (3, "ok".into())]
+    );
+}
+
+#[test]
+fn the_last_line_of_a_session_without_newline_is_not_lost() {
+    let (logs, data) = setup();
+    let log = fixture("solo_game");
+    append(
+        &logs.join(SESSION_A).join("Power.log"),
+        log.trim_end_matches('\n'),
+    );
+    let mut watcher = Watcher::new(&logs, Store::open(&data).unwrap());
+    assert!(
+        watcher.poll().unwrap().is_empty(),
+        "STATE=COMPLETE is the unfinished last line"
+    );
+
+    fs::create_dir_all(logs.join(SESSION_B)).unwrap();
+    let saved = watcher.poll().unwrap();
+    assert_eq!(statuses(&saved), vec![(1, "ok".into())]);
+}
+
+#[test]
+fn a_line_too_long_marks_the_game_unsupported() {
+    let (logs, data) = setup();
+    let log = fixture("solo_game");
+    let cut = log.find("D 12:00:00.0000000 GameState.DebugPrintPower() -     TAG_CHANGE Entity=GameEntity tag=STATE").unwrap();
+    let huge = "y".repeat(bg_parser::lines::MAX_LINE + 5);
+    let text = format!("{}{huge}\n{}", &log[..cut], &log[cut..]);
+    append(&logs.join(SESSION_A).join("Power.log"), &text);
+    let mut watcher = Watcher::new(&logs, Store::open(&data).unwrap());
+    // A broken game stops being read, so it is saved when it closes (next
+    // game, new session or app exit), not at STATE=COMPLETE.
+    assert!(watcher.poll().unwrap().is_empty());
+    let (saved, _) = watcher.finish().unwrap();
+    assert_eq!(statuses(&saved), vec![(1, "unsupported".into())]);
+}
