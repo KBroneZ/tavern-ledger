@@ -19,15 +19,27 @@ test("file name has the date", () => {
   assert.equal(exportFileName(new Date("2026-10-09T23:30:00Z")), "tavern-ledger-export-2026-10-09.json");
 });
 
-test("own files: only the games bucket and the user's folder", () => {
+test("own files: the games bucket entries in the user's folder", () => {
   const data = sample([
     { bucket: "games", name: `${USER}/Hearthstone_2026_10_09_18_30_00-1.json.gz` },
+    { bucket: "games", name: `${USER}/Hearthstone_2026_10_09_18_30_00-2.json.gz` },
+  ]);
+  assert.deepEqual(ownFileNames(data), [
+    `${USER}/Hearthstone_2026_10_09_18_30_00-1.json.gz`,
+    `${USER}/Hearthstone_2026_10_09_18_30_00-2.json.gz`,
+  ]);
+});
+
+test("a listed file that cannot be exported stops the export instead of being left out", () => {
+  for (const odd of [
     { bucket: "games", name: "someone-else/x.json.gz" },
     { bucket: "other", name: `${USER}/y.json.gz` },
     { bucket: "games", name: `${USER}/../z.json.gz` },
+    { bucket: "games", name: `${USER}/sub/dir.json.gz` },
     "garbage",
-  ]);
-  assert.deepEqual(ownFileNames(data), [`${USER}/Hearthstone_2026_10_09_18_30_00-1.json.gz`]);
+  ]) {
+    assert.throws(() => ownFileNames(sample([odd])), /file/, JSON.stringify(odd));
+  }
 });
 
 test("an answer that is not an export is refused", () => {

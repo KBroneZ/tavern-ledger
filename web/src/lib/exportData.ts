@@ -20,17 +20,22 @@ function asExport(data: unknown): ExportDoc & { account: { id: string } } {
   return d as ExportDoc & { account: { id: string } };
 }
 
-/** Names of the user's own files listed in the export, to download them. */
+/**
+ * Names of the user's files listed in the export, to download them. A listed
+ * file this page cannot fetch safely stops the export: leaving it out would
+ * hand the user an incomplete file that looks complete.
+ */
 export function ownFileNames(data: unknown): string[] {
   const doc = asExport(data);
   const prefix = `${doc.account.id}/`;
-  return doc.files.flatMap((f) => {
+  return doc.files.map((f) => {
     const file = f as { bucket?: unknown; name?: unknown } | null;
-    if (file?.bucket !== "games" || typeof file.name !== "string") return [];
-    const rest = file.name.slice(prefix.length);
-    return file.name.startsWith(prefix) && /^[A-Za-z0-9_.-]+$/.test(rest) && !rest.includes("..")
-      ? [file.name]
-      : [];
+    const name = typeof file?.name === "string" ? file.name : "";
+    const rest = name.slice(prefix.length);
+    const ok = file?.bucket === "games" && name.startsWith(prefix) &&
+      /^[A-Za-z0-9_.-]+$/.test(rest) && !rest.includes("..");
+    if (!ok) throw new Error("the export lists a file that cannot be downloaded");
+    return name;
   });
 }
 

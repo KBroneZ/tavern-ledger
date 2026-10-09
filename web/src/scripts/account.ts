@@ -38,7 +38,12 @@ async function setUpProfile(user: User): Promise<void> {
     isPublic.checked = profile.isPublic;
     setPublicLink(user.id, profile.isPublic);
   } catch {
+    // A blank form saved now would overwrite the stored profile.
+    for (const el of form.querySelectorAll<HTMLInputElement | HTMLButtonElement>("input, button")) {
+      el.disabled = true;
+    }
     say(message, "Could not load your profile. Reload the page to try again.", "error");
+    return;
   }
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -124,13 +129,19 @@ function setUpDelete(user: User): void {
           say(message, "Enter your password, then press Delete my account again.", "error");
           return;
         case "signed-out":
-          showOnly("signed-out");
+          await signedOut();
           return;
         case "error":
           say(message, outcome.message, "error");
       }
     });
   });
+}
+
+/** The server no longer accepts this session: forget it here too. */
+async function signedOut(): Promise<void> {
+  await supabase.auth.signOut({ scope: "local" });
+  showOnly("signed-out");
 }
 
 function setUpSignOut(): void {
@@ -154,7 +165,7 @@ async function start(): Promise<void> {
     } else if (fromEmailLink) {
       say(pageMessage, "Your email is confirmed. Sign in to continue.", "ok");
     }
-    showOnly("signed-out");
+    await signedOut();
     return;
   }
   const user = data.user;

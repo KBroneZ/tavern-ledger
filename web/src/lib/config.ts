@@ -61,8 +61,8 @@ export function readConfig(env: ConfigSource): SiteConfig {
 /**
  * Content-Security-Policy for every page: scripts and styles come only from
  * the site's own files (the build inlines none), and the only connection is
- * to the Supabase project. frame-ancestors only works as a header, so it is
- * in public/_headers too.
+ * to the Supabase project. frame-ancestors only works as a header: the build
+ * writes it to dist/_headers (astro.config.mjs).
  */
 export function contentSecurityPolicy(supabaseOrigin: string): string {
   return [

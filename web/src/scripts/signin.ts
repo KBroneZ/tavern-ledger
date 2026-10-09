@@ -43,7 +43,8 @@ wire("signup-form", "signup-message", async (email, password, message) => {
   if (outcome.kind === "check-email") byId<HTMLFormElement>("signup-form").reset();
 });
 
-// Already signed in: go straight to the account.
-void supabase.auth.getSession().then(({ data }) => {
-  if (data.session) location.replace(ACCOUNT_PAGE);
+// Already signed in (checked with the server, not only the stored session):
+// go straight to the account.
+void supabase.auth.getUser().then(({ data }) => {
+  if (data.user) location.replace(ACCOUNT_PAGE);
 });

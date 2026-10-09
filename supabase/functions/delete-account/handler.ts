@@ -9,8 +9,9 @@
 // No dependencies: plain fetch against the project's own HTTP APIs.
 //
 // Before any step (T-104c): a browser request must come from the website's
-// own origin (SITE_ORIGINS), and the user must have signed in within the last
-// MAX_SIGN_IN_AGE_MS, so a stolen or forgotten session cannot delete the
+// own origin (SITE_ORIGINS), and this session must come from a sign-in within
+// the last MAX_SIGN_IN_AGE_MS (both the account's last sign-in and the
+// token's own `amr` time), so a stolen or forgotten session cannot delete the
 // account. Requests with no Origin header (not a browser) skip the CORS
 // check; they still need a valid token and a recent sign-in.
 
@@ -32,6 +33,8 @@ const FILE_BATCH = 1000;
 const MAX_FILE_ROUNDS = 20;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 export const MAX_SIGN_IN_AGE_MS = 10 * 60 * 1000;
+// Clocks of this function and the auth server may differ a little.
+const CLOCK_SKEW_MS = 60 * 1000;
 const CORS_ALLOW_HEADERS = "authorization, apikey, content-type, x-client-info";
 
 /** Comma-separated SITE_ORIGINS to a list of exact http(s) origins. */
@@ -99,6 +102,31 @@ async function call(
 async function send(fetchFn: Fetch, step: string, url: string, init: RequestInit) {
   const res = await call(fetchFn, step, url, init);
   await res.body?.cancel();
+}
+
+/**
+ * When this session signed in: the newest `amr` timestamp of the access token,
+ * in milliseconds, or NaN. Only called after /auth/v1/user has accepted the
+ * token, so its signature is already checked.
+ */
+function sessionSignInAt(token: string): number {
+  const parts = token.split(".");
+  if (parts.length !== 3) return NaN;
+  try {
+    const b64 = parts[1].replaceAll("-", "+").replaceAll("_", "/");
+    const payload = JSON.parse(atob(b64.padEnd(Math.ceil(b64.length / 4) * 4, "=")));
+    if (!Array.isArray(payload?.amr)) return NaN;
+    const times = payload.amr
+      .map((a: { timestamp?: unknown }) => a?.timestamp)
+      .filter((t: unknown): t is number => typeof t === "number" && Number.isFinite(t));
+    return times.length === 0 ? NaN : Math.max(...times) * 1000;
+  } catch (_e) {
+    return NaN;
+  }
+}
+
+function isRecent(at: number, now: number): boolean {
+  return Number.isFinite(at) && now - at <= MAX_SIGN_IN_AGE_MS && at - now <= CLOCK_SKEW_MS;
 }
 
 interface CurrentUser {
@@ -199,7 +227,8 @@ export async function handle(req: Request, env: Env, fetchFn: Fetch = fetch): Pr
       return json(401, { error: "sign in first" }, cors);
     }
     const now = (env.now ?? Date.now)();
-    if (!Number.isFinite(user.lastSignInAt) || now - user.lastSignInAt > MAX_SIGN_IN_AGE_MS) {
+    const token = authorization.slice("Bearer ".length);
+    if (!isRecent(user.lastSignInAt, now) || !isRecent(sessionSignInAt(token), now)) {
       return json(
         403,
         { error: "sign in again to delete your account", reason: "reauthenticate" },

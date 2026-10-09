@@ -14,6 +14,20 @@ const ENV: Env = {
 const USER = "00000000-0000-4000-8000-00000000000a";
 const RECENT = new Date(NOW - 60_000).toISOString();
 
+/** A token shaped like Supabase's access token. Only /auth/v1/user (faked
+ *  here) checks the signature; the function only reads `amr` after that. */
+function fakeToken(payload: unknown): string {
+  const b64 = (o: unknown) =>
+    btoa(JSON.stringify(o)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+  return `${b64({ alg: "ES256", typ: "JWT" })}.${b64(payload)}.c2lnbmF0dXJl`;
+}
+const amrAt = (...msAgo: number[]) =>
+  fakeToken({
+    sub: USER,
+    amr: msAgo.map((ago) => ({ method: "password", timestamp: Math.floor((NOW - ago) / 1000) })),
+  });
+const TOKEN = amrAt(60_000);
+
 function assertEquals(actual: unknown, expected: unknown, msg = ""): void {
   const a = JSON.stringify(actual);
   const e = JSON.stringify(expected);
@@ -70,7 +84,7 @@ function fakeApi(
 
 const request = (
   method = "DELETE",
-  auth = "Bearer header.payload.sig",
+  auth = `Bearer ${TOKEN}`,
   origin: string | null = null,
 ) => {
   const headers: Record<string, string> = {};
@@ -104,7 +118,7 @@ Deno.test("deletes files, then rows, then the auth user", async () => {
 Deno.test("the user is taken from the token, never from the request", async () => {
   const api = fakeApi();
   await handle(request(), ENV, api.fetchFn);
-  assertEquals(api.calls[0].headers.Authorization, "Bearer header.payload.sig");
+  assertEquals(api.calls[0].headers.Authorization, `Bearer ${TOKEN}`);
   const rows = api.calls.find((c) => c.path === "/rest/v1/rpc/delete_user_data");
   assertEquals(rows?.body, { target: USER });
 });
@@ -167,7 +181,8 @@ Deno.test("the error answer and log hold no token or id", async () => {
     const res = await handle(request(), ENV, api.fetchFn);
     const text = await res.text() + logged.join("\n");
     assertEquals(res.status, 500);
-    assertEquals(/header\.payload|0000000a|service-key/.test(text), false, text);
+    const payload = TOKEN.split(".")[1];
+    assertEquals(text.includes(payload) || /0000000a|service-key/.test(text), false, text);
   } finally {
     console.error = original;
   }
@@ -302,4 +317,57 @@ Deno.test("a missing or unreadable sign-in time is refused", async () => {
     assertEquals(res.status, 403, String(lastSignIn));
     assertEquals(api.calls.length, 1, String(lastSignIn));
   }
+});
+
+// --- This session's own sign-in time (security review M2) ---
+
+Deno.test("an old session is refused even if the account signed in recently elsewhere", async () => {
+  const api = fakeApi({ files: [`${USER}/a.json.gz`] });
+  const old = amrAt(MAX_SIGN_IN_AGE_MS + 1000);
+  const res = await handle(request("DELETE", `Bearer ${old}`), ENV, api.fetchFn);
+  assertEquals(res.status, 403);
+  assertEquals((await res.json()).reason, "reauthenticate");
+  assertEquals(api.files(), [`${USER}/a.json.gz`]);
+});
+
+Deno.test("the newest of the session's sign-in methods counts", async () => {
+  const token = amrAt(MAX_SIGN_IN_AGE_MS * 3, 30_000);
+  const api = fakeApi();
+  assertEquals((await handle(request("DELETE", `Bearer ${token}`), ENV, api.fetchFn)).status, 200);
+});
+
+Deno.test("a token with no readable sign-in time is refused", async () => {
+  const tokens = [
+    fakeToken({ sub: USER }),
+    fakeToken({ sub: USER, amr: [] }),
+    fakeToken({ sub: USER, amr: [{ method: "password", timestamp: "now" }] }),
+    fakeToken({ sub: USER, amr: "password" }),
+    "not.a.jwt",
+    "opaque-token",
+  ];
+  for (const token of tokens) {
+    const api = fakeApi();
+    const res = await handle(request("DELETE", `Bearer ${token}`), ENV, api.fetchFn);
+    assertEquals(res.status, 403, token);
+    assertEquals(api.calls.length, 1, token);
+  }
+});
+
+Deno.test("sign-in times far in the future are refused", async () => {
+  const ahead = new Date(NOW + 5 * 60_000).toISOString();
+  const api = fakeApi({ lastSignIn: ahead });
+  assertEquals((await handle(request(), ENV, api.fetchFn)).status, 403);
+  const future = amrAt(-5 * 60_000);
+  const api2 = fakeApi();
+  assertEquals(
+    (await handle(request("DELETE", `Bearer ${future}`), ENV, api2.fetchFn)).status,
+    403,
+  );
+});
+
+Deno.test("a small clock difference is tolerated", async () => {
+  const ahead = new Date(NOW + 30_000).toISOString();
+  const api = fakeApi({ lastSignIn: ahead });
+  const token = amrAt(-30_000);
+  assertEquals((await handle(request("DELETE", `Bearer ${token}`), ENV, api.fetchFn)).status, 200);
 });
