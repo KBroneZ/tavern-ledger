@@ -40,7 +40,7 @@ pub struct Sourced<T> {
 }
 
 impl<T> Sourced<T> {
-    fn log(value: Option<T>) -> Self {
+    pub(crate) fn log(value: Option<T>) -> Self {
         Sourced {
             source: Source::log_if(value.is_some()),
             value,
@@ -141,25 +141,25 @@ pub struct Recap {
     pub problems: Vec<String>,
 }
 
-struct LobbySeat {
-    pid: i64,
-    hero: Option<String>,
+pub(crate) struct LobbySeat {
+    pub(crate) pid: i64,
+    pub(crate) hero: Option<String>,
     team: Option<i64>,
     final_place: Option<i64>,
 }
 
 /// One report, read defensively: the history is a local file that can be old
 /// or edited by hand.
-struct View<'a> {
+pub(crate) struct View<'a> {
+    pub(crate) lobby: Vec<LobbySeat>,
     report: &'a Value,
-    lobby: Vec<LobbySeat>,
     /// Round number -> round, for the rounds the log has.
-    rounds: BTreeMap<i64, &'a Value>,
-    duos: bool,
+    pub(crate) rounds: BTreeMap<i64, &'a Value>,
+    pub(crate) duos: bool,
 }
 
 impl<'a> View<'a> {
-    fn new(report: &'a Value) -> Self {
+    pub(crate) fn new(report: &'a Value) -> Self {
         let lobby = list(report, "lobby")
             .iter()
             .filter_map(|p| {
@@ -183,13 +183,13 @@ impl<'a> View<'a> {
         }
     }
 
-    fn seat(&self, pid: i64) -> Option<&LobbySeat> {
+    pub(crate) fn seat(&self, pid: i64) -> Option<&LobbySeat> {
         self.lobby.iter().find(|s| s.pid == pid)
     }
 
     /// Everyone who shares this player's health: the team in Duos, the
     /// player alone otherwise (or when the lobby does not give the team).
-    fn side_of(&self, pid: i64) -> Vec<i64> {
+    pub(crate) fn side_of(&self, pid: i64) -> Vec<i64> {
         let team = self.duos.then(|| self.seat(pid)?.team).flatten();
         let mut side: BTreeSet<i64> = BTreeSet::from([pid]);
         if let Some(team) = team {
@@ -203,7 +203,7 @@ impl<'a> View<'a> {
         side.into_iter().collect()
     }
 
-    fn own_side(&self) -> Option<Vec<i64>> {
+    pub(crate) fn own_side(&self) -> Option<Vec<i64>> {
         let local = self.report.get("local_player_id")?.as_i64()?;
         let mut side = self.side_of(local);
         if self.duos {
@@ -221,7 +221,7 @@ impl<'a> View<'a> {
     /// Health of a side at the end of `round` (0 = before the first combat):
     /// the number its players share. None when the log has none, or when the
     /// players disagree (then it is not one shared number).
-    fn health_of(&self, side: &[i64], round: i64) -> Option<i64> {
+    pub(crate) fn health_of(&self, side: &[i64], round: i64) -> Option<i64> {
         let map = if round == 0 {
             self.report.get("start_health")
         } else {
@@ -238,7 +238,7 @@ impl<'a> View<'a> {
         }
     }
 
-    fn hero_ref(&self, id: &str) -> HeroRef {
+    pub(crate) fn hero_ref(&self, id: &str) -> HeroRef {
         let names = self.report.get("card_names").and_then(Value::as_object);
         let name = |key: &str| names?.get(key)?.as_str().map(String::from);
         HeroRef {
@@ -252,18 +252,18 @@ impl<'a> View<'a> {
     }
 }
 
-fn list<'a>(value: &'a Value, key: &str) -> &'a [Value] {
+pub(crate) fn list<'a>(value: &'a Value, key: &str) -> &'a [Value] {
     value
         .get(key)
         .and_then(Value::as_array)
         .map_or(&[], Vec::as_slice)
 }
 
-fn text(value: &Value, key: &str) -> Option<String> {
+pub(crate) fn text(value: &Value, key: &str) -> Option<String> {
     value.get(key)?.as_str().map(String::from)
 }
 
-fn texts(value: &Value, key: &str) -> Vec<String> {
+pub(crate) fn texts(value: &Value, key: &str) -> Vec<String> {
     list(value, key)
         .iter()
         .filter_map(Value::as_str)
@@ -423,7 +423,7 @@ fn own_health(view: &View) -> Vec<HealthPoint> {
     points
 }
 
-fn tribes(report: &Value) -> Vec<TribeOffer> {
+pub(crate) fn tribes(report: &Value) -> Vec<TribeOffer> {
     let mut offers: Vec<TribeOffer> = report
         .get("shop_tribes")
         .and_then(Value::as_object)

@@ -16,6 +16,22 @@
         "minWidth": 640,
         "minHeight": 480,
         "visible": false
+      },
+      {
+        "label": "overlay",
+        "title": "Tavern Ledger overlay",
+        "url": "overlay.html",
+        "width": 340,
+        "height": 860,
+        "visible": false,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "shadow": false,
+        "resizable": false,
+        "focus": false,
+        "focusable": false
       }
     ],
     "security": {

@@ -2,6 +2,8 @@
 //! the local game history. Only reads the game's log files (D-004).
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod foreground;
+mod overlay;
 mod upload;
 
 use std::collections::BTreeSet;
@@ -17,6 +19,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{App, AppHandle, Emitter, Manager, State, WindowEvent, Wry};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tracker::discover::find_logs_dir;
+use tracker::live::{live_game, LiveGame};
 use tracker::lobby_tribes::{self, Action, Entries, GameStarts, LobbyView};
 use tracker::lock::{HistoryLock, LockError};
 use tracker::provenance::{row_sources, RowSources};
@@ -37,13 +40,22 @@ const STATUS_CHANGED: &str = "status-changed";
 const LOBBY_TRIBES_CHANGED: &str = "lobby-tribes-changed";
 /// A game the history did not have before was saved: the window shows its recap.
 const GAME_FINISHED: &str = "game-finished";
+/// The game in progress, as the overlay shows it, changed (T-301).
+const LIVE_CHANGED: &str = "live-changed";
 /// Added by the Windows start-up entry: open in the tray, not on screen.
 const MINIMIZED_ARG: &str = "--minimized";
 /// `--data-dir <folder>`: keep the history (and the upload settings) there
 /// instead of %APPDATA%\TavernLedger, e.g. to try a build without touching
 /// the real history.
 const DATA_DIR_ARG: &str = "--data-dir";
+/// `--logs-dir <folder>`: follow the logs there instead of the game's own
+/// Logs folder, e.g. a replayed log (development only, T-D02).
+const LOGS_DIR_ARG: &str = "--logs-dir";
+/// Development only: the overlay is on, shows whatever window is in front and
+/// saves no setting, so a replayed game can be checked without playing.
+const OVERLAY_DEV_ARG: &str = "--overlay-dev";
 const MENU_SHOW: &str = "show";
+const MENU_OVERLAY: &str = "overlay";
 const MENU_AUTOSTART: &str = "autostart";
 const MENU_QUIT: &str = "quit";
 
@@ -88,6 +100,10 @@ struct AppState {
     entries_problem: Mutex<Option<String>>,
     /// The Battlegrounds game being played now, not saved yet.
     in_progress: Mutex<Option<GameKey>>,
+    /// The game in progress as the overlay shows it, without the tribes
+    /// entered by hand (those are added when it is read).
+    live: Mutex<Option<LiveGame>>,
+    overlay: overlay::Overlay,
 }
 
 #[tauri::command]
@@ -143,6 +159,29 @@ fn recap_of(state: &AppState, session: &str, index: u64) -> Result<Recap, String
             recap(&row.report).with_entered_tribes(entries.as_ref().and_then(|e| e.entry(&key)))
         })
         .ok_or_else(|| "That game is not in the history.".to_string())
+}
+
+/// What the overlay shows: the game in progress, or nothing when no
+/// Battlegrounds game is on (T-301). The window renders it and decides nothing.
+#[tauri::command]
+fn overlay_state(state: State<'_, Arc<AppState>>) -> Option<LiveGame> {
+    overlay_state_of(&state)
+}
+
+fn overlay_state_of(state: &AppState) -> Option<LiveGame> {
+    let live = state
+        .live
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone()?;
+    let key = state
+        .in_progress
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone();
+    let entries = state.entries.lock().unwrap_or_else(|e| e.into_inner());
+    let entered = key.and_then(|key| entries.as_ref()?.entry(&key));
+    Some(live.with_entered_tribes(entered))
 }
 
 /// The lobby tribes entered by hand, the fixed list to pick from and the game
@@ -299,6 +338,25 @@ fn set_status(app: &AppHandle, state: &AppState, update: impl FnOnce(&mut Status
     }
 }
 
+/// The game in progress as the overlay shows it.
+fn live_now(watcher: &mut Watcher) -> Option<LiveGame> {
+    let report = serde_json::to_value(watcher.live_report()?).ok()?;
+    Some(live_game(&report))
+}
+
+/// Keeps the overlay's game up to date and tells it, only if it changed.
+fn publish_live(app: &AppHandle, state: &AppState, now: Option<LiveGame>) {
+    let changed = {
+        let mut current = state.live.lock().unwrap_or_else(|e| e.into_inner());
+        let changed = *current != now;
+        *current = now;
+        changed
+    };
+    if changed {
+        let _ = app.emit(LIVE_CHANGED, ());
+    }
+}
+
 fn publish_games(app: &AppHandle, state: &AppState, store: &Store) {
     let rows = store
         .games()
@@ -357,7 +415,7 @@ fn refresh_setup(app: &AppHandle, state: &AppState, logs_dir: &Path) {
 
 /// Opens the history and follows the log until the app quits.
 fn run_tracker(app: AppHandle, state: Arc<AppState>) {
-    let Some(logs_dir) = find_logs_dir() else {
+    let Some(logs_dir) = path_from(std::env::args(), LOGS_DIR_ARG).or_else(find_logs_dir) else {
         let msg = "Hearthstone's Logs folder was not found. Is the game installed?";
         return problem(&app, &state, msg.into());
     };
@@ -411,9 +469,20 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
         polls_until_setup_check -= 1;
         // A bug must not stop the tracker silently while the window looks fine.
         let Ok(result) = catch_unwind(AssertUnwindSafe(|| watcher.poll())) else {
+            // The overlay must not keep showing a game nobody follows any more.
+            publish_live(&app, &state, None);
             let msg = "The tracker stopped after an internal error. Restart the app; your history is safe.";
             return problem(&app, &state, msg.into());
         };
+        // The overlay is on its own guard: a bug in it must not cost a saved game.
+        match catch_unwind(AssertUnwindSafe(|| live_now(&mut watcher))) {
+            Ok(live) => publish_live(&app, &state, live),
+            Err(_) => {
+                publish_live(&app, &state, None);
+                let msg = "The overlay stopped after an internal error. Restart the app; your history is safe.";
+                set_status(&app, &state, |s| s.notice = Some(msg.into()));
+            }
+        }
         track_game_in_progress(&app, &state, &mut starts, watcher.in_progress());
         let session = watcher.session().map(String::from);
         let power_log = watcher.has_power_log();
@@ -456,9 +525,18 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
 }
 
 fn data_dir_from(args: impl IntoIterator<Item = String>) -> Option<PathBuf> {
+    path_from(args, DATA_DIR_ARG)
+}
+
+/// The folder that follows `flag` on the command line, if any.
+fn path_from(args: impl IntoIterator<Item = String>, flag: &str) -> Option<PathBuf> {
     let mut args = args.into_iter();
-    args.by_ref().find(|a| a == DATA_DIR_ARG)?;
+    args.by_ref().find(|a| a == flag)?;
     args.next().filter(|d| !d.is_empty()).map(PathBuf::from)
+}
+
+fn overlay_dev(args: impl IntoIterator<Item = String>) -> bool {
+    args.into_iter().any(|a| a == OVERLAY_DEV_ARG)
 }
 
 /// Keeps the game in progress up to date for the window and gives a waiting
@@ -527,6 +605,18 @@ fn toggle_autostart(app: &AppHandle, item: &CheckMenuItem<Wry>) {
     }
 }
 
+/// Turns the overlay on or off; the menu shows the real state.
+fn toggle_overlay(app: &AppHandle, item: &CheckMenuItem<Wry>) {
+    let state = app.state::<Arc<AppState>>();
+    let result = state.overlay.set_enabled(!state.overlay.enabled());
+    let _ = item.set_checked(state.overlay.enabled());
+    let failed = result.is_err();
+    set_status(app, &state, |s| s.notice = result.err());
+    if failed {
+        show_window(app);
+    }
+}
+
 /// The start-up entry holds the exe path unquoted (auto-launch 0.5), so a
 /// path with spaces could run the wrong program or nothing at all.
 fn can_autostart(exe: &Path) -> bool {
@@ -545,9 +635,18 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
     };
     let autostart =
         CheckMenuItem::with_id(app, MENU_AUTOSTART, label, available, enabled, None::<&str>)?;
+    let state = app.state::<Arc<AppState>>();
+    let overlay = CheckMenuItem::with_id(
+        app,
+        MENU_OVERLAY,
+        "Show overlay during a game",
+        true,
+        state.overlay.enabled(),
+        None::<&str>,
+    )?;
     let show = MenuItem::with_id(app, MENU_SHOW, "Open Tavern Ledger", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, MENU_QUIT, "Quit", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&show, &autostart, &quit])?;
+    let menu = Menu::with_items(app, &[&show, &overlay, &autostart, &quit])?;
     let mut tray = TrayIconBuilder::with_id("main")
         .tooltip("Tavern Ledger: following your Battlegrounds games")
         .menu(&menu)
@@ -555,6 +654,7 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
         .on_menu_event(move |app, event: MenuEvent| match event.id().as_ref() {
             MENU_SHOW => show_window(app),
             MENU_AUTOSTART => toggle_autostart(app, &autostart),
+            MENU_OVERLAY => toggle_overlay(app, &overlay),
             MENU_QUIT => app.exit(0),
             _ => {}
         })
@@ -593,6 +693,7 @@ fn main() {
             save_problem_report,
             lobby_tribes_view,
             edit_lobby_tribes,
+            overlay_state,
             upload::upload_status,
             upload::upload_set_enabled,
             upload::upload_sign_in,
@@ -607,7 +708,18 @@ fn main() {
             }
         })
         .setup(move |app| {
+            let data_dir =
+                data_dir_from(std::env::args()).unwrap_or_else(tracker::store::default_dir);
+            let loaded = state.overlay.load(&data_dir, overlay_dev(std::env::args()));
             setup_tray(app)?;
+            overlay::follow(app.handle().clone(), state.clone());
+            let prepared = overlay::prepare(app.handle()).map_err(|e| {
+                state.overlay.disable();
+                format!("The overlay could not be set up ({e}); it is off.")
+            });
+            if let Some(message) = loaded.err().or(prepared.err()) {
+                set_status(app.handle(), &state, |s| s.notice = Some(message));
+            }
             // The window starts hidden (tauri.conf.json), so a start-up
             // launch never flashes it on screen.
             if !starts_hidden(std::env::args()) {
@@ -822,6 +934,70 @@ mod tests {
         );
         assert_eq!(data_dir_from(args(&["desktop.exe"])), None);
         assert_eq!(data_dir_from(args(&["desktop.exe", DATA_DIR_ARG])), None);
+    }
+
+    #[test]
+    fn the_logs_folder_can_be_chosen_on_the_command_line_for_a_replay() {
+        assert_eq!(
+            path_from(
+                args(&["desktop.exe", LOGS_DIR_ARG, r"C:\Temp\x\Logs"]),
+                LOGS_DIR_ARG
+            ),
+            Some(PathBuf::from(r"C:\Temp\x\Logs"))
+        );
+        // One flag never reads the other's value.
+        let both = args(&["d.exe", DATA_DIR_ARG, "data", LOGS_DIR_ARG, "logs"]);
+        assert_eq!(
+            path_from(both.clone(), LOGS_DIR_ARG),
+            Some(PathBuf::from("logs"))
+        );
+        assert_eq!(data_dir_from(both), Some(PathBuf::from("data")));
+        assert_eq!(path_from(args(&["d.exe"]), LOGS_DIR_ARG), None);
+    }
+
+    #[test]
+    fn the_overlay_dev_flag_is_off_unless_given() {
+        assert!(overlay_dev(args(&["desktop.exe", OVERLAY_DEV_ARG])));
+        assert!(!overlay_dev(args(&["desktop.exe"])));
+    }
+
+    fn live_report(tribes: serde_json::Value) -> LiveGame {
+        live_game(&serde_json::json!({
+            "status": "incomplete", "game_type": "GT_BATTLEGROUNDS", "local_player_id": 1,
+            "hero": "H", "lobby": [{"player_id": 1, "hero": "H"}, {"player_id": 2, "hero": "O"}],
+            "start_health": {"1": 40, "2": 40}, "shop_tribes": tribes, "rounds": [],
+        }))
+    }
+
+    #[test]
+    fn the_overlay_has_nothing_to_show_when_no_game_is_on() {
+        assert!(overlay_state_of(&AppState::default()).is_none());
+    }
+
+    #[test]
+    fn the_overlay_shows_the_tribes_entered_for_the_game_in_progress_apart_from_the_tavern_ones() {
+        let (state, _dir) = state_with_entries(serde_json::json!({"status": "ok"}));
+        let now = GameKey {
+            session: "Hearthstone_2026_10_09_00_00_00".into(),
+            index: 2,
+        };
+        *state.in_progress.lock().unwrap() = Some(now.clone());
+        *state.live.lock().unwrap() = Some(live_report(serde_json::json!({"MURLOC": 3})));
+        assert!(overlay_state_of(&state).unwrap().entered_tribes.is_empty());
+
+        let tribes = five(["BEAST", "DEMON", "DRAGON", "ELEMENTAL", "MECHANICAL"]);
+        let set = Action::Set {
+            session: now.session,
+            index: 2,
+            tribes: tribes.clone(),
+        };
+        edit_lobby_tribes_of(&state, set).unwrap();
+        let shown = overlay_state_of(&state).unwrap();
+        assert_eq!(shown.entered_tribes, tribes);
+        assert_eq!(
+            shown.tribes[0].tribe, "MURLOC",
+            "the tavern list is untouched"
+        );
     }
 
     #[test]
