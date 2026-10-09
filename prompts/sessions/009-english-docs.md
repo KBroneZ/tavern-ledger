@@ -33,8 +33,8 @@ Working rules (user's decisions, 2026-10-09):
 
 1. Translate to English, keeping meaning, ids (T-xxx, D-xxx, P-xxx), tables, numbers and relative links intact:
    - `docs/plan/plan.md`, `docs/decisions/DECISIONS.md`, `PROVENANCE.md`;
-   - `docs/research/*.md`. Rename the files to English names (for example `fuentes-mmr.md` → `mmr-sources.md`) and fix every link to them across the repo, code comments included;
-   - the session prompts in `prompts/sesiones/`. Rename the folder to `prompts/sessions/` and the files to English slugs.
+   - `docs/research/*.md`. Rename the files to English names (for example `mmr-sources.md` → `mmr-sources.md`) and fix every link to them across the repo, code comments included;
+   - the session prompts in `prompts/sessions/`. Rename the folder to `prompts/sessions/` and the files to English slugs.
 2. **`CLAUDE.md`:** the user asked for these rules in it: English everywhere, Claude merges its own PRs, and the user often works remotely. Your harness may block editing `CLAUDE.md` as self-modification. If it does, do not work around it: give the user the exact text so they can apply it or allow the edit.
 3. Spanish left in code (comments, strings, test names, tool output): translate it.
 4. CI checks relative Markdown links (lychee `--offline`): it must stay green.
@@ -51,4 +51,4 @@ Working rules (user's decisions, 2026-10-09):
 - [ ] Ids, numbers and links unchanged in meaning; CI (tests, links, secrets) green.
 - [ ] `CLAUDE.md` updated, or the user has the exact text and knows why it could not be applied.
 - [ ] PR merged by you.
-- [ ] Ask the user whether they want the next prompt. The next task is T-102 (personal stats), already written in `prompts/sesiones/010-personal-stats.md`; move it to the renamed folder.
+- [ ] Ask the user whether they want the next prompt. The next task is T-102 (personal stats), already written in `prompts/sessions/010-personal-stats.md`; move it to the renamed folder.

@@ -1,88 +1,90 @@
 # Plan
 
-Estados: `pendiente` · `en curso` · `hecho` · `bloqueado`.
+Statuses: `pending` · `in progress` · `done` · `blocked`.
 
-## F0 — Prueba de viabilidad (40–80 h estimadas)
+## F0 — Feasibility proof (40–80 h estimated)
 
-Objetivo: demostrar que se puede reconstruir una partida de Battlegrounds solo con logs locales.
+Goal: show that a Battlegrounds game can be rebuilt from local logs alone.
 
-| ID | Tarea | Estado | Criterio de aceptación |
-|----|-------|--------|------------------------|
-| T-001 | Elegir nombre (P-001) y crear el repo en GitHub (con OK del usuario) | hecho | Repo remoto con README, LICENSE MIT y `.gitignore`. |
-| T-002 | Activar logs (`log.config`) y recoger 10+ partidas propias como fixtures (Solo y Duos) | en curso | Fixtures en `fixtures/` sin datos de terceros que no sean públicos; anotados en `PROVENANCE.md`. |
-| T-003 | Prototipo de parser con `hslog` (Python, MIT) para ver qué expone `Power.log` en BG | hecho | Informe: héroe, tribus del lobby, tableros por ronda, rivales, puesto final, Duos. Qué falta. |
-| T-004 | Investigar fuentes de MMR (P-007): logs locales + leaderboard público | hecho | Tabla de qué dato sale de dónde, con evidencia. |
-| T-005 | Decidir stack de escritorio (P-002) | hecho | Decisión en `DECISIONS.md` con motivo. |
-| T-006 | Cliente del leaderboard con caché y límites | hecho | Tests con respuestas sintéticas (no se guardan respuestas reales, D-012); timeout, errores y los cuatro estados de D-011 explícitos. |
+| ID | Task | Status | Acceptance criteria |
+|----|------|--------|---------------------|
+| T-001 | Choose a name (P-001) and create the GitHub repo (with the user's OK) | done | Remote repo with README, MIT LICENSE and `.gitignore`. |
+| T-002 | Enable logs (`log.config`) and collect 10+ own games as fixtures (Solo and Duos) | in progress | Fixtures in `fixtures/` with no third-party data that isn't public; recorded in `PROVENANCE.md`. |
+| T-003 | Parser prototype with `hslog` (Python, MIT) to see what `Power.log` exposes in BG | done | Report: hero, lobby tribes, boards per round, opponents, final placement, Duos. What is missing. |
+| T-004 | Research MMR sources (P-007): local logs + public leaderboard | done | Table of which data comes from where, with evidence. |
+| T-005 | Decide the desktop stack (P-002) | done | Decision in `DECISIONS.md` with reason. |
+| T-006 | Leaderboard client with cache and limits | done | Tests with synthetic responses (real responses are not stored, D-012); timeout, errors and the four D-011 states explicit. |
 
-**Notas T-002 (2026-10-08).** `tools/check_logs.py` confirma que `log.config` ya activa `Power` (LogLevel=1, FilePrinting, Verbose). Los logs están en `C:\Battle.net\Battle.net\Hearthstone\Logs\Hearthstone_<fecha>\`. Inventario: 6 sesiones (2 a 8 de octubre), 23 inicios de partida, todos `GT_BATTLEGROUNDS_DUO`, build 253216. Ninguna de Solo. El juego deja `Power_old.log` (120–563 MB por sesión). Falta: jugar partidas de Solo y recortar cada partida a un fixture pequeño (necesita el parser de T-003) y quitar nombres de jugadores que no sean públicos.
+**Notes T-002 (2026-10-08).** `tools/check_logs.py` confirms that `log.config` already enables `Power` (LogLevel=1, FilePrinting, Verbose). The logs are in `C:\Battle.net\Battle.net\Hearthstone\Logs\Hearthstone_<date>\`. Inventory: 6 sessions (October 2 to 8), 23 game starts, all `GT_BATTLEGROUNDS_DUO`, build 253216. None of Solo. The game leaves a `Power_old.log` (120–563 MB per session). Missing: play Solo games and trim each game into a small fixture (needs the T-003 parser) and remove names of players that aren't public.
 
-**Notas T-002 (2026-10-08, sesión 002).** Sin partidas de Solo nuevas. Los tests de T-003 usan logs sintéticos; los fixtures recortados de logs propios quedan pendientes (necesitan OK del usuario antes de commitearlos).
+**Notes T-002 (2026-10-08, session 002).** No new Solo games. The T-003 tests use synthetic logs; the trimmed fixtures from own logs stay pending (they need the user's OK before being committed).
 
-**Notas T-002 (2026-10-09, sesión 003).** Primera partida de Solo (`GT_BATTLEGROUNDS`, build 253216, sesión `Hearthstone_2026_10_09_00_26_56`). `parse_bg.py` la lee en `ok` pero con dos fallos a investigar: la vida final sale 30 aunque el jugador quedó 7.º (eliminado), y la vida sube de 12 a 30 en la última ronda; además, otro jugador del lobby sale también con puesto 7. Sin tocar el parser en esta sesión.
+**Notes T-002 (2026-10-09, session 003).** First Solo game (`GT_BATTLEGROUNDS`, build 253216, session `Hearthstone_2026_10_09_00_26_56`). `parse_bg.py` reads it as `ok` but with two failures to investigate: the final health is 30 even though the player finished 7th (eliminated), and health goes up from 12 to 30 in the last round; also, another lobby player shows up with placement 7 too. Parser not touched in this session.
 
-**Notas T-002 (2026-10-09, sesión 004).** `check_logs.py`: sin partidas nuevas (6 sesiones, 22 de Duos y 1 de Solo).
+**Notes T-002 (2026-10-09, session 004).** `check_logs.py`: no new games (6 sessions, 22 Duos and 1 Solo).
 
-**Notas T-002 (2026-10-09, sesión 005).** `check_logs.py`: sin partidas nuevas (6 sesiones, 22 de Duos y 1 de Solo). Causa de los dos fallos de Solo: al ser eliminado, el juego copia el héroe del jugador local (`COPIED_FROM_ENTITY_ID`, puesto viejo, `DAMAGE=0`) y el parser leía la copia. El jugador quedó 8.º, no 7.º; el otro "7" era correcto. Lo mismo pasaba en las 12 partidas de Duos perdidas (vida 30; puesto mal en 4). Arreglado en `parse_bg.py` con tests sintéticos; vida mínima 0. Solo (`GT_BATTLEGROUNDS`) pasa a tipo probado. Detalle en [`parser-hslog.md`](../research/parser-hslog.md). Queda: más partidas de Solo y el puesto de los rivales que siguen vivos cuando cae el jugador (es el del momento, no el final).
+**Notes T-002 (2026-10-09, session 005).** `check_logs.py`: no new games (6 sessions, 22 Duos and 1 Solo). Cause of the two Solo failures: when eliminated, the game copies the local player's hero (`COPIED_FROM_ENTITY_ID`, old placement, `DAMAGE=0`) and the parser read the copy. The player finished 8th, not 7th; the other "7" was correct. The same happened in the 12 lost Duos games (health 30; wrong placement in 4). Fixed in `parse_bg.py` with synthetic tests; minimum health 0. Solo (`GT_BATTLEGROUNDS`) becomes a proven type. Details in [`parser-hslog.md`](../research/parser-hslog.md). Remaining: more Solo games and the placement of opponents still alive when the player falls (it is the placement at that moment, not the final one).
 
-**Notas T-005 (2026-10-09, sesión 006).** Informe [`stack-escritorio.md`](../research/stack-escritorio.md): Tauri 2, .NET (WPF/Avalonia) y Electron comparados en instalador, overlay, interfaz compartida con la web, autoactualización y licencias para SignPath. Recomendación: Tauri 2 (Rust + TS); plan B WPF. Prueba del overlay en `spikes/overlay-tauri/`: transparente, siempre encima y los clics pasan a la ventana de debajo (comprobado con un clic real, debug y release; `.exe` de 8,5 MB). Probado también encima de Hearthstone en pantalla completa sin bordes, sin mandar entrada al juego: el overlay queda encima y los clics van al juego. El usuario elige Tauri (D-014).
+**Notes T-005 (2026-10-09, session 006).** Report [`desktop-stack.md`](../research/desktop-stack.md): Tauri 2, .NET (WPF/Avalonia) and Electron compared on installer, overlay, UI shared with the web, auto-update and licenses for SignPath. Recommendation: Tauri 2 (Rust + TS); plan B WPF. Overlay test in `spikes/overlay-tauri/`: transparent, always on top and clicks pass through to the window below (checked with a real click, debug and release; 8.5 MB `.exe`). Also tested on top of Hearthstone in borderless fullscreen, without sending input to the game: the overlay stays on top and clicks go to the game. The user picks Tauri (D-014).
 
-**Notas T-003 (2026-10-08).** `tools/parse_bg.py` + informe [`docs/research/parser-hslog.md`](../research/parser-hslog.md). 23 de 23 partidas reales (Duos, build 253216) en `ok`. Sale todo salvo el MMR y la lista exacta de tribus (solo inferida de la tienda); el 12 % de los combates del compañero en Duos no se ve en el log local. Solo sin probar con logs reales.
+**Notes T-003 (2026-10-08).** `tools/parse_bg.py` + report [`docs/research/parser-hslog.md`](../research/parser-hslog.md). 23 of 23 real games (Duos, build 253216) in `ok`. Everything comes out except MMR and the exact tribe list (only inferred from the shop); 12% of the partner's combats in Duos are not visible in the local log. Solo untested with real logs.
 
-**Notas T-004 (2026-10-09).** Informe [`docs/research/fuentes-mmr.md`](../research/fuentes-mmr.md). Ningún log local trae el valor del MMR; `Net.log` solo marca cuándo llega `NetCacheBaconRatingInfo` (tras cada partida). Leaderboard: endpoint, parámetros, corte en 8000 y cruce por nombre documentados. `[Net]` con `Verbose=true` probado con OK del usuario (cambio hecho por él): no expone el rating. Nuevo pendiente P-008 (términos de la web). P-007 cerrado con D-011: rating del leaderboard si aparece; si no, "por debajo del corte" (< 8000).
+**Notes T-004 (2026-10-09).** Report [`docs/research/mmr-sources.md`](../research/mmr-sources.md). No local log carries the MMR value; `Net.log` only marks when `NetCacheBaconRatingInfo` arrives (after each game). Leaderboard: endpoint, parameters, cutoff at 8000 and name matching documented. `[Net]` with `Verbose=true` tested with the user's OK (change made by them): it does not expose the rating. New pending P-008 (website terms). P-007 closed with D-011: leaderboard rating if it appears; otherwise, "below the cutoff" (< 8000).
 
-**Notas T-006 (2026-10-09).** `tools/leaderboard.py` + informe [`docs/research/cliente-leaderboard.md`](../research/cliente-leaderboard.md). P-008 cerrado con D-012 (solo la fila propia, desde la app del usuario); estrategia en D-013. Medidas con 10 peticiones: gzip (308 → 17 KB por página), `ETag` inútil (cambia en cada respuesta), 10–30 jugadores por punto de MMR cerca del corte. Recorrido completo de Solo EU: 174 peticiones, ~3 MB, ~7 min, como mucho uno al día. Tests sin red (respuestas sintéticas y un servidor local para el transporte). Medida 10 (01:49): el leaderboard cambia por tandas, entre minutos y menos de una hora. Queda: comprobar mayúsculas y Unicode con la fila de un usuario real del top.
+**Notes T-006 (2026-10-09).** `tools/leaderboard.py` + report [`docs/research/leaderboard-client.md`](../research/leaderboard-client.md). P-008 closed with D-012 (only the user's own row, from the user's app); strategy in D-013. Measured with 10 requests: gzip (308 → 17 KB per page), `ETag` useless (changes on every response), 10–30 players per MMR point near the cutoff. Full Solo EU sweep: 174 requests, ~3 MB, ~7 min, at most once a day. Tests without network (synthetic responses and a local server for the transport). Measurement 10 (01:49): the leaderboard changes in batches, between minutes and under an hour. Remaining: check case and Unicode with the row of a real top user.
 
-## F1 — Historial local y web mínima
+## F1 — Local history and minimal web
 
-**Notas T-101 (2026-10-09, sesión 006/007).** Workspace de Rust con tres crates:
-- `crates/bg-parser`: port del parser de Python sin `hslog` (misma salida JSON). Paridad comprobada con 13 casos sintéticos (en tests y CI) y con las 23 partidas reales (en local, `tools/compare_parsers.py`): idénticas. Log de 590 MB: 2,6 s frente a 19,8 s en Python. Da cada partida en cuanto llega `STATE=COMPLETE`.
-- `crates/tracker` + CLI `tavern-watch`: encuentra la carpeta de logs (registro o `--logs-dir`), sigue `Power.log` de la sesión más reciente (solo líneas completas; rotación a `Power_old.log` y sesiones nuevas) y guarda en `%APPDATA%\TavernLedger\games.jsonl` (D-015). `--import` lee las sesiones antiguas: 23 partidas en 8 s; ninguno de los 149 nombres de jugador de los logs aparece en el historial.
-- `crates/desktop`: app Tauri (sin npm todavía) que sigue el log en segundo plano y muestra el historial con stats por modo (Solo 1–8, Duos 1–4 por equipo; top 4 / top 2). Probada con el historial real.
+**Notes T-101 (2026-10-09, session 006/007).** Rust workspace with three crates:
+- `crates/bg-parser`: port of the Python parser without `hslog` (same JSON output). Parity checked with 13 synthetic cases (in tests and CI) and with the 23 real games (local, `tools/compare_parsers.py`): identical. 590 MB log: 2.6 s versus 19.8 s in Python. Emits each game as soon as `STATE=COMPLETE` arrives.
+- `crates/tracker` + CLI `tavern-watch`: finds the logs folder (registry or `--logs-dir`), follows `Power.log` of the most recent session (complete lines only; rotation to `Power_old.log` and new sessions) and saves to `%APPDATA%\TavernLedger\games.jsonl` (D-015). `--import` reads old sessions: 23 games in 8 s; none of the 149 player names in the logs appears in the history.
+- `crates/desktop`: Tauri app (no npm yet) that follows the log in the background and shows the history with stats per mode (Solo 1–8, Duos 1–4 per team; top 4 / top 2). Tested with the real history.
 
-Revisiones de código y de seguridad: sin CRITICAL ni HIGH; los MEDIUM, arreglados (líneas de más de 1 MiB marcan la partida como `unsupported`; el seguimiento lee cada byte una vez, detecta la rotación también por los primeros bytes y no pierde la última línea; las partidas pendientes sobreviven a un error; el historial aguanta una escritura cortada y UTF-8 inválido; la app no se congela, avisa si el hilo de seguimiento cae o si falta `Power.log`; `reg.exe` con ruta fija; CSP más estricta).
+Code and security reviews: no CRITICAL or HIGH; the MEDIUMs, fixed (lines over 1 MiB mark the game as `unsupported`; the follower reads each byte once, detects rotation also by the first bytes and doesn't lose the last line; pending games survive an error; the history withstands a cut write and invalid UTF-8; the app doesn't freeze, warns if the follower thread dies or if `Power.log` is missing; `reg.exe` with a fixed path; stricter CSP).
 
-**Notas T-101 (2026-10-09, sesión 008).**
-- Nombres de héroe (D-017): salen del propio `Power.log`, que escribe el nombre de cada carta en las referencias `[entityName=… cardId=…]`, en el idioma del cliente del jugador. No hay dataset externo: los JSON de HearthstoneJSON son "Copyright © Blizzard Entertainment - All Rights Reserved" (el envoltorio es CC0) y `hsdata` no tiene licencia. El informe gana el campo `card_names` (solo los héroes que menciona; solo en Rust, el prototipo de Python queda congelado y la paridad lo ignora). Con las 23 partidas reales: 184 de 184 héroes del lobby con nombre, ningún nombre de jugador en la salida (comprobado contra los `PlayerName` del log sin imprimirlos) y paridad con Python intacta. El historial del usuario se reimportó con `--import` (copia previa en `games.jsonl.bak-008`): 23 de 23 partidas con nombre.
-- Una sola instancia (D-016): bloqueo del sistema sobre `games.lock` junto al historial (`File::try_lock` de la biblioteca estándar, sin dependencias). Lo toman la app y `tavern-watch`; el segundo proceso lo dice (la app muestra el historial en solo lectura). Probado con dos `tavern-watch`: el segundo sale con error y, al cerrar el primero, vuelve a funcionar.
-- Revisiones de código y de seguridad: sin CRITICAL ni HIGH. Arreglado el MEDIUM que compartían: el `cardId` se leía fuera del corchete de la entidad, así que un formato raro podía emparejar un BattleTag con un héroe, y una línea larga de referencias rotas costaba 15 s (cuadrático). Ahora el `cardId` solo se lee dentro del mismo corchete y con caracteres de id, se descartan nombres con forma de BattleTag, solo se guardan ids de héroe y el escaneo está acotado (milisegundos). `rust-version = "1.89"` por `File::try_lock`.
-- Prueba en vivo: pendiente; el usuario no ha jugado con la app abierta desde la sesión 007.
-- Bandeja y arranque con Windows (D-018, con OK del usuario a las dependencias): icono en la bandeja con "Open Tavern Ledger", "Start with Windows" y "Quit"; cerrar la ventana la esconde y la app sigue leyendo el log. El arranque con Windows está desactivado por defecto y solo se activa desde ese menú; la entrada de inicio abre la app con `--minimized`, directamente en la bandeja. Revisión: sin CRITICAL ni HIGH; arreglados los MEDIUM (si falla el cambio, la ventana se abre con el aviso; con espacios en la ruta la opción se desactiva) y el parpadeo al arrancar minimizada (la ventana nace oculta). Para T-105: el instalador debe usar una carpeta sin espacios o escribir la entrada de inicio con comillas. Comprobado: la app arranca en release y no crea entrada en `HKCU\...\Run` hasta que el usuario la activa.
+**Notes T-101 (2026-10-09, session 008).**
+- Hero names (D-017): they come from `Power.log` itself, which writes each card's name in the `[entityName=… cardId=…]` references, in the player's client language. No external dataset: the HearthstoneJSON JSONs are "Copyright © Blizzard Entertainment - All Rights Reserved" (the wrapper is CC0) and `hsdata` has no license. The report gains the `card_names` field (only the heroes it mentions; Rust only, the Python prototype stays frozen and parity ignores it). With the 23 real games: 184 of 184 lobby heroes with a name, no player name in the output (checked against the log's `PlayerName` values without printing them) and parity with Python intact. The user's history was re-imported with `--import` (previous copy in `games.jsonl.bak-008`): 23 of 23 games with a name.
+- Single instance (D-016): system lock on `games.lock` next to the history (`File::try_lock` from the standard library, no dependencies). The app and `tavern-watch` take it; the second process says so (the app shows the history read-only). Tested with two `tavern-watch`: the second exits with an error and, when the first closes, works again.
+- Code and security reviews: no CRITICAL or HIGH. Fixed the MEDIUM they shared: the `cardId` was read outside the entity bracket, so an odd format could pair a BattleTag with a hero, and a long line of broken references cost 15 s (quadratic). Now the `cardId` is only read inside the same bracket and with id characters, BattleTag-shaped names are discarded, only hero ids are saved and the scan is bounded (milliseconds). `rust-version = "1.89"` because of `File::try_lock`.
+- Live test: pending; the user hasn't played with the app open since session 007.
+- Tray and start with Windows (D-018, with the user's OK for the dependencies): tray icon with "Open Tavern Ledger", "Start with Windows" and "Quit"; closing the window hides it and the app keeps reading the log. Start with Windows is off by default and only turned on from that menu; the startup entry opens the app with `--minimized`, straight into the tray. Review: no CRITICAL or HIGH; fixed the MEDIUMs (if the change fails, the window opens with the warning; with spaces in the path the option is disabled) and the flash when starting minimized (the window is born hidden). For T-105: the installer must use a folder without spaces or write the startup entry with quotes. Checked: the app starts in release and creates no entry in `HKCU\...\Run` until the user turns it on.
 
-Queda para cerrar T-101: la prueba en vivo (jugar una partida con `cargo run --release -p desktop` abierto y ver que aparece sola al terminar). La build firmada es T-105. La CI no compila `desktop` (necesita librerías del sistema en Linux).
+Remaining to close T-101: the live test (play a game with `cargo run --release -p desktop` open and see it appear by itself at the end). The signed build is T-105. CI doesn't build `desktop` (it needs system libraries on Linux).
 
-| ID | Tarea | Estado |
-|----|-------|--------|
-| T-101 | App de escritorio: vigilar `Power.log` y guardar partidas en local | en curso |
-| T-102 | Stats personales: héroes, puestos medios, tribus | pendiente |
-| T-103 | Decidir stack web y backend (P-003) | pendiente |
-| T-104 | Cuentas, subida de partidas, perfil público; privacidad y borrado (RGPD) | pendiente |
-| T-105 | Firma de código (P-005) e instalador con autoactualización | pendiente |
+**Notes T-101 (2026-10-09, session 009).** Live test still not done: no Battlegrounds game since session 008 (`check_logs.py`: the newest session folder has no Power log yet). `games.jsonl` holds 46 records for the same 23 games from 5 sessions, each saved twice by two imports; expected, since the store is append-only and the last record per game wins.
 
-## F2 — Replays y recaps
+| ID | Task | Status |
+|----|------|--------|
+| T-101 | Desktop app: watch `Power.log` and save games locally | in progress |
+| T-102 | Personal stats: heroes, average placements, tribes | pending |
+| T-103 | Decide web stack and backend (P-003) | pending |
+| T-104 | Accounts, game upload, public profile; privacy and deletion (GDPR) | pending |
+| T-105 | Code signing (P-005) and installer with auto-update | pending |
 
-| ID | Tarea | Estado |
-|----|-------|--------|
-| T-201 | Visor de partida turno a turno en la web (tableros vistos de los rivales) | pendiente |
-| T-202 | Recap tras cada partida | pendiente |
-| T-203 | Récord contra cada rival del lobby | pendiente |
+## F2 — Replays and recaps
 
-## F3 — Overlay mínimo
+| ID | Task | Status |
+|----|------|--------|
+| T-201 | Turn-by-turn game viewer on the web (opponents' boards as seen) | pending |
+| T-202 | Recap after each game | pending |
+| T-203 | Record against each lobby opponent | pending |
 
-| ID | Tarea | Estado |
-|----|-------|--------|
-| T-301 | Overlay con tribus del lobby, último tablero visto de cada rival y récord | pendiente |
-| T-302 | Overlay personalizable: botón de bloquear/desbloquear para mover los paneles donde cada uno quiera, elegir qué paneles se ven y varios temas | pendiente |
+## F3 — Minimal overlay
 
-## F4 — Comunidad y extras
+| ID | Task | Status |
+|----|------|--------|
+| T-301 | Overlay with lobby tribes, last seen board of each opponent and record | pending |
+| T-302 | Customizable overlay: lock/unlock button to move the panels wherever each user wants, choose which panels show and several themes | pending |
 
-| ID | Tarea | Estado |
-|----|-------|--------|
-| T-401 | Stats agregadas de comunidad (solo con consentimiento y volumen suficiente) | pendiente |
-| T-402 | Extras de pago (P-006) | pendiente |
+## F4 — Community and extras
 
-## Fuera de alcance por ahora
+| ID | Task | Status |
+|----|------|--------|
+| T-401 | Aggregate community stats (only with consent and enough volume) | pending |
+| T-402 | Paid extras (P-006) | pending |
 
-- Simulador de combate (coste muy alto; solo si el proyecto sigue vivo tras F4).
-- Lectura de memoria (D-004).
-- Inyección o modificación del cliente, incluido el "minion dance": descartado para siempre (D-006).
+## Out of scope for now
+
+- Combat simulator (very high cost; only if the project is still alive after F4).
+- Memory reading (D-004).
+- Injection or client modification, including the "minion dance": discarded for good (D-006).

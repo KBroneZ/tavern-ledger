@@ -1,4 +1,4 @@
-"""Tests de tools/parse_bg.py con logs sintéticos (ver bg_log_builder.py)."""
+"""Tests for tools/parse_bg.py with synthetic logs (see bg_log_builder.py)."""
 
 import io
 import json
