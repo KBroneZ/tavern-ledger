@@ -5,6 +5,7 @@
 
 use std::collections::BTreeMap;
 use std::path::Path;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -23,6 +24,10 @@ const CARDS_CHANGED: &str = "cards-changed";
 const CHECK_EVERY: Duration = Duration::from_secs(60);
 /// A page never asks for more names than this at once.
 const MAX_IDS: usize = 200;
+/// Image requests answered at the same time; more get a 404 and the page
+/// shows no picture until it asks again (the next update).
+const MAX_IN_FLIGHT: usize = 16;
+static IN_FLIGHT: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(Default)]
 pub struct Cards {
@@ -71,12 +76,16 @@ pub fn start(app: &AppHandle, data_dir: &Path) {
 }
 
 /// Names for the ids asked, null for each one the card data does not know.
-/// Ids that are not plain card ids are left out.
+/// Ids that are not plain card ids are left out, and so is every id while
+/// there is no card data yet: "not known yet" is not "unknown".
 pub fn names_of(store: Option<&CardStore>, ids: &[String]) -> BTreeMap<String, Option<String>> {
+    let Some(store) = store.filter(|s| s.has_data()) else {
+        return BTreeMap::new();
+    };
     ids.iter()
         .filter(|id| valid_id(id))
         .take(MAX_IDS)
-        .map(|id| (id.clone(), store.and_then(|s| s.name(id))))
+        .map(|id| (id.clone(), store.name(id)))
         .collect()
 }
 
@@ -124,8 +133,29 @@ pub fn response(image: Option<Vec<u8>>) -> Response<Vec<u8>> {
     built.unwrap_or_else(|_| Response::new(Vec::new()))
 }
 
+/// Takes one of the `MAX_IN_FLIGHT` slots; gives it back when dropped.
+struct Slot;
+
+impl Slot {
+    fn take() -> Option<Slot> {
+        let before = IN_FLIGHT.fetch_add(1, Ordering::SeqCst);
+        if before >= MAX_IN_FLIGHT {
+            IN_FLIGHT.fetch_sub(1, Ordering::SeqCst);
+            return None;
+        }
+        Some(Slot)
+    }
+}
+
+impl Drop for Slot {
+    fn drop(&mut self) {
+        IN_FLIGHT.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
 /// The `cardart` protocol. A fetch can take seconds, so it answers from
-/// its own thread and never blocks the window.
+/// its own thread and never blocks the window; at most `MAX_IN_FLIGHT`
+/// such threads at once.
 pub fn protocol<R: Runtime>(
     ctx: UriSchemeContext<'_, R>,
     request: Request<Vec<u8>>,
@@ -136,10 +166,14 @@ pub fn protocol<R: Runtime>(
         .flatten()
         .map(String::from);
     let store = ctx.app_handle().state::<Cards>().store.get().cloned();
-    let (Some(id), Some(store)) = (id, store) else {
+    let (Some(id), Some(store), Some(slot)) = (id, store, Slot::take()) else {
         return responder.respond(response(None));
     };
-    thread::spawn(move || responder.respond(response(store.art(&id, now()))));
+    thread::spawn(move || {
+        let image = store.art(&id, now());
+        drop(slot);
+        responder.respond(response(image));
+    });
 }
 
 #[cfg(test)]
@@ -174,13 +208,61 @@ mod tests {
     }
 
     #[test]
-    fn without_card_data_every_name_is_unknown_and_bad_ids_are_dropped() {
-        let ids: Vec<String> = ["CARD_1", "../x", "CARD_2"].map(String::from).to_vec();
-        let names = names_of(None, &ids);
+    fn without_card_data_no_name_is_answered_yet() {
+        let ids: Vec<String> = ["CARD_1", "CARD_2"].map(String::from).to_vec();
+        assert!(
+            names_of(None, &ids).is_empty(),
+            "not known yet, not unknown"
+        );
+    }
+
+    struct NoNetwork;
+
+    impl cards::net::Fetch for NoNetwork {
+        fn get(&self, _: &cards::net::Get) -> Result<cards::net::Reply, cards::net::NetError> {
+            Err(cards::net::NetError::Connect("test".into()))
+        }
+    }
+
+    /// A store whose saved card data is 1000 made-up cards `C_0` … `C_999`.
+    fn store_with_data(name: &str) -> CardStore {
+        let dir = std::env::temp_dir().join(format!("tl-desktop-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let cards: Vec<_> = (0..1000)
+            .map(|i| serde_json::json!({"id": format!("C_{i}"), "name": format!("Card {i}")}))
+            .collect();
+        let catalog =
+            cards::catalog::Catalog::from_hearthstonejson(&serde_json::to_vec(&cards).unwrap())
+                .unwrap();
+        let saved = cards::catalog::SavedCatalog {
+            catalog,
+            fetched_at: now(),
+            etag: None,
+        };
+        std::fs::write(dir.join("catalog.json"), saved.to_json()).unwrap();
+        CardStore::open(dir, Box::new(NoNetwork))
+    }
+
+    #[test]
+    fn names_are_answered_with_null_for_unknown_ids_and_bad_ids_dropped() {
+        let store = store_with_data("names");
+        let ids: Vec<String> = ["C_1", "../x", "NOT_A_CARD"].map(String::from).to_vec();
+        let names = names_of(Some(&store), &ids);
         assert_eq!(names.len(), 2);
-        assert!(names.values().all(Option::is_none));
+        assert_eq!(names["C_1"].as_deref(), Some("Card 1"));
+        assert_eq!(names["NOT_A_CARD"], None);
         let many: Vec<String> = (0..500).map(|i| format!("C_{i}")).collect();
-        assert_eq!(names_of(None, &many).len(), MAX_IDS);
+        assert_eq!(names_of(Some(&store), &many).len(), MAX_IDS);
+    }
+
+    #[test]
+    fn only_a_few_image_requests_run_at_once() {
+        let slots: Vec<Slot> = std::iter::from_fn(Slot::take).take(100).collect();
+        assert_eq!(slots.len(), MAX_IN_FLIGHT);
+        assert!(Slot::take().is_none());
+        drop(slots);
+        assert!(Slot::take().is_some(), "slots come back");
     }
 
     #[test]

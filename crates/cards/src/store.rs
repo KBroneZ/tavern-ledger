@@ -14,7 +14,7 @@ use std::sync::{Mutex, MutexGuard};
 use serde::Serialize;
 
 use crate::art::{is_jpeg, ArtCache, CACHE_CAP_BYTES, MAX_IMAGE_BYTES};
-use crate::catalog::{gunzip, valid_id, Catalog, SavedCatalog};
+use crate::catalog::{gunzip, valid_etag, valid_id, Catalog, SavedCatalog, MAX_INFLATED};
 use crate::net::{Fetch, Get, Reply};
 
 pub const DATA_URL: &str = "https://api.hearthstonejson.com/v1/latest/enUS/cards.json";
@@ -27,7 +27,13 @@ pub const REFRESH_AFTER_SECS: u64 = 7 * 24 * 3600;
 pub const RETRY_AFTER_SECS: u64 = 3600;
 /// An image that could not be fetched is not asked for again for an hour.
 pub const ART_RETRY_AFTER_SECS: u64 = 3600;
+/// After the art server could not be reached, no image is asked for this long.
+pub const ART_OFFLINE_SECS: u64 = 300;
+/// At most this many images are fetched in any hour (a full lobby is ~60).
+pub const ART_PER_HOUR: u32 = 300;
 const CATALOG_FILE: &str = "catalog.json";
+/// When the card data was last asked for, so a restart does not ask again.
+const ATTEMPT_FILE: &str = "last-attempt.txt";
 
 pub fn art_url(id: &str) -> String {
     format!("{ART_BASE}{id}.jpg")
@@ -52,6 +58,10 @@ struct Inner {
     /// The app asked for a card the data does not have: maybe a new patch.
     want_newer: bool,
     art_misses: HashMap<String, u64>,
+    /// No image is fetched before this time (the server was unreachable).
+    art_offline_until: u64,
+    /// Start of the current hour of image fetches, and how many so far.
+    art_hour: (u64, u32),
 }
 
 pub struct CardStore {
@@ -77,8 +87,11 @@ impl CardStore {
 
     pub fn with_cap(dir: PathBuf, fetch: Box<dyn Fetch>, cap: u64) -> CardStore {
         let mut inner = Inner::default();
-        // A missing file is a first start: the data is fetched.
-        if let Ok(bytes) = fs::read(dir.join(CATALOG_FILE)) {
+        // A missing file is a first start: the data is fetched. A file far
+        // larger than the real one is not read at all.
+        let path = dir.join(CATALOG_FILE);
+        let small = fs::metadata(&path).is_ok_and(|m| m.len() <= MAX_INFLATED as u64);
+        if let Some(bytes) = small.then(|| fs::read(&path).ok()).flatten() {
             match SavedCatalog::from_json(&bytes) {
                 Ok(saved) => inner.saved = Some(saved),
                 Err(e) => {
@@ -88,6 +101,9 @@ impl CardStore {
                 }
             }
         }
+        inner.last_attempt = fs::read_to_string(dir.join(ATTEMPT_FILE))
+            .ok()
+            .and_then(|text| text.trim().parse().ok());
         let art = ArtCache::new(dir.join("art"), cap);
         CardStore {
             dir,
@@ -106,6 +122,11 @@ impl CardStore {
             fetched_at: inner.saved.as_ref().map(|s| s.fetched_at),
             problem: inner.problem.clone(),
         }
+    }
+
+    /// True once there are card names to look up.
+    pub fn has_data(&self) -> bool {
+        lock(&self.inner).saved.is_some()
     }
 
     /// The card's name, or None (the app then shows the id, "unknown").
@@ -134,12 +155,15 @@ impl CardStore {
 
     fn due(&self, now: u64) -> bool {
         let inner = lock(&self.inner);
+        // A time in the future means the clock was wrong then: not trusted.
         let waited = inner
             .last_attempt
-            .is_none_or(|t| now.saturating_sub(t) >= RETRY_AFTER_SECS);
+            .is_none_or(|t| t > now || now - t >= RETRY_AFTER_SECS);
         let stale = match &inner.saved {
             None => true,
-            Some(s) => now.saturating_sub(s.fetched_at) >= REFRESH_AFTER_SECS || inner.want_newer,
+            Some(s) => {
+                s.fetched_at > now || now - s.fetched_at >= REFRESH_AFTER_SECS || inner.want_newer
+            }
         };
         waited && stale
     }
@@ -155,6 +179,8 @@ impl CardStore {
             let mut inner = lock(&self.inner);
             inner.last_attempt = Some(now);
             inner.want_newer = false;
+            let _ = fs::create_dir_all(&self.dir)
+                .and_then(|()| fs::write(self.dir.join(ATTEMPT_FILE), now.to_string()));
             inner.saved.as_ref().and_then(|s| s.etag.clone())
         };
         let request = Get {
@@ -232,7 +258,7 @@ impl CardStore {
         let saved = SavedCatalog {
             catalog,
             fetched_at: now,
-            etag: reply.etag.filter(|e| e.len() <= 200 && e.is_ascii()),
+            etag: reply.etag.filter(|e| valid_etag(e)),
         };
         // Not saving only costs a download next time; the names still show.
         let _ = self.save(&saved);
@@ -257,7 +283,7 @@ impl CardStore {
         if let Some(bytes) = self.art.read(id) {
             return Some(bytes);
         }
-        if !self.knows(id) || self.recent_miss(id, now) {
+        if !self.knows(id) || !self.may_fetch_art(id, now) {
             return None;
         }
         let _one = lock(&self.art_lock);
@@ -265,7 +291,7 @@ impl CardStore {
         if let Some(bytes) = self.art.read(id) {
             return Some(bytes);
         }
-        if self.recent_miss(id, now) {
+        if !self.take_art_slot(id, now) {
             return None;
         }
         let request = Get {
@@ -274,7 +300,11 @@ impl CardStore {
             if_none_match: None,
             max_bytes: MAX_IMAGE_BYTES,
         };
-        let image = self.fetch.get(&request).ok().filter(|r| {
+        let answer = self.fetch.get(&request);
+        if answer.is_err() {
+            lock(&self.inner).art_offline_until = now + ART_OFFLINE_SECS;
+        }
+        let image = answer.ok().filter(|r| {
             r.status == 200
                 && !r.truncated
                 && r.content_type
@@ -299,10 +329,31 @@ impl CardStore {
         }
     }
 
-    fn recent_miss(&self, id: &str, now: u64) -> bool {
-        lock(&self.inner)
+    /// Not a recent miss, the server not just found unreachable, and the
+    /// hourly budget not spent.
+    fn may_fetch_art(&self, id: &str, now: u64) -> bool {
+        let inner = lock(&self.inner);
+        let missed = inner
             .art_misses
             .get(id)
-            .is_some_and(|&t| now.saturating_sub(t) < ART_RETRY_AFTER_SECS)
+            .is_some_and(|&t| t <= now && now - t < ART_RETRY_AFTER_SECS);
+        let (start, used) = inner.art_hour;
+        let spent = start <= now && now - start < 3600 && used >= ART_PER_HOUR;
+        !missed && now >= inner.art_offline_until && !spent
+    }
+
+    /// Checks again under the art lock and counts the request.
+    fn take_art_slot(&self, id: &str, now: u64) -> bool {
+        if !self.may_fetch_art(id, now) {
+            return false;
+        }
+        let mut inner = lock(&self.inner);
+        let (start, used) = inner.art_hour;
+        inner.art_hour = if start <= now && now - start < 3600 {
+            (start, used + 1)
+        } else {
+            (now, 1)
+        };
+        true
     }
 }

@@ -824,7 +824,7 @@ function renderCardStatus() {
   const s = TLCards.status();
   node.classList.toggle("problem", Boolean(s && s.problem));
   if (!s) node.textContent = "Card pictures: status not available.";
-  else if (s.problem) node.textContent = `Card pictures: ${s.problem} Card ids are shown instead.`;
+  else if (s.problem) node.textContent = `Card pictures: ${s.problem}` + (s.cards ? " The names already saved are still used." : " Card ids are shown instead.");
   else if (s.cards) node.textContent = `Card pictures: ${s.cards} cards known, checked ${new Date(s.fetched_at * 1000).toLocaleDateString()}.`;
   else node.textContent = "Card pictures: getting the card data…";
 }

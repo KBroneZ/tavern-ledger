@@ -68,9 +68,13 @@ What this means for us:
 
 **A, HearthstoneJSON**, with these limits (to be recorded as D-038 if the user agrees):
 
-1. Data: one `cards.json` (enUS) fetched with gzip, kept on the PC and refreshed only when the game build in the log is newer than the cached one, or after 7 days; conditional requests with the `etag`.
+1. Data: one `cards.json` (enUS) fetched with gzip, kept on the PC and checked again after 7 days or when the log shows a card it does not have, at most once an hour, with the `etag` (an unchanged file costs a 304).
 2. Art: `256x` JPG for hero portraits and board minions, fetched only when a card is about to be shown, cached on the PC with a size cap (50 MB, oldest dropped first), a few requests at a time.
 3. Every request: timeout, identifiable User-Agent (`TavernLedger/<version> (+https://tavernledger.net)`), response validated (JSON shape; image magic bytes, type and size limits). Any failure shows the card id and "unknown", never a guessed or wrong picture.
 4. Nothing is committed: no card data, no images, no fixtures with real data (tests use synthetic JSON and tiny made-up bytes).
-5. Art only in free features; a credit line "Card art and card data © Blizzard Entertainment" next to the existing notice; a setting to switch images off.
+5. Art only in free features; a credit line "Card art and card data © Blizzard Entertainment" next to the existing notice.
 6. Before any paid extra ships, ask HearthSim (`contact@hearthsim.net`) and recheck Blizzard's terms.
+
+## Decision
+
+The user chose **A, HearthstoneJSON** on 2026-10-10 (D-038). Built in session 026 as described above; see the T-304 notes in the [plan](../plan/plan.md).

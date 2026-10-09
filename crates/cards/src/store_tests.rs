@@ -309,3 +309,63 @@ fn the_image_folder_stays_under_its_cap() {
         .sum();
     assert!(size <= 200, "{size}");
 }
+
+#[test]
+fn a_restart_does_not_ask_for_the_card_data_again_within_the_hour() {
+    let (store, fake, dir) = store("restart");
+    fake.on(DATA_URL, Err(NetError::Timeout));
+    assert!(!store.refresh_if_due(NOW));
+    let fake2 = Arc::new(FakeFetch::default());
+    let again = CardStore::open(dir, Box::new(Shared(fake2.clone())));
+    assert!(!again.refresh_if_due(NOW + 60));
+    assert!(fake2.urls().is_empty(), "the last attempt was kept on disk");
+}
+
+#[test]
+fn a_fetch_time_in_the_future_counts_as_stale() {
+    let (store, fake, _) = ready("future");
+    // The clock was a year ahead when the data was fetched, and the last
+    // attempt also looks like it is in the future.
+    let earlier = NOW - 365 * 24 * HOUR;
+    fake.on(DATA_URL, status(304));
+    store.refresh_if_due(earlier);
+    assert_eq!(fake.urls().len(), 2, "refreshed instead of waiting a year");
+}
+
+#[test]
+fn an_unreachable_art_server_pauses_every_image_for_a_while() {
+    let (store, fake, _) = ready("offline");
+    fake.on(&art_url("CARD_1"), Err(NetError::Timeout));
+    assert_eq!(store.art("CARD_1", NOW), None);
+    assert_eq!(
+        store.art("CARD_2", NOW + 10),
+        None,
+        "no request while paused"
+    );
+    assert_eq!(fake.urls().len(), 2);
+    fake.on(&art_url("CARD_2"), ok("image/jpeg", jpeg()));
+    assert_eq!(store.art("CARD_2", NOW + ART_OFFLINE_SECS), Some(jpeg()));
+}
+
+#[test]
+fn at_most_a_few_hundred_images_are_fetched_an_hour() {
+    let (store, fake, _) = ready("budget");
+    for i in 0..ART_PER_HOUR {
+        let id = format!("CARD_{i}");
+        fake.on(&art_url(&id), ok("image/jpeg", jpeg()));
+        assert!(store.art(&id, NOW).is_some(), "{id}");
+    }
+    let over = format!("CARD_{ART_PER_HOUR}");
+    assert_eq!(store.art(&over, NOW + 60), None, "budget spent");
+    fake.on(&art_url(&over), ok("image/jpeg", jpeg()));
+    assert!(store.art(&over, NOW + HOUR).is_some(), "next hour");
+}
+
+#[test]
+fn has_data_only_once_names_are_there() {
+    let (store, fake, _) = store("has-data");
+    assert!(!store.has_data());
+    fake.on(DATA_URL, data_reply("\"v1\""));
+    store.refresh_if_due(NOW);
+    assert!(store.has_data());
+}

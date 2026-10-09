@@ -14,6 +14,7 @@ window.TLCards = (() => {
   const BATCH = 200; // the app answers at most this many ids at once
 
   const names = new Map(); // id -> name, or null when the card data does not know it
+  const waiting = new Set(); // asked while the app had no card data yet
   const asking = new Set();
   const watchers = [];
   let queued = new Set();
@@ -37,14 +38,16 @@ window.TLCards = (() => {
       }
       for (const id of part) {
         asking.delete(id);
-        names.set(id, got && typeof got[id] === "string" ? got[id] : null);
+        // Left out of the answer: no card data yet. Asked again on the next change.
+        if (!got || !Object.prototype.hasOwnProperty.call(got, id)) waiting.add(id);
+        else names.set(id, typeof got[id] === "string" ? got[id] : null);
       }
     }
     changed();
   }
 
   function want(id) {
-    if (typeof id !== "string" || !ID.test(id) || names.has(id) || asking.has(id)) return;
+    if (typeof id !== "string" || !ID.test(id) || asking.has(id)) return;
     queued.add(id);
     if (!timer) timer = setTimeout(flush, 0);
   }
@@ -53,11 +56,9 @@ window.TLCards = (() => {
   // marked unknown). undefined: not answered yet (show the id, no mark).
   function name(id) {
     if (typeof id !== "string" || !ID.test(id)) return null;
-    if (!names.has(id)) {
-      want(id);
-      return undefined;
-    }
-    return names.get(id);
+    if (names.has(id)) return names.get(id);
+    if (!waiting.has(id)) want(id);
+    return undefined;
   }
 
   // An <img> for the card's art, or null for an id that is not a card id.
@@ -82,8 +83,11 @@ window.TLCards = (() => {
     changed();
   }
 
+  // The card data changed: ask again for every id seen, keeping the old
+  // answers on screen until the new ones arrive (no flicker).
   listen("cards-changed", () => {
-    names.clear();
+    for (const id of [...names.keys(), ...waiting]) want(id);
+    waiting.clear();
     refreshStatus();
   });
   refreshStatus();

@@ -5,7 +5,7 @@
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
 use crate::catalog::valid_id;
 
@@ -13,6 +13,8 @@ use crate::catalog::valid_id;
 pub const MAX_IMAGE_BYTES: usize = 512 * 1024;
 /// The folder never stays above this (D-038).
 pub const CACHE_CAP_BYTES: u64 = 50 * 1024 * 1024;
+/// A shown image's "last used" time is moved at most this often.
+const TOUCH_AFTER: Duration = Duration::from_secs(600);
 
 /// A JPEG starts with FF D8 FF.
 pub fn is_jpeg(bytes: &[u8]) -> bool {
@@ -50,9 +52,18 @@ impl ArtCache {
             let _ = fs::remove_file(&path);
             return None;
         }
-        // Mark it as just used, for the cap.
-        if let Ok(file) = fs::File::options().write(true).open(&path) {
-            let _ = file.set_modified(SystemTime::now());
+        // Mark it as just used, for the cap; not on every read, since the
+        // overlay shows the same images each time the game moves.
+        let now = SystemTime::now();
+        let stale = fs::metadata(&path)
+            .and_then(|m| m.modified())
+            .map_or(true, |t| {
+                now.duration_since(t).unwrap_or_default() >= TOUCH_AFTER
+            });
+        if stale {
+            if let Ok(file) = fs::File::options().write(true).open(&path) {
+                let _ = file.set_modified(now);
+            }
         }
         Some(bytes)
     }

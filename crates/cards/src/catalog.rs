@@ -7,6 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::io::Read;
 
+use serde::de::{self, Deserializer, SeqAccess, Visitor};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -14,8 +15,12 @@ use serde_json::Value;
 /// is not the card list (an error page, a different file).
 pub const MIN_CARDS: usize = 1000;
 pub const MAX_NAME_CHARS: usize = 100;
+/// More than this is not the card list either (and would cost memory).
+pub const MAX_CARDS: usize = 100_000;
+/// Entries read before the file is refused, usable or not.
+pub const MAX_ENTRIES: usize = 200_000;
 /// The real file is about 10 MB; this stops a gzip bomb.
-pub const MAX_INFLATED: usize = 64 * 1024 * 1024;
+pub const MAX_INFLATED: usize = 32 * 1024 * 1024;
 /// Version of the file we keep on the PC.
 const SAVED_FORMAT: u32 = 1;
 
@@ -27,6 +32,8 @@ pub enum CatalogError {
     Shape,
     /// The array had fewer usable cards than `MIN_CARDS`.
     TooFew(usize),
+    /// More than `MAX_CARDS` usable cards.
+    TooMany,
 }
 
 impl fmt::Display for CatalogError {
@@ -35,6 +42,7 @@ impl fmt::Display for CatalogError {
             CatalogError::Encoding => write!(f, "the card data could not be unpacked"),
             CatalogError::Shape => write!(f, "the card data is not in the expected format"),
             CatalogError::TooFew(n) => write!(f, "the card data has only {n} usable cards"),
+            CatalogError::TooMany => write!(f, "the card data has far more cards than expected"),
         }
     }
 }
@@ -45,12 +53,20 @@ pub fn valid_id(id: &str) -> bool {
     !id.is_empty() && id.len() <= 64 && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_')
 }
 
+/// Invisible characters that change how text reads (bidirectional
+/// overrides, zero-width marks): a name with one could pass for another.
+fn is_format_char(c: char) -> bool {
+    matches!(c, '\u{00AD}' | '\u{061C}' | '\u{180E}' | '\u{200B}'..='\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2060}'..='\u{206F}' | '\u{FEFF}')
+}
+
 /// A name we are willing to show: trimmed, 1 to 100 characters, no control
-/// characters. Shown with `textContent` only, never as markup.
+/// or invisible formatting characters. Shown with `textContent` only, never
+/// as markup.
 fn clean_name(name: &str) -> Option<String> {
     let name = name.trim();
     let chars = name.chars().count();
-    let ok = (1..=MAX_NAME_CHARS).contains(&chars) && !name.chars().any(char::is_control);
+    let ok = (1..=MAX_NAME_CHARS).contains(&chars)
+        && !name.chars().any(|c| c.is_control() || is_format_char(c));
     ok.then(|| name.to_string())
 }
 
@@ -67,10 +83,55 @@ pub fn gunzip(body: &[u8]) -> Result<Vec<u8>, CatalogError> {
     Ok(out)
 }
 
+/// One entry, keeping only the two fields we read; every other field is
+/// skipped without being kept. A field that is not a string is None.
 #[derive(Deserialize)]
 struct RawCard {
-    id: Option<Value>,
-    name: Option<Value>,
+    #[serde(default, deserialize_with = "string_or_none")]
+    id: Option<String>,
+    #[serde(default, deserialize_with = "string_or_none")]
+    name: Option<String>,
+}
+
+fn string_or_none<'de, D: Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {
+    Ok(match Value::deserialize(d)? {
+        Value::String(text) => Some(text),
+        _ => None,
+    })
+}
+
+/// The usable (id, name) pairs, read one entry at a time so a file of
+/// millions of tiny entries is refused before it fills memory.
+struct Pairs(Vec<(String, String)>);
+
+impl<'de> Deserialize<'de> for Pairs {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Pairs, D::Error> {
+        struct Entries;
+        impl<'de> Visitor<'de> for Entries {
+            type Value = Pairs;
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str("an array of cards")
+            }
+            fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Pairs, A::Error> {
+                let mut pairs = Vec::new();
+                let mut read = 0usize;
+                while let Some(card) = seq.next_element::<RawCard>()? {
+                    read += 1;
+                    if read > MAX_ENTRIES {
+                        return Err(de::Error::custom("too many entries"));
+                    }
+                    let (Some(id), Some(name)) = (card.id, card.name) else {
+                        continue;
+                    };
+                    if let Some(name) = clean_name(&name).filter(|_| valid_id(&id)) {
+                        pairs.push((id, name));
+                    }
+                }
+                Ok(Pairs(pairs))
+            }
+        }
+        d.deserialize_seq(Entries)
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -81,13 +142,8 @@ pub struct Catalog {
 impl Catalog {
     /// Reads HearthstoneJSON's `cards.json` (already inflated).
     pub fn from_hearthstonejson(json: &[u8]) -> Result<Catalog, CatalogError> {
-        let raw: Vec<RawCard> = serde_json::from_slice(json).map_err(|_| CatalogError::Shape)?;
-        let pairs = raw.into_iter().filter_map(|card| {
-            let id = card.id?.as_str()?.to_string();
-            let name = clean_name(card.name?.as_str()?)?;
-            valid_id(&id).then_some((id, name))
-        });
-        Catalog::from_pairs(pairs)
+        let Pairs(pairs) = serde_json::from_slice(json).map_err(|_| CatalogError::Shape)?;
+        Catalog::from_pairs(pairs.into_iter())
     }
 
     /// An id that appears twice with different names is dropped: showing
@@ -107,6 +163,9 @@ impl Catalog {
             }
         }
         names.retain(|id, _| !clashes.contains(id));
+        if names.len() > MAX_CARDS {
+            return Err(CatalogError::TooMany);
+        }
         if names.len() < MIN_CARDS {
             return Err(CatalogError::TooFew(names.len()));
         }
@@ -140,6 +199,12 @@ struct Saved {
     names: BTreeMap<String, String>,
 }
 
+/// An ETag we send back as-is: visible ASCII only, so a hand-edited file
+/// cannot make every request fail.
+pub fn valid_etag(etag: &str) -> bool {
+    !etag.is_empty() && etag.len() <= 200 && etag.bytes().all(|b| (0x20..0x7f).contains(&b))
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SavedCatalog {
     pub catalog: Catalog,
@@ -171,7 +236,7 @@ impl SavedCatalog {
             .into_iter()
             .filter(|(id, _)| valid_id(id))
             .filter_map(|(id, name)| clean_name(&name).map(|n| (id, n)));
-        let etag = saved.etag.filter(|e| e.len() <= 200 && e.is_ascii());
+        let etag = saved.etag.filter(|e| valid_etag(e));
         Ok(SavedCatalog {
             catalog: Catalog::from_pairs(pairs)?,
             fetched_at: saved.fetched_at,
@@ -245,6 +310,8 @@ pub mod tests {
             json!({"id": "EMPTY_NAME", "name": "   "}),
             json!({"id": "LONG_NAME", "name": long}),
             json!({"id": "CONTROL", "name": "Bell\u{7}"}),
+            json!({"id": "BIDI", "name": "Evil\u{202E}lacol"}),
+            json!({"id": "ZERO_WIDTH", "name": "Zero\u{200B}Width"}),
             json!({"id": "NUMBER_NAME", "name": 5}),
             json!({"id": 42, "name": "Number id"}),
             json!({"name": "No id"}),
@@ -258,9 +325,34 @@ pub mod tests {
             "EMPTY_NAME",
             "LONG_NAME",
             "CONTROL",
+            "BIDI",
+            "ZERO_WIDTH",
             "NUMBER_NAME",
         ] {
             assert_eq!(catalog.name(id), None, "{id}");
+        }
+    }
+
+    #[test]
+    fn a_file_of_millions_of_entries_or_cards_is_refused() {
+        let empties = format!("[{}{{}}]", "{},".repeat(MAX_ENTRIES));
+        assert_eq!(
+            Catalog::from_hearthstonejson(empties.as_bytes()),
+            Err(CatalogError::Shape)
+        );
+        let many = synthetic(MAX_CARDS + 1, vec![]);
+        assert_eq!(
+            Catalog::from_hearthstonejson(&many),
+            Err(CatalogError::TooMany)
+        );
+    }
+
+    #[test]
+    fn only_visible_ascii_etags_are_sent_back() {
+        assert!(valid_etag(r#""a7fd90b783d1ce0883662523f079c7f4-2""#));
+        assert!(valid_etag(r#"W/"x""#));
+        for bad in ["", "a\nb", "caf\u{e9}", &"x".repeat(201)] {
+            assert!(!valid_etag(bad), "{bad:?}");
         }
     }
 
