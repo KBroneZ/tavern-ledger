@@ -55,7 +55,7 @@ Supabase is open source (Apache-2.0) and self-hostable, so leaving means running
 | Item | Detail | Source |
 |------|--------|--------|
 | Free plan | 500 MB database per project, 1 GB file storage (50 MB max upload), 5 GB egress + 5 GB cached, 50,000 MAU, 500,000 Edge Function calls, 2 active projects | [pricing](https://supabase.com/pricing) |
-| When it runs out | Email notice and a grace period, then restrictions under the Fair Use Policy; the exact restriction (read-only, block) is **unverified** | [billing](https://supabase.com/docs/guides/platform/billing-on-supabase), [usage](https://supabase.com/docs/guides/platform/manage-your-usage/disk-size) |
+| When it runs out | Email notice and a grace period, then restrictions under the Fair Use Policy, usually on the whole organisation: the project is paused, the database turns read-only, or every API request gets HTTP 402; new projects are blocked. Which one applies is not stated | [billing FAQ](https://supabase.com/docs/guides/platform/billing-faq), [usage](https://supabase.com/docs/guides/platform/manage-your-usage/disk-size) |
 | Inactivity | "Free projects are paused after 1 week of inactivity." Restoring is manual | [pricing](https://supabase.com/pricing) |
 | Backups | None on Free: daily backups start on Pro (7 days); Supabase advises Free projects to export with `supabase db dump` themselves | [backups](https://supabase.com/docs/guides/platform/backups) |
 | Commercial use on free | No Free-plan or non-commercial clause in the terms; use is limited to the customer's "internal business purposes" and Supabase may add caps or throttling (5(c)) | [terms](https://supabase.com/terms) |
@@ -92,11 +92,11 @@ The Hobby plan bans commercial use and has no DPA, so paid extras (P-006) would 
 | Item | Detail | Source |
 |------|--------|--------|
 | Workers free | 100,000 requests a day, 10 ms CPU per request; what happens over the limit is **unverified** (requests fail until the daily reset, per secondary sources) | [Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/) |
-| D1 free | 5 GB total, 5M rows read and 100,000 rows written a day; over the limit, queries fail until 00:00 UTC; over storage, inserts blocked | [D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/) |
+| D1 free | 500 MB per database, 10 databases, 5 GB per account; 5M rows read and 100,000 rows written a day; over the limit, queries fail until 00:00 UTC; over storage, inserts blocked | [D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/), [D1 limits](https://developers.cloudflare.com/d1/platform/limits/) |
 | R2 free | As in B | [R2 pricing](https://developers.cloudflare.com/r2/pricing/) |
 | Inactivity | No pause | — |
 | First paid step | Workers Paid, $5/month per account: 10M requests, 30M CPU-ms, 25B D1 rows read, 50M rows written; D1 storage over 5 GB at $0.75 per GB-month | [Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/), [D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/) |
-| EU region | D1 `jurisdiction: "eu"` (set at creation, cannot change); R2 has an EU jurisdiction too (**unverified** in this session) | [D1 data location](https://developers.cloudflare.com/d1/configuration/data-location/) |
+| EU region | D1 `jurisdiction: "eu"` and R2 `eu` jurisdiction, both set at creation and fixed afterwards; whether R2's jurisdiction is on the free tier is not stated (**unverified**). Workers themselves run worldwide | [D1 data location](https://developers.cloudflare.com/d1/configuration/data-location/), [R2 data location](https://developers.cloudflare.com/r2/reference/data-location/) |
 | DPA | Customer DPA v6.4 (2026-04-03), SCCs modules 2 and 3, sub-processor list; no plan restriction named | [DPA](https://www.cloudflare.com/cloudflare-customer-dpa/) |
 | Commercial use on free | No restriction found (**unverified**) | — |
 | Export | `wrangler d1 export` to SQL (SQLite dialect), R2 through the S3 API | — |
@@ -107,10 +107,10 @@ The Hobby plan bans commercial use and has no DPA, so paid extras (P-006) would 
 
 | Item | Detail | Source |
 |------|--------|--------|
-| Price | CX23 (2 vCPU, 4 GB, 40 GB, 20 TB traffic in the EU): about €5.49/month without VAT after the June 2026 price rise, plus about €0.50 for IPv4. Hetzner's page did not render prices and showed the plans as "currently unavailable" (**unverified**) | [Hetzner cost-optimized](https://www.hetzner.com/cloud/cost-optimized/), [secondary](https://kimmo.suominen.com/stuff/cpc-2026-08.txt) |
+| Price | CX23 (2 vCPU, 4 GB, 40 GB, 20 TB traffic in the EU): €5.49/month without VAT for new orders since 2026-06-15 (was €3.99), plus €0.50 for IPv4 (second source, **unverified**). The product page showed the plans as "currently unavailable" | [price adjustment](https://docs.hetzner.com/general/infrastructure-and-availability/price-adjustment/), [cost-optimized](https://www.hetzner.com/cloud/cost-optimized/) |
 | Free plan | None | — |
 | EU region | Nuremberg, Falkenstein, Helsinki | [Hetzner cloud](https://www.hetzner.com/cloud/) |
-| DPA | Hetzner offers one through its console (**unverified**: the page was not found) | — |
+| DPA | Offered to Cloud customers through the account, no special plan (second source, **unverified**) | [data protection](https://docs.hetzner.com/general/company-and-policy/data-protection-at-hetzner/) |
 | Export | Everything is ours: `pg_dump`, files on disk | — |
 | Auth | Our own (OAuth server, sessions, email): the most security-sensitive code, written and run by us | — |
 | Ops for one person | High: OS updates, TLS, firewall, backups off the box, monitoring, incident response | — |
@@ -119,13 +119,15 @@ Plus: the API could share the Rust report types with the desktop app. Minus: one
 
 Fly.io was also checked and dropped: no free plan for new organisations (trial of 2 hours or 7 days), card required, from $2.28/month in Amsterdam ([pricing](https://fly.io/pricing)).
 
+Also checked by the second source (below) and dropped: Render (the free Postgres expires after 30 days), Railway (after the trial, $1 of credit a month), Netlify (choosing a Functions region needs Pro) and Turso (DPA from the Scaler plan up).
+
 ## Comparison
 
 | | A. Supabase | B. Vercel + Neon + R2 | C. Cloudflare | D. Hetzner VPS |
 |---|---|---|---|---|
 | Cost at start | €0 | €0, but no commercial use | €0 | ~€6/month |
 | First paid step | $25/month | $20/month (Vercel Pro) + Neon usage | $5/month | same VPS |
-| Free-plan risk | Pauses after 1 week idle; no backups | Hard caps; no commercial use | Daily caps | — |
+| Free-plan risk | Pauses after 1 week idle; no backups | Hard caps; no commercial use | Daily caps; 500 MB per D1 database | — |
 | EU data | Frankfurt | Frankfurt (Neon), Vercel region **unverified** | EU jurisdiction | Germany, Finland |
 | DPA on the plan we would use | Yes | No on Hobby | Yes | Yes (**unverified**) |
 | Processors (with an email provider) | 3 (Supabase, Cloudflare Pages, email) | 4 | 2 | 2 |
@@ -150,6 +152,10 @@ If the pause or the $25 step become a problem, move to plan B.
 B is discarded (no commercial use and no DPA on Hobby), and D is kept only as the exit path: if Supabase stops fitting, self-host Supabase or plain Postgres on a VPS.
 
 Email for magic links needs an email provider in A and C (another processor, with its own DPA); choosing it is part of T-104. Supabase's built-in email is only for testing (**unverified** limit).
+
+## Second source
+
+ChatGPT (Codex CLI with web search, 2026-10-09) answered the same questions independently. It agrees on the Supabase, Neon, Vercel and Cloudflare limits above, on Vercel's DPA covering only Pro and Enterprise, and on the Blizzard terms (no paid premium features, 30-day TTL). It added the facts now cited above (Supabase restrictions, D1's 500 MB per database, R2's EU jurisdiction, Hetzner's June 2026 price); each was re-read on the provider's page before going in, except where marked **unverified**. Its answer is not stored in the repo.
 
 ## Upload design
 
