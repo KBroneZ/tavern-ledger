@@ -8,7 +8,7 @@ Date: 2026-10-09. Sources: the 100 most-starred results of the GitHub search "he
 - **The two things nobody gets from the log alone:** the exact lobby tribes at hero select and the opponents' names (and so their MMR). Tools that show them read memory (bgtracker's optional reader, HDT plugins) or the game's network traffic (HS Reconnect). The rest show "inferred", let the user pick, or say nothing. This matches our findings (D-011, [parser-hslog.md](parser-hslog.md)).
 - **Closest peers to us:** `AlexanderKempes/openbg` (Rust, `Power.log` only, MIT, egui transparent Win32 overlay) and `jmarlett93/battlegrounds-companion` (Rust workspace, `Power.log` only, SQLite, Linux overlay; no licence). The only Tauri app found, BgBuddy, is closed source and needs a "helper DLL".
 - **Storage:** local-first everywhere (JSONL, SQLite, CSV). Servers appear only for leaderboard sites and bots (Supabase + Next.js, DynamoDB, MySQL).
-- **Risky category to stay away from:** "reconnect" or "unplug" tools that cut the game's connection to skip combat animations (xinyao27's tool, HsReconnector, HS Reconnect for macOS). HDT marks reconnected games as unreliable. Out of scope for us (D-004).
+- **Risky category to stay away from:** "reconnect" or "unplug" tools that cut the game's connection to skip combat animations (xinyao27's tool, HsReconnector, HS Reconnect for macOS). HDT marks reconnected games as unreliable. Out of the product (D-004); allowed only as a dev tool that never ships (D-022).
 
 ## Projects
 
@@ -67,12 +67,14 @@ Common design: board model → combat engine → many random trials → distribu
 
 ## Ideas worth considering for Tavern Ledger
 
+The useful ones are now tasks in the plan (T-106 to T-110, T-303, T-D01, T-D02) or listed under its "Future ideas". How-to details: [implementation-notes.md](implementation-notes.md).
+
 1. **Check `client.config` `FileSizeLimit.Int=-1`** in `check_logs.py` and the app, and say so when it's missing (a game cut at 10 MB would otherwise look `incomplete`). Small, high value.
 2. **Read `LoadingScreen.log`** to know when the player leaves a game, if we ever need it faster than `STATE=COMPLETE`.
 3. **Store the parser version and game build** with each saved game, so a parser fix can say which games to re-read.
 4. **Label where each value comes from**: from the log, inferred, entered by you, from the leaderboard, unknown (we already do this for MMR and tribes).
 5. **Uploads opt-in, never on by default** (bgtracker turned community sharing on by default; HS Reconnect added telemetry later). Matches rule 6.
 6. **Overlay (F3):** openbg's notes match our spike: a click-through window needs windowed or borderless fullscreen.
-7. **Do not:** reconnect/unplug features, memory readers, bundling HearthstoneJSON data or Firestone stats without permission.
+7. **Do not:** reconnect/unplug features in the product (dev tool only, D-022), memory readers, bundling HearthstoneJSON data or Firestone stats without permission.
 
 ChatGPT's raw answer is kept locally in `.local/handoffs/github-landscape-answer.md` (not in git). Claims used here were checked against the repos' READMEs and the GitHub API; one conflict was resolved (bgtracker's licence file is MIT with exclusions for art and data, though GitHub shows "NOASSERTION").
