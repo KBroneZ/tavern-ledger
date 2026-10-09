@@ -16,7 +16,7 @@ A prototype client looks up your own row in the public leaderboard with a local 
 
 Desktop stack (T-005): the comparison recommends Tauri 2. A minimal Tauri overlay (transparent, always on top, clicks pass through) works on Windows 11, also over the game in borderless fullscreen. Decision: Tauri 2 (D-014). Findings: [docs/research/stack-escritorio.md](docs/research/stack-escritorio.md).
 
-Next tasks: T-101 (desktop app: follow `Power.log`, store games locally) and T-002 (more Solo games and trimmed fixtures).
+Next tasks: T-101 (desktop app: follow `Power.log`, store games locally; only a live test during a real game is left) and T-002 (more Solo games and trimmed fixtures).
 
 ## Check your log setup
 
@@ -55,7 +55,10 @@ Rust workspace (Tauri 2, D-014). `tavern-watch` follows the game's `Power.log`
 and saves each Battlegrounds game to `%APPDATA%\TavernLedger\games.jsonl` as
 soon as it ends; the desktop app does the same in the background and shows
 the history. Both only read the log files. The history holds card ids,
-places and boards, never player names.
+places and boards, never player names. Hero names come from the log itself,
+in your game's language; a hero the log does not name shows its card id.
+Only one of them can write the history at a time: a second copy says so and
+does not write.
 
 ```
 cargo run --release -p tracker -- --import    # follow live, after importing older sessions

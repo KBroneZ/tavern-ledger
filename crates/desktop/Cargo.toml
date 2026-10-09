@@ -2,6 +2,7 @@
 name = "desktop"
 version = "0.1.0"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 description = "Tavern Ledger desktop app (Tauri)"

@@ -14,6 +14,7 @@ use std::thread::sleep;
 use std::time::Duration;
 
 use tracker::discover::{find_logs_dir, is_session_name};
+use tracker::lock::{HistoryLock, LockError};
 use tracker::store::Store;
 use tracker::{import_session, Saved, Watcher};
 
@@ -64,7 +65,10 @@ fn describe(saved: &Saved) -> String {
         saved.key.session,
         saved.key.index,
         status.unwrap_or_default(),
-        r.hero.as_deref().unwrap_or("unknown hero"),
+        r.hero
+            .as_deref()
+            .map(|id| r.card_names.get(id).map_or(id, String::as_str))
+            .unwrap_or("unknown hero"),
         place,
         r.rounds.len()
     )
@@ -92,6 +96,12 @@ fn run(args: Args) -> Result<(), String> {
         .or_else(find_logs_dir)
         .ok_or("Hearthstone's Logs folder not found; pass --logs-dir")?;
     let data_dir = args.data_dir.unwrap_or_else(tracker::store::default_dir);
+    // Held until the end of run: one writer for the history at a time.
+    let _lock = HistoryLock::acquire(&data_dir).map_err(|e| match e {
+        LockError::Busy => "The history is in use by another Tavern Ledger process (the app or another tavern-watch). Close it first."
+            .to_string(),
+        e => e.to_string(),
+    })?;
     let mut store = Store::open(&data_dir).map_err(|e| format!("cannot open the history: {e}"))?;
     if store.unreadable_lines > 0 {
         println!(

@@ -181,6 +181,71 @@ pub fn parse_entity(raw: &str) -> EntityRef {
     EntityRef::Name(raw.to_string())
 }
 
+const NAME_KEY: &str = "[entityName=";
+const UNKNOWN_ENTITY: &str = "UNKNOWN ENTITY";
+/// How far past "[entityName=" the " id=N zone=" may be (longer names are
+/// not card names), and how far past it the closing "]" may be. Bounding
+/// both keeps a long line of broken references linear.
+const NAME_WINDOW: usize = 512;
+const BRACKET_WINDOW: usize = 256;
+const MAX_CARD_ID: usize = 64;
+
+/// Card names the log prints inside "[entityName=NAME id=N zone=... cardId=ID ...]",
+/// as (card id, name). These are in the game client's language. The card id
+/// is only read inside the same brackets. Entities without a card id
+/// (players, whose name is the BattleTag), names that look like a BattleTag
+/// and hidden cards ("UNKNOWN ENTITY") give nothing.
+pub fn card_names(body: &str) -> Vec<(&str, &str)> {
+    let mut out = Vec::new();
+    let mut rest = body;
+    while let Some(start) = rest.find(NAME_KEY) {
+        rest = &rest[start + NAME_KEY.len()..];
+        let Some(name_end) = name_end(rest) else {
+            continue;
+        };
+        let name = &rest[..name_end];
+        rest = &rest[name_end..];
+        let Some(close) = rest.bytes().take(BRACKET_WINDOW).position(|b| b == b']') else {
+            continue;
+        };
+        let card = rest[..close]
+            .split(' ')
+            .find_map(|field| field.strip_prefix("cardId="))
+            .unwrap_or("");
+        if is_card_id(card) && is_card_name(name) {
+            out.push((card, name));
+        }
+        rest = &rest[close..];
+    }
+    out
+}
+
+/// Where the name ends: the first " id=<digits> zone=", as hslog's lazy regex.
+fn name_end(text: &str) -> Option<usize> {
+    text.match_indices(" id=")
+        .map(|(pos, _)| pos)
+        .take_while(|&pos| pos <= NAME_WINDOW)
+        .find(|&pos| {
+            let tail = &text[pos + " id=".len()..];
+            let digits = tail.bytes().take_while(u8::is_ascii_digit).count();
+            digits > 0 && tail[digits..].starts_with(" zone=")
+        })
+}
+
+fn is_card_id(id: &str) -> bool {
+    !id.is_empty()
+        && id.len() <= MAX_CARD_ID
+        && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_')
+}
+
+/// "Name#1234" is a BattleTag, never a card name.
+fn is_card_name(name: &str) -> bool {
+    let looks_like_battletag = name
+        .rsplit_once('#')
+        .is_some_and(|(_, tail)| !tail.is_empty() && tail.bytes().all(|b| b.is_ascii_digit()));
+    !name.is_empty() && !name.starts_with(UNKNOWN_ENTITY) && !looks_like_battletag
+}
+
 fn int_after(body: &str, key: &str) -> Option<i64> {
     let start = body.find(key)? + key.len();
     let digits: String = body[start..]
@@ -269,6 +334,68 @@ mod tests {
             classify("D 1 PowerTaskList.DebugPrintPower() - CREATE_GAME"),
             Line::Other
         );
+    }
+
+    #[test]
+    fn names_cards_from_bracketed_entities() {
+        let body = "TAG_CHANGE Entity=[entityName=Lord Jaraxxus id=10 zone=PLAY zonePos=0 \
+            cardId=TB_BaconShop_HERO_37 player=2] tag=ZONE value=PLAY";
+        assert_eq!(
+            card_names(body),
+            vec![("TB_BaconShop_HERO_37", "Lord Jaraxxus")]
+        );
+        // hslog's name match is lazy up to " id=N zone=": a name may hold " id=".
+        let body = "Info[0] = [entityName=Some id=7 Minion id=103 zone=HAND zonePos=1 \
+            cardId=X player=7]";
+        assert_eq!(card_names(body), vec![("X", "Some id=7 Minion")]);
+    }
+
+    #[test]
+    fn players_and_unknown_entities_have_no_card_name() {
+        assert!(card_names(
+            "TAG_CHANGE Entity=[entityName=Someone#1234 id=2 zone=PLAY zonePos=0 cardId= player=2] tag=A value=1"
+        )
+        .is_empty());
+        assert!(card_names(
+            "TAG_CHANGE Entity=[entityName=UNKNOWN ENTITY [cardType=INVALID] id=9 zone=HAND zonePos=0 cardId=X player=2] tag=A value=1"
+        )
+        .is_empty());
+        assert!(card_names("TAG_CHANGE Entity=Someone#1234 tag=A value=1").is_empty());
+        assert!(card_names("TAG_CHANGE Entity=[entityName=Cut").is_empty());
+    }
+
+    #[test]
+    fn a_card_id_is_never_taken_from_another_entity() {
+        // A player bracket without cardId, then a hero on the same line.
+        let body = "BLOCK_START BlockType=ATTACK Entity=[entityName=Someone#1234 id=2 zone=PLAY \
+            zonePos=0 player=2] Target=[entityName=Hero id=10 zone=PLAY zonePos=0 \
+            cardId=TB_BaconShop_HERO_37 player=2]";
+        assert_eq!(card_names(body), vec![("TB_BaconShop_HERO_37", "Hero")]);
+    }
+
+    #[test]
+    fn battletag_like_names_and_odd_card_ids_are_dropped() {
+        assert!(card_names(
+            "Info[0] = [entityName=Someone#1234 id=2 zone=PLAY zonePos=0 cardId=TB_BaconShop_HERO_1 player=2]"
+        )
+        .is_empty());
+        assert!(card_names(
+            "Info[0] = [entityName=Hero id=2 zone=PLAY zonePos=0 cardId=BAD<id> player=2]"
+        )
+        .is_empty());
+        let long = format!(
+            "Info[0] = [entityName=Hero id=2 zone=PLAY zonePos=0 cardId={} player=2]",
+            "A".repeat(65)
+        );
+        assert!(card_names(&long).is_empty());
+    }
+
+    #[test]
+    fn a_huge_line_of_broken_references_is_linear() {
+        let line = "[entityName=A id=1 zone=X ".repeat(40_000);
+        let start = std::time::Instant::now();
+        assert!(card_names(&line).is_empty());
+        assert!(start.elapsed() < std::time::Duration::from_secs(1));
     }
 
     #[test]

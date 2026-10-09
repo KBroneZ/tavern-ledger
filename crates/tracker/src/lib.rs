@@ -3,6 +3,7 @@
 //! log files (D-004).
 
 pub mod discover;
+pub mod lock;
 pub mod store;
 pub mod tail;
 

@@ -3,6 +3,8 @@
 //!
 //! Privacy: only card ids and lobby player ids (1-8), never names or accounts.
 
+use std::collections::BTreeMap;
+
 use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 
@@ -90,6 +92,9 @@ pub struct GameReport {
     pub hero: Option<String>,
     pub teammate_player_id: Option<i64>,
     pub teammate_hero: Option<String>,
+    /// Card id -> name, for the heroes in this report whose name the log
+    /// prints (in the game client's language). Not in the Python prototype.
+    pub card_names: BTreeMap<String, String>,
     pub final_place: Option<i64>,
     pub final_health: Option<i64>,
     pub lobby: Vec<LobbyPlayer>,
@@ -118,6 +123,7 @@ impl GameReport {
             hero: None,
             teammate_player_id: None,
             teammate_hero: None,
+            card_names: BTreeMap::new(),
             final_place: None,
             final_health: None,
             lobby: Vec::new(),

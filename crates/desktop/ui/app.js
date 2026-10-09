@@ -43,6 +43,17 @@ function placeBadge(place, gameType) {
 // The history is a local file; tolerate hand-edited or older records.
 const list = (value) => (Array.isArray(value) ? value : []);
 
+// Hero name as the game's log printed it (in the game's language); the card
+// id when the log gave none. Never a guessed name.
+function heroCell(report) {
+  const id = typeof report.hero === "string" ? report.hero : null;
+  const names = report.card_names && typeof report.card_names === "object" ? report.card_names : {};
+  const name = id && typeof names[id] === "string" ? names[id] : null;
+  const cell = el("td", "hero", name || id || "—");
+  if (name) cell.title = id;
+  return cell;
+}
+
 function note(report) {
   if (report.status === "incomplete") return "Game not finished in the log";
   if (report.status === "unsupported") return "Could not be read: " + list(report.problems).join("; ");
@@ -55,7 +66,7 @@ function row(game) {
   tr.append(
     el("td", null, played(game.session, game.index)),
     el("td", null, MODES[r.game_type] || r.game_type || "—"),
-    el("td", "hero", r.hero || "—"),
+    heroCell(r),
   );
   const placeCell = el("td", "num");
   placeCell.append(placeBadge(r.final_place, r.game_type));

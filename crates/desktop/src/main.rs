@@ -10,6 +10,7 @@ use std::time::Duration;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, State};
 use tracker::discover::find_logs_dir;
+use tracker::lock::{HistoryLock, LockError};
 use tracker::store::Store;
 use tracker::Watcher;
 
@@ -93,13 +94,30 @@ fn problem(app: &AppHandle, state: &AppState, message: String) {
     set_status(app, state, |s| s.problem = Some(message));
 }
 
+/// Another Tavern Ledger (or tavern-watch) is already following the log: show
+/// the history without writing to it, and say why nothing new appears.
+fn show_read_only(app: &AppHandle, state: &AppState, data_dir: &std::path::Path) {
+    if let Ok(store) = Store::open(data_dir) {
+        publish_games(app, state, &store);
+    }
+    let msg = "Tavern Ledger is already running (or tavern-watch is). This window only shows the history; use the other one to follow your games.";
+    problem(app, state, msg.into());
+}
+
 /// Opens the history and follows the log until the app quits.
 fn run_tracker(app: AppHandle, state: Arc<AppState>) {
     let Some(logs_dir) = find_logs_dir() else {
         let msg = "Hearthstone's Logs folder was not found. Is the game installed?";
         return problem(&app, &state, msg.into());
     };
-    let store = match Store::open(&tracker::store::default_dir()) {
+    let data_dir = tracker::store::default_dir();
+    // Held while this thread runs: only one process writes the history.
+    let _lock = match HistoryLock::acquire(&data_dir) {
+        Ok(lock) => lock,
+        Err(LockError::Busy) => return show_read_only(&app, &state, &data_dir),
+        Err(e) => return problem(&app, &state, format!("Cannot use the game history: {e}.")),
+    };
+    let store = match Store::open(&data_dir) {
         Ok(store) => store,
         Err(e) => {
             return problem(

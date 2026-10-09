@@ -47,6 +47,8 @@ def compare(path: Path) -> bool:
     python = json.loads(json.dumps([parse_bg.to_dict(r) for r in parse_bg.parse_file(path)]))
     proc = subprocess.run([str(RUST), str(path), "--json"], capture_output=True, timeout=1800)
     rust = json.loads(proc.stdout)["games"]
+    for game in rust:
+        game.pop("card_names", None)  # Rust-only: hero names read from the log
     print(f"{path.parent.name}/{path.name}: {len(python)} games (Python), {len(rust)} (Rust)")
     ok = len(python) == len(rust)
     for py, rs in zip(python, rust):
