@@ -46,6 +46,7 @@ test("every page has the CSP as its first meta after the charset", () => {
     assert.match(csp, CONFIG ? /script-src 'self'(;|$)/ : /script-src 'none'(;|$)/, name(page));
     assert.match(csp, CONFIG ? /form-action 'self'(;|$)/ : /form-action 'none'(;|$)/, name(page));
     assert.match(csp, /style-src 'self'(;|$)/, name(page));
+    assert.match(csp, /font-src 'self'(;|$)/, name(page));
     if (CONFIG) assert.match(csp, /connect-src https?:\/\/[^\s;*]+(;|$)/, name(page));
     else assert.match(csp, /connect-src 'none'(;|$)/, name(page));
     assert.doesNotMatch(csp, /unsafe|\*/, name(page));
@@ -159,4 +160,44 @@ test("only the public key is in the files", () => {
     assert.doesNotMatch(text, /sb_secret_[A-Za-z0-9]/, name(file));
     for (const role of jwtRoles(text)) assert.equal(role, "anon", name(file));
   }
+});
+
+test("fonts and styles are our own files: every url() is a local font, none is external", () => {
+  const css = ALL.filter((f) => f.endsWith(".css"));
+  assert.ok(css.length > 0, "no stylesheet in dist");
+  const declared = css.flatMap((f) => [...readFileSync(f, "utf8").matchAll(/url\(/g)]);
+  assert.ok(declared.length >= 4, "the four font files are declared");
+  for (const file of css) {
+    const text = readFileSync(file, "utf8");
+    assert.doesNotMatch(text, /@import|https?:\/\//i, name(file));
+    const urls = [...text.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)].map((m) => m[1]);
+
+    for (const url of urls) {
+      assert.match(url, /^\/fonts\/[a-z0-9-]+\.woff2$/, url);
+      assert.ok(existsSync(join(DIST, url)), url);
+    }
+  }
+});
+
+test("the OFL text ships next to the fonts", () => {
+  for (const licence of ["fonts/OFL-Unbounded.txt", "fonts/OFL-DM-Mono.txt"]) {
+    assert.match(readFileSync(join(DIST, licence), "utf8"), /SIL OPEN FONT LICENSE Version 1\.1/i, licence);
+  }
+});
+
+test("no tag loads anything from another site", () => {
+  for (const page of PAGES) {
+    const html = readFileSync(page, "utf8");
+    for (const tag of html.matchAll(/<(?:link|script|img|source|iframe|video|audio)\b[^>]*\s(?:src|href)="(?:https?:)?\/\/[^"]*"[^>]*>/g)) {
+      if (/rel="canonical"/.test(tag[0])) continue;
+      assert.fail(`${name(page)}: ${tag[0]}`);
+    }
+  }
+});
+
+test("the home page has the example game card, labelled as an example", () => {
+  const html = readFileSync(join(DIST, "index.html"), "utf8");
+  assert.match(html, /class="live"/);
+  assert.match(html, /Example game/);
+  assert.match(html, /made-up numbers/);
 });
