@@ -118,7 +118,8 @@ test("accounts open: the account pages have their forms and scripts", { skip: !C
   if (SIGNUPS) {
     assert.match(signin, /id="signup-form"/);
   } else {
-    // Sign-ups closed (the hosted default): sign-in only, no way to create an account.
+    // Sign-ups closed (the hosted default): sign-in stays, no sign-up form is rendered.
+    // The real gate is the hosted project's disable_signup (deploy.md, section 10.9).
     assert.doesNotMatch(signin, /id="signup-form"|autocomplete="new-password"/);
     assert.match(signin, /Sign-up is not open yet/);
     assert.match(signin, /id="signin-form"/);
