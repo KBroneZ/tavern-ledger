@@ -3,7 +3,8 @@
 //   1. the user's files in the `games` bucket, through the Storage API
 //      (deleting storage.objects rows in SQL would leave the bytes behind);
 //   2. their rows: public.delete_user_data() refuses while files remain;
-//   3. the auth user (identities, sessions and refresh tokens go with it).
+//   3. the auth user (identities, sessions and refresh tokens go with it);
+//   4. the audit entry step 3 writes (it holds the email).
 // Every step can be repeated, so a failure halfway is fixed by calling again.
 // No dependencies: plain fetch against the project's own HTTP APIs.
 
@@ -66,6 +67,12 @@ async function call(
   return res;
 }
 
+/** Like call(), for answers whose body is not needed. */
+async function send(fetchFn: Fetch, step: string, url: string, init: RequestInit) {
+  const res = await call(fetchFn, step, url, init);
+  await res.body?.cancel();
+}
+
 /** Id of the user the access token belongs to, or null if it is not valid. */
 async function currentUserId(
   env: Env,
@@ -114,7 +121,7 @@ async function deleteFiles(env: Env, fetchFn: Fetch, userId: string): Promise<nu
     const names = await fileNames(env, fetchFn, userId);
     if (names.length === 0) return deleted;
     const batch = names.slice(0, FILE_BATCH);
-    await call(fetchFn, "delete files", `${env.url}/storage/v1/object/games`, {
+    await send(fetchFn, "delete files", `${env.url}/storage/v1/object/games`, {
       method: "DELETE",
       headers: serviceHeaders(env),
       body: JSON.stringify({ prefixes: batch }),
@@ -144,11 +151,19 @@ export async function handle(req: Request, env: Env, fetchFn: Fetch = fetch): Pr
       body: JSON.stringify({ target: userId }),
     });
     const rows = await rowsRes.json();
-    await call(fetchFn, "delete auth user", `${env.url}/auth/v1/admin/users/${userId}`, {
+    await send(fetchFn, "delete auth user", `${env.url}/auth/v1/admin/users/${userId}`, {
       method: "DELETE",
       headers: serviceHeaders(env),
     });
-    return json(200, { deleted: { files, ...rows, account: 1 } });
+    const eventsRes = await call(
+      fetchFn,
+      "delete auth events",
+      `${env.url}/rest/v1/rpc/delete_user_auth_events`,
+      { method: "POST", headers: serviceHeaders(env), body: JSON.stringify({ target: userId }) },
+    );
+    const lateEvents = await eventsRes.json();
+    const authEvents = Number(rows?.auth_events ?? 0) + Number(lateEvents ?? 0);
+    return json(200, { deleted: { files, ...rows, auth_events: authEvents, account: 1 } });
   } catch (e) {
     if (e instanceof StepError) {
       // Step and status only: no token, id or email in the logs.

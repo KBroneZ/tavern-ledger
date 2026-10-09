@@ -2,15 +2,17 @@
 --
 -- Export: public.export_my_data() returns, as one JSON document, everything
 -- this project holds about the signed-in user: the auth account (without
--- password hash or tokens), sign-in identities, sessions, auth audit entries,
+-- password hash or tokens), sign-in identities, sessions, second factors
+-- (metadata only), auth audit entries,
 -- the profile, every game row and the list of their files. The website zips
 -- it with the files themselves (T-104c), which the user can already read.
 --
 -- Deletion: the delete-account Edge Function removes, in this order, the
 -- user's files (through the Storage API: deleting rows in storage.objects
 -- would leave the bytes behind), then calls public.delete_user_data() for the
--- rows, then deletes the auth user. Each step can be repeated if a later one
--- fails.
+-- rows, then deletes the auth user, then public.delete_user_auth_events() for
+-- the audit entry that deletion writes. Each step can be repeated if a later
+-- one fails.
 
 create function public.export_my_data()
 returns jsonb
@@ -64,13 +66,25 @@ begin
       ) order by s.created_at)
       from auth.sessions s where s.user_id = uid
     ), '[]'::jsonb),
+    -- Second factors (metadata only; secrets stay out).
+    'mfa_factors', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'factor_type', f.factor_type,
+        'friendly_name', f.friendly_name,
+        'status', f.status,
+        'created_at', f.created_at,
+        'updated_at', f.updated_at
+      ) order by f.created_at)
+      from auth.mfa_factors f where f.user_id = uid
+    ), '[]'::jsonb),
     'auth_events', coalesce((
       select jsonb_agg(jsonb_build_object(
         'created_at', a.created_at,
         'ip_address', a.ip_address,
         'payload', a.payload
       ) order by a.created_at)
-      from auth.audit_log_entries a where a.payload ->> 'actor_id' = uid::text
+      from auth.audit_log_entries a where (a.payload ->> 'actor_id' = uid::text
+             or a.payload -> 'traits' ->> 'user_id' = uid::text)
     ), '[]'::jsonb),
     'profile', (
       select to_jsonb(p) from public.profiles p where p.user_id = uid
@@ -140,7 +154,9 @@ begin
   get diagnostics n_profiles = row_count;
   -- Auth audit entries have no foreign key to the user and would survive the
   -- auth user's deletion.
-  delete from auth.audit_log_entries where payload ->> 'actor_id' = target::text;
+  delete from auth.audit_log_entries
+  where payload ->> 'actor_id' = target::text
+     or payload -> 'traits' ->> 'user_id' = target::text;
   get diagnostics n_events = row_count;
 
   return jsonb_build_object(
@@ -151,3 +167,29 @@ $$;
 
 revoke all on function public.delete_user_data(uuid) from public, anon, authenticated;
 grant execute on function public.delete_user_data(uuid) to service_role;
+
+-- Last step of deletion, after the auth user is gone: deleting the auth user
+-- writes one more audit entry (user_deleted, with the email in its traits).
+create function public.delete_user_auth_events(target uuid)
+returns bigint
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  n bigint;
+begin
+  if exists (select 1 from auth.users where id = target) then
+    raise exception 'the auth user still exists; delete it first'
+      using errcode = '55000';
+  end if;
+  delete from auth.audit_log_entries
+  where payload ->> 'actor_id' = target::text
+     or payload -> 'traits' ->> 'user_id' = target::text;
+  get diagnostics n = row_count;
+  return n;
+end;
+$$;
+
+revoke all on function public.delete_user_auth_events(uuid) from public, anon, authenticated;
+grant execute on function public.delete_user_auth_events(uuid) to service_role;

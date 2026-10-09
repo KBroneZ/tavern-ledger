@@ -1,6 +1,8 @@
 <#
 .SYNOPSIS
 Weekly backup of the Supabase project until it moves to Pro (D-020, T-104a).
+Keep .localackups on an encrypted disk (BitLocker): data.sql holds every
+account's email and password hash.
 
 .DESCRIPTION
 Runs on the developer's own machine, never in CI (the repo is public).
@@ -20,6 +22,7 @@ Keys are only read into memory, never printed or written to the backup.
 pwsh tools\backup_supabase.ps1
 pwsh tools\backup_supabase.ps1 -Local
 #>
+#Requires -Version 7
 [CmdletBinding()]
 param(
     [switch]$Local,
@@ -88,7 +91,9 @@ function Get-ObjectNames($conn, [string]$prefix) {
         $page = @($res.Content | ConvertFrom-Json)
         foreach ($entry in $page) {
             $full = if ($prefix) { "$prefix/$($entry.name)" } else { $entry.name }
-            if ($null -eq $entry.id) { $names.AddRange([string[]](Get-ObjectNames $conn $full)) }
+            if ($null -eq $entry.id) {
+                foreach ($n in (Get-ObjectNames $conn $full)) { $names.Add($n) }
+            }
             else { $names.Add($full) }
         }
         $offset += $page.Count
@@ -96,51 +101,70 @@ function Get-ObjectNames($conn, [string]$prefix) {
     return $names
 }
 
+function Remove-OldBackups {
+    $cutoff = (Get-Date).ToUniversalTime().AddDays(-$KeepDays)
+    Get-ChildItem $backupRoot -Directory -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.Name -match '^\d{8}-\d{6}$' -and
+            [datetime]::ParseExact($_.Name, 'yyyyMMdd-HHmmss', $null) -lt $cutoff
+        } |
+        ForEach-Object {
+            Write-Host "Deleting backup older than $KeepDays days: $($_.Name)"
+            Remove-Item -Recurse -Force -Confirm:$false $_.FullName
+        }
+}
+
+# Old backups go first, so a failing backup never keeps deleted users' data
+# past -KeepDays.
+Remove-OldBackups
+
 $conn = Get-Connection
 $stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss')
 $dir = Join-Path $backupRoot $stamp
 New-Item -ItemType Directory -Force $dir | Out-Null
-Write-Host "Backup to .local\backups\$stamp"
+try {
+    # Only the current user may read the backup (it holds every account's data).
+    & icacls $dir /inheritance:r /grant:r "$($env:USERNAME):(OI)(CI)F" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Could not restrict access to the backup folder.' }
+    Write-Host "Backup to .local\backups\$stamp"
 
-Write-Host 'Database...'
-Invoke-Dump (Join-Path $dir 'roles.sql') @('--role-only')
-Invoke-Dump (Join-Path $dir 'schema.sql') @()
-Invoke-Dump (Join-Path $dir 'data.sql') @('--data-only', '--use-copy')
+    Write-Host 'Database...'
+    Invoke-Dump (Join-Path $dir 'roles.sql') @('--role-only')
+    Invoke-Dump (Join-Path $dir 'schema.sql') @()
+    # Live sign-in secrets are left out: a restore signs everyone out, which is
+    # safer than keeping usable refresh tokens on disk.
+    Invoke-Dump (Join-Path $dir 'data.sql') @('--data-only', '--use-copy',
+        '-x', 'auth.refresh_tokens', '-x', 'auth.sessions', '-x', 'auth.one_time_tokens',
+        '-x', 'auth.flow_state')
 
-Write-Host "Bucket '$bucket'..."
-$storageDir = Join-Path $dir "storage\$bucket"
-$manifest = [System.Collections.Generic.List[object]]::new()
-foreach ($name in (Get-ObjectNames $conn '')) {
-    # Names come from the server: refuse anything that could leave the folder.
-    if ($name -notmatch '^[0-9a-f-]{36}/[A-Za-z0-9_.-]+$' -or $name.Contains('..')) {
-        throw "Unexpected object name in the bucket; stopping."
+    Write-Host "Bucket '$bucket'..."
+    $storageDir = Join-Path $dir "storage\$bucket"
+    $manifest = [System.Collections.Generic.List[object]]::new()
+    foreach ($name in (Get-ObjectNames $conn '')) {
+        # Names come from the server: refuse anything that could leave the folder.
+        if ($name -notmatch '^[0-9a-f-]{36}/[A-Za-z0-9_.-]+$' -or $name.Contains('..')) {
+            throw "Unexpected object name in the bucket; stopping."
+        }
+        $out = Join-Path $storageDir ($name -replace '/', '\')
+        New-Item -ItemType Directory -Force (Split-Path -Parent $out) | Out-Null
+        $escaped = ($name -split '/' | ForEach-Object { [uri]::EscapeDataString($_) }) -join '/'
+        Invoke-WebRequest -Uri "$($conn.Url)/storage/v1/object/$bucket/$escaped" `
+            -Headers (Get-Headers $conn) -OutFile $out -TimeoutSec $timeoutSec | Out-Null
+        $manifest.Add([ordered]@{
+            name   = $name
+            bytes  = (Get-Item $out).Length
+            sha256 = (Get-FileHash -Algorithm SHA256 $out).Hash.ToLowerInvariant()
+        })
     }
-    $out = Join-Path $storageDir ($name -replace '/', '\')
-    New-Item -ItemType Directory -Force (Split-Path -Parent $out) | Out-Null
-    $escaped = ($name -split '/' | ForEach-Object { [uri]::EscapeDataString($_) }) -join '/'
-    Invoke-WebRequest -Uri "$($conn.Url)/storage/v1/object/$bucket/$escaped" `
-        -Headers (Get-Headers $conn) -OutFile $out -TimeoutSec $timeoutSec | Out-Null
-    $manifest.Add([ordered]@{
-        name   = $name
-        bytes  = (Get-Item $out).Length
-        sha256 = (Get-FileHash -Algorithm SHA256 $out).Hash.ToLowerInvariant()
-    })
+    [ordered]@{
+        created_utc = $stamp
+        source      = if ($Local) { 'local' } else { 'linked' }
+        files       = $manifest
+    } | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 (Join-Path $dir 'manifest.json')
+    Write-Host "  $($manifest.Count) files"
+} catch {
+    # A half-written backup is worse than none: it looks complete.
+    Remove-Item -Recurse -Force -Confirm:$false $dir -ErrorAction SilentlyContinue
+    throw
 }
-[ordered]@{
-    created_utc = $stamp
-    source      = if ($Local) { 'local' } else { 'linked' }
-    files       = $manifest
-} | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 (Join-Path $dir 'manifest.json')
-Write-Host "  $($manifest.Count) files"
-
-$cutoff = (Get-Date).ToUniversalTime().AddDays(-$KeepDays)
-Get-ChildItem $backupRoot -Directory |
-    Where-Object {
-        $_.Name -match '^\d{8}-\d{6}$' -and
-        [datetime]::ParseExact($_.Name, 'yyyyMMdd-HHmmss', $null) -lt $cutoff
-    } |
-    ForEach-Object {
-        Write-Host "Deleting backup older than $KeepDays days: $($_.Name)"
-        Remove-Item -Recurse -Force -Confirm:$false $_.FullName
-    }
 Write-Host 'Done.'

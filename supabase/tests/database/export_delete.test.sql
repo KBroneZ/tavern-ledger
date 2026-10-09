@@ -13,6 +13,8 @@ values ('00000000-0000-4000-8000-00000000000a', '00000000-0000-4000-8000-0000000
         '{"sub": "00000000-0000-4000-8000-00000000000a", "email": "a@example.test"}', 'email');
 insert into auth.audit_log_entries (id, payload)
 values (gen_random_uuid(), '{"action": "login", "actor_id": "00000000-0000-4000-8000-00000000000a"}'),
+       (gen_random_uuid(), '{"action": "user_modified", "actor_id": "00000000-0000-4000-8000-0000000000ad",
+          "traits": {"user_id": "00000000-0000-4000-8000-00000000000a"}}'),
        (gen_random_uuid(), '{"action": "login", "actor_id": "00000000-0000-4000-8000-00000000000b"}');
 
 insert into public.games (user_id, session, game_index, game_type, status, hero_card_id,
@@ -37,7 +39,7 @@ select is((select doc -> 'account' ->> 'email' from export_a), 'a@example.test',
   'export has the account email');
 select is((select jsonb_array_length(doc -> 'identities') from export_a), 1,
   'export has the sign-in identities');
-select is((select jsonb_array_length(doc -> 'auth_events') from export_a), 1,
+select is((select jsonb_array_length(doc -> 'auth_events') from export_a), 2,
   'export has the user''s auth events and no one else''s');
 select is((select doc -> 'profile' ->> 'user_id' from export_a),
   '00000000-0000-4000-8000-00000000000a', 'export has the profile');
@@ -78,7 +80,7 @@ where name like '00000000-0000-4000-8000-00000000000a/%';
 set local role service_role;
 select is(
   public.delete_user_data('00000000-0000-4000-8000-00000000000a'),
-  '{"games": 2, "profiles": 1, "auth_events": 1}'::jsonb,
+  '{"games": 2, "profiles": 1, "auth_events": 2}'::jsonb,
   'delete_user_data removes the games, the profile and the auth events'
 );
 reset role;
@@ -87,7 +89,7 @@ select results_eq(
   $$ select (select count(*) from public.games where user_id = '00000000-0000-4000-8000-00000000000a')
           + (select count(*) from public.profiles where user_id = '00000000-0000-4000-8000-00000000000a')
           + (select count(*) from auth.audit_log_entries
-             where payload ->> 'actor_id' = '00000000-0000-4000-8000-00000000000a')
+             where payload::text like '%00000000-0000-4000-8000-00000000000a%')
           + (select count(*) from public.games where user_id = '00000000-0000-4000-8000-00000000000b') $$,
   $$ values (2::bigint) $$,
   'nothing of A remains in the rows, and B''s games are untouched'

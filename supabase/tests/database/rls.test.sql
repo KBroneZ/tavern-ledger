@@ -2,7 +2,7 @@
 -- Users are made up; everything rolls back at the end.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(32);
+select plan(38);
 
 -- Two users. The trigger gives each a private profile.
 insert into auth.users (id, email) values
@@ -46,6 +46,11 @@ select throws_ok(
   '23514', null, 'a BattleTag-shaped display name is rejected'
 );
 select throws_ok(
+  $$ update public.profiles set display_name = 'Name＃1234'
+     where user_id = '00000000-0000-4000-8000-00000000000a' $$,
+  '23514', null, 'a look-alike of # is rejected too'
+);
+select throws_ok(
   $$ update public.profiles set display_name = repeat('x', 33)
      where user_id = '00000000-0000-4000-8000-00000000000a' $$,
   '23514', null, 'display names are capped at 32 characters'
@@ -62,6 +67,19 @@ select throws_ok(
   $$ update public.games set tribes_offered = '{"BEAST": -1}' $$,
   '23514', null, 'tribe counts cannot be negative'
 );
+select throws_ok($$ update public.games set tribes_offered = '[]' $$,
+  '23514', null, 'tribes offered must be an object');
+select throws_ok($$ update public.games set tribes_offered = '{"BEAST": "x"}' $$,
+  '23514', null, 'tribe counts must be numbers');
+select throws_ok($$ update public.games set tribes_offered = '{"BEAST": 1.5}' $$,
+  '23514', null, 'tribe counts must be whole');
+select throws_ok($$ update public.games set tribes_offered = '{"BEAST": 10001}' $$,
+  '23514', null, 'tribe counts are capped');
+select throws_ok(
+  $$ update public.games set tribes_offered =
+       (select jsonb_object_agg('T_' || chr(65 + i / 26) || chr(65 + i % 26), 1)
+        from generate_series(0, 32) as i) $$,
+  '23514', null, 'at most 32 tribes');
 select throws_ok(
   $$ update public.games set session = '../etc' $$,
   '23514', null, 'session must look like a log folder name'

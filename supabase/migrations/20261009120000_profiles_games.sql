@@ -26,17 +26,23 @@ language sql
 immutable
 set search_path = ''
 as $$
-  select jsonb_typeof(counts) = 'object'
-    and (select count(*) from jsonb_object_keys(counts)) <= 32
-    and not exists (
+  -- CASE, not AND/OR: Postgres does not promise to evaluate those in order,
+  -- and jsonb_each or a numeric cast on the wrong type would raise an error.
+  select case
+    when jsonb_typeof(counts) <> 'object' then false
+    when (select count(*) from jsonb_object_keys(counts)) > 32 then false
+    else not exists (
       select 1
       from jsonb_each(counts) as t(tribe, n)
-      where t.tribe !~ '^[A-Z_]{1,32}$'
-        or jsonb_typeof(t.n) <> 'number'
-        or (t.n)::numeric <> trunc((t.n)::numeric)
-        or (t.n)::numeric < 0
-        or (t.n)::numeric > 10000
-    );
+      where case
+        when t.tribe !~ '^[A-Z_]{1,32}$' then true
+        when jsonb_typeof(t.n) <> 'number' then true
+        else (t.n)::numeric <> trunc((t.n)::numeric)
+          or (t.n)::numeric < 0
+          or (t.n)::numeric > 10000
+      end
+    )
+  end;
 $$;
 
 -- ---------------------------------------------------------------------------
@@ -45,15 +51,16 @@ $$;
 
 create table public.profiles (
   user_id uuid primary key references auth.users (id) on delete cascade,
-  -- Chosen by the user; null until they pick one. No '#', so a BattleTag
-  -- (Name#1234) cannot be stored as a display name.
+  -- Chosen by the user; null until they pick one. Letters, digits, spaces,
+  -- '_', '.' and '-' only: no '#' or look-alikes, so a BattleTag (Name#1234)
+  -- cannot be stored as a display name.
   display_name text
     check (
       display_name is null
       or (
         char_length(display_name) between 1 and 32
         and display_name = btrim(display_name)
-        and display_name !~ '[#[:cntrl:]]'
+        and display_name ~ '^[[:alnum:] _.-]+$'
       )
     ),
   is_public boolean not null default false,

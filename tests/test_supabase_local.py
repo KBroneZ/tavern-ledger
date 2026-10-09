@@ -195,7 +195,8 @@ class LocalStackTests(unittest.TestCase):
             " + (select count(*) from auth.sessions where user_id = '{u}')"
             " + (select count(*) from auth.refresh_tokens where user_id = '{u}')"
             " + (select count(*) from auth.audit_log_entries"
-            "    where payload ->> 'actor_id' = '{u}')".format(u=uid))
+            "    where payload::text like '%{u}%' or payload::text like '%{e}%')"
+            .format(u=uid, e=email))
         self.assertEqual(left, "0", "nothing of the user remains")
         self.users.remove(uid)
 

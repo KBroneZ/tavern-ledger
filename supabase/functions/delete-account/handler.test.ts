@@ -20,8 +20,11 @@ interface Call {
 }
 
 /** Fake project APIs. `files` is the bucket; `fail` makes one step fail. */
-function fakeApi(opts: { files?: string[]; fail?: string; userStatus?: number } = {}) {
+function fakeApi(
+  opts: { files?: string[]; fail?: string; userStatus?: number; stickyFiles?: boolean } = {},
+) {
   let files = [...(opts.files ?? [])];
+  let fail = opts.fail;
   const calls: Call[] = [];
   const reply = (status: number, body: unknown) =>
     Promise.resolve(new Response(JSON.stringify(body), { status }));
@@ -30,22 +33,23 @@ function fakeApi(opts: { files?: string[]; fail?: string; userStatus?: number } 
     const method = init.method ?? "GET";
     const body = init.body ? JSON.parse(init.body as string) : null;
     calls.push({ method, path, body, headers: init.headers as Record<string, string> });
-    if (opts.fail === path) return reply(503, {});
+    if (fail === path) return reply(503, {});
     if (path === "/auth/v1/user") {
       return opts.userStatus ? reply(opts.userStatus, {}) : reply(200, { id: USER });
     }
     if (path === "/rest/v1/rpc/user_file_names") return reply(200, files);
     if (path === "/storage/v1/object/games" && method === "DELETE") {
-      files = files.filter((f) => !body.prefixes.includes(f));
+      if (!opts.stickyFiles) files = files.filter((f) => !body.prefixes.includes(f));
       return reply(200, []);
     }
     if (path === "/rest/v1/rpc/delete_user_data") {
       return reply(200, { games: 2, profiles: 1, auth_events: 3 });
     }
     if (path === `/auth/v1/admin/users/${USER}` && method === "DELETE") return reply(200, {});
+    if (path === "/rest/v1/rpc/delete_user_auth_events") return reply(200, 1);
     return reply(404, {});
   };
-  return { fetchFn, calls, files: () => files };
+  return { fetchFn, calls, files: () => files, heal: () => (fail = undefined) };
 }
 
 const request = (method = "DELETE", auth = "Bearer header.payload.sig") =>
@@ -59,7 +63,7 @@ Deno.test("deletes files, then rows, then the auth user", async () => {
   const res = await handle(request(), ENV, api.fetchFn);
   assertEquals(res.status, 200);
   assertEquals(await res.json(), {
-    deleted: { files: 2, games: 2, profiles: 1, auth_events: 3, account: 1 },
+    deleted: { files: 2, games: 2, profiles: 1, auth_events: 4, account: 1 },
   });
   assertEquals(api.files(), []);
   assertEquals(
@@ -71,6 +75,7 @@ Deno.test("deletes files, then rows, then the auth user", async () => {
       "POST /rest/v1/rpc/user_file_names",
       "POST /rest/v1/rpc/delete_user_data",
       `DELETE /auth/v1/admin/users/${USER}`,
+      "POST /rest/v1/rpc/delete_user_auth_events",
     ],
   );
 });
@@ -153,4 +158,38 @@ Deno.test("new-style secret keys are not sent as a bearer token", async () => {
   const rows = api.calls.find((c) => c.path === "/rest/v1/rpc/delete_user_data");
   assertEquals(rows?.headers.Authorization, undefined);
   assertEquals(rows?.headers.apikey, "sb_secret_test");
+});
+
+Deno.test("calling again after a failed row step finishes the deletion", async () => {
+  const api = fakeApi({ files: [`${USER}/a.json.gz`], fail: "/rest/v1/rpc/delete_user_data" });
+  assertEquals((await handle(request(), ENV, api.fetchFn)).status, 500);
+  api.heal();
+  const res = await handle(request(), ENV, api.fetchFn);
+  assertEquals(res.status, 200);
+  assertEquals(api.files(), []);
+  assertEquals(api.calls.at(-1)?.path, "/rest/v1/rpc/delete_user_auth_events");
+});
+
+Deno.test("files that will not go away stop the deletion before the rows", async () => {
+  const api = fakeApi({ files: [`${USER}/a.json.gz`], stickyFiles: true });
+  const res = await handle(request(), ENV, api.fetchFn);
+  assertEquals(res.status, 500);
+  assertEquals((await res.json()).step, "delete files");
+  assertEquals(api.calls.some((c) => c.path.includes("delete_user_data")), false);
+});
+
+Deno.test("more than 1000 files are deleted in batches", async () => {
+  const many = Array.from({ length: 1500 }, (_, i) => `${USER}/g${i}.json.gz`);
+  const api = fakeApi({ files: many });
+  const res = await handle(request(), ENV, api.fetchFn);
+  assertEquals(res.status, 200);
+  const batches = api.calls.filter((c) => c.path === "/storage/v1/object/games");
+  assertEquals(batches.map((c) => (c.body as { prefixes: string[] }).prefixes.length), [1000, 500]);
+});
+
+Deno.test("a network error is a 500 with the step, not a crash", async () => {
+  const failing: Fetch = () => Promise.reject(new TypeError("network down"));
+  const res = await handle(request(), ENV, failing);
+  assertEquals(res.status, 500);
+  assertEquals((await res.json()).step, "auth");
 });
