@@ -41,7 +41,8 @@ test("every page has the CSP as its first meta after the charset", () => {
     assert.match(metas[1] ?? "", /http-equiv="Content-Security-Policy"/, name(page));
     const csp = /content="([^"]*)"/.exec(metas[1])?.[1] ?? "";
     assert.match(csp, /default-src 'none'/, name(page));
-    assert.match(csp, /script-src 'self'(;|$)/, name(page));
+    assert.match(csp, CONFIG ? /script-src 'self'(;|$)/ : /script-src 'none'(;|$)/, name(page));
+    assert.match(csp, CONFIG ? /form-action 'self'(;|$)/ : /form-action 'none'(;|$)/, name(page));
     assert.match(csp, /style-src 'self'(;|$)/, name(page));
     if (CONFIG) assert.match(csp, /connect-src https?:\/\/[^\s;*]+(;|$)/, name(page));
     else assert.match(csp, /connect-src 'none'(;|$)/, name(page));
@@ -65,6 +66,13 @@ test("no inline script, style or event handler in any page", () => {
   }
 });
 
+test("every page but the 404 names its canonical address on the apex domain", () => {
+  for (const page of PAGES.filter((p) => !p.endsWith("404.html"))) {
+    const path = "/" + name(page).replace(/index\.html$/, "");
+    assert.ok(readFileSync(page, "utf8").includes(`<link rel="canonical" href="https://tavernledger.net${path}">`), name(page));
+  }
+});
+
 test("every page shows the fan-project notice", () => {
   for (const page of PAGES) {
     assert.match(
@@ -84,6 +92,8 @@ test("_headers carries the same policy plus frame-ancestors and the other securi
   assert.match(headers, /X-Content-Type-Options: nosniff/);
   assert.match(headers, /X-Frame-Options: DENY/);
   assert.match(headers, /Referrer-Policy: no-referrer/);
+  assert.match(headers, /Cross-Origin-Opener-Policy: same-origin/);
+  assert.match(headers, /\/_astro\/\*\n  Cache-Control: public, max-age=31536000, immutable/);
   assert.match(headers, /Permissions-Policy: camera=\(\)/);
   assert.match(headers, /Strict-Transport-Security: max-age=31536000; includeSubDomains/);
 });
@@ -107,6 +117,11 @@ test("accounts closed: no form, no script and no backend anywhere", { skip: !!CO
     assert.doesNotMatch(html, /<script\b|<form\b|<input\b|href="\/(signin|account)\/"/, name(page));
   }
   assert.deepEqual(ALL.filter((f) => f.endsWith(".js")).map(name), []);
+  for (const file of ALL) {
+    const text = readFileSync(file, "utf8");
+    // No project URL (the policy links to supabase.com, which is fine) and no key of any kind.
+    assert.doesNotMatch(text, /\.supabase\.co(?![a-z])|127\.0\.0\.1:54321|sb_publishable_|eyJ[A-Za-z0-9_-]+\./, name(file));
+  }
 });
 
 function jwtRoles(text: string): string[] {

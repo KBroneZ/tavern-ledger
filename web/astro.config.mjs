@@ -44,6 +44,9 @@ function securityHeaders() {
 }
 
 export default defineConfig({
+  // The public address (canonical links); the same files also answer on
+  // tavern-ledger.pages.dev and on the local preview.
+  site: "https://tavernledger.net",
   output: "static",
   // Same port as site_url in supabase/config.toml.
   server: { host: "127.0.0.1", port: 3000 },

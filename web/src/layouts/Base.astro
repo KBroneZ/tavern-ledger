@@ -17,6 +17,8 @@ const config = readConfig(import.meta.env);
 // built site (and `npm run preview`) always carries it.
 const csp = import.meta.env.PROD ? contentSecurityPolicy(config?.url ?? null) : null;
 const path = Astro.url.pathname;
+// The 404 page answers on every missing address, so it names none.
+const canonical = path.startsWith("/404") ? null : new URL(path, Astro.site).href;
 ---
 
 <!doctype html>
@@ -28,6 +30,7 @@ const path = Astro.url.pathname;
     <meta name="referrer" content="no-referrer" />
     <meta name="description" content={description} />
     {noindex && <meta name="robots" content="noindex" />}
+    {canonical && <link rel="canonical" href={canonical} />}
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{title} · Tavern Ledger</title>
   </head>

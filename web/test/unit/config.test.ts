@@ -90,8 +90,10 @@ test("the CSP allows scripts and styles from the site only and connects to Supab
   assert.doesNotMatch(csp, /unsafe|\*|data:/);
 });
 
-test("with accounts closed the CSP allows no connection at all", () => {
+test("with accounts closed the CSP allows no script, form or connection", () => {
   const csp = contentSecurityPolicy(null);
-  assert.match(csp, /(^|; )connect-src 'none'(;|$)/);
-  assert.match(csp, /(^|; )default-src 'none'(;|$)/);
+  for (const directive of ["default-src", "script-src", "connect-src", "form-action", "base-uri"]) {
+    assert.match(csp, new RegExp(`(^|; )${directive} 'none'(;|$)`), directive);
+  }
+  assert.match(csp, /(^|; )style-src 'self'(;|$)/);
 });

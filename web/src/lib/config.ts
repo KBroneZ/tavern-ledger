@@ -65,17 +65,20 @@ export function readConfig(env: ConfigSource): SiteConfig | null {
 /**
  * Content-Security-Policy for every page: scripts and styles come only from
  * the site's own files (the build inlines none), and the only connection is
- * to the Supabase project (none at all with accounts closed). frame-ancestors
+ * to the Supabase project. With accounts closed there is no script, form or
+ * connection at all. frame-ancestors
  * only works as a header: the build writes it to dist/_headers (astro.config.mjs).
  */
 export function contentSecurityPolicy(supabaseOrigin: string | null): string {
+  // Accounts closed: no page has a script or a form, so allow none at all.
+  const open = supabaseOrigin !== null;
   return [
     "default-src 'none'",
-    "script-src 'self'",
+    `script-src ${open ? "'self'" : "'none'"}`,
     "style-src 'self'",
     "img-src 'self'",
     `connect-src ${supabaseOrigin ?? "'none'"}`,
     "base-uri 'none'",
-    "form-action 'self'",
+    `form-action ${open ? "'self'" : "'none'"}`,
   ].join("; ");
 }
