@@ -158,11 +158,11 @@ Deno.test("a wrong or malformed sweep token runs nothing", async () => {
   }
 });
 
-Deno.test("a sweep token that cannot be checked is a 500, not a run", async () => {
+Deno.test("a sweep token that cannot be checked is a plain 503, not a run", async () => {
   const api = fakeApi({ files: [orphan(1)], fail: "/rest/v1/rpc/sweep_token_valid" });
   const res = await handle(tokenRequest(TOKEN), ENV, api.fetchFn);
-  assertEquals(res.status, 500);
-  assertEquals((await res.json()).step, "check token");
+  assertEquals(res.status, 503);
+  assertEquals(await res.json(), { error: "try again later" });
   assertEquals(api.calls.length, 1);
 });
 

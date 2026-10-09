@@ -2,7 +2,7 @@
 -- The sweep function's side is tested in supabase/functions/sweep/.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(19);
 
 -- ------------------------------------------------------------ extensions, job
 select has_extension('pg_cron', 'pg_cron is installed');
@@ -57,7 +57,7 @@ select ok(
 delete from vault.secrets where name = 'project_url';
 select is(private.run_sweep(), null, 'without project_url the job sends nothing');
 
-select vault.create_secret('https://example.test/', 'project_url');
+select lives_ok($$ select vault.create_secret('https://example.test/', 'project_url') $$, 'project_url can be set');
 create temporary table sent as select private.run_sweep() as id;
 select isnt((select id from sent), null, 'with project_url the job queues one request');
 select results_eq(
@@ -71,7 +71,7 @@ select results_eq(
 -- ------------------------------------------------------------ run record
 delete from private.sweep_runs;
 insert into private.sweep_runs (ran_at, result) values (now() - interval '91 days', '{}');
-select public.sweep_housekeeping();
+select lives_ok($$ select public.sweep_housekeeping() $$, 'a sweep finishes');
 select is((select count(*)::int from private.sweep_runs), 1,
   'each finished sweep leaves one record and old ones go');
 select ok(

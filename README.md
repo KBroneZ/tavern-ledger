@@ -20,7 +20,7 @@ Personal stats (T-102) are in the app: totals, per-hero numbers and tribes seen 
 
 Web stack (T-103): a static Astro site plus Supabase in the EU (Postgres, login, file storage); the desktop app will upload each finished game, about 2.5 KB gzipped, only after you sign in and turn it on. No Battle.net login: Blizzard's developer terms do not allow it in an app with paid extras. Decision D-020; findings: [docs/research/web-stack.md](docs/research/web-stack.md). Nothing is online yet.
 
-Backend (T-104a): the database schema, row-level security, export, account deletion and backups exist and are tested on a local Supabase stack. Clients can only read their own data and public profiles; game uploads go through one server function. **Hosted project** (session 022): Supabase in Frankfurt, sign-ups closed; each merge to `main` applies the migrations and deploys the server functions through Supabase's GitHub integration, and a daily job in the database runs the clean-up. Plan and live state: [docs/research/deploy.md](docs/research/deploy.md) section 10.
+Backend (T-104a): the database schema, row-level security, export, account deletion and backups exist and are tested on a local Supabase stack. Clients can only read their own data and public profiles; game uploads go through one server function. **Hosted project** (session 022): Supabase in Frankfurt, sign-ups closed, nothing deployed yet; once Supabase's GitHub integration is connected (pending the user), each merge to `main` applies the migrations and deploys the server functions, and a daily job in the database runs the clean-up. Plan and live state: [docs/research/deploy.md](docs/research/deploy.md) section 10.
 
 Robustness (session 014): the app and `check_logs.py` check that the game is set up to write a complete log (`log.config` and `client.config`), every saved game records which parser version read it, `tavern-watch --reparse` re-reads old sessions after a parser fix, and a dev tool replays a saved log so the app can be tested without playing.
 
@@ -39,7 +39,7 @@ Overlay (T-301): a small transparent window on top of the game with three panels
 
 Privacy and terms (T-104b): a data inventory written from the code, and drafts of the privacy policy and terms in [docs/legal/](docs/legal/), shown on the site at `/privacy/` and `/terms/`. They are not in force: the controller's name, some provider details and the legal checks of the email sender are still to be decided; the contact addresses exist. No analytics, minimum age 16.
 
-Next tasks: T-302 (movable and customizable overlay), T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), finishing the hosted backend (session 022: GitHub connection, email sender, end-to-end test, all waiting for the user) and T-104b (fill in the open items of the privacy policy).
+Next tasks: T-302 (movable and customizable overlay), T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), finishing the hosted backend (pending user decisions from session 022: email sender, GitHub connection, end-to-end test, opening sign-ups) and T-104b (fill in the open items of the privacy policy).
 
 ## Check your log setup
 
@@ -148,7 +148,7 @@ pwsh tools/backup_supabase.ps1 -Local # backup into .local/backups/
 
 These run on the developer's machine, not in CI. The desktop end-to-end test sends one sign-in email; the local stack allows two an hour. The daily sweep (files with no row, audit entries of deleted accounts, expired counters) is the `sweep` function: `POST /functions/v1/sweep` with the service-role key, or with the sweep token that `pg_cron` sends every day at 03:17 UTC (migration `20261010090000_sweep_schedule.sql`; on the local stack the job sends nothing because Vault has no `project_url`). Each finished sweep leaves a row in `private.sweep_runs`.
 
-Hosted project (session 022, [deploy.md](docs/research/deploy.md) section 10): migrations and the three functions reach it through the Supabase GitHub integration on each merge to `main`; auth settings (sign-ups closed, site URL, redirect URL, password length) are set in the dashboard. The desktop app has the hosted URL and publishable key built in. Without `-Local`, the backup script backs up the linked hosted project, reading `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from `.local/supabase.env`; the Free plan has no Supabase backups, so this is the only one.
+Hosted project (session 022, [deploy.md](docs/research/deploy.md) section 10): migrations and the three functions will reach it through the Supabase GitHub integration on each merge to `main` once the user connects it; auth settings (sign-ups closed, site URL, redirect URL, password length) are set in the dashboard. The desktop app has the hosted URL and publishable key built in. Without `-Local`, the backup script backs up the linked hosted project, reading `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from `.local/supabase.env`; the Free plan has no Supabase backups, so this is the only one.
 
 ### Website (`web/`)
 

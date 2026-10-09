@@ -142,6 +142,11 @@ export async function handle(req: Request, env: Env, fetchFn: Fetch = fetch): Pr
     const counts = await res.json();
     return json(200, { files, ...counts });
   } catch (e) {
+    if (e instanceof StepError && e.step === "check token") {
+      // Callers without a valid key may reach this: say nothing about the database.
+      console.error(`sweep: ${e.message}`);
+      return json(503, { error: "try again later" });
+    }
     if (e instanceof StepError) {
       console.error(`sweep: ${e.message}`);
       return json(500, { error: "the sweep did not finish; run it again", step: e.step });

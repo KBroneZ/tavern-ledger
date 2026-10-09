@@ -77,9 +77,11 @@ end;
 $$;
 
 create table private.sweep_runs (
-  ran_at timestamptz primary key default clock_timestamp(),
+  id bigint generated always as identity primary key,
+  ran_at timestamptz not null default clock_timestamp(),
   result jsonb not null
 );
+create index sweep_runs_ran_at on private.sweep_runs (ran_at);
 revoke all on private.sweep_runs from public, anon, authenticated, service_role;
 
 -- As in 20261009150000_upload.sql, plus the run record at the end.
