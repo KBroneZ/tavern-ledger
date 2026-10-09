@@ -120,7 +120,7 @@ Supabase Auth needs a sender for sign-up confirmation, email change and password
 | Beta caveat | Cloudflare's terms exclude beta services from the SLA and limit liability for their data | — |
 | New credential to keep | A Cloudflare API token (stored only in Supabase's SMTP settings) | A Brevo SMTP key (stored only in Supabase's SMTP settings) |
 
-**Claude's recommendation was Brevo** (plain SMTP on Supabase's documented port, free at this volume, EU company, not a beta). **The user chose Cloudflare Email Sending** (2026-10-09, D-030): one provider and one dashboard for the domain, the site and all mail. Known costs of that choice: Workers Paid ($5/month) and a beta (no SLA; SMTP on port 465, which Supabase's docs do not show, so test it first or use the Send Email Hook instead).
+**Claude's recommendation was Brevo** (plain SMTP on Supabase's documented port, free at this volume, EU company, not a beta). **The user chose Cloudflare Email Sending** (2026-10-09, D-030): one provider and one dashboard for the domain, the site and all mail. Known costs of that choice: Workers Paid ($5/month) and a beta (no SLA; SMTP on port 465, which Supabase's docs do not show, so test it first or use the Send Email Hook instead). **Changed on 2026-10-10 (D-034): the user chose Brevo.** Section 10.4 is kept for a later switch; the Brevo setup is section 10.4b.
 
 **Setup belongs to session 022** (with the hosted Supabase project, after #016 merges), not to this session. 022 will:
 
@@ -219,7 +219,7 @@ Not secrets: `delete-account` allows `https://tavernledger.net` when `SITE_ORIGI
 | Email templates | Supabase's defaults (the magic link and confirmation go through `/auth/v1/verify`, which the desktop and the site's PKCE flow need) | branding later |
 | GraphQL (`pg_graphql`) | off if the extension is on | as the local schema; nothing uses it |
 
-### 10.4 Auth emails: custom SMTP with Cloudflare Email Sending (D-030)
+### 10.4 Auth emails: custom SMTP with Cloudflare Email Sending (D-030, replaced by 10.4b)
 
 - **Needs the user's OK to pay:** Email Sending requires Workers Paid (3,000 emails a month included, then $0.35 per 1,000; the plan's own price is shown in the dashboard at purchase). It is a beta.
 - Onboard `tavernledger.net` in Email Sending. Its records live on the `cf-bounce` subdomain (MX and SPF) plus a DKIM key on its own selector; none goes on the apex, so the apex SPF record of Email Routing stays as it is. If the dashboard asks for anything at the apex, merge it into the single `v=spf1` record.
@@ -227,6 +227,16 @@ Not secrets: `delete-account` allows `https://tavernledger.net` when `SITE_ORIGI
 - Supabase SMTP: host `smtp.mx.cloudflare.net`, port **465** (implicit TLS; Cloudflare refuses STARTTLS on 587), user `api_token`, sender `noreply@tavernledger.net`, name "Tavern Ledger". Supabase's docs only show port 587: if it cannot connect on 465, stop and ask the user (Send Email Hook with our own code, or Brevo).
 - DMARC (`_dmarc`, taken over from 021): keep `p=reject; sp=reject; adkim=s` and relax `aspf` to `r`. Sent mail carries `From: noreply@tavernledger.net`, DKIM `d=tavernledger.net` (aligned under strict rules) and an envelope on `cf-bounce.tavernledger.net` (aligned for SPF only under relaxed rules). Forwarded mail is not affected (Email Routing keeps the sender's own `From:`).
 - Check: a magic link to the user's own address, then the received headers (`Authentication-Results`: SPF, DKIM and DMARC `pass`).
+
+### 10.4b Auth emails: custom SMTP with Brevo (D-034)
+
+- First read on Brevo's own pages (the help pages refused our fetcher on 2026-10-09: try the browser): the free plan's daily limit and branding, the legal entity, where messages and logs are stored and for how long, and the DPA. Put the answers in `docs/legal/data-inventory.md` and the privacy draft; anything still unclear stays `[TO BE CHECKED]`.
+- **[user]** Create the Brevo account (free plan) and accept its terms; the user does this, never Claude.
+- Authenticate `tavernledger.net` in Brevo: add exactly the records its dashboard shows (DKIM and any verification record). If it asks for an SPF include at the apex, merge it into the single `v=spf1` record next to Email Routing's.
+- SMTP key: one key for Supabase only, named for it, copied from Brevo's dashboard straight into Supabase's SMTP password field (never shown in chat, logs or files).
+- Supabase SMTP: host `smtp-relay.brevo.com`, port 587 (STARTTLS), user the SMTP login Brevo shows, sender `noreply@tavernledger.net`, name "Tavern Ledger".
+- DMARC (`_dmarc`): keep `p=reject`. Check that Brevo signs with DKIM `d=tavernledger.net` after authentication (aligned) before relying on it; relax `aspf` to `r` only if Brevo's envelope sits on a subdomain of ours.
+- Check: a magic link to the user's own address, then the received headers (`Authentication-Results`: DKIM and DMARC `pass`).
 
 ### 10.5 Sweep schedule
 
@@ -252,7 +262,7 @@ Failures are not silent: every sweep that finishes leaves a row in `private.swee
 2. Auth settings (10.3) with sign-ups off, before anything is deployed; check `disable_signup: true` on the public `/auth/v1/settings`.
 3. Merge this session's PR: the integration applies the four migrations and deploys the three functions. Check: migrations listed as applied; parity query (tables, columns, constraints, indexes, policies, grants, functions and their security, triggers, buckets) gives the same fingerprint on the local stack and the hosted project; RLS on every table in `public`; `anon` and `authenticated` hold only the grants in the migrations; the bucket is private with its policies; no default privileges that would hand a future table to `anon` or `authenticated`; `pg_graphql` off or exposing nothing; with the publishable key alone, every REST, RPC and Storage write is refused and a sign-up and an email link for an unknown address are refused; functions answer `401` without a token and the right CORS on `delete-account`'s preflight; `net` is still not in the Data API's exposed schemas. After **every** merge that touches `supabase/`: `/auth/v1/settings` still says `disable_signup: true`, and the site URL and redirect list are unchanged (the integration's docs say it ignores auth settings by default: "All other configurations, including API, Auth, and seed files, are ignored by default"; checked, not assumed).
 4. Vault `project_url`, then run the sweep once by hand (`select private.run_sweep()`) and read the response.
-5. **[user]** Workers Paid; then Email Sending onboarding, DNS, API token, Supabase SMTP, DMARC.
+5. **[user]** Brevo account (D-034, replacing Workers Paid and Email Sending); then domain authentication, SMTP key, Supabase SMTP, DMARC (section 10.4b).
 6. Pages variables and redeploy.
 7. **[user]** End-to-end check (the user, from the phone, about five minutes): create their own account in Supabase (Authentication → Users → Add user, their address, auto-confirm), sign in on `https://tavernledger.net/signin/`, open the account page, download the export, delete the account. Meanwhile Claude sends one desktop-style magic link to that address to check SMTP and DMARC, and checks on the server that nothing of the account remains after deletion. (Claude does not create accounts or type passwords on a production site.)
 8. Desktop default, then sign-ups stay closed until the user says so (**[user]**).
