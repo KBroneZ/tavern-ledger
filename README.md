@@ -16,7 +16,9 @@ A prototype client looks up your own row in the public leaderboard with a local 
 
 Desktop stack (T-005): the comparison recommends Tauri 2. A minimal Tauri overlay (transparent, always on top, clicks pass through) works on Windows 11, also over the game in borderless fullscreen. Decision: Tauri 2 (D-014). Findings: [docs/research/desktop-stack.md](docs/research/desktop-stack.md).
 
-Next tasks: T-101 (desktop app: follow `Power.log`, store games locally; only a live test during a real game is left) and T-002 (more Solo games and trimmed fixtures).
+Personal stats (T-102) are in the app: totals, per-hero numbers and tribes seen in the tavern, per mode.
+
+Next tasks: T-101 (desktop app: follow `Power.log`, store games locally; only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures) and T-103 (web stack).
 
 ## Check your log setup
 
@@ -61,6 +63,11 @@ Only one of them can write the history at a time: a second copy says so and
 does not write. The app lives in the system tray: closing the window keeps it
 following the log, and "Quit" in the tray menu exits. "Start with Windows" in
 the same menu is off until you turn it on.
+
+Per mode (Solo and Duos apart), the app shows your totals, your numbers per
+hero (skins of a hero grouped together) and the tribes the tavern offered you.
+Those are not the lobby's tribes: the log does not say which tribes were in
+the lobby. Unfinished or unreadable games are counted apart, never as places.
 
 ```
 cargo run --release -p tracker -- --import    # follow live, after importing older sessions

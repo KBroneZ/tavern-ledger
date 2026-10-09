@@ -27,6 +27,42 @@
       <div class="stat"><span class="label" id="stat-top-label">Top half</span><span id="stat-top" class="value">—</span></div>
       <div class="stat"><span class="label">Wins</span><span id="stat-wins" class="value">—</span></div>
     </section>
+    <p id="not-counted" class="tally-note" hidden></p>
+
+    <div class="breakdown">
+      <section class="ledger heroes" aria-labelledby="heroes-title">
+        <h2 id="heroes-title">Heroes</h2>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Hero</th>
+              <th scope="col" class="num">Games</th>
+              <th scope="col" class="num">Avg place</th>
+              <th scope="col" class="num" id="heroes-top-label">Top half</th>
+              <th scope="col" class="num">Wins</th>
+            </tr>
+          </thead>
+          <tbody id="heroes"></tbody>
+        </table>
+        <p id="heroes-empty" class="empty" hidden>No heroes yet.</p>
+      </section>
+
+      <section class="ledger tribes" aria-labelledby="tribes-title">
+        <h2 id="tribes-title">Tribes seen in the tavern</h2>
+        <p class="note">What the tavern offered you. The game's log does not say which tribes were in the lobby, so this is not that list.</p>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Tribe</th>
+              <th scope="col" class="num">Games</th>
+              <th scope="col" class="num">Offers</th>
+            </tr>
+          </thead>
+          <tbody id="tribes"></tbody>
+        </table>
+        <p id="tribes-empty" class="empty" hidden>No tavern offers seen yet.</p>
+      </section>
+    </div>
 
     <section class="ledger" aria-labelledby="ledger-title">
       <h2 id="ledger-title">Ledger</h2>

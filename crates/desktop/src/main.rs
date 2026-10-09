@@ -15,6 +15,7 @@ use tauri::{App, AppHandle, Emitter, Manager, State, WindowEvent, Wry};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tracker::discover::find_logs_dir;
 use tracker::lock::{HistoryLock, LockError};
+use tracker::stats::Stats;
 use tracker::store::Store;
 use tracker::Watcher;
 
@@ -64,6 +65,17 @@ fn list_games(state: State<'_, Arc<AppState>>) -> Vec<GameRow> {
         .lock()
         .unwrap_or_else(|e| e.into_inner())
         .clone()
+}
+
+/// Totals, heroes and tribes for the window, from the same rows it lists:
+/// the window renders them and computes nothing (T-102).
+#[tauri::command]
+fn game_stats(state: State<'_, Arc<AppState>>) -> Stats {
+    stats_of(&state.games.lock().unwrap_or_else(|e| e.into_inner()))
+}
+
+fn stats_of(rows: &[GameRow]) -> Stats {
+    tracker::stats::compute(rows.iter().map(|row| &row.report))
 }
 
 #[tauri::command]
@@ -271,7 +283,7 @@ fn main() {
             Some(vec![MINIMIZED_ARG]),
         ))
         .manage(state.clone())
-        .invoke_handler(tauri::generate_handler![list_games, status])
+        .invoke_handler(tauri::generate_handler![list_games, game_stats, status])
         .on_window_event(|window, event| {
             // Closing the window hides it; "Quit" in the tray menu exits.
             if let WindowEvent::CloseRequested { api, .. } = event {
@@ -300,6 +312,25 @@ mod tests {
 
     fn args(list: &[&str]) -> Vec<String> {
         list.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn stats_are_computed_from_the_rows_the_window_lists() {
+        let row = |game_type: &str, place: i64| GameRow {
+            session: "Hearthstone_2026_10_09_00_00_00".into(),
+            index: 1,
+            report: serde_json::json!({
+                "status": "ok", "game_type": game_type, "hero": "H", "final_place": place,
+            }),
+        };
+        let stats = stats_of(&[row("GT_BATTLEGROUNDS", 3), row("GT_BATTLEGROUNDS_DUO", 1)]);
+        let solo = &stats.modes[0];
+        assert_eq!(
+            (solo.mode.as_str(), solo.totals.games),
+            ("GT_BATTLEGROUNDS", 1)
+        );
+        assert_eq!(solo.totals.average_place, Some(3.0));
+        assert_eq!(stats.modes[1].totals.wins, Some(1));
     }
 
     #[test]

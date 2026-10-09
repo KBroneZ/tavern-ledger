@@ -3630,6 +3630,7 @@ name = "tracker"
 version = "0.1.0"
 dependencies = [
  "bg-parser",
+ "serde",
  "serde_json",
 ]
 

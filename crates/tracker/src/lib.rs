@@ -4,6 +4,7 @@
 
 pub mod discover;
 pub mod lock;
+pub mod stats;
 pub mod store;
 pub mod tail;
 
