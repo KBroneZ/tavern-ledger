@@ -91,8 +91,8 @@ Remaining to close T-101: the live test (play a game with `cargo run --release -
 | ID | Task | Status |
 |----|------|--------|
 | T-301 | Overlay with tribes seen in the tavern (or entered by the user, labelled so), last seen board of each opponent and record. Needs windowed or borderless fullscreen (exclusive fullscreen hides any overlay) | pending |
-| T-303 | Lobby tribes by hand: the user picks the 5 tribes at hero select; shown as "entered by you", never mixed with the inferred ones | pending |
 | T-302 | Customizable overlay: lock/unlock button to move the panels wherever each user wants, choose which panels show and several themes | pending |
+| T-303 | Lobby tribes by hand: the user picks the 5 tribes at hero select; shown as "entered by you", never mixed with the inferred ones | pending |
 
 ## F4 — Community and extras
 
