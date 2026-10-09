@@ -1,0 +1,219 @@
+// The overlay (T-301). The app decides every value and its source
+// (tracker::live); this file only shows them. The window is click-through, so
+// a source is always a word on the page, never a tooltip. Text is set with
+// textContent only: nothing from the log is ever treated as markup.
+"use strict";
+
+const { invoke } = window.__TAURI__.core;
+const { listen } = window.__TAURI__.event;
+
+const MODES = { GT_BATTLEGROUNDS: "Solo", GT_BATTLEGROUNDS_DUO: "Duos" };
+const SOURCES = ["log", "inferred", "entered", "leaderboard", "unknown"];
+
+let game = null;
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined && text !== null) node.textContent = String(text);
+  return node;
+}
+
+function label(source) {
+  const key = SOURCES.includes(source) ? source : "unknown";
+  const entry = game && game.legend.find((e) => e.source === key);
+  return entry ? entry.label : key;
+}
+
+// The mark for a source; none for the log, whose values are the plain ones.
+function mark(source) {
+  const key = SOURCES.includes(source) ? source : "unknown";
+  return key === "log" ? null : el("span", `src src-${key}`, label(key));
+}
+
+function unknown() {
+  return el("span", "unknown-value", "?");
+}
+
+function tribeName(id) {
+  const text = String(id).toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function heroName(hero) {
+  return hero.name || hero.id;
+}
+
+function heroes(list) {
+  return list.length ? list.map(heroName).join(" + ") : null;
+}
+
+function sourced(node, sourced) {
+  node.append(sourced.value === null ? unknown() : String(sourced.value));
+  return node;
+}
+
+function renderStatus(g) {
+  const panel = document.getElementById("status");
+  panel.className = "panel status";
+  panel.replaceChildren();
+  if (g.phase === "unreadable") {
+    panel.classList.add("unreadable");
+    panel.append(
+      el("div", "hero", "Cannot read this game"),
+      el("div", null, "The game's log is not in a form this version understands, so nothing is shown rather than a guess."),
+    );
+    return;
+  }
+  if (g.phase === "starting") {
+    panel.append("Game starting… waiting for the lobby.");
+    return;
+  }
+  const line = el("div");
+  const mode = g.game_type.value ? MODES[g.game_type.value] || "Battlegrounds" : null;
+  const names = [g.hero.value, g.is_duos ? g.teammate_hero.value : null]
+    .filter(Boolean)
+    .map(heroName)
+    .join(" + ");
+  const sep = () => el("span", "sep", "·");
+  line.append(el("span", "hero", names || "Hero unknown"), sep(), mode || "Mode unknown", sep());
+  if (g.phase === "over") {
+    line.append("Game over");
+  } else {
+    line.append(g.last_combat.value === null ? "no combat yet" : `combat ${g.last_combat.value}`);
+  }
+  line.append(sep(), sourced(el("span"), g.own_health), " hp");
+  panel.append(line);
+  const notes = [...g.warnings, ...g.problems].slice(0, 2);
+  if (notes.length) panel.append(el("p", "notes", notes.join(" · ")));
+}
+
+function renderTribes(g) {
+  const panel = document.getElementById("tribes");
+  panel.replaceChildren(el("h2", null, "Tribes"));
+  const seen = el("div", "row");
+  seen.append(el("span", "what", "Seen in the tavern"));
+  const seenMark = mark(g.tribes_source);
+  if (seenMark) seen.append(seenMark);
+  seen.append(
+    el(
+      "div",
+      "tribe-list",
+      g.tribes.length ? g.tribes.map((t) => `${tribeName(t.tribe)} ${t.offers}`).join(" · ") : "none yet",
+    ),
+  );
+  panel.append(seen);
+  if (g.entered_tribes.length) {
+    const entered = el("div", "row");
+    entered.append(el("span", "what", "You entered"));
+    const enteredMark = mark(g.entered_tribes_source);
+    if (enteredMark) entered.append(enteredMark);
+    entered.append(el("div", "tribe-list", g.entered_tribes.map(tribeName).join(" · ")));
+    panel.append(entered);
+  }
+  panel.hidden = false;
+}
+
+function renderRecord(opponent) {
+  const record = el("span", "record");
+  if (!opponent.record) {
+    record.append(el("span", "none", "not fought"));
+    return record;
+  }
+  const r = opponent.record;
+  record.append(el("span", "w", `${r.won}W`), " ", el("span", "l", `${r.lost}L`), ` ${r.tie}T`);
+  if (r.unknown) record.append(" ", unknown(), ` ×${r.unknown}`);
+  const recordMark = mark(opponent.record_source);
+  if (recordMark) record.append(recordMark);
+  return record;
+}
+
+function renderBoards(opponent) {
+  const wrap = el("div", "board");
+  if (!opponent.boards.length) {
+    wrap.append(el("span", "none", "no board seen yet"), mark(opponent.boards_source) || "");
+    return [wrap];
+  }
+  return opponent.boards.map((board) => {
+    const row = el("div", "board");
+    const who = opponent.boards.length > 1 && board.hero ? `${heroName(board.hero)} · ` : "";
+    row.append(el("span", "when", `${who}board in round ${board.round}`));
+    if (!board.minions.length) row.append(el("span", "none", "empty"));
+    for (const m of board.minions) {
+      const chip = el("span", m.golden ? "minion golden" : "minion");
+      const stat = (n) => (n === null || n === undefined ? "?" : n);
+      chip.append(el("b", null, `${stat(m.atk)}/${stat(m.health)}`), el("i", null, m.card_id || "?"));
+      row.append(chip);
+    }
+    return row;
+  });
+}
+
+function renderOpponents(g) {
+  const panel = document.getElementById("opponents");
+  panel.replaceChildren(el("h2", null, "Opponents"));
+  if (!g.opponents.length) {
+    panel.append(el("div", "row", "The log does not show the lobby yet."));
+  }
+  for (const opponent of g.opponents) {
+    const item = el("div", "opponent");
+    const head = el("div", "head");
+    const hp = el("span", "hp");
+    hp.append(sourced(el("b"), opponent.health), " hp");
+    head.append(el("span", "name", heroes(opponent.heroes) || "Hero unknown"), hp, renderRecord(opponent));
+    item.append(head, ...renderBoards(opponent));
+    panel.append(item);
+  }
+  panel.hidden = false;
+}
+
+function render() {
+  const legend = document.getElementById("legend");
+  if (!game) {
+    const status = document.getElementById("status");
+    status.className = "panel status";
+    status.textContent = "Waiting for a game…";
+    document.getElementById("tribes").hidden = true;
+    document.getElementById("opponents").hidden = true;
+    legend.hidden = true;
+    return;
+  }
+  renderStatus(game);
+  const showPanels = game.phase === "playing" || game.phase === "over";
+  document.getElementById("tribes").hidden = !showPanels;
+  document.getElementById("opponents").hidden = !showPanels;
+  legend.hidden = !showPanels;
+  if (showPanels) {
+    renderTribes(game);
+    renderOpponents(game);
+  }
+}
+
+// Answers can come back out of order: only the newest request is shown.
+let latest = 0;
+
+async function refresh() {
+  const mine = ++latest;
+  const fresh = await invoke("overlay_state");
+  if (mine !== latest) return;
+  game = fresh;
+  render();
+}
+
+async function start() {
+  // Listen first, so a change between the first read and the listener is not lost.
+  await listen("live-changed", () => refresh().catch(showError));
+  await listen("lobby-tribes-changed", () => refresh().catch(showError));
+  await refresh();
+}
+
+// The window cannot be clicked: say it on the page, never throw silently, and
+// never leave old panels under the message as if they were current.
+function showError(error) {
+  const panel = document.getElementById("status");
+  panel.className = "panel status unreadable";
+  panel.textContent = `The overlay could not update (${error}).`;
+  for (const id of ["tribes", "opponents", "legend"]) document.getElementById(id).hidden = true;
+}
+
+start().catch(showError);

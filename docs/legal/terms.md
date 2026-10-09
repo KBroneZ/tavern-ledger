@@ -8,7 +8,7 @@ These terms cover the Tavern Ledger website and the accounts on it. The desktop 
 
 ## 1. What Tavern Ledger is
 
-A free fan project, run by one person in their spare time: a Windows app that reads Hearthstone's log files on your PC, and a website to keep and share your Battlegrounds games. It is offered by [TO BE DECIDED: name of the person who runs Tavern Ledger, and country]; contact: contact@tavernledger.net.
+A free fan project, run by one person in their spare time: a Windows app that reads Hearthstone's log files on your PC, and a website to keep and share your Battlegrounds games. It is offered by Andrew Rodrigo, Bulgaria; contact: contact@tavernledger.net.
 
 **Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.** Hearthstone is a trademark of Blizzard Entertainment, Inc.
 
@@ -61,4 +61,4 @@ You can stop using the service and delete your account at any time. If we decide
 
 ## 11. Changes and law
 
-We may change these terms when the service, the law or our providers change. We will post changes here with a new date and tell signed-up users by email at least 30 days before a change that affects them applies. If you do not agree, you can delete your account before then. These terms are governed by the law of [TO BE DECIDED: the controller's country], without taking away the protection of the law of the country where you live as a consumer.
+We may change these terms when the service, the law or our providers change. We will post changes here with a new date and tell signed-up users by email at least 30 days before a change that affects them applies. If you do not agree, you can delete your account before then. These terms are governed by the law of Bulgaria, without taking away the protection of the law of the country where you live as a consumer.

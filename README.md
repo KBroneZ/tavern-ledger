@@ -35,9 +35,11 @@ Where values come from (T-109): every number or label in the window says where i
 
 Lobby tribes by hand (T-303): the log never says which five tribes are in the lobby, so you can pick them yourself from a fixed list, at hero select or later from the history (`Tribes` button on each game; you can change, clear or move the entry). If no game is on when you pick them, they go to the next game that starts. They are saved on your computer next to the history, not inside the game's report, so re-reading a game keeps them. They are always marked "entered by you" and shown next to the tribes seen in the tavern, never mixed with them; the stats count them in a separate table. Decision D-029.
 
+Overlay (T-301): a small transparent window on top of the game with three panels: the tribes seen in the tavern (inferred) and the ones you entered (entered by you), each opponent by hero (health, the last board of theirs that entered play with the round it was seen, and your record against them, inferred from health), and a one-line status. It is off until you tick "Show overlay during a game" in the tray menu (the choice is kept), and it only shows while a Battlegrounds game is on and Hearthstone is the window in front (read from the front window's title and class only; nothing is opened or read in the game). Clicks go through it and it never takes focus. Every source is written on the panel (no mark: from the log); unknown values show `?`, an opponent not fought yet shows "not fought", and a game the parser cannot read says so instead of guessing. Boards show card ids and attack/health: the log names heroes only. **Exclusive fullscreen hides any overlay: run Hearthstone windowed or borderless.** Decision D-032.
+
 Privacy and terms (T-104b): a data inventory written from the code, and drafts of the privacy policy and terms in [docs/legal/](docs/legal/), shown on the site at `/privacy/` and `/terms/`. They are not in force: the controller's name, some provider details and the legal checks of the email sender are still to be decided; the contact addresses exist. No analytics, minimum age 16.
 
-Next tasks: T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), finishing the hosted backend (session 022: GitHub connection, email sender, end-to-end test, all waiting for the user) and T-104b (fill in the open items of the privacy policy).
+Next tasks: T-302 (movable and customizable overlay), T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), finishing the hosted backend (session 022: GitHub connection, email sender, end-to-end test, all waiting for the user) and T-104b (fill in the open items of the privacy policy).
 
 ## Check your log setup
 
@@ -112,6 +114,12 @@ To try the app or `tavern-watch` without playing, replay a saved log into a temp
 ```
 python tools/dev/replay_log.py "<path>\Power_old.log" --dest-dir "$env:TEMP\replay" --lines-per-second 500
 cargo run -p tracker -- --logs-dir "$env:TEMP\replay\Logs" --data-dir "$env:TEMP\replay\data"
+```
+
+To see the overlay on a replayed game, follow the replayed folder with the app and force the overlay on (`--overlay-dev` turns it on, shows it whatever window is in front and saves no setting; `--logs-dir` is for this and nothing else):
+
+```
+cargo run -p desktop -- --data-dir "$env:TEMP\replay\data" --logs-dir "$env:TEMP\replay\Logs" --overlay-dev
 ```
 
 ## Development

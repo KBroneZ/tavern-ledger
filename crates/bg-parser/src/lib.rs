@@ -194,6 +194,14 @@ impl LogReader {
         Some(build_report(index, reader))
     }
 
+    /// What the game in progress looks like so far, built by the same code
+    /// as the saved report (so live and saved agree). It never changes what
+    /// the game's final report will say. `None` before any game starts.
+    pub fn snapshot_current(&self) -> Option<GameReport> {
+        let reader = self.current.as_ref()?;
+        Some(build_report(self.count + 1, reader))
+    }
+
     /// Number of the Battlegrounds game being played right now (the `index`
     /// its report will have), from hero select until the log marks it
     /// complete. `None` when no such game is on.

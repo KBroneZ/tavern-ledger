@@ -10,7 +10,7 @@ Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainmen
 
 ## 1. Who is responsible
 
-The controller is [TO BE DECIDED: name of the person who runs Tavern Ledger], a private person in Bulgaria who runs this project in their spare time.
+The controller is Andrew Rodrigo, Bulgaria, a private person who runs this project in their spare time.
 
 Contact for anything about your data: privacy@tavernledger.net.
 
@@ -88,7 +88,7 @@ You can, at any time:
 
 Write to privacy@tavernledger.net for anything the site does not do by itself. We answer within one month.
 
-You can also complain to a data protection authority, in particular in the EU country where you live or work or where you think the problem happened. The authority where the controller is based is Bulgaria's Commission for Personal Data Protection (CPDP), www.cpdp.bg.
+You can also complain to a data protection authority, in particular in the EU country where you live or work or where you think the problem happened. The controller's authority is the Bulgarian Commission for Personal Data Protection (Комисия за защита на личните данни), www.cpdp.bg.
 
 ## 8. Cookies and browser storage
 

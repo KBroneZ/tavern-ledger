@@ -69,7 +69,7 @@ Read on the providers' pages on 2026-10-09: Supabase's DPA names Supabase Pte. L
 
 ## 5. Open items before the first user
 
-- Controller name. Country: Bulgaria, so the lead authority is the CPDP (relayed by the hub, session 022). Contact addresses exist since session 021: `contact@` and `privacy@tavernledger.net`.
+- Done in session 021: controller Andrew Rodrigo, Bulgaria (user's answer); contact addresses `contact@` and `privacy@tavernledger.net`; authority the Bulgarian CPDP; governing law Bulgaria. Bulgaria sets the age of digital consent at 14, so the project's minimum age of 16 (D-027) stays stricter than the law.
 - Cloudflare DPA version, and whether it covers Email Sending.
 - A sign-up notice on `/signin/` ("By creating an account you agree to the terms, confirm you are 16 or older, and confirm you have read the privacy policy"; the policy is information, not something to consent to), plus a password reset (T-104c notes).
 - The outbound email sender (see section 4) and its DPA.
