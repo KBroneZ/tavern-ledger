@@ -63,6 +63,11 @@ Remaining to close T-101: the live test (play a game with `cargo run --release -
 | T-104c | Website (Astro): sign-in, account page with export and deletion, public profile (private by default) | pending |
 | T-104d | Desktop upload: sign-in through the browser (PKCE, loopback), upload queue with retries, upload off until the user turns it on | pending |
 | T-105 | Code signing (P-005) and installer with auto-update | pending |
+| T-106 | Log setup check: `client.config` `[Log] FileSizeLimit.Int=-1` (without it the game stops writing a log at about 10 MB, one game) and `log.config` `[Power]`, in `check_logs.py` and in the app, with fix instructions; the app never edits them by itself | pending |
+| T-107 | Save the parser version and game build with each game; when a parser fix lands, say which saved games to re-read and re-read them from the logs still on disk | pending |
+| T-108 | Fixtures from more than one game build (trimmed, no third-party names, with the user's OK) as regression tests for patches | pending |
+| T-109 | Where each value comes from, shown in the app: from the log, inferred, entered by you, from the leaderboard, unknown | pending |
+| T-110 | "Report a problem" bundle: one game's report, parser version, build and the parser's warnings, with names removed; the user sees it and sends it by hand | pending |
 
 **Notes T-104a (2026-10-09, session 012).** Built and tested on the local Supabase stack only; the user chose to create the hosted project later (account, terms, DPA, Frankfurt, Free plan). Supabase CLI 2.118.0 as a pinned npm dev dependency and Docker Desktop, with the user's OK (D-021). Migrations in `supabase/migrations/`: `profiles` (private by default, display name of up to 32 letters, digits, spaces, `_`, `.` or `-`: no `#` or look-alike, so no BattleTag) and `games` keyed by `(user_id, session, game_index)` with checked mode, status, hero card id, place range per mode, build, date, tribes offered, `saved_at` revision, SHA-256, size and a derived storage path; no name, rating or MMR column (a test checks it). Private `games` bucket (64 KiB, `application/gzip`), files at `<user_id>/<session>-<index>.json.gz`. Row-level security: clients read their own rows and the rows and files of public profiles; their privileges are cut down to `select` plus updating their own `display_name` and `is_public`; no client write on games or the bucket. Export: `export_my_data()` (account without password hash or tokens, identities, sessions, second factors, auth events, profile, every game row, file list). Deletion: Edge Function `delete-account` (files through the Storage API, rows, auth user, then the `user_deleted` audit entry that the auth deletion itself writes with the email; repeatable after a failure, except that a failure in that last step leaves the entry until it is removed by hand or by the T-104d sweep). Backups: `tools/backup_supabase.ps1` (roles, schema, data without live sessions or refresh tokens, bucket and a SHA-256 manifest in `.local/backups/`, readable by the current Windows user only, kept 35 days; a failed run leaves no partial folder), checked against the local stack; `.local` should sit on a BitLocker disk, since `data.sql` holds emails and password hashes. Tests: 50 pgTAP (`npx supabase test db`), 14 Deno unit tests for the function, 4 end-to-end tests against the running stack (`TAVERN_SUPABASE_LOCAL=1`; after deletion nothing of the user remains in rows, auth tables, audit log or storage); a run with loosened policies fails 8 of the pgTAP tests. `supabase db lint`: no findings. Not in CI (D-021). When the hosted project exists: mirror the `config.toml` auth settings (password length 10, email confirmation, secure password change, no GraphQL schema), check that the `postgres` role may still delete from `auth.audit_log_entries` there (**unverified**), and add CORS for the site's origin plus a recent sign-in check to `delete-account` (T-104c). Reviews (code and security): no CRITICAL or HIGH; fixed the MEDIUM (the audit entry the auth deletion writes, retention running before the backup, CHECK evaluation order, backups holding live tokens) and most LOW findings. The upload Edge Function, quotas and the daily sweep of files with no row are T-104d.
 
@@ -85,7 +90,8 @@ Remaining to close T-101: the live test (play a game with `cargo run --release -
 
 | ID | Task | Status |
 |----|------|--------|
-| T-301 | Overlay with lobby tribes, last seen board of each opponent and record | pending |
+| T-301 | Overlay with tribes seen in the tavern (or entered by the user, labelled so), last seen board of each opponent and record. Needs windowed or borderless fullscreen (exclusive fullscreen hides any overlay) | pending |
+| T-303 | Lobby tribes by hand: the user picks the 5 tribes at hero select; shown as "entered by you", never mixed with the inferred ones | pending |
 | T-302 | Customizable overlay: lock/unlock button to move the panels wherever each user wants, choose which panels show and several themes | pending |
 
 ## F4 — Community and extras
@@ -95,8 +101,26 @@ Remaining to close T-101: the live test (play a game with `cargo run --release -
 | T-401 | Aggregate community stats (only with consent and enough volume) | pending |
 | T-402 | Paid extras (P-006) | pending |
 
+## Dev tools
+
+Never shipped to users; for collecting test games and debugging.
+
+| ID | Task | Status |
+|----|------|--------|
+| T-D01 | Reconnect/unplug dev tool under `tools/dev/` (D-022): hotkey that drops the game's TCP connection to skip combat, by hand, own account, admin; games played with it marked in the history. Needs the user's OK to start | pending |
+| T-D02 | Log replay: feed a saved `Power.log` to the tracker at game speed, to test the app and the overlay without playing | pending |
+
+## Future ideas (from the GitHub survey)
+
+Not planned yet; each needs its own task and, where noted, a decision.
+
+- Read `LoadingScreen.log` to know when the player leaves a game, if `STATE=COMPLETE` turns out too late for recaps (T-202).
+- Combat odds (F4 or later): only with the validation method other projects document (score predictions against real outcomes; replay the real attack order to find the first rule that differs) and showing "not modelled" instead of a number when a card is not supported. See [implementation-notes.md](../research/implementation-notes.md).
+- Card images on the web (T-201): only under Blizzard's Fan Content Policy; HearthstoneJSON data is "All Rights Reserved", so it is never bundled in the repo.
+- Community stats (T-401) opt-in and off by default, never switched on by an update.
+
 ## Out of scope for now
 
 - Combat simulator (very high cost; only if the project is still alive after F4).
-- Memory reading (D-004).
+- Memory reading (D-004). It is how other trackers get exact lobby tribes at hero select and opponents' names (so their MMR); we show those as inferred or unknown instead.
 - Injection or client modification, including the "minion dance": discarded for good (D-006).
