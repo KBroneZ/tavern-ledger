@@ -20,7 +20,9 @@ Personal stats (T-102) are in the app: totals, per-hero numbers and tribes seen 
 
 Web stack (T-103): a static Astro site plus Supabase in the EU (Postgres, login, file storage); the desktop app will upload each finished game, about 2.5 KB gzipped, only after you sign in and turn it on. No Battle.net login: Blizzard's developer terms do not allow it in an app with paid extras. Decision D-020; findings: [docs/research/web-stack.md](docs/research/web-stack.md). Nothing is online yet.
 
-Next tasks: T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures) and T-104a to T-104d (accounts, privacy policy, website and upload).
+Backend (T-104a): the database schema, row-level security, export, account deletion and backups exist and are tested on a local Supabase stack. Clients can only read their own data and public profiles; game uploads will go through one server function. The hosted project is not created yet.
+
+Next tasks: T-101 (only a live test during a real game is left), T-002 (more Solo games and trimmed fixtures), the hosted Supabase project (T-104a, needs the user) and T-104b to T-104d (privacy policy, website and upload).
 
 ## Check your log setup
 
@@ -86,6 +88,21 @@ cargo test --workspace
 ```
 
 CI runs the tests, checks relative Markdown links and scans the history for secrets.
+
+### Backend (local Supabase stack)
+
+Needs Node.js and Docker Desktop. The CLI is pinned in `package.json`.
+
+```
+npm ci
+npx supabase start                    # first run pulls the images (a few GB)
+npx supabase test db                  # pgTAP: schema, row-level security, export
+deno test supabase/functions/delete-account/
+$env:TAVERN_SUPABASE_LOCAL = "1"; python -m unittest tests.test_supabase_local -v
+pwsh tools/backup_supabase.ps1 -Local # backup into .local/backups/
+```
+
+These run on the developer's machine, not in CI. Without `-Local`, the backup script backs up the linked hosted project, reading `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from `.local/supabase.env`.
 
 ## License
 

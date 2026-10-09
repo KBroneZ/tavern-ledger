@@ -70,6 +70,8 @@ prompts/sessions/        session prompts (only if the user asks)
 tools/                   read-only scripts (check_logs.py, parse_bg.py)
 spikes/                  throwaway tests (overlay-tauri: the T-005 overlay test)
 tests/                   tests (unittest; dependencies pinned in requirements.txt)
+supabase/                backend: migrations, database tests, Edge Functions (local stack)
+package.json             dev tooling only (Supabase CLI, pinned)
 requirements.txt         Python dependencies with version and hash
 .github/workflows/       CI: tests, links and secrets
 .local/                  local only, never in git
