@@ -11,11 +11,11 @@ function fakeJwt(role: string): string {
 test("reads the project URL and the public key", () => {
   const config = readConfig({
     PUBLIC_SUPABASE_URL: "https://abcd.supabase.co",
-    PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_abc123",
+    PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_x",
   });
   assert.deepEqual(config, {
     url: "https://abcd.supabase.co",
-    anonKey: "sb_publishable_abc123",
+    anonKey: "sb_publishable_x",
   });
 });
 

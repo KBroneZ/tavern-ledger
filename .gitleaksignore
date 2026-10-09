@@ -1,0 +1,4 @@
+# Made-up test key ("sb_publishable_" + "abc123") in a branch commit of #013;
+# the file now uses a value gitleaks does not flag. Not a real key.
+7f5f90da4938e56351811c0a16797b0e4b7a6c22:web/test/unit/config.test.ts:generic-api-key:14
+7f5f90da4938e56351811c0a16797b0e4b7a6c22:web/test/unit/config.test.ts:generic-api-key:18
