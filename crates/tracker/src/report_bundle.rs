@@ -64,6 +64,7 @@ const ROUND: Shape = Shape::Object(&[
     ("entries", Shape::List(&ENTRY)),
     ("own_health_after", Shape::Scalar),
     ("opponents", Shape::List(&Shape::Scalar)),
+    ("health_after", Shape::Map),
 ]);
 
 const LOBBY_PLAYER: Shape = Shape::Object(&[
@@ -92,6 +93,7 @@ const REPORT: Shape = Shape::Object(&[
     ("lobby", Shape::List(&LOBBY_PLAYER)),
     ("shop_tribes", Shape::Map),
     ("rounds", Shape::List(&ROUND)),
+    ("start_health", Shape::Map),
     ("warnings", TEXTS),
     ("problems", TEXTS),
     ("not_in_log", TEXTS),
@@ -390,7 +392,9 @@ mod tests {
             "lobby": [{"player_id": 3, "hero": "BG20_HERO_202", "duo_team": null,
                        "final_place": 2, "final_health": 12}],
             "shop_tribes": {"Beast": 4},
+            "start_health": {"3": 40, "5": 40},
             "rounds": [{"number": 1, "own_health_after": 40, "opponents": [5],
+                "health_after": {"3": 40, "5": 33},
                 "entries": [{"side": "own", "player_id": 3, "hero": "BG20_HERO_202",
                     "board": [{"card_id": "BG_X", "atk": 2, "health": 3,
                                "position": 1, "golden": false}]},

@@ -49,6 +49,9 @@ def compare(path: Path) -> bool:
     rust = json.loads(proc.stdout)["games"]
     for game in rust:
         game.pop("card_names", None)  # Rust-only: hero names read from the log
+        game.pop("start_health", None)  # Rust-only: health of every lobby hero
+        for rnd in game.get("rounds", []):
+            rnd.pop("health_after", None)
     print(f"{path.parent.name}/{path.name}: {len(python)} games (Python), {len(rust)} (Rust)")
     ok = len(python) == len(rust)
     for py, rs in zip(python, rust):

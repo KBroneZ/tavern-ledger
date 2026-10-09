@@ -130,7 +130,7 @@ pub fn base_hero(card_id: &str) -> &str {
 const SKIN: &str = "_SKIN_";
 
 /// Place rules of a mode: the top half, and the worst possible place.
-fn rules(mode: &str) -> Option<(i64, i64)> {
+pub(crate) fn rules(mode: &str) -> Option<(i64, i64)> {
     match mode {
         SOLO => Some((4, 8)),
         DUOS => Some((2, 4)), // Duos places are per team
@@ -138,7 +138,7 @@ fn rules(mode: &str) -> Option<(i64, i64)> {
     }
 }
 
-fn mode_of(report: &Value) -> &'static str {
+pub(crate) fn mode_of(report: &Value) -> &'static str {
     match report.get("game_type").and_then(Value::as_str) {
         Some(SOLO) => SOLO,
         Some(DUOS) => DUOS,
@@ -148,7 +148,7 @@ fn mode_of(report: &Value) -> &'static str {
 
 /// The place of a game if it counts: a finished game with a place inside
 /// the mode's range. None for anything else.
-fn counted_place(mode: &str, status: Option<&str>, report: &Value) -> Option<i64> {
+pub(crate) fn counted_place(mode: &str, status: Option<&str>, report: &Value) -> Option<i64> {
     let (_, worst) = rules(mode)?;
     if status != Some("ok") {
         return None;
