@@ -1,6 +1,6 @@
 # Privacy policy (draft)
 
-> **Draft, not in force.** The website is not open to the public yet, and none of the providers below has been signed up yet. Items marked `[TO BE DECIDED: …]` or `[TO BE CHECKED: …]` must be settled before the first public user. This draft was written by the project, not by a lawyer, and is not legal advice. Source of every statement: the [data inventory](https://github.com/KBroneZ/tavern-ledger/blob/main/docs/legal/data-inventory.md).
+> **Draft, not in force.** The website is not open to the public yet: sign-ups are closed. Supabase and Cloudflare are in use; the email sender is being set up. Items marked `[TO BE DECIDED: …]` or `[TO BE CHECKED: …]` must be settled before the first public user. This draft was written by the project, not by a lawyer, and is not legal advice. Source of every statement: the [data inventory](https://github.com/KBroneZ/tavern-ledger/blob/main/docs/legal/data-inventory.md).
 
 Last updated: [TO BE DECIDED: date it takes effect]
 
@@ -10,7 +10,7 @@ Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainmen
 
 ## 1. Who is responsible
 
-The controller is [TO BE DECIDED: name of the person who runs Tavern Ledger, and country], a private person who runs this project in their spare time.
+The controller is [TO BE DECIDED: name of the person who runs Tavern Ledger], a private person in Bulgaria who runs this project in their spare time.
 
 Contact for anything about your data: privacy@tavernledger.net.
 
@@ -18,9 +18,9 @@ Contact for anything about your data: privacy@tavernledger.net.
 
 The app reads the game's log files and saves a summary of each Battlegrounds game in `%APPDATA%\TavernLedger\games.jsonl`: the session's start time, mode, game build, your hero and your Duos teammate's hero, the lobby's heroes by player number, places and health, boards (as card ids), card names in your game's language, tribes offered in the tavern, and which parser version read the game. The logs contain the names (BattleTags) of the players in your lobby; the app does not save them.
 
-The app sends nothing over the internet. We never receive this file. To export it, copy it; to delete it, delete the `TavernLedger` folder.
+Unless you turn on uploading, the app sends nothing over the internet and we never receive this file. To export it, copy it; to delete it, delete the `TavernLedger` folder.
 
-Uploading games to your website account is a planned feature. It will be off until you sign in and turn it on, and this policy will be updated before it ships.
+**Uploading to your account (optional, off by default).** You can sign in from the app with a one-time link sent to your email and opened in your browser; the app never asks for your password. It keeps the sign-in (a refresh token) in Windows Credential Manager on your PC, and a list of the games it uploaded next to the history (`uploads.jsonl`). Only when you turn "Upload games" on does it send each finished game's record (the summary above, without player names) to your account (section 4). Signing out ends the session on our server, removes the sign-in from your PC and turns uploading off.
 
 ## 3. When you visit the website
 
@@ -39,7 +39,9 @@ There are no ads, no analytics and no tracking.
 | Sign-in sessions: times, IP address and browser user agent; refresh and one-time tokens | To keep you signed in | Contract |
 | Security log: sign-up, sign-in, sign-out, password and email changes, with time and IP address | To detect and stop abuse of accounts | Legitimate interest in keeping accounts secure (Art. 6(1)(f)) |
 | Profile: a display name you choose (optional) and whether your profile is public (off by default) | To show your profile, if you make it public | Contract: publication only happens when you switch it on, and you can switch it off at any time |
-| Your games: a summary row per game (date, mode, hero, place, build, tribes offered) and the game's full record from the app (no player names) | To show your history and stats | Contract |
+| Your games: a summary row per game (date, mode, hero, place, build, tribes offered, parser version) and the game's full record from the app (no player names), if you upload them | To show your history and stats | Contract |
+| Upload times: when each of your uploads happened, kept two days | To enforce the hourly and daily upload limits | Legitimate interest in keeping the service available for everyone (Art. 6(1)(f)) |
+| Refused requests: a hash of the IP address that sent an upload with an invalid sign-in, and a count, kept one hour | To block abusive requests | Legitimate interest in protecting the service |
 | Backups of all of the above, without live sign-in sessions | To recover from failures | Legitimate interest in not losing your data |
 
 Your email and a password are required to have an account; without them we cannot create one. Everything else is optional: a display name, uploading games and a public profile.
@@ -50,13 +52,13 @@ We do **not** collect player names, BattleTags, Battle.net accounts, ratings or 
 
 ## 5. Who receives your data
 
-**Our providers**, as processors acting on our instructions, each under a data processing agreement (DPA) that we will sign before the site opens:
+**Our providers**, as processors acting on our instructions, each under a data processing agreement (DPA) that is part of its terms:
 
 | Provider | What it does | Where | Transfers outside the EU |
 |----------|--------------|-------|--------------------------|
-| Supabase (contracting entity Supabase Pte. Ltd., Singapore) | Database, sign-in, file storage, server functions and their logs | Frankfurt, Germany (EU) | Data is stored in the EU, but Supabase and its sub-processors may access it from other countries; covered by the EU Standard Contractual Clauses in Supabase's DPA. [TO BE CHECKED at sign-up: DPA version and sub-processor list, supabase.com/legal/customer-resources/subprocessor-list] |
-| Cloudflare, Inc. (USA) | Hosts the website's pages | Worldwide network | EU–US Data Privacy Framework, with Standard Contractual Clauses as a fallback, in the Cloudflare Customer DPA. [TO BE CHECKED at sign-up: DPA version] |
-| [TO BE DECIDED: outbound email sender] | Sends account emails (sign-up confirmation, email change and, once it exists, password reset) | [TO BE CHECKED] | [TO BE CHECKED] |
+| Supabase (contracting entity Supabase Pte. Ltd., Singapore) | Database, sign-in, file storage, server functions and their logs | Frankfurt, Germany (EU) | Data is stored in the EU, but Supabase and its sub-processors may access it from other countries; covered by the EU Standard Contractual Clauses in Supabase's DPA, which is part of its terms of service; Supabase also provides a transfer impact assessment. Sub-processors: list of 1 June 2026 at supabase.com/legal/subprocessors. |
+| Cloudflare, Inc. (USA) | Hosts the website's pages; forwards mail sent to our contact addresses | Worldwide network | EU–US Data Privacy Framework, with Standard Contractual Clauses as a fallback, in the Cloudflare Customer DPA. [TO BE CHECKED: DPA version] |
+| Cloudflare, Inc. (USA), Email Sending | Sends account emails from noreply@tavernledger.net (sign-up confirmation, sign-in links, email change and, once it exists, password reset) | [TO BE CHECKED: where Email Sending processes and logs messages] | As for Cloudflare above, if the Customer DPA covers Email Sending [TO BE CHECKED: the DPA annex we read does not name it] |
 
 You can ask us for a copy of the transfer safeguards at the contact address above.
 
@@ -70,7 +72,8 @@ We do not sell or rent your data.
 
 - **Account, profile, games, sessions and the security log:** until you delete your account (sessions also end when you sign out or they expire).
 - **Backups:** made weekly on the controller's own computer, readable only by their user account, and deleted after 35 days. After you delete your account, your data can remain in backups for up to 35 days. If we ever restore a backup, we delete again the accounts deleted since it was made.
-- **Provider logs** (page requests, server requests, emails sent): kept by Cloudflare, Supabase and the email sender for the periods their services set, then deleted. They are not tied to your account in a way we can export or delete one by one. [TO BE CHECKED: Supabase log retention on our plan; Cloudflare Pages request logs; the email sender's log retention, to be set to its shortest option.]
+- **Upload times:** two days. **Refused-request counters:** one hour.
+- **Provider logs** (page requests, server requests, emails sent): kept by Cloudflare, Supabase and the email sender for the periods their services set, then deleted. Supabase keeps its API and database logs for one day on our plan. They are not tied to your account in a way we can export or delete one by one. [TO BE CHECKED: Cloudflare Pages request logs; Email Sending's log retention, to be set to its shortest option.]
 
 ## 7. Your rights
 
@@ -85,11 +88,11 @@ You can, at any time:
 
 Write to privacy@tavernledger.net for anything the site does not do by itself. We answer within one month.
 
-You can also complain to a data protection authority, in particular in the EU country where you live or work or where you think the problem happened. [TO BE DECIDED: if the controller is in Spain, the Agencia Española de Protección de Datos (AEPD), www.aepd.es.]
+You can also complain to a data protection authority, in particular in the EU country where you live or work or where you think the problem happened. The authority where the controller is based is Bulgaria's Commission for Personal Data Protection (CPDP), www.cpdp.bg.
 
 ## 8. Cookies and browser storage
 
-The website sets no cookies of its own and uses no tracking. When you sign in, the Supabase library stores your sign-in session in your browser's local storage (key `sb-<project>-auth-token`: access and refresh tokens and your account's basic details) and, during sign-in, a one-time code verifier (`…-code-verifier`). These are strictly necessary to keep you signed in and are removed when you sign out. Our hosting provider, Cloudflare, may set a strictly necessary security cookie (such as `__cf_bm` or `cf_clearance`) when its protection against attacks and abusive bots needs to check a visit; it is not used to track you. [TO BE CHECKED: the exact cookies and their lifetime on our plan.]
+The website sets no cookies of its own and uses no tracking. When you sign in, the Supabase library stores your sign-in session in your browser's local storage (key `sb-<project>-auth-token`: access and refresh tokens and your account's basic details) and, during sign-in, a one-time code verifier (`…-code-verifier`). These are strictly necessary to keep you signed in and are removed when you sign out. Our hosting provider, Cloudflare, sets a cookie only if its protection against attacks shows you a challenge: `cf_clearance`, which records that you passed it so you are not asked again for a while. It is strictly necessary and not used to track you. Cloudflare's bot cookie `__cf_bm` is not used on this site (its bot features are off), and Cloudflare's Network Error Logging (browser reports of failed connections) is turned off. [TO BE CHECKED: the challenge passage time set on our zone, which is how long `cf_clearance` lasts.]
 
 ## 9. Children
 

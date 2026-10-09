@@ -1,8 +1,7 @@
-//! Which server to upload to: `server.json` next to the history,
-//! `{"url": "...", "anon_key": "..."}`. The hosted project does not exist yet
-//! (it needs the user's account), so there is no built-in server: without the
-//! file, upload says it is not available. Only the public (anon) key belongs
-//! here; a service-role or secret key is refused.
+//! Which server to upload to: the hosted project built in, unless the data
+//! folder has `server.json` (`{"url": "...", "anon_key": "..."}`, e.g. the
+//! local stack for development). Only the public (anon or publishable) key
+//! belongs in either; a service-role or secret key is refused.
 
 use std::fs;
 use std::io;
@@ -13,6 +12,13 @@ use base64::Engine;
 use serde::Deserialize;
 
 pub const FILE_NAME: &str = "server.json";
+
+/// The hosted Supabase project (docs/research/deploy.md, section 10) and its
+/// publishable key, which is public by design: what it can reach is limited
+/// by row-level security and the upload function's own checks.
+const HOSTED_URL: &str = "https://vgttflmexobrqhcyxjks.supabase.co";
+// Public key: gitleaks would flag its shape, hence the marker on the line below.
+const HOSTED_PUBLISHABLE_KEY: &str = "sb_publishable_pJF8WBoz25Ypn4xAcvp_7Q_slkw7glM"; // gitleaks:allow
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct ServerConfig {
@@ -52,6 +58,23 @@ impl std::fmt::Display for ConfigError {
 struct Raw {
     url: String,
     anon_key: String,
+}
+
+/// The built-in server: the hosted project.
+pub fn hosted() -> ServerConfig {
+    ServerConfig {
+        url: HOSTED_URL.to_string(),
+        anon_key: HOSTED_PUBLISHABLE_KEY.to_string(),
+    }
+}
+
+/// `server.json` if the data folder has one, else the hosted project. A file
+/// that exists but cannot be read or is wrong stays an error.
+pub fn load_or_hosted(dir: &Path) -> Result<ServerConfig, ConfigError> {
+    match load(dir) {
+        Err(ConfigError::Missing) => Ok(hosted()),
+        other => other,
+    }
 }
 
 pub fn load(dir: &Path) -> Result<ServerConfig, ConfigError> {
@@ -200,6 +223,29 @@ mod tests {
         let body = serde_json::json!({"url": "https://a.supabase.co", "anon_key": jwt("anon")});
         fs::write(dir.join(FILE_NAME), body.to_string()).unwrap();
         assert_eq!(load(&dir).unwrap().url, "https://a.supabase.co");
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn the_built_in_server_is_the_hosted_project_with_its_public_key() {
+        let server = hosted();
+        assert_eq!(server.url, "https://vgttflmexobrqhcyxjks.supabase.co");
+        assert_eq!(parse(&server.url, &server.anon_key), Ok(server.clone()));
+        assert!(server.anon_key.starts_with("sb_publishable_"));
+    }
+
+    #[test]
+    fn without_the_file_the_hosted_project_is_used_and_the_file_still_wins() {
+        let dir = std::env::temp_dir().join(format!("tl-config-hosted-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let _ = fs::remove_file(dir.join(FILE_NAME));
+        assert_eq!(load_or_hosted(&dir), Ok(hosted()));
+        let body = serde_json::json!({"url": "http://127.0.0.1:54321", "anon_key": jwt("anon")});
+        fs::write(dir.join(FILE_NAME), body.to_string()).unwrap();
+        assert_eq!(load_or_hosted(&dir).unwrap().url, "http://127.0.0.1:54321");
+        // A broken file is an error to show, never a silent switch to the hosted project.
+        fs::write(dir.join(FILE_NAME), "{").unwrap();
+        assert!(matches!(load_or_hosted(&dir), Err(ConfigError::Invalid(_))));
         fs::remove_dir_all(&dir).unwrap();
     }
 }

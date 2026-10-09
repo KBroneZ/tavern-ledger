@@ -18,7 +18,11 @@ interface Call {
   body: unknown;
 }
 
-function fakeApi(opts: { files?: string[]; fail?: string; sticky?: boolean } = {}) {
+const TOKEN = "ab".repeat(32);
+
+function fakeApi(
+  opts: { files?: string[]; fail?: string; sticky?: boolean; token?: string } = {},
+) {
   let files = [...(opts.files ?? [])];
   const calls: Call[] = [];
   const reply = (status: number, body: unknown) =>
@@ -30,6 +34,9 @@ function fakeApi(opts: { files?: string[]; fail?: string; sticky?: boolean } = {
     calls.push({ method, path, body });
     if (opts.fail === path) return reply(503, {});
     if (path === "/rest/v1/rpc/sweep_orphan_files") return reply(200, files.slice(0, 1000));
+    if (path === "/rest/v1/rpc/sweep_token_valid") {
+      return reply(200, body.p_token === (opts.token ?? TOKEN));
+    }
     if (path === "/storage/v1/object/games" && method === "DELETE") {
       if (!opts.sticky) files = files.filter((f) => !body.prefixes.includes(f));
       return reply(200, []);
@@ -124,4 +131,43 @@ Deno.test("a failed step is a 500 naming it", async () => {
   const failing: Fetch = () => Promise.reject(new TypeError("network down"));
   const res2 = await handle(request(), ENV, failing);
   assertEquals([res2.status, (await res2.json()).step], [500, "list files"]);
+});
+
+const tokenRequest = (token: string, extra: Record<string, string> = {}) =>
+  new Request("http://fn.test/sweep", {
+    method: "POST",
+    headers: { "X-Sweep-Token": token, ...extra },
+  });
+
+Deno.test("the scheduled job's sweep token is checked by the database, then runs", async () => {
+  const api = fakeApi({ files: [orphan(1)] });
+  const res = await handle(tokenRequest(TOKEN), ENV, api.fetchFn);
+  assertEquals(res.status, 200);
+  assertEquals(api.calls[0].path, "/rest/v1/rpc/sweep_token_valid");
+  assertEquals(api.calls[0].body, { p_token: TOKEN });
+  assertEquals(api.calls.at(-1)?.path, "/rest/v1/rpc/sweep_housekeeping");
+});
+
+Deno.test("a wrong or malformed sweep token runs nothing", async () => {
+  // Wrong token: asked once, refused. Malformed: refused without asking.
+  for (const [token, asked] of [["cd".repeat(32), 1], ["short", 0], [`${TOKEN}0`, 0], ["", 0]] as const) {
+    const api = fakeApi({ files: [orphan(1)] });
+    const res = await handle(tokenRequest(token), ENV, api.fetchFn);
+    assertEquals(res.status, 401, token);
+    assertEquals(api.calls.length, asked, token);
+  }
+});
+
+Deno.test("a sweep token that cannot be checked is a 500, not a run", async () => {
+  const api = fakeApi({ files: [orphan(1)], fail: "/rest/v1/rpc/sweep_token_valid" });
+  const res = await handle(tokenRequest(TOKEN), ENV, api.fetchFn);
+  assertEquals(res.status, 500);
+  assertEquals((await res.json()).step, "check token");
+  assertEquals(api.calls.length, 1);
+});
+
+Deno.test("a sweep token with the wrong method is refused after the check", async () => {
+  const api = fakeApi();
+  const req = new Request("http://fn.test/sweep", { method: "GET", headers: { "X-Sweep-Token": TOKEN } });
+  assertEquals((await handle(req, ENV, api.fetchFn)).status, 405);
 });

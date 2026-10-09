@@ -1,4 +1,6 @@
-// Daily sweep (T-104d). POST /functions/v1/sweep with the service-role key:
+// Daily sweep (T-104d). POST /functions/v1/sweep with the service-role key,
+// or with the sweep token that the scheduled job reads from Vault
+// (X-Sweep-Token; checked by the database, migration 20261010090000):
 //   1. game files with no summary row (an upload that wrote its file and then
 //      failed before the row), untouched for an hour, through the Storage
 //      API (deleting storage.objects rows in SQL would leave the bytes);
@@ -61,6 +63,21 @@ function isServiceRole(req: Request, env: Env): boolean {
     (sameSecret(token, env.serviceKey) || sameSecret(apikey, env.serviceKey));
 }
 
+// The token the migration puts in Vault: 32 random bytes as hex.
+const SWEEP_TOKEN = /^[0-9a-f]{64}$/;
+
+/** True if the request carries the scheduled job's sweep token. */
+async function hasSweepToken(req: Request, env: Env, fetchFn: Fetch): Promise<boolean> {
+  const token = req.headers.get("X-Sweep-Token") ?? "";
+  if (!SWEEP_TOKEN.test(token)) return false;
+  const res = await call(fetchFn, "check token", `${env.url}/rest/v1/rpc/sweep_token_valid`, {
+    method: "POST",
+    headers: serviceHeaders(env),
+    body: JSON.stringify({ p_token: token }),
+  });
+  return (await res.json()) === true;
+}
+
 async function call(fetchFn: Fetch, step: string, url: string, init: RequestInit) {
   let res: Response;
   try {
@@ -110,9 +127,11 @@ async function deleteOrphans(env: Env, fetchFn: Fetch): Promise<number> {
 }
 
 export async function handle(req: Request, env: Env, fetchFn: Fetch = fetch): Promise<Response> {
-  if (!isServiceRole(req, env)) return json(401, { error: "service role only" });
-  if (req.method !== "POST") return json(405, { error: "use POST" });
   try {
+    if (!isServiceRole(req, env) && !(await hasSweepToken(req, env, fetchFn))) {
+      return json(401, { error: "service role only" });
+    }
+    if (req.method !== "POST") return json(405, { error: "use POST" });
     const files = await deleteOrphans(env, fetchFn);
     const res = await call(
       fetchFn,

@@ -36,12 +36,15 @@ wire("signin-form", "signin-message", async (email, password, message) => {
   location.assign(ACCOUNT_PAGE);
 });
 
-wire("signup-form", "signup-message", async (email, password, message) => {
-  say(message, "Creating the account…");
-  const outcome = await signUp(supabase, email, password, new URL(ACCOUNT_PAGE, location.origin).href);
-  say(message, outcome.message, outcome.kind === "error" ? "error" : "ok");
-  if (outcome.kind === "check-email") byId<HTMLFormElement>("signup-form").reset();
-});
+// The sign-up form is only in the page while sign-ups are open.
+if (document.getElementById("signup-form")) {
+  wire("signup-form", "signup-message", async (email, password, message) => {
+    say(message, "Creating the account…");
+    const outcome = await signUp(supabase, email, password, new URL(ACCOUNT_PAGE, location.origin).href);
+    say(message, outcome.message, outcome.kind === "error" ? "error" : "ok");
+    if (outcome.kind === "check-email") byId<HTMLFormElement>("signup-form").reset();
+  });
+}
 
 // Already signed in (checked with the server, not only the stored session):
 // go straight to the account.

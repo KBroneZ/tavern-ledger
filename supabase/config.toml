@@ -385,9 +385,30 @@ deno_version = 2
 
 # Not secrets, but this is how the local stack passes settings to functions.
 # SITE_ORIGINS: the website's origins that may call delete-account (T-104c).
-# The hosted project sets it with `supabase secrets set`.
+# The hosted project uses the function's default, https://tavernledger.net.
 [edge_runtime.secrets]
 SITE_ORIGINS = "http://127.0.0.1:3000"
+
+# The Supabase GitHub integration deploys the functions declared here on each
+# push to main (docs/research/deploy.md, section 10.1). Each function checks
+# its caller itself before doing anything. upload-game and delete-account keep
+# the platform's JWT check in front as well (it accepts the users' tokens);
+# sweep is called by the database's own scheduled job with the sweep token
+# from Vault and no key, so the platform check would refuse it.
+[functions.upload-game]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/upload-game/index.ts"
+
+[functions.delete-account]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/delete-account/index.ts"
+
+[functions.sweep]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/sweep/index.ts"
 
 [analytics]
 enabled = false

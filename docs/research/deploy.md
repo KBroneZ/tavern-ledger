@@ -168,6 +168,104 @@ Seen in the responses and not ours: `Access-Control-Allow-Origin: *` (Pages defa
 
 Not done: a test message to `contact@` from an outside address (the user can send one from their phone), CAA, HSTS raised to a year (after a couple of clean weeks).
 
+## 10. Hosted backend (T-104a hosted, session 022)
+
+Plan for the hosted Supabase project and the auth emails. Project `tavern-ledger`, ref `vgttflmexobrqhcyxjks`, org "Tavern Ledger" (Free plan), Central EU (Frankfurt). Created by the hub with the user on 2026-10-09: Data API on, "automatically expose new tables" off (the migrations grant explicitly), automatic RLS on, no migration applied. Facts read on the providers' pages and dashboards on 2026-10-09 (sources at the end); **unverified** marks what no primary page confirmed.
+
+What the dashboards showed before any change: the current JWT signing key is ECC P-256 (ES256), the legacy HS256 secret is a "previous key" that still verifies old tokens; the new publishable (`sb_publishable_…`) and secret (`sb_secret_…`) keys exist and the legacy `anon`/`service_role` keys are still enabled; no GitHub connection; Cloudflare Email Sending is not enabled on the account ("currently only available with the Workers Paid plan").
+
+### 10.1 How migrations and Edge Functions reach the hosted project
+
+**Choice: the Supabase GitHub integration, deploying `main` to production, branching off.** Supabase made it available on all plans in April 2026: on each push to `main` it applies new migrations, deploys the Edge Functions declared in `supabase/config.toml` and the buckets declared there. It ignores auth and API settings and the seed.
+
+| | GitHub integration (chosen) | CLI from GitHub Actions | CLI from this PC |
+|---|---|---|---|
+| Long-lived secret | none | a personal access token (scoped to the project) and the database password as GitHub secrets | the same two, on this PC |
+| New dependency | none | none (the CLI is already pinned) | none |
+| Access granted | the Supabase GitHub app on `KBroneZ/tavern-ledger` (the user approves on GitHub) | token with write access to the project | same |
+| Who deploys | every merge to `main`, like the site (D-030) | every merge to `main` | whoever runs it; easy to forget or to run from the wrong branch |
+| Main risk | a compromised Supabase account could read the repo through the app | a leaked token or password changes production directly | same, plus drift between `main` and production |
+
+No secret anywhere and the same "merge is deploy" rule as Pages decided it. What the integration does not cover is set once by hand and listed in 10.3 to 10.6: auth settings, function secrets, the Vault entry for the sweep, SMTP. A migration runs in one transaction on the integration (no `create index concurrently`); none of ours needs more. A failed deploy shows in the dashboard (Branches / integration logs); after each merge that touches `supabase/`, check it there and with the parity query in 10.8. Rollback of a bad migration is a new migration (nothing is reverted by hand on production). **Fallback** if the integration fails or the user declines it: the CLI from this PC with a project-scoped access token (30-day expiry) kept in Windows Credential Manager by `supabase login`, never in a file or in GitHub.
+
+`config.toml` declares the three functions. `upload-game` and `delete-account` keep `verify_jwt = true` (the default): the platform check accepts both legacy HS256 and new ES256 user tokens, and the new publishable and secret keys, and each function still authenticates the caller itself (`/auth/v1/user`). `sweep` has `verify_jwt = false`: its caller is the database's own job, which sends only the sweep token (no key to keep in Vault), and the function refuses anything but the service key or a valid token before doing any work. If the gateway ever refuses valid ES256 tokens (reported in a few GitHub issues; **unverified** for this project), switch that function to `verify_jwt = false` in a PR: its own checks are the real gate.
+
+### 10.2 Where each secret lives
+
+| Secret | Where | Who can see it |
+|---|---|---|
+| Database password | set at project creation; not needed by the integration | the user (dashboard can reset it) |
+| `service_role` / `sb_secret_…` keys | Supabase only; the functions get `SUPABASE_SERVICE_ROLE_KEY` from the platform | never copied anywhere |
+| Sweep token | Vault, created by the migration from 32 random bytes inside the database (`sweep_token`); compared by the `sweep` function through a service-role-only RPC | nobody needs to read it |
+| Cloudflare API token for SMTP (Email Sending: Edit, this account only) | Supabase's SMTP password field only (copied from Cloudflare's dashboard to Supabase's by clipboard, never shown in chat, logs or files) | Supabase, Cloudflare |
+| Publishable key, project URL | Pages build variables, the desktop default, docs | public by design |
+
+Not secrets: `delete-account` allows `https://tavernledger.net` when `SITE_ORIGINS` is unset (the local stack sets its own in `config.toml`), so the hosted project needs no function secret; the Vault entry `project_url` (`https://vgttflmexobrqhcyxjks.supabase.co`) for the sweep schedule is set once with SQL.
+
+### 10.3 Auth settings (dashboard, mirroring `config.toml` where it applies)
+
+| Setting | Value | Why |
+|---|---|---|
+| Site URL | `https://tavernledger.net` | the default redirect |
+| Redirect URLs | `https://tavernledger.net/account/` | the only page the site redirects to (sign-up confirmation). The desktop's `http://127.0.0.1:<port>/desktop-callback/<state>` is accepted by the loopback rule on the local auth version; checked on the hosted one first and only if refused, `http://127.0.0.1:*/desktop-callback/*` is added |
+| Allow new users to sign up | **off** | sign-ups stay closed until the user says so |
+| Confirm email | on | |
+| Secure email change, secure password change | on | as `config.toml` |
+| Minimum password length | 10, no character classes | as `config.toml` and the site's check |
+| Leaked password protection | not available | Pro plan only; revisit with Pro |
+| Email OTP / link expiry | 3600 s | as `config.toml` |
+| Anonymous sign-ins, phone, OAuth providers, MFA | off | not used |
+| Rate limits | emails 30 an hour (Supabase's default once custom SMTP is on), sign-ups and sign-ins 30 per 5 minutes per IP, token verifications 30 per 5 minutes per IP, token refreshes 150 per 5 minutes per IP | the defaults; low enough for a project that is not public |
+| Email templates | Supabase's defaults (the magic link and confirmation go through `/auth/v1/verify`, which the desktop and the site's PKCE flow need) | branding later |
+| GraphQL (`pg_graphql`) | off if the extension is on | as the local schema; nothing uses it |
+
+### 10.4 Auth emails: custom SMTP with Cloudflare Email Sending (D-030)
+
+- **Needs the user's OK to pay:** Email Sending requires Workers Paid (3,000 emails a month included, then $0.35 per 1,000; the plan's own price is shown in the dashboard at purchase). It is a beta.
+- Onboard `tavernledger.net` in Email Sending. Its records live on the `cf-bounce` subdomain (MX and SPF) plus a DKIM key on its own selector; none goes on the apex, so the apex SPF record of Email Routing stays as it is. If the dashboard asks for anything at the apex, merge it into the single `v=spf1` record.
+- API token: "Email Sending: Edit", this account only, no other permission, no expiry shorter than the plan for rotation (yearly, noted in the plan).
+- Supabase SMTP: host `smtp.mx.cloudflare.net`, port **465** (implicit TLS; Cloudflare refuses STARTTLS on 587), user `api_token`, sender `noreply@tavernledger.net`, name "Tavern Ledger". Supabase's docs only show port 587: if it cannot connect on 465, stop and ask the user (Send Email Hook with our own code, or Brevo).
+- DMARC (`_dmarc`, taken over from 021): keep `p=reject; sp=reject; adkim=s` and relax `aspf` to `r`. Sent mail carries `From: noreply@tavernledger.net`, DKIM `d=tavernledger.net` (aligned under strict rules) and an envelope on `cf-bounce.tavernledger.net` (aligned for SPF only under relaxed rules). Forwarded mail is not affected (Email Routing keeps the sender's own `From:`).
+- Check: a magic link to the user's own address, then the received headers (`Authentication-Results`: SPF, DKIM and DMARC `pass`).
+
+### 10.5 Sweep schedule
+
+New migration `20261010090000_sweep_schedule.sql`: `pg_cron` and `pg_net`, a Vault secret `sweep_token` made inside the database from 32 random bytes, `public.sweep_token_valid(text)` (service role only, compares SHA-256 digests, false when either side is missing), and `private.run_sweep()` scheduled daily at 03:17 UTC (nobody but the database owner may call it). It reads `project_url` and `sweep_token` from Vault and calls `POST <project_url>/functions/v1/sweep` with the token in `X-Sweep-Token`, 30 s timeout. Without `project_url` (the local stack, or before it is set) it sends nothing and logs a warning. The `sweep` function accepts either the service key (manual runs, as today) or a well-formed token that the database confirms; a token it cannot check is a 500, never a run.
+
+Known limit (second opinion): while a request waits in `pg_net`'s queue (seconds), its headers, and so the token, are readable by database roles that can read `net.http_request_queue`; on Supabase that is roles with a direct database connection, which only the owner has. The token only lets someone run the sweep early, which is safe at any time. If it ever leaks, delete the Vault entry and re-run the `do` block of the migration to make a new one.
+
+Failures are not silent: every sweep that finishes leaves a row in `private.sweep_runs` (time and counts, kept 90 days; only the owner can read it). `cron.job_run_details` says the request was queued and `net._http_response` holds the function's answer for six hours. Check after the first run, then weekly until there is alerting: `select max(ran_at) from private.sweep_runs` must be under 25 hours old.
+
+### 10.6 Function secrets and checks
+
+- No function secret to set (`SITE_ORIGINS` defaults to the site). `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` come from the platform; they are the legacy service key while legacy keys stay enabled. Before the legacy keys are ever disabled, the functions must read the new secret key instead (follow-up, noted in the plan).
+- Client IP on the hosted gateway: read one refused request's headers in the function logs to see whether `CF-Connecting-IP` or `X-Forwarded-For` carries the client (D-025 left it **unverified**).
+
+### 10.7 Site and desktop
+
+- Pages, **production** environment only: `PUBLIC_SUPABASE_URL=https://vgttflmexobrqhcyxjks.supabase.co`, `PUBLIC_SUPABASE_ANON_KEY=<sb_publishable_…>`. New build setting `PUBLIC_SIGNUPS_OPEN` (unset = closed): while closed, `/signin/` shows the sign-in form and "Sign-up is not open yet" instead of the sign-up form. Redeploy, then check the CSP allows only the project's origin and that sign-in, account, export and deletion work.
+- Desktop: when the data folder has no `server.json`, the app uses the hosted project's URL and publishable key built in (`crates/uploader`); `server.json` still overrides it for the local stack. Upload stays off until the user signs in and turns it on.
+
+### 10.8 Order of the changes (each checked before the next)
+
+1. **[user]** Approve the Supabase GitHub app on `KBroneZ/tavern-ledger` only; connect it with "Deploy to production" on `main`, branching off, Supabase directory `supabase`.
+2. Auth settings (10.3) with sign-ups off, before anything is deployed; check `disable_signup: true` on the public `/auth/v1/settings`.
+3. Merge this session's PR: the integration applies the four migrations and deploys the three functions. Check: migrations listed as applied; parity query (tables, columns, constraints, indexes, policies, grants, functions and their security, triggers, buckets) gives the same fingerprint on the local stack and the hosted project; RLS on every table in `public`; `anon` and `authenticated` hold only the grants in the migrations; the bucket is private with its policies; no default privileges that would hand a future table to `anon` or `authenticated`; `pg_graphql` off or exposing nothing; with the publishable key alone, every REST, RPC and Storage write is refused and a sign-up and an email link for an unknown address are refused; functions answer `401` without a token and the right CORS on `delete-account`'s preflight.
+4. Vault `project_url`, then run the sweep once by hand (`select private.run_sweep()`) and read the response.
+5. **[user]** Workers Paid; then Email Sending onboarding, DNS, API token, Supabase SMTP, DMARC.
+6. Pages variables and redeploy.
+7. **[user]** End-to-end check (the user, from the phone, about five minutes): create their own account in Supabase (Authentication → Users → Add user, their address, auto-confirm), sign in on `https://tavernledger.net/signin/`, open the account page, download the export, delete the account. Meanwhile Claude sends one desktop-style magic link to that address to check SMTP and DMARC, and checks on the server that nothing of the account remains after deletion. (Claude does not create accounts or type passwords on a production site.)
+8. Desktop default, then sign-ups stay closed until the user says so (**[user]**).
+
+### 10.9 Live state (session 022)
+
+1. 2026-10-09, before any deploy: "Allow new users to sign up" was **on** (Supabase's default for a new project) and was turned off first; the public `/auth/v1/settings` answers `disable_signup: true`. Confirm email was already on. Email provider: secure email change on (already), secure password change on, current password required to change it, minimum length 10 (was 6), email link expiry 3600 s. Site URL `https://tavernledger.net` (was `http://localhost:3000`); redirect URLs: `https://tavernledger.net/account/` only.
+2. Waiting for the user: GitHub connection, Workers Paid, SMTP password, the end-to-end test.
+
+### 10.10 Second opinion on this plan (ChatGPT, 2026-10-09)
+
+The reviewer could not read the repository (its sandbox refused file reads), so it reviewed the approach from the plan's questions and Supabase's docs. Applied: the token can sit in `pg_net`'s queue table for seconds and is readable there by roles with a direct connection (documented as a known limit; the token can only start a sweep); a queued request is not a finished sweep, so finished sweeps now leave a row in `private.sweep_runs`; closed sign-ups are checked on the server (`/auth/v1/settings`), and the post-deploy checks include writes refused with the publishable key alone, default privileges and `pg_graphql`; DMARC alignment is confirmed from the received headers, not assumed. Not applied: "rehearse the first deploy from the remote state" (the hosted database has no migration yet, which is the same start as `supabase db reset`, run locally before the merge); "rotate the sweep token" on a schedule (it only allows an early sweep; rotation steps are written above).
+
 ## Second opinion (ChatGPT, 2026-10-09)
 
 Code and security reviews (Claude subagents) found no CRITICAL or HIGH; applied: HSTS starts at one day, no canonical link on `noindex` pages, the open-mode build test checks that every script a page loads exists, the privacy draft names Cloudflare's possible security cookies, the takedown order above.
@@ -190,4 +288,9 @@ Reviewed this plan and the site's code before any Cloudflare change. Applied: cl
 - Cloudflare Customer DPA: https://www.cloudflare.com/cloudflare-customer-dpa/
 - Brevo SMTP: https://developers.brevo.com/docs/smtp-integration
 - Brevo free plan, branding, data location, DPA (help pages, not readable by our fetcher; search summaries only): https://help.brevo.com/hc/en-us/articles/208580669 , https://help.brevo.com/hc/en-us/articles/360001005510 , https://help.brevo.com/hc/en-us/articles/15403782599570
+- Supabase GitHub integration: https://supabase.com/docs/guides/deployment/branching/github-integration ; on all plans: https://supabase.com/changelog/44713-developer-update-april-2026
+- Edge Functions auth headers and `verify_jwt`: https://supabase.com/docs/guides/functions/auth-headers ; function secrets: https://supabase.com/docs/guides/functions/secrets
+- Scheduling Edge Functions (pg_cron, pg_net, Vault): https://supabase.com/docs/guides/functions/schedule-functions ; pg_net headers in the queue: https://supabase.com/docs/guides/troubleshooting/database-roles-can-read-request-headers-queued-by-pg_net-ad6357
+- Password security (leaked password protection, Pro only): https://supabase.com/docs/guides/auth/password-security ; redirect URLs: https://supabase.com/docs/guides/auth/redirect-urls
+- Cloudflare Email Sending SMTP (port 465 only): https://developers.cloudflare.com/email-service/api/send-emails/smtp/
 - Supabase custom SMTP: https://supabase.com/docs/guides/auth/auth-smtp ; rate limits: https://supabase.com/docs/guides/auth/rate-limits ; Send Email Hook: https://supabase.com/docs/guides/auth/auth-hooks/send-email-hook
