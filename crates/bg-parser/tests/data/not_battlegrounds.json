@@ -1,0 +1,23 @@
+[
+  {
+    "index": 1,
+    "status": "not_battlegrounds",
+    "game_type": "GT_RANKED",
+    "build": 253216,
+    "local_player_id": null,
+    "hero": null,
+    "teammate_player_id": null,
+    "teammate_hero": null,
+    "final_place": null,
+    "final_health": null,
+    "lobby": [],
+    "shop_tribes": {},
+    "rounds": [],
+    "warnings": [],
+    "problems": [],
+    "not_in_log": [
+      "MMR",
+      "available tribes (exact list)"
+    ]
+  }
+]

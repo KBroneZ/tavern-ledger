@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tavern Ledger</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="masthead">
+    <div class="brand">
+      <h1>Tavern Ledger</h1>
+      <p class="tagline">Your Battlegrounds games, read from the game's own log.</p>
+    </div>
+    <p id="status" class="status" role="status" aria-live="polite">Starting…</p>
+  </header>
+
+  <main>
+    <nav class="modes" aria-label="Game mode">
+      <button type="button" data-mode="GT_BATTLEGROUNDS" aria-pressed="false">Solo</button>
+      <button type="button" data-mode="GT_BATTLEGROUNDS_DUO" aria-pressed="false">Duos</button>
+      <button type="button" data-mode="OTHER" aria-pressed="false" hidden>Other</button>
+    </nav>
+    <section class="tally" aria-label="Summary">
+      <div class="stat"><span class="label">Games</span><span id="stat-games" class="value">—</span></div>
+      <div class="stat"><span class="label">Average place</span><span id="stat-avg" class="value">—</span></div>
+      <div class="stat"><span class="label" id="stat-top-label">Top half</span><span id="stat-top" class="value">—</span></div>
+      <div class="stat"><span class="label">Wins</span><span id="stat-wins" class="value">—</span></div>
+    </section>
+
+    <section class="ledger" aria-labelledby="ledger-title">
+      <h2 id="ledger-title">Ledger</h2>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Session · game</th>
+            <th scope="col">Mode</th>
+            <th scope="col">Hero</th>
+            <th scope="col" class="num">Place</th>
+            <th scope="col" class="num">Health</th>
+            <th scope="col" class="num">Rounds</th>
+            <th scope="col">Note</th>
+          </tr>
+        </thead>
+        <tbody id="games"></tbody>
+      </table>
+      <p id="empty" class="empty" hidden>No games yet. Play a Battlegrounds game and it will appear here when it ends.</p>
+    </section>
+  </main>
+
+  <footer>
+    Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.
+    Hero names come from your game's log, in your game's language. MMR is not in the game's log.
+  </footer>
+  <script src="app.js"></script>
+</body>
+</html>

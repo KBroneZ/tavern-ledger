@@ -1,0 +1,123 @@
+[
+  {
+    "index": 1,
+    "status": "ok",
+    "game_type": "GT_BATTLEGROUNDS_DUO",
+    "build": 253216,
+    "local_player_id": 2,
+    "hero": "TB_BaconShop_HERO_37",
+    "teammate_player_id": 1,
+    "teammate_hero": "TB_BaconShop_HERO_16",
+    "final_place": 1,
+    "final_health": 25,
+    "lobby": [
+      {
+        "player_id": 1,
+        "hero": "TB_BaconShop_HERO_16",
+        "duo_team": 1,
+        "final_place": 1,
+        "final_health": 25
+      },
+      {
+        "player_id": 2,
+        "hero": "TB_BaconShop_HERO_37",
+        "duo_team": null,
+        "final_place": 1,
+        "final_health": 25
+      },
+      {
+        "player_id": 3,
+        "hero": "TB_BaconShop_HERO_60",
+        "duo_team": 2,
+        "final_place": 2,
+        "final_health": 30
+      },
+      {
+        "player_id": 4,
+        "hero": "TB_BaconShop_HERO_18",
+        "duo_team": 2,
+        "final_place": 2,
+        "final_health": 30
+      }
+    ],
+    "shop_tribes": {
+      "QUILBOAR": 1,
+      "PIRATE": 1,
+      "NEUTRAL": 1
+    },
+    "rounds": [
+      {
+        "number": 1,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 1,
+            "hero": "TB_BaconShop_HERO_16",
+            "board": [
+              {
+                "card_id": "BG32_236",
+                "atk": 2,
+                "health": 2,
+                "position": 1,
+                "golden": false
+              }
+            ]
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_60",
+            "board": [
+              {
+                "card_id": "BG26_135",
+                "atk": 3,
+                "health": 1,
+                "position": 1,
+                "golden": false
+              }
+            ]
+          },
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "TB_BaconShop_HERO_37",
+            "board": [
+              {
+                "card_id": "BG20_100",
+                "atk": 2,
+                "health": 1,
+                "position": 1,
+                "golden": false
+              }
+            ]
+          },
+          {
+            "side": "opponent",
+            "player_id": 4,
+            "hero": "TB_BaconShop_HERO_18",
+            "board": [
+              {
+                "card_id": "BG20_100_G",
+                "atk": 4,
+                "health": 2,
+                "position": 1,
+                "golden": true
+              }
+            ]
+          }
+        ],
+        "own_health_after": 25,
+        "opponents": [
+          3,
+          4
+        ]
+      }
+    ],
+    "warnings": [],
+    "problems": [],
+    "not_in_log": [
+      "MMR",
+      "available tribes (exact list)"
+    ]
+  }
+]

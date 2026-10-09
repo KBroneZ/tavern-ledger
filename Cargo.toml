@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+exclude = ["spikes"]
+
+[workspace.package]
+edition = "2021"
+# File::try_lock (D-016)
+rust-version = "1.89"
+license = "MIT"
+publish = false

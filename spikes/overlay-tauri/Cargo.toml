@@ -1,0 +1,12 @@
+[package]
+name = "overlay-spike"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "MIT"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2.12", features = [] }

@@ -1,0 +1,102 @@
+[
+  {
+    "index": 1,
+    "status": "ok",
+    "game_type": "GT_BATTLEGROUNDS_DUO",
+    "build": 253216,
+    "local_player_id": 2,
+    "hero": "TB_BaconShop_HERO_37",
+    "teammate_player_id": 1,
+    "teammate_hero": "TB_BaconShop_HERO_16",
+    "final_place": 1,
+    "final_health": 30,
+    "lobby": [
+      {
+        "player_id": 1,
+        "hero": "TB_BaconShop_HERO_16",
+        "duo_team": null,
+        "final_place": 1,
+        "final_health": 30
+      },
+      {
+        "player_id": 2,
+        "hero": "TB_BaconShop_HERO_37",
+        "duo_team": null,
+        "final_place": 1,
+        "final_health": 30
+      },
+      {
+        "player_id": 3,
+        "hero": "TB_BaconShop_HERO_60",
+        "duo_team": null,
+        "final_place": 1,
+        "final_health": 30
+      },
+      {
+        "player_id": 4,
+        "hero": "TB_BaconShop_HERO_18",
+        "duo_team": null,
+        "final_place": 1,
+        "final_health": 30
+      }
+    ],
+    "shop_tribes": {},
+    "rounds": [
+      {
+        "number": 1,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 1,
+            "hero": "TB_BaconShop_HERO_16",
+            "board": null
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_60",
+            "board": null
+          },
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "TB_BaconShop_HERO_37",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 4,
+            "hero": "TB_BaconShop_HERO_18",
+            "board": [
+              {
+                "card_id": "BG20_100",
+                "atk": 2,
+                "health": 1,
+                "position": 1,
+                "golden": false
+              }
+            ]
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_60",
+            "board": null
+          }
+        ],
+        "own_health_after": 30,
+        "opponents": [
+          3,
+          4,
+          3
+        ]
+      }
+    ],
+    "warnings": [],
+    "problems": [],
+    "not_in_log": [
+      "MMR",
+      "available tribes (exact list)"
+    ]
+  }
+]

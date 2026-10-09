@@ -14,7 +14,9 @@ No local log has the MMR value. The public leaderboard only covers ratings of 80
 
 A prototype client looks up your own row in the public leaderboard with a local cache and a small, capped number of requests. It never stores other players' rows. Strategy and measurements: [docs/research/cliente-leaderboard.md](docs/research/cliente-leaderboard.md).
 
-Next tasks: T-002 (more Solo games and trimmed fixtures) and T-005 (desktop stack).
+Desktop stack (T-005): the comparison recommends Tauri 2. A minimal Tauri overlay (transparent, always on top, clicks pass through) works on Windows 11, also over the game in borderless fullscreen. Decision: Tauri 2 (D-014). Findings: [docs/research/stack-escritorio.md](docs/research/stack-escritorio.md).
+
+Next tasks: T-101 (desktop app: follow `Power.log`, store games locally; only a live test during a real game is left) and T-002 (more Solo games and trimmed fixtures).
 
 ## Check your log setup
 
@@ -47,11 +49,31 @@ python tools/leaderboard.py --name "<your BattleTag>" --mode solo --region EU
 
 Use `--mode duos` for Duos, `--hearthstone-log PATH` to read the region from the game's `Hearthstone.log` instead of `--region`, and `--json` for machine-readable output. To answer "below the cut-off" it must check every page (about 170 requests, a few minutes), so it does that at most once a day per region and mode and otherwise shows the last result with its time. The cache lives in `.local/leaderboard-cache.json`.
 
+## Desktop app and tracker (prototype)
+
+Rust workspace (Tauri 2, D-014). `tavern-watch` follows the game's `Power.log`
+and saves each Battlegrounds game to `%APPDATA%\TavernLedger\games.jsonl` as
+soon as it ends; the desktop app does the same in the background and shows
+the history. Both only read the log files. The history holds card ids,
+places and boards, never player names. Hero names come from the log itself,
+in your game's language; a hero the log does not name shows its card id.
+Only one of them can write the history at a time: a second copy says so and
+does not write. The app lives in the system tray: closing the window keeps it
+following the log, and "Quit" in the tray menu exits. "Start with Windows" in
+the same menu is off until you turn it on.
+
+```
+cargo run --release -p tracker -- --import    # follow live, after importing older sessions
+cargo run --release -p desktop                # the app
+cargo run --release -p bg-parser -- "<path>\Power_old.log" --json
+```
+
 ## Development
 
 ```
 python -m pip install --require-hashes --only-binary=:all: -r requirements.txt
 python -m unittest discover -s tests
+cargo test --workspace
 ```
 
 CI runs the tests, checks relative Markdown links and scans the history for secrets.

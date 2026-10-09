@@ -1,0 +1,60 @@
+[
+  {
+    "index": 1,
+    "status": "ok",
+    "game_type": "GT_BATTLEGROUNDS",
+    "build": 253216,
+    "local_player_id": 2,
+    "hero": "TB_BaconShop_HERO_37",
+    "teammate_player_id": null,
+    "teammate_hero": null,
+    "final_place": 3,
+    "final_health": 23,
+    "lobby": [
+      {
+        "player_id": 2,
+        "hero": "TB_BaconShop_HERO_37",
+        "duo_team": null,
+        "final_place": 3,
+        "final_health": 23
+      },
+      {
+        "player_id": 3,
+        "hero": "TB_BaconShop_HERO_60",
+        "duo_team": null,
+        "final_place": 2,
+        "final_health": 30
+      }
+    ],
+    "shop_tribes": {},
+    "rounds": [
+      {
+        "number": 1,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "TB_BaconShop_HERO_37",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_60",
+            "board": []
+          }
+        ],
+        "own_health_after": 23,
+        "opponents": [
+          3
+        ]
+      }
+    ],
+    "warnings": [],
+    "problems": [],
+    "not_in_log": [
+      "MMR",
+      "available tribes (exact list)"
+    ]
+  }
+]

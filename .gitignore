@@ -2,9 +2,12 @@
 .env
 .env.*
 *.log
+# Synthetic logs for the Rust parser tests (no real games).
+!crates/bg-parser/tests/data/*.log
 bin/
 obj/
 node_modules/
 dist/
 .venv/
 __pycache__/
+target/
