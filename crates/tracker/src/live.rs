@@ -39,6 +39,9 @@ pub struct LiveMinion {
     pub atk: Option<i64>,
     pub health: Option<i64>,
     pub golden: bool,
+    /// Keywords as it entered the combat (T-208); None when the record is
+    /// older than parser revision 5 (not recorded), never "none".
+    pub keywords: Option<Vec<String>>,
 }
 
 /// A board that entered play in a combat, with the combat it was seen in.
@@ -382,6 +385,9 @@ fn last_board(view: &View, pid: i64) -> Option<LiveBoard> {
     })
 }
 
+/// The parser writes at most this many keywords per minion.
+const MAX_KEYWORDS: usize = 8;
+
 fn minions_of(board: &[Value]) -> Vec<LiveMinion> {
     let mut placed: Vec<(i64, LiveMinion)> = board
         .iter()
@@ -394,6 +400,13 @@ fn minions_of(board: &[Value]) -> Vec<LiveMinion> {
                     atk: number("atk"),
                     health: number("health"),
                     golden: m.get("golden").and_then(Value::as_bool).unwrap_or(false),
+                    keywords: m.get("keywords").and_then(Value::as_array).map(|k| {
+                        k.iter()
+                            .filter_map(Value::as_str)
+                            .take(MAX_KEYWORDS)
+                            .map(String::from)
+                            .collect()
+                    }),
                 },
             )
         })

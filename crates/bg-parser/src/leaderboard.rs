@@ -13,7 +13,10 @@
 //!   power.
 //!
 //! Only the values on leaderboard heroes are kept, never those on the copies
-//! the game makes for a combat, and only when they change.
+//! the game makes for a combat, and only when they change; from a tag change
+//! or from the packet that creates or shows the hero. A trinket tag set back
+//! to 0 is not kept: the list says what the leaderboard showed, not when a
+//! trinket left it (never seen in the user's logs).
 
 use std::collections::BTreeMap;
 
@@ -25,6 +28,9 @@ use crate::collector::MAX_DBF_ID;
 pub const MAX_CHANGES: usize = 64;
 /// No hero makes this many triples.
 pub const MAX_TRIPLES: i64 = 1_000;
+
+/// The shop record's bound on turns (shop.rs), which upload-game checks too.
+pub const MAX_TURN: i64 = crate::shop::MAX_TURNS as i64;
 
 pub const TRIPLES: &str = "PLAYER_TRIPLES";
 const TRINKET_TAGS: [(&str, TrinketSlot); 3] = [
@@ -88,6 +94,10 @@ impl LeaderboardTracker {
             return;
         }
         let turn = shop_turn(game_turn);
+        // Past the shop record's bound: not a turn the game has.
+        if turn > MAX_TURN {
+            return;
+        }
         let log = self.heroes.entry(player_id).or_default();
         if tag == TRIPLES {
             let same = log.triples.last().is_some_and(|t| t.count == value);

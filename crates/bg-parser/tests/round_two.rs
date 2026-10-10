@@ -161,3 +161,42 @@ fn the_saved_reports_for_upload_game_are_current() {
         "run BLESS=1 cargo test -p bg-parser --test round_two"
     );
 }
+
+#[test]
+fn a_hero_packet_with_a_count_set_keeps_it_and_strange_values_are_left_out() {
+    let text = read("solo_round_two_game");
+    // The opponent's leaderboard hero arrives with a triple already counted.
+    let created = "tag=PLAYER_LEADERBOARD_PLACE value=2\n";
+    let at = text.find(created).expect("the opponent's hero packet") + created.len();
+    let line = text[..at].lines().last().unwrap();
+    let prefix = &line[..line.find("tag=").unwrap()];
+    let mut text = format!(
+        "{}{prefix}tag=PLAYER_TRIPLES value=1\n{}",
+        &text[..at],
+        &text[at..]
+    );
+    // A value that is not a number, and a turn past any game's.
+    text = text.replace(
+        "TAG_CHANGE Entity=21 tag=PLAYER_TRIPLES value=2",
+        "TAG_CHANGE Entity=21 tag=PLAYER_TRIPLES value=MANY",
+    );
+    let r = report(&text);
+    let triples: Vec<_> = seat(&r, 3)
+        .triples
+        .iter()
+        .map(|t| (t.turn, t.count))
+        .collect();
+    assert_eq!(
+        triples,
+        [(0, 1)],
+        "set at the start, then nothing new or readable"
+    );
+
+    let far = read("solo_round_two_game").replace(
+        "TAG_CHANGE Entity=GameEntity tag=TURN value=5 ",
+        "TAG_CHANGE Entity=GameEntity tag=TURN value=205 ",
+    );
+    let r = report(&far);
+    assert_eq!(seat(&r, 3).triples.len(), 1, "turn 103 is past the bound");
+    assert_eq!(r.discovers.len(), 2, "so is a choice on that turn");
+}

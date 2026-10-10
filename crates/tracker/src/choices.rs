@@ -74,6 +74,8 @@ pub struct Choice {
     pub source_card: Option<String>,
     pub offered: Vec<ChoiceOption>,
     /// Index in `offered` of what was taken; None when the log does not say.
+    /// Every choice in the user's logs takes one card; the parser keeps more,
+    /// and only the first is shown.
     pub picked: Option<usize>,
 }
 
@@ -93,8 +95,9 @@ pub struct SeatExtras {
     pub seat: i64,
     pub hero: Option<String>,
     pub own: bool,
-    /// Triples at the end of the game (0 when the leaderboard never showed one).
-    pub triples: i64,
+    /// The last triple count the leaderboard showed; None when the log never
+    /// gave one for this hero (no triple, or the log began after it).
+    pub triples: Option<i64>,
     /// (turn, count) each time the count changed.
     pub triples_by_turn: Vec<(i64, i64)>,
     pub trinkets: Vec<TrinketShown>,
@@ -208,7 +211,7 @@ fn seat_extras(p: &Value, own_pid: Option<i64>) -> Option<SeatExtras> {
         seat,
         hero: text(p, "hero"),
         own: own_pid == Some(seat),
-        triples: triples_by_turn.last().map(|t| t.1).unwrap_or(0),
+        triples: triples_by_turn.last().map(|t| t.1),
         triples_by_turn,
         trinkets,
     })
@@ -345,6 +348,14 @@ impl ChoiceCounts {
             // A choice the log does not say was answered would make every
             // offer look passed over: left out of the pick counts.
             let Some(i) = c.picked else { continue };
+            // A hidden card would drop an offer or the pick: the rate would lean.
+            let hidden = |o: &ChoiceOption| match c.kind {
+                ChoiceKind::DarkGift => o.gift.is_none(),
+                _ => o.card_id.is_none(),
+            };
+            if c.offered.iter().any(hidden) {
+                continue;
+            }
             match c.kind {
                 ChoiceKind::Trinket => {
                     let cards: Vec<String> =
@@ -462,9 +473,12 @@ mod tests {
         );
         let me = &r.leaderboard[0];
         assert!(me.own);
-        assert_eq!((me.triples, me.triples_by_turn.len()), (2, 2));
+        assert_eq!((me.triples, me.triples_by_turn.len()), (Some(2), 2));
         assert_eq!(me.trinkets[0].dbf_id, 111);
-        assert_eq!(r.leaderboard[1].triples, 0);
+        assert_eq!(
+            r.leaderboard[1].triples, None,
+            "never shown: unknown, not 0"
+        );
     }
 
     #[test]
@@ -524,17 +538,34 @@ mod tests {
     }
 
     #[test]
+    fn the_recap_and_the_stats_carry_the_choices() {
+        let g = game(json!([trinket(&["T_A", "T_B"], 1)]), 3);
+        let r = crate::recap::recap(&g);
+        assert_eq!(r.choices.state, ChoiceState::Recorded);
+        assert_eq!(r.choices.choices.len(), 1);
+        let stats = crate::stats::compute([g].iter());
+        let c = &stats.modes[0].choices;
+        assert_eq!((c.games, c.trinkets.len()), (1, 2));
+        let b = c.trinkets.iter().find(|t| t.card_id == "T_B").unwrap();
+        assert_eq!((b.picked, b.average_place_when_picked), (1, Some(3.0)));
+    }
+
+    #[test]
     fn unanswered_choices_and_malformed_values_are_left_out() {
         let open = json!({"turn": 6, "source": "BG30_Trinket_2nd",
             "offered": [{"card_id": "T_A", "gift": null}], "picked": []});
         let odd = json!({"turn": 6, "source": "BG30_Trinket_2nd",
             "offered": [{"card_id": "T_A", "gift": null}], "picked": [7]});
         let empty = json!({"turn": 6, "offered": [], "picked": []});
+        let hidden = json!({"turn": 6, "source": "BG30_Trinket_1st",
+            "offered": [{"card_id": "T_A", "gift": null}, {"card_id": null, "gift": null}],
+            "picked": [1]});
         let mut counts = ChoiceCounts::default();
-        counts.add(&game(json!([open, odd, empty]), 4), Some(4));
+        counts.add(&game(json!([open, odd, empty, hidden]), 4), Some(4));
         let s = counts.finish();
         assert_eq!(s.games, 1);
         assert!(s.trinkets.is_empty());
-        assert_eq!(s.choices_by_kind.get("trinket"), Some(&2));
+        // A choice with a hidden card would skew the rates: left out of them.
+        assert_eq!(s.choices_by_kind.get("trinket"), Some(&3));
     }
 }

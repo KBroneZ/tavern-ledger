@@ -447,8 +447,14 @@ fn summarize(mut base: GameReport, c: &Collector) -> GameReport {
             }),
             final_place: place(h),
             final_health: hero_health(h),
-            triples: c.leaderboard.of(*pid).triples,
-            trinkets: c.leaderboard.of(*pid).trinkets,
+            triples: Vec::new(),
+            trinkets: Vec::new(),
+        })
+        .map(|mut p| {
+            let shown = c.leaderboard.of(p.player_id);
+            p.triples = shown.triples;
+            p.trinkets = shown.trinkets;
+            p
         })
         .collect();
     base.shop_tribes = count_tribes(c);

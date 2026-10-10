@@ -91,7 +91,8 @@ impl DiscoverTracker {
         self.reading = Reading::Nothing;
         self.current = None;
         let Some(id) = choice_id(body) else { return };
-        let general = body.split(' ').any(|f| f == GENERAL);
+        // Past the shop record's bound on turns: not a turn the game has.
+        let general = body.split(' ').any(|f| f == GENERAL) && turn <= crate::leaderboard::MAX_TURN;
         let seen = self.ids.iter().any(|(c, _)| *c == id);
         if general && !seen && self.discovers.len() < MAX_DISCOVERS {
             self.discovers.push(Discover {

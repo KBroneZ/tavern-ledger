@@ -469,21 +469,22 @@ function lobbyPlayer(v: unknown, field: string, seen: Seen): void {
   if (p.triples !== undefined) {
     list(p.triples, `${field}.triples`, MAX_CHANGES).forEach((t, i) => {
       const at = `${field}.triples[${i}]`;
-      const seen = shape(t, at, KEYS["report.lobby[].triples[]"], KEYS["report.lobby[].triples[]"]);
-      int(seen.turn, `${at}.turn`, 0, MAX_SHOP_TURNS);
-      int(seen.count, `${at}.count`, 0, MAX_TRIPLES);
+      const keys = KEYS["report.lobby[].triples[]"];
+      const triple = shape(t, at, keys, keys);
+      int(triple.turn, `${at}.turn`, 0, MAX_SHOP_TURNS);
+      int(triple.count, `${at}.count`, 0, MAX_TRIPLES);
     });
   }
   if (p.trinkets !== undefined) {
     list(p.trinkets, `${field}.trinkets`, MAX_CHANGES).forEach((t, i) => {
       const at = `${field}.trinkets[${i}]`;
       const keys = KEYS["report.lobby[].trinkets[]"];
-      const seen = shape(t, at, keys, keys);
-      int(seen.turn, `${at}.turn`, 0, MAX_SHOP_TURNS);
-      if (typeof seen.slot !== "string" || !TRINKET_SLOTS.has(seen.slot)) {
+      const trinket = shape(t, at, keys, keys);
+      int(trinket.turn, `${at}.turn`, 0, MAX_SHOP_TURNS);
+      if (typeof trinket.slot !== "string" || !TRINKET_SLOTS.has(trinket.slot)) {
         throw new Invalid(`${at}.slot`);
       }
-      int(seen.dbf_id, `${at}.dbf_id`, 1, MAX_DBF_ID);
+      int(trinket.dbf_id, `${at}.dbf_id`, 1, MAX_DBF_ID);
     });
   }
 }

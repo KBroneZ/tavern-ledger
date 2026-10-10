@@ -16,6 +16,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::Serialize;
 use serde_json::Value;
 
+use crate::choices::{game_choices, GameChoices};
 use crate::hero_pick::{hero_pick, HeroPick};
 use crate::provenance::Source;
 use crate::shop::{shop_recap, ShopRecap};
@@ -164,6 +165,9 @@ pub struct Recap {
     pub shop: ShopRecap,
     /// The heroes offered, the rerolls and the hero picked (T-209).
     pub hero_pick: HeroPick,
+    /// The player's choices, the Old God and every hero's triples and
+    /// trinkets on the leaderboard (T-207, T-211, T-212).
+    pub choices: GameChoices,
     pub warnings: Vec<String>,
     pub problems: Vec<String>,
 }
@@ -596,6 +600,7 @@ pub fn recap(report: &Value) -> Recap {
         entered_tribes_source: Source::Unknown,
         shop: shop_recap(report),
         hero_pick: hero_pick(&view, report),
+        choices: game_choices(report),
         status: Sourced::log(status),
         warnings: texts(report, "warnings"),
         problems: texts(report, "problems"),

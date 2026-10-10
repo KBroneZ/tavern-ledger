@@ -218,22 +218,28 @@ impl Collector {
             }
             Pending::Full { id, card_id } => {
                 let parent = skin_parent(&tags);
+                let shown = leaderboard_values(&tags);
                 self.board.create(Entity { id, card_id, tags });
                 self.note_skin(id, parent);
+                self.note_leaderboard_packet(id, shown);
                 self.track_shop(id);
                 self.shop_sees(id);
             }
             Pending::Show { id, card_id } => {
                 let parent = skin_parent(&tags);
+                let shown = leaderboard_values(&tags);
                 self.board.show(id, card_id, tags)?;
                 self.note_skin(id, parent);
+                self.note_leaderboard_packet(id, shown);
                 self.shop_sees(id);
             }
             Pending::Change { id, card_id } => {
                 let parent = skin_parent(&tags);
                 self.hero_select.on_change(id, &card_id);
+                let shown = leaderboard_values(&tags);
                 self.board.change(id, card_id, tags)?;
                 self.note_skin(id, parent);
+                self.note_leaderboard_packet(id, shown);
                 self.shop_sees(id);
             }
         }
@@ -266,6 +272,12 @@ impl Collector {
 
     /// A leaderboard tag changed on entity `id`: kept when it is a lobby
     /// hero, never a combat copy.
+    fn note_leaderboard_packet(&mut self, id: i64, shown: Vec<(String, i64)>) {
+        for (tag, value) in shown {
+            self.note_leaderboard(id, &tag, value);
+        }
+    }
+
     fn note_leaderboard(&mut self, id: i64, tag: &str, value: i64) {
         let pid = leaderboard_heroes(&self.board)
             .into_iter()
@@ -312,7 +324,11 @@ impl Collector {
         let is_hero = tag == "HERO_ENTITY";
         let is_shop = tag == "ZONE" || tag == "CONTROLLER";
         let is_skin_parent = tag == SKIN_PARENT;
-        let leaderboard_tag = is_leaderboard_tag(&tag).then(|| tag.clone());
+        // A value that is not a number is not one the leaderboard shows.
+        let leaderboard_tag = match &value {
+            Value::Int(v) if is_leaderboard_tag(&tag) => Some((tag.clone(), *v)),
+            _ => None,
+        };
         if Some(id) == self.local && RESULT_TAGS.contains(&tag.as_str()) {
             self.result_tags_seen = true;
         }
@@ -337,8 +353,8 @@ impl Collector {
         if is_skin_parent {
             self.note_skin(id, Some(new_int).filter(|v| (1..=MAX_DBF_ID).contains(v)));
         }
-        if let Some(tag) = leaderboard_tag {
-            self.note_leaderboard(id, &tag, new_int);
+        if let Some((tag, v)) = leaderboard_tag {
+            self.note_leaderboard(id, &tag, v);
         }
         if is_turn {
             self.on_turn(new_int, old);
@@ -500,6 +516,18 @@ impl Collector {
             .find(|(pid, _)| *pid == local_pid)
             .map(|(_, h)| h)
     }
+}
+
+/// The leaderboard tags a packet carries with numbers, so a hero created
+/// or shown with a count already set keeps it.
+fn leaderboard_values(tags: &Tags) -> Vec<(String, i64)> {
+    tags.iter()
+        .filter(|(tag, _)| is_leaderboard_tag(tag))
+        .filter_map(|(tag, value)| match value {
+            Value::Int(v) => Some((tag.clone(), *v)),
+            _ => None,
+        })
+        .collect()
 }
 
 /// A base hero link in a packet's tags: a database id, or None (0 is none).
