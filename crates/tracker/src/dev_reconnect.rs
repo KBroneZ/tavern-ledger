@@ -91,7 +91,9 @@ impl Reconnects {
 
     /// Every game of the history played with the tool: its own span, widened
     /// to the end of the game before it and the start of the game after it
-    /// in the same session.
+    /// in the same session. The history only holds Battlegrounds games, so a
+    /// use during another mode between two of them marks both (over-marking,
+    /// the safe side; `reconnect_marks.py` sees every game of the log).
     pub fn marked(&self, store: &Store) -> BTreeSet<GameKey> {
         let mut marked = BTreeSet::new();
         if self.times.is_empty() {

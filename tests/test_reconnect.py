@@ -204,6 +204,29 @@ class MainTest(TempDirTest):
         self.assertEqual(code, 2)
         self.assertIn("only runs on Windows", err)
 
+    def test_list_works_without_isolated_mode_and_never_drops(self):
+        fake = mock.Mock()
+        fake.find_pids.return_value = set()
+        with mock.patch.object(reconnect.sys, "platform", "win32"), \
+                mock.patch.object(reconnect, "is_isolated", return_value=False), \
+                mock.patch.object(reconnect, "Win32", return_value=fake):
+            code, out, _ = self.run_main(["--list"])
+        self.assertEqual(code, 0)
+        self.assertIn("not running", out)
+        fake.delete.assert_not_called()
+
+    def test_a_linked_data_folder_is_refused_at_start(self):
+        fake = mock.Mock()
+        fake.is_admin.return_value = True
+        with mock.patch.object(reconnect.sys, "platform", "win32"), \
+                mock.patch.object(reconnect, "is_isolated", return_value=True), \
+                mock.patch.object(reconnect, "Win32", return_value=fake), \
+                mock.patch.object(reconnect.reconnect_marks, "is_link", return_value=True):
+            code, _, err = self.run_main(["--data-dir", str(self.dir)])
+        self.assertEqual(code, 2)
+        self.assertIn("link or junction", err)
+        fake.register_hotkey.assert_not_called()
+
     def test_without_python_isolated_mode_it_refuses_before_any_windows_call(self):
         with mock.patch.object(reconnect.sys, "platform", "win32"), \
                 mock.patch.object(reconnect, "is_isolated", return_value=False), \
@@ -347,7 +370,7 @@ class UsesFileTest(TempDirTest):
         self.assertEqual(marks.read_uses(self.dir).times, [at(8, 0), at(9, 0, 10)])
 
     def test_a_link_or_junction_is_never_written_through(self):
-        with mock.patch.object(marks, "_is_reparse_point", return_value=True):
+        with mock.patch.object(marks, "is_link", return_value=True):
             with self.assertRaisesRegex(OSError, "link or junction"):
                 marks.append_use(self.dir, at(9, 0))
         self.assertFalse((self.dir / marks.FILE_NAME).exists())

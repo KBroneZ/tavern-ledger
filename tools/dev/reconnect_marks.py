@@ -61,7 +61,7 @@ def parse_utc(text: str) -> datetime | None:
         return None
 
 
-def _is_reparse_point(path: Path) -> bool:
+def is_link(path: Path) -> bool:
     try:
         attrs = getattr(os.lstat(path), "st_file_attributes", 0)
     except FileNotFoundError:
@@ -75,7 +75,7 @@ def append_use(data_dir: Path, moment: datetime) -> Path:
     (it could point the write somewhere else)."""
     data_dir.mkdir(parents=True, exist_ok=True)
     path = data_dir / FILE_NAME
-    if _is_reparse_point(data_dir) or _is_reparse_point(path):
+    if is_link(data_dir) or is_link(path):
         raise OSError(f"{path} is a link or junction; refusing to write through it")
     with path.open("a+b") as out:
         out.seek(0, os.SEEK_END)
@@ -140,9 +140,10 @@ def session_start(name: str) -> datetime | None:
     if not m:
         return None
     try:
-        return datetime(*(int(g) for g in m.groups()))
+        start = datetime(*(int(g) for g in m.groups()))
     except ValueError:
         return None
+    return start if start.year >= 1970 else None  # same bound as game_clock.rs
 
 
 def local_to_utc(naive: datetime) -> datetime:

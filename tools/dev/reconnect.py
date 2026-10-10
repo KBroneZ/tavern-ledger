@@ -537,6 +537,10 @@ def run(args: argparse.Namespace, mods: int, vk: int) -> int:
               "account, its uses would never reach your tracker: pass --data-dir with your own "
               "%APPDATA%\\TavernLedger. Nothing was done.", file=sys.stderr)
         return 2
+    if reconnect_marks.is_link(data_dir) or reconnect_marks.is_link(data_dir / reconnect_marks.FILE_NAME):
+        print(f"{data_dir} or its uses file is a link or junction; the tool will not write through it. "
+              "Pass --data-dir with a plain folder. Nothing was done.", file=sys.stderr)
+        return 2
     print(BANNER)
     print(f"Uses are recorded in {data_dir / reconnect_marks.FILE_NAME} (UTC time only).")
     remote_ports = set(args.remote_port) if args.remote_port else None

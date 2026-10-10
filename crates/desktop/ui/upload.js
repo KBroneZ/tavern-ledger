@@ -19,6 +19,7 @@
       c.rejected && `${c.rejected} refused by the server`,
       c.not_uploadable && `${c.not_uploadable} stay on this PC (mode not uploaded)`,
       c.dev_reconnect && `${c.dev_reconnect} stay on this PC (played with the reconnect dev tool)`,
+      c.held_dev_file && `${c.held_dev_file} held: the reconnect dev tool's file cannot be read`,
     ].filter(Boolean);
     return parts.join(" · ");
   }

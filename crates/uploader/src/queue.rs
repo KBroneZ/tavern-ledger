@@ -141,6 +141,8 @@ pub struct Counts {
     pub not_uploadable: usize,
     /// Games played with the reconnect dev tool (D-043): never uploaded.
     pub dev_reconnect: usize,
+    /// Games held because the dev tool's file cannot be read (fail closed).
+    pub held_dev_file: usize,
 }
 
 /// The server's address pattern: a log folder name and a game number 1-1000.
@@ -184,7 +186,11 @@ pub fn pending(
     let mut counts = Counts::default();
     let marked = reconnects.marked(store);
     for (key, report) in store.games() {
-        if reconnects.unreadable || marked.contains(key) {
+        if reconnects.unreadable {
+            counts.held_dev_file += 1;
+            continue;
+        }
+        if marked.contains(key) {
             counts.dev_reconnect += 1;
             continue;
         }
@@ -299,7 +305,7 @@ pub(crate) mod tests {
         assert!(reconnects.unreadable);
         let (items, counts) = pending(&store, &Marks::open(&dir).unwrap(), &reconnects, Some("u"));
         assert!(items.is_empty());
-        assert_eq!(counts.dev_reconnect, 1);
+        assert_eq!((counts.held_dev_file, counts.dev_reconnect), (1, 0));
     }
 
     #[test]
@@ -327,7 +333,8 @@ pub(crate) mod tests {
                 uploaded: 0,
                 rejected: 0,
                 not_uploadable: 1,
-                dev_reconnect: 0
+                dev_reconnect: 0,
+                held_dev_file: 0
             }
         );
     }
