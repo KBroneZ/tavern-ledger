@@ -443,7 +443,7 @@ fn last_board(view: &View, pid: i64) -> Option<LiveBoard> {
 /// The parser writes at most this many keywords per minion.
 const MAX_KEYWORDS: usize = 8;
 
-fn minions_of(board: &[Value]) -> Vec<LiveMinion> {
+pub(crate) fn minions_of(board: &[Value]) -> Vec<LiveMinion> {
     let mut placed: Vec<(i64, LiveMinion)> = board
         .iter()
         .map(|m| {

@@ -85,8 +85,11 @@ pub struct TrinketShown {
     pub turn: i64,
     /// `first`, `second` or `hero_power`.
     pub slot: String,
-    /// Database id (the window turns it into a card with the card data).
+    /// Database id, as the log gives it.
     pub dbf_id: i64,
+    /// The card with that database id in the card data; None without card
+    /// data or when the data does not know it.
+    pub card_id: Option<String>,
 }
 
 /// One lobby hero as the leaderboard showed it.
@@ -110,6 +113,8 @@ pub struct GameChoices {
     pub source: Source,
     pub choices: Vec<Choice>,
     pub old_god_dbf: Option<i64>,
+    /// The Old God's card in the card data (see `TrinketShown::card_id`).
+    pub old_god: Option<String>,
     pub old_god_source: Source,
     /// Every lobby hero's triples and trinkets; empty when not recorded.
     pub leaderboard: Vec<SeatExtras>,
@@ -204,6 +209,7 @@ fn seat_extras(p: &Value, own_pid: Option<i64>) -> Option<SeatExtras> {
                     .get("dbf_id")?
                     .as_i64()
                     .filter(|d| (1..=MAX_DBF_ID).contains(d))?,
+                card_id: None,
             })
         })
         .collect();
@@ -239,6 +245,20 @@ fn leaderboard(report: &Value) -> Result<Vec<SeatExtras>, ChoiceState> {
     Ok(seats)
 }
 
+/// The player's own triple count at the end of a finished game, as the
+/// leaderboard showed it (T-207). The game logs the count each time it
+/// changes, from 0, so a finished game whose leaderboard is recorded and
+/// never changed it made no triple. None for an older record, an unfinished
+/// game or a game without the player's seat.
+pub(crate) fn own_triples(report: &Value) -> Option<i64> {
+    if report.get("status").and_then(Value::as_str) != Some("ok") {
+        return None;
+    }
+    let seats = leaderboard(report).ok()?;
+    let own = seats.iter().find(|s| s.own)?;
+    Some(own.triples.unwrap_or(0))
+}
+
 /// The choices part of a game's recap.
 pub fn game_choices(report: &Value) -> GameChoices {
     let (state, source, choices) = match read(report) {
@@ -259,8 +279,22 @@ pub fn game_choices(report: &Value) -> GameChoices {
         choices,
         old_god_source: Source::log_if(old_god_dbf.is_some()),
         old_god_dbf,
+        old_god: None,
         leaderboard,
         leaderboard_state,
+    }
+}
+
+impl GameChoices {
+    /// Fills in the card ids of the database ids, from the card data.
+    pub fn with_dbf_cards(mut self, card_of: &dyn Fn(i64) -> Option<String>) -> Self {
+        self.old_god = self.old_god_dbf.and_then(card_of);
+        for seat in &mut self.leaderboard {
+            for trinket in &mut seat.trinkets {
+                trinket.card_id = card_of(trinket.dbf_id);
+            }
+        }
+        self
     }
 }
 
@@ -479,6 +513,40 @@ mod tests {
             r.leaderboard[1].triples, None,
             "never shown: unknown, not 0"
         );
+    }
+
+    #[test]
+    fn own_triples_are_the_last_count_or_none_made_in_a_finished_game() {
+        assert_eq!(own_triples(&game(json!([]), 1)), Some(2));
+        let mut none = game(json!([]), 1);
+        none["lobby"][0]["triples"] = json!([]);
+        assert_eq!(own_triples(&none), Some(0), "never changed from 0");
+        let mut open = game(json!([]), 1);
+        open["status"] = json!("incomplete");
+        assert_eq!(
+            own_triples(&open),
+            None,
+            "a game not finished may lack the end"
+        );
+        let mut old = game(json!([]), 1);
+        old["lobby"][0].as_object_mut().unwrap().remove("triples");
+        assert_eq!(own_triples(&old), None, "not recorded is not 0");
+        let mut seatless = game(json!([]), 1);
+        seatless["local_player_id"] = json!(9);
+        assert_eq!(own_triples(&seatless), None);
+    }
+
+    #[test]
+    fn card_ids_are_filled_in_from_the_database_ids() {
+        let card_of = |dbf: i64| (dbf == 111 || dbf == 130610).then(|| format!("C_{dbf}"));
+        let r = game_choices(&game(json!([]), 1)).with_dbf_cards(&card_of);
+        assert_eq!(r.old_god.as_deref(), Some("C_130610"));
+        assert_eq!(
+            r.leaderboard[0].trinkets[0].card_id.as_deref(),
+            Some("C_111")
+        );
+        let unknown = game_choices(&game(json!([]), 1)).with_dbf_cards(&|_| None);
+        assert_eq!((unknown.old_god, unknown.old_god_dbf), (None, Some(130610)));
     }
 
     #[test]
