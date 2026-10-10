@@ -7,6 +7,14 @@ import solo from "../../../crates/bg-parser/tests/data/solo_local_eliminated.jso
 import broken from "../../../crates/bg-parser/tests/data/broken_then_ok.json" with {
   type: "json",
 };
+// Real games from the user's own logs (T-108), as the current parser writes
+// them: with start_health and rounds[].health_after (parser revision 2).
+import realDuos from "../../../crates/bg-parser/tests/data/real/b253216_duos.json" with {
+  type: "json",
+};
+import realSolo from "../../../crates/bg-parser/tests/data/real/b253216_solo.json" with {
+  type: "json",
+};
 
 export const SESSION = "Hearthstone_2026_10_09_18_30_00";
 
@@ -31,4 +39,15 @@ export function record(overrides: Json = {}): Json {
   };
 }
 
-export { broken, duo, solo };
+/** A record of a real game as the current desktop app uploads it. */
+export function realRecord(report: Json): Json {
+  return {
+    session: SESSION,
+    index: 1,
+    saved_at: 1791000000,
+    parser: { version: "0.1.0", revision: 2 },
+    report: { ...structuredClone(report), index: 1 },
+  };
+}
+
+export { broken, duo, realDuos, realSolo, solo };

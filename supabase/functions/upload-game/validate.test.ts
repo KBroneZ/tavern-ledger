@@ -1,7 +1,17 @@
 // Run: deno test supabase/functions/upload-game/
 // What an uploaded record may hold (T-104d, D-012, D-017).
-import { broken, duo, type Json, record, SESSION, solo } from "./testdata.ts";
-import { parsePath, validateRecord } from "./validate.ts";
+import {
+  broken,
+  duo,
+  type Json,
+  realDuos,
+  realRecord,
+  realSolo,
+  record,
+  SESSION,
+  solo,
+} from "./testdata.ts";
+import { parsePath, validateRecord, VALIDATOR_VERSION } from "./validate.ts";
 
 function assertEquals(actual: unknown, expected: unknown, msg = ""): void {
   const a = JSON.stringify(actual);
@@ -38,6 +48,78 @@ Deno.test("real Solo, unsupported and old records are accepted", () => {
     assertEquals(v.ok, true, JSON.stringify(v));
     if (v.ok) assertEquals(v.summary.parser_version, null);
   }
+});
+
+Deno.test("real games from the current parser (revision 2) are accepted", () => {
+  for (const report of [realDuos[0], realSolo[0]]) {
+    const v = validateRecord(realRecord(report), SESSION, 1);
+    if (!v.ok) throw new Error(`refused: ${v.code} ${v.field}`);
+    assertEquals(v.summary.parser_version, "0.1.0+r2");
+    assertEquals(v.summary.hero_card_id, report.hero);
+  }
+});
+
+Deno.test("health maps may be empty (unknown) or missing (older records)", () => {
+  const rec = realRecord(realDuos[0]);
+  rec.report.start_health = {};
+  rec.report.rounds[0].health_after = {};
+  delete rec.report.rounds[1].health_after;
+  delete rec.report.start_health;
+  assertEquals(validateRecord(rec, SESSION, 1).ok, true);
+});
+
+Deno.test("health maps hold only players of this game and sane health", () => {
+  const sixteen = Object.fromEntries(Array.from({ length: 17 }, (_, i) => [String(i + 1), 30]));
+  const bad: Array<[unknown, string]> = [
+    [null, "null"],
+    [[30, 30], "an array"],
+    ["30", "a string"],
+    [{ "9": 30 }, "a player not in the game"],
+    [{ "0": 30 }, "player 0"],
+    [{ "01": 30 }, "a padded id"],
+    [{ "1.0": 30 }, "a decimal id"],
+    [{ "Someone": 30 }, "a name as key"],
+    [{ "1": -1 }, "negative health"],
+    [{ "1": 100001 }, "absurd health"],
+    [{ "1": 30.5 }, "a fraction"],
+    [{ "1": "30" }, "health as text"],
+    [{ "1": null }, "null health"],
+    [{ "1": { "hp": 30 } }, "an object as health"],
+    [sixteen, "more than 16 entries"],
+  ];
+  for (const [value, why] of bad) {
+    const start = realRecord(realDuos[0]);
+    start.report.start_health = value;
+    refused(start, "invalid_report", "report.start_health", `start_health: ${why}`);
+    const after = realRecord(realDuos[0]);
+    after.report.rounds[2].health_after = value;
+    refused(after, "invalid_report", "report.rounds[2].health_after", `health_after: ${why}`);
+  }
+});
+
+Deno.test("a player id counts when the report shows it anywhere", () => {
+  // Solo lobby is 1-8; drop player 8 from the lobby but keep it in a combat.
+  const rec = realRecord(realSolo[0]);
+  const pid = rec.report.rounds[0].entries.find((e: Json) => e.side === "opponent").player_id;
+  rec.report.lobby = rec.report.lobby.filter((p: Json) => p.player_id !== pid);
+  assertEquals(validateRecord(rec, SESSION, 1).ok, true, "a player seen in combat");
+  rec.report.rounds.forEach((r: Json) =>
+    r.entries.forEach((e: Json) => {
+      if (e.player_id === pid) e.player_id = null;
+    })
+  );
+  refused(rec, "invalid_report", "report.start_health", "a player seen nowhere");
+});
+
+Deno.test("a name in a health map is refused as a player name", () => {
+  const rec = realRecord(realDuos[0]);
+  rec.report.start_health = { "Someone#1234": 30 };
+  const v = validateRecord(rec, SESSION, 1);
+  assertEquals(v.ok ? "accepted" : v.code, "player_name");
+});
+
+Deno.test("the validator version is a positive integer, 2 or more since revision 2", () => {
+  assertEquals(Number.isInteger(VALIDATOR_VERSION) && VALIDATOR_VERSION >= 2, true);
 });
 
 Deno.test("session and index must match the address", () => {

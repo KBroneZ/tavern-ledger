@@ -268,6 +268,28 @@ class LocalStackTests(unittest.TestCase):
         _, rows = self.api.request("GET", f"/rest/v1/games?user_id=eq.{uid}", token=token)
         self.assertEqual([r["game_index"] for r in rows], [1], "nothing forged was stored")
 
+    def test_upload_takes_real_games_from_the_current_parser(self):
+        # Parser revision 2 writes start_health and rounds[].health_after; the
+        # validator before D-047 refused every such game.
+        uid, _, token = self.make_user()
+        for index, name in enumerate(["b253216_duos", "b253216_solo"], start=1):
+            status, body = self.upload(token, _real_record(name, index), index=index)
+            self.assertEqual((status, body.get("result")), (201, "created"), body)
+            self.assertGreaterEqual(body["validator"], 2, "the answer says the version")
+        _, rows = self.api.request("GET", f"/rest/v1/games?user_id=eq.{uid}", token=token)
+        self.assertEqual(sorted(r["game_index"] for r in rows), [1, 2])
+        self.assertEqual({r["parser_version"] for r in rows}, {"0.1.0+r2"})
+
+        named = _real_record("b253216_duos", 3)
+        named["report"]["start_health"] = {"Someone#1234": 30}
+        status, body = self.upload(token, named, index=3)
+        self.assertEqual((status, body["code"]), (400, "player_name"))
+        stranger = _real_record("b253216_duos", 3)
+        stranger["report"]["rounds"][0]["health_after"]["9"] = 30
+        status, body = self.upload(token, stranger, index=3)
+        self.assertEqual((status, body["code"], body["field"]),
+                         (400, "invalid_report", "report.rounds[0].health_after"))
+
     def test_upload_limits(self):
         uid, _, token = self.make_user()
         _psql("insert into private.upload_events (user_id, at) select '{u}', now()"
@@ -343,6 +365,16 @@ def _record(saved_at=1791000000, final_place=None):
         report["final_place"] = final_place
     return {"session": SESSION, "index": 1, "saved_at": saved_at,
             "parser": {"version": "0.1.0", "revision": 1}, "report": report}
+
+
+def _real_record(name, index):
+    """A real game (T-108) as the current parser and desktop app write it."""
+    with open(os.path.join(os.path.dirname(__file__), "..", "crates", "bg-parser", "tests",
+                           "data", "real", f"{name}.json"), encoding="utf-8") as f:
+        report = json.load(f)[0]
+    report["index"] = index
+    return {"session": SESSION, "index": index, "saved_at": 1791000000,
+            "parser": {"version": "0.1.0", "revision": 2}, "report": report}
 
 
 if __name__ == "__main__":

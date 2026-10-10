@@ -2,7 +2,8 @@
 // Fake HTTP APIs; the end-to-end test against the local stack is
 // tests/test_supabase_local.py (and the desktop app's own, T-104d).
 import { type Env, type Fetch, handle, MAX_BODY, MAX_INFLATED } from "./handler.ts";
-import { record, SESSION } from "./testdata.ts";
+import { realDuos, realRecord, record, SESSION } from "./testdata.ts";
+import { VALIDATOR_VERSION } from "./validate.ts";
 
 type Bytes = Uint8Array<ArrayBuffer>;
 
@@ -110,7 +111,7 @@ Deno.test("a new game: checks, then the file, then the row", async () => {
   const res = await handle(request(await gzip(raw)), ENV, api.fetchFn);
   assertEquals(res.status, 201);
   const sha = await sha256(raw);
-  assertEquals(await res.json(), { result: "created", sha256: sha });
+  assertEquals(await res.json(), { result: "created", sha256: sha, validator: VALIDATOR_VERSION });
   assertEquals(api.paths(), [
     "POST /rest/v1/rpc/upload_ip_blocked",
     "GET /auth/v1/user",
@@ -251,8 +252,31 @@ Deno.test("a forged upload with extra fields is refused before any write", async
     error: "the game record is not valid",
     code: "invalid_report",
     field: "report.lobby[0].battle_tag",
+    validator: VALIDATOR_VERSION,
   });
   assertEquals(api.paths().some((p) => p.includes("upload_begin")), false);
+});
+
+Deno.test("a real game from the current parser is stored", async () => {
+  const api = fakeApi();
+  const res = await handle(await upload(realRecord(realDuos[0])), ENV, api.fetchFn);
+  assertEquals(res.status, 201);
+});
+
+Deno.test("every answer says which validator version the server runs", async () => {
+  const cases: Array<[string, Request | Promise<Request>, Parameters<typeof fakeApi>[0]]> = [
+    ["stored", upload(), {}],
+    ["unchanged", upload(), { begin: { result: "unchanged" } }],
+    ["refused record", upload(record({ mmr: 1 })), {}],
+    ["older revision", upload(), { begin: { result: "older" } }],
+    ["no sign-in", upload(), { user: 401 }],
+    ["not gzip", request(enc(record())), {}],
+    ["server error", upload(), { fail: "/rest/v1/rpc/upload_begin" }],
+  ];
+  for (const [what, req, opts] of cases) {
+    const res = await handle(await req, ENV, fakeApi(opts).fetchFn);
+    assertEquals((await res.json()).validator, VALIDATOR_VERSION, what);
+  }
 });
 
 Deno.test("a body over 64 KiB is 413, with or without Content-Length", async () => {
