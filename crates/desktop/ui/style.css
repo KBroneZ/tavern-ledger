@@ -360,8 +360,9 @@ dialog.recap { width: min(900px, calc(100vw - 32px)); overflow-y: auto; }
 .recap .empty { margin: 4px 0; }
 
 .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 16px; margin: 0; }
+.fact { min-width: 0; }
 .fact dt { font-size: 13px; font-weight: 600; color: var(--dim); }
-.fact dd { margin: 2px 0 0; font: 700 18px/1.3 var(--font-display); font-stretch: 88%; font-variant-numeric: tabular-nums; }
+.fact dd { margin: 2px 0 0; font: 700 18px/1.3 var(--font-display); font-stretch: 88%; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 
 .chart { max-width: 560px; }
 .health-chart { display: block; width: 100%; height: auto; }
