@@ -241,6 +241,17 @@ footer {
 .src-entered { border-style: double; border-width: 3px; color: #2f5d7a; }
 .src-leaderboard { border-style: solid; border-width: 2px; color: #2f5d7a; }
 .src-unknown { border-style: dotted; color: var(--ink-soft); }
+.src-card_data { border-style: solid; border-radius: 2px; color: var(--ink-soft); }
+.portrait {
+  width: 22px;
+  height: 22px;
+  margin-right: 6px;
+  border-radius: 50%;
+  object-fit: cover;
+  vertical-align: middle;
+}
+.card-status { display: block; }
+.card-status.problem { color: var(--gold-bright); }
 .stat .src { margin-left: 0; margin-top: 2px; align-self: flex-start; }
 .stat .src-inferred { color: var(--gold-bright); }
 .stat .src-entered, .stat .src-leaderboard { color: #8fc0dd; }

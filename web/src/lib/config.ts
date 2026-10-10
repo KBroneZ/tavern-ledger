@@ -94,6 +94,7 @@ export function contentSecurityPolicy(supabaseOrigin: string | null): string {
     `script-src ${open ? "'self'" : "'none'"}`,
     "style-src 'self'",
     "img-src 'self'",
+    "font-src 'self'",
     `connect-src ${supabaseOrigin ?? "'none'"}`,
     "base-uri 'none'",
     `form-action ${open ? "'self'" : "'none'"}`,
