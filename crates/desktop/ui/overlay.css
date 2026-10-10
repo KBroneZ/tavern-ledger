@@ -241,17 +241,32 @@ body.unlocked .slot { cursor: move; }
 body.unlocked .panel { outline: 2px dashed var(--accent); outline-offset: 2px; }
 body.unlocked .slot.dragging .panel { outline-style: solid; }
 
-/* Keyboard arranging: a solid ring, thicker than the dashed outline every panel has. */
+/* Keyboard arranging: a solid ring, thicker than the dashed outline every
+   panel has, with a dark ring on both sides of it (T-319) so it shows over a
+   light and a dark game alike. The shadow fills the gap inside the outline
+   and shows past it; the panel's own dashed outline turns dark under it. */
 body.unlocked .slot:focus-visible,
 .board-box:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 4px;
+  box-shadow: 0 0 0 9px var(--panel-solid);
 }
+body.unlocked .slot:focus-visible .panel {
+  outline-style: solid;
+  outline-color: var(--panel-solid);
+}
+/* Buttons: the same two colours, the dark ring outside the light one. */
+.toolbar button:focus-visible,
+.arrange-pad button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 5px var(--panel-solid);
+}
+/* Placed by overlay-place.js where it covers no panel; top left until then. */
 .key-hint {
   position: fixed;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 8px;
+  left: 8px;
   margin: 0;
   max-width: calc(100% - 16px);
   padding: 6px 12px;
@@ -290,8 +305,7 @@ body.unlocked .slot:focus-visible,
 .toolbar {
   position: fixed;
   top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 8px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -312,7 +326,10 @@ body.unlocked .slot:focus-visible,
 .toolbar-warning[hidden] { display: none; }
 .toolbar output { min-width: 3.2em; text-align: center; font-variant-numeric: tabular-nums; }
 
-.toolbar button {
+.toolbar button,
+.arrange-pad button {
+  min-width: 28px;
+  min-height: 28px;
   padding: 4px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -321,13 +338,43 @@ body.unlocked .slot:focus-visible,
   font: 600 12px/1.4 var(--font-body);
   cursor: pointer;
 }
+.arrange-pad button:hover,
 .toolbar button:hover { background: color-mix(in srgb, var(--text) 16%, transparent); }
-.toolbar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.arrange-pad button[aria-pressed="true"],
 .toolbar button[aria-pressed="true"] {
   border-color: var(--accent);
   border-width: 2px;
   color: var(--accent);
 }
 /* A mark on the pressed button, so the state is not carried by colour alone. */
-.toolbar button[aria-pressed="true"]::before { content: "\2713  " / ""; }
+.toolbar button[aria-pressed="true"]::before,
+.arrange-pad button[aria-pressed="true"]::before { content: "\2713  " / ""; }
 .toolbar button.primary { border-color: var(--accent); color: var(--accent); }
+
+/* The move-and-size buttons (T-319, WCAG 2.5.7): one click does what one
+   arrow key does, for the selected panel or the leaderboard box. Placed next
+   to it by overlay-place.js; shown only while unlocked. */
+.arrange-pad {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 11;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: calc(100% - 16px);
+  padding: 8px 10px;
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  background: var(--panel-solid);
+  color: var(--text);
+}
+.arrange-pad[hidden] { display: none; }
+.pad-title { color: var(--accent); font-size: 12px; }
+.pad-row { display: flex; flex-wrap: wrap; gap: 6px; }
+/* The direction drawn before the word; the word is the button's name. */
+.pad-left::before { content: "\2190  " / ""; }
+.pad-up::before { content: "\2191  " / ""; }
+.pad-down::before { content: "\2193  " / ""; }
+.pad-right::before { content: "\2192  " / ""; }

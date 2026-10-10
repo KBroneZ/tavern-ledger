@@ -5,6 +5,9 @@
 //
 //   Arrow            move by STEP pixels (Shift: BIG_STEP)
 //   Alt + arrow      make bigger or smaller by the same steps
+//
+// The on-screen buttons (T-319, WCAG 2.5.7) are the same keys for a single
+// click: `press(action, big)` gives the key press a button stands for.
 "use strict";
 
 (() => {
@@ -41,7 +44,24 @@
     return changed ? next : rect;
   }
 
-  const api = { STEP, BIG_STEP, nudge };
+  // Each on-screen button and the key it stands for (`resize`: with Alt).
+  const PAD = [
+    { action: "left", label: "Move left", key: "ArrowLeft", resize: false },
+    { action: "up", label: "Move up", key: "ArrowUp", resize: false },
+    { action: "down", label: "Move down", key: "ArrowDown", resize: false },
+    { action: "right", label: "Move right", key: "ArrowRight", resize: false },
+    { action: "narrower", label: "Narrower", key: "ArrowLeft", resize: true },
+    { action: "wider", label: "Wider", key: "ArrowRight", resize: true },
+    { action: "shorter", label: "Shorter", key: "ArrowUp", resize: true },
+    { action: "taller", label: "Taller", key: "ArrowDown", resize: true },
+  ];
+
+  function press(action, big) {
+    const button = PAD.find((b) => b.action === action);
+    return button ? { key: button.key, shiftKey: Boolean(big), altKey: button.resize } : null;
+  }
+
+  const api = { STEP, BIG_STEP, PAD, nudge, press };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLKeys = api;
 })();

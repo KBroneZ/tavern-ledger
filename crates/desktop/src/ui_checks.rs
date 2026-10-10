@@ -10,6 +10,8 @@ const INDEX: &str = include_str!("../ui/index.html");
 const OVERLAY: &str = include_str!("../ui/overlay.html");
 const SWITCH: &str = include_str!("../ui/overlay-switch.js");
 const APP: &str = include_str!("../ui/app.js");
+const OVERLAY_CSS: &str = include_str!("../ui/overlay.css");
+const LAYOUT: &str = include_str!("../ui/overlay-layout.js");
 
 fn position(page: &str, needle: &str) -> usize {
     page.find(needle)
@@ -83,4 +85,50 @@ fn the_health_chart_prints_its_values() {
     // Round and health as text in the drawing, not only in the aria-label.
     assert!(APP.contains("\"round-label\""));
     assert!(APP.contains("\"value-label\""));
+}
+
+#[test]
+fn the_overlay_can_be_arranged_with_single_clicks() {
+    // WCAG 2.5.7: buttons next to the selected panel, made from the key rules.
+    assert!(OVERLAY.contains("id=\"arrange-pad\""));
+    assert!(OVERLAY.contains("id=\"pad-big\" aria-pressed=\"false\""));
+    assert!(LAYOUT.contains("TLKeys.PAD") && LAYOUT.contains("TLKeys.press(action, bigSteps)"));
+    // Saved like keys: the same delayed save.
+    assert!(LAYOUT.contains("queueKeySave(id,") && LAYOUT.contains("queueKeySave(\"box\","));
+    // Hidden while locked: no target then.
+    assert!(LAYOUT.contains("const target = unlocked ? selectedRect() : null;"));
+    assert!(LAYOUT.contains("pad.hidden = !target;"));
+    let place = position(OVERLAY, "overlay-place.js");
+    assert!(place < position(OVERLAY, "overlay-layout.js"));
+}
+
+#[test]
+fn the_overlay_buttons_are_at_least_24_pixels() {
+    // WCAG 2.5.8: the toolbar and the move-and-size buttons share one rule.
+    let rule = position(OVERLAY_CSS, ".toolbar button,\n.arrange-pad button {");
+    let end = rule + OVERLAY_CSS[rule..].find('}').unwrap();
+    let body = &OVERLAY_CSS[rule..end];
+    assert!(body.contains("min-width: 28px;") && body.contains("min-height: 28px;"));
+}
+
+#[test]
+fn the_overlay_controls_are_placed_away_from_the_panels() {
+    // Not pinned to the top and bottom centre any more (T-319).
+    for rule in [".toolbar {", ".key-hint {"] {
+        let at = position(OVERLAY_CSS, rule);
+        let end = at + OVERLAY_CSS[at..].find('}').unwrap();
+        assert!(!OVERLAY_CSS[at..end].contains("translateX"), "{rule}");
+    }
+    assert!(LAYOUT.contains("TLPlace.spot(") && LAYOUT.contains("TLPlace.padSpot("));
+}
+
+#[test]
+fn the_focus_ring_has_two_colours() {
+    // A light ring with a dark one around it (the contrast is tested in overlay_layout.rs).
+    for ring in [
+        "outline: 3px solid var(--accent);\n  outline-offset: 4px;\n  box-shadow: 0 0 0 9px var(--panel-solid);",
+        "outline: 2px solid var(--accent);\n  outline-offset: 1px;\n  box-shadow: 0 0 0 5px var(--panel-solid);",
+    ] {
+        assert!(OVERLAY_CSS.contains(ring), "{ring}");
+    }
 }

@@ -649,7 +649,7 @@ mod tests {
             .skip(1)
             .filter_map(|rest| rest.split('"').next())
             .collect();
-        assert_eq!(scripts.len(), 7);
+        assert_eq!(scripts.len(), 8);
         for script in scripts {
             assert!(ui.join(script).is_file(), "{script} is missing");
         }
@@ -663,6 +663,7 @@ mod tests {
             include_str!("../ui/overlay-layout.js"),
             include_str!("../ui/overlay-hover.js"),
             include_str!("../ui/overlay-keys.js"),
+            include_str!("../ui/overlay-place.js"),
             include_str!("../ui/focus-keeper.js"),
         ] {
             assert!(script.contains("(() => {") && script.trim_end().ends_with("})();"));

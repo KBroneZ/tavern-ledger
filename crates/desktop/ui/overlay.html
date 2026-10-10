@@ -10,7 +10,7 @@
   <div id="scrim" hidden></div>
   <div id="toolbar" class="toolbar" role="group" aria-label="Overlay layout" hidden>
     <strong class="toolbar-title">Layout editing</strong>
-    <span id="toolbar-note" class="toolbar-note">Clicks do not reach the game while unlocked. Drag a panel to move it, its corner to resize it; or Tab to a panel and use the arrow keys (Shift for bigger steps, Alt to resize). Example data is shown when no game is on. Drag the dashed "Leaderboard" box over the game's column of heroes if it is not there already; it is kept for this game window size.</span>
+    <span id="toolbar-note" class="toolbar-note">Clicks do not reach the game while unlocked. Drag a panel to move it, its corner to resize it; or click a panel and use the buttons next to it; or Tab to a panel and use the arrow keys (Shift for bigger steps, Alt to resize). Example data is shown when no game is on. Drag the dashed "Leaderboard" box over the game's column of heroes if it is not there already; it is kept for this game window size.</span>
     <span class="toolbar-row" id="theme-buttons" role="group" aria-label="Theme"></span>
     <span class="toolbar-row" role="group" aria-label="Opacity">
       <span class="toolbar-label">Opacity</span>
@@ -38,10 +38,17 @@
   <div id="board-box" class="board-box" hidden><span class="board-label">Leaderboard</span><span class="grip"></span></div>
   <p id="key-status" class="visually-hidden" role="status"></p>
   <p id="key-hint" class="key-hint" hidden>Arrow keys move it. Shift: bigger steps. Alt + arrow keys: resize. Tab: next panel.</p>
+  <div id="arrange-pad" class="arrange-pad" role="group" aria-label="Move or resize" hidden>
+    <strong id="pad-title" class="pad-title"></strong>
+    <span id="pad-moves" class="pad-row" role="group" aria-label="Move"></span>
+    <span id="pad-sizes" class="pad-row" role="group" aria-label="Size"></span>
+    <button type="button" id="pad-big" aria-pressed="false">Big steps</button>
+  </div>
   <aside id="hover-card" class="hover-card" aria-label="Opponent" hidden></aside>
   <script src="overlay.js"></script>
   <script src="overlay-hover.js"></script>
   <script src="overlay-keys.js"></script>
+  <script src="overlay-place.js"></script>
   <script src="overlay-layout.js"></script>
 </body>
 </html>

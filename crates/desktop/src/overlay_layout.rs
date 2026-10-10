@@ -753,6 +753,27 @@ mod tests {
         assert!((contrast((255, 255, 255), (255, 255, 255)) - 1.0).abs() < 0.01);
     }
 
+    /// The focus ring is two colours (T-319): the accent and the panel's own
+    /// dark colour. They must stand apart from each other, and one of them
+    /// from whatever the game shows around the ring (WCAG 1.4.11, 3:1).
+    #[test]
+    fn the_focus_ring_shows_over_any_game_in_every_theme() {
+        for theme in THEMES {
+            let p = theme.palette();
+            let apart = contrast(p.accent, p.panel);
+            assert!(apart >= 3.0, "{} ring colours: {apart:.2}", theme.id());
+            for v in (0..=255).step_by(5) {
+                let behind = (v, v, v);
+                let best = contrast(p.accent, behind).max(contrast(p.panel, behind));
+                assert!(
+                    best >= 3.0,
+                    "{} ring over {behind:?}: {best:.2}",
+                    theme.id()
+                );
+            }
+        }
+    }
+
     #[test]
     fn the_high_contrast_theme_clears_the_stricter_bar() {
         let p = Theme::Contrast.palette();

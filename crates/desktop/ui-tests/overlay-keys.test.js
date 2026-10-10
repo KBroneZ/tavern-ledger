@@ -47,3 +47,34 @@ test("other keys do nothing, and an arrow at the limit returns the same rectangl
   const edge = { ...r, x: 0 };
   assert.equal(nudge(edge, key("ArrowLeft"), screen, panel), edge);
 });
+
+// On-screen buttons (T-319): a single click does what a key does.
+const { PAD, press } = require("../ui/overlay-keys.js");
+
+test("every on-screen button does what its key does, at both step sizes", () => {
+  assert.equal(PAD.length, 8, "four moves and four sizes");
+  for (const button of PAD) {
+    for (const big of [false, true]) {
+      const event = press(button.action, big);
+      const expected = key(button.key, { altKey: button.resize, shiftKey: big });
+      assert.deepEqual(nudge(r, event, screen, panel), nudge(r, expected, screen, panel), button.action);
+    }
+  }
+});
+
+test("each button has its own action and a label that says what it does", () => {
+  const actions = PAD.map((b) => b.action);
+  assert.equal(new Set(actions).size, actions.length);
+  for (const b of PAD) assert.match(b.label, /^(Move (left|right|up|down)|Wider|Narrower|Taller|Shorter)$/);
+  assert.equal(press("nonsense", false), null);
+});
+
+test("the size buttons resize, the move buttons move", () => {
+  const by = (a) => nudge(r, press(a, false), screen, panel);
+  assert.deepEqual(by("wider"), { ...r, w: 300 + STEP });
+  assert.deepEqual(by("narrower"), { ...r, w: 300 - STEP });
+  assert.deepEqual(by("taller"), { ...r, h: 200 + STEP });
+  assert.deepEqual(by("shorter"), { ...r, h: 200 - STEP });
+  assert.deepEqual(by("left"), { ...r, x: 100 - STEP });
+  assert.deepEqual(nudge(r, press("down", true), screen, panel), { ...r, y: 100 + BIG_STEP });
+});
