@@ -1,8 +1,6 @@
-# Terms of use (draft)
+# Terms of use
 
-> **Draft, not in force.** The website is not open to the public yet. Items marked `[TO BE DECIDED: …]` must be settled before the first public user. Written by the project, not by a lawyer; not legal advice.
-
-Last updated: [TO BE DECIDED: date it takes effect]
+Last updated: 10 October 2026
 
 These terms cover the Tavern Ledger website and the accounts on it. The desktop app and its source code are covered by their open-source licence (section 6).
 
@@ -15,7 +13,7 @@ A free fan project, run by one person in their spare time: a Windows app that re
 ## 2. Your account
 
 - You must be 16 or older to create an account.
-- Use a real email address you control, and keep your password to yourself. You are responsible for what you do with your account and for keeping your password safe. If you think someone else is using it, change your password and tell us.
+- Use a real email address you control, and keep your password to yourself. You are responsible for what you do with your account and for keeping your password safe. If you think someone else is using it, change your password ("Forgot password?" on the sign-in page) and tell us.
 - One person per account. Do not create accounts in bulk or for someone else without their consent.
 
 ## 3. Acceptable use

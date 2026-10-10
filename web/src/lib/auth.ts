@@ -77,3 +77,56 @@ export function signUpOutcome(e: AuthErrorLike | null): SignUpOutcome {
   }
   return { kind: "error", message: GENERIC };
 }
+
+export const RESET_SENT =
+  "Check your inbox: if this email has an account, a link to choose a new password is on its way. " +
+  "Open it in this browser.";
+
+/** A message if the reset request cannot be sent, or null. */
+export function checkEmail(email: string): string | null {
+  return EMAIL.test(email.trim()) ? null : "Enter a valid email address.";
+}
+
+/**
+ * `error` is null when the request succeeded. Any other refusal gets the
+ * same answer as a sent email, so the form never says whether an email has
+ * an account; only a busy server or no connection is said as such.
+ */
+export function resetRequestOutcome(e: AuthErrorLike | null): SignUpOutcome {
+  if (e === null) return { kind: "check-email", message: RESET_SENT };
+  if (isRateLimit(e)) return { kind: "error", message: RATE_LIMITED };
+  if (isNetwork(e)) return { kind: "error", message: UNREACHABLE };
+  if (e.code === "email_address_invalid") return { kind: "error", message: "Enter a valid email address." };
+  if (e.status !== undefined && e.status >= 400 && e.status < 500) {
+    return { kind: "check-email", message: RESET_SENT };
+  }
+  return { kind: "error", message: GENERIC };
+}
+
+/** A message if the new password cannot be saved, or null. */
+export function checkNewPassword(password: string, repeat: string): string | null {
+  if ([...password].length < MIN_PASSWORD_LENGTH) {
+    return `The password needs at least ${MIN_PASSWORD_LENGTH} characters.`;
+  }
+  if (password !== repeat) return "The two passwords are not the same.";
+  return null;
+}
+
+export function newPasswordErrorMessage(e: AuthErrorLike): string {
+  if (isRateLimit(e)) return RATE_LIMITED;
+  if (isNetwork(e)) return UNREACHABLE;
+  switch (e.code) {
+    case "same_password":
+      return "Choose a password different from your current one.";
+    case "weak_password":
+      return `Choose a stronger password (at least ${MIN_PASSWORD_LENGTH} characters).`;
+    case "reauthentication_needed":
+    case "session_not_found":
+    case "session_expired":
+      return "This reset has expired. Ask for a new link with “Forgot password?” on the sign-in page.";
+  }
+  if (e.status === 401 || e.status === 403 || e.name === "AuthSessionMissingError") {
+    return "This reset has expired. Ask for a new link with “Forgot password?” on the sign-in page.";
+  }
+  return GENERIC;
+}

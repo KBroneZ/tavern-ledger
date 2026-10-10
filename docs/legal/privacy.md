@@ -1,8 +1,6 @@
-# Privacy policy (draft)
+# Privacy policy
 
-> **Draft, not in force.** The website is not open to the public yet: sign-ups are closed. Supabase, Cloudflare and the email sender (Lettermint) are in use. Items marked `[TO BE DECIDED: …]` or `[TO BE CHECKED: …]` must be settled before the first public user. This draft was written by the project, not by a lawyer, and is not legal advice. Source of every statement: the [data inventory](https://github.com/KBroneZ/tavern-ledger/blob/main/docs/legal/data-inventory.md).
-
-Last updated: [TO BE DECIDED: date it takes effect]
+Last updated: 10 October 2026
 
 Tavern Ledger is a free, open-source Hearthstone Battlegrounds tracker: a Windows app that reads the game's log files on your PC, and a website where you can keep and, if you want, share your games. This policy says what personal data we handle, why, where it goes and what you can do about it.
 
@@ -35,9 +33,9 @@ There are no ads, no analytics and no tracking.
 | Data | Why | Legal basis |
 |------|-----|-------------|
 | Email address, password (stored only as a hash), account id, sign-up, confirmation and last sign-in times | To create your account and sign you in | Contract (Art. 6(1)(b)): needed to provide the account you asked for |
-| Account emails: your address, the message (a confirmation link) and its delivery status | To confirm your address and secure your account | Contract |
+| Account emails: your address, the message (a confirmation, sign-in or password reset link) and its delivery status | To confirm your address and secure your account | Contract |
 | Sign-in sessions: times, IP address and browser user agent; refresh and one-time tokens | To keep you signed in | Contract |
-| Security log: sign-up, sign-in, sign-out, password and email changes, with time and IP address [TO BE CHECKED: whether our hosting stores this log in our database or only in its own logs] | To detect and stop abuse of accounts | Legitimate interest in keeping accounts secure (Art. 6(1)(f)) |
+| Security log: sign-up, sign-in, sign-out, password reset requests, password and email changes, with time and IP address, kept in our database for 90 days | To detect and stop abuse of accounts | Legitimate interest in keeping accounts secure (Art. 6(1)(f)) |
 | Profile: a display name you choose (optional) and whether your profile is public (off by default) | To show your profile, if you make it public | Contract: publication only happens when you switch it on, and you can switch it off at any time |
 | Your games: a summary row per game (date, mode, hero, place, build, tribes offered, parser version) and the game's full record from the app (no player names), if you upload them | To show your history and stats | Contract |
 | Upload times: when each of your uploads happened, kept two days | To enforce the hourly and daily upload limits | Legitimate interest in keeping the service available for everyone (Art. 6(1)(f)) |
@@ -57,8 +55,8 @@ We do **not** collect player names, BattleTags, Battle.net accounts, ratings or 
 | Provider | What it does | Where | Transfers outside the EU |
 |----------|--------------|-------|--------------------------|
 | Supabase (contracting entity Supabase Pte. Ltd., Singapore) | Database, sign-in, file storage, server functions and their logs | Frankfurt, Germany (EU) | Data is stored in the EU, but Supabase and its sub-processors may access it from other countries; covered by the EU Standard Contractual Clauses in Supabase's DPA, which is part of its terms of service; Supabase also provides a transfer impact assessment. Sub-processors: list of 1 June 2026 at supabase.com/legal/subprocessors. |
-| Cloudflare, Inc. (USA) | Hosts the website's pages; forwards mail sent to our contact addresses | Worldwide network | EU–US Data Privacy Framework, with Standard Contractual Clauses as a fallback, in the Cloudflare Customer DPA. [TO BE CHECKED: DPA version] |
-| Lettermint B.V., the Netherlands | Sends account emails from noreply@tavernledger.net (sign-up confirmation, sign-in links, email change and, once it exists, password reset). Open and click tracking is switched off on our account, so the links reach you unchanged | European Union | None for email data: Lettermint's data processing agreement (part of its terms) keeps it in the EU and allows no transfer outside the EEA without our approval. Two of its sub-processors, Slack (staff messaging) and Stripe (billing), are outside the EU and do not receive the emails |
+| Cloudflare, Inc. (USA) | Hosts the website's pages; forwards mail sent to our contact addresses | Worldwide network | EU–US Data Privacy Framework, with Standard Contractual Clauses as a fallback, in the Cloudflare Customer DPA (version 6.4 of 3 April 2026) |
+| Lettermint B.V., the Netherlands | Sends account emails from noreply@tavernledger.net (sign-up confirmation, sign-in links, email change and password reset). Open and click tracking is switched off on our account, so the links reach you unchanged | European Union | None for email data: Lettermint's data processing agreement (part of its terms) keeps it in the EU and allows no transfer outside the EEA without our approval. Two of its sub-processors, Slack (staff messaging) and Stripe (billing), are outside the EU and do not receive the emails |
 
 You can ask us for a copy of the transfer safeguards at the contact address above.
 
@@ -70,10 +68,11 @@ We do not sell or rent your data.
 
 ## 6. How long we keep it
 
-- **Account, profile, games, sessions and the security log:** until you delete your account (sessions also end when you sign out or they expire).
+- **Account, profile, games and sessions:** until you delete your account (sessions also end when you sign out or they expire).
+- **Security log:** 90 days, then deleted every day by our clean-up job; all of it goes earlier if you delete your account.
 - **Backups:** made weekly on the controller's own computer, readable only by their user account, and deleted after 35 days. After you delete your account, your data can remain in backups for up to 35 days. If we ever restore a backup, we delete again the accounts deleted since it was made.
 - **Upload times:** two days. **Refused-request counters:** one hour.
-- **Provider logs** (page requests, server requests, emails sent): kept by Cloudflare, Supabase and the email sender for the periods their services set, then deleted. Supabase keeps its API and database logs for one day on our plan. They are not tied to your account in a way we can export or delete one by one. Lettermint keeps each email it sent, with its delivery record, for 28 days and then deletes it. [TO BE CHECKED: Cloudflare Pages request logs.]
+- **Provider logs** (page requests, server requests, emails sent): kept by Cloudflare, Supabase and the email sender for the periods their services set, then deleted. They are not tied to your account in a way we can export or delete one by one. Supabase keeps its API, database and sign-in logs for one day on our plan. Lettermint keeps each email it sent, with its delivery record, for 28 days and then deletes it. Cloudflare does not give us the website's request logs on our plan and does not publish a fixed period for them; under its privacy policy it keeps them only as long as it needs to run and protect its network. For mail you send to our contact addresses, Cloudflare keeps a delivery record (sender, recipient, subject, time and result) for 31 days; the message itself is passed on to our mailbox.
 
 ## 7. Your rights
 
@@ -92,7 +91,7 @@ You can also complain to a data protection authority, in particular in the EU co
 
 ## 8. Cookies and browser storage
 
-The website sets no cookies of its own and uses no tracking. When you sign in, the Supabase library stores your sign-in session in your browser's local storage (key `sb-<project>-auth-token`: access and refresh tokens and your account's basic details) and, during sign-in, a one-time code verifier (`…-code-verifier`). These are strictly necessary to keep you signed in and are removed when you sign out. Our hosting provider, Cloudflare, sets a cookie only if its protection against attacks shows you a challenge: `cf_clearance`, which records that you passed it so you are not asked again for a while. It is strictly necessary and not used to track you. Cloudflare's bot cookie `__cf_bm` is not used on this site (its bot features are off), and Cloudflare's Network Error Logging (browser reports of failed connections) is turned off. [TO BE CHECKED: the challenge passage time set on our zone, which is how long `cf_clearance` lasts.]
+The website sets no cookies of its own and uses no tracking. When you sign in, the Supabase library stores your sign-in session in your browser's local storage (key `sb-<project>-auth-token`: access and refresh tokens and your account's basic details) and, while you sign up or reset your password, a one-time code verifier (`…-code-verifier`) that proves the email link came back to the browser that asked for it. These are strictly necessary to keep you signed in and are removed when you sign out. Our hosting provider, Cloudflare, sets a cookie only if its protection against attacks shows you a challenge: `cf_clearance`, which records that you passed it so you are not asked again for a while. It lasts 30 minutes (our zone's setting), is strictly necessary and is not used to track you. Cloudflare's bot cookie `__cf_bm` is not used on this site (its bot features are off), and Cloudflare's Network Error Logging (browser reports of failed connections) is turned off.
 
 ## 9. Children
 

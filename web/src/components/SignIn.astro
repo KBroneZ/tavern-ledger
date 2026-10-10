@@ -26,9 +26,10 @@ const { signupsOpen } = Astro.props;
         Password
         <input type="password" name="password" autocomplete="current-password" required />
       </label>
-      <button type="submit">Sign in</button>
+      <button type="submit" disabled>Sign in</button>
       <p class="message" id="signin-message" role="status" aria-live="polite"></p>
     </form>
+    <p class="meta"><a href="/forgot-password/">Forgot password?</a></p>
   </section>
 
   <section class="panel" aria-labelledby="signup-heading">
@@ -51,7 +52,11 @@ const { signupsOpen } = Astro.props;
               required
             />
           </label>
-          <button type="submit">Create account</button>
+          <p class="hint">
+            By creating an account you accept the <a href="/terms/">terms</a> and confirm you are
+            16 or older. The <a href="/privacy/">privacy policy</a> says what we do with your data.
+          </p>
+          <button type="submit" disabled>Create account</button>
           <p class="message" id="signup-message" role="status" aria-live="polite"></p>
         </form>
       ) : (

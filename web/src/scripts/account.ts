@@ -1,22 +1,34 @@
 import type { User } from "@supabase/supabase-js";
-import { deleteAccount, exportAll, loadOwnProfile, saveProfile, signIn } from "../lib/api.ts";
+import {
+  deleteAccount,
+  exportAll,
+  finishAuthLink,
+  loadOwnProfile,
+  saveProfile,
+  setNewPassword,
+  signIn,
+} from "../lib/api.ts";
+import { checkNewPassword } from "../lib/auth.ts";
+import { hasLinkParams, parseAuthLink } from "../lib/authLink.ts";
 import { isConfirmed } from "../lib/deleteAccount.ts";
 import { exportFileName } from "../lib/exportData.ts";
 import { checkDisplayName, publicProfilePath } from "../lib/profile.ts";
 import { config, supabase } from "./client.ts";
 import { busy, byId, field, say, show } from "./dom.ts";
 
-// Read before the Supabase client cleans the address up: an email link lands
-// here with ?code=… (or an error), and the client swaps the code for a session.
-const query = new URLSearchParams(location.search);
-const hash = new URLSearchParams(location.hash.slice(1));
-const fromEmailLink = query.has("code");
-const linkError = query.has("error") || hash.has("error");
+// Every email link lands here (D-048). Read it, then take it out of the
+// address before any request, so no code or token stays in the address bar
+// or in the history.
+const link = parseAuthLink(location.search, location.hash);
+if (hasLinkParams(location.search, location.hash)) history.replaceState(null, "", location.pathname);
 
 const pageMessage = byId("page-message");
 
-function showOnly(section: "signed-in" | "signed-out" | "deleted"): void {
-  for (const id of ["signed-in", "signed-out", "deleted"]) show(byId(id), id === section);
+type Section = "signed-in" | "signed-out" | "set-password" | "deleted";
+const SECTIONS: Section[] = ["signed-in", "signed-out", "set-password", "deleted"];
+
+function showOnly(section: Section): void {
+  for (const id of SECTIONS) show(byId(id), id === section);
 }
 
 function setPublicLink(userId: string, isPublic: boolean): void {
@@ -154,27 +166,58 @@ function setUpSignOut(): void {
   });
 }
 
-async function start(): Promise<void> {
-  // Validates the session with the server (and finishes an email link).
-  const { data, error } = await supabase.auth.getUser();
-  if (fromEmailLink || linkError) history.replaceState(null, "", location.pathname);
-  say(pageMessage, "");
-  if (error || !data.user) {
-    if (linkError) {
-      say(pageMessage, "This link is invalid or has expired. Sign in, or ask for a new link by signing up again.", "error");
-    } else if (fromEmailLink) {
-      say(pageMessage, "Your email is confirmed. Sign in to continue.", "ok");
+/** The form a password reset link leads to; then the account as usual. */
+function setUpNewPassword(user: User): void {
+  const form = byId<HTMLFormElement>("set-password-form");
+  const message = byId("set-password-message");
+  showOnly("set-password");
+  field(form, "password").focus();
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const password = field(form, "password").value;
+    const problem = checkNewPassword(password, field(form, "repeat").value);
+    if (problem) {
+      say(message, problem, "error");
+      return;
     }
-    await signedOut();
-    return;
-  }
-  const user = data.user;
+    void busy(form.querySelector("button") as HTMLButtonElement, async () => {
+      say(message, "Saving…");
+      const error = await setNewPassword(supabase, password);
+      if (error) {
+        say(message, error, "error");
+        return;
+      }
+      form.reset();
+      say(message, "");
+      say(pageMessage, "Your new password is saved.", "ok");
+      await showAccount(user);
+    });
+  });
+}
+
+async function showAccount(user: User): Promise<void> {
   byId("account-email").textContent = user.email ?? "";
   showOnly("signed-in");
   setUpExport();
   setUpDelete(user);
   setUpSignOut();
   await setUpProfile(user);
+}
+
+async function start(): Promise<void> {
+  const outcome = await finishAuthLink(supabase, config, link);
+  // Validates the session with the server, not only the stored one.
+  const { data, error } = await supabase.auth.getUser();
+  say(pageMessage, outcome.message ?? "", outcome.tone);
+  if (error || !data.user) {
+    await signedOut();
+    return;
+  }
+  if (outcome.recovery) {
+    setUpNewPassword(data.user);
+    return;
+  }
+  await showAccount(data.user);
 }
 
 start().catch(() => {

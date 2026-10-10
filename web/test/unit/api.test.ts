@@ -4,7 +4,18 @@
 import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import type { SupabaseClient, SupportedStorage } from "@supabase/supabase-js";
-import { deleteAccount, exportAll, loadPublicProfile, makeClient, saveProfile } from "../../src/lib/api.ts";
+import {
+  deleteAccount,
+  exportAll,
+  finishAuthLink,
+  loadPublicProfile,
+  makeClient,
+  requestPasswordReset,
+  saveProfile,
+  setNewPassword,
+  signUp,
+} from "../../src/lib/api.ts";
+import { RESET_SENT } from "../../src/lib/auth.ts";
 
 const CONFIG = { url: "http://127.0.0.1:54321", anonKey: "sb_publishable_test" };
 const USER = "0f8fad5b-d9cb-469f-a165-70867728950e";
@@ -188,4 +199,192 @@ test("delete: a network failure says nothing was deleted yet", async () => {
 test("delete: a non-JSON answer is an error, not a crash", async () => {
   stubFetch({ "/functions/v1/delete-account": () => new Response("<html>", { status: 502 }) });
   assert.equal((await deleteAccount(withSession("tok"), CONFIG)).kind, "error");
+});
+
+// --- email links and password reset (D-048) ---
+
+function b64url(value: unknown): string {
+  return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+/** An Auth error as the server answers it (API version 2024-01-01). */
+function authError(code: string, status: number): Response {
+  return new Response(JSON.stringify({ code, msg: "refused" }), {
+    status,
+    headers: { "Content-Type": "application/json", "X-Supabase-Api-Version": "2024-01-01" },
+  });
+}
+
+const ACCESS_TOKEN = `${b64url({ alg: "ES256" })}.${b64url({ sub: USER, exp: 4102444800, role: "authenticated" })}.c2ln`;
+
+function session(): Record<string, unknown> {
+  return {
+    access_token: ACCESS_TOKEN,
+    token_type: "bearer",
+    expires_in: 3600,
+    expires_at: Math.floor(Date.now() / 1000) + 3600,
+    refresh_token: "refresh-token",
+    user: { id: USER, aud: "authenticated", email: "someone@example.test" },
+  };
+}
+
+test("reset request: sends a PKCE challenge and the account page as the return address", async () => {
+  let body: Record<string, unknown> = {};
+  let query = "";
+  stubFetch({
+    "/auth/v1/recover": async (url, init) => {
+      body = JSON.parse(String(init.body));
+      query = url.search;
+      return json({});
+    },
+  });
+  const outcome = await requestPasswordReset(client(), " someone@example.test ", "https://tavernledger.net/account/");
+  assert.equal(outcome.kind, "check-email");
+  assert.equal(body.email, "someone@example.test");
+  assert.equal(body.code_challenge_method, "s256");
+  assert.equal(typeof body.code_challenge, "string");
+  assert.equal(new URLSearchParams(query).get("redirect_to"), "https://tavernledger.net/account/");
+});
+
+test("reset request: a refusal reads like a sent email, a rate limit and no connection say so", async () => {
+  stubFetch({ "/auth/v1/recover": () => authError("user_not_found", 400) });
+  const refused = await requestPasswordReset(client(), "someone@example.test", "https://x.test/account/");
+  assert.deepEqual(refused, { kind: "check-email", message: RESET_SENT });
+  stubFetch({ "/auth/v1/recover": () => authError("over_email_send_rate_limit", 429) });
+  const limited = await requestPasswordReset(client(), "someone@example.test", "https://x.test/account/");
+  assert.equal(limited.kind, "error");
+  assert.match(limited.message, /Too many attempts/);
+  globalThis.fetch = (() => Promise.reject(new TypeError("offline"))) as typeof fetch;
+  const offline = await requestPasswordReset(client(), "someone@example.test", "https://x.test/account/");
+  assert.match(offline.message, /Could not reach/);
+});
+
+test("link: a reset code started in this browser opens the new password form", async () => {
+  const c = client();
+  stubFetch({ "/auth/v1/recover": () => json({}) });
+  await requestPasswordReset(c, "someone@example.test", "https://x.test/account/");
+  let verifier = "";
+  stubFetch({
+    "/auth/v1/token": (url, init) => {
+      assert.equal(url.searchParams.get("grant_type"), "pkce");
+      verifier = JSON.parse(String(init.body)).code_verifier;
+      return json(session());
+    },
+  });
+  const outcome = await finishAuthLink(c, CONFIG, { kind: "code", code: "0b5c4a1e-1111", flowId: null });
+  assert.deepEqual(outcome, { recovery: true, message: null, tone: "info" });
+  assert.ok(verifier.length >= 43);
+  assert.equal((await c.auth.getSession()).data.session?.access_token, ACCESS_TOKEN);
+});
+
+test("link: a code opened in another browser says what to do, with no request", async () => {
+  const seen = stubFetch({});
+  const outcome = await finishAuthLink(client(), CONFIG, { kind: "code", code: "0b5c4a1e-1111", flowId: null });
+  assert.equal(outcome.recovery, false);
+  assert.equal(outcome.tone, "error");
+  assert.match(outcome.message ?? "", /another browser/);
+  assert.deepEqual(seen, []);
+});
+
+test("link: a sign-up code started here signs in and says the email is confirmed", async () => {
+  const c = client();
+  stubFetch({ "/auth/v1/signup": () => json({ id: USER }) });
+  await signUp(c, "someone@example.test", "0123456789ab", "https://x.test/account/");
+  stubFetch({ "/auth/v1/token": () => json(session()) });
+  const outcome = await finishAuthLink(c, CONFIG, { kind: "code", code: "0b5c4a1e-1111", flowId: null });
+  assert.deepEqual(outcome, { recovery: false, message: "Your email is confirmed.", tone: "ok" });
+});
+
+test("link: an expired code from the server is explained", async () => {
+  const c = client();
+  stubFetch({ "/auth/v1/recover": () => json({}) });
+  await requestPasswordReset(c, "someone@example.test", "https://x.test/account/");
+  stubFetch({ "/auth/v1/token": () => authError("flow_state_not_found", 404) });
+  const outcome = await finishAuthLink(c, CONFIG, { kind: "code", code: "0b5c4a1e-1111", flowId: null });
+  assert.match(outcome.message ?? "", /expired or was already used/);
+});
+
+test("link: a session in the hash is never kept, and is ended on the server", async () => {
+  const c = client();
+  let auth = "";
+  const seen = stubFetch({
+    "/auth/v1/logout": (_url, init) => {
+      auth = new Headers(init.headers).get("Authorization") ?? "";
+      return new Response(null, { status: 204 });
+    },
+  });
+  const outcome = await finishAuthLink(c, CONFIG, { kind: "implicit", type: "invite", accessToken: ACCESS_TOKEN });
+  assert.equal(outcome.recovery, false);
+  assert.match(outcome.message ?? "", /confirmed.*Forgot password/);
+  assert.equal(auth, `Bearer ${ACCESS_TOKEN}`);
+  assert.deepEqual(seen, ["POST /auth/v1/logout"]);
+  assert.equal((await c.auth.getSession()).data.session, null);
+});
+
+test("link: a session in the hash that is not shaped like a token sends nothing", async () => {
+  const seen = stubFetch({});
+  const outcome = await finishAuthLink(client(), CONFIG, { kind: "implicit", type: "signup", accessToken: null });
+  assert.equal(outcome.message, "Your email is confirmed. Sign in to continue.");
+  assert.deepEqual(seen, []);
+});
+
+test("link: a token_hash reset keeps the session for the new password form", async () => {
+  const c = client();
+  let body: Record<string, unknown> = {};
+  stubFetch({
+    "/auth/v1/verify": (_url, init) => {
+      body = JSON.parse(String(init.body));
+      return json(session());
+    },
+  });
+  const outcome = await finishAuthLink(c, CONFIG, { kind: "token-hash", tokenHash: "pkce_abcdef0123", type: "recovery" });
+  assert.deepEqual(outcome, { recovery: true, message: null, tone: "info" });
+  assert.equal(body.token_hash, "pkce_abcdef0123");
+  assert.equal(body.type, "recovery");
+});
+
+test("link: a token_hash confirmation confirms but does not stay signed in", async () => {
+  const c = client();
+  const seen = stubFetch({
+    "/auth/v1/verify": () => json(session()),
+    "/auth/v1/logout": () => new Response(null, { status: 204 }),
+  });
+  const outcome = await finishAuthLink(c, CONFIG, { kind: "token-hash", tokenHash: "pkce_abcdef0123", type: "signup" });
+  assert.deepEqual(outcome, { recovery: false, message: "Your email is confirmed. Sign in to continue.", tone: "ok" });
+  assert.deepEqual(seen, ["POST /auth/v1/verify", "POST /auth/v1/logout"]);
+  assert.equal((await c.auth.getSession()).data.session, null);
+});
+
+test("link: an error in the address and a notice need no request", async () => {
+  const seen = stubFetch({});
+  const failed = await finishAuthLink(client(), CONFIG, { kind: "error", code: "otp_expired" });
+  assert.equal(failed.tone, "error");
+  assert.match(failed.message ?? "", /expired/);
+  assert.equal((await finishAuthLink(client(), CONFIG, { kind: "notice" })).tone, "ok");
+  assert.deepEqual(await finishAuthLink(client(), CONFIG, { kind: "none" }), { recovery: false, message: null, tone: "info" });
+  assert.deepEqual(seen, []);
+});
+
+test("new password: saved with the reset session, and refusals in words", async () => {
+  const c = client();
+  stubFetch({ "/auth/v1/verify": () => json(session()) });
+  await finishAuthLink(c, CONFIG, { kind: "token-hash", tokenHash: "pkce_abcdef0123", type: "recovery" });
+  let body: Record<string, unknown> = {};
+  stubFetch({
+    "/auth/v1/user": (_url, init) => {
+      body = JSON.parse(String(init.body));
+      return json(session().user);
+    },
+  });
+  assert.equal(await setNewPassword(c, "a-new-password"), null);
+  assert.equal(body.password, "a-new-password");
+  stubFetch({ "/auth/v1/user": () => authError("same_password", 422) });
+  assert.match((await setNewPassword(c, "a-new-password")) ?? "", /different/);
+  stubFetch({ "/auth/v1/user": () => authError("over_request_rate_limit", 429) });
+  assert.match((await setNewPassword(c, "a-new-password")) ?? "", /Too many attempts/);
+});
+
+test("new password: without a session it asks for a new link", async () => {
+  stubFetch({});
+  assert.match((await setNewPassword(client(), "a-new-password")) ?? "", /new link/);
 });

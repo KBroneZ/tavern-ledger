@@ -1,4 +1,5 @@
 ---
+import { MIN_PASSWORD_LENGTH } from "../lib/auth.ts";
 import { CONFIRM_PHRASE } from "../lib/deleteAccount.ts";
 ---
 
@@ -7,6 +8,29 @@ import { CONFIRM_PHRASE } from "../lib/deleteAccount.ts";
 
 <section id="signed-out" hidden>
   <p>You are not signed in. <a href="/signin/">Sign in</a> to see your account.</p>
+</section>
+
+<section id="set-password" class="panel" aria-labelledby="set-password-heading" hidden>
+  <h2 id="set-password-heading">Set a new password</h2>
+  <form id="set-password-form" novalidate>
+    <label>
+      New password
+      <span class="hint">At least {MIN_PASSWORD_LENGTH} characters.</span>
+      <input
+        type="password"
+        name="password"
+        autocomplete="new-password"
+        minlength={MIN_PASSWORD_LENGTH}
+        required
+      />
+    </label>
+    <label>
+      Repeat it
+      <input type="password" name="repeat" autocomplete="new-password" required />
+    </label>
+    <button type="submit">Save the new password</button>
+    <p class="message" id="set-password-message" role="status" aria-live="polite"></p>
+  </form>
 </section>
 
 <section id="deleted" hidden>
