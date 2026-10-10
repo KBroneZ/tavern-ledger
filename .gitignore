@@ -5,6 +5,8 @@
 *.log
 # Synthetic logs for the Rust parser tests (no real games).
 !crates/bg-parser/tests/data/*.log
+# Real games of the user's own, scrubbed by tools/make_fixture.py (D-044).
+!crates/bg-parser/tests/data/real/*.log
 bin/
 obj/
 node_modules/
