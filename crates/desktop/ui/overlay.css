@@ -172,20 +172,24 @@ body {
 .opponent.compact .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .panel .hint { margin: 4px 0 0; color: var(--dim); font-size: 10px; }
 
-/* The hover card next to the game's leaderboard (T-306, T-307). */
+/* The hover card at the top of the game window (T-306, T-307, T-309). */
 .hover-card {
   position: fixed;
   z-index: 5;
   overflow: hidden;
   padding: 7px 10px 8px;
   border: 1px solid var(--border);
-  border-left-width: 3px;
+  border-top-width: 3px;
   border-radius: 3px;
   background: var(--panel-bg);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
 }
 .hover-card[hidden] { display: none; }
-.hover-card[data-side="left"] { border-left-width: 1px; border-right-width: 3px; }
+/* One row of minions, like the game's own board strip: they shrink, never wrap. */
+.hover-card .board { flex-wrap: nowrap; }
+.hover-card .board .when { flex: none; max-width: 9em; white-space: normal; }
+.hover-card .minion { flex: 0 1 76px; min-width: 0; }
+.hover-card .minion i { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hover-card .head { display: flex; align-items: baseline; gap: 8px; }
 .hover-card .name { flex: 1 1 auto; min-width: 0; font-weight: 700; }
 .hover-card .hp { flex: none; color: var(--dim); }

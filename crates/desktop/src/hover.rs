@@ -3,7 +3,8 @@
 //! the mouse position is checked about 20 times a second against where the
 //! leaderboard is (from the game window's rectangle). When it rests on a
 //! slot the overlay page is told which place it is, and shows that
-//! opponent's card next to the leaderboard. The overlay stays click-through:
+//! opponent's card at the top of the game window, centred (T-309, D-049).
+//! The overlay stays click-through:
 //! the mouse is only watched, never taken. Nothing is read from the game.
 
 use std::sync::Arc;
@@ -24,12 +25,13 @@ pub const HOVER_CHANGED: &str = "overlay-hover";
 const WATCH_EVERY: Duration = Duration::from_millis(50);
 /// Otherwise the thread only looks now and then whether it can start.
 const IDLE_EVERY: Duration = Duration::from_millis(400);
-/// The width the hover card asks for, in the overlay's own pixels.
-pub const CARD_WIDTH: f64 = 340.0;
+/// The width the hover card asks for, in the overlay's own pixels: room for
+/// a full board of seven minions in one row.
+pub const CARD_WIDTH: f64 = 640.0;
 
 /// What the page needs to show the card: the place hovered (1 is the top
-/// slot), the slot's rectangle and where the card goes, both in the overlay
-/// window's own pixels.
+/// slot), the slot's rectangle and where the card goes (the top of the game
+/// window), both in the overlay window's own pixels.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Hover {
     pub place: i64,
@@ -63,6 +65,7 @@ pub fn hover_at(
     };
     let place = slot_at(board, slots, cursor)?;
     let slot = slot_area(board, slots, place).in_frame(frame.origin, frame.scale);
+    let game = client.in_frame(frame.origin, frame.scale);
     let bounds = Area {
         x: 0.0,
         y: 0.0,
@@ -72,7 +75,7 @@ pub fn hover_at(
     Some(Hover {
         place,
         slot,
-        card: place_card(slot, bounds, CARD_WIDTH),
+        card: place_card(game, bounds, CARD_WIDTH),
     })
 }
 
@@ -135,7 +138,6 @@ pub fn watch(app: AppHandle, state: Arc<AppState>) {
 mod tests {
     use super::*;
     use crate::leaderboard::default_area;
-    use crate::screen_fit::Side;
 
     fn frame(origin: (f64, f64), scale: f64, size: (f64, f64)) -> OverlayFrame {
         OverlayFrame {
@@ -164,7 +166,8 @@ mod tests {
                 let hover = hover_at(game, board, 8, middle_of(game, board, 8, place), f)
                     .expect("on the leaderboard");
                 assert_eq!(hover.place, place);
-                assert_eq!(hover.card.side, Side::Right);
+                assert_eq!(hover.card.x + hover.card.width / 2.0, w / 2.0, "centred");
+                assert_eq!(hover.card.y, crate::screen_fit::GAP, "at the top");
                 assert!(hover.card.x + hover.card.width <= w);
             }
         }
@@ -196,6 +199,11 @@ mod tests {
         assert_eq!(hover.place, 4);
         let back_x = hover.slot.x * 1.5 + 1920.0;
         assert!((back_x - (2100.0 + board.x)).abs() < 0.01);
+        // The card is centred on the game window, at its top, in the
+        // overlay's pixels.
+        let centre = (hover.card.x + hover.card.width / 2.0) * 1.5 + 1920.0;
+        assert!((centre - (2100.0 + 640.0)).abs() < 0.01);
+        assert!((hover.card.y * 1.5 - (150.0 + 8.0 * 1.5)).abs() < 0.01);
     }
 
     #[test]

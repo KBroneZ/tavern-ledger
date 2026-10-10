@@ -1,9 +1,11 @@
 // The hover card (T-306, T-307). The app watches the mouse over the game's
 // own leaderboard and says which place is hovered (hover.rs) and where the
-// card goes (screen_fit.rs); this file only draws that opponent's card from
-// the live state overlay.js already has: hero, tier, health, record, the last
-// board met with its round and, at tier 1 or 2, the minions they could have
-// (labelled "possible"). Our own slot shows nothing. Text is set with
+// card goes: the top of the game window, centred (screen_fit.rs, T-309); this
+// file only draws that opponent's card from the live state overlay.js already
+// has: hero, tier, health, record, the last board met with its round in one
+// row and the minions they could have (labelled "possible"): on game turns 2
+// and 3 for everyone, later only for a hero not met yet (D-050). Our own slot
+// shows nothing. Text is set with
 // textContent only. Own scope; it uses overlay.js's drawing helpers.
 "use strict";
 
@@ -41,10 +43,30 @@ window.TLHover = (() => {
     return [list, ...marks];
   }
 
+  // Where the lobby tribes come from (D-050). Tribes from the tavern are only
+  // those offered so far: say when the list may miss some (T-307).
+  function tribesText(p) {
+    const list = p.tribes.map(tribeName).join(" · ");
+    if (p.tribes_basis === "tavern_confirmed") {
+      return p.tribes_complete
+        ? `From the lobby tribes ${list} (all 5 confirmed in the tavern)`
+        : `From the ${p.tribes.length} lobby tribes confirmed in the tavern so far ${list}; the others are missing until offered or entered`;
+    }
+    if (p.tribes_basis === "tavern_seen") {
+      return `From the tribes seen so far ${list}; other lobby tribes are missing until you enter them`;
+    }
+    return `From the tribes ${list}`;
+  }
+
   function possibleBlock(opponent, p) {
     const block = el("div", "possible");
     const hero = opponent.seats.length > 1 ? heroOf(opponent, p.seat) : null;
-    const title = el("div", "when", `${hero ? `${heroName(hero)} · ` : ""}tavern tier ${p.tier}: could have`);
+    const tiers = p.min_tier === p.tier ? `tier ${p.tier}` : `tier ${p.min_tier}-${p.tier}`;
+    const what =
+      p.reason === "not_met_yet"
+        ? `not met yet · tavern tier ${p.tier}: could have ${tiers}`
+        : `tavern tier ${p.tier}: could have`;
+    const title = el("div", "when", `${hero ? `${heroName(hero)} · ` : ""}${what}`);
     title.append(mark(p.source) || "");
     block.append(title);
     if (p.missing === "tribes_unknown") {
@@ -55,34 +77,25 @@ window.TLHover = (() => {
       block.append(el("div", "none", "No card data on this PC yet, so these cannot be listed."));
       return block;
     }
-    // Tribes seen in the tavern are only those offered so far: say the list
-    // may miss the lobby's other tribes (T-307).
-    const seenOnly = p.tribes_source === "inferred";
-    const from = el(
-      "div",
-      "none",
-      seenOnly
-        ? `From the tribes seen so far ${p.tribes.map(tribeName).join(" · ")}; other lobby tribes are missing until you enter them`
-        : `From the tribes ${p.tribes.map(tribeName).join(" · ")}`,
-    );
+    const from = el("div", "none", tribesText(p));
     from.append(mark(p.tribes_source) || "");
     block.append(from);
+    if (p.reason === "not_met_yet") {
+      block.append(el("div", "none", "No board of theirs seen yet: a guess from their tier and the lobby tribes. The game's own tribe hint is not in the log."));
+    }
     if (!p.cards.length) block.append(el("div", "none", "No pool minion matches."));
     else block.append(...cardNames(p.cards));
     return block;
   }
 
-  // Centred on the slot, moved to stay inside the screen (the same rule as
-  // screen_fit::card_top); taller than the screen, it is cut to it.
+  // Where the app put it (screen_fit::place_card): inside the screen, cut
+  // at its bottom when taller.
   function position() {
     const p = hover.card;
     card.style.left = `${Math.round(p.x)}px`;
+    card.style.top = `${Math.round(p.y)}px`;
     card.style.width = `${Math.round(p.width)}px`;
-    card.style.maxHeight = `${Math.round(p.bottom - p.top)}px`;
-    const height = Math.min(card.offsetHeight, p.bottom - p.top);
-    const top = Math.min(Math.max(p.center_y - height / 2, p.top), p.bottom - height);
-    card.style.top = `${Math.round(top)}px`;
-    card.dataset.side = p.side;
+    card.style.maxHeight = `${Math.round(p.max_height)}px`;
   }
 
   function render() {
