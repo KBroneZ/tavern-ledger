@@ -9,9 +9,11 @@
 <link rel="stylesheet" href="shop.css">
 <link rel="stylesheet" href="curious.css">
 <link rel="stylesheet" href="round-two.css">
+<link rel="stylesheet" href="compact.css">
+<link rel="stylesheet" href="turns.css">
 </head>
 <body>
-  <header class="masthead">
+  <header id="masthead" class="masthead">
     <div class="brand">
       <h1>Tavern Ledger</h1>
       <p class="tagline">Your Battlegrounds games, read from the game's own log.</p>
@@ -19,7 +21,7 @@
     <p id="status" class="status" role="status" aria-live="polite">Starting…</p>
   </header>
 
-  <main>
+  <main id="home">
     <section id="setup" class="setup" role="status" aria-live="polite" hidden>
       <h2>Game log setup</h2>
       <ul id="setup-list"></ul>
@@ -28,7 +30,10 @@
     <section id="overlay-switch" class="overlay-switch" aria-label="Overlay">
       <label class="switch"><input id="overlay-enabled" type="checkbox"> Overlay during a game</label>
       <button type="button" id="overlay-arrange">Arrange overlay</button>
-      <p class="overlay-hint">Also in the tray menu. It shows over Hearthstone only while a game is on; hover a hero on the game's leaderboard to see the last board you met. "Arrange overlay" lets you move the panels and fit the leaderboard box (the whole screen takes clicks until you press "Lock overlay"). Exclusive fullscreen hides any overlay: run Hearthstone windowed or borderless.</p>
+      <details class="fold about overlay-hint">
+        <summary data-focus="fold:about:overlay">How the overlay works</summary>
+        <p class="note">Also in the tray menu. It shows over Hearthstone only while a game is on; hover a hero on the game's leaderboard to see the last board you met. "Arrange overlay" lets you move the panels and fit the leaderboard box (the whole screen takes clicks until you press "Lock overlay"). Exclusive fullscreen hides any overlay: run Hearthstone windowed or borderless.</p>
+      </details>
       <p id="overlay-switch-problem" class="problem" role="status" hidden></p>
     </section>
 
@@ -55,17 +60,20 @@
       <p class="note">Off until you turn it on. Each finished game's report goes up: heroes, card ids, places and boards. Never player names, BattleTags or ratings.</p>
     </details>
 
-    <div id="view-tabs" class="view-tabs" role="tablist" aria-label="Views">
-      <button type="button" role="tab" id="tab-games" aria-controls="panel-games" aria-selected="true">Your games</button>
-      <button type="button" role="tab" id="tab-curious" aria-controls="panel-curious" aria-selected="false" tabindex="-1">Curious stats</button>
+    <div class="view-bar">
+      <div id="view-tabs" class="view-tabs" role="tablist" aria-label="Views">
+        <button type="button" role="tab" id="tab-games" aria-controls="panel-games" aria-selected="true">Your games</button>
+        <button type="button" role="tab" id="tab-stats" aria-controls="panel-stats" aria-selected="false" tabindex="-1">Stats</button>
+        <button type="button" role="tab" id="tab-curious" aria-controls="panel-curious" aria-selected="false" tabindex="-1">Curious stats</button>
+      </div>
+      <nav id="modes" class="modes" aria-label="Game mode">
+        <button type="button" data-mode="GT_BATTLEGROUNDS" aria-pressed="false">Solo</button>
+        <button type="button" data-mode="GT_BATTLEGROUNDS_DUO" aria-pressed="false">Duos</button>
+        <button type="button" data-mode="OTHER" aria-pressed="false" hidden>Other</button>
+      </nav>
     </div>
 
     <div id="panel-games" class="tab-panel" role="tabpanel" aria-labelledby="tab-games">
-    <nav class="modes" aria-label="Game mode">
-      <button type="button" data-mode="GT_BATTLEGROUNDS" aria-pressed="false">Solo</button>
-      <button type="button" data-mode="GT_BATTLEGROUNDS_DUO" aria-pressed="false">Duos</button>
-      <button type="button" data-mode="OTHER" aria-pressed="false" hidden>Other</button>
-    </nav>
     <section class="tally" aria-label="Summary">
       <div class="stat"><span class="label">Games</span><span id="stat-games" class="value">—</span><span id="stat-games-src" class="src-slot"></span></div>
       <div class="stat"><span class="label">Average place</span><span id="stat-avg" class="value">—</span><span id="stat-avg-src" class="src-slot"></span></div>
@@ -75,126 +83,119 @@
     <p id="not-counted" class="tally-note" hidden></p>
 
     <section class="ledger lobby" aria-labelledby="lobby-title">
-      <h2 id="lobby-title" tabindex="-1">Lobby tribes</h2>
-      <p class="note">The game's log does not say which five tribes are in the lobby. If you want them in your stats, pick them here from the list; they are saved on your computer and always marked as entered by you. They are never mixed with the tribes seen in the tavern.</p>
-      <p id="lobby-state" role="status" aria-live="polite"></p>
-      <ul id="lobby-current" class="tribe-list"></ul>
-      <p id="lobby-error" class="report-error" role="alert" hidden></p>
-      <div class="lobby-actions">
-        <button type="button" id="lobby-enter" class="report-btn" data-focus-next="lobby-title"></button>
-        <button type="button" id="lobby-clear" class="report-btn" data-focus-next="lobby-enter lobby-title" hidden>Remove</button>
+      <div class="lobby-line">
+        <h2 id="lobby-title" tabindex="-1">Lobby tribes</h2>
+        <p id="lobby-state" role="status" aria-live="polite"></p>
+        <ul id="lobby-current" class="tribe-list"></ul>
+        <div class="lobby-actions">
+          <button type="button" id="lobby-enter" class="report-btn" data-focus-next="lobby-title"></button>
+          <button type="button" id="lobby-clear" class="report-btn" data-focus-next="lobby-enter lobby-title" hidden>Remove</button>
+        </div>
       </div>
+      <p id="lobby-error" class="report-error" role="alert" hidden></p>
+      <details class="fold about">
+        <summary data-focus="fold:about:lobby">About this</summary>
+        <p class="note">The game's log does not say which five tribes are in the lobby. If you want them in your stats, pick them here from the list; they are saved on your computer and always marked as entered by you. They are never mixed with the tribes seen in the tavern.</p>
+      </details>
     </section>
+
+    <section class="ledger games-list" aria-labelledby="ledger-title">
+      <h2 id="ledger-title">Ledger</h2>
+      <div id="games" data-focus-scope></div>
+      <p id="empty" class="empty" hidden>No games yet. Play a Battlegrounds game and it will appear here when it ends.</p>
+    </section>
+    </div>
+
+    <div id="panel-stats" class="tab-panel" role="tabpanel" aria-labelledby="tab-stats" hidden>
 
     <div class="breakdown">
       <section class="ledger heroes" aria-labelledby="heroes-title">
         <h2 id="heroes-title">Heroes</h2>
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Hero</th>
-              <th scope="col" class="num">Games</th>
-              <th scope="col" class="num">Avg place</th>
-              <th scope="col" class="num" id="heroes-top-label">Top half</th>
-              <th scope="col" class="num">Wins</th>
-            </tr>
-          </thead>
-          <tbody id="heroes"></tbody>
-        </table>
+        <div id="heroes"></div>
         <p id="heroes-empty" class="empty" hidden>No heroes yet.</p>
       </section>
 
       <section class="ledger tribes" aria-labelledby="tribes-title">
         <h2 id="tribes-title">Tribes seen in the tavern</h2>
-        <p class="note">What the tavern offered you. The game's log does not say which tribes were in the lobby, so this is not that list.</p>
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Tribe</th>
-              <th scope="col" class="num">Games</th>
-              <th scope="col" class="num">Offers</th>
-            </tr>
-          </thead>
-          <tbody id="tribes"></tbody>
-        </table>
+        <div id="tribes"></div>
+        <details class="fold about">
+          <summary data-focus="fold:about:tribes">About this</summary>
+          <p class="note">What the tavern offered you. The game's log does not say which tribes were in the lobby, so this is not that list.</p>
+        </details>
         <p id="tribes-empty" class="empty" hidden>No tavern offers seen yet.</p>
       </section>
 
       <section class="ledger tribes" id="entered-tribes-section" aria-labelledby="entered-tribes-title" hidden>
         <h2 id="entered-tribes-title">Lobby tribes you entered</h2>
         <p class="note">Typed by you, one pick of five per game. Separate from the tribes seen in the tavern.</p>
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Tribe</th>
-              <th scope="col" class="num">Games</th>
-            </tr>
-          </thead>
-          <tbody id="entered-tribes"></tbody>
-        </table>
+        <div id="entered-tribes"></div>
       </section>
     </div>
 
     <section class="ledger shop-stats" aria-labelledby="shop-stats-title">
       <h2 id="shop-stats-title">Shop and actions</h2>
-      <p class="note">Averages per game over the games whose shop the log has from start to end. Only your own shop is in the log.</p>
       <div id="shop-stats-body"></div>
+      <details class="fold about">
+        <summary data-focus="fold:about:shop">About this</summary>
+        <p class="note">Averages per game over the games whose shop the log has from start to end. Only your own shop is in the log.</p>
+      </details>
     </section>
 
     <section class="ledger hero-picks" aria-labelledby="hero-picks-title">
       <h2 id="hero-picks-title">Hero picks</h2>
-      <p class="note">The heroes the game offered you at the start of each game, and the one you picked. Only your own offers are in the log.</p>
       <div id="hero-picks-body"></div>
+      <details class="fold about">
+        <summary data-focus="fold:about:picks">About this</summary>
+        <p class="note">The heroes the game offered you at the start of each game, and the one you picked. Only your own offers are in the log.</p>
+      </details>
     </section>
 
     <section class="ledger choice-stats" aria-labelledby="choice-stats-title">
       <h2 id="choice-stats-title">Trinkets and Dark Gifts</h2>
-      <p class="note">How often each one was offered to you, how often you took it, and your average place when you did. Only your own choices are in the log.</p>
       <div id="choice-stats-body"></div>
+      <details class="fold about">
+        <summary data-focus="fold:about:choices">About this</summary>
+        <p class="note">How often each one was offered to you, how often you took it, and your average place when you did. Only your own choices are in the log.</p>
+      </details>
     </section>
 
-    <section class="ledger" aria-labelledby="ledger-title">
-      <h2 id="ledger-title">Ledger</h2>
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Session · game</th>
-            <th scope="col">Mode</th>
-            <th scope="col">Hero</th>
-            <th scope="col" class="num">Place</th>
-            <th scope="col" class="num">Health</th>
-            <th scope="col" class="num">Rounds</th>
-            <th scope="col">Note</th>
-            <th scope="col"><span class="visually-hidden">Recap and report a problem</span></th>
-          </tr>
-        </thead>
-        <tbody id="games" data-focus-scope></tbody>
-      </table>
-      <p id="empty" class="empty" hidden>No games yet. Play a Battlegrounds game and it will appear here when it ends.</p>
-    </section>
     </div>
 
     <section id="panel-curious" class="tab-panel curious" role="tabpanel" aria-labelledby="tab-curious" hidden>
-      <h2 id="curious-title">Curious stats</h2>
-      <p class="note">Totals over all your games, Solo and Duos together. Each one says where it comes from and how many games back it; a game saved before a value was kept is left out of that count, never added as zero.</p>
+      <h2 id="curious-title" class="visually-hidden">Curious stats</h2>
+      <details class="fold about">
+        <summary data-focus="fold:about:curious">About these totals</summary>
+        <p class="note">Totals over all your games, Solo and Duos together. Each one says where it comes from and how many games back it; a game saved before a value was kept is left out of that count, never added as zero.</p>
+      </details>
       <div id="curious-body"></div>
     </section>
 
-    <section class="legend" aria-labelledby="legend-title">
-      <h2 id="legend-title">Where values come from</h2>
+    <details class="legend fold">
+      <summary data-focus="fold:legend">Where values come from</summary>
       <p class="note">A value with no mark comes straight from the game's log. Every other value carries a mark, and hovering any value says where it comes from.</p>
       <ul id="legend-list"></ul>
-    </section>
+    </details>
   </main>
 
-  <dialog id="recap-dialog" class="recap" aria-labelledby="recap-title">
-    <h2 id="recap-title">Game recap</h2>
+  <section id="recap-view" class="recap recap-view" aria-labelledby="recap-title" hidden>
+    <header class="recap-bar">
+      <div class="recap-who">
+        <span id="recap-portrait" class="recap-portrait"></span>
+        <div class="recap-names">
+          <h2 id="recap-title" tabindex="-1">Game recap</h2>
+          <p id="recap-sub" class="recap-sub"></p>
+        </div>
+        <span id="recap-place" class="recap-place"></span>
+      </div>
+      <div class="recap-actions">
+        <button type="button" id="recap-tribes" class="report-btn">Tribes</button>
+        <button type="button" id="recap-report" class="report-btn">Report</button>
+        <button type="button" id="recap-close" class="close-x" aria-label="Close the recap" title="Close (Esc)"><span aria-hidden="true">&#x2715;</span></button>
+      </div>
+    </header>
     <p id="recap-error" class="report-error" role="alert" hidden></p>
     <div id="recap-body"></div>
-    <div class="dialog-actions">
-      <button type="button" id="recap-close">Close</button>
-    </div>
-  </dialog>
+  </section>
 
   <dialog id="tribes-dialog" class="tribes-dialog" aria-labelledby="tribes-title-dialog">
     <h2 id="tribes-title-dialog">Lobby tribes</h2>
@@ -239,9 +240,13 @@
   </footer>
   <script src="focus-keeper.js"></script>
   <script src="cards.js"></script>
+  <script src="compact.js"></script>
+  <script src="scroll-cue.js"></script>
+  <script src="recap-view.js"></script>
   <script src="shop.js"></script>
   <script src="extras.js"></script>
   <script src="round-two.js"></script>
+  <script src="turns.js"></script>
   <script src="curious.js"></script>
   <script src="tabs.js"></script>
   <script src="app.js"></script>

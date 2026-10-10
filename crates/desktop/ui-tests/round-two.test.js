@@ -94,7 +94,8 @@ test("the stats table has rates, places and the games behind it", () => {
     dark_gifts: [],
   };
   const t = R.choiceTable(stats, "trinkets");
-  assert.deepEqual(t.rows[0], { id: "T_A", offered: "4", picked: "1", rate: "25%", place: "3.00", placeTip: "Over 1 game with a place that counts." });
+  assert.deepEqual(t.rows[0], { id: "T_A", offered: "4", picked: "1", rate: "25%", place: "3.00", placeTip: "Over 1 game with a place that counts.",
+    sort: { offered: 4, picked: 1, rate: 0.25, place: 3 } });
   assert.match(t.note, /^Over 3 games whose choices are in the log\. Not counted: 2 saved by an older version/);
   assert.equal(R.choiceTable(stats, "dark_gifts").empty, "None offered in these games yet.");
   assert.equal(R.choiceTable(null, "trinkets").empty, "No choice in the log yet.");
