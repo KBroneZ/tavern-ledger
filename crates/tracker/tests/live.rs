@@ -93,6 +93,10 @@ fn the_watcher_gives_the_live_game_while_it_is_on_and_not_after() {
     append(&power, &log[..cut]);
     assert!(watcher.poll().unwrap().is_empty());
     let live = watcher.live_report().expect("a game is on").clone();
+    let lobby = watcher.live_lobby();
+    assert!(!lobby.is_empty(), "the leaderboard of the game on");
+    let with_board = live_of(&live).with_leaderboard(&lobby);
+    assert!(with_board.own_place.value.is_some());
 
     // Same lines through the parser alone: the same state.
     let mut reader = LogReader::default();
@@ -103,6 +107,7 @@ fn the_watcher_gives_the_live_game_while_it_is_on_and_not_after() {
     append(&power, &log[cut..]);
     assert_eq!(watcher.poll().unwrap().len(), 1, "the game is saved");
     assert!(watcher.live_report().is_none(), "no game on any more");
+    assert!(watcher.live_lobby().is_empty(), "no leaderboard either");
 }
 
 #[test]

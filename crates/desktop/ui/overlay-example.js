@@ -10,6 +10,9 @@ const EXAMPLE_GAME = {
   hero: { value: { id: "EXAMPLE_HERO", name: "Example Hero" }, source: "log" },
   teammate_hero: { value: null, source: "unknown" },
   last_combat: { value: 5, source: "log" },
+  own_seats: [3],
+  own_place: { value: 2, source: "log" },
+  leaderboard_slots: 3,
   own_health: { value: 32, source: "log" },
   tribes: [
     { tribe: "BEAST", offers: 6 },
@@ -36,6 +39,9 @@ const EXAMPLE_GAME = {
       boards_source: "log",
       record: { won: 1, lost: 1, tie: 0, unknown: 0 },
       record_source: "inferred",
+      place: { value: 1, source: "log" },
+      tiers: [{ value: 4, source: "log" }],
+      possible: [],
     },
     {
       heroes: [{ id: "EXAMPLE_B", name: "Example Opponent B" }],
@@ -45,6 +51,9 @@ const EXAMPLE_GAME = {
       boards_source: "unknown",
       record: null,
       record_source: "unknown",
+      place: { value: 3, source: "log" },
+      tiers: [{ value: 2, source: "log" }],
+      possible: [],
     },
   ],
   warnings: [],
@@ -55,6 +64,7 @@ const EXAMPLE_GAME = {
     { source: "entered", label: "entered by you" },
     { source: "leaderboard", label: "from the leaderboard" },
     { source: "card_data", label: "card database" },
+    { source: "possible", label: "possible" },
     { source: "unknown", label: "unknown" },
   ],
 };

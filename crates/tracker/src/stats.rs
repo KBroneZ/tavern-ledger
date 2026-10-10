@@ -652,7 +652,7 @@ mod tests {
     #[test]
     fn stats_carry_the_legend() {
         let stats = compute(&[]);
-        assert_eq!(stats.legend.len(), 6);
+        assert_eq!(stats.legend.len(), Source::ALL.len());
         assert_eq!(stats.legend[0].source, Source::Log);
     }
 

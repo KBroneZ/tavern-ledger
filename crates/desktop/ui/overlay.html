@@ -10,7 +10,7 @@
   <div id="scrim" hidden></div>
   <div id="toolbar" class="toolbar" role="toolbar" aria-label="Overlay layout" hidden>
     <strong class="toolbar-title">Layout editing</strong>
-    <span id="toolbar-note" class="toolbar-note">Clicks do not reach the game while unlocked. Drag a panel to move it, its corner to resize it. Example data is shown when no game is on.</span>
+    <span id="toolbar-note" class="toolbar-note">Clicks do not reach the game while unlocked. Drag a panel to move it, its corner to resize it. Example data is shown when no game is on. Drag the dashed "Leaderboard" box over the game's column of heroes if it is not there already; it is kept for this game window size.</span>
     <span class="toolbar-row" id="theme-buttons" role="group" aria-label="Theme"></span>
     <span class="toolbar-row" role="group" aria-label="Opacity">
       <span class="toolbar-label">Opacity</span>
@@ -21,6 +21,7 @@
     <span class="toolbar-row" id="panel-toggles" role="group" aria-label="Panels shown"></span>
     <span class="toolbar-row">
       <button type="button" id="reset-layout">Reset layout</button>
+      <button type="button" id="reset-board">Reset leaderboard box</button>
       <button type="button" id="lock" class="primary">Lock overlay</button>
     </span>
     <span id="toolbar-warning" class="toolbar-warning" role="alert" hidden></span>
@@ -33,7 +34,10 @@
   </div>
   <script src="cards.js"></script>
   <script src="overlay-example.js"></script>
+  <div id="board-box" class="board-box" hidden><span class="board-label">Leaderboard</span><span class="grip"></span></div>
+  <aside id="hover-card" class="hover-card" aria-label="Opponent" hidden></aside>
   <script src="overlay.js"></script>
+  <script src="overlay-hover.js"></script>
   <script src="overlay-layout.js"></script>
 </body>
 </html>

@@ -23,7 +23,7 @@
   --border: #2f7f74;
   --font-display: "Unbounded", "Segoe UI", system-ui, sans-serif;
   --font-body: "DM Mono", Consolas, "Cascadia Mono", monospace;
-  --stack-left: 8px;
+  --stack-right: 8px;
   --stack-top: 96px;
   --stack-width: 340px;
 }
@@ -46,15 +46,19 @@ body {
   user-select: none;
 }
 
-/* Panels not placed by the user keep the default stack, as in T-301. */
+/* Panels not placed by the user keep the default stack, at the right edge
+   so it never covers the game's leaderboard on the left (T-306). */
 #stack {
   position: absolute;
-  left: var(--stack-left);
+  right: var(--stack-right);
   top: var(--stack-top);
   width: var(--stack-width);
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* Never past the bottom of the screen (T-308): what does not fit is cut. */
+  max-height: calc(100vh - var(--stack-top) - 8px);
+  overflow: hidden;
 }
 
 .slot { position: relative; display: flex; }
@@ -72,6 +76,7 @@ body {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
 }
 .panel[hidden] { display: none; }
+.slot > .panel { overflow: hidden; }
 
 .panel h2 {
   margin: 0 0 4px;
@@ -109,6 +114,7 @@ body {
 .src-leaderboard { border-style: solid; border-width: 2px; color: var(--info); }
 .src-unknown { border-style: dotted; color: var(--muted); }
 .src-card_data { border-style: solid; border-radius: 2px; color: var(--text); }
+.src-possible { border-style: dashed; border-width: 2px; border-radius: 2px; color: var(--amber); font-style: italic; }
 
 .unknown-value {
   padding: 0 4px;
@@ -160,6 +166,62 @@ body {
   border-radius: 50%;
   object-fit: cover;
 }
+/* Compact opponents list (T-306): one line each, no boards. */
+.opponent.compact { padding: 3px 0; }
+.opponent .tier { flex: none; color: var(--accent); font-variant-numeric: tabular-nums; }
+.opponent.compact .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.panel .hint { margin: 4px 0 0; color: var(--dim); font-size: 10px; }
+
+/* The hover card next to the game's leaderboard (T-306, T-307). */
+.hover-card {
+  position: fixed;
+  z-index: 5;
+  overflow: hidden;
+  padding: 7px 10px 8px;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 3px;
+  background: var(--panel-bg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
+}
+.hover-card[hidden] { display: none; }
+.hover-card[data-side="left"] { border-left-width: 1px; border-right-width: 3px; }
+.hover-card .head { display: flex; align-items: baseline; gap: 8px; }
+.hover-card .name { flex: 1 1 auto; min-width: 0; font-weight: 700; }
+.hover-card .hp { flex: none; color: var(--dim); }
+.hover-card .hp b { color: var(--text); font-weight: 700; }
+.hover-card .portrait { flex: none; align-self: center; width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+.possible { margin-top: 6px; padding-top: 4px; border-top: 1px dashed color-mix(in srgb, var(--amber) 55%, transparent); }
+.possible .when { color: var(--dim); font-size: 10.5px; }
+.possible .none { color: var(--dim); font-size: 10.5px; }
+.possible-list { display: flex; flex-wrap: wrap; gap: 2px 8px; margin-top: 2px; font-size: 10.5px; }
+.possible-card { white-space: nowrap; font-style: italic; }
+.possible-card b { color: var(--amber); font-style: normal; font-weight: 500; }
+.possible-card.unnamed { text-decoration: underline dotted; }
+
+/* The leaderboard box, shown only while unlocked. */
+.board-box {
+  position: fixed;
+  z-index: 9;
+  border: 2px dashed var(--amber);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
+  cursor: move;
+  touch-action: none;
+}
+.board-box[hidden] { display: none; }
+.board-box.custom { border-style: solid; }
+.board-box .board-label {
+  position: absolute;
+  top: -20px;
+  left: 0;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--panel-solid);
+  color: var(--amber);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
 .minion.golden { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, transparent); }
 
 .legend {

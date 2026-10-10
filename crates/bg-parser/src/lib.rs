@@ -18,7 +18,7 @@ use std::io::BufRead;
 
 use collector::{hero_health, leaderboard_heroes, Collector};
 use power::{card_names, classify, parse_power, Line, ParseError};
-use report::{CombatEntry, GameReport, LobbyPlayer, Round, Status};
+use report::{CombatEntry, GameReport, LobbyPlayer, LobbySlot, Round, Status};
 use state::Entity;
 
 /// The parser's crate version, saved with every game (T-107).
@@ -32,6 +32,8 @@ pub const PARSER_REVISION: u32 = 2;
 pub const TESTED_BUILDS: &[i64] = &[253216];
 pub const TESTED_GAME_TYPES: &[&str] = &["GT_BATTLEGROUNDS", "GT_BATTLEGROUNDS_DUO"];
 const MAX_LOBBY: usize = 8;
+/// The highest tavern tier; a value past it is not a tier the game has.
+const MAX_TECH_LEVEL: i64 = 7;
 /// The line that starts every game; [`LogReader`] splits the log at it.
 pub const CREATE_GAME: &str = "GameState.DebugPrintPower() - CREATE_GAME";
 /// Bounds on the card names kept per game, so a strange log cannot grow them.
@@ -107,6 +109,30 @@ impl GameReader {
             }
         }
         build_report(index, &self)
+    }
+
+    /// Every lobby hero's leaderboard place and tavern tier as the log has
+    /// them now, by player id (T-306). Empty before the lobby is known or
+    /// once the game could not be read.
+    pub fn lobby_now(&self) -> Vec<LobbySlot> {
+        if self.error.is_some() {
+            return Vec::new();
+        }
+        let mut slots: Vec<LobbySlot> = leaderboard_heroes(&self.collector.board)
+            .into_iter()
+            .take(MAX_LOBBY)
+            .map(|(pid, hero)| LobbySlot {
+                player_id: pid,
+                place: hero
+                    .opt_int("PLAYER_LEADERBOARD_PLACE")
+                    .filter(|p| (1..=MAX_LOBBY as i64).contains(p)),
+                tech_level: hero
+                    .opt_int("PLAYER_TECH_LEVEL")
+                    .filter(|t| (1..=MAX_TECH_LEVEL).contains(t)),
+            })
+            .collect();
+        slots.sort_by_key(|s| s.player_id);
+        slots
     }
 
     /// True when the log says this is a Battlegrounds game (solo or Duos).
@@ -201,6 +227,15 @@ impl LogReader {
     pub fn snapshot_current(&self) -> Option<GameReport> {
         let reader = self.current.as_ref()?;
         Some(build_report(self.count + 1, reader))
+    }
+
+    /// The leaderboard of the Battlegrounds game in progress, as the log has
+    /// it now (see [`GameReader::lobby_now`]); empty when no such game is on.
+    pub fn lobby_now(&self) -> Vec<LobbySlot> {
+        match self.current.as_ref() {
+            Some(reader) if self.in_progress_index().is_some() => reader.lobby_now(),
+            _ => Vec::new(),
+        }
     }
 
     /// Number of the Battlegrounds game being played right now (the `index`

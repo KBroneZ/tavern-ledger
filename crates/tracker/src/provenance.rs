@@ -19,17 +19,21 @@ pub enum Source {
     Leaderboard,
     /// Card names and art looked up by the log's card id (T-304, D-038).
     CardData,
+    /// A minion an opponent could have, from the lobby's tribes and the card
+    /// data's minion pool (T-307). Never seen: only possible.
+    Possible,
     #[default]
     Unknown,
 }
 
 impl Source {
-    pub const ALL: [Source; 6] = [
+    pub const ALL: [Source; 7] = [
         Source::Log,
         Source::Inferred,
         Source::Entered,
         Source::Leaderboard,
         Source::CardData,
+        Source::Possible,
         Source::Unknown,
     ];
 
@@ -41,6 +45,7 @@ impl Source {
             Source::Entered => "entered by you",
             Source::Leaderboard => "from the leaderboard",
             Source::CardData => "card database",
+            Source::Possible => "possible",
             Source::Unknown => "unknown",
         }
     }
@@ -58,6 +63,9 @@ impl Source {
             Source::Leaderboard => "Blizzard's public leaderboard says so.",
             Source::CardData => {
                 "Card name or art looked up by the card id in the log, in HearthstoneJSON's copy of Blizzard's card data (English). It can lag behind a game patch."
+            }
+            Source::Possible => {
+                "A minion this opponent could have at their tavern tier, from the lobby's tribes and the card data's minion pool. Not seen: they may have none of them."
             }
             Source::Unknown => "Nothing in the log says. It is not zero.",
         }
@@ -145,7 +153,7 @@ mod tests {
     #[test]
     fn every_source_has_a_label_and_a_sentence_for_the_legend() {
         let legend = legend();
-        assert_eq!(legend.len(), 6);
+        assert_eq!(legend.len(), 7);
         let labels: Vec<_> = legend.iter().map(|e| e.label).collect();
         assert_eq!(
             labels,
@@ -155,6 +163,7 @@ mod tests {
                 "entered by you",
                 "from the leaderboard",
                 "card database",
+                "possible",
                 "unknown"
             ]
         );

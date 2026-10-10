@@ -87,6 +87,18 @@ pub struct LobbyPlayer {
     pub final_health: i64,
 }
 
+/// One lobby hero as the game's leaderboard shows it right now: its place
+/// (top is 1; in Duos both heroes of a team share their team's place) and its
+/// tavern tier. Live only (T-306): never part of the saved report, so the
+/// report, the upload and the Python prototype stay as they are. `None` is
+/// unknown, never 0.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct LobbySlot {
+    pub player_id: i64,
+    pub place: Option<i64>,
+    pub tech_level: Option<i64>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct GameReport {
     pub index: usize,

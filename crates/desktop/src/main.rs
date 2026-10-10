@@ -4,8 +4,12 @@
 
 mod card_data;
 mod foreground;
+mod hover;
+mod leaderboard;
 mod overlay;
 mod overlay_layout;
+mod overlay_window;
+mod screen_fit;
 mod upload;
 
 use std::collections::BTreeSet;
@@ -180,8 +184,12 @@ fn recap_of(state: &AppState, session: &str, index: u64) -> Result<Recap, String
 /// What the overlay shows: the game in progress, or nothing when no
 /// Battlegrounds game is on (T-301). The window renders it and decides nothing.
 #[tauri::command]
-fn overlay_state(state: State<'_, Arc<AppState>>) -> Option<LiveGame> {
-    overlay_state_of(&state)
+fn overlay_state(
+    state: State<'_, Arc<AppState>>,
+    cards: State<'_, card_data::Cards>,
+) -> Option<LiveGame> {
+    let pool = card_data::pool_cards(&cards);
+    overlay_state_of(&state).map(|live| live.with_possible(&pool))
 }
 
 fn overlay_state_of(state: &AppState) -> Option<LiveGame> {
@@ -356,8 +364,9 @@ fn set_status(app: &AppHandle, state: &AppState, update: impl FnOnce(&mut Status
 
 /// The game in progress as the overlay shows it.
 fn live_now(watcher: &mut Watcher) -> Option<LiveGame> {
+    let lobby = watcher.live_lobby();
     let report = serde_json::to_value(watcher.live_report()?).ok()?;
-    Some(live_game(&report))
+    Some(live_game(&report).with_leaderboard(&lobby))
 }
 
 /// Keeps the overlay's game up to date and tells it, only if it changed.
@@ -633,11 +642,10 @@ fn toggle_autostart(app: &AppHandle, item: &CheckMenuItem<Wry>) {
     }
 }
 
-/// Turns the overlay on or off; the menu shows the real state.
-fn toggle_overlay(app: &AppHandle, item: &CheckMenuItem<Wry>) {
+/// Turns the overlay on or off; the menu and the window show the real state.
+fn toggle_overlay(app: &AppHandle) {
     let state = app.state::<Arc<AppState>>();
-    let result = state.overlay.set_enabled(!state.overlay.enabled());
-    let _ = item.set_checked(state.overlay.enabled());
+    let result = overlay::set_enabled(app, &state, !state.overlay.enabled());
     let failed = result.is_err();
     set_status(app, &state, |s| s.notice = result.err());
     if failed {
@@ -680,6 +688,7 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
         false,
         None::<&str>,
     )?;
+    overlay::keep_enable_item(&state, overlay.clone());
     overlay::keep_unlock_item(&state, unlock.clone());
     let reset_layout = MenuItem::with_id(
         app,
@@ -701,7 +710,7 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
         .on_menu_event(move |app, event: MenuEvent| match event.id().as_ref() {
             MENU_SHOW => show_window(app),
             MENU_AUTOSTART => toggle_autostart(app, &autostart),
-            MENU_OVERLAY => toggle_overlay(app, &overlay),
+            MENU_OVERLAY => toggle_overlay(app),
             MENU_UNLOCK => {
                 let state = app.state::<Arc<AppState>>();
                 overlay::set_unlocked(app, &state, !state.overlay.unlocked());
@@ -758,6 +767,9 @@ fn main() {
             overlay::overlay_set_shown,
             overlay::overlay_reset_layout,
             overlay::overlay_set_unlocked,
+            overlay::overlay_set_enabled,
+            overlay::overlay_save_leaderboard,
+            overlay::overlay_reset_leaderboard,
             upload::upload_status,
             upload::upload_set_enabled,
             upload::upload_sign_in,
@@ -779,8 +791,9 @@ fn main() {
             let loaded = state.overlay.load(&data_dir, overlay_dev(std::env::args()));
             card_data::start(app.handle(), &data_dir);
             setup_tray(app)?;
-            overlay::follow(app.handle().clone(), state.clone());
-            let prepared = overlay::prepare(app.handle()).map_err(|e| {
+            overlay_window::follow(app.handle().clone(), state.clone());
+            hover::watch(app.handle().clone(), state.clone());
+            let prepared = overlay_window::prepare(app.handle()).map_err(|e| {
                 state.overlay.disable();
                 format!("The overlay could not be set up ({e}); it is off.")
             });
