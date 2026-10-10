@@ -7,9 +7,11 @@ interface Props {
   description: string;
   /** Pages about one account are kept out of search engines. */
   noindex?: boolean;
+  /** "home" is full width, "reading" one column of about 68 characters. */
+  layout?: "home" | "page" | "reading";
 }
 
-const { title, description, noindex = false } = Astro.props;
+const { title, description, noindex = false, layout = "page" } = Astro.props;
 // Fails the build if only one setting is given or the key is not the public
 // one; null means accounts are closed (no backend).
 const config = readConfig(import.meta.env);
@@ -32,35 +34,47 @@ const canonical = noindex ? null : new URL(path, Astro.site).href;
     {noindex && <meta name="robots" content="noindex" />}
     {canonical && <link rel="canonical" href={canonical} />}
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {
+      layout === "home" && (
+        <link
+          rel="preload"
+          href="/fonts/bricolage-grotesque-latin-wdth-normal.woff2"
+          as="font"
+          type="font/woff2"
+          crossorigin
+        />
+      )
+    }
     <title>{title} · Tavern Ledger</title>
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
     <header class="masthead">
       <a class="brand" href="/">
-        <span class="brand-mark" aria-hidden="true">TL</span>
+        <span class="mark" aria-hidden="true"></span>
         <span>Tavern Ledger</span>
       </a>
       <nav aria-label="Main">
         <a href="/" aria-current={path === "/" ? "page" : undefined}>Home</a>
+        <a href="/privacy/" aria-current={path.startsWith("/privacy") ? "page" : undefined}>Privacy</a>
         {config && (
           <>
-            <a href="/account/" aria-current={path.startsWith("/account") ? "page" : undefined}>Account</a>
             <a href="/signin/" aria-current={path.startsWith("/signin") ? "page" : undefined}>Sign in</a>
+            <a href="/account/" aria-current={path.startsWith("/account") ? "page" : undefined}>Account</a>
           </>
         )}
       </nav>
     </header>
-    <main id="main">
+    <main id="main" class={`layout-${layout}`}>
       <slot />
     </main>
     <footer class="colophon">
       <p class="notice">
         Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.
       </p>
-      <p>
-        Open source (MIT). Not open to the public yet. <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a>
-      </p>
+      <p>Open source (MIT). Not open to the public yet.</p>
+      <p><a href="/privacy/">Privacy</a></p>
+      <p><a href="/terms/">Terms</a></p>
     </footer>
   </body>
 </html>

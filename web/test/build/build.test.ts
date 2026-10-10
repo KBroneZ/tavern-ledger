@@ -179,7 +179,7 @@ test("fonts and styles are our own files: every url() is a local font, none is e
   const css = ALL.filter((f) => f.endsWith(".css"));
   assert.ok(css.length > 0, "no stylesheet in dist");
   const declared = css.flatMap((f) => [...readFileSync(f, "utf8").matchAll(/url\(/g)]);
-  assert.ok(declared.length >= 4, "the four font files are declared");
+  assert.ok(declared.length >= 3, "the three font files are declared");
   for (const file of css) {
     const text = readFileSync(file, "utf8");
     assert.doesNotMatch(text, /@import|https?:\/\//i, name(file));
@@ -193,24 +193,100 @@ test("fonts and styles are our own files: every url() is a local font, none is e
 });
 
 test("the OFL text ships next to the fonts", () => {
-  for (const licence of ["fonts/OFL-Unbounded.txt", "fonts/OFL-DM-Mono.txt"]) {
+  for (const licence of ["fonts/OFL-Bricolage-Grotesque.txt", "fonts/OFL-Figtree.txt"]) {
     assert.match(readFileSync(join(DIST, licence), "utf8"), /SIL OPEN FONT LICENSE Version 1\.1/i, licence);
   }
 });
 
-test("no tag loads anything from another site", () => {
+test("only the two D-052 families ship, within the 120 KB font budget", () => {
+  const fonts = ALL.filter((f) => f.endsWith(".woff2"));
+  assert.deepEqual(fonts.map(name).sort(), [
+    "fonts/bricolage-grotesque-latin-wdth-normal.woff2",
+    "fonts/figtree-latin-ext-wght-normal.woff2",
+    "fonts/figtree-latin-wght-normal.woff2",
+  ]);
+  const total = fonts.reduce((sum, f) => sum + statSync(f).size, 0);
+  assert.ok(total <= 120 * 1024, `${total} bytes of fonts`);
+});
+
+test("only the home page preloads a font, and it is the headline font", () => {
   for (const page of PAGES) {
     const html = readFileSync(page, "utf8");
-    for (const tag of html.matchAll(/<(?:link|script|img|source|iframe|video|audio)\b[^>]*\s(?:src|href)="(?:https?:)?\/\/[^"]*"[^>]*>/g)) {
-      if (/rel="canonical"/.test(tag[0])) continue;
-      assert.fail(`${name(page)}: ${tag[0]}`);
+    const preloads = [...html.matchAll(/<link\b[^>]*rel="preload"[^>]*>/g)].map((m) => m[0]);
+    if (name(page) !== "index.html") {
+      assert.deepEqual(preloads, [], name(page));
+      continue;
     }
+    assert.equal(preloads.length, 1);
+    assert.match(preloads[0], /href="\/fonts\/bricolage-grotesque-latin-wdth-normal\.woff2"/);
+    assert.match(preloads[0], /as="font"/);
+    assert.match(preloads[0], /crossorigin/);
   }
 });
 
-test("the home page has the example game card, labelled as an example", () => {
+test("no page loads anything from another origin", () => {
+  for (const page of PAGES) {
+    const html = readFileSync(page, "utf8");
+    // Only <a> links may point elsewhere (they load nothing by themselves);
+    // the canonical link names an address and loads nothing either.
+    for (const tag of html.matchAll(/<(?!a\b)([a-z]+)\b[^>]*\s(?:src|href|srcset|poster|data|action|formaction)="\s*(?:[a-z][a-z0-9+.-]*:|\/\/)[^"]*"[^>]*>/gi)) {
+      if (tag[1] === "link" && /rel="canonical"/.test(tag[0])) continue;
+      assert.fail(`${name(page)}: ${tag[0]}`);
+    }
+    assert.doesNotMatch(html, /<(?:iframe|object|embed|img)\b/, name(page));
+  }
+});
+
+test("the home page's pinned scene is one described picture plus five captions as text", () => {
   const html = readFileSync(join(DIST, "index.html"), "utf8");
-  assert.match(html, /class="live"/);
-  assert.match(html, /Example game/);
-  assert.match(html, /made-up numbers/);
+  const section = /<section class="pin" id="scene"[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
+  assert.match(section, /aria-labelledby="scene-title"/);
+  const img = /<div class="stage3d" role="img" aria-label="([^"]+)"/.exec(section);
+  assert.ok(img, "the scene is one image with a description");
+  for (const layer of ["board", "tavern", "leaderboard", "Tavern Ledger"]) assert.match(img[1], new RegExp(layer));
+  const captions = [...section.matchAll(/<li class="cap c(\d)"[^>]*>[\s\S]*?<h3>([^<]+)<\/h3>[\s\S]*?<p>([^<]+)<\/p>/g)];
+  assert.deepEqual(
+    captions.map((c) => c[1]),
+    ["1", "2", "3", "4", "5"],
+  );
+  assert.match(captions[4][3], /clicks pass through/);
+  assert.match(section, /<div class="pips" aria-hidden="true">/);
+  // Our own shapes only: no picture of any kind in the scene.
+  assert.doesNotMatch(section, /<img\b|<svg\b|url\(/);
+});
+
+test("every number on the home page that is not real is labelled as made up", () => {
+  const html = readFileSync(join(DIST, "index.html"), "utf8");
+  const big = [...html.matchAll(/<span class="big">\s*(\d+)\s*<small>([^<]+)<\/small>/g)];
+  assert.ok(big.length > 0);
+  for (const [, , label] of big) assert.match(label, /made-up example/);
+});
+
+test("the still picture is the default: every animation sits behind the two scroll-timeline queries", () => {
+  const css = ALL.filter((f) => f.endsWith(".css"))
+    .map((f) => readFileSync(f, "utf8"))
+    .join("\n");
+  // Cut out each @supports (animation-timeline ...) block, braces matched.
+  let rest = css;
+  let at = rest.indexOf("@supports");
+  while (at !== -1) {
+    const open = rest.indexOf("{", at);
+    if (!/animation-timeline/.test(rest.slice(at, open))) {
+      at = rest.indexOf("@supports", open);
+      continue;
+    }
+    let depth = 0;
+    let end = open;
+    for (; end < rest.length; end++) {
+      if (rest[end] === "{") depth++;
+      else if (rest[end] === "}" && --depth === 0) break;
+    }
+    assert.match(rest.slice(at, end + 1), /prefers-reduced-motion:\s*no-preference/, "the moving scene also waits for no-preference");
+    rest = rest.slice(0, at) + rest.slice(end + 1);
+    at = rest.indexOf("@supports", at);
+  }
+  assert.ok(rest.length < css.length, "the moving scene is there");
+  assert.doesNotMatch(rest, /animation-(?:name|timeline)\s*:/);
+  for (const shorthand of rest.matchAll(/animation\s*:\s*([^;}]+)/g)) assert.match(shorthand[1], /^none/);
+  assert.doesNotMatch(rest, /view-timeline/);
 });
