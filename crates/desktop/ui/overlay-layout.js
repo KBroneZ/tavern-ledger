@@ -11,12 +11,16 @@
 
   const PANEL_IDS = ["status", "tribes", "opponents", "legend"];
   const PANEL_NAMES = { status: "Status", tribes: "Tribes", opponents: "Opponents" };
+  const SLOT_NAMES = { ...PANEL_NAMES, legend: "Legend" };
   // Rough limits while dragging; the app enforces the real ones when it saves.
   const MIN_W = 160;
   const MAX_W = 800;
   const MIN_H = 40;
   const GRAB_H = 32;
   const OPACITY_STEP = 0.05;
+  // Keys are saved once they stop, not once per key press (the app writes a file each time).
+  const KEY_SAVE_DELAY_MS = 400;
+  const KEYSHORTCUTS = "ArrowLeft ArrowRight ArrowUp ArrowDown Shift+ArrowLeft Shift+ArrowRight Shift+ArrowUp Shift+ArrowDown Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown";
   // Space kept from the bottom edge of the screen.
   const EDGE = 8;
   // The smallest leaderboard box, in the window's own pixels.
@@ -32,8 +36,10 @@
   let rects = {};
   let dragging = false;
   let pending = null;
-  // Stops the drag in progress without saving it (the overlay got locked under the mouse).
+  // Stops the drag or key session in progress without saving it (the overlay got locked under it).
   let abortDrag = null;
+  // The key presses not saved yet: { timer, save }.
+  let keySession = null;
 
   function px(n) {
     return `${Math.round(n)}px`;
@@ -76,6 +82,12 @@
     box.hidden = !known;
     boxRect = known ? { ...v.leaderboard.area } : null;
     if (!known) return;
+    box.tabIndex = 0;
+    box.setAttribute("role", "group");
+    box.setAttribute("aria-label", "Leaderboard box");
+    box.setAttribute("aria-describedby", "key-hint");
+    box.setAttribute("aria-roledescription", "movable box");
+    box.setAttribute("aria-keyshortcuts", KEYSHORTCUTS);
     box.classList.toggle("custom", v.leaderboard.custom);
     box.querySelector(".board-label").textContent = v.leaderboard.custom
       ? "Leaderboard (your box)"
@@ -83,10 +95,11 @@
     placeBox(boxRect);
   }
 
-  function button(text, onClick, pressed) {
+  function button(text, onClick, pressed, focusKey) {
     const b = document.createElement("button");
     b.type = "button";
     b.textContent = text;
+    b.setAttribute("data-focus", focusKey);
     if (pressed !== undefined) b.setAttribute("aria-pressed", String(pressed));
     b.addEventListener("click", onClick);
     return b;
@@ -96,7 +109,7 @@
     const themes = document.getElementById("theme-buttons");
     themes.replaceChildren(
       ...v.themes.map((t) =>
-        button(t.label, () => send("overlay_set_theme", { theme: t.id }).catch(fail), t.id === v.theme),
+        button(t.label, () => send("overlay_set_theme", { theme: t.id }).catch(fail), t.id === v.theme, `theme:${t.id}`),
       ),
     );
     document.getElementById("opacity-value").textContent = `${Math.round(v.opacity * 100)}%`;
@@ -108,6 +121,7 @@
           name,
           () => send("overlay_set_shown", { panel: id, shown: !shown }).catch(fail),
           shown,
+          `panel:${id}`,
         );
       }),
     );
@@ -119,7 +133,26 @@
     document.getElementById("reset-board").disabled = !v.leaderboard || !v.leaderboard.custom;
   }
 
+  // Whether the user can reach a panel by keyboard: only while arranging.
+  function makeReachable(id, slot, unlocked) {
+    if (!unlocked) {
+      for (const name of ["tabindex", "role", "aria-label", "aria-describedby", "aria-roledescription", "aria-keyshortcuts"]) slot.removeAttribute(name);
+      return;
+    }
+    slot.tabIndex = 0;
+    slot.setAttribute("role", "group");
+    slot.setAttribute("aria-label", `${SLOT_NAMES[id]} panel position`);
+    slot.setAttribute("aria-describedby", "key-hint");
+    slot.setAttribute("aria-roledescription", "movable panel");
+    slot.setAttribute("aria-keyshortcuts", KEYSHORTCUTS);
+  }
+
+  // Redrawing re-parents panels and rebuilds the toolbar: focus is kept through it.
   function draw(v) {
+    TLFocus.keep(document, () => drawNow(v));
+  }
+
+  function drawNow(v) {
     view = v;
     const root = document.documentElement;
     for (const [name, value] of Object.entries(v.vars)) root.style.setProperty(name, value);
@@ -133,6 +166,7 @@
       const slot = slots.get(id);
       slot.hidden = v.hidden.includes(id);
       slot.querySelector(".grip").hidden = !v.unlocked;
+      makeReachable(id, slot, v.unlocked);
       if (place(id, slot)) document.body.append(slot);
       else inStack.push(slot);
     }
@@ -143,8 +177,10 @@
 
   // A change that arrives while a panel is being dragged waits for the drop.
   function show(v) {
+    // Locked from elsewhere: keys already pressed are kept, a drag in progress is dropped.
+    if (keySession && !v.unlocked) saveKeys().catch(failAndRefresh);
     if (dragging && !v.unlocked && abortDrag) abortDrag();
-    if (dragging) pending = v;
+    if (dragging || keySession) pending = v;
     else draw(v);
   }
 
@@ -158,6 +194,7 @@
 
   // Moves or resizes the leaderboard box; saved on release.
   function startBoxDrag(event) {
+    saveKeys().catch(failAndRefresh);
     const start = { ...boxRect, px: event.clientX, py: event.clientY };
     const resizing = event.target.classList.contains("grip");
     let moved = false;
@@ -206,6 +243,7 @@
     const slot = event.target.closest(".slot");
     if (!slot) return;
     const id = slot.dataset.panel;
+    saveKeys().catch(failAndRefresh);
     const box = slot.getBoundingClientRect();
     if (!rects[id]) rects[id] = { x: box.left, y: box.top, w: box.width, h: null };
     const start = { ...rects[id], px: event.clientX, py: event.clientY, height: box.height };
@@ -254,6 +292,90 @@
     window.addEventListener("pointercancel", end);
   }
 
+  // Saves the key presses made so far, now. Resolves once the app has answered.
+  async function saveKeys() {
+    if (!keySession) return;
+    const { timer, save } = keySession;
+    clearTimeout(timer);
+    keySession = null;
+    pending = null;
+    abortDrag = null;
+    await save();
+  }
+
+  // Applies a key press now and saves it once the keys pause, like the end of a drag.
+  function queueKeySave(owner, save, spoken) {
+    // Another panel (or the box) than the one waiting to be saved: save that one first.
+    if (keySession && keySession.owner !== owner) saveKeys().catch(failAndRefresh);
+    if (keySession) clearTimeout(keySession.timer);
+    announce(spoken);
+    const timer = setTimeout(() => saveKeys().catch(failAndRefresh), KEY_SAVE_DELAY_MS);
+    keySession = { timer, save, owner };
+    abortDrag = () => {
+      clearTimeout(timer);
+      keySession = null;
+      pending = null;
+      abortDrag = null;
+    };
+  }
+
+  // The panel or box that holds keyboard focus itself (not a button inside it).
+  function focusedTarget() {
+    const node = document.activeElement;
+    if (!node || !view || !view.unlocked) return null;
+    if (node === box && boxRect) return { kind: "box" };
+    if (node.classList.contains("slot") && node.dataset.panel) return { kind: "panel", id: node.dataset.panel, slot: node };
+    return null;
+  }
+
+  function keyArrange(event) {
+    if (event.ctrlKey || event.metaKey || dragging) return;
+    const target = focusedTarget();
+    if (!target) return;
+    const screen = { w: window.innerWidth, h: window.innerHeight };
+    if (target.kind === "box") {
+      const next = TLKeys.nudge(boxRect, event, screen, { minW: BOX_MIN_W, maxW: screen.w, minH: BOX_MIN_H, keepInside: true });
+      if (!next) return;
+      event.preventDefault();
+      if (next === boxRect) return announce("Leaderboard box: edge of the screen");
+      boxRect = next;
+      placeBox(boxRect);
+      queueKeySave("box", () => send("overlay_save_leaderboard", { area: { x: next.x, y: next.y, w: next.w, h: next.h } }), `Leaderboard box: x ${Math.round(next.x)}, y ${Math.round(next.y)}, width ${Math.round(next.w)}, height ${Math.round(next.h)}`);
+      return;
+    }
+    const { id, slot } = target;
+    const shown = slot.getBoundingClientRect();
+    const current = rects[id] || { x: shown.left, y: shown.top, w: shown.width, h: null };
+    const from = { ...current, h: current.h ?? shown.height };
+    const next = TLKeys.nudge(from, event, screen, { minW: MIN_W, maxW: MAX_W, minH: MIN_H, grabH: GRAB_H });
+    if (!next) return;
+    event.preventDefault();
+    if (next === from) return announce(`${SLOT_NAMES[id]} panel: edge or size limit reached`);
+    // Height is only pinned when the user resized; a move keeps the panel's own height.
+    rects[id] = { x: next.x, y: next.y, w: next.w, h: event.altKey ? next.h : current.h };
+    place(id, slot);
+    // Putting a stacked panel on the page moves it in the document: focus is kept through that.
+    TLFocus.keep(document, () => {
+      if (slot.parentElement !== document.body) document.body.append(slot);
+    });
+    queueKeySave(id, () => send("overlay_save_layout", { panels: rects }), `${SLOT_NAMES[id]} panel: x ${Math.round(next.x)}, y ${Math.round(next.y)}, width ${Math.round(next.w)}`);
+  }
+
+  // Said by screen readers; nothing on screen shows it.
+  function announce(text) {
+    document.getElementById("key-status").textContent = text;
+  }
+
+  // A short line on screen, only while a panel or the box has the keyboard.
+  function showKeyHint() {
+    document.getElementById("key-hint").hidden = !focusedTarget();
+  }
+
+  // A save that failed: show what the app really has, then say why.
+  function failAndRefresh(error) {
+    refresh().then(() => fail(error), fail);
+  }
+
   function fail(error) {
     const warning = document.getElementById("toolbar-warning");
     warning.hidden = false;
@@ -265,9 +387,14 @@
   }
 
   async function init() {
-    document
-      .getElementById("lock")
-      .addEventListener("click", () => send("overlay_set_unlocked", { unlocked: false }).catch(fail));
+    document.getElementById("lock").addEventListener("click", async () => {
+      try {
+        await saveKeys();
+        await send("overlay_set_unlocked", { unlocked: false });
+      } catch (error) {
+        fail(error);
+      }
+    });
     document
       .getElementById("reset-layout")
       .addEventListener("click", () => send("overlay_reset_layout").catch(fail));
@@ -287,6 +414,9 @@
         fail(error);
       }
     });
+    document.addEventListener("keydown", keyArrange);
+    document.addEventListener("focusin", showKeyHint);
+    document.addEventListener("focusout", () => setTimeout(showKeyHint, 0));
     await onEvent("overlay-settings-changed", () => refresh().catch(fail));
     await refresh();
   }

@@ -313,7 +313,7 @@ pub fn set_unlocked(app: &AppHandle, state: &AppState, on: bool) {
         let result = app
             .get_webview_window(WINDOW)
             .ok_or(tauri::Error::WindowNotFound)
-            .and_then(|w| w.set_ignore_cursor_events(!want));
+            .and_then(|w| set_window_input(&w, want));
         if result.is_err() || state.overlay.unlocked.load(Ordering::SeqCst) == want {
             break result;
         }
@@ -328,6 +328,31 @@ pub fn set_unlocked(app: &AppHandle, state: &AppState, on: bool) {
     }
     refresh_unlock_item(state);
     let _ = app.emit(SETTINGS_CHANGED, ());
+}
+
+/// Unlocked, the window takes clicks and keyboard focus (arranging works by
+/// arrow keys too). Locked, it is click-through and cannot be focused. The
+/// click-through switch goes first when locking and last when unlocking, so a
+/// failure half way never leaves a window over the game taking clicks.
+fn set_window_input(window: &tauri::WebviewWindow, unlocked: bool) -> tauri::Result<()> {
+    if unlocked {
+        window.set_focusable(true)?;
+        window.set_ignore_cursor_events(false)?;
+        // Only a nicety: without it the first click gives the window focus.
+        let _ = window.set_focus();
+        Ok(())
+    } else {
+        window.set_ignore_cursor_events(true)?;
+        window.set_focusable(false)?;
+        // An unfocusable window can still hold the foreground, and would keep
+        // taking the game's keys. Hiding and showing it hands the foreground
+        // to the window below, and it does not take it back (it cannot activate).
+        if window.is_focused().unwrap_or(false) {
+            window.hide()?;
+            window.show()?;
+        }
+        Ok(())
+    }
 }
 
 /// The tray entry shows the real state, not what the click toggled it to.
@@ -624,7 +649,7 @@ mod tests {
             .skip(1)
             .filter_map(|rest| rest.split('"').next())
             .collect();
-        assert_eq!(scripts.len(), 5);
+        assert_eq!(scripts.len(), 7);
         for script in scripts {
             assert!(ui.join(script).is_file(), "{script} is missing");
         }
@@ -637,6 +662,8 @@ mod tests {
         for script in [
             include_str!("../ui/overlay-layout.js"),
             include_str!("../ui/overlay-hover.js"),
+            include_str!("../ui/overlay-keys.js"),
+            include_str!("../ui/focus-keeper.js"),
         ] {
             assert!(script.contains("(() => {") && script.trim_end().ends_with("})();"));
         }

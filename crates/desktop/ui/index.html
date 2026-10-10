@@ -17,42 +17,42 @@
     <p id="status" class="status" role="status" aria-live="polite">Starting…</p>
   </header>
 
-  <section id="setup" class="setup" role="status" aria-live="polite" hidden>
-    <h2>Game log setup</h2>
-    <ul id="setup-list"></ul>
-  </section>
-
-  <section id="overlay-switch" class="overlay-switch" aria-label="Overlay">
-    <label class="switch"><input id="overlay-enabled" type="checkbox"> Overlay during a game</label>
-    <button type="button" id="overlay-arrange">Arrange overlay</button>
-    <p class="overlay-hint">Also in the tray menu. It shows over Hearthstone only while a game is on; hover a hero on the game's leaderboard to see the last board you met. "Arrange overlay" lets you move the panels and fit the leaderboard box (the whole screen takes clicks until you press "Lock overlay"). Exclusive fullscreen hides any overlay: run Hearthstone windowed or borderless.</p>
-    <p id="overlay-switch-problem" class="problem" role="status" hidden></p>
-  </section>
-
-  <details id="upload" class="upload">
-    <summary>Upload to the website<span id="upload-summary">…</span></summary>
-    <p id="upload-unavailable" hidden></p>
-    <div id="upload-signed-out" hidden>
-      <form id="upload-sign-in">
-        <label for="upload-email">Email of your Tavern Ledger account</label>
-        <input id="upload-email" type="email" autocomplete="email" maxlength="254" required>
-        <button type="submit">Send sign-in link</button>
-      </form>
-      <p id="upload-waiting" hidden><span id="upload-waiting-text"></span> <button type="button" id="upload-cancel">Cancel</button></p>
-      <p class="note">The link opens in your browser and signs this app in; the app never asks for your password. Accounts are created on the website.</p>
-    </div>
-    <div id="upload-signed-in" hidden>
-      <p>Signed in as <span id="upload-email-shown"></span> <button type="button" id="upload-sign-out">Sign out</button></p>
-      <label class="switch"><input id="upload-enabled" type="checkbox"> Upload games</label>
-    </div>
-    <p id="upload-queue" hidden></p>
-    <p id="upload-last" hidden></p>
-    <p id="upload-problem" class="problem" role="status" hidden></p>
-    <p id="upload-notice" role="status" hidden></p>
-    <p class="note">Off until you turn it on. Each finished game's report goes up: heroes, card ids, places and boards. Never player names, BattleTags or ratings.</p>
-  </details>
-
   <main>
+    <section id="setup" class="setup" role="status" aria-live="polite" hidden>
+      <h2>Game log setup</h2>
+      <ul id="setup-list"></ul>
+    </section>
+
+    <section id="overlay-switch" class="overlay-switch" aria-label="Overlay">
+      <label class="switch"><input id="overlay-enabled" type="checkbox"> Overlay during a game</label>
+      <button type="button" id="overlay-arrange">Arrange overlay</button>
+      <p class="overlay-hint">Also in the tray menu. It shows over Hearthstone only while a game is on; hover a hero on the game's leaderboard to see the last board you met. "Arrange overlay" lets you move the panels and fit the leaderboard box (the whole screen takes clicks until you press "Lock overlay"). Exclusive fullscreen hides any overlay: run Hearthstone windowed or borderless.</p>
+      <p id="overlay-switch-problem" class="problem" role="status" hidden></p>
+    </section>
+
+    <details id="upload" class="upload">
+      <summary>Upload to the website<span id="upload-summary">…</span></summary>
+      <p id="upload-unavailable" hidden></p>
+      <div id="upload-signed-out" hidden>
+        <form id="upload-sign-in">
+          <label for="upload-email">Email of your Tavern Ledger account</label>
+          <input id="upload-email" type="email" autocomplete="email" maxlength="254" required>
+          <button type="submit">Send sign-in link</button>
+        </form>
+        <p id="upload-waiting" hidden><span id="upload-waiting-text"></span> <button type="button" id="upload-cancel">Cancel</button></p>
+        <p class="note">The link opens in your browser and signs this app in; the app never asks for your password. Accounts are created on the website.</p>
+      </div>
+      <div id="upload-signed-in" hidden>
+        <p>Signed in as <span id="upload-email-shown"></span> <button type="button" id="upload-sign-out">Sign out</button></p>
+        <label class="switch"><input id="upload-enabled" type="checkbox"> Upload games</label>
+      </div>
+      <p id="upload-queue" hidden></p>
+      <p id="upload-last" hidden></p>
+      <p id="upload-problem" class="problem" role="status" hidden></p>
+      <p id="upload-notice" role="status" hidden></p>
+      <p class="note">Off until you turn it on. Each finished game's report goes up: heroes, card ids, places and boards. Never player names, BattleTags or ratings.</p>
+    </details>
+
     <nav class="modes" aria-label="Game mode">
       <button type="button" data-mode="GT_BATTLEGROUNDS" aria-pressed="false">Solo</button>
       <button type="button" data-mode="GT_BATTLEGROUNDS_DUO" aria-pressed="false">Duos</button>
@@ -67,14 +67,14 @@
     <p id="not-counted" class="tally-note" hidden></p>
 
     <section class="ledger lobby" aria-labelledby="lobby-title">
-      <h2 id="lobby-title">Lobby tribes</h2>
+      <h2 id="lobby-title" tabindex="-1">Lobby tribes</h2>
       <p class="note">The game's log does not say which five tribes are in the lobby. If you want them in your stats, pick them here from the list; they are saved on your computer and always marked as entered by you. They are never mixed with the tribes seen in the tavern.</p>
       <p id="lobby-state" role="status" aria-live="polite"></p>
       <ul id="lobby-current" class="tribe-list"></ul>
       <p id="lobby-error" class="report-error" role="alert" hidden></p>
       <div class="lobby-actions">
-        <button type="button" id="lobby-enter" class="report-btn"></button>
-        <button type="button" id="lobby-clear" class="report-btn" hidden>Remove</button>
+        <button type="button" id="lobby-enter" class="report-btn" data-focus-next="lobby-title"></button>
+        <button type="button" id="lobby-clear" class="report-btn" data-focus-next="lobby-enter lobby-title" hidden>Remove</button>
       </div>
     </section>
 
@@ -148,7 +148,7 @@
             <th scope="col"><span class="visually-hidden">Recap and report a problem</span></th>
           </tr>
         </thead>
-        <tbody id="games"></tbody>
+        <tbody id="games" data-focus-scope></tbody>
       </table>
       <p id="empty" class="empty" hidden>No games yet. Play a Battlegrounds game and it will appear here when it ends.</p>
     </section>
@@ -182,11 +182,11 @@
       <div id="tribes-move" class="move-row" hidden>
         <label for="tribes-move-to">Move these tribes to</label>
         <select id="tribes-move-to"></select>
-        <button type="button" id="tribes-move-go" class="report-btn">Move</button>
+        <button type="button" id="tribes-move-go" class="report-btn" data-focus-next="tribes-save tribes-close">Move</button>
       </div>
       <div class="dialog-actions">
         <button type="button" id="tribes-save">Save</button>
-        <button type="button" id="tribes-clear" hidden>Remove</button>
+        <button type="button" id="tribes-clear" data-focus-next="tribes-save tribes-close" hidden>Remove</button>
         <button type="button" id="tribes-close">Close</button>
       </div>
     </form>
@@ -210,6 +210,7 @@
     Card pictures and minion names come from HearthstoneJSON (hearthstonejson.com) and are kept on this PC; card art and card data &copy; Blizzard Entertainment.
     <span id="card-status" class="card-status" role="status"></span>
   </footer>
+  <script src="focus-keeper.js"></script>
   <script src="cards.js"></script>
   <script src="shop.js"></script>
   <script src="app.js"></script>

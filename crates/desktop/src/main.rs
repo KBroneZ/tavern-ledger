@@ -10,6 +10,8 @@ mod overlay;
 mod overlay_layout;
 mod overlay_window;
 mod screen_fit;
+#[cfg(test)]
+mod ui_checks;
 mod upload;
 
 use std::collections::BTreeSet;
