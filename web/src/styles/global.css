@@ -400,7 +400,8 @@ button:active,
   transform: scale(0.97);
 }
 
-button:disabled {
+button:disabled,
+button[aria-disabled="true"] {
   opacity: 0.55;
   cursor: progress;
   transform: none;

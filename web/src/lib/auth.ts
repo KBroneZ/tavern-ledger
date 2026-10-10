@@ -116,6 +116,11 @@ export function checkNewPassword(password: string, repeat: string): string | nul
   return null;
 }
 
+/** Which field `checkNewPassword` is complaining about. */
+export function newPasswordField(password: string): "password" | "repeat" {
+  return [...password].length < MIN_PASSWORD_LENGTH ? "password" : "repeat";
+}
+
 export function newPasswordErrorMessage(e: AuthErrorLike): string {
   if (isRateLimit(e)) return RATE_LIMITED;
   if (isNetwork(e)) return UNREACHABLE;

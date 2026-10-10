@@ -1,7 +1,7 @@
 import { requestPasswordReset } from "../lib/api.ts";
 import { checkEmail } from "../lib/auth.ts";
 import { supabase } from "./client.ts";
-import { busy, byId, field, ready, say } from "./dom.ts";
+import { busy, byId, clearInvalid, failField, field, ready, say } from "./dom.ts";
 
 // The reset link comes back to the account page, the one return address
 // the project allows (docs/research/deploy.md, section 10.3).
@@ -13,9 +13,10 @@ const message = byId("reset-message");
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   const email = field(form, "email").value;
+  clearInvalid(form);
   const problem = checkEmail(email);
   if (problem) {
-    say(message, problem, "error");
+    failField(field(form, "email"), message, problem);
     return;
   }
   void busy(form.querySelector("button") as HTMLButtonElement, async () => {
