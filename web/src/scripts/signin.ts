@@ -1,7 +1,7 @@
 import { signIn, signUp } from "../lib/api.ts";
-import { checkCredentials } from "../lib/auth.ts";
+import { checkCredentials, checkEmail } from "../lib/auth.ts";
 import { supabase } from "./client.ts";
-import { busy, byId, field, ready, say } from "./dom.ts";
+import { busy, byId, clearInvalid, failField, field, ready, say } from "./dom.ts";
 
 const ACCOUNT_PAGE = "/account/";
 
@@ -16,9 +16,11 @@ function wire(
     event.preventDefault();
     const email = field(form, "email").value;
     const password = field(form, "password").value;
+    clearInvalid(form);
     const problem = checkCredentials(email, password);
     if (problem) {
-      say(message, problem, "error");
+      const wrong = checkEmail(email) ? field(form, "email") : field(form, "password");
+      failField(wrong, message, problem);
       return;
     }
     const button = form.querySelector("button") as HTMLButtonElement;

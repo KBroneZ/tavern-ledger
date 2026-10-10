@@ -8,13 +8,13 @@ import {
   setNewPassword,
   signIn,
 } from "../lib/api.ts";
-import { checkNewPassword } from "../lib/auth.ts";
+import { checkNewPassword, newPasswordField } from "../lib/auth.ts";
 import { hasLinkParams, parseAuthLink } from "../lib/authLink.ts";
 import { isConfirmed } from "../lib/deleteAccount.ts";
 import { exportFileName } from "../lib/exportData.ts";
 import { checkDisplayName, publicProfilePath } from "../lib/profile.ts";
 import { config, supabase } from "./client.ts";
-import { busy, byId, field, say, show } from "./dom.ts";
+import { busy, byId, clearInvalid, failField, field, moveFocus, say, show } from "./dom.ts";
 
 // Every email link lands here (D-048). Read it, then take it out of the
 // address before any request, so no code or token stays in the address bar
@@ -29,6 +29,12 @@ const SECTIONS: Section[] = ["signed-in", "signed-out", "set-password", "deleted
 
 function showOnly(section: Section): void {
   for (const id of SECTIONS) show(byId(id), id === section);
+}
+
+/** Shows a section that replaces what the user was using, and puts focus on its text. */
+function swapTo(section: Section, focusOn: string): void {
+  showOnly(section);
+  moveFocus(byId(focusOn));
 }
 
 function setPublicLink(userId: string, isPublic: boolean): void {
@@ -59,9 +65,10 @@ async function setUpProfile(user: User): Promise<void> {
   }
   form.addEventListener("submit", (event) => {
     event.preventDefault();
+    clearInvalid(form);
     const checked = checkDisplayName(name.value);
     if (!checked.ok) {
-      say(message, checked.message, "error");
+      failField(name, message, checked.message);
       return;
     }
     void busy(form.querySelector("button") as HTMLButtonElement, async () => {
@@ -114,8 +121,9 @@ function setUpDelete(user: User): void {
   const password = field(form, "password");
   form.addEventListener("submit", (event) => {
     event.preventDefault();
+    clearInvalid(form);
     if (!isConfirmed(field(form, "confirm").value)) {
-      say(message, "Type the phrase exactly to confirm.", "error");
+      failField(field(form, "confirm"), message, "Type the phrase exactly to confirm.");
       return;
     }
     void busy(form.querySelector("button") as HTMLButtonElement, async () => {
@@ -123,7 +131,7 @@ function setUpDelete(user: User): void {
         say(message, "Checking your password…");
         const error = await signIn(supabase, user.email ?? "", password.value);
         if (error) {
-          say(message, error, "error");
+          failField(password, message, error);
           return;
         }
       }
@@ -133,7 +141,7 @@ function setUpDelete(user: User): void {
       switch (outcome.kind) {
         case "deleted":
           await supabase.auth.signOut({ scope: "local" });
-          showOnly("deleted");
+          swapTo("deleted", "deleted-message");
           return;
         case "reauthenticate":
           show(reauth, true);
@@ -141,7 +149,7 @@ function setUpDelete(user: User): void {
           say(message, "Enter your password, then press Delete my account again.", "error");
           return;
         case "signed-out":
-          await signedOut();
+          await signedOut(true);
           return;
         case "error":
           say(message, outcome.message, "error");
@@ -151,9 +159,10 @@ function setUpDelete(user: User): void {
 }
 
 /** The server no longer accepts this session: forget it here too. */
-async function signedOut(): Promise<void> {
+async function signedOut(fromAction = false): Promise<void> {
   await supabase.auth.signOut({ scope: "local" });
-  showOnly("signed-out");
+  if (fromAction) swapTo("signed-out", "signed-out-message");
+  else showOnly("signed-out");
 }
 
 function setUpSignOut(): void {
@@ -175,9 +184,10 @@ function setUpNewPassword(user: User): void {
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     const password = field(form, "password").value;
+    clearInvalid(form);
     const problem = checkNewPassword(password, field(form, "repeat").value);
     if (problem) {
-      say(message, problem, "error");
+      failField(field(form, newPasswordField(password)), message, problem);
       return;
     }
     void busy(form.querySelector("button") as HTMLButtonElement, async () => {
@@ -191,6 +201,7 @@ function setUpNewPassword(user: User): void {
       say(message, "");
       say(pageMessage, "Your new password is saved.", "ok");
       await showAccount(user);
+      moveFocus(byId("account-heading"));
     });
   });
 }

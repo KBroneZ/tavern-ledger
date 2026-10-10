@@ -42,12 +42,45 @@ export function ready(form: HTMLFormElement): void {
   }
 }
 
-/** Runs `work` with the button disabled, so a form cannot be sent twice. */
-export async function busy<T>(button: HTMLButtonElement, work: () => Promise<T>): Promise<T> {
-  button.disabled = true;
+/**
+ * Says an error and ties it to the field that holds it: `aria-invalid` and
+ * `aria-describedby` on the field, then focus on it.
+ */
+export function failField(input: HTMLInputElement, message: HTMLElement, text: string): void {
+  say(message, text, "error");
+  input.setAttribute("aria-invalid", "true");
+  input.setAttribute("aria-describedby", message.id);
+  input.focus();
+}
+
+/** Takes the error ties off every field of the form (call before a new check). */
+export function clearInvalid(form: HTMLFormElement): void {
+  for (const input of form.querySelectorAll<HTMLElement>("[aria-invalid]")) {
+    input.removeAttribute("aria-invalid");
+    input.removeAttribute("aria-describedby");
+  }
+}
+
+/** Moves focus to an element that is not a control (a heading or a message). */
+export function moveFocus(el: HTMLElement): void {
+  el.setAttribute("tabindex", "-1");
+  el.focus();
+}
+
+/**
+ * Runs `work` with the button marked busy, so a form cannot be sent twice.
+ * The button is not `disabled`: a disabled button loses focus, and keyboard
+ * and screen reader users would land back on the page start. A second call
+ * while busy does nothing.
+ */
+export async function busy<T>(button: HTMLButtonElement, work: () => Promise<T>): Promise<T | undefined> {
+  if (button.getAttribute("aria-disabled") === "true") return undefined;
+  button.setAttribute("aria-disabled", "true");
+  button.setAttribute("aria-busy", "true");
   try {
     return await work();
   } finally {
-    button.disabled = false;
+    button.removeAttribute("aria-disabled");
+    button.removeAttribute("aria-busy");
   }
 }
