@@ -64,7 +64,7 @@ fn ready(games: &[(&str, u64, &str)]) -> Rig {
 /// What the server answers for a stored game: the hash of what was sent.
 fn stored(r: &Rig, nth: usize) -> Reply {
     let (store, marks) = (Store::open(&r.dir).unwrap(), Marks::open(&r.dir).unwrap());
-    let (items, _) = pending(&store, &marks, Some(USER));
+    let (items, _) = pending(&store, &marks, &Reconnects::default(), Some(USER));
     reply(
         201,
         json!({"result": "created", "sha256": items[nth].sha256}),

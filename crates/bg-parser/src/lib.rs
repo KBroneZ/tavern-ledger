@@ -32,7 +32,8 @@ pub const PARSER_REVISION: u32 = 2;
 pub const TESTED_BUILDS: &[i64] = &[253216];
 pub const TESTED_GAME_TYPES: &[&str] = &["GT_BATTLEGROUNDS", "GT_BATTLEGROUNDS_DUO"];
 const MAX_LOBBY: usize = 8;
-const CREATE_GAME: &str = "GameState.DebugPrintPower() - CREATE_GAME";
+/// The line that starts every game; [`LogReader`] splits the log at it.
+pub const CREATE_GAME: &str = "GameState.DebugPrintPower() - CREATE_GAME";
 /// Bounds on the card names kept per game, so a strange log cannot grow them.
 const MAX_NAMES: usize = 1_000;
 const MAX_NAME_LEN: usize = 100;

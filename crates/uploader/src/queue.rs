@@ -14,6 +14,7 @@ use flate2::write::GzEncoder;
 use flate2::Compression;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use tracker::dev_reconnect::Reconnects;
 use tracker::store::{GameKey, Store};
 
 use crate::pkce::sha256_hex;
@@ -138,6 +139,8 @@ pub struct Counts {
     pub rejected: usize,
     /// Friendly and other modes the server does not store.
     pub not_uploadable: usize,
+    /// Games played with the reconnect dev tool (D-043): never uploaded.
+    pub dev_reconnect: usize,
 }
 
 /// The server's address pattern: a log folder name and a game number 1-1000.
@@ -169,10 +172,20 @@ pub fn body_of(store: &Store, key: &GameKey, report: &Value) -> Vec<u8> {
 }
 
 /// Games waiting for `user`, oldest first, and the counts for the app.
-pub fn pending(store: &Store, marks: &Marks, user: Option<&str>) -> (Vec<Item>, Counts) {
+/// Games played with the reconnect dev tool are never waiting.
+pub fn pending(
+    store: &Store,
+    marks: &Marks,
+    reconnects: &Reconnects,
+    user: Option<&str>,
+) -> (Vec<Item>, Counts) {
     let mut items = Vec::new();
     let mut counts = Counts::default();
     for (key, report) in store.games() {
+        if reconnects.marks(store.played(key)) {
+            counts.dev_reconnect += 1;
+            continue;
+        }
         let mode = report
             .get("game_type")
             .and_then(Value::as_str)
@@ -251,6 +264,31 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn games_played_with_the_reconnect_dev_tool_are_never_uploaded() {
+        use tracker::game_clock::Played;
+        let dir = temp_dir("dev-reconnect");
+        let mut store = Store::open(&dir).unwrap();
+        // 2026-10-01 08:00-08:20 and 09:00-09:20 UTC.
+        for (index, from) in [(1, 1_790_841_600), (2, 1_790_845_200)] {
+            let key = GameKey {
+                session: S1.into(),
+                index,
+            };
+            let played = Some(Played {
+                from,
+                to: from + 1200,
+            });
+            let report = report(index, "GT_BATTLEGROUNDS");
+            store.save_played(key, report, played).unwrap();
+        }
+        let reconnects = Reconnects::parse("{\"utc\": \"2026-10-01T08:10:00Z\"}\n");
+        let (items, counts) = pending(&store, &Marks::open(&dir).unwrap(), &reconnects, Some("u"));
+        assert_eq!(items.iter().map(|i| i.key.index).collect::<Vec<_>>(), [2]);
+        assert_eq!(counts.dev_reconnect, 1);
+        assert_eq!(counts.waiting, 1);
+    }
+
+    #[test]
     fn waiting_games_come_oldest_first_and_other_modes_stay_local() {
         let dir = temp_dir("pending");
         let store = store_with(
@@ -262,7 +300,7 @@ pub(crate) mod tests {
             ],
         );
         let marks = Marks::open(&dir).unwrap();
-        let (items, counts) = pending(&store, &marks, Some("u"));
+        let (items, counts) = pending(&store, &marks, &Reconnects::default(), Some("u"));
         let keys: Vec<_> = items
             .iter()
             .map(|i| (i.key.session.as_str(), i.key.index))
@@ -274,7 +312,8 @@ pub(crate) mod tests {
                 waiting: 2,
                 uploaded: 0,
                 rejected: 0,
-                not_uploadable: 1
+                not_uploadable: 1,
+                dev_reconnect: 0
             }
         );
     }
@@ -303,7 +342,12 @@ pub(crate) mod tests {
     fn the_body_is_the_record_with_its_revision_and_parser() {
         let dir = temp_dir("body");
         let store = store_with(&dir, &[(S1, 1, "GT_BATTLEGROUNDS")]);
-        let (items, _) = pending(&store, &Marks::open(&dir).unwrap(), None);
+        let (items, _) = pending(
+            &store,
+            &Marks::open(&dir).unwrap(),
+            &Reconnects::default(),
+            None,
+        );
         let body: Value = serde_json::from_slice(&items[0].body).unwrap();
         let key = GameKey {
             session: S1.into(),
@@ -338,7 +382,7 @@ pub(crate) mod tests {
             &[(S1, 1, "GT_BATTLEGROUNDS"), (S1, 2, "GT_BATTLEGROUNDS")],
         );
         let mut marks = Marks::open(&dir).unwrap();
-        let (items, _) = pending(&store, &marks, Some("u"));
+        let (items, _) = pending(&store, &marks, &Reconnects::default(), Some("u"));
         marks
             .record(mark(&items[0], "u", Outcome::Uploaded))
             .unwrap();
@@ -347,11 +391,11 @@ pub(crate) mod tests {
             .unwrap();
 
         let marks = Marks::open(&dir).unwrap();
-        let (left, counts) = pending(&store, &marks, Some("u"));
+        let (left, counts) = pending(&store, &marks, &Reconnects::default(), Some("u"));
         assert!(left.is_empty());
         assert_eq!((counts.uploaded, counts.rejected), (1, 1));
 
-        let (other, _) = pending(&store, &marks, Some("someone-else"));
+        let (other, _) = pending(&store, &marks, &Reconnects::default(), Some("someone-else"));
         assert_eq!(other.len(), 2, "another account has not got these games");
 
         // A re-imported game (new record, last one wins) is waiting again.
@@ -362,7 +406,7 @@ pub(crate) mod tests {
         let mut changed = report(1, "GT_BATTLEGROUNDS");
         changed["final_place"] = json!(2);
         store.save(key, changed).unwrap();
-        let (again, _) = pending(&store, &marks, Some("u"));
+        let (again, _) = pending(&store, &marks, &Reconnects::default(), Some("u"));
         assert_eq!(
             again.iter().map(|i| i.key.index).collect::<Vec<_>>(),
             vec![1]
@@ -377,7 +421,7 @@ pub(crate) mod tests {
             &[(S1, 1, "GT_BATTLEGROUNDS"), (S1, 2, "GT_BATTLEGROUNDS")],
         );
         let mut marks = Marks::open(&dir).unwrap();
-        let (items, _) = pending(&store, &marks, Some("u"));
+        let (items, _) = pending(&store, &marks, &Reconnects::default(), Some("u"));
         marks
             .record(mark(&items[0], "u", Outcome::Uploaded))
             .unwrap();
@@ -390,7 +434,12 @@ pub(crate) mod tests {
         marks
             .record(mark(&items[1], "u", Outcome::Uploaded))
             .unwrap();
-        let (left, counts) = pending(&store, &Marks::open(&dir).unwrap(), Some("u"));
+        let (left, counts) = pending(
+            &store,
+            &Marks::open(&dir).unwrap(),
+            &Reconnects::default(),
+            Some("u"),
+        );
         assert!(
             left.is_empty(),
             "the record after the broken line is readable"

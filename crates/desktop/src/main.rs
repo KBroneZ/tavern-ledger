@@ -20,6 +20,7 @@ use tauri::menu::{CheckMenuItem, Menu, MenuEvent, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{App, AppHandle, Emitter, Manager, State, WindowEvent, Wry};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
+use tracker::dev_reconnect::Reconnects;
 use tracker::discover::find_logs_dir;
 use tracker::live::{live_game, LiveGame};
 use tracker::lobby_tribes::{self, Action, Entries, GameStarts, LobbyView};
@@ -82,6 +83,9 @@ struct Status {
     /// What to change in `log.config` / `client.config` (T-106); empty when
     /// the game is set up to write a complete Power.log.
     setup: Vec<String>,
+    /// Set when the reconnect dev tool's file exists but could not be read
+    /// whole (D-043); never set for a user who did not run the tool.
+    dev_reconnects: Option<String>,
 }
 
 #[derive(Clone, Serialize)]
@@ -93,6 +97,9 @@ struct GameRow {
     parser: Option<ParserStamp>,
     /// Where each value of the row comes from (T-109).
     sources: RowSources,
+    /// Played with the reconnect dev tool (D-043): marked in the history and
+    /// left out of the stats and the upload.
+    dev_reconnect: bool,
 }
 
 /// Shared with the window. The watcher itself lives only in the tracker
@@ -131,8 +138,10 @@ fn game_stats(state: State<'_, Arc<AppState>>) -> Stats {
     stats_of(&games, entries.as_ref())
 }
 
+/// Games played with the reconnect dev tool are not counted (D-043).
 fn stats_of(rows: &[GameRow], entries: Option<&Entries>) -> Stats {
-    tracker::stats::compute_with_entered(rows.iter().map(|row| {
+    let counted = rows.iter().filter(|row| !row.dev_reconnect);
+    tracker::stats::compute_with_entered(counted.map(|row| {
         let key = GameKey {
             session: row.session.clone(),
             index: row.index,
@@ -365,7 +374,19 @@ fn publish_live(app: &AppHandle, state: &AppState, now: Option<LiveGame>) {
 }
 
 fn publish_games(app: &AppHandle, state: &AppState, store: &Store) {
-    let rows = store
+    let reconnects = store
+        .path()
+        .parent()
+        .map(Reconnects::load)
+        .unwrap_or_default();
+    let rows = rows_of(store, &reconnects);
+    *state.games.lock().unwrap_or_else(|e| e.into_inner()) = rows;
+    set_status(app, state, |s| s.dev_reconnects = reconnects.warning);
+    let _ = app.emit(GAMES_CHANGED, ());
+}
+
+fn rows_of(store: &Store, reconnects: &Reconnects) -> Vec<GameRow> {
+    store
         .games()
         .map(|(key, report)| GameRow {
             session: key.session.clone(),
@@ -373,10 +394,9 @@ fn publish_games(app: &AppHandle, state: &AppState, store: &Store) {
             report: report.clone(),
             parser: store.parser(key).cloned(),
             sources: row_sources(&key.session, report),
+            dev_reconnect: reconnects.marks(store.played(key)),
         })
-        .collect();
-    *state.games.lock().unwrap_or_else(|e| e.into_inner()) = rows;
-    let _ = app.emit(GAMES_CHANGED, ());
+        .collect()
 }
 
 /// Which of the games just saved are new to the history. A game read again
@@ -798,6 +818,7 @@ mod tests {
             index: 1,
             parser: None,
             sources: row_sources("", &serde_json::Value::Null),
+            dev_reconnect: false,
             report: serde_json::json!({
                 "status": "ok", "game_type": game_type, "hero": "H", "final_place": place,
             }),
@@ -815,6 +836,40 @@ mod tests {
         assert_eq!(stats.modes[1].totals.wins, Some(1));
     }
 
+    #[test]
+    fn games_played_with_the_reconnect_dev_tool_are_listed_marked_and_not_counted() {
+        use tracker::game_clock::Played;
+        let dir = std::env::temp_dir().join(format!("tl-desktop-devrc-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut store = Store::open(&dir).unwrap();
+        // Game 1 at 2026-10-09 08:00-08:20 UTC, game 2 an hour later.
+        for (index, from, place) in [(1, 1_791_532_800, 1), (2, 1_791_536_400, 7)] {
+            let key = GameKey {
+                session: "Hearthstone_2026_10_09_07_00_00".into(),
+                index,
+            };
+            let report = serde_json::json!({
+                "status": "ok", "game_type": "GT_BATTLEGROUNDS", "hero": "H", "final_place": place,
+            });
+            let played = Some(Played {
+                from,
+                to: from + 1200,
+            });
+            store.save_played(key, report, played).unwrap();
+        }
+        let reconnects = Reconnects::parse("{\"utc\": \"2026-10-09T08:05:00Z\"}\n");
+        let rows = rows_of(&store, &reconnects);
+        assert_eq!(
+            rows.iter().map(|r| r.dev_reconnect).collect::<Vec<_>>(),
+            [true, false]
+        );
+        let stats = stats_of(&rows, None);
+        assert_eq!(stats.modes[0].totals.games, 1);
+        assert_eq!(stats.modes[0].totals.average_place, Some(7.0));
+        assert_eq!(stats.modes[0].heroes[0].tally.games, 1);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     fn state_with(report: serde_json::Value) -> AppState {
         let state = AppState::default();
         state.games.lock().unwrap().push(GameRow {
@@ -822,6 +877,7 @@ mod tests {
             index: 1,
             sources: row_sources("Hearthstone_2026_10_09_00_00_00", &report),
             parser: None,
+            dev_reconnect: false,
             report,
         });
         state
