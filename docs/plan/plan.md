@@ -218,6 +218,20 @@ The user wants all of these, each at its own time (2026-10-10). They are ranked 
 - **`GAME_SEED` and a combat simulator:** the seed is no use. The game's random number code runs on Blizzard's servers and is unknown, and a simulator that foresaw a real combat would break D-004. A future simulator works out odds from the boards the player saw.
 - **A lead from session 040:** the game entity carries unnamed tag 4730 = 5 in all 11 games (perhaps the number of lobby tribes; unverified).
 
+## App rework (the user's notes, 2026-10-10 night)
+
+The user's review of the app after rounds 3 and 4: too much information at once, not visual enough. To do later, each in its own session.
+
+| ID | Task | Status |
+|----|------|--------|
+| T-320 | Broken pictures: some card and hero pictures do not load in the app; find which ids fail and why (card data map, missing art, cache) and fix or show a clear placeholder | pending |
+| T-321 | Turns rework: a clearer, more visual look for each turn; when a turn is opened, its shops are folded behind a "See shops" toggle instead of all shown | pending |
+| T-322 | Recap in the full window: opening a recap fills the app's window (not a separate window), with a close button (X) at the top right that goes back | pending |
+| T-323 | Less at once: fold secondary details (shop extras, sources, long tables) behind toggles across the app; easier to read at a glance | pending |
+| T-324 | Settings page: change app options in one place (overlay, uploads, pictures on or off, language, …) | pending |
+| T-325 | Languages: the app in other languages, Spanish first (UI text; card names in the game's language is a separate item) | pending |
+| T-326 | Lobby tribes from public sources: research how other apps know the lobby's tribes and which public APIs they use (HearthstoneJSON, Blizzard's Hearthstone Game Data API, others), and take everything useful we may use. Limits: absolute rule 1 (HDT's code may be looked at to learn which public data sources it uses, never copied or ported; Nomi's Kitchen not read) and D-004 (if the exact lobby tribes only come from memory reading, as the plan's "Out of scope" says, we keep the log route and say so); follow the lead of tag 4730 (session 040) | pending |
+
 ## F4 — Community and extras
 
 | ID | Task | Status |
