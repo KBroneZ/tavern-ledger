@@ -1,0 +1,105 @@
+[
+  {
+    "index": 1,
+    "status": "incomplete",
+    "game_type": "GT_BATTLEGROUNDS",
+    "build": 253216,
+    "local_player_id": 2,
+    "hero": "TB_BaconShop_HERO_37",
+    "teammate_player_id": null,
+    "teammate_hero": null,
+    "final_place": null,
+    "final_health": 26,
+    "lobby": [
+      {
+        "player_id": 2,
+        "hero": "TB_BaconShop_HERO_37",
+        "duo_team": null,
+        "final_place": null,
+        "final_health": 26
+      },
+      {
+        "player_id": 3,
+        "hero": "TB_BaconShop_HERO_60",
+        "duo_team": null,
+        "final_place": null,
+        "final_health": 0
+      }
+    ],
+    "shop_tribes": {
+      "NEUTRAL": 12
+    },
+    "rounds": [
+      {
+        "number": 1,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "TB_BaconShop_HERO_37",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_60",
+            "board": []
+          }
+        ],
+        "own_health_after": 26,
+        "opponents": [
+          3
+        ]
+      },
+      {
+        "number": 2,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "TB_BaconShop_HERO_37",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_60",
+            "board": [
+              {
+                "card_id": "BG20_100",
+                "atk": 1,
+                "health": 1,
+                "position": 0,
+                "golden": false
+              },
+              {
+                "card_id": "BG28_300",
+                "atk": 1,
+                "health": 1,
+                "position": 0,
+                "golden": false
+              },
+              {
+                "card_id": "BG20_100",
+                "atk": 1,
+                "health": 1,
+                "position": 0,
+                "golden": false
+              }
+            ]
+          }
+        ],
+        "own_health_after": null,
+        "opponents": [
+          3
+        ]
+      }
+    ],
+    "warnings": [],
+    "problems": [],
+    "not_in_log": [
+      "MMR",
+      "available tribes (exact list)"
+    ]
+  }
+]

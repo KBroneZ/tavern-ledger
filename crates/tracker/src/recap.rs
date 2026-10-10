@@ -15,6 +15,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 use crate::provenance::Source;
+use crate::shop::{shop_recap, ShopRecap};
 use crate::stats::{base_hero, counted_place, mode_of, rules, DUOS};
 
 /// A recap never carries more than this many warnings, or this long a text.
@@ -137,6 +138,8 @@ pub struct Recap {
     /// entered. Never merged with `tribes`: shown next to them.
     pub entered_tribes: Vec<String>,
     pub entered_tribes_source: Source,
+    /// The player's own shop turn by turn and logged actions (T-204, T-205).
+    pub shop: ShopRecap,
     pub warnings: Vec<String>,
     pub problems: Vec<String>,
 }
@@ -492,6 +495,7 @@ pub fn recap(report: &Value) -> Recap {
         tribes,
         entered_tribes: Vec::new(),
         entered_tribes_source: Source::Unknown,
+        shop: shop_recap(report),
         status: Sourced::log(status),
         warnings: texts(report, "warnings"),
         problems: texts(report, "problems"),

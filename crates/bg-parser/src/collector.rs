@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 
 use crate::power::{EntityRef, Packet, ParseError, Value};
 use crate::report::{Minion, Side};
+use crate::shop::{Seats, ShopTracker};
 use crate::state::{Board, Entity, Players, Tags};
 
 /// An entity packet whose `tag=` lines are still arriving.
@@ -49,6 +50,12 @@ pub struct Collector {
     pub lobby_health: BTreeMap<i64, BTreeMap<i64, i64>>,
     open_own: Option<OpenLeg>,
     open_opp: Option<OpenLeg>,
+    /// The player's own shop and actions (T-204, T-205).
+    pub shop: ShopTracker,
+    /// Time of the line being read, in ms from the game's first line.
+    pub now_ms: i64,
+    /// Nesting of the line being read (0 is the log's top level).
+    pub indent: usize,
 }
 
 impl Collector {
@@ -89,14 +96,34 @@ impl Collector {
                 self.board.exists(id)?;
             }
             Packet::TagChange { entity, tag, value } => self.tag_change(&entity, tag, value)?,
-            Packet::BlockStart { block_type, entity } => {
+            Packet::BlockStart {
+                block_type,
+                entity,
+                target,
+            } => {
                 self.mention(&entity);
                 if block_type == "ATTACK" && self.in_combat() {
                     self.snapshot_open_legs();
                 }
+                if self.indent == 0 {
+                    let seats = self.seats();
+                    let by_id = |r: &EntityRef| match r {
+                        EntityRef::Id(id) => self.board.get(*id),
+                        _ => None,
+                    };
+                    let (entity, target) = (by_id(&entity), target.as_ref().and_then(by_id));
+                    self.shop
+                        .on_top_block(&block_type, entity, target, &self.board, seats);
+                }
+            }
+            Packet::BlockEnd => {
+                if self.indent == 0 {
+                    let seats = self.seats();
+                    self.shop.on_top_block_end(&self.board, seats);
+                }
             }
             Packet::Mention(entity) => self.mention(&entity),
-            Packet::BlockEnd | Packet::Ignored | Packet::Tag { .. } => {}
+            Packet::Ignored | Packet::Tag { .. } => {}
         }
         Ok(())
     }
@@ -110,6 +137,21 @@ impl Collector {
 
     pub fn finish(&mut self) -> Result<(), ParseError> {
         self.commit()
+    }
+
+    pub fn seats(&self) -> Seats {
+        Seats {
+            local: self.local,
+            local_pid: self.local_pid,
+            dummy_pid: self.dummy_pid,
+        }
+    }
+
+    fn shop_sees(&mut self, id: i64) {
+        let seats = self.seats();
+        if let Some(entity) = self.board.get(id) {
+            self.shop.on_maybe_offer(entity, seats);
+        }
     }
 
     fn commit(&mut self) -> Result<(), ParseError> {
@@ -142,9 +184,16 @@ impl Collector {
             Pending::Full { id, card_id } => {
                 self.board.create(Entity { id, card_id, tags });
                 self.track_shop(id);
+                self.shop_sees(id);
             }
-            Pending::Show { id, card_id } => self.board.show(id, card_id, tags)?,
-            Pending::Change { id, card_id } => self.board.change(id, card_id, tags)?,
+            Pending::Show { id, card_id } => {
+                self.board.show(id, card_id, tags)?;
+                self.shop_sees(id);
+            }
+            Pending::Change { id, card_id } => {
+                self.board.change(id, card_id, tags)?;
+                self.shop_sees(id);
+            }
         }
         Ok(())
     }
@@ -169,14 +218,32 @@ impl Collector {
         let is_turn = tag == "TURN" && Some(id) == self.board.game_id;
         let is_hero = tag == "HERO_ENTITY";
         let is_shop = tag == "ZONE" || tag == "CONTROLLER";
+        let is_over = Some(id) == self.board.game_id
+            && tag == "STATE"
+            && value == Value::Name("COMPLETE".into());
         let new_int = if let Value::Int(v) = value { v } else { 0 };
+        let old = self.board.get(id).and_then(|e| e.opt_int(&tag));
+        let shop_tag = matches!(
+            tag.as_str(),
+            "FROZEN" | "PLAYER_TECH_LEVEL" | "ZONE" | "CONTROLLER"
+        )
+        .then(|| tag.clone());
         self.board.set_tag(id, tag, value)?;
         if is_turn {
             self.on_turn(new_int);
+            let seats = self.seats();
+            self.shop.on_turn(new_int, self.now_ms, &self.board, seats);
         } else if is_hero && self.in_combat() {
             self.on_hero_switch(id, new_int);
         } else if is_shop {
             self.track_shop(id);
+        }
+        if is_over {
+            self.shop.on_game_over(self.now_ms);
+        }
+        if let (Some(tag), Some(entity)) = (shop_tag, self.board.get(id)) {
+            let seats = self.seats();
+            self.shop.on_tag(entity, &tag, old, &self.board, seats);
         }
         Ok(())
     }

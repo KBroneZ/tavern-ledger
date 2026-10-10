@@ -67,12 +67,25 @@ fn walk(level: &str, value: &Value, seen: &mut BTreeMap<String, BTreeSet<String>
             "board",
             "report.rounds[].entries[].board[]",
         ),
+        ("report.shop", "turns", "report.shop.turns[]"),
+        (
+            "report.shop.turns[]",
+            "offers",
+            "report.shop.turns[].offers[]",
+        ),
+        ("report.shop", "tier_ups", "report.shop.tier_ups[]"),
+        ("report.shop", "actions", "report.shop.actions[]"),
     ];
     for (parent, key, child) in children {
         if parent == level {
             for item in obj.get(key).and_then(Value::as_array).into_iter().flatten() {
                 walk(child, item, seen);
             }
+        }
+    }
+    if level == "report" {
+        if let Some(shop) = obj.get("shop") {
+            walk("report.shop", shop, seen);
         }
     }
 }

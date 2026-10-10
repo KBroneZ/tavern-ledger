@@ -7,15 +7,18 @@
 //! not match what this parser expects (e.g. after a game patch), the game is
 //! "unsupported" instead of showing wrong data.
 
+pub mod clock;
 pub mod collector;
 pub mod lines;
 pub mod power;
 pub mod report;
+pub mod shop;
 pub mod state;
 
 use std::collections::{BTreeMap, HashMap};
 use std::io::BufRead;
 
+use clock::Clock;
 use collector::{hero_health, leaderboard_heroes, Collector};
 use power::{card_names, classify, parse_power, Line, ParseError};
 use report::{CombatEntry, GameReport, LobbyPlayer, LobbySlot, Round, Status};
@@ -26,7 +29,7 @@ pub const PARSER_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Bump when a change makes the parser read the same log differently (new
 /// fields, fixed bugs). Saved with every game so `tavern-watch --reparse`
 /// and the server can tell which records an older parser wrote.
-pub const PARSER_REVISION: u32 = 2;
+pub const PARSER_REVISION: u32 = 3;
 
 /// Builds whose real logs this parser was checked against.
 pub const TESTED_BUILDS: &[i64] = &[253216];
@@ -50,6 +53,7 @@ pub struct GameReader {
     reported_complete: bool,
     /// Card id -> name as printed in the log; the report keeps heroes only.
     names: HashMap<String, String>,
+    clock: Clock,
 }
 
 impl GameReader {
@@ -58,15 +62,26 @@ impl GameReader {
             // hslog rejects such lines; a broken game must not look fine.
             self.error = Some("RegexParsingError");
         }
+        if let Some(ms) = self.clock.at(line) {
+            self.collector.now_ms = ms;
+            self.collector.shop.saw_line(ms);
+        }
         match classify(line) {
             Line::Game(data) => self.feed_game(data),
-            Line::Power(data) if self.error.is_none() => {
+            Line::Power(data, indent) if self.error.is_none() => {
                 self.remember_names(data);
+                self.collector.indent = indent;
                 if let Err(ParseError(name)) =
                     parse_power(data).and_then(|p| self.collector.feed(p))
                 {
                     self.error = Some(name);
                 }
+            }
+            Line::SendOption if self.error.is_none() => {
+                self.collector.shop.on_option(self.collector.now_ms);
+            }
+            Line::SendChoice(kind) if self.error.is_none() => {
+                self.collector.shop.on_choice(self.collector.now_ms, kind);
             }
             _ => {}
         }
@@ -386,6 +401,7 @@ fn summarize(mut base: GameReport, c: &Collector) -> GameReport {
     base.shop_tribes = count_tribes(c);
     base.rounds = rounds_of(c, &heroes, complete.then(|| hero_health(own)));
     base.start_health = c.lobby_health.get(&0).cloned().unwrap_or_default();
+    base.shop = Some(c.shop.record(&c.board, c.seats()));
     base
 }
 

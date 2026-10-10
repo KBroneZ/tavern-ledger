@@ -16,7 +16,7 @@ import contract from "./report_keys.json" with { type: "json" };
  * refuse. Every answer carries it, and the desktop app retries a game this
  * server refused once when it sees a higher number (D-047).
  */
-export const VALIDATOR_VERSION = 2;
+export const VALIDATOR_VERSION = 3;
 
 export const SESSION_PATTERN = /^Hearthstone_(\d{4})_(\d{2})_(\d{2})_\d{2}_\d{2}_\d{2}$/;
 const PATH_PATTERN = /\/v1\/games\/(Hearthstone_\d{4}(?:_\d{2}){5})\/([1-9][0-9]{0,3})$/;
@@ -38,6 +38,30 @@ const MAX_INT = 2 ** 31 - 1;
 const PLAYER_KEY = /^[1-9][0-9]?$/;
 const MAX_HEALTH = 100000;
 const MAX_HEALTH_ENTRIES = 16;
+// The shop record (parser revision 3, T-204, T-205, D-046): the parser's own
+// bounds (crates/bg-parser/src/shop.rs). Times are ms from the game's first
+// log line, never a clock time; a day is far longer than any game.
+const MAX_SHOP_TURNS = 100;
+const MAX_OFFERS = 400;
+const MAX_GAME_OFFERS = 3000;
+const MAX_CARDS = 100;
+const MAX_ACTIONS = 3000;
+const MAX_MS = 24 * 60 * 60 * 1000;
+const MAX_COUNT = 10000;
+const ACTION_KINDS = new Set([
+  "roll",
+  "buy",
+  "buy_spell",
+  "sell",
+  "freeze",
+  "unfreeze",
+  "tier_up",
+  "hero_power",
+  "play",
+  "move",
+  "choose",
+  "other",
+]);
 
 /**
  * The keys checked at each level; must equal report_keys.json. Level names
@@ -62,6 +86,7 @@ const KEYS: Record<string, string[]> = {
     "shop_tribes",
     "rounds",
     "start_health",
+    "shop",
     "warnings",
     "problems",
     "not_in_log",
@@ -70,6 +95,26 @@ const KEYS: Record<string, string[]> = {
   "report.rounds[]": ["number", "entries", "own_health_after", "opponents", "health_after"],
   "report.rounds[].entries[]": ["side", "player_id", "hero", "board"],
   "report.rounds[].entries[].board[]": ["card_id", "atk", "health", "position", "golden"],
+  "report.shop": ["turns", "tier_ups", "actions", "start_ms", "end_ms", "ended"],
+  "report.shop.turns[]": [
+    "turn",
+    "start_ms",
+    "end_ms",
+    "tier",
+    "gold",
+    "gold_spent",
+    "rolls",
+    "free_rolls",
+    "buys",
+    "spell_buys",
+    "sells",
+    "freezes",
+    "offers",
+    "actions",
+  ],
+  "report.shop.turns[].offers[]": ["card_id", "roll", "frozen"],
+  "report.shop.tier_ups[]": ["turn", "tier"],
+  "report.shop.actions[]": ["ms", "turn", "kind"],
 };
 
 // A validator out of step with the list stops the function at start: games
@@ -235,6 +280,66 @@ function healthMap(v: unknown, field: string, players: Set<number>): void {
   }
 }
 
+function bool(v: unknown, field: string): void {
+  if (typeof v !== "boolean") throw new Invalid(field);
+}
+
+function cards(v: unknown, field: string): void {
+  list(v, field, MAX_CARDS).forEach((c, i) => cardId(c, `${field}[${i}]`));
+}
+
+function shopTurn(v: unknown, field: string): void {
+  const t = shape(v, field, KEYS["report.shop.turns[]"], KEYS["report.shop.turns[]"]);
+  int(t.turn, `${field}.turn`, 1, MAX_SHOP_TURNS);
+  const start = int(t.start_ms, `${field}.start_ms`, 0, MAX_MS);
+  int(t.end_ms, `${field}.end_ms`, start, MAX_MS);
+  optInt(t.tier, `${field}.tier`, 1, 7);
+  optInt(t.gold, `${field}.gold`, 0, MAX_COUNT);
+  optInt(t.gold_spent, `${field}.gold_spent`, 0, MAX_COUNT);
+  const rolls = int(t.rolls, `${field}.rolls`, 0, MAX_COUNT);
+  int(t.free_rolls, `${field}.free_rolls`, 0, rolls);
+  cards(t.buys, `${field}.buys`);
+  int(t.spell_buys, `${field}.spell_buys`, 0, MAX_COUNT);
+  cards(t.sells, `${field}.sells`);
+  int(t.freezes, `${field}.freezes`, 0, MAX_COUNT);
+  list(t.offers, `${field}.offers`, MAX_OFFERS).forEach((o, i) => {
+    const at = `${field}.offers[${i}]`;
+    const offer = shape(o, at, KEYS["report.shop.turns[].offers[]"], ["roll", "frozen"]);
+    cardId(offer.card_id, `${at}.card_id`);
+    int(offer.roll, `${at}.roll`, 0, rolls);
+    bool(offer.frozen, `${at}.frozen`);
+  });
+  int(t.actions, `${field}.actions`, 0, MAX_ACTIONS);
+}
+
+/** The player's own shop and logged actions; null when the game was unreadable. */
+function shop(v: unknown, field: string): void {
+  if (v === undefined || v === null) return;
+  const s = shape(v, field, KEYS["report.shop"], ["turns", "tier_ups", "actions", "ended"]);
+  const turns = list(s.turns, `${field}.turns`, MAX_SHOP_TURNS);
+  turns.forEach((t, i) => shopTurn(t, `${field}.turns[${i}]`));
+  const offers = turns.reduce((n: number, t) => n + (t as { offers: unknown[] }).offers.length, 0);
+  if (offers > MAX_GAME_OFFERS) throw new Invalid(`${field}.turns`);
+  list(s.tier_ups, `${field}.tier_ups`, MAX_SHOP_TURNS).forEach((u, i) => {
+    const at = `${field}.tier_ups[${i}]`;
+    const up = shape(u, at, KEYS["report.shop.tier_ups[]"], KEYS["report.shop.tier_ups[]"]);
+    int(up.turn, `${at}.turn`, 1, MAX_SHOP_TURNS);
+    int(up.tier, `${at}.tier`, 2, 7);
+  });
+  list(s.actions, `${field}.actions`, MAX_ACTIONS).forEach((a, i) => {
+    const at = `${field}.actions[${i}]`;
+    const action = shape(a, at, KEYS["report.shop.actions[]"], KEYS["report.shop.actions[]"]);
+    int(action.ms, `${at}.ms`, 0, MAX_MS);
+    int(action.turn, `${at}.turn`, 1, MAX_SHOP_TURNS);
+    if (typeof action.kind !== "string" || !ACTION_KINDS.has(action.kind)) {
+      throw new Invalid(`${at}.kind`);
+    }
+  });
+  const start = optInt(s.start_ms, `${field}.start_ms`, 0, MAX_MS);
+  optInt(s.end_ms, `${field}.end_ms`, start ?? 0, MAX_MS);
+  bool(s.ended, `${field}.ended`);
+}
+
 function lobbyPlayer(v: unknown, field: string, seen: Seen): void {
   const p = shape(v, field, KEYS["report.lobby[]"], ["player_id"]);
   seen.players.add(int(p.player_id, `${field}.player_id`, 1, 64));
@@ -350,6 +455,7 @@ function check(value: unknown, session: string, index: number): Summary {
   rounds.forEach((x, i) =>
     healthMap(x.health_after, `report.rounds[${i}].health_after`, seen.players)
   );
+  shop(r.shop, "report.shop");
   notes(r.warnings, "report.warnings");
   notes(r.problems, "report.problems");
   if (r.not_in_log !== undefined) {

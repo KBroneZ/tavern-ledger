@@ -4,10 +4,13 @@
         [--parser target/release/bg-parse]
 
 Allow-list first: only the GameState lines the parser reads are kept: the
-packets in KEEP_OPCODES, ATTACK blocks, entities of the card types in
-KEEP_CARDTYPES and the tags in KEEP_TAGS. Everything else is dropped,
-including every PowerTaskList, Options and Choices line. Timestamps become
-00:00:00. A bracketed entity ("[entityName=... id=N ...]") becomes its id N,
+packets in KEEP_OPCODES, ATTACK blocks, the player's top-level action blocks
+(PLAY, MOVE_MINION, DECK_ACTION) with their BLOCK_END, entities of the card
+types in KEEP_CARDTYPES, the tags in KEEP_TAGS, and the numbers-only
+SendOption lines and SendChoices headers (the actions the client sent, T-205).
+Everything else is dropped, including every PowerTaskList, Options and
+chosen-entity line. Timestamps count from the game's first line (00:00:00),
+so durations stay and the time of day goes (D-046). A bracketed entity ("[entityName=... id=N ...]") becomes its id N,
 so no card text or name in brackets is kept; hero names are then missing from
 the fixture's report (card_names), which the raw game would have. Every player name (BattleTags, the plain names opponents get during
 combat, the AI slot's name) becomes Player1 (the local player) or OpponentN
@@ -47,7 +50,6 @@ from reconnect_marks import MarkedLogError, default_data_dir, refuse_marked_log 
 POWER = "GameState.DebugPrintPower() - "
 GAME = "GameState.DebugPrintGame() - "
 CREATE_GAME = POWER + "CREATE_GAME"
-TIME = "00:00:00.0000000"
 LOCAL_PLACEHOLDER = "Player1"
 
 # Tags the Rust parser reads (crates/bg-parser/src). A tag it starts using
@@ -55,26 +57,42 @@ LOCAL_PLACEHOLDER = "Player1"
 KEEP_TAGS = frozenset({
     "ARMOR", "ATK", "BACON_CURRENT_COMBAT_PLAYER_ID", "BACON_DUMMY_PLAYER",
     "BACON_DUO_TEAMMATE_PLAYER_ID", "BACON_DUO_TEAM_ID", "CARDRACE", "CARDTYPE",
-    "CONTROLLER", "COPIED_FROM_ENTITY_ID", "DAMAGE", "HEALTH", "HERO_ENTITY",
-    "IS_BACON_POOL_MINION", "PLAYER_ID", "PLAYER_LEADERBOARD_PLACE", "STATE",
+    "CONTROLLER", "COPIED_FROM_ENTITY_ID", "DAMAGE", "FROZEN", "HEALTH", "HERO_ENTITY",
+    "IS_BACON_POOL_MINION", "NUM_RESOURCES_SPENT_THIS_GAME", "PLAYER_ID",
+    "PLAYER_LEADERBOARD_PLACE", "PLAYER_TECH_LEVEL", "RESOURCES", "STATE",
     "TURN", "ZONE", "ZONE_POSITION",
 })
 # Power packets kept (their tag= lines are filtered by KEEP_TAGS). Of the
-# blocks only ATTACK is kept: the parser takes the combat boards there.
+# blocks, ATTACK is kept at any depth (the parser takes the combat boards
+# there) and the player's actions at the top level only, with their end.
 KEEP_OPCODES = frozenset({
     "CREATE_GAME", "GameEntity", "Player", "FULL_ENTITY", "SHOW_ENTITY",
     "CHANGE_ENTITY", "HIDE_ENTITY",
 })
-# Entities created with any other card type (enchantments, spells, hero
-# powers, trinkets...) are dropped with every line about them. Hidden cards
-# (no type yet) stay.
-KEEP_CARDTYPES = frozenset({"GAME", "PLAYER", "HERO", "MINION", "INVALID"})
+TOP_BLOCKS = frozenset({"PLAY", "MOVE_MINION", "DECK_ACTION"})
+# Entities created with any other card type (enchantments, spells,
+# trinkets...) are dropped with every line about them. Hidden cards (no type
+# yet) stay. Shop buttons and hero powers tell what an action was.
+KEEP_CARDTYPES = frozenset({"GAME", "PLAYER", "HERO", "MINION", "INVALID",
+                            "GAME_MODE_BUTTON", "MOVE_MINION_HOVER_TARGET", "HERO_POWER"})
 KEEP_GAME_KEYS = ("GameType=", "BuildNumber=", "PlayerID=")
 # Names the game itself uses for hidden players and cards: not personal.
 GAME_NAMES = ("UNKNOWN HUMAN PLAYER", "UNKNOWN ENTITY")
 
-LINE = re.compile(r"^([DWE]) [\d:.]+ (GameState\.DebugPrint(?:Power|Game)\(\) - )(.*)$")
-ALLOWED = re.compile(r"^[DWE] " + re.escape(TIME) + r" GameState\.DebugPrint(Power|Game)\(\) - ")
+SEND_OPTION = "GameState.SendOption() - "
+SEND_CHOICES = "GameState.SendChoices() - "
+LINE = re.compile(r"^([DWE]) ([\d:.]+) (GameState\.(?:DebugPrint(?:Power|Game)|SendOption|SendChoices)"
+                  r"\(\) - )(.*)$")
+STAMP = re.compile(r"^[DWE] \d{1,2}:\d{2}:\d{2}(?:\.\d{1,7})? ")
+OPTION_BODY = re.compile(r"^selectedOption=-?\d+ selectedSubOption=-?\d+ selectedTarget=-?\d+ "
+                         r"selectedPosition=-?\d+$")
+CHOICE_BODY = re.compile(r"^id=\d+ ChoiceType=[A-Z_]+$")
+ALLOWED = re.compile(r"^[DWE] \d{2}:\d{2}:\d{2}\.\d{7} (?:GameState\.DebugPrint(?:Power|Game)\(\) - "
+                     r"|GameState\.SendOption\(\) - selectedOption=-?\d+ selectedSubOption=-?\d+ "
+                     r"selectedTarget=-?\d+ selectedPosition=-?\d+$"
+                     r"|GameState\.SendChoices\(\) - id=\d+ ChoiceType=[A-Z_]+$)")
+TICKS_PER_SECOND = 10_000_000
+DAY_TICKS = 24 * 3600 * TICKS_PER_SECOND
 ACCOUNT = re.compile(r"GameAccountId=\[hi=(\d+) lo=(\d+)\]")
 PLACEHOLDER_ACCOUNT = re.compile(r"^GameAccountId=\[hi=(0 lo=0|1 lo=[1-9])\]$")
 ENTITY_REF = re.compile(r"(?:FULL_ENTITY - Creating ID=|(?:SHOW|CHANGE)_ENTITY - Updating Entity="
@@ -189,9 +207,9 @@ def dropped_entities(lines: list[str]) -> set[int]:
     current = None
     for line in lines:
         match = LINE.match(line.rstrip("\r\n"))
-        if not match or match.group(2) != POWER:
+        if not match or match.group(3) != POWER:
             continue
-        body = match.group(3).strip()
+        body = match.group(4).strip()
         created = re.match(r"FULL_ENTITY - Creating ID=(\d+) ", body)
         if created:
             current = int(created.group(1))
@@ -206,23 +224,62 @@ def dropped_entities(lines: list[str]) -> set[int]:
     return dropped
 
 
+class Clock:
+    """A line's time as time since the game's first line, past midnight too."""
+
+    def __init__(self) -> None:
+        self.first: int | None = None
+        self.last = 0
+        self.days = 0
+
+    def relative(self, stamp: str) -> str:
+        hms, _, fraction = stamp.partition(".")
+        h, m, s = (int(x) for x in hms.split(":"))
+        ticks = ((h * 60 + m) * 60 + s) * TICKS_PER_SECOND + int(fraction.ljust(7, "0")[:7])
+        if self.first is None:
+            self.first = ticks
+        if ticks < self.last - DAY_TICKS // 2:
+            self.days += 1
+        self.last = ticks
+        since = max(0, ticks + self.days * DAY_TICKS - self.first)
+        whole, fraction_ticks = divmod(since, TICKS_PER_SECOND)
+        minutes, seconds = divmod(whole, 60)
+        return f"{minutes // 60:02d}:{minutes % 60:02d}:{seconds:02d}.{fraction_ticks:07d}"
+
+
 class _AllowList:
     """Line kinds, block types, entities and tags the parser reads."""
 
     def __init__(self, dropped: set[int]) -> None:
         self.dropped = dropped
         self.in_dropped_entity = False  # its tag= lines go too
+        self.top_block_kept = False  # so its BLOCK_END stays too
 
     def keep(self, prefix: str, body: str) -> bool:
         if prefix == GAME:
             return body.startswith(KEEP_GAME_KEYS)
+        if prefix == SEND_OPTION:
+            return bool(OPTION_BODY.match(body))
+        if prefix == SEND_CHOICES:
+            return bool(CHOICE_BODY.match(body))
         stripped = body.strip()
+        top = not body[:1].isspace()
         opcode = stripped.split(" ", 1)[0]
         if opcode.startswith("tag="):
             return not self.in_dropped_entity and opcode[len("tag="):] in KEEP_TAGS
         self.in_dropped_entity = False
         if opcode == "BLOCK_START":
-            return stripped.startswith("BLOCK_START BlockType=ATTACK ")
+            block = re.match(r"BLOCK_START BlockType=(\w+) ", stripped)
+            kind = block.group(1) if block else ""
+            if not top:
+                return kind == "ATTACK"
+            self.top_block_kept = kind in TOP_BLOCKS or kind == "ATTACK"
+            return self.top_block_kept
+        if opcode == "BLOCK_END":
+            if not top:
+                return False
+            kept, self.top_block_kept = self.top_block_kept, False
+            return kept
         if opcode not in KEEP_OPCODES and opcode != "TAG_CHANGE":
             return False
         if _entity_id(stripped) in self.dropped:
@@ -266,13 +323,16 @@ def scrub_game(lines: list[str], ids: Identities) -> str:
     names = _name_pattern(mapping)
     accounts: dict[tuple[str, str], str] = {}
     allow = _AllowList(dropped_entities(lines))
+    clock = Clock()
     out = []
     for line in lines:
+        # Every line moves the clock, kept or not, so midnight is noticed.
+        time = clock.relative(line.split(" ", 2)[1]) if STAMP.match(line) else None
         match = LINE.match(line.rstrip("\r\n"))
-        if not match or not allow.keep(match.group(2), match.group(3)):
+        if not match or time is None or not allow.keep(match.group(3), match.group(4)):
             continue
-        level, prefix, body = match.groups()
-        out.append(f"{level} {TIME} {prefix}{_scrub(body, names, mapping, accounts)}")
+        level, _, prefix, body = match.groups()
+        out.append(f"{level} {time} {prefix}{_scrub(body, names, mapping, accounts)}")
     return "\n".join(out) + "\n"
 
 
