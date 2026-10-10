@@ -61,7 +61,7 @@ Remaining to close T-101: the live test (play a game with `cargo run --release -
 | T-104a | Supabase project in the EU (with the user's OK: account, terms, DPA), schema with row-level security (clients read only; one Edge Function writes), export, deletion and weekly backups until Pro | local done; hosted project live with sign-ups closed (session 022); deploy through the GitHub integration waits for the user |
 | T-104b | Privacy policy, processor list (Supabase, static host, email provider) and terms, before the first user | draft updated in session 022 (Supabase DPA and TIA, upload data, sender, cookies, Bulgaria/CPDP); controller name and a few provider checks left |
 | T-104c | Website (Astro): sign-in, account page with export and deletion, public profile (private by default) | live at tavernledger.net with accounts closed; sign-in only (no sign-up form) once the Pages build has the hosted project (session 022) |
-| T-104d | Desktop upload: sign-in through the browser (PKCE, loopback), upload queue with retries, upload off until the user turns it on | done; the app has the hosted project built in (session 022) |
+| T-104d | Desktop upload: sign-in through the browser (PKCE, loopback), upload queue with retries, upload off until the user turns it on | done; the app has the hosted project built in (session 022); first sign-in against the hosted project worked on 2026-10-10 after adding the loopback redirect URL (`deploy.md` 10.7) |
 | T-104e | Website redesign from open-source UI references; the user picks one of two or three directions (session 028, D-040) | done in PR (direction D "Combat Round", D-040); HSTS stays at one day until 2026-10-23 |
 | T-104f | Auth email sender without link tracking (replaces Brevo, D-037) | done (session 029, D-041): Lettermint as Supabase SMTP, tracking off, links go straight to Supabase, DMARC pass; Lettermint approved the account |
 | T-104g | Backend follow-ups from 022 (salted IP hash, pause check, new secret key) (session 030, D-042) | done in PR; after the merge: function logs must show the new secret key, then a PR removes the legacy fallback; pause re-check on 2026-10-17 |
@@ -110,6 +110,8 @@ Remaining to close T-101: the live test (play a game with `cargo run --release -
 **Notes T-101 (2026-10-09, session 014).** Live test still not done: the history holds the same 23 games from 5 sessions (3, 7, 8, 1 and 4 games), no new game since session 011.
 
 **Notes T-101 (2026-10-09, session 011).** Live test still not done: the history holds the same 23 games from 5 sessions (3, 7, 8, 1 and 4), no new game since session 010, with the app running.
+
+**Follow-ups before opening sign-ups (hub, 2026-10-10).** (1) The site has no "forgot password" page and only reads PKCE `?code=` links on `/account/`: a confirmation or invite link made from the dashboard lands there with nothing said; show "Email confirmed, now sign in" for every confirmation link and add password reset. (2) The account export's `auth_events` came back empty on the hosted project (found by session 029). (3) DMARC aggregate reports (`rua`) not set. (4) D-034 and D-037 carry no "replaced by D-041" note. (5) The app could say "use the newest email" when a sign-in link from an older attempt arrives (`otp_expired`). (6) T-104b: privacy policy and terms still a draft with parts marked to be checked.
 
 ## F2 — Replays and recaps
 
@@ -161,7 +163,7 @@ Never shipped to users; for collecting test games and debugging.
 
 | ID | Task | Status |
 |----|------|--------|
-| T-D01 | Reconnect/unplug dev tool under `tools/dev/` (D-022): hotkey that drops the game's TCP connection to skip combat, by hand, own account, admin; games played with it marked in the history. The user said yes on 2026-10-10 (D-035) | done (live test in a real game: the user's call) |
+| T-D01 | Reconnect/unplug dev tool under `tools/dev/` (D-022): hotkey that drops the game's TCP connection to skip combat, by hand, own account, admin; games played with it marked in the history. The user said yes on 2026-10-10 (D-035) | done; elevated `--self-test` passed on the user's PC (2026-10-10: the test connection was reset, another one kept working); live test in a real game: the user's call |
 | T-D02 | Log replay: feed a saved `Power.log` to the tracker at game speed, to test the app and the overlay without playing | done |
 
 ## Future ideas (from the GitHub survey)
