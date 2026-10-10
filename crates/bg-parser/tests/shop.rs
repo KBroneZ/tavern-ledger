@@ -12,7 +12,10 @@ fn read(name: &str) -> String {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests/data")
         .join(format!("{name}.log"));
-    fs::read_to_string(path).expect("fixture")
+    // A Windows checkout may turn the fixture's LF into CRLF.
+    fs::read_to_string(path)
+        .expect("fixture")
+        .replace("\r\n", "\n")
 }
 
 fn report(text: &str) -> GameReport {
