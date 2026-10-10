@@ -15,7 +15,7 @@ const DIST = join(ROOT, "dist");
 const ENV = loadEnv("production", ROOT, "PUBLIC_");
 const CONFIG = readConfig(ENV);
 const SIGNUPS = signupsOpen(ENV);
-const ACCOUNT_PAGES = ["signin/index.html", "account/index.html", "profile/index.html"];
+const ACCOUNT_PAGES = ["signin/index.html", "account/index.html", "profile/index.html", "forgot-password/index.html"];
 
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -30,7 +30,7 @@ const name = (f: string) => relative(DIST, f).replaceAll("\\", "/");
 
 test("the site was built", () => {
   assert.ok(PAGES.length >= 6, "run `npm run build` first");
-  for (const page of ["index.html", "signin/index.html", "account/index.html", "profile/index.html", "privacy/index.html", "terms/index.html"]) {
+  for (const page of ["index.html", ...ACCOUNT_PAGES, "privacy/index.html", "terms/index.html"]) {
     assert.ok(PAGES.map(name).includes(page), page);
   }
 });
@@ -116,8 +116,21 @@ test("accounts open: the account pages have their forms and scripts", { skip: !C
     assert.doesNotMatch(html, /Accounts are not open yet/, page);
   }
   const signin = readFileSync(join(DIST, "signin/index.html"), "utf8");
+  assert.match(signin, /href="\/forgot-password\/"/);
+  const forgot = readFileSync(join(DIST, "forgot-password/index.html"), "utf8");
+  assert.match(forgot, /id="reset-form"/);
+  // Sent before the script runs, a form would become a GET with the email
+  // (and password) in the address: its button only works once the script does.
+  for (const [page, html] of [["signin", signin], ["forgot-password", forgot]]) {
+    const buttons = [...html.matchAll(/<button\b[^>]*type="submit"[^>]*>/g)].map((m) => m[0]);
+    assert.ok(buttons.length > 0, page);
+    for (const button of buttons) assert.match(button, /\sdisabled\b/, `${page}: ${button}`);
+  }
+  const account = readFileSync(join(DIST, "account/index.html"), "utf8");
+  assert.match(account, /id="set-password-form"/);
   if (SIGNUPS) {
     assert.match(signin, /id="signup-form"/);
+    assert.match(signin, /accept the <a href="\/terms\/">terms<\/a> and confirm you are\s+16 or older/);
   } else {
     // Sign-ups closed (the hosted default): sign-in stays, no sign-up form is rendered.
     // The real gate is the hosted project's disable_signup (deploy.md, section 10.9).
@@ -134,7 +147,7 @@ test("accounts closed: no form, no script and no backend anywhere", { skip: !!CO
   }
   for (const page of PAGES) {
     const html = readFileSync(page, "utf8");
-    assert.doesNotMatch(html, /<script\b|<form\b|<input\b|href="\/(signin|account)\/"/, name(page));
+    assert.doesNotMatch(html, /<script\b|<form\b|<input\b|href="\/(signin|account|forgot-password)\/"/, name(page));
   }
   assert.deepEqual(ALL.filter((f) => f.endsWith(".js")).map(name), []);
   for (const file of ALL) {

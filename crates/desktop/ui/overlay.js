@@ -117,6 +117,17 @@ function renderTribes(g) {
     ),
   );
   panel.append(seen);
+  // The lobby's tribes the tavern confirmed with the card data (D-050): the
+  // log has no list of them.
+  const lobby = g.lobby_tribes;
+  if (lobby && lobby.basis === "tavern_confirmed") {
+    const row = el("div", "row");
+    row.append(el("span", "what", lobby.complete ? "Lobby (all 5 confirmed)" : `Lobby (${lobby.tribes.length} of 5 confirmed)`));
+    const lobbyMark = mark(lobby.source);
+    if (lobbyMark) row.append(lobbyMark);
+    row.append(el("div", "tribe-list", lobby.tribes.map(tribeName).join(" · ")));
+    panel.append(row);
+  }
   if (g.entered_tribes.length) {
     const entered = el("div", "row");
     entered.append(el("span", "what", "You entered"));

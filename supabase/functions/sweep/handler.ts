@@ -6,8 +6,8 @@
 //      failed before the row), untouched for an hour, through the Storage
 //      API (deleting storage.objects rows in SQL would leave the bytes);
 //   2. public.sweep_housekeeping(): audit entries of deleted accounts (the
-//      T-104a leftover), upload times older than two days and IP counters
-//      older than an hour.
+//      T-104a leftover) and every audit entry older than 90 days (D-048),
+//      upload times older than two days and IP counters older than an hour.
 // Safe to run any time and as often as wanted. No dependencies.
 
 export interface Env {

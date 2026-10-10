@@ -3,7 +3,12 @@ import assert from "node:assert/strict";
 import {
   CHECK_EMAIL,
   checkCredentials,
+  checkEmail,
+  checkNewPassword,
   MIN_PASSWORD_LENGTH,
+  newPasswordErrorMessage,
+  RESET_SENT,
+  resetRequestOutcome,
   signInErrorMessage,
   signUpOutcome,
 } from "../../src/lib/auth.ts";
@@ -62,4 +67,50 @@ test("sign-up: weak password, rate limit and other errors", () => {
   const other = signUpOutcome({ status: 500, message: "boom" });
   assert.equal(other.kind, "error");
   assert.doesNotMatch(other.message, /boom/);
+});
+
+test("reset request: the same answer whether the email has an account or not", () => {
+  assert.deepEqual(resetRequestOutcome(null), { kind: "check-email", message: RESET_SENT });
+  for (const e of [
+    { code: "user_not_found", status: 400 },
+    { code: "email_not_confirmed", status: 400 },
+    { code: "signup_disabled", status: 422 },
+    { status: 404 },
+    // Only an existing account gets this (a second email within a minute).
+    { code: "over_email_send_rate_limit", status: 429 },
+  ]) {
+    assert.deepEqual(resetRequestOutcome(e), { kind: "check-email", message: RESET_SENT }, JSON.stringify(e));
+  }
+  assert.doesNotMatch(RESET_SENT, /no account|not found|exist/i);
+});
+
+test("reset request: rate limits, no connection and server errors are said in words", () => {
+  assert.match(resetRequestOutcome({ code: "over_request_rate_limit", status: 429 }).message, /Too many/);
+  assert.match(resetRequestOutcome({ status: 429 }).message, /Too many/);
+  assert.match(resetRequestOutcome({ name: "AuthRetryableFetchError", status: 0 }).message, /reach the server/);
+  assert.match(resetRequestOutcome({ code: "email_address_invalid", status: 400 }).message, /valid email/);
+  const boom = resetRequestOutcome({ status: 500, message: "boom" });
+  assert.equal(boom.kind, "error");
+  assert.doesNotMatch(boom.message, /boom/);
+});
+
+test("reset email is checked before sending", () => {
+  assert.equal(checkEmail(" a@example.test "), null);
+  assert.match(checkEmail("nope") ?? "", /valid email/);
+});
+
+test("new password: length and repeat are checked before sending", () => {
+  assert.equal(checkNewPassword("0123456789", "0123456789"), null);
+  assert.match(checkNewPassword("short", "short") ?? "", /10 characters/);
+  assert.match(checkNewPassword("0123456789", "0123456780") ?? "", /not the same/);
+});
+
+test("new password: server refusals in words, never the server's text", () => {
+  assert.match(newPasswordErrorMessage({ code: "same_password", status: 422 }), /different/);
+  assert.match(newPasswordErrorMessage({ code: "weak_password", status: 422 }), /stronger/);
+  assert.match(newPasswordErrorMessage({ code: "reauthentication_needed", status: 400 }), /new link/);
+  assert.match(newPasswordErrorMessage({ name: "AuthSessionMissingError", status: 400 }), /new link/);
+  assert.match(newPasswordErrorMessage({ status: 401 }), /new link/);
+  assert.match(newPasswordErrorMessage({ status: 429 }), /Too many/);
+  assert.doesNotMatch(newPasswordErrorMessage({ status: 500, message: "boom" }), /boom/);
 });

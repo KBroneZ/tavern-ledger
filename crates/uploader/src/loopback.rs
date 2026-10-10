@@ -17,6 +17,8 @@ use crate::pkce::{random_token, same_secret};
 
 pub const CALLBACK_PATH: &str = "/desktop-callback/";
 const MAX_REQUEST: usize = 8 * 1024;
+/// Supabase's error code for a link that expired or was replaced by a newer one.
+const EXPIRED: &str = "otp_expired";
 /// One connection gets this long in total to send its request line.
 const CONNECTION_DEADLINE: Duration = Duration::from_secs(2);
 const POLL: Duration = Duration::from_millis(100);
@@ -36,6 +38,13 @@ impl std::fmt::Display for WaitError {
         match self {
             WaitError::Cancelled => write!(f, "sign-in cancelled"),
             WaitError::TimedOut => write!(f, "the sign-in link was not opened in time"),
+            // Each new link request replaces the previous token, so this is
+            // nearly always a link from an older email.
+            WaitError::LinkFailed(code) if code == EXPIRED => write!(
+                f,
+                "that link is from an earlier attempt or expired: use the newest email, \
+                 or ask for a new link"
+            ),
             WaitError::LinkFailed(code) => {
                 write!(
                     f,
@@ -138,7 +147,12 @@ impl Loopback {
             })
             .unwrap_or("no_code")
             .to_string();
-        respond(&mut stream, 400, PAGE_FAILED);
+        let page = if error == EXPIRED {
+            PAGE_EXPIRED
+        } else {
+            PAGE_FAILED
+        };
+        respond(&mut stream, 400, page);
         Some(Err(WaitError::LinkFailed(error)))
     }
 }
@@ -182,6 +196,8 @@ fn read_request_target(stream: &mut TcpStream) -> io::Result<Option<String>> {
 const PAGE_DONE: &str = "You are signed in to Tavern Ledger. You can close this tab.";
 const PAGE_FAILED: &str =
     "This sign-in link did not work (it may have expired or been used). Ask for a new one in Tavern Ledger.";
+const PAGE_EXPIRED: &str = "This sign-in link is from an earlier attempt or has expired. \
+     Open the newest email from Tavern Ledger, or ask for a new link in the app.";
 const PAGE_OLD_LINK: &str =
     "This sign-in link is from an earlier attempt. Open the newest email from Tavern Ledger.";
 const PAGE_NOT_FOUND: &str = "Not found.";
@@ -328,6 +344,33 @@ mod tests {
         assert_eq!(
             handle.join().unwrap(),
             Err(WaitError::LinkFailed("otp_expired".into()))
+        );
+    }
+
+    #[test]
+    fn an_expired_link_tells_the_user_to_use_the_newest_email() {
+        let (lb, handle, _) = start();
+        let target = format!(
+            "{}?error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid",
+            path_of(&lb)
+        );
+        let (status, page) = browse(lb.port, &target);
+        assert_eq!(status, 400);
+        assert!(page.contains(PAGE_EXPIRED), "{page}");
+        let error = handle.join().unwrap().unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "that link is from an earlier attempt or expired: use the newest email, \
+             or ask for a new link"
+        );
+    }
+
+    #[test]
+    fn other_link_errors_keep_their_code_in_the_message() {
+        let error = WaitError::LinkFailed("flow_state_not_found".into());
+        assert_eq!(
+            error.to_string(),
+            "the sign-in link did not work (flow_state_not_found); ask for a new one"
         );
     }
 
