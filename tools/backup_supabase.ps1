@@ -45,6 +45,7 @@ function Get-Connection {
         $raw = (& npx supabase status -o json 2>$null | Out-String)
         if ($LASTEXITCODE -ne 0) { throw 'Local stack is not running (npx supabase start).' }
         $status = ($raw -replace '(?s)^[^{]*', '') | ConvertFrom-Json
+        if (-not $status.SECRET_KEY) { throw 'supabase status gave no SECRET_KEY (update the Supabase CLI).' }
         return @{ Url = $status.API_URL; Key = $status.SECRET_KEY }
     }
     $envFile = Join-Path $repo '.local\supabase.env'
