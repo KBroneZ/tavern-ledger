@@ -185,7 +185,8 @@ tr.dev-reconnect td { opacity: 0.7; }
 }
 
 /* A place is a number plus a shape, so colour is never the only cue:
-   win = lit disc, top half = ring, bottom half = bare number, rules unknown = soft square. */
+   win = lit disc, top half = ring, bottom half = bare number, mode rules unknown = soft square,
+   no place in the log = dashed circle with a dash. */
 .place {
   display: inline-grid;
   place-items: center;
@@ -200,7 +201,7 @@ tr.dev-reconnect td { opacity: 0.7; }
 .place.top4 { box-shadow: inset 0 0 0 2.5px var(--amber); color: var(--amber-hi); }
 .place.bottom4 { color: var(--dim); }
 .place.plain { border-radius: 7px; background: var(--panel-hi); color: var(--text); }
-.place.unknown { color: var(--dim); }
+.place.unknown { border: 2px dashed var(--dim); color: var(--dim); }
 
 .empty { margin: 14px 0 4px; color: var(--dim); font-style: italic; }
 

@@ -220,7 +220,7 @@ body {
 
 /* Golden: a star after the numbers, so it is never colour alone. */
 .minion.golden b { color: var(--accent); }
-.minion.golden b::after { content: " °5"; }
+.minion.golden b::after { content: " \2605"; }
 .minion.golden .art { box-shadow: 0 0 0 2px var(--accent); }
 
 .legend {
