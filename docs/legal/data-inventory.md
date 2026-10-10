@@ -72,7 +72,7 @@ Read on the providers' pages on 2026-10-09: Supabase's DPA names Supabase Pte. L
 - Done in session 021: controller Andrew Rodrigo, Bulgaria (user's answer); contact addresses `contact@` and `privacy@tavernledger.net`; authority the Bulgarian CPDP; governing law Bulgaria. Bulgaria sets the age of digital consent at 14, so the project's minimum age of 16 (D-027) stays stricter than the law.
 - Cloudflare DPA version.
 - A sign-up notice on `/signin/` ("By creating an account you agree to the terms, confirm you are 16 or older, and confirm you have read the privacy policy"; the policy is information, not something to consent to), plus a password reset (T-104c notes).
-- The outbound email sender is Lettermint (section 4, D-041); its DPA is part of its terms. Lettermint reviews new accounts by hand before they send to other people's addresses.
+- The outbound email sender is Lettermint (section 4, D-041); its DPA is part of its terms. Lettermint reviews new accounts by hand before they send to other people's addresses; ours was approved on 2026-10-10.
 - Check whether the hosted project writes Auth's audit log (S5) to the database at all: the export after a fresh sign-in on 2026-10-10 had no `auth_events` (session 029). If it lives only in Supabase's own logs, S5 moves under S9.
 - Decide whether the security log (S5) should be trimmed after a fixed time instead of living as long as the account (second opinion, MEDIUM; kept for now because it is small and deleted with the account).
 - The effective date ("Last updated"): set the day accounts open, with the user's OK.
