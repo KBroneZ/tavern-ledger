@@ -1,7 +1,8 @@
-//! Minions an opponent at tavern tier 1 or 2 could have (T-307): the pool
+//! Minions an opponent could have early in the game (T-307, T-309): the pool
 //! minions of their tier or lower whose tribe is in the lobby, plus the
-//! neutral ones. Past tier 2 there are too many to be useful, so nothing is
-//! listed. Every minion here is labelled `possible`, never `seen`.
+//! neutral ones. Listed only on game turns 2 and 3 (D-049): on turn 1 there
+//! is nothing to go on, and from turn 4 on there are too many to be useful.
+//! Every minion here is labelled `possible`, never `seen`.
 //!
 //! The lobby's tribes are the ones the user entered (T-303) or, when there
 //! are none, the tribes seen in the tavern (inferred). With neither, the list
@@ -13,8 +14,10 @@ use crate::live::LiveGame;
 use crate::lobby_tribes::TRIBES;
 use crate::provenance::Source;
 
-/// The highest tavern tier that gets a list.
-pub const MAX_TIER: i64 = 2;
+/// The game turns that get a list (the shop record's turn numbers).
+pub const TURNS: std::ops::RangeInclusive<i64> = 2..=3;
+/// Tavern tiers the game has; any other value is not a tier.
+const TIERS: std::ops::RangeInclusive<i64> = 1..=7;
 /// A minion with this race belongs to every tribe (HearthstoneJSON and the
 /// log both say `ALL`).
 const ALL_TRIBES: &str = "ALL";
@@ -79,8 +82,13 @@ pub fn lobby_tribes(entered: &[String], seen: &[String]) -> (Vec<String>, Source
     (Vec::new(), Source::Unknown)
 }
 
-/// The list for one hero, or `None` when its tier is unknown or past
-/// [`MAX_TIER`] (nothing is shown then).
+/// Whether this game turn gets lists at all. An unknown turn gets none.
+pub fn lists_on(turn: Option<i64>) -> bool {
+    turn.is_some_and(|t| TURNS.contains(&t))
+}
+
+/// The list for one hero, or `None` when its tier is unknown (nothing is
+/// shown then). The turn rule is [`lists_on`].
 pub fn possible_for(
     seat: i64,
     tier: Option<i64>,
@@ -88,7 +96,7 @@ pub fn possible_for(
     pool: &[PoolCard],
     duos: bool,
 ) -> Option<Possible> {
-    let tier = tier.filter(|t| (1..=MAX_TIER).contains(t))?;
+    let tier = tier.filter(|t| TIERS.contains(t))?;
     let (lobby, tribes_source) = tribes;
     let missing = if lobby.is_empty() {
         Some(NoList::TribesUnknown)
@@ -128,9 +136,16 @@ pub fn possible_for(
 }
 
 impl LiveGame {
-    /// Adds the possible minions of every opponent hero at tier 1 or 2. Call
-    /// it after the entered tribes and the leaderboard are in.
+    /// Adds the possible minions of every opponent hero on game turns 2 and
+    /// 3 (none on any other turn). Call it after the entered tribes and the
+    /// leaderboard are in.
     pub fn with_possible(mut self, pool: &[PoolCard]) -> Self {
+        if !lists_on(self.turn.value) {
+            for opponent in &mut self.opponents {
+                opponent.possible.clear();
+            }
+            return self;
+        }
         let seen: Vec<String> = self.tribes.iter().map(|t| t.tribe.clone()).collect();
         let (lobby, source) = lobby_tribes(&self.entered_tribes, &seen);
         let duos = self.is_duos;
@@ -214,9 +229,28 @@ mod tests {
     }
 
     #[test]
-    fn tier_three_or_more_or_unknown_lists_nothing() {
+    fn tier_three_adds_tier_three() {
         let lobby = strings(&["BEAST"]);
-        for tier in [Some(3), Some(6), None, Some(0), Some(-1)] {
+        let p = possible_for(3, Some(3), (&lobby, Source::Entered), &pool(), false).unwrap();
+        assert_eq!(
+            ids(&p),
+            ["BEAST_1", "NEUTRAL_1", "AMALGAM_2", "BEAST_2", "BEAST_3"]
+        );
+    }
+
+    #[test]
+    fn only_turns_two_and_three_get_lists() {
+        assert!(lists_on(Some(2)));
+        assert!(lists_on(Some(3)));
+        for turn in [None, Some(0), Some(1), Some(4), Some(9), Some(-2)] {
+            assert!(!lists_on(turn), "{turn:?}");
+        }
+    }
+
+    #[test]
+    fn an_unknown_tier_lists_nothing() {
+        let lobby = strings(&["BEAST"]);
+        for tier in [None, Some(0), Some(-1), Some(8)] {
             assert_eq!(
                 possible_for(3, tier, (&lobby, Source::Entered), &pool(), false),
                 None,

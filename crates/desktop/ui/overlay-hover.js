@@ -1,9 +1,10 @@
 // The hover card (T-306, T-307). The app watches the mouse over the game's
 // own leaderboard and says which place is hovered (hover.rs) and where the
-// card goes (screen_fit.rs); this file only draws that opponent's card from
-// the live state overlay.js already has: hero, tier, health, record, the last
-// board met with its round and, at tier 1 or 2, the minions they could have
-// (labelled "possible"). Our own slot shows nothing. Text is set with
+// card goes: the top of the game window, centred (screen_fit.rs, T-309); this
+// file only draws that opponent's card from the live state overlay.js already
+// has: hero, tier, health, record, the last board met with its round in one
+// row and, on game turns 2 and 3, the minions they could have (labelled
+// "possible"). Our own slot shows nothing. Text is set with
 // textContent only. Own scope; it uses overlay.js's drawing helpers.
 "use strict";
 
@@ -72,17 +73,14 @@ window.TLHover = (() => {
     return block;
   }
 
-  // Centred on the slot, moved to stay inside the screen (the same rule as
-  // screen_fit::card_top); taller than the screen, it is cut to it.
+  // Where the app put it (screen_fit::place_card): inside the screen, cut
+  // at its bottom when taller.
   function position() {
     const p = hover.card;
     card.style.left = `${Math.round(p.x)}px`;
+    card.style.top = `${Math.round(p.y)}px`;
     card.style.width = `${Math.round(p.width)}px`;
-    card.style.maxHeight = `${Math.round(p.bottom - p.top)}px`;
-    const height = Math.min(card.offsetHeight, p.bottom - p.top);
-    const top = Math.min(Math.max(p.center_y - height / 2, p.top), p.bottom - height);
-    card.style.top = `${Math.round(top)}px`;
-    card.dataset.side = p.side;
+    card.style.maxHeight = `${Math.round(p.max_height)}px`;
   }
 
   function render() {

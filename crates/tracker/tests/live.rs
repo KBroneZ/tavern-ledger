@@ -67,6 +67,44 @@ fn live_state_equals_the_saved_report_for_the_same_log() {
 }
 
 #[test]
+fn the_live_turn_follows_the_shop_phases_of_the_log() {
+    // TURN 1 is the first shop (turn 1), TURN 2 its combat (still turn 1),
+    // TURN 3 the second shop (turn 2), and so on (D-049).
+    for name in [
+        "solo_game",
+        "duo_game",
+        "real/b253216_solo",
+        "real/b253216_duos",
+    ] {
+        let log = fixture(name);
+        let mut reader = LogReader::default();
+        let mut seen = Vec::new();
+        for line in log.lines() {
+            reader.feed(line);
+            if line.contains("Entity=GameEntity tag=TURN value=") {
+                let Some(report) = reader.snapshot_current() else {
+                    continue;
+                };
+                let tag: i64 = line
+                    .rsplit("value=")
+                    .next()
+                    .and_then(|v| v.trim().parse().ok())
+                    .expect("a turn number");
+                let turn = live_of(&report).turn.value;
+                if tag >= 1 {
+                    assert_eq!(turn, Some((tag + 1) / 2), "{name} TURN {tag}");
+                }
+                seen.push(turn);
+            }
+        }
+        assert!(seen.contains(&Some(2)), "{name}: reaches turn 2");
+        if name.starts_with("real/") {
+            assert!(seen.contains(&Some(4)), "{name}: reaches turn 4");
+        }
+    }
+}
+
+#[test]
 fn a_finished_game_reads_as_over_and_an_unfinished_one_as_playing() {
     let phase_of = |name: &str| {
         let mut reader = LogReader::default();

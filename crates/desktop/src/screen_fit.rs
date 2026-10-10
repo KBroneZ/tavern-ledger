@@ -108,74 +108,59 @@ pub fn overlay_area(screen: &Screen) -> (Area, f64) {
     (area, scale)
 }
 
-/// Space kept between the leaderboard and the card, and from screen edges.
+/// Space kept between the card and the game window's or the screen's edges.
 pub const GAP: f64 = 8.0;
 /// The card is never narrower than this, even on a tiny screen.
 const MIN_CARD_WIDTH: f64 = 120.0;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Side {
-    Right,
-    Left,
-}
-
-/// Where the hover card goes, in the overlay window's own pixels. The page
-/// measures the card's height and puts it at `center_y`, moved to stay
-/// between `top` and `bottom`; taller than that, it is cut to that height.
+/// Where the hover card goes, in the overlay window's own pixels: its
+/// top-left corner, its width and the most height it may take before it is
+/// cut (the page measures the rest).
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct CardPlace {
     pub x: f64,
+    pub y: f64,
     pub width: f64,
-    pub side: Side,
-    pub top: f64,
-    pub bottom: f64,
-    pub center_y: f64,
+    pub max_height: f64,
 }
 
-/// Puts a card of `want_width` next to `anchor` (the hovered slot) inside
-/// `bounds` (the overlay window): to its right when it fits, else to its
-/// left, else on the side with more room, narrower.
-pub fn place_card(anchor: Area, bounds: Area, want_width: f64) -> CardPlace {
+/// Puts a card of `want_width` at the top of `game` (the game window's
+/// client area), centred on it, like the board strip the game itself shows
+/// (T-309, D-049). It stays inside `bounds` (the overlay window, which covers
+/// the monitor holding the game): narrower than the game window or the
+/// screen when it must be, moved in when the game window reaches past the
+/// screen's edge.
+pub fn place_card(game: Area, bounds: Area, want_width: f64) -> CardPlace {
     let inner_left = bounds.x + GAP;
     let inner_right = bounds.right() - GAP;
-    let room_right = inner_right - (anchor.right() + GAP);
-    let room_left = (anchor.x - GAP) - inner_left;
-    let want = want_width.max(MIN_CARD_WIDTH);
-    let (side, room) = if room_right >= want {
-        (Side::Right, room_right)
-    } else if room_left >= want {
-        (Side::Left, room_left)
-    } else if room_right >= room_left {
-        (Side::Right, room_right)
+    let screen_room = (inner_right - inner_left).max(MIN_CARD_WIDTH.min(bounds.w));
+    let game_room = if game.usable() {
+        game.w - 2.0 * GAP
     } else {
-        (Side::Left, room_left)
+        screen_room
     };
-    let max_width = (inner_right - inner_left).max(MIN_CARD_WIDTH.min(bounds.w));
-    let width = want.min(room.max(MIN_CARD_WIDTH)).min(max_width);
-    let x = match side {
-        Side::Right => anchor.right() + GAP,
-        Side::Left => anchor.x - GAP - width,
+    let width = want_width
+        .max(MIN_CARD_WIDTH)
+        .min(game_room.max(MIN_CARD_WIDTH))
+        .min(screen_room);
+    let center = if game.usable() {
+        game.x + game.w / 2.0
+    } else {
+        bounds.x + bounds.w / 2.0
     };
-    let x = x.clamp(bounds.x, (bounds.right() - width).max(bounds.x));
-    let top = bounds.y + GAP;
-    let bottom = (bounds.bottom() - GAP).max(top);
+    let x = (center - width / 2.0).clamp(bounds.x, (bounds.right() - width).max(bounds.x));
+    let top = if game.usable() { game.y } else { bounds.y };
+    // `clamp` needs its lowest bound at most its highest, even on a window
+    // shorter than two gaps.
+    let highest = bounds.y + GAP.min(bounds.h);
+    let lowest = (bounds.bottom() - GAP).max(highest);
+    let y = (top + GAP).clamp(highest, lowest);
     CardPlace {
         x,
+        y,
         width,
-        side,
-        top,
-        bottom,
-        center_y: (anchor.y + anchor.h / 2.0).clamp(top, bottom),
+        max_height: (bounds.bottom() - GAP - y).max(0.0),
     }
-}
-
-#[cfg(test)]
-/// The top of a card of `height` centred on `place.center_y`, moved to stay
-/// inside `top..bottom` (the page does the same with the measured height).
-pub fn card_top(place: &CardPlace, height: f64) -> f64 {
-    let height = height.min(place.bottom - place.top);
-    (place.center_y - height / 2.0).clamp(place.top, place.bottom - height)
 }
 
 #[cfg(test)]
@@ -255,60 +240,102 @@ mod tests {
         assert_eq!(overlay_area(&broken), (s.whole, 1.0));
     }
 
-    #[test]
-    fn the_card_goes_right_of_the_leaderboard_when_it_fits() {
-        let slot = area(200.0, 400.0, 80.0, 90.0);
-        let p = place_card(slot, SCREEN, 360.0);
-        assert_eq!(p.side, Side::Right);
-        assert_eq!(p.x, 280.0 + GAP);
-        assert_eq!(p.width, 360.0);
-        assert_eq!(p.center_y, 445.0);
+    const UHD: Area = Area {
+        x: 0.0,
+        y: 0.0,
+        w: 3840.0,
+        h: 2112.0,
+    };
+
+    fn inside(p: &CardPlace, bounds: Area) -> bool {
+        p.x >= bounds.x
+            && p.x + p.width <= bounds.right()
+            && p.y >= bounds.y
+            && p.y + p.max_height <= bounds.bottom()
     }
 
     #[test]
-    fn the_card_flips_left_when_the_right_has_no_room() {
-        let slot = area(1700.0, 400.0, 80.0, 90.0);
-        let p = place_card(slot, SCREEN, 360.0);
-        assert_eq!(p.side, Side::Left);
-        assert_eq!(p.x, 1700.0 - GAP - 360.0);
-        assert!(p.x >= 0.0);
+    fn the_card_is_centred_at_the_top_of_a_full_screen_game() {
+        for (bounds, game) in [
+            (SCREEN, area(0.0, 0.0, 1920.0, 1080.0)),
+            (UHD, area(0.0, 0.0, 3840.0, 2160.0)),
+        ] {
+            let p = place_card(game, bounds, 640.0);
+            assert_eq!(p.width, 640.0);
+            assert_eq!(p.x + p.width / 2.0, game.w / 2.0, "centred");
+            assert_eq!(p.y, GAP);
+            assert!(inside(&p, bounds), "{p:?}");
+        }
     }
 
     #[test]
-    fn with_room_on_neither_side_the_card_shrinks_but_stays_on_screen() {
-        let small = area(0.0, 0.0, 500.0, 400.0);
-        let slot = area(150.0, 100.0, 80.0, 60.0);
-        let p = place_card(slot, small, 360.0);
-        assert!(p.width < 360.0);
-        assert!(p.x >= small.x && p.x + p.width <= small.right(), "{p:?}");
+    fn a_window_away_from_the_origin_gets_the_card_at_its_own_top() {
+        let game = area(500.0, 200.0, 1280.0, 720.0);
+        let p = place_card(game, SCREEN, 640.0);
+        assert_eq!(p.x, 500.0 + 640.0 - 320.0);
+        assert_eq!(p.y, 200.0 + GAP);
+        assert_eq!(p.max_height, 1080.0 - GAP - p.y);
+    }
+
+    #[test]
+    fn a_small_window_shrinks_the_card_to_it() {
+        let game = area(100.0, 100.0, 400.0, 300.0);
+        let p = place_card(game, SCREEN, 640.0);
+        assert_eq!(p.width, 400.0 - 2.0 * GAP);
+        assert_eq!(p.x, 100.0 + GAP);
+        assert!(inside(&p, SCREEN));
     }
 
     #[test]
     fn a_card_wider_than_the_screen_is_cut_to_the_screen() {
         let tiny = area(0.0, 0.0, 300.0, 200.0);
-        let p = place_card(area(10.0, 10.0, 20.0, 20.0), tiny, 5000.0);
-        assert!(p.x >= 0.0 && p.x + p.width <= 300.0, "{p:?}");
+        let p = place_card(area(0.0, 0.0, 300.0, 200.0), tiny, 5000.0);
+        assert!(inside(&p, tiny), "{p:?}");
+        let p = place_card(
+            area(0.0, 0.0, 90.0, 60.0),
+            area(0.0, 0.0, 90.0, 60.0),
+            640.0,
+        );
+        assert!(p.x >= 0.0 && p.x + p.width <= 90.0, "{p:?}");
     }
 
     #[test]
-    fn the_card_never_goes_above_or_below_the_screen() {
-        let p = place_card(area(200.0, 1050.0, 80.0, 90.0), SCREEN, 360.0);
-        let top = card_top(&p, 500.0);
-        assert!(top >= GAP && top + 500.0 <= 1080.0 - GAP, "{top}");
-        let p = place_card(area(200.0, -40.0, 80.0, 60.0), SCREEN, 360.0);
-        assert_eq!(card_top(&p, 300.0), GAP);
-        // Taller than the screen: cut to it, starting at the top.
-        let p = place_card(area(200.0, 500.0, 80.0, 60.0), SCREEN, 360.0);
-        assert_eq!(card_top(&p, 5000.0), GAP);
+    fn a_window_past_the_screen_edge_keeps_the_card_on_screen() {
+        // Mostly on this screen, but reaching past its left and top edges.
+        let game = area(-300.0, -100.0, 1280.0, 720.0);
+        let p = place_card(game, SCREEN, 640.0);
+        assert!(inside(&p, SCREEN), "{p:?}");
+        assert_eq!(p.y, GAP);
+        // Past the right edge.
+        let p = place_card(area(1500.0, 0.0, 1280.0, 720.0), SCREEN, 640.0);
+        assert_eq!(p.x + p.width, 1920.0);
     }
 
     #[test]
-    fn a_monitor_left_of_the_primary_works_in_its_own_pixels() {
-        let bounds = area(0.0, 0.0, 1280.0, 1032.0);
-        let game_slot = area(-1700.0, 500.0, 80.0, 90.0).in_frame((-1920.0, 0.0), 1.5);
-        assert!((game_slot.x - 146.666).abs() < 0.01);
-        let p = place_card(game_slot, bounds, 360.0);
-        assert!(p.x + p.width <= bounds.right());
+    fn on_a_second_scaled_monitor_the_card_is_in_that_overlay_s_pixels() {
+        // Game full screen on a 4K monitor at 150% right of a 1080p primary:
+        // the overlay covers that monitor; the game is given in its pixels.
+        let bounds = area(0.0, 0.0, 2560.0, 1408.0);
+        let game = area(1920.0, 0.0, 3840.0, 2160.0).in_frame((1920.0, 0.0), 1.5);
+        let p = place_card(game, bounds, 640.0);
+        assert_eq!(p.x, 1280.0 - 320.0);
+        assert_eq!(p.y, GAP);
+        assert!(inside(&p, bounds));
+    }
+
+    #[test]
+    fn a_window_shorter_than_two_gaps_does_not_break_the_placement() {
+        let flat = area(0.0, 0.0, 400.0, 10.0);
+        let p = place_card(area(0.0, 0.0, 400.0, 10.0), flat, 640.0);
+        assert_eq!(p.y, GAP);
+        assert_eq!(p.max_height, 0.0);
+    }
+
+    #[test]
+    fn with_no_usable_game_window_the_card_is_centred_on_the_screen() {
+        let p = place_card(area(f64::NAN, 0.0, 0.0, 0.0), SCREEN, 640.0);
+        assert_eq!(p.x, 640.0);
+        assert_eq!(p.y, GAP);
     }
 
     #[test]

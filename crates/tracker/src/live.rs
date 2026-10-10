@@ -91,6 +91,10 @@ pub struct LiveGame {
     pub teammate_hero: Sourced<HeroRef>,
     /// The number of the last combat the log has.
     pub last_combat: Sourced<i64>,
+    /// The game turn now: the number of the newest shop phase in the shop
+    /// record (1 for the first shop; its combat keeps the same number), the
+    /// same turn the shop record and the rounds use (T-309, D-049).
+    pub turn: Sourced<i64>,
     /// Our own seats (ours and, in Duos, the teammate's): the leaderboard
     /// slot that holds them shows nothing on hover.
     pub own_seats: Vec<i64>,
@@ -199,6 +203,7 @@ pub fn live_game(report: &Value) -> LiveGame {
         hero: recap.hero,
         teammate_hero: recap.teammate_hero,
         last_combat: Sourced::log(view.rounds.keys().next_back().copied()),
+        turn: Sourced::log(turn_now(report)),
         own_seats: own.clone(),
         own_place: Sourced::log(None),
         leaderboard_slots: None,
@@ -217,6 +222,17 @@ pub fn live_game(report: &Value) -> LiveGame {
         warnings: texts(report, "warnings"),
         problems: texts(report, "problems"),
     }
+}
+
+/// The newest shop turn's number, from the report's shop record.
+fn turn_now(report: &Value) -> Option<i64> {
+    report
+        .pointer("/shop/turns")?
+        .as_array()?
+        .last()?
+        .get("turn")?
+        .as_i64()
+        .filter(|t| *t >= 1)
 }
 
 /// The same rule as [`current_health`]: the last point, or the one before it
@@ -725,6 +741,76 @@ mod tests {
         assert_eq!(first.place.value, Some(1));
         let tiers: Vec<_> = first.tiers.iter().map(|t| t.value).collect();
         assert_eq!(tiers, [Some(1), Some(2)]);
+    }
+
+    /// A shop record whose newest turn is `turn` (none for 0).
+    fn at_turn(mut report: Value, turn: i64) -> Value {
+        let turns: Vec<Value> = (1..=turn).map(|t| json!({"turn": t})).collect();
+        report["shop"] = json!({"turns": turns});
+        report
+    }
+
+    fn pool() -> Vec<crate::possible::PoolCard> {
+        vec![crate::possible::PoolCard {
+            id: "NEUTRAL_1".into(),
+            tier: 1,
+            tribes: Vec::new(),
+            duos_only: false,
+        }]
+    }
+
+    #[test]
+    fn the_game_turn_is_the_newest_shop_turn() {
+        assert_eq!(live_game(&solo(vec![], "incomplete")).turn.value, None);
+        assert_eq!(
+            live_game(&at_turn(solo(vec![], "incomplete"), 0))
+                .turn
+                .value,
+            None
+        );
+        let live = live_game(&at_turn(solo(vec![], "incomplete"), 5));
+        assert_eq!(live.turn.value, Some(5));
+        assert_eq!(live.turn.source, Source::Log);
+    }
+
+    #[test]
+    fn possible_minions_only_on_turns_two_and_three_in_solo_and_duos() {
+        let solo_lobby = [
+            slot(1, Some(1), Some(1)),
+            slot(2, Some(2), Some(1)),
+            slot(3, Some(3), Some(2)),
+            slot(4, Some(4), Some(1)),
+        ];
+        let duos_lobby = [
+            slot(1, Some(1), Some(1)),
+            slot(2, Some(1), Some(1)),
+            slot(3, Some(2), Some(2)),
+            slot(4, Some(2), Some(1)),
+            slot(5, Some(3), Some(1)),
+            slot(6, Some(3), Some(1)),
+        ];
+        let tribes = ["BEAST".to_string()];
+        for (name, report, lobby) in [
+            ("solo", solo(vec![], "incomplete"), &solo_lobby[..]),
+            ("duos", duos(vec![]), &duos_lobby[..]),
+        ] {
+            for turn in 1..=4 {
+                let live = live_game(&at_turn(report.clone(), turn))
+                    .with_leaderboard(lobby)
+                    .with_entered_tribes(Some(&tribes))
+                    .with_possible(&pool());
+                let listed = live.opponents.iter().all(|o| {
+                    o.possible.len() == o.seats.len()
+                        && o.possible.iter().all(|p| p.source == Source::Possible)
+                });
+                let none = live.opponents.iter().all(|o| o.possible.is_empty());
+                if turn == 2 || turn == 3 {
+                    assert!(listed, "{name} turn {turn}: every opponent hero listed");
+                } else {
+                    assert!(none, "{name} turn {turn}: nothing listed");
+                }
+            }
+        }
     }
 
     #[test]
