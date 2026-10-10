@@ -28,7 +28,8 @@ The user wants the exact lobby tribes ("all the other apps have them; I won't go
    - Clean-room plan: how we would find the data ourselves without HearthMirror's code; how it breaks on patches and how the app says "unsupported version" instead of false data.
    - What changes in the docs, the site and the privacy text (absolute rules 3 and 8: no false "only reads logs" claims).
    - Draft **D-063** (pending the user's OK) that would amend D-004 for this one read.
-5. Research doc `docs/research/lobby-tribes-exact.md`, plan row T-326 notes, draft D-063; one PR through the hub.
+5. **What else other apps take from memory** (the user's request, 2026-10-11: "see what else the other apps get, to understand what they do without trouble, and use it too"). From their public docs, feature lists, changelogs and issues only: a table of every data item HDT, Firestone and similar apps get from memory (for example: the player's and opponents' MMR or rating, opponents' names and BattleTags, the lobby's tribes, anomalies, quests and rewards, hero options, the player's collection, deck info, …). For each: where they say it comes from, whether the game shows it to the player on screen (D-004: we only show what the player could see), whether it touches other players' personal data (GDPR, absolute rule 6), how Blizzard has treated it (sources), and a recommendation: **use** (shown in game, low risk), **maybe** (needs a user call), or **no**. Fold the "use" items into the D-063 draft so the user approves one scope, not item by item.
+6. Research doc `docs/research/lobby-tribes-exact.md`, plan row T-326 notes, draft D-063; one PR through the hub.
 
 ## Out of scope
 
