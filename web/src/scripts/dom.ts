@@ -31,6 +31,17 @@ export function cell(text: string, className?: string): HTMLTableCellElement {
   return td;
 }
 
+/**
+ * Enables a form's submit button. The pages ship it disabled, so a form
+ * sent before its script runs cannot fall back to a plain GET that would
+ * put the email (and password) in the address.
+ */
+export function ready(form: HTMLFormElement): void {
+  for (const button of form.querySelectorAll<HTMLButtonElement>('button[type="submit"]')) {
+    button.disabled = false;
+  }
+}
+
 /** Runs `work` with the button disabled, so a form cannot be sent twice. */
 export async function busy<T>(button: HTMLButtonElement, work: () => Promise<T>): Promise<T> {
   button.disabled = true;

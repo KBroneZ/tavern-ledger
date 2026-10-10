@@ -1,7 +1,7 @@
 // End-to-end run of the website's account flow against the local Supabase
 // stack (T-104c), with the same functions the pages use:
-// sign up, confirm through the local mail catcher, set the profile, public
-// profile, export, the delete-account checks (origin, recent sign-in) and
+// sign up, confirm through the local mail catcher, password reset and the
+// other email links (D-048), set the profile, public profile, export, the delete-account checks (origin, recent sign-in) and
 // deletion, then a check that nothing of the user remains.
 //
 // Skipped unless TAVERN_SUPABASE_LOCAL=1 and `npx supabase start` is running.
@@ -20,14 +20,18 @@ import type { SupabaseClient, SupportedStorage } from "@supabase/supabase-js";
 import {
   deleteAccount,
   exportAll,
+  finishAuthLink,
   loadOwnProfile,
   loadPublicProfile,
   makeClient,
+  requestPasswordReset,
   saveProfile,
+  setNewPassword,
   signIn,
   signUp,
 } from "../../src/lib/api.ts";
-import { CHECK_EMAIL } from "../../src/lib/auth.ts";
+import { CHECK_EMAIL, RESET_SENT } from "../../src/lib/auth.ts";
+import { parseAuthLink } from "../../src/lib/authLink.ts";
 import type { SiteConfig } from "../../src/lib/config.ts";
 import { deleteOutcome } from "../../src/lib/deleteAccount.ts";
 
@@ -82,6 +86,13 @@ async function confirmationLink(mail: string, email: string): Promise<string> {
   throw new Error("no confirmation email arrived");
 }
 
+/** Where an email link's /auth/v1/verify sends the browser. */
+async function landing(link: string): Promise<URL> {
+  const res = await fetch(link, { redirect: "manual" });
+  await res.body?.cancel();
+  return new URL(res.headers.get("location") ?? "");
+}
+
 async function deleteMail(mail: string, email: string): Promise<void> {
   await fetch(`${mail}/api/v1/search?query=${encodeURIComponent(`to:"${email}"`)}`, { method: "DELETE" });
 }
@@ -108,7 +119,7 @@ describe("website account flow on the local stack", { skip: !ENABLED && "set TAV
   const s = ENABLED ? stack() : ({} as Stack);
   const config: SiteConfig = { url: s.url, anonKey: s.anon };
   const email = `web-e2e-${randomBytes(6).toString("hex")}@example.test`;
-  const password = randomBytes(12).toString("base64url");
+  let password = randomBytes(12).toString("base64url");
   const client: SupabaseClient = ENABLED ? makeClient(config, memoryStorage()) : ({} as SupabaseClient);
   let userId = "";
   const fileName = () => `${userId}/${SESSION}-1.json.gz`;
@@ -134,15 +145,66 @@ describe("website account flow on the local stack", { skip: !ENABLED && "set TAV
     const outcome = await signUp(client, email, password, `${SITE}/account/`);
     assert.deepEqual(outcome, { kind: "check-email", message: CHECK_EMAIL });
     const link = await confirmationLink(s.mail, email);
-    const res = await fetch(link, { redirect: "manual" });
-    const location = res.headers.get("location") ?? "";
-    assert.ok(location.startsWith(`${SITE}/account/`), "the link goes back to the account page");
-    const code = new URL(location).searchParams.get("code");
-    assert.ok(code, "PKCE code in the redirect");
-    const { data, error } = await client.auth.exchangeCodeForSession(code);
-    assert.equal(error, null);
+    const target = await landing(link);
+    assert.equal(target.origin + target.pathname, `${SITE}/account/`, "the link goes back to the account page");
+    const parsed = parseAuthLink(target.search, target.hash);
+    assert.equal(parsed.kind, "code", "PKCE code in the redirect");
+    const finished = await finishAuthLink(client, config, parsed);
+    assert.deepEqual(finished, { recovery: false, message: "Your email is confirmed.", tone: "ok" });
+    const { data } = await client.auth.getUser();
     userId = data.user?.id ?? "";
     assert.match(userId, /^[0-9a-f-]{36}$/);
+  });
+
+  test("password reset: the link opens the new password form and only the new password works", async () => {
+    await deleteMail(s.mail, email);
+    const outcome = await requestPasswordReset(client, email, `${SITE}/account/`);
+    assert.deepEqual(outcome, { kind: "check-email", message: RESET_SENT });
+    const nobody = `nobody-${randomBytes(4).toString("hex")}@example.test`;
+    assert.deepEqual(await requestPasswordReset(makeClient(config, memoryStorage()), nobody, `${SITE}/account/`), outcome);
+
+    const link = await confirmationLink(s.mail, email);
+    assert.match(link, /type=recovery/);
+    const target = await landing(link);
+    assert.equal(target.origin + target.pathname, `${SITE}/account/`);
+    const parsed = parseAuthLink(target.search, target.hash);
+    assert.equal(parsed.kind, "code");
+    assert.deepEqual(await finishAuthLink(client, config, parsed), { recovery: true, message: null, tone: "info" });
+
+    const elsewhere = makeClient(config, memoryStorage());
+    assert.equal(await signIn(elsewhere, email, password), null);
+    const newPassword = randomBytes(12).toString("base64url");
+    assert.equal(await setNewPassword(client, newPassword), null);
+    assert.ok((await elsewhere.auth.getUser()).error, "the session signed in elsewhere is ended");
+    assert.equal((await client.auth.getUser()).error, null, "the one that reset stays");
+    const other = makeClient(config, memoryStorage());
+    assert.ok(await signIn(other, email, password), "the old password is refused");
+    assert.equal(await signIn(other, email, newPassword), null);
+    password = newPassword;
+
+    // The same link again: refused, and the page can say why.
+    const again = await landing(link);
+    assert.deepEqual(parseAuthLink(again.search, again.hash), { kind: "error", code: "otp_expired" });
+  });
+
+  test("a link made without PKCE (as from the dashboard) is explained and its session ended", async () => {
+    const sessions = () => psql(`select count(*) from auth.sessions where user_id = '${userId}'`);
+    const before = sessions();
+    const res = await service("/auth/v1/admin/generate_link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "magiclink", email, redirect_to: `${SITE}/account/` }),
+    });
+    assert.equal(res.status, 200);
+    const body = (await res.json()) as { action_link?: string; properties?: { action_link?: string } };
+    const action = body.action_link ?? body.properties?.action_link ?? "";
+    const target = await landing(action);
+    const parsed = parseAuthLink(target.search, target.hash);
+    assert.equal(parsed.kind, "implicit");
+    assert.equal(sessions(), String(Number(before) + 1), "the link made a session");
+    const outcome = await finishAuthLink(makeClient(config, memoryStorage()), config, parsed);
+    assert.match(outcome.message ?? "", /for the Tavern Ledger app/);
+    assert.equal(sessions(), before, "and the site ended it");
   });
 
   test("sign-up and sign-in answers do not reveal that the email exists", async () => {
@@ -219,7 +281,10 @@ describe("website account flow on the local stack", { skip: !ENABLED && "set TAV
     assert.equal(data.games[0].hero_card_id, "BG20_HERO_202");
     assert.equal(data.files.length, 1);
     assert.ok(data.identities.length >= 1);
-    assert.ok(data.auth_events.length >= 1);
+    const actions = data.auth_events.map((e: { payload?: { action?: string } }) => e.payload?.action);
+    for (const action of ["user_signedup", "login", "user_recovery_requested", "user_modified"]) {
+      assert.ok(actions.includes(action), `${action} in ${actions.join(", ")}`);
+    }
     assert.deepEqual(data.file_contents, [
       { name: fileName(), encoding: "gzip+base64", data: gz.toString("base64") },
     ]);

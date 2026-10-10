@@ -218,7 +218,8 @@ Not secrets: `delete-account` reads `SITE_ORIGINS`, which `config.toml` sets to 
 | Email OTP / link expiry | 3600 s | as `config.toml` |
 | Anonymous sign-ins, phone, OAuth providers, MFA | off | not used |
 | Rate limits | emails 30 an hour (Supabase's default once custom SMTP is on), sign-ups and sign-ins 30 per 5 minutes per IP, token verifications 30 per 5 minutes per IP, token refreshes 150 per 5 minutes per IP | the defaults; low enough for a project that is not public |
-| Email templates | Supabase's defaults (the magic link and confirmation go through `/auth/v1/verify`, which the desktop and the site's PKCE flow need) | branding later |
+| Email templates | Supabase's defaults (the magic link, confirmation, invite and reset links go through `/auth/v1/verify` via `{{ .ConfirmationURL }}`, which the desktop and the site's PKCE flow need; the reset template checked in the dashboard on 2026-10-10) | branding later; the site also reads `?token_hash=` links if a template ever uses them (D-048) |
+| Audit logs → Write audit logs to the database | **on**: was off; the user turns it on before sign-ups open (section 10.13) | the export's `auth_events` and the security log in the privacy policy need `auth.audit_log_entries` (D-048, section 10.13) |
 | GraphQL (`pg_graphql`) | off if the extension is on | as the local schema; nothing uses it |
 
 ### 10.4 Auth emails: custom SMTP with Cloudflare Email Sending (D-030, replaced by 10.4b)
@@ -323,6 +324,18 @@ Ruled out: **Postmark** (100 a month, US only, message content kept 45 days on t
 
 Residual risk (security review): `lm-bounces.tavernledger.net` points at Lettermint's shared `bounces.lmta.net`, whose SPF covers Lettermint's shared sending IPs. Mail with `From: tavernledger.net` that is not signed by our DKIM key could still pass DMARC on SPF if Lettermint let another of its customers use our return path; Lettermint ties a domain to the project that verified it, so this needs a fault at Lettermint, the same kind of trust the apex SPF already gives Cloudflare. Kept `p=reject`, `sp=reject`, `adkim=s`. Follow-ups: DMARC aggregate reports (`rua`) to an address we read, so spoofing would show; check for dangling CNAMEs whenever a subdomain is removed; return to `aspf=s` if Lettermint ever allows it.
 
+**DMARC aggregate reports (session 037, proposed; the user changes DNS).** With mail now sent as `@tavernledger.net`, aggregate reports show who sends as the domain and whether it passes, which is how a broken DKIM key or someone spoofing the domain would show up. Proposal:
+
+1. Cloudflare → `tavernledger.net` → Email → Email Routing → Routing rules → Create address: custom address `dmarc`, action "Send to an email", destination the same mailbox as `contact@` (already verified). Catch-all stays off.
+2. Cloudflare → DNS → Records → the TXT record `_dmarc` → Edit → content:
+
+   `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=r; rua=mailto:dmarc@tavernledger.net`
+
+   (only `rua=` is new; TTL Auto, DNS only). The address is on the same domain, so no extra authorization record (`_report._dmarc`) is needed.
+3. Check: `nslookup -type=TXT _dmarc.tavernledger.net 1.1.1.1` shows the new content; the first reports (zip or gzip XML from Google, Microsoft and others, usually one a day per receiver that got mail from the domain) arrive in the mailbox within a day or two of the next auth email.
+
+What the reports hold: the receiving organisation, the sending IPs, counts, and SPF/DKIM/DMARC results; no message content and no recipient addresses. With only auth emails going out, expect a few small reports a week. No `ruf` (forensic reports, which can carry message parts): not wanted. Cloudflare's own DMARC Management (Email → DMARC Management) can read the same reports in the dashboard, but it adds its own `rua` address; not needed for now.
+
 ### 10.12 Live state (session 029, Lettermint, D-041)
 
 1. 2026-10-10: the user created the Lettermint account (free plan, team and project "Tavern Ledger") and accepted its terms. Domain `tavernledger.net` added with **manual** records (not Lettermint's "Connect Cloudflare", which would take access to the zone), all DNS only: CNAME `lm-bounces` → `bounces.lmta.net`, CNAME `lm1._domainkey` and `lm2._domainkey` → `lm1`/`lm2.3dm4d36ohcsxjqu5wphadtvkt4.dkim.lmta.net`. DMARC changed to `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=r` (Lettermint refuses to verify while `aspf=s`; reason in 10.11). No apex SPF change. Lettermint showed four verified records; "Automatic DKIM rotation" is on.
@@ -332,6 +345,15 @@ Residual risk (security review): `lm-bounces.tavernledger.net` points at Letterm
 5. End-to-end test (the user's own account, created by the user in the dashboard with auto-confirm): one magic link requested with the publishable key (`POST /auth/v1/otp`, `create_user: false`, `redirect_to=https://tavernledger.net/account/`) answered 200 and arrived in about a second. Headers: `From: "Tavern Ledger" <noreply@tavernledger.net>`; DKIM pass for `d=tavernledger.net` (selector `lm1`) and for `bounces.lmta.net`; SPF pass for `lm-bounces.tavernledger.net`; **DMARC pass** (`p=REJECT`); delivered over TLS 1.3 from `nl-ams.lmta.net`; **no `List-Unsubscribe`** or `List-Unsubscribe-Post`. **The sign-in link points straight at `https://vgttflmexobrqhcyxjks.supabase.co/auth/v1/verify?token=…&type=magiclink&redirect_to=https://tavernledger.net/account/`** (no tracker). The raw message was read through the user's Gmail and its local copy deleted; the token was never written down.
 6. Same test, on the site: the user signed in at `/signin/`, downloaded the export (`tavern-ledger-export-2026-10-10.json`, 1.7 KB, with `format`, `format_version`, `exported_at`, `account`, `identities`, `sessions`, `profile`, `games`, `files`, `file_contents`, `auth_events`, `mfa_factors`, `upload_events`) and deleted the account; the dashboard's user list is empty afterwards. **Found:** `auth_events` was empty although the user had just signed in, so the hosted project may not write Auth's audit log to `auth.audit_log_entries` (**unverified**: Supabase may keep it only in its own logs). Follow-up in the plan: check the setting and update S5 in the data inventory.
 7. Brevo removed from DNS: TXT `brevo-code:…` at the apex, CNAME `brevo1._domainkey` and `brevo2._domainkey`; public resolvers no longer return them. Closing the Brevo account is the user's call (asked at the end of the session).
+
+### 10.13 Sign-in follow-ups (session 037, T-104i, D-048)
+
+1. **Empty `auth_events`, cause:** Authentication → Audit Logs → "Write audit logs to the database" is **off** on the hosted project (read in the dashboard on 2026-10-10; the page says Auth then keeps the log only in its own logs, which the Free plan keeps one day). Nothing in the migrations, the export's filter or row-level security was wrong: the local stack writes the table and the website's local end-to-end test finds `user_signedup`, `login`, `user_recovery_requested` and `user_modified` in the export. The switch has no SQL or `config.toml` equivalent. **[user]** Turn it on and press Save changes (on the phone: supabase.com → project tavern-ledger → Authentication → Audit Logs, under Configuration). Check: sign in on the site, download the export, `auth_events` has a `login` entry.
+2. **Retention:** migration `20261011090000_auth_events_retention.sql` makes the daily sweep also remove audit entries older than 90 days (pgTAP `auth_events_retention.test.sql`).
+3. **Email links on the site:** every kind lands on `/account/` and says what happened; the address is cleaned before any request (D-048). Checked on the local stack in Chrome on 2026-10-10: "Forgot password?" → reset email (Mailpit) → the link opens "Set a new password" at a clean `/account/` → saved → account shown; the same link again says it expired or was already used; a dashboard-style invite link (`generate_link`, no PKCE) says "Your email is confirmed. To choose a password, use “Forgot password?”…", leaves the hash empty, keeps the visitor's own session and leaves the invitee no session on the server. No new redirect URL: the reset link comes back to `https://tavernledger.net/account/`, already on the list (10.3), and the site's CSP is unchanged.
+4. **Local stack:** `email_sent` raised from 2 to 30 an hour in `config.toml` (the hosted value with custom SMTP), so the website's (sign-up and reset) and the desktop's end-to-end tests can run twice in an hour.
+5. **DMARC `rua`:** proposed in 10.11; waiting on the user.
+6. **Privacy policy and terms** out of draft (effective 10 October 2026, the user's approval). Facts read for them on 2026-10-10: Cloudflare Customer DPA version 6.4 of 2026-04-03; the zone's Challenge Passage is 30 minutes; Email Routing keeps routing events 31 days; Cloudflare's privacy policy sets no fixed period for request logs.
 
 ## Second opinion (ChatGPT, 2026-10-09)
 
@@ -359,6 +381,8 @@ Reviewed this plan and the site's code before any Cloudflare change. Applied: cl
 - Edge Functions auth headers and `verify_jwt`: https://supabase.com/docs/guides/functions/auth-headers ; function secrets: https://supabase.com/docs/guides/functions/secrets
 - Scheduling Edge Functions (pg_cron, pg_net, Vault): https://supabase.com/docs/guides/functions/schedule-functions ; pg_net headers in the queue: https://supabase.com/docs/guides/troubleshooting/database-roles-can-read-request-headers-queued-by-pg_net-ad6357
 - Password security (leaked password protection, Pro only): https://supabase.com/docs/guides/auth/password-security ; redirect URLs: https://supabase.com/docs/guides/auth/redirect-urls
+- Auth audit logs (database switch; read 2026-10-10): https://supabase.com/docs/guides/auth/audit-logs
+- Cloudflare Customer DPA (version 6.4; read 2026-10-10): https://www.cloudflare.com/cloudflare-customer-dpa/ ; Email Routing analytics (31 days): https://developers.cloudflare.com/email-routing/get-started/email-routing-analytics/ ; Cloudflare privacy policy: https://www.cloudflare.com/privacypolicy/
 - Cloudflare Email Sending SMTP (port 465 only): https://developers.cloudflare.com/email-service/api/send-emails/smtp/
 - Supabase custom SMTP: https://supabase.com/docs/guides/auth/auth-smtp ; rate limits: https://supabase.com/docs/guides/auth/rate-limits ; Send Email Hook: https://supabase.com/docs/guides/auth/auth-hooks/send-email-hook
 
