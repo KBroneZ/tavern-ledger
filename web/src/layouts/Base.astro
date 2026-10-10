@@ -65,7 +65,7 @@ const canonical = noindex ? null : new URL(path, Astro.site).href;
         )}
       </nav>
     </header>
-    <main id="main" class={`layout-${layout}`}>
+    <main id="main" class={`layout-${layout}`} tabindex="-1">
       <slot />
     </main>
     <footer class="colophon">

@@ -257,7 +257,7 @@ test("the home page's pinned scene is one described picture plus five captions a
 
 test("every number on the home page that is not real is labelled as made up", () => {
   const html = readFileSync(join(DIST, "index.html"), "utf8");
-  const big = [...html.matchAll(/<span class="big">\s*(\d+)\s*<small>([^<]+)<\/small>/g)];
+  const big = [...html.matchAll(/<p class="big">\s*(\d+)\s*<small>([^<]+)<\/small>/g)];
   assert.ok(big.length > 0);
   for (const [, , label] of big) assert.match(label, /made-up example/);
 });
@@ -281,7 +281,16 @@ test("the still picture is the default: every animation sits behind the two scro
       if (rest[end] === "{") depth++;
       else if (rest[end] === "}" && --depth === 0) break;
     }
-    assert.match(rest.slice(at, end + 1), /prefers-reduced-motion:\s*no-preference/, "the moving scene also waits for no-preference");
+    // Everything inside sits in one nested @media that also asks for no-preference.
+    const inner = rest.slice(open + 1, end).trim();
+    assert.match(inner, /^@media[^{]*prefers-reduced-motion:\s*no-preference[^{]*\{/, "the moving scene also waits for no-preference");
+    let level = 0;
+    let closes = 0;
+    for (let i = 0; i < inner.length; i++) {
+      if (inner[i] === "{") level++;
+      else if (inner[i] === "}" && --level === 0) closes++;
+    }
+    assert.equal(closes, 1, "nothing in the @supports block outside its @media");
     rest = rest.slice(0, at) + rest.slice(end + 1);
     at = rest.indexOf("@supports", at);
   }

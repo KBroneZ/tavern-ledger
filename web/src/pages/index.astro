@@ -1,11 +1,14 @@
 ---
 import Base from "../layouts/Base.astro";
+import "../styles/home.css";
+import "../styles/scene.css";
 import { readConfig } from "../lib/config.ts";
 
 const accountsOpen = readConfig(import.meta.env) !== null;
 
-// The scene's five steps (D-052). The picture's description says the same
-// as the captions together, for screen readers.
+// The scene's five steps (D-052). The captions stay readable to screen
+// readers in both the moving and the still scene; the picture's description
+// tells the same story in one go.
 const steps = [
   { title: "Your screen, while you play", text: "Seen from the side, it comes apart into layers of glass." },
   { title: "The board", text: "Your minions. Drawn by the game, as always." },
@@ -17,7 +20,7 @@ const steps = [
   },
 ];
 const sceneLabel =
-  "The game screen seen from the side, split into four panes of glass: the board, the tavern and the leaderboard, all drawn by the game, and Tavern Ledger's pane in front, lit, with a card for the hero pointed at and a few small notes. Drawn with our own simple shapes, no game art.";
+  "The game screen seen from the side, split into four panes of glass: the board with your minions, the tavern where you buy and the leaderboard of eight heroes, all drawn by the game, and Tavern Ledger's pane in front, lit, with a few notes at the side and a card for the hero pointed at.";
 ---
 
 <Base
@@ -29,7 +32,7 @@ const sceneLabel =
     <span class="lamp lamp-1" aria-hidden="true"></span>
     <span class="lamp lamp-2" aria-hidden="true"></span>
     <span class="lamp lamp-3" aria-hidden="true"></span>
-    <h1 id="hero-heading">Pull up a stool. <em>We kept your games.</em></h1>
+    <h1 id="hero-heading">Pull up a stool. <span class="lit">We kept your games.</span></h1>
     <p class="lead">
       A free Windows app that reads Hearthstone's own log on your PC and keeps every Battlegrounds
       game: your hero, your place and the boards you faced.
@@ -45,7 +48,7 @@ const sceneLabel =
     <div class="pin-stage">
       <div class="caption-col">
         <div class="pips" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-        <ol class="captions">
+        <ol class="captions" role="list">
           {
             steps.map((step, i) => (
               <li class={`cap c${i + 1}`}>
@@ -90,7 +93,7 @@ const sceneLabel =
     </p>
     <div class="trio">
       <div class="glass">
-        <span class="big">37<small>games kept, in this made-up example</small></span>
+        <p class="big">37 <small>games kept, in this made-up example</small></p>
         <h3>Every game, every place</h3>
         <p>Your hero and where you finished, Solo and Duos apart.</p>
       </div>
@@ -109,9 +112,12 @@ const sceneLabel =
     <section class="safe glass" id="safe" aria-labelledby="safe-heading">
       <div>
         <h2 id="safe-heading" class="sec-h">Safe for your account</h2>
-        <p class="sec-p">It only reads the files the game already writes on your PC.</p>
+        <p class="sec-p">
+          It reads the log files the game already writes on your PC and, for the overlay, where
+          your pointer is over the game window.
+        </p>
       </div>
-      <ul>
+      <ul role="list">
         <li>It never reads the game's memory, adds code to it or changes its files.</li>
         <li>It never plays or clicks for you.</li>
         <li>It never shows what you could not see on your own screen.</li>
@@ -121,7 +127,7 @@ const sceneLabel =
 
   <section class="sec yours" aria-labelledby="yours-heading">
     <h2 id="yours-heading" class="sec-h">Your games stay yours</h2>
-    <ul>
+    <ul role="list">
       <li><b>Private until you say</b><span>Your profile is hidden until you make it public.</span></li>
       <li><b>Take it all with you</b><span>Download everything the site keeps about you in one file.</span></li>
       <li><b>Gone when you ask</b><span>Delete your account and every game with it.</span></li>
