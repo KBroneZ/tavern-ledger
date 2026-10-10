@@ -35,7 +35,8 @@ use tracker::provenance::{row_sources, RowSources};
 use tracker::recap::{recap, Recap};
 use tracker::report_bundle::{self, BundleInput};
 use tracker::setup::{check_setup, client_config_path, default_log_config_path};
-use tracker::stats::Stats;
+use tracker::stats::curious::{CardNames, Curious};
+use tracker::stats::{HeroLinks, Stats};
 use tracker::store::{GameKey, ParserStamp, Store};
 use tracker::Watcher;
 
@@ -138,22 +139,46 @@ fn list_games(state: State<'_, Arc<AppState>>) -> Vec<GameRow> {
 /// Totals, heroes and tribes for the window, from the same rows it lists:
 /// the window renders them and computes nothing (T-102).
 #[tauri::command]
-fn game_stats(state: State<'_, Arc<AppState>>) -> Stats {
+fn game_stats(state: State<'_, Arc<AppState>>, cards: State<'_, card_data::Cards>) -> Stats {
+    let links = card_data::hero_links(&cards);
     let games = state.games.lock().unwrap_or_else(|e| e.into_inner());
     let entries = state.entries.lock().unwrap_or_else(|e| e.into_inner());
-    stats_of(&games, entries.as_ref())
+    stats_of(&games, entries.as_ref(), &links)
 }
 
-/// Games played with the reconnect dev tool are not counted (D-043).
-fn stats_of(rows: &[GameRow], entries: Option<&Entries>) -> Stats {
+/// Games played with the reconnect dev tool are not counted (D-043). Skins
+/// are grouped by the game's own link looked up in `links` (T-214); the
+/// D-019 name rule only where that link is missing, and labelled so.
+fn stats_of(rows: &[GameRow], entries: Option<&Entries>, links: &HeroLinks) -> Stats {
     let counted = rows.iter().filter(|row| !row.dev_reconnect);
-    tracker::stats::compute_with_entered(counted.map(|row| {
-        let key = GameKey {
-            session: row.session.clone(),
-            index: row.index,
-        };
-        (&row.report, entries.and_then(|e| e.entry(&key)))
-    }))
+    tracker::stats::compute_with_links(
+        counted.map(|row| {
+            let key = GameKey {
+                session: row.session.clone(),
+                index: row.index,
+            };
+            (&row.report, entries.and_then(|e| e.entry(&key)))
+        }),
+        links,
+    )
+}
+
+/// Fun totals over every counted game (T-216), each with its source and
+/// the games it covers. Card names (for golden Brann and Titus) come from
+/// the card data; without it that stat says so.
+#[tauri::command]
+fn curious_stats(state: State<'_, Arc<AppState>>, cards: State<'_, card_data::Cards>) -> Curious {
+    let store = card_data::store_with_data(&cards);
+    let games = state.games.lock().unwrap_or_else(|e| e.into_inner());
+    let name = |id: &str| store.and_then(|s| s.name(id));
+    let names: Option<CardNames<'_>> = store.map(|_| &name as _);
+    curious_of(&games, names)
+}
+
+/// Games played with the reconnect dev tool are not counted here either.
+fn curious_of(rows: &[GameRow], names: Option<CardNames<'_>>) -> Curious {
+    let counted = rows.iter().filter(|row| !row.dev_reconnect);
+    tracker::stats::curious::compute(counted.map(|row| &row.report), names)
 }
 
 /// The recap of one game in the history: results, health, tribes and
@@ -755,6 +780,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             list_games,
             game_stats,
+            curious_stats,
             status,
             game_recap,
             preview_problem_report,
@@ -842,6 +868,7 @@ mod tests {
         let stats = stats_of(
             &[row("GT_BATTLEGROUNDS", 3), row("GT_BATTLEGROUNDS_DUO", 1)],
             None,
+            &HeroLinks::new(),
         );
         let solo = &stats.modes[0];
         assert_eq!(
@@ -850,6 +877,78 @@ mod tests {
         );
         assert_eq!(solo.totals.average_place, Some(3.0));
         assert_eq!(stats.modes[1].totals.wins, Some(1));
+    }
+
+    fn plain_row(report: serde_json::Value, dev_reconnect: bool) -> GameRow {
+        GameRow {
+            session: "Hearthstone_2026_10_09_00_00_00".into(),
+            index: 1,
+            parser: None,
+            sources: row_sources("", &serde_json::Value::Null),
+            dev_reconnect,
+            report,
+        }
+    }
+
+    #[test]
+    fn the_stats_group_skins_by_the_games_link_and_fall_back_to_the_name_rule() {
+        let base = serde_json::json!({
+            "status": "ok", "game_type": "GT_BATTLEGROUNDS", "hero": "BG20_HERO_102", "final_place": 1,
+        });
+        // The D-019 rule cannot group this skin (another prefix); the game's link can.
+        let skin = serde_json::json!({
+            "status": "ok", "game_type": "GT_BATTLEGROUNDS", "hero": "TB_BaconShop_HERO_102_SKIN_G",
+            "final_place": 3, "skin_parents": {"TB_BaconShop_HERO_102_SKIN_G": 59_999},
+        });
+        // An older record without the link: the name rule, labelled.
+        let old = serde_json::json!({
+            "status": "ok", "game_type": "GT_BATTLEGROUNDS", "hero": "BG20_HERO_102_SKIN_C", "final_place": 2,
+        });
+        let rows = [
+            plain_row(base, false),
+            plain_row(skin, false),
+            plain_row(old, false),
+        ];
+        let links = HeroLinks::from([(59_999, "BG20_HERO_102".to_string())]);
+        let stats = stats_of(&rows, None, &links);
+        let heroes = &stats.modes[0].heroes;
+        assert_eq!(heroes.len(), 1, "all three under one hero");
+        assert_eq!(heroes[0].tally.games, 3);
+        assert_eq!(heroes[0].variants_by_rule, ["BG20_HERO_102_SKIN_C"]);
+        assert_eq!(heroes[0].grouping, tracker::provenance::Source::Inferred);
+        // Without the card data the linked skin stays apart: nothing is guessed.
+        let plain = stats_of(&rows, None, &HeroLinks::new());
+        assert_eq!(plain.modes[0].heroes.len(), 2);
+    }
+
+    #[test]
+    fn curious_stats_skip_reconnect_games_and_use_the_card_names() {
+        let sold = |gold: i64| {
+            serde_json::json!({
+                "status": "ok", "game_type": "GT_BATTLEGROUNDS", "hero": "H", "final_place": 1,
+                "shop": {"turns": [{
+                    "turn": 1, "start_ms": 0, "end_ms": 1000, "tier": 1, "gold": 3,
+                    "gold_spent": gold, "rolls": 0, "free_rolls": 0, "buys": [], "spell_buys": 0,
+                    "sells": ["BG_GOLDEN_G"], "freezes": 0, "offers": [], "actions": 0,
+                    "extra_gold": 0, "sell_gold": 1, "buy_gold": 0, "spell_gold": 0,
+                    "free_refreshes": 0, "passes": null,
+                }], "tier_ups": [], "actions": [], "start_ms": 0, "end_ms": 1000, "ended": true},
+            })
+        };
+        let rows = [plain_row(sold(3), false), plain_row(sold(100), true)];
+        let name = |id: &str| (id == "BG_GOLDEN_G").then(|| "Brann Bronzebeard".to_string());
+        let curious = curious_of(&rows, Some(&name as CardNames<'_>));
+        let stat = |key: &str| curious.stats.iter().find(|s| s.key == key).unwrap().clone();
+        assert_eq!(curious.games, 1, "the reconnect game is not counted");
+        assert_eq!(stat("gold_spent").value, Some(3));
+        assert_eq!(stat("golden_brann_titus_sold").value, Some(1));
+        let blind = curious_of(&rows, None);
+        let stat = blind
+            .stats
+            .iter()
+            .find(|s| s.key == "golden_brann_titus_sold")
+            .unwrap();
+        assert_eq!(stat.value, None, "no card data: unknown, not 0");
     }
 
     #[test]
@@ -879,7 +978,7 @@ mod tests {
             rows.iter().map(|r| r.dev_reconnect).collect::<Vec<_>>(),
             [true, false]
         );
-        let stats = stats_of(&rows, None);
+        let stats = stats_of(&rows, None, &HeroLinks::new());
         assert_eq!(stats.modes[0].totals.games, 1);
         assert_eq!(stats.modes[0].totals.average_place, Some(7.0));
         assert_eq!(stats.modes[0].heroes[0].tally.games, 1);
@@ -936,7 +1035,7 @@ mod tests {
         assert_eq!(r.tribes[0].tribe, "MURLOC", "the tavern list is untouched");
         let games = state.games.lock().unwrap();
         let entries = state.entries.lock().unwrap();
-        let stats = stats_of(&games, entries.as_ref());
+        let stats = stats_of(&games, entries.as_ref(), &HeroLinks::new());
         assert_eq!(stats.modes[0].games_with_entered_tribes, 1);
         assert_eq!(stats.modes[0].games_with_tribes, 1);
     }

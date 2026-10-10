@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="upload.css">
 <link rel="stylesheet" href="shop.css">
+<link rel="stylesheet" href="curious.css">
 </head>
 <body>
   <header class="masthead">
@@ -53,6 +54,12 @@
       <p class="note">Off until you turn it on. Each finished game's report goes up: heroes, card ids, places and boards. Never player names, BattleTags or ratings.</p>
     </details>
 
+    <div id="view-tabs" class="view-tabs" role="tablist" aria-label="Views">
+      <button type="button" role="tab" id="tab-games" aria-controls="panel-games" aria-selected="true">Your games</button>
+      <button type="button" role="tab" id="tab-curious" aria-controls="panel-curious" aria-selected="false" tabindex="-1">Curious stats</button>
+    </div>
+
+    <div id="panel-games" class="tab-panel" role="tabpanel" aria-labelledby="tab-games">
     <nav class="modes" aria-label="Game mode">
       <button type="button" data-mode="GT_BATTLEGROUNDS" aria-pressed="false">Solo</button>
       <button type="button" data-mode="GT_BATTLEGROUNDS_DUO" aria-pressed="false">Duos</button>
@@ -133,6 +140,12 @@
       <div id="shop-stats-body"></div>
     </section>
 
+    <section class="ledger hero-picks" aria-labelledby="hero-picks-title">
+      <h2 id="hero-picks-title">Hero picks</h2>
+      <p class="note">The heroes the game offered you at the start of each game, and the one you picked. Only your own offers are in the log.</p>
+      <div id="hero-picks-body"></div>
+    </section>
+
     <section class="ledger" aria-labelledby="ledger-title">
       <h2 id="ledger-title">Ledger</h2>
       <table>
@@ -151,6 +164,13 @@
         <tbody id="games" data-focus-scope></tbody>
       </table>
       <p id="empty" class="empty" hidden>No games yet. Play a Battlegrounds game and it will appear here when it ends.</p>
+    </section>
+    </div>
+
+    <section id="panel-curious" class="tab-panel curious" role="tabpanel" aria-labelledby="tab-curious" hidden>
+      <h2 id="curious-title">Curious stats</h2>
+      <p class="note">Totals over all your games, Solo and Duos together. Each one says where it comes from and how many games back it; a game saved before a value was kept is left out of that count, never added as zero.</p>
+      <div id="curious-body"></div>
     </section>
 
     <section class="legend" aria-labelledby="legend-title">
@@ -213,6 +233,9 @@
   <script src="focus-keeper.js"></script>
   <script src="cards.js"></script>
   <script src="shop.js"></script>
+  <script src="extras.js"></script>
+  <script src="curious.js"></script>
+  <script src="tabs.js"></script>
   <script src="app.js"></script>
   <script src="upload.js"></script>
   <script src="overlay-switch.js"></script>

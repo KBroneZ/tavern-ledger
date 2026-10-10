@@ -93,7 +93,23 @@ pub struct OpponentRecord {
     pub lost: usize,
     pub tie: usize,
     pub unknown: usize,
+    /// Where won, lost and tie come from: the log when the game recorded
+    /// every one of them, inferred when any was worked out from health,
+    /// unknown when there is no result at all.
+    pub counts_source: Source,
     pub combats: Vec<Combat>,
+}
+
+/// How many of a game's combat results the game recorded (from the log),
+/// how many were worked out from health (inferred) and how many are unknown.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct ResultSources {
+    pub from_log: usize,
+    pub inferred: usize,
+    pub unknown: usize,
+    /// False for a game saved before the parser read the game's own results
+    /// (revision 4): re-read with `--reparse` to get them.
+    pub recorded: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -135,6 +151,8 @@ pub struct Recap {
     pub missing_rounds: Vec<i64>,
     /// How results are worked out, and how Duos counts.
     pub record_basis: &'static str,
+    /// Every combat result of the game by source (T-206, D-055).
+    pub results: ResultSources,
     /// Tavern offers, most common first. Not the lobby's tribes.
     pub tribes: Vec<TribeOffer>,
     pub tribes_source: Source,
@@ -394,6 +412,61 @@ fn count(combats: &[Combat], outcome: Outcome) -> usize {
     combats.iter().filter(|c| c.outcome == outcome).count()
 }
 
+/// Log when every result is the game's own, inferred when any was worked
+/// out from health, unknown when there is none.
+fn counts_source<'a>(combats: impl IntoIterator<Item = &'a Combat>) -> Source {
+    let mut out = Source::Unknown;
+    for c in combats {
+        match c.source {
+            Source::Inferred => return Source::Inferred,
+            Source::Log => out = Source::Log,
+            _ => {}
+        }
+    }
+    out
+}
+
+/// A round saved by a parser of revision 4 or later has a `result` key
+/// (null when the game recorded none); older records have no key at all.
+fn results_recorded(view: &View) -> bool {
+    view.rounds.values().any(|r| r.get("result").is_some())
+}
+
+fn result_sources(view: &View, records: &Records) -> ResultSources {
+    let all = records
+        .combats
+        .values()
+        .flatten()
+        .chain(&records.unattributed);
+    let by = |source: Source| all.clone().filter(|c| c.source == source).count();
+    ResultSources {
+        from_log: by(Source::Log),
+        inferred: by(Source::Inferred),
+        unknown: by(Source::Unknown),
+        recorded: results_recorded(view),
+    }
+}
+
+/// Every combat of a game in round order: the one result per round the
+/// recap shows (T-216 streaks).
+pub(crate) fn combats_in_order(report: &Value) -> Vec<Combat> {
+    let records = read_combats(&View::new(report));
+    let mut all: Vec<Combat> = records
+        .combats
+        .into_values()
+        .flatten()
+        .chain(records.unattributed)
+        .collect();
+    all.sort_by_key(|c| c.round);
+    all
+}
+
+/// The player's own health before the first combat and after each one,
+/// with a point of no health for each round the log lacks (T-216).
+pub(crate) fn own_health_points(report: &Value) -> Vec<HealthPoint> {
+    own_health(&View::new(report))
+}
+
 fn opponent_record(view: &View, seats: Vec<i64>, combats: Vec<Combat>) -> OpponentRecord {
     let heroes = seats
         .iter()
@@ -412,6 +485,7 @@ fn opponent_record(view: &View, seats: Vec<i64>, combats: Vec<Combat>) -> Oppone
         lost: count(&combats, Outcome::Lost),
         tie: count(&combats, Outcome::Tie),
         unknown: count(&combats, Outcome::Unknown),
+        counts_source: counts_source(&combats),
         seats,
         combats,
     }
@@ -487,6 +561,7 @@ pub fn recap(report: &Value) -> Recap {
     let mode = mode_of(report);
     let status = text(report, "status");
     let records = read_combats(&view);
+    let results = result_sources(&view, &records);
     let tribes = tribes(report);
     Recap {
         game_type: Sourced::log(text(report, "game_type")),
@@ -507,6 +582,7 @@ pub fn recap(report: &Value) -> Recap {
                 opponent_record(&view, seats, combats)
             })
             .collect(),
+        results,
         unattributed: records.unattributed,
         missing_rounds: missing_rounds(&view),
         record_basis: if view.duos { BASIS_DUOS } else { BASIS_SOLO },
@@ -821,6 +897,64 @@ mod tests {
         assert_eq!(
             (c2.outcome, c2.source, c2.reason),
             (Outcome::Won, Source::Log, None)
+        );
+    }
+
+    #[test]
+    fn results_are_counted_by_source_and_an_older_record_says_not_recorded() {
+        // Rounds 1 and 2 from health, round 3 the game's own, round 4 unknown.
+        let mut report = solo(&[(2, 35, 40), (3, 35, 30), (4, 30, 40), (2, 25, 20)]);
+        let old = recap(&report);
+        assert_eq!(
+            old.results,
+            ResultSources {
+                from_log: 0,
+                inferred: 3,
+                unknown: 1,
+                recorded: false
+            }
+        );
+        assert_eq!(old.record[0].counts_source, Source::Inferred);
+        for round in 0..4 {
+            report["rounds"][round]["result"] = Value::Null;
+        }
+        report["rounds"][2]["result"] = json!("lost");
+        let r = recap(&report);
+        assert_eq!(
+            r.results,
+            ResultSources {
+                from_log: 1,
+                inferred: 2,
+                unknown: 1,
+                recorded: true
+            }
+        );
+        let seat4 = r.record.iter().find(|o| o.seats == [4]).unwrap();
+        assert_eq!(
+            seat4.counts_source,
+            Source::Log,
+            "every result the game's own"
+        );
+        let seat2 = r.record.iter().find(|o| o.seats == [2]).unwrap();
+        assert_eq!(seat2.counts_source, Source::Inferred, "one from health");
+    }
+
+    #[test]
+    fn an_opponent_with_no_result_at_all_has_unknown_counts() {
+        let r = recap(&solo(&[(2, 35, 35)]));
+        assert_eq!(r.record[0].unknown, 1);
+        assert_eq!(r.record[0].counts_source, Source::Unknown);
+    }
+
+    #[test]
+    fn combats_come_in_round_order_across_opponents() {
+        let report = solo(&[(2, 35, 40), (3, 35, 30), (2, 35, 35)]);
+        let rounds: Vec<_> = combats_in_order(&report).iter().map(|c| c.round).collect();
+        assert_eq!(rounds, [1, 2, 3]);
+        assert_eq!(
+            own_health_points(&report).len(),
+            4,
+            "round 0 and three rounds"
         );
     }
 
