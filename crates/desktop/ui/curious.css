@@ -1,0 +1,101 @@
+/* Tabs of the main window, the "Curious stats" tab (T-216) and the hero pick
+   (T-209), in Lamplight glass (D-052). */
+
+/* Tabs: big display words on a rule; the selected one is lit amber from below. */
+.view-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.view-tabs [role="tab"] {
+  position: relative;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  background: transparent;
+  color: var(--dim);
+  font: 700 19px/1 var(--font-display);
+  font-stretch: 85%;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: color 120ms ease-out;
+}
+.view-tabs [role="tab"]::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: -1px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--amber);
+  box-shadow: 0 -4px 14px rgb(255 178 74 / 0.55);
+  opacity: 0;
+  transform: scaleX(0.4);
+  transition: opacity 160ms ease-out, transform 160ms ease-out;
+}
+.view-tabs [role="tab"]:hover { color: var(--text); }
+.view-tabs [role="tab"][aria-selected="true"] { color: var(--amber-hi); }
+.view-tabs [role="tab"][aria-selected="true"]::after { opacity: 1; transform: scaleX(1); }
+.tab-panel { display: flex; flex-direction: column; gap: calc(var(--space) * 1.1); }
+.tab-panel[hidden] { display: none; }
+
+/* Curious stats: glass tiles, the number set large, the source and the
+   game count under it; a tile with no data is quieter, never a 0. */
+.curious > h2 { margin: 0; }
+.curious > .note { margin: 0; color: var(--dim); max-width: 80ch; }
+.curious-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.curious-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px 16px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), inset 0 0 0 1px var(--line-soft), 0 14px 30px rgb(0 0 0 / 0.3);
+}
+.curious-label { margin: 0; color: var(--dim); font: 600 14px/1.3 var(--font-body); letter-spacing: 0; }
+.curious-value { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 2px 0 0; }
+.curious-number {
+  font: 700 clamp(30px, 3.2vw, 40px)/1.05 var(--font-display);
+  font-stretch: 80%;
+  font-variant-numeric: tabular-nums;
+  color: var(--amber-hi);
+}
+.curious-value.none .curious-number { color: var(--dim); font-size: 22px; }
+.curious-card { font: 700 20px/1.2 var(--font-display); font-stretch: 85%; color: var(--amber-hi); }
+.curious-times { color: var(--dim); font-size: 13.5px; }
+.curious-art { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; }
+.curious-coverage { margin: 0; color: var(--text); font-size: 13.5px; font-weight: 600; }
+.curious-why { margin: 0; color: var(--dim); font-size: 13.5px; }
+.curious-basis { margin: 4px 0 0; color: var(--dim); font-size: 12.5px; }
+
+/* Hero pick in the recap: the offered heroes in a row, the picked one lit. */
+.pick-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; padding: 0; list-style: none; }
+.pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--dim);
+}
+.pick.picked { background: var(--panel-hi); box-shadow: inset 0 0 0 1.5px var(--amber); color: var(--text); }
+.pick-tag { margin-left: 6px; color: var(--amber-hi); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.results-line { margin-top: 0; }
+.hero-picks tbody th { padding: 8px; border-bottom: 1px solid var(--line-soft); color: var(--text); font-size: 15px; white-space: normal; }
+.shop-card.passed { outline: 1px dashed var(--info); }
+
+@media (prefers-reduced-motion: reduce) {
+  .view-tabs [role="tab"], .view-tabs [role="tab"]::after { transition: none; }
+}
+@media (forced-colors: active) {
+  .view-tabs [role="tab"][aria-selected="true"] { border-bottom: 3px solid Highlight; }
+  .curious-stat, .pick { border: 1.5px solid CanvasText; }
+  .pick.picked { border: 2.5px solid Highlight; }
+}

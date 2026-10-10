@@ -11,6 +11,8 @@
 //! ids (D-038, D-055); only when a game has no link, or the card data does not
 //! know it, by the D-019 card id rule, and those ids are listed apart.
 
+pub mod curious;
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::Serialize;

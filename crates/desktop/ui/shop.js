@@ -90,6 +90,13 @@ window.TLShop = (() => {
     if (t.buys.length) item.append(cardRow(ui, "Bought", t.buys, "bought"));
     if (t.spell_buys) item.append(ui.el("p", "note", `${plural(t.spell_buys, "tavern spell")} bought.`));
     if (t.sells.length) item.append(cardRow(ui, "Sold", t.sells, "sold"));
+    if (t.passes && t.passes.length) item.append(cardRow(ui, "Passed", t.passes, "passed"));
+    const gold = [
+      t.extra_gold && `${t.extra_gold} extra gold`,
+      t.sell_gold && `${t.sell_gold} gold from selling`,
+      t.free_refreshes && plural(t.free_refreshes, "free roll") + " the game gave",
+    ].filter(Boolean);
+    if (gold.length) item.append(ui.el("p", "note", `${gold.join(" · ")}.`));
     return item;
   }
 
@@ -102,7 +109,7 @@ window.TLShop = (() => {
     return item;
   }
 
-  function recapSection(shop, ui) {
+  function recapSection(shop, ui, isDuos) {
     const section = ui.el("section", "recap-part shop");
     const heading = ui.el("h3", null, "Shop and actions");
     const mark = ui.sourceMark(shop.source);
@@ -113,6 +120,10 @@ window.TLShop = (() => {
       return section;
     }
     const t = shop.totals;
+    if (!t) {
+      section.append(ui.withSource(ui.el("p", "empty", "No shop turn in the log."), "unknown"));
+      return section;
+    }
     const facts = ui.el("dl", "facts");
     facts.append(
       fact(ui, "APM (logged)", one(shop.apm), shop.apm_definition),
@@ -123,6 +134,8 @@ window.TLShop = (() => {
       fact(ui, "Minutes", one(shop.minutes)),
     );
     section.append(facts);
+    // Gold extras and free rolls (T-210): "not recorded" in older games, never 0.
+    section.append(window.TLExtras.factList(ui, window.TLExtras.shopExtras(t, isDuos, shop.turns)));
     section.append(ui.el("p", "note", shop.apm_definition));
     if (shop.ended === false) {
       section.append(ui.withSource(ui.el("p", "note", "The log stops before the game ends: the last turn may be cut short."), "unknown"));
@@ -172,7 +185,8 @@ window.TLShop = (() => {
       fact(ui, "Sells / game", one(s.sells)),
       fact(ui, "Gold spent / game", one(s.gold_spent)),
     );
-    parts.push(facts, ui.el("p", "note", s.apm_definition));
+    const extras = window.TLExtras.factList(ui, window.TLExtras.shopExtraStats(s));
+    parts.push(facts, extras, ui.el("p", "note", s.apm_definition));
     const notes = [
       s.not_recorded && `${s.not_recorded} saved by an older version (run tavern-watch --reparse while their logs are on disk)`,
       s.not_counted && `${s.not_counted} with the log cut short, no shop turn or an unreadable shop record`,

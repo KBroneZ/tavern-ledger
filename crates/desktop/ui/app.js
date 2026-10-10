@@ -10,6 +10,7 @@ const MODES = { GT_BATTLEGROUNDS: "Solo", GT_BATTLEGROUNDS_DUO: "Duos" };
 
 let allGames = [];
 let stats = { modes: [], legend: [] };
+let curious = null; // the "Curious stats" tab (T-216), all modes together
 let mode = null; // chosen game type; defaults to the mode with most games
 let userPicked = false;
 const OTHER = "OTHER"; // any other Battlegrounds type, so no game is hidden
@@ -465,6 +466,7 @@ function renderBreakdown(m) {
     ...entered.map((t) => enteredRow(t, m.games_with_entered_tribes, m.entered_tribes_source)),
   );
   TLShop.renderStats(m, SHOP_UI);
+  document.getElementById("hero-picks-body").replaceChildren(...TLExtras.heroPickTable(m.hero_picks, SHOP_UI));
 }
 
 // What shop.js needs to draw with the same marks and tooltips as this file.
@@ -674,17 +676,25 @@ function opponentRow(o) {
   }
   const chips = el("td", "chips");
   chips.append(...o.combats.map(combatChip));
-  // Won, lost and tie are our reading of health changes: inferred. An unknown count is not a result.
-  tr.append(who, countCell(o.won, "inferred"), countCell(o.lost, "inferred"), countCell(o.tie, "inferred"), countCell(o.unknown, "unknown"), chips);
+  // Won, lost and tie: from the log when the game recorded each one, inferred
+  // when any was worked out from health (D-055). An unknown count is not a result.
+  // No result at all against them: "—", not a count of 0 wins.
+  const src = o.counts_source;
+  const n = (v) => (src === "unknown" ? "—" : v);
+  tr.append(who, countCell(n(o.won), src), countCell(n(o.lost), src), countCell(n(o.tie), src), countCell(o.unknown, "unknown"), chips);
   return tr;
 }
 
 function recordTable(r) {
   const head = el("tr");
   head.append(el("th", null, r.is_duos ? "Opposing team" : "Opponent"));
+  // The mark on the headings: inferred when any result was worked out from
+  // health, unknown when the game has no result at all.
+  const counted = TLExtras.resultsLine(r.results).source;
   ["Won", "Lost", "Tie"].forEach((word) => {
     const th = el("th", "num", word);
-    th.append(sourceMark("inferred"));
+    const mark = sourceMark(counted);
+    if (mark) th.append(mark);
     head.append(th);
   });
   head.append(el("th", "num", "Unknown"), el("th", null, "Rounds"));
@@ -700,9 +710,12 @@ function recordTable(r) {
 
 function recordSection(r) {
   const section = el("section", "recap-part");
+  const results = TLExtras.resultsLine(r.results);
   const heading = el("h3", null, "Record against each opponent");
-  heading.append(sourceMark("inferred"));
+  const mark = sourceMark(results.source);
+  if (mark) heading.append(mark);
   section.append(heading, el("p", "note", r.record_basis));
+  if (results.text) section.append(withSource(el("p", "note results-line", results.text), results.source));
   section.append(r.record.length ? recordTable(r) : el("p", "empty", "No combat could be matched to an opponent."));
   if (r.unattributed.length) {
     const reasons = [...new Set(r.unattributed.map((c) => c.reason).filter(Boolean))];
@@ -776,7 +789,10 @@ function renderRecap(r) {
 function renderRecapNow(r) {
   const health = el("section", "recap-part");
   health.append(withSource(el("h3", null, "Your health over the rounds"), r.health_source), healthChart(r.health));
-  document.getElementById("recap-body").replaceChildren(recapFacts(r), health, recordSection(r), TLShop.recapSection(r.shop, SHOP_UI), enteredSection(r), tribesSection(r), messagesSection(r));
+  document.getElementById("recap-body").replaceChildren(
+    recapFacts(r), TLExtras.heroPickSection(r.hero_pick, SHOP_UI, portrait), health, recordSection(r),
+    TLShop.recapSection(r.shop, SHOP_UI, r.is_duos), enteredSection(r), tribesSection(r), messagesSection(r),
+  );
 }
 
 async function openRecap(game) {
@@ -829,6 +845,7 @@ function renderNow() {
   });
   renderTally(m, games.filter((g) => g.dev_reconnect === true).length);
   renderBreakdown(m);
+  TLCurious.render(curious, SHOP_UI, document.getElementById("curious-body"));
   renderLegend();
 }
 
@@ -838,10 +855,11 @@ let refreshSeq = 0;
 
 async function refreshGames() {
   const seq = ++refreshSeq;
-  const [games, fresh] = await Promise.all([invoke("list_games"), invoke("game_stats")]);
+  const [games, fresh, freshCurious] = await Promise.all([invoke("list_games"), invoke("game_stats"), invoke("curious_stats")]);
   if (seq !== refreshSeq) return;
   allGames = games.slice().reverse(); // newest first
   stats = fresh;
+  curious = freshCurious;
   // Also on every refresh: the first one can run before the app opened the entries.
   const freshLobby = await invoke("lobby_tribes_view");
   if (seq !== refreshSeq) return;
@@ -852,6 +870,9 @@ async function refreshGames() {
   render();
   renderLobby();
 }
+
+// "Your games" and "Curious stats" (T-216); both are drawn on every refresh.
+TLTabs.setup(document, "view-tabs");
 
 document.querySelectorAll(".modes button").forEach((button) => {
   button.addEventListener("click", () => {
