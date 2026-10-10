@@ -560,3 +560,122 @@ fn another_account_uploads_its_own_copy() {
     );
     assert_eq!(r.engine.status().counts.waiting, 1);
 }
+
+/// A stored answer from a server whose validator is at `version` (D-047).
+fn stored_by(r: &Rig, nth: usize, version: u32) -> Reply {
+    let (store, marks) = (Store::open(&r.dir).unwrap(), Marks::open(&r.dir).unwrap());
+    let (items, _) = pending(&store, &marks, &Reconnects::default(), Some(USER));
+    reply(
+        201,
+        json!({"result": "created", "sha256": items[nth].sha256, "validator": version}),
+    )
+}
+
+fn refused_by(version: u32) -> Reply {
+    reply(
+        400,
+        json!({"code": "invalid_report", "field": "report.x", "validator": version}),
+    )
+}
+
+/// Marks the waiting games refused as the app did before D-047: no version.
+fn refuse_as_before_d047(r: &Rig) {
+    let store = Store::open(&r.dir).unwrap();
+    let mut marks = Marks::open(&r.dir).unwrap();
+    let (items, _) = pending(&store, &marks, &Reconnects::default(), Some(USER));
+    for item in items {
+        marks
+            .record(Mark {
+                session: item.key.session.clone(),
+                index: item.key.index,
+                user: USER.into(),
+                sha256: item.sha256.clone(),
+                outcome: Outcome::Rejected,
+                code: Some("invalid_report".into()),
+                validator: None,
+                at: 1,
+            })
+            .unwrap();
+    }
+}
+
+#[test]
+fn games_refused_before_validator_versions_are_retried_once() {
+    let mut r = ready(&[(S1, 1, SOLO), (S1, 2, SOLO)]);
+    refuse_as_before_d047(&r);
+    assert_eq!(r.engine.status().counts.waiting, 2, "waiting again");
+    r.http.on(PUT, stored_by(&r, 0, 2));
+    r.http.on(PUT, refused_by(2));
+    assert_eq!(r.engine.run(Instant::now(), 10), Wake::Idle);
+    assert_eq!(puts(&r.http), vec![format!("{S1}/1"), format!("{S1}/2")]);
+    let counts = &r.engine.status().counts;
+    assert_eq!(
+        (counts.uploaded, counts.rejected, counts.waiting),
+        (1, 1, 0)
+    );
+    // Refused again by the same validator: not retried, also after a restart.
+    assert_eq!(r.engine.run(Instant::now(), 10), Wake::Idle);
+    let mut again = Engine::new(
+        r.dir.clone(),
+        Ok(server()),
+        r.http.clone(),
+        Box::new(r.tokens.clone()),
+    );
+    assert_eq!(again.run(Instant::now(), 10), Wake::Idle);
+    assert_eq!(puts(&r.http).len(), 2);
+}
+
+#[test]
+fn a_server_that_does_not_say_its_version_never_makes_a_retry_loop() {
+    let mut r = ready(&[(S1, 1, SOLO)]);
+    refuse_as_before_d047(&r);
+    r.http.on(
+        PUT,
+        reply(400, json!({"code": "invalid_report", "field": "report.x"})),
+    );
+    r.engine.run(Instant::now(), 10);
+    assert_eq!(r.engine.run(Instant::now(), 10), Wake::Idle);
+    assert_eq!(puts(&r.http).len(), 1);
+    assert_eq!(r.engine.status().counts.rejected, 1);
+}
+
+#[test]
+fn a_refused_game_is_retried_once_when_a_newer_validator_answers() {
+    let mut r = ready(&[(S1, 1, SOLO), (S1, 2, SOLO)]);
+    r.http.on(PUT, refused_by(2));
+    r.http.on(PUT, refused_by(2));
+    r.engine.run(Instant::now(), 10);
+    assert_eq!(r.engine.run(Instant::now(), 10), Wake::Idle);
+    assert_eq!(
+        puts(&r.http).len(),
+        2,
+        "not retried while the server is the same"
+    );
+
+    // The server is fixed (validator 3); the next game's answer says so and
+    // the refused games go straight after it.
+    add_game(&r.dir, S2, 1, 3);
+    r.http.on(PUT, stored_by(&r, 0, 3));
+    assert_eq!(r.engine.run(Instant::now(), 10), Wake::Now);
+    assert_eq!(r.engine.status().counts.waiting, 2);
+    r.http.on(PUT, stored_by(&r, 0, 3));
+    // A rolled-back server (an older version) refusing again: still once.
+    r.http.on(PUT, refused_by(2));
+    assert_eq!(r.engine.run(Instant::now(), 10), Wake::Idle);
+    assert_eq!(r.engine.run(Instant::now(), 10), Wake::Idle);
+    assert_eq!(
+        puts(&r.http),
+        vec![
+            format!("{S1}/1"),
+            format!("{S1}/2"),
+            format!("{S2}/1"),
+            format!("{S1}/1"),
+            format!("{S1}/2"),
+        ]
+    );
+    let counts = &r.engine.status().counts;
+    assert_eq!(
+        (counts.uploaded, counts.rejected, counts.waiting),
+        (2, 1, 0)
+    );
+}

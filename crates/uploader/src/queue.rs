@@ -3,7 +3,11 @@
 //! SHA-256 of the exact JSON sent and whether it was stored or refused. A game
 //! is waiting when its current record has no mark for this account and these
 //! bytes, so a game re-imported locally (the last record wins, D-015) is sent
-//! again, and a game the server refused is not retried until it changes.
+//! again, and a game the server refused is not retried until it changes or
+//! the server's validator moves on (D-047): every answer says the validator's
+//! version, and a game refused by an older one than the newest seen is sent
+//! once more. Its new mark carries at least the newest version, so a game is
+//! never retried in a loop.
 
 use std::collections::BTreeMap;
 use std::fs::{self, File, OpenOptions};
@@ -41,12 +45,21 @@ pub struct Mark {
     /// The server's error code for a refused game.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub code: Option<String>,
+    /// upload-game's validator version when it answered; `None` for marks
+    /// written before servers said it (D-047).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validator: Option<u32>,
     pub at: u64,
 }
+
+/// The version of servers from before D-047, which did not say it.
+pub const FIRST_VALIDATOR: u32 = 1;
 
 pub struct Marks {
     path: PathBuf,
     latest: BTreeMap<GameKey, Mark>,
+    /// The newest validator version any answer carried.
+    validator: u32,
     needs_newline: bool,
 }
 
@@ -56,6 +69,7 @@ impl Marks {
         let mut marks = Marks {
             path,
             latest: BTreeMap::new(),
+            validator: FIRST_VALIDATOR,
             needs_newline: false,
         };
         let file = match File::open(&marks.path) {
@@ -73,6 +87,7 @@ impl Marks {
             marks.needs_newline = !raw.ends_with(b"\n");
             // A broken line (a crash mid-write) only means that game is sent again.
             if let Ok(mark) = serde_json::from_slice::<Mark>(&raw) {
+                marks.saw(&mark);
                 let key = GameKey {
                     session: mark.session.clone(),
                     index: mark.index,
@@ -85,6 +100,17 @@ impl Marks {
 
     pub fn get(&self, key: &GameKey) -> Option<&Mark> {
         self.latest.get(key)
+    }
+
+    /// The newest validator version the server has answered with.
+    pub fn validator(&self) -> u32 {
+        self.validator
+    }
+
+    fn saw(&mut self, mark: &Mark) {
+        self.validator = self
+            .validator
+            .max(mark.validator.unwrap_or(FIRST_VALIDATOR));
     }
 
     pub fn record(&mut self, mark: Mark) -> io::Result<()> {
@@ -105,6 +131,7 @@ impl Marks {
         file.write_all(line.as_bytes())?;
         file.flush()?;
         self.needs_newline = false;
+        self.saw(&mark);
         let key = GameKey {
             session: mark.session.clone(),
             index: mark.index,
@@ -207,10 +234,12 @@ pub fn pending(
         let mark = marks
             .get(key)
             .filter(|m| Some(m.user.as_str()) == user && m.sha256 == sha256);
-        match mark.map(|m| m.outcome) {
-            Some(Outcome::Uploaded) => counts.uploaded += 1,
-            Some(Outcome::Rejected) => counts.rejected += 1,
-            None => {
+        match mark.map(|m| (m.outcome, m.validator)) {
+            Some((Outcome::Uploaded, _)) => counts.uploaded += 1,
+            // Refused by the newest validator seen. A mark from before D-047
+            // (no version) is older than any, so it is sent once more.
+            Some((Outcome::Rejected, Some(v))) if v >= marks.validator() => counts.rejected += 1,
+            Some((Outcome::Rejected, _)) | None => {
                 counts.waiting += 1;
                 items.push(Item {
                     key: key.clone(),
@@ -267,6 +296,7 @@ pub(crate) mod tests {
             sha256: item.sha256.clone(),
             outcome,
             code: None,
+            validator: Some(FIRST_VALIDATOR),
             at: 1,
         }
     }
@@ -466,5 +496,79 @@ pub(crate) mod tests {
             "the record after the broken line is readable"
         );
         assert_eq!(counts.uploaded, 2);
+    }
+
+    #[test]
+    fn a_refused_game_waits_again_only_for_a_newer_validator() {
+        let dir = temp_dir("validator");
+        let store = store_with(
+            &dir,
+            &[(S1, 1, "GT_BATTLEGROUNDS"), (S1, 2, "GT_BATTLEGROUNDS")],
+        );
+        let mut marks = Marks::open(&dir).unwrap();
+        assert_eq!(marks.validator(), 1, "servers before D-047 count as 1");
+        let (items, _) = pending(&store, &marks, &Reconnects::default(), Some("u"));
+        let refused = |item: &Item, validator| Mark {
+            validator,
+            code: Some("invalid_report".into()),
+            ..mark(item, "u", Outcome::Rejected)
+        };
+        // Refused before servers said their version: waiting again (once).
+        marks.record(refused(&items[0], None)).unwrap();
+        // Refused by the newest validator seen: stays refused.
+        marks.record(refused(&items[1], Some(2))).unwrap();
+        assert_eq!(marks.validator(), 2);
+        let (waiting, counts) = pending(&store, &marks, &Reconnects::default(), Some("u"));
+        assert_eq!(waiting.iter().map(|i| i.key.index).collect::<Vec<_>>(), [1]);
+        assert_eq!((counts.waiting, counts.rejected), (1, 1));
+
+        // A newer validator answered (any game): both refused games wait.
+        marks.record(refused(&items[0], Some(3))).unwrap();
+        let marks = Marks::open(&dir).unwrap();
+        assert_eq!(marks.validator(), 3, "kept across restarts");
+        let (waiting, _) = pending(&store, &marks, &Reconnects::default(), Some("u"));
+        assert_eq!(waiting.iter().map(|i| i.key.index).collect::<Vec<_>>(), [2]);
+    }
+
+    #[test]
+    fn marks_from_before_validator_versions_still_load() {
+        let dir = temp_dir("old-marks");
+        let line = json!({"session": S1, "index": 1, "user": "u", "sha256": "x",
+            "outcome": "rejected", "code": "invalid_report", "at": 1})
+        .to_string()
+            + "\n";
+        fs::write(dir.join(FILE_NAME), line).unwrap();
+        let marks = Marks::open(&dir).unwrap();
+        let key = GameKey {
+            session: S1.into(),
+            index: 1,
+        };
+        assert_eq!(marks.get(&key).unwrap().validator, None);
+        assert_eq!(marks.validator(), 1);
+    }
+
+    /// supabase/functions/upload-game/report_keys.json (D-047): the record the
+    /// app sends has exactly the keys upload-game checks.
+    #[test]
+    fn the_record_has_exactly_the_keys_upload_game_checks() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../supabase/functions/upload-game/report_keys.json");
+        let contract: Value = serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap();
+        let keys = |v: &Value| {
+            let mut k: Vec<String> = v.as_object().unwrap().keys().cloned().collect();
+            k.sort();
+            Value::from(k)
+        };
+        let dir = temp_dir("contract");
+        let store = store_with(&dir, &[(S1, 1, "GT_BATTLEGROUNDS")]);
+        let (items, _) = pending(
+            &store,
+            &Marks::open(&dir).unwrap(),
+            &Reconnects::default(),
+            None,
+        );
+        let body: Value = serde_json::from_slice(&items[0].body).unwrap();
+        assert_eq!(keys(&body), contract["keys"]["record"]);
+        assert_eq!(keys(&body["parser"]), contract["keys"]["parser"]);
     }
 }

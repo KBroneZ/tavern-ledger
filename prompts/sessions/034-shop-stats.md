@@ -51,7 +51,8 @@ The user wants every game to keep its economy: the minions offered in each shop 
 2. **Parser** (new revision, T-107): per game and per turn, the shop offers (card ids, turn, whether frozen in), rolls (free and paid), buys, sells, freezes, gold available and spent, tier-ups with the turn, and the list of logged player actions with their log time. Tests on synthetic logs (extend `tests/bg_log_builder.py`) and on the real fixtures (expected reports regenerated and checked by hand). Old saved games keep working and say "not recorded" until `--reparse`.
 3. **APM**: logged actions per minute of game (from the first shop turn to the end), per turn and per game, with the definition shown in the UI.
 4. **Recap**: a "Shop" section: turn by turn (tier, gold, rolls, buys, sells, offers with card pictures from the card data, frozen ones marked), tier-up turns, totals and APM. **Stats**: averages per game (rolls, gold spent, turn of each tier-up, APM), per hero too, apart for Solo and Duos.
-5. Plan rows T-204 and T-205 and notes, README, D-046, same PR.
+5. **Uploads**: every new field in the saved report must also be accepted by `supabase/functions/upload-game/validate.ts` (session 035, D-047, adds a contract test that fails when they drift; follow it). If 035 has not merged when you start, wait for it or ask the hub.
+6. Plan rows T-204 and T-205 and notes, README, D-046, same PR.
 
 ## Out of scope
 
