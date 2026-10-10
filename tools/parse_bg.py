@@ -227,10 +227,20 @@ def race_name(value: int) -> str:
 
 
 def is_golden(card_id: str | None) -> bool:
-    """Tripled minions have their own card id. The PREMIUM tag is only cosmetic."""
+    """Tripled minions have their own card id."""
     if not card_id:
         return False
     return card_id.endswith("_G") or card_id.startswith("TB_BaconUps_")
+
+
+def is_golden_minion(entity) -> bool:
+    """A board minion is golden when it has PREMIUM or a golden card id.
+
+    PREMIUM also marks cards that are always golden and golden tokens, which
+    have no golden id (session 052). It is set for a moment on minions set
+    aside during a triple in the shop, never on a board at a combat.
+    """
+    return bool(entity.tags.get(GameTag.PREMIUM)) or is_golden(entity.card_id)
 
 
 def hero_health(hero) -> int:
@@ -250,7 +260,7 @@ def board_of(game, controller: int) -> tuple[Minion, ...]:
     return tuple(
         Minion(e.card_id, e.tags.get(GameTag.ATK, 0), e.tags.get(GameTag.HEALTH, 0)
                - e.tags.get(GameTag.DAMAGE, 0), e.tags.get(GameTag.ZONE_POSITION, 0),
-               is_golden(e.card_id))
+               is_golden_minion(e))
         for e in minions
     )
 

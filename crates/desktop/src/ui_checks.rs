@@ -10,7 +10,7 @@ const INDEX: &str = include_str!("../ui/index.html");
 const OVERLAY: &str = include_str!("../ui/overlay.html");
 const SWITCH: &str = include_str!("../ui/overlay-switch.js");
 const APP: &str = include_str!("../ui/app.js");
-const OVERLAY_CSS: &str = include_str!("../ui/overlay.css");
+const OVERLAY_CSS_FILE: &str = include_str!("../ui/overlay.css");
 const LAYOUT: &str = include_str!("../ui/overlay-layout.js");
 const ROUND_TWO: &str = include_str!("../ui/round-two.js");
 const ROUND_TWO_CSS: &str = include_str!("../ui/round-two.css");
@@ -39,6 +39,12 @@ fn rule<'a>(css: &'a str, selector: &str) -> &'a str {
     let at = position(css, selector);
     let end = at + css[at..].find('}').unwrap();
     &css[at..end]
+}
+
+/// The stylesheet with LF line ends: a Windows checkout with
+/// `core.autocrlf=true` has CRLF in the working tree.
+fn overlay_css() -> String {
+    lf(OVERLAY_CSS_FILE)
 }
 
 fn position(page: &str, needle: &str) -> usize {
@@ -151,18 +157,21 @@ fn the_overlay_can_be_arranged_with_single_clicks() {
 #[test]
 fn the_overlay_buttons_are_at_least_24_pixels() {
     // WCAG 2.5.8: the toolbar and the move-and-size buttons share one rule.
-    let css = lf(OVERLAY_CSS);
-    let body = rule(&css, ".toolbar button,\n.arrange-pad button {");
+    let css = overlay_css();
+    let rule = position(&css, ".toolbar button,\n.arrange-pad button {");
+    let end = rule + css[rule..].find('}').unwrap();
+    let body = &css[rule..end];
     assert!(body.contains("min-width: 28px;") && body.contains("min-height: 28px;"));
 }
 
 #[test]
 fn the_overlay_controls_are_placed_away_from_the_panels() {
     // Not pinned to the top and bottom centre any more (T-319).
+    let css = overlay_css();
     for rule in [".toolbar {", ".key-hint {"] {
-        let at = position(OVERLAY_CSS, rule);
-        let end = at + OVERLAY_CSS[at..].find('}').unwrap();
-        assert!(!OVERLAY_CSS[at..end].contains("translateX"), "{rule}");
+        let at = position(&css, rule);
+        let end = at + css[at..].find('}').unwrap();
+        assert!(!css[at..end].contains("translateX"), "{rule}");
     }
     assert!(LAYOUT.contains("TLPlace.spot(") && LAYOUT.contains("TLPlace.padSpot("));
 }
@@ -170,11 +179,12 @@ fn the_overlay_controls_are_placed_away_from_the_panels() {
 #[test]
 fn the_focus_ring_has_two_colours() {
     // A light ring with a dark one around it (the contrast is tested in overlay_layout.rs).
+    let css = overlay_css();
     for ring in [
         "outline: 3px solid var(--accent);\n  outline-offset: 4px;\n  box-shadow: 0 0 0 9px var(--panel-solid);",
         "outline: 2px solid var(--accent);\n  outline-offset: 1px;\n  box-shadow: 0 0 0 5px var(--panel-solid);",
     ] {
-        assert!(lf(OVERLAY_CSS).contains(ring), "{ring}");
+        assert!(css.contains(ring), "{ring}");
     }
 }
 

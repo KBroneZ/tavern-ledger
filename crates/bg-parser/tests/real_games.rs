@@ -509,3 +509,32 @@ fn duos_round_two_build_253216() {
     assert_eq!(r.discovers.len(), 8);
     assert_eq!(r.old_god, Some(130610));
 }
+
+/// Golden board minions by `PREMIUM` (parser revision 6, session 052): every
+/// golden card id stays golden, and Aureate Laureate (always golden, no golden
+/// id) is golden too; no other minion is.
+#[test]
+fn golden_by_premium_build_253216() {
+    for (name, laureates) in [("b253216_solo", 0), ("b253216_duos", 2)] {
+        let r = game(name);
+        let minions: Vec<_> = r
+            .rounds
+            .iter()
+            .flat_map(|round| &round.entries)
+            .filter_map(|e| e.board.as_ref())
+            .flatten()
+            .collect();
+        let by_id =
+            |m: &bg_parser::report::Minion| bg_parser::collector::is_golden(m.card_id.as_deref());
+        assert!(
+            minions.iter().filter(|m| by_id(m)).all(|m| m.golden),
+            "{name}"
+        );
+        let extra: Vec<_> = minions
+            .iter()
+            .filter(|m| m.golden && !by_id(m))
+            .map(|m| m.card_id.as_deref())
+            .collect();
+        assert_eq!(extra, vec![Some("BG32_236"); laureates], "{name}");
+    }
+}

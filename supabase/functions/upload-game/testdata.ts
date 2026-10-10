@@ -11,7 +11,8 @@ import broken from "../../../crates/bg-parser/tests/data/broken_then_ok.json" wi
 // them: with start_health and rounds[].health_after (parser revision 2), the
 // shop record (revision 3), and the combat results, hero pick, skin links and
 // shop extras (revision 4), and the leaderboard's triples and trinkets, board
-// keywords, the player's choices and the Old God (revision 5).
+// keywords, the player's choices and the Old God (revision 5), and golden
+// minions by PREMIUM (revision 6: Aureate Laureate in the Duos game).
 import realDuos from "../../../crates/bg-parser/tests/data/real/b253216_duos.json" with {
   type: "json",
 };

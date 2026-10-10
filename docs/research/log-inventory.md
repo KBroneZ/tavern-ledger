@@ -59,8 +59,8 @@ Columns as for `Power.log`: what it means, when, counts, used today, possible us
 
 | Item | Means | When | Count | Used today | Possible use | Allowed | Effort |
 |---|---|---|---|---|---|---|---|
-| `LoadingScreen.OnSceneLoaded` `prevMode`, `currMode` | Scene change. Values seen: `HUB`, `BACON` (Battlegrounds lobby), `GAMEPLAY`, `LOGIN`, `STARTUP`, `DRAFT`, `PACKOPENING` | each scene change | 80 | no | "game starting" / "back in lobby" signal for the app and overlay, before `Power.log` has a `CREATE_GAME` | yes (the player's own screen) | low |
-| `LoadingScreen.OnSceneUnloaded`, `OnScenePreUnload` `prevMode`, `nextMode`, `m_phase` | The same change seen from the scene that closes | each scene change | 63, 41 | no | same | yes | low |
+| `LoadingScreen.OnSceneLoaded` `prevMode`, `currMode` | Scene change. Values seen: `HUB`, `BACON` (Battlegrounds lobby), `GAMEPLAY`, `LOGIN`, `STARTUP`, `DRAFT`, `PACKOPENING` | each scene change | 80 | yes (session 052, D-061) | "game starting" / "back in lobby" signal for the app and overlay, before `Power.log` has a `CREATE_GAME` | yes (the player's own screen) | low |
+| `LoadingScreen.OnSceneUnloaded`, `OnScenePreUnload` `prevMode`, `nextMode`, `m_phase` | The same change seen from the scene that closes | each scene change | 63, 41 | `OnScenePreUnload` yes (session 052, D-061) | same | yes | low |
 | `Gameplay.OnPowerHistory` `powerList=<n>` | A batch of power packets reached the client (size) | during games | 8,231 | no | none | n/a | - |
 | `Gameplay.OnAllOptions` `id=<n>`, `Gameplay.OnEntityChoices` `id=<n>` | Options and choices reached the client (same ids as `Power.log`) | during games | 2,511, 242 | no | none (`Power.log` has them in full) | n/a | - |
 | `MulliganManager.HandleGameStart`, `WaitForHeroesAndStartAnimations` | Hero select starts | each game | 22, 11 | no | hero-select start time | yes | low |
@@ -222,7 +222,7 @@ One table per group. Columns: **On** = entity types that carry it (`GAME`, `PLAY
 | `TAVERN_SPELL_ATTACK_INCREASE` | Tavern spell attack bonus (per side) | PLAYER, PLAYER_BOB, ENCHANTMENT | 0..218 | shop, combat; TURN 6-30 | 414 (S 2 / D 412; 10 g) | no | recap: bonus over time | own yes; opponent check | low |
 | `TAVERN_SPELL_HEALTH_INCREASE` | Tavern spell health bonus (per side) | PLAYER, PLAYER_BOB, ENCHANTMENT | 0..34 | shop, combat; TURN 6-30 | 278 (S 0 / D 278; 8 g) | no | recap: bonus over time | own yes; opponent check | low |
 | `TIMEOUT` | Turn timer in seconds (25..125) | PLAYER | 25..125 | hero select, shop; TURN 1-29 | 262 (S 28 / D 234; 11 g) | no | shop record: time per turn | yes (own) | low |
-| `NEXT_OPPONENT_PLAYER_ID` | Seat of the next combat opponent | HERO, PLAYER | 1..8 | setup, shop, combat, end; TURN 1-29 | 255 (S 40 / D 215; 11 g) | no | overlay: next opponent's last board | yes (game marks next opponent) | low |
+| `NEXT_OPPONENT_PLAYER_ID` | Seat of the next combat opponent | HERO, PLAYER | 1..8 | setup, shop, combat, end; TURN 1-29 | 255 (S 40 / D 215; 11 g) | yes, live only (session 052, D-061) | overlay: next opponent's last board | yes (game marks next opponent) | low |
 | `PLAYER_TRIPLES` | Triples made by each lobby hero | HERO | 1..8 | shop, combat, end; TURN 5-27 | 229 (S 27 / D 202; 11 g) | no | overlay hover, recap per opponent | yes (leaderboard tooltip) | low |
 | `SUPPRESS_SUMMON_VO_FOR_PLAYER` | Voice flag | PLAYER, PLAYER_BOB | 0..1 | setup, combat; TURN 2-30 | 219 (S 2 / D 217; 11 g) | no | none | n/a (no player meaning) | - |
 | `COMBO_ACTIVE` | A card was already played this turn | PLAYER | 0..1 | shop; TURN 1-29 | 210 (S 28 / D 182; 11 g) | no | none | n/a (no player meaning) | - |
@@ -420,7 +420,7 @@ One table per group. Columns: **On** = entity types that carry it (`GAME`, `PLAY
 | `BACON_IN_COMBAT_PHASE` | 1 while a combat plays | GAME | 0..1 | shop, combat; TURN 2-30 | 235 (S 36 / D 199; 11 g) | no | phase marker for live state | yes | low |
 | `DAMAGE_DEALT_TO_HERO_LAST_TURN` | Damage the local hero took last combat | PLAYER | 0..30 | combat; TURN 2-30 | 121 (S 16 / D 105; 11 g) | no | recap: damage per round | yes (own) | low |
 | `BACON_ODD_PLAYER_OUT` | Hero/team with no opponent this round (fights a ghost) | HERO, PLAYER | 0..1 | shop, combat, end; TURN 16-27 | 46 (S 2 / D 44; 8 g) | no | mark ghost rounds | yes (on screen) | low |
-| `BACON_COMBAT_DAMAGE_CAP` | Cap on hero damage per combat (2..15 by turn) | GAME | 2..15 | hero select, shop; TURN 1-15 | 26 (S 8 / D 18; 11 g) | no | overlay: max damage you can take | yes if the game shows it (check on screen) | low |
+| `BACON_COMBAT_DAMAGE_CAP` | Cap on hero damage per combat (2..15 by turn) | GAME | 2..15 | hero select, shop; TURN 1-15 | 26 (S 8 / D 18; 11 g) | no (left out, D-061: not shown on screen as far as any source says) | overlay: max damage you can take | yes if the game shows it (check on screen) | low |
 | `CANT_BE_DESTROYED` | Ghost hero can't die | HERO | 0..1 | hero select, combat; TURN 22-26 | 23 (S 2 / D 21; 11 g) | no | with ghost | yes | - |
 | `BACON_IS_KEL_THUZAD` | The ghost opponent (eliminated player) in combat | HERO | 0..1 | hero select, combat; TURN 22-26 | 23 (S 2 / D 21; 11 g) | no | mark ghost fights | yes (on screen) | low |
 | `EXTRA_ATTACKS_THIS_TURN` | Extra attacks | MINION | 0..0 | shop, combat; TURN 11-30 | 23 (S 0 / D 23; 5 g) | no | none | yes (on screen) | - |
@@ -540,7 +540,7 @@ One table per group. Columns: **On** = entity types that carry it (`GAME`, `PLAY
 | `TAG_SCRIPT_DATA_NUM_6` | Card script number (counters shown on some cards) | BATTLEGROUND_TRINKET, SPELL, ENCHANTMENT | 0..132532 | hero select, shop, combat; TURN 1-30 | 4170 (S 303 / D 3867; 11 g) | no | none | only where the card shows it | - |
 | `ENCHANTMENT_INVISIBLE` | Hidden enchantment | ENCHANTMENT | 1..1 | shop, combat; TURN 1-30 | 3063 (S 246 / D 2817; 11 g) | no | none | n/a (no player meaning) | - |
 | `TAG_SCRIPT_DATA_NUM_4` | Card script number (counters shown on some cards) | BATTLEGROUND_TRINKET, MINION, SPELL | 0..200 | shop, combat; TURN 1-30 | 2855 (S 191 / D 2664; 11 g) | no | none | only where the card shows it | - |
-| `PREMIUM` | Golden art flag (cosmetic, not the golden minion; see parser notes) | MINION, ENCHANTMENT, BATTLEGROUND_TRINKET | 0..1 | hero select, shop, combat; TURN 1-30 | 2742 (S 165 / D 2577; 11 g) | no | none | yes | - |
+| `PREMIUM` | Golden minion, also always-golden cards and golden tokens; set for a moment on minions set aside during a triple ([overlay-data.md](overlay-data.md)) | MINION, ENCHANTMENT, BATTLEGROUND_TRINKET | 0..1 | hero select, shop, combat; TURN 1-30 | 2742 (S 165 / D 2577; 11 g) | yes, board minions (parser revision 6, D-061) | - | yes | - |
 | `PARENT_CARD` | Parent card | SPELL | 0..44786 | shop, combat; TURN 3-30 | 2230 (S 264 / D 1966; 11 g) | no | none | yes | - |
 | `BACON_TRIGGER_XY` | Card triggers on a Battlegrounds condition (engine) | MINION, SPELL, HERO_POWER | 0..1 | hero select, shop, combat; TURN 1-30 | 2180 (S 109 / D 2071; 11 g) | no | none | n/a (no player meaning) | - |
 | `FALLBACK_ENCHANTMENT_PORTRAIT_DBID` | Enchantment icon | ENCHANTMENT | 57110..127884 | shop, combat; TURN 3-30 | 1446 (S 6 / D 1440; 11 g) | no | none | n/a (no player meaning) | - |

@@ -547,9 +547,19 @@ pub fn race_name(value: Option<&Value>) -> String {
     }
 }
 
-/// Tripled minions have their own card id. The PREMIUM tag is only cosmetic.
+/// Tripled minions have their own card id.
 pub fn is_golden(card_id: Option<&str>) -> bool {
     card_id.is_some_and(|c| c.ends_with("_G") || c.starts_with("TB_BaconUps_"))
+}
+
+/// A board minion is golden when it has `PREMIUM` or a golden card id
+/// (parser revision 6). `PREMIUM` also marks cards that are always golden and
+/// golden tokens, which have no golden id; on the user's 11 games it is on
+/// every golden-id board minion and on no other board minion at a combat. The
+/// game sets it for a moment on minions set aside during a triple in the shop,
+/// which never reach a board this way (session 052).
+pub fn is_golden_minion(e: &Entity) -> bool {
+    e.int("PREMIUM") > 0 || is_golden(e.card_id.as_deref())
 }
 
 /// Health + armor - damage, never below 0: the killing blow can overshoot.
@@ -583,7 +593,7 @@ pub fn board_of(board: &Board, controller: i64) -> Vec<Minion> {
             atk: e.int("ATK"),
             health: e.int("HEALTH").saturating_sub(e.int("DAMAGE")),
             position: e.int("ZONE_POSITION"),
-            golden: is_golden(e.card_id.as_deref()),
+            golden: is_golden_minion(e),
             keywords: KEYWORDS
                 .iter()
                 .filter(|(tag, _)| e.int(tag) > 0)

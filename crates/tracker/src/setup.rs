@@ -18,6 +18,10 @@ const REQUIRED_POWER: [(&str, &str); 3] = [
     ("FilePrinting", "true"),
     ("Verbose", "true"),
 ];
+/// Optional (T-314): the scene changes the app reads to say "in the
+/// Battlegrounds lobby" or "game loading" and to end a game that was left.
+const LOADING_SCREEN_SECTION: &str = "LoadingScreen";
+const OPTIONAL_LOADING_SCREEN: [(&str, &str); 2] = [("LogLevel", "1"), ("FilePrinting", "true")];
 const LOG_SECTION: &str = "Log";
 const REQUIRED_LOG: [(&str, &str); 1] = [("FileSizeLimit.Int", "-1")];
 
@@ -38,6 +42,9 @@ pub enum FileCheck {
 pub struct SetupReport {
     pub log_config: FileCheck,
     pub client_config: FileCheck,
+    /// The optional `[LoadingScreen]` section of `log.config` (T-314); not
+    /// part of [`SetupReport::is_ok`].
+    pub loading_screen: FileCheck,
     log_config_path: Option<PathBuf>,
     client_config_path: Option<PathBuf>,
 }
@@ -61,6 +68,7 @@ pub fn client_config_path(logs_dir: &Path) -> Option<PathBuf> {
 pub fn check_setup(log_config: Option<&Path>, client_config: Option<&Path>) -> SetupReport {
     SetupReport {
         log_config: check_file(log_config, POWER_SECTION, &REQUIRED_POWER),
+        loading_screen: check_file(log_config, LOADING_SCREEN_SECTION, &OPTIONAL_LOADING_SCREEN),
         client_config: check_file(client_config, LOG_SECTION, &REQUIRED_LOG),
         log_config_path: log_config.map(Path::to_path_buf),
         client_config_path: client_config.map(Path::to_path_buf),
@@ -149,6 +157,29 @@ impl SetupReport {
             "Without it the game stops writing Power.log at about 10 MB and later games are lost.",
         );
         out
+    }
+
+    /// Optional settings that add to the app but are not needed, in plain
+    /// English; empty when they are there or when `log.config` itself needs
+    /// fixing first (the messages say that).
+    pub fn notes(&self) -> Vec<String> {
+        let readable = matches!(
+            self.log_config,
+            FileCheck::Ok | FileCheck::SettingsMissing(_)
+        );
+        match &self.loading_screen {
+            FileCheck::SettingsMissing(lines) if readable => {
+                let place = self
+                    .log_config_path
+                    .as_deref()
+                    .map_or(LOG_CONFIG_FILE.to_string(), |p| p.display().to_string());
+                vec![format!(
+                    "Optional: {LOG_CONFIG_FILE} ({place}) can have these lines under [{LOADING_SCREEN_SECTION}]: {}. Without them the app reads Power.log only and works as before; with them it shows when you are in the Battlegrounds lobby or a game is loading, and the overlay ends a game you leave before it is over. Restart the game afterwards.",
+                    lines.join(", ")
+                )]
+            }
+            _ => Vec::new(),
+        }
     }
 }
 
@@ -316,6 +347,49 @@ mod tests {
         let _ = check_setup(None, Some(&cfg)).messages();
         assert_eq!(fs::read_to_string(&cfg).unwrap(), "[Graphics]\nWidth=1\n");
         assert!(!dir.join(LOG_CONFIG_FILE).exists());
+    }
+
+    #[test]
+    fn the_loading_screen_section_is_an_optional_note_not_a_problem() {
+        let dir = temp_dir();
+        let log = dir.join(LOG_CONFIG_FILE);
+        let client_cfg = dir.join(CLIENT_CONFIG_FILE);
+        fs::write(
+            &client_cfg,
+            "[Log]
+FileSizeLimit.Int=-1
+",
+        )
+        .unwrap();
+        fs::write(&log, POWER_OK).unwrap();
+        let without = check_setup(Some(&log), Some(&client_cfg));
+        assert!(without.is_ok(), "the Power log is enough");
+        assert!(without.messages().is_empty());
+        let notes = without.notes();
+        assert_eq!(notes.len(), 1);
+        assert!(notes[0].starts_with("Optional:"));
+        assert!(notes[0].contains("[LoadingScreen]"));
+        assert!(notes[0].contains("LogLevel=1, FilePrinting=true"));
+
+        let with = format!(
+            "{POWER_OK}[LoadingScreen]
+LogLevel=1
+FilePrinting=True
+Verbose=False
+"
+        );
+        fs::write(&log, with).unwrap();
+        assert!(check_setup(Some(&log), Some(&client_cfg))
+            .notes()
+            .is_empty());
+    }
+
+    #[test]
+    fn no_optional_note_while_log_config_itself_is_missing() {
+        let dir = temp_dir();
+        assert!(check_setup(Some(&dir.join("log.config")), None)
+            .notes()
+            .is_empty());
     }
 
     #[test]
