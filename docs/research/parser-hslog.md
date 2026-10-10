@@ -7,7 +7,7 @@ Date: 2026-10-08. Prototype: [`tools/parse_bg.py`](../../tools/parse_bg.py). Tes
 - **A Battlegrounds game can be rebuilt from `Power.log` alone.** Own hero and teammate's hero, lobby with heroes and teams, health per round, opponent of each combat, boards at the start of each combat and final placement all come from the log, with no memory reading.
 - Tested with the user's **23 real games** (6 sessions, build 253216): 22 Duos (`GT_BATTLEGROUNDS_DUO`) and 1 Solo (`GT_BATTLEGROUNDS`). 23 of 23 in `ok` state, 8-player lobby in all, no repeated placements (in Duos, 1-4 by pairs), 0 unidentified opponents.
 - When eliminated, the game **copies the local player's hero** with an old placement and reset health. Until session 005 the prototype read the copy: final health 30 in the 13 lost games (12 Duos and the Solo one) and wrong placement in 5 (see "Local player elimination", below).
-- **Not in the log:** MMR and the exact list of lobby tribes. Tribes can only be inferred from what the tavern offers, and the inference is not reliable (see below).
+- **Not in the log:** MMR and the exact list of lobby tribes. Tribes can only be inferred from what the tavern offers; `CARDRACE` counts alone are not reliable (see below), the card data's full tribe lists make them exact in practice ([lobby-tribes-log.md](lobby-tribes-log.md), T-310).
 - In Duos, **some of the teammate's combats are not visible** in the local log: 141 of 1145 combat entries (12 %). The prototype marks them "not visible" instead of showing them empty.
 - `hslog` fails on logs with several Duos games (`InconsistentPlayerIdError`). Avoided with a new parser per game.
 - Performance: 15 s for the largest log (563 MB, 8 games), processing one game at a time.
@@ -75,6 +75,8 @@ Eliminated opponents do not generate a copy (0 in the 23 games). Their health us
 
 Counting the minions offered per game, only in 17 of 23 games do exactly 5 tribes appear with 5 or more appearances. In the rest, tribes with 1-4 appearances show up that are not in the lobby or that might be (effects that generate minions of other tribes, dual-tribe minions with a single `CARDRACE`). The prototype gives the counts as they are, labeled as inferred. The product needs another source (another log, another tag) or to show it as "probable".
 
+**Update (T-310, 2026-10-10):** no log has the list (checked tag by tag, [lobby-tribes-log.md](lobby-tribes-log.md)). With the card data, a single-tribe minion offered by Bob proves its tribe: exactly 5 tribes in each of the 18 games with a shop record; the dual-tribe minions explain the extra `CARDRACE` tribes.
+
 ## Failures and limits found
 
 | Finding | Impact | What the prototype does |
@@ -105,6 +107,6 @@ Counting the minions offered per game, only in 17 of 23 games do exactly 5 tribe
 - More Solo games: there is only one real one, in which the local player falls first. Still to see: a won Solo game and one with opponents eliminated before the local player (covered only with synthetic logs).
 - **Placement of opponents still alive** when the local player falls: the log gives them their placement at that moment, not the final one (the game goes on without the player). The prototype gives it as `final_place`, same as for those already eliminated. They need to be told apart (e.g. health > 0 at the end) and their placement marked as unknown or "placement at exit".
 - Trimmed fixtures from own logs, with no third-party names, with the user's OK.
-- Exact source of the lobby tribes.
+- Exact source of the lobby tribes: none in the log (T-310); worked out from the tavern with the card data.
 - Reconnections mid-game: if the game writes a new `CREATE_GAME` for the same game, the prototype would count it as two. It has not happened in the 23 logs (the count matches `check_logs.py`), but it is untested.
 - Spectator mode: untested.
