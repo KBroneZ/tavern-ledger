@@ -79,7 +79,19 @@
     return (Array.isArray(opponents) ? opponents : []).find((o) => o && o.next === true) || null;
   }
 
-  const api = { KEYWORDS, keywordMarks, keywordLegend, triplesText, trinketText, seatWords, nextOpponent };
+  // The game keeps its mark on the opponent being fought until the next
+  // shop turn: while combat N is under way (the log's last combat is the
+  // current turn) the marked opponent is the current one, not the next.
+  function nextLabels(game) {
+    const value = (s) => (s && Number.isInteger(s.value) ? s.value : null);
+    const turn = value(game && game.turn);
+    const fighting = turn !== null && value(game && game.last_combat) === turn;
+    const team = Boolean(game && game.is_duos);
+    if (fighting) return { badge: "Now", heading: team ? "Opposing team now" : "Opponent now" };
+    return { badge: "Next", heading: team ? "Next opposing team" : "Next opponent" };
+  }
+
+  const api = { KEYWORDS, keywordMarks, keywordLegend, triplesText, trinketText, seatWords, nextOpponent, nextLabels };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLWords = api;
 })();

@@ -420,8 +420,14 @@ fn live_now(watcher: &mut Watcher) -> Option<LiveGame> {
     )
 }
 
-/// Keeps the scene up to date for the overlay and tells it when it changed.
-fn publish_scene(app: &AppHandle, state: &AppState, now: Option<Scene>) {
+/// Keeps the scene up to date for the overlay and tells it when it changed;
+/// a scene file that cannot be read is said in the status, never silent.
+fn publish_scene(
+    app: &AppHandle,
+    state: &AppState,
+    now: Option<Scene>,
+    error: Option<std::io::ErrorKind>,
+) {
     let changed = {
         let mut current = state.scene.lock().unwrap_or_else(|e| e.into_inner());
         let changed = *current != now;
@@ -431,9 +437,13 @@ fn publish_scene(app: &AppHandle, state: &AppState, now: Option<Scene>) {
     if changed {
         let _ = app.emit(LIVE_CHANGED, ());
     }
-    set_status(app, state, |s| {
-        s.scene = now.map(|n| n.describe().to_string())
-    });
+    let words = match error {
+        Some(kind) => Some(format!(
+            "game screen unknown (LoadingScreen.log could not be read: {kind:?})"
+        )),
+        None => now.map(|n| n.describe().to_string()),
+    };
+    set_status(app, state, |s| s.scene = words);
 }
 
 /// Keeps the overlay's game up to date and tells it, only if it changed.
@@ -593,7 +603,7 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
                 set_status(&app, &state, |s| s.notice = Some(msg.into()));
             }
         }
-        publish_scene(&app, &state, watcher.scene());
+        publish_scene(&app, &state, watcher.scene(), watcher.scene_error());
         track_game_in_progress(&app, &state, &mut starts, watcher.in_progress());
         let session = watcher.session().map(String::from);
         let power_log = watcher.has_power_log();

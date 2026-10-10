@@ -249,7 +249,7 @@ function opponentHead(opponent) {
   hp.append(sourced(el("b"), opponent.health), " hp");
   const portraits = opponent.heroes.map((h) => TLCards.art(h.id, "portrait")).filter(Boolean);
   // The game's own mark on its leaderboard (T-313), in words.
-  if (opponent.next) head.append(el("span", "next-badge", "Next"));
+  if (opponent.next) head.append(el("span", "next-badge", TLWords.nextLabels(current()).badge));
   head.append(
     ...portraits,
     el("span", "name", heroes(opponent.heroes) || "Hero unknown"),
@@ -276,7 +276,7 @@ function renderOpponents(g) {
     // The heading already says "next".
     const badge = head.querySelector(".next-badge");
     if (badge) badge.remove();
-    block.append(el("h3", null, g.is_duos ? "Next opposing team" : "Next opponent"), head, ...renderShown(next), ...renderBoards(next));
+    block.append(el("h3", null, TLWords.nextLabels(g).heading), head, ...renderShown(next), ...renderBoards(next));
     panel.append(block);
   }
   for (const opponent of g.opponents) {

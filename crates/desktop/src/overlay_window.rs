@@ -5,7 +5,7 @@
 
 use std::sync::Arc;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use tauri::{
     AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Position, Size, WebviewWindow,
@@ -41,6 +41,22 @@ pub fn wants_visible(
 /// overlay never steals clicks mid-game unless the user unlocks it then.
 pub fn should_relock(unlocked: bool, game_was_on: bool, game_is_on: bool) -> bool {
     unlocked && !game_was_on && game_is_on
+}
+
+/// A load that never ends (the client closed or crashed on the loading
+/// screen) stops counting as a game after this long.
+const LOADING_LIMIT: Duration = Duration::from_secs(60);
+
+/// Whether a Battlegrounds loading screen still counts as a game starting:
+/// yes from when it began until [`LOADING_LIMIT`], so a scene file that stops
+/// at "loading" never keeps the overlay up.
+pub fn still_loading(loading: bool, since: &mut Option<Instant>, now: Instant) -> bool {
+    if !loading {
+        *since = None;
+        return false;
+    }
+    let began = *since.get_or_insert(now);
+    now.duration_since(began) < LOADING_LIMIT
 }
 
 /// Covers the game's monitor with the window, and makes every click go
@@ -131,10 +147,12 @@ pub fn follow(app: AppHandle, state: Arc<AppState>) {
         let mut shown = false;
         let mut game_was_on = false;
         let mut failures: u32 = 0;
+        let mut loading_since: Option<Instant> = None;
         loop {
             // A Battlegrounds game loading counts as on: the overlay starts
             // with the loading screen (T-314), before the log has the game.
             let loading = *lock(&state.scene) == Some(Scene::BattlegroundsLoading);
+            let loading = still_loading(loading, &mut loading_since, Instant::now());
             let game_on = lock(&state.live).is_some() || loading;
             if should_relock(state.overlay.unlocked(), game_was_on, game_on) {
                 set_unlocked(&app, &state, false);
@@ -234,6 +252,26 @@ mod tests {
         let other = Some(Foreground::Other);
         assert!(wants_visible(false, false, false, other, true));
         assert!(wants_visible(true, true, false, other, true));
+    }
+
+    #[test]
+    fn a_loading_screen_counts_as_a_game_starting_for_a_minute_only() {
+        let start = Instant::now();
+        let mut since = None;
+        assert!(still_loading(true, &mut since, start));
+        assert!(still_loading(
+            true,
+            &mut since,
+            start + Duration::from_secs(59)
+        ));
+        assert!(!still_loading(true, &mut since, start + LOADING_LIMIT));
+        assert!(!still_loading(false, &mut since, start + LOADING_LIMIT));
+        assert_eq!(since, None, "the next load starts the clock again");
+        assert!(still_loading(
+            true,
+            &mut since,
+            start + Duration::from_secs(120)
+        ));
     }
 
     #[test]

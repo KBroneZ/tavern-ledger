@@ -97,9 +97,9 @@ pub struct Watcher {
     /// `LoadingScreen.log` of the same session (T-314): where the client is.
     scenes: Follower,
     scene: SceneTracker,
-    /// False after the scene file could not be read: the scene is unknown
-    /// until it reads again, never a stale one.
-    scene_read: bool,
+    /// Set after the scene file could not be read (the error kind): the
+    /// scene is unknown until it reads again, never a stale one.
+    scene_error: Option<io::ErrorKind>,
     /// A game the player left before its end (session, game index): it
     /// stays over even when the next game's loading screen comes.
     left: Option<(String, usize)>,
@@ -118,7 +118,7 @@ impl Watcher {
             to_utc: game_clock::system_local_to_utc,
             scenes: Follower::loading_screen(logs_dir),
             scene: SceneTracker::default(),
-            scene_read: true,
+            scene_error: None,
             left: None,
         }
     }
@@ -166,12 +166,20 @@ impl Watcher {
             }
         });
         self.poll_scenes();
-        if self.scene().is_some_and(Scene::left_game) {
-            if let Some(r) = self.reader.as_ref() {
-                if let Some(index) = r.log.in_progress_index() {
-                    self.left = Some((r.name.clone(), index));
+        match self.scene() {
+            Some(scene) if scene.left_game() => {
+                if let Some(r) = self.reader.as_ref() {
+                    if let Some(index) = r.log.in_progress_index() {
+                        self.left = Some((r.name.clone(), index));
+                    }
                 }
             }
+            // The game screen loaded: it comes after the new game's
+            // CREATE_GAME, so whatever game is open now is that one. Also
+            // undoes a mark made when CREATE_GAME was read before the scene
+            // change (the two files are written apart).
+            Some(Scene::Game) => self.left = None,
+            _ => {}
         }
         let saved = self.save_pending()?;
         read.map(|()| saved)
@@ -187,17 +195,26 @@ impl Watcher {
             Event::Line(line) => scene.feed(line),
             Event::TooLong => {}
         });
-        let ok = read.is_ok();
-        if ok != self.scene_read {
+        let error = read.err().map(|e| e.kind());
+        if error.is_some() != self.scene_error.is_some() {
             self.live_stale = true;
         }
-        self.scene_read = ok;
+        self.scene_error = error;
+    }
+
+    /// Why `LoadingScreen.log` could not be read in the last poll; None when
+    /// it was read or is not there (off in log.config).
+    pub fn scene_error(&self) -> Option<io::ErrorKind> {
+        self.scene_error
     }
 
     /// Where the client is, from `LoadingScreen.log` (T-314); None when the
     /// file is off in log.config, says nothing yet or cannot be read.
     pub fn scene(&self) -> Option<Scene> {
-        self.scene_read.then(|| self.scene.now()).flatten()
+        self.scene_error
+            .is_none()
+            .then(|| self.scene.now())
+            .flatten()
     }
 
     /// The player left the game screen: a game the log still has open was

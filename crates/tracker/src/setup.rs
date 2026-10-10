@@ -174,7 +174,7 @@ impl SetupReport {
                     .as_deref()
                     .map_or(LOG_CONFIG_FILE.to_string(), |p| p.display().to_string());
                 vec![format!(
-                    "Optional: {LOG_CONFIG_FILE} ({place}) can have these lines under [{LOADING_SCREEN_SECTION}]: {}. With them the app shows when you are in the Battlegrounds lobby or a game is loading, and the overlay ends a game you leave before it is over. Restart the game afterwards.",
+                    "Optional: {LOG_CONFIG_FILE} ({place}) can have these lines under [{LOADING_SCREEN_SECTION}]: {}. Without them the app reads Power.log only and works as before; with them it shows when you are in the Battlegrounds lobby or a game is loading, and the overlay ends a game you leave before it is over. Restart the game afterwards.",
                     lines.join(", ")
                 )]
             }

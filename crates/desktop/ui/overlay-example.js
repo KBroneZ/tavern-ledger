@@ -10,6 +10,7 @@ const EXAMPLE_GAME = {
   hero: { value: { id: "EXAMPLE_HERO", name: "Example Hero" }, source: "log" },
   teammate_hero: { value: null, source: "unknown" },
   last_combat: { value: 5, source: "log" },
+  turn: { value: 6, source: "log" },
   own_seats: [3],
   own_place: { value: 2, source: "log" },
   leaderboard_slots: 3,

@@ -69,3 +69,11 @@ test("the next opponent is the one the game marks, or none", () => {
   assert.equal(words.nextOpponent([a]), null);
   assert.equal(words.nextOpponent(undefined), null);
 });
+
+test("the marked opponent is the next one in the shop and the current one during its combat", () => {
+  const shop = { turn: { value: 6 }, last_combat: { value: 5 }, is_duos: false };
+  const combat = { turn: { value: 6 }, last_combat: { value: 6 }, is_duos: true };
+  assert.deepEqual(words.nextLabels(shop), { badge: "Next", heading: "Next opponent" });
+  assert.deepEqual(words.nextLabels(combat), { badge: "Now", heading: "Opposing team now" });
+  assert.deepEqual(words.nextLabels({ turn: { value: null }, last_combat: { value: null } }), { badge: "Next", heading: "Next opponent" });
+});

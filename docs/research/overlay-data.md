@@ -43,7 +43,7 @@ The value on the local leaderboard hero at the end of each shop turn, against th
 
 So it is the game's own "next opponent" for the shop turn, and in Duos it names one hero of the next opposing team (the overlay marks the whole team). `NEXT_OPPONENT_TEAMMATE_PLAYER_ID` is set only during combats (97 times) and is not needed.
 
-**Does the game show it?** Yes. Blizzard's launch post: "The status of all other players (including which opponent you will face off against next) will be visible at all times on the Leaderboard"; player guides describe the next opponent's portrait highlighted in red and pushed out of the column during the recruit phase. The overlay shows the same mark ("Next") with that opponent's last board seen, which the player already saw in an earlier combat. Live only: it is not saved or uploaded.
+**Does the game show it?** Yes. Blizzard's launch post: "The status of all other players (including which opponent you will face off against next) will be visible at all times on the Leaderboard"; player guides describe the next opponent's portrait highlighted in red and pushed out of the column during the recruit phase. The overlay shows the same mark ("Next" in the shop; "Now" during that combat, since the game keeps its mark on the opponent being fought until the next shop turn) with that opponent's last board seen, which the player already saw in an earlier combat. Live only: it is not saved or uploaded.
 
 ## T-312: opponents' triples and trinkets
 
