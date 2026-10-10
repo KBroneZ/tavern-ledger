@@ -107,6 +107,26 @@ pub fn pool_cards(cards: &Cards) -> Vec<tracker::possible::PoolCard> {
         .collect()
 }
 
+/// The card data's link from each base hero's database id to its card id
+/// (T-214), so the stats group skins by the game's own link; empty while
+/// there is no card data (the stats then use the D-019 rule and say so).
+pub fn hero_links(cards: &Cards) -> tracker::stats::HeroLinks {
+    cards
+        .store
+        .get()
+        .map(|store| store.hero_links())
+        .unwrap_or_default()
+}
+
+/// The card data's store, once it is open and holds data; None before.
+pub fn store_with_data(cards: &Cards) -> Option<&CardStore> {
+    cards
+        .store
+        .get()
+        .map(Arc::as_ref)
+        .filter(|store| store.has_data())
+}
+
 #[tauri::command]
 pub fn card_names(cards: State<'_, Cards>, ids: Vec<String>) -> BTreeMap<String, Option<String>> {
     names_of(cards.store.get().map(Arc::as_ref), &ids)

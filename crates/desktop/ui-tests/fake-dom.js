@@ -1,5 +1,6 @@
-// Just enough of a page for focus-keeper.js: elements with an id, attributes,
-// a parent, `hidden`/`disabled`, and focus. Not a browser; no dependency.
+// Just enough of a page for focus-keeper.js and tabs.js: elements with an id,
+// attributes, a parent, `hidden`/`disabled`, focus and event listeners. Not a
+// browser; no dependency.
 "use strict";
 
 class FakeNode {
@@ -13,6 +14,23 @@ class FakeNode {
     this.parent = null;
     this.children = [];
     this.isConnected = true;
+    this.listeners = {};
+  }
+
+  setAttribute(name, value) {
+    this.attrs[name] = String(value);
+    if (name === "id") this.id = String(value);
+  }
+
+  addEventListener(type, fn) {
+    (this.listeners[type] = this.listeners[type] || []).push(fn);
+  }
+
+  // Runs the listeners of this node and its parents, like a bubbling event.
+  dispatch(type, extra = {}) {
+    const event = { type, target: this, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...extra };
+    for (let n = this; n; n = n.parent) (n.listeners[type] || []).forEach((fn) => fn(event));
+    return event;
   }
 
   append(child) {
@@ -52,6 +70,8 @@ class FakeNode {
     walk(this);
     if (selector === "*") return all;
     if (selector === "[data-focus]") return all.filter((n) => "data-focus" in n.attrs);
+    const attr = /^\[([a-z-]+)="([^"]*)"\]$/.exec(selector);
+    if (attr) return all.filter((n) => n.attrs[attr[1]] === attr[2]);
     return all.filter((n) => ["button", "input", "select", "textarea"].includes(n.tag) || "tabindex" in n.attrs);
   }
 
