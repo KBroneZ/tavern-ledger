@@ -125,6 +125,10 @@ python tools/dev/replay_log.py "<path>\Power_old.log" --dest-dir "$env:TEMP\repl
 cargo run -p tracker -- --logs-dir "$env:TEMP\replay\Logs" --data-dir "$env:TEMP\replay\data"
 ```
 
+### Reconnect dev tool (development only)
+
+To collect test games faster, `tools/dev/reconnect.py` drops Hearthstone's own connections on a hotkey so the client reconnects past combat animations. Never shipped to users; needs an elevated terminal; it can carry risk for your Battle.net account, so only use it by hand on your own account. Games played with it are marked in the history and left out of the stats, the upload and fixtures. Details, risk and how to undo: [tools/dev/README.md](tools/dev/README.md).
+
 To see the overlay on a replayed game, follow the replayed folder with the app and force the overlay on (`--overlay-dev` turns it on, shows it whatever window is in front and does not save the on/off choice (layout and theme are saved in the data folder you give; `--overlay-unlock` starts it unlocked); `--logs-dir` is for this and nothing else):
 
 ```

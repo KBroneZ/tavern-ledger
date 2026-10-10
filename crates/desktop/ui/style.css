@@ -168,6 +168,18 @@ tbody tr:hover { background: var(--panel-hi); }
 td.hero-name { font-weight: 500; }
 .tribes .note { margin: -4px 0 8px; }
 .note { color: var(--dim); font-size: 12px; }
+/* Played with the reconnect dev tool (D-043): visible, but never a result. */
+tr.dev-reconnect td { opacity: 0.7; }
+.dev-mark {
+  display: inline-block;
+  padding: 0 6px;
+  border: 1px dashed var(--gold);
+  border-radius: var(--radius);
+  color: var(--gold);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
 
 /* A place is a number plus a shape, so colour is never the only cue. */
 .place {

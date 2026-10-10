@@ -120,9 +120,22 @@ function note(report) {
   return list(report.warnings).join("; ");
 }
 
+// Played with the reconnect dev tool (D-043): left out of the stats and the upload.
+const DEV_RECONNECT_TIP = "Played with the reconnect dev tool: not counted in the stats and never uploaded.";
+
+function noteCell(game) {
+  const cell = el("td", "note", note(game.report));
+  if (game.dev_reconnect === true) {
+    const mark = el("span", "dev-mark", "Dev reconnect");
+    mark.title = DEV_RECONNECT_TIP;
+    cell.prepend(mark, " ");
+  }
+  return cell;
+}
+
 function row(game, top) {
   const r = game.report;
-  const tr = el("tr");
+  const tr = el("tr", game.dev_reconnect === true ? "dev-reconnect" : null);
   const src = game.sources || {};
   const playedCell = el("td", null, played(game.session, game.index));
   playedCell.title = provenance(game);
@@ -137,7 +150,7 @@ function row(game, top) {
     withSource(placeCell, src.place),
     withSource(el("td", "num", r.final_health ?? "—"), src.health),
     withSource(el("td", "num", list(r.rounds).length || "—"), src.rounds),
-    el("td", "note", note(r)),
+    noteCell(game),
     reportCell(game),
   );
   return tr;
@@ -148,7 +161,7 @@ function topLabel(top) {
 }
 
 // "—" when no game counts: no games is unknown, not 0.
-function renderTally(m) {
+function renderTally(m, devGames) {
   const t = m.totals;
   const src = m.totals_sources || {};
   const set = (id, value, source) => {
@@ -166,13 +179,14 @@ function renderTally(m) {
   set("stat-wins", dash(t.wins, String), src.wins);
   const notCounted = (t.games || 0) - (t.placed || 0);
   const note = document.getElementById("not-counted");
-  note.hidden = notCounted === 0;
+  note.hidden = notCounted === 0 && devGames === 0;
   const parts = [
     t.incomplete && `${t.incomplete} not finished in the log`,
     t.unsupported && `${t.unsupported} could not be read`,
   ].filter(Boolean);
   const why = m.top_half === null ? "place rules unknown for this mode" : parts.join(", ");
-  note.textContent = `${notCounted} of ${t.games} games not counted for places` + (why ? ` (${why})` : "") + ".";
+  note.textContent = notCounted === 0 ? "" : `${notCounted} of ${t.games} games not counted for places` + (why ? ` (${why})` : "") + ".";
+  if (devGames > 0) note.textContent += `${notCounted === 0 ? "" : " "}${devGames} played with the reconnect dev tool left out.`;
 }
 
 function heroRow(h, top) {
@@ -762,7 +776,7 @@ function render() {
   document.querySelectorAll(".modes button").forEach((b) => {
     b.setAttribute("aria-pressed", String(b.dataset.mode === mode));
   });
-  renderTally(m);
+  renderTally(m, games.filter((g) => g.dev_reconnect === true).length);
   renderBreakdown(m);
   renderLegend();
 }
@@ -806,6 +820,7 @@ function renderStatus(s) {
   else if (s.logs_dir) node.textContent = "Waiting for the game to write a log…";
   else node.textContent = "Starting…";
   if (s.notice) node.textContent += ` — ${s.notice}`;
+  if (s.dev_reconnects) node.textContent += ` — ${s.dev_reconnects}`;
   node.title = [s.logs_dir && `Logs: ${s.logs_dir}`, s.history && `History: ${s.history}`]
     .filter(Boolean).join("\n");
 }

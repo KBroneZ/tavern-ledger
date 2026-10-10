@@ -17,6 +17,7 @@ use std::process::ExitCode;
 use std::thread::sleep;
 use std::time::Duration;
 
+use tracker::dev_reconnect::Reconnects;
 use tracker::discover::{find_logs_dir, is_session_name};
 use tracker::lock::{HistoryLock, LockError};
 use tracker::setup::{check_setup, client_config_path, default_log_config_path};
@@ -165,6 +166,9 @@ fn run(args: Args) -> Result<(), String> {
         }
     }
     println!("History: {}", store.path().display());
+    if let Some(warning) = Reconnects::load(&data_dir).warning {
+        eprintln!("Warning: {warning}");
+    }
     if args.reparse {
         return run_reparse(&logs_dir, &mut store);
     }
