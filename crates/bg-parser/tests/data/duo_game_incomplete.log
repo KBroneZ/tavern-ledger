@@ -119,6 +119,7 @@ D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=ATK value=2
 D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=HEALTH value=2
 D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=1
+D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=ENTITY_ID value=41
 D 12:00:00.0000000 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=42 CardID=TB_BaconShop_HERO_60
 D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
@@ -134,7 +135,6 @@ D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=ATK value=3
 D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=HEALTH value=1
 D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=1
-D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 12:00:00.0000000 GameState.DebugPrintPower() -         tag=ENTITY_ID value=43
 D 12:00:00.0000000 GameState.DebugPrintPower() - BLOCK_START BlockType=ATTACK Entity=41 EffectCardId=System.Collections.Generic.List`1[System.String] EffectIndex=0 Target=0 SubOption=-1 
 D 12:00:00.0000000 GameState.DebugPrintPower() -     TAG_CHANGE Entity=41 tag=ATTACKING value=1 

@@ -354,8 +354,23 @@ Deno.test("a name in a health map is refused as a player name", () => {
   assertEquals(v.ok ? "accepted" : v.code, "player_name");
 });
 
-Deno.test("the validator version is a positive integer, 5 or more since revision 5", () => {
-  assertEquals(Number.isInteger(VALIDATOR_VERSION) && VALIDATOR_VERSION >= 5, true);
+Deno.test("the validator version is a positive integer, 6 or more since revision 6", () => {
+  assertEquals(Number.isInteger(VALIDATOR_VERSION) && VALIDATOR_VERSION >= 6, true);
+});
+
+Deno.test("a golden minion without a golden card id is accepted (revision 6, PREMIUM)", () => {
+  const rec = realRecord(realDuos[0]);
+  const board = rec.report.rounds
+    .flatMap((r: { entries: { board: unknown[] | null }[] }) => r.entries)
+    .find((e: { board: unknown[] | null }) => Array.isArray(e.board) && e.board.length > 0)?.board;
+  if (!board) throw new Error("the real Duos game has a board");
+  board[0] = { ...(board[0] as Record<string, unknown>), card_id: "BG32_236", golden: true };
+  rec.parser = { version: "0.1.0", revision: 6 };
+  const v = validateRecord(rec, SESSION, 1);
+  assertEquals(v.ok ? "accepted" : v.code, "accepted");
+  (board[0] as Record<string, unknown>).golden = "yes";
+  const bad = validateRecord(rec, SESSION, 1);
+  assertEquals(bad.ok ? "accepted" : bad.code, "invalid_report", "golden stays a boolean");
 });
 
 Deno.test("session and index must match the address", () => {

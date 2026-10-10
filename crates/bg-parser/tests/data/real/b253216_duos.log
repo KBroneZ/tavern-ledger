@@ -163,6 +163,7 @@ D 00:00:12.1725776 GameState.DebugPrintPower() - TAG_CHANGE Entity=141 tag=COPIE
 D 00:00:14.1542937 GameState.DebugPrintPower() - CHANGE_ENTITY - Updating Entity=90 CardID=BG36_HERO_101
 D 00:00:14.1542937 GameState.DebugPrintPower() -     tag=CARDTYPE value=HERO
 D 00:00:14.1542937 GameState.DebugPrintPower() -     tag=HEALTH value=30
+D 00:00:14.1542937 GameState.DebugPrintPower() -     tag=PREMIUM value=0
 D 00:00:14.1542937 GameState.DebugPrintPower() -     tag=ARMOR value=13
 D 00:00:14.1542937 GameState.DebugPrintPower() -     tag=BACON_SKIN_PARENT_ID value=0
 D 00:00:18.0225490 GameState.DebugPrintPower() - FULL_ENTITY - Creating ID=157 CardID=BG31_HERO_802p
@@ -434,6 +435,7 @@ D 00:00:54.6283502 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:00:54.6283502 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:00:54.6283502 GameState.DebugPrintPower() -         tag=ATK value=2
 D 00:00:54.6283502 GameState.DebugPrintPower() -         tag=HEALTH value=2
+D 00:00:54.6283502 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:00:54.6283502 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:00:54.6283502 GameState.DebugPrintPower() -         tag=DIVINE_SHIELD value=1
 D 00:00:54.6283502 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
@@ -463,6 +465,7 @@ D 00:00:54.6283502 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:00:54.6283502 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:00:54.6283502 GameState.DebugPrintPower() -             tag=ATK value=2
 D 00:00:54.6283502 GameState.DebugPrintPower() -             tag=HEALTH value=2
+D 00:00:54.6283502 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:00:54.6283502 GameState.DebugPrintPower() -             tag=ZONE value=PLAY
 D 00:00:54.6283502 GameState.DebugPrintPower() -             tag=DIVINE_SHIELD value=1
 D 00:00:54.6283502 GameState.DebugPrintPower() -             tag=CARDRACE value=PIRATE
@@ -871,6 +874,7 @@ D 00:01:52.5237617 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:01:52.5237617 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:01:52.5237617 GameState.DebugPrintPower() -         tag=ATK value=2
 D 00:01:52.5237617 GameState.DebugPrintPower() -         tag=HEALTH value=2
+D 00:01:52.5237617 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:01:52.5237617 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:01:52.5237617 GameState.DebugPrintPower() -         tag=DIVINE_SHIELD value=1
 D 00:01:52.5237617 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
@@ -1002,6 +1006,7 @@ D 00:01:52.6618004 GameState.DebugPrintPower() -     TAG_CHANGE Entity=568 tag=C
 D 00:01:52.6618004 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=568 CardID=BG30_Trinket_1st
 D 00:01:52.6618004 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:01:52.6618004 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:01:52.6618004 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:01:52.6618004 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:01:52.6618004 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:01:52.6618004 GameState.DebugPrintPower() -     HIDE_ENTITY - Entity=569 tag=ZONE value=SETASIDE
@@ -1009,6 +1014,7 @@ D 00:01:52.6618004 GameState.DebugPrintPower() -     TAG_CHANGE Entity=569 tag=C
 D 00:01:52.6618004 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=569 CardID=BG30_Trinket_2nd
 D 00:01:52.6618004 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:01:52.6618004 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:01:52.6618004 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:01:52.6618004 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:01:52.6618004 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:01:52.6618004 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=795 CardID=
@@ -1148,6 +1154,7 @@ D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=HEALTH value=12
+D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=STEALTH value=0
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=DIVINE_SHIELD value=0
@@ -1207,6 +1214,7 @@ D 00:01:52.8922220 GameState.DebugPrintPower() -     TAG_CHANGE Entity=587 tag=C
 D 00:01:52.8922220 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=587 CardID=BG30_Trinket_1st
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:01:52.8922220 GameState.DebugPrintPower() -     HIDE_ENTITY - Entity=588 tag=ZONE value=SETASIDE
@@ -1214,6 +1222,7 @@ D 00:01:52.8922220 GameState.DebugPrintPower() -     TAG_CHANGE Entity=588 tag=C
 D 00:01:52.8922220 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=588 CardID=BG30_Trinket_2nd
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:01:52.8922220 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=853 CardID=
@@ -1241,6 +1250,7 @@ D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=ATK value=2
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=HEALTH value=2
+D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=DIVINE_SHIELD value=1
 D 00:01:52.8922220 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
@@ -1487,6 +1497,7 @@ D 00:01:53.1882200 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:01:53.1882200 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:01:53.1882200 GameState.DebugPrintPower() -             tag=ATK value=2
 D 00:01:53.1882200 GameState.DebugPrintPower() -             tag=HEALTH value=2
+D 00:01:53.1882200 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:01:53.1882200 GameState.DebugPrintPower() -             tag=ZONE value=PLAY
 D 00:01:53.1882200 GameState.DebugPrintPower() -             tag=DIVINE_SHIELD value=1
 D 00:01:53.1882200 GameState.DebugPrintPower() -             tag=CARDRACE value=PIRATE
@@ -1503,6 +1514,7 @@ D 00:01:53.1882200 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:01:53.1882200 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:01:53.1882200 GameState.DebugPrintPower() -             tag=ATK value=2
 D 00:01:53.1882200 GameState.DebugPrintPower() -             tag=HEALTH value=2
+D 00:01:53.1882200 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:01:53.1882200 GameState.DebugPrintPower() -             tag=ZONE value=REMOVEDFROMGAME
 D 00:01:53.1882200 GameState.DebugPrintPower() -             tag=DIVINE_SHIELD value=1
 D 00:01:53.1882200 GameState.DebugPrintPower() -             tag=CARDRACE value=PIRATE
@@ -2044,6 +2056,7 @@ D 00:02:38.4478726 GameState.DebugPrintPower() -     TAG_CHANGE Entity=1153 tag=
 D 00:02:38.4478726 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=1153 CardID=BG30_Trinket_1st
 D 00:02:38.4478726 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:02:38.4478726 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:02:38.4478726 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:02:38.4478726 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:02:38.4478726 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:02:38.4478726 GameState.DebugPrintPower() -     HIDE_ENTITY - Entity=1154 tag=ZONE value=SETASIDE
@@ -2051,6 +2064,7 @@ D 00:02:38.4478726 GameState.DebugPrintPower() -     TAG_CHANGE Entity=1154 tag=
 D 00:02:38.4478726 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=1154 CardID=BG30_Trinket_2nd
 D 00:02:38.4478726 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:02:38.4478726 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:02:38.4478726 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:02:38.4478726 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:02:38.4478726 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:02:38.4478726 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=1397 CardID=
@@ -2126,6 +2140,7 @@ D 00:02:38.7548965 GameState.DebugPrintPower() -     TAG_CHANGE Entity=1168 tag=
 D 00:02:38.7548965 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=1168 CardID=BG30_Trinket_1st
 D 00:02:38.7548965 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:02:38.7548965 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:02:38.7548965 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:02:38.7548965 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:02:38.7548965 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:02:38.7548965 GameState.DebugPrintPower() -     HIDE_ENTITY - Entity=1169 tag=ZONE value=SETASIDE
@@ -2133,6 +2148,7 @@ D 00:02:38.7548965 GameState.DebugPrintPower() -     TAG_CHANGE Entity=1169 tag=
 D 00:02:38.7548965 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=1169 CardID=BG30_Trinket_2nd
 D 00:02:38.7548965 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:02:38.7548965 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:02:38.7548965 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:02:38.7548965 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:02:38.7548965 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:02:38.7548965 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=1462 CardID=
@@ -3021,6 +3037,7 @@ D 00:03:42.9754399 GameState.DebugPrintPower() -     TAG_CHANGE Entity=1852 tag=
 D 00:03:42.9754399 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=1852 CardID=BG30_Trinket_1st
 D 00:03:42.9754399 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:03:42.9754399 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:03:42.9754399 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:03:42.9754399 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:03:42.9754399 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:03:42.9754399 GameState.DebugPrintPower() -     HIDE_ENTITY - Entity=1853 tag=ZONE value=SETASIDE
@@ -3028,6 +3045,7 @@ D 00:03:42.9754399 GameState.DebugPrintPower() -     TAG_CHANGE Entity=1853 tag=
 D 00:03:42.9754399 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=1853 CardID=BG30_Trinket_2nd
 D 00:03:42.9754399 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:03:42.9754399 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:03:42.9754399 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:03:42.9754399 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:03:42.9754399 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:03:42.9754399 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=2146 CardID=
@@ -4153,6 +4171,7 @@ D 00:05:06.9543301 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:05:06.9543301 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:05:06.9543301 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:05:06.9543301 GameState.DebugPrintPower() -         tag=HEALTH value=6
+D 00:05:06.9543301 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:05:06.9543301 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:05:06.9543301 GameState.DebugPrintPower() -         tag=CARDRACE value=ELEMENTAL
 D 00:05:06.9543301 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=2700 CardID=
@@ -4497,6 +4516,7 @@ D 00:05:07.0999855 GameState.DebugPrintPower() -     TAG_CHANGE Entity=2691 tag=
 D 00:05:07.0999855 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=2691 CardID=BG30_Trinket_1st
 D 00:05:07.0999855 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:05:07.0999855 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:05:07.0999855 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:05:07.0999855 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:05:07.0999855 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:05:07.0999855 GameState.DebugPrintPower() -     HIDE_ENTITY - Entity=2692 tag=ZONE value=SETASIDE
@@ -4504,6 +4524,7 @@ D 00:05:07.0999855 GameState.DebugPrintPower() -     TAG_CHANGE Entity=2692 tag=
 D 00:05:07.0999855 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=2692 CardID=BG30_Trinket_2nd
 D 00:05:07.0999855 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:05:07.0999855 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:05:07.0999855 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:05:07.0999855 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:05:07.0999855 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:05:07.0999855 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=2989 CardID=
@@ -4548,6 +4569,7 @@ D 00:05:07.0999855 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:05:07.0999855 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:05:07.0999855 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:05:07.0999855 GameState.DebugPrintPower() -         tag=HEALTH value=6
+D 00:05:07.0999855 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:05:07.0999855 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:05:07.0999855 GameState.DebugPrintPower() -         tag=CARDRACE value=ELEMENTAL
 D 00:05:07.0999855 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=2
@@ -4881,6 +4903,7 @@ D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=HEALTH value=12
+D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=STEALTH value=0
 D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=DIVINE_SHIELD value=0
@@ -4916,6 +4939,7 @@ D 00:05:07.5331490 GameState.DebugPrintPower() -     TAG_CHANGE Entity=3097 tag=
 D 00:05:07.5331490 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=3097 CardID=BG33_813
 D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=CARDTYPE value=SPELL
+D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:05:07.5331490 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=3098 CardID=TB_BaconShopBadsongE
@@ -4952,6 +4976,7 @@ D 00:05:07.5331490 GameState.DebugPrintPower() -     TAG_CHANGE Entity=2717 tag=
 D 00:05:07.5331490 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=2717 CardID=BG30_Trinket_1st
 D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:05:07.5331490 GameState.DebugPrintPower() -     HIDE_ENTITY - Entity=2718 tag=ZONE value=SETASIDE
@@ -4959,6 +4984,7 @@ D 00:05:07.5331490 GameState.DebugPrintPower() -     TAG_CHANGE Entity=2718 tag=
 D 00:05:07.5331490 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=2718 CardID=BG30_Trinket_2nd
 D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:05:07.5331490 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:05:07.5331490 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=3112 CardID=
@@ -5607,6 +5633,7 @@ D 00:05:07.8177072 GameState.DebugPrintPower() -     CHANGE_ENTITY - Updating En
 D 00:05:07.8177072 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:05:07.8177072 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:05:07.8177072 GameState.DebugPrintPower() -         tag=HEALTH value=2
+D 00:05:07.8177072 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:05:07.8177072 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
 D 00:05:07.8177072 GameState.DebugPrintPower() -         tag=IS_BACON_POOL_MINION value=0
 D 00:05:07.8177072 GameState.DebugPrintPower() - BLOCK_END
@@ -5893,6 +5920,7 @@ D 00:06:00.9914568 GameState.DebugPrintPower() -                         tag=CON
 D 00:06:00.9914568 GameState.DebugPrintPower() -                         tag=CARDTYPE value=MINION
 D 00:06:00.9914568 GameState.DebugPrintPower() -                         tag=ATK value=4
 D 00:06:00.9914568 GameState.DebugPrintPower() -                         tag=HEALTH value=4
+D 00:06:00.9914568 GameState.DebugPrintPower() -                         tag=PREMIUM value=1
 D 00:06:00.9914568 GameState.DebugPrintPower() -                         tag=ZONE value=HAND
 D 00:06:00.9914568 GameState.DebugPrintPower() -                         tag=CARDRACE value=PIRATE
 D 00:06:00.9914568 GameState.DebugPrintPower() -                         tag=ZONE_POSITION value=1
@@ -5905,6 +5933,7 @@ D 00:06:00.9914568 GameState.DebugPrintPower() -                         tag=CON
 D 00:06:00.9914568 GameState.DebugPrintPower() -                     SHOW_ENTITY - Updating Entity=3579 CardID=TB_BaconShopBadsongE
 D 00:06:00.9914568 GameState.DebugPrintPower() -                         tag=CONTROLLER value=2
 D 00:06:00.9914568 GameState.DebugPrintPower() -                         tag=CARDTYPE value=ENCHANTMENT
+D 00:06:00.9914568 GameState.DebugPrintPower() -                         tag=PREMIUM value=1
 D 00:06:00.9914568 GameState.DebugPrintPower() -                         tag=ZONE value=SETASIDE
 D 00:06:00.9914568 GameState.DebugPrintPower() -                     TAG_CHANGE Entity=3579 tag=ZONE value=PLAY 
 D 00:06:00.9914568 GameState.DebugPrintPower() -                 FULL_ENTITY - Creating ID=3580 CardID=
@@ -5913,6 +5942,7 @@ D 00:06:00.9914568 GameState.DebugPrintPower() -                     tag=CONTROL
 D 00:06:00.9914568 GameState.DebugPrintPower() -                 SHOW_ENTITY - Updating Entity=3580 CardID=TB_BaconShopBadsongE
 D 00:06:00.9914568 GameState.DebugPrintPower() -                     tag=CONTROLLER value=2
 D 00:06:00.9914568 GameState.DebugPrintPower() -                     tag=CARDTYPE value=ENCHANTMENT
+D 00:06:00.9914568 GameState.DebugPrintPower() -                     tag=PREMIUM value=1
 D 00:06:00.9914568 GameState.DebugPrintPower() -                     tag=ZONE value=SETASIDE
 D 00:06:00.9914568 GameState.DebugPrintPower() -                 TAG_CHANGE Entity=3580 tag=ZONE value=PLAY 
 D 00:06:00.9914568 GameState.DebugPrintPower() -                 TAG_CHANGE Entity=92 tag=PLAYER_TRIPLES value=1 
@@ -6025,6 +6055,8 @@ D 00:06:04.3504498 GameState.DebugPrintEntityChoices() - Entities[2]=3596
 D 00:06:09.2162377 GameState.SendChoices() - id=4 ChoiceType=GENERAL
 D 00:06:09.4789580 GameState.DebugPrintEntitiesChosen() - id=4 EntitiesCount=1
 D 00:06:09.4789580 GameState.DebugPrintEntitiesChosen() - Entities[0]=3598
+D 00:06:09.5509261 GameState.DebugPrintPower() - TAG_CHANGE Entity=3598 tag=PREMIUM value=1 
+D 00:06:09.5509261 GameState.DebugPrintPower() - TAG_CHANGE Entity=3598 tag=PREMIUM value=0 
 D 00:06:09.5509261 GameState.DebugPrintPower() - TAG_CHANGE Entity=3598 tag=ZONE value=HAND 
 D 00:06:09.5509261 GameState.DebugPrintPower() - TAG_CHANGE Entity=3598 tag=ZONE_POSITION value=1 
 D 00:06:09.5509261 GameState.DebugPrintPower() - BLOCK_START BlockType=TRIGGER Entity=3287 EffectCardId=System.Collections.Generic.List`1[System.String] EffectIndex=1 Target=0 SubOption=-1 TriggerKeyword=TAG_NOT_SET
@@ -6257,6 +6289,7 @@ D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=ATK value=4
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=HEALTH value=6
+D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=CARDRACE value=ABERRATION
 D 00:06:44.7704887 GameState.DebugPrintPower() -     TAG_CHANGE Entity=3708 tag=COPIED_FROM_ENTITY_ID value=3458 
@@ -6388,6 +6421,7 @@ D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=ATK value=2
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=HEALTH value=2
+D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=DIVINE_SHIELD value=1
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
@@ -6408,6 +6442,7 @@ D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=HEALTH value=2
+D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
 D 00:06:44.7704887 GameState.DebugPrintPower() -     TAG_CHANGE Entity=3732 tag=COPIED_FROM_ENTITY_ID value=2724 
@@ -6416,6 +6451,7 @@ D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=ATK value=4
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=HEALTH value=4
+D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:06:44.7704887 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
 D 00:06:44.7704887 GameState.DebugPrintPower() -     TAG_CHANGE Entity=3733 tag=COPIED_FROM_ENTITY_ID value=3578 
@@ -6614,6 +6650,7 @@ D 00:06:44.9326693 GameState.DebugPrintPower() -     TAG_CHANGE Entity=3702 tag=
 D 00:06:44.9326693 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=3702 CardID=BG30_Trinket_1st
 D 00:06:44.9326693 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:06:44.9326693 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:06:44.9326693 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:06:44.9326693 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:06:44.9326693 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:06:44.9326693 GameState.DebugPrintPower() -     HIDE_ENTITY - Entity=3703 tag=ZONE value=SETASIDE
@@ -6621,6 +6658,7 @@ D 00:06:44.9326693 GameState.DebugPrintPower() -     TAG_CHANGE Entity=3703 tag=
 D 00:06:44.9326693 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=3703 CardID=BG30_Trinket_2nd
 D 00:06:44.9326693 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:06:44.9326693 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:06:44.9326693 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:06:44.9326693 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:06:44.9326693 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:06:44.9326693 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=4080 CardID=
@@ -6653,6 +6691,7 @@ D 00:06:44.9326693 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:06:44.9326693 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:06:44.9326693 GameState.DebugPrintPower() -         tag=ATK value=4
 D 00:06:44.9326693 GameState.DebugPrintPower() -         tag=HEALTH value=6
+D 00:06:44.9326693 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:06:44.9326693 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:06:44.9326693 GameState.DebugPrintPower() -         tag=CARDRACE value=ABERRATION
 D 00:06:44.9326693 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=1
@@ -6787,6 +6826,7 @@ D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINI
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=ATK value=4
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=HEALTH value=6
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=DAMAGE value=0
+D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=CARDRACE value=ABERRATION
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=COPIED_FROM_ENTITY_ID value=4082
@@ -6805,6 +6845,7 @@ D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=ATK value=2
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=HEALTH value=4
+D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=STEALTH value=0
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=DIVINE_SHIELD value=0
@@ -6856,6 +6897,7 @@ D 00:06:45.5737585 GameState.DebugPrintPower() -     TAG_CHANGE Entity=3725 tag=
 D 00:06:45.5737585 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=3725 CardID=BG30_Trinket_1st
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:06:45.5737585 GameState.DebugPrintPower() -     HIDE_ENTITY - Entity=3726 tag=ZONE value=SETASIDE
@@ -6863,6 +6905,7 @@ D 00:06:45.5737585 GameState.DebugPrintPower() -     TAG_CHANGE Entity=3726 tag=
 D 00:06:45.5737585 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=3726 CardID=BG30_Trinket_2nd
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:06:45.5737585 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=4208 CardID=
@@ -6901,6 +6944,7 @@ D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=ATK value=2
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=HEALTH value=2
+D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=DIVINE_SHIELD value=1
 D 00:06:45.5737585 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
@@ -7478,6 +7522,7 @@ D 00:06:45.6024068 GameState.DebugPrintPower() -     TAG_CHANGE Entity=4218 tag=
 D 00:06:45.6024068 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=4218 CardID=BG36_520t
 D 00:06:45.6024068 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:06:45.6024068 GameState.DebugPrintPower() -         tag=CARDTYPE value=SPELL
+D 00:06:45.6024068 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:06:45.6024068 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:06:45.6024068 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:06:45.6024068 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=4219 CardID=TB_BaconShopBadsongE
@@ -7767,8 +7812,10 @@ D 00:07:50.5491590 GameState.DebugPrintPower() - TAG_CHANGE Entity=4562 tag=ZONE
 D 00:07:50.5491590 GameState.DebugPrintPower() - TAG_CHANGE Entity=4559 tag=ZONE value=REMOVEDFROMGAME 
 D 00:07:50.5491590 GameState.DebugPrintPower() - CHANGE_ENTITY - Updating Entity=283 CardID=BG30_MagicItem_888
 D 00:07:50.5491590 GameState.DebugPrintPower() -     tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:07:50.5491590 GameState.DebugPrintPower() -     tag=PREMIUM value=0
 D 00:07:50.5491590 GameState.DebugPrintPower() - CHANGE_ENTITY - Updating Entity=283 CardID=BG30_MagicItem_888
 D 00:07:50.5491590 GameState.DebugPrintPower() -     tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:07:50.5491590 GameState.DebugPrintPower() -     tag=PREMIUM value=0
 D 00:07:50.5491590 GameState.DebugPrintPower() - BLOCK_START BlockType=TRIGGER Entity=51 EffectCardId=System.Collections.Generic.List`1[System.String] EffectIndex=33 Target=0 SubOption=-1 TriggerKeyword=TAG_NOT_SET
 D 00:07:50.5491590 GameState.DebugPrintPower() - BLOCK_END
 D 00:07:50.5491590 GameState.DebugPrintPower() - BLOCK_START BlockType=TRIGGER Entity=4543 EffectCardId=System.Collections.Generic.List`1[System.String] EffectIndex=0 Target=0 SubOption=-1 TriggerKeyword=TAG_NOT_SET
@@ -7781,6 +7828,7 @@ D 00:07:50.5491590 GameState.DebugPrintPower() -     CHANGE_ENTITY - Updating En
 D 00:07:50.5491590 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:07:50.5491590 GameState.DebugPrintPower() -         tag=ATK value=2
 D 00:07:50.5491590 GameState.DebugPrintPower() -         tag=HEALTH value=6
+D 00:07:50.5491590 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:07:50.5491590 GameState.DebugPrintPower() -         tag=CARDRACE value=ABERRATION
 D 00:07:50.5491590 GameState.DebugPrintPower() -         tag=IS_BACON_POOL_MINION value=0
 D 00:07:50.5491590 GameState.DebugPrintPower() - BLOCK_END
@@ -8270,6 +8318,7 @@ D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=ATK value=4
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=HEALTH value=2
+D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=TAUNT value=1
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=CARDRACE value=MECHANICAL
@@ -8349,6 +8398,7 @@ D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=HEALTH value=6
+D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=CARDRACE value=MECHANICAL
 D 00:08:58.4901149 GameState.DebugPrintPower() -     TAG_CHANGE Entity=5111 tag=COPIED_FROM_ENTITY_ID value=4970 
@@ -8556,6 +8606,7 @@ D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=HEALTH value=2
+D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
 D 00:08:58.4901149 GameState.DebugPrintPower() -     TAG_CHANGE Entity=5137 tag=COPIED_FROM_ENTITY_ID value=3732 
@@ -8564,6 +8615,7 @@ D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=ATK value=4
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=HEALTH value=4
+D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:08:58.4901149 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
 D 00:08:58.4901149 GameState.DebugPrintPower() -     TAG_CHANGE Entity=5138 tag=COPIED_FROM_ENTITY_ID value=3733 
@@ -8643,6 +8695,7 @@ D 00:08:58.6930360 GameState.DebugPrintPower() -     TAG_CHANGE Entity=5087 tag=
 D 00:08:58.6930360 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=5087 CardID=BG30_Trinket_2nd
 D 00:08:58.6930360 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:08:58.6930360 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:08:58.6930360 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:08:58.6930360 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:08:58.6930360 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:08:58.6930360 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=5624 CardID=
@@ -8758,6 +8811,7 @@ D 00:08:58.6930360 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:08:58.6930360 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:08:58.6930360 GameState.DebugPrintPower() -         tag=ATK value=4
 D 00:08:58.6930360 GameState.DebugPrintPower() -         tag=HEALTH value=2
+D 00:08:58.6930360 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:08:58.6930360 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:08:58.6930360 GameState.DebugPrintPower() -         tag=TAUNT value=1
 D 00:08:58.6930360 GameState.DebugPrintPower() -         tag=CARDRACE value=MECHANICAL
@@ -8791,6 +8845,7 @@ D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=ATK value=3
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=HEALTH value=3
+D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=ZONE value=PLAY
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=TAUNT value=1
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=CARDRACE value=MECHANICAL
@@ -8799,6 +8854,7 @@ D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=COPIED_FROM_ENT
 D 00:08:59.6014176 GameState.DebugPrintPower() -         SHOW_ENTITY - Updating Entity=5786 CardID=TB_Bacon_Secrets_15e
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=CONTROLLER value=10
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=CARDTYPE value=ENCHANTMENT
+D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=ZONE value=PLAY
 D 00:08:59.6014176 GameState.DebugPrintPower() -         TAG_CHANGE Entity=5785 tag=ZONE_POSITION value=5 
 D 00:08:59.6014176 GameState.DebugPrintPower() -     TAG_CHANGE Entity=5085 tag=ZONE value=GRAVEYARD 
@@ -8884,6 +8940,7 @@ D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=ATK value=6
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=HEALTH value=2
+D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=ZONE value=SETASIDE
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=CARDRACE value=PIRATE
 D 00:08:59.6014176 GameState.DebugPrintPower() -         TAG_CHANGE Entity=5795 tag=DAMAGE value=33 
@@ -8978,6 +9035,7 @@ D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=ATK value=4
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=HEALTH value=4
+D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=ZONE value=SETASIDE
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=CARDRACE value=PIRATE
 D 00:08:59.6014176 GameState.DebugPrintPower() -         TAG_CHANGE Entity=5803 tag=DAMAGE value=4 
@@ -9175,6 +9233,7 @@ D 00:08:59.6014176 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:08:59.6014176 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:08:59.6014176 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:08:59.6014176 GameState.DebugPrintPower() -         tag=HEALTH value=6
+D 00:08:59.6014176 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:08:59.6014176 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:08:59.6014176 GameState.DebugPrintPower() -         tag=CARDRACE value=MECHANICAL
 D 00:08:59.6014176 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=1
@@ -9296,6 +9355,7 @@ D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=ATK value=6
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=HEALTH value=6
+D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=ZONE value=SETASIDE
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=CARDRACE value=MECHANICAL
 D 00:08:59.6014176 GameState.DebugPrintPower() -         TAG_CHANGE Entity=5827 tag=DAMAGE value=33 
@@ -9306,6 +9366,7 @@ D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=ATK value=6
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=HEALTH value=6
+D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=ZONE value=SETASIDE
 D 00:08:59.6014176 GameState.DebugPrintPower() -             tag=CARDRACE value=MECHANICAL
 D 00:08:59.6014176 GameState.DebugPrintPower() -         TAG_CHANGE Entity=5828 tag=DAMAGE value=33 
@@ -10194,6 +10255,7 @@ D 00:08:59.6316012 GameState.DebugPrintPower() -     TAG_CHANGE Entity=5791 tag=
 D 00:08:59.6316012 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=5791 CardID=BG36_624
 D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=CARDTYPE value=SPELL
+D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:08:59.6316012 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=5792 CardID=TB_BaconShopBadsongE
@@ -10208,6 +10270,7 @@ D 00:08:59.6316012 GameState.DebugPrintPower() -     TAG_CHANGE Entity=5793 tag=
 D 00:08:59.6316012 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=5793 CardID=BG36_624
 D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=CARDTYPE value=SPELL
+D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:08:59.6316012 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=5794 CardID=TB_BaconShopBadsongE
@@ -10221,6 +10284,7 @@ D 00:08:59.6316012 GameState.DebugPrintPower() -     TAG_CHANGE Entity=5799 tag=
 D 00:08:59.6316012 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=5799 CardID=BG36_624
 D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=CARDTYPE value=SPELL
+D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:08:59.6316012 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=5800 CardID=TB_BaconShopBadsongE
@@ -10233,6 +10297,7 @@ D 00:08:59.6316012 GameState.DebugPrintPower() -     TAG_CHANGE Entity=5801 tag=
 D 00:08:59.6316012 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=5801 CardID=BG36_624
 D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=CARDTYPE value=SPELL
+D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:08:59.6316012 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:08:59.6316012 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=5802 CardID=TB_BaconShopBadsongE
@@ -10508,6 +10573,7 @@ D 00:08:59.9210104 GameState.DebugPrintPower() -     CHANGE_ENTITY - Updating En
 D 00:08:59.9210104 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:08:59.9210104 GameState.DebugPrintPower() -         tag=ATK value=12
 D 00:08:59.9210104 GameState.DebugPrintPower() -         tag=HEALTH value=6
+D 00:08:59.9210104 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:08:59.9210104 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
 D 00:08:59.9210104 GameState.DebugPrintPower() -         tag=DEATHRATTLE value=1
 D 00:08:59.9210104 GameState.DebugPrintPower() -         tag=IS_BACON_POOL_MINION value=0
@@ -11179,6 +11245,7 @@ D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=HEALTH value=8
+D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CARDRACE value=MURLOC
 D 00:11:08.6910292 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=6997 CardID=
@@ -11336,6 +11403,7 @@ D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=HEALTH value=6
+D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CARDRACE value=MECHANICAL
 D 00:11:08.6910292 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=7017 CardID=
@@ -11655,6 +11723,7 @@ D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=HEALTH value=6
+D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CARDRACE value=ELEMENTAL
 D 00:11:08.6910292 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=7055 CardID=
@@ -11721,6 +11790,7 @@ D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=ATK value=12
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=HEALTH value=8
+D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
 D 00:11:08.6910292 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=7062 CardID=
@@ -11758,6 +11828,7 @@ D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=ATK value=4
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=HEALTH value=6
+D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CARDRACE value=MURLOC
 D 00:11:08.6910292 GameState.DebugPrintPower() -     TAG_CHANGE Entity=7065 tag=REBORN value=1 
@@ -11804,6 +11875,7 @@ D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=ATK value=12
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=HEALTH value=6
+D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=DEATHRATTLE value=1
@@ -11813,6 +11885,7 @@ D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=HEALTH value=2
+D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
 D 00:11:08.6910292 GameState.DebugPrintPower() -     TAG_CHANGE Entity=7069 tag=COPIED_FROM_ENTITY_ID value=5137 
@@ -11821,6 +11894,7 @@ D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=ATK value=4
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=HEALTH value=4
+D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:11:08.6910292 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
 D 00:11:08.6910292 GameState.DebugPrintPower() -     TAG_CHANGE Entity=7070 tag=COPIED_FROM_ENTITY_ID value=5138 
@@ -12038,6 +12112,7 @@ D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=HEALTH value=6
+D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=CARDRACE value=MECHANICAL
 D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=2
@@ -12223,6 +12298,7 @@ D 00:11:09.0101030 GameState.DebugPrintPower() -     TAG_CHANGE Entity=6973 tag=
 D 00:11:09.0101030 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=6973 CardID=BG30_Trinket_2nd
 D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:11:09.0101030 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=7718 CardID=
@@ -12414,6 +12490,7 @@ D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=HEALTH value=8
+D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=CARDRACE value=MURLOC
 D 00:11:09.0101030 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=5
@@ -12682,6 +12759,7 @@ D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=ATK value=6
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=HEALTH value=6
+D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=ZONE value=SETASIDE
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=CARDRACE value=MECHANICAL
 D 00:11:11.0317680 GameState.DebugPrintPower() -         FULL_ENTITY - Creating ID=8052 CardID=
@@ -13189,6 +13267,7 @@ D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=ATK value=4
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=HEALTH value=4
+D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=ZONE value=SETASIDE
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=CARDRACE value=PIRATE
 D 00:11:11.0317680 GameState.DebugPrintPower() -         TAG_CHANGE Entity=8081 tag=DAMAGE value=12 
@@ -13211,6 +13290,7 @@ D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=ATK value=12
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=HEALTH value=6
+D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=ZONE value=SETASIDE
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=CARDRACE value=PIRATE
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=DEATHRATTLE value=1
@@ -13278,6 +13358,7 @@ D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=ATK value=6
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=HEALTH value=2
+D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=ZONE value=SETASIDE
 D 00:11:11.0317680 GameState.DebugPrintPower() -             tag=CARDRACE value=PIRATE
 D 00:11:11.0317680 GameState.DebugPrintPower() -         TAG_CHANGE Entity=7723 tag=HEALTH value=10 
@@ -13491,6 +13572,7 @@ D 00:11:11.0317680 GameState.DebugPrintPower() -     TAG_CHANGE Entity=6977 tag=
 D 00:11:11.0317680 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=6977 CardID=BG33_813
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=CARDTYPE value=SPELL
+D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=STEALTH value=0
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=DIVINE_SHIELD value=0
@@ -13514,6 +13596,7 @@ D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=ATK value=4
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=HEALTH value=4
+D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=STEALTH value=0
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=DIVINE_SHIELD value=0
@@ -13550,6 +13633,7 @@ D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=ATK value=8
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=HEALTH value=5
+D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=STEALTH value=0
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=DIVINE_SHIELD value=0
@@ -13625,6 +13709,7 @@ D 00:11:11.0317680 GameState.DebugPrintPower() -     TAG_CHANGE Entity=7034 tag=
 D 00:11:11.0317680 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=7034 CardID=BG30_Trinket_2nd
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:11:11.0317680 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=8105 CardID=
@@ -13739,6 +13824,7 @@ D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=HEALTH value=6
+D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=CARDRACE value=ELEMENTAL
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=3
@@ -13807,6 +13893,7 @@ D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=ATK value=12
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=HEALTH value=8
+D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=5
@@ -13846,6 +13933,7 @@ D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=ATK value=4
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=HEALTH value=6
+D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=CARDRACE value=MURLOC
 D 00:11:11.0317680 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=7
@@ -14845,6 +14933,7 @@ D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=HEALTH value=12
+D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=STEALTH value=0
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=DIVINE_SHIELD value=0
@@ -14884,6 +14973,7 @@ D 00:11:11.0701866 GameState.DebugPrintPower() -     TAG_CHANGE Entity=7040 tag=
 D 00:11:11.0701866 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=7040 CardID=BG33_815
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=CARDTYPE value=SPELL
+D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=STEALTH value=0
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=DIVINE_SHIELD value=0
@@ -14909,6 +14999,7 @@ D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=ATK value=5
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=HEALTH value=5
+D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=STEALTH value=0
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=DIVINE_SHIELD value=1
@@ -14942,6 +15033,7 @@ D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=ATK value=3
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=HEALTH value=2
+D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=STEALTH value=0
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=DIVINE_SHIELD value=0
@@ -14971,6 +15063,7 @@ D 00:11:11.0701866 GameState.DebugPrintPower() -     TAG_CHANGE Entity=7046 tag=
 D 00:11:11.0701866 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=7046 CardID=BG28_810
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=CARDTYPE value=SPELL
+D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=STEALTH value=0
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=DIVINE_SHIELD value=0
@@ -14991,6 +15084,7 @@ D 00:11:11.0701866 GameState.DebugPrintPower() -     TAG_CHANGE Entity=8126 tag=
 D 00:11:11.0701866 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=8126 CardID=BG33_811
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=CARDTYPE value=SPELL
+D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=ZONE value=REMOVEDFROMGAME
 D 00:11:11.0701866 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:11:11.0701866 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=8127 CardID=TB_BaconShopBadsongE
@@ -15287,6 +15381,7 @@ D 00:11:11.3977622 GameState.DebugPrintPower() -     CHANGE_ENTITY - Updating En
 D 00:11:11.3977622 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:11:11.3977622 GameState.DebugPrintPower() -         tag=ATK value=14
 D 00:11:11.3977622 GameState.DebugPrintPower() -         tag=HEALTH value=14
+D 00:11:11.3977622 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:11:11.3977622 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
 D 00:11:11.3977622 GameState.DebugPrintPower() -         tag=IS_BACON_POOL_MINION value=0
 D 00:11:11.3977622 GameState.DebugPrintPower() -     TAG_CHANGE Entity=7071 tag=HEALTH value=40 
@@ -15553,6 +15648,7 @@ D 00:12:01.5439989 GameState.DebugPrintPower() -         TAG_CHANGE Entity=9101 
 D 00:12:01.5439989 GameState.DebugPrintPower() -         SHOW_ENTITY - Updating Entity=9101 CardID=BG32_337
 D 00:12:01.5439989 GameState.DebugPrintPower() -             tag=CONTROLLER value=10
 D 00:12:01.5439989 GameState.DebugPrintPower() -             tag=CARDTYPE value=BATTLEGROUND_SPELL
+D 00:12:01.5439989 GameState.DebugPrintPower() -             tag=PREMIUM value=0
 D 00:12:01.5439989 GameState.DebugPrintPower() -             tag=ZONE value=PLAY
 D 00:12:01.5439989 GameState.DebugPrintPower() -             tag=ZONE_POSITION value=0
 D 00:12:01.5439989 GameState.DebugPrintPower() -         TAG_CHANGE Entity=9101 tag=ZONE_POSITION value=6 
@@ -15915,6 +16011,7 @@ D 00:12:18.0092211 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:12:18.0092211 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:12:18.0092211 GameState.DebugPrintPower() -             tag=ATK value=3
 D 00:12:18.0092211 GameState.DebugPrintPower() -             tag=HEALTH value=4
+D 00:12:18.0092211 GameState.DebugPrintPower() -             tag=PREMIUM value=0
 D 00:12:18.0092211 GameState.DebugPrintPower() -             tag=ZONE value=PLAY
 D 00:12:18.0092211 GameState.DebugPrintPower() -             tag=CARDRACE value=PIRATE
 D 00:12:18.0092211 GameState.DebugPrintPower() -             tag=ZONE_POSITION value=0
@@ -16077,6 +16174,7 @@ D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=ATK value=2
 D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=HEALTH value=2
+D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=ZONE value=SETASIDE
 D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=DIVINE_SHIELD value=1
 D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=CARDRACE value=PIRATE
@@ -16088,6 +16186,7 @@ D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=ATK value=2
 D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=HEALTH value=2
+D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=ZONE value=PLAY
 D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=DIVINE_SHIELD value=1
 D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=CARDRACE value=PIRATE
@@ -16105,6 +16204,7 @@ D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=ATK value=5
 D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=HEALTH value=5
+D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=PREMIUM value=0
 D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=ZONE value=PLAY
 D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=CARDRACE value=ABERRATION
 D 00:12:21.9774868 GameState.DebugPrintPower() -             tag=DEATHRATTLE value=1
@@ -16403,6 +16503,7 @@ D 00:12:28.3692136 GameState.DebugPrintPower() -         TAG_CHANGE Entity=9273 
 D 00:12:28.3692136 GameState.DebugPrintPower() -         SHOW_ENTITY - Updating Entity=9273 CardID=BG28_520
 D 00:12:28.3692136 GameState.DebugPrintPower() -             tag=CONTROLLER value=10
 D 00:12:28.3692136 GameState.DebugPrintPower() -             tag=CARDTYPE value=BATTLEGROUND_SPELL
+D 00:12:28.3692136 GameState.DebugPrintPower() -             tag=PREMIUM value=0
 D 00:12:28.3692136 GameState.DebugPrintPower() -             tag=ZONE value=PLAY
 D 00:12:28.3692136 GameState.DebugPrintPower() -             tag=ZONE_POSITION value=0
 D 00:12:28.3692136 GameState.DebugPrintPower() -         TAG_CHANGE Entity=9273 tag=ZONE_POSITION value=6 
@@ -16596,6 +16697,7 @@ D 00:12:33.6479405 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:12:33.6479405 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:12:33.6479405 GameState.DebugPrintPower() -             tag=ATK value=5
 D 00:12:33.6479405 GameState.DebugPrintPower() -             tag=HEALTH value=1
+D 00:12:33.6479405 GameState.DebugPrintPower() -             tag=PREMIUM value=0
 D 00:12:33.6479405 GameState.DebugPrintPower() -             tag=ZONE value=PLAY
 D 00:12:33.6479405 GameState.DebugPrintPower() -             tag=CARDRACE value=ELEMENTAL
 D 00:12:33.6479405 GameState.DebugPrintPower() -             tag=DEATHRATTLE value=1
@@ -17108,6 +17210,7 @@ D 00:13:10.8149412 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:13:10.8149412 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:13:10.8149412 GameState.DebugPrintPower() -             tag=ATK value=4
 D 00:13:10.8149412 GameState.DebugPrintPower() -             tag=HEALTH value=3
+D 00:13:10.8149412 GameState.DebugPrintPower() -             tag=PREMIUM value=0
 D 00:13:10.8149412 GameState.DebugPrintPower() -             tag=ZONE value=PLAY
 D 00:13:10.8149412 GameState.DebugPrintPower() -             tag=CARDRACE value=ELEMENTAL
 D 00:13:10.8149412 GameState.DebugPrintPower() -             tag=ZONE_POSITION value=0
@@ -17124,6 +17227,7 @@ D 00:13:10.8149412 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:13:10.8149412 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:13:10.8149412 GameState.DebugPrintPower() -             tag=ATK value=3
 D 00:13:10.8149412 GameState.DebugPrintPower() -             tag=HEALTH value=3
+D 00:13:10.8149412 GameState.DebugPrintPower() -             tag=PREMIUM value=0
 D 00:13:10.8149412 GameState.DebugPrintPower() -             tag=ZONE value=PLAY
 D 00:13:10.8149412 GameState.DebugPrintPower() -             tag=CARDRACE value=ELEMENTAL
 D 00:13:10.8149412 GameState.DebugPrintPower() -             tag=ZONE_POSITION value=0
@@ -17250,6 +17354,7 @@ D 00:13:15.3693765 GameState.DebugPrintPower() -                     tag=CONTROL
 D 00:13:15.3693765 GameState.DebugPrintPower() -                 SHOW_ENTITY - Updating Entity=9777 CardID=BG31_818e
 D 00:13:15.3693765 GameState.DebugPrintPower() -                     tag=CONTROLLER value=2
 D 00:13:15.3693765 GameState.DebugPrintPower() -                     tag=CARDTYPE value=ENCHANTMENT
+D 00:13:15.3693765 GameState.DebugPrintPower() -                     tag=PREMIUM value=1
 D 00:13:15.3693765 GameState.DebugPrintPower() -                     tag=ZONE value=SETASIDE
 D 00:13:15.3693765 GameState.DebugPrintPower() -                 TAG_CHANGE Entity=9777 tag=ZONE value=PLAY 
 D 00:13:15.3693765 GameState.DebugPrintPower() -                 FULL_ENTITY - Creating ID=9778 CardID=
@@ -17258,6 +17363,7 @@ D 00:13:15.3693765 GameState.DebugPrintPower() -                     tag=CONTROL
 D 00:13:15.3693765 GameState.DebugPrintPower() -                 SHOW_ENTITY - Updating Entity=9778 CardID=BG31_818e
 D 00:13:15.3693765 GameState.DebugPrintPower() -                     tag=CONTROLLER value=2
 D 00:13:15.3693765 GameState.DebugPrintPower() -                     tag=CARDTYPE value=ENCHANTMENT
+D 00:13:15.3693765 GameState.DebugPrintPower() -                     tag=PREMIUM value=1
 D 00:13:15.3693765 GameState.DebugPrintPower() -                     tag=ZONE value=SETASIDE
 D 00:13:15.3693765 GameState.DebugPrintPower() -                 TAG_CHANGE Entity=9778 tag=ZONE value=PLAY 
 D 00:13:15.3693765 GameState.DebugPrintPower() -                 FULL_ENTITY - Creating ID=9779 CardID=
@@ -17266,6 +17372,7 @@ D 00:13:15.3693765 GameState.DebugPrintPower() -                     tag=CONTROL
 D 00:13:15.3693765 GameState.DebugPrintPower() -                 SHOW_ENTITY - Updating Entity=9779 CardID=BG31_818e
 D 00:13:15.3693765 GameState.DebugPrintPower() -                     tag=CONTROLLER value=2
 D 00:13:15.3693765 GameState.DebugPrintPower() -                     tag=CARDTYPE value=ENCHANTMENT
+D 00:13:15.3693765 GameState.DebugPrintPower() -                     tag=PREMIUM value=1
 D 00:13:15.3693765 GameState.DebugPrintPower() -                     tag=ZONE value=SETASIDE
 D 00:13:15.3693765 GameState.DebugPrintPower() -                 TAG_CHANGE Entity=9779 tag=ZONE value=PLAY 
 D 00:13:15.3693765 GameState.DebugPrintPower() -                 FULL_ENTITY - Creating ID=9780 CardID=
@@ -17407,6 +17514,7 @@ D 00:13:19.3528009 GameState.DebugPrintPower() -                     tag=CONTROL
 D 00:13:19.3528009 GameState.DebugPrintPower() -                 SHOW_ENTITY - Updating Entity=9801 CardID=BG31_816e
 D 00:13:19.3528009 GameState.DebugPrintPower() -                     tag=CONTROLLER value=2
 D 00:13:19.3528009 GameState.DebugPrintPower() -                     tag=CARDTYPE value=ENCHANTMENT
+D 00:13:19.3528009 GameState.DebugPrintPower() -                     tag=PREMIUM value=1
 D 00:13:19.3528009 GameState.DebugPrintPower() -                     tag=ZONE value=SETASIDE
 D 00:13:19.3528009 GameState.DebugPrintPower() -                 TAG_CHANGE Entity=9801 tag=ZONE value=PLAY 
 D 00:13:19.3528009 GameState.DebugPrintPower() -                 FULL_ENTITY - Creating ID=9802 CardID=
@@ -17415,6 +17523,7 @@ D 00:13:19.3528009 GameState.DebugPrintPower() -                     tag=CONTROL
 D 00:13:19.3528009 GameState.DebugPrintPower() -                 SHOW_ENTITY - Updating Entity=9802 CardID=BG31_816e
 D 00:13:19.3528009 GameState.DebugPrintPower() -                     tag=CONTROLLER value=2
 D 00:13:19.3528009 GameState.DebugPrintPower() -                     tag=CARDTYPE value=ENCHANTMENT
+D 00:13:19.3528009 GameState.DebugPrintPower() -                     tag=PREMIUM value=1
 D 00:13:19.3528009 GameState.DebugPrintPower() -                     tag=ZONE value=SETASIDE
 D 00:13:19.3528009 GameState.DebugPrintPower() -                 TAG_CHANGE Entity=9802 tag=ZONE value=PLAY 
 D 00:13:19.3528009 GameState.DebugPrintPower() -                 FULL_ENTITY - Creating ID=9803 CardID=
@@ -17423,6 +17532,7 @@ D 00:13:19.3528009 GameState.DebugPrintPower() -                     tag=CONTROL
 D 00:13:19.3528009 GameState.DebugPrintPower() -                 SHOW_ENTITY - Updating Entity=9803 CardID=BG31_816e
 D 00:13:19.3528009 GameState.DebugPrintPower() -                     tag=CONTROLLER value=2
 D 00:13:19.3528009 GameState.DebugPrintPower() -                     tag=CARDTYPE value=ENCHANTMENT
+D 00:13:19.3528009 GameState.DebugPrintPower() -                     tag=PREMIUM value=1
 D 00:13:19.3528009 GameState.DebugPrintPower() -                     tag=ZONE value=SETASIDE
 D 00:13:19.3528009 GameState.DebugPrintPower() -                 TAG_CHANGE Entity=9803 tag=ZONE value=PLAY 
 D 00:13:19.3528009 GameState.DebugPrintPower() -                 FULL_ENTITY - Creating ID=9804 CardID=
@@ -17526,6 +17636,7 @@ D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=ATK value=2
 D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=HEALTH value=2
+D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=ZONE value=SETASIDE
 D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=DIVINE_SHIELD value=1
 D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=CARDRACE value=PIRATE
@@ -17614,6 +17725,7 @@ D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=ATK value=3
 D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=HEALTH value=3
+D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=PREMIUM value=0
 D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=ZONE value=PLAY
 D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=CARDRACE value=ELEMENTAL
 D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=ZONE_POSITION value=0
@@ -17630,6 +17742,7 @@ D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=ATK value=2
 D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=HEALTH value=2
+D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=ZONE value=PLAY
 D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=DIVINE_SHIELD value=1
 D 00:13:19.9486934 GameState.DebugPrintPower() -             tag=CARDRACE value=PIRATE
@@ -17718,6 +17831,7 @@ D 00:13:24.4421947 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:13:24.4421947 GameState.DebugPrintPower() -         SHOW_ENTITY - Updating Entity=9848 CardID=BG26_814e
 D 00:13:24.4421947 GameState.DebugPrintPower() -             tag=CONTROLLER value=2
 D 00:13:24.4421947 GameState.DebugPrintPower() -             tag=CARDTYPE value=ENCHANTMENT
+D 00:13:24.4421947 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:13:24.4421947 GameState.DebugPrintPower() -             tag=ZONE value=SETASIDE
 D 00:13:24.4421947 GameState.DebugPrintPower() -         TAG_CHANGE Entity=9848 tag=ZONE value=PLAY 
 D 00:13:24.4421947 GameState.DebugPrintPower() -     TAG_CHANGE Entity=7071 tag=HEALTH value=85 
@@ -18010,6 +18124,7 @@ D 00:13:33.6191125 GameState.DebugPrintPower() -                 tag=CONTROLLER 
 D 00:13:33.6191125 GameState.DebugPrintPower() -             SHOW_ENTITY - Updating Entity=9904 CardID=BG26_814e
 D 00:13:33.6191125 GameState.DebugPrintPower() -                 tag=CONTROLLER value=2
 D 00:13:33.6191125 GameState.DebugPrintPower() -                 tag=CARDTYPE value=ENCHANTMENT
+D 00:13:33.6191125 GameState.DebugPrintPower() -                 tag=PREMIUM value=1
 D 00:13:33.6191125 GameState.DebugPrintPower() -                 tag=ZONE value=SETASIDE
 D 00:13:33.6191125 GameState.DebugPrintPower() -             TAG_CHANGE Entity=9904 tag=ZONE value=PLAY 
 D 00:13:33.6191125 GameState.DebugPrintPower() -         TAG_CHANGE Entity=7070 tag=HEALTH value=51 
@@ -18614,6 +18729,7 @@ D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=HEALTH value=6
+D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=CARDRACE value=MECHANICAL
 D 00:13:33.6191125 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=10124 CardID=
@@ -18803,6 +18919,7 @@ D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=ATK value=20
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=HEALTH value=20
+D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=DIVINE_SHIELD value=1
 D 00:13:33.6191125 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=10149 CardID=
@@ -19058,6 +19175,7 @@ D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=ATK value=12
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=HEALTH value=6
+D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=DEATHRATTLE value=1
@@ -19087,6 +19205,7 @@ D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=ATK value=4
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=HEALTH value=4
+D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
 D 00:13:33.6191125 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=10177 CardID=
@@ -19142,6 +19261,7 @@ D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=ATK value=14
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=HEALTH value=14
+D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:13:33.6191125 GameState.DebugPrintPower() -         tag=CARDRACE value=PIRATE
 D 00:13:33.6191125 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=10183 CardID=
@@ -19329,6 +19449,7 @@ D 00:13:34.0354969 GameState.DebugPrintPower() -     TAG_CHANGE Entity=10066 tag
 D 00:13:34.0354969 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=10066 CardID=BG30_Trinket_2nd
 D 00:13:34.0354969 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:13:34.0354969 GameState.DebugPrintPower() -         tag=CARDTYPE value=BATTLEGROUND_TRINKET
+D 00:13:34.0354969 GameState.DebugPrintPower() -         tag=PREMIUM value=0
 D 00:13:34.0354969 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:13:34.0354969 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=0
 D 00:13:34.0354969 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=11088 CardID=
@@ -19687,6 +19808,7 @@ D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=ATK value=12
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=HEALTH value=6
+D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=ZONE value=SETASIDE
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=CARDRACE value=PIRATE
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=DEATHRATTLE value=1
@@ -20071,6 +20193,7 @@ D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=ATK value=4
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=HEALTH value=4
+D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=ZONE value=SETASIDE
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=CARDRACE value=PIRATE
 D 00:13:37.3734842 GameState.DebugPrintPower() -         FULL_ENTITY - Creating ID=11502 CardID=
@@ -20130,6 +20253,7 @@ D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=ATK value=14
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=HEALTH value=14
+D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=ZONE value=SETASIDE
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=CARDRACE value=PIRATE
 D 00:13:37.3734842 GameState.DebugPrintPower() -         FULL_ENTITY - Creating ID=11506 CardID=
@@ -20251,6 +20375,7 @@ D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:13:37.3734842 GameState.DebugPrintPower() -         SHOW_ENTITY - Updating Entity=11519 CardID=BG36_524e
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=CONTROLLER value=2
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=CARDTYPE value=ENCHANTMENT
+D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=ZONE value=SETASIDE
 D 00:13:37.3734842 GameState.DebugPrintPower() -         TAG_CHANGE Entity=11519 tag=ZONE value=PLAY 
 D 00:13:37.3734842 GameState.DebugPrintPower() -         TAG_CHANGE Entity=7071 tag=HEALTH value=28 
@@ -20376,6 +20501,7 @@ D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:13:37.3734842 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=11526 CardID=BG36_524e
 D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=CARDTYPE value=ENCHANTMENT
+D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=ZONE value=SETASIDE
 D 00:13:37.3734842 GameState.DebugPrintPower() -     TAG_CHANGE Entity=11526 tag=ZONE value=PLAY 
 D 00:13:37.3734842 GameState.DebugPrintPower() -     TAG_CHANGE Entity=7071 tag=HEALTH value=28 
@@ -20386,6 +20512,7 @@ D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=CONTROLLER value=2
 D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=ATK value=6
 D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=HEALTH value=6
+D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=CARDRACE value=MECHANICAL
 D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=2
@@ -20687,6 +20814,7 @@ D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=CONTROLLER valu
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=CARDTYPE value=MINION
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=ATK value=6
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=HEALTH value=6
+D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=PREMIUM value=1
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=ZONE value=SETASIDE
 D 00:13:37.3734842 GameState.DebugPrintPower() -             tag=CARDRACE value=MECHANICAL
 D 00:13:37.3734842 GameState.DebugPrintPower() -         FULL_ENTITY - Creating ID=11552 CardID=
@@ -20992,6 +21120,7 @@ D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=CONTROLLER value=10
 D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=CARDTYPE value=MINION
 D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=ATK value=20
 D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=HEALTH value=20
+D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=PREMIUM value=1
 D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=ZONE value=PLAY
 D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=DIVINE_SHIELD value=1
 D 00:13:37.3734842 GameState.DebugPrintPower() -         tag=ZONE_POSITION value=2

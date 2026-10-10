@@ -13,10 +13,12 @@ import contract from "./report_keys.json" with { type: "json" };
 
 /**
  * Goes up by one each time the validator starts accepting records it used to
- * refuse. Every answer carries it, and the desktop app retries a game this
- * server refused once when it sees a higher number (D-047).
+ * refuse, or a field it checks changes meaning (6: parser revision 6 reads
+ * `golden` from PREMIUM, so always-golden cards and golden tokens are golden;
+ * same key and type, D-061). Every answer carries it, and the desktop app
+ * retries a game this server refused once when it sees a higher number (D-047).
  */
-export const VALIDATOR_VERSION = 5;
+export const VALIDATOR_VERSION = 6;
 
 export const SESSION_PATTERN = /^Hearthstone_(\d{4})_(\d{2})_(\d{2})_\d{2}_\d{2}_\d{2}$/;
 const PATH_PATTERN = /\/v1\/games\/(Hearthstone_\d{4}(?:_\d{2}){5})\/([1-9][0-9]{0,3})$/;

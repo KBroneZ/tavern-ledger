@@ -423,7 +423,7 @@
               {
                 "atk": 3,
                 "card_id": "BG32_236",
-                "golden": false,
+                "golden": true,
                 "health": 3,
                 "keywords": [
                   "divine_shield"
@@ -852,7 +852,7 @@
               {
                 "atk": 2,
                 "card_id": "BG32_236",
-                "golden": false,
+                "golden": true,
                 "health": 2,
                 "keywords": [
                   "divine_shield"
