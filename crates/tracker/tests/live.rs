@@ -8,6 +8,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use bg_parser::LogReader;
 use tracker::live::{live_game, LiveGame, Phase};
+use tracker::scene::Scene;
 use tracker::store::Store;
 use tracker::Watcher;
 
@@ -167,4 +168,65 @@ fn the_live_report_follows_new_lines_between_polls() {
     let late = watcher.live_report().map(|r| r.rounds.len());
     assert!(late >= early, "more of the game is known, never less");
     assert_ne!(early, None);
+}
+
+fn scene_line(prev: &str, curr: &str) -> String {
+    format!("D 10:00:00.0000000 LoadingScreen.OnSceneLoaded() - prevMode={prev} currMode={curr}\n")
+}
+
+/// The game in progress is cut off (no end) and the player went back to the
+/// lobby: with LoadingScreen.log the overlay's game ends (T-314).
+#[test]
+fn leaving_the_game_screen_ends_the_live_game_of_a_cut_off_log() {
+    let root = temp_dir();
+    let logs = root.join("Logs");
+    let session = logs.join(SESSION);
+    fs::create_dir_all(&session).unwrap();
+    let mut watcher = Watcher::new(&logs, Store::open(&root.join("data")).unwrap());
+    let log = fixture("duo_game_incomplete");
+    append(&session.join("Power.log"), &log);
+    watcher.poll().unwrap();
+    assert_eq!(watcher.scene(), None, "no LoadingScreen.log: unknown");
+    assert!(watcher.live_report().is_some(), "as before without the file");
+
+    let scenes = session.join("LoadingScreen.log");
+    append(&scenes, &scene_line("HUB", "BACON"));
+    append(&scenes, &format!(
+        "D 10:00:01.0000000 LoadingScreen.OnScenePreUnload() - prevMode=BACON nextMode=GAMEPLAY m_phase=INVALID\n"
+    ));
+    watcher.poll().unwrap();
+    assert_eq!(watcher.scene(), Some(Scene::BattlegroundsLoading));
+    assert!(watcher.live_report().is_some());
+    append(&scenes, &scene_line("BACON", "GAMEPLAY"));
+    watcher.poll().unwrap();
+    assert_eq!(watcher.scene(), Some(Scene::Game));
+    assert!(watcher.live_report().is_some());
+    assert!(watcher.in_progress().is_some());
+
+    append(&scenes, &scene_line("GAMEPLAY", "BACON"));
+    watcher.poll().unwrap();
+    assert_eq!(watcher.scene(), Some(Scene::BattlegroundsLobby));
+    assert!(watcher.live_report().is_none(), "the player left the game");
+    assert!(watcher.in_progress().is_none());
+    assert!(watcher.live_lobby().is_empty());
+    assert_eq!(watcher.live_next_opponent(), None);
+}
+
+#[test]
+fn the_watcher_gives_the_next_opponent_of_the_game_on() {
+    let root = temp_dir();
+    let logs = root.join("Logs");
+    fs::create_dir_all(logs.join(SESSION)).unwrap();
+    let power = logs.join(SESSION).join("Power.log");
+    let mut watcher = Watcher::new(&logs, Store::open(&root.join("data")).unwrap());
+    let log = fixture("solo_game");
+    let turn = log.find("tag=TURN value=1").expect("a shop turn");
+    let cut = log[..turn].rfind('\n').unwrap() + 1;
+    append(&power, &log[..cut]);
+    append(
+        &power,
+        "D 12:00:00.0000000 GameState.DebugPrintPower() -     TAG_CHANGE Entity=10 tag=NEXT_OPPONENT_PLAYER_ID value=3 \n",
+    );
+    watcher.poll().unwrap();
+    assert_eq!(watcher.live_next_opponent(), Some(3));
 }

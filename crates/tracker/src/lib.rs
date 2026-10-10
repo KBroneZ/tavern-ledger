@@ -8,12 +8,14 @@ pub mod discover;
 pub mod game_clock;
 pub mod hero_pick;
 pub mod live;
+pub mod live_seats;
 pub mod lobby_tribes;
 pub mod lock;
 pub mod possible;
 pub mod provenance;
 pub mod recap;
 pub mod report_bundle;
+pub mod scene;
 pub mod setup;
 pub mod shop;
 pub mod stats;
@@ -30,6 +32,7 @@ use bg_parser::report::{GameReport, Status};
 use bg_parser::LogReader;
 
 use game_clock::{GameClock, LocalToUtc, Played};
+use scene::{Scene, SceneTracker};
 use store::{GameKey, Store};
 use tail::{Event, Follower};
 
@@ -91,18 +94,28 @@ pub struct Watcher {
     /// overlay). Rebuilt only when the log moved.
     live: Option<GameReport>,
     live_stale: bool,
+    /// `LoadingScreen.log` of the same session (T-314): where the client is.
+    scenes: Follower,
+    scene: SceneTracker,
+    /// False after the scene file could not be read: the scene is unknown
+    /// until it reads again, never a stale one.
+    scene_read: bool,
 }
 
 impl Watcher {
     pub fn new(logs_dir: impl Into<PathBuf>, store: Store) -> Self {
+        let logs_dir: PathBuf = logs_dir.into();
         Watcher {
-            follower: Follower::new(logs_dir),
+            follower: Follower::new(logs_dir.clone()),
             reader: None,
             store,
             pending: VecDeque::new(),
             live: None,
             live_stale: true,
             to_utc: game_clock::system_local_to_utc,
+            scenes: Follower::loading_screen(logs_dir),
+            scene: SceneTracker::default(),
+            scene_read: true,
         }
     }
 
@@ -148,8 +161,38 @@ impl Watcher {
                 }
             }
         });
+        self.poll_scenes();
         let saved = self.save_pending()?;
         read.map(|()| saved)
+    }
+
+    /// Reads the new scene changes. A read error leaves the scene unknown
+    /// (the app then works from Power.log alone) and never stops a game
+    /// from being saved.
+    fn poll_scenes(&mut self) {
+        let scene = &mut self.scene;
+        let read = self.scenes.poll(&mut |event| match event {
+            Event::Session(_) => *scene = SceneTracker::default(),
+            Event::Line(line) => scene.feed(line),
+            Event::TooLong => {}
+        });
+        let ok = read.is_ok();
+        if ok != self.scene_read {
+            self.live_stale = true;
+        }
+        self.scene_read = ok;
+    }
+
+    /// Where the client is, from `LoadingScreen.log` (T-314); None when the
+    /// file is off in log.config, says nothing yet or cannot be read.
+    pub fn scene(&self) -> Option<Scene> {
+        self.scene_read.then(|| self.scene.now()).flatten()
+    }
+
+    /// The player left the game screen: a game the log still has open was
+    /// cut off, so it is not "on" any more for the overlay and the window.
+    fn game_left(&self) -> bool {
+        self.scene().is_some_and(Scene::left_game)
     }
 
     /// Closes the game in progress (e.g. when the app quits) and saves it.
@@ -187,6 +230,9 @@ impl Watcher {
     /// The Battlegrounds game being played now (not saved yet), from hero
     /// select until the log marks it complete (T-303).
     pub fn in_progress(&self) -> Option<GameKey> {
+        if self.game_left() {
+            return None;
+        }
         let reader = self.reader.as_ref()?;
         Some(GameKey {
             session: reader.name.clone(),
@@ -198,8 +244,9 @@ impl Watcher {
     /// the overlay; `None` when no game is on. Built by the same parser as the
     /// saved report and kept until the log moves.
     pub fn live_report(&mut self) -> Option<&GameReport> {
+        let left = self.game_left();
         let snapshot = match self.reader.as_ref() {
-            Some(reader) if reader.log.in_progress_index().is_some() => {
+            Some(reader) if !left && reader.log.in_progress_index().is_some() => {
                 if !self.live_stale && self.live.is_some() {
                     return self.live.as_ref();
                 }
@@ -215,10 +262,22 @@ impl Watcher {
     /// Every lobby hero's leaderboard place and tavern tier now, for the
     /// overlay (T-306); empty when no Battlegrounds game is on.
     pub fn live_lobby(&self) -> Vec<bg_parser::report::LobbySlot> {
+        if self.game_left() {
+            return Vec::new();
+        }
         self.reader
             .as_ref()
             .map(|r| r.log.lobby_now())
             .unwrap_or_default()
+    }
+
+    /// The seat the game marks as the next opponent now (T-313); None when
+    /// no Battlegrounds game is on or the log has no mark yet.
+    pub fn live_next_opponent(&self) -> Option<i64> {
+        if self.game_left() {
+            return None;
+        }
+        self.reader.as_ref()?.log.next_opponent_now()
     }
 
     /// See [`Follower::has_power_log`].

@@ -151,3 +151,37 @@ fn the_saved_report_has_no_new_fields() {
     let json = serde_json::to_string(&reports).unwrap();
     assert!(!json.contains("tech_level"));
 }
+
+/// The next opponent the game marks on its leaderboard (T-313): the local
+/// leaderboard hero's `NEXT_OPPONENT_PLAYER_ID`, set once each shop turn.
+/// Live only, like the places and tiers.
+#[test]
+fn the_next_opponent_is_the_local_heros_mark() {
+    let all = lines("solo_game");
+    let part = up_to(&all, "tag=TURN value=1");
+    assert_eq!(reader_with(&part).next_opponent_now(), None, "not set yet");
+
+    let mut marked = part.clone();
+    marked.push(tag(10, "NEXT_OPPONENT_PLAYER_ID", 3));
+    assert_eq!(reader_with(&marked).next_opponent_now(), Some(3));
+}
+
+#[test]
+fn a_next_opponent_mark_that_is_not_an_opponent_seat_is_ignored() {
+    let all = lines("solo_game");
+    let part = up_to(&all, "tag=TURN value=1");
+    for (entity, value) in [(21, 2), (10, 2), (10, 7), (10, 0)] {
+        let mut marked = part.clone();
+        marked.push(tag(entity, "NEXT_OPPONENT_PLAYER_ID", value));
+        assert_eq!(
+            reader_with(&marked).next_opponent_now(),
+            None,
+            "entity {entity} value {value}"
+        );
+    }
+}
+
+#[test]
+fn no_game_no_next_opponent() {
+    assert_eq!(LogReader::default().next_opponent_now(), None);
+}

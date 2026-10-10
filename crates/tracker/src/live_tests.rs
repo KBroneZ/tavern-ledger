@@ -557,3 +557,76 @@ fn nothing_in_the_live_state_can_hold_a_name() {
         );
     }
 }
+
+/// Seats 2 and 3 with leaderboard values (parser revision 5).
+fn with_seat_values(mut report: Value) -> Value {
+    for p in report["lobby"].as_array_mut().unwrap() {
+        p["triples"] = json!([]);
+        p["trinkets"] = json!([]);
+    }
+    report["lobby"][1]["triples"] = json!([{"turn": 6, "count": 2}]);
+    report["lobby"][1]["trinkets"] = json!([{"turn": 6, "slot": "first", "dbf_id": 111}]);
+    report
+}
+
+#[test]
+fn each_opponent_carries_the_leaderboards_triples_and_trinkets() {
+    let live = live_game(&with_seat_values(solo(vec![], "incomplete")));
+    let second = opponent(&live, 2);
+    assert_eq!(second.shown_source, Source::Log);
+    assert_eq!(second.shown[0].seat, 2);
+    assert_eq!(second.shown[0].triples, Some(2));
+    assert_eq!(second.shown[0].trinkets[0].dbf_id, 111);
+    let third = opponent(&live, 3);
+    assert_eq!(third.shown[0].triples, None, "no triple in the log is not 0");
+}
+
+#[test]
+fn a_record_without_leaderboard_values_says_not_recorded() {
+    let live = live_game(&solo(vec![], "incomplete"));
+    let second = opponent(&live, 2);
+    assert!(second.shown.is_empty());
+    assert_eq!(second.shown_source, Source::Unknown);
+}
+
+#[test]
+fn trinket_cards_come_from_the_card_data_when_it_knows_the_id() {
+    let live = live_game(&with_seat_values(solo(vec![], "incomplete")))
+        .with_trinket_cards(|dbf| (dbf == 111).then(|| "BG30_MagicItem_1".to_string()));
+    let trinket = &opponent(&live, 2).shown[0].trinkets[0];
+    assert_eq!(trinket.card_id.as_deref(), Some("BG30_MagicItem_1"));
+    let unknown = live_game(&with_seat_values(solo(vec![], "incomplete"))).with_trinket_cards(|_| None);
+    assert_eq!(opponent(&unknown, 2).shown[0].trinkets[0].card_id, None);
+}
+
+#[test]
+fn the_next_opponent_is_the_one_the_game_marks() {
+    let live = live_game(&solo(vec![], "incomplete")).with_next_opponent(Some(3));
+    let marked: Vec<_> = live
+        .opponents
+        .iter()
+        .filter(|o| o.next)
+        .map(|o| o.seats.clone())
+        .collect();
+    assert_eq!(marked, [[3]]);
+    let none = live_game(&solo(vec![], "incomplete")).with_next_opponent(None);
+    assert!(none.opponents.iter().all(|o| !o.next));
+}
+
+#[test]
+fn in_duos_the_next_opposing_team_is_marked() {
+    let live = live_game(&duos(vec![])).with_next_opponent(Some(4));
+    let marked: Vec<_> = live
+        .opponents
+        .iter()
+        .filter(|o| o.next)
+        .map(|o| o.seats.clone())
+        .collect();
+    assert_eq!(marked, [[3, 4]]);
+}
+
+#[test]
+fn our_own_seat_is_never_marked_as_next() {
+    let live = live_game(&duos(vec![])).with_next_opponent(Some(2));
+    assert!(live.opponents.iter().all(|o| !o.next));
+}

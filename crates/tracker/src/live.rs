@@ -14,6 +14,7 @@ use bg_parser::report::LobbySlot;
 use serde::Serialize;
 use serde_json::Value;
 
+use crate::live_seats::{seats_shown, LiveSeat};
 use crate::possible::{LobbyTribes, Possible};
 use crate::provenance::{legend, LegendEntry, Source};
 use crate::recap::{list, recap, text, texts, tribes, HeroRef, Sourced, TribeOffer, View};
@@ -85,6 +86,14 @@ pub struct LiveOpponent {
     /// Minions each hero could have (T-307, D-049, D-050), added by the app
     /// from the card data on the turns the rule lists; empty otherwise.
     pub possible: Vec<Possible>,
+    /// Each hero's triples and trinkets as the game's leaderboard shows them
+    /// now (T-312), in the order of `seats`; empty when not recorded.
+    pub shown: Vec<LiveSeat>,
+    /// Log when the report has the leaderboard's values, else unknown.
+    pub shown_source: Source,
+    /// The game marks this opponent (a team in Duos) as the next one on its
+    /// leaderboard (T-313), from the log.
+    pub next: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -146,6 +155,31 @@ impl LiveGame {
 }
 
 impl LiveGame {
+    /// Marks the opponent holding `seat`, the one the game marks as next on
+    /// its leaderboard (T-313); in Duos that marks the whole opposing team.
+    /// Our own seats are never marked.
+    pub fn with_next_opponent(mut self, seat: Option<i64>) -> Self {
+        let seat = seat.filter(|s| !self.own_seats.contains(s));
+        for opponent in &mut self.opponents {
+            opponent.next = seat.is_some_and(|s| opponent.seats.contains(&s));
+        }
+        self
+    }
+
+    /// Adds the card each trinket is, from the card data (the log gives a
+    /// database id); a trinket the card data does not know keeps None.
+    pub fn with_trinket_cards(mut self, card_of: impl Fn(i64) -> Option<String>) -> Self {
+        for trinket in self
+            .opponents
+            .iter_mut()
+            .flat_map(|o| o.shown.iter_mut())
+            .flat_map(|s| s.trinkets.iter_mut())
+        {
+            trinket.card_id = card_of(trinket.dbf_id);
+        }
+        self
+    }
+
     /// Adds the leaderboard as the log has it now (T-306): every opponent's
     /// place and tiers and our own place, and sorts the opponents in the
     /// leaderboard's order (unknown places last).
@@ -208,6 +242,9 @@ pub fn live_game(report: &Value) -> LiveGame {
         Vec::new()
     } else {
         opponents_of(&view, &own, &recap.record)
+            .into_iter()
+            .map(|o| with_shown(o, report))
+            .collect()
     };
     LiveGame {
         phase,
@@ -336,6 +373,9 @@ fn opponent_of(
         place: Sourced::log(None),
         tiers: seats.iter().map(|_| Sourced::log(None)).collect(),
         possible: Vec::new(),
+        shown: Vec::new(),
+        shown_source: Source::Unknown,
+        next: false,
         boards_source: Source::log_if(!boards.is_empty()),
         record_source: if record.is_some() {
             Source::Inferred
@@ -347,6 +387,21 @@ fn opponent_of(
         record,
         seats,
     }
+}
+
+/// The leaderboard's triples and trinkets of the opponent's heroes (T-312).
+fn with_shown(mut opponent: LiveOpponent, report: &Value) -> LiveOpponent {
+    match seats_shown(report, &opponent.seats) {
+        Some(shown) => {
+            opponent.shown = shown;
+            opponent.shown_source = Source::Log;
+        }
+        None => {
+            opponent.shown = Vec::new();
+            opponent.shown_source = Source::Unknown;
+        }
+    }
+    opponent
 }
 
 /// Health after the last closed combat (the start health before any). Only
