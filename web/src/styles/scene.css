@@ -268,11 +268,13 @@
 
 /* The moving scene. Every animation runs on the section's view timeline:
    0 to 26% the screen turns and comes apart, then each pane is lit in turn
-   while its caption shows. Only transform, opacity and box-shadow move. */
+   while its caption shows. Only transform, opacity and box-shadow move.
+   The scene takes 1.5 screens of scrolling (2.5 screens tall minus the one
+   it fills); the steps are percentages of that, so they scale with it. */
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) and (min-height: 560px) {
     .pin {
-      height: 460vh;
+      height: 250vh;
       view-timeline: --pin block;
     }
 
@@ -662,7 +664,7 @@
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) and (min-height: 560px) and (max-width: 860px) {
     .pin {
-      height: 420vh;
+      height: 230vh;
     }
 
     .pin-stage {
