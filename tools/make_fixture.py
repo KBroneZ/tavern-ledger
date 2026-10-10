@@ -8,9 +8,10 @@ packets in KEEP_OPCODES, ATTACK blocks, every top-level block with its
 BLOCK_END (the player's actions, and the gold each block gives, D-055),
 entities of the card types in KEEP_CARDTYPES, the tags in KEEP_TAGS, the
 numbers-only SendOption lines and SendChoices headers (the actions the client
-sent, T-205), and the hero choice (T-209): the MULLIGAN choice's header and
-entity lines and the matching chosen-entity lines, rewritten to their ids
-("id=1 ChoiceType=MULLIGAN", "Entities[0]=103"). Everything else is dropped,
+sent, T-205), and the player's choices: the hero choice (T-209) and every
+discover-like choice (T-211, T-212), each header with its source and entity
+lines and the matching chosen-entity lines, rewritten to their ids
+("id=1 ChoiceType=MULLIGAN", "Source=12", "Entities[0]=103"). Everything else is dropped,
 including every PowerTaskList, Options and SendChoices entity line. Timestamps count from the game's first line (00:00:00),
 so durations stay and the time of day goes (D-046). A bracketed entity ("[entityName=... id=N ...]") becomes its id N,
 so no card text or name in brackets is kept; hero names are then missing from
@@ -65,6 +66,12 @@ KEEP_TAGS = frozenset({
     "NUM_RESOURCES_SPENT_THIS_GAME", "PLAYER_ID", "PLAYER_LEADERBOARD_PLACE",
     "PLAYER_TECH_LEVEL", "RESOURCES", "RESOURCES_USED", "STATE", "TEMP_RESOURCES",
     "TURN", "ZONE", "ZONE_POSITION",
+    # Parser revision 5 (T-207, T-208, T-211): the leaderboard's triples and
+    # trinkets, board keywords, Dark Gifts and the Old God.
+    "PLAYER_TRIPLES", "BACON_FIRST_TRINKET_DATABASE_ID", "BACON_SECOND_TRINKET_DATABASE_ID",
+    "BACON_HEROPOWER_TRINKET_DATABASE_ID", "TAUNT", "DIVINE_SHIELD", "REBORN", "VENOMOUS",
+    "WINDFURY", "STEALTH", "DEATHRATTLE", "BACON_RALLY", "DARK_GIFT_ENTITY",
+    "BACON_GLOBAL_OLD_GOD_DBID",
 })
 # Power packets kept (their tag= lines are filtered by KEEP_TAGS). Of the
 # blocks, ATTACK is kept at any depth (the parser takes the combat boards
@@ -74,11 +81,14 @@ KEEP_OPCODES = frozenset({
     "CREATE_GAME", "GameEntity", "Player", "FULL_ENTITY", "SHOW_ENTITY",
     "CHANGE_ENTITY", "HIDE_ENTITY",
 })
-# Entities created with any other card type (enchantments, spells,
-# trinkets...) are dropped with every line about them. Hidden cards (no type
-# yet) stay. Shop buttons and hero powers tell what an action was.
+# Entities created with any other card type (enchantments...) are dropped
+# with every line about them. Hidden cards (no type yet) stay. Shop buttons
+# and hero powers tell what an action was; spells, trinkets and quest rewards
+# are offered in choices (T-211, T-212).
 KEEP_CARDTYPES = frozenset({"GAME", "PLAYER", "HERO", "MINION", "INVALID",
-                            "GAME_MODE_BUTTON", "MOVE_MINION_HOVER_TARGET", "HERO_POWER"})
+                            "GAME_MODE_BUTTON", "MOVE_MINION_HOVER_TARGET", "HERO_POWER",
+                            "SPELL", "BATTLEGROUND_SPELL", "BATTLEGROUND_TRINKET",
+                            "BATTLEGROUND_QUEST_REWARD"})
 KEEP_GAME_KEYS = ("GameType=", "BuildNumber=", "PlayerID=")
 # Names the game itself uses for hidden players and cards: not personal.
 GAME_NAMES = ("UNKNOWN HUMAN PLAYER", "UNKNOWN ENTITY")
@@ -93,15 +103,18 @@ STAMP = re.compile(r"^[DWE] \d{1,2}:\d{2}:\d{2}(?:\.\d{1,7})? ")
 OPTION_BODY = re.compile(r"^selectedOption=-?\d+ selectedSubOption=-?\d+ selectedTarget=-?\d+ "
                          r"selectedPosition=-?\d+$")
 CHOICE_BODY = re.compile(r"^id=\d+ ChoiceType=[A-Z_]+$")
-# The hero choice (T-209): a header, then one line per hero offered or chosen.
+# The player's choices (T-209, T-211, T-212): a header, then its source and
+# one line per card offered or chosen.
 CHOICE_ID = re.compile(r"^id=(\d+) ")
 CHOICE_ENTITY = re.compile(r"^Entities\[(\d+)\]=(\d+)$")
+CHOICE_SOURCE = re.compile(r"^Source=\d+$")
+KEPT_CHOICES = ("MULLIGAN", "GENERAL")
 ALLOWED = re.compile(r"^[DWE] \d{2}:\d{2}:\d{2}\.\d{7} (?:GameState\.DebugPrint(?:Power|Game)\(\) - "
                      r"|GameState\.SendOption\(\) - selectedOption=-?\d+ selectedSubOption=-?\d+ "
                      r"selectedTarget=-?\d+ selectedPosition=-?\d+$"
                      r"|GameState\.SendChoices\(\) - id=\d+ ChoiceType=[A-Z_]+$"
-                     r"|GameState\.DebugPrintEntityChoices\(\) - (?:id=\d+ ChoiceType=MULLIGAN"
-                     r"|Entities\[\d+\]=\d+)$"
+                     r"|GameState\.DebugPrintEntityChoices\(\) - (?:id=\d+ "
+                     r"ChoiceType=(?:MULLIGAN|GENERAL)|Source=\d+|Entities\[\d+\]=\d+)$"
                      r"|GameState\.DebugPrintEntitiesChosen\(\) - (?:id=\d+ EntitiesCount=\d+"
                      r"|Entities\[\d+\]=\d+)$)")
 TICKS_PER_SECOND = 10_000_000
@@ -267,12 +280,13 @@ class _AllowList:
         self.dropped = dropped
         self.in_dropped_entity = False  # its tag= lines go too
         self.hero_choice: str | None = None  # id of the MULLIGAN choice
-        self.in_hero_list = False  # entity lines of the hero choice follow
+        self.choices: set[str] = set()  # ids of the choices kept
+        self.in_list = False  # source and entity lines of a kept choice follow
 
     def keep(self, prefix: str, body: str) -> bool:
         if prefix in (CHOICES, CHOSEN):
             return self._keep_choice(prefix, body.strip())
-        self.in_hero_list = False
+        self.in_list = False
         if prefix == GAME:
             return body.startswith(KEEP_GAME_KEYS)
         if prefix == SEND_OPTION:
@@ -302,26 +316,40 @@ class _AllowList:
         return True
 
     def _keep_choice(self, prefix: str, body: str) -> bool:
-        """The hero choice's header and entities, and what was chosen for it."""
+        """A kept choice's header, source and entities, and what was chosen for
+        it: the first hero choice and every GENERAL one."""
         header = CHOICE_ID.match(body)
         if header:
-            mulligan = prefix == CHOICES and " ChoiceType=MULLIGAN " in f" {body} "
-            if mulligan and self.hero_choice is None:
-                self.hero_choice = header.group(1)
-            self.in_hero_list = header.group(1) == self.hero_choice and (
-                mulligan or prefix == CHOSEN)
-            return self.in_hero_list
-        return self.in_hero_list and body.startswith("Entities[")
+            choice = header.group(1)
+            if prefix == CHOICES:
+                kind = choice_type(body)
+                first_hero = kind == "MULLIGAN" and self.hero_choice is None
+                if first_hero:
+                    self.hero_choice = choice
+                if first_hero or kind == "GENERAL":
+                    self.choices.add(choice)
+                self.in_list = choice in self.choices and kind in KEPT_CHOICES
+            else:
+                self.in_list = choice in self.choices
+            return self.in_list
+        listed = body.startswith("Entities[") or (prefix == CHOICES and body.startswith("Source="))
+        return self.in_list and listed
+
+
+def choice_type(body: str) -> str:
+    """The ChoiceType of a choice header ("" when it has none)."""
+    kind = re.search(r" ChoiceType=([A-Z_]+)(?: |$)", body)
+    return kind.group(1) if kind else ""
 
 
 def _rewrite_choice(prefix: str, body: str) -> str:
-    """A kept hero choice line, with its ids only (after the id scrub)."""
+    """A kept choice line, with its ids only (after the id scrub)."""
     body = body.strip()
     header = CHOICE_ID.match(body)
     if not header:
-        return body  # "Entities[i]=<id>"
+        return body  # "Entities[i]=<id>" or "Source=<id>"
     if prefix == CHOICES:
-        return f"id={header.group(1)} ChoiceType=MULLIGAN"
+        return f"id={header.group(1)} ChoiceType={choice_type(body)}"
     count = re.search(r" EntitiesCount=(\d+)", body)
     return f"id={header.group(1)} EntitiesCount={count.group(1) if count else 0}"
 
@@ -370,8 +398,9 @@ def scrub_game(lines: list[str], ids: Identities) -> str:
         body = _scrub(body, names, mapping, accounts)
         if prefix in (CHOICES, CHOSEN):
             body = _rewrite_choice(prefix, body)
-            if not (CHOICE_ID.match(body) or CHOICE_ENTITY.match(body)):
-                continue  # a hero the log does not name by id: nothing to keep
+            if not (CHOICE_ID.match(body) or CHOICE_ENTITY.match(body)
+                    or CHOICE_SOURCE.match(body)):
+                continue  # a card the log does not name by id: nothing to keep
         out.append(f"{level} {time} {prefix}{body}")
     return "\n".join(out) + "\n"
 

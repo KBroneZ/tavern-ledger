@@ -50,6 +50,8 @@ const MINION: Shape = Shape::Object(&[
     ("health", Shape::Scalar),
     ("position", Shape::Scalar),
     ("golden", Shape::Scalar),
+    // Parser revision 5: keyword names.
+    ("keywords", Shape::List(&Shape::Id)),
 ]);
 
 const ENTRY: Shape = Shape::Object(&[
@@ -74,6 +76,36 @@ const LOBBY_PLAYER: Shape = Shape::Object(&[
     ("duo_team", Shape::Scalar),
     ("final_place", Shape::Scalar),
     ("final_health", Shape::Scalar),
+    // Parser revision 5: the leaderboard's triples and trinkets.
+    (
+        "triples",
+        Shape::List(&Shape::Object(&[
+            ("turn", Shape::Scalar),
+            ("count", Shape::Scalar),
+        ])),
+    ),
+    (
+        "trinkets",
+        Shape::List(&Shape::Object(&[
+            ("turn", Shape::Scalar),
+            ("slot", Shape::Id),
+            ("dbf_id", Shape::Scalar),
+        ])),
+    ),
+]);
+
+/// The player's own choices (parser revision 5).
+const DISCOVER: Shape = Shape::Object(&[
+    ("turn", Shape::Scalar),
+    ("source", Shape::Id),
+    (
+        "offered",
+        Shape::List(&Shape::Object(&[
+            ("card_id", Shape::Id),
+            ("gift", Shape::Id),
+        ])),
+    ),
+    ("picked", Shape::List(&Shape::Scalar)),
 ]);
 
 const TEXTS: Shape = Shape::List(&Shape::Scalar);
@@ -157,6 +189,8 @@ const REPORT: Shape = Shape::Object(&[
     ("shop", SHOP),
     ("hero_select", HERO_SELECT),
     ("skin_parents", Shape::Map),
+    ("discovers", Shape::List(&DISCOVER)),
+    ("old_god", Shape::Scalar),
     ("warnings", TEXTS),
     ("problems", TEXTS),
     ("not_in_log", TEXTS),

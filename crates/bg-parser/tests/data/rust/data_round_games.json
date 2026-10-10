@@ -17,14 +17,18 @@
         "hero": "BG20_HERO_202_SKIN_B4",
         "duo_team": null,
         "final_place": 1,
-        "final_health": 23
+        "final_health": 23,
+        "triples": [],
+        "trinkets": []
       },
       {
         "player_id": 3,
         "hero": "TB_BaconShop_HERO_102_SKIN_G",
         "duo_team": null,
         "final_place": 2,
-        "final_health": 0
+        "final_health": 0,
+        "triples": [],
+        "trinkets": []
       }
     ],
     "shop_tribes": {
@@ -294,6 +298,8 @@
       "TB_BaconShop_HERO_102_SKIN_G": 59999,
       "TB_BaconShop_HERO_60_SKIN_A": 58000
     },
+    "discovers": [],
+    "old_god": null,
     "warnings": [],
     "problems": [],
     "not_in_log": [
@@ -319,28 +325,36 @@
         "hero": "TB_BaconShop_HERO_43_SKIN_N",
         "duo_team": 1,
         "final_place": 2,
-        "final_health": 28
+        "final_health": 28,
+        "triples": [],
+        "trinkets": []
       },
       {
         "player_id": 2,
         "hero": "BG24_HERO_100_SKIN_E",
         "duo_team": null,
         "final_place": 2,
-        "final_health": 28
+        "final_health": 28,
+        "triples": [],
+        "trinkets": []
       },
       {
         "player_id": 3,
         "hero": "TB_BaconShop_HERO_60",
         "duo_team": 2,
         "final_place": 1,
-        "final_health": 30
+        "final_health": 30,
+        "triples": [],
+        "trinkets": []
       },
       {
         "player_id": 4,
         "hero": "TB_BaconShop_HERO_18",
         "duo_team": 2,
         "final_place": 1,
-        "final_health": 30
+        "final_health": 30,
+        "triples": [],
+        "trinkets": []
       }
     ],
     "shop_tribes": {},
@@ -364,7 +378,8 @@
                 "atk": 3,
                 "health": 1,
                 "position": 1,
-                "golden": false
+                "golden": false,
+                "keywords": []
               }
             ]
           }
@@ -461,6 +476,8 @@
       "BG24_HERO_100_SKIN_E": 97000,
       "TB_BaconShop_HERO_43_SKIN_N": 57000
     },
+    "discovers": [],
+    "old_god": null,
     "warnings": [],
     "problems": [],
     "not_in_log": [

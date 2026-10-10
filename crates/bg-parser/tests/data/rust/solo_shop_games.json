@@ -17,14 +17,18 @@
         "hero": "TB_BaconShop_HERO_37",
         "duo_team": null,
         "final_place": 1,
-        "final_health": 26
+        "final_health": 26,
+        "triples": [],
+        "trinkets": []
       },
       {
         "player_id": 3,
         "hero": "TB_BaconShop_HERO_60",
         "duo_team": null,
         "final_place": 2,
-        "final_health": 0
+        "final_health": 0,
+        "triples": [],
+        "trinkets": []
       }
     ],
     "shop_tribes": {
@@ -76,21 +80,24 @@
                 "atk": 1,
                 "health": 1,
                 "position": 0,
-                "golden": false
+                "golden": false,
+                "keywords": []
               },
               {
                 "card_id": "BG28_300",
                 "atk": 1,
                 "health": 1,
                 "position": 0,
-                "golden": false
+                "golden": false,
+                "keywords": []
               },
               {
                 "card_id": "BG20_100",
                 "atk": 1,
                 "health": 1,
                 "position": 0,
-                "golden": false
+                "golden": false,
+                "keywords": []
               }
             ]
           }
@@ -282,6 +289,8 @@
     },
     "hero_select": null,
     "skin_parents": {},
+    "discovers": [],
+    "old_god": null,
     "warnings": [],
     "problems": [],
     "not_in_log": [
@@ -307,14 +316,18 @@
         "hero": "TB_BaconShop_HERO_37",
         "duo_team": null,
         "final_place": null,
-        "final_health": 26
+        "final_health": 26,
+        "triples": [],
+        "trinkets": []
       },
       {
         "player_id": 3,
         "hero": "TB_BaconShop_HERO_60",
         "duo_team": null,
         "final_place": null,
-        "final_health": 0
+        "final_health": 0,
+        "triples": [],
+        "trinkets": []
       }
     ],
     "shop_tribes": {
@@ -366,21 +379,24 @@
                 "atk": 1,
                 "health": 1,
                 "position": 0,
-                "golden": false
+                "golden": false,
+                "keywords": []
               },
               {
                 "card_id": "BG28_300",
                 "atk": 1,
                 "health": 1,
                 "position": 0,
-                "golden": false
+                "golden": false,
+                "keywords": []
               },
               {
                 "card_id": "BG20_100",
                 "atk": 1,
                 "health": 1,
                 "position": 0,
-                "golden": false
+                "golden": false,
+                "keywords": []
               }
             ]
           }
@@ -569,6 +585,8 @@
     },
     "hero_select": null,
     "skin_parents": {},
+    "discovers": [],
+    "old_god": null,
     "warnings": [],
     "problems": [],
     "not_in_log": [

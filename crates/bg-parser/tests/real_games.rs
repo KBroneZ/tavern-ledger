@@ -127,8 +127,10 @@ fn allowed(line: &str) -> bool {
         || rest
             .strip_prefix("GameState.DebugPrintEntityChoices() - ")
             .is_some_and(|b| {
-                b.strip_suffix(" ChoiceType=MULLIGAN")
-                    .is_some_and(|id| numbers(id, &["id="]))
+                [" ChoiceType=MULLIGAN", " ChoiceType=GENERAL"]
+                    .iter()
+                    .any(|kind| b.strip_suffix(kind).is_some_and(|id| numbers(id, &["id="])))
+                    || numbers(b, &["Source="])
                     || hero_entity(b)
             })
         || rest
@@ -137,7 +139,7 @@ fn allowed(line: &str) -> bool {
     time_ok && body_ok
 }
 
-/// "Entities[i]=N": a hero of the hero choice, by entity id only.
+/// "Entities[i]=N": a card of a choice, by entity id only.
 fn hero_entity(body: &str) -> bool {
     let digits = |t: &str| !t.is_empty() && t.bytes().all(|b| b.is_ascii_digit());
     body.strip_prefix("Entities[")
@@ -160,6 +162,8 @@ fn the_allow_list_check_knows_each_line_kind() {
     for ok in [
         "D 00:00:01.0000000 GameState.DebugPrintEntityChoices() - id=1 ChoiceType=MULLIGAN",
         "D 00:00:01.0000000 GameState.DebugPrintEntityChoices() - Entities[0]=103",
+        "D 00:00:01.0000000 GameState.DebugPrintEntityChoices() - id=2 ChoiceType=GENERAL",
+        "D 00:00:01.0000000 GameState.DebugPrintEntityChoices() - Source=812",
         "D 00:00:01.0000000 GameState.DebugPrintEntitiesChosen() - id=1 EntitiesCount=1",
         "D 00:00:01.0000000 GameState.DebugPrintEntitiesChosen() - Entities[0]=104",
     ] {
@@ -168,6 +172,7 @@ fn the_allow_list_check_knows_each_line_kind() {
     for bad in [
         "D 00:00:01.0000000 GameState.DebugPrintEntityChoices() - id=1 Player=Someone          TaskList=7 ChoiceType=MULLIGAN CountMin=1 CountMax=1",
         "D 00:00:01.0000000 GameState.DebugPrintEntityChoices() - Source=GameEntity",
+        "D 00:00:01.0000000 GameState.DebugPrintEntityChoices() - id=2 ChoiceType=TARGET",
         "D 00:00:01.0000000 GameState.DebugPrintEntityChoices() - Entities[0]=[entityName=X          id=103 zone=HAND zonePos=1 cardId=Y player=7]",
         "D 00:00:01.0000000 GameState.DebugPrintEntitiesChosen() - id=1 Player=Someone          EntitiesCount=1",
         "D 00:01:02 GameState.DebugPrintPower() - BLOCK_END",
@@ -396,4 +401,111 @@ fn duos_data_round_build_253216() {
     assert_eq!(kinds.count(), 1);
     let sells: u32 = s.turns.iter().map(|t| t.sell_gold.unwrap()).sum();
     assert_eq!(sells, 18);
+}
+
+// Parser revision 5 (T-207, T-208, T-211, T-212, D-058), checked against the
+// raw games the fixtures were made from (docs/research/parser-round-2.md).
+
+fn local_seat(r: &GameReport) -> &bg_parser::report::LobbyPlayer {
+    let pid = r.local_player_id.expect("local player");
+    r.lobby
+        .iter()
+        .find(|p| p.player_id == pid)
+        .expect("own seat")
+}
+
+fn picked(d: &bg_parser::discover::Discover) -> Option<&str> {
+    let i = *d.picked.first()?;
+    d.offered.get(i)?.card_id.as_deref()
+}
+
+#[test]
+fn solo_round_two_build_253216() {
+    use bg_parser::leaderboard::TrinketSlot::{First, HeroPower, Second};
+    let r = game("b253216_solo");
+    // The leaderboard's triples and trinkets: every hero's, as it shows them.
+    let me = local_seat(&r);
+    let triples: Vec<_> = me.triples.iter().map(|t| (t.turn, t.count)).collect();
+    assert_eq!(triples, [(7, 1)], "one triple reward in the raw game");
+    let with_triples = r.lobby.iter().filter(|p| !p.triples.is_empty()).count();
+    assert_eq!(with_triples, 6);
+    assert!(r.lobby.iter().all(|p| p.trinkets.len() >= 2));
+    let slots: Vec<_> = r
+        .lobby
+        .iter()
+        .flat_map(|p| p.trinkets.iter().map(|t| t.slot))
+        .collect();
+    assert_eq!(slots.iter().filter(|s| **s == First).count(), 8);
+    assert_eq!(slots.iter().filter(|s| **s == Second).count(), 8);
+    assert_eq!(slots.iter().filter(|s| **s == HeroPower).count(), 1);
+    // The own trinkets on the leaderboard are the ones the player picked.
+    let picks: Vec<_> = r
+        .discovers
+        .iter()
+        .filter(|d| {
+            d.source
+                .as_deref()
+                .is_some_and(|s| s.starts_with("BG30_Trinket_"))
+        })
+        .map(|d| (d.turn, picked(d)))
+        .collect();
+    assert_eq!(
+        picks,
+        [
+            (6, Some("BG30_MagicItem_435")),
+            (9, Some("BG30_MagicItem_996"))
+        ]
+    );
+    let own: Vec<_> = me.trinkets.iter().map(|t| (t.turn, t.dbf_id)).collect();
+    assert_eq!(own, [(6, 112082), (9, 112988)]);
+    // 14 choices, all picked: 8 from the hero power, 3 Dark Gifts with a
+    // gift on every offer, 2 trinket offers, 1 triple reward.
+    assert_eq!(r.discovers.len(), 14);
+    assert!(r.discovers.iter().all(|d| d.picked.len() == 1));
+    let gifts = r
+        .discovers
+        .iter()
+        .filter(|d| d.source.as_deref() == Some("BG36_MidGameEffect_010"));
+    assert!(gifts
+        .clone()
+        .all(|d| d.offered.iter().all(|o| o.gift.is_some())));
+    assert_eq!(gifts.count(), 3);
+    assert_eq!(r.old_god, Some(130610));
+    // Keywords on the boards as they entered combat.
+    let keywords = |name: &str| {
+        r.rounds
+            .iter()
+            .flat_map(|round| round.entries.iter())
+            .filter_map(|e| e.board.as_ref())
+            .flatten()
+            .filter(|m| m.keywords.contains(&name))
+            .count()
+    };
+    assert_eq!(
+        ["taunt", "divine_shield", "windfury", "deathrattle", "rally"].map(keywords),
+        [18, 16, 14, 12, 6]
+    );
+}
+
+#[test]
+fn duos_round_two_build_253216() {
+    let r = game("b253216_duos");
+    let me = local_seat(&r);
+    assert_eq!(me.triples.len(), 1);
+    // The game ended before the second trinket (turn 9).
+    let own: Vec<_> = me.trinkets.iter().map(|t| (t.turn, t.dbf_id)).collect();
+    assert_eq!(own, [(6, 112895)]);
+    let trinket = r
+        .discovers
+        .iter()
+        .find(|d| d.source.as_deref() == Some("BG30_Trinket_1st"))
+        .expect("the first trinket offer");
+    assert_eq!(trinket.offered.len(), 4);
+    assert_eq!(picked(trinket), Some("BG30_MagicItem_888"));
+    // The quest the hero power offered, and the pick.
+    let quest = &r.discovers[0];
+    assert_eq!(quest.source.as_deref(), Some("BG24_QuestsPlayerEnch_t"));
+    assert_eq!(picked(quest), Some("BG24_Quest_124"));
+    assert_eq!(r.discovers.len(), 8);
+    assert_eq!(r.old_god, Some(130610));
 }

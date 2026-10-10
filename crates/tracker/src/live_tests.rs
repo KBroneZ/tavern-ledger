@@ -107,6 +107,24 @@ fn a_board_the_log_never_replayed_is_unknown_not_empty() {
 }
 
 #[test]
+fn keywords_come_with_the_board_and_older_records_say_not_recorded() {
+    let mut taunt = minion("M_A", 2, 3, 1);
+    taunt["keywords"] = json!(["taunt", "divine_shield"]);
+    let board = json!([taunt, minion("M_B", 1, 1, 2)]);
+    let live = live_game(&solo(
+        vec![round(1, 2, board, json!({"1": 40, "2": 40}))],
+        "incomplete",
+    ));
+    let minions = &opponent(&live, 2).boards[0].minions;
+    assert_eq!(
+        minions[0].keywords.as_deref(),
+        Some(&["taunt".to_string(), "divine_shield".to_string()][..])
+    );
+    // A record from before parser revision 5 has no keywords: not "none".
+    assert_eq!(minions[1].keywords, None);
+}
+
+#[test]
 fn an_empty_board_that_did_play_is_a_board() {
     let live = live_game(&solo(
         vec![round(1, 2, json!([]), json!({"1": 40, "2": 40}))],

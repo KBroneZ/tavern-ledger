@@ -2,6 +2,7 @@
 //! Battlegrounds games (T-101). Read-only towards the game: it only reads the
 //! log files (D-004).
 
+pub mod choices;
 pub mod dev_reconnect;
 pub mod discover;
 pub mod game_clock;

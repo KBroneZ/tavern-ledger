@@ -585,3 +585,141 @@ def duo_data_game() -> str:
     b.tag(101, "PLAYER_LEADERBOARD_PLACE", 2).tag(20, "PLAYER_LEADERBOARD_PLACE", 2)
     b.tag("GameEntity", "STATE", "COMPLETE")
     return b.text()
+
+
+def choices(b: LogBuilder, choice_id: int, source: int, offered: list[int],
+            picked: int | None, pid: int = 2) -> None:
+    """A discover-like choice (ChoiceType=GENERAL) and what was taken, as real
+    logs print them (bracketed entities, the player's name in the header)."""
+    kind = "DebugPrintEntityChoices"
+    b._choice_line(kind, f"id={choice_id} Player={LOCAL_NAME} TaskList=9 ChoiceType=GENERAL "
+                         "CountMin=1 CountMax=1")
+    b._choice_line(kind, f"  Source=[entityName=Source id={source} zone=PLAY zonePos=0 "
+                         f"cardId=X player={pid}]")
+    for i, entity_id in enumerate(offered):
+        b._choice_line(kind, f"  Entities[{i}]=[entityName=Card {i} id={entity_id} zone=SETASIDE "
+                             f"zonePos=0 cardId=X player={pid}]")
+    if picked is None:
+        return
+    b.send_choice("GENERAL")
+    kind = "DebugPrintEntitiesChosen"
+    b._choice_line(kind, f"id={choice_id} Player={LOCAL_NAME} EntitiesCount=1")
+    b._choice_line(kind, f"  Entities[0]=[entityName=Picked id={picked} zone=SETASIDE "
+                         f"zonePos=0 cardId=X player={pid}]")
+
+
+def solo_round_two_game() -> str:
+    """Solo game with the parser revision 5 data (T-207, T-208, T-211, T-212).
+
+    The game's Old God is set at the start. Leaderboard (player id: hero):
+    2 local (102), 3 opponent (21). Opponent: a triple on turn 2 (shown again
+    on a combat copy, which is not the leaderboard), a second on turn 3, a
+    first trinket on turn 2 that upgrades on turn 3. Local: the trinket offer
+    on turn 2 (four trinkets, the second taken), whose database id the
+    leaderboard then shows; a Dark Gift choice (each minion with its gift, the
+    third taken); a triple reward the game ended before it was answered. The
+    opponent's combat board has a minion with taunt, divine shield and rally.
+    """
+    b = LogBuilder().create_game(game_type="GT_BATTLEGROUNDS")
+    b.tag("GameEntity", "BACON_GLOBAL_OLD_GOD_DBID", 130610)
+    hero = {"CARDTYPE": "HERO", "HEALTH": 30}
+    b.full_entity(102, "BG20_HERO_202", CONTROLLER=2, ZONE="PLAY", PLAYER_ID=2,
+                  PLAYER_LEADERBOARD_PLACE=1, **hero)
+    b.full_entity(11, "TB_BaconShopBob", CONTROLLER=10, ZONE="PLAY", **hero)
+    b.full_entity(21, "TB_BaconShop_HERO_60", CONTROLLER=10, ZONE="SETASIDE", PLAYER_ID=3,
+                  PLAYER_LEADERBOARD_PLACE=2, **hero)
+    b.tag(2, "HERO_ENTITY", 102)
+    b.at(10).turn(1)
+    b.at(40).turn(2)
+    b.at(70).turn(3)
+    b.tag(21, "PLAYER_TRIPLES", 1)
+    b.tag(21, "BACON_FIRST_TRINKET_DATABASE_ID", 111001)
+    # The trinket offer: a trinket button, four trinkets, the second taken.
+    b.full_entity(70, "BG30_Trinket_1st", CARDTYPE="BATTLEGROUND_TRINKET", CONTROLLER=2,
+                  ZONE="PLAY")
+    trinkets = ["BG30_MagicItem_001", "BG30_MagicItem_002", "BG30_MagicItem_003",
+                "BG30_MagicItem_004"]
+    for i, card in enumerate(trinkets):
+        b.full_entity(71 + i, card, CARDTYPE="BATTLEGROUND_TRINKET", CONTROLLER=2,
+                      ZONE="SETASIDE", BACON_IS_POTENTIAL_TRINKET=1)
+    b.at(72)
+    choices(b, 2, 70, [71, 72, 73, 74], picked=72)
+    b.tag(102, "BACON_FIRST_TRINKET_DATABASE_ID", 112002)
+    # Dark Discovery: three minions, each with the gift it comes with.
+    b.full_entity(80, "BG36_MidGameEffect_010", CARDTYPE="SPELL", CONTROLLER=2, ZONE="SETASIDE")
+    for i in range(3):
+        b.full_entity(90 + i, f"BG36_MidGameEffect_000t{i + 1}", CARDTYPE="SPELL", CONTROLLER=2,
+                      ZONE="SETASIDE")
+        b.full_entity(81 + i, f"BG36_10{i}", CARDTYPE="MINION", CONTROLLER=2, ZONE="SETASIDE",
+                      HAS_DARK_GIFT=1, DARK_GIFT_ENTITY=90 + i, ATK=2, HEALTH=2)
+    b.at(75)
+    choices(b, 3, 80, [81, 82, 83], picked=83)
+    b.at(100).turn(4)
+    # A combat copy of the opponent's hero shows the triples too: not the leaderboard.
+    b.full_entity(44, "TB_BaconShop_HERO_60", CONTROLLER=10, ZONE="PLAY", **hero)
+    b.tag(3, "HERO_ENTITY", 44).tag(3, "BACON_CURRENT_COMBAT_PLAYER_ID", 3)
+    b.tag(44, "PLAYER_TRIPLES", 5)
+    b.full_entity(45, "BG26_135", CARDTYPE="MINION", CONTROLLER=10, ZONE="PLAY", ATK=3,
+                  HEALTH=4, ZONE_POSITION=1, TAUNT=1, DIVINE_SHIELD=1, BACON_RALLY=1)
+    b.full_entity(46, "BG20_100", CARDTYPE="MINION", CONTROLLER=10, ZONE="PLAY", ATK=1,
+                  HEALTH=1, ZONE_POSITION=2)
+    b.attack(45)
+    b.tag(3, "HERO_ENTITY", 11)
+    b.at(130).turn(5)
+    b.tag(21, "PLAYER_TRIPLES", 2)
+    b.tag(21, "BACON_FIRST_TRINKET_DATABASE_ID", 111002)
+    b.full_entity(95, "TB_BaconShop_Triples_01", CARDTYPE="SPELL", CONTROLLER=2, ZONE="PLAY")
+    b.full_entity(96, "BG20_101", CARDTYPE="MINION", CONTROLLER=2, ZONE="SETASIDE")
+    b.full_entity(97, "BG20_102", CARDTYPE="MINION", CONTROLLER=2, ZONE="SETASIDE")
+    b.at(132)
+    choices(b, 4, 95, [96, 97], picked=None)
+    b.at(150).tag(21, "PLAYER_LEADERBOARD_PLACE", 2).tag(102, "PLAYER_LEADERBOARD_PLACE", 1)
+    b.tag("GameEntity", "STATE", "COMPLETE")
+    return b.text()
+
+
+def duo_round_two_game() -> str:
+    """Duos game with the parser revision 5 data. Lobby (player id: hero):
+    2 local, 1 teammate, 3 and 4 opponents. The teammate and an opponent get
+    trinkets and a triple; the local player takes a triple reward's minion;
+    the teammate's combat board has keywords. No Old God in this log.
+    """
+    b = LogBuilder().create_game(local_tags={"BACON_DUO_TEAMMATE_PLAYER_ID": 1})
+    hero = {"CARDTYPE": "HERO", "HEALTH": 30}
+    b.full_entity(101, "BG24_HERO_100", CONTROLLER=2, ZONE="PLAY", PLAYER_ID=2,
+                  BACON_DUO_TEAM_ID=1, PLAYER_LEADERBOARD_PLACE=1, **hero)
+    b.full_entity(11, "TB_BaconShopBob", CONTROLLER=10, ZONE="PLAY", **hero)
+    for entity_id, card, pid, team in ((20, "TB_BaconShop_HERO_43", 1, 1),
+                                       (21, "TB_BaconShop_HERO_60", 3, 2),
+                                       (22, "TB_BaconShop_HERO_18", 4, 2)):
+        b.full_entity(entity_id, card, CONTROLLER=10, ZONE="SETASIDE", PLAYER_ID=pid,
+                      BACON_DUO_TEAM_ID=team, PLAYER_LEADERBOARD_PLACE=1 if team == 1 else 2,
+                      **hero)
+    b.tag(2, "HERO_ENTITY", 101)
+    b.at(10).turn(1)
+    b.tag(20, "PLAYER_TRIPLES", 1)
+    b.tag(20, "BACON_FIRST_TRINKET_DATABASE_ID", 120001)
+    b.tag(22, "BACON_SECOND_TRINKET_DATABASE_ID", 120002)
+    b.full_entity(95, "TB_BaconShop_Triples_01", CARDTYPE="SPELL", CONTROLLER=2, ZONE="PLAY")
+    for i, card in enumerate(["BG20_101", "BG20_102", "BG20_103"]):
+        b.full_entity(96 + i, card, CARDTYPE="MINION", CONTROLLER=2, ZONE="SETASIDE")
+    b.at(15)
+    choices(b, 2, 95, [96, 97, 98], picked=96)
+    b.at(40).turn(2)
+    # The teammate fights first: their board enters play on the local side.
+    b.full_entity(40, "TB_BaconShop_HERO_43", CONTROLLER=2, ZONE="PLAY", **hero)
+    b.tag(2, "HERO_ENTITY", 40)
+    b.full_entity(41, "BG20_100", CARDTYPE="MINION", CONTROLLER=2, ZONE="PLAY", ATK=2,
+                  HEALTH=3, ZONE_POSITION=1, REBORN=1, VENOMOUS=1, WINDFURY=1, STEALTH=1,
+                  DEATHRATTLE=1)
+    b.full_entity(42, "TB_BaconShop_HERO_60", CONTROLLER=10, ZONE="PLAY", **hero)
+    b.tag(3, "HERO_ENTITY", 42).tag(3, "BACON_CURRENT_COMBAT_PLAYER_ID", 3)
+    b.full_entity(43, "BG26_135", CARDTYPE="MINION", CONTROLLER=10, ZONE="PLAY", ATK=3,
+                  HEALTH=1, ZONE_POSITION=1)
+    b.attack(43)
+    b.tag(2, "HERO_ENTITY", 101).tag(3, "HERO_ENTITY", 11)
+    b.at(70).turn(3)
+    b.tag(21, "PLAYER_LEADERBOARD_PLACE", 1).tag(22, "PLAYER_LEADERBOARD_PLACE", 1)
+    b.tag(101, "PLAYER_LEADERBOARD_PLACE", 2).tag(20, "PLAYER_LEADERBOARD_PLACE", 2)
+    b.tag("GameEntity", "STATE", "COMPLETE")
+    return b.text()

@@ -20,8 +20,8 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 import parse_bg  # noqa: E402
 from bg_log_builder import (  # noqa: E402
-    LogBuilder, duo_data_game, duo_game, duo_game_hidden_leg, solo_data_game, solo_game,
-    solo_game_local_eliminated, solo_shop_game)
+    LogBuilder, duo_data_game, duo_game, duo_game_hidden_leg, duo_round_two_game, solo_data_game,
+    solo_game, solo_game_local_eliminated, solo_round_two_game, solo_shop_game)
 
 OUT = ROOT / "crates" / "bg-parser" / "tests" / "data"
 
@@ -39,6 +39,8 @@ CASES = {
     "solo_shop_game_cut": solo_shop_game(complete=False),
     "solo_data_game": solo_data_game(),
     "duo_data_game": duo_data_game(),
+    "solo_round_two_game": solo_round_two_game(),
+    "duo_round_two_game": duo_round_two_game(),
     "not_battlegrounds": LogBuilder().create_game(game_type="GT_RANKED").turn(1).text(),
     "missing_own_hero": LogBuilder().create_game(game_type="GT_BATTLEGROUNDS").turn(1).turn(2).text(),
     "missing_entity": duo_game().replace(

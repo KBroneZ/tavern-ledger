@@ -18,6 +18,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::Serialize;
 use serde_json::Value;
 
+use crate::choices::{ChoiceCounts, ChoiceStats};
 use crate::hero_pick::{HeroPicks, PickCounts};
 use crate::provenance::{legend, LegendEntry, Source};
 use crate::shop::{ShopCounts, ShopStats};
@@ -139,6 +140,8 @@ pub struct ModeStats {
     pub shop: ShopStats,
     /// Heroes offered and picked (T-209).
     pub hero_picks: HeroPicks,
+    /// Trinkets and Dark Gifts offered and taken (T-211, T-212).
+    pub choices: ChoiceStats,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -266,6 +269,7 @@ struct ModeCounts {
     heroes: BTreeMap<Option<String>, HeroCounts>,
     shop: ShopCounts,
     picks: PickCounts,
+    choices: ChoiceCounts,
     games_with_tribes: usize,
     tribes: BTreeMap<String, (usize, u64)>,
     games_with_entered_tribes: usize,
@@ -298,6 +302,7 @@ impl ModeCounts {
         self.shop.add(report);
         self.picks
             .add(report, place, &|card| hero_for(card, report, links).0);
+        self.choices.add(report, place);
 
         let offered: Vec<(&String, u64)> = report
             .get("shop_tribes")
@@ -387,6 +392,7 @@ impl ModeCounts {
             entered_tribes_source: Source::Entered,
             shop: self.shop.finish(),
             hero_picks: self.picks.finish(names),
+            choices: self.choices.finish(),
         }
     }
 }
