@@ -21,8 +21,17 @@ pub const MAX_CARDS: usize = 100_000;
 pub const MAX_ENTRIES: usize = 200_000;
 /// The real file is about 10 MB; this stops a gzip bomb.
 pub const MAX_INFLATED: usize = 32 * 1024 * 1024;
-/// Version of the file we keep on the PC.
-const SAVED_FORMAT: u32 = 1;
+/// Version of the file we keep on the PC. Format 1 had names only; it still
+/// loads, without the minion pool, and is fetched again (T-307).
+const SAVED_FORMAT: u32 = 2;
+const NAMES_ONLY_FORMAT: u32 = 1;
+/// The real pool has about 300 minions.
+pub const MAX_POOL: usize = 2_000;
+/// Battlegrounds tavern tiers are 1 to 7.
+pub const MAX_TIER: u8 = 7;
+/// A pool minion has at most a couple of tribes; more is not the real data.
+pub const MAX_TRIBES: usize = 4;
+const MAX_TRIBE_CHARS: usize = 32;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CatalogError {
@@ -83,14 +92,35 @@ pub fn gunzip(body: &[u8]) -> Result<Vec<u8>, CatalogError> {
     Ok(out)
 }
 
-/// One entry, keeping only the two fields we read; every other field is
-/// skipped without being kept. A field that is not a string is None.
+/// One entry, keeping only the fields we read; every other field is skipped
+/// without being kept. A field of the wrong type is None.
 #[derive(Deserialize)]
 struct RawCard {
     #[serde(default, deserialize_with = "string_or_none")]
     id: Option<String>,
     #[serde(default, deserialize_with = "string_or_none")]
     name: Option<String>,
+    /// Battlegrounds fields (T-307), as HearthstoneJSON writes them.
+    #[serde(
+        default,
+        rename = "isBattlegroundsPoolMinion",
+        deserialize_with = "bool_or_none"
+    )]
+    pool: Option<bool>,
+    #[serde(default, rename = "techLevel", deserialize_with = "int_or_none")]
+    tier: Option<i64>,
+    /// Kept raw: a field that is there but malformed must not read as
+    /// "no tribe" (a neutral minion).
+    #[serde(default)]
+    races: Option<Value>,
+    #[serde(default)]
+    race: Option<Value>,
+    #[serde(
+        default,
+        rename = "isBattlegroundsDuosExclusive",
+        deserialize_with = "bool_or_none"
+    )]
+    duos_only: Option<bool>,
 }
 
 fn string_or_none<'de, D: Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {
@@ -100,9 +130,73 @@ fn string_or_none<'de, D: Deserializer<'de>>(d: D) -> Result<Option<String>, D::
     })
 }
 
-/// The usable (id, name) pairs, read one entry at a time so a file of
-/// millions of tiny entries is refused before it fills memory.
-struct Pairs(Vec<(String, String)>);
+fn bool_or_none<'de, D: Deserializer<'de>>(d: D) -> Result<Option<bool>, D::Error> {
+    Ok(Value::deserialize(d)?.as_bool())
+}
+
+fn int_or_none<'de, D: Deserializer<'de>>(d: D) -> Result<Option<i64>, D::Error> {
+    Ok(Value::deserialize(d)?.as_i64())
+}
+
+/// A list of strings, or None if it is anything else (one item that is not
+/// a string spoils the list).
+fn strings(value: &Value) -> Option<Vec<String>> {
+    value
+        .as_array()?
+        .iter()
+        .map(|v| v.as_str().map(String::from))
+        .collect()
+}
+
+/// A Battlegrounds pool minion: its tavern tier, its tribes as the log
+/// names them (`BEAST`, `ALL`; empty for a neutral minion) and whether only
+/// Duos has it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PoolMinion {
+    pub tier: u8,
+    pub tribes: Vec<String>,
+    #[serde(default)]
+    pub duos_only: bool,
+}
+
+/// A tribe name we keep: upper-case letters and `_`, as the log writes them.
+fn valid_tribe(tribe: &str) -> bool {
+    !tribe.is_empty()
+        && tribe.len() <= MAX_TRIBE_CHARS
+        && tribe.bytes().all(|b| b.is_ascii_uppercase() || b == b'_')
+}
+
+/// The pool data of a card, or None when it is not a pool minion or its
+/// fields do not pass the checks (it then is never listed as possible).
+fn pool_minion(card: &RawCard) -> Option<PoolMinion> {
+    if card.pool != Some(true) {
+        return None;
+    }
+    let tier = u8::try_from(card.tier?).ok()?;
+    // A field that is there but malformed leaves the card out.
+    let tribes = match (&card.races, &card.race) {
+        (Some(races), _) => strings(races)?,
+        (None, Some(race)) => vec![race.as_str()?.to_string()],
+        (None, None) => Vec::new(),
+    };
+    clean_pool(PoolMinion {
+        tier,
+        tribes,
+        duos_only: card.duos_only == Some(true),
+    })
+}
+
+/// Checks a pool entry (also when it is read back from the PC).
+fn clean_pool(minion: PoolMinion) -> Option<PoolMinion> {
+    let ok = (1..=MAX_TIER).contains(&minion.tier)
+        && minion.tribes.len() <= MAX_TRIBES
+        && minion.tribes.iter().all(|t| valid_tribe(t));
+    ok.then_some(minion)
+}
+
+/// The usable (id, name, pool data) entries, read one entry at a time so a
+/// file of millions of tiny entries is refused before it fills memory.
+struct Pairs(Vec<(String, String, Option<PoolMinion>)>);
 
 impl<'de> Deserialize<'de> for Pairs {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Pairs, D::Error> {
@@ -120,11 +214,12 @@ impl<'de> Deserialize<'de> for Pairs {
                     if read > MAX_ENTRIES {
                         return Err(de::Error::custom("too many entries"));
                     }
+                    let pool = pool_minion(&card);
                     let (Some(id), Some(name)) = (card.id, card.name) else {
                         continue;
                     };
                     if let Some(name) = clean_name(&name).filter(|_| valid_id(&id)) {
-                        pairs.push((id, name));
+                        pairs.push((id, name, pool));
                     }
                 }
                 Ok(Pairs(pairs))
@@ -137,18 +232,32 @@ impl<'de> Deserialize<'de> for Pairs {
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Catalog {
     names: BTreeMap<String, String>,
+    /// Battlegrounds pool minions by card id; every id here has a name.
+    pool: BTreeMap<String, PoolMinion>,
 }
 
 impl Catalog {
     /// Reads HearthstoneJSON's `cards.json` (already inflated).
     pub fn from_hearthstonejson(json: &[u8]) -> Result<Catalog, CatalogError> {
-        let Pairs(pairs) = serde_json::from_slice(json).map_err(|_| CatalogError::Shape)?;
-        Catalog::from_pairs(pairs.into_iter())
+        let Pairs(entries) = serde_json::from_slice(json).map_err(|_| CatalogError::Shape)?;
+        let mut pool = BTreeMap::new();
+        let mut pairs = Vec::with_capacity(entries.len());
+        for (id, name, minion) in entries {
+            if let Some(minion) = minion {
+                pool.insert(id.clone(), minion);
+            }
+            pairs.push((id, name));
+        }
+        Catalog::from_parts(pairs.into_iter(), pool)
     }
 
     /// An id that appears twice with different names is dropped: showing
-    /// either could be the wrong card.
-    fn from_pairs(pairs: impl Iterator<Item = (String, String)>) -> Result<Catalog, CatalogError> {
+    /// either could be the wrong card. Pool data is kept only for a card that
+    /// keeps its name, and dropped whole if there is far too much of it.
+    fn from_parts(
+        pairs: impl Iterator<Item = (String, String)>,
+        mut pool: BTreeMap<String, PoolMinion>,
+    ) -> Result<Catalog, CatalogError> {
         let mut names = BTreeMap::new();
         let mut clashes = BTreeSet::new();
         for (id, name) in pairs {
@@ -163,13 +272,23 @@ impl Catalog {
             }
         }
         names.retain(|id, _| !clashes.contains(id));
+        pool.retain(|id, _| names.contains_key(id));
+        if pool.len() > MAX_POOL {
+            pool.clear();
+        }
         if names.len() > MAX_CARDS {
             return Err(CatalogError::TooMany);
         }
         if names.len() < MIN_CARDS {
             return Err(CatalogError::TooFew(names.len()));
         }
-        Ok(Catalog { names })
+        Ok(Catalog { names, pool })
+    }
+
+    /// The Battlegrounds pool minions by card id (empty when the data has
+    /// none, e.g. a copy saved before T-307).
+    pub fn pool(&self) -> &BTreeMap<String, PoolMinion> {
+        &self.pool
     }
 
     pub fn name(&self, id: &str) -> Option<&str> {
@@ -197,6 +316,8 @@ struct Saved {
     fetched_at: u64,
     etag: Option<String>,
     names: BTreeMap<String, String>,
+    #[serde(default)]
+    pool: BTreeMap<String, PoolMinion>,
 }
 
 /// An ETag we send back as-is: visible ASCII only, so a hand-edited file
@@ -220,6 +341,7 @@ impl SavedCatalog {
             fetched_at: self.fetched_at,
             etag: self.etag.clone(),
             names: self.catalog.names.clone(),
+            pool: self.catalog.pool.clone(),
         };
         serde_json::to_vec(&saved).unwrap_or_default()
     }
@@ -228,7 +350,8 @@ impl SavedCatalog {
     /// file on disk anyone could have edited.
     pub fn from_json(bytes: &[u8]) -> Result<SavedCatalog, CatalogError> {
         let saved: Saved = serde_json::from_slice(bytes).map_err(|_| CatalogError::Shape)?;
-        if saved.format != SAVED_FORMAT {
+        let names_only = saved.format == NAMES_ONLY_FORMAT;
+        if saved.format != SAVED_FORMAT && !names_only {
             return Err(CatalogError::Shape);
         }
         let pairs = saved
@@ -236,10 +359,19 @@ impl SavedCatalog {
             .into_iter()
             .filter(|(id, _)| valid_id(id))
             .filter_map(|(id, name)| clean_name(&name).map(|n| (id, n)));
-        let etag = saved.etag.filter(|e| valid_etag(e));
+        let pool = saved
+            .pool
+            .into_iter()
+            .filter(|(id, _)| valid_id(id))
+            .filter_map(|(id, minion)| Some((id, clean_pool(minion)?)))
+            .collect();
+        // A names-only copy has no pool: without its ETag the next fetch
+        // brings the whole file instead of "unchanged".
+        let etag = saved.etag.filter(|e| valid_etag(e)).filter(|_| !names_only);
         Ok(SavedCatalog {
-            catalog: Catalog::from_pairs(pairs)?,
-            fetched_at: saved.fetched_at,
+            catalog: Catalog::from_parts(pairs, pool)?,
+            // A names-only copy counts as old, so it is replaced soon.
+            fetched_at: if names_only { 0 } else { saved.fetched_at },
             etag,
         })
     }
@@ -367,6 +499,98 @@ pub mod tests {
         let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
         assert_eq!(catalog.name("TWICE"), None);
         assert_eq!(catalog.name("SAME"), Some("Same"));
+    }
+
+    #[test]
+    fn pool_minions_keep_their_tier_and_tribes() {
+        let extra = vec![
+            json!({"id": "BG_A", "name": "A", "isBattlegroundsPoolMinion": true, "techLevel": 1, "races": ["BEAST"], "race": "BEAST"}),
+            json!({"id": "BG_B", "name": "B", "isBattlegroundsPoolMinion": true, "techLevel": 2, "races": ["MURLOC", "PIRATE"]}),
+            json!({"id": "BG_N", "name": "N", "isBattlegroundsPoolMinion": true, "techLevel": 1}),
+            json!({"id": "BG_OLD", "name": "Old", "isBattlegroundsPoolMinion": true, "techLevel": 3, "race": "DEMON"}),
+            json!({"id": "BG_D", "name": "D", "isBattlegroundsPoolMinion": true, "techLevel": 1, "isBattlegroundsDuosExclusive": true}),
+            json!({"id": "BG_OUT", "name": "Out", "isBattlegroundsPoolMinion": false, "techLevel": 1}),
+            json!({"id": "BG_NOT", "name": "Not", "techLevel": 1}),
+        ];
+        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
+        let pool = catalog.pool();
+        let minion = |tier: u8, tribes: &[&str], duos_only: bool| PoolMinion {
+            tier,
+            tribes: tribes.iter().map(|t| t.to_string()).collect(),
+            duos_only,
+        };
+        assert_eq!(pool["BG_A"], minion(1, &["BEAST"], false));
+        assert_eq!(pool["BG_B"], minion(2, &["MURLOC", "PIRATE"], false));
+        assert_eq!(pool["BG_N"], minion(1, &[], false), "neutral");
+        assert_eq!(
+            pool["BG_OLD"],
+            minion(3, &["DEMON"], false),
+            "the old single race"
+        );
+        assert_eq!(pool["BG_D"], minion(1, &[], true));
+        assert!(!pool.contains_key("BG_OUT") && !pool.contains_key("BG_NOT"));
+        assert!(
+            !pool.contains_key("CARD_1"),
+            "an ordinary card is not in the pool"
+        );
+    }
+
+    #[test]
+    fn pool_minions_with_odd_fields_are_never_listed() {
+        let extra = vec![
+            json!({"id": "T0", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": 0}),
+            json!({"id": "T8", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": 8}),
+            json!({"id": "TS", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": "1"}),
+            json!({"id": "TN", "name": "x", "isBattlegroundsPoolMinion": true}),
+            json!({"id": "RL", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": 1, "races": ["beast"]}),
+            json!({"id": "RN", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": 1, "races": ["BEAST", 5]}),
+            json!({"id": "RM", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": 1, "races": ["A", "B", "C", "D", "E"]}),
+            json!({"id": "RX", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": 1, "races": ["<b>"]}),
+            json!({"id": "RO", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": 1, "races": "BEAST"}),
+            json!({"id": "R1", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": 1, "race": 7}),
+            json!({"id": "BAD ID", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": 1}),
+        ];
+        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
+        assert!(catalog.pool().is_empty(), "{:?}", catalog.pool());
+        assert_eq!(catalog.name("RN"), Some("x"), "the name still shows");
+    }
+
+    #[test]
+    fn the_pool_is_saved_and_checked_again_when_read() {
+        let extra = vec![
+            json!({"id": "BG_A", "name": "A", "isBattlegroundsPoolMinion": true, "techLevel": 1, "races": ["BEAST"]}),
+        ];
+        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
+        let saved = SavedCatalog {
+            catalog,
+            fetched_at: 1_700_000_000,
+            etag: Some("\"abc\"".into()),
+        };
+        let back = SavedCatalog::from_json(&saved.to_json()).unwrap();
+        assert_eq!(back, saved);
+        let mut edited: Value = serde_json::from_slice(&saved.to_json()).unwrap();
+        edited["pool"]["BG_A"]["tier"] = json!(9);
+        edited["pool"]["NO_NAME"] = json!({"tier": 1, "tribes": []});
+        let back = SavedCatalog::from_json(&serde_json::to_vec(&edited).unwrap()).unwrap();
+        assert!(back.catalog.pool().is_empty());
+    }
+
+    #[test]
+    fn a_names_only_copy_still_loads_and_is_replaced_soon() {
+        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, vec![])).unwrap();
+        let saved = SavedCatalog {
+            catalog,
+            fetched_at: 1_700_000_000,
+            etag: Some("\"abc\"".into()),
+        };
+        let mut old: Value = serde_json::from_slice(&saved.to_json()).unwrap();
+        old["format"] = json!(1);
+        old.as_object_mut().unwrap().remove("pool");
+        let back = SavedCatalog::from_json(&serde_json::to_vec(&old).unwrap()).unwrap();
+        assert_eq!(back.catalog.name("CARD_1"), Some("Card 1"));
+        assert!(back.catalog.pool().is_empty());
+        assert_eq!(back.fetched_at, 0, "old: fetched again at the next chance");
+        assert_eq!(back.etag, None, "the whole file, not \"unchanged\"");
     }
 
     #[test]

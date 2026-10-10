@@ -89,6 +89,24 @@ pub fn names_of(store: Option<&CardStore>, ids: &[String]) -> BTreeMap<String, O
         .collect()
 }
 
+/// The Battlegrounds pool minions from the card data (T-307), for the
+/// overlay's "possible" lists; empty while there is no card data.
+pub fn pool_cards(cards: &Cards) -> Vec<tracker::possible::PoolCard> {
+    let Some(store) = cards.store.get() else {
+        return Vec::new();
+    };
+    store
+        .pool()
+        .into_iter()
+        .map(|(id, m)| tracker::possible::PoolCard {
+            id,
+            tier: i64::from(m.tier),
+            tribes: m.tribes,
+            duos_only: m.duos_only,
+        })
+        .collect()
+}
+
 #[tauri::command]
 pub fn card_names(cards: State<'_, Cards>, ids: Vec<String>) -> BTreeMap<String, Option<String>> {
     names_of(cards.store.get().map(Arc::as_ref), &ids)

@@ -8,7 +8,7 @@ const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 
 const MODES = { GT_BATTLEGROUNDS: "Solo", GT_BATTLEGROUNDS_DUO: "Duos" };
-const SOURCES = ["log", "inferred", "entered", "leaderboard", "card_data", "unknown"];
+const SOURCES = ["log", "inferred", "entered", "leaderboard", "card_data", "possible", "unknown"];
 
 let game = null;
 // While the layout is being edited and no game is on, the panels show the
@@ -151,7 +151,7 @@ function renderBoards(opponent) {
   return opponent.boards.map((board) => {
     const row = el("div", "board");
     const who = opponent.boards.length > 1 && board.hero ? `${heroName(board.hero)} · ` : "";
-    row.append(el("span", "when", `${who}board in round ${board.round}`));
+    row.append(el("span", "when", `${who}seen in round ${board.round}`));
     if (!board.minions.length) row.append(el("span", "none", "empty"));
     // Names and art are looked up by the log's card id (T-304): the row says
     // so in words, and a card the card data does not know shows its id, marked unknown.
@@ -176,6 +176,31 @@ function renderBoards(opponent) {
   });
 }
 
+// "T3", or "T3+4" for a Duos team; "T?" when the log has not said.
+function tiers(opponent) {
+  const known = (opponent.tiers || []).map((t) => (t.value === null ? "?" : t.value));
+  return `T${known.length ? known.join("+") : "?"}`;
+}
+
+// The head line of an opponent: portraits, hero names, tier, health, record.
+// Shared by the compact list and the hover card (overlay-hover.js).
+function opponentHead(opponent) {
+  const head = el("div", "head");
+  const hp = el("span", "hp");
+  hp.append(sourced(el("b"), opponent.health), " hp");
+  const portraits = opponent.heroes.map((h) => TLCards.art(h.id, "portrait")).filter(Boolean);
+  head.append(
+    ...portraits,
+    el("span", "name", heroes(opponent.heroes) || "Hero unknown"),
+    el("span", "tier", tiers(opponent)),
+    hp,
+    renderRecord(opponent),
+  );
+  return head;
+}
+
+// Compact (T-306): one line per opponent, in the leaderboard's order. The
+// boards are on the hover card, over the game's own leaderboard.
 function renderOpponents(g) {
   const panel = document.getElementById("opponents");
   panel.replaceChildren(el("h2", null, "Opponents"));
@@ -183,15 +208,16 @@ function renderOpponents(g) {
     panel.append(el("div", "row", "The log does not show the lobby yet."));
   }
   for (const opponent of g.opponents) {
-    const item = el("div", "opponent");
-    const head = el("div", "head");
-    const hp = el("span", "hp");
-    hp.append(sourced(el("b"), opponent.health), " hp");
-    const portraits = opponent.heroes.map((h) => TLCards.art(h.id, "portrait")).filter(Boolean);
-    head.append(...portraits, el("span", "name", heroes(opponent.heroes) || "Hero unknown"), hp, renderRecord(opponent));
-    item.append(head, ...renderBoards(opponent));
+    const item = el("div", "opponent compact");
+    item.append(opponentHead(opponent));
     panel.append(item);
   }
+  // Boards are only on the hover card: say when the hover cannot work yet.
+  const hint =
+    g.leaderboard_slots === null || g.leaderboard_slots === undefined
+      ? "The leaderboard's order is not in the log yet, so hovering it shows nothing for now."
+      : "Hover a hero on the game's leaderboard to see the last board you met.";
+  panel.append(el("p", "hint", hint));
   panel.hidden = false;
 }
 
@@ -205,6 +231,7 @@ function render() {
     document.getElementById("tribes").hidden = true;
     document.getElementById("opponents").hidden = true;
     legend.hidden = true;
+    if (window.TLHover) window.TLHover.render();
     return;
   }
   renderStatus(g);
@@ -216,6 +243,7 @@ function render() {
     renderTribes(g);
     renderOpponents(g);
   }
+  if (window.TLHover) window.TLHover.render();
 }
 
 // Answers can come back out of order: only the newest request is shown.
@@ -226,6 +254,7 @@ async function refresh() {
   const fresh = await invoke("overlay_state");
   if (mine !== latest) return;
   game = fresh;
+  if (window.TLHover) window.TLHover.setFailed(false);
   render();
 }
 
@@ -234,6 +263,8 @@ async function start() {
   // Listen first, so a change between the first read and the listener is not lost.
   await listen("live-changed", () => refresh().catch(showError));
   await listen("lobby-tribes-changed", () => refresh().catch(showError));
+  // New card data can change the possible minions (T-307).
+  await listen("cards-changed", () => refresh().catch(showError));
   await refresh();
 }
 
@@ -244,6 +275,7 @@ function showError(error) {
   panel.className = "panel status unreadable";
   panel.textContent = `The overlay could not update (${error}).`;
   for (const id of ["tribes", "opponents", "legend"]) document.getElementById(id).hidden = true;
+  if (window.TLHover) window.TLHover.setFailed(true);
 }
 
 // A script error must show on the page too: nobody can open a console on this window.

@@ -10,9 +10,11 @@
 
 use std::collections::BTreeSet;
 
+use bg_parser::report::LobbySlot;
 use serde::Serialize;
 use serde_json::Value;
 
+use crate::possible::Possible;
 use crate::provenance::{legend, LegendEntry, Source};
 use crate::recap::{list, recap, text, texts, tribes, HeroRef, Sourced, TribeOffer, View};
 
@@ -70,6 +72,14 @@ pub struct LiveOpponent {
     /// None until we have fought them.
     pub record: Option<LiveRecord>,
     pub record_source: Source,
+    /// Their place on the game's leaderboard now (top is 1; a team's place in
+    /// Duos), from the log (T-306).
+    pub place: Sourced<i64>,
+    /// Each hero's tavern tier now, in the order of `seats`, from the log.
+    pub tiers: Vec<Sourced<i64>>,
+    /// Minions each hero at tier 1 or 2 could have (T-307), added by the app
+    /// from the card data; empty otherwise.
+    pub possible: Vec<Possible>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -81,6 +91,14 @@ pub struct LiveGame {
     pub teammate_hero: Sourced<HeroRef>,
     /// The number of the last combat the log has.
     pub last_combat: Sourced<i64>,
+    /// Our own seats (ours and, in Duos, the teammate's): the leaderboard
+    /// slot that holds them shows nothing on hover.
+    pub own_seats: Vec<i64>,
+    /// Our place on the game's leaderboard now, from the log.
+    pub own_place: Sourced<i64>,
+    /// How many slots the game's leaderboard has (8 in Solo, 4 teams in
+    /// Duos), from the places the log gives; None until every place is known.
+    pub leaderboard_slots: Option<i64>,
     pub own_health: Sourced<i64>,
     /// Tavern offers, most common first. Not the lobby's tribes.
     pub tribes: Vec<TribeOffer>,
@@ -110,6 +128,54 @@ impl LiveGame {
     }
 }
 
+impl LiveGame {
+    /// Adds the leaderboard as the log has it now (T-306): every opponent's
+    /// place and tiers and our own place, and sorts the opponents in the
+    /// leaderboard's order (unknown places last).
+    pub fn with_leaderboard(mut self, lobby: &[LobbySlot]) -> Self {
+        let slot = |pid: i64| lobby.iter().find(|s| s.player_id == pid);
+        let place_of = |seats: &[i64]| seats.iter().find_map(|&pid| slot(pid)?.place);
+        for opponent in &mut self.opponents {
+            opponent.place = Sourced::log(place_of(&opponent.seats));
+            opponent.tiers = opponent
+                .seats
+                .iter()
+                .map(|&pid| Sourced::log(slot(pid).and_then(|s| s.tech_level)))
+                .collect();
+        }
+        self.own_place = Sourced::log(place_of(&self.own_seats));
+        self.leaderboard_slots = leaderboard_slots(lobby);
+        self.opponents.sort_by_key(|o| {
+            (
+                o.place.value.is_none(),
+                o.place.value,
+                std::cmp::Reverse(o.health.value),
+                o.seats.clone(),
+            )
+        });
+        self
+    }
+}
+
+/// The number of leaderboard slots, when the places look like a whole
+/// leaderboard: 1 to N with no gap, each held by one hero (Solo) or by the
+/// two heroes of a team (Duos). Anything else is unknown.
+fn leaderboard_slots(lobby: &[LobbySlot]) -> Option<i64> {
+    let places: Option<Vec<i64>> = lobby.iter().map(|s| s.place).collect();
+    let places = places?;
+    let distinct: Vec<i64> = places
+        .iter()
+        .copied()
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    let n = i64::try_from(distinct.len()).ok()?;
+    let whole = distinct == (1..=n).collect::<Vec<_>>();
+    let per_slot = places.len() / distinct.len().max(1);
+    let even = places.len() % distinct.len().max(1) == 0 && (per_slot == 1 || per_slot == 2);
+    (n > 0 && whole && even).then_some(n)
+}
+
 /// A parser problem that is a failure to read, not just "the lobby is not
 /// there yet".
 const PARSER_ERROR: &str = "parser error";
@@ -133,6 +199,9 @@ pub fn live_game(report: &Value) -> LiveGame {
         hero: recap.hero,
         teammate_hero: recap.teammate_hero,
         last_combat: Sourced::log(view.rounds.keys().next_back().copied()),
+        own_seats: own.clone(),
+        own_place: Sourced::log(None),
+        leaderboard_slots: None,
         own_health: Sourced::log(own_health_now(&recap.health)),
         tribes_source: if tribes.is_empty() {
             Source::Unknown
@@ -224,6 +293,9 @@ fn opponent_of(
         });
     LiveOpponent {
         health: Sourced::log(current_health(view, &seats)),
+        place: Sourced::log(None),
+        tiers: seats.iter().map(|_| Sourced::log(None)).collect(),
+        possible: Vec::new(),
         boards_source: Source::log_if(!boards.is_empty()),
         record_source: if record.is_some() {
             Source::Inferred
@@ -575,6 +647,84 @@ mod tests {
         let other = live.opponents.iter().find(|o| o.seats == [5, 6]).unwrap();
         assert!(other.boards.is_empty());
         assert_eq!(live.teammate_hero.value.as_ref().unwrap().id, "H_2");
+    }
+
+    fn slot(player_id: i64, place: Option<i64>, tech_level: Option<i64>) -> LobbySlot {
+        LobbySlot {
+            player_id,
+            place,
+            tech_level,
+        }
+    }
+
+    #[test]
+    fn the_leaderboard_gives_places_tiers_and_its_order() {
+        let lobby = [
+            slot(1, Some(2), Some(3)),
+            slot(2, Some(4), Some(1)),
+            slot(3, Some(1), Some(2)),
+            slot(4, Some(3), None),
+        ];
+        let live = live_game(&solo(vec![], "incomplete")).with_leaderboard(&lobby);
+        let order: Vec<_> = live.opponents.iter().map(|o| o.seats[0]).collect();
+        assert_eq!(order, [3, 4, 2], "top of the leaderboard first");
+        assert_eq!(opponent(&live, 3).place.value, Some(1));
+        assert_eq!(opponent(&live, 2).tiers[0].value, Some(1));
+        assert_eq!(opponent(&live, 4).tiers[0].source, Source::Unknown);
+        assert_eq!(live.own_place.value, Some(2));
+        assert_eq!(live.own_seats, [1]);
+        assert_eq!(live.leaderboard_slots, Some(4));
+    }
+
+    #[test]
+    fn without_the_leaderboard_places_and_tiers_are_unknown() {
+        let live = live_game(&solo(vec![], "incomplete"));
+        let two = opponent(&live, 2);
+        assert_eq!(two.place.source, Source::Unknown);
+        assert_eq!(two.tiers.len(), 1);
+        assert_eq!(two.tiers[0].value, None);
+        assert_eq!(live.leaderboard_slots, None);
+        let live = live.with_leaderboard(&[]);
+        assert_eq!(live.own_place.value, None);
+    }
+
+    #[test]
+    fn a_leaderboard_with_gaps_or_missing_places_has_no_slot_count() {
+        assert_eq!(
+            leaderboard_slots(&[slot(1, Some(1), None), slot(2, Some(3), None)]),
+            None
+        );
+        assert_eq!(
+            leaderboard_slots(&[slot(1, Some(1), None), slot(2, None, None)]),
+            None
+        );
+        assert_eq!(leaderboard_slots(&[]), None);
+        let three_on_one = [
+            slot(1, Some(1), None),
+            slot(2, Some(1), None),
+            slot(3, Some(1), None),
+        ];
+        assert_eq!(leaderboard_slots(&three_on_one), None);
+    }
+
+    #[test]
+    fn in_duos_a_team_has_one_place_and_a_tier_per_hero() {
+        let lobby = [
+            slot(1, Some(2), Some(2)),
+            slot(2, Some(2), Some(3)),
+            slot(3, Some(1), Some(1)),
+            slot(4, Some(1), Some(2)),
+            slot(5, Some(3), Some(4)),
+            slot(6, Some(3), Some(5)),
+        ];
+        let live = live_game(&duos(vec![])).with_leaderboard(&lobby);
+        assert_eq!(live.leaderboard_slots, Some(3));
+        assert_eq!(live.own_place.value, Some(2));
+        let first = &live.opponents[0];
+        assert_eq!(first.seats, [3, 4]);
+        assert_eq!(first.place.value, Some(1));
+        let tiers: Vec<_> = first.tiers.iter().map(|t| t.value).collect();
+        assert_eq!(tiers, [Some(1), Some(2)]);
     }
 
     #[test]

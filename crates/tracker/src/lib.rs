@@ -8,6 +8,7 @@ pub mod game_clock;
 pub mod live;
 pub mod lobby_tribes;
 pub mod lock;
+pub mod possible;
 pub mod provenance;
 pub mod recap;
 pub mod report_bundle;
@@ -206,6 +207,15 @@ impl Watcher {
         self.live_stale = false;
         self.live = snapshot;
         self.live.as_ref()
+    }
+
+    /// Every lobby hero's leaderboard place and tavern tier now, for the
+    /// overlay (T-306); empty when no Battlegrounds game is on.
+    pub fn live_lobby(&self) -> Vec<bg_parser::report::LobbySlot> {
+        self.reader
+            .as_ref()
+            .map(|r| r.log.lobby_now())
+            .unwrap_or_default()
     }
 
     /// See [`Follower::has_power_log`].

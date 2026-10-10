@@ -17,6 +17,11 @@
   const MIN_H = 40;
   const GRAB_H = 32;
   const OPACITY_STEP = 0.05;
+  // Space kept from the bottom edge of the screen.
+  const EDGE = 8;
+  // The smallest leaderboard box, in the window's own pixels.
+  const BOX_MIN_W = 12;
+  const BOX_MIN_H = 40;
 
   const stack = document.getElementById("stack");
   const slots = new Map(
@@ -38,7 +43,8 @@
     const r = rects[id];
     if (!r) {
       slot.classList.remove("placed");
-      for (const prop of ["left", "top", "width", "minHeight"]) slot.style[prop] = "";
+      for (const prop of ["left", "top", "width", "minHeight", "maxHeight"]) slot.style[prop] = "";
+      slot.querySelector(".panel").style.maxHeight = "";
       return false;
     }
     slot.classList.add("placed");
@@ -46,7 +52,35 @@
     slot.style.top = px(r.y);
     slot.style.width = px(r.w);
     slot.style.minHeight = r.h ? px(r.h) : "";
+    // Never past the bottom of the screen (T-308): what does not fit is cut.
+    const limit = px(Math.max(GRAB_H, window.innerHeight - r.y - EDGE));
+    slot.style.maxHeight = limit;
+    slot.querySelector(".panel").style.maxHeight = limit;
     return true;
+  }
+
+  // The leaderboard box (T-306), in the window's own pixels; shown only
+  // while unlocked and once the app knows where the game window is.
+  const box = document.getElementById("board-box");
+  let boxRect = null;
+
+  function placeBox(r) {
+    box.style.left = px(r.x);
+    box.style.top = px(r.y);
+    box.style.width = px(r.w);
+    box.style.height = px(r.h);
+  }
+
+  function drawBox(v) {
+    const known = v.unlocked && v.leaderboard;
+    box.hidden = !known;
+    boxRect = known ? { ...v.leaderboard.area } : null;
+    if (!known) return;
+    box.classList.toggle("custom", v.leaderboard.custom);
+    box.querySelector(".board-label").textContent = v.leaderboard.custom
+      ? "Leaderboard (your box)"
+      : "Leaderboard (measured default)";
+    placeBox(boxRect);
   }
 
   function button(text, onClick, pressed) {
@@ -78,8 +112,11 @@
       }),
     );
     const warning = document.getElementById("toolbar-warning");
-    warning.hidden = !v.warning;
-    warning.textContent = v.warning || "";
+    const noBoard = v.leaderboard ? null : "Bring Hearthstone to the front once to adjust the leaderboard box.";
+    const text = [v.warning, noBoard].filter(Boolean).join(" ");
+    warning.hidden = !text;
+    warning.textContent = text;
+    document.getElementById("reset-board").disabled = !v.leaderboard || !v.leaderboard.custom;
   }
 
   function draw(v) {
@@ -100,6 +137,7 @@
       else inStack.push(slot);
     }
     stack.append(...inStack);
+    drawBox(v);
     if (v.unlocked) drawToolbar(v);
   }
 
@@ -118,8 +156,53 @@
     return Math.min(Math.max(n, lo), Math.max(lo, hi));
   }
 
+  // Moves or resizes the leaderboard box; saved on release.
+  function startBoxDrag(event) {
+    const start = { ...boxRect, px: event.clientX, py: event.clientY };
+    const resizing = event.target.classList.contains("grip");
+    let moved = false;
+    dragging = true;
+    event.preventDefault();
+    const move = (e) => {
+      const sw = window.innerWidth;
+      const sh = window.innerHeight;
+      const dx = e.clientX - start.px;
+      const dy = e.clientY - start.py;
+      moved = moved || dx !== 0 || dy !== 0;
+      if (resizing) {
+        boxRect.w = clamp(start.w + dx, BOX_MIN_W, sw - boxRect.x);
+        boxRect.h = clamp(start.h + dy, BOX_MIN_H, sh - boxRect.y);
+      } else {
+        boxRect.x = clamp(start.x + dx, 0, sw - boxRect.w);
+        boxRect.y = clamp(start.y + dy, 0, sh - boxRect.h);
+      }
+      placeBox(boxRect);
+    };
+    const stop = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+      dragging = false;
+      pending = null;
+      abortDrag = null;
+    };
+    const end = () => {
+      stop();
+      if (moved) send("overlay_save_leaderboard", { area: { x: boxRect.x, y: boxRect.y, w: boxRect.w, h: boxRect.h } }).catch(fail);
+      else if (view) draw(view);
+    };
+    abortDrag = stop;
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+  }
+
   function startDrag(event) {
     if (!view || !view.unlocked || event.button !== 0) return;
+    if (boxRect && event.target.closest("#board-box")) {
+      startBoxDrag(event);
+      return;
+    }
     const slot = event.target.closest(".slot");
     if (!slot) return;
     const id = slot.dataset.panel;
@@ -188,6 +271,9 @@
     document
       .getElementById("reset-layout")
       .addEventListener("click", () => send("overlay_reset_layout").catch(fail));
+    document
+      .getElementById("reset-board")
+      .addEventListener("click", () => send("overlay_reset_leaderboard").catch(fail));
     const nudge = (delta) => () => {
       if (view) send("overlay_set_opacity", { value: view.opacity + delta }).catch(fail);
     };

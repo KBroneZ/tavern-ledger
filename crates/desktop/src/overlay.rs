@@ -4,7 +4,9 @@
 //! draws on top of the game and never touches it: no memory, no injection, no
 //! clicks or keys sent to the game (D-004, D-006).
 //!
-//! The window covers the main screen and the panels are placed inside it.
+//! The window covers the work area of the monitor that holds the game (the
+//! main one when no game window is known, T-308) and the panels are placed
+//! inside it.
 //! Locked (the default, and always at start and when a game starts) every
 //! click goes through it. Unlocked, the panels take the mouse so they can be
 //! moved and resized; the window shows even with no game, with example data.
@@ -17,28 +19,25 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::thread;
-use std::time::Duration;
 
 use serde::Serialize;
 use tauri::menu::CheckMenuItem;
-use tauri::{
-    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Position, Size, State, Wry,
-};
+use tauri::{AppHandle, Emitter, Manager, State, Wry};
 
-use crate::foreground::{self, Foreground};
+use crate::hover::OverlayFrame;
 use crate::overlay_layout::{
     Layout, Panel, Rect, Settings, Theme, MAX_OPACITY, MIN_OPACITY, THEMES,
 };
+use crate::screen_fit::Area;
 use crate::AppState;
 
 pub const WINDOW: &str = "overlay";
 /// The overlay page listens for this to redraw with new settings.
-const SETTINGS_CHANGED: &str = "overlay-settings-changed";
-/// How often the window is shown or hidden to follow the game and the
-/// window in front.
-const CHECK_EVERY: Duration = Duration::from_millis(500);
+pub(crate) const SETTINGS_CHANGED: &str = "overlay-settings-changed";
 const PREFS_FILE: &str = "overlay.json";
+
+/// x, y, width, height (physical pixels) and scale in thousandths.
+pub(crate) type Placed = (i32, i32, u32, u32, u32);
 
 /// Whether the user switched the overlay on, and how they arranged it, kept
 /// in the data folder so it survives a restart. Off until the user turns it
@@ -55,10 +54,17 @@ pub struct Overlay {
     /// Layout editing: the panels take the mouse. Never saved.
     unlocked: AtomicBool,
     prefs: Mutex<Option<PathBuf>>,
-    /// The overlay window's size in logical pixels (the main screen).
+    /// The overlay window's size in logical pixels (a monitor's work area).
     screen: Mutex<(f64, f64)>,
-    /// Where the window is now: x, y, width, height in physical pixels.
-    placed: Mutex<Option<(i32, i32, u32, u32)>>,
+    /// Where the window is now: x, y, width, height in physical pixels, and
+    /// the monitor's scale in thousandths (a DPI change moves it too).
+    placed: Mutex<Option<Placed>>,
+    /// The window's physical origin, scale and logical size, once placed.
+    frame: Mutex<Option<OverlayFrame>>,
+    /// The game window's client area the last time it was seen (physical
+    /// pixels), for the monitor choice and the leaderboard box.
+    game: Mutex<Option<Area>>,
+    enable_item: Mutex<Option<CheckMenuItem<Wry>>>,
     /// The last problem saving the settings, until a save works.
     warning: Mutex<Option<String>>,
     unlock_item: Mutex<Option<CheckMenuItem<Wry>>>,
@@ -79,8 +85,18 @@ pub struct View {
     hidden: Vec<Panel>,
     layout: Layout,
     screen: (f64, f64),
+    /// The leaderboard box in the window's own pixels, for adjusting it while
+    /// unlocked; `None` until the game window has been seen on this monitor.
+    leaderboard: Option<BoardView>,
     vars: BTreeMap<&'static str, String>,
     warning: Option<String>,
+}
+
+#[derive(Serialize)]
+struct BoardView {
+    area: Area,
+    /// True when the user drew it; false for the measured default.
+    custom: bool,
 }
 
 #[derive(Serialize)]
@@ -89,7 +105,7 @@ struct ThemeInfo {
     label: &'static str,
 }
 
-fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
+pub(crate) fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(|e| e.into_inner())
 }
 
@@ -170,6 +186,78 @@ impl Overlay {
         write_whole(&path, &text).map_err(|e| failed(e.kind()))
     }
 
+    /// The game window's client area the last time it was seen.
+    pub fn game(&self) -> Option<Area> {
+        *lock(&self.game)
+    }
+
+    /// True when the window was last placed exactly so.
+    pub fn placed_as(&self, placed: Placed) -> bool {
+        *lock(&self.placed) == Some(placed)
+    }
+
+    /// Records where the window now is.
+    pub fn set_placed(&self, placed: Placed, frame: OverlayFrame) {
+        *lock(&self.placed) = Some(placed);
+        *lock(&self.screen) = frame.size;
+        *lock(&self.frame) = Some(frame);
+    }
+
+    /// Remembers where the game window is (T-306).
+    pub fn saw_game(&self, client: Area) {
+        if client.usable() {
+            *lock(&self.game) = Some(client);
+        }
+    }
+
+    pub fn frame(&self) -> Option<OverlayFrame> {
+        *lock(&self.frame)
+    }
+
+    /// The leaderboard box for this game window, relative to its client
+    /// area, in physical pixels: the user's or the measured default.
+    pub fn leaderboard_box(&self, client: Area) -> Area {
+        lock(&self.settings).leaderboard_for((client.w, client.h)).0
+    }
+
+    fn board_view(&self, settings: &Settings) -> Option<BoardView> {
+        let client = (*lock(&self.game))?;
+        let frame = self.frame()?;
+        let (area, custom) = settings.leaderboard_for((client.w, client.h));
+        let on_screen = Area {
+            x: client.x + area.x,
+            y: client.y + area.y,
+            ..area
+        };
+        Some(BoardView {
+            area: on_screen.in_frame(frame.origin, frame.scale),
+            custom,
+        })
+    }
+
+    /// The box the user drew, given in the window's own pixels, kept for the
+    /// game window's size. False when no game window is known.
+    pub fn save_leaderboard(&self, drawn: Area) -> Result<bool, String> {
+        let (Some(client), Some(frame)) = (*lock(&self.game), self.frame()) else {
+            return Ok(false);
+        };
+        let physical = Area {
+            x: drawn.x * frame.scale + frame.origin.0 - client.x,
+            y: drawn.y * frame.scale + frame.origin.1 - client.y,
+            w: drawn.w * frame.scale,
+            h: drawn.h * frame.scale,
+        };
+        self.change(|s, _| s.set_leaderboard((client.w, client.h), physical))
+            .map(|()| true)
+    }
+
+    pub fn reset_leaderboard(&self) -> Result<(), String> {
+        let Some(client) = *lock(&self.game) else {
+            return Ok(());
+        };
+        self.change(|s, _| s.reset_leaderboard((client.w, client.h)))
+    }
+
     pub fn view(&self) -> View {
         let settings = lock(&self.settings).clone();
         let screen = *lock(&self.screen);
@@ -189,6 +277,7 @@ impl Overlay {
             max_opacity: MAX_OPACITY,
             hidden: settings.hidden.iter().copied().collect(),
             layout: settings.layout_for(screen),
+            leaderboard: self.board_view(&settings),
             screen,
             vars: settings.theme.css_vars(settings.opacity),
             warning: lock(&self.warning).clone(),
@@ -204,68 +293,6 @@ fn write_whole(path: &Path, text: &str) -> io::Result<()> {
     let side = path.with_extension("json.tmp");
     std::fs::write(&side, text)?;
     std::fs::rename(&side, path)
-}
-
-/// What decides whether the window shows. `front` is `None` when the system
-/// cannot say what is in front: then it shows (the overlay only ever draws
-/// while a game is on). While the layout is being edited it shows whatever
-/// else is true, so there is something to arrange.
-pub fn wants_visible(
-    enabled: bool,
-    game_on: bool,
-    ignore_foreground: bool,
-    front: Option<Foreground>,
-    unlocked: bool,
-) -> bool {
-    unlocked
-        || (enabled && game_on && (ignore_foreground || !matches!(front, Some(Foreground::Other))))
-}
-
-/// A game that starts while the layout is unlocked locks it again, so the
-/// overlay never steals clicks mid-game unless the user unlocks it then.
-pub fn should_relock(unlocked: bool, game_was_on: bool, game_is_on: bool) -> bool {
-    unlocked && !game_was_on && game_is_on
-}
-
-/// Covers the main screen with the window, and makes every click go through
-/// it to the window below. It never takes focus.
-pub fn prepare(app: &AppHandle) -> tauri::Result<()> {
-    let window = app
-        .get_webview_window(WINDOW)
-        .ok_or(tauri::Error::WindowNotFound)?;
-    window.set_ignore_cursor_events(true)?;
-    fit_window(app)?;
-    Ok(())
-}
-
-/// Makes the window cover the main screen as it is now. Only touches the
-/// window when the screen changed. True if it did.
-fn fit_window(app: &AppHandle) -> tauri::Result<bool> {
-    let window = app
-        .get_webview_window(WINDOW)
-        .ok_or(tauri::Error::WindowNotFound)?;
-    let Some(monitor) = window.primary_monitor()? else {
-        return Ok(false);
-    };
-    let (origin, size) = (monitor.position(), monitor.size());
-    let placed = (origin.x, origin.y, size.width, size.height);
-    let state = app.state::<Arc<AppState>>();
-    if *lock(&state.overlay.placed) == Some(placed) {
-        return Ok(false);
-    }
-    window.set_position(Position::Physical(PhysicalPosition::new(
-        origin.x, origin.y,
-    )))?;
-    window.set_size(Size::Physical(PhysicalSize::new(size.width, size.height)))?;
-    // Only now: a failed call is tried again on the next check.
-    *lock(&state.overlay.placed) = Some(placed);
-    let scale = monitor.scale_factor();
-    *lock(&state.overlay.screen) = (
-        f64::from(size.width) / scale,
-        f64::from(size.height) / scale,
-    );
-    let _ = app.emit(SETTINGS_CHANGED, ());
-    Ok(true)
 }
 
 /// Unlocks or locks the layout editing. Locking is the safe direction: if the
@@ -305,9 +332,28 @@ pub fn set_unlocked(app: &AppHandle, state: &AppState, on: bool) {
 
 /// The tray entry shows the real state, not what the click toggled it to.
 fn refresh_unlock_item(state: &AppState) {
-    if let Some(item) = lock(&state.overlay.unlock_item).as_ref() {
+    let item = lock(&state.overlay.unlock_item).clone();
+    if let Some(item) = item {
         let _ = item.set_checked(state.overlay.unlocked());
     }
+}
+
+/// The tray's "show overlay" entry, so it follows the switch in the window.
+pub fn keep_enable_item(state: &AppState, item: CheckMenuItem<Wry>) {
+    *lock(&state.overlay.enable_item) = Some(item);
+}
+
+/// Switches the overlay on or off from the tray or the main window (T-308);
+/// both show the real state afterwards, and a failed save is said.
+pub fn set_enabled(app: &AppHandle, state: &AppState, on: bool) -> Result<(), String> {
+    let result = state.overlay.set_enabled(on);
+    // Cloned out first: no lock is held over a call to the menu.
+    let item = lock(&state.overlay.enable_item).clone();
+    if let Some(item) = item {
+        let _ = item.set_checked(state.overlay.enabled());
+    }
+    let _ = app.emit(SETTINGS_CHANGED, ());
+    result
 }
 
 /// The tray's "unlock" entry, so the menu can show the real state.
@@ -369,6 +415,42 @@ pub fn overlay_reset_layout(app: AppHandle, state: State<'_, Arc<AppState>>) -> 
 }
 
 #[tauri::command]
+pub fn overlay_set_enabled(app: AppHandle, state: State<'_, Arc<AppState>>, enabled: bool) -> View {
+    if let Err(message) = set_enabled(&app, &state, enabled) {
+        crate::set_status(&app, &state, |s| s.notice = Some(message));
+    }
+    state.overlay.view()
+}
+
+/// Keeps the leaderboard box the user drew over the game (T-306).
+#[tauri::command]
+pub fn overlay_save_leaderboard(
+    app: AppHandle,
+    state: State<'_, Arc<AppState>>,
+    area: Area,
+) -> View {
+    match state.overlay.save_leaderboard(area) {
+        Ok(true) => {}
+        Ok(false) => {
+            let msg = "The leaderboard box was not kept: bring Hearthstone to the front once, then try again.";
+            crate::set_status(&app, &state, |s| s.notice = Some(msg.into()));
+        }
+        Err(message) => crate::set_status(&app, &state, |s| s.notice = Some(message)),
+    }
+    let _ = app.emit(SETTINGS_CHANGED, ());
+    state.overlay.view()
+}
+
+#[tauri::command]
+pub fn overlay_reset_leaderboard(app: AppHandle, state: State<'_, Arc<AppState>>) -> View {
+    if let Err(message) = state.overlay.reset_leaderboard() {
+        crate::set_status(&app, &state, |s| s.notice = Some(message));
+    }
+    let _ = app.emit(SETTINGS_CHANGED, ());
+    state.overlay.view()
+}
+
+#[tauri::command]
 pub fn overlay_set_unlocked(
     app: AppHandle,
     state: State<'_, Arc<AppState>>,
@@ -376,55 +458,6 @@ pub fn overlay_set_unlocked(
 ) -> View {
     set_unlocked(&app, &state, unlocked);
     state.overlay.view()
-}
-
-/// A show or hide that keeps failing is said once, not retried in silence.
-const FAILURES_BEFORE_NOTICE: u32 = 5;
-
-/// Shows or hides the window as the game, the setting and the window in
-/// front change, until the app quits.
-pub fn follow(app: AppHandle, state: Arc<AppState>) {
-    thread::spawn(move || {
-        let mut shown = false;
-        let mut game_was_on = false;
-        let mut failures: u32 = 0;
-        loop {
-            let game_on = lock(&state.live).is_some();
-            if should_relock(state.overlay.unlocked(), game_was_on, game_on) {
-                set_unlocked(&app, &state, false);
-            }
-            game_was_on = game_on;
-            let _ = fit_window(&app);
-            let want = wants_visible(
-                state.overlay.enabled(),
-                game_on,
-                state.overlay.ignores_foreground(),
-                foreground::current(),
-                state.overlay.unlocked(),
-            );
-            if want != shown {
-                let done = match app.get_webview_window(WINDOW) {
-                    Some(window) if want => {
-                        // On top again every time: another window may have taken the place.
-                        window.show().and_then(|()| window.set_always_on_top(true))
-                    }
-                    Some(window) => window.hide(),
-                    None => Err(tauri::Error::WindowNotFound),
-                };
-                if done.is_ok() {
-                    shown = want;
-                    failures = 0;
-                } else {
-                    failures += 1;
-                    if failures == FAILURES_BEFORE_NOTICE {
-                        let msg = "The overlay window could not be shown or hidden.";
-                        crate::set_status(&app, &state, |s| s.notice = Some(msg.into()));
-                    }
-                }
-            }
-            thread::sleep(CHECK_EVERY);
-        }
-    });
 }
 
 #[cfg(test)]
@@ -567,71 +600,6 @@ mod tests {
         assert!(!overlay.unlocked());
     }
 
-    #[test]
-    fn it_shows_only_while_on_in_a_game_with_the_game_in_front() {
-        let game = Some(Foreground::Hearthstone);
-        let other = Some(Foreground::Other);
-        assert!(wants_visible(true, true, false, game, false));
-        assert!(
-            !wants_visible(false, true, false, game, false),
-            "switched off"
-        );
-        assert!(
-            !wants_visible(true, false, false, game, false),
-            "no game on"
-        );
-        assert!(
-            !wants_visible(true, true, false, other, false),
-            "another window in front"
-        );
-    }
-
-    #[test]
-    fn when_the_window_in_front_cannot_be_read_it_still_shows() {
-        assert!(wants_visible(true, true, false, None, false));
-        assert!(!wants_visible(true, false, false, None, false));
-    }
-
-    #[test]
-    fn the_dev_flag_ignores_the_window_in_front_but_not_the_game() {
-        assert!(wants_visible(
-            true,
-            true,
-            true,
-            Some(Foreground::Other),
-            false
-        ));
-        assert!(!wants_visible(
-            true,
-            false,
-            true,
-            Some(Foreground::Other),
-            false
-        ));
-    }
-
-    #[test]
-    fn while_unlocked_it_shows_with_no_game_and_even_when_switched_off() {
-        let other = Some(Foreground::Other);
-        assert!(wants_visible(false, false, false, other, true));
-        assert!(wants_visible(true, true, false, other, true));
-    }
-
-    #[test]
-    fn a_game_starting_locks_an_unlocked_overlay_again() {
-        assert!(should_relock(true, false, true));
-        assert!(
-            !should_relock(true, true, true),
-            "a game already on: the user unlocked it on purpose"
-        );
-        assert!(!should_relock(true, false, false), "no game yet");
-        assert!(!should_relock(false, false, true), "already locked");
-        assert!(
-            !should_relock(true, true, false),
-            "a game ending does not lock"
-        );
-    }
-
     const OVERLAY_HTML: &str = include_str!("../ui/overlay.html");
 
     #[test]
@@ -656,7 +624,7 @@ mod tests {
             .skip(1)
             .filter_map(|rest| rest.split('"').next())
             .collect();
-        assert_eq!(scripts.len(), 4);
+        assert_eq!(scripts.len(), 5);
         for script in scripts {
             assert!(ui.join(script).is_file(), "{script} is missing");
         }
@@ -666,7 +634,11 @@ mod tests {
     fn the_layout_script_stays_in_its_own_scope() {
         // A top-level function there once replaced one of the same name in
         // overlay.js and the overlay never showed a game.
-        let layout = include_str!("../ui/overlay-layout.js");
-        assert!(layout.contains("(() => {") && layout.trim_end().ends_with("})();"));
+        for script in [
+            include_str!("../ui/overlay-layout.js"),
+            include_str!("../ui/overlay-hover.js"),
+        ] {
+            assert!(script.contains("(() => {") && script.trim_end().ends_with("})();"));
+        }
     }
 }

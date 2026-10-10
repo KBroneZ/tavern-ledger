@@ -21,7 +21,12 @@
     <ul id="setup-list"></ul>
   </section>
 
-  <p class="overlay-hint">Overlay: tick "Show overlay during a game" in the tray menu. It shows over Hearthstone only while a game is on. Exclusive fullscreen hides any overlay: run Hearthstone windowed or borderless.</p>
+  <section id="overlay-switch" class="overlay-switch" aria-label="Overlay">
+    <label class="switch"><input id="overlay-enabled" type="checkbox"> Overlay during a game</label>
+    <button type="button" id="overlay-arrange">Arrange overlay</button>
+    <p class="overlay-hint">Also in the tray menu. It shows over Hearthstone only while a game is on; hover a hero on the game's leaderboard to see the last board you met. "Arrange overlay" lets you move the panels and fit the leaderboard box (the whole screen takes clicks until you press "Lock overlay"). Exclusive fullscreen hides any overlay: run Hearthstone windowed or borderless.</p>
+    <p id="overlay-switch-problem" class="problem" role="status" hidden></p>
+  </section>
 
   <details id="upload" class="upload">
     <summary>Upload to the website<span id="upload-summary">…</span></summary>
@@ -201,5 +206,6 @@
   <script src="cards.js"></script>
   <script src="app.js"></script>
   <script src="upload.js"></script>
+  <script src="overlay-switch.js"></script>
 </body>
 </html>

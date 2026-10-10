@@ -14,7 +14,9 @@ use std::sync::{Mutex, MutexGuard};
 use serde::Serialize;
 
 use crate::art::{is_jpeg, ArtCache, CACHE_CAP_BYTES, MAX_IMAGE_BYTES};
-use crate::catalog::{gunzip, valid_etag, valid_id, Catalog, SavedCatalog, MAX_INFLATED};
+use crate::catalog::{
+    gunzip, valid_etag, valid_id, Catalog, PoolMinion, SavedCatalog, MAX_INFLATED,
+};
 use crate::net::{Fetch, Get, Reply};
 
 pub const DATA_URL: &str = "https://api.hearthstonejson.com/v1/latest/enUS/cards.json";
@@ -144,6 +146,22 @@ impl CardStore {
             inner.want_newer = true;
         }
         found
+    }
+
+    /// The Battlegrounds pool minions (T-307), empty while there is no card
+    /// data or the data has no pool.
+    pub fn pool(&self) -> Vec<(String, PoolMinion)> {
+        lock(&self.inner)
+            .saved
+            .as_ref()
+            .map(|s| {
+                s.catalog
+                    .pool()
+                    .iter()
+                    .map(|(id, m)| (id.clone(), m.clone()))
+                    .collect()
+            })
+            .unwrap_or_default()
     }
 
     fn knows(&self, id: &str) -> bool {

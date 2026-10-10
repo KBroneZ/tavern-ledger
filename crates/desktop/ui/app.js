@@ -27,7 +27,7 @@ function el(tag, className, text) {
 
 // Where a value comes from (T-109). The app decides the source (tracker::provenance)
 // and this file only shows it: a mark for every source but the log, and a tooltip on every value.
-const SOURCES = ["log", "inferred", "entered", "leaderboard", "card_data", "unknown"];
+const SOURCES = ["log", "inferred", "entered", "leaderboard", "card_data", "possible", "unknown"];
 const sourceOf = (source) => (SOURCES.includes(source) ? source : "unknown");
 
 function sourceInfo(source) {

@@ -3,12 +3,15 @@
 //! rules, no window code, so every rule here has a test.
 //!
 //! Positions are in logical pixels of the overlay window, which covers the
-//! main screen. A panel with no saved rectangle stays in the default stack
-//! (top left, as in T-301).
+//! game's monitor. A panel with no saved rectangle stays in the default stack
+//! (top right since T-306, clear of the game's leaderboard).
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
+
+use crate::leaderboard;
+use crate::screen_fit::Area;
 
 /// The panels of the overlay. `Legend` explains the source marks, so it can
 /// move and resize but never be hidden.
@@ -353,6 +356,10 @@ pub struct Settings {
     /// The resolution of the last layout saved, to start from when the
     /// screen is a new one.
     pub last_resolution: Option<String>,
+    /// The leaderboard box the user drew over the game (T-306), per game
+    /// window size (`resolution_key` of the client area, physical pixels),
+    /// relative to the client area. Without one the measured default is used.
+    pub leaderboards: BTreeMap<String, Area>,
 }
 
 impl Default for Settings {
@@ -364,6 +371,7 @@ impl Default for Settings {
             hidden: BTreeSet::new(),
             layouts: BTreeMap::new(),
             last_resolution: None,
+            leaderboards: BTreeMap::new(),
         }
     }
 }
@@ -380,6 +388,13 @@ impl Settings {
         settings
             .layouts
             .retain(|key, _| parse_resolution(key).is_some());
+        settings.leaderboards = std::mem::take(&mut settings.leaderboards)
+            .into_iter()
+            .filter_map(|(key, area)| {
+                let client = parse_resolution(&key)?;
+                Some((key, leaderboard::fit_area(area, client)?))
+            })
+            .collect();
         Ok(settings)
     }
 
@@ -423,6 +438,32 @@ impl Settings {
         self.layouts.clear();
         self.last_resolution = None;
         self.hidden.clear();
+    }
+
+    /// The leaderboard box for a game window of this size (physical pixels,
+    /// relative to its client area), and whether the user drew it.
+    pub fn leaderboard_for(&self, client: (f64, f64)) -> (Area, bool) {
+        let saved = self
+            .leaderboards
+            .get(&resolution_key(client))
+            .and_then(|a| leaderboard::fit_area(*a, client));
+        match saved {
+            Some(area) => (area, true),
+            None => (leaderboard::default_area(client), false),
+        }
+    }
+
+    /// Keeps the box the user drew for this window size, made to fit it.
+    /// A box with bad numbers is not kept.
+    pub fn set_leaderboard(&mut self, client: (f64, f64), area: Area) {
+        if let Some(area) = leaderboard::fit_area(area, client) {
+            self.leaderboards.insert(resolution_key(client), area);
+        }
+    }
+
+    /// Back to the measured default for this window size.
+    pub fn reset_leaderboard(&mut self, client: (f64, f64)) {
+        self.leaderboards.remove(&resolution_key(client));
     }
 
     pub fn set_opacity(&mut self, value: f64) {
@@ -676,6 +717,54 @@ mod tests {
             let solid = contrast(p.danger, p.panel);
             assert!(solid >= 4.5, "{} danger text: {solid:.2}", theme.id());
         }
+    }
+
+    #[test]
+    fn the_leaderboard_box_is_the_default_until_the_user_draws_one() {
+        let client = (3840.0, 2160.0);
+        let mut s = Settings::default();
+        let (area, custom) = s.leaderboard_for(client);
+        assert!(!custom);
+        assert_eq!(area, leaderboard::default_area(client));
+        let drawn = Area {
+            x: 400.0,
+            y: 300.0,
+            w: 200.0,
+            h: 1500.0,
+        };
+        s.set_leaderboard(client, drawn);
+        assert_eq!(s.leaderboard_for(client), (drawn, true));
+        assert!(!s.leaderboard_for((1920.0, 1080.0)).1, "per window size");
+        let back = Settings::parse(&s.to_text().unwrap()).unwrap();
+        assert_eq!(back.leaderboard_for(client), (drawn, true));
+        s.reset_leaderboard(client);
+        assert!(!s.leaderboard_for(client).1);
+    }
+
+    #[test]
+    fn a_leaderboard_box_off_the_window_or_broken_is_fitted_or_dropped() {
+        let s = Settings::parse(
+            r#"{"leaderboards":{"1920x1080":{"x":-50,"y":2000,"w":100,"h":600},"nonsense":{"x":0,"y":0,"w":1,"h":1}}}"#,
+        )
+        .unwrap();
+        assert_eq!(s.leaderboards.len(), 1);
+        let (area, custom) = s.leaderboard_for((1920.0, 1080.0));
+        assert!(
+            custom && area.x >= 0.0 && area.bottom() <= 1080.0,
+            "{area:?}"
+        );
+        let mut s = Settings::default();
+        s.set_leaderboard(
+            (1920.0, 1080.0),
+            Area {
+                x: f64::NAN,
+                y: 0.0,
+                w: 1.0,
+                h: 1.0,
+            },
+        );
+        assert!(s.leaderboards.is_empty());
+        assert!(Settings::parse(r#"{"leaderboards":{"1920x1080":{"x":"a"}}}"#).is_err());
     }
 
     #[test]
