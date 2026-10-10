@@ -1,0 +1,20 @@
+[package]
+name = "cards"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Card names and art from HearthstoneJSON, fetched at run time and cached on the player's PC (T-304, D-038)"
+
+[features]
+# The real HTTPS client (reqwest with Windows' own TLS). Off in CI: every
+# request is tested against a fake server.
+http = ["dep:reqwest"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Already in Cargo.lock through Tauri and the uploader (PROVENANCE.md).
+flate2 = "1.1"
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "native-tls"], optional = true }

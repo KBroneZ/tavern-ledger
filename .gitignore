@@ -13,3 +13,5 @@ dist/
 .venv/
 __pycache__/
 target/
+# Card data and art fetched at run time (D-038); never committed.
+card-cache/

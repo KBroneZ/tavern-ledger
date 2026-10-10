@@ -8,7 +8,7 @@ const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 
 const MODES = { GT_BATTLEGROUNDS: "Solo", GT_BATTLEGROUNDS_DUO: "Duos" };
-const SOURCES = ["log", "inferred", "entered", "leaderboard", "unknown"];
+const SOURCES = ["log", "inferred", "entered", "leaderboard", "card_data", "unknown"];
 
 let game = null;
 // While the layout is being edited and no game is on, the panels show the
@@ -153,12 +153,25 @@ function renderBoards(opponent) {
     const who = opponent.boards.length > 1 && board.hero ? `${heroName(board.hero)} · ` : "";
     row.append(el("span", "when", `${who}board in round ${board.round}`));
     if (!board.minions.length) row.append(el("span", "none", "empty"));
+    // Names and art are looked up by the log's card id (T-304): the row says
+    // so in words, and a card the card data does not know shows its id, marked unknown.
+    let named = false;
+    let unnamed = false;
     for (const m of board.minions) {
       const chip = el("span", m.golden ? "minion golden" : "minion");
       const stat = (n) => (n === null || n === undefined ? "?" : n);
-      chip.append(el("b", null, `${stat(m.atk)}/${stat(m.health)}`), el("i", null, m.card_id || "?"));
+      const name = TLCards.name(m.card_id);
+      if (name) named = true;
+      if (name === null) unnamed = true;
+      const art = TLCards.art(m.card_id, "art");
+      if (art) chip.append(art);
+      const label = el("i", name === null ? "unnamed" : null, name || m.card_id || "?");
+      if (name && m.card_id) label.title = m.card_id;
+      chip.append(el("b", null, `${stat(m.atk)}/${stat(m.health)}`), label);
       row.append(chip);
     }
+    if (named) row.append(mark("card_data"));
+    if (unnamed) row.append(mark("unknown"));
     return row;
   });
 }
@@ -174,7 +187,8 @@ function renderOpponents(g) {
     const head = el("div", "head");
     const hp = el("span", "hp");
     hp.append(sourced(el("b"), opponent.health), " hp");
-    head.append(el("span", "name", heroes(opponent.heroes) || "Hero unknown"), hp, renderRecord(opponent));
+    const portraits = opponent.heroes.map((h) => TLCards.art(h.id, "portrait")).filter(Boolean);
+    head.append(...portraits, el("span", "name", heroes(opponent.heroes) || "Hero unknown"), hp, renderRecord(opponent));
     item.append(head, ...renderBoards(opponent));
     panel.append(item);
   }
@@ -216,6 +230,7 @@ async function refresh() {
 }
 
 async function start() {
+  TLCards.onChange(render);
   // Listen first, so a change between the first read and the listener is not lost.
   await listen("live-changed", () => refresh().catch(showError));
   await listen("lobby-tribes-changed", () => refresh().catch(showError));
