@@ -21,10 +21,16 @@ pub const MAX_CARDS: usize = 100_000;
 pub const MAX_ENTRIES: usize = 200_000;
 /// The real file is about 10 MB; this stops a gzip bomb.
 pub const MAX_INFLATED: usize = 32 * 1024 * 1024;
-/// Version of the file we keep on the PC. Format 1 had names only; it still
-/// loads, without the minion pool, and is fetched again (T-307).
-const SAVED_FORMAT: u32 = 2;
+/// Version of the file we keep on the PC. Format 1 had names only, format 2
+/// no hero links; both still load, without what they lack, and are fetched
+/// again (T-307, T-214).
+const SAVED_FORMAT: u32 = 3;
 const NAMES_ONLY_FORMAT: u32 = 1;
+const NO_HERO_LINKS_FORMAT: u32 = 2;
+/// The real data has about 3,000 hero cards (skins included).
+pub const MAX_HEROES: usize = 20_000;
+/// Database ids are positive and far below this.
+pub const MAX_DBF_ID: i64 = 10_000_000;
 /// The real pool has about 300 minions.
 pub const MAX_POOL: usize = 2_000;
 /// Battlegrounds tavern tiers are 1 to 7.
@@ -121,6 +127,18 @@ struct RawCard {
         deserialize_with = "bool_or_none"
     )]
     duos_only: Option<bool>,
+    /// The database id the log uses for links such as a skin's base hero
+    /// (`BACON_SKIN_PARENT_ID`, T-214).
+    #[serde(default, rename = "dbfId", deserialize_with = "int_or_none")]
+    dbf: Option<i64>,
+    #[serde(default, rename = "type", deserialize_with = "string_or_none")]
+    card_type: Option<String>,
+}
+
+/// The database id of a hero card, the only kind a skin links to.
+fn hero_dbf(card: &RawCard) -> Option<i64> {
+    let dbf = card.dbf.filter(|d| (1..=MAX_DBF_ID).contains(d))?;
+    (card.card_type.as_deref() == Some("HERO")).then_some(dbf)
 }
 
 fn string_or_none<'de, D: Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {
@@ -194,9 +212,10 @@ fn clean_pool(minion: PoolMinion) -> Option<PoolMinion> {
     ok.then_some(minion)
 }
 
-/// The usable (id, name, pool data) entries, read one entry at a time so a
-/// file of millions of tiny entries is refused before it fills memory.
-struct Pairs(Vec<(String, String, Option<PoolMinion>)>);
+/// The usable (id, name, pool data, hero database id) entries, read one
+/// entry at a time so a file of millions of tiny entries is refused before
+/// it fills memory.
+struct Pairs(Vec<(String, String, Option<PoolMinion>, Option<i64>)>);
 
 impl<'de> Deserialize<'de> for Pairs {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Pairs, D::Error> {
@@ -215,11 +234,12 @@ impl<'de> Deserialize<'de> for Pairs {
                         return Err(de::Error::custom("too many entries"));
                     }
                     let pool = pool_minion(&card);
+                    let dbf = hero_dbf(&card);
                     let (Some(id), Some(name)) = (card.id, card.name) else {
                         continue;
                     };
                     if let Some(name) = clean_name(&name).filter(|_| valid_id(&id)) {
-                        pairs.push((id, name, pool));
+                        pairs.push((id, name, pool, dbf));
                     }
                 }
                 Ok(Pairs(pairs))
@@ -234,6 +254,8 @@ pub struct Catalog {
     names: BTreeMap<String, String>,
     /// Battlegrounds pool minions by card id; every id here has a name.
     pool: BTreeMap<String, PoolMinion>,
+    /// Hero card ids by database id (T-214); every id here has a name.
+    heroes: BTreeMap<i64, String>,
 }
 
 impl Catalog {
@@ -241,22 +263,28 @@ impl Catalog {
     pub fn from_hearthstonejson(json: &[u8]) -> Result<Catalog, CatalogError> {
         let Pairs(entries) = serde_json::from_slice(json).map_err(|_| CatalogError::Shape)?;
         let mut pool = BTreeMap::new();
+        let mut heroes = Vec::new();
         let mut pairs = Vec::with_capacity(entries.len());
-        for (id, name, minion) in entries {
+        for (id, name, minion, dbf) in entries {
             if let Some(minion) = minion {
                 pool.insert(id.clone(), minion);
             }
+            if let Some(dbf) = dbf {
+                heroes.push((dbf, id.clone()));
+            }
             pairs.push((id, name));
         }
-        Catalog::from_parts(pairs.into_iter(), pool)
+        Catalog::from_parts(pairs.into_iter(), pool, heroes.into_iter())
     }
 
     /// An id that appears twice with different names is dropped: showing
-    /// either could be the wrong card. Pool data is kept only for a card that
-    /// keeps its name, and dropped whole if there is far too much of it.
+    /// either could be the wrong card. Pool data and hero links are kept only
+    /// for a card that keeps its name, and dropped whole if there is far too
+    /// much of them. A database id given to two cards is dropped too.
     fn from_parts(
         pairs: impl Iterator<Item = (String, String)>,
         mut pool: BTreeMap<String, PoolMinion>,
+        hero_ids: impl Iterator<Item = (i64, String)>,
     ) -> Result<Catalog, CatalogError> {
         let mut names = BTreeMap::new();
         let mut clashes = BTreeSet::new();
@@ -276,13 +304,36 @@ impl Catalog {
         if pool.len() > MAX_POOL {
             pool.clear();
         }
+        let mut heroes: BTreeMap<i64, String> = BTreeMap::new();
+        let mut twice = BTreeSet::new();
+        for (dbf, id) in hero_ids.filter(|(dbf, id)| {
+            (1..=MAX_DBF_ID).contains(dbf) && valid_id(id) && names.contains_key(id)
+        }) {
+            match heroes.get(&dbf) {
+                Some(seen) if *seen != id => {
+                    twice.insert(dbf);
+                }
+                Some(_) => {}
+                None => {
+                    heroes.insert(dbf, id);
+                }
+            }
+        }
+        heroes.retain(|dbf, _| !twice.contains(dbf));
+        if heroes.len() > MAX_HEROES {
+            heroes.clear();
+        }
         if names.len() > MAX_CARDS {
             return Err(CatalogError::TooMany);
         }
         if names.len() < MIN_CARDS {
             return Err(CatalogError::TooFew(names.len()));
         }
-        Ok(Catalog { names, pool })
+        Ok(Catalog {
+            names,
+            pool,
+            heroes,
+        })
     }
 
     /// The Battlegrounds pool minions by card id (empty when the data has
@@ -293,6 +344,12 @@ impl Catalog {
 
     pub fn name(&self, id: &str) -> Option<&str> {
         self.names.get(id).map(String::as_str)
+    }
+
+    /// Hero card ids by database id (empty when the data has none, e.g. a
+    /// copy saved before T-214).
+    pub fn hero_links(&self) -> &BTreeMap<i64, String> {
+        &self.heroes
     }
 
     pub fn contains(&self, id: &str) -> bool {
@@ -318,6 +375,8 @@ struct Saved {
     names: BTreeMap<String, String>,
     #[serde(default)]
     pool: BTreeMap<String, PoolMinion>,
+    #[serde(default)]
+    heroes: BTreeMap<i64, String>,
 }
 
 /// An ETag we send back as-is: visible ASCII only, so a hand-edited file
@@ -342,6 +401,7 @@ impl SavedCatalog {
             etag: self.etag.clone(),
             names: self.catalog.names.clone(),
             pool: self.catalog.pool.clone(),
+            heroes: self.catalog.heroes.clone(),
         };
         serde_json::to_vec(&saved).unwrap_or_default()
     }
@@ -350,8 +410,9 @@ impl SavedCatalog {
     /// file on disk anyone could have edited.
     pub fn from_json(bytes: &[u8]) -> Result<SavedCatalog, CatalogError> {
         let saved: Saved = serde_json::from_slice(bytes).map_err(|_| CatalogError::Shape)?;
-        let names_only = saved.format == NAMES_ONLY_FORMAT;
-        if saved.format != SAVED_FORMAT && !names_only {
+        // An older copy lacks what later formats added: fetched again soon.
+        let old = saved.format == NAMES_ONLY_FORMAT || saved.format == NO_HERO_LINKS_FORMAT;
+        if saved.format != SAVED_FORMAT && !old {
             return Err(CatalogError::Shape);
         }
         let pairs = saved
@@ -365,13 +426,13 @@ impl SavedCatalog {
             .filter(|(id, _)| valid_id(id))
             .filter_map(|(id, minion)| Some((id, clean_pool(minion)?)))
             .collect();
-        // A names-only copy has no pool: without its ETag the next fetch
-        // brings the whole file instead of "unchanged".
-        let etag = saved.etag.filter(|e| valid_etag(e)).filter(|_| !names_only);
+        // An older copy has no pool or no hero links: without its ETag the
+        // next fetch brings the whole file instead of "unchanged".
+        let etag = saved.etag.filter(|e| valid_etag(e)).filter(|_| !old);
         Ok(SavedCatalog {
-            catalog: Catalog::from_parts(pairs, pool)?,
-            // A names-only copy counts as old, so it is replaced soon.
-            fetched_at: if names_only { 0 } else { saved.fetched_at },
+            catalog: Catalog::from_parts(pairs, pool, saved.heroes.into_iter())?,
+            // An older copy counts as old, so it is replaced soon.
+            fetched_at: if old { 0 } else { saved.fetched_at },
             etag,
         })
     }
@@ -591,6 +652,57 @@ pub mod tests {
         assert!(back.catalog.pool().is_empty());
         assert_eq!(back.fetched_at, 0, "old: fetched again at the next chance");
         assert_eq!(back.etag, None, "the whole file, not \"unchanged\"");
+    }
+
+    #[test]
+    fn hero_cards_are_found_by_their_database_id() {
+        let extra = vec![
+            json!({"id": "HERO_BASE", "name": "Base", "type": "HERO", "dbfId": 59999}),
+            json!({"id": "HERO_BASE_SKIN_A", "name": "Base", "type": "HERO", "dbfId": 70001}),
+            json!({"id": "MINION_X", "name": "Minion", "type": "MINION", "dbfId": 12}),
+            json!({"id": "HERO_NO_DBF", "name": "No id", "type": "HERO"}),
+            json!({"id": "HERO_BAD_DBF", "name": "Bad id", "type": "HERO", "dbfId": "5"}),
+            json!({"id": "HERO_ZERO", "name": "Zero", "type": "HERO", "dbfId": 0}),
+            json!({"id": "HERO_TWIN_A", "name": "Twin A", "type": "HERO", "dbfId": 333}),
+            json!({"id": "HERO_TWIN_B", "name": "Twin B", "type": "HERO", "dbfId": 333}),
+            json!({"id": "BAD ID", "name": "Bad", "type": "HERO", "dbfId": 444}),
+        ];
+        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
+        let links: Vec<_> = catalog
+            .hero_links()
+            .iter()
+            .map(|(d, id)| (*d, id.as_str()))
+            .collect();
+        // Only heroes; a database id two cards claim is dropped, not guessed.
+        assert_eq!(links, [(59999, "HERO_BASE"), (70001, "HERO_BASE_SKIN_A")]);
+    }
+
+    #[test]
+    fn hero_links_are_saved_and_checked_again_when_read() {
+        let extra =
+            vec![json!({"id": "HERO_BASE", "name": "Base", "type": "HERO", "dbfId": 59999})];
+        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
+        let saved = SavedCatalog {
+            catalog,
+            fetched_at: 1_700_000_000,
+            etag: Some("\"abc\"".into()),
+        };
+        let back = SavedCatalog::from_json(&saved.to_json()).unwrap();
+        assert_eq!(back, saved);
+        let mut edited: Value = serde_json::from_slice(&saved.to_json()).unwrap();
+        edited["heroes"]["7"] = json!("../EVIL");
+        edited["heroes"]["8"] = json!("NOT_A_CARD");
+        edited["heroes"]["-1"] = json!("HERO_BASE");
+        let back = SavedCatalog::from_json(&serde_json::to_vec(&edited).unwrap()).unwrap();
+        assert_eq!(back.catalog.hero_links().len(), 1);
+        // A copy from before the links loads and is fetched again soon.
+        let mut old: Value = serde_json::from_slice(&saved.to_json()).unwrap();
+        old["format"] = json!(2);
+        old.as_object_mut().unwrap().remove("heroes");
+        let back = SavedCatalog::from_json(&serde_json::to_vec(&old).unwrap()).unwrap();
+        assert!(back.catalog.hero_links().is_empty());
+        assert_eq!((back.fetched_at, back.etag), (0, None));
+        assert_eq!(back.catalog.name("HERO_BASE"), Some("Base"));
     }
 
     #[test]

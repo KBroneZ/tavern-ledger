@@ -1,0 +1,125 @@
+[
+  {
+    "index": 1,
+    "status": "ok",
+    "game_type": "GT_BATTLEGROUNDS",
+    "build": 253216,
+    "local_player_id": 2,
+    "hero": "BG20_HERO_202_SKIN_B4",
+    "teammate_player_id": null,
+    "teammate_hero": null,
+    "final_place": 1,
+    "final_health": 23,
+    "lobby": [
+      {
+        "player_id": 2,
+        "hero": "BG20_HERO_202_SKIN_B4",
+        "duo_team": null,
+        "final_place": 1,
+        "final_health": 23
+      },
+      {
+        "player_id": 3,
+        "hero": "TB_BaconShop_HERO_102_SKIN_G",
+        "duo_team": null,
+        "final_place": 2,
+        "final_health": 0
+      }
+    ],
+    "shop_tribes": {
+      "NEUTRAL": 1
+    },
+    "rounds": [
+      {
+        "number": 1,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "BG20_HERO_202_SKIN_B4",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_102_SKIN_G",
+            "board": []
+          }
+        ],
+        "own_health_after": 30,
+        "opponents": [
+          3
+        ]
+      },
+      {
+        "number": 2,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "BG20_HERO_202_SKIN_B4",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_102_SKIN_G",
+            "board": []
+          }
+        ],
+        "own_health_after": 25,
+        "opponents": [
+          3
+        ]
+      },
+      {
+        "number": 3,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "BG20_HERO_202_SKIN_B4",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_102_SKIN_G",
+            "board": []
+          }
+        ],
+        "own_health_after": 25,
+        "opponents": [
+          3
+        ]
+      },
+      {
+        "number": 4,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "BG20_HERO_202_SKIN_B4",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_102_SKIN_G",
+            "board": []
+          }
+        ],
+        "own_health_after": 23,
+        "opponents": [
+          3
+        ]
+      }
+    ],
+    "warnings": [],
+    "problems": [],
+    "not_in_log": [
+      "MMR",
+      "available tribes (exact list)"
+    ]
+  }
+]

@@ -3,7 +3,8 @@
 //!
 //! Unknown is not zero: a game saved before the parser kept the shop says
 //! "not recorded", a turn the log skipped has no numbers, and an APM needs a
-//! time span the log gives.
+//! time span the log gives. The gold and pass numbers of parser revision 4
+//! (T-210) are None in turns saved before it.
 
 use serde::Serialize;
 use serde_json::Value;
@@ -66,6 +67,15 @@ pub struct TurnView {
     pub actions: Option<u32>,
     pub seconds: Option<f64>,
     pub apm: Option<f64>,
+    /// Gold beyond the turn's own and beyond sells (cards, trinkets, refunds).
+    pub extra_gold: Option<u32>,
+    pub sell_gold: Option<u32>,
+    pub buy_gold: Option<u32>,
+    pub spell_gold: Option<u32>,
+    /// Rolls that used a free roll the game showed on the roll button.
+    pub free_refreshes: Option<u32>,
+    /// Cards passed to the teammate (Duos); None when not recorded.
+    pub passes: Option<Vec<Option<String>>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -86,6 +96,16 @@ pub struct ShopTotals {
     /// None when a turn's gold is not in the log.
     pub gold_spent: Option<i64>,
     pub actions: u32,
+    // Parser revision 4 (T-210): None when a turn lacks the number (not
+    // recorded, or its gold is not in the log).
+    pub extra_gold: Option<i64>,
+    pub sell_gold: Option<i64>,
+    pub buy_gold: Option<i64>,
+    pub spell_gold: Option<i64>,
+    /// Gold beyond the fixed income: extra gold plus sell gold.
+    pub gold_beyond_income: Option<i64>,
+    pub free_refreshes: Option<u32>,
+    pub passes: Option<u32>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -167,6 +187,12 @@ fn turn_view(t: &ShopTurn, tier_up: bool, logged: bool) -> TurnView {
         apm: logged
             .then(|| per_minute(t.actions as usize, t.start_ms, t.end_ms))
             .flatten(),
+        extra_gold: t.extra_gold,
+        sell_gold: t.sell_gold,
+        buy_gold: t.buy_gold,
+        spell_gold: t.spell_gold,
+        free_refreshes: t.free_refreshes,
+        passes: t.passes.clone(),
     }
 }
 
@@ -188,11 +214,24 @@ fn gap(turn: i64) -> TurnView {
         actions: None,
         seconds: None,
         apm: None,
+        extra_gold: None,
+        sell_gold: None,
+        buy_gold: None,
+        spell_gold: None,
+        free_refreshes: None,
+        passes: None,
     }
+}
+
+/// The sum of a number over every turn, None when any turn lacks it.
+fn sum_known(record: &ShopRecord, f: fn(&ShopTurn) -> Option<u32>) -> Option<i64> {
+    record.turns.iter().map(|t| f(t).map(i64::from)).sum()
 }
 
 pub fn totals(record: &ShopRecord) -> ShopTotals {
     let sum = |f: &dyn Fn(&ShopTurn) -> u32| record.turns.iter().map(f).sum();
+    let extra_gold = sum_known(record, |t| t.extra_gold);
+    let sell_gold = sum_known(record, |t| t.sell_gold);
     ShopTotals {
         rolls: sum(&|t| t.rolls),
         free_rolls: sum(&|t| t.free_rolls),
@@ -202,6 +241,17 @@ pub fn totals(record: &ShopRecord) -> ShopTotals {
         freezes: sum(&|t| t.freezes),
         gold_spent: record.turns.iter().map(|t| t.gold_spent).sum(),
         actions: record.actions.len() as u32,
+        extra_gold,
+        sell_gold,
+        buy_gold: sum_known(record, |t| t.buy_gold),
+        spell_gold: sum_known(record, |t| t.spell_gold),
+        gold_beyond_income: extra_gold.zip(sell_gold).map(|(e, s)| e + s),
+        free_refreshes: sum_known(record, |t| t.free_refreshes).map(|n| n as u32),
+        passes: record
+            .turns
+            .iter()
+            .map(|t| t.passes.as_ref().map(|p| p.len() as u32))
+            .sum(),
     }
 }
 
@@ -299,6 +349,20 @@ pub struct ShopStats {
     pub apm: Option<f64>,
     /// Games with a time span in the log: the denominator of `apm`.
     pub apm_games: usize,
+    /// Per game: gold beyond the turn's own and beyond sells, gold from
+    /// sells, both together, free rolls used, cards passed (T-210).
+    pub extra_gold: Option<f64>,
+    pub sell_gold: Option<f64>,
+    pub gold_beyond_income: Option<f64>,
+    pub free_refreshes: Option<f64>,
+    pub passes: Option<f64>,
+    /// Games with the gold and pass numbers for every turn: the denominator
+    /// of all but `free_refreshes` (games saved before parser revision 4
+    /// have none).
+    pub extras_games: usize,
+    /// Games whose log gives the roll button's free rolls: the denominator
+    /// of `free_refreshes`.
+    pub free_refresh_games: usize,
     pub tier_turns: Vec<TierTurn>,
     pub source: Source,
     pub apm_definition: &'static str,
@@ -314,6 +378,10 @@ pub struct ShopCounts {
     sells: u64,
     gold: i64,
     apm: f64,
+    extra_gold: i64,
+    sell_gold: i64,
+    free_refreshes: u64,
+    passes: u64,
     tiers: std::collections::BTreeMap<i64, (i64, usize)>,
 }
 
@@ -349,6 +417,16 @@ impl ShopCounts {
             self.apm += apm;
             self.stats.apm_games += 1;
         }
+        if let (Some(extra), Some(sell), Some(passes)) = (t.extra_gold, t.sell_gold, t.passes) {
+            self.extra_gold = self.extra_gold.saturating_add(extra);
+            self.sell_gold = self.sell_gold.saturating_add(sell);
+            self.passes += u64::from(passes);
+            self.stats.extras_games += 1;
+        }
+        if let Some(free) = t.free_refreshes {
+            self.free_refreshes += u64::from(free);
+            self.stats.free_refresh_games += 1;
+        }
         // The first time each tier was reached in this game.
         let mut seen = std::collections::BTreeSet::new();
         for up in &record.tier_ups {
@@ -370,6 +448,14 @@ impl ShopCounts {
             sells: avg(self.sells as f64, games),
             gold_spent: avg(self.gold as f64, self.stats.gold_games),
             apm: avg(self.apm, self.stats.apm_games),
+            extra_gold: avg(self.extra_gold as f64, self.stats.extras_games),
+            sell_gold: avg(self.sell_gold as f64, self.stats.extras_games),
+            gold_beyond_income: avg(
+                self.extra_gold.saturating_add(self.sell_gold) as f64,
+                self.stats.extras_games,
+            ),
+            free_refreshes: avg(self.free_refreshes as f64, self.stats.free_refresh_games),
+            passes: avg(self.passes as f64, self.stats.extras_games),
             tier_turns: self
                 .tiers
                 .into_iter()
@@ -546,6 +632,85 @@ mod tests {
     fn a_hand_edited_turn_number_does_not_grow_the_gaps() {
         let r = shop_recap(&report(vec![turn(1_000_000_000, 0, 60_000, 1)], 1, true));
         assert!(r.turns.len() <= 101);
+    }
+
+    /// A turn as parser revision 4 writes it.
+    fn turn4(n: i64, extra: u32, sell: u32, passes: &[&str]) -> Value {
+        let mut t = turn(n, (n - 1) * 60_000, n * 60_000, 1);
+        t["extra_gold"] = json!(extra);
+        t["sell_gold"] = json!(sell);
+        t["buy_gold"] = json!(3);
+        t["spell_gold"] = json!(0);
+        t["free_refreshes"] = json!(1);
+        t["passes"] = json!(passes);
+        t
+    }
+
+    #[test]
+    fn revision_4_turns_show_and_total_their_gold_and_passes() {
+        let r = shop_recap(&report(
+            vec![turn4(1, 2, 1, &["BG_P"]), turn4(2, 0, 3, &[])],
+            2,
+            true,
+        ));
+        assert_eq!(r.turns[0].extra_gold, Some(2));
+        assert_eq!(r.turns[0].passes, Some(vec![Some("BG_P".to_string())]));
+        let t = r.totals.unwrap();
+        assert_eq!(
+            (t.extra_gold, t.sell_gold, t.gold_beyond_income),
+            (Some(2), Some(4), Some(6))
+        );
+        assert_eq!((t.buy_gold, t.spell_gold), (Some(6), Some(0)));
+        assert_eq!((t.free_refreshes, t.passes), (Some(2), Some(1)));
+    }
+
+    #[test]
+    fn older_turns_have_no_revision_4_numbers_not_zeros() {
+        // Revision 3 turns: the keys are not there.
+        let r = shop_recap(&report(vec![turn(1, 0, 60_000, 1)], 1, true));
+        assert_eq!(
+            (r.turns[0].extra_gold, r.turns[0].passes.clone()),
+            (None, None)
+        );
+        let t = r.totals.unwrap();
+        assert_eq!(
+            (t.extra_gold, t.gold_beyond_income, t.passes),
+            (None, None, None)
+        );
+        // One turn without its gold in the log: the game's gold totals are unknown.
+        let mut cut = turn4(2, 1, 1, &[]);
+        cut["extra_gold"] = Value::Null;
+        let r = shop_recap(&report(vec![turn4(1, 2, 1, &[]), cut], 2, true));
+        let t = r.totals.unwrap();
+        assert_eq!(
+            (t.extra_gold, t.sell_gold, t.gold_beyond_income),
+            (None, Some(2), None)
+        );
+    }
+
+    #[test]
+    fn stats_average_the_revision_4_numbers_over_the_games_that_have_them() {
+        let mut counts = ShopCounts::default();
+        counts.add(&report(vec![turn4(1, 2, 1, &["BG_P"])], 1, true));
+        counts.add(&report(vec![turn4(1, 4, 3, &[])], 1, true));
+        counts.add(&report(vec![turn(1, 0, 60_000, 1)], 1, true)); // revision 3
+        let s = counts.finish();
+        assert_eq!((s.games, s.extras_games), (3, 2));
+        assert_eq!((s.extra_gold, s.sell_gold), (Some(3.0), Some(2.0)));
+        assert_eq!(s.gold_beyond_income, Some(5.0));
+        assert_eq!((s.free_refreshes, s.passes), (Some(1.0), Some(0.5)));
+        assert_eq!(s.free_refresh_games, 2);
+        // A game whose log never gives the button's free rolls still counts
+        // for the gold, not for the free rolls.
+        let mut counts = ShopCounts::default();
+        let mut unknown = turn4(1, 2, 1, &[]);
+        unknown["free_refreshes"] = Value::Null;
+        counts.add(&report(vec![unknown], 1, true));
+        let s = counts.finish();
+        assert_eq!((s.extras_games, s.free_refresh_games), (1, 0));
+        assert_eq!((s.extra_gold, s.free_refreshes), (Some(2.0), None));
+        let none = ShopCounts::default().finish();
+        assert_eq!((none.extra_gold, none.extras_games), (None, 0));
     }
 
     #[test]

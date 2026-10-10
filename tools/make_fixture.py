@@ -4,12 +4,14 @@
         [--parser target/release/bg-parse]
 
 Allow-list first: only the GameState lines the parser reads are kept: the
-packets in KEEP_OPCODES, ATTACK blocks, the player's top-level action blocks
-(PLAY, MOVE_MINION, DECK_ACTION) with their BLOCK_END, entities of the card
-types in KEEP_CARDTYPES, the tags in KEEP_TAGS, and the numbers-only
-SendOption lines and SendChoices headers (the actions the client sent, T-205).
-Everything else is dropped, including every PowerTaskList, Options and
-chosen-entity line. Timestamps count from the game's first line (00:00:00),
+packets in KEEP_OPCODES, ATTACK blocks, every top-level block with its
+BLOCK_END (the player's actions, and the gold each block gives, D-055),
+entities of the card types in KEEP_CARDTYPES, the tags in KEEP_TAGS, the
+numbers-only SendOption lines and SendChoices headers (the actions the client
+sent, T-205), and the hero choice (T-209): the MULLIGAN choice's header and
+entity lines and the matching chosen-entity lines, rewritten to their ids
+("id=1 ChoiceType=MULLIGAN", "Entities[0]=103"). Everything else is dropped,
+including every PowerTaskList, Options and SendChoices entity line. Timestamps count from the game's first line (00:00:00),
 so durations stay and the time of day goes (D-046). A bracketed entity ("[entityName=... id=N ...]") becomes its id N,
 so no card text or name in brackets is kept; hero names are then missing from
 the fixture's report (card_names), which the raw game would have. Every player name (BattleTags, the plain names opponents get during
@@ -56,20 +58,22 @@ LOCAL_PLACEHOLDER = "Player1"
 # later must be added here before new fixtures are made.
 KEEP_TAGS = frozenset({
     "ARMOR", "ATK", "BACON_CURRENT_COMBAT_PLAYER_ID", "BACON_DUMMY_PLAYER",
-    "BACON_DUO_TEAMMATE_PLAYER_ID", "BACON_DUO_TEAM_ID", "CARDRACE", "CARDTYPE",
-    "CONTROLLER", "COPIED_FROM_ENTITY_ID", "DAMAGE", "FROZEN", "HEALTH", "HERO_ENTITY",
-    "IS_BACON_POOL_MINION", "NUM_RESOURCES_SPENT_THIS_GAME", "PLAYER_ID",
-    "PLAYER_LEADERBOARD_PLACE", "PLAYER_TECH_LEVEL", "RESOURCES", "STATE",
+    "BACON_DUO_TEAMMATE_PLAYER_ID", "BACON_DUO_TEAM_ID", "BACON_FREE_REFRESH_COUNT",
+    "BACON_SKIN_PARENT_ID", "BACON_WON_LAST_COMBAT", "CARDRACE", "CARDTYPE",
+    "CONTROLLER", "COPIED_FROM_ENTITY_ID", "DAMAGE", "DAMAGE_DEALT_TO_HERO_LAST_TURN",
+    "FROZEN", "HEALTH", "HERO_ENTITY", "IS_BACON_POOL_MINION",
+    "NUM_RESOURCES_SPENT_THIS_GAME", "PLAYER_ID", "PLAYER_LEADERBOARD_PLACE",
+    "PLAYER_TECH_LEVEL", "RESOURCES", "RESOURCES_USED", "STATE", "TEMP_RESOURCES",
     "TURN", "ZONE", "ZONE_POSITION",
 })
 # Power packets kept (their tag= lines are filtered by KEEP_TAGS). Of the
 # blocks, ATTACK is kept at any depth (the parser takes the combat boards
-# there) and the player's actions at the top level only, with their end.
+# there) and every block at the top level, with its end: the player's actions
+# are top-level blocks, and the parser counts the gold each one gives (D-055).
 KEEP_OPCODES = frozenset({
     "CREATE_GAME", "GameEntity", "Player", "FULL_ENTITY", "SHOW_ENTITY",
     "CHANGE_ENTITY", "HIDE_ENTITY",
 })
-TOP_BLOCKS = frozenset({"PLAY", "MOVE_MINION", "DECK_ACTION"})
 # Entities created with any other card type (enchantments, spells,
 # trinkets...) are dropped with every line about them. Hidden cards (no type
 # yet) stay. Shop buttons and hero powers tell what an action was.
@@ -81,16 +85,25 @@ GAME_NAMES = ("UNKNOWN HUMAN PLAYER", "UNKNOWN ENTITY")
 
 SEND_OPTION = "GameState.SendOption() - "
 SEND_CHOICES = "GameState.SendChoices() - "
-LINE = re.compile(r"^([DWE]) ([\d:.]+) (GameState\.(?:DebugPrint(?:Power|Game)|SendOption|SendChoices)"
-                  r"\(\) - )(.*)$")
+CHOICES = "GameState.DebugPrintEntityChoices() - "
+CHOSEN = "GameState.DebugPrintEntitiesChosen() - "
+LINE = re.compile(r"^([DWE]) ([\d:.]+) (GameState\.(?:DebugPrint(?:Power|Game|EntityChoices"
+                  r"|EntitiesChosen)|SendOption|SendChoices)\(\) - )(.*)$")
 STAMP = re.compile(r"^[DWE] \d{1,2}:\d{2}:\d{2}(?:\.\d{1,7})? ")
 OPTION_BODY = re.compile(r"^selectedOption=-?\d+ selectedSubOption=-?\d+ selectedTarget=-?\d+ "
                          r"selectedPosition=-?\d+$")
 CHOICE_BODY = re.compile(r"^id=\d+ ChoiceType=[A-Z_]+$")
+# The hero choice (T-209): a header, then one line per hero offered or chosen.
+CHOICE_ID = re.compile(r"^id=(\d+) ")
+CHOICE_ENTITY = re.compile(r"^Entities\[(\d+)\]=(\d+)$")
 ALLOWED = re.compile(r"^[DWE] \d{2}:\d{2}:\d{2}\.\d{7} (?:GameState\.DebugPrint(?:Power|Game)\(\) - "
                      r"|GameState\.SendOption\(\) - selectedOption=-?\d+ selectedSubOption=-?\d+ "
                      r"selectedTarget=-?\d+ selectedPosition=-?\d+$"
-                     r"|GameState\.SendChoices\(\) - id=\d+ ChoiceType=[A-Z_]+$)")
+                     r"|GameState\.SendChoices\(\) - id=\d+ ChoiceType=[A-Z_]+$"
+                     r"|GameState\.DebugPrintEntityChoices\(\) - (?:id=\d+ ChoiceType=MULLIGAN"
+                     r"|Entities\[\d+\]=\d+)$"
+                     r"|GameState\.DebugPrintEntitiesChosen\(\) - (?:id=\d+ EntitiesCount=\d+"
+                     r"|Entities\[\d+\]=\d+)$)")
 TICKS_PER_SECOND = 10_000_000
 DAY_TICKS = 24 * 3600 * TICKS_PER_SECOND
 ACCOUNT = re.compile(r"GameAccountId=\[hi=(\d+) lo=(\d+)\]")
@@ -106,7 +119,7 @@ NAME_SPOTS = (
     re.compile(r"PlayerName=(.+)$"),
     re.compile(r"(?:Entity|Target|Player)=(?![\[\d])(.+?)"
                r"(?= (?:tag|CardID|EffectCardId|EffectIndex|SubOption|Target|BlockType|TaskList"
-               r"|ChoiceType)=|$)"),
+               r"|ChoiceType|EntitiesCount)=|$)"),
     re.compile(r"(?:Info\[\d+\]|Targets\[\d+\]|Source) = (?![\[\d])(.+)$"),
     # A bracketed entity without a card id is a player.
     re.compile(r"\[entityName=(.+?) id=\d+ zone=\w* zonePos=\d+ (?:cardId= )?player=\d+\]"),
@@ -253,9 +266,13 @@ class _AllowList:
     def __init__(self, dropped: set[int]) -> None:
         self.dropped = dropped
         self.in_dropped_entity = False  # its tag= lines go too
-        self.top_block_kept = False  # so its BLOCK_END stays too
+        self.hero_choice: str | None = None  # id of the MULLIGAN choice
+        self.in_hero_list = False  # entity lines of the hero choice follow
 
     def keep(self, prefix: str, body: str) -> bool:
+        if prefix in (CHOICES, CHOSEN):
+            return self._keep_choice(prefix, body.strip())
+        self.in_hero_list = False
         if prefix == GAME:
             return body.startswith(KEEP_GAME_KEYS)
         if prefix == SEND_OPTION:
@@ -271,15 +288,9 @@ class _AllowList:
         if opcode == "BLOCK_START":
             block = re.match(r"BLOCK_START BlockType=(\w+) ", stripped)
             kind = block.group(1) if block else ""
-            if not top:
-                return kind == "ATTACK"
-            self.top_block_kept = kind in TOP_BLOCKS or kind == "ATTACK"
-            return self.top_block_kept
+            return top or kind == "ATTACK"
         if opcode == "BLOCK_END":
-            if not top:
-                return False
-            kept, self.top_block_kept = self.top_block_kept, False
-            return kept
+            return top
         if opcode not in KEEP_OPCODES and opcode != "TAG_CHANGE":
             return False
         if _entity_id(stripped) in self.dropped:
@@ -289,6 +300,30 @@ class _AllowList:
             tag = re.search(r" tag=(\w+) value=", stripped)
             return bool(tag) and tag.group(1) in KEEP_TAGS
         return True
+
+    def _keep_choice(self, prefix: str, body: str) -> bool:
+        """The hero choice's header and entities, and what was chosen for it."""
+        header = CHOICE_ID.match(body)
+        if header:
+            mulligan = prefix == CHOICES and " ChoiceType=MULLIGAN " in f" {body} "
+            if mulligan and self.hero_choice is None:
+                self.hero_choice = header.group(1)
+            self.in_hero_list = header.group(1) == self.hero_choice and (
+                mulligan or prefix == CHOSEN)
+            return self.in_hero_list
+        return self.in_hero_list and body.startswith("Entities[")
+
+
+def _rewrite_choice(prefix: str, body: str) -> str:
+    """A kept hero choice line, with its ids only (after the id scrub)."""
+    body = body.strip()
+    header = CHOICE_ID.match(body)
+    if not header:
+        return body  # "Entities[i]=<id>"
+    if prefix == CHOICES:
+        return f"id={header.group(1)} ChoiceType=MULLIGAN"
+    count = re.search(r" EntitiesCount=(\d+)", body)
+    return f"id={header.group(1)} EntitiesCount={count.group(1) if count else 0}"
 
 
 def _scrub(body: str, names: re.Pattern | None, mapping: dict[str, str],
@@ -332,7 +367,12 @@ def scrub_game(lines: list[str], ids: Identities) -> str:
         if not match or time is None or not allow.keep(match.group(3), match.group(4)):
             continue
         level, _, prefix, body = match.groups()
-        out.append(f"{level} {time} {prefix}{_scrub(body, names, mapping, accounts)}")
+        body = _scrub(body, names, mapping, accounts)
+        if prefix in (CHOICES, CHOSEN):
+            body = _rewrite_choice(prefix, body)
+            if not (CHOICE_ID.match(body) or CHOICE_ENTITY.match(body)):
+                continue  # a hero the log does not name by id: nothing to keep
+        out.append(f"{level} {time} {prefix}{body}")
     return "\n".join(out) + "\n"
 
 

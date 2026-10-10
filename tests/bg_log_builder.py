@@ -102,6 +102,34 @@ class LogBuilder:
             inner(self)
         return self._power("BLOCK_END", indent=indent)
 
+    def change_entity(self, entity_id: int, card_id: str, **tags: object) -> "LogBuilder":
+        self._power(f"CHANGE_ENTITY - Updating Entity={entity_id} CardID={card_id}", indent=4)
+        self._tags(dict(tags))
+        return self
+
+    def _choice_line(self, kind: str, data: str) -> None:
+        self.lines.append(f"D {self.time} GameState.{kind}() - {data}")
+
+    def hero_choices(self, heroes: list[tuple[int, str]], choice_id: int = 1,
+                     player: str = "SyntheticPlayer#0001", pid: int = 2) -> "LogBuilder":
+        """The hero pick the game offers the player, as real logs print it."""
+        kind = "DebugPrintEntityChoices"
+        self._choice_line(kind, f"id={choice_id} Player={player} TaskList=7 ChoiceType=MULLIGAN "
+                                "CountMin=1 CountMax=1")
+        self._choice_line(kind, "  Source=GameEntity")
+        for i, (entity_id, card_id) in enumerate(heroes):
+            self._choice_line(kind, f"  Entities[{i}]=[entityName=Hero {i} id={entity_id} zone=HAND "
+                                    f"zonePos={i + 1} cardId={card_id} player={pid}]")
+        return self
+
+    def hero_chosen(self, entity_id: int, card_id: str, choice_id: int = 1,
+                    player: str = "SyntheticPlayer#0001", pid: int = 2) -> "LogBuilder":
+        kind = "DebugPrintEntitiesChosen"
+        self._choice_line(kind, f"id={choice_id} Player={player} EntitiesCount=1")
+        self._choice_line(kind, f"  Entities[0]=[entityName=Picked id={entity_id} zone=HAND "
+                                f"zonePos=1 cardId={card_id} player={pid}]")
+        return self
+
     def offer(self, entity_id: int, card_id: str, bob_pid: int = 10) -> "LogBuilder":
         """A pool minion showing up in the shop (Bob's side of the board)."""
         return self.full_entity(entity_id, card_id, CARDTYPE="MINION", CONTROLLER=bob_pid,
@@ -382,4 +410,178 @@ def solo_shop_game(complete: bool = True) -> str:
     if complete:
         b.at(150).tag(21, "PLAYER_LEADERBOARD_PLACE", 2).tag(10, "PLAYER_LEADERBOARD_PLACE", 1)
         b.tag("GameEntity", "STATE", "COMPLETE")
+    return b.text()
+
+
+LOCAL_NAME = "SyntheticPlayer#0001"
+
+
+def _gold(**tags: int):
+    """A block's inner part: tag changes on the local player entity (2)."""
+    def inner(b: LogBuilder) -> None:
+        for tag, value in tags.items():
+            b.tag(2, tag, value)
+    return inner
+
+
+def _combat(b: LogBuilder, turn: int, at: float, *, won: bool, damage_dealt: int,
+            own_damage: int, opp_damage: int) -> None:
+    """One Solo combat against player 3, with the result tags the game sets
+    on the local player (entity 2, named as real logs do)."""
+    b.at(at).turn(turn)
+    b.full_entity(40 + turn, "TB_BaconShop_HERO_102_SKIN_G", CARDTYPE="HERO", HEALTH=30,
+                  CONTROLLER=10, ZONE="PLAY")
+    b.tag(3, "HERO_ENTITY", 40 + turn).tag(3, "BACON_CURRENT_COMBAT_PLAYER_ID", 3)
+    # Both result tags are set back to 0 when a combat starts.
+    b.tag(LOCAL_NAME, "BACON_WON_LAST_COMBAT", 0)
+    b.tag(LOCAL_NAME, "DAMAGE_DEALT_TO_HERO_LAST_TURN", 0)
+    b.attack(40 + turn)
+    if won:
+        b.tag(LOCAL_NAME, "BACON_WON_LAST_COMBAT", 1)
+    if damage_dealt:
+        b.tag(LOCAL_NAME, "DAMAGE_DEALT_TO_HERO_LAST_TURN", damage_dealt)
+    if own_damage:
+        b.tag(102, "DAMAGE", own_damage)
+    if opp_damage:
+        b.tag(21, "DAMAGE", opp_damage)
+    b.tag(3, "HERO_ENTITY", 11)
+
+
+def solo_data_game() -> str:
+    """Solo game with the parser revision 4 data (T-206, T-209, T-210, T-214).
+
+    Hero pick: four heroes offered (101-104), 103 rerolled into another hero,
+    102 (a skin with its base hero's database id) picked. Combats as the game
+    records them on the local player: round 1 won, round 2 lost (5 damage),
+    round 3 a tie, round 4 won while the local hero also lost health in the
+    shop (so the health rule alone cannot tell), and the game ends there.
+    Shop: the turn's own gold is set in a TRIGGER block of the player entity;
+    turn 1: a buy at the override cost 2, a coin that gives 1 gold back, a
+    trigger giving 2 extra gold; turn 2: a roll that uses the roll button's
+    free roll, a paid roll, a hero power that takes the gold and gives it back
+    (no extra gold), a sell at BACON_SELL_VALUE 2; turn 3: a tavern spell for 1.
+    """
+    b = LogBuilder().create_game(game_type="GT_BATTLEGROUNDS")
+    hand = {"CARDTYPE": "HERO", "HEALTH": 30, "CONTROLLER": 2, "ZONE": "HAND"}
+    b.full_entity(101, "TB_BaconShop_HERO_37", **hand)
+    b.full_entity(102, "BG20_HERO_202_SKIN_B4", BACON_SKIN=1, BACON_SKIN_PARENT_ID=60011, **hand)
+    b.full_entity(103, "TB_BaconShop_HERO_18", **hand)
+    b.full_entity(104, "TB_BaconShop_HERO_60_SKIN_A", BACON_SKIN=1, BACON_SKIN_PARENT_ID=58000,
+                  **hand)
+    b.full_entity(11, "TB_BaconShopBob", CARDTYPE="HERO", HEALTH=30, CONTROLLER=10, ZONE="PLAY")
+    b.full_entity(21, "TB_BaconShop_HERO_102_SKIN_G", CARDTYPE="HERO", HEALTH=30, CONTROLLER=10,
+                  ZONE="SETASIDE", PLAYER_ID=3, PLAYER_LEADERBOARD_PLACE=2, BACON_SKIN=1,
+                  BACON_SKIN_PARENT_ID=59999)
+    buttons = dict(SHOP_BUTTONS, buy_spell=(66, "TB_BaconShop_DragBuy_Spell",
+                                            "MOVE_MINION_HOVER_TARGET"))
+    for entity_id, card_id, cardtype in buttons.values():
+        b.full_entity(entity_id, card_id, CARDTYPE=cardtype, CONTROLLER=2, ZONE="PLAY")
+    button = {name: entity_id for name, (entity_id, _, _) in buttons.items()}
+    b.full_entity(80, "BG28_Coin", CARDTYPE="SPELL", CONTROLLER=2, ZONE="HAND")
+    b.full_entity(81, "BG_Enchant_Gold", CARDTYPE="ENCHANTMENT", CONTROLLER=2, ZONE="PLAY")
+
+    b.hero_choices([(101, "TB_BaconShop_HERO_37"), (102, "BG20_HERO_202_SKIN_B4"),
+                    (103, "TB_BaconShop_HERO_18"), (104, "TB_BaconShop_HERO_60_SKIN_A")])
+    b.change_entity(103, "TB_BaconShop_HERO_49", BACON_NUM_MULLIGAN_REFRESH_USED=1)
+    b.send_choice("MULLIGAN")
+    b.hero_chosen(102, "BG20_HERO_202_SKIN_B4")
+    b.tag(102, "ZONE", "PLAY").tag(102, "PLAYER_ID", 2).tag(102, "PLAYER_LEADERBOARD_PLACE", 1)
+    b.tag(102, "PLAYER_TECH_LEVEL", 1).tag(2, "HERO_ENTITY", 102)
+
+    # Shop turn 1: 3 gold. A buy at 2, a coin gives 1 back, a trigger gives 2.
+    b.at(10).turn(1)
+    b.block("TRIGGER", LOCAL_NAME, inner=_gold(RESOURCES=3))
+    b.full_entity(30, "BG20_100", CARDTYPE="MINION", CONTROLLER=10, ZONE="PLAY",
+                  IS_BACON_POOL_MINION=1, ATK=1, HEALTH=1, BACON_OVERRIDE_BG_COST=2)
+    b.at(12).send_option().block("PLAY", button["buy"], target=30, inner=lambda x: (
+        x.tag(2, "NUM_RESOURCES_SPENT_THIS_GAME", 2), x.tag(2, "RESOURCES_USED", 2),
+        x.tag(30, "CONTROLLER", 2), x.tag(30, "ZONE", "HAND")))
+    b.at(14).send_option().block("PLAY", 80, inner=_gold(RESOURCES_USED=1))
+    b.at(16).block("TRIGGER", 81, inner=_gold(TEMP_RESOURCES=2))
+    _combat(b, 2, 40, won=True, damage_dealt=0, own_damage=0, opp_damage=3)
+
+    # Shop turn 2: 4 gold and a free roll on the button.
+    b.at(70).turn(3)
+    b.block("TRIGGER", LOCAL_NAME, inner=_gold(RESOURCES=4, RESOURCES_USED=0))
+    b.tag(button["reroll"], "BACON_FREE_REFRESH_COUNT", 1)
+    b.at(72).send_option().block("PLAY", button["reroll"], inner=lambda x: (
+        x.tag(button["reroll"], "BACON_FREE_REFRESH_COUNT", 0),))
+    b.at(74).send_option().block("PLAY", button["reroll"], inner=lambda x: (
+        x.tag(2, "NUM_RESOURCES_SPENT_THIS_GAME", 3), x.tag(2, "RESOURCES_USED", 1)))
+    b.at(76).block("TRIGGER", button["hero_power"], inner=lambda x: (
+        x.tag(2, "RESOURCES", 0), x.tag(2, "RESOURCES", 4)))
+    b.full_entity(31, "BG28_300", CARDTYPE="MINION", CONTROLLER=2, ZONE="PLAY", ATK=1, HEALTH=1,
+                  BACON_SELL_VALUE=2)
+    b.at(78).send_option().block("PLAY", button["sell"], target=31, inner=lambda x: (
+        x.tag(2, "RESOURCES_USED", 0), x.tag(2, "TEMP_RESOURCES", 3),
+        x.tag(31, "CONTROLLER", 10), x.tag(31, "ZONE", "REMOVEDFROMGAME")))
+    _combat(b, 4, 100, won=False, damage_dealt=5, own_damage=5, opp_damage=0)
+
+    # Shop turn 3: a tavern spell for 1.
+    b.at(130).turn(5)
+    b.block("TRIGGER", LOCAL_NAME, inner=_gold(RESOURCES=5, TEMP_RESOURCES=0))
+    b.full_entity(32, "BG28_500", CARDTYPE="BATTLEGROUND_SPELL", CONTROLLER=10, ZONE="PLAY")
+    b.at(132).send_option().block("PLAY", button["buy_spell"], target=32, inner=lambda x: (
+        x.tag(2, "NUM_RESOURCES_SPENT_THIS_GAME", 4), x.tag(2, "RESOURCES_USED", 1)))
+    _combat(b, 6, 160, won=False, damage_dealt=0, own_damage=0, opp_damage=0)
+
+    # Shop turn 4: the hero hurts itself; the last combat is won.
+    b.at(190).turn(7)
+    b.block("TRIGGER", LOCAL_NAME, inner=_gold(RESOURCES=6, RESOURCES_USED=0))
+    b.tag(102, "DAMAGE", 7)
+    _combat(b, 8, 220, won=True, damage_dealt=0, own_damage=0, opp_damage=30)
+    b.at(250).tag(21, "PLAYER_LEADERBOARD_PLACE", 2).tag(102, "PLAYER_LEADERBOARD_PLACE", 1)
+    b.tag("GameEntity", "STATE", "COMPLETE")
+    return b.text()
+
+
+def duo_data_game() -> str:
+    """Duos game with the parser revision 4 data: a hero pick without
+    rerolls, a card passed to the teammate (a top-level DECK_ACTION block),
+    and a lost round whose damage the game counts once per teammate hero.
+
+    Lobby (player id: hero): 2 local (a skin), 1 teammate (a skin), 3 and 4
+    opponents.
+    """
+    b = LogBuilder().create_game(local_tags={"BACON_DUO_TEAMMATE_PLAYER_ID": 1})
+    hero = {"CARDTYPE": "HERO", "HEALTH": 30}
+    b.full_entity(101, "BG24_HERO_100_SKIN_E", CONTROLLER=2, ZONE="HAND",
+                  BACON_SKIN_PARENT_ID=97000, **hero)
+    b.full_entity(102, "TB_BaconShop_HERO_37", CONTROLLER=2, ZONE="HAND", **hero)
+    b.full_entity(11, "TB_BaconShopBob", CONTROLLER=10, ZONE="PLAY", **hero)
+    b.full_entity(20, "TB_BaconShop_HERO_43_SKIN_N", CONTROLLER=10, ZONE="SETASIDE",
+                  PLAYER_ID=1, BACON_DUO_TEAM_ID=1, PLAYER_LEADERBOARD_PLACE=1,
+                  BACON_SKIN_PARENT_ID=57000, **hero)
+    b.full_entity(21, "TB_BaconShop_HERO_60", CONTROLLER=10, ZONE="SETASIDE", PLAYER_ID=3,
+                  BACON_DUO_TEAM_ID=2, PLAYER_LEADERBOARD_PLACE=2, **hero)
+    b.full_entity(22, "TB_BaconShop_HERO_18", CONTROLLER=10, ZONE="SETASIDE", PLAYER_ID=4,
+                  BACON_DUO_TEAM_ID=2, PLAYER_LEADERBOARD_PLACE=2, **hero)
+    b.hero_choices([(101, "BG24_HERO_100_SKIN_E"), (102, "TB_BaconShop_HERO_37")])
+    b.send_choice("MULLIGAN")
+    b.hero_chosen(101, "BG24_HERO_100_SKIN_E")
+    b.tag(101, "ZONE", "PLAY").tag(101, "PLAYER_ID", 2).tag(101, "PLAYER_LEADERBOARD_PLACE", 1)
+    b.tag(2, "HERO_ENTITY", 101)
+
+    b.at(10).turn(1)
+    b.block("TRIGGER", LOCAL_NAME, inner=_gold(RESOURCES=3))
+    b.full_entity(30, "BG20_100", CARDTYPE="MINION", CONTROLLER=2, ZONE="HAND", ATK=1, HEALTH=1)
+    b.at(15).send_option().block("DECK_ACTION", 30, inner=lambda x: (
+        x.tag(30, "IS_USING_PASS_OPTION", 1), x.tag(30, "ZONE", "SETASIDE")))
+
+    b.at(40).turn(2)
+    b.full_entity(42, "TB_BaconShop_HERO_60", CONTROLLER=10, ZONE="PLAY", **hero)
+    b.tag(3, "HERO_ENTITY", 42).tag(3, "BACON_CURRENT_COMBAT_PLAYER_ID", 3)
+    b.full_entity(43, "BG26_135", CARDTYPE="MINION", CONTROLLER=10, ZONE="PLAY",
+                  ATK=3, HEALTH=1, ZONE_POSITION=1)
+    b.attack(43)
+    # The team lost 2: the game counts it once per teammate hero.
+    b.tag(LOCAL_NAME, "DAMAGE_DEALT_TO_HERO_LAST_TURN", 2)
+    b.tag(LOCAL_NAME, "DAMAGE_DEALT_TO_HERO_LAST_TURN", 4)
+    b.tag(101, "DAMAGE", 2).tag(20, "DAMAGE", 2)
+    b.tag(3, "HERO_ENTITY", 11)
+
+    b.at(70).turn(3)
+    b.tag(21, "PLAYER_LEADERBOARD_PLACE", 1).tag(22, "PLAYER_LEADERBOARD_PLACE", 1)
+    b.tag(101, "PLAYER_LEADERBOARD_PLACE", 2).tag(20, "PLAYER_LEADERBOARD_PLACE", 2)
+    b.tag("GameEntity", "STATE", "COMPLETE")
     return b.text()

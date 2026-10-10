@@ -1,11 +1,13 @@
 //! Replays one game's packets and records what the report needs: the local
 //! and shop (Bob) players, the tribes offered in the shop, who steps into each
-//! combat with which board, and the local health after each round.
+//! combat with which board, the local health after each round, each combat's
+//! result as the game records it, the hero pick and the skins' base heroes.
 
 use std::collections::BTreeMap;
 
+use crate::hero_select::HeroSelectTracker;
 use crate::power::{EntityRef, Packet, ParseError, Value};
-use crate::report::{Minion, Side};
+use crate::report::{CombatResult, Minion, Side};
 use crate::shop::{Seats, ShopTracker};
 use crate::state::{Board, Entity, Players, Tags};
 
@@ -28,6 +30,13 @@ struct OpenLeg {
 
 /// (side, hero card id, combat player id hint, board or None if not visible)
 pub type RawEntry = (Side, Option<String>, Option<i64>, Option<Vec<Minion>>);
+
+/// Hero card ids whose skin link is kept per game: far more than a lobby shows.
+pub const MAX_SKIN_LINKS: usize = 256;
+/// Database ids are positive and far below this.
+pub const MAX_DBF_ID: i64 = 10_000_000;
+const SKIN_PARENT: &str = "BACON_SKIN_PARENT_ID";
+const RESULT_TAGS: [&str; 2] = ["BACON_WON_LAST_COMBAT", "DAMAGE_DEALT_TO_HERO_LAST_TURN"];
 
 #[derive(Debug, Default)]
 pub struct Collector {
@@ -52,6 +61,18 @@ pub struct Collector {
     open_opp: Option<OpenLeg>,
     /// The player's own shop and actions (T-204, T-205).
     pub shop: ShopTracker,
+    /// The player's own hero pick (T-209).
+    pub hero_select: HeroSelectTracker,
+    /// Round -> the combat's result as the game records it on the local
+    /// player (T-206); None when its tags do not agree with each other.
+    pub results: BTreeMap<i64, Option<CombatResult>>,
+    /// Hero card id -> database id of its base hero (`BACON_SKIN_PARENT_ID`,
+    /// T-214); None when the log gives one card two different links.
+    pub skin_parents: BTreeMap<String, Option<i64>>,
+    /// The log set a combat result tag on the local player at least once. A
+    /// game without any (a log that lacks them) has no read results: all
+    /// ties would be a guess.
+    pub result_tags_seen: bool,
     /// Time of the line being read, in ms from the game's first line.
     pub now_ms: i64,
     /// Nesting of the line being read (0 is the log's top level).
@@ -107,11 +128,19 @@ impl Collector {
                 }
                 if self.indent == 0 {
                     let seats = self.seats();
+                    // A player is named, not numbered (the turn's own gold
+                    // is set in a block of the player entity).
+                    let entity = match &entity {
+                        EntityRef::Id(id) => Some(*id),
+                        EntityRef::Name(_) => self.players.entity_id(&entity, &self.board).ok(),
+                        EntityRef::Game => None,
+                    };
                     let by_id = |r: &EntityRef| match r {
                         EntityRef::Id(id) => self.board.get(*id),
                         _ => None,
                     };
-                    let (entity, target) = (by_id(&entity), target.as_ref().and_then(by_id));
+                    let entity = entity.and_then(|id| self.board.get(id));
+                    let target = target.as_ref().and_then(by_id);
                     self.shop
                         .on_top_block(&block_type, entity, target, &self.board, seats);
                 }
@@ -182,20 +211,65 @@ impl Collector {
                 self.board.create(player);
             }
             Pending::Full { id, card_id } => {
+                let parent = skin_parent(&tags);
                 self.board.create(Entity { id, card_id, tags });
+                self.note_skin(id, parent);
                 self.track_shop(id);
                 self.shop_sees(id);
             }
             Pending::Show { id, card_id } => {
+                let parent = skin_parent(&tags);
                 self.board.show(id, card_id, tags)?;
+                self.note_skin(id, parent);
                 self.shop_sees(id);
             }
             Pending::Change { id, card_id } => {
+                let parent = skin_parent(&tags);
+                self.hero_select.on_change(id, &card_id);
                 self.board.change(id, card_id, tags)?;
+                self.note_skin(id, parent);
                 self.shop_sees(id);
             }
         }
         Ok(())
+    }
+
+    /// Keeps the base hero link a hero packet carries for its card. Read from
+    /// the packet's own tags: an entity changed to another card keeps the old
+    /// card's tags.
+    fn note_skin(&mut self, id: i64, parent: Option<i64>) {
+        let Some(parent) = parent else { return };
+        let Some(card) = self
+            .board
+            .get(id)
+            .filter(|e| e.is("CARDTYPE", "HERO"))
+            .and_then(|e| e.card_id.clone())
+        else {
+            return;
+        };
+        let full = self.skin_parents.len() >= MAX_SKIN_LINKS;
+        match self.skin_parents.get_mut(&card) {
+            Some(seen) if *seen != Some(parent) => *seen = None,
+            Some(_) => {}
+            None if !full => {
+                self.skin_parents.insert(card, Some(parent));
+            }
+            None => {}
+        }
+    }
+
+    /// The last combat's result as the game records it on the local player:
+    /// `BACON_WON_LAST_COMBAT` 1 is a win, else `DAMAGE_DEALT_TO_HERO_LAST_TURN`
+    /// above 0 a loss, else a tie. Both are set back to 0 when a combat starts
+    /// (the log leaves out tags that are 0). Anything else is unknown.
+    fn combat_result(&self) -> Option<CombatResult> {
+        let player = self.local.and_then(|id| self.board.get(id))?;
+        match (player.int(RESULT_TAGS[0]), player.int(RESULT_TAGS[1])) {
+            (1, 0) => Some(CombatResult::Won),
+            (0, d) if d > 0 => Some(CombatResult::Lost),
+            (0, 0) => Some(CombatResult::Tie),
+            _ => None,
+        }
     }
 
     fn turn(&self) -> i64 {
@@ -218,6 +292,10 @@ impl Collector {
         let is_turn = tag == "TURN" && Some(id) == self.board.game_id;
         let is_hero = tag == "HERO_ENTITY";
         let is_shop = tag == "ZONE" || tag == "CONTROLLER";
+        let is_skin_parent = tag == SKIN_PARENT;
+        if Some(id) == self.local && RESULT_TAGS.contains(&tag.as_str()) {
+            self.result_tags_seen = true;
+        }
         let is_over = Some(id) == self.board.game_id
             && tag == "STATE"
             && value == Value::Name("COMPLETE".into());
@@ -225,12 +303,22 @@ impl Collector {
         let old = self.board.get(id).and_then(|e| e.opt_int(&tag));
         let shop_tag = matches!(
             tag.as_str(),
-            "FROZEN" | "PLAYER_TECH_LEVEL" | "ZONE" | "CONTROLLER"
+            "FROZEN"
+                | "PLAYER_TECH_LEVEL"
+                | "ZONE"
+                | "CONTROLLER"
+                | "RESOURCES"
+                | "TEMP_RESOURCES"
+                | "RESOURCES_USED"
+                | "BACON_FREE_REFRESH_COUNT"
         )
         .then(|| tag.clone());
         self.board.set_tag(id, tag, value)?;
+        if is_skin_parent {
+            self.note_skin(id, Some(new_int).filter(|v| (1..=MAX_DBF_ID).contains(v)));
+        }
         if is_turn {
-            self.on_turn(new_int);
+            self.on_turn(new_int, old);
             let seats = self.seats();
             self.shop.on_turn(new_int, self.now_ms, &self.board, seats);
         } else if is_hero && self.in_combat() {
@@ -240,6 +328,11 @@ impl Collector {
         }
         if is_over {
             self.shop.on_game_over(self.now_ms);
+            // The game ends right after its last combat: no shop turn follows.
+            if self.in_combat() {
+                let result = self.combat_result();
+                self.results.entry(self.turn() / 2).or_insert(result);
+            }
         }
         if let (Some(tag), Some(entity)) = (shop_tag, self.board.get(id)) {
             let seats = self.seats();
@@ -248,9 +341,16 @@ impl Collector {
         Ok(())
     }
 
-    fn on_turn(&mut self, turn: i64) {
+    fn on_turn(&mut self, turn: i64, old: Option<i64>) {
         // The previous turn's legs that never reached an attack were not visible.
         let previous = turn.saturating_sub(1).div_euclid(2);
+        // A combat the log has from start to end: its result is read as the
+        // next shop turn starts.
+        let combat_seen = old.is_some_and(|o| o >= 2 && o % 2 == 0 && o + 1 == turn);
+        if combat_seen {
+            let result = self.combat_result();
+            self.results.insert(previous, result);
+        }
         self.close_unseen(Side::Own, previous);
         self.close_unseen(Side::Opponent, previous);
         if self.in_combat() {
@@ -376,6 +476,14 @@ impl Collector {
             .into_iter()
             .find(|(pid, _)| *pid == local_pid)
             .map(|(_, h)| h)
+    }
+}
+
+/// A base hero link in a packet's tags: a database id, or None (0 is none).
+fn skin_parent(tags: &Tags) -> Option<i64> {
+    match tags.get(SKIN_PARENT) {
+        Some(Value::Int(v)) if (1..=MAX_DBF_ID).contains(v) => Some(*v),
+        _ => None,
     }
 }
 

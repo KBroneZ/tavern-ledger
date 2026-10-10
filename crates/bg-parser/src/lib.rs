@@ -9,6 +9,7 @@
 
 pub mod clock;
 pub mod collector;
+pub mod hero_select;
 pub mod lines;
 pub mod power;
 pub mod report;
@@ -29,7 +30,7 @@ pub const PARSER_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Bump when a change makes the parser read the same log differently (new
 /// fields, fixed bugs). Saved with every game so `tavern-watch --reparse`
 /// and the server can tell which records an older parser wrote.
-pub const PARSER_REVISION: u32 = 3;
+pub const PARSER_REVISION: u32 = 4;
 
 /// Builds whose real logs this parser was checked against.
 pub const TESTED_BUILDS: &[i64] = &[253216];
@@ -42,6 +43,9 @@ pub const CREATE_GAME: &str = "GameState.DebugPrintPower() - CREATE_GAME";
 /// Bounds on the card names kept per game, so a strange log cannot grow them.
 const MAX_NAMES: usize = 1_000;
 const MAX_NAME_LEN: usize = 100;
+/// Hero names and skin links per report: far more than a lobby and a hero
+/// pick show, and what upload-game accepts.
+const MAX_HERO_MAPS: usize = 64;
 
 /// One game being read.
 #[derive(Debug, Default)]
@@ -83,8 +87,29 @@ impl GameReader {
             Line::SendChoice(kind) if self.error.is_none() => {
                 self.collector.shop.on_choice(self.collector.now_ms, kind);
             }
+            Line::Choices(body) if self.error.is_none() => {
+                // A packet still taking tag lines is complete by now (a reroll's
+                // CHANGE_ENTITY can come right before the pick).
+                if let Err(ParseError(name)) = self.collector.finish() {
+                    self.error = Some(name);
+                    return;
+                }
+                let c = &mut self.collector;
+                c.hero_select.on_choices(body, &c.board, c.local_pid);
+                return;
+            }
+            Line::Chosen(body) if self.error.is_none() => {
+                if let Err(ParseError(name)) = self.collector.finish() {
+                    self.error = Some(name);
+                    return;
+                }
+                let c = &mut self.collector;
+                c.hero_select.on_chosen(body, &c.board);
+                return;
+            }
             _ => {}
         }
+        self.collector.hero_select.on_other_line();
     }
 
     /// Keeps hero names only (their card ids hold "HERO"): the report shows
@@ -308,22 +333,40 @@ fn build_report(index: usize, r: &GameReader) -> GameReport {
     }
     let mut report = summarize(base, c);
     report.card_names = hero_names(&report, &r.names);
+    report.skin_parents = skin_parents(&report, c);
     report
+}
+
+/// Every hero card id the report mentions.
+fn heroes_in(report: &GameReport) -> impl Iterator<Item = &String> {
+    let lobby = report.lobby.iter().filter_map(|p| p.hero.as_ref());
+    let combats = report
+        .rounds
+        .iter()
+        .flat_map(|r| r.entries.iter().filter_map(|e| e.hero.as_ref()));
+    let offered = report.hero_select.iter().flat_map(|h| h.offered.iter());
+    [&report.hero, &report.teammate_hero]
+        .into_iter()
+        .flatten()
+        .chain(lobby)
+        .chain(combats)
+        .chain(offered)
 }
 
 /// Names of the heroes the report mentions, when the log printed them.
 fn hero_names(report: &GameReport, names: &HashMap<String, String>) -> BTreeMap<String, String> {
-    let lobby = report.lobby.iter().map(|p| &p.hero);
-    let combats = report
-        .rounds
-        .iter()
-        .flat_map(|r| r.entries.iter().map(|e| &e.hero));
-    [&report.hero, &report.teammate_hero]
-        .into_iter()
-        .chain(lobby)
-        .chain(combats)
-        .flatten()
+    heroes_in(report)
         .filter_map(|card| Some((card.clone(), names.get(card)?.clone())))
+        .take(MAX_HERO_MAPS)
+        .collect()
+}
+
+/// Base hero links of the heroes the report mentions, when the log gives one
+/// (and only one) for the card.
+fn skin_parents(report: &GameReport, c: &Collector) -> BTreeMap<String, i64> {
+    heroes_in(report)
+        .filter_map(|card| Some((card.clone(), (*c.skin_parents.get(card)?)?)))
+        .take(MAX_HERO_MAPS)
         .collect()
 }
 
@@ -402,6 +445,7 @@ fn summarize(mut base: GameReport, c: &Collector) -> GameReport {
     base.rounds = rounds_of(c, &heroes, complete.then(|| hero_health(own)));
     base.start_health = c.lobby_health.get(&0).cloned().unwrap_or_default();
     base.shop = Some(c.shop.record(&c.board, c.seats()));
+    base.hero_select = c.hero_select.record();
     base
 }
 
@@ -463,6 +507,12 @@ fn rounds_of(c: &Collector, heroes: &[(i64, &Entity)], last_health: Option<i64>)
                 .collect(),
             own_health_after: health.get(&n).copied().flatten(),
             health_after: lobby_health.get(&n).cloned().unwrap_or_default(),
+            result: c
+                .results
+                .get(&n)
+                .copied()
+                .flatten()
+                .filter(|_| c.result_tags_seen),
         })
         .collect()
 }

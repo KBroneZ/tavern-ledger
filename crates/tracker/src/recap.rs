@@ -4,16 +4,19 @@
 //! Red line (D-004, D-012): an opponent is a hero and a seat in *this* game,
 //! never a name, a BattleTag or an account, and nothing links two games.
 //!
-//! The log never says who won a combat. It gives every lobby hero's health
-//! (health + armor - damage) before and after each combat, so a result is
-//! *worked out* from those changes and labelled inferred. When the numbers
-//! cannot say, the result is unknown, never a guess.
+//! Since parser revision 4 a combat's result is the one the game records on
+//! the local player (`BACON_WON_LAST_COMBAT`, `DAMAGE_DEALT_TO_HERO_LAST_TURN`,
+//! D-055), labelled from the log. For older records, or a combat the log does
+//! not have whole, the result is *worked out* from every lobby hero's health
+//! (health + armor - damage) before and after the combat and labelled
+//! inferred (D-028). When neither can say, the result is unknown, never a guess.
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::Serialize;
 use serde_json::Value;
 
+use crate::hero_pick::{hero_pick, HeroPick};
 use crate::provenance::Source;
 use crate::shop::{shop_recap, ShopRecap};
 use crate::stats::{base_hero, counted_place, mode_of, rules, DUOS};
@@ -29,8 +32,8 @@ const WHY_OUT: &str = "a side was already out of the game";
 const WHY_HEALED: &str = "a side gained health, so health changes do not show the result";
 const WHY_BOTH_LOST: &str = "both sides lost health, so the log cannot say who won";
 
-const BASIS_SOLO: &str = "The log never says who won a combat. Results are worked out from health: you lost health and the opponent did not (lost), the opponent lost health and you did not (won), neither lost health (tie). If both lost health, or the log lacks a number, the result is unknown.";
-const BASIS_DUOS: &str = "The log never says who won a combat. Results are worked out from health: your team lost health and the other team did not (lost), the other team lost health and yours did not (won), neither lost health (tie). If both lost health, or the log lacks a number, the result is unknown. In Duos each round counts once, for your team against the opposing team: both fights of the round together, because a team shares one health pool.";
+const BASIS_SOLO: &str = "Results are the ones the game records for you after each combat (from the log). For games saved before that was read, or a combat the log does not have whole, they are worked out from health (inferred): you lost health and the opponent did not (lost), the opponent lost health and you did not (won), neither lost health (tie). If both lost health, or the log lacks a number, the result is unknown.";
+const BASIS_DUOS: &str = "Results are the ones the game records for your team after each combat (from the log). For games saved before that was read, or a combat the log does not have whole, they are worked out from health (inferred): your team lost health and the other team did not (lost), the other team lost health and yours did not (won), neither lost health (tie). If both lost health, or the log lacks a number, the result is unknown. In Duos each round counts once, for your team against the opposing team: both fights of the round together, because a team shares one health pool.";
 
 /// A value and where it comes from: the log when there is a value, unknown
 /// when there is none.
@@ -70,7 +73,8 @@ pub enum Outcome {
 pub struct Combat {
     pub round: i64,
     pub outcome: Outcome,
-    /// Inferred for a result worked out from health, unknown for no result.
+    /// Log for the result the game records, inferred for one worked out from
+    /// health, unknown for no result.
     pub source: Source,
     /// Why the result is unknown.
     pub reason: Option<&'static str>,
@@ -140,6 +144,8 @@ pub struct Recap {
     pub entered_tribes_source: Source,
     /// The player's own shop turn by turn and logged actions (T-204, T-205).
     pub shop: ShopRecap,
+    /// The heroes offered, the rerolls and the hero picked (T-209).
+    pub hero_pick: HeroPick,
     pub warnings: Vec<String>,
     pub problems: Vec<String>,
 }
@@ -311,6 +317,22 @@ fn combat(round: i64, outcome: Outcome, reason: Option<&'static str>) -> Combat 
     }
 }
 
+/// The result the game recorded for this round (parser revision 4), if any.
+fn logged(round: i64, value: &Value) -> Option<Combat> {
+    let outcome = match value.get("result")?.as_str()? {
+        "won" => Outcome::Won,
+        "lost" => Outcome::Lost,
+        "tie" => Outcome::Tie,
+        _ => return None,
+    };
+    Some(Combat {
+        round,
+        outcome,
+        source: Source::Log,
+        reason: None,
+    })
+}
+
 /// The opposing sides a round names, each as the players who share its health.
 fn opposing_sides(view: &View, round: &Value) -> Vec<Vec<i64>> {
     let pids: BTreeSet<i64> = list(round, "entries")
@@ -333,6 +355,7 @@ fn read_combats(view: &View) -> Records {
     let own = view.own_side();
     let mut records = Records::default();
     for (&number, round) in &view.rounds {
+        let read = logged(number, round);
         let sides = opposing_sides(view, round);
         let [opp] = sides.as_slice() else {
             let why = if sides.is_empty() {
@@ -340,29 +363,29 @@ fn read_combats(view: &View) -> Records {
             } else {
                 WHY_MANY_OPPONENTS
             };
+            // The result can be known even when the opponent is not.
             records
                 .unattributed
-                .push(combat(number, Outcome::Unknown, Some(why)));
+                .push(read.unwrap_or_else(|| combat(number, Outcome::Unknown, Some(why))));
             continue;
         };
-        let (outcome, reason) = match &own {
-            Some(own) => judge(
-                [
-                    view.health_of(own, number - 1),
-                    view.health_of(opp, number - 1),
-                ],
-                [view.health_of(own, number), view.health_of(opp, number)],
-            ),
-            None => (Outcome::Unknown, Some(WHY_NO_HEALTH)),
-        };
+        let result = read.unwrap_or_else(|| {
+            let (outcome, reason) = match &own {
+                Some(own) => judge(
+                    [
+                        view.health_of(own, number - 1),
+                        view.health_of(opp, number - 1),
+                    ],
+                    [view.health_of(own, number), view.health_of(opp, number)],
+                ),
+                None => (Outcome::Unknown, Some(WHY_NO_HEALTH)),
+            };
+            combat(number, outcome, reason)
+        });
         if !records.combats.contains_key(opp) {
             records.order.push(opp.clone());
         }
-        records
-            .combats
-            .entry(opp.clone())
-            .or_default()
-            .push(combat(number, outcome, reason));
+        records.combats.entry(opp.clone()).or_default().push(result);
     }
     records
 }
@@ -496,6 +519,7 @@ pub fn recap(report: &Value) -> Recap {
         entered_tribes: Vec::new(),
         entered_tribes_source: Source::Unknown,
         shop: shop_recap(report),
+        hero_pick: hero_pick(&view, report),
         status: Sourced::log(status),
         warnings: texts(report, "warnings"),
         problems: texts(report, "problems"),
@@ -566,7 +590,7 @@ mod tests {
     }
 
     #[test]
-    fn worked_out_results_are_inferred_never_straight_from_the_log() {
+    fn worked_out_results_are_inferred_when_the_game_records_none() {
         let r = recap(&solo(&[(2, 35, 40), (3, 35, 31), (4, 35, 40)]));
         for record in &r.record {
             assert!(record.combats.iter().all(|c| c.source == Source::Inferred));
@@ -782,6 +806,61 @@ mod tests {
     }
 
     #[test]
+    fn a_result_the_game_records_wins_over_the_health_rule_and_is_from_the_log() {
+        // Health alone: round 1 lost, round 2 both lost health (unknown).
+        let mut report = solo(&[(2, 35, 40), (3, 30, 31)]);
+        report["rounds"][0]["result"] = json!("lost");
+        report["rounds"][1]["result"] = json!("won");
+        let r = recap(&report);
+        let c1 = &r.record[0].combats[0];
+        assert_eq!(
+            (c1.outcome, c1.source, c1.reason),
+            (Outcome::Lost, Source::Log, None)
+        );
+        let c2 = &r.record[1].combats[0];
+        assert_eq!(
+            (c2.outcome, c2.source, c2.reason),
+            (Outcome::Won, Source::Log, None)
+        );
+    }
+
+    #[test]
+    fn a_round_without_a_recorded_result_falls_back_to_health_labelled_inferred() {
+        // A revision 4 combat the log cut (null) and an older record (no key).
+        let mut report = solo(&[(2, 35, 40), (3, 35, 31)]);
+        report["rounds"][0]["result"] = Value::Null;
+        report["rounds"][1]["result"] = json!("sideways"); // hand-edited: not a result
+        let r = recap(&report);
+        assert_eq!(results(&r, 2), [(1, Outcome::Lost)]);
+        assert_eq!(results(&r, 3), [(2, Outcome::Won)]);
+        assert!(r
+            .record
+            .iter()
+            .flat_map(|o| &o.combats)
+            .all(|c| c.source == Source::Inferred));
+    }
+
+    #[test]
+    fn a_recorded_result_counts_even_when_the_opponent_is_not_known() {
+        let mut report = solo(&[(2, 35, 40)]);
+        report["rounds"][0]["entries"] = json!([{"side": "own", "player_id": 1, "hero": "H_ME"}]);
+        report["rounds"][0]["result"] = json!("tie");
+        let r = recap(&report);
+        let c = &r.unattributed[0];
+        assert_eq!((c.outcome, c.source), (Outcome::Tie, Source::Log));
+    }
+
+    #[test]
+    fn duos_recorded_results_are_the_teams() {
+        let mut report = duos(&[([3, 4], 45, 50), ([5, 6], 40, 40)]);
+        report["rounds"][1]["result"] = json!("won");
+        let r = recap(&report);
+        let team30 = &r.record[1];
+        assert_eq!((team30.won, team30.unknown), (1, 0));
+        assert_eq!(team30.combats[0].source, Source::Log);
+    }
+
+    #[test]
     fn solo_basis_does_not_talk_about_teams() {
         assert_eq!(recap(&solo(&[])).record_basis, BASIS_SOLO);
         assert!(!BASIS_SOLO.contains("team"));
@@ -907,5 +986,38 @@ mod tests {
         assert_eq!(r.rounds_played.value, Some(2));
         assert!(r.record.is_empty());
         assert_eq!(r.unattributed.len(), 2);
+    }
+
+    /// A real game (T-108) as parser revision 4 reads it.
+    fn real(name: &str) -> Value {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join(format!("../bg-parser/tests/data/real/{name}.json"));
+        let games: Value = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+        games[0].clone()
+    }
+
+    #[test]
+    fn real_games_have_every_combat_result_from_the_log() {
+        for (name, won, lost, tie) in [("b253216_solo", 5, 3, 1), ("b253216_duos", 2, 6, 0)] {
+            let r = recap(&real(name));
+            let combats: Vec<&Combat> = r
+                .record
+                .iter()
+                .flat_map(|o| &o.combats)
+                .chain(&r.unattributed)
+                .collect();
+            assert!(combats.iter().all(|c| c.source == Source::Log), "{name}");
+            let count = |o| combats.iter().filter(|c| c.outcome == o).count();
+            let counts = (
+                count(Outcome::Won),
+                count(Outcome::Lost),
+                count(Outcome::Tie),
+            );
+            assert_eq!(counts, (won, lost, tie), "{name}");
+            assert_eq!(
+                r.hero_pick.picked.as_ref().map(|h| h.id.as_str()),
+                r.hero.value.as_ref().map(|h| h.id.as_str())
+            );
+        }
     }
 }

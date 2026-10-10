@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 
+use crate::hero_select::HeroSelect;
 use crate::shop::ShopRecord;
 
 pub const NOT_IN_POWER_LOG: [&str; 2] = ["MMR", "available tribes (exact list)"];
@@ -26,6 +27,16 @@ pub enum Status {
 pub enum Side {
     Own,
     Opponent,
+}
+
+/// A combat's result for the local player (their team in Duos), as the game
+/// records it (T-206, D-055).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CombatResult {
+    Won,
+    Lost,
+    Tie,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -56,6 +67,10 @@ pub struct Round {
     /// player id once the combat closed. Empty when the log did not give it
     /// (unknown, not zero). Rust-only: the Python prototype does not write it.
     pub health_after: BTreeMap<i64, i64>,
+    /// The result the game records on the local player once the combat is
+    /// over (parser revision 4). None when the log does not have the whole
+    /// combat or its tags disagree: unknown, never a tie. Rust-only.
+    pub result: Option<CombatResult>,
 }
 
 impl Round {
@@ -70,12 +85,13 @@ impl Round {
 
 impl Serialize for Round {
     fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        let mut map = s.serialize_map(Some(5))?;
+        let mut map = s.serialize_map(Some(6))?;
         map.serialize_entry("number", &self.number)?;
         map.serialize_entry("entries", &self.entries)?;
         map.serialize_entry("own_health_after", &self.own_health_after)?;
         map.serialize_entry("opponents", &self.opponents())?;
         map.serialize_entry("health_after", &self.health_after)?;
+        map.serialize_entry("result", &self.result)?;
         map.end()
     }
 }
@@ -127,6 +143,13 @@ pub struct GameReport {
     /// The player's own shop and logged actions (T-204, T-205, parser
     /// revision 3). None when the game could not be read. Rust-only.
     pub shop: Option<ShopRecord>,
+    /// The player's own hero pick (T-209, parser revision 4). None when the
+    /// log has no hero choice for this game. Rust-only.
+    pub hero_select: Option<HeroSelect>,
+    /// Card id -> database id of the base hero, for the skins in this report
+    /// whose link the log gives (`BACON_SKIN_PARENT_ID`, T-214, parser
+    /// revision 4). A hero missing here has no link in the log. Rust-only.
+    pub skin_parents: BTreeMap<String, i64>,
     pub warnings: Vec<String>,
     pub problems: Vec<String>,
     pub not_in_log: Vec<String>,
@@ -156,6 +179,8 @@ impl GameReport {
             rounds: Vec::new(),
             start_health: BTreeMap::new(),
             shop: None,
+            hero_select: None,
+            skin_parents: BTreeMap::new(),
             warnings: Vec::new(),
             problems: Vec::new(),
             not_in_log: NOT_IN_POWER_LOG.iter().map(|s| s.to_string()).collect(),

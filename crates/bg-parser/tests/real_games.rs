@@ -79,7 +79,8 @@ fn every_tested_build_has_a_real_game() {
 }
 
 /// "D hh:mm:ss.fffffff " (time since the game's first line, D-046), then a
-/// power or game line, or an option or choice header that holds numbers only.
+/// power or game line, an option or choice header that holds numbers only, or
+/// a line of the hero choice rewritten to ids (D-055).
 fn allowed(line: &str) -> bool {
     let Some(rest) = line.strip_prefix("D ") else {
         return false;
@@ -122,8 +123,26 @@ fn allowed(line: &str) -> bool {
             .and_then(|b| b.split_once(" ChoiceType="))
             .is_some_and(|(id, kind)| {
                 numbers(id, &["id="]) && kind.bytes().all(|b| b.is_ascii_uppercase() || b == b'_')
-            });
+            })
+        || rest
+            .strip_prefix("GameState.DebugPrintEntityChoices() - ")
+            .is_some_and(|b| {
+                b.strip_suffix(" ChoiceType=MULLIGAN")
+                    .is_some_and(|id| numbers(id, &["id="]))
+                    || hero_entity(b)
+            })
+        || rest
+            .strip_prefix("GameState.DebugPrintEntitiesChosen() - ")
+            .is_some_and(|b| numbers(b, &["id=", "EntitiesCount="]) || hero_entity(b));
     time_ok && body_ok
+}
+
+/// "Entities[i]=N": a hero of the hero choice, by entity id only.
+fn hero_entity(body: &str) -> bool {
+    let digits = |t: &str| !t.is_empty() && t.bytes().all(|b| b.is_ascii_digit());
+    body.strip_prefix("Entities[")
+        .and_then(|rest| rest.split_once("]="))
+        .is_some_and(|(i, id)| digits(i) && digits(id))
 }
 
 #[test]
@@ -138,7 +157,19 @@ fn the_allow_list_check_knows_each_line_kind() {
     assert!(allowed(
         "D 00:01:02.0030000 GameState.SendChoices() - id=3 ChoiceType=GENERAL"
     ));
+    for ok in [
+        "D 00:00:01.0000000 GameState.DebugPrintEntityChoices() - id=1 ChoiceType=MULLIGAN",
+        "D 00:00:01.0000000 GameState.DebugPrintEntityChoices() - Entities[0]=103",
+        "D 00:00:01.0000000 GameState.DebugPrintEntitiesChosen() - id=1 EntitiesCount=1",
+        "D 00:00:01.0000000 GameState.DebugPrintEntitiesChosen() - Entities[0]=104",
+    ] {
+        assert!(allowed(ok), "{ok}");
+    }
     for bad in [
+        "D 00:00:01.0000000 GameState.DebugPrintEntityChoices() - id=1 Player=Someone          TaskList=7 ChoiceType=MULLIGAN CountMin=1 CountMax=1",
+        "D 00:00:01.0000000 GameState.DebugPrintEntityChoices() - Source=GameEntity",
+        "D 00:00:01.0000000 GameState.DebugPrintEntityChoices() - Entities[0]=[entityName=X          id=103 zone=HAND zonePos=1 cardId=Y player=7]",
+        "D 00:00:01.0000000 GameState.DebugPrintEntitiesChosen() - id=1 Player=Someone          EntitiesCount=1",
         "D 00:01:02 GameState.DebugPrintPower() - BLOCK_END",
         "D 00:01:02.0030000 PowerTaskList.DebugPrintPower() - BLOCK_END",
         "D 00:01:02.0030000 GameState.SendChoices() -   m_chosenEntities[0]=5",
@@ -302,4 +333,67 @@ fn duos_shop_build_253216() {
     // 97 options and 8 picks: only the local player's, never the teammate's.
     assert_eq!(s.actions.len(), 105);
     assert!(s.ended);
+}
+
+// Parser revision 4 (T-206, T-209, T-210, T-214, D-055), checked against the
+// raw games the fixtures were made from (docs/research/parser-data-round.md).
+
+#[test]
+fn solo_data_round_build_253216() {
+    use bg_parser::report::CombatResult::{Lost, Tie, Won};
+    let r = game("b253216_solo");
+    let results: Vec<_> = r.rounds.iter().map(|round| round.result).collect();
+    let expected = [Won, Won, Won, Won, Won, Tie, Lost, Lost, Lost].map(Some);
+    assert_eq!(results, expected);
+    let pick = r.hero_select.as_ref().expect("a hero pick");
+    assert_eq!(pick.offered.len(), 5, "four offered, one reroll");
+    assert_eq!(pick.rerolls, 1);
+    assert_eq!(pick.picked, r.hero);
+    // Every skin in the report has its base hero link; base heroes have none.
+    assert_eq!(r.skin_parents.len(), 6);
+    assert!(r.skin_parents.keys().all(|card| card.contains("_SKIN_")));
+    let s = shop("b253216_solo");
+    let total = |f: fn(&bg_parser::shop::ShopTurn) -> Option<u32>| {
+        s.turns.iter().map(|t| f(t).expect("recorded")).sum::<u32>()
+    };
+    assert_eq!(total(|t| t.extra_gold), 11);
+    assert_eq!(total(|t| t.sell_gold), 8, "8 sells at 1 gold");
+    assert_eq!(total(|t| t.buy_gold), 33, "11 buys at 3 gold");
+    assert_eq!(total(|t| t.spell_gold), 2);
+    assert_eq!(
+        total(|t| t.free_refreshes),
+        5,
+        "every free roll used a free roll"
+    );
+    assert!(s
+        .turns
+        .iter()
+        .all(|t| t.passes.as_ref().is_some_and(Vec::is_empty)));
+}
+
+#[test]
+fn duos_data_round_build_253216() {
+    use bg_parser::report::CombatResult::{Lost, Won};
+    let r = game("b253216_duos");
+    let results: Vec<_> = r.rounds.iter().map(|round| round.result).collect();
+    let expected = [Lost, Won, Lost, Lost, Won, Lost, Lost, Lost].map(Some);
+    assert_eq!(results, expected);
+    let pick = r.hero_select.as_ref().expect("a hero pick");
+    assert_eq!((pick.offered.len(), pick.rerolls), (5, 1));
+    assert_eq!(pick.picked, r.hero);
+    assert_eq!(r.skin_parents.len(), 7);
+    let s = shop("b253216_duos");
+    let passes: usize = s
+        .turns
+        .iter()
+        .map(|t| t.passes.as_ref().unwrap().len())
+        .sum();
+    assert_eq!(passes, 1);
+    let kinds = s
+        .actions
+        .iter()
+        .filter(|a| a.kind == bg_parser::shop::ActionKind::Pass);
+    assert_eq!(kinds.count(), 1);
+    let sells: u32 = s.turns.iter().map(|t| t.sell_gold.unwrap()).sum();
+    assert_eq!(sells, 18);
 }

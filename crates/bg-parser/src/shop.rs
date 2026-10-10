@@ -15,6 +15,20 @@
 //!   the hero pick) is one action the client sent, at the line's time; its
 //!   kind is the top-level block that answers it.
 //!
+//! Parser revision 4 (T-210, D-055, docs/research/parser-data-round.md):
+//! - a buy's price is the change of `NUM_RESOURCES_SPENT_THIS_GAME` over its
+//!   block (2 when the minion has `BACON_OVERRIDE_BG_COST` 2, else 3);
+//! - the gold the player has is `RESOURCES - RESOURCES_USED + TEMP_RESOURCES`;
+//!   a block gains what that gold grew by plus what it spent;
+//! - a sell's gold is its block's gain (`BACON_SELL_VALUE` when set, else 1);
+//! - extra gold is every other block's gain, except the turn's own gold, which
+//!   a top-level `TRIGGER` block of the player entity sets (a block that takes
+//!   gold away and gives it back gains nothing);
+//! - a roll that lowers the roll button's `BACON_FREE_REFRESH_COUNT` used one
+//!   of the free rolls the game showed;
+//! - a pass to the teammate (Duos) is a top-level `DECK_ACTION` block of the
+//!   player's own card.
+//!
 //! Only the local player's shop: other players' shops are not in the log.
 //! Times are milliseconds from the game's first log line, never a clock time.
 
@@ -35,6 +49,7 @@ pub const MAX_ACTIONS: usize = 3_000;
 pub const MAX_MS: i64 = 24 * 60 * 60 * 1000;
 const MAX_TIER: i64 = 7;
 const MAX_GOLD: i64 = 10_000;
+const FREE_REFRESHES: &str = "BACON_FREE_REFRESH_COUNT";
 
 const REROLL: &str = "TB_BaconShop_8p_Reroll_Button";
 const BUY: &str = "TB_BaconShop_DragBuy";
@@ -60,6 +75,8 @@ pub enum ActionKind {
     Move,
     /// A pick among cards offered (discover and the like).
     Choose,
+    /// A card passed to the teammate (Duos, parser revision 4).
+    Pass,
     /// Anything else the client sent, or an option the log does not answer.
     Other,
 }
@@ -102,6 +119,29 @@ pub struct ShopTurn {
     pub offers: Vec<Offer>,
     /// Actions the log records in this turn (see [`PlayerAction`]).
     pub actions: u32,
+    // Parser revision 4 (T-210). None in records saved before it ("not
+    // recorded"); the gold ones are None too when the turn's gold is not in
+    // the log.
+    /// Gold beyond the turn's own and beyond sells: cards, trinkets and the
+    /// like giving gold, refunds, more gold this turn.
+    #[serde(default)]
+    pub extra_gold: Option<u32>,
+    /// Gold the player got for selling.
+    #[serde(default)]
+    pub sell_gold: Option<u32>,
+    /// Gold spent buying minions.
+    #[serde(default)]
+    pub buy_gold: Option<u32>,
+    /// Gold spent buying tavern spells.
+    #[serde(default)]
+    pub spell_gold: Option<u32>,
+    /// Rolls that used one of the free rolls the game showed on the roll
+    /// button; None for the whole game when the log never gives that count.
+    #[serde(default)]
+    pub free_refreshes: Option<u32>,
+    /// Cards passed to the teammate (Duos), by card id.
+    #[serde(default)]
+    pub passes: Option<Vec<Option<String>>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -150,6 +190,14 @@ struct OpenBlock {
     spent_before: Option<i64>,
     froze: bool,
     unfroze: bool,
+    /// The turn's own gold being set (a TRIGGER block of the player entity).
+    refresh: bool,
+    /// Card id of the block's entity, for passes.
+    card: Option<String>,
+    /// The gold the player had when the block started.
+    gold_before: Option<i64>,
+    /// A roll that used a free roll the game showed.
+    used_free: bool,
     /// The action (an option sent) this block answers.
     answers: Option<usize>,
 }
@@ -177,6 +225,9 @@ pub struct ShopTracker {
     end_ms: Option<i64>,
     last_ms: i64,
     offers_seen: usize,
+    /// The log gave the roll button's free rolls at least once this game.
+    /// Without it, "no free roll used" would be a guess: unknown instead.
+    free_refreshes_seen: bool,
 }
 
 impl ShopTracker {
@@ -210,6 +261,12 @@ impl ShopTracker {
                     freezes: 0,
                     offers: Vec::new(),
                     actions: 0,
+                    extra_gold: Some(0),
+                    sell_gold: Some(0),
+                    buy_gold: Some(0),
+                    spell_gold: Some(0),
+                    free_refreshes: Some(0),
+                    passes: Some(Vec::new()),
                 },
                 offer_ids: Vec::new(),
                 untouched: true,
@@ -260,12 +317,19 @@ impl ShopTracker {
         seats: Seats,
     ) {
         self.close_block(board, seats);
-        let kind = block_kind(block_type, entity);
+        let own = entity.is_some_and(|e| Some(e.int("CONTROLLER")) == seats.local_pid);
+        // A pass is of the player's own card; any other DECK_ACTION stays "other".
+        let kind = block_kind(block_type, entity).map(|k| {
+            if k == ActionKind::Pass && !own {
+                ActionKind::Other
+            } else {
+                k
+            }
+        });
         let answers = kind.and_then(|_| self.pending.take());
         if let (Some(kind), Some(i)) = (kind, answers) {
             self.actions[i].kind = kind;
         }
-        let own = entity.is_some_and(|e| Some(e.int("CONTROLLER")) == seats.local_pid);
         let shop_kind = kind.filter(|_| own && self.open.is_some());
         if let (Some(kind), Some(open)) = (shop_kind, self.open.as_mut()) {
             open.untouched = false;
@@ -274,6 +338,7 @@ impl ShopTracker {
                 open.record.rolls = (open.record.rolls + 1).min(MAX_COUNT);
             }
         }
+        let refresh = block_type == "TRIGGER" && entity.is_some_and(|e| seats.local == Some(e.id));
         self.block = Some(OpenBlock {
             kind: shop_kind,
             target: target.and_then(|t| t.card_id.clone()),
@@ -281,6 +346,10 @@ impl ShopTracker {
             froze: false,
             unfroze: false,
             answers,
+            refresh,
+            card: entity.and_then(|e| e.card_id.clone()),
+            gold_before: gold(board, seats),
+            used_free: false,
         });
     }
 
@@ -297,17 +366,47 @@ impl ShopTracker {
             return;
         };
         let turn = &mut open.record;
+        let cost = match (block.spent_before, spent(board, seats)) {
+            (Some(before), Some(after)) => Some(after.saturating_sub(before)),
+            _ => None,
+        };
+        // Gold the block gave: what the player's gold grew by, plus what it spent.
+        let gain = match (block.gold_before, gold(board, seats)) {
+            (Some(before), Some(after)) => after
+                .saturating_sub(before)
+                .saturating_add(cost.unwrap_or(0)),
+            _ => 0,
+        };
+        let is_sell = block.kind == Some(ActionKind::Sell);
+        if !block.refresh && !is_sell && gain > 0 {
+            add(&mut turn.extra_gold, gain);
+        }
         match block.kind {
             Some(ActionKind::Roll) => {
-                if let (Some(before), Some(after)) = (block.spent_before, spent(board, seats)) {
-                    if after <= before {
-                        turn.free_rolls = (turn.free_rolls + 1).min(turn.rolls);
-                    }
+                if cost.is_some_and(|c| c <= 0) {
+                    turn.free_rolls = (turn.free_rolls + 1).min(turn.rolls);
+                }
+                if block.used_free {
+                    add(&mut turn.free_refreshes, 1);
                 }
             }
-            Some(ActionKind::Buy) if turn.buys.len() < MAX_CARDS => turn.buys.push(block.target),
-            Some(ActionKind::BuySpell) => turn.spell_buys = (turn.spell_buys + 1).min(MAX_COUNT),
-            Some(ActionKind::Sell) if turn.sells.len() < MAX_CARDS => turn.sells.push(block.target),
+            Some(ActionKind::Buy) if turn.buys.len() < MAX_CARDS => {
+                turn.buys.push(block.target);
+                add(&mut turn.buy_gold, cost.unwrap_or(0));
+            }
+            Some(ActionKind::BuySpell) => {
+                turn.spell_buys = (turn.spell_buys + 1).min(MAX_COUNT);
+                add(&mut turn.spell_gold, cost.unwrap_or(0));
+            }
+            Some(ActionKind::Sell) if turn.sells.len() < MAX_CARDS => {
+                turn.sells.push(block.target);
+                add(&mut turn.sell_gold, gain);
+            }
+            Some(ActionKind::Pass) => {
+                if let Some(passes) = turn.passes.as_mut().filter(|p| p.len() < MAX_CARDS) {
+                    passes.push(block.card);
+                }
+            }
             Some(ActionKind::Freeze) if block.froze || !block.unfroze => {
                 turn.freezes = (turn.freezes + 1).min(MAX_COUNT)
             }
@@ -334,7 +433,50 @@ impl ShopTracker {
             "FROZEN" => self.on_frozen(entity),
             "PLAYER_TECH_LEVEL" => self.on_tier(entity, old, board, seats),
             "ZONE" | "CONTROLLER" => self.on_maybe_offer(entity, seats),
+            "RESOURCES" | "TEMP_RESOURCES" | "RESOURCES_USED" => {
+                self.on_gold_outside_blocks(entity, tag, old, seats)
+            }
+            FREE_REFRESHES => self.on_free_refresh(entity, old),
             _ => {}
+        }
+    }
+
+    /// The player's gold changed outside any top-level block (blocks count
+    /// their gain as they close): a rise is extra gold.
+    fn on_gold_outside_blocks(
+        &mut self,
+        entity: &Entity,
+        tag: &str,
+        old: Option<i64>,
+        seats: Seats,
+    ) {
+        let Some(open) = self.open.as_mut() else {
+            return;
+        };
+        if seats.local != Some(entity.id) || self.block.is_some() {
+            return;
+        }
+        let (old, new) = (old.unwrap_or(0), entity.int(tag));
+        let gain = if tag == "RESOURCES_USED" {
+            old.saturating_sub(new)
+        } else {
+            new.saturating_sub(old)
+        };
+        if gain > 0 {
+            add(&mut open.record.extra_gold, gain);
+        }
+    }
+
+    /// The roll button's free rolls went down during a roll: that roll used one.
+    fn on_free_refresh(&mut self, entity: &Entity, old: Option<i64>) {
+        let button = entity.card_id.as_deref() == Some(REROLL);
+        self.free_refreshes_seen |= button;
+        let Some(block) = self.block.as_mut() else {
+            return;
+        };
+        let fewer = entity.int(FREE_REFRESHES) < old.unwrap_or(0);
+        if block.kind == Some(ActionKind::Roll) && button && fewer {
+            block.used_free = true;
         }
     }
 
@@ -411,6 +553,13 @@ impl ShopTracker {
         turn.gold = local
             .and_then(|p| tag_int(p, "RESOURCES"))
             .filter(|g| (0..=MAX_GOLD).contains(g));
+        if turn.gold.is_none() {
+            // Without the turn's gold the player's gold tags are not in the log.
+            turn.extra_gold = None;
+            turn.sell_gold = None;
+            turn.buy_gold = None;
+            turn.spell_gold = None;
+        }
         // Without the turn's gold the player's gold tags are not in the log.
         turn.gold_spent = match (turn.gold, self.spent_at_turn_start, spent(board, seats)) {
             (Some(_), Some(before), Some(after)) => {
@@ -444,6 +593,9 @@ impl ShopTracker {
             .collect();
         for (turn, next) in copy.turns.iter_mut().zip(ends) {
             turn.end_ms = next.max(turn.start_ms);
+            if !copy.free_refreshes_seen {
+                turn.free_refreshes = None;
+            }
         }
         ShopRecord {
             turns: copy.turns,
@@ -456,10 +608,18 @@ impl ShopTracker {
     }
 }
 
+/// Adds to a count the record keeps, within its bound.
+fn add(count: &mut Option<u32>, n: i64) {
+    if let Some(c) = count.as_mut() {
+        let n = u32::try_from(n.clamp(0, MAX_GOLD)).unwrap_or(0);
+        *c = c.saturating_add(n).min(MAX_COUNT);
+    }
+}
+
 fn block_kind(block_type: &str, entity: Option<&Entity>) -> Option<ActionKind> {
     match block_type {
         "MOVE_MINION" => return Some(ActionKind::Move),
-        "DECK_ACTION" => return Some(ActionKind::Other),
+        "DECK_ACTION" => return Some(ActionKind::Pass),
         "PLAY" => {}
         _ => return None,
     }
@@ -489,6 +649,16 @@ fn tag_int(entity: &Entity, tag: &str) -> Option<i64> {
 fn spent(board: &Board, seats: Seats) -> Option<i64> {
     let local = board.get(seats.local?)?;
     Some(local.int("NUM_RESOURCES_SPENT_THIS_GAME"))
+}
+
+/// The gold the player has right now. The log leaves out tags that are 0.
+fn gold(board: &Board, seats: Seats) -> Option<i64> {
+    let p = board.get(seats.local?)?;
+    Some(
+        p.int("RESOURCES")
+            .saturating_sub(p.int("RESOURCES_USED"))
+            .saturating_add(p.int("TEMP_RESOURCES")),
+    )
 }
 
 fn own_hero(board: &Board, seats: Seats) -> Option<&Entity> {

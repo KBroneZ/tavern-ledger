@@ -2,6 +2,7 @@
 // What an uploaded record may hold (T-104d, D-012, D-017).
 import {
   broken,
+  dataGames,
   duo,
   type Json,
   realDuos,
@@ -51,12 +52,14 @@ Deno.test("real Solo, unsupported and old records are accepted", () => {
   }
 });
 
-Deno.test("real games from the current parser (revision 3, with the shop) are accepted", () => {
+Deno.test("real games from the current parser (revision 4) are accepted", () => {
   for (const report of [realDuos[0], realSolo[0]]) {
     assertEquals(report.shop.turns.length > 0, true, "the fixture has a shop record");
+    assertEquals(report.hero_select.offered.length > 0, true, "the fixture has a hero pick");
+    assertEquals(report.rounds.every((r: Json) => r.result !== null), true, "results");
     const v = validateRecord(realRecord(report), SESSION, 1);
     if (!v.ok) throw new Error(`refused: ${v.code} ${v.field}`);
-    assertEquals(v.summary.parser_version, "0.1.0+r3");
+    assertEquals(v.summary.parser_version, "0.1.0+r4");
     assertEquals(v.summary.hero_card_id, report.hero);
   }
 });
@@ -67,6 +70,79 @@ Deno.test("synthetic games with every shop action kind are accepted", () => {
     const v = validateRecord(realRecord(report), SESSION, 1);
     if (!v.ok) throw new Error(`refused: ${v.code} ${v.field}`);
   }
+});
+
+Deno.test("synthetic games with every revision 4 field are accepted", () => {
+  for (const report of dataGames) {
+    const v = validateRecord(realRecord(report), SESSION, 1);
+    if (!v.ok) throw new Error(`refused: ${v.code} ${v.field}`);
+  }
+  const kinds = dataGames.flatMap((g: Json) => g.shop.actions.map((a: Json) => a.kind));
+  assertEquals(kinds.includes("pass"), true, "a pass to the teammate");
+});
+
+Deno.test("revision 3 records, without the revision 4 fields, are still accepted", () => {
+  const rec = realRecord(realSolo[0]);
+  rec.parser.revision = 3;
+  delete rec.report.hero_select;
+  delete rec.report.skin_parents;
+  rec.report.rounds.forEach((r: Json) => delete r.result);
+  for (const turn of rec.report.shop.turns) {
+    for (const key of ["extra_gold", "sell_gold", "buy_gold", "spell_gold", "free_refreshes", "passes"]) {
+      delete turn[key];
+    }
+  }
+  rec.report.shop.actions.forEach((a: Json) => a.kind = a.kind === "pass" ? "other" : a.kind);
+  const v = validateRecord(rec, SESSION, 1);
+  if (!v.ok) throw new Error(`refused: ${v.code} ${v.field}`);
+  // Unknown is allowed too: no result, no pick, a turn without gold numbers.
+  const unknown = realRecord(realDuos[0]);
+  unknown.report.rounds[0].result = null;
+  unknown.report.hero_select = null;
+  unknown.report.skin_parents = {};
+  unknown.report.shop.turns[0].extra_gold = null;
+  unknown.report.shop.turns[0].passes = null;
+  assertEquals(validateRecord(unknown, SESSION, 1).ok, true);
+});
+
+Deno.test("the revision 4 fields keep to their shapes and bounds", () => {
+  const hero = (r: Json) => r.hero_select.offered[0];
+  const cases: Array<[(r: Json) => void, string]> = [
+    [(r) => (r.rounds[0].result = "draw"), "report.rounds[0].result"],
+    [(r) => (r.rounds[0].result = 1), "report.rounds[0].result"],
+    [(r) => (r.hero_select.player = "Someone"), "report.hero_select.player"],
+    [(r) => (r.hero_select.offered = new Array(33).fill(hero(r))), "report.hero_select.offered"],
+    [(r) => (r.hero_select.offered[1] = null), "report.hero_select.offered[1]"],
+    [(r) => (r.hero_select.offered[1] = "<b>x</b>"), "report.hero_select.offered[1]"],
+    [(r) => (r.hero_select.rerolls = -1), "report.hero_select.rerolls"],
+    [(r) => (r.hero_select.rerolls = 33), "report.hero_select.rerolls"],
+    [(r) => (r.hero_select.picked = "BG_NOT_OFFERED"), "report.hero_select.picked"],
+    [(r) => delete r.hero_select.offered, "report.hero_select.offered"],
+    [(r) => (r.skin_parents = { BG_NOT_SHOWN_SKIN_A: 5 }), "report.skin_parents"],
+    [(r) => (r.skin_parents = { [hero(r)]: 0 }), "report.skin_parents"],
+    [(r) => (r.skin_parents = { [hero(r)]: 10000001 }), "report.skin_parents"],
+    [(r) => (r.skin_parents = { [hero(r)]: "60011" }), "report.skin_parents"],
+    [(r) => (r.skin_parents = [hero(r)]), "report.skin_parents"],
+    [(r) => (r.shop.turns[0].extra_gold = -1), "report.shop.turns[0].extra_gold"],
+    [(r) => (r.shop.turns[0].sell_gold = 10001), "report.shop.turns[0].sell_gold"],
+    [(r) => (r.shop.turns[0].buy_gold = 1.5), "report.shop.turns[0].buy_gold"],
+    [(r) => (r.shop.turns[0].spell_gold = "2"), "report.shop.turns[0].spell_gold"],
+    [
+      (r) => (r.shop.turns[0].free_refreshes = r.shop.turns[0].rolls + 1),
+      "report.shop.turns[0].free_refreshes",
+    ],
+    [(r) => (r.shop.turns[0].passes = ["BG_1", 7]), "report.shop.turns[0].passes[1]"],
+    [(r) => (r.shop.turns[0].passes = new Array(101).fill("BG_1")), "report.shop.turns[0].passes"],
+  ];
+  for (const [forge, field] of cases) {
+    const rec = realRecord(realSolo[0]);
+    forge(rec.report);
+    refused(rec, "invalid_report", field);
+  }
+  // Offered heroes are heroes the report shows: their names may come along.
+  const named = realRecord(realSolo[0]);
+  named.report.card_names = { [hero(named.report)]: "Héroe" };
+  assertEquals(validateRecord(named, SESSION, 1).ok, true);
 });
 
 Deno.test("records without a shop (older parsers) or with none (unreadable game) are accepted", () => {
@@ -172,8 +248,8 @@ Deno.test("a name in a health map is refused as a player name", () => {
   assertEquals(v.ok ? "accepted" : v.code, "player_name");
 });
 
-Deno.test("the validator version is a positive integer, 3 or more since revision 3", () => {
-  assertEquals(Number.isInteger(VALIDATOR_VERSION) && VALIDATOR_VERSION >= 3, true);
+Deno.test("the validator version is a positive integer, 4 or more since revision 4", () => {
+  assertEquals(Number.isInteger(VALIDATOR_VERSION) && VALIDATOR_VERSION >= 4, true);
 });
 
 Deno.test("session and index must match the address", () => {
