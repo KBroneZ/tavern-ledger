@@ -1,7 +1,12 @@
+import { describeServiceKey, serviceKeyFromEnv } from "../_shared/service_key.ts";
 import { handle, parseOrigins } from "./handler.ts";
 
 const url = Deno.env.get("SUPABASE_URL");
-const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const service = serviceKeyFromEnv((name) => Deno.env.get(name));
+const serviceNote = describeServiceKey("delete-account", service);
+// Said once per instance, so the logs show which key production uses (D-042).
+if (service.ok && service.source === "secret_key") console.info(serviceNote);
+else console.warn(serviceNote);
 // The website's origins, comma-separated. Unset: the public site, which is
 // not a secret and the same for every deploy of this project (the local
 // stack sets its own in supabase/config.toml).
@@ -18,12 +23,12 @@ if (configuredOrigins.length !== allowedOrigins.length) {
 }
 
 Deno.serve((req) => {
-  if (!url || !serviceKey) {
-    console.error("delete-account: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing");
+  if (!url || !service.ok) {
+    console.error(url ? serviceNote : "delete-account: SUPABASE_URL missing");
     return new Response(JSON.stringify({ error: "server not configured" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
   }
-  return handle(req, { url, serviceKey, allowedOrigins });
+  return handle(req, { url, serviceKey: service.key, allowedOrigins });
 });

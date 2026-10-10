@@ -147,8 +147,8 @@ select ok(public.upload_ip_blocked(repeat('1', 64)), '30 failures in 10 minutes 
 select ok(not public.upload_ip_blocked(repeat('2', 64)), 'other IPs are not blocked');
 update private.upload_ip_failures set window_start = window_start - interval '2 hours';
 select ok(not public.upload_ip_blocked(repeat('1', 64)), 'failures older than 10 minutes expire');
-select throws_ok($$ select public.upload_ip_failed('1.2.3.4') $$, '23514', null,
-  'only a hashed IP is stored, never the address');
+select throws_ok($$ select public.upload_ip_failed('1.2.3.4') $$, '22023', null,
+  'only a hashed IP is accepted, never the address (salted in ip_salt.test.sql)');
 insert into private.upload_ip_failures (ip_key, window_start, failures)
 values (repeat('3', 64), now() - interval '3 hours', 5);
 do $$ begin perform public.upload_ip_failed(repeat('4', 64)); end $$;

@@ -3,8 +3,8 @@
 // with the user's access token and one game record, gzipped
 // (Content-Type: application/gzip). In this order:
 //   1. address, method and type; the body is read up to 64 KiB;
-//   2. the client's IP (hashed) is not blocked; the token is valid (a refused
-//      token counts against the IP);
+//   2. the client's IP (hashed here, salted by the database: D-042) is not
+//      blocked; the token is valid (a refused token counts against the IP);
 //   3. the body inflates to at most 512 KiB of UTF-8 JSON that passes
 //      validateRecord(): no player names, no fields outside the report;
 //   4. upload_begin(): revision, rate limits and total quota;
