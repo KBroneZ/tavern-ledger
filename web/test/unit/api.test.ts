@@ -340,9 +340,9 @@ test("link: a token_hash reset keeps the session for the new password form", asy
       return json(session());
     },
   });
-  const outcome = await finishAuthLink(c, CONFIG, { kind: "token-hash", tokenHash: "pkce_abcdef0123", type: "recovery" });
+  const outcome = await finishAuthLink(c, CONFIG, { kind: "token-hash", tokenHash: "token-hash-example", type: "recovery" });
   assert.deepEqual(outcome, { recovery: true, message: null, tone: "info" });
-  assert.equal(body.token_hash, "pkce_abcdef0123");
+  assert.equal(body.token_hash, "token-hash-example");
   assert.equal(body.type, "recovery");
 });
 
@@ -352,7 +352,7 @@ test("link: a token_hash confirmation confirms but does not stay signed in", asy
     "/auth/v1/verify": () => json(session()),
     "/auth/v1/logout": () => new Response(null, { status: 204 }),
   });
-  const outcome = await finishAuthLink(c, CONFIG, { kind: "token-hash", tokenHash: "pkce_abcdef0123", type: "signup" });
+  const outcome = await finishAuthLink(c, CONFIG, { kind: "token-hash", tokenHash: "token-hash-example", type: "signup" });
   assert.deepEqual(outcome, { recovery: false, message: "Your email is confirmed. Sign in to continue.", tone: "ok" });
   assert.deepEqual(seen, ["POST /auth/v1/verify", "POST /auth/v1/logout"]);
   assert.equal((await c.auth.getSession()).data.session, null);
@@ -371,7 +371,7 @@ test("link: an error in the address and a notice need no request", async () => {
 test("new password: saved with the reset session, and refusals in words", async () => {
   const c = client();
   stubFetch({ "/auth/v1/verify": () => json(session()) });
-  await finishAuthLink(c, CONFIG, { kind: "token-hash", tokenHash: "pkce_abcdef0123", type: "recovery" });
+  await finishAuthLink(c, CONFIG, { kind: "token-hash", tokenHash: "token-hash-example", type: "recovery" });
   let body: Record<string, unknown> = {};
   let logout = "";
   stubFetch({

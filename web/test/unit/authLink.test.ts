@@ -54,13 +54,13 @@ test("an error code that is not plain lowercase letters, digits and _ is dropped
 });
 
 test("a token_hash link needs a known type", () => {
-  assert.deepEqual(parseAuthLink("?token_hash=pkce_0123456789abcdef&type=recovery", ""), {
+  assert.deepEqual(parseAuthLink("?token_hash=token-hash-example&type=recovery", ""), {
     kind: "token-hash",
-    tokenHash: "pkce_0123456789abcdef",
+    tokenHash: "token-hash-example",
     type: "recovery",
   });
-  assert.deepEqual(parseAuthLink("?token_hash=pkce_0123456789abcdef&type=sms", ""), { kind: "error", code: null });
-  assert.deepEqual(parseAuthLink("?token_hash=pkce_0123456789abcdef", ""), { kind: "error", code: null });
+  assert.deepEqual(parseAuthLink("?token_hash=token-hash-example&type=sms", ""), { kind: "error", code: null });
+  assert.deepEqual(parseAuthLink("?token_hash=token-hash-example", ""), { kind: "error", code: null });
   assert.deepEqual(parseAuthLink("?token_hash=<x>&type=signup", ""), { kind: "error", code: null });
 });
 

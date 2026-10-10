@@ -5,3 +5,11 @@
 # Made-up JWT-shaped test token ({"alg":"ES256"}.{"sub":"user"}) in the first
 # commit of #016; the file now uses a value gitleaks does not flag. Not a real token.
 f138038fa6510f768c26d37b6dd4d211f199178f:supabase/functions/upload-game/handler.test.ts:jwt:11
+# Made-up test values (token hashes) in a branch commit of #72; the files now use
+# values gitleaks does not flag. Not real tokens.
+86c9dbbe5827111747c1eabf5ebc73ed9229b401:web/test/unit/authLink.test.ts:generic-api-key:59
+86c9dbbe5827111747c1eabf5ebc73ed9229b401:web/test/unit/authLink.test.ts:generic-api-key:63
+86c9dbbe5827111747c1eabf5ebc73ed9229b401:web/test/unit/api.test.ts:generic-api-key:340
+86c9dbbe5827111747c1eabf5ebc73ed9229b401:web/test/unit/api.test.ts:generic-api-key:342
+86c9dbbe5827111747c1eabf5ebc73ed9229b401:web/test/unit/api.test.ts:generic-api-key:352
+86c9dbbe5827111747c1eabf5ebc73ed9229b401:web/test/unit/api.test.ts:generic-api-key:371
