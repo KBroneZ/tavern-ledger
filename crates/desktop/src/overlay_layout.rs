@@ -133,8 +133,10 @@ fn parse_resolution(key: &str) -> Option<(f64, f64)> {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Theme {
-    /// Dark wood and gold, the look of T-301.
+    /// Dark teal board with mint and gold, the Combat Round look (D-039).
     #[default]
+    Round,
+    /// Dark wood and gold, the look of T-301.
     Tavern,
     /// Light parchment with dark text.
     Parchment,
@@ -142,7 +144,12 @@ pub enum Theme {
     Contrast,
 }
 
-pub const THEMES: [Theme; 3] = [Theme::Tavern, Theme::Parchment, Theme::Contrast];
+pub const THEMES: [Theme; 4] = [
+    Theme::Round,
+    Theme::Tavern,
+    Theme::Parchment,
+    Theme::Contrast,
+];
 
 type Rgb = (u8, u8, u8);
 
@@ -181,6 +188,7 @@ impl Palette {
 impl Theme {
     pub fn label(self) -> &'static str {
         match self {
+            Theme::Round => "Combat Round (dark)",
             Theme::Tavern => "Tavern (dark)",
             Theme::Parchment => "Parchment (light)",
             Theme::Contrast => "High contrast",
@@ -189,6 +197,7 @@ impl Theme {
 
     pub fn id(self) -> &'static str {
         match self {
+            Theme::Round => "round",
             Theme::Tavern => "tavern",
             Theme::Parchment => "parchment",
             Theme::Contrast => "contrast",
@@ -197,6 +206,19 @@ impl Theme {
 
     pub fn palette(self) -> Palette {
         match self {
+            Theme::Round => Palette {
+                panel: (0x07, 0x18, 0x1c),
+                text: (0xd6, 0xec, 0xe8),
+                dim: (0xb0, 0xd0, 0xca),
+                accent: (0x5f, 0xe0, 0xc8),
+                won: (0x7f, 0xe0, 0xa0),
+                lost: (0xff, 0x9a, 0x86),
+                amber: (0xf2, 0xc1, 0x4e),
+                info: (0x8f, 0xc9, 0xe8),
+                muted: (0xae, 0xce, 0xc8),
+                danger: (0xff, 0xd0, 0xc6),
+                border: (0x2f, 0x7f, 0x74),
+            },
             Theme::Tavern => Palette {
                 panel: (0x1c, 0x13, 0x0c),
                 text: (0xef, 0xe2, 0xc4),
@@ -562,7 +584,7 @@ mod tests {
     fn the_file_from_t_301_still_loads() {
         let s = Settings::parse(r#"{"enabled":true}"#).unwrap();
         assert!(s.enabled);
-        assert_eq!(s.theme, Theme::Tavern);
+        assert_eq!(s.theme, Theme::Round);
         assert_eq!(s.opacity, DEFAULT_OPACITY);
     }
 
