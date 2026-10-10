@@ -148,8 +148,17 @@ body {
   height: 36px;
   margin: 1px 0;
   border-radius: 9px;
-  object-fit: cover;
 }
+/* Card art (T-325, as T-320 in the window): HearthstoneJSON's 256x pictures
+   pad a tall minion picture with white bars at both sides (and some hero
+   skins at one side). object-view-box crops the source to the art first,
+   cover then fills the shape, and the background under it is dark. */
+.minion .art, .portrait {
+  object-fit: cover;
+  background: var(--panel-solid);
+}
+.portrait { object-view-box: inset(0% 8%); object-position: 50% 30%; }
+.minion .art { object-view-box: inset(1% 16% 2%); object-position: 50% 28%; }
 .minion i.unnamed { text-decoration: underline dotted; }
 .opponent .portrait {
   flex: none;
@@ -157,7 +166,6 @@ body {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  object-fit: cover;
 }
 /* Compact opponents list (T-306): one line each, no boards. */
 .opponent.compact { padding: 3px 0; }
@@ -186,7 +194,7 @@ body {
 .hover-card .name { flex: 1 1 auto; min-width: 0; font-weight: 700; }
 .hover-card .hp { flex: none; color: var(--dim); }
 .hover-card .hp b { color: var(--text); font-weight: 700; }
-.hover-card .portrait { flex: none; align-self: center; width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+.hover-card .portrait { flex: none; align-self: center; width: 26px; height: 26px; border-radius: 50%; }
 .possible { margin-top: 6px; padding-top: 4px; border-top: 1px dashed color-mix(in srgb, var(--amber) 55%, transparent); }
 .possible .when { color: var(--dim); font-size: 11.5px; }
 .possible .none { color: var(--dim); font-size: 11.5px; }

@@ -13,6 +13,7 @@ mod overlay;
 mod overlay_layout;
 mod overlay_window;
 mod screen_fit;
+mod settings;
 #[cfg(test)]
 mod ui_checks;
 mod upload;
@@ -27,7 +28,7 @@ use std::time::Duration;
 use serde::Serialize;
 use tauri::menu::{CheckMenuItem, Menu, MenuEvent, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{App, AppHandle, Emitter, Manager, State, WindowEvent, Wry};
+use tauri::{App, AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tracker::dev_reconnect::Reconnects;
 use tracker::discover::find_logs_dir;
@@ -750,22 +751,13 @@ fn show_window(app: &AppHandle) {
     }
 }
 
-/// Turns the Windows start-up entry on or off; the menu shows the real state.
-fn toggle_autostart(app: &AppHandle, item: &CheckMenuItem<Wry>) {
-    let launcher = app.autolaunch();
-    let result = match launcher.is_enabled() {
-        Ok(true) => launcher.disable(),
-        Ok(false) => launcher.enable(),
-        Err(e) => Err(e),
-    };
-    let _ = item.set_checked(launcher.is_enabled().unwrap_or(false));
+/// Turns the Windows start-up entry on or off; the menu and the Settings
+/// page show the real state.
+fn toggle_autostart(app: &AppHandle) {
+    let settings = app.state::<Arc<settings::Settings>>();
     let state = app.state::<Arc<AppState>>();
-    let notice = result
-        .is_err()
-        .then(|| "Could not change the Windows start-up setting.".to_string());
-    let failed = notice.is_some();
-    set_status(app, &state, |s| s.notice = notice);
-    if failed {
+    let on = !app.autolaunch().is_enabled().unwrap_or(false);
+    if settings::set_autostart(app, &settings, &state, on).is_err() {
         // The window is usually hidden in the tray: show it so the message is seen.
         show_window(app);
     }
@@ -793,10 +785,12 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
     // Off by default: only the user turns it on, from this menu.
     let enabled = app.autolaunch().is_enabled().unwrap_or(false);
     let available = std::env::current_exe().is_ok_and(|exe| can_autostart(&exe));
+    // Built with the English words; `keep_tray` puts them in the app's language.
+    let words = settings::tray_words(settings::Language::En);
     let label = if available {
-        "Start with Windows"
+        words.autostart
     } else {
-        "Start with Windows (not available: the app's folder has spaces)"
+        words.autostart_unavailable
     };
     let autostart =
         CheckMenuItem::with_id(app, MENU_AUTOSTART, label, available, enabled, None::<&str>)?;
@@ -804,41 +798,42 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
     let overlay = CheckMenuItem::with_id(
         app,
         MENU_OVERLAY,
-        "Show overlay during a game",
+        words.overlay,
         true,
         state.overlay.enabled(),
         None::<&str>,
     )?;
-    let unlock = CheckMenuItem::with_id(
-        app,
-        MENU_UNLOCK,
-        "Unlock overlay to move and resize panels",
-        true,
-        false,
-        None::<&str>,
-    )?;
+    let unlock = CheckMenuItem::with_id(app, MENU_UNLOCK, words.unlock, true, false, None::<&str>)?;
     overlay::keep_enable_item(&state, overlay.clone());
     overlay::keep_unlock_item(&state, unlock.clone());
     let reset_layout = MenuItem::with_id(
         app,
         MENU_RESET_LAYOUT,
-        "Reset overlay layout",
+        words.reset_layout,
         true,
         None::<&str>,
     )?;
-    let show = MenuItem::with_id(app, MENU_SHOW, "Open Tavern Ledger", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, MENU_QUIT, "Quit", true, None::<&str>)?;
+    let show = MenuItem::with_id(app, MENU_SHOW, words.show, true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, MENU_QUIT, words.quit, true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
         &[&show, &overlay, &unlock, &reset_layout, &autostart, &quit],
     )?;
+    let items = (
+        show.clone(),
+        overlay.clone(),
+        unlock.clone(),
+        reset_layout.clone(),
+    );
+    let kept_autostart = autostart.clone();
+    let quit_item = quit.clone();
     let mut tray = TrayIconBuilder::with_id("main")
-        .tooltip("Tavern Ledger: following your Battlegrounds games")
+        .tooltip(words.tooltip)
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(move |app, event: MenuEvent| match event.id().as_ref() {
             MENU_SHOW => show_window(app),
-            MENU_AUTOSTART => toggle_autostart(app, &autostart),
+            MENU_AUTOSTART => toggle_autostart(app),
             MENU_OVERLAY => toggle_overlay(app),
             MENU_UNLOCK => {
                 let state = app.state::<Arc<AppState>>();
@@ -864,18 +859,32 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
     if let Some(icon) = app.default_window_icon() {
         tray = tray.icon(icon.clone());
     }
-    tray.build(app)?;
+    let icon = tray.build(app)?;
+    let (show, overlay, unlock, reset_layout) = items;
+    app.state::<Arc<settings::Settings>>()
+        .keep_tray(settings::TrayItems {
+            show,
+            overlay,
+            unlock,
+            reset_layout,
+            autostart: kept_autostart,
+            autostart_available: available,
+            quit: quit_item,
+            icon,
+        });
     Ok(())
 }
 
 fn main() {
     let state = Arc::new(AppState::default());
+    let app_settings = Arc::new(settings::Settings::default());
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             Some(vec![MINIMIZED_ARG]),
         ))
         .manage(state.clone())
+        .manage(app_settings.clone())
         .manage(upload::Upload::default())
         .manage(card_data::Cards::default())
         .register_asynchronous_uri_scheme_protocol(card_data::SCHEME, card_data::protocol)
@@ -910,6 +919,11 @@ fn main() {
             card_data::card_data_status,
             game_memory_status,
             game_memory_set_enabled,
+            settings::app_settings,
+            settings::app_set_language,
+            settings::app_set_system_language,
+            settings::app_autostart,
+            settings::app_set_autostart,
         ])
         .on_window_event(|window, event| {
             // Closing the window hides it; "Quit" in the tray menu exits.
@@ -923,6 +937,7 @@ fn main() {
                 data_dir_from(std::env::args()).unwrap_or_else(tracker::store::default_dir);
             let loaded = state.overlay.load(&data_dir, overlay_dev(std::env::args()));
             let game_memory_loaded = state.game_memory.load(&data_dir);
+            let settings_loaded = app_settings.load(&data_dir);
             card_data::start(app.handle(), &data_dir);
             setup_tray(app)?;
             overlay_window::follow(app.handle().clone(), state.clone());
@@ -935,7 +950,12 @@ fn main() {
             if overlay_dev(std::env::args()) && unlock_asked {
                 overlay::set_unlocked(app.handle(), &state, true);
             }
-            if let Some(message) = loaded.err().or(prepared.err()).or(game_memory_loaded.err()) {
+            if let Some(message) = loaded
+                .err()
+                .or(prepared.err())
+                .or(settings_loaded.err())
+                .or(game_memory_loaded.err())
+            {
                 set_status(app.handle(), &state, |s| s.notice = Some(message));
             }
             // The window starts hidden (tauri.conf.json), so a start-up

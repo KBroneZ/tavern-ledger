@@ -2,6 +2,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const TLCompact = require("../ui/compact.js");
+const I18n = require("../ui/i18n.js");
+require("../ui/strings/common.js");
+require("../ui/strings/details.js");
 
 const hero = (name, games, place) => ({ name, games, place });
 const byGames = { games: (r) => r.games, place: (r) => r.place, name: (r) => r.name };
@@ -104,4 +107,17 @@ test("the state of each list is kept by its key across redraws", () => {
   state.expanded = true;
   assert.equal(TLCompact.state("heroes:GT_BATTLEGROUNDS").expanded, true);
   assert.equal(TLCompact.state("heroes:GT_BATTLEGROUNDS_DUO").expanded, false);
+});
+
+test("in Spanish the button and the sort order follow the language", () => {
+  I18n.setLang("es");
+  try {
+    assert.equal(TLCompact.view({ rows: many(20), limit: 6 }).button.text, "Mostrar todo (20)");
+    assert.equal(TLCompact.view({ rows: many(20), limit: 6, expanded: true }).button.text, "Mostrar las 6 primeras");
+    const names = [hero("Zoe", 1, 2), hero("Ñandú", 1, 2), hero("Nora", 1, 2), hero("Óscar", 1, 2)];
+    assert.deepEqual(TLCompact.rank(names, byGames).map((r) => r.name), ["Nora", "Ñandú", "Óscar", "Zoe"]);
+  } finally {
+    I18n.setLang("en");
+  }
+  assert.equal(TLCompact.view({ rows: many(20), limit: 6 }).button.text, "Show all (20)");
 });

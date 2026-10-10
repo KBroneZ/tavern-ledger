@@ -20,7 +20,11 @@ class Node {
   remove() { this.removed = true; }
 }
 
-global.window = { __TAURI__: { core: { invoke: async () => ({}) }, event: { listen: () => {} } } };
+const I18n = require("../ui/i18n.js");
+require("../ui/strings/common.js");
+require("../ui/strings/details.js");
+
+global.window = { __TAURI__: { core: { invoke: async () => ({}) }, event: { listen: () => {} } }, TLI18n: I18n };
 global.location = { protocol: "http:" };
 global.document = { createElement: (tag) => new Node(tag) };
 require(path.join(__dirname, "..", "ui", "cards.js"));
@@ -57,4 +61,15 @@ test("in the main window a picture loads lazily and a failed one becomes a same-
   assert.equal(spot.className, "portrait art-missing", "keeps the picture's class, so its size and shape");
   assert.equal(spot.attrs["aria-hidden"], "true");
   assert.match(spot.title, /No picture/);
+});
+
+test("the placeholder's tooltip is in the language in use", () => {
+  I18n.setLang("es");
+  try {
+    const img = TLCards.art("BG26_174", "portrait", { placeholder: true });
+    img.fire("error");
+    assert.match(img.replacedBy.title, /^Sin imagen: la base de cartas/);
+  } finally {
+    I18n.setLang("en");
+  }
 });

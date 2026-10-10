@@ -11,6 +11,7 @@
 "use strict";
 
 window.TLHover = (() => {
+  const I18n = window.TLI18n;
   const { listen: onEvent } = window.__TAURI__.event;
   const card = document.getElementById("hover-card");
   let hover = null;
@@ -37,7 +38,7 @@ window.TLHover = (() => {
       if (name) named = true;
       if (name === null) unnamed = true;
       const item = el("span", name === null ? "possible-card unnamed" : "possible-card", name || c.id);
-      item.prepend(el("b", null, `T${c.tier} `));
+      item.prepend(el("b", null, `${I18n.t("ov.tier", { value: c.tier })} `));
       list.append(item);
     }
     const marks = [named ? mark("card_data") : null, unnamed ? mark("unknown") : null].filter(Boolean);
@@ -50,41 +51,41 @@ window.TLHover = (() => {
     const list = p.tribes.map(tribeName).join(" · ");
     if (p.tribes_basis === "tavern_confirmed") {
       return p.tribes_complete
-        ? `From the lobby tribes ${list} (all 5 confirmed in the tavern)`
-        : `From the ${p.tribes.length} lobby tribes confirmed in the tavern so far ${list}; the others are missing until offered or entered`;
+        ? I18n.t("ov.possible.fromLobbyAll", { list })
+        : I18n.t("ov.possible.fromLobbyPart", { count: p.tribes.length, list });
     }
     if (p.tribes_basis === "tavern_seen") {
-      return `From the tribes seen so far ${list}; other lobby tribes are missing until you enter them`;
+      return I18n.t("ov.possible.fromSeen", { list });
     }
-    return `From the tribes ${list}`;
+    return I18n.t("ov.possible.fromTribes", { list });
   }
 
   function possibleBlock(opponent, p) {
     const block = el("div", "possible");
     const hero = opponent.seats.length > 1 ? heroOf(opponent, p.seat) : null;
-    const tiers = p.min_tier === p.tier ? `tier ${p.tier}` : `tier ${p.min_tier}-${p.tier}`;
+    const tiers = p.min_tier === p.tier ? I18n.t("ov.possible.tier", { tier: p.tier }) : I18n.t("ov.possible.tierRange", { min: p.min_tier, tier: p.tier });
     const what =
       p.reason === "not_met_yet"
-        ? `not met yet · tavern tier ${p.tier}: could have ${tiers}`
-        : `tavern tier ${p.tier}: could have`;
+        ? I18n.t("ov.possible.notMet", { tier: p.tier, tiers })
+        : I18n.t("ov.possible.could", { tier: p.tier });
     const title = el("div", "when", `${hero ? `${heroName(hero)} · ` : ""}${what}`);
     title.append(mark(p.source) || "");
     block.append(title);
     if (p.missing === "tribes_unknown") {
-      block.append(el("div", "none", "Lobby tribes unknown: enter them in the app to list these. Nothing is guessed."));
+      block.append(el("div", "none", I18n.t("ov.possible.noTribes")));
       return block;
     }
     if (p.missing === "no_card_data") {
-      block.append(el("div", "none", "No card data on this PC yet, so these cannot be listed."));
+      block.append(el("div", "none", I18n.t("ov.possible.noCards")));
       return block;
     }
     const from = el("div", "none", tribesText(p));
     from.append(mark(p.tribes_source) || "");
     block.append(from);
     if (p.reason === "not_met_yet") {
-      block.append(el("div", "none", "No board of theirs seen yet: a guess from their tier and the lobby tribes. The game's own tribe hint is not in the log."));
+      block.append(el("div", "none", I18n.t("ov.possible.guess")));
     }
-    if (!p.cards.length) block.append(el("div", "none", "No pool minion matches."));
+    if (!p.cards.length) block.append(el("div", "none", I18n.t("ov.possible.none")));
     else block.append(...cardNames(p.cards));
     return block;
   }

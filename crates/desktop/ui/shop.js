@@ -5,47 +5,51 @@
 "use strict";
 
 window.TLShop = (() => {
-  const KIND_WORDS = {
-    roll: "rolls", buy: "buys", buy_spell: "spell buys", sell: "sells", freeze: "freezes",
-    unfreeze: "unfreezes", tier_up: "tier-ups", hero_power: "hero powers", play: "cards played",
-    move: "minions moved", choose: "picks", other: "other",
+  const I18n = window.TLI18n;
+  const t = I18n.t;
+  // The word for a kind of logged action: shop.kind.<kind>, as the app writes
+  // them (strings/details.js); an unknown kind shows as it is.
+  const kindWord = (k) => {
+    const key = `shop.kind.${k === "other" ? "misc" : k}`;
+    return key in I18n.tables().en ? t(key) : k;
   };
-  const NOT_RECORDED = "Not recorded: this game was saved by an older version of the app. "
-    + "Run tavern-watch --reparse while its log is still on disk to add it.";
-  const NOT_AVAILABLE = "No shop record: the log of this game could not be read.";
+  // A card's tooltip: its name (or id), and that it was frozen from last turn.
+  const cardTitle = (id, frozen) => {
+    const name = window.TLCards.name(id) || id || t("shop.card.unknown");
+    return frozen ? t("shop.card.frozen", { name }) : name;
+  };
 
   // Card labels drawn before the card data answered; named when it does.
   let unnamed = [];
   window.TLCards.onChange(() => {
-    unnamed = unnamed.filter(({ box, label, id, suffix, ui }) => {
+    unnamed = unnamed.filter(({ box, label, id, frozen, ui }) => {
       if (!box.isConnected) return false;
       const name = window.TLCards.name(id);
       if (name === undefined) return true;
       label.textContent = name || id;
-      box.title = `${name || id}${suffix}`;
+      box.title = cardTitle(id, frozen);
       ui.addTip(box, "card_data");
       return false;
     });
   });
 
-  const one = (v, digits = 1) => (v === null || v === undefined ? "—" : v.toFixed(digits));
-  const num = (v) => (v === null || v === undefined ? "—" : String(v));
-  const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+  const one = (v, digits = 1) => (v === null || v === undefined ? "—" : I18n.num(v, digits));
+  const num = (v) => (v === null || v === undefined ? "—" : I18n.num(v));
 
   // A card picture with its name (or id) as tooltip; the id as text when there is no picture.
   function card(ui, id, extraClass) {
     const box = ui.el("span", `shop-card ${extraClass || ""}`.trim());
     const name = window.TLCards.name(id);
-    const suffix = extraClass === "frozen" ? " (frozen from last turn)" : "";
-    box.title = `${name || id || "Unknown card"}${suffix}`;
+    const frozen = extraClass === "frozen";
+    box.title = cardTitle(id, frozen);
     const img = ui.art(id, "shop-art");
     if (img) {
-      img.title = "Picture: card database. © Blizzard Entertainment.";
+      img.title = t("shop.card.picture", { source: t("source.card_data.label") });
       box.append(img);
     }
     const label = ui.el("span", "shop-card-id", name || id || "?");
     box.append(label);
-    if (name === undefined && id) unnamed.push({ box, label, id, suffix, ui });
+    if (name === undefined && id) unnamed.push({ box, label, id, frozen, ui });
     ui.addTip(box, id ? "card_data" : "unknown");
     return box;
   }
@@ -74,42 +78,42 @@ window.TLShop = (() => {
   // The turns themselves are drawn by turns.js.
   function recapSummary(shop, ui, isDuos, game) {
     const section = ui.el("section", "recap-part shop");
-    const heading = ui.el("h3", null, "Shop and actions");
+    const heading = ui.el("h3", null, t("shop.recap.title"));
     const mark = ui.sourceMark(shop.source);
     if (mark) heading.append(mark);
     section.append(heading);
     if (shop.state !== "recorded") {
-      section.append(ui.withSource(ui.el("p", "empty", shop.state === "not_recorded" ? NOT_RECORDED : NOT_AVAILABLE), "unknown"));
+      section.append(ui.withSource(ui.el("p", "empty", shop.state === "not_recorded" ? t("shop.not_recorded") : t("shop.not_available")), "unknown"));
       return section;
     }
-    const t = shop.totals;
-    if (!t) {
-      section.append(ui.withSource(ui.el("p", "empty", "No shop turn in the log."), "unknown"));
+    const tot = shop.totals;
+    if (!tot) {
+      section.append(ui.withSource(ui.el("p", "empty", t("shop.recap.no_turn")), "unknown"));
       return section;
     }
     const facts = ui.el("dl", "facts");
     facts.append(
-      fact(ui, "APM (logged)", one(shop.apm), shop.apm_definition),
-      fact(ui, "Rolls", `${t.rolls}${t.free_rolls ? ` (${t.free_rolls} free)` : ""}`),
-      fact(ui, "Buys · sells", `${t.buys + t.spell_buys} · ${t.sells}`),
-      fact(ui, "Gold spent", num(t.gold_spent)),
+      fact(ui, t("shop.apm"), one(shop.apm), I18n.backend(shop.apm_definition)),
+      fact(ui, t("shop.rolls"), tot.free_rolls ? t("shop.rolls_free", { rolls: num(tot.rolls), free: num(tot.free_rolls) }) : num(tot.rolls)),
+      fact(ui, t("shop.buys_sells"), `${num(tot.buys + tot.spell_buys)} · ${num(tot.sells)}`),
+      fact(ui, t("shop.gold_spent"), num(tot.gold_spent)),
     );
     section.append(facts);
-    const more = window.TLCompact.fold(ui, `${game}:shop-more`, "More shop numbers");
+    const more = window.TLCompact.fold(ui, `${game}:shop-more`, t("shop.more"));
     const moreFacts = ui.el("dl", "facts");
     moreFacts.append(
-      fact(ui, "Actions", shop.apm === null && t.actions === 0 ? "—" : num(t.actions), shop.action_kinds.map(([k, n]) => `${n} ${KIND_WORDS[k] || k}`).join(", ")),
-      fact(ui, "Minutes", one(shop.minutes)),
+      fact(ui, t("shop.actions"), shop.apm === null && tot.actions === 0 ? "—" : num(tot.actions), shop.action_kinds.map(([k, n]) => `${num(n)} ${kindWord(k)}`).join(", ")),
+      fact(ui, t("shop.minutes"), one(shop.minutes)),
     );
     // Gold extras and free rolls (T-210): "not recorded" in older games, never 0.
-    more.append(moreFacts, window.TLExtras.factList(ui, window.TLExtras.shopExtras(t, isDuos, shop.turns)));
-    const ups = shop.tier_ups.map((u) => `tier ${u.tier} on turn ${u.turn}`).join(" · ");
-    more.append(ui.el("p", "note", ups ? `Tavern tier-ups: ${ups}.` : "No tavern tier-up in the log."));
-    more.append(ui.el("p", "note", shop.apm_definition));
-    more.append(ui.el("p", "note", "Frozen: kept from the last turn. Only your own shop is in the log."));
+    more.append(moreFacts, window.TLExtras.factList(ui, window.TLExtras.shopExtras(tot, isDuos, shop.turns)));
+    const ups = shop.tier_ups.map((u) => t("shop.tier_up_item", { tier: u.tier, turn: u.turn })).join(" · ");
+    more.append(ui.el("p", "note", ups ? t("shop.tier_ups", { list: ups }) : t("shop.tier_ups.none")));
+    more.append(ui.el("p", "note", I18n.backend(shop.apm_definition)));
+    more.append(ui.el("p", "note", t("shop.frozen_note")));
     section.append(more);
     if (shop.ended === false) {
-      section.append(ui.withSource(ui.el("p", "note", "The log stops before the game ends: the last turn may be cut short."), "unknown"));
+      section.append(ui.withSource(ui.el("p", "note", t("shop.cut_short")), "unknown"));
     }
     return section;
   }
@@ -125,7 +129,7 @@ window.TLShop = (() => {
     const tr = ui.el("tr");
     const s = h.shop;
     tr.append(
-      ui.el("td", h.name ? "hero-name" : "hero", h.name || h.hero || "Unknown hero"),
+      ui.el("td", h.name ? "hero-name" : "hero", h.name || h.hero || t("shop.hero.unknown")),
       statCell(ui, s.games || "—", s.source),
       statCell(ui, one(s.rolls), s.source),
       statCell(ui, one(s.buys), s.source),
@@ -143,39 +147,39 @@ window.TLShop = (() => {
     if (!box || !s) return;
     // The games left out stay in view: an older game is "not recorded", not 0.
     const notes = [
-      s.not_recorded && `${s.not_recorded} saved by an older version (run tavern-watch --reparse while their logs are on disk)`,
-      s.not_counted && `${s.not_counted} with the log cut short, no shop turn or an unreadable shop record`,
+      s.not_recorded && t("shop.left.old", { n: I18n.num(s.not_recorded) }),
+      s.not_counted && t("shop.left.cut", { n: I18n.num(s.not_counted) }),
     ].filter(Boolean);
-    const left = notes.length ? [ui.el("p", "note shop-left", `Not counted: ${notes.join("; ")}.`)] : [];
+    const left = notes.length ? [ui.el("p", "note shop-left", t("shop.left", { list: notes.join("; ") }))] : [];
     if (!s.games) {
-      box.replaceChildren(ui.el("p", "empty", "No game with a shop record yet."), ...left);
+      box.replaceChildren(ui.el("p", "empty", t("shop.stats.none")), ...left);
       return;
     }
     const facts = ui.el("dl", "facts");
     facts.append(
-      fact(ui, "Games counted", s.games || "—"),
-      fact(ui, "APM (logged)", one(s.apm), s.apm_definition),
-      fact(ui, "Rolls / game", one(s.rolls)),
-      fact(ui, "Buys / game", one(s.buys)),
-      fact(ui, "Gold spent / game", one(s.gold_spent)),
+      fact(ui, t("shop.games_counted"), s.games ? I18n.num(s.games) : "—"),
+      fact(ui, t("shop.apm"), one(s.apm), I18n.backend(s.apm_definition)),
+      fact(ui, t("shop.rolls_game"), one(s.rolls)),
+      fact(ui, t("shop.buys_game"), one(s.buys)),
+      fact(ui, t("shop.gold_game"), one(s.gold_spent)),
     );
-    const more = window.TLCompact.fold(ui, `stats:${mode}:shop-more`, "More: gold, tier-ups and each hero");
+    const more = window.TLCompact.fold(ui, `stats:${mode}:shop-more`, t("shop.stats.more"));
     const moreFacts = ui.el("dl", "facts");
-    moreFacts.append(fact(ui, "Free rolls / game", one(s.free_rolls)), fact(ui, "Sells / game", one(s.sells)));
+    moreFacts.append(fact(ui, t("shop.free_rolls_game"), one(s.free_rolls)), fact(ui, t("shop.sells_game"), one(s.sells)));
     more.append(moreFacts, window.TLExtras.factList(ui, window.TLExtras.shopExtraStats(s)));
     if (s.tier_turns.length) {
       const list = ui.el("ul", "tribe-list");
-      list.append(...s.tier_turns.map((t) => {
-        const li = ui.el("li", null, `Tier ${t.tier}: turn ${one(t.average_turn)}`);
-        li.title = `Average turn you reached tier ${t.tier}, over the ${plural(t.games, "game")} that reached it.`;
+      list.append(...s.tier_turns.map((tt) => {
+        const li = ui.el("li", null, t("shop.tier_turn", { tier: tt.tier, turn: one(tt.average_turn) }));
+        li.title = t("shop.tier_turn.tip", { tier: tt.tier, games: I18n.plural("shop.games", tt.games) });
         ui.addTip(li, "log");
         return li;
       }));
-      more.append(ui.el("p", "note", "Average turn of each tavern tier-up:"), list);
+      more.append(ui.el("p", "note", t("shop.tier_turns.note")), list);
     }
     const perHero = heroShopTable(ui, m, mode);
-    if (perHero) more.append(ui.el("p", "note", "Per hero, averages per game:"), perHero);
-    more.append(ui.el("p", "note", s.apm_definition));
+    if (perHero) more.append(ui.el("p", "note", t("shop.per_hero")), perHero);
+    more.append(ui.el("p", "note", I18n.backend(s.apm_definition)));
     box.replaceChildren(facts, ...left, more);
   }
 
@@ -186,14 +190,14 @@ window.TLShop = (() => {
     const name = (h) => h.name || h.hero || "";
     const ranked = window.TLCompact.rank(heroes, { games: (h) => h.shop.games, name });
     const columns = [
-      { label: "Hero", sort: name, text: true },
-      { label: "Games", num: true, sort: (h) => h.shop.games },
-      { label: "Rolls", num: true, sort: (h) => h.shop.rolls },
-      { label: "Buys", num: true, sort: (h) => h.shop.buys },
-      { label: "Gold spent", num: true, sort: (h) => h.shop.gold_spent },
-      { label: "APM", num: true, sort: (h) => h.shop.apm },
+      { label: t("shop.col.hero"), sort: name, text: true },
+      { label: t("shop.col.games"), num: true, sort: (h) => h.shop.games },
+      { label: t("shop.col.rolls"), num: true, sort: (h) => h.shop.rolls },
+      { label: t("shop.col.buys"), num: true, sort: (h) => h.shop.buys },
+      { label: t("shop.col.gold_spent"), num: true, sort: (h) => h.shop.gold_spent },
+      { label: t("shop.col.apm"), num: true, sort: (h) => h.shop.apm },
     ];
-    return window.TLCompact.table(ui, { key: `shop-heroes:${mode}`, columns, rows: ranked, row: (h) => heroRow(ui, h), label: "Shop per hero" });
+    return window.TLCompact.table(ui, { key: `shop-heroes:${mode}`, columns, rows: ranked, row: (h) => heroRow(ui, h), label: t("shop.per_hero.label") });
   }
 
   return { recapSummary, renderStats, card, cardRow };

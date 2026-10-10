@@ -34,11 +34,6 @@ const TRIBES_TRIES: u32 = 20;
 /// Reads of the rating per visit to the lobby screen.
 const RATING_TRIES: u32 = 10;
 
-/// The switch's words, for the settings page.
-pub const SWITCH_LABEL: &str = "Read the lobby's tribes and your rating from the game";
-/// The risk, in one paragraph, shown next to the switch.
-pub const RISK: &str = "When this is on, Tavern Ledger reads two things the game already shows you, the lobby's five tribes at hero select and your own Battlegrounds rating, straight from the game while it runs. It only reads: it never changes the game, adds code to it or plays for you, and the values stay on this PC. Reading the game's memory goes against the letter of Blizzard's End User License Agreement. Other trackers have done it for over ten years with no known bans, but Blizzard could act against it at any time, and the account at risk is yours. It is off unless you turn it on.";
-
 /// Asks the game for the two values. The real one opens the game read-only;
 /// tests use a fake that counts calls.
 pub trait Reader {
@@ -99,10 +94,9 @@ pub struct View {
     pub status: ReaderStatus,
     pub tribes_status: ReaderStatus,
     pub rating: OwnRating,
-    /// `game`: the label "from the game".
+    /// `game`: the label "from the game". The switch's words and the risk
+    /// paragraph are the window's (`settings.memory.*`, English and Spanish).
     pub source: Source,
-    pub label: &'static str,
-    pub risk: &'static str,
     pub checked_builds: &'static [i64],
     /// Set when the choice could not be saved or read.
     pub warning: Option<String>,
@@ -231,8 +225,6 @@ impl GameMemory {
                 status: s.rating_status,
             },
             source: Source::Game,
-            label: SWITCH_LABEL,
-            risk: RISK,
             checked_builds: CHECKED_BUILDS,
             warning: lock(&self.warning).clone(),
         }
@@ -581,15 +573,5 @@ mod tests {
         let view = gm.view();
         assert_eq!(view.rating.solo, None);
         assert_eq!(view.rating.status, ReaderStatus::UnsupportedVersion);
-    }
-
-    #[test]
-    fn the_view_carries_the_switch_words_and_the_risk() {
-        let gm = GameMemory::default();
-        let view = gm.view();
-        assert!(!view.enabled);
-        assert!(view.risk.contains("End User License Agreement"));
-        assert!(view.risk.contains("off unless you turn it on"));
-        assert_eq!(view.label, SWITCH_LABEL);
     }
 }

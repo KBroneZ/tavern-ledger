@@ -2,6 +2,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const X = require("../ui/extras.js");
+const I18n = require("../ui/i18n.js");
+require("../ui/strings/common.js");
+require("../ui/strings/details.js");
 
 test("results say how many came from the log, were inferred or are unknown", () => {
   const line = X.resultsLine({ from_log: 9, inferred: 2, unknown: 1, recorded: true });
@@ -87,4 +90,22 @@ test("per-hero pick stats give rate and place, and the games left out", () => {
   assert.match(s.note, /1 with no hero choice/);
   assert.equal(s.empty, null);
   assert.equal(X.heroPickStats({ games: 0, not_recorded: 0, no_data: 0, heroes: [] }).empty, "No hero pick in the log yet.");
+});
+
+test("in Spanish the words, numbers and shares follow the language", () => {
+  I18n.setLang("es");
+  try {
+    assert.equal(X.NOT_RECORDED, "no registrado");
+    const facts = X.shopExtraStats({ extra_gold: 2.5, sell_gold: 4, gold_beyond_income: 6.5, free_refreshes: null, passes: 0, extras_games: 4, free_refresh_games: 0 });
+    assert.equal(facts[0].label, "Oro extra / partida");
+    assert.equal(facts[0].value, "2,5");
+    assert.equal(facts[0].tip, "Media sobre 4 partidas con este registro.");
+    assert.equal(facts[3].value, "no registrado");
+    const p = X.heroPick({ state: "recorded", source: "log", rerolls: 1, offered: [{ id: "H_A", name: "Alpha" }], picked: { id: "H_A", name: "Alpha" } });
+    assert.equal(p.rerolls, "1 cambio de héroe");
+    assert.match(X.resultsLine({ from_log: 3, inferred: 0, unknown: 0, recorded: true }).text, /^Resultados: 3 del registro del juego\./);
+  } finally {
+    I18n.setLang("en");
+  }
+  assert.equal(X.NOT_RECORDED, "not recorded");
 });
