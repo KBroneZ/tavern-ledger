@@ -67,15 +67,12 @@ function json(status: number, body: unknown, extra: Record<string, string> = {})
 }
 
 function serviceHeaders(env: Env): Record<string, string> {
-  // New-style secret keys (sb_secret_...) go in `apikey` only; the gateway
-  // turns them into a service-role token. Legacy keys are JWTs.
+  // The secret key (sb_secret_...) goes in `apikey` only, never as a bearer
+  // token; the gateway turns it into a service-role token (D-042, D-053).
   const headers: Record<string, string> = {
     apikey: env.serviceKey,
     "Content-Type": "application/json",
   };
-  if (!env.serviceKey.startsWith("sb_")) {
-    headers.Authorization = `Bearer ${env.serviceKey}`;
-  }
   return headers;
 }
 

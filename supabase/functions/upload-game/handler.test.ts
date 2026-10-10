@@ -7,7 +7,7 @@ import { VALIDATOR_VERSION } from "./validate.ts";
 
 type Bytes = Uint8Array<ArrayBuffer>;
 
-const ENV: Env = { url: "http://api.test", serviceKey: "service-key-for-tests" };
+const ENV: Env = { url: "http://api.test", serviceKey: "sb_secret_test" };
 const USER = "00000000-0000-4000-8000-00000000000a";
 const TOKEN = "made-up-access-token-for-tests";
 const PATH = `/upload-game/v1/games/${SESSION}/1`;
@@ -408,7 +408,7 @@ Deno.test("a network error is 500 with the step, and holds no token or user id",
     assertEquals(res.status, 500);
     assertEquals(JSON.parse(body).step, "ip check");
     assertEquals(
-      text.includes(TOKEN) || text.includes(USER) || text.includes("service-key"),
+      text.includes(TOKEN) || text.includes(USER) || text.includes(ENV.serviceKey),
       false,
     );
   } finally {
