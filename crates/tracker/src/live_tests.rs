@@ -634,3 +634,89 @@ fn our_own_seat_is_never_marked_as_next() {
     let live = live_game(&duos(vec![])).with_next_opponent(Some(2));
     assert!(live.opponents.iter().all(|o| !o.next));
 }
+
+fn strings(list: &[&str]) -> Vec<String> {
+    list.iter().map(|s| s.to_string()).collect()
+}
+
+/// A game at turn 2 whose tavern offered a single-tribe Beast and Murloc.
+fn tavern_beast_murloc() -> (LiveGame, Vec<crate::possible::PoolCard>) {
+    let mut report = at_turn(solo(vec![], "incomplete"), 2);
+    report["build"] = json!(253216);
+    report["shop"]["turns"][0]["offers"] = json!([
+        {"card_id": "BEAST_1", "roll": 0, "frozen": false},
+        {"card_id": "MURLOC_1", "roll": 0, "frozen": false},
+    ]);
+    let card = |id: &str, tribe: &str| crate::possible::PoolCard {
+        id: id.into(),
+        tier: 1,
+        tribes: vec![tribe.to_string()],
+        duos_only: false,
+    };
+    let pool = vec![card("BEAST_1", "BEAST"), card("MURLOC_1", "MURLOC")];
+    (live_game(&report), pool)
+}
+
+#[test]
+fn tribes_from_the_game_come_before_entered_and_inferred_ones() {
+    use crate::game_values::ReaderStatus;
+    let (live, pool) = tavern_beast_murloc();
+    let game = strings(&["UNDEAD", "BEAST", "MURLOC", "PIRATE", "DRAGON"]);
+    let entered = strings(&["BEAST", "DEMON", "MURLOC", "NAGA", "UNDEAD"]);
+    let live = live
+        .with_entered_tribes(Some(&entered))
+        .with_game_tribes(Some(&game), ReaderStatus::Ok)
+        .with_possible(&pool);
+    assert_eq!(
+        live.lobby_tribes.tribes,
+        ["BEAST", "DRAGON", "MURLOC", "PIRATE", "UNDEAD"]
+    );
+    assert_eq!(live.lobby_tribes.source, Source::Game);
+    assert_eq!(live.lobby_tribes.basis, TribesBasis::Game);
+    assert!(live.lobby_tribes.complete);
+    assert!(live.game_tribes.checked_build);
+    assert_eq!(live.game_tribes.note, None);
+    // The entered ones stay apart, as entered.
+    assert_eq!(live.entered_tribes_source, Source::Entered);
+}
+
+#[test]
+fn tribes_from_the_game_the_tavern_contradicts_fall_back_and_say_unsupported() {
+    use crate::game_values::{ReaderStatus, UNSUPPORTED_TRIBES};
+    let (live, pool) = tavern_beast_murloc();
+    // No Murloc, but the tavern offered a single-tribe Murloc.
+    let game = strings(&["UNDEAD", "BEAST", "DEMON", "PIRATE", "DRAGON"]);
+    let live = live
+        .with_game_tribes(Some(&game), ReaderStatus::Ok)
+        .with_possible(&pool);
+    assert_eq!(live.lobby_tribes.tribes, ["BEAST", "MURLOC"]);
+    assert_eq!(live.lobby_tribes.source, Source::Inferred);
+    assert!(live.game_tribes.tribes.is_empty());
+    assert_eq!(live.game_tribes.status, ReaderStatus::UnsupportedVersion);
+    assert_eq!(live.game_tribes.note, Some(UNSUPPORTED_TRIBES));
+}
+
+#[test]
+fn a_failed_read_falls_back_to_the_entered_tribes() {
+    use crate::game_values::ReaderStatus;
+    let (live, pool) = tavern_beast_murloc();
+    let entered = strings(&["BEAST", "DEMON", "MURLOC", "NAGA", "UNDEAD"]);
+    let live = live
+        .with_entered_tribes(Some(&entered))
+        .with_game_tribes(None, ReaderStatus::UnsupportedVersion)
+        .with_possible(&pool);
+    assert_eq!(live.lobby_tribes.source, Source::Entered);
+    assert_eq!(live.game_tribes.status, ReaderStatus::UnsupportedVersion);
+}
+
+#[test]
+fn with_the_switch_off_nothing_from_the_game_is_in_the_state() {
+    let (live, pool) = tavern_beast_murloc();
+    let live = live.with_possible(&pool);
+    assert_eq!(live.game_tribes, crate::game_values::GameTribes::default());
+    assert_eq!(
+        live.game_tribes.status,
+        crate::game_values::ReaderStatus::Off
+    );
+    assert_ne!(live.lobby_tribes.source, Source::Game);
+}

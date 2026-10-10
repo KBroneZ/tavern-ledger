@@ -1,6 +1,6 @@
 # Tavern Ledger
 
-Free, open-source Battlegrounds tracker for Windows, plus a website to follow your progress. It only reads the game's local log files: no memory reading, no injection, no game file changes.
+Free, open-source Battlegrounds tracker for Windows, plus a website to follow your progress. It reads the game's local log files and, only if you turn it on, two values the game already shows you (the lobby's five tribes and your own rating) from the game's memory, read-only. No injection, no game file changes, nothing done for you in the game.
 
 > Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.
 
@@ -73,7 +73,7 @@ Overlay polish (T-309, D-049): the hover card now opens at the top of the game w
 
 Lobby tribes and unmet opponents (T-310, D-050): the game does not write the lobby's tribes to its logs, nor the tribe and count it shows for each player ([research](docs/research/lobby-tribes-log.md)). The overlay now works the tribes out from Bob's offers with the card data (a minion of a single tribe proves that tribe; exact on all 18 games checked) and shows them as "Lobby (N of 5 confirmed)", marked inferred; the tribes you enter still come first. From turn 4 on, hovering an opponent you have not met yet lists the minions of their tier and the tier below from those tribes, marked "possible".
 
-Exact lobby tribes (T-326): the research is done. No log the game writes and no public source has the lobby's five tribes (checked tag by tag on all 11 raw games on disk, every log file); every app that shows them at hero select reads the game's memory. A design for a read-only memory read of two values the game shows you (the lobby's tribes and your own rating), with the account risk said plainly, is decision D-063, **approved by the user on 2026-10-11**. It is not built yet (T-327 the reader, T-328 the texts); until it ships, the app still only reads the log files. Research: [docs/research/lobby-tribes-exact.md](docs/research/lobby-tribes-exact.md).
+Exact lobby tribes (T-326): the research is done. No log the game writes and no public source has the lobby's five tribes (checked tag by tag on all 11 raw games on disk, every log file); every app that shows them at hero select reads the game's memory. A design for a read-only memory read of two values the game shows you (the lobby's tribes and your own rating), with the account risk said plainly, is decision D-063, **approved by the user on 2026-10-11**. Built in T-327 and T-328 (below). Research: [docs/research/lobby-tribes-exact.md](docs/research/lobby-tribes-exact.md).
 
 Privacy and terms (T-104b): a data inventory written from the code, and the privacy policy and terms in [docs/legal/](docs/legal/), shown on the site at `/privacy/` and `/terms/`. In force from 10 October 2026, approved by the user; every provider detail is checked against the live setup (Supabase in Frankfurt, Cloudflare Pages and Email Routing, Lettermint, salted IP hashes). No analytics, minimum age 16, the security log is kept 90 days.
 
@@ -124,7 +124,8 @@ Use `--mode duos` for Duos, `--hearthstone-log PATH` to read the region from the
 Rust workspace (Tauri 2, D-014). `tavern-watch` follows the game's `Power.log`
 and saves each Battlegrounds game to `%APPDATA%\TavernLedger\games.jsonl` as
 soon as it ends; the desktop app does the same in the background and shows
-the history. Both only read the log files. The history holds card ids,
+the history. Both read the log files; the app can also read two values from
+the game itself if you turn that on (D-063, below). The history holds card ids,
 places and boards, never player names. Hero names come from the log itself,
 in your game's language; a hero the log does not name shows its card id.
 Only one of them can write the history at a time: a second copy says so and

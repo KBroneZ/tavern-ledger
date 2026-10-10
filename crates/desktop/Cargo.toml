@@ -18,3 +18,4 @@ serde_json = "1"
 tracker = { path = "../tracker" }
 uploader = { path = "../uploader", features = ["http"] }
 cards = { path = "../cards", features = ["http"] }
+game-memory = { path = "../game-memory" }

@@ -1,11 +1,13 @@
 //! Follows Hearthstone's `Power.log` and keeps a local history of
-//! Battlegrounds games (T-101). Read-only towards the game: it only reads the
-//! log files (D-004).
+//! Battlegrounds games (T-101). Read-only towards the game: this crate only
+//! reads the log files (D-004); the app's optional read of two values from the
+//! game itself is in `game-memory` (D-063).
 
 pub mod choices;
 pub mod dev_reconnect;
 pub mod discover;
 pub mod game_clock;
+pub mod game_values;
 pub mod hero_pick;
 pub mod live;
 pub mod live_seats;

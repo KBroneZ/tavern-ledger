@@ -14,6 +14,7 @@ use bg_parser::report::LobbySlot;
 use serde::Serialize;
 use serde_json::Value;
 
+use crate::game_values::{GameTribes, ReaderStatus};
 use crate::live_seats::{seats_shown, LiveSeat};
 use crate::possible::{LobbyTribes, Possible};
 use crate::provenance::{legend, LegendEntry, Source};
@@ -124,9 +125,15 @@ pub struct LiveGame {
     /// The five tribes the user picked (T-303), never merged with `tribes`.
     pub entered_tribes: Vec<String>,
     pub entered_tribes_source: Source,
-    /// The lobby's tribes as far as the app knows them (entered, else
-    /// confirmed by the tavern with the card data, else seen in the tavern),
-    /// added by the app with the possible minions (D-050).
+    /// The five tribes read from the game (D-063), when the user turned that
+    /// on, with the reader's status; empty otherwise. Never merged with the
+    /// other tribes, never saved in the report.
+    pub game_tribes: GameTribes,
+    /// The game build from the log, for the reader's checked builds.
+    pub build: Option<i64>,
+    /// The lobby's tribes as far as the app knows them (from the game, else
+    /// entered, else confirmed by the tavern with the card data, else seen in
+    /// the tavern), added by the app with the possible minions (D-050).
     pub lobby_tribes: LobbyTribes,
     /// Every pool minion Bob offered so far (card ids, repeats kept), from
     /// the shop record; read by the app with the card data, not shown.
@@ -150,6 +157,16 @@ impl LiveGame {
         } else {
             Source::Entered
         };
+        self
+    }
+}
+
+impl LiveGame {
+    /// Adds the tribes the reader got from the game for this game (D-063),
+    /// with its status. Checked here; checked against the tavern in
+    /// [`LiveGame::with_possible`].
+    pub fn with_game_tribes(mut self, tribes: Option<&[String]>, status: ReaderStatus) -> Self {
+        self.game_tribes = GameTribes::new(tribes, status, self.build);
         self
     }
 }
@@ -266,6 +283,8 @@ pub fn live_game(report: &Value) -> LiveGame {
         tribes,
         entered_tribes: Vec::new(),
         entered_tribes_source: Source::Unknown,
+        game_tribes: GameTribes::default(),
+        build: report.get("build").and_then(Value::as_i64),
         lobby_tribes: LobbyTribes::default(),
         offered: offered(report),
         opponents,

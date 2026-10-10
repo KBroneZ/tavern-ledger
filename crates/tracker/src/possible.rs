@@ -8,7 +8,9 @@
 //! an unknown turn: there is nothing to go on.
 //!
 //! The lobby's tribes (D-050): the log has no list of them. They are the ones
-//! the user entered (T-303); else the tribes the tavern confirmed: a pool
+//! read from the game when the user turned that on (D-063), while the tavern
+//! does not contradict them; else the ones the user entered (T-303); else
+//! the tribes the tavern confirmed: a pool
 //! minion of exactly one tribe that Bob offered proves its tribe is in the
 //! lobby (the card data knows every tribe of a minion, the log's `CARDRACE`
 //! only one, so its counts can show tribes that are not in the lobby); else
@@ -61,6 +63,8 @@ pub enum NoList {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TribesBasis {
+    /// Read from the game (D-063), checked against the tavern.
+    Game,
     /// The user typed them (T-303).
     Entered,
     /// Single-tribe pool minions Bob offered, read with the card data.
@@ -149,13 +153,24 @@ pub fn confirmed_tribes(offered: &[String], pool: &[PoolCard]) -> Option<Vec<Str
     (!tribes.is_empty() && tribes.len() <= LOBBY_SIZE).then_some(tribes)
 }
 
-/// The lobby's tribes for the lists: entered by the user, else confirmed by
+/// The lobby's tribes for the lists: read from the game (already checked,
+/// see [`crate::game_values`]), else entered by the user, else confirmed by
 /// the tavern with the card data, else seen in the tavern, else none.
 pub fn lobby_tribes(
+    game: &[String],
     entered: &[String],
     confirmed: Option<&[String]>,
     seen: &[String],
 ) -> LobbyTribes {
+    let game = real(game);
+    if game.len() == LOBBY_SIZE {
+        return LobbyTribes {
+            tribes: game,
+            source: Source::Game,
+            basis: TribesBasis::Game,
+            complete: true,
+        };
+    }
     let entered = real(entered);
     if !entered.is_empty() {
         return LobbyTribes {
@@ -252,14 +267,22 @@ pub fn possible_for(
 }
 
 impl LiveGame {
-    /// Adds the lobby's tribes as far as the user, the tavern and the card
-    /// data tell, and the possible minions of every opponent hero the turn
-    /// rule lets through ([`reason_for`]). Call it after the entered tribes
-    /// and the leaderboard are in.
+    /// Adds the lobby's tribes as far as the game, the user, the tavern and
+    /// the card data tell, and the possible minions of every opponent hero
+    /// the turn rule lets through ([`reason_for`]). Call it after the game's
+    /// and the entered tribes and the leaderboard are in. Tribes from the
+    /// game that the tavern contradicts are dropped here.
     pub fn with_possible(mut self, pool: &[PoolCard]) -> Self {
         let seen: Vec<String> = self.tribes.iter().map(|t| t.tribe.clone()).collect();
         let confirmed = confirmed_tribes(&self.offered, pool);
-        let lobby = lobby_tribes(&self.entered_tribes, confirmed.as_deref(), &seen);
+        self.game_tribes =
+            std::mem::take(&mut self.game_tribes).checked_against(confirmed.as_deref());
+        let lobby = lobby_tribes(
+            &self.game_tribes.tribes,
+            &self.entered_tribes,
+            confirmed.as_deref(),
+            &seen,
+        );
         let duos = self.is_duos;
         let turn = self.turn.value;
         for opponent in &mut self.opponents {
@@ -315,7 +338,7 @@ mod tests {
     }
 
     fn entered(tribes: &[String]) -> LobbyTribes {
-        lobby_tribes(tribes, None, &[])
+        lobby_tribes(&[], tribes, None, &[])
     }
 
     fn ids(p: &Possible) -> Vec<&str> {
@@ -449,13 +472,13 @@ mod tests {
         let entered = strings(&["BEAST", "DEMON", "DRAGON", "MURLOC", "NAGA"]);
         let confirmed = strings(&["MURLOC"]);
         let seen = strings(&["PIRATE", "NEUTRAL", "ALL"]);
-        let lobby = lobby_tribes(&entered, Some(&confirmed), &seen);
+        let lobby = lobby_tribes(&[], &entered, Some(&confirmed), &seen);
         assert_eq!(lobby.tribes, entered);
         assert_eq!(
             (lobby.source, lobby.basis, lobby.complete),
             (Source::Entered, TribesBasis::Entered, true)
         );
-        let lobby = lobby_tribes(&[], Some(&confirmed), &seen);
+        let lobby = lobby_tribes(&[], &[], Some(&confirmed), &seen);
         assert_eq!(
             lobby.tribes, confirmed,
             "the tavern's confirmed tribes next"
@@ -464,7 +487,7 @@ mod tests {
             (lobby.source, lobby.basis, lobby.complete),
             (Source::Inferred, TribesBasis::TavernConfirmed, false)
         );
-        let lobby = lobby_tribes(&[], None, &seen);
+        let lobby = lobby_tribes(&[], &[], None, &seen);
         assert_eq!(
             lobby.tribes,
             strings(&["PIRATE"]),
@@ -475,10 +498,13 @@ mod tests {
             (Source::Inferred, TribesBasis::TavernSeen, false)
         );
         assert_eq!(
-            lobby_tribes(&[], None, &strings(&["NEUTRAL"])),
+            lobby_tribes(&[], &[], None, &strings(&["NEUTRAL"])),
             LobbyTribes::default()
         );
-        assert_eq!(lobby_tribes(&[], Some(&[]), &[]).source, Source::Unknown);
+        assert_eq!(
+            lobby_tribes(&[], &[], Some(&[]), &[]).source,
+            Source::Unknown
+        );
     }
 
     #[test]
@@ -522,8 +548,8 @@ mod tests {
     #[test]
     fn five_confirmed_tribes_make_the_lobby_complete() {
         let five = strings(&["BEAST", "DEMON", "DRAGON", "MURLOC", "NAGA"]);
-        assert!(lobby_tribes(&[], Some(&five), &[]).complete);
-        assert!(!lobby_tribes(&[], Some(&five[..4]), &[]).complete);
+        assert!(lobby_tribes(&[], &[], Some(&five), &[]).complete);
+        assert!(!lobby_tribes(&[], &[], Some(&five[..4]), &[]).complete);
     }
 
     #[test]

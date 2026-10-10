@@ -269,5 +269,5 @@ Not planned yet; each needs its own task and, where noted, a decision.
 ## Out of scope for now
 
 - Combat simulator (very high cost; only if the project is still alive after F4).
-- Memory reading (D-004). It is how other trackers get exact lobby tribes at hero select and opponents' names (so their MMR); we show those as inferred or unknown instead.
+- Memory reading beyond D-063 (D-004). D-063 allows one read-only read, off by default, of the lobby's tribes and the player's own rating (T-327). Anything else other trackers read from memory, such as opponents' names (so their MMR) or each player's main minion type, stays out; we show those as inferred or unknown instead.
 - Injection or client modification, including the "minion dance": discarded for good (D-006).
