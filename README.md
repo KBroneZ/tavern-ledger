@@ -22,6 +22,8 @@ Web stack (T-103): a static Astro site plus Supabase in the EU (Postgres, login,
 
 Backend (T-104a): the database schema, row-level security, export, account deletion and backups exist and are tested on a local Supabase stack. Clients can only read their own data and public profiles; game uploads go through one server function. **Hosted project** (session 022): Supabase in Frankfurt, sign-ups closed, nothing deployed yet; once Supabase's GitHub integration is connected (pending the user), each merge to `main` applies the migrations and deploys the server functions, and a daily job in the database runs the clean-up. Plan and live state: [docs/research/deploy.md](docs/research/deploy.md) section 10.
 
+Backend follow-ups (T-104g): the counter of refused uploads per IP keeps only a salted hash, with a random salt kept in the database's vault and replaced every day; the server functions use Supabase's new secret key (the old service key only as a fallback for now); the daily clean-up's effect on the Free plan's pause after a week without activity is written down in [deploy.md](docs/research/deploy.md) section 10.5 and watched (D-042).
+
 Robustness (session 014): the app and `check_logs.py` check that the game is set up to write a complete log (`log.config` and `client.config`), every saved game records which parser version read it, `tavern-watch --reparse` re-reads old sessions after a parser fix, and a dev tool replays a saved log so the app can be tested without playing.
 
 Website (T-104c): a static Astro site in `web/` with sign-in by email, an account page (display name, public profile switch, download all your data, delete your account) and a public profile page that only exists when you turn it on. It shows no ratings and no other players' names. **Online at [tavernledger.net](https://tavernledger.net) with accounts closed** (session 021): home, privacy and terms drafts; sign-in, account and profile say "Accounts are not open yet" until the hosted backend is wired in. Hosted on Cloudflare Pages from `main`, no scripts, no analytics. Contact mail: `contact@` and `privacy@tavernledger.net` (D-030); deploy notes in [docs/research/deploy.md](docs/research/deploy.md).
@@ -29,6 +31,8 @@ Website (T-104c): a static Astro site in `web/` with sign-in by email, an accoun
 Upload (T-104d): the desktop app can upload each finished game to your account. It is off until you sign in and turn it on. You sign in with a one-time link from your email, opened in your browser; the app never asks for your password and keeps the sign-in in Windows Credential Manager. Only the game's report goes up (heroes, card ids, places, boards), never player names, BattleTags or ratings, and the server checks that again before storing it. The app uses the hosted project unless its data folder has a `server.json` (for the local stack).
 
 Game recap (T-202) and record against each opponent (T-203): a "Recap" button on each game, and it opens by itself when a new game ends. It shows hero (and teammate in Duos), place, health over the rounds, tribes seen in the tavern and the parser's warnings, and for each opponent in that game (by hero and seat, never by name) the combats won, lost, tied or unknown. The log never says who won, so results are worked out from health changes and marked inferred; when the numbers cannot say, the result is unknown. In Duos each round counts once for your team against the opposing team. Games saved before parser revision 2 show unknown results until re-read with `tavern-watch --reparse`.
+
+Real-game tests (T-108): the parser is also tested on real games of the user's own, one Solo and one Duos so far, trimmed to the lines the parser reads and scrubbed of every player name, account id and card text by `tools/make_fixture.py`, which refuses to write if anything personal is left (D-044). The logs on hand hold one game build; the next patch adds the second.
 
 Where values come from (T-109): every number or label in the window says where it comes from. Values straight from the game's log carry no mark; inferred ones (tribes seen in the tavern, skins grouped under one hero) and unknown ones carry a mark, every value has a tooltip, and a legend explains them. "Report a problem" (T-110): a button on each game shows the whole report file (game report, parser version, game build, app version, log setup check, warnings) and saves it to your Downloads folder if you choose. The app refuses to make it if it finds anything that looks like a player name, and it never sends it anywhere; you send it yourself.
 
@@ -41,12 +45,14 @@ Customizable overlay (T-302): from the tray, "Unlock overlay to move and resize 
 
 Card pictures (T-304): the overlay boards show each minion's art and English name, and the overlay, the history, the hero stats and the recap show hero portraits. They come from [HearthstoneJSON](https://hearthstonejson.com/), fetched by the app the first time they are needed and kept on your computer only (`card-cache` in the data folder; pictures capped at 50 MB); nothing is in this repository. The app asks for the card data at most once an hour, and only when its copy is a week old or a card is missing from it, and for each picture once. Names and pictures are marked "card database"; if anything fails, or a card is not in the data, the app shows the card id instead, never a guess. Card art and card data © Blizzard Entertainment; they are only used in free features. Decision D-038; sources and terms in [docs/research/card-images.md](docs/research/card-images.md).
 
+Desktop look (T-305, D-039): the app window and the overlay use the same "Combat Round" look as the website (dark teal, Unbounded and DM Mono, fonts shipped inside the app). The overlay has a new default theme, "Combat Round (dark)"; Tavern, Parchment and High contrast are still in the layout toolbar.
+
 Privacy and terms (T-104b): a data inventory written from the code, and drafts of the privacy policy and terms in [docs/legal/](docs/legal/), shown on the site at `/privacy/` and `/terms/`. They are not in force: the effective date, a few provider details (marked in the drafts) and the security log's storage are still to be checked; the contact addresses exist. No analytics, minimum age 16.
 
 Auth emails (T-104f): sign-up and sign-in emails go out from `noreply@tavernledger.net` through Lettermint (Netherlands, data kept in the EU, logs deleted after 28 days), with open and click tracking off, so the one-time link goes straight to the sign-in server. Tested end to end on 2026-10-10 (DMARC pass, no unsubscribe header, sign-in, export and deletion on the site). Decision D-041; details in [docs/research/deploy.md](docs/research/deploy.md) sections 10.11 and 10.12. Lettermint approved the account the same day. Sign-ups stay closed until the user opens them.
 
 
-Next tasks, in the user's order (2026-10-10; hub prompt [prompts/sessions/025-hub.md](prompts/sessions/025-hub.md)): (1) card and hero images in the overlay and the app (T-304, session 026); (2) redesign of the desktop app and overlay (T-305, session 027, after 026); the website redesign (T-104e, session 028) is done: direction "Combat Round", D-040; (3) the auth email sender that does not rewrite links (T-104f, session 029) is done: Lettermint, D-041; then the follow-ups from session 022, T-D01, T-108, and what waits on the user (T-101, T-105, opening sign-ups).
+Next tasks, in the user's order (2026-10-10; hub prompt [prompts/sessions/025-hub.md](prompts/sessions/025-hub.md)): (1) card and hero images in the overlay and the app (T-304, session 026); (2) redesign of the desktop app and overlay (T-305, session 027, done: "Combat Round", D-039); the website redesign (T-104e, session 028) is done: direction "Combat Round", D-040; (3) the auth email sender that does not rewrite links (T-104f, session 029) is done: Lettermint, D-041; then the follow-ups from session 022, T-D01, T-108, and what waits on the user (T-101, T-105, opening sign-ups).
 
 ## Check your log setup
 
@@ -123,6 +129,10 @@ python tools/dev/replay_log.py "<path>\Power_old.log" --dest-dir "$env:TEMP\repl
 cargo run -p tracker -- --logs-dir "$env:TEMP\replay\Logs" --data-dir "$env:TEMP\replay\data"
 ```
 
+### Reconnect dev tool (development only)
+
+To collect test games faster, `tools/dev/reconnect.py` drops Hearthstone's own connections on a hotkey so the client reconnects past combat animations. Never shipped to users; needs an elevated terminal; it can carry risk for your Battle.net account, so only use it by hand on your own account. Games played with it are marked in the history and left out of the stats, the upload and fixtures. Details, risk and how to undo: [tools/dev/README.md](tools/dev/README.md).
+
 To see the overlay on a replayed game, follow the replayed folder with the app and force the overlay on (`--overlay-dev` turns it on, shows it whatever window is in front and does not save the on/off choice (layout and theme are saved in the data folder you give; `--overlay-unlock` starts it unlocked); `--logs-dir` is for this and nothing else):
 
 ```
@@ -138,6 +148,17 @@ cargo test --workspace
 ```
 
 CI runs the tests, checks relative Markdown links and scans the history for secrets.
+
+### Real-game fixtures
+
+Copy the raw log into `.local/` (never commit it), build the parser and make one fixture per game; the script writes nothing if the log has a game played with the reconnect dev tool (D-043), if a name or id would be left, or if the fixture would read differently from the raw game:
+
+```
+cargo build --release -p bg-parser
+python tools/make_fixture.py .local/fixtures-raw/Power_old.log --game 3 --session Hearthstone_<date> --out crates/bg-parser/tests/data/real/b<build>_duos.log --parser target/release/bg-parse
+```
+
+Check the report it writes next to the fixture (`.json`) by hand, add the build to `TESTED_BUILDS` if it is new (then make the fixture again, so the report has no "not tested" warning), and get the user's OK before committing.
 
 ### Backend (local Supabase stack)
 

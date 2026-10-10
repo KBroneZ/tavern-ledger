@@ -41,7 +41,7 @@ There are no ads, no analytics and no tracking.
 | Profile: a display name you choose (optional) and whether your profile is public (off by default) | To show your profile, if you make it public | Contract: publication only happens when you switch it on, and you can switch it off at any time |
 | Your games: a summary row per game (date, mode, hero, place, build, tribes offered, parser version) and the game's full record from the app (no player names), if you upload them | To show your history and stats | Contract |
 | Upload times: when each of your uploads happened, kept two days | To enforce the hourly and daily upload limits | Legitimate interest in keeping the service available for everyone (Art. 6(1)(f)) |
-| Refused requests: a hash of the IP address that sent an upload with an invalid sign-in, and a count, kept one hour | To block abusive requests | Legitimate interest in protecting the service |
+| Refused requests: a salted hash of the IP address that sent an upload with an invalid sign-in (the address itself is not stored, and the secret salt is replaced every day), and a count, kept one hour at most | To block abusive requests | Legitimate interest in protecting the service |
 | Backups of all of the above, without live sign-in sessions | To recover from failures | Legitimate interest in not losing your data |
 
 Your email and a password are required to have an account; without them we cannot create one. Everything else is optional: a display name, uploading games and a public profile.

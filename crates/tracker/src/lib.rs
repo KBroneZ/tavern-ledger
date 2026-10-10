@@ -2,7 +2,9 @@
 //! Battlegrounds games (T-101). Read-only towards the game: it only reads the
 //! log files (D-004).
 
+pub mod dev_reconnect;
 pub mod discover;
+pub mod game_clock;
 pub mod live;
 pub mod lobby_tribes;
 pub mod lock;
@@ -19,10 +21,11 @@ use std::fs::File;
 use std::io::{self, BufReader};
 use std::path::{Path, PathBuf};
 
-use bg_parser::lines::for_each_chunk;
+use bg_parser::lines::{for_each_chunk, Chunk};
 use bg_parser::report::{GameReport, Status};
 use bg_parser::LogReader;
 
+use game_clock::{GameClock, LocalToUtc, Played};
 use store::{GameKey, Store};
 use tail::{Event, Follower};
 
@@ -33,13 +36,53 @@ pub struct Saved {
     pub report: GameReport,
 }
 
+/// The session being read: its games and when each one was played.
+struct SessionReader {
+    name: String,
+    log: LogReader,
+    clock: GameClock,
+}
+
+impl SessionReader {
+    fn new(name: &str) -> Self {
+        SessionReader {
+            name: name.to_string(),
+            log: LogReader::default(),
+            clock: GameClock::new(name),
+        }
+    }
+
+    fn feed(&mut self, line: &str) {
+        self.log.feed(line);
+        self.clock.feed(line);
+    }
+
+    fn pending(&self, report: GameReport, to_utc: LocalToUtc) -> Pending {
+        let played = self.clock.played(report.index, to_utc);
+        (self.name.clone(), report, played)
+    }
+
+    /// Closes the session and queues its last games.
+    fn finish(self, pending: &mut VecDeque<Pending>, to_utc: LocalToUtc) {
+        let SessionReader { name, log, clock } = self;
+        pending.extend(log.finish().into_iter().map(|g| {
+            let played = clock.played(g.index, to_utc);
+            (name.clone(), g, played)
+        }));
+    }
+}
+
+/// A finished game waiting to be saved: session, report, when it was played.
+type Pending = (String, GameReport, Option<Played>);
+
 pub struct Watcher {
     follower: Follower,
-    reader: Option<(String, LogReader)>,
+    reader: Option<SessionReader>,
     store: Store,
     /// Finished games not saved yet. They survive a failed poll or a failed
     /// write and are saved on the next poll.
-    pending: VecDeque<(String, GameReport)>,
+    pending: VecDeque<Pending>,
+    to_utc: LocalToUtc,
     /// The game in progress as of the last poll that read lines (for the
     /// overlay). Rebuilt only when the log moved.
     live: Option<GameReport>,
@@ -55,7 +98,14 @@ impl Watcher {
             pending: VecDeque::new(),
             live: None,
             live_stale: true,
+            to_utc: game_clock::system_local_to_utc,
         }
+    }
+
+    /// Uses `to_utc` instead of the system's time zone (for tests).
+    pub fn with_local_time(mut self, to_utc: LocalToUtc) -> Self {
+        self.to_utc = to_utc;
+        self
     }
 
     /// Reads what the game wrote since the last poll and saves every game
@@ -65,29 +115,32 @@ impl Watcher {
         let reader = &mut self.reader;
         let pending = &mut self.pending;
         let live_stale = &mut self.live_stale;
+        let to_utc = self.to_utc;
         let read = self.follower.poll(&mut |event| match event {
             Event::Session(name) => {
                 *live_stale = true;
-                if let Some((old, r)) = reader.take() {
-                    pending.extend(r.finish().into_iter().map(|g| (old.clone(), g)));
+                if let Some(old) = reader.take() {
+                    old.finish(pending, to_utc);
                 }
-                *reader = Some((name.to_string(), LogReader::default()));
+                *reader = Some(SessionReader::new(name));
             }
             Event::Line(line) => {
                 *live_stale = true;
-                if let Some((session, r)) = reader.as_mut() {
+                if let Some(r) = reader.as_mut() {
                     r.feed(line);
-                    let done = r
+                    let done: Vec<GameReport> = r
+                        .log
                         .take_finished()
                         .into_iter()
-                        .chain(r.take_completed_current());
-                    pending.extend(done.map(|g| (session.clone(), g)));
+                        .chain(r.log.take_completed_current())
+                        .collect();
+                    pending.extend(done.into_iter().map(|g| r.pending(g, to_utc)));
                 }
             }
             Event::TooLong => {
                 *live_stale = true;
-                if let Some((_, r)) = reader.as_mut() {
-                    r.feed_too_long();
+                if let Some(r) = reader.as_mut() {
+                    r.log.feed_too_long();
                 }
             }
         });
@@ -97,9 +150,8 @@ impl Watcher {
 
     /// Closes the game in progress (e.g. when the app quits) and saves it.
     pub fn finish(mut self) -> io::Result<(Vec<Saved>, Store)> {
-        if let Some((session, r)) = self.reader.take() {
-            self.pending
-                .extend(r.finish().into_iter().map(|g| (session.clone(), g)));
+        if let Some(r) = self.reader.take() {
+            r.finish(&mut self.pending, self.to_utc);
         }
         let saved = self.save_pending()?;
         Ok((saved, self.store))
@@ -107,12 +159,12 @@ impl Watcher {
 
     fn save_pending(&mut self) -> io::Result<Vec<Saved>> {
         let mut saved = Vec::new();
-        while let Some((session, report)) = self.pending.pop_front() {
-            match save_report(&mut self.store, session.clone(), &report) {
+        while let Some((session, report, played)) = self.pending.pop_front() {
+            match save_report(&mut self.store, session.clone(), &report, played) {
                 Ok(Some(s)) => saved.push(s),
                 Ok(None) => {}
                 Err(e) => {
-                    self.pending.push_front((session, report));
+                    self.pending.push_front((session, report, played));
                     return Err(e);
                 }
             }
@@ -131,10 +183,10 @@ impl Watcher {
     /// The Battlegrounds game being played now (not saved yet), from hero
     /// select until the log marks it complete (T-303).
     pub fn in_progress(&self) -> Option<GameKey> {
-        let (session, reader) = self.reader.as_ref()?;
+        let reader = self.reader.as_ref()?;
         Some(GameKey {
-            session: session.clone(),
-            index: reader.in_progress_index()? as u64,
+            session: reader.name.clone(),
+            index: reader.log.in_progress_index()? as u64,
         })
     }
 
@@ -143,11 +195,11 @@ impl Watcher {
     /// saved report and kept until the log moves.
     pub fn live_report(&mut self) -> Option<&GameReport> {
         let snapshot = match self.reader.as_ref() {
-            Some((_, reader)) if reader.in_progress_index().is_some() => {
+            Some(reader) if reader.log.in_progress_index().is_some() => {
                 if !self.live_stale && self.live.is_some() {
                     return self.live.as_ref();
                 }
-                reader.snapshot_current()
+                reader.log.snapshot_current()
             }
             _ => None,
         };
@@ -169,6 +221,7 @@ fn save_report(
     store: &mut Store,
     session: String,
     report: &GameReport,
+    played: Option<Played>,
 ) -> io::Result<Option<Saved>> {
     if report.status == Status::NotBattlegrounds {
         return Ok(None);
@@ -178,23 +231,31 @@ fn save_report(
         index: report.index as u64,
     };
     let value = serde_json::to_value(report).map_err(io::Error::other)?;
-    Ok(store.save(key.clone(), value)?.then(|| Saved {
-        key,
-        report: report.clone(),
-    }))
+    Ok(store
+        .save_played(key.clone(), value, played)?
+        .then(|| Saved {
+            key,
+            report: report.clone(),
+        }))
 }
 
-/// Reads one session folder (Power_old.log, then Power.log) into reports.
-fn read_session(session_dir: &Path) -> io::Result<Vec<GameReport>> {
-    let mut reader = LogReader::default();
+/// Reads one session folder (Power_old.log, then Power.log) into reports,
+/// each with when it was played.
+fn read_session(session_dir: &Path) -> io::Result<Vec<(GameReport, Option<Played>)>> {
+    let mut reader = SessionReader::new(&session_name(session_dir));
     for file in [tail::POWER_OLD_LOG, tail::POWER_LOG] {
         let path = session_dir.join(file);
         if path.is_file() {
             let input = BufReader::new(File::open(&path)?);
-            for_each_chunk(input, &mut |chunk| reader.feed_chunk(chunk))?;
+            for_each_chunk(input, &mut |chunk| match chunk {
+                Chunk::Line(line) => reader.feed(&line),
+                Chunk::TooLong => reader.log.feed_too_long(),
+            })?;
         }
     }
-    Ok(reader.finish())
+    let mut pending = VecDeque::new();
+    reader.finish(&mut pending, game_clock::system_local_to_utc);
+    Ok(pending.into_iter().map(|(_, g, p)| (g, p)).collect())
 }
 
 fn session_name(session_dir: &Path) -> String {
@@ -209,8 +270,8 @@ fn session_name(session_dir: &Path) -> String {
 pub fn import_session(session_dir: &Path, store: &mut Store) -> io::Result<Vec<Saved>> {
     let name = session_name(session_dir);
     let mut saved = Vec::new();
-    for report in read_session(session_dir)? {
-        saved.extend(save_report(store, name.clone(), &report)?);
+    for (report, played) in read_session(session_dir)? {
+        saved.extend(save_report(store, name.clone(), &report, played)?);
     }
     Ok(saved)
 }
@@ -286,7 +347,7 @@ pub fn reparse(logs_dir: &Path, store: &mut Store) -> io::Result<ReparseOutcome>
                 continue;
             }
         };
-        let found: BTreeSet<u64> = reports.iter().map(|r| r.index as u64).collect();
+        let found: BTreeSet<u64> = reports.iter().map(|(r, _)| r.index as u64).collect();
         let missing: Vec<GameKey> = keys
             .into_iter()
             .filter(|k| !found.contains(&k.index))
@@ -296,7 +357,7 @@ pub fn reparse(logs_dir: &Path, store: &mut Store) -> io::Result<ReparseOutcome>
             continue;
         }
         outcome.sessions_read += 1;
-        for report in &reports {
+        for (report, played) in &reports {
             let key = GameKey {
                 session: session.clone(),
                 index: report.index as u64,
@@ -315,7 +376,7 @@ pub fn reparse(logs_dir: &Path, store: &mut Store) -> io::Result<ReparseOutcome>
             }
             outcome
                 .changed
-                .extend(save_report(store, session.clone(), report)?);
+                .extend(save_report(store, session.clone(), report, *played)?);
         }
     }
     Ok(outcome)

@@ -1,23 +1,28 @@
 /* The overlay covers the screen. Locked, it is click-through, so nothing here
    can be hovered or clicked; unlocked, panels can be moved and resized.
    Every source is a word on the page, never a tooltip. The colours below are
-   the Tavern theme, used until the app sends the chosen theme (the same
+   the Combat Round theme, used until the app sends the chosen theme (the same
    values live in overlay_layout.rs, where a test checks their contrast). */
+@font-face { font-family: "Unbounded"; font-weight: 500; font-display: swap; src: url("fonts/unbounded-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Unbounded"; font-weight: 800; font-display: swap; src: url("fonts/unbounded-latin-800-normal.woff2") format("woff2"); }
+@font-face { font-family: "DM Mono"; font-weight: 400; font-display: swap; src: url("fonts/dm-mono-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "DM Mono"; font-weight: 500; font-display: swap; src: url("fonts/dm-mono-latin-500-normal.woff2") format("woff2"); }
+
 :root {
-  --panel-bg: rgba(28, 19, 12, 0.9);
-  --panel-solid: #1c130c;
-  --text: #efe2c4;
-  --dim: #cdbb94;
-  --accent: #e8bd55;
-  --won: #7fc08a;
+  --panel-bg: rgba(7, 24, 28, 0.9);
+  --panel-solid: #07181c;
+  --text: #d6ece8;
+  --dim: #b0d0ca;
+  --accent: #5fe0c8;
+  --won: #7fe0a0;
   --lost: #ff9a86;
-  --amber: #f0b45a;
-  --info: #8fc0dd;
-  --muted: #c8b998;
-  --danger: #f3d0c6;
-  --border: #c99620;
-  --font-display: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
-  --font-body: "Segoe UI", system-ui, sans-serif;
+  --amber: #f2c14e;
+  --info: #8fc9e8;
+  --muted: #aecec8;
+  --danger: #ffd0c6;
+  --border: #2f7f74;
+  --font-display: "Unbounded", "Segoe UI", system-ui, sans-serif;
+  --font-body: "DM Mono", Consolas, "Cascadia Mono", monospace;
   --stack-left: 8px;
   --stack-top: 96px;
   --stack-width: 340px;
@@ -62,7 +67,7 @@ body {
   padding: 7px 10px 8px;
   border: 1px solid var(--border);
   border-left-width: 3px;
-  border-radius: 5px;
+  border-radius: 3px;
   background: var(--panel-bg);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
 }
@@ -71,13 +76,13 @@ body {
 .panel h2 {
   margin: 0 0 4px;
   color: var(--accent);
-  font: 700 11px/1.3 var(--font-body);
-  letter-spacing: 0.1em;
+  font: 500 10px/1.3 var(--font-display);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .status { font-size: 12.5px; }
-.status .hero { font: 700 14px/1.3 var(--font-display); color: var(--accent); }
+.status .hero { font: 500 13px/1.3 var(--font-display); color: var(--accent); }
 .status .sep { margin: 0 5px; color: var(--border); }
 .status .notes { margin: 4px 0 0; color: var(--amber); font-size: 11px; }
 .status.unreadable { border-color: var(--lost); color: var(--danger); }
@@ -93,7 +98,7 @@ body {
   padding: 0 5px;
   border: 1px solid currentColor;
   border-radius: 999px;
-  font: 600 9px/1.55 var(--font-body);
+  font: 500 9px/1.55 var(--font-body);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;

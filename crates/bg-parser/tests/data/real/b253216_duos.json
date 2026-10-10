@@ -1,0 +1,1183 @@
+[
+  {
+    "build": 253216,
+    "card_names": {},
+    "final_health": 0,
+    "final_place": 4,
+    "game_type": "GT_BATTLEGROUNDS_DUO",
+    "hero": "BG24_HERO_100_SKIN_E",
+    "index": 1,
+    "lobby": [
+      {
+        "duo_team": 3,
+        "final_health": 0,
+        "final_place": 4,
+        "hero": "TB_BaconShop_HERO_43_SKIN_N",
+        "player_id": 1
+      },
+      {
+        "duo_team": 3,
+        "final_health": 0,
+        "final_place": 4,
+        "hero": "BG24_HERO_100_SKIN_E",
+        "player_id": 2
+      },
+      {
+        "duo_team": 1,
+        "final_health": 48,
+        "final_place": 1,
+        "hero": "TB_BaconShop_HERO_36",
+        "player_id": 3
+      },
+      {
+        "duo_team": 1,
+        "final_health": 48,
+        "final_place": 1,
+        "hero": "BG31_HERO_802",
+        "player_id": 4
+      },
+      {
+        "duo_team": 4,
+        "final_health": 22,
+        "final_place": 2,
+        "hero": "BG22_HERO_201_SKIN_D",
+        "player_id": 5
+      },
+      {
+        "duo_team": 2,
+        "final_health": 8,
+        "final_place": 3,
+        "hero": "BG32_HERO_001",
+        "player_id": 6
+      },
+      {
+        "duo_team": 2,
+        "final_health": 8,
+        "final_place": 3,
+        "hero": "TB_BaconShop_HERO_50_SKIN_G",
+        "player_id": 7
+      },
+      {
+        "duo_team": 4,
+        "final_health": 22,
+        "final_place": 2,
+        "hero": "TB_BaconShop_HERO_21",
+        "player_id": 8
+      }
+    ],
+    "local_player_id": 2,
+    "not_in_log": [
+      "MMR",
+      "available tribes (exact list)"
+    ],
+    "problems": [],
+    "rounds": [
+      {
+        "entries": [
+          {
+            "board": [
+              {
+                "atk": 3,
+                "card_id": "BG31_815",
+                "golden": false,
+                "health": 3,
+                "position": 1
+              }
+            ],
+            "hero": "TB_BaconShop_HERO_43_SKIN_N",
+            "player_id": 1,
+            "side": "own"
+          },
+          {
+            "board": [
+              {
+                "atk": 3,
+                "card_id": "BG31_815",
+                "golden": false,
+                "health": 3,
+                "position": 1
+              }
+            ],
+            "hero": "BG31_HERO_802",
+            "player_id": 4,
+            "side": "opponent"
+          },
+          {
+            "board": [
+              {
+                "atk": 3,
+                "card_id": "BG26_135",
+                "golden": false,
+                "health": 1,
+                "position": 1
+              }
+            ],
+            "hero": "BG24_HERO_100_SKIN_E",
+            "player_id": 2,
+            "side": "own"
+          },
+          {
+            "board": [
+              {
+                "atk": 3,
+                "card_id": "BG32_236",
+                "golden": false,
+                "health": 3,
+                "position": 1
+              }
+            ],
+            "hero": "TB_BaconShop_HERO_36",
+            "player_id": 3,
+            "side": "opponent"
+          }
+        ],
+        "health_after": {
+          "1": 52,
+          "2": 52,
+          "3": 61,
+          "4": 61,
+          "5": 52,
+          "6": 54,
+          "7": 54,
+          "8": 52
+        },
+        "number": 1,
+        "opponents": [
+          4,
+          3
+        ],
+        "own_health_after": 52
+      },
+      {
+        "entries": [
+          {
+            "board": null,
+            "hero": "BG32_HERO_001",
+            "player_id": 6,
+            "side": "opponent"
+          },
+          {
+            "board": [
+              {
+                "atk": 3,
+                "card_id": "BG31_815",
+                "golden": false,
+                "health": 3,
+                "position": 1
+              }
+            ],
+            "hero": "TB_BaconShop_HERO_43_SKIN_N",
+            "player_id": 1,
+            "side": "own"
+          },
+          {
+            "board": [
+              {
+                "atk": 3,
+                "card_id": "BG36_098",
+                "golden": false,
+                "health": 2,
+                "position": 1
+              }
+            ],
+            "hero": "TB_BaconShop_HERO_50_SKIN_G",
+            "player_id": 7,
+            "side": "opponent"
+          },
+          {
+            "board": [
+              {
+                "atk": 1,
+                "card_id": "BG29_611",
+                "golden": false,
+                "health": 1,
+                "position": 1
+              },
+              {
+                "atk": 3,
+                "card_id": "BG26_135",
+                "golden": false,
+                "health": 1,
+                "position": 2
+              },
+              {
+                "atk": 2,
+                "card_id": "BG26_146",
+                "golden": false,
+                "health": 3,
+                "position": 3
+              }
+            ],
+            "hero": "BG24_HERO_100_SKIN_E",
+            "player_id": 2,
+            "side": "own"
+          }
+        ],
+        "health_after": {
+          "1": 52,
+          "2": 52,
+          "3": 61,
+          "4": 61,
+          "5": 49,
+          "6": 50,
+          "7": 50,
+          "8": 49
+        },
+        "number": 2,
+        "opponents": [
+          6,
+          7
+        ],
+        "own_health_after": 52
+      },
+      {
+        "entries": [
+          {
+            "board": [
+              {
+                "atk": 1,
+                "card_id": "BG29_611",
+                "golden": false,
+                "health": 1,
+                "position": 1
+              },
+              {
+                "atk": 3,
+                "card_id": "BG26_135",
+                "golden": false,
+                "health": 1,
+                "position": 2
+              },
+              {
+                "atk": 2,
+                "card_id": "BG26_146",
+                "golden": false,
+                "health": 4,
+                "position": 3
+              },
+              {
+                "atk": 2,
+                "card_id": "BGDUO_114",
+                "golden": false,
+                "health": 2,
+                "position": 4
+              }
+            ],
+            "hero": "BG24_HERO_100_SKIN_E",
+            "player_id": 2,
+            "side": "own"
+          },
+          {
+            "board": [
+              {
+                "atk": 2,
+                "card_id": "BG26_146",
+                "golden": false,
+                "health": 5,
+                "position": 1
+              },
+              {
+                "atk": 2,
+                "card_id": "BG26_146",
+                "golden": false,
+                "health": 3,
+                "position": 2
+              }
+            ],
+            "hero": "TB_BaconShop_HERO_21",
+            "player_id": 8,
+            "side": "opponent"
+          },
+          {
+            "board": [],
+            "hero": "TB_BaconShop_HERO_43_SKIN_N",
+            "player_id": 1,
+            "side": "own"
+          },
+          {
+            "board": null,
+            "hero": "BG24_HERO_100_SKIN_E",
+            "player_id": 2,
+            "side": "own"
+          }
+        ],
+        "health_after": {
+          "1": 45,
+          "2": 45,
+          "3": 61,
+          "4": 61,
+          "5": 49,
+          "6": 44,
+          "7": 44,
+          "8": 49
+        },
+        "number": 3,
+        "opponents": [
+          8
+        ],
+        "own_health_after": 45
+      },
+      {
+        "entries": [
+          {
+            "board": [
+              {
+                "atk": 4,
+                "card_id": "BG34_170t3",
+                "golden": false,
+                "health": 4,
+                "position": 1
+              },
+              {
+                "atk": 3,
+                "card_id": "BG34_170",
+                "golden": false,
+                "health": 3,
+                "position": 2
+              },
+              {
+                "atk": 5,
+                "card_id": "BGDUO_700",
+                "golden": false,
+                "health": 6,
+                "position": 3
+              }
+            ],
+            "hero": "TB_BaconShop_HERO_43_SKIN_N",
+            "player_id": 1,
+            "side": "own"
+          },
+          {
+            "board": [
+              {
+                "atk": 4,
+                "card_id": "BG33_822",
+                "golden": false,
+                "health": 6,
+                "position": 1
+              },
+              {
+                "atk": 11,
+                "card_id": "BG31_815_G",
+                "golden": true,
+                "health": 11,
+                "position": 2
+              }
+            ],
+            "hero": "BG31_HERO_802",
+            "player_id": 4,
+            "side": "opponent"
+          },
+          {
+            "board": [
+              {
+                "atk": 1,
+                "card_id": "BG29_611",
+                "golden": false,
+                "health": 1,
+                "position": 1
+              },
+              {
+                "atk": 3,
+                "card_id": "BG26_135",
+                "golden": false,
+                "health": 1,
+                "position": 2
+              },
+              {
+                "atk": 2,
+                "card_id": "BG26_146",
+                "golden": false,
+                "health": 5,
+                "position": 3
+              },
+              {
+                "atk": 2,
+                "card_id": "BGDUO_114",
+                "golden": false,
+                "health": 2,
+                "position": 4
+              }
+            ],
+            "hero": "BG24_HERO_100_SKIN_E",
+            "player_id": 2,
+            "side": "own"
+          },
+          {
+            "board": [
+              {
+                "atk": 6,
+                "card_id": "BG29_300",
+                "golden": false,
+                "health": 10,
+                "position": 1
+              }
+            ],
+            "hero": "TB_BaconShop_HERO_36",
+            "player_id": 3,
+            "side": "opponent"
+          }
+        ],
+        "health_after": {
+          "1": 40,
+          "2": 40,
+          "3": 61,
+          "4": 61,
+          "5": 49,
+          "6": 37,
+          "7": 37,
+          "8": 49
+        },
+        "number": 4,
+        "opponents": [
+          4,
+          3
+        ],
+        "own_health_after": 40
+      },
+      {
+        "entries": [
+          {
+            "board": [
+              {
+                "atk": 3,
+                "card_id": "BG34_170",
+                "golden": false,
+                "health": 3,
+                "position": 1
+              },
+              {
+                "atk": 2,
+                "card_id": "BG36_311",
+                "golden": false,
+                "health": 2,
+                "position": 2
+              },
+              {
+                "atk": 5,
+                "card_id": "BGDUO_700",
+                "golden": false,
+                "health": 6,
+                "position": 3
+              },
+              {
+                "atk": 5,
+                "card_id": "BG36_854",
+                "golden": false,
+                "health": 4,
+                "position": 4
+              }
+            ],
+            "hero": "TB_BaconShop_HERO_43_SKIN_N",
+            "player_id": 1,
+            "side": "own"
+          },
+          {
+            "board": [
+              {
+                "atk": 4,
+                "card_id": "BG36_110_G",
+                "golden": true,
+                "health": 6,
+                "position": 1
+              }
+            ],
+            "hero": "TB_BaconShop_HERO_50_SKIN_G",
+            "player_id": 7,
+            "side": "opponent"
+          },
+          {
+            "board": [
+              {
+                "atk": 6,
+                "card_id": "BG36_521",
+                "golden": false,
+                "health": 3,
+                "position": 1
+              },
+              {
+                "atk": 2,
+                "card_id": "BG32_236",
+                "golden": false,
+                "health": 2,
+                "position": 2
+              }
+            ],
+            "hero": "BG32_HERO_001",
+            "player_id": 6,
+            "side": "opponent"
+          },
+          {
+            "board": [
+              {
+                "atk": 6,
+                "card_id": "BGDUO_110",
+                "golden": false,
+                "health": 4,
+                "position": 1
+              },
+              {
+                "atk": 6,
+                "card_id": "BG26_135_G",
+                "golden": true,
+                "health": 2,
+                "position": 2
+              },
+              {
+                "atk": 4,
+                "card_id": "BGDUO_118_G",
+                "golden": true,
+                "health": 4,
+                "position": 3
+              },
+              {
+                "atk": 1,
+                "card_id": "BG36_100",
+                "golden": false,
+                "health": 3,
+                "position": 4
+              },
+              {
+                "atk": 2,
+                "card_id": "BG26_146",
+                "golden": false,
+                "health": 6,
+                "position": 5
+              }
+            ],
+            "hero": "BG24_HERO_100_SKIN_E",
+            "player_id": 2,
+            "side": "own"
+          }
+        ],
+        "health_after": {
+          "1": 40,
+          "2": 40,
+          "3": 61,
+          "4": 61,
+          "5": 37,
+          "6": 23,
+          "7": 23,
+          "8": 37
+        },
+        "number": 5,
+        "opponents": [
+          7,
+          6
+        ],
+        "own_health_after": 40
+      },
+      {
+        "entries": [
+          {
+            "board": [
+              {
+                "atk": 6,
+                "card_id": "BGDUO_110",
+                "golden": false,
+                "health": 4,
+                "position": 1
+              },
+              {
+                "atk": 6,
+                "card_id": "BGDUO31_207",
+                "golden": false,
+                "health": 3,
+                "position": 2
+              },
+              {
+                "atk": 6,
+                "card_id": "BG26_135_G",
+                "golden": true,
+                "health": 2,
+                "position": 3
+              },
+              {
+                "atk": 4,
+                "card_id": "BGDUO_118_G",
+                "golden": true,
+                "health": 4,
+                "position": 4
+              },
+              {
+                "atk": 2,
+                "card_id": "BG26_146",
+                "golden": false,
+                "health": 7,
+                "position": 5
+              },
+              {
+                "atk": 2,
+                "card_id": "BG36_110",
+                "golden": false,
+                "health": 3,
+                "position": 6
+              }
+            ],
+            "hero": "BG24_HERO_100_SKIN_E",
+            "player_id": 2,
+            "side": "own"
+          },
+          {
+            "board": [
+              {
+                "atk": 33,
+                "card_id": "BG36_506",
+                "golden": false,
+                "health": 46,
+                "position": 1
+              },
+              {
+                "atk": 2,
+                "card_id": "BG26_146",
+                "golden": false,
+                "health": 8,
+                "position": 2
+              },
+              {
+                "atk": 2,
+                "card_id": "BG26_146",
+                "golden": false,
+                "health": 6,
+                "position": 3
+              },
+              {
+                "atk": 4,
+                "card_id": "BG36_854_G",
+                "golden": true,
+                "health": 2,
+                "position": 4
+              }
+            ],
+            "hero": "TB_BaconShop_HERO_21",
+            "player_id": 8,
+            "side": "opponent"
+          },
+          {
+            "board": [
+              {
+                "atk": 6,
+                "card_id": "BG34_170_G",
+                "golden": true,
+                "health": 6,
+                "position": 1
+              },
+              {
+                "atk": 2,
+                "card_id": "BG36_311",
+                "golden": false,
+                "health": 2,
+                "position": 2
+              },
+              {
+                "atk": 5,
+                "card_id": "BG34_170t3",
+                "golden": false,
+                "health": 8,
+                "position": 3
+              },
+              {
+                "atk": 3,
+                "card_id": "BG34_170t2",
+                "golden": false,
+                "health": 8,
+                "position": 4
+              },
+              {
+                "atk": 11,
+                "card_id": "BG36_300",
+                "golden": false,
+                "health": 12,
+                "position": 5
+              },
+              {
+                "atk": 5,
+                "card_id": "BGDUO_700",
+                "golden": false,
+                "health": 6,
+                "position": 6
+              },
+              {
+                "atk": 5,
+                "card_id": "BG36_854",
+                "golden": false,
+                "health": 4,
+                "position": 7
+              }
+            ],
+            "hero": "TB_BaconShop_HERO_43_SKIN_N",
+            "player_id": 1,
+            "side": "own"
+          },
+          {
+            "board": null,
+            "hero": "BG24_HERO_100_SKIN_E",
+            "player_id": 2,
+            "side": "own"
+          }
+        ],
+        "health_after": {
+          "1": 25,
+          "2": 25,
+          "3": 61,
+          "4": 61,
+          "5": 37,
+          "6": 8,
+          "7": 8,
+          "8": 37
+        },
+        "number": 6,
+        "opponents": [
+          8
+        ],
+        "own_health_after": 25
+      },
+      {
+        "entries": [
+          {
+            "board": [
+              {
+                "atk": 5,
+                "card_id": "BG34_171",
+                "golden": false,
+                "health": 2,
+                "position": 1
+              },
+              {
+                "atk": 8,
+                "card_id": "BG34_170_G",
+                "golden": true,
+                "health": 8,
+                "position": 2
+              },
+              {
+                "atk": 4,
+                "card_id": "BG36_311",
+                "golden": false,
+                "health": 4,
+                "position": 3
+              },
+              {
+                "atk": 7,
+                "card_id": "BG34_170t3",
+                "golden": false,
+                "health": 10,
+                "position": 4
+              },
+              {
+                "atk": 13,
+                "card_id": "BG36_300",
+                "golden": false,
+                "health": 14,
+                "position": 5
+              },
+              {
+                "atk": 7,
+                "card_id": "BGDUO_700",
+                "golden": false,
+                "health": 8,
+                "position": 6
+              },
+              {
+                "atk": 7,
+                "card_id": "BG36_854",
+                "golden": false,
+                "health": 6,
+                "position": 7
+              }
+            ],
+            "hero": "TB_BaconShop_HERO_43_SKIN_N",
+            "player_id": 1,
+            "side": "own"
+          },
+          {
+            "board": [
+              {
+                "atk": 6,
+                "card_id": "BG36_318",
+                "golden": false,
+                "health": 6,
+                "position": 1
+              },
+              {
+                "atk": 8,
+                "card_id": "BG34_604",
+                "golden": false,
+                "health": 17,
+                "position": 2
+              },
+              {
+                "atk": 2,
+                "card_id": "BG34_604",
+                "golden": false,
+                "health": 11,
+                "position": 3
+              },
+              {
+                "atk": 11,
+                "card_id": "BG34_170t",
+                "golden": false,
+                "health": 9,
+                "position": 4
+              },
+              {
+                "atk": 12,
+                "card_id": "BGDUO33_140_G",
+                "golden": true,
+                "health": 18,
+                "position": 5
+              },
+              {
+                "atk": 10,
+                "card_id": "BG29_300",
+                "golden": false,
+                "health": 18,
+                "position": 6
+              }
+            ],
+            "hero": "TB_BaconShop_HERO_36",
+            "player_id": 3,
+            "side": "opponent"
+          },
+          {
+            "board": [
+              {
+                "atk": 6,
+                "card_id": "BGDUO_110",
+                "golden": false,
+                "health": 4,
+                "position": 1
+              },
+              {
+                "atk": 12,
+                "card_id": "BGDUO31_207_G",
+                "golden": true,
+                "health": 6,
+                "position": 2
+              },
+              {
+                "atk": 6,
+                "card_id": "BG26_135_G",
+                "golden": true,
+                "health": 2,
+                "position": 3
+              },
+              {
+                "atk": 4,
+                "card_id": "BGDUO_118_G",
+                "golden": true,
+                "health": 4,
+                "position": 4
+              },
+              {
+                "atk": 22,
+                "card_id": "BG36_524",
+                "golden": false,
+                "health": 26,
+                "position": 5
+              },
+              {
+                "atk": 2,
+                "card_id": "BG26_146",
+                "golden": false,
+                "health": 8,
+                "position": 6
+              },
+              {
+                "atk": 2,
+                "card_id": "BG36_110",
+                "golden": false,
+                "health": 3,
+                "position": 7
+              }
+            ],
+            "hero": "BG24_HERO_100_SKIN_E",
+            "player_id": 2,
+            "side": "own"
+          },
+          {
+            "board": [
+              {
+                "atk": 32,
+                "card_id": "BG33_822",
+                "golden": false,
+                "health": 29,
+                "position": 1
+              },
+              {
+                "atk": 9,
+                "card_id": "BGDUO31_201",
+                "golden": false,
+                "health": 5,
+                "position": 2
+              },
+              {
+                "atk": 20,
+                "card_id": "BG31_815_G",
+                "golden": true,
+                "health": 13,
+                "position": 3
+              },
+              {
+                "atk": 16,
+                "card_id": "BG36_700",
+                "golden": false,
+                "health": 9,
+                "position": 4
+              },
+              {
+                "atk": 21,
+                "card_id": "BG33_830_G",
+                "golden": true,
+                "health": 10,
+                "position": 5
+              },
+              {
+                "atk": 6,
+                "card_id": "BG36_300",
+                "golden": false,
+                "health": 3,
+                "position": 6
+              },
+              {
+                "atk": 11,
+                "card_id": "BG31_149_G",
+                "golden": true,
+                "health": 13,
+                "position": 7
+              }
+            ],
+            "hero": "BG31_HERO_802",
+            "player_id": 4,
+            "side": "opponent"
+          }
+        ],
+        "health_after": {
+          "1": 10,
+          "2": 10,
+          "3": 61,
+          "4": 61,
+          "5": 22,
+          "6": 8,
+          "7": 8,
+          "8": 22
+        },
+        "number": 7,
+        "opponents": [
+          3,
+          4
+        ],
+        "own_health_after": 10
+      },
+      {
+        "entries": [
+          {
+            "board": [
+              {
+                "atk": 8,
+                "card_id": "BGDUO_110",
+                "golden": false,
+                "health": 5,
+                "position": 1
+              },
+              {
+                "atk": 14,
+                "card_id": "BGDUO31_207_G",
+                "golden": true,
+                "health": 7,
+                "position": 2
+              },
+              {
+                "atk": 6,
+                "card_id": "BGDUO_118_G",
+                "golden": true,
+                "health": 97,
+                "position": 3
+              },
+              {
+                "atk": 3,
+                "card_id": "BG26_814",
+                "golden": false,
+                "health": 4,
+                "position": 4
+              },
+              {
+                "atk": 38,
+                "card_id": "BG36_524_G",
+                "golden": true,
+                "health": 221,
+                "position": 5
+              },
+              {
+                "atk": 8,
+                "card_id": "BG36_523",
+                "golden": false,
+                "health": 7,
+                "position": 6
+              },
+              {
+                "atk": 4,
+                "card_id": "BG_LOE_077",
+                "golden": false,
+                "health": 5,
+                "position": 7
+              }
+            ],
+            "hero": "BG24_HERO_100_SKIN_E",
+            "player_id": 2,
+            "side": "own"
+          },
+          {
+            "board": [
+              {
+                "atk": 9,
+                "card_id": "BG36_311",
+                "golden": false,
+                "health": 9,
+                "position": 1
+              },
+              {
+                "atk": 7,
+                "card_id": "BG36_103",
+                "golden": false,
+                "health": 4,
+                "position": 2
+              },
+              {
+                "atk": 17,
+                "card_id": "BG36_108",
+                "golden": false,
+                "health": 27,
+                "position": 3
+              },
+              {
+                "atk": 7,
+                "card_id": "BG36_312",
+                "golden": false,
+                "health": 3,
+                "position": 4
+              },
+              {
+                "atk": 3,
+                "card_id": "BG36_311",
+                "golden": false,
+                "health": 3,
+                "position": 5
+              },
+              {
+                "atk": 39,
+                "card_id": "BG36_106",
+                "golden": false,
+                "health": 39,
+                "position": 6
+              },
+              {
+                "atk": 51,
+                "card_id": "BG36_106",
+                "golden": false,
+                "health": 51,
+                "position": 7
+              }
+            ],
+            "hero": "TB_BaconShop_HERO_50_SKIN_G",
+            "player_id": 7,
+            "side": "opponent"
+          },
+          {
+            "board": [
+              {
+                "atk": 5,
+                "card_id": "BG34_171",
+                "golden": false,
+                "health": 2,
+                "position": 1
+              },
+              {
+                "atk": 8,
+                "card_id": "BG34_170_G",
+                "golden": true,
+                "health": 8,
+                "position": 2
+              },
+              {
+                "atk": 4,
+                "card_id": "BG36_311",
+                "golden": false,
+                "health": 4,
+                "position": 3
+              },
+              {
+                "atk": 7,
+                "card_id": "BG34_170t3",
+                "golden": false,
+                "health": 10,
+                "position": 4
+              },
+              {
+                "atk": 6,
+                "card_id": "BG23_318",
+                "golden": false,
+                "health": 2,
+                "position": 5
+              },
+              {
+                "atk": 13,
+                "card_id": "BG36_300",
+                "golden": false,
+                "health": 14,
+                "position": 6
+              },
+              {
+                "atk": 7,
+                "card_id": "BG36_854",
+                "golden": false,
+                "health": 6,
+                "position": 7
+              }
+            ],
+            "hero": "TB_BaconShop_HERO_43_SKIN_N",
+            "player_id": 1,
+            "side": "own"
+          }
+        ],
+        "health_after": {
+          "1": 0,
+          "2": 0,
+          "3": 48,
+          "4": 48,
+          "5": 22,
+          "6": 8,
+          "7": 8,
+          "8": 22
+        },
+        "number": 8,
+        "opponents": [
+          7
+        ],
+        "own_health_after": 0
+      }
+    ],
+    "shop_tribes": {
+      "ABERRATION": 5,
+      "ELEMENTAL": 5,
+      "MECHANICAL": 8,
+      "MURLOC": 4,
+      "NEUTRAL": 4,
+      "PIRATE": 5
+    },
+    "start_health": {
+      "1": 46,
+      "2": 38,
+      "3": 46,
+      "4": 45,
+      "5": 42,
+      "6": 41,
+      "7": 45,
+      "8": 40
+    },
+    "status": "ok",
+    "teammate_hero": "TB_BaconShop_HERO_43_SKIN_N",
+    "teammate_player_id": 1,
+    "warnings": []
+  }
+]

@@ -399,3 +399,15 @@ Deno.test("new-style secret keys are not sent as a bearer token", async () => {
   assertEquals(begin.headers.Authorization, undefined);
   assertEquals(begin.headers.apikey, "sb_secret_test");
 });
+
+Deno.test("with a new-style secret key no service call carries a bearer token", async () => {
+  const api = fakeApi();
+  const res = await handle(await upload(), { ...ENV, serviceKey: "sb_secret_test" }, api.fetchFn);
+  assertEquals(res.status, 201);
+  for (const c of api.calls) {
+    assertEquals(c.headers.apikey, "sb_secret_test", c.path);
+    // Only the user lookup sends a bearer, and it is the user's own token.
+    const bearer = c.path === "/auth/v1/user" ? `Bearer ${TOKEN}` : undefined;
+    assertEquals(c.headers.Authorization, bearer, c.path);
+  }
+});

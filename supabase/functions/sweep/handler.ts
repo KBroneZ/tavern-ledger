@@ -1,4 +1,5 @@
-// Daily sweep (T-104d). POST /functions/v1/sweep with the service-role key,
+// Daily sweep (T-104d). POST /functions/v1/sweep with the service key the
+// function itself uses (the new secret key where the platform gives it, D-042),
 // or with the sweep token that the scheduled job reads from Vault
 // (X-Sweep-Token; checked by the database, migration 20261010090000):
 //   1. game files with no summary row (an upload that wrote its file and then

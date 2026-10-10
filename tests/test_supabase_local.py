@@ -36,6 +36,7 @@ def _stack():
         "url": status["API_URL"],
         "anon": status["ANON_KEY"],
         "service": status["SERVICE_ROLE_KEY"],
+        "secret": status["SECRET_KEY"],
     }
 
 
@@ -52,9 +53,11 @@ class Api:
         self.stack = stack
 
     def request(self, method, path, *, token=None, key=None, body=None,
-                raw=None, content_type="application/json", headers=None):
+                raw=None, content_type="application/json", headers=None, bearer=True):
         key = key or self.stack["anon"]
-        hdrs = {"apikey": key, "Authorization": f"Bearer {token or key}"}
+        hdrs = {"apikey": key}
+        if bearer:
+            hdrs["Authorization"] = f"Bearer {token or key}"
         hdrs.update(headers or {})
         data = raw
         if body is not None:
@@ -82,6 +85,10 @@ class Api:
 
     def service(self, method, path, **kw):
         return self.request(method, path, key=self.stack["service"], **kw)
+
+    def secret(self, method, path, **kw):
+        """With the new secret key (sb_secret_...), sent in `apikey` only."""
+        return self.request(method, path, key=self.stack["secret"], bearer=False, **kw)
 
 
 @unittest.skipUnless(ENABLED, "set TAVERN_SUPABASE_LOCAL=1 with the local stack running")
@@ -274,6 +281,25 @@ class LocalStackTests(unittest.TestCase):
             token=token, raw=b"x" * 70000, content_type="application/gzip")
         self.assertEqual(status, 413)
 
+    def test_refused_upload_stores_only_a_salted_ip_key(self):
+        ip = "192.0.2.77"  # TEST-NET-1, never a real client
+        status, _ = self.api.request(
+            "PUT", f"/functions/v1/upload-game/v1/games/{SESSION}/1",
+            raw=gzip.compress(_compact(_record())), content_type="application/gzip",
+            headers={"X-Forwarded-For": ip})
+        self.assertEqual(status, 401, "a token that is not a user's is refused")
+        plain = "encode(extensions.digest('{ip}', 'sha256'), 'hex')".format(ip=ip)
+        try:
+            self.assertEqual(_psql(
+                f"select count(*) from private.upload_ip_failures where ip_key = {plain}"),
+                "0", "the plain SHA-256 of the IP is never stored (D-042)")
+            self.assertEqual(_psql(
+                "select count(*) from private.upload_ip_failures"
+                f" where ip_key = private.ip_key({plain})"),
+                "1", "the refused request is counted under the salted key")
+        finally:
+            _psql(f"delete from private.upload_ip_failures where ip_key = private.ip_key({plain})")
+
     def test_sweep_removes_orphan_files(self):
         uid, _, token = self.make_user()
         status, _ = self.upload(token, _record())
@@ -283,7 +309,9 @@ class LocalStackTests(unittest.TestCase):
         _psql("set session_replication_role = replica;"
               " update storage.objects set created_at = now() - interval '2 hours',"
               " updated_at = now() - interval '2 hours' where name = '{n}'".format(n=orphan))
-        status, body = self.api.service("POST", "/functions/v1/sweep", body={})
+        # The functions use the new secret key where the platform gives it
+        # (D-042; the local edge runtime does), so that is the key sweep takes.
+        status, body = self.api.secret("POST", "/functions/v1/sweep", body={})
         self.assertEqual(status, 200, body)
         self.assertGreaterEqual(body["files"], 1)
         left = _psql("select string_agg(name, ',' order by name) from storage.objects"

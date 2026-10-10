@@ -22,6 +22,7 @@ use std::time::{Duration, Instant};
 
 use serde::Serialize;
 use serde_json::Value;
+use tracker::dev_reconnect::Reconnects;
 use tracker::store::Store;
 
 use crate::auth::{now_secs, Auth, AuthError, Session};
@@ -321,7 +322,9 @@ impl Engine {
     fn refresh_status(&mut self) {
         let user = self.settings.user_id.clone();
         match self.load() {
-            Ok((store, marks)) => self.status.counts = pending(&store, &marks, user.as_deref()).1,
+            Ok((store, marks, reconnects)) => {
+                self.status.counts = pending(&store, &marks, &reconnects, user.as_deref()).1
+            }
             Err(e) => {
                 self.status.problem =
                     Some(format!("Cannot read the game history ({:?}).", e.kind()))
@@ -334,8 +337,14 @@ impl Engine {
         self.status.email = self.settings.email.clone();
     }
 
-    fn load(&self) -> io::Result<(Store, Marks)> {
-        Ok((Store::open(&self.data_dir)?, Marks::open(&self.data_dir)?))
+    /// The history, the upload marks and the reconnect dev tool's uses; a
+    /// broken dev tool file only means no game is held back for it.
+    fn load(&self) -> io::Result<(Store, Marks, Reconnects)> {
+        Ok((
+            Store::open(&self.data_dir)?,
+            Marks::open(&self.data_dir)?,
+            Reconnects::load(&self.data_dir),
+        ))
     }
 
     /// A valid access token, refreshing (and saving the rotated refresh
@@ -491,11 +500,11 @@ impl Engine {
             }
         }
         let user = self.settings.user_id.clone().unwrap_or_default();
-        let (store, mut marks) = match self.load() {
+        let (store, mut marks, reconnects) = match self.load() {
             Ok(loaded) => loaded,
             Err(e) => return self.stop(format!("Cannot read the game history ({:?}).", e.kind())),
         };
-        let (items, _) = pending(&store, &marks, Some(&user));
+        let (items, _) = pending(&store, &marks, &reconnects, Some(&user));
         if items.is_empty() {
             return Wake::Idle;
         }
