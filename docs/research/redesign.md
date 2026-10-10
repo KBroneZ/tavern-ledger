@@ -80,7 +80,7 @@ Headings get `text-wrap: balance` and `letter-spacing: -0.015em`; paragraphs `te
 - **Primary button**: amber gradient (`--amber-hi` to `--amber`), `--amber-ink` text, 48px tall, `scale(0.97)` on press (130ms). One per view.
 - **Quiet button**: `--panel` fill, `1.5px` inset `--line` ring, amber ring on hover.
 - **Danger button**: transparent, `2px` inset `--bad` ring, `--bad` text.
-- **Place**: the number always shows. Win: lit amber disc. Top half: amber ring. Bottom half: bare number. Unknown: dashed circle with "?" and the `unknown` mark.
+- **Place**: the number always shows. Win: lit amber disc. Top half: amber ring. Bottom half: bare number. No place in the data: a dashed circle with a dash (the app) or "?" (the site) and the `unknown` mark. Place rules of the mode unknown (the app): the number on a soft square.
 - **Source marks**: unchanged words and border styles (dashed inferred, double entered, solid leaderboard, square card data, dashed italic possible, dotted unknown).
 - **Brand mark**: our own lantern pane, a rounded amber rectangle with a white inner line; no Blizzard shapes. Same in the app.
 

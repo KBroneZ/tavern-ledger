@@ -567,7 +567,7 @@ mod tests {
                     screen,
                     &BTreeMap::from([(Panel::Opponents, rect(500.0, 120.0))]),
                 );
-                s.theme = Theme::Parchment;
+                s.theme = Theme::Contrast;
                 s.set_opacity(0.8);
                 s.set_shown(Panel::Tribes, false);
             })
@@ -576,7 +576,7 @@ mod tests {
         second.load(&dir, false).unwrap();
         *second.screen.lock().unwrap() = (1920.0, 1080.0);
         let view = second.view();
-        assert_eq!(view.theme, "parchment");
+        assert_eq!(view.theme, "contrast");
         assert_eq!(view.opacity, 0.8);
         assert_eq!(view.hidden, vec![Panel::Tribes]);
         assert_eq!(view.layout.panels[&Panel::Opponents], rect(500.0, 120.0));
