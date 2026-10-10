@@ -16,11 +16,12 @@ resets a connection is recorded (UTC time only) in
 %APPDATA%\\TavernLedger\\dev-reconnects.jsonl so the tracker marks that game
 and leaves it out of stats, uploads and fixtures.
 
-Usage (from an elevated terminal):
-    python tools/dev/reconnect.py [--hotkey ctrl+alt+f9] [--cooldown 10]
+Usage (from an elevated terminal; -I keeps user-writable Python paths out
+of an elevated process, and the tool refuses to run elevated without it):
+    python -I tools/dev/reconnect.py [--hotkey ctrl+alt+f9] [--cooldown 10]
         [--remote-port N ...] [--data-dir DIR]
-    python tools/dev/reconnect.py --list        (no admin needed, drops nothing)
-    python tools/dev/reconnect.py --self-test   (drops only a local test connection)
+    python tools/dev/reconnect.py --list           (no admin needed, drops nothing)
+    python -I tools/dev/reconnect.py --self-test   (drops only a local test connection)
 
 Stop it with Ctrl+C or by closing the window.
 """
@@ -30,6 +31,7 @@ from __future__ import annotations
 import argparse
 import ctypes
 import ipaddress
+import math
 import os
 import socket
 import struct
@@ -40,6 +42,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Iterable, Protocol
 
+# Run elevated from a user-writable folder: write no .pyc there, and find the
+# sibling module explicitly (python -I does not add the script's folder).
+sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import reconnect_marks  # noqa: E402
@@ -63,6 +68,7 @@ MOD_ALT, MOD_CONTROL, MOD_SHIFT, MOD_NOREPEAT = 0x0001, 0x0002, 0x0004, 0x4000
 WM_HOTKEY = 0x0312
 PM_REMOVE = 0x0001
 TH32CS_SNAPPROCESS = 0x00000002
+LOAD_LIBRARY_SEARCH_SYSTEM32 = 0x00000800
 HOTKEY_ID = 0x0031
 
 BANNER = """\
@@ -101,7 +107,8 @@ def parse_hotkey(text: str) -> tuple[int, int]:
 def virtual_key(key: str) -> int:
     if len(key) == 1 and ("a" <= key <= "z" or "0" <= key <= "9"):
         return ord(key.upper())
-    if key.startswith("f") and key[1:].isdigit() and 1 <= int(key[1:]) <= 11:
+    number = key[1:]
+    if key.startswith("f") and number.isascii() and number.isdigit() and 1 <= int(number) <= 11:
         return 0x70 + int(key[1:]) - 1  # VK_F1 = 0x70
     raise UsageError(f"key {key!r} not supported (use a-z, 0-9 or f1-f11; f12 is reserved)")
 
@@ -214,10 +221,15 @@ class Win32:
         from ctypes import wintypes
 
         self.wt = wintypes
-        self.iphlpapi = ctypes.WinDLL("iphlpapi", use_last_error=True)
-        self.kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-        self.advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
-        self.user32 = ctypes.WinDLL("user32", use_last_error=True)
+
+        def system_dll(name: str) -> ctypes.WinDLL:
+            # System32 only: never a same-named DLL planted next to Python.
+            return ctypes.WinDLL(name, use_last_error=True, winmode=LOAD_LIBRARY_SEARCH_SYSTEM32)
+
+        self.iphlpapi = system_dll("iphlpapi")
+        self.kernel32 = system_dll("kernel32")
+        self.advapi32 = system_dll("advapi32")
+        self.user32 = system_dll("user32")
         self._declare()
 
     def _declare(self) -> None:
@@ -435,18 +447,40 @@ def run_hotkey(api: Win32, mods: int, vk: int, cooldown: Cooldown, data_dir: Pat
     try:
         while True:
             if api.hotkey_pressed():
-                left = cooldown.left()
-                if left > 0:
-                    print(f"Cooldown: {left:.0f} s left; ignored.")
-                else:
-                    cooldown.use()
-                    print(f"{datetime.now():%H:%M:%S} {drop_once(api, data_dir, remote_ports).message()}")
+                on_press(api, cooldown, data_dir, remote_ports)
             time.sleep(POLL_SECONDS)
     except KeyboardInterrupt:
         print("Stopped. Nothing to undo: the tool changed no setting.")
         return 0
     finally:
         api.unregister_hotkey()
+
+
+def on_press(api: Api, cooldown: Cooldown, data_dir: Path, remote_ports: set[int] | None) -> None:
+    """One hotkey press. The cooldown starts only when something was dropped;
+    an error is reported and the tool keeps waiting."""
+    left = cooldown.left()
+    if left > 0:
+        print(f"Cooldown: {left:.0f} s left; ignored.")
+        return
+    try:
+        result = drop_once(api, data_dir, remote_ports)
+    except OSError as e:
+        print(f"{datetime.now():%H:%M:%S} Nothing dropped: {e}")
+        return
+    if result.recorded is not None:
+        cooldown.use()
+    print(f"{datetime.now():%H:%M:%S} {result.message()}")
+
+
+def is_isolated() -> bool:
+    return bool(sys.flags.isolated)
+
+
+def history_missing(data_dir: Path) -> bool:
+    """No tracker history in the default data folder: likely an elevated
+    terminal of another account, whose %APPDATA% the tracker never reads."""
+    return not (data_dir / "games.jsonl").is_file()
 
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
@@ -469,12 +503,24 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     try:
         mods, vk = parse_hotkey(args.hotkey)
-        if args.cooldown < MIN_COOLDOWN:
-            raise UsageError(f"--cooldown must be at least {MIN_COOLDOWN:g} seconds")
+        if not (math.isfinite(args.cooldown) and args.cooldown >= MIN_COOLDOWN):
+            raise UsageError(f"--cooldown must be a number of seconds, at least {MIN_COOLDOWN:g}")
         if args.remote_port and not all(0 < p < 65536 for p in args.remote_port):
             raise UsageError("--remote-port must be 1-65535")
     except UsageError as e:
         print(f"Error: {e}", file=sys.stderr)
+        return 2
+    try:
+        return run(args, mods, vk)
+    except OSError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 2
+
+
+def run(args: argparse.Namespace, mods: int, vk: int) -> int:
+    if not args.list and not is_isolated():
+        print("Run it as 'python -I tools/dev/reconnect.py ...': an elevated Python must not "
+              "load code from user-writable paths. Nothing was done.", file=sys.stderr)
         return 2
     api = Win32()
     if args.list:
@@ -485,15 +531,16 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if args.self_test:
         return self_test(api)
-    print(BANNER)
     data_dir = args.data_dir or reconnect_marks.default_data_dir()
+    if args.data_dir is None and history_missing(data_dir):
+        print(f"No Tavern Ledger history in {data_dir}. If this elevated terminal belongs to another "
+              "account, its uses would never reach your tracker: pass --data-dir with your own "
+              "%APPDATA%\\TavernLedger. Nothing was done.", file=sys.stderr)
+        return 2
+    print(BANNER)
     print(f"Uses are recorded in {data_dir / reconnect_marks.FILE_NAME} (UTC time only).")
     remote_ports = set(args.remote_port) if args.remote_port else None
-    try:
-        return run_hotkey(api, mods, vk, Cooldown(args.cooldown), data_dir, remote_ports, args.hotkey)
-    except OSError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        return 2
+    return run_hotkey(api, mods, vk, Cooldown(args.cooldown), data_dir, remote_ports, args.hotkey)
 
 
 if __name__ == "__main__":

@@ -17,16 +17,16 @@ Never shipped: not in the app, the installer, releases or user docs. For collect
 **Admin.** Windows only lets an elevated process reset connections. Open the terminal with "Run as administrator"; without it the tool says so and does nothing.
 
 ```
-python tools/dev/reconnect.py                       # wait for Ctrl+Alt+F9
-python tools/dev/reconnect.py --hotkey ctrl+shift+r --cooldown 20
-python tools/dev/reconnect.py --list                # no admin: show the game's connections, drop nothing
-python tools/dev/reconnect.py --remote-port 3724    # only connections to that remote port
-python tools/dev/reconnect.py --self-test           # admin: drop a local test connection only
+python -I tools/dev/reconnect.py                       # wait for Ctrl+Alt+F9
+python -I tools/dev/reconnect.py --hotkey ctrl+shift+r --cooldown 20
+python tools/dev/reconnect.py --list                   # no admin: show the game's connections, drop nothing
+python -I tools/dev/reconnect.py --remote-port 3724    # only connections to that remote port
+python -I tools/dev/reconnect.py --self-test           # admin: drop a local test connection only
 ```
 
-A hotkey needs Ctrl or Alt plus a letter, a digit or F1-F11 (F12 is reserved by Windows). IPv6 connections cannot be reset this way; the tool counts them and leaves them alone.
+`-I` (isolated mode) is required when elevated: it keeps user-writable Python paths out of an admin process. Without `--data-dir`, the tool refuses a data folder that has no Tavern Ledger history (for example an elevated terminal of another account, whose uses your tracker would never see). A hotkey needs Ctrl or Alt plus a letter, a digit or F1-F11 (F12 is reserved by Windows). IPv6 connections cannot be reset this way; the tool counts them and leaves them alone.
 
-**Marks.** Every press that drops something first appends one line to `%APPDATA%\TavernLedger\dev-reconnects.jsonl`: `{"utc": "2026-10-10T19:15:03Z"}`, the UTC time and nothing else. The tracker marks every game whose time (from the log's own clock) holds one of those lines, give or take 30 seconds: the history shows "Dev reconnect" on it, and the stats, hero stats and upload leave it out. `reconnect_marks.py` makes fixture tools refuse such logs:
+**Marks.** Every press that drops something first appends one line to `%APPDATA%\TavernLedger\dev-reconnects.jsonl`: `{"utc": "2026-10-10T19:15:03Z"}`, the UTC time and nothing else. The tracker marks every game whose time (from the log's own clock) holds one of those lines, give or take 30 seconds, and each game also owns the gaps before and after it (a use between two games marks both): the history shows "Dev reconnect" on it, and the stats, hero stats and upload leave it out; while the file cannot be read at all, nothing is uploaded. `reconnect_marks.py` makes fixture tools refuse such logs:
 
 ```
 python tools/dev/reconnect_marks.py "<Logs>\Hearthstone_<date>\Power_old.log"

@@ -4,11 +4,16 @@
 //! `dev-reconnects.jsonl` in the data folder: `{"utc": "2026-10-10T19:15:03Z"}`,
 //! nothing else. A game whose span ([`Played`]) holds one of those times is a
 //! *dev reconnect* game: the history marks it and the stats and the upload
-//! leave it out. The marks are worked out each time from that file, never
-//! saved in the history. No file is the normal case (the tool was never
-//! used): no marks. A file that cannot be read, or has lines that make no
-//! sense, gives the marks it can and a warning; never a crash.
+//! leave it out. Each game also owns the gaps before and after it in its
+//! session (a use between two games marks both): a reconnect can split one
+//! game in two in the log, and a game saved at COMPLETE keeps the span it had
+//! then. The marks are worked out each time from that file, never saved in
+//! the history. No file is the normal case (the tool was never used): no
+//! marks. Lines that make no sense are skipped with a warning; a file that
+//! cannot be read at all gives no marks, a warning and `unreadable`, and the
+//! upload then holds every game (fail closed). Never a crash.
 
+use std::collections::BTreeSet;
 use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
@@ -16,6 +21,7 @@ use std::path::Path;
 use serde_json::Value;
 
 use crate::game_clock::{days_from_civil, Played};
+use crate::store::{GameKey, Store};
 
 pub const FILE_NAME: &str = "dev-reconnects.jsonl";
 /// A use this close before a game's first line or after its last still
@@ -32,6 +38,9 @@ pub struct Reconnects {
     /// Why some or all of the file could not be used; `None` when it was
     /// read whole (or does not exist).
     pub warning: Option<String>,
+    /// The file exists but could not be read at all: which games were played
+    /// with the tool is unknown.
+    pub unreadable: bool,
 }
 
 impl Reconnects {
@@ -43,9 +52,10 @@ impl Reconnects {
             Err(e) => Reconnects {
                 times: Vec::new(),
                 warning: Some(format!(
-                    "Could not read {FILE_NAME} ({:?}); no game is marked as played with the reconnect dev tool.",
+                    "Could not read {FILE_NAME} ({:?}); no game is marked as played with the reconnect dev tool and uploads wait.",
                     e.kind()
                 )),
+                unreadable: true,
             },
         }
     }
@@ -62,7 +72,11 @@ impl Reconnects {
         times.sort_unstable();
         let warning = (bad > 0)
             .then(|| format!("{bad} line(s) of {FILE_NAME} could not be read and were skipped."));
-        Reconnects { times, warning }
+        Reconnects {
+            times,
+            warning,
+            unreadable: false,
+        }
     }
 
     pub fn is_empty(&self) -> bool {
@@ -72,13 +86,42 @@ impl Reconnects {
     /// True when the tool was used while the game was on. A game with no
     /// known span cannot be checked and is not marked.
     pub fn marks(&self, played: Option<&Played>) -> bool {
-        let Some(p) = played else {
-            return false;
-        };
-        let start = self.times.partition_point(|&t| t < p.from - MARGIN_SECS);
-        self.times
-            .get(start)
-            .is_some_and(|&t| t <= p.to + MARGIN_SECS)
+        played.is_some_and(|p| self.any_between(p.from, p.to))
+    }
+
+    /// Every game of the history played with the tool: its own span, widened
+    /// to the end of the game before it and the start of the game after it
+    /// in the same session.
+    pub fn marked(&self, store: &Store) -> BTreeSet<GameKey> {
+        let mut marked = BTreeSet::new();
+        if self.times.is_empty() {
+            return marked;
+        }
+        let games: Vec<(&GameKey, Option<&Played>)> =
+            store.games().map(|(k, _)| (k, store.played(k))).collect();
+        for (i, &(key, played)) in games.iter().enumerate() {
+            let Some(p) = played else {
+                continue;
+            };
+            let neighbour = |j: Option<usize>| {
+                j.and_then(|j| games.get(j))
+                    .filter(|(k, _)| k.session == key.session)
+                    .and_then(|(_, p)| *p)
+            };
+            let before = neighbour(i.checked_sub(1)).map_or(p.from, |b| b.to.min(p.from));
+            let after = neighbour(Some(i + 1)).map_or(p.to, |a| a.from.max(p.to));
+            if self.any_between(before, after) {
+                marked.insert(key.clone());
+            }
+        }
+        marked
+    }
+
+    fn any_between(&self, from: i64, to: i64) -> bool {
+        let lo = from.saturating_sub(MARGIN_SECS);
+        let hi = to.saturating_add(MARGIN_SECS);
+        let start = self.times.partition_point(|&t| t < lo);
+        self.times.get(start).is_some_and(|&t| t <= hi)
     }
 }
 
@@ -183,6 +226,54 @@ mod tests {
         assert!(!r.marks(None), "a game with no known span is not marked");
     }
 
+    fn store_with(tag: &str, spans: &[(&str, u64, Option<Played>)]) -> Store {
+        let mut store = Store::open(&temp_dir(tag)).unwrap();
+        for (session, index, played) in spans {
+            let key = GameKey {
+                session: session.to_string(),
+                index: *index,
+            };
+            let report = serde_json::json!({ "index": index });
+            store.save_played(key, report, *played).unwrap();
+        }
+        store
+    }
+
+    #[test]
+    fn a_use_between_two_games_of_a_session_marks_both_but_not_other_sessions() {
+        let a = span("2026-10-10T19:00:00Z", "2026-10-10T19:20:00Z");
+        let b = span("2026-10-10T19:25:00Z", "2026-10-10T19:40:00Z");
+        let c = span("2026-10-10T19:41:00Z", "2026-10-10T19:50:00Z");
+        let store = store_with(
+            "gap",
+            &[
+                ("S1", 1, Some(a)),
+                ("S1", 2, Some(b)),
+                ("S1", 3, None),
+                ("S2", 1, Some(c)),
+            ],
+        );
+        // 19:22:30: after game 1's last line (+30 s), before game 2's first.
+        let r = Reconnects::parse("{\"utc\": \"2026-10-10T19:22:30Z\"}\n");
+        let marked: Vec<(String, u64)> = r
+            .marked(&store)
+            .into_iter()
+            .map(|k| (k.session, k.index))
+            .collect();
+        assert_eq!(marked, [("S1".to_string(), 1), ("S1".to_string(), 2)]);
+        assert!(Reconnects::default().marked(&store).is_empty());
+    }
+
+    #[test]
+    fn spans_at_the_ends_of_time_do_not_overflow() {
+        let r = Reconnects::parse("{\"utc\": \"2026-10-10T19:22:30Z\"}\n");
+        let all = Played {
+            from: i64::MIN,
+            to: i64::MAX,
+        };
+        assert!(r.marks(Some(&all)));
+    }
+
     #[test]
     fn bad_lines_are_skipped_with_a_warning_and_the_good_ones_still_mark() {
         let r = Reconnects::parse(
@@ -207,6 +298,7 @@ mod tests {
         std::fs::create_dir_all(dir.join(FILE_NAME)).unwrap();
         let r = Reconnects::load(&dir);
         assert!(r.is_empty());
+        assert!(r.unreadable);
         assert!(r.warning.unwrap().starts_with("Could not read"));
     }
 

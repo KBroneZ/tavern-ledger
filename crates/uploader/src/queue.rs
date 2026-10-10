@@ -172,7 +172,8 @@ pub fn body_of(store: &Store, key: &GameKey, report: &Value) -> Vec<u8> {
 }
 
 /// Games waiting for `user`, oldest first, and the counts for the app.
-/// Games played with the reconnect dev tool are never waiting.
+/// Games played with the reconnect dev tool are never waiting; while its
+/// file cannot be read, no game is (fail closed: an upload cannot be undone).
 pub fn pending(
     store: &Store,
     marks: &Marks,
@@ -181,8 +182,9 @@ pub fn pending(
 ) -> (Vec<Item>, Counts) {
     let mut items = Vec::new();
     let mut counts = Counts::default();
+    let marked = reconnects.marked(store);
     for (key, report) in store.games() {
-        if reconnects.marks(store.played(key)) {
+        if reconnects.unreadable || marked.contains(key) {
             counts.dev_reconnect += 1;
             continue;
         }
@@ -286,6 +288,18 @@ pub(crate) mod tests {
         assert_eq!(items.iter().map(|i| i.key.index).collect::<Vec<_>>(), [2]);
         assert_eq!(counts.dev_reconnect, 1);
         assert_eq!(counts.waiting, 1);
+    }
+
+    #[test]
+    fn while_the_dev_tool_file_cannot_be_read_no_game_is_uploaded() {
+        let dir = temp_dir("dev-reconnect-unreadable");
+        let store = store_with(&dir, &[(S1, 1, "GT_BATTLEGROUNDS")]);
+        std::fs::create_dir_all(dir.join(tracker::dev_reconnect::FILE_NAME)).unwrap();
+        let reconnects = Reconnects::load(&dir);
+        assert!(reconnects.unreadable);
+        let (items, counts) = pending(&store, &Marks::open(&dir).unwrap(), &reconnects, Some("u"));
+        assert!(items.is_empty());
+        assert_eq!(counts.dev_reconnect, 1);
     }
 
     #[test]

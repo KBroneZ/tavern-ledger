@@ -84,7 +84,8 @@ class HotkeyTest(unittest.TestCase):
         self.assertEqual(reconnect.parse_hotkey("alt+0"), (reconnect.MOD_ALT, ord("0")))
 
     def test_hotkeys_that_could_fire_by_accident_or_are_reserved_are_refused(self):
-        for bad in ["f9", "shift+f9", "ctrl+alt+f12", "win+f9", "ctrl+alt+space", "ctrl+", ""]:
+        for bad in ["f9", "shift+f9", "ctrl+alt+f12", "win+f9", "ctrl+alt+space", "ctrl+", "",
+                    "ctrl+f\u00b2"]:
             with self.assertRaises(reconnect.UsageError, msg=bad):
                 reconnect.parse_hotkey(bad)
 
@@ -155,6 +156,29 @@ class DropTest(TempDirTest):
         self.assertEqual(len(self.lines()), 1, "a failed reset is still recorded: the game may be affected")
 
 
+class PressTest(TempDirTest):
+    def press(self, api, cooldown):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            reconnect.on_press(api, cooldown, self.dir, None)
+        return out.getvalue()
+
+    def test_the_cooldown_starts_only_when_something_was_dropped(self):
+        now = [100.0]
+        cooldown = reconnect.Cooldown(10, clock=lambda: now[0])
+        self.assertIn("not running", self.press(FakeApi(pids=set()), cooldown))
+        self.assertEqual(cooldown.left(), 0)
+        self.assertIn("Dropped 1", self.press(FakeApi(rows=[row()]), cooldown))
+        self.assertIn("Cooldown", self.press(FakeApi(rows=[row()]), cooldown))
+
+    def test_a_windows_error_on_one_press_is_reported_and_the_tool_keeps_going(self):
+        api = FakeApi()
+        api.tcp_rows = mock.Mock(side_effect=OSError(5, "GetExtendedTcpTable failed"))
+        cooldown = reconnect.Cooldown(10)
+        self.assertIn("Nothing dropped", self.press(api, cooldown))
+        self.assertEqual(cooldown.left(), 0)
+
+
 class CooldownTest(unittest.TestCase):
     def test_presses_inside_the_cooldown_wait(self):
         now = [100.0]
@@ -180,10 +204,32 @@ class MainTest(TempDirTest):
         self.assertEqual(code, 2)
         self.assertIn("only runs on Windows", err)
 
+    def test_without_python_isolated_mode_it_refuses_before_any_windows_call(self):
+        with mock.patch.object(reconnect.sys, "platform", "win32"), \
+                mock.patch.object(reconnect, "is_isolated", return_value=False), \
+                mock.patch.object(reconnect, "Win32") as win:
+            code, _, err = self.run_main(["--data-dir", str(self.dir)])
+        self.assertEqual(code, 2)
+        self.assertIn("python -I", err)
+        win.assert_not_called()
+
+    def test_without_a_history_in_the_default_folder_it_refuses(self):
+        fake = mock.Mock()
+        fake.is_admin.return_value = True
+        with mock.patch.object(reconnect.sys, "platform", "win32"), \
+                mock.patch.object(reconnect, "is_isolated", return_value=True), \
+                mock.patch.object(reconnect, "Win32", return_value=fake), \
+                mock.patch.object(reconnect.reconnect_marks, "default_data_dir", return_value=self.dir):
+            code, out, err = self.run_main([])
+        self.assertEqual(code, 2)
+        self.assertIn("another account", err)
+        fake.register_hotkey.assert_not_called()
+
     def test_without_admin_rights_it_refuses_and_does_nothing(self):
         fake = mock.Mock()
         fake.is_admin.return_value = False
         with mock.patch.object(reconnect.sys, "platform", "win32"), \
+                mock.patch.object(reconnect, "is_isolated", return_value=True), \
                 mock.patch.object(reconnect, "Win32", return_value=fake):
             code, out, err = self.run_main(["--data-dir", str(self.dir)])
         self.assertEqual(code, 2)
@@ -196,7 +242,8 @@ class MainTest(TempDirTest):
     def test_bad_options_are_refused_before_any_windows_call(self):
         with mock.patch.object(reconnect.sys, "platform", "win32"), \
                 mock.patch.object(reconnect, "Win32") as win:
-            for argv in (["--hotkey", "f9"], ["--cooldown", "0.5"], ["--remote-port", "0"]):
+            for argv in (["--hotkey", "f9"], ["--cooldown", "0.5"], ["--cooldown", "nan"],
+                         ["--cooldown", "inf"], ["--remote-port", "0"]):
                 self.assertEqual(self.run_main(argv)[0], 2, argv)
         win.assert_not_called()
 
@@ -205,6 +252,7 @@ class MainTest(TempDirTest):
         fake.is_admin.return_value = True
         fake.hotkey_pressed.side_effect = KeyboardInterrupt
         with mock.patch.object(reconnect.sys, "platform", "win32"), \
+                mock.patch.object(reconnect, "is_isolated", return_value=True), \
                 mock.patch.object(reconnect, "Win32", return_value=fake):
             code, out, _ = self.run_main(["--data-dir", str(self.dir)])
         self.assertEqual(code, 0)
@@ -259,6 +307,22 @@ class SpansTest(unittest.TestCase):
         unknown = marks.game_spans(lines, "replay", utc_plus_2)[0]
         self.assertIsNone(unknown.start)
 
+    def test_a_client_left_open_overnight_dates_the_next_game_the_next_day(self):
+        lines = [f"D 21:00:00.0 {marks.CREATE_GAME}", "D 22:00:00.0 x", f"D 10:30:00.0 {marks.CREATE_GAME}"]
+        spans = marks.game_spans(lines, "Hearthstone_2026_10_10_18_00_00", lambda n: n.replace(tzinfo=UTC))
+        self.assertEqual(spans[1].start, datetime(2026, 10, 11, 10, 30, tzinfo=UTC))
+
+    def test_the_daylight_saving_fall_back_hour_is_not_a_new_day(self):
+        lines = [f"D 02:50:00.0 {marks.CREATE_GAME}", "D 02:05:00.0 x"]
+        span = marks.game_spans(lines, "Hearthstone_2026_10_25_01_00_00", lambda n: n.replace(tzinfo=UTC))[0]
+        self.assertEqual(span.end, datetime(2026, 10, 25, 2, 5, tzinfo=UTC))
+
+    def test_a_use_between_two_games_marks_both_like_the_tracker(self):
+        spans = [marks.GameSpan(1, at(9, 0), at(9, 20)), marks.GameSpan(2, at(9, 25), at(9, 40)),
+                 marks.GameSpan(3, None, None)]
+        self.assertEqual(marks.marked_games(spans, [at(9, 22, 30)]), [1, 2])
+        self.assertEqual(marks.marked_games(spans, [at(8, 0)]), [])
+
     def test_marked_within_the_margin_only(self):
         span = marks.GameSpan(1, at(9, 0), at(9, 20))
         self.assertTrue(marks.is_marked(span, [at(9, 10)]))
@@ -276,6 +340,21 @@ class UsesFileTest(TempDirTest):
         self.assertIsNone(uses.warning)
         for line in (self.dir / marks.FILE_NAME).read_text().splitlines():
             self.assertEqual(list(json.loads(line)), ["utc"], "UTC time and nothing else")
+
+    def test_a_use_after_a_cut_last_line_starts_on_its_own_line(self):
+        (self.dir / marks.FILE_NAME).write_bytes(b'{"utc": "2026-10-09T08:00:00Z"}')
+        marks.append_use(self.dir, at(9, 0, 10))
+        self.assertEqual(marks.read_uses(self.dir).times, [at(8, 0), at(9, 0, 10)])
+
+    def test_a_link_or_junction_is_never_written_through(self):
+        with mock.patch.object(marks, "_is_reparse_point", return_value=True):
+            with self.assertRaisesRegex(OSError, "link or junction"):
+                marks.append_use(self.dir, at(9, 0))
+        self.assertFalse((self.dir / marks.FILE_NAME).exists())
+
+    def test_deeply_nested_json_is_a_bad_line_not_a_crash(self):
+        (self.dir / marks.FILE_NAME).write_text("[" * 100_000 + "\n")
+        self.assertEqual(marks.read_uses(self.dir).warning[:9], "1 line(s)")
 
     def test_missing_file_is_no_uses_and_no_warning(self):
         self.assertEqual(marks.read_uses(self.dir), marks.Uses([]))
@@ -307,12 +386,13 @@ class RefuseTest(TempDirTest):
         return marks.refuse_marked_log(self.log, data_dir=self.data, to_utc=utc_plus_2, **kw)
 
     def test_a_log_with_a_marked_game_is_refused(self):
-        marks.append_use(self.data, at(10, 30, 5))
-        with self.assertRaisesRegex(marks.MarkedLogError, r"game\(s\) \[2\]"):
+        # In the gap between the two games: both are marked, like the tracker.
+        marks.append_use(self.data, at(10, 0))
+        with self.assertRaisesRegex(marks.MarkedLogError, r"game\(s\) \[1, 2\]"):
             self.refuse()
 
     def test_a_log_with_no_marked_game_passes(self):
-        marks.append_use(self.data, at(10, 0))
+        marks.append_use(self.data, at(8, 0))
         self.assertEqual(self.refuse(), [])
 
     def test_no_uses_file_means_every_log_passes(self):

@@ -386,6 +386,7 @@ fn publish_games(app: &AppHandle, state: &AppState, store: &Store) {
 }
 
 fn rows_of(store: &Store, reconnects: &Reconnects) -> Vec<GameRow> {
+    let marked = reconnects.marked(store);
     store
         .games()
         .map(|(key, report)| GameRow {
@@ -394,7 +395,7 @@ fn rows_of(store: &Store, reconnects: &Reconnects) -> Vec<GameRow> {
             report: report.clone(),
             parser: store.parser(key).cloned(),
             sources: row_sources(&key.session, report),
-            dev_reconnect: reconnects.marks(store.played(key)),
+            dev_reconnect: marked.contains(key),
         })
         .collect()
 }

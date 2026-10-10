@@ -15,9 +15,12 @@ use bg_parser::CREATE_GAME;
 use serde::{Deserialize, Serialize};
 
 const SECS_PER_DAY: i64 = 86_400;
-/// A time of day this much earlier than the previous line means the clock
-/// passed midnight (lines are written in order; small steps back are jitter).
-const MIDNIGHT_JUMP: i64 = SECS_PER_DAY / 2;
+/// A time of day more than this earlier than the previous line means the
+/// next day. Lines are written in order, so the only step back within a day
+/// is the clock's one-hour daylight-saving fall-back (and tiny jitter); an
+/// idle client left open overnight (22:00, then 10:30) must roll. Known
+/// limit: a gap of almost a whole day or more cannot be told from the times.
+const NEXT_DAY_STEP_BACK: i64 = 2 * 3600;
 
 /// First and last line of a game, in seconds since 1970 (UTC).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -75,7 +78,7 @@ impl GameClock {
     fn local_time(&mut self, line: &str) -> Option<i64> {
         let midnight = self.midnight?;
         let time_of_day = line_time_of_day(line)?;
-        if time_of_day + MIDNIGHT_JUMP < self.last_time_of_day {
+        if time_of_day + NEXT_DAY_STEP_BACK < self.last_time_of_day {
             self.day += 1;
         }
         self.last_time_of_day = time_of_day;
@@ -106,7 +109,8 @@ pub fn session_start(name: &str) -> Option<i64> {
     let [year, month, day, hour, minute, second] = parts[..] else {
         return None;
     };
-    let valid = (1..=12).contains(&month)
+    let valid = (1970..=9999).contains(&year)
+        && (1..=12).contains(&month)
         && (1..=days_in_month(year, month)).contains(&day)
         && hour < 24
         && minute < 60
@@ -288,6 +292,11 @@ mod tests {
         assert_eq!(session_start("Hearthstone_2026_10_10_21_03"), None);
         assert_eq!(session_start("Hearthstone_2026_10_10_21_03_+5"), None);
         assert_eq!(session_start("replay"), None);
+        assert_eq!(
+            session_start("Hearthstone_99999999999999_10_10_21_03_45"),
+            None
+        );
+        assert_eq!(session_start("Hearthstone_1969_12_31_23_00_00"), None);
     }
 
     #[test]
@@ -320,6 +329,26 @@ mod tests {
         let played = clock.played(1, Some).unwrap();
         assert_eq!(played.from, at(2026, 10, 10, 23, 55, 0));
         assert_eq!(played.to, at(2026, 10, 11, 0, 10, 0));
+    }
+
+    #[test]
+    fn a_client_left_open_overnight_dates_the_next_game_the_next_day() {
+        let mut clock = GameClock::new("Hearthstone_2026_10_10_18_00_00");
+        clock.feed(&create("21:00:00"));
+        clock.feed(&line("22:00:00", "TAG_CHANGE"));
+        clock.feed(&create("10:30:00"));
+        assert_eq!(
+            clock.played(2, Some).unwrap().from,
+            at(2026, 10, 11, 10, 30, 0)
+        );
+    }
+
+    #[test]
+    fn the_daylight_saving_fall_back_hour_is_not_a_new_day() {
+        let mut clock = GameClock::new("Hearthstone_2026_10_25_01_00_00");
+        clock.feed(&create("02:50:00"));
+        clock.feed(&line("02:05:00", "the clock went back one hour"));
+        assert_eq!(clock.played(1, Some).unwrap().to, at(2026, 10, 25, 2, 5, 0));
     }
 
     #[test]

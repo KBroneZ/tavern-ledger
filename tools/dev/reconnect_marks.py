@@ -6,7 +6,7 @@ nothing else. This module writes and reads that file and tells whether a
 saved Power.log holds a game played while the tool was used, the same way the
 tracker does (crates/tracker/src/game_clock.rs and dev_reconnect.rs): each
 game runs from its CREATE_GAME line to its last line, on the log's own clock,
-plus a 30-second margin.
+widened to the games next to it in the session, plus a 30-second margin.
 
 Fixture tools must call `refuse_marked_log` before using a log (D-022: a game
 played with the tool never becomes a fixture). From the command line:
@@ -36,7 +36,10 @@ CREATE_GAME = "GameState.DebugPrintPower() - CREATE_GAME"
 SESSION_RE = re.compile(r"^Hearthstone_(\d{4})_(\d{2})_(\d{2})_(\d{2})_(\d{2})_(\d{2})$")
 LINE_TIME_RE = re.compile(r"^[DWE] (\d{2}):(\d{2}):(\d{2})(?:\.\d+)? ")
 UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
-HALF_DAY = 12 * 3600
+# A step back in time of day larger than this is the next day (the one-hour
+# daylight-saving fall-back is not); same rule as game_clock.rs.
+NEXT_DAY_STEP_BACK = 2 * 3600
+FILE_ATTRIBUTE_REPARSE_POINT = 0x400
 
 
 def default_data_dir() -> Path:
@@ -58,14 +61,30 @@ def parse_utc(text: str) -> datetime | None:
         return None
 
 
+def _is_reparse_point(path: Path) -> bool:
+    try:
+        attrs = getattr(os.lstat(path), "st_file_attributes", 0)
+    except FileNotFoundError:
+        return False
+    return path.is_symlink() or bool(attrs & FILE_ATTRIBUTE_REPARSE_POINT)
+
+
 def append_use(data_dir: Path, moment: datetime) -> Path:
-    """Appends one use (UTC time only) and returns the file's path."""
+    """Appends one use (UTC time only) and returns the file's path. The tool
+    runs elevated, so it refuses a folder or file that is a link or junction
+    (it could point the write somewhere else)."""
     data_dir.mkdir(parents=True, exist_ok=True)
     path = data_dir / FILE_NAME
-    line = json.dumps({"utc": format_utc(moment)}) + "\n"
-    # One write per line, so the tracker never reads half of one.
-    with path.open("a", encoding="utf-8", newline="\n") as out:
-        out.write(line)
+    if _is_reparse_point(data_dir) or _is_reparse_point(path):
+        raise OSError(f"{path} is a link or junction; refusing to write through it")
+    with path.open("a+b") as out:
+        out.seek(0, os.SEEK_END)
+        glue = b""
+        if out.tell() > 0:
+            out.seek(-1, os.SEEK_END)
+            glue = b"" if out.read(1) == b"\n" else b"\n"
+        # One write per line, so the tracker never reads half of one.
+        out.write(glue + (json.dumps({"utc": format_utc(moment)}) + "\n").encode())
         out.flush()
         os.fsync(out.fileno())
     return path
@@ -96,7 +115,7 @@ def read_uses(data_dir: Path) -> Uses:
             continue
         try:
             value = json.loads(line)
-        except ValueError:
+        except (ValueError, RecursionError):
             value = None
         moment = parse_utc(value.get("utc")) if isinstance(value, dict) else None
         if moment is None:
@@ -155,7 +174,7 @@ def game_spans(
         if h > 23 or mi > 59 or s > 59:
             continue
         tod = h * 3600 + mi * 60 + s
-        if tod + HALF_DAY < last:
+        if tod + NEXT_DAY_STEP_BACK < last:
             day += 1
         last = tod
         moment = datetime(start.year, start.month, start.day) + timedelta(days=day, seconds=tod)
@@ -174,6 +193,23 @@ def is_marked(span: GameSpan, uses: list[datetime]) -> bool:
     if span.start is None or span.end is None:
         return False
     return any(span.start - MARGIN <= t <= span.end + MARGIN for t in uses)
+
+
+def marked_games(spans: list[GameSpan], uses: list[datetime]) -> list[int]:
+    """Games of one session played with the tool: each span widened to the
+    end of the game before it and the start of the game after it, like the
+    tracker (a use between two games marks both)."""
+    marked = []
+    for i, span in enumerate(spans):
+        if span.start is None or span.end is None:
+            continue
+        before = spans[i - 1] if i > 0 else None
+        after = spans[i + 1] if i + 1 < len(spans) else None
+        start = min(before.end, span.start) if before and before.end else span.start
+        end = max(after.start, span.end) if after and after.start else span.end
+        if is_marked(GameSpan(span.index, start, end), uses):
+            marked.append(span.index)
+    return marked
 
 
 class MarkedLogError(Exception):
@@ -197,7 +233,7 @@ def refuse_marked_log(
     name = session or log.parent.name
     with log.open(encoding="utf-8", errors="replace") as f:
         spans = game_spans(f, name, to_utc)
-    marked = [s.index for s in spans if is_marked(s, uses.times)]
+    marked = marked_games(spans, uses.times)
     if marked:
         raise MarkedLogError(
             f"{log.name}: game(s) {marked} were played with the reconnect dev tool (D-022); not a fixture.")
