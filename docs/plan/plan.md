@@ -186,6 +186,7 @@ The user wants all of these, each at its own time (2026-10-10). They are ranked 
 | T-213 | Duos combats the game does not play back (the `SETASIDE` copies of the teammate's fights, `parser-hslog.md`): after the game only, in the recap, the stats and the web viewer, labelled "not shown in game"; never in the overlay, never during the game, never as the live "last board seen" (D-054) | pending |
 | T-214 | Skins grouped by the game's own link to the base hero (`BACON_SKIN_PARENT_ID`) instead of the D-019 name rule, for the per-hero stats | pending |
 | T-215 | Combat replay, attack by attack, for the combats the game plays back (with T-201) | pending |
+| T-216 | A "Curious stats" tab in the app (and later on the web profile): fun totals across all games, for example gold spent, gold gained beyond the game's fixed income (extra gold, `TEMP_RESOURCES`, with T-210), golden Brann or Titus sold, rolls, triples, the most bought minion, the longest win streak, the most damage taken in one combat; each with its source and the number of games it covers, never a guess (user's request, 2026-10-10) | pending |
 | T-312 | Opponents' triples and trinkets in the overlay's hover card | pending |
 | T-313 | Next opponent marked in the overlay with their last board (Duos: the next opposing team), from `NEXT_OPPONENT_PLAYER_ID` | pending |
 | T-314 | "In the Battlegrounds lobby" and "game loading" from the scene changes in `LoadingScreen.log`, for the app's status and the overlay's start | pending |
