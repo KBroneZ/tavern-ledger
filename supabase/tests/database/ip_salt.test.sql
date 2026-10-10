@@ -4,7 +4,7 @@
 -- a daily job replaces the salt and drops every counter.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(24);
 
 delete from private.upload_ip_failures;
 
@@ -43,12 +43,15 @@ select ok(public.upload_ip_blocked(repeat('2', 64)), '30 failures in 10 minutes 
 select ok(not public.upload_ip_blocked(repeat('3', 64)), 'other IPs are not blocked');
 
 -- ------------------------------------------------------------ rotation
-create temporary table before as select pg_temp.salt() as salt;
+create temporary table before as
+  select pg_temp.salt() as salt, (select updated_at from vault.secrets where name = 'ip_salt') as at;
 select lives_ok($$ select private.rotate_ip_salt() $$, 'the salt rotates');
 select is((select count(*)::int from vault.secrets where name = 'ip_salt'), 1,
   'after a rotation Vault still holds exactly one salt: the old one is gone');
 select ok(pg_temp.salt() ~ '^[0-9a-f]{64}$' and pg_temp.salt() <> (select salt from before),
   'the new salt is a different random value');
+select ok((select updated_at > (select at from before) from vault.secrets where name = 'ip_salt'),
+  'a rotation moves updated_at, which the weekly check reads (deploy.md 10.5)');
 select is((select count(*)::int from private.upload_ip_failures), 0,
   'a rotation drops every counter made under the old salt');
 select ok(not public.upload_ip_blocked(repeat('2', 64)),
@@ -76,6 +79,16 @@ select ok(
     where has_function_privilege(r.role, f.sig, 'execute')
   ),
   'only the database itself can rotate the salt or compute a key'
+);
+-- service_role can read Vault (Supabase's own grant, not ours): whoever holds
+-- the secret key can recompute keys, as they can read every row anyway.
+select ok(
+  not exists (
+    select 1 from unnest(array['vault.secrets', 'vault.decrypted_secrets']) as t(tbl),
+      unnest(array['anon', 'authenticated']) as r(role)
+    where has_table_privilege(r.role, t.tbl, 'select')
+  ),
+  'clients cannot read the salt'
 );
 
 select * from finish();
