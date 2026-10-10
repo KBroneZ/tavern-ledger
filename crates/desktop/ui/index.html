@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="round-two.css">
 <link rel="stylesheet" href="compact.css">
 <link rel="stylesheet" href="turns.css">
+<link rel="stylesheet" href="settings.css">
 </head>
 <body>
   <header id="masthead" class="masthead">
@@ -27,44 +28,12 @@
       <ul id="setup-list"></ul>
     </section>
 
-    <section id="overlay-switch" class="overlay-switch" aria-label="Overlay">
-      <label class="switch"><input id="overlay-enabled" type="checkbox"> Overlay during a game</label>
-      <button type="button" id="overlay-arrange">Arrange overlay</button>
-      <details class="fold about overlay-hint">
-        <summary data-focus="fold:about:overlay">How the overlay works</summary>
-        <p class="note">Also in the tray menu. It shows over Hearthstone only while a game is on; hover a hero on the game's leaderboard to see the last board you met. "Arrange overlay" lets you move the panels and fit the leaderboard box (the whole screen takes clicks until you press "Lock overlay"). Exclusive fullscreen hides any overlay: run Hearthstone windowed or borderless.</p>
-      </details>
-      <p id="overlay-switch-problem" class="problem" role="status" hidden></p>
-    </section>
-
-    <details id="upload" class="upload">
-      <summary>Upload to the website<span id="upload-summary">…</span></summary>
-      <p id="upload-unavailable" hidden></p>
-      <div id="upload-signed-out" hidden>
-        <form id="upload-sign-in">
-          <label for="upload-email">Email of your Tavern Ledger account</label>
-          <input id="upload-email" type="email" autocomplete="email" maxlength="254" required>
-          <button type="submit">Send sign-in link</button>
-        </form>
-        <p id="upload-waiting" hidden><span id="upload-waiting-text"></span> <button type="button" id="upload-cancel">Cancel</button></p>
-        <p class="note">The link opens in your browser and signs this app in; the app never asks for your password. Accounts are created on the website.</p>
-      </div>
-      <div id="upload-signed-in" hidden>
-        <p>Signed in as <span id="upload-email-shown"></span> <button type="button" id="upload-sign-out">Sign out</button></p>
-        <label class="switch"><input id="upload-enabled" type="checkbox"> Upload games</label>
-      </div>
-      <p id="upload-queue" hidden></p>
-      <p id="upload-last" hidden></p>
-      <p id="upload-problem" class="problem" role="status" hidden></p>
-      <p id="upload-notice" role="status" hidden></p>
-      <p class="note">Off until you turn it on. Each finished game's report goes up: heroes, card ids, places and boards. Never player names, BattleTags or ratings.</p>
-    </details>
-
     <div class="view-bar">
       <div id="view-tabs" class="view-tabs" role="tablist" aria-label="Views">
         <button type="button" role="tab" id="tab-games" aria-controls="panel-games" aria-selected="true">Your games</button>
         <button type="button" role="tab" id="tab-stats" aria-controls="panel-stats" aria-selected="false" tabindex="-1">Stats</button>
         <button type="button" role="tab" id="tab-curious" aria-controls="panel-curious" aria-selected="false" tabindex="-1">Curious stats</button>
+        <button type="button" role="tab" id="tab-settings" class="tab-gear" aria-controls="panel-settings" aria-selected="false" tabindex="-1" data-i18n-attr="aria-label:settings.tab;title:settings.tab" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="3.6" stroke-dasharray="3.4 2.88"/><circle cx="12" cy="12" r="5.6" fill="none" stroke="currentColor" stroke-width="2.2"/></svg></button>
       </div>
       <nav id="modes" class="modes" aria-label="Game mode">
         <button type="button" data-mode="GT_BATTLEGROUNDS" aria-pressed="false">Solo</button>
@@ -170,6 +139,60 @@
       <div id="curious-body"></div>
     </section>
 
+    <section id="panel-settings" class="tab-panel settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+      <h2 id="settings-title" data-i18n="settings.title">Settings</h2>
+      <p class="note" data-i18n="settings.intro">Changes apply at once and are kept on this PC.</p>
+      <section id="language-setting" class="settings-group" aria-labelledby="language-title">
+        <h3 id="language-title" data-i18n="settings.language.title">Language</h3>
+        <p class="setting-row"><label for="setting-language" data-i18n="settings.language.label">Language of the app</label> <select id="setting-language"></select></p>
+        <p class="note" data-i18n="settings.language.note">Card and hero names stay as the card data and the game's log give them.</p>
+        <p id="language-problem" class="problem" role="status" hidden></p>
+      </section>
+      <section id="overlay-switch" class="overlay-switch settings-group" aria-labelledby="overlay-switch-title">
+        <h3 id="overlay-switch-title" data-i18n="settings.overlay.title">Overlay</h3>
+        <label class="switch"><input id="overlay-enabled" type="checkbox"> Overlay during a game</label>
+        <button type="button" id="overlay-arrange">Arrange overlay</button>
+        <p class="setting-row"><label for="overlay-theme" data-i18n="settings.overlay.theme">Overlay theme</label> <select id="overlay-theme"></select></p>
+        <details class="fold about overlay-hint">
+          <summary data-focus="fold:about:overlay">How the overlay works</summary>
+          <p class="note">Also in the tray menu. It shows over Hearthstone only while a game is on; hover a hero on the game's leaderboard to see the last board you met. "Arrange overlay" lets you move the panels and fit the leaderboard box (the whole screen takes clicks until you press "Lock overlay"). Exclusive fullscreen hides any overlay: run Hearthstone windowed or borderless.</p>
+        </details>
+        <p id="overlay-switch-problem" class="problem" role="status" hidden></p>
+      </section>
+      <section id="autostart-setting" class="settings-group" aria-labelledby="autostart-title">
+        <h3 id="autostart-title" data-i18n="settings.windows.title">Windows</h3>
+        <label class="switch"><input id="setting-autostart" type="checkbox"> <span data-i18n="settings.autostart">Start with Windows</span></label>
+        <p id="autostart-note" class="note" hidden></p>
+        <p id="autostart-problem" class="problem" role="status" hidden></p>
+      </section>
+      <section id="upload" class="upload settings-group" aria-labelledby="upload-title">
+        <h3 id="upload-title" class="upload-head">Upload to the website<span id="upload-summary">…</span></h3>
+        <p id="upload-unavailable" hidden></p>
+        <div id="upload-signed-out" hidden>
+          <form id="upload-sign-in">
+            <label for="upload-email">Email of your Tavern Ledger account</label>
+            <input id="upload-email" type="email" autocomplete="email" maxlength="254" required>
+            <button type="submit">Send sign-in link</button>
+          </form>
+          <p id="upload-waiting" hidden><span id="upload-waiting-text"></span> <button type="button" id="upload-cancel">Cancel</button></p>
+          <p class="note">The link opens in your browser and signs this app in; the app never asks for your password. Accounts are created on the website.</p>
+        </div>
+        <div id="upload-signed-in" hidden>
+          <p>Signed in as <span id="upload-email-shown"></span> <button type="button" id="upload-sign-out">Sign out</button></p>
+          <label class="switch"><input id="upload-enabled" type="checkbox"> Upload games</label>
+        </div>
+        <p id="upload-queue" hidden></p>
+        <p id="upload-last" hidden></p>
+        <p id="upload-problem" class="problem" role="status" hidden></p>
+        <p id="upload-notice" role="status" hidden></p>
+        <p class="note">Off until you turn it on. Each finished game's report goes up: heroes, card ids, places and boards. Never player names, BattleTags or ratings.</p>
+      </section>
+      <section id="memory-setting" class="settings-group" aria-labelledby="memory-title">
+        <h3 id="memory-title" data-i18n="settings.memory.title">Lobby tribes and rating from the game</h3>
+        <p id="memory-state" class="note" data-i18n="settings.memory.later">Not in this version yet. When it comes, it is off until you turn it on here, with what it reads and its risk said first.</p>
+      </section>
+    </section>
+
     <details class="legend fold">
       <summary data-focus="fold:legend">Where values come from</summary>
       <p class="note">A value with no mark comes straight from the game's log. Every other value carries a mark, and hovering any value says where it comes from.</p>
@@ -238,6 +261,10 @@
     Card pictures and minion names come from HearthstoneJSON (hearthstonejson.com) and are kept on this PC; card art and card data &copy; Blizzard Entertainment.
     <span id="card-status" class="card-status" role="status"></span>
   </footer>
+  <script src="i18n.js"></script>
+  <script src="strings/common.js"></script>
+  <script src="strings/window.js"></script>
+  <script src="strings/details.js"></script>
   <script src="focus-keeper.js"></script>
   <script src="cards.js"></script>
   <script src="compact.js"></script>
@@ -252,5 +279,6 @@
   <script src="app.js"></script>
   <script src="upload.js"></script>
   <script src="overlay-switch.js"></script>
+  <script src="settings.js"></script>
 </body>
 </html>

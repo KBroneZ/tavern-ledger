@@ -8,8 +8,8 @@
   color: var(--dim);
   font-size: 14px;
 }
-.upload summary { display: flex; align-items: center; min-height: 28px; cursor: pointer; font-weight: 700; color: var(--text); }
-.upload summary span { margin-left: 8px; font-weight: 500; color: var(--dim); }
+.upload .upload-head { display: flex; align-items: center; min-height: 28px; margin: 0; font: 700 15px/1.3 var(--font-display); color: var(--text); }
+.upload .upload-head span { margin-left: 8px; font-weight: 500; color: var(--dim); }
 .upload p { margin: 8px 0 0; }
 .upload [hidden] { display: none; }
 .upload form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 10px; }
