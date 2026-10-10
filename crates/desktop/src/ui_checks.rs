@@ -12,6 +12,8 @@ const SWITCH: &str = include_str!("../ui/overlay-switch.js");
 const APP: &str = include_str!("../ui/app.js");
 const OVERLAY_CSS: &str = include_str!("../ui/overlay.css");
 const LAYOUT: &str = include_str!("../ui/overlay-layout.js");
+const ROUND_TWO: &str = include_str!("../ui/round-two.js");
+const ROUND_TWO_CSS: &str = include_str!("../ui/round-two.css");
 
 fn position(page: &str, needle: &str) -> usize {
     page.find(needle)
@@ -78,6 +80,24 @@ fn the_main_window_keeps_focus_through_its_redraws() {
     assert!(APP.contains("TLFocus.keep(document, renderNow)"));
     assert!(APP.contains("TLFocus.keep(document, renderLobbyNow)"));
     assert!(APP.contains("TLFocus.keep(document, renderTribesDialogNow)"));
+}
+
+#[test]
+fn round_two_details_are_folded_keyboard_controls_with_words_not_colour() {
+    // Loaded before the window's script, with its own stylesheet.
+    assert!(position(INDEX, "round-two.js") < position(INDEX, "app.js"));
+    assert!(INDEX.contains("href=\"round-two.css\""));
+    assert!(INDEX.contains("id=\"choice-stats-body\""));
+    // Native <details>: Enter and Space open it; closed until the user opens
+    // it, and its summary is found again after a redraw.
+    assert!(ROUND_TWO.contains("ui.el(\"details\""));
+    assert!(ROUND_TWO.contains("box.open = openFolds.has(key)"));
+    assert!(ROUND_TWO.contains("data-focus\", `fold:${key}`"));
+    // Keyword and pick marks are words the screen reader reads, not colours.
+    for word in ["\"Taunt\"", "\"Divine Shield\"", "\"Golden\"", "\"taken\""] {
+        assert!(ROUND_TWO.contains(word), "{word} is shown as a word");
+    }
+    assert!(!ROUND_TWO_CSS.contains("display: none"));
 }
 
 #[test]
