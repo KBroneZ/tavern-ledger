@@ -758,14 +758,7 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
         state.overlay.enabled(),
         None::<&str>,
     )?;
-    let unlock = CheckMenuItem::with_id(
-        app,
-        MENU_UNLOCK,
-        words.unlock,
-        true,
-        false,
-        None::<&str>,
-    )?;
+    let unlock = CheckMenuItem::with_id(app, MENU_UNLOCK, words.unlock, true, false, None::<&str>)?;
     overlay::keep_enable_item(&state, overlay.clone());
     overlay::keep_unlock_item(&state, unlock.clone());
     let reset_layout = MenuItem::with_id(
@@ -781,7 +774,12 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
         app,
         &[&show, &overlay, &unlock, &reset_layout, &autostart, &quit],
     )?;
-    let items = (show.clone(), overlay.clone(), unlock.clone(), reset_layout.clone());
+    let items = (
+        show.clone(),
+        overlay.clone(),
+        unlock.clone(),
+        reset_layout.clone(),
+    );
     let kept_autostart = autostart.clone();
     let quit_item = quit.clone();
     let mut tray = TrayIconBuilder::with_id("main")

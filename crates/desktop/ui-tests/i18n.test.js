@@ -168,3 +168,29 @@ test("the markup's words and attributes are set from the table", () => {
   assert.equal(nodes[1].attrs.title, "Ajustes");
   I18n.setLang("en");
 });
+
+test("the setup box's lines are translated with their paths and settings kept", () => {
+  I18n.setLang("es");
+  // As tracker::setup writes them.
+  const missing = "client.config not found (D:/Games/client.config). Without it the game stops writing Power.log at about 10 MB and later games are lost. Create it with [Log] and these lines: FileSizeLimit.Int=-1. Then restart the game.";
+  assert.equal(I18n.backend(missing), "No se encuentra client.config (D:/Games/client.config). Sin él, el juego deja de escribir Power.log al llegar a unos 10 MB y se pierden las partidas siguientes. Créalo con [Log] y estas líneas: FileSizeLimit.Int=-1. Después reinicia el juego.");
+  const lines = "log.config (D:/a b/log.config) needs these lines under [Power]: LogLevel=1, FilePrinting=true. Without the Power log Tavern Ledger sees no games. Restart the game afterwards.";
+  assert.equal(I18n.backend(lines), "log.config (D:/a b/log.config) necesita estas líneas en [Power]: LogLevel=1, FilePrinting=true. Sin el registro Power, Tavern Ledger no ve ninguna partida. Después reinicia el juego.");
+  const locked = "log.config could not be read (PermissionDenied): D:/x/log.config. Check that the file is not locked or protected.";
+  assert.match(I18n.backend(locked), /^No se puede leer log\.config \(PermissionDenied\): D:\/x\/log\.config\./);
+  const optional = "Optional: log.config (D:/x/log.config) can have these lines under [LoadingScreen]: LogLevel=1, FilePrinting=true. Without them the app reads Power.log only and works as before; with them it shows when you are in the Battlegrounds lobby or a game is loading, and the overlay ends a game you leave before it is over. Restart the game afterwards.";
+  assert.match(I18n.backend(optional), /^Opcional: log\.config \(D:\/x\/log\.config\) puede tener estas líneas en \[LoadingScreen\]: LogLevel=1, FilePrinting=true\. Sin ellas/);
+  I18n.setLang("en");
+  assert.equal(I18n.backend(missing), missing);
+});
+
+test("English dates follow the PC's own English, en-GB when it has none", () => {
+  const d = new Date(2026, 9, 9);
+  I18n.setLang("en");
+  I18n.englishFrom(["en-US", "es-ES"]);
+  assert.equal(I18n.date(d), "10/09/2026");
+  I18n.englishFrom(["es-ES"]);
+  assert.equal(I18n.date(d), "09/10/2026");
+  I18n.englishFrom(["en"]);
+  assert.equal(I18n.date(d), "09/10/2026");
+});

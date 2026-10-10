@@ -5,34 +5,39 @@
 "use strict";
 
 (() => {
+  const I18n = typeof module !== "undefined" && module.exports ? require("./i18n.js") : window.TLI18n;
+  const t = I18n.t;
   const known = (v) => v !== null && v !== undefined;
 
   // "in 14 of 29 games"; the whole history when it is every game.
   function coverage(games, total) {
-    if (!total) return "No games yet.";
-    if (!games) return `In none of your ${total} game${total === 1 ? "" : "s"}.`;
-    if (games === total) return `In all ${total} game${total === 1 ? "" : "s"}.`;
-    return `In ${games} of ${total} games.`;
+    if (!total) return t("curious.none_yet");
+    if (!games) return I18n.plural("curious.in_none", total);
+    if (games === total) return I18n.plural("curious.in_all", total);
+    return t("curious.in_some", { games: I18n.num(games), total: I18n.num(total) });
   }
+
+  // A count with the language's thousands separator (1,234 / 1234 in Spanish).
+  const grouped = (value) => new Intl.NumberFormat(I18n.locale()).format(value);
 
   // One row per stat. `card` is the card id to name (the most bought minion).
   function rows(curious) {
     if (!curious || !Array.isArray(curious.stats)) return [];
     return curious.stats.map((s) => ({
       key: s.key,
-      label: s.label,
-      value: known(s.value) ? s.value.toLocaleString("en-US") : "No data",
-      times: s.card && known(s.value) ? `bought ${s.value} time${s.value === 1 ? "" : "s"}` : null,
+      label: I18n.backend(s.label),
+      value: known(s.value) ? grouped(s.value) : t("curious.no_data"),
+      times: s.card && known(s.value) ? I18n.plural("curious.bought", s.value) : null,
       card: s.card || null,
       source: known(s.value) ? s.source : "unknown",
       coverage: coverage(s.games, curious.games),
-      why: known(s.value) ? null : s.missing,
-      basis: s.basis,
+      why: known(s.value) ? null : I18n.backend(s.missing),
+      basis: I18n.backend(s.basis),
     }));
   }
 
   function dropped(curious) {
-    return curious && Array.isArray(curious.dropped) ? curious.dropped.map((d) => `${d.label}: ${d.why}`) : [];
+    return curious && Array.isArray(curious.dropped) ? curious.dropped.map((d) => `${I18n.backend(d.label)}: ${I18n.backend(d.why)}`) : [];
   }
 
   // --- Drawing (the page only).
@@ -64,7 +69,7 @@
     item.append(label, value, ui.el("p", "curious-coverage", r.coverage));
     if (r.why) item.append(ui.el("p", "curious-why", r.why));
     // The long definition waits behind a fold (T-323).
-    if (r.basis) item.append(window.TLCompact.about(ui, `curious:${r.key}`, r.basis, "How it is counted"));
+    if (r.basis) item.append(window.TLCompact.about(ui, `curious:${r.key}`, r.basis, t("curious.how")));
     return item;
   }
 
@@ -72,7 +77,7 @@
     const list = rows(curious);
     const parts = [];
     if (!list.length) {
-      parts.push(ui.el("p", "empty", "Curious stats are not available yet."));
+      parts.push(ui.el("p", "empty", t("curious.unavailable")));
     } else {
       const grid = ui.el("ul", "curious-grid");
       grid.append(...list.map((r) => tile(ui, r)));
@@ -81,8 +86,8 @@
     const left = dropped(curious);
     if (left.length) {
       const notes = ui.el("ul", "messages");
-      notes.append(...left.map((t) => ui.el("li", null, t)));
-      parts.push(ui.el("h3", null, "Left out"), notes);
+      notes.append(...left.map((line) => ui.el("li", null, line)));
+      parts.push(ui.el("h3", null, t("curious.left_out")), notes);
     }
     box.replaceChildren(...parts);
   }

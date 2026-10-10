@@ -79,7 +79,7 @@ window.TLCards = (() => {
       const missing = document.createElement("span");
       missing.className = `${className} art-missing`;
       missing.setAttribute("aria-hidden", "true");
-      missing.title = "No picture: the card database has none for this card right now.";
+      missing.title = window.TLI18n.t("cards.no_picture", { source: window.TLI18n.t("source.card_data.label") });
       img.replaceWith(missing);
     });
     img.src = ART + id;

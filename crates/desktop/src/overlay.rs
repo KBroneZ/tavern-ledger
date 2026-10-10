@@ -649,7 +649,7 @@ mod tests {
             .skip(1)
             .filter_map(|rest| rest.split('"').next())
             .collect();
-        assert_eq!(scripts.len(), 9);
+        assert_eq!(scripts.len(), 12);
         for script in scripts {
             assert!(ui.join(script).is_file(), "{script} is missing");
         }

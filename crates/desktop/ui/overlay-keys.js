@@ -44,16 +44,17 @@
     return changed ? next : rect;
   }
 
-  // Each on-screen button and the key it stands for (`resize`: with Alt).
+  // Each on-screen button and the key it stands for (`resize`: with Alt);
+  // `label` is the English text, `i18n` the key of its words (strings/overlay.js).
   const PAD = [
-    { action: "left", label: "Move left", key: "ArrowLeft", resize: false },
-    { action: "up", label: "Move up", key: "ArrowUp", resize: false },
-    { action: "down", label: "Move down", key: "ArrowDown", resize: false },
-    { action: "right", label: "Move right", key: "ArrowRight", resize: false },
-    { action: "narrower", label: "Narrower", key: "ArrowLeft", resize: true },
-    { action: "wider", label: "Wider", key: "ArrowRight", resize: true },
-    { action: "shorter", label: "Shorter", key: "ArrowUp", resize: true },
-    { action: "taller", label: "Taller", key: "ArrowDown", resize: true },
+    { action: "left", label: "Move left", i18n: "ov.pad.left", key: "ArrowLeft", resize: false },
+    { action: "up", label: "Move up", i18n: "ov.pad.up", key: "ArrowUp", resize: false },
+    { action: "down", label: "Move down", i18n: "ov.pad.down", key: "ArrowDown", resize: false },
+    { action: "right", label: "Move right", i18n: "ov.pad.right", key: "ArrowRight", resize: false },
+    { action: "narrower", label: "Narrower", i18n: "ov.pad.narrower", key: "ArrowLeft", resize: true },
+    { action: "wider", label: "Wider", i18n: "ov.pad.wider", key: "ArrowRight", resize: true },
+    { action: "shorter", label: "Shorter", i18n: "ov.pad.shorter", key: "ArrowUp", resize: true },
+    { action: "taller", label: "Taller", i18n: "ov.pad.taller", key: "ArrowDown", resize: true },
   ];
 
   function press(action, big) {

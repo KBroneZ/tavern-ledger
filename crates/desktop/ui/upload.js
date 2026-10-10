@@ -7,36 +7,34 @@
 (() => {
   const { invoke } = window.__TAURI__.core;
   const { listen } = window.__TAURI__.event;
+  const { t, plural, backend, num, dateTime } = window.TLI18n;
   const $ = (id) => document.getElementById(id);
-
-  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
   function queueText(c) {
     if (!c) return "";
     const parts = [
-      `${plural(c.waiting, "game", "games")} waiting to upload`,
-      c.uploaded && `${c.uploaded} uploaded`,
-      c.rejected && `${c.rejected} refused by the server`,
-      c.not_uploadable && `${c.not_uploadable} stay on this PC (mode not uploaded)`,
-      c.dev_reconnect && `${c.dev_reconnect} stay on this PC (played with the reconnect dev tool)`,
-      c.held_dev_file && `${c.held_dev_file} held: the reconnect dev tool's file cannot be read`,
+      plural("win.upload.waiting", c.waiting),
+      c.uploaded && t("win.upload.uploaded", { n: num(c.uploaded) }),
+      c.rejected && t("win.upload.rejected", { n: num(c.rejected) }),
+      c.not_uploadable && t("win.upload.notUploadable", { n: num(c.not_uploadable) }),
+      c.dev_reconnect && t("win.upload.devReconnect", { n: num(c.dev_reconnect) }),
+      c.held_dev_file && t("win.upload.heldDev", { n: num(c.held_dev_file) }),
     ].filter(Boolean);
     return parts.join(" · ");
   }
 
   function when(secs) {
     if (!Number.isInteger(secs)) return "";
-    const d = new Date(secs * 1000);
-    return ` (${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`;
+    return ` (${dateTime(new Date(secs * 1000))})`;
   }
 
   function summary(v) {
-    if (!v.running) return "not running";
-    if (!v.available) return "not available yet";
-    if (!v.signed_in) return v.signing_in ? "signing in…" : "signed out";
-    if (!v.enabled) return "off";
-    if (v.problem) return "paused";
-    return v.counts && v.counts.waiting ? `${v.counts.waiting} waiting` : "on, up to date";
+    if (!v.running) return t("win.upload.sum.notRunning");
+    if (!v.available) return t("win.upload.sum.notAvailable");
+    if (!v.signed_in) return v.signing_in ? t("win.upload.sum.signingIn") : t("win.upload.sum.signedOut");
+    if (!v.enabled) return t("win.upload.sum.off");
+    if (v.problem) return t("win.upload.sum.paused");
+    return v.counts && v.counts.waiting ? t("win.upload.sum.waiting", { n: num(v.counts.waiting) }) : t("win.upload.sum.upToDate");
   }
 
   function show(id, text) {
@@ -48,8 +46,8 @@
   function render(v) {
     $("upload-summary").textContent = summary(v);
     const unavailable = !v.running
-      ? "Upload is not running in this window: it starts once the app follows your games (if another Tavern Ledger is open, use that one)."
-      : !v.available ? `Upload is not available: ${v.unavailable_reason || "no server"}.` : "";
+      ? t("win.upload.notRunning")
+      : !v.available ? t("win.upload.unavailable", { reason: backend(v.unavailable_reason) || t("win.upload.noServer") }) : "";
     show("upload-unavailable", unavailable);
     const usable = v.running && v.available;
     $("upload-signed-out").hidden = !usable || v.signed_in;
@@ -57,21 +55,21 @@
     $("upload-sign-in").hidden = Boolean(v.signing_in);
     show("upload-waiting-text", v.signing_in
       ? (v.link_sent
-        ? `If ${v.signing_in} has an account, a sign-in link is on its way. Open it on this PC.`
-        : `Asking for a sign-in link for ${v.signing_in}…`)
+        ? t("win.upload.linkSent", { email: v.signing_in })
+        : t("win.upload.linkAsking", { email: v.signing_in }))
       : "");
     $("upload-waiting").hidden = !v.signing_in;
-    $("upload-email-shown").textContent = v.email || "your account";
+    $("upload-email-shown").textContent = v.email || t("win.upload.yourAccount");
     const toggle = $("upload-enabled");
     toggle.checked = Boolean(v.enabled);
     toggle.disabled = !v.signed_in;
     show("upload-queue", usable ? queueText(v.counts) : "");
-    show("upload-last", v.last_result ? `Last: ${v.last_result}${when(v.last_at)}` : "");
-    show("upload-problem", v.problem || "");
-    show("upload-notice", v.notice || "");
+    show("upload-last", v.last_result ? t("win.upload.last", { result: backend(v.last_result), when: when(v.last_at) }) : "");
+    show("upload-problem", backend(v.problem || ""));
+    show("upload-notice", backend(v.notice || ""));
   }
 
-  const report = (err) => show("upload-notice", String(err));
+  const report = (err) => show("upload-notice", backend(String(err)));
 
   $("upload-sign-in").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -84,6 +82,7 @@
   });
 
   (async () => {
+    await window.TLI18n.ready();
     await listen("upload-changed", (e) => render(e.payload));
     render(await invoke("upload_status"));
   })().catch(report);

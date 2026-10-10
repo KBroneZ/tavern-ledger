@@ -12,13 +12,24 @@
 
 (() => {
   const LANGS = ["en", "es"];
-  // The locale used for numbers and dates in each language.
+  // The locale used for numbers and dates in each language. Spanish is
+  // Spain's; English follows the PC's own English (en-US writes dates
+  // month first), en-GB when the PC has none.
   const LOCALES = { en: "en-GB", es: "es-ES" };
+  function englishFrom(systemLangs) {
+    const tag = (systemLangs || []).map(String).find((l) => /^en-[a-z]{2}$/i.test(l));
+    LOCALES.en = tag || "en-GB";
+  }
   const tables = { en: {}, es: {} };
   // Fixed sentences the app's Rust side writes in English, by their English
   // text: the ones with a translation are shown translated, any other is shown
   // as written (a parser warning, an error with a file name in it).
   const backendTables = { es: {} };
+  // Sentence shapes from the Rust side with values in them (a path, a list
+  // of settings): [whole-sentence regex source, text with $1, $2…]. Each
+  // value goes through the exact table first, so a fixed sentence inside one
+  // is translated too and a path stays as it is.
+  const backendPatterns = { es: [] };
   let lang = "en";
 
   // Adds a table: { en: { key: text }, es: { key: text }, backend: { es: { english: text } } }.
@@ -31,6 +42,9 @@
       });
     });
     Object.assign(backendTables.es, (table.backend && table.backend.es) || {});
+    ((table.backendPatterns && table.backendPatterns.es) || []).forEach(([source, text]) => {
+      backendPatterns.es.push([new RegExp(`^${source}$`), text]);
+    });
   }
 
   // The language to use: the saved choice when it is one we have, else the
@@ -84,11 +98,20 @@
   // A list joined the language's way: "a, b and c" / "a, b y c".
   const list = (items) => new Intl.ListFormat(LOCALES[lang], { style: "long", type: "conjunction" }).format(items.map(String));
 
-  // A sentence from the Rust side, translated when it is a known fixed one.
+  // A sentence from the Rust side, translated when it is a known fixed one
+  // or has a known shape; any other is returned as written.
   function backend(text) {
     if (typeof text !== "string" || lang === "en") return text;
-    const own = backendTables[lang] && backendTables[lang][text];
-    return own !== undefined ? own : text;
+    const exact = (part) => {
+      const own = backendTables[lang] && backendTables[lang][part];
+      return own !== undefined ? own : part;
+    };
+    if (exact(text) !== text) return exact(text);
+    for (const [regex, out] of backendPatterns[lang] || []) {
+      const m = regex.exec(text);
+      if (m) return out.replace(/\$(\d)/g, (whole, n) => (m[Number(n)] !== undefined ? exact(m[Number(n)]) : whole));
+    }
+    return text;
   }
 
   // The markup's own words: `data-i18n="key"` sets the element's text and
@@ -121,6 +144,7 @@
     ready = invoke("app_settings")
       .then((s) => s && s.language, () => null)
       .then((saved) => {
+        englishFrom(system());
         setLang(pick(saved, system()));
         document.documentElement.lang = lang;
         // The tray menu follows the system language while none is chosen.
@@ -134,13 +158,14 @@
   }
 
   const api = {
-    LANGS, define, pick, t, plural, num, percent, date, dateTime, list, backend, apply, setLang,
+    LANGS, define, pick, englishFrom, t, plural, num, percent, date, dateTime, list, backend, apply, setLang,
     lang: () => lang,
     locale: () => LOCALES[lang],
     ready: () => ready,
     // For the tests: the tables as defined.
     tables: () => tables,
     backendTables: () => backendTables,
+    backendPatterns: () => backendPatterns,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLI18n = api;

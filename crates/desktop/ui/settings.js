@@ -12,15 +12,16 @@
   const { t } = I18n;
   const $ = (id) => document.getElementById(id);
   const REOPEN = "tl-reopen-settings";
+  let saved = null; // the saved choice: "en", "es" or null for the system language
 
+  // The problem lines are live regions: they stay in the page, empty when
+  // there is nothing to say, so a screen reader hears the text when it comes.
   function problem(id, text) {
-    const node = $(id);
-    node.textContent = text || "";
-    node.hidden = !text;
+    $(id).textContent = text || "";
   }
 
   // "Windows language (Español)", then each language by its own name.
-  function languageOptions(saved) {
+  function languageOptions() {
     const system = I18n.pick(null, navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]);
     const select = $("setting-language");
     const option = (value, text) => {
@@ -43,14 +44,23 @@
   $("setting-language").addEventListener("change", (e) => {
     const language = e.target.value || null;
     problem("language-problem", "");
-    try {
-      sessionStorage.setItem(REOPEN, "1");
-    } catch (_) {
-      // Without session storage the page opens on the first tab; nothing is lost.
+    // Only a change of the shown language reloads the page; then it opens here again.
+    const system = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language];
+    if (I18n.pick(language, system) !== I18n.lang()) {
+      try {
+        sessionStorage.setItem(REOPEN, "1");
+      } catch (_) {
+        // Without session storage the page opens on the first tab; nothing is lost.
+      }
     }
     // The answer reloads the page (i18n.js); an error leaves it as it is.
-    call("app_set_language", { language }).catch((error) => {
+    call("app_set_language", { language }).then((v) => {
+      saved = v ? v.language : language;
+    }, (error) => {
       problem("language-problem", t("settings.language.failed", { error: I18n.backend(String(error)) }));
+      // Kept for this run only when saving failed: the event still reloads the
+      // page in that language; if nothing changed, the list shows the old choice.
+      languageOptions();
     });
   });
 
@@ -58,7 +68,9 @@
     const box = $("setting-autostart");
     box.checked = Boolean(v.enabled);
     box.disabled = !v.available;
-    problem("autostart-note", v.available ? "" : t("settings.autostart.unavailable"));
+    const note = $("autostart-note");
+    note.textContent = v.available ? "" : t("settings.autostart.unavailable");
+    note.hidden = v.available;
     problem("autostart-problem", "");
   }
 
@@ -90,8 +102,8 @@
   }
 
   I18n.ready().then(async () => {
-    const saved = await call("app_settings").then((s) => s && s.language, () => null);
-    languageOptions(saved);
+    saved = await call("app_settings").then((s) => (s && s.language) || null, () => null);
+    languageOptions();
     reopen();
     await onEvent("autostart-changed", refreshAutostart);
     await refreshAutostart();

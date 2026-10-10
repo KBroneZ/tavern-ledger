@@ -8,10 +8,19 @@
 (() => {
   const { invoke: call } = window.__TAURI__.core;
   const { listen: onEvent } = window.__TAURI__.event;
+  const I18n = window.TLI18n;
 
   const PANEL_IDS = ["status", "tribes", "opponents", "legend"];
-  const PANEL_NAMES = { status: "Status", tribes: "Tribes", opponents: "Opponents" };
-  const SLOT_NAMES = { ...PANEL_NAMES, legend: "Legend" };
+  // The panels' names are read when used, so they follow the language.
+  const SLOT_NAMES = {
+    status: () => I18n.t("ov.slot.status"),
+    tribes: () => I18n.t("ov.slot.tribes"),
+    opponents: () => I18n.t("ov.slot.opponents"),
+    legend: () => I18n.t("ov.slot.legend"),
+  };
+  const TOGGLE_IDS = ["status", "tribes", "opponents"];
+  const slotName = (id) => SLOT_NAMES[id]();
+  const panelTitle = (id) => I18n.t("ov.slot.panel", { name: slotName(id) });
   // Rough limits while dragging; the app enforces the real ones when it saves.
   const MIN_W = 160;
   const MAX_W = 800;
@@ -89,14 +98,14 @@
     if (!known) return;
     box.tabIndex = 0;
     box.setAttribute("role", "group");
-    box.setAttribute("aria-label", "Leaderboard box");
+    box.setAttribute("aria-label", I18n.t("ov.box.name"));
     box.setAttribute("aria-describedby", "key-hint");
-    box.setAttribute("aria-roledescription", "movable box");
+    box.setAttribute("aria-roledescription", I18n.t("ov.box.role"));
     box.setAttribute("aria-keyshortcuts", KEYSHORTCUTS);
     box.classList.toggle("custom", v.leaderboard.custom);
     box.querySelector(".board-label").textContent = v.leaderboard.custom
-      ? "Leaderboard (your box)"
-      : "Leaderboard (measured default)";
+      ? I18n.t("ov.box.custom")
+      : I18n.t("ov.box.default");
     placeBox(boxRect);
   }
 
@@ -110,20 +119,26 @@
     return b;
   }
 
+  // A theme's label in the language; the app's own label when it has no words here.
+  function themeLabel(theme) {
+    const key = `theme.${theme.id}`;
+    return key in I18n.tables().en ? I18n.t(key) : theme.label;
+  }
+
   function drawToolbar(v) {
     const themes = document.getElementById("theme-buttons");
     themes.replaceChildren(
       ...v.themes.map((t) =>
-        button(t.label, () => send("overlay_set_theme", { theme: t.id }).catch(fail), t.id === v.theme, `theme:${t.id}`),
+        button(themeLabel(t), () => send("overlay_set_theme", { theme: t.id }).catch(fail), t.id === v.theme, `theme:${t.id}`),
       ),
     );
-    document.getElementById("opacity-value").textContent = `${Math.round(v.opacity * 100)}%`;
+    document.getElementById("opacity-value").textContent = I18n.percent(v.opacity);
     const toggles = document.getElementById("panel-toggles");
     toggles.replaceChildren(
-      ...Object.entries(PANEL_NAMES).map(([id, name]) => {
+      ...TOGGLE_IDS.map((id) => {
         const shown = !v.hidden.includes(id);
         return button(
-          name,
+          slotName(id),
           () => send("overlay_set_shown", { panel: id, shown: !shown }).catch(fail),
           shown,
           `panel:${id}`,
@@ -131,8 +146,8 @@
       }),
     );
     const warning = document.getElementById("toolbar-warning");
-    const noBoard = v.leaderboard ? null : "Bring Hearthstone to the front once to adjust the leaderboard box.";
-    const text = [v.warning, noBoard].filter(Boolean).join(" ");
+    const noBoard = v.leaderboard ? null : I18n.t("ov.warn.noBoard");
+    const text = [v.warning ? I18n.backend(v.warning) : null, noBoard].filter(Boolean).join(" ");
     warning.hidden = !text;
     warning.textContent = text;
     document.getElementById("reset-board").disabled = !v.leaderboard || !v.leaderboard.custom;
@@ -146,9 +161,9 @@
     }
     slot.tabIndex = 0;
     slot.setAttribute("role", "group");
-    slot.setAttribute("aria-label", `${SLOT_NAMES[id]} panel position`);
+    slot.setAttribute("aria-label", I18n.t("ov.slot.position", { name: slotName(id) }));
     slot.setAttribute("aria-describedby", "key-hint");
-    slot.setAttribute("aria-roledescription", "movable panel");
+    slot.setAttribute("aria-roledescription", I18n.t("ov.slot.role"));
     slot.setAttribute("aria-keyshortcuts", KEYSHORTCUTS);
   }
 
@@ -366,13 +381,13 @@
       const next = TLKeys.nudge(boxRect, event, screen, { minW: BOX_MIN_W, maxW: screen.w, minH: BOX_MIN_H, keepInside: true });
       if (!next) return false;
       if (next === boxRect) {
-        announce("Leaderboard box: edge of the screen");
+        announce(I18n.t("ov.announce.boxEdge"));
         return true;
       }
       boxRect = next;
       placeBox(boxRect);
       placeControls();
-      queueKeySave("box", () => send("overlay_save_leaderboard", { area: { x: next.x, y: next.y, w: next.w, h: next.h } }), `Leaderboard box: x ${Math.round(next.x)}, y ${Math.round(next.y)}, width ${Math.round(next.w)}, height ${Math.round(next.h)}`);
+      queueKeySave("box", () => send("overlay_save_leaderboard", { area: { x: next.x, y: next.y, w: next.w, h: next.h } }), I18n.t("ov.announce.box", { x: Math.round(next.x), y: Math.round(next.y), w: Math.round(next.w), h: Math.round(next.h) }));
       return true;
     }
     const { id, slot } = target;
@@ -382,7 +397,7 @@
     const next = TLKeys.nudge(from, event, screen, { minW: MIN_W, maxW: MAX_W, minH: MIN_H, grabH: GRAB_H });
     if (!next) return false;
     if (next === from) {
-      announce(`${SLOT_NAMES[id]} panel: edge or size limit reached`);
+      announce(I18n.t("ov.announce.panelEdge", { name: slotName(id) }));
       return true;
     }
     // Height is only pinned when the user resized; a move keeps the panel's own height.
@@ -394,7 +409,7 @@
     });
     padFollows();
     placeControls();
-    queueKeySave(id, () => send("overlay_save_layout", { panels: rects }), `${SLOT_NAMES[id]} panel: x ${Math.round(next.x)}, y ${Math.round(next.y)}, width ${Math.round(next.w)}`);
+    queueKeySave(id, () => send("overlay_save_layout", { panels: rects }), I18n.t("ov.announce.panel", { name: slotName(id), x: Math.round(next.x), y: Math.round(next.y), w: Math.round(next.w) }));
     return true;
   }
 
@@ -447,9 +462,9 @@
       .filter((r) => r.w > 0 && r.h > 0);
     if (boxRect && !box.hidden) taken.push({ ...boxRect });
     if (target) {
-      const name = selected === "box" ? "Leaderboard box" : `${SLOT_NAMES[selected]} panel`;
+      const name = selected === "box" ? I18n.t("ov.box.name") : panelTitle(selected);
       document.getElementById("pad-title").textContent = name;
-      pad.setAttribute("aria-label", `Move or resize: ${name}`);
+      pad.setAttribute("aria-label", I18n.t("ov.pad.labelFor", { name }));
       const others = taken.filter((r) => !TLPlace.overlaps(r, target));
       // The buttons stay where they are while the same panel moves, so the
       // next click lands on the same button; they move when they would cover
@@ -479,7 +494,7 @@
     const moves = document.getElementById("pad-moves");
     const sizes = document.getElementById("pad-sizes");
     for (const b of TLKeys.PAD) {
-      const node = button(b.label, () => padArrange(b.action), undefined, `pad:${b.action}`);
+      const node = button(I18n.t(b.i18n), () => padArrange(b.action), undefined, `pad:${b.action}`);
       node.className = `pad-${b.action}`;
       (b.resize ? sizes : moves).append(node);
     }
@@ -511,7 +526,7 @@
   function fail(error) {
     const warning = document.getElementById("toolbar-warning");
     warning.hidden = false;
-    warning.textContent = `The overlay settings could not be updated (${error}).`;
+    warning.textContent = I18n.t("ov.warn.updateFailed", { error });
     // The bar grew: it may now cover a panel.
     placeControls();
   }
@@ -560,5 +575,6 @@
     await refresh();
   }
 
-  init().catch(fail);
+  // Nothing is drawn before the language is known and the markup is in it.
+  I18n.ready().then(init).catch(fail);
 })();

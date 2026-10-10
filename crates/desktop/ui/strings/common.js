@@ -150,17 +150,17 @@
       "keyword.divine_shield.short": "ED",
       "keyword.divine_shield": "Escudo divino",
       "keyword.reborn.short": "Re",
-      "keyword.reborn": "Reencarnación",
-      "keyword.venomous.short": "V",
-      "keyword.venomous": "Venenoso",
+      "keyword.reborn": "Renacer",
+      "keyword.venomous.short": "Po",
+      "keyword.venomous": "Ponzoña",
       "keyword.windfury.short": "VF",
       "keyword.windfury": "Viento furioso",
       "keyword.stealth.short": "S",
       "keyword.stealth": "Sigilo",
       "keyword.deathrattle.short": "UA",
       "keyword.deathrattle": "Último aliento",
-      "keyword.rally.short": "Ar",
-      "keyword.rally": "Arenga",
+      "keyword.rally.short": "Al",
+      "keyword.rally": "Alentar",
       "keyword.golden": "Dorado",
 
       "mode.GT_BATTLEGROUNDS": "Individual",
@@ -213,7 +213,24 @@
         "Signed out: the sign-in on this PC is gone. Sign in again.": "Sesión cerrada: el inicio de sesión de este PC ya no está. Vuelve a iniciar sesión.",
         "Signed out: your sign-in expired or was ended. Sign in again.": "Sesión cerrada: tu sesión ha caducado o se ha cerrado. Vuelve a iniciar sesión.",
         "Upload paused: too many sign-in refreshes.": "Subida en pausa: demasiadas renovaciones de sesión.",
+        // tracker::setup, the reasons inside its lines
+        "Without the Power log Tavern Ledger sees no games.": "Sin el registro Power, Tavern Ledger no ve ninguna partida.",
+        "Without it the game stops writing Power.log at about 10 MB and later games are lost.": "Sin él, el juego deja de escribir Power.log al llegar a unos 10 MB y se pierden las partidas siguientes.",
       },
+    },
+
+    // tracker::setup's lines (file, path, section, settings, reason).
+    backendPatterns: {
+      es: [
+        [String.raw`(\S+) not found \((.+)\)\. (.+?) Create it with \[(\w+)\] and these lines: (.+)\. Then restart the game\.`,
+          "No se encuentra $1 ($2). $3 Créalo con [$4] y estas líneas: $5. Después reinicia el juego."],
+        [String.raw`(\S+) could not be read \((\w+)\): (.+)\. Check that the file is not locked or protected\.`,
+          "No se puede leer $1 ($2): $3. Comprueba que el archivo no esté bloqueado ni protegido."],
+        [String.raw`(\S+) \((.+)\) needs these lines under \[(\w+)\]: (.+)\. (.+?) Restart the game afterwards\.`,
+          "$1 ($2) necesita estas líneas en [$3]: $4. $5 Después reinicia el juego."],
+        [String.raw`Optional: (\S+) \((.+)\) can have these lines under \[(\w+)\]: (.+)\. Without them the app reads Power\.log only and works as before; with them it shows when you are in the Battlegrounds lobby or a game is loading, and the overlay ends a game you leave before it is over\. Restart the game afterwards\.`,
+          "Opcional: $1 ($2) puede tener estas líneas en [$3]: $4. Sin ellas la app solo lee Power.log y funciona como antes; con ellas muestra cuándo estás en la sala de Battlegrounds o cargando una partida, y el overlay cierra la partida que abandones antes de que acabe. Después reinicia el juego."],
+      ],
     },
   };
 

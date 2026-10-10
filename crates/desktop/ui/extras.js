@@ -7,46 +7,42 @@
 "use strict";
 
 (() => {
-  const REPARSE = "re-read it with tavern-watch --reparse while its log is still on disk";
-  const REPARSE_MANY = "re-read them with tavern-watch --reparse while their logs are still on disk";
-  const NOT_RECORDED = "not recorded";
-  const INCOMPLETE = "not every turn";
-  const INCOMPLETE_TIP = "The game kept this, but the log lacks it for at least one turn (often turn 1's gold), so there is no total.";
+  const I18n = typeof module !== "undefined" && module.exports ? require("./i18n.js") : window.TLI18n;
+  const t = I18n.t;
   const known = (v) => v !== null && v !== undefined;
-  const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
-  const one = (v) => (known(v) ? v.toFixed(1) : "—");
+  const one = (v) => (known(v) ? I18n.num(v, 1) : "—");
 
   // One line on where this game's combat results come from.
   function resultsLine(results) {
     if (!results) return { text: "", source: "unknown" };
     const { from_log: log, inferred, unknown, recorded } = results;
-    if (log + inferred + unknown === 0) return { text: "No combat in the log.", source: "unknown" };
+    if (log + inferred + unknown === 0) return { text: t("extras.results.none"), source: "unknown" };
     const parts = [
-      log && `${log} from the game's log`,
-      inferred && `${inferred} inferred from health`,
-      unknown && `${unknown} unknown`,
+      log && t("extras.results.log", { n: I18n.num(log) }),
+      inferred && t("extras.results.inferred", { n: I18n.num(inferred) }),
+      unknown && t("extras.results.unknown", { n: I18n.num(unknown) }),
     ].filter(Boolean);
-    let text = `Results: ${parts.join(", ")}.`;
-    if (!recorded) text += ` The game's own results are not recorded for this game: ${REPARSE}.`;
+    let text = t("extras.results", { parts: parts.join(", ") });
+    if (!recorded) text += ` ${t("extras.results.unrecorded", { reparse: t("extras.reparse") })}`;
     return { text, source: inferred ? "inferred" : log ? "log" : "unknown" };
   }
 
   // The log's name, else the card data's (English), else the card id.
   const cardName = (id) => (typeof window !== "undefined" && window.TLCards ? window.TLCards.name(id) : null);
-  const heroWords = (h) => (h && (h.name || cardName(h.id) || h.id)) || "Unknown hero";
+  const heroWords = (h) => (h && (h.name || cardName(h.id) || h.id)) || t("extras.hero.unknown");
 
   // The hero pick of one game, worded; `empty` is set when there is none to show.
   function heroPick(pick) {
     if (!pick || pick.state === "not_recorded") {
-      return { empty: `Hero pick not recorded: this game was saved by an older version of the app; ${REPARSE}.` };
+      return { empty: t("extras.pick.old", { reparse: t("extras.reparse") }) };
     }
-    if (pick.state !== "recorded") return { empty: "The log has no hero choice for this game." };
+    if (pick.state !== "recorded") return { empty: t("extras.pick.none") };
     const pickedId = pick.picked && pick.picked.id;
     return {
       empty: null,
       offered: pick.offered.map((h) => ({ id: h.id, text: heroWords(h), named: Boolean(h.name), picked: h.id === pickedId })),
-      rerolls: pick.rerolls === 0 ? "No reroll" : plural(pick.rerolls, "reroll"),
-      picked: pick.picked ? heroWords(pick.picked) : "The log does not say which hero you picked.",
+      rerolls: pick.rerolls === 0 ? t("extras.pick.no_reroll") : I18n.plural("extras.pick.rerolls", pick.rerolls),
+      picked: pick.picked ? heroWords(pick.picked) : t("extras.pick.unsaid"),
       pickedSource: pick.picked ? "log" : "unknown",
     };
   }
@@ -58,65 +54,64 @@
     if (!totals) return [];
     const kept = (key) => Array.isArray(turns) && turns.some((t) => known(t[key]));
     const fact = (label, value, tip, key) => {
-      if (known(value)) return { label, value: String(value), source: "log", tip };
+      if (known(value)) return { label, value: I18n.num(value), source: "log", tip };
       const partial = Boolean(key) && kept(key);
-      return { label, value: partial ? INCOMPLETE : NOT_RECORDED, source: "unknown", tip: partial ? INCOMPLETE_TIP : tip };
+      return { label, value: partial ? t("extras.incomplete") : t("extras.not_recorded"), source: "unknown", tip: partial ? t("extras.incomplete_tip") : tip };
     };
     const facts = [
-      fact("Extra gold", totals.extra_gold, "Gold beyond each turn's own and beyond sells: cards, trinkets, refunds.", "extra_gold"),
-      fact("Gold from selling", totals.sell_gold, null, "sell_gold"),
-      fact("Gold beyond the fixed income", totals.gold_beyond_income, "Extra gold plus gold from selling.", "extra_gold"),
-      fact("Gold on minions", totals.buy_gold, totals.buys ? `${plural(totals.buys, "minion")} bought.` : null, "buy_gold"),
-      fact("Gold on tavern spells", totals.spell_gold, null, "spell_gold"),
-      fact("Free rolls the game gave", totals.free_refreshes,
-        "Rolls that used a free roll shown on the roll button. Other rolls that spent no gold came from cards or effects.", "free_refreshes"),
+      fact(t("extras.gold.extra"), totals.extra_gold, t("extras.gold.extra.tip"), "extra_gold"),
+      fact(t("extras.gold.sell"), totals.sell_gold, null, "sell_gold"),
+      fact(t("extras.gold.beyond"), totals.gold_beyond_income, t("extras.gold.beyond.tip"), "extra_gold"),
+      fact(t("extras.gold.buy"), totals.buy_gold, totals.buys ? I18n.plural("extras.minions_bought", totals.buys) : null, "buy_gold"),
+      fact(t("extras.gold.spell"), totals.spell_gold, null, "spell_gold"),
+      fact(t("extras.free.given"), totals.free_refreshes, t("extras.free.given.tip"), "free_refreshes"),
     ];
-    if (isDuos) facts.push(fact("Cards passed to your teammate", totals.passes, null, "passes"));
+    if (isDuos) facts.push(fact(t("extras.passes"), totals.passes, null, "passes"));
     return facts;
   }
 
   // The extras averaged per game in the stats, each with the games it covers.
   function shopExtraStats(s) {
     if (!s) return [];
-    const over = (n) => (n ? `Average over ${plural(n, "game")} with this record.` : "No game has this record yet.");
+    const over = (n) => (n ? I18n.plural("extras.avg_over", n) : t("extras.avg_none"));
     const avg = (label, value, games) => ({
       label,
-      value: games ? one(value) : NOT_RECORDED,
+      value: games ? one(value) : t("extras.not_recorded"),
       source: games && known(value) ? "log" : "unknown",
       tip: over(games),
     });
     return [
-      avg("Extra gold / game", s.extra_gold, s.extras_games),
-      avg("Gold from selling / game", s.sell_gold, s.extras_games),
-      avg("Gold beyond income / game", s.gold_beyond_income, s.extras_games),
-      avg("Free rolls given / game", s.free_refreshes, s.free_refresh_games),
-      avg("Cards passed / game", s.passes, s.extras_games),
+      avg(t("extras.avg.extra"), s.extra_gold, s.extras_games),
+      avg(t("extras.avg.sell"), s.sell_gold, s.extras_games),
+      avg(t("extras.avg.beyond"), s.gold_beyond_income, s.extras_games),
+      avg(t("extras.avg.free"), s.free_refreshes, s.free_refresh_games),
+      avg(t("extras.avg.passes"), s.passes, s.extras_games),
     ];
   }
 
-  const percent = (v) => (known(v) ? `${Math.round(v * 100)}%` : "—");
+  const percent = (v) => (known(v) ? I18n.percent(v) : "—");
 
   // Rows of the per-hero pick table, and a note on the games left out.
   function heroPickStats(picks) {
-    if (!picks) return { rows: [], note: "", empty: "No hero pick in the log yet." };
+    if (!picks) return { rows: [], note: "", empty: t("extras.picks.empty") };
     const rows = picks.heroes.map((h) => ({
       hero: h.hero,
       text: h.name || h.hero,
-      offered: String(h.offered),
-      picked: String(h.picked),
+      offered: I18n.num(h.offered),
+      picked: I18n.num(h.picked),
       rate: percent(h.pick_rate),
-      place: known(h.average_place_when_picked) ? h.average_place_when_picked.toFixed(2) : "—",
-      placeTip: `Over ${plural(h.placed_when_picked, "game")} with a place that counts.`,
+      place: known(h.average_place_when_picked) ? I18n.num(h.average_place_when_picked, 2) : "—",
+      placeTip: I18n.plural("extras.place_tip", h.placed_when_picked),
       sort: { offered: h.offered, picked: h.picked, rate: h.pick_rate, place: h.average_place_when_picked },
     }));
     const left = [
-      picks.not_recorded && `${picks.not_recorded} saved by an older version (${REPARSE_MANY})`,
-      picks.no_data && `${picks.no_data} with no hero choice or no pick in the log`,
+      picks.not_recorded && t("extras.left.old", { n: I18n.num(picks.not_recorded), reparse: t("extras.reparse_many") }),
+      picks.no_data && t("extras.left.none", { n: I18n.num(picks.no_data) }),
     ].filter(Boolean);
     return {
       rows,
-      note: `Over ${plural(picks.games, "game")} whose hero pick is in the log.` + (left.length ? ` Not counted: ${left.join("; ")}.` : ""),
-      empty: rows.length ? null : "No hero pick in the log yet.",
+      note: I18n.plural("extras.picks.note", picks.games) + (left.length ? ` ${t("extras.not_counted", { list: left.join("; ") })}` : ""),
+      empty: rows.length ? null : t("extras.picks.empty"),
     };
   }
 
@@ -136,7 +131,7 @@
 
   function heroPickSection(pick, ui, portrait) {
     const section = ui.el("section", "recap-part hero-pick");
-    const heading = ui.el("h3", null, "Hero pick");
+    const heading = ui.el("h3", null, t("extras.pick.title"));
     const mark = ui.sourceMark(pick ? pick.source : "unknown");
     if (mark) heading.append(mark);
     section.append(heading);
@@ -146,14 +141,14 @@
       return section;
     }
     const list = ui.el("ul", "pick-list");
-    list.setAttribute("aria-label", "Heroes offered");
+    list.setAttribute("aria-label", t("extras.pick.offered"));
     list.append(...p.offered.map((h) => {
       const li = ui.el("li", h.picked ? "pick picked" : "pick");
       const label = ui.el("span", null, h.text);
       li.append(label);
       const img = portrait(h.id);
       if (img) li.prepend(img);
-      if (h.picked) li.append(ui.el("span", "pick-tag", "picked"));
+      if (h.picked) li.append(ui.el("span", "pick-tag", t("extras.pick.tag")));
       li.title = h.id;
       ui.addTip(li, "log");
       // Named by the card data when the log does not name it; named later if
@@ -171,8 +166,8 @@
       return li;
     }));
     section.append(list, factList(ui, [
-      { label: "Rerolls", value: p.rerolls, source: "log" },
-      { label: "Picked", value: p.picked, source: p.pickedSource },
+      { label: t("extras.pick.rerolls_label"), value: p.rerolls, source: "log" },
+      { label: t("extras.pick.picked_label"), value: p.picked, source: p.pickedSource },
     ]));
     return section;
   }
@@ -186,11 +181,11 @@
     const C = window.TLCompact;
     const rows = C.rank(s.rows, { games: (r) => r.sort.offered, place: (r) => r.sort.place, name: (r) => r.text });
     const columns = [
-      { label: "Hero", sort: (r) => r.text, text: true },
-      { label: "Offered", num: true, sort: (r) => r.sort.offered },
-      { label: "Picked", num: true, sort: (r) => r.sort.picked },
-      { label: "Pick rate", num: true, sort: (r) => r.sort.rate },
-      { label: "Avg place when picked", num: true, sort: (r) => r.sort.place, low: true },
+      { label: t("extras.col.hero"), sort: (r) => r.text, text: true },
+      { label: t("extras.col.offered"), num: true, sort: (r) => r.sort.offered },
+      { label: t("extras.col.picked"), num: true, sort: (r) => r.sort.picked },
+      { label: t("extras.col.rate"), num: true, sort: (r) => r.sort.rate },
+      { label: t("extras.col.place"), num: true, sort: (r) => r.sort.place, low: true },
     ];
     const row = (r) => {
       const tr = ui.el("tr");
@@ -205,11 +200,13 @@
       tr.querySelectorAll("td").forEach((td) => ui.addTip(td, "log"));
       return tr;
     };
-    return parts.concat(C.table(ui, { key, columns, rows, row, label: "Hero picks" }));
+    return parts.concat(C.table(ui, { key, columns, rows, row, label: t("extras.picks.label") }));
   }
 
   const api = {
-    NOT_RECORDED, resultsLine, heroPick, shopExtras, shopExtraStats, heroPickStats,
+    // The words for "not recorded", in the language now in use.
+    get NOT_RECORDED() { return t("extras.not_recorded"); },
+    resultsLine, heroPick, shopExtras, shopExtraStats, heroPickStats,
     factList, heroPickSection, heroPickTable,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;

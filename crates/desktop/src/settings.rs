@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
 use tauri::menu::{CheckMenuItem, MenuItem};
 use tauri::tray::TrayIcon;
-use tauri::{AppHandle, Emitter, State, Wry};
+use tauri::{AppHandle, Emitter, Manager, State, Wry};
 use tauri_plugin_autostart::ManagerExt;
 
 use crate::overlay::lock;
@@ -56,6 +56,8 @@ pub struct View {
 }
 
 /// The tray menu's items, kept to change their words and the start-up tick.
+/// Cloned out of the lock before use: their calls wait for the main thread.
+#[derive(Clone)]
 pub struct TrayItems {
     pub show: MenuItem<Wry>,
     pub overlay: CheckMenuItem<Wry>,
@@ -128,7 +130,8 @@ impl Settings {
     /// Puts the tray menu's words in the app's language.
     fn relabel_tray(&self) {
         let words = tray_words(self.language());
-        if let Some(items) = lock(&self.tray).as_ref() {
+        let items = lock(&self.tray).clone();
+        if let Some(items) = items {
             let _ = items.show.set_text(words.show);
             let _ = items.overlay.set_text(words.overlay);
             let _ = items.unlock.set_text(words.unlock);
@@ -150,14 +153,14 @@ impl Settings {
     }
 
     fn tick_autostart(&self, on: bool) {
-        if let Some(items) = lock(&self.tray).as_ref() {
+        let items = lock(&self.tray).clone();
+        if let Some(items) = items {
             let _ = items.autostart.set_checked(on);
         }
     }
 }
 
-const SAVE_FAILED: &str =
-    "The language could not be saved; it will be lost after a restart.";
+const SAVE_FAILED: &str = "The language could not be saved; it will be lost after a restart.";
 
 /// Written whole to a side file first, so a crash never leaves half a file.
 fn write_whole(path: &Path, text: &str) -> io::Result<()> {
@@ -190,7 +193,8 @@ pub fn tray_words(language: Language) -> TrayWords {
             unlock: "Unlock overlay to move and resize panels",
             reset_layout: "Reset overlay layout",
             autostart: "Start with Windows",
-            autostart_unavailable: "Start with Windows (not available: the app's folder has spaces)",
+            autostart_unavailable:
+                "Start with Windows (not available: the app's folder has spaces)",
             quit: "Quit",
             tooltip: "Tavern Ledger: following your Battlegrounds games",
         },
@@ -200,7 +204,8 @@ pub fn tray_words(language: Language) -> TrayWords {
             unlock: "Desbloquear el overlay para mover y redimensionar paneles",
             reset_layout: "Restablecer la disposición del overlay",
             autostart: "Iniciar con Windows",
-            autostart_unavailable: "Iniciar con Windows (no disponible: la carpeta de la app tiene espacios)",
+            autostart_unavailable:
+                "Iniciar con Windows (no disponible: la carpeta de la app tiene espacios)",
             quit: "Salir",
             tooltip: "Tavern Ledger: sigue tus partidas de Battlegrounds",
         },
@@ -220,6 +225,12 @@ pub fn app_set_language(
     language: Option<Language>,
 ) -> Result<View, String> {
     let result = settings.set_language(language);
+    // The windows reload in the new language, so a failure also goes to the
+    // status line, which survives the reload.
+    if let Err(message) = &result {
+        let state = app.state::<Arc<AppState>>();
+        crate::set_status(&app, &state, |s| s.notice = Some(message.clone()));
+    }
     settings.relabel_tray();
     let view = settings.view();
     let _ = app.emit(CHANGED, view.clone());
@@ -298,10 +309,7 @@ mod tests {
     use super::*;
 
     fn dir(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!(
-            "tl-settings-{name}-{}",
-            std::process::id()
-        ));
+        let dir = std::env::temp_dir().join(format!("tl-settings-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
@@ -325,7 +333,12 @@ mod tests {
         settings.set_language(Some(Language::Es)).unwrap();
         let again = Settings::default();
         again.load(&dir).unwrap();
-        assert_eq!(again.view(), View { language: Some(Language::Es) });
+        assert_eq!(
+            again.view(),
+            View {
+                language: Some(Language::Es)
+            }
+        );
         assert_eq!(again.language(), Language::Es);
         again.set_language(None).unwrap();
         let back = Settings::default();
