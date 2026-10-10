@@ -13,7 +13,8 @@
   function show(view) {
     box.checked = Boolean(view.enabled);
     box.disabled = false;
-    arrange.setAttribute("aria-pressed", String(Boolean(view.unlocked)));
+    // The label says the state; a pressed state on top would say it twice, differently.
+    arrange.dataset.unlocked = String(Boolean(view.unlocked));
     arrange.textContent = view.unlocked ? "Lock overlay" : "Arrange overlay";
     problem.hidden = true;
   }
@@ -38,7 +39,7 @@
   });
 
   arrange.addEventListener("click", () => {
-    const unlocked = arrange.getAttribute("aria-pressed") === "true";
+    const unlocked = arrange.dataset.unlocked === "true";
     call("overlay_set_unlocked", { unlocked: !unlocked }).then(show).catch(fail);
   });
 

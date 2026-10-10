@@ -237,7 +237,12 @@ function tribeChips(tribes) {
   });
 }
 
+// Every redraw keeps focus where it was (T-317), see focus-keeper.js.
 function renderLobby() {
+  TLFocus.keep(document, renderLobbyNow);
+}
+
+function renderLobbyNow() {
   const state = document.getElementById("lobby-state");
   const current = document.getElementById("lobby-current");
   const enter = document.getElementById("lobby-enter");
@@ -296,6 +301,23 @@ async function editTribes(action, errorId) {
   }
 }
 
+// A dialog gives focus back to whatever opened it. The history is redrawn
+// meanwhile, so that button may be a new one: it is found again by its key.
+const dialogOpeners = new Map();
+
+function showDialog(dialog) {
+  if (dialog.open) return;
+  dialogOpeners.set(dialog.id, TLFocus.note(document));
+  dialog.showModal();
+}
+
+document.querySelectorAll("dialog").forEach((dialog) => {
+  dialog.addEventListener("close", () => {
+    TLFocus.restore(document, dialogOpeners.get(dialog.id));
+    dialogOpeners.delete(dialog.id);
+  });
+});
+
 function tribesTargetText(target) {
   if (target.kind === "pending") return "For the next game that starts.";
   const game = allGames.find((g) => g.session === target.session && g.index === target.index);
@@ -330,6 +352,10 @@ function moveTargets(target) {
 }
 
 function renderTribesDialog() {
+  TLFocus.keep(document, renderTribesDialogNow);
+}
+
+function renderTribesDialogNow() {
   const target = tribesTarget;
   if (!target || !lobby) return;
   const entered = entryOf(target);
@@ -341,6 +367,7 @@ function renderTribesDialog() {
     const box = el("input");
     box.type = "checkbox";
     box.value = choice.id;
+    box.setAttribute("data-focus", `tribe:${choice.id}`);
     box.checked = keep.has(choice.id);
     box.addEventListener("change", updateTribesCount);
     label.append(box, el("span", null, tribeLabel(choice.id)));
@@ -365,8 +392,7 @@ function openTribesDialog(target) {
   const error = document.getElementById("tribes-error");
   error.hidden = true;
   renderTribesDialog();
-  const dialog = document.getElementById("tribes-dialog");
-  if (!dialog.open) dialog.showModal();
+  showDialog(document.getElementById("tribes-dialog"));
 }
 
 function tribesButton(game) {
@@ -375,6 +401,7 @@ function tribesButton(game) {
   button.type = "button";
   button.title = entered ? `Lobby tribes entered by you: ${entered.map(tribeLabel).join(", ")}` : "Enter the lobby tribes for this game";
   button.setAttribute("aria-label", `Lobby tribes of game ${played(game.session, game.index)}`);
+  button.setAttribute("data-focus", `tribes:${game.session}:${game.index}`);
   button.addEventListener("click", () => openTribesDialog({ kind: "game", session: game.session, index: game.index }));
   return button;
 }
@@ -462,6 +489,7 @@ function reportCell(game) {
   const button = el("button", "report-btn", "Report");
   button.type = "button";
   button.setAttribute("aria-label", `Report a problem with game ${played(game.session, game.index)}`);
+  button.setAttribute("data-focus", `report:${game.session}:${game.index}`);
   button.addEventListener("click", () => openReport(game));
   const cell = el("td", "actions");
   cell.append(recapButton(game), tribesButton(game), button);
@@ -481,7 +509,7 @@ async function openReport(game) {
   showReportMessage("report-error", "");
   showReportMessage("report-saved", "");
   document.getElementById("report-save").disabled = true;
-  document.getElementById("report-dialog").showModal();
+  showDialog(document.getElementById("report-dialog"));
   try {
     const text = await invoke("preview_problem_report", target);
     if (reportGame !== target) return;
@@ -524,6 +552,7 @@ function recapButton(game) {
   const button = el("button", "report-btn", "Recap");
   button.type = "button";
   button.setAttribute("aria-label", `Recap of game ${played(game.session, game.index)}`);
+  button.setAttribute("data-focus", `recap:${game.session}:${game.index}`);
   button.addEventListener("click", () => openRecap(game));
   return button;
 }
@@ -582,30 +611,41 @@ function healthChart(points) {
     wrap.append(el("p", "empty", "The log has no health for this game."));
     return wrap;
   }
-  const width = 480, height = 110, pad = 14;
+  // Room under the line for the round numbers and above it for the health values.
+  const width = 480, height = 140, pad = 16, padTop = 24, padBottom = 30;
   const top = Math.max(...known.map((p) => p.health), 1);
   const last = Math.max(points.length - 1, 1);
   const x = (i) => pad + (i * (width - 2 * pad)) / last;
-  const y = (h) => height - pad - (h * (height - 2 * pad)) / top;
+  const y = (h) => height - padBottom - (h * (height - padTop - padBottom)) / top;
   const chart = svg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", class: "health-chart" });
   chart.setAttribute("aria-label", "Health " + points.map((p) => `${pointWords(p)}: ${p.health ?? "unknown"}`).join(", "));
   chart.append(svg("line", { x1: pad, y1: y(0), x2: width - pad, y2: y(0), class: "axis" }));
+  const label = (cx, cy, text, className) => {
+    const node = svg("text", { x: cx, y: cy, "text-anchor": "middle", class: className });
+    node.textContent = text;
+    return node;
+  };
   let run = [];
   const flush = () => {
     if (run.length > 1) chart.append(svg("polyline", { points: run.join(" "), class: "line" }));
     run = [];
   };
   points.forEach((p, i) => {
-    if (!Number.isInteger(p.health)) return flush();
+    // The round under every point, the health over it: nothing is for screen readers only.
+    chart.append(label(x(i), height - padBottom + 16, p.round, "round-label"));
+    if (!Number.isInteger(p.health)) {
+      chart.append(label(x(i), y(0) - 6, "?", "value-label unknown"));
+      return flush();
+    }
     run.push(`${x(i)},${y(p.health)}`);
     const dot = svg("circle", { cx: x(i), cy: y(p.health), r: 3, class: "dot" });
     const tip = svg("title", {});
     tip.textContent = `Health ${pointWords(p)}: ${p.health}`;
     dot.append(tip);
-    chart.append(dot);
+    chart.append(dot, label(x(i), y(p.health) - 8, p.health, "value-label"));
   });
   flush();
-  wrap.append(chart);
+  wrap.append(chart, el("p", "note", "The number over a point is your health, the one under it the round (0: before the first combat). A ? means the log has no health for that round."));
   return wrap;
 }
 
@@ -730,6 +770,10 @@ function messagesSection(r) {
 }
 
 function renderRecap(r) {
+  TLFocus.keep(document, () => renderRecapNow(r));
+}
+
+function renderRecapNow(r) {
   const health = el("section", "recap-part");
   health.append(withSource(el("h3", null, "Your health over the rounds"), r.health_source), healthChart(r.health));
   document.getElementById("recap-body").replaceChildren(recapFacts(r), health, recordSection(r), TLShop.recapSection(r.shop, SHOP_UI), enteredSection(r), tribesSection(r), messagesSection(r));
@@ -741,8 +785,7 @@ async function openRecap(game) {
   document.getElementById("recap-title").textContent = `Game recap · ${played(game.session, game.index)}`;
   document.getElementById("recap-body").replaceChildren();
   showReportMessage("recap-error", "");
-  const dialog = document.getElementById("recap-dialog");
-  if (!dialog.open) dialog.showModal();
+  showDialog(document.getElementById("recap-dialog"));
   try {
     const recap = await invoke("game_recap", target);
     if (recapGame === target) renderRecap(recap);
@@ -770,6 +813,10 @@ function pickDefaultMode() {
 }
 
 function render() {
+  TLFocus.keep(document, renderNow);
+}
+
+function renderNow() {
   const games = allGames.filter((g) => modeOf(g) === mode);
   const m = modeStats();
   document.querySelector('.modes [data-mode="OTHER"]').hidden = !allGames.some((g) => modeOf(g) === OTHER);
