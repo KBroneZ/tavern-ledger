@@ -2,6 +2,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const TLTurns = require("../ui/turns.js");
+const I18n = require("../ui/i18n.js");
+require("../ui/strings/common.js");
+require("../ui/strings/details.js");
 
 const minion = (card_id, atk, health, extra = {}) => ({ card_id, atk, health, golden: false, keywords: [], ...extra });
 const shopTurn = (turn, extra = {}) => ({
@@ -149,4 +152,20 @@ test("keywords not recorded (older games) are told apart from no keywords", () =
 test("several opponents keep the order of their names", () => {
   const order = TLTurns.rows(recap({ record: [{ heroes: [{ id: "A" }, { id: "B" }], seats: [1, 2], combats: [{ round: 1, outcome: "won", source: "log" }], boards: [] }] }), report)[0];
   assert.deepEqual(order.combat.opponents.map((h) => h.id), ["A", "B"]);
+});
+
+test("in Spanish a turn's summary and shop facts follow the language", () => {
+  I18n.setLang("es");
+  try {
+    const [, two] = TLTurns.rows(recap(), report);
+    assert.equal(TLTurns.summaryWords(two, (h) => h.name || h.id), "Turno 2, nivel 2, mejora de taberna, perdido contra HERO_C, vida −5, tu tablero 1 esbirro");
+    const facts = TLTurns.shopFacts(shopTurn(1, { apm: 4.25, rolls: 3, free_rolls: 2 }));
+    assert.deepEqual(facts.map((f) => f.label), ["Oro", "Gastado", "Refrescos", "Compras", "Ventas", "APM"]);
+    assert.equal(facts[5].value, "4,3");
+    assert.equal(facts[2].value, "3 (2 gratis)");
+    assert.equal(TLTurns.totalsWords({ count: 0, attack: 0, health: 0 }), "vacío");
+  } finally {
+    I18n.setLang("en");
+  }
+  assert.equal(TLTurns.totalsWords({ count: 0, attack: 0, health: 0 }), "empty");
 });

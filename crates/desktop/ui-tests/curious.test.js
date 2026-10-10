@@ -2,6 +2,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const TLCurious = require("../ui/curious.js");
+const I18n = require("../ui/i18n.js");
+require("../ui/strings/common.js");
+require("../ui/strings/details.js");
 
 const stat = (over) => ({
   key: "gold_spent", label: "Gold spent", value: 1234, card: null, source: "log",
@@ -63,4 +66,24 @@ test("dropped stats are listed with the reason", () => {
 test("no answer from the app yet gives no rows instead of an error", () => {
   assert.deepEqual(TLCurious.rows(null), []);
   assert.deepEqual(TLCurious.rows({ games: 0 }), []);
+});
+
+test("in Spanish the coverage, the value and the app's sentences are translated", () => {
+  I18n.setLang("es");
+  try {
+    assert.equal(TLCurious.coverage(14, 29), "En 14 de 29 partidas.");
+    assert.equal(TLCurious.coverage(1, 1), "En tu única partida (1).");
+    const [row] = TLCurious.rows({ games: 29, stats: [stat({ value: 12345, label: "Gold spent", basis: "Gold you got for selling minions." })] });
+    assert.equal(row.value, "12.345");
+    assert.equal(row.label, "Oro gastado");
+    assert.equal(row.basis, "Oro que obtuviste por vender esbirros.");
+    const [none] = TLCurious.rows({ games: 3, stats: [stat({ value: null, source: "unknown", games: 0, missing: "No combat result is known in any game." })] });
+    assert.equal(none.value, "Sin datos");
+    assert.equal(none.why, "No se conoce el resultado de ningún combate en ninguna partida.");
+    const [bought] = TLCurious.rows({ games: 5, stats: [stat({ key: "most_bought", value: 7, card: "BG_A" })] });
+    assert.equal(bought.times, "comprado 7 veces");
+  } finally {
+    I18n.setLang("en");
+  }
+  assert.equal(TLCurious.coverage(14, 29), "In 14 of 29 games.");
 });

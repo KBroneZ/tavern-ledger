@@ -9,47 +9,37 @@
 "use strict";
 
 (() => {
-  const REPARSE = "re-read it with tavern-watch --reparse while its log is still on disk";
-  const REPARSE_MANY = "re-read them with tavern-watch --reparse while their logs are still on disk";
+  const I18n = typeof module !== "undefined" && module.exports ? require("./i18n.js") : window.TLI18n;
+  const t = I18n.t;
   const known = (v) => v !== null && v !== undefined;
-  const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
   const list = (v) => (Array.isArray(v) ? v : []);
+  const inEnglish = (key) => key in I18n.tables().en;
 
   // Short marks, in words: readable without colour and read out as they are.
-  const KEYWORDS = {
-    taunt: ["Taunt", "Taunt"],
-    divine_shield: ["Shield", "Divine Shield"],
-    reborn: ["Reborn", "Reborn"],
-    venomous: ["Venomous", "Venomous"],
-    windfury: ["Windfury", "Windfury"],
-    stealth: ["Stealth", "Stealth"],
-    deathrattle: ["Deathrattle", "Deathrattle"],
-    rally: ["Rally", "Rally"],
-  };
+  // The words are keyword.<k> (common.js); only the Divine Shield mark is
+  // shorter than its name. A keyword the tables lack shows in title case.
   const titleCase = (key) => key.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 
   // A minion's keywords: null when the record is older than revision 5.
   function keywordMarks(keywords) {
     if (!Array.isArray(keywords)) return null;
     return keywords.filter((k) => typeof k === "string").map((k) => {
-      const [short, full] = KEYWORDS[k] || [titleCase(k), titleCase(k)];
+      const full = inEnglish(`keyword.${k}`) ? t(`keyword.${k}`) : titleCase(k);
+      const short = k === "divine_shield" ? t("r2.kw.shield") : full;
       return { key: k, short, full };
     });
   }
 
-  const CHOICE_KINDS = {
-    trinket: "Trinket offer",
-    dark_gift: "Dark Gift",
-    quest: "Quest",
-    triple_reward: "Triple reward",
-    discover: "Discover",
-  };
+  // The kind of one choice: r2.kind.<kind> (trinket dark_gift quest
+  // triple_reward discover); an unknown kind reads as Discover.
+  const choiceKind = (kind) => t(inEnglish(`r2.kind.${kind}`) ? `r2.kind.${kind}` : "r2.kind.discover");
 
   // Why a game has no choices or leaderboard to show; null when it has.
+  // `what` is "leaderboard" or "choices": r2.missing.<what>.old|none.
   function missing(state, what) {
     if (state === "recorded") return null;
-    if (state === "not_recorded") return `${what} not recorded: this game was saved by an older version of the app; ${REPARSE}.`;
-    return `The log has no ${what.toLowerCase()} for this game.`;
+    if (state === "not_recorded") return t(`r2.missing.${what}.old`, { reparse: t("r2.reparse") });
+    return t(`r2.missing.${what}.none`);
   }
 
   // The trinkets and triple count the leaderboard showed for a seat as of a
@@ -63,7 +53,7 @@
     return { triples: changes.length ? changes[changes.length - 1][1] : 0, trinkets: [...bySlot.values()] };
   }
 
-  const triplesText = (n, atEnd) => (n ? plural(n, "triple") : atEnd ? "no triple" : "no triple yet");
+  const triplesText = (n, atEnd) => (n ? I18n.plural("r2.triples", n) : atEnd ? t("r2.triple.none") : t("r2.triple.none_yet"));
 
   // One opponent (a team in Duos): its seats' leaderboard entries and its
   // boards, worded. `leaderboard` is null when the record has none.
@@ -75,7 +65,7 @@
       return entry ? seatAt(entry, turn) : null;
     };
     return {
-      leaderboardMissing: recorded ? null : missing(choices ? choices.leaderboard_state : "not_recorded", "Triples and trinkets"),
+      leaderboardMissing: recorded ? null : missing(choices ? choices.leaderboard_state : "not_recorded", "leaderboard"),
       end: seats.map((s) => ({ seat: s.seat, hero: s.hero, ...seatAt(s, Infinity) })),
       boards: list(opponent.boards).map((b) => ({
         round: b.round,
@@ -86,7 +76,7 @@
         keywordsRecorded: list(b.minions).every((m) => Array.isArray(m.keywords)),
         minions: list(b.minions).map((m) => ({
           id: m.card_id,
-          stats: `${known(m.atk) ? m.atk : "?"}/${known(m.health) ? m.health : "?"}`,
+          stats: `${known(m.atk) ? I18n.num(m.atk) : "?"}/${known(m.health) ? I18n.num(m.health) : "?"}`,
           golden: m.golden === true,
           keywords: keywordMarks(m.keywords),
         })),
@@ -96,11 +86,11 @@
 
   // The player's choices, one row each, and what they add up to.
   function choiceRows(choices) {
-    const empty = missing(choices ? choices.state : "not_recorded", "Choices");
+    const empty = missing(choices ? choices.state : "not_recorded", "choices");
     if (empty) return { empty, rows: [], trinketsTaken: [], oldGod: null };
     const rows = list(choices.choices).map((c) => ({
       turn: c.turn,
-      kind: CHOICE_KINDS[c.kind] || "Discover",
+      kind: choiceKind(c.kind),
       options: list(c.offered).map((o, i) => ({ id: o.card_id, gift: o.gift, taken: c.picked === i })),
       pickKnown: known(c.picked),
     }));
@@ -109,29 +99,29 @@
       .map((c) => c.offered[c.picked] && c.offered[c.picked].card_id)
       .filter(Boolean);
     const oldGod = known(choices.old_god_dbf) ? { id: choices.old_god || null, dbf: choices.old_god_dbf } : null;
-    return { empty: rows.length ? null : "No choice in the log for this game.", rows, trinketsTaken, oldGod };
+    return { empty: rows.length ? null : t("r2.choices.empty"), rows, trinketsTaken, oldGod };
   }
 
   // The per-trinket or per-Dark Gift table of the stats.
   function choiceTable(stats, key) {
-    if (!stats) return { rows: [], note: "", empty: "No choice in the log yet." };
+    if (!stats) return { rows: [], note: "", empty: t("r2.stats.empty") };
     const rows = list(stats[key]).map((c) => ({
       id: c.card_id,
-      offered: String(c.offered),
-      picked: String(c.picked),
-      rate: known(c.pick_rate) ? `${Math.round(c.pick_rate * 100)}%` : "—",
-      place: known(c.average_place_when_picked) ? c.average_place_when_picked.toFixed(2) : "—",
-      placeTip: `Over ${plural(c.placed_when_picked, "game")} with a place that counts.`,
+      offered: I18n.num(c.offered),
+      picked: I18n.num(c.picked),
+      rate: known(c.pick_rate) ? I18n.percent(c.pick_rate) : "—",
+      place: known(c.average_place_when_picked) ? I18n.num(c.average_place_when_picked, 2) : "—",
+      placeTip: I18n.plural("r2.place_tip", c.placed_when_picked),
       sort: { offered: c.offered, picked: c.picked, rate: c.pick_rate, place: c.average_place_when_picked },
     }));
     const left = [
-      stats.not_recorded && `${stats.not_recorded} saved by an older version (${REPARSE_MANY})`,
-      stats.no_data && `${stats.no_data} the log could not read`,
+      stats.not_recorded && t("r2.left.old", { n: I18n.num(stats.not_recorded), reparse: t("r2.reparse_many") }),
+      stats.no_data && t("r2.left.no_data", { n: I18n.num(stats.no_data) }),
     ].filter(Boolean);
     return {
       rows,
-      note: `Over ${plural(stats.games, "game")} whose choices are in the log.` + (left.length ? ` Not counted: ${left.join("; ")}.` : ""),
-      empty: rows.length ? null : "None offered in these games yet.",
+      note: I18n.plural("r2.stats.note", stats.games) + (left.length ? ` ${t("r2.not_counted", { list: left.join("; ") })}` : ""),
+      empty: rows.length ? null : t("r2.stats.none_offered"),
     };
   }
 
@@ -155,7 +145,7 @@
   // data answers after it is drawn (one watcher for the whole page).
   const cards = () => (typeof window !== "undefined" ? window.TLCards : null);
   function cardName(ui, id, className) {
-    const node = ui.el("span", className || "card-name", (cards() && cards().name(id)) || id || "Unknown card");
+    const node = ui.el("span", className || "card-name", (cards() && cards().name(id)) || id || t("r2.card.unknown"));
     if (id) {
       node.title = id;
       node.dataset.card = id;
@@ -172,7 +162,7 @@
   function minionItem(ui, m) {
     const li = ui.el("li", "minion");
     li.append(cardName(ui, m.id), " ", ui.el("span", "minion-stats", m.stats));
-    if (m.golden) li.append(" ", ui.el("span", "kw kw-golden", "Golden"));
+    if (m.golden) li.append(" ", ui.el("span", "kw kw-golden", t("keyword.golden")));
     (m.keywords || []).forEach((k) => {
       const mark = ui.el("span", `kw kw-${k.key}`, k.short);
       mark.title = k.full;
@@ -182,12 +172,12 @@
   }
 
   function leaderLine(ui, at, prefix, atEnd) {
-    const p = ui.el("p", "note leader-line", `${prefix}${triplesText(at.triples, atEnd)}`);
+    const p = ui.el("p", "note leader-line", `${prefix} ${triplesText(at.triples, atEnd)}`);
     if (at.trinkets.length) {
-      p.append(" · trinkets: ");
-      at.trinkets.forEach((t, i) => {
+      p.append(` · ${t("r2.trinkets_label")} `);
+      at.trinkets.forEach((tr, i) => {
         if (i) p.append(", ");
-        p.append(t.card_id ? cardName(ui, t.card_id) : ui.el("span", "card-name", `card ${t.dbf_id}`));
+        p.append(tr.card_id ? cardName(ui, tr.card_id) : ui.el("span", "card-name", t("r2.card_dbf", { id: tr.dbf_id })));
       });
     }
     ui.addTip(p, "log");
@@ -197,29 +187,29 @@
   function boardBlock(ui, b, heroText, duos) {
     const block = ui.el("div", "seen-board");
     const who = duos && b.hero ? ` · ${heroText(b.hero)}` : "";
-    block.append(ui.el("h5", null, `Round ${b.round}${who}`));
-    if (b.board) block.append(leaderLine(ui, b.board, "Leaderboard that turn: "));
-    if (!b.minions.length) block.append(ui.el("p", "empty", "Empty board."));
+    block.append(ui.el("h5", null, `${t("r2.round", { round: b.round })}${who}`));
+    if (b.board) block.append(leaderLine(ui, b.board, t("r2.leaderboard_turn")));
+    if (!b.minions.length) block.append(ui.el("p", "empty", t("r2.board.empty")));
     else {
       const items = ui.el("ul", "minions");
-      items.setAttribute("aria-label", `Board in round ${b.round}`);
+      items.setAttribute("aria-label", t("r2.board.aria", { round: b.round }));
       items.append(...b.minions.map((m) => minionItem(ui, m)));
       block.append(items);
     }
-    if (!b.keywordsRecorded) block.append(ui.withSource(ui.el("p", "note", `Keywords not recorded: ${REPARSE}.`), "unknown"));
+    if (!b.keywordsRecorded) block.append(ui.withSource(ui.el("p", "note", t("r2.keywords_missing", { reparse: t("r2.reparse") })), "unknown"));
     return block;
   }
 
   // One fold per opponent under the record table.
   function opponentFold(ui, o, choices, heroText, duos, key) {
     const d = opponentDetails(o, choices);
-    const name = list(o.heroes).map(heroText).join(" + ") || "Unknown hero";
+    const name = list(o.heroes).map(heroText).join(" + ") || t("r2.hero.unknown");
     const end = d.end.map((s) => triplesText(s.triples, true)).join(" + ");
-    const box = fold(ui, key, `${name}: ${plural(d.boards.length, "board")} seen${end ? ` · ${end} at the end` : ""}`, "opponent-fold");
+    const box = fold(ui, key, `${name}: ${I18n.plural("r2.boards_seen", d.boards.length)}${end ? ` · ${t("r2.opp.end", { end })}` : ""}`, "opponent-fold");
     if (d.leaderboardMissing) box.append(ui.withSource(ui.el("p", "note", d.leaderboardMissing), "unknown"));
     const heroOf = (id) => list(o.heroes).find((h) => h.id === id) || { id };
-    d.end.forEach((s) => box.append(leaderLine(ui, s, duos ? `${heroText(heroOf(s.hero))} at the end: ` : "At the end: ", true)));
-    if (!d.boards.length) box.append(ui.withSource(ui.el("p", "empty", "No board of theirs in the log."), "unknown"));
+    d.end.forEach((s) => box.append(leaderLine(ui, s, duos ? t("r2.hero_at_end", { hero: heroText(heroOf(s.hero)) }) : t("r2.at_end"), true)));
+    if (!d.boards.length) box.append(ui.withSource(ui.el("p", "empty", t("r2.opp.no_board")), "unknown"));
     box.append(...d.boards.map((b) => boardBlock(ui, b, heroText, duos)));
     return box;
   }
@@ -227,7 +217,7 @@
   // `game` keys the folds, so each game's recap starts folded.
   function opponentFolds(ui, r, heroText, game) {
     const wrap = ui.el("div", "opponent-folds");
-    wrap.append(ui.el("h4", null, "Boards, triples and trinkets"));
+    wrap.append(ui.el("h4", null, t("r2.opp.heading")));
     wrap.append(...list(r.record).map((o) => opponentFold(ui, o, r.choices, heroText, r.is_duos, `${game}:opp:${list(o.seats).join("-")}`)));
     return wrap;
   }
@@ -236,13 +226,13 @@
     const li = ui.el("li", o.taken ? "choice-option taken" : "choice-option");
     li.append(cardName(ui, o.id));
     if (o.gift) li.append(" + ", cardName(ui, o.gift, "card-name gift"));
-    if (o.taken) li.append(" ", ui.el("span", "pick-tag", "taken"));
+    if (o.taken) li.append(" ", ui.el("span", "pick-tag", t("r2.taken")));
     return li;
   }
 
   function choicesSection(ui, choices, game) {
     const section = ui.el("section", "recap-part own-choices");
-    const heading = ui.el("h3", null, "Your choices");
+    const heading = ui.el("h3", null, t("r2.choices.title"));
     const mark = ui.sourceMark(choices ? choices.source : "unknown");
     if (mark) heading.append(mark);
     section.append(heading);
@@ -260,25 +250,25 @@
       return item;
     };
     const taken = c.trinketsTaken.flatMap((id, i) => (i ? [", ", cardName(ui, id)] : [cardName(ui, id)]));
-    facts.append(fact("Trinkets taken", taken.length ? taken : ["none"], "log"));
+    facts.append(fact(t("r2.choices.trinkets_taken"), taken.length ? taken : [t("r2.none")], "log"));
     const god = c.oldGod;
     facts.append(god
-      ? fact("Old God", [god.id ? cardName(ui, god.id) : `card ${god.dbf} (not in the card data)`], god.id ? "card_data" : "log")
-      : fact("Old God", ["no data"], "unknown"));
+      ? fact(t("r2.old_god"), [god.id ? cardName(ui, god.id) : t("r2.card_not_in_data", { id: god.dbf })], god.id ? "card_data" : "log")
+      : fact(t("r2.old_god"), [t("r2.no_data")], "unknown"));
     section.append(facts);
     if (!c.rows.length) {
       section.append(ui.withSource(ui.el("p", "empty", c.empty), "unknown"));
       return section;
     }
-    const box = fold(ui, `${game}:choices`, `Every choice (${c.rows.length})`);
+    const box = fold(ui, `${game}:choices`, t("r2.choices.every", { n: c.rows.length }));
     const rows = ui.el("ol", "choice-list");
     rows.append(...c.rows.map((row) => {
       const li = ui.el("li", "own-choice");
-      li.append(ui.el("span", "choice-head", `Turn ${row.turn} · ${row.kind}`));
+      li.append(ui.el("span", "choice-head", t("r2.choice.head", { turn: row.turn, kind: row.kind })));
       const options = ui.el("ul", "choice-options");
       options.append(...row.options.map((o) => optionNode(ui, o)));
       li.append(options);
-      if (!row.pickKnown) li.append(ui.withSource(ui.el("p", "note", "The log does not say which one you took."), "unknown"));
+      if (!row.pickKnown) li.append(ui.withSource(ui.el("p", "note", t("r2.choice.unsaid")), "unknown"));
       return li;
     }));
     box.append(rows);
@@ -288,7 +278,7 @@
 
   // Inside its fold: the top rows by times offered (ties: better average place
   // when taken, then name), "Show all" for the rest, sortable (T-323).
-  function choiceTableNode(ui, stats, key, label, mode) {
+  function choiceTableNode(ui, stats, key, label, singular, mode) {
     const s = choiceTable(stats, key);
     const box = fold(ui, `stats:${key}`, `${label} (${s.rows.length})`);
     if (s.empty) {
@@ -299,11 +289,11 @@
     const C = window.TLCompact;
     const rows = C.rank(s.rows, { games: (r) => r.sort.offered, place: (r) => r.sort.place, name: nameOf });
     const columns = [
-      { label: label.replace(/s$/, ""), sort: nameOf, text: true },
-      { label: "Offered", num: true, sort: (r) => r.sort.offered },
-      { label: "Taken", num: true, sort: (r) => r.sort.picked },
-      { label: "Pick rate", num: true, sort: (r) => r.sort.rate },
-      { label: "Avg place when taken", num: true, sort: (r) => r.sort.place, low: true },
+      { label: singular, sort: nameOf, text: true },
+      { label: t("r2.col.offered"), num: true, sort: (r) => r.sort.offered },
+      { label: t("r2.col.taken"), num: true, sort: (r) => r.sort.picked },
+      { label: t("r2.col.rate"), num: true, sort: (r) => r.sort.rate },
+      { label: t("r2.col.place"), num: true, sort: (r) => r.sort.place, low: true },
     ];
     const row = (r) => {
       const tr = ui.el("tr");
@@ -325,8 +315,8 @@
     const s = choiceTable(stats, "trinkets");
     return [
       ui.el("p", "note", s.note),
-      choiceTableNode(ui, stats, "trinkets", "Trinkets", mode),
-      choiceTableNode(ui, stats, "dark_gifts", "Dark Gifts", mode),
+      choiceTableNode(ui, stats, "trinkets", t("r2.table.trinkets"), t("r2.table.trinket"), mode),
+      choiceTableNode(ui, stats, "dark_gifts", t("r2.table.dark_gifts"), t("r2.table.dark_gift"), mode),
     ];
   }
 

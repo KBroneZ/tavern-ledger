@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tavern Ledger</title>
+<title data-i18n="win.title">Tavern Ledger</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="upload.css">
 <link rel="stylesheet" href="shop.css">
@@ -11,98 +11,67 @@
 <link rel="stylesheet" href="round-two.css">
 <link rel="stylesheet" href="compact.css">
 <link rel="stylesheet" href="turns.css">
+<link rel="stylesheet" href="settings.css">
 </head>
 <body>
   <header id="masthead" class="masthead">
     <div class="brand">
       <h1>Tavern Ledger</h1>
-      <p class="tagline">Your Battlegrounds games, read from the game's own log.</p>
+      <p class="tagline" data-i18n="win.tagline">Your Battlegrounds games, read from the game's own log.</p>
     </div>
-    <p id="status" class="status" role="status" aria-live="polite">Starting…</p>
+    <p id="status" class="status" role="status" aria-live="polite" data-i18n="win.status.starting">Starting…</p>
   </header>
 
   <main id="home">
     <section id="setup" class="setup" role="status" aria-live="polite" hidden>
-      <h2>Game log setup</h2>
+      <h2 data-i18n="win.setup.title">Game log setup</h2>
       <ul id="setup-list"></ul>
     </section>
 
-    <section id="overlay-switch" class="overlay-switch" aria-label="Overlay">
-      <label class="switch"><input id="overlay-enabled" type="checkbox"> Overlay during a game</label>
-      <button type="button" id="overlay-arrange">Arrange overlay</button>
-      <details class="fold about overlay-hint">
-        <summary data-focus="fold:about:overlay">How the overlay works</summary>
-        <p class="note">Also in the tray menu. It shows over Hearthstone only while a game is on; hover a hero on the game's leaderboard to see the last board you met. "Arrange overlay" lets you move the panels and fit the leaderboard box (the whole screen takes clicks until you press "Lock overlay"). Exclusive fullscreen hides any overlay: run Hearthstone windowed or borderless.</p>
-      </details>
-      <p id="overlay-switch-problem" class="problem" role="status" hidden></p>
-    </section>
-
-    <details id="upload" class="upload">
-      <summary>Upload to the website<span id="upload-summary">…</span></summary>
-      <p id="upload-unavailable" hidden></p>
-      <div id="upload-signed-out" hidden>
-        <form id="upload-sign-in">
-          <label for="upload-email">Email of your Tavern Ledger account</label>
-          <input id="upload-email" type="email" autocomplete="email" maxlength="254" required>
-          <button type="submit">Send sign-in link</button>
-        </form>
-        <p id="upload-waiting" hidden><span id="upload-waiting-text"></span> <button type="button" id="upload-cancel">Cancel</button></p>
-        <p class="note">The link opens in your browser and signs this app in; the app never asks for your password. Accounts are created on the website.</p>
-      </div>
-      <div id="upload-signed-in" hidden>
-        <p>Signed in as <span id="upload-email-shown"></span> <button type="button" id="upload-sign-out">Sign out</button></p>
-        <label class="switch"><input id="upload-enabled" type="checkbox"> Upload games</label>
-      </div>
-      <p id="upload-queue" hidden></p>
-      <p id="upload-last" hidden></p>
-      <p id="upload-problem" class="problem" role="status" hidden></p>
-      <p id="upload-notice" role="status" hidden></p>
-      <p class="note">Off until you turn it on. Each finished game's report goes up: heroes, card ids, places and boards. Never player names, BattleTags or ratings.</p>
-    </details>
-
     <div class="view-bar">
-      <div id="view-tabs" class="view-tabs" role="tablist" aria-label="Views">
-        <button type="button" role="tab" id="tab-games" aria-controls="panel-games" aria-selected="true">Your games</button>
-        <button type="button" role="tab" id="tab-stats" aria-controls="panel-stats" aria-selected="false" tabindex="-1">Stats</button>
-        <button type="button" role="tab" id="tab-curious" aria-controls="panel-curious" aria-selected="false" tabindex="-1">Curious stats</button>
+      <div id="view-tabs" class="view-tabs" role="tablist" aria-label="Views" data-i18n-attr="aria-label:win.tabs.label">
+        <button type="button" role="tab" id="tab-games" aria-controls="panel-games" aria-selected="true" data-i18n="win.tab.games">Your games</button>
+        <button type="button" role="tab" id="tab-stats" aria-controls="panel-stats" aria-selected="false" tabindex="-1" data-i18n="win.tab.stats">Stats</button>
+        <button type="button" role="tab" id="tab-curious" aria-controls="panel-curious" aria-selected="false" tabindex="-1" data-i18n="win.tab.curious">Curious stats</button>
+        <button type="button" role="tab" id="tab-settings" class="tab-gear" aria-controls="panel-settings" aria-selected="false" tabindex="-1" data-i18n-attr="aria-label:settings.tab;title:settings.tab" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="3.6" stroke-dasharray="3.4 2.88"/><circle cx="12" cy="12" r="5.6" fill="none" stroke="currentColor" stroke-width="2.2"/></svg></button>
       </div>
-      <nav id="modes" class="modes" aria-label="Game mode">
-        <button type="button" data-mode="GT_BATTLEGROUNDS" aria-pressed="false">Solo</button>
-        <button type="button" data-mode="GT_BATTLEGROUNDS_DUO" aria-pressed="false">Duos</button>
-        <button type="button" data-mode="OTHER" aria-pressed="false" hidden>Other</button>
+      <nav id="modes" class="modes" aria-label="Game mode" data-i18n-attr="aria-label:win.modes.label">
+        <button type="button" data-mode="GT_BATTLEGROUNDS" aria-pressed="false" data-i18n="mode.GT_BATTLEGROUNDS">Solo</button>
+        <button type="button" data-mode="GT_BATTLEGROUNDS_DUO" aria-pressed="false" data-i18n="mode.GT_BATTLEGROUNDS_DUO">Duos</button>
+        <button type="button" data-mode="OTHER" aria-pressed="false" hidden data-i18n="mode.OTHER">Other</button>
       </nav>
     </div>
 
     <div id="panel-games" class="tab-panel" role="tabpanel" aria-labelledby="tab-games">
-    <section class="tally" aria-label="Summary">
-      <div class="stat"><span class="label">Games</span><span id="stat-games" class="value">—</span><span id="stat-games-src" class="src-slot"></span></div>
-      <div class="stat"><span class="label">Average place</span><span id="stat-avg" class="value">—</span><span id="stat-avg-src" class="src-slot"></span></div>
-      <div class="stat"><span class="label" id="stat-top-label">Top half</span><span id="stat-top" class="value">—</span><span id="stat-top-src" class="src-slot"></span></div>
-      <div class="stat"><span class="label">Wins</span><span id="stat-wins" class="value">—</span><span id="stat-wins-src" class="src-slot"></span></div>
+    <section class="tally" aria-label="Summary" data-i18n-attr="aria-label:win.tally.label">
+      <div class="stat"><span class="label" data-i18n="win.stat.games">Games</span><span id="stat-games" class="value">—</span><span id="stat-games-src" class="src-slot"></span></div>
+      <div class="stat"><span class="label" data-i18n="win.stat.avg">Average place</span><span id="stat-avg" class="value">—</span><span id="stat-avg-src" class="src-slot"></span></div>
+      <div class="stat"><span class="label" id="stat-top-label" data-i18n="win.top.half">Top half</span><span id="stat-top" class="value">—</span><span id="stat-top-src" class="src-slot"></span></div>
+      <div class="stat"><span class="label" data-i18n="win.stat.wins">Wins</span><span id="stat-wins" class="value">—</span><span id="stat-wins-src" class="src-slot"></span></div>
     </section>
     <p id="not-counted" class="tally-note" hidden></p>
 
     <section class="ledger lobby" aria-labelledby="lobby-title">
       <div class="lobby-line">
-        <h2 id="lobby-title" tabindex="-1">Lobby tribes</h2>
+        <h2 id="lobby-title" tabindex="-1" data-i18n="win.lobby.title">Lobby tribes</h2>
         <p id="lobby-state" role="status" aria-live="polite"></p>
         <ul id="lobby-current" class="tribe-list"></ul>
         <div class="lobby-actions">
           <button type="button" id="lobby-enter" class="report-btn" data-focus-next="lobby-title"></button>
-          <button type="button" id="lobby-clear" class="report-btn" data-focus-next="lobby-enter lobby-title" hidden>Remove</button>
+          <button type="button" id="lobby-clear" class="report-btn" data-focus-next="lobby-enter lobby-title" hidden data-i18n="win.remove">Remove</button>
         </div>
       </div>
       <p id="lobby-error" class="report-error" role="alert" hidden></p>
       <details class="fold about">
-        <summary data-focus="fold:about:lobby">About this</summary>
-        <p class="note">The game's log does not say which five tribes are in the lobby. If you want them in your stats, pick them here from the list; they are saved on your computer and always marked as entered by you. They are never mixed with the tribes seen in the tavern.</p>
+        <summary data-focus="fold:about:lobby" data-i18n="win.about">About this</summary>
+        <p class="note" data-i18n="win.lobby.about">The game's log does not say which five tribes are in the lobby. If you want them in your stats, pick them here from the list; they are saved on your computer and always marked as entered by you. They are never mixed with the tribes seen in the tavern.</p>
       </details>
     </section>
 
     <section class="ledger games-list" aria-labelledby="ledger-title">
-      <h2 id="ledger-title">Ledger</h2>
+      <h2 id="ledger-title" data-i18n="win.ledger.title">Ledger</h2>
       <div id="games" data-focus-scope></div>
-      <p id="empty" class="empty" hidden>No games yet. Play a Battlegrounds game and it will appear here when it ends.</p>
+      <p id="empty" class="empty" hidden data-i18n="win.ledger.emptyInitial">No games yet. Play a Battlegrounds game and it will appear here when it ends.</p>
     </section>
     </div>
 
@@ -110,69 +79,123 @@
 
     <div class="breakdown">
       <section class="ledger heroes" aria-labelledby="heroes-title">
-        <h2 id="heroes-title">Heroes</h2>
+        <h2 id="heroes-title" data-i18n="win.heroes.title">Heroes</h2>
         <div id="heroes"></div>
-        <p id="heroes-empty" class="empty" hidden>No heroes yet.</p>
+        <p id="heroes-empty" class="empty" hidden data-i18n="win.heroes.empty">No heroes yet.</p>
       </section>
 
       <section class="ledger tribes" aria-labelledby="tribes-title">
-        <h2 id="tribes-title">Tribes seen in the tavern</h2>
+        <h2 id="tribes-title" data-i18n="win.tribes.seen.title">Tribes seen in the tavern</h2>
         <div id="tribes"></div>
         <details class="fold about">
-          <summary data-focus="fold:about:tribes">About this</summary>
-          <p class="note">What the tavern offered you. The game's log does not say which tribes were in the lobby, so this is not that list.</p>
+          <summary data-focus="fold:about:tribes" data-i18n="win.about">About this</summary>
+          <p class="note" data-i18n="win.tribes.seen.about">What the tavern offered you. The game's log does not say which tribes were in the lobby, so this is not that list.</p>
         </details>
-        <p id="tribes-empty" class="empty" hidden>No tavern offers seen yet.</p>
+        <p id="tribes-empty" class="empty" hidden data-i18n="win.tribes.seen.empty">No tavern offers seen yet.</p>
       </section>
 
       <section class="ledger tribes" id="entered-tribes-section" aria-labelledby="entered-tribes-title" hidden>
-        <h2 id="entered-tribes-title">Lobby tribes you entered</h2>
-        <p class="note">Typed by you, one pick of five per game. Separate from the tribes seen in the tavern.</p>
+        <h2 id="entered-tribes-title" data-i18n="win.entered.title">Lobby tribes you entered</h2>
+        <p class="note" data-i18n="win.entered.about">Typed by you, one pick of five per game. Separate from the tribes seen in the tavern.</p>
         <div id="entered-tribes"></div>
       </section>
     </div>
 
     <section class="ledger shop-stats" aria-labelledby="shop-stats-title">
-      <h2 id="shop-stats-title">Shop and actions</h2>
+      <h2 id="shop-stats-title" data-i18n="win.shop.title">Shop and actions</h2>
       <div id="shop-stats-body"></div>
       <details class="fold about">
-        <summary data-focus="fold:about:shop">About this</summary>
-        <p class="note">Averages per game over the games whose shop the log has from start to end. Only your own shop is in the log.</p>
+        <summary data-focus="fold:about:shop" data-i18n="win.about">About this</summary>
+        <p class="note" data-i18n="win.shop.about">Averages per game over the games whose shop the log has from start to end. Only your own shop is in the log.</p>
       </details>
     </section>
 
     <section class="ledger hero-picks" aria-labelledby="hero-picks-title">
-      <h2 id="hero-picks-title">Hero picks</h2>
+      <h2 id="hero-picks-title" data-i18n="win.picks.title">Hero picks</h2>
       <div id="hero-picks-body"></div>
       <details class="fold about">
-        <summary data-focus="fold:about:picks">About this</summary>
-        <p class="note">The heroes the game offered you at the start of each game, and the one you picked. Only your own offers are in the log.</p>
+        <summary data-focus="fold:about:picks" data-i18n="win.about">About this</summary>
+        <p class="note" data-i18n="win.picks.about">The heroes the game offered you at the start of each game, and the one you picked. Only your own offers are in the log.</p>
       </details>
     </section>
 
     <section class="ledger choice-stats" aria-labelledby="choice-stats-title">
-      <h2 id="choice-stats-title">Trinkets and Dark Gifts</h2>
+      <h2 id="choice-stats-title" data-i18n="win.choices.title">Trinkets and Dark Gifts</h2>
       <div id="choice-stats-body"></div>
       <details class="fold about">
-        <summary data-focus="fold:about:choices">About this</summary>
-        <p class="note">How often each one was offered to you, how often you took it, and your average place when you did. Only your own choices are in the log.</p>
+        <summary data-focus="fold:about:choices" data-i18n="win.about">About this</summary>
+        <p class="note" data-i18n="win.choices.about">How often each one was offered to you, how often you took it, and your average place when you did. Only your own choices are in the log.</p>
       </details>
     </section>
 
     </div>
 
     <section id="panel-curious" class="tab-panel curious" role="tabpanel" aria-labelledby="tab-curious" hidden>
-      <h2 id="curious-title" class="visually-hidden">Curious stats</h2>
+      <h2 id="curious-title" class="visually-hidden" data-i18n="win.tab.curious">Curious stats</h2>
       <details class="fold about">
-        <summary data-focus="fold:about:curious">About these totals</summary>
-        <p class="note">Totals over all your games, Solo and Duos together. Each one says where it comes from and how many games back it; a game saved before a value was kept is left out of that count, never added as zero.</p>
+        <summary data-focus="fold:about:curious" data-i18n="win.curious.aboutTitle">About these totals</summary>
+        <p class="note" data-i18n="win.curious.about">Totals over all your games, Solo and Duos together. Each one says where it comes from and how many games back it; a game saved before a value was kept is left out of that count, never added as zero.</p>
       </details>
       <div id="curious-body"></div>
     </section>
 
+    <section id="panel-settings" class="tab-panel settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+      <h2 id="settings-title" data-i18n="settings.title">Settings</h2>
+      <p class="note" data-i18n="settings.intro">Changes apply at once and are kept on this PC.</p>
+      <section id="language-setting" class="settings-group" aria-labelledby="language-title">
+        <h3 id="language-title" data-i18n="settings.language.title">Language</h3>
+        <p class="setting-row"><label for="setting-language" data-i18n="settings.language.label">Language of the app</label> <select id="setting-language"></select></p>
+        <p class="note" data-i18n="settings.language.note">Card and hero names stay as the card data and the game's log give them.</p>
+        <p id="language-problem" class="problem" role="status"></p>
+      </section>
+      <section id="overlay-switch" class="overlay-switch settings-group" aria-labelledby="overlay-switch-title">
+        <h3 id="overlay-switch-title" data-i18n="settings.overlay.title">Overlay</h3>
+        <label class="switch"><input id="overlay-enabled" type="checkbox"> <span data-i18n="win.overlay.during">Overlay during a game</span></label>
+        <button type="button" id="overlay-arrange" data-i18n="win.overlay.arrange">Arrange overlay</button>
+        <p class="setting-row"><label for="overlay-theme" data-i18n="settings.overlay.theme">Overlay theme</label> <select id="overlay-theme"></select></p>
+        <details class="fold about overlay-hint">
+          <summary data-focus="fold:about:overlay" data-i18n="win.overlay.howTitle">How the overlay works</summary>
+          <p class="note" data-i18n="win.overlay.how">Also in the tray menu. It shows over Hearthstone only while a game is on; hover a hero on the game's leaderboard to see the last board you met. "Arrange overlay" lets you move the panels and fit the leaderboard box (the whole screen takes clicks until you press "Lock overlay"). Exclusive fullscreen hides any overlay: run Hearthstone windowed or borderless.</p>
+        </details>
+        <p id="overlay-switch-problem" class="problem" role="status" hidden></p>
+      </section>
+      <section id="autostart-setting" class="settings-group" aria-labelledby="autostart-title">
+        <h3 id="autostart-title" data-i18n="settings.windows.title">Windows</h3>
+        <label class="switch"><input id="setting-autostart" type="checkbox"> <span data-i18n="settings.autostart">Start with Windows</span></label>
+        <p id="autostart-note" class="note" hidden></p>
+        <p id="autostart-problem" class="problem" role="status"></p>
+      </section>
+      <section id="upload" class="upload settings-group" aria-labelledby="upload-title">
+        <h3 id="upload-title" class="upload-head"><span data-i18n="win.upload.title">Upload to the website</span><span id="upload-summary">…</span></h3>
+        <p id="upload-unavailable" hidden></p>
+        <div id="upload-signed-out" hidden>
+          <form id="upload-sign-in">
+            <label for="upload-email" data-i18n="win.upload.emailLabel">Email of your Tavern Ledger account</label>
+            <input id="upload-email" type="email" autocomplete="email" maxlength="254" required>
+            <button type="submit" data-i18n="win.upload.send">Send sign-in link</button>
+          </form>
+          <p id="upload-waiting" hidden><span id="upload-waiting-text"></span> <button type="button" id="upload-cancel" data-i18n="win.cancel">Cancel</button></p>
+          <p class="note" data-i18n="win.upload.linkNote">The link opens in your browser and signs this app in; the app never asks for your password. Accounts are created on the website.</p>
+        </div>
+        <div id="upload-signed-in" hidden>
+          <p><span data-i18n="win.upload.signedInAs">Signed in as</span> <span id="upload-email-shown"></span> <button type="button" id="upload-sign-out" data-i18n="win.upload.signOut">Sign out</button></p>
+          <label class="switch"><input id="upload-enabled" type="checkbox"> <span data-i18n="win.upload.games">Upload games</span></label>
+        </div>
+        <p id="upload-queue" hidden></p>
+        <p id="upload-last" hidden></p>
+        <p id="upload-problem" class="problem" role="status" hidden></p>
+        <p id="upload-notice" role="status" hidden></p>
+        <p class="note" data-i18n="win.upload.offNote">Off until you turn it on. Each finished game's report goes up: heroes, card ids, places and boards. Never player names, BattleTags or ratings.</p>
+      </section>
+      <section id="memory-setting" class="settings-group" aria-labelledby="memory-title">
+        <h3 id="memory-title" data-i18n="settings.memory.title">Lobby tribes and rating from the game</h3>
+        <p id="memory-state" class="note" data-i18n="settings.memory.later">Not in this version yet. When it comes, it is off until you turn it on here, with what it reads and its risk said first.</p>
+      </section>
+    </section>
+
     <details class="legend fold">
-      <summary data-focus="fold:legend">Where values come from</summary>
-      <p class="note">A value with no mark comes straight from the game's log. Every other value carries a mark, and hovering any value says where it comes from.</p>
+      <summary data-focus="fold:legend" data-i18n="win.legend.title">Where values come from</summary>
+      <p class="note" data-i18n="win.legend.note">A value with no mark comes straight from the game's log. Every other value carries a mark, and hovering any value says where it comes from.</p>
       <ul id="legend-list"></ul>
     </details>
   </main>
@@ -188,9 +211,9 @@
         <span id="recap-place" class="recap-place"></span>
       </div>
       <div class="recap-actions">
-        <button type="button" id="recap-tribes" class="report-btn">Tribes</button>
-        <button type="button" id="recap-report" class="report-btn">Report</button>
-        <button type="button" id="recap-close" class="close-x" aria-label="Close the recap" title="Close (Esc)"><span aria-hidden="true">&#x2715;</span></button>
+        <button type="button" id="recap-tribes" class="report-btn" data-i18n="win.recap.tribes">Tribes</button>
+        <button type="button" id="recap-report" class="report-btn" data-i18n="win.recap.report">Report</button>
+        <button type="button" id="recap-close" class="close-x" aria-label="Close the recap" title="Close (Esc)" data-i18n-attr="aria-label:win.recap.close;title:win.recap.closeTip"><span aria-hidden="true">&#x2715;</span></button>
       </div>
     </header>
     <p id="recap-error" class="report-error" role="alert" hidden></p>
@@ -198,46 +221,50 @@
   </section>
 
   <dialog id="tribes-dialog" class="tribes-dialog" aria-labelledby="tribes-title-dialog">
-    <h2 id="tribes-title-dialog">Lobby tribes</h2>
+    <h2 id="tribes-title-dialog" data-i18n="win.lobby.title">Lobby tribes</h2>
     <p id="tribes-target" class="note"></p>
     <form id="tribes-form" method="dialog">
       <fieldset>
-        <legend>Pick the <span id="tribes-need">5</span> tribes in the lobby</legend>
+        <legend id="tribes-legend">Pick the 5 tribes in the lobby</legend>
         <div id="tribes-choices" class="choices"></div>
       </fieldset>
       <p id="tribes-count" class="note" role="status" aria-live="polite"></p>
       <p id="tribes-error" class="report-error" role="alert" hidden></p>
       <div id="tribes-move" class="move-row" hidden>
-        <label for="tribes-move-to">Move these tribes to</label>
+        <label for="tribes-move-to" data-i18n="win.tribes.moveTo">Move these tribes to</label>
         <select id="tribes-move-to"></select>
-        <button type="button" id="tribes-move-go" class="report-btn" data-focus-next="tribes-save tribes-close">Move</button>
+        <button type="button" id="tribes-move-go" class="report-btn" data-focus-next="tribes-save tribes-close" data-i18n="win.tribes.move">Move</button>
       </div>
       <div class="dialog-actions">
-        <button type="button" id="tribes-save">Save</button>
-        <button type="button" id="tribes-clear" data-focus-next="tribes-save tribes-close" hidden>Remove</button>
-        <button type="button" id="tribes-close">Close</button>
+        <button type="button" id="tribes-save" data-i18n="win.save">Save</button>
+        <button type="button" id="tribes-clear" data-focus-next="tribes-save tribes-close" hidden data-i18n="win.remove">Remove</button>
+        <button type="button" id="tribes-close" data-i18n="win.close">Close</button>
       </div>
     </form>
   </dialog>
 
   <dialog id="report-dialog" aria-labelledby="report-title">
-    <h2 id="report-title">Report a problem</h2>
-    <p class="note">This is the file that will be saved (only its time stamp is set again when you save). It holds no player names: the app refuses to make it if it finds one. Nothing is sent anywhere. Saving puts the file in your Downloads folder, and you can send it yourself.</p>
+    <h2 id="report-title" data-i18n="win.report.title">Report a problem</h2>
+    <p class="note" data-i18n="win.report.note">This is the file that will be saved (only its time stamp is set again when you save). It holds no player names: the app refuses to make it if it finds one. Nothing is sent anywhere. Saving puts the file in your Downloads folder, and you can send it yourself.</p>
     <p id="report-error" class="report-error" role="alert" hidden></p>
     <pre id="report-text" tabindex="0"></pre>
     <p id="report-saved" class="note" role="status" hidden></p>
     <div class="dialog-actions">
-      <button type="button" id="report-save">Save to Downloads</button>
-      <button type="button" id="report-close">Close</button>
+      <button type="button" id="report-save" data-i18n="win.report.save">Save to Downloads</button>
+      <button type="button" id="report-close" data-i18n="win.close">Close</button>
     </div>
   </dialog>
 
   <footer>
-    Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.
-    Hero names come from your game's log, in your game's language. MMR is not in the game's log.
-    Card pictures and minion names come from HearthstoneJSON (hearthstonejson.com) and are kept on this PC; card art and card data &copy; Blizzard Entertainment.
+    <span data-i18n="win.footer.fan">Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.</span>
+    <span data-i18n="win.footer.names">Hero names come from your game's log, in your game's language. MMR is not in the game's log.</span>
+    <span data-i18n="win.footer.cards">Card pictures and minion names come from HearthstoneJSON (hearthstonejson.com) and are kept on this PC; card art and card data &copy; Blizzard Entertainment.</span>
     <span id="card-status" class="card-status" role="status"></span>
   </footer>
+  <script src="i18n.js"></script>
+  <script src="strings/common.js"></script>
+  <script src="strings/window.js"></script>
+  <script src="strings/details.js"></script>
   <script src="focus-keeper.js"></script>
   <script src="cards.js"></script>
   <script src="compact.js"></script>
@@ -252,5 +279,6 @@
   <script src="app.js"></script>
   <script src="upload.js"></script>
   <script src="overlay-switch.js"></script>
+  <script src="settings.js"></script>
 </body>
 </html>

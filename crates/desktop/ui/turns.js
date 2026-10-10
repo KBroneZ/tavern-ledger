@@ -10,11 +10,14 @@
 "use strict";
 
 (() => {
-  const OUTCOME = { won: "Won", lost: "Lost", tie: "Tie", unknown: "Unknown" };
+  const I18n = typeof module !== "undefined" && module.exports ? require("./i18n.js") : window.TLI18n;
+  const t = I18n.t;
+  // The words of a result are outcome.<won|lost|tie|unknown> (common.js).
+  const OUTCOMES = ["won", "lost", "tie", "unknown"];
+  const outcomeWord = (outcome) => t(`outcome.${outcome}`);
   const known = (v) => v !== null && v !== undefined;
   const list = (v) => (Array.isArray(v) ? v : []);
-  const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
-  const num = (v) => (known(v) ? String(v) : "—");
+  const num = (v) => (known(v) ? I18n.num(v) : "—");
 
   const minionOf = (m) => ({
     id: typeof m.card_id === "string" ? m.card_id : null,
@@ -50,7 +53,7 @@
       if (!c) continue;
       const seen = list(o.boards).find((b) => b.round === round);
       return {
-        outcome: OUTCOME[c.outcome] ? c.outcome : "unknown",
+        outcome: OUTCOMES.includes(c.outcome) ? c.outcome : "unknown",
         source: c.source,
         reason: c.reason || null,
         opponents: list(o.heroes),
@@ -59,7 +62,7 @@
     }
     const lone = list(r.unattributed).find((x) => x.round === round);
     if (!lone) return null;
-    return { outcome: OUTCOME[lone.outcome] ? lone.outcome : "unknown", source: lone.source, reason: lone.reason || null, opponents: [], board: null };
+    return { outcome: OUTCOMES.includes(lone.outcome) ? lone.outcome : "unknown", source: lone.source, reason: lone.reason || null, opponents: [], board: null };
   }
 
   function healthAt(r, round) {
@@ -95,7 +98,7 @@
 
   // "12/30", "?/30" when a stat is missing, "empty" for an empty board.
   function totalsWords(t) {
-    if (!t.count) return "empty";
+    if (!t.count) return I18n.t("turns.empty");
     return `${num(t.attack).replace("—", "?")}/${num(t.health).replace("—", "?")}`;
   }
 
@@ -110,26 +113,27 @@
   }
 
   function summaryWords(row, heroText) {
-    const parts = [`Turn ${row.turn}`];
-    if (row.tier) parts.push(`tier ${row.tier.value}`, ...(row.tier.up ? ["up a tier"] : []));
+    const parts = [t("turns.s.turn", { turn: row.turn })];
+    if (row.tier) parts.push(t("turns.s.tier", { tier: row.tier.value }), ...(row.tier.up ? [t("turns.s.up")] : []));
     if (row.combat) {
       const who = row.combat.opponents.map(heroText).join(" + ");
-      parts.push(`${OUTCOME[row.combat.outcome].toLowerCase()}${who ? ` against ${who}` : ""}`);
-    } else parts.push("no combat in the log");
-    parts.push(`health ${healthWords(row.health)}`);
-    if (row.own) parts.push(`your board ${plural(row.own.totals.count, "minion")}`);
+      const outcome = outcomeWord(row.combat.outcome).toLocaleLowerCase(I18n.locale());
+      parts.push(who ? t("turns.s.vs", { outcome, who }) : outcome);
+    } else parts.push(t("turns.s.no_combat"));
+    parts.push(t("turns.s.health", { change: healthWords(row.health) }));
+    if (row.own) parts.push(I18n.plural("turns.s.board", row.own.totals.count));
     return parts.join(", ");
   }
 
-  function shopFacts(t) {
-    if (!t || !t.in_log) return [];
+  function shopFacts(shop) {
+    if (!shop || !shop.in_log) return [];
     return [
-      { label: "Gold", value: num(t.gold) },
-      { label: "Spent", value: num(t.gold_spent) },
-      { label: "Rolls", value: `${num(t.rolls)}${t.free_rolls ? ` (${t.free_rolls} free)` : ""}` },
-      { label: "Buys", value: String(list(t.buys).length + (t.spell_buys || 0)) },
-      { label: "Sells", value: String(list(t.sells).length) },
-      { label: "APM", value: known(t.apm) ? t.apm.toFixed(1) : "—" },
+      { label: t("turns.fact.gold"), value: num(shop.gold) },
+      { label: t("turns.fact.spent"), value: num(shop.gold_spent) },
+      { label: t("turns.fact.rolls"), value: shop.free_rolls ? t("turns.rolls_free", { rolls: num(shop.rolls), free: num(shop.free_rolls) }) : num(shop.rolls) },
+      { label: t("turns.fact.buys"), value: num(list(shop.buys).length + (shop.spell_buys || 0)) },
+      { label: t("turns.fact.sells"), value: num(list(shop.sells).length) },
+      { label: t("turns.fact.apm"), value: known(shop.apm) ? I18n.num(shop.apm, 1) : "—" },
     ];
   }
 
@@ -137,18 +141,19 @@
   // `ui` is the window's el/withSource/sourceMark/addTip; `hero` draws a hero
   // (portrait + name); `heroText` words one; `game` keys the open turns.
 
-  const KEYWORD_WORDS = {
-    taunt: ["Taunt", "Taunt"], divine_shield: ["Shield", "Divine Shield"], reborn: ["Reborn", "Reborn"],
-    venomous: ["Venomous", "Venomous"], windfury: ["Windfury", "Windfury"], stealth: ["Stealth", "Stealth"],
-    deathrattle: ["Deathrattle", "Deathrattle"], rally: ["Rally", "Rally"],
-  };
+  // The short and full word of a keyword mark: keyword.<k> (common.js); only
+  // the Divine Shield mark is shorter than its name.
+  function keywordWords(k) {
+    const full = `keyword.${k}` in I18n.tables().en ? t(`keyword.${k}`) : k;
+    return [k === "divine_shield" ? t("turns.kw.shield") : full, full];
+  }
 
-  function tier(ui, t) {
-    if (!t) return ui.el("span", "turn-tier none", "");
-    const node = ui.el("span", "turn-tier", `Tier ${t.value}`);
-    if (t.up) {
+  function tier(ui, level) {
+    if (!level) return ui.el("span", "turn-tier none", "");
+    const node = ui.el("span", "turn-tier", t("turns.tier", { tier: level.value }));
+    if (level.up) {
       const up = ui.el("span", "tier-up", "▲");
-      up.title = "Up a tier this turn";
+      up.title = t("turns.tier_up_tip");
       node.append(up);
     }
     ui.addTip(node, "log");
@@ -158,15 +163,15 @@
   function result(ui, c, heroText, art) {
     const box = ui.el("span", "turn-combat");
     if (!c) {
-      box.append(ui.el("span", "chip chip-unknown", "No combat"));
+      box.append(ui.el("span", "chip chip-unknown", t("turns.no_combat")));
       ui.addTip(box, "unknown");
       return box;
     }
-    const chip = ui.el("span", `chip chip-${c.outcome} src-${["log", "inferred"].includes(c.source) ? c.source : "unknown"}`, OUTCOME[c.outcome]);
-    chip.title = c.reason ? `Unknown: ${c.reason}.` : OUTCOME[c.outcome];
+    const chip = ui.el("span", `chip chip-${c.outcome} src-${["log", "inferred"].includes(c.source) ? c.source : "unknown"}`, outcomeWord(c.outcome));
+    chip.title = c.reason ? t("turns.unknown_reason", { reason: I18n.backend(c.reason) }) : outcomeWord(c.outcome);
     ui.addTip(chip, c.source);
     box.append(chip);
-    const who = ui.el("span", "turn-opponent", c.opponents.map(heroText).join(" + ") || "opponent unknown");
+    const who = ui.el("span", "turn-opponent", c.opponents.map(heroText).join(" + ") || t("turns.opponent_unknown"));
     who.prepend(...c.opponents.map((h) => art(h.id, "portrait")).filter(Boolean));
     box.append(who);
     return box;
@@ -176,7 +181,7 @@
     const words = healthWords(h);
     const kind = !known(h.change) ? "unknown" : h.change < 0 ? "hurt" : h.change > 0 ? "healed" : "even";
     const node = ui.el("span", `turn-health ${kind}`, words);
-    node.title = known(h.after) ? `Health ${num(h.before)} → ${h.after}.` : "The log has no health for this round.";
+    node.title = known(h.after) ? t("turns.health_tip", { before: num(h.before), after: num(h.after) }) : t("turns.health_none");
     ui.addTip(node, known(h.change) ? source : "unknown");
     return node;
   }
@@ -185,7 +190,7 @@
   function strip(ui, own, art) {
     const box = ui.el("span", "turn-strip");
     if (!own) {
-      box.append(ui.el("span", "turn-strip-none", "board not in the log"));
+      box.append(ui.el("span", "turn-strip-none", t("turns.strip_none")));
       return box;
     }
     const faces = ui.el("span", "turn-faces");
@@ -193,9 +198,11 @@
       const img = art(m.id, m.golden ? "face golden" : "face");
       if (img) faces.append(img);
     });
-    const t = own.totals;
-    box.append(faces, ui.el("span", "turn-totals", totalsWords(t)));
-    box.title = t.count ? `${plural(t.count, "minion")}, ${num(t.attack)} attack and ${num(t.health)} health in all.` : "Empty board.";
+    const totals = own.totals;
+    box.append(faces, ui.el("span", "turn-totals", totalsWords(totals)));
+    box.title = totals.count
+      ? t("turns.strip_tip", { minions: I18n.plural("turns.minions", totals.count), attack: num(totals.attack), health: num(totals.health) })
+      : t("turns.board.empty");
     return box;
   }
 
@@ -203,8 +210,8 @@
     const tile = card(ui, m.id, m.golden ? "golden" : "");
     tile.append(ui.el("span", "minion-stats", `${num(m.atk)}/${num(m.health)}`));
     const marks = [];
-    if (m.golden) marks.push(["Golden", "Golden"]);
-    (m.keywords || []).forEach((k) => marks.push(KEYWORD_WORDS[k] || [k, k]));
+    if (m.golden) marks.push([t("keyword.golden"), t("keyword.golden")]);
+    (m.keywords || []).forEach((k) => marks.push(keywordWords(k)));
     if (marks.length) {
       const line = ui.el("span", "tile-marks");
       marks.forEach(([short, full]) => {
@@ -226,10 +233,10 @@
     }
     const cards = ui.el("div", "shop-cards");
     cards.append(...minions.map((m) => minionTile(ui, m, card)));
-    if (!minions.length) cards.append(ui.el("span", "empty", "Empty board."));
+    if (!minions.length) cards.append(ui.el("span", "empty", t("turns.board.empty")));
     row.append(cards);
     if (minions.length && !keywordsRecorded(minions)) {
-      row.append(ui.withSource(ui.el("span", "note", "Keywords not recorded for this game."), "unknown"));
+      row.append(ui.withSource(ui.el("span", "note", t("turns.kw_missing")), "unknown"));
     }
     return row;
   }
@@ -246,44 +253,44 @@
     return dl;
   }
 
-  function turnNotes(t) {
+  function turnNotes(shop) {
     return [
-      known(t.seconds) && `${Math.round(t.seconds)} s from this shop to the next`,
-      t.spell_buys && `${plural(t.spell_buys, "tavern spell")} bought`,
-      t.extra_gold && `${t.extra_gold} extra gold`,
-      t.sell_gold && `${t.sell_gold} gold from selling`,
-      t.free_refreshes && `${plural(t.free_refreshes, "free roll")} the game gave`,
+      known(shop.seconds) && t("turns.note.seconds", { n: I18n.num(Math.round(shop.seconds)) }),
+      shop.spell_buys && I18n.plural("turns.note.spells", shop.spell_buys),
+      shop.extra_gold && t("turns.note.extra_gold", { n: I18n.num(shop.extra_gold) }),
+      shop.sell_gold && t("turns.note.sell_gold", { n: I18n.num(shop.sell_gold) }),
+      shop.free_refreshes && I18n.plural("turns.note.free", shop.free_refreshes),
     ].filter(Boolean);
   }
 
   function turnBody(ui, row, h) {
     const body = [];
     const own = row.own;
-    const ownLabel = own && !own.mine && own.hero ? h.heroText({ id: own.hero }) : "Your board";
-    body.push(boardRow(ui, ownLabel, own && own.minions, h.card, "Not in the log for this round."));
+    const ownLabel = own && !own.mine && own.hero ? h.heroText({ id: own.hero }) : t("turns.your_board");
+    body.push(boardRow(ui, ownLabel, own && own.minions, h.card, t("turns.board.not_in_round")));
     if (row.combat) {
-      const who = row.combat.opponents.map(h.heroText).join(" + ") || "Their board";
-      body.push(boardRow(ui, who, row.combat.board, h.card, "Their board is not in the log for this round."));
+      const who = row.combat.opponents.map(h.heroText).join(" + ") || t("turns.their_board");
+      body.push(boardRow(ui, who, row.combat.board, h.card, t("turns.board.theirs_not")));
     }
-    const t = row.shop;
-    if (!t || !t.in_log) {
+    const shop = row.shop;
+    if (!shop || !shop.in_log) {
       // Said once for the whole game when it has no shop record at all.
-      if (h.shopRecorded) body.push(ui.withSource(ui.el("p", "note", "No shop record for this turn."), "unknown"));
+      if (h.shopRecorded) body.push(ui.withSource(ui.el("p", "note", t("turns.no_shop")), "unknown"));
       return body;
     }
-    body.push(shopFactList(ui, t));
-    if (list(t.buys).length) body.push(h.cardRow(ui, "Bought", t.buys, "bought"));
-    if (list(t.sells).length) body.push(h.cardRow(ui, "Sold", t.sells, "sold"));
-    if (list(t.passes).length) body.push(h.cardRow(ui, "Passed", t.passes, "passed"));
-    const notes = turnNotes(t);
+    body.push(shopFactList(ui, shop));
+    if (list(shop.buys).length) body.push(h.cardRow(ui, t("turns.bought"), shop.buys, "bought"));
+    if (list(shop.sells).length) body.push(h.cardRow(ui, t("turns.sold"), shop.sells, "sold"));
+    if (list(shop.passes).length) body.push(h.cardRow(ui, t("turns.passed"), shop.passes, "passed"));
+    const notes = turnNotes(shop);
     if (notes.length) body.push(ui.el("p", "note", `${notes.join(" · ")}.`));
-    const shops = list(t.shops);
+    const shops = list(shop.shops);
     if (!shops.length) {
-      body.push(ui.withSource(ui.el("p", "note", "No shop offers in the log for this turn."), "unknown"));
+      body.push(ui.withSource(ui.el("p", "note", t("turns.no_offers")), "unknown"));
       return body;
     }
-    const see = h.fold(ui, `${h.game}:shops:${row.turn}`, `See shops (${shops.length})`, "see-shops");
-    see.append(...shops.map((s) => h.cardRow(ui, s.roll === 0 ? "Shop" : `Roll ${s.roll}`, s.offers)));
+    const see = h.fold(ui, `${h.game}:shops:${row.turn}`, t("turns.see_shops", { n: shops.length }), "see-shops");
+    see.append(...shops.map((s) => h.cardRow(ui, s.roll === 0 ? t("turns.shop") : t("turns.roll", { n: s.roll }), s.offers)));
     body.push(see);
     return body;
   }
@@ -306,27 +313,27 @@
 
   function section(ui, r, report, h) {
     const part = ui.el("section", "recap-part turns");
-    const heading = ui.el("h3", null, "Turns");
+    const heading = ui.el("h3", null, t("turns.title"));
     part.append(heading);
     const all = rows(r, report);
     if (!all.length) {
-      part.append(ui.withSource(ui.el("p", "empty", "No turn in the log."), "unknown"));
+      part.append(ui.withSource(ui.el("p", "empty", t("turns.none")), "unknown"));
       return part;
     }
     const key = ui.el("p", "note turn-key");
-    key.append("Open a turn for both boards, its shop and what you bought. Health change over each combat ");
+    key.append(`${t("turns.key")} `);
     const mark = ui.sourceMark("inferred");
     if (mark) key.append(mark);
     key.append(".");
     part.append(key);
     const shopRecorded = Boolean(r.shop && r.shop.state === "recorded");
     if (!shopRecorded) {
-      part.append(ui.withSource(ui.el("p", "note", "This game has no shop record: turns show only combats and boards."), "unknown"));
+      part.append(ui.withSource(ui.el("p", "note", t("turns.no_shop_game")), "unknown"));
     }
     // Column names over the rows; each row's summary also says it all in words.
     const cols = ui.el("div", "turn-cols");
     cols.setAttribute("aria-hidden", "true");
-    cols.append(...["Turn", "Tier", "Combat", "Health", "Your board"].map((w) => ui.el("span", null, w)));
+    cols.append(...["turns.col.turn", "turns.col.tier", "turns.col.combat", "turns.col.health", "turns.col.board"].map((k) => ui.el("span", null, t(k))));
     part.append(cols);
     const listNode = ui.el("div", "turn-list");
     const tools = { ...h, shopRecorded };

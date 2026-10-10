@@ -2,6 +2,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const R = require("../ui/round-two.js");
+const I18n = require("../ui/i18n.js");
+require("../ui/strings/common.js");
+require("../ui/strings/details.js");
 
 test("keywords are short words with the full name, and an older record is not none", () => {
   const marks = R.keywordMarks(["taunt", "divine_shield", "new_thing"]);
@@ -99,4 +102,20 @@ test("the stats table has rates, places and the games behind it", () => {
   assert.match(t.note, /^Over 3 games whose choices are in the log\. Not counted: 2 saved by an older version/);
   assert.equal(R.choiceTable(stats, "dark_gifts").empty, "None offered in these games yet.");
   assert.equal(R.choiceTable(null, "trinkets").empty, "No choice in the log yet.");
+});
+
+test("in Spanish keywords, kinds and counts follow the language", () => {
+  I18n.setLang("es");
+  try {
+    const marks = R.keywordMarks(["taunt", "divine_shield"]);
+    assert.deepEqual(marks.map((k) => [k.short, k.full]), [["Provocar", "Provocar"], ["Escudo", "Escudo divino"]]);
+    assert.equal(R.choiceRows(choices()).rows[1].kind, "Don siniestro");
+    const t = R.choiceTable({ games: 3, not_recorded: 0, no_data: 0, trinkets: [{ card_id: "T_A", offered: 4, picked: 1, pick_rate: 0.25, placed_when_picked: 1, average_place_when_picked: 2.5 }], dark_gifts: [] }, "trinkets");
+    assert.equal(t.rows[0].place, "2,50");
+    assert.match(t.note, /^Sobre 3 partidas cuyas elecciones/);
+    assert.match(R.choiceRows({ state: "not_recorded" }).empty, /^Elecciones no registradas/);
+  } finally {
+    I18n.setLang("en");
+  }
+  assert.equal(R.keywordMarks(["taunt"])[0].full, "Taunt");
 });

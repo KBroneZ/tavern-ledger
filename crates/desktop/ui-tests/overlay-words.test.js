@@ -1,6 +1,9 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const I18n = require("../ui/i18n.js");
+require("../ui/strings/common.js");
+require("../ui/strings/overlay.js");
 const words = require("../ui/overlay-words.js");
 
 const names = { BG30_MagicItem_1: "Made-up Trinket" };
@@ -76,4 +79,19 @@ test("the marked opponent is the next one in the shop and the current one during
   assert.deepEqual(words.nextLabels(shop), { badge: "Next", heading: "Next opponent" });
   assert.deepEqual(words.nextLabels(combat), { badge: "Now", heading: "Opposing team now" });
   assert.deepEqual(words.nextLabels({ turn: { value: null }, last_combat: { value: null } }), { badge: "Next", heading: "Next opponent" });
+});
+
+test("in Spanish the marks, the triple count and the labels are Spanish, and English comes back", () => {
+  I18n.setLang("es");
+  try {
+    assert.deepEqual(words.keywordMarks(["divine_shield"]), [{ key: "divine_shield", short: "ED", full: "Escudo divino" }]);
+    assert.equal(words.triplesText(1), "1 triple");
+    assert.equal(words.triplesText(3), "3 triples");
+    assert.equal(words.triplesText(null), "aún sin triples en el registro");
+    assert.deepEqual(words.nextLabels({ turn: { value: null }, last_combat: { value: null } }), { badge: "Siguiente", heading: "Siguiente rival" });
+    assert.match(words.keywordLegend(), /^P Provocar · ED Escudo divino/);
+  } finally {
+    I18n.setLang("en");
+  }
+  assert.equal(words.keywordMarks(["taunt"])[0].short, "T");
 });

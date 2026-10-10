@@ -19,6 +19,11 @@ const SHOP_CSS: &str = include_str!("../ui/shop.css");
 const CURIOUS_CSS: &str = include_str!("../ui/curious.css");
 const TURNS_CSS: &str = include_str!("../ui/turns.css");
 const COMPACT_CSS: &str = include_str!("../ui/compact.css");
+const SETTINGS_JS: &str = include_str!("../ui/settings.js");
+const I18N: &str = include_str!("../ui/i18n.js");
+const COMMON_WORDS: &str = include_str!("../ui/strings/common.js");
+const WINDOW_WORDS: &str = include_str!("../ui/strings/window.js");
+const DETAIL_WORDS: &str = include_str!("../ui/strings/details.js");
 /// The main window's scripts that draw pictures or tables, besides app.js.
 const WINDOW_SCRIPTS: [(&str, &str); 6] = [
     ("shop.js", include_str!("../ui/shop.js")),
@@ -86,8 +91,12 @@ fn a_toolbar_role_is_not_claimed_without_arrow_keys_between_its_buttons() {
 
 #[test]
 fn the_arrange_button_has_one_signal_not_two() {
-    // Its text changes between "Arrange overlay" and "Lock overlay".
-    assert!(SWITCH.contains("Lock overlay") && SWITCH.contains("Arrange overlay"));
+    // Its text changes between "Arrange overlay" and "Lock overlay" (T-325: words in the table).
+    assert!(
+        SWITCH.contains("t(\"win.overlay.lock\")") && SWITCH.contains("t(\"win.overlay.arrange\")")
+    );
+    assert!(WINDOW_WORDS.contains("\"win.overlay.arrange\": \"Arrange overlay\""));
+    assert!(WINDOW_WORDS.contains("\"win.overlay.lock\": \"Lock overlay\""));
     assert!(!SWITCH.contains("aria-pressed"));
     assert!(!INDEX.contains("id=\"overlay-arrange\" aria-pressed"));
 }
@@ -126,9 +135,13 @@ fn round_two_details_are_folded_keyboard_controls_with_words_not_colour() {
     assert!(ROUND_TWO.contains("box.open = openFolds.has(key)"));
     assert!(ROUND_TWO.contains("data-focus\", `fold:${key}`"));
     // Keyword and pick marks are words the screen reader reads, not colours.
-    for word in ["\"Taunt\"", "\"Divine Shield\"", "\"Golden\"", "\"taken\""] {
-        assert!(ROUND_TWO.contains(word), "{word} is shown as a word");
+    // The words are in the string tables (T-325).
+    for word in ["\"Taunt\"", "\"Divine Shield\"", "\"Golden\""] {
+        assert!(COMMON_WORDS.contains(word), "{word} is shown as a word");
     }
+    assert!(DETAIL_WORDS.contains("[\"r2.taken\", \"taken\""));
+    assert!(ROUND_TWO.contains("t(\"keyword.golden\")"));
+    assert!(ROUND_TWO.contains("t(\"r2.taken\")"));
     assert!(!ROUND_TWO_CSS.contains("display: none"));
 }
 
@@ -310,7 +323,91 @@ fn long_lists_share_one_compact_helper() {
     }
     // The button says how many rows it opens and what it controls.
     let compact = WINDOW_SCRIPTS[5].1;
-    assert!(compact.contains("Show all (${all.length})"));
+    assert!(compact.contains("t(\"compact.show_all\", { n: all.length })"));
+    assert!(DETAIL_WORDS.contains("[\"compact.show_all\", \"Show all ({n})\""));
     assert!(compact.contains("button.setAttribute(\"aria-expanded\""));
     assert!(compact.contains("th.setAttribute(\"aria-sort\""));
+}
+
+#[test]
+fn overlay_pictures_are_cropped_to_the_art_with_no_white_edges() {
+    // T-325: the same crop as the window (T-320) for the overlay's minions
+    // and portraits, in the panels and the hover card.
+    let css = overlay_css();
+    let shared = rule(&css, ".minion .art, .portrait {");
+    assert!(shared.contains("object-fit: cover;"));
+    assert!(shared.contains("background: var(--panel-solid);"));
+    assert!(
+        css.contains("\n.portrait { object-view-box: inset(0% 8%); object-position: 50% 30%; }")
+    );
+    assert!(css.contains(
+        "\n.minion .art { object-view-box: inset(1% 16% 2%); object-position: 50% 28%; }"
+    ));
+    let css = css.to_lowercase();
+    for banned in [
+        "object-fit: contain",
+        "background: #fff",
+        "background: white",
+    ] {
+        assert!(!css.contains(banned), "{banned}");
+    }
+}
+
+#[test]
+fn settings_are_a_tab_with_a_named_gear_and_labelled_controls() {
+    // T-324: the gear is the last tab, named for screen readers (the icon is hidden).
+    let tab = position(INDEX, "id=\"tab-settings\"");
+    let tag = &INDEX[INDEX[..tab].rfind('<').unwrap()..tab + INDEX[tab..].find('>').unwrap()];
+    for needed in [
+        "role=\"tab\"",
+        "aria-controls=\"panel-settings\"",
+        "aria-label=\"Settings\"",
+    ] {
+        assert!(tag.contains(needed), "{needed}");
+    }
+    assert!(INDEX.contains("aria-hidden=\"true\" focusable=\"false\""));
+    assert!(INDEX.contains(
+        "<section id=\"panel-settings\" class=\"tab-panel settings\" role=\"tabpanel\" aria-labelledby=\"tab-settings\" hidden>"
+    ));
+    // Every control has a label tied to it, and the options live in the panel.
+    for id in ["setting-language", "overlay-theme", "upload-email"] {
+        assert!(INDEX.contains(&format!("<label for=\"{id}\"")), "{id}");
+    }
+    let index = lf(INDEX);
+    let panel = position(&index, "id=\"panel-settings\"");
+    let end = panel + index[panel..].find("\n    </section>\n").unwrap();
+    for id in [
+        "id=\"setting-language\"",
+        "id=\"overlay-enabled\"",
+        "id=\"overlay-theme\"",
+        "id=\"setting-autostart\"",
+        "id=\"upload-enabled\"",
+        "id=\"memory-setting\"",
+    ] {
+        let at = position(&index, id);
+        assert!(panel < at && at < end, "{id} is outside the Settings panel");
+    }
+    // Problems are said, not only shown.
+    for id in ["language-problem", "autostart-problem"] {
+        assert!(INDEX.contains(&format!("id=\"{id}\" class=\"problem\" role=\"status\">")));
+    }
+    assert!(position(INDEX, "settings.js") > position(INDEX, "app.js"));
+    assert!(INDEX.contains("href=\"settings.css\""));
+    // A language change comes back to the language control.
+    assert!(SETTINGS_JS.contains("$(\"setting-language\").focus();"));
+}
+
+#[test]
+fn both_windows_follow_the_language_setting() {
+    // T-325: the language is read before the first draw, and a change in
+    // Settings reloads each window in the new language.
+    for page in [INDEX, OVERLAY] {
+        let first = position(page, "<script src=");
+        assert_eq!(first, position(page, "<script src=\"i18n.js\">"));
+        assert!(page.contains("<script src=\"strings/common.js\">"));
+    }
+    assert!(I18N.contains("invoke(\"app_settings\")"));
+    assert!(I18N.contains("listen(\"app-settings-changed\""));
+    assert!(I18N.contains("window.location.reload()"));
+    assert_eq!(crate::settings::CHANGED, "app-settings-changed");
 }

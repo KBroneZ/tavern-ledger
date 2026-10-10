@@ -3,49 +3,52 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tavern Ledger overlay</title>
+<title data-i18n="ov.title">Tavern Ledger overlay</title>
 <link rel="stylesheet" href="overlay.css">
 </head>
 <body>
   <div id="scrim" hidden></div>
-  <div id="toolbar" class="toolbar" role="group" aria-label="Overlay layout" hidden>
-    <strong class="toolbar-title">Layout editing</strong>
-    <span id="toolbar-note" class="toolbar-note">Clicks do not reach the game while unlocked. Drag a panel to move it, its corner to resize it; or click a panel and use the buttons next to it; or Tab to a panel and use the arrow keys (Shift for bigger steps, Alt to resize). Example data is shown when no game is on. Drag the dashed "Leaderboard" box over the game's column of heroes if it is not there already; it is kept for this game window size.</span>
-    <span class="toolbar-row" id="theme-buttons" role="group" aria-label="Theme"></span>
-    <span class="toolbar-row" role="group" aria-label="Opacity">
-      <span class="toolbar-label">Opacity</span>
-      <button type="button" id="opacity-down" aria-label="Less opaque">&minus;</button>
+  <div id="toolbar" class="toolbar" role="group" aria-label="Overlay layout" data-i18n-attr="aria-label:ov.toolbar.label" hidden>
+    <strong class="toolbar-title" data-i18n="ov.toolbar.title">Layout editing</strong>
+    <span id="toolbar-note" class="toolbar-note" data-i18n="ov.toolbar.note">Clicks do not reach the game while unlocked. Drag a panel to move it, its corner to resize it; or click a panel and use the buttons next to it; or Tab to a panel and use the arrow keys (Shift for bigger steps, Alt to resize). Example data is shown when no game is on. Drag the dashed "Leaderboard" box over the game's column of heroes if it is not there already; it is kept for this game window size.</span>
+    <span class="toolbar-row" id="theme-buttons" role="group" aria-label="Theme" data-i18n-attr="aria-label:ov.toolbar.theme"></span>
+    <span class="toolbar-row" role="group" aria-label="Opacity" data-i18n-attr="aria-label:ov.opacity">
+      <span class="toolbar-label" data-i18n="ov.opacity">Opacity</span>
+      <button type="button" id="opacity-down" aria-label="Less opaque" data-i18n-attr="aria-label:ov.opacity.less">&minus;</button>
       <output id="opacity-value">90%</output>
-      <button type="button" id="opacity-up" aria-label="More opaque">+</button>
+      <button type="button" id="opacity-up" aria-label="More opaque" data-i18n-attr="aria-label:ov.opacity.more">+</button>
     </span>
-    <span class="toolbar-row" id="panel-toggles" role="group" aria-label="Panels shown"></span>
+    <span class="toolbar-row" id="panel-toggles" role="group" aria-label="Panels shown" data-i18n-attr="aria-label:ov.toolbar.panels"></span>
     <span class="toolbar-row">
-      <button type="button" id="reset-layout">Reset layout</button>
-      <button type="button" id="reset-board">Reset leaderboard box</button>
-      <button type="button" id="lock" class="primary">Lock overlay</button>
+      <button type="button" id="reset-layout" data-i18n="ov.toolbar.resetLayout">Reset layout</button>
+      <button type="button" id="reset-board" data-i18n="ov.toolbar.resetBoard">Reset leaderboard box</button>
+      <button type="button" id="lock" class="primary" data-i18n="ov.toolbar.lock">Lock overlay</button>
     </span>
     <span id="toolbar-warning" class="toolbar-warning" role="alert" hidden></span>
   </div>
   <div id="stack">
-    <div class="slot" data-panel="status" data-focus="slot:status"><section id="status" class="panel status" aria-label="Game status">Waiting for a game…</section><span class="grip" hidden></span></div>
-    <div class="slot" data-panel="tribes" data-focus="slot:tribes"><section id="tribes" class="panel" aria-label="Tribes" hidden></section><span class="grip" hidden></span></div>
-    <div class="slot" data-panel="opponents" data-focus="slot:opponents"><section id="opponents" class="panel" aria-label="Opponents" hidden></section><span class="grip" hidden></span></div>
-    <div class="slot" data-panel="legend" data-focus="slot:legend"><p id="legend" class="panel legend" hidden>No mark: from the log. Card names and pictures: HearthstoneJSON, &copy; Blizzard Entertainment.</p><span class="grip" hidden></span></div>
+    <div class="slot" data-panel="status" data-focus="slot:status"><section id="status" class="panel status" aria-label="Game status" data-i18n-attr="aria-label:ov.panel.status" data-i18n="ov.status.waiting">Waiting for a game…</section><span class="grip" hidden></span></div>
+    <div class="slot" data-panel="tribes" data-focus="slot:tribes"><section id="tribes" class="panel" aria-label="Tribes" data-i18n-attr="aria-label:ov.slot.tribes" hidden></section><span class="grip" hidden></span></div>
+    <div class="slot" data-panel="opponents" data-focus="slot:opponents"><section id="opponents" class="panel" aria-label="Opponents" data-i18n-attr="aria-label:ov.slot.opponents" hidden></section><span class="grip" hidden></span></div>
+    <div class="slot" data-panel="legend" data-focus="slot:legend"><p id="legend" class="panel legend" data-i18n="ov.legend" hidden>No mark: from the log. Card names and pictures: HearthstoneJSON, &copy; Blizzard Entertainment.</p><span class="grip" hidden></span></div>
   </div>
+  <script src="i18n.js"></script>
+  <script src="strings/common.js"></script>
+  <script src="strings/overlay.js"></script>
   <script src="focus-keeper.js"></script>
   <script src="cards.js"></script>
   <script src="overlay-example.js"></script>
   <script src="overlay-words.js"></script>
-  <div id="board-box" class="board-box" hidden><span class="board-label">Leaderboard</span><span class="grip"></span></div>
+  <div id="board-box" class="board-box" hidden><span class="board-label" data-i18n="ov.box.label">Leaderboard</span><span class="grip"></span></div>
   <p id="key-status" class="visually-hidden" role="status"></p>
-  <p id="key-hint" class="key-hint" hidden>Arrow keys move it. Shift: bigger steps. Alt + arrow keys: resize. Tab: next panel.</p>
-  <div id="arrange-pad" class="arrange-pad" role="group" aria-label="Move or resize" hidden>
+  <p id="key-hint" class="key-hint" data-i18n="ov.keyhint" hidden>Arrow keys move it. Shift: bigger steps. Alt + arrow keys: resize. Tab: next panel.</p>
+  <div id="arrange-pad" class="arrange-pad" role="group" aria-label="Move or resize" data-i18n-attr="aria-label:ov.pad.label" hidden>
     <strong id="pad-title" class="pad-title"></strong>
-    <span id="pad-moves" class="pad-row" role="group" aria-label="Move"></span>
-    <span id="pad-sizes" class="pad-row" role="group" aria-label="Size"></span>
-    <button type="button" id="pad-big" aria-pressed="false">Big steps</button>
+    <span id="pad-moves" class="pad-row" role="group" aria-label="Move" data-i18n-attr="aria-label:ov.pad.move"></span>
+    <span id="pad-sizes" class="pad-row" role="group" aria-label="Size" data-i18n-attr="aria-label:ov.pad.size"></span>
+    <button type="button" id="pad-big" aria-pressed="false" data-i18n="ov.pad.big">Big steps</button>
   </div>
-  <aside id="hover-card" class="hover-card" aria-label="Opponent" hidden></aside>
+  <aside id="hover-card" class="hover-card" aria-label="Opponent" data-i18n-attr="aria-label:ov.hover.label" hidden></aside>
   <script src="overlay.js"></script>
   <script src="overlay-hover.js"></script>
   <script src="overlay-keys.js"></script>

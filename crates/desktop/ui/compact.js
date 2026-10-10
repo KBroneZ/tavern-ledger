@@ -7,23 +7,27 @@
 "use strict";
 
 (() => {
+  const I18n = typeof module !== "undefined" && module.exports ? require("./i18n.js") : window.TLI18n;
+  const t = I18n.t;
   const LIMIT = 6;
   const known = (v) => v !== null && v !== undefined && !(typeof v === "number" && Number.isNaN(v));
-  const collator = new Intl.Collator("en", { sensitivity: "base", numeric: true });
+  // Names sort by the language in use, read when a list is sorted.
+  const collator = () => new Intl.Collator(I18n.locale(), { sensitivity: "base", numeric: true });
 
   // Unknown values always go after known ones, whichever way a list is sorted.
-  function compareKnown(a, b, dir) {
+  function compareKnown(a, b, dir, collate) {
     if (!known(a) || !known(b)) return known(a) ? -1 : known(b) ? 1 : 0;
-    if (typeof a === "string" || typeof b === "string") return dir * collator.compare(String(a), String(b));
+    if (typeof a === "string" || typeof b === "string") return dir * collate.compare(String(a), String(b));
     return dir * (a - b);
   }
 
   // A new list: most games first, then the better (lower) average place, then the name.
   function rank(rows, by) {
+    const collate = collator();
     return rows.slice().sort((a, b) =>
-      compareKnown(by.games(a), by.games(b), -1)
-      || (by.place ? compareKnown(by.place(a), by.place(b), 1) : 0)
-      || compareKnown(by.name(a), by.name(b), 1));
+      compareKnown(by.games(a), by.games(b), -1, collate)
+      || (by.place ? compareKnown(by.place(a), by.place(b), 1, collate) : 0)
+      || compareKnown(by.name(a), by.name(b), 1, collate));
   }
 
   // Best first: high numbers, low places (`low`), A to Z for text.
@@ -34,7 +38,8 @@
     const column = columns[sort.column];
     const dir = bestDir(column) * (sort.dir === "worst" ? -1 : 1);
     // A stable sort, so ties keep the default ranking.
-    return rows.slice().sort((a, b) => compareKnown(column.sort(a), column.sort(b), dir));
+    const collate = collator();
+    return rows.slice().sort((a, b) => compareKnown(column.sort(a), column.sort(b), dir, collate));
   }
 
   function ariaSort(column, index, sort) {
@@ -49,7 +54,7 @@
     const folds = all.length > limit;
     return {
       rows: folds && !expanded ? all.slice(0, limit) : all,
-      button: folds ? { text: expanded ? `Show top ${limit}` : `Show all (${all.length})`, expanded } : null,
+      button: folds ? { text: expanded ? t("compact.show_top", { n: limit }) : t("compact.show_all", { n: all.length }), expanded } : null,
       headings: columns.map((c, i) => ({ label: c.label, sortable: Boolean(c.sort), ariaSort: c.sort ? ariaSort(c, i, sort) : "none" })),
     };
   }
@@ -87,7 +92,7 @@
   }
 
   // A long explanation, out of the way: "About this" opens it.
-  function about(ui, key, text, label = "About this") {
+  function about(ui, key, text, label = t("compact.about")) {
     const box = fold(ui, `about:${key}`, label, "about");
     box.append(ui.el("p", "note", text));
     return box;
@@ -111,7 +116,7 @@
       mark.setAttribute("aria-hidden", "true");
       button.append(mark);
     }
-    button.title = `Sort by ${column.label.toLowerCase()}`;
+    button.title = t("compact.sort_by", { label: column.label.toLocaleLowerCase(I18n.locale()) });
     button.addEventListener("click", () => {
       st.sort = nextSort(st.sort, index);
       redraw();

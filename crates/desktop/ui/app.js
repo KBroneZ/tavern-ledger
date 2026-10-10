@@ -6,7 +6,15 @@
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 
-const MODES = { GT_BATTLEGROUNDS: "Solo", GT_BATTLEGROUNDS_DUO: "Duos" };
+// The words of the interface come from the language tables (i18n.js,
+// strings/window.js); `tl` is a short name for the lookup (`t` is a common
+// local name, and this file's scope is shared with the other scripts).
+const tl = TLI18n.t;
+const tlPlural = TLI18n.plural;
+
+// The game types with a switch of their own; the name shown comes from `mode.<id>`.
+const MODES = { GT_BATTLEGROUNDS: true, GT_BATTLEGROUNDS_DUO: true };
+const modeName = (id) => (MODES[id] ? tl(`mode.${id}`) : null);
 
 let allGames = [];
 let stats = { modes: [], legend: [] };
@@ -31,14 +39,16 @@ function el(tag, className, text) {
 const SOURCES = ["log", "inferred", "entered", "leaderboard", "card_data", "possible", "unknown"];
 const sourceOf = (source) => (SOURCES.includes(source) ? source : "unknown");
 
+// The words are the interface's own (source.<key>.label and .description),
+// the same ones the Rust legend carries in English.
 function sourceInfo(source) {
   const key = sourceOf(source);
-  return stats.legend.find((e) => e.source === key) || { source: key, label: key, description: "" };
+  return { source: key, label: tl(`source.${key}.label`), description: tl(`source.${key}.description`) };
 }
 
 function addTip(node, source) {
   const info = sourceInfo(source);
-  node.title = [node.title, `Source: ${info.label}. ${info.description}`].filter(Boolean).join("\n");
+  node.title = [node.title, tl("win.source.tip", { label: info.label, description: info.description })].filter(Boolean).join("\n");
 }
 
 function sourceMark(source) {
@@ -58,11 +68,11 @@ function withSource(node, source) {
   return node;
 }
 
-// "Hearthstone_2026_10_09_15_26_25" + game 2 -> "2026-10-09 15:26 · 2"
+// "Hearthstone_2026_10_09_15_26_25" + game 2 -> "09/10/2026, 15:26 · 2" (as the language writes dates)
 // (the session start time; the log has no per-game date yet)
 function played(session, index) {
   const m = /^Hearthstone_(\d{4})_(\d{2})_(\d{2})_(\d{2})_(\d{2})_\d{2}$/.exec(session);
-  const when = m ? `${m[1]}-${m[2]}-${m[3]} ${m[4]}:${m[5]}` : session;
+  const when = m ? TLI18n.dateTime(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]))) : session;
   return `${when} · ${index}`;
 }
 
@@ -70,8 +80,8 @@ function played(session, index) {
 // from before the parser was saved is "unknown version", not an error.
 function provenance(game) {
   const p = game.parser;
-  const parser = p && typeof p.version === "string" ? `parser ${p.version} r${p.revision}` : "parser unknown version";
-  const build = Number.isInteger(game.report.build) ? `build ${game.report.build}` : "build unknown";
+  const parser = p && typeof p.version === "string" ? tl("win.prov.parser", { version: p.version, revision: p.revision }) : tl("win.prov.parserUnknown");
+  const build = Number.isInteger(game.report.build) ? tl("win.prov.build", { build: game.report.build }) : tl("win.prov.buildUnknown");
   return `${build} · ${parser}`;
 }
 
@@ -88,8 +98,8 @@ function placeBadge(place, top) {
 }
 
 const dash = (value, format) => (value === null || value === undefined ? "—" : format(value));
-const avgText = (v) => dash(v, (x) => x.toFixed(2));
-const shareText = (v) => dash(v, (x) => `${Math.round(x * 100)}%`);
+const avgText = (v) => dash(v, (x) => TLI18n.num(x, 2));
+const shareText = (v) => dash(v, (x) => TLI18n.percent(x));
 
 // The history is a local file; tolerate hand-edited or older records.
 const list = (value) => (Array.isArray(value) ? value : []);
@@ -103,7 +113,7 @@ const ART_OPTIONS = { lazy: true, placeholder: true };
 
 function art(id, className) {
   const img = TLCards.art(id, className, ART_OPTIONS);
-  if (img) img.title = `Picture: ${sourceInfo("card_data").label}. © Blizzard Entertainment.`;
+  if (img) img.title = tl("win.art.tip", { source: sourceInfo("card_data").label });
   return img;
 }
 
@@ -125,13 +135,13 @@ function heroCell(report, source) {
 }
 
 function note(report) {
-  if (report.status === "incomplete") return "Game not finished in the log";
-  if (report.status === "unsupported") return "Could not be read: " + list(report.problems).join("; ");
-  return list(report.warnings).join("; ");
+  if (report.status === "incomplete") return tl("win.note.incomplete");
+  if (report.status === "unsupported") return tl("win.note.unsupported", { problems: list(report.problems).map(TLI18n.backend).join("; ") });
+  return list(report.warnings).map(TLI18n.backend).join("; ");
 }
 
 // Played with the reconnect dev tool (D-043): left out of the stats and the upload.
-const DEV_RECONNECT_TIP = "Played with the reconnect dev tool: not counted in the stats and never uploaded.";
+const devReconnectTip = () => tl("win.dev.tip");
 
 // The game's note under its hero, small; nothing when there is none (T-323).
 function noteLine(game) {
@@ -139,8 +149,8 @@ function noteLine(game) {
   if (!text && game.dev_reconnect !== true) return null;
   const line = el("span", "row-note", text);
   if (game.dev_reconnect === true) {
-    const mark = el("span", "dev-mark", "Dev reconnect");
-    mark.title = DEV_RECONNECT_TIP;
+    const mark = el("span", "dev-mark", tl("win.dev.mark"));
+    mark.title = devReconnectTip();
     line.prepend(mark, " ");
   }
   return line;
@@ -156,7 +166,7 @@ function row(game, top) {
   playedCell.title = provenance(game);
   const hero = heroCell(r, src.hero);
   // "Other" holds several game types: each row says its own.
-  if (mode === OTHER) hero.append(withSource(el("span", "row-note", r.game_type || "Unknown type"), src.mode));
+  if (mode === OTHER) hero.append(withSource(el("span", "row-note", r.game_type || tl("win.row.unknownType")), src.mode));
   const line = noteLine(game);
   if (line) hero.append(line);
   tr.append(withSource(playedCell, src.played), hero);
@@ -177,20 +187,20 @@ const LEDGER_LIMIT = 8;
 
 function ledgerTable(games, top) {
   const columns = [
-    { label: "Session · game" },
-    { label: "Hero" },
-    { label: "Place", num: true, sort: (g) => g.report.final_place, low: true },
-    { label: "Health", num: true, sort: (g) => g.report.final_health },
-    { label: "Rounds", num: true, sort: (g) => list(g.report.rounds).length || null },
-    { label: "", head: () => el("span", "visually-hidden", "Open the recap") },
+    { label: tl("win.col.played") },
+    { label: tl("win.col.hero") },
+    { label: tl("win.col.place"), num: true, sort: (g) => g.report.final_place, low: true },
+    { label: tl("win.col.health"), num: true, sort: (g) => g.report.final_health },
+    { label: tl("win.col.rounds"), num: true, sort: (g) => list(g.report.rounds).length || null },
+    { label: "", head: () => el("span", "visually-hidden", tl("win.ledger.openRecap")) },
   ];
   return TLCompact.table(SHOP_UI, {
-    key: `ledger:${mode}`, columns, rows: games, row: (g) => row(g, top), limit: LEDGER_LIMIT, label: "Your games, newest first",
+    key: `ledger:${mode}`, columns, rows: games, row: (g) => row(g, top), limit: LEDGER_LIMIT, label: tl("win.ledger.label"),
   });
 }
 
 function topLabel(top) {
-  return top === null ? "Top half" : `Top ${top}`;
+  return top === null ? tl("win.top.half") : tl("win.top.n", { n: top });
 }
 
 // "—" when no game counts: no games is unknown, not 0.
@@ -214,17 +224,18 @@ function renderTally(m, devGames) {
   const note = document.getElementById("not-counted");
   note.hidden = notCounted === 0 && devGames === 0;
   const parts = [
-    t.incomplete && `${t.incomplete} not finished in the log`,
-    t.unsupported && `${t.unsupported} could not be read`,
+    t.incomplete && tl("win.tally.incomplete", { n: t.incomplete }),
+    t.unsupported && tl("win.tally.unsupported", { n: t.unsupported }),
   ].filter(Boolean);
-  const why = m.top_half === null ? "place rules unknown for this mode" : parts.join(", ");
-  note.textContent = notCounted === 0 ? "" : `${notCounted} of ${t.games} games not counted for places` + (why ? ` (${why})` : "") + ".";
-  if (devGames > 0) note.textContent += `${notCounted === 0 ? "" : " "}${devGames} played with the reconnect dev tool left out.`;
+  const why = m.top_half === null ? tl("win.tally.rulesUnknown") : parts.join(", ");
+  const counted = { counted: notCounted, games: t.games, why };
+  note.textContent = notCounted === 0 ? "" : tl(why ? "win.tally.notCountedWhy" : "win.tally.notCounted", counted);
+  if (devGames > 0) note.textContent += (notCounted === 0 ? "" : " ") + tl("win.tally.dev", { n: devGames });
 }
 
 function heroRow(h, top) {
   const tr = el("tr");
-  const cell = el("td", h.name ? "hero-name" : "hero", h.name || h.hero || "Unknown hero");
+  const cell = el("td", h.name ? "hero-name" : "hero", h.name || h.hero || tl("win.hero.unknown"));
   if (h.variants.length) cell.title = h.variants.join("\n");
   const img = portrait(h.hero);
   if (img) cell.prepend(img);
@@ -242,9 +253,12 @@ function heroRow(h, top) {
   return tr;
 }
 
-// The log's race names: NEUTRAL is a minion with no tribe, ALL one with every tribe.
-const TRIBE_LABELS = { NEUTRAL: "No tribe", ALL: "All tribes" };
-const tribeLabel = (name) => TRIBE_LABELS[name] || name.charAt(0) + name.slice(1).toLowerCase();
+// The log's race names (NEUTRAL is a minion with no tribe, ALL one with every
+// tribe) in the language; one the tables do not know shows capitalised.
+const tribeLabel = (name) => {
+  const key = `tribe.${name}`;
+  return key in TLI18n.tables().en ? tl(key) : name.charAt(0) + name.slice(1).toLowerCase();
+};
 
 // Lobby tribes entered by hand (T-303). The app owns the fixed list, the rules
 // and the saving; this file shows them. Always marked "entered by you", and
@@ -283,11 +297,11 @@ function renderLobbyNow() {
   enter.hidden = clear.hidden = true;
   current.replaceChildren();
   if (!lobby) {
-    state.textContent = "Loading…";
+    state.textContent = tl("win.lobby.loading");
     return;
   }
   if (!lobby.available) {
-    state.textContent = lobby.problem || "Entering tribes is not available: this window does not own the history.";
+    state.textContent = TLI18n.backend(lobby.problem || "Entering tribes is not available: this window does not own the history.");
     return;
   }
   const target = lobby.in_progress
@@ -296,15 +310,15 @@ function renderLobbyNow() {
   const entered = entryOf(target);
   if (lobby.in_progress) {
     state.textContent = entered
-      ? "A game is in progress. Tribes entered by you for it:"
-      : "A game is in progress. Pick the five tribes you see on your screen at hero select.";
+      ? tl("win.lobby.state.liveEntered")
+      : tl("win.lobby.state.livePick");
   } else {
     state.textContent = entered
-      ? "No game in progress. These tribes wait for the next game:"
-      : "No game in progress. You can pick the tribes now and they will go to the next game.";
+      ? tl("win.lobby.state.idleEntered")
+      : tl("win.lobby.state.idlePick");
   }
   current.replaceChildren(...(entered ? tribeChips(entered) : []));
-  enter.textContent = entered ? "Change" : lobby.in_progress ? "Enter tribes" : "Enter tribes for the next game";
+  enter.textContent = entered ? tl("win.lobby.change") : lobby.in_progress ? tl("win.lobby.enter") : tl("win.lobby.enterNext");
   enter.onclick = () => openTribesDialog(target);
   enter.hidden = false;
   clear.hidden = !entered;
@@ -328,7 +342,7 @@ async function editTribes(action, errorId) {
     await refreshGames();
     return true;
   } catch (err) {
-    error.textContent = String(err);
+    error.textContent = TLI18n.backend(String(err));
     error.hidden = false;
     return false;
   }
@@ -352,9 +366,9 @@ document.querySelectorAll("dialog").forEach((dialog) => {
 });
 
 function tribesTargetText(target) {
-  if (target.kind === "pending") return "For the next game that starts.";
+  if (target.kind === "pending") return tl("win.tribes.forNext");
   const game = allGames.find((g) => g.session === target.session && g.index === target.index);
-  return game ? `For game ${played(game.session, game.index)}.` : "For the game in progress.";
+  return game ? tl("win.tribes.forGame", { game: played(game.session, game.index) }) : tl("win.tribes.forLive");
 }
 
 function pickedTribes() {
@@ -364,7 +378,7 @@ function pickedTribes() {
 function updateTribesCount() {
   const need = lobby ? lobby.lobby_size : 5;
   const picked = pickedTribes().length;
-  document.getElementById("tribes-count").textContent = `${picked} of ${need} picked.`;
+  document.getElementById("tribes-count").textContent = tl("win.tribes.count", { picked, need });
   document.getElementById("tribes-save").disabled = picked !== need;
   // At the limit, the rest stay off, so a sixth tribe cannot be picked by mistake.
   document.querySelectorAll("#tribes-choices input").forEach((box) => {
@@ -379,7 +393,7 @@ function moveTargets(target) {
     .map((g) => ({ session: g.session, index: g.index, text: played(g.session, g.index) }));
   const live = lobby.in_progress;
   if (live && !withEntry.has(gameKey(live)) && !(live.session === target.session && live.index === target.index)) {
-    options.unshift({ session: live.session, index: live.index, text: "Game in progress" });
+    options.unshift({ session: live.session, index: live.index, text: tl("win.tribes.gameLive") });
   }
   return options;
 }
@@ -393,7 +407,7 @@ function renderTribesDialogNow() {
   if (!target || !lobby) return;
   const entered = entryOf(target);
   document.getElementById("tribes-target").textContent = tribesTargetText(target);
-  document.getElementById("tribes-need").textContent = lobby.lobby_size;
+  document.getElementById("tribes-legend").textContent = tl("win.tribes.pick", { n: lobby.lobby_size });
   const keep = new Set(document.getElementById("tribes-choices").childElementCount ? pickedTribes() : entered || []);
   document.getElementById("tribes-choices").replaceChildren(...lobby.choices.map((choice) => {
     const label = el("label", "choice");
@@ -432,8 +446,8 @@ function openTribesDialog(target) {
 function updateTribesButton(game) {
   const button = document.getElementById("recap-tribes");
   const entered = game && entryOf({ kind: "game", session: game.session, index: game.index });
-  button.textContent = entered ? "Tribes ✓" : "Tribes";
-  button.title = entered ? `Lobby tribes entered by you: ${entered.map(tribeLabel).join(", ")}` : "Enter the lobby tribes for this game";
+  button.textContent = entered ? tl("win.recap.tribesDone") : tl("win.recap.tribes");
+  button.title = entered ? tl("win.recap.tribesTip", { tribes: TLI18n.list(entered.map(tribeLabel)) }) : tl("win.recap.tribesEnter");
   button.hidden = !game || !lobby || !lobby.available;
 }
 
@@ -470,33 +484,33 @@ function heroesTable(m) {
   const name = (h) => h.name || h.hero || "";
   const rows = TLCompact.rank(m.heroes, { games: (h) => h.tally.games, place: (h) => h.tally.average_place, name });
   const columns = [
-    { label: "Hero", sort: name, text: true },
-    { label: "Games", num: true, sort: (h) => h.tally.games },
-    { label: "Avg place", num: true, sort: (h) => h.tally.average_place, low: true },
+    { label: tl("win.col.hero"), sort: name, text: true },
+    { label: tl("win.col.games"), num: true, sort: (h) => h.tally.games },
+    { label: tl("win.col.avgPlace"), num: true, sort: (h) => h.tally.average_place, low: true },
     { label: topLabel(m.top_half), num: true, sort: (h) => (m.top_half === null ? null : h.tally.top_half_share) },
-    { label: "Wins", num: true, sort: (h) => h.tally.wins },
+    { label: tl("win.col.wins"), num: true, sort: (h) => h.tally.wins },
   ];
-  return TLCompact.table(SHOP_UI, { key: `heroes:${mode}`, columns, rows, row: (h) => heroRow(h, m.top_half), label: "Heroes" });
+  return TLCompact.table(SHOP_UI, { key: `heroes:${mode}`, columns, rows, row: (h) => heroRow(h, m.top_half), label: tl("win.heroes.title") });
 }
 
 function tribesTable(m) {
   // Most games first, then most offers (as a lower-is-better number), then the name.
   const rows = TLCompact.rank(m.tribes, { games: (t) => t.games, place: (t) => -t.offers, name: (t) => tribeLabel(t.tribe) });
   const columns = [
-    { label: "Tribe", sort: (t) => tribeLabel(t.tribe), text: true },
-    { label: "Games", num: true, sort: (t) => t.games },
-    { label: "Offers", num: true, sort: (t) => t.offers },
+    { label: tl("win.col.tribe"), sort: (t) => tribeLabel(t.tribe), text: true },
+    { label: tl("win.col.games"), num: true, sort: (t) => t.games },
+    { label: tl("win.col.offers"), num: true, sort: (t) => t.offers },
   ];
   return TLCompact.table(SHOP_UI, {
-    key: `tribes:${mode}`, columns, rows, row: (t) => tribeRow(t, m.games_with_tribes, m.tribes_source), label: "Tribes seen in the tavern",
+    key: `tribes:${mode}`, columns, rows, row: (t) => tribeRow(t, m.games_with_tribes, m.tribes_source), label: tl("win.tribes.seen.title"),
   });
 }
 
 function enteredTable(m, entered) {
   const rows = TLCompact.rank(entered, { games: (t) => t.games, name: (t) => tribeLabel(t.tribe) });
-  const columns = [{ label: "Tribe" }, { label: "Games", num: true }];
+  const columns = [{ label: tl("win.col.tribe") }, { label: tl("win.col.games"), num: true }];
   return TLCompact.table(SHOP_UI, {
-    key: `entered:${mode}`, columns, rows, row: (t) => enteredRow(t, m.games_with_entered_tribes, m.entered_tribes_source), label: "Lobby tribes you entered",
+    key: `entered:${mode}`, columns, rows, row: (t) => enteredRow(t, m.games_with_entered_tribes, m.entered_tribes_source), label: tl("win.entered.title"),
   });
 }
 
@@ -504,7 +518,7 @@ function enteredRow(t, total, source) {
   const tr = el("tr");
   const cell = el("td", null, tribeLabel(t.tribe));
   cell.title = t.tribe;
-  const count = el("td", "num", `${t.games} of ${total}`);
+  const count = el("td", "num", tl("win.count.of", { n: t.games, total }));
   addTip(count, source);
   tr.append(withSource(cell, source), count);
   return tr;
@@ -514,7 +528,7 @@ function tribeRow(t, total, source) {
   const tr = el("tr");
   const cell = el("td", null, tribeLabel(t.tribe));
   cell.title = t.tribe;
-  const counts = [el("td", "num", `${t.games} of ${total}`), el("td", "num", t.offers)];
+  const counts = [el("td", "num", tl("win.count.of", { n: t.games, total })), el("td", "num", t.offers)];
   counts.forEach((c) => addTip(c, source));
   tr.append(withSource(cell, source), ...counts);
   return tr;
@@ -540,9 +554,10 @@ const SHOP_UI = { el, withSource, sourceMark, addTip, art };
 // The legend comes from the app, so its words are the ones on the marks.
 function renderLegend() {
   const items = stats.legend.map((e) => {
-    const mark = e.source === "log" ? el("span", "src src-log", "no mark") : sourceMark(e.source);
+    const mark = e.source === "log" ? el("span", "src src-log", tl("win.legend.noMark")) : sourceMark(e.source);
     const item = el("li");
-    item.append(mark, el("span", null, `${e.label}: ${e.description}`));
+    const words = (part, fallback) => (`source.${e.source}.${part}` in TLI18n.tables().en ? tl(`source.${e.source}.${part}`) : fallback);
+    item.append(mark, el("span", null, `${words("label", e.label)}: ${words("description", e.description)}`));
     return item;
   });
   document.getElementById("legend-list").replaceChildren(...items);
@@ -572,7 +587,7 @@ async function openReport(game) {
     document.getElementById("report-text").textContent = text;
     document.getElementById("report-save").disabled = false;
   } catch (err) {
-    if (reportGame === target) showReportMessage("report-error", String(err));
+    if (reportGame === target) showReportMessage("report-error", TLI18n.backend(String(err)));
   }
 }
 
@@ -585,10 +600,10 @@ async function saveReport() {
     const path = await invoke("save_problem_report", target);
     if (reportGame !== target) return;
     showReportMessage("report-error", "");
-    showReportMessage("report-saved", `Saved to ${path}. Nothing was sent.`);
+    showReportMessage("report-saved", tl("win.report.saved", { path }));
   } catch (err) {
     if (reportGame !== target) return;
-    showReportMessage("report-error", String(err));
+    showReportMessage("report-error", TLI18n.backend(String(err)));
     save.disabled = false;
   }
 }
@@ -601,13 +616,14 @@ document.getElementById("report-dialog").addEventListener("close", () => { repor
 // including every source label; this file only draws it. Opponents are heroes
 // and seats of this one game, never names.
 let recapGame = null;
-const OUTCOME_WORDS = { won: "Won", lost: "Lost", tie: "Tie", unknown: "Unknown" };
+const OUTCOMES = ["won", "lost", "tie", "unknown"];
+const outcomeWord = (outcome) => tl(`outcome.${OUTCOMES.includes(outcome) ? outcome : "unknown"}`);
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 function recapButton(game) {
-  const button = el("button", "report-btn", "Recap");
+  const button = el("button", "report-btn", tl("win.recap.button"));
   button.type = "button";
-  button.setAttribute("aria-label", `Recap of game ${played(game.session, game.index)}`);
+  button.setAttribute("aria-label", tl("win.recap.buttonLabel", { game: played(game.session, game.index) }));
   button.setAttribute("data-focus", `recap:${game.session}:${game.index}`);
   button.addEventListener("click", () => openRecap(game));
   return button;
@@ -632,19 +648,19 @@ function fact(label, value, source) {
 }
 
 function statusText(status) {
-  if (status === "ok") return "Finished";
-  if (status === "incomplete") return "Not finished in the log";
-  if (status === "unsupported") return "Could not be read";
+  if (status === "ok") return tl("win.state.finished");
+  if (status === "incomplete") return tl("win.state.incomplete");
+  if (status === "unsupported") return tl("win.state.unreadable");
   return "—";
 }
 
 // The hero, the place, the mode and the date are in the recap's top bar.
 function recapFacts(r) {
   const facts = el("dl", "facts");
-  if (r.is_duos) facts.append(fact("Teammate", heroWithPortrait(r.teammate_hero.value), r.teammate_hero.source));
-  facts.append(fact("Final health", r.final_health.value ?? "—", r.final_health.source));
-  facts.append(fact("Rounds played", r.rounds_played.value ?? "—", r.rounds_played.source));
-  if (r.status.value !== "ok") facts.append(fact("State", statusText(r.status.value), r.status.source));
+  if (r.is_duos) facts.append(fact(tl("win.fact.teammate"), heroWithPortrait(r.teammate_hero.value), r.teammate_hero.source));
+  facts.append(fact(tl("win.fact.health"), r.final_health.value ?? "—", r.final_health.source));
+  facts.append(fact(tl("win.fact.rounds"), r.rounds_played.value ?? "—", r.rounds_played.source));
+  if (r.status.value !== "ok") facts.append(fact(tl("win.fact.state"), statusText(r.status.value), r.status.source));
   return facts;
 }
 
@@ -652,21 +668,21 @@ function recapFacts(r) {
 function renderRecapBar(r, game) {
   const hero = r ? r.hero.value : null;
   const title = document.getElementById("recap-title");
-  title.textContent = hero ? heroText(hero) : "Game recap";
+  title.textContent = hero ? heroText(hero) : tl("win.recap.title");
   title.title = "";
   if (r) withSource(title, r.hero.source);
   const img = hero && art(hero.id, "recap-art");
   document.getElementById("recap-portrait").replaceChildren(...(img ? [img] : []));
-  const kind = r ? MODES[r.game_type.value] || r.game_type.value : null;
+  const kind = r ? modeName(r.game_type.value) || r.game_type.value : null;
   const sub = document.getElementById("recap-sub");
   sub.textContent = [kind, played(game.session, game.index)].filter(Boolean).join(" · ");
-  sub.title = "The time is when the game's log session started; the log has no time per game.";
+  sub.title = tl("win.recap.subTip");
   if (r) addTip(sub, r.game_type.source);
   const place = document.getElementById("recap-place");
   place.replaceChildren();
   place.title = "";
   if (r) {
-    place.append(el("span", "recap-place-label", "Place"), placeBadge(r.place.value, r.top_half));
+    place.append(el("span", "recap-place-label", tl("win.recap.place")), placeBadge(r.place.value, r.top_half));
     withSource(place, r.place.source);
   }
 }
@@ -677,14 +693,14 @@ function svg(tag, attrs) {
   return node;
 }
 
-const pointWords = (p) => (p.round === 0 ? "before the first combat" : `after round ${p.round}`);
+const pointWords = (p) => (p.round === 0 ? tl("win.chart.before") : tl("win.chart.after", { round: p.round }));
 
 // Health after each round as a line; a round with no number breaks the line.
 function healthChart(points) {
   const wrap = el("div", "chart");
   const known = points.filter((p) => Number.isInteger(p.health));
   if (!known.length) {
-    wrap.append(el("p", "empty", "The log has no health for this game."));
+    wrap.append(el("p", "empty", tl("win.chart.noHealth")));
     return wrap;
   }
   // Room under the line for the round numbers and above it for the health values.
@@ -694,7 +710,7 @@ function healthChart(points) {
   const x = (i) => pad + (i * (width - 2 * pad)) / last;
   const y = (h) => height - padBottom - (h * (height - padTop - padBottom)) / top;
   const chart = svg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", class: "health-chart" });
-  chart.setAttribute("aria-label", "Health " + points.map((p) => `${pointWords(p)}: ${p.health ?? "unknown"}`).join(", "));
+  chart.setAttribute("aria-label", tl("win.chart.label", { points: points.map((p) => `${pointWords(p)}: ${p.health ?? tl("win.chart.unknown")}`).join(", ") }));
   chart.append(svg("line", { x1: pad, y1: y(0), x2: width - pad, y2: y(0), class: "axis" }));
   const label = (cx, cy, text, className) => {
     const node = svg("text", { x: cx, y: cy, "text-anchor": "middle", class: className });
@@ -716,19 +732,19 @@ function healthChart(points) {
     run.push(`${x(i)},${y(p.health)}`);
     const dot = svg("circle", { cx: x(i), cy: y(p.health), r: 3, class: "dot" });
     const tip = svg("title", {});
-    tip.textContent = `Health ${pointWords(p)}: ${p.health}`;
+    tip.textContent = tl("win.chart.point", { when: pointWords(p), health: p.health });
     dot.append(tip);
     chart.append(dot, label(x(i), y(p.health) - 8, p.health, "value-label"));
   });
   flush();
-  wrap.append(chart, TLCompact.about(SHOP_UI, "health-chart", "The number over a point is your health, the one under it the round (0: before the first combat). A ? means the log has no health for that round.", "How to read this"));
+  wrap.append(chart, TLCompact.about(SHOP_UI, "health-chart", tl("win.chart.help"), tl("win.chart.howTo")));
   return wrap;
 }
 
 function combatChip(c) {
-  const word = OUTCOME_WORDS[c.outcome] || "Unknown";
-  const chip = el("span", `chip chip-${c.outcome} src-${sourceOf(c.source)}`, `R${c.round} ${word}`);
-  chip.title = c.reason ? `Round ${c.round}: unknown, ${c.reason}.` : `Round ${c.round}: ${word}.`;
+  const word = outcomeWord(c.outcome);
+  const chip = el("span", `chip chip-${c.outcome} src-${sourceOf(c.source)}`, tl("win.chip.text", { round: c.round, word }));
+  chip.title = c.reason ? tl("win.chip.unknownTip", { round: c.round, reason: TLI18n.backend(c.reason) }) : tl("win.chip.tip", { round: c.round, word });
   addTip(chip, c.source);
   return chip;
 }
@@ -741,11 +757,11 @@ function countCell(n, source) {
 
 function opponentRow(o) {
   const tr = el("tr");
-  const who = el("td", "opponent", o.heroes.map(heroText).join(" + ") || "Unknown hero");
+  const who = el("td", "opponent", o.heroes.map(heroText).join(" + ") || tl("win.hero.unknown"));
   who.prepend(...o.heroes.map((h) => portrait(h.id)).filter(Boolean));
-  who.title = o.heroes.map((h) => h.id).concat(o.seats.map((s) => `seat ${s}`)).join("\n");
+  who.title = o.heroes.map((h) => h.id).concat(o.seats.map((s) => tl("win.opp.seat", { n: s }))).join("\n");
   if (o.final_place.value !== null) {
-    const place = el("span", "finished", `finished ${o.final_place.value}`);
+    const place = el("span", "finished", tl("win.opp.finished", { place: o.final_place.value }));
     who.append(" ", withSource(place, o.final_place.source));
   }
   const chips = el("td", "chips");
@@ -761,17 +777,17 @@ function opponentRow(o) {
 
 function recordTable(r) {
   const head = el("tr");
-  head.append(el("th", null, r.is_duos ? "Opposing team" : "Opponent"));
+  head.append(el("th", null, r.is_duos ? tl("win.opp.team") : tl("win.opp.single")));
   // The mark on the headings: inferred when any result was worked out from
   // health, unknown when the game has no result at all.
   const counted = TLExtras.resultsLine(r.results).source;
-  ["Won", "Lost", "Tie"].forEach((word) => {
-    const th = el("th", "num", word);
+  ["won", "lost", "tie"].forEach((outcome) => {
+    const th = el("th", "num", outcomeWord(outcome));
     const mark = sourceMark(counted);
     if (mark) th.append(mark);
     head.append(th);
   });
-  head.append(el("th", "num", "Unknown"), el("th", null, "Rounds"));
+  head.append(el("th", "num", outcomeWord("unknown")), el("th", null, tl("win.col.rounds")));
   head.querySelectorAll("th").forEach((th) => th.setAttribute("scope", "col"));
   const thead = el("thead");
   thead.append(head);
@@ -785,36 +801,36 @@ function recordTable(r) {
 function recordSection(r) {
   const section = el("section", "recap-part");
   const results = TLExtras.resultsLine(r.results);
-  const heading = el("h3", null, "Record against each opponent");
+  const heading = el("h3", null, tl("win.record.title"));
   const mark = sourceMark(results.source);
   if (mark) heading.append(mark);
   section.append(heading);
-  section.append(r.record.length ? recordTable(r) : el("p", "empty", "No combat could be matched to an opponent."));
-  const basis = TLCompact.about(SHOP_UI, "record", r.record_basis, "Where the results come from");
+  section.append(r.record.length ? recordTable(r) : el("p", "empty", tl("win.record.none")));
+  const basis = TLCompact.about(SHOP_UI, "record", TLI18n.backend(r.record_basis), tl("win.record.basis"));
   if (results.text) basis.append(withSource(el("p", "note results-line", results.text), results.source));
   section.append(basis);
   if (r.record.length) section.append(TLRoundTwo.opponentFolds(SHOP_UI, r, heroText, recapGame ? gameKey(recapGame) : ""));
   if (r.unattributed.length) {
-    const reasons = [...new Set(r.unattributed.map((c) => c.reason).filter(Boolean))];
+    const reasons = [...new Set(r.unattributed.map((c) => TLI18n.backend(c.reason)).filter(Boolean))];
     const rounds = r.unattributed.map((c) => c.round).join(", ");
-    section.append(withSource(el("p", "note", `Rounds ${rounds}: opponent unknown (${reasons.join("; ")}).`), "unknown"));
+    section.append(withSource(el("p", "note", tl("win.record.unattributed", { rounds, reasons: reasons.join("; ") })), "unknown"));
   }
   if (r.missing_rounds.length) {
-    section.append(withSource(el("p", "note", `Rounds the log does not have: ${r.missing_rounds.join(", ")}.`), "unknown"));
+    section.append(withSource(el("p", "note", tl("win.record.missing", { rounds: r.missing_rounds.join(", ") })), "unknown"));
   }
   return section;
 }
 
 function tribesSection(r) {
   const section = el("section", "recap-part");
-  const heading = el("h3", null, "Tribes seen in the tavern");
+  const heading = el("h3", null, tl("win.tribes.seen.title"));
   heading.append(sourceMark(r.tribes_source));
   section.append(heading);
   if (!r.tribes.length) {
-    section.append(el("p", "empty", "No tavern offers in the log."));
+    section.append(el("p", "empty", tl("win.tribesSection.none")));
     return section;
   }
-  section.append(el("p", "note", "What the tavern offered you. The log does not say which tribes were in the lobby."));
+  section.append(el("p", "note", tl("win.tribesSection.note")));
   // The mark is on the heading once; each tribe keeps the tooltip.
   const list = el("ul", "tribe-list");
   list.append(...r.tribes.map((t) => {
@@ -831,18 +847,18 @@ function tribesSection(r) {
 // merged with it and never used to correct it, whether the two agree or not.
 function enteredSection(r) {
   const section = el("section", "recap-part");
-  const heading = el("h3", null, "Lobby tribes");
+  const heading = el("h3", null, tl("win.lobby.title"));
   heading.append(sourceMark(r.entered_tribes_source));
   section.append(heading);
   if (!r.entered_tribes.length) {
-    section.append(el("p", "empty", "You did not enter the lobby tribes for this game."));
+    section.append(el("p", "empty", tl("win.entered.none")));
     return section;
   }
   const items = el("ul", "tribe-list");
   items.append(...tribeChips(r.entered_tribes));
   section.append(items);
   if (r.tribes.length) {
-    section.append(el("p", "note", "The list above and the tavern offers are two separate sources. Tavern Ledger does not correct one with the other."));
+    section.append(el("p", "note", tl("win.entered.note")));
   }
   return section;
 }
@@ -850,12 +866,12 @@ function enteredSection(r) {
 // Folded: open only when there is something to read (T-323).
 function messagesSection(r) {
   const section = el("section", "recap-part");
-  const all = r.problems.map((m) => `Problem: ${m}`).concat(r.warnings);
+  const all = r.problems.map((m) => tl("win.msg.problem", { text: TLI18n.backend(m) })).concat(r.warnings.map(TLI18n.backend));
   if (!all.length) {
-    section.append(el("p", "note", "The parser reported no warnings for this game."));
+    section.append(el("p", "note", tl("win.msg.none")));
     return section;
   }
-  const box = TLCompact.fold(SHOP_UI, `${recapGame ? gameKey(recapGame) : ""}:warnings`, `Parser warnings (${all.length})`);
+  const box = TLCompact.fold(SHOP_UI, `${recapGame ? gameKey(recapGame) : ""}:warnings`, tl("win.msg.title", { n: all.length }));
   const items = el("ul", "messages");
   items.append(...all.map((m) => el("li", null, m)));
   box.append(items);
@@ -874,7 +890,7 @@ function renderRecapNow(r, game) {
   renderRecapBar(r, game);
   updateTribesButton(game);
   const health = el("section", "recap-part");
-  health.append(withSource(el("h3", null, "Your health over the rounds"), r.health_source), healthChart(r.health));
+  health.append(withSource(el("h3", null, tl("win.recap.healthTitle")), r.health_source), healthChart(r.health));
   const top = el("div", "recap-top");
   top.append(recapFacts(r), health);
   const turnTools = { card: TLShop.card, cardRow: TLShop.cardRow, fold: TLCompact.fold, art, heroText, game: key };
@@ -914,7 +930,7 @@ async function openRecap(game) {
     const recap = await invoke("game_recap", target);
     if (recapGame === target) renderRecap(recap, target);
   } catch (err) {
-    if (recapGame === target) showReportMessage("recap-error", String(err));
+    if (recapGame === target) showReportMessage("recap-error", TLI18n.backend(String(err)));
   }
 }
 
@@ -952,7 +968,7 @@ function renderNow() {
   document.getElementById("games").replaceChildren(...(games.length ? [ledgerTable(games, m.top_half)] : []));
   const empty = document.getElementById("empty");
   empty.hidden = games.length > 0;
-  empty.textContent = `No ${MODES[mode] || "other"} games yet. Play one and it will appear here when it ends.`;
+  empty.textContent = tl("win.ledger.empty", { mode: modeName(mode) || tl("win.mode.else") });
   document.querySelectorAll(".modes button").forEach((b) => {
     b.setAttribute("aria-pressed", String(b.dataset.mode === mode));
   });
@@ -985,10 +1001,16 @@ async function refreshGames() {
   renderLobby();
 }
 
-// "Your games", "Stats" and "Curious stats" (T-216, T-323); all are drawn on
-// every refresh. Curious stats count every mode, so the mode switch hides there.
+// "Your games", "Stats", "Curious stats" and Settings (T-216, T-323, T-324); all are
+// drawn on every refresh. Curious stats count every mode and Settings none, so the
+// mode switch hides on those two.
 const tabIds = [...document.querySelectorAll('#view-tabs [role="tab"]')].map((t) => t.id);
-const showModes = (tab) => { document.getElementById("modes").hidden = tabIds[tab] === "tab-curious"; };
+// Settings are not about a mode either, and the legend is about the values.
+const showModes = (tab) => {
+  const bare = tabIds[tab] === "tab-curious" || tabIds[tab] === "tab-settings";
+  document.getElementById("modes").hidden = bare;
+  document.querySelector("details.legend").hidden = tabIds[tab] === "tab-settings";
+};
 showModes(TLTabs.setup(document, "view-tabs", showModes).current());
 TLScrollCue.start(window, document);
 
@@ -1004,14 +1026,15 @@ function renderStatus(s) {
   const node = document.getElementById("status");
   node.classList.toggle("problem", Boolean(s.problem || s.notice));
   node.classList.toggle("live", !s.problem && Boolean(s.session) && Boolean(s.power_log));
-  if (s.problem) node.textContent = s.problem;
-  else if (s.session && !s.power_log) node.textContent = `Following ${s.session}: no Power.log yet (it appears with the first game; if it never does, check log.config)`;
-  else if (s.session) node.textContent = `Following ${s.session}${s.scene ? ` · ${s.scene}` : ""}`;
-  else if (s.logs_dir) node.textContent = "Waiting for the game to write a log…";
-  else node.textContent = "Starting…";
-  if (s.notice) node.textContent += ` — ${s.notice}`;
-  if (s.dev_reconnects) node.textContent += ` — ${s.dev_reconnects}`;
-  node.title = [s.logs_dir && `Logs: ${s.logs_dir}`, s.history && `History: ${s.history}`]
+  if (s.problem) node.textContent = TLI18n.backend(s.problem);
+  else if (s.session && !s.power_log) node.textContent = tl("win.status.noPowerLog", { session: s.session });
+  else if (s.session && s.scene) node.textContent = tl("win.status.followingScene", { session: s.session, scene: TLI18n.backend(s.scene) });
+  else if (s.session) node.textContent = tl("win.status.following", { session: s.session });
+  else if (s.logs_dir) node.textContent = tl("win.status.waiting");
+  else node.textContent = tl("win.status.starting");
+  if (s.notice) node.textContent += ` — ${TLI18n.backend(s.notice)}`;
+  if (s.dev_reconnects) node.textContent += ` — ${TLI18n.backend(s.dev_reconnects)}`;
+  node.title = [s.logs_dir && tl("win.status.logs", { path: s.logs_dir }), s.history && tl("win.status.history", { path: s.history })]
     .filter(Boolean).join("\n");
 }
 
@@ -1019,7 +1042,7 @@ function renderStatus(s) {
 function renderSetup(s) {
   const lines = Array.isArray(s.setup) ? s.setup : [];
   const list = document.getElementById("setup-list");
-  list.replaceChildren(...lines.map((line) => el("li", null, String(line))));
+  list.replaceChildren(...lines.map((line) => el("li", null, TLI18n.backend(String(line)))));
   document.getElementById("setup").hidden = lines.length === 0;
 }
 
@@ -1028,13 +1051,15 @@ function renderCardStatus() {
   const node = document.getElementById("card-status");
   const s = TLCards.status();
   node.classList.toggle("problem", Boolean(s && s.problem));
-  if (!s) node.textContent = "Card pictures: status not available.";
-  else if (s.problem) node.textContent = `Card pictures: ${s.problem}` + (s.cards ? " The names already saved are still used." : " Card ids are shown instead.");
-  else if (s.cards) node.textContent = `Card pictures: ${s.cards} cards known, checked ${new Date(s.fetched_at * 1000).toLocaleDateString()}.`;
-  else node.textContent = "Card pictures: getting the card data…";
+  if (!s) node.textContent = tl("win.cards.unavailable");
+  else if (s.problem) node.textContent = tl(s.cards ? "win.cards.problemKept" : "win.cards.problemIds", { problem: TLI18n.backend(s.problem) });
+  else if (s.cards) node.textContent = tl("win.cards.known", { cards: TLI18n.num(s.cards), date: TLI18n.date(new Date(s.fetched_at * 1000)) });
+  else node.textContent = tl("win.cards.getting");
 }
 
 async function main() {
+  // The first draw is already in the chosen language.
+  await TLI18n.ready();
   TLCards.onChange(() => {
     renderCardStatus();
     render();
@@ -1054,9 +1079,10 @@ async function main() {
 }
 
 function showError(err) {
-  renderStatus({ problem: "Something went wrong: " + String(err) });
+  const text = tl("win.error.generic", { error: TLI18n.backend(String(err)) });
+  renderStatus({ problem: text });
   // The status line is hidden while a recap fills the window.
-  if (recapView.isOpen()) showReportMessage("recap-error", "Something went wrong: " + String(err));
+  if (recapView.isOpen()) showReportMessage("recap-error", text);
 }
 
 main().catch(showError);
