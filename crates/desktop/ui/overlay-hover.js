@@ -2,8 +2,9 @@
 // own leaderboard and says which place is hovered (hover.rs) and where the
 // card goes: the top of the game window, centred (screen_fit.rs, T-309); this
 // file only draws that opponent's card from the live state overlay.js already
-// has: hero, tier, health, record, the last board met with its round in one
-// row and the minions they could have (labelled "possible"): on game turns 2
+// has: hero, tier, health, record, the next-opponent mark, the leaderboard's
+// triples and trinkets (T-312, T-313), the last board met with its round and
+// each minion's keywords in one row and the minions they could have (labelled "possible"): on game turns 2
 // and 3 for everyone, later only for a hero not met yet (D-050). Our own slot
 // shows nothing. Text is set with
 // textContent only. Own scope; it uses overlay.js's drawing helpers.
@@ -105,7 +106,7 @@ window.TLHover = (() => {
     if (g.own_place && g.own_place.value === hover.place) return hide();
     const opponent = g.opponents.find((o) => o.place && o.place.value === hover.place);
     if (!opponent) return hide();
-    card.replaceChildren(opponentHead(opponent), ...renderBoards(opponent));
+    card.replaceChildren(opponentHead(opponent), ...renderShown(opponent), ...renderBoards(opponent));
     for (const p of opponent.possible || []) card.append(possibleBlock(opponent, p));
     card.hidden = false;
     position();

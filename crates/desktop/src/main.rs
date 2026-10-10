@@ -34,6 +34,7 @@ use tracker::lock::{HistoryLock, LockError};
 use tracker::provenance::{row_sources, RowSources};
 use tracker::recap::{recap, Recap};
 use tracker::report_bundle::{self, BundleInput};
+use tracker::scene::Scene;
 use tracker::setup::{check_setup, client_config_path, default_log_config_path};
 use tracker::stats::curious::{CardNames, Curious};
 use tracker::stats::{HeroLinks, Stats};
@@ -93,6 +94,9 @@ struct Status {
     /// Set when the reconnect dev tool's file exists but could not be read
     /// whole (D-043); never set for a user who did not run the tool.
     dev_reconnects: Option<String>,
+    /// Where the game client is, from LoadingScreen.log (T-314), in words;
+    /// None when that log is off or says nothing yet.
+    scene: Option<String>,
 }
 
 #[derive(Clone, Serialize)]
@@ -124,6 +128,8 @@ struct AppState {
     /// The game in progress as the overlay shows it, without the tribes
     /// entered by hand (those are added when it is read).
     live: Mutex<Option<LiveGame>>,
+    /// Where the game client is (T-314), for the overlay's start.
+    scene: Mutex<Option<Scene>>,
     overlay: overlay::Overlay,
 }
 
@@ -220,7 +226,16 @@ fn overlay_state(
     cards: State<'_, card_data::Cards>,
 ) -> Option<LiveGame> {
     let pool = card_data::pool_cards(&cards);
-    overlay_state_of(&state).map(|live| live.with_possible(&pool))
+    let store = card_data::store_with_data(&cards);
+    let card_of = |dbf: i64| store.and_then(|s| s.card_of_dbf(dbf));
+    overlay_state_of(&state).map(|live| live.with_possible(&pool).with_trinket_cards(card_of))
+}
+
+/// Where the game client is (T-314): the overlay says "game loading" while
+/// a Battlegrounds game loads, before the log has the game.
+#[tauri::command]
+fn overlay_scene(state: State<'_, Arc<AppState>>) -> Option<Scene> {
+    *state.scene.lock().unwrap_or_else(|e| e.into_inner())
 }
 
 fn overlay_state_of(state: &AppState) -> Option<LiveGame> {
@@ -396,8 +411,27 @@ fn set_status(app: &AppHandle, state: &AppState, update: impl FnOnce(&mut Status
 /// The game in progress as the overlay shows it.
 fn live_now(watcher: &mut Watcher) -> Option<LiveGame> {
     let lobby = watcher.live_lobby();
+    let next = watcher.live_next_opponent();
     let report = serde_json::to_value(watcher.live_report()?).ok()?;
-    Some(live_game(&report).with_leaderboard(&lobby))
+    Some(
+        live_game(&report)
+            .with_leaderboard(&lobby)
+            .with_next_opponent(next),
+    )
+}
+
+/// Keeps the scene up to date for the overlay and tells it when it changed.
+fn publish_scene(app: &AppHandle, state: &AppState, now: Option<Scene>) {
+    let changed = {
+        let mut current = state.scene.lock().unwrap_or_else(|e| e.into_inner());
+        let changed = *current != now;
+        *current = now;
+        changed
+    };
+    if changed {
+        let _ = app.emit(LIVE_CHANGED, ());
+    }
+    set_status(app, state, |s| s.scene = now.map(|n| n.describe().to_string()));
 }
 
 /// Keeps the overlay's game up to date and tells it, only if it changed.
@@ -477,7 +511,9 @@ fn show_read_only(app: &AppHandle, state: &AppState, data_dir: &std::path::Path)
 fn refresh_setup(app: &AppHandle, state: &AppState, logs_dir: &Path) {
     let log_config = default_log_config_path();
     let client_config = client_config_path(logs_dir);
-    let messages = check_setup(log_config.as_deref(), client_config.as_deref()).messages();
+    let report = check_setup(log_config.as_deref(), client_config.as_deref());
+    // What to fix first, then what is optional (T-314).
+    let messages: Vec<String> = report.messages().into_iter().chain(report.notes()).collect();
     set_status(app, state, |s| s.setup = messages);
 }
 
@@ -551,6 +587,7 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
                 set_status(&app, &state, |s| s.notice = Some(msg.into()));
             }
         }
+        publish_scene(&app, &state, watcher.scene());
         track_game_in_progress(&app, &state, &mut starts, watcher.in_progress());
         let session = watcher.session().map(String::from);
         let power_log = watcher.has_power_log();
@@ -792,6 +829,7 @@ fn main() {
             lobby_tribes_view,
             edit_lobby_tribes,
             overlay_state,
+            overlay_scene,
             overlay::overlay_settings,
             overlay::overlay_save_layout,
             overlay::overlay_set_theme,

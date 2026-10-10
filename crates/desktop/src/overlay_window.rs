@@ -16,6 +16,7 @@ use crate::hover::{self, OverlayFrame};
 use crate::overlay::{lock, set_unlocked, SETTINGS_CHANGED, WINDOW};
 use crate::screen_fit::{overlay_area, pick_screen, Area, Screen};
 use crate::AppState;
+use tracker::scene::Scene;
 
 /// How often the window is shown or hidden to follow the game and the
 /// window in front.
@@ -131,7 +132,10 @@ pub fn follow(app: AppHandle, state: Arc<AppState>) {
         let mut game_was_on = false;
         let mut failures: u32 = 0;
         loop {
-            let game_on = lock(&state.live).is_some();
+            // A Battlegrounds game loading counts as on: the overlay starts
+            // with the loading screen (T-314), before the log has the game.
+            let loading = *lock(&state.scene) == Some(Scene::BattlegroundsLoading);
+            let game_on = lock(&state.live).is_some() || loading;
             if should_relock(state.overlay.unlocked(), game_was_on, game_on) {
                 set_unlocked(&app, &state, false);
             }

@@ -11,6 +11,9 @@ const MODES = { GT_BATTLEGROUNDS: "Solo", GT_BATTLEGROUNDS_DUO: "Duos" };
 const SOURCES = ["log", "inferred", "entered", "leaderboard", "card_data", "possible", "unknown"];
 
 let game = null;
+// Where the game client is (T-314, LoadingScreen.log): "battlegrounds_loading"
+// shows the overlay with the loading screen, before the log has the game.
+let scene = null;
 // While the layout is being edited and no game is on, the panels show the
 // example game so there is something to arrange (overlay-example.js).
 let editing = false;
@@ -179,11 +182,56 @@ function renderBoards(opponent) {
       const label = el("i", name === null ? "unnamed" : null, name || m.card_id || "?");
       if (name && m.card_id) label.title = m.card_id;
       chip.append(el("b", null, `${stat(m.atk)}/${stat(m.health)}`), label);
+      const marks = keywordMarks(m.keywords);
+      if (marks) chip.append(marks);
       row.append(chip);
     }
     if (named) row.append(mark("card_data"));
     if (unnamed) row.append(mark("unknown"));
     return row;
+  });
+}
+
+// A minion's keywords (T-208): short letters, each read out by its full
+// name; the legend spells them out. Nothing when the record did not keep them.
+function keywordMarks(keywords) {
+  const marks = TLWords.keywordMarks(keywords);
+  if (!marks || !marks.length) return null;
+  const line = el("span", "kws");
+  for (const k of marks) {
+    const mark = el("span", `kw kw-${k.key}`, k.short);
+    mark.setAttribute("aria-hidden", "true");
+    line.append(mark);
+  }
+  line.append(el("span", "visually-hidden", marks.map((k) => k.full).join(", ")));
+  return line;
+}
+
+// The leaderboard's triples and trinkets of each of the opponent's heroes
+// (T-312), as its tooltip shows them now.
+function renderShown(opponent) {
+  if (opponent.shown_source !== "log" || !Array.isArray(opponent.shown) || !opponent.shown.length) {
+    const none = el("div", "seat-line none", "Triples and trinkets not recorded");
+    none.append(mark("unknown") || "");
+    return [none];
+  }
+  return opponent.shown.map((seat) => {
+    const w = TLWords.seatWords(seat, TLCards.name);
+    const i = opponent.seats.indexOf(seat.seat);
+    const hero = opponent.seats.length > 1 && opponent.heroes.length === opponent.seats.length ? opponent.heroes[i] : null;
+    const line = el("div", "seat-line", `${hero ? `${heroName(hero)} · ` : ""}${w.triples}`);
+    if (w.trinkets.length) {
+      line.append(" · trinkets: ");
+      w.trinkets.forEach((t, n) => {
+        if (n) line.append(", ");
+        line.append(el("span", t.known ? "trinket" : "trinket unnamed", t.hero_power ? `${t.text} (hero power)` : t.text));
+      });
+    } else {
+      line.append(" · no trinket yet");
+    }
+    if (w.named) line.append(mark("card_data"));
+    if (w.unknown) line.append(mark("unknown"));
+    return line;
   });
 }
 
@@ -200,6 +248,8 @@ function opponentHead(opponent) {
   const hp = el("span", "hp");
   hp.append(sourced(el("b"), opponent.health), " hp");
   const portraits = opponent.heroes.map((h) => TLCards.art(h.id, "portrait")).filter(Boolean);
+  // The game's own mark on its leaderboard (T-313), in words.
+  if (opponent.next) head.append(el("span", "next-badge", "Next"));
   head.append(
     ...portraits,
     el("span", "name", heroes(opponent.heroes) || "Hero unknown"),
@@ -217,6 +267,13 @@ function renderOpponents(g) {
   panel.replaceChildren(el("h2", null, "Opponents"));
   if (!g.opponents.length) {
     panel.append(el("div", "row", "The log does not show the lobby yet."));
+  }
+  // The next opponent the game marks (T-313), with the last board met.
+  const next = TLWords.nextOpponent(g.opponents);
+  if (next) {
+    const block = el("div", "next-block");
+    block.append(el("h3", null, g.is_duos ? "Next opposing team" : "Next opponent"), opponentHead(next), ...renderShown(next), ...renderBoards(next));
+    panel.append(block);
   }
   for (const opponent of g.opponents) {
     const item = el("div", "opponent compact");
@@ -238,7 +295,7 @@ function render() {
   if (!g) {
     const status = document.getElementById("status");
     status.className = "panel status";
-    status.textContent = "Waiting for a game…";
+    status.textContent = scene === "battlegrounds_loading" ? "Battlegrounds game loading…" : "Waiting for a game…";
     document.getElementById("tribes").hidden = true;
     document.getElementById("opponents").hidden = true;
     legend.hidden = true;
@@ -262,14 +319,17 @@ let latest = 0;
 
 async function refresh() {
   const mine = ++latest;
-  const fresh = await invoke("overlay_state");
+  const [fresh, where] = await Promise.all([invoke("overlay_state"), invoke("overlay_scene")]);
   if (mine !== latest) return;
   game = fresh;
+  scene = typeof where === "string" ? where : null;
   if (window.TLHover) window.TLHover.setFailed(false);
   render();
 }
 
 async function start() {
+  // The key to the keyword marks, from the same words the marks use.
+  document.getElementById("legend").append(el("span", "legend-keys", ` Keywords: ${TLWords.keywordLegend()}; ★ golden.`));
   TLCards.onChange(render);
   // Listen first, so a change between the first read and the listener is not lost.
   await listen("live-changed", () => refresh().catch(showError));

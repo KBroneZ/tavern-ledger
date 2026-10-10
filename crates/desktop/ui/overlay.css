@@ -219,6 +219,36 @@ body {
 }
 
 /* Golden: a star after the numbers, so it is never colour alone. */
+/* Keyword marks (T-208): letters on a thin edge, never colour alone; the
+   legend spells them out and each line is read out in full. */
+.kws { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; max-width: 100%; }
+.kw {
+  padding: 0 3px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font: 700 10px/1.35 var(--font-body);
+}
+/* The next opponent (T-313): the word "Next", on the game's own mark. */
+.next-badge {
+  flex: none;
+  padding: 0 6px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.next-block { margin: 4px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.next-block h3 { margin: 0 0 4px; font-size: 12px; color: var(--dim); font-weight: 600; }
+/* The leaderboard's triples and trinkets (T-312). */
+.seat-line { margin: 3px 0; font-size: 12px; color: var(--dim); }
+.seat-line .trinket { color: var(--text); }
+.seat-line .trinket.unnamed { text-decoration: underline dotted; }
+.legend-keys { display: block; margin-top: 2px; }
+
 .minion.golden b { color: var(--accent); }
 .minion.golden b::after { content: " \2605" / " golden"; }
 .minion.golden .art { box-shadow: 0 0 0 2px var(--accent); }
