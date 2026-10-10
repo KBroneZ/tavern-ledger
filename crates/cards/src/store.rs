@@ -164,6 +164,16 @@ impl CardStore {
             .unwrap_or_default()
     }
 
+    /// Hero card ids by database id, to group skins by the game's own link
+    /// (T-214); empty while there is no card data or the data has none.
+    pub fn hero_links(&self) -> std::collections::BTreeMap<i64, String> {
+        lock(&self.inner)
+            .saved
+            .as_ref()
+            .map(|s| s.catalog.hero_links().clone())
+            .unwrap_or_default()
+    }
+
     fn knows(&self, id: &str) -> bool {
         lock(&self.inner)
             .saved

@@ -1,0 +1,82 @@
+[
+  {
+    "index": 1,
+    "status": "ok",
+    "game_type": "GT_BATTLEGROUNDS_DUO",
+    "build": 253216,
+    "local_player_id": 2,
+    "hero": "BG24_HERO_100_SKIN_E",
+    "teammate_player_id": 1,
+    "teammate_hero": "TB_BaconShop_HERO_43_SKIN_N",
+    "final_place": 2,
+    "final_health": 28,
+    "lobby": [
+      {
+        "player_id": 1,
+        "hero": "TB_BaconShop_HERO_43_SKIN_N",
+        "duo_team": 1,
+        "final_place": 2,
+        "final_health": 28
+      },
+      {
+        "player_id": 2,
+        "hero": "BG24_HERO_100_SKIN_E",
+        "duo_team": null,
+        "final_place": 2,
+        "final_health": 28
+      },
+      {
+        "player_id": 3,
+        "hero": "TB_BaconShop_HERO_60",
+        "duo_team": 2,
+        "final_place": 1,
+        "final_health": 30
+      },
+      {
+        "player_id": 4,
+        "hero": "TB_BaconShop_HERO_18",
+        "duo_team": 2,
+        "final_place": 1,
+        "final_health": 30
+      }
+    ],
+    "shop_tribes": {},
+    "rounds": [
+      {
+        "number": 1,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "BG24_HERO_100_SKIN_E",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_60",
+            "board": [
+              {
+                "card_id": "BG26_135",
+                "atk": 3,
+                "health": 1,
+                "position": 1,
+                "golden": false
+              }
+            ]
+          }
+        ],
+        "own_health_after": 28,
+        "opponents": [
+          3
+        ]
+      }
+    ],
+    "warnings": [],
+    "problems": [],
+    "not_in_log": [
+      "MMR",
+      "available tribes (exact list)"
+    ]
+  }
+]

@@ -176,21 +176,23 @@ The user wants all of these, each at its own time (2026-10-10). They are ranked 
 
 | ID | Task | Status |
 |----|------|--------|
-| T-206 | Combat result as the game records it (`BACON_WON_LAST_COMBAT`, `DAMAGE_DEALT_TO_HERO_LAST_TURN`) instead of working it out from health (D-028); fewer "unknown" results in the recap and stats | pending |
+| T-206 | Combat result as the game records it (`BACON_WON_LAST_COMBAT`, `DAMAGE_DEALT_TO_HERO_LAST_TURN`) instead of working it out from health (D-028); fewer "unknown" results in the recap and stats | done (session 044, D-055; in the window with the redesign) |
 | T-207 | Opponents' triples and trinkets (`PLAYER_TRIPLES`, `BACON_*_TRINKET_*`) in the recap, as the game's leaderboard tooltip shows them | pending |
 | T-208 | Keywords on the boards seen (taunt, divine shield, reborn, venomous, windfury, stealth, deathrattle, golden) in the recap and the hover card | pending |
-| T-209 | Hero select record: heroes offered, rerolls used, hero picked; pick rate and placement when offered in the stats | pending |
-| T-210 | Shop record extras: extra gold, why a roll was free, buy and sell prices, turn timer, Duos passes | pending |
+| T-209 | Hero select record: heroes offered, rerolls used, hero picked; pick rate and placement when offered in the stats | done (session 044, D-055; in the window with the redesign) |
+| T-210 | Shop record extras: extra gold, why a roll was free, buy and sell prices, turn timer, Duos passes | done but the turn timer (session 044, D-055; in the window with the redesign) |
 | T-211 | Season choices in the recap: own trinkets and the trinket offers made to the player, quests and rewards, Dark Gifts, the Old God, Timewarped buys | pending |
 | T-212 | Discover picks: what the player was offered and what they took | pending |
 | T-213 | Duos combats the game does not play back (the `SETASIDE` copies of the teammate's fights, `parser-hslog.md`): after the game only, in the recap, the stats and the web viewer, labelled "not shown in game"; never in the overlay, never during the game, never as the live "last board seen" (D-054) | pending |
-| T-214 | Skins grouped by the game's own link to the base hero (`BACON_SKIN_PARENT_ID`) instead of the D-019 name rule, for the per-hero stats | pending |
+| T-214 | Skins grouped by the game's own link to the base hero (`BACON_SKIN_PARENT_ID`) instead of the D-019 name rule, for the per-hero stats | done in the parser, the tracker and the card data (session 044, D-055); the app passes the links to the stats with the redesign |
 | T-215 | Combat replay, attack by attack, for the combats the game plays back (with T-201) | pending |
 | T-216 | A "Curious stats" tab in the app (and later on the web profile): fun totals across all games, for example gold spent, gold gained beyond the game's fixed income (extra gold, `TEMP_RESOURCES`, with T-210), golden Brann or Titus sold, rolls, triples, the most bought minion, the longest win streak, the most damage taken in one combat; each with its source and the number of games it covers, never a guess (user's request, 2026-10-10) | pending |
 | T-312 | Opponents' triples and trinkets in the overlay's hover card | pending |
 | T-313 | Next opponent marked in the overlay with their last board (Duos: the next opposing team), from `NEXT_OPPONENT_PLAYER_ID` | pending |
 | T-314 | "In the Battlegrounds lobby" and "game loading" from the scene changes in `LoadingScreen.log`, for the app's status and the overlay's start | pending |
 | T-315 | The combat damage cap in the overlay, only after checking that the game shows it to the player | pending |
+
+**Notes T-206, T-209, T-210 and T-214 (2026-10-10, session 044).** Research and counts on the user's 11 raw games in [parser-data-round.md](../research/parser-data-round.md); D-055. **Parser (revision 4):** each round's `result` as the game records it (won, lost, tie, or none), `hero_select` (heroes shown, rerolls, hero picked), `skin_parents` (skin card id to the base hero's database id) and, per shop turn, `extra_gold`, `sell_gold`, `buy_gold`, `spell_gold`, `free_refreshes` and `passes`, plus the action kind `pass`; all Rust-only (the Python prototype does not read them; the parity tests drop them). **Tracker:** the recap reads each combat's result from the log and falls back to the health rule, labelled inferred; it has a hero pick section (`hero_pick`) and the shop's new numbers per turn and in total (`gold_beyond_income` = extra + sell gold, for T-216); the stats have `hero_picks` per mode (offered, picked, pick rate, average place when picked) and the new shop averages; `compute_with_links` groups skins by the game's link through the card data, with the D-019 ids listed apart (`variants_by_rule`). **Card data:** the app's copy keeps hero card ids by database id (`CardStore::hero_links`; saved format 3, an older copy is fetched again). **Upload:** `upload-game` checks the new keys (validator version 4). **Not done:** the turn timer (`TIMEOUT` does not match a shop length the log gives); the window display and passing `hero_links` from the app to the stats wait for the redesign (session 041), since `crates/desktop` was out of bounds while it ran. After merging: `tavern-watch --reparse` to re-read the history.
 
 **Notes (hub, 2026-10-10).** What the inventory marked "not usable", in the order of the user's interest:
 - **Hidden Duos combats:** allowed after the game only (T-213, D-054).

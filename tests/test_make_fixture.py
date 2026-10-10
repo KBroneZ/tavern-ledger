@@ -23,7 +23,7 @@ sys.path.insert(0, str(HERE))
 import make_fixture  # noqa: E402
 import reconnect_marks  # noqa: E402
 import parse_bg  # noqa: E402
-from bg_log_builder import duo_game, solo_game, solo_shop_game  # noqa: E402
+from bg_log_builder import duo_game, solo_data_game, solo_game, solo_shop_game  # noqa: E402
 
 LOCAL = "FakeLocal#4321"
 LOCAL_ALIAS = "FakeLocal"
@@ -120,10 +120,11 @@ class ScrubTest(unittest.TestCase):
             self.assertRegex(line, r"^[DWE] 00:00:00\.0000000 GameState\.DebugPrint(Power|Game)\(\) - ")
         for dropped in ("PowerTaskList", "DebugPrintOptions", "LoadingScreen", "GAME_SEED",
                         "META_DATA", "Info[0]", "NUM_TURNS_IN_PLAY", "FormatType", "21:13:07",
-                        "BlockType=TRIGGER", "BG_Enchant_X", "Entity=90 "):
+                        "BG_Enchant_X", "Entity=90 "):
             self.assertFalse(dropped in self.out, dropped)
-        # A kept top-level block keeps its end; the TRIGGER's end goes with it.
-        self.assertEqual(self.out.count("BLOCK_END"), self.out.count("BLOCK_START BlockType=ATTACK"))
+        # Every top-level block stays with its end (D-055), its entity as an id.
+        self.assertIn("BLOCK_START BlockType=TRIGGER Entity=3 ", self.out)
+        self.assertEqual(self.out.count("BLOCK_END"), self.out.count("BLOCK_START"))
 
     def test_it_is_smaller(self):
         self.assertLess(len(self.out), len(self.raw))
@@ -175,8 +176,8 @@ class ShopLinesTest(unittest.TestCase):
                      "tag=FROZEN value=1", "tag=RESOURCES value=10",
                      "tag=NUM_RESOURCES_SPENT_THIS_GAME value=9", "tag=PLAYER_TECH_LEVEL value=2"):
             self.assertIn(kept, self.out)
-        # The turn-start TRIGGER goes, the offers inside it stay.
-        self.assertNotIn("BlockType=TRIGGER", self.out)
+        # The turn-start TRIGGER stays (the turn's own gold is set in it, D-055).
+        self.assertIn("BLOCK_START BlockType=TRIGGER Entity=3 ", self.out)
         self.assertIn("FULL_ENTITY - Creating ID=34 CardID=BG28_300", self.out)
         # A nested PLAY block is not an action of the player.
         self.assertEqual(self.out.count("BlockType=PLAY"), 7)
@@ -184,6 +185,56 @@ class ShopLinesTest(unittest.TestCase):
 
     def test_the_report_is_the_same(self):
         self.assertEqual(parse_text(self.out), parse_text(self.raw))
+
+
+CHOICE_LINE = re.compile(r"GameState\.DebugPrint(EntityChoices|EntitiesChosen)\(\)")
+
+
+class DataRoundLinesTest(unittest.TestCase):
+    """What parser revision 4 needs (T-206, T-209, T-210, T-214, D-055)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.raw = named(solo_data_game())
+        cls.out = make_fixture.make_fixture(cls.raw, game=1)
+
+    def test_the_hero_choice_is_kept_as_ids_only(self):
+        lines = [line.split(" ", 2)[2] for line in self.out.splitlines() if CHOICE_LINE.search(line)]
+        self.assertEqual(lines, [
+            "GameState.DebugPrintEntityChoices() - id=1 ChoiceType=MULLIGAN",
+            "GameState.DebugPrintEntityChoices() - Entities[0]=101",
+            "GameState.DebugPrintEntityChoices() - Entities[1]=102",
+            "GameState.DebugPrintEntityChoices() - Entities[2]=103",
+            "GameState.DebugPrintEntityChoices() - Entities[3]=104",
+            "GameState.DebugPrintEntitiesChosen() - id=1 EntitiesCount=1",
+            "GameState.DebugPrintEntitiesChosen() - Entities[0]=102",
+        ])
+        for dropped in ("Source=GameEntity", "TaskList", "CountMin", "Player=", "entityName"):
+            self.assertNotIn(dropped, "\n".join(lines))
+        self.assertIn("CHANGE_ENTITY - Updating Entity=103 CardID=TB_BaconShop_HERO_49", self.out)
+
+    def test_other_choices_are_not_kept(self):
+        raw = self.raw.replace("ChoiceType=MULLIGAN CountMin", "ChoiceType=GENERAL CountMin")
+        out = make_fixture.make_fixture(raw, game=1)
+        self.assertNotIn("DebugPrintEntityChoices", out)
+        self.assertNotIn("DebugPrintEntitiesChosen", out)
+
+    def test_the_new_tags_and_every_top_level_block_are_kept(self):
+        for kept in ("tag=BACON_WON_LAST_COMBAT value=1", "tag=DAMAGE_DEALT_TO_HERO_LAST_TURN value=5",
+                     "tag=TEMP_RESOURCES value=2", "tag=RESOURCES_USED value=2",
+                     "tag=BACON_FREE_REFRESH_COUNT value=1", "tag=BACON_SKIN_PARENT_ID value=60011",
+                     "BLOCK_START BlockType=TRIGGER Entity=Player1 ",
+                     "BLOCK_START BlockType=TRIGGER Entity=81 "):
+            self.assertIn(kept, self.out)
+        self.assertNotIn(LOCAL, self.out)
+        self.assertEqual(self.out.count("() - BLOCK_END"), self.out.count("() - BLOCK_START"))
+
+    def test_the_report_is_the_same_but_for_the_hero_choice(self):
+        # The Python prototype does not read the hero choice rewritten to ids;
+        # make_fixture's --parser check runs the Rust parser, which does.
+        def without_choices(text: str) -> str:
+            return "".join(line + "\n" for line in text.splitlines() if not CHOICE_LINE.search(line))
+        self.assertEqual(parse_text(without_choices(self.out)), parse_text(without_choices(self.raw)))
 
 
 class RelativeTimeTest(unittest.TestCase):

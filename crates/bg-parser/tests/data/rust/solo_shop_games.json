@@ -54,7 +54,8 @@
         "health_after": {
           "2": 26,
           "3": 30
-        }
+        },
+        "result": null
       },
       {
         "number": 2,
@@ -101,7 +102,8 @@
         "health_after": {
           "2": 26,
           "3": 0
-        }
+        },
+        "result": null
       }
     ],
     "start_health": {
@@ -142,7 +144,13 @@
               "frozen": false
             }
           ],
-          "actions": 3
+          "actions": 3,
+          "extra_gold": 6,
+          "sell_gold": 0,
+          "buy_gold": 3,
+          "spell_gold": 0,
+          "free_refreshes": null,
+          "passes": []
         },
         {
           "turn": 2,
@@ -206,7 +214,13 @@
               "frozen": false
             }
           ],
-          "actions": 6
+          "actions": 6,
+          "extra_gold": 13,
+          "sell_gold": 0,
+          "buy_gold": 0,
+          "spell_gold": 0,
+          "free_refreshes": null,
+          "passes": []
         }
       ],
       "tier_ups": [
@@ -266,6 +280,8 @@
       "end_ms": 150000,
       "ended": true
     },
+    "hero_select": null,
+    "skin_parents": {},
     "warnings": [],
     "problems": [],
     "not_in_log": [
@@ -328,7 +344,8 @@
         "health_after": {
           "2": 26,
           "3": 30
-        }
+        },
+        "result": null
       },
       {
         "number": 2,
@@ -372,7 +389,8 @@
         "opponents": [
           3
         ],
-        "health_after": {}
+        "health_after": {},
+        "result": null
       }
     ],
     "start_health": {
@@ -413,7 +431,13 @@
               "frozen": false
             }
           ],
-          "actions": 3
+          "actions": 3,
+          "extra_gold": 6,
+          "sell_gold": 0,
+          "buy_gold": 3,
+          "spell_gold": 0,
+          "free_refreshes": null,
+          "passes": []
         },
         {
           "turn": 2,
@@ -477,7 +501,13 @@
               "frozen": false
             }
           ],
-          "actions": 6
+          "actions": 6,
+          "extra_gold": 13,
+          "sell_gold": 0,
+          "buy_gold": 0,
+          "spell_gold": 0,
+          "free_refreshes": null,
+          "passes": []
         }
       ],
       "tier_ups": [
@@ -537,6 +567,8 @@
       "end_ms": 120000,
       "ended": false
     },
+    "hero_select": null,
+    "skin_parents": {},
     "warnings": [],
     "problems": [],
     "not_in_log": [

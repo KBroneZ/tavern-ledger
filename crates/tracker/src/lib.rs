@@ -5,6 +5,7 @@
 pub mod dev_reconnect;
 pub mod discover;
 pub mod game_clock;
+pub mod hero_pick;
 pub mod live;
 pub mod lobby_tribes;
 pub mod lock;

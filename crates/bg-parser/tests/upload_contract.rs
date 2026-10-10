@@ -87,6 +87,9 @@ fn walk(level: &str, value: &Value, seen: &mut BTreeMap<String, BTreeSet<String>
         if let Some(shop) = obj.get("shop") {
             walk("report.shop", shop, seen);
         }
+        if let Some(pick) = obj.get("hero_select") {
+            walk("report.hero_select", pick, seen);
+        }
     }
 }
 

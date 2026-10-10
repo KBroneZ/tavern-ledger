@@ -1,5 +1,5 @@
 {
-  "about": "Every key of an uploaded game record, per level (T-104h, D-047). The parser's report (crates/bg-parser/src/report.rs) and the desktop app's record (crates/uploader) must write exactly these, and upload-game's validator must check exactly these: cargo test fails when the parser writes a key missing here, and the function refuses to start when validate.ts checks a different set. Maps whose keys are data (card_names, shop_tribes, start_health, health_after) are not levels.",
+  "about": "Every key of an uploaded game record, per level (T-104h, D-047). The parser's report (crates/bg-parser/src/report.rs) and the desktop app's record (crates/uploader) must write exactly these, and upload-game's validator must check exactly these: cargo test fails when the parser writes a key missing here, and the function refuses to start when validate.ts checks a different set. Maps whose keys are data (card_names, shop_tribes, start_health, health_after, skin_parents) are not levels.",
   "keys": {
     "record": ["index", "parser", "report", "saved_at", "session"],
     "parser": ["revision", "version"],
@@ -10,6 +10,7 @@
       "final_place",
       "game_type",
       "hero",
+      "hero_select",
       "index",
       "lobby",
       "local_player_id",
@@ -18,6 +19,7 @@
       "rounds",
       "shop",
       "shop_tribes",
+      "skin_parents",
       "start_health",
       "status",
       "teammate_hero",
@@ -25,13 +27,14 @@
       "warnings"
     ],
     "report.lobby[]": ["duo_team", "final_health", "final_place", "hero", "player_id"],
-    "report.rounds[]": ["entries", "health_after", "number", "opponents", "own_health_after"],
+    "report.rounds[]": ["entries", "health_after", "number", "opponents", "own_health_after", "result"],
     "report.rounds[].entries[]": ["board", "hero", "player_id", "side"],
     "report.rounds[].entries[].board[]": ["atk", "card_id", "golden", "health", "position"],
     "report.shop": ["actions", "end_ms", "ended", "start_ms", "tier_ups", "turns"],
-    "report.shop.turns[]": ["actions", "buys", "end_ms", "free_rolls", "freezes", "gold", "gold_spent", "offers", "rolls", "sells", "spell_buys", "start_ms", "tier", "turn"],
+    "report.shop.turns[]": ["actions", "buy_gold", "buys", "end_ms", "extra_gold", "free_refreshes", "free_rolls", "freezes", "gold", "gold_spent", "offers", "passes", "rolls", "sell_gold", "sells", "spell_buys", "spell_gold", "start_ms", "tier", "turn"],
     "report.shop.turns[].offers[]": ["card_id", "frozen", "roll"],
     "report.shop.tier_ups[]": ["tier", "turn"],
-    "report.shop.actions[]": ["kind", "ms", "turn"]
+    "report.shop.actions[]": ["kind", "ms", "turn"],
+    "report.hero_select": ["offered", "picked", "rerolls"]
   }
 }

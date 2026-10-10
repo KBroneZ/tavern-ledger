@@ -65,6 +65,7 @@ const ROUND: Shape = Shape::Object(&[
     ("own_health_after", Shape::Scalar),
     ("opponents", Shape::List(&Shape::Scalar)),
     ("health_after", Shape::Map),
+    ("result", Shape::Id),
 ]);
 
 const LOBBY_PLAYER: Shape = Shape::Object(&[
@@ -98,6 +99,19 @@ const SHOP_TURN: Shape = Shape::Object(&[
     ("freezes", Shape::Scalar),
     ("offers", Shape::List(&OFFER)),
     ("actions", Shape::Scalar),
+    ("extra_gold", Shape::Scalar),
+    ("sell_gold", Shape::Scalar),
+    ("buy_gold", Shape::Scalar),
+    ("spell_gold", Shape::Scalar),
+    ("free_refreshes", Shape::Scalar),
+    ("passes", Shape::List(&Shape::Id)),
+]);
+
+/// The player's own hero pick (parser revision 4).
+const HERO_SELECT: Shape = Shape::Object(&[
+    ("offered", Shape::List(&Shape::Id)),
+    ("rerolls", Shape::Scalar),
+    ("picked", Shape::Id),
 ]);
 
 /// The player's own shop and logged actions (parser revision 3).
@@ -141,6 +155,8 @@ const REPORT: Shape = Shape::Object(&[
     ("rounds", Shape::List(&ROUND)),
     ("start_health", Shape::Map),
     ("shop", SHOP),
+    ("hero_select", HERO_SELECT),
+    ("skin_parents", Shape::Map),
     ("warnings", TEXTS),
     ("problems", TEXTS),
     ("not_in_log", TEXTS),
@@ -541,14 +557,21 @@ mod tests {
         );
         let report = serde_json::to_value(&game).unwrap();
         assert!(built(&report).is_ok());
-        // And a full shop record (T-204, T-205).
-        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../bg-parser/tests/data/solo_shop_game.log");
-        let log = std::fs::read(path).unwrap();
-        let games = bg_parser::parse_reader(log.as_slice()).unwrap();
-        let report = serde_json::to_value(&games[0]).unwrap();
-        assert!(!report["shop"]["turns"].as_array().unwrap().is_empty());
-        assert!(built(&report).is_ok(), "{:?}", built(&report).err());
+        // And a full shop record (T-204, T-205), and the revision 4 fields:
+        // results, hero pick, skin links, shop extras (T-206 to T-214).
+        let data = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../bg-parser/tests/data");
+        for name in [
+            "solo_shop_game.log",
+            "solo_data_game.log",
+            "duo_data_game.log",
+            "real/b253216_duos.log",
+        ] {
+            let log = std::fs::read(data.join(name)).unwrap();
+            let games = bg_parser::parse_reader(log.as_slice()).unwrap();
+            let report = serde_json::to_value(&games[0]).unwrap();
+            assert!(!report["shop"]["turns"].as_array().unwrap().is_empty());
+            assert!(built(&report).is_ok(), "{name}: {:?}", built(&report).err());
+        }
     }
 
     // --- what stays out ---

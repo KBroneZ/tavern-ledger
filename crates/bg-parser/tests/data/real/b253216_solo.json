@@ -6,6 +6,17 @@
     "final_place": 8,
     "game_type": "GT_BATTLEGROUNDS",
     "hero": "BG21_HERO_000_SKIN_D",
+    "hero_select": {
+      "offered": [
+        "BG22_HERO_001_SKIN_A",
+        "BG21_HERO_000_SKIN_D",
+        "TB_BaconShop_HERO_42_SKIN_D",
+        "BG21_HERO_020_SKIN_F",
+        "TB_BaconShop_HERO_28_SKIN_E"
+      ],
+      "picked": "BG21_HERO_000_SKIN_D",
+      "rerolls": 1
+    },
     "index": 1,
     "lobby": [
       {
@@ -117,7 +128,8 @@
         "opponents": [
           1
         ],
-        "own_health_after": 40
+        "own_health_after": 40,
+        "result": "won"
       },
       {
         "entries": [
@@ -171,7 +183,8 @@
         "opponents": [
           5
         ],
-        "own_health_after": 40
+        "own_health_after": 40,
+        "result": "won"
       },
       {
         "entries": [
@@ -232,7 +245,8 @@
         "opponents": [
           4
         ],
-        "own_health_after": 40
+        "own_health_after": 40,
+        "result": "won"
       },
       {
         "entries": [
@@ -307,7 +321,8 @@
         "opponents": [
           2
         ],
-        "own_health_after": 40
+        "own_health_after": 40,
+        "result": "won"
       },
       {
         "entries": [
@@ -410,7 +425,8 @@
         "opponents": [
           8
         ],
-        "own_health_after": 40
+        "own_health_after": 40,
+        "result": "won"
       },
       {
         "entries": [
@@ -520,7 +536,8 @@
         "opponents": [
           3
         ],
-        "own_health_after": 40
+        "own_health_after": 40,
+        "result": "tie"
       },
       {
         "entries": [
@@ -637,7 +654,8 @@
         "opponents": [
           6
         ],
-        "own_health_after": 27
+        "own_health_after": 27,
+        "result": "lost"
       },
       {
         "entries": [
@@ -768,7 +786,8 @@
         "opponents": [
           1
         ],
-        "own_health_after": 12
+        "own_health_after": 12,
+        "result": "lost"
       },
       {
         "entries": [
@@ -899,7 +918,8 @@
         "opponents": [
           5
         ],
-        "own_health_after": 0
+        "own_health_after": 0,
+        "result": "lost"
       }
     ],
     "shop": {
@@ -1564,10 +1584,13 @@
       "turns": [
         {
           "actions": 3,
+          "buy_gold": 3,
           "buys": [
             "BG36_345"
           ],
           "end_ms": 79558,
+          "extra_gold": 3,
+          "free_refreshes": 0,
           "free_rolls": 0,
           "freezes": 0,
           "gold": 3,
@@ -1589,19 +1612,25 @@
               "roll": 0
             }
           ],
+          "passes": [],
           "rolls": 0,
+          "sell_gold": 0,
           "sells": [],
           "spell_buys": 0,
+          "spell_gold": 0,
           "start_ms": 31521,
           "tier": 1,
           "turn": 1
         },
         {
           "actions": 5,
+          "buy_gold": 3,
           "buys": [
             "BGS_119"
           ],
           "end_ms": 120607,
+          "extra_gold": 0,
+          "free_refreshes": 0,
           "free_rolls": 0,
           "freezes": 0,
           "gold": 4,
@@ -1623,17 +1652,23 @@
               "roll": 0
             }
           ],
+          "passes": [],
           "rolls": 0,
+          "sell_gold": 0,
           "sells": [],
           "spell_buys": 0,
+          "spell_gold": 0,
           "start_ms": 79558,
           "tier": 1,
           "turn": 2
         },
         {
           "actions": 5,
+          "buy_gold": 0,
           "buys": [],
           "end_ms": 178538,
+          "extra_gold": 0,
+          "free_refreshes": 0,
           "free_rolls": 0,
           "freezes": 0,
           "gold": 5,
@@ -1675,17 +1710,23 @@
               "roll": 1
             }
           ],
+          "passes": [],
           "rolls": 1,
+          "sell_gold": 0,
           "sells": [],
           "spell_buys": 0,
+          "spell_gold": 0,
           "start_ms": 120607,
           "tier": 2,
           "turn": 3
         },
         {
           "actions": 3,
+          "buy_gold": 0,
           "buys": [],
           "end_ms": 279627,
+          "extra_gold": 0,
+          "free_refreshes": 0,
           "free_rolls": 0,
           "freezes": 0,
           "gold": 6,
@@ -1712,19 +1753,25 @@
               "roll": 0
             }
           ],
+          "passes": [],
           "rolls": 0,
+          "sell_gold": 0,
           "sells": [],
           "spell_buys": 0,
+          "spell_gold": 0,
           "start_ms": 178538,
           "tier": 3,
           "turn": 4
         },
         {
           "actions": 8,
+          "buy_gold": 3,
           "buys": [
             "BG36_101"
           ],
           "end_ms": 367520,
+          "extra_gold": 0,
+          "free_refreshes": 0,
           "free_rolls": 0,
           "freezes": 0,
           "gold": 7,
@@ -1751,17 +1798,23 @@
               "roll": 0
             }
           ],
+          "passes": [],
           "rolls": 0,
+          "sell_gold": 0,
           "sells": [],
           "spell_buys": 0,
+          "spell_gold": 0,
           "start_ms": 279627,
           "tier": 3,
           "turn": 5
         },
         {
           "actions": 8,
+          "buy_gold": 0,
           "buys": [],
           "end_ms": 482914,
+          "extra_gold": 0,
+          "free_refreshes": 0,
           "free_rolls": 0,
           "freezes": 0,
           "gold": 8,
@@ -1788,19 +1841,25 @@
               "roll": 0
             }
           ],
+          "passes": [],
           "rolls": 0,
+          "sell_gold": 0,
           "sells": [],
           "spell_buys": 1,
+          "spell_gold": 1,
           "start_ms": 367520,
           "tier": 4,
           "turn": 6
         },
         {
           "actions": 15,
+          "buy_gold": 3,
           "buys": [
             "BG30_121"
           ],
           "end_ms": 596664,
+          "extra_gold": 4,
+          "free_refreshes": 0,
           "free_rolls": 0,
           "freezes": 0,
           "gold": 9,
@@ -1832,20 +1891,26 @@
               "roll": 0
             }
           ],
+          "passes": [],
           "rolls": 0,
+          "sell_gold": 0,
           "sells": [],
           "spell_buys": 1,
+          "spell_gold": 0,
           "start_ms": 482914,
           "tier": 5,
           "turn": 7
         },
         {
           "actions": 24,
+          "buy_gold": 6,
           "buys": [
             "BG25_354",
             "BG28_582"
           ],
           "end_ms": 725173,
+          "extra_gold": 0,
+          "free_refreshes": 2,
           "free_rolls": 2,
           "freezes": 1,
           "gold": 10,
@@ -1977,17 +2042,21 @@
               "roll": 4
             }
           ],
+          "passes": [],
           "rolls": 4,
+          "sell_gold": 1,
           "sells": [
             "BG36_345"
           ],
           "spell_buys": 0,
+          "spell_gold": 0,
           "start_ms": 596664,
           "tier": 5,
           "turn": 8
         },
         {
           "actions": 56,
+          "buy_gold": 15,
           "buys": [
             "BG30_123",
             "BG31_320",
@@ -1996,6 +2065,8 @@
             "BG26_ICC_901"
           ],
           "end_ms": 876422,
+          "extra_gold": 4,
+          "free_refreshes": 3,
           "free_rolls": 3,
           "freezes": 1,
           "gold": 14,
@@ -2152,7 +2223,9 @@
               "roll": 5
             }
           ],
+          "passes": [],
           "rolls": 5,
+          "sell_gold": 7,
           "sells": [
             "BGS_119",
             "BG36_101",
@@ -2163,6 +2236,7 @@
             "BG31_326"
           ],
           "spell_buys": 1,
+          "spell_gold": 1,
           "start_ms": 725173,
           "tier": 5,
           "turn": 9
@@ -2176,6 +2250,14 @@
       "MURLOC": 8,
       "NEUTRAL": 8,
       "QUILBOAR": 6
+    },
+    "skin_parents": {
+      "BG21_HERO_000_SKIN_D": 73940,
+      "BG21_HERO_020_SKIN_F": 77516,
+      "BG22_HERO_001_SKIN_A": 79719,
+      "BG24_HERO_204_SKIN_C": 96870,
+      "TB_BaconShop_HERO_28_SKIN_E": 58534,
+      "TB_BaconShop_HERO_42_SKIN_D": 60213
     },
     "start_health": {
       "1": 45,

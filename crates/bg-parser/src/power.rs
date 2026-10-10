@@ -87,6 +87,12 @@ pub enum Line<'a> {
     SendOption,
     /// The client sending a choice; the text is its type (GENERAL, MULLIGAN...).
     SendChoice(&'a str),
+    /// A choice the game offers the player (`DebugPrintEntityChoices`): its
+    /// header ("id=N ... ChoiceType=MULLIGAN ...") or one of its entities
+    /// ("Entities[i]=..."). Used for the hero pick only (T-209).
+    Choices(&'a str),
+    /// What the game says was chosen (`DebugPrintEntitiesChosen`): header or entity.
+    Chosen(&'a str),
     Other,
 }
 
@@ -94,6 +100,8 @@ const POWER: &str = "GameState.DebugPrintPower() - ";
 const GAME: &str = "GameState.DebugPrintGame() - ";
 const SEND_OPTION: &str = "GameState.SendOption() - selectedOption=";
 const SEND_CHOICES: &str = "GameState.SendChoices() - id=";
+const CHOICES: &str = "GameState.DebugPrintEntityChoices() - ";
+const CHOSEN: &str = "GameState.DebugPrintEntitiesChosen() - ";
 const IGNORED_OPCODES: &[&str] = &[
     "META_DATA",
     "SUB_SPELL_START",
@@ -118,6 +126,12 @@ pub fn classify(line: &str) -> Line<'_> {
     }
     if line.contains(SEND_OPTION) {
         return Line::SendOption;
+    }
+    if let Some(pos) = line.find(CHOICES) {
+        return Line::Choices(line[pos + CHOICES.len()..].trim());
+    }
+    if let Some(pos) = line.find(CHOSEN) {
+        return Line::Chosen(line[pos + CHOSEN.len()..].trim());
     }
     if let Some(pos) = line.find(SEND_CHOICES) {
         // "id=N ChoiceType=GENERAL"; the chosen entities follow on their own lines.
@@ -385,6 +399,22 @@ mod tests {
         );
         assert_eq!(
             classify("D 1 PowerTaskList.DebugPrintPower() - CREATE_GAME"),
+            Line::Other
+        );
+        assert_eq!(
+            classify("D 1 GameState.DebugPrintEntityChoices() - id=1 ChoiceType=MULLIGAN"),
+            Line::Choices("id=1 ChoiceType=MULLIGAN")
+        );
+        assert_eq!(
+            classify("D 1 GameState.DebugPrintEntityChoices() -   Entities[0]=103"),
+            Line::Choices("Entities[0]=103")
+        );
+        assert_eq!(
+            classify("D 1 GameState.DebugPrintEntitiesChosen() -   Entities[0]=104"),
+            Line::Chosen("Entities[0]=104")
+        );
+        assert_eq!(
+            classify("D 1 PowerTaskList.DebugPrintEntityChoices() - id=1 ChoiceType=MULLIGAN"),
             Line::Other
         );
     }

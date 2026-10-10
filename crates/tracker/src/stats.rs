@@ -5,14 +5,24 @@
 //! are counted apart, never as zero. With no counted game the numbers are
 //! None ("—" in the window), not 0. Hero names come from the history itself
 //! (D-017), never from a guessed mapping.
+//!
+//! Skins are grouped under their base hero by the game's own link
+//! (`skin_parents`, parser revision 4) looked up in the card data's database
+//! ids (D-038, D-055); only when a game has no link, or the card data does not
+//! know it, by the D-019 card id rule, and those ids are listed apart.
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::Serialize;
 use serde_json::Value;
 
+use crate::hero_pick::{HeroPicks, PickCounts};
 use crate::provenance::{legend, LegendEntry, Source};
 use crate::shop::{ShopCounts, ShopStats};
+
+/// Database id of a base hero -> its card id, from the card data (D-038).
+/// Empty when the card data is not on the PC: skins then group by D-019.
+pub type HeroLinks = BTreeMap<i64, String>;
 
 pub const SOLO: &str = "GT_BATTLEGROUNDS";
 pub const DUOS: &str = "GT_BATTLEGROUNDS_DUO";
@@ -67,9 +77,13 @@ pub struct HeroStats {
     pub name: Option<String>,
     /// Every card id (skins included) grouped under this hero.
     pub variants: Vec<String>,
+    /// The variants put here by the D-019 card id rule, because the game gave
+    /// no link for them (or the card data does not know it).
+    pub variants_by_rule: Vec<String>,
     /// The name is printed by the log, or unknown (the id is shown instead).
     pub name_source: Source,
-    /// Several card ids under one hero are grouped by us (D-019): inferred.
+    /// From the log when every variant is the hero itself or linked to it by
+    /// the game; inferred when the D-019 rule grouped any.
     pub grouping: Source,
     pub tally: Tally,
     pub tally_sources: TallySources,
@@ -121,6 +135,8 @@ pub struct ModeStats {
     pub entered_tribes_source: Source,
     /// Shop and APM averages per game (T-204, T-205).
     pub shop: ShopStats,
+    /// Heroes offered and picked (T-209).
+    pub hero_picks: HeroPicks,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -148,6 +164,24 @@ pub fn base_hero(card_id: &str) -> &str {
 }
 
 const SKIN: &str = "_SKIN_";
+
+/// The hero a card id belongs to in one report: the base hero the game links
+/// it to (`skin_parents`, looked up in `links`), else the D-019 rule. True
+/// when the D-019 rule grouped it under another id.
+pub(crate) fn hero_for(card: &str, report: &Value, links: &HeroLinks) -> (String, bool) {
+    let linked = report
+        .get("skin_parents")
+        .and_then(|m| m.get(card))
+        .and_then(Value::as_i64)
+        .and_then(|dbf| links.get(&dbf));
+    match linked {
+        Some(base) => (base.clone(), false),
+        None => {
+            let base = base_hero(card);
+            (base.to_string(), base != card)
+        }
+    }
+}
 
 /// Place rules of a mode: the top half, and the worst possible place.
 pub(crate) fn rules(mode: &str) -> Option<(i64, i64)> {
@@ -217,10 +251,19 @@ impl Counts {
 }
 
 #[derive(Default)]
+struct HeroCounts {
+    variants: BTreeSet<String>,
+    by_rule: BTreeSet<String>,
+    counts: Counts,
+    shop: ShopCounts,
+}
+
+#[derive(Default)]
 struct ModeCounts {
     totals: Counts,
-    heroes: BTreeMap<Option<String>, (BTreeSet<String>, Counts, ShopCounts)>,
+    heroes: BTreeMap<Option<String>, HeroCounts>,
     shop: ShopCounts,
+    picks: PickCounts,
     games_with_tribes: usize,
     tribes: BTreeMap<String, (usize, u64)>,
     games_with_entered_tribes: usize,
@@ -228,7 +271,7 @@ struct ModeCounts {
 }
 
 impl ModeCounts {
-    fn add(&mut self, mode: &str, report: &Value, entered: Option<&[String]>) {
+    fn add(&mut self, mode: &str, report: &Value, entered: Option<&[String]>, links: &HeroLinks) {
         if let Some(entered) = entered.filter(|e| !e.is_empty()) {
             self.games_with_entered_tribes += 1;
             for tribe in entered {
@@ -239,14 +282,20 @@ impl ModeCounts {
         let place = counted_place(mode, status, report);
         self.totals.add(status, place);
         let hero = report.get("hero").and_then(Value::as_str);
-        let (variants, counts, shop) = self
+        let grouped = hero.map(|h| hero_for(h, report, links));
+        let row = self
             .heroes
-            .entry(hero.map(|h| base_hero(h).to_string()))
+            .entry(grouped.as_ref().map(|(base, _)| base.clone()))
             .or_default();
-        variants.extend(hero.map(String::from));
-        counts.add(status, place);
-        shop.add(report);
+        row.variants.extend(hero.map(String::from));
+        if let (Some(h), Some((_, true))) = (hero, &grouped) {
+            row.by_rule.insert(h.to_string());
+        }
+        row.counts.add(status, place);
+        row.shop.add(report);
         self.shop.add(report);
+        self.picks
+            .add(report, place, &|card| hero_for(card, report, links).0);
 
         let offered: Vec<(&String, u64)> = report
             .get("shop_tribes")
@@ -270,22 +319,25 @@ impl ModeCounts {
         let mut heroes: Vec<HeroStats> = self
             .heroes
             .into_iter()
-            .map(|(hero, (variants, counts, shop))| {
-                let name = hero.as_deref().and_then(|h| names.for_hero(h, &variants));
-                let tally = counts.tally(top_half);
+            .map(|(hero, row)| {
+                let name = hero
+                    .as_deref()
+                    .and_then(|h| names.for_hero(h, &row.variants));
+                let tally = row.counts.tally(top_half);
                 HeroStats {
                     name_source: Source::log_if(name.is_some()),
-                    grouping: if variants.len() > 1 {
-                        Source::Inferred
-                    } else {
+                    grouping: if row.by_rule.is_empty() {
                         Source::Log
+                    } else {
+                        Source::Inferred
                     },
                     tally_sources: TallySources::of(&tally),
                     name,
                     hero,
-                    variants: variants.into_iter().collect(),
+                    variants: row.variants.into_iter().collect(),
+                    variants_by_rule: row.by_rule.into_iter().collect(),
                     tally,
-                    shop: shop.finish(),
+                    shop: row.shop.finish(),
                 }
             })
             .collect();
@@ -332,13 +384,14 @@ impl ModeCounts {
             entered_tribes,
             entered_tribes_source: Source::Entered,
             shop: self.shop.finish(),
+            hero_picks: self.picks.finish(names),
         }
     }
 }
 
 /// Hero names printed by the log, from every game in the history.
 #[derive(Default)]
-struct Names(BTreeMap<String, BTreeMap<String, usize>>);
+pub(crate) struct Names(BTreeMap<String, BTreeMap<String, usize>>);
 
 impl Names {
     fn add(&mut self, report: &Value) {
@@ -366,7 +419,7 @@ impl Names {
     }
 
     /// The base hero's name if any game names it, else its first named skin.
-    fn for_hero(&self, base: &str, variants: &BTreeSet<String>) -> Option<String> {
+    pub(crate) fn for_hero(&self, base: &str, variants: &BTreeSet<String>) -> Option<String> {
         self.of(base)
             .or_else(|| variants.iter().find_map(|id| self.of(id)))
     }
@@ -383,12 +436,24 @@ pub fn compute<'a>(reports: impl IntoIterator<Item = &'a Value>) -> Stats {
 pub fn compute_with_entered<'a>(
     games: impl IntoIterator<Item = (&'a Value, Option<&'a [String]>)>,
 ) -> Stats {
+    compute_with_links(games, &HeroLinks::new())
+}
+
+/// Like [`compute_with_entered`], grouping skins by the game's own links
+/// looked up in `links` (T-214).
+pub fn compute_with_links<'a>(
+    games: impl IntoIterator<Item = (&'a Value, Option<&'a [String]>)>,
+    links: &HeroLinks,
+) -> Stats {
     let mut names = Names::default();
     let mut modes: BTreeMap<&'static str, ModeCounts> = BTreeMap::new();
     for (report, entered) in games {
         names.add(report);
         let mode = mode_of(report);
-        modes.entry(mode).or_default().add(mode, report, entered);
+        modes
+            .entry(mode)
+            .or_default()
+            .add(mode, report, entered, links);
     }
     let other = modes.remove(OTHER);
     let mut take = |mode| modes.remove(mode).unwrap_or_default().finish(mode, &names);
@@ -704,6 +769,62 @@ mod tests {
         assert_eq!(grouped.grouping, Source::Inferred);
         let single = heroes.iter().find(|h| h.variants.len() == 1).unwrap();
         assert_eq!(single.grouping, Source::Log);
+        assert!(single.variants_by_rule.is_empty());
+        assert_eq!(grouped.variants_by_rule, ["BG20_HERO_202_SKIN_C"]);
+    }
+
+    /// A game whose hero is a skin the game links to base hero `dbf`.
+    fn linked(hero: &str, dbf: i64, place: i64) -> Value {
+        let mut g = game(SOLO, "ok", hero, Some(place));
+        g["skin_parents"] = json!({ hero: dbf });
+        g
+    }
+
+    #[test]
+    fn skins_group_by_the_games_own_link_when_the_card_data_knows_it() {
+        // D-019 keeps these apart (they only share a number); the game links them.
+        let links = HeroLinks::from([(59_999, "BG20_HERO_102".to_string())]);
+        let games = [
+            game(SOLO, "ok", "BG20_HERO_102", Some(1)),
+            linked("TB_BaconShop_HERO_102_SKIN_G", 59_999, 3),
+        ];
+        let stats = compute_with_links(games.iter().map(|g| (g, None)), &links);
+        let heroes = &mode(&stats, SOLO).heroes;
+        assert_eq!(heroes.len(), 1);
+        let h = &heroes[0];
+        assert_eq!(h.hero.as_deref(), Some("BG20_HERO_102"));
+        assert_eq!(
+            h.variants,
+            ["BG20_HERO_102", "TB_BaconShop_HERO_102_SKIN_G"]
+        );
+        assert!(h.variants_by_rule.is_empty());
+        assert_eq!(h.grouping, Source::Log, "the game's own link, not a guess");
+        assert_eq!(h.tally.games, 2);
+    }
+
+    #[test]
+    fn without_the_link_or_the_card_data_the_name_rule_groups_and_says_so() {
+        let games = [
+            game(SOLO, "ok", "BG20_HERO_202", Some(1)),
+            // An older record: no link.
+            game(SOLO, "ok", "BG20_HERO_202_SKIN_C", Some(2)),
+            // A link the card data does not know.
+            linked("BG20_HERO_202_SKIN_D", 1234, 3),
+            // A link the card data knows.
+            linked("BG20_HERO_202_SKIN_E", 60_011, 4),
+        ];
+        let links = HeroLinks::from([(60_011, "BG20_HERO_202".to_string())]);
+        let stats = compute_with_links(games.iter().map(|g| (g, None)), &links);
+        let h = &mode(&stats, SOLO).heroes[0];
+        assert_eq!(h.tally.games, 4);
+        assert_eq!(
+            h.variants_by_rule,
+            ["BG20_HERO_202_SKIN_C", "BG20_HERO_202_SKIN_D"]
+        );
+        assert_eq!(h.grouping, Source::Inferred);
+        // No card data on the PC at all: the D-019 rule as before.
+        let plain = compute(&games);
+        assert_eq!(mode(&plain, SOLO).heroes[0].variants_by_rule.len(), 3);
     }
 
     #[test]

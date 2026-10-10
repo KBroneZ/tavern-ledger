@@ -1,0 +1,471 @@
+[
+  {
+    "index": 1,
+    "status": "ok",
+    "game_type": "GT_BATTLEGROUNDS",
+    "build": 253216,
+    "local_player_id": 2,
+    "hero": "BG20_HERO_202_SKIN_B4",
+    "teammate_player_id": null,
+    "teammate_hero": null,
+    "card_names": {},
+    "final_place": 1,
+    "final_health": 23,
+    "lobby": [
+      {
+        "player_id": 2,
+        "hero": "BG20_HERO_202_SKIN_B4",
+        "duo_team": null,
+        "final_place": 1,
+        "final_health": 23
+      },
+      {
+        "player_id": 3,
+        "hero": "TB_BaconShop_HERO_102_SKIN_G",
+        "duo_team": null,
+        "final_place": 2,
+        "final_health": 0
+      }
+    ],
+    "shop_tribes": {
+      "NEUTRAL": 1
+    },
+    "rounds": [
+      {
+        "number": 1,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "BG20_HERO_202_SKIN_B4",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_102_SKIN_G",
+            "board": []
+          }
+        ],
+        "own_health_after": 30,
+        "opponents": [
+          3
+        ],
+        "health_after": {
+          "2": 30,
+          "3": 27
+        },
+        "result": "won"
+      },
+      {
+        "number": 2,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "BG20_HERO_202_SKIN_B4",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_102_SKIN_G",
+            "board": []
+          }
+        ],
+        "own_health_after": 25,
+        "opponents": [
+          3
+        ],
+        "health_after": {
+          "2": 25,
+          "3": 27
+        },
+        "result": "lost"
+      },
+      {
+        "number": 3,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "BG20_HERO_202_SKIN_B4",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_102_SKIN_G",
+            "board": []
+          }
+        ],
+        "own_health_after": 25,
+        "opponents": [
+          3
+        ],
+        "health_after": {
+          "2": 25,
+          "3": 27
+        },
+        "result": "tie"
+      },
+      {
+        "number": 4,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "BG20_HERO_202_SKIN_B4",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_102_SKIN_G",
+            "board": []
+          }
+        ],
+        "own_health_after": 23,
+        "opponents": [
+          3
+        ],
+        "health_after": {
+          "2": 23,
+          "3": 0
+        },
+        "result": "won"
+      }
+    ],
+    "start_health": {
+      "2": 30,
+      "3": 30
+    },
+    "shop": {
+      "turns": [
+        {
+          "turn": 1,
+          "start_ms": 10000,
+          "end_ms": 70000,
+          "tier": 1,
+          "gold": 3,
+          "gold_spent": 2,
+          "rolls": 0,
+          "free_rolls": 0,
+          "buys": [
+            "BG20_100"
+          ],
+          "spell_buys": 0,
+          "sells": [],
+          "freezes": 0,
+          "offers": [
+            {
+              "card_id": "BG20_100",
+              "roll": 0,
+              "frozen": false
+            }
+          ],
+          "actions": 2,
+          "extra_gold": 3,
+          "sell_gold": 0,
+          "buy_gold": 2,
+          "spell_gold": 0,
+          "free_refreshes": 0,
+          "passes": []
+        },
+        {
+          "turn": 2,
+          "start_ms": 70000,
+          "end_ms": 130000,
+          "tier": 1,
+          "gold": 4,
+          "gold_spent": 1,
+          "rolls": 2,
+          "free_rolls": 1,
+          "buys": [],
+          "spell_buys": 0,
+          "sells": [
+            "BG28_300"
+          ],
+          "freezes": 0,
+          "offers": [],
+          "actions": 3,
+          "extra_gold": 0,
+          "sell_gold": 2,
+          "buy_gold": 0,
+          "spell_gold": 0,
+          "free_refreshes": 1,
+          "passes": []
+        },
+        {
+          "turn": 3,
+          "start_ms": 130000,
+          "end_ms": 190000,
+          "tier": 1,
+          "gold": 5,
+          "gold_spent": 1,
+          "rolls": 0,
+          "free_rolls": 0,
+          "buys": [],
+          "spell_buys": 1,
+          "sells": [],
+          "freezes": 0,
+          "offers": [],
+          "actions": 1,
+          "extra_gold": 0,
+          "sell_gold": 0,
+          "buy_gold": 0,
+          "spell_gold": 1,
+          "free_refreshes": 0,
+          "passes": []
+        },
+        {
+          "turn": 4,
+          "start_ms": 190000,
+          "end_ms": 250000,
+          "tier": 1,
+          "gold": 6,
+          "gold_spent": 0,
+          "rolls": 0,
+          "free_rolls": 0,
+          "buys": [],
+          "spell_buys": 0,
+          "sells": [],
+          "freezes": 0,
+          "offers": [],
+          "actions": 0,
+          "extra_gold": 0,
+          "sell_gold": 0,
+          "buy_gold": 0,
+          "spell_gold": 0,
+          "free_refreshes": 0,
+          "passes": []
+        }
+      ],
+      "tier_ups": [],
+      "actions": [
+        {
+          "ms": 12000,
+          "turn": 1,
+          "kind": "buy"
+        },
+        {
+          "ms": 14000,
+          "turn": 1,
+          "kind": "play"
+        },
+        {
+          "ms": 72000,
+          "turn": 2,
+          "kind": "roll"
+        },
+        {
+          "ms": 74000,
+          "turn": 2,
+          "kind": "roll"
+        },
+        {
+          "ms": 78000,
+          "turn": 2,
+          "kind": "sell"
+        },
+        {
+          "ms": 132000,
+          "turn": 3,
+          "kind": "buy_spell"
+        }
+      ],
+      "start_ms": 10000,
+      "end_ms": 250000,
+      "ended": true
+    },
+    "hero_select": {
+      "offered": [
+        "TB_BaconShop_HERO_37",
+        "BG20_HERO_202_SKIN_B4",
+        "TB_BaconShop_HERO_18",
+        "TB_BaconShop_HERO_60_SKIN_A",
+        "TB_BaconShop_HERO_49"
+      ],
+      "rerolls": 1,
+      "picked": "BG20_HERO_202_SKIN_B4"
+    },
+    "skin_parents": {
+      "BG20_HERO_202_SKIN_B4": 60011,
+      "TB_BaconShop_HERO_102_SKIN_G": 59999,
+      "TB_BaconShop_HERO_60_SKIN_A": 58000
+    },
+    "warnings": [],
+    "problems": [],
+    "not_in_log": [
+      "MMR",
+      "available tribes (exact list)"
+    ]
+  },
+  {
+    "index": 1,
+    "status": "ok",
+    "game_type": "GT_BATTLEGROUNDS_DUO",
+    "build": 253216,
+    "local_player_id": 2,
+    "hero": "BG24_HERO_100_SKIN_E",
+    "teammate_player_id": 1,
+    "teammate_hero": "TB_BaconShop_HERO_43_SKIN_N",
+    "card_names": {},
+    "final_place": 2,
+    "final_health": 28,
+    "lobby": [
+      {
+        "player_id": 1,
+        "hero": "TB_BaconShop_HERO_43_SKIN_N",
+        "duo_team": 1,
+        "final_place": 2,
+        "final_health": 28
+      },
+      {
+        "player_id": 2,
+        "hero": "BG24_HERO_100_SKIN_E",
+        "duo_team": null,
+        "final_place": 2,
+        "final_health": 28
+      },
+      {
+        "player_id": 3,
+        "hero": "TB_BaconShop_HERO_60",
+        "duo_team": 2,
+        "final_place": 1,
+        "final_health": 30
+      },
+      {
+        "player_id": 4,
+        "hero": "TB_BaconShop_HERO_18",
+        "duo_team": 2,
+        "final_place": 1,
+        "final_health": 30
+      }
+    ],
+    "shop_tribes": {},
+    "rounds": [
+      {
+        "number": 1,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "BG24_HERO_100_SKIN_E",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_60",
+            "board": [
+              {
+                "card_id": "BG26_135",
+                "atk": 3,
+                "health": 1,
+                "position": 1,
+                "golden": false
+              }
+            ]
+          }
+        ],
+        "own_health_after": 28,
+        "opponents": [
+          3
+        ],
+        "health_after": {
+          "1": 28,
+          "2": 28,
+          "3": 30,
+          "4": 30
+        },
+        "result": "lost"
+      }
+    ],
+    "start_health": {
+      "1": 30,
+      "2": 30,
+      "3": 30,
+      "4": 30
+    },
+    "shop": {
+      "turns": [
+        {
+          "turn": 1,
+          "start_ms": 10000,
+          "end_ms": 70000,
+          "tier": null,
+          "gold": 3,
+          "gold_spent": 0,
+          "rolls": 0,
+          "free_rolls": 0,
+          "buys": [],
+          "spell_buys": 0,
+          "sells": [],
+          "freezes": 0,
+          "offers": [],
+          "actions": 1,
+          "extra_gold": 0,
+          "sell_gold": 0,
+          "buy_gold": 0,
+          "spell_gold": 0,
+          "free_refreshes": null,
+          "passes": [
+            "BG20_100"
+          ]
+        },
+        {
+          "turn": 2,
+          "start_ms": 70000,
+          "end_ms": 70000,
+          "tier": null,
+          "gold": 3,
+          "gold_spent": 0,
+          "rolls": 0,
+          "free_rolls": 0,
+          "buys": [],
+          "spell_buys": 0,
+          "sells": [],
+          "freezes": 0,
+          "offers": [],
+          "actions": 0,
+          "extra_gold": 0,
+          "sell_gold": 0,
+          "buy_gold": 0,
+          "spell_gold": 0,
+          "free_refreshes": null,
+          "passes": []
+        }
+      ],
+      "tier_ups": [],
+      "actions": [
+        {
+          "ms": 15000,
+          "turn": 1,
+          "kind": "pass"
+        }
+      ],
+      "start_ms": 10000,
+      "end_ms": 70000,
+      "ended": true
+    },
+    "hero_select": {
+      "offered": [
+        "BG24_HERO_100_SKIN_E",
+        "TB_BaconShop_HERO_37"
+      ],
+      "rerolls": 0,
+      "picked": "BG24_HERO_100_SKIN_E"
+    },
+    "skin_parents": {
+      "BG24_HERO_100_SKIN_E": 97000,
+      "TB_BaconShop_HERO_43_SKIN_N": 57000
+    },
+    "warnings": [],
+    "problems": [],
+    "not_in_log": [
+      "MMR",
+      "available tribes (exact list)"
+    ]
+  }
+]

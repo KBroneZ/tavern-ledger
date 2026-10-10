@@ -17,16 +17,21 @@ fn check(name: &str) {
     .expect("valid json");
     let reports = bg_parser::parse_reader(log.as_slice()).expect("in-memory read");
     let mut actual = serde_json::to_value(&reports).expect("serializable");
-    // Hero names, the lobby's health and the shop are Rust-only (the Python
+    // Hero names, the lobby's health, the shop, the hero pick, the skin links
+    // and the combat results the game records are Rust-only (the Python
     // prototype does not read them); tests/card_names.rs,
-    // tests/lobby_health.rs and tests/shop.rs cover them.
+    // tests/lobby_health.rs, tests/shop.rs and tests/data_round.rs cover them.
     for game in actual.as_array_mut().expect("list of games") {
         let report = game.as_object_mut().expect("report object");
         report.remove("card_names");
         report.remove("start_health");
         report.remove("shop");
+        report.remove("hero_select");
+        report.remove("skin_parents");
         for round in report["rounds"].as_array_mut().expect("rounds") {
-            round.as_object_mut().expect("round").remove("health_after");
+            let round = round.as_object_mut().expect("round");
+            round.remove("health_after");
+            round.remove("result");
         }
     }
     assert_eq!(actual, expected, "case {name}");
@@ -49,6 +54,8 @@ parity!(
     solo_local_eliminated_after_opponent,
     solo_shop_game,
     solo_shop_game_cut,
+    solo_data_game,
+    duo_data_game,
     not_battlegrounds,
     missing_own_hero,
     missing_entity,
@@ -71,7 +78,7 @@ fn every_fixture_is_checked() {
                 .is_some_and(|x| x == "log")
         })
         .count();
-    assert_eq!(count, 15, "add new fixtures to the parity! list");
+    assert_eq!(count, 17, "add new fixtures to the parity! list");
 }
 
 #[test]

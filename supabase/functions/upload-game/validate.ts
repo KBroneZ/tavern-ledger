@@ -16,7 +16,7 @@ import contract from "./report_keys.json" with { type: "json" };
  * refuse. Every answer carries it, and the desktop app retries a game this
  * server refused once when it sees a higher number (D-047).
  */
-export const VALIDATOR_VERSION = 3;
+export const VALIDATOR_VERSION = 4;
 
 export const SESSION_PATTERN = /^Hearthstone_(\d{4})_(\d{2})_(\d{2})_\d{2}_\d{2}_\d{2}$/;
 const PATH_PATTERN = /\/v1\/games\/(Hearthstone_\d{4}(?:_\d{2}){5})\/([1-9][0-9]{0,3})$/;
@@ -48,6 +48,23 @@ const MAX_CARDS = 100;
 const MAX_ACTIONS = 3000;
 const MAX_MS = 24 * 60 * 60 * 1000;
 const MAX_COUNT = 10000;
+// Parser revision 4 (T-206, T-209, T-210, T-214, D-055): the combat result
+// the game records, the hero pick, the skins' base hero links and more shop
+// numbers. Older records have none of them, so none is required.
+const RESULTS = new Set(["won", "lost", "tie"]);
+const MAX_OFFERED = 32;
+// Hero card id -> database id of its base hero (a positive number).
+const MAX_SKIN_LINKS = 64;
+const MAX_DBF_ID = 10000000;
+const MAX_HERO_NAMES = 64;
+const TURN_KEYS_SINCE_R4 = [
+  "extra_gold",
+  "sell_gold",
+  "buy_gold",
+  "spell_gold",
+  "free_refreshes",
+  "passes",
+];
 const ACTION_KINDS = new Set([
   "roll",
   "buy",
@@ -60,6 +77,7 @@ const ACTION_KINDS = new Set([
   "play",
   "move",
   "choose",
+  "pass",
   "other",
 ]);
 
@@ -87,12 +105,21 @@ const KEYS: Record<string, string[]> = {
     "rounds",
     "start_health",
     "shop",
+    "hero_select",
+    "skin_parents",
     "warnings",
     "problems",
     "not_in_log",
   ],
   "report.lobby[]": ["player_id", "hero", "duo_team", "final_place", "final_health"],
-  "report.rounds[]": ["number", "entries", "own_health_after", "opponents", "health_after"],
+  "report.rounds[]": [
+    "number",
+    "entries",
+    "own_health_after",
+    "opponents",
+    "health_after",
+    "result",
+  ],
   "report.rounds[].entries[]": ["side", "player_id", "hero", "board"],
   "report.rounds[].entries[].board[]": ["card_id", "atk", "health", "position", "golden"],
   "report.shop": ["turns", "tier_ups", "actions", "start_ms", "end_ms", "ended"],
@@ -111,10 +138,17 @@ const KEYS: Record<string, string[]> = {
     "freezes",
     "offers",
     "actions",
+    "extra_gold",
+    "sell_gold",
+    "buy_gold",
+    "spell_gold",
+    "free_refreshes",
+    "passes",
   ],
   "report.shop.turns[].offers[]": ["card_id", "roll", "frozen"],
   "report.shop.tier_ups[]": ["turn", "tier"],
   "report.shop.actions[]": ["ms", "turn", "kind"],
+  "report.hero_select": ["offered", "rerolls", "picked"],
 };
 
 // A validator out of step with the list stops the function at start: games
@@ -259,6 +293,9 @@ function round(v: unknown, field: string, seen: Seen): Obj {
     );
   }
   optInt(r.own_health_after, `${field}.own_health_after`, -100000, 100000);
+  if (r.result !== undefined && r.result !== null && !RESULTS.has(r.result as string)) {
+    throw new Invalid(`${field}.result`);
+  }
   if (r.opponents !== undefined) {
     list(r.opponents, `${field}.opponents`, 8).forEach((p, i) =>
       optInt(p, `${field}.opponents[${i}]`, 1, 64)
@@ -289,7 +326,8 @@ function cards(v: unknown, field: string): void {
 }
 
 function shopTurn(v: unknown, field: string): void {
-  const t = shape(v, field, KEYS["report.shop.turns[]"], KEYS["report.shop.turns[]"]);
+  const keys = KEYS["report.shop.turns[]"];
+  const t = shape(v, field, keys, keys.filter((k) => !TURN_KEYS_SINCE_R4.includes(k)));
   int(t.turn, `${field}.turn`, 1, MAX_SHOP_TURNS);
   const start = int(t.start_ms, `${field}.start_ms`, 0, MAX_MS);
   int(t.end_ms, `${field}.end_ms`, start, MAX_MS);
@@ -310,6 +348,11 @@ function shopTurn(v: unknown, field: string): void {
     bool(offer.frozen, `${at}.frozen`);
   });
   int(t.actions, `${field}.actions`, 0, MAX_ACTIONS);
+  for (const key of ["extra_gold", "sell_gold", "buy_gold", "spell_gold"]) {
+    optInt(t[key], `${field}.${key}`, 0, MAX_COUNT);
+  }
+  optInt(t.free_refreshes, `${field}.free_refreshes`, 0, rolls);
+  if (t.passes !== undefined && t.passes !== null) cards(t.passes, `${field}.passes`);
 }
 
 /** The player's own shop and logged actions; null when the game was unreadable. */
@@ -340,6 +383,31 @@ function shop(v: unknown, field: string): void {
   bool(s.ended, `${field}.ended`);
 }
 
+/** The player's own hero pick; null or missing when the log has none. */
+function heroSelect(v: unknown, field: string, seen: Seen): void {
+  if (v === undefined || v === null) return;
+  const h = shape(v, field, KEYS["report.hero_select"], ["offered", "rerolls"]);
+  const offered = list(h.offered, `${field}.offered`, MAX_OFFERED).map((c, i) => {
+    const id = cardId(c, `${field}.offered[${i}]`);
+    if (id === null) throw new Invalid(`${field}.offered[${i}]`);
+    seen.heroes.add(id);
+    return id;
+  });
+  int(h.rerolls, `${field}.rerolls`, 0, MAX_OFFERED);
+  const picked = cardId(h.picked, `${field}.picked`);
+  if (picked !== null && !offered.includes(picked)) throw new Invalid(`${field}.picked`);
+}
+
+/** Hero card id -> base hero database id, for heroes this report shows. */
+function skinParents(v: unknown, field: string, heroes: Set<string>): void {
+  if (v === undefined) return;
+  if (!isObject(v) || Object.keys(v).length > MAX_SKIN_LINKS) throw new Invalid(field);
+  for (const [id, dbf] of Object.entries(v)) {
+    if (!CARD_ID.test(id) || !heroes.has(id)) throw new Invalid(field);
+    int(dbf, field, 1, MAX_DBF_ID);
+  }
+}
+
 function lobbyPlayer(v: unknown, field: string, seen: Seen): void {
   const p = shape(v, field, KEYS["report.lobby[]"], ["player_id"]);
   seen.players.add(int(p.player_id, `${field}.player_id`, 1, 64));
@@ -365,7 +433,7 @@ function tribes(v: unknown, field: string): Record<string, number> {
 
 function heroNames(v: unknown, field: string, heroes: Set<string>): void {
   if (v === undefined) return;
-  if (!isObject(v) || Object.keys(v).length > 32) throw new Invalid(field);
+  if (!isObject(v) || Object.keys(v).length > MAX_HERO_NAMES) throw new Invalid(field);
   for (const [id, name] of Object.entries(v)) {
     // Only the heroes this report shows, as the parser writes it.
     if (!CARD_ID.test(id) || !heroes.has(id)) throw new Invalid(field);
@@ -456,6 +524,7 @@ function check(value: unknown, session: string, index: number): Summary {
     healthMap(x.health_after, `report.rounds[${i}].health_after`, seen.players)
   );
   shop(r.shop, "report.shop");
+  heroSelect(r.hero_select, "report.hero_select", seen);
   notes(r.warnings, "report.warnings");
   notes(r.problems, "report.problems");
   if (r.not_in_log !== undefined) {
@@ -466,6 +535,7 @@ function check(value: unknown, session: string, index: number): Summary {
     });
   }
   heroNames(r.card_names, "report.card_names", seen.heroes);
+  skinParents(r.skin_parents, "report.skin_parents", seen.heroes);
 
   return {
     game_type: gameType,
