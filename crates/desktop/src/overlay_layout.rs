@@ -136,23 +136,16 @@ fn parse_resolution(key: &str) -> Option<(f64, f64)> {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Theme {
-    /// Dark teal board with mint and gold, the Combat Round look (D-039).
+    /// Smoked glass with amber lamplight, the Lamplight glass look (D-052).
+    /// The retired themes (Combat Round, Tavern, Parchment) read as this one.
     #[default]
-    Round,
-    /// Dark wood and gold, the look of T-301.
-    Tavern,
-    /// Light parchment with dark text.
-    Parchment,
+    #[serde(alias = "round", alias = "tavern", alias = "parchment")]
+    Glass,
     /// Black and white with strong colours.
     Contrast,
 }
 
-pub const THEMES: [Theme; 4] = [
-    Theme::Round,
-    Theme::Tavern,
-    Theme::Parchment,
-    Theme::Contrast,
-];
+pub const THEMES: [Theme; 2] = [Theme::Glass, Theme::Contrast];
 
 type Rgb = (u8, u8, u8);
 
@@ -191,62 +184,32 @@ impl Palette {
 impl Theme {
     pub fn label(self) -> &'static str {
         match self {
-            Theme::Round => "Combat Round (dark)",
-            Theme::Tavern => "Tavern (dark)",
-            Theme::Parchment => "Parchment (light)",
+            Theme::Glass => "Glass (dark)",
             Theme::Contrast => "High contrast",
         }
     }
 
     pub fn id(self) -> &'static str {
         match self {
-            Theme::Round => "round",
-            Theme::Tavern => "tavern",
-            Theme::Parchment => "parchment",
+            Theme::Glass => "glass",
             Theme::Contrast => "contrast",
         }
     }
 
     pub fn palette(self) -> Palette {
         match self {
-            Theme::Round => Palette {
-                panel: (0x07, 0x18, 0x1c),
-                text: (0xd6, 0xec, 0xe8),
-                dim: (0xb0, 0xd0, 0xca),
-                accent: (0x5f, 0xe0, 0xc8),
-                won: (0x7f, 0xe0, 0xa0),
-                lost: (0xff, 0x9a, 0x86),
-                amber: (0xf2, 0xc1, 0x4e),
-                info: (0x8f, 0xc9, 0xe8),
-                muted: (0xae, 0xce, 0xc8),
+            Theme::Glass => Palette {
+                panel: (0x1e, 0x16, 0x12),
+                text: (0xf7, 0xef, 0xe6),
+                dim: (0xcb, 0xbd, 0xaf),
+                accent: (0xff, 0xd0, 0x8a),
+                won: (0x8f, 0xe0, 0xa8),
+                lost: (0xff, 0x9a, 0x8a),
+                amber: (0xff, 0xb2, 0x4a),
+                info: (0xa9, 0xc8, 0xff),
+                muted: (0xc4, 0xb6, 0xa8),
                 danger: (0xff, 0xd0, 0xc6),
-                border: (0x2f, 0x7f, 0x74),
-            },
-            Theme::Tavern => Palette {
-                panel: (0x1c, 0x13, 0x0c),
-                text: (0xef, 0xe2, 0xc4),
-                dim: (0xcd, 0xbb, 0x94),
-                accent: (0xe8, 0xbd, 0x55),
-                won: (0x7f, 0xc0, 0x8a),
-                lost: (0xff, 0x9a, 0x86),
-                amber: (0xf0, 0xb4, 0x5a),
-                info: (0x8f, 0xc0, 0xdd),
-                muted: (0xc8, 0xb9, 0x98),
-                danger: (0xf3, 0xd0, 0xc6),
-                border: (0xc9, 0x96, 0x2f),
-            },
-            Theme::Parchment => Palette {
-                panel: (0xf4, 0xea, 0xd2),
-                text: (0x1f, 0x16, 0x0c),
-                dim: (0x4a, 0x3d, 0x2a),
-                accent: (0x5c, 0x3a, 0x00),
-                won: (0x0c, 0x4a, 0x1a),
-                lost: (0x7a, 0x1c, 0x0c),
-                amber: (0x66, 0x36, 0x00),
-                info: (0x0a, 0x45, 0x70),
-                muted: (0x4a, 0x40, 0x2a),
-                danger: (0x7a, 0x1d, 0x10),
-                border: (0x8a, 0x5a, 0x10),
+                border: (0x9a, 0x6a, 0x30),
             },
             Theme::Contrast => Palette {
                 panel: (0x00, 0x00, 0x00),
@@ -625,8 +588,25 @@ mod tests {
     fn the_file_from_t_301_still_loads() {
         let s = Settings::parse(r#"{"enabled":true}"#).unwrap();
         assert!(s.enabled);
-        assert_eq!(s.theme, Theme::Round);
+        assert_eq!(s.theme, Theme::Glass);
         assert_eq!(s.opacity, DEFAULT_OPACITY);
+    }
+
+    #[test]
+    fn retired_themes_read_as_glass_and_are_saved_as_glass() {
+        for old in ["round", "tavern", "parchment"] {
+            let s = Settings::parse(&format!(r#"{{"theme":"{old}"}}"#)).unwrap();
+            assert_eq!(s.theme, Theme::Glass, "{old}");
+            assert_eq!(serde_json::to_string(&s.theme).unwrap(), r#""glass""#);
+        }
+        let s = Settings::parse(r#"{"theme":"contrast"}"#).unwrap();
+        assert_eq!(s.theme, Theme::Contrast);
+    }
+
+    #[test]
+    fn glass_is_the_default_and_high_contrast_stays() {
+        assert_eq!(Theme::default(), Theme::Glass);
+        assert_eq!(THEMES, [Theme::Glass, Theme::Contrast]);
     }
 
     #[test]
