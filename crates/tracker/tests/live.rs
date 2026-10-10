@@ -170,6 +170,8 @@ fn the_live_report_follows_new_lines_between_polls() {
     assert_ne!(early, None);
 }
 
+const LOADING_FROM_LOBBY: &str = "D 10:00:01.0000000 LoadingScreen.OnScenePreUnload() - prevMode=BACON nextMode=GAMEPLAY m_phase=INVALID\n";
+
 fn scene_line(prev: &str, curr: &str) -> String {
     format!("D 10:00:00.0000000 LoadingScreen.OnSceneLoaded() - prevMode={prev} currMode={curr}\n")
 }
@@ -187,13 +189,14 @@ fn leaving_the_game_screen_ends_the_live_game_of_a_cut_off_log() {
     append(&session.join("Power.log"), &log);
     watcher.poll().unwrap();
     assert_eq!(watcher.scene(), None, "no LoadingScreen.log: unknown");
-    assert!(watcher.live_report().is_some(), "as before without the file");
+    assert!(
+        watcher.live_report().is_some(),
+        "as before without the file"
+    );
 
     let scenes = session.join("LoadingScreen.log");
     append(&scenes, &scene_line("HUB", "BACON"));
-    append(&scenes, &format!(
-        "D 10:00:01.0000000 LoadingScreen.OnScenePreUnload() - prevMode=BACON nextMode=GAMEPLAY m_phase=INVALID\n"
-    ));
+    append(&scenes, LOADING_FROM_LOBBY);
     watcher.poll().unwrap();
     assert_eq!(watcher.scene(), Some(Scene::BattlegroundsLoading));
     assert!(watcher.live_report().is_some());
@@ -210,6 +213,20 @@ fn leaving_the_game_screen_ends_the_live_game_of_a_cut_off_log() {
     assert!(watcher.in_progress().is_none());
     assert!(watcher.live_lobby().is_empty());
     assert_eq!(watcher.live_next_opponent(), None);
+
+    // The next game loads: the game that was left does not come back.
+    append(&scenes, LOADING_FROM_LOBBY);
+    append(&scenes, &scene_line("BACON", "GAMEPLAY"));
+    watcher.poll().unwrap();
+    assert_eq!(watcher.scene(), Some(Scene::Game));
+    assert!(watcher.live_report().is_none(), "the left game stays left");
+    assert!(watcher.in_progress().is_none());
+
+    // Its CREATE_GAME arrives: the new game is on.
+    append(&session.join("Power.log"), &fixture("duo_game_incomplete"));
+    watcher.poll().unwrap();
+    assert!(watcher.live_report().is_some(), "the new game");
+    assert!(watcher.in_progress().is_some());
 }
 
 #[test]

@@ -100,6 +100,9 @@ pub struct Watcher {
     /// False after the scene file could not be read: the scene is unknown
     /// until it reads again, never a stale one.
     scene_read: bool,
+    /// A game the player left before its end (session, game index): it
+    /// stays over even when the next game's loading screen comes.
+    left: Option<(String, usize)>,
 }
 
 impl Watcher {
@@ -116,6 +119,7 @@ impl Watcher {
             scenes: Follower::loading_screen(logs_dir),
             scene: SceneTracker::default(),
             scene_read: true,
+            left: None,
         }
     }
 
@@ -162,6 +166,13 @@ impl Watcher {
             }
         });
         self.poll_scenes();
+        if self.scene().is_some_and(Scene::left_game) {
+            if let Some(r) = self.reader.as_ref() {
+                if let Some(index) = r.log.in_progress_index() {
+                    self.left = Some((r.name.clone(), index));
+                }
+            }
+        }
         let saved = self.save_pending()?;
         read.map(|()| saved)
     }
@@ -190,9 +201,19 @@ impl Watcher {
     }
 
     /// The player left the game screen: a game the log still has open was
-    /// cut off, so it is not "on" any more for the overlay and the window.
+    /// cut off, so it is not "on" any more for the overlay and the window,
+    /// also once the next game starts loading.
     fn game_left(&self) -> bool {
-        self.scene().is_some_and(Scene::left_game)
+        if self.scene().is_some_and(Scene::left_game) {
+            return true;
+        }
+        let Some(r) = self.reader.as_ref() else {
+            return false;
+        };
+        match (&self.left, r.log.in_progress_index()) {
+            (Some((session, index)), Some(now)) => *session == r.name && *index == now,
+            _ => false,
+        }
     }
 
     /// Closes the game in progress (e.g. when the app quits) and saves it.

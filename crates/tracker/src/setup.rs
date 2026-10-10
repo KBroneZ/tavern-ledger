@@ -163,7 +163,10 @@ impl SetupReport {
     /// English; empty when they are there or when `log.config` itself needs
     /// fixing first (the messages say that).
     pub fn notes(&self) -> Vec<String> {
-        let readable = matches!(self.log_config, FileCheck::Ok | FileCheck::SettingsMissing(_));
+        let readable = matches!(
+            self.log_config,
+            FileCheck::Ok | FileCheck::SettingsMissing(_)
+        );
         match &self.loading_screen {
             FileCheck::SettingsMissing(lines) if readable => {
                 let place = self
@@ -351,9 +354,13 @@ mod tests {
         let dir = temp_dir();
         let log = dir.join(LOG_CONFIG_FILE);
         let client_cfg = dir.join(CLIENT_CONFIG_FILE);
-        fs::write(&client_cfg, "[Log]
+        fs::write(
+            &client_cfg,
+            "[Log]
 FileSizeLimit.Int=-1
-").unwrap();
+",
+        )
+        .unwrap();
         fs::write(&log, POWER_OK).unwrap();
         let without = check_setup(Some(&log), Some(&client_cfg));
         assert!(without.is_ok(), "the Power log is enough");
@@ -364,19 +371,25 @@ FileSizeLimit.Int=-1
         assert!(notes[0].contains("[LoadingScreen]"));
         assert!(notes[0].contains("LogLevel=1, FilePrinting=true"));
 
-        let with = format!("{POWER_OK}[LoadingScreen]
+        let with = format!(
+            "{POWER_OK}[LoadingScreen]
 LogLevel=1
 FilePrinting=True
 Verbose=False
-");
+"
+        );
         fs::write(&log, with).unwrap();
-        assert!(check_setup(Some(&log), Some(&client_cfg)).notes().is_empty());
+        assert!(check_setup(Some(&log), Some(&client_cfg))
+            .notes()
+            .is_empty());
     }
 
     #[test]
     fn no_optional_note_while_log_config_itself_is_missing() {
         let dir = temp_dir();
-        assert!(check_setup(Some(&dir.join("log.config")), None).notes().is_empty());
+        assert!(check_setup(Some(&dir.join("log.config")), None)
+            .notes()
+            .is_empty());
     }
 
     #[test]

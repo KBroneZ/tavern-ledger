@@ -431,7 +431,9 @@ fn publish_scene(app: &AppHandle, state: &AppState, now: Option<Scene>) {
     if changed {
         let _ = app.emit(LIVE_CHANGED, ());
     }
-    set_status(app, state, |s| s.scene = now.map(|n| n.describe().to_string()));
+    set_status(app, state, |s| {
+        s.scene = now.map(|n| n.describe().to_string())
+    });
 }
 
 /// Keeps the overlay's game up to date and tells it, only if it changed.
@@ -513,7 +515,11 @@ fn refresh_setup(app: &AppHandle, state: &AppState, logs_dir: &Path) {
     let client_config = client_config_path(logs_dir);
     let report = check_setup(log_config.as_deref(), client_config.as_deref());
     // What to fix first, then what is optional (T-314).
-    let messages: Vec<String> = report.messages().into_iter().chain(report.notes()).collect();
+    let messages: Vec<String> = report
+        .messages()
+        .into_iter()
+        .chain(report.notes())
+        .collect();
     set_status(app, state, |s| s.setup = messages);
 }
 

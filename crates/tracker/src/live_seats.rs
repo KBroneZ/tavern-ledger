@@ -73,8 +73,7 @@ fn seat_shown(seat: i64, p: &Value) -> LiveSeat {
         .iter()
         .take(MAX_CHANGES)
         .filter_map(|t| t.get("count")?.as_i64())
-        .filter(|c| *c >= 0)
-        .last();
+        .rfind(|c| *c >= 0);
     let changes: Vec<(String, i64)> = list(p, "trinkets")
         .iter()
         .take(MAX_CHANGES)
@@ -133,7 +132,11 @@ mod tests {
             .iter()
             .map(|t| (t.slot.as_str(), t.dbf_id))
             .collect();
-        assert_eq!(trinkets, [("first", 112), ("second", 222)], "an upgrade replaces the first");
+        assert_eq!(
+            trinkets,
+            [("first", 112), ("second", 222)],
+            "an upgrade replaces the first"
+        );
         assert!(shown[0].trinkets.iter().all(|t| t.card_id.is_none()));
     }
 

@@ -578,7 +578,10 @@ fn each_opponent_carries_the_leaderboards_triples_and_trinkets() {
     assert_eq!(second.shown[0].triples, Some(2));
     assert_eq!(second.shown[0].trinkets[0].dbf_id, 111);
     let third = opponent(&live, 3);
-    assert_eq!(third.shown[0].triples, None, "no triple in the log is not 0");
+    assert_eq!(
+        third.shown[0].triples, None,
+        "no triple in the log is not 0"
+    );
 }
 
 #[test]
@@ -595,7 +598,8 @@ fn trinket_cards_come_from_the_card_data_when_it_knows_the_id() {
         .with_trinket_cards(|dbf| (dbf == 111).then(|| "BG30_MagicItem_1".to_string()));
     let trinket = &opponent(&live, 2).shown[0].trinkets[0];
     assert_eq!(trinket.card_id.as_deref(), Some("BG30_MagicItem_1"));
-    let unknown = live_game(&with_seat_values(solo(vec![], "incomplete"))).with_trinket_cards(|_| None);
+    let unknown =
+        live_game(&with_seat_values(solo(vec![], "incomplete"))).with_trinket_cards(|_| None);
     assert_eq!(opponent(&unknown, 2).shown[0].trinkets[0].card_id, None);
 }
 

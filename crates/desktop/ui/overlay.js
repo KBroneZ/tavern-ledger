@@ -271,8 +271,12 @@ function renderOpponents(g) {
   // The next opponent the game marks (T-313), with the last board met.
   const next = TLWords.nextOpponent(g.opponents);
   if (next) {
-    const block = el("div", "next-block");
-    block.append(el("h3", null, g.is_duos ? "Next opposing team" : "Next opponent"), opponentHead(next), ...renderShown(next), ...renderBoards(next));
+    const block = el("div", "opponent next-block");
+    const head = opponentHead(next);
+    // The heading already says "next".
+    const badge = head.querySelector(".next-badge");
+    if (badge) badge.remove();
+    block.append(el("h3", null, g.is_duos ? "Next opposing team" : "Next opponent"), head, ...renderShown(next), ...renderBoards(next));
     panel.append(block);
   }
   for (const opponent of g.opponents) {

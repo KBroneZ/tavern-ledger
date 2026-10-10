@@ -124,7 +124,9 @@ mod tests {
     use super::*;
 
     fn loaded(prev: &str, curr: &str) -> String {
-        format!("D 19:15:48.8947131 LoadingScreen.OnSceneLoaded() - prevMode={prev} currMode={curr}")
+        format!(
+            "D 19:15:48.8947131 LoadingScreen.OnSceneLoaded() - prevMode={prev} currMode={curr}"
+        )
     }
 
     fn pre_unload(prev: &str, next: &str) -> String {
@@ -142,7 +144,8 @@ mod tests {
     #[test]
     fn nothing_read_is_unknown() {
         assert_eq!(after_lines(&[]), None);
-        let noise = "D 19:11:43.1 LoadingScreen.OnSceneLoaded() - m_assetLoadStartTimestamp=123".to_string();
+        let noise = "D 19:11:43.1 LoadingScreen.OnSceneLoaded() - m_assetLoadStartTimestamp=123"
+            .to_string();
         assert_eq!(after_lines(&[noise]), None);
     }
 
@@ -151,7 +154,11 @@ mod tests {
         let mut lines = vec![loaded("STARTUP", "LOGIN"), loaded("LOGIN", "HUB")];
         assert_eq!(after_lines(&lines), Some(Scene::Menu));
         lines.push(pre_unload("HUB", "BACON"));
-        assert_eq!(after_lines(&lines), Some(Scene::Menu), "still the menu until it loads");
+        assert_eq!(
+            after_lines(&lines),
+            Some(Scene::Menu),
+            "still the menu until it loads"
+        );
         lines.push(loaded("HUB", "BACON"));
         assert_eq!(after_lines(&lines), Some(Scene::BattlegroundsLobby));
         lines.push(pre_unload("BACON", "GAMEPLAY"));
@@ -159,7 +166,11 @@ mod tests {
         lines.push(loaded("BACON", "GAMEPLAY"));
         assert_eq!(after_lines(&lines), Some(Scene::Game));
         lines.push(pre_unload("GAMEPLAY", "BACON"));
-        assert_eq!(after_lines(&lines), Some(Scene::BattlegroundsLobby), "left as soon as it closes");
+        assert_eq!(
+            after_lines(&lines),
+            Some(Scene::BattlegroundsLobby),
+            "left as soon as it closes"
+        );
         lines.push(loaded("GAMEPLAY", "BACON"));
         assert_eq!(after_lines(&lines), Some(Scene::BattlegroundsLobby));
     }
@@ -169,7 +180,11 @@ mod tests {
         let lines = vec![loaded("HUB", "DRAFT")];
         assert_eq!(after_lines(&lines), Some(Scene::Elsewhere));
         let lines = vec![loaded("HUB", "DRAFT"), pre_unload("DRAFT", "GAMEPLAY")];
-        assert_eq!(after_lines(&lines), Some(Scene::Elsewhere), "not a Battlegrounds load");
+        assert_eq!(
+            after_lines(&lines),
+            Some(Scene::Elsewhere),
+            "not a Battlegrounds load"
+        );
         let lines = vec![loaded("DRAFT", "GAMEPLAY")];
         assert_eq!(after_lines(&lines), Some(Scene::Game));
     }
@@ -186,6 +201,9 @@ mod tests {
     #[test]
     fn a_value_that_is_not_a_mode_name_is_ignored() {
         let odd = "D 1 LoadingScreen.OnSceneLoaded() - prevMode=HUB currMode=Some#1234".to_string();
-        assert_eq!(after_lines(&[loaded("LOGIN", "HUB"), odd]), Some(Scene::Menu));
+        assert_eq!(
+            after_lines(&[loaded("LOGIN", "HUB"), odd]),
+            Some(Scene::Menu)
+        );
     }
 }
