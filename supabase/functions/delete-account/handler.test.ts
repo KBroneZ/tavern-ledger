@@ -7,7 +7,7 @@ const NOW = Date.parse("2026-10-09T12:00:00Z");
 const SITE = "https://site.test";
 const ENV: Env = {
   url: "http://api.test",
-  serviceKey: "service-key-for-tests",
+  serviceKey: "sb_secret_test",
   allowedOrigins: [SITE],
   now: () => NOW,
 };
@@ -182,7 +182,7 @@ Deno.test("the error answer and log hold no token or id", async () => {
     const text = await res.text() + logged.join("\n");
     assertEquals(res.status, 500);
     const payload = TOKEN.split(".")[1];
-    assertEquals(text.includes(payload) || /0000000a|service-key/.test(text), false, text);
+    assertEquals(text.includes(payload) || /0000000a|sb_secret_test/.test(text), false, text);
   } finally {
     console.error = original;
   }

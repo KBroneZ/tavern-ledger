@@ -2,7 +2,7 @@
 // Fake HTTP APIs; tests/test_supabase_local.py runs it against the local stack.
 import { type Env, type Fetch, handle } from "./handler.ts";
 
-const ENV: Env = { url: "http://api.test", serviceKey: "service-key-for-tests" };
+const ENV: Env = { url: "http://api.test", serviceKey: "sb_secret_test" };
 const A = "00000000-0000-4000-8000-00000000000a";
 const orphan = (i: number) => `${A}/Hearthstone_2026_10_09_18_30_00-${i}.json.gz`;
 
@@ -16,6 +16,7 @@ interface Call {
   method: string;
   path: string;
   body: unknown;
+  headers: Record<string, string>;
 }
 
 const TOKEN = "ab".repeat(32);
@@ -31,7 +32,8 @@ function fakeApi(
     const path = input.replace(ENV.url, "");
     const method = init.method ?? "GET";
     const body = init.body ? JSON.parse(init.body as string) : null;
-    calls.push({ method, path, body });
+    const headers = (init.headers ?? {}) as Record<string, string>;
+    calls.push({ method, path, body, headers });
     if (opts.fail === path) return reply(503, {});
     if (path === "/rest/v1/rpc/sweep_orphan_files") return reply(200, files.slice(0, 1000));
     if (path === "/rest/v1/rpc/sweep_token_valid") {
@@ -94,6 +96,15 @@ Deno.test("a new-style secret key in apikey is accepted", async () => {
     headers: { apikey: "sb_secret_test" },
   });
   assertEquals((await handle(req, env, fakeApi().fetchFn)).status, 200);
+});
+
+Deno.test("service calls send the secret key in apikey only, never as a bearer", async () => {
+  const api = fakeApi({ files: [orphan(1)] });
+  assertEquals((await handle(request(), ENV, api.fetchFn)).status, 200);
+  for (const c of api.calls) {
+    assertEquals(c.headers.apikey, ENV.serviceKey, c.path);
+    assertEquals(c.headers.Authorization, undefined, c.path);
+  }
 });
 
 Deno.test("names that are not game files are never deleted", async () => {
