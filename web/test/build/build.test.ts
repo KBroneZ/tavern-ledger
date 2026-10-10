@@ -262,6 +262,19 @@ test("every number on the home page that is not real is labelled as made up", ()
   for (const [, , label] of big) assert.match(label, /made-up example/);
 });
 
+test("the pinned scene takes at most about 1.5 screens of scrolling", () => {
+  const css = ALL.filter((f) => f.endsWith(".css"))
+    .map((f) => readFileSync(f, "utf8"))
+    .join("\n");
+  // Every height the moving scene sets on .pin, in viewport heights.
+  const heights = [...css.matchAll(/\.pin\{[^}]*?\bheight:\s*(\d+(?:\.\d+)?)vh/g)].map((m) => Number(m[1]));
+  assert.ok(heights.length >= 2, "desktop and narrow heights are set");
+  for (const vh of heights) {
+    // The scene scrolls for (height - 100vh); keep every step readable but short.
+    assert.ok(vh >= 200 && vh <= 260, `.pin is ${vh}vh`);
+  }
+});
+
 test("the still picture is the default: every animation sits behind the two scroll-timeline queries", () => {
   const css = ALL.filter((f) => f.endsWith(".css"))
     .map((f) => readFileSync(f, "utf8"))

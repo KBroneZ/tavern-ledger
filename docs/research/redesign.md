@@ -146,7 +146,7 @@ Structure:
 </section>
 ```
 
-- `.pin` is `460vh` tall (`420vh` under 860px wide) and declares `view-timeline: --pin block`. `.pin-stage` is `position: sticky; top: <nav height>; height: calc(100vh - <nav height>)`, a two-column grid (captions `0.75fr`, scene `1.75fr`; one column on phones, captions on top).
+- `.pin` is `250vh` tall (`230vh` under 860px wide; first built at `460vh` and `420vh`, shortened after the user found it too long, D-056) and declares `view-timeline: --pin block`. `.pin-stage` is `position: sticky; top: <nav height>; height: calc(100vh - <nav height>)`, a two-column grid (captions `0.75fr`, scene `1.75fr`; one column on phones, captions on top).
 - `.stage3d` has `perspective: 1900px; perspective-origin: 50% 35%`. `.scene3` (16:10, `transform-style: preserve-3d`) rests at `rotateY(-42deg) rotateX(9deg)`.
 - Each `.pane` is a glass rectangle (`border-radius: 20px`, fill `rgb(255 238 220 / 0.045)`, prism edge at 60%) placed with `transform: translateZ(var(--z))`: board `-210px`, tavern `-70px`, leaderboard `70px`, ours `210px`. `--z` is set in the pane's class, never inline.
 - Pane contents, all our own shapes: board, seven soft amber lights in a row near the bottom; tavern, four outlined rounded rectangles near the top; leaderboard, eight small circles down the left with the third one white and glowing; ours, a dark card with an amber ring at the top centre, three small panels on the right and a thin amber line from the glowing circle to the card. Each pane has a label chip above its top left corner; ours is amber.
