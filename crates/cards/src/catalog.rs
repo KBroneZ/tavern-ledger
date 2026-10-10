@@ -22,11 +22,12 @@ pub const MAX_ENTRIES: usize = 200_000;
 /// The real file is about 10 MB; this stops a gzip bomb.
 pub const MAX_INFLATED: usize = 32 * 1024 * 1024;
 /// Version of the file we keep on the PC. Format 1 had names only, format 2
-/// no hero links; both still load, without what they lack, and are fetched
-/// again (T-307, T-214).
-const SAVED_FORMAT: u32 = 3;
+/// no hero links, format 3 no card links; all still load, without what they
+/// lack, and are fetched again (T-307, T-214, T-207).
+const SAVED_FORMAT: u32 = 4;
 const NAMES_ONLY_FORMAT: u32 = 1;
 const NO_HERO_LINKS_FORMAT: u32 = 2;
+const NO_CARD_LINKS_FORMAT: u32 = 3;
 /// The real data has about 3,000 hero cards (skins included).
 pub const MAX_HEROES: usize = 20_000;
 /// Database ids are positive and far below this.
@@ -135,10 +136,14 @@ struct RawCard {
     card_type: Option<String>,
 }
 
+/// A card's database id, when it is a plain one.
+fn card_dbf(card: &RawCard) -> Option<i64> {
+    card.dbf.filter(|d| (1..=MAX_DBF_ID).contains(d))
+}
+
 /// The database id of a hero card, the only kind a skin links to.
 fn hero_dbf(card: &RawCard) -> Option<i64> {
-    let dbf = card.dbf.filter(|d| (1..=MAX_DBF_ID).contains(d))?;
-    (card.card_type.as_deref() == Some("HERO")).then_some(dbf)
+    card_dbf(card).filter(|_| card.card_type.as_deref() == Some("HERO"))
 }
 
 fn string_or_none<'de, D: Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {
@@ -212,10 +217,12 @@ fn clean_pool(minion: PoolMinion) -> Option<PoolMinion> {
     ok.then_some(minion)
 }
 
-/// The usable (id, name, pool data, hero database id) entries, read one
-/// entry at a time so a file of millions of tiny entries is refused before
-/// it fills memory.
-struct Pairs(Vec<(String, String, Option<PoolMinion>, Option<i64>)>);
+/// One usable entry: id, name, pool data, hero database id, database id.
+type Entry = (String, String, Option<PoolMinion>, Option<i64>, Option<i64>);
+
+/// The usable entries, read one entry at a time so a file of millions of
+/// tiny entries is refused before it fills memory.
+struct Pairs(Vec<Entry>);
 
 impl<'de> Deserialize<'de> for Pairs {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Pairs, D::Error> {
@@ -234,12 +241,13 @@ impl<'de> Deserialize<'de> for Pairs {
                         return Err(de::Error::custom("too many entries"));
                     }
                     let pool = pool_minion(&card);
-                    let dbf = hero_dbf(&card);
+                    let hero = hero_dbf(&card);
+                    let dbf = card_dbf(&card);
                     let (Some(id), Some(name)) = (card.id, card.name) else {
                         continue;
                     };
                     if let Some(name) = clean_name(&name).filter(|_| valid_id(&id)) {
-                        pairs.push((id, name, pool, dbf));
+                        pairs.push((id, name, pool, hero, dbf));
                     }
                 }
                 Ok(Pairs(pairs))
@@ -256,6 +264,38 @@ pub struct Catalog {
     pool: BTreeMap<String, PoolMinion>,
     /// Hero card ids by database id (T-214); every id here has a name.
     heroes: BTreeMap<i64, String>,
+    /// Every card id by database id, for the trinkets and the Old God the log
+    /// gives as database ids (T-207); every id here has a name.
+    cards: BTreeMap<i64, String>,
+}
+
+/// Card ids by database id, keeping only ids that have a name. A database id
+/// two cards claim is dropped, not guessed; far too many drops them all.
+fn links(
+    ids: impl Iterator<Item = (i64, String)>,
+    names: &BTreeMap<String, String>,
+    max: usize,
+) -> BTreeMap<i64, String> {
+    let mut links: BTreeMap<i64, String> = BTreeMap::new();
+    let mut twice = BTreeSet::new();
+    for (dbf, id) in ids.filter(|(dbf, id)| {
+        (1..=MAX_DBF_ID).contains(dbf) && valid_id(id) && names.contains_key(id)
+    }) {
+        match links.get(&dbf) {
+            Some(seen) if *seen != id => {
+                twice.insert(dbf);
+            }
+            Some(_) => {}
+            None => {
+                links.insert(dbf, id);
+            }
+        }
+    }
+    links.retain(|dbf, _| !twice.contains(dbf));
+    if links.len() > max {
+        links.clear();
+    }
+    links
 }
 
 impl Catalog {
@@ -264,17 +304,26 @@ impl Catalog {
         let Pairs(entries) = serde_json::from_slice(json).map_err(|_| CatalogError::Shape)?;
         let mut pool = BTreeMap::new();
         let mut heroes = Vec::new();
+        let mut cards = Vec::new();
         let mut pairs = Vec::with_capacity(entries.len());
-        for (id, name, minion, dbf) in entries {
+        for (id, name, minion, hero, dbf) in entries {
             if let Some(minion) = minion {
                 pool.insert(id.clone(), minion);
             }
+            if let Some(hero) = hero {
+                heroes.push((hero, id.clone()));
+            }
             if let Some(dbf) = dbf {
-                heroes.push((dbf, id.clone()));
+                cards.push((dbf, id.clone()));
             }
             pairs.push((id, name));
         }
-        Catalog::from_parts(pairs.into_iter(), pool, heroes.into_iter())
+        Catalog::from_parts(
+            pairs.into_iter(),
+            pool,
+            heroes.into_iter(),
+            cards.into_iter(),
+        )
     }
 
     /// An id that appears twice with different names is dropped: showing
@@ -285,6 +334,7 @@ impl Catalog {
         pairs: impl Iterator<Item = (String, String)>,
         mut pool: BTreeMap<String, PoolMinion>,
         hero_ids: impl Iterator<Item = (i64, String)>,
+        card_ids: impl Iterator<Item = (i64, String)>,
     ) -> Result<Catalog, CatalogError> {
         let mut names = BTreeMap::new();
         let mut clashes = BTreeSet::new();
@@ -304,25 +354,8 @@ impl Catalog {
         if pool.len() > MAX_POOL {
             pool.clear();
         }
-        let mut heroes: BTreeMap<i64, String> = BTreeMap::new();
-        let mut twice = BTreeSet::new();
-        for (dbf, id) in hero_ids.filter(|(dbf, id)| {
-            (1..=MAX_DBF_ID).contains(dbf) && valid_id(id) && names.contains_key(id)
-        }) {
-            match heroes.get(&dbf) {
-                Some(seen) if *seen != id => {
-                    twice.insert(dbf);
-                }
-                Some(_) => {}
-                None => {
-                    heroes.insert(dbf, id);
-                }
-            }
-        }
-        heroes.retain(|dbf, _| !twice.contains(dbf));
-        if heroes.len() > MAX_HEROES {
-            heroes.clear();
-        }
+        let heroes = links(hero_ids, &names, MAX_HEROES);
+        let cards = links(card_ids, &names, MAX_CARDS);
         if names.len() > MAX_CARDS {
             return Err(CatalogError::TooMany);
         }
@@ -333,6 +366,7 @@ impl Catalog {
             names,
             pool,
             heroes,
+            cards,
         })
     }
 
@@ -350,6 +384,12 @@ impl Catalog {
     /// copy saved before T-214).
     pub fn hero_links(&self) -> &BTreeMap<i64, String> {
         &self.heroes
+    }
+
+    /// The card id of a database id; None when the data has none (e.g. a
+    /// copy saved before T-207) or two cards claim it.
+    pub fn card_of_dbf(&self, dbf: i64) -> Option<&str> {
+        self.cards.get(&dbf).map(String::as_str)
     }
 
     pub fn contains(&self, id: &str) -> bool {
@@ -377,6 +417,8 @@ struct Saved {
     pool: BTreeMap<String, PoolMinion>,
     #[serde(default)]
     heroes: BTreeMap<i64, String>,
+    #[serde(default)]
+    cards: BTreeMap<i64, String>,
 }
 
 /// An ETag we send back as-is: visible ASCII only, so a hand-edited file
@@ -402,6 +444,7 @@ impl SavedCatalog {
             names: self.catalog.names.clone(),
             pool: self.catalog.pool.clone(),
             heroes: self.catalog.heroes.clone(),
+            cards: self.catalog.cards.clone(),
         };
         serde_json::to_vec(&saved).unwrap_or_default()
     }
@@ -411,7 +454,12 @@ impl SavedCatalog {
     pub fn from_json(bytes: &[u8]) -> Result<SavedCatalog, CatalogError> {
         let saved: Saved = serde_json::from_slice(bytes).map_err(|_| CatalogError::Shape)?;
         // An older copy lacks what later formats added: fetched again soon.
-        let old = saved.format == NAMES_ONLY_FORMAT || saved.format == NO_HERO_LINKS_FORMAT;
+        let old = [
+            NAMES_ONLY_FORMAT,
+            NO_HERO_LINKS_FORMAT,
+            NO_CARD_LINKS_FORMAT,
+        ]
+        .contains(&saved.format);
         if saved.format != SAVED_FORMAT && !old {
             return Err(CatalogError::Shape);
         }
@@ -430,7 +478,12 @@ impl SavedCatalog {
         // next fetch brings the whole file instead of "unchanged".
         let etag = saved.etag.filter(|e| valid_etag(e)).filter(|_| !old);
         Ok(SavedCatalog {
-            catalog: Catalog::from_parts(pairs, pool, saved.heroes.into_iter())?,
+            catalog: Catalog::from_parts(
+                pairs,
+                pool,
+                saved.heroes.into_iter(),
+                saved.cards.into_iter(),
+            )?,
             // An older copy counts as old, so it is replaced soon.
             fetched_at: if old { 0 } else { saved.fetched_at },
             etag,
@@ -675,6 +728,44 @@ pub mod tests {
             .collect();
         // Only heroes; a database id two cards claim is dropped, not guessed.
         assert_eq!(links, [(59999, "HERO_BASE"), (70001, "HERO_BASE_SKIN_A")]);
+    }
+
+    #[test]
+    fn any_card_is_found_by_its_database_id_and_saved() {
+        let extra = vec![
+            json!({"id": "TRINKET_A", "name": "Trinket", "type": "BATTLEGROUND_TRINKET", "dbfId": 1234}),
+            json!({"id": "HERO_BASE", "name": "Base", "type": "HERO", "dbfId": 59999}),
+            json!({"id": "TWIN_A", "name": "Twin A", "dbfId": 333}),
+            json!({"id": "TWIN_B", "name": "Twin B", "dbfId": 333}),
+        ];
+        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
+        assert_eq!(catalog.card_of_dbf(1234), Some("TRINKET_A"));
+        assert_eq!(catalog.card_of_dbf(59999), Some("HERO_BASE"));
+        assert_eq!(catalog.card_of_dbf(333), None, "claimed twice: not guessed");
+        assert_eq!(catalog.card_of_dbf(-1), None);
+        let saved = SavedCatalog {
+            catalog,
+            fetched_at: 1_700_000_000,
+            etag: Some("\"abc\"".into()),
+        };
+        let back = SavedCatalog::from_json(&saved.to_json()).unwrap();
+        assert_eq!(back, saved);
+        let mut edited: Value = serde_json::from_slice(&saved.to_json()).unwrap();
+        edited["cards"]["7"] = json!("../EVIL");
+        edited["cards"]["8"] = json!("NOT_A_CARD");
+        let back = SavedCatalog::from_json(&serde_json::to_vec(&edited).unwrap()).unwrap();
+        assert_eq!(
+            (back.catalog.card_of_dbf(7), back.catalog.card_of_dbf(8)),
+            (None, None)
+        );
+        // A copy from before the card links loads without them and is fetched again soon.
+        let mut old: Value = serde_json::from_slice(&saved.to_json()).unwrap();
+        old["format"] = json!(3);
+        old.as_object_mut().unwrap().remove("cards");
+        let back = SavedCatalog::from_json(&serde_json::to_vec(&old).unwrap()).unwrap();
+        assert_eq!(back.catalog.card_of_dbf(1234), None);
+        assert_eq!(back.catalog.hero_links().len(), 1);
+        assert_eq!((back.fetched_at, back.etag), (0, None));
     }
 
     #[test]
