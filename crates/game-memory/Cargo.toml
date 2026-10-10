@@ -9,6 +9,12 @@ description = "Read-only reader for two values the game shows the player: the lo
 
 [dependencies]
 
+# Tries both reads once against the running game (read-only) and prints the
+# result: the check mode for the app's status and for each new game build.
+[[bin]]
+name = "game-memory-check"
+path = "src/check.rs"
+
 # Read and query rights only (D-063): no write, thread or debug features.
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
