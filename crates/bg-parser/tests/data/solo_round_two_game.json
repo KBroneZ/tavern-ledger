@@ -1,0 +1,75 @@
+[
+  {
+    "index": 1,
+    "status": "ok",
+    "game_type": "GT_BATTLEGROUNDS",
+    "build": 253216,
+    "local_player_id": 2,
+    "hero": "BG20_HERO_202",
+    "teammate_player_id": null,
+    "teammate_hero": null,
+    "final_place": 1,
+    "final_health": 30,
+    "lobby": [
+      {
+        "player_id": 2,
+        "hero": "BG20_HERO_202",
+        "duo_team": null,
+        "final_place": 1,
+        "final_health": 30
+      },
+      {
+        "player_id": 3,
+        "hero": "TB_BaconShop_HERO_60",
+        "duo_team": null,
+        "final_place": 2,
+        "final_health": 30
+      }
+    ],
+    "shop_tribes": {},
+    "rounds": [
+      {
+        "number": 2,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "BG20_HERO_202",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_60",
+            "board": [
+              {
+                "card_id": "BG26_135",
+                "atk": 3,
+                "health": 4,
+                "position": 1,
+                "golden": false
+              },
+              {
+                "card_id": "BG20_100",
+                "atk": 1,
+                "health": 1,
+                "position": 2,
+                "golden": false
+              }
+            ]
+          }
+        ],
+        "own_health_after": 30,
+        "opponents": [
+          3
+        ]
+      }
+    ],
+    "warnings": [],
+    "problems": [],
+    "not_in_log": [
+      "MMR",
+      "available tribes (exact list)"
+    ]
+  }
+]

@@ -16,7 +16,7 @@ import contract from "./report_keys.json" with { type: "json" };
  * refuse. Every answer carries it, and the desktop app retries a game this
  * server refused once when it sees a higher number (D-047).
  */
-export const VALIDATOR_VERSION = 4;
+export const VALIDATOR_VERSION = 5;
 
 export const SESSION_PATTERN = /^Hearthstone_(\d{4})_(\d{2})_(\d{2})_\d{2}_\d{2}_\d{2}$/;
 const PATH_PATTERN = /\/v1\/games\/(Hearthstone_\d{4}(?:_\d{2}){5})\/([1-9][0-9]{0,3})$/;
@@ -65,6 +65,26 @@ const TURN_KEYS_SINCE_R4 = [
   "free_refreshes",
   "passes",
 ];
+// Parser revision 5 (T-207, T-208, T-211, T-212, D-058): the leaderboard's
+// triples and trinkets per hero and turn, board keywords, the player's own
+// choices (discovers, trinket offers, Dark Gifts) and the game's Old God.
+// Older records have none of them, so none is required. Bounds are the
+// parser's (leaderboard.rs, discover.rs).
+const KEYWORDS = new Set([
+  "taunt",
+  "divine_shield",
+  "reborn",
+  "venomous",
+  "windfury",
+  "stealth",
+  "deathrattle",
+  "rally",
+]);
+const TRINKET_SLOTS = new Set(["first", "second", "hero_power"]);
+const MAX_CHANGES = 64;
+const MAX_TRIPLES = 1000;
+const MAX_DISCOVERS = 200;
+const MAX_OPTIONS = 10;
 const ACTION_KINDS = new Set([
   "roll",
   "buy",
@@ -107,11 +127,23 @@ const KEYS: Record<string, string[]> = {
     "shop",
     "hero_select",
     "skin_parents",
+    "discovers",
+    "old_god",
     "warnings",
     "problems",
     "not_in_log",
   ],
-  "report.lobby[]": ["player_id", "hero", "duo_team", "final_place", "final_health"],
+  "report.lobby[]": [
+    "player_id",
+    "hero",
+    "duo_team",
+    "final_place",
+    "final_health",
+    "triples",
+    "trinkets",
+  ],
+  "report.lobby[].triples[]": ["turn", "count"],
+  "report.lobby[].trinkets[]": ["turn", "slot", "dbf_id"],
   "report.rounds[]": [
     "number",
     "entries",
@@ -121,7 +153,14 @@ const KEYS: Record<string, string[]> = {
     "result",
   ],
   "report.rounds[].entries[]": ["side", "player_id", "hero", "board"],
-  "report.rounds[].entries[].board[]": ["card_id", "atk", "health", "position", "golden"],
+  "report.rounds[].entries[].board[]": [
+    "card_id",
+    "atk",
+    "health",
+    "position",
+    "golden",
+    "keywords",
+  ],
   "report.shop": ["turns", "tier_ups", "actions", "start_ms", "end_ms", "ended"],
   "report.shop.turns[]": [
     "turn",
@@ -149,6 +188,8 @@ const KEYS: Record<string, string[]> = {
   "report.shop.tier_ups[]": ["turn", "tier"],
   "report.shop.actions[]": ["ms", "turn", "kind"],
   "report.hero_select": ["offered", "rerolls", "picked"],
+  "report.discovers[]": ["turn", "source", "offered", "picked"],
+  "report.discovers[].offered[]": ["card_id", "gift"],
 };
 
 // A validator out of step with the list stops the function at start: games
@@ -263,6 +304,15 @@ function minion(v: unknown, field: string): void {
   optInt(m.position, `${field}.position`, 0, 64);
   if (m.golden !== undefined && typeof m.golden !== "boolean") {
     throw new Invalid(`${field}.golden`);
+  }
+  if (m.keywords !== undefined) {
+    const words = list(m.keywords, `${field}.keywords`, KEYWORDS.size);
+    if (
+      words.some((w) => typeof w !== "string" || !KEYWORDS.has(w)) ||
+      new Set(words).size !== words.length
+    ) {
+      throw new Invalid(`${field}.keywords`);
+    }
   }
 }
 
@@ -416,6 +466,48 @@ function lobbyPlayer(v: unknown, field: string, seen: Seen): void {
   optInt(p.duo_team, `${field}.duo_team`, 1, 8);
   optInt(p.final_place, `${field}.final_place`, 1, 8);
   optInt(p.final_health, `${field}.final_health`, -100000, 100000);
+  if (p.triples !== undefined) {
+    list(p.triples, `${field}.triples`, MAX_CHANGES).forEach((t, i) => {
+      const at = `${field}.triples[${i}]`;
+      const keys = KEYS["report.lobby[].triples[]"];
+      const triple = shape(t, at, keys, keys);
+      int(triple.turn, `${at}.turn`, 0, MAX_SHOP_TURNS);
+      int(triple.count, `${at}.count`, 0, MAX_TRIPLES);
+    });
+  }
+  if (p.trinkets !== undefined) {
+    list(p.trinkets, `${field}.trinkets`, MAX_CHANGES).forEach((t, i) => {
+      const at = `${field}.trinkets[${i}]`;
+      const keys = KEYS["report.lobby[].trinkets[]"];
+      const trinket = shape(t, at, keys, keys);
+      int(trinket.turn, `${at}.turn`, 0, MAX_SHOP_TURNS);
+      if (typeof trinket.slot !== "string" || !TRINKET_SLOTS.has(trinket.slot)) {
+        throw new Invalid(`${at}.slot`);
+      }
+      int(trinket.dbf_id, `${at}.dbf_id`, 1, MAX_DBF_ID);
+    });
+  }
+}
+
+/** The player's own choices: what was offered and the index of what was taken. */
+function discovers(v: unknown, field: string): void {
+  if (v === undefined) return;
+  list(v, field, MAX_DISCOVERS).forEach((d, i) => {
+    const at = `${field}[${i}]`;
+    const c = shape(d, at, KEYS["report.discovers[]"], ["turn", "offered", "picked"]);
+    int(c.turn, `${at}.turn`, 0, MAX_SHOP_TURNS);
+    cardId(c.source, `${at}.source`);
+    const offered = list(c.offered, `${at}.offered`, MAX_OPTIONS);
+    if (offered.length === 0) throw new Invalid(`${at}.offered`);
+    offered.forEach((o, j) => {
+      const opt = shape(o, `${at}.offered[${j}]`, KEYS["report.discovers[].offered[]"]);
+      cardId(opt.card_id, `${at}.offered[${j}].card_id`);
+      cardId(opt.gift, `${at}.offered[${j}].gift`);
+    });
+    const picked = list(c.picked, `${at}.picked`, offered.length);
+    picked.forEach((p, j) => int(p, `${at}.picked[${j}]`, 0, offered.length - 1));
+    if (new Set(picked).size !== picked.length) throw new Invalid(`${at}.picked`);
+  });
 }
 
 function tribes(v: unknown, field: string): Record<string, number> {
@@ -536,6 +628,8 @@ function check(value: unknown, session: string, index: number): Summary {
   }
   heroNames(r.card_names, "report.card_names", seen.heroes);
   skinParents(r.skin_parents, "report.skin_parents", seen.heroes);
+  discovers(r.discovers, "report.discovers");
+  optInt(r.old_god, "report.old_god", 1, MAX_DBF_ID);
 
   return {
     game_type: gameType,

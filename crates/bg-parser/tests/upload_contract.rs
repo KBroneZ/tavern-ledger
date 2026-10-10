@@ -75,6 +75,14 @@ fn walk(level: &str, value: &Value, seen: &mut BTreeMap<String, BTreeSet<String>
         ),
         ("report.shop", "tier_ups", "report.shop.tier_ups[]"),
         ("report.shop", "actions", "report.shop.actions[]"),
+        ("report.lobby[]", "triples", "report.lobby[].triples[]"),
+        ("report.lobby[]", "trinkets", "report.lobby[].trinkets[]"),
+        ("report", "discovers", "report.discovers[]"),
+        (
+            "report.discovers[]",
+            "offered",
+            "report.discovers[].offered[]",
+        ),
     ];
     for (parent, key, child) in children {
         if parent == level {

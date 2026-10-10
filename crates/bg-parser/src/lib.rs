@@ -9,7 +9,9 @@
 
 pub mod clock;
 pub mod collector;
+pub mod discover;
 pub mod hero_select;
+pub mod leaderboard;
 pub mod lines;
 pub mod power;
 pub mod report;
@@ -30,7 +32,7 @@ pub const PARSER_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Bump when a change makes the parser read the same log differently (new
 /// fields, fixed bugs). Saved with every game so `tavern-watch --reparse`
 /// and the server can tell which records an older parser wrote.
-pub const PARSER_REVISION: u32 = 4;
+pub const PARSER_REVISION: u32 = 5;
 
 /// Builds whose real logs this parser was checked against.
 pub const TESTED_BUILDS: &[i64] = &[253216];
@@ -46,6 +48,8 @@ const MAX_NAME_LEN: usize = 100;
 /// Hero names and skin links per report: far more than a lobby and a hero
 /// pick show, and what upload-game accepts.
 const MAX_HERO_MAPS: usize = 64;
+/// The game's Old God, set once on the game entity at the start.
+const OLD_GOD: &str = "BACON_GLOBAL_OLD_GOD_DBID";
 
 /// One game being read.
 #[derive(Debug, Default)]
@@ -96,6 +100,8 @@ impl GameReader {
                 }
                 let c = &mut self.collector;
                 c.hero_select.on_choices(body, &c.board, c.local_pid);
+                let turn = leaderboard::shop_turn(c.turn());
+                c.discovers.on_choices(body, &c.board, c.local_pid, turn);
                 return;
             }
             Line::Chosen(body) if self.error.is_none() => {
@@ -105,11 +111,13 @@ impl GameReader {
                 }
                 let c = &mut self.collector;
                 c.hero_select.on_chosen(body, &c.board);
+                c.discovers.on_chosen(body);
                 return;
             }
             _ => {}
         }
         self.collector.hero_select.on_other_line();
+        self.collector.discovers.on_other_line();
     }
 
     /// Keeps hero names only (their card ids hold "HERO"): the report shows
@@ -439,6 +447,14 @@ fn summarize(mut base: GameReport, c: &Collector) -> GameReport {
             }),
             final_place: place(h),
             final_health: hero_health(h),
+            triples: Vec::new(),
+            trinkets: Vec::new(),
+        })
+        .map(|mut p| {
+            let shown = c.leaderboard.of(p.player_id);
+            p.triples = shown.triples;
+            p.trinkets = shown.trinkets;
+            p
         })
         .collect();
     base.shop_tribes = count_tribes(c);
@@ -446,6 +462,10 @@ fn summarize(mut base: GameReport, c: &Collector) -> GameReport {
     base.start_health = c.lobby_health.get(&0).cloned().unwrap_or_default();
     base.shop = Some(c.shop.record(&c.board, c.seats()));
     base.hero_select = c.hero_select.record();
+    base.discovers = c.discovers.record();
+    base.old_god = game
+        .opt_int(OLD_GOD)
+        .filter(|v| (1..=collector::MAX_DBF_ID).contains(v));
     base
 }
 

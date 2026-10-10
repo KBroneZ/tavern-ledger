@@ -8,7 +8,9 @@ use std::collections::BTreeMap;
 use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 
+use crate::discover::Discover;
 use crate::hero_select::HeroSelect;
+use crate::leaderboard::{TrinketSeen, TriplesSeen};
 use crate::shop::ShopRecord;
 
 pub const NOT_IN_POWER_LOG: [&str; 2] = ["MMR", "available tribes (exact list)"];
@@ -46,7 +48,23 @@ pub struct Minion {
     pub health: i64,
     pub position: i64,
     pub golden: bool,
+    /// Keywords the minion had as it entered the combat (T-208, parser
+    /// revision 5), by name: see [`KEYWORDS`]. Rust-only.
+    pub keywords: Vec<&'static str>,
 }
+
+/// Keyword tags read on board minions and the name each is saved under, in
+/// this order (T-208). Golden is `Minion::golden`.
+pub const KEYWORDS: [(&str, &str); 8] = [
+    ("TAUNT", "taunt"),
+    ("DIVINE_SHIELD", "divine_shield"),
+    ("REBORN", "reborn"),
+    ("VENOMOUS", "venomous"),
+    ("WINDFURY", "windfury"),
+    ("STEALTH", "stealth"),
+    ("DEATHRATTLE", "deathrattle"),
+    ("BACON_RALLY", "rally"),
+];
 
 /// One side stepping into a combat. `board` is None when the fight never
 /// plays out in the local log: unknown, not empty.
@@ -103,6 +121,12 @@ pub struct LobbyPlayer {
     pub duo_team: Option<i64>,
     pub final_place: Option<i64>,
     pub final_health: i64,
+    /// The hero's triple count each time the leaderboard changed it (T-207,
+    /// parser revision 5). Rust-only.
+    pub triples: Vec<TriplesSeen>,
+    /// The hero's trinkets as the leaderboard shows them, each time one is
+    /// set (T-207, parser revision 5). Rust-only.
+    pub trinkets: Vec<TrinketSeen>,
 }
 
 /// One lobby hero as the game's leaderboard shows it right now: its place
@@ -150,6 +174,13 @@ pub struct GameReport {
     /// whose link the log gives (`BACON_SKIN_PARENT_ID`, T-214, parser
     /// revision 4). A hero missing here has no link in the log. Rust-only.
     pub skin_parents: BTreeMap<String, i64>,
+    /// Every choice the player was offered and what they took: discovers,
+    /// trinket offers, Dark Gifts, quests (T-211, T-212, parser revision 5).
+    /// Rust-only.
+    pub discovers: Vec<Discover>,
+    /// Database id of the game's Old God (`BACON_GLOBAL_OLD_GOD_DBID`, T-211,
+    /// parser revision 5); None when the log does not give one. Rust-only.
+    pub old_god: Option<i64>,
     pub warnings: Vec<String>,
     pub problems: Vec<String>,
     pub not_in_log: Vec<String>,
@@ -181,6 +212,8 @@ impl GameReport {
             shop: None,
             hero_select: None,
             skin_parents: BTreeMap::new(),
+            discovers: Vec::new(),
+            old_god: None,
             warnings: Vec::new(),
             problems: Vec::new(),
             not_in_log: NOT_IN_POWER_LOG.iter().map(|s| s.to_string()).collect(),

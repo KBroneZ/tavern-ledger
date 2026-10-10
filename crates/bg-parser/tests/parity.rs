@@ -17,10 +17,12 @@ fn check(name: &str) {
     .expect("valid json");
     let reports = bg_parser::parse_reader(log.as_slice()).expect("in-memory read");
     let mut actual = serde_json::to_value(&reports).expect("serializable");
-    // Hero names, the lobby's health, the shop, the hero pick, the skin links
-    // and the combat results the game records are Rust-only (the Python
-    // prototype does not read them); tests/card_names.rs,
-    // tests/lobby_health.rs, tests/shop.rs and tests/data_round.rs cover them.
+    // Hero names, the lobby's health, the shop, the hero pick, the skin links,
+    // the combat results the game records, the leaderboard's triples and
+    // trinkets, board keywords, discovers and the Old God are Rust-only (the
+    // Python prototype does not read them); tests/card_names.rs,
+    // tests/lobby_health.rs, tests/shop.rs, tests/data_round.rs and
+    // tests/round_two.rs cover them.
     for game in actual.as_array_mut().expect("list of games") {
         let report = game.as_object_mut().expect("report object");
         report.remove("card_names");
@@ -28,10 +30,24 @@ fn check(name: &str) {
         report.remove("shop");
         report.remove("hero_select");
         report.remove("skin_parents");
+        report.remove("discovers");
+        report.remove("old_god");
+        for player in report["lobby"].as_array_mut().expect("lobby") {
+            let player = player.as_object_mut().expect("lobby player");
+            player.remove("triples");
+            player.remove("trinkets");
+        }
         for round in report["rounds"].as_array_mut().expect("rounds") {
             let round = round.as_object_mut().expect("round");
             round.remove("health_after");
             round.remove("result");
+            for entry in round["entries"].as_array_mut().expect("entries") {
+                if let Some(board) = entry["board"].as_array_mut() {
+                    for minion in board {
+                        minion.as_object_mut().expect("minion").remove("keywords");
+                    }
+                }
+            }
         }
     }
     assert_eq!(actual, expected, "case {name}");
@@ -56,6 +72,8 @@ parity!(
     solo_shop_game_cut,
     solo_data_game,
     duo_data_game,
+    solo_round_two_game,
+    duo_round_two_game,
     not_battlegrounds,
     missing_own_hero,
     missing_entity,
@@ -78,7 +96,7 @@ fn every_fixture_is_checked() {
                 .is_some_and(|x| x == "log")
         })
         .count();
-    assert_eq!(count, 17, "add new fixtures to the parity! list");
+    assert_eq!(count, 19, "add new fixtures to the parity! list");
 }
 
 #[test]

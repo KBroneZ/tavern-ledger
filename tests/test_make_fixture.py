@@ -214,10 +214,25 @@ class DataRoundLinesTest(unittest.TestCase):
         self.assertIn("CHANGE_ENTITY - Updating Entity=103 CardID=TB_BaconShop_HERO_49", self.out)
 
     def test_other_choices_are_not_kept(self):
-        raw = self.raw.replace("ChoiceType=MULLIGAN CountMin", "ChoiceType=GENERAL CountMin")
+        raw = self.raw.replace("ChoiceType=MULLIGAN CountMin", "ChoiceType=TARGET CountMin")
         out = make_fixture.make_fixture(raw, game=1)
         self.assertNotIn("DebugPrintEntityChoices", out)
         self.assertNotIn("DebugPrintEntitiesChosen", out)
+
+    def test_discover_choices_are_kept_as_ids_with_their_source(self):
+        # T-211, T-212: a GENERAL choice keeps its source and cards, as ids.
+        raw = self.raw.replace("ChoiceType=MULLIGAN CountMin", "ChoiceType=GENERAL CountMin")
+        raw = raw.replace("Source=GameEntity", "Source=[entityName=Coin id=80 zone=HAND zonePos=1 "
+                                               "cardId=BG28_Coin player=2]")
+        out = make_fixture.make_fixture(raw, game=1)
+        lines = [line.split(" ", 2)[2] for line in out.splitlines() if CHOICE_LINE.search(line)]
+        self.assertEqual(lines[:2], [
+            "GameState.DebugPrintEntityChoices() - id=1 ChoiceType=GENERAL",
+            "GameState.DebugPrintEntityChoices() - Source=80",
+        ])
+        self.assertIn("GameState.DebugPrintEntitiesChosen() - Entities[0]=102", lines)
+        for dropped in ("TaskList", "CountMin", "Player=", "entityName"):
+            self.assertNotIn(dropped, "\n".join(lines))
 
     def test_the_new_tags_and_every_top_level_block_are_kept(self):
         for kept in ("tag=BACON_WON_LAST_COMBAT value=1", "tag=DAMAGE_DEALT_TO_HERO_LAST_TURN value=5",

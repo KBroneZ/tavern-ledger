@@ -9,6 +9,7 @@ import {
   realRecord,
   realSolo,
   record,
+  roundTwoGames,
   shopGames,
   SESSION,
   solo,
@@ -52,14 +53,16 @@ Deno.test("real Solo, unsupported and old records are accepted", () => {
   }
 });
 
-Deno.test("real games from the current parser (revision 4) are accepted", () => {
+Deno.test("real games from the current parser (revision 5) are accepted", () => {
   for (const report of [realDuos[0], realSolo[0]]) {
     assertEquals(report.shop.turns.length > 0, true, "the fixture has a shop record");
     assertEquals(report.hero_select.offered.length > 0, true, "the fixture has a hero pick");
     assertEquals(report.rounds.every((r: Json) => r.result !== null), true, "results");
     const v = validateRecord(realRecord(report), SESSION, 1);
     if (!v.ok) throw new Error(`refused: ${v.code} ${v.field}`);
-    assertEquals(v.summary.parser_version, "0.1.0+r4");
+    assertEquals(report.discovers.length > 0, true, "the fixture has choices");
+    assertEquals(report.old_god !== null, true, "the fixture has the Old God");
+    assertEquals(v.summary.parser_version, "0.1.0+r5");
     assertEquals(v.summary.hero_card_id, report.hero);
   }
 });
@@ -81,8 +84,111 @@ Deno.test("synthetic games with every revision 4 field are accepted", () => {
   assertEquals(kinds.includes("pass"), true, "a pass to the teammate");
 });
 
+/** A record without the revision 5 fields, as parser revision 4 wrote it. */
+function revision4(report: Json): Json {
+  const rec = realRecord(report);
+  rec.parser.revision = 4;
+  delete rec.report.discovers;
+  delete rec.report.old_god;
+  for (const p of rec.report.lobby) {
+    delete p.triples;
+    delete p.trinkets;
+  }
+  for (const r of rec.report.rounds) {
+    for (const e of r.entries) (e.board ?? []).forEach((m: Json) => delete m.keywords);
+  }
+  return rec;
+}
+
+Deno.test("synthetic games with every revision 5 field are accepted", () => {
+  for (const report of roundTwoGames) {
+    const v = validateRecord(realRecord(report), SESSION, 1);
+    if (!v.ok) throw new Error(`refused: ${v.code} ${v.field}`);
+  }
+  const slots = roundTwoGames.flatMap((g: Json) =>
+    g.lobby.flatMap((p: Json) => p.trinkets.map((t: Json) => t.slot))
+  );
+  assertEquals(new Set(slots).size, 2, "first and second trinkets");
+  const gifts = roundTwoGames.flatMap((g: Json) =>
+    g.discovers.flatMap((d: Json) => d.offered.filter((o: Json) => o.gift !== null))
+  );
+  assertEquals(gifts.length, 3, "a Dark Gift choice");
+});
+
+Deno.test("revision 4 records, without the revision 5 fields, are still accepted", () => {
+  for (const report of [realSolo[0], realDuos[0], ...roundTwoGames]) {
+    const v = validateRecord(revision4(report), SESSION, 1);
+    if (!v.ok) throw new Error(`refused: ${v.code} ${v.field}`);
+  }
+  // Unknown is allowed too: no Old God, a choice without a pick, no gift.
+  const unknown = realRecord(realSolo[0]);
+  unknown.report.old_god = null;
+  unknown.report.discovers[0].picked = [];
+  unknown.report.discovers[0].source = null;
+  unknown.report.discovers[0].offered[0].card_id = null;
+  assertEquals(validateRecord(unknown, SESSION, 1).ok, true);
+});
+
+Deno.test("the revision 5 fields keep to their shapes and bounds", () => {
+  const board = (r: Json) => r.rounds[0].entries.find((e: Json) => e.board?.length).board;
+  const cases: Array<[(r: Json) => void, string]> = [
+    [(r) => (r.lobby[0].triples = [{ turn: 1, count: -1 }]), "report.lobby[0].triples[0].count"],
+    [(r) => (r.lobby[0].triples = [{ turn: 1, count: 1001 }]), "report.lobby[0].triples[0].count"],
+    [(r) => (r.lobby[0].triples = [{ turn: 101, count: 1 }]), "report.lobby[0].triples[0].turn"],
+    [(r) => (r.lobby[0].triples = [{ turn: 1 }]), "report.lobby[0].triples[0].count"],
+    [
+      (r) => (r.lobby[0].triples = [{ turn: 1, count: 1, player: "x" }]),
+      "report.lobby[0].triples[0].player",
+    ],
+    [
+      (r) => (r.lobby[0].triples = new Array(65).fill({ turn: 1, count: 1 })),
+      "report.lobby[0].triples",
+    ],
+    [
+      (r) => (r.lobby[0].trinkets = [{ turn: 6, slot: "third", dbf_id: 5 }]),
+      "report.lobby[0].trinkets[0].slot",
+    ],
+    [
+      (r) => (r.lobby[0].trinkets = [{ turn: 6, slot: "first", dbf_id: 0 }]),
+      "report.lobby[0].trinkets[0].dbf_id",
+    ],
+    [
+      (r) => (r.lobby[0].trinkets = [{ turn: 6, slot: "first", dbf_id: 10000001 }]),
+      "report.lobby[0].trinkets[0].dbf_id",
+    ],
+    [(r) => (board(r)[0].keywords = ["flying"]), "report.rounds[0].entries[1].board[0].keywords"],
+    [
+      (r) => (board(r)[0].keywords = ["taunt", "taunt"]),
+      "report.rounds[0].entries[1].board[0].keywords",
+    ],
+    [(r) => (board(r)[0].keywords = "taunt"), "report.rounds[0].entries[1].board[0].keywords"],
+    [(r) => (r.discovers = {}), "report.discovers"],
+    [(r) => (r.discovers = new Array(201).fill(r.discovers[0])), "report.discovers"],
+    [(r) => (r.discovers[0].offered = []), "report.discovers[0].offered"],
+    [
+      (r) => (r.discovers[0].offered = new Array(11).fill(r.discovers[0].offered[0])),
+      "report.discovers[0].offered",
+    ],
+    [(r) => (r.discovers[0].offered[0].card_id = "<b>"), "report.discovers[0].offered[0].card_id"],
+    [(r) => (r.discovers[0].offered[0].gift = 7), "report.discovers[0].offered[0].gift"],
+    [(r) => (r.discovers[0].offered[0].name = "x"), "report.discovers[0].offered[0].name"],
+    [(r) => (r.discovers[0].source = "a b"), "report.discovers[0].source"],
+    [(r) => (r.discovers[0].turn = -1), "report.discovers[0].turn"],
+    [(r) => (r.discovers[0].picked = [5]), "report.discovers[0].picked[0]"],
+    [(r) => (r.discovers[0].picked = [0, 0]), "report.discovers[0].picked"],
+    [(r) => delete r.discovers[0].picked, "report.discovers[0].picked"],
+    [(r) => (r.old_god = 0), "report.old_god"],
+    [(r) => (r.old_god = "C'Thun"), "report.old_god"],
+  ];
+  for (const [forge, field] of cases) {
+    const rec = realRecord(roundTwoGames[0]);
+    forge(rec.report);
+    refused(rec, "invalid_report", field);
+  }
+});
+
 Deno.test("revision 3 records, without the revision 4 fields, are still accepted", () => {
-  const rec = realRecord(realSolo[0]);
+  const rec = revision4(realSolo[0]);
   rec.parser.revision = 3;
   delete rec.report.hero_select;
   delete rec.report.skin_parents;
@@ -248,8 +354,8 @@ Deno.test("a name in a health map is refused as a player name", () => {
   assertEquals(v.ok ? "accepted" : v.code, "player_name");
 });
 
-Deno.test("the validator version is a positive integer, 4 or more since revision 4", () => {
-  assertEquals(Number.isInteger(VALIDATOR_VERSION) && VALIDATOR_VERSION >= 4, true);
+Deno.test("the validator version is a positive integer, 5 or more since revision 5", () => {
+  assertEquals(Number.isInteger(VALIDATOR_VERSION) && VALIDATOR_VERSION >= 5, true);
 });
 
 Deno.test("session and index must match the address", () => {
