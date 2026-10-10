@@ -43,8 +43,10 @@ Card pictures (T-304): the overlay boards show each minion's art and English nam
 
 Privacy and terms (T-104b): a data inventory written from the code, and drafts of the privacy policy and terms in [docs/legal/](docs/legal/), shown on the site at `/privacy/` and `/terms/`. They are not in force: the controller's name, some provider details and the legal checks of the email sender are still to be decided; the contact addresses exist. No analytics, minimum age 16.
 
+Auth emails (T-104f): sign-up and sign-in emails go out from `noreply@tavernledger.net` through Lettermint (Netherlands, data kept in the EU, logs deleted after 28 days), with open and click tracking off, so the one-time link goes straight to the sign-in server. Tested end to end on 2026-10-10 (DMARC pass, no unsubscribe header, sign-in, export and deletion on the site). Decision D-041; details in [docs/research/deploy.md](docs/research/deploy.md) sections 10.11 and 10.12. Sign-ups stay closed until the user opens them, after Lettermint approves the account.
 
-Next tasks, in the user's order (2026-10-10; hub prompt [prompts/sessions/025-hub.md](prompts/sessions/025-hub.md)): (1) card and hero images in the overlay and the app (T-304, session 026); (2) redesign of the desktop app and overlay (T-305, session 027, after 026); the website redesign (T-104e, session 028) is done: direction "Combat Round", D-040; (3) an auth email sender that does not rewrite links (T-104f, session 029), which blocks opening sign-ups (D-037); then the follow-ups from session 022, T-D01, T-108, and what waits on the user (T-101, T-105, opening sign-ups).
+
+Next tasks, in the user's order (2026-10-10; hub prompt [prompts/sessions/025-hub.md](prompts/sessions/025-hub.md)): (1) card and hero images in the overlay and the app (T-304, session 026); (2) redesign of the desktop app and overlay (T-305, session 027, after 026); the website redesign (T-104e, session 028) is done: direction "Combat Round", D-040; (3) the auth email sender that does not rewrite links (T-104f, session 029) is done: Lettermint, D-041; then the follow-ups from session 022, T-D01, T-108, and what waits on the user (T-101, T-105, opening sign-ups).
 
 ## Check your log setup
 
