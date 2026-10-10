@@ -74,5 +74,6 @@ supabase/                backend: migrations, database tests, Edge Functions (lo
 package.json             dev tooling only (Supabase CLI, pinned)
 requirements.txt         Python dependencies with version and hash
 .github/workflows/       CI: tests, links and secrets
+.claude/skills/          design skills (third-party, PROVENANCE.md)
 .local/                  local only, never in git
 ```
