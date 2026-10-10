@@ -16,7 +16,7 @@ Contact for anything about your data: privacy@tavernledger.net.
 
 ## 2. The desktop app keeps your data on your PC
 
-The app reads the game's log files and saves a summary of each Battlegrounds game in `%APPDATA%\TavernLedger\games.jsonl`: the session's start time, mode, game build, your hero and your Duos teammate's hero, the lobby's heroes by player number, places and health, boards (as card ids), card names in your game's language, tribes offered in the tavern, and which parser version read the game. The logs contain the names (BattleTags) of the players in your lobby; the app does not save them.
+The app reads the game's log files and saves a summary of each Battlegrounds game in `%APPDATA%\TavernLedger\games.jsonl`: the session's start time, mode, game build, your hero and your Duos teammate's hero, the lobby's heroes by player number, places and health, boards (as card ids), card names in your game's language, tribes offered in the tavern, your own shop each turn (the cards offered, bought and sold, rolls, freezes, gold and tavern tier) and the actions the game recorded you making, with their time since the game started (to work out your actions per minute), and which parser version read the game. The logs contain the names (BattleTags) of the players in your lobby; the app does not save them.
 
 Unless you turn on uploading, the app sends nothing over the internet and we never receive this file. To export it, copy it; to delete it, delete the `TavernLedger` folder.
 

@@ -1,0 +1,547 @@
+[
+  {
+    "index": 1,
+    "status": "ok",
+    "game_type": "GT_BATTLEGROUNDS",
+    "build": 253216,
+    "local_player_id": 2,
+    "hero": "TB_BaconShop_HERO_37",
+    "teammate_player_id": null,
+    "teammate_hero": null,
+    "card_names": {},
+    "final_place": 1,
+    "final_health": 26,
+    "lobby": [
+      {
+        "player_id": 2,
+        "hero": "TB_BaconShop_HERO_37",
+        "duo_team": null,
+        "final_place": 1,
+        "final_health": 26
+      },
+      {
+        "player_id": 3,
+        "hero": "TB_BaconShop_HERO_60",
+        "duo_team": null,
+        "final_place": 2,
+        "final_health": 0
+      }
+    ],
+    "shop_tribes": {
+      "NEUTRAL": 12
+    },
+    "rounds": [
+      {
+        "number": 1,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "TB_BaconShop_HERO_37",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_60",
+            "board": []
+          }
+        ],
+        "own_health_after": 26,
+        "opponents": [
+          3
+        ],
+        "health_after": {
+          "2": 26,
+          "3": 30
+        }
+      },
+      {
+        "number": 2,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "TB_BaconShop_HERO_37",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_60",
+            "board": [
+              {
+                "card_id": "BG20_100",
+                "atk": 1,
+                "health": 1,
+                "position": 0,
+                "golden": false
+              },
+              {
+                "card_id": "BG28_300",
+                "atk": 1,
+                "health": 1,
+                "position": 0,
+                "golden": false
+              },
+              {
+                "card_id": "BG20_100",
+                "atk": 1,
+                "health": 1,
+                "position": 0,
+                "golden": false
+              }
+            ]
+          }
+        ],
+        "own_health_after": 26,
+        "opponents": [
+          3
+        ],
+        "health_after": {
+          "2": 26,
+          "3": 0
+        }
+      }
+    ],
+    "start_health": {
+      "2": 30,
+      "3": 30
+    },
+    "shop": {
+      "turns": [
+        {
+          "turn": 1,
+          "start_ms": 10000,
+          "end_ms": 70000,
+          "tier": 1,
+          "gold": 3,
+          "gold_spent": 3,
+          "rolls": 0,
+          "free_rolls": 0,
+          "buys": [
+            "BG20_100"
+          ],
+          "spell_buys": 0,
+          "sells": [],
+          "freezes": 1,
+          "offers": [
+            {
+              "card_id": "BG20_100",
+              "roll": 0,
+              "frozen": false
+            },
+            {
+              "card_id": "BG28_300",
+              "roll": 0,
+              "frozen": false
+            },
+            {
+              "card_id": "BGS_004",
+              "roll": 0,
+              "frozen": false
+            }
+          ],
+          "actions": 3
+        },
+        {
+          "turn": 2,
+          "start_ms": 70000,
+          "end_ms": 150000,
+          "tier": 2,
+          "gold": 10,
+          "gold_spent": 6,
+          "rolls": 2,
+          "free_rolls": 1,
+          "buys": [],
+          "spell_buys": 0,
+          "sells": [
+            "BG20_100"
+          ],
+          "freezes": 0,
+          "offers": [
+            {
+              "card_id": "BG28_300",
+              "roll": 0,
+              "frozen": true
+            },
+            {
+              "card_id": "BGS_004",
+              "roll": 0,
+              "frozen": true
+            },
+            {
+              "card_id": "BG21_009",
+              "roll": 0,
+              "frozen": false
+            },
+            {
+              "card_id": "BG25_011",
+              "roll": 1,
+              "frozen": false
+            },
+            {
+              "card_id": "BG26_135",
+              "roll": 1,
+              "frozen": false
+            },
+            {
+              "card_id": "BG31_806",
+              "roll": 1,
+              "frozen": false
+            },
+            {
+              "card_id": "BG20_100",
+              "roll": 2,
+              "frozen": false
+            },
+            {
+              "card_id": "BG28_300",
+              "roll": 2,
+              "frozen": false
+            },
+            {
+              "card_id": "BG20_100",
+              "roll": 2,
+              "frozen": false
+            }
+          ],
+          "actions": 6
+        }
+      ],
+      "tier_ups": [
+        {
+          "turn": 2,
+          "tier": 2
+        }
+      ],
+      "actions": [
+        {
+          "ms": 15000,
+          "turn": 1,
+          "kind": "buy"
+        },
+        {
+          "ms": 20000,
+          "turn": 1,
+          "kind": "hero_power"
+        },
+        {
+          "ms": 25000,
+          "turn": 1,
+          "kind": "freeze"
+        },
+        {
+          "ms": 75000,
+          "turn": 2,
+          "kind": "roll"
+        },
+        {
+          "ms": 80000,
+          "turn": 2,
+          "kind": "roll"
+        },
+        {
+          "ms": 85000,
+          "turn": 2,
+          "kind": "tier_up"
+        },
+        {
+          "ms": 88000,
+          "turn": 2,
+          "kind": "move"
+        },
+        {
+          "ms": 90000,
+          "turn": 2,
+          "kind": "sell"
+        },
+        {
+          "ms": 95000,
+          "turn": 2,
+          "kind": "choose"
+        }
+      ],
+      "start_ms": 10000,
+      "end_ms": 150000,
+      "ended": true
+    },
+    "warnings": [],
+    "problems": [],
+    "not_in_log": [
+      "MMR",
+      "available tribes (exact list)"
+    ]
+  },
+  {
+    "index": 1,
+    "status": "incomplete",
+    "game_type": "GT_BATTLEGROUNDS",
+    "build": 253216,
+    "local_player_id": 2,
+    "hero": "TB_BaconShop_HERO_37",
+    "teammate_player_id": null,
+    "teammate_hero": null,
+    "card_names": {},
+    "final_place": null,
+    "final_health": 26,
+    "lobby": [
+      {
+        "player_id": 2,
+        "hero": "TB_BaconShop_HERO_37",
+        "duo_team": null,
+        "final_place": null,
+        "final_health": 26
+      },
+      {
+        "player_id": 3,
+        "hero": "TB_BaconShop_HERO_60",
+        "duo_team": null,
+        "final_place": null,
+        "final_health": 0
+      }
+    ],
+    "shop_tribes": {
+      "NEUTRAL": 12
+    },
+    "rounds": [
+      {
+        "number": 1,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "TB_BaconShop_HERO_37",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_60",
+            "board": []
+          }
+        ],
+        "own_health_after": 26,
+        "opponents": [
+          3
+        ],
+        "health_after": {
+          "2": 26,
+          "3": 30
+        }
+      },
+      {
+        "number": 2,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "TB_BaconShop_HERO_37",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_60",
+            "board": [
+              {
+                "card_id": "BG20_100",
+                "atk": 1,
+                "health": 1,
+                "position": 0,
+                "golden": false
+              },
+              {
+                "card_id": "BG28_300",
+                "atk": 1,
+                "health": 1,
+                "position": 0,
+                "golden": false
+              },
+              {
+                "card_id": "BG20_100",
+                "atk": 1,
+                "health": 1,
+                "position": 0,
+                "golden": false
+              }
+            ]
+          }
+        ],
+        "own_health_after": null,
+        "opponents": [
+          3
+        ],
+        "health_after": {}
+      }
+    ],
+    "start_health": {
+      "2": 30,
+      "3": 30
+    },
+    "shop": {
+      "turns": [
+        {
+          "turn": 1,
+          "start_ms": 10000,
+          "end_ms": 70000,
+          "tier": 1,
+          "gold": 3,
+          "gold_spent": 3,
+          "rolls": 0,
+          "free_rolls": 0,
+          "buys": [
+            "BG20_100"
+          ],
+          "spell_buys": 0,
+          "sells": [],
+          "freezes": 1,
+          "offers": [
+            {
+              "card_id": "BG20_100",
+              "roll": 0,
+              "frozen": false
+            },
+            {
+              "card_id": "BG28_300",
+              "roll": 0,
+              "frozen": false
+            },
+            {
+              "card_id": "BGS_004",
+              "roll": 0,
+              "frozen": false
+            }
+          ],
+          "actions": 3
+        },
+        {
+          "turn": 2,
+          "start_ms": 70000,
+          "end_ms": 120000,
+          "tier": 2,
+          "gold": 10,
+          "gold_spent": 6,
+          "rolls": 2,
+          "free_rolls": 1,
+          "buys": [],
+          "spell_buys": 0,
+          "sells": [
+            "BG20_100"
+          ],
+          "freezes": 0,
+          "offers": [
+            {
+              "card_id": "BG28_300",
+              "roll": 0,
+              "frozen": true
+            },
+            {
+              "card_id": "BGS_004",
+              "roll": 0,
+              "frozen": true
+            },
+            {
+              "card_id": "BG21_009",
+              "roll": 0,
+              "frozen": false
+            },
+            {
+              "card_id": "BG25_011",
+              "roll": 1,
+              "frozen": false
+            },
+            {
+              "card_id": "BG26_135",
+              "roll": 1,
+              "frozen": false
+            },
+            {
+              "card_id": "BG31_806",
+              "roll": 1,
+              "frozen": false
+            },
+            {
+              "card_id": "BG20_100",
+              "roll": 2,
+              "frozen": false
+            },
+            {
+              "card_id": "BG28_300",
+              "roll": 2,
+              "frozen": false
+            },
+            {
+              "card_id": "BG20_100",
+              "roll": 2,
+              "frozen": false
+            }
+          ],
+          "actions": 6
+        }
+      ],
+      "tier_ups": [
+        {
+          "turn": 2,
+          "tier": 2
+        }
+      ],
+      "actions": [
+        {
+          "ms": 15000,
+          "turn": 1,
+          "kind": "buy"
+        },
+        {
+          "ms": 20000,
+          "turn": 1,
+          "kind": "hero_power"
+        },
+        {
+          "ms": 25000,
+          "turn": 1,
+          "kind": "freeze"
+        },
+        {
+          "ms": 75000,
+          "turn": 2,
+          "kind": "roll"
+        },
+        {
+          "ms": 80000,
+          "turn": 2,
+          "kind": "roll"
+        },
+        {
+          "ms": 85000,
+          "turn": 2,
+          "kind": "tier_up"
+        },
+        {
+          "ms": 88000,
+          "turn": 2,
+          "kind": "move"
+        },
+        {
+          "ms": 90000,
+          "turn": 2,
+          "kind": "sell"
+        },
+        {
+          "ms": 95000,
+          "turn": 2,
+          "kind": "choose"
+        }
+      ],
+      "start_ms": 10000,
+      "end_ms": 120000,
+      "ended": false
+    },
+    "warnings": [],
+    "problems": [],
+    "not_in_log": [
+      "MMR",
+      "available tribes (exact list)"
+    ]
+  }
+]

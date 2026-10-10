@@ -140,8 +140,8 @@ fn in_duos_both_heroes_of_a_team_share_its_place() {
     places.sort_unstable();
     assert_eq!(places, [1, 1, 2, 2, 3, 3, 4, 4]);
     assert!(
-        now.iter().all(|s| s.tech_level.is_none()),
-        "the scrubbed fixture keeps no tiers"
+        now.iter().all(|s| s.tech_level.is_some()),
+        "the fixture keeps every hero's tier (D-046)"
     );
 }
 

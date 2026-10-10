@@ -1157,6 +1157,1082 @@
         "own_health_after": 0
       }
     ],
+    "shop": {
+      "actions": [
+        {
+          "kind": "choose",
+          "ms": 86540,
+          "turn": 1
+        },
+        {
+          "kind": "buy",
+          "ms": 89848,
+          "turn": 1
+        },
+        {
+          "kind": "play",
+          "ms": 90869,
+          "turn": 1
+        },
+        {
+          "kind": "freeze",
+          "ms": 91467,
+          "turn": 1
+        },
+        {
+          "kind": "buy_spell",
+          "ms": 134655,
+          "turn": 2
+        },
+        {
+          "kind": "play",
+          "ms": 135332,
+          "turn": 2
+        },
+        {
+          "kind": "buy",
+          "ms": 139086,
+          "turn": 2
+        },
+        {
+          "kind": "play",
+          "ms": 140172,
+          "turn": 2
+        },
+        {
+          "kind": "play",
+          "ms": 141115,
+          "turn": 2
+        },
+        {
+          "kind": "move",
+          "ms": 142183,
+          "turn": 2
+        },
+        {
+          "kind": "tier_up",
+          "ms": 176070,
+          "turn": 3
+        },
+        {
+          "kind": "buy_spell",
+          "ms": 177501,
+          "turn": 3
+        },
+        {
+          "kind": "play",
+          "ms": 178162,
+          "turn": 3
+        },
+        {
+          "kind": "play",
+          "ms": 179816,
+          "turn": 3
+        },
+        {
+          "kind": "move",
+          "ms": 258225,
+          "turn": 4
+        },
+        {
+          "kind": "tier_up",
+          "ms": 267721,
+          "turn": 4
+        },
+        {
+          "kind": "move",
+          "ms": 345413,
+          "turn": 5
+        },
+        {
+          "kind": "move",
+          "ms": 348905,
+          "turn": 5
+        },
+        {
+          "kind": "play",
+          "ms": 350141,
+          "turn": 5
+        },
+        {
+          "kind": "choose",
+          "ms": 356223,
+          "turn": 5
+        },
+        {
+          "kind": "play",
+          "ms": 359025,
+          "turn": 5
+        },
+        {
+          "kind": "play",
+          "ms": 359981,
+          "turn": 5
+        },
+        {
+          "kind": "buy",
+          "ms": 360701,
+          "turn": 5
+        },
+        {
+          "kind": "play",
+          "ms": 363131,
+          "turn": 5
+        },
+        {
+          "kind": "play",
+          "ms": 364044,
+          "turn": 5
+        },
+        {
+          "kind": "choose",
+          "ms": 369216,
+          "turn": 5
+        },
+        {
+          "kind": "play",
+          "ms": 370554,
+          "turn": 5
+        },
+        {
+          "kind": "move",
+          "ms": 376206,
+          "turn": 5
+        },
+        {
+          "kind": "move",
+          "ms": 377681,
+          "turn": 5
+        },
+        {
+          "kind": "move",
+          "ms": 381111,
+          "turn": 5
+        },
+        {
+          "kind": "sell",
+          "ms": 387673,
+          "turn": 5
+        },
+        {
+          "kind": "sell",
+          "ms": 388438,
+          "turn": 5
+        },
+        {
+          "kind": "buy",
+          "ms": 389229,
+          "turn": 5
+        },
+        {
+          "kind": "play",
+          "ms": 390539,
+          "turn": 5
+        },
+        {
+          "kind": "choose",
+          "ms": 469963,
+          "turn": 6
+        },
+        {
+          "kind": "sell",
+          "ms": 473335,
+          "turn": 6
+        },
+        {
+          "kind": "play",
+          "ms": 477762,
+          "turn": 6
+        },
+        {
+          "kind": "play",
+          "ms": 480253,
+          "turn": 6
+        },
+        {
+          "kind": "tier_up",
+          "ms": 484572,
+          "turn": 6
+        },
+        {
+          "kind": "buy",
+          "ms": 485301,
+          "turn": 6
+        },
+        {
+          "kind": "play",
+          "ms": 487420,
+          "turn": 6
+        },
+        {
+          "kind": "play",
+          "ms": 493091,
+          "turn": 6
+        },
+        {
+          "kind": "play",
+          "ms": 523284,
+          "turn": 6
+        },
+        {
+          "kind": "buy",
+          "ms": 584292,
+          "turn": 7
+        },
+        {
+          "kind": "play",
+          "ms": 585341,
+          "turn": 7
+        },
+        {
+          "kind": "sell",
+          "ms": 586332,
+          "turn": 7
+        },
+        {
+          "kind": "move",
+          "ms": 590898,
+          "turn": 7
+        },
+        {
+          "kind": "move",
+          "ms": 595418,
+          "turn": 7
+        },
+        {
+          "kind": "move",
+          "ms": 597461,
+          "turn": 7
+        },
+        {
+          "kind": "move",
+          "ms": 598805,
+          "turn": 7
+        },
+        {
+          "kind": "play",
+          "ms": 602825,
+          "turn": 7
+        },
+        {
+          "kind": "choose",
+          "ms": 616776,
+          "turn": 7
+        },
+        {
+          "kind": "tier_up",
+          "ms": 618583,
+          "turn": 7
+        },
+        {
+          "kind": "move",
+          "ms": 622398,
+          "turn": 7
+        },
+        {
+          "kind": "play",
+          "ms": 637177,
+          "turn": 7
+        },
+        {
+          "kind": "buy_spell",
+          "ms": 638002,
+          "turn": 7
+        },
+        {
+          "kind": "play",
+          "ms": 662449,
+          "turn": 7
+        },
+        {
+          "kind": "move",
+          "ms": 716579,
+          "turn": 8
+        },
+        {
+          "kind": "move",
+          "ms": 718405,
+          "turn": 8
+        },
+        {
+          "kind": "buy_spell",
+          "ms": 719333,
+          "turn": 8
+        },
+        {
+          "kind": "play",
+          "ms": 720234,
+          "turn": 8
+        },
+        {
+          "kind": "roll",
+          "ms": 721273,
+          "turn": 8
+        },
+        {
+          "kind": "play",
+          "ms": 724234,
+          "turn": 8
+        },
+        {
+          "kind": "choose",
+          "ms": 733337,
+          "turn": 8
+        },
+        {
+          "kind": "move",
+          "ms": 734742,
+          "turn": 8
+        },
+        {
+          "kind": "sell",
+          "ms": 735735,
+          "turn": 8
+        },
+        {
+          "kind": "sell",
+          "ms": 736274,
+          "turn": 8
+        },
+        {
+          "kind": "roll",
+          "ms": 737718,
+          "turn": 8
+        },
+        {
+          "kind": "buy",
+          "ms": 740992,
+          "turn": 8
+        },
+        {
+          "kind": "roll",
+          "ms": 741647,
+          "turn": 8
+        },
+        {
+          "kind": "buy_spell",
+          "ms": 746416,
+          "turn": 8
+        },
+        {
+          "kind": "play",
+          "ms": 747349,
+          "turn": 8
+        },
+        {
+          "kind": "roll",
+          "ms": 748112,
+          "turn": 8
+        },
+        {
+          "kind": "roll",
+          "ms": 753257,
+          "turn": 8
+        },
+        {
+          "kind": "move",
+          "ms": 765326,
+          "turn": 8
+        },
+        {
+          "kind": "sell",
+          "ms": 778103,
+          "turn": 8
+        },
+        {
+          "kind": "play",
+          "ms": 778783,
+          "turn": 8
+        },
+        {
+          "kind": "play",
+          "ms": 780381,
+          "turn": 8
+        },
+        {
+          "kind": "buy",
+          "ms": 782206,
+          "turn": 8
+        },
+        {
+          "kind": "play",
+          "ms": 783090,
+          "turn": 8
+        },
+        {
+          "kind": "choose",
+          "ms": 784883,
+          "turn": 8
+        },
+        {
+          "kind": "choose",
+          "ms": 786416,
+          "turn": 8
+        },
+        {
+          "kind": "sell",
+          "ms": 787186,
+          "turn": 8
+        },
+        {
+          "kind": "play",
+          "ms": 787844,
+          "turn": 8
+        },
+        {
+          "kind": "play",
+          "ms": 789291,
+          "turn": 8
+        },
+        {
+          "kind": "sell",
+          "ms": 790055,
+          "turn": 8
+        },
+        {
+          "kind": "roll",
+          "ms": 790500,
+          "turn": 8
+        },
+        {
+          "kind": "play",
+          "ms": 791292,
+          "turn": 8
+        },
+        {
+          "kind": "sell",
+          "ms": 792301,
+          "turn": 8
+        },
+        {
+          "kind": "play",
+          "ms": 793133,
+          "turn": 8
+        },
+        {
+          "kind": "play",
+          "ms": 794417,
+          "turn": 8
+        },
+        {
+          "kind": "sell",
+          "ms": 795150,
+          "turn": 8
+        },
+        {
+          "kind": "buy",
+          "ms": 795645,
+          "turn": 8
+        },
+        {
+          "kind": "other",
+          "ms": 797597,
+          "turn": 8
+        },
+        {
+          "kind": "play",
+          "ms": 798333,
+          "turn": 8
+        },
+        {
+          "kind": "sell",
+          "ms": 799078,
+          "turn": 8
+        },
+        {
+          "kind": "roll",
+          "ms": 799631,
+          "turn": 8
+        },
+        {
+          "kind": "play",
+          "ms": 800276,
+          "turn": 8
+        },
+        {
+          "kind": "sell",
+          "ms": 801157,
+          "turn": 8
+        },
+        {
+          "kind": "buy_spell",
+          "ms": 801747,
+          "turn": 8
+        },
+        {
+          "kind": "play",
+          "ms": 804123,
+          "turn": 8
+        },
+        {
+          "kind": "sell",
+          "ms": 806779,
+          "turn": 8
+        },
+        {
+          "kind": "roll",
+          "ms": 808103,
+          "turn": 8
+        },
+        {
+          "kind": "play",
+          "ms": 809815,
+          "turn": 8
+        },
+        {
+          "kind": "play",
+          "ms": 810416,
+          "turn": 8
+        }
+      ],
+      "end_ms": 818236,
+      "ended": true,
+      "start_ms": 54308,
+      "tier_ups": [
+        {
+          "tier": 2,
+          "turn": 3
+        },
+        {
+          "tier": 3,
+          "turn": 4
+        },
+        {
+          "tier": 4,
+          "turn": 6
+        },
+        {
+          "tier": 5,
+          "turn": 7
+        }
+      ],
+      "turns": [
+        {
+          "actions": 4,
+          "buys": [
+            "BG26_135"
+          ],
+          "end_ms": 113153,
+          "free_rolls": 0,
+          "freezes": 1,
+          "gold": 3,
+          "gold_spent": 3,
+          "offers": [
+            {
+              "card_id": "BG32_236",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG26_135",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG26_146",
+              "frozen": false,
+              "roll": 0
+            }
+          ],
+          "rolls": 0,
+          "sells": [],
+          "spell_buys": 0,
+          "start_ms": 54308,
+          "tier": 1,
+          "turn": 1
+        },
+        {
+          "actions": 6,
+          "buys": [
+            "BG29_611"
+          ],
+          "end_ms": 158993,
+          "free_rolls": 0,
+          "freezes": 0,
+          "gold": 4,
+          "gold_spent": 5,
+          "offers": [
+            {
+              "card_id": "BG32_236",
+              "frozen": true,
+              "roll": 0
+            },
+            {
+              "card_id": "BG26_146",
+              "frozen": true,
+              "roll": 0
+            },
+            {
+              "card_id": "BG29_611",
+              "frozen": false,
+              "roll": 0
+            }
+          ],
+          "rolls": 0,
+          "sells": [],
+          "spell_buys": 1,
+          "start_ms": 113153,
+          "tier": 1,
+          "turn": 2
+        },
+        {
+          "actions": 4,
+          "buys": [],
+          "end_ms": 223623,
+          "free_rolls": 0,
+          "freezes": 0,
+          "gold": 5,
+          "gold_spent": 5,
+          "offers": [
+            {
+              "card_id": "BG26_146",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BGS_119",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BGDUO_114",
+              "frozen": false,
+              "roll": 0
+            }
+          ],
+          "rolls": 0,
+          "sells": [],
+          "spell_buys": 1,
+          "start_ms": 158993,
+          "tier": 2,
+          "turn": 3
+        },
+        {
+          "actions": 2,
+          "buys": [],
+          "end_ms": 307783,
+          "free_rolls": 0,
+          "freezes": 0,
+          "gold": 6,
+          "gold_spent": 6,
+          "offers": [
+            {
+              "card_id": "BG26_146",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG29_611",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG36_345",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG34_170t3",
+              "frozen": false,
+              "roll": 0
+            }
+          ],
+          "rolls": 0,
+          "sells": [],
+          "spell_buys": 0,
+          "start_ms": 223623,
+          "tier": 3,
+          "turn": 4
+        },
+        {
+          "actions": 18,
+          "buys": [
+            "BGDUO_118",
+            "BG36_100"
+          ],
+          "end_ms": 406708,
+          "free_rolls": 0,
+          "freezes": 0,
+          "gold": 7,
+          "gold_spent": 9,
+          "offers": [
+            {
+              "card_id": "BGDUO_118",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG34_170t",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG36_100",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG31_818",
+              "frozen": false,
+              "roll": 0
+            }
+          ],
+          "rolls": 0,
+          "sells": [
+            "BG29_611",
+            "BGDUO_114"
+          ],
+          "spell_buys": 0,
+          "start_ms": 307783,
+          "tier": 3,
+          "turn": 5
+        },
+        {
+          "actions": 9,
+          "buys": [
+            "BGDUO31_207"
+          ],
+          "end_ms": 539885,
+          "free_rolls": 0,
+          "freezes": 0,
+          "gold": 8,
+          "gold_spent": 11,
+          "offers": [
+            {
+              "card_id": "BG36_110",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG36_108",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG34_856",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BGDUO31_207",
+              "frozen": false,
+              "roll": 0
+            }
+          ],
+          "rolls": 0,
+          "sells": [
+            "BG36_100_G"
+          ],
+          "spell_buys": 0,
+          "start_ms": 406708,
+          "tier": 4,
+          "turn": 6
+        },
+        {
+          "actions": 14,
+          "buys": [
+            "BG24_018"
+          ],
+          "end_ms": 671363,
+          "free_rolls": 0,
+          "freezes": 0,
+          "gold": 9,
+          "gold_spent": 18,
+          "offers": [
+            {
+              "card_id": "BG24_018",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG31_812",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG36_703",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG36_312",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG36_180",
+              "frozen": false,
+              "roll": 0
+            }
+          ],
+          "rolls": 0,
+          "sells": [
+            "BG24_018"
+          ],
+          "spell_buys": 1,
+          "start_ms": 539885,
+          "tier": 5,
+          "turn": 7
+        },
+        {
+          "actions": 48,
+          "buys": [
+            "BG26_814",
+            "BG28_550",
+            "BG23_318"
+          ],
+          "end_ms": 818236,
+          "free_rolls": 4,
+          "freezes": 0,
+          "gold": 10,
+          "gold_spent": 22,
+          "offers": [
+            {
+              "card_id": "BG36_113",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG34_604",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG32_336",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG31_148",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG29_300",
+              "frozen": false,
+              "roll": 0
+            },
+            {
+              "card_id": "BG32_235",
+              "frozen": false,
+              "roll": 1
+            },
+            {
+              "card_id": "BGDUO_108",
+              "frozen": false,
+              "roll": 1
+            },
+            {
+              "card_id": "BGDUO_104",
+              "frozen": false,
+              "roll": 1
+            },
+            {
+              "card_id": "BGDUO31_207",
+              "frozen": false,
+              "roll": 1
+            },
+            {
+              "card_id": "BG24_715",
+              "frozen": false,
+              "roll": 1
+            },
+            {
+              "card_id": "BGDUO_114",
+              "frozen": false,
+              "roll": 2
+            },
+            {
+              "card_id": "BG32_336",
+              "frozen": false,
+              "roll": 2
+            },
+            {
+              "card_id": "BG36_342",
+              "frozen": false,
+              "roll": 2
+            },
+            {
+              "card_id": "BG26_814",
+              "frozen": false,
+              "roll": 2
+            },
+            {
+              "card_id": "BG25_016",
+              "frozen": false,
+              "roll": 2
+            },
+            {
+              "card_id": "BG32_236",
+              "frozen": false,
+              "roll": 3
+            },
+            {
+              "card_id": "BG36_318",
+              "frozen": false,
+              "roll": 3
+            },
+            {
+              "card_id": "BG36_620",
+              "frozen": false,
+              "roll": 3
+            },
+            {
+              "card_id": "BGS_116",
+              "frozen": false,
+              "roll": 3
+            },
+            {
+              "card_id": "BGDUO_114",
+              "frozen": false,
+              "roll": 3
+            },
+            {
+              "card_id": "BG27_005",
+              "frozen": false,
+              "roll": 4
+            },
+            {
+              "card_id": "BGDUO_110",
+              "frozen": false,
+              "roll": 4
+            },
+            {
+              "card_id": "BG27_000",
+              "frozen": false,
+              "roll": 4
+            },
+            {
+              "card_id": "BG34_604",
+              "frozen": false,
+              "roll": 4
+            },
+            {
+              "card_id": "BGDUO_118",
+              "frozen": false,
+              "roll": 4
+            },
+            {
+              "card_id": "BGDUO_114",
+              "frozen": false,
+              "roll": 5
+            },
+            {
+              "card_id": "BG33_822",
+              "frozen": false,
+              "roll": 5
+            },
+            {
+              "card_id": "BG28_550",
+              "frozen": false,
+              "roll": 5
+            },
+            {
+              "card_id": "BG34_604",
+              "frozen": false,
+              "roll": 5
+            },
+            {
+              "card_id": "BG34_856",
+              "frozen": false,
+              "roll": 5
+            },
+            {
+              "card_id": "BG36_116",
+              "frozen": false,
+              "roll": 6
+            },
+            {
+              "card_id": "BG35_341",
+              "frozen": false,
+              "roll": 6
+            },
+            {
+              "card_id": "BG31_816",
+              "frozen": false,
+              "roll": 6
+            },
+            {
+              "card_id": "BG31_815",
+              "frozen": false,
+              "roll": 6
+            },
+            {
+              "card_id": "BG23_318",
+              "frozen": false,
+              "roll": 6
+            },
+            {
+              "card_id": "BG36_311",
+              "frozen": false,
+              "roll": 7
+            },
+            {
+              "card_id": "BG26_137",
+              "frozen": false,
+              "roll": 7
+            },
+            {
+              "card_id": "BGDUO_109",
+              "frozen": false,
+              "roll": 7
+            },
+            {
+              "card_id": "BG31_815",
+              "frozen": false,
+              "roll": 7
+            },
+            {
+              "card_id": "BG32_236",
+              "frozen": false,
+              "roll": 7
+            },
+            {
+              "card_id": "BG31_816",
+              "frozen": false,
+              "roll": 8
+            },
+            {
+              "card_id": "BG36_700",
+              "frozen": false,
+              "roll": 8
+            },
+            {
+              "card_id": "BG36_101",
+              "frozen": false,
+              "roll": 8
+            },
+            {
+              "card_id": "BG32_111",
+              "frozen": false,
+              "roll": 8
+            },
+            {
+              "card_id": "BG36_520",
+              "frozen": false,
+              "roll": 8
+            }
+          ],
+          "rolls": 8,
+          "sells": [
+            "BG36_110",
+            "BG26_146",
+            "BG26_135_G",
+            "BG28_550",
+            "BG29_300",
+            "BG29_300",
+            "BG31_818",
+            "BG31_816",
+            "BGDUO_104",
+            "BG26_814"
+          ],
+          "spell_buys": 3,
+          "start_ms": 671363,
+          "tier": 5,
+          "turn": 8
+        }
+      ]
+    },
     "shop_tribes": {
       "ABERRATION": 5,
       "ELEMENTAL": 5,

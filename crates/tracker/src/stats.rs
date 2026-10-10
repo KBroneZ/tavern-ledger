@@ -12,6 +12,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 use crate::provenance::{legend, LegendEntry, Source};
+use crate::shop::{ShopCounts, ShopStats};
 
 pub const SOLO: &str = "GT_BATTLEGROUNDS";
 pub const DUOS: &str = "GT_BATTLEGROUNDS_DUO";
@@ -72,6 +73,8 @@ pub struct HeroStats {
     pub grouping: Source,
     pub tally: Tally,
     pub tally_sources: TallySources,
+    /// Shop and APM averages for this hero (T-204, T-205).
+    pub shop: ShopStats,
 }
 
 /// A tribe offered in the tavern. Not the exact lobby tribes: the log does
@@ -116,6 +119,8 @@ pub struct ModeStats {
     pub entered_tribes: Vec<TribeEntered>,
     /// Every row here was typed by the user: entered by you.
     pub entered_tribes_source: Source,
+    /// Shop and APM averages per game (T-204, T-205).
+    pub shop: ShopStats,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -214,7 +219,8 @@ impl Counts {
 #[derive(Default)]
 struct ModeCounts {
     totals: Counts,
-    heroes: BTreeMap<Option<String>, (BTreeSet<String>, Counts)>,
+    heroes: BTreeMap<Option<String>, (BTreeSet<String>, Counts, ShopCounts)>,
+    shop: ShopCounts,
     games_with_tribes: usize,
     tribes: BTreeMap<String, (usize, u64)>,
     games_with_entered_tribes: usize,
@@ -233,12 +239,14 @@ impl ModeCounts {
         let place = counted_place(mode, status, report);
         self.totals.add(status, place);
         let hero = report.get("hero").and_then(Value::as_str);
-        let (variants, counts) = self
+        let (variants, counts, shop) = self
             .heroes
             .entry(hero.map(|h| base_hero(h).to_string()))
             .or_default();
         variants.extend(hero.map(String::from));
         counts.add(status, place);
+        shop.add(report);
+        self.shop.add(report);
 
         let offered: Vec<(&String, u64)> = report
             .get("shop_tribes")
@@ -262,7 +270,7 @@ impl ModeCounts {
         let mut heroes: Vec<HeroStats> = self
             .heroes
             .into_iter()
-            .map(|(hero, (variants, counts))| {
+            .map(|(hero, (variants, counts, shop))| {
                 let name = hero.as_deref().and_then(|h| names.for_hero(h, &variants));
                 let tally = counts.tally(top_half);
                 HeroStats {
@@ -277,6 +285,7 @@ impl ModeCounts {
                     hero,
                     variants: variants.into_iter().collect(),
                     tally,
+                    shop: shop.finish(),
                 }
             })
             .collect();
@@ -322,6 +331,7 @@ impl ModeCounts {
             games_with_entered_tribes: self.games_with_entered_tribes,
             entered_tribes,
             entered_tribes_source: Source::Entered,
+            shop: self.shop.finish(),
         }
     }
 }

@@ -23,7 +23,7 @@ sys.path.insert(0, str(HERE))
 import make_fixture  # noqa: E402
 import reconnect_marks  # noqa: E402
 import parse_bg  # noqa: E402
-from bg_log_builder import duo_game, solo_game  # noqa: E402
+from bg_log_builder import duo_game, solo_game, solo_shop_game  # noqa: E402
 
 LOCAL = "FakeLocal#4321"
 LOCAL_ALIAS = "FakeLocal"
@@ -120,11 +120,78 @@ class ScrubTest(unittest.TestCase):
             self.assertRegex(line, r"^[DWE] 00:00:00\.0000000 GameState\.DebugPrint(Power|Game)\(\) - ")
         for dropped in ("PowerTaskList", "DebugPrintOptions", "LoadingScreen", "GAME_SEED",
                         "META_DATA", "Info[0]", "NUM_TURNS_IN_PLAY", "FormatType", "21:13:07",
-                        "BlockType=TRIGGER", "BLOCK_END", "BG_Enchant_X", "Entity=90 "):
+                        "BlockType=TRIGGER", "BG_Enchant_X", "Entity=90 "):
             self.assertFalse(dropped in self.out, dropped)
+        # A kept top-level block keeps its end; the TRIGGER's end goes with it.
+        self.assertEqual(self.out.count("BLOCK_END"), self.out.count("BLOCK_START BlockType=ATTACK"))
 
     def test_it_is_smaller(self):
         self.assertLess(len(self.out), len(self.raw))
+
+
+def named(text: str) -> str:
+    """A synthetic game with fake personal values where real logs put them."""
+    return (text.replace("SyntheticPlayer#0001", LOCAL)
+            .replace("PlayerName=The Innkeeper", f"PlayerName={RIVAL_AI}")
+            .replace("[hi=1 lo=1]", f"[hi={HI} lo={LO}]"))
+
+
+class ShopLinesTest(unittest.TestCase):
+    """What the shop record and the logged actions need (T-204, T-205, D-046)."""
+
+    @classmethod
+    def setUpClass(cls):
+        chosen = ("D 12:01:35.0000000 GameState.SendChoices() -   m_chosenEntities[0]="
+                  f"[entityName={LOCAL} id=2 zone=PLAY zonePos=0 cardId= player=2]")
+        options = "D 12:01:35.0000000 GameState.DebugPrintOptions() - id=7"
+        nested = ("D 12:01:35.0000000 GameState.DebugPrintPower() -     BLOCK_START BlockType=PLAY "
+                  "Entity=65 EffectCardId=X EffectIndex=0 Target=0 SubOption=-1 ")
+        marker = "ChoiceType=GENERAL\n"
+        cls.raw = named(solo_shop_game()).replace(
+            marker, marker + "\n".join([chosen, options, nested]) + "\n")
+        cls.out = make_fixture.make_fixture(cls.raw, game=1)
+
+    def test_times_run_from_the_game_start(self):
+        lines = self.out.splitlines()
+        self.assertTrue(lines[0].startswith("D 00:00:00.0000000 "))
+        self.assertIn("D 00:00:10.0000000 GameState.DebugPrintPower() -     TAG_CHANGE "
+                      "Entity=GameEntity tag=TURN value=1 ", self.out)
+        self.assertIn("D 00:02:30.0000000 ", self.out)
+        self.assertNotIn("12:0", self.out)
+
+    def test_options_and_choice_headers_are_kept(self):
+        self.assertEqual(self.out.count("GameState.SendOption() - selectedOption="), 8)
+        self.assertIn("GameState.SendChoices() - id=3 ChoiceType=GENERAL", self.out)
+        self.assertIn("GameState.SendChoices() - id=3 ChoiceType=MULLIGAN", self.out)
+        for dropped in ("m_chosenEntities", "DebugPrintOptions", LOCAL_ALIAS):
+            self.assertNotIn(dropped, self.out)
+
+    def test_top_level_action_blocks_and_their_entities_are_kept(self):
+        for kept in ("BLOCK_START BlockType=PLAY Entity=63 ", "Target=30 ",
+                     "BLOCK_START BlockType=MOVE_MINION Entity=30 ",
+                     "FULL_ENTITY - Creating ID=60 CardID=TB_BaconShop_8p_Reroll_Button",
+                     "tag=CARDTYPE value=GAME_MODE_BUTTON", "tag=CARDTYPE value=HERO_POWER",
+                     "tag=CARDTYPE value=MOVE_MINION_HOVER_TARGET",
+                     "tag=FROZEN value=1", "tag=RESOURCES value=10",
+                     "tag=NUM_RESOURCES_SPENT_THIS_GAME value=9", "tag=PLAYER_TECH_LEVEL value=2"):
+            self.assertIn(kept, self.out)
+        # The turn-start TRIGGER goes, the offers inside it stay.
+        self.assertNotIn("BlockType=TRIGGER", self.out)
+        self.assertIn("FULL_ENTITY - Creating ID=34 CardID=BG28_300", self.out)
+        # A nested PLAY block is not an action of the player.
+        self.assertEqual(self.out.count("BlockType=PLAY"), 7)
+        self.assertEqual(self.out.count("() - BLOCK_END"), self.out.count("() - BLOCK_START"))
+
+    def test_the_report_is_the_same(self):
+        self.assertEqual(parse_text(self.out), parse_text(self.raw))
+
+
+class RelativeTimeTest(unittest.TestCase):
+    def test_past_midnight_keeps_counting(self):
+        clock = make_fixture.Clock()
+        self.assertEqual(clock.relative("23:59:59.5000000"), "00:00:00.0000000")
+        self.assertEqual(clock.relative("00:00:01.2500000"), "00:00:01.7500000")
+        self.assertEqual(clock.relative("01:00:01.2500000"), "01:00:01.7500000")
 
 
 class GameSelectionTest(unittest.TestCase):
@@ -171,6 +238,16 @@ class DenyListTest(unittest.TestCase):
         hits = make_fixture.deny_hits("D 00:00:00.0000000 PowerTaskList.DebugPrintPower() - x\n",
                                       self.ids)
         self.assertTrue(hits)
+
+    def test_only_the_number_shapes_of_options_and_choices_pass(self):
+        ok = ("D 00:00:01.0000000 GameState.SendOption() - selectedOption=1 selectedSubOption=-1 "
+              "selectedTarget=336 selectedPosition=0\n"
+              "D 00:00:01.0000000 GameState.SendChoices() - id=3 ChoiceType=GENERAL\n")
+        self.assertEqual(make_fixture.deny_hits(ok, self.ids), [])
+        for bad in ("D 00:00:01.0000000 GameState.SendChoices() -   m_chosenEntities[0]=5\n",
+                    "D 00:00:01.0000000 GameState.SendOption() - selectedOption=1 text\n"):
+            with self.subTest(bad):
+                self.assertTrue(make_fixture.deny_hits(bad, self.ids))
 
 
 class CliTest(unittest.TestCase):

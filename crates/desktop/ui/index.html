@@ -6,6 +6,7 @@
 <title>Tavern Ledger</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="upload.css">
+<link rel="stylesheet" href="shop.css">
 </head>
 <body>
   <header class="masthead">
@@ -126,6 +127,12 @@
       </section>
     </div>
 
+    <section class="ledger shop-stats" aria-labelledby="shop-stats-title">
+      <h2 id="shop-stats-title">Shop and actions</h2>
+      <p class="note">Averages per game over the games whose shop the log has from start to end. Only your own shop is in the log.</p>
+      <div id="shop-stats-body"></div>
+    </section>
+
     <section class="ledger" aria-labelledby="ledger-title">
       <h2 id="ledger-title">Ledger</h2>
       <table>
@@ -204,6 +211,7 @@
     <span id="card-status" class="card-status" role="status"></span>
   </footer>
   <script src="cards.js"></script>
+  <script src="shop.js"></script>
   <script src="app.js"></script>
   <script src="upload.js"></script>
   <script src="overlay-switch.js"></script>

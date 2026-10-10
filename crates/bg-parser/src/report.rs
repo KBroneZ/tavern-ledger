@@ -8,6 +8,8 @@ use std::collections::BTreeMap;
 use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 
+use crate::shop::ShopRecord;
+
 pub const NOT_IN_POWER_LOG: [&str; 2] = ["MMR", "available tribes (exact list)"];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -122,6 +124,9 @@ pub struct GameReport {
     /// Health of every lobby hero by player id before the first combat. Empty
     /// when the log did not give it. Rust-only, like `Round::health_after`.
     pub start_health: BTreeMap<i64, i64>,
+    /// The player's own shop and logged actions (T-204, T-205, parser
+    /// revision 3). None when the game could not be read. Rust-only.
+    pub shop: Option<ShopRecord>,
     pub warnings: Vec<String>,
     pub problems: Vec<String>,
     pub not_in_log: Vec<String>,
@@ -150,6 +155,7 @@ impl GameReport {
             shop_tribes: Vec::new(),
             rounds: Vec::new(),
             start_health: BTreeMap::new(),
+            shop: None,
             warnings: Vec::new(),
             problems: Vec::new(),
             not_in_log: NOT_IN_POWER_LOG.iter().map(|s| s.to_string()).collect(),

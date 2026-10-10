@@ -65,6 +65,8 @@ pub enum Packet {
     BlockStart {
         block_type: String,
         entity: EntityRef,
+        /// The block's target; None when the log gives `Target=0`.
+        target: Option<EntityRef>,
     },
     BlockEnd,
     /// Entity references in META_DATA / SUB_SPELL detail lines. Only names
@@ -77,13 +79,21 @@ pub enum Packet {
 /// Which part of the log a line belongs to.
 #[derive(Debug, PartialEq, Eq)]
 pub enum Line<'a> {
-    Power(&'a str),
+    /// A power packet and how deep it is nested: the log indents each
+    /// level of BLOCK_START by four spaces, so 0 is a top-level packet.
+    Power(&'a str, usize),
     Game(&'a str),
+    /// The client sending one of the player's options (T-205).
+    SendOption,
+    /// The client sending a choice; the text is its type (GENERAL, MULLIGAN...).
+    SendChoice(&'a str),
     Other,
 }
 
 const POWER: &str = "GameState.DebugPrintPower() - ";
 const GAME: &str = "GameState.DebugPrintGame() - ";
+const SEND_OPTION: &str = "GameState.SendOption() - selectedOption=";
+const SEND_CHOICES: &str = "GameState.SendChoices() - id=";
 const IGNORED_OPCODES: &[&str] = &[
     "META_DATA",
     "SUB_SPELL_START",
@@ -99,10 +109,22 @@ const IGNORED_OPCODES: &[&str] = &[
 pub fn classify(line: &str) -> Line<'_> {
     let line = line.trim_end_matches(['\r', '\n']);
     if let Some(pos) = line.find(POWER) {
-        return Line::Power(line[pos + POWER.len()..].trim());
+        let body = &line[pos + POWER.len()..];
+        let indent = body.len() - body.trim_start().len();
+        return Line::Power(body.trim(), indent);
     }
     if let Some(pos) = line.find(GAME) {
         return Line::Game(line[pos + GAME.len()..].trim());
+    }
+    if line.contains(SEND_OPTION) {
+        return Line::SendOption;
+    }
+    if let Some(pos) = line.find(SEND_CHOICES) {
+        // "id=N ChoiceType=GENERAL"; the chosen entities follow on their own lines.
+        let rest = &line[pos + SEND_CHOICES.len()..];
+        if let Some((_, kind)) = rest.split_once(" ChoiceType=") {
+            return Line::SendChoice(kind.trim());
+        }
     }
     Line::Other
 }
@@ -313,7 +335,19 @@ fn parse_block_start(body: &str) -> Option<Packet> {
     Some(Packet::BlockStart {
         block_type: block_type.to_string(),
         entity: parse_entity(&rest[..end]),
+        target: block_target(&rest[end..]),
     })
+}
+
+/// "... Target=<entity> SubOption=..." -> the entity; None for `Target=0`.
+fn block_target(rest: &str) -> Option<EntityRef> {
+    let start = rest.find(" Target=")? + " Target=".len();
+    let rest = &rest[start..];
+    let end = rest.rfind(" SubOption=").unwrap_or(rest.len());
+    match parse_entity(rest[..end].trim()) {
+        EntityRef::Id(0) => None,
+        target => Some(target),
+    }
 }
 
 #[cfg(test)]
@@ -324,7 +358,26 @@ mod tests {
     fn classifies_lines() {
         assert_eq!(
             classify("D 12:00:00.0000000 GameState.DebugPrintPower() -     CREATE_GAME\r\n"),
-            Line::Power("CREATE_GAME")
+            Line::Power("CREATE_GAME", 4)
+        );
+        assert_eq!(
+            classify("D 1 GameState.DebugPrintPower() - BLOCK_END"),
+            Line::Power("BLOCK_END", 0)
+        );
+        assert_eq!(
+            classify(
+                "D 1 GameState.SendOption() - selectedOption=7 selectedSubOption=-1 \
+                 selectedTarget=336 selectedPosition=0"
+            ),
+            Line::SendOption
+        );
+        assert_eq!(
+            classify("D 1 GameState.SendChoices() - id=2 ChoiceType=GENERAL"),
+            Line::SendChoice("GENERAL")
+        );
+        assert_eq!(
+            classify("D 1 GameState.SendChoices() -   m_chosenEntities[0]=4"),
+            Line::Other
         );
         assert_eq!(
             classify("D 1 GameState.DebugPrintGame() - GameType=GT_BATTLEGROUNDS"),
@@ -452,6 +505,42 @@ mod tests {
                 card_id: "TB_X".into()
             }
         );
+    }
+
+    #[test]
+    fn block_start_keeps_its_target() {
+        let p = parse_power(
+            "BLOCK_START BlockType=PLAY Entity=[entityName=Buy id=337 zone=PLAY zonePos=0 \
+             cardId=TB_BaconShop_DragBuy player=7] EffectCardId=System.Collections.Generic.\
+             List`1[System.String] EffectIndex=0 Target=[entityName=Some Minion id=336 \
+             zone=PLAY zonePos=1 cardId=BG36_345 player=15] SubOption=-1 ",
+        )
+        .unwrap();
+        assert_eq!(
+            p,
+            Packet::BlockStart {
+                block_type: "PLAY".into(),
+                entity: EntityRef::Id(337),
+                target: Some(EntityRef::Id(336)),
+            }
+        );
+        let p = parse_power(
+            "BLOCK_START BlockType=PLAY Entity=1023 EffectCardId=X EffectIndex=0 Target=0 SubOption=-1",
+        )
+        .unwrap();
+        assert!(matches!(p, Packet::BlockStart { target: None, .. }));
+        // Scrubbed fixtures keep only the id.
+        let p = parse_power(
+            "BLOCK_START BlockType=PLAY Entity=337 EffectCardId=X EffectIndex=0 Target=336 SubOption=-1",
+        )
+        .unwrap();
+        assert!(matches!(
+            p,
+            Packet::BlockStart {
+                target: Some(EntityRef::Id(336)),
+                ..
+            }
+        ));
     }
 
     #[test]

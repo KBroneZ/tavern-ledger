@@ -437,7 +437,11 @@ function renderBreakdown(m) {
   document.getElementById("entered-tribes").replaceChildren(
     ...entered.map((t) => enteredRow(t, m.games_with_entered_tribes, m.entered_tribes_source)),
   );
+  TLShop.renderStats(m, SHOP_UI);
 }
+
+// What shop.js needs to draw with the same marks and tooltips as this file.
+const SHOP_UI = { el, withSource, sourceMark, addTip };
 
 // The legend comes from the app, so its words are the ones on the marks.
 function renderLegend() {
@@ -728,7 +732,7 @@ function messagesSection(r) {
 function renderRecap(r) {
   const health = el("section", "recap-part");
   health.append(withSource(el("h3", null, "Your health over the rounds"), r.health_source), healthChart(r.health));
-  document.getElementById("recap-body").replaceChildren(recapFacts(r), health, recordSection(r), enteredSection(r), tribesSection(r), messagesSection(r));
+  document.getElementById("recap-body").replaceChildren(recapFacts(r), health, recordSection(r), TLShop.recapSection(r.shop, SHOP_UI), enteredSection(r), tribesSection(r), messagesSection(r));
 }
 
 async function openRecap(game) {

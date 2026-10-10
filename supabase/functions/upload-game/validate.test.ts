@@ -8,6 +8,7 @@ import {
   realRecord,
   realSolo,
   record,
+  shopGames,
   SESSION,
   solo,
 } from "./testdata.ts";
@@ -50,13 +51,66 @@ Deno.test("real Solo, unsupported and old records are accepted", () => {
   }
 });
 
-Deno.test("real games from the current parser (revision 2) are accepted", () => {
+Deno.test("real games from the current parser (revision 3, with the shop) are accepted", () => {
   for (const report of [realDuos[0], realSolo[0]]) {
+    assertEquals(report.shop.turns.length > 0, true, "the fixture has a shop record");
     const v = validateRecord(realRecord(report), SESSION, 1);
     if (!v.ok) throw new Error(`refused: ${v.code} ${v.field}`);
-    assertEquals(v.summary.parser_version, "0.1.0+r2");
+    assertEquals(v.summary.parser_version, "0.1.0+r3");
     assertEquals(v.summary.hero_card_id, report.hero);
   }
+});
+
+Deno.test("synthetic games with every shop action kind are accepted", () => {
+  for (const report of shopGames) {
+    assertEquals(report.shop.actions.length > 0, true, "the fixture has actions");
+    const v = validateRecord(realRecord(report), SESSION, 1);
+    if (!v.ok) throw new Error(`refused: ${v.code} ${v.field}`);
+  }
+});
+
+Deno.test("records without a shop (older parsers) or with none (unreadable game) are accepted", () => {
+  const old = realRecord(realSolo[0]);
+  delete old.report.shop;
+  assertEquals(validateRecord(old, SESSION, 1).ok, true);
+  const none = realRecord(realSolo[0]);
+  none.report.shop = null;
+  assertEquals(validateRecord(none, SESSION, 1).ok, true);
+});
+
+Deno.test("the shop keeps to its shapes and bounds", () => {
+  const cases: Array<[(s: Json) => void, string]> = [
+    [(s) => (s.player = "Someone"), "report.shop.player"],
+    [(s) => (s.turns[0].opponent_shop = []), "report.shop.turns[0].opponent_shop"],
+    [(s) => (s.turns[0].offers[0].card_id = "<b>x</b>"), "report.shop.turns[0].offers[0].card_id"],
+    [(s) => (s.turns[0].offers[0].name = "Card"), "report.shop.turns[0].offers[0].name"],
+    [(s) => (s.turns[0].offers[0].roll = 99), "report.shop.turns[0].offers[0].roll"],
+    [(s) => (s.turns[0].free_rolls = s.turns[0].rolls + 1), "report.shop.turns[0].free_rolls"],
+    [(s) => (s.turns[0].buys = ["BG_1", 7]), "report.shop.turns[0].buys[1]"],
+    [(s) => (s.turns[0].gold = -1), "report.shop.turns[0].gold"],
+    [(s) => (s.turns[0].tier = 8), "report.shop.turns[0].tier"],
+    [(s) => (s.turns[0].end_ms = s.turns[0].start_ms - 1), "report.shop.turns[0].end_ms"],
+    [(s) => delete s.turns[0].rolls, "report.shop.turns[0].rolls"],
+    [(s) => (s.tier_ups[0].tier = 1), "report.shop.tier_ups[0].tier"],
+    [(s) => (s.actions[0].kind = "typed_text"), "report.shop.actions[0].kind"],
+    [(s) => (s.actions[0].ms = 24 * 60 * 60 * 1000 + 1), "report.shop.actions[0].ms"],
+    [(s) => (s.actions = new Array(3001).fill(s.actions[0])), "report.shop.actions"],
+    [(s) => (s.ended = "yes"), "report.shop.ended"],
+    [(s) => (s.turns = new Array(8).fill(null).map((_, i) => ({
+      ...s.turns[0],
+      turn: i + 1,
+      offers: new Array(400).fill(s.turns[0].offers[0]),
+    }))), "report.shop.turns"],
+  ];
+  for (const [forge, field] of cases) {
+    const rec = realRecord(realSolo[0]);
+    forge(rec.report.shop);
+    refused(rec, "invalid_report", field);
+  }
+  const named = realRecord(realSolo[0]);
+  named.report.shop.turns[0].offers[0].card_id = "Someone#1234";
+  const v = validateRecord(named, SESSION, 1);
+  assertEquals(v.ok ? "accepted" : v.code, "player_name");
 });
 
 Deno.test("health maps may be empty (unknown) or missing (older records)", () => {
@@ -118,8 +172,8 @@ Deno.test("a name in a health map is refused as a player name", () => {
   assertEquals(v.ok ? "accepted" : v.code, "player_name");
 });
 
-Deno.test("the validator version is a positive integer, 2 or more since revision 2", () => {
-  assertEquals(Number.isInteger(VALIDATOR_VERSION) && VALIDATOR_VERSION >= 2, true);
+Deno.test("the validator version is a positive integer, 3 or more since revision 3", () => {
+  assertEquals(Number.isInteger(VALIDATOR_VERSION) && VALIDATOR_VERSION >= 3, true);
 });
 
 Deno.test("session and index must match the address", () => {

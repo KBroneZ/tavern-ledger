@@ -16,6 +16,7 @@
       "not_in_log",
       "problems",
       "rounds",
+      "shop",
       "shop_tribes",
       "start_health",
       "status",
@@ -26,6 +27,11 @@
     "report.lobby[]": ["duo_team", "final_health", "final_place", "hero", "player_id"],
     "report.rounds[]": ["entries", "health_after", "number", "opponents", "own_health_after"],
     "report.rounds[].entries[]": ["board", "hero", "player_id", "side"],
-    "report.rounds[].entries[].board[]": ["atk", "card_id", "golden", "health", "position"]
+    "report.rounds[].entries[].board[]": ["atk", "card_id", "golden", "health", "position"],
+    "report.shop": ["actions", "end_ms", "ended", "start_ms", "tier_ups", "turns"],
+    "report.shop.turns[]": ["actions", "buys", "end_ms", "free_rolls", "freezes", "gold", "gold_spent", "offers", "rolls", "sells", "spell_buys", "start_ms", "tier", "turn"],
+    "report.shop.turns[].offers[]": ["card_id", "frozen", "roll"],
+    "report.shop.tier_ups[]": ["tier", "turn"],
+    "report.shop.actions[]": ["kind", "ms", "turn"]
   }
 }

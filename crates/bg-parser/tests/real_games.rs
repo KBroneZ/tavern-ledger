@@ -78,17 +78,83 @@ fn every_tested_build_has_a_real_game() {
     }
 }
 
+/// "D hh:mm:ss.fffffff " (time since the game's first line, D-046), then a
+/// power or game line, or an option or choice header that holds numbers only.
+fn allowed(line: &str) -> bool {
+    let Some(rest) = line.strip_prefix("D ") else {
+        return false;
+    };
+    let (time, rest) = rest.split_at(rest.len().min(17));
+    let time_ok = time.len() == 17
+        && time.bytes().enumerate().all(|(i, b)| match i {
+            2 | 5 => b == b':',
+            8 => b == b'.',
+            16 => b == b' ',
+            _ => b.is_ascii_digit(),
+        });
+    let numbers = |text: &str, keys: &[&str]| {
+        let fields: Vec<&str> = text.split(' ').collect();
+        fields.len() == keys.len()
+            && fields.iter().zip(keys).all(|(field, key)| {
+                field.strip_prefix(key).is_some_and(|v| {
+                    let v = v.strip_prefix('-').unwrap_or(v);
+                    !v.is_empty() && v.bytes().all(|b| b.is_ascii_digit())
+                })
+            })
+    };
+    let body_ok = rest.starts_with("GameState.DebugPrintPower() - ")
+        || rest.starts_with("GameState.DebugPrintGame() - ")
+        || rest
+            .strip_prefix("GameState.SendOption() - ")
+            .is_some_and(|b| {
+                numbers(
+                    b,
+                    &[
+                        "selectedOption=",
+                        "selectedSubOption=",
+                        "selectedTarget=",
+                        "selectedPosition=",
+                    ],
+                )
+            })
+        || rest
+            .strip_prefix("GameState.SendChoices() - ")
+            .and_then(|b| b.split_once(" ChoiceType="))
+            .is_some_and(|(id, kind)| {
+                numbers(id, &["id="]) && kind.bytes().all(|b| b.is_ascii_uppercase() || b == b'_')
+            });
+    time_ok && body_ok
+}
+
+#[test]
+fn the_allow_list_check_knows_each_line_kind() {
+    assert!(allowed(
+        "D 00:01:02.0030000 GameState.DebugPrintPower() - BLOCK_END"
+    ));
+    assert!(allowed(
+        "D 00:01:02.0030000 GameState.SendOption() - selectedOption=1 selectedSubOption=-1 \
+         selectedTarget=336 selectedPosition=0"
+    ));
+    assert!(allowed(
+        "D 00:01:02.0030000 GameState.SendChoices() - id=3 ChoiceType=GENERAL"
+    ));
+    for bad in [
+        "D 00:01:02 GameState.DebugPrintPower() - BLOCK_END",
+        "D 00:01:02.0030000 PowerTaskList.DebugPrintPower() - BLOCK_END",
+        "D 00:01:02.0030000 GameState.SendChoices() -   m_chosenEntities[0]=5",
+        "D 00:01:02.0030000 GameState.SendOption() - selectedOption=1 Someone",
+    ] {
+        assert!(!allowed(bad), "{bad}");
+    }
+}
+
 #[test]
 fn no_player_name_or_account_id_is_in_a_fixture() {
     for name in fixtures() {
         let (text, _) = read(&name);
         for (n, line) in text.lines().enumerate() {
             let at = format!("{name}.log line {}", n + 1);
-            assert!(
-                line.starts_with("D 00:00:00.0000000 GameState.DebugPrintPower() - ")
-                    || line.starts_with("D 00:00:00.0000000 GameState.DebugPrintGame() - "),
-                "{at}: line outside the allow-list"
-            );
+            assert!(allowed(line), "{at}: line outside the allow-list");
             let bytes = line.as_bytes();
             assert!(
                 !bytes
@@ -182,4 +248,58 @@ fn duos_build_253216() {
         .filter(|e| e.board.is_none())
         .count();
     assert_eq!(hidden, 3);
+}
+
+// Shop and actions (T-204, T-205), checked against counts of the raw logs in
+// session 034 (docs/research/shop-and-apm.md): options and choices sent,
+// top-level shop blocks, gold tags and tier changes.
+
+fn shop(name: &str) -> bg_parser::shop::ShopRecord {
+    game(name).shop.expect("a shop record")
+}
+
+fn sum(s: &bg_parser::shop::ShopRecord, f: impl Fn(&bg_parser::shop::ShopTurn) -> u32) -> u32 {
+    s.turns.iter().map(f).sum()
+}
+
+#[test]
+fn solo_shop_build_253216() {
+    let s = shop("b253216_solo");
+    assert_eq!(s.turns.len(), 9);
+    assert_eq!((sum(&s, |t| t.rolls), sum(&s, |t| t.free_rolls)), (10, 5));
+    assert_eq!(sum(&s, |t| t.buys.len() as u32), 11);
+    assert_eq!(sum(&s, |t| t.spell_buys), 3);
+    assert_eq!(sum(&s, |t| t.sells.len() as u32), 8);
+    assert_eq!(sum(&s, |t| t.freezes), 2);
+    let gold: Vec<_> = s.turns.iter().map(|t| t.gold).collect();
+    let expected: Vec<_> = [3, 4, 5, 6, 7, 8, 9, 10, 14].map(Some).into();
+    assert_eq!(gold, expected);
+    // Spent over the game: the last NUM_RESOURCES_SPENT_THIS_GAME.
+    assert_eq!(s.turns.iter().filter_map(|t| t.gold_spent).sum::<i64>(), 78);
+    let tiers: Vec<_> = s.tier_ups.iter().map(|u| (u.turn, u.tier)).collect();
+    assert_eq!(tiers, [(3, 2), (4, 3), (6, 4), (7, 5)]);
+    // 113 options and 14 discover picks sent; the hero pick is not counted.
+    assert_eq!(s.actions.len(), 127);
+    assert!(s.ended);
+    let minutes = (s.end_ms.unwrap() - s.start_ms.unwrap()) as f64 / 60_000.0;
+    assert!((14.0..14.2).contains(&minutes), "{minutes}");
+    // Every offer and every bought or sold minion has its card id.
+    for t in &s.turns {
+        assert!(t.offers.iter().all(|o| o.card_id.is_some()));
+        assert!(t.buys.iter().chain(&t.sells).all(Option::is_some));
+    }
+}
+
+#[test]
+fn duos_shop_build_253216() {
+    let s = shop("b253216_duos");
+    assert_eq!(s.turns.len(), 8);
+    assert_eq!((sum(&s, |t| t.rolls), sum(&s, |t| t.free_rolls)), (8, 4));
+    assert_eq!(sum(&s, |t| t.buys.len() as u32), 9);
+    assert_eq!(sum(&s, |t| t.sells.len() as u32), 14);
+    let tiers: Vec<_> = s.tier_ups.iter().map(|u| (u.turn, u.tier)).collect();
+    assert_eq!(tiers, [(3, 2), (4, 3), (6, 4), (7, 5)]);
+    // 97 options and 8 picks: only the local player's, never the teammate's.
+    assert_eq!(s.actions.len(), 105);
+    assert!(s.ended);
 }
