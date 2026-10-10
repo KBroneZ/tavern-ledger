@@ -79,10 +79,12 @@ class DuoGameTest(unittest.TestCase):
         self.assertIs(parse_bg.is_golden(""), False)
         self.assertIs(parse_bg.is_golden("TB_BaconUps_001"), True)
 
-    def test_golden_comes_from_the_card_id_not_the_premium_tag(self):
-        cosmetic = self.report.rounds[0].entries[1].board[0]  # PREMIUM=1, normal card
-        tripled = self.report.rounds[0].entries[3].board[0]   # BG20_100_G
-        self.assertFalse(cosmetic.golden)
+    def test_golden_comes_from_the_premium_tag_or_the_card_id(self):
+        always_golden = self.report.rounds[0].entries[0].board[0]  # BG32_236, PREMIUM=1
+        normal = self.report.rounds[0].entries[1].board[0]         # no PREMIUM
+        tripled = self.report.rounds[0].entries[3].board[0]        # BG20_100_G
+        self.assertTrue(always_golden.golden)
+        self.assertFalse(normal.golden)
         self.assertTrue(tripled.golden)
 
     def test_opponents_faced(self):

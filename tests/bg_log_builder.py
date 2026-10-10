@@ -183,12 +183,13 @@ def duo_game(complete: bool = True, build: int = 253216) -> str:
     b.tag(3, "BACON_CURRENT_COMBAT_PLAYER_ID", 3)
     b.full_entity(40, "TB_BaconShop_HERO_16", CONTROLLER=2, ZONE="PLAY", **hero)
     b.tag(2, "HERO_ENTITY", 40)
+    # Aureate Laureate is always golden: PREMIUM without a golden card id.
     b.full_entity(41, "BG32_236", CARDTYPE="MINION", CONTROLLER=2, ZONE="PLAY",
-                  ATK=2, HEALTH=2, ZONE_POSITION=1)
+                  ATK=2, HEALTH=2, ZONE_POSITION=1, PREMIUM=1)
     b.full_entity(42, "TB_BaconShop_HERO_60", CONTROLLER=10, ZONE="PLAY", **hero)
     b.tag(3, "HERO_ENTITY", 42)
     b.full_entity(43, "BG26_135", CARDTYPE="MINION", CONTROLLER=10, ZONE="PLAY",
-                  ATK=3, HEALTH=1, ZONE_POSITION=1, PREMIUM=1)
+                  ATK=3, HEALTH=1, ZONE_POSITION=1)
     b.attack(41)
     # 43 dies and summons 44 mid-fight: 44 was not on the board at combat start.
     b.tag(43, "ZONE", "GRAVEYARD")

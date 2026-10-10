@@ -1,4 +1,5 @@
-//! Follows `Power.log` in the newest session folder as the game writes it.
+//! Follows `Power.log` (or another of the game's logs, such as
+//! `LoadingScreen.log`) in the newest session folder as the game writes it.
 //!
 //! Bytes are read once: a line still being written stays in the splitter
 //! until its newline arrives. The game may rotate the file (`Power.log`
@@ -17,6 +18,8 @@ use crate::discover::latest_session;
 
 pub const POWER_LOG: &str = "Power.log";
 pub const POWER_OLD_LOG: &str = "Power_old.log";
+pub const LOADING_SCREEN_LOG: &str = "LoadingScreen.log";
+pub const LOADING_SCREEN_OLD_LOG: &str = "LoadingScreen_old.log";
 const READ_CHUNK: usize = 1 << 20;
 const HEAD_LEN: usize = 256;
 
@@ -30,10 +33,18 @@ pub enum Event<'a> {
     TooLong,
 }
 
+/// The file followed and the name the game gives it once rotated.
+#[derive(Clone, Copy, Debug)]
+struct Files {
+    current: &'static str,
+    old: &'static str,
+}
+
 #[derive(Debug)]
 struct Position {
     dir: PathBuf,
     name: String,
+    files: Files,
     offset: u64,
     /// First bytes of the file being read, to notice a rotation.
     head: Vec<u8>,
@@ -44,15 +55,26 @@ struct Position {
 pub struct Follower {
     logs_dir: PathBuf,
     current: Option<Position>,
+    files: Files,
 }
 
 impl Follower {
     /// Follows the newest session from its first line, so games played
     /// before the app started are not lost.
     pub fn new(logs_dir: impl Into<PathBuf>) -> Self {
+        Self::of(logs_dir, POWER_LOG, POWER_OLD_LOG)
+    }
+
+    /// Follows `LoadingScreen.log` instead (T-314), the same way.
+    pub fn loading_screen(logs_dir: impl Into<PathBuf>) -> Self {
+        Self::of(logs_dir, LOADING_SCREEN_LOG, LOADING_SCREEN_OLD_LOG)
+    }
+
+    fn of(logs_dir: impl Into<PathBuf>, current: &'static str, old: &'static str) -> Self {
         Follower {
             logs_dir: logs_dir.into(),
             current: None,
+            files: Files { current, old },
         }
     }
 
@@ -86,6 +108,7 @@ impl Follower {
         self.current = Some(Position {
             dir,
             name,
+            files: self.files,
             offset: 0,
             head: Vec::new(),
             splitter: LineSplitter::default(),
@@ -102,7 +125,7 @@ impl Follower {
     pub fn has_power_log(&self) -> bool {
         self.current
             .as_ref()
-            .is_some_and(|p| p.offset > 0 || p.dir.join(POWER_LOG).is_file())
+            .is_some_and(|p| p.offset > 0 || p.dir.join(p.files.current).is_file())
     }
 }
 
@@ -114,7 +137,7 @@ fn forward<'f>(on_event: &'f mut dyn FnMut(Event<'_>)) -> impl FnMut(Chunk<'_>) 
 }
 
 fn read_new(pos: &mut Position, on_event: &mut dyn FnMut(Event<'_>)) -> io::Result<()> {
-    let path = pos.dir.join(POWER_LOG);
+    let path = pos.dir.join(pos.files.current);
     let len = match fs::metadata(&path) {
         Ok(meta) => meta.len(),
         Err(e) if e.kind() == io::ErrorKind::NotFound => return drain_rotated(pos, on_event),
@@ -140,7 +163,7 @@ fn drain_rotated(pos: &mut Position, on_event: &mut dyn FnMut(Event<'_>)) -> io:
     if pos.offset == 0 {
         return Ok(());
     }
-    let old = pos.dir.join(POWER_OLD_LOG);
+    let old = pos.dir.join(pos.files.old);
     let is_ours = fs::metadata(&old).is_ok_and(|m| m.len() >= pos.offset)
         && read_head(&old).is_ok_and(|head| same_start(&head, &pos.head));
     if is_ours {

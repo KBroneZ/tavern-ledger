@@ -72,6 +72,8 @@ KEEP_TAGS = frozenset({
     "BACON_HEROPOWER_TRINKET_DATABASE_ID", "TAUNT", "DIVINE_SHIELD", "REBORN", "VENOMOUS",
     "WINDFURY", "STEALTH", "DEATHRATTLE", "BACON_RALLY", "DARK_GIFT_ENTITY",
     "BACON_GLOBAL_OLD_GOD_DBID",
+    # Parser revision 6 (session 052): golden board minions by PREMIUM.
+    "PREMIUM",
 })
 # Power packets kept (their tag= lines are filtered by KEEP_TAGS). Of the
 # blocks, ATTACK is kept at any depth (the parser takes the combat boards

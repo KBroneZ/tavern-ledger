@@ -32,7 +32,7 @@ pub const PARSER_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Bump when a change makes the parser read the same log differently (new
 /// fields, fixed bugs). Saved with every game so `tavern-watch --reparse`
 /// and the server can tell which records an older parser wrote.
-pub const PARSER_REVISION: u32 = 5;
+pub const PARSER_REVISION: u32 = 6;
 
 /// Builds whose real logs this parser was checked against.
 pub const TESTED_BUILDS: &[i64] = &[253216];
@@ -50,6 +50,8 @@ const MAX_NAME_LEN: usize = 100;
 const MAX_HERO_MAPS: usize = 64;
 /// The game's Old God, set once on the game entity at the start.
 const OLD_GOD: &str = "BACON_GLOBAL_OLD_GOD_DBID";
+/// The next opponent's seat, on the local leaderboard hero (T-313).
+const NEXT_OPPONENT: &str = "NEXT_OPPONENT_PLAYER_ID";
 
 /// One game being read.
 #[derive(Debug, Default)]
@@ -183,6 +185,26 @@ impl GameReader {
         slots
     }
 
+    /// The seat the game marks as the next opponent on its leaderboard
+    /// (T-313): the local leaderboard hero's `NEXT_OPPONENT_PLAYER_ID`, set
+    /// once each shop turn (123 of 123 shop turns on the user's 11 games, and
+    /// the hero met in the next combat or, in Duos, their teammate, every
+    /// time). Live only; `None` when it is not set, not another lobby seat,
+    /// or the game could not be read.
+    pub fn next_opponent_now(&self) -> Option<i64> {
+        if self.error.is_some() {
+            return None;
+        }
+        let local = self.collector.local_pid?;
+        let heroes = leaderboard_heroes(&self.collector.board);
+        let (_, own) = heroes.iter().find(|(pid, _)| *pid == local)?;
+        let next = own.opt_int(NEXT_OPPONENT)?;
+        heroes
+            .iter()
+            .any(|(pid, _)| *pid == next && *pid != local)
+            .then_some(next)
+    }
+
     /// True when the log says this is a Battlegrounds game (solo or Duos).
     pub fn is_battlegrounds(&self) -> bool {
         self.game_type
@@ -284,6 +306,13 @@ impl LogReader {
             Some(reader) if self.in_progress_index().is_some() => reader.lobby_now(),
             _ => Vec::new(),
         }
+    }
+
+    /// The next opponent of the Battlegrounds game in progress (see
+    /// [`GameReader::next_opponent_now`]); `None` when no such game is on.
+    pub fn next_opponent_now(&self) -> Option<i64> {
+        self.in_progress_index()?;
+        self.current.as_ref()?.next_opponent_now()
     }
 
     /// Number of the Battlegrounds game being played right now (the `index`

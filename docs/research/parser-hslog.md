@@ -40,7 +40,7 @@ Evidence: game of 2026-10-02 (`Hearthstone_2026_10_02_15_44_55/Power_old.log`, 1
 | Opponent of each combat | Yes | In combat, the dummy player changes its `HERO_ENTITY` to a copy of the opponent's hero; it is identified by the `card_id` of the lobby hero and, if that does not match (ghosts of eliminated players, e.g. `TB_BaconShop_HERO_KelThuzad`), by `BACON_CURRENT_COMBAT_PLAYER_ID` | line 7880 |
 | Who fights on your side (you or your teammate) | Yes | The local player changes its `HERO_ENTITY` to the copy of the teammate's hero and back to its own | — |
 | Own and opponent board at combat start | Yes, except hidden combats | Minions in `ZONE=PLAY` on each side in the first `BLOCK_START BlockType=ATTACK` block after the hero change: `card_id`, `ATK`, `HEALTH − DAMAGE`, `ZONE_POSITION` | line 9044 (first attack; 257 in the game) |
-| Golden minion | Yes | By `card_id` (`…_G` or `TB_BaconUps_…`). **The `PREMIUM` tag is no use**: it is cosmetic (it appears on freshly bought tier 1 minions) | 895 golden minions seen in the 23 games |
+| Golden minion | Yes | By `card_id` (`…_G` or `TB_BaconUps_…`). **The `PREMIUM` tag is no use**: it is cosmetic (it appears on freshly bought tier 1 minions). *Corrected in session 052 (D-061): it is set only for a moment on minions set aside during a triple, and on board minions it marks golden ones, including always-golden cards and golden tokens; see [overlay-data.md](overlay-data.md).* | 895 golden minions seen in the 23 games |
 | Lobby tribes | Inferred only | `CARDRACE` of the shop minions (`IS_BACON_POOL_MINION=1`, controlled by the dummy player in the tavern turn) | lines 2573, 2580 |
 | MMR | **No** | It does not appear in `Power.log` (search for `MMR`, `Rating`: no results). See T-004 | — |
 

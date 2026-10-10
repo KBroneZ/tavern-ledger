@@ -161,7 +161,8 @@ fn run(args: Args) -> Result<(), String> {
     if check_setup_files {
         let log_config = default_log_config_path();
         let client_config = client_config_path(&logs_dir);
-        for message in check_setup(log_config.as_deref(), client_config.as_deref()).messages() {
+        let setup = check_setup(log_config.as_deref(), client_config.as_deref());
+        for message in setup.messages().into_iter().chain(setup.notes()) {
             println!("Setup: {message}");
         }
     }

@@ -8,6 +8,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use bg_parser::LogReader;
 use tracker::live::{live_game, LiveGame, Phase};
+use tracker::scene::Scene;
 use tracker::store::Store;
 use tracker::Watcher;
 
@@ -167,4 +168,161 @@ fn the_live_report_follows_new_lines_between_polls() {
     let late = watcher.live_report().map(|r| r.rounds.len());
     assert!(late >= early, "more of the game is known, never less");
     assert_ne!(early, None);
+}
+
+const LOADING_FROM_LOBBY: &str = "D 10:00:01.0000000 LoadingScreen.OnScenePreUnload() - prevMode=BACON nextMode=GAMEPLAY m_phase=INVALID\n";
+
+fn scene_line(prev: &str, curr: &str) -> String {
+    format!("D 10:00:00.0000000 LoadingScreen.OnSceneLoaded() - prevMode={prev} currMode={curr}\n")
+}
+
+/// The game in progress is cut off (no end) and the player went back to the
+/// lobby: with LoadingScreen.log the overlay's game ends (T-314).
+#[test]
+fn leaving_the_game_screen_ends_the_live_game_of_a_cut_off_log() {
+    let root = temp_dir();
+    let logs = root.join("Logs");
+    let session = logs.join(SESSION);
+    fs::create_dir_all(&session).unwrap();
+    let mut watcher = Watcher::new(&logs, Store::open(&root.join("data")).unwrap());
+    let log = fixture("duo_game_incomplete");
+    append(&session.join("Power.log"), &log);
+    watcher.poll().unwrap();
+    assert_eq!(watcher.scene(), None, "no LoadingScreen.log: unknown");
+    assert!(
+        watcher.live_report().is_some(),
+        "as before without the file"
+    );
+
+    let scenes = session.join("LoadingScreen.log");
+    append(&scenes, &scene_line("HUB", "BACON"));
+    append(&scenes, LOADING_FROM_LOBBY);
+    watcher.poll().unwrap();
+    assert_eq!(watcher.scene(), Some(Scene::BattlegroundsLoading));
+    assert!(watcher.live_report().is_some());
+    append(&scenes, &scene_line("BACON", "GAMEPLAY"));
+    watcher.poll().unwrap();
+    assert_eq!(watcher.scene(), Some(Scene::Game));
+    assert!(watcher.live_report().is_some());
+    assert!(watcher.in_progress().is_some());
+
+    append(&scenes, &scene_line("GAMEPLAY", "BACON"));
+    watcher.poll().unwrap();
+    assert_eq!(watcher.scene(), Some(Scene::BattlegroundsLobby));
+    assert!(watcher.live_report().is_none(), "the player left the game");
+    assert!(watcher.in_progress().is_none());
+    assert!(watcher.live_lobby().is_empty());
+    assert_eq!(watcher.live_next_opponent(), None);
+
+    // The next game loads (the order of the real logs: the lobby closes,
+    // CREATE_GAME, then the game screen loads): the game that was left
+    // does not come back meanwhile.
+    append(&scenes, LOADING_FROM_LOBBY);
+    watcher.poll().unwrap();
+    assert_eq!(watcher.scene(), Some(Scene::BattlegroundsLoading));
+    assert!(watcher.live_report().is_none(), "the left game stays left");
+    assert!(watcher.in_progress().is_none());
+
+    // Its CREATE_GAME arrives, then the game screen: the new game is on.
+    append(&session.join("Power.log"), &fixture("duo_game_incomplete"));
+    watcher.poll().unwrap();
+    assert!(watcher.live_report().is_some(), "the new game");
+    append(&scenes, &scene_line("BACON", "GAMEPLAY"));
+    watcher.poll().unwrap();
+    assert!(watcher.live_report().is_some());
+    assert!(watcher.in_progress().is_some());
+}
+
+#[test]
+fn the_watcher_gives_the_next_opponent_of_the_game_on() {
+    let root = temp_dir();
+    let logs = root.join("Logs");
+    fs::create_dir_all(logs.join(SESSION)).unwrap();
+    let power = logs.join(SESSION).join("Power.log");
+    let mut watcher = Watcher::new(&logs, Store::open(&root.join("data")).unwrap());
+    let log = fixture("solo_game");
+    let turn = log.find("tag=TURN value=1").expect("a shop turn");
+    let cut = log[..turn].rfind('\n').unwrap() + 1;
+    append(&power, &log[..cut]);
+    append(
+        &power,
+        "D 12:00:00.0000000 GameState.DebugPrintPower() -     TAG_CHANGE Entity=10 tag=NEXT_OPPONENT_PLAYER_ID value=3 \n",
+    );
+    watcher.poll().unwrap();
+    assert_eq!(watcher.live_next_opponent(), Some(3));
+}
+
+/// Power.log and LoadingScreen.log are written apart: a new game's
+/// CREATE_GAME can be read while the scene still says "lobby". The game is
+/// hidden only until the scene reaches the game, never for good (review H1).
+#[test]
+fn a_game_read_before_its_scene_change_shows_once_the_scene_catches_up() {
+    let root = temp_dir();
+    let logs = root.join("Logs");
+    let session = logs.join(SESSION);
+    fs::create_dir_all(&session).unwrap();
+    let scenes = session.join("LoadingScreen.log");
+    append(&scenes, &scene_line("HUB", "BACON"));
+    let mut watcher = Watcher::new(&logs, Store::open(&root.join("data")).unwrap());
+    watcher.poll().unwrap();
+    append(&session.join("Power.log"), &fixture("duo_game_incomplete"));
+    watcher.poll().unwrap();
+    assert!(
+        watcher.live_report().is_none(),
+        "the scene says lobby for now"
+    );
+
+    append(&scenes, LOADING_FROM_LOBBY);
+    append(&scenes, &scene_line("BACON", "GAMEPLAY"));
+    watcher.poll().unwrap();
+    assert_eq!(watcher.scene(), Some(Scene::Game));
+    assert!(
+        watcher.live_report().is_some(),
+        "the game shows once the scene is the game"
+    );
+    assert!(watcher.in_progress().is_some());
+}
+
+#[test]
+fn a_new_session_starts_with_an_unknown_scene() {
+    let root = temp_dir();
+    let logs = root.join("Logs");
+    let first = logs.join(SESSION);
+    fs::create_dir_all(&first).unwrap();
+    append(
+        &first.join("LoadingScreen.log"),
+        &scene_line("HUB", "BACON"),
+    );
+    let mut watcher = Watcher::new(&logs, Store::open(&root.join("data")).unwrap());
+    watcher.poll().unwrap();
+    assert_eq!(watcher.scene(), Some(Scene::BattlegroundsLobby));
+    fs::create_dir_all(logs.join("Hearthstone_2026_10_09_11_00_00")).unwrap();
+    watcher.poll().unwrap();
+    assert_eq!(watcher.scene(), None, "nothing read in the new session yet");
+    assert_eq!(watcher.scene_error(), None);
+}
+
+/// LoadingScreen.log rotates like Power.log: the lines left in the old file
+/// are read before the new one (review M3).
+#[test]
+fn the_scene_file_is_followed_across_a_rotation() {
+    let root = temp_dir();
+    let logs = root.join("Logs");
+    let session = logs.join(SESSION);
+    fs::create_dir_all(&session).unwrap();
+    let scenes = session.join("LoadingScreen.log");
+    append(&scenes, &scene_line("HUB", "BACON"));
+    let mut watcher = Watcher::new(&logs, Store::open(&root.join("data")).unwrap());
+    watcher.poll().unwrap();
+    assert_eq!(watcher.scene(), Some(Scene::BattlegroundsLobby));
+    append(&scenes, &scene_line("BACON", "GAMEPLAY"));
+    fs::rename(&scenes, session.join("LoadingScreen_old.log")).unwrap();
+    append(&scenes, "D 10:01:00.0000000 LoadingScreen.FadeIn()\n");
+    watcher.poll().unwrap();
+    assert_eq!(
+        watcher.scene(),
+        Some(Scene::Game),
+        "the old file's last line counted"
+    );
+    assert_eq!(watcher.scene_error(), None);
 }

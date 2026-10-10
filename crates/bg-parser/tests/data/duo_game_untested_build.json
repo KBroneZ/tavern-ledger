@@ -59,7 +59,7 @@
                 "atk": 2,
                 "health": 2,
                 "position": 1,
-                "golden": false
+                "golden": true
               }
             ]
           },
