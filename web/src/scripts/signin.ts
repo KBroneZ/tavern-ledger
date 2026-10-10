@@ -1,7 +1,7 @@
 import { signIn, signUp } from "../lib/api.ts";
 import { checkCredentials } from "../lib/auth.ts";
 import { supabase } from "./client.ts";
-import { busy, byId, field, say } from "./dom.ts";
+import { busy, byId, field, ready, say } from "./dom.ts";
 
 const ACCOUNT_PAGE = "/account/";
 
@@ -24,6 +24,7 @@ function wire(
     const button = form.querySelector("button") as HTMLButtonElement;
     void busy(button, () => submit(email, password, message));
   });
+  ready(form);
 }
 
 wire("signin-form", "signin-message", async (email, password, message) => {

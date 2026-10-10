@@ -14,7 +14,8 @@ Backups older than -KeepDays (default 35) are deleted, so a deleted account
 leaves the backups within that time; the privacy policy (T-104b) states it.
 
 Hosted project (default): needs `npx supabase link` done once, and
-.local\supabase.env with SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY lines.
+.local\supabase.env with SUPABASE_URL and SUPABASE_SECRET_KEY lines (the
+project's secret key, sb_secret_...; legacy service_role keys are refused, D-053).
 -Local backs up the local stack instead (for testing the script).
 Keys are only read into memory, never printed or written to the backup.
 
@@ -44,29 +45,32 @@ function Get-Connection {
         $raw = (& npx supabase status -o json 2>$null | Out-String)
         if ($LASTEXITCODE -ne 0) { throw 'Local stack is not running (npx supabase start).' }
         $status = ($raw -replace '(?s)^[^{]*', '') | ConvertFrom-Json
-        return @{ Url = $status.API_URL; Key = $status.SERVICE_ROLE_KEY }
+        if (-not $status.SECRET_KEY) { throw 'supabase status gave no SECRET_KEY (update the Supabase CLI).' }
+        return @{ Url = $status.API_URL; Key = $status.SECRET_KEY }
     }
     $envFile = Join-Path $repo '.local\supabase.env'
-    if (-not (Test-Path $envFile)) { throw "Missing $envFile (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)." }
+    if (-not (Test-Path $envFile)) { throw "Missing $envFile (SUPABASE_URL, SUPABASE_SECRET_KEY)." }
     $vars = @{}
     foreach ($line in Get-Content $envFile) {
-        if ($line -match '^\s*(SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY)\s*=\s*(.+?)\s*$') {
+        if ($line -match '^\s*(SUPABASE_URL|SUPABASE_SECRET_KEY)\s*=\s*(.+?)\s*$') {
             $vars[$Matches[1]] = $Matches[2].Trim('"')
         }
     }
-    if (-not $vars['SUPABASE_URL'] -or -not $vars['SUPABASE_SERVICE_ROLE_KEY']) {
-        throw "$envFile needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
+    if (-not $vars['SUPABASE_URL'] -or -not $vars['SUPABASE_SECRET_KEY']) {
+        throw "$envFile needs SUPABASE_URL and SUPABASE_SECRET_KEY (SUPABASE_SERVICE_ROLE_KEY is no longer read)."
+    }
+    if (-not $vars['SUPABASE_SECRET_KEY'].StartsWith('sb_secret_')) {
+        throw 'SUPABASE_SECRET_KEY must be a secret key (sb_secret_...), not a legacy service_role key.'
     }
     if ($vars['SUPABASE_URL'] -notmatch '^https://[a-z0-9]+\.supabase\.co$') {
         throw 'SUPABASE_URL must be https://<project>.supabase.co'
     }
-    return @{ Url = $vars['SUPABASE_URL']; Key = $vars['SUPABASE_SERVICE_ROLE_KEY'] }
+    return @{ Url = $vars['SUPABASE_URL']; Key = $vars['SUPABASE_SECRET_KEY'] }
 }
 
+# The secret key goes in apikey only, never as a bearer token.
 function Get-Headers($conn) {
-    $h = @{ apikey = $conn.Key }
-    if (-not $conn.Key.StartsWith('sb_')) { $h.Authorization = "Bearer $($conn.Key)" }
-    return $h
+    return @{ apikey = $conn.Key }
 }
 
 function Invoke-Dump([string]$file, [string[]]$extra) {

@@ -1,13 +1,13 @@
 // Daily sweep (T-104d). POST /functions/v1/sweep with the service key the
-// function itself uses (the new secret key where the platform gives it, D-042),
+// function itself uses (the new secret key, D-042; never a legacy key, D-053),
 // or with the sweep token that the scheduled job reads from Vault
 // (X-Sweep-Token; checked by the database, migration 20261010090000):
 //   1. game files with no summary row (an upload that wrote its file and then
 //      failed before the row), untouched for an hour, through the Storage
 //      API (deleting storage.objects rows in SQL would leave the bytes);
 //   2. public.sweep_housekeeping(): audit entries of deleted accounts (the
-//      T-104a leftover), upload times older than two days and IP counters
-//      older than an hour.
+//      T-104a leftover) and every audit entry older than 90 days (D-048),
+//      upload times older than two days and IP counters older than an hour.
 // Safe to run any time and as often as wanted. No dependencies.
 
 export interface Env {
@@ -41,9 +41,6 @@ function serviceHeaders(env: Env): Record<string, string> {
     apikey: env.serviceKey,
     "Content-Type": "application/json",
   };
-  if (!env.serviceKey.startsWith("sb_")) {
-    headers.Authorization = `Bearer ${env.serviceKey}`;
-  }
   return headers;
 }
 
