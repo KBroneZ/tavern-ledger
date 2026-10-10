@@ -1,85 +1,146 @@
 ---
 import Base from "../layouts/Base.astro";
+import "../styles/home.css";
+import "../styles/scene.css";
 import { readConfig } from "../lib/config.ts";
 
 const accountsOpen = readConfig(import.meta.env) !== null;
+
+// The scene's five steps (D-052). The captions stay readable to screen
+// readers in both the moving and the still scene; the picture's description
+// tells the same story in one go.
+const steps = [
+  { title: "Your screen, while you play", text: "Seen from the side, it comes apart into layers of glass." },
+  { title: "The board", text: "Your minions. Drawn by the game, as always." },
+  { title: "The tavern", text: "Where you buy. Also drawn by the game." },
+  { title: "The leaderboard", text: "The eight heroes down the side, drawn by the game. Point at one." },
+  {
+    title: "Tavern Ledger, in front",
+    text: "One pane of ours: a few notes at the side and the last board you met of the hero you point at. Only what you already saw, and your clicks pass through to the game.",
+  },
+];
+const sceneLabel =
+  "The game screen seen from the side, split into four panes of glass: the board with your minions, the tavern where you buy and the leaderboard of eight heroes, all drawn by the game, and Tavern Ledger's pane in front, lit, with a few notes at the side and a card for the hero pointed at.";
 ---
 
 <Base
-  title="Your Battlegrounds games, in your own ledger"
+  title="Your Battlegrounds games, kept for you"
   description="Free, open-source Battlegrounds tracker for Windows that only reads the game's log files, plus a website to follow your progress."
+  layout="home"
 >
   <section class="hero" aria-labelledby="hero-heading">
-    <div>
-      <p class="kicker">Battlegrounds tracker · Windows · free</p>
-      <h1 id="hero-heading">Every game you play, <span>on the record.</span></h1>
-      <p class="lede">
-        Tavern Ledger is a desktop app that reads Hearthstone's log files on your PC and keeps a
-        history of your Battlegrounds games: hero, final place, the tribes the tavern offered and
-        the boards you saw. This website will let you keep that history in an account and, if you
-        choose, share a public profile.
-      </p>
+    <span class="lamp lamp-1" aria-hidden="true"></span>
+    <span class="lamp lamp-2" aria-hidden="true"></span>
+    <span class="lamp lamp-3" aria-hidden="true"></span>
+    <h1 id="hero-heading">Pull up a stool. <span class="lit">We kept your games.</span></h1>
+    <p class="lead">
+      A free Windows app that reads Hearthstone's own log on your PC and keeps every Battlegrounds
+      game: your hero, your place and the boards you faced.
+    </p>
+    <div class="ctas">
+      <a class="btn" href="#scene">Show me</a>
+      <a class="btn quiet" href="#safe">Is it safe?</a>
     </div>
-    <figure class="live">
-      <div class="live-head"><span>Game card</span><em>Example game</em></div>
-      <div class="live-round" aria-hidden="true"><b></b><span>of an example game</span></div>
-      <div class="live-hp" aria-hidden="true"><i></i></div>
-      <div class="live-lobby" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-      <figcaption>
-        An illustration with made-up numbers: your health, and the lobby thinning out round by
-        round. Your real games appear here only after the desktop app uploads them, which comes
-        with a later version, and only after you sign in and turn it on.
-      </figcaption>
-    </figure>
   </section>
 
-  <div class="holds table-wrap">
-    <table class="ledger">
-      <caption>What an uploaded game holds on the site</caption>
-      <thead>
-        <tr><th scope="col">Item</th><th scope="col" class="num">On the site</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>Hero and final place</td><td class="num">yes</td></tr>
-        <tr><td>Mode (Solo or Duos) and date</td><td class="num">yes</td></tr>
-        <tr><td>Tribes the tavern offered you</td><td class="num">yes</td></tr>
-        <tr><td>Your rating or MMR</td><td class="num never">never</td></tr>
-        <tr><td>Other players' names</td><td class="num never">never</td></tr>
-      </tbody>
-    </table>
-  </div>
+  <section class="pin" id="scene" aria-labelledby="scene-title">
+    <h2 id="scene-title" class="visually-hidden">What Tavern Ledger adds to your screen</h2>
+    <div class="pin-stage">
+      <div class="caption-col">
+        <div class="pips" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        <ol class="captions" role="list">
+          {
+            steps.map((step, i) => (
+              <li class={`cap c${i + 1}`}>
+                <span class="step">{i + 1} of {steps.length}</span>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+      <div class="stage3d" role="img" aria-label={sceneLabel}>
+        <div class="scene3">
+          <div class="pane p1">
+            <span class="label">Board</span>
+            <div class="row"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="pane p2">
+            <span class="label">Tavern</span>
+            <div class="row"><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="pane p3">
+            <span class="label">Leaderboard</span>
+            <div class="col"><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="pane p4 ours">
+            <span class="label">Tavern Ledger</span>
+            <span class="card"></span>
+            <span class="beam"></span>
+            <div class="panels-mini"><i></i><i></i><i></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-  <div class="columns">
-    <section aria-labelledby="does-heading">
-      <h2 id="does-heading">What the desktop app does</h2>
-      <ul>
-        <li>Rebuilds each Battlegrounds game from the game's own log file.</li>
-        <li>Shows your totals and your numbers per hero, Solo and Duos apart.</li>
-        <li>Says "unknown" when it does not know, never a made-up number.</li>
-      </ul>
-    </section>
-    <section aria-labelledby="never-heading">
-      <h2 id="never-heading">What it never does</h2>
-      <ul>
-        <li>Read the game's memory, inject code or change game files.</li>
-        <li>Act in the game for you.</li>
-        <li>Show anything you could not see on your own screen.</li>
-      </ul>
-    </section>
-    <section aria-labelledby="yours-heading">
-      <h2 id="yours-heading">Your data</h2>
-      <ul>
-        <li>Your profile is private until you make it public.</li>
-        <li>Download everything we hold about you as one file.</li>
-        <li>Delete your account and every file and row with it.</li>
-      </ul>
-    </section>
-  </div>
-
-  <aside class="status" aria-label="Project status">
-    <p>
-      <strong>Not open to the public yet.</strong> The desktop app is a prototype and the website
-      is being built. {accountsOpen ? "Accounts on this site are for testing only." : "Accounts are not open yet."}
+  <section class="sec" aria-labelledby="keeps-heading">
+    <h2 id="keeps-heading" class="sec-h">What it keeps for you</h2>
+    <p class="sec-p">
+      Everything comes from the game's own log. When the log does not say, the app says "unknown"
+      instead of guessing.
     </p>
-  </aside>
+    <div class="trio">
+      <div class="glass">
+        <p class="big">37 <small>games kept, in this made-up example</small></p>
+        <h3>Every game, every place</h3>
+        <p>Your hero and where you finished, Solo and Duos apart.</p>
+      </div>
+      <div class="glass">
+        <h3>The boards you met</h3>
+        <p>Each opponent's board at the start of every combat, as the log records it.</p>
+      </div>
+      <div class="glass">
+        <h3>A recap after each game</h3>
+        <p>Your health over the rounds and your record against each opponent.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec">
+    <section class="safe glass" id="safe" aria-labelledby="safe-heading">
+      <div>
+        <h2 id="safe-heading" class="sec-h">Safe for your account</h2>
+        <p class="sec-p">
+          It reads the log files the game already writes on your PC and, for the overlay, where
+          your pointer is over the game window.
+        </p>
+      </div>
+      <ul role="list">
+        <li>It never reads the game's memory, adds code to it or changes its files.</li>
+        <li>It never plays or clicks for you.</li>
+        <li>It never shows what you could not see on your own screen.</li>
+      </ul>
+    </section>
+  </div>
+
+  <section class="sec yours" aria-labelledby="yours-heading">
+    <h2 id="yours-heading" class="sec-h">Your games stay yours</h2>
+    <ul role="list">
+      <li><b>Private until you say</b><span>Your profile is hidden until you make it public.</span></li>
+      <li><b>Take it all with you</b><span>Download everything the site keeps about you in one file.</span></li>
+      <li><b>Gone when you ask</b><span>Delete your account and every game with it.</span></li>
+    </ul>
+  </section>
+
+  <div class="sec">
+    <aside class="doors glass" aria-label="Project status">
+      <strong>The doors are not open yet.</strong>
+      <span>
+        The desktop app is a prototype and the website is being built.{" "}
+        {accountsOpen ? "Accounts on this site are for testing only." : "Accounts are not open yet."}
+      </span>
+    </aside>
+  </div>
 </Base>

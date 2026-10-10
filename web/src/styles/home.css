@@ -1,0 +1,242 @@
+/* Tavern Ledger home page (D-052): hero, what it keeps, safety, your data and
+   status. Loaded by index.astro only; the tokens are in global.css. */
+
+.hero {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  padding: clamp(44px, 8vw, 96px) var(--gutter) clamp(28px, 4vw, 44px);
+  text-align: center;
+  overflow: hidden;
+}
+
+/* Three blurred lamps behind the headline. Decorative; they never move. */
+.lamp {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(22px);
+  pointer-events: none;
+}
+
+.lamp-1 {
+  left: 8%;
+  top: 18%;
+  width: 120px;
+  height: 120px;
+  background: var(--amber);
+  opacity: 0.4;
+}
+
+.lamp-2 {
+  right: 10%;
+  top: 10%;
+  width: 90px;
+  height: 90px;
+  background: #ff9db8;
+  opacity: 0.22;
+}
+
+.lamp-3 {
+  right: 22%;
+  bottom: 4%;
+  width: 140px;
+  height: 140px;
+  background: var(--amber);
+  opacity: 0.22;
+}
+
+.hero h1 {
+  position: relative;
+  max-width: 20ch;
+  font-size: clamp(2.6rem, 6.8vw, 5.25rem);
+  line-height: 0.98;
+}
+
+.hero h1 .lit {
+  display: block;
+  color: var(--amber-hi);
+}
+
+.hero .lead {
+  position: relative;
+  max-width: 48ch;
+}
+
+.ctas {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.sec {
+  max-width: calc(var(--wide) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding: var(--section) var(--gutter) 0;
+}
+
+.sec-h {
+  font-size: clamp(1.9rem, 4vw, 3rem);
+  line-height: 1.02;
+}
+
+.sec-p {
+  max-width: 54ch;
+  margin-top: 10px;
+  color: var(--dim);
+  font-size: 1.125rem;
+}
+
+/* What it keeps: three glass cards, the first one wider. */
+.trio {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.trio > .glass {
+  padding: 22px 22px 24px;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.trio h3 {
+  font-size: 1.45rem;
+  line-height: 1.15;
+}
+
+.trio p {
+  color: var(--dim);
+}
+
+.big {
+  display: block;
+  margin: 0;
+  color: var(--amber-hi);
+  font: 700 clamp(2.1rem, 4vw, 3rem) / 1.05 var(--display);
+  font-stretch: 80%;
+  font-variant-numeric: tabular-nums;
+}
+
+.big small {
+  display: block;
+  margin-top: 6px;
+  color: var(--dim);
+  font: 600 0.95rem / 1.4 var(--body);
+}
+
+/* Safe for your account: one glass panel, three "never" lines. */
+.safe {
+  padding: clamp(22px, 3vw, 36px);
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr);
+  gap: 18px 40px;
+  align-items: start;
+}
+
+.safe ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 14px;
+}
+
+.safe li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  font-size: 1.125rem;
+}
+
+.safe li::before {
+  content: "\2715";
+  content: "\2715" / "";
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgb(255 154 138 / 0.14);
+  color: var(--bad);
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* Your games stay yours: three columns split by hairlines. */
+.yours ul {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-block: 1px solid var(--line);
+}
+
+.yours li {
+  padding: 18px 20px 20px;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.yours li:first-child {
+  padding-inline-start: 0;
+}
+
+.yours li + li {
+  border-inline-start: 1px solid var(--line);
+}
+
+.yours li b {
+  font: 700 1.3rem / 1.15 var(--display);
+  font-stretch: 88%;
+}
+
+.yours li span {
+  color: var(--dim);
+}
+
+.doors {
+  padding: 18px 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: baseline;
+}
+
+.doors strong {
+  color: var(--amber-hi);
+  font: 700 1.3rem / 1.2 var(--display);
+  font-stretch: 88%;
+}
+
+.doors span {
+  color: var(--dim);
+}
+
+@media (max-width: 860px) {
+  .trio,
+  .safe {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .yours ul {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .yours li {
+    padding-inline: 0;
+  }
+
+  .yours li + li {
+    border-inline-start: 0;
+    border-top: 1px solid var(--line);
+  }
+}
