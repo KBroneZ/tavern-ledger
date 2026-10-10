@@ -1,0 +1,499 @@
+[
+  {
+    "index": 1,
+    "status": "ok",
+    "game_type": "GT_BATTLEGROUNDS",
+    "build": 253216,
+    "local_player_id": 2,
+    "hero": "BG20_HERO_202",
+    "teammate_player_id": null,
+    "teammate_hero": null,
+    "card_names": {},
+    "final_place": 1,
+    "final_health": 30,
+    "lobby": [
+      {
+        "player_id": 2,
+        "hero": "BG20_HERO_202",
+        "duo_team": null,
+        "final_place": 1,
+        "final_health": 30,
+        "triples": [],
+        "trinkets": [
+          {
+            "turn": 2,
+            "slot": "first",
+            "dbf_id": 112002
+          }
+        ]
+      },
+      {
+        "player_id": 3,
+        "hero": "TB_BaconShop_HERO_60",
+        "duo_team": null,
+        "final_place": 2,
+        "final_health": 30,
+        "triples": [
+          {
+            "turn": 2,
+            "count": 1
+          },
+          {
+            "turn": 3,
+            "count": 2
+          }
+        ],
+        "trinkets": [
+          {
+            "turn": 2,
+            "slot": "first",
+            "dbf_id": 111001
+          },
+          {
+            "turn": 3,
+            "slot": "first",
+            "dbf_id": 111002
+          }
+        ]
+      }
+    ],
+    "shop_tribes": {},
+    "rounds": [
+      {
+        "number": 2,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "BG20_HERO_202",
+            "board": []
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_60",
+            "board": [
+              {
+                "card_id": "BG26_135",
+                "atk": 3,
+                "health": 4,
+                "position": 1,
+                "golden": false,
+                "keywords": [
+                  "taunt",
+                  "divine_shield",
+                  "rally"
+                ]
+              },
+              {
+                "card_id": "BG20_100",
+                "atk": 1,
+                "health": 1,
+                "position": 2,
+                "golden": false,
+                "keywords": []
+              }
+            ]
+          }
+        ],
+        "own_health_after": 30,
+        "opponents": [
+          3
+        ],
+        "health_after": {
+          "2": 30,
+          "3": 30
+        },
+        "result": null
+      }
+    ],
+    "start_health": {
+      "2": 30,
+      "3": 30
+    },
+    "shop": {
+      "turns": [
+        {
+          "turn": 1,
+          "start_ms": 10000,
+          "end_ms": 70000,
+          "tier": null,
+          "gold": null,
+          "gold_spent": null,
+          "rolls": 0,
+          "free_rolls": 0,
+          "buys": [],
+          "spell_buys": 0,
+          "sells": [],
+          "freezes": 0,
+          "offers": [],
+          "actions": 0,
+          "extra_gold": null,
+          "sell_gold": null,
+          "buy_gold": null,
+          "spell_gold": null,
+          "free_refreshes": null,
+          "passes": []
+        },
+        {
+          "turn": 2,
+          "start_ms": 70000,
+          "end_ms": 130000,
+          "tier": null,
+          "gold": null,
+          "gold_spent": null,
+          "rolls": 0,
+          "free_rolls": 0,
+          "buys": [],
+          "spell_buys": 0,
+          "sells": [],
+          "freezes": 0,
+          "offers": [],
+          "actions": 2,
+          "extra_gold": null,
+          "sell_gold": null,
+          "buy_gold": null,
+          "spell_gold": null,
+          "free_refreshes": null,
+          "passes": []
+        },
+        {
+          "turn": 3,
+          "start_ms": 130000,
+          "end_ms": 150000,
+          "tier": null,
+          "gold": null,
+          "gold_spent": null,
+          "rolls": 0,
+          "free_rolls": 0,
+          "buys": [],
+          "spell_buys": 0,
+          "sells": [],
+          "freezes": 0,
+          "offers": [],
+          "actions": 0,
+          "extra_gold": null,
+          "sell_gold": null,
+          "buy_gold": null,
+          "spell_gold": null,
+          "free_refreshes": null,
+          "passes": []
+        }
+      ],
+      "tier_ups": [],
+      "actions": [
+        {
+          "ms": 72000,
+          "turn": 2,
+          "kind": "choose"
+        },
+        {
+          "ms": 75000,
+          "turn": 2,
+          "kind": "choose"
+        }
+      ],
+      "start_ms": 10000,
+      "end_ms": 150000,
+      "ended": true
+    },
+    "hero_select": null,
+    "skin_parents": {},
+    "discovers": [
+      {
+        "turn": 2,
+        "source": "BG30_Trinket_1st",
+        "offered": [
+          {
+            "card_id": "BG30_MagicItem_001",
+            "gift": null
+          },
+          {
+            "card_id": "BG30_MagicItem_002",
+            "gift": null
+          },
+          {
+            "card_id": "BG30_MagicItem_003",
+            "gift": null
+          },
+          {
+            "card_id": "BG30_MagicItem_004",
+            "gift": null
+          }
+        ],
+        "picked": [
+          1
+        ]
+      },
+      {
+        "turn": 2,
+        "source": "BG36_MidGameEffect_010",
+        "offered": [
+          {
+            "card_id": "BG36_100",
+            "gift": "BG36_MidGameEffect_000t1"
+          },
+          {
+            "card_id": "BG36_101",
+            "gift": "BG36_MidGameEffect_000t2"
+          },
+          {
+            "card_id": "BG36_102",
+            "gift": "BG36_MidGameEffect_000t3"
+          }
+        ],
+        "picked": [
+          2
+        ]
+      },
+      {
+        "turn": 3,
+        "source": "TB_BaconShop_Triples_01",
+        "offered": [
+          {
+            "card_id": "BG20_101",
+            "gift": null
+          },
+          {
+            "card_id": "BG20_102",
+            "gift": null
+          }
+        ],
+        "picked": []
+      }
+    ],
+    "old_god": 130610,
+    "warnings": [],
+    "problems": [],
+    "not_in_log": [
+      "MMR",
+      "available tribes (exact list)"
+    ]
+  },
+  {
+    "index": 1,
+    "status": "ok",
+    "game_type": "GT_BATTLEGROUNDS_DUO",
+    "build": 253216,
+    "local_player_id": 2,
+    "hero": "BG24_HERO_100",
+    "teammate_player_id": 1,
+    "teammate_hero": "TB_BaconShop_HERO_43",
+    "card_names": {},
+    "final_place": 2,
+    "final_health": 30,
+    "lobby": [
+      {
+        "player_id": 1,
+        "hero": "TB_BaconShop_HERO_43",
+        "duo_team": 1,
+        "final_place": 2,
+        "final_health": 30,
+        "triples": [
+          {
+            "turn": 1,
+            "count": 1
+          }
+        ],
+        "trinkets": [
+          {
+            "turn": 1,
+            "slot": "first",
+            "dbf_id": 120001
+          }
+        ]
+      },
+      {
+        "player_id": 2,
+        "hero": "BG24_HERO_100",
+        "duo_team": 1,
+        "final_place": 2,
+        "final_health": 30,
+        "triples": [],
+        "trinkets": []
+      },
+      {
+        "player_id": 3,
+        "hero": "TB_BaconShop_HERO_60",
+        "duo_team": 2,
+        "final_place": 1,
+        "final_health": 30,
+        "triples": [],
+        "trinkets": []
+      },
+      {
+        "player_id": 4,
+        "hero": "TB_BaconShop_HERO_18",
+        "duo_team": 2,
+        "final_place": 1,
+        "final_health": 30,
+        "triples": [],
+        "trinkets": [
+          {
+            "turn": 1,
+            "slot": "second",
+            "dbf_id": 120002
+          }
+        ]
+      }
+    ],
+    "shop_tribes": {},
+    "rounds": [
+      {
+        "number": 1,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 1,
+            "hero": "TB_BaconShop_HERO_43",
+            "board": [
+              {
+                "card_id": "BG20_100",
+                "atk": 2,
+                "health": 3,
+                "position": 1,
+                "golden": false,
+                "keywords": [
+                  "reborn",
+                  "venomous",
+                  "windfury",
+                  "stealth",
+                  "deathrattle"
+                ]
+              }
+            ]
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "TB_BaconShop_HERO_60",
+            "board": [
+              {
+                "card_id": "BG26_135",
+                "atk": 3,
+                "health": 1,
+                "position": 1,
+                "golden": false,
+                "keywords": []
+              }
+            ]
+          },
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "BG24_HERO_100",
+            "board": null
+          }
+        ],
+        "own_health_after": 30,
+        "opponents": [
+          3
+        ],
+        "health_after": {
+          "1": 30,
+          "2": 30,
+          "3": 30,
+          "4": 30
+        },
+        "result": null
+      }
+    ],
+    "start_health": {
+      "1": 30,
+      "2": 30,
+      "3": 30,
+      "4": 30
+    },
+    "shop": {
+      "turns": [
+        {
+          "turn": 1,
+          "start_ms": 10000,
+          "end_ms": 70000,
+          "tier": null,
+          "gold": null,
+          "gold_spent": null,
+          "rolls": 0,
+          "free_rolls": 0,
+          "buys": [],
+          "spell_buys": 0,
+          "sells": [],
+          "freezes": 0,
+          "offers": [],
+          "actions": 1,
+          "extra_gold": null,
+          "sell_gold": null,
+          "buy_gold": null,
+          "spell_gold": null,
+          "free_refreshes": null,
+          "passes": []
+        },
+        {
+          "turn": 2,
+          "start_ms": 70000,
+          "end_ms": 70000,
+          "tier": null,
+          "gold": null,
+          "gold_spent": null,
+          "rolls": 0,
+          "free_rolls": 0,
+          "buys": [],
+          "spell_buys": 0,
+          "sells": [],
+          "freezes": 0,
+          "offers": [],
+          "actions": 0,
+          "extra_gold": null,
+          "sell_gold": null,
+          "buy_gold": null,
+          "spell_gold": null,
+          "free_refreshes": null,
+          "passes": []
+        }
+      ],
+      "tier_ups": [],
+      "actions": [
+        {
+          "ms": 15000,
+          "turn": 1,
+          "kind": "choose"
+        }
+      ],
+      "start_ms": 10000,
+      "end_ms": 70000,
+      "ended": true
+    },
+    "hero_select": null,
+    "skin_parents": {},
+    "discovers": [
+      {
+        "turn": 1,
+        "source": "TB_BaconShop_Triples_01",
+        "offered": [
+          {
+            "card_id": "BG20_101",
+            "gift": null
+          },
+          {
+            "card_id": "BG20_102",
+            "gift": null
+          },
+          {
+            "card_id": "BG20_103",
+            "gift": null
+          }
+        ],
+        "picked": [
+          0
+        ]
+      }
+    ],
+    "old_god": null,
+    "warnings": [],
+    "problems": [],
+    "not_in_log": [
+      "MMR",
+      "available tribes (exact list)"
+    ]
+  }
+]

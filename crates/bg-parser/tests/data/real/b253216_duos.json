@@ -2,6 +2,176 @@
   {
     "build": 253216,
     "card_names": {},
+    "discovers": [
+      {
+        "offered": [
+          {
+            "card_id": "BG24_Quest_124",
+            "gift": null
+          },
+          {
+            "card_id": "BG24_Quest_151",
+            "gift": null
+          }
+        ],
+        "picked": [
+          0
+        ],
+        "source": "BG24_QuestsPlayerEnch_t",
+        "turn": 1
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BGDUO_118",
+            "gift": "BG36_MidGameEffect_000t11"
+          },
+          {
+            "card_id": "BG36_854",
+            "gift": "BG36_MidGameEffect_000t5"
+          },
+          {
+            "card_id": "BG27_556",
+            "gift": "BG36_MidGameEffect_000t51"
+          }
+        ],
+        "picked": [
+          0
+        ],
+        "source": "BG36_MidGameEffect_010",
+        "turn": 5
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BGDUO_110",
+            "gift": null
+          },
+          {
+            "card_id": "BG26_137",
+            "gift": null
+          },
+          {
+            "card_id": "BG36_312",
+            "gift": null
+          }
+        ],
+        "picked": [
+          0
+        ],
+        "source": "TB_BaconShop_Triples_01",
+        "turn": 5
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BG30_MagicItem_924",
+            "gift": null
+          },
+          {
+            "card_id": "BG35_MagicItem_931",
+            "gift": null
+          },
+          {
+            "card_id": "BGDUO_MagicItem_010",
+            "gift": null
+          },
+          {
+            "card_id": "BG30_MagicItem_888",
+            "gift": null
+          }
+        ],
+        "picked": [
+          3
+        ],
+        "source": "BG30_Trinket_1st",
+        "turn": 6
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BG36_524",
+            "gift": "BG36_MidGameEffect_000t4"
+          },
+          {
+            "card_id": "BG32_341",
+            "gift": "BG36_MidGameEffect_000t5"
+          },
+          {
+            "card_id": "BG36_312",
+            "gift": "BG36_MidGameEffect_000t7"
+          }
+        ],
+        "picked": [
+          0
+        ],
+        "source": "BG36_MidGameEffect_010",
+        "turn": 7
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BG26_814",
+            "gift": "BG36_MidGameEffect_000t10"
+          },
+          {
+            "card_id": "BG36_851",
+            "gift": "BG36_MidGameEffect_000t"
+          },
+          {
+            "card_id": "BG33_318",
+            "gift": "BG36_MidGameEffect_000t2"
+          }
+        ],
+        "picked": [
+          0
+        ],
+        "source": "BG36_MidGameEffect_010",
+        "turn": 8
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BG31_886",
+            "gift": null
+          },
+          {
+            "card_id": "BG36_883",
+            "gift": null
+          },
+          {
+            "card_id": "BG28_601",
+            "gift": null
+          }
+        ],
+        "picked": [
+          2
+        ],
+        "source": "BG28_550",
+        "turn": 8
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BG28_845",
+            "gift": null
+          },
+          {
+            "card_id": "BG33_811",
+            "gift": null
+          },
+          {
+            "card_id": "BG31_819",
+            "gift": null
+          }
+        ],
+        "picked": [
+          2
+        ],
+        "source": "BG28_550",
+        "turn": 8
+      }
+    ],
     "final_health": 0,
     "final_place": 4,
     "game_type": "GT_BATTLEGROUNDS_DUO",
@@ -24,56 +194,173 @@
         "final_health": 0,
         "final_place": 4,
         "hero": "TB_BaconShop_HERO_43_SKIN_N",
-        "player_id": 1
+        "player_id": 1,
+        "trinkets": [
+          {
+            "dbf_id": 130834,
+            "slot": "first",
+            "turn": 6
+          },
+          {
+            "dbf_id": 120154,
+            "slot": "first",
+            "turn": 6
+          }
+        ],
+        "triples": [
+          {
+            "count": 1,
+            "turn": 6
+          }
+        ]
       },
       {
         "duo_team": 3,
         "final_health": 0,
         "final_place": 4,
         "hero": "BG24_HERO_100_SKIN_E",
-        "player_id": 2
+        "player_id": 2,
+        "trinkets": [
+          {
+            "dbf_id": 112895,
+            "slot": "first",
+            "turn": 6
+          }
+        ],
+        "triples": [
+          {
+            "count": 1,
+            "turn": 5
+          }
+        ]
       },
       {
         "duo_team": 1,
         "final_health": 48,
         "final_place": 1,
         "hero": "TB_BaconShop_HERO_36",
-        "player_id": 3
+        "player_id": 3,
+        "trinkets": [
+          {
+            "dbf_id": 130890,
+            "slot": "first",
+            "turn": 6
+          }
+        ],
+        "triples": [
+          {
+            "count": 1,
+            "turn": 7
+          }
+        ]
       },
       {
         "duo_team": 1,
         "final_health": 48,
         "final_place": 1,
         "hero": "BG31_HERO_802",
-        "player_id": 4
+        "player_id": 4,
+        "trinkets": [
+          {
+            "dbf_id": 120154,
+            "slot": "first",
+            "turn": 6
+          }
+        ],
+        "triples": [
+          {
+            "count": 1,
+            "turn": 4
+          },
+          {
+            "count": 2,
+            "turn": 7
+          },
+          {
+            "count": 3,
+            "turn": 7
+          }
+        ]
       },
       {
         "duo_team": 4,
         "final_health": 22,
         "final_place": 2,
         "hero": "BG22_HERO_201_SKIN_D",
-        "player_id": 5
+        "player_id": 5,
+        "trinkets": [
+          {
+            "dbf_id": 112991,
+            "slot": "first",
+            "turn": 6
+          },
+          {
+            "dbf_id": 134453,
+            "slot": "first",
+            "turn": 8
+          }
+        ],
+        "triples": [
+          {
+            "count": 1,
+            "turn": 8
+          }
+        ]
       },
       {
         "duo_team": 2,
         "final_health": 8,
         "final_place": 3,
         "hero": "BG32_HERO_001",
-        "player_id": 6
+        "player_id": 6,
+        "trinkets": [
+          {
+            "dbf_id": 131003,
+            "slot": "first",
+            "turn": 6
+          }
+        ],
+        "triples": []
       },
       {
         "duo_team": 2,
         "final_health": 8,
         "final_place": 3,
         "hero": "TB_BaconShop_HERO_50_SKIN_G",
-        "player_id": 7
+        "player_id": 7,
+        "trinkets": [
+          {
+            "dbf_id": 112895,
+            "slot": "first",
+            "turn": 6
+          }
+        ],
+        "triples": [
+          {
+            "count": 1,
+            "turn": 5
+          }
+        ]
       },
       {
         "duo_team": 4,
         "final_health": 22,
         "final_place": 2,
         "hero": "TB_BaconShop_HERO_21",
-        "player_id": 8
+        "player_id": 8,
+        "trinkets": [
+          {
+            "dbf_id": 130880,
+            "slot": "first",
+            "turn": 6
+          }
+        ],
+        "triples": [
+          {
+            "count": 1,
+            "turn": 5
+          }
+        ]
       }
     ],
     "local_player_id": 2,
@@ -81,6 +368,7 @@
       "MMR",
       "available tribes (exact list)"
     ],
+    "old_god": 130610,
     "problems": [],
     "rounds": [
       {
@@ -92,6 +380,7 @@
                 "card_id": "BG31_815",
                 "golden": false,
                 "health": 3,
+                "keywords": [],
                 "position": 1
               }
             ],
@@ -106,6 +395,7 @@
                 "card_id": "BG31_815",
                 "golden": false,
                 "health": 3,
+                "keywords": [],
                 "position": 1
               }
             ],
@@ -120,6 +410,7 @@
                 "card_id": "BG26_135",
                 "golden": false,
                 "health": 1,
+                "keywords": [],
                 "position": 1
               }
             ],
@@ -134,6 +425,9 @@
                 "card_id": "BG32_236",
                 "golden": false,
                 "health": 3,
+                "keywords": [
+                  "divine_shield"
+                ],
                 "position": 1
               }
             ],
@@ -175,6 +469,7 @@
                 "card_id": "BG31_815",
                 "golden": false,
                 "health": 3,
+                "keywords": [],
                 "position": 1
               }
             ],
@@ -189,6 +484,7 @@
                 "card_id": "BG36_098",
                 "golden": false,
                 "health": 2,
+                "keywords": [],
                 "position": 1
               }
             ],
@@ -203,6 +499,10 @@
                 "card_id": "BG29_611",
                 "golden": false,
                 "health": 1,
+                "keywords": [
+                  "divine_shield",
+                  "deathrattle"
+                ],
                 "position": 1
               },
               {
@@ -210,6 +510,7 @@
                 "card_id": "BG26_135",
                 "golden": false,
                 "health": 1,
+                "keywords": [],
                 "position": 2
               },
               {
@@ -217,6 +518,7 @@
                 "card_id": "BG26_146",
                 "golden": false,
                 "health": 3,
+                "keywords": [],
                 "position": 3
               }
             ],
@@ -252,6 +554,10 @@
                 "card_id": "BG29_611",
                 "golden": false,
                 "health": 1,
+                "keywords": [
+                  "divine_shield",
+                  "deathrattle"
+                ],
                 "position": 1
               },
               {
@@ -259,6 +565,7 @@
                 "card_id": "BG26_135",
                 "golden": false,
                 "health": 1,
+                "keywords": [],
                 "position": 2
               },
               {
@@ -266,6 +573,7 @@
                 "card_id": "BG26_146",
                 "golden": false,
                 "health": 4,
+                "keywords": [],
                 "position": 3
               },
               {
@@ -273,6 +581,7 @@
                 "card_id": "BGDUO_114",
                 "golden": false,
                 "health": 2,
+                "keywords": [],
                 "position": 4
               }
             ],
@@ -287,6 +596,7 @@
                 "card_id": "BG26_146",
                 "golden": false,
                 "health": 5,
+                "keywords": [],
                 "position": 1
               },
               {
@@ -294,6 +604,7 @@
                 "card_id": "BG26_146",
                 "golden": false,
                 "health": 3,
+                "keywords": [],
                 "position": 2
               }
             ],
@@ -340,6 +651,7 @@
                 "card_id": "BG34_170t3",
                 "golden": false,
                 "health": 4,
+                "keywords": [],
                 "position": 1
               },
               {
@@ -347,6 +659,7 @@
                 "card_id": "BG34_170",
                 "golden": false,
                 "health": 3,
+                "keywords": [],
                 "position": 2
               },
               {
@@ -354,6 +667,7 @@
                 "card_id": "BGDUO_700",
                 "golden": false,
                 "health": 6,
+                "keywords": [],
                 "position": 3
               }
             ],
@@ -368,6 +682,9 @@
                 "card_id": "BG33_822",
                 "golden": false,
                 "health": 6,
+                "keywords": [
+                  "rally"
+                ],
                 "position": 1
               },
               {
@@ -375,6 +692,7 @@
                 "card_id": "BG31_815_G",
                 "golden": true,
                 "health": 11,
+                "keywords": [],
                 "position": 2
               }
             ],
@@ -389,6 +707,10 @@
                 "card_id": "BG29_611",
                 "golden": false,
                 "health": 1,
+                "keywords": [
+                  "divine_shield",
+                  "deathrattle"
+                ],
                 "position": 1
               },
               {
@@ -396,6 +718,7 @@
                 "card_id": "BG26_135",
                 "golden": false,
                 "health": 1,
+                "keywords": [],
                 "position": 2
               },
               {
@@ -403,6 +726,7 @@
                 "card_id": "BG26_146",
                 "golden": false,
                 "health": 5,
+                "keywords": [],
                 "position": 3
               },
               {
@@ -410,6 +734,7 @@
                 "card_id": "BGDUO_114",
                 "golden": false,
                 "health": 2,
+                "keywords": [],
                 "position": 4
               }
             ],
@@ -424,6 +749,9 @@
                 "card_id": "BG29_300",
                 "golden": false,
                 "health": 10,
+                "keywords": [
+                  "taunt"
+                ],
                 "position": 1
               }
             ],
@@ -459,6 +787,7 @@
                 "card_id": "BG34_170",
                 "golden": false,
                 "health": 3,
+                "keywords": [],
                 "position": 1
               },
               {
@@ -466,6 +795,7 @@
                 "card_id": "BG36_311",
                 "golden": false,
                 "health": 2,
+                "keywords": [],
                 "position": 2
               },
               {
@@ -473,6 +803,7 @@
                 "card_id": "BGDUO_700",
                 "golden": false,
                 "health": 6,
+                "keywords": [],
                 "position": 3
               },
               {
@@ -480,6 +811,10 @@
                 "card_id": "BG36_854",
                 "golden": false,
                 "health": 4,
+                "keywords": [
+                  "taunt",
+                  "deathrattle"
+                ],
                 "position": 4
               }
             ],
@@ -494,6 +829,7 @@
                 "card_id": "BG36_110_G",
                 "golden": true,
                 "health": 6,
+                "keywords": [],
                 "position": 1
               }
             ],
@@ -508,6 +844,9 @@
                 "card_id": "BG36_521",
                 "golden": false,
                 "health": 3,
+                "keywords": [
+                  "deathrattle"
+                ],
                 "position": 1
               },
               {
@@ -515,6 +854,9 @@
                 "card_id": "BG32_236",
                 "golden": false,
                 "health": 2,
+                "keywords": [
+                  "divine_shield"
+                ],
                 "position": 2
               }
             ],
@@ -529,6 +871,9 @@
                 "card_id": "BGDUO_110",
                 "golden": false,
                 "health": 4,
+                "keywords": [
+                  "deathrattle"
+                ],
                 "position": 1
               },
               {
@@ -536,6 +881,7 @@
                 "card_id": "BG26_135_G",
                 "golden": true,
                 "health": 2,
+                "keywords": [],
                 "position": 2
               },
               {
@@ -543,6 +889,7 @@
                 "card_id": "BGDUO_118_G",
                 "golden": true,
                 "health": 4,
+                "keywords": [],
                 "position": 3
               },
               {
@@ -550,6 +897,7 @@
                 "card_id": "BG36_100",
                 "golden": false,
                 "health": 3,
+                "keywords": [],
                 "position": 4
               },
               {
@@ -557,6 +905,7 @@
                 "card_id": "BG26_146",
                 "golden": false,
                 "health": 6,
+                "keywords": [],
                 "position": 5
               }
             ],
@@ -592,6 +941,9 @@
                 "card_id": "BGDUO_110",
                 "golden": false,
                 "health": 4,
+                "keywords": [
+                  "deathrattle"
+                ],
                 "position": 1
               },
               {
@@ -599,6 +951,9 @@
                 "card_id": "BGDUO31_207",
                 "golden": false,
                 "health": 3,
+                "keywords": [
+                  "deathrattle"
+                ],
                 "position": 2
               },
               {
@@ -606,6 +961,7 @@
                 "card_id": "BG26_135_G",
                 "golden": true,
                 "health": 2,
+                "keywords": [],
                 "position": 3
               },
               {
@@ -613,6 +969,7 @@
                 "card_id": "BGDUO_118_G",
                 "golden": true,
                 "health": 4,
+                "keywords": [],
                 "position": 4
               },
               {
@@ -620,6 +977,7 @@
                 "card_id": "BG26_146",
                 "golden": false,
                 "health": 7,
+                "keywords": [],
                 "position": 5
               },
               {
@@ -627,6 +985,7 @@
                 "card_id": "BG36_110",
                 "golden": false,
                 "health": 3,
+                "keywords": [],
                 "position": 6
               }
             ],
@@ -641,6 +1000,9 @@
                 "card_id": "BG36_506",
                 "golden": false,
                 "health": 46,
+                "keywords": [
+                  "divine_shield"
+                ],
                 "position": 1
               },
               {
@@ -648,6 +1010,7 @@
                 "card_id": "BG26_146",
                 "golden": false,
                 "health": 8,
+                "keywords": [],
                 "position": 2
               },
               {
@@ -655,6 +1018,7 @@
                 "card_id": "BG26_146",
                 "golden": false,
                 "health": 6,
+                "keywords": [],
                 "position": 3
               },
               {
@@ -662,6 +1026,10 @@
                 "card_id": "BG36_854_G",
                 "golden": true,
                 "health": 2,
+                "keywords": [
+                  "taunt",
+                  "deathrattle"
+                ],
                 "position": 4
               }
             ],
@@ -676,6 +1044,7 @@
                 "card_id": "BG34_170_G",
                 "golden": true,
                 "health": 6,
+                "keywords": [],
                 "position": 1
               },
               {
@@ -683,6 +1052,7 @@
                 "card_id": "BG36_311",
                 "golden": false,
                 "health": 2,
+                "keywords": [],
                 "position": 2
               },
               {
@@ -690,6 +1060,7 @@
                 "card_id": "BG34_170t3",
                 "golden": false,
                 "health": 8,
+                "keywords": [],
                 "position": 3
               },
               {
@@ -697,6 +1068,7 @@
                 "card_id": "BG34_170t2",
                 "golden": false,
                 "health": 8,
+                "keywords": [],
                 "position": 4
               },
               {
@@ -704,6 +1076,7 @@
                 "card_id": "BG36_300",
                 "golden": false,
                 "health": 12,
+                "keywords": [],
                 "position": 5
               },
               {
@@ -711,6 +1084,7 @@
                 "card_id": "BGDUO_700",
                 "golden": false,
                 "health": 6,
+                "keywords": [],
                 "position": 6
               },
               {
@@ -718,6 +1092,10 @@
                 "card_id": "BG36_854",
                 "golden": false,
                 "health": 4,
+                "keywords": [
+                  "taunt",
+                  "deathrattle"
+                ],
                 "position": 7
               }
             ],
@@ -758,6 +1136,9 @@
                 "card_id": "BG34_171",
                 "golden": false,
                 "health": 2,
+                "keywords": [
+                  "deathrattle"
+                ],
                 "position": 1
               },
               {
@@ -765,6 +1146,7 @@
                 "card_id": "BG34_170_G",
                 "golden": true,
                 "health": 8,
+                "keywords": [],
                 "position": 2
               },
               {
@@ -772,6 +1154,7 @@
                 "card_id": "BG36_311",
                 "golden": false,
                 "health": 4,
+                "keywords": [],
                 "position": 3
               },
               {
@@ -779,6 +1162,7 @@
                 "card_id": "BG34_170t3",
                 "golden": false,
                 "health": 10,
+                "keywords": [],
                 "position": 4
               },
               {
@@ -786,6 +1170,7 @@
                 "card_id": "BG36_300",
                 "golden": false,
                 "health": 14,
+                "keywords": [],
                 "position": 5
               },
               {
@@ -793,6 +1178,7 @@
                 "card_id": "BGDUO_700",
                 "golden": false,
                 "health": 8,
+                "keywords": [],
                 "position": 6
               },
               {
@@ -800,6 +1186,10 @@
                 "card_id": "BG36_854",
                 "golden": false,
                 "health": 6,
+                "keywords": [
+                  "taunt",
+                  "deathrattle"
+                ],
                 "position": 7
               }
             ],
@@ -814,6 +1204,9 @@
                 "card_id": "BG36_318",
                 "golden": false,
                 "health": 6,
+                "keywords": [
+                  "deathrattle"
+                ],
                 "position": 1
               },
               {
@@ -821,6 +1214,10 @@
                 "card_id": "BG34_604",
                 "golden": false,
                 "health": 17,
+                "keywords": [
+                  "stealth",
+                  "rally"
+                ],
                 "position": 2
               },
               {
@@ -828,6 +1225,10 @@
                 "card_id": "BG34_604",
                 "golden": false,
                 "health": 11,
+                "keywords": [
+                  "stealth",
+                  "rally"
+                ],
                 "position": 3
               },
               {
@@ -835,6 +1236,7 @@
                 "card_id": "BG34_170t",
                 "golden": false,
                 "health": 9,
+                "keywords": [],
                 "position": 4
               },
               {
@@ -842,6 +1244,7 @@
                 "card_id": "BGDUO33_140_G",
                 "golden": true,
                 "health": 18,
+                "keywords": [],
                 "position": 5
               },
               {
@@ -849,6 +1252,9 @@
                 "card_id": "BG29_300",
                 "golden": false,
                 "health": 18,
+                "keywords": [
+                  "taunt"
+                ],
                 "position": 6
               }
             ],
@@ -863,6 +1269,9 @@
                 "card_id": "BGDUO_110",
                 "golden": false,
                 "health": 4,
+                "keywords": [
+                  "deathrattle"
+                ],
                 "position": 1
               },
               {
@@ -870,6 +1279,9 @@
                 "card_id": "BGDUO31_207_G",
                 "golden": true,
                 "health": 6,
+                "keywords": [
+                  "deathrattle"
+                ],
                 "position": 2
               },
               {
@@ -877,6 +1289,7 @@
                 "card_id": "BG26_135_G",
                 "golden": true,
                 "health": 2,
+                "keywords": [],
                 "position": 3
               },
               {
@@ -884,6 +1297,7 @@
                 "card_id": "BGDUO_118_G",
                 "golden": true,
                 "health": 4,
+                "keywords": [],
                 "position": 4
               },
               {
@@ -891,6 +1305,7 @@
                 "card_id": "BG36_524",
                 "golden": false,
                 "health": 26,
+                "keywords": [],
                 "position": 5
               },
               {
@@ -898,6 +1313,7 @@
                 "card_id": "BG26_146",
                 "golden": false,
                 "health": 8,
+                "keywords": [],
                 "position": 6
               },
               {
@@ -905,6 +1321,7 @@
                 "card_id": "BG36_110",
                 "golden": false,
                 "health": 3,
+                "keywords": [],
                 "position": 7
               }
             ],
@@ -919,6 +1336,9 @@
                 "card_id": "BG33_822",
                 "golden": false,
                 "health": 29,
+                "keywords": [
+                  "rally"
+                ],
                 "position": 1
               },
               {
@@ -926,6 +1346,7 @@
                 "card_id": "BGDUO31_201",
                 "golden": false,
                 "health": 5,
+                "keywords": [],
                 "position": 2
               },
               {
@@ -933,6 +1354,7 @@
                 "card_id": "BG31_815_G",
                 "golden": true,
                 "health": 13,
+                "keywords": [],
                 "position": 3
               },
               {
@@ -940,6 +1362,7 @@
                 "card_id": "BG36_700",
                 "golden": false,
                 "health": 9,
+                "keywords": [],
                 "position": 4
               },
               {
@@ -947,6 +1370,7 @@
                 "card_id": "BG33_830_G",
                 "golden": true,
                 "health": 10,
+                "keywords": [],
                 "position": 5
               },
               {
@@ -954,6 +1378,7 @@
                 "card_id": "BG36_300",
                 "golden": false,
                 "health": 3,
+                "keywords": [],
                 "position": 6
               },
               {
@@ -961,6 +1386,13 @@
                 "card_id": "BG31_149_G",
                 "golden": true,
                 "health": 13,
+                "keywords": [
+                  "taunt",
+                  "reborn",
+                  "venomous",
+                  "windfury",
+                  "stealth"
+                ],
                 "position": 7
               }
             ],
@@ -996,6 +1428,9 @@
                 "card_id": "BGDUO_110",
                 "golden": false,
                 "health": 5,
+                "keywords": [
+                  "deathrattle"
+                ],
                 "position": 1
               },
               {
@@ -1003,6 +1438,9 @@
                 "card_id": "BGDUO31_207_G",
                 "golden": true,
                 "health": 7,
+                "keywords": [
+                  "deathrattle"
+                ],
                 "position": 2
               },
               {
@@ -1010,6 +1448,7 @@
                 "card_id": "BGDUO_118_G",
                 "golden": true,
                 "health": 97,
+                "keywords": [],
                 "position": 3
               },
               {
@@ -1017,6 +1456,7 @@
                 "card_id": "BG26_814",
                 "golden": false,
                 "health": 4,
+                "keywords": [],
                 "position": 4
               },
               {
@@ -1024,6 +1464,7 @@
                 "card_id": "BG36_524_G",
                 "golden": true,
                 "health": 221,
+                "keywords": [],
                 "position": 5
               },
               {
@@ -1031,6 +1472,7 @@
                 "card_id": "BG36_523",
                 "golden": false,
                 "health": 7,
+                "keywords": [],
                 "position": 6
               },
               {
@@ -1038,6 +1480,7 @@
                 "card_id": "BG_LOE_077",
                 "golden": false,
                 "health": 5,
+                "keywords": [],
                 "position": 7
               }
             ],
@@ -1052,6 +1495,7 @@
                 "card_id": "BG36_311",
                 "golden": false,
                 "health": 9,
+                "keywords": [],
                 "position": 1
               },
               {
@@ -1059,6 +1503,9 @@
                 "card_id": "BG36_103",
                 "golden": false,
                 "health": 4,
+                "keywords": [
+                  "deathrattle"
+                ],
                 "position": 2
               },
               {
@@ -1066,6 +1513,7 @@
                 "card_id": "BG36_108",
                 "golden": false,
                 "health": 27,
+                "keywords": [],
                 "position": 3
               },
               {
@@ -1073,6 +1521,7 @@
                 "card_id": "BG36_312",
                 "golden": false,
                 "health": 3,
+                "keywords": [],
                 "position": 4
               },
               {
@@ -1080,6 +1529,7 @@
                 "card_id": "BG36_311",
                 "golden": false,
                 "health": 3,
+                "keywords": [],
                 "position": 5
               },
               {
@@ -1087,6 +1537,7 @@
                 "card_id": "BG36_106",
                 "golden": false,
                 "health": 39,
+                "keywords": [],
                 "position": 6
               },
               {
@@ -1094,6 +1545,7 @@
                 "card_id": "BG36_106",
                 "golden": false,
                 "health": 51,
+                "keywords": [],
                 "position": 7
               }
             ],
@@ -1108,6 +1560,9 @@
                 "card_id": "BG34_171",
                 "golden": false,
                 "health": 2,
+                "keywords": [
+                  "deathrattle"
+                ],
                 "position": 1
               },
               {
@@ -1115,6 +1570,7 @@
                 "card_id": "BG34_170_G",
                 "golden": true,
                 "health": 8,
+                "keywords": [],
                 "position": 2
               },
               {
@@ -1122,6 +1578,7 @@
                 "card_id": "BG36_311",
                 "golden": false,
                 "health": 4,
+                "keywords": [],
                 "position": 3
               },
               {
@@ -1129,6 +1586,7 @@
                 "card_id": "BG34_170t3",
                 "golden": false,
                 "health": 10,
+                "keywords": [],
                 "position": 4
               },
               {
@@ -1136,6 +1594,9 @@
                 "card_id": "BG23_318",
                 "golden": false,
                 "health": 2,
+                "keywords": [
+                  "deathrattle"
+                ],
                 "position": 5
               },
               {
@@ -1143,6 +1604,7 @@
                 "card_id": "BG36_300",
                 "golden": false,
                 "health": 14,
+                "keywords": [],
                 "position": 6
               },
               {
@@ -1150,6 +1612,10 @@
                 "card_id": "BG36_854",
                 "golden": false,
                 "health": 6,
+                "keywords": [
+                  "taunt",
+                  "deathrattle"
+                ],
                 "position": 7
               }
             ],

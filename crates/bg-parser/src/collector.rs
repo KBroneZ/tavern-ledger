@@ -5,9 +5,11 @@
 
 use std::collections::BTreeMap;
 
+use crate::discover::DiscoverTracker;
 use crate::hero_select::HeroSelectTracker;
+use crate::leaderboard::{is_leaderboard_tag, LeaderboardTracker};
 use crate::power::{EntityRef, Packet, ParseError, Value};
-use crate::report::{CombatResult, Minion, Side};
+use crate::report::{CombatResult, Minion, Side, KEYWORDS};
 use crate::shop::{Seats, ShopTracker};
 use crate::state::{Board, Entity, Players, Tags};
 
@@ -63,6 +65,10 @@ pub struct Collector {
     pub shop: ShopTracker,
     /// The player's own hero pick (T-209).
     pub hero_select: HeroSelectTracker,
+    /// The player's own discover picks (T-211, T-212).
+    pub discovers: DiscoverTracker,
+    /// Triples and trinkets on the leaderboard (T-207).
+    pub leaderboard: LeaderboardTracker,
     /// Round -> the combat's result as the game records it on the local
     /// player (T-206); None when its tags do not agree with each other.
     pub results: BTreeMap<i64, Option<CombatResult>>,
@@ -258,6 +264,19 @@ impl Collector {
         }
     }
 
+    /// A leaderboard tag changed on entity `id`: kept when it is a lobby
+    /// hero, never a combat copy.
+    fn note_leaderboard(&mut self, id: i64, tag: &str, value: i64) {
+        let pid = leaderboard_heroes(&self.board)
+            .into_iter()
+            .find(|(_, h)| h.id == id)
+            .map(|(pid, _)| pid);
+        if let Some(pid) = pid {
+            let turn = self.turn();
+            self.leaderboard.on_tag(pid, tag, value, turn);
+        }
+    }
+
     /// The last combat's result as the game records it on the local player:
     /// `BACON_WON_LAST_COMBAT` 1 is a win, else `DAMAGE_DEALT_TO_HERO_LAST_TURN`
     /// above 0 a loss, else a tie. Both are set back to 0 when a combat starts
@@ -272,7 +291,7 @@ impl Collector {
         }
     }
 
-    fn turn(&self) -> i64 {
+    pub fn turn(&self) -> i64 {
         self.board.game().map(|g| g.int("TURN")).unwrap_or(0)
     }
 
@@ -293,6 +312,7 @@ impl Collector {
         let is_hero = tag == "HERO_ENTITY";
         let is_shop = tag == "ZONE" || tag == "CONTROLLER";
         let is_skin_parent = tag == SKIN_PARENT;
+        let leaderboard_tag = is_leaderboard_tag(&tag).then(|| tag.clone());
         if Some(id) == self.local && RESULT_TAGS.contains(&tag.as_str()) {
             self.result_tags_seen = true;
         }
@@ -316,6 +336,9 @@ impl Collector {
         self.board.set_tag(id, tag, value)?;
         if is_skin_parent {
             self.note_skin(id, Some(new_int).filter(|v| (1..=MAX_DBF_ID).contains(v)));
+        }
+        if let Some(tag) = leaderboard_tag {
+            self.note_leaderboard(id, &tag, new_int);
         }
         if is_turn {
             self.on_turn(new_int, old);
@@ -533,6 +556,11 @@ pub fn board_of(board: &Board, controller: i64) -> Vec<Minion> {
             health: e.int("HEALTH").saturating_sub(e.int("DAMAGE")),
             position: e.int("ZONE_POSITION"),
             golden: is_golden(e.card_id.as_deref()),
+            keywords: KEYWORDS
+                .iter()
+                .filter(|(tag, _)| e.int(tag) > 0)
+                .map(|(_, name)| *name)
+                .collect(),
         })
         .collect()
 }

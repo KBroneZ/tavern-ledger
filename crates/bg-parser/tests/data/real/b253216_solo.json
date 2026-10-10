@@ -2,6 +2,310 @@
   {
     "build": 253216,
     "card_names": {},
+    "discovers": [
+      {
+        "offered": [
+          {
+            "card_id": "BG21_HERO_000p_t1",
+            "gift": null
+          },
+          {
+            "card_id": "BG21_HERO_000_Buddyt",
+            "gift": null
+          },
+          {
+            "card_id": "BG21_HERO_000_Buddyt2",
+            "gift": null
+          }
+        ],
+        "picked": [
+          0
+        ],
+        "source": "BG21_HERO_000p",
+        "turn": 2
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BG21_HERO_000p_t1",
+            "gift": null
+          },
+          {
+            "card_id": "BG21_HERO_000_Buddyt",
+            "gift": null
+          },
+          {
+            "card_id": "BG21_HERO_000_Buddyt2",
+            "gift": null
+          }
+        ],
+        "picked": [
+          2
+        ],
+        "source": "BG21_HERO_000p",
+        "turn": 3
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BG21_HERO_000p_t1",
+            "gift": null
+          },
+          {
+            "card_id": "BG21_HERO_000_Buddyt",
+            "gift": null
+          },
+          {
+            "card_id": "BG21_HERO_000_Buddyt2",
+            "gift": null
+          }
+        ],
+        "picked": [
+          1
+        ],
+        "source": "BG21_HERO_000p",
+        "turn": 4
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BG21_HERO_000p_t1",
+            "gift": null
+          },
+          {
+            "card_id": "BG21_HERO_000_Buddyt",
+            "gift": null
+          },
+          {
+            "card_id": "BG21_HERO_000_Buddyt2",
+            "gift": null
+          }
+        ],
+        "picked": [
+          0
+        ],
+        "source": "BG21_HERO_000p",
+        "turn": 5
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BG27_556",
+            "gift": "BG36_MidGameEffect_000t13"
+          },
+          {
+            "card_id": "BG36_101",
+            "gift": "BG36_MidGameEffect_000t18"
+          },
+          {
+            "card_id": "BG31_326",
+            "gift": "BG36_MidGameEffect_000t52"
+          }
+        ],
+        "picked": [
+          1
+        ],
+        "source": "BG36_MidGameEffect_010",
+        "turn": 5
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BG36_MagicItem_852",
+            "gift": null
+          },
+          {
+            "card_id": "BG30_MagicItem_435",
+            "gift": null
+          },
+          {
+            "card_id": "BG30_MagicItem_994",
+            "gift": null
+          },
+          {
+            "card_id": "BG30_MagicItem_425",
+            "gift": null
+          }
+        ],
+        "picked": [
+          1
+        ],
+        "source": "BG30_Trinket_1st",
+        "turn": 6
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BG21_HERO_000p_t1",
+            "gift": null
+          },
+          {
+            "card_id": "BG21_HERO_000_Buddyt",
+            "gift": null
+          },
+          {
+            "card_id": "BG21_HERO_000_Buddyt2",
+            "gift": null
+          }
+        ],
+        "picked": [
+          0
+        ],
+        "source": "BG21_HERO_000p",
+        "turn": 6
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BG21_HERO_000p_t1",
+            "gift": null
+          },
+          {
+            "card_id": "BG21_HERO_000_Buddyt",
+            "gift": null
+          },
+          {
+            "card_id": "BG21_HERO_000_Buddyt2",
+            "gift": null
+          }
+        ],
+        "picked": [
+          2
+        ],
+        "source": "BG21_HERO_000p",
+        "turn": 7
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BG23_017",
+            "gift": null
+          },
+          {
+            "card_id": "BG26_175",
+            "gift": null
+          },
+          {
+            "card_id": "BG26_354",
+            "gift": null
+          }
+        ],
+        "picked": [
+          0
+        ],
+        "source": "TB_BaconShop_Triples_01",
+        "turn": 7
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BG21_HERO_000p_t1",
+            "gift": null
+          },
+          {
+            "card_id": "BG21_HERO_000_Buddyt",
+            "gift": null
+          },
+          {
+            "card_id": "BG21_HERO_000_Buddyt2",
+            "gift": null
+          }
+        ],
+        "picked": [
+          0
+        ],
+        "source": "BG21_HERO_000p",
+        "turn": 8
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BG30_121",
+            "gift": "BG36_MidGameEffect_000t2"
+          },
+          {
+            "card_id": "BG36_102",
+            "gift": "BG36_MidGameEffect_000t4"
+          },
+          {
+            "card_id": "BG33_883",
+            "gift": "BG36_MidGameEffect_000t29"
+          }
+        ],
+        "picked": [
+          2
+        ],
+        "source": "BG36_MidGameEffect_010",
+        "turn": 8
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BG36_MagicItem_370",
+            "gift": null
+          },
+          {
+            "card_id": "BG30_MagicItem_996",
+            "gift": null
+          },
+          {
+            "card_id": "BG30_MagicItem_546",
+            "gift": null
+          },
+          {
+            "card_id": "BG36_MagicItem_308",
+            "gift": null
+          }
+        ],
+        "picked": [
+          1
+        ],
+        "source": "BG30_Trinket_2nd",
+        "turn": 9
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BG21_HERO_000p_t1",
+            "gift": null
+          },
+          {
+            "card_id": "BG21_HERO_000_Buddyt",
+            "gift": null
+          },
+          {
+            "card_id": "BG21_HERO_000_Buddyt2",
+            "gift": null
+          }
+        ],
+        "picked": [
+          0
+        ],
+        "source": "BG21_HERO_000p",
+        "turn": 9
+      },
+      {
+        "offered": [
+          {
+            "card_id": "BG36_331",
+            "gift": "BG36_MidGameEffect_000t13"
+          },
+          {
+            "card_id": "BG36_102",
+            "gift": "BG36_MidGameEffect_000t29"
+          },
+          {
+            "card_id": "BG33_891",
+            "gift": "BG36_MidGameEffect_000t11"
+          }
+        ],
+        "picked": [
+          0
+        ],
+        "source": "BG36_MidGameEffect_010",
+        "turn": 9
+      }
+    ],
     "final_health": 0,
     "final_place": 8,
     "game_type": "GT_BATTLEGROUNDS",
@@ -24,56 +328,211 @@
         "final_health": 34,
         "final_place": 2,
         "hero": "BG31_HERO_006",
-        "player_id": 1
+        "player_id": 1,
+        "trinkets": [
+          {
+            "dbf_id": 111556,
+            "slot": "first",
+            "turn": 6
+          },
+          {
+            "dbf_id": 134748,
+            "slot": "second",
+            "turn": 9
+          }
+        ],
+        "triples": []
       },
       {
         "duo_team": null,
         "final_health": 5,
         "final_place": 6,
         "hero": "BG35_HERO_001",
-        "player_id": 2
+        "player_id": 2,
+        "trinkets": [
+          {
+            "dbf_id": 134199,
+            "slot": "first",
+            "turn": 6
+          },
+          {
+            "dbf_id": 120145,
+            "slot": "second",
+            "turn": 9
+          }
+        ],
+        "triples": []
       },
       {
         "duo_team": null,
         "final_health": 35,
         "final_place": 1,
         "hero": "TB_BaconShop_HERO_43",
-        "player_id": 3
+        "player_id": 3,
+        "trinkets": [
+          {
+            "dbf_id": 133389,
+            "slot": "first",
+            "turn": 6
+          },
+          {
+            "dbf_id": 131305,
+            "slot": "second",
+            "turn": 9
+          }
+        ],
+        "triples": [
+          {
+            "count": 1,
+            "turn": 6
+          },
+          {
+            "count": 2,
+            "turn": 8
+          }
+        ]
       },
       {
         "duo_team": null,
         "final_health": 18,
         "final_place": 4,
         "hero": "BG36_HERO_105",
-        "player_id": 4
+        "player_id": 4,
+        "trinkets": [
+          {
+            "dbf_id": 111448,
+            "slot": "first",
+            "turn": 6
+          },
+          {
+            "dbf_id": 121132,
+            "slot": "second",
+            "turn": 9
+          }
+        ],
+        "triples": [
+          {
+            "count": 1,
+            "turn": 6
+          },
+          {
+            "count": 2,
+            "turn": 6
+          }
+        ]
       },
       {
         "duo_team": null,
         "final_health": 13,
         "final_place": 5,
         "hero": "BG32_HERO_002",
-        "player_id": 5
+        "player_id": 5,
+        "trinkets": [
+          {
+            "dbf_id": 112895,
+            "slot": "first",
+            "turn": 6
+          },
+          {
+            "dbf_id": 131308,
+            "slot": "hero_power",
+            "turn": 8
+          },
+          {
+            "dbf_id": 131306,
+            "slot": "second",
+            "turn": 9
+          }
+        ],
+        "triples": [
+          {
+            "count": 1,
+            "turn": 8
+          }
+        ]
       },
       {
         "duo_team": null,
         "final_health": 26,
         "final_place": 3,
         "hero": "BG24_HERO_204_SKIN_C",
-        "player_id": 6
+        "player_id": 6,
+        "trinkets": [
+          {
+            "dbf_id": 130835,
+            "slot": "first",
+            "turn": 6
+          },
+          {
+            "dbf_id": 120145,
+            "slot": "second",
+            "turn": 9
+          }
+        ],
+        "triples": [
+          {
+            "count": 1,
+            "turn": 6
+          },
+          {
+            "count": 2,
+            "turn": 7
+          }
+        ]
       },
       {
         "duo_team": null,
         "final_health": 0,
         "final_place": 8,
         "hero": "BG21_HERO_000_SKIN_D",
-        "player_id": 7
+        "player_id": 7,
+        "trinkets": [
+          {
+            "dbf_id": 112082,
+            "slot": "first",
+            "turn": 6
+          },
+          {
+            "dbf_id": 112988,
+            "slot": "second",
+            "turn": 9
+          }
+        ],
+        "triples": [
+          {
+            "count": 1,
+            "turn": 7
+          }
+        ]
       },
       {
         "duo_team": null,
         "final_health": 1,
         "final_place": 7,
         "hero": "BG20_HERO_242",
-        "player_id": 8
+        "player_id": 8,
+        "trinkets": [
+          {
+            "dbf_id": 112002,
+            "slot": "first",
+            "turn": 6
+          },
+          {
+            "dbf_id": 120928,
+            "slot": "second",
+            "turn": 9
+          }
+        ],
+        "triples": [
+          {
+            "count": 1,
+            "turn": 8
+          },
+          {
+            "count": 2,
+            "turn": 8
+          }
+        ]
       }
     ],
     "local_player_id": 7,
@@ -81,6 +540,7 @@
       "MMR",
       "available tribes (exact list)"
     ],
+    "old_god": 130610,
     "problems": [],
     "rounds": [
       {
@@ -92,6 +552,7 @@
                 "card_id": "BG36_345",
                 "golden": false,
                 "health": 4,
+                "keywords": [],
                 "position": 1
               }
             ],
@@ -106,6 +567,7 @@
                 "card_id": "BG36_345",
                 "golden": false,
                 "health": 3,
+                "keywords": [],
                 "position": 1
               }
             ],
@@ -140,6 +602,10 @@
                 "card_id": "BGS_119",
                 "golden": false,
                 "health": 5,
+                "keywords": [
+                  "divine_shield",
+                  "windfury"
+                ],
                 "position": 1
               },
               {
@@ -147,6 +613,7 @@
                 "card_id": "BG36_345",
                 "golden": false,
                 "health": 5,
+                "keywords": [],
                 "position": 2
               }
             ],
@@ -161,6 +628,9 @@
                 "card_id": "BG33_886",
                 "golden": false,
                 "health": 3,
+                "keywords": [
+                  "rally"
+                ],
                 "position": 1
               }
             ],
@@ -195,6 +665,10 @@
                 "card_id": "BGS_119",
                 "golden": false,
                 "health": 10,
+                "keywords": [
+                  "divine_shield",
+                  "windfury"
+                ],
                 "position": 1
               },
               {
@@ -202,6 +676,7 @@
                 "card_id": "BG36_345",
                 "golden": false,
                 "health": 7,
+                "keywords": [],
                 "position": 2
               }
             ],
@@ -216,6 +691,7 @@
                 "card_id": "BGS_115",
                 "golden": false,
                 "health": 3,
+                "keywords": [],
                 "position": 1
               },
               {
@@ -223,6 +699,10 @@
                 "card_id": "BG29_611",
                 "golden": false,
                 "health": 1,
+                "keywords": [
+                  "divine_shield",
+                  "deathrattle"
+                ],
                 "position": 2
               }
             ],
@@ -257,6 +737,10 @@
                 "card_id": "BGS_119",
                 "golden": false,
                 "health": 12,
+                "keywords": [
+                  "divine_shield",
+                  "windfury"
+                ],
                 "position": 1
               },
               {
@@ -264,6 +748,7 @@
                 "card_id": "BG36_345",
                 "golden": false,
                 "health": 9,
+                "keywords": [],
                 "position": 2
               }
             ],
@@ -278,6 +763,7 @@
                 "card_id": "BG36_360t3",
                 "golden": false,
                 "health": 6,
+                "keywords": [],
                 "position": 1
               },
               {
@@ -285,6 +771,7 @@
                 "card_id": "BG31_816",
                 "golden": false,
                 "health": 3,
+                "keywords": [],
                 "position": 2
               },
               {
@@ -292,6 +779,9 @@
                 "card_id": "BG29_300",
                 "golden": false,
                 "health": 6,
+                "keywords": [
+                  "taunt"
+                ],
                 "position": 3
               },
               {
@@ -299,6 +789,7 @@
                 "card_id": "BG32_330",
                 "golden": false,
                 "health": 3,
+                "keywords": [],
                 "position": 4
               }
             ],
@@ -333,6 +824,9 @@
                 "card_id": "BG36_101",
                 "golden": false,
                 "health": 4,
+                "keywords": [
+                  "deathrattle"
+                ],
                 "position": 1
               },
               {
@@ -340,6 +834,9 @@
                 "card_id": "BG36_101",
                 "golden": false,
                 "health": 4,
+                "keywords": [
+                  "deathrattle"
+                ],
                 "position": 2
               },
               {
@@ -347,6 +844,10 @@
                 "card_id": "BGS_119",
                 "golden": false,
                 "health": 15,
+                "keywords": [
+                  "divine_shield",
+                  "windfury"
+                ],
                 "position": 3
               },
               {
@@ -354,6 +855,7 @@
                 "card_id": "BG36_345",
                 "golden": false,
                 "health": 11,
+                "keywords": [],
                 "position": 4
               }
             ],
@@ -368,6 +870,10 @@
                 "card_id": "BGS_119",
                 "golden": false,
                 "health": 1,
+                "keywords": [
+                  "divine_shield",
+                  "windfury"
+                ],
                 "position": 1
               },
               {
@@ -375,6 +881,7 @@
                 "card_id": "BG34_170t3",
                 "golden": false,
                 "health": 5,
+                "keywords": [],
                 "position": 2
               },
               {
@@ -382,6 +889,7 @@
                 "card_id": "BG34_170t3",
                 "golden": false,
                 "health": 5,
+                "keywords": [],
                 "position": 3
               },
               {
@@ -389,6 +897,7 @@
                 "card_id": "BG24_715",
                 "golden": false,
                 "health": 1,
+                "keywords": [],
                 "position": 4
               },
               {
@@ -396,6 +905,9 @@
                 "card_id": "BG31_149",
                 "golden": false,
                 "health": 3,
+                "keywords": [
+                  "taunt"
+                ],
                 "position": 5
               },
               {
@@ -403,6 +915,7 @@
                 "card_id": "BG34_405",
                 "golden": false,
                 "health": 4,
+                "keywords": [],
                 "position": 6
               }
             ],
@@ -437,6 +950,9 @@
                 "card_id": "BG36_101",
                 "golden": false,
                 "health": 6,
+                "keywords": [
+                  "deathrattle"
+                ],
                 "position": 1
               },
               {
@@ -444,6 +960,10 @@
                 "card_id": "BG36_101",
                 "golden": false,
                 "health": 9,
+                "keywords": [
+                  "taunt",
+                  "deathrattle"
+                ],
                 "position": 2
               },
               {
@@ -451,6 +971,10 @@
                 "card_id": "BGS_119",
                 "golden": false,
                 "health": 20,
+                "keywords": [
+                  "divine_shield",
+                  "windfury"
+                ],
                 "position": 3
               },
               {
@@ -458,6 +982,7 @@
                 "card_id": "BG36_345",
                 "golden": false,
                 "health": 13,
+                "keywords": [],
                 "position": 4
               }
             ],
@@ -472,6 +997,14 @@
                 "card_id": "BG31_149_G",
                 "golden": true,
                 "health": 8,
+                "keywords": [
+                  "taunt",
+                  "divine_shield",
+                  "reborn",
+                  "venomous",
+                  "windfury",
+                  "stealth"
+                ],
                 "position": 1
               },
               {
@@ -479,6 +1012,7 @@
                 "card_id": "BG30_123",
                 "golden": false,
                 "health": 4,
+                "keywords": [],
                 "position": 2
               },
               {
@@ -486,6 +1020,7 @@
                 "card_id": "BG30_123",
                 "golden": false,
                 "health": 4,
+                "keywords": [],
                 "position": 3
               },
               {
@@ -493,6 +1028,7 @@
                 "card_id": "BG28_550",
                 "golden": false,
                 "health": 4,
+                "keywords": [],
                 "position": 4
               },
               {
@@ -500,6 +1036,9 @@
                 "card_id": "BG29_300",
                 "golden": false,
                 "health": 6,
+                "keywords": [
+                  "taunt"
+                ],
                 "position": 5
               },
               {
@@ -507,6 +1046,9 @@
                 "card_id": "BG29_300",
                 "golden": false,
                 "health": 6,
+                "keywords": [
+                  "taunt"
+                ],
                 "position": 6
               },
               {
@@ -514,6 +1056,7 @@
                 "card_id": "BG_LOE_077",
                 "golden": false,
                 "health": 19,
+                "keywords": [],
                 "position": 7
               }
             ],
@@ -548,6 +1091,10 @@
                 "card_id": "BG23_017",
                 "golden": false,
                 "health": 9,
+                "keywords": [
+                  "taunt",
+                  "deathrattle"
+                ],
                 "position": 1
               },
               {
@@ -555,6 +1102,10 @@
                 "card_id": "BG36_101_G",
                 "golden": true,
                 "health": 18,
+                "keywords": [
+                  "taunt",
+                  "deathrattle"
+                ],
                 "position": 2
               },
               {
@@ -562,6 +1113,10 @@
                 "card_id": "BGS_119",
                 "golden": false,
                 "health": 20,
+                "keywords": [
+                  "divine_shield",
+                  "windfury"
+                ],
                 "position": 3
               },
               {
@@ -569,6 +1124,7 @@
                 "card_id": "BG30_121",
                 "golden": false,
                 "health": 10,
+                "keywords": [],
                 "position": 4
               },
               {
@@ -576,6 +1132,7 @@
                 "card_id": "BG36_345",
                 "golden": false,
                 "health": 16,
+                "keywords": [],
                 "position": 5
               }
             ],
@@ -590,6 +1147,11 @@
                 "card_id": "BG20_101",
                 "golden": false,
                 "health": 29,
+                "keywords": [
+                  "divine_shield",
+                  "windfury",
+                  "rally"
+                ],
                 "position": 1
               },
               {
@@ -597,6 +1159,10 @@
                 "card_id": "BG31_326_G",
                 "golden": true,
                 "health": 41,
+                "keywords": [
+                  "divine_shield",
+                  "windfury"
+                ],
                 "position": 2
               },
               {
@@ -604,6 +1170,10 @@
                 "card_id": "BG31_320_G",
                 "golden": true,
                 "health": 4,
+                "keywords": [
+                  "venomous",
+                  "windfury"
+                ],
                 "position": 3
               },
               {
@@ -611,6 +1181,9 @@
                 "card_id": "BG31_327",
                 "golden": false,
                 "health": 5,
+                "keywords": [
+                  "stealth"
+                ],
                 "position": 4
               },
               {
@@ -618,6 +1191,7 @@
                 "card_id": "BG36_332",
                 "golden": false,
                 "health": 4,
+                "keywords": [],
                 "position": 5
               },
               {
@@ -625,6 +1199,11 @@
                 "card_id": "BG29_611",
                 "golden": false,
                 "health": 8,
+                "keywords": [
+                  "taunt",
+                  "divine_shield",
+                  "deathrattle"
+                ],
                 "position": 6
               },
               {
@@ -632,6 +1211,9 @@
                 "card_id": "BGFYM_002t",
                 "golden": false,
                 "health": 2,
+                "keywords": [
+                  "taunt"
+                ],
                 "position": 7
               }
             ],
@@ -666,6 +1248,7 @@
                 "card_id": "BG28_582",
                 "golden": false,
                 "health": 6,
+                "keywords": [],
                 "position": 1
               },
               {
@@ -673,6 +1256,9 @@
                 "card_id": "BG33_883",
                 "golden": false,
                 "health": 34,
+                "keywords": [
+                  "rally"
+                ],
                 "position": 2
               },
               {
@@ -680,6 +1266,10 @@
                 "card_id": "BG23_017",
                 "golden": false,
                 "health": 12,
+                "keywords": [
+                  "taunt",
+                  "deathrattle"
+                ],
                 "position": 3
               },
               {
@@ -687,6 +1277,10 @@
                 "card_id": "BG36_101_G",
                 "golden": true,
                 "health": 18,
+                "keywords": [
+                  "taunt",
+                  "deathrattle"
+                ],
                 "position": 4
               },
               {
@@ -694,6 +1288,10 @@
                 "card_id": "BGS_119",
                 "golden": false,
                 "health": 23,
+                "keywords": [
+                  "divine_shield",
+                  "windfury"
+                ],
                 "position": 5
               },
               {
@@ -701,6 +1299,7 @@
                 "card_id": "BG30_121",
                 "golden": false,
                 "health": 13,
+                "keywords": [],
                 "position": 6
               },
               {
@@ -708,6 +1307,7 @@
                 "card_id": "BG25_354",
                 "golden": false,
                 "health": 10,
+                "keywords": [],
                 "position": 7
               }
             ],
@@ -722,6 +1322,10 @@
                 "card_id": "BGS_119",
                 "golden": false,
                 "health": 40,
+                "keywords": [
+                  "divine_shield",
+                  "windfury"
+                ],
                 "position": 1
               },
               {
@@ -729,6 +1333,7 @@
                 "card_id": "BG31_148",
                 "golden": false,
                 "health": 3,
+                "keywords": [],
                 "position": 2
               },
               {
@@ -736,6 +1341,10 @@
                 "card_id": "BG29_300",
                 "golden": false,
                 "health": 52,
+                "keywords": [
+                  "taunt",
+                  "reborn"
+                ],
                 "position": 3
               },
               {
@@ -743,6 +1352,7 @@
                 "card_id": "BG36_853",
                 "golden": false,
                 "health": 79,
+                "keywords": [],
                 "position": 4
               },
               {
@@ -750,6 +1360,7 @@
                 "card_id": "BG36_701",
                 "golden": false,
                 "health": 35,
+                "keywords": [],
                 "position": 5
               },
               {
@@ -757,6 +1368,7 @@
                 "card_id": "BG_LOE_077",
                 "golden": false,
                 "health": 40,
+                "keywords": [],
                 "position": 6
               },
               {
@@ -764,6 +1376,7 @@
                 "card_id": "BG36_346",
                 "golden": false,
                 "health": 42,
+                "keywords": [],
                 "position": 7
               }
             ],
@@ -798,6 +1411,11 @@
                 "card_id": "BG36_331",
                 "golden": false,
                 "health": 69,
+                "keywords": [
+                  "divine_shield",
+                  "windfury",
+                  "rally"
+                ],
                 "position": 1
               },
               {
@@ -805,6 +1423,9 @@
                 "card_id": "BG33_883",
                 "golden": false,
                 "health": 142,
+                "keywords": [
+                  "rally"
+                ],
                 "position": 2
               },
               {
@@ -812,6 +1433,7 @@
                 "card_id": "BG28_582",
                 "golden": false,
                 "health": 11,
+                "keywords": [],
                 "position": 3
               },
               {
@@ -819,6 +1441,10 @@
                 "card_id": "BG23_017",
                 "golden": false,
                 "health": 17,
+                "keywords": [
+                  "taunt",
+                  "deathrattle"
+                ],
                 "position": 4
               },
               {
@@ -826,6 +1452,10 @@
                 "card_id": "BG36_101_G",
                 "golden": true,
                 "health": 20,
+                "keywords": [
+                  "taunt",
+                  "deathrattle"
+                ],
                 "position": 5
               },
               {
@@ -833,6 +1463,9 @@
                 "card_id": "BG30_121_G",
                 "golden": true,
                 "health": 27,
+                "keywords": [
+                  "taunt"
+                ],
                 "position": 6
               },
               {
@@ -840,6 +1473,7 @@
                 "card_id": "BG25_354",
                 "golden": false,
                 "health": 60,
+                "keywords": [],
                 "position": 7
               }
             ],
@@ -854,6 +1488,10 @@
                 "card_id": "BG33_318",
                 "golden": false,
                 "health": 68,
+                "keywords": [
+                  "venomous",
+                  "rally"
+                ],
                 "position": 1
               },
               {
@@ -861,6 +1499,7 @@
                 "card_id": "BG31_148",
                 "golden": false,
                 "health": 57,
+                "keywords": [],
                 "position": 2
               },
               {
@@ -868,6 +1507,7 @@
                 "card_id": "BG34_170t",
                 "golden": false,
                 "health": 41,
+                "keywords": [],
                 "position": 3
               },
               {
@@ -875,6 +1515,7 @@
                 "card_id": "BG34_170t2",
                 "golden": false,
                 "health": 49,
+                "keywords": [],
                 "position": 4
               },
               {
@@ -882,6 +1523,7 @@
                 "card_id": "BG34_170t2",
                 "golden": false,
                 "health": 29,
+                "keywords": [],
                 "position": 5
               },
               {
@@ -889,6 +1531,10 @@
                 "card_id": "BG36_372",
                 "golden": false,
                 "health": 71,
+                "keywords": [
+                  "taunt",
+                  "divine_shield"
+                ],
                 "position": 6
               },
               {
@@ -896,6 +1542,10 @@
                 "card_id": "BG31_149",
                 "golden": false,
                 "health": 28,
+                "keywords": [
+                  "taunt",
+                  "venomous"
+                ],
                 "position": 7
               }
             ],
