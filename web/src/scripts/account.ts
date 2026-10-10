@@ -210,6 +210,9 @@ async function start(): Promise<void> {
   const { data, error } = await supabase.auth.getUser();
   say(pageMessage, outcome.message ?? "", outcome.tone);
   if (error || !data.user) {
+    if (outcome.recovery) {
+      say(pageMessage, "This reset has expired. Ask for a new link with “Forgot password?” on the sign-in page.", "error");
+    }
     await signedOut();
     return;
   }

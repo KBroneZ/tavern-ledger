@@ -22,7 +22,9 @@ export type AuthLink =
   | { kind: "error"; code: string | null };
 
 // Shapes of what this module passes on; anything else is ignored.
-const CODE = /^[A-Za-z0-9-]{8,128}$/;
+// Supabase Auth's PKCE codes are UUIDs; flow ids as auth-js accepts them.
+const CODE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const FLOW_ID = /^[A-Za-z0-9_-]{8,64}$/;
 const TOKEN_HASH = /^[A-Za-z0-9_-]{8,256}$/;
 const ACCESS_TOKEN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 const ERROR_CODE = /^[a-z0-9_]{1,64}$/;
@@ -51,7 +53,7 @@ export function parseAuthLink(search: string, hash: string): AuthLink {
   if (code !== null) {
     if (!CODE.test(code)) return { kind: "error", code: null };
     const flowId = query.get("sb_flow_id");
-    return { kind: "code", code, flowId: flowId !== null && CODE.test(flowId) ? flowId : null };
+    return { kind: "code", code, flowId: flowId !== null && FLOW_ID.test(flowId) ? flowId : null };
   }
   const tokenHash = query.get("token_hash");
   if (tokenHash !== null) {

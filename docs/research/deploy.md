@@ -219,7 +219,7 @@ Not secrets: `delete-account` reads `SITE_ORIGINS`, which `config.toml` sets to 
 | Anonymous sign-ins, phone, OAuth providers, MFA | off | not used |
 | Rate limits | emails 30 an hour (Supabase's default once custom SMTP is on), sign-ups and sign-ins 30 per 5 minutes per IP, token verifications 30 per 5 minutes per IP, token refreshes 150 per 5 minutes per IP | the defaults; low enough for a project that is not public |
 | Email templates | Supabase's defaults (the magic link, confirmation, invite and reset links go through `/auth/v1/verify` via `{{ .ConfirmationURL }}`, which the desktop and the site's PKCE flow need; the reset template checked in the dashboard on 2026-10-10) | branding later; the site also reads `?token_hash=` links if a template ever uses them (D-048) |
-| Audit logs → Write audit logs to the database | **on** (was off until session 037) | the export's `auth_events` and the security log in the privacy policy need `auth.audit_log_entries` (D-048, section 10.13) |
+| Audit logs → Write audit logs to the database | **on**: was off; the user turns it on before sign-ups open (section 10.13) | the export's `auth_events` and the security log in the privacy policy need `auth.audit_log_entries` (D-048, section 10.13) |
 | GraphQL (`pg_graphql`) | off if the extension is on | as the local schema; nothing uses it |
 
 ### 10.4 Auth emails: custom SMTP with Cloudflare Email Sending (D-030, replaced by 10.4b)

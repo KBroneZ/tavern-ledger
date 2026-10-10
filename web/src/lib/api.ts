@@ -95,14 +95,24 @@ export async function requestPasswordReset(
   }
 }
 
-/** null when saved, else the message to show. Needs the session of a reset link. */
+/**
+ * null when saved, else the message to show. Needs the session of a reset
+ * link. Then ends every other session of the account, so whoever else was
+ * signed in (the reason for a reset, often) is out.
+ */
 export async function setNewPassword(client: SupabaseClient, password: string): Promise<string | null> {
   try {
     const { error } = await client.auth.updateUser({ password });
-    return error ? newPasswordErrorMessage(error as AuthErrorLike) : null;
+    if (error) return newPasswordErrorMessage(error as AuthErrorLike);
   } catch {
     return newPasswordErrorMessage({ status: 0 });
   }
+  try {
+    await client.auth.signOut({ scope: "others" });
+  } catch {
+    // The password is saved; other sessions still end when they expire.
+  }
+  return null;
 }
 
 export interface LinkOutcome {

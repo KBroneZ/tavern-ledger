@@ -251,6 +251,9 @@ test("reset request: a refusal reads like a sent email, a rate limit and no conn
   const refused = await requestPasswordReset(client(), "someone@example.test", "https://x.test/account/");
   assert.deepEqual(refused, { kind: "check-email", message: RESET_SENT });
   stubFetch({ "/auth/v1/recover": () => authError("over_email_send_rate_limit", 429) });
+  const again = await requestPasswordReset(client(), "someone@example.test", "https://x.test/account/");
+  assert.deepEqual(again, { kind: "check-email", message: RESET_SENT }, "a second email to an account looks like the first");
+  stubFetch({ "/auth/v1/recover": () => authError("over_request_rate_limit", 429) });
   const limited = await requestPasswordReset(client(), "someone@example.test", "https://x.test/account/");
   assert.equal(limited.kind, "error");
   assert.match(limited.message, /Too many attempts/);
@@ -370,14 +373,21 @@ test("new password: saved with the reset session, and refusals in words", async 
   stubFetch({ "/auth/v1/verify": () => json(session()) });
   await finishAuthLink(c, CONFIG, { kind: "token-hash", tokenHash: "pkce_abcdef0123", type: "recovery" });
   let body: Record<string, unknown> = {};
+  let logout = "";
   stubFetch({
     "/auth/v1/user": (_url, init) => {
       body = JSON.parse(String(init.body));
       return json(session().user);
     },
+    "/auth/v1/logout": (url) => {
+      logout = url.searchParams.get("scope") ?? "";
+      return new Response(null, { status: 204 });
+    },
   });
   assert.equal(await setNewPassword(c, "a-new-password"), null);
   assert.equal(body.password, "a-new-password");
+  assert.equal(logout, "others", "every other session of the account is ended");
+  assert.ok((await c.auth.getSession()).data.session, "this one stays");
   stubFetch({ "/auth/v1/user": () => authError("same_password", 422) });
   assert.match((await setNewPassword(c, "a-new-password")) ?? "", /different/);
   stubFetch({ "/auth/v1/user": () => authError("over_request_rate_limit", 429) });

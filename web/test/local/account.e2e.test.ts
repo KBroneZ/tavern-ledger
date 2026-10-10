@@ -171,8 +171,12 @@ describe("website account flow on the local stack", { skip: !ENABLED && "set TAV
     assert.equal(parsed.kind, "code");
     assert.deepEqual(await finishAuthLink(client, config, parsed), { recovery: true, message: null, tone: "info" });
 
+    const elsewhere = makeClient(config, memoryStorage());
+    assert.equal(await signIn(elsewhere, email, password), null);
     const newPassword = randomBytes(12).toString("base64url");
     assert.equal(await setNewPassword(client, newPassword), null);
+    assert.ok((await elsewhere.auth.getUser()).error, "the session signed in elsewhere is ended");
+    assert.equal((await client.auth.getUser()).error, null, "the one that reset stays");
     const other = makeClient(config, memoryStorage());
     assert.ok(await signIn(other, email, password), "the old password is refused");
     assert.equal(await signIn(other, email, newPassword), null);

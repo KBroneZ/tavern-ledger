@@ -94,6 +94,10 @@ export function checkEmail(email: string): string | null {
  */
 export function resetRequestOutcome(e: AuthErrorLike | null): SignUpOutcome {
   if (e === null) return { kind: "check-email", message: RESET_SENT };
+  // Supabase refuses a second reset email to the same account within a
+  // minute; an unknown email is never refused, so saying so would tell
+  // which emails have an account. Limits per address of the sender stay.
+  if (e.code === "over_email_send_rate_limit") return { kind: "check-email", message: RESET_SENT };
   if (isRateLimit(e)) return { kind: "error", message: RATE_LIMITED };
   if (isNetwork(e)) return { kind: "error", message: UNREACHABLE };
   if (e.code === "email_address_invalid") return { kind: "error", message: "Enter a valid email address." };

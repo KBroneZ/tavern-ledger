@@ -76,6 +76,8 @@ test("reset request: the same answer whether the email has an account or not", (
     { code: "email_not_confirmed", status: 400 },
     { code: "signup_disabled", status: 422 },
     { status: 404 },
+    // Only an existing account gets this (a second email within a minute).
+    { code: "over_email_send_rate_limit", status: 429 },
   ]) {
     assert.deepEqual(resetRequestOutcome(e), { kind: "check-email", message: RESET_SENT }, JSON.stringify(e));
   }
@@ -83,7 +85,8 @@ test("reset request: the same answer whether the email has an account or not", (
 });
 
 test("reset request: rate limits, no connection and server errors are said in words", () => {
-  assert.match(resetRequestOutcome({ code: "over_email_send_rate_limit", status: 429 }).message, /Too many/);
+  assert.match(resetRequestOutcome({ code: "over_request_rate_limit", status: 429 }).message, /Too many/);
+  assert.match(resetRequestOutcome({ status: 429 }).message, /Too many/);
   assert.match(resetRequestOutcome({ name: "AuthRetryableFetchError", status: 0 }).message, /reach the server/);
   assert.match(resetRequestOutcome({ code: "email_address_invalid", status: 400 }).message, /valid email/);
   const boom = resetRequestOutcome({ status: 500, message: "boom" });
