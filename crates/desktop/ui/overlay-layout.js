@@ -40,6 +40,11 @@
   let abortDrag = null;
   // The key presses not saved yet: { timer, save }.
   let keySession = null;
+  // The panel or box the on-screen buttons act on (T-319): "box", a panel id, or null.
+  let selected = null;
+  // Which selection the buttons were placed next to; they stay put while it is the same.
+  let padFor = null;
+  let bigSteps = false;
 
   function px(n) {
     return `${Math.round(n)}px`;
@@ -171,8 +176,11 @@
       else inStack.push(slot);
     }
     stack.append(...inStack);
+    padFollows();
     drawBox(v);
+    if (!v.unlocked || (selected === "box" ? box.hidden : selected && slots.get(selected).hidden)) selected = null;
     if (v.unlocked) drawToolbar(v);
+    placeControls();
   }
 
   // A change that arrives while a panel is being dragged waits for the drop.
@@ -214,6 +222,7 @@
         boxRect.y = clamp(start.y + dy, 0, sh - boxRect.h);
       }
       placeBox(boxRect);
+      placeControls();
     };
     const stop = () => {
       window.removeEventListener("pointermove", move);
@@ -225,6 +234,7 @@
     };
     const end = () => {
       stop();
+      padFor = null;
       if (moved) send("overlay_save_leaderboard", { area: { x: boxRect.x, y: boxRect.y, w: boxRect.w, h: boxRect.h } }).catch(fail);
       else if (view) draw(view);
     };
@@ -237,12 +247,14 @@
   function startDrag(event) {
     if (!view || !view.unlocked || event.button !== 0) return;
     if (boxRect && event.target.closest("#board-box")) {
+      select("box");
       startBoxDrag(event);
       return;
     }
     const slot = event.target.closest(".slot");
     if (!slot) return;
     const id = slot.dataset.panel;
+    select(id);
     saveKeys().catch(failAndRefresh);
     const box = slot.getBoundingClientRect();
     if (!rects[id]) rects[id] = { x: box.left, y: box.top, w: box.width, h: null };
@@ -268,7 +280,11 @@
         r.y = clamp(start.y + dy, 0, sh - GRAB_H);
       }
       place(id, slot);
-      if (slot.parentElement !== document.body) document.body.append(slot);
+      if (slot.parentElement !== document.body) {
+        document.body.append(slot);
+        padFollows();
+      }
+      placeControls();
     };
     const stop = () => {
       window.removeEventListener("pointermove", move);
@@ -281,6 +297,7 @@
     };
     const end = () => {
       stop();
+      padFor = null;
       // A press with no movement changes nothing: it must not pin a stacked panel.
       if (moved) send("overlay_save_layout", { panels: rects }).catch(fail);
       else if (view) draw(view);
@@ -331,26 +348,43 @@
   function keyArrange(event) {
     if (event.ctrlKey || event.metaKey || dragging) return;
     const target = focusedTarget();
-    if (!target) return;
+    if (target && arrange(target, event)) event.preventDefault();
+  }
+
+  // A click on an on-screen button: the key press it stands for, on the selected panel or box.
+  function padArrange(action) {
+    if (dragging || !view || !view.unlocked || !selected) return;
+    const target = selected === "box" ? { kind: "box" } : { kind: "panel", id: selected, slot: slots.get(selected) };
+    arrange(target, TLKeys.press(action, bigSteps));
+  }
+
+  // Applies a key press (or a button standing for one) to a panel or the box.
+  // False when the key is not one that arranges.
+  function arrange(target, event) {
     const screen = { w: window.innerWidth, h: window.innerHeight };
     if (target.kind === "box") {
       const next = TLKeys.nudge(boxRect, event, screen, { minW: BOX_MIN_W, maxW: screen.w, minH: BOX_MIN_H, keepInside: true });
-      if (!next) return;
-      event.preventDefault();
-      if (next === boxRect) return announce("Leaderboard box: edge of the screen");
+      if (!next) return false;
+      if (next === boxRect) {
+        announce("Leaderboard box: edge of the screen");
+        return true;
+      }
       boxRect = next;
       placeBox(boxRect);
+      placeControls();
       queueKeySave("box", () => send("overlay_save_leaderboard", { area: { x: next.x, y: next.y, w: next.w, h: next.h } }), `Leaderboard box: x ${Math.round(next.x)}, y ${Math.round(next.y)}, width ${Math.round(next.w)}, height ${Math.round(next.h)}`);
-      return;
+      return true;
     }
     const { id, slot } = target;
     const shown = slot.getBoundingClientRect();
     const current = rects[id] || { x: shown.left, y: shown.top, w: shown.width, h: null };
     const from = { ...current, h: current.h ?? shown.height };
     const next = TLKeys.nudge(from, event, screen, { minW: MIN_W, maxW: MAX_W, minH: MIN_H, grabH: GRAB_H });
-    if (!next) return;
-    event.preventDefault();
-    if (next === from) return announce(`${SLOT_NAMES[id]} panel: edge or size limit reached`);
+    if (!next) return false;
+    if (next === from) {
+      announce(`${SLOT_NAMES[id]} panel: edge or size limit reached`);
+      return true;
+    }
     // Height is only pinned when the user resized; a move keeps the panel's own height.
     rects[id] = { x: next.x, y: next.y, w: next.w, h: event.altKey ? next.h : current.h };
     place(id, slot);
@@ -358,7 +392,102 @@
     TLFocus.keep(document, () => {
       if (slot.parentElement !== document.body) document.body.append(slot);
     });
+    padFollows();
+    placeControls();
     queueKeySave(id, () => send("overlay_save_layout", { panels: rects }), `${SLOT_NAMES[id]} panel: x ${Math.round(next.x)}, y ${Math.round(next.y)}, width ${Math.round(next.w)}`);
+    return true;
+  }
+
+  function select(target) {
+    if (selected === target) return;
+    selected = target in SLOT_NAMES || target === "box" ? target : null;
+    padFollows();
+    placeControls();
+  }
+
+  // The buttons come right after the selected panel or box in the tab order.
+  // Moving them keeps focus where it is (a button of theirs may have it).
+  function padFollows() {
+    const node = selected === "box" ? box : selected && slots.get(selected);
+    const pad = document.getElementById("arrange-pad");
+    if (node && node.nextElementSibling !== pad) TLFocus.keep(document, () => node.after(pad));
+  }
+
+  function rectOf(node) {
+    const r = node.getBoundingClientRect();
+    return { x: r.left, y: r.top, w: r.width, h: r.height };
+  }
+
+  // The selected panel's or box's rectangle, or null when it takes no room
+  // (a panel with nothing to show): then there is nothing to put the buttons next to.
+  function selectedRect() {
+    if (!selected) return null;
+    const r = selected === "box" ? boxRect : rectOf(slots.get(selected));
+    return r && r.w > 0 && r.h > 0 ? r : null;
+  }
+
+  // Puts the move-and-size buttons next to the selected panel or box, then
+  // the toolbar and the key hint where they cover no panel (T-319).
+  function placeControls() {
+    const pad = document.getElementById("arrange-pad");
+    const toolbar = document.getElementById("toolbar");
+    const hint = document.getElementById("key-hint");
+    const unlocked = Boolean(view && view.unlocked);
+    const target = unlocked ? selectedRect() : null;
+    if (!target) {
+      selected = null;
+      padFor = null;
+    }
+    pad.hidden = !target;
+    if (!unlocked) return;
+    const screen = { w: window.innerWidth, h: window.innerHeight };
+    const taken = [...slots.values()]
+      .filter((slot) => !slot.hidden)
+      .map(rectOf)
+      .filter((r) => r.w > 0 && r.h > 0);
+    if (boxRect && !box.hidden) taken.push({ ...boxRect });
+    if (target) {
+      const name = selected === "box" ? "Leaderboard box" : `${SLOT_NAMES[selected]} panel`;
+      document.getElementById("pad-title").textContent = name;
+      pad.setAttribute("aria-label", `Move or resize: ${name}`);
+      const others = taken.filter((r) => !TLPlace.overlaps(r, target));
+      // The buttons stay where they are while the same panel moves, so the
+      // next click lands on the same button; they move when they would cover
+      // it or another panel.
+      const here = rectOf(pad);
+      if (padFor !== selected || [target, ...others].some((r) => TLPlace.overlaps(here, r))) {
+        const p = TLPlace.padSpot({ w: pad.offsetWidth, h: pad.offsetHeight }, target, screen, others);
+        pad.style.left = px(p.x);
+        pad.style.top = px(p.y);
+        padFor = selected;
+      }
+      taken.push(rectOf(pad));
+    }
+    const bar = TLPlace.spot({ w: toolbar.offsetWidth, h: toolbar.offsetHeight }, screen, taken, "top");
+    toolbar.style.left = px(bar.x);
+    toolbar.style.top = px(bar.y);
+    taken.push(rectOf(toolbar));
+    if (!hint.hidden) {
+      const line = TLPlace.spot({ w: hint.offsetWidth, h: hint.offsetHeight }, screen, taken, "bottom");
+      hint.style.left = px(line.x);
+      hint.style.top = px(line.y);
+    }
+  }
+
+  // The on-screen buttons, made once from the key rules (overlay-keys.js).
+  function buildPad() {
+    const moves = document.getElementById("pad-moves");
+    const sizes = document.getElementById("pad-sizes");
+    for (const b of TLKeys.PAD) {
+      const node = button(b.label, () => padArrange(b.action), undefined, `pad:${b.action}`);
+      node.className = `pad-${b.action}`;
+      (b.resize ? sizes : moves).append(node);
+    }
+    const big = document.getElementById("pad-big");
+    big.addEventListener("click", () => {
+      bigSteps = !bigSteps;
+      big.setAttribute("aria-pressed", String(bigSteps));
+    });
   }
 
   // Said by screen readers; nothing on screen shows it.
@@ -368,7 +497,10 @@
 
   // A short line on screen, only while a panel or the box has the keyboard.
   function showKeyHint() {
-    document.getElementById("key-hint").hidden = !focusedTarget();
+    const target = focusedTarget();
+    document.getElementById("key-hint").hidden = !target;
+    if (target) select(target.kind === "box" ? "box" : target.id);
+    else placeControls();
   }
 
   // A save that failed: show what the app really has, then say why.
@@ -380,6 +512,8 @@
     const warning = document.getElementById("toolbar-warning");
     warning.hidden = false;
     warning.textContent = `The overlay settings could not be updated (${error}).`;
+    // The bar grew: it may now cover a panel.
+    placeControls();
   }
 
   async function refresh() {
@@ -414,7 +548,12 @@
         fail(error);
       }
     });
+    buildPad();
     document.addEventListener("keydown", keyArrange);
+    window.addEventListener("resize", () => {
+      padFor = null;
+      placeControls();
+    });
     document.addEventListener("focusin", showKeyHint);
     document.addEventListener("focusout", () => setTimeout(showKeyHint, 0));
     await onEvent("overlay-settings-changed", () => refresh().catch(fail));
