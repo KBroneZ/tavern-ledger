@@ -1,0 +1,31 @@
+{
+  "about": "Every key of an uploaded game record, per level (T-104h, D-047). The parser's report (crates/bg-parser/src/report.rs) and the desktop app's record (crates/uploader) must write exactly these, and upload-game's validator must check exactly these: cargo test fails when the parser writes a key missing here, and the function refuses to start when validate.ts checks a different set. Maps whose keys are data (card_names, shop_tribes, start_health, health_after) are not levels.",
+  "keys": {
+    "record": ["index", "parser", "report", "saved_at", "session"],
+    "parser": ["revision", "version"],
+    "report": [
+      "build",
+      "card_names",
+      "final_health",
+      "final_place",
+      "game_type",
+      "hero",
+      "index",
+      "lobby",
+      "local_player_id",
+      "not_in_log",
+      "problems",
+      "rounds",
+      "shop_tribes",
+      "start_health",
+      "status",
+      "teammate_hero",
+      "teammate_player_id",
+      "warnings"
+    ],
+    "report.lobby[]": ["duo_team", "final_health", "final_place", "hero", "player_id"],
+    "report.rounds[]": ["entries", "health_after", "number", "opponents", "own_health_after"],
+    "report.rounds[].entries[]": ["board", "hero", "player_id", "side"],
+    "report.rounds[].entries[].board[]": ["atk", "card_id", "golden", "health", "position"]
+  }
+}

@@ -4,6 +4,19 @@
 // must never carry player names, BattleTags, ratings or MMR (D-012, D-017):
 // there is no field for them, a BattleTag-shaped string anywhere is refused,
 // and hero names are only accepted for heroes the report shows.
+//
+// The keys it checks at each level are listed in report_keys.json, which a
+// cargo test ties to the parser's report (T-104h, D-047): a parser that
+// writes a new key fails CI until the key is listed there and checked here.
+
+import contract from "./report_keys.json" with { type: "json" };
+
+/**
+ * Goes up by one each time the validator starts accepting records it used to
+ * refuse. Every answer carries it, and the desktop app retries a game this
+ * server refused once when it sees a higher number (D-047).
+ */
+export const VALIDATOR_VERSION = 2;
 
 export const SESSION_PATTERN = /^Hearthstone_(\d{4})_(\d{2})_(\d{2})_\d{2}_\d{2}_\d{2}$/;
 const PATH_PATTERN = /\/v1\/games\/(Hearthstone_\d{4}(?:_\d{2}){5})\/([1-9][0-9]{0,3})$/;
@@ -21,6 +34,55 @@ const BATTLETAG = /[#＃﹟]\s*\d{3,6}/;
 const NAME = /^[\p{L}\p{M}\p{N}\p{P}\p{S}\p{Zs}]{1,64}$/u;
 const NAME_FORBIDDEN = /[<>#＃﹟@＠\\"]/;
 const MAX_INT = 2 ** 31 - 1;
+// Health maps: player id ("1"-"64") -> health + armor - damage, never below 0.
+const PLAYER_KEY = /^[1-9][0-9]?$/;
+const MAX_HEALTH = 100000;
+const MAX_HEALTH_ENTRIES = 16;
+
+/**
+ * The keys checked at each level; must equal report_keys.json. Level names
+ * stay quoted: crates/bg-parser/tests/upload_contract.rs reads this table.
+ */
+const KEYS: Record<string, string[]> = {
+  "record": ["session", "index", "saved_at", "parser", "report"],
+  "parser": ["version", "revision"],
+  "report": [
+    "index",
+    "status",
+    "game_type",
+    "build",
+    "local_player_id",
+    "hero",
+    "teammate_player_id",
+    "teammate_hero",
+    "card_names",
+    "final_place",
+    "final_health",
+    "lobby",
+    "shop_tribes",
+    "rounds",
+    "start_health",
+    "warnings",
+    "problems",
+    "not_in_log",
+  ],
+  "report.lobby[]": ["player_id", "hero", "duo_team", "final_place", "final_health"],
+  "report.rounds[]": ["number", "entries", "own_health_after", "opponents", "health_after"],
+  "report.rounds[].entries[]": ["side", "player_id", "hero", "board"],
+  "report.rounds[].entries[].board[]": ["card_id", "atk", "health", "position", "golden"],
+};
+
+// A validator out of step with the list stops the function at start: games
+// wait in the app (5xx) instead of being refused or stored unchecked.
+const sameKeys = (a: string[] | undefined, b: string[]) =>
+  a !== undefined && [...a].sort().join() === [...b].sort().join();
+const listed: Record<string, string[]> = contract.keys;
+if (
+  !sameKeys(Object.keys(listed), Object.keys(KEYS)) ||
+  Object.entries(KEYS).some(([level, keys]) => !sameKeys(listed[level], keys))
+) {
+  throw new Error("validate.ts and report_keys.json list different keys");
+}
 
 export type GameType = "GT_BATTLEGROUNDS" | "GT_BATTLEGROUNDS_DUO";
 const MAX_PLACE: Record<GameType, number> = { GT_BATTLEGROUNDS: 8, GT_BATTLEGROUNDS_DUO: 4 };
@@ -112,7 +174,7 @@ function notes(v: unknown, field: string): void {
 }
 
 function minion(v: unknown, field: string): void {
-  const m = shape(v, field, ["card_id", "atk", "health", "position", "golden"], [
+  const m = shape(v, field, KEYS["report.rounds[].entries[].board[]"], [
     "atk",
     "health",
   ]);
@@ -125,25 +187,30 @@ function minion(v: unknown, field: string): void {
   }
 }
 
-function entry(v: unknown, field: string, heroes: Set<string>): void {
-  const e = shape(v, field, ["side", "player_id", "hero", "board"], ["side"]);
+/** Hero card ids and player ids the report shows, outside the health maps. */
+interface Seen {
+  heroes: Set<string>;
+  players: Set<number>;
+}
+
+function entry(v: unknown, field: string, seen: Seen): void {
+  const e = shape(v, field, KEYS["report.rounds[].entries[]"], ["side"]);
   if (e.side !== "own" && e.side !== "opponent") throw new Invalid(`${field}.side`);
-  optInt(e.player_id, `${field}.player_id`, 1, 64);
+  const pid = optInt(e.player_id, `${field}.player_id`, 1, 64);
+  if (pid !== null) seen.players.add(pid);
   const hero = cardId(e.hero, `${field}.hero`);
-  if (hero) heroes.add(hero);
+  if (hero) seen.heroes.add(hero);
   if (e.board !== null && e.board !== undefined) {
     list(e.board, `${field}.board`, 16).forEach((m, i) => minion(m, `${field}.board[${i}]`));
   }
 }
 
-function round(v: unknown, field: string, heroes: Set<string>): void {
-  const r = shape(v, field, ["number", "entries", "own_health_after", "opponents"], [
-    "number",
-  ]);
+function round(v: unknown, field: string, seen: Seen): Obj {
+  const r = shape(v, field, KEYS["report.rounds[]"], ["number"]);
   int(r.number, `${field}.number`, 0, 1000);
   if (r.entries !== undefined) {
     list(r.entries, `${field}.entries`, 8).forEach((e, i) =>
-      entry(e, `${field}.entries[${i}]`, heroes)
+      entry(e, `${field}.entries[${i}]`, seen)
     );
   }
   optInt(r.own_health_after, `${field}.own_health_after`, -100000, 100000);
@@ -152,15 +219,27 @@ function round(v: unknown, field: string, heroes: Set<string>): void {
       optInt(p, `${field}.opponents[${i}]`, 1, 64)
     );
   }
+  return r;
 }
 
-function lobbyPlayer(v: unknown, field: string, heroes: Set<string>): void {
-  const p = shape(v, field, ["player_id", "hero", "duo_team", "final_place", "final_health"], [
-    "player_id",
-  ]);
-  int(p.player_id, `${field}.player_id`, 1, 64);
+/**
+ * Health by player id (`start_health`, `rounds[].health_after`): only
+ * players this report shows elsewhere, so a key can never carry a name.
+ */
+function healthMap(v: unknown, field: string, players: Set<number>): void {
+  if (v === undefined) return;
+  if (!isObject(v) || Object.keys(v).length > MAX_HEALTH_ENTRIES) throw new Invalid(field);
+  for (const [pid, health] of Object.entries(v)) {
+    if (!PLAYER_KEY.test(pid) || !players.has(Number(pid))) throw new Invalid(field);
+    int(health, field, 0, MAX_HEALTH);
+  }
+}
+
+function lobbyPlayer(v: unknown, field: string, seen: Seen): void {
+  const p = shape(v, field, KEYS["report.lobby[]"], ["player_id"]);
+  seen.players.add(int(p.player_id, `${field}.player_id`, 1, 64));
   const hero = cardId(p.hero, `${field}.hero`);
-  if (hero) heroes.add(hero);
+  if (hero) seen.heroes.add(hero);
   optInt(p.duo_team, `${field}.duo_team`, 1, 8);
   optInt(p.final_place, `${field}.final_place`, 1, 8);
   optInt(p.final_health, `${field}.final_health`, -100000, 100000);
@@ -218,7 +297,7 @@ function playedOn(session: string): string {
 
 function check(value: unknown, session: string, index: number): Summary {
   if (!isObject(value)) throw new Invalid("record");
-  const rec = shape(value, "", ["session", "index", "saved_at", "parser", "report"], [
+  const rec = shape(value, "", KEYS["record"], [
     "session",
     "index",
     "saved_at",
@@ -230,7 +309,7 @@ function check(value: unknown, session: string, index: number): Summary {
   const savedAt = int(rec.saved_at, "saved_at", 0, 32503680000);
   let parserVersion: string | null = null;
   if (rec.parser !== undefined && rec.parser !== null) {
-    const p = shape(rec.parser, "parser", ["version", "revision"], ["version", "revision"]);
+    const p = shape(rec.parser, "parser", KEYS["parser"], ["version", "revision"]);
     if (typeof p.version !== "string" || !PARSER_VERSION.test(p.version)) {
       throw new Invalid("parser.version");
     }
@@ -238,25 +317,7 @@ function check(value: unknown, session: string, index: number): Summary {
     parserVersion = `${p.version}+r${revision}`;
   }
 
-  const r = shape(rec.report, "report", [
-    "index",
-    "status",
-    "game_type",
-    "build",
-    "local_player_id",
-    "hero",
-    "teammate_player_id",
-    "teammate_hero",
-    "card_names",
-    "final_place",
-    "final_health",
-    "lobby",
-    "shop_tribes",
-    "rounds",
-    "warnings",
-    "problems",
-    "not_in_log",
-  ], ["index", "status", "game_type"]);
+  const r = shape(rec.report, "report", KEYS["report"], ["index", "status", "game_type"]);
   if (r.index !== index) throw new Invalid("report.index");
   if (r.status !== "ok" && r.status !== "incomplete" && r.status !== "unsupported") {
     throw new Invalid("report.status");
@@ -266,24 +327,29 @@ function check(value: unknown, session: string, index: number): Summary {
   }
   const gameType = r.game_type as GameType;
   const build = optInt(r.build, "report.build", 1, 100000000);
-  optInt(r.local_player_id, "report.local_player_id", 1, 64);
-  optInt(r.teammate_player_id, "report.teammate_player_id", 1, 64);
-  const heroes = new Set<string>();
+  const seen: Seen = { heroes: new Set(), players: new Set() };
+  for (const key of ["local_player_id", "teammate_player_id"]) {
+    const pid = optInt(r[key], `report.${key}`, 1, 64);
+    if (pid !== null) seen.players.add(pid);
+  }
   const hero = cardId(r.hero, "report.hero");
-  if (hero) heroes.add(hero);
+  if (hero) seen.heroes.add(hero);
   const mate = cardId(r.teammate_hero, "report.teammate_hero");
-  if (mate) heroes.add(mate);
+  if (mate) seen.heroes.add(mate);
   const finalPlace = optInt(r.final_place, "report.final_place", 1, MAX_PLACE[gameType]);
   optInt(r.final_health, "report.final_health", -100000, 100000);
   if (r.lobby !== undefined) {
-    list(r.lobby, "report.lobby", 16).forEach((p, i) =>
-      lobbyPlayer(p, `report.lobby[${i}]`, heroes)
-    );
+    list(r.lobby, "report.lobby", 16).forEach((p, i) => lobbyPlayer(p, `report.lobby[${i}]`, seen));
   }
   const offered = tribes(r.shop_tribes, "report.shop_tribes");
-  if (r.rounds !== undefined) {
-    list(r.rounds, "report.rounds", 200).forEach((x, i) => round(x, `report.rounds[${i}]`, heroes));
-  }
+  const rounds = r.rounds === undefined
+    ? []
+    : list(r.rounds, "report.rounds", 200).map((x, i) => round(x, `report.rounds[${i}]`, seen));
+  // After every round, so a player seen in any combat counts.
+  healthMap(r.start_health, "report.start_health", seen.players);
+  rounds.forEach((x, i) =>
+    healthMap(x.health_after, `report.rounds[${i}].health_after`, seen.players)
+  );
   notes(r.warnings, "report.warnings");
   notes(r.problems, "report.problems");
   if (r.not_in_log !== undefined) {
@@ -293,7 +359,7 @@ function check(value: unknown, session: string, index: number): Summary {
       }
     });
   }
-  heroNames(r.card_names, "report.card_names", heroes);
+  heroNames(r.card_names, "report.card_names", seen.heroes);
 
   return {
     game_type: gameType,

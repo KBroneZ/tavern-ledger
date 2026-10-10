@@ -6,7 +6,9 @@
 //!   8 s... up to 15 min); the game stays waiting, also across restarts.
 //! * 429: wait for `Retry-After`.
 //! * 400, 409, 413: the server refused this game; it is marked refused and
-//!   shown, never retried in a loop (a changed record is sent again).
+//!   shown, never retried in a loop (a changed record is sent again, and so
+//!   is a game refused by an older validator than the newest that answered,
+//!   once: D-047).
 //! * 401: refresh the session once; if that fails, sign out and ask the user
 //!   to sign in again.
 //! * 403 and any other 4xx: stop and show the reason.
@@ -44,6 +46,8 @@ const GAME_REFUSALS: [&str; 6] = [
     "too_large",
     "older_revision",
 ];
+/// A validator version above this is not a version (D-047).
+const MAX_VALIDATOR: u64 = 1_000_000;
 /// Refresh the access token when it has less than this left.
 const REFRESH_MARGIN_SECS: u64 = 60;
 
@@ -84,10 +88,11 @@ pub fn backoff(attempt: u32, fraction: f64) -> Duration {
     base / 2 + base.mul_f64(fraction.clamp(0.0, 1.0) / 2.0)
 }
 
-/// What one upload attempt came to.
+/// What one upload attempt came to, with the validator version the answer
+/// carried.
 enum Sent {
-    Stored,
-    Refused(String),
+    Stored(Option<u32>),
+    Refused(String, Option<u32>),
     Unauthorized,
     /// Network trouble or a server error: back off.
     BackOff(String),
@@ -438,6 +443,11 @@ impl Engine {
             Err(e) => return Sent::BackOff(e.to_string()),
         };
         let json = res.json().unwrap_or(Value::Null);
+        let validator = json
+            .get("validator")
+            .and_then(Value::as_u64)
+            .filter(|v| (1..=MAX_VALIDATOR).contains(v))
+            .map(|v| v as u32);
         let code = json
             .get("code")
             .and_then(Value::as_str)
@@ -447,7 +457,7 @@ impl Engine {
             200 | 201 => {
                 // The server hashes what it stored; it must be what we sent.
                 if json.get("sha256").and_then(Value::as_str) == Some(item.sha256.as_str()) {
-                    Sent::Stored
+                    Sent::Stored(validator)
                 } else {
                     Sent::BackOff("the server's answer did not match the game sent".into())
                 }
@@ -456,7 +466,7 @@ impl Engine {
             // refused; anything else (a proxy, a wrong deploy) stops instead,
             // so the history is never marked refused by mistake.
             400 | 409 | 413 if code.as_deref().is_some_and(|c| GAME_REFUSALS.contains(&c)) => {
-                Sent::Refused(code.unwrap_or_default())
+                Sent::Refused(code.unwrap_or_default(), validator)
             }
             401 => Sent::Unauthorized,
             429 => {
@@ -508,6 +518,7 @@ impl Engine {
         if items.is_empty() {
             return Wake::Idle;
         }
+        let validator_before = marks.validator();
         let (mut uploaded, mut refused) = (0usize, Vec::new());
         for item in items.iter().take(budget) {
             let mut sent = Sent::Unauthorized;
@@ -521,11 +532,11 @@ impl Engine {
                     break;
                 }
             }
-            let outcome = match sent {
-                Sent::Stored => Outcome::Uploaded,
-                Sent::Refused(ref code) => {
+            let (outcome, answered_by) = match sent {
+                Sent::Stored(v) => (Outcome::Uploaded, v),
+                Sent::Refused(ref code, v) => {
                     refused.push(code.clone());
-                    Outcome::Rejected
+                    (Outcome::Rejected, v)
                 }
                 Sent::Unauthorized => {
                     let w = self.forget_and_stop(
@@ -560,6 +571,13 @@ impl Engine {
                     .filter(|_| outcome == Outcome::Rejected)
                     .cloned(),
                 outcome,
+                // Never below the newest version seen, so an older server
+                // (a rollback) cannot make a refused game wait again.
+                validator: Some(
+                    answered_by
+                        .unwrap_or(crate::queue::FIRST_VALIDATOR)
+                        .max(marks.validator()),
+                ),
                 at: now_secs(),
             };
             if let Err(e) = marks.record(mark) {
@@ -576,7 +594,10 @@ impl Engine {
                 self.status.problem = None;
             }
         }
-        let wake = if items.len() > budget {
+        // A newer validator answered: games it refused before may wait again.
+        let retry = marks.validator() > validator_before
+            && pending(&store, &marks, &reconnects, Some(&user)).1.waiting > 0;
+        let wake = if items.len() > budget || retry {
             Wake::Now
         } else {
             Wake::Idle

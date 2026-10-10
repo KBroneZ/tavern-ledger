@@ -1,6 +1,6 @@
 //! End to end against the local Supabase stack (T-104d): sign in through a
 //! real magic link and the loopback redirect, upload, upload again, re-import,
-//! hit the quota, sign out. Skipped unless TAVERN_SUPABASE_LOCAL=1 and
+//! retry a real game refused before D-047, hit the quota, sign out. Skipped unless TAVERN_SUPABASE_LOCAL=1 and
 //! `npx supabase start` is running; needs the `http` feature:
 //!
 //!     $env:TAVERN_SUPABASE_LOCAL = "1"
@@ -22,10 +22,12 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use serde_json::{json, Value};
+use tracker::dev_reconnect::Reconnects;
 use tracker::store::{GameKey, Store};
 use uploader::auth::Auth;
 use uploader::config::{self, ServerConfig};
 use uploader::http::{Http, Method, Request, ReqwestHttp};
+use uploader::queue::{pending, Mark, Marks, Outcome};
 use uploader::secrets::{credential_name, CredentialManager, TokenStore};
 use uploader::signin::SignIn;
 use uploader::{Engine, Wake};
@@ -33,6 +35,7 @@ use uploader::{Engine, Wake};
 const MAIL: &str = "http://127.0.0.1:54324";
 const S1: &str = "Hearthstone_2026_10_09_18_30_00";
 const S2: &str = "Hearthstone_2026_10_09_20_00_00";
+const S3: &str = "Hearthstone_2026_10_09_21_00_00";
 
 struct Stack {
     url: String,
@@ -245,6 +248,29 @@ fn save_game(dir: &Path, session: &str, report: &Value) {
     store.save(key, report.clone()).unwrap();
 }
 
+/// Marks every waiting game refused the way the app did before D-047 (no
+/// validator version), as the user's first 26 uploads were.
+fn refuse_as_before_d047(dir: &Path, uid: &str) {
+    let store = Store::open(dir).unwrap();
+    let mut marks = Marks::open(dir).unwrap();
+    let (items, _) = pending(&store, &marks, &Reconnects::default(), Some(uid));
+    assert!(!items.is_empty());
+    for item in items {
+        marks
+            .record(Mark {
+                session: item.key.session.clone(),
+                index: item.key.index,
+                user: uid.into(),
+                sha256: item.sha256.clone(),
+                outcome: Outcome::Rejected,
+                code: Some("invalid_report".into()),
+                validator: None,
+                at: 1,
+            })
+            .unwrap();
+    }
+}
+
 fn no_token_in_files(dir: &Path, secrets: &[&str]) {
     for entry in fs::read_dir(dir).unwrap() {
         let path = entry.unwrap().path();
@@ -395,6 +421,24 @@ fn sign_in_upload_quota_and_sign_out_against_the_local_stack() {
     ));
     assert_eq!(place, "5");
     eprintln!("re-import replaced the stored game");
+
+    // ---- a real game from the current parser, refused before D-047, is
+    // retried once and stored (D-047)
+    let mut real = fixture("real/b253216_duos");
+    real["index"] = json!(1);
+    save_game(&dir, S3, &real);
+    refuse_as_before_d047(&dir, &uid);
+    assert_eq!(engine.run(Instant::now(), 10), Wake::Idle);
+    let counts = &engine.status().counts;
+    assert_eq!(
+        (counts.uploaded, counts.rejected, counts.waiting),
+        (3, 0, 0)
+    );
+    let stored = psql(&format!(
+        "select parser_version from public.games where user_id = '{uid}' and session = '{S3}'"
+    ));
+    assert_eq!(stored, parser);
+    eprintln!("a real game refused before the fix: retried once and stored");
 
     // ---- quota: 600 uploads in the last hour
     psql(&format!("insert into private.upload_events (user_id, at) select '{uid}', now() from generate_series(1, 600)"));

@@ -10,11 +10,11 @@
 //   4. upload_begin(): revision, rate limits and total quota;
 //   5. the file, re-compressed here from the checked bytes, is written with
 //      the service role, then upload_commit() writes the summary row.
-// Same bytes again: 200 without writing. Answers carry a code, never the
-// values sent, a token or an id. No dependencies: plain fetch against the
-// project's own HTTP APIs.
+// Same bytes again: 200 without writing. Answers carry a code and the
+// validator's version (D-047), never the values sent, a token or an id. No
+// dependencies: plain fetch against the project's own HTTP APIs.
 
-import { parsePath, type Summary, validateRecord } from "./validate.ts";
+import { parsePath, type Summary, validateRecord, VALIDATOR_VERSION } from "./validate.ts";
 
 export interface Env {
   url: string;
@@ -42,8 +42,9 @@ class StepError extends Error {
 
 class TooLarge extends Error {}
 
-function json(status: number, body: unknown, extra: Record<string, string> = {}): Response {
-  return new Response(JSON.stringify(body), {
+/** Every answer says which validator ran, so the app can retry games it refused. */
+function json(status: number, body: object, extra: Record<string, string> = {}): Response {
+  return new Response(JSON.stringify({ ...body, validator: VALIDATOR_VERSION }), {
     status,
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...extra },
   });
