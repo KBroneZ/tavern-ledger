@@ -183,13 +183,17 @@ fn curious_of(rows: &[GameRow], names: Option<CardNames<'_>>) -> Curious {
 
 /// The recap of one game in the history: results, health, tribes and
 /// warnings, each with its source (T-202, T-203). The window renders it.
+/// Trinkets and the Old God are named by the card data when it is there.
 #[tauri::command]
 fn game_recap(
     state: State<'_, Arc<AppState>>,
+    cards: State<'_, card_data::Cards>,
     session: String,
     index: u64,
 ) -> Result<Recap, String> {
-    recap_of(&state, &session, index)
+    let store = card_data::store_with_data(&cards);
+    let card_of = |dbf: i64| store.and_then(|s| s.card_of_dbf(dbf));
+    recap_of(&state, &session, index).map(|r| r.with_dbf_cards(&card_of))
 }
 
 fn recap_of(state: &AppState, session: &str, index: u64) -> Result<Recap, String> {

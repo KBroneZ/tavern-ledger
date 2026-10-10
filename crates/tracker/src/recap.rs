@@ -18,6 +18,7 @@ use serde_json::Value;
 
 use crate::choices::{game_choices, GameChoices};
 use crate::hero_pick::{hero_pick, HeroPick};
+use crate::live::{minions_of, LiveBoard};
 use crate::provenance::Source;
 use crate::shop::{shop_recap, ShopRecap};
 use crate::stats::{base_hero, counted_place, mode_of, rules, DUOS};
@@ -99,6 +100,10 @@ pub struct OpponentRecord {
     /// unknown when there is no result at all.
     pub counts_source: Source,
     pub combats: Vec<Combat>,
+    /// Their boards as each combat against them began (from the log), in
+    /// round order; a board the log does not have is left out. Keywords
+    /// (T-208) are None on a record older than parser revision 5.
+    pub boards: Vec<LiveBoard>,
 }
 
 /// How many of a game's combat results the game recorded (from the log),
@@ -471,6 +476,28 @@ pub(crate) fn own_health_points(report: &Value) -> Vec<HealthPoint> {
     own_health(&View::new(report))
 }
 
+/// The boards of these seats that entered play, round by round.
+fn boards_of(view: &View, seats: &[i64]) -> Vec<LiveBoard> {
+    view.rounds
+        .iter()
+        .flat_map(|(&round, value)| {
+            list(value, "entries")
+                .iter()
+                .filter(|e| e.get("side").and_then(Value::as_str) == Some("opponent"))
+                .filter_map(move |e| {
+                    let seat = e.get("player_id")?.as_i64()?;
+                    let minions = e.get("board")?.as_array()?;
+                    seats.contains(&seat).then(|| LiveBoard {
+                        seat,
+                        hero: text(e, "hero").map(|id| view.hero_ref(&id)),
+                        round,
+                        minions: minions_of(minions),
+                    })
+                })
+        })
+        .collect()
+}
+
 fn opponent_record(view: &View, seats: Vec<i64>, combats: Vec<Combat>) -> OpponentRecord {
     let heroes = seats
         .iter()
@@ -490,6 +517,7 @@ fn opponent_record(view: &View, seats: Vec<i64>, combats: Vec<Combat>) -> Oppone
         tie: count(&combats, Outcome::Tie),
         unknown: count(&combats, Outcome::Unknown),
         counts_source: counts_source(&combats),
+        boards: boards_of(view, &seats),
         seats,
         combats,
     }
@@ -555,6 +583,13 @@ impl Recap {
         } else {
             Source::Entered
         };
+        self
+    }
+
+    /// Names the trinkets and the Old God, which the log gives as database
+    /// ids, with the card data (`card_of` turns a database id into a card id).
+    pub fn with_dbf_cards(mut self, card_of: &dyn Fn(i64) -> Option<String>) -> Self {
+        self.choices = self.choices.with_dbf_cards(card_of);
         self
     }
 }
@@ -658,6 +693,43 @@ mod tests {
             .iter()
             .map(|c| (c.round, c.outcome))
             .collect()
+    }
+
+    #[test]
+    fn each_opponent_carries_its_boards_with_keywords_in_round_order() {
+        let mut g = solo(&[(2, 35, 40), (3, 35, 30), (2, 30, 40)]);
+        g["rounds"][0]["entries"][1]["board"] = json!([
+            {"card_id": "M_B", "atk": 2, "health": 2, "position": 2, "keywords": []},
+            {"card_id": "M_A", "atk": 1, "health": 3, "position": 1, "keywords": ["taunt"]},
+        ]);
+        // Round 3: a record older than revision 5 has no keywords; round 2 no board.
+        g["rounds"][2]["entries"][1]["board"] = json!([{"card_id": "M_C", "atk": 4, "health": 4}]);
+        g["rounds"][1]["entries"][1]["board"] = Value::Null;
+        let r = recap(&g);
+        let two = r.record.iter().find(|o| o.seats == [2]).unwrap();
+        let rounds: Vec<_> = two.boards.iter().map(|b| b.round).collect();
+        assert_eq!(rounds, [1, 3]);
+        let first = &two.boards[0];
+        assert_eq!(
+            first.minions[0].card_id.as_deref(),
+            Some("M_A"),
+            "in board order"
+        );
+        assert_eq!(
+            first.minions[0].keywords.as_deref(),
+            Some(&["taunt".to_string()][..])
+        );
+        assert_eq!(
+            first.minions[1].keywords.as_deref(),
+            Some(&[][..]),
+            "recorded: none"
+        );
+        assert_eq!(
+            two.boards[1].minions[0].keywords, None,
+            "not recorded, not none"
+        );
+        let three = r.record.iter().find(|o| o.seats == [3]).unwrap();
+        assert!(three.boards.is_empty(), "no board in the log: none shown");
     }
 
     #[test]

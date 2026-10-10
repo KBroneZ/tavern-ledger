@@ -174,6 +174,16 @@ impl CardStore {
             .unwrap_or_default()
     }
 
+    /// The card id of a database id (the trinkets and the Old God, T-207);
+    /// None while there is no card data or the data does not know it.
+    pub fn card_of_dbf(&self, dbf: i64) -> Option<String> {
+        lock(&self.inner)
+            .saved
+            .as_ref()
+            .and_then(|s| s.catalog.card_of_dbf(dbf))
+            .map(String::from)
+    }
+
     fn knows(&self, id: &str) -> bool {
         lock(&self.inner)
             .saved

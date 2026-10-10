@@ -14,6 +14,7 @@ use bg_parser::shop::ShopRecord;
 use serde::Serialize;
 use serde_json::Value;
 
+use crate::choices::own_triples;
 use crate::provenance::Source;
 use crate::recap::{combats_in_order, own_health_points, Outcome};
 use crate::shop::{record_of, totals};
@@ -41,12 +42,12 @@ const BASIS_MOST_BOUGHT: &str = "The minion you bought most often over all games
 const BASIS_WIN_STREAK: &str = "Most combats won in a row inside one game. A tie, a loss, an unknown result or a round the log lacks ends the streak. Inferred when any result in it was worked out from health.";
 const BASIS_DAMAGE: &str = "Your health before a combat minus your health after it (armor included), the largest over all games. Inferred: health paid or healed during the shop turn before the combat is counted in it too, and a combat with no health after it in the log (often the last one) is left out.";
 
-/// The triple count is not in the saved record: golden minions also come from
-/// cards and discovers, so counting them would be a guess.
-const DROPPED: [(&str, &str); 1] = [(
-    "Triples",
-    "The saved game record has no triple count, and golden minions also come from cards and discovers, so counting them would be a guess.",
-)];
+const WHY_NO_TRIPLES: &str = "No finished game has the leaderboard's triple count yet: it is kept since parser revision 5. Older games need tavern-watch --reparse while their logs are on disk.";
+const BASIS_TRIPLES: &str = "Triples you made, as the game's leaderboard counted them at the end of each finished game (golden minions from cards or discovers are not triples). In Duos it is your own hero's count.";
+
+/// Stats the saved data cannot back. Triples left this list once the
+/// leaderboard's count was kept (parser revision 5, D-058).
+const DROPPED: [(&str, &str); 0] = [];
 
 /// Looks a card id up in the card data: its English name, None when unknown.
 pub type CardNames<'a> = &'a dyn Fn(&str) -> Option<String>;
@@ -206,6 +207,7 @@ struct Counts {
     paid_rolls: Sum,
     free_rolls: Sum,
     brann_titus: Sum,
+    triples: Sum,
     shop_games: usize,
     bought: BTreeMap<String, i64>,
     streak: Option<Streak>,
@@ -233,6 +235,7 @@ impl Counts {
                 *self.bought.entry(id.clone()).or_default() += 1;
             }
         }
+        self.triples.add(own_triples(report));
         if let Some(streak) = game_streak(report) {
             self.streak_games += 1;
             self.streak = Some(self.streak.unwrap_or_default().better(streak));
@@ -343,6 +346,8 @@ impl Counts {
                 self.free_rolls
                     .stat("free_rolls", "Free rolls", BASIS_FREE_ROLLS, shop_why),
                 self.most_bought(),
+                self.triples
+                    .stat("triples", "Triples", BASIS_TRIPLES, WHY_NO_TRIPLES),
                 streak.unwrap_or(CuriousStat {
                     key: "longest_win_streak",
                     label: "Longest win streak (combats)",
@@ -510,7 +515,31 @@ mod tests {
         let c = compute(&[], no_names());
         assert_eq!(c.games, 0);
         assert!(c.stats.iter().all(|s| s.value.is_none()));
-        assert_eq!(c.dropped[0].label, "Triples");
+        assert!(c.dropped.is_empty(), "triples are backed since revision 5");
+        assert_eq!(stat(&c, "triples").missing, Some(WHY_NO_TRIPLES));
+    }
+
+    #[test]
+    fn triples_sum_the_leaderboard_count_of_finished_games_only() {
+        let with = |triples: Value, status: &str| {
+            json!({
+                "status": status, "game_type": "GT_BATTLEGROUNDS", "local_player_id": 1,
+                "lobby": [{"player_id": 1, "hero": "H", "triples": triples, "trinkets": []}],
+            })
+        };
+        let games = [
+            with(
+                json!([{"turn": 4, "count": 1}, {"turn": 8, "count": 3}]),
+                "ok",
+            ),
+            with(json!([]), "ok"),
+            with(json!([{"turn": 4, "count": 1}]), "incomplete"),
+            json!({"status": "ok", "game_type": "GT_BATTLEGROUNDS", "local_player_id": 1,
+                   "lobby": [{"player_id": 1, "hero": "H"}]}),
+        ];
+        let c = compute(&games, no_names());
+        let t = stat(&c, "triples");
+        assert_eq!((t.value, t.games, t.source), (Some(3), 2, Source::Log));
     }
 
     #[test]

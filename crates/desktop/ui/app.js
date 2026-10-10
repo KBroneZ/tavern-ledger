@@ -467,6 +467,7 @@ function renderBreakdown(m) {
   );
   TLShop.renderStats(m, SHOP_UI);
   document.getElementById("hero-picks-body").replaceChildren(...TLExtras.heroPickTable(m.hero_picks, SHOP_UI));
+  document.getElementById("choice-stats-body").replaceChildren(...TLRoundTwo.choiceTables(SHOP_UI, m.choices));
 }
 
 // What shop.js needs to draw with the same marks and tooltips as this file.
@@ -717,6 +718,7 @@ function recordSection(r) {
   section.append(heading, el("p", "note", r.record_basis));
   if (results.text) section.append(withSource(el("p", "note results-line", results.text), results.source));
   section.append(r.record.length ? recordTable(r) : el("p", "empty", "No combat could be matched to an opponent."));
+  if (r.record.length) section.append(TLRoundTwo.opponentFolds(SHOP_UI, r, heroText, recapGame ? gameKey(recapGame) : ""));
   if (r.unattributed.length) {
     const reasons = [...new Set(r.unattributed.map((c) => c.reason).filter(Boolean))];
     const rounds = r.unattributed.map((c) => c.round).join(", ");
@@ -790,7 +792,8 @@ function renderRecapNow(r) {
   const health = el("section", "recap-part");
   health.append(withSource(el("h3", null, "Your health over the rounds"), r.health_source), healthChart(r.health));
   document.getElementById("recap-body").replaceChildren(
-    recapFacts(r), TLExtras.heroPickSection(r.hero_pick, SHOP_UI, portrait), health, recordSection(r),
+    recapFacts(r), TLExtras.heroPickSection(r.hero_pick, SHOP_UI, portrait),
+    TLRoundTwo.choicesSection(SHOP_UI, r.choices, recapGame ? gameKey(recapGame) : ""), health, recordSection(r),
     TLShop.recapSection(r.shop, SHOP_UI, r.is_duos), enteredSection(r), tribesSection(r), messagesSection(r),
   );
 }
