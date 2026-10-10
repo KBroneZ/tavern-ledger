@@ -62,14 +62,26 @@ window.TLCards = (() => {
   }
 
   // An <img> for the card's art, or null for an id that is not a card id.
-  function art(id, className) {
+  // Options (the main window, T-320): `lazy` fetches it only when it comes
+  // into view (long lists and closed folds then cost no picture), and
+  // `placeholder` puts a plain shape of the same size in place of a picture
+  // that does not load, instead of removing it.
+  function art(id, className, options = {}) {
     if (typeof id !== "string" || !ID.test(id)) return null;
     const img = document.createElement("img");
     img.className = className;
     img.alt = "";
     img.decoding = "async";
     img.draggable = false;
-    img.addEventListener("error", () => img.remove());
+    if (options.lazy) img.loading = "lazy";
+    img.addEventListener("error", () => {
+      if (!options.placeholder) return img.remove();
+      const missing = document.createElement("span");
+      missing.className = `${className} art-missing`;
+      missing.setAttribute("aria-hidden", "true");
+      missing.title = "No picture: the card database has none for this card right now.";
+      img.replaceWith(missing);
+    });
     img.src = ART + id;
     return img;
   }

@@ -122,6 +122,7 @@
       rate: known(c.pick_rate) ? `${Math.round(c.pick_rate * 100)}%` : "—",
       place: known(c.average_place_when_picked) ? c.average_place_when_picked.toFixed(2) : "—",
       placeTip: `Over ${plural(c.placed_when_picked, "game")} with a place that counts.`,
+      sort: { offered: c.offered, picked: c.picked, rate: c.pick_rate, place: c.average_place_when_picked },
     }));
     const left = [
       stats.not_recorded && `${stats.not_recorded} saved by an older version (${REPARSE_MANY})`,
@@ -285,24 +286,26 @@
     return section;
   }
 
-  function choiceTableNode(ui, stats, key, label) {
+  // Inside its fold: the top rows by times offered (ties: better average place
+  // when taken, then name), "Show all" for the rest, sortable (T-323).
+  function choiceTableNode(ui, stats, key, label, mode) {
     const s = choiceTable(stats, key);
     const box = fold(ui, `stats:${key}`, `${label} (${s.rows.length})`);
     if (s.empty) {
       box.append(ui.el("p", "empty", s.empty));
       return box;
     }
-    const table = ui.el("table");
-    const head = ui.el("tr");
-    [label.replace(/s$/, ""), "Offered", "Taken", "Pick rate", "Avg place when taken"].forEach((w, i) => {
-      const th = ui.el("th", i ? "num" : null, w);
-      th.setAttribute("scope", "col");
-      head.append(th);
-    });
-    const thead = ui.el("thead");
-    thead.append(head);
-    const tbody = ui.el("tbody");
-    tbody.append(...s.rows.map((r) => {
+    const nameOf = (r) => (cards() && cards().name(r.id)) || r.id || "";
+    const C = window.TLCompact;
+    const rows = C.rank(s.rows, { games: (r) => r.sort.offered, place: (r) => r.sort.place, name: nameOf });
+    const columns = [
+      { label: label.replace(/s$/, ""), sort: nameOf, text: true },
+      { label: "Offered", num: true, sort: (r) => r.sort.offered },
+      { label: "Taken", num: true, sort: (r) => r.sort.picked },
+      { label: "Pick rate", num: true, sort: (r) => r.sort.rate },
+      { label: "Avg place when taken", num: true, sort: (r) => r.sort.place, low: true },
+    ];
+    const row = (r) => {
       const tr = ui.el("tr");
       const name = ui.el("th", "hero-name");
       name.setAttribute("scope", "row");
@@ -312,19 +315,18 @@
       tr.append(name, ...[r.offered, r.picked, r.rate].map((v) => ui.el("td", "num", v)), place);
       tr.querySelectorAll("td").forEach((td) => ui.addTip(td, "log"));
       return tr;
-    }));
-    table.append(thead, tbody);
-    box.append(table);
+    };
+    box.append(C.table(ui, { key: `${key}:${mode}`, columns, rows, row, label }));
     return box;
   }
 
   // The stats' trinket and Dark Gift tables for one mode, folded.
-  function choiceTables(ui, stats) {
+  function choiceTables(ui, stats, mode = "") {
     const s = choiceTable(stats, "trinkets");
     return [
       ui.el("p", "note", s.note),
-      choiceTableNode(ui, stats, "trinkets", "Trinkets"),
-      choiceTableNode(ui, stats, "dark_gifts", "Dark Gifts"),
+      choiceTableNode(ui, stats, "trinkets", "Trinkets", mode),
+      choiceTableNode(ui, stats, "dark_gifts", "Dark Gifts", mode),
     ];
   }
 

@@ -107,6 +107,7 @@
       rate: percent(h.pick_rate),
       place: known(h.average_place_when_picked) ? h.average_place_when_picked.toFixed(2) : "—",
       placeTip: `Over ${plural(h.placed_when_picked, "game")} with a place that counts.`,
+      sort: { offered: h.offered, picked: h.picked, rate: h.pick_rate, place: h.average_place_when_picked },
     }));
     const left = [
       picks.not_recorded && `${picks.not_recorded} saved by an older version (${REPARSE_MANY})`,
@@ -176,33 +177,35 @@
     return section;
   }
 
-  function heroPickTable(picks, ui) {
+  // Top heroes by times offered (ties: better average place when picked, then
+  // name), "Show all" for the rest, sortable (T-323). `key` keeps its state.
+  function heroPickTable(picks, ui, key = "hero-picks") {
     const s = heroPickStats(picks);
     const parts = [ui.el("p", "note", s.note)];
     if (s.empty) return parts.concat(ui.el("p", "empty", s.empty));
-    const table = ui.el("table");
-    const head = ui.el("tr");
-    ["Hero", "Offered", "Picked", "Pick rate", "Avg place when picked"].forEach((w, i) => {
-      const th = ui.el("th", i ? "num" : null, w);
-      th.setAttribute("scope", "col");
-      head.append(th);
-    });
-    const thead = ui.el("thead");
-    thead.append(head);
-    const tbody = ui.el("tbody");
-    tbody.append(...s.rows.map((r) => {
+    const C = window.TLCompact;
+    const rows = C.rank(s.rows, { games: (r) => r.sort.offered, place: (r) => r.sort.place, name: (r) => r.text });
+    const columns = [
+      { label: "Hero", sort: (r) => r.text, text: true },
+      { label: "Offered", num: true, sort: (r) => r.sort.offered },
+      { label: "Picked", num: true, sort: (r) => r.sort.picked },
+      { label: "Pick rate", num: true, sort: (r) => r.sort.rate },
+      { label: "Avg place when picked", num: true, sort: (r) => r.sort.place, low: true },
+    ];
+    const row = (r) => {
       const tr = ui.el("tr");
       const name = ui.el("th", "hero-name", r.text);
       name.setAttribute("scope", "row");
       name.title = r.hero;
+      const img = ui.art(r.hero, "portrait");
+      if (img) name.prepend(img);
       const place = ui.el("td", "num", r.place);
       place.title = r.placeTip;
       tr.append(name, ...[r.offered, r.picked, r.rate].map((v) => ui.el("td", "num", v)), place);
       tr.querySelectorAll("td").forEach((td) => ui.addTip(td, "log"));
       return tr;
-    }));
-    table.append(thead, tbody);
-    return parts.concat(table);
+    };
+    return parts.concat(C.table(ui, { key, columns, rows, row, label: "Hero picks" }));
   }
 
   const api = {

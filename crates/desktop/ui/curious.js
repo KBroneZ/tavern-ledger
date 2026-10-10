@@ -51,11 +51,8 @@
     label.id = `curious-${r.key}-label`;
     const value = ui.el("p", known(r.why) ? "curious-value none" : "curious-value");
     if (r.card) {
-      const art = typeof window !== "undefined" && window.TLCards ? window.TLCards.art(r.card, "curious-art") : null;
-      if (art) {
-        art.title = "Picture: card database. © Blizzard Entertainment.";
-        value.append(art);
-      }
+      const art = ui.art ? ui.art(r.card, "curious-art") : null;
+      if (art) value.append(art);
       const name = ui.el("span", "curious-card", cardName(r.card));
       name.title = r.card;
       ui.addTip(name, "card_data");
@@ -66,7 +63,8 @@
     ui.withSource(value, r.source);
     item.append(label, value, ui.el("p", "curious-coverage", r.coverage));
     if (r.why) item.append(ui.el("p", "curious-why", r.why));
-    item.append(ui.el("p", "note curious-basis", r.basis));
+    // The long definition waits behind a fold (T-323).
+    if (r.basis) item.append(window.TLCompact.about(ui, `curious:${r.key}`, r.basis, "How it is counted"));
     return item;
   }
 

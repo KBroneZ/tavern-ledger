@@ -94,13 +94,22 @@ const shareText = (v) => dash(v, (x) => `${Math.round(x * 100)}%`);
 // The history is a local file; tolerate hand-edited or older records.
 const list = (value) => (Array.isArray(value) ? value : []);
 
-// The hero's portrait, looked up by the log's card id in the card data
-// (T-304); none when there is no id or no image (cards.js removes it).
-function portrait(id) {
-  const img = TLCards.art(id, "portrait");
+// Every picture in this window (T-304, T-320): fetched only when it comes into
+// view, so long lists and closed folds spend none of the app's hourly picture
+// budget, and a picture that cannot load leaves a plain shape of the same
+// size instead of a gap. The crop that hides the white bars of the source art
+// is in style.css.
+const ART_OPTIONS = { lazy: true, placeholder: true };
+
+function art(id, className) {
+  const img = TLCards.art(id, className, ART_OPTIONS);
   if (img) img.title = `Picture: ${sourceInfo("card_data").label}. © Blizzard Entertainment.`;
   return img;
 }
+
+// The hero's portrait, looked up by the log's card id in the card data
+// (T-304); none when there is no id.
+const portrait = (id) => art(id, "portrait");
 
 // Hero name as the game's log printed it (in the game's language); the card
 // id when the log gave none. Never a guessed name.
@@ -124,37 +133,60 @@ function note(report) {
 // Played with the reconnect dev tool (D-043): left out of the stats and the upload.
 const DEV_RECONNECT_TIP = "Played with the reconnect dev tool: not counted in the stats and never uploaded.";
 
-function noteCell(game) {
-  const cell = el("td", "note", note(game.report));
+// The game's note under its hero, small; nothing when there is none (T-323).
+function noteLine(game) {
+  const text = note(game.report);
+  if (!text && game.dev_reconnect !== true) return null;
+  const line = el("span", "row-note", text);
   if (game.dev_reconnect === true) {
     const mark = el("span", "dev-mark", "Dev reconnect");
     mark.title = DEV_RECONNECT_TIP;
-    cell.prepend(mark, " ");
+    line.prepend(mark, " ");
   }
-  return cell;
+  return line;
 }
 
+// One game of the ledger. The mode is the list's own (the mode switch), so it
+// is not repeated; tribes and the problem report are in the game's recap.
 function row(game, top) {
   const r = game.report;
   const tr = el("tr", game.dev_reconnect === true ? "dev-reconnect" : null);
   const src = game.sources || {};
-  const playedCell = el("td", null, played(game.session, game.index));
+  const playedCell = el("td", "played", played(game.session, game.index));
   playedCell.title = provenance(game);
-  tr.append(
-    withSource(playedCell, src.played),
-    withSource(el("td", null, MODES[r.game_type] || r.game_type || "—"), src.mode),
-    heroCell(r, src.hero),
-  );
+  const hero = heroCell(r, src.hero);
+  // "Other" holds several game types: each row says its own.
+  if (mode === OTHER) hero.append(withSource(el("span", "row-note", r.game_type || "Unknown type"), src.mode));
+  const line = noteLine(game);
+  if (line) hero.append(line);
+  tr.append(withSource(playedCell, src.played), hero);
   const placeCell = el("td", "num");
   placeCell.append(placeBadge(r.final_place, top));
+  const open = el("td", "actions");
+  open.append(recapButton(game));
   tr.append(
     withSource(placeCell, src.place),
     withSource(el("td", "num", r.final_health ?? "—"), src.health),
     withSource(el("td", "num", list(r.rounds).length || "—"), src.rounds),
-    noteCell(game),
-    reportCell(game),
+    open,
   );
   return tr;
+}
+
+const LEDGER_LIMIT = 8;
+
+function ledgerTable(games, top) {
+  const columns = [
+    { label: "Session · game" },
+    { label: "Hero" },
+    { label: "Place", num: true, sort: (g) => g.report.final_place, low: true },
+    { label: "Health", num: true, sort: (g) => g.report.final_health },
+    { label: "Rounds", num: true, sort: (g) => list(g.report.rounds).length || null },
+    { label: "", head: () => el("span", "visually-hidden", "Open the recap") },
+  ];
+  return TLCompact.table(SHOP_UI, {
+    key: `ledger:${mode}`, columns, rows: games, row: (g) => row(g, top), limit: LEDGER_LIMIT, label: "Your games, newest first",
+  });
 }
 
 function topLabel(top) {
@@ -396,15 +428,13 @@ function openTribesDialog(target) {
   showDialog(document.getElementById("tribes-dialog"));
 }
 
-function tribesButton(game) {
-  const entered = entryOf({ kind: "game", session: game.session, index: game.index });
-  const button = el("button", "report-btn", entered ? "Tribes ✓" : "Tribes");
-  button.type = "button";
+// The recap's "Tribes" button: says whether tribes were entered for its game.
+function updateTribesButton(game) {
+  const button = document.getElementById("recap-tribes");
+  const entered = game && entryOf({ kind: "game", session: game.session, index: game.index });
+  button.textContent = entered ? "Tribes ✓" : "Tribes";
   button.title = entered ? `Lobby tribes entered by you: ${entered.map(tribeLabel).join(", ")}` : "Enter the lobby tribes for this game";
-  button.setAttribute("aria-label", `Lobby tribes of game ${played(game.session, game.index)}`);
-  button.setAttribute("data-focus", `tribes:${game.session}:${game.index}`);
-  button.addEventListener("click", () => openTribesDialog({ kind: "game", session: game.session, index: game.index }));
-  return button;
+  button.hidden = !game || !lobby || !lobby.available;
 }
 
 async function saveTribes() {
@@ -434,6 +464,42 @@ document.getElementById("tribes-move-go").addEventListener("click", async () => 
 });
 document.getElementById("tribes-form").addEventListener("submit", (e) => e.preventDefault());
 
+// The stats' long tables (T-323): top rows by games, ties broken by the better
+// average place and then the name, "Show all" for the rest (compact.js).
+function heroesTable(m) {
+  const name = (h) => h.name || h.hero || "";
+  const rows = TLCompact.rank(m.heroes, { games: (h) => h.tally.games, place: (h) => h.tally.average_place, name });
+  const columns = [
+    { label: "Hero", sort: name, text: true },
+    { label: "Games", num: true, sort: (h) => h.tally.games },
+    { label: "Avg place", num: true, sort: (h) => h.tally.average_place, low: true },
+    { label: topLabel(m.top_half), num: true, sort: (h) => (m.top_half === null ? null : h.tally.top_half_share) },
+    { label: "Wins", num: true, sort: (h) => h.tally.wins },
+  ];
+  return TLCompact.table(SHOP_UI, { key: `heroes:${mode}`, columns, rows, row: (h) => heroRow(h, m.top_half), label: "Heroes" });
+}
+
+function tribesTable(m) {
+  // Most games first, then most offers (as a lower-is-better number), then the name.
+  const rows = TLCompact.rank(m.tribes, { games: (t) => t.games, place: (t) => -t.offers, name: (t) => tribeLabel(t.tribe) });
+  const columns = [
+    { label: "Tribe", sort: (t) => tribeLabel(t.tribe), text: true },
+    { label: "Games", num: true, sort: (t) => t.games },
+    { label: "Offers", num: true, sort: (t) => t.offers },
+  ];
+  return TLCompact.table(SHOP_UI, {
+    key: `tribes:${mode}`, columns, rows, row: (t) => tribeRow(t, m.games_with_tribes, m.tribes_source), label: "Tribes seen in the tavern",
+  });
+}
+
+function enteredTable(m, entered) {
+  const rows = TLCompact.rank(entered, { games: (t) => t.games, name: (t) => tribeLabel(t.tribe) });
+  const columns = [{ label: "Tribe" }, { label: "Games", num: true }];
+  return TLCompact.table(SHOP_UI, {
+    key: `entered:${mode}`, columns, rows, row: (t) => enteredRow(t, m.games_with_entered_tribes, m.entered_tribes_source), label: "Lobby tribes you entered",
+  });
+}
+
 function enteredRow(t, total, source) {
   const tr = el("tr");
   const cell = el("td", null, tribeLabel(t.tribe));
@@ -455,23 +521,21 @@ function tribeRow(t, total, source) {
 }
 
 function renderBreakdown(m) {
-  document.getElementById("heroes-top-label").textContent = topLabel(m.top_half);
-  document.getElementById("heroes").replaceChildren(...m.heroes.map((h) => heroRow(h, m.top_half)));
+  document.getElementById("heroes").replaceChildren(...(m.heroes.length ? [heroesTable(m)] : []));
   document.getElementById("heroes-empty").hidden = m.heroes.length > 0;
-  document.getElementById("tribes").replaceChildren(...m.tribes.map((t) => tribeRow(t, m.games_with_tribes, m.tribes_source)));
+  document.getElementById("tribes").replaceChildren(...(m.tribes.length ? [tribesTable(m)] : []));
   document.getElementById("tribes-empty").hidden = m.tribes.length > 0;
   const entered = list(m.entered_tribes);
   document.getElementById("entered-tribes-section").hidden = entered.length === 0;
-  document.getElementById("entered-tribes").replaceChildren(
-    ...entered.map((t) => enteredRow(t, m.games_with_entered_tribes, m.entered_tribes_source)),
-  );
-  TLShop.renderStats(m, SHOP_UI);
-  document.getElementById("hero-picks-body").replaceChildren(...TLExtras.heroPickTable(m.hero_picks, SHOP_UI));
-  document.getElementById("choice-stats-body").replaceChildren(...TLRoundTwo.choiceTables(SHOP_UI, m.choices));
+  document.getElementById("entered-tribes").replaceChildren(...(entered.length ? [enteredTable(m, entered)] : []));
+  TLShop.renderStats(m, SHOP_UI, mode);
+  document.getElementById("hero-picks-body").replaceChildren(...TLExtras.heroPickTable(m.hero_picks, SHOP_UI, `hero-picks:${mode}`));
+  document.getElementById("choice-stats-body").replaceChildren(...TLRoundTwo.choiceTables(SHOP_UI, m.choices, mode));
 }
 
-// What shop.js needs to draw with the same marks and tooltips as this file.
-const SHOP_UI = { el, withSource, sourceMark, addTip };
+// What shop.js and the other drawing files need to draw with the same marks,
+// tooltips and pictures as this file.
+const SHOP_UI = { el, withSource, sourceMark, addTip, art };
 
 // The legend comes from the app, so its words are the ones on the marks.
 function renderLegend() {
@@ -487,17 +551,6 @@ function renderLegend() {
 // "Report a problem" (T-110): the app builds the file; the window shows it
 // whole before it is saved. Nothing is sent anywhere.
 let reportGame = null;
-
-function reportCell(game) {
-  const button = el("button", "report-btn", "Report");
-  button.type = "button";
-  button.setAttribute("aria-label", `Report a problem with game ${played(game.session, game.index)}`);
-  button.setAttribute("data-focus", `report:${game.session}:${game.index}`);
-  button.addEventListener("click", () => openReport(game));
-  const cell = el("td", "actions");
-  cell.append(recapButton(game), tribesButton(game), button);
-  return cell;
-}
 
 function showReportMessage(id, text) {
   const node = document.getElementById(id);
@@ -585,17 +638,37 @@ function statusText(status) {
   return "—";
 }
 
+// The hero, the place, the mode and the date are in the recap's top bar.
 function recapFacts(r) {
   const facts = el("dl", "facts");
-  const mode = MODES[r.game_type.value] || r.game_type.value || "—";
-  facts.append(fact("Mode", mode, r.game_type.source));
-  facts.append(fact("Hero", heroWithPortrait(r.hero.value), r.hero.source));
   if (r.is_duos) facts.append(fact("Teammate", heroWithPortrait(r.teammate_hero.value), r.teammate_hero.source));
-  facts.append(fact("Place", placeBadge(r.place.value, r.top_half), r.place.source));
   facts.append(fact("Final health", r.final_health.value ?? "—", r.final_health.source));
   facts.append(fact("Rounds played", r.rounds_played.value ?? "—", r.rounds_played.source));
-  facts.append(fact("State", statusText(r.status.value), r.status.source));
+  if (r.status.value !== "ok") facts.append(fact("State", statusText(r.status.value), r.status.source));
   return facts;
+}
+
+// The top bar: the hero's portrait and name, the place, the mode and the date.
+function renderRecapBar(r, game) {
+  const hero = r ? r.hero.value : null;
+  const title = document.getElementById("recap-title");
+  title.textContent = hero ? heroText(hero) : "Game recap";
+  title.title = "";
+  if (r) withSource(title, r.hero.source);
+  const img = hero && art(hero.id, "recap-art");
+  document.getElementById("recap-portrait").replaceChildren(...(img ? [img] : []));
+  const kind = r ? MODES[r.game_type.value] || r.game_type.value : null;
+  const sub = document.getElementById("recap-sub");
+  sub.textContent = [kind, played(game.session, game.index)].filter(Boolean).join(" · ");
+  sub.title = "The time is when the game's log session started; the log has no time per game.";
+  if (r) addTip(sub, r.game_type.source);
+  const place = document.getElementById("recap-place");
+  place.replaceChildren();
+  place.title = "";
+  if (r) {
+    place.append(el("span", "recap-place-label", "Place"), placeBadge(r.place.value, r.top_half));
+    withSource(place, r.place.source);
+  }
 }
 
 function svg(tag, attrs) {
@@ -648,7 +721,7 @@ function healthChart(points) {
     chart.append(dot, label(x(i), y(p.health) - 8, p.health, "value-label"));
   });
   flush();
-  wrap.append(chart, el("p", "note", "The number over a point is your health, the one under it the round (0: before the first combat). A ? means the log has no health for that round."));
+  wrap.append(chart, TLCompact.about(SHOP_UI, "health-chart", "The number over a point is your health, the one under it the round (0: before the first combat). A ? means the log has no health for that round.", "How to read this"));
   return wrap;
 }
 
@@ -715,9 +788,11 @@ function recordSection(r) {
   const heading = el("h3", null, "Record against each opponent");
   const mark = sourceMark(results.source);
   if (mark) heading.append(mark);
-  section.append(heading, el("p", "note", r.record_basis));
-  if (results.text) section.append(withSource(el("p", "note results-line", results.text), results.source));
+  section.append(heading);
   section.append(r.record.length ? recordTable(r) : el("p", "empty", "No combat could be matched to an opponent."));
+  const basis = TLCompact.about(SHOP_UI, "record", r.record_basis, "Where the results come from");
+  if (results.text) basis.append(withSource(el("p", "note results-line", results.text), results.source));
+  section.append(basis);
   if (r.record.length) section.append(TLRoundTwo.opponentFolds(SHOP_UI, r, heroText, recapGame ? gameKey(recapGame) : ""));
   if (r.unattributed.length) {
     const reasons = [...new Set(r.unattributed.map((c) => c.reason).filter(Boolean))];
@@ -740,11 +815,13 @@ function tribesSection(r) {
     return section;
   }
   section.append(el("p", "note", "What the tavern offered you. The log does not say which tribes were in the lobby."));
+  // The mark is on the heading once; each tribe keeps the tooltip.
   const list = el("ul", "tribe-list");
   list.append(...r.tribes.map((t) => {
     const li = el("li", null, `${tribeLabel(t.tribe)} ${t.offers}`);
     li.title = t.tribe;
-    return withSource(li, r.tribes_source);
+    addTip(li, r.tribes_source);
+    return li;
   }));
   section.append(list);
   return section;
@@ -770,56 +847,89 @@ function enteredSection(r) {
   return section;
 }
 
+// Folded: open only when there is something to read (T-323).
 function messagesSection(r) {
   const section = el("section", "recap-part");
-  section.append(el("h3", null, "Parser warnings"));
   const all = r.problems.map((m) => `Problem: ${m}`).concat(r.warnings);
   if (!all.length) {
     section.append(el("p", "note", "The parser reported no warnings for this game."));
     return section;
   }
-  const list = el("ul", "messages");
-  list.append(...all.map((m) => el("li", null, m)));
-  section.append(list);
+  const box = TLCompact.fold(SHOP_UI, `${recapGame ? gameKey(recapGame) : ""}:warnings`, `Parser warnings (${all.length})`);
+  const items = el("ul", "messages");
+  items.append(...all.map((m) => el("li", null, m)));
+  box.append(items);
+  section.append(box);
   return section;
 }
 
-function renderRecap(r) {
-  TLFocus.keep(document, () => renderRecapNow(r));
+function renderRecap(r, game) {
+  TLFocus.keep(document, () => renderRecapNow(r, game));
 }
 
-function renderRecapNow(r) {
+// Most telling first: health and turns, then the record, then the details.
+function renderRecapNow(r, game) {
+  const key = gameKey(game);
+  const report = (allGames.find((g) => gameKey(g) === key) || {}).report || null;
+  renderRecapBar(r, game);
+  updateTribesButton(game);
   const health = el("section", "recap-part");
   health.append(withSource(el("h3", null, "Your health over the rounds"), r.health_source), healthChart(r.health));
+  const top = el("div", "recap-top");
+  top.append(recapFacts(r), health);
+  const turnTools = { card: TLShop.card, cardRow: TLShop.cardRow, fold: TLCompact.fold, art, heroText, game: key };
   document.getElementById("recap-body").replaceChildren(
-    recapFacts(r), TLExtras.heroPickSection(r.hero_pick, SHOP_UI, portrait),
-    TLRoundTwo.choicesSection(SHOP_UI, r.choices, recapGame ? gameKey(recapGame) : ""), health, recordSection(r),
-    TLShop.recapSection(r.shop, SHOP_UI, r.is_duos), enteredSection(r), tribesSection(r), messagesSection(r),
+    top, TLShop.recapSummary(r.shop, SHOP_UI, r.is_duos, key), TLTurns.section(SHOP_UI, r, report, turnTools),
+    recordSection(r), TLExtras.heroPickSection(r.hero_pick, SHOP_UI, portrait),
+    TLRoundTwo.choicesSection(SHOP_UI, r.choices, key), enteredSection(r), tribesSection(r), messagesSection(r),
   );
 }
 
+// The recap fills the window (T-322): the X at the top right or Escape goes
+// back to the list, scrolled as it was, with focus on the game's button.
+const recapView = TLRecapView.create({
+  doc: document,
+  win: window,
+  focus: TLFocus,
+  view: document.getElementById("recap-view"),
+  heading: document.getElementById("recap-title"),
+  hide: [document.getElementById("masthead"), document.getElementById("home")],
+  blocked: () => Boolean(document.querySelector("dialog[open]")),
+  onClose: () => { recapGame = null; },
+});
+
+// Loads (or reloads) the recap of `game`; opens the view if it is not open.
 async function openRecap(game) {
   const target = { session: game.session, index: game.index };
+  const reload = recapView.isOpen() && recapGame && gameKey(recapGame) === gameKey(target);
   recapGame = target;
-  document.getElementById("recap-title").textContent = `Game recap · ${played(game.session, game.index)}`;
-  document.getElementById("recap-body").replaceChildren();
+  if (!reload) {
+    renderRecapBar(null, target);
+    updateTribesButton(target);
+    document.getElementById("recap-body").replaceChildren();
+  }
   showReportMessage("recap-error", "");
-  showDialog(document.getElementById("recap-dialog"));
+  recapView.open(`recap:${target.session}:${target.index}`);
   try {
     const recap = await invoke("game_recap", target);
-    if (recapGame === target) renderRecap(recap);
+    if (recapGame === target) renderRecap(recap, target);
   } catch (err) {
     if (recapGame === target) showReportMessage("recap-error", String(err));
   }
 }
 
-document.getElementById("recap-close").addEventListener("click", () => document.getElementById("recap-dialog").close());
-document.getElementById("recap-dialog").addEventListener("close", () => { recapGame = null; });
+document.getElementById("recap-close").addEventListener("click", () => recapView.close());
+document.getElementById("recap-tribes").addEventListener("click", () => {
+  if (recapGame) openTribesDialog({ kind: "game", session: recapGame.session, index: recapGame.index });
+});
+document.getElementById("recap-report").addEventListener("click", () => {
+  if (recapGame) openReport(recapGame);
+});
 
-// A game that just ended: show its recap, unless another dialog is open.
+// A game that just ended: show its recap, unless a dialog or another recap is open.
 async function onGameFinished(finished) {
   await refreshGames();
-  if (document.querySelector("dialog[open]")) return;
+  if (document.querySelector("dialog[open]") || recapView.isOpen()) return;
   const game = allGames.find((g) => g.session === finished.session && g.index === finished.index);
   if (game) openRecap(game);
 }
@@ -839,7 +949,7 @@ function renderNow() {
   const games = allGames.filter((g) => modeOf(g) === mode);
   const m = modeStats();
   document.querySelector('.modes [data-mode="OTHER"]').hidden = !allGames.some((g) => modeOf(g) === OTHER);
-  document.getElementById("games").replaceChildren(...games.map((g) => row(g, m.top_half)));
+  document.getElementById("games").replaceChildren(...(games.length ? [ledgerTable(games, m.top_half)] : []));
   const empty = document.getElementById("empty");
   empty.hidden = games.length > 0;
   empty.textContent = `No ${MODES[mode] || "other"} games yet. Play one and it will appear here when it ends.`;
@@ -850,6 +960,7 @@ function renderNow() {
   renderBreakdown(m);
   TLCurious.render(curious, SHOP_UI, document.getElementById("curious-body"));
   renderLegend();
+  if (recapGame) updateTribesButton(recapGame);
 }
 
 // Refreshes can overlap; only the latest one may paint, so an older answer
@@ -874,8 +985,12 @@ async function refreshGames() {
   renderLobby();
 }
 
-// "Your games" and "Curious stats" (T-216); both are drawn on every refresh.
-TLTabs.setup(document, "view-tabs");
+// "Your games", "Stats" and "Curious stats" (T-216, T-323); all are drawn on
+// every refresh. Curious stats count every mode, so the mode switch hides there.
+const tabIds = [...document.querySelectorAll('#view-tabs [role="tab"]')].map((t) => t.id);
+const showModes = (tab) => { document.getElementById("modes").hidden = tabIds[tab] === "tab-curious"; };
+showModes(TLTabs.setup(document, "view-tabs", showModes).current());
+TLScrollCue.start(window, document);
 
 document.querySelectorAll(".modes button").forEach((button) => {
   button.addEventListener("click", () => {
@@ -940,6 +1055,8 @@ async function main() {
 
 function showError(err) {
   renderStatus({ problem: "Something went wrong: " + String(err) });
+  // The status line is hidden while a recap fills the window.
+  if (recapView.isOpen()) showReportMessage("recap-error", "Something went wrong: " + String(err));
 }
 
 main().catch(showError);

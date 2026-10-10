@@ -30,6 +30,7 @@ class FakeNode {
   dispatch(type, extra = {}) {
     const event = { type, target: this, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...extra };
     for (let n = this; n; n = n.parent) (n.listeners[type] || []).forEach((fn) => fn(event));
+    (this.doc.listeners[type] || []).forEach((fn) => fn(event));
     return event;
   }
 
@@ -88,6 +89,11 @@ class FakeDocument {
     this.body = new FakeNode(this, "body");
     this.documentElement = new FakeNode(this, "html");
     this.activeElement = this.body;
+    this.listeners = {};
+  }
+
+  addEventListener(type, fn) {
+    (this.listeners[type] = this.listeners[type] || []).push(fn);
   }
 
   make(tag, attrs, parent = this.body) {

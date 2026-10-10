@@ -1,0 +1,80 @@
+/* Turns in the recap (T-321): one row per turn read at a glance (turn, tier,
+   result and opponent, health change, your board), the details in the open
+   turn and the shops behind "See shops". Lamplight glass tokens from
+   style.css; no frames around minions (D-052); every mark is also a word. */
+.turn-key { margin-bottom: 8px; }
+.turn-list { display: flex; flex-direction: column; gap: 6px; }
+
+.turn-cols, .turn-head {
+  display: grid;
+  grid-template-columns: 30px 78px minmax(0, 1.5fr) 50px minmax(0, 1.4fr);
+  align-items: center;
+  gap: 4px 12px;
+}
+.turn-cols { padding: 0 12px 0 34px; color: var(--dim); font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+
+.fold.turn > summary { display: flex; align-items: center; gap: 10px; padding: 8px 12px; list-style: none; }
+.fold.turn > summary::-webkit-details-marker { display: none; }
+.fold.turn > summary::before {
+  content: "▸" / "";
+  flex: none;
+  width: 12px;
+  color: var(--dim);
+  font-size: 12px;
+  transition: transform 150ms ease-out;
+}
+.fold.turn[open] > summary::before { transform: rotate(90deg); }
+.turn-head { flex: 1; min-width: 0; }
+
+.turn-no { font: 700 20px/1 var(--font-display); font-stretch: 80%; font-variant-numeric: tabular-nums; color: var(--text); }
+.turn-tier {
+  justify-self: start;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--panel-hi);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.turn-tier.none { visibility: hidden; }
+.tier-up { margin-left: 4px; color: var(--amber-hi); font-size: 11px; }
+
+.turn-combat { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.turn-combat .chip { flex: none; }
+.turn-opponent { display: flex; align-items: center; min-width: 0; overflow: hidden; color: var(--dim); font-size: 13.5px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+.turn-opponent .portrait { width: 22px; height: 22px; margin-right: 6px; }
+
+.turn-health { font: 700 16px/1 var(--font-display); font-stretch: 85%; font-variant-numeric: tabular-nums; text-align: right; }
+.turn-health.hurt { color: var(--bad); }
+.turn-health.healed { color: var(--good); }
+.turn-health.even, .turn-health.unknown { color: var(--dim); }
+
+.turn-strip { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.turn-faces { display: flex; padding-left: 6px; }
+.face { width: 24px; height: 24px; margin-left: -6px; box-shadow: 0 0 0 2px var(--panel-solid); }
+.face.golden { box-shadow: 0 0 0 2px var(--panel-solid), 0 0 0 3.5px var(--amber); }
+.turn-totals { color: var(--text); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.turn-strip-none { color: var(--dim); font-size: 12.5px; font-style: italic; }
+
+/* The open turn. */
+.fold.turn > .shop-row { padding-left: 0; padding-right: 0; }
+.fold.turn > .shop-row > .shop-row-label { flex-basis: 120px; overflow-wrap: anywhere; }
+.shop-card .minion-stats { color: var(--text); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tile-marks { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; }
+.turn-facts { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 6px 0 2px; padding-top: 8px; border-top: 1px dashed var(--line-soft); }
+.turn-facts dt { color: var(--dim); font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.turn-facts dd { margin: 0; font: 700 16px/1.2 var(--font-display); font-stretch: 88%; font-variant-numeric: tabular-nums; }
+.fold.see-shops { margin-bottom: 10px; background: var(--bg-deep); }
+
+@media (max-width: 640px) {
+  .turn-cols { display: none; }
+  .turn-head { grid-template-columns: 26px auto minmax(0, 1fr) auto; }
+  .turn-strip { grid-column: 2 / -1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fold.turn > summary::before { transition: none; }
+}
+@media (forced-colors: active) {
+  .turn-tier { border: 1px solid CanvasText; }
+}
