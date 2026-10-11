@@ -28,7 +28,6 @@ body {
   left: 50%;
   width: max(100%, 85lvh);
   margin-left: calc(max(100%, 85lvh) / -2);
-  will-change: transform;
 }
 
 .backdrop-art img {
@@ -42,7 +41,7 @@ body {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(12% 5.5% at 83% 12.5%, rgb(10 6 4 / 0.7), transparent 100%);
+  background: radial-gradient(16% 8% at 86% 15%, rgb(10 6 4 / 0.72), rgb(10 6 4 / 0.35) 60%, transparent 100%);
 }
 
 /* A light shade on the whole painting; the darker reading column is on main
@@ -223,6 +222,25 @@ body {
     padding: 10px 12px 12px;
     border-radius: var(--r-small);
     background: rgb(14 9 7 / 0.72);
+  }
+}
+
+/* Windows high contrast: plain text in the system colours, no gold fill or parchment. */
+@media (forced-colors: active) {
+  .gold-title {
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    filter: none;
+  }
+
+  .parchment {
+    background: Canvas;
+    border: 1px solid CanvasText;
+    box-shadow: none;
+  }
+
+  .parchment .lead {
+    color: CanvasText;
   }
 }
 

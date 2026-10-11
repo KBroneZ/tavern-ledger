@@ -58,6 +58,9 @@ KEY_LIT_BOX = (600, 40, 2160, 530)
 COMMON = Cut("btn-common", (860, 968, 1900, 1275), 60, 56, close=31)
 SMALL = Cut("btn-small", (1100, 1285, 1650, 1485), 60, 44)
 OPEN = 7  # px: anything joined to the button by a thread thinner than this is dropped
+SHEET_SIZE = (2752, 1536)  # the boxes below are measured on this export
+MIN_AREA = 0.25  # a cut must cover at least this share of its box, or the outline was lost
+MAX_MISMATCH = 1500.0  # mean squared grey difference over the outline: lined up the sheet gives about 1300, 8 px off about 1600
 DULL = 90  # max - min channel: anything this grey and this dark is backdrop
 
 
@@ -169,6 +172,8 @@ def cut(sheet, spec: Cut):
 
     crop = sheet.crop(spec.box)
     mask = silhouette(np.asarray(crop), spec.dark, spec.close)
+    if mask.mean() < MIN_AREA:
+        raise SystemExit(f"{spec.name}: the cut covers {mask.mean():.0%} of its box; the outline was lost")
     ys, xs = np.nonzero(mask)
     bbox = (int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1)
     return with_alpha(crop, mask).crop(bbox), mask[bbox[1]:bbox[3], bbox[0]:bbox[2]], bbox
@@ -184,6 +189,10 @@ def cut_lit(sheet, plain_box, plain_bbox, mask):
     area = sheet.crop(KEY_LIT_BOX)
     dx, dy = best_offset(plain, np.asarray(area))
     lit = area.crop((dx, dy, dx + w, dy + h))
+    p, l = plain.astype(float).mean(-1), np.asarray(lit).astype(float).mean(-1)
+    mismatch = float((((l - l.mean()) - (p - p.mean()))[mask] ** 2).mean())
+    if mismatch > MAX_MISMATCH:
+        raise SystemExit(f"btn-key-lit: the lit and plain buttons do not line up (mismatch {mismatch:.0f})")
     return with_alpha(lit, mask)
 
 
@@ -234,6 +243,8 @@ def main() -> int:
 
     OUT.mkdir(parents=True, exist_ok=True)
     sheet = Image.open(ART / "buttons-sheet.webp").convert("RGB")
+    if sheet.size != SHEET_SIZE:
+        raise SystemExit(f"buttons-sheet.webp is {sheet.size}, not {SHEET_SIZE}: measure the boxes again")
     key, key_mask, key_bbox = cut(sheet, KEY)
     lit = cut_lit(sheet, KEY.box, key_bbox, key_mask)
     common, _, _ = cut(sheet, COMMON)

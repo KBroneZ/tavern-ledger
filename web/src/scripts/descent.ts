@@ -5,6 +5,9 @@
 import { backdropOffset, type Descent } from "../lib/home/descent.ts";
 
 const art = document.querySelector<HTMLElement>("[data-descent]");
+// The backdrop is 100lvh tall: a steady screen height while a phone's toolbar
+// slides in and out (innerHeight changes then, and the painting would jump).
+const frameBox = art?.parentElement ?? null;
 const pin = document.querySelector<HTMLElement>("#scene");
 const stage = pin?.querySelector<HTMLElement>(".pin-stage") ?? null;
 const still = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -22,7 +25,7 @@ function pinnedSpan(): [number, number] | null {
 
 function measure(): void {
   if (!art) return;
-  const screen = window.innerHeight;
+  const screen = frameBox?.offsetHeight || window.innerHeight;
   const span = pinnedSpan();
   descent = {
     maxScroll: document.documentElement.scrollHeight - screen,
@@ -36,7 +39,7 @@ function draw(): void {
   frame = 0;
   if (!art) return;
   const y = still.matches ? 0 : backdropOffset(window.scrollY, descent);
-  art.style.transform = `translate3d(0, ${-y.toFixed(1)}px, 0)`;
+  art.style.transform = `translate3d(0, ${-Math.round(y * 10) / 10}px, 0)`;
 }
 
 function schedule(): void {
