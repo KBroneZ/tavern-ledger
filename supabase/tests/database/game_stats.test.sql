@@ -2,7 +2,7 @@
 -- Users and games are made up; everything rolls back at the end.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(61);
+select plan(66);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-00000000000a', 'a@example.test'),
@@ -24,7 +24,8 @@ insert into seed values
      "rolls": 30, "free_rolls": 4, "buys": 25, "spell_buys": 3, "sells": 9, "freezes": 2,
      "actions": 300, "apm": 21.5, "triples": 3, "final_board": ["BG_A", null, "BG_B"],
      "final_board_round": 12, "board_stats_max": 210, "golden_max": 2,
-     "heroes_offered": ["BG20_HERO_202", "BG22_HERO_000"], "hero_rerolls": 1}'),
+     "heroes_offered": ["BG20_HERO_202", "BG22_HERO_000", "BG20_HERO_202_SKIN_C"],
+     "hero_rerolls": 1}'),
   (2, 'GT_BATTLEGROUNDS', 'ok', 'BG20_HERO_202_SKIN_A', 5, '2026-10-02',
    '{"rounds": 9, "combats_won": 3, "combats_lost": 4, "combats_tied": 0, "combats_unknown": 2,
      "combats_inferred": 1, "win_streak": 2, "win_streak_inferred": true,
@@ -66,50 +67,54 @@ select is(
      and user_id = '00000000-0000-4000-8000-00000000000a'),
   '(,)', 'a value missing from the summary is unknown (null), never zero');
 select throws_ok(
-  $$ select public.upload_commit(
-       '00000000-0000-4000-8000-00000000000a', 'Hearthstone_2026_10_09_18_30_00', 9,
-       'GT_BATTLEGROUNDS', 'ok', 'BG20_HERO_202', 2, 253216, '2026-10-01', '{}', 1791000000,
-       repeat('a', 64), 2000, null, '{"rounds": 7, "battletag": "x"}', 1) $$,
+  $$ select public.game_stats_backfill_put('00000000-0000-4000-8000-00000000000a',
+       'Hearthstone_2026_10_09_18_30_00', 1, repeat('a', 64), 1, '{"rounds": 7, "battletag": "x"}') $$,
   '22023', null, 'a summary key that is not a column is refused');
 select throws_ok(
-  $$ select public.upload_commit(
-       '00000000-0000-4000-8000-00000000000a', 'Hearthstone_2026_10_09_18_30_00', 9,
-       'GT_BATTLEGROUNDS', 'ok', 'BG20_HERO_202', 2, 253216, '2026-10-01', '{}', 1791000000,
-       repeat('a', 64), 2000, null, '{"user_id": "00000000-0000-4000-8000-00000000000b"}', 1) $$,
+  $$ select public.game_stats_backfill_put('00000000-0000-4000-8000-00000000000a',
+       'Hearthstone_2026_10_09_18_30_00', 1, repeat('a', 64), 1, '{"user_id": "00000000-0000-4000-8000-00000000000b"}') $$,
   '22023', null, 'the summary cannot name the row it belongs to');
 select throws_ok(
-  $$ select public.upload_commit(
-       '00000000-0000-4000-8000-00000000000a', 'Hearthstone_2026_10_09_18_30_00', 9,
-       'GT_BATTLEGROUNDS', 'ok', 'BG20_HERO_202', 2, 253216, '2026-10-01', '{}', 1791000000,
-       repeat('a', 64), 2000, null, '{"rounds": 7}', null) $$,
+  $$ select public.game_stats_backfill_put('00000000-0000-4000-8000-00000000000a',
+       'Hearthstone_2026_10_09_18_30_00', 1, repeat('a', 64), null, '{"rounds": 7}') $$,
   '22023', null, 'a summary needs its version');
 select throws_ok(
-  $$ select public.upload_commit(
-       '00000000-0000-4000-8000-00000000000a', 'Hearthstone_2026_10_09_18_30_00', 9,
-       'GT_BATTLEGROUNDS', 'ok', 'BG20_HERO_202', 2, 253216, '2026-10-01', '{}', 1791000000,
-       repeat('a', 64), 2000, null, '{"rounds": 3, "combats_won": 1, "combats_lost": 1,
-         "combats_tied": 0, "combats_unknown": 0}', 1) $$,
+  $$ select public.game_stats_backfill_put('00000000-0000-4000-8000-00000000000a',
+       'Hearthstone_2026_10_09_18_30_00', 1, repeat('a', 64), 1, '{"rounds": 3, "combats_won": 1, "combats_lost": 1, "combats_tied": 0, "combats_unknown": 0}') $$,
   '23514', null, 'the combats must add up to the rounds');
 select throws_ok(
-  $$ select public.upload_commit(
-       '00000000-0000-4000-8000-00000000000a', 'Hearthstone_2026_10_09_18_30_00', 9,
-       'GT_BATTLEGROUNDS', 'ok', 'BG20_HERO_202', 2, 253216, '2026-10-01', '{}', 1791000000,
-       repeat('a', 64), 2000, null, '{"final_board": ["BG<script>"]}', 1) $$,
+  $$ select public.game_stats_backfill_put('00000000-0000-4000-8000-00000000000a',
+       'Hearthstone_2026_10_09_18_30_00', 1, repeat('a', 64), 1, '{"final_board": ["BG<script>"]}') $$,
   '23514', null, 'the final board holds card ids only');
 select throws_ok(
-  $$ select public.upload_commit(
-       '00000000-0000-4000-8000-00000000000a', 'Hearthstone_2026_10_09_18_30_00', 9,
-       'GT_BATTLEGROUNDS', 'ok', 'BG20_HERO_202', 2, 253216, '2026-10-01', '{}', 1791000000,
-       repeat('a', 64), 2000, null, '{"heroes_offered": ["Name#1234"]}', 1) $$,
+  $$ select public.game_stats_backfill_put('00000000-0000-4000-8000-00000000000a',
+       'Hearthstone_2026_10_09_18_30_00', 1, repeat('a', 64), 1, '{"final_board": ["BG_A,BG_B"]}') $$,
+  '23514', null, 'each element of the final board is one card id');
+select throws_ok(
+  $$ select public.game_stats_backfill_put('00000000-0000-4000-8000-00000000000a',
+       'Hearthstone_2026_10_09_18_30_00', 1, repeat('a', 64), 1, '{"heroes_offered": ["Name#1234"]}') $$,
   '23514', null, 'heroes offered are card ids only');
 select throws_ok(
-  $$ select public.upload_commit(
-       '00000000-0000-4000-8000-00000000000a', 'Hearthstone_2026_10_09_18_30_00', 9,
-       'GT_BATTLEGROUNDS', 'ok', 'BG20_HERO_202', 2, 253216, '2026-10-01', '{}', 1791000000,
-       repeat('a', 64), 2000, null, '{"rolls": 2, "free_rolls": 3}', 1) $$,
+  $$ select public.game_stats_backfill_put('00000000-0000-4000-8000-00000000000a',
+       'Hearthstone_2026_10_09_18_30_00', 1, repeat('a', 64), 1, '{"heroes_offered": ["BG_A", null]}') $$,
+  '23514', null, 'heroes offered have no unknown entry');
+select throws_ok(
+  $$ select public.game_stats_backfill_put('00000000-0000-4000-8000-00000000000a',
+       'Hearthstone_2026_10_09_18_30_00', 1, repeat('a', 64), 1, '{"rolls": 2, "free_rolls": 3}') $$,
   '23514', null, 'free rolls cannot pass the rolls');
-select is((select count(*)::int from public.games where game_index = 9), 0,
-  'a refused summary stores no game row either');
+select is(
+  public.upload_commit(
+    '00000000-0000-4000-8000-00000000000a', 'Hearthstone_2026_10_09_18_30_00', 9,
+    'GT_BATTLEGROUNDS', 'ok', 'BG20_HERO_202', 2, 253216, '2026-10-01', '{}', 1791000000,
+    repeat('a', 64), 2000, null, '{"rolls": 2, "free_rolls": 3}', 1),
+  'created', 'a summary the table refuses never blocks the upload');
+select results_eq(
+  $$ select g.game_index, s.user_id is null from public.games g
+     left join public.game_stats s using (user_id, session, game_index)
+     where g.game_index = 9 $$,
+  $$ values (9, true) $$,
+  'the game is stored without the refused summary, for the sweep to report');
+delete from public.games where game_index = 9;
 select throws_ok(
   $$ insert into public.game_stats (user_id, session, game_index, summary_version)
      values ('00000000-0000-4000-8000-00000000000a', 'Hearthstone_2026_10_09_18_30_00', 99, 1) $$,
@@ -152,6 +157,10 @@ select is(
   public.game_stats_backfill_put('00000000-0000-4000-8000-00000000000a',
     'Hearthstone_2026_10_09_18_30_00', 3, repeat('a', 64), 1, '{"rounds": 10}'),
   'changed', 'a summary of another copy of the game is not stored');
+select is(
+  public.game_stats_backfill_put('00000000-0000-4000-8000-00000000000a',
+    'Hearthstone_2026_10_09_18_30_00', 3, null, 1, '{"rounds": 10}'),
+  'changed', 'a summary without the copy''s SHA-256 is not stored');
 select is(
   public.game_stats_backfill_put('00000000-0000-4000-8000-00000000000a',
     'Hearthstone_2026_10_09_18_30_00', 3, repeat('c', 64), 1, '{"rounds": 10, "triples": 0}'),
@@ -267,6 +276,10 @@ select results_eq(
             ('BG22_HERO_000'::text, 2::bigint, 1::bigint, 3.00::numeric, 1::bigint, 3::smallint,
              3::smallint, 1::bigint, 0::bigint) $$,
   'heroes: skins grouped under the base hero, picks counted where the hero choice is known'
+);
+select is(
+  (select count(*)::int from public.user_heroes where mode = 'solo'), 2,
+  'a hero offered as two skins in one game is one hero, offered once'
 );
 select results_eq(
   $$ select hero, hero_card_id from public.game_summaries where game_index = 2 $$,

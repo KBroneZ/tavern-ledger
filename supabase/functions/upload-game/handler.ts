@@ -223,6 +223,22 @@ function commitArgs(
   };
 }
 
+/**
+ * upload_commit() with the game's summary. Until the T-502 migration lands
+ * (functions and migrations deploy in no fixed order), the database has no
+ * upload_commit with a summary and PostgREST answers 404: the row is written
+ * without it, and the daily sweep adds the summary later.
+ */
+async function commit(env: Env, fetchFn: Fetch, args: ReturnType<typeof commitArgs>) {
+  try {
+    return await rpc(env, fetchFn, "write row", "upload_commit", args);
+  } catch (e) {
+    if (!(e instanceof StepError && e.status === 404)) throw e;
+    const { p_stats: _stats, p_summary_version: _version, ...withoutSummary } = args;
+    return await rpc(env, fetchFn, "write row", "upload_commit", withoutSummary);
+  }
+}
+
 const BEGIN_REFUSALS: Record<string, [number, string]> = {
   older: [409, "a newer copy of this game is already stored"],
   quota_games: [403, "your account holds the most games it can"],
@@ -302,11 +318,9 @@ async function store(
   });
   await write.body?.cancel();
 
-  const committed = await rpc(
+  const committed = await commit(
     env,
     fetchFn,
-    "write row",
-    "upload_commit",
     commitArgs(userId, key, checked.summary, stats, sha, file.length),
   );
   if (committed === "created") return json(201, { result: "created", sha256: sha });

@@ -9,13 +9,14 @@ What the website reads from Supabase to show a player's games and stats, without
 - **Unknown is null, never zero.** A value the report cannot back (an older parser revision, a log that lacks it, an unfinished game) is null. Every total in a view comes with the number of games behind it (`*_games`, `games`), so the site can say "in 14 of 29 games".
 - **Inferred is marked.** Combat results come from the log; when the log has none they are worked out from health (`combats_inferred` counts those). Damage taken and dealt are health drops, so always inferred; `user_records.inferred` says so per record.
 - **Clients only read.** Writes go through the upload function and the daily sweep with the service role.
+- **Per-user reads.** The views are meant to be filtered by `user_id` (the filter reaches the table indexes; checked with `EXPLAIN`). An unfiltered read aggregates every profile the caller can see.
 
 ## How the summary is filled
 
-1. **At upload.** `upload-game` validates the record (validator 6, unchanged), works out the summary with `summarize()` and passes it to `upload_commit(..., p_stats, p_summary_version)`, which writes the game row and its `game_stats` row in one transaction. An older copy changes neither.
-2. **Games stored before.** The daily sweep (`sweep`, 03:17 UTC) lists games with no summary or one older than `SUMMARY_VERSION` (`game_stats_backfill_list`), reads each stored file through the Storage API, checks its SHA-256 against the row and runs `validateRecord()` again, then stores the summary (`game_stats_backfill_put`, which refuses it if another copy was uploaded meanwhile). At most 200 games per run; its answer has `stats: {listed, stored, skipped, failed}`. Nothing is typed by hand in production: the first sweep after the merge fills the existing games.
+1. **At upload.** `upload-game` validates the record (validator 6, unchanged), works out the summary with `summarize()` and passes it to `upload_commit(..., p_stats, p_summary_version)`, which writes the game row and its `game_stats` row in one transaction. An older copy changes neither. A summary the table refuses (summary code and table out of step) never blocks the upload: the game is stored without it and the sweep reports it.
+2. **Games stored before.** The daily sweep (`sweep`, 03:17 UTC) lists games with no summary or one older than `SUMMARY_VERSION` (`game_stats_backfill_list`), reads each stored file through the Storage API, checks its SHA-256 against the row and runs `validateRecord()` again, then stores the summary (`game_stats_backfill_put`, which refuses it if another copy was uploaded meanwhile). At most 500 games and 100 seconds per run, picked in random order so files that keep failing cannot hold the others back; its answer has `stats: {listed, stored, skipped, failed, left}` and a run with failures logs their count (never ids or names). Nothing is typed by hand in production: the first sweep after the merge fills the existing games.
 3. **A new summary version.** Raising `SUMMARY_VERSION` makes the sweep fill every game again with the new code.
-4. **Deploy order.** `upload_commit`'s two new arguments have defaults, so the function deployed before this change keeps working; a game it replaces loses its stale summary and the sweep makes a new one.
+4. **Deploy order.** Either order works. `upload_commit`'s two new arguments have defaults, so the function deployed before this change keeps working (a game it replaces loses its stale summary and the sweep makes a new one). The new function deployed before the migration gets PostgREST's 404 (`PGRST202`) for the new arguments and writes the row without the summary.
 
 ## Tables and views
 
@@ -53,7 +54,7 @@ One row per game: `user_id`, `session`, `game_index`, `mode` (`solo` or `duos`),
 
 ### `user_heroes` (per user, mode and hero)
 
-`games`, `placed_games`, `avg_place`, `top_half`, `top_half_pct`, `wins`, `best_place`, `worst_place`, `offered_games` (games whose known hero choice offered this hero) and `picked_games` (games played with it after a known choice). Pick rate = `picked_games / offered_games`.
+`games`, `placed_games`, `avg_place`, `top_half`, `top_half_pct`, `wins`, `best_place`, `worst_place`, `offered_games` (games whose known hero choice offered this hero, once per game) and `picked_games` (games played with it from those choices, so never more than `offered_games`). Pick rate = `picked_games / offered_games`.
 
 ### `user_records` (per user, mode and record)
 

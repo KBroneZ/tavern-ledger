@@ -95,7 +95,7 @@ Deno.test("deletes orphan files through the Storage API, then housekeeping", asy
     auth_events: 1,
     upload_events: 2,
     ip_failures: 3,
-    stats: { listed: 0, stored: 0, skipped: 0, failed: 0 },
+    stats: { listed: 0, stored: 0, skipped: 0, failed: 0, left: 0 },
   });
   assertEquals(api.files(), []);
   assertEquals(api.calls.map((c) => `${c.method} ${c.path}`), [
@@ -254,9 +254,9 @@ Deno.test("games with no summary get one from their stored report", async () => 
   const api = fakeApi({ missing: [g.row], objects: { [g.name]: g.file } });
   const res = await handle(request(), ENV, api.fetchFn);
   assertEquals(res.status, 200);
-  assertEquals((await res.json()).stats, { listed: 1, stored: 1, skipped: 0, failed: 0 });
+  assertEquals((await res.json()).stats, { listed: 1, stored: 1, skipped: 0, failed: 0, left: 0 });
   const list = api.calls.find((c) => c.path === "/rest/v1/rpc/game_stats_backfill_list")!;
-  assertEquals(list.body, { p_version: SUMMARY_VERSION, p_limit: 200 });
+  assertEquals(list.body, { p_version: SUMMARY_VERSION, p_limit: 500 });
   const get = api.calls.find((c) => c.method === "GET")!;
   assertEquals(get.path, `/storage/v1/object/authenticated/games/${g.name}`);
   assertEquals(get.headers.apikey, ENV.serviceKey);
@@ -284,7 +284,7 @@ Deno.test("a stored file that differs from its row, fails the check or is gone i
   });
   const res = await handle(request(), ENV, api.fetchFn);
   assertEquals(res.status, 200);
-  assertEquals((await res.json()).stats, { listed: 4, stored: 1, skipped: 0, failed: 3 });
+  assertEquals((await res.json()).stats, { listed: 4, stored: 1, skipped: 0, failed: 3, left: 0 });
   const puts = api.calls.filter((c) => c.path === "/rest/v1/rpc/game_stats_backfill_put");
   assertEquals(puts.length, 1);
 });
@@ -293,7 +293,7 @@ Deno.test("a summary the database turns down is skipped, not an error", async ()
   const g = await stored(1);
   const api = fakeApi({ missing: [g.row], objects: { [g.name]: g.file }, put: "changed" });
   const res = await handle(request(), ENV, api.fetchFn);
-  assertEquals((await res.json()).stats, { listed: 1, stored: 0, skipped: 1, failed: 0 });
+  assertEquals((await res.json()).stats, { listed: 1, stored: 0, skipped: 1, failed: 0, left: 0 });
 });
 
 Deno.test("a failed write of one summary is counted and the others go on", async () => {
@@ -305,7 +305,7 @@ Deno.test("a failed write of one summary is counted and the others go on", async
   });
   const res = await handle(request(), ENV, api.fetchFn);
   assertEquals(res.status, 200);
-  assertEquals((await res.json()).stats, { listed: 1, stored: 0, skipped: 0, failed: 1 });
+  assertEquals((await res.json()).stats, { listed: 1, stored: 0, skipped: 0, failed: 1, left: 0 });
 });
 
 Deno.test("rows that do not look like game rows are never fetched", async () => {
@@ -322,4 +322,18 @@ Deno.test("a failed list of missing summaries is a 500 naming it", async () => {
   const api = fakeApi({ fail: "/rest/v1/rpc/game_stats_backfill_list" });
   const res = await handle(request(), ENV, api.fetchFn);
   assertEquals([res.status, (await res.json()).step], [500, "list summaries"]);
+});
+
+Deno.test("no summary is started past the time budget; the rest are left for the next run", async () => {
+  const games = [await stored(1), await stored(2), await stored(3)];
+  const api = fakeApi({
+    missing: games.map((g) => g.row),
+    objects: Object.fromEntries(games.map((g) => [g.name, g.file])),
+  });
+  // Each look at the clock moves it 40 seconds on.
+  let t = 0;
+  const env = { ...ENV, now: () => (t += 40_000) };
+  const res = await handle(request(), env, api.fetchFn);
+  assertEquals(res.status, 200);
+  assertEquals((await res.json()).stats, { listed: 3, stored: 2, skipped: 0, failed: 0, left: 1 });
 });

@@ -11,8 +11,8 @@
 //   3. game summaries for the website (T-502, D-071): games stored before
 //      the upload function wrote them, or summarized by an older version, get
 //      one from their stored report, read through the Storage API, checked
-//      again by validateRecord() and against the row's SHA-256. At most 200
-//      per run; the rest wait for the next run.
+//      again by validateRecord() and against the row's SHA-256. At most 500
+//      per run and 100 seconds; the rest wait for the next run.
 // Safe to run any time and as often as wanted. No dependencies.
 
 import { summarize, SUMMARY_VERSION } from "../_shared/game_summary.ts";
@@ -21,6 +21,8 @@ import { validateRecord } from "../upload-game/validate.ts";
 export interface Env {
   url: string;
   serviceKey: string;
+  /** Clock in ms, for tests; Date.now by default. */
+  now?: () => number;
 }
 
 export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
@@ -31,7 +33,10 @@ const MAX_ROUNDS = 20;
 const GAME_FILE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/Hearthstone_\d{4}(_\d{2}){5}-[1-9][0-9]{0,3}\.json\.gz$/;
 // Summaries filled per run; a stored game is about 2.5 KB gzipped.
-const BACKFILL_LIMIT = 200;
+const BACKFILL_LIMIT = 500;
+// No summary is started after this long, so a slow Storage cannot run the
+// function past its wall-clock limit; the rest wait for the next run.
+const BACKFILL_BUDGET_MS = 100_000;
 // The upload function stores at most 64 KiB, inflating to at most 512 KiB.
 const MAX_FILE = 64 * 1024;
 const MAX_INFLATED = 512 * 1024;
@@ -236,8 +241,14 @@ async function backfillStats(env: Env, fetchFn: Fetch) {
   if (!Array.isArray(games) || !games.every(isMissing)) {
     throw new StepError("list summaries", 502);
   }
-  const counts = { listed: games.length, stored: 0, skipped: 0, failed: 0 };
+  const now = env.now ?? Date.now;
+  const deadline = now() + BACKFILL_BUDGET_MS;
+  const counts = { listed: games.length, stored: 0, skipped: 0, failed: 0, left: 0 };
   for (const game of games) {
+    if (now() >= deadline) {
+      counts.left += 1;
+      continue;
+    }
     const stats = await summaryOf(env, fetchFn, game);
     if (stats === null) {
       counts.failed += 1;

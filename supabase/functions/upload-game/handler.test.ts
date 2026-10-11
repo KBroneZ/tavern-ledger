@@ -49,6 +49,8 @@ interface Call {
 function fakeApi(opts: {
   begin?: unknown;
   commit?: unknown;
+  /** The database before the T-502 migration: no upload_commit with a summary. */
+  noSummaryCommit?: boolean;
   user?: number;
   blocked?: boolean;
   fail?: string;
@@ -77,6 +79,9 @@ function fakeApi(opts: {
       case "/rest/v1/rpc/upload_begin":
         return reply(200, opts.begin ?? { result: "create" });
       case "/rest/v1/rpc/upload_commit":
+        if (opts.noSummaryCommit && "p_stats" in (body as object)) {
+          return reply(404, { code: "PGRST202" });
+        }
         return reply(200, opts.commit ?? "created");
       case FILE:
         return reply(200, { Key: `games/${USER}/${SESSION}-1.json.gz` });
@@ -147,6 +152,24 @@ Deno.test("a new game: checks, then the file, then the row", async () => {
     p_stats: summarize(record().report),
     p_summary_version: SUMMARY_VERSION,
   });
+});
+
+Deno.test("before the T-502 migration lands the row is written without the summary", async () => {
+  const api = fakeApi({ noSummaryCommit: true });
+  const res = await handle(await upload(), ENV, api.fetchFn);
+  assertEquals(res.status, 201);
+  const commits = api.calls.filter((c) => c.path === "/rest/v1/rpc/upload_commit");
+  assertEquals(commits.length, 2);
+  const second = commits[1].body as Record<string, unknown>;
+  assertEquals(["p_stats" in second, "p_summary_version" in second], [false, false]);
+  assertEquals(second.p_parser_version, "0.1.0+r1");
+});
+
+Deno.test("any other failed row write is still a 500", async () => {
+  const api = fakeApi({ fail: "/rest/v1/rpc/upload_commit" });
+  const res = await handle(await upload(), ENV, api.fetchFn);
+  assertEquals([res.status, (await res.json()).step], [500, "write row"]);
+  assertEquals(api.calls.filter((c) => c.path === "/rest/v1/rpc/upload_commit").length, 1);
 });
 
 Deno.test("the summary of a real game goes with its row (T-502)", async () => {

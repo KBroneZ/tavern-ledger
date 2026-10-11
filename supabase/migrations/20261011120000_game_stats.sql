@@ -12,7 +12,8 @@
 --   owner, and by everyone once the owner's profile is public. They hold
 --   nothing that is not already readable today (the summary row and the
 --   report file are as public as the game row), and no name, BattleTag,
---   rating or account id.
+--   rating or game account id (user_id, the site's own account id, is in
+--   them as it is in games).
 --     game_summaries  one row per game with its summary (the games list)
 --     user_overview   per user and mode: games, places, totals
 --     user_heroes     per user, mode and hero: games, places, picks
@@ -27,6 +28,21 @@
 -- ---------------------------------------------------------------------------
 -- public.game_stats
 -- ---------------------------------------------------------------------------
+
+-- A one-dimensional array of card ids; null elements only when allowed (a
+-- minion whose card the log did not give).
+create function private.is_card_ids(ids text[], nulls_allowed boolean)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $$
+  select coalesce(array_ndims(ids), 1) = 1
+    and not exists (
+      select 1 from unnest(ids) as e
+      where case when e is null then not nulls_allowed else e !~ '^[A-Za-z0-9_]{1,64}$' end
+    );
+$$;
 
 create table public.game_stats (
   user_id uuid not null,
@@ -78,19 +94,14 @@ create table public.game_stats (
   -- The local player's last board seen entering a combat, by card id (null:
   -- a minion whose card the log did not give).
   final_board text[] check (
-    cardinality(final_board) <= 16
-    and coalesce(array_ndims(final_board), 1) = 1
-    and array_to_string(final_board, ',', '') ~ '^([A-Za-z0-9_]{1,64})?(,([A-Za-z0-9_]{1,64})?)*$'
+    cardinality(final_board) <= 16 and private.is_card_ids(final_board, true)
   ),
   final_board_round smallint check (final_board_round between 0 and 1000),
   board_stats_max integer check (board_stats_max >= 0),
   golden_max smallint check (golden_max between 0 and 16),
   -- The player's hero choice (parser revision 4).
   heroes_offered text[] check (
-    cardinality(heroes_offered) <= 32
-    and coalesce(array_ndims(heroes_offered), 1) = 1
-    and array_position(heroes_offered, null) is null
-    and array_to_string(heroes_offered, ',') ~ '^([A-Za-z0-9_]{1,64}(,[A-Za-z0-9_]{1,64})*)?$'
+    cardinality(heroes_offered) <= 32 and private.is_card_ids(heroes_offered, false)
   ),
   hero_rerolls smallint check (hero_rerolls between 0 and 32),
   primary key (user_id, session, game_index),
@@ -160,6 +171,7 @@ begin
   where k not in (
     select a.attname from pg_catalog.pg_attribute a
     where a.attrelid = 'public.game_stats'::regclass and a.attnum > 0 and not a.attisdropped
+      and a.attgenerated = ''
   ) or k in ('user_id', 'session', 'game_index', 'summary_version', 'computed_at')
   limit 1;
   if bad is not null then
@@ -190,8 +202,11 @@ revoke all on function private.put_game_stats(uuid, text, integer, integer, json
 -- As in 20261009150000_upload.sql, plus the summary: with p_stats the summary
 -- is written with the game row; without it (the upload function deployed
 -- before T-502 still calls with the first 14 arguments) a replaced game drops
--- its stale summary and the sweep fills a new one. An older copy changes
--- neither. Returns created | replaced | older.
+-- its stale summary and the sweep fills a new one. A summary the table
+-- refuses (a data or constraint error: summary code and table out of step)
+-- never blocks the upload: the game is stored without it, and the sweep,
+-- which does not catch the error, reports it every run. An older copy
+-- changes neither. Returns created | replaced | older.
 drop function public.upload_commit(
   uuid, text, integer, text, text, text, integer, integer, date, jsonb, bigint, text, integer, text
 );
@@ -247,12 +262,16 @@ begin
   if inserted is null then
     return 'older';
   end if;
-  if p_stats is null then
-    delete from public.game_stats s
-    where s.user_id = target and s.session = p_session and s.game_index = p_game_index;
-  else
-    perform private.put_game_stats(target, p_session, p_game_index, p_summary_version, p_stats);
+  if p_stats is not null then
+    begin
+      perform private.put_game_stats(target, p_session, p_game_index, p_summary_version, p_stats);
+      return case when inserted then 'created' else 'replaced' end;
+    exception when data_exception or integrity_constraint_violation then
+      raise warning 'upload_commit: summary refused (%); game stored without it', sqlstate;
+    end;
   end if;
+  delete from public.game_stats s
+  where s.user_id = target and s.session = p_session and s.game_index = p_game_index;
   return case when inserted then 'created' else 'replaced' end;
 end;
 $$;
@@ -267,7 +286,8 @@ grant execute on function public.upload_commit(
 ) to service_role;
 
 -- Games whose summary is missing or older than p_version, for the sweep: at
--- most p_limit (capped at 500) per call. content_sha256 names the stored copy.
+-- most p_limit (capped at 500) per call, in no fixed order. content_sha256
+-- names the stored copy.
 create function public.game_stats_backfill_list(p_version integer, p_limit integer)
 returns table (
   user_id uuid,
@@ -286,7 +306,8 @@ as $$
   left join public.game_stats s
     on s.user_id = g.user_id and s.session = g.session and s.game_index = g.game_index
   where s.user_id is null or s.summary_version < p_version
-  order by g.user_id, g.session, g.game_index
+  -- Random, so files that keep failing cannot hold back the others forever.
+  order by random()
   limit least(greatest(coalesce(p_limit, 0), 0), 500);
 $$;
 
@@ -319,7 +340,7 @@ begin
   if sha is null then
     return 'missing';
   end if;
-  if sha <> p_sha256 then
+  if p_sha256 is null or sha <> p_sha256 then
     return 'changed';
   end if;
   select s.summary_version into version
@@ -470,52 +491,50 @@ comment on view public.user_overview is
 
 -- Per user, mode and hero (skins under their base hero). Picks count the
 -- games whose hero choice is known: offered_games had the hero among the
--- choices, picked_games played it after a known choice.
+-- choices, picked_games played it from those choices.
 create view public.user_heroes with (security_invoker = true) as
-with played as (
-  select
-    user_id,
-    mode,
-    hero,
-    count(*) as games,
-    count(counted_place) as placed_games,
-    round(avg(counted_place), 2) as avg_place,
-    count(*) filter (where top_half) as top_half,
-    round(100.0 * count(*) filter (where top_half) / nullif(count(counted_place), 0), 1)
-      as top_half_pct,
-    count(*) filter (where won) as wins,
-    min(counted_place) as best_place,
-    max(counted_place) as worst_place,
-    count(*) filter (where heroes_offered is not null) as picked_games
-  from public.game_summaries
-  where hero is not null
-  group by user_id, mode, hero
-),
-offered as (
-  select user_id, mode, base as hero, count(distinct (session, game_index)) as offered_games
-  from public.game_summaries
-  cross join lateral unnest(heroes_offered) as o(card)
-  cross join lateral (
-    select coalesce(substring(o.card from '^(.+)_SKIN_[A-Za-z0-9]+$'), o.card) as base
-  ) b
-  group by user_id, mode, base
+-- One input row per game played (with its hero) and one per hero offered in
+-- a game, then one grouping: a filter on user_id reaches both branches (a
+-- full join of two groupings would read every visible game first).
+with picks as (
+  select g.user_id, g.mode, g.hero, g.counted_place, g.top_half, g.won,
+    1 as played,
+    exists (
+      select 1 from unnest(g.heroes_offered) as c(card)
+      where coalesce(substring(c.card from '^(.+)_SKIN_[A-Za-z0-9]+$'), c.card) = g.hero
+    )::int as picked,
+    0 as offered
+  from public.game_summaries g
+  where g.hero is not null
+  union all
+  select o.user_id, o.mode, o.hero, null::smallint, null::boolean, null::boolean,
+    0, 0, 1
+  from (
+    select g.user_id, g.mode, g.session, g.game_index,
+      coalesce(substring(c.card from '^(.+)_SKIN_[A-Za-z0-9]+$'), c.card) as hero
+    from public.game_summaries g
+    cross join lateral unnest(g.heroes_offered) as c(card)
+  ) o
+  -- A hero offered twice in one game (two of its skins) counts once.
+  group by o.user_id, o.mode, o.session, o.game_index, o.hero
 )
 select
-  coalesce(p.user_id, o.user_id) as user_id,
-  coalesce(p.mode, o.mode) as mode,
-  coalesce(p.hero, o.hero) as hero,
-  coalesce(p.games, 0) as games,
-  coalesce(p.placed_games, 0) as placed_games,
-  p.avg_place,
-  coalesce(p.top_half, 0) as top_half,
-  p.top_half_pct,
-  coalesce(p.wins, 0) as wins,
-  p.best_place,
-  p.worst_place,
-  coalesce(o.offered_games, 0) as offered_games,
-  coalesce(p.picked_games, 0) as picked_games
-from played p
-full join offered o on o.user_id = p.user_id and o.mode = p.mode and o.hero = p.hero;
+  user_id,
+  mode,
+  hero,
+  sum(played) as games,
+  count(counted_place) as placed_games,
+  round(avg(counted_place), 2) as avg_place,
+  count(*) filter (where top_half) as top_half,
+  round(100.0 * count(*) filter (where top_half) / nullif(count(counted_place), 0), 1)
+    as top_half_pct,
+  count(*) filter (where won) as wins,
+  min(counted_place) as best_place,
+  max(counted_place) as worst_place,
+  sum(offered) as offered_games,
+  sum(picked) as picked_games
+from picks
+group by user_id, mode, hero;
 
 comment on view public.user_heroes is
   'Per user, mode and hero (skins under the base hero, D-019 rule): games, places, top 4 / top 2, best and worst place, and picks from known hero choices (T-502).';
@@ -537,68 +556,47 @@ with streaks as (
   where counted_place is not null
 ),
 top_runs as (
-  select user_id, mode, run, max(placed) as placed, count(*) as len,
-    max(array[played_on::text, session, lpad(game_index::text, 4, '0')]) as last_game
+  -- Each run with its last game.
+  select distinct on (user_id, mode, run)
+    user_id, mode, run, placed, session, game_index, played_on,
+    count(*) over (partition by user_id, mode, run) as len
   from streaks
   where top_half
-  group by user_id, mode, run
+  order by user_id, mode, run, played_on desc, session desc, game_index desc
 ),
 candidates as (
-  select user_id, mode, 'win_streak' as record, win_streak::numeric as value, session,
-    game_index, played_on, coalesce(win_streak_inferred, false) as inferred,
-    count(*) over (partition by user_id, mode) as games,
+  select g.user_id, g.mode, r.record, r.value, g.session, g.game_index, g.played_on,
+    r.inferred, r.tiebreak
+  from public.game_summaries g
+  cross join lateral (values
     -- At equal value, a streak from the log beats an inferred one.
-    coalesce(win_streak_inferred, false)::int as tiebreak
-  from public.game_summaries where win_streak is not null
+    ('win_streak', g.win_streak::numeric, coalesce(g.win_streak_inferred, false),
+      coalesce(g.win_streak_inferred, false)::int),
+    ('damage_dealt_max', g.damage_dealt_max::numeric, true, 0),
+    ('damage_taken_max', g.damage_taken_max::numeric, true, 0),
+    ('board_stats_max', g.board_stats_max::numeric, false, 0),
+    ('golden_max', g.golden_max::numeric, false, 0),
+    ('gold_spent', g.gold_spent::numeric, false, 0),
+    ('gold_beyond_income', g.gold_beyond_income::numeric, false, 0),
+    ('rolls', g.rolls::numeric, false, 0),
+    ('triples', g.triples::numeric, false, 0),
+    ('apm', g.apm, false, 0),
+    ('rounds', g.rounds::numeric, false, 0)
+  ) as r(record, value, inferred, tiebreak)
+  where r.value is not null
+),
+counted as (
+  select user_id, mode, record, value, session, game_index, played_on, inferred, tiebreak,
+    count(*) over (partition by user_id, mode, record) as games
+  from candidates
   union all
-  select user_id, mode, 'damage_dealt_max', damage_dealt_max, session, game_index, played_on,
-    true, count(*) over (partition by user_id, mode), 0
-  from public.game_summaries where damage_dealt_max is not null
-  union all
-  select user_id, mode, 'damage_taken_max', damage_taken_max, session, game_index, played_on,
-    true, count(*) over (partition by user_id, mode), 0
-  from public.game_summaries where damage_taken_max is not null
-  union all
-  select user_id, mode, 'board_stats_max', board_stats_max, session, game_index, played_on,
-    false, count(*) over (partition by user_id, mode), 0
-  from public.game_summaries where board_stats_max is not null
-  union all
-  select user_id, mode, 'golden_max', golden_max, session, game_index, played_on,
-    false, count(*) over (partition by user_id, mode), 0
-  from public.game_summaries where golden_max is not null
-  union all
-  select user_id, mode, 'gold_spent', gold_spent, session, game_index, played_on,
-    false, count(*) over (partition by user_id, mode), 0
-  from public.game_summaries where gold_spent is not null
-  union all
-  select user_id, mode, 'gold_beyond_income', gold_beyond_income, session, game_index,
-    played_on, false, count(*) over (partition by user_id, mode), 0
-  from public.game_summaries where gold_beyond_income is not null
-  union all
-  select user_id, mode, 'rolls', rolls, session, game_index, played_on,
-    false, count(*) over (partition by user_id, mode), 0
-  from public.game_summaries where rolls is not null
-  union all
-  select user_id, mode, 'triples', triples, session, game_index, played_on,
-    false, count(*) over (partition by user_id, mode), 0
-  from public.game_summaries where triples is not null
-  union all
-  select user_id, mode, 'apm', apm, session, game_index, played_on,
-    false, count(*) over (partition by user_id, mode), 0
-  from public.game_summaries where apm is not null
-  union all
-  select user_id, mode, 'rounds', rounds, session, game_index, played_on,
-    false, count(*) over (partition by user_id, mode), 0
-  from public.game_summaries where rounds is not null
-  union all
-  -- The run's last game; its date and key come from the array above.
-  select user_id, mode, 'top_half_streak', len, last_game[2], last_game[3]::integer,
-    last_game[1]::date, false, placed, 0
+  select user_id, mode, 'top_half_streak', len::numeric, session, game_index, played_on,
+    false, 0, placed
   from top_runs
 )
 select distinct on (user_id, mode, record)
   user_id, mode, record, value, session, game_index, played_on, games, inferred
-from candidates
+from counted
 order by user_id, mode, record, value desc, tiebreak, played_on, session, game_index;
 
 comment on view public.user_records is
