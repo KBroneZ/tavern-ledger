@@ -247,7 +247,7 @@ function minion(r: Reader, v: unknown): Minion {
     golden: r.bool(m.golden),
     keywords,
     gifts: absent(m.gifts) ? [] : [...new Set(r.list(m.gifts, MAX_GIFTS).map((v) => r.card(v)).filter((v): v is string => v !== null))],
-    giftUnknown: m.gift_unknown === true,
+    giftUnknown: absent(m.gift_unknown) ? false : r.bool(m.gift_unknown),
   };
 }
 

@@ -252,6 +252,11 @@ test("a loaded round keeps each minion's Dark Gifts and sends them to the engine
   const minions = loaded.state.player[0].minions;
   assert.deepEqual(minions[1].gifts, ["BG36_MidGameEffect_000t9", "BG36_MidGameEffect_000t13"]);
   assert.deepEqual(minions[0].gifts, [], "an unknown gift is not sent: the engine plays the plain card");
+  assert.equal(loaded.unknownGifts, 1, "but it is counted, so the page says the odds are approximate");
+  assert.equal(loaded.giftsNotRecorded, true, "the test record is an older revision");
+  const current = game(report);
+  const newer = B.fromRound({ ...current, revision: B.GIFTS_REVISION }, 2, cards);
+  assert.equal(newer?.giftsNotRecorded, false);
   const request = JSON.parse(B.toRequest(loaded.state, cards));
   const sent = request.player[0].minions[1];
   assert.deepEqual(sent.gifts, ["BG36_MidGameEffect_000t9", "BG36_MidGameEffect_000t13"]);

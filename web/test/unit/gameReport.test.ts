@@ -217,6 +217,10 @@ test("report reader: Dark Gifts on board minions (revision 9), bad ones counted"
   assert.equal(rec.unreadable, 1, "the bad id is counted");
   assert.equal(second.giftUnknown, true);
   assert.deepEqual(second.gifts, []);
+  board[1].gift_unknown = "yes";
+  const bad = read(record(report));
+  assert.equal(bad.report.rounds[1].entries[0].board?.[1].giftUnknown, false);
+  assert.equal(bad.unreadable, 2, "a gift_unknown that is not true or false is counted too");
 });
 
 test("report reader: the real game with Dark Gifts reads without a dropped value", () => {

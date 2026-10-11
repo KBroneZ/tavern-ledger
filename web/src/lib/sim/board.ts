@@ -111,7 +111,17 @@ export interface Loaded {
   state: SimState;
   /** Minions left out: no card id, or no Attack or Health in the record. */
   skipped: number;
+  /**
+   * Minions loaded with a Dark Gift the log does not name (T-528): they play
+   * as the plain card, so the odds are approximate.
+   */
+  unknownGifts: number;
+  /** Saved before the parser recorded Dark Gifts (revision 9): any gift is missing. */
+  giftsNotRecorded: boolean;
 }
+
+/** The parser revision that records Dark Gifts on board minions (D-107). */
+export const GIFTS_REVISION = 9;
 
 function minionFrom(m: ReportMinion, cards: CardIndex): SimMinion | null {
   if (m.cardId === null || m.atk === null || m.health === null || m.atk < 0 || m.health < 1) return null;
@@ -145,10 +155,12 @@ export function fromRound(record: GameRecord, roundNumber: number, cards: CardIn
   const mode: Mode = report.mode === "duos" ? "duos" : "solo";
   const keep = mode === "duos" ? 2 : 1;
   let skipped = 0;
+  let unknownGifts = 0;
   const board = (list: ReportMinion[], tier: number | null): SimBoard => {
-    const minions = list.map((m) => minionFrom(m, cards)).filter((m): m is SimMinion => m !== null);
-    skipped += list.length - minions.length + Math.max(0, minions.length - MAX_MINIONS);
-    return { tier, minions: minions.slice(0, MAX_MINIONS) };
+    const kept = list.map((m) => [m, minionFrom(m, cards)] as const).filter((p): p is readonly [ReportMinion, SimMinion] => p[1] !== null).slice(0, MAX_MINIONS);
+    skipped += list.length - kept.length;
+    unknownGifts += kept.filter(([m]) => m.giftUnknown).length;
+    return { tier, minions: kept.map(([, s]) => s) };
   };
   const ownTier = report.shop?.turns.find((t) => t.turn === roundNumber)?.tier ?? null;
   const isLocal = (f: Fought) => f.playerId !== null && f.playerId === report.localPlayerId;
@@ -160,6 +172,8 @@ export function fromRound(record: GameRecord, roundNumber: number, cards: CardIn
       cap: null,
     },
     skipped,
+    unknownGifts,
+    giftsNotRecorded: record.revision === null || record.revision < GIFTS_REVISION,
   };
 }
 

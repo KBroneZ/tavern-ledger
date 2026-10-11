@@ -24,6 +24,9 @@ export const ES: Record<SimStringKey, string> = {
   "load.loaded": "Turno {n} cargado.",
   "load.skipped.one": "Se ha dejado fuera 1 esbirro: el registro no dice cuál era.",
   "load.skipped.other": "Se han dejado fuera {count} esbirros: el registro no dice cuáles eran.",
+  "load.giftsNotRecorded": "Esta partida se guardó antes de registrar los dones siniestros: un esbirro con don juega como la carta normal.",
+  "load.unknownGifts.one": "1 esbirro tiene un don siniestro que el registro del juego no nombra: juega como la carta normal, así que las probabilidades son aproximadas.",
+  "load.unknownGifts.other": "{count} esbirros tienen un don siniestro que el registro del juego no nombra: juegan como la carta normal, así que las probabilidades son aproximadas.",
   "load.unknownTiers": "El registro solo tiene tu nivel de taberna. Pon los de los demás para ver el daño.",
 
   "mode.label": "Combate",

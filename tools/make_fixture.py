@@ -26,6 +26,9 @@ makes the script refuse to write anything. With --parser (the Rust
 `bg-parse` binary, or any command that prints its --json output), the raw
 game and the fixture must give the same report, or nothing is written; that
 report is saved next to the fixture (FIXTURE.json) for the parser tests.
+"The same" leaves out hero names and the combat replays' events, which the
+nested blocks the fixture drops give (T-215): a scrubber change that loses
+replay events is not caught here, only by the replay tests on the fixture.
 
 A log with a game played with the reconnect dev tool (D-022, D-043, see
 tools/dev/reconnect_marks.py) is refused before anything else; pass --session
