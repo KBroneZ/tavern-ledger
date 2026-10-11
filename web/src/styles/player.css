@@ -1,0 +1,36 @@
+/* Heroes and curious stats pages (T-505), on the data pages' pieces
+   (data.css, dash.css). */
+
+/* A value that rests on few games: the source marks' shape, in the quiet
+   text colour, so it reads as a caution and not as a source. */
+.mark-few {
+  color: var(--text-2);
+  border-style: solid;
+  border-color: var(--line);
+}
+
+.dtable td .mark-few {
+  margin-inline-start: var(--s-1);
+}
+
+.data-note > .mark-few {
+  margin-inline-end: var(--s-1);
+}
+
+.hstats-sort {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+}
+
+.hstats-sort-label {
+  color: var(--text-2);
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+
+/* The hero's name links to its games: the link takes the cell's text style. */
+.cell-hero a {
+  font-weight: 700;
+}
