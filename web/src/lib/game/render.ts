@@ -82,7 +82,7 @@ function turnsTable(turns: TurnRow[]): HTMLElement {
   );
   return el(
     "div",
-    { class: "scroll-x", role: "region", "aria-label": g("turns.title"), tabindex: 0 },
+    { class: "scroll-x", role: "region", "aria-label": g("turns.table"), tabindex: 0 },
     el(
       "table",
       { class: "dtable gv-turns" },
@@ -299,7 +299,7 @@ function lobbySection(view: GameView): HTMLElement {
       note(g("lobby.desc")),
       el(
         "div",
-        { class: "scroll-x", role: "region", "aria-label": g("lobby.title"), tabindex: 0 },
+        { class: "scroll-x", role: "region", "aria-label": g("lobby.table"), tabindex: 0 },
         el(
           "table",
           { class: "dtable" },

@@ -54,6 +54,8 @@ export const GAME_STRINGS = {
 
   "turns.title": "Turns",
   "turns.empty": "No turns in this record.",
+  "turns.table": "Turns table",
+  "turns.chart": "Turns chart",
   "turns.col.turn": "Turn",
   "turns.col.tier": "Tier",
   "turns.col.result": "Result",
@@ -146,6 +148,7 @@ export const GAME_STRINGS = {
   "lobby.slot.second": "second",
   "lobby.slot.hero_power": "hero power",
   "lobby.empty": "No lobby in this record.",
+  "lobby.table": "Lobby table",
 
   "notes.title": "Parser notes",
 

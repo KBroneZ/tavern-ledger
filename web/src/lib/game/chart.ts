@@ -6,6 +6,7 @@
 import { barScale, columnPath, type Result } from "../data/format.ts";
 import { t } from "../data/strings.ts";
 import { el, svg } from "./dom.ts";
+import { g } from "./strings.ts";
 
 export interface ChartTurn {
   turn: number;
@@ -71,7 +72,7 @@ export function turnChart(turns: ChartTurn[], id: string): HTMLElement {
     el("ul", { class: "chart-key", "aria-hidden": "true" }, key("key-win", t("result.win")), key("key-loss", t("result.loss")), key("key-tie", t("result.tie")), key("key-unknown", t("result.unknown"))),
     el(
       "div",
-      { class: "scroll-x", role: "region", "aria-label": t("chart.turns.title"), tabindex: 0 },
+      { class: "scroll-x", role: "region", "aria-label": g("turns.chart"), tabindex: 0 },
       svg(
         "svg",
         { viewBox: `0 0 ${width} ${HEIGHT}`, width, height: HEIGHT, role: "img", "aria-labelledby": `${id}-title`, "aria-describedby": `${id}-desc` },

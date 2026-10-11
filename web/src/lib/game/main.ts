@@ -86,7 +86,8 @@ async function run(ref: GameRef, download: Download, signedIn: () => Promise<boo
   if (result.kind === "ok") return showGame(result, ref);
   if (result.kind === "unavailable") return showUnavailable(await signedIn().catch(() => false));
   showError(result.kind, () => {
-    void run(ref, download, signedIn);
+    // The button goes away with the block: keep focus on the page's heading.
+    void run(ref, download, signedIn).then(() => heading.focus());
   });
 }
 
