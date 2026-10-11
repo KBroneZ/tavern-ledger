@@ -76,7 +76,8 @@ impl Combat<'_> {
                 // Its card's Deathrattles, then those it gained in combat.
                 let cards = std::iter::once(d.unit.card).chain(d.unit.gained.iter().copied());
                 for card in cards.flat_map(|c| std::iter::repeat_n(c, times)) {
-                    let triggers = self.p.cards[card as usize].triggers;
+                    let p = self.p;
+                    let triggers = &p.cards[card as usize].triggers;
                     for t in triggers {
                         if let Trigger::Deathrattle(actions) = t {
                             for a in *actions {
@@ -122,15 +123,12 @@ impl Combat<'_> {
     }
 
     /// The minion comes back where it died as a fresh copy of its card with
-    /// 1 Health and no Reborn. Without the card's stats, its last Attack and
-    /// keywords are used (an approximation the caller reports).
+    /// 1 Health and no Reborn (see `reborn_form` for a gifted one). Without
+    /// the card's stats, its last Attack and keywords are used (an
+    /// approximation the caller reports).
     pub(super) fn reborn(&mut self, d: &Dead) {
-        let card = d.unit.card;
-        let (attack, kw) = match self.p.cards[card as usize].base {
-            Some(b) => (b.attack, b.keywords),
-            None => (d.unit.attack, d.unit.kw),
-        };
-        let unit = self.fresh(card, attack, 1, kw.without(Keywords::REBORN));
+        let (card, attack, health, kw) = self.reborn_form(d);
+        let unit = self.fresh(card, attack, health, kw.without(Keywords::REBORN));
         let uid = unit.uid;
         let at = self.anchor_pos(d.side, d.anchor);
         if self.sides[d.side].insert(at, unit) {
