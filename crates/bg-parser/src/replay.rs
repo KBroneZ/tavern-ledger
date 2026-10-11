@@ -21,11 +21,11 @@ use crate::report::{Minion, Side};
 use crate::state::{Board, Entity};
 
 /// Minions kept per combat: both boards and every summon, far more than a
-/// combat has (about 40 on the user's longest), so a strange log cannot grow
-/// the record.
+/// combat has (62 on the user's longest), so a strange log cannot grow the
+/// record.
 pub const MAX_REPLAY_MINIONS: usize = 200;
-/// Events kept per combat: about 300 on the user's longest. Past it the
-/// replay stops and says it is incomplete.
+/// Events kept per combat: 466 on the user's longest. Past it the replay
+/// stops and says it is incomplete.
 pub const MAX_REPLAY_EVENTS: usize = 2000;
 
 /// A minion as it enters the replay: on a board as the combat starts, or

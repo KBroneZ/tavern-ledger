@@ -15,7 +15,7 @@ import { type GameRef, storagePath } from "./url.ts";
 export const MAX_GZIPPED = 64 * 1024;
 /**
  * upload-game's own cap on an inflated record (the largest real game is about
- * 210 KB with its combat replays, D-099).
+ * 200 KB with its combat replays, D-099).
  */
 export const MAX_INFLATED = 1024 * 1024;
 

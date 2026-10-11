@@ -33,8 +33,8 @@ type Bytes = Uint8Array<ArrayBuffer>;
  */
 export const MAX_BODY = 64 * 1024;
 /**
- * Largest inflated record (the largest real game is about 210 KB with its
- * combat replays, D-099; 29 KB before them).
+ * Largest inflated record (the largest real game is about 200 KB with its
+ * combat replays, D-099; 82 KB without them).
  */
 export const MAX_INFLATED = 1024 * 1024;
 const TIMEOUT_MS = 10_000;
