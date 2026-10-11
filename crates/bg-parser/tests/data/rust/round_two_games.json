@@ -104,7 +104,42 @@
           "2": 30,
           "3": 30
         },
-        "result": null
+        "result": null,
+        "replay": {
+          "minions": [
+            {
+              "side": "opponent",
+              "card_id": "BG26_135",
+              "atk": 3,
+              "health": 4,
+              "position": 1,
+              "golden": false,
+              "keywords": [
+                "taunt",
+                "divine_shield",
+                "rally"
+              ]
+            },
+            {
+              "side": "opponent",
+              "card_id": "BG20_100",
+              "atk": 1,
+              "health": 1,
+              "position": 2,
+              "golden": false,
+              "keywords": []
+            }
+          ],
+          "start": 2,
+          "events": [
+            {
+              "kind": "attack",
+              "attacker": 0,
+              "defender": null
+            }
+          ],
+          "complete": true
+        }
       }
     ],
     "start_health": {
@@ -395,7 +430,44 @@
           "3": 30,
           "4": 30
         },
-        "result": null
+        "result": null,
+        "replay": {
+          "minions": [
+            {
+              "side": "own",
+              "card_id": "BG20_100",
+              "atk": 2,
+              "health": 3,
+              "position": 1,
+              "golden": false,
+              "keywords": [
+                "reborn",
+                "venomous",
+                "windfury",
+                "stealth",
+                "deathrattle"
+              ]
+            },
+            {
+              "side": "opponent",
+              "card_id": "BG26_135",
+              "atk": 3,
+              "health": 1,
+              "position": 1,
+              "golden": false,
+              "keywords": []
+            }
+          ],
+          "start": 2,
+          "events": [
+            {
+              "kind": "attack",
+              "attacker": 1,
+              "defender": null
+            }
+          ],
+          "complete": true
+        }
       }
     ],
     "start_health": {

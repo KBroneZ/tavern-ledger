@@ -9,7 +9,7 @@
 // server does, BattleTag shapes refused) and the parser's short notes.
 
 /** The parser revision this site knows (crates/bg-parser PARSER_REVISION). */
-export const KNOWN_REVISION = 7;
+export const KNOWN_REVISION = 8;
 
 const CARD_ID = /^[A-Za-z0-9_]{1,64}$/;
 const NOTE = /^[A-Za-z0-9 _:.()-]{1,160}$/;

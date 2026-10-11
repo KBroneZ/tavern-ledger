@@ -9,9 +9,8 @@ use crate::discover::DiscoverTracker;
 use crate::hero_select::HeroSelectTracker;
 use crate::leaderboard::{is_leaderboard_tag, LeaderboardTracker};
 use crate::power::{EntityRef, Packet, ParseError, Value};
-use crate::report::{
-    AttackSlot, CombatResult, DefenderSource, LoggedAttack, Minion, Side, KEYWORDS, SIM_KEYWORDS,
-};
+use crate::replay::{board_entities, minion_of, ReplayTracker, Sides};
+use crate::report::{AttackSlot, CombatResult, DefenderSource, LoggedAttack, Minion, Side};
 use crate::shop::{Seats, ShopTracker};
 use crate::state::{Board, Entity, Players, Tags};
 
@@ -91,6 +90,8 @@ pub struct Collector {
     /// Round -> the player's own board as the shop turn before it ended
     /// (T-608).
     pub shop_boards: BTreeMap<i64, Vec<Minion>>,
+    /// Each shown combat, event by event (T-215).
+    pub replays: ReplayTracker,
     /// Time of the line being read, in ms from the game's first line.
     pub now_ms: i64,
     /// Nesting of the line being read (0 is the log's top level).
@@ -139,11 +140,22 @@ impl Collector {
                 block_type,
                 entity,
                 target,
+                trigger,
             } => {
                 self.mention(&entity);
                 if block_type == "ATTACK" && self.in_combat() {
                     self.snapshot_open_legs();
                     self.on_attack(&entity);
+                }
+                if let EntityRef::Id(id) = entity {
+                    let sides = self.sides();
+                    self.replays.on_block(
+                        &block_type,
+                        Some(id),
+                        trigger.as_deref(),
+                        &self.board,
+                        sides,
+                    );
                 }
                 if self.indent == 0 {
                     let seats = self.seats();
@@ -185,6 +197,14 @@ impl Collector {
 
     pub fn finish(&mut self) -> Result<(), ParseError> {
         self.commit()
+    }
+
+    /// The two sides of a combat on screen (T-215).
+    fn sides(&self) -> Sides {
+        Sides {
+            own: self.local_pid,
+            opponent: self.dummy_pid,
+        }
     }
 
     pub fn seats(&self) -> Seats {
@@ -237,6 +257,8 @@ impl Collector {
                 self.note_leaderboard_packet(id, shown);
                 self.track_shop(id);
                 self.shop_sees(id);
+                let sides = self.sides();
+                self.replays.on_created(id, &self.board, sides);
             }
             Pending::Show { id, card_id } => {
                 let parent = skin_parent(&tags);
@@ -245,6 +267,8 @@ impl Collector {
                 self.note_skin(id, parent);
                 self.note_leaderboard_packet(id, shown);
                 self.shop_sees(id);
+                let sides = self.sides();
+                self.replays.on_shown(id, &self.board, sides);
             }
             Pending::Change { id, card_id } => {
                 let parent = skin_parent(&tags);
@@ -254,6 +278,8 @@ impl Collector {
                 self.note_skin(id, parent);
                 self.note_leaderboard_packet(id, shown);
                 self.shop_sees(id);
+                let sides = self.sides();
+                self.replays.on_shown(id, &self.board, sides);
             }
         }
         Ok(())
@@ -364,6 +390,8 @@ impl Collector {
         .then(|| tag.clone());
         self.board.set_tag(id, tag.clone(), value)?;
         self.note_defender(id, &tag, old, new_int);
+        let sides = self.sides();
+        self.replays.on_tag(id, &tag, old, &self.board, sides);
         if is_skin_parent {
             self.note_skin(id, Some(new_int).filter(|v| (1..=MAX_DBF_ID).contains(v)));
         }
@@ -381,6 +409,7 @@ impl Collector {
         }
         if is_over {
             self.shop.on_game_over(self.now_ms);
+            self.replays.on_game_over();
             // The game ends right after its last combat: no shop turn follows.
             if self.in_combat() {
                 let result = self.combat_result();
@@ -396,6 +425,7 @@ impl Collector {
 
     fn on_turn(&mut self, turn: i64, old: Option<i64>) {
         self.open_attack = None;
+        self.replays.on_turn(turn);
         // The previous turn's legs that never reached an attack were not visible.
         let previous = turn.saturating_sub(1).div_euclid(2);
         // A combat the log has from start to end: its result is read as the
@@ -443,6 +473,7 @@ impl Collector {
         };
         self.close_unseen(side, self.turn() / 2);
         let (hero, hint) = self.current(side);
+        self.replays.on_hero_switch(side, hero.clone());
         *self.open_mut(side) = Some(OpenLeg {
             explicit: true,
             hero,
@@ -559,6 +590,7 @@ impl Collector {
             return;
         };
         let found = if Some(id) == self.board.game_id && tag == "PROPOSED_DEFENDER" && new > 0 {
+            self.replays.on_defender(new);
             self.slot(new).map(|s| (s, DefenderSource::Game))
         } else {
             let old = old.unwrap_or(0);
@@ -670,32 +702,9 @@ pub fn lobby_health_now(board: &Board) -> BTreeMap<i64, i64> {
 }
 
 pub fn board_of(board: &Board, controller: i64) -> Vec<Minion> {
-    let mut minions: Vec<&Entity> = board
-        .iter()
-        .filter(|e| {
-            e.is("CARDTYPE", "MINION") && e.is("ZONE", "PLAY") && e.int("CONTROLLER") == controller
-        })
-        .collect();
-    minions.sort_by_key(|e| (e.int("ZONE_POSITION"), e.id));
-    minions
+    board_entities(board, controller)
         .into_iter()
-        .map(|e| Minion {
-            card_id: e.card_id.clone(),
-            atk: e.int("ATK"),
-            health: e.int("HEALTH").saturating_sub(e.int("DAMAGE")),
-            position: e.int("ZONE_POSITION"),
-            golden: is_golden_minion(e),
-            keywords: KEYWORDS
-                .iter()
-                .filter(|(tag, _)| e.int(tag) > 0)
-                .map(|(_, name)| *name)
-                .collect(),
-            sim_keywords: SIM_KEYWORDS
-                .iter()
-                .filter(|(tag, _)| e.int(tag) > 0)
-                .map(|(_, name)| *name)
-                .collect(),
-        })
+        .map(minion_of)
         .collect()
 }
 

@@ -11,6 +11,7 @@ use serde::{Serialize, Serializer};
 use crate::discover::Discover;
 use crate::hero_select::HeroSelect;
 use crate::leaderboard::{TrinketSeen, TriplesSeen};
+use crate::replay::CombatReplay;
 use crate::shop::ShopRecord;
 
 pub const NOT_IN_POWER_LOG: [&str; 2] = ["MMR", "available tribes (exact list)"];
@@ -138,6 +139,11 @@ pub struct Round {
     /// (T-608): what the overlay's odds start from. None when the log does
     /// not have that shop turn. Rust-only and not serialized.
     pub own_shop_board: Option<Vec<Minion>>,
+    /// The combat event by event as the game played it back (T-215, parser
+    /// revision 8). None when the game did not play it back on screen ("not
+    /// shown"); a record from an older parser has no `replay` key at all
+    /// ("not recorded").
+    pub replay: Option<CombatReplay>,
 }
 
 impl Round {
@@ -152,13 +158,14 @@ impl Round {
 
 impl Serialize for Round {
     fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        let mut map = s.serialize_map(Some(6))?;
+        let mut map = s.serialize_map(Some(7))?;
         map.serialize_entry("number", &self.number)?;
         map.serialize_entry("entries", &self.entries)?;
         map.serialize_entry("own_health_after", &self.own_health_after)?;
         map.serialize_entry("opponents", &self.opponents())?;
         map.serialize_entry("health_after", &self.health_after)?;
         map.serialize_entry("result", &self.result)?;
+        map.serialize_entry("replay", &self.replay)?;
         map.end()
     }
 }

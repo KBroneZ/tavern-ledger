@@ -67,6 +67,9 @@ pub enum Packet {
         entity: EntityRef,
         /// The block's target; None when the log gives `Target=0`.
         target: Option<EntityRef>,
+        /// A trigger block's `TriggerKeyword` (T-215); None when the line has
+        /// none, it is empty or `TAG_NOT_SET`.
+        trigger: Option<String>,
     },
     BlockEnd,
     /// Entity references in META_DATA / SUB_SPELL detail lines. Only names
@@ -350,7 +353,18 @@ fn parse_block_start(body: &str) -> Option<Packet> {
         block_type: block_type.to_string(),
         entity: parse_entity(&rest[..end]),
         target: block_target(&rest[end..]),
+        trigger: trigger_keyword(&rest[end..]),
     })
+}
+
+/// "... TriggerKeyword=DEATHRATTLE" -> "DEATHRATTLE"; None when absent,
+/// empty, `TAG_NOT_SET` or a bare number (a tag the client has no name for).
+fn trigger_keyword(rest: &str) -> Option<String> {
+    let start = rest.rfind(" TriggerKeyword=")? + " TriggerKeyword=".len();
+    let word = rest[start..].split_whitespace().next()?;
+    let named = word.chars().all(|c| c.is_ascii_uppercase() || c == '_')
+        && word.chars().any(|c| c.is_ascii_uppercase());
+    (named && word != "TAG_NOT_SET").then(|| word.to_string())
 }
 
 /// "... Target=<entity> SubOption=..." -> the entity; None for `Target=0`.
@@ -552,6 +566,7 @@ mod tests {
                 block_type: "PLAY".into(),
                 entity: EntityRef::Id(337),
                 target: Some(EntityRef::Id(336)),
+                trigger: None,
             }
         );
         let p = parse_power(
@@ -571,6 +586,31 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn block_start_keeps_its_trigger_keyword() {
+        let keyword = |line: &str| match parse_power(line).unwrap() {
+            Packet::BlockStart { trigger, .. } => trigger,
+            other => panic!("not a block: {other:?}"),
+        };
+        let head = "BLOCK_START BlockType=TRIGGER Entity=2016 EffectCardId=X EffectIndex=0                     Target=0 SubOption=-1";
+        assert_eq!(
+            keyword(&format!("{head} TriggerKeyword=DEATHRATTLE")),
+            Some("DEATHRATTLE".into())
+        );
+        assert_eq!(
+            keyword(&format!("{head} TriggerKeyword=BACON_RALLY ")),
+            Some("BACON_RALLY".into())
+        );
+        for none in [
+            "TriggerKeyword=TAG_NOT_SET",
+            "TriggerKeyword=",
+            "TriggerKeyword=1724",
+            "",
+        ] {
+            assert_eq!(keyword(&format!("{head} {none}")), None, "{none}");
+        }
     }
 
     #[test]

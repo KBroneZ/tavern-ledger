@@ -59,7 +59,13 @@
           "2": 30,
           "3": 27
         },
-        "result": "won"
+        "result": "won",
+        "replay": {
+          "minions": [],
+          "start": 0,
+          "events": [],
+          "complete": true
+        }
       },
       {
         "number": 2,
@@ -85,7 +91,13 @@
           "2": 25,
           "3": 27
         },
-        "result": "lost"
+        "result": "lost",
+        "replay": {
+          "minions": [],
+          "start": 0,
+          "events": [],
+          "complete": true
+        }
       },
       {
         "number": 3,
@@ -111,7 +123,13 @@
           "2": 25,
           "3": 27
         },
-        "result": "tie"
+        "result": "tie",
+        "replay": {
+          "minions": [],
+          "start": 0,
+          "events": [],
+          "complete": true
+        }
       },
       {
         "number": 4,
@@ -137,7 +155,13 @@
           "2": 23,
           "3": 0
         },
-        "result": "won"
+        "result": "won",
+        "replay": {
+          "minions": [],
+          "start": 0,
+          "events": [],
+          "complete": true
+        }
       }
     ],
     "start_health": {
@@ -394,7 +418,29 @@
           "3": 30,
           "4": 30
         },
-        "result": "lost"
+        "result": "lost",
+        "replay": {
+          "minions": [
+            {
+              "side": "opponent",
+              "card_id": "BG26_135",
+              "atk": 3,
+              "health": 1,
+              "position": 1,
+              "golden": false,
+              "keywords": []
+            }
+          ],
+          "start": 1,
+          "events": [
+            {
+              "kind": "attack",
+              "attacker": 0,
+              "defender": null
+            }
+          ],
+          "complete": true
+        }
       }
     ],
     "start_health": {
