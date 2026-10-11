@@ -67,6 +67,7 @@ Game terms follow the game's own esES client (D-086). Prose uses "vida" for heal
 | Solo / Duos | Solo / Dúos | Not "Individual" |
 | tavern / tavern tier | taberna / nivel de taberna | "mejora de taberna" for a tier up |
 | minion | esbirro | |
+| Mech (tribe), Venomous, Rally | Robot, Ponzoña, Alentar | The esES game's own strings (checked in T-531) |
 | golden | dorado | "(dorado)" after a card name |
 | triple | triple | |
 | trinket | abalorio | |
@@ -80,7 +81,7 @@ Game terms follow the game's own esES client (D-086). Prose uses "vida" for heal
 | opponent / teammate | rival / compañero | |
 | health / attack | vida / ataque | |
 | gold / gold from selling / extra gold | oro / oro por ventas / oro extra | |
-| gold beyond income | oro más allá de los ingresos | Clumsy in both; see open items |
+| gold beyond base income | oro más allá del oro base del turno | The app's wording since T-531 |
 | win / tie / loss (result) | victoria / empate / derrota | |
 | pick rate, top 4 rate, win rate | porcentaje de elección, porcentaje de top 4, porcentaje de victorias | Not "tasa" |
 | offered (hero choice) | salió ("te salió") | |

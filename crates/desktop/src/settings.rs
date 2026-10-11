@@ -221,14 +221,14 @@ pub fn tray_words(language: Language) -> TrayWords {
         },
         Language::Es => TrayWords {
             show: "Abrir Tavern Ledger",
-            overlay: "Mostrar el overlay durante la partida",
+            overlay: "Mostrar overlay durante la partida",
             unlock: "Desbloquear el overlay para mover y redimensionar paneles",
             reset_layout: "Restablecer la disposición del overlay",
             autostart: "Iniciar con Windows",
             autostart_unavailable:
                 "Iniciar con Windows (no disponible: la carpeta de la app tiene espacios)",
             quit: "Salir",
-            tooltip: "Tavern Ledger: sigue tus partidas de Battlegrounds",
+            tooltip: "Tavern Ledger: sigue tus partidas de Campos de Batalla",
         },
     }
 }

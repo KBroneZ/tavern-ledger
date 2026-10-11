@@ -15,7 +15,7 @@ test("each stat says how many games back it", () => {
   assert.equal(TLCurious.coverage(14, 29), "In 14 of 29 games.");
   assert.equal(TLCurious.coverage(29, 29), "In all 29 games.");
   assert.equal(TLCurious.coverage(0, 29), "In none of your 29 games.");
-  assert.equal(TLCurious.coverage(1, 1), "In all 1 game.");
+  assert.equal(TLCurious.coverage(1, 1), "In your only game (1).");
   assert.equal(TLCurious.coverage(0, 0), "No games yet.");
 });
 

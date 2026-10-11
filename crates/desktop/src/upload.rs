@@ -69,7 +69,7 @@ fn not_running(upload: &Upload) -> Result<(), String> {
     Err(if upload.tx.lock().map(|t| t.is_none()).unwrap_or(true) {
         "Upload is not running in this window: it starts once the app follows your games (if another Tavern Ledger is open, use that one).".into()
     } else {
-        "The upload worker stopped; restart the app.".into()
+        "Uploading stopped. Restart the app.".into()
     })
 }
 
