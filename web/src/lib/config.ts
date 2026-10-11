@@ -100,3 +100,11 @@ export function contentSecurityPolicy(supabaseOrigin: string | null): string {
     `form-action ${open ? "'self'" : "'none'"}`,
   ].join("; ");
 }
+
+/**
+ * Whether pages may carry a script: in dev, or when accounts are open. The
+ * accounts-closed build allows none (script-src 'none'), so it ships none.
+ */
+export function scriptsAllowed(env: ConfigSource, dev: boolean): boolean {
+  return dev || readConfig(env) !== null;
+}

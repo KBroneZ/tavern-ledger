@@ -233,8 +233,35 @@ test("no page loads anything from another origin", () => {
       if (tag[1] === "link" && /rel="canonical"/.test(tag[0])) continue;
       assert.fail(`${name(page)}: ${tag[0]}`);
     }
-    assert.doesNotMatch(html, /<(?:iframe|object|embed|img)\b/, name(page));
+    assert.doesNotMatch(html, /<(?:iframe|object|embed)\b/, name(page));
   }
+});
+
+test("pictures are our own files, with their size and a text alternative", () => {
+  for (const page of PAGES) {
+    const html = readFileSync(page, "utf8");
+    for (const [img] of html.matchAll(/<img\b[^>]*>/g)) {
+      // Our own files only (img-src 'self'); card art waits on its CSP decision (T-504).
+      const src = /\ssrc="([^"]*)"/.exec(img)?.[1] ?? "";
+      assert.match(src, /^\/placeholders\/(?:hero|card)-\d\.svg$/, `${name(page)}: ${img}`);
+      assert.ok(existsSync(join(DIST, src)), src);
+      // Width and height keep the room (no layout shift); alt is there, empty when decorative.
+      assert.match(img, /\swidth="\d+"/, img);
+      assert.match(img, /\sheight="\d+"/, img);
+      assert.match(img, /\salt(?:="[^"]*")?[\s>]/, img);
+    }
+  }
+});
+
+test("the style page has every piece, made-up data only, and stays out of search engines", () => {
+  const html = readFileSync(join(DIST, "style/index.html"), "utf8");
+  assert.match(html, /<meta name="robots" content="noindex">/);
+  const pieces = ['class="tile', 'class="topn"', 'class="fold', 'data-switch="detail"', 'data-switch="mode"', "place-first",
+    'class="pic ', "pic-missing", "state-loading", "chart-places", "chart-trend", "chart-turns"];
+  for (const piece of pieces) assert.ok(html.includes(piece), piece);
+  assert.match(html, /made-up/);
+  // Not in the menu: nothing links to it.
+  for (const page of PAGES) assert.doesNotMatch(readFileSync(page, "utf8"), /href="\/style\/"/, name(page));
 });
 
 test("the home page's pinned scene is one described picture plus five captions as text", () => {
@@ -276,7 +303,11 @@ test("the pinned scene takes at most about 1.5 screens of scrolling", () => {
 });
 
 test("the still picture is the default: every animation sits behind the two scroll-timeline queries", () => {
-  const css = ALL.filter((f) => f.endsWith(".css"))
+  // The home page's own stylesheets: the data pages' loading shimmer is not part of the scene.
+  const home = readFileSync(join(DIST, "index.html"), "utf8");
+  const sheets = [...home.matchAll(/<link\b[^>]*rel="stylesheet"[^>]*href="\/([^"]+)"/g)].map((m) => join(DIST, m[1]));
+  assert.ok(sheets.length > 0, "the home page links its stylesheets");
+  const css = sheets
     .map((f) => readFileSync(f, "utf8"))
     .join("\n");
   // Cut out each @supports (animation-timeline ...) block, braces matched.

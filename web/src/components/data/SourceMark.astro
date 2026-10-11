@@ -1,0 +1,13 @@
+---
+// "inferred" or "unknown" next to a value (the app's marks, T-109). A value
+// read straight from the game's log carries no mark.
+import { t } from "../../lib/data/strings.ts";
+
+interface Props {
+  kind: "inferred" | "unknown";
+}
+
+const { kind } = Astro.props;
+---
+
+<span class={`mark-src mark-${kind}`}>{kind === "inferred" ? t("source.inferred") : t("source.unknown")}</span>

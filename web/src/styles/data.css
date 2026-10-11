@@ -1,0 +1,926 @@
+/* Data pages (T-501): tokens and pieces on top of Lamplight glass (D-052,
+   global.css). Dark only. Loaded by the pages that show stats, so the home
+   page and the legal pages carry none of it. Chart colours were checked with
+   the dataviz skill's validator on the panel surface (#1e1612): results as a
+   categorical pair, places as an ordinal ramp, both passing every check. */
+
+/* ---------- Tokens ---------- */
+
+:root {
+  /* Surfaces, from the page up. */
+  --surface-sunk: rgb(0 0 0 / 0.24);
+  --surface-1: var(--panel);
+  --surface-2: rgb(255 238 220 / 0.085);
+  --surface-chart: #1e1612;
+
+  /* Text levels: all at least 4.5:1 on the page and on a raised surface. */
+  --text-1: var(--text);
+  --text-2: var(--dim);
+  --text-3: #ad9f91;
+
+  /* Places (text and badges). 1st is lit, the top half a ring, the bottom
+     half the bare number: shape carries it as well as colour. */
+  --place-first: var(--amber);
+  --place-first-ink: var(--amber-ink);
+  --place-top: var(--amber-hi);
+  --place-bottom: var(--dim);
+
+  /* Places as chart marks: one amber ramp, light to dark (ordinal), every
+     step at least 4:1 on the panel (WCAG 1.4.11). */
+  --mark-first: #eba04a;
+  --mark-top: #c27c2c;
+  --mark-bottom: #837870;
+
+  /* Combat results as chart marks (categorical pair, CVD-safe) and as text. */
+  --mark-win: #c9801f;
+  --mark-loss: #7480e0;
+  --mark-tie: #8a8078;
+  --win-text: var(--amber-hi);
+  --loss-text: #b9c0ff;
+  --tie-text: var(--dim);
+
+  /* Trends: better or worse than before (always with an arrow and words). */
+  --better: var(--good);
+  --worse: var(--bad);
+
+  /* Where a value comes from (the app's marks, T-109). */
+  --inferred: var(--info);
+  --unknown: var(--dim);
+
+  /* Chart furniture. */
+  --grid: rgb(255 228 200 / 0.12);
+  --axis: rgb(255 228 200 / 0.28);
+
+  /* Dense data: a 4px spacing scale and a tighter type scale. */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --t-xs: 0.75rem;
+  --t-sm: 0.8125rem;
+  --t-md: 0.9375rem;
+  --t-lg: 1.125rem;
+  --t-value: clamp(1.6rem, 1.3rem + 1vw, 2rem);
+  --t-hero: clamp(2.6rem, 2rem + 2.4vw, 3.5rem);
+
+  --r-tile: 14px;
+  --r-chip: 999px;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* ---------- Scrollbar ---------- */
+
+/* A thin amber bar instead of the wide native one (the user's notes,
+   T-323); wheel, touch and keys scroll as always. */
+html,
+.scroll-x {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 178 74 / 0.45) transparent;
+}
+
+/* Positioned, so visually hidden text inside stays inside the scroller
+   instead of widening the page. */
+.scroll-x {
+  position: relative;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border-radius: var(--r-small);
+}
+
+.scroll-x:hover {
+  scrollbar-color: rgb(255 178 74 / 0.75) transparent;
+}
+
+/* ---------- Section rhythm ---------- */
+
+.data-section {
+  display: grid;
+  gap: var(--s-4);
+  padding-block: var(--s-5);
+  border-top: 1px solid var(--line-soft);
+}
+
+.data-section > h2 {
+  font-size: 1.3rem;
+}
+
+.data-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.data-note {
+  color: var(--text-2);
+  font-size: var(--t-md);
+  max-width: var(--measure);
+}
+
+/* ---------- Stat tiles ---------- */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 168px), 1fr));
+  gap: var(--s-3);
+}
+
+.tile {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--s-3) var(--s-4) var(--s-4);
+  border-radius: var(--r-tile);
+  background: var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--line-soft);
+}
+
+.tile-hero {
+  grid-column: span 2;
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgb(255 178 74 / 0.12), transparent 60%),
+    var(--surface-1);
+}
+
+@media (max-width: 380px) {
+  .tile-hero {
+    grid-column: auto;
+  }
+}
+
+.tile-label {
+  color: var(--text-2);
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+
+.tile-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-2);
+  font: 700 var(--t-value) / 1.1 var(--body);
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.tile-hero .tile-value {
+  font-size: var(--t-hero);
+}
+
+.tile-value.is-unknown {
+  color: var(--text-3);
+}
+
+.tile-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  font-size: var(--t-sm);
+  font-weight: 700;
+}
+
+.tile-trend.better {
+  color: var(--better);
+}
+
+.tile-trend.worse {
+  color: var(--worse);
+}
+
+.tile-trend.same {
+  color: var(--text-2);
+}
+
+.tile-back {
+  color: var(--text-3);
+  font-size: var(--t-sm);
+}
+
+.tile-spark {
+  margin-top: var(--s-2);
+}
+
+/* ---------- Source marks ---------- */
+
+.mark-src {
+  display: inline-block;
+  padding: 0 7px;
+  border: 1px dashed currentColor;
+  border-radius: var(--r-chip);
+  font: 700 var(--t-xs) / 1.6 var(--body);
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.mark-inferred {
+  color: var(--inferred);
+}
+
+.mark-unknown {
+  border-style: dotted;
+  color: var(--unknown);
+}
+
+.legend-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-2);
+  font-size: var(--t-sm);
+}
+
+.legend-list li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+
+/* ---------- Place badges ---------- */
+
+.place {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: var(--r-chip);
+  font: 800 var(--t-md) / 1 var(--body);
+  font-variant-numeric: tabular-nums;
+}
+
+.place-lg {
+  min-width: 44px;
+  height: 44px;
+  font-size: 1.25rem;
+}
+
+.place-first {
+  background: radial-gradient(circle at 35% 30%, #fff0cf, var(--place-first) 60%, #e08a20);
+  color: var(--place-first-ink);
+  box-shadow: 0 0 12px rgb(255 178 74 / 0.4);
+}
+
+.place-top {
+  color: var(--place-top);
+  box-shadow: inset 0 0 0 2px var(--place-top);
+}
+
+.place-bottom {
+  color: var(--place-bottom);
+}
+
+.place-unknown {
+  border: 2px dashed var(--unknown);
+  color: var(--unknown);
+}
+
+/* ---------- Pictures ---------- */
+
+/* The source art is padded with white bars (HearthstoneJSON, and our
+   placeholders on purpose): crop to the art first, then fill a circle on a
+   dark ground, so no white edge ever shows (D-062, D-065). Where
+   object-view-box is missing the picture is scaled inside a clipping frame. */
+.pic {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--panel-solid);
+  box-shadow: inset 0 0 0 1px var(--line-soft);
+  vertical-align: middle;
+}
+
+.pic img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pic-hero img {
+  object-view-box: inset(0% 8%);
+  object-position: 50% 30%;
+}
+
+.pic-card img {
+  object-view-box: inset(1% 16% 2%);
+  object-position: 50% 28%;
+}
+
+@supports not (object-view-box: inset(0%)) {
+  .pic-hero img {
+    transform: scale(1.2);
+  }
+
+  .pic-card img {
+    transform: scale(1.48);
+  }
+}
+
+.pic-missing {
+  background: radial-gradient(circle at 50% 38%, rgb(255 228 200 / 0.22) 0 18%, transparent 19%), var(--panel-solid);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.pic-row {
+  display: flex;
+  gap: var(--s-2);
+  padding: var(--s-2) 2px var(--s-3);
+}
+
+/* ---------- Compact tables ---------- */
+
+.topn {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.dtable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-md);
+}
+
+.dtable caption {
+  padding-bottom: var(--s-2);
+  color: var(--text-2);
+  font-size: var(--t-sm);
+  text-align: start;
+}
+
+.dtable th {
+  padding: var(--s-2) var(--s-3);
+  color: var(--text-2);
+  font-size: var(--t-sm);
+  font-weight: 700;
+  text-align: start;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+}
+
+.dtable td {
+  padding: 6px var(--s-3);
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: middle;
+}
+
+.dtable .num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dtable tbody tr:hover {
+  background: var(--surface-1);
+}
+
+.cell-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 9rem;
+}
+
+/* Rows past the top N wait behind "Show all": the toggle is a native
+   disclosure, so keyboard and screen readers get it for free. */
+.dtable tr.more {
+  display: none;
+}
+
+.topn:has(> .topn-toggle[open]) tr.more {
+  display: table-row;
+}
+
+.topn-toggle > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 36px;
+  padding: 0 var(--s-3);
+  border-radius: var(--r-small);
+  color: var(--amber-hi);
+  font-weight: 700;
+  font-size: var(--t-md);
+  cursor: pointer;
+  list-style: none;
+}
+
+.topn-toggle > summary::-webkit-details-marker {
+  display: none;
+}
+
+.topn-toggle > summary:hover {
+  background: var(--panel-hi);
+}
+
+.topn-toggle .when-open,
+.topn-toggle[open] .when-closed {
+  display: none;
+}
+
+.topn-toggle[open] .when-open {
+  display: inline;
+}
+
+/* ---------- Folds ---------- */
+
+.fold {
+  border-radius: var(--r-tile);
+  background: var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--line-soft);
+}
+
+.fold > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 44px;
+  padding: var(--s-2) var(--s-4);
+  border-radius: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fold > summary::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--amber-hi);
+  border-bottom: 2px solid var(--amber-hi);
+  transform: rotate(-45deg);
+  transition: transform 160ms var(--ease-out);
+}
+
+.fold[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.fold > summary:hover {
+  background: var(--panel-hi);
+}
+
+.fold-hint {
+  margin-inline-start: auto;
+  color: var(--text-3);
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+
+.fold-body {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-4) var(--s-4);
+}
+
+/* ---------- Switches (Simple / Advanced, Solo / Duos) ---------- */
+
+.seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-button);
+  background: var(--surface-sunk);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.seg button {
+  min-height: 36px;
+  padding: 0 var(--s-4);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-2);
+  font: 700 var(--t-md) / 1 var(--body);
+  box-shadow: none;
+}
+
+.seg button:hover {
+  color: var(--text-1);
+  box-shadow: none;
+}
+
+.seg button[aria-pressed="true"] {
+  background: var(--surface-2);
+  color: var(--text-1);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    inset 0 -2px 0 var(--amber);
+}
+
+/* Simple by default: Advanced-only detail shows once the viewer picks it. */
+.adv {
+  display: none;
+}
+
+html[data-detail="advanced"] .adv {
+  display: revert;
+}
+
+html[data-detail="advanced"] .simple-only {
+  display: none;
+}
+
+/* Solo first; the script shows the other panel when it is picked. */
+.mode-panels:not([data-mode="duos"]) > [data-mode-panel="duos"],
+.mode-panels[data-mode="duos"] > [data-mode-panel="solo"] {
+  display: none;
+}
+
+/* ---------- States: empty, unknown, loading, error ---------- */
+
+.state {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-1);
+  padding: var(--s-4);
+  border-radius: var(--r-tile);
+  border: 1px dashed var(--line);
+  color: var(--text-2);
+}
+
+.state-title {
+  color: var(--text-1);
+  font-weight: 700;
+}
+
+.state-unknown {
+  border-style: dotted;
+}
+
+.state-error {
+  border-style: solid;
+  border-color: rgb(255 154 138 / 0.5);
+}
+
+.state-error .state-title {
+  color: var(--bad);
+}
+
+.skeleton {
+  display: grid;
+  gap: var(--s-2);
+  width: 100%;
+}
+
+.skeleton span {
+  height: 14px;
+  border-radius: 7px;
+  background: linear-gradient(90deg, var(--surface-1), var(--surface-2), var(--surface-1)) 0 0 / 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+.skeleton span:nth-child(2n) {
+  width: 72%;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ---------- Charts ---------- */
+
+.chart {
+  display: grid;
+  align-content: start;
+  gap: var(--s-2);
+  min-width: 0;
+  margin: 0;
+}
+
+.chart-title {
+  font-size: var(--t-md);
+  font-weight: 700;
+}
+
+.chart-desc {
+  color: var(--text-3);
+  font-size: var(--t-sm);
+}
+
+/* Drawn at its own size (the width and height attributes, so text stays
+   11px); it only shrinks to fit a narrow screen. A turn chart wider than the
+   screen scrolls instead. */
+.chart svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart .scroll-x svg {
+  max-width: none;
+}
+
+.chart text {
+  fill: var(--text-2);
+  font: 600 11px var(--body);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart .label-strong {
+  fill: var(--text-1);
+  font-weight: 700;
+}
+
+.chart .grid {
+  stroke: var(--grid);
+  stroke-width: 1;
+}
+
+.chart .axis {
+  stroke: var(--axis);
+  stroke-width: 1;
+}
+
+.fill-first {
+  fill: var(--mark-first);
+}
+
+.fill-top {
+  fill: var(--mark-top);
+}
+
+.fill-bottom {
+  fill: var(--mark-bottom);
+}
+
+.fill-win {
+  fill: var(--mark-win);
+}
+
+.fill-loss {
+  fill: var(--mark-loss);
+}
+
+.fill-tie {
+  fill: var(--mark-tie);
+}
+
+.mark-none {
+  fill: none;
+  stroke: var(--unknown);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 2;
+}
+
+.spark-line {
+  fill: none;
+  stroke: var(--text-3);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.spark-end {
+  fill: var(--amber);
+  stroke: var(--surface-chart);
+  stroke-width: 2;
+}
+
+.chart .hit {
+  fill: transparent;
+}
+
+.chart g.mark:hover .hit {
+  fill: rgb(255 228 200 / 0.06);
+}
+
+.chart-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-2);
+  font-size: var(--t-sm);
+}
+
+.chart-key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-key i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.key-first {
+  background: var(--mark-first);
+}
+
+.key-top {
+  background: var(--mark-top);
+}
+
+.key-bottom {
+  background: var(--mark-bottom);
+}
+
+.key-win {
+  background: var(--mark-win);
+}
+
+.key-loss {
+  background: var(--mark-loss);
+}
+
+.key-tie {
+  background: var(--mark-tie);
+}
+
+.key-unknown {
+  box-shadow: inset 0 0 0 1.5px var(--unknown);
+}
+
+.res-win {
+  color: var(--win-text);
+}
+
+.res-loss {
+  color: var(--loss-text);
+}
+
+.res-tie,
+.res-unknown {
+  color: var(--tie-text);
+}
+
+/* ---------- Token swatches (style page) ---------- */
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.swatches li {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--t-sm);
+  color: var(--text-2);
+}
+
+.swatches i {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.sw-surface-1 { background: var(--surface-1); }
+.sw-surface-2 { background: var(--surface-2); }
+.sw-surface-sunk { background: var(--surface-sunk); }
+.sw-text-1 { background: var(--text-1); }
+.sw-text-2 { background: var(--text-2); }
+.sw-text-3 { background: var(--text-3); }
+.sw-better { background: var(--better); }
+.sw-worse { background: var(--worse); }
+.sw-inferred { background: var(--inferred); }
+
+.type-scale {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.ts-xs { font-size: var(--t-xs); }
+.ts-sm { font-size: var(--t-sm); }
+.ts-md { font-size: var(--t-md); }
+.ts-lg { font-size: var(--t-lg); }
+.ts-value { font: 700 var(--t-value) / 1.1 var(--body); }
+
+/* ---------- Preferences ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton span {
+    animation: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .tile,
+  .fold,
+  .state,
+  .seg {
+    border: 1px solid CanvasText;
+  }
+
+  .seg button[aria-pressed="true"] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .chart-key i,
+  .chart circle.hit {
+    forced-color-adjust: none;
+  }
+
+  .chart-key i,
+  .pic-missing,
+  .skeleton span {
+    border: 1px solid CanvasText;
+  }
+
+  .place-first {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .place-top {
+    border: 2px solid CanvasText;
+  }
+
+  .chart rect,
+  .chart path:not(.spark-line) {
+    forced-color-adjust: none;
+  }
+}
+
+/* Picture sizes: a fixed set, so every picture reserves its room. */
+.pic[data-size="24"] { width: 24px; height: 24px; }
+.pic[data-size="32"] { width: 32px; height: 32px; }
+.pic[data-size="40"] { width: 40px; height: 40px; }
+.pic[data-size="56"] { width: 56px; height: 56px; }
+
+.fold-compact {
+  background: transparent;
+  box-shadow: none;
+}
+
+.fold-compact > summary {
+  min-height: 36px;
+  padding-inline: var(--s-2);
+  color: var(--amber-hi);
+  font-size: var(--t-sm);
+}
+
+.fold-compact > .fold-body {
+  padding-inline: 0;
+}
+
+.tile-spark {
+  display: block;
+  width: 120px;
+  height: 28px;
+}
+
+/* A hero name heads its row: as plain as the other cells. */
+.dtable tbody th {
+  padding: 6px var(--s-3);
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--text-1);
+  font-size: var(--t-md);
+  font-weight: 600;
+  white-space: normal;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: var(--s-5);
+}
+
+/* Grid children may shrink below their content, so a wide table or chart
+   scrolls inside its .scroll-x instead of widening the page. */
+.data-section > *,
+.topn > *,
+.chart > * {
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .dtable th,
+  .dtable td,
+  .dtable tbody th {
+    padding-inline: var(--s-2);
+  }
+}

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { contentSecurityPolicy, readConfig, signupsOpen } from "../../src/lib/config.ts";
+import { contentSecurityPolicy, readConfig, scriptsAllowed, signupsOpen } from "../../src/lib/config.ts";
 
 // Made-up keys with the shape of Supabase's (a JWT whose payload names the role).
 function fakeJwt(role: string): string {
@@ -118,4 +118,10 @@ test("a sign-up setting that is not true or false stops the build", () => {
 
 test("open sign-ups without a backend stop the build", () => {
   assert.throws(() => signupsOpen({ PUBLIC_SIGNUPS_OPEN: "true" }), /PUBLIC_SIGNUPS_OPEN/);
+});
+
+test("scriptsAllowed: in dev or with accounts open, never in the accounts-closed build", () => {
+  assert.equal(scriptsAllowed({}, false), false);
+  assert.equal(scriptsAllowed({}, true), true);
+  assert.equal(scriptsAllowed({ PUBLIC_SUPABASE_URL: "https://abc.supabase.co", PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_x" }, false), true);
 });
