@@ -170,6 +170,29 @@
   font-size: var(--t-xs);
 }
 
+/* Dark Gifts (T-528, D-107): a violet star and the gift's name; the summary
+   is the tooltip and what a screen reader hears. A dashed edge for a gift
+   the log does not name. Shape and words, never colour alone. */
+.gv-gifts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.gv-gift {
+  padding: 0 var(--s-2);
+  border: 1px solid rgb(212 184 255 / 0.6);
+  border-radius: var(--r-chip);
+  color: #d4b8ff;
+  font-size: var(--t-xs);
+  font-weight: 700;
+  cursor: help;
+}
+
+.gv-gift.is-unknown {
+  border-style: dashed;
+}
+
 .gv-frozen,
 .gv-taken {
   padding: 0 var(--s-2);

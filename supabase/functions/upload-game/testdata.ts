@@ -19,6 +19,11 @@ import realDuos from "../../../crates/bg-parser/tests/data/real/b253216_duos.jso
 import realSolo from "../../../crates/bg-parser/tests/data/real/b253216_solo.json" with {
   type: "json",
 };
+// A Duos game with Dark Gifts on both sides' minions, one with two gifts and
+// one marked gifted with no gift enchantment (revision 9, T-528).
+import realGifts from "../../../crates/bg-parser/tests/data/real/b253216_duos_gifts.json" with {
+  type: "json",
+};
 
 // The Rust parser's reports of the synthetic shop games (every action kind),
 // kept current by crates/bg-parser/tests/shop.rs.
@@ -71,4 +76,4 @@ export function realRecord(report: Json): Json {
   };
 }
 
-export { broken, dataGames, duo, realDuos, realSolo, roundTwoGames, shopGames, solo };
+export { broken, dataGames, duo, realDuos, realGifts, realSolo, roundTwoGames, shopGames, solo };

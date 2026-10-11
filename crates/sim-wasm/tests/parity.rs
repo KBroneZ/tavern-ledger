@@ -202,6 +202,11 @@ fn log_board(b: &Value) -> Vec<LogMinion> {
                 golden: m["golden"].as_bool().unwrap(),
                 keywords: statics(words, &SAVED),
                 sim_keywords: statics(words, &SIM_ONLY),
+                gifts: m["gifts"]
+                    .as_array()
+                    .map(|g| statics(g, &bg_parser::gifts::GIFT_IDS))
+                    .unwrap_or_default(),
+                gift_unknown: false,
             }
         })
         .collect()

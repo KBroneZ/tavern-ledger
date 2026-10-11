@@ -14,6 +14,7 @@ use std::time::{Duration, Instant};
 
 use bg_parser::report::{GameReport, LobbySlot, Minion as LogMinion, Side};
 use combat_sim::cards::has_start_of_combat;
+use combat_sim::gifts;
 use combat_sim::{
     simulate_teams, BaseCard, CombatResult, Keywords, Minion, Odds, Options, Team, Tribes, Verdict,
     Warband,
@@ -207,8 +208,32 @@ pub(crate) fn start_of_combat_in(report: &GameReport, round: i64) -> bool {
         .filter(|r| r.number == round)
         .flat_map(|r| r.entries.iter())
         .flat_map(|e| e.board.iter().flatten())
-        .filter_map(|m| m.card_id.as_deref())
-        .any(has_start_of_combat)
+        .any(acts_at_start_of_combat)
+}
+
+/// True when the minion's card or one of its Dark Gifts acts at the start
+/// of combat (T-528).
+pub(crate) fn acts_at_start_of_combat(m: &LogMinion) -> bool {
+    m.card_id.as_deref().is_some_and(has_start_of_combat)
+        || m.gifts.iter().any(|g| gifts::has_start_of_combat(g))
+}
+
+/// Card ids of the minions the game marks as gifted with no gift the log
+/// names (T-528): played as the plain card, so the odds say approximate.
+fn unknown_gifts(input: &OddsInput) -> Vec<String> {
+    let duos = input
+        .duos
+        .iter()
+        .flat_map(|d| d.teammate.board.iter().chain(&d.opponent_teammate.board));
+    let mut ids: Vec<String> = Vec::new();
+    for m in input.own.iter().chain(&input.opponent).chain(duos) {
+        if let (true, Some(id)) = (m.gift_unknown, &m.card_id) {
+            if !ids.contains(id) {
+                ids.push(id.clone());
+            }
+        }
+    }
+    ids
 }
 
 /// What the game shows now, beside the saved report, that the odds read.
@@ -282,7 +307,7 @@ fn engine_minion(m: &LogMinion, facts: &dyn Fn(&str) -> Option<Facts>) -> Result
         tribes: f.tribes,
         tier: f.tier,
         base: Some(f.base),
-        gifts: Vec::new(), // Dark Gifts come from the log in T-528 (D-100).
+        gifts: m.gifts.iter().map(|g| g.to_string()).collect(),
         card_id: id,
     })
 }
@@ -424,7 +449,10 @@ pub fn run_odds(
             .boards()
             .chain(opponent.boards())
             .flat_map(|b| &b.minions)
-            .any(|m| has_start_of_combat(&m.card_id));
+            .any(|m| {
+                has_start_of_combat(&m.card_id)
+                    || m.gifts.iter().any(|g| gifts::has_start_of_combat(g))
+            });
     let known = o.damage_unknown == 0;
     LiveOdds {
         seat,
@@ -437,15 +465,26 @@ pub fn run_odds(
         trials: o.trials,
         dealt: spread(&o.damage_dealt, input.damage_cap).filter(|_| known),
         taken: spread(&o.damage_taken, input.damage_cap).filter(|_| known),
-        approximate: o
-            .coverage
-            .approximate
-            .into_iter()
-            .map(|(id, _)| id)
-            .collect(),
+        approximate: with_unknown_gifts(
+            o.coverage
+                .approximate
+                .into_iter()
+                .map(|(id, _)| id)
+                .collect(),
+            input,
+        ),
         missing: Vec::new(),
         start_of_combat,
     }
+}
+
+fn with_unknown_gifts(mut approximate: Vec<String>, input: &OddsInput) -> Vec<String> {
+    for id in unknown_gifts(input) {
+        if !approximate.contains(&id) {
+            approximate.push(id);
+        }
+    }
+    approximate
 }
 
 #[cfg(test)]

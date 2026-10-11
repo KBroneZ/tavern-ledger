@@ -152,8 +152,17 @@ fn minion(v: &Value, db: &CardDb) -> Option<Minion> {
         tribes: facts.map_or(Tribes::NONE, |f| f.tribes),
         tier: facts.and_then(|f| f.tier),
         base: facts.and_then(|f| f.base),
-        // Saved games do not record Dark Gifts yet (T-528).
-        gifts: Vec::new(),
+        // Dark Gifts (parser revision 9, T-528); older records have none.
+        gifts: v
+            .get("gifts")
+            .and_then(Value::as_array)
+            .map(|a| {
+                a.iter()
+                    .filter_map(Value::as_str)
+                    .map(String::from)
+                    .collect()
+            })
+            .unwrap_or_default(),
         card_id,
     })
 }
@@ -600,6 +609,22 @@ mod tests {
             .keywords
             .contains(Keywords::DIVINE_SHIELD));
         assert_eq!(h.card_counts["BG28_300"], 2);
+    }
+
+    #[test]
+    fn reads_the_dark_gifts_a_saved_minion_has() {
+        let db = load_cards(CARDS).unwrap();
+        let gifted = serde_json::json!({
+            "card_id": "BG28_300", "atk": 3, "health": 2,
+            "gifts": ["BG36_MidGameEffect_000t9", "BG36_MidGameEffect_000t13"],
+        });
+        let m = minion(&gifted, &db).unwrap();
+        assert_eq!(
+            m.gifts,
+            ["BG36_MidGameEffect_000t9", "BG36_MidGameEffect_000t13"]
+        );
+        let older = serde_json::json!({"card_id": "BG28_300", "atk": 3, "health": 2});
+        assert!(minion(&older, &db).unwrap().gifts.is_empty());
     }
 
     #[test]

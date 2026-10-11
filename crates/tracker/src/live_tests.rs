@@ -125,6 +125,27 @@ fn keywords_come_with_the_board_and_older_records_say_not_recorded() {
 }
 
 #[test]
+fn dark_gifts_come_with_the_board() {
+    let mut gifted = minion("M_A", 2, 3, 1);
+    gifted["gifts"] = json!(["BG36_MidGameEffect_000t9", "BG36_MidGameEffect_000t13"]);
+    let mut marked = minion("M_B", 1, 1, 2);
+    marked["gift_unknown"] = json!(true);
+    let board = json!([gifted, marked, minion("M_C", 1, 1, 3)]);
+    let live = live_game(&solo(
+        vec![round(1, 2, board, json!({"1": 40, "2": 40}))],
+        "incomplete",
+    ));
+    let minions = &opponent(&live, 2).boards[0].minions;
+    assert_eq!(
+        minions[0].gifts,
+        ["BG36_MidGameEffect_000t9", "BG36_MidGameEffect_000t13"]
+    );
+    assert!(!minions[0].gift_unknown);
+    assert!(minions[1].gifts.is_empty() && minions[1].gift_unknown);
+    assert!(minions[2].gifts.is_empty() && !minions[2].gift_unknown);
+}
+
+#[test]
 fn an_empty_board_that_did_play_is_a_board() {
     let live = live_game(&solo(
         vec![round(1, 2, json!([]), json!({"1": 40, "2": 40}))],

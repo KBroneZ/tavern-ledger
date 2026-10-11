@@ -108,6 +108,32 @@ window.TLCards = (() => {
     return img;
   }
 
+  // Dark Gifts on a minion (T-528, D-107): `gifts` holds gift card ids,
+  // `gift_unknown` marks a minion the game says is gifted with no gift
+  // named. One mark per gift, in the minion's order: { id, name, title }.
+  // Names and summaries come from strings/gifts.js; a gift it does not know
+  // shows its card data name, else its id, with no summary.
+  const GIFT_PREFIX = "BG36_MidGameEffect_";
+  function gifts(m) {
+    const I18n = window.TLI18n;
+    const words = (key) => {
+      const text = I18n.t(key);
+      return text === key ? null : text;
+    };
+    const ids = m && Array.isArray(m.gifts) ? m.gifts.filter((id) => typeof id === "string" && ID.test(id)) : [];
+    const marks = ids.map((id) => {
+      const short = id.startsWith(GIFT_PREFIX) ? id.slice(GIFT_PREFIX.length) : null;
+      const name = (short && words(`gift.name.${short}`)) || display(id) || id;
+      const text = short && words(`gift.text.${short}`);
+      const tip = text ? I18n.t("gift.tip", { name, text }) : name;
+      return { id, name, title: `${I18n.t("gift.mark")}: ${tip}` };
+    });
+    if (!marks.length && m && m.gift_unknown === true) {
+      marks.push({ id: null, name: I18n.t("gift.unknown"), title: `${I18n.t("gift.unknown")}: ${I18n.t("gift.unknown_text")}` });
+    }
+    return marks;
+  }
+
   async function refreshStatus() {
     try {
       status = await invoke("card_data_status");
@@ -130,6 +156,7 @@ window.TLCards = (() => {
     name,
     display,
     art,
+    gifts,
     status: () => status,
     onChange: (f) => watchers.push(f),
   };

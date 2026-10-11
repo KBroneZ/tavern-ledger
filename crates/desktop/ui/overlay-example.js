@@ -40,7 +40,7 @@ const EXAMPLE_GAME = {
           round: 5,
           minions: [
             { card_id: "EXAMPLE_1", atk: 4, health: 5, golden: false, keywords: ["taunt", "divine_shield"] },
-            { card_id: "EXAMPLE_2", atk: 8, health: 9, golden: true, keywords: ["deathrattle"] },
+            { card_id: "EXAMPLE_2", atk: 8, health: 9, golden: true, keywords: ["deathrattle"], gifts: ["BG36_MidGameEffect_000t9"] },
           ],
         },
       ],

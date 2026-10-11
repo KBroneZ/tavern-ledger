@@ -26,6 +26,9 @@ makes the script refuse to write anything. With --parser (the Rust
 `bg-parse` binary, or any command that prints its --json output), the raw
 game and the fixture must give the same report, or nothing is written; that
 report is saved next to the fixture (FIXTURE.json) for the parser tests.
+"The same" leaves out hero names and the combat replays' events, which the
+nested blocks the fixture drops give (T-215): a scrubber change that loses
+replay events is not caught here, only by the replay tests on the fixture.
 
 A log with a game played with the reconnect dev tool (D-022, D-043, see
 tools/dev/reconnect_marks.py) is refused before anything else; pass --session
@@ -74,6 +77,9 @@ KEEP_TAGS = frozenset({
     "BACON_GLOBAL_OLD_GOD_DBID",
     # Parser revision 6 (session 052): golden board minions by PREMIUM.
     "PREMIUM",
+    # Parser revision 9 (T-528): Dark Gifts on board minions, enchantments
+    # attached to the minion.
+    "ATTACHED", "HAS_DARK_GIFT",
 })
 # Power packets kept (their tag= lines are filtered by KEEP_TAGS). Of the
 # blocks, ATTACK is kept at any depth (the parser takes the combat boards
@@ -91,6 +97,9 @@ KEEP_CARDTYPES = frozenset({"GAME", "PLAYER", "HERO", "MINION", "INVALID",
                             "GAME_MODE_BUTTON", "MOVE_MINION_HOVER_TARGET", "HERO_POWER",
                             "SPELL", "BATTLEGROUND_SPELL", "BATTLEGROUND_TRINKET",
                             "BATTLEGROUND_QUEST_REWARD"})
+# Enchantments are dropped like the other card types, except the Dark Gift
+# ones the parser reads (crates/bg-parser/src/gifts.rs).
+GIFT_ENCHANTMENT = re.compile(r"CardID=(?:BG36_MidGameEffect_000t\w*e\w*|EDR_100t13e)$")
 KEEP_GAME_KEYS = ("GameType=", "BuildNumber=", "PlayerID=")
 # Names the game itself uses for hidden players and cards: not personal.
 GAME_NAMES = ("UNKNOWN HUMAN PLAYER", "UNKNOWN ENTITY")
@@ -233,6 +242,7 @@ def dropped_entities(lines: list[str]) -> set[int]:
     """Entities created with a card type the parser never reads (KEEP_CARDTYPES)."""
     dropped: set[int] = set()
     current = None
+    gift = False
     for line in lines:
         match = LINE.match(line.rstrip("\r\n"))
         if not match or match.group(3) != POWER:
@@ -241,10 +251,12 @@ def dropped_entities(lines: list[str]) -> set[int]:
         created = re.match(r"FULL_ENTITY - Creating ID=(\d+) ", body)
         if created:
             current = int(created.group(1))
+            gift = bool(GIFT_ENCHANTMENT.search(body))
             continue
         cardtype = re.match(r"tag=CARDTYPE value=(\w+)$", body)
         if cardtype and current is not None:
-            if cardtype.group(1) not in KEEP_CARDTYPES:
+            kept = cardtype.group(1) in KEEP_CARDTYPES
+            if not kept and not (gift and cardtype.group(1) == "ENCHANTMENT"):
                 dropped.add(current)
             continue
         if not body.startswith("tag="):
@@ -461,18 +473,37 @@ def _report(command: list[str], text: str, folder: Path) -> object:
         os.unlink(name)
 
 
-def _without_card_names(games: object) -> object:
-    if isinstance(games, list):
-        return [{k: v for k, v in g.items() if k != "card_names"} if isinstance(g, dict) else g
-                for g in games]
-    return games
+def _comparable(games: object) -> object:
+    """A report without what a fixture cannot keep: hero names (card text)
+    and the combat replays' events, which nested blocks the fixture drops
+    give (T-215); the replays' minions stay."""
+    if not isinstance(games, list):
+        return games
+    out = []
+    for g in games:
+        if not isinstance(g, dict):
+            out.append(g)
+            continue
+        g = {k: v for k, v in g.items() if k != "card_names"}
+        rounds = g.get("rounds")
+        if isinstance(rounds, list):
+            g["rounds"] = [_without_replay_events(r) for r in rounds]
+        out.append(g)
+    return out
+
+
+def _without_replay_events(round_: object) -> object:
+    if not isinstance(round_, dict) or not isinstance(round_.get("replay"), dict):
+        return round_
+    replay = {k: v for k, v in round_["replay"].items() if k not in ("events", "complete")}
+    return {**round_, "replay": replay}
 
 
 def check_same_report(command: list[str], raw_game: str, fixture: str, folder: Path) -> object:
     """The fixture must read exactly like the raw game, but for hero names
-    (card text, never kept); returns the fixture's report."""
+    and replay events (see _comparable); returns the fixture's report."""
     report = _report(command, fixture, folder)
-    if _without_card_names(_report(command, raw_game, folder)) != _without_card_names(report):
+    if _comparable(_report(command, raw_game, folder)) != _comparable(report):
         raise FixtureError("the fixture's report differs from the raw game's report")
     return report
 
