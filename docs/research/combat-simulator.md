@@ -66,7 +66,7 @@ Status: **done** = in the engine and tested; **to check** = in the engine, to be
 
 ## 4. Cards
 
-- **Registry keyed by exact card id** (`cards.rs`). Golden cards have their own ids (`BG25_354_G`, `TB_BaconUps_045`), so a golden effect is written out, never "double the normal one" by guess.
+- **Registry keyed by exact card id** (`cards.rs`, with the cards of each round in `cards_round1.rs` to `cards_round4.rs`). Golden cards have their own ids (`BG25_354_G`, `TB_BaconUps_045`), so a golden effect is written out, never "double the normal one" by guess.
 - **Two lists:** `NO_COMBAT_EFFECT` (text never changes a combat: shop, hand, Tavern, teammate, or keywords the board already shows; checked card by card) and `EFFECTS` (built from a few primitives: summon, buff all, buff random, gain stats or a keyword, give a keyword, damage, strip keywords, destroy the killer; triggers Deathrattle, Rally, Avenge, start of combat, friendly attacks, after attack, plus static ones such as Cleave, Taunt while shielded, extra Deathrattles, shield at 6 Attack).
 - **Fidelity:** each effect is `Exact` or `Approximate(reason)`. A card in neither list is **not modelled**: `simulate` returns `Verdict::NotModelled` with the card ids, never a number. The harness alone may play unknown cards as plain minions, and says so.
 - **Tokens** (`TOKENS`): id, printed stats, keywords, tribe, tier.
@@ -82,6 +82,8 @@ Status: **done** = in the engine and tested; **to check** = in the engine, to be
 Release build on the user's PC, the 19 logged Solo combats, 10 000 trials each: **32 ms on average, 73 ms at most** (target: under 200 ms). One thread, no allocation-heavy work per attack beyond small vectors; fast enough to run on every board change in the overlay.
 
 Duos (session 074), the same 10 000 trials on each Duos combat's boards: **74 ms on average, 308 ms at most** on the 84 combats of the logs, 105 and 389 ms on the 232 of the history: four boards, and late games with boards in the thousands make long combats. The overlay keeps its 150 ms budget: such a run stops after fewer trials (at least 1 000) and says how many in Advanced.
+
+After card round 4 (session 075), on the history: Solo 38 ms on average (36 before), Duos 118 ms on average and 569 ms at most (108 and 432 before): the newly modelled cards make some combats longer (Beetles that grow, Golems that keep the card's stats).
 
 ## 7. Validation on the user's combats (T-603, T-603b)
 
@@ -169,6 +171,41 @@ As 7.3, for Duos: the player's board before the combat (the shop board in the lo
 - The order of each team is taken from the combat itself; the app reads the game's flag and its marked opponent, which named the first boards in 74 and 73 of 77 combats (section 3), so these scores are a little kinder than the app's.
 - In 29 history combats the player's own board did not fight, so the history has no board for it; the app has the shop board then.
 
+### 7.6 What the app would show, and the accuracy export (T-604, T-607)
+
+Since session 075 `combat-validate` also plays every combat with a result as the app would: on its own boards (as they came in), cards not modelled refused, start of combat off. It counts the combats a card not modelled blocks, per card, and scores the rest per mode. Before and after card round 4 (section 9):
+
+| Source | Mode | Combats with a result | Blocked | With a hand summoner | Blocked by the hand summoners only | Scored | Mean p(real result) | Brier | Most likely = real |
+|---|---|---|---|---|---|---|---|---|---|
+| History | Solo | 19 | 0 → 0 | 0 | 0 | 19 → 19 | 96% → 96% | 0.058 → 0.058 | 18 of 19 → 18 of 19 |
+| History | Duos | 232 | 50 (22%) → 30 (13%) | 23 | 16 → 18 | 182 → 202 | 80% → 81% | 0.292 → 0.274 | 147 of 182 → 166 of 202 |
+| Logs | Duos | 84 | 23 (27%) → 18 (21%) | 15 | 12 → 13 | 61 → 66 | 85% → 84% | 0.197 → 0.212 | 53 of 61 → 57 of 66 |
+
+- Cards that still block, by combats (history): `BG34_140` 11, `BG31_999` 7, `BG31_835` 5, `BG21_HERO_030t` 4, `BG34_140_G` 3, `BG34_Giant_017` 3, `BGS_008` 1, `TB_BaconShop_HERO_33_Buddy_G` 1. The hand summoners alone now block 18 of the 30.
+- The overlay's inputs (section 7.5) gain too: "a card not modelled" 31 → 16 (history) and 18 → 14 (logs); scored 104 → 119 (58 right, 49%) and 36 → 40 (29 right, 72%).
+- The engine on every board that fought (unknown cards as plain minions, section 7.4): 188 → 189 of 232 right on the history, 71 of 84 on the logs (unchanged).
+
+**Export for the website (T-607).** `combat-validate (--history … | --logs …) --cards cards.json --export accuracy.json` also writes these numbers as a small JSON file. It holds counts, shares, the date, the engine version and card ids only: no names, BattleTags, account ids, seats, heroes, games or rounds. The user's own file stays on the PC until the user chooses to publish it; the repo has a synthetic example only, `crates/combat-sim/tests/data/accuracy_example.json` (a test checks its keys against the export).
+
+| Key | Meaning |
+|---|---|
+| `format` | Shape version, now `1`; a reader checks it first |
+| `date` | The day the file was written (UTC, `YYYY-MM-DD`) |
+| `engine_version` | The `combat-sim` crate version; its minor number is the card round (`0.4.0`: round 4) |
+| `trials` | Trials per combat |
+| `modes.solo`, `modes.duos` | One block per mode, below |
+| `…combats_with_result` | Logged combats with the game's result |
+| `…blocked`, `…blocked_share` | Combats with a card not modelled on a board (no number in the app), and their share; `null` share with no combat |
+| `…refused` | Combats the engine's board check refused |
+| `…scored` | Combats played (with a result, not blocked, not refused) |
+| `…mean_p_real` | Mean probability given to the real result; `null` when nothing was scored |
+| `…brier` | Multi-class Brier score (0 best, 2 worst); `null` when nothing was scored |
+| `…most_likely_right` | Scored combats whose most likely result was the real one |
+| `…calibration` | Five buckets of predicted shares (`from`, `to`, `predictions`, `mean_said`, `happened`; the last two `null` for an empty bucket): of the times the engine said 0-20%, how often it happened, and so on |
+| `blocking_cards` | Up to 10 card ids that block most combats, with the count (both modes) |
+
+A page shows the scored combats with their accuracy and, beside them, the blocked share ("no odds in 13% of Duos combats: a card is not modelled"), never one without the other.
+
 ## 8. One engine for the app and the website
 
 **App (T-605, done in session 071, D-084).** During a shop turn the overlay runs the player's board as it is now against the next opponent's last board seen (D-004: only boards the player saw on screen; the opponent is the one the game marks as next, D-061). How:
@@ -208,9 +245,15 @@ Left for round 3, most seen first: `BG34_140` and `BG21_HERO_030t` (summon from 
 
 **Round 3 (session 074, Duos)**, the most seen of the Duos history that the board alone can play, each with its golden card: `BG35_342` (gains for each friendly Deathrattle, exact), `BG34_690` (Deathrattle: Undead +2 Attack; approximate: Undead summoned later miss it), `BG26_802` (doubles a summoned Beast's Attack; approximate: order with other summon effects), `BG35_602` (+3 Attack to a summoned Beast; approximate: the bonus grows during the game). New primitives: after a friendly Deathrattle, after a friendly summon (a Reborn copy counts). Not modelled appearances: 163 → 139 (35 → 27 cards). Left, most seen first, and why: `BG34_140`, `BG31_835`, `BG21_HERO_030t` (summon from the hand, which is not seen), `BG31_999` (copies the minion it destroyed at the start of combat, gone from a logged board), `BG36_360t9` (its Golem's card id is not in the card data), `TB_BaconShop_HP_105t` (gains other minions' Deathrattles).
 
+**Round 4 (session 075)**, ordered by the combats each card blocked (section 7.6), each with its golden card: `BG36_360t9` (Dark Paradox: Deathrattle, a Golem with its stats; approximate: the Golem's card id `BG30_MagicItem_442t` is the one the log shows for Jailbird Juggernaut, the card data has none), `TB_BaconShop_HP_105t` and its skin (Fish of N'Zoth: gains the Deathrattle of each friendly Deathrattle minion that dies; approximate: those gained in earlier combats are not on the board), `BG36_209` (Ravaging Scorpid: Beetles +4/+4 after each friendly attack, a Beetle on death; approximate: Beetles' game-long buffs), `BG34_Giant_331` (Timewarped Warghoul: triggers a neighbour's Deathrattle; approximate: which one, and neighbours that die with it), `BG36_333` (Jailbird Juggernaut: Rally, a Golem with its stats attacks the target first; approximate: what it does when its Golem kills the target), `BG31_HERO_802pt1` and `BG31_HERO_802pt` (Carrier and Colossus, Protoss minions of a hero power; approximate: they improve during the game), `BGDUO31_208` (San'layn Scribe; approximate: Scribes dying in this combat), `TB_BaconShop_HERO_76_Buddy` (Spirit of Air; approximate: picks only minions that miss a keyword), and the golden cards of `BG26_354`, `BG27_556` (start of combat, as their normal cards), `BGS_126` (excess damage to both neighbours, exact) and `BG33_430`. New primitives: a token with the card's Attack and full Health (one that attacks first), a buff for card ids, damage to the target's neighbours, a neighbour's Deathrattle, after a friendly attack, Deathrattles gained in combat; minions now keep their full Health apart from the damage. Not modelled appearances: 139 → 83 (27 → 12 cards); blocked Duos combats 50 → 30 of 232.
+
+The replay (section 7.2) checks the cards it meets: one first difference moved, game 3 round 8: the Beetle the Scorpid summons is now there, and the first difference is its stats (2/2 against the log's 14/14: the game-long Beetle buffs, the stated approximation). The other first differences are unchanged (32 of 79 combats to the end, 500 of 1 308 attacks).
+
+Left blocking, and why: the hand summoners (question 4, and `BG34_Giant_017`, which summons from the hand too); `BG31_999` Stitched Salvager (its Deathrattle copies the minion it destroyed at the start of combat, which no board the app has still shows, so like the hand summoners the missing minion is often the biggest of the combat); `BGS_008` and `BG34_Giant_590` (random minions from a pool); `BG34_Giant_599` (copies Deathrattles at the start of combat); `TB_BaconShop_HERO_33_Buddy` (follows the Amalgam); the golden Fish skin (gains each Deathrattle twice); `BG26_RLK_833` (seen in combats without a result only).
+
 ## 10. Questions for the user
 
 1. **How the website runs the engine.** WebAssembly (needs `'wasm-unsafe-eval'` in the CSP), a TypeScript port, or a server function. Recommendation: WebAssembly, the CSP change limited to the simulator page if possible.
 2. **Which boards the website's simulator may load.** Only your own games, or also other public players' boards. Recommendation: your own games only at first (your boards and the opponents' boards you met, which you saw on screen); other players' boards only from public profiles and only after T-509's privacy texts cover it.
 3. **Duos odds (T-608, done in session 074).** Please check in your next Duos game that "their first board" is the one that fights your first board (the overlay takes the opponent the game marks as next).
-4. **Cards that summon from the hand** (`BG34_140` Expert Aviator, the most seen card not modelled, and `BG31_835`, `BG21_HERO_030t`): today they block the odds ("a card is not modelled"). They could play as approximate, with the hand summon left out and the card named. Recommendation: keep them blocking; the summon is often the biggest minion of the combat.
+4. **Cards that summon from the hand** (`BG34_140` Expert Aviator, the most seen card not modelled, and `BG31_835`, `BG21_HERO_030t`): today they block the odds ("a card is not modelled"). They could play as approximate, with the hand summon left out and the card named. Recommendation: keep them blocking; the summon is often the biggest minion of the combat. **Applied** (the hub's call, session 075): after round 4 they are on a board in 23 of the 232 Duos combats of the history (15 of 84 in the logs) and alone block 18 of them (13 in the logs), 8% of the Duos combats.
