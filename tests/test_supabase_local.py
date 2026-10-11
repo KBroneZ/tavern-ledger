@@ -188,6 +188,13 @@ class LocalStackTests(unittest.TestCase):
         self.assertTrue(doc["sessions"], "export lists sign-in sessions")
         self.assertEqual(doc["profile"]["user_id"], uid)
         self.assertNotIn("encrypted_password", json.dumps(doc))
+        self.assertEqual(doc["community_consent"],
+                         {"hero_stats": False, "updated_at": None, "policy_version": None})
+
+        # Opted in to the community hero stats: the choice goes with the account.
+        status, on = self.api.request("POST", "/rest/v1/rpc/set_community_consent",
+                                      token=token, body={"p_hero_stats": True})
+        self.assertEqual((status, on), (200, True))
 
         status, result = self.api.request(
             "DELETE", "/functions/v1/delete-account", token=token)
@@ -202,6 +209,7 @@ class LocalStackTests(unittest.TestCase):
         left = _psql(
             "select (select count(*) from public.games where user_id = '{u}')"
             " + (select count(*) from public.profiles where user_id = '{u}')"
+            " + (select count(*) from public.community_consent where user_id = '{u}')"
             " + (select count(*) from storage.objects where name like '{u}/%')"
             " + (select count(*) from auth.users where id = '{u}')"
             " + (select count(*) from auth.identities where user_id = '{u}')"

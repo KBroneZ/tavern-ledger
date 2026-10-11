@@ -3,7 +3,9 @@ import {
   deleteAccount,
   exportAll,
   finishAuthLink,
+  loadCommunityConsent,
   loadOwnProfile,
+  saveCommunityConsent,
   saveProfile,
   setNewPassword,
   signIn,
@@ -84,6 +86,38 @@ async function setUpProfile(user: User): Promise<void> {
       name.value = checked.value ?? "";
       setPublicLink(user.id, isPublic.checked);
       say(message, "Saved.", "ok");
+    });
+  });
+}
+
+/** The community hero stats switch (T-507): its own form, apart from the public profile. */
+async function setUpCommunity(user: User): Promise<void> {
+  const form = byId<HTMLFormElement>("community-form");
+  const message = byId("community-message");
+  const box = field(form, "hero_stats");
+  try {
+    box.checked = await loadCommunityConsent(supabase, user.id);
+  } catch {
+    // Saving an unknown state could turn the switch off, or on, by mistake.
+    for (const el of form.querySelectorAll<HTMLInputElement | HTMLButtonElement>("input, button")) {
+      el.disabled = true;
+    }
+    say(message, "Could not load this setting. Reload the page to try again.", "error");
+    return;
+  }
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const on = box.checked;
+    void busy(form.querySelector("button") as HTMLButtonElement, async () => {
+      say(message, "Saving…");
+      const error = await saveCommunityConsent(supabase, on);
+      if (error) {
+        // The stored choice still holds: show it, never the one that failed.
+        box.checked = !on;
+        say(message, `${error} Your setting is unchanged.`, "error");
+        return;
+      }
+      say(message, on ? "Saved. Your games count from the next daily update." : "Saved. Your games are out from the next daily update.", "ok");
     });
   });
 }
@@ -212,7 +246,7 @@ async function showAccount(user: User): Promise<void> {
   setUpExport();
   setUpDelete(user);
   setUpSignOut();
-  await setUpProfile(user);
+  await Promise.all([setUpProfile(user), setUpCommunity(user)]);
 }
 
 async function start(): Promise<void> {

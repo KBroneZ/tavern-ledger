@@ -77,10 +77,31 @@ import { CONFIRM_PHRASE } from "../lib/deleteAccount.ts";
       <h2 id="export-heading">Your data</h2>
       <p>
         Download everything this site holds about you as one JSON file: account, sign-in
-        history, profile, every game and the game files themselves.
+        history, profile and settings, every game and the game files themselves.
       </p>
       <button type="button" id="export-button" class="secondary">Download my data</button>
       <p class="message" id="export-message" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="panel" aria-labelledby="community-heading">
+      <h2 id="community-heading">Community stats</h2>
+      <form id="community-form" novalidate>
+        <label class="check">
+          <input type="checkbox" name="hero_stats" />
+          <span>
+            Include my games in community hero stats
+            <span class="hint">
+              Off by default, and separate from your public profile. When on, your finished games
+              count toward the <a href="/heroes/">hero stats</a>, shown only as rounded totals over at
+              least 5 players and never with your name; turning it off takes them out at the next daily
+              update.
+              <a href="/privacy/#community-hero-stats">How this works</a>.
+            </span>
+          </span>
+        </label>
+        <button type="submit">Save</button>
+        <p class="message" id="community-message" role="status" aria-live="polite"></p>
+      </form>
     </section>
   </div>
 
