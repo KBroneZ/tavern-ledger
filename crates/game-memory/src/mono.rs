@@ -220,11 +220,34 @@ impl<'a> Mono<'a> {
 
     /// The name of the class an object belongs to (object → vtable → class).
     pub fn object_class_name(&self, object: u64) -> Result<String, WalkError> {
-        let vtable = self.mem.read_ptr(object)?;
-        let class = self.mem.read_ptr(vtable + self.layout.vtable_class)?;
+        let class = self.object_class(object)?;
         Ok(self
             .mem
             .read_name(self.mem.read_ptr(class + self.layout.class_name)?)?)
+    }
+
+    /// The class of `object`, through its vtable.
+    pub fn object_class(&self, object: u64) -> Result<u64, WalkError> {
+        let vtable = self.mem.read_ptr(object)?;
+        Ok(self.mem.read_ptr(vtable + self.layout.vtable_class)?)
+    }
+
+    /// The ints of a list object, after checking that it is a `list_class`
+    /// (`List`1`) and that its items are an array (a class named `…[]`).
+    pub fn typed_int_list(
+        &self,
+        list: u64,
+        list_class: &str,
+        max: usize,
+    ) -> Result<Vec<i32>, WalkError> {
+        if self.object_class_name(list)? != list_class {
+            return Err(unsupported("list of another type"));
+        }
+        let items = self.mem.read_ptr(list + 0x10)?;
+        if !self.object_class_name(items)?.ends_with("[]") {
+            return Err(unsupported("list items are not an array"));
+        }
+        int_list(self.mem, list, max)
     }
 
     /// A field of `class` (not of its parents) by name. Literal (const)
@@ -484,10 +507,28 @@ pub(crate) mod fake {
             obj
         }
 
-        /// A `List<int>` object holding `values`.
+        /// A class with only a name (for the type of an object).
+        pub fn bare_class(&mut self, name: &str) -> u64 {
+            let class = self.alloc(0x120);
+            let name_at = self.string(name);
+            self.mem.put_u64(class + L.class_name, name_at);
+            class
+        }
+
+        /// Makes `object` one of a class named `name`.
+        pub fn set_class_name(&mut self, object: u64, name: &str) {
+            let class = self.bare_class(name);
+            let vtable = self.alloc(0x50);
+            self.mem.put_u64(vtable + L.vtable_class, class);
+            self.mem.put_u64(object, vtable);
+        }
+
+        /// A `List<int>` object (`List`1`, items an `Int32[]`) holding `values`.
         pub fn int_list(&mut self, values: &[i32]) -> u64 {
             let list = self.alloc(0x20);
             let array = self.alloc(0x20 + 4 * values.len().max(8));
+            self.set_class_name(list, "List`1");
+            self.set_class_name(array, "Int32[]");
             self.mem.put_u64(array + 0x18, values.len().max(8) as u64);
             for (i, v) in values.iter().enumerate() {
                 self.mem.put_u32(array + 0x20 + 4 * i as u64, *v as u32);

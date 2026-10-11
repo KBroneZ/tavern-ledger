@@ -3,10 +3,13 @@
 //!
 //! When on, the reader (`game-memory` crate, read-only rights) is asked for:
 //! - the lobby's five tribes while a Battlegrounds game is in progress (from
-//!   hero select), every few seconds for about a minute, until a read passes
-//!   its checks and is not the last game's five again (the game may still
-//!   hold those as a game starts); a failed check stops it for that game
-//!   ("unsupported game version") and the app keeps its log-based tribes;
+//!   hero select), every few seconds for about a minute, until two reads in
+//!   a row pass their checks and agree, and are not the last game's five
+//!   again (the game may still hold those as a game starts); only on a game
+//!   build the reader was checked on (any other build: not read at all); a
+//!   failed check, or the tavern contradicting the tribes, stops it for that
+//!   game ("unsupported game version") and the app keeps its log-based
+//!   tribes;
 //! - the player's own rating each time the Battlegrounds lobby screen opens.
 //!
 //! The values stay in memory on this PC: they are not saved with the games,
@@ -69,6 +72,8 @@ struct State {
     /// The last game's tribes: at the start of a game the game may still
     /// hold them, so the same five are not taken for the new game.
     last_tribes: Option<Vec<String>>,
+    /// A read that passed, waiting for the next read to give the same.
+    pending: Option<Vec<String>>,
     tribes_status: ReaderStatus,
     tribes_tries: u32,
     tribes_done: bool,
@@ -201,17 +206,35 @@ impl GameMemory {
         };
     }
 
-    /// Called once per poll with the game in progress and the scene. Asks
-    /// the reader only when the switch is on, and only when there is
-    /// something to read.
-    pub fn tick(&self, reader: &dyn Reader, game: Option<&GameKey>, scene: Option<Scene>) {
+    /// Called once per poll with the game in progress, its build from the
+    /// log and the scene. Asks the reader only when the switch is on, and
+    /// only when there is something to read.
+    pub fn tick(
+        &self,
+        reader: &dyn Reader,
+        game: Option<&GameKey>,
+        build: Option<i64>,
+        scene: Option<Scene>,
+    ) {
         let mut s = lock(&self.state);
         if !s.enabled {
             return;
         }
         s.ticks = s.ticks.wrapping_add(1);
-        tick_tribes(&mut s, reader, game);
+        tick_tribes(&mut s, reader, game, build);
         tick_rating(&mut s, reader, scene);
+    }
+
+    /// The tavern contradicted the tribes read for `game`: they are dropped
+    /// for the rest of that game, whatever the tavern shows later.
+    pub fn refuse(&self, game: &GameKey) {
+        let mut s = lock(&self.state);
+        if s.enabled && s.game.as_ref() == Some(game) {
+            s.tribes = None;
+            s.pending = None;
+            s.tribes_status = ReaderStatus::UnsupportedVersion;
+            s.tribes_done = true;
+        }
     }
 
     /// The tribes read for `game` and the reader's status for them.
@@ -244,7 +267,7 @@ impl GameMemory {
     }
 }
 
-fn tick_tribes(s: &mut State, reader: &dyn Reader, game: Option<&GameKey>) {
+fn tick_tribes(s: &mut State, reader: &dyn Reader, game: Option<&GameKey>, build: Option<i64>) {
     let Some(game) = game else {
         return;
     };
@@ -253,6 +276,7 @@ fn tick_tribes(s: &mut State, reader: &dyn Reader, game: Option<&GameKey>) {
         if let Some(last) = s.tribes.take() {
             s.last_tribes = Some(last);
         }
+        s.pending = None;
         s.tribes_status = ReaderStatus::Waiting;
         s.tribes_tries = 0;
         s.tribes_done = false;
@@ -261,10 +285,33 @@ fn tick_tribes(s: &mut State, reader: &dyn Reader, game: Option<&GameKey>) {
     if s.tribes_done || !s.ticks.is_multiple_of(TRIBES_EVERY) {
         return;
     }
+    // The path is trusted only on the builds it was checked on: on any other
+    // build the game is not even opened (D-063's fail-safe rule).
+    match build {
+        None => return,
+        Some(b) if !CHECKED_BUILDS.contains(&b) => {
+            s.tribes_status = ReaderStatus::UnsupportedVersion;
+            s.tribes_done = true;
+            return;
+        }
+        Some(_) => {}
+    }
     s.tribes_tries += 1;
+    // Taken only when two reads in a row agree, and not the last game's five.
     let result = match reader.lobby_tribes() {
-        Ok(tribes) if s.last_tribes.as_ref() == Some(&tribes) => Err(ReadFailure::NotYet),
-        other => other,
+        Ok(tribes) if s.last_tribes.as_ref() == Some(&tribes) => {
+            s.pending = None;
+            Err(ReadFailure::NotYet)
+        }
+        Ok(tribes) if s.pending.as_ref() == Some(&tribes) => Ok(tribes),
+        Ok(tribes) => {
+            s.pending = Some(tribes);
+            Err(ReadFailure::NotYet)
+        }
+        Err(e) => {
+            s.pending = None;
+            Err(e)
+        }
     };
     s.tribes_status = match &result {
         Ok(_) => ReaderStatus::Ok,
@@ -411,9 +458,11 @@ mod tests {
         n: u32,
     ) {
         for _ in 0..n {
-            gm.tick(reader, game, scene);
+            gm.tick(reader, game, BUILD, scene);
         }
     }
+
+    const BUILD: Option<i64> = Some(253216);
 
     const RATING: Rating = Rating {
         solo: Some(6543),
@@ -445,7 +494,12 @@ mod tests {
         assert_eq!(gm.tribes_for(Some(&key(1))), (None, ReaderStatus::Off));
         // Off by default even for a value of GameMemory never loaded.
         let unloaded = GameMemory::default();
-        unloaded.tick(&reader, Some(&key(1)), Some(Scene::BattlegroundsLobby));
+        unloaded.tick(
+            &reader,
+            Some(&key(1)),
+            BUILD,
+            Some(Scene::BattlegroundsLobby),
+        );
         assert_eq!(reader.calls.get(), 0);
     }
 
@@ -464,7 +518,7 @@ mod tests {
             &reader,
             Some(&key(1)),
             Some(Scene::BattlegroundsLobby),
-            3,
+            6,
         );
         assert!(again.tribes_for(Some(&key(1))).0.is_some());
         again.set_enabled(false).unwrap();
@@ -501,6 +555,9 @@ mod tests {
         assert_eq!(reader.calls.get(), 0);
         ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 3);
         assert_eq!(gm.tribes_for(Some(&key(1))), (None, ReaderStatus::Waiting));
+        // One read that passes waits for the next to agree.
+        ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 3);
+        assert_eq!(gm.tribes_for(Some(&key(1))), (None, ReaderStatus::Waiting));
         ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 3);
         assert_eq!(
             gm.tribes_for(Some(&key(1))),
@@ -533,7 +590,7 @@ mod tests {
             vec![Ok(lobby()), Ok(lobby()), Ok(lobby()), Ok(other_lobby())],
             vec![Ok(RATING)],
         );
-        ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 3);
+        ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 6);
         assert_eq!(gm.tribes_for(Some(&key(1))).0, Some(lobby()));
         ticks(&gm, &reader, Some(&key(2)), Some(Scene::Game), 3);
         assert_eq!(gm.tribes_for(Some(&key(2))), (None, ReaderStatus::Waiting));
@@ -550,12 +607,65 @@ mod tests {
         // keeps its log-based tribes rather than risk the old value.
         let gm = on("same-lobby");
         let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(RATING)]);
-        ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 3);
+        ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 6);
+        assert_eq!(gm.tribes_for(Some(&key(1))).0, Some(lobby()));
         ticks(&gm, &reader, Some(&key(2)), Some(Scene::Game), 200);
         assert_eq!(
             gm.tribes_for(Some(&key(2))),
             (None, ReaderStatus::UnsupportedVersion)
         );
+    }
+
+    #[test]
+    fn two_reads_in_a_row_must_agree() {
+        let gm = on("agree");
+        let reader = FakeReader::new(
+            vec![Ok(lobby()), Ok(other_lobby()), Ok(other_lobby())],
+            vec![Ok(RATING)],
+        );
+        ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 6);
+        assert_eq!(gm.tribes_for(Some(&key(1))), (None, ReaderStatus::Waiting));
+        ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 3);
+        assert_eq!(gm.tribes_for(Some(&key(1))).0, Some(other_lobby()));
+    }
+
+    #[test]
+    fn a_build_the_reader_was_not_checked_on_is_never_read() {
+        let gm = on("build");
+        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(RATING)]);
+        for _ in 0..60 {
+            gm.tick(&reader, Some(&key(1)), Some(999_999), Some(Scene::Game));
+        }
+        assert_eq!(reader.calls.get(), 0);
+        assert_eq!(
+            gm.tribes_for(Some(&key(1))),
+            (None, ReaderStatus::UnsupportedVersion)
+        );
+        // No build from the log yet: wait, without reading.
+        for _ in 0..60 {
+            gm.tick(&reader, Some(&key(2)), None, Some(Scene::Game));
+        }
+        assert_eq!(reader.calls.get(), 0);
+        assert_eq!(gm.tribes_for(Some(&key(2))), (None, ReaderStatus::Waiting));
+    }
+
+    #[test]
+    fn tribes_the_tavern_contradicted_stay_dropped_for_that_game() {
+        let gm = on("refuse");
+        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(RATING)]);
+        ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 6);
+        assert!(gm.tribes_for(Some(&key(1))).0.is_some());
+        gm.refuse(&key(2)); // another game: no effect
+        assert!(gm.tribes_for(Some(&key(1))).0.is_some());
+        gm.refuse(&key(1));
+        let calls = reader.calls.get();
+        ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 30);
+        assert_eq!(reader.calls.get(), calls, "not read again");
+        assert_eq!(
+            gm.tribes_for(Some(&key(1))),
+            (None, ReaderStatus::UnsupportedVersion)
+        );
+        assert_eq!(gm.view().status, ReaderStatus::UnsupportedVersion);
     }
 
     #[test]
@@ -644,7 +754,7 @@ mod tests {
                 "rating path not mapped".into(),
             ))],
         );
-        ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 3);
+        ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 6);
         ticks(&gm, &reader, None, Some(Scene::BattlegroundsLobby), 3);
         let view = gm.view();
         assert_eq!(view.status, ReaderStatus::Ok);

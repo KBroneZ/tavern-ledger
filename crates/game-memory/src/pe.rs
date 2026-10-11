@@ -27,6 +27,7 @@ pub fn export(mem: &dyn Memory, base: u64, name: &str) -> Result<Option<u64>, Re
         return Ok(None);
     }
     let dir = base + dir_rva;
+    let functions_count = u64::from(mem.read_u32(dir + 20)?);
     let count = mem.read_u32(dir + 24)?.min(MAX_EXPORTS);
     let functions = base + u64::from(mem.read_u32(dir + 28)?);
     let names = base + u64::from(mem.read_u32(dir + 32)?);
@@ -37,6 +38,9 @@ pub fn export(mem: &dyn Memory, base: u64, name: &str) -> Result<Option<u64>, Re
             continue;
         }
         let ordinal = u64::from(mem.read_u16(ordinals + i * 2)?);
+        if ordinal >= functions_count {
+            return Err(ReadError::Unreadable(ordinals + i * 2));
+        }
         let rva = u64::from(mem.read_u32(functions + ordinal * 4)?);
         return Ok(Some(base + rva));
     }
@@ -60,6 +64,7 @@ pub(crate) mod tests {
         let n = exports.len() as u32;
         let (functions, names, ordinals, strings) = (0x1100u32, 0x1200u32, 0x1300u32, 0x1400u32);
         mem.zeroed(base + u64::from(dir), 0x40);
+        mem.put_u32(base + u64::from(dir) + 20, n);
         mem.put_u32(base + u64::from(dir) + 24, n);
         mem.put_u32(base + u64::from(dir) + 28, functions);
         mem.put_u32(base + u64::from(dir) + 32, names);
@@ -91,6 +96,15 @@ pub(crate) mod tests {
             Ok(Some(0x10_3000))
         );
         assert_eq!(export(&mem, 0x10_0000, "missing"), Ok(None));
+    }
+
+    #[test]
+    fn an_ordinal_past_the_function_table_is_an_error() {
+        let mut mem = FakeMemory::new();
+        fake_module(&mut mem, 0x10_0000, &[("mono_get_root_domain", 0x3000)]);
+        mem.zeroed(0x10_1100, 0x40); // readable, but past the one function
+        mem.put_u16(0x10_1300, 7);
+        assert!(export(&mem, 0x10_0000, "mono_get_root_domain").is_err());
     }
 
     #[test]

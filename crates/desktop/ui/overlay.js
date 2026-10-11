@@ -137,7 +137,6 @@ function renderTribes(g) {
     const gameMark = mark(lobby.source);
     if (gameMark) row.append(gameMark);
     row.append(el("div", "tribe-list", lobby.tribes.map(tribeName).join(" · ")));
-    if (g.game_tribes && !g.game_tribes.checked_build) row.append(el("span", "notes", TLI18n.t("ov.tribes.uncheckedBuild")));
     panel.append(row);
   }
   if (g.game_tribes && g.game_tribes.note) panel.append(el("p", "notes", TLI18n.backend(g.game_tribes.note)));

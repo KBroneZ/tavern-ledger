@@ -234,7 +234,20 @@ fn overlay_state(
     let pool = card_data::pool_cards(&cards);
     let store = card_data::store_with_data(&cards);
     let card_of = |dbf: i64| store.and_then(|s| s.card_of_dbf(dbf));
-    overlay_state_of(&state).map(|live| live.with_possible(&pool).with_trinket_cards(card_of))
+    let shown = overlay_state_of(&state)?.with_possible(&pool);
+    // Tribes from the game that the tavern contradicted stay dropped for the
+    // rest of the game (D-063).
+    if shown.game_tribes.note.is_some() {
+        if let Some(key) = state
+            .in_progress
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+        {
+            state.game_memory.refuse(key);
+        }
+    }
+    Some(shown.with_trinket_cards(card_of))
 }
 
 /// Where the game client is (T-314): the overlay says "game loading" while
@@ -287,10 +300,16 @@ fn read_from_game(app: &AppHandle, state: &AppState) {
         .unwrap_or_else(|e| e.into_inner())
         .clone();
     let scene = *state.scene.lock().unwrap_or_else(|e| e.into_inner());
+    let build = state
+        .live
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .as_ref()
+        .and_then(|live| live.build);
     let tick = || {
         state
             .game_memory
-            .tick(&game_memory::GameReader, game.as_ref(), scene)
+            .tick(&game_memory::GameReader, game.as_ref(), build, scene)
     };
     if catch_unwind(AssertUnwindSafe(tick)).is_err() {
         state.game_memory.stop_for_run();

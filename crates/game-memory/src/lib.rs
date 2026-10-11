@@ -79,14 +79,16 @@ pub fn check() -> Check {
 mod scope_tests {
     //! The reader walks only the fields D-063 names (D-004 as amended).
 
-    /// Every name the walker may look up, and nothing else.
-    const ALLOWED: [&str; 9] = [
+    /// Every name the walker may look up or check a type against, and
+    /// nothing else.
+    const ALLOWED: [&str; 10] = [
         "Assembly-CSharp",
         "",
         "GameState",
         "s_instance",
         "m_availableRacesInBattlegroundsExcludingAmalgam",
         "m_missingRacesInBattlegrounds",
+        "List`1",
         "NetCacheBaconRatingInfo",
         "<Rating>k__BackingField",
         "<DuosRating>k__BackingField",

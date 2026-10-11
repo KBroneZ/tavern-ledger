@@ -29,6 +29,15 @@ The reader (`crates/game-memory/src/mono.rs`, `LAYOUT_BDWGC_X64`) uses these off
 
 Race ids are the game's `TAG_RACE` numbers; the names are those of the `hearthstone` package (already pinned, `requirements.txt`), the same names the log writes as `CARDRACE`.
 
+## What the reader checks (and what it cannot)
+
+- Only on a game build in `CHECKED_BUILDS` (`crates/tracker/src/game_values.rs`); any other build is not read at all and shows "unsupported game version" until the paths are checked on it and the build is added.
+- At every step a back pointer or a name: class → image, field → class, vtable → class, the code bytes of `mono_get_root_domain`, the export's ordinal within the function table.
+- Types: the object in `s_instance` must be of the `GameState` class just found (same pointer); both lists must be `List`1` objects whose items are an array (a class named `…[]`).
+- Values: five distinct known tribes in the lobby, a non-empty list of distinct known tribes left out, none in both.
+- Time: two reads in a row (three seconds apart) must agree, and must not be the five of the game before (the game may still hold them as a game starts). The tavern contradicting the tribes (D-050) drops them for the rest of the game.
+- **Not checked:** the size of each list element (4 bytes, `int` or an `int` enum: seen as such on build 253216, not read from the array's class) and whether `GameState` is replaced between games (one read at hero select after a different lobby was fresh). Both are reasons the build list is strict: a new build is only added after it is checked on real games.
+
 ## Not done
 
 1. Map the path to the own rating (through the service locator to `NetCache`, or to the Battlegrounds screen's data model) and compare it with the rating the screen shows. `ServiceManager` (in `Blizzard.T5.ServiceLocator`) holds the services in its statics `s_runtimeServices` (offset 0), `s_dynamicServices` (8) and `s_serviceObjects` (16, a `List`). The explorer's `rating` mode walks from there; it has not been run with the game open yet.

@@ -4,7 +4,7 @@
 //! `docs/research/memory-reader.md`). Every value is checked before it is
 //! returned; a value that fails a check is never returned.
 
-use crate::mono::{int_list, Mono, WalkError};
+use crate::mono::{Mono, WalkError};
 
 pub const ASSEMBLY: &str = "Assembly-CSharp";
 /// Both classes are in the global namespace.
@@ -16,6 +16,8 @@ pub const STATE_CLASS: &str = "GameState";
 pub const STATE_INSTANCE: &str = "s_instance";
 pub const TRIBES_IN: &str = "m_availableRacesInBattlegroundsExcludingAmalgam";
 pub const TRIBES_OUT: &str = "m_missingRacesInBattlegrounds";
+/// The type both lists must be (a check, not a lookup).
+pub const LIST_CLASS: &str = "List`1";
 
 /// The player's own rating, as the Battlegrounds screen shows it.
 pub const RATING_CLASS: &str = "NetCacheBaconRatingInfo";
@@ -94,11 +96,11 @@ fn from_walk(e: WalkError) -> ReadFailure {
 }
 
 /// The lobby's tribes, checked: five distinct Battlegrounds tribes in the
-/// lobby, none of them also listed as left out, and every listed id a known
-/// tribe. Sorted by name.
+/// lobby, a non-empty list of distinct tribes left out, none of them also in
+/// the lobby, and every listed id a known tribe. Sorted by name.
 pub fn check_tribes(inside: &[i32], outside: &[i32]) -> Result<Vec<&'static str>, ReadFailure> {
     let name = |id: &i32| TRIBE_IDS.iter().find(|(t, _)| t == id).map(|(_, n)| *n);
-    if inside.is_empty() {
+    if inside.is_empty() || outside.is_empty() {
         return Err(ReadFailure::NotYet);
     }
     if inside.len() != LOBBY_TRIBES {
@@ -113,7 +115,10 @@ pub fn check_tribes(inside: &[i32], outside: &[i32]) -> Result<Vec<&'static str>
     if names.len() != LOBBY_TRIBES {
         return Err(unsupported("a tribe is listed twice"));
     }
-    for id in outside {
+    for (i, id) in outside.iter().enumerate() {
+        if outside[..i].contains(id) {
+            return Err(unsupported("a left-out tribe is listed twice"));
+        }
         if name(id).is_none() {
             return Err(unsupported("unknown tribe id"));
         }
@@ -148,9 +153,16 @@ pub fn read_lobby_tribes(mono: &Mono) -> Result<Vec<&'static str>, ReadFailure> 
         }
         Err(e) => return Err(from_walk(e)),
     };
+    // The object must be a GameState of this image, not one of another
+    // class that happens to sit there.
+    if mono.object_class(state).map_err(from_walk)? != class {
+        return Err(unsupported("game state of another type"));
+    }
     let list = |field: &str| -> Result<Vec<i32>, ReadFailure> {
         match mono.object_field(state, class, field) {
-            Ok(l) => int_list(mono.mem(), l, MAX_LIST).map_err(from_walk),
+            Ok(l) => mono
+                .typed_int_list(l, LIST_CLASS, MAX_LIST)
+                .map_err(from_walk),
             Err(WalkError::Unsupported(why)) if why.ends_with("is not set") => Ok(Vec::new()),
             Err(e) => Err(from_walk(e)),
         }
@@ -205,8 +217,8 @@ mod tests {
             check_tribes(&IN, &OUT).unwrap(),
             ["BEAST", "DRAGON", "MURLOC", "PIRATE", "UNDEAD"]
         );
-        // The list of tribes left out is optional.
-        assert!(check_tribes(&IN, &[]).is_ok());
+        // The list of tribes left out must be there too: empty is not yet.
+        assert_eq!(check_tribes(&IN, &[]), Err(ReadFailure::NotYet));
     }
 
     #[test]
@@ -217,10 +229,11 @@ mod tests {
                 Err(ReadFailure::Unsupported(_))
             )
         };
-        assert!(bad(&[20, 24, 14, 11], &[]));
-        assert!(bad(&[20, 24, 14, 11, 23, 15], &[]));
-        assert!(bad(&[20, 24, 14, 11, 11], &[]));
-        assert!(bad(&[20, 24, 14, 11, 99], &[]));
+        assert!(bad(&[20, 24, 14, 11], &OUT));
+        assert!(bad(&[20, 24, 14, 11, 23, 15], &OUT));
+        assert!(bad(&[20, 24, 14, 11, 11], &OUT));
+        assert!(bad(&[20, 24, 14, 11, 99], &OUT));
+        assert!(bad(&IN, &[126, 15, 15]));
         assert!(bad(&[20, 24, 14, 11, 23], &[23]));
         assert!(bad(&[20, 24, 14, 11, 23], &[7]));
         assert_eq!(check_tribes(&[], &[]), Err(ReadFailure::NotYet));
@@ -343,6 +356,45 @@ mod tests {
             read_lobby_tribes(&mono),
             Err(ReadFailure::Unsupported(_))
         ));
+    }
+
+    /// The objects on the walk must be of the expected types: a value read
+    /// through an object of another type is never returned.
+    #[test]
+    fn objects_of_another_type_are_refused() {
+        let unsupported = |f: &FakeMono| {
+            let mono = Mono::attach(&f.mem, MONO_BASE, LAYOUT_BDWGC_X64).unwrap();
+            matches!(read_lobby_tribes(&mono), Err(ReadFailure::Unsupported(_)))
+        };
+        use crate::memory::Memory;
+        // `s_instance` holding an object that is not a GameState.
+        let mut f = FakeMono::new();
+        let image = game_state(&mut f, &IN, &OUT);
+        let state = static_state(&f, image);
+        f.set_class_name(state, "GameState");
+        assert!(unsupported(&f), "a GameState of another class");
+        // A list that is not a List`1.
+        let mut f = FakeMono::new();
+        let image = game_state(&mut f, &IN, &OUT);
+        let state = static_state(&f, image);
+        let list = f.mem.read_u64(state + 0x10).unwrap();
+        f.set_class_name(list, "Dictionary`2");
+        assert!(unsupported(&f), "a list of another type");
+        // Items that are not an array.
+        let mut f = FakeMono::new();
+        let image = game_state(&mut f, &IN, &OUT);
+        let state = static_state(&f, image);
+        let list = f.mem.read_u64(state + 0x18).unwrap();
+        let items = f.mem.read_u64(list + 0x10).unwrap();
+        f.set_class_name(items, "String");
+        assert!(unsupported(&f), "items that are not an array");
+    }
+
+    /// The GameState object the fake's static field holds.
+    fn static_state(f: &FakeMono, image: u64) -> u64 {
+        let mono = Mono::attach(&f.mem, MONO_BASE, LAYOUT_BDWGC_X64).unwrap();
+        let class = mono.class(image, NAMESPACE, STATE_CLASS).unwrap();
+        mono.static_object(class, STATE_INSTANCE).unwrap()
     }
 
     fn rating_object(f: &mut FakeMono, class_name: &str, solo: i32, duos: i32) -> u64 {

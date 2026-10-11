@@ -8,8 +8,9 @@
 //!   tribe the tavern confirms (D-050) is among them. If the tavern
 //!   contradicts them, they are dropped for the rest of the game and the app
 //!   says "unsupported game version", falling back to the other sources.
-//! - On a game build the reader was not checked on, a value that passes
-//!   every check is still shown, marked as an unchecked build.
+//! - On a game build the reader was not checked on (or an unknown build),
+//!   nothing from the game is shown: "unsupported game version" (D-063's
+//!   fail-safe rule). The app does not even read on such a build.
 //! - The values stay on this PC: they are never put in a game's report and
 //!   never uploaded.
 
@@ -51,7 +52,8 @@ pub struct GameTribes {
     /// Five tribes, sorted, or empty.
     pub tribes: Vec<String>,
     pub status: ReaderStatus,
-    /// False on a build not in [`CHECKED_BUILDS`] (or an unknown build).
+    /// False on a build not in [`CHECKED_BUILDS`] (or an unknown build);
+    /// then there are no tribes.
     pub checked_build: bool,
     /// The note to show instead, when the value was refused.
     pub note: Option<&'static str>,
@@ -62,7 +64,8 @@ impl GameTribes {
     /// the log.
     pub fn new(tribes: Option<&[String]>, status: ReaderStatus, build: Option<i64>) -> GameTribes {
         let tribes = tribes.and_then(valid).unwrap_or_default();
-        let status = if status == ReaderStatus::Ok && tribes.is_empty() {
+        let checked_build = build.is_some_and(|b| CHECKED_BUILDS.contains(&b));
+        let status = if status == ReaderStatus::Ok && (tribes.is_empty() || !checked_build) {
             ReaderStatus::UnsupportedVersion
         } else {
             status
@@ -74,7 +77,7 @@ impl GameTribes {
                 Vec::new()
             },
             status,
-            checked_build: build.is_some_and(|b| CHECKED_BUILDS.contains(&b)),
+            checked_build,
             note: (status == ReaderStatus::UnsupportedVersion).then_some(UNSUPPORTED_TRIBES),
         }
     }
@@ -142,11 +145,16 @@ mod tests {
     }
 
     #[test]
-    fn an_unchecked_or_unknown_build_is_marked() {
-        let g = GameTribes::new(Some(&strings(&LOBBY)), ReaderStatus::Ok, Some(999_999));
-        assert_eq!(g.tribes.len(), 5);
-        assert!(!g.checked_build);
-        assert!(!GameTribes::new(Some(&strings(&LOBBY)), ReaderStatus::Ok, None).checked_build);
+    fn an_unchecked_or_unknown_build_is_never_shown() {
+        // Fail safe (D-063): the reader's path is only trusted on the builds
+        // it was checked on; any other build says "unsupported game version".
+        for build in [Some(999_999), None] {
+            let g = GameTribes::new(Some(&strings(&LOBBY)), ReaderStatus::Ok, build);
+            assert!(g.tribes.is_empty());
+            assert!(!g.checked_build);
+            assert_eq!(g.status, ReaderStatus::UnsupportedVersion);
+            assert_eq!(g.note, Some(UNSUPPORTED_TRIBES));
+        }
     }
 
     #[test]
