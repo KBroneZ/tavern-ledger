@@ -13,7 +13,8 @@ import type { BoardView, ChoiceView, GameView, HeroRef, OpponentView, SeatView, 
 import { g } from "./strings.ts";
 import * as w from "./words.ts";
 
-const DASH = t("value.none");
+// The same in every language (test/unit/i18n.test.ts), so it can be a constant.
+const DASH = "—";
 const num = (v: number | null) => (v === null ? DASH : compact(v));
 
 /** The same tree, shown in Advanced only. */

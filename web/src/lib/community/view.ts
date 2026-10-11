@@ -25,10 +25,11 @@ import {
   type Period,
 } from "./heroes.ts";
 import { ct, type ChKey } from "./strings.ts";
+import { dateFormat, href } from "../i18n.ts";
 
 /** Where the account page's switch is. */
-export const JOIN_HREF = "/account/#community-heading";
-export const POLICY_HREF = "/privacy/#community-hero-stats";
+export const JOIN_PATH = "/account/#community-heading";
+export const POLICY_PATH = "/privacy/#community-hero-stats";
 
 /** The four sort buttons with aria-pressed, named by the visible "Sort by"; the page script re-sorts every panel on a click. */
 function sortSwitch(id: string, sort: HeroSort): VNode {
@@ -52,7 +53,7 @@ function emptyState(p: Period): VNode {
       title: ct("empty.title"),
       body: ct("empty.body", { min: MIN_GAMES, players: MIN_PLAYERS, period: periodName(p, "in") }),
     },
-    h("p", {}, `${ct("empty.join")} `, h("a", { href: JOIN_HREF }, ct("empty.join.link")), "."),
+    h("p", {}, `${ct("empty.join")} `, h("a", { href: href(JOIN_PATH) }, ct("empty.join.link")), "."),
   );
 }
 
@@ -83,25 +84,24 @@ export function modePanels(stats: CommunityStats, sort: HeroSort): VNode[] {
   return MODES.map((m) => h("div", { "data-mode-panel": m }, PERIODS.map((p) => periodPanel(stats.heroes[m][p], m, p, sort))));
 }
 
-const DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
 /** "Updated 11 Oct 2026, 04:05 UTC, with games up to 10 Oct 2026." or "Not built yet." */
 export function updatedLine(state: CommunityState): string {
   const time = refreshedText(state.refreshedAt);
   if (!time || !state.countedUntil) return ct("page.updated.never");
-  return ct("page.updated", { time, day: DAY.format(new Date(`${state.countedUntil}T00:00:00Z`)) });
+  return ct("page.updated", { time, day: dateFormat({ day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }, "en-GB").format(new Date(`${state.countedUntil}T00:00:00Z`)) });
 }
 
 /** Who is counted, the thresholds, what is counted, the rounding, where it comes from and how it is built. */
 export function howFold(): VNode {
   return fold(
     { summary: ct("how.summary") },
-    h("p", {}, ct("how.who"), " ", h("a", { href: JOIN_HREF }, ct("empty.join.link")), "."),
+    h("p", {}, ct("how.who"), " ", h("a", { href: href(JOIN_PATH) }, ct("empty.join.link")), "."),
     h("p", {}, ct("how.min", { min: MIN_GAMES, players: MIN_PLAYERS })),
     h("p", {}, ct("how.what")),
     h("p", {}, ct("how.rounding")),
     h("p", {}, ct("how.source")),
     h("p", {}, ct("how.refresh")),
-    h("p", {}, `${ct("how.privacy.lead")} `, h("a", { href: POLICY_HREF }, ct("how.privacy")), "."),
+    h("p", {}, `${ct("how.privacy.lead")} `, h("a", { href: href(POLICY_PATH) }, ct("how.privacy")), "."),
   );
 }

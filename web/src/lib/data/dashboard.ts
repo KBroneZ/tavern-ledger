@@ -8,6 +8,7 @@ import { t } from "./strings.ts";
 import { unknownValue, sourceMark, type Cell, type Column, type TileProps } from "../view/pieces.ts";
 import { h, type VNode } from "../view/node.ts";
 import { gamePath } from "../game/url.ts";
+import { dateFormat } from "../i18n.ts";
 
 export const modeName = (m: Mode): string => (m === "solo" ? t("mode.solo") : t("mode.duos"));
 
@@ -16,7 +17,8 @@ export function perGame(sum: number | null, games: number): number | null {
   return sum === null || games === 0 ? null : sum / games;
 }
 
-const DATE = new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+// "1 Oct 2026" / "1 oct 2026", in the page's language (T-508).
+const DATE = { format: (d: Date) => dateFormat({ day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(d) };
 
 /** "9 Oct 2026" from "2026-10-09"; a dash when unknown. */
 export function dateText(isoDay: string | null): string {

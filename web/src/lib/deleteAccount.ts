@@ -1,10 +1,13 @@
 // Account deletion: the typed confirmation and how the delete-account
 // function's answer is read (supabase/functions/delete-account/handler.ts).
 
-export const CONFIRM_PHRASE = "delete my account";
+import { at } from "./account/strings.ts";
+
+/** The phrase to type, in the page's language (T-508). */
+export const confirmPhrase = (): string => at("account.delete.phrase");
 
 export function isConfirmed(typed: string): boolean {
-  return typed.trim() === CONFIRM_PHRASE;
+  return typed.trim() === confirmPhrase();
 }
 
 export type DeleteOutcome =
@@ -21,19 +24,16 @@ export function deleteOutcome(status: number, body: unknown): DeleteOutcome {
   if (status === 200) {
     return b.deleted?.account === 1
       ? { kind: "deleted" }
-      : { kind: "error", message: "The server gave an unexpected answer. Try again." };
+      : { kind: "error", message: at("delete.unexpected") };
   }
   if (status === 403 && b.reason === "reauthenticate") return { kind: "reauthenticate" };
   if (status === 401) return { kind: "signed-out" };
   if (status === 0) {
-    return { kind: "error", message: "Could not reach the server. Nothing was deleted yet; try again." };
+    return { kind: "error", message: at("delete.unreachable") };
   }
   if (status >= 500) {
-    const step = typeof b.step === "string" && STEPS.has(b.step) ? ` (step: ${b.step})` : "";
-    return {
-      kind: "error",
-      message: `Deletion did not finish${step}. Try again: it picks up where it stopped.`,
-    };
+    const known = typeof b.step === "string" && STEPS.has(b.step);
+    return { kind: "error", message: known ? at("delete.unfinishedStep", { step: b.step as string }) : at("delete.unfinished") };
   }
-  return { kind: "error", message: "The server refused the request. Reload the page and try again." };
+  return { kind: "error", message: at("delete.refused") };
 }

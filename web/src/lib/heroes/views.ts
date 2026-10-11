@@ -15,7 +15,7 @@ import {
   heroColumns,
   heroStatCells,
   MIN_GAMES,
-  OFFERED_COLUMNS,
+  offeredColumns,
   offeredCells,
   offeredOnly,
   sortHeroes,
@@ -61,7 +61,7 @@ function offeredFold(m: Mode, rows: readonly HeroStat[]): VNode | null {
     { class: "adv" },
     fold(
       { summary: t("hstats.offered", { count: only.length }), context: modeName(m) },
-      topTable({ caption: t("hstats.offered.caption", { mode: modeName(m) }), columns: OFFERED_COLUMNS, rows: only.map(offeredCells), top: TOP_HEROES }),
+      topTable({ caption: t("hstats.offered.caption", { mode: modeName(m) }), columns: offeredColumns(), rows: only.map(offeredCells), top: TOP_HEROES }),
     ),
   );
 }

@@ -5,25 +5,31 @@
 // heroes above the thresholds ever reach the page; no player is shown.
 // With accounts closed the page shows a notice instead: no data, no script.
 // Kept out of search engines, like the leaderboards.
-import Base from "../layouts/Base.astro";
-import AccountsClosed from "../components/AccountsClosed.astro";
-import Switch from "../components/data/Switch.astro";
-import DataScript from "../components/data/DataScript.astro";
-import StateBlock from "../components/data/StateBlock.astro";
-import "../styles/data.css";
-import "../styles/dash.css";
-import "../styles/player.css";
-import "../styles/community.css";
-import { readConfig } from "../lib/config.ts";
-import { DEFAULT_PERIOD, PERIODS, periodName } from "../lib/community/heroes.ts";
-import { ct } from "../lib/community/strings.ts";
+import Base from "../../layouts/Base.astro";
+import AccountsClosed from "../../components/AccountsClosed.astro";
+import Switch from "../../components/data/Switch.astro";
+import DataScript from "../../components/data/DataScript.astro";
+import StateBlock from "../../components/data/StateBlock.astro";
+import "../../styles/data.css";
+import "../../styles/dash.css";
+import "../../styles/player.css";
+import "../../styles/community.css";
+import { readConfig } from "../../lib/config.ts";
+import { DEFAULT_PERIOD, PERIODS, periodName } from "../../lib/community/heroes.ts";
+import { ct } from "../../lib/community/strings.ts";
+import { langPaths, setLang } from "../../lib/i18n.ts";
+import { st } from "../../lib/site/strings.ts";
+
+export const getStaticPaths = langPaths;
+// Every string below is drawn in the page's language (T-508).
+setLang(Astro.props.lang);
 
 const accountsOpen = readConfig(import.meta.env) !== null;
 ---
 
 <Base
-  title="Hero stats"
-  description="Community Battlegrounds hero stats from Tavern Ledger players who chose to share their games: games, pick rate, average place and top-half rate. Self-reported, no players shown."
+  title={st("meta.heroes.title")}
+  description={st("meta.heroes.description")}
   noindex
 >
   {
@@ -58,10 +64,10 @@ const accountsOpen = readConfig(import.meta.env) !== null;
           <div id="ch-about" />
         </div>
         <DataScript />
-        <script src="../scripts/communityHeroes.ts" />
+        <script src="../../scripts/communityHeroes.ts" />
       </div>
     ) : (
-      <AccountsClosed heading="Hero stats" />
+      <AccountsClosed heading={st("meta.heroes.title")} />
     )
   }
 </Base>

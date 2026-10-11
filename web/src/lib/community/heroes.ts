@@ -10,6 +10,7 @@ import { t } from "../data/strings.ts";
 import { h, type VNode } from "../view/node.ts";
 import type { Cell, Column } from "../view/pieces.ts";
 import { ct, type ChKey } from "./strings.ts";
+import { numberFormat } from "../i18n.ts";
 
 export type Period = "30d" | "all";
 export const MODES: readonly Mode[] = ["solo", "duos"];
@@ -211,19 +212,19 @@ export function heroColumns(m: Mode): Column[] {
   ];
 }
 
-const ONE = new Intl.NumberFormat("en", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /** A floored count as the page shows it: "50+" is 50 to 59 games. */
 export function atLeast(value: number): string {
   return ct("count.atLeast", { n: compact(value) });
 }
 
+/** A whole percent from the server (57 → "57%" / "57 %"), in the page's language. */
 export function rate(value: number): string {
-  return `${value}%`;
+  return numberFormat({ style: "percent", maximumFractionDigits: 1 }).format(value / 100);
 }
 
 export function place(value: number): string {
-  return ONE.format(value);
+  return numberFormat({ minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value);
 }
 
 /** A dash that screen readers read as "Not enough hero choices yet". */

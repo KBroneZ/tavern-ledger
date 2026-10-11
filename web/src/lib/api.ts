@@ -15,7 +15,7 @@ import {
   confirmedMessage,
   implicitLinkMessage,
   linkErrorMessage,
-  NOTICE_MESSAGE,
+  noticeMessage,
 } from "./authLink.ts";
 import type { SiteConfig } from "./config.ts";
 import { type DeleteOutcome, deleteOutcome } from "./deleteAccount.ts";
@@ -171,7 +171,7 @@ export async function finishAuthLink(
     case "none":
       return NOTHING;
     case "notice":
-      return { recovery: false, message: NOTICE_MESSAGE, tone: "ok" };
+      return { recovery: false, message: noticeMessage(), tone: "ok" };
     case "error":
       return { recovery: false, message: linkErrorMessage(link.code), tone: "error" };
     case "implicit":

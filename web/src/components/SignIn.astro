@@ -1,5 +1,7 @@
 ---
 import { MIN_PASSWORD_LENGTH } from "../lib/auth.ts";
+import { href } from "../lib/i18n.ts";
+import { at } from "../lib/account/strings.ts";
 
 interface Props {
   /** False until the owner opens sign-ups (PUBLIC_SIGNUPS_OPEN). */
@@ -8,42 +10,41 @@ interface Props {
 const { signupsOpen } = Astro.props;
 ---
 
-<h1>Sign in</h1>
+<h1>{at("signin.title")}</h1>
 <p class="meta">
-  Email and password. The site is <a href="/privacy/">not open to the public yet</a>: accounts
-  are for testing only.
+  {at("signin.meta.before")} <a href={href("/privacy/")}>{at("signin.meta.link")}</a>{at("signin.meta.after")}
 </p>
 
 <div class="panels">
   <section class="panel" aria-labelledby="signin-heading">
-    <h2 id="signin-heading">I have an account</h2>
+    <h2 id="signin-heading">{at("signin.have")}</h2>
     <form id="signin-form" novalidate>
       <label>
-        Email
+        {at("signin.email")}
         <input type="email" name="email" autocomplete="username" required />
       </label>
       <label>
-        Password
+        {at("signin.password")}
         <input type="password" name="password" autocomplete="current-password" required />
       </label>
-      <button type="submit" disabled>Sign in</button>
+      <button type="submit" disabled>{at("signin.submit")}</button>
       <p class="message" id="signin-message" role="status" aria-live="polite"></p>
     </form>
-    <p class="meta"><a href="/forgot-password/">Forgot password?</a></p>
+    <p class="meta"><a href={href("/forgot-password/")}>{at("signin.forgot")}</a></p>
   </section>
 
   <section class="panel" aria-labelledby="signup-heading">
-    <h2 id="signup-heading">Create an account</h2>
+    <h2 id="signup-heading">{at("signin.create")}</h2>
     {
       signupsOpen ? (
         <form id="signup-form" novalidate>
           <label>
-            Email
+            {at("signin.email")}
             <input type="email" name="email" autocomplete="email" required />
           </label>
           <label>
-            Password
-            <span class="hint">At least {MIN_PASSWORD_LENGTH} characters.</span>
+            {at("signin.password")}
+            <span class="hint">{at("signin.hint.length", { min: MIN_PASSWORD_LENGTH })}</span>
             <input
               type="password"
               name="password"
@@ -53,14 +54,14 @@ const { signupsOpen } = Astro.props;
             />
           </label>
           <p class="hint">
-            By creating an account you accept the <a href="/terms/">terms</a> and confirm you are
-            16 or older. The <a href="/privacy/">privacy policy</a> says what we do with your data.
+            {at("signin.consent.before")} <a href={href("/terms/")}>{at("signin.consent.terms")}</a> {at("signin.consent.middle")}{" "}
+            <a href={href("/privacy/")}>{at("signin.consent.privacy")}</a> {at("signin.consent.after")}
           </p>
-          <button type="submit" class="secondary" disabled>Create account</button>
+          <button type="submit" class="secondary" disabled>{at("signin.createSubmit")}</button>
           <p class="message" id="signup-message" role="status" aria-live="polite"></p>
         </form>
       ) : (
-        <p class="meta">Sign-up is not open yet.</p>
+        <p class="meta">{at("signin.closed")}</p>
       )
     }
   </section>

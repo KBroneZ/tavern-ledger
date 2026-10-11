@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { CONFIRM_PHRASE, deleteOutcome, isConfirmed } from "../../src/lib/deleteAccount.ts";
+import { confirmPhrase, deleteOutcome, isConfirmed } from "../../src/lib/deleteAccount.ts";
 
 test("the typed confirmation must match the phrase", () => {
-  assert.equal(CONFIRM_PHRASE, "delete my account");
+  assert.equal(confirmPhrase(), "delete my account");
   assert.equal(isConfirmed("delete my account"), true);
   assert.equal(isConfirmed("  delete my account  "), true);
   assert.equal(isConfirmed("Delete My Account"), false);

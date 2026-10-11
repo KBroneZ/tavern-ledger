@@ -60,7 +60,8 @@ test("no inline script, style or event handler in any page", () => {
   for (const page of PAGES) {
     const html = readFileSync(page, "utf8");
     for (const tag of html.matchAll(/<script\b[^>]*>/g)) {
-      assert.match(tag[0], /\ssrc="\/_astro\/[^"]+\.js"/, `${name(page)}: ${tag[0]}`);
+      // Our bundles, or the language script (public/lang.js, T-508).
+      assert.match(tag[0], /\ssrc="(?:\/_astro\/[^"]+\.js|\/lang\.js)"/, `${name(page)}: ${tag[0]}`);
     }
     assert.doesNotMatch(html, /<script\b[^>]*>[^<\s]/, name(page));
     assert.doesNotMatch(html, /<style\b/, name(page));
@@ -148,9 +149,13 @@ test("accounts closed: no form, no script and no backend anywhere", { skip: !!CO
     const html = readFileSync(join(DIST, page), "utf8");
     assert.match(html, /Accounts are not open yet/, page);
   }
+  for (const page of ACCOUNT_PAGES) {
+    assert.match(readFileSync(join(DIST, "es", page), "utf8"), /Las cuentas aún no están abiertas/, `es/${page}`);
+  }
   for (const page of PAGES) {
-    const html = readFileSync(page, "utf8");
-    assert.doesNotMatch(html, /<script\b|<form\b|<input\b|href="\/(signin|account|forgot-password)\/"/, name(page));
+    // The language switch links a notice page to its own twin (T-508); no other link to them.
+    const html = readFileSync(page, "utf8").replace(/<a\b[^>]*data-lang-switch[^>]*>/g, "");
+    assert.doesNotMatch(html, /<script\b|<form\b|<input\b|href="(?:\/es)?\/(signin|account|forgot-password)\/"/, name(page));
   }
   assert.deepEqual(ALL.filter((f) => f.endsWith(".js")).map(name), []);
   for (const file of ALL) {
@@ -216,7 +221,7 @@ test("only the home page preloads a font, and it is the headline font", () => {
   for (const page of PAGES) {
     const html = readFileSync(page, "utf8");
     const preloads = [...html.matchAll(/<link\b[^>]*rel="preload"[^>]*>/g)].map((m) => m[0]);
-    if (name(page) !== "index.html") {
+    if (name(page) !== "index.html" && name(page) !== "es/index.html") {
       assert.deepEqual(preloads, [], name(page));
       continue;
     }
@@ -233,7 +238,7 @@ test("no page loads anything from another origin", () => {
     // Only <a> links may point elsewhere (they load nothing by themselves);
     // the canonical link names an address and loads nothing either.
     for (const tag of html.matchAll(/<(?!a\b)([a-z]+)\b[^>]*\s(?:src|href|srcset|poster|data|action|formaction)="\s*(?:[a-z][a-z0-9+.-]*:|\/\/)[^"]*"[^>]*>/gi)) {
-      if (tag[1] === "link" && /rel="canonical"/.test(tag[0])) continue;
+      if (tag[1] === "link" && /rel="(?:canonical|alternate)"/.test(tag[0])) continue;
       assert.fail(`${name(page)}: ${tag[0]}`);
     }
     assert.doesNotMatch(html, /<(?:iframe|object|embed)\b/, name(page));
@@ -382,7 +387,7 @@ test("the browser pieces draw the same markup as the Astro components on /style/
     p.statTile({ hero: true, label: "Average place, Solo", value: f.average(3.42), backing: f.backing(30, 31), trend: f.trend(-0.3, "lower"), spark: { values: sample.recent, min: 1, max: 8, invert: true } }),
     p.statTile({ label: "Combats won", value: "41", source: "inferred", backing: f.backing(31, 31) }),
     p.statTile({ label: "Actions per minute", value: f.average(null), source: "unknown", backing: f.backing(0, 31) }),
-    p.topTable({ caption: "Heroes, most games first (made-up)", columns: sample.heroColumns, rows: sample.heroRows, top: 5 }),
+    p.topTable({ caption: "Heroes, most games first (made-up)", columns: sample.heroColumns, rows: sample.heroRows(), top: 5 }),
     p.topTable({ caption: "Last games (made-up)", columns: sample.gameColumns, rows: sample.gameRows }),
     p.placeChart(sample.soloPlaces, "solo", "places-solo"),
     p.placeChart(sample.duosPlaces, "duos", "places-duos"),

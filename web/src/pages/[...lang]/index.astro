@@ -1,0 +1,133 @@
+---
+import Base from "../../layouts/Base.astro";
+import "../../styles/home.css";
+import "../../styles/scene.css";
+import { readConfig } from "../../lib/config.ts";
+import { langPaths, numberFormat, setLang } from "../../lib/i18n.ts";
+import { st } from "../../lib/site/strings.ts";
+
+export const getStaticPaths = langPaths;
+// Every string below is drawn in the page's language (T-508).
+setLang(Astro.props.lang);
+
+const accountsOpen = readConfig(import.meta.env) !== null;
+
+// The scene's five steps (D-052). The captions stay readable to screen
+// readers in both the moving and the still scene; the picture's description
+// tells the same story in one go.
+const steps = ([1, 2, 3, 4, 5] as const).map((n) => ({
+  title: st(`home.step${n}.title`),
+  text: st(`home.step${n}.text`),
+}));
+const sceneLabel = st("home.scene.label");
+const count = (n: number) => numberFormat({ maximumFractionDigits: 0 }).format(n);
+---
+
+<Base title={st("meta.index.title")} description={st("meta.index.description")} layout="home">
+  <section class="hero" aria-labelledby="hero-heading">
+    <span class="lamp lamp-1" aria-hidden="true"></span>
+    <span class="lamp lamp-2" aria-hidden="true"></span>
+    <span class="lamp lamp-3" aria-hidden="true"></span>
+    <h1 id="hero-heading">{st("home.hero.title")} <span class="lit">{st("home.hero.lit")}</span></h1>
+    <p class="lead">{st("home.lead")}</p>
+    <div class="ctas">
+      <a class="btn" href="#scene">{st("home.cta.show")}</a>
+      <a class="btn quiet" href="#safe">{st("home.cta.safe")}</a>
+    </div>
+  </section>
+
+  <section class="pin" id="scene" aria-labelledby="scene-title">
+    <h2 id="scene-title" class="visually-hidden">{st("home.scene.title")}</h2>
+    <div class="pin-stage">
+      <div class="caption-col">
+        <div class="pips" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        <ol class="captions" role="list">
+          {
+            steps.map((step, i) => (
+              <li class={`cap c${i + 1}`}>
+                <span class="step">{st("home.step", { n: count(i + 1), total: count(steps.length) })}</span>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+      <div class="stage3d" role="img" aria-label={sceneLabel}>
+        <div class="scene3">
+          <div class="pane p1">
+            <span class="label">{st("home.pane.board")}</span>
+            <div class="row"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="pane p2">
+            <span class="label">{st("home.pane.tavern")}</span>
+            <div class="row"><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="pane p3">
+            <span class="label">{st("home.pane.leaderboard")}</span>
+            <div class="col"><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="pane p4 ours">
+            <span class="label">Tavern Ledger</span>
+            <span class="card"></span>
+            <span class="beam"></span>
+            <div class="panels-mini"><i></i><i></i><i></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="keeps-heading">
+    <h2 id="keeps-heading" class="sec-h">{st("home.keeps.title")}</h2>
+    <p class="sec-p">{st("home.keeps.body")}</p>
+    <div class="trio">
+      <div class="glass">
+        <p class="big">{count(37)} <small>{st("home.keeps.example")}</small></p>
+        <h3>{st("home.keeps.games.title")}</h3>
+        <p>{st("home.keeps.games.body")}</p>
+      </div>
+      <div class="glass">
+        <h3>{st("home.keeps.boards.title")}</h3>
+        <p>{st("home.keeps.boards.body")}</p>
+      </div>
+      <div class="glass">
+        <h3>{st("home.keeps.recap.title")}</h3>
+        <p>{st("home.keeps.recap.body")}</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec">
+    <section class="safe glass" id="safe" aria-labelledby="safe-heading">
+      <div>
+        <h2 id="safe-heading" class="sec-h">{st("home.safe.title")}</h2>
+        <p class="sec-p">{st("home.safe.body")}</p>
+      </div>
+      <ul role="list">
+        <li>{st("home.safe.1")}</li>
+        <li>{st("home.safe.2")}</li>
+        <li>{st("home.safe.3")}</li>
+      </ul>
+    </section>
+  </div>
+
+  <section class="sec yours" aria-labelledby="yours-heading">
+    <h2 id="yours-heading" class="sec-h">{st("home.yours.title")}</h2>
+    <ul role="list">
+      <li><b>{st("home.yours.private.title")}</b><span>{st("home.yours.private.body")}</span></li>
+      <li><b>{st("home.yours.take.title")}</b><span>{st("home.yours.take.body")}</span></li>
+      <li><b>{st("home.yours.gone.title")}</b><span>{st("home.yours.gone.body")}</span></li>
+    </ul>
+  </section>
+
+  <div class="sec">
+    <aside class="doors glass" aria-label={st("home.status.label")}>
+      <strong>{st("home.status.title")}</strong>
+      <span>
+        {st("home.status.body")}{" "}
+        {accountsOpen ? st("home.status.testing") : st("home.status.closed")}
+      </span>
+    </aside>
+  </div>
+</Base>

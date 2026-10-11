@@ -2,6 +2,9 @@
 // Spanish. The data pieces' own words (results, places, sources, backing
 // lines) stay in lib/data/strings.ts. Placeholders are {name}.
 
+import { makeT } from "../i18n.ts";
+import { ES } from "./strings.es.ts";
+
 export const GAME_STRINGS = {
   "page.title": "Game",
   "page.description": "One Battlegrounds game in full: turns, boards, shops and choices.",
@@ -163,12 +166,5 @@ export const GAME_STRINGS = {
 
 export type GameStringKey = keyof typeof GAME_STRINGS;
 
-/** The string for a key with its placeholders filled. */
-export function g(key: GameStringKey, vars: Record<string, string | number> = {}): string {
-  const text: string | undefined = GAME_STRINGS[key];
-  if (text === undefined) throw new Error(`no string ${key}`);
-  return text.replaceAll(/\{([a-z]+)\}/g, (_, name: string) => {
-    if (!(name in vars)) throw new Error(`string ${key} needs {${name}}`);
-    return String(vars[name]);
-  });
-}
+/** The string for a key in the page's language, with its placeholders filled. */
+export const g = makeT<GameStringKey>({ name: "game", en: GAME_STRINGS, es: ES });

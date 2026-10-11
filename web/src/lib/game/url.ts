@@ -1,3 +1,4 @@
+import { href } from "../i18n.ts";
 // The game viewer's address (T-504): /game/?u=<user id>&s=<session>&g=<index>.
 // The three values are the game's key in public.games, so the page needs no
 // other id; the games list (T-503) links each row here with gamePath().
@@ -28,7 +29,7 @@ export function parseGameRef(search: string): GameRef | null {
 /** The viewer's address for one game. */
 export function gamePath(userId: string, session: string, index: number): string {
   const query = new URLSearchParams({ u: userId, s: session, g: String(index) });
-  return `/game/?${query.toString()}`;
+  return href(`/game/?${query.toString()}`);
 }
 
 /** Where the game's report is in the `games` bucket (games.storage_path). */

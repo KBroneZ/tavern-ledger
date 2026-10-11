@@ -494,6 +494,9 @@ html,
 
 .seg {
   display: inline-flex;
+  /* A longer language wraps its buttons rather than widen a phone's page. */
+  flex-wrap: wrap;
+  max-width: 100%;
   gap: 2px;
   padding: 3px;
   border-radius: var(--r-button);

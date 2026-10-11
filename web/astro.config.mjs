@@ -1,6 +1,6 @@
 // Static site (D-020). Nothing is inlined into the HTML, so the
 // Content-Security-Policy can allow scripts and styles from 'self' only.
-import { readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { defineConfig } from "astro/config";
 import { loadEnv } from "vite";
 import { contentSecurityPolicy, readConfig } from "./src/lib/config.ts";
@@ -31,6 +31,13 @@ function securityHeaders() {
           "",
         ].join("\n");
         writeFileSync(new URL("_headers", dir), headers);
+        // Cloudflare Pages serves the nearest 404.html: the Spanish one must
+        // be es/404.html, not es/404/index.html (T-508).
+        const es404 = new URL("es/404/index.html", dir);
+        if (existsSync(es404)) {
+          renameSync(es404, new URL("es/404.html", dir));
+          rmSync(new URL("es/404/", dir), { recursive: true });
+        }
         // Astro still bundles the account pages' scripts, though no page
         // loads them when accounts are closed: ship none (test/build checks
         // that no page has a script tag).
@@ -39,6 +46,8 @@ function securityHeaders() {
           for (const name of readdirSync(assets)) {
             if (name.endsWith(".js")) rmSync(new URL(name, assets));
           }
+          // The language script (public/lang.js) too: no page loads it here.
+          rmSync(new URL("lang.js", dir), { force: true });
         }
       },
     },
@@ -53,7 +62,9 @@ export default defineConfig({
   // Same port as site_url in supabase/config.toml.
   server: { host: "127.0.0.1", port: 3000 },
   devToolbar: { enabled: false },
-  build: { inlineStylesheets: "never" },
+  // One page at a time: each page sets the language its strings are drawn
+  // in (lib/i18n.ts, T-508), so pages must not render side by side.
+  build: { inlineStylesheets: "never", concurrency: 1 },
   vite: { build: { assetsInlineLimit: 0 } },
   integrations: [securityHeaders()],
 });
