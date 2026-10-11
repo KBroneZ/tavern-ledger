@@ -8,6 +8,7 @@ use combat_sim::cards::{Trigger, EFFECTS};
 use super::*;
 
 const GAME: &str = "GT_BATTLEGROUNDS";
+const DUOS: &str = "GT_BATTLEGROUNDS_DUO";
 
 fn minion(card: &str, atk: i64, health: i64, position: i64) -> LogMinion {
     LogMinion {
@@ -88,7 +89,14 @@ fn input() -> OddsInput {
         ],
     );
     let own = [minion(PLAIN, 6, 6, 1)];
-    odds_input(&r, Some(&own), Some(5), &[slot(2, 3), slot(5, 4)], Some(5)).expect("odds")
+    let live = LiveFacts {
+        own_now: Some(&own),
+        next: Some(5),
+        lobby: &[slot(2, 3), slot(5, 4)],
+        damage_cap: Some(5),
+        fights_first: None,
+    };
+    odds_input(&r, live).expect("odds")
 }
 
 #[test]
@@ -142,13 +150,17 @@ fn each_reason_for_no_odds_is_named() {
     let r = report(GAME, vec![round(1, 5, Some(vec![minion(PLAIN, 1, 1, 1)]))]);
     let own = [minion(PLAIN, 2, 2, 1)];
     let gap = |r: &GameReport, own: Option<&[LogMinion]>, next| {
-        odds_input(r, own, next, &[], None)
-            .expect_err("no odds")
-            .gap
+        let live = LiveFacts {
+            own_now: own,
+            next,
+            ..LiveFacts::default()
+        };
+        odds_input(r, live).expect_err("no odds").gap
     };
     assert_eq!(
-        gap(&report("GT_BATTLEGROUNDS_DUO", vec![]), Some(&own), Some(5)),
-        Gap::Duos
+        gap(&report(DUOS, vec![]), Some(&own), Some(5)),
+        Gap::Order,
+        "Duos without the game's order"
     );
     assert_eq!(gap(&r, Some(&own), None), Gap::NoNextOpponent);
     assert_eq!(gap(&r, None, Some(5)), Gap::NotInShop);
@@ -188,7 +200,12 @@ fn a_start_of_combat_card_is_flagged() {
     seen.entries[0].board = Some(vec![minion(soc, 1, 1, 1)]);
     let r = report(GAME, vec![seen]);
     let own = [minion(PLAIN, 6, 6, 1)];
-    let i = odds_input(&r, Some(&own), Some(5), &[], None).expect("odds");
+    let live = LiveFacts {
+        own_now: Some(&own),
+        next: Some(5),
+        ..LiveFacts::default()
+    };
+    let i = odds_input(&r, live).expect("odds");
     assert!(i.seen_after_start_of_combat);
     assert!(run_odds(&i, &facts, Duration::from_secs(5)).start_of_combat);
 }
@@ -228,4 +245,148 @@ fn the_spread_takes_percentiles() {
         })
     );
     assert_eq!(spread(&BTreeMap::new(), None), None);
+}
+
+/// A Duos game: the player (seat 2) and their teammate (3) against seats 5
+/// (the next opponent) and 6. The teammate fought on screen in round 3,
+/// seat 6 in round 4, seat 5 in round 5.
+fn duos_report(rounds: Vec<Round>) -> GameReport {
+    let mut r = report(DUOS, rounds);
+    r.teammate_player_id = Some(3);
+    r.lobby = [(2, 1), (3, 1), (5, 2), (6, 2)]
+        .into_iter()
+        .map(|(seat, team)| bg_parser::report::LobbyPlayer {
+            player_id: seat,
+            hero: None,
+            duo_team: Some(team),
+            final_place: None,
+            final_health: 0,
+            triples: Vec::new(),
+            trinkets: Vec::new(),
+        })
+        .collect();
+    r
+}
+
+fn duos_round(number: i64, own: (i64, i64), foe: (i64, i64)) -> Round {
+    Round {
+        entries: vec![
+            entry(Side::Own, own.0, Some(vec![minion(PLAIN, own.1, own.1, 1)])),
+            entry(
+                Side::Opponent,
+                foe.0,
+                Some(vec![minion(PLAIN, foe.1, foe.1, 1)]),
+            ),
+        ],
+        ..round(number, foe.0, None)
+    }
+}
+
+fn duos_rounds() -> Vec<Round> {
+    vec![
+        duos_round(3, (3, 7), (6, 1)),
+        duos_round(4, (2, 2), (6, 2)),
+        duos_round(5, (2, 2), (5, 3)),
+    ]
+}
+
+fn duos_live(own: &[LogMinion], first: Option<bool>) -> LiveFacts<'_> {
+    LiveFacts {
+        own_now: Some(own),
+        next: Some(5),
+        lobby: &[],
+        damage_cap: None,
+        fights_first: first,
+    }
+}
+
+#[test]
+fn duos_odds_use_both_teams_last_boards_in_the_games_order() {
+    let r = duos_report(duos_rounds());
+    let own = [minion(PLAIN, 4, 4, 1)];
+    let i = odds_input(&r, duos_live(&own, Some(false))).expect("odds");
+    assert_eq!((i.opponent_seat, i.seen_round), (5, 5));
+    let d = i.duos.clone().expect("Duos");
+    assert!(!d.local_first);
+    assert_eq!((d.teammate.seat, d.teammate.round), (3, 3));
+    assert_eq!(d.teammate.board[0].atk, 7);
+    // Seat 6's newest board, not the round 3 one.
+    assert_eq!(
+        (d.opponent_teammate.seat, d.opponent_teammate.round),
+        (6, 4)
+    );
+    let mut missing = Vec::new();
+    let (player, foe) = teams(&i, &facts, &mut missing);
+    assert!(missing.is_empty());
+    assert_eq!(
+        player.first.minions[0].attack, 7,
+        "the teammate fights first"
+    );
+    assert_eq!(player.second.expect("two boards").minions[0].attack, 4);
+    assert_eq!(foe.first.minions[0].attack, 3, "the marked opponent first");
+    assert_eq!(foe.second.expect("two boards").minions[0].attack, 2);
+
+    let o = run_odds(&i, &facts, Duration::from_secs(5));
+    assert_eq!(o.gap, None);
+    assert_eq!(o.won, 1.0);
+    assert_eq!(o.seen_round, Some(3), "the oldest board");
+    let rounds: Vec<_> = o.boards.iter().map(|b| (b.role, b.seat, b.round)).collect();
+    assert_eq!(
+        rounds,
+        [
+            (Role::Teammate, 3, Some(3)),
+            (Role::Opponent, 5, Some(5)),
+            (Role::OpponentTeammate, 6, Some(4))
+        ]
+    );
+}
+
+#[test]
+fn duos_names_the_boards_never_seen() {
+    // Only seat 5 has been met; the teammate never fought on screen.
+    let r = duos_report(vec![duos_round(5, (2, 2), (5, 3))]);
+    let own = [minion(PLAIN, 4, 4, 1)];
+    let no = odds_input(&r, duos_live(&own, Some(true))).expect_err("no odds");
+    assert_eq!((no.gap, no.seat), (Gap::MissingBoard, Some(5)));
+    let rounds: Vec<_> = no.boards.iter().map(|b| (b.role, b.round)).collect();
+    assert_eq!(
+        rounds,
+        [
+            (Role::Teammate, None),
+            (Role::Opponent, Some(5)),
+            (Role::OpponentTeammate, None)
+        ]
+    );
+    // The overlay gets the same list.
+    assert_eq!(no.odds().boards, no.boards);
+}
+
+#[test]
+fn duos_without_the_games_order_or_teams_gives_no_number() {
+    let own = [minion(PLAIN, 4, 4, 1)];
+    let r = duos_report(duos_rounds());
+    let order = |r: &GameReport, first| odds_input(r, duos_live(&own, first)).unwrap_err().gap;
+    assert_eq!(order(&r, None), Gap::Order);
+    let mut no_teams = duos_report(duos_rounds());
+    no_teams.lobby.clear();
+    assert_eq!(order(&no_teams, Some(true)), Gap::Order);
+    let mut no_mate = duos_report(duos_rounds());
+    no_mate.teammate_player_id = None;
+    assert_eq!(order(&no_mate, Some(true)), Gap::Order);
+}
+
+#[test]
+fn duos_odds_flag_a_start_of_combat_card_where_a_board_was_seen() {
+    let soc = EFFECTS
+        .iter()
+        .find(|(_, r)| r.triggers.contains(&Trigger::StartOfCombatUnmodelled))
+        .map(|(id, _)| *id)
+        .expect("a start of combat card");
+    let mut rounds = duos_rounds();
+    // The teammate's round had the card on the other side.
+    rounds[0].entries[1].board = Some(vec![minion(soc, 1, 1, 1)]);
+    let r = duos_report(rounds);
+    let own = [minion(PLAIN, 4, 4, 1)];
+    let i = odds_input(&r, duos_live(&own, Some(true))).expect("odds");
+    assert!(i.seen_after_start_of_combat);
 }

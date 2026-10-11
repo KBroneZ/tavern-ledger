@@ -67,7 +67,7 @@ test("a reason replaces the numbers, and some reasons say nothing", () => {
   const gap = (g, extra) => oddsView({ ...odds(), gap: g, won: 0, tied: 0, lost: 0, trials: 0, ...extra }, true, nameOf);
   assert.equal(gap("no_board_seen").text, "Odds: no board of theirs seen yet");
   assert.deepEqual(gap("no_board_seen").shares, []);
-  assert.equal(gap("duos").text, "Odds: not in Duos yet");
+  assert.equal(gap("order").text, "Odds: who fights first is not known yet");
   const missing = gap("not_modelled", { missing: ["SYN_A"] });
   assert.deepEqual(missing.lines, ["Not modelled: Made-up Minion"]);
   assert.deepEqual(gap("no_card_data", { missing: ["SYN_X"] }).lines, ["No card data for: SYN_X"]);
@@ -103,4 +103,48 @@ test("a long list of cards is cut", () => {
   const many = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"];
   const v = oddsView(odds({ approximate: many }), true, nameOf);
   assert.ok(v.lines.includes("Approximate: C1, C2, C3, C4, C5, C6, +2"));
+});
+
+const duosBoards = (teammate, opponent, second) => [
+  { role: "teammate", seat: 2, round: teammate },
+  { role: "opponent", seat: 5, round: opponent },
+  { role: "opponent_teammate", seat: 6, round: second },
+];
+
+test("Duos odds give the oldest board's age, and each board's in Advanced", () => {
+  I18n.setLang("en");
+  const duo = odds({ seen_round: 4, boards: duosBoards(7, 6, 4) });
+  const simple = oddsView(duo, false, nameOf);
+  assert.equal(simple.age, "oldest board seen turn 4");
+  assert.deepEqual(simple.lines, []);
+  assert.match(simple.about, /your teammate's last board/);
+  const advanced = oddsView(duo, true, nameOf);
+  assert.deepEqual(advanced.lines.slice(2, 5), [
+    "Your teammate's board: seen turn 7",
+    "Their first board: seen turn 6",
+    "Their second board: seen turn 4",
+  ]);
+  // Solo keeps its words.
+  assert.match(oddsView(odds(), false, nameOf).about, /^Simulated from your board now against/);
+});
+
+test("Duos names the boards never seen instead of a number", () => {
+  I18n.setLang("en");
+  const missing = (boards) =>
+    oddsView({ ...odds(), gap: "missing_board", won: 0, tied: 0, lost: 0, trials: 0, boards }, false, nameOf);
+  const v = missing(duosBoards(null, 6, null));
+  assert.equal(v.kind, "note");
+  assert.equal(v.text, "Odds: not seen yet: your teammate's board, their second board");
+  assert.deepEqual(v.shares, []);
+  assert.equal(v.said, v.text);
+  // Nothing named as missing: nothing to say rather than an empty list.
+  assert.equal(missing(duosBoards(7, 6, 4)), null);
+  assert.equal(missing([{ role: "boss", seat: 1, round: null }]), null);
+  I18n.setLang("es");
+  assert.equal(
+    missing(duosBoards(7, null, 4)).text,
+    "Probabilidades: aún no has visto su primer tablero",
+  );
+  assert.equal(oddsView(odds({ seen_round: 4, boards: duosBoards(7, 6, 4) }), false, nameOf).age, "tablero más antiguo visto en el turno 4");
+  I18n.setLang("en");
 });

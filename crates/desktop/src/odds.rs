@@ -2,8 +2,9 @@
 //! the odds should be worked out from; the simulator runs on its own thread,
 //! never the window's, once the boards stop changing for a moment
 //! ([`DEBOUNCE`]) and within a time budget ([`BUDGET`]). A reason for no
-//! odds (Duos, no board seen yet...) is shown at once. While the game shows
-//! the combat, the odds worked out in the shop stay.
+//! odds (no board seen yet...) is shown at once. While the game shows the
+//! combat, the odds worked out in the shop stay. Duos odds (T-608) come the
+//! same way, with the teammate's and both opponents' boards.
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, Sender};
@@ -13,7 +14,7 @@ use std::time::Duration;
 
 use bg_parser::report::Status;
 use tauri::{AppHandle, Emitter, Manager};
-use tracker::odds::{odds_input, run_odds, Gap, LiveOdds, NoOdds, OddsInput};
+use tracker::odds::{odds_input, run_odds, Gap, LiveFacts, LiveOdds, NoOdds, OddsInput};
 use tracker::Watcher;
 
 use crate::overlay::lock;
@@ -91,13 +92,15 @@ pub fn wanted(watcher: &Watcher, on: bool) -> Wanted {
     if report.status != Status::Incomplete {
         return None;
     }
-    Some(odds_input(
-        report,
-        watcher.live_own_board(),
-        watcher.live_next_opponent(),
-        &watcher.live_lobby(),
-        watcher.live_damage_cap(),
-    ))
+    let lobby = watcher.live_lobby();
+    let live = LiveFacts {
+        own_now: watcher.live_own_board(),
+        next: watcher.live_next_opponent(),
+        lobby: &lobby,
+        damage_cap: watcher.live_damage_cap(),
+        fights_first: watcher.live_fights_first(),
+    };
+    Some(odds_input(report, live))
 }
 
 impl Odds {
@@ -214,6 +217,7 @@ mod tests {
         NoOdds {
             gap,
             seat: Some(seat),
+            boards: Vec::new(),
         }
     }
 
@@ -227,16 +231,17 @@ mod tests {
             own_tier: None,
             opponent_tier: None,
             damage_cap: None,
+            duos: None,
         }
     }
 
     #[test]
     fn a_reason_shows_at_once_and_a_run_waits_for_the_thread() {
         assert_eq!(step(&None, None, None), Step::Show(None));
-        let duos = gap(Gap::Duos, 3);
+        let unseen = gap(Gap::NoBoardSeen, 3);
         assert_eq!(
-            step(&Some(Err(duos)), None, None),
-            Step::Show(Some(duos.odds()))
+            step(&Some(Err(unseen.clone())), None, None),
+            Step::Show(Some(unseen.odds()))
         );
         assert_eq!(
             step(&Some(Ok(input(3))), None, None),
@@ -249,7 +254,7 @@ mod tests {
 
     #[test]
     fn odds_for_another_opponent_go_at_once_when_a_new_run_starts() {
-        let mut shown = gap(Gap::Duos, 3).odds();
+        let mut shown = gap(Gap::NoBoardSeen, 3).odds();
         shown.gap = None;
         assert_eq!(
             step(&Some(Ok(input(4))), None, Some(&shown)),

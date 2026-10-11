@@ -52,6 +52,7 @@ const MAX_HERO_MAPS: usize = 64;
 const OLD_GOD: &str = "BACON_GLOBAL_OLD_GOD_DBID";
 /// The next opponent's seat, on the local leaderboard hero (T-313).
 const NEXT_OPPONENT: &str = "NEXT_OPPONENT_PLAYER_ID";
+const FIGHTS_FIRST: &str = "BACON_DUO_PLAYER_FIGHTS_FIRST_NEXT_COMBAT";
 /// The combat damage cap on the game entity, and whether it applies (T-315).
 const DAMAGE_CAP: &str = "BACON_COMBAT_DAMAGE_CAP";
 const DAMAGE_CAP_ON: &str = "BACON_COMBAT_DAMAGE_CAP_ENABLED";
@@ -210,6 +211,28 @@ impl GameReader {
             .then_some(next)
     }
 
+    /// Duos: whether the player's own board fights before their teammate's
+    /// in the next combat (T-608): the local leaderboard hero's
+    /// `BACON_DUO_PLAYER_FIGHTS_FIRST_NEXT_COMBAT`, set each shop turn from
+    /// the second one. On the user's 6 Duos sessions of 2026-10-11 it named
+    /// the team's first board in 74 of 77 combats; the other 3 had an empty
+    /// first board. Live only; `None` when the log has not set it or the
+    /// game could not be read.
+    pub fn fights_first_now(&self) -> Option<bool> {
+        if self.error.is_some() {
+            return None;
+        }
+        let hero = self.collector.own_leaderboard_hero()?;
+        if !hero.has(FIGHTS_FIRST) {
+            return None;
+        }
+        match hero.int(FIGHTS_FIRST) {
+            0 => Some(false),
+            1 => Some(true),
+            _ => None,
+        }
+    }
+
     /// The most damage a lost combat can deal now, which the game shows the
     /// player ("Max damage: 15", T-315): the game entity's
     /// `BACON_COMBAT_DAMAGE_CAP` while `BACON_COMBAT_DAMAGE_CAP_ENABLED` is 1.
@@ -354,6 +377,13 @@ impl LogReader {
     pub fn next_opponent_now(&self) -> Option<i64> {
         self.in_progress_index()?;
         self.current.as_ref()?.next_opponent_now()
+    }
+
+    /// Whether the player fights first in the next Duos combat (see
+    /// [`GameReader::fights_first_now`]); `None` when no such game is on.
+    pub fn fights_first_now(&self) -> Option<bool> {
+        self.in_progress_index()?;
+        self.current.as_ref()?.fights_first_now()
     }
 
     /// The damage cap of the Battlegrounds game in progress (see
