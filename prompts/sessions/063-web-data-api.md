@@ -16,7 +16,7 @@ Work in your worktree **`C:\Users\andia\tavern-ledger\.claude\worktrees\063-web-
 Working rules (user's decisions):
 - Decide technical matters yourself. Ask the user, **through the hub** as well as in your tab: new dependencies, anything that makes more data public than today, production dashboard changes.
 - Never touch production by hand (no SQL editor writes, no dashboard saves). Production changes only through merged migrations (D-031).
-- `gh` is not available in task sessions. When your branch is ready (tests green, all reviews done, no open CRITICAL or HIGH), push it and message the hub (`tavern-ledger-d9`, find it with `ListAgents`, use its `[ref]`) with the branch, the PR title and a short PR body (summary, review results, test plan). The hub opens the PR, waits for CI and merges it.
+- `gh` is not available in task sessions. When your branch is ready (tests green, all reviews done, no open CRITICAL or HIGH), push it and message the hub (`tavern-ledger-2b`, find it with `ListAgents`, use its `[ref]`) with the branch, the PR title and a short PR body (summary, review results, test plan). The hub opens the PR, waits for CI and merges it.
 - **Merging to `main` deploys the migrations and functions.** Afterwards check, and tell the hub: `/auth/v1/settings` still says `disable_signup: true`, functions answer `401` without a token, the validator answers its version (`POST …/functions/v1/upload-game` with the publishable key as `apikey` and bearer gives `405 … "validator": N`), and the new views answer as expected for an anonymous caller (nothing private).
 
 ## Why

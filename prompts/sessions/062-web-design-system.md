@@ -15,7 +15,7 @@ Work in your worktree **`C:\Users\andia\tavern-ledger\.claude\worktrees\062-web-
 
 Working rules (user's decisions):
 - Decide technical matters yourself. Ask the user, **through the hub** as well as in your tab: new dependencies, any change to the CSP.
-- `gh` is not available in task sessions. When your branch is ready (tests green, reviews done, no open CRITICAL or HIGH), push it and message the hub (`tavern-ledger-d9`, find it with `ListAgents`, use its `[ref]`) with the branch, the PR title and a short PR body (summary, review results, test plan). The hub opens the PR, waits for CI and merges it. **Merging to `main` deploys the site:** afterwards check every page answers 200 and the CSP header is unchanged, and tell the hub.
+- `gh` is not available in task sessions. When your branch is ready (tests green, reviews done, no open CRITICAL or HIGH), push it and message the hub (`tavern-ledger-2b`, find it with `ListAgents`, use its `[ref]`) with the branch, the PR title and a short PR body (summary, review results, test plan). The hub opens the PR, waits for CI and merges it. **Merging to `main` deploys the site:** afterwards check every page answers 200 and the CSP header is unchanged, and tell the hub.
 
 ## Why
 
