@@ -80,7 +80,7 @@ where name like '00000000-0000-4000-8000-00000000000a/%';
 set local role service_role;
 select is(
   public.delete_user_data('00000000-0000-4000-8000-00000000000a'),
-  '{"games": 2, "profiles": 1, "auth_events": 2}'::jsonb,
+  '{"game_stats": 0, "games": 2, "profiles": 1, "auth_events": 2}'::jsonb,
   'delete_user_data removes the games, the profile and the auth events'
 );
 reset role;

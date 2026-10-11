@@ -290,6 +290,42 @@ class LocalStackTests(unittest.TestCase):
         self.assertEqual((status, body["code"], body["field"]),
                          (400, "invalid_report", "report.rounds[0].health_after"))
 
+    def test_summary_at_upload_and_backfill_by_the_sweep(self):
+        # T-502 (D-071): the upload writes each game's summary; the sweep
+        # fills the ones missing (games stored before T-502) from the files.
+        uid, _, token = self.make_user()
+        _, _, other = self.make_user()
+        for index, name in enumerate(["b253216_duos", "b253216_solo"], start=1):
+            status, body = self.upload(token, _real_record(name, index), index=index)
+            self.assertEqual((status, body.get("result")), (201, "created"), body)
+        query = f"/rest/v1/game_stats?user_id=eq.{uid}&order=game_index"
+        _, stats = self.api.request("GET", query, token=token)
+        self.assertEqual([s["game_index"] for s in stats], [1, 2])
+        duos = _real_record("b253216_duos", 1)["report"]
+        self.assertEqual(stats[0]["teammate_hero"], duos["teammate_hero"])
+        self.assertEqual(stats[0]["rounds"], len(duos["rounds"]))
+        self.assertIsNone(stats[1]["teammate_hero"], "no teammate in Solo")
+
+        _, overview = self.api.request(
+            "GET", f"/rest/v1/user_overview?user_id=eq.{uid}&order=mode", token=token)
+        self.assertEqual([(o["mode"], o["games"]) for o in overview], [("duos", 1), ("solo", 1)])
+        for view in ("game_stats", "game_summaries", "user_overview", "user_heroes",
+                     "user_records"):
+            _, rows = self.api.request("GET", f"/rest/v1/{view}?user_id=eq.{uid}")
+            self.assertEqual(rows, [], f"anon reads no {view} of a private profile")
+            _, rows = self.api.request("GET", f"/rest/v1/{view}?user_id=eq.{uid}", token=other)
+            self.assertEqual(rows, [], f"another user reads no {view} of a private profile")
+
+        _psql(f"delete from public.game_stats where user_id = '{uid}'")
+        status, body = self.api.secret("POST", "/functions/v1/sweep", body={})
+        self.assertEqual(status, 200, body)
+        self.assertGreaterEqual(body["stats"]["stored"], 2)
+        _, again = self.api.request("GET", query, token=token)
+        drop = ("computed_at",)
+        self.assertEqual([{k: v for k, v in s.items() if k not in drop} for s in again],
+                         [{k: v for k, v in s.items() if k not in drop} for s in stats],
+                         "the sweep makes the same summary as the upload")
+
     def test_upload_limits(self):
         uid, _, token = self.make_user()
         _psql("insert into private.upload_events (user_id, at) select '{u}', now()"
