@@ -327,7 +327,13 @@ class LocalStackTests(unittest.TestCase):
         _psql(f"delete from public.game_stats where user_id = '{uid}'")
         status, body = self.api.secret("POST", "/functions/v1/sweep", body={})
         self.assertEqual(status, 200, body)
-        self.assertGreaterEqual(body["stats"]["stored"], 2)
+        self.assertGreaterEqual(body["stats"]["filled"], 2)
+        # T-524: the run's row holds the same counts as the answer.
+        self.assertEqual(
+            _psql("select result -> 'stats' = '{s}'::jsonb and result ? 'auth_events'"
+                  " and not result ? 'failed_step' from private.sweep_runs"
+                  " where id = {i}".format(s=json.dumps(body["stats"]), i=int(body["run_id"]))),
+            "t", "the sweep records its backfill counts on its run's row")
         _, again = self.api.request("GET", query, token=token)
         drop = ("computed_at",)
         self.assertEqual([{k: v for k, v in s.items() if k not in drop} for s in again],
