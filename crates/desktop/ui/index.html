@@ -189,7 +189,12 @@
       </section>
       <section id="memory-setting" class="settings-group" aria-labelledby="memory-title">
         <h3 id="memory-title" data-i18n="settings.memory.title">Lobby tribes and rating from the game</h3>
-        <p id="memory-state" class="note" data-i18n="settings.memory.later">Not in this version yet. When it comes, it is off until you turn it on here, with what it reads and its risk said first.</p>
+        <p class="note" data-i18n="settings.memory.what">It reads two things the game already shows you, the lobby's five tribes at hero select and your own Battlegrounds rating, straight from the game while it runs. It only reads: it never changes the game, adds code to it or plays for you. The values stay on this PC and are never uploaded.</p>
+        <p class="note memory-risk" data-i18n="settings.memory.risk">The risk: reading the game's memory goes against the letter of Blizzard's End User License Agreement. Other trackers have done it for over ten years with no known bans, but Blizzard could act against it at any time, and the account at risk is yours.</p>
+        <label class="switch"><input id="memory-enabled" type="checkbox"> <span data-i18n="settings.memory.switch">Read the lobby's tribes and your rating from the game</span></label>
+        <p id="memory-status" class="note" role="status"></p>
+        <p id="memory-rating" class="note" hidden></p>
+        <p id="memory-problem" class="problem" role="status"></p>
       </section>
     </section>
 
@@ -280,5 +285,6 @@
   <script src="upload.js"></script>
   <script src="overlay-switch.js"></script>
   <script src="settings.js"></script>
+  <script src="memory-setting.js"></script>
 </body>
 </html>

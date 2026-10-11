@@ -1,6 +1,6 @@
 # Privacy policy
 
-Last updated: 10 October 2026
+Last updated: 11 October 2026
 
 Tavern Ledger is a free, open-source Hearthstone Battlegrounds tracker: a Windows app that reads the game's log files on your PC, and a website where you can keep and, if you want, share your games. This policy says what personal data we handle, why, where it goes and what you can do about it.
 
@@ -15,6 +15,8 @@ Contact for anything about your data: privacy@tavernledger.net.
 ## 2. The desktop app keeps your data on your PC
 
 The app reads the game's log files and saves a summary of each Battlegrounds game in `%APPDATA%\TavernLedger\games.jsonl`: the session's start time, mode, game build, your hero and your Duos teammate's hero, the lobby's heroes by player number, places and health, boards (as card ids), card names in your game's language, tribes offered in the tavern, your own shop each turn (the cards offered, bought and sold, rolls, freezes, gold and tavern tier) and the actions the game recorded you making, with their time since the game started (to work out your actions per minute; together with the game's start time this shows roughly when each action happened), and which parser version read the game. The logs contain the names (BattleTags) of the players in your lobby; the app does not save them.
+
+**Reading from the game (optional, off by default).** If you turn on "Read the lobby's tribes and your rating from the game", the app also reads, read-only, two values the game shows you while it runs: the five tribes of the lobby you are in and your own Battlegrounds rating (Solo and Duos). It reads nothing else from the game: no other players' names, BattleTags, account ids or ratings. These values stay in the app's memory on your PC: they are not saved with your games, not put in the game record and never uploaded. Turning the switch off forgets them.
 
 Unless you turn on uploading, the app sends nothing over the internet and we never receive this file. To export it, copy it; to delete it, delete the `TavernLedger` folder.
 

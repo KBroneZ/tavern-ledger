@@ -25,7 +25,7 @@ const sceneLabel =
 
 <Base
   title="Your Battlegrounds games, kept for you"
-  description="Free, open-source Battlegrounds tracker for Windows that only reads the game's log files, plus a website to follow your progress."
+  description="Free, open-source Battlegrounds tracker for Windows that reads the game's log files, plus a website to follow your progress."
   layout="home"
 >
   <section class="hero" aria-labelledby="hero-heading">
@@ -114,11 +114,13 @@ const sceneLabel =
         <h2 id="safe-heading" class="sec-h">Safe for your account</h2>
         <p class="sec-p">
           It reads the log files the game already writes on your PC and, for the overlay, where
-          your pointer is over the game window.
+          your pointer is over the game window. If you turn it on, it also reads two things the
+          game already shows you, the lobby's tribes and your own rating, from the game's memory,
+          read-only. That is off unless you choose it, and the app says what it risks.
         </p>
       </div>
       <ul role="list">
-        <li>It never reads the game's memory, adds code to it or changes its files.</li>
+        <li>It never changes the game, adds code to it or changes its files.</li>
         <li>It never plays or clicks for you.</li>
         <li>It never shows what you could not see on your own screen.</li>
       </ul>

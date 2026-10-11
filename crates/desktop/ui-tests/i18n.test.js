@@ -83,7 +83,7 @@ test("both pages load the language before any script that draws words", () => {
 test("every tribe, source, keyword, mode and result has its words", () => {
   const tribes = ["ABERRATION", "BEAST", "DEMON", "DRAGON", "ELEMENTAL", "MECHANICAL", "MURLOC", "NAGA", "PIRATE", "QUILBOAR", "UNDEAD", "NEUTRAL", "ALL"];
   tribes.forEach((t) => assert.ok(`tribe.${t}` in tables.en, t));
-  ["log", "inferred", "entered", "leaderboard", "card_data", "possible", "unknown"].forEach((s) => {
+  ["log", "inferred", "entered", "leaderboard", "card_data", "possible", "game", "unknown"].forEach((s) => {
     assert.ok(`source.${s}.label` in tables.en && `source.${s}.description` in tables.en, s);
   });
   ["taunt", "divine_shield", "reborn", "venomous", "windfury", "stealth", "deathrattle", "rally"].forEach((k) => {

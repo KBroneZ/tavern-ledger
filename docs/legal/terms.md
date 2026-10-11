@@ -1,6 +1,6 @@
 # Terms of use
 
-Last updated: 10 October 2026
+Last updated: 11 October 2026
 
 These terms cover the Tavern Ledger website and the accounts on it. The desktop app and its source code are covered by their open-source licence (section 6).
 
@@ -51,7 +51,7 @@ As far as the law allows, we are not liable for indirect losses or for losses ca
 
 ## 9. The game
 
-Tavern Ledger only reads the log files the game writes on your PC. It does not read the game's memory, change game files, inject code or act in the game for you. Your use of Hearthstone stays subject to Blizzard's own terms.
+Tavern Ledger reads the log files the game writes on your PC. If you turn it on (it is off by default), the app also reads two values the game shows you, the lobby's five tribes and your own Battlegrounds rating, from the game's memory while it runs, with read-only access. Reading the game's memory goes against the letter of Blizzard's End User License Agreement; Blizzard has tolerated such reads by other trackers for years, but it could act against them at any time, and the risk to your Battle.net account is yours if you turn this on. Tavern Ledger never changes game files, injects code or acts in the game for you. Your use of Hearthstone stays subject to Blizzard's own terms.
 
 ## 10. Ending
 

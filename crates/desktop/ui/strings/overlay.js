@@ -83,6 +83,7 @@
       "ov.tribes.lobbyAll": "Lobby (all 5 confirmed)",
       "ov.tribes.lobbyPart": "Lobby ({count} of 5 confirmed)",
       "ov.tribes.entered": "You entered",
+      "ov.tribes.lobbyGame": "Lobby",
 
       // Opponents panel.
       "ov.opponents.noLobby": "The log does not show the lobby yet.",
@@ -219,6 +220,7 @@
       "ov.tribes.lobbyAll": "Sala (las 5 confirmadas)",
       "ov.tribes.lobbyPart": "Sala ({count} de 5 confirmadas)",
       "ov.tribes.entered": "Has introducido",
+      "ov.tribes.lobbyGame": "Sala",
 
       "ov.opponents.noLobby": "El registro aún no muestra la sala.",
       "ov.opponents.hint": "Pasa el ratón por un héroe de la clasificación del juego para ver el último tablero que enfrentaste.",

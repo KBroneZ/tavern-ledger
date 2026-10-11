@@ -7,7 +7,7 @@
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 
-const SOURCES = ["log", "inferred", "entered", "leaderboard", "card_data", "possible", "unknown"];
+const SOURCES = ["log", "inferred", "entered", "leaderboard", "card_data", "possible", "game", "unknown"];
 
 let game = null;
 // Where the game client is (T-314, LoadingScreen.log): "battlegrounds_loading"
@@ -130,6 +130,16 @@ function renderTribes(g) {
   // The lobby's tribes the tavern confirmed with the card data (D-050): the
   // log has no list of them.
   const lobby = g.lobby_tribes;
+  // Read from the game (D-063), when the user turned that on.
+  if (lobby && lobby.basis === "game") {
+    const row = el("div", "row");
+    row.append(el("span", "what", TLI18n.t("ov.tribes.lobbyGame")));
+    const gameMark = mark(lobby.source);
+    if (gameMark) row.append(gameMark);
+    row.append(el("div", "tribe-list", lobby.tribes.map(tribeName).join(" · ")));
+    panel.append(row);
+  }
+  if (g.game_tribes && g.game_tribes.note) panel.append(el("p", "notes", TLI18n.backend(g.game_tribes.note)));
   if (lobby && lobby.basis === "tavern_confirmed") {
     const row = el("div", "row");
     row.append(el("span", "what", lobby.complete ? TLI18n.t("ov.tribes.lobbyAll") : TLI18n.t("ov.tribes.lobbyPart", { count: lobby.tribes.length })));

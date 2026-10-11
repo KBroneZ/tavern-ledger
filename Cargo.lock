@@ -600,6 +600,7 @@ name = "desktop"
 version = "0.1.0"
 dependencies = [
  "cards",
+ "game-memory",
  "serde",
  "serde_json",
  "tauri",
@@ -979,6 +980,13 @@ dependencies = [
  "memchr",
  "pin-project-lite",
  "slab",
+]
+
+[[package]]
+name = "game-memory"
+version = "0.1.0"
+dependencies = [
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

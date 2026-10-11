@@ -1,0 +1,26 @@
+[package]
+name = "game-memory"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Read-only reader for two values the game shows the player: the lobby's tribes and the player's own Battlegrounds rating (D-063)"
+
+[dependencies]
+
+# Tries both reads once against the running game (read-only) and prints the
+# result: the check mode for the app's status and for each new game build.
+[[bin]]
+name = "game-memory-check"
+path = "src/check.rs"
+
+# Read and query rights only (D-063): no write, thread or debug features.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_ProcessStatus",
+    "Win32_System_Threading",
+] }

@@ -5,7 +5,9 @@
 //! when we derive it (tribes seen in the tavern, skin grouping D-019),
 //! *entered by you* (the lobby tribes of T-303), *from the leaderboard*
 //! (not in the app yet), *from the card database* (card names and art looked
-//! up by the log's card id, T-304) or *unknown* when there is nothing to show.
+//! up by the log's card id, T-304), *from the game* (read from the game's
+//! memory, read-only, when the user turned that on: D-063) or *unknown* when
+//! there is nothing to show.
 
 use serde::Serialize;
 use serde_json::Value;
@@ -22,18 +24,22 @@ pub enum Source {
     /// A minion an opponent could have, from the lobby's tribes and the card
     /// data's minion pool (T-307). Never seen: only possible.
     Possible,
+    /// Read from the game itself (read-only), only when the user turned it
+    /// on (D-063): the lobby's tribes and the player's own rating.
+    Game,
     #[default]
     Unknown,
 }
 
 impl Source {
-    pub const ALL: [Source; 7] = [
+    pub const ALL: [Source; 8] = [
         Source::Log,
         Source::Inferred,
         Source::Entered,
         Source::Leaderboard,
         Source::CardData,
         Source::Possible,
+        Source::Game,
         Source::Unknown,
     ];
 
@@ -46,6 +52,7 @@ impl Source {
             Source::Leaderboard => "from the leaderboard",
             Source::CardData => "card database",
             Source::Possible => "possible",
+            Source::Game => "from the game",
             Source::Unknown => "unknown",
         }
     }
@@ -66,6 +73,9 @@ impl Source {
             }
             Source::Possible => {
                 "A minion this opponent could have at their tavern tier, from the lobby's tribes and the card data's minion pool. Not seen: they may have none of them."
+            }
+            Source::Game => {
+                "Read from the game while it runs (read-only), because you turned that on. The game shows it on your screen. It stays on this PC."
             }
             Source::Unknown => "Nothing in the log says. It is not zero.",
         }
@@ -153,7 +163,7 @@ mod tests {
     #[test]
     fn every_source_has_a_label_and_a_sentence_for_the_legend() {
         let legend = legend();
-        assert_eq!(legend.len(), 7);
+        assert_eq!(legend.len(), 8);
         let labels: Vec<_> = legend.iter().map(|e| e.label).collect();
         assert_eq!(
             labels,
@@ -164,6 +174,7 @@ mod tests {
                 "from the leaderboard",
                 "card database",
                 "possible",
+                "from the game",
                 "unknown"
             ]
         );

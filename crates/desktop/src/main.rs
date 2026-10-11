@@ -1,9 +1,12 @@
 //! Tavern Ledger desktop app: follows Power.log in the background and shows
-//! the local game history. Only reads the game's log files (D-004).
+//! the local game history. Reads the game's log files (D-004) and, only if
+//! the user turns it on, two values from the game itself, read-only: the
+//! lobby's tribes and the player's own rating (D-063, `game_memory`).
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod card_data;
 mod foreground;
+mod game_memory;
 mod hover;
 mod leaderboard;
 mod overlay;
@@ -132,6 +135,8 @@ struct AppState {
     /// Where the game client is (T-314), for the overlay's start.
     scene: Mutex<Option<Scene>>,
     overlay: overlay::Overlay,
+    /// The switch and the values read from the game (D-063); off by default.
+    game_memory: game_memory::GameMemory,
 }
 
 #[tauri::command]
@@ -229,7 +234,20 @@ fn overlay_state(
     let pool = card_data::pool_cards(&cards);
     let store = card_data::store_with_data(&cards);
     let card_of = |dbf: i64| store.and_then(|s| s.card_of_dbf(dbf));
-    overlay_state_of(&state).map(|live| live.with_possible(&pool).with_trinket_cards(card_of))
+    let shown = overlay_state_of(&state)?.with_possible(&pool);
+    // Tribes from the game that the tavern contradicted stay dropped for the
+    // rest of the game (D-063).
+    if shown.game_tribes.note.is_some() {
+        if let Some(key) = state
+            .in_progress
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+        {
+            state.game_memory.refuse(key);
+        }
+    }
+    Some(shown.with_trinket_cards(card_of))
 }
 
 /// Where the game client is (T-314): the overlay says "game loading" while
@@ -251,8 +269,53 @@ fn overlay_state_of(state: &AppState) -> Option<LiveGame> {
         .unwrap_or_else(|e| e.into_inner())
         .clone();
     let entries = state.entries.lock().unwrap_or_else(|e| e.into_inner());
-    let entered = key.and_then(|key| entries.as_ref()?.entry(&key));
-    Some(live.with_entered_tribes(entered))
+    let entered = key.as_ref().and_then(|key| entries.as_ref()?.entry(key));
+    let (game_tribes, reader) = state.game_memory.tribes_for(key.as_ref());
+    Some(
+        live.with_entered_tribes(entered)
+            .with_game_tribes(game_tribes.as_deref(), reader),
+    )
+}
+
+/// The switch for reading from the game (D-063), its status and the own
+/// rating read, for the settings page.
+#[tauri::command]
+fn game_memory_status(state: State<'_, Arc<AppState>>) -> game_memory::View {
+    state.game_memory.view()
+}
+
+#[tauri::command]
+fn game_memory_set_enabled(state: State<'_, Arc<AppState>>, enabled: bool) -> game_memory::View {
+    // A failed save is in the view's warning; the choice holds for this run.
+    let _ = state.game_memory.set_enabled(enabled);
+    state.game_memory.view()
+}
+
+/// Asks the game for its values when the switch is on (D-063). A bug in the
+/// reader turns it off for this run instead of stopping the tracker.
+fn read_from_game(app: &AppHandle, state: &AppState) {
+    let game = state
+        .in_progress
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone();
+    let scene = *state.scene.lock().unwrap_or_else(|e| e.into_inner());
+    let build = state
+        .live
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .as_ref()
+        .and_then(|live| live.build);
+    let tick = || {
+        state
+            .game_memory
+            .tick(&game_memory::GameReader, game.as_ref(), build, scene)
+    };
+    if catch_unwind(AssertUnwindSafe(tick)).is_err() {
+        state.game_memory.stop_for_run();
+        let msg = "Reading from the game stopped after an internal error; it is off until the app restarts.";
+        set_status(app, state, |s| s.notice = Some(msg.into()));
+    }
 }
 
 /// The lobby tribes entered by hand, the fixed list to pick from and the game
@@ -606,6 +669,7 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
         }
         publish_scene(&app, &state, watcher.scene(), watcher.scene_error());
         track_game_in_progress(&app, &state, &mut starts, watcher.in_progress());
+        read_from_game(&app, &state);
         let session = watcher.session().map(String::from);
         let power_log = watcher.has_power_log();
         match result {
@@ -873,6 +937,8 @@ fn main() {
             upload::upload_sign_out,
             card_data::card_names,
             card_data::card_data_status,
+            game_memory_status,
+            game_memory_set_enabled,
             settings::app_settings,
             settings::app_set_language,
             settings::app_set_system_language,
@@ -890,6 +956,7 @@ fn main() {
             let data_dir =
                 data_dir_from(std::env::args()).unwrap_or_else(tracker::store::default_dir);
             let loaded = state.overlay.load(&data_dir, overlay_dev(std::env::args()));
+            let game_memory_loaded = state.game_memory.load(&data_dir);
             let settings_loaded = app_settings.load(&data_dir);
             card_data::start(app.handle(), &data_dir);
             setup_tray(app)?;
@@ -903,7 +970,12 @@ fn main() {
             if overlay_dev(std::env::args()) && unlock_asked {
                 overlay::set_unlocked(app.handle(), &state, true);
             }
-            if let Some(message) = loaded.err().or(prepared.err()).or(settings_loaded.err()) {
+            if let Some(message) = loaded
+                .err()
+                .or(prepared.err())
+                .or(settings_loaded.err())
+                .or(game_memory_loaded.err())
+            {
                 set_status(app.handle(), &state, |s| s.notice = Some(message));
             }
             // The window starts hidden (tauri.conf.json), so a start-up
