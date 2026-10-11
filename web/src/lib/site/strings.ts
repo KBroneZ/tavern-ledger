@@ -21,7 +21,7 @@ export const SITE_STRINGS = {
   "layout.signin": "Sign in",
   "layout.account": "Account",
   "layout.notice": "Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.",
-  "layout.openSource": "Open source (MIT). Not open to the public yet.",
+  "layout.openSource": "Open source (AGPL-3.0). Not open to the public yet.",
   // The switch names the other language in that language: on an English page "Español".
   "layout.switch": "Español",
   "layout.switch.label": "Leer esta página en español",

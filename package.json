@@ -2,7 +2,7 @@
   "name": "tavern-ledger",
   "private": true,
   "description": "Dev tooling only (Supabase CLI for the local stack).",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "devDependencies": {
     "supabase": "2.118.0"
   }

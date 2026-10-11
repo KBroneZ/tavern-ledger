@@ -36,6 +36,8 @@ Heroes and curious stats (T-505, D-083): from your dashboard or a public profile
 
 Hero names and portraits (T-510 to T-513, D-092): the website now names every hero, skins included, by its base hero's name in the page's language (English, or the game's Spanish on `/es/…`), from a small table built from HearthstoneJSON by `tools/hero_names.py` and kept in the repo; an id it does not know reads "Unknown hero", never the card id. The games list's hero filter lists names, sorted. Hero lists (games, your heroes, the dashboard, community heroes, the hero leaderboard) lead each row with a big portrait. The menu shows "Sign in" or "Account", not both. Games uploaded before the per-game summaries (T-502) got their rounds, combats, triples and APM when the hub ran the sweep by hand on 2026-10-11 (41 of 41 filled).
 
+License (T-529, D-101): the project is now under the GNU Affero General Public License, version 3 only (`AGPL-3.0-only`) instead of MIT. Anyone may use, change and share the code, and whoever shares a changed copy, or runs one for others over a network, must publish its source under the same license; versions published before 12 October 2026 stay available under MIT. Contributions are welcome. CI now checks that every Rust crate and npm package the project uses has a license compatible with it (`tools/check_licenses.py`).
+
 Sweep record (T-524, D-096): each daily sweep now records, next to its clean-up counts, how many game summaries its backfill listed, looked at, filled and left for the next run, and the ones it skipped by reason, or the step it failed at; a run that reported nothing shows as such, never as zero. Last runs, read only in the SQL editor: `select ran_at, result from private.sweep_runs order by ran_at desc limit 10;` (details in [deploy.md](docs/research/deploy.md) section 10.5).
 
 Robustness (session 014): the app and `check_logs.py` check that the game is set up to write a complete log (`log.config` and `client.config`), every saved game records which parser version read it, `tavern-watch --reparse` re-reads old sessions after a parser fix, and a dev tool replays a saved log so the app can be tested without playing.
@@ -281,4 +283,8 @@ CI runs the unit tests, the build and the built-file checks.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+GNU Affero General Public License, version 3 only (`AGPL-3.0-only`). See [LICENSE](LICENSE). You can use, study, change and share the code; if you share a changed version, or run it for others over a network, you share its source under the same license.
+
+Versions published before 12 October 2026 were released under the MIT license and stay available under it (D-101).
+
+Contributions are welcome under the same license. Hearthstone's names, cards and art belong to Blizzard Entertainment and are not covered by this license.
