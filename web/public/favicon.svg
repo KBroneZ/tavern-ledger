@@ -1,1 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs><radialGradient id="g" cx="50%" cy="60%" r="60%"><stop offset="0" stop-color="#ffd08a"/><stop offset=".55" stop-color="#ffb24a"/><stop offset="1" stop-color="#c4701c"/></radialGradient></defs><path d="M10 2h12a7 7 0 0 1 7 7v16a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V9a7 7 0 0 1 7-7z" fill="url(#g)"/><path d="M11 6h10a4.5 4.5 0 0 1 4.5 4.5v14A2.5 2.5 0 0 1 23 27H9a2.5 2.5 0 0 1-2.5-2.5v-14A4.5 4.5 0 0 1 11 6z" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="2"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Tavern Ledger">
+  <!-- Tavern Ledger mark. Hand-drawn SVG (T-522, D-094) traced from an AI-made reference that is not shipped. App icon and favicon at 16 to 32 px; every edge on the 16 px grid. -->
+  <rect width="32" height="32" rx="6" fill="#ffb24a"/>
+  <path fill="#120d0b" d="M2 2H18V6H12V22H8V6H2ZM4 8H6V24H24V28H2V24H4ZM14 8H16V18H22V22H14ZM20 2H22V16H20ZM24 6H28Q30 6 30 8V16Q30 18 28 18H24V16H28V8H24Z"/>
+</svg>
