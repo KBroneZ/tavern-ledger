@@ -107,8 +107,8 @@ test("trend: signed change and whether it is better, for lower-is-better and hig
 });
 
 test("threshold: says how many games are still needed to rank", () => {
-  assert.equal(threshold(12, 20), "Needs 20 games to rank (has 12)");
-  assert.equal(threshold(1, 20), "Needs 20 games to rank (has 1)");
+  assert.equal(threshold(12, 20), "Needs 20 games to be ranked (has 12)");
+  assert.equal(threshold(1, 20), "Needs 20 games to be ranked (has 1)");
   assert.equal(threshold(20, 20), null);
   assert.equal(threshold(31, 20), null);
 });

@@ -16,7 +16,7 @@ export const ES: Record<SiteKey, string> = {
   "layout.signin": "Entrar",
   "layout.account": "Cuenta",
   "layout.notice": "Proyecto no oficial de fans. Sin afiliación con Blizzard Entertainment ni respaldo de esta.",
-  "layout.openSource": "Código abierto (AGPL-3.0). Aún no está abierto al público.",
+  "layout.openSource": "Código abierto (AGPL-3.0). La web aún no está abierta al público.",
   "layout.switch": "English",
   "layout.switch.label": "Read this page in English",
   "layout.socialAlt": "Logotipo de Tavern Ledger, una jarra dibujada con las letras TL, sobre la frase Hearthstone Battlegrounds tracker",
@@ -24,7 +24,7 @@ export const ES: Record<SiteKey, string> = {
   // Page titles and descriptions.
   "meta.index.title": "Tus partidas de Campos de Batalla, guardadas para ti",
   "meta.index.description":
-    "Registro gratuito y de código abierto de Campos de Batalla para Windows que lee los archivos de registro del juego, con una web para seguir tu progreso.",
+    "Registro gratuito y de código abierto para Campos de Batalla en Windows. Lee los archivos de registro del juego y tiene una web para seguir tu progreso.",
   "meta.privacy.title": "Privacidad",
   "meta.privacy.description": "Política de privacidad de Tavern Ledger: qué datos personales tratamos, por qué y cuáles son tus derechos.",
   "meta.terms.title": "Términos",
@@ -32,27 +32,27 @@ export const ES: Record<SiteKey, string> = {
   "meta.me.title": "Tus partidas",
   "meta.me.description": "Tu panel de Tavern Ledger: tus partidas, puestos, héroes y récords.",
   "meta.profile.title": "Perfil de jugador",
-  "meta.profile.description": "Las partidas públicas y las estadísticas de un jugador de Tavern Ledger.",
+  "meta.profile.description": "Las partidas y estadísticas públicas de un jugador de Tavern Ledger.",
   "meta.games.title": "Partidas",
   "meta.games.description": "Las partidas de un jugador de Tavern Ledger, con filtros.",
-  "meta.curious.title": "Estadísticas curiosas",
-  "meta.curious.description": "Los récords y totales curiosos de un jugador de Tavern Ledger, cada uno con las partidas que hay detrás.",
+  "meta.curious.title": "Récords",
+  "meta.curious.description": "Los récords y totales de un jugador de Tavern Ledger, cada uno con las partidas en las que se basa.",
   "meta.playerHeroes.title": "Héroes",
   "meta.playerHeroes.description": "Los héroes de un jugador de Tavern Ledger: partidas, puestos y elecciones por héroe.",
   "meta.heroes.title": "Estadísticas de héroes",
   "meta.heroes.description":
-    "Estadísticas de héroes de Campos de Batalla de la comunidad, de jugadores de Tavern Ledger que decidieron compartir sus partidas: partidas, tasa de elección, puesto medio y tasa de mitad superior. Autodeclaradas, sin mostrar jugadores.",
+    "Estadísticas de héroes de Campos de Batalla con las partidas de los jugadores de Tavern Ledger que deciden compartirlas: partidas, porcentaje de elección, puesto medio y porcentaje de top. Datos enviados por los propios jugadores, sin mostrar a ninguno.",
   "meta.leaderboards.title": "Clasificaciones",
   "meta.leaderboards.description":
     "Clasificaciones públicas de Tavern Ledger: jugadores que hicieron público su perfil, ordenados según las partidas de Campos de Batalla que subieron. Autodeclaradas, sin puntuaciones.",
   "meta.accuracy.title": "Precisión del simulador",
   "meta.accuracy.description":
-    "Cuántas veces aciertan las probabilidades de combate de Tavern Ledger, medido con combates reales de Campos de Batalla: por modo, con la parte de combates sin probabilidades al lado de cada cifra.",
+    "Cuántas veces aciertan las probabilidades de combate de Tavern Ledger, medido con combates reales de Campos de Batalla, por modo y con el porcentaje de combates sin probabilidades al lado de cada cifra.",
   "meta.signin.title": "Iniciar sesión",
   "meta.signin.description": "Inicia sesión o crea una cuenta de Tavern Ledger.",
   "meta.account.title": "Tu cuenta",
   "meta.account.description": "Tu cuenta de Tavern Ledger.",
-  "meta.forgot.title": "Contraseña olvidada",
+  "meta.forgot.title": "¿Has olvidado la contraseña?",
   "meta.forgot.description": "Elige una contraseña nueva para tu cuenta de Tavern Ledger.",
 
   // 404.
@@ -128,8 +128,8 @@ export const ES: Record<SiteKey, string> = {
   "news.title": "Novedades",
   "news.accuracy": "Cuántas veces aciertan las probabilidades de combate del overlay, medido con combates reales.",
   "news.accuracy.link": "Precisión del simulador",
-  "news.heroes": "Estadísticas de héroes de la comunidad. Tus partidas solo cuentan si activas el interruptor de la página de tu cuenta; está desactivado hasta que lo hagas.",
+  "news.heroes": "Estadísticas de héroes de la comunidad. Tus partidas solo cuentan si activas el interruptor en la página de tu cuenta; está desactivado hasta que lo hagas.",
   "news.heroes.link": "Estadísticas de héroes",
-  "news.simulator": "Un simulador de combates en la web: carga un tablero de una de tus partidas, cámbialo y simúlalo.",
+  "news.simulator": "Un simulador de combates en la web: carga un tablero de una de tus partidas, cámbialo y simula el combate.",
   "news.simulator.link": "Simulador",
 };

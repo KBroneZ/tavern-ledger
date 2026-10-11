@@ -238,7 +238,7 @@ test("blocking rows name the card in the page's language, golden marked, id kept
   assert.deepEqual(en.map((r) => r.id), ["BG34_140", "BG34_140_G", "BG99_1"]);
   assert.deepEqual(en.map((r) => r.combats), ["11", "3", "1"]);
   setLang("es");
-  assert.deepEqual(blockingRows(cards, names).map((r) => r.name), ["Aviador experto", "Aviador experto (versión dorada)", "BG99_1"]);
+  assert.deepEqual(blockingRows(cards, names).map((r) => r.name), ["Aviador experto", "Aviador experto (dorado)", "BG99_1"]);
 });
 
 test("the export is not changed by reading it", () => {

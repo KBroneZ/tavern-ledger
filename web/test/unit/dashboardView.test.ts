@@ -47,7 +47,7 @@ test("Simple shows four key tiles; the economy and combats are Advanced only", (
 
 test("the panel has the charts, last games, heroes and records, and links to the games list", () => {
   const html = toHtml(modePanel("solo", dashboard(), opts));
-  for (const part of ["chart-places", "chart-trend", "Last game, Solo", "Heroes, most games first, Solo", "Best values and when they happened, Solo", 'href="/games/?mode=solo"']) {
+  for (const part of ["chart-places", "chart-trend", "Last game (Solo)", "Heroes by games played (Solo)", "Best values and when they were set (Solo)", 'href="/games/?mode=solo"']) {
     assert.ok(html.includes(part), part);
   }
 });
@@ -73,7 +73,7 @@ test("no records and no heroes say so instead of an empty table", () => {
 test("the charts say when they count only the latest games", () => {
   const dash = dashboard();
   const big = { ...dash, modes: { ...dash.modes, solo: { ...dash.modes.solo, total: 5000 } } };
-  assert.match(textOf(modePanel("solo", big, opts)), /count the last 1000 games/);
+  assert.match(textOf(modePanel("solo", big, opts)), /cover the last 1000 games/);
   assert.doesNotMatch(textOf(modePanel("solo", dash, opts)), /count the last/);
 });
 
@@ -100,7 +100,7 @@ test("games list: no match, a page past the end and filters left out each say so
   assert.match(past, /No games on this page/);
   assert.ok(past.includes(`href="/games/?id=${ID}"`));
   const bad = listBody(listPage({ invalid: ["hero", "from", "from"] })).map(textOf).join(" ");
-  assert.match(bad, /not valid: hero, from\./);
+  assert.match(bad, /were ignored: hero, from\./);
 });
 
 test("games list: one game on the page reads as one game", () => {
