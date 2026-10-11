@@ -13,4 +13,4 @@ pub mod store;
 mod store_tests;
 
 pub use catalog::valid_id;
-pub use store::{CardStatus, CardStore};
+pub use store::{CardStatus, CardStore, Locale};

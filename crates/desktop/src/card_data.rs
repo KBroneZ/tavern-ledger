@@ -2,16 +2,21 @@
 //! fetches and caches them from HearthstoneJSON; this file gives the pages
 //! the names (a command) and the images (the `cardart` protocol, so an
 //! `<img>` can show a cached JPEG). Anything missing shows the card id.
+//!
+//! Names follow the app's language (session 057): the English card data
+//! always (the app's logic, the pool and the art rely on it), and the
+//! Spanish one, fetched and kept only once a page asks for Spanish names.
+//! A name the Spanish data lacks comes from the English data.
 
 use std::collections::BTreeMap;
 use std::path::Path;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use cards::net::ReqwestFetch;
-use cards::{valid_id, CardStatus, CardStore};
+use cards::{valid_id, CardStatus, CardStore, Locale};
 use tauri::http::{header, Method, Request, Response, StatusCode};
 use tauri::{AppHandle, Emitter, Manager, Runtime, State, UriSchemeContext, UriSchemeResponder};
 
@@ -32,6 +37,10 @@ static IN_FLIGHT: AtomicUsize = AtomicUsize::new(0);
 #[derive(Default)]
 pub struct Cards {
     store: OnceLock<Arc<CardStore>>,
+    /// The Spanish names (`card-cache/esES`).
+    spanish: OnceLock<Arc<CardStore>>,
+    /// A page asked for Spanish names: the worker keeps that data current.
+    wants_spanish: Arc<AtomicBool>,
     /// Why there are no names or art at all (the HTTPS client did not start).
     off: OnceLock<String>,
 }
@@ -57,14 +66,28 @@ pub fn start(app: &AppHandle, data_dir: &Path) {
     };
     let store = Arc::new(CardStore::open(
         data_dir.join("card-cache"),
-        Box::new(fetch),
+        Box::new(fetch.clone()),
     ));
     let _ = cards.store.set(store.clone());
+    let spanish = Arc::new(CardStore::open_locale(
+        data_dir.join("card-cache").join(Locale::EsEs.code()),
+        Box::new(fetch),
+        Locale::EsEs,
+    ));
+    let _ = cards.spanish.set(spanish.clone());
+    // Kept from an earlier start in Spanish: kept current too.
+    if spanish.has_data() {
+        cards.wants_spanish.store(true, Ordering::SeqCst);
+    }
+    let wants_spanish = cards.wants_spanish.clone();
     let app = app.clone();
     thread::spawn(move || {
         let mut shown = store.status();
         loop {
-            let changed = store.refresh_if_due(now());
+            let mut changed = store.refresh_if_due(now());
+            if wants_spanish.load(Ordering::SeqCst) {
+                changed |= spanish.refresh_if_due(now());
+            }
             let status = store.status();
             if changed || status != shown {
                 shown = status;
@@ -76,16 +99,29 @@ pub fn start(app: &AppHandle, data_dir: &Path) {
 }
 
 /// Names for the ids asked, null for each one the card data does not know.
+/// `local` is the card data in the app's language (None for English): its
+/// name first, the English one when it lacks the id or has no data yet.
 /// Ids that are not plain card ids are left out, and so is every id while
 /// there is no card data yet: "not known yet" is not "unknown".
-pub fn names_of(store: Option<&CardStore>, ids: &[String]) -> BTreeMap<String, Option<String>> {
-    let Some(store) = store.filter(|s| s.has_data()) else {
+pub fn names_of(
+    english: Option<&CardStore>,
+    local: Option<&CardStore>,
+    ids: &[String],
+) -> BTreeMap<String, Option<String>> {
+    let english = english.filter(|s| s.has_data());
+    let local = local.filter(|s| s.has_data());
+    if english.is_none() && local.is_none() {
         return BTreeMap::new();
-    };
+    }
     ids.iter()
         .filter(|id| valid_id(id))
         .take(MAX_IDS)
-        .map(|id| (id.clone(), store.name(id)))
+        .map(|id| {
+            let name = local
+                .and_then(|s| s.name(id))
+                .or_else(|| english.and_then(|s| s.name(id)));
+            (id.clone(), name)
+        })
         .collect()
 }
 
@@ -127,9 +163,23 @@ pub fn store_with_data(cards: &Cards) -> Option<&CardStore> {
         .filter(|store| store.has_data())
 }
 
+/// `lang` is the app's language as the pages name it ("en", "es"); any
+/// other value is English.
 #[tauri::command]
-pub fn card_names(cards: State<'_, Cards>, ids: Vec<String>) -> BTreeMap<String, Option<String>> {
-    names_of(cards.store.get().map(Arc::as_ref), &ids)
+pub fn card_names(
+    cards: State<'_, Cards>,
+    ids: Vec<String>,
+    lang: Option<String>,
+) -> BTreeMap<String, Option<String>> {
+    let english = cards.store.get().map(Arc::as_ref);
+    let local = match lang.as_deref() {
+        Some("es") => {
+            cards.wants_spanish.store(true, Ordering::SeqCst);
+            cards.spanish.get().map(Arc::as_ref)
+        }
+        _ => None,
+    };
+    names_of(english, local, &ids)
 }
 
 #[tauri::command]
@@ -249,7 +299,7 @@ mod tests {
     fn without_card_data_no_name_is_answered_yet() {
         let ids: Vec<String> = ["CARD_1", "CARD_2"].map(String::from).to_vec();
         assert!(
-            names_of(None, &ids).is_empty(),
+            names_of(None, None, &ids).is_empty(),
             "not known yet, not unknown"
         );
     }
@@ -262,13 +312,46 @@ mod tests {
         }
     }
 
-    /// A store whose saved card data is 1000 made-up cards `C_0` … `C_999`.
+    #[test]
+    fn names_follow_the_language_with_english_for_what_it_lacks() {
+        let english = store_with_data("en");
+        let spanish = store_named("es", |i| {
+            (!(600..800).contains(&i)).then(|| format!("Carta {i}"))
+        });
+        let ids: Vec<String> = ["C_1", "C_700", "NOT_A_CARD"].map(String::from).to_vec();
+        let names = names_of(Some(&english), Some(&spanish), &ids);
+        assert_eq!(names["C_1"].as_deref(), Some("Carta 1"));
+        assert_eq!(
+            names["C_700"].as_deref(),
+            Some("Card 700"),
+            "English fallback"
+        );
+        assert_eq!(names["NOT_A_CARD"], None);
+        // Spanish data not on the PC yet: English names meanwhile.
+        let empty = CardStore::open(std::env::temp_dir().join("tl-none-x"), Box::new(NoNetwork));
+        let names = names_of(Some(&english), Some(&empty), &ids);
+        assert_eq!(names["C_1"].as_deref(), Some("Card 1"));
+        // No English data but the Spanish one: Spanish names.
+        let names = names_of(None, Some(&spanish), &ids);
+        assert_eq!(
+            (names["C_1"].as_deref(), names["C_700"].as_deref()),
+            (Some("Carta 1"), None)
+        );
+    }
+
+    /// A store whose saved card data is 1200 made-up cards `C_0` … `C_1199`.
     fn store_with_data(name: &str) -> CardStore {
+        store_named(name, |i| Some(format!("Card {i}")))
+    }
+
+    /// Made-up cards `C_0` … `C_1199`; `named` names each one (None leaves
+    /// it out of the data, which needs 1000 cards at least).
+    fn store_named(name: &str, named: impl Fn(usize) -> Option<String>) -> CardStore {
         let dir = std::env::temp_dir().join(format!("tl-desktop-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        let cards: Vec<_> = (0..1000)
-            .map(|i| serde_json::json!({"id": format!("C_{i}"), "name": format!("Card {i}")}))
+        let cards: Vec<_> = (0..1200)
+            .filter_map(|i| Some(serde_json::json!({"id": format!("C_{i}"), "name": named(i)?})))
             .collect();
         let catalog =
             cards::catalog::Catalog::from_hearthstonejson(&serde_json::to_vec(&cards).unwrap())
@@ -286,12 +369,12 @@ mod tests {
     fn names_are_answered_with_null_for_unknown_ids_and_bad_ids_dropped() {
         let store = store_with_data("names");
         let ids: Vec<String> = ["C_1", "../x", "NOT_A_CARD"].map(String::from).to_vec();
-        let names = names_of(Some(&store), &ids);
+        let names = names_of(Some(&store), None, &ids);
         assert_eq!(names.len(), 2);
         assert_eq!(names["C_1"].as_deref(), Some("Card 1"));
         assert_eq!(names["NOT_A_CARD"], None);
         let many: Vec<String> = (0..500).map(|i| format!("C_{i}")).collect();
-        assert_eq!(names_of(Some(&store), &many).len(), MAX_IDS);
+        assert_eq!(names_of(Some(&store), None, &many).len(), MAX_IDS);
     }
 
     #[test]

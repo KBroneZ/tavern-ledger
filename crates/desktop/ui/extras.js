@@ -27,9 +27,12 @@
     return { text, source: inferred ? "inferred" : log ? "log" : "unknown" };
   }
 
-  // The log's name, else the card data's (English), else the card id.
-  const cardName = (id) => (typeof window !== "undefined" && window.TLCards ? window.TLCards.name(id) : null);
-  const heroWords = (h) => (h && (h.name || cardName(h.id) || h.id)) || t("extras.hero.unknown");
+  // The card data's name in the app's language, else the log's, else the
+  // card id (cards.js; without it, as in the tests, the log's).
+  const cards = () => (typeof window !== "undefined" && window.TLCards) || null;
+  const shown = (id, logName) => (cards() ? cards().display(id, logName) : logName || id);
+  const fromCardData = (id) => Boolean(cards()) && typeof cards().name(id) === "string";
+  const heroWords = (h) => (h && shown(h.id, h.name)) || t("extras.hero.unknown");
 
   // The hero pick of one game, worded; `empty` is set when there is none to show.
   function heroPick(pick) {
@@ -40,52 +43,70 @@
     const pickedId = pick.picked && pick.picked.id;
     return {
       empty: null,
-      offered: pick.offered.map((h) => ({ id: h.id, text: heroWords(h), named: Boolean(h.name), picked: h.id === pickedId })),
+      offered: pick.offered.map((h) => ({ id: h.id, text: heroWords(h), named: fromCardData(h.id), picked: h.id === pickedId })),
       rerolls: pick.rerolls === 0 ? t("extras.pick.no_reroll") : I18n.plural("extras.pick.rerolls", pick.rerolls),
       picked: pick.picked ? heroWords(pick.picked) : t("extras.pick.unsaid"),
       pickedSource: pick.picked ? "log" : "unknown",
     };
   }
 
-  // The gold and free-roll extras of one game's shop (parser revision 4). A
-  // value the record lacks says "not recorded" (an older game) or "not every
-  // turn" (the log lacks it for a turn), never 0. `turns` tells the two apart.
-  function shopExtras(totals, isDuos, turns) {
-    if (!totals) return [];
-    const kept = (key) => Array.isArray(turns) && turns.some((t) => known(t[key]));
-    const fact = (label, value, tip, key) => {
-      if (known(value)) return { label, value: I18n.num(value), source: "log", tip };
-      const partial = Boolean(key) && kept(key);
-      return { label, value: partial ? t("extras.incomplete") : t("extras.not_recorded"), source: "unknown", tip: partial ? t("extras.incomplete_tip") : tip };
+  // A number summed over a game's turns (tracker::shop::TurnSum): the sum of
+  // the turns that have it, and "10 of 11 turns" when some turn lacks it. A
+  // turn without it is left out, never counted as 0; with no turn at all it
+  // is "no data".
+  function turnSum(sum, tip) {
+    if (!sum) return { value: t("extras.no_data"), sub: null, source: "unknown", tip: t("extras.no_data_tip") };
+    const partial = sum.turns < sum.of;
+    const left = partial ? t("extras.turns_of_tip", { turns: I18n.num(sum.turns), missing: I18n.num(sum.of - sum.turns) }) : null;
+    return {
+      value: I18n.num(sum.value),
+      sub: partial ? t("extras.turns_of", { turns: I18n.num(sum.turns), of: I18n.num(sum.of) }) : null,
+      source: "log",
+      tip: [tip, left].filter(Boolean).join(" ") || null,
     };
+  }
+
+  // The gold and free-roll extras of one game's shop (parser revision 4),
+  // each over the turns that have it (turnSum).
+  function shopExtras(totals, isDuos) {
+    if (!totals) return [];
+    const fact = (label, sum, tip) => ({ label, ...turnSum(sum, tip) });
     const facts = [
-      fact(t("extras.gold.extra"), totals.extra_gold, t("extras.gold.extra.tip"), "extra_gold"),
-      fact(t("extras.gold.sell"), totals.sell_gold, null, "sell_gold"),
-      fact(t("extras.gold.beyond"), totals.gold_beyond_income, t("extras.gold.beyond.tip"), "extra_gold"),
-      fact(t("extras.gold.buy"), totals.buy_gold, totals.buys ? I18n.plural("extras.minions_bought", totals.buys) : null, "buy_gold"),
-      fact(t("extras.gold.spell"), totals.spell_gold, null, "spell_gold"),
-      fact(t("extras.free.given"), totals.free_refreshes, t("extras.free.given.tip"), "free_refreshes"),
+      fact(t("extras.gold.extra"), totals.extra_gold, t("extras.gold.extra.tip")),
+      fact(t("extras.gold.sell"), totals.sell_gold, null),
+      fact(t("extras.gold.beyond"), totals.gold_beyond_income, t("extras.gold.beyond.tip")),
+      fact(t("extras.gold.buy"), totals.buy_gold, totals.buys ? I18n.plural("extras.minions_bought", totals.buys) : null),
+      fact(t("extras.gold.spell"), totals.spell_gold, null),
+      fact(t("extras.free.given"), totals.free_refreshes, t("extras.free.given.tip")),
     ];
-    if (isDuos) facts.push(fact(t("extras.passes"), totals.passes, null, "passes"));
+    if (isDuos) facts.push(fact(t("extras.passes"), totals.passes, null));
     return facts;
+  }
+
+  // "Average over 4 games with this record.", and how many of their turns
+  // back it when some turn lacks it.
+  function averageTip(games, turns) {
+    if (!games) return t("extras.avg_none");
+    const over = I18n.plural("extras.avg_over", games);
+    if (!turns || turns.known >= turns.of) return over;
+    return `${over} ${t("extras.avg_turns", { turns: I18n.num(turns.known), of: I18n.num(turns.of) })}`;
   }
 
   // The extras averaged per game in the stats, each with the games it covers.
   function shopExtraStats(s) {
     if (!s) return [];
-    const over = (n) => (n ? I18n.plural("extras.avg_over", n) : t("extras.avg_none"));
-    const avg = (label, value, games) => ({
+    const avg = (label, value, games, turns) => ({
       label,
       value: games ? one(value) : t("extras.not_recorded"),
       source: games && known(value) ? "log" : "unknown",
-      tip: over(games),
+      tip: averageTip(games, turns),
     });
     return [
-      avg(t("extras.avg.extra"), s.extra_gold, s.extras_games),
-      avg(t("extras.avg.sell"), s.sell_gold, s.extras_games),
-      avg(t("extras.avg.beyond"), s.gold_beyond_income, s.extras_games),
+      avg(t("extras.avg.extra"), s.extra_gold, s.extras_games, s.extras_turns),
+      avg(t("extras.avg.sell"), s.sell_gold, s.extras_games, s.extras_turns),
+      avg(t("extras.avg.beyond"), s.gold_beyond_income, s.extras_games, s.extras_turns),
       avg(t("extras.avg.free"), s.free_refreshes, s.free_refresh_games),
-      avg(t("extras.avg.passes"), s.passes, s.extras_games),
+      avg(t("extras.avg.passes"), s.passes, s.pass_games),
     ];
   }
 
@@ -96,7 +117,7 @@
     if (!picks) return { rows: [], note: "", empty: t("extras.picks.empty") };
     const rows = picks.heroes.map((h) => ({
       hero: h.hero,
-      text: h.name || h.hero,
+      text: shown(h.hero, h.name),
       offered: I18n.num(h.offered),
       picked: I18n.num(h.picked),
       rate: percent(h.pick_rate),
@@ -124,6 +145,7 @@
       const dd = ui.el("dd", null, f.value);
       if (f.tip) dd.title = f.tip;
       item.append(ui.el("dt", null, f.label), ui.withSource(dd, f.source));
+      if (f.sub) item.append(ui.el("dd", "fact-sub", f.sub));
       return item;
     }));
     return dl;
@@ -151,18 +173,9 @@
       if (h.picked) li.append(ui.el("span", "pick-tag", t("extras.pick.tag")));
       li.title = h.id;
       ui.addTip(li, "log");
-      // Named by the card data when the log does not name it; named later if
-      // the card data answers after this is drawn.
-      if (!h.named && window.TLCards) {
-        if (label.textContent !== h.id) ui.addTip(li, "card_data");
-        else window.TLCards.onChange(() => {
-          const name = li.isConnected && window.TLCards.name(h.id);
-          if (name && label.textContent === h.id) {
-            label.textContent = name;
-            ui.addTip(li, "card_data");
-          }
-        });
-      }
+      // Named by the card data in the app's language (the recap is drawn
+      // again when the card data answers).
+      if (h.named) ui.addTip(li, "card_data");
       return li;
     }));
     section.append(list, factList(ui, [
@@ -206,7 +219,7 @@
   const api = {
     // The words for "not recorded", in the language now in use.
     get NOT_RECORDED() { return t("extras.not_recorded"); },
-    resultsLine, heroPick, shopExtras, shopExtraStats, heroPickStats,
+    resultsLine, heroPick, turnSum, shopExtras, averageTip, shopExtraStats, heroPickStats,
     factList, heroPickSection, heroPickTable,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;

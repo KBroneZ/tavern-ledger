@@ -121,14 +121,14 @@ function art(id, className) {
 // (T-304); none when there is no id.
 const portrait = (id) => art(id, "portrait");
 
-// Hero name as the game's log printed it (in the game's language); the card
-// id when the log gave none. Never a guessed name.
+// Hero name in the app's language from the card data, else as the game's log
+// printed it (in the game's language), else the card id. Never a guessed name.
 function heroCell(report, source) {
   const id = typeof report.hero === "string" ? report.hero : null;
   const names = report.card_names && typeof report.card_names === "object" ? report.card_names : {};
-  const name = id && typeof names[id] === "string" ? names[id] : null;
-  const cell = el("td", "hero", name || id || "—");
-  if (name) cell.title = id;
+  const name = id ? TLCards.display(id, typeof names[id] === "string" ? names[id] : null) : null;
+  const cell = el("td", "hero", name || "—");
+  if (name && name !== id) cell.title = id;
   const img = portrait(id);
   if (img) cell.prepend(img);
   return withSource(cell, source);
@@ -235,7 +235,8 @@ function renderTally(m, devGames) {
 
 function heroRow(h, top) {
   const tr = el("tr");
-  const cell = el("td", h.name ? "hero-name" : "hero", h.name || h.hero || tl("win.hero.unknown"));
+  const shown = h.hero ? TLCards.display(h.hero, h.name) : h.name;
+  const cell = el("td", shown && shown !== h.hero ? "hero-name" : "hero", shown || tl("win.hero.unknown"));
   if (h.variants.length) cell.title = h.variants.join("\n");
   const img = portrait(h.hero);
   if (img) cell.prepend(img);
@@ -481,7 +482,7 @@ document.getElementById("tribes-form").addEventListener("submit", (e) => e.preve
 // The stats' long tables (T-323): top rows by games, ties broken by the better
 // average place and then the name, "Show all" for the rest (compact.js).
 function heroesTable(m) {
-  const name = (h) => h.name || h.hero || "";
+  const name = (h) => (h.hero ? TLCards.display(h.hero, h.name) : h.name) || "";
   const rows = TLCompact.rank(m.heroes, { games: (h) => h.tally.games, place: (h) => h.tally.average_place, name });
   const columns = [
     { label: tl("win.col.hero"), sort: name, text: true },
@@ -616,6 +617,8 @@ document.getElementById("report-dialog").addEventListener("close", () => { repor
 // including every source label; this file only draws it. Opponents are heroes
 // and seats of this one game, never names.
 let recapGame = null;
+// The recap on screen, drawn again (focus kept) when card names arrive.
+let recapShown = null;
 const OUTCOMES = ["won", "lost", "tie", "unknown"];
 const outcomeWord = (outcome) => tl(`outcome.${OUTCOMES.includes(outcome) ? outcome : "unknown"}`);
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -629,7 +632,7 @@ function recapButton(game) {
   return button;
 }
 
-const heroText = (hero) => (hero && (hero.name || hero.id)) || "—";
+const heroText = (hero) => (hero && TLCards.display(hero.id, hero.name)) || "—";
 
 // The hero's name with its portrait in front, when there is one.
 function heroWithPortrait(hero) {
@@ -911,7 +914,7 @@ const recapView = TLRecapView.create({
   heading: document.getElementById("recap-title"),
   hide: [document.getElementById("masthead"), document.getElementById("home")],
   blocked: () => Boolean(document.querySelector("dialog[open]")),
-  onClose: () => { recapGame = null; },
+  onClose: () => { recapGame = null; recapShown = null; },
 });
 
 // Loads (or reloads) the recap of `game`; opens the view if it is not open.
@@ -928,7 +931,10 @@ async function openRecap(game) {
   recapView.open(`recap:${target.session}:${target.index}`);
   try {
     const recap = await invoke("game_recap", target);
-    if (recapGame === target) renderRecap(recap, target);
+    if (recapGame === target) {
+      recapShown = { recap, target };
+      renderRecap(recap, target);
+    }
   } catch (err) {
     if (recapGame === target) showReportMessage("recap-error", TLI18n.backend(String(err)));
   }
@@ -1063,6 +1069,8 @@ async function main() {
   TLCards.onChange(() => {
     renderCardStatus();
     render();
+    // Names in an open recap follow too (the card data answered or changed).
+    if (recapShown && recapGame === recapShown.target && recapView.isOpen()) renderRecap(recapShown.recap, recapShown.target);
   });
   await listen("games-changed", () => refreshGames().catch(showError));
   const showStatus = (s) => { renderStatus(s); renderSetup(s); };

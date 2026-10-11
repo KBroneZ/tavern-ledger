@@ -1,5 +1,6 @@
 //! What the user can change in the overlay (T-302): where each panel is and
-//! how big, which panels show, the theme and the opacity. Pure data and
+//! how big, which panels show, the theme, the opacity and how much detail it
+//! shows (T-333). Pure data and
 //! rules, no window code, so every rule here has a test.
 //!
 //! Positions are in logical pixels of the overlay window, which covers the
@@ -146,6 +147,18 @@ pub enum Theme {
 }
 
 pub const THEMES: [Theme; 2] = [Theme::Glass, Theme::Contrast];
+
+/// How much the overlay shows (T-333, D-067). Simple is for most players:
+/// the board, hero, tier, health, triples and the marks that keep a guess
+/// from passing as seen. Advanced adds keyword letters, trinket names, the
+/// minions an opponent could have and every source word.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Detail {
+    #[default]
+    Simple,
+    Advanced,
+}
 
 type Rgb = (u8, u8, u8);
 
@@ -313,6 +326,7 @@ pub struct Settings {
     pub enabled: bool,
     pub theme: Theme,
     pub opacity: f64,
+    pub detail: Detail,
     pub hidden: BTreeSet<Panel>,
     /// One layout per screen resolution, by `resolution_key`.
     pub layouts: BTreeMap<String, Layout>,
@@ -331,6 +345,7 @@ impl Default for Settings {
             enabled: false,
             theme: Theme::default(),
             opacity: DEFAULT_OPACITY,
+            detail: Detail::default(),
             hidden: BTreeSet::new(),
             layouts: BTreeMap::new(),
             last_resolution: None,
@@ -784,5 +799,26 @@ mod tests {
                 .fold(f64::MAX, f64::min);
             assert!(worst >= 7.0, "{name}: {worst:.2}");
         }
+    }
+
+    #[test]
+    fn detail_starts_simple_and_is_kept() {
+        assert_eq!(Settings::default().detail, Detail::Simple);
+        let old = Settings::parse(r#"{"enabled":true,"theme":"glass","opacity":0.9}"#).unwrap();
+        assert_eq!(
+            old.detail,
+            Detail::Simple,
+            "a file from before keeps working"
+        );
+        let s = Settings {
+            detail: Detail::Advanced,
+            ..Settings::default()
+        };
+        let back = Settings::parse(&s.to_text().unwrap()).unwrap();
+        assert_eq!(back.detail, Detail::Advanced);
+        assert!(
+            Settings::parse(r#"{"detail":"expert"}"#).is_err(),
+            "unknown words are refused"
+        );
     }
 }
