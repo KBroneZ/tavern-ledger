@@ -8,7 +8,6 @@ import {
   deleteAccount,
   exportAll,
   finishAuthLink,
-  loadPublicProfile,
   makeClient,
   requestPasswordReset,
   saveProfile,
@@ -65,57 +64,6 @@ function rows(list: unknown[]): Route {
 }
 
 const client = () => makeClient(CONFIG, memoryStorage());
-
-// --- loadPublicProfile ---
-
-test("public profile: no public row is not-found, and games are not asked for", async () => {
-  const seen = stubFetch({ "/rest/v1/profiles": rows([]) });
-  assert.deepEqual(await loadPublicProfile(client(), USER), { kind: "not-found" });
-  assert.deepEqual(seen, ["GET /rest/v1/profiles"]);
-});
-
-test("public profile: the query asks for public profiles only", async () => {
-  let query = "";
-  stubFetch({
-    "/rest/v1/profiles": (url, init) => {
-      query = url.search;
-      return rows([])(url, init);
-    },
-  });
-  await loadPublicProfile(client(), USER);
-  assert.match(decodeURIComponent(query), /is_public=eq\.true/);
-  assert.match(decodeURIComponent(query), new RegExp(`user_id=eq\\.${USER}`));
-});
-
-test("public profile: name and games through gameView", async () => {
-  stubFetch({
-    "/rest/v1/profiles": rows([{ display_name: "Keeper" }]),
-    "/rest/v1/games": rows([
-      { game_type: "GT_BATTLEGROUNDS", status: "ok", hero_card_id: "BG20_HERO_202", final_place: 1, played_on: "2026-10-09" },
-      { game_type: "GT_BATTLEGROUNDS_DUO", status: "incomplete", hero_card_id: null, final_place: null, played_on: "2026-10-08" },
-    ]),
-  });
-  assert.deepEqual(await loadPublicProfile(client(), USER), {
-    kind: "found",
-    name: "Keeper",
-    games: [
-      { date: "2026-10-09", mode: "Solo", hero: "BG20_HERO_202", place: "1st" },
-      { date: "2026-10-08", mode: "Duos", hero: "unknown", place: "unfinished" },
-    ],
-  });
-});
-
-test("public profile: server and network errors are errors, not not-found", async () => {
-  stubFetch({ "/rest/v1/profiles": () => json({ message: "boom" }, 500) });
-  assert.deepEqual(await loadPublicProfile(client(), USER), { kind: "error" });
-  stubFetch({
-    "/rest/v1/profiles": rows([{ display_name: null }]),
-    "/rest/v1/games": () => json({ message: "boom" }, 500),
-  });
-  assert.deepEqual(await loadPublicProfile(client(), USER), { kind: "error" });
-  globalThis.fetch = (() => Promise.reject(new TypeError("offline"))) as typeof fetch;
-  assert.deepEqual(await loadPublicProfile(client(), USER), { kind: "error" });
-});
 
 // --- saveProfile ---
 

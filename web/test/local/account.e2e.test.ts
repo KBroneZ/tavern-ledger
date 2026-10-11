@@ -22,7 +22,6 @@ import {
   exportAll,
   finishAuthLink,
   loadOwnProfile,
-  loadPublicProfile,
   makeClient,
   requestPasswordReset,
   saveProfile,
@@ -34,6 +33,8 @@ import { CHECK_EMAIL, RESET_SENT } from "../../src/lib/auth.ts";
 import { parseAuthLink } from "../../src/lib/authLink.ts";
 import type { SiteConfig } from "../../src/lib/config.ts";
 import { deleteOutcome } from "../../src/lib/deleteAccount.ts";
+import { loadGames, profileAccess } from "../../src/lib/dataApi.ts";
+import { DEFAULT_FILTERS } from "../../src/lib/data/filters.ts";
 
 const ENABLED = process.env.TAVERN_SUPABASE_LOCAL === "1";
 const REPO = join(import.meta.dirname, "..", "..", "..");
@@ -219,7 +220,7 @@ describe("website account flow on the local stack", { skip: !ENABLED && "set TAV
 
   test("a new profile is private and has no name", async () => {
     assert.deepEqual(await loadOwnProfile(client, userId), { displayName: null, isPublic: false });
-    assert.deepEqual(await loadPublicProfile(makeClient(config, memoryStorage()), userId), { kind: "not-found" });
+    assert.deepEqual(await profileAccess(makeClient(config, memoryStorage()), userId, null), { kind: "private" });
   });
 
   test("a BattleTag-shaped name is refused by the database", async () => {
@@ -255,19 +256,18 @@ describe("website account flow on the local stack", { skip: !ENABLED && "set TAV
 
     assert.equal(await saveProfile(client, userId, { displayName: "Web E2E Tester", isPublic: true }), null);
     const anon = makeClient(config, memoryStorage());
-    assert.deepEqual(await loadPublicProfile(anon, userId), {
-      kind: "found",
-      name: "Web E2E Tester",
-      games: [{ date: "2026-10-09", mode: "Duos", hero: "BG20_HERO_202", place: "2nd" }],
-    });
+    assert.deepEqual(await profileAccess(anon, userId, null), { kind: "public", name: "Web E2E Tester", own: false });
+    const { rows, total } = await loadGames(anon, userId, DEFAULT_FILTERS);
+    assert.equal(total, 1);
+    assert.deepEqual([rows[0].playedOn, rows[0].mode, rows[0].hero, rows[0].place], ["2026-10-09", "duos", "BG20_HERO_202", 2]);
   });
 
   test("a private profile and a missing one give the same answer", async () => {
     assert.equal(await saveProfile(client, userId, { displayName: "Web E2E Tester", isPublic: false }), null);
     const anon = makeClient(config, memoryStorage());
-    const hidden = await loadPublicProfile(anon, userId);
-    const missing = await loadPublicProfile(anon, randomUUID());
-    assert.deepEqual(hidden, { kind: "not-found" });
+    const hidden = await profileAccess(anon, userId, null);
+    const missing = await profileAccess(anon, randomUUID(), null);
+    assert.deepEqual(hidden, { kind: "private" });
     assert.deepEqual(missing, hidden);
   });
 

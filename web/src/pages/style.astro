@@ -8,7 +8,7 @@ import { scriptsAllowed } from "../lib/config.ts";
 import { average, backing, compact, share, threshold, trend } from "../lib/data/format.ts";
 import { t } from "../lib/data/strings.ts";
 import StatTile from "../components/data/StatTile.astro";
-import TopTable, { type Cell } from "../components/data/TopTable.astro";
+import TopTable from "../components/data/TopTable.astro";
 import Fold from "../components/data/Fold.astro";
 import Switch from "../components/data/Switch.astro";
 import PlaceBadge from "../components/data/PlaceBadge.astro";
@@ -19,49 +19,12 @@ import PlaceChart from "../components/data/PlaceChart.astro";
 import Sparkline from "../components/data/Sparkline.astro";
 import TurnBars, { type Turn } from "../components/data/TurnBars.astro";
 import DataScript from "../components/data/DataScript.astro";
+import { duosPlaces, gameColumns, gameRows, heroColumns, heroRows, recent, soloPlaces } from "../lib/data/sample.ts";
 
 // Whether this build ships scripts; without them the switches stay hidden.
 const scripts = scriptsAllowed(import.meta.env, import.meta.env.DEV);
 
-// ---------- Made-up example data ----------
-
-const soloPlaces = [3, 1, 5, 2, 4, 7, 1, 3, 6, 2, 4, 8, 3, 2, 5, 1, 4, 3, null, 6, 2, 4, 3, 5, 1, 2, 7, 4, 3, 2, 4];
-const duosPlaces = [2, 1, 3, 2, 4, 1, 2, 3, 2, 1, 4, 2];
-const recent = soloPlaces.slice(-12);
-
-const heroes: { id: string; name: string; games: number; avg: number; top: number; best: number }[] = [
-  { id: "SAMPLE_HERO_01", name: "Lantern Keeper", games: 9, avg: 2.89, top: 7, best: 1 },
-  { id: "SAMPLE_HERO_02", name: "Brass Captain", games: 6, avg: 3.5, top: 4, best: 1 },
-  { id: "SAMPLE_HERO_03", name: "Moss Witch", games: 4, avg: 4.25, top: 2, best: 2 },
-  { id: "SAMPLE_HERO_04", name: "Tide Caller", games: 3, avg: 3.0, top: 2, best: 2 },
-  { id: "SAMPLE_HERO_05", name: "Ember Cook", games: 3, avg: 5.67, top: 1, best: 3 },
-  { id: "SAMPLE_HERO_06", name: "Clockwork Bard", games: 2, avg: 4.5, top: 1, best: 4 },
-  { id: "SAMPLE_HERO_07", name: "Salt Merchant", games: 2, avg: 6.0, top: 0, best: 5 },
-  { id: "SAMPLE_HERO_08", name: "Owl Sentry", games: 1, avg: 2.0, top: 1, best: 2 },
-  { id: "SAMPLE_HERO_09", name: "Frost Tinker", games: 1, avg: 8.0, top: 0, best: 8 },
-];
-const heroColumns = [
-  { label: "Hero" },
-  { label: "Games", numeric: true },
-  { label: "Avg place", numeric: true },
-  { label: "Top 4", numeric: true },
-  { label: "Best", numeric: true },
-];
-const heroRows: Cell[][] = heroes.map((h) => [
-  { hero: h.id, name: h.name },
-  h.games,
-  average(h.avg),
-  share(h.top, h.games),
-  { place: h.best, mode: "solo" },
-]);
-
-const gameColumns = [{ label: "Hero" }, { label: "Place", numeric: true }, { label: "Turns", numeric: true }, { label: "When" }];
-const gameRows: Cell[][] = [
-  [{ hero: "SAMPLE_HERO_01", name: "Lantern Keeper" }, { place: 1, mode: "solo" }, 14, "2 hours ago"],
-  [{ hero: "SAMPLE_HERO_03", name: "Moss Witch" }, { place: 4, mode: "solo" }, 12, "3 hours ago"],
-  [{ hero: null, name: "Hero not recorded" }, { place: null, mode: "solo" }, "—", "Yesterday"],
-  [{ hero: "SAMPLE_HERO_05", name: "Ember Cook" }, { place: 7, mode: "solo" }, 9, "Yesterday"],
-];
+// ---------- Made-up example data (the rest is in lib/data/sample.ts) ----------
 
 const turns: Turn[] = [
   { turn: 1, result: "tie", damage: 0 },
