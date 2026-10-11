@@ -223,9 +223,10 @@ pub fn golden_id(card_id: &str) -> String {
 const GILDED_GAP: &str = "gilded, but its golden card is not modelled: it plays the plain card";
 
 /// How closely the engine plays `gift` on `card_id`: Gilding is exact only
-/// when the golden card is modelled or the card has no combat effect.
+/// when the golden card is modelled, the card has no combat effect or the
+/// card is golden already.
 pub fn fidelity(gift: &Gift, card_id: &str) -> Fidelity {
-    if !gift.golden {
+    if !gift.golden || card_id.ends_with("_G") {
         return gift.fidelity;
     }
     let golden_known = cards::rules(&golden_id(card_id)).is_some();

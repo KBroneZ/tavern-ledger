@@ -61,6 +61,8 @@ fn gilding_is_exact_only_when_the_golden_card_or_no_effect_is_known() {
     // Bonehead's golden card is modelled; a keyword-only card has no effect.
     assert_eq!(fidelity(gilding, "BG28_300"), Fidelity::Exact);
     assert_eq!(fidelity(gilding, "BGS_119"), Fidelity::Exact);
+    // Already golden: the card's own rules are the golden ones.
+    assert_eq!(fidelity(gilding, "BG28_300_G"), Fidelity::Exact);
     let (no_golden, _) = EFFECTS
         .iter()
         .find(|(id, r)| {

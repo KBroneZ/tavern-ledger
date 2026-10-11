@@ -148,6 +148,9 @@ impl Combat<'_> {
             Action::StripTarget(k) => {
                 if let Some(u) = target.and_then(|(foe, t)| self.unit_mut(foe, t)) {
                     u.kw = u.kw.without(k);
+                    if k.contains(Keywords::DIVINE_SHIELD) {
+                        u.shield_taken = 0;
+                    }
                 }
             }
             Action::DestroyKiller => {

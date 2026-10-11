@@ -345,3 +345,40 @@ fn approximate_gifts_are_named_with_the_reason() {
     let gift = crate::gifts::gift(PERSISTING_HORROR).unwrap();
     assert!(matches!(gift.fidelity, Fidelity::Approximate(_)));
 }
+
+#[test]
+fn the_same_gift_twice_counts_once() {
+    let twice = plain(3, 4).gift(RESISTANCE).gift(RESISTANCE);
+    with_soc(vec![twice], vec![plain(0, 9)], true, |c| {
+        c.start_of_combat(0, [true, false]);
+        assert_eq!(stats(c, 0), vec![(3, 8)]);
+    });
+}
+
+#[test]
+fn doppelganger_on_a_full_board_summons_nothing() {
+    let mut board = vec![plain(4, 5).gift(DOPPELGANGER)];
+    board.extend((0..6).map(|_| plain(1, 1)));
+    with_soc(board, vec![plain(0, 9)], true, |c| {
+        c.start_of_combat(0, [true, false]);
+        assert_eq!(c.sides[0].units.len(), 7);
+    });
+}
+
+#[test]
+fn torets_blessing_holds_through_real_attacks() {
+    let gifted = plain(1, 2)
+        .with(Keywords::DIVINE_SHIELD)
+        .gift(TORETHS_BLESSING);
+    with(vec![gifted], vec![plain(5, 99)], |c| {
+        let foe = uid_at(c, 1, 0);
+        for _ in 0..2 {
+            c.swing(1, foe);
+        }
+        assert_eq!(stats(c, 0), vec![(1, 2)], "two hits, shield still up");
+        c.swing(1, foe);
+        assert!(!c.sides[0].units[0].kw.contains(Keywords::DIVINE_SHIELD));
+        c.swing(1, foe);
+        assert!(c.sides[0].units.is_empty());
+    });
+}

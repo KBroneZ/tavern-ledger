@@ -13,7 +13,14 @@ use crate::model::{Keywords, Minion, Tribes};
 pub(crate) fn card_of(cards: &mut Vec<CardInfo>, m: &Minion) -> (u16, Keywords) {
     let next = cards.len();
     let plain = intern(cards, &m.card_id, &[], || info(m, &[], next));
-    let known: Vec<&'static Gift> = m.gifts.iter().filter_map(|g| gifts::gift(g)).collect();
+    // The same gift listed twice counts once (whether the game stacks a gift
+    // a triple brings twice is not checked).
+    let mut known: Vec<&'static Gift> = Vec::new();
+    for g in m.gifts.iter().filter_map(|g| gifts::gift(g)) {
+        if !known.iter().any(|k| k.id == g.id) {
+            known.push(g);
+        }
+    }
     if known.is_empty() {
         return (plain, Keywords::NONE);
     }
