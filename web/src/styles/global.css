@@ -237,23 +237,12 @@ a:hover {
     linear-gradient(#000 0 0);
 }
 
-/* Brand: a lantern pane, our own mark. */
-.mark {
-  position: relative;
+/* Brand: the TL tankard mark (docs/brand/logo/mark.svg, D-094). */
+.brand .mark {
   flex: none;
-  width: 22px;
-  height: 26px;
-  border-radius: 8px 8px 5px 5px;
-  background: radial-gradient(60% 60% at 50% 60%, var(--amber-hi), var(--amber) 55%, #c4701c);
-  box-shadow: 0 0 16px rgb(255 178 74 / 0.55);
-}
-
-.mark::after {
-  content: "";
-  position: absolute;
-  inset: 3px;
-  border-radius: 6px 6px 3px 3px;
-  border: 1.5px solid rgb(255 255 255 / 0.6);
+  width: 30px;
+  height: 28px;
+  background: url("/mark.svg") center / contain no-repeat;
 }
 
 /* ---------- Masthead and footer ---------- */

@@ -235,7 +235,7 @@ test("only the public key is in the files", () => {
   }
 });
 
-test("fonts and styles are our own files: every url() is a local font, none is external", () => {
+test("fonts and styles are our own files: every url() is a local font or the brand mark, none is external", () => {
   const css = ALL.filter((f) => f.endsWith(".css"));
   assert.ok(css.length > 0, "no stylesheet in dist");
   const declared = css.flatMap((f) => [...readFileSync(f, "utf8").matchAll(/url\(/g)]);
@@ -246,7 +246,8 @@ test("fonts and styles are our own files: every url() is a local font, none is e
     const urls = [...text.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)].map((m) => m[1]);
 
     for (const url of urls) {
-      assert.match(url, /^\/fonts\/[a-z0-9-]+\.woff2$/, url);
+      // The masthead draws the logo (public/mark.svg, D-094) as a background.
+      assert.match(url, /^\/(?:fonts\/[a-z0-9-]+\.woff2|mark\.svg)$/, url);
       assert.ok(existsSync(join(DIST, url)), url);
     }
   }

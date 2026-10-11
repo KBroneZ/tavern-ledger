@@ -1,5 +1,7 @@
 # Logo brief
 
+**Outcome (2026-10-11, T-522, D-094):** the user picked a "TL" monogram that forms a tankard, made in Gemini (closest to direction 4 with the tankard of direction 2). It is redrawn by hand in [logo/](logo/index.html); the AI images stay in [reference/](reference/) as reference only.
+
 Task T-520 (session 079, D-093). The brief for a Tavern Ledger mark that works in the app, on the website and everywhere else. Ready-to-paste image prompts: [logo-prompts.md](logo-prompts.md).
 
 ## The product

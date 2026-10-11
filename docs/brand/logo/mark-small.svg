@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Tavern Ledger">
+  <!-- Tavern Ledger mark. Hand-drawn SVG (T-522, D-094) traced from an AI-made reference that is not shipped. Simplified for 16 to 32 px: no crossbar serifs, one-pixel gaps at 16 px. -->
+  <path fill="#ffb24a" d="M0 2H20V6H12V24H8V6H0Z"/>
+  <path fill="#ffd08a" d="M4 8H6V26H28V30H2V26H4ZM14 8H18V20H26V24H14ZM22 2H26V18H22ZM28 6H30Q32 6 32 8V20Q32 22 30 22H28V18H30V10H28Z"/>
+</svg>
