@@ -1,75 +1,240 @@
-/* Tavern Ledger home page (D-052): hero, what it keeps, safety, your data and
-   status. Loaded by index.astro only; the tokens are in global.css. */
+/* Tavern Ledger home page (D-052, D-105): the painted tavern behind the page,
+   hero, what it keeps, safety, your data and status. Loaded by index.astro
+   only; the tokens are in global.css, the buttons in buttons.css. */
+
+/* ---------- The painting behind the page (T-530) ---------- */
+
+/* The painting shows through: only the canvas (html) keeps the dark colour. */
+body {
+  background: transparent;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: -2;
+  height: 100lvh;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--bg-deep);
+}
+
+/* At least twice as tall as the screen, so phones still feel the descent;
+   on a narrow screen the centre of the painting, cropped at the sides.
+   scripts/descent.ts moves it with a transform. */
+.backdrop-art {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: max(100%, 85lvh);
+  margin-left: calc(max(100%, 85lvh) / -2);
+  will-change: transform;
+}
+
+.backdrop-art img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The blue magic at the top right is soft enough to read as magic only. */
+.backdrop-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(12% 5.5% at 83% 12.5%, rgb(10 6 4 / 0.7), transparent 100%);
+}
+
+/* A light shade on the whole painting; the darker reading column is on main
+   below, so the door in the first screen stays bright. */
+.backdrop-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgb(10 6 4 / 0.2), rgb(10 6 4 / 0.38) 22%, rgb(10 6 4 / 0.38) 78%, rgb(10 6 4 / 0.2)),
+    linear-gradient(180deg, rgb(10 6 4 / 0.15), transparent 30%, transparent 70%, rgb(10 6 4 / 0.25));
+}
+
+/* The reading column: a darker centre from the end of the first screen down.
+   It scrolls with the page; the painting moves behind it. */
+.layout-home {
+  position: relative;
+}
+
+.layout-home::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgb(10 6 4 / 0.1), rgb(10 6 4 / 0.5) 20%, rgb(10 6 4 / 0.5) 80%, rgb(10 6 4 / 0.1));
+  mask-image: linear-gradient(180deg, transparent 0, transparent 70svh, #000 110svh);
+}
+
+/* Rising sparks, gold on the left and blue on the right. Off by default and
+   with reduced motion; only transform and opacity move. */
+.sparks {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+
+.sparks i {
+  position: absolute;
+  bottom: -12px;
+  left: var(--x);
+  width: var(--s, 4px);
+  height: var(--s, 4px);
+  border-radius: 50%;
+  background: #ffd27a;
+  box-shadow: 0 0 6px 1px rgb(255 178 74 / 0.8);
+  opacity: 0;
+}
+
+.sparks i:nth-child(n + 9) {
+  background: #9fe8ff;
+  box-shadow: 0 0 7px 1px rgb(90 200 255 / 0.85);
+}
+
+.sparks i:nth-child(1) { --x: 3%; --d: 9s; --w: -3s; --dx: 30px; }
+.sparks i:nth-child(2) { --x: 7%; --d: 12s; --w: -8s; --dx: -20px; --s: 3px; }
+.sparks i:nth-child(3) { --x: 11%; --d: 10s; --w: -1s; --dx: 40px; }
+.sparks i:nth-child(4) { --x: 14%; --d: 14s; --w: -11s; --dx: 10px; --s: 5px; }
+.sparks i:nth-child(5) { --x: 5%; --d: 11s; --w: -6s; --dx: 24px; --s: 3px; }
+.sparks i:nth-child(6) { --x: 17%; --d: 13s; --w: -4s; --dx: -16px; }
+.sparks i:nth-child(7) { --x: 9%; --d: 15s; --w: -13s; --dx: 36px; --s: 3px; }
+.sparks i:nth-child(8) { --x: 20%; --d: 12s; --w: -9s; --dx: 12px; }
+.sparks i:nth-child(9) { --x: 97%; --d: 10s; --w: -2s; --dx: -30px; }
+.sparks i:nth-child(10) { --x: 93%; --d: 13s; --w: -7s; --dx: 18px; --s: 3px; }
+.sparks i:nth-child(11) { --x: 89%; --d: 11s; --w: -10s; --dx: -38px; }
+.sparks i:nth-child(12) { --x: 86%; --d: 15s; --w: -5s; --dx: -12px; --s: 5px; }
+.sparks i:nth-child(13) { --x: 95%; --d: 12s; --w: -12s; --dx: -22px; --s: 3px; }
+.sparks i:nth-child(14) { --x: 83%; --d: 14s; --w: -3s; --dx: 14px; }
+.sparks i:nth-child(15) { --x: 91%; --d: 9s; --w: -8s; --dx: -34px; --s: 3px; }
+.sparks i:nth-child(16) { --x: 80%; --d: 13s; --w: -1s; --dx: -10px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .sparks {
+    display: block;
+  }
+
+  .sparks i {
+    animation: rise var(--d) linear var(--w) infinite;
+  }
+}
+
+@keyframes rise {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0);
+  }
+  12% {
+    opacity: 0.9;
+  }
+  70% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--dx), -105lvh, 0);
+  }
+}
+
+/* ---------- Hero ---------- */
 
 .hero {
   position: relative;
   display: grid;
   justify-items: center;
-  gap: 18px;
-  padding: clamp(44px, 8vw, 96px) var(--gutter) clamp(28px, 4vw, 44px);
+  align-content: space-between;
+  gap: clamp(18px, 3vw, 28px);
+  min-height: calc(100svh - var(--nav-h));
+  padding: clamp(24px, 4vw, 48px) var(--gutter) clamp(28px, 4vw, 44px);
   text-align: center;
-  overflow: hidden;
 }
 
-/* Three blurred lamps behind the headline. Decorative; they never move. */
-.lamp {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(22px);
-  pointer-events: none;
-}
-
-.lamp-1 {
-  left: 8%;
-  top: 18%;
-  width: 120px;
-  height: 120px;
-  background: var(--amber);
-  opacity: 0.4;
-}
-
-.lamp-2 {
-  right: 10%;
-  top: 10%;
-  width: 90px;
-  height: 90px;
-  background: #ff9db8;
-  opacity: 0.22;
-}
-
-.lamp-3 {
-  right: 22%;
-  bottom: 4%;
-  width: 140px;
-  height: 140px;
-  background: var(--amber);
-  opacity: 0.22;
-}
-
-.hero h1 {
-  position: relative;
+/* The headline in gold, lit from above, with a dark rim to lift it off the painting. */
+.gold-title {
   max-width: 20ch;
   font-size: clamp(2.6rem, 6.8vw, 5.25rem);
   line-height: 0.98;
+  color: #ffd27a;
+  background: linear-gradient(180deg, #fff3cf 8%, #ffd27a 42%, #e9a43a 68%, #b8701f 92%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 0 #3a1f07) drop-shadow(0 8px 18px rgb(0 0 0 / 0.75));
 }
 
-.hero h1 .lit {
+.gold-title .lit {
   display: block;
-  color: var(--amber-hi);
 }
 
-.hero .lead {
+/* The lead on a sheet of parchment pinned to the wall. */
+.parchment {
   position: relative;
-  max-width: 48ch;
+  max-width: 40rem;
+  padding: clamp(16px, 2.4vw, 24px) clamp(20px, 3vw, 34px);
+  border-radius: 6px;
+  background:
+    radial-gradient(120% 90% at 50% 40%, #f3e2bd 0%, #e6cd9b 62%, #c9a66b 100%);
+  box-shadow:
+    inset 0 0 0 1px rgb(120 80 30 / 0.35),
+    inset 0 0 28px rgb(120 72 24 / 0.45),
+    0 14px 30px rgb(0 0 0 / 0.55);
+  transform: rotate(-0.6deg);
+}
+
+.parchment .lead {
+  max-width: none;
+  color: #3a2410;
+  font-weight: 600;
 }
 
 .ctas {
-  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+}
+
+.ctas-row {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 14px;
-  margin-top: 6px;
+  gap: 12px 16px;
+}
+
+/* ---------- The rest of the page on the painting ---------- */
+
+/* Panels sit on the painting: darker and opaque enough to read on any part of it. */
+.layout-home .glass {
+  background: rgb(20 13 10 / 0.82);
+}
+
+/* Phones: the masthead scrolls away and wraps, so the hero is as tall as its
+   content; the scene's captions get a dark backing over the bright door. */
+@media (max-width: 560px) {
+  .hero {
+    min-height: 0;
+    align-content: start;
+  }
+
+  .layout-home .caption-col {
+    padding: 10px 12px 12px;
+    border-radius: var(--r-small);
+    background: rgb(14 9 7 / 0.72);
+  }
+}
+
+/* The footer sits over the cellar's blue light: give it a dark ground. */
+.colophon {
+  background: rgb(10 6 4 / 0.8);
+}
+
+.cellar {
+  display: grid;
+  justify-items: center;
+  padding: var(--section) var(--gutter) 0;
 }
 
 .sec {

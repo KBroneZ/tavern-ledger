@@ -1,0 +1,58 @@
+// Moves the home page's painting as the page scrolls (T-530, D-105). Without
+// this script (accounts closed) or with reduced motion the painting stays
+// still at the barrel door. Only a transform changes; the sizes are read again
+// when the page or the screen changes size, never while scrolling.
+import { backdropOffset, type Descent } from "../lib/home/descent.ts";
+
+const art = document.querySelector<HTMLElement>("[data-descent]");
+const pin = document.querySelector<HTMLElement>("#scene");
+const stage = pin?.querySelector<HTMLElement>(".pin-stage") ?? null;
+const still = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+let descent: Descent = { maxScroll: 0, travel: 0, pinStart: null, pinEnd: null };
+let frame = 0;
+
+/** The scroll span over which the scene's stage is stuck to the screen, or null when it never sticks. */
+function pinnedSpan(): [number, number] | null {
+  if (!pin || !stage || getComputedStyle(stage).position !== "sticky") return null;
+  const top = pin.getBoundingClientRect().top + window.scrollY;
+  const stuckAt = parseFloat(getComputedStyle(stage).top) || 0;
+  return [top - stuckAt, top + pin.offsetHeight - stage.offsetHeight - stuckAt];
+}
+
+function measure(): void {
+  if (!art) return;
+  const screen = window.innerHeight;
+  const span = pinnedSpan();
+  descent = {
+    maxScroll: document.documentElement.scrollHeight - screen,
+    travel: art.offsetHeight - screen,
+    pinStart: span?.[0] ?? null,
+    pinEnd: span?.[1] ?? null,
+  };
+}
+
+function draw(): void {
+  frame = 0;
+  if (!art) return;
+  const y = still.matches ? 0 : backdropOffset(window.scrollY, descent);
+  art.style.transform = `translate3d(0, ${-y.toFixed(1)}px, 0)`;
+}
+
+function schedule(): void {
+  if (frame === 0) frame = requestAnimationFrame(draw);
+}
+
+function remeasure(): void {
+  measure();
+  schedule();
+}
+
+if (art) {
+  remeasure();
+  window.addEventListener("scroll", schedule, { passive: true });
+  window.addEventListener("resize", remeasure);
+  still.addEventListener("change", remeasure);
+  // Fonts, the painting itself and late layout change the page's height.
+  new ResizeObserver(remeasure).observe(document.body);
+}

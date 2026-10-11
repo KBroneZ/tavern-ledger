@@ -1,5 +1,7 @@
 ---
 import Base from "../../layouts/Base.astro";
+import TavernBackdrop from "../../components/home/TavernBackdrop.astro";
+import Button from "../../components/ui/Button.astro";
 import "../../styles/home.css";
 import "../../styles/scene.css";
 import { readConfig } from "../../lib/config.ts";
@@ -28,15 +30,20 @@ const newsDay = (date: string) =>
 ---
 
 <Base title={st("meta.index.title")} description={st("meta.index.description")} layout="home">
+  <TavernBackdrop />
+
   <section class="hero" aria-labelledby="hero-heading">
-    <span class="lamp lamp-1" aria-hidden="true"></span>
-    <span class="lamp lamp-2" aria-hidden="true"></span>
-    <span class="lamp lamp-3" aria-hidden="true"></span>
-    <h1 id="hero-heading">{st("home.hero.title")} <span class="lit">{st("home.hero.lit")}</span></h1>
-    <p class="lead">{st("home.lead")}</p>
+    <h1 id="hero-heading" class="gold-title">{st("home.hero.title")} <span class="lit">{st("home.hero.lit")}</span></h1>
+    <div class="parchment">
+      <p class="lead">{st("home.lead")}</p>
+    </div>
     <div class="ctas">
-      <a class="btn" href="#scene">{st("home.cta.show")}</a>
-      <a class="btn quiet" href="#safe">{st("home.cta.safe")}</a>
+      {/* Nothing to download yet: the key button says so and leads to the project's status. */}
+      <Button kind="key" href="#doors" note={st("home.cta.download.note")}>{st("home.cta.download")}</Button>
+      <div class="ctas-row">
+        <Button kind="common" href="#scene">{st("home.cta.show")}</Button>
+        <Button kind="common" href="#safe">{st("home.cta.safe")}</Button>
+      </div>
     </div>
   </section>
 
@@ -142,12 +149,16 @@ const newsDay = (date: string) =>
   </section>
 
   <div class="sec">
-    <aside class="doors glass" aria-label={st("home.status.label")}>
+    <aside class="doors glass" id="doors" aria-label={st("home.status.label")}>
       <strong>{st("home.status.title")}</strong>
       <span>
         {st("home.status.body")}{" "}
         {accountsOpen ? st("home.status.testing") : st("home.status.closed")}
       </span>
     </aside>
+  </div>
+
+  <div class="cellar">
+    <Button kind="small" href="#main">{st("home.top")}</Button>
   </div>
 </Base>

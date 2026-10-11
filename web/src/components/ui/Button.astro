@@ -1,0 +1,41 @@
+---
+// The tavern buttons (T-530, D-105), one per role. The words are real text on
+// top of painted art cut from the user's Gemini sheet (tools/build_home_art.py):
+// - key:    gold stone with gems, for the few key actions; it lights up on hover and focus
+// - common: dark wood and bronze, for common actions; it knocks when pressed
+// - small:  small stone in a thin gold frame, for small actions
+// A link when given href, otherwise a button. The home page uses it first; the
+// other pages adopt it later.
+import "../../styles/buttons.css";
+
+interface Props {
+  kind: "key" | "common" | "small";
+  href?: string;
+  type?: "button" | "submit";
+  /** A second, smaller line under the label (key buttons only). */
+  note?: string;
+  class?: string;
+}
+
+const { kind, href, type = "button", note, class: extra } = Astro.props;
+const classes = ["tb", `tb-${kind}`, extra].filter(Boolean).join(" ");
+const label = kind === "key" && note ? "tb-label tb-two" : "tb-label";
+---
+
+{
+  href ? (
+    <a class={classes} href={href}>
+      <span class={label}>
+        <slot />
+        {kind === "key" && note && <small>{note}</small>}
+      </span>
+    </a>
+  ) : (
+    <button class={classes} type={type}>
+      <span class={label}>
+        <slot />
+        {kind === "key" && note && <small>{note}</small>}
+      </span>
+    </button>
+  )
+}

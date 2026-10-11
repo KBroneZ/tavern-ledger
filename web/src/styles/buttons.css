@@ -1,0 +1,205 @@
+/* The tavern buttons (T-530, D-105): web/src/components/ui/Button.astro.
+   Painted art from web/public/art/home/ (cut by tools/build_home_art.py) sits
+   in ::before and ::after; the label is real text on top. Wood and the small
+   stone are nine-sliced (border-image), so they stretch to any label without
+   bending their corners; the gold stone keeps its shape and only scales.
+   Only transform, opacity and filter move. */
+
+.tb {
+  --tb-press: 90ms ease-out;
+  --tb-spring: 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  isolation: isolate;
+  display: inline-grid;
+  place-items: center;
+  justify-self: center;
+  min-height: 48px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  font-family: var(--display);
+  font-stretch: 88%;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--tb-spring);
+}
+
+/* The global button rules (global.css) do not apply to these. */
+button.tb:hover,
+button.tb:active {
+  box-shadow: none;
+}
+
+.tb::before,
+.tb::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.tb-label {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  line-height: 1;
+}
+
+.tb:focus-visible {
+  outline: 3px solid var(--amber-hi);
+  outline-offset: 4px;
+  border-radius: 14px;
+}
+
+/* ---------- Key: gold stone with gems ---------- */
+
+.tb-key {
+  width: clamp(240px, 24vw, 331px);
+  aspect-ratio: 663 / 200;
+  color: #22150a;
+  font-size: clamp(1.2rem, 1.6vw, 1.45rem);
+  font-weight: 800;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.5);
+}
+
+.tb-key::before,
+.tb-key::after {
+  inset: 0;
+  background: url("/art/home/btn-key.webp") center / 100% 100% no-repeat;
+  background-image: image-set(url("/art/home/btn-key.webp") 1x, url("/art/home/btn-key@2x.webp") 2x);
+}
+
+/* The lit stone, cross-faded in, with the glow the sheet painted around it. */
+.tb-key::after {
+  background-image: url("/art/home/btn-key-lit.webp");
+  background-image: image-set(url("/art/home/btn-key-lit.webp") 1x, url("/art/home/btn-key-lit@2x.webp") 2x);
+  opacity: 0;
+  filter: drop-shadow(0 0 10px rgb(255 196 92 / 0.75)) drop-shadow(0 0 26px rgb(255 160 60 / 0.45));
+  transition: opacity 260ms ease;
+}
+
+.tb-key:hover::after,
+.tb-key:focus-visible::after {
+  opacity: 1;
+}
+
+.tb-key small {
+  font: 700 0.78rem / 1.1 var(--body);
+  letter-spacing: 0.02em;
+  color: #3b2a1a;
+}
+
+.tb-key:active {
+  transform: scale(0.97);
+  transition: transform var(--tb-press);
+}
+
+/* ---------- Common: dark wood and bronze ---------- */
+
+.tb-common {
+  padding: 0 34px;
+  min-height: 56px;
+  color: #fbeed8;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-shadow:
+    0 1px 0 rgb(0 0 0 / 0.85),
+    0 0 8px rgb(0 0 0 / 0.6);
+}
+
+.tb-common::before {
+  inset: 0;
+  border-style: solid;
+  border-width: 17px 27px;
+  border-image-source: url("/art/home/btn-common.webp");
+  border-image-source: image-set(url("/art/home/btn-common.webp") 1x, url("/art/home/btn-common@2x.webp") 2x);
+  border-image-slice: 30% 13.5% fill;
+  border-image-repeat: stretch;
+  filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.45));
+  transition: filter 200ms ease;
+}
+
+.tb-common:hover {
+  transform: translateY(-1px);
+}
+
+.tb-common:hover::before,
+.tb-common:focus-visible::before {
+  filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.45)) brightness(1.12);
+}
+
+/* Knock: pressed in fast, sprung back on release. */
+.tb-common:active {
+  transform: translateY(2px) scale(0.97) rotate(-0.6deg);
+  transition: transform var(--tb-press);
+}
+
+/* ---------- Small: small stone in a thin gold frame ---------- */
+
+.tb-small {
+  overflow: hidden;
+  min-height: 44px;
+  padding: 0 26px;
+  border-radius: 22px;
+  color: #22160c;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.4);
+}
+
+.tb-small::before {
+  inset: 0;
+  border-style: solid;
+  border-width: 20px 25px;
+  border-image-source: url("/art/home/btn-small.webp");
+  border-image-source: image-set(url("/art/home/btn-small.webp") 1x, url("/art/home/btn-small@2x.webp") 2x);
+  border-image-slice: 45% 22% fill;
+  border-image-repeat: stretch;
+}
+
+/* A glint that runs over the worn stone on hover and focus. */
+.tb-small::after {
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(105deg, transparent 35%, rgb(255 246 220 / 0.55) 50%, transparent 65%);
+  transform: translateX(-120%);
+}
+
+.tb-small:hover::after,
+.tb-small:focus-visible::after {
+  transform: translateX(120%);
+  transition: transform 700ms ease-in-out;
+}
+
+.tb-small .tb-label {
+  position: relative;
+  z-index: 1;
+}
+
+.tb-small:active {
+  transform: scale(0.94);
+  transition: transform var(--tb-press);
+}
+
+/* ---------- Preferences ---------- */
+
+/* Windows high contrast draws no pictures: a plain bordered button. */
+@media (forced-colors: active) {
+  .tb::before,
+  .tb::after {
+    display: none;
+  }
+
+  .tb {
+    padding-inline: 22px;
+    border: 2px solid ButtonText;
+    color: ButtonText;
+    text-shadow: none;
+  }
+}
