@@ -618,6 +618,22 @@ fn the_next_opponent_is_the_one_the_game_marks() {
 }
 
 #[test]
+fn odds_show_only_against_the_opponent_marked_next_while_the_game_is_on() {
+    use crate::odds::{Gap, LiveOdds};
+    let odds = |seat| Some(LiveOdds::gap(Gap::NoBoardSeen, Some(seat), None));
+    let live = || live_game(&solo(vec![], "incomplete")).with_next_opponent(Some(3));
+    assert_eq!(live().with_odds(odds(3)).odds, odds(3));
+    assert_eq!(
+        live().with_odds(odds(2)).odds,
+        None,
+        "worked out for another opponent"
+    );
+    assert_eq!(live().with_odds(None).odds, None);
+    let over = live_game(&solo(vec![], "ok")).with_next_opponent(Some(3));
+    assert_eq!(over.with_odds(odds(3)).odds, None, "the game is over");
+}
+
+#[test]
 fn in_duos_the_next_opposing_team_is_marked() {
     let live = live_game(&duos(vec![])).with_next_opponent(Some(4));
     let marked: Vec<_> = live

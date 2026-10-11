@@ -187,9 +187,18 @@ impl LiveGame {
         self
     }
 
-    /// Adds the combat odds (T-605) while the game is on.
+    /// Adds the combat odds (T-605) while the game is on, only when they
+    /// are against the opponent marked next now (odds worked out for the
+    /// previous one never show under the new one's line).
     pub fn with_odds(mut self, odds: Option<LiveOdds>) -> Self {
-        self.odds = odds.filter(|_| self.phase == Phase::Playing);
+        let next: Vec<i64> = self
+            .opponents
+            .iter()
+            .filter(|o| o.next)
+            .flat_map(|o| o.seats.iter().copied())
+            .collect();
+        let playing = self.phase == Phase::Playing;
+        self.odds = odds.filter(|o| playing && o.seat.is_some_and(|s| next.contains(&s)));
         self
     }
 
