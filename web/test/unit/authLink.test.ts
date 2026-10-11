@@ -101,7 +101,7 @@ test("confirmations say whether a sign-in is still needed", () => {
 test("link errors are explained in words, never as the server's text", () => {
   assert.match(linkErrorMessage("otp_expired"), /expired or was already used/);
   assert.match(linkErrorMessage("flow_state_not_found"), /expired or was already used/);
-  assert.match(linkErrorMessage("pkce_code_verifier_not_found"), /another browser/);
+  assert.match(linkErrorMessage("pkce_code_verifier_not_found"), /different browser/);
   assert.match(linkErrorMessage("over_email_send_rate_limit"), /Too many attempts/);
   assert.match(linkErrorMessage("network"), /Could not reach/);
   assert.match(linkErrorMessage(null), /did not work/);

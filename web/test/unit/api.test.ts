@@ -233,7 +233,7 @@ test("link: a code opened in another browser says what to do, with no request", 
   const outcome = await finishAuthLink(client(), CONFIG, { kind: "code", code: "0b5c4a1e-1111", flowId: null });
   assert.equal(outcome.recovery, false);
   assert.equal(outcome.tone, "error");
-  assert.match(outcome.message ?? "", /another browser/);
+  assert.match(outcome.message ?? "", /different browser/);
   assert.deepEqual(seen, []);
 });
 

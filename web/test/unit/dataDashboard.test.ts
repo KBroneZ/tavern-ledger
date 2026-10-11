@@ -134,7 +134,7 @@ test("a game's date links to the game viewer when its key is known, each value e
 test("combats won: unknown combats are said next to the share of known ones", () => {
   const { advanced } = overviewTiles(overview(overviewRow({ combats_won: 5, combats_lost: 2, combats_tied: 0, combats_unknown: 6, combats_inferred: 0 })), []);
   assert.equal(advanced[0].value, "71%");
-  assert.equal(advanced[0].backing, "of 7 combats with a result; 6 unknown");
+  assert.equal(advanced[0].backing, "of 7 combats with a known result; 6 unknown");
 });
 
 test("heroes: games without a place are said next to the games, since places count finished games only", () => {

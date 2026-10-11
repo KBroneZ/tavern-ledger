@@ -8,7 +8,7 @@ export const ACC_STRINGS = {
   "page.kicker": "Combat simulator",
   "page.title": "How often the odds are right",
   "page.intro":
-    "The simulator behind the overlay's odds, checked on real combats: for each combat it gives its chances of a win, a tie and a loss, and the game's log says what really happened.",
+    "The simulator behind the overlay's odds, checked on real combats: for each combat it gives the chance of a win, a tie and a loss, and the game's log says what really happened.",
   "page.version": "Engine {version} · measured {date} · {trials} trials per combat",
 
   "mode.solo": "Solo",
@@ -16,7 +16,7 @@ export const ACC_STRINGS = {
   "mode.combats": "{count} combats with the game's result",
 
   "tile.right": "Most likely result was right",
-  "tile.meanP": "Mean chance given to what happened",
+  "tile.meanP": "Average chance given to the real result",
   "tile.meanP.back": "over {count} scored combats",
   "tile.blocked": "No odds: a card is not modelled",
   "tile.brier": "Brier score",
@@ -28,22 +28,22 @@ export const ACC_STRINGS = {
   "blocked.none": "Odds in every {mode} combat with a result ({total}): no card was missing.",
   "blocked.empty": "No {mode} combats with a result yet.",
 
-  "cal.title": "Said and happened",
+  "cal.title": "Predicted and real",
   "cal.desc":
-    "Every chance the simulator gave in {mode} (a win, a tie and a loss per combat), grouped by what it said. Beside each group, how often that result really happened. Close bars mean the odds can be trusted.",
-  "cal.key.said": "Said",
-  "cal.key.happened": "Happened",
-  "cal.none": "no chances",
-  "cal.mark": "Said {range}: {predictions} chances, said {said} on average, happened {happened}",
+    "Every chance the simulator gave in {mode} (a win, a tie and a loss per combat), grouped by what it predicted. Beside each group, how often that result really happened. When the two bars are close, the odds can be trusted.",
+  "cal.key.said": "Predicted",
+  "cal.key.happened": "Real",
+  "cal.none": "no predictions",
+  "cal.mark": "Predicted {range}: {predictions} predictions, {said} on average, real {happened}",
   "cal.table": "Show as a table",
-  "cal.col.range": "Said",
-  "cal.col.predictions": "Chances",
-  "cal.col.said": "Said on average",
-  "cal.col.happened": "Happened",
+  "cal.col.range": "Predicted",
+  "cal.col.predictions": "Predictions",
+  "cal.col.said": "Average predicted",
+  "cal.col.happened": "Real",
 
   "cards.title": "Cards that block the odds most",
   "cards.desc":
-    "When one of these is on a board, the simulator gives no odds rather than a wrong number. Counted over Solo and Duos together.",
+    "When one of these is on a board, the simulator gives no odds instead of a wrong number. Solo and Duos counted together.",
   "cards.col.card": "Card",
   "cards.col.id": "Card id",
   "cards.col.combats": "Combats blocked",

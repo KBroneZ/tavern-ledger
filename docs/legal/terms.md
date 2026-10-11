@@ -36,7 +36,7 @@ Your profile is private until you make it public. A public profile shows your di
 
 With a public profile, a display name and enough games, you also appear on the public leaderboards, which rank players on their uploaded games. The privacy policy says what they show and how to leave them (turn the profile private: the boards stop showing you as soon as you save). Leaderboards are for fun: the numbers are self-reported by each player's app, there are no prizes, and we do not promise they are accurate or complete. If games look changed to climb a board, we may take the steps in section 3, such as leaving them off the boards.
 
-If you turn on "Include my games in community hero stats" on your account page (it is off until you do), your games count toward the community hero stats: totals per hero over many players that never name you. The privacy policy says what is used and how to stop. Like the leaderboards, these numbers are self-reported, for information and fun, and we do not promise they are accurate or complete; games that look changed may be left out.
+If you turn on "Include my games in community hero stats" on your account page (it is off until you do), your games count toward the community hero stats: totals per hero across many players, which never name you. The privacy policy says what is used and how to stop. Like the leaderboards, these numbers are self-reported, for information and fun, and we do not promise they are accurate or complete; games that look changed may be left out.
 
 ## 5. Your data and leaving
 

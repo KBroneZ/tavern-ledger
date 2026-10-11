@@ -16,7 +16,7 @@ export const SIM_STRINGS = {
   "load.signIn": "Sign in",
   "load.games": "Your games",
   "load.loading": "Loading your games…",
-  "load.none": "No games uploaded yet. The app uploads them once you turn it on.",
+  "load.none": "No games uploaded yet. Turn on uploads in the app's Settings and they will show up here.",
   "load.more": "More games",
   "load.error": "Could not load your games. Check your connection and try again.",
   "load.retry": "Try again",
@@ -27,7 +27,7 @@ export const SIM_STRINGS = {
   "load.loaded": "Loaded turn {n}.",
   "load.skipped.one": "1 minion was left out: the record does not say what it was.",
   "load.skipped.other": "{count} minions were left out: the record does not say what they were.",
-  "load.unknownTiers": "Only your own tavern tier is in the record. Set the others for the damage.",
+  "load.unknownTiers": "Only your own tavern tier is in the record. Set the others to see the damage.",
 
   "mode.label": "Combat",
 
@@ -98,8 +98,8 @@ export const SIM_STRINGS = {
   "result.cap": "Damage cap",
   "result.capNone": "None",
   "result.approx": "≈ Approximate",
-  "result.approx.one": "1 card is played with a known gap.",
-  "result.approx.other": "{count} cards are played with a known gap.",
+  "result.approx.one": "1 card is simulated with a known difference from the game.",
+  "result.approx.other": "{count} cards are simulated with a known difference from the game.",
   "result.soc": "A card here acts at the start of combat, which the simulator does not play: boards loaded from a game already show its effect, boards you build do not.",
   "result.notModelled": "Cannot run: the simulator does not know these cards, and never guesses.",
   "result.notModelledHint": "Remove them to see the odds.",
