@@ -25,6 +25,8 @@ export const SITE_STRINGS = {
   // The switch names the other language in that language: on an English page "Español".
   "layout.switch": "Español",
   "layout.switch.label": "Leer esta página en español",
+  // Alt text of the link preview image (public/social-card.png, T-523).
+  "layout.socialAlt": "Tavern Ledger logo, a tankard drawn from the letters TL, over the line Hearthstone Battlegrounds tracker",
 
   // Page titles and descriptions.
   "meta.index.title": "Your Battlegrounds games, kept for you",

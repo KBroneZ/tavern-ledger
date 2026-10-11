@@ -38,6 +38,8 @@ const xDefault = alternates.find((a) => a.lang === "en")?.href;
 // The language script (public/lang.js) needs scripts: only when accounts are open.
 const languageScript = config !== null && translated;
 const current = (match: boolean) => (match ? "page" : undefined);
+// Link previews (T-523): one card for every page, at an absolute address.
+const socialCard = new URL("/social-card.png", Astro.site).href;
 ---
 
 <!doctype html>
@@ -56,6 +58,15 @@ const current = (match: boolean) => (match ? "page" : undefined);
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta property="og:site_name" content="Tavern Ledger" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={socialCard} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={st("layout.socialAlt")} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={socialCard} />
     {
       layout === "home" && (
         <link

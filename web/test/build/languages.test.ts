@@ -135,3 +135,21 @@ test("the Spanish legal pages are marked as translations and dated as the Englis
     assert.ok(spanish.includes(`href="https://tavernledger.net/${page.replace("index.html", "")}"`), `${page}: links to the English it translates`);
   }
 });
+
+test("every page has the social card for link previews, its alt text in the page's language (T-523)", () => {
+  assert.ok(existsSync(join(DIST, "social-card.png")), "public/social-card.png is copied into the build");
+  const alt = { en: "Tavern Ledger logo, a tankard drawn from the letters TL, over the line Hearthstone Battlegrounds tracker", es: "Logotipo de Tavern Ledger, una jarra dibujada con las letras TL, sobre la frase Hearthstone Battlegrounds tracker" };
+  for (const page of PAGES) {
+    const html = read(page);
+    const meta = (key: string) => [...html.matchAll(/<meta (?:property|name)="([^"]+)" content="([^"]*)">/g)].filter((m) => m[1] === key).map((m) => m[2]);
+    assert.deepEqual(meta("og:image"), [`${SITE}/social-card.png`], page);
+    assert.deepEqual(meta("og:image:width"), ["1200"], page);
+    assert.deepEqual(meta("og:image:height"), ["630"], page);
+    assert.deepEqual(meta("og:image:alt"), [page.startsWith("es/") ? alt.es : alt.en], page);
+    assert.deepEqual(meta("twitter:card"), ["summary_large_image"], page);
+    assert.deepEqual(meta("twitter:image"), [`${SITE}/social-card.png`], page);
+    assert.deepEqual(meta("og:site_name"), ["Tavern Ledger"], page);
+    assert.equal(meta("og:title").length, 1, page);
+    assert.equal(meta("og:description").length, 1, page);
+  }
+});
