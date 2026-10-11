@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"><defs><mask id="m12" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+<rect width="64" height="64" fill="#fff"/>
+<path transform="rotate(-30 32 32)" d="M0 28h64v8H0z" fill="#000" stroke="#000" stroke-width="8"/>
+</mask></defs><path fill="currentColor" mask="url(#m12)" d="M9 8h7v48H9zM22 8h7v48h-7zM35 8h7v48h-7zM48 8h7v48h-7z"/>
+<path fill="currentColor" transform="rotate(-30 32 32)" d="M0 28h64v8H0z"/></svg>
