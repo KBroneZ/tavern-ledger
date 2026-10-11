@@ -54,6 +54,9 @@ pub(crate) struct Prepared {
     pub second: [Option<Vec<Unit>>; 2],
     pub second_tier: [Option<u8>; 2],
     pub start_of_combat: bool,
+    /// Some card here gains what the Amalgam gains (round 5): checked once,
+    /// not on every buff.
+    pub amalgam_followers: bool,
 }
 
 impl Prepared {
@@ -135,7 +138,13 @@ impl Prepared {
                 });
             }
         }
+        let amalgam_followers = cards.iter().any(|c| {
+            c.triggers
+                .iter()
+                .any(|t| matches!(t, Trigger::GainsWithAmalgam(_)))
+        });
         Prepared {
+            amalgam_followers,
             cards,
             tokens,
             start,

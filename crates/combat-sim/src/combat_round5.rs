@@ -10,16 +10,12 @@ impl Combat<'_> {
     /// After `uid` gained stats: when it is an Amalgam, the friends that
     /// follow it gain them too, as many times over as their card says.
     pub(super) fn amalgam_gained(&mut self, side: usize, uid: u32, attack: i32, health: i32) {
-        if attack <= 0 && health <= 0 {
+        if !self.p.amalgam_followers || (attack <= 0 && health <= 0) {
             return;
         }
-        let follows = |t: &Trigger| matches!(t, Trigger::GainsWithAmalgam(_));
-        if !self.p.cards.iter().any(|c| c.triggers.iter().any(follows)) {
-            return;
-        }
-        let is_amalgam = self
-            .unit(side, uid)
-            .is_some_and(|u| AMALGAMS.contains(&self.p.cards[u.card as usize].id.as_str()));
+        let is_amalgam = self.unit(side, uid).is_some_and(|u| {
+            u.alive() && AMALGAMS.contains(&self.p.cards[u.card as usize].id.as_str())
+        });
         if !is_amalgam {
             return;
         }
@@ -45,7 +41,9 @@ impl Combat<'_> {
 
     /// `uid` gains the Deathrattles of the `count` left-most living friends
     /// that have one, `times` over; cards that copy Deathrattles themselves
-    /// are left out (their own copies included).
+    /// are left out (their own copies included). "Two left-most Deathrattles"
+    /// is read as two minions, each with all its Deathrattles: a minion with
+    /// two is not checked against the game (the card is approximate).
     pub(super) fn copy_leftmost_deathrattles(
         &mut self,
         side: usize,

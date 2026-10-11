@@ -195,3 +195,49 @@ fn salvager_ghastcoiler_and_festergut_stay_not_modelled() {
         assert_eq!(cards::rules(id), None, "{id}");
     }
 }
+
+#[test]
+fn a_dead_amalgam_and_an_empty_buff_feed_nothing() {
+    let amalgam = Minion::new("TB_BaconShop_HP_033t", 2, 2).tier(1);
+    let mishmash = Minion::new("TB_BaconShop_HERO_33_Buddy", 4, 4).tier(3);
+    with(vec![amalgam, mishmash], vec![plain(1, 1)], |c| {
+        let a = uid_at(c, 0, 0);
+        c.buff(0, a, 0, 0);
+        c.sides[0].units[0].health = 0;
+        c.buff(0, a, 3, 0);
+        assert_eq!(stats(c, 0)[1], (4, 4));
+    });
+}
+
+#[test]
+fn golden_fish_passes_what_a_dead_fish_gained_twice() {
+    let fish = Minion::new("TB_BaconShop_HP_105t", 2, 2).tier(1);
+    let golden = Minion::new("TB_BaconUps_307", 4, 40).tier(1);
+    with(vec![golden, fish, bonehead()], vec![plain(5, 50)], |c| {
+        // Bonehead dies: the Fish gains it once, the golden Fish twice.
+        let b = uid_at(c, 0, 1 + 1);
+        c.swing(0, b);
+        assert_eq!(c.sides[0].units[0].gained.len(), 2);
+        assert_eq!(c.sides[0].units[1].gained.len(), 1);
+        // The Fish dies: the golden Fish gains what it had gained, twice.
+        let f = uid_at(c, 0, 1);
+        c.swing(0, f);
+        assert_eq!(c.sides[0].units[0].gained.len(), 4);
+    });
+}
+
+#[test]
+fn whirl_o_tron_skips_minions_without_a_deathrattle_and_copies_gained_ones() {
+    let fish = Minion::new("TB_BaconShop_HP_105t", 2, 2).tier(1);
+    let player = vec![plain(1, 1), fish, whirl("BG34_Giant_599")];
+    // A Bonehead on the enemy board puts its card in the combat's card list.
+    let opponent = vec![bonehead(), plain(50, 50)];
+    with_soc(player, opponent, true, |c| {
+        let bonehead = c.p.cards.iter().position(|k| k.id == "BG28_300").unwrap() as u16;
+        // The Fish gained Bonehead's Deathrattle earlier in this combat.
+        c.sides[0].units[1].gained.push(bonehead);
+        c.start_of_combat(0, [true, false]);
+        // The plain minion is skipped; the Fish's gained Deathrattle is copied.
+        assert_eq!(c.sides[0].units[2].gained, [bonehead]);
+    });
+}

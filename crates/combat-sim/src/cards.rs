@@ -313,7 +313,8 @@ pub const TOKENS: &[Token] = &[
     tok("BG30_MagicItem_442t", 1, 1, Tribes::NONE, 1),
     tok("BG31_HERO_802pt1t", 7, 7, Tribes::MECH, 1),
     gold(tok("BG31_HERO_802pt1t_G", 14, 14, Tribes::MECH, 1)),
-    // Round 5: Foul Egg's Chicken.
+    // Round 5: Foul Egg's Chicken (Foul Fowl), an Undead and a Beast in the
+    // card data.
     tok("BG_RLK_833t", 3, 3, Tribes::UNDEAD.union(Tribes::BEAST), 1),
 ];
 
