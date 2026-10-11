@@ -271,7 +271,7 @@ The user's request (2026-10-11): everything the app knows on the website, detail
 
 | ID | Task | Status |
 |----|------|--------|
-| T-501 | Design system for the web data pages (tokens, stat tiles, compact tables, folds, charts, pictures, empty states) | pending |
+| T-501 | Design system for the web data pages (tokens, stat tiles, compact tables, folds, charts, pictures, empty states) | done (session 062, D-070): tokens in `web/src/styles/data.css`, components in `web/src/components/data/`, logic and strings in `web/src/lib/data/` with unit tests, build-time SVG charts (places, place over time, turns), pictures from one setting (synthetic placeholders until the CSP decision), style page `/style/` (made-up data, `noindex`); axe clean, CLS 0, no page overflow at 375 px |
 | T-502 | Data API: per-game summaries and per-user SQL views, private by default (RLS), tested | done |
 | T-503 | Personal dashboard and games list (`/me/`, `/u/<name>/`, games) | pending |
 | T-504 | Game viewer (T-201): one game in full, Simple and Advanced | pending |

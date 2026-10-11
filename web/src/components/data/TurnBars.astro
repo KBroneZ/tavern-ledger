@@ -1,0 +1,115 @@
+---
+// One game's combats, turn by turn: a won turn is a bar up (damage dealt), a
+// lost turn a bar down (damage taken), a tie a flat tick and an unknown
+// result a dashed box. Direction and a key carry the result as well as the
+// colour; the biggest hit each way is labelled, the rest are in the table.
+import { barScale, columnPath, type Result } from "../../lib/data/format.ts";
+import { t } from "../../lib/data/strings.ts";
+import SourceMark from "./SourceMark.astro";
+import Fold from "./Fold.astro";
+import StateBlock from "./StateBlock.astro";
+
+export interface Turn {
+  turn: number;
+  result: Result;
+  /** Damage dealt (win) or taken (loss); null when the log does not say. */
+  damage: number | null;
+  inferred?: boolean;
+}
+
+interface Props {
+  turns: Turn[];
+  id: string;
+}
+
+const { turns, id } = Astro.props;
+const SLOT = 24;
+const BAR = 14;
+const HALF = 52;
+const PAD = 14;
+const MID = PAD + HALF;
+const HEIGHT = MID + HALF + PAD + 16;
+const width = turns.length * SLOT;
+const scale = barScale(
+  turns.map((x) => x.damage ?? 0),
+  HALF,
+);
+const peak = (r: Result) =>
+  turns.filter((x) => x.result === r && x.damage !== null).reduce<Turn | null>((a, b) => (!a || (b.damage as number) > (a.damage as number) ? b : a), null);
+const peaks = new Set([peak("win"), peak("loss")].filter(Boolean));
+const resultText = (r: Result) => t(`result.${r}`);
+---
+
+{turns.length === 0 ? <StateBlock kind="empty" title={t("chart.turns.title")} body={t("state.unknown.body")} /> : (
+<figure class="chart chart-turns">
+  <figcaption>
+    <p class="chart-title" id={`${id}-title`}>{t("chart.turns.title")}</p>
+    <p class="chart-desc" id={`${id}-desc`}>{t("chart.turns.desc")}</p>
+  </figcaption>
+  <ul class="chart-key" aria-hidden="true">
+    <li><i class="key-win" aria-hidden="true"></i>{t("result.win")}</li>
+    <li><i class="key-loss" aria-hidden="true"></i>{t("result.loss")}</li>
+    <li><i class="key-tie" aria-hidden="true"></i>{t("result.tie")}</li>
+    <li><i class="key-unknown" aria-hidden="true"></i>{t("result.unknown")}</li>
+  </ul>
+  <div class="scroll-x" role="region" aria-label={t("chart.turns.title")} tabindex="0">
+    <svg viewBox={`0 0 ${width} ${HEIGHT}`} width={width} height={HEIGHT} role="img" aria-labelledby={`${id}-title`} aria-describedby={`${id}-desc`}>
+      <line class="axis" x1="0" x2={width} y1={MID} y2={MID} />
+      {
+        turns.map((x, i) => {
+          const left = i * SLOT + (SLOT - BAR) / 2;
+          const length = x.damage === null ? 0 : scale(x.damage);
+          const up = x.result === "win";
+          return (
+            <g class="mark">
+              <title>{`${t("chart.turns.turn", { turn: x.turn })}: ${resultText(x.result)}${x.damage === null ? "" : `, ${x.damage}`}`}</title>
+              <rect class="hit" x={i * SLOT} y="0" width={SLOT} height={MID + HALF + PAD} />
+              {(x.result === "win" || x.result === "loss") && length > 0 && (
+                <path class={`fill-${x.result}`} d={columnPath(left, MID, BAR, length, up ? "up" : "down")} />
+              )}
+              {(x.result === "tie" || length === 0) && x.result !== "unknown" && x.damage !== null && (
+                <rect class={`fill-${x.result}`} x={left} y={MID - 2} width={BAR} height="4" rx="2" />
+              )}
+              {(x.result === "unknown" || x.damage === null) && (
+                <rect class="mark-none" x={left + 0.75} y={MID - 6} width={BAR - 1.5} height="12" rx="3" />
+              )}
+              {peaks.has(x) && (
+                <text x={left + BAR / 2} y={up ? MID - length - 4 : MID + length + 12} text-anchor="middle" class="label-strong">
+                  {up ? x.damage : `−${x.damage}`}
+                </text>
+              )}
+              <text x={left + BAR / 2} y={HEIGHT - 4} text-anchor="middle">
+                {x.turn}
+              </text>
+            </g>
+          );
+        })
+      }
+    </svg>
+  </div>
+  <Fold summary={t("chart.table")} context={t("chart.turns.title")} compact>
+    <table class="dtable">
+      <thead>
+        <tr>
+          <th scope="col">{t("chart.turns.col.turn")}</th>
+          <th scope="col">{t("chart.turns.col.result")}</th>
+          <th scope="col" class="num">{t("chart.turns.col.damage")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          turns.map((x) => (
+            <tr>
+              <td>{x.turn}</td>
+              <td>
+                <span class={`res-${x.result}`}>{resultText(x.result)}</span> {x.inferred && <SourceMark kind="inferred" />}
+              </td>
+              <td class="num">{x.damage === null ? t("value.none") : x.result === "loss" ? `−${x.damage}` : x.damage}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </Fold>
+</figure>
+)}

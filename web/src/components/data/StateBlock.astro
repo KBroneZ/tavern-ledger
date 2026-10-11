@@ -1,0 +1,41 @@
+---
+// What a piece shows when it has nothing to show: empty (no games yet),
+// unknown (not recorded), loading (keeps the room it will need, so nothing
+// jumps) and error. Each says so in words. A page that swaps one in after
+// loading announces it itself (a live region present at load is not read).
+import { t } from "../../lib/data/strings.ts";
+
+interface Props {
+  kind: "empty" | "unknown" | "loading" | "error";
+  title?: string;
+  body?: string;
+  /** Loading: how many lines of room to keep. */
+  lines?: number;
+}
+
+const { kind, title, body, lines = 3 } = Astro.props;
+const defaults = {
+  empty: [t("state.empty"), t("state.empty.body")],
+  unknown: [t("state.unknown"), t("state.unknown.body")],
+  loading: [t("state.loading"), ""],
+  error: [t("state.error"), t("state.error.body")],
+} as const;
+const [heading, text] = [title ?? defaults[kind][0], body ?? defaults[kind][1]];
+---
+
+{
+  kind === "loading" ? (
+    <div class="state state-loading" role="status">
+      <span class="visually-hidden">{heading}</span>
+      <div class="skeleton" aria-hidden="true">
+        {Array.from({ length: lines }, () => <span />)}
+      </div>
+    </div>
+  ) : (
+    <div class={`state state-${kind}`}>
+      <p class="state-title">{heading}</p>
+      {text && <p>{text}</p>}
+      <slot />
+    </div>
+  )
+}

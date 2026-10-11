@@ -1,0 +1,42 @@
+---
+// A two-way switch: Simple / Advanced (remembered per viewer) or Solo / Duos
+// (kept in the address, so a link opens the same view). Two buttons with
+// aria-pressed in a labelled group. It needs the page's script, so it stays
+// hidden until the script shows it; without it the page shows Simple and Solo.
+import { t } from "../../lib/data/strings.ts";
+
+interface Props {
+  kind: "detail" | "mode";
+  /** For a mode switch: the id of the .mode-panels block it drives. */
+  controls?: string;
+}
+
+const { kind, controls } = Astro.props;
+const options =
+  kind === "detail"
+    ? [
+        ["simple", t("detail.simple")],
+        ["advanced", t("detail.advanced")],
+      ]
+    : [
+        ["solo", t("mode.solo")],
+        ["duos", t("mode.duos")],
+      ];
+---
+
+<div
+  class="seg"
+  role="group"
+  aria-label={kind === "detail" ? t("detail.label") : t("mode.label")}
+  data-switch={kind}
+  data-controls={controls}
+  hidden
+>
+  {
+    options.map(([value, label], i) => (
+      <button type="button" data-value={value} aria-pressed={i === 0 ? "true" : "false"} aria-controls={controls}>
+        {label}
+      </button>
+    ))
+  }
+</div>

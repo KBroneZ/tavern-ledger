@@ -1,0 +1,26 @@
+---
+// Details folded away: a native <details>, so Enter and Space open it and
+// screen readers say whether it is expanded.
+interface Props {
+  summary: string;
+  /** Read after the summary by screen readers only, to tell folds apart ("Show as a table: Places"). */
+  context?: string;
+  /** A short hint at the right of the summary ("3 boards"). */
+  hint?: string;
+  open?: boolean;
+  /** Smaller, for a chart's table. */
+  compact?: boolean;
+}
+
+const { summary, context, hint, open = false, compact = false } = Astro.props;
+---
+
+<details class:list={["fold", { "fold-compact": compact }]} open={open}>
+  <summary>
+    <span>{summary}{context && <span class="visually-hidden">: {context}</span>}</span>
+    {hint && <span class="fold-hint">{hint}</span>}
+  </summary>
+  <div class="fold-body">
+    <slot />
+  </div>
+</details>
