@@ -81,6 +81,7 @@ mod real {
     /// Blocking reqwest client: Windows' TLS and certificate store
     /// (native-tls), HTTPS only, no redirects, a timeout and a User-Agent
     /// that says who we are.
+    #[derive(Clone)]
     pub struct ReqwestFetch {
         client: reqwest::blocking::Client,
     }

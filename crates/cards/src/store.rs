@@ -19,7 +19,34 @@ use crate::catalog::{
 };
 use crate::net::{Fetch, Get, Reply};
 
+/// The English card data: names the app's logic relies on (golden Brann and
+/// Titus), the pool, the hero links and the art. Other languages add names.
 pub const DATA_URL: &str = "https://api.hearthstonejson.com/v1/latest/enUS/cards.json";
+
+/// The languages the card data is fetched in (the app's languages, D-065).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Locale {
+    EnUs,
+    EsEs,
+}
+
+impl Locale {
+    /// HearthstoneJSON's code, also the cache folder of a second language.
+    pub fn code(self) -> &'static str {
+        match self {
+            Locale::EnUs => "enUS",
+            Locale::EsEs => "esES",
+        }
+    }
+
+    /// The same file as [`DATA_URL`] in this language.
+    pub fn data_url(self) -> String {
+        format!(
+            "https://api.hearthstonejson.com/v1/latest/{}/cards.json",
+            self.code()
+        )
+    }
+}
 const ART_BASE: &str = "https://art.hearthstonejson.com/v1/256x/";
 /// The gzip download is about 1.6 MB.
 pub const MAX_DATA_BYTES: usize = 16 * 1024 * 1024;
@@ -68,6 +95,7 @@ struct Inner {
 
 pub struct CardStore {
     dir: PathBuf,
+    data_url: String,
     fetch: Box<dyn Fetch>,
     inner: Mutex<Inner>,
     /// One image request at a time.
@@ -84,7 +112,15 @@ impl CardStore {
     /// `dir` is the cache folder on the PC (`<data folder>/card-cache`).
     /// Reads the saved card data if it passes the checks; nothing is fetched here.
     pub fn open(dir: PathBuf, fetch: Box<dyn Fetch>) -> CardStore {
-        CardStore::with_cap(dir, fetch, CACHE_CAP_BYTES)
+        CardStore::open_locale(dir, fetch, Locale::EnUs)
+    }
+
+    /// The card data in `locale`, cached in `dir` (its own folder, so each
+    /// language keeps its own file, ETag and request times).
+    pub fn open_locale(dir: PathBuf, fetch: Box<dyn Fetch>, locale: Locale) -> CardStore {
+        let mut store = CardStore::with_cap(dir, fetch, CACHE_CAP_BYTES);
+        store.data_url = locale.data_url();
+        store
     }
 
     pub fn with_cap(dir: PathBuf, fetch: Box<dyn Fetch>, cap: u64) -> CardStore {
@@ -109,6 +145,7 @@ impl CardStore {
         let art = ArtCache::new(dir.join("art"), cap);
         CardStore {
             dir,
+            data_url: DATA_URL.into(),
             fetch,
             inner: Mutex::new(inner),
             art_lock: Mutex::new(()),
@@ -222,7 +259,7 @@ impl CardStore {
             inner.saved.as_ref().and_then(|s| s.etag.clone())
         };
         let request = Get {
-            url: DATA_URL.into(),
+            url: self.data_url.clone(),
             gzip: true,
             if_none_match: etag,
             max_bytes: MAX_DATA_BYTES,

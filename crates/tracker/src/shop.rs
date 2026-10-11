@@ -84,6 +84,22 @@ pub struct TierUpView {
     pub tier: i64,
 }
 
+/// A number summed over the turns that have it: `turns` of the game's `of`
+/// turns. A turn without it is left out, never counted as 0.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
+pub struct TurnSum {
+    pub value: i64,
+    pub turns: u32,
+    pub of: u32,
+}
+
+impl TurnSum {
+    /// Every turn of the game has the number.
+    pub fn complete(&self) -> bool {
+        self.turns == self.of
+    }
+}
+
 /// Sums over the turns the log has.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
 pub struct ShopTotals {
@@ -93,19 +109,24 @@ pub struct ShopTotals {
     pub spell_buys: u32,
     pub sells: u32,
     pub freezes: u32,
-    /// None when a turn's gold is not in the log.
-    pub gold_spent: Option<i64>,
+    /// The game's turns, from the first to the last the log has (turns the
+    /// log skipped count): the `of` of every [`TurnSum`].
+    pub turns: u32,
+    /// The gold numbers: None only when no turn has the number (an older
+    /// game, or no turn's gold in the log); else the sum over the turns
+    /// that have it, and how many they are.
+    pub gold_spent: Option<TurnSum>,
     pub actions: u32,
-    // Parser revision 4 (T-210): None when a turn lacks the number (not
-    // recorded, or its gold is not in the log).
-    pub extra_gold: Option<i64>,
-    pub sell_gold: Option<i64>,
-    pub buy_gold: Option<i64>,
-    pub spell_gold: Option<i64>,
-    /// Gold beyond the fixed income: extra gold plus sell gold.
-    pub gold_beyond_income: Option<i64>,
-    pub free_refreshes: Option<u32>,
-    pub passes: Option<u32>,
+    // Parser revision 4 (T-210).
+    pub extra_gold: Option<TurnSum>,
+    pub sell_gold: Option<TurnSum>,
+    pub buy_gold: Option<TurnSum>,
+    pub spell_gold: Option<TurnSum>,
+    /// Gold beyond the fixed income: extra gold plus sell gold, over the
+    /// turns that have both.
+    pub gold_beyond_income: Option<TurnSum>,
+    pub free_refreshes: Option<TurnSum>,
+    pub passes: Option<TurnSum>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -223,15 +244,29 @@ fn gap(turn: i64) -> TurnView {
     }
 }
 
-/// The sum of a number over every turn, None when any turn lacks it.
-fn sum_known(record: &ShopRecord, f: fn(&ShopTurn) -> Option<u32>) -> Option<i64> {
-    record.turns.iter().map(|t| f(t).map(i64::from)).sum()
+/// The game's turns: up to the last one the log has, gaps included.
+fn turn_count(record: &ShopRecord) -> u32 {
+    let last = record.turns.iter().map(|t| t.turn).max().unwrap_or(0);
+    let last = u32::try_from(last.clamp(0, MAX_TURN)).unwrap_or(0);
+    last.max(u32::try_from(record.turns.len()).unwrap_or(u32::MAX))
+}
+
+/// A number summed over the turns that have it; None when none has it.
+fn sum_known(record: &ShopRecord, f: impl Fn(&ShopTurn) -> Option<i64>) -> Option<TurnSum> {
+    let mut sum = TurnSum {
+        of: turn_count(record),
+        ..TurnSum::default()
+    };
+    for value in record.turns.iter().filter_map(f) {
+        sum.value = sum.value.saturating_add(value);
+        sum.turns += 1;
+    }
+    (sum.turns > 0).then_some(sum)
 }
 
 pub fn totals(record: &ShopRecord) -> ShopTotals {
     let sum = |f: &dyn Fn(&ShopTurn) -> u32| record.turns.iter().map(f).sum();
-    let extra_gold = sum_known(record, |t| t.extra_gold);
-    let sell_gold = sum_known(record, |t| t.sell_gold);
+    let gold = |f: fn(&ShopTurn) -> Option<u32>| sum_known(record, move |t| f(t).map(i64::from));
     ShopTotals {
         rolls: sum(&|t| t.rolls),
         free_rolls: sum(&|t| t.free_rolls),
@@ -239,19 +274,18 @@ pub fn totals(record: &ShopRecord) -> ShopTotals {
         spell_buys: sum(&|t| t.spell_buys),
         sells: sum(&|t| t.sells.len() as u32),
         freezes: sum(&|t| t.freezes),
-        gold_spent: record.turns.iter().map(|t| t.gold_spent).sum(),
+        turns: turn_count(record),
+        gold_spent: sum_known(record, |t| t.gold_spent),
         actions: record.actions.len() as u32,
-        extra_gold,
-        sell_gold,
-        buy_gold: sum_known(record, |t| t.buy_gold),
-        spell_gold: sum_known(record, |t| t.spell_gold),
-        gold_beyond_income: extra_gold.zip(sell_gold).map(|(e, s)| e + s),
-        free_refreshes: sum_known(record, |t| t.free_refreshes).map(|n| n as u32),
-        passes: record
-            .turns
-            .iter()
-            .map(|t| t.passes.as_ref().map(|p| p.len() as u32))
-            .sum(),
+        extra_gold: gold(|t| t.extra_gold),
+        sell_gold: gold(|t| t.sell_gold),
+        buy_gold: gold(|t| t.buy_gold),
+        spell_gold: gold(|t| t.spell_gold),
+        gold_beyond_income: sum_known(record, |t| {
+            Some(i64::from(t.extra_gold?) + i64::from(t.sell_gold?))
+        }),
+        free_refreshes: gold(|t| t.free_refreshes),
+        passes: sum_known(record, |t| t.passes.as_ref().map(|p| p.len() as i64)),
     }
 }
 
@@ -330,6 +364,13 @@ pub struct TierTurn {
     pub games: usize,
 }
 
+/// Turns behind an average: `known` of the `of` turns of the games counted.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
+pub struct TurnCount {
+    pub known: u64,
+    pub of: u64,
+}
+
 /// Averages per game over the games whose shop the log has from start to end.
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 pub struct ShopStats {
@@ -343,29 +384,58 @@ pub struct ShopStats {
     pub free_rolls: Option<f64>,
     pub buys: Option<f64>,
     pub sells: Option<f64>,
+    /// Per game, over the turns whose gold the log has.
     pub gold_spent: Option<f64>,
-    /// Games with every turn's gold in the log: the denominator of `gold_spent`.
+    /// Games with at least one turn's gold in the log: the denominator of
+    /// `gold_spent`; `gold_turns` says how many of their turns back it.
     pub gold_games: usize,
+    pub gold_turns: TurnCount,
     pub apm: Option<f64>,
     /// Games with a time span in the log: the denominator of `apm`.
     pub apm_games: usize,
     /// Per game: gold beyond the turn's own and beyond sells, gold from
-    /// sells, both together, free rolls used, cards passed (T-210).
+    /// sells, both together, free rolls used, cards passed (T-210), each
+    /// over the turns that have it.
     pub extra_gold: Option<f64>,
     pub sell_gold: Option<f64>,
     pub gold_beyond_income: Option<f64>,
     pub free_refreshes: Option<f64>,
     pub passes: Option<f64>,
-    /// Games with the gold and pass numbers for every turn: the denominator
-    /// of all but `free_refreshes` (games saved before parser revision 4
-    /// have none).
+    /// Games with the gold extras in at least one turn: the denominator of
+    /// the gold extras (games saved before parser revision 4 have none).
     pub extras_games: usize,
+    pub extras_turns: TurnCount,
+    /// Games with the passes in at least one turn: the denominator of `passes`.
+    pub pass_games: usize,
     /// Games whose log gives the roll button's free rolls: the denominator
     /// of `free_refreshes`.
     pub free_refresh_games: usize,
     pub tier_turns: Vec<TierTurn>,
     pub source: Source,
     pub apm_definition: &'static str,
+}
+
+/// A per-game average over the games that have the number in some turn.
+#[derive(Debug, Default)]
+struct Avg {
+    sum: i64,
+    games: usize,
+    turns: TurnCount,
+}
+
+impl Avg {
+    fn add(&mut self, value: Option<TurnSum>) {
+        if let Some(v) = value {
+            self.sum = self.sum.saturating_add(v.value);
+            self.games += 1;
+            self.turns.known += u64::from(v.turns);
+            self.turns.of += u64::from(v.of);
+        }
+    }
+
+    fn average(&self) -> Option<f64> {
+        (self.games > 0).then(|| self.sum as f64 / self.games as f64)
+    }
 }
 
 /// Sums for [`ShopStats`], filled game by game.
@@ -376,12 +446,13 @@ pub struct ShopCounts {
     free_rolls: u64,
     buys: u64,
     sells: u64,
-    gold: i64,
     apm: f64,
-    extra_gold: i64,
-    sell_gold: i64,
-    free_refreshes: u64,
-    passes: u64,
+    gold: Avg,
+    extra_gold: Avg,
+    sell_gold: Avg,
+    beyond: Avg,
+    free_refreshes: Avg,
+    passes: Avg,
     tiers: std::collections::BTreeMap<i64, (i64, usize)>,
 }
 
@@ -409,24 +480,16 @@ impl ShopCounts {
         self.free_rolls += u64::from(t.free_rolls);
         self.buys += u64::from(t.buys);
         self.sells += u64::from(t.sells);
-        if let Some(gold) = t.gold_spent {
-            self.gold = self.gold.saturating_add(gold);
-            self.stats.gold_games += 1;
-        }
+        self.gold.add(t.gold_spent);
         if let Some(apm) = game_apm(&record) {
             self.apm += apm;
             self.stats.apm_games += 1;
         }
-        if let (Some(extra), Some(sell), Some(passes)) = (t.extra_gold, t.sell_gold, t.passes) {
-            self.extra_gold = self.extra_gold.saturating_add(extra);
-            self.sell_gold = self.sell_gold.saturating_add(sell);
-            self.passes += u64::from(passes);
-            self.stats.extras_games += 1;
-        }
-        if let Some(free) = t.free_refreshes {
-            self.free_refreshes += u64::from(free);
-            self.stats.free_refresh_games += 1;
-        }
+        self.extra_gold.add(t.extra_gold);
+        self.sell_gold.add(t.sell_gold);
+        self.beyond.add(t.gold_beyond_income);
+        self.passes.add(t.passes);
+        self.free_refreshes.add(t.free_refreshes);
         // The first time each tier was reached in this game.
         let mut seen = std::collections::BTreeSet::new();
         for up in &record.tier_ups {
@@ -446,16 +509,19 @@ impl ShopCounts {
             free_rolls: avg(self.free_rolls as f64, games),
             buys: avg(self.buys as f64, games),
             sells: avg(self.sells as f64, games),
-            gold_spent: avg(self.gold as f64, self.stats.gold_games),
+            gold_spent: self.gold.average(),
+            gold_games: self.gold.games,
+            gold_turns: self.gold.turns,
             apm: avg(self.apm, self.stats.apm_games),
-            extra_gold: avg(self.extra_gold as f64, self.stats.extras_games),
-            sell_gold: avg(self.sell_gold as f64, self.stats.extras_games),
-            gold_beyond_income: avg(
-                self.extra_gold.saturating_add(self.sell_gold) as f64,
-                self.stats.extras_games,
-            ),
-            free_refreshes: avg(self.free_refreshes as f64, self.stats.free_refresh_games),
-            passes: avg(self.passes as f64, self.stats.extras_games),
+            extra_gold: self.extra_gold.average(),
+            sell_gold: self.sell_gold.average(),
+            gold_beyond_income: self.beyond.average(),
+            extras_games: self.extra_gold.games,
+            extras_turns: self.extra_gold.turns,
+            free_refreshes: self.free_refreshes.average(),
+            free_refresh_games: self.free_refreshes.games,
+            passes: self.passes.average(),
+            pass_games: self.passes.games,
             tier_turns: self
                 .tiers
                 .into_iter()
@@ -573,8 +639,16 @@ mod tests {
         ));
         let t = r.totals.expect("totals");
         assert_eq!(
-            (t.rolls, t.free_rolls, t.buys, t.gold_spent, t.actions),
-            (4, 2, 2, Some(6), 3)
+            (t.rolls, t.free_rolls, t.buys, t.actions, t.turns),
+            (4, 2, 2, 3, 2)
+        );
+        assert_eq!(
+            t.gold_spent,
+            Some(TurnSum {
+                value: 6,
+                turns: 2,
+                of: 2
+            })
         );
         assert_eq!(r.action_kinds, [(ActionKind::Roll, 3)]);
     }
@@ -657,11 +731,12 @@ mod tests {
         assert_eq!(r.turns[0].passes, Some(vec![Some("BG_P".to_string())]));
         let t = r.totals.unwrap();
         assert_eq!(
-            (t.extra_gold, t.sell_gold, t.gold_beyond_income),
+            (v(t.extra_gold), v(t.sell_gold), v(t.gold_beyond_income)),
             (Some(2), Some(4), Some(6))
         );
-        assert_eq!((t.buy_gold, t.spell_gold), (Some(6), Some(0)));
-        assert_eq!((t.free_refreshes, t.passes), (Some(2), Some(1)));
+        assert_eq!((v(t.buy_gold), v(t.spell_gold)), (Some(6), Some(0)));
+        assert_eq!((v(t.free_refreshes), v(t.passes)), (Some(2), Some(1)));
+        assert!(t.extra_gold.unwrap().complete());
     }
 
     #[test]
@@ -677,15 +752,97 @@ mod tests {
             (t.extra_gold, t.gold_beyond_income, t.passes),
             (None, None, None)
         );
-        // One turn without its gold in the log: the game's gold totals are unknown.
-        let mut cut = turn4(2, 1, 1, &[]);
-        cut["extra_gold"] = Value::Null;
-        let r = shop_recap(&report(vec![turn4(1, 2, 1, &[]), cut], 2, true));
+    }
+
+    fn v(sum: Option<TurnSum>) -> Option<i64> {
+        sum.map(|s| s.value)
+    }
+
+    /// Turn 1 as the log gave it in the user's game of 2026-10-11: the
+    /// turn is there, its gold is not.
+    fn no_gold(n: i64) -> Value {
+        let mut t = turn4(n, 0, 0, &[]);
+        for key in [
+            "gold",
+            "gold_spent",
+            "extra_gold",
+            "sell_gold",
+            "buy_gold",
+            "spell_gold",
+        ] {
+            t[key] = Value::Null;
+        }
+        t
+    }
+
+    #[test]
+    fn a_turn_without_its_gold_leaves_the_others_summed_and_says_how_many() {
+        let r = shop_recap(&report(
+            vec![no_gold(1), turn4(2, 2, 1, &[]), turn4(3, 0, 3, &[])],
+            3,
+            true,
+        ));
+        let t = r.totals.unwrap();
+        let known = |value| {
+            Some(TurnSum {
+                value,
+                turns: 2,
+                of: 3,
+            })
+        };
+        assert_eq!(t.gold_spent, known(6));
+        assert_eq!((t.extra_gold, t.sell_gold), (known(2), known(4)));
+        assert_eq!(t.gold_beyond_income, known(6));
+        assert!(!t.gold_spent.unwrap().complete());
+        // The free rolls and passes are kept apart from the gold: all 3 turns.
+        assert_eq!(t.free_refreshes.map(|s| (s.turns, s.of)), Some((3, 3)));
+        // The missing turn stays unknown in the turn list: never a made-up 0.
+        assert_eq!((r.turns[0].gold_spent, r.turns[0].extra_gold), (None, None));
+    }
+
+    #[test]
+    fn a_game_with_no_turn_gold_has_no_gold_totals() {
+        let r = shop_recap(&report(vec![no_gold(1), no_gold(2)], 2, true));
         let t = r.totals.unwrap();
         assert_eq!(
-            (t.extra_gold, t.sell_gold, t.gold_beyond_income),
-            (None, Some(2), None)
+            (t.gold_spent, t.extra_gold, t.gold_beyond_income),
+            (None, None, None)
         );
+        assert_eq!(t.rolls, 4);
+        let mut counts = ShopCounts::default();
+        counts.add(&report(vec![no_gold(1), no_gold(2)], 2, true));
+        let s = counts.finish();
+        assert_eq!((s.games, s.gold_games, s.gold_spent), (1, 0, None));
+        assert_eq!((s.extras_games, s.extra_gold), (0, None));
+    }
+
+    #[test]
+    fn a_turn_the_log_skipped_counts_in_the_turns_of_the_game() {
+        let r = shop_recap(&report(
+            vec![turn4(1, 0, 0, &[]), turn4(3, 0, 0, &[])],
+            2,
+            true,
+        ));
+        let t = r.totals.unwrap();
+        assert_eq!(t.turns, 3);
+        assert_eq!(t.gold_spent.map(|s| (s.turns, s.of)), Some((2, 3)));
+    }
+
+    #[test]
+    fn stats_count_a_game_missing_one_turn_and_say_how_many_turns() {
+        let mut counts = ShopCounts::default();
+        counts.add(&report(vec![no_gold(1), turn4(2, 2, 1, &[])], 1, true));
+        counts.add(&report(
+            vec![turn4(1, 4, 3, &[]), turn4(2, 0, 1, &[])],
+            1,
+            true,
+        ));
+        let s = counts.finish();
+        assert_eq!((s.gold_games, s.extras_games, s.pass_games), (2, 2, 2));
+        assert_eq!(s.gold_turns, TurnCount { known: 3, of: 4 });
+        assert_eq!(s.extras_turns, TurnCount { known: 3, of: 4 });
+        assert_eq!(s.gold_spent, Some(4.5));
+        assert_eq!((s.extra_gold, s.sell_gold), (Some(3.0), Some(2.5)));
     }
 
     #[test]

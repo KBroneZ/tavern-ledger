@@ -369,3 +369,21 @@ fn has_data_only_once_names_are_there() {
     store.refresh_if_due(NOW);
     assert!(store.has_data());
 }
+
+#[test]
+fn a_second_language_fetches_its_own_file_into_its_own_folder() {
+    assert_eq!(DATA_URL, Locale::EnUs.data_url());
+    let dir = temp_dir("es");
+    let fake = Arc::new(FakeFetch::default());
+    let es_url = "https://api.hearthstonejson.com/v1/latest/esES/cards.json";
+    fake.on(es_url, data_reply("\"es1\""));
+    let es = CardStore::open_locale(dir.clone(), Box::new(Shared(fake.clone())), Locale::EsEs);
+    assert!(es.refresh_if_due(NOW));
+    assert_eq!(fake.urls(), [es_url]);
+    assert_eq!(es.name("HERO_X").as_deref(), Some("Made-up Hero"));
+    // Kept on the PC: a restart has the names without asking again.
+    let again = CardStore::open_locale(dir.clone(), Box::new(Shared(fake.clone())), Locale::EsEs);
+    assert!(again.has_data());
+    assert!(!again.refresh_if_due(NOW + 60));
+    let _ = fs::remove_dir_all(&dir);
+}

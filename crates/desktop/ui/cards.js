@@ -1,5 +1,7 @@
 // Card names and art (T-304, D-038), shared by the window and the overlay.
-// Names come from the app (HearthstoneJSON's card data, cached on this PC);
+// Names come from the app (HearthstoneJSON's card data, cached on this PC)
+// in the app's language (session 057: Spanish names with the app in
+// Spanish, English ones in English), whatever language the game's log is in;
 // art comes from the app's cardart protocol. A card the data does not know
 // shows its id; an image that does not load is removed, so no wrong or
 // broken picture is ever shown. Own scope: it must not clash with the
@@ -25,25 +27,36 @@ window.TLCards = (() => {
 
   async function flush() {
     timer = null;
+    // Names in the page's language: asked once it is known.
+    const I18n = window.TLI18n;
+    if (I18n) await I18n.ready();
+    const lang = I18n ? I18n.lang() : "en";
     const ids = [...queued];
     queued = new Set();
     ids.forEach((id) => asking.add(id));
+    let news = false;
     for (let i = 0; i < ids.length; i += BATCH) {
       const part = ids.slice(i, i + BATCH);
       let got = {};
       try {
-        got = await invoke("card_names", { ids: part });
+        got = await invoke("card_names", { ids: part, lang });
       } catch (_) {
         got = {}; // the names stay unknown; the ids show
       }
       for (const id of part) {
         asking.delete(id);
         // Left out of the answer: no card data yet. Asked again on the next change.
-        if (!got || !Object.prototype.hasOwnProperty.call(got, id)) waiting.add(id);
-        else names.set(id, typeof got[id] === "string" ? got[id] : null);
+        if (!got || !Object.prototype.hasOwnProperty.call(got, id)) {
+          waiting.add(id);
+          continue;
+        }
+        const answer = typeof got[id] === "string" ? got[id] : null;
+        news = news || !names.has(id) || names.get(id) !== answer;
+        names.set(id, answer);
       }
     }
-    changed();
+    // The pages redraw only when a name is new or changed.
+    if (news) changed();
   }
 
   function want(id) {
@@ -59,6 +72,15 @@ window.TLCards = (() => {
     if (names.has(id)) return names.get(id);
     if (!waiting.has(id)) want(id);
     return undefined;
+  }
+
+  // The name to show: the card data's in the app's language, else the name
+  // the game's log printed (`logName`, in the game client's language), else
+  // the card id. Asks the app for it when it is not known yet.
+  function display(id, logName) {
+    const known = name(id);
+    if (typeof known === "string" && known) return known;
+    return logName || id || null;
   }
 
   // An <img> for the card's art, or null for an id that is not a card id.
@@ -106,6 +128,7 @@ window.TLCards = (() => {
 
   return {
     name,
+    display,
     art,
     status: () => status,
     onChange: (f) => watchers.push(f),

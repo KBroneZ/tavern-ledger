@@ -525,6 +525,15 @@ td.played { white-space: nowrap; color: var(--dim); font-variant-numeric: tabula
 .close-x:hover { box-shadow: inset 0 0 0 1.5px var(--amber); color: var(--amber-hi); }
 .close-x:active { transform: scale(0.94); }
 .recap-view > .report-error { margin: 14px 0 0; }
+/* The recap's content keeps a readable width in a wide window (the user's
+   2560 px wide window spread four numbers over the whole width): one
+   centred column, numbers as compact tiles, explanations wrapped. */
+#recap-body { max-width: 1320px; margin-inline: auto; }
+.recap-part .facts { grid-template-columns: repeat(auto-fill, minmax(150px, 210px)); gap: 8px; }
+.recap-part .fact { padding: 8px 12px 9px; border-radius: var(--radius-s); background: var(--panel); box-shadow: inset 0 0 0 1px var(--line-soft); }
+.fact .fact-sub { margin: 1px 0 0; color: var(--dim); font: 600 12px/1.3 var(--font-body); }
+.recap .note { max-width: 90ch; overflow-wrap: anywhere; }
+.recap .fold > .facts { margin: 4px 0 8px; }
 .recap-top { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(0, 2.4fr); gap: var(--space); align-items: start; margin-top: 16px; }
 .recap-top .facts { grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .recap-top .recap-part { margin-top: 0; padding-top: 0; border-top: 0; }

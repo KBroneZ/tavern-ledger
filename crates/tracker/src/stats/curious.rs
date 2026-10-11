@@ -17,7 +17,7 @@ use serde_json::Value;
 use crate::choices::own_triples;
 use crate::provenance::Source;
 use crate::recap::{combats_in_order, own_health_points, Outcome};
-use crate::shop::{record_of, totals};
+use crate::shop::{record_of, totals, TurnCount, TurnSum};
 
 /// Card names (English, from the card data) that count as golden Brann or
 /// Titus when sold.
@@ -32,7 +32,8 @@ const WHY_NO_BUYS: &str = "No minion bought in the games with a shop record.";
 const WHY_NO_RESULTS: &str = "No combat result is known in any game.";
 const WHY_NO_HEALTH: &str = "No game has your health before and after the same combat.";
 
-const BASIS_GOLD_SPENT: &str = "Gold you spent in the tavern, summed over every turn the log has.";
+const BASIS_GOLD_SPENT: &str =
+    "Gold you spent in the tavern, summed over every turn whose gold the log has.";
 const BASIS_EXTRA_GOLD: &str = "Gold beyond each turn's own: from cards, trinkets, refunds and the like (the game's temporary gold). Gold from selling is apart.";
 const BASIS_SELL_GOLD: &str = "Gold you got for selling minions.";
 const BASIS_PAID_ROLLS: &str = "Rolls that spent gold.";
@@ -65,6 +66,9 @@ pub struct CuriousStat {
     pub source: Source,
     /// Games whose record backs the value: "in `games` of `Curious::games`".
     pub games: usize,
+    /// For a sum over shop turns: the turns of those games that back it
+    /// ("130 of 131 turns"); None for the other stats.
+    pub turns: Option<TurnCount>,
     pub missing: Option<&'static str>,
     /// How the value is worked out.
     pub basis: &'static str,
@@ -85,11 +89,13 @@ pub struct Curious {
     pub dropped: Vec<Dropped>,
 }
 
-/// A sum over the games that have the number.
+/// A sum over the games that have the number (and, for a sum over shop
+/// turns, the turns that have it).
 #[derive(Default)]
 struct Sum {
     total: i64,
     games: usize,
+    turns: Option<TurnCount>,
 }
 
 impl Sum {
@@ -97,6 +103,17 @@ impl Sum {
         if let Some(v) = value {
             self.total = self.total.saturating_add(v);
             self.games += 1;
+        }
+    }
+
+    /// A game's sum over the turns that have the number: a turn without it
+    /// is left out, never added as 0, and the turns are counted.
+    fn add_turns(&mut self, value: Option<TurnSum>) {
+        if let Some(v) = value {
+            self.add(Some(v.value));
+            let turns = self.turns.get_or_insert_with(TurnCount::default);
+            turns.known += u64::from(v.turns);
+            turns.of += u64::from(v.of);
         }
     }
 
@@ -115,6 +132,7 @@ impl Sum {
             card: None,
             source: Source::log_if(known),
             games: self.games,
+            turns: self.turns,
             missing: (!known).then_some(why),
             basis,
         }
@@ -222,9 +240,9 @@ impl Counts {
         if let Some(record) = record_of(report).ok().filter(|r| !r.turns.is_empty()) {
             let t = totals(&record);
             self.shop_games += 1;
-            self.gold_spent.add(t.gold_spent);
-            self.extra_gold.add(t.extra_gold);
-            self.sell_gold.add(t.sell_gold);
+            self.gold_spent.add_turns(t.gold_spent);
+            self.extra_gold.add_turns(t.extra_gold);
+            self.sell_gold.add_turns(t.sell_gold);
             self.paid_rolls
                 .add(Some(i64::from(t.rolls.saturating_sub(t.free_rolls))));
             self.free_rolls.add(Some(i64::from(t.free_rolls)));
@@ -267,6 +285,7 @@ impl Counts {
             card: top.map(|(id, _)| id.clone()),
             source: Source::log_if(top.is_some()),
             games: self.shop_games,
+            turns: None,
             missing: top.is_none().then_some(why),
             basis: BASIS_MOST_BOUGHT,
         }
@@ -301,6 +320,7 @@ impl Counts {
                 Source::Inferred
             },
             games: self.streak_games,
+            turns: None,
             missing: None,
             basis: BASIS_WIN_STREAK,
         });
@@ -315,6 +335,7 @@ impl Counts {
                 Source::Unknown
             },
             games: self.damage_games,
+            turns: None,
             missing: self.damage.is_none().then_some(WHY_NO_HEALTH),
             basis: BASIS_DAMAGE,
         };
@@ -355,6 +376,7 @@ impl Counts {
                     card: None,
                     source: Source::Unknown,
                     games: 0,
+                    turns: None,
                     missing: Some(WHY_NO_RESULTS),
                     basis: BASIS_WIN_STREAK,
                 }),
@@ -494,6 +516,32 @@ mod tests {
         let extra = stat(&c, "extra_gold");
         assert_eq!((extra.value, extra.games), (Some(2), 1), "in 1 of 2 games");
         assert_eq!(stat(&c, "gold_spent").games, 2);
+    }
+
+    #[test]
+    fn a_turn_without_its_gold_is_left_out_and_the_turns_are_counted() {
+        let mut first = turn(1, 3, 0, 0, &[], &[]);
+        for key in [
+            "gold",
+            "gold_spent",
+            "extra_gold",
+            "sell_gold",
+            "buy_gold",
+            "spell_gold",
+        ] {
+            first[key] = Value::Null;
+        }
+        let games = [
+            game(vec![first, turn(2, 4, 0, 0, &[], &["BG_A"])]),
+            game(vec![turn(1, 3, 0, 0, &[], &[])]),
+        ];
+        let c = compute(&games, no_names());
+        let gold = stat(&c, "gold_spent");
+        assert_eq!((gold.value, gold.games), (Some(7), 2));
+        assert_eq!(gold.turns, Some(TurnCount { known: 2, of: 3 }));
+        assert_eq!(stat(&c, "extra_gold").value, Some(4));
+        assert_eq!(stat(&c, "sell_gold").value, Some(1));
+        assert_eq!(stat(&c, "paid_rolls").turns, None, "not a gold sum");
     }
 
     #[test]

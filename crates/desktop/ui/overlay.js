@@ -62,8 +62,9 @@ function tribeName(id) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+// The card data's name in the app's language, else the log's, else the id.
 function heroName(hero) {
-  return hero.name || hero.id;
+  return TLCards.display(hero.id, hero.name);
 }
 
 function heroes(list) {
