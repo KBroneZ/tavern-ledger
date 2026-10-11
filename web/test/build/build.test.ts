@@ -15,7 +15,7 @@ const DIST = join(ROOT, "dist");
 const ENV = loadEnv("production", ROOT, "PUBLIC_");
 const CONFIG = readConfig(ENV);
 const SIGNUPS = signupsOpen(ENV);
-const DATA_PAGES = ["me/index.html", "games/index.html", "profile/index.html"];
+const DATA_PAGES = ["me/index.html", "games/index.html", "profile/index.html", "leaderboards/index.html", "player-heroes/index.html", "curious/index.html"];
 const ACCOUNT_PAGES = ["signin/index.html", "account/index.html", "forgot-password/index.html", ...DATA_PAGES];
 
 function files(dir: string): string[] {
@@ -426,4 +426,39 @@ test("accounts open: the data pages are a static frame with reserved room for th
   // The owner's pages stay out of search engines; the menu links to the dashboard.
   for (const file of ["me/index.html", "games/index.html"]) assert.match(page(file), /<meta name="robots" content="noindex">/, file);
   assert.match(page("index.html"), /href="\/me\/"/);
+});
+
+test("accounts open: the heroes and curious stats pages are a static frame with reserved room (T-505)", { skip: !CONFIG }, () => {
+  for (const [file, kind] of [["player-heroes/index.html", "heroes"], ["curious/index.html", "curious"]]) {
+    const html = readFileSync(join(DIST, file), "utf8");
+    assert.match(html, new RegExp(`id="pp" data-page="${kind}" aria-busy="true"`), file);
+    assert.match(html, /class="dash-body" id="pp-body"/, file);
+    assert.match(html, /class="mode-panels" id="pp-modes"/, file);
+    assert.match(html, /data-switch="mode" data-controls="pp-modes"/, file);
+    assert.match(html, /data-switch="detail"/, file);
+    assert.match(html, /state-loading/, file);
+    assert.match(html, /id="pp-status" role="status" aria-live="polite"/, file);
+    assert.match(html, /<meta name="robots" content="noindex">/, file);
+  }
+});
+
+test("accounts open: the leaderboards are a static frame with reserved room, linked from the menu", { skip: !CONFIG }, () => {
+  const page = (p: string) => readFileSync(join(DIST, p), "utf8");
+  const html = page("leaderboards/index.html");
+  assert.match(html, /id="lb" aria-busy="true"/);
+  assert.match(html, /class="dash-body lb-periods" id="lb-body" data-period="30d"/);
+  assert.match(html, /class="mode-panels" id="lb-modes"/);
+  assert.match(html, /data-switch="mode" data-controls="lb-modes"/);
+  assert.match(html, /data-switch="detail"/);
+  assert.match(html, /role="group" aria-label="Period" id="lb-period-switch"[^>]*hidden/);
+  for (const period of ["7d", "30d", "all"]) assert.match(html, new RegExp(`data-value="${period}"`), period);
+  assert.match(html, /state-loading/);
+  assert.match(html, /id="lb-status" role="status" aria-live="polite"/);
+  // Public, but kept out of search engines (it lists display names); every page's menu links to it.
+  assert.match(html, /<meta name="robots" content="noindex">/);
+  assert.match(page("privacy/index.html"), /id="public-profiles-and-leaderboards"/);
+  for (const file of ["index.html", "me/index.html", "privacy/index.html"]) {
+    assert.match(page(file), /<a href="\/leaderboards\/"[^>]*>Leaderboards<\/a>/, file);
+  }
+  assert.match(html, /<a href="\/leaderboards\/" aria-current="page">/);
 });

@@ -29,6 +29,14 @@ export interface DashboardOptions {
   owner: boolean;
   /** Whose games these are, for each game's link. */
   userId: string;
+  /** The heroes page's address for a mode (T-505). */
+  heroesHref?: (m: Mode) => string;
+  /** The curious stats page's address for a mode (T-505). */
+  curiousHref?: (m: Mode) => string;
+}
+
+function moreLink(href: string | undefined, text: string): VNode | null {
+  return href ? h("p", {}, h("a", { class: "dash-more", href }, text)) : null;
 }
 
 function section(id: string, title: string, ...body: (VNode | null)[]): VNode {
@@ -71,7 +79,7 @@ function lastGamesSection(m: Mode, data: ModeData, opts: DashboardOptions): VNod
   );
 }
 
-function heroesSection(m: Mode, dash: Dashboard): VNode {
+function heroesSection(m: Mode, dash: Dashboard, opts: DashboardOptions): VNode {
   const rows = heroCells(dash.heroes, m);
   return section(
     `dash-${m}-heroes`,
@@ -79,10 +87,11 @@ function heroesSection(m: Mode, dash: Dashboard): VNode {
     rows.length === 0
       ? stateBlock({ kind: "unknown", title: t("heroes.empty") })
       : topTable({ caption: t("heroes.caption", { mode: modeName(m) }), columns: HERO_COLUMNS(m), rows, top: TOP_ROWS }),
+    rows.length === 0 ? null : moreLink(opts.heroesHref?.(m), t("player.link.heroes", { mode: modeName(m) })),
   );
 }
 
-function recordsSection(m: Mode, dash: Dashboard, games: number): VNode {
+function recordsSection(m: Mode, dash: Dashboard, games: number, opts: DashboardOptions): VNode {
   const rows = recordCells(dash.records, m, games);
   return section(
     `dash-${m}-records`,
@@ -90,6 +99,7 @@ function recordsSection(m: Mode, dash: Dashboard, games: number): VNode {
     rows.length === 0
       ? stateBlock({ kind: "unknown", title: t("records.empty"), body: t("records.empty.body") })
       : topTable({ caption: t("records.caption", { mode: modeName(m) }), columns: RECORD_COLUMNS, rows, top: TOP_RECORDS }),
+    moreLink(opts.curiousHref?.(m), t("player.link.curious")),
   );
 }
 
@@ -108,8 +118,8 @@ export function modePanel(m: Mode, dash: Dashboard, opts: DashboardOptions): VNo
     overviewSection(m, data),
     chartsSection(m, data),
     lastGamesSection(m, data, opts),
-    heroesSection(m, dash),
-    recordsSection(m, dash, data.overview.games),
+    heroesSection(m, dash, opts),
+    recordsSection(m, dash, data.overview.games, opts),
   );
 }
 

@@ -46,7 +46,10 @@ import { CONFIRM_PHRASE } from "../lib/deleteAccount.ts";
       <form id="profile-form" novalidate>
         <label>
           Display name
-          <span class="hint">Up to 32 letters, digits, spaces, _ . or -. Not your BattleTag.</span>
+          <span class="hint">
+            Up to 32 letters, digits, spaces, _ . or -. Not your BattleTag. Offensive words and names
+            that look official are refused.
+          </span>
           <input type="text" name="display_name" maxlength="32" autocomplete="nickname" />
         </label>
         <label class="check">
@@ -56,7 +59,9 @@ import { CONFIRM_PHRASE } from "../lib/deleteAccount.ts";
             <span class="hint">
               Off by default. When on, anyone can find your profile and read your display name
               and every game you uploaded in full: hero, place, mode, date, tribes offered and
-              the boards you saw. Never your rating or other players' names.
+              the boards you saw. With a display name and enough games, you also appear on the
+              <a href="/leaderboards/">public leaderboards</a>. Never your rating or other players'
+              names. Turning it off hides you everywhere as soon as you save.
             </span>
           </span>
         </label>

@@ -178,30 +178,42 @@ function dataTable(head: VNode, rows: VNode[], caption?: string): VNode {
   return h("table", { class: "dtable" }, caption ? h("caption", {}, caption) : null, head, h("tbody", {}, rows));
 }
 
-function headRow(labels: [string, boolean][]): VNode {
-  return h("thead", {}, h("tr", {}, labels.map(([label, num]) => h("th", { scope: "col", class: num ? "num" : undefined }, label))));
+function headRow(labels: [string, boolean][] | Column[]): VNode {
+  const columns: Column[] = labels.map((l) => (Array.isArray(l) ? { label: l[0], numeric: l[1] } : l));
+  return h(
+    "thead",
+    {},
+    h("tr", {}, columns.map((c) => h("th", { scope: "col", class: cls({ num: !!c.numeric, adv: !!c.advanced }) || undefined }, c.label))),
+  );
 }
 
 export type Cell =
   | string
   | number
   | { place: number | null; mode: Mode }
-  | { hero: string | null; name: string }
+  /** With href, the hero's name links there (the heroes page's link to that hero's games). */
+  | { hero: string | null; name: string; href?: string }
   /** Anything else (a value with a mark); the client pages only. */
   | { node: VNode | VNode[] };
 
 export interface Column {
   label: string;
   numeric?: boolean;
+  /** Shown in Advanced only (the .adv rule). */
+  advanced?: boolean;
+  /** Text cells of this column are the row's header (th scope="row"). */
+  rowHeader?: boolean;
 }
 
-function tableCell(cell: Cell, numeric: boolean | undefined): VNode {
+function tableCell(cell: Cell, column: Column | undefined): VNode {
   if (typeof cell === "object" && "hero" in cell) {
-    return h("th", { scope: "row" }, h("span", { class: "cell-hero" }, picture("hero", cell.hero, cell.name, 24, true), h("span", {}, cell.name)));
+    const name = cell.href ? h("a", { href: cell.href }, cell.name) : h("span", {}, cell.name);
+    return h("th", { scope: "row", class: cls({ adv: !!column?.advanced }) || undefined }, h("span", { class: "cell-hero" }, picture("hero", cell.hero, cell.name, 24, true), name));
   }
-  const klass = cls({ num: !!numeric }) || undefined;
+  const klass = cls({ num: !!column?.numeric, adv: !!column?.advanced }) || undefined;
   if (typeof cell === "object" && "place" in cell) return h("td", { class: klass }, placeBadge(cell.place, cell.mode));
   if (typeof cell === "object") return h("td", { class: klass }, cell.node);
+  if (column?.rowHeader) return h("th", { scope: "row", class: klass }, String(cell));
   return h("td", { class: klass }, String(cell));
 }
 
@@ -223,8 +235,8 @@ export function topTable({ caption, columns, rows, top = 5, label = caption }: T
       "div",
       { class: "scroll-x", role: "region", "aria-label": label, tabindex: "0" },
       dataTable(
-        headRow(columns.map((c) => [c.label, !!c.numeric])),
-        all.map(({ cells, more }) => h("tr", { class: cls({ more }) || undefined }, cells.map((c, i) => tableCell(c, columns[i]?.numeric)))),
+        headRow(columns),
+        all.map(({ cells, more }) => h("tr", { class: cls({ more }) || undefined }, cells.map((c, i) => tableCell(c, columns[i])))),
         caption,
       ),
     ),

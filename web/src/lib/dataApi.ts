@@ -31,13 +31,14 @@ export const LAST_GAMES = 10;
 
 const MODES: Mode[] = ["solo", "duos"];
 
-interface Answer {
+export interface Answer {
   data: unknown;
   error: unknown;
   count?: number | null;
 }
 
-function rowsOf(answer: Answer): Record<string, unknown>[] {
+/** The rows of an answer; a failed request throws. */
+export function rowsOf(answer: Answer): Record<string, unknown>[] {
   if (answer.error) throw new DataError("the request failed");
   return asRows(answer.data);
 }

@@ -5,6 +5,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 // so a BattleTag (Name#1234) cannot be entered. The database has the last word.
 const NAME = /^[\p{L}\p{N} _.-]+$/u;
 const MAX_NAME = 32;
+/** The message private.check_display_name() raises for a listed word. */
+const NAME_NOT_ALLOWED = "display_name_not_allowed";
 
 export type NameCheck = { ok: true; value: string | null } | { ok: false; message: string };
 
@@ -32,6 +34,10 @@ export function publicProfilePath(userId: string): string {
 
 /** A PostgREST error as the profile form shows it. */
 export function profileErrorMessage(e: { code?: string; message?: string }): string {
+  // The server's word list (D-077) refused the name; the list stays on the server.
+  if (e.code === "23514" && e.message === NAME_NOT_ALLOWED) {
+    return "This name is not allowed. Choose another one: names show on public pages and leaderboards.";
+  }
   if (e.code === "23514") return "Use 1-32 letters, digits, spaces, _ . or - only.";
   if (e.code === "PGRST301" || e.code === "42501") return "Your session ended. Sign in again.";
   return "Could not save. Try again in a moment.";

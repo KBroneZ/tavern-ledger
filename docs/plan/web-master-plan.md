@@ -69,6 +69,8 @@ Built as SQL views or materialized views refreshed on a schedule (like the sweep
 
 **T-503 notes (done, D-073):** the data pages stay static: a frame with reserved room and a script that draws the T-501 pieces from the data API (same markup, checked by a build test). Addresses are `/me/`, `/profile/?id=<uuid>` and `/games/` (`?id=` for a public profile) rather than `/u/<name>/`: a static host has no server routing and display names are not unique handles. New pieces for later pages: `web/src/lib/view/` (element trees), `web/src/lib/data/rows.ts` (checked rows), `dashboard.ts`, `filters.ts`, `web/src/lib/dataApi.ts`.
 
+**T-506 and T-509 notes (done, D-082):** `/leaderboards/` lists public profiles with an allowed display name and 20 finished games in the mode and period (10 per hero), 12 boards, rebuilt every 10 minutes, read through `public.leaderboard()`; leaving is immediate. The privacy policy and terms cover public profiles and leaderboards. Details: [leaderboards.md](../research/leaderboards.md).
+
 Order: T-501 and T-502 in parallel (they do not overlap: `web/` design vs `supabase/`), then T-503 and T-504, then T-505 to T-509.
 
 ## Decisions the user must make (the hub asks, one at a time)

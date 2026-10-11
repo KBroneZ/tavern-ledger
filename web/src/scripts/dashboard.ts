@@ -5,6 +5,7 @@
 import { loadDashboard, profileAccess, type ProfileAccess } from "../lib/dataApi.ts";
 import type { Mode } from "../lib/data/format.ts";
 import { filtersQuery, DEFAULT_FILTERS } from "../lib/data/filters.ts";
+import { statsPagePath } from "../lib/heroes/heroes.ts";
 import { t } from "../lib/data/strings.ts";
 import { parseProfileId, publicProfilePath } from "../lib/profile.ts";
 import { aboutFold, dashboardPanels, isEmpty } from "../lib/view/dashboardView.ts";
@@ -90,6 +91,7 @@ async function start(): Promise<void> {
   const { userId, access } = who;
   const dash = await loadDashboard(supabase, userId);
   const gamesHref = (m: Mode) => `/games/${filtersQuery({ ...DEFAULT_FILTERS, mode: m }, own ? null : userId)}`;
+  const profileId = own ? null : userId;
   const name = access.kind === "private" ? null : (access.name ?? t("dash.unnamed"));
   if (!own && name) {
     title.textContent = name;
@@ -102,7 +104,9 @@ async function start(): Promise<void> {
     return;
   }
   mount(note, ...(extra ? [extra] : []));
-  mount(panels, ...dashboardPanels(dash, { gamesHref, owner: own, userId }));
+  const heroesHref = (m: Mode) => statsPagePath("heroes", m, profileId);
+  const curiousHref = (m: Mode) => statsPagePath("curious", m, profileId);
+  mount(panels, ...dashboardPanels(dash, { gamesHref, owner: own, userId, heroesHref, curiousHref }));
   mount(about, aboutFold());
   gate.hidden = true;
   panels.hidden = false;
