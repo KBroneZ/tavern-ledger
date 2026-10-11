@@ -9,11 +9,13 @@
 //      validateRecord(): no player names, no fields outside the report;
 //   4. upload_begin(): revision, rate limits and total quota;
 //   5. the file, re-compressed here from the checked bytes, is written with
-//      the service role, then upload_commit() writes the summary row.
+//      the service role, then upload_commit() writes the game row and the
+//      game's summary for the website (T-502, D-071), in one transaction.
 // Same bytes again: 200 without writing. Answers carry a code and the
 // validator's version (D-047), never the values sent, a token or an id. No
 // dependencies: plain fetch against the project's own HTTP APIs.
 
+import { type GameStats, summarize, SUMMARY_VERSION } from "../_shared/game_summary.ts";
 import { parsePath, type Summary, validateRecord, VALIDATOR_VERSION } from "./validate.ts";
 
 export interface Env {
@@ -197,6 +199,7 @@ function commitArgs(
   userId: string,
   key: { session: string; index: number },
   s: Summary,
+  stats: GameStats,
   sha: string,
   size: number,
 ) {
@@ -215,6 +218,8 @@ function commitArgs(
     p_sha256: sha,
     p_size: size,
     p_parser_version: s.parser_version,
+    p_stats: stats,
+    p_summary_version: SUMMARY_VERSION,
   };
 }
 
@@ -260,6 +265,8 @@ async function store(
       field: checked.field,
     });
   }
+  // The record passed validateRecord(), so its report has the parser's shape.
+  const stats = summarize((decoded.value as { report: unknown }).report);
   const sha = await sha256Hex(decoded.bytes);
   // Store only the checked bytes: a gzip header can carry a name or comment.
   const file = await gzip(decoded.bytes);
@@ -300,7 +307,7 @@ async function store(
     fetchFn,
     "write row",
     "upload_commit",
-    commitArgs(userId, key, checked.summary, sha, file.length),
+    commitArgs(userId, key, checked.summary, stats, sha, file.length),
   );
   if (committed === "created") return json(201, { result: "created", sha256: sha });
   if (committed === "replaced") return json(200, { result: "replaced", sha256: sha });

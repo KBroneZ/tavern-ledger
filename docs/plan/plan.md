@@ -272,7 +272,7 @@ The user's request (2026-10-11): everything the app knows on the website, detail
 | ID | Task | Status |
 |----|------|--------|
 | T-501 | Design system for the web data pages (tokens, stat tiles, compact tables, folds, charts, pictures, empty states) | pending |
-| T-502 | Data API: per-game summaries and per-user SQL views, private by default (RLS), tested | pending |
+| T-502 | Data API: per-game summaries and per-user SQL views, private by default (RLS), tested | done |
 | T-503 | Personal dashboard and games list (`/me/`, `/u/<name>/`, games) | pending |
 | T-504 | Game viewer (T-201): one game in full, Simple and Advanced | pending |
 | T-505 | Heroes and curious stats pages | pending |
@@ -280,6 +280,8 @@ The user's request (2026-10-11): everything the app knows on the website, detail
 | T-507 | Community hero stats (T-401) with volume thresholds | pending |
 | T-508 | The website in Spanish | pending |
 | T-509 | Legal and privacy texts for public stats and leaderboards | pending |
+
+**Notes T-502 (2026-10-11, session 063).** D-071; API notes in [web-data-api.md](../research/web-data-api.md). **Summary:** `public.game_stats`, one row per game, written by `upload-game` with the game row (`supabase/functions/_shared/game_summary.ts` ports the desktop app's rules: results from the log or inferred from health, win streak, damage taken and dealt, shop totals with the turns behind each gold sum, APM, triples, final board, hero choice); null is unknown. **Backfill:** the daily sweep fills games stored before (or summarized by an older version) from their files, checked by SHA-256 and the validator, 200 per run. **Views** (`security_invoker`, same RLS as `games`): `game_summaries` (games list: filter by mode, hero, date, place; paged), `user_overview`, `user_heroes` (with pick rate from known hero choices), `user_records` (best value, its game, the games behind it, inferred or not). Export and account deletion cover the new table; a summary goes with its game. **Tests:** 61 new database tests (privacy for anon and another user on every view, writes refused, backfill races, export, deletion) and the old ones updated (202 in all); 27 new function tests (summary rules, upload sends it, sweep backfill; 125 in all); an end-to-end test on the local stack (upload writes the summary, the sweep makes the same one again). Not summarized: tribes on the final board (need the card data), opponents' boards and choices (the game viewer reads the file). Leaderboards stay T-506.
 
 ## F4 — Community and extras
 

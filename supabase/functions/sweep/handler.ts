@@ -7,8 +7,16 @@
 //      API (deleting storage.objects rows in SQL would leave the bytes);
 //   2. public.sweep_housekeeping(): audit entries of deleted accounts (the
 //      T-104a leftover) and every audit entry older than 90 days (D-048),
-//      upload times older than two days and IP counters older than an hour.
+//      upload times older than two days and IP counters older than an hour;
+//   3. game summaries for the website (T-502, D-071): games stored before
+//      the upload function wrote them, or summarized by an older version, get
+//      one from their stored report, read through the Storage API, checked
+//      again by validateRecord() and against the row's SHA-256. At most 200
+//      per run; the rest wait for the next run.
 // Safe to run any time and as often as wanted. No dependencies.
+
+import { summarize, SUMMARY_VERSION } from "../_shared/game_summary.ts";
+import { validateRecord } from "../upload-game/validate.ts";
 
 export interface Env {
   url: string;
@@ -22,6 +30,12 @@ const TIMEOUT_MS = 10_000;
 const MAX_ROUNDS = 20;
 const GAME_FILE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/Hearthstone_\d{4}(_\d{2}){5}-[1-9][0-9]{0,3}\.json\.gz$/;
+// Summaries filled per run; a stored game is about 2.5 KB gzipped.
+const BACKFILL_LIMIT = 200;
+// The upload function stores at most 64 KiB, inflating to at most 512 KiB.
+const MAX_FILE = 64 * 1024;
+const MAX_INFLATED = 512 * 1024;
+const SHA256 = /^[0-9a-f]{64}$/;
 
 class StepError extends Error {
   constructor(readonly step: string, readonly status: number) {
@@ -124,6 +138,146 @@ async function deleteOrphans(env: Env, fetchFn: Fetch): Promise<number> {
   throw new StepError("delete files", 508);
 }
 
+interface Missing {
+  user_id: string;
+  session: string;
+  game_index: number;
+  storage_path: string;
+  content_sha256: string;
+}
+
+/** A row of game_stats_backfill_list() whose file name is the one its key gives. */
+function isMissing(v: unknown): v is Missing {
+  if (typeof v !== "object" || v === null) return false;
+  const m = v as Record<string, unknown>;
+  return typeof m.user_id === "string" && typeof m.session === "string" &&
+    Number.isInteger(m.game_index) && typeof m.storage_path === "string" &&
+    typeof m.content_sha256 === "string" && SHA256.test(m.content_sha256) &&
+    GAME_FILE.test(m.storage_path) &&
+    m.storage_path === `${m.user_id}/${m.session}-${m.game_index}.json.gz`;
+}
+
+async function readCapped(stream: ReadableStream<Uint8Array>, max: number): Promise<Uint8Array> {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.length;
+      if (size > max) throw new Error("too large");
+      chunks.push(value);
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
+  }
+  const out = new Uint8Array(size);
+  let at = 0;
+  for (const c of chunks) {
+    out.set(c, at);
+    at += c.length;
+  }
+  return out;
+}
+
+async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes as BufferSource));
+  return Array.from(digest, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * The summary of one stored game, or null when its file is missing, is not
+ * the copy the row names, or no longer passes the upload check.
+ */
+async function summaryOf(env: Env, fetchFn: Fetch, game: Missing) {
+  let res: Response;
+  try {
+    res = await fetchFn(`${env.url}/storage/v1/object/authenticated/games/${game.storage_path}`, {
+      headers: { apikey: env.serviceKey },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+  } catch (_e) {
+    return null;
+  }
+  if (!res.ok || !res.body) {
+    await res.body?.cancel();
+    return null;
+  }
+  try {
+    const file = await readCapped(res.body, MAX_FILE);
+    const bytes = await readCapped(
+      new Blob([file as BlobPart]).stream().pipeThrough(new DecompressionStream("gzip")),
+      MAX_INFLATED,
+    );
+    if ((await sha256Hex(bytes)) !== game.content_sha256) return null;
+    const record = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    if (!validateRecord(record, game.session, game.game_index).ok) return null;
+    return summarize(record.report);
+  } catch (_e) {
+    return null;
+  }
+}
+
+/** Fills missing or outdated game summaries; counts what happened to each. */
+async function backfillStats(env: Env, fetchFn: Fetch) {
+  const res = await call(
+    fetchFn,
+    "list summaries",
+    `${env.url}/rest/v1/rpc/game_stats_backfill_list`,
+    {
+      method: "POST",
+      headers: serviceHeaders(env),
+      body: JSON.stringify({ p_version: SUMMARY_VERSION, p_limit: BACKFILL_LIMIT }),
+    },
+  );
+  const games = await res.json();
+  // Never fetch anything that is not shaped like the game the row names.
+  if (!Array.isArray(games) || !games.every(isMissing)) {
+    throw new StepError("list summaries", 502);
+  }
+  const counts = { listed: games.length, stored: 0, skipped: 0, failed: 0 };
+  for (const game of games) {
+    const stats = await summaryOf(env, fetchFn, game);
+    if (stats === null) {
+      counts.failed += 1;
+      continue;
+    }
+    let result: unknown;
+    try {
+      const put = await call(
+        fetchFn,
+        "write summary",
+        `${env.url}/rest/v1/rpc/game_stats_backfill_put`,
+        {
+          method: "POST",
+          headers: serviceHeaders(env),
+          body: JSON.stringify({
+            target: game.user_id,
+            p_session: game.session,
+            p_game_index: game.game_index,
+            p_sha256: game.content_sha256,
+            p_summary_version: SUMMARY_VERSION,
+            p_stats: stats,
+          }),
+        },
+      );
+      result = await put.json();
+    } catch (_e) {
+      counts.failed += 1;
+      continue;
+    }
+    // changed, newer or missing: another copy or version won; nothing to do.
+    if (result === "stored") counts.stored += 1;
+    else counts.skipped += 1;
+  }
+  if (counts.failed > 0) {
+    // Counts only: no user id, session or file name in the logs.
+    console.error(`sweep: ${counts.failed} of ${counts.listed} game summaries could not be made`);
+  }
+  return counts;
+}
+
 export async function handle(req: Request, env: Env, fetchFn: Fetch = fetch): Promise<Response> {
   try {
     if (!isServiceRole(req, env) && !(await hasSweepToken(req, env, fetchFn))) {
@@ -138,7 +292,8 @@ export async function handle(req: Request, env: Env, fetchFn: Fetch = fetch): Pr
       { method: "POST", headers: serviceHeaders(env), body: "{}" },
     );
     const counts = await res.json();
-    return json(200, { files, ...counts });
+    const stats = await backfillStats(env, fetchFn);
+    return json(200, { files, ...counts, stats });
   } catch (e) {
     if (e instanceof StepError && e.step === "check token") {
       // Callers without a valid key may reach this: say nothing about the database.

@@ -4,6 +4,7 @@
 import { type Env, type Fetch, handle, MAX_BODY, MAX_INFLATED } from "./handler.ts";
 import { realDuos, realRecord, record, SESSION } from "./testdata.ts";
 import { VALIDATOR_VERSION } from "./validate.ts";
+import { summarize, SUMMARY_VERSION } from "../_shared/game_summary.ts";
 
 type Bytes = Uint8Array<ArrayBuffer>;
 
@@ -143,7 +144,19 @@ Deno.test("a new game: checks, then the file, then the row", async () => {
     p_sha256: sha,
     p_size: file.raw!.length,
     p_parser_version: "0.1.0+r1",
+    p_stats: summarize(record().report),
+    p_summary_version: SUMMARY_VERSION,
   });
+});
+
+Deno.test("the summary of a real game goes with its row (T-502)", async () => {
+  const api = fakeApi();
+  const res = await handle(await upload(realRecord(realDuos[0])), ENV, api.fetchFn);
+  assertEquals(res.status, 201);
+  const commit = api.calls.find((c) => c.path === "/rest/v1/rpc/upload_commit")!;
+  const body = commit.body as Record<string, Record<string, unknown>>;
+  assertEquals(body.p_stats, summarize(realDuos[0]));
+  assertEquals(body.p_stats.teammate_hero, realDuos[0].teammate_hero);
 });
 
 Deno.test("the file stored is re-compressed by the server, not the bytes sent", async () => {
