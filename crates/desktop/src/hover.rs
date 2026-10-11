@@ -25,9 +25,17 @@ pub const HOVER_CHANGED: &str = "overlay-hover";
 const WATCH_EVERY: Duration = Duration::from_millis(50);
 /// Otherwise the thread only looks now and then whether it can start.
 const IDLE_EVERY: Duration = Duration::from_millis(400);
-/// The width the hover card asks for, in the overlay's own pixels: room for
-/// a full board of seven minions in one row.
-pub const CARD_WIDTH: f64 = 640.0;
+/// The width the hover card asks for, as a share of the game window's
+/// height: the game lays its board out by the height, and seven minions in
+/// one row there take about this much (T-333). The page sizes its text from
+/// the width it gets (overlay-scale.js).
+pub const CARD_SHARE: f64 = 0.85;
+
+/// The card's width for a game client area of this height, in the overlay's
+/// own pixels; `place_card` keeps it inside the game window and the screen.
+pub fn card_width(game_height: f64) -> f64 {
+    CARD_SHARE * game_height
+}
 
 /// What the page needs to show the card: the place hovered (1 is the top
 /// slot), the slot's rectangle and where the card goes (the top of the game
@@ -75,7 +83,7 @@ pub fn hover_at(
     Some(Hover {
         place,
         slot,
-        card: place_card(game, bounds, CARD_WIDTH),
+        card: place_card(game, bounds, card_width(game.h)),
     })
 }
 
@@ -219,5 +227,31 @@ mod tests {
             })
             .collect();
         assert_eq!(places, [1, 1, 2, 2, 3, 3, 4, 4]);
+    }
+
+    #[test]
+    fn the_board_is_sized_to_the_game_at_4k_150_and_at_1080p() {
+        // 3840x2160 at 150%: the overlay's pixels are 2/3 of the screen's.
+        let game = client(0.0, 0.0, 3840.0, 2160.0);
+        let board = default_area((3840.0, 2160.0));
+        let f = frame((0.0, 0.0), 1.5, (2560.0, 1408.0));
+        let hover = hover_at(game, board, 8, middle_of(game, board, 8, 2), f).unwrap();
+        assert!(
+            (hover.card.width - 0.85 * 1440.0).abs() < 0.01,
+            "{:?}",
+            hover.card
+        );
+        assert!((hover.card.x + hover.card.width / 2.0 - 1280.0).abs() < 0.01);
+        // 1920x1080 at 100%: the same share of the screen.
+        let game = client(0.0, 0.0, 1920.0, 1080.0);
+        let board = default_area((1920.0, 1080.0));
+        let f = frame((0.0, 0.0), 1.0, (1920.0, 1040.0));
+        let hover = hover_at(game, board, 8, middle_of(game, board, 8, 2), f).unwrap();
+        assert!((hover.card.width - 0.85 * 1080.0).abs() < 0.01);
+        // A narrow window keeps it inside the game.
+        let game = client(0.0, 0.0, 1000.0, 1080.0);
+        let board = default_area((1000.0, 1080.0));
+        let hover = hover_at(game, board, 8, middle_of(game, board, 8, 2), f).unwrap();
+        assert!(hover.card.x >= 0.0 && hover.card.x + hover.card.width <= 1000.0);
     }
 }

@@ -11,6 +11,7 @@ pub mod live;
 pub mod live_seats;
 pub mod lobby_tribes;
 pub mod lock;
+pub mod playback;
 pub mod possible;
 pub mod provenance;
 pub mod recap;
@@ -26,12 +27,15 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fs::File;
 use std::io::{self, BufReader};
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 use bg_parser::lines::{for_each_chunk, Chunk};
 use bg_parser::report::{GameReport, Status};
 use bg_parser::LogReader;
 
+use bg_parser::report::LobbySlot;
 use game_clock::{GameClock, LocalToUtc, Played};
+use playback::Playback;
 use scene::{Scene, SceneTracker};
 use store::{GameKey, Store};
 use tail::{Event, Follower};
@@ -43,11 +47,21 @@ pub struct Saved {
     pub report: GameReport,
 }
 
+/// The game in progress as the overlay shows it, as of some line (T-335).
+#[derive(Default)]
+struct LiveView {
+    report: Option<GameReport>,
+    lobby: Vec<LobbySlot>,
+    next: Option<i64>,
+}
+
 /// The session being read: its games and when each one was played.
 struct SessionReader {
     name: String,
     log: LogReader,
     clock: GameClock,
+    /// The live views, shown once the game has played their lines.
+    playback: Playback<LiveView>,
 }
 
 impl SessionReader {
@@ -56,12 +70,32 @@ impl SessionReader {
             name: name.to_string(),
             log: LogReader::default(),
             clock: GameClock::new(name),
+            playback: Playback::default(),
         }
     }
 
     fn feed(&mut self, line: &str) {
         self.log.feed(line);
         self.clock.feed(line);
+        self.playback.feed(line);
+    }
+
+    /// Keeps a view of the game in progress as the log has it now.
+    fn record_live(&mut self) {
+        let view = match self.log.in_progress_index() {
+            Some(_) => LiveView {
+                report: self.log.snapshot_current(),
+                lobby: self.log.lobby_now(),
+                next: self.log.next_opponent_now(),
+            },
+            None => LiveView::default(),
+        };
+        self.playback.record(view, Instant::now());
+    }
+
+    /// The view the game has shown on screen so far.
+    fn live_view(&self) -> Option<&LiveView> {
+        self.playback.view(Instant::now())
     }
 
     fn pending(&self, report: GameReport, to_utc: LocalToUtc) -> Pending {
@@ -71,7 +105,9 @@ impl SessionReader {
 
     /// Closes the session and queues its last games.
     fn finish(self, pending: &mut VecDeque<Pending>, to_utc: LocalToUtc) {
-        let SessionReader { name, log, clock } = self;
+        let SessionReader {
+            name, log, clock, ..
+        } = self;
         pending.extend(log.finish().into_iter().map(|g| {
             let played = clock.played(g.index, to_utc);
             (name.clone(), g, played)
@@ -90,9 +126,7 @@ pub struct Watcher {
     /// write and are saved on the next poll.
     pending: VecDeque<Pending>,
     to_utc: LocalToUtc,
-    /// The game in progress as of the last poll that read lines (for the
-    /// overlay). Rebuilt only when the log moved.
-    live: Option<GameReport>,
+    /// The log moved since the live view was last kept (for the overlay).
     live_stale: bool,
     /// `LoadingScreen.log` of the same session (T-314): where the client is.
     scenes: Follower,
@@ -113,7 +147,6 @@ impl Watcher {
             reader: None,
             store,
             pending: VecDeque::new(),
-            live: None,
             live_stale: true,
             to_utc: game_clock::system_local_to_utc,
             scenes: Follower::loading_screen(logs_dir),
@@ -165,6 +198,11 @@ impl Watcher {
                 }
             }
         });
+        if std::mem::take(&mut self.live_stale) {
+            if let Some(r) = self.reader.as_mut() {
+                r.record_live();
+            }
+        }
         self.poll_scenes();
         match self.scene() {
             Some(scene) if scene.left_game() => {
@@ -280,42 +318,31 @@ impl Watcher {
 
     /// What the Battlegrounds game being played now looks like so far, for
     /// the overlay; `None` when no game is on. Built by the same parser as the
-    /// saved report and kept until the log moves.
-    pub fn live_report(&mut self) -> Option<&GameReport> {
-        let left = self.game_left();
-        let snapshot = match self.reader.as_ref() {
-            Some(reader) if !left && reader.log.in_progress_index().is_some() => {
-                if !self.live_stale && self.live.is_some() {
-                    return self.live.as_ref();
-                }
-                reader.log.snapshot_current()
-            }
-            _ => None,
-        };
-        self.live_stale = false;
-        self.live = snapshot;
-        self.live.as_ref()
+    /// saved report, as of the last line the game has played on screen
+    /// (T-335).
+    pub fn live_report(&self) -> Option<&GameReport> {
+        self.shown_live()?.report.as_ref()
     }
 
-    /// Every lobby hero's leaderboard place and tavern tier now, for the
-    /// overlay (T-306); empty when no Battlegrounds game is on.
-    pub fn live_lobby(&self) -> Vec<bg_parser::report::LobbySlot> {
-        if self.game_left() {
-            return Vec::new();
-        }
-        self.reader
-            .as_ref()
-            .map(|r| r.log.lobby_now())
+    /// Every lobby hero's leaderboard place and tavern tier as the game shows
+    /// them, for the overlay (T-306); empty when no Battlegrounds game is on.
+    pub fn live_lobby(&self) -> Vec<LobbySlot> {
+        self.shown_live()
+            .map(|v| v.lobby.clone())
             .unwrap_or_default()
     }
 
-    /// The seat the game marks as the next opponent now (T-313); None when
-    /// no Battlegrounds game is on or the log has no mark yet.
+    /// The seat the game marks as the next opponent (T-313); None when no
+    /// Battlegrounds game is on or the log has no mark yet.
     pub fn live_next_opponent(&self) -> Option<i64> {
+        self.shown_live()?.next
+    }
+
+    fn shown_live(&self) -> Option<&LiveView> {
         if self.game_left() {
             return None;
         }
-        self.reader.as_ref()?.log.next_opponent_now()
+        self.reader.as_ref()?.live_view()
     }
 
     /// See [`Follower::has_power_log`].

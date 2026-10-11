@@ -126,6 +126,13 @@
   }
 
   function drawToolbar(v) {
+    const details = document.getElementById("detail-buttons");
+    details.replaceChildren(
+      details.querySelector(".toolbar-label"),
+      ...["simple", "advanced"].map((d) =>
+        button(I18n.t(`ov.detail.${d}`), () => send("overlay_set_detail", { detail: d }).catch(fail), d === v.detail, `detail:${d}`),
+      ),
+    );
     const themes = document.getElementById("theme-buttons");
     themes.replaceChildren(
       ...v.themes.map((t) =>
@@ -177,6 +184,8 @@
     const root = document.documentElement;
     for (const [name, value] of Object.entries(v.vars)) root.style.setProperty(name, value);
     document.body.classList.toggle("unlocked", v.unlocked);
+    // Simple or Advanced (T-333): the stylesheet hides what Simple leaves out.
+    document.body.dataset.detail = v.detail === "advanced" ? "advanced" : "simple";
     document.getElementById("scrim").hidden = !v.unlocked;
     document.getElementById("toolbar").hidden = !v.unlocked;
     setEditing(v.unlocked);

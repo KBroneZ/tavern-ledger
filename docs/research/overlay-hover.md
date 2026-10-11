@@ -44,3 +44,34 @@ Log replay (T-D02) of the user's Solo game cut at round 3, with a plain stand-in
 - 1280x720 window: slot 5 showed the fifth-place opponent; off the leaderboard the card hid.
 - The same window on the second monitor (1920x1080, 100 %): the overlay moved to that monitor's work area; slot 2 showed the second-place opponent; our own slot (8th) showed nothing.
 - Unlocked, with no game: the box showed over the stand-in's leaderboard area, a drag of 20 px right and down was saved exactly in `overlay.json` for `1280x720`.
+
+## Session 058 (2026-10-11): wrong board, board across the top, text size, Simple and Advanced (T-333 to T-335, D-067)
+
+### Why the hover sometimes showed another opponent (T-335)
+
+The game writes every packet from the server twice to `Power.log`: when it arrives (`GameState.DebugPrintPower`, the lines the parser reads) and when the client plays it on screen (`PowerTaskList.DebugPrintPower`). A Battlegrounds combat arrives whole when it starts, so the log already has its outcome (health, `PLAYER_LEADERBOARD_PLACE`, the next turn) while the game is still playing the fight. On the user's three sessions of 2026-10-11 (counts and times only), each place change reached the `GameState` lines a median of 17 to 25 s, and up to 72 s, before the matching `PowerTaskList` line. During that time the overlay matched the hovered slot with the new places while the screen still showed the old order: a reproduction on the real Duos fixture has teams 3 and 4 swapped in the log while the screen still showed them the other way round. It also meant the overlay showed a combat's result before the game did.
+
+Both kinds of line carry the same `TAG_CHANGE`s in the same order: 98,716 of each in one session, and the same count at every game start and at the end of all three sessions; at most about 10,800 were waiting to be played. The fix (`crates/tracker/src/playback.rs`) keeps each view of the live state with the number of arrived `TAG_CHANGE`s it was built from and shows the newest one the played lines have reached. A log without played lines is not held back, and a view waiting more than 120 s is shown anyway, so a log that never catches up cannot freeze the overlay.
+
+In Duos the hover card now gives each hero of the team their own row with their own board, matched by seat, so a teammate's board is never shown as if it were the hovered hero's. Which of a team's two portraits is on top is not in the log, so the hover still works per team.
+
+### What the other trackers show (public material only)
+
+Rule 1 of `CLAUDE.md` holds: no code of HDT, Firestone or their tools was opened, and for Nomi's Kitchen only its public site was read, not its code or its repository.
+
+- **Hearthstone Deck Tracker (HearthSim).** Release notes v1.28.1 (page dated "18 May", no year shown; <https://git.tdem.in/HearthSim/Hearthstone-Deck-Tracker/releases/tag/v1.28.1>): "Hover over heroes on the leaderboard as usual to see the last board you encountered", last-known boards for Duos, and a fix for "the last known board state in Battlegrounds sometimes showing a board from the wrong hero" (the same kind of bug as T-335). HSReplay's overlay page (<https://hsreplay.net/battlegrounds/overlay/>, search snippet only; the site did not load) calls it "last known board" with minions, stats and buffs. Where it appears on screen and how big it is was not found in any public text; the user's own description is "the board shown at the top, like in Deck Tracker".
+- **Firestone (Zero-to-Heroes).** Feature wiki (mirror updated 2025-05-28, <https://github-wiki-see.page/m/Zero-to-Heroes/firestone/wiki/Firestone-features>): hovering the leaderboard shows the last opponent's info with their last board, and whether they levelled up or made triples since; battle odds can be set to show only after the fight; a minion list by tier filtered by the lobby's tribes; the Battlegrounds window is meant for a second screen and can be an overlay on one screen. No size or scale setting was found.
+- **nomi.gg (Nomi's Kitchen).** Home page (Patch 36.6.3, no date, <https://nomi.gg/>): an overlay with "Opponent boards, lobby tribes, fight odds and hero stats", set up in "about a minute", free, "shows full stat numbers". No public detail on the hover layout or settings was found.
+
+What we took: the board where the game's own board strip is (across the top), one row of up to seven minions with attack and health as the game draws them (HDT, the user's request); the turn it was seen, said as "2 turns ago" (Firestone's "since you last fought them"); few words by default and the rest behind a switch, as the user asked ("things must be for people who are not so pro"). Nothing about how their overlays look in detail was found in public text, so the layout is ours, in the Lamplight glass look (D-052).
+
+### Board across the top (T-333) and text size (T-334)
+
+- The card asks for 85% of the game window's height as its width (the game lays its board out by the height) and sits at the top of the game window, centred, inside the screen (`hover.rs`, `screen_fit::place_card`). It is click-through and shows only while the mouse rests on the leaderboard, so it never blocks play.
+- Each minion: picture (the 256x art cropped as in 053 and 056, no white edges), attack bottom left and health bottom right in round badges, golden as a ring and a star, keyword letters (Advanced), name under it. A Duos team has two rows, square pictures so they take less height.
+- Text follows the screen: the page's base size is 1.32% of the overlay window's height (at least 13 px), the card's is 1.65% of its width (`overlay-scale.js`). Tested: at 3840x2160 at 150% the body text is about 28 physical pixels (1.3% of the screen's height) and the card's about 30; at 1920x1080 at 100%, 14 and 15. The game's own leaderboard text was not measured (no full screenshot), so 1.25% of the height is the floor the tests check.
+- Rendered off screen (headless Edge, the real overlay page with its calls stubbed and invented data) at 2560x1440 at 150% and 1920x1080 at 100%, Solo and Duos, Simple and Advanced, English and Spanish.
+
+### Simple and Advanced (D-067)
+
+Simple (the default) shows the board, the hero, tier, health, record, triple and trinket counts, and the turn the board was seen, with every source mark but the card-database word ("inferred", "unknown", "from the leaderboard"). Advanced adds keyword letters, trinket names, the minions an opponent could have (always labelled "possible", D-050), the card-database word (the legend credits the card data) and the keyword key in the legend. The switch is in the overlay's toolbar (unlock the overlay to see it) and is kept in `overlay.json`; a switch in the Settings tab is left for after session 055's work there is merged.

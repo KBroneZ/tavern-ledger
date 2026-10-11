@@ -177,7 +177,7 @@ function renderBoards(opponent) {
   return opponent.boards.map((board) => {
     const row = el("div", "board");
     const who = opponent.boards.length > 1 && board.hero ? `${heroName(board.hero)} · ` : "";
-    row.append(el("span", "when", `${who}${TLI18n.t("ov.board.seen", { round: board.round })}`));
+    row.append(el("span", "when", `${who}${TLWords.seenWords(board.round, current().turn.value)}`));
     if (!board.minions.length) row.append(el("span", "none", TLI18n.t("ov.board.empty")));
     // Names and art are looked up by the log's card id (T-304): the row says
     // so in words, and a card the card data does not know shows its id, marked unknown.
@@ -209,7 +209,7 @@ function renderBoards(opponent) {
 function keywordMarks(keywords) {
   const marks = TLWords.keywordMarks(keywords);
   if (!marks || !marks.length) return null;
-  const line = el("span", "kws");
+  const line = el("span", "kws adv");
   for (const k of marks) {
     const mark = el("span", `kw kw-${k.key}`, k.short);
     mark.setAttribute("aria-hidden", "true");
@@ -232,17 +232,21 @@ function renderShown(opponent) {
     const i = opponent.seats.indexOf(seat.seat);
     const hero = opponent.seats.length > 1 && opponent.heroes.length === opponent.seats.length ? opponent.heroes[i] : null;
     const line = el("div", "seat-line", `${hero ? `${heroName(hero)} · ` : ""}${w.triples}`);
+    // Trinket names are Advanced (T-333); Simple says how many.
+    const names = el("span", "adv");
     if (w.trinkets.length) {
-      line.append(` · ${TLI18n.t("ov.shown.trinkets")} `);
+      line.append(el("span", "simple-only", ` · ${TLI18n.plural("ov.trinkets", w.trinkets.length)}`));
+      names.append(` · ${TLI18n.t("ov.shown.trinkets")} `);
       w.trinkets.forEach((t, n) => {
-        if (n) line.append(", ");
-        line.append(el("span", t.known ? "trinket" : "trinket unnamed", t.hero_power ? TLI18n.t("ov.shown.heroPower", { text: t.text }) : t.text));
+        if (n) names.append(", ");
+        names.append(el("span", t.known ? "trinket" : "trinket unnamed", t.hero_power ? TLI18n.t("ov.shown.heroPower", { text: t.text }) : t.text));
       });
     } else {
-      line.append(` · ${TLI18n.t("ov.shown.noTrinket")}`);
+      names.append(` · ${TLI18n.t("ov.shown.noTrinket")}`);
     }
-    if (w.named) line.append(mark("card_data"));
-    if (w.unknown) line.append(mark("unknown"));
+    if (w.named) names.append(mark("card_data"));
+    if (w.unknown) names.append(mark("unknown"));
+    line.append(names);
     return line;
   });
 }
@@ -343,7 +347,15 @@ async function refresh() {
   render();
 }
 
+// Text follows the screen (T-334): the base size is a share of the window's
+// height, which covers the game's monitor (overlay-scale.js).
+function fitText() {
+  document.documentElement.style.fontSize = `${TLScale.rootPx(window.innerHeight)}px`;
+}
+
 async function start() {
+  fitText();
+  window.addEventListener("resize", fitText);
   // Nothing is drawn before the language is known and the markup is in it.
   await TLI18n.ready();
   // The key to the keyword marks, from the same words the marks use.

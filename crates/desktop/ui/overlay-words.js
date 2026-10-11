@@ -93,7 +93,45 @@
     return { badge: I18n.t("ov.next.badge"), heading: team ? I18n.t("ov.next.headingTeam") : I18n.t("ov.next.heading") };
   }
 
-  const api = { KEYWORDS, keywordMarks, keywordLegend, triplesText, trinketText, seatWords, nextOpponent, nextLabels };
+  // The hover board (T-333): one entry per hero of the opponent (two in a
+  // Duos team), in the order of its seats, each with its hero, tier, the
+  // leaderboard's values and the last board met. A board is matched by its
+  // seat, never by position, so a team's two boards never swap; a Solo board
+  // without a seat (older records) belongs to the only hero.
+  function seatViews(opponent) {
+    const o = opponent || {};
+    const seats = Array.isArray(o.seats) ? o.seats : [];
+    const heroes = Array.isArray(o.heroes) && o.heroes.length === seats.length ? o.heroes : [];
+    const tiers = Array.isArray(o.tiers) ? o.tiers : [];
+    const boards = Array.isArray(o.boards) ? o.boards : [];
+    const shown = o.shown_source === "log" && Array.isArray(o.shown) ? o.shown : [];
+    const possible = Array.isArray(o.possible) ? o.possible : [];
+    return seats.map((seat, i) => {
+      const bySeat = boards.find((b) => b && b.seat === seat);
+      const lone = seats.length === 1 && boards.length === 1 && !Number.isInteger(boards[0].seat) ? boards[0] : null;
+      const tier = tiers[i] && Number.isInteger(tiers[i].value) ? tiers[i].value : null;
+      return {
+        seat,
+        hero: heroes[i] || null,
+        tier,
+        shown: shown.find((s) => s && s.seat === seat) || null,
+        board: bySeat || lone || null,
+        possible: possible.filter((p) => p && (p.seat === seat || (seats.length === 1 && !Number.isInteger(p.seat)))),
+      };
+    });
+  }
+
+  // When a board was seen, in words: "Turn 6 · this turn" or "Turn 6 · 2
+  // turns ago"; the turn alone when the turn now is unknown.
+  function seenWords(round, turnNow) {
+    if (!Number.isInteger(round)) return I18n.t("ov.board.noneYet");
+    const turn = I18n.t("ov.board.turn", { turn: round });
+    if (!Number.isInteger(turnNow) || round > turnNow) return turn;
+    const ago = turnNow - round;
+    return `${turn} · ${ago === 0 ? I18n.t("ov.board.thisTurn") : I18n.plural("ov.board.ago", ago)}`;
+  }
+
+  const api = { KEYWORDS, keywordMarks, keywordLegend, triplesText, trinketText, seatWords, nextOpponent, nextLabels, seatViews, seenWords };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLWords = api;
 })();

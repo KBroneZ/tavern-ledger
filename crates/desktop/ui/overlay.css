@@ -24,7 +24,7 @@
   --font-body: "Figtree", "Segoe UI", system-ui, sans-serif;
   --stack-right: 8px;
   --stack-top: 96px;
-  --stack-width: 340px;
+  --stack-width: 26rem;
 }
 
 * { box-sizing: border-box; }
@@ -40,7 +40,7 @@ html, body {
 body {
   position: relative;
   color: var(--text);
-  font: 500 13px/1.38 var(--font-body);
+  font: 500 1rem/1.38 var(--font-body);
   -webkit-user-select: none;
   user-select: none;
 }
@@ -79,13 +79,13 @@ body {
 .panel h2 {
   margin: 0 0 4px;
   color: var(--accent);
-  font: 700 13px/1.3 var(--font-body);
+  font: 700 1rem/1.3 var(--font-body);
 }
 
-.status { font-size: 13.5px; }
-.status .hero { font: 700 15px/1.3 var(--font-display); font-stretch: 88%; color: var(--accent); }
+.status { font-size: 1.038rem; }
+.status .hero { font: 700 1.154rem/1.3 var(--font-display); font-stretch: 88%; color: var(--accent); }
 .status .sep { margin: 0 5px; color: var(--dim); }
-.status .notes { margin: 4px 0 0; color: var(--amber); font-size: 12px; }
+.status .notes { margin: 4px 0 0; color: var(--amber); font-size: 0.923rem; }
 .status.unreadable { border-color: var(--lost); color: var(--danger); }
 
 .row { margin: 3px 0 0; }
@@ -99,7 +99,7 @@ body {
   padding: 0 6px;
   border: 1.5px solid currentColor;
   border-radius: 999px;
-  font: 700 11px/1.5 var(--font-body);
+  font: 700 0.846rem/1.5 var(--font-body);
   white-space: nowrap;
   vertical-align: middle;
 }
@@ -130,8 +130,8 @@ body {
 .record .none { color: var(--dim); }
 
 .board { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; align-items: center; }
-.board .when { flex: 0 0 100%; color: var(--dim); font-size: 11.5px; }
-.board .none { color: var(--dim); font-size: 11.5px; }
+.board .when { flex: 0 0 100%; color: var(--dim); font-size: 0.885rem; }
+.board .none { color: var(--dim); font-size: 0.885rem; }
 /* No frame around a minion (D-052): its picture, plain numbers, its name. */
 .minion {
   display: inline-flex;
@@ -141,11 +141,11 @@ body {
   padding: 0 2px 1px;
   line-height: 1.15;
 }
-.minion b { font-size: 13px; font-variant-numeric: tabular-nums; }
-.minion i { font: 500 11px/1.15 var(--font-body); color: var(--dim); font-style: normal; }
+.minion b { font-size: 1rem; font-variant-numeric: tabular-nums; }
+.minion i { font: 500 0.846rem/1.15 var(--font-body); color: var(--dim); font-style: normal; }
 .minion .art {
-  width: 36px;
-  height: 36px;
+  width: 2.75rem;
+  height: 2.75rem;
   margin: 1px 0;
   border-radius: 9px;
 }
@@ -163,42 +163,129 @@ body {
 .opponent .portrait {
   flex: none;
   align-self: center;
-  width: 22px;
-  height: 22px;
+  width: 1.7rem;
+  height: 1.7rem;
   border-radius: 50%;
 }
 /* Compact opponents list (T-306): one line each, no boards. */
 .opponent.compact { padding: 3px 0; }
 .opponent .tier { flex: none; color: var(--accent); font-variant-numeric: tabular-nums; }
 .opponent.compact .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.panel .hint { margin: 4px 0 0; color: var(--dim); font-size: 11px; }
+.panel .hint { margin: 4px 0 0; color: var(--dim); font-size: 0.846rem; }
 
-/* The hover card at the top of the game window (T-306, T-307, T-309). */
+/* The hover board across the top of the game window (T-333), laid out like
+   the game's own board: one row of up to seven minions, attack bottom left,
+   health bottom right. Every size inside follows --card-font, which the page
+   sets from the board's width (T-334), so it reads the same at any screen. */
 .hover-card {
   position: fixed;
   z-index: 5;
   overflow: hidden;
-  padding: 9px 12px 10px;
-  border: 1.5px solid var(--amber);
-  border-radius: 12px;
+  padding: 0.55em 0.8em 0.7em;
+  border: 2px solid var(--amber);
+  border-radius: 0.9em;
   background: var(--panel-bg);
-  box-shadow: 0 0 22px color-mix(in srgb, var(--amber) 30%, transparent), 0 8px 22px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 0 1.4em color-mix(in srgb, var(--amber) 30%, transparent), 0 0.5em 1.4em rgba(0, 0, 0, 0.55);
+  font-size: var(--card-font, 1rem);
+  line-height: 1.25;
 }
 .hover-card[hidden] { display: none; }
-/* One row of minions, like the game's own board strip: they shrink, never wrap. */
-.hover-card .board { flex-wrap: nowrap; }
-.hover-card .board .when { flex: none; max-width: 9em; white-space: normal; }
-.hover-card .minion { flex: 0 1 76px; min-width: 0; }
-.hover-card .minion i { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hover-card .head { display: flex; align-items: baseline; gap: 8px; }
-.hover-card .name { flex: 1 1 auto; min-width: 0; font-weight: 700; }
-.hover-card .hp { flex: none; color: var(--dim); }
-.hover-card .hp b { color: var(--text); font-weight: 700; }
-.hover-card .portrait { flex: none; align-self: center; width: 26px; height: 26px; border-radius: 50%; }
+.hb-head, .hb-seat-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3em 0.9em;
+}
+.hb-title { flex: 0 1 auto; min-width: 0; font: 700 1.3em/1.2 var(--font-display); font-stretch: 88%; color: var(--accent); }
+.hb-health { color: var(--dim); }
+.hb-health b { color: var(--text); font-size: 1.15em; }
+.hover-card .record { font-size: 1.05em; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hover-card .portrait { flex: none; width: 2.2em; height: 2.2em; border-radius: 50%; }
+.hover-card .hb-head .portrait { width: 2.6em; height: 2.6em; }
+.hb-seat { margin-top: 0.5em; padding-top: 0.45em; border-top: 1px solid color-mix(in srgb, var(--border) 45%, transparent); }
+.hb-hero { font-weight: 700; }
+.hb-tier { padding: 0.05em 0.5em; border: 1.5px solid var(--accent); border-radius: 0.5em; color: var(--accent); font-weight: 700; }
+.hb-fact { color: var(--dim); }
+.hb-fact .trinket { color: var(--text); }
+.hb-fact .trinket.unnamed { text-decoration: underline dotted; }
+.hb-seen { margin-left: auto; color: var(--dim); font-weight: 600; }
+.hb-empty { margin-top: 0.4em; color: var(--dim); }
+.hb-marks { margin-top: 0.25em; }
+/* Seven equal slots; fewer minions sit in the middle, as in the game. */
+.hb-board {
+  display: flex;
+  justify-content: center;
+  gap: 0.5em;
+  margin: 0.5em 0 0;
+  padding: 0;
+  list-style: none;
+}
+.hb-minion {
+  display: flex;
+  flex: 0 0 calc((100% - 3em) / 7);
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+.hb-art { position: relative; width: 100%; aspect-ratio: 5 / 6; }
+.hover-card.team .hb-art { aspect-ratio: 1 / 1; }
+/* The picture fills the box; its own size never stretches the box. */
+.hb-art .art, .hb-art .art-missing {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 46% / 40%;
+  object-fit: cover;
+  object-view-box: inset(1% 16% 2%);
+  object-position: 50% 28%;
+  background: var(--panel-solid);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--border) 80%, transparent);
+}
+.hb-minion.golden .hb-art .art { box-shadow: 0 0 0 0.22em var(--accent), 0 0 0.9em color-mix(in srgb, var(--accent) 60%, transparent); }
+/* Attack and health in round badges at the bottom corners, as in the game. */
+.hb-atk, .hb-hp {
+  position: absolute;
+  bottom: -0.15em;
+  min-width: 1.75em;
+  padding: 0.1em 0.3em;
+  border: 2px solid rgba(0, 0, 0, 0.75);
+  border-radius: 999px;
+  background: var(--panel-solid);
+  font: 800 1.25em/1.2 var(--font-display);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.hb-atk { left: -0.1em; color: var(--accent); }
+.hb-hp { right: -0.1em; color: var(--lost); }
+.hb-minion.golden .hb-atk::after { content: " \2605" / ""; font-size: 0.7em; }
+.hb-art .kws { position: absolute; top: 0.1em; left: 0; right: 0; }
+.hb-art .kw { background: var(--panel-solid); font-size: 0.75em; }
+.hb-name {
+  max-width: 100%;
+  margin-top: 0.35em;
+  overflow: hidden;
+  color: var(--dim);
+  font-style: normal;
+  font-size: 0.85em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hb-name.unnamed { text-decoration: underline dotted; }
+.hover-card .possible { font-size: 0.9em; }
+
+/* Simple and Advanced (T-333): Simple leaves out keyword letters, trinket
+   names, the possible minions, the card-database word (the legend credits
+   the card data) and the keyword key. Every other mark stays in both. */
+body[data-detail="simple"] .adv,
+body[data-detail="simple"] .src-card_data,
+body[data-detail="simple"] .legend-keys { display: none; }
+body:not([data-detail="simple"]) .simple-only { display: none; }
 .possible { margin-top: 6px; padding-top: 4px; border-top: 1px dashed color-mix(in srgb, var(--amber) 55%, transparent); }
-.possible .when { color: var(--dim); font-size: 11.5px; }
-.possible .none { color: var(--dim); font-size: 11.5px; }
-.possible-list { display: flex; flex-wrap: wrap; gap: 2px 8px; margin-top: 2px; font-size: 11.5px; }
+.possible .when { color: var(--dim); font-size: 0.885rem; }
+.possible .none { color: var(--dim); font-size: 0.885rem; }
+.possible-list { display: flex; flex-wrap: wrap; gap: 2px 8px; margin-top: 2px; font-size: 0.885rem; }
 .possible-card { white-space: nowrap; font-style: italic; }
 .possible-card b { color: var(--amber); font-style: normal; font-weight: 500; }
 .possible-card.unnamed { text-decoration: underline dotted; }
@@ -222,7 +309,7 @@ body {
   border-radius: 3px;
   background: var(--panel-solid);
   color: var(--amber);
-  font-size: 11.5px;
+  font-size: 0.885rem;
   white-space: nowrap;
 }
 
@@ -235,7 +322,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 4px;
   color: var(--text);
-  font: 700 11px/1.3 var(--font-body);
+  font: 700 0.846rem/1.3 var(--font-body);
 }
 /* The next opponent (T-313): the word "Next", on the game's own mark. */
 .next-badge {
@@ -244,7 +331,7 @@ body {
   border: 1px solid var(--accent);
   border-radius: 6px;
   color: var(--accent);
-  font-size: 11px;
+  font-size: 0.846rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -255,9 +342,9 @@ body {
 .next-block .head .name { flex: 1 0 100%; order: 1; }
 .next-block .head .portrait { order: 0; }
 .next-block .head .tier, .next-block .head .hp, .next-block .head .record { order: 2; }
-.next-block h3 { margin: 0 0 4px; font-size: 12px; color: var(--dim); font-weight: 600; }
+.next-block h3 { margin: 0 0 4px; font-size: 0.923rem; color: var(--dim); font-weight: 600; }
 /* The leaderboard's triples and trinkets (T-312). */
-.seat-line { margin: 3px 0; font-size: 12px; color: var(--dim); }
+.seat-line { margin: 3px 0; font-size: 0.923rem; color: var(--dim); }
 .seat-line .trinket { color: var(--text); }
 .seat-line .trinket.unnamed { text-decoration: underline dotted; }
 .legend-keys { display: block; margin-top: 2px; }
@@ -269,7 +356,7 @@ body {
 .legend {
   margin: 0;
   color: var(--dim);
-  font-size: 11px;
+  font-size: 0.846rem;
 }
 
 /* Layout editing (unlocked). The scrim says the whole screen is taking clicks. */
@@ -317,7 +404,7 @@ body.unlocked .slot:focus-visible .panel {
   border-radius: 10px;
   background: var(--panel-solid);
   color: var(--text);
-  font-size: 12px;
+  font-size: 0.923rem;
   z-index: 10;
 }
 .key-hint[hidden] { display: none; }
@@ -362,7 +449,7 @@ body.unlocked .slot:focus-visible .panel {
   z-index: 10;
 }
 .toolbar-title { color: var(--accent); }
-.toolbar-note { flex: 1 1 100%; color: var(--dim); font-size: 11px; }
+.toolbar-note, .toolbar-detail-note { flex: 1 1 100%; color: var(--dim); font-size: 0.846rem; }
 .toolbar-row { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .toolbar-label { color: var(--dim); }
 .toolbar-warning { flex: 1 1 100%; color: var(--danger); font-weight: 600; }
@@ -378,7 +465,7 @@ body.unlocked .slot:focus-visible .panel {
   border-radius: 8px;
   background: transparent;
   color: var(--text);
-  font: 600 12px/1.4 var(--font-body);
+  font: 600 0.923rem/1.4 var(--font-body);
   cursor: pointer;
 }
 .arrange-pad button:hover,
@@ -414,10 +501,16 @@ body.unlocked .slot:focus-visible .panel {
   color: var(--text);
 }
 .arrange-pad[hidden] { display: none; }
-.pad-title { color: var(--accent); font-size: 12px; }
+.pad-title { color: var(--accent); font-size: 0.923rem; }
 .pad-row { display: flex; flex-wrap: wrap; gap: 6px; }
 /* The direction drawn before the word; the word is the button's name. */
 .pad-left::before { content: "\2190  " / ""; }
 .pad-up::before { content: "\2191  " / ""; }
 .pad-down::before { content: "\2193  " / ""; }
 .pad-right::before { content: "\2192  " / ""; }
+/* Inside the board every size follows the board's own text size. */
+.hover-card .possible .when,
+.hover-card .possible .none,
+.hover-card .possible-list { font-size: 1em; }
+.hover-card .src { font-size: 0.72em; }
+.hover-card .next-badge { font-size: 0.85em; }

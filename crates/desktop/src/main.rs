@@ -858,6 +858,7 @@ fn main() {
             overlay::overlay_settings,
             overlay::overlay_save_layout,
             overlay::overlay_set_theme,
+            overlay::overlay_set_detail,
             overlay::overlay_set_opacity,
             overlay::overlay_set_shown,
             overlay::overlay_reset_layout,

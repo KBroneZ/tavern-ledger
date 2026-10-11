@@ -26,7 +26,7 @@ use tauri::{AppHandle, Emitter, Manager, State, Wry};
 
 use crate::hover::OverlayFrame;
 use crate::overlay_layout::{
-    Layout, Panel, Rect, Settings, Theme, MAX_OPACITY, MIN_OPACITY, THEMES,
+    Detail, Layout, Panel, Rect, Settings, Theme, MAX_OPACITY, MIN_OPACITY, THEMES,
 };
 use crate::screen_fit::Area;
 use crate::AppState;
@@ -80,6 +80,7 @@ pub struct View {
     theme: &'static str,
     themes: Vec<ThemeInfo>,
     opacity: f64,
+    detail: Detail,
     min_opacity: f64,
     max_opacity: f64,
     hidden: Vec<Panel>,
@@ -273,6 +274,7 @@ impl Overlay {
                 })
                 .collect(),
             opacity: settings.opacity,
+            detail: settings.detail,
             min_opacity: MIN_OPACITY,
             max_opacity: MAX_OPACITY,
             hidden: settings.hidden.iter().copied().collect(),
@@ -417,6 +419,11 @@ pub fn overlay_save_layout(
 #[tauri::command]
 pub fn overlay_set_theme(app: AppHandle, state: State<'_, Arc<AppState>>, theme: Theme) -> View {
     change(&app, &state, |s, _| s.theme = theme)
+}
+
+#[tauri::command]
+pub fn overlay_set_detail(app: AppHandle, state: State<'_, Arc<AppState>>, detail: Detail) -> View {
+    change(&app, &state, |s, _| s.detail = detail)
 }
 
 #[tauri::command]
@@ -649,7 +656,7 @@ mod tests {
             .skip(1)
             .filter_map(|rest| rest.split('"').next())
             .collect();
-        assert_eq!(scripts.len(), 12);
+        assert_eq!(scripts.len(), 13);
         for script in scripts {
             assert!(ui.join(script).is_file(), "{script} is missing");
         }
@@ -665,6 +672,7 @@ mod tests {
             include_str!("../ui/overlay-keys.js"),
             include_str!("../ui/overlay-place.js"),
             include_str!("../ui/overlay-words.js"),
+            include_str!("../ui/overlay-scale.js"),
             include_str!("../ui/focus-keeper.js"),
         ] {
             assert!(script.contains("(() => {") && script.trim_end().ends_with("})();"));
