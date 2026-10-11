@@ -95,3 +95,51 @@ test("in Spanish the marks, the triple count and the labels are Spanish, and Eng
   }
   assert.equal(words.keywordMarks(["taunt"])[0].short, "T");
 });
+
+// The hover board (T-333): each hero of a Duos team with its own board.
+const team = {
+  heroes: [{ id: "HERO_A" }, { id: "HERO_B" }],
+  seats: [5, 8],
+  tiers: [{ value: 4, source: "log" }, { value: null, source: "log" }],
+  boards: [{ seat: 8, round: 6, minions: [] }],
+  shown: [{ seat: 5, triples: 1, trinkets: [] }, { seat: 8, triples: 0, trinkets: [] }],
+  shown_source: "log",
+  possible: [{ seat: 5, tier: 4 }],
+};
+
+test("a team's boards go with their own hero, matched by seat", () => {
+  const [a, b] = words.seatViews(team);
+  assert.equal(a.hero.id, "HERO_A");
+  assert.equal(a.board, null, "the first hero was not met: no board, never the teammate's");
+  assert.equal(a.tier, 4);
+  assert.equal(a.shown.triples, 1);
+  assert.equal(a.possible.length, 1);
+  assert.equal(b.hero.id, "HERO_B");
+  assert.equal(b.board.round, 6);
+  assert.equal(b.tier, null, "unknown, not 0");
+  assert.equal(b.possible.length, 0);
+});
+
+test("a Solo board kept without a seat belongs to the only hero", () => {
+  const [only] = words.seatViews({ heroes: [{ id: "X" }], seats: [3], boards: [{ round: 2, minions: [] }], tiers: [] });
+  assert.equal(only.board.round, 2);
+  assert.equal(only.shown, null, "leaderboard values not recorded");
+});
+
+test("leaderboard values not from the log are not shown", () => {
+  const [a] = words.seatViews({ ...team, shown_source: "unknown" });
+  assert.equal(a.shown, null);
+  assert.deepEqual(words.seatViews(null), []);
+});
+
+test("when a board was seen, in turns", () => {
+  I18n.setLang("en");
+  assert.equal(words.seenWords(6, 6), "Turn 6 · this turn");
+  assert.equal(words.seenWords(6, 7), "Turn 6 · 1 turn ago");
+  assert.equal(words.seenWords(4, 7), "Turn 4 · 3 turns ago");
+  assert.equal(words.seenWords(6, null), "Turn 6");
+  assert.equal(words.seenWords(null, 6), "No board seen yet");
+  I18n.setLang("es");
+  assert.equal(words.seenWords(4, 7), "Turno 4 · hace 3 turnos");
+  I18n.setLang("en");
+});
