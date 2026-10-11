@@ -44,7 +44,7 @@ What one upload leaves behind (`supabase/functions/upload-game/handler.ts`, migr
 
 Per-user limits already in `upload_begin()` (migration `20261009150000_upload.sql`): 600 uploads an hour, 5,000 a day, **10,000 games and 50 MiB of files in total**. Past either total the upload is refused (`quota_games` / `quota_bytes`, HTTP 403).
 
-The database bytes per game (the three rows and their indexes) are **not measured** yet: they are **assumed at 2 KB** below. The read-only query in section 7 measures them on the hosted project.
+The database bytes per game were measured on the hosted project with the query in section 7 (section 7.1): 41 games, a 13.3 MB database, and 409,600 B in `public.games`, `public.game_stats` and `storage.objects` together, about 10 KB per game. With so few games that figure is mostly each table's and index's fixed pages (Postgres stores 8 KB pages, and every table and index takes at least one), so it is an upper bound. The rows themselves are estimated at about 2.5 KB per game (**assumed**: about 300 B in `games`, 400 B in `game_stats` and 400 B in `storage.objects`, plus their indexes, `storage.objects` having several). The files average 7,137 B on the server today, matching the older, smaller games uploaded so far.
 
 The privacy draft and `docs/legal/data-inventory.md` (row S8) say game files are kept "while the account exists". Any retention window changes that line.
 
@@ -86,27 +86,29 @@ Assumptions (all **assumed** unless marked):
 
 - An active player plays **5 games a day** on average; a heavy player 14 (the user's own median on the days they played, measured).
 - One file is **15 KB** with replays, **7 KB** without (measured medians, rounded up).
-- The database holds **2 KB** per game (assumed; section 7) plus about 30 MB that does not grow with games (assumed: Auth, extensions, Vault).
+- The database holds **2.5 KB** per game (assumed; the measured upper bound is 10 KB, section 1.2) on top of a base of **13.3 MB** that does not grow with games (measured, section 7.1), leaving about 487 MB of the Free plan's 500 MB.
 - Each active player downloads 5 game files and 100 KB of lists and stats a day: about **5.25 MB of egress a month** (assumed).
 - A month is 30 days: 150 games per active player.
 
-Growth per active player and month: 2.25 MB of files with replays (1.05 MB without), 0.3 MB of database, 5.25 MB of egress, about 150 Edge Function calls.
+Growth per active player and month: 2.25 MB of files with replays (1.05 MB without), 0.375 MB of database, 5.25 MB of egress, about 150 Edge Function calls.
 
 **Time until the Free plan's first limit, keeping everything forever:**
 
 | Active players | Files, 1 GB, with replays | Files, without replays | Database, 500 MB | Egress, 5 GB a month |
 |---|---|---|---|---|
-| 10 | about 3.7 years | about 8 years | about 13 years | 1 % used |
-| 100 | **about 4.5 months** | about 9.5 months | about 16 months | 10 % used |
-| 1,000 | **about 2 weeks** | about 4 weeks | about 7 weeks | **over (105 %)** |
+| 10 | about 3.7 years | about 8 years | about 11 years | 1 % used |
+| 100 | **about 4.5 months** | about 9.5 months | about 13 months | 10 % used |
+| 1,000 | **about 2 weeks** | about 4 weeks | about 5.5 weeks | **over (105 %)** |
+
+If the database really took the measured upper bound of 10 KB per game, its column would read about 2.7 years, **3.2 months** and 10 days, making it the first wall at 100 players. The storage alert (option A) watches both, and the query in section 7 should be run again at a few thousand games to settle the real figure.
 
 Edge Function calls stay under the quota in all three (1,000 players: about 150,000 of 500,000 a month). Monthly active users are far from 50,000.
 
 **Per player, with today's 50 MiB total:** about 3,500 games with replays, so an average player is refused after about 23 months and a heavy one after about **8 months**. That cap is already, in effect, a retention policy the player is not told about.
 
-**On Pro** (100 GB files, 8 GB disk, 250 GB egress): 1,000 active players keeping everything with replays use about 27 GB of files and 3.6 GB of database in a year, both inside the $25. Kept forever, one player's year of files (27 MB) would cost about $0.0006 a month in Pro storage overage. **Storage costs little on Pro; the hard wall is the Free plan.**
+**On Pro** (100 GB files, 8 GB disk, 250 GB egress): 1,000 active players keeping everything with replays use about 27 GB of files and 4.5 GB of database in a year, both inside the $25. Kept forever, one player's year of files (27 MB) would cost about $0.0006 a month in Pro storage overage. **Storage costs little on Pro; the hard wall is the Free plan.**
 
-**With a 90-day window** for the files (summaries kept): files stop growing at about 6.75 MB per active player with replays (3.15 MB without), so the Free plan's 1 GB holds about **150 active players with replays** (about 320 without), and accounts that stop playing empty themselves. The database keeps growing by 0.3 MB per active player and month and becomes the Free plan's limit (100 players: about 16 months).
+**With a 90-day window** for the files (summaries kept): files stop growing at about 6.75 MB per active player with replays (3.15 MB without), so the Free plan's 1 GB holds about **150 active players with replays** (about 320 without), and accounts that stop playing empty themselves. The database keeps growing by about 0.375 MB per active player and month and becomes the Free plan's limit (100 players: about 13 months).
 
 ## 4. Options
 
@@ -145,7 +147,7 @@ One at a time, each with a recommendation.
 
 ## 7. Query for the hosted project (read only)
 
-To replace the assumed 2 KB per game and the 30 MB base. It returns only totals and sizes, no ids or names. To run in the Supabase SQL editor:
+Run once by the hub on 2026-10-12; results in 7.1. Run it again at a few thousand games to measure the database bytes per game. It returns only totals and sizes, no ids or names. To run in the Supabase SQL editor:
 
 ```sql
 select 'database' as what, pg_database_size(current_database()) as bytes, null::bigint as rows
@@ -165,3 +167,24 @@ order by 1;
 ```
 
 Database bytes per game = (`public.games` + `public.game_stats` + `storage.objects`) bytes divided by the games bucket's file count, once there are enough games for the fixed overhead of each table to matter little.
+
+### 7.1 Results (hosted project, 2026-10-12 about 02:15 local, run by the hub)
+
+Row counts are Postgres's estimates (`reltuples`; "-" where the table was never analysed). 41 games is too few for per-game figures: each table's and index's fixed pages dominate.
+
+| What | Bytes | Rows |
+|---|---|---|
+| database | 13,276,851 | |
+| games bucket files | 292,626 | 41 |
+| `public.games` | 90,112 | 41 |
+| `public.game_stats` | 114,688 | 41 |
+| `storage.objects` | 204,800 | 29 (stale estimate) |
+| `public.profiles` | 32,768 | - |
+| `auth.users` | 221,184 | 1 |
+| `auth.audit_log_entries` | 81,920 | - |
+| `private.upload_events` | 24,576 | 57 |
+| `private.sweep_runs` | 49,152 | - |
+| `private.leaderboard_rows` | 24,576 | - |
+| `private.community_hero_rows` | 16,384 | - |
+
+Read: the database's base is 13.3 MB (2.7 % of the Free plan's 500 MB); game files use 0.29 MB (0.03 % of 1 GB), 7,137 B per file on average; the three per-game tables hold 409,600 B, about 10 KB per game as an upper bound.
