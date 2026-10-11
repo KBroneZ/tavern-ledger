@@ -19,3 +19,5 @@ __pycache__/
 target/
 # Card data and art fetched at run time (D-038); never committed.
 card-cache/
+# The website simulator's card data, written at build time (T-606, D-038).
+web/src/lib/sim/generated/

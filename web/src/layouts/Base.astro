@@ -1,6 +1,6 @@
 ---
 import "../styles/global.css";
-import { contentSecurityPolicy, readConfig } from "../lib/config.ts";
+import { contentSecurityPolicy, readConfig, WASM_PAGES } from "../lib/config.ts";
 import { basePath, href, lang, LANGS, pathIn, type Lang } from "../lib/i18n.ts";
 import { st } from "../lib/site/strings.ts";
 
@@ -21,7 +21,9 @@ const { title, description, noindex = false, layout = "page", translated = true 
 const config = readConfig(import.meta.env);
 // Dev mode injects styles from JavaScript, which the policy would block; the
 // built site (and `npm run preview`) always carries it.
-const csp = import.meta.env.PROD ? contentSecurityPolicy(config?.url ?? null) : null;
+// The simulator page alone may also compile WebAssembly (D-090).
+const wasm = WASM_PAGES.includes(Astro.url.pathname);
+const csp = import.meta.env.PROD ? contentSecurityPolicy(config?.url ?? null, { wasm }) : null;
 // The page's language was set by the page (setLang) before the layout renders.
 const pageLang: Lang = lang();
 const other: Lang = pageLang === "en" ? "es" : "en";
@@ -80,6 +82,7 @@ const current = (match: boolean) => (match ? "page" : undefined);
             <a href={href("/leaderboards/")} aria-current={current(base.startsWith("/leaderboards"))}>{st("layout.leaderboards")}</a>
             <a href={href("/heroes/")} aria-current={current(base.startsWith("/heroes"))}>{st("layout.heroes")}</a>
             <a href={href("/me/")} aria-current={current(base.startsWith("/me") || base.startsWith("/games"))}>{st("layout.games")}</a>
+            <a href={href("/simulator/")} aria-current={current(base.startsWith("/simulator"))}>{st("layout.simulator")}</a>
             <a href={href("/signin/")} aria-current={current(base.startsWith("/signin"))}>{st("layout.signin")}</a>
             <a href={href("/account/")} aria-current={current(base.startsWith("/account"))}>{st("layout.account")}</a>
           </>

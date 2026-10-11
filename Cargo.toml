@@ -9,3 +9,13 @@ edition = "2021"
 rust-version = "1.89"
 license = "MIT"
 publish = false
+
+# The website's WebAssembly engine (crates/sim-wasm, T-606): small and
+# self-contained. Used only by web/tools/build-sim-wasm.ts.
+[profile.sim-wasm]
+inherits = "release"
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

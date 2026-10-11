@@ -56,6 +56,9 @@ jobs:
           ASTRO_TELEMETRY_DISABLED: "1"
           PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
           PUBLIC_SUPABASE_ANON_KEY: sb_publishable_placeholder
+          # The simulator's card data from synthetic files, not HearthstoneJSON
+          # (the Pages build fetches the real one; T-606, D-090).
+          SIM_CARDS_DIR: test/fixtures/sim-cards
         run: |
           npm ci
           npm test

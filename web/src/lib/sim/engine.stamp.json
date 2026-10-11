@@ -1,0 +1,12 @@
+{
+  "wasm": "e39ee0011c23a65c9bdac9fa35eb0336e03f189b4a8c19b4bd75ed3e07054f21",
+  "sources": "eda910d18740567cee81ac2e73c684697ed8661ded9e411a83260469fcd8fa8d",
+  "crates": [
+    "itoa",
+    "memchr",
+    "serde_core",
+    "serde_json",
+    "zmij"
+  ],
+  "rustc": "rustc 1.96.0 (ac68faa20 2026-05-25)"
+}

@@ -1,0 +1,53 @@
+---
+// The combat simulator's frame (T-606): the heading and Simple/Advanced
+// switch, then "Load a combat", the boards and the odds. Each region keeps
+// the room it will need while the script (lib/sim/main.ts) loads, so
+// nothing moves when it arrives.
+import "../../styles/data.css";
+import "./sim.css";
+import Switch from "../data/Switch.astro";
+import StateBlock from "../data/StateBlock.astro";
+import DataScript from "../data/DataScript.astro";
+import { sm } from "../../lib/sim/strings.ts";
+---
+
+<article class="sim" aria-labelledby="sim-title">
+  <div class="data-head">
+    <div>
+      <p class="kicker">{sm("page.kicker")}</p>
+      <h1 id="sim-title">{sm("page.title")}</h1>
+    </div>
+    <Switch kind="detail" />
+  </div>
+  <p class="visually-hidden" id="sim-status" role="status" aria-live="polite"></p>
+
+  <section class="sim-panel sim-load-panel" aria-labelledby="sim-load-title">
+    <h2 class="sim-panel-title" id="sim-load-title">{sm("load.title")}</h2>
+    <div id="sim-load">
+      <StateBlock kind="loading" title={sm("page.loading")} lines={2} />
+    </div>
+  </section>
+
+  <div class="sim-note" id="sim-note" role="status"></div>
+
+  <div class="sim-main">
+    <div class="sim-boards">
+      <div id="sim-mode" class="sim-mode-slot"></div>
+      <div class="sim-editor" id="sim-editor" aria-busy="true">
+        <StateBlock kind="loading" title={sm("page.loading")} lines={6} />
+      </div>
+    </div>
+    <section class="sim-panel sim-result" aria-labelledby="sim-result-title">
+      <h2 class="sim-panel-title" id="sim-result-title">{sm("result.title")}</h2>
+      <div id="sim-result" aria-live="off">
+        <StateBlock kind="loading" title={sm("page.loading")} lines={3} />
+      </div>
+    </section>
+  </div>
+
+  <p class="sim-credit">{sm("credit")}</p>
+  <noscript><p class="state state-error">{sm("page.noscript")}</p></noscript>
+</article>
+
+<DataScript />
+<script src="../../lib/sim/main.ts"></script>

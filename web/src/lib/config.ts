@@ -4,6 +4,13 @@
 // forms, no scripts (until the hosted Supabase project exists).
 import { ART_ORIGIN } from "./data/pictures.ts";
 
+/** The one source the simulator page and its worker add to script-src (D-090). */
+export const WASM_SOURCE = "'wasm-unsafe-eval'";
+/** The pages that get it: the simulator in each language. Nothing else. */
+export const WASM_PAGES: readonly string[] = ["/simulator/", "/es/simulator/"];
+/** The simulator's worker script under /_astro/ (Vite names it after its source, simWorker.ts). */
+export const WASM_WORKER = /^simWorker-[A-Za-z0-9_-]+\.js$/;
+
 export interface SiteConfig {
   url: string;
   anonKey: string;
@@ -87,13 +94,19 @@ export function signupsOpen(env: ConfigSource): boolean {
  * host (D-074), which the game viewer draws in the browser. With accounts
  * closed there is no script, form, connection or outside picture at all. frame-ancestors
  * only works as a header: the build writes it to dist/_headers (astro.config.mjs).
+ *
+ * `wasm` is for the simulator page and its worker only (T-606, D-089, D-090):
+ * script-src also gets 'wasm-unsafe-eval', which lets a script compile
+ * WebAssembly and nothing else (no eval, no inline script). Every other
+ * directive stays the same.
  */
-export function contentSecurityPolicy(supabaseOrigin: string | null): string {
+export function contentSecurityPolicy(supabaseOrigin: string | null, options: { wasm?: boolean } = {}): string {
   // Accounts closed: no page has a script or a form, so allow none at all.
   const open = supabaseOrigin !== null;
+  const scripts = open ? (options.wasm ? `'self' ${WASM_SOURCE}` : "'self'") : "'none'";
   return [
     "default-src 'none'",
-    `script-src ${open ? "'self'" : "'none'"}`,
+    `script-src ${scripts}`,
     "style-src 'self'",
     `img-src ${open ? `'self' ${ART_ORIGIN}` : "'self'"}`,
     "font-src 'self'",
