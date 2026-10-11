@@ -18,13 +18,16 @@
   }
 
   // Saves the answer and closes the dialog; null when done, else the error,
-  // and the dialog stays open to try again.
+  // and the dialog stays open to try again. A choice the app could not save
+  // holds for this run only (the view's warning), so it is said here too.
   async function answer(call, dialog, enabled) {
+    let view;
     try {
-      await call("overlay_set_enabled", { enabled });
+      view = await call("overlay_set_enabled", { enabled });
     } catch (error) {
       return String(error);
     }
+    if (view && view.warning) return String(view.warning);
     dialog.close();
     return null;
   }

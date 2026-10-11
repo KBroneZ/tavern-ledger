@@ -98,6 +98,10 @@ pub struct Poll<'a> {
     /// Whether the last finished game was Duos (`None`: no game, or another
     /// mode).
     pub last_duos: Option<bool>,
+    /// The overlay is off: the lobby's tribes, which only the overlay shows,
+    /// are not read (T-531, D-106). The rating is read as before. Saving the
+    /// tribes with each game (D-104) will need them read again.
+    pub skip_tribes: bool,
 }
 
 /// The rating change the last game made, in its mode.
@@ -337,7 +341,9 @@ impl GameMemory {
             return;
         }
         s.ticks = s.ticks.wrapping_add(1);
-        tick_tribes(&mut s, reader, poll.game, poll.build);
+        if !poll.skip_tribes {
+            tick_tribes(&mut s, reader, poll.game, poll.build);
+        }
         tick_rating(&mut s, reader, poll);
         self.save_rating(&mut s);
     }
@@ -895,6 +901,23 @@ mod tests {
         let gm = GameMemory::default();
         assert!(gm.load(&dir).is_err());
         assert!(!gm.view().enabled);
+    }
+
+    #[test]
+    fn with_the_overlay_off_the_tribes_are_not_read() {
+        // T-531: only the overlay shows them, so overlay off reads nothing.
+        let gm = on("tribes-overlay-off");
+        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(RATING)]);
+        let game = key(1);
+        let off = Poll {
+            skip_tribes: true,
+            ..poll(Some(&game), BUILD, Some(Scene::Game))
+        };
+        for _ in 0..9 {
+            gm.tick(&reader, &off);
+        }
+        assert_eq!(reader.calls.get(), 0);
+        assert_eq!(gm.tribes_for(Some(&key(1))).0, None);
     }
 
     #[test]

@@ -380,6 +380,7 @@ fn read_from_game(app: &AppHandle, state: &AppState, client_build: Option<i64>) 
         last_duos: last.duos,
         newest: last.newest.as_ref(),
         previous: last.previous.as_ref(),
+        skip_tribes: !state.overlay.enabled(),
     };
     let tick = || state.game_memory.tick(&game_memory::GameReader, &poll);
     if catch_unwind(AssertUnwindSafe(tick)).is_err() {

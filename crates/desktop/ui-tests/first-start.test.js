@@ -68,3 +68,12 @@ test("an answer the app cannot take keeps the question open and says why", async
   assert.equal(await TLFirstStart.answer(call, dialog, true), "Error: boom");
   assert.equal(dialog.open, true);
 });
+
+test("an answer that holds but could not be saved keeps the question open and says so", async () => {
+  const dialog = fakeDialog();
+  dialog.open = true;
+  const warning = "The overlay settings could not be saved (PermissionDenied); they will be lost after a restart.";
+  const { call } = fakeCall({ overlay_set_enabled: { enabled: false, warning } });
+  assert.equal(await TLFirstStart.answer(call, dialog, false), warning);
+  assert.equal(dialog.open, true);
+});
