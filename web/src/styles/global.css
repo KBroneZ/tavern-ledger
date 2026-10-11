@@ -238,7 +238,7 @@ a:hover {
 }
 
 /* Brand: the TL tankard mark (docs/brand/logo/mark.svg, D-094). */
-.mark {
+.brand .mark {
   flex: none;
   width: 30px;
   height: 28px;

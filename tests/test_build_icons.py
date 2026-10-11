@@ -28,6 +28,10 @@ class PngSize(unittest.TestCase):
         with self.assertRaises(ValueError):
             bi.png_size(b"GIF89a" + b"\x00" * 30)
 
+    def test_rejects_a_truncated_png(self):
+        with self.assertRaises(ValueError):
+            bi.png_size(png(16, 16)[:20])
+
 
 class Ico(unittest.TestCase):
     def test_packs_every_size_with_a_valid_directory(self):
@@ -74,6 +78,24 @@ class Copies(unittest.TestCase):
 
     def test_check_mode_needs_no_browser(self):
         self.assertEqual(bi.main(["--check"]), 0)
+
+
+class Committed(unittest.TestCase):
+    """The committed binaries are whole and have the planned sizes (no browser needed)."""
+
+    def test_app_icon_has_every_size(self):
+        ico = bi.ICO.read_bytes()
+        reserved, kind, count = struct.unpack_from("<HHH", ico, 0)
+        self.assertEqual((reserved, kind, count), (0, 1, len(bi.ICO_SIZES)))
+        for i, size in enumerate(bi.ICO_SIZES):
+            w, h, _, _, _, _, length, start = struct.unpack_from("<BBBBHHII", ico, 6 + 16 * i)
+            self.assertEqual((w, h), (size % 256, size % 256))
+            self.assertEqual(bi.png_size(ico[start:start + length]), (size, size))
+
+    def test_website_pngs_have_their_sizes(self):
+        self.assertEqual(bi.png_size((bi.PUBLIC / "favicon-32.png").read_bytes()), (32, 32))
+        size = bi.APPLE_SIZE
+        self.assertEqual(bi.png_size((bi.PUBLIC / "apple-touch-icon.png").read_bytes()), (size, size))
 
 
 if __name__ == "__main__":

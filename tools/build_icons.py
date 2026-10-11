@@ -1,7 +1,8 @@
 """Rebuilds the app and website icons from the hand-drawn logo SVGs (T-522, D-094).
 
 Sources (docs/brand/logo/):
-- app-tile-small.svg  16 to 32 px: drawn on the 16 px grid, so it stays sharp
+- app-tile-small.svg  16 to 32 px: drawn on the 16 px grid, so it is sharp at 16 and 32 px
+                      (24 px falls between grid lines and is slightly soft, still clearer than the big tile)
 - app-tile.svg        48 px and up
 - mark.svg            the masthead mark
 
@@ -58,7 +59,7 @@ def tile_for(size: int) -> str:
 
 def png_size(data: bytes) -> tuple[int, int]:
     """Width and height from a PNG's IHDR chunk."""
-    if not data.startswith(PNG_SIGNATURE) or data[12:16] != b"IHDR":
+    if len(data) < 24 or not data.startswith(PNG_SIGNATURE) or data[12:16] != b"IHDR":
         raise ValueError("not a PNG file")
     return struct.unpack(">II", data[16:24])
 
@@ -92,15 +93,20 @@ def render(chrome: str, svg: str, size: int, background: str = "transparent") ->
     page = ("<!doctype html><html><head><style>html,body{margin:0;background:%s}"
             "svg{display:block;width:%dpx;height:%dpx}</style></head><body>%s</body></html>"
             % (background, size, size, svg))
-    with tempfile.TemporaryDirectory() as tmp:
+    # Chrome's helper processes can hold the profile a moment after exit: do not fail on cleanup.
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         html = Path(tmp) / "icon.html"
         out = Path(tmp) / "icon.png"
         html.write_text(page, encoding="utf-8")
-        subprocess.run(
-            [chrome, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--force-device-scale-factor=1",
-             f"--user-data-dir={Path(tmp) / 'profile'}", f"--window-size={size},{size}",
-             "--default-background-color=00000000", f"--screenshot={out}", html.as_uri()],
-            check=True, capture_output=True, timeout=RENDER_TIMEOUT)
+        try:
+            subprocess.run(
+                [chrome, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--force-device-scale-factor=1",
+                 f"--user-data-dir={Path(tmp) / 'profile'}", f"--window-size={size},{size}",
+                 "--default-background-color=00000000", f"--screenshot={out}", html.as_uri()],
+                check=True, capture_output=True, timeout=RENDER_TIMEOUT)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+            detail = (getattr(exc, "stderr", None) or b"").decode("utf-8", errors="replace")[-500:]
+            raise SystemExit(f"Chrome could not render the {size} px icon: {exc}\n{detail}") from exc
         data = out.read_bytes()
     if png_size(data) != (size, size):
         raise SystemExit(f"Chrome rendered {png_size(data)} instead of {size}x{size}.")
