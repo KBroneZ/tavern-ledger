@@ -13,6 +13,7 @@ use tauri::{
 
 use crate::foreground::{self, Foreground};
 use crate::hover::{self, OverlayFrame};
+use crate::over_game_guard::GameWatch;
 use crate::overlay::{lock, set_unlocked, SETTINGS_CHANGED, WINDOW};
 use crate::screen_fit::{overlay_area, pick_screen, Area, Screen};
 use crate::AppState;
@@ -140,10 +141,17 @@ fn fit_window(app: &AppHandle) -> tauri::Result<bool> {
 /// A show or hide that keeps failing is said once, not retried in silence.
 const FAILURES_BEFORE_NOTICE: u32 = 5;
 
+/// What a guarded run (a test build) says while it keeps the overlay hidden;
+/// layout editing is hidden too.
+const GUARD_NOTICE: &str = "Test build: the overlay, and its layout editing, stay hidden while Hearthstone runs (start with --allow-over-game to show them).";
+
 /// Shows or hides the window as the game, the setting and the window in
-/// front change, until the app quits.
-pub fn follow(app: AppHandle, state: Arc<AppState>) {
+/// front change, until the app quits. A `guarded` run (a test build) keeps
+/// it hidden while the game runs (`over_game_guard`).
+pub fn follow(app: AppHandle, state: Arc<AppState>, guarded: bool) {
     thread::spawn(move || {
+        let mut watch = GameWatch::new(guarded);
+        let mut said_guarded = false;
         let mut shown = false;
         let mut game_was_on = false;
         let mut failures: u32 = 0;
@@ -175,6 +183,19 @@ pub fn follow(app: AppHandle, state: Arc<AppState>) {
                 foreground::current(),
                 state.overlay.unlocked(),
             );
+            let blocked = want && watch.blocks();
+            if blocked != said_guarded {
+                // Said once while it holds, and taken back when it no longer does.
+                crate::set_status(&app, &state, |s| {
+                    if blocked {
+                        s.notice = Some(GUARD_NOTICE.into());
+                    } else if s.notice.as_deref() == Some(GUARD_NOTICE) {
+                        s.notice = None;
+                    }
+                });
+            }
+            said_guarded = blocked;
+            let want = want && !blocked;
             if want != shown {
                 let done = match app.get_webview_window(WINDOW) {
                     Some(window) if want => {

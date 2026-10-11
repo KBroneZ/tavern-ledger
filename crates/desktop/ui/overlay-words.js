@@ -131,7 +131,71 @@
     return `${turn} · ${ago === 0 ? I18n.t("ov.board.thisTurn") : I18n.plural("ov.board.ago", ago)}`;
   }
 
-  const api = { KEYWORDS, keywordMarks, keywordLegend, triplesText, trinketText, seatWords, nextOpponent, nextLabels, seatViews, seenWords };
+  // The hovered hero of a Duos team (T-340): the app says which of the
+  // team's two portraits the mouse is on (hover.rs, 0 the top one), and the
+  // seats are in the order the team is listed in (lower player id first).
+  // That this is the game's top portrait is not in the log: unconfirmed
+  // until a real Duos game is checked (T-336). With no portrait known
+  // (an older app or Solo), the whole team stays.
+  function hoveredViews(views, member) {
+    const list = Array.isArray(views) ? views : [];
+    if (list.length < 2 || !Number.isInteger(member) || member < 0 || member >= list.length) return list;
+    return [list[member]];
+  }
+
+  // One opponent in the Simple side panel (T-339): a face per hero with
+  // their tier when known, the health, the triples the leaderboard shows (0
+  // when it shows none or did not say), the game's next mark. Unknown
+  // values are null and left out of the panel, never shown as "?".
+  function simpleRow(opponent) {
+    const o = opponent || {};
+    const seats = Array.isArray(o.seats) ? o.seats : [];
+    const heroes = Array.isArray(o.heroes) && o.heroes.length === seats.length ? o.heroes : [];
+    const tiers = Array.isArray(o.tiers) ? o.tiers : [];
+    const shown = o.shown_source === "log" && Array.isArray(o.shown) ? o.shown : [];
+    const health = o.health && Number.isInteger(o.health.value) ? o.health.value : null;
+    const triples = shown.reduce((sum, s) => sum + (s && Number.isInteger(s.triples) && s.triples > 0 ? s.triples : 0), 0);
+    return {
+      faces: seats.map((_, i) => ({
+        hero: heroes[i] || null,
+        tier: tiers[i] && Number.isInteger(tiers[i].value) ? tiers[i].value : null,
+      })),
+      health,
+      triples,
+      next: o.next === true,
+      out: health !== null && health <= 0,
+    };
+  }
+
+  // The lobby's tribes for the Simple panel: read from the game (D-063) or
+  // entered by the user, else the ones the tavern confirmed, marked inferred
+  // with how many of the five when not all. Offers seen in the tavern alone
+  // are not the lobby: Simple leaves them to Advanced.
+  function simpleTribes(game) {
+    const lobby = game && game.lobby_tribes;
+    if (!lobby || !Array.isArray(lobby.tribes) || !lobby.tribes.length) return null;
+    if (lobby.basis === "game" || lobby.basis === "entered") return { tribes: lobby.tribes, inferred: false, count: null };
+    if (lobby.basis === "tavern_confirmed") {
+      return { tribes: lobby.tribes, inferred: true, count: lobby.complete ? null : lobby.tribes.length };
+    }
+    return null;
+  }
+
+  const api = {
+    KEYWORDS,
+    keywordMarks,
+    keywordLegend,
+    triplesText,
+    trinketText,
+    seatWords,
+    nextOpponent,
+    nextLabels,
+    seatViews,
+    seenWords,
+    hoveredViews,
+    simpleRow,
+    simpleTribes,
+  };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLWords = api;
 })();

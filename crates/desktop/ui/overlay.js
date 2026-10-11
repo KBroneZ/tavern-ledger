@@ -92,7 +92,9 @@ function renderStatus(g) {
     panel.append(TLI18n.t("ov.status.starting"));
     return;
   }
-  const line = el("div");
+  // Advanced: heroes, mode, last combat and health in words. Simple shows
+  // nothing of it during a game (T-339): the game shows all of it already.
+  const line = el("div", "adv");
   const mode = g.game_type.value ? modeName(g.game_type.value) : null;
   const names = [g.hero.value, g.is_duos ? g.teammate_hero.value : null]
     .filter(Boolean)
@@ -107,14 +109,47 @@ function renderStatus(g) {
   }
   line.append(sep(), sourced(el("span"), g.own_health), ` ${TLI18n.t("ov.hp.unit")}`);
   panel.append(line);
+  if (g.phase === "over") panel.append(el("div", "simple-only", TLI18n.t("ov.status.over")));
   if (g === EXAMPLE_GAME) panel.append(el("p", "notes", TLI18n.t("ov.status.example")));
   const notes = [...g.warnings, ...g.problems].slice(0, 2).map((w) => TLI18n.backend(w));
   if (notes.length) panel.append(el("p", "notes", notes.join(" · ")));
+  // Warnings and problems always show: a failure is never silent.
+  panel.classList.toggle("simple-empty", g.phase !== "over" && g !== EXAMPLE_GAME && !notes.length);
+}
+
+// The Simple tribe row (T-339): the lobby's tribes as short chips, one
+// "inferred" mark when the tavern confirmed them, "2/5" when not all are known.
+function simpleTribeRow(g) {
+  const known = TLWords.simpleTribes(g);
+  if (!known) return null;
+  const row = el("div", "tribe-chips simple-only");
+  row.setAttribute("aria-label", TLI18n.t("ov.slot.tribes"));
+  for (const t of known.tribes) {
+    // The short name is seen, the full one read out.
+    const chip = el("span", "chip");
+    const short = el("span", null, tribeShort(t));
+    short.setAttribute("aria-hidden", "true");
+    chip.append(short, el("span", "visually-hidden", tribeName(t)));
+    row.append(chip);
+  }
+  if (known.count !== null) row.append(el("span", "chip-count", TLI18n.t("ov.tribes.count", { count: known.count })));
+  if (known.inferred) row.append(mark("inferred"));
+  return row;
+}
+
+// A short tribe name that fits a chip; the full name when there is none.
+function tribeShort(id) {
+  const key = `ov.tribeShort.${String(id).toUpperCase()}`;
+  return key in TLI18n.tables().en ? TLI18n.t(key) : tribeName(id);
 }
 
 function renderTribes(g) {
   const panel = document.getElementById("tribes");
-  panel.replaceChildren(el("h2", null, TLI18n.t("ov.slot.tribes")));
+  const simple = simpleTribeRow(g);
+  const full = el("div", "adv");
+  panel.replaceChildren(...[simple, full].filter(Boolean));
+  panel.classList.toggle("simple-empty", !simple);
+  full.append(el("h2", null, TLI18n.t("ov.slot.tribes")));
   const seen = el("div", "row");
   seen.append(el("span", "what", TLI18n.t("ov.tribes.seen")));
   const seenMark = mark(g.tribes_source);
@@ -126,7 +161,7 @@ function renderTribes(g) {
       g.tribes.length ? g.tribes.map((t) => `${tribeName(t.tribe)} ${t.offers}`).join(" · ") : TLI18n.t("ov.tribes.none"),
     ),
   );
-  panel.append(seen);
+  full.append(seen);
   // The lobby's tribes the tavern confirmed with the card data (D-050): the
   // log has no list of them.
   const lobby = g.lobby_tribes;
@@ -137,16 +172,16 @@ function renderTribes(g) {
     const gameMark = mark(lobby.source);
     if (gameMark) row.append(gameMark);
     row.append(el("div", "tribe-list", lobby.tribes.map(tribeName).join(" · ")));
-    panel.append(row);
+    full.append(row);
   }
-  if (g.game_tribes && g.game_tribes.note) panel.append(el("p", "notes", TLI18n.backend(g.game_tribes.note)));
+  if (g.game_tribes && g.game_tribes.note) full.append(el("p", "notes", TLI18n.backend(g.game_tribes.note)));
   if (lobby && lobby.basis === "tavern_confirmed") {
     const row = el("div", "row");
     row.append(el("span", "what", lobby.complete ? TLI18n.t("ov.tribes.lobbyAll") : TLI18n.t("ov.tribes.lobbyPart", { count: lobby.tribes.length })));
     const lobbyMark = mark(lobby.source);
     if (lobbyMark) row.append(lobbyMark);
     row.append(el("div", "tribe-list", lobby.tribes.map(tribeName).join(" · ")));
-    panel.append(row);
+    full.append(row);
   }
   if (g.entered_tribes.length) {
     const entered = el("div", "row");
@@ -154,7 +189,7 @@ function renderTribes(g) {
     const enteredMark = mark(g.entered_tribes_source);
     if (enteredMark) entered.append(enteredMark);
     entered.append(el("div", "tribe-list", g.entered_tribes.map(tribeName).join(" · ")));
-    panel.append(entered);
+    full.append(entered);
   }
   panel.hidden = false;
 }
@@ -288,11 +323,59 @@ function opponentHead(opponent) {
 
 // Compact (T-306): one line per opponent, in the leaderboard's order. The
 // boards are on the hover card, over the game's own leaderboard.
+// One opponent in the Simple panel (T-339): the heroes' portraits with
+// their tier, the health and the triples when above 0; the game's next mark
+// as a lit row. No names (they are on the hover card) and no unknowns.
+function simpleOpponent(opponent) {
+  const r = TLWords.simpleRow(opponent);
+  const row = el("li", `opp${r.next ? " next" : ""}${r.out ? " out" : ""}`);
+  const said = [];
+  const faces = el("span", "faces");
+  for (const f of r.faces) {
+    const face = el("span", "face");
+    const art = f.hero ? TLCards.art(f.hero.id, "portrait") : null;
+    face.append(art || el("span", "portrait blank"));
+    if (f.tier !== null) {
+      const tier = el("b", "face-tier", f.tier);
+      tier.setAttribute("aria-hidden", "true");
+      face.append(tier);
+    }
+    faces.append(face);
+    said.push(`${f.hero ? heroName(f.hero) : TLI18n.t("ov.status.heroUnknown")}${f.tier !== null ? `, ${TLI18n.t("ov.board.tier", { value: f.tier })}` : ""}`);
+  }
+  row.append(faces);
+  const nums = el("span", "nums");
+  if (r.next) {
+    const word = TLWords.nextLabels(current()).badge;
+    nums.append(el("span", "opp-next", word));
+  }
+  if (r.health !== null) {
+    const hp = el("b", "opp-hp", r.health);
+    hp.setAttribute("aria-hidden", "true");
+    nums.append(hp);
+    said.push(`${r.health} ${TLI18n.t("ov.hp.unit")}`);
+  }
+  if (r.triples > 0) {
+    const tr = el("span", "opp-triples", `★${r.triples}`);
+    tr.setAttribute("aria-hidden", "true");
+    nums.append(tr);
+    said.push(TLI18n.plural("ov.triples", r.triples));
+  }
+  row.append(nums, el("span", "visually-hidden", said.join("; ")));
+  return row;
+}
+
 function renderOpponents(g) {
   const panel = document.getElementById("opponents");
-  panel.replaceChildren(el("h2", null, TLI18n.t("ov.slot.opponents")));
+  const list = el("ol", "opp-list simple-only");
+  list.setAttribute("aria-label", TLI18n.t("ov.slot.opponents"));
+  list.append(...g.opponents.map(simpleOpponent));
+  const full = el("div", "adv");
+  panel.replaceChildren(list, full);
+  panel.classList.toggle("simple-empty", !g.opponents.length);
+  full.append(el("h2", null, TLI18n.t("ov.slot.opponents")));
   if (!g.opponents.length) {
-    panel.append(el("div", "row", TLI18n.t("ov.opponents.noLobby")));
+    full.append(el("div", "row", TLI18n.t("ov.opponents.noLobby")));
   }
   // The next opponent the game marks (T-313), with the last board met.
   const next = TLWords.nextOpponent(g.opponents);
@@ -303,19 +386,19 @@ function renderOpponents(g) {
     const badge = head.querySelector(".next-badge");
     if (badge) badge.remove();
     block.append(el("h3", null, TLWords.nextLabels(g).heading), head, ...renderShown(next), ...renderBoards(next));
-    panel.append(block);
+    full.append(block);
   }
   for (const opponent of g.opponents) {
     const item = el("div", "opponent compact");
     item.append(opponentHead(opponent));
-    panel.append(item);
+    full.append(item);
   }
   // Boards are only on the hover card: say when the hover cannot work yet.
   const hint =
     g.leaderboard_slots === null || g.leaderboard_slots === undefined
       ? TLI18n.t("ov.opponents.hintNoOrder")
       : TLI18n.t("ov.opponents.hint");
-  panel.append(el("p", "hint", hint));
+  full.append(el("p", "hint", hint));
   panel.hidden = false;
 }
 

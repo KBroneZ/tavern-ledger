@@ -75,3 +75,30 @@ What we took: the board where the game's own board strip is (across the top), on
 ### Simple and Advanced (D-067)
 
 Simple (the default) shows the board, the hero, tier, health, record, triple and trinket counts, and the turn the board was seen, with every source mark but the card-database word ("inferred", "unknown", "from the leaderboard"). Advanced adds keyword letters, trinket names, the minions an opponent could have (always labelled "possible", D-050), the card-database word (the legend credits the card data) and the keyword key in the legend. The switch is in the overlay's toolbar (unlock the overlay to see it) and is kept in `overlay.json`; a switch in the Settings tab is left for after session 055's work there is merged.
+
+## Session 059 (2026-10-11): a slim side panel, one hero on hover (T-339, T-340, D-068)
+
+### What players need from the side panel during a game
+
+From the public material already cited above (HDT's release notes, Firestone's feature wiki; no code read, rule 1) and the user's two live Duos games:
+
+- The other trackers put the detail on the leaderboard hover (last board, tier, triples) and keep anything always on screen small. The board is wanted only when the player asks for it, by hovering.
+- During a turn a player decides from: the lobby's tribes, who they fight next, and each opponent's tier and health (how strong and how close to dying). Triples matter when there are some.
+- Names, sources, "not fought", "no board seen yet" and the record help after the game or when checking the app, not while playing. The user's words: "the names are not needed", "too much information that makes no sense there", "it covers part of what is there".
+
+So Simple keeps those few values as portraits and numbers, and Advanced keeps everything else.
+
+### Where it fits
+
+Hearthstone keeps its play area at 4:3 and fills the rest of a 16:9 screen with scenery, so each side has a strip of (16/9 − 4/3) / 2 ≈ 22% of the screen's height. Whether the game draws anything in the right strip at the panel's height is to be checked in a real game with the user (T-336). The Simple panel is 13.5 rem wide, with a rem of 1.32% of the height (T-334): about 18% of the height.
+
+| Screen | Overlay pixels | Strip beside the play area | Simple panel (Duos, 3 teams) | Simple panel (Solo, 7 opponents) | Advanced panel |
+|---|---|---|---|---|---|
+| 1920x1080 at 100% | 1920x1080 | 240 px | 176 x 181 px | 176 px wide | 338 x 881 px |
+| 3840x2160 at 150% | 2560x1440 | 320 px | 240 px wide | 240 x 439 px | (as 058) |
+
+Measured off screen (headless Edge, the overlay page with its Tauri calls stubbed, invented data, real card ids for the pictures), at the default place: the right edge, 96 px from the top, clear of the game's leaderboard on the left. The height of a headless window is a little below the screen's (985 of 1080 px), so the real panel is about 10% bigger than measured, still inside the strip.
+
+### One hero on hover (T-340)
+
+In Duos the game's leaderboard shows the two heroes of a team one above the other in one slot. `hover.rs` now says which half of the slot the mouse is on, and the card shows that hero's board only. The log does not say which teammate is on top (see session 058); the top one is taken as the team's first seat (lower player id) until a real game confirms or reverses it.

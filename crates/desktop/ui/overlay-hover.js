@@ -6,7 +6,7 @@
 // last board met, one row of up to seven minions with attack and health, and
 // the turn it was seen; the hero, tier, health, record, triples and trinkets
 // (T-312, T-313). In Duos each hero of the team has its own row, matched by
-// seat. Advanced (T-333) adds keyword letters, trinket names, source words
+// seat; since T-340 only the hero under the mouse. Advanced (T-333) adds keyword letters, trinket names, source words
 // and the minions they could have (labelled "possible"): on game turns 2 and
 // 3 for everyone, later only for a hero not met yet (D-050). Our own slot
 // shows nothing. The live state follows what the game has played on screen
@@ -163,7 +163,9 @@ window.TLHover = (() => {
       return facts;
     }
     const w = TLWords.seatWords(view.shown, TLCards.name);
-    facts.push(el("span", "hb-fact", w.triples));
+    // Simple shows a triple count only above 0 (T-339).
+    const some = Number.isInteger(view.shown.triples) && view.shown.triples > 0;
+    facts.push(el("span", some ? "hb-fact" : "hb-fact adv", w.triples));
     if (w.trinkets.length) {
       facts.push(el("span", "hb-fact simple-only", I18n.plural("ov.trinkets", w.trinkets.length)));
       const names = el("span", "hb-fact adv");
@@ -189,7 +191,8 @@ window.TLHover = (() => {
       line.append(el("b", "hb-hero", view.hero ? heroName(view.hero) : I18n.t("ov.status.heroUnknown")));
     }
     line.append(...seatFacts(view));
-    const seen = el("span", "hb-seen", TLWords.seenWords(view.board ? view.board.round : null, current().turn.value));
+    // "No board seen yet" is Advanced (T-339): Simple leaves the row out.
+    const seen = el("span", view.board ? "hb-seen" : "hb-seen adv", TLWords.seenWords(view.board ? view.board.round : null, current().turn.value));
     if (!view.board) seen.append(mark(opponent.boards_source) || "");
     line.append(seen);
     block.append(line);
@@ -209,18 +212,24 @@ window.TLHover = (() => {
   }
 
   // The card's first line: the game's mark, portrait and names, health and
-  // the record against them (the whole team in Duos).
-  function cardHead(opponent, team) {
+  // the record against them (the whole team in Duos). `lone` is the one hero
+  // shown (Solo, or the one of a Duos team under the mouse, T-340); health
+  // and record stay the team's, as the game counts them.
+  function cardHead(opponent, team, lone) {
     const head = el("div", "hb-head");
     if (opponent.next) head.append(el("span", "next-badge", TLWords.nextLabels(current()).badge));
-    if (!team) {
-      const portrait = opponent.heroes[0] ? TLCards.art(opponent.heroes[0].id, "portrait") : null;
+    if (lone) {
+      const portrait = TLCards.art(lone.id, "portrait");
       if (portrait) head.append(portrait);
     }
-    head.append(el("b", "hb-title", heroes(opponent.heroes) || I18n.t("ov.status.heroUnknown")));
+    const title = lone ? heroName(lone) : team ? heroes(opponent.heroes) : null;
+    head.append(el("b", "hb-title", title || I18n.t("ov.status.heroUnknown")));
     const hp = el("span", "hb-health");
     hp.append(sourced(el("b"), opponent.health), ` ${I18n.t("ov.hp.unit")}`);
-    head.append(hp, renderRecord(opponent));
+    // The record is Advanced (T-339), like in the side panel.
+    const record = renderRecord(opponent);
+    record.classList.add("adv");
+    head.append(hp, record);
     return head;
   }
 
@@ -231,10 +240,13 @@ window.TLHover = (() => {
     if (g.own_place && g.own_place.value === hover.place) return hide();
     const opponent = g.opponents.find((o) => o.place && o.place.value === hover.place);
     if (!opponent) return hide();
-    const views = TLWords.seatViews(opponent);
+    const all = TLWords.seatViews(opponent);
+    // In Duos only the hero under the mouse (T-340).
+    const views = TLWords.hoveredViews(all, hover.member);
     const team = views.length > 1;
+    const lone = team ? null : views[0] ? views[0].hero : opponent.heroes[0] || null;
     card.classList.toggle("team", team);
-    card.replaceChildren(cardHead(opponent, team), ...views.map((v) => seatBlock(opponent, v, team)));
+    card.replaceChildren(cardHead(opponent, team, lone), ...views.map((v) => seatBlock(opponent, v, team)));
     card.hidden = false;
     position();
   }
