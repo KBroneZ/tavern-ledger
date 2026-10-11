@@ -151,11 +151,12 @@
       <section id="overlay-switch" class="overlay-switch settings-group" aria-labelledby="overlay-switch-title">
         <h3 id="overlay-switch-title" data-i18n="settings.overlay.title">Overlay</h3>
         <label class="switch"><input id="overlay-enabled" type="checkbox"> <span data-i18n="win.overlay.during">Overlay during a game</span></label>
+        <label class="switch"><input id="overlay-lobby" type="checkbox"> <span data-i18n="settings.overlay.lobby">Lobby panel: your rating and today's games on the Battlegrounds lobby screen</span></label>
         <button type="button" id="overlay-arrange" data-i18n="win.overlay.arrange">Arrange overlay</button>
         <p class="setting-row"><label for="overlay-theme" data-i18n="settings.overlay.theme">Overlay theme</label> <select id="overlay-theme"></select></p>
         <details class="fold about overlay-hint">
           <summary data-focus="fold:about:overlay" data-i18n="win.overlay.howTitle">How the overlay works</summary>
-          <p class="note" data-i18n="win.overlay.how">Also in the tray menu. It shows over Hearthstone only while a game is on; hover a hero on the game's leaderboard to see the last board you met. "Arrange overlay" lets you move the panels and fit the leaderboard box (the whole screen takes clicks until you press "Lock overlay"). Exclusive fullscreen hides any overlay: run Hearthstone windowed or borderless.</p>
+          <p class="note" data-i18n="win.overlay.how">Also in the tray menu. It shows over Hearthstone only while a game is on, and its small lobby panel on the Battlegrounds lobby screen; hover a hero on the game's leaderboard to see the last board you met. "Arrange overlay" lets you move the panels and fit the leaderboard box (the whole screen takes clicks until you press "Lock overlay"). Exclusive fullscreen hides any overlay: run Hearthstone windowed or borderless.</p>
         </details>
         <p id="overlay-switch-problem" class="problem" role="status" hidden></p>
       </section>
@@ -262,7 +263,7 @@
 
   <footer>
     <span data-i18n="win.footer.fan">Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.</span>
-    <span data-i18n="win.footer.names">Hero names come from your game's log, in your game's language. MMR is not in the game's log.</span>
+    <span data-i18n="win.footer.names">Card and hero names follow the app's language (from the card data). Your rating is not in the game's log: it shows only when reading from the game is on in Settings.</span>
     <span data-i18n="win.footer.cards">Card pictures and minion names come from HearthstoneJSON (hearthstonejson.com) and are kept on this PC; card art and card data &copy; Blizzard Entertainment.</span>
     <span id="card-status" class="card-status" role="status"></span>
   </footer>

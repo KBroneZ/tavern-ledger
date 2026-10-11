@@ -25,8 +25,9 @@ const CHECK_EVERY: Duration = Duration::from_millis(500);
 
 /// What decides whether the window shows. `front` is `None` when the system
 /// cannot say what is in front: then it shows (the overlay only ever draws
-/// while a game is on). While the layout is being edited it shows whatever
-/// else is true, so there is something to arrange.
+/// while a game is on, or its lobby panel on the Battlegrounds lobby screen).
+/// While the layout is being edited it shows whatever else is true, so there
+/// is something to arrange.
 pub fn wants_visible(
     enabled: bool,
     game_on: bool,
@@ -36,6 +37,12 @@ pub fn wants_visible(
 ) -> bool {
     unlocked
         || (enabled && game_on && (ignore_foreground || !matches!(front, Some(Foreground::Other))))
+}
+
+/// The lobby panel (T-338) counts as something to show only on the
+/// Battlegrounds lobby screen, with no game on, when the user left it on.
+pub fn lobby_on(scene: Option<Scene>, game_on: bool, panel_shown: bool) -> bool {
+    panel_shown && !game_on && scene == Some(Scene::BattlegroundsLobby)
 }
 
 /// A game that starts while the layout is unlocked locks it again, so the
@@ -162,6 +169,7 @@ pub fn follow(app: AppHandle, state: Arc<AppState>, guarded: bool) {
             let loading = *lock(&state.scene) == Some(Scene::BattlegroundsLoading);
             let loading = still_loading(loading, &mut loading_since, Instant::now());
             let game_on = lock(&state.live).is_some() || loading;
+            let lobby = lobby_on(*lock(&state.scene), game_on, state.overlay.lobby_shown());
             if should_relock(state.overlay.unlocked(), game_was_on, game_on) {
                 set_unlocked(&app, &state, false);
             }
@@ -178,7 +186,7 @@ pub fn follow(app: AppHandle, state: Arc<AppState>, guarded: bool) {
             let _ = fit_window(&app);
             let want = wants_visible(
                 state.overlay.enabled(),
-                game_on,
+                game_on || lobby,
                 state.overlay.ignores_foreground(),
                 foreground::current(),
                 state.overlay.unlocked(),
@@ -273,6 +281,26 @@ mod tests {
         let other = Some(Foreground::Other);
         assert!(wants_visible(false, false, false, other, true));
         assert!(wants_visible(true, true, false, other, true));
+    }
+
+    #[test]
+    fn the_lobby_panel_shows_only_on_the_lobby_screen_with_no_game_on() {
+        let lobby = Some(Scene::BattlegroundsLobby);
+        assert!(lobby_on(lobby, false, true));
+        assert!(!lobby_on(lobby, false, false), "turned off");
+        assert!(
+            !lobby_on(lobby, true, true),
+            "a game is on: the game panels show"
+        );
+        for other in [
+            None,
+            Some(Scene::Menu),
+            Some(Scene::Game),
+            Some(Scene::BattlegroundsLoading),
+            Some(Scene::Elsewhere),
+        ] {
+            assert!(!lobby_on(other, false, true), "{other:?}");
+        }
     }
 
     #[test]

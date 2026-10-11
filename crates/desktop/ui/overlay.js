@@ -16,6 +16,10 @@ let scene = null;
 // While the layout is being edited and no game is on, the panels show the
 // example game so there is something to arrange (overlay-example.js).
 let editing = false;
+// The lobby panel's values (T-338, overlay_lobby): shown on the
+// Battlegrounds lobby screen with no game on.
+let lobbyView = null;
+const LOBBY_REFRESH_MS = 5000;
 
 function current() {
   return game || (editing ? EXAMPLE_GAME : null);
@@ -402,9 +406,57 @@ function renderOpponents(g) {
   panel.hidden = false;
 }
 
+// The lobby panel (T-338): the own rating with the last game's change, and
+// the day's summary. Advanced also marks the rating "from the game".
+function renderLobby(v) {
+  const panel = document.getElementById("lobby");
+  panel.replaceChildren();
+  const rows = TLLobby.ratingRows(v);
+  for (const r of rows) {
+    const row = el("p", "lobby-rating");
+    row.append(el("span", "lobby-mode", r.label), el("b", "lobby-value", r.value));
+    if (r.change) {
+      const change = el("span", `lobby-change ${r.up ? "up" : "down"}`, r.change);
+      change.title = TLI18n.t("lobby.change.label");
+      row.append(change, el("span", "visually-hidden", TLI18n.t("lobby.change.label")));
+    }
+    panel.append(row);
+  }
+  if (rows.length) {
+    const source = mark("game");
+    if (source) {
+      source.classList.add("adv");
+      panel.append(source);
+    }
+  }
+  const note = TLLobby.ratingNote(v, document.body.dataset.detail === "advanced");
+  if (note) panel.append(el("p", "notes", note));
+  // Each part of a summary line stays whole; lines break only between parts.
+  for (const line of TLLobby.summaryLines(v)) {
+    const p = el("p", "lobby-today");
+    line.split(" · ").forEach((part, i) => {
+      if (i) p.append(" · ");
+      p.append(el("span", "nowrap", part));
+    });
+    panel.append(p);
+  }
+  panel.hidden = false;
+}
+
 function render() {
   const legend = document.getElementById("legend");
   const g = current();
+  const lobby = document.getElementById("lobby");
+  // Only on the lobby screen with no game on; while arranging, the example.
+  const lobbyShown = !game && (editing ? EXAMPLE_LOBBY : lobbyView && lobbyView.in_lobby ? lobbyView : null);
+  if (lobbyShown) renderLobby(lobbyShown);
+  else lobby.hidden = true;
+  if (!g && lobbyShown) {
+    for (const id of ["status", "tribes", "opponents", "legend"]) document.getElementById(id).hidden = true;
+    if (window.TLHover) window.TLHover.render();
+    return;
+  }
+  document.getElementById("status").hidden = false;
   if (!g) {
     const status = document.getElementById("status");
     status.className = "panel status";
@@ -433,9 +485,13 @@ let latest = 0;
 async function refresh() {
   const mine = ++latest;
   const [fresh, where] = await Promise.all([invoke("overlay_state"), invoke("overlay_scene")]);
+  // The lobby panel only matters with no game on, and a problem with it
+  // must not hide a game: it is asked apart and its failure leaves it off.
+  const lobbyNow = fresh ? null : await invoke("overlay_lobby", TLLobby.dayRange(new Date())).catch(() => null);
   if (mine !== latest) return;
   game = fresh;
   scene = typeof where === "string" ? where : null;
+  lobbyView = lobbyNow;
   if (window.TLHover) window.TLHover.setFailed(false);
   render();
 }
@@ -460,6 +516,11 @@ async function start() {
   // New card data can change the possible minions (T-307).
   await listen("cards-changed", () => refresh().catch(showError));
   await refresh();
+  // The rating is read on the lobby screen without an event: asked again
+  // while the lobby panel is up.
+  setInterval(() => {
+    if (lobbyView && lobbyView.in_lobby) refresh().catch(showError);
+  }, LOBBY_REFRESH_MS);
 }
 
 // The window cannot be clicked: say it on the page, never throw silently, and
@@ -468,7 +529,7 @@ function showError(error) {
   const panel = document.getElementById("status");
   panel.className = "panel status unreadable";
   panel.textContent = TLI18n.t("ov.error.update", { error });
-  for (const id of ["tribes", "opponents", "legend"]) document.getElementById(id).hidden = true;
+  for (const id of ["tribes", "opponents", "legend", "lobby"]) document.getElementById(id).hidden = true;
   if (window.TLHover) window.TLHover.setFailed(true);
 }
 

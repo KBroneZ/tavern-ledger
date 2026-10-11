@@ -335,3 +335,30 @@ fn a_line_too_long_marks_the_game_unsupported() {
     let (saved, _) = watcher.finish().unwrap();
     assert_eq!(statuses(&saved), vec![(1, "unsupported".into())]);
 }
+
+#[test]
+fn the_client_build_is_known_from_net_log_before_any_game_then_from_the_games() {
+    let (logs, data) = setup();
+    let mut watcher = Watcher::new(&logs, Store::open(&data).unwrap());
+    watcher.poll().unwrap();
+    assert_eq!(watcher.client_build(), None, "no Net.log, no game");
+    append(
+        &logs.join(SESSION_A).join("Net.log"),
+        "D 04:58:45.6710837 Hearthstone/36.6.253216 (PC;Desktop;made-up)\n",
+    );
+    watcher.poll().unwrap();
+    assert_eq!(watcher.client_build(), Some(253216));
+    let log = fixture("solo_game");
+    let game_build = log
+        .lines()
+        .find_map(tracker::client_build::from_power_line)
+        .expect("the fixture has a build line");
+    append(&logs.join(SESSION_A).join("Power.log"), &log);
+    watcher.poll().unwrap();
+    let expected = (game_build == 253216).then_some(253216);
+    assert_eq!(
+        watcher.client_build(),
+        expected,
+        "two builds that differ are unknown"
+    );
+}

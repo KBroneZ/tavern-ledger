@@ -28,6 +28,10 @@
     </span>
     <span id="toolbar-warning" class="toolbar-warning" role="alert" hidden></span>
   </div>
+  <!-- The lobby panel (T-338) sits in its own corner, away from the game stack. -->
+  <div id="lobby-dock">
+    <div class="slot" data-panel="lobby" data-focus="slot:lobby"><section id="lobby" class="panel lobby" aria-label="Lobby" data-i18n-attr="aria-label:ov.slot.lobby" hidden></section><span class="grip" hidden></span></div>
+  </div>
   <div id="stack">
     <div class="slot" data-panel="status" data-focus="slot:status"><section id="status" class="panel status" aria-label="Game status" data-i18n-attr="aria-label:ov.panel.status" data-i18n="ov.status.waiting">Waiting for a game…</section><span class="grip" hidden></span></div>
     <div class="slot" data-panel="tribes" data-focus="slot:tribes"><section id="tribes" class="panel" aria-label="Tribes" data-i18n-attr="aria-label:ov.slot.tribes" hidden></section><span class="grip" hidden></span></div>
@@ -41,6 +45,7 @@
   <script src="cards.js"></script>
   <script src="overlay-example.js"></script>
   <script src="overlay-words.js"></script>
+  <script src="lobby-words.js"></script>
   <script src="overlay-scale.js"></script>
   <div id="board-box" class="board-box" hidden><span class="board-label" data-i18n="ov.box.label">Leaderboard</span><span class="grip"></span></div>
   <p id="key-status" class="visually-hidden" role="status"></p>

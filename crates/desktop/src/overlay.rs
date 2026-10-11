@@ -141,6 +141,11 @@ impl Overlay {
         self.unlocked.store(false, Ordering::SeqCst);
     }
 
+    /// Whether the lobby panel (T-338) is left on; on by default.
+    pub fn lobby_shown(&self) -> bool {
+        !lock(&self.settings).hidden.contains(&Panel::Lobby)
+    }
+
     pub fn unlocked(&self) -> bool {
         self.unlocked.load(Ordering::SeqCst) && !self.broken.load(Ordering::SeqCst)
     }
@@ -641,6 +646,7 @@ mod tests {
             Panel::Tribes,
             Panel::Opponents,
             Panel::Legend,
+            Panel::Lobby,
         ] {
             let id = serde_json::to_string(&panel).unwrap();
             let slot = format!("data-panel={id}");
@@ -656,7 +662,7 @@ mod tests {
             .skip(1)
             .filter_map(|rest| rest.split('"').next())
             .collect();
-        assert_eq!(scripts.len(), 13);
+        assert_eq!(scripts.len(), 14);
         for script in scripts {
             assert!(ui.join(script).is_file(), "{script} is missing");
         }
@@ -672,6 +678,7 @@ mod tests {
             include_str!("../ui/overlay-keys.js"),
             include_str!("../ui/overlay-place.js"),
             include_str!("../ui/overlay-words.js"),
+            include_str!("../ui/lobby-words.js"),
             include_str!("../ui/overlay-scale.js"),
             include_str!("../ui/focus-keeper.js"),
         ] {

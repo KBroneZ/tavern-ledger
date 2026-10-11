@@ -1,7 +1,8 @@
 // The overlay on/off switch in the main window (T-308), the same setting as
 // the tray's "Show overlay during a game" (saved in overlay.json); both show
 // the real state after any change. The overlay theme (T-324) is on the same
-// page. Own scope.
+// page, and the lobby panel's switch (T-338: a panel of the overlay, shown
+// or hidden like the others, on by default). Own scope.
 "use strict";
 
 (() => {
@@ -9,6 +10,7 @@
   const { listen: onEvent } = window.__TAURI__.event;
   const { t, backend } = window.TLI18n;
   const box = document.getElementById("overlay-enabled");
+  const lobby = document.getElementById("overlay-lobby");
   const arrange = document.getElementById("overlay-arrange");
   const theme = document.getElementById("overlay-theme");
   const problem = document.getElementById("overlay-switch-problem");
@@ -36,6 +38,8 @@
   function show(view) {
     box.checked = Boolean(view.enabled);
     box.disabled = false;
+    lobby.checked = !(Array.isArray(view.hidden) && view.hidden.includes("lobby"));
+    lobby.disabled = false;
     // The label says the state; a pressed state on top would say it twice, differently.
     arrange.dataset.unlocked = String(Boolean(view.unlocked));
     arrange.textContent = view.unlocked ? t("win.overlay.lock") : t("win.overlay.arrange");
@@ -55,6 +59,16 @@
   box.addEventListener("change", () => {
     box.disabled = true;
     call("overlay_set_enabled", { enabled: box.checked })
+      .then(show)
+      .catch((error) => {
+        fail(error);
+        refresh().catch(fail);
+      });
+  });
+
+  lobby.addEventListener("change", () => {
+    lobby.disabled = true;
+    call("overlay_set_shown", { panel: "lobby", shown: lobby.checked })
       .then(show)
       .catch((error) => {
         fail(error);

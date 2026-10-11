@@ -473,6 +473,46 @@ pub fn compute_with_links<'a>(
     }
 }
 
+/// One mode's numbers over a short span of games, for the lobby panel's
+/// summary of the day (T-338).
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ModeSummary {
+    /// SOLO or DUOS.
+    pub mode: String,
+    /// Places that count as top half (4 in Solo, 2 in Duos).
+    pub top_half: i64,
+    pub tally: Tally,
+}
+
+/// Solo and Duos apart, only the modes with a game, Solo first. Games of
+/// other types are left out: their place rules are unknown.
+pub fn summary<'a>(reports: impl IntoIterator<Item = &'a Value>) -> Vec<ModeSummary> {
+    let mut counts: BTreeMap<&'static str, Counts> = BTreeMap::new();
+    for report in reports {
+        let mode = mode_of(report);
+        if mode == OTHER {
+            continue;
+        }
+        let status = report.get("status").and_then(Value::as_str);
+        counts
+            .entry(mode)
+            .or_default()
+            .add(status, counted_place(mode, status, report));
+    }
+    [SOLO, DUOS]
+        .into_iter()
+        .filter_map(|mode| {
+            let (top_half, _) = rules(mode)?;
+            let c = counts.get(mode)?;
+            Some(ModeSummary {
+                mode: mode.to_string(),
+                top_half,
+                tally: c.tally(Some(top_half)),
+            })
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -532,6 +572,28 @@ mod tests {
         let solo = mode(&stats, SOLO);
         assert_eq!(solo.games_with_entered_tribes, 0);
         assert!(solo.entered_tribes.is_empty());
+    }
+
+    #[test]
+    fn the_summary_counts_solo_and_duos_apart_and_only_modes_played() {
+        let games = [
+            json!({"status": "ok", "game_type": SOLO, "final_place": 2}),
+            json!({"status": "ok", "game_type": SOLO, "final_place": 6}),
+            json!({"status": "incomplete", "game_type": SOLO}),
+            json!({"status": "ok", "game_type": "GT_OTHER", "final_place": 1}),
+        ];
+        let s = summary(games.iter());
+        assert_eq!(s.len(), 1, "no Duos game: no Duos line");
+        assert_eq!(s[0].mode, SOLO);
+        assert_eq!(s[0].top_half, 4);
+        assert_eq!((s[0].tally.games, s[0].tally.placed), (3, 2));
+        assert_eq!(s[0].tally.average_place, Some(4.0));
+        assert_eq!(s[0].tally.top_half_share, Some(0.5));
+        let duos = [json!({"status": "ok", "game_type": DUOS, "final_place": 2})];
+        let s = summary(duos.iter());
+        assert_eq!((s[0].mode.as_str(), s[0].top_half), (DUOS, 2));
+        assert_eq!(s[0].tally.top_half_share, Some(1.0));
+        assert!(summary(std::iter::empty()).is_empty());
     }
 
     #[test]

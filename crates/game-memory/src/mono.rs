@@ -26,6 +26,11 @@ pub struct Layout {
     pub class_runtime_info: u64,
     pub class_field_count: u64,
     pub class_next_cached: u64,
+    /// A generic instance class (`Dictionary<K, V>`) keeps no field count of
+    /// its own: its `MonoGenericClass` pointer sits where a class definition
+    /// keeps its flags, and that points to the generic definition first.
+    pub class_generic_class: u64,
+    pub generic_class_container: u64,
     pub field_size: u64,
     pub field_name: u64,
     pub field_parent: u64,
@@ -53,6 +58,8 @@ pub const LAYOUT_BDWGC_X64: Layout = Layout {
     class_runtime_info: 0xd0,
     class_field_count: 0x100,
     class_next_cached: 0x108,
+    class_generic_class: 0xf0,
+    generic_class_container: 0x00,
     field_size: 0x20,
     field_name: 0x08,
     field_parent: 0x10,
@@ -74,6 +81,8 @@ const MAX_VTABLE: u32 = 65_536;
 /// `FIELD_ATTRIBUTE_STATIC` and `FIELD_ATTRIBUTE_LITERAL` (ECMA-335).
 const ATTR_STATIC: u32 = 0x10;
 const ATTR_LITERAL: u32 = 0x40;
+/// `MONO_TYPE_I4`: a field of type `int` (ECMA-335 element type).
+pub const TYPE_I4: u32 = 0x08;
 
 /// Why a walk stopped. Reasons name only Mono metadata (assembly, class and
 /// field names), never game data.
@@ -96,6 +105,7 @@ impl std::fmt::Display for WalkError {
         match self {
             WalkError::Read(ReadError::Unreadable(_)) => write!(f, "memory not readable"),
             WalkError::Read(ReadError::BadName(_)) => write!(f, "unreadable name"),
+            WalkError::Read(ReadError::BadPointer(_)) => write!(f, "not a pointer"),
             WalkError::Unsupported(why) => write!(f, "{why}"),
         }
     }
@@ -110,6 +120,8 @@ fn unsupported(why: impl Into<String>) -> WalkError {
 pub struct Field {
     pub offset: u64,
     pub is_static: bool,
+    /// The element type (`MONO_TYPE_*`), bits 16 to 23 after the attributes.
+    pub type_code: u32,
 }
 
 pub struct Mono<'a> {
@@ -168,9 +180,9 @@ impl<'a> Mono<'a> {
                 }
                 return Ok(image);
             }
-            match self.mem.read_u64(node + 8)? {
-                0 => break,
-                next => node = next,
+            match self.mem.read_link(node + 8)? {
+                None => break,
+                Some(next) => node = next,
             }
         }
         Err(unsupported(format!("assembly {assembly} not loaded")))
@@ -188,8 +200,8 @@ impl<'a> Mono<'a> {
         let table = self.mem.read_ptr(cache + 32)?;
         let mut seen = 0usize;
         for i in 0..u64::from(buckets) {
-            let mut class = self.mem.read_u64(table + i * 8)?;
-            while class != 0 {
+            let mut link = self.mem.read_link(table + i * 8)?;
+            while let Some(class) = link {
                 seen += 1;
                 if seen > MAX_CLASSES {
                     return Err(unsupported("class cache too long"));
@@ -205,16 +217,16 @@ impl<'a> Mono<'a> {
                 {
                     return Ok(class);
                 }
-                class = self.mem.read_u64(class + l.class_next_cached)?;
+                link = self.mem.read_link(class + l.class_next_cached)?;
             }
         }
         Err(unsupported(format!("class {name} not found")))
     }
 
     fn class_namespace(&self, class: u64) -> Result<String, WalkError> {
-        match self.mem.read_u64(class + self.layout.class_namespace)? {
-            0 => Ok(String::new()),
-            p => Ok(self.mem.read_name(p)?),
+        match self.mem.read_link(class + self.layout.class_namespace)? {
+            None => Ok(String::new()),
+            Some(p) => Ok(self.mem.read_name(p)?),
         }
     }
 
@@ -254,7 +266,9 @@ impl<'a> Mono<'a> {
     /// fields have no storage and are refused.
     pub fn field(&self, class: u64, name: &str) -> Result<Field, WalkError> {
         let l = &self.layout;
-        let count = self.mem.read_u32(class + l.class_field_count)?;
+        let count = self
+            .mem
+            .read_u32(self.definition(class)? + l.class_field_count)?;
         if count > MAX_FIELDS {
             return Err(unsupported("field count out of range"));
         }
@@ -272,7 +286,8 @@ impl<'a> Mono<'a> {
                 return Err(unsupported("field does not point back to its class"));
             }
             let ty = self.mem.read_ptr(entry)?;
-            let attrs = self.mem.read_u32(ty + l.type_attrs)? & 0xffff;
+            let word = self.mem.read_u32(ty + l.type_attrs)?;
+            let attrs = word & 0xffff;
             if attrs & ATTR_LITERAL != 0 {
                 return Err(unsupported(format!("field {name} is a constant")));
             }
@@ -281,9 +296,34 @@ impl<'a> Mono<'a> {
             return Ok(Field {
                 offset,
                 is_static: attrs & ATTR_STATIC != 0,
+                type_code: (word >> 16) & 0xff,
             });
         }
         Err(unsupported(format!("field {name} not found")))
+    }
+
+    /// The class that keeps the field count of `class`: itself, or for a
+    /// generic instance (a name with a backtick, like ``Dictionary`2``) its
+    /// generic definition, which must have the same name and be another
+    /// class. The instance's fields are its own, in the definition's order.
+    fn definition(&self, class: u64) -> Result<u64, WalkError> {
+        let l = &self.layout;
+        let name = self
+            .mem
+            .read_name(self.mem.read_ptr(class + l.class_name)?)?;
+        if !name.contains('`') {
+            return Ok(class);
+        }
+        let generic = self.mem.read_ptr(class + l.class_generic_class)?;
+        let container = self.mem.read_ptr(generic + l.generic_class_container)?;
+        let same_name = self
+            .mem
+            .read_name(self.mem.read_ptr(container + l.class_name)?)
+            .is_ok_and(|n| n == name);
+        if container == class || !same_name {
+            return Err(unsupported("generic class without its definition"));
+        }
+        Ok(container)
     }
 
     /// Where the static fields of `class` live in the root domain.
@@ -312,23 +352,68 @@ impl<'a> Mono<'a> {
             return Err(unsupported(format!("field {field} is not static")));
         }
         let data = self.static_data(class)?;
-        self.mem
-            .read_ptr(data + f.offset)
-            .map_err(|_| unsupported(format!("{field} is not set")))
+        reference(self.mem.read_ptr(data + f.offset), field)
     }
 
     /// The object in an instance reference field of `object` (of `class`).
     pub fn object_field(&self, object: u64, class: u64, field: &str) -> Result<u64, WalkError> {
         let f = self.instance_field(class, field)?;
-        self.mem
-            .read_ptr(object + f.offset)
-            .map_err(|_| unsupported(format!("{field} is not set")))
+        reference(self.mem.read_ptr(object + f.offset), field)
     }
 
-    /// A 32-bit integer instance field of `object` (of `class`).
+    /// A 32-bit integer instance field of `object` (of `class`); a field of
+    /// any other type is refused.
     pub fn int_field(&self, object: u64, class: u64, field: &str) -> Result<i32, WalkError> {
         let f = self.instance_field(class, field)?;
+        if f.type_code != TYPE_I4 {
+            return Err(unsupported(format!("field {field} is not an int")));
+        }
         Ok(self.mem.read_i32(object + f.offset)?)
+    }
+
+    /// The elements of an array object of references, after checking that
+    /// its class is `array_class` (for example `Object[]`), that it has at
+    /// most `max` elements and that it holds at least `used`. Empty slots are
+    /// `None`.
+    pub fn ref_array(
+        &self,
+        array: u64,
+        array_class: &str,
+        used: usize,
+        max: usize,
+    ) -> Result<Vec<Option<u64>>, WalkError> {
+        self.struct_array_refs(array, array_class, used, max, 8, 0)
+    }
+
+    /// The `stride`-byte entries of an array object of structs, read as the
+    /// reference at `at` in each entry; same checks as [`Mono::ref_array`].
+    pub fn struct_array_refs(
+        &self,
+        array: u64,
+        array_class: &str,
+        used: usize,
+        max: usize,
+        stride: u64,
+        at: u64,
+    ) -> Result<Vec<Option<u64>>, WalkError> {
+        if self.object_class_name(array)? != array_class {
+            return Err(unsupported("array of another type"));
+        }
+        let len = self.mem.read_u64(array + 0x18)?;
+        let fits = at.checked_add(8).is_some_and(|end| end <= stride);
+        if !fits || used > max || (used as u64) > len {
+            return Err(unsupported("array shorter than its count"));
+        }
+        (0..used as u64)
+            .map(|i| {
+                let addr = i
+                    .checked_mul(stride)
+                    .and_then(|o| o.checked_add(0x20 + at))
+                    .and_then(|o| array.checked_add(o))
+                    .ok_or_else(|| unsupported("array out of range"))?;
+                Ok(self.mem.read_link(addr)?)
+            })
+            .collect()
     }
 
     fn instance_field(&self, class: u64, field: &str) -> Result<Field, WalkError> {
@@ -337,6 +422,17 @@ impl<'a> Mono<'a> {
             return Err(unsupported(format!("field {field} is static")));
         }
         Ok(f)
+    }
+}
+
+/// A reference field's value: null is "not set" (the game has not made the
+/// object yet); a value that is not a pointer, or memory that cannot be read,
+/// is passed on as it is.
+fn reference(read: Result<u64, ReadError>, field: &str) -> Result<u64, WalkError> {
+    match read {
+        Ok(p) => Ok(p),
+        Err(ReadError::Unreadable(0)) => Err(unsupported(format!("{field} is not set"))),
+        Err(e) => Err(WalkError::Read(e)),
     }
 }
 
@@ -381,6 +477,16 @@ pub(crate) mod fake {
         pub offset: u64,
         pub is_static: bool,
     }
+
+    /// Fields the fake types as `int`; every other field is a class.
+    pub const INT_FIELDS: [&str; 6] = [
+        "m_count",
+        "<Rating>k__BackingField",
+        "<DuosRating>k__BackingField",
+        "_count",
+        "touchedSlots",
+        "m_int",
+    ];
 
     impl FakeMono {
         pub fn new() -> FakeMono {
@@ -471,7 +577,12 @@ pub(crate) mod fake {
                 let e = entries + i as u64 * L.field_size;
                 let ty = self.alloc(16);
                 let attrs = if f.is_static { ATTR_STATIC } else { 0 };
-                self.mem.put_u32(ty + L.type_attrs, attrs | (0x12 << 16));
+                let code = if INT_FIELDS.contains(&f.name) {
+                    TYPE_I4
+                } else {
+                    0x12
+                };
+                self.mem.put_u32(ty + L.type_attrs, attrs | (code << 16));
                 let fname = self.string(f.name);
                 self.mem.put_u64(e, ty);
                 self.mem.put_u64(e + L.field_name, fname);
@@ -479,8 +590,22 @@ pub(crate) mod fake {
                 self.mem.put_u32(e + L.field_offset, f.offset as u32);
             }
             self.mem.put_u64(class + L.class_fields, entries);
-            self.mem
-                .put_u32(class + L.class_field_count, fields.len() as u32);
+            if name.contains('`') {
+                // A generic instance: its own count is not a count (as on
+                // the real client); the definition keeps it.
+                let definition = self.alloc(0x120);
+                self.mem.put_u64(definition + L.class_name, name_at);
+                self.mem
+                    .put_u32(definition + L.class_field_count, fields.len() as u32);
+                let generic = self.alloc(0x20);
+                self.mem
+                    .put_u64(generic + L.generic_class_container, definition);
+                self.mem.put_u64(class + L.class_generic_class, generic);
+                self.mem.put_u32(class + L.class_field_count, 0x3e92_b9c0);
+            } else {
+                self.mem
+                    .put_u32(class + L.class_field_count, fields.len() as u32);
+            }
             // Statics: runtime info → vtable (3 method slots) → data.
             let data = self.alloc(0x100);
             let vtable = self.alloc(0x100);
@@ -658,6 +783,45 @@ mod tests {
         wrong.class_image += 8;
         let mono = Mono::attach(&f.mem, MONO_BASE, wrong).unwrap();
         assert!(mono.class(image, "", "Thing").is_err());
+    }
+
+    #[test]
+    fn a_generic_instance_takes_its_field_count_from_its_definition() {
+        let mut f = FakeMono::new();
+        let image = f.assembly("mscorlib");
+        let (class, _) = f.class(
+            image,
+            "System.Collections.Generic",
+            "Dictionary`2",
+            &[
+                FakeField {
+                    name: "_entries",
+                    offset: 0x18,
+                    is_static: false,
+                },
+                FakeField {
+                    name: "_count",
+                    offset: 0x40,
+                    is_static: false,
+                },
+            ],
+        );
+        let mono = Mono::attach(&f.mem, MONO_BASE, LAYOUT_BDWGC_X64).unwrap();
+        assert_eq!(mono.field(class, "_count").unwrap().offset, 0x40);
+        // A definition with another name is not its definition.
+        let generic = f
+            .mem
+            .read_u64(class + LAYOUT_BDWGC_X64.class_generic_class)
+            .unwrap();
+        let other = f.bare_class("List`1");
+        f.mem.put_u64(generic, other);
+        let mono = Mono::attach(&f.mem, MONO_BASE, LAYOUT_BDWGC_X64).unwrap();
+        assert_eq!(
+            mono.field(class, "_count"),
+            Err(WalkError::Unsupported(
+                "generic class without its definition".into()
+            ))
+        );
     }
 
     #[test]
