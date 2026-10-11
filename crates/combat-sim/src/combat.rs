@@ -429,6 +429,9 @@ mod round3;
 #[path = "combat_round4.rs"]
 mod round4;
 
+#[path = "combat_round5.rs"]
+mod round5;
+
 #[path = "combat_duos.rs"]
 mod duos;
 use duos::Legs;

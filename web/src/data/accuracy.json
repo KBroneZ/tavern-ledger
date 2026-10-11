@@ -1,66 +1,42 @@
 {
   "blocking_cards": [
     {
-      "card_id": "BG34_140",
-      "combats": 11
-    },
-    {
       "card_id": "BG31_999",
       "combats": 7
     },
     {
-      "card_id": "BG31_835",
-      "combats": 5
-    },
-    {
-      "card_id": "BG21_HERO_030t",
-      "combats": 4
-    },
-    {
-      "card_id": "BG34_140_G",
-      "combats": 3
-    },
-    {
-      "card_id": "BG34_Giant_017",
-      "combats": 3
-    },
-    {
       "card_id": "BGS_008",
-      "combats": 1
-    },
-    {
-      "card_id": "TB_BaconShop_HERO_33_Buddy_G",
       "combats": 1
     }
   ],
   "date": "2026-10-11",
-  "engine_version": "0.4.0",
+  "engine_version": "0.5.0",
   "format": 1,
   "modes": {
     "duos": {
-      "blocked": 30,
-      "blocked_share": 0.12931034482758622,
-      "brier": 0.2742205613861387,
+      "blocked": 8,
+      "blocked_share": 0.034482758620689655,
+      "brier": 0.2776640480357144,
       "calibration": [
         {
           "from": 0.0,
-          "happened": 0.06149732620320856,
-          "mean_said": 0.015565508021390366,
-          "predictions": 374,
+          "happened": 0.06235011990407674,
+          "mean_said": 0.014800479616306947,
+          "predictions": 417,
           "to": 0.2
         },
         {
           "from": 0.2,
-          "happened": 0.52,
-          "mean_said": 0.29972,
-          "predictions": 25,
+          "happened": 0.5384615384615384,
+          "mean_said": 0.29898846153846154,
+          "predictions": 26,
           "to": 0.4
         },
         {
           "from": 0.4,
-          "happened": 0.30434782608695654,
-          "mean_said": 0.4980000000000001,
-          "predictions": 23,
+          "happened": 0.2916666666666667,
+          "mean_said": 0.49923750000000006,
+          "predictions": 24,
           "to": 0.6000000000000001
         },
         {
@@ -72,17 +48,17 @@
         },
         {
           "from": 0.8,
-          "happened": 0.8895348837209303,
-          "mean_said": 0.9813866279069767,
-          "predictions": 172,
+          "happened": 0.8860103626943006,
+          "mean_said": 0.9825896373056995,
+          "predictions": 193,
           "to": 1.0
         }
       ],
       "combats_with_result": 232,
-      "mean_p_real": 0.8103301980198019,
-      "most_likely_right": 166,
+      "mean_p_real": 0.8117839285714286,
+      "most_likely_right": 184,
       "refused": 0,
-      "scored": 202
+      "scored": 224
     },
     "solo": {
       "blocked": 0,

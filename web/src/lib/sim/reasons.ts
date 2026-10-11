@@ -37,6 +37,10 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
   "it improves during the game; the card's printed numbers are used": "mejora durante la partida; se usan los números impresos de la carta",
   "picks only minions that miss one of the keywords": "solo elige esbirros a los que les falta alguna de las palabras clave",
   "may come back with Reborn; card stats unknown": "puede volver con Renacer; no se conocen las estadísticas de la carta",
+  "summons a minion from the hand, which is not seen: the summon is left out":
+    "invoca un esbirro de la mano, que no se ve: la invocación se deja fuera",
+  "on a board taken after the start of combat, the Deathrattles it copied are not on the board":
+    "en un tablero tomado después del inicio del combate, los Últimos alientos que copió no están en el tablero",
 };
 
 /** The reason in the page's language, and whether it had to stay in English. */

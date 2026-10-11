@@ -92,11 +92,11 @@ pub const EFFECTS_4: &[(&str, CardRules)] = &[
     // Fish of N'Zoth (a hero power's minion) and its skin.
     (
         "TB_BaconShop_HP_105t",
-        approx(EARLIER_GAINS, &[Trigger::GainsDeathrattles]),
+        approx(EARLIER_GAINS, &[Trigger::GainsDeathrattles(1)]),
     ),
     (
         "TB_BaconShop_HP_105t_SKIN_A",
-        approx(EARLIER_GAINS, &[Trigger::GainsDeathrattles]),
+        approx(EARLIER_GAINS, &[Trigger::GainsDeathrattles(1)]),
     ),
     // Ravaging Scorpid: after a friendly minion attacks, your Beetles have
     // +4/+4 (golden +8/+8); Deathrattle: summon a 2/2 Beetle (golden two).

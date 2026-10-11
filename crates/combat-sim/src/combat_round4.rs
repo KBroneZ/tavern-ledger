@@ -162,22 +162,36 @@ impl Combat<'_> {
     }
 
     /// The minions that gain the Deathrattles of friends that die take them
-    /// from `dead` (each dead minion's card and what it had gained).
+    /// from `dead` (each dead minion's card and what it had gained), as many
+    /// times over as their card says (round 5: golden Fish, twice).
     pub(super) fn gain_deathrattles(&mut self, dead: &[Dead]) {
-        let gains = |c: &CardInfo| c.triggers.contains(&Trigger::GainsDeathrattles);
-        if !self.p.cards.iter().any(gains) {
+        let times = |triggers: &[Trigger]| -> usize {
+            triggers
+                .iter()
+                .map(|t| match t {
+                    Trigger::GainsDeathrattles(n) => usize::from(*n),
+                    _ => 0,
+                })
+                .sum()
+        };
+        if !self
+            .p
+            .cards
+            .iter()
+            .any(|c: &CardInfo| times(c.triggers) > 0)
+        {
             return;
         }
         for d in dead {
             if self.deathrattles(&d.unit).is_empty() {
                 continue;
             }
-            let gainers: Vec<u32> = self
+            let gainers: Vec<(u32, usize)> = self
                 .friends(d.side, Tribes::NONE, None)
                 .into_iter()
-                .filter(|f| {
-                    self.unit(d.side, *f)
-                        .is_some_and(|u| self.triggers(u).contains(&Trigger::GainsDeathrattles))
+                .filter_map(|f| {
+                    let n = times(self.triggers(self.unit(d.side, f)?));
+                    (n > 0).then_some((f, n))
                 })
                 .collect();
             // Only cards that have a Deathrattle of their own: a dead Fish
@@ -187,10 +201,12 @@ impl Combat<'_> {
                 .iter()
                 .any(|t| matches!(t, Trigger::Deathrattle(_)));
             let own = has_own.then_some(d.unit.card);
-            for g in gainers {
+            for (g, n) in gainers {
                 if let Some(u) = self.unit_mut(d.side, g) {
-                    u.gained.extend(own);
-                    u.gained.extend(d.unit.gained.iter().copied());
+                    for _ in 0..n {
+                        u.gained.extend(own);
+                        u.gained.extend(d.unit.gained.iter().copied());
+                    }
                 }
             }
         }

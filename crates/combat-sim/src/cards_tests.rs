@@ -6,6 +6,7 @@ fn all_effects() -> impl Iterator<Item = &'static (&'static str, CardRules)> {
         .chain(crate::cards_round2::EFFECTS_2)
         .chain(crate::cards_round3::EFFECTS_3)
         .chain(crate::cards_round4::EFFECTS_4)
+        .chain(crate::cards_round5::EFFECTS_5)
 }
 
 #[test]

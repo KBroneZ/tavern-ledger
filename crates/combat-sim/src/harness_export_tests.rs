@@ -49,8 +49,8 @@ fn counts_blocked_combats_by_card_and_scores_the_rest() {
     let known = ["BGS_119", "BGS_119"];
     let solo = vec![
         solo(&known, &["BG_ICC_026t"], CombatResult::Won),
-        solo(&["BG34_140"], &known, CombatResult::Lost),
-        solo(&["BG34_140", "ZZ_UNKNOWN"], &known, CombatResult::Tie),
+        solo(&["ZZ_UNKNOWN"], &known, CombatResult::Lost),
+        solo(&["ZZ_OTHER", "ZZ_UNKNOWN"], &known, CombatResult::Tie),
     ];
     let duos = vec![
         duos(&known, &["ZZ_UNKNOWN"], Some(CombatResult::Won)),
@@ -64,8 +64,6 @@ fn counts_blocked_combats_by_card_and_scores_the_rest() {
     // Assert
     assert_eq!(a.solo.with_result, 3);
     assert_eq!(a.solo.blocked, 2);
-    assert_eq!(a.solo.with_hand_summoner, 2);
-    assert_eq!(a.solo.blocked_by_hand_only, 1);
     assert_eq!(a.solo.report.combats, 1);
     assert_eq!(a.solo.report.top_pick_hits, 1);
     assert_eq!(
@@ -73,13 +71,68 @@ fn counts_blocked_combats_by_card_and_scores_the_rest() {
         "a combat without a result is left out"
     );
     assert_eq!(a.duos.blocked, 1);
-    assert_eq!(a.duos.blocked_by_hand_only, 0);
     assert_eq!(a.duos.report.combats, 1);
     assert_eq!(
         a.blockers,
-        vec![("BG34_140".to_string(), 2), ("ZZ_UNKNOWN".to_string(), 2)]
+        vec![("ZZ_UNKNOWN".to_string(), 3), ("ZZ_OTHER".to_string(), 1)]
     );
     assert!((a.solo.blocked_share() - 2.0 / 3.0).abs() < 1e-9);
+}
+
+#[test]
+fn hand_summoners_no_longer_block_and_are_scored_apart_too() {
+    // Arrange: Expert Aviator plays as a plain 2/2 (its hand summon left out).
+    let known = ["BGS_119", "BGS_119"];
+    let solo = vec![
+        solo(&known, &["BG34_140"], CombatResult::Won),
+        solo(&known, &["BG_ICC_026t"], CombatResult::Won),
+        solo(&["BG34_140_G"], &["ZZ_UNKNOWN"], CombatResult::Tie),
+    ];
+
+    // Act
+    let a = accuracy(&solo, &[], &options());
+
+    // Assert
+    assert_eq!(a.solo.blocked, 1, "only the card not modelled blocks");
+    assert_eq!(a.solo.with_hand_summoner, 2);
+    assert_eq!(a.solo.report.combats, 2);
+    assert_eq!(a.solo.hand_scored.combats, 1);
+    assert_eq!(a.solo.hand_scored.top_pick_hits, 1);
+    assert_eq!(a.blockers, vec![("ZZ_UNKNOWN".to_string(), 1)]);
+}
+
+#[test]
+fn blocked_combats_are_also_played_anyway_and_scored_apart() {
+    // Arrange: the blocking cards play as plain 2/2s; two beat one.
+    let known = ["BGS_119", "BGS_119"];
+    let solo = vec![
+        solo(&known, &["ZZ_UNKNOWN"], CombatResult::Won),
+        solo(&known, &["ZZ_UNKNOWN"], CombatResult::Lost),
+        solo(&known, &["BG_ICC_026t"], CombatResult::Won),
+    ];
+
+    // Act
+    let a = accuracy(&solo, &[], &options());
+
+    // Assert: blocked combats stay blocked, and are scored apart.
+    assert_eq!(a.solo.blocked, 2);
+    assert_eq!(a.solo.report.combats, 1);
+    assert_eq!(a.solo.anyway.combats, 2);
+    assert_eq!(a.solo.anyway.top_pick_hits, 1);
+    assert_eq!(a.duos.anyway.combats, 0);
+    let text = render_accuracy(&a);
+    assert!(
+        text.contains("| Solo | blocked, played anyway | 2 |"),
+        "{text}"
+    );
+    assert!(
+        text.contains("| Duos | scored, with a hand summoner | 0 | - | - | - |"),
+        "{text}"
+    );
+    // The export keeps its keys: nothing of this goes in it.
+    let v: Value = serde_json::from_str(&export_json(&a, &options(), "2026-10-11")).unwrap();
+    assert!(v["modes"]["solo"].get("anyway").is_none());
+    assert!(v["modes"]["solo"].get("hand_scored").is_none());
 }
 
 #[test]
@@ -159,13 +212,13 @@ fn the_synthetic_example_in_the_docs_has_the_export_shape() {
 
 #[test]
 fn renders_the_blocked_combats_by_card() {
-    let solo = vec![solo(&["BG34_140"], &["BGS_119"], CombatResult::Lost)];
+    let solo = vec![solo(&["ZZ_UNKNOWN"], &["BGS_119"], CombatResult::Lost)];
     let text = render_accuracy(&accuracy(&solo, &[], &options()));
     assert!(
-        text.contains("| Solo | 1 | 1 (100%) | 1 | 1 | 0 | 0 | - | - | - |"),
+        text.contains("| Solo | 1 | 1 (100%) | 0 | 0 | 0 | - | - | - |"),
         "{text}"
     );
-    assert!(text.contains("`BG34_140` 1"), "{text}");
+    assert!(text.contains("`ZZ_UNKNOWN` 1"), "{text}");
 }
 
 #[test]

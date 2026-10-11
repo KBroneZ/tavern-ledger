@@ -106,6 +106,9 @@ pub enum Action {
     /// Trigger the Deathrattles of a minion next to the card (both with
     /// `both`), except a card that does this itself (round 4).
     TriggerAdjacentDeathrattle { both: bool },
+    /// Gain the Deathrattles of the `count` left-most friendly minions that
+    /// have one (not other cards that do this), `times` over (round 5).
+    CopyLeftmostDeathrattles { count: u8, times: u8 },
 }
 
 impl Action {
@@ -186,8 +189,11 @@ pub enum Trigger {
     /// enemy minions next to it (round 4).
     ExcessToBothAdjacent,
     /// After another friendly minion with a Deathrattle dies, this gains its
-    /// Deathrattles for the rest of the combat (round 4).
-    GainsDeathrattles,
+    /// Deathrattles for the rest of the combat, `n` times over (round 4).
+    GainsDeathrattles(u8),
+    /// Whenever a friendly Amalgam ([`AMALGAMS`]) gains stats, this gains
+    /// them `n` times over (round 5).
+    GainsWithAmalgam(i32),
 }
 
 impl Trigger {
@@ -227,7 +233,8 @@ pub fn rules(card_id: &str) -> Option<CardRules> {
         .iter()
         .chain(crate::cards_round2::EFFECTS_2)
         .chain(crate::cards_round3::EFFECTS_3)
-        .chain(crate::cards_round4::EFFECTS_4);
+        .chain(crate::cards_round4::EFFECTS_4)
+        .chain(crate::cards_round5::EFFECTS_5);
     if let Some((_, rules)) = all.into_iter().find(|(id, _)| *id == card_id) {
         return Some(*rules);
     }
@@ -306,6 +313,8 @@ pub const TOKENS: &[Token] = &[
     tok("BG30_MagicItem_442t", 1, 1, Tribes::NONE, 1),
     tok("BG31_HERO_802pt1t", 7, 7, Tribes::MECH, 1),
     gold(tok("BG31_HERO_802pt1t_G", 14, 14, Tribes::MECH, 1)),
+    // Round 5: Foul Egg's Chicken.
+    tok("BG_RLK_833t", 3, 3, Tribes::UNDEAD.union(Tribes::BEAST), 1),
 ];
 
 pub(crate) const fn exact(triggers: &'static [Trigger]) -> CardRules {
@@ -322,8 +331,9 @@ pub(crate) const fn approx(reason: &'static str, triggers: &'static [Trigger]) -
     }
 }
 
-/// Round 1 (session 068); later rounds are in `cards_round2` to `cards_round4`.
+/// Round 1 (session 068); later rounds are in `cards_round2` to `cards_round5`.
 pub use crate::cards_round1::EFFECTS;
+pub use crate::cards_round5::{AMALGAMS, HAND_SUMMONERS};
 
 /// Cards whose text never changes a combat, checked one by one against the
 /// card data (session 068). Keywords they have are on the board already.
