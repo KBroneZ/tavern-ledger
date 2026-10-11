@@ -167,3 +167,45 @@ fn a_duos_first_leg_stops_when_a_board_is_gone() {
     let r = replay(&band(&p0), &band(&o0), &steps, Span::FirstLeg, 1);
     assert_eq!((r.matched, r.difference), (1, None));
 }
+
+#[test]
+fn a_duos_combat_replays_through_the_teammates_board() {
+    // The two 1/1s trade; both teammates' boards (2/5 and 1/3) come in at
+    // once with one minion each: a coin flip, which the log's side (the
+    // player) is taken to have won.
+    let mate = [m(2, 5)];
+    let foe_mate = [m(1, 3)];
+    let player = Team::duo(band(&[m(1, 1)]), band(&mate));
+    let opponent = Team::duo(band(&[m(1, 1)]), band(&foe_mate));
+    let steps = [
+        step((0, 0), 0, &[m(1, 1)], &[m(1, 1)]),
+        step((0, 0), 0, &mate, &foe_mate),
+        step((1, 0), 0, &[m(2, 4)], &[m(1, 1)]),
+    ];
+    let r = replay_teams(
+        &player,
+        &opponent,
+        &steps,
+        Span::Whole(Some(CombatResult::Won)),
+        1,
+    );
+    assert_eq!(r.difference, None, "{r:?}");
+    assert_eq!((r.matched, r.boards_in), (3, 2));
+}
+
+#[test]
+fn the_wrong_side_after_a_teammate_comes_in_is_named() {
+    // The player's board is gone; their teammate brings two minions against
+    // one: the teammate's side attacks first, not the opponent.
+    let mate = [m(1, 5), m(1, 5)];
+    let player = Team::duo(band(&[m(1, 1)]), band(&mate));
+    let opponent = Team::solo(band(&[m(1, 9)]));
+    let steps = [
+        step((0, 0), 0, &[m(1, 1)], &[m(1, 9)]),
+        step((1, 0), 0, &mate, &[m(1, 8)]),
+    ];
+    let r = replay_teams(&player, &opponent, &steps, Span::Whole(None), 1);
+    let d = r.difference.expect("differs");
+    assert_eq!((d.attack, d.rule), (2, Rule::AfterTeammate));
+    assert_eq!(r.boards_in, 1);
+}

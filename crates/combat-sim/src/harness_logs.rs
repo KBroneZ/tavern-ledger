@@ -278,12 +278,14 @@ pub fn render_replays(rows: &[Replayed], scored: &[Scored], unreadable: usize) -
         .count();
     let attacks: usize = rows.iter().map(|r| r.replay.attacks).sum();
     let matched: usize = rows.iter().map(|r| r.replay.matched).sum();
+    let boards_in: usize = rows.iter().map(|r| r.replay.boards_in).sum();
     let _ = writeln!(out, "\n## Attack order replay (T-603b)\n");
     let _ = writeln!(
         out,
         "Combats replayed: {} ({} Solo, {} Duos, both legs); {} rounds with attacks could not \
          be read. Replayed without a difference: {}. Attacks played as the log did before the \
-         first difference: {} of {}.\n",
+         first difference: {} of {}. Teammates' boards that came in before the first \
+         difference (Duos): {boards_in}.\n",
         rows.len(),
         solo,
         rows.len() - solo,

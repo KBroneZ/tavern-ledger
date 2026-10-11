@@ -9,6 +9,7 @@
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
+use std::time::Instant;
 
 use bg_parser::report::{GameReport, Round, Side};
 use serde_json::Value;
@@ -413,9 +414,12 @@ pub fn render_duos(combats: &[DuosCombat], options: &Options, source: Source) ->
         (Vec::new(), "every board that fought"),
         (Vec::new(), "both teams' two boards fought"),
     ];
+    let mut micros: Vec<u128> = Vec::new();
     for c in &with_result {
-        let Ok(Verdict::Odds(o)) = simulate_teams(&team_of(&c.own), &team_of(&c.opponent), &opts)
-        else {
+        let start = Instant::now();
+        let verdict = simulate_teams(&team_of(&c.own), &team_of(&c.opponent), &opts);
+        micros.push(start.elapsed().as_micros());
+        let Ok(Verdict::Odds(o)) = verdict else {
             continue;
         };
         let item = (prediction(&o), c.result.expect("filtered"));
@@ -442,6 +446,17 @@ pub fn render_duos(combats: &[DuosCombat], options: &Options, source: Source) ->
             } else {
                 "-".into()
             }
+        );
+    }
+    if let Some(max) = micros.iter().max() {
+        let mean = micros.iter().sum::<u128>() / micros.len() as u128;
+        let _ = writeln!(
+            out,
+            "
+Speed: {} trials per Duos combat took {:.1} ms on average, {:.1} ms at most.",
+            options.trials,
+            mean as f64 / 1000.0,
+            *max as f64 / 1000.0
         );
     }
     render_overlay_duos(&mut out, combats, options, source);

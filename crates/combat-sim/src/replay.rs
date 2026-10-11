@@ -77,6 +77,8 @@ pub struct Replay {
     /// Attacks the engine played as the log did before the first difference.
     pub matched: usize,
     pub difference: Option<Difference>,
+    /// Duos: teammates' boards that came in before the first difference.
+    pub boards_in: usize,
 }
 
 /// Keywords compared between the engine and the log: the ones both track.
@@ -147,6 +149,7 @@ fn replay_prepared(prepared: &Prepared, steps: &[LoggedStep], span: Span, seed: 
         attacks: steps.len(),
         matched: 0,
         difference: None,
+        boards_in: 0,
     };
     let mut turn = Turn::default();
     for (k, step) in steps.iter().enumerate() {
@@ -158,7 +161,13 @@ fn replay_prepared(prepared: &Prepared, steps: &[LoggedStep], span: Span, seed: 
         if span == Span::FirstLeg && c.finished() {
             return out;
         }
-        if c.finished() && c.enter_waiting() != [false, false] {
+        let entered = if c.finished() {
+            c.enter_waiting()
+        } else {
+            [false; 2]
+        };
+        if entered != [false, false] {
+            out.boards_in += entered.iter().filter(|e| **e).count();
             // Who attacks next is decided again, as at the start.
             turn = Turn {
                 current: None,

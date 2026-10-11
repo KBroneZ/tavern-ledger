@@ -134,7 +134,7 @@ test("Duos names the boards never seen instead of a number", () => {
     oddsView({ ...odds(), gap: "missing_board", won: 0, tied: 0, lost: 0, trials: 0, boards }, false, nameOf);
   const v = missing(duosBoards(null, 6, null));
   assert.equal(v.kind, "note");
-  assert.equal(v.text, "Odds: not seen yet: your teammate's board, their second board");
+  assert.equal(v.text, "Odds: not seen yet: your teammate's board and their second board");
   assert.deepEqual(v.shares, []);
   assert.equal(v.said, v.text);
   // Nothing named as missing: nothing to say rather than an empty list.

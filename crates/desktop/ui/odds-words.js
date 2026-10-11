@@ -62,7 +62,7 @@
       if (odds.gap === "missing_board") {
         const unseen = boards.filter((b) => b.round === null);
         if (!unseen.length) return null;
-        const who = unseen.map((b) => I18n.t(`ov.odds.unseen.${b.role}`)).join(", ");
+        const who = I18n.list(unseen.map((b) => I18n.t(`ov.odds.unseen.${b.role}`)));
         const text = I18n.t("ov.odds.gap.missing_board", { who });
         return { kind: "note", text, shares: [], age: null, approx: false, lines, about, said: text };
       }
