@@ -180,9 +180,16 @@ impl Combat<'_> {
                         .is_some_and(|u| self.triggers(u).contains(&Trigger::GainsDeathrattles))
                 })
                 .collect();
+            // Only cards that have a Deathrattle of their own: a dead Fish
+            // passes on what it gained, not its own card.
+            let has_own = self.p.cards[d.unit.card as usize]
+                .triggers
+                .iter()
+                .any(|t| matches!(t, Trigger::Deathrattle(_)));
+            let own = has_own.then_some(d.unit.card);
             for g in gainers {
                 if let Some(u) = self.unit_mut(d.side, g) {
-                    u.gained.push(d.unit.card);
+                    u.gained.extend(own);
                     u.gained.extend(d.unit.gained.iter().copied());
                 }
             }

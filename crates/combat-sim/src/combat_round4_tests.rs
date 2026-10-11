@@ -236,3 +236,89 @@ fn carrier_summons_an_interceptor_after_four_friends_die() {
         },
     );
 }
+
+#[test]
+fn golden_jailbird_juggernauts_golem_has_double_stats() {
+    let jailbird = Minion::new("BG36_333_G", 12, 30).tier(7);
+    with(vec![jailbird], vec![plain(1, 100)], |c| {
+        let j = first(c, 0);
+        c.swing(0, j);
+        // Golem 24/60, then the Juggernaut: 100 - 36.
+        assert_eq!(stats(c, 1), [(1, 64)]);
+        assert_eq!(stats(c, 0), [(12, 29), (24, 59)]);
+    });
+}
+
+#[test]
+fn jailbird_does_not_attack_when_its_golem_killed_the_target() {
+    // Not checked against the game (the card is approximate): the
+    // Juggernaut's own hit is lost and its after-attack triggers do not run.
+    let jailbird = Minion::new("BG36_333", 6, 15).tier(7);
+    let scorpid = Minion::new("BG36_209", 6, 7).tribe(Tribes::BEAST).tier(6);
+    let beetle = Minion::new("BG28_603t", 2, 2).tribe(Tribes::BEAST).tier(1);
+    with(vec![jailbird, scorpid, beetle], vec![plain(0, 5)], |c| {
+        let j = first(c, 0);
+        c.swing(0, j);
+        assert!(c.sides[1].units.is_empty());
+        // One friendly attack (the Golem's): the Beetle gets +4/+4 once.
+        assert_eq!(stats(c, 0), [(6, 15), (6, 15), (6, 7), (6, 6)]);
+    });
+}
+
+#[test]
+fn golem_is_lost_on_a_full_board() {
+    let jailbird = Minion::new("BG36_333", 6, 15).tier(7);
+    let mut board = vec![jailbird];
+    board.extend((0..6).map(|_| plain(1, 10)));
+    with(board, vec![plain(0, 50)], |c| {
+        let j = first(c, 0);
+        c.swing(0, j);
+        assert_eq!(c.sides[0].units.len(), 7);
+        assert_eq!(stats(c, 1), [(0, 44)], "only the Juggernaut hits");
+    });
+}
+
+#[test]
+fn warghoul_last_on_the_board_triggers_its_left_neighbour() {
+    let warghoul = taunt(Minion::new("BG34_Giant_331", 9, 3).tier(5));
+    with(vec![bonehead(), warghoul], vec![plain(5, 50)], |c| {
+        let w = c.sides[0].units[1].uid;
+        c.swing(0, w);
+        assert_eq!(ids(c, 0), ["BG28_300", "BG_ICC_026t", "BG_ICC_026t"]);
+    });
+}
+
+#[test]
+fn a_fish_passes_what_it_gained_to_another_fish() {
+    let fish = || {
+        Minion::new("TB_BaconShop_HP_105t", 2, 2)
+            .tribe(Tribes::BEAST)
+            .tier(1)
+    };
+    with(vec![fish(), bonehead(), fish()], vec![plain(5, 50)], |c| {
+        let b = c.sides[0].units[1].uid;
+        c.swing(0, b);
+        let f = first(c, 0);
+        c.swing(0, f);
+        // The second Fish has Bonehead's Deathrattle once, not the Fish card.
+        let last = c.sides[0].units.last().unwrap();
+        assert_eq!(c.p.cards[last.card as usize].id, "TB_BaconShop_HP_105t");
+        assert_eq!(last.gained.len(), 2, "from Bonehead, then from the Fish");
+        let bone = c.p.cards.iter().position(|x| x.id == "BG28_300").unwrap();
+        assert!(last.gained.iter().all(|g| usize::from(*g) == bone));
+    });
+}
+
+#[test]
+fn windfury_runs_after_friendly_attack_once_per_swing() {
+    let attacker = Minion {
+        keywords: Keywords::WINDFURY,
+        ..plain(1, 10)
+    };
+    let scorpid = Minion::new("BG36_209", 6, 7).tribe(Tribes::BEAST).tier(6);
+    let beetle = Minion::new("BG28_603t", 2, 2).tribe(Tribes::BEAST).tier(1);
+    with(vec![attacker, scorpid, beetle], vec![plain(0, 50)], |c| {
+        c.attack_turn(0);
+        assert_eq!(stats(c, 0)[2], (10, 10));
+    });
+}

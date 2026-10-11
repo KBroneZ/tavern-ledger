@@ -178,10 +178,10 @@ Since session 075 `combat-validate` also plays every combat with a result as the
 | Source | Mode | Combats with a result | Blocked | With a hand summoner | Blocked by the hand summoners only | Scored | Mean p(real result) | Brier | Most likely = real |
 |---|---|---|---|---|---|---|---|---|---|
 | History | Solo | 19 | 0 → 0 | 0 | 0 | 19 → 19 | 96% → 96% | 0.058 → 0.058 | 18 of 19 → 18 of 19 |
-| History | Duos | 232 | 50 (22%) → 30 (13%) | 23 | 16 → 18 | 182 → 202 | 80% → 81% | 0.292 → 0.274 | 147 of 182 → 166 of 202 |
+| History | Duos | 232 | 50 (22%) → 30 (13%) | 25 | 19 → 21 | 182 → 202 | 80% → 81% | 0.292 → 0.274 | 147 of 182 → 166 of 202 |
 | Logs | Duos | 84 | 23 (27%) → 18 (21%) | 15 | 12 → 13 | 61 → 66 | 85% → 84% | 0.197 → 0.212 | 53 of 61 → 57 of 66 |
 
-- Cards that still block, by combats (history): `BG34_140` 11, `BG31_999` 7, `BG31_835` 5, `BG21_HERO_030t` 4, `BG34_140_G` 3, `BG34_Giant_017` 3, `BGS_008` 1, `TB_BaconShop_HERO_33_Buddy_G` 1. The hand summoners alone now block 18 of the 30.
+- Cards that still block, by combats (history): `BG34_140` 11, `BG31_999` 7, `BG31_835` 5, `BG21_HERO_030t` 4, `BG34_140_G` 3, `BG34_Giant_017` 3, `BGS_008` 1, `TB_BaconShop_HERO_33_Buddy_G` 1. The hand summoners (with `BG34_Giant_017`, which summons from the hand too) alone now block 21 of the 30.
 - The overlay's inputs (section 7.5) gain too: "a card not modelled" 31 → 16 (history) and 18 → 14 (logs); scored 104 → 119 (58 right, 49%) and 36 → 40 (29 right, 72%).
 - The engine on every board that fought (unknown cards as plain minions, section 7.4): 188 → 189 of 232 right on the history, 71 of 84 on the logs (unchanged).
 
@@ -256,4 +256,4 @@ Left blocking, and why: the hand summoners (question 4, and `BG34_Giant_017`, wh
 1. **How the website runs the engine.** WebAssembly (needs `'wasm-unsafe-eval'` in the CSP), a TypeScript port, or a server function. Recommendation: WebAssembly, the CSP change limited to the simulator page if possible.
 2. **Which boards the website's simulator may load.** Only your own games, or also other public players' boards. Recommendation: your own games only at first (your boards and the opponents' boards you met, which you saw on screen); other players' boards only from public profiles and only after T-509's privacy texts cover it.
 3. **Duos odds (T-608, done in session 074).** Please check in your next Duos game that "their first board" is the one that fights your first board (the overlay takes the opponent the game marks as next).
-4. **Cards that summon from the hand** (`BG34_140` Expert Aviator, the most seen card not modelled, and `BG31_835`, `BG21_HERO_030t`): today they block the odds ("a card is not modelled"). They could play as approximate, with the hand summon left out and the card named. Recommendation: keep them blocking; the summon is often the biggest minion of the combat. **Applied** (the hub's call, session 075): after round 4 they are on a board in 23 of the 232 Duos combats of the history (15 of 84 in the logs) and alone block 18 of them (13 in the logs), 8% of the Duos combats.
+4. **Cards that summon from the hand** (`BG34_140` Expert Aviator, the most seen card not modelled, and `BG31_835`, `BG21_HERO_030t`): today they block the odds ("a card is not modelled"). They could play as approximate, with the hand summon left out and the card named. Recommendation: keep them blocking; the summon is often the biggest minion of the combat. **Applied** (the hub's call, session 075): after round 4, counting `BG34_Giant_017` (also from the hand), they are on a board in 25 of the 232 Duos combats of the history (15 of 84 in the logs) and alone block 21 of them (13 in the logs), 9% of the Duos combats.

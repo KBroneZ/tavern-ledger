@@ -24,14 +24,17 @@ use crate::trials::{simulate, simulate_teams, Odds, Options, Verdict};
 pub const FORMAT: u32 = 1;
 
 /// The cards that summon a minion from the hand, which is not seen: kept
-/// blocking (section 10, question 4).
-pub const HAND_SUMMONERS: [&str; 6] = [
+/// blocking (section 10, question 4). `BG34_Giant_017` summons a minion
+/// from the hand on its Deathrattle.
+pub const HAND_SUMMONERS: [&str; 8] = [
     "BG34_140",
     "BG34_140_G",
     "BG31_835",
     "BG31_835_G",
     "BG21_HERO_030t",
     "BG21_HERO_030t_G",
+    "BG34_Giant_017",
+    "BG34_Giant_017_G",
 ];
 
 /// Calibration buckets in the export and the report.
