@@ -74,16 +74,20 @@ export interface RoundChoice {
   result: Round["result"];
 }
 
+interface Fought {
+  playerId: number | null;
+  board: ReportMinion[];
+}
+
 /** The boards that fought on one side, in the order they came in, one per player. */
-function sideBoards(round: Round, side: "own" | "opponent"): ReportMinion[][] {
-  const seen = new Set<number | null>();
-  const out: ReportMinion[][] = [];
+function sideBoards(round: Round, side: "own" | "opponent"): Fought[] {
+  const seen = new Set<number>();
+  const out: Fought[] = [];
   for (const e of round.entries) {
     if (e.side !== side || e.board === null) continue;
-    const who = e.playerId;
-    if (who !== null && seen.has(who)) continue;
-    seen.add(who);
-    out.push(e.board);
+    if (e.playerId !== null && seen.has(e.playerId)) continue;
+    if (e.playerId !== null) seen.add(e.playerId);
+    out.push({ playerId: e.playerId, board: e.board });
   }
   return out;
 }
@@ -137,13 +141,12 @@ export function fromRound(record: GameRecord, roundNumber: number, cards: CardIn
     return { tier, minions: minions.slice(0, MAX_MINIONS) };
   };
   const ownTier = report.shop?.turns.find((t) => t.turn === roundNumber)?.tier ?? null;
-  const ownEntries = round.entries.filter((e) => e.side === "own" && e.board !== null);
-  const isLocal = (i: number) => ownEntries[i]?.playerId === report.localPlayerId;
+  const isLocal = (f: Fought) => f.playerId !== null && f.playerId === report.localPlayerId;
   return {
     state: {
       mode,
-      player: own.slice(0, keep).map((b, i) => board(b, isLocal(i) ? ownTier : null)),
-      opponent: opp.slice(0, keep).map((b) => board(b, null)),
+      player: own.slice(0, keep).map((f) => board(f.board, isLocal(f) ? ownTier : null)),
+      opponent: opp.slice(0, keep).map((f) => board(f.board, null)),
       cap: null,
     },
     skipped,
@@ -163,6 +166,7 @@ function mapMinion(state: SimState, side: Side, index: number, key: number, chan
 const clampStat = (n: number, min: number) => (Number.isFinite(n) ? Math.min(MAX_STAT, Math.max(min, Math.trunc(n))) : min);
 
 export function setMode(state: SimState, mode: Mode): SimState {
+  if (state.mode === mode) return state;
   if (mode === "solo") return { ...state, mode, player: state.player.slice(0, 1), opponent: state.opponent.slice(0, 1) };
   return { ...state, mode };
 }
@@ -179,11 +183,13 @@ export function removeBoard(state: SimState, side: Side, index: number): SimStat
 
 export function setTier(state: SimState, side: Side, index: number, tier: number | null): SimState {
   const value = tier === null || !Number.isInteger(tier) || tier < 1 || tier > MAX_TIER ? null : tier;
+  if (state[side][index]?.tier === value) return state;
   return mapBoard(state, side, index, (b) => ({ ...b, tier: value }));
 }
 
 export function setCap(state: SimState, cap: number | null): SimState {
-  return { ...state, cap: cap === null || !Number.isInteger(cap) || cap < 1 ? null : Math.min(cap, 1000) };
+  const value = cap === null || !Number.isInteger(cap) || cap < 1 ? null : Math.min(cap, 1000);
+  return value === state.cap ? state : { ...state, cap: value };
 }
 
 /** A new minion with the card's own stats and keywords, at the right end; none past seven. */
@@ -218,6 +224,8 @@ export function moveMinion(state: SimState, side: Side, index: number, key: numb
 }
 
 export function setStats(state: SimState, side: Side, index: number, key: number, attack: number, health: number): SimState {
+  const m = state[side][index]?.minions.find((x) => x.key === key);
+  if (m && m.attack === clampStat(attack, 0) && m.health === clampStat(health, 1)) return state;
   return mapMinion(state, side, index, key, (m) => ({ ...m, attack: clampStat(attack, 0), health: clampStat(health, 1) }));
 }
 

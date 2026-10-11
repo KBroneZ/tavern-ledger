@@ -3,6 +3,7 @@
 // note and a link to sign in; the editor works either way.
 import { dateText, modeName } from "../data/dashboard.ts";
 import type { GameRow } from "../data/rows.ts";
+import { heroName } from "../heroes/names.ts";
 import { href } from "../i18n.ts";
 import { cls, h, type VNode } from "../view/node.ts";
 import { picture, placeBadge, stateBlock } from "../view/pieces.ts";
@@ -31,14 +32,20 @@ function gameButton(row: GameRow, picked: PickedGame | null): VNode | null {
   const key = gameKey(row);
   if (!key) return null;
   const on = picked?.key === key;
+  const name = heroName(row.hero);
   return h(
     "li",
     {},
     h(
       "button",
       { type: "button", class: cls("sim-game", { "is-on": on }), "data-act": "game", "data-game": key, "data-focus": `game-${key}`, "aria-pressed": on ? "true" : "false" },
-      picture("hero", row.hero, row.hero ?? "", 32, true),
-      h("span", { class: "sim-game-text" }, h("span", {}, dateText(row.playedOn)), h("span", { class: "sim-dim" }, modeName(row.mode))),
+      picture("hero", row.hero, name ?? "", 32, true),
+      h(
+        "span",
+        { class: "sim-game-text" },
+        h("span", {}, name ?? dateText(row.playedOn)),
+        h("span", { class: "sim-dim" }, name ? `${dateText(row.playedOn)} · ${modeName(row.mode)}` : modeName(row.mode)),
+      ),
       placeBadge(row.place, row.mode),
     ),
   );

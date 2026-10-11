@@ -111,6 +111,27 @@ test("a Duos round gives each team's boards in the order they came in, one per p
   assert.ok([...state.player, ...state.opponent].every((b) => b.tier === null));
 });
 
+test("a player logged twice with a board counts once, and only the local player gets the shop's tier", () => {
+  const report = duosReport() as { rounds: { entries: unknown[] }[]; shop: unknown };
+  const mine = { side: "own", player_id: 2, hero: "SYN_HERO_A", board: [{ card_id: "SYN_M_01", atk: 1, health: 1, position: 0, golden: false, keywords: [] }] };
+  report.rounds[0].entries = [mine, { ...mine }, ...report.rounds[0].entries.slice(1)];
+  report.shop = { turns: [{ turn: 1, tier: 4 }], tier_ups: [], actions: [], start_ms: 0, end_ms: 1 };
+  const loaded = B.fromRound(game(report), 1, cards);
+  assert.ok(loaded);
+  assert.deepEqual(loaded.state.player.map((b) => [b.tier, b.minions.length]), [[4, 1], [null, 1]]);
+});
+
+test("an edit that changes nothing gives the same state (no new run)", () => {
+  let s = B.addMinion(B.emptyState(), "player", 0, "BGS_119", cards);
+  const key = s.player[0].minions[0].key;
+  assert.equal(B.setMode(s, "solo"), s);
+  assert.equal(B.setCap(s, null), s);
+  assert.equal(B.setTier(s, "player", 0, null), s);
+  assert.equal(B.setStats(s, "player", 0, key, 2, 1), s);
+  s = B.setCap(s, 10);
+  assert.equal(B.setCap(s, 10), s);
+});
+
 test("edits return new states and keep the rules: seven minions, tiers 1 to 7, stats in range", () => {
   let s = B.emptyState();
   const before = s;

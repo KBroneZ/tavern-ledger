@@ -108,6 +108,7 @@ function startWorker(): Worker {
 function showFailed(): void {
   result = { kind: "failed" };
   marks = NO_MARKS;
+  els.status.textContent = sm("result.failed");
   drawResult();
   drawEditor();
 }
@@ -129,10 +130,13 @@ function showAnswer(a: Answer): void {
 
 function play(): void {
   clearTimeout(timer);
+  // The id is taken now: an answer still on its way for the boards before
+  // this edit no longer matches, even while this run waits to start.
+  const id = ++sent;
   if (B.notReady(sim)) {
-    sent += 1;
     result = { kind: "empty" };
     marks = NO_MARKS;
+    els.status.textContent = "";
     drawResult();
     return;
   }
@@ -140,10 +144,9 @@ function play(): void {
   result = { kind: "running", previous };
   drawResult();
   timer = setTimeout(() => {
-    sent += 1;
     try {
       worker ??= startWorker();
-      worker.postMessage({ id: sent, request: B.toRequest(sim, cards) });
+      worker.postMessage({ id, request: B.toRequest(sim, cards) });
     } catch {
       showFailed();
     }
@@ -180,6 +183,8 @@ function onEditorClick(event: Event): void {
   if (act === "retry") {
     worker?.terminate();
     worker = null;
+    // Without card data (its chunk failed to load) the page starts again.
+    if (cards.size === 0) return void start().catch(() => showFailed());
     return play();
   }
   if (act === "board-add") {
@@ -254,12 +259,14 @@ function onEditorChange(event: Event): void {
   const key = Number(el.dataset.key);
   const minion = at && sim[at.side][at.board].minions.find((m) => m.key === key);
   if (!at || !minion) return;
-  const value = el.value === "" ? NaN : Number(el.value);
+  // An empty field keeps the value it had; one out of range is clamped (setStats).
+  if (el.value.trim() === "" || !Number.isFinite(Number(el.value))) return drawEditor();
+  const value = Number(el.value);
   const attack = field === "attack" ? value : minion.attack;
   const health = field === "health" ? value : minion.health;
   const next = B.setStats(sim, at.side, at.board, key, attack, health);
-  // A value the field cannot hold (empty, 0 Health) snaps back to the one kept.
-  if (next === sim || Number(el.value) !== (field === "attack" ? attack : health)) drawEditor();
+  // A value clamped back to the one kept still redraws, so the field shows it.
+  if (next === sim) return drawEditor();
   update(next);
 }
 
@@ -294,7 +301,15 @@ async function listGames(append: boolean): Promise<void> {
     const all = [...before, ...rows];
     games = { kind: "ready", rows: all, total, more: all.length < total && rows.length > 0 };
   } catch {
-    games = { kind: "error" };
+    // A failed "More" keeps the games already shown and can be tried again.
+    if (append && games.kind === "ready") {
+      page -= 1;
+      games = { ...games, more: true };
+      notes = [sm("load.error")];
+      drawNotes();
+    } else {
+      games = { kind: "error" };
+    }
   }
   drawLoad();
 }
@@ -331,13 +346,16 @@ function loadRound(n: number): void {
   if (boards.some((b) => b.tier === null)) notes.push(sm("load.unknownTiers"));
   drawLoad();
   drawNotes();
-  update(loaded.state);
+  update({ ...loaded.state, cap: sim.cap });
 }
 
 function onLoadClick(event: Event): void {
   const el = (event.target as HTMLElement).closest<HTMLElement>("[data-act]");
   if (!el) return;
-  if (el.dataset.act === "games-retry") void (account ? listGames(false) : signIn().catch(() => undefined));
+  if (el.dataset.act === "games-retry") {
+    page = 1;
+    void (account ? listGames(false) : signIn().catch(() => undefined));
+  }
   if (el.dataset.act === "games-more") {
     page += 1;
     void listGames(true);
@@ -365,10 +383,14 @@ async function signIn(): Promise<void> {
 
 // ---------- Start ----------
 
-async function start(): Promise<void> {
-  watchPictureFallback(document);
+/** The card data in the page's language (a script chunk from the site itself). */
+async function loadCards(): Promise<void> {
   const file = lang() === "es" ? await import("./generated/cards.es.json") : await import("./generated/cards.en.json");
   cards = new CardIndex(readCardFile(file.default));
+}
+
+async function start(): Promise<void> {
+  watchPictureFallback(document);
   els.editor.addEventListener("click", onEditorClick);
   els.mode.addEventListener("click", onEditorClick);
   els.result.addEventListener("click", onEditorClick);
@@ -376,6 +398,7 @@ async function start(): Promise<void> {
   els.editor.addEventListener("change", onEditorChange);
   els.result.addEventListener("change", onResultChange);
   els.load.addEventListener("click", onLoadClick);
+  await loadCards();
   els.editor.removeAttribute("aria-busy");
   drawEditor();
   drawResult();

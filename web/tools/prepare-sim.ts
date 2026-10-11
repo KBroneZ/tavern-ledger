@@ -21,7 +21,8 @@ import { sha256, STAMP_PATH, type Stamp, WASM_PATH } from "./simStamp.ts";
 
 const WEB = join(import.meta.dirname, "..");
 const OUT = join(WEB, "src", "lib", "sim", "generated");
-const BASE = "https://api.hearthstonejson.com/v1/latest";
+const ORIGIN = "https://api.hearthstonejson.com";
+const BASE = `${ORIGIN}/v1/latest`;
 /** cards.json is about 25 MB uncompressed; far above, it is not the card data. */
 const MAX_BYTES = 64 * 1024 * 1024;
 const TIMEOUT_MS = 120_000;
@@ -30,12 +31,18 @@ const USER_AGENT = "TavernLedger-site-build (+https://tavernledger.net)";
 const out = (lang: string) => join(OUT, `cards.${lang}.json`);
 
 async function fetchList(locale: string): Promise<{ list: unknown; build: string }> {
-  const url = `${BASE}/${locale}/cards.json`;
-  const res = await fetch(url, { headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(TIMEOUT_MS), redirect: "follow" });
+  const signal = AbortSignal.timeout(TIMEOUT_MS);
+  const get = (url: string) => fetch(url, { headers: { "User-Agent": USER_AGENT }, signal, redirect: "manual" });
+  let final = new URL(`${BASE}/${locale}/cards.json`);
+  let res = await get(final.href);
+  // "latest" may redirect once to a build number: followed only on HearthstoneJSON's own host.
+  const location = res.headers.get("location");
+  if (res.status >= 300 && res.status < 400 && location) {
+    final = new URL(location, final);
+    if (final.origin !== ORIGIN) throw new Error(`HearthstoneJSON ${locale}: redirected off its host`);
+    res = await get(final.href);
+  }
   if (!res.ok || !res.body) throw new Error(`HearthstoneJSON ${locale}: HTTP ${res.status}`);
-  // Only HearthstoneJSON's own host, after its redirect to the build number.
-  const final = new URL(res.url);
-  if (final.origin !== "https://api.hearthstonejson.com") throw new Error(`HearthstoneJSON ${locale}: redirected off its host`);
   const reader = res.body.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
