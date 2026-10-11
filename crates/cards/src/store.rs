@@ -185,8 +185,6 @@ impl CardStore {
         found
     }
 
-    /// The Battlegrounds pool minions (T-307), empty while there is no card
-    /// data or the data has no pool.
     /// A Battlegrounds minion's combat facts (T-605); None without card
     /// data or when the data has none for it.
     pub fn combat_facts(&self, id: &str) -> Option<crate::combat_facts::CombatFacts> {
@@ -196,6 +194,8 @@ impl CardStore {
             .and_then(|s| s.catalog.combat_facts(id).cloned())
     }
 
+    /// The Battlegrounds pool minions (T-307), empty while there is no card
+    /// data or the data has no pool.
     pub fn pool(&self) -> Vec<(String, PoolMinion)> {
         lock(&self.inner)
             .saved

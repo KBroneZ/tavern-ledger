@@ -147,6 +147,21 @@ fn devout_hellcaller_grows_when_another_demon_deals_damage() {
 }
 
 #[test]
+fn a_hellcaller_that_died_in_the_same_hit_is_not_brought_back() {
+    let caller = Minion::new("BG33_155", 4, 4).tribe(Tribes::DEMON).tier(3);
+    let demon = plain(2, 9).tribe(Tribes::DEMON);
+    with(vec![demon, caller], vec![plain(0, 9)], |c| {
+        c.sides[0].units[1].health = 0;
+        let d = uid(c, 0, 0);
+        c.after_damage_dealt([
+            (0, d, Tribes::DEMON, true),
+            (1, uid(c, 1, 0), Tribes::NONE, false),
+        ]);
+        assert_eq!(stats(c, 0)[1], (4, 0), "still dead");
+    });
+}
+
+#[test]
 fn deathstrider_triggers_the_left_most_deathrattle_after_a_rally_attack() {
     let rally = Minion::new("BG36_200", 1, 5).tribe(Tribes::BEAST).tier(1);
     let rattle = Minion::new("BG29_611", 1, 5).tribe(Tribes::MECH).tier(1);

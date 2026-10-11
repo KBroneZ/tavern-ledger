@@ -44,7 +44,7 @@ test("advanced adds the damage both ways, the cards with a gap and the trials", 
     "You deal 4–9, most likely 6",
     "You take 3–7, most likely 5",
     "Approximate: Made-up Minion, SYN_B",
-    "Start of combat effects are not played on your shop board",
+    "Start of combat effects are not played, and their board may already carry some",
     "10,000 combats simulated",
   ]);
   assert.equal(v.approx, true);
@@ -74,6 +74,14 @@ test("a reason replaces the numbers, and some reasons say nothing", () => {
   assert.equal(gap("no_next_opponent"), null);
   assert.equal(gap("not_in_shop"), null);
   assert.equal(oddsView(null, false, nameOf), null);
+});
+
+test("a share that can happen is never 0%, one that can fail never 100%", () => {
+  I18n.setLang("en");
+  const v = oddsView(odds({ won: 0.996, tied: 0, lost: 0.004 }), false, nameOf);
+  assert.deepEqual(v.shares.map((s) => s.value), [">99%", "0%", "<1%"]);
+  const sure = oddsView(odds({ won: 1, tied: 0, lost: 0 }), false, nameOf);
+  assert.deepEqual(sure.shares.map((s) => s.value), ["100%", "0%", "0%"]);
 });
 
 test("shares that are not shares are never drawn", () => {

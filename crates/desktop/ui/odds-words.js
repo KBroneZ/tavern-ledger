@@ -14,6 +14,14 @@
   const MAX_CARDS = 6;
 
   const isShare = (x) => typeof x === "number" && Number.isFinite(x) && x >= 0 && x <= 1;
+
+  // A whole percentage, except that a share that can happen is never "0%"
+  // and one that can fail is never "100%".
+  function shareText(x) {
+    if (x > 0 && x < 0.005) return `<${I18n.percent(0.01)}`;
+    if (x < 1 && x > 0.995) return `>${I18n.percent(0.99)}`;
+    return I18n.percent(x);
+  }
   const isSpread = (s) => s && ["low", "likely", "high"].every((k) => Number.isInteger(s[k]));
 
   // Card names, at most a few, then "+N".
@@ -50,8 +58,8 @@
     const share = (key, value) => ({
       key,
       label: I18n.t(`ov.odds.${key}Label`),
-      value: I18n.percent(value),
-      text: I18n.t(`ov.odds.${key}`, { value: I18n.percent(value) }),
+      value: shareText(value),
+      text: I18n.t(`ov.odds.${key}`, { value: shareText(value) }),
     });
     const shares = [share("win", odds.won), share("tie", odds.tied), share("lose", odds.lost)];
     const age = Number.isInteger(odds.seen_round) ? I18n.t("ov.odds.seen", { turn: odds.seen_round }) : null;

@@ -31,34 +31,54 @@ pub type Wanted = Option<Result<OddsInput, NoOdds>>;
 
 #[derive(Default)]
 pub struct Odds {
-    /// The last [`Wanted`], so only changes are acted on.
-    last: Mutex<Wanted>,
-    shown: Mutex<Option<LiveOdds>>,
+    /// Everything that decides what is shown, under one lock so the
+    /// simulator's thread and the tracker's loop cannot cross.
+    inner: Mutex<Inner>,
     jobs: Mutex<Option<Sender<OddsInput>>>,
+}
+
+#[derive(Default)]
+struct Inner {
+    /// The last [`Wanted`], so only changes are acted on.
+    last: Wanted,
+    /// The input whose result may still be shown: the last one asked for in
+    /// the shop. Kept while the game shows that combat.
+    run: Option<OddsInput>,
+    shown: Option<LiveOdds>,
 }
 
 /// What a new [`Wanted`] does.
 #[derive(Debug, PartialEq)]
 pub enum Step {
     Show(Option<LiveOdds>),
-    /// The game is showing the combat these odds are for: they stay.
+    /// The game is showing the combat the last shop input is for: its odds
+    /// stay, or come when its run ends.
     Keep,
-    Run(OddsInput),
+    /// Work these odds out; `clear` when what is shown is for another
+    /// opponent and must go at once.
+    Run {
+        input: OddsInput,
+        clear: bool,
+    },
 }
 
-pub fn step(wanted: &Wanted, shown: Option<&LiveOdds>) -> Step {
+/// `run` is the last shop input asked for; `shown` what the overlay has.
+pub fn step(wanted: &Wanted, run: Option<&OddsInput>, shown: Option<&LiveOdds>) -> Step {
     match wanted {
         None => Step::Show(None),
         Some(Err(no)) => {
-            let fighting = no.gap == Gap::NotInShop
-                && shown.is_some_and(|s| s.seat == no.seat && s.gap != Some(Gap::NotInShop));
+            let fighting =
+                no.gap == Gap::NotInShop && run.is_some_and(|r| Some(r.opponent_seat) == no.seat);
             if fighting {
                 Step::Keep
             } else {
                 Step::Show(Some(no.odds()))
             }
         }
-        Some(Ok(input)) => Step::Run(input.clone()),
+        Some(Ok(input)) => Step::Run {
+            input: input.clone(),
+            clear: shown.is_some_and(|s| s.seat != Some(input.opponent_seat)),
+        },
     }
 }
 
@@ -82,39 +102,60 @@ pub fn wanted(watcher: &Watcher, on: bool) -> Wanted {
 
 impl Odds {
     pub fn shown(&self) -> Option<LiveOdds> {
-        lock(&self.shown).clone()
+        lock(&self.inner).shown.clone()
     }
 
     /// Acts on what the tracker's loop wants now (see [`step`]).
     pub fn submit(&self, app: &AppHandle, wanted: Wanted) {
-        {
-            let mut last = lock(&self.last);
-            if *last == wanted {
+        let (changed, job) = {
+            let mut inner = lock(&self.inner);
+            if inner.last == wanted {
                 return;
             }
-            *last = wanted.clone();
-        }
-        let next = step(&wanted, lock(&self.shown).as_ref());
-        match next {
-            Step::Show(odds) => self.set(app, odds),
-            Step::Keep => {}
-            Step::Run(input) => {
-                if let Some(jobs) = lock(&self.jobs).as_ref() {
-                    let _ = jobs.send(input);
+            inner.last = wanted.clone();
+            let next = step(&wanted, inner.run.as_ref(), inner.shown.as_ref());
+            let before = inner.shown.clone();
+            let job = match next {
+                Step::Show(odds) => {
+                    inner.run = None;
+                    inner.shown = odds;
+                    None
                 }
+                Step::Keep => None,
+                Step::Run { input, clear } => {
+                    inner.run = Some(input.clone());
+                    if clear {
+                        inner.shown = None;
+                    }
+                    Some(input)
+                }
+            };
+            (inner.shown != before, job)
+        };
+        if let Some(input) = job {
+            if let Some(jobs) = lock(&self.jobs).as_ref() {
+                let _ = jobs.send(input);
             }
+        }
+        if changed {
+            let _ = app.emit(LIVE_CHANGED, ());
         }
     }
 
     fn is_wanted(&self, input: &OddsInput) -> bool {
-        matches!(&*lock(&self.last), Some(Ok(i)) if i == input)
+        lock(&self.inner).run.as_ref() == Some(input)
     }
 
-    fn set(&self, app: &AppHandle, odds: Option<LiveOdds>) {
+    /// Shows a run's result if its input is still the one wanted, checked
+    /// and set under the same lock.
+    fn finish(&self, app: &AppHandle, input: &OddsInput, odds: LiveOdds) {
         let changed = {
-            let mut shown = lock(&self.shown);
-            let changed = *shown != odds;
-            *shown = odds;
+            let mut inner = lock(&self.inner);
+            if inner.run.as_ref() != Some(input) {
+                return;
+            }
+            let changed = inner.shown.as_ref() != Some(&odds);
+            inner.shown = Some(odds);
             changed
         };
         if changed {
@@ -160,9 +201,7 @@ pub fn start(app: AppHandle, state: Arc<AppState>) {
                     )
                 });
             // A newer input may have come while it ran; that one is queued.
-            if state.odds.is_wanted(&input) {
-                state.odds.set(&app, Some(odds));
-            }
+            state.odds.finish(&app, &input, odds);
         }
     });
 }
@@ -182,6 +221,7 @@ mod tests {
         OddsInput {
             opponent_seat: seat,
             seen_round: 2,
+            seen_after_start_of_combat: false,
             own: Vec::new(),
             opponent: Vec::new(),
             own_tier: None,
@@ -192,22 +232,65 @@ mod tests {
 
     #[test]
     fn a_reason_shows_at_once_and_a_run_waits_for_the_thread() {
-        assert_eq!(step(&None, None), Step::Show(None));
+        assert_eq!(step(&None, None, None), Step::Show(None));
         let duos = gap(Gap::Duos, 3);
-        assert_eq!(step(&Some(Err(duos)), None), Step::Show(Some(duos.odds())));
-        assert_eq!(step(&Some(Ok(input(3))), None), Step::Run(input(3)));
+        assert_eq!(
+            step(&Some(Err(duos)), None, None),
+            Step::Show(Some(duos.odds()))
+        );
+        assert_eq!(
+            step(&Some(Ok(input(3))), None, None),
+            Step::Run {
+                input: input(3),
+                clear: false
+            }
+        );
     }
 
     #[test]
-    fn the_shop_odds_stay_while_the_game_shows_that_combat() {
-        let mut odds = gap(Gap::Duos, 3).odds();
-        odds.gap = None;
+    fn odds_for_another_opponent_go_at_once_when_a_new_run_starts() {
+        let mut shown = gap(Gap::Duos, 3).odds();
+        shown.gap = None;
+        assert_eq!(
+            step(&Some(Ok(input(4))), None, Some(&shown)),
+            Step::Run {
+                input: input(4),
+                clear: true
+            }
+        );
+        assert_eq!(
+            step(&Some(Ok(input(3))), None, Some(&shown)),
+            Step::Run {
+                input: input(3),
+                clear: false
+            }
+        );
+    }
+
+    #[test]
+    fn the_last_shop_input_stays_wanted_while_the_game_shows_that_combat() {
         let fighting = Some(Err(gap(Gap::NotInShop, 3)));
-        assert_eq!(step(&fighting, Some(&odds)), Step::Keep);
-        // Another opponent, or nothing shown yet: the reason is shown.
-        let other = Some(Err(gap(Gap::NotInShop, 4)));
-        assert!(matches!(step(&other, Some(&odds)), Step::Show(Some(_))));
-        assert!(matches!(step(&fighting, None), Step::Show(Some(_))));
+        // Its run may not have ended yet: it is kept, and still lands.
+        assert_eq!(step(&fighting, Some(&input(3)), None), Step::Keep);
+        // No shop input for that opponent (another one, or none yet): the reason.
+        assert!(matches!(
+            step(&fighting, Some(&input(4)), None),
+            Step::Show(Some(_))
+        ));
+        assert!(matches!(step(&fighting, None, None), Step::Show(Some(_))));
+    }
+
+    #[test]
+    fn a_run_lands_only_while_its_input_is_wanted() {
+        let odds = Odds::default();
+        lock(&odds.inner).run = Some(input(3));
+        assert!(odds.is_wanted(&input(3)));
+        assert!(!odds.is_wanted(&input(4)));
+        lock(&odds.inner).run = None;
+        assert!(
+            !odds.is_wanted(&input(3)),
+            "switched off or a reason shown since"
+        );
     }
 
     #[test]

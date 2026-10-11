@@ -179,6 +179,17 @@ fn a_start_of_combat_card_is_flagged() {
     let o = run_odds(&i, &facts, Duration::from_secs(5));
     assert!(o.start_of_combat);
     assert!(!run_odds(&input(), &facts, Duration::from_secs(5)).start_of_combat);
+    assert!(!input().seen_after_start_of_combat);
+
+    // The player's card acted when the board was seen, and is gone now:
+    // the board seen may carry its effects.
+    let mut seen = round(3, 5, Some(vec![minion(PLAIN, 1, 1, 1)]));
+    seen.entries[0].board = Some(vec![minion(soc, 1, 1, 1)]);
+    let r = report(GAME, vec![seen]);
+    let own = [minion(PLAIN, 6, 6, 1)];
+    let i = odds_input(&r, Some(&own), Some(5), &[], None).expect("odds");
+    assert!(i.seen_after_start_of_combat);
+    assert!(run_odds(&i, &facts, Duration::from_secs(5)).start_of_combat);
 }
 
 #[test]

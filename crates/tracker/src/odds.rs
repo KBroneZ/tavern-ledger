@@ -72,6 +72,10 @@ pub struct OddsInput {
     pub opponent_seat: i64,
     /// The combat (turn) the opponent's board was seen in.
     pub seen_round: i64,
+    /// A card on either board of that combat acted at the start of combat,
+    /// so the board seen may already carry its effects (a minion killed or
+    /// buffed before the first attack).
+    pub seen_after_start_of_combat: bool,
     pub own: Vec<LogMinion>,
     pub opponent: Vec<LogMinion>,
     pub own_tier: Option<i64>,
@@ -205,6 +209,14 @@ pub fn odds_input(
     let Some((opponent, seen_round)) = last_board(report, seat) else {
         return Err(NoOdds::new(Gap::NoBoardSeen, Some(seat)));
     };
+    let seen_after_start_of_combat = report
+        .rounds
+        .iter()
+        .filter(|r| r.number == seen_round)
+        .flat_map(|r| r.entries.iter())
+        .flat_map(|e| e.board.iter().flatten())
+        .filter_map(|m| m.card_id.as_deref())
+        .any(has_start_of_combat);
     let tier = |pid: Option<i64>| {
         lobby
             .iter()
@@ -214,6 +226,7 @@ pub fn odds_input(
     Ok(OddsInput {
         opponent_seat: seat,
         seen_round,
+        seen_after_start_of_combat,
         own: own.to_vec(),
         opponent: opponent.to_vec(),
         own_tier: tier(report.local_player_id),
@@ -338,11 +351,12 @@ pub fn run_odds(
     let Some(o) = total else {
         return LiveOdds::gap(Gap::BadBoard, seat, seen);
     };
-    let start_of_combat = player
-        .minions
-        .iter()
-        .chain(&opponent.minions)
-        .any(|m| has_start_of_combat(&m.card_id));
+    let start_of_combat = input.seen_after_start_of_combat
+        || player
+            .minions
+            .iter()
+            .chain(&opponent.minions)
+            .any(|m| has_start_of_combat(&m.card_id));
     let known = o.damage_unknown == 0;
     LiveOdds {
         seat,

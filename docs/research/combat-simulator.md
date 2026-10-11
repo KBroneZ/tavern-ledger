@@ -113,6 +113,7 @@ Run of 2026-10-11 on what is on the PC: the Solo game of 2026-10-09 (the one wit
 - Most Duos differences are cards: stats that grow (game-long buffs, Blood Gems), Deities (`BGFYM_011`, `BGFYM_000`) and a hero power's minion (`BG22_HERO_305t`) appearing on the board, and cards round 2 still leaves out. The run prints each one with its card ids.
 - Attack order: two first attacks out of order are a start-of-combat attack (`BG36_849`, "Start of Combat: attack immediately") and a minion at position 7 (`BG36_360t5`) that no card on the board explains (a hero power or trinket, not on the board). The pointer case is in the rule table above.
 - Too few Solo combats to change a rule on this alone; the replay is now the tool to check each "to check" rule as more Solo games are logged.
+- Known limits of the replay (session 071 review): it decides the first attacker from the boards at the first attack, after start-of-combat effects, where the engine counts before them, so a start-of-combat summon or kill can give a false "who attacks first"; an attack made inside another one ("attacks immediately") is a step of its own in the log, so the next comparison names another rule; in a log without `PROPOSED_DEFENDER` the defender is the first enemy hit, which an effect before the swing can get wrong.
 
 ### 7.3 The overlay's inputs (T-605)
 

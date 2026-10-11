@@ -51,7 +51,7 @@ impl Combat<'_> {
             let friends: Vec<u32> = self.sides[side]
                 .units
                 .iter()
-                .filter(|u| u.uid != dealer)
+                .filter(|u| u.uid != dealer && u.alive())
                 .map(|u| u.uid)
                 .collect();
             for f in friends {
@@ -117,7 +117,13 @@ impl Combat<'_> {
     /// After a friendly minion comes back with Reborn.
     pub(super) fn after_reborn(&mut self, side: usize, reborn: u32) {
         let attack = self.unit(side, reborn).map_or(0, |u| u.attack);
-        let friends: Vec<u32> = self.sides[side].units.iter().map(|u| u.uid).collect();
+        // A friend that died in the same hit waits for its own Reborn, if any.
+        let friends: Vec<u32> = self.sides[side]
+            .units
+            .iter()
+            .filter(|u| u.alive())
+            .map(|u| u.uid)
+            .collect();
         for f in friends {
             let Some(unit) = self.unit(side, f) else {
                 continue;

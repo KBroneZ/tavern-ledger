@@ -257,7 +257,7 @@ fn overlay_state(
     Some(
         shown
             .with_trinket_cards(card_of)
-            .with_odds(state.odds.shown()),
+            .with_odds(state.odds.shown().filter(|_| state.overlay.odds_shown())),
     )
 }
 
