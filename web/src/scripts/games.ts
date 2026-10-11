@@ -15,6 +15,7 @@ import { supabase } from "./client.ts";
 import { byId } from "./dom.ts";
 import { watchPictureFallback } from "../lib/data/pictures.ts";
 import { href } from "../lib/i18n.ts";
+import { heroOptions } from "../lib/heroes/names.ts";
 
 // A picture that fails to load shows its local placeholder (D-074).
 watchPictureFallback(document);
@@ -53,13 +54,12 @@ function fillForm(f: GameFilters, profileId: string | null): void {
 }
 
 function fillHeroes(heroes: string[], selected: string | null): void {
-  // A hero in the address with no game still shows, so the filter in force is visible.
-  const list = selected && !heroes.includes(selected) ? [selected, ...heroes] : heroes;
-  const options = list.map((hero) => {
+  // By name in the page's language (T-510); the address's hero shows even with no game.
+  const options = heroOptions(heroes, selected, t("hero.unknownId")).map(({ value, label }) => {
     const option = document.createElement("option");
-    option.value = hero;
-    option.textContent = hero;
-    option.selected = hero === selected;
+    option.value = value;
+    option.textContent = label;
+    option.selected = value === selected;
     return option;
   });
   heroSelect.append(...options);

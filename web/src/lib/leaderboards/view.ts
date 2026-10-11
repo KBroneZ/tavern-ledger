@@ -6,7 +6,8 @@ import type { Mode } from "../data/format.ts";
 import { t } from "../data/strings.ts";
 import { publicProfilePath } from "../profile.ts";
 import { h, type VNode } from "../view/node.ts";
-import { fold, picture, stateBlock, topTable, type Cell, type Column } from "../view/pieces.ts";
+import { fold, HERO_PIC, picture, stateBlock, topTable, type Cell, type Column } from "../view/pieces.ts";
+import { heroLabel } from "../heroes/names.ts";
 import type { Boards, Leaderboards } from "./api.ts";
 import {
   boardHow,
@@ -40,8 +41,9 @@ function columns(def: BoardDef, m: Mode): Column[] {
 }
 
 function heroCell(hero: string | null): Cell {
-  const name = hero ?? lt("hero.unknown");
-  return { node: h("span", { class: "cell-hero" }, picture("hero", hero, name, 24, true), h("span", {}, name)) };
+  const { name, unknownId } = heroLabel(hero, lt("hero.unknown"), lt("hero.unknown"));
+  const id = unknownId ? h("span", { class: "adv cell-note hero-id" }, unknownId) : null;
+  return { node: h("span", { class: "cell-hero" }, picture("hero", hero, name, HERO_PIC, true), h("span", { class: "hero-name" }, h("span", {}, name), id)) };
 }
 
 /** One table row: standing, the player linked to their public profile, (hero), value, games. */

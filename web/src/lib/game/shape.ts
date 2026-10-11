@@ -10,6 +10,7 @@
 // Opponents are shown by hero only: the report has no player names.
 import type { Result } from "../data/format.ts";
 import type { Choice, Entry, GameRecord, Minion, Report, Round, Seat, ShopTurn, TrinketSlot } from "./report.ts";
+import { heroName } from "../heroes/names.ts";
 
 export interface HeroRef {
   id: string | null;
@@ -119,8 +120,9 @@ const MS_PER_MINUTE = 60_000;
 // The server summary's cap: more is a log the clock cannot back.
 const MAX_APM = 99_999;
 
+/** The hero's name in the page's language from the name table (T-510), else the game's own name. */
 export function heroRef(report: Report, id: string | null): HeroRef {
-  return { id, name: id ? (report.heroNames.get(id) ?? null) : null };
+  return { id, name: id ? (heroName(id) ?? report.heroNames.get(id) ?? null) : null };
 }
 
 function boardView(minions: Minion[] | null): BoardView | null {

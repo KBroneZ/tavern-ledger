@@ -79,6 +79,24 @@
     return;
   }
 
+  // The menu shows "Sign in" or "Account", not both (T-513): signed in when
+  // the browser holds a Supabase session (supabase-js keeps it in
+  // localStorage as sb-<project>-auth-token). Only that key's name is read,
+  // never its value. Unknown (storage blocked) leaves both links.
+  function signedIn() {
+    try {
+      var store = win.localStorage;
+      for (var i = 0; i < store.length; i++) {
+        if (/^sb-[a-z0-9]+-auth-token$/.test(store.key(i) || "")) return true;
+      }
+      return false;
+    } catch (e) {
+      return null;
+    }
+  }
+  var auth = signedIn();
+  if (auth !== null) win.document.documentElement.setAttribute("data-auth", auth ? "in" : "out");
+
   // The switch in the menu: remember the choice, and keep the page's query
   // and hash (filters, a profile id, an open period).
   function withPlace(link) {

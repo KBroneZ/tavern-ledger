@@ -7,7 +7,8 @@ import { DEFAULT_FILTERS, filtersQuery } from "../data/filters.ts";
 import { count, DataError, heroRow, place, type HeroRow } from "../data/rows.ts";
 import { t } from "../data/strings.ts";
 import { h, type VNode } from "../view/node.ts";
-import { unknownValue, type Cell, type Column } from "../view/pieces.ts";
+import { heroCell, unknownValue, type Cell, type Column } from "../view/pieces.ts";
+import { byHeroName } from "./names.ts";
 import { href } from "../i18n.ts";
 
 /** Below this many games, an average or a rate is marked "few games". */
@@ -52,7 +53,7 @@ export function withSort(href: string, sort: HeroSort): string {
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
-const byId = (a: HeroStat, b: HeroStat) => (a.hero ?? "").localeCompare(b.hero ?? "");
+const byName = (a: HeroStat, b: HeroStat) => byHeroName(a.hero, b.hero);
 const avgOf = (r: HeroStat) => r.avgPlace ?? Number.POSITIVE_INFINITY;
 const enough = (r: HeroStat) => r.placedGames >= MIN_GAMES;
 
@@ -60,18 +61,18 @@ const enough = (r: HeroStat) => r.placedGames >= MIN_GAMES;
  * Heroes played in one mode. "games": most games first, then the better
  * average place. "avg": the better average place first among heroes with
  * enough finished games, then those with few, then those with none; ties by
- * more games. The card id breaks any tie left, so the order is stable.
+ * more games. The name (then the card id) breaks any tie left, so the order is stable.
  */
 export function sortHeroes(rows: readonly HeroStat[], m: Mode, sort: HeroSort): HeroStat[] {
   const played = rows.filter((r) => r.mode === m && r.games > 0);
-  if (sort === "games") return played.toSorted((a, b) => b.games - a.games || avgOf(a) - avgOf(b) || byId(a, b));
+  if (sort === "games") return played.toSorted((a, b) => b.games - a.games || avgOf(a) - avgOf(b) || byName(a, b));
   const tier = (r: HeroStat) => (r.avgPlace === null ? 2 : enough(r) ? 0 : 1);
-  return played.toSorted((a, b) => tier(a) - tier(b) || avgOf(a) - avgOf(b) || b.games - a.games || byId(a, b));
+  return played.toSorted((a, b) => tier(a) - tier(b) || avgOf(a) - avgOf(b) || b.games - a.games || byName(a, b));
 }
 
 /** Heroes offered in a known hero choice but never played in this mode, most offered first. */
 export function offeredOnly(rows: readonly HeroStat[], m: Mode): HeroStat[] {
-  return rows.filter((r) => r.mode === m && r.games === 0 && r.offeredGames > 0).toSorted((a, b) => b.offeredGames - a.offeredGames || byId(a, b));
+  return rows.filter((r) => r.mode === m && r.games === 0 && r.offeredGames > 0).toSorted((a, b) => b.offeredGames - a.offeredGames || byName(a, b));
 }
 
 /** True when a mode has at least one hero played. */
@@ -115,13 +116,10 @@ export function heroGamesHref(hero: string | null, m: Mode, profileId: string | 
   return hero === null ? undefined : href(`/games/${filtersQuery({ ...DEFAULT_FILTERS, mode: m, hero }, profileId)}`);
 }
 
-// Heroes go by card id until the card data reaches the site (D-074, T-504).
-const heroName = (hero: string | null) => hero ?? t("hero.unknown");
-
 export function heroStatCells(r: HeroStat, profileId: string | null): Cell[] {
   const few = r.placedGames > 0 && r.placedGames < MIN_GAMES;
   return [
-    { hero: r.hero, name: heroName(r.hero), href: heroGamesHref(r.hero, r.mode, profileId) },
+    heroCell(r.hero, heroGamesHref(r.hero, r.mode, profileId)),
     // Places count finished games only: say how many when some are not.
     r.placedGames < r.games ? t("heroes.games.placed", { games: r.games, placed: r.placedGames }) : compact(r.games),
     withFew(r.avgPlace, average(r.avgPlace), few),
@@ -137,7 +135,7 @@ export function heroStatCells(r: HeroStat, profileId: string | null): Cell[] {
 export const offeredColumns = (): Column[] => [{ label: t("heroes.col.hero") }, { label: t("hstats.col.offered"), numeric: true }];
 
 export function offeredCells(r: HeroStat): Cell[] {
-  return [{ hero: r.hero, name: heroName(r.hero) }, compact(r.offeredGames)];
+  return [heroCell(r.hero), compact(r.offeredGames)];
 }
 
 export type StatsPage = "heroes" | "curious";
