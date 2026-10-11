@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" role="img" aria-label="Tavern Ledger">
+  <!-- Tavern Ledger mark. Hand-drawn SVG (T-523) after app-tile-small.svg, redrawn on the 20 px grid for the tray at 125 % scaling: every edge on a whole pixel, two-pixel strokes and one-pixel gaps. -->
+  <rect width="20" height="20" rx="4" fill="#ffb24a"/>
+  <path fill="#120d0b" d="M1 2H10V4H7V15H5V4H1ZM2 5H4V16H14V18H1V16H2ZM8 5H10V13H13V15H8ZM11 2H13V12H11ZM14 4H18Q19 4 19 5V12Q19 13 18 13H14V11H17V6H14Z"/>
+</svg>

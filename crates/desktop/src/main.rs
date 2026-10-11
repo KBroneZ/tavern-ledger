@@ -29,9 +29,10 @@ use std::thread;
 use std::time::Duration;
 
 use serde::Serialize;
+use tauri::image::Image;
 use tauri::menu::{CheckMenuItem, Menu, MenuEvent, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{App, AppHandle, Emitter, Manager, State, WindowEvent};
+use tauri::{include_image, App, AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tracker::dev_reconnect::Reconnects;
 use tracker::discover::find_logs_dir;
@@ -908,6 +909,35 @@ fn can_autostart(exe: &Path) -> bool {
     !exe.to_string_lossy().contains(char::is_whitespace)
 }
 
+/// Sizes of the tray images (`crates/desktop/icons/tray-NN.png`, T-523): drawn
+/// on a pixel grid for 100, 125, 150 and 200 % scaling, so none is blurred by
+/// Windows shrinking the 256 px app icon.
+const TRAY_SIZES: [u32; 4] = [16, 20, 24, 32];
+
+/// The tray image size for a screen scaling: the smallest drawing at least as
+/// big as 16 px times the scaling, else the biggest.
+fn tray_icon_px(scale: f64) -> u32 {
+    let scale = if scale.is_finite() && scale >= 1.0 {
+        scale
+    } else {
+        1.0
+    };
+    let want = (16.0 * scale).round();
+    TRAY_SIZES
+        .into_iter()
+        .find(|&px| f64::from(px) >= want)
+        .unwrap_or(TRAY_SIZES[TRAY_SIZES.len() - 1])
+}
+
+fn tray_image(px: u32) -> Image<'static> {
+    match px {
+        16 => include_image!("icons/tray-16.png"),
+        20 => include_image!("icons/tray-20.png"),
+        24 => include_image!("icons/tray-24.png"),
+        _ => include_image!("icons/tray-32.png"),
+    }
+}
+
 /// Tray icon: the app keeps following the log while its window is closed.
 fn setup_tray(app: &App) -> tauri::Result<()> {
     // Off by default: only the user turns it on, from this menu.
@@ -984,9 +1014,14 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
                 show_window(tray.app_handle());
             }
         });
-    if let Some(icon) = app.default_window_icon() {
-        tray = tray.icon(icon.clone());
-    }
+    // The taskbar sits on the primary screen in most set-ups; 100 % if unknown.
+    // Picked once at start: after a scaling change Windows rescales this image.
+    let scale = app
+        .primary_monitor()
+        .ok()
+        .flatten()
+        .map_or(1.0, |monitor| monitor.scale_factor());
+    tray = tray.icon(tray_image(tray_icon_px(scale)));
     let icon = tray.build(app)?;
     let (show, overlay, unlock, reset_layout) = items;
     app.state::<Arc<settings::Settings>>()
@@ -1565,5 +1600,30 @@ mod tests {
         assert!(!can_autostart(Path::new(
             r"C:\Program Files\Tavern Ledger\desktop.exe"
         )));
+    }
+
+    #[test]
+    fn tray_icon_matches_the_screen_scaling() {
+        // Windows draws the tray icon at 16 px times the scaling.
+        assert_eq!(tray_icon_px(1.0), 16);
+        assert_eq!(tray_icon_px(1.25), 20);
+        assert_eq!(tray_icon_px(1.5), 24);
+        assert_eq!(tray_icon_px(1.75), 32);
+        assert_eq!(tray_icon_px(2.0), 32);
+        // Above 200 % the biggest drawing is scaled up by Windows.
+        assert_eq!(tray_icon_px(3.0), 32);
+        // A scaling Windows never reports falls back to 100 %.
+        assert_eq!(tray_icon_px(0.0), 16);
+        assert_eq!(tray_icon_px(-1.0), 16);
+        assert_eq!(tray_icon_px(f64::NAN), 16);
+        assert_eq!(tray_icon_px(0.5), 16);
+    }
+
+    #[test]
+    fn every_tray_image_has_its_size() {
+        for px in TRAY_SIZES {
+            let image = tray_image(px);
+            assert_eq!((image.width(), image.height()), (px, px));
+        }
     }
 }
