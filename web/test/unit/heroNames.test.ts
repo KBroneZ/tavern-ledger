@@ -92,3 +92,12 @@ test("the games list's hero filter lists names, sorted, with the address's hero 
   ]);
   assert.equal(heroOptions(["BG22_HERO_002"], "BG22_HERO_002", "?").length, 1);
 });
+
+test("prototype names are never heroes, and Spanish sorts by the Spanish names", () => {
+  for (const id of ["constructor", "toString", "hasOwnProperty", "__proto___SKIN_A"]) assert.equal(baseHero(id), null, id);
+  setLang("es");
+  // Overlord Saurfang is "Señor supremo Colmillosauro" in Spanish: after Reno Jackson there, before it in English.
+  assert.deepEqual(["BG20_HERO_102", "TB_BaconShop_HERO_41"].toSorted(byHeroName), ["TB_BaconShop_HERO_41", "BG20_HERO_102"]);
+  setLang("en");
+  assert.deepEqual(["TB_BaconShop_HERO_41", "BG20_HERO_102"].toSorted(byHeroName), ["BG20_HERO_102", "TB_BaconShop_HERO_41"]);
+});

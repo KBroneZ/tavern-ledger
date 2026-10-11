@@ -13,7 +13,8 @@ export type Cell =
   | string
   | number
   | { place: number | null; mode: Mode }
-  | { hero: string | null; name: string };
+  /** As in lib/view/pieces.ts: href links the name, unknownId shows in Advanced (T-510). */
+  | { hero: string | null; name: string; href?: string; unknownId?: string | null };
 
 export interface Column {
   label: string;
@@ -34,7 +35,8 @@ const { caption, columns, rows, top = 5, label = caption } = Astro.props;
 const { shown, rest } = topN(rows, top);
 const all = [...shown.map((r) => ({ cells: r, more: false })), ...rest.map((r) => ({ cells: r, more: true }))];
 const isPlace = (c: Cell): c is { place: number | null; mode: Mode } => typeof c === "object" && "place" in c;
-const isHero = (c: Cell): c is { hero: string | null; name: string } => typeof c === "object" && "hero" in c;
+const isHero = (c: Cell): c is { hero: string | null; name: string; href?: string; unknownId?: string | null } =>
+  typeof c === "object" && "hero" in c;
 ---
 
 <div class="topn">
@@ -55,7 +57,10 @@ const isHero = (c: Cell): c is { hero: string | null; name: string } => typeof c
                   <th scope="row">
                     <span class="cell-hero">
                       <Picture kind="hero" id={cell.hero} name={cell.name} size={HERO_PIC} decorative />
-                      <span class="hero-name"><span>{cell.name}</span></span>
+                      <span class="hero-name">
+                        {cell.href ? <a href={cell.href}>{cell.name}</a> : <span>{cell.name}</span>}
+                        {cell.unknownId && <span class="adv cell-note hero-id">{cell.unknownId}</span>}
+                      </span>
                     </span>
                   </th>
                 ) : isPlace(cell) ? (
