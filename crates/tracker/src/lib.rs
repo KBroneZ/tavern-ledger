@@ -15,6 +15,7 @@ pub mod live_seats;
 pub mod lobby_tribes;
 pub mod lock;
 pub mod odds;
+pub mod odds_duos;
 pub mod playback;
 pub mod possible;
 pub mod provenance;
@@ -61,6 +62,8 @@ struct LiveView {
     damage_cap: Option<i64>,
     /// The player's own board in a shop turn (T-605).
     own_board: Option<Vec<bg_parser::report::Minion>>,
+    /// Duos: the player fights first next combat (T-608).
+    fights_first: Option<bool>,
 }
 
 /// The session being read: its games and when each one was played.
@@ -97,6 +100,7 @@ impl SessionReader {
                 next: self.log.next_opponent_now(),
                 damage_cap: self.log.damage_cap_now(),
                 own_board: self.log.own_board_now(),
+                fights_first: self.log.fights_first_now(),
             },
             None => LiveView::default(),
         };
@@ -373,6 +377,12 @@ impl Watcher {
     /// None in a combat turn or when no Battlegrounds game is on.
     pub fn live_own_board(&self) -> Option<&[bg_parser::report::Minion]> {
         self.shown_live()?.own_board.as_deref()
+    }
+
+    /// Duos: whether the player's board fights first next combat, as the
+    /// game has set it (T-608); None when not set or no game is on.
+    pub fn live_fights_first(&self) -> Option<bool> {
+        self.shown_live()?.fights_first
     }
 
     fn shown_live(&self) -> Option<&LiveView> {

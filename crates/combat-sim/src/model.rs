@@ -203,6 +203,40 @@ impl Warband {
     }
 }
 
+/// One side of a combat. In Duos a team brings two boards: the one that
+/// fights first and the teammate's, which comes in once the first is gone
+/// (`second` is `None` in Solo, or when the teammate is out of the game).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Team {
+    pub first: Warband,
+    pub second: Option<Warband>,
+}
+
+impl Team {
+    pub fn solo(board: Warband) -> Self {
+        Team {
+            first: board,
+            second: None,
+        }
+    }
+
+    pub fn duo(first: Warband, second: Warband) -> Self {
+        Team {
+            first,
+            second: Some(second),
+        }
+    }
+
+    /// Every board of the team, first one first.
+    pub fn boards(&self) -> impl Iterator<Item = &Warband> {
+        std::iter::once(&self.first).chain(self.second.as_ref())
+    }
+
+    pub fn validate(&self) -> Result<(), BoardError> {
+        self.boards().try_for_each(Warband::validate)
+    }
+}
+
 /// A board the engine refuses: the input is wrong, not the combat.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum BoardError {

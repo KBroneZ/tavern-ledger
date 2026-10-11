@@ -229,3 +229,22 @@ fn no_damage_cap_without_the_game_setting_it_or_a_game_on() {
     let ended = reader_with(&all);
     assert_eq!(ended.damage_cap_now(), None, "the game is over");
 }
+
+/// Duos: whether the player's own board fights first next combat (T-608):
+/// the local leaderboard hero's flag, live only.
+#[test]
+fn the_own_fight_order_is_the_local_heros_flag() {
+    let all = lines("solo_game");
+    let part = up_to(&all, "tag=TURN value=1");
+    assert_eq!(reader_with(&part).fights_first_now(), None, "not set yet");
+    for (value, first) in [(1, Some(true)), (0, Some(false)), (5, None)] {
+        let mut marked = part.clone();
+        marked.push(tag(10, "BACON_DUO_PLAYER_FIGHTS_FIRST_NEXT_COMBAT", value));
+        assert_eq!(reader_with(&marked).fights_first_now(), first, "{value}");
+    }
+    // Another hero's flag is not the player's.
+    let mut other = part.clone();
+    other.push(tag(21, "BACON_DUO_PLAYER_FIGHTS_FIRST_NEXT_COMBAT", 1));
+    assert_eq!(reader_with(&other).fights_first_now(), None);
+    assert_eq!(LogReader::default().fights_first_now(), None);
+}

@@ -221,3 +221,28 @@ fn the_own_board_now_is_given_in_a_shop_turn_only() {
     assert!(reader.own_board_now().is_none(), "the game is over");
     assert!(LogReader::default().own_board_now().is_none());
 }
+
+#[test]
+fn each_round_keeps_the_own_shop_board_before_it_but_does_not_save_it() {
+    let r = report(&game());
+    let board = r.rounds[0]
+        .own_shop_board
+        .clone()
+        .expect("shop turn 1 seen");
+    let cards: Vec<_> = board.iter().map(|m| m.card_id.as_deref()).collect();
+    assert_eq!(cards, [Some("SYN_POISON"), Some("SYN_MEGA")]);
+    assert_eq!(board[0].sim_keywords, ["poisonous"]);
+    let json = serde_json::to_string(&r).expect("serializable");
+    assert!(!json.contains("shop_board"));
+
+    // A log that starts in the combat has no shop turn before it.
+    let all = game();
+    let from = all
+        .iter()
+        .position(|l| l.contains("tag=TURN value=1"))
+        .unwrap();
+    let mut late: Vec<String> = all[..from].to_vec();
+    late.extend(all[from + 1..].iter().cloned());
+    let r = report(&late);
+    assert_eq!(r.rounds[0].own_shop_board, None);
+}

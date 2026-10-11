@@ -9,7 +9,7 @@
 
 use super::{Combat, Prepared, Unit};
 use crate::combat::CombatResult;
-use crate::model::{Keywords, Minion, Warband};
+use crate::model::{Keywords, Minion, Team, Warband};
 use crate::rng::Rng;
 
 /// One logged attack: who attacked (side 0 is the player, 1 the opponent;
@@ -27,6 +27,9 @@ pub struct LoggedStep {
 pub enum Rule {
     /// The side that attacks first (more minions, else a coin flip).
     FirstAttacker,
+    /// Duos: the side that attacks first once a teammate's board comes in
+    /// (decided again as at the start).
+    AfterTeammate,
     /// Which side attacks next (sides alternate; a side that cannot attack
     /// passes) or which of its minions (the pointer, Windfury).
     AttackOrder,
@@ -48,6 +51,7 @@ impl Rule {
     pub fn label(self) -> &'static str {
         match self {
             Rule::FirstAttacker => "who attacks first",
+            Rule::AfterTeammate => "who attacks after a teammate's board comes in",
             Rule::AttackOrder => "attack order",
             Rule::Target => "target choice (Taunt, Stealth)",
             Rule::Minions => "deaths, summons or their places",
@@ -73,6 +77,8 @@ pub struct Replay {
     /// Attacks the engine played as the log did before the first difference.
     pub matched: usize,
     pub difference: Option<Difference>,
+    /// Duos: teammates' boards that came in before the first difference.
+    pub boards_in: usize,
 }
 
 /// Keywords compared between the engine and the log: the ones both track.
@@ -105,8 +111,8 @@ fn keyword_names(k: Keywords) -> String {
 pub enum Span {
     /// A Solo combat: every attack, then the end against the game's result.
     Whole(Option<CombatResult>),
-    /// The first leg of a Duos combat: until one of the two boards is gone
-    /// (the next board then comes in, which the engine does not play yet).
+    /// The first leg of a Duos combat: until one of the two boards is gone.
+    /// For a combat whose teammate's board the log does not show.
     FirstLeg,
 }
 
@@ -120,12 +126,30 @@ pub fn replay(
     seed: u64,
 ) -> Replay {
     let prepared = Prepared::new(player, opponent, false);
+    replay_prepared(&prepared, steps, span, seed)
+}
+
+/// Replays a whole Duos combat (T-608): when a board is gone, the team's
+/// second board comes in as the engine plays it, and the attacks go on.
+pub fn replay_teams(
+    player: &Team,
+    opponent: &Team,
+    steps: &[LoggedStep],
+    span: Span,
+    seed: u64,
+) -> Replay {
+    let prepared = Prepared::teams(player, opponent, false);
+    replay_prepared(&prepared, steps, span, seed)
+}
+
+fn replay_prepared(prepared: &Prepared, steps: &[LoggedStep], span: Span, seed: u64) -> Replay {
     let mut rng = Rng::new(seed);
-    let mut c = Combat::new(&prepared, &mut rng);
+    let mut c = Combat::new(prepared, &mut rng);
     let mut out = Replay {
         attacks: steps.len(),
         matched: 0,
         difference: None,
+        boards_in: 0,
     };
     let mut turn = Turn::default();
     for (k, step) in steps.iter().enumerate() {
@@ -136,6 +160,20 @@ pub fn replay(
         out.matched = k + 1;
         if span == Span::FirstLeg && c.finished() {
             return out;
+        }
+        let entered = if c.finished() {
+            c.enter_waiting()
+        } else {
+            [false; 2]
+        };
+        if entered != [false, false] {
+            out.boards_in += entered.iter().filter(|e| **e).count();
+            // Who attacks next is decided again, as at the start.
+            turn = Turn {
+                current: None,
+                last: None,
+                after_teammate: true,
+            };
         }
     }
     out.difference = match span {
@@ -152,6 +190,8 @@ struct Turn {
     current: Option<(usize, u32, u8)>,
     /// The side of the last attack.
     last: Option<usize>,
+    /// A teammate's board has just come in.
+    after_teammate: bool,
 }
 
 fn diff(attack: usize, rule: Rule, detail: String) -> Difference {
@@ -192,6 +232,8 @@ impl Combat<'_> {
         if side != want_side {
             let rule = if k == 0 {
                 Rule::FirstAttacker
+            } else if turn.after_teammate {
+                Rule::AfterTeammate
             } else {
                 Rule::AttackOrder
             };
@@ -264,6 +306,7 @@ impl Combat<'_> {
         let still = self.unit(side, uid).is_some_and(|u| u.attack > 0);
         turn.current = (left > 0 && still && !self.finished()).then_some((side, uid, left));
         turn.last = Some(side);
+        turn.after_teammate = false;
         Ok(())
     }
 
