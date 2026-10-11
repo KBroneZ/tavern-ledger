@@ -265,6 +265,22 @@ The user's review of the app after rounds 3 and 4: too much information at once,
 
 **Notes T-327, T-328 (2026-10-11, session 055).** D-063; how the fields were found, per build, in [memory-reader.md](../research/memory-reader.md). **Reader:** new crate `crates/game-memory`: opens the game with `PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ` only (a test checks the rights, and a source scan finds no write, allocate, protect, thread or debug call), finds the Mono runtime, walks Mono's public structures by name (assembly `Assembly-CSharp`, class `GameState`, its static `s_instance`, the lists of tribes in and out) and checks a back pointer or a name at every step, so an unknown layout fails as "unsupported game version" instead of reading the wrong thing. A scope test pins every name the reader looks up. **Checks:** read only on a game build in the checked list (any other build: the game is not opened, "unsupported game version"); `s_instance` must be a `GameState` of that image, both lists `List`1` over an array; five distinct known tribes in, a non-empty list of distinct tribes left out, none in both; two reads in a row must agree and must not be the last game's five; the tavern contradicting them (D-050) drops them for the rest of the game, with the inferred tribes and the note "Lobby tribes: unsupported game version". Reviews: `/code-review`, `/security-review` (no finding at confidence 8 or more) and ChatGPT (Codex) as second AI; its findings were checked one by one and the valid ones fixed (unchecked builds were shown with a mark: now refused; object and list types; two reads; sticky refusal; export ordinal bound). **Verified:** on build 253216, 2 Duos games, at hero select and mid-game, each equal to the tribes the tavern confirmed. **Switch:** off by default (`game_memory.json`); with it off the game is never opened (tested). On the Settings page with what it reads and the risk paragraph, English and Spanish; status line and the rating line. **Rating:** class and fields found, path not mapped; by the user's choice (2026-10-11) it ships as "unsupported game version" and is finished in T-337. The values stay in memory on the PC: not in the history, the report or any upload. No new dependency (only `windows-sys` features, already in `Cargo.lock`).
 
+## F5 — Website round (master plan: [web-master-plan.md](web-master-plan.md))
+
+The user's request (2026-10-11): everything the app knows on the website, detailed but clean, plus public leaderboards. Leaderboards list only profiles their owners made public; ratings read from memory are never uploaded (D-063).
+
+| ID | Task | Status |
+|----|------|--------|
+| T-501 | Design system for the web data pages (tokens, stat tiles, compact tables, folds, charts, pictures, empty states) | pending |
+| T-502 | Data API: per-game summaries and per-user SQL views, private by default (RLS), tested | pending |
+| T-503 | Personal dashboard and games list (`/me/`, `/u/<name>/`, games) | pending |
+| T-504 | Game viewer (T-201): one game in full, Simple and Advanced | pending |
+| T-505 | Heroes and curious stats pages | pending |
+| T-506 | Public leaderboards (opt-in profiles, thresholds, periods, explanations, anti-abuse) | pending |
+| T-507 | Community hero stats (T-401) with volume thresholds | pending |
+| T-508 | The website in Spanish | pending |
+| T-509 | Legal and privacy texts for public stats and leaderboards | pending |
+
 ## F4 — Community and extras
 
 | ID | Task | Status |
