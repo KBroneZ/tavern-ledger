@@ -1,0 +1,23 @@
+---
+// The combat simulator (T-606, D-089, D-090): /simulator/ and
+// /es/simulator/. Its policy alone also allows compiling WebAssembly
+// (Base.astro reads WASM_PAGES). Nothing on it is about one account until
+// the script runs, but what it loads is: kept out of search engines.
+import Base from "../../layouts/Base.astro";
+import AccountsClosed from "../../components/AccountsClosed.astro";
+import Simulator from "../../components/sim/Simulator.astro";
+import { readConfig } from "../../lib/config.ts";
+import { sm } from "../../lib/sim/strings.ts";
+import { langPaths, setLang } from "../../lib/i18n.ts";
+
+export const getStaticPaths = langPaths;
+// Every string below is drawn in the page's language (T-508).
+setLang(Astro.props.lang);
+
+// With accounts closed the page shows a notice instead: no script.
+const accountsOpen = readConfig(import.meta.env) !== null;
+---
+
+<Base title={sm("page.title")} description={sm("page.description")} noindex>
+  {accountsOpen ? <Simulator /> : <AccountsClosed heading={sm("page.title")} />}
+</Base>

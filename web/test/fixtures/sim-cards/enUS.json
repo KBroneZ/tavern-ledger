@@ -1,0 +1,166 @@
+[
+ {
+  "id": "BGS_119",
+  "dbfId": 900001,
+  "name": "Synthetic Spark",
+  "type": "MINION",
+  "set": "BATTLEGROUNDS",
+  "techLevel": 1,
+  "attack": 2,
+  "health": 1,
+  "races": [
+   "ELEMENTAL"
+  ],
+  "mechanics": [
+   "DIVINE_SHIELD",
+   "WINDFURY"
+  ],
+  "isBattlegroundsPoolMinion": true,
+  "battlegroundsPremiumDbfId": 900002
+ },
+ {
+  "id": "TB_BaconUps_159",
+  "dbfId": 900002,
+  "name": "Synthetic Spark",
+  "type": "MINION",
+  "set": "BATTLEGROUNDS",
+  "techLevel": 1,
+  "attack": 4,
+  "health": 2,
+  "races": [
+   "ELEMENTAL"
+  ],
+  "mechanics": [
+   "DIVINE_SHIELD",
+   "MEGA_WINDFURY"
+  ]
+ },
+ {
+  "id": "BG28_300",
+  "dbfId": 900003,
+  "name": "Synthetic Skull",
+  "type": "MINION",
+  "set": "BATTLEGROUNDS",
+  "techLevel": 1,
+  "attack": 1,
+  "health": 1,
+  "races": [
+   "UNDEAD"
+  ],
+  "mechanics": [
+   "DEATHRATTLE"
+  ],
+  "isBattlegroundsPoolMinion": true,
+  "battlegroundsPremiumDbfId": 900004
+ },
+ {
+  "id": "BG28_300_G",
+  "dbfId": 900004,
+  "name": "Synthetic Skull",
+  "type": "MINION",
+  "set": "BATTLEGROUNDS",
+  "techLevel": 1,
+  "attack": 2,
+  "health": 2,
+  "races": [
+   "UNDEAD"
+  ],
+  "mechanics": [
+   "DEATHRATTLE"
+  ]
+ },
+ {
+  "id": "BG_ICC_026t",
+  "dbfId": 900005,
+  "name": "Synthetic Bones",
+  "type": "MINION",
+  "set": "BATTLEGROUNDS",
+  "techLevel": 1,
+  "attack": 1,
+  "health": 1,
+  "races": [
+   "UNDEAD"
+  ]
+ },
+ {
+  "id": "BG25_009",
+  "dbfId": 900006,
+  "name": "Synthetic Grower",
+  "type": "MINION",
+  "set": "BATTLEGROUNDS",
+  "techLevel": 2,
+  "attack": 2,
+  "health": 2,
+  "races": [
+   "QUILBOAR"
+  ],
+  "isBattlegroundsPoolMinion": true
+ },
+ {
+  "id": "BG26_963_G",
+  "dbfId": 900007,
+  "name": "Synthetic Dawn Dragon",
+  "type": "MINION",
+  "set": "BATTLEGROUNDS",
+  "techLevel": 3,
+  "attack": 4,
+  "health": 4,
+  "races": [
+   "DRAGON"
+  ]
+ },
+ {
+  "id": "BG29_611",
+  "dbfId": 900008,
+  "name": "Synthetic Venom Bot",
+  "type": "MINION",
+  "set": "BATTLEGROUNDS",
+  "techLevel": 2,
+  "attack": 3,
+  "health": 3,
+  "races": [
+   "MECHANICAL"
+  ],
+  "mechanics": [
+   "VENOMOUS",
+   "POISONOUS"
+  ],
+  "isBattlegroundsPoolMinion": true
+ },
+ {
+  "id": "BG_NOT_A_CARD",
+  "dbfId": 900009,
+  "name": "Synthetic Unknown",
+  "type": "MINION",
+  "set": "BATTLEGROUNDS",
+  "techLevel": 6,
+  "attack": 6,
+  "health": 6,
+  "isBattlegroundsPoolMinion": true
+ },
+ {
+  "id": "CORE_SYN",
+  "dbfId": 910001,
+  "name": "Not battlegrounds",
+  "type": "MINION",
+  "set": "CORE",
+  "attack": 1,
+  "health": 1
+ },
+ {
+  "id": "BG_SPELL_SYN",
+  "dbfId": 910002,
+  "name": "A spell",
+  "type": "BATTLEGROUND_SPELL",
+  "set": "BATTLEGROUNDS"
+ },
+ {
+  "id": "BG_BAD_SYN",
+  "dbfId": 910003,
+  "name": "Bad stats",
+  "type": "MINION",
+  "set": "BATTLEGROUNDS",
+  "attack": -1,
+  "health": 1
+ }
+]

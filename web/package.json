@@ -8,8 +8,8 @@
     "node": ">=22.18.0"
   },
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
+    "dev": "node tools/prepare-sim.ts --if-missing && astro dev",
+    "build": "node tools/prepare-sim.ts && astro build",
     "preview": "astro preview",
     "test": "node --test \"test/unit/*.test.ts\"",
     "test:dist": "node --test \"test/build/*.test.ts\"",

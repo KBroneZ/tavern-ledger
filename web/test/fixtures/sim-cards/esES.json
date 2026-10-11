@@ -1,0 +1,47 @@
+[
+ {
+  "id": "BGS_119",
+  "dbfId": 900001,
+  "name": "Chispa sintética"
+ },
+ {
+  "id": "TB_BaconUps_159",
+  "dbfId": 900002,
+  "name": "Chispa sintética"
+ },
+ {
+  "id": "BG28_300",
+  "dbfId": 900003,
+  "name": "Cráneo sintético"
+ },
+ {
+  "id": "BG28_300_G",
+  "dbfId": 900004,
+  "name": "Cráneo sintético"
+ },
+ {
+  "id": "BG_ICC_026t",
+  "dbfId": 900005,
+  "name": "Huesos sintéticos"
+ },
+ {
+  "id": "BG25_009",
+  "dbfId": 900006,
+  "name": "Crecedor sintético"
+ },
+ {
+  "id": "BG26_963_G",
+  "dbfId": 900007,
+  "name": "Dragón del alba sintético"
+ },
+ {
+  "id": "BG29_611",
+  "dbfId": 900008,
+  "name": "Robot de ponzoña sintético"
+ },
+ {
+  "id": "BG_NOT_A_CARD",
+  "dbfId": 900009,
+  "name": "Desconocido sintético"
+ }
+]

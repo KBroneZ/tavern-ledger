@@ -3,7 +3,29 @@
 import { existsSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { defineConfig } from "astro/config";
 import { loadEnv } from "vite";
-import { contentSecurityPolicy, readConfig } from "./src/lib/config.ts";
+import { contentSecurityPolicy, readConfig, WASM_PAGES, WASM_WORKER } from "./src/lib/config.ts";
+
+/**
+ * The simulator page (both languages) and its worker get the same policy
+ * plus 'wasm-unsafe-eval' (T-606, D-090), nothing else. Cloudflare Pages
+ * applies every matching rule in file order and joins repeated headers with
+ * a comma, which would make two policies that both apply; so each rule
+ * first drops the site-wide one ("! Content-Security-Policy") and then sets
+ * its own (Pages runs a rule's removals before its values). A worker gets
+ * its policy from its own script's response, hence the worker's rule.
+ */
+function simulatorHeaders(config, dir) {
+  if (!config) return [];
+  const workers = readdirSync(new URL("_astro/", dir)).filter((name) => WASM_WORKER.test(name));
+  if (workers.length !== 1) throw new Error(`expected one simulator worker in _astro/, found ${workers.length}`);
+  const policy = `${contentSecurityPolicy(config.url, { wasm: true })}; frame-ancestors 'none'`;
+  return [...WASM_PAGES, `/_astro/${workers[0]}`].flatMap((path) => [
+    path,
+    "  ! Content-Security-Policy",
+    `  Content-Security-Policy: ${policy}`,
+    "",
+  ]);
+}
 
 /** Writes dist/_headers (Cloudflare Pages) with the same policy as the pages. */
 function securityHeaders() {
@@ -29,6 +51,7 @@ function securityHeaders() {
           "/_astro/*",
           "  Cache-Control: public, max-age=31536000, immutable",
           "",
+          ...simulatorHeaders(config, dir),
         ].join("\n");
         writeFileSync(new URL("_headers", dir), headers);
         // Cloudflare Pages serves the nearest 404.html: the Spanish one must
@@ -65,6 +88,7 @@ export default defineConfig({
   // One page at a time: each page sets the language its strings are drawn
   // in (lib/i18n.ts, T-508), so pages must not render side by side.
   build: { inlineStylesheets: "never", concurrency: 1 },
-  vite: { build: { assetsInlineLimit: 0 } },
+  // The simulator's worker (lib/sim/simWorker.ts) is an ES module worker.
+  vite: { build: { assetsInlineLimit: 0 }, worker: { format: "es" } },
   integrations: [securityHeaders()],
 });

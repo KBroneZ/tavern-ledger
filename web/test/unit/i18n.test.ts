@@ -16,6 +16,7 @@ import { STRINGS, t } from "../../src/lib/data/strings.ts";
 import { GAME_STRINGS } from "../../src/lib/game/strings.ts";
 import { LB_STRINGS } from "../../src/lib/leaderboards/strings.ts";
 import { SITE_STRINGS } from "../../src/lib/site/strings.ts";
+import { SIM_STRINGS } from "../../src/lib/sim/strings.ts";
 import { average, backing, compact, ordinal, share, trend } from "../../src/lib/data/format.ts";
 import { dateText } from "../../src/lib/data/dashboard.ts";
 import { formatValue, refreshedText } from "../../src/lib/leaderboards/boards.ts";
@@ -38,9 +39,9 @@ const ROOT = join(import.meta.dirname, "..", "..");
 
 afterEach(() => setLang("en"));
 
-test("every table is registered: site, account, data, game, leaderboards, community, accuracy", () => {
-  assert.deepEqual(TABLES.map((x) => x.name).sort(), ["account", "accuracy", "community", "data", "game", "leaderboards", "site"]);
-  const english = [ACCOUNT_STRINGS, ACC_STRINGS, CH_STRINGS, STRINGS, GAME_STRINGS, LB_STRINGS, SITE_STRINGS];
+test("every table is registered: site, account, data, game, leaderboards, community, accuracy, simulator", () => {
+  assert.deepEqual(TABLES.map((x) => x.name).sort(), ["account", "accuracy", "community", "data", "game", "leaderboards", "simulator", "site"]);
+  const english = [ACCOUNT_STRINGS, ACC_STRINGS, CH_STRINGS, STRINGS, GAME_STRINGS, LB_STRINGS, SITE_STRINGS, SIM_STRINGS];
   for (const en of english) assert.ok(TABLES.some((x) => x.en === en));
 });
 

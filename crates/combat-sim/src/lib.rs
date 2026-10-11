@@ -41,3 +41,7 @@ pub mod score;
 pub use combat::{CombatResult, Outcome};
 pub use model::{BaseCard, BoardError, Keywords, Minion, Team, Tribes, Warband, MAX_BOARD};
 pub use trials::{simulate, simulate_teams, Coverage, Odds, Options, Verdict};
+
+/// The engine's version: its minor number is the card round (D-088). The
+/// accuracy export and the website show it.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");

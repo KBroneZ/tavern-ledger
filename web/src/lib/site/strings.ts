@@ -17,6 +17,7 @@ export const SITE_STRINGS = {
   "layout.leaderboards": "Leaderboards",
   "layout.heroes": "Hero stats",
   "layout.games": "Your games",
+  "layout.simulator": "Simulator",
   "layout.signin": "Sign in",
   "layout.account": "Account",
   "layout.notice": "Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.",

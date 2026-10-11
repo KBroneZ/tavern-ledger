@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { loadEnv } from "vite";
-import { readConfig, signupsOpen } from "../../src/lib/config.ts";
+import { contentSecurityPolicy, readConfig, signupsOpen, WASM_PAGES, WASM_WORKER } from "../../src/lib/config.ts";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const DIST = join(ROOT, "dist");
@@ -28,6 +28,9 @@ function files(dir: string): string[] {
 const ALL = existsSync(DIST) ? files(DIST) : [];
 const PAGES = ALL.filter((f) => f.endsWith(".html"));
 const name = (f: string) => relative(DIST, f).replaceAll("\\", "/");
+/** The simulator page in each language (WASM_PAGES, as built files). */
+const WASM_FILES = WASM_PAGES.map((path) => `${path.slice(1)}index.html`);
+const isWasmPage = (f: string) => WASM_FILES.includes(name(f));
 
 test("the site was built", () => {
   assert.ok(PAGES.length >= 6, "run `npm run build` first");
@@ -44,7 +47,9 @@ test("every page has the CSP as its first meta after the charset", () => {
     assert.match(metas[1] ?? "", /http-equiv="Content-Security-Policy"/, name(page));
     const csp = /content="([^"]*)"/.exec(metas[1])?.[1] ?? "";
     assert.match(csp, /default-src 'none'/, name(page));
-    assert.match(csp, CONFIG ? /script-src 'self'(;|$)/ : /script-src 'none'(;|$)/, name(page));
+    // D-090: the simulator page alone may also compile WebAssembly.
+    const wasm = CONFIG !== null && isWasmPage(page);
+    assert.match(csp, wasm ? /script-src 'self' 'wasm-unsafe-eval'(;|$)/ : CONFIG ? /script-src 'self'(;|$)/ : /script-src 'none'(;|$)/, name(page));
     assert.match(csp, CONFIG ? /form-action 'self'(;|$)/ : /form-action 'none'(;|$)/, name(page));
     assert.match(csp, /style-src 'self'(;|$)/, name(page));
     assert.match(csp, /font-src 'self'(;|$)/, name(page));
@@ -52,7 +57,7 @@ test("every page has the CSP as its first meta after the charset", () => {
     assert.match(csp, CONFIG ? /img-src 'self' https:\/\/art\.hearthstonejson\.com(;|$)/ : /img-src 'self'(;|$)/, name(page));
     if (CONFIG) assert.match(csp, /connect-src https?:\/\/[^\s;*]+(;|$)/, name(page));
     else assert.match(csp, /connect-src 'none'(;|$)/, name(page));
-    assert.doesNotMatch(csp, /unsafe|\*/, name(page));
+    assert.doesNotMatch(wasm ? csp.replace(" 'wasm-unsafe-eval'", "") : csp, /unsafe|\*/, name(page));
   }
 });
 
@@ -109,6 +114,53 @@ test("_headers carries the same policy plus frame-ancestors and the other securi
   assert.match(headers, /\/_astro\/\*\n  Cache-Control: public, max-age=31536000, immutable/);
   assert.match(headers, /Permissions-Policy: camera=\(\)/);
   assert.match(headers, /Strict-Transport-Security: max-age=\d+; includeSubDomains/);
+});
+
+test("_headers: the simulator page and its worker alone get 'wasm-unsafe-eval', replacing the site-wide policy", () => {
+  const headers = readFileSync(join(DIST, "_headers"), "utf8");
+  const rules = headers.split(/\n(?=\S)/).map((block) => block.trim().split("\n").map((l) => l.trim()));
+  const csp = (rule: string[]) => rule.filter((l) => l.startsWith("Content-Security-Policy:"));
+  const withWasm = rules.filter((r) => csp(r).some((l) => l.includes("wasm-unsafe-eval")));
+  if (!CONFIG) {
+    assert.deepEqual(withWasm, [], "accounts closed: no script, nothing to compile");
+    assert.doesNotMatch(headers, /wasm/);
+    return;
+  }
+  const workers = readdirSync(join(DIST, "_astro")).filter((f) => WASM_WORKER.test(f));
+  assert.equal(workers.length, 1, "one simulator worker");
+  assert.deepEqual(withWasm.map((r) => r[0]), [...WASM_PAGES, `/_astro/${workers[0]}`]);
+  const expected = `Content-Security-Policy: ${contentSecurityPolicy(CONFIG.url, { wasm: true })}; frame-ancestors 'none'`;
+  for (const rule of withWasm) {
+    // Pages joins repeated headers: each rule drops the site-wide policy first.
+    assert.deepEqual(rule.slice(1), ["! Content-Security-Policy", expected], rule[0]);
+  }
+  // The site-wide rule comes first and stays without it.
+  assert.equal(rules[0][0], "/*");
+  assert.doesNotMatch(csp(rules[0]).join(""), /wasm/);
+  // Each page's own meta policy matches its header.
+  for (const file of WASM_FILES) {
+    const meta = /http-equiv="Content-Security-Policy" content="([^"]*)"/.exec(readFileSync(join(DIST, file), "utf8"))?.[1];
+    assert.equal(`Content-Security-Policy: ${meta}; frame-ancestors 'none'`, expected, file);
+  }
+  // The worker carries the engine and loads nothing: no fetch, no import.
+  const worker = readFileSync(join(DIST, "_astro", workers[0]), "utf8");
+  assert.doesNotMatch(worker, /\bfetch\(|importScripts|\bimport\(/);
+});
+
+test("the simulator page: noindex, its script and frame when accounts are open, the notice when closed", () => {
+  for (const file of WASM_FILES) {
+    const html = readFileSync(join(DIST, file), "utf8");
+    assert.match(html, /<meta name="robots" content="noindex">/, file);
+    if (CONFIG) {
+      for (const id of ["sim-load", "sim-editor", "sim-result", "sim-mode"]) assert.match(html, new RegExp(`id="${id}"`), `${file}: ${id}`);
+      assert.match(html, /state-loading/, "the loading blocks keep the room");
+      const sources = [...html.matchAll(/<script\b[^>]*\ssrc="\/([^"]+)"/g)].map((m) => m[1]);
+      assert.ok(sources.length >= 1, "the simulator's script");
+      for (const src of sources) assert.ok(existsSync(join(DIST, src)), src);
+    } else {
+      assert.match(html, /Accounts are not open yet|Las cuentas aún no están abiertas/);
+    }
+  }
 });
 
 test("accounts open: the account pages have their forms and scripts", { skip: !CONFIG }, () => {

@@ -1,0 +1,698 @@
+{
+  "cases": [
+    {
+      "answer": {
+        "approximate": [],
+        "damage_known": true,
+        "dealt": null,
+        "engine": "0.4.0",
+        "lost": 7508,
+        "stalled": 0,
+        "start_of_combat": false,
+        "status": "odds",
+        "taken": {
+          "high": 3,
+          "likely": 3,
+          "low": 3
+        },
+        "tied": 2492,
+        "trials": 10000,
+        "won": 0
+      },
+      "name": "solo plain",
+      "request": {
+        "damage_cap": 15,
+        "opponent": [
+          {
+            "minions": [
+              {
+                "attack": 1,
+                "card_id": "BG_ICC_026t",
+                "facts": {
+                  "attack": 1,
+                  "health": 1,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": [
+                    "UNDEAD"
+                  ]
+                },
+                "golden": false,
+                "health": 1,
+                "keywords": []
+              },
+              {
+                "attack": 4,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 3,
+                "keywords": [
+                  "divine_shield"
+                ]
+              }
+            ],
+            "tier": 2
+          }
+        ],
+        "player": [
+          {
+            "minions": [
+              {
+                "attack": 3,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 4,
+                "keywords": []
+              },
+              {
+                "attack": 2,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 2,
+                "keywords": [
+                  "taunt"
+                ]
+              }
+            ],
+            "tier": 3
+          }
+        ]
+      }
+    },
+    {
+      "answer": {
+        "approximate": [],
+        "damage_known": true,
+        "dealt": null,
+        "engine": "0.4.0",
+        "lost": 10000,
+        "stalled": 0,
+        "start_of_combat": false,
+        "status": "odds",
+        "taken": {
+          "high": 11,
+          "likely": 9,
+          "low": 7
+        },
+        "tied": 0,
+        "trials": 10000,
+        "won": 0
+      },
+      "name": "solo deathrattles and keywords",
+      "request": {
+        "damage_cap": 15,
+        "opponent": [
+          {
+            "minions": [
+              {
+                "attack": 6,
+                "card_id": "BG30_125_G",
+                "facts": {
+                  "attack": 4,
+                  "health": 6,
+                  "keywords": [],
+                  "tier": 4,
+                  "tribes": [
+                    "UNDEAD"
+                  ]
+                },
+                "golden": true,
+                "health": 8,
+                "keywords": [
+                  "deathrattle"
+                ]
+              },
+              {
+                "attack": 5,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 9,
+                "keywords": [
+                  "poisonous",
+                  "taunt"
+                ]
+              },
+              {
+                "attack": 2,
+                "card_id": "BG_ICC_026t",
+                "facts": {
+                  "attack": 1,
+                  "health": 1,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": [
+                    "UNDEAD"
+                  ]
+                },
+                "golden": false,
+                "health": 2,
+                "keywords": []
+              }
+            ],
+            "tier": 5
+          }
+        ],
+        "player": [
+          {
+            "minions": [
+              {
+                "attack": 4,
+                "card_id": "BG28_300",
+                "facts": {
+                  "attack": 2,
+                  "health": 2,
+                  "keywords": [
+                    "REBORN"
+                  ],
+                  "tier": 3,
+                  "tribes": [
+                    "UNDEAD"
+                  ]
+                },
+                "golden": false,
+                "health": 6,
+                "keywords": [
+                  "reborn"
+                ]
+              },
+              {
+                "attack": 3,
+                "card_id": "BG29_611",
+                "facts": {
+                  "attack": 3,
+                  "health": 3,
+                  "keywords": [],
+                  "tier": 2,
+                  "tribes": [
+                    "MECHANICAL"
+                  ]
+                },
+                "golden": false,
+                "health": 3,
+                "keywords": [
+                  "venomous"
+                ]
+              },
+              {
+                "attack": 7,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 2,
+                "keywords": [
+                  "windfury",
+                  "stealth"
+                ]
+              }
+            ],
+            "tier": 4
+          }
+        ]
+      }
+    },
+    {
+      "answer": {
+        "approximate": [
+          {
+            "card_id": "BG25_009",
+            "reason": "its numbers grow during the game; the base values are used"
+          }
+        ],
+        "damage_known": true,
+        "dealt": {
+          "high": 6,
+          "likely": 6,
+          "low": 6
+        },
+        "engine": "0.4.0",
+        "lost": 2593,
+        "stalled": 0,
+        "start_of_combat": true,
+        "status": "odds",
+        "taken": {
+          "high": 4,
+          "likely": 4,
+          "low": 4
+        },
+        "tied": 6127,
+        "trials": 10000,
+        "won": 1280
+      },
+      "name": "solo approximate and start of combat",
+      "request": {
+        "damage_cap": 15,
+        "opponent": [
+          {
+            "minions": [
+              {
+                "attack": 4,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 4,
+                "keywords": [
+                  "mega_windfury"
+                ]
+              },
+              {
+                "attack": 3,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 5,
+                "keywords": []
+              }
+            ],
+            "tier": 3
+          }
+        ],
+        "player": [
+          {
+            "minions": [
+              {
+                "attack": 3,
+                "card_id": "BG25_009",
+                "facts": {
+                  "attack": 2,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 2,
+                  "tribes": [
+                    "QUILBOAR"
+                  ]
+                },
+                "golden": false,
+                "health": 3,
+                "keywords": []
+              },
+              {
+                "attack": 4,
+                "card_id": "BG26_963_G",
+                "facts": {
+                  "attack": 2,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 3,
+                  "tribes": [
+                    "DRAGON"
+                  ]
+                },
+                "golden": true,
+                "health": 4,
+                "keywords": []
+              }
+            ],
+            "tier": 3
+          }
+        ]
+      }
+    },
+    {
+      "answer": {
+        "approximate": [],
+        "damage_known": false,
+        "dealt": null,
+        "engine": "0.4.0",
+        "lost": 1275,
+        "stalled": 0,
+        "start_of_combat": false,
+        "status": "odds",
+        "taken": null,
+        "tied": 7484,
+        "trials": 10000,
+        "won": 1241
+      },
+      "name": "solo unknown tier",
+      "request": {
+        "damage_cap": 15,
+        "opponent": [
+          {
+            "minions": [
+              {
+                "attack": 3,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 3,
+                "keywords": []
+              },
+              {
+                "attack": 1,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 2,
+                "keywords": []
+              }
+            ],
+            "tier": 2
+          }
+        ],
+        "player": [
+          {
+            "minions": [
+              {
+                "attack": 3,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 3,
+                "keywords": []
+              },
+              {
+                "attack": 2,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 1,
+                "keywords": []
+              }
+            ],
+            "tier": null
+          }
+        ]
+      }
+    },
+    {
+      "answer": {
+        "approximate": [],
+        "engine": "0.4.0",
+        "not_modelled": [
+          "BG_NOT_A_CARD"
+        ],
+        "status": "not_modelled"
+      },
+      "name": "solo not modelled",
+      "request": {
+        "damage_cap": 15,
+        "opponent": [
+          {
+            "minions": [
+              {
+                "attack": 3,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 3,
+                "keywords": []
+              }
+            ],
+            "tier": 1
+          }
+        ],
+        "player": [
+          {
+            "minions": [
+              {
+                "attack": 3,
+                "card_id": "BG_NOT_A_CARD",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 3,
+                "keywords": []
+              }
+            ],
+            "tier": 1
+          }
+        ]
+      }
+    },
+    {
+      "answer": {
+        "engine": "0.4.0",
+        "missing": [
+          "BG_ICC_026t"
+        ],
+        "status": "no_card_data"
+      },
+      "name": "solo card data missing",
+      "request": {
+        "damage_cap": 15,
+        "opponent": [
+          {
+            "minions": [
+              {
+                "attack": 3,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 3,
+                "keywords": []
+              }
+            ],
+            "tier": 1
+          }
+        ],
+        "player": [
+          {
+            "minions": [
+              {
+                "attack": 3,
+                "card_id": "BG_ICC_026t",
+                "facts": null,
+                "golden": false,
+                "health": 3,
+                "keywords": []
+              }
+            ],
+            "tier": 1
+          }
+        ]
+      }
+    },
+    {
+      "answer": {
+        "approximate": [],
+        "damage_known": true,
+        "dealt": {
+          "high": 4,
+          "likely": 4,
+          "low": 4
+        },
+        "engine": "0.4.0",
+        "lost": 5609,
+        "stalled": 0,
+        "start_of_combat": false,
+        "status": "odds",
+        "taken": {
+          "high": 3,
+          "likely": 3,
+          "low": 3
+        },
+        "tied": 0,
+        "trials": 10000,
+        "won": 4391
+      },
+      "name": "duos two boards each",
+      "request": {
+        "damage_cap": 15,
+        "opponent": [
+          {
+            "minions": [
+              {
+                "attack": 5,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 4,
+                "keywords": []
+              },
+              {
+                "attack": 1,
+                "card_id": "BG_ICC_026t",
+                "facts": {
+                  "attack": 1,
+                  "health": 1,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": [
+                    "UNDEAD"
+                  ]
+                },
+                "golden": false,
+                "health": 1,
+                "keywords": []
+              }
+            ],
+            "tier": 5
+          },
+          {
+            "minions": [
+              {
+                "attack": 4,
+                "card_id": "BG29_611",
+                "facts": {
+                  "attack": 3,
+                  "health": 3,
+                  "keywords": [],
+                  "tier": 2,
+                  "tribes": [
+                    "MECHANICAL"
+                  ]
+                },
+                "golden": false,
+                "health": 5,
+                "keywords": [
+                  "taunt"
+                ]
+              }
+            ],
+            "tier": 2
+          }
+        ],
+        "player": [
+          {
+            "minions": [
+              {
+                "attack": 3,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 3,
+                "keywords": []
+              },
+              {
+                "attack": 2,
+                "card_id": "BG28_300",
+                "facts": {
+                  "attack": 2,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 3,
+                  "tribes": [
+                    "UNDEAD"
+                  ]
+                },
+                "golden": false,
+                "health": 2,
+                "keywords": []
+              }
+            ],
+            "tier": 4
+          },
+          {
+            "minions": [
+              {
+                "attack": 3,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 2,
+                "keywords": [
+                  "divine_shield"
+                ]
+              }
+            ],
+            "tier": 3
+          }
+        ]
+      }
+    }
+  ]
+}

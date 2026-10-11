@@ -12,6 +12,7 @@ export const ES: Record<SiteKey, string> = {
   "layout.leaderboards": "Clasificaciones",
   "layout.heroes": "Héroes",
   "layout.games": "Tus partidas",
+  "layout.simulator": "Simulador",
   "layout.signin": "Entrar",
   "layout.account": "Cuenta",
   "layout.notice": "Proyecto no oficial de fans. Sin afiliación con Blizzard Entertainment ni respaldo de esta.",

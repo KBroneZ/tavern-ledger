@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { contentSecurityPolicy, readConfig, scriptsAllowed, signupsOpen } from "../../src/lib/config.ts";
+import { contentSecurityPolicy, readConfig, scriptsAllowed, signupsOpen, WASM_PAGES, WASM_WORKER } from "../../src/lib/config.ts";
 
 // Made-up keys with the shape of Supabase's (a JWT whose payload names the role).
 function fakeJwt(role: string): string {
@@ -109,6 +109,20 @@ test("pictures: the open site adds exactly HearthstoneJSON's art host to img-src
   );
   // Accounts closed: no script draws a game, so no picture comes from outside.
   assert.match(contentSecurityPolicy(null), /(^|; )img-src 'self'(;|$)/);
+});
+
+test("the simulator's policy adds only 'wasm-unsafe-eval' to script-src, and only when asked (D-090)", () => {
+  const plain = contentSecurityPolicy("https://abcd.supabase.co");
+  const wasm = contentSecurityPolicy("https://abcd.supabase.co", { wasm: true });
+  assert.equal(wasm, plain.replace("script-src 'self'", "script-src 'self' 'wasm-unsafe-eval'"));
+  assert.equal(wasm.match(/unsafe/g)?.length, 1);
+  assert.doesNotMatch(wasm.replace(" 'wasm-unsafe-eval'", ""), /unsafe|\*|data:/);
+  // Closed: no script at all, so nothing to compile either.
+  assert.equal(contentSecurityPolicy(null, { wasm: true }), contentSecurityPolicy(null));
+  assert.deepEqual(WASM_PAGES, ["/simulator/", "/es/simulator/"]);
+  assert.match("simWorker-Cif63Ow6.js", WASM_WORKER);
+  assert.doesNotMatch("main-Cif63Ow6.js", WASM_WORKER);
+  assert.doesNotMatch("simWorker-x/../a.js", WASM_WORKER);
 });
 
 const BACKEND = { PUBLIC_SUPABASE_URL: "https://abcd.supabase.co", PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_x" };

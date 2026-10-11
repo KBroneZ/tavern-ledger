@@ -1,0 +1,117 @@
+// Every string the combat simulator page shows (T-606), English; Spanish in
+// strings.es.ts (D-086). Placeholders are {name}.
+
+import { makeT } from "../i18n.ts";
+import { ES } from "./strings.es.ts";
+
+export const SIM_STRINGS = {
+  "page.title": "Combat simulator",
+  "page.description": "Try a Battlegrounds combat: load a round from one of your games or build the boards, then see the odds.",
+  "page.kicker": "Try a combat",
+  "page.noscript": "The simulator needs JavaScript.",
+  "page.loading": "Loading the simulator…",
+
+  "load.title": "Load a combat",
+  "load.signedOut": "Sign in to load a combat from one of your games. The editor below works without an account.",
+  "load.signIn": "Sign in",
+  "load.games": "Your games",
+  "load.loading": "Loading your games…",
+  "load.none": "No games uploaded yet. The app uploads them once you turn it on.",
+  "load.more": "More games",
+  "load.error": "Could not load your games. Check your connection and try again.",
+  "load.retry": "Try again",
+  "load.rounds": "Rounds of this game",
+  "load.round": "Turn {n}",
+  "load.noRounds": "This game has no combat with both boards to load.",
+  "load.gameError": "This game cannot be read.",
+  "load.loaded": "Loaded turn {n}.",
+  "load.skipped.one": "1 minion was left out: the record does not say what it was.",
+  "load.skipped.other": "{count} minions were left out: the record does not say what they were.",
+  "load.unknownTiers": "Only your own tavern tier is in the record. Set the others for the damage.",
+
+  "mode.label": "Combat",
+
+  "side.player": "You",
+  "side.opponent": "Opponent",
+  "side.player.duos": "Your team",
+  "side.opponent.duos": "Their team",
+  "board.first": "First board",
+  "board.second": "Second board",
+  "board.addSecond": "Add a second board",
+  "board.remove": "Remove this board",
+  "board.empty": "No minions yet.",
+  "board.full": "A board holds 7 minions.",
+
+  "tier.label": "Tavern tier",
+  "tier.unknown": "?",
+  "tier.unknownLong": "Unknown tier",
+  "tier.value": "Tier {n}",
+
+  "minion.golden": "Golden",
+  "minion.attack": "Attack",
+  "minion.health": "Health",
+  "minion.left": "Move left",
+  "minion.right": "Move right",
+  "minion.remove": "Remove",
+  "minion.close": "Done",
+  "minion.keywords": "Keywords",
+  "minion.notModelled": "Not modelled",
+  "minion.approximate": "Approximate",
+  "minion.noData": "Not in the card data",
+
+  "keyword.taunt": "Taunt",
+  "keyword.divine_shield": "Divine Shield",
+  "keyword.reborn": "Reborn",
+  "keyword.venomous": "Venomous",
+  "keyword.poisonous": "Poisonous",
+  "keyword.windfury": "Windfury",
+  "keyword.mega_windfury": "Mega-Windfury",
+  "keyword.stealth": "Stealth",
+
+  "add.button": "Add a minion",
+  "add.label": "Find a minion by name",
+  "add.placeholder": "Minion name",
+  "add.none": "No minion with that name.",
+  "add.tier": "Tier {n}",
+  "add.close": "Close",
+
+  "result.title": "Odds",
+  "result.empty": "Put minions on both sides to see the odds.",
+  "result.running": "Playing 10,000 combats…",
+  "result.win": "Win",
+  "result.tie": "Tie",
+  "result.lose": "Lose",
+  "result.bar": "Win {win}, tie {tie}, lose {lose}",
+  "result.likely": "Likely damage",
+  "result.dealt": "You deal {n}",
+  "result.taken": "You take {n}",
+  "result.range": "{low} to {high}",
+  "result.dealtRange": "Damage you deal",
+  "result.takenRange": "Damage you take",
+  "result.rangeNote": "Median, and 10th to 90th percentile, after the damage cap.",
+  "result.noDamage": "None",
+  "result.damageUnknown": "Damage unknown: set every tavern tier.",
+  "result.trials": "{n} combats played",
+  "result.stalled": "{n} stopped at the turn limit (counted as ties)",
+  "result.engine": "Engine {version}",
+  "result.cards": "Card data: {source}",
+  "result.cap": "Damage cap",
+  "result.capNone": "None",
+  "result.approx": "≈ Approximate",
+  "result.approx.one": "1 card is played with a known gap.",
+  "result.approx.other": "{count} cards are played with a known gap.",
+  "result.soc": "A card here acts at the start of combat, which the simulator does not play: boards loaded from a game already show its effect, boards you build do not.",
+  "result.notModelled": "Cannot run: the simulator does not know these cards, and never guesses.",
+  "result.notModelledHint": "Remove them to see the odds.",
+  "result.noCardData": "Cannot run: the card data lacks these cards.",
+  "result.badBoard": "These boards cannot be played.",
+  "result.failed": "The simulator stopped unexpectedly.",
+  "result.retry": "Try again",
+
+  "credit": "Card data and card art © Blizzard Entertainment, from HearthstoneJSON. The odds come from the same engine as the app: only what is on the boards, no hero powers, trinkets or spells.",
+} as const;
+
+export type SimStringKey = keyof typeof SIM_STRINGS;
+
+/** The string for a key in the page's language, with its placeholders filled. */
+export const sm = makeT<SimStringKey>({ name: "simulator", en: SIM_STRINGS, es: ES });
