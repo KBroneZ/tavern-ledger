@@ -29,6 +29,9 @@ const UNSAVED: SimKeyword[] = ["poisonous", "mega_windfury"];
 export const MAX_MINIONS = 7;
 export const MAX_STAT = 99_999;
 export const MAX_TIER = 7;
+/** Dark Gifts on one minion (crates/sim-wasm takes at most 4). */
+export const MAX_GIFTS = 4;
+const GIFT_ID = /^[A-Za-z0-9_]{1,64}$/;
 
 export interface SimMinion {
   /** Stable within the page, for focus and lists. */
@@ -38,6 +41,12 @@ export interface SimMinion {
   attack: number;
   health: number;
   keywords: SimKeyword[];
+  /**
+   * Dark Gifts by the gift's card id (`BG36_MidGameEffect_000t16`), as the
+   * engine keys them (crates/combat-sim/src/gifts.rs). The saved report does
+   * not hold them yet (T-528); the editor's controls come with T-526.
+   */
+  gifts: string[];
 }
 
 export interface SimBoard {
@@ -117,6 +126,7 @@ function minionFrom(m: ReportMinion, cards: CardIndex): SimMinion | null {
     attack: Math.min(m.atk, MAX_STAT),
     health: Math.min(m.health, MAX_STAT),
     keywords,
+    gifts: [],
   };
 }
 
@@ -203,6 +213,7 @@ export function addMinion(state: SimState, side: Side, index: number, cardId: st
     attack: card.a,
     health: card.h,
     keywords: SIM_KEYWORDS.filter((k) => card.k.includes(TAG[k])),
+    gifts: [],
   };
   return mapBoard(state, side, index, (b) => ({ ...b, minions: [...b.minions, minion] }));
 }
@@ -234,6 +245,19 @@ export function toggleKeyword(state: SimState, side: Side, index: number, key: n
     ...m,
     keywords: m.keywords.includes(keyword) ? m.keywords.filter((k) => k !== keyword) : SIM_KEYWORDS.filter((k) => k === keyword || m.keywords.includes(k)),
   }));
+}
+
+/** Adds a Dark Gift to a minion; none past four, and the same gift once. */
+export function addGift(state: SimState, side: Side, index: number, key: number, giftId: string): SimState {
+  const m = state[side][index]?.minions.find((x) => x.key === key);
+  if (!m || !GIFT_ID.test(giftId) || m.gifts.includes(giftId) || m.gifts.length >= MAX_GIFTS) return state;
+  return mapMinion(state, side, index, key, (x) => ({ ...x, gifts: [...x.gifts, giftId] }));
+}
+
+export function removeGift(state: SimState, side: Side, index: number, key: number, giftId: string): SimState {
+  const m = state[side][index]?.minions.find((x) => x.key === key);
+  if (!m?.gifts.includes(giftId)) return state;
+  return mapMinion(state, side, index, key, (x) => ({ ...x, gifts: x.gifts.filter((g) => g !== giftId) }));
 }
 
 /**
@@ -275,6 +299,7 @@ export function toRequest(state: SimState, cards: CardIndex): string {
       attack: m.attack,
       health: m.health,
       keywords: m.keywords,
+      gifts: m.gifts,
       facts: cards.facts(m.cardId),
     })),
   });

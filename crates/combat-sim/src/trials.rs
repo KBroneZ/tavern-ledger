@@ -5,7 +5,8 @@ use std::collections::BTreeMap;
 
 use crate::cards::{self, Action, Fidelity, Trigger};
 use crate::combat::{play, CombatResult, Prepared};
-use crate::model::{BoardError, Keywords, Team, Tribes, Warband};
+use crate::gifts;
+use crate::model::{BoardError, Keywords, Minion, Team, Tribes, Warband};
 use crate::rng::Rng;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -35,10 +36,10 @@ impl Default for Options {
 /// Which cards on the two boards the engine cannot play exactly.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Coverage {
-    /// Card ids with no rules, or with a start-of-combat effect the engine
-    /// does not play when start of combat is on.
+    /// Card ids (and Dark Gift ids) with no rules, or with a start-of-combat
+    /// effect the engine does not play when start of combat is on.
     pub not_modelled: Vec<String>,
-    /// Card ids played with a known gap, and the gap.
+    /// Card ids (and Dark Gift ids) played with a known gap, and the gap.
     pub approximate: Vec<(String, &'static str)>,
 }
 
@@ -73,6 +74,9 @@ impl Coverage {
                 }
             }
         }
+        for m in boards.iter().flat_map(|b| &b.minions) {
+            cov.add_gifts(m, start_of_combat);
+        }
         for band in boards {
             let grants = reborn_grants(band);
             for m in &band.minions {
@@ -90,6 +94,26 @@ impl Coverage {
             }
         }
         cov
+    }
+
+    /// A minion's Dark Gifts, by the same rules as cards: a gift the engine
+    /// does not know (or whose start-of-combat effect it does not play, when
+    /// start of combat is on) blocks; an approximate one is named.
+    fn add_gifts(&mut self, m: &Minion, start_of_combat: bool) {
+        for id in &m.gifts {
+            let Some(gift) = gifts::gift(id) else {
+                push_unique(&mut self.not_modelled, id.clone());
+                continue;
+            };
+            if start_of_combat && gift.triggers.contains(&Trigger::StartOfCombatUnmodelled) {
+                push_unique(&mut self.not_modelled, id.clone());
+            }
+            if let Fidelity::Approximate(why) = gifts::fidelity(gift, &m.card_id) {
+                if !self.approximate.iter().any(|(c, _)| c == id) {
+                    self.approximate.push((id.clone(), why));
+                }
+            }
+        }
     }
 
     pub fn is_exact(&self) -> bool {

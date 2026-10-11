@@ -1,6 +1,6 @@
 # Public leaderboards (T-506, D-075 to D-077, D-082)
 
-How the public leaderboards at `/leaderboards/` are built, who is on them, and why each number is what it is. Schema: [`supabase/migrations/20261011150000_leaderboards.sql`](../../supabase/migrations/20261011150000_leaderboards.sql). Tests: [`supabase/tests/database/leaderboards.test.sql`](../../supabase/tests/database/leaderboards.test.sql) (60), `web/test/unit/leaderboards.test.ts`, `web/test/local/leaderboards.e2e.test.ts`. The privacy policy and terms say the same in plain words ([privacy.md](../legal/privacy.md) section 4, [terms.md](../legal/terms.md) section 4).
+How the public leaderboards at `/leaderboards/` are built, who is on them, and why each number is what it is. Schema: [`supabase/migrations/20261011150000_leaderboards.sql`](../../supabase/migrations/20261011150000_leaderboards.sql). Tests: [`supabase/tests/database/leaderboards.test.sql`](../../supabase/tests/database/leaderboards.test.sql) (61, with the old minimums set back), [`leaderboard_minimums.test.sql`](../../supabase/tests/database/leaderboard_minimums.test.sql) (18, the rule since D-103), `web/test/unit/leaderboards.test.ts`, `web/test/local/leaderboards.e2e.test.ts`. The privacy policy and terms say the same in plain words ([privacy.md](../legal/privacy.md) section 4, [terms.md](../legal/terms.md) section 4).
 
 ## Who is on a board (D-075)
 
@@ -8,11 +8,13 @@ A player is listed only when all of these hold:
 
 1. **The profile is public** (`profiles.is_public`, off by default).
 2. **It has a display name**, and the name passes the word list (below).
-3. **Enough games**: at least **20 finished games** in the mode and period that have the board's number (10 with the hero for the per-hero board, on top of the 20).
+3. **One finished game** in the mode and period that has the board's number (one with the hero for the per-hero board). Until D-103 (T-534, 2026-10-12) this was 20 games (10 with the hero); it lives in `private.leaderboard_min_games()` and `private.leaderboard_min_hero_games()`, replaced by [`20261012120000_leaderboard_no_minimum.sql`](../../supabase/migrations/20261012120000_leaderboard_no_minimum.sql), so it can be raised again with one migration.
 
 Rows show the display name (read at the moment of the request, so a rename shows at once), a link to `/profile/?id=<account id>` (the site's own account id, already public for a public profile), the standing, the value and the games behind it. No email, BattleTag, rating (D-076) or other players' names: there is no column for them.
 
-**Why 20.** A 1-game 100% must not top a board (D-075). Over 20 Solo games the average place has a standard error of about 2.3 / √20 ≈ 0.5 places, enough to separate a strong player from a lucky week, and 20 games in 7 days is about three a day, which an active player reaches. One number for every board and period keeps the explanation to one sentence. **Why 10 per hero:** a player rarely plays 20 games with one hero in a month; 10 still rules out one-game flukes, and the player must also have the 20 games overall.
+**Few games (D-103).** The site has few players, and with 20 games every board was empty, so the user removed the minimum. The website instead marks a row that rests on fewer than 20 games (10 with the hero on the hero board) as "few games", next to the games behind it, so a 1-game 100% reads for what it is; the order stays by value, ties by more games. The community hero stats keep their own minimum (D-083: 50 games from 5 players): it protects players who are not public.
+
+**Why 20 (D-082, now the "few games" line).** A 1-game 100% must not top a board (D-075). Over 20 Solo games the average place has a standard error of about 2.3 / √20 ≈ 0.5 places, enough to separate a strong player from a lucky week, and 20 games in 7 days is about three a day, which an active player reaches. One number for every board and period keeps the explanation to one sentence. **Why 10 per hero:** a player rarely plays 20 games with one hero in a month; 10 still rules out one-game flukes, and under D-082 the player also needed the 20 games overall (no longer, D-103).
 
 ## What counts
 

@@ -152,6 +152,8 @@ fn minion(v: &Value, db: &CardDb) -> Option<Minion> {
         tribes: facts.map_or(Tribes::NONE, |f| f.tribes),
         tier: facts.and_then(|f| f.tier),
         base: facts.and_then(|f| f.base),
+        // Saved games do not record Dark Gifts yet (T-528).
+        gifts: Vec::new(),
         card_id,
     })
 }

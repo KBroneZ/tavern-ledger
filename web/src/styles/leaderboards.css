@@ -72,3 +72,12 @@
 .lb-skeleton .state {
   min-height: 420px;
 }
+
+/* A value that rests on few games (D-103): the source marks' shape in the
+   quiet text colour, as on the heroes page (player.css), so it reads as a
+   caution and not as a source. */
+.lb-board .mark-few {
+  color: var(--text-2);
+  border-style: solid;
+  border-color: var(--line);
+}

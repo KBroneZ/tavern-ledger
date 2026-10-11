@@ -33,7 +33,14 @@ pub struct Outcome {
 #[derive(Clone, Debug)]
 pub(crate) struct CardInfo {
     pub id: String,
-    pub triggers: &'static [Trigger],
+    /// The Dark Gifts (`crate::gifts`) of the minions that share this entry;
+    /// the same card with other gifts has an entry of its own.
+    pub gifts: Vec<&'static str>,
+    /// The entry of the same card without gifts, for a minion that comes
+    /// back with Reborn as a fresh copy of its card.
+    pub plain: u16,
+    /// The card's triggers, then those of the minion's Dark Gifts.
+    pub triggers: Vec<Trigger>,
     pub tier: Option<u8>,
     pub tribes: Tribes,
     pub base: Option<BaseCard>,
@@ -83,15 +90,9 @@ impl Prepared {
             band.minions
                 .iter()
                 .map(|m| {
-                    let card = intern(cards, &m.card_id, || CardInfo {
-                        id: m.card_id.clone(),
-                        triggers: cards::rules(&m.card_id).map(|r| r.triggers).unwrap_or(&[]),
-                        tier: m.tier,
-                        tribes: m.tribes,
-                        base: m.base,
-                    });
+                    let (card, keywords) = gifts::card_of(cards, m);
                     uid += 1;
-                    Unit::new(uid, card, m.attack, m.health, m.keywords)
+                    Unit::new(uid, card, m.attack, m.health, m.keywords.union(keywords))
                 })
                 .collect()
         };
@@ -105,7 +106,7 @@ impl Prepared {
         let mut tokens: Vec<(&'static str, u16)> = Vec::new();
         let mut i = 0;
         while i < cards.len() {
-            for t in summoned_tokens(cards[i].triggers) {
+            for t in summoned_tokens(&cards[i].triggers) {
                 let Some(token) = cards::token(t) else {
                     continue;
                 };
@@ -114,7 +115,9 @@ impl Prepared {
                 }
                 cards.push(CardInfo {
                     id: token.id.to_string(),
-                    triggers: cards::rules(token.id).map(|r| r.triggers).unwrap_or(&[]),
+                    gifts: Vec::new(),
+                    plain: cards.len() as u16,
+                    triggers: cards::rules(token.id).map_or(Vec::new(), |r| r.triggers.to_vec()),
                     tier: Some(token.tier),
                     tribes: token.tribes,
                     base: Some(BaseCard {
@@ -131,7 +134,7 @@ impl Prepared {
         let boards = start.iter_mut().chain([s0, s1].into_iter().flatten());
         for board in boards {
             for unit in board.iter_mut() {
-                let triggers = cards[unit.card as usize].triggers;
+                let triggers = &cards[unit.card as usize].triggers;
                 unit.shield_done = triggers.iter().any(|t| match t {
                     Trigger::ShieldAtAttack(n) => unit.attack >= *n,
                     _ => false,
@@ -156,8 +159,13 @@ impl Prepared {
     }
 }
 
-fn intern(cards: &mut Vec<CardInfo>, id: &str, make: impl FnOnce() -> CardInfo) -> u16 {
-    if let Some(i) = cards.iter().position(|c| c.id == id) {
+pub(crate) fn intern(
+    cards: &mut Vec<CardInfo>,
+    id: &str,
+    gifts: &[&'static str],
+    make: impl FnOnce() -> CardInfo,
+) -> u16 {
+    if let Some(i) = cards.iter().position(|c| c.id == id && c.gifts == gifts) {
         return i as u16;
     }
     cards.push(make());
@@ -190,6 +198,8 @@ pub(crate) struct Unit {
     max_health: i32,
     /// Cards whose Deathrattles it gained in this combat.
     gained: Vec<u16>,
+    /// Hits its current Divine Shield has taken (a gift's shield takes 3).
+    shield_taken: u8,
 }
 
 impl Unit {
@@ -205,6 +215,7 @@ impl Unit {
             hit_by: None,
             max_health: health,
             gained: Vec::new(),
+            shield_taken: 0,
         }
     }
 
@@ -306,7 +317,7 @@ impl<'a> Combat<'a> {
     }
 }
 
-impl Combat<'_> {
+impl<'a> Combat<'a> {
     fn run(&mut self) -> Outcome {
         let mut turn = self.first_attacker();
         if self.p.start_of_combat {
@@ -400,8 +411,9 @@ impl Combat<'_> {
         }
     }
 
-    fn triggers(&self, unit: &Unit) -> &'static [Trigger] {
-        self.p.cards[unit.card as usize].triggers
+    fn triggers(&self, unit: &Unit) -> &'a [Trigger] {
+        let p: &'a Prepared = self.p;
+        &p.cards[unit.card as usize].triggers
     }
 
     fn tribes(&self, unit: &Unit) -> Tribes {
@@ -443,6 +455,9 @@ mod round5;
 
 #[path = "combat_duos.rs"]
 mod duos;
+
+#[path = "combat_gifts.rs"]
+mod gifts;
 use duos::Legs;
 
 #[cfg(test)]
@@ -452,3 +467,7 @@ mod tests;
 #[cfg(test)]
 #[path = "combat_duos_tests.rs"]
 mod duos_tests;
+
+#[cfg(test)]
+#[path = "combat_gifts_tests.rs"]
+mod gifts_tests;

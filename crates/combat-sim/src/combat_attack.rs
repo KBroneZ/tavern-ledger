@@ -110,6 +110,7 @@ impl Combat<'_> {
         }
         let (a_atk, a_kw, t_atk, t_kw) = (a.attack, a.kw, t.attack, t.kw);
         let a_triggers = self.triggers(a);
+        let immune = a_triggers.contains(&Trigger::ImmuneWhileAttacking);
         let (a_tribes, t_tribes) = (self.tribes(a), self.tribes(t));
         let t_health = t.health;
         let t_shield = t.kw.contains(Keywords::DIVINE_SHIELD);
@@ -123,7 +124,7 @@ impl Combat<'_> {
                 self.damage(foe, *n, a_atk, a_kw, uid);
             }
         }
-        let hit_back_venom = self.damage(side, uid, t_atk, t_kw, target);
+        let hit_back_venom = !immune && self.damage(side, uid, t_atk, t_kw, target);
         if killed_venom {
             self.lose_venomous(side, uid);
         }
@@ -137,7 +138,7 @@ impl Combat<'_> {
                 foe,
                 target,
                 t_tribes,
-                t_atk > 0 && !a_kw.contains(Keywords::DIVINE_SHIELD),
+                t_atk > 0 && !immune && !a_kw.contains(Keywords::DIVINE_SHIELD),
             ),
         ]);
         let attacker_alive = self.unit(side, uid).is_some_and(Unit::alive);
@@ -247,12 +248,20 @@ impl Combat<'_> {
         if amount <= 0 {
             return false;
         }
+        let hits = match self.unit(side, uid) {
+            Some(u) if u.kw.contains(Keywords::DIVINE_SHIELD) => self.shield_hits(u),
+            _ => 1,
+        };
         let Some(u) = self.unit_mut(side, uid) else {
             return false;
         };
         u.hit_by = Some(by);
         if u.kw.contains(Keywords::DIVINE_SHIELD) {
-            u.kw = u.kw.without(Keywords::DIVINE_SHIELD);
+            u.shield_taken = u.shield_taken.saturating_add(1);
+            if u.shield_taken >= hits {
+                u.kw = u.kw.without(Keywords::DIVINE_SHIELD);
+                u.shield_taken = 0;
+            }
             return false;
         }
         u.health = u.health.saturating_sub(amount);

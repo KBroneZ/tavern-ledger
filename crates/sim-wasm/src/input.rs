@@ -17,6 +17,8 @@ const MAX_NAMES: usize = 16;
 const MAX_NAME: usize = 32;
 /// The game's cap on the damage to a hero.
 const MAX_CAP: i64 = 1_000;
+/// Dark Gifts on one minion: one is usual; the user's logs show two at most.
+const MAX_GIFTS: usize = 4;
 
 /// Card facts a board does not show, as the page sends them (the same
 /// words as `crates/cards` keeps: types `BEAST`, keywords `DIVINE_SHIELD`).
@@ -135,6 +137,7 @@ fn minion(v: &Value, missing: &mut Vec<String>) -> Res<Option<Minion>> {
     let attack = int(m.get("attack"), "attack", 0, i64::from(i32::MAX))? as i32;
     let health = int(m.get("health"), "health", 1, i64::from(i32::MAX))? as i32;
     let keywords = board_keywords(m.get("keywords"))?;
+    let gifts = gifts(m.get("gifts"))?;
     let Some(f) = facts(m.get("facts").unwrap_or(&Value::Null))? else {
         if !missing.iter().any(|x| x == id) {
             missing.push(id.to_string());
@@ -150,7 +153,29 @@ fn minion(v: &Value, missing: &mut Vec<String>) -> Res<Option<Minion>> {
         tribes: f.tribes,
         tier: f.tier,
         base: Some(f.base),
+        gifts,
     }))
+}
+
+/// The minion's Dark Gifts by their gift card ids (`crate::gifts` in the
+/// engine). A gift the engine does not know is passed on: the engine names
+/// it and gives no number, as for a card.
+fn gifts(v: Option<&Value>) -> Res<Vec<String>> {
+    let Some(v) = v.filter(|v| !v.is_null()) else {
+        return Ok(Vec::new());
+    };
+    let list = v
+        .as_array()
+        .filter(|l| l.len() <= MAX_GIFTS)
+        .ok_or("gifts is not a short list")?;
+    list.iter()
+        .map(|g| {
+            g.as_str()
+                .filter(|id| valid_id(id))
+                .map(str::to_string)
+                .ok_or_else(|| "a gift has no valid card id".to_string())
+        })
+        .collect()
 }
 
 fn board(v: &Value, missing: &mut Vec<String>) -> Res<Warband> {
