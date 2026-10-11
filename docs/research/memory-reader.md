@@ -20,22 +20,22 @@ The reader (`crates/game-memory/src/mono.rs`, `LAYOUT_BDWGC_X64`) uses these off
 
 ## What the game keeps
 
-- **Lobby tribes (candidate, failed its check).** `GameState` (global namespace) has a static `s_instance` and the instance fields `m_availableRacesInBattlegroundsExcludingAmalgam`, `m_missingRacesInBattlegrounds` and `m_inactiveRacesInBattlegrounds`, each a `List` of race ids. Read once mid-game in game 2 of session `Hearthstone_2026_10_11_01_10_48` (Duos): available `[20, 24, 14, 11, 23]` (Beast, Dragon, Murloc, Undead, Pirate), missing `[126, 15, 18, 43, 17]` (Aberration, Demon, Elemental, Quilboar, Mechanical), inactive empty. Together they are the ten tribes of this season (Naga is in neither). **But that game's tavern proves a different lobby:** single-tribe offers (D-050, with the card data) confirm Aberration, Elemental, Mechanical, Pirate and Undead. So this field was not that game's lobby when it was read: either it means something else, or it is filled at another moment (hero select) and held other values mid-game. The reader's check against the tavern (D-050) rejects such a value, and the app falls back to the inferred tribes with "Lobby tribes: unsupported game version". **Not verified: needs reads at hero select and mid-game on at least two games.**
+- **Lobby tribes (verified on 2 games).** `GameState` (global namespace) has a static `s_instance` and the instance fields `m_availableRacesInBattlegroundsExcludingAmalgam`, `m_missingRacesInBattlegrounds` and `m_inactiveRacesInBattlegrounds`, each a `List` of race ids. The first holds the lobby's five tribes; the second the five left out (together the ten tribes of this season; Naga is in neither); the third was empty every time. Checked against the tavern-confirmed lobby (D-050: single-tribe offers, with the card data) of the same game:
+  - Session `Hearthstone_2026_10_11_03_26_41`, game 1 (Duos): read at hero select and again mid-game, both `[126, 15, 24, 18, 17]` (Aberration, Demon, Dragon, Elemental, Mechanical). The tavern confirmed exactly those five.
+  - Session `Hearthstone_2026_10_11_01_10_48` (Duos): one mid-game read, `[20, 24, 14, 11, 23]` (Beast, Dragon, Murloc, Undead, Pirate). It was first matched to game 2 by the time of the read and looked like a failure (game 2's tavern confirmed Aberration, Elemental, Mechanical, Pirate, Undead). Game 3 of the same session confirmed exactly the read's five (a 1 in 252 chance for a random lobby), so the read fell in game 3; game 2 and 3 were saved within three minutes of each other, which is how the read was matched to the wrong game.
+
+  The reader still checks every read (five distinct known tribes, none also in the "left out" list) and the tracker drops it if the tavern later contradicts it (`GameTribes::checked_against`), showing "Lobby tribes: unsupported game version" and the inferred tribes instead.
 - **Own rating (class found, path not mapped).** `NetCacheBaconRatingInfo` has two instance ints, `<Rating>k__BackingField` (offset 16) and `<DuosRating>k__BackingField` (offset 20). The game's `NetCache` keeps such objects in its `m_netCache` map, but `NetCache` has no static instance of its own (it is reached through a service locator in `Blizzard.T5.ServiceLocator`), and no class has a static field of type `NetCacheBaconRatingInfo`. `BaconLobbyDataModel` (the Battlegrounds screen's data model) also has an `m_Rating` int. **The fixed path to either is not mapped yet**; the reader returns "unsupported game version" for the rating until it is.
 
 Race ids are the game's `TAG_RACE` numbers; the names are those of the `hearthstone` package (already pinned, `requirements.txt`), the same names the log writes as `CARDRACE`.
 
-## Not done (needs the user's game and permission to run the explorer)
+## Not done
 
-The live exploration stopped when Claude Code's auto-mode permission check refused further runs of the explorer (twice). Still to do, on the user's client:
-
-1. Read the `GameState` lists at hero select (and again mid-game) on two or more games, and compare each with that game's tavern-confirmed lobby.
-2. If they do not match, find the field that does (the tavern guide's data, which the game fills for the lobby since patch 33.2, is the next candidate).
-3. Map the path to the own rating (through the service locator to `NetCache`, or to the Battlegrounds screen's data model) and compare it with the rating the screen shows.
-4. Record each result here with the build.
+1. Map the path to the own rating (through the service locator to `NetCache`, or to the Battlegrounds screen's data model) and compare it with the rating the screen shows. `ServiceManager` (in `Blizzard.T5.ServiceLocator`) holds the services in its statics `s_runtimeServices` (offset 0), `s_dynamicServices` (8) and `s_serviceObjects` (16, a `List`). The explorer's `rating` mode walks from there; it has not been run with the game open yet.
+2. Record the result here with the build.
 
 ## Per build
 
 | Build | Mono layout | Tribes path | Rating path | Checked on |
 |---|---|---|---|---|
-| 253216 | `LAYOUT_BDWGC_X64` (above) | candidate `GameState.s_instance` lists: **failed** the tavern check (1 game) | not mapped | — |
+| 253216 | `LAYOUT_BDWGC_X64` (above) | `GameState.s_instance` → `m_availableRacesInBattlegroundsExcludingAmalgam`: matches the tavern on 2 games | not mapped | 2026-10-11, Duos, 2 games |
