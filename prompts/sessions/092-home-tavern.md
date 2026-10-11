@@ -12,7 +12,7 @@ Work in your worktree **`C:\Users\andia\tavern-ledger\.claude\worktrees\092-home
 
 ## Why and what the user chose (2026-10-12, through the hub)
 
-T-525's hand-drawn concepts were rejected ("nothing like the references"). The user then chose painted art made in Gemini, now in **`docs/brand/home/art/`**:
+T-525's hand-drawn concepts were rejected ("nothing like the references"). The user then chose painted art made in Gemini, now in **`docs/brand/art/home/`**:
 
 - **`tavern-tall.webp`** (1344×3168): one continuous painting from top to bottom: the big barrel door with golden sparks (left) and a blue magical glow (right), the warm tavern with fireplace and bar in the middle, stone stairs down to a cellar with blue light at the bottom.
 - **`buttons-sheet.webp`**: four buttons on a dark tavern backdrop: gold stone with blue and orange gems, glowing (hover) and plain (rest); dark wood with bronze frame and rivets; small stone with a thin gold frame.
