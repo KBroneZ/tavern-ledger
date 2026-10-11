@@ -143,3 +143,76 @@ test("when a board was seen, in turns", () => {
   assert.equal(words.seenWords(4, 7), "Turno 4 · hace 3 turnos");
   I18n.setLang("en");
 });
+
+// Session 059 (T-339, T-340): the Simple side panel and the single-hero hover.
+
+const duoTeam = {
+  heroes: [{ id: "HERO_A" }, { id: "HERO_B" }],
+  seats: [3, 4],
+  tiers: [{ value: 4 }, { value: null }],
+  health: { value: 22 },
+  next: true,
+  shown_source: "log",
+  shown: [{ seat: 3, triples: 2, trinkets: [] }, { seat: 4, triples: 1, trinkets: [] }],
+};
+
+test("a Simple row has one face per hero with its known tier, no names", () => {
+  const row = words.simpleRow(duoTeam);
+  assert.deepEqual(row.faces, [{ hero: { id: "HERO_A" }, tier: 4 }, { hero: { id: "HERO_B" }, tier: null }]);
+  assert.equal(row.health, 22);
+  assert.equal(row.triples, 3, "the team's triples together");
+  assert.equal(row.next, true);
+  assert.equal(row.out, false);
+});
+
+test("a Simple row hides what is unknown instead of showing ?", () => {
+  const row = words.simpleRow({ heroes: [], seats: [5], tiers: [], health: { value: null }, shown_source: "unknown", shown: [] });
+  assert.deepEqual(row.faces, [{ hero: null, tier: null }]);
+  assert.equal(row.health, null);
+  assert.equal(row.triples, 0, "no triple count: nothing shown");
+  assert.equal(row.next, false);
+});
+
+test("a Simple row counts triples only from the log and marks a team that is out", () => {
+  assert.equal(words.simpleRow({ ...duoTeam, shown_source: "unknown" }).triples, 0);
+  assert.equal(words.simpleRow({ ...duoTeam, shown: [{ seat: 3, triples: null }] }).triples, 0);
+  assert.equal(words.simpleRow({ ...duoTeam, health: { value: 0 } }).out, true);
+  assert.deepEqual(words.simpleRow(null).faces, []);
+});
+
+test("Simple tribes: from the game or entered with no mark, confirmed by the tavern marked inferred", () => {
+  assert.deepEqual(words.simpleTribes({ lobby_tribes: { basis: "game", tribes: ["BEAST", "NAGA"], complete: true, source: "game" } }), {
+    tribes: ["BEAST", "NAGA"],
+    inferred: false,
+    count: null,
+  });
+  assert.deepEqual(words.simpleTribes({ lobby_tribes: { basis: "entered", tribes: ["BEAST"], complete: true, source: "entered" } }).inferred, false);
+  assert.deepEqual(words.simpleTribes({ lobby_tribes: { basis: "tavern_confirmed", tribes: ["MECHANICAL", "UNDEAD"], complete: false, source: "inferred" } }), {
+    tribes: ["MECHANICAL", "UNDEAD"],
+    inferred: true,
+    count: 2,
+  });
+  assert.equal(words.simpleTribes({ lobby_tribes: { basis: "tavern_confirmed", tribes: ["A", "B", "C", "D", "E"], complete: true, source: "inferred" } }).count, null);
+});
+
+test("Simple tribes: nothing when only the tavern's offers or nothing is known", () => {
+  assert.equal(words.simpleTribes({ lobby_tribes: { basis: "tavern_seen", tribes: ["BEAST"], source: "inferred" } }), null);
+  assert.equal(words.simpleTribes({ lobby_tribes: { basis: "unknown", tribes: [], source: "unknown" } }), null);
+  assert.equal(words.simpleTribes({ lobby_tribes: { basis: "game", tribes: [], source: "game" } }), null);
+  assert.equal(words.simpleTribes(null), null);
+});
+
+test("a Duos hover shows only the hovered hero's view", () => {
+  const views = words.seatViews({ ...duoTeam, boards: [] });
+  assert.deepEqual(words.hoveredViews(views, 0).map((v) => v.seat), [3]);
+  assert.deepEqual(words.hoveredViews(views, 1).map((v) => v.seat), [4]);
+});
+
+test("without a known portrait the hover keeps the whole team", () => {
+  const views = words.seatViews({ ...duoTeam, boards: [] });
+  assert.equal(words.hoveredViews(views, null).length, 2);
+  assert.equal(words.hoveredViews(views, undefined).length, 2);
+  assert.equal(words.hoveredViews(views, 2).length, 2, "out of range");
+  const solo = words.seatViews({ heroes: [{ id: "X" }], seats: [3], boards: [], tiers: [] });
+  assert.equal(words.hoveredViews(solo, 1).length, 1, "Solo has one hero anyway");
+});

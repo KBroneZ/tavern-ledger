@@ -514,3 +514,79 @@ body.unlocked .slot:focus-visible .panel {
 .hover-card .possible-list { font-size: 1em; }
 .hover-card .src { font-size: 0.72em; }
 .hover-card .next-badge { font-size: 0.85em; }
+
+/* Simple side panel (T-339, D-068): narrow and short, so it fits the strip
+   a 16:9 screen leaves beside the game's 4:3 play area (about 22% of the
+   height on each side). Portraits first, no names (they are on the hover
+   card), no words for unknown values, no headings, no hint, no legend. */
+body[data-detail="simple"] { --stack-width: 13.5rem; }
+/* While the layout is being edited every panel shows, so it can be placed. */
+body[data-detail="simple"]:not(.unlocked) .panel.simple-empty,
+body[data-detail="simple"]:not(.unlocked) .slot:has(> .panel.simple-empty),
+body[data-detail="simple"] .slot[data-panel="legend"] { display: none; }
+body[data-detail="simple"] .panel { padding: 5px 7px 6px; }
+
+.tribe-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
+.tribe-chips .chip {
+  padding: 1px 6px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 999px;
+  color: var(--text);
+  font: 600 0.82rem/1.35 var(--font-body);
+  white-space: nowrap;
+}
+.tribe-chips .chip-count { color: var(--dim); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+.tribe-chips .src { font-size: 0.72rem; padding: 0 4px; }
+
+.opp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.opp {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+/* The game's next mark: a lit row with a small word, never colour alone. */
+.opp.next {
+  border-color: color-mix(in srgb, var(--accent) 80%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.opp-next {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: var(--panel-solid);
+  font: 800 0.62rem/1.3 var(--font-body);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.opp.out { opacity: 0.45; }
+.opp .faces { display: flex; gap: 3px; flex: none; }
+.opp .face { position: relative; flex: none; width: 2.7rem; height: 2.7rem; }
+.opp .face .portrait {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 80%, transparent);
+}
+.opp .portrait.blank { background: color-mix(in srgb, var(--dim) 25%, var(--panel-solid)); }
+/* The tier as the game draws it: a small badge at the portrait's foot. */
+.opp .face-tier {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  min-width: 1.15rem;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--panel-solid);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font: 800 0.74rem/1.2 var(--font-body);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.opp .nums { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
+.opp .opp-hp { font: 800 1.15rem/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.opp .opp-triples { color: var(--accent); font-weight: 700; font-size: 0.8rem; font-variant-numeric: tabular-nums; }

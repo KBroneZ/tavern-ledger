@@ -9,6 +9,7 @@ mod foreground;
 mod game_memory;
 mod hover;
 mod leaderboard;
+mod over_game_guard;
 mod overlay;
 mod overlay_layout;
 mod overlay_window;
@@ -960,7 +961,9 @@ fn main() {
             let settings_loaded = app_settings.load(&data_dir);
             card_data::start(app.handle(), &data_dir);
             setup_tray(app)?;
-            overlay_window::follow(app.handle().clone(), state.clone());
+            // A test build never shows its overlay over the user's game (T-336).
+            let guarded = over_game_guard::guarded(cfg!(debug_assertions), std::env::args());
+            overlay_window::follow(app.handle().clone(), state.clone(), guarded);
             hover::watch(app.handle().clone(), state.clone());
             let prepared = overlay_window::prepare(app.handle()).map_err(|e| {
                 state.overlay.disable();

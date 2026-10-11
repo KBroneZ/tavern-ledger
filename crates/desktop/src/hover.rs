@@ -43,6 +43,9 @@ pub fn card_width(game_height: f64) -> f64 {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Hover {
     pub place: i64,
+    /// In Duos, which of the team's two portraits is under the mouse: 0 the
+    /// top one, 1 the bottom one (T-340); None in Solo.
+    pub member: Option<i64>,
     pub slot: Area,
     pub card: CardPlace,
 }
@@ -58,11 +61,13 @@ pub struct OverlayFrame {
 
 /// The hover for this cursor, or `None`. Pure, so it is tested: `client`
 /// is the game's client area and `board` the leaderboard box inside it
-/// (relative to it), both in physical pixels.
+/// (relative to it), both in physical pixels. `per_slot` is how many
+/// portraits a slot holds: 2 for a Duos team, else 1.
 pub fn hover_at(
     client: Area,
     board: Area,
     slots: i64,
+    per_slot: i64,
     cursor: (f64, f64),
     frame: OverlayFrame,
 ) -> Option<Hover> {
@@ -72,6 +77,12 @@ pub fn hover_at(
         ..board
     };
     let place = slot_at(board, slots, cursor)?;
+    // The portraits split the leaderboard evenly, so the portrait under the
+    // mouse is the slot's top or bottom half.
+    let member = (per_slot > 1)
+        .then(|| slot_at(board, slots * per_slot, cursor))
+        .flatten()
+        .map(|portrait| (portrait - 1 - (place - 1) * per_slot).clamp(0, per_slot - 1));
     let slot = slot_area(board, slots, place).in_frame(frame.origin, frame.scale);
     let game = client.in_frame(frame.origin, frame.scale);
     let bounds = Area {
@@ -82,6 +93,7 @@ pub fn hover_at(
     };
     Some(Hover {
         place,
+        member,
         slot,
         card: place_card(game, bounds, card_width(game.h)),
     })
@@ -104,9 +116,10 @@ fn current(state: &AppState) -> Option<Hover> {
     if !overlay.enabled() || overlay.unlocked() {
         return None;
     }
-    let slots = {
+    let (slots, per_slot) = {
         let live = state.live.lock().unwrap_or_else(|e| e.into_inner());
-        live.as_ref()?.leaderboard_slots?
+        let live = live.as_ref()?;
+        (live.leaderboard_slots?, if live.is_duos { 2 } else { 1 })
     };
     let client = game_client(overlay.ignores_foreground())?;
     overlay.saw_game(client);
@@ -115,6 +128,7 @@ fn current(state: &AppState) -> Option<Hover> {
         client,
         board,
         slots,
+        per_slot,
         foreground::cursor()?,
         overlay.frame()?,
     )
@@ -171,7 +185,7 @@ mod tests {
             let board = default_area((w, h));
             let f = frame((0.0, 0.0), 1.0, (w, h - 40.0));
             for place in 1..=8 {
-                let hover = hover_at(game, board, 8, middle_of(game, board, 8, place), f)
+                let hover = hover_at(game, board, 8, 1, middle_of(game, board, 8, place), f)
                     .expect("on the leaderboard");
                 assert_eq!(hover.place, place);
                 assert_eq!(hover.card.x + hover.card.width / 2.0, w / 2.0, "centred");
@@ -186,10 +200,10 @@ mod tests {
         let game = client(0.0, 0.0, 1920.0, 1080.0);
         let board = default_area((1920.0, 1080.0));
         let f = frame((0.0, 0.0), 1.0, (1920.0, 1040.0));
-        assert_eq!(hover_at(game, board, 8, (960.0, 540.0), f), None);
-        assert_eq!(hover_at(game, board, 8, (5.0, 5.0), f), None);
+        assert_eq!(hover_at(game, board, 8, 1, (960.0, 540.0), f), None);
+        assert_eq!(hover_at(game, board, 8, 1, (5.0, 5.0), f), None);
         assert_eq!(
-            hover_at(game, board, 0, middle_of(game, board, 8, 3), f),
+            hover_at(game, board, 0, 1, middle_of(game, board, 8, 3), f),
             None,
             "no slot count yet"
         );
@@ -203,7 +217,7 @@ mod tests {
         let board = default_area((1280.0, 720.0));
         let f = frame((1920.0, 0.0), 1.5, (2560.0, 1408.0));
         let point = middle_of(game, board, 8, 4);
-        let hover = hover_at(game, board, 8, point, f).unwrap();
+        let hover = hover_at(game, board, 8, 1, point, f).unwrap();
         assert_eq!(hover.place, 4);
         let back_x = hover.slot.x * 1.5 + 1920.0;
         assert!((back_x - (2100.0 + board.x)).abs() < 0.01);
@@ -221,7 +235,7 @@ mod tests {
         let f = frame((0.0, 0.0), 1.0, (1920.0, 1040.0));
         let places: Vec<i64> = (1..=8)
             .map(|portrait| {
-                hover_at(game, board, 4, middle_of(game, board, 8, portrait), f)
+                hover_at(game, board, 4, 2, middle_of(game, board, 8, portrait), f)
                     .unwrap()
                     .place
             })
@@ -230,12 +244,31 @@ mod tests {
     }
 
     #[test]
+    fn duos_says_which_portrait_of_the_team_is_hovered() {
+        let game = client(0.0, 0.0, 1920.0, 1080.0);
+        let board = default_area((1920.0, 1080.0));
+        let f = frame((0.0, 0.0), 1.0, (1920.0, 1040.0));
+        let members: Vec<Option<i64>> = (1..=8)
+            .map(|portrait| {
+                hover_at(game, board, 4, 2, middle_of(game, board, 8, portrait), f)
+                    .unwrap()
+                    .member
+            })
+            .collect();
+        let want: Vec<Option<i64>> = [0, 1, 0, 1, 0, 1, 0, 1].into_iter().map(Some).collect();
+        assert_eq!(members, want);
+        // Solo has no team: no member.
+        let solo = hover_at(game, board, 8, 1, middle_of(game, board, 8, 3), f).unwrap();
+        assert_eq!(solo.member, None);
+    }
+
+    #[test]
     fn the_board_is_sized_to_the_game_at_4k_150_and_at_1080p() {
         // 3840x2160 at 150%: the overlay's pixels are 2/3 of the screen's.
         let game = client(0.0, 0.0, 3840.0, 2160.0);
         let board = default_area((3840.0, 2160.0));
         let f = frame((0.0, 0.0), 1.5, (2560.0, 1408.0));
-        let hover = hover_at(game, board, 8, middle_of(game, board, 8, 2), f).unwrap();
+        let hover = hover_at(game, board, 8, 1, middle_of(game, board, 8, 2), f).unwrap();
         assert!(
             (hover.card.width - 0.85 * 1440.0).abs() < 0.01,
             "{:?}",
@@ -246,12 +279,12 @@ mod tests {
         let game = client(0.0, 0.0, 1920.0, 1080.0);
         let board = default_area((1920.0, 1080.0));
         let f = frame((0.0, 0.0), 1.0, (1920.0, 1040.0));
-        let hover = hover_at(game, board, 8, middle_of(game, board, 8, 2), f).unwrap();
+        let hover = hover_at(game, board, 8, 1, middle_of(game, board, 8, 2), f).unwrap();
         assert!((hover.card.width - 0.85 * 1080.0).abs() < 0.01);
         // A narrow window keeps it inside the game.
         let game = client(0.0, 0.0, 1000.0, 1080.0);
         let board = default_area((1000.0, 1080.0));
-        let hover = hover_at(game, board, 8, middle_of(game, board, 8, 2), f).unwrap();
+        let hover = hover_at(game, board, 8, 1, middle_of(game, board, 8, 2), f).unwrap();
         assert!(hover.card.x >= 0.0 && hover.card.x + hover.card.width <= 1000.0);
     }
 }

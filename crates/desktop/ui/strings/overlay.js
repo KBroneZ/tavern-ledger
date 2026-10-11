@@ -84,6 +84,19 @@
       "ov.tribes.lobbyPart": "Lobby ({count} of 5 confirmed)",
       "ov.tribes.entered": "You entered",
       "ov.tribes.lobbyGame": "Lobby",
+      // Simple panel (T-339): short tribe names for the chips, read out in full.
+      "ov.tribes.count": "{count}/5",
+      "ov.tribeShort.ABERRATION": "Aberr",
+      "ov.tribeShort.BEAST": "Beast",
+      "ov.tribeShort.DEMON": "Demon",
+      "ov.tribeShort.DRAGON": "Dragon",
+      "ov.tribeShort.ELEMENTAL": "Elem",
+      "ov.tribeShort.MECHANICAL": "Mech",
+      "ov.tribeShort.MURLOC": "Murloc",
+      "ov.tribeShort.NAGA": "Naga",
+      "ov.tribeShort.PIRATE": "Pirate",
+      "ov.tribeShort.QUILBOAR": "Quil",
+      "ov.tribeShort.UNDEAD": "Undead",
 
       // Opponents panel.
       "ov.opponents.noLobby": "The log does not show the lobby yet.",
@@ -142,7 +155,7 @@
       "ov.toolbar.detail": "Detail",
       "ov.detail.simple": "Simple",
       "ov.detail.advanced": "Advanced",
-      "ov.detail.note": "Simple: the board, hero, tier, health and triples. Advanced also shows keyword letters, trinket names, the minions an opponent could have and where each value comes from.",
+      "ov.detail.note": "Simple: a narrow panel with the lobby's tribes and each opponent's portraits, tier, health and triples; hover a hero for their board. Advanced also shows names, your record against each opponent, keyword letters, trinket names, the minions an opponent could have and where each value comes from.",
 
       // Legend.
       "ov.legend": "No mark: from the log. Card names and pictures: HearthstoneJSON, © Blizzard Entertainment.",
@@ -221,6 +234,18 @@
       "ov.tribes.lobbyPart": "Sala ({count} de 5 confirmadas)",
       "ov.tribes.entered": "Has introducido",
       "ov.tribes.lobbyGame": "Sala",
+      "ov.tribes.count": "{count}/5",
+      "ov.tribeShort.ABERRATION": "Aberr",
+      "ov.tribeShort.BEAST": "Bestia",
+      "ov.tribeShort.DEMON": "Demonio",
+      "ov.tribeShort.DRAGON": "Dragón",
+      "ov.tribeShort.ELEMENTAL": "Elem",
+      "ov.tribeShort.MECHANICAL": "Robot",
+      "ov.tribeShort.MURLOC": "Múrloc",
+      "ov.tribeShort.NAGA": "Naga",
+      "ov.tribeShort.PIRATE": "Pirata",
+      "ov.tribeShort.QUILBOAR": "Jaba",
+      "ov.tribeShort.UNDEAD": "No-muerto",
 
       "ov.opponents.noLobby": "El registro aún no muestra la sala.",
       "ov.opponents.hint": "Pasa el ratón por un héroe de la clasificación del juego para ver el último tablero que enfrentaste.",
@@ -275,7 +300,7 @@
       "ov.toolbar.detail": "Detalle",
       "ov.detail.simple": "Sencillo",
       "ov.detail.advanced": "Avanzado",
-      "ov.detail.note": "Sencillo: el tablero, el héroe, el nivel, la vida y los triples. Avanzado muestra además las letras de palabras clave, los nombres de los abalorios, los esbirros que podría tener un rival y de dónde sale cada valor.",
+      "ov.detail.note": "Sencillo: un panel estrecho con las tribus de la sala y, de cada rival, retratos, nivel, vida y triples; pasa el ratón por un héroe para ver su tablero. Avanzado muestra además los nombres, tu balance contra cada rival, las letras de palabras clave, los nombres de los abalorios, los esbirros que podría tener un rival y de dónde sale cada valor.",
 
       "ov.legend": "Sin marca: del registro. Nombres e imágenes de cartas: HearthstoneJSON, © Blizzard Entertainment.",
       "ov.legend.keys": "Palabras clave: {list}; ★ dorado.",
