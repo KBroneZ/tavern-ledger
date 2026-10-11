@@ -46,7 +46,9 @@ export function damageText(turn: TurnRow): string {
   if (turn.dealt !== null && turn.dealt > 0) parts.push(g("turns.dealt", { n: turn.dealt }));
   if (turn.taken !== null && turn.taken > 0) parts.push(g("turns.taken", { n: turn.taken }));
   if (parts.length > 0) return parts.join(" · ");
-  return turn.dealt === 0 || turn.taken === 0 ? "0" : DASH;
+  // No damage either way: 0 only when the figure that result turns on is known.
+  const zero = turn.result === "win" ? turn.dealt === 0 : turn.result === "loss" ? turn.taken === 0 : turn.dealt === 0 && turn.taken === 0;
+  return zero ? "0" : DASH;
 }
 
 export function goldText(turn: TurnRow): string {
@@ -67,6 +69,12 @@ export function statsText(m: Minion): string {
   return g("minion.stats", { attack: m.atk === null ? "?" : m.atk, health: m.health === null ? "?" : m.health });
 }
 
+/** "3 attack, 3 health", for screen readers next to the short "3/3". */
+export function statsWords(m: Minion): string {
+  const unknown = g("minion.unknownStat");
+  return g("minion.statsWords", { attack: m.atk ?? unknown, health: m.health ?? unknown });
+}
+
 /** "SYN_M_02, 3/3, Golden, Taunt, Divine Shield": what a picture's alt and the list say. */
 export function minionWords(m: Minion): string {
   return [m.cardId ?? g("minion.unknownCard"), statsText(m), m.golden ? g("minion.golden") : "", keywordWords(m.keywords)]
@@ -75,8 +83,10 @@ export function minionWords(m: Minion): string {
 }
 
 export function boardTotals(board: BoardView): string {
-  if (board.minions.length === 0) return g("boards.empty");
-  return g("boards.totals", { count: board.minions.length, attack: num(board.attack), health: num(board.health) });
+  const count = board.minions.length;
+  if (count === 0) return g("boards.empty");
+  const stats = { attack: num(board.attack), health: num(board.health) };
+  return count === 1 ? g("boards.totals.one", stats) : g("boards.totals", { count, ...stats });
 }
 
 export function plural(one: Parameters<typeof g>[0], other: Parameters<typeof g>[0], count: number): string {

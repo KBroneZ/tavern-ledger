@@ -46,11 +46,13 @@ test("turns: one row per shop turn or combat, joined by number", () => {
   assert.equal(two.gold, null, "a turn without gold stays unknown");
   assert.equal(two.taken, 5);
   assert.deepEqual([two.ownBoard?.attack, two.ownBoard?.health], [5, 6]);
-  assert.deepEqual([two.opponentBoard?.attack, two.opponentBoard?.health], [6, 7]);
+  assert.equal(two.opponentBoards.length, 1);
+  assert.deepEqual([two.opponentBoards[0].board.attack, two.opponentBoards[0].board.health], [6, 7]);
+  assert.deepEqual(two.opponentBoards[0].hero, { id: "SYN_HERO_C", name: "Moss Witch" });
   assert.equal(three.result, "unknown");
   assert.equal(three.dealt, null);
   assert.equal(three.ownBoard, null, "no board in the record is unknown");
-  assert.deepEqual(three.opponentBoard, { minions: [], attack: 0, health: 0 });
+  assert.deepEqual(three.opponentBoards.map((b) => b.board), [{ minions: [], attack: 0, health: 0 }]);
   assert.equal(three.shop?.sells.length, 1);
 });
 
@@ -63,7 +65,6 @@ test("turns: a combat without a shop turn still gets its row; a stat it lacks le
   assert.equal(v.turns[0].tier, null);
   assert.equal(v.turns[0].ownBoard?.attack, null);
   assert.equal(v.turns[0].ownBoard?.health, 3);
-  assert.equal(v.summary.shopTurns, 0);
   assert.equal(v.summary.rolls, null);
   assert.equal(v.summary.buys, null);
   assert.deepEqual(v.summary.goldSpent, { value: null, known: 0, total: 0 });
@@ -132,6 +133,10 @@ test("Duos: the team shares health, the teammate is named, results are the team'
   assert.equal(v.turns[0].dealt, 0);
   assert.deepEqual(v.lobby.filter((s) => s.teammate).map((s) => s.hero.id), ["SYN_HERO_B"]);
   assert.deepEqual(v.lobby.map((s) => s.team), [2, 2, 1, 1]);
+  // Each opponent once, every board the record has for them.
+  assert.deepEqual(v.turns[0].opponents.map((h) => h.id), ["SYN_HERO_C", "SYN_HERO_D"]);
+  assert.deepEqual(v.turns[0].opponentBoards.map((b) => [b.hero.id, b.board.minions.length]), [["SYN_HERO_C", 1], ["SYN_HERO_D", 2]]);
+  assert.deepEqual(v.opponents[0].heroes.map((h) => h.id), ["SYN_HERO_C", "SYN_HERO_D"]);
 });
 
 test("an unfinished game has no triples total and no made-up place", () => {
@@ -150,4 +155,14 @@ test("no player name anywhere in the shaped view", () => {
   rep.rounds[0].entries[1].player_name = "SomePlayer";
   const text = JSON.stringify(view(rep), (_, v) => (v instanceof Map ? [...v] : v));
   assert.doesNotMatch(text, /SomePlayer/);
+});
+
+test("summary: APM is capped like the server's, and triples need every seat's record", () => {
+  const rep = soloReport() as Record<string, any>;
+  rep.shop.end_ms = rep.shop.start_ms + 1;
+  rep.shop.actions = Array.from({ length: 2000 }, (_, i) => ({ ms: rep.shop.start_ms, turn: 1, kind: "roll", i }));
+  delete rep.lobby[1].triples;
+  const s = view(rep).summary;
+  assert.equal(s.apm, null, "an impossible APM is unknown, like the server's summary");
+  assert.equal(s.triples, null, "a seat without the leaderboard record makes the count unknown");
 });

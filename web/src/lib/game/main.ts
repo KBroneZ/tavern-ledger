@@ -64,18 +64,22 @@ function showGame(result: Extract<LoadResult, { kind: "ok" }>, ref: GameRef): vo
     const text = unreadable === 1 ? g("state.unreadableValues.one") : g("state.unreadableValues.other", { count: unreadable });
     banners.push(h("p", { class: "state state-unknown gv-banner" }, text));
   }
-  show(pageHeading(view.summary), [...banners, ...renderGame(view, playedOn(ref.session))], g("page.loaded"));
+  const title = pageHeading(view.summary);
+  show(title, [...banners, ...renderGame(view, playedOn(ref.session))], g("page.loaded", { title }));
 }
 
 async function run(ref: GameRef, download: Download, signedIn: () => Promise<boolean>): Promise<void> {
+  // The loading block replaces whatever was there (an error and its button), so a retry runs once.
+  mount(body, stateBlock({ kind: "loading", title: g("page.loading"), lines: 10 }));
   body.setAttribute("aria-busy", "true");
   status.textContent = g("page.loading");
   const result = await loadGame(download, ref);
   if (result.kind === "ok") return showGame(result, ref);
   if (result.kind === "unavailable") return showUnavailable(await signedIn().catch(() => false));
   showError(result.kind, () => {
-    // The button goes away with the block: keep focus on the page's heading.
-    void run(ref, download, signedIn).then(() => heading.focus());
+    // The button goes away with the block: focus moves to the page's heading first.
+    heading.focus();
+    run(ref, download, signedIn).catch(() => showError("error", () => location.reload()));
   });
 }
 

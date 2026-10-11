@@ -22,6 +22,7 @@ import { g } from "../../lib/game/strings.ts";
   <div class="gv-body" id="game-body" aria-busy="true">
     <StateBlock kind="loading" title={g("page.loading")} lines={10} />
   </div>
+  <noscript><p class="state state-error">{g("page.noscript")}</p></noscript>
 </article>
 
 <DataScript />

@@ -23,6 +23,7 @@ const MAX_HEALTH = 100_000;
 const MAX_COUNT = 10_000;
 const MAX_DBF_ID = 10_000_000;
 const MAX_TURN = 100;
+const MAX_GAME_OFFERS = 3000;
 
 export const KEYWORDS = [
   "taunt",
@@ -122,7 +123,6 @@ export interface Choice {
 export interface Report {
   status: "ok" | "incomplete" | "unsupported" | null;
   mode: "solo" | "duos" | null;
-  build: number | null;
   localPlayerId: number | null;
   hero: string | null;
   teammatePlayerId: number | null;
@@ -330,10 +330,21 @@ function shopTurn(r: Reader, v: unknown): ShopTurn | null {
   };
 }
 
+/** At most MAX_GAME_OFFERS offers in a game, as the server checks; the rest is dropped and counted. */
+function capOffers(r: Reader, turns: ShopTurn[]): ShopTurn[] {
+  let left = MAX_GAME_OFFERS;
+  return turns.map((t) => {
+    const kept = t.offers.slice(0, Math.max(0, left));
+    left -= kept.length;
+    r.unreadable += t.offers.length - kept.length;
+    return kept.length === t.offers.length ? t : { ...t, offers: kept };
+  });
+}
+
 function shop(r: Reader, v: unknown): Shop | null {
   const s = r.obj(v);
   if (!s) return null;
-  const turns = r.list(s.turns, MAX_TURN).map((t) => shopTurn(r, t)).filter((t): t is ShopTurn => t !== null);
+  const turns = capOffers(r, r.list(s.turns, MAX_TURN).map((t) => shopTurn(r, t)).filter((t): t is ShopTurn => t !== null));
   const tierUps = r.list(s.tier_ups, MAX_TURN).flatMap((x) => {
     const u = r.obj(x);
     const turn = u ? r.int(u.turn, 1, MAX_TURN) : null;
@@ -390,7 +401,6 @@ function report(r: Reader, o: Obj): Report {
   return {
     status: r.oneOf(o.status, ["ok", "incomplete", "unsupported"] as const),
     mode,
-    build: r.int(o.build, 1, 100_000_000),
     localPlayerId: r.int(o.local_player_id, 1, 64),
     hero: r.card(o.hero),
     teammatePlayerId: r.int(o.teammate_player_id, 1, 64),

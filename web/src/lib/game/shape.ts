@@ -9,7 +9,7 @@
 // * totals over turns say how many turns back them; unknown is never zero.
 // Opponents are shown by hero only: the report has no player names.
 import type { Result } from "../data/format.ts";
-import type { Choice, GameRecord, Minion, Report, Round, Seat, ShopTurn, TrinketSlot } from "./report.ts";
+import type { Choice, Entry, GameRecord, Minion, Report, Round, Seat, ShopTurn, TrinketSlot } from "./report.ts";
 
 export interface HeroRef {
   id: string | null;
@@ -49,7 +49,8 @@ export interface TurnRow {
   ownBoard: BoardView | null;
   /** Whose board ownBoard is, in Duos when it is the teammate's. */
   ownBoardHero: HeroRef | null;
-  opponentBoard: BoardView | null;
+  /** Each opposing hero's board the record has (two in Duos); empty: none recorded. */
+  opponentBoards: { hero: HeroRef; board: BoardView }[];
   shop: ShopTurn | null;
 }
 
@@ -67,7 +68,6 @@ export interface Summary {
   rolls: number | null;
   buys: number | null;
   sells: number | null;
-  shopTurns: number;
   finalTier: number | null;
   apm: number | null;
   triples: number | null;
@@ -116,6 +116,8 @@ const TRINKET_SOURCES = new Set(["BG30_Trinket_1st", "BG30_Trinket_2nd"]);
 const DARK_GIFT_SOURCE = "BG36_MidGameEffect_010";
 const TRIPLE_REWARD = "TB_BaconShop_Triples_01";
 const MS_PER_MINUTE = 60_000;
+// The server summary's cap: more is a log the clock cannot back.
+const MAX_APM = 99_999;
 
 export function heroRef(report: Report, id: string | null): HeroRef {
   return { id, name: id ? (report.heroNames.get(id) ?? null) : null };
@@ -238,8 +240,14 @@ function turnRows(report: Report, list: Combat[]): TurnRow[] {
     const shop = shopTurns.get(turn) ?? null;
     const combat = byRound.get(turn) ?? null;
     const own = combat ? ownEntry(report, combat.round) : null;
-    const opponents = combat?.round.entries.filter((e) => e.side === "opponent") ?? [];
-    const opponentBoards = opponents.filter((e) => e.board !== null);
+    // The game can log one opponent twice (once without a board): each hero once, with the board it has.
+    const opponents = new Map<string, Entry>();
+    for (const e of combat?.round.entries ?? []) {
+      if (e.side !== "opponent") continue;
+      const key = e.playerId !== null ? `p${e.playerId}` : `h${e.hero ?? ""}`;
+      const seen = opponents.get(key);
+      if (!seen || (seen.board === null && e.board !== null)) opponents.set(key, e);
+    }
     return {
       turn,
       tier: shop?.tier ?? null,
@@ -248,13 +256,16 @@ function turnRows(report: Report, list: Combat[]): TurnRow[] {
       goldSpent: shop?.goldSpent ?? null,
       result: combat ? RESULT[combat.outcome] : null,
       inferred: combat?.inferred ?? false,
-      opponents: opponents.map((e) => heroRef(report, e.hero)),
+      opponents: [...opponents.values()].map((e) => heroRef(report, e.hero)),
       dealt: combat?.dealt ?? null,
       taken: combat?.taken ?? null,
       healthAfter: combat?.round.ownHealthAfter ?? null,
       ownBoard: boardView(own?.board ?? null),
       ownBoardHero: own && own.playerId !== report.localPlayerId && own.hero !== report.hero ? heroRef(report, own.hero) : null,
-      opponentBoard: opponentBoards.length === 1 ? boardView(opponentBoards[0].board) : null,
+      opponentBoards: [...opponents.values()].flatMap((e) => {
+        const board = boardView(e.board);
+        return board ? [{ hero: heroRef(report, e.hero), board }] : [];
+      }),
       shop,
     };
   });
@@ -265,8 +276,7 @@ function known(values: (number | null)[], total: number): Known {
   return { value: have.length > 0 ? have.reduce((a, b) => a + b, 0) : null, known: have.length, total };
 }
 
-function summary(record: GameRecord, list: Combat[]): Summary {
-  const report = record.report;
+function summary(report: Report, list: Combat[]): Summary {
   const turns = report.shop?.turns ?? [];
   const count = (o: Outcome) => list.filter((c) => c.outcome === o).length;
   const sum = (f: (t: ShopTurn) => number | null) =>
@@ -276,7 +286,7 @@ function summary(record: GameRecord, list: Combat[]): Summary {
   );
   const shop = report.shop;
   const minutes = shop && shop.startMs !== null && shop.endMs !== null ? (shop.endMs - shop.startMs) / MS_PER_MINUTE : 0;
-  const own = report.lobby.find((s) => s.playerId === report.localPlayerId);
+  const apm = shop && shop.actions > 0 && minutes > 0 ? Math.round((shop.actions / minutes) * 100) / 100 : null;
   return {
     mode: report.mode,
     status: report.status,
@@ -291,12 +301,17 @@ function summary(record: GameRecord, list: Combat[]): Summary {
     rolls: sum((t) => t.rolls),
     buys: turns.length === 0 ? null : turns.reduce((n, t) => n + t.buys.length, 0),
     sells: turns.length === 0 ? null : turns.reduce((n, t) => n + t.sells.length, 0),
-    shopTurns: turns.length,
     finalTier: tiers.length > 0 ? Math.max(...tiers) : null,
-    apm: shop && shop.actions > 0 && minutes > 0 ? Math.round((shop.actions / minutes) * 100) / 100 : null,
-    // The leaderboard's own count at the end of a finished game (choices.rs).
-    triples: report.status === "ok" && own?.triples ? (own.triples.at(-1)?.count ?? 0) : null,
+    apm: apm !== null && apm <= MAX_APM ? apm : null,
+    triples: triples(report),
   };
+}
+
+/** The leaderboard's own count at the end of a finished game; unknown unless every seat has the record (choices.rs). */
+function triples(report: Report): number | null {
+  if (report.status !== "ok" || report.lobby.length === 0 || report.lobby.some((s) => s.triples === null)) return null;
+  const own = report.lobby.find((s) => s.playerId === report.localPlayerId);
+  return own?.triples ? (own.triples.at(-1)?.count ?? 0) : null;
 }
 
 function opponentsMet(report: Report, list: Combat[]): OpponentView[] {
@@ -333,7 +348,7 @@ function seatViews(report: Report): SeatView[] {
     }));
 }
 
-export function choiceKind(choice: Choice): ChoiceKind {
+function choiceKind(choice: Choice): ChoiceKind {
   const source = choice.source ?? "";
   if (TRINKET_SOURCES.has(source)) return "trinket";
   if (source === DARK_GIFT_SOURCE) return "dark_gift";
@@ -361,7 +376,7 @@ export function shapeGame(record: GameRecord): GameView {
   const list = combats(report, sides);
   const pick = report.heroSelect;
   return {
-    summary: summary(record, list),
+    summary: summary(report, list),
     turns: turnRows(report, list),
     opponents: opponentsMet(report, list),
     lobby: seatViews(report),

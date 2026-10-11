@@ -7,7 +7,11 @@
 import { type GameRecord, readRecord } from "./report.ts";
 import { type GameRef, storagePath } from "./url.ts";
 
-/** The bucket's file size limit (64 KB; the largest real game is about 3.3 KB gzipped). */
+/**
+ * The bucket's file size limit (64 KB; the largest real game is about 3.3 KB
+ * gzipped). Storage already enforces it, and the download is in memory before
+ * this check, so here it only refuses a file that should not exist.
+ */
 export const MAX_GZIPPED = 64 * 1024;
 /** upload-game's own cap on an inflated record (the largest real game is about 29 KB). */
 export const MAX_INFLATED = 512 * 1024;

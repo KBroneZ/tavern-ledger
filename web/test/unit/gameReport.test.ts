@@ -81,7 +81,6 @@ test("report reader: bad values become unknown and are counted, never a crash", 
   const rep = soloReport() as Record<string, any>;
   rep.final_place = 9; // out of range for Solo
   rep.hero = "<script>";
-  rep.build = "250000";
   rep.rounds[0].result = "victory";
   rep.rounds[0].entries[0].board[0].atk = 1.5;
   rep.rounds[0].entries[0].board[0].keywords = ["taunt", "flying", 3];
@@ -94,7 +93,6 @@ test("report reader: bad values become unknown and are counted, never a crash", 
   const r = rec.report;
   assert.equal(r.finalPlace, null);
   assert.equal(r.hero, null);
-  assert.equal(r.build, null);
   assert.equal(r.rounds[0].result, null);
   assert.equal(r.rounds[0].entries[0].board?.[0].atk, null);
   assert.deepEqual(r.rounds[0].entries[0].board?.[0].keywords, ["taunt"]);
@@ -103,7 +101,7 @@ test("report reader: bad values become unknown and are counted, never a crash", 
   assert.equal(r.lobby.length, 3);
   assert.deepEqual(r.choices?.[0].picked, []);
   assert.deepEqual(r.warnings, ["fine"]);
-  assert.equal(rec.unreadable, 13);
+  assert.equal(rec.unreadable, 12);
 });
 
 test("report reader: wrong types at any level never throw", () => {
@@ -177,4 +175,14 @@ test("report reader: every synthetic parser report in the repo reads without a d
       assert.equal(result.record.unreadable, 0, `${file} game ${index}`);
     }
   }
+});
+
+test("report reader: at most 3000 shop offers in a game, as the server checks", () => {
+  const rep = soloReport() as Record<string, any>;
+  const offers = Array.from({ length: 400 }, () => ({ card_id: "SYN_M_01", roll: 0, frozen: false }));
+  rep.shop.turns = Array.from({ length: 10 }, (_, i) => ({ ...rep.shop.turns[0], turn: i + 1, offers }));
+  const rec = read(record(rep));
+  const kept = rec.report.shop!.turns.reduce((n, t) => n + t.offers.length, 0);
+  assert.equal(kept, 3000);
+  assert.equal(rec.unreadable, 1000);
 });

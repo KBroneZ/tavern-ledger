@@ -150,12 +150,16 @@ export function duosReport(): Json {
     rounds: [
       {
         number: 1,
+        // Both teams' boards, and the game's second copy of one opponent with no board.
         entries: [
           { side: "own", player_id: 2, hero: "SYN_HERO_A", board: [] },
-          { side: "opponent", player_id: 4, hero: "SYN_HERO_C", board: [] },
+          { side: "own", player_id: 3, hero: "SYN_HERO_B", board: [minion("SYN_M_01", 2, 3)] },
+          { side: "opponent", player_id: 4, hero: "SYN_HERO_C", board: [minion("SYN_M_04", 1, 1)] },
+          { side: "opponent", player_id: 5, hero: "SYN_HERO_D", board: [minion("SYN_M_05", 4, 4), minion("SYN_M_06", 1, 2)] },
+          { side: "opponent", player_id: 4, hero: "SYN_HERO_C", board: null },
         ],
         own_health_after: 35,
-        opponents: [4],
+        opponents: [4, 5],
         health_after: { "2": 35, "3": 35, "4": 40, "5": 40 },
         result: null,
       },

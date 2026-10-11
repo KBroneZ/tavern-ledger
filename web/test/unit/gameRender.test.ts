@@ -36,8 +36,12 @@ test("words: hero names, headings, minions and unknown values", () => {
   assert.equal(damageText(v.turns[0]), "dealt 3");
   assert.equal(damageText(v.turns[1]), "took 5");
   assert.equal(damageText(v.turns[2]), "took 13");
-  assert.equal(goldText(v.turns[0]), "3 of 3");
+  assert.equal(goldText(v.turns[0]), "3 of 3 spent");
   assert.equal(goldText(v.turns[1]), "—", "a turn without gold is unknown, never 0");
+  // A lost combat whose own health after it is unknown: the damage that matters is unknown, not 0.
+  assert.equal(damageText({ ...v.turns[1], dealt: 0, taken: null }), "—");
+  assert.equal(damageText({ ...v.turns[0], dealt: null, taken: 0 }), "—");
+  assert.equal(damageText({ ...v.turns[1], result: "tie", dealt: 0, taken: 0 }), "0");
   assert.equal(minionWords(v.turns[1].ownBoard!.minions[1]), "SYN_M_02, 3/3, Golden, Taunt, Divine Shield");
   assert.equal(minionWords({ cardId: null, atk: null, health: 2, golden: false, keywords: [] }), "Unknown card, ?/2");
 });
@@ -70,11 +74,19 @@ test("render: every picture has its size, a text alternative and a local fallbac
   assert.ok(missing.length >= 1);
 });
 
+test("render: a record with no combats shows dashes, not 0 won", () => {
+  const rep = soloReport() as Record<string, any>;
+  rep.rounds = [];
+  const all = renderGame(view(rep), null).map(text).join("\n");
+  assert.doesNotMatch(all, /0 won/);
+  assert.match(all, /Rounds—/);
+});
+
 test("render: inferred results are marked and unknown values are dashes, never 0", () => {
   const nodes = renderGame(view(), "2026-10-09");
   const turns = nodes.find((n) => attr(n, "aria-labelledby") === "gv-turns-title")!;
   const rows = [...walk(turns)].filter((n) => n.tag === "tr").slice(1).map(text);
-  assert.match(rows[0], /^1.*Won.*Brass Captain.*dealt 3.*3 of 3$/);
+  assert.match(rows[0], /^1.*Won.*Brass Captain.*dealt 3.*3 of 3 spent$/);
   assert.match(rows[1], /^22 tier up.*Lost inferred.*Moss Witch.*took 5—$/);
   assert.match(rows[2], /Unknown/);
 });
@@ -85,6 +97,9 @@ test("render: Duos shows the teammate and the lobby's teams", () => {
   assert.match(all, /TeammateBrass Captain/);
   assert.match(all, /Team/);
   assert.match(all, /This game has no shop record/);
+  assert.match(all, /SYN_HERO_C's board/);
+  assert.match(all, /SYN_HERO_D's board/);
+  assert.doesNotMatch(all, /Not in the record/);
 });
 
 test("render: no player name, BattleTag or markup from the record reaches the page", () => {

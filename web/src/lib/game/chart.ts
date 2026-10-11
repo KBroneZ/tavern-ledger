@@ -65,8 +65,8 @@ export function turnChart(turns: ChartTurn[], id: string): VNode {
     h(
       "figcaption",
       {},
-      h("p", { class: "chart-title", id: `${id}-title` }, t("chart.turns.title")),
-      h("p", { class: "chart-desc", id: `${id}-desc` }, t("chart.turns.desc")),
+      h("p", { class: "chart-title", id: `${id}-title` }, g("turns.chartTitle")),
+      h("p", { class: "chart-desc", id: `${id}-desc` }, g("turns.chartDesc")),
     ),
     h("ul", { class: "chart-key", "aria-hidden": "true" }, key("key-win", t("result.win")), key("key-loss", t("result.loss")), key("key-tie", t("result.tie")), key("key-unknown", t("result.unknown"))),
     h(
