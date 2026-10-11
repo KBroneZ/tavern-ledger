@@ -65,10 +65,13 @@ test("a rating that cannot be read says why; off is only explained in Advanced",
 
 test("the day's summary is one line per mode played", () => {
   const today = [
-    { mode: SOLO, top_half: 4, tally: { games: 3, placed: 3, average_place: 4.333, top_half_share: 2 / 3 } },
-    { mode: DUOS, top_half: 2, tally: { games: 1, placed: 0, average_place: null, top_half_share: null } },
+    { mode: SOLO, top_half: 4, top_half_games: 2, tally: { games: 3, placed: 3, average_place: 4.333, top_half_share: 2 / 3 } },
+    { mode: DUOS, top_half: 2, top_half_games: 0, tally: { games: 1, placed: 0, average_place: null, top_half_share: null } },
   ];
-  assert.deepEqual(lobby.summaryLines(view({ today })), ["Solo today: 3 games · avg 4.3 · top 4 67%", "Duos today: 1 game"]);
+  assert.deepEqual(lobby.summaryLines(view({ today })), ["Solo today: 3 games · avg 4.3 · top 4: 2 of 3", "Duos today: 1 game"]);
+  // The case reported on 2026-10-11: 10 games, one not finished in the log.
+  const duos = [{ mode: DUOS, top_half: 2, top_half_games: 6, tally: { games: 10, placed: 9, average_place: 2.111, top_half_share: 6 / 9 } }];
+  assert.deepEqual(lobby.summaryLines(view({ today: duos })), ["Duos today: 10 games · 9 placed · avg 2.1 · top 2: 6 of 9"]);
   assert.deepEqual(lobby.summaryLines(view({ today: [] })), ["No games yet today"]);
   assert.deepEqual(lobby.summaryLines(view({ today: [{ mode: "OTHER", top_half: 4, tally: { games: 2 } }] })), ["No games yet today"]);
 });
@@ -84,8 +87,8 @@ test("Spanish words and numbers", () => {
         ["Dúos", "5040", null],
       ],
     );
-    const today = [{ mode: SOLO, top_half: 4, tally: { games: 2, placed: 2, average_place: 3.5, top_half_share: 0.5 } }];
-    assert.deepEqual(lobby.summaryLines(view({ today })), ["Individual hoy: 2 partidas · media 3,5 · top 4 50 %"]);
+    const today = [{ mode: SOLO, top_half: 4, top_half_games: 1, tally: { games: 3, placed: 2, average_place: 3.5, top_half_share: 0.5 } }];
+    assert.deepEqual(lobby.summaryLines(view({ today })), ["Individual hoy: 3 partidas · 2 con puesto · media 3,5 · top 4: 1 de 2"]);
     assert.deepEqual(lobby.summaryLines(view()), ["Aún no has jugado hoy"]);
   } finally {
     I18n.setLang("en");

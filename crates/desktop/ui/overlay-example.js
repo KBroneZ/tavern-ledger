@@ -15,6 +15,7 @@ const EXAMPLE_GAME = {
   own_place: { value: 2, source: "log" },
   leaderboard_slots: 3,
   own_health: { value: 32, source: "log" },
+  damage_cap: 15,
   tribes: [
     { tribe: "BEAST", offers: 6 },
     { tribe: "MURLOC", offers: 4 },

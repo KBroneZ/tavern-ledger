@@ -71,6 +71,8 @@ Order: T-501 and T-502 in parallel (they do not overlap: `web/` design vs `supab
 
 ## Decisions the user must make (the hub asks, one at a time)
 
+**Answered 2026-10-11:** 1 → D-075 (public profiles, minimum games), 2 → D-078 (open after T-506 and T-509), 3 → D-074 (HearthstoneJSON pictures), 4 → D-076 (no rating), 5 → D-077 (current rule plus a word filter).
+
 1. **Public leaderboards scope:** only opt-in public profiles, with a minimum of games (recommended), or more.
 2. **Opening sign-ups:** leaderboards are empty with one account; opening sign-ups is the user's call (D-041 mail, legal texts out of draft).
 3. **Card pictures on the website:** allow HearthstoneJSON's image host in the CSP (`img-src`) under the fan content terms, or no pictures.

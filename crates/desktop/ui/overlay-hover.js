@@ -1,6 +1,7 @@
 // The hover board (T-306, T-307, T-333). The app watches the mouse over the
 // game's own leaderboard and says which place is hovered (hover.rs) and where
-// the board goes: across the top of the game window, centred, as wide as the
+// the board goes: across the top of the game window, right of the game's own
+// hover card (T-341), as wide as the
 // game's own board (screen_fit.rs, hover.rs). This file draws that opponent
 // from the live state overlay.js already has, laid out like the game: the
 // last board met, one row of up to seven minions with attack and health, and

@@ -3,7 +3,8 @@
 //! the mouse position is checked about 20 times a second against where the
 //! leaderboard is (from the game window's rectangle). When it rests on a
 //! slot the overlay page is told which place it is, and shows that
-//! opponent's card at the top of the game window, centred (T-309, D-049).
+//! opponent's card at the top of the game window, right of the game's own
+//! hover card (T-309, D-049, T-341).
 //! The overlay stays click-through:
 //! the mouse is only watched, never taken. Nothing is read from the game.
 
@@ -16,7 +17,7 @@ use tauri::{AppHandle, Emitter};
 
 use crate::foreground;
 use crate::leaderboard::{slot_area, slot_at};
-use crate::screen_fit::{place_card, Area, CardPlace};
+use crate::screen_fit::{place_card, Area, CardPlace, GAP, MIN_CARD_WIDTH};
 use crate::AppState;
 
 /// The page listens for this: a `Hover`, or null when nothing is hovered.
@@ -35,6 +36,35 @@ pub const CARD_SHARE: f64 = 0.85;
 /// own pixels; `place_card` keeps it inside the game window and the screen.
 pub fn card_width(game_height: f64) -> f64 {
     CARD_SHARE * game_height
+}
+
+/// The game's own hover card ("Playing as…", the combat history and the
+/// hero power's tip, T-341) opens right of its leaderboard, from about 0.54
+/// of the height left of the game window's centre to the centre itself, and
+/// from about a quarter of the height down (measured on the user's
+/// screenshot at 3840x2160). Our board starts this share of the height right
+/// of the centre, so it never covers that card whichever slot is hovered.
+pub const CLEAR_RIGHT_OF_CENTRE: f64 = 0.03;
+
+/// Moves a card placed at the top of the game window (centred) to the right
+/// of the game's own hover card, narrower when the room up to the game
+/// window's right edge (and the screen's) is less than its width. A window
+/// too narrow for even the smallest card keeps the centred place.
+pub fn clear_of_game_card(card: CardPlace, game: Area, bounds: Area) -> CardPlace {
+    if !game.usable() {
+        return card;
+    }
+    let left = game.x + game.w / 2.0 + CLEAR_RIGHT_OF_CENTRE * game.h;
+    let right = game.right().min(bounds.right()) - GAP;
+    let room = right - left;
+    if card.x >= left || room < MIN_CARD_WIDTH {
+        return card;
+    }
+    CardPlace {
+        x: left,
+        width: card.width.min(room),
+        ..card
+    }
 }
 
 /// What the page needs to show the card: the place hovered (1 is the top
@@ -95,7 +125,7 @@ pub fn hover_at(
         place,
         member,
         slot,
-        card: place_card(game, bounds, card_width(game.h)),
+        card: clear_of_game_card(place_card(game, bounds, card_width(game.h)), game, bounds),
     })
 }
 
@@ -188,9 +218,13 @@ mod tests {
                 let hover = hover_at(game, board, 8, 1, middle_of(game, board, 8, place), f)
                     .expect("on the leaderboard");
                 assert_eq!(hover.place, place);
-                assert_eq!(hover.card.x + hover.card.width / 2.0, w / 2.0, "centred");
-                assert_eq!(hover.card.y, crate::screen_fit::GAP, "at the top");
-                assert!(hover.card.x + hover.card.width <= w);
+                let clear = w / 2.0 + CLEAR_RIGHT_OF_CENTRE * h;
+                assert!(
+                    (hover.card.x - clear).abs() < 0.01,
+                    "right of the game's card"
+                );
+                assert_eq!(hover.card.y, GAP, "at the top");
+                assert!(hover.card.x + hover.card.width <= w - GAP);
             }
         }
     }
@@ -221,10 +255,12 @@ mod tests {
         assert_eq!(hover.place, 4);
         let back_x = hover.slot.x * 1.5 + 1920.0;
         assert!((back_x - (2100.0 + board.x)).abs() < 0.01);
-        // The card is centred on the game window, at its top, in the
-        // overlay's pixels.
-        let centre = (hover.card.x + hover.card.width / 2.0) * 1.5 + 1920.0;
-        assert!((centre - (2100.0 + 640.0)).abs() < 0.01);
+        // The card starts right of the game window's centre, at its top,
+        // in the overlay's pixels, and stays inside the game window.
+        let left = hover.card.x * 1.5 + 1920.0;
+        assert!((left - (2100.0 + 640.0 + 0.03 * 720.0)).abs() < 0.01);
+        let right = (hover.card.x + hover.card.width) * 1.5 + 1920.0;
+        assert!(right <= 2100.0 + 1280.0 - 8.0 * 1.5 + 0.01);
         assert!((hover.card.y * 1.5 - (150.0 + 8.0 * 1.5)).abs() < 0.01);
     }
 
@@ -262,6 +298,81 @@ mod tests {
         assert_eq!(solo.member, None);
     }
 
+    /// The game's own hover card, as measured on the user's screenshot
+    /// (T-341): from 0.54 of the height left of the centre to the centre,
+    /// from a quarter of the height down; with some margin.
+    fn game_card_zone(game: Area) -> Area {
+        let centre = game.x + game.w / 2.0;
+        Area {
+            x: centre - 0.56 * game.h,
+            y: game.y + 0.1 * game.h,
+            w: 0.57 * game.h,
+            h: 0.85 * game.h,
+        }
+    }
+
+    #[test]
+    fn the_board_never_covers_the_games_own_hover_card() {
+        // 3840x2160 at 150% and 1920x1080 at 100%, Solo and Duos, every slot.
+        for (w, h, scale, work_h) in [(3840.0, 2160.0, 1.5, 1408.0), (1920.0, 1080.0, 1.0, 1040.0)]
+        {
+            let game = client(0.0, 0.0, w, h);
+            let board = default_area((w, h));
+            let f = frame((0.0, 0.0), scale, (w / scale, work_h));
+            let zone = game_card_zone(game.in_frame((0.0, 0.0), scale));
+            for (slots, per_slot) in [(8, 1), (4, 2)] {
+                for portrait in 1..=8 {
+                    let point = middle_of(game, board, 8, portrait);
+                    let card = hover_at(game, board, slots, per_slot, point, f)
+                        .unwrap()
+                        .card;
+                    assert!(card.x >= zone.right(), "{w}x{h}: {card:?} over {zone:?}");
+                    // Still the size the game's board asks for (D-067).
+                    assert!((card.width - 0.85 * h / scale).abs() < 0.01, "{card:?}");
+                    assert!(card.x + card.width <= w / scale - GAP + 0.01);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn a_narrow_window_gets_a_narrower_board_still_clear_of_the_games_card() {
+        // A 4:3 window: less room right of the centre.
+        let game = client(0.0, 0.0, 1440.0, 1080.0);
+        let board = default_area((1440.0, 1080.0));
+        let f = frame((0.0, 0.0), 1.0, (1920.0, 1040.0));
+        let card = hover_at(game, board, 8, 1, middle_of(game, board, 8, 1), f)
+            .unwrap()
+            .card;
+        assert!((card.x - (720.0 + 0.03 * 1080.0)).abs() < 0.01);
+        assert!((card.x + card.width - (1440.0 - GAP)).abs() < 0.01);
+        // Too narrow for even the smallest card: the centred place stays.
+        let tiny = client(0.0, 0.0, 300.0, 1080.0);
+        let centred = place_card(
+            tiny,
+            Area {
+                x: 0.0,
+                y: 0.0,
+                w: 1920.0,
+                h: 1040.0,
+            },
+            918.0,
+        );
+        assert_eq!(
+            clear_of_game_card(
+                centred,
+                tiny,
+                Area {
+                    x: 0.0,
+                    y: 0.0,
+                    w: 1920.0,
+                    h: 1040.0
+                }
+            ),
+            centred
+        );
+    }
+
     #[test]
     fn the_board_is_sized_to_the_game_at_4k_150_and_at_1080p() {
         // 3840x2160 at 150%: the overlay's pixels are 2/3 of the screen's.
@@ -274,7 +385,7 @@ mod tests {
             "{:?}",
             hover.card
         );
-        assert!((hover.card.x + hover.card.width / 2.0 - 1280.0).abs() < 0.01);
+        assert!((hover.card.x - (1280.0 + 0.03 * 1440.0)).abs() < 0.01);
         // 1920x1080 at 100%: the same share of the screen.
         let game = client(0.0, 0.0, 1920.0, 1080.0);
         let board = default_area((1920.0, 1080.0));

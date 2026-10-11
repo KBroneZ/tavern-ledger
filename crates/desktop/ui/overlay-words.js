@@ -132,15 +132,18 @@
   }
 
   // The hovered hero of a Duos team (T-340): the app says which of the
-  // team's two portraits the mouse is on (hover.rs, 0 the top one), and the
-  // seats are in the order the team is listed in (lower player id first).
-  // That this is the game's top portrait is not in the log: unconfirmed
-  // until a real Duos game is checked (T-336). With no portrait known
-  // (an older app or Solo), the whole team stays.
+  // team's two portraits the mouse is on (hover.rs, 0 the top one). The
+  // game puts the higher player id on top (T-343, D-080): the user saw the
+  // lower id's board under an opposing team's top portrait, and their own
+  // hero is the top one of their own team, where they hold the higher id in
+  // 33 of their 39 Duos games. The log does not say it; hero entity ids
+  // agree with the lower-id order in 13 of 21 teams, so they do not fit.
+  // With no portrait known (an older app or Solo), the whole team stays.
   function hoveredViews(views, member) {
     const list = Array.isArray(views) ? views : [];
     if (list.length < 2 || !Number.isInteger(member) || member < 0 || member >= list.length) return list;
-    return [list[member]];
+    const topFirst = [...list].sort((a, b) => b.seat - a.seat);
+    return [topFirst[member]];
   }
 
   // One opponent in the Simple side panel (T-339): a face per hero with
@@ -181,6 +184,15 @@
     return null;
   }
 
+  // The combat damage cap the game shows (T-315): "Max damage 15", the
+  // game's own words, in Simple and Advanced; null when no cap applies or
+  // the log has none (never a guess).
+  function damageCap(game) {
+    const cap = game ? game.damage_cap : null;
+    if (!Number.isInteger(cap) || cap <= 0) return null;
+    return { text: I18n.t("ov.cap", { value: I18n.num(cap) }), about: I18n.t("ov.cap.about") };
+  }
+
   const api = {
     KEYWORDS,
     keywordMarks,
@@ -195,6 +207,7 @@
     hoveredViews,
     simpleRow,
     simpleTribes,
+    damageCap,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLWords = api;

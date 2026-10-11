@@ -375,8 +375,12 @@ function renderOpponents(g) {
   list.setAttribute("aria-label", TLI18n.t("ov.slot.opponents"));
   list.append(...g.opponents.map(simpleOpponent));
   const full = el("div", "adv");
-  panel.replaceChildren(list, full);
-  panel.classList.toggle("simple-empty", !g.opponents.length);
+  // The damage cap the game shows (T-315), above the opponents in both modes.
+  const cap = TLWords.damageCap(g);
+  const capLine = cap ? el("p", "damage-cap", cap.text) : null;
+  if (capLine) capLine.title = cap.about;
+  panel.replaceChildren(...[capLine, list, full].filter(Boolean));
+  panel.classList.toggle("simple-empty", !g.opponents.length && !cap);
   full.append(el("h2", null, TLI18n.t("ov.slot.opponents")));
   if (!g.opponents.length) {
     full.append(el("div", "row", TLI18n.t("ov.opponents.noLobby")));

@@ -146,6 +146,10 @@ pub struct LiveGame {
     pub legend: Vec<LegendEntry>,
     pub warnings: Vec<String>,
     pub problems: Vec<String>,
+    /// The most damage a lost combat can deal now, which the game shows the
+    /// player ("Max damage: 15", T-315); None when no cap applies or the
+    /// log has none. Live only, from the game entity.
+    pub damage_cap: Option<i64>,
 }
 
 impl LiveGame {
@@ -172,6 +176,13 @@ impl LiveGame {
 }
 
 impl LiveGame {
+    /// Adds the combat damage cap the game shows now (T-315); none once the
+    /// game is over.
+    pub fn with_damage_cap(mut self, cap: Option<i64>) -> Self {
+        self.damage_cap = cap.filter(|_| self.phase == Phase::Playing);
+        self
+    }
+
     /// Marks the opponent holding `seat`, the one the game marks as next on
     /// its leaderboard (T-313); in Duos that marks the whole opposing team.
     /// Our own seats are never marked.
@@ -292,6 +303,7 @@ pub fn live_game(report: &Value) -> LiveGame {
         legend: legend(),
         warnings: texts(report, "warnings"),
         problems: texts(report, "problems"),
+        damage_cap: None,
     }
 }
 

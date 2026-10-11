@@ -40,6 +40,10 @@
         <button type="button" data-mode="GT_BATTLEGROUNDS_DUO" aria-pressed="false" data-i18n="mode.GT_BATTLEGROUNDS_DUO">Duos</button>
         <button type="button" data-mode="OTHER" aria-pressed="false" hidden data-i18n="mode.OTHER">Other</button>
       </nav>
+      <div class="detail-switch" role="group" aria-label="Detail" data-i18n-attr="aria-label:win.detail.label">
+        <button type="button" data-detail-pick="simple" aria-pressed="true" data-i18n="win.detail.simple">Simple</button>
+        <button type="button" data-detail-pick="advanced" aria-pressed="false" data-i18n="win.detail.advanced">Advanced</button>
+      </div>
     </div>
 
     <div id="panel-games" class="tab-panel" role="tabpanel" aria-labelledby="tab-games">
@@ -51,7 +55,7 @@
     </section>
     <p id="not-counted" class="tally-note" hidden></p>
 
-    <section class="ledger lobby" aria-labelledby="lobby-title">
+    <section class="ledger lobby adv-only" aria-labelledby="lobby-title">
       <div class="lobby-line">
         <h2 id="lobby-title" tabindex="-1" data-i18n="win.lobby.title">Lobby tribes</h2>
         <p id="lobby-state" role="status" aria-live="polite"></p>
@@ -84,7 +88,7 @@
         <p id="heroes-empty" class="empty" hidden data-i18n="win.heroes.empty">No heroes yet.</p>
       </section>
 
-      <section class="ledger tribes" aria-labelledby="tribes-title">
+      <section class="ledger tribes adv-only" aria-labelledby="tribes-title">
         <h2 id="tribes-title" data-i18n="win.tribes.seen.title">Tribes seen in the tavern</h2>
         <div id="tribes"></div>
         <details class="fold about">
@@ -94,7 +98,7 @@
         <p id="tribes-empty" class="empty" hidden data-i18n="win.tribes.seen.empty">No tavern offers seen yet.</p>
       </section>
 
-      <section class="ledger tribes" id="entered-tribes-section" aria-labelledby="entered-tribes-title" hidden>
+      <section class="ledger tribes adv-only" id="entered-tribes-section" aria-labelledby="entered-tribes-title" hidden>
         <h2 id="entered-tribes-title" data-i18n="win.entered.title">Lobby tribes you entered</h2>
         <p class="note" data-i18n="win.entered.about">Typed by you, one pick of five per game. Separate from the tribes seen in the tavern.</p>
         <div id="entered-tribes"></div>
@@ -110,7 +114,7 @@
       </details>
     </section>
 
-    <section class="ledger hero-picks" aria-labelledby="hero-picks-title">
+    <section class="ledger hero-picks adv-only" aria-labelledby="hero-picks-title">
       <h2 id="hero-picks-title" data-i18n="win.picks.title">Hero picks</h2>
       <div id="hero-picks-body"></div>
       <details class="fold about">
@@ -119,7 +123,7 @@
       </details>
     </section>
 
-    <section class="ledger choice-stats" aria-labelledby="choice-stats-title">
+    <section class="ledger choice-stats adv-only" aria-labelledby="choice-stats-title">
       <h2 id="choice-stats-title" data-i18n="win.choices.title">Trinkets and Dark Gifts</h2>
       <div id="choice-stats-body"></div>
       <details class="fold about">
@@ -147,6 +151,13 @@
         <p class="setting-row"><label for="setting-language" data-i18n="settings.language.label">Language of the app</label> <select id="setting-language"></select></p>
         <p class="note" data-i18n="settings.language.note">Card and hero names follow this language too (from the card data; the game's own name when the card data does not have the card).</p>
         <p id="language-problem" class="problem" role="status"></p>
+      </section>
+      <section id="detail-setting" class="settings-group" aria-labelledby="detail-title">
+        <h3 id="detail-title" data-i18n="settings.detail.title">Detail</h3>
+        <p class="setting-row"><label for="setting-window-detail" data-i18n="settings.detail.window">Main window</label> <select id="setting-window-detail"><option value="simple" data-i18n="win.detail.simple">Simple</option><option value="advanced" data-i18n="win.detail.advanced">Advanced</option></select></p>
+        <p class="setting-row"><label for="overlay-detail" data-i18n="settings.detail.overlay">Overlay</label> <select id="overlay-detail"><option value="simple" data-i18n="win.detail.simple">Simple</option><option value="advanced" data-i18n="win.detail.advanced">Advanced</option></select></p>
+        <p class="note" data-i18n="settings.detail.note">Simple shows the key numbers; Advanced shows everything. The main window and the overlay each keep their own choice.</p>
+        <p id="window-detail-problem" class="problem" role="status"></p>
       </section>
       <section id="overlay-switch" class="overlay-switch settings-group" aria-labelledby="overlay-switch-title">
         <h3 id="overlay-switch-title" data-i18n="settings.overlay.title">Overlay</h3>
@@ -217,7 +228,11 @@
         <span id="recap-place" class="recap-place"></span>
       </div>
       <div class="recap-actions">
-        <button type="button" id="recap-tribes" class="report-btn" data-i18n="win.recap.tribes">Tribes</button>
+        <div class="detail-switch in-bar" role="group" aria-label="Detail" data-i18n-attr="aria-label:win.detail.label">
+          <button type="button" data-detail-pick="simple" aria-pressed="true" data-i18n="win.detail.simple">Simple</button>
+          <button type="button" data-detail-pick="advanced" aria-pressed="false" data-i18n="win.detail.advanced">Advanced</button>
+        </div>
+        <button type="button" id="recap-tribes" class="report-btn adv-only" data-i18n="win.recap.tribes">Tribes</button>
         <button type="button" id="recap-report" class="report-btn" data-i18n="win.recap.report">Report</button>
         <button type="button" id="recap-close" class="close-x" aria-label="Close the recap" title="Close (Esc)" data-i18n-attr="aria-label:win.recap.close;title:win.recap.closeTip"><span aria-hidden="true">&#x2715;</span></button>
       </div>
@@ -282,6 +297,7 @@
   <script src="turns.js"></script>
   <script src="curious.js"></script>
   <script src="tabs.js"></script>
+  <script src="detail-switch.js"></script>
   <script src="app.js"></script>
   <script src="upload.js"></script>
   <script src="overlay-switch.js"></script>
