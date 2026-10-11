@@ -26,6 +26,18 @@ export interface ModeFigures {
 
 const percent = (value: number | null): string =>
   value === null ? DASH : numberFormat({ style: "percent", maximumFractionDigits: 0 }).format(value);
+
+/**
+ * part / whole as a whole percent that never rounds to a claim the counts
+ * do not make: above 0 is at least "<1%", below all is at most 99%.
+ */
+function sharePercent(part: number, whole: number): string {
+  if (whole === 0) return DASH;
+  const value = part / whole;
+  if (part > 0 && value < 0.005) return `<${percent(0.01)}`;
+  if (part < whole && value >= 0.995) return percent(0.99);
+  return percent(value);
+}
 const plain = (value: number): string => numberFormat({ maximumFractionDigits: 0 }).format(value);
 
 export const modeName = (mode: AccuracyMode): string => at(mode === "solo" ? "mode.solo" : "mode.duos");
@@ -34,7 +46,7 @@ function blockedNote(m: ModeAccuracy, name: string): string {
   if (m.combats_with_result === 0) return at("blocked.empty", { mode: name });
   if (m.blocked === 0) return at("blocked.none", { mode: name, total: plain(m.combats_with_result) });
   return at("blocked.some", {
-    share: percent(m.blocked_share),
+    share: sharePercent(m.blocked, m.combats_with_result),
     mode: name,
     blocked: plain(m.blocked),
     total: plain(m.combats_with_result),
@@ -49,14 +61,14 @@ export function modeFigures(m: ModeAccuracy, mode: AccuracyMode): ModeFigures {
     modeName: name,
     combats: at("mode.combats", { count: plain(m.combats_with_result) }),
     right: {
-      value: scored ? percent(m.most_likely_right / m.scored) : DASH,
+      value: scored ? sharePercent(m.most_likely_right, m.scored) : DASH,
       backing: scored ? at("right.backing", { right: plain(m.most_likely_right), scored: plain(m.scored) }) : "",
     },
     meanP: {
       value: percent(m.mean_p_real),
       backing: scored ? at("tile.meanP.back", { count: plain(m.scored) }) : "",
     },
-    blocked: { value: percent(m.blocked_share), note: blockedNote(m, name) },
+    blocked: { value: sharePercent(m.blocked, m.combats_with_result), note: blockedNote(m, name) },
     brier: {
       value: m.brier === null ? DASH : numberFormat({ minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(m.brier),
       backing: at("tile.brier.back"),

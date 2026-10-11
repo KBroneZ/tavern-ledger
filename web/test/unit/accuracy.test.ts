@@ -98,6 +98,8 @@ test("an extra key anywhere fails: the page shows only the export's fields", () 
 test("wrong types and impossible values fail", () => {
   const cases: [string, (raw: Record<string, unknown>) => void][] = [
     ["date", (r) => (r.date = "11/10/2026")],
+    ["date", (r) => (r.date = "2026-13-45")],
+    ["blocked_share", (r) => ((r.modes as Record<string, Record<string, unknown>>).duos.blocked_share = 0.5)],
     ["engine_version", (r) => (r.engine_version = 4)],
     ["trials", (r) => (r.trials = -1)],
     ["card_id", (r) => ((r.blocking_cards as Record<string, unknown>[])[0].card_id = "<script>")],
@@ -192,6 +194,16 @@ test("no combat blocked: the note says so instead of hiding the share", () => {
   const f = modeFigures(sample().modes.solo, "solo");
   assert.equal(f.blocked.value, "0%");
   assert.equal(f.blocked.note, "Odds in every Solo combat with a result (19): no card was missing.");
+});
+
+test("shares never round to a claim the counts do not make", () => {
+  const raw = committed();
+  const duos = (raw.modes as Record<string, Record<string, unknown>>).duos;
+  Object.assign(duos, { combats_with_result: 1000, blocked: 3, blocked_share: 0.003, refused: 0, scored: 997, most_likely_right: 996 });
+  const f = modeFigures(parseAccuracy(raw).modes.duos, "duos");
+  assert.equal(f.blocked.value, "<1%");
+  assert.match(f.blocked.note, /^No odds in <1% of Duos combats \(3 of 1,000\)/);
+  assert.equal(f.right.value, "99%");
 });
 
 test("calibration bars: percents per bucket, empty buckets marked, never drawn as 0", () => {

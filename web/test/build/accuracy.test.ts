@@ -37,6 +37,19 @@ test("each mode's tile row holds the accuracy and the blocked share together", (
   }
 });
 
+test("the Brier score, refused count and card ids are Advanced only", () => {
+  for (const page of PAGES) {
+    const html = read(page);
+    const brier = page.startsWith("es/") ? "Puntuación de Brier" : "Brier score";
+    const adv = [...html.matchAll(/<div class="adv">([\s\S]*?)<\/div>\s*<\/div>\s*<figure/g)].map((m) => m[1]);
+    assert.equal(adv.length, 2, page);
+    for (const block of adv) assert.ok(block.includes(brier), page);
+    assert.equal(html.split(brier).length - 1, 2, `${page}: the Brier label only inside the Advanced blocks`);
+    assert.match(html, /<th scope="col" class="adv">/, page);
+    assert.ok(!/<td class="acc-id/.test(html), `${page}: card id cells are Advanced`);
+  }
+});
+
 test("the page shows the committed numbers: counts, version and date", () => {
   const en = text(read("accuracy/index.html"));
   for (const mode of ["solo", "duos"] as const) {

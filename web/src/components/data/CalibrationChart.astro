@@ -37,6 +37,7 @@ const pairX = (i: number) => i * SLOT + (SLOT - 2 * BAR - GAP) / 2;
     <li><i class="key-said" aria-hidden="true"></i>{at("cal.key.said")}</li>
     <li><i class="key-happened" aria-hidden="true"></i>{at("cal.key.happened")}</li>
   </ul>
+  <div class="scroll-x" role="region" aria-label={at("cal.title")} tabindex="0">
   <svg viewBox={`0 0 ${width} ${HEIGHT}`} width={width} height={HEIGHT} role="img" aria-labelledby={`${id}-title`} aria-describedby={`${id}-desc`}>
     <line class="grid" x1="0" x2={width} y1={TOP} y2={TOP} />
     <line class="grid" x1="0" x2={width} y1={(TOP + BASE) / 2} y2={(TOP + BASE) / 2} />
@@ -82,6 +83,7 @@ const pairX = (i: number) => i * SLOT + (SLOT - 2 * BAR - GAP) / 2;
       })
     }
   </svg>
+  </div>
   <Fold summary={at("cal.table")} context={`${at("cal.title")}, ${modeName}`} compact>
     <table class="dtable">
       <thead>

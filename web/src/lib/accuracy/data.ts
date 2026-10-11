@@ -60,6 +60,16 @@ const VERSION = /^\d+\.\d+\.\d+$/;
 const BUCKETS = 5;
 const MAX_BLOCKING = 10;
 const BRIER_MAX = 2;
+/** A share written as a float may differ from part / whole in its last digits. */
+const SHARE_TOLERANCE = 1e-9;
+
+/** A real calendar day, not just the shape (2026-13-45 fails). */
+function isDay(value: string): boolean {
+  if (!DATE.test(value)) return false;
+  const [y, m, d] = value.split("-").map(Number);
+  const day = new Date(Date.UTC(y, m - 1, d));
+  return day.getUTCFullYear() === y && day.getUTCMonth() === m - 1 && day.getUTCDate() === d;
+}
 
 type Raw = Record<string, unknown>;
 
@@ -133,6 +143,9 @@ function modeAccuracy(value: unknown, where: string): ModeAccuracy {
   if (m.blocked + m.refused + m.scored > m.combats_with_result) throw new Error(`${where}: blocked, refused and scored exceed combats_with_result`);
   if (m.most_likely_right > m.scored) throw new Error(`${where}: most_likely_right exceeds scored`);
   if ((m.combats_with_result === 0) !== (m.blocked_share === null)) throw new Error(`${where}: blocked_share is null exactly with no combat`);
+  if (m.blocked_share !== null && Math.abs(m.blocked_share - m.blocked / m.combats_with_result) > SHARE_TOLERANCE) {
+    throw new Error(`${where}: blocked_share is not blocked / combats_with_result`);
+  }
   if ((m.scored === 0) !== (m.mean_p_real === null) || (m.scored === 0) !== (m.brier === null)) {
     throw new Error(`${where}: mean_p_real and brier are null exactly when nothing was scored`);
   }
@@ -152,7 +165,7 @@ export function parseAccuracy(value: unknown): Accuracy {
   // The format first: another shape is not read at all.
   if (raw.format !== ACCURACY_FORMAT) throw new Error(`accuracy: format is not ${ACCURACY_FORMAT}`);
   keys(raw, ["format", "date", "engine_version", "trials", "modes", "blocking_cards"], "accuracy");
-  if (typeof raw.date !== "string" || !DATE.test(raw.date)) throw new Error("accuracy.date: not YYYY-MM-DD");
+  if (typeof raw.date !== "string" || !isDay(raw.date)) throw new Error("accuracy.date: not a YYYY-MM-DD day");
   if (typeof raw.engine_version !== "string" || !VERSION.test(raw.engine_version)) throw new Error("accuracy.engine_version: not a version");
   const modes = object(raw.modes, "accuracy.modes");
   keys(modes, MODES, "accuracy.modes");
