@@ -132,19 +132,18 @@
   }
 
   // The hovered hero of a Duos team (T-340): the app says which of the
-  // team's two portraits the mouse is on (hover.rs, 0 the top one), and the
-  // seats are in the order the team is listed in (lower player id first).
-  // That this is the game's top portrait is not in the log. The user says
-  // their own hero is the top one of their own team (T-343), while they have
-  // the higher player id in 33 of their 39 Duos games: the game does not
-  // put the lower id on top there. Our own slot shows nothing on hover; for
-  // opposing teams the first seat stays the top one until a real game
-  // confirms or refutes it (one line here). With no portrait known
-  // (an older app or Solo), the whole team stays.
+  // team's two portraits the mouse is on (hover.rs, 0 the top one). The
+  // game puts the higher player id on top (T-343, D-080): the user saw the
+  // lower id's board under an opposing team's top portrait, and their own
+  // hero is the top one of their own team, where they hold the higher id in
+  // 33 of their 39 Duos games. The log does not say it; hero entity ids
+  // agree with the lower-id order in 13 of 21 teams, so they do not fit.
+  // With no portrait known (an older app or Solo), the whole team stays.
   function hoveredViews(views, member) {
     const list = Array.isArray(views) ? views : [];
     if (list.length < 2 || !Number.isInteger(member) || member < 0 || member >= list.length) return list;
-    return [list[member]];
+    const topFirst = [...list].sort((a, b) => b.seat - a.seat);
+    return [topFirst[member]];
   }
 
   // One opponent in the Simple side panel (T-339): a face per hero with
