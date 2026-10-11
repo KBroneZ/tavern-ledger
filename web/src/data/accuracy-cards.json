@@ -1,0 +1,45 @@
+{
+  "cards": {
+    "BG21_HERO_030t": {
+      "en": "Sneed's New Shredder",
+      "es": "Trituradora nueva de Sneed",
+      "golden": false
+    },
+    "BG31_835": {
+      "en": "Deathly Striker",
+      "es": "Asaltadora letal",
+      "golden": false
+    },
+    "BG31_999": {
+      "en": "Stitched Salvager",
+      "es": "Recuperador cosido",
+      "golden": false
+    },
+    "BG34_140": {
+      "en": "Expert Aviator",
+      "es": "Aviador experto",
+      "golden": false
+    },
+    "BG34_140_G": {
+      "en": "Expert Aviator",
+      "es": "Aviador experto",
+      "golden": true
+    },
+    "BG34_Giant_017": {
+      "en": "Timewarped Scourfin",
+      "es": "Plagaleta asíncrono",
+      "golden": false
+    },
+    "BGS_008": {
+      "en": "Ghastcoiler",
+      "es": "Terror reptiliano",
+      "golden": false
+    },
+    "TB_BaconShop_HERO_33_Buddy_G": {
+      "en": "Mishmash",
+      "es": "Revoltijo",
+      "golden": true
+    }
+  },
+  "format": 1
+}

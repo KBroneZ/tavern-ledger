@@ -10,6 +10,7 @@ import { runInNewContext } from "node:vm";
 import { basePath, href, isLang, langPaths, pathIn, pathLang, placeholders, pluralForm, setLang, TABLES } from "../../src/lib/i18n.ts";
 // Each table registers itself when imported.
 import { ACCOUNT_STRINGS } from "../../src/lib/account/strings.ts";
+import { ACC_STRINGS } from "../../src/lib/accuracy/strings.ts";
 import { CH_STRINGS } from "../../src/lib/community/strings.ts";
 import { STRINGS, t } from "../../src/lib/data/strings.ts";
 import { GAME_STRINGS } from "../../src/lib/game/strings.ts";
@@ -37,9 +38,9 @@ const ROOT = join(import.meta.dirname, "..", "..");
 
 afterEach(() => setLang("en"));
 
-test("every table is registered: site, account, data, game, leaderboards, community", () => {
-  assert.deepEqual(TABLES.map((x) => x.name).sort(), ["account", "community", "data", "game", "leaderboards", "site"]);
-  const english = [ACCOUNT_STRINGS, CH_STRINGS, STRINGS, GAME_STRINGS, LB_STRINGS, SITE_STRINGS];
+test("every table is registered: site, account, data, game, leaderboards, community, accuracy", () => {
+  assert.deepEqual(TABLES.map((x) => x.name).sort(), ["account", "accuracy", "community", "data", "game", "leaderboards", "site"]);
+  const english = [ACCOUNT_STRINGS, ACC_STRINGS, CH_STRINGS, STRINGS, GAME_STRINGS, LB_STRINGS, SITE_STRINGS];
   for (const en of english) assert.ok(TABLES.some((x) => x.en === en));
 });
 
