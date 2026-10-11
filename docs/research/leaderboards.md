@@ -28,7 +28,7 @@ Rows show the display name (read at the moment of the request, so a rename shows
 | `top_half_rate` Top 4 rate (Top 2 in Duos) | % of finished games in the top half, 1 decimal | higher | finished games |
 | `win_rate` Win rate | % of finished games in 1st, 1 decimal | higher | finished games |
 | `games` Games played | finished games | higher | the same |
-| `top_half_streak` Longest top 4 / top 2 streak | most top-half finishes in a row within the period, in play order | higher | finished games |
+| `top_half_streak` Longest top 4 / top 2 streak | most top-half finishes in a row within the period, in play order; a left-out game (below) breaks a run | higher | finished games |
 | `hero_avg_place` Best average place per hero | mean place with one hero (skins under their hero, D-019 rule); one row per player and hero | lower | games with that hero (10+) |
 | `apm` Actions per minute | mean APM (D-046) | higher | games with APM recorded |
 | `gold_beyond_income` | mean gold beyond income per game | higher | games with it recorded |
@@ -57,14 +57,15 @@ The data is self-reported: the desktop app uploads it and the validator checks i
 | gold beyond income | 5000 | far above any game seen |
 | board attack + health | 10,000,000 | far above any board seen |
 | rounds | 100 | games end long before |
+| day played | tomorrow (UTC) | the day comes from the player's own clock, which can be ahead of UTC by a day at most |
 
 Unknown values never exclude a game. Other limits are the upload's own: per-user hourly and daily upload limits, the validator, a minimum of games. Ranking needs many games, so a forged report gains little; the terms allow leaving altered games off the boards.
 
 ## How it is built
 
-- **Snapshot**: `private.leaderboard_rows` (mode, period, board, user id, hero, value, games), in a schema the API does not expose; no client role has any right on it. `private.refresh_leaderboards()` rebuilds it in one transaction (readers keep the old one until it commits) from the games of public profiles with an allowed name only, so nothing else is copied. pg_cron job `leaderboards-refresh`, every 10 minutes (`*/10 * * * *`). The migration builds it once.
-- **Reads**: `public.leaderboard(p_mode, p_period)` (anon and authenticated; `security definer`, empty search path). It checks every profile again as it reads (public, named, name allowed), computes the standings over the rows it returns, and refuses an unknown mode or period (`22023`). `public.leaderboard_refreshed_at()` gives the last rebuild's time.
-- **Opting out**: a trigger deletes a profile's rows the moment it turns private; the read check hides it at once anyway. Turning public again shows the player at the next rebuild (within 10 minutes). Account deletion takes the rows with the profile (foreign key).
+- **Snapshot**: `private.leaderboard_rows` (mode, period, board, user id, hero, value, games), in a schema the API does not expose; no client role has any right on it. `private.refresh_leaderboards()` rebuilds it in one transaction (readers keep the old one until it commits) from the games of public profiles with an allowed name only, so nothing else is copied. It works the rows out into a temporary table first and only then swaps them in (delete and insert, joined with the profiles as they are at that moment), so the stored rows are locked for a moment only. One rebuild at a time through an advisory lock, never a table lock, so reads and opt-outs never wait for a rebuild. pg_cron job `leaderboards-refresh`, every 10 minutes (`*/10 * * * *`). The migration builds it once. Dates use UTC (`now() at time zone 'utc'`), whatever the session's time zone.
+- **Reads**: `public.leaderboard(p_mode, p_period)` (anon and authenticated; `security definer`, empty search path). It checks each player on the boards once (public, named, name allowed; a materialized step, so the word list runs once per player, not per row), computes the standings over the rows it returns, and refuses an unknown mode or period (`22023`). `public.leaderboard_refreshed_at()` gives the last rebuild's time.
+- **Opting out**: the read check hides a profile the moment it turns private or loses its name. A trigger also deletes its stored rows then, skipping (never waiting for) rows a running rebuild holds: that rebuild's swap reads the profiles afresh and leaves the profile out; only an opt-out in the instant between the swap and the rebuild's commit keeps its rows until the next rebuild, still hidden by the read check. Turning public again shows the player at the next rebuild. A page already open keeps what it loaded until it is reloaded. Account deletion (`delete_user_data()`) deletes the rows before the profile, in the same lock order as a rebuild, so the two cannot deadlock.
 - **Export**: `export_my_data()` has `leaderboard_rows` (the player's own numbers, without names or ids).
 
 Calling it from the site:
@@ -80,7 +81,7 @@ const { data: at } = await supabase.rpc("leaderboard_refreshed_at");
 Today's rule (1 to 32 letters, digits, space, `_.-`; the `profiles.display_name` check) plus a small word list in `private.name_blocklist`, kept in the migration (written for this project; no third-party list). Each word is matched in three spellings of the name, all lower case after Unicode NFKC (full-width letters read as plain): as typed, and with digits read as letters (`0` o, `1` i or l, `3` e, `4` a, `5` s, `7` t, `8` b, `9` g).
 
 - `part` words match anywhere once spaces, `_`, `.` and `-` are removed ("F u c k", "f_u_c_k").
-- `word` words match only a whole word of the name or the whole name, for words that hide in ordinary ones ("ass" in "Class", "cock" in "Peacock", "rape" in "Grape").
+- `word` words match only a whole word of the name or the whole name, for words that hide in ordinary ones ("ass" in "Class", "cock" in "Peacock", "rape" in "Grape", "rapist" in "Therapist", "nazi" in "Ashkenazi", "fuk" in "Fukuoka").
 - `reserved` words would make a name look official: `blizzard`, `tavernledger` (anywhere), `admin`, `administrator`, `moderator`, `staff`, `support`, `official` (whole words). Blizzard's name in a display name could read as endorsement (absolute rule 5).
 
 **Where it is checked.** A trigger on `profiles` (`before insert or update of display_name`) refuses a changed name with SQLSTATE `23514` and the message `display_name_not_allowed`, on every write path (the account page, the API, the service role). The account page turns that into "This name is not allowed…". The list never goes to the browser. Only a *changed* name is checked, so a player whose old name fails a newly added word can still make the profile private. The boards check the name again on every read and every rebuild, so such a name is hidden from the boards until it changes.
@@ -89,5 +90,9 @@ Today's rule (1 to 32 letters, digits, space, `_.-`; the `profiles.display_name`
 
 ## Checks
 
-- Database (60 tests): every board's values, ties, the 50-row cap, the periods' edges, the minimum, a private profile, a profile with no name, a name that fails the list later, anonymous and signed-in readers, opting out at once and coming back at the next rebuild, export, deletion, rights on every object, the schedule.
+- Database (62 tests): every board's values, ties, the 50-row cap, the periods' edges (a week ago, tomorrow, the day after), the minimum, a private profile, a profile with no name, a name that fails the list later, ordinary names with a whole-word entry inside, anonymous and signed-in readers, opting out and clearing the name at once and coming back at the next rebuild, export, deletion, rights on every object, the schedule.
+
+## Reviews (session 069)
+
+`/code-review` (Sonnet), `/security-review` (Opus), `database-reviewer` (Opus) and a second AI (ChatGPT through Codex, with the code pasted in: its first run could not read the repository). No CRITICAL or HIGH left. Fixed from them: the rebuild held a table lock for its whole run, so an opt-out or an account deletion could wait or deadlock (now computed first, swapped at the end, advisory lock, the opt-out trigger skips locked rows, deletion takes the rows first); games dated after tomorrow counted on the 7- and 30-day boards for good (now impossible) and the dates followed the session's time zone (now UTC); the read ran the word list per row (now once per player); clearing a name left the stored rows; an excluded game joined two streaks; "Therapist", "Ashkenazi" and "Fukuoka" were refused; the hero board said 20 games where it means 20 and 10 with the hero; an unreadable rebuild time read "Not built yet" (now an error); values outside a board's range are refused in the browser; the texts promised "at once" for pages already open and "within 10 minutes" for a schedule. Left as they are: seven requests per page view (one per mode and period, so the switches never wait); the minimums written in both the database and the page (a test pins each).
 - Browser (local stack, synthetic users only): axe clean (WCAG 2.2 AA and best practice) in Simple and Advanced, Solo and Duos, every fold open; CLS 0; no sideways scroll at 390 px; the period switch kept in the address.

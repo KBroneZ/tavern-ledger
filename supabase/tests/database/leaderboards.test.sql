@@ -3,7 +3,7 @@
 -- back at the end.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(60);
+select plan(62);
 
 -- Players (ids end in their letter where hex allows):
 --   A  Alpha   public, 25 Solo games yesterday (+1 impossible, +2 unfinished)
@@ -85,6 +85,12 @@ select pg_temp.seed('00000000-0000-4000-8000-00000000001b', 1, 20, 'GT_BATTLEGRO
 -- A week ago: outside the last 7 days (today and the six before).
 select pg_temp.seed('00000000-0000-4000-8000-00000000001b', 21, 5, 'GT_BATTLEGROUNDS', 'ok', 8,
   null, current_date - 7, '{"rounds": 9}');
+-- Dated tomorrow (UTC): a player ahead of UTC can play then, so it counts.
+select pg_temp.seed('00000000-0000-4000-8000-00000000001a', 21, 1, 'GT_BATTLEGROUNDS_DUO', 'ok', 1,
+  'BG24_HERO_100', current_date + 1, '{"rounds": 9}');
+-- Dated the day after: impossible, left out of every board.
+select pg_temp.seed('00000000-0000-4000-8000-00000000001b', 30, 1, 'GT_BATTLEGROUNDS', 'ok', 1,
+  null, current_date + 2, '{"rounds": 9}');
 -- A game with no server summary yet does not count.
 select public.upload_commit('00000000-0000-4000-8000-00000000001b', 'Hearthstone_2026_10_09_18_30_00',
   26, 'GT_BATTLEGROUNDS', 'ok', null, 1, 253216, current_date - 1, '{}'::jsonb, 1791000000,
@@ -107,8 +113,8 @@ $$;
 select ok(private.refresh_leaderboards() > 0, 'the rebuild stores rows');
 select ok(public.leaderboard_refreshed_at() between now() - interval '1 minute' and now(),
   'the rebuild time is kept');
-select is((select excluded_games from private.leaderboard_state), 1,
-  'the impossible game is counted as excluded');
+select is((select excluded_games from private.leaderboard_state), 2,
+  'the impossible games (8 golden minions, a date after tomorrow) are counted as excluded');
 select results_eq(
   $$ select schedule, command, active from cron.job where jobname = 'leaderboards-refresh' $$,
   $$ values ('*/10 * * * *'::text, 'select private.refresh_leaderboards()'::text, true) $$,
@@ -176,6 +182,9 @@ select results_eq(
      where board = 'avg_place' and standing = 1 $$,
   $$ values (1, 'Golf', 1.00::numeric) $$,
   'Duos boards rank Duos places (per team)');
+select is(
+  (select games from public.leaderboard('duos', '7d') where board = 'games' and display_name = 'Golf'), 21,
+  'a game dated tomorrow (UTC) counts in the last 7 days');
 select is(
   (select count(*)::int from public.leaderboard('duos', '7d') where board = 'avg_place'), 50,
   'a board lists at most 50 rows');
@@ -249,9 +258,11 @@ select results_eq(
   'listed words are refused: anywhere, spaced out, in digits, full-width, as whole words');
 select results_eq(
   $$ select n, pg_temp.name_refused(n) from unnest(array[
-       'Bass Player', 'Class Act', 'Grape', 'Badminton', 'Peacock', 'Sussex', 'Álvaro Ñ', 'Delta']) as n $$,
+       'Bass Player', 'Class Act', 'Grape', 'Badminton', 'Peacock', 'Sussex', 'Álvaro Ñ',
+       'Therapist', 'Ashkenazi', 'Fukuoka', 'Delta']) as n $$,
   $$ select n, 'saved' from unnest(array[
-       'Bass Player', 'Class Act', 'Grape', 'Badminton', 'Peacock', 'Sussex', 'Álvaro Ñ', 'Delta']) as n $$,
+       'Bass Player', 'Class Act', 'Grape', 'Badminton', 'Peacock', 'Sussex', 'Álvaro Ñ',
+       'Therapist', 'Ashkenazi', 'Fukuoka', 'Delta']) as n $$,
   'ordinary names that contain a whole-word entry are kept');
 select is(pg_temp.name_refused(null), 'saved', 'clearing the name always works');
 select throws_ok(
@@ -384,6 +395,12 @@ select ok(
   and not private.leaderboard_game_plausible(jsonb_populate_record(null::public.game_stats,
     '{"final_board": ["A", "B", "C", "D", "E", "F", "G", "H"]}')),
   'an APM above 100 or 8 minions on a board make a game impossible; unknown values do not');
+
+-- Clearing the name: the stored rows go at once, like making the profile private.
+update public.profiles set display_name = null where user_id = '00000000-0000-4000-8000-00000000001b';
+select is((select count(*)::int from private.leaderboard_rows
+           where user_id = '00000000-0000-4000-8000-00000000001b'), 0,
+  'a profile whose display name is cleared leaves the snapshot at once');
 
 select * from finish();
 rollback;

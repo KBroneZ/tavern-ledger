@@ -55,11 +55,18 @@ export function rowCells(def: BoardDef, row: BoardRow): Cell[] {
   ];
 }
 
+/** The minimum a board needs, in words (the hero board also needs games with the hero). */
+function minimum(def: BoardDef, p: Period, kind: "how" | "empty"): string {
+  const vars = { period: periodName(p, true), min: MIN_GAMES, hero: MIN_HERO_GAMES };
+  if (def.key === "hero_avg_place") return lt(kind === "how" ? "board.how.min.hero" : "board.empty.body.hero", vars);
+  return lt(kind === "how" ? "board.how.min" : "board.empty.body", vars);
+}
+
 function how(def: BoardDef, title: string, p: Period): VNode {
   return fold(
     { summary: lt("board.how"), context: title, compact: true },
     h("p", {}, boardHow(def)),
-    h("p", {}, lt("board.how.min", { period: periodName(p, true), min: MIN_GAMES })),
+    h("p", {}, minimum(def, p, "how")),
     h("p", {}, lt("board.how.ties")),
     h("p", {}, lt("board.how.source")),
   );
@@ -71,7 +78,7 @@ export function boardSection(def: BoardDef, rows: readonly BoardRow[], m: Mode, 
   const title = boardTitle(def, m);
   const body =
     rows.length === 0
-      ? stateBlock({ kind: "empty", title: lt("board.empty"), body: lt("board.empty.body", { min: MIN_GAMES, period: periodName(p, true) }) })
+      ? stateBlock({ kind: "empty", title: lt("board.empty"), body: minimum(def, p, "empty") })
       : topTable({
           caption: lt("board.caption", { board: title, mode: t(`mode.${m}`), period: periodName(p, true) }),
           columns: columns(def, m),

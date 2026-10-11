@@ -42,7 +42,6 @@ revoke all on private.name_blocklist from public, anon, authenticated, service_r
 insert into private.name_blocklist (word, match, reason) values
   -- Slurs and strong profanity, anywhere in the name.
   ('fuck', 'part', 'offensive'),
-  ('fuk', 'part', 'offensive'),
   ('shit', 'part', 'offensive'),
   ('cunt', 'part', 'offensive'),
   ('nigger', 'part', 'offensive'),
@@ -62,11 +61,13 @@ insert into private.name_blocklist (word, match, reason) values
   ('wanker', 'part', 'offensive'),
   ('tranny', 'part', 'offensive'),
   ('hitler', 'part', 'offensive'),
-  ('nazi', 'part', 'offensive'),
   ('killyourself', 'part', 'offensive'),
   ('molest', 'part', 'offensive'),
-  ('rapist', 'part', 'offensive'),
-  -- Words that hide inside ordinary ones: whole words only.
+  -- Words that hide inside ordinary ones ("Fukuoka", "Ashkenazi", "Therapist",
+-- "Class"): whole words only.
+  ('fuk', 'word', 'offensive'),
+  ('nazi', 'word', 'offensive'),
+  ('rapist', 'word', 'offensive'),
   ('ass', 'word', 'offensive'),
   ('asshole', 'word', 'offensive'),
   ('arse', 'word', 'offensive'),
@@ -108,7 +109,8 @@ as $$
   from (select lower(normalize(p_name, nfkc)) as n) s;
 $$;
 
--- True when no listed word is in the name; true for no name.
+-- True when no listed word is in the name; true for no name. Each spelling's
+-- joined-up form and words are worked out once, then matched against the list.
 create function private.display_name_allowed(p_name text)
 returns boolean
 language sql
@@ -119,11 +121,13 @@ as $$
   select p_name is null or not exists (
     select 1
     from unnest(private.name_spellings(p_name)) as v(n)
-    cross join private.name_blocklist b
-    where case b.match
-      when 'part' then position(b.word in regexp_replace(v.n, '[ _.-]+', '', 'g')) > 0
-      else b.word = any (regexp_split_to_array(v.n, '[ _.-]+'))
-        or b.word = regexp_replace(v.n, '[ _.-]+', '', 'g')
+    cross join lateral (
+      select regexp_replace(v.n, '[ _.-]+', '', 'g') as joined,
+        regexp_split_to_array(v.n, '[ _.-]+') as words
+    ) f
+    join private.name_blocklist b on case b.match
+      when 'part' then strpos(f.joined, b.word) > 0
+      else b.word = any (f.words) or b.word = f.joined
     end
   );
 $$;
@@ -225,8 +229,11 @@ revoke all on function private.leaderboard_game_plausible(public.game_stats)
   from public, anon, authenticated, service_role;
 
 -- Rebuilds the snapshot in one transaction (readers see the old one until it
--- commits). Periods end today (UTC): the last 7 days are today and the six
--- before, by the day each game was played. Returns the number of rows.
+-- commits). The rows are worked out first into a temporary table; the stored
+-- ones are only replaced at the end, so their row locks last a moment. Periods end today (UTC): the last 7 days are today and the six
+-- before, by the day each game was played (the player's local day, so up to
+-- tomorrow in UTC; a game dated later is impossible). Returns the number of
+-- rows.
 create function private.refresh_leaderboards()
 returns integer
 language plpgsql
@@ -239,14 +246,18 @@ declare
   n_excluded integer;
   min_games integer := private.leaderboard_min_games();
   min_hero integer := private.leaderboard_min_hero_games();
+  today date := (now() at time zone 'utc')::date;
 begin
-  -- One rebuild at a time; reads go on.
-  lock table private.leaderboard_rows in exclusive mode;
-  delete from private.leaderboard_rows;
+  -- One rebuild at a time. An advisory lock, not a table lock: reads and a
+  -- profile turning private (its trigger) never wait for a rebuild.
+  perform pg_advisory_xact_lock(hashtext('private.refresh_leaderboards'));
 
   -- A second rebuild in the same transaction (tests) starts clean.
   if to_regclass('pg_temp.lb_games') is not null then
     drop table pg_temp.lb_games;
+  end if;
+  if to_regclass('pg_temp.lb_new') is not null then
+    drop table pg_temp.lb_new;
   end if;
   create temp table lb_games on commit drop as
   select
@@ -265,7 +276,7 @@ begin
     s.triples,
     s.board_stats_max,
     s.golden_max,
-    private.leaderboard_game_plausible(s) as plausible
+    private.leaderboard_game_plausible(s) and g.played_on <= today + 1 as plausible
   from public.games g
   join public.profiles p on p.user_id = g.user_id
   join public.game_stats s
@@ -278,15 +289,17 @@ begin
 
   select count(*) filter (where not plausible) into n_excluded from pg_temp.lb_games;
 
-  insert into private.leaderboard_rows (mode, period, board, user_id, hero, value, games)
+  create temp table lb_new on commit drop as
   with periods (period, since) as (
-    values ('7d', current_date - 6), ('30d', current_date - 29), ('all', null::date)
+    values ('7d', today - 6), ('30d', today - 29), ('all', null::date)
   ),
-  scoped as (
+  in_period as (
     select per.period, c.*
     from pg_temp.lb_games c
     join periods per on per.since is null or c.played_on >= per.since
-    where c.plausible
+  ),
+  scoped as (
+    select * from in_period where plausible
   ),
   totals as (
     select period, mode, user_id,
@@ -306,18 +319,19 @@ begin
   ),
   runs as (
     -- Runs of top-half finishes in a row, in play order, within the period.
-    select period, mode, user_id, top_half,
+    -- A left-out game breaks a run: leaving it out never makes a run longer.
+    select period, mode, user_id, counted,
       row_number() over (partition by period, mode, user_id order by played_on, session, game_index)
         - row_number() over (
-            partition by period, mode, user_id, top_half order by played_on, session, game_index
+            partition by period, mode, user_id, counted order by played_on, session, game_index
           ) as run
-    from scoped
+    from (select i.*, i.top_half and i.plausible as counted from in_period i) c
   ),
   streaks as (
     select period, mode, user_id, max(len) as longest
     from (
       select period, mode, user_id, run, count(*) as len
-      from runs where top_half
+      from runs where counted
       group by period, mode, user_id, run
     ) r
     group by period, mode, user_id
@@ -330,7 +344,7 @@ begin
     group by c.period, c.mode, c.user_id, c.hero
     having count(*) >= min_hero
   )
-  select t.mode, t.period, b.board, t.user_id, null, b.value, b.games
+  select t.mode, t.period, b.board, t.user_id, null::text as hero, b.value, b.games
   from totals t
   left join streaks st using (period, mode, user_id)
   cross join lateral (values
@@ -351,6 +365,15 @@ begin
   union all
   select h.mode, h.period, 'hero_avg_place', h.user_id, h.hero, round(h.avg_place, 2), h.games
   from heroes h;
+
+  -- The swap. The insert reads the profiles as they are now, so a profile
+  -- that turned private while the rows were worked out is left out.
+  delete from private.leaderboard_rows;
+  insert into private.leaderboard_rows (mode, period, board, user_id, hero, value, games)
+  select x.mode, x.period, x.board, x.user_id, x.hero, x.value, x.games
+  from pg_temp.lb_new x
+  join public.profiles p on p.user_id = x.user_id
+  where p.is_public and p.display_name is not null;
   get diagnostics n = row_count;
 
   select count(distinct user_id) into n_players from private.leaderboard_rows;
@@ -366,8 +389,11 @@ $$;
 
 revoke all on function private.refresh_leaderboards() from public, anon, authenticated, service_role;
 
--- A profile made private leaves the snapshot at once (the reads below also
+-- A profile made private, or whose name is cleared, leaves the snapshot at
+-- once (the reads below also
 -- check it, so this only keeps the stored copy as small as what is shown).
+-- Rows a running rebuild holds are skipped, never waited for: that rebuild
+-- deletes them itself, or its last step drops the profile's new rows.
 create function private.leaderboard_forget_private()
 returns trigger
 language plpgsql
@@ -375,7 +401,12 @@ security definer
 set search_path = ''
 as $$
 begin
-  delete from private.leaderboard_rows r where r.user_id = new.user_id;
+  delete from private.leaderboard_rows r
+  where r.ctid in (
+    select x.ctid from private.leaderboard_rows x
+    where x.user_id = new.user_id
+    for update skip locked
+  );
   return new;
 end;
 $$;
@@ -383,8 +414,11 @@ $$;
 revoke all on function private.leaderboard_forget_private() from public, anon, authenticated, service_role;
 
 create trigger profiles_leaderboard_private
-  after update of is_public on public.profiles
-  for each row when (old.is_public and not new.is_public)
+  after update of is_public, display_name on public.profiles
+  for each row when (
+    (old.is_public and not new.is_public)
+    or (old.display_name is not null and new.display_name is null)
+  )
   execute function private.leaderboard_forget_private();
 
 -- ---------------------------------------------------------------------------
@@ -420,24 +454,33 @@ begin
     raise exception 'leaderboard: period is 7d, 30d or all' using errcode = '22023';
   end if;
   return query
-  select x.board, x.standing, x.user_id, x.display_name, x.hero, x.value, x.games
+  -- Each player on these boards is checked once (public, named, name allowed).
+  with shown as materialized (
+    select p.user_id as id, p.display_name as name
+    from public.profiles p
+    where p.user_id in (
+        select r.user_id from private.leaderboard_rows r
+        where r.mode = p_mode and r.period = p_period
+      )
+      and p.is_public
+      and p.display_name is not null
+      and private.display_name_allowed(p.display_name)
+  )
+  select x.board, x.standing, x.user_id, x.name, x.hero, x.value, x.games
   from (
-    select r.board, r.user_id, p.display_name, r.hero, r.value, r.games,
+    select r.board, r.user_id, sh.name, r.hero, r.value, r.games,
       (rank() over (partition by r.board order by o.score))::integer as standing,
       row_number() over (
         partition by r.board order by o.score, r.games desc, r.user_id, r.hero
       ) as n
     from private.leaderboard_rows r
-    join public.profiles p on p.user_id = r.user_id
+    join shown sh on sh.id = r.user_id
     cross join lateral (
       select case when r.board in ('avg_place', 'hero_avg_place') then r.value else -r.value end
         as score
     ) o
     where r.mode = p_mode
       and r.period = p_period
-      and p.is_public
-      and p.display_name is not null
-      and private.display_name_allowed(p.display_name)
   ) x
   where x.n <= 50
   order by x.board, x.n;
@@ -581,6 +624,52 @@ begin
   );
 end;
 $$;
+
+-- As in 20261011120000_game_stats.sql, plus the leaderboard rows first: a
+-- rebuild locks them before it checks the profile, so deletion takes the same
+-- order and the two never deadlock (the foreign key would also remove them).
+create or replace function public.delete_user_data(target uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  n_stats bigint;
+  n_games bigint;
+  n_profiles bigint;
+  n_events bigint;
+begin
+  if exists (
+    select 1 from storage.objects o
+    where o.bucket_id = 'games' and (storage.foldername(o.name))[1] = target::text
+  ) then
+    raise exception 'files remain for this user; delete them first'
+      using errcode = '55000';
+  end if;
+
+  delete from private.leaderboard_rows where user_id = target;
+  delete from public.game_stats where user_id = target;
+  get diagnostics n_stats = row_count;
+  delete from public.games where user_id = target;
+  get diagnostics n_games = row_count;
+  delete from public.profiles where user_id = target;
+  get diagnostics n_profiles = row_count;
+  -- Auth audit entries have no foreign key to the user and would survive the
+  -- auth user's deletion.
+  delete from auth.audit_log_entries
+  where payload ->> 'actor_id' = target::text
+     or payload -> 'traits' ->> 'user_id' = target::text;
+  get diagnostics n_events = row_count;
+
+  return jsonb_build_object(
+    'game_stats', n_stats, 'games', n_games, 'profiles', n_profiles, 'auth_events', n_events
+  );
+end;
+$$;
+
+revoke all on function public.delete_user_data(uuid) from public, anon, authenticated;
+grant execute on function public.delete_user_data(uuid) to service_role;
 
 -- ---------------------------------------------------------------------------
 -- Schedule: every 10 minutes (pg_cron replaces a job of the same name).

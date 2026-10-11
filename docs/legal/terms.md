@@ -34,7 +34,7 @@ If an account breaks these rules, we may take a proportionate step: ask you to c
 
 Your profile is private until you make it public. A public profile shows your display name and every game you uploaded, in full, to anyone, and anyone can link to it or copy what it shows. You can make it private again at any time; copies others already made are out of our control.
 
-With a public profile, a display name and enough games, you also appear on the public leaderboards, which rank players on their uploaded games. The privacy policy says what they show and how to leave them (turn the profile private: it takes effect at once). Leaderboards are for fun: the numbers are self-reported by each player's app, there are no prizes, and we do not promise they are accurate or complete. If games look changed to climb a board, we may take the steps in section 3, such as leaving them off the boards.
+With a public profile, a display name and enough games, you also appear on the public leaderboards, which rank players on their uploaded games. The privacy policy says what they show and how to leave them (turn the profile private: the boards stop showing you as soon as you save). Leaderboards are for fun: the numbers are self-reported by each player's app, there are no prizes, and we do not promise they are accurate or complete. If games look changed to climb a board, we may take the steps in section 3, such as leaving them off the boards.
 
 ## 5. Your data and leaving
 

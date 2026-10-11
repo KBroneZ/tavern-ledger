@@ -26,7 +26,6 @@ export const LB_STRINGS = {
 
   "section.simple": "Main boards",
   "section.advanced": "Economy and fun",
-  "section.advanced.note": "Shown in Advanced.",
 
   "col.standing": "#",
   "col.player": "Player",
@@ -83,24 +82,25 @@ export const LB_STRINGS = {
   "board.how": "How this is counted",
   "board.how.min":
     "Counts finished games from {period}. A player needs at least {min} of them, with this number recorded, to be listed.",
+  "board.how.min.hero":
+    "Counts finished games from {period}. A player needs at least {min} of them, and at least {hero} with the hero, to be listed.",
   "board.how.source":
     "Self-reported: every game comes from the player's own app, and the server checks each report before storing it. A game with a value no real game can have is left out of every board.",
   "board.how.ties": "Equal values share a place; then more games come first.",
   "board.empty": "Nobody here yet",
   "board.empty.body": "No public player has {min} finished games in {period} for this board.",
+  "board.empty.body.hero": "No public player has {min} finished games in {period} with {hero} of them on one hero.",
   "board.caption": "{board}, {mode}, {period}",
-  "board.top": "Top {count}",
 
   "about.summary": "About these boards",
   "about.who":
-    "Only players who turned on \"Public profile\" on their account page are listed, by the display name they chose, with a link to their public profile. Turning the profile private removes them from every board at once.",
+    "Only players who turned on \"Public profile\" on their account page are listed, by the display name they chose, with a link to their public profile. Turning the profile private removes them from every board as soon as they save.",
   "about.min": "A board lists a player once they have {min} finished games in the mode and period ({hero} with a hero on the hero board). Each board shows its top 50.",
-  "about.refresh": "The boards are rebuilt every 10 minutes from the uploaded games. A new public profile or new games show at the next rebuild.",
+  "about.refresh": "The boards are rebuilt from the uploaded games every 10 minutes. A new public profile or new games show at the next rebuild.",
   "about.data":
     "Nothing here comes from Blizzard: no ratings, no BattleTags and no other players' names. Numbers are self-reported by each player's app; see the privacy policy for what becomes public.",
   "about.privacy": "Privacy policy",
 
-  "player.profile": "{name}'s public profile",
   "hero.unknown": "Unknown hero",
 } as const;
 

@@ -436,7 +436,7 @@ test("accounts open: the leaderboards are a static frame with reserved room, lin
   assert.match(html, /class="mode-panels" id="lb-modes"/);
   assert.match(html, /data-switch="mode" data-controls="lb-modes"/);
   assert.match(html, /data-switch="detail"/);
-  assert.match(html, /role="group" aria-label="Period" id="lb-period"[^>]*hidden/);
+  assert.match(html, /role="group" aria-label="Period" id="lb-period-switch"[^>]*hidden/);
   for (const period of ["7d", "30d", "all"]) assert.match(html, new RegExp(`data-value="${period}"`), period);
   assert.match(html, /state-loading/);
   assert.match(html, /id="lb-status" role="status" aria-live="polite"/);

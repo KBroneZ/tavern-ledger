@@ -1,7 +1,7 @@
 // The public leaderboards' boards (T-506, D-075): which there are, how each
 // value reads, and the rows from public.leaderboard() checked before use.
 // Pure, so the page script and the tests share it.
-import { average, compact, type Mode } from "../data/format.ts";
+import { average, compact, PLACES, type Mode } from "../data/format.ts";
 import { asRows, DataError } from "../data/rows.ts";
 import { lt, type LbKey } from "./strings.ts";
 
@@ -78,8 +78,16 @@ function positive(value: unknown, what: string): number {
   return value;
 }
 
-/** One row of public.leaderboard(), checked; anything unexpected throws. */
-export function boardRow(value: unknown): BoardRow {
+/** The range a board's value can take; anything outside is a fault on the server. */
+function inRange(board: BoardKey, value: number, m: Mode): boolean {
+  if (board === "avg_place" || board === "hero_avg_place") return value >= 1 && value <= PLACES[m];
+  if (board === "top_half_rate" || board === "win_rate") return value <= 100;
+  if (board === "most_golden") return value <= 7;
+  return true;
+}
+
+/** One row of public.leaderboard() for mode m, checked; anything unexpected throws. */
+export function boardRow(value: unknown, m: Mode): BoardRow {
   const row = asRows([value])[0];
   if (!(BOARD_KEYS as readonly unknown[]).includes(row.board)) throw new DataError("bad board");
   const board = row.board as BoardKey;
@@ -90,6 +98,7 @@ export function boardRow(value: unknown): BoardRow {
   if ((board === "hero_avg_place") !== (hero !== null)) throw new DataError("hero on the wrong board");
   // PostgREST sends numeric as a JSON number; a string would be a change on the server.
   if (typeof row.value !== "number" || !Number.isFinite(row.value) || row.value < 0) throw new DataError("bad value");
+  if (!inRange(board, row.value, m)) throw new DataError("value out of range");
   return {
     board,
     standing: positive(row.standing, "standing"),

@@ -20,7 +20,7 @@ export interface Leaderboards {
 async function one(client: SupabaseClient, m: Mode, p: Period): Promise<Boards> {
   const answer = await client.rpc("leaderboard", { p_mode: m, p_period: p });
   if (answer.error) throw new DataError("the request failed");
-  const rows = asRows(answer.data).map(boardRow);
+  const rows = asRows(answer.data).map((r) => boardRow(r, m));
   const boards = groupBoards(rows);
   for (const list of boards.values()) if (list.length > MAX_ROWS) throw new DataError("too many rows");
   return boards;
@@ -34,7 +34,10 @@ export async function loadLeaderboards(client: SupabaseClient): Promise<Leaderbo
     ...pairs.map(([m, p]) => one(client, m, p)),
   ]);
   if (refreshed.error) throw new DataError("the request failed");
-  if (refreshed.data !== null && typeof refreshed.data !== "string") throw new DataError("bad time");
+  // Null only before the first rebuild; anything else must be a time.
+  if (refreshed.data !== null && (typeof refreshed.data !== "string" || Number.isNaN(Date.parse(refreshed.data)))) {
+    throw new DataError("bad time");
+  }
   const boards = { solo: {}, duos: {} } as Record<Mode, Record<Period, Boards>>;
   pairs.forEach(([m, p], i) => {
     boards[m][p] = lists[i];

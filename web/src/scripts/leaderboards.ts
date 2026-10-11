@@ -10,13 +10,13 @@ import { aboutFold, modePanels, updatedLine } from "../lib/leaderboards/view.ts"
 import { h, mount } from "../lib/view/node.ts";
 import { stateBlock } from "../lib/view/pieces.ts";
 import { supabase } from "./client.ts";
-import { byId, moveFocus } from "./dom.ts";
+import { byId } from "./dom.ts";
 
 const root = byId("lb");
 const status = byId("lb-status");
 const body = byId("lb-body");
 const panels = byId("lb-modes");
-const periods = byId("lb-period");
+const periods = byId("lb-period-switch");
 
 // Hero pictures on the per-hero board fall back to the local placeholder (D-074).
 watchPictureFallback(document);
@@ -61,10 +61,7 @@ function failed(): void {
   const retry = h("button", { type: "button", class: "secondary", id: "lb-retry" }, lt("page.retry"));
   mount(panels, stateBlock({ kind: "error", title: lt("page.error"), body: lt("page.error.body") }, retry));
   settle(lt("page.error"));
-  byId("lb-retry").addEventListener("click", () => {
-    moveFocus(byId("lb"));
-    location.reload();
-  });
+  byId("lb-retry").addEventListener("click", () => location.reload());
 }
 
 start().catch(failed);
