@@ -1,0 +1,62 @@
+// The simulator accuracy page's words (T-607). Placeholders are {name}.
+// Spanish is in strings.es.ts.
+
+import { makeT } from "../i18n.ts";
+import { ES } from "./strings.es.ts";
+
+export const ACC_STRINGS = {
+  "page.kicker": "Combat simulator",
+  "page.title": "How often the odds are right",
+  "page.intro":
+    "The simulator behind the overlay's odds, checked on real combats: for each combat it gives its chances of a win, a tie and a loss, and the game's log says what really happened.",
+  "page.version": "Engine {version} · measured {date} · {trials} trials per combat",
+
+  "mode.solo": "Solo",
+  "mode.duos": "Duos",
+  "mode.combats": "{count} combats with the game's result",
+
+  "tile.right": "Most likely result was right",
+  "tile.meanP": "Mean chance given to what happened",
+  "tile.meanP.back": "over {count} scored combats",
+  "tile.blocked": "No odds: a card is not modelled",
+  "tile.brier": "Brier score",
+  "tile.brier.back": "0 is best, 2 is worst",
+  "tile.refused": "Refused by the board check",
+
+  "right.backing": "{right} of {scored} combats",
+  "blocked.some": "No odds in {share} of {mode} combats ({blocked} of {total}): a card is not modelled.",
+  "blocked.none": "Odds in every {mode} combat with a result ({total}): no card was missing.",
+  "blocked.empty": "No {mode} combats with a result yet.",
+
+  "cal.title": "Said and happened",
+  "cal.desc":
+    "Every chance the simulator gave in {mode} (a win, a tie and a loss per combat), grouped by what it said. Beside each group, how often that result really happened. Close bars mean the odds can be trusted.",
+  "cal.key.said": "Said",
+  "cal.key.happened": "Happened",
+  "cal.none": "no chances",
+  "cal.mark": "Said {range}: {predictions} chances, said {said} on average, happened {happened}",
+  "cal.table": "Show as a table",
+  "cal.col.range": "Said",
+  "cal.col.predictions": "Chances",
+  "cal.col.said": "Said on average",
+  "cal.col.happened": "Happened",
+
+  "cards.title": "Cards that block the odds most",
+  "cards.desc":
+    "When one of these is on a board, the simulator gives no odds rather than a wrong number. Counted over Solo and Duos together.",
+  "cards.col.card": "Card",
+  "cards.col.id": "Card id",
+  "cards.col.combats": "Combats blocked",
+  "cards.none": "No card blocked a combat.",
+  "card.golden": "{name} (golden)",
+
+  "about.title": "What is measured, and its limits",
+  "about.body":
+    "Only the combats of the person who builds Tavern Ledger, from their own games, with the boards as they entered each combat (the first attack). Start of combat effects are off, as in the overlay. A combat counts as scored when the simulator could play it; the share of combats with no odds is always shown beside it. Small numbers, one player: a guide, not a promise.",
+  "about.refresh": "These numbers are refreshed after each round of new cards.",
+} as const;
+
+export type AccKey = keyof typeof ACC_STRINGS;
+
+/** The string for a key in the page's language, with its placeholders filled. */
+export const at = makeT<AccKey>({ name: "accuracy", en: ACC_STRINGS, es: ES });

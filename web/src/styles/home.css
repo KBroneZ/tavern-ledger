@@ -203,6 +203,40 @@
   color: var(--dim);
 }
 
+/* What's new: dated lines, newest first (D-089). */
+.news ul {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  border-top: 1px solid var(--line);
+}
+
+.news li {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  gap: 4px 20px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.news time {
+  color: var(--amber-hi);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.news li span {
+  color: var(--dim);
+  max-width: 68ch;
+}
+
+@media (max-width: 520px) {
+  .news li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .doors {
   padding: 18px 22px;
   display: flex;
