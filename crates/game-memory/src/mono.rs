@@ -26,6 +26,11 @@ pub struct Layout {
     pub class_runtime_info: u64,
     pub class_field_count: u64,
     pub class_next_cached: u64,
+    /// A generic instance class (`Dictionary<K, V>`) keeps no field count of
+    /// its own: its `MonoGenericClass` pointer sits where a class definition
+    /// keeps its flags, and that points to the generic definition first.
+    pub class_generic_class: u64,
+    pub generic_class_container: u64,
     pub field_size: u64,
     pub field_name: u64,
     pub field_parent: u64,
@@ -53,6 +58,8 @@ pub const LAYOUT_BDWGC_X64: Layout = Layout {
     class_runtime_info: 0xd0,
     class_field_count: 0x100,
     class_next_cached: 0x108,
+    class_generic_class: 0xf0,
+    generic_class_container: 0x00,
     field_size: 0x20,
     field_name: 0x08,
     field_parent: 0x10,
@@ -259,7 +266,9 @@ impl<'a> Mono<'a> {
     /// fields have no storage and are refused.
     pub fn field(&self, class: u64, name: &str) -> Result<Field, WalkError> {
         let l = &self.layout;
-        let count = self.mem.read_u32(class + l.class_field_count)?;
+        let count = self
+            .mem
+            .read_u32(self.definition(class)? + l.class_field_count)?;
         if count > MAX_FIELDS {
             return Err(unsupported("field count out of range"));
         }
@@ -291,6 +300,30 @@ impl<'a> Mono<'a> {
             });
         }
         Err(unsupported(format!("field {name} not found")))
+    }
+
+    /// The class that keeps the field count of `class`: itself, or for a
+    /// generic instance (a name with a backtick, like ``Dictionary`2``) its
+    /// generic definition, which must have the same name and be another
+    /// class. The instance's fields are its own, in the definition's order.
+    fn definition(&self, class: u64) -> Result<u64, WalkError> {
+        let l = &self.layout;
+        let name = self
+            .mem
+            .read_name(self.mem.read_ptr(class + l.class_name)?)?;
+        if !name.contains('`') {
+            return Ok(class);
+        }
+        let generic = self.mem.read_ptr(class + l.class_generic_class)?;
+        let container = self.mem.read_ptr(generic + l.generic_class_container)?;
+        let same_name = self
+            .mem
+            .read_name(self.mem.read_ptr(container + l.class_name)?)
+            .is_ok_and(|n| n == name);
+        if container == class || !same_name {
+            return Err(unsupported("generic class without its definition"));
+        }
+        Ok(container)
     }
 
     /// Where the static fields of `class` live in the root domain.
@@ -557,8 +590,22 @@ pub(crate) mod fake {
                 self.mem.put_u32(e + L.field_offset, f.offset as u32);
             }
             self.mem.put_u64(class + L.class_fields, entries);
-            self.mem
-                .put_u32(class + L.class_field_count, fields.len() as u32);
+            if name.contains('`') {
+                // A generic instance: its own count is not a count (as on
+                // the real client); the definition keeps it.
+                let definition = self.alloc(0x120);
+                self.mem.put_u64(definition + L.class_name, name_at);
+                self.mem
+                    .put_u32(definition + L.class_field_count, fields.len() as u32);
+                let generic = self.alloc(0x20);
+                self.mem
+                    .put_u64(generic + L.generic_class_container, definition);
+                self.mem.put_u64(class + L.class_generic_class, generic);
+                self.mem.put_u32(class + L.class_field_count, 0x3e92_b9c0);
+            } else {
+                self.mem
+                    .put_u32(class + L.class_field_count, fields.len() as u32);
+            }
             // Statics: runtime info → vtable (3 method slots) → data.
             let data = self.alloc(0x100);
             let vtable = self.alloc(0x100);
@@ -736,6 +783,45 @@ mod tests {
         wrong.class_image += 8;
         let mono = Mono::attach(&f.mem, MONO_BASE, wrong).unwrap();
         assert!(mono.class(image, "", "Thing").is_err());
+    }
+
+    #[test]
+    fn a_generic_instance_takes_its_field_count_from_its_definition() {
+        let mut f = FakeMono::new();
+        let image = f.assembly("mscorlib");
+        let (class, _) = f.class(
+            image,
+            "System.Collections.Generic",
+            "Dictionary`2",
+            &[
+                FakeField {
+                    name: "_entries",
+                    offset: 0x18,
+                    is_static: false,
+                },
+                FakeField {
+                    name: "_count",
+                    offset: 0x40,
+                    is_static: false,
+                },
+            ],
+        );
+        let mono = Mono::attach(&f.mem, MONO_BASE, LAYOUT_BDWGC_X64).unwrap();
+        assert_eq!(mono.field(class, "_count").unwrap().offset, 0x40);
+        // A definition with another name is not its definition.
+        let generic = f
+            .mem
+            .read_u64(class + LAYOUT_BDWGC_X64.class_generic_class)
+            .unwrap();
+        let other = f.bare_class("List`1");
+        f.mem.put_u64(generic, other);
+        let mono = Mono::attach(&f.mem, MONO_BASE, LAYOUT_BDWGC_X64).unwrap();
+        assert_eq!(
+            mono.field(class, "_count"),
+            Err(WalkError::Unsupported(
+                "generic class without its definition".into()
+            ))
+        );
     }
 
     #[test]
