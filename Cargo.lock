@@ -361,6 +361,7 @@ dependencies = [
 name = "combat-sim"
 version = "0.1.0"
 dependencies = [
+ "bg-parser",
  "serde_json",
 ]
 
@@ -606,6 +607,7 @@ dependencies = [
 name = "desktop"
 version = "0.1.0"
 dependencies = [
+ "bg-parser",
  "cards",
  "game-memory",
  "serde",
@@ -3847,6 +3849,7 @@ name = "tracker"
 version = "0.1.0"
 dependencies = [
  "bg-parser",
+ "combat-sim",
  "serde",
  "serde_json",
 ]

@@ -11,6 +11,7 @@ mod hover;
 mod leaderboard;
 mod lobby_panel;
 mod over_game_guard;
+mod odds;
 mod overlay;
 mod overlay_layout;
 mod overlay_window;
@@ -141,6 +142,8 @@ struct AppState {
     overlay: overlay::Overlay,
     /// The switch and the values read from the game (D-063); off by default.
     game_memory: game_memory::GameMemory,
+    /// The combat odds for the overlay (T-605).
+    odds: odds::Odds,
 }
 
 #[tauri::command]
@@ -251,7 +254,11 @@ fn overlay_state(
             state.game_memory.refuse(key);
         }
     }
-    Some(shown.with_trinket_cards(card_of))
+    Some(
+        shown
+            .with_trinket_cards(card_of)
+            .with_odds(state.odds.shown()),
+    )
 }
 
 /// Where the game client is (T-314): the overlay says "game loading" while
@@ -756,7 +763,13 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
         };
         // The overlay is on its own guard: a bug in it must not cost a saved game.
         match catch_unwind(AssertUnwindSafe(|| live_now(&mut watcher))) {
-            Ok(live) => publish_live(&app, &state, live),
+            Ok(live) => {
+                publish_live(&app, &state, live);
+                let on = state.overlay.odds_shown();
+                if let Ok(wanted) = catch_unwind(AssertUnwindSafe(|| odds::wanted(&watcher, on))) {
+                    state.odds.submit(&app, wanted);
+                }
+            }
             Err(_) => {
                 publish_live(&app, &state, None);
                 let msg = "The overlay stopped after an internal error. Restart the app; your history is safe.";
@@ -1022,6 +1035,7 @@ fn main() {
             overlay::overlay_set_detail,
             overlay::overlay_set_opacity,
             overlay::overlay_set_shown,
+            overlay::overlay_set_odds,
             overlay::overlay_reset_layout,
             overlay::overlay_set_unlocked,
             overlay::overlay_set_enabled,
@@ -1083,6 +1097,7 @@ fn main() {
             if !starts_hidden(std::env::args()) {
                 show_window(app.handle());
             }
+            odds::start(app.handle().clone(), state.clone());
             let handle = app.handle().clone();
             thread::spawn(move || run_tracker(handle, state));
             Ok(())

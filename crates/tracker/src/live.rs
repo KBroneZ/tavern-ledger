@@ -16,6 +16,7 @@ use serde_json::Value;
 
 use crate::game_values::{GameTribes, ReaderStatus};
 use crate::live_seats::{seats_shown, LiveSeat};
+use crate::odds::LiveOdds;
 use crate::possible::{LobbyTribes, Possible};
 use crate::provenance::{legend, LegendEntry, Source};
 use crate::recap::{list, recap, text, texts, tribes, HeroRef, Sourced, TribeOffer, View};
@@ -150,6 +151,9 @@ pub struct LiveGame {
     /// player ("Max damage: 15", T-315); None when no cap applies or the
     /// log has none. Live only, from the game entity.
     pub damage_cap: Option<i64>,
+    /// The combat odds against the next opponent (T-605), added by the app
+    /// from its own thread; None when switched off or not worked out yet.
+    pub odds: Option<LiveOdds>,
 }
 
 impl LiveGame {
@@ -180,6 +184,12 @@ impl LiveGame {
     /// game is over.
     pub fn with_damage_cap(mut self, cap: Option<i64>) -> Self {
         self.damage_cap = cap.filter(|_| self.phase == Phase::Playing);
+        self
+    }
+
+    /// Adds the combat odds (T-605) while the game is on.
+    pub fn with_odds(mut self, odds: Option<LiveOdds>) -> Self {
+        self.odds = odds.filter(|_| self.phase == Phase::Playing);
         self
     }
 
@@ -304,6 +314,7 @@ pub fn live_game(report: &Value) -> LiveGame {
         warnings: texts(report, "warnings"),
         problems: texts(report, "problems"),
         damage_cap: None,
+        odds: None,
     }
 }
 

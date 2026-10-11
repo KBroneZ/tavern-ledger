@@ -93,6 +93,9 @@ pub struct LoggedCombat {
     /// report against one's own history, not an id.
     pub game: usize,
     pub round: i64,
+    /// The opponent's seat in this game (a lobby player id, 1-8), to find
+    /// the board of theirs the player saw before (the overlay's input).
+    pub opponent_seat: Option<i64>,
     pub player: Warband,
     pub opponent: Warband,
     pub result: CombatResult,
@@ -249,6 +252,7 @@ pub fn load_history(jsonl: &str, db: &CardDb) -> History {
                 Some((player, opponent, result)) => h.combats.push(LoggedCombat {
                     game: game + 1,
                     round: round.get("number").and_then(Value::as_i64).unwrap_or(0),
+                    opponent_seat: opp.first().and_then(|e| e.get("player_id")?.as_i64()),
                     player,
                     opponent,
                     result,

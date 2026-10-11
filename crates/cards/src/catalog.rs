@@ -11,6 +11,8 @@ use serde::de::{self, Deserializer, SeqAccess, Visitor};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::combat_facts::{CombatFacts, MAX_COMBAT_CARDS};
+
 /// The real file has about 30,000 cards. Fewer than this means the answer
 /// is not the card list (an error page, a different file).
 pub const MIN_CARDS: usize = 1000;
@@ -22,12 +24,14 @@ pub const MAX_ENTRIES: usize = 200_000;
 /// The real file is about 10 MB; this stops a gzip bomb.
 pub const MAX_INFLATED: usize = 32 * 1024 * 1024;
 /// Version of the file we keep on the PC. Format 1 had names only, format 2
-/// no hero links, format 3 no card links; all still load, without what they
-/// lack, and are fetched again (T-307, T-214, T-207).
-const SAVED_FORMAT: u32 = 4;
+/// no hero links, format 3 no card links, format 4 no combat facts; all
+/// still load, without what they lack, and are fetched again (T-307, T-214,
+/// T-207, T-605).
+const SAVED_FORMAT: u32 = 5;
 const NAMES_ONLY_FORMAT: u32 = 1;
 const NO_HERO_LINKS_FORMAT: u32 = 2;
 const NO_CARD_LINKS_FORMAT: u32 = 3;
+const NO_COMBAT_FACTS_FORMAT: u32 = 4;
 /// The real data has about 3,000 hero cards (skins included).
 pub const MAX_HEROES: usize = 20_000;
 /// Database ids are positive and far below this.
@@ -134,6 +138,15 @@ struct RawCard {
     dbf: Option<i64>,
     #[serde(default, rename = "type", deserialize_with = "string_or_none")]
     card_type: Option<String>,
+    /// Combat facts (T-605).
+    #[serde(default, deserialize_with = "string_or_none")]
+    set: Option<String>,
+    #[serde(default, deserialize_with = "int_or_none")]
+    attack: Option<i64>,
+    #[serde(default, deserialize_with = "int_or_none")]
+    health: Option<i64>,
+    #[serde(default)]
+    mechanics: Option<Value>,
 }
 
 /// A card's database id, when it is a plain one.
@@ -196,17 +209,34 @@ fn pool_minion(card: &RawCard) -> Option<PoolMinion> {
         return None;
     }
     let tier = u8::try_from(card.tier?).ok()?;
-    // A field that is there but malformed leaves the card out.
-    let tribes = match (&card.races, &card.race) {
-        (Some(races), _) => strings(races)?,
-        (None, Some(race)) => vec![race.as_str()?.to_string()],
-        (None, None) => Vec::new(),
-    };
+    let tribes = card_tribes(card)?;
     clean_pool(PoolMinion {
         tier,
         tribes,
         duos_only: card.duos_only == Some(true),
     })
+}
+
+/// A card's types; None when a field is there but malformed (the card is
+/// then left out, not read as having no type).
+fn card_tribes(card: &RawCard) -> Option<Vec<String>> {
+    Some(match (&card.races, &card.race) {
+        (Some(races), _) => strings(races)?,
+        (None, Some(race)) => vec![race.as_str()?.to_string()],
+        (None, None) => Vec::new(),
+    })
+}
+
+fn combat_facts(card: &RawCard) -> Option<CombatFacts> {
+    CombatFacts::from_card(
+        card.set.as_deref(),
+        card.card_type.as_deref(),
+        card.attack,
+        card.health,
+        card.tier,
+        card_tribes(card),
+        card.mechanics.as_ref(),
+    )
 }
 
 /// Checks a pool entry (also when it is read back from the PC).
@@ -217,8 +247,15 @@ fn clean_pool(minion: PoolMinion) -> Option<PoolMinion> {
     ok.then_some(minion)
 }
 
-/// One usable entry: id, name, pool data, hero database id, database id.
-type Entry = (String, String, Option<PoolMinion>, Option<i64>, Option<i64>);
+/// One usable entry.
+struct Entry {
+    id: String,
+    name: String,
+    pool: Option<PoolMinion>,
+    hero: Option<i64>,
+    dbf: Option<i64>,
+    combat: Option<CombatFacts>,
+}
 
 /// The usable entries, read one entry at a time so a file of millions of
 /// tiny entries is refused before it fills memory.
@@ -243,11 +280,19 @@ impl<'de> Deserialize<'de> for Pairs {
                     let pool = pool_minion(&card);
                     let hero = hero_dbf(&card);
                     let dbf = card_dbf(&card);
+                    let combat = combat_facts(&card);
                     let (Some(id), Some(name)) = (card.id, card.name) else {
                         continue;
                     };
                     if let Some(name) = clean_name(&name).filter(|_| valid_id(&id)) {
-                        pairs.push((id, name, pool, hero, dbf));
+                        pairs.push(Entry {
+                            id,
+                            name,
+                            pool,
+                            hero,
+                            dbf,
+                            combat,
+                        });
                     }
                 }
                 Ok(Pairs(pairs))
@@ -267,6 +312,9 @@ pub struct Catalog {
     /// Every card id by database id, for the trinkets and the Old God the log
     /// gives as database ids (T-207); every id here has a name.
     cards: BTreeMap<i64, String>,
+    /// Battlegrounds minions' combat facts by card id (T-605); every id here
+    /// has a name.
+    combat: BTreeMap<String, CombatFacts>,
 }
 
 /// Card ids by database id, keeping only ids that have a name. A database id
@@ -305,24 +353,29 @@ impl Catalog {
         let mut pool = BTreeMap::new();
         let mut heroes = Vec::new();
         let mut cards = Vec::new();
+        let mut combat = BTreeMap::new();
         let mut pairs = Vec::with_capacity(entries.len());
-        for (id, name, minion, hero, dbf) in entries {
-            if let Some(minion) = minion {
-                pool.insert(id.clone(), minion);
+        for e in entries {
+            if let Some(minion) = e.pool {
+                pool.insert(e.id.clone(), minion);
             }
-            if let Some(hero) = hero {
-                heroes.push((hero, id.clone()));
+            if let Some(hero) = e.hero {
+                heroes.push((hero, e.id.clone()));
             }
-            if let Some(dbf) = dbf {
-                cards.push((dbf, id.clone()));
+            if let Some(dbf) = e.dbf {
+                cards.push((dbf, e.id.clone()));
             }
-            pairs.push((id, name));
+            if let Some(facts) = e.combat {
+                combat.insert(e.id.clone(), facts);
+            }
+            pairs.push((e.id, e.name));
         }
         Catalog::from_parts(
             pairs.into_iter(),
             pool,
             heroes.into_iter(),
             cards.into_iter(),
+            combat,
         )
     }
 
@@ -335,6 +388,7 @@ impl Catalog {
         mut pool: BTreeMap<String, PoolMinion>,
         hero_ids: impl Iterator<Item = (i64, String)>,
         card_ids: impl Iterator<Item = (i64, String)>,
+        mut combat: BTreeMap<String, CombatFacts>,
     ) -> Result<Catalog, CatalogError> {
         let mut names = BTreeMap::new();
         let mut clashes = BTreeSet::new();
@@ -354,6 +408,10 @@ impl Catalog {
         if pool.len() > MAX_POOL {
             pool.clear();
         }
+        combat.retain(|id, _| names.contains_key(id));
+        if combat.len() > MAX_COMBAT_CARDS {
+            combat.clear();
+        }
         let heroes = links(hero_ids, &names, MAX_HEROES);
         let cards = links(card_ids, &names, MAX_CARDS);
         if names.len() > MAX_CARDS {
@@ -367,6 +425,7 @@ impl Catalog {
             pool,
             heroes,
             cards,
+            combat,
         })
     }
 
@@ -374,6 +433,12 @@ impl Catalog {
     /// none, e.g. a copy saved before T-307).
     pub fn pool(&self) -> &BTreeMap<String, PoolMinion> {
         &self.pool
+    }
+
+    /// A Battlegrounds minion's combat facts (T-605); None when the data
+    /// has none for it (e.g. a copy saved before), never a guess.
+    pub fn combat_facts(&self, id: &str) -> Option<&CombatFacts> {
+        self.combat.get(id)
     }
 
     pub fn name(&self, id: &str) -> Option<&str> {
@@ -419,6 +484,8 @@ struct Saved {
     heroes: BTreeMap<i64, String>,
     #[serde(default)]
     cards: BTreeMap<i64, String>,
+    #[serde(default)]
+    combat: BTreeMap<String, CombatFacts>,
 }
 
 /// An ETag we send back as-is: visible ASCII only, so a hand-edited file
@@ -445,6 +512,7 @@ impl SavedCatalog {
             pool: self.catalog.pool.clone(),
             heroes: self.catalog.heroes.clone(),
             cards: self.catalog.cards.clone(),
+            combat: self.catalog.combat.clone(),
         };
         serde_json::to_vec(&saved).unwrap_or_default()
     }
@@ -458,6 +526,7 @@ impl SavedCatalog {
             NAMES_ONLY_FORMAT,
             NO_HERO_LINKS_FORMAT,
             NO_CARD_LINKS_FORMAT,
+            NO_COMBAT_FACTS_FORMAT,
         ]
         .contains(&saved.format);
         if saved.format != SAVED_FORMAT && !old {
@@ -474,6 +543,12 @@ impl SavedCatalog {
             .filter(|(id, _)| valid_id(id))
             .filter_map(|(id, minion)| Some((id, clean_pool(minion)?)))
             .collect();
+        let combat = saved
+            .combat
+            .into_iter()
+            .filter(|(id, _)| valid_id(id))
+            .filter_map(|(id, facts)| Some((id, facts.clean()?)))
+            .collect();
         // An older copy has no pool or no hero links: without its ETag the
         // next fetch brings the whole file instead of "unchanged".
         let etag = saved.etag.filter(|e| valid_etag(e)).filter(|_| !old);
@@ -483,6 +558,7 @@ impl SavedCatalog {
                 pool,
                 saved.heroes.into_iter(),
                 saved.cards.into_iter(),
+                combat,
             )?,
             // An older copy counts as old, so it is replaced soon.
             fetched_at: if old { 0 } else { saved.fetched_at },
@@ -841,5 +917,40 @@ pub mod tests {
         edited["format"] = json!(99);
         assert!(SavedCatalog::from_json(&serde_json::to_vec(&edited).unwrap()).is_err());
         assert!(SavedCatalog::from_json(b"{broken").is_err());
+    }
+
+    #[test]
+    fn combat_facts_are_read_saved_and_checked_again() {
+        let extra = vec![
+            json!({"id": "BG_SYN_1", "name": "Synth", "type": "MINION", "set": "BATTLEGROUNDS",
+                   "attack": 2, "health": 3, "techLevel": 2, "races": ["MECHANICAL"],
+                   "mechanics": ["DIVINE_SHIELD", "TRIGGER_VISUAL"]}),
+            json!({"id": "CORE_SYN", "name": "Core", "type": "MINION", "set": "CORE",
+                   "attack": 1, "health": 1}),
+        ];
+        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
+        let facts = catalog.combat_facts("BG_SYN_1").expect("a Battlegrounds minion");
+        assert_eq!((facts.attack, facts.health, facts.tier), (2, 3, Some(2)));
+        assert_eq!(facts.tribes, ["MECHANICAL"]);
+        assert_eq!(facts.keywords, ["DIVINE_SHIELD"]);
+        assert!(catalog.combat_facts("CORE_SYN").is_none());
+        let saved = SavedCatalog {
+            catalog,
+            fetched_at: 5,
+            etag: Some("\"e\"".into()),
+        };
+        let back = SavedCatalog::from_json(&saved.to_json()).unwrap();
+        assert_eq!(back, saved);
+        let mut edited: Value = serde_json::from_slice(&saved.to_json()).unwrap();
+        edited["combat"]["BG_SYN_1"]["health"] = json!(-4);
+        let back = SavedCatalog::from_json(&serde_json::to_vec(&edited).unwrap()).unwrap();
+        assert!(back.catalog.combat_facts("BG_SYN_1").is_none(), "checked when read");
+        // A copy from before the combat facts loads without them and is fetched again soon.
+        let mut old: Value = serde_json::from_slice(&saved.to_json()).unwrap();
+        old["format"] = json!(4);
+        old.as_object_mut().unwrap().remove("combat");
+        let back = SavedCatalog::from_json(&serde_json::to_vec(&old).unwrap()).unwrap();
+        assert!(back.catalog.combat_facts("BG_SYN_1").is_none());
+        assert_eq!((back.fetched_at, back.etag), (0, None));
     }
 }

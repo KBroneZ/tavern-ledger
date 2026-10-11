@@ -339,6 +339,8 @@ pub struct Settings {
     /// window size (`resolution_key` of the client area, physical pixels),
     /// relative to the client area. Without one the measured default is used.
     pub leaderboards: BTreeMap<String, Area>,
+    /// The combat odds (T-605) are switched off; on by default.
+    pub odds_off: bool,
 }
 
 impl Default for Settings {
@@ -352,6 +354,7 @@ impl Default for Settings {
             layouts: BTreeMap::new(),
             last_resolution: None,
             leaderboards: BTreeMap::new(),
+            odds_off: false,
         }
     }
 }

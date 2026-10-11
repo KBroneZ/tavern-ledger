@@ -12,6 +12,7 @@ pub mod game_values;
 pub mod hero_pick;
 pub mod live;
 pub mod live_seats;
+pub mod odds;
 pub mod lobby_tribes;
 pub mod lock;
 pub mod playback;
@@ -58,6 +59,8 @@ struct LiveView {
     lobby: Vec<LobbySlot>,
     next: Option<i64>,
     damage_cap: Option<i64>,
+    /// The player's own board in a shop turn (T-605).
+    own_board: Option<Vec<bg_parser::report::Minion>>,
 }
 
 /// The session being read: its games and when each one was played.
@@ -93,6 +96,7 @@ impl SessionReader {
                 lobby: self.log.lobby_now(),
                 next: self.log.next_opponent_now(),
                 damage_cap: self.log.damage_cap_now(),
+                own_board: self.log.own_board_now(),
             },
             None => LiveView::default(),
         };
@@ -363,6 +367,12 @@ impl Watcher {
     /// Battlegrounds game is on or no cap applies.
     pub fn live_damage_cap(&self) -> Option<i64> {
         self.shown_live()?.damage_cap
+    }
+
+    /// The player's own board in a shop turn, as the game shows it (T-605);
+    /// None in a combat turn or when no Battlegrounds game is on.
+    pub fn live_own_board(&self) -> Option<&[bg_parser::report::Minion]> {
+        self.shown_live()?.own_board.as_deref()
     }
 
     fn shown_live(&self) -> Option<&LiveView> {
