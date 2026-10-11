@@ -258,7 +258,10 @@ fn pct(x: f64) -> String {
 pub fn render_replays(rows: &[Replayed], scored: &[Scored], unreadable: usize) -> String {
     let mut out = String::new();
     let solo = rows.iter().filter(|r| !r.duos).count();
-    let to_end = rows.iter().filter(|r| r.replay.difference.is_none()).count();
+    let to_end = rows
+        .iter()
+        .filter(|r| r.replay.difference.is_none())
+        .count();
     let attacks: usize = rows.iter().map(|r| r.replay.attacks).sum();
     let matched: usize = rows.iter().map(|r| r.replay.matched).sum();
     let _ = writeln!(out, "\n## Attack order replay (T-603b)\n");
@@ -287,7 +290,10 @@ pub fn render_replays(rows: &[Replayed], scored: &[Scored], unreadable: usize) -
     for (rule, n) in &by_rule {
         let _ = writeln!(out, "| {} | {n} |", rule.label());
     }
-    let _ = writeln!(out, "\nEach difference (game, round: attack, rule, detail):\n");
+    let _ = writeln!(
+        out,
+        "\nEach difference (game, round: attack, rule, detail):\n"
+    );
     for r in rows.iter().filter(|r| r.replay.difference.is_some()) {
         let d = r.replay.difference.as_ref().expect("filtered");
         let _ = writeln!(
@@ -316,8 +322,9 @@ pub fn render_replays(rows: &[Replayed], scored: &[Scored], unreadable: usize) -
             .find(|r| !r.duos && r.game == s.combat.game && r.round == s.combat.round);
         let words = match replay.map(|r| &r.replay.difference) {
             None => "no attacks in the log".to_string(),
-            Some(None) => "the replay follows the log to the end: the odds come from chance"
-                .to_string(),
+            Some(None) => {
+                "the replay follows the log to the end: the odds come from chance".to_string()
+            }
             Some(Some(d)) => format!("attack {}: {}; {}", d.attack, d.rule.label(), d.detail),
         };
         let _ = writeln!(
@@ -467,9 +474,21 @@ mod tests {
             ],
             ..History::default()
         };
-        let text = render_overlay_path(&history, &Options { trials: 200, ..Options::default() });
-        assert!(text.contains("No board of that opponent seen before: 2"), "{text}");
-        assert!(text.contains("not modelled (the overlay shows no number): 1"), "{text}");
+        let text = render_overlay_path(
+            &history,
+            &Options {
+                trials: 200,
+                ..Options::default()
+            },
+        );
+        assert!(
+            text.contains("No board of that opponent seen before: 2"),
+            "{text}"
+        );
+        assert!(
+            text.contains("not modelled (the overlay shows no number): 1"),
+            "{text}"
+        );
         // Said won (from the old 1/1), lost in fact.
         assert!(text.contains("| 1 | 0% | 2.000 | 0 of 1 | 2.0 |"), "{text}");
     }

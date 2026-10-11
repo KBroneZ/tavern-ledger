@@ -74,8 +74,10 @@ pub const KEYWORDS: [(&str, &str); 8] = [
 /// Keyword tags read on board minions for the combat simulator only (T-604),
 /// kept out of the saved report: upload-game checks every saved keyword
 /// against [`KEYWORDS`]'s names.
-pub const SIM_KEYWORDS: [(&str, &str); 2] =
-    [("POISONOUS", "poisonous"), ("MEGA_WINDFURY", "mega_windfury")];
+pub const SIM_KEYWORDS: [(&str, &str); 2] = [
+    ("POISONOUS", "poisonous"),
+    ("MEGA_WINDFURY", "mega_windfury"),
+];
 
 /// A minion's place in one attack (T-603b): its side, its board position
 /// (1 is the left-most) and its card.

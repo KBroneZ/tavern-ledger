@@ -87,8 +87,11 @@ impl Combat<'_> {
         if times == 0 {
             return;
         }
-        let has_deathrattle =
-            |c: &Self, u: &Unit| c.triggers(u).iter().any(|t| matches!(t, Trigger::Deathrattle(_)));
+        let has_deathrattle = |c: &Self, u: &Unit| {
+            c.triggers(u)
+                .iter()
+                .any(|t| matches!(t, Trigger::Deathrattle(_)))
+        };
         let Some(uid) = self.sides[side]
             .units
             .iter()

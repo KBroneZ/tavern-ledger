@@ -929,7 +929,9 @@ pub mod tests {
                    "attack": 1, "health": 1}),
         ];
         let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
-        let facts = catalog.combat_facts("BG_SYN_1").expect("a Battlegrounds minion");
+        let facts = catalog
+            .combat_facts("BG_SYN_1")
+            .expect("a Battlegrounds minion");
         assert_eq!((facts.attack, facts.health, facts.tier), (2, 3, Some(2)));
         assert_eq!(facts.tribes, ["MECHANICAL"]);
         assert_eq!(facts.keywords, ["DIVINE_SHIELD"]);
@@ -944,7 +946,10 @@ pub mod tests {
         let mut edited: Value = serde_json::from_slice(&saved.to_json()).unwrap();
         edited["combat"]["BG_SYN_1"]["health"] = json!(-4);
         let back = SavedCatalog::from_json(&serde_json::to_vec(&edited).unwrap()).unwrap();
-        assert!(back.catalog.combat_facts("BG_SYN_1").is_none(), "checked when read");
+        assert!(
+            back.catalog.combat_facts("BG_SYN_1").is_none(),
+            "checked when read"
+        );
         // A copy from before the combat facts loads without them and is fetched again soon.
         let mut old: Value = serde_json::from_slice(&saved.to_json()).unwrap();
         old["format"] = json!(4);

@@ -15,7 +15,12 @@ fn band(minions: &[Minion]) -> Warband {
     }
 }
 
-fn step(attacker: (usize, usize), defender: usize, player: &[Minion], opponent: &[Minion]) -> LoggedStep {
+fn step(
+    attacker: (usize, usize),
+    defender: usize,
+    player: &[Minion],
+    opponent: &[Minion],
+) -> LoggedStep {
     LoggedStep {
         attacker,
         defender: Some(defender),
@@ -96,9 +101,17 @@ fn a_board_unlike_the_engines_after_an_attack_is_named() {
     let steps = [step((0, 0), 0, &p0, &o0), step((1, 0), 0, &p1, &o1)];
     // Same minions, other numbers.
     let o0 = [m(1, 5)];
-    let steps2 = [step((0, 0), 0, &p0, &o0), step((1, 0), 0, &[m(2, 2), m(1, 1)], &[m(1, 4)])];
-    assert_eq!(run(&steps, CombatResult::Won).difference.unwrap().rule, Rule::Minions);
-    let d = run(&steps2, CombatResult::Lost).difference.expect("differs");
+    let steps2 = [
+        step((0, 0), 0, &p0, &o0),
+        step((1, 0), 0, &[m(2, 2), m(1, 1)], &[m(1, 4)]),
+    ];
+    assert_eq!(
+        run(&steps, CombatResult::Won).difference.unwrap().rule,
+        Rule::Minions
+    );
+    let d = run(&steps2, CombatResult::Lost)
+        .difference
+        .expect("differs");
     assert_eq!((d.attack, d.rule), (2, Rule::Stats));
 }
 

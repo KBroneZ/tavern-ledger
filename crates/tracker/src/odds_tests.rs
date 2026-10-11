@@ -33,7 +33,10 @@ fn entry(side: Side, seat: i64, board: Option<Vec<LogMinion>>) -> CombatEntry {
 fn round(number: i64, opponent: i64, board: Option<Vec<LogMinion>>) -> Round {
     Round {
         number,
-        entries: vec![entry(Side::Own, 2, Some(vec![])), entry(Side::Opponent, opponent, board)],
+        entries: vec![
+            entry(Side::Own, 2, Some(vec![])),
+            entry(Side::Opponent, opponent, board),
+        ],
         own_health_after: None,
         health_after: BTreeMap::new(),
         result: None,
@@ -92,7 +95,10 @@ fn the_input_is_the_next_opponents_last_board_seen() {
     let i = input();
     assert_eq!((i.opponent_seat, i.seen_round), (5, 3));
     assert_eq!(i.opponent[0].atk, 1);
-    assert_eq!((i.own_tier, i.opponent_tier, i.damage_cap), (Some(3), Some(4), Some(5)));
+    assert_eq!(
+        (i.own_tier, i.opponent_tier, i.damage_cap),
+        (Some(3), Some(4), Some(5))
+    );
 }
 
 #[test]
@@ -106,7 +112,13 @@ fn a_sure_win_gives_the_damage_after_the_cap() {
     assert_eq!(o.taken, None, "never lost");
     let mut capped = input();
     capped.damage_cap = Some(2);
-    assert_eq!(run_odds(&capped, &facts, Duration::from_secs(5)).dealt.unwrap().likely, 2);
+    assert_eq!(
+        run_odds(&capped, &facts, Duration::from_secs(5))
+            .dealt
+            .unwrap()
+            .likely,
+        2
+    );
 }
 
 #[test]
@@ -129,12 +141,17 @@ fn each_reason_for_no_odds_is_named() {
     let r = report(GAME, vec![round(1, 5, Some(vec![minion(PLAIN, 1, 1, 1)]))]);
     let own = [minion(PLAIN, 2, 2, 1)];
     let gap = |r: &GameReport, own: Option<&[LogMinion]>, next| {
-        odds_input(r, own, next, &[], None).expect_err("no odds").gap
+        odds_input(r, own, next, &[], None)
+            .expect_err("no odds")
+            .gap
     };
-    assert_eq!(gap(&report("GT_BATTLEGROUNDS_DUO", vec![]), Some(&own), Some(5)), Some(Gap::Duos));
-    assert_eq!(gap(&r, Some(&own), None), Some(Gap::NoNextOpponent));
-    assert_eq!(gap(&r, None, Some(5)), Some(Gap::NotInShop));
-    assert_eq!(gap(&r, Some(&own), Some(7)), Some(Gap::NoBoardSeen));
+    assert_eq!(
+        gap(&report("GT_BATTLEGROUNDS_DUO", vec![]), Some(&own), Some(5)),
+        Gap::Duos
+    );
+    assert_eq!(gap(&r, Some(&own), None), Gap::NoNextOpponent);
+    assert_eq!(gap(&r, None, Some(5)), Gap::NotInShop);
+    assert_eq!(gap(&r, Some(&own), Some(7)), Gap::NoBoardSeen);
 
     let i = input();
     let none = |_: &str| None;
@@ -166,7 +183,13 @@ fn a_start_of_combat_card_is_flagged() {
 
 #[test]
 fn card_data_words_become_facts() {
-    let f = Facts::from_names(2, 3, Some(4), &["MECHANICAL".into(), "ODD".into()], &["DIVINE_SHIELD".into()]);
+    let f = Facts::from_names(
+        2,
+        3,
+        Some(4),
+        &["MECHANICAL".into(), "ODD".into()],
+        &["DIVINE_SHIELD".into()],
+    );
     assert!(f.tribes.is(Tribes::MECH));
     assert!(f.base.keywords.contains(Keywords::DIVINE_SHIELD));
     assert_eq!((f.base.attack, f.base.health, f.tier), (2, 3, Some(4)));
@@ -175,8 +198,22 @@ fn card_data_words_become_facts() {
 #[test]
 fn the_spread_takes_percentiles() {
     let counts: BTreeMap<i32, u32> = [(1, 10), (5, 80), (9, 10)].into_iter().collect();
-    assert_eq!(spread(&counts, None), Some(Spread { low: 1, likely: 5, high: 5 }));
+    assert_eq!(
+        spread(&counts, None),
+        Some(Spread {
+            low: 1,
+            likely: 5,
+            high: 5
+        })
+    );
     let wide: BTreeMap<i32, u32> = [(1, 5), (5, 80), (9, 15)].into_iter().collect();
-    assert_eq!(spread(&wide, Some(8)), Some(Spread { low: 5, likely: 5, high: 8 }));
+    assert_eq!(
+        spread(&wide, Some(8)),
+        Some(Spread {
+            low: 5,
+            likely: 5,
+            high: 8
+        })
+    );
     assert_eq!(spread(&BTreeMap::new(), None), None);
 }

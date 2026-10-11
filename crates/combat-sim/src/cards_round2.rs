@@ -9,9 +9,11 @@ use crate::model::{Keywords, Tribes};
 const ANY: Tribes = Tribes::NONE;
 const SPELL: &str = "the spell's values can grow during the game; the printed ones are used";
 const ATTACK_DAMAGE: &str = "counts damage from attacks only, not from effects";
-const LEFT_MOST: &str = "which Deathrattle it triggers and when is not checked against the game yet";
+const LEFT_MOST: &str =
+    "which Deathrattle it triggers and when is not checked against the game yet";
 const GEM_CHAIN: &str = "Blood Gems played on it in combat are not passed on";
-const KNIGHTS: &str = "Eternal Knights grow with the Knights that died this game, which the log does not show";
+const KNIGHTS: &str =
+    "Eternal Knights grow with the Knights that died this game, which the log does not show";
 
 /// "Give your minions +3/+2. Repeat for your Dragons. Repeat for your
 /// minions with Divine Shield." (Mighty Dragonbreath, cast in combat.)
@@ -70,10 +72,7 @@ const PER_TRIBE: Action = Action::BuffOnePerTribe {
 
 pub const EFFECTS_2: &[(&str, CardRules)] = &[
     // Crimson Vindicator: Rally: cast Mighty Dragonbreath (golden: twice).
-    (
-        "BG36_241",
-        approx(SPELL, &[Trigger::Rally(&DRAGONBREATH)]),
-    ),
+    ("BG36_241", approx(SPELL, &[Trigger::Rally(&DRAGONBREATH)])),
     (
         "BG36_241_G",
         approx(SPELL, &[Trigger::Rally(&DRAGONBREATH_TWICE)]),
@@ -104,11 +103,17 @@ pub const EFFECTS_2: &[(&str, CardRules)] = &[
     // left-most Deathrattle (golden: twice).
     (
         "BG36_208",
-        approx(LEFT_MOST, &[Trigger::AfterFriendlyRallyAttacks { times: 1 }]),
+        approx(
+            LEFT_MOST,
+            &[Trigger::AfterFriendlyRallyAttacks { times: 1 }],
+        ),
     ),
     (
         "BG36_208_G",
-        approx(LEFT_MOST, &[Trigger::AfterFriendlyRallyAttacks { times: 2 }]),
+        approx(
+            LEFT_MOST,
+            &[Trigger::AfterFriendlyRallyAttacks { times: 2 }],
+        ),
     ),
     // Geomagus Roogug: passes Blood Gems on; its Divine Shield is on the board.
     ("BG28_583", approx(GEM_CHAIN, &[])),
@@ -166,7 +171,10 @@ pub const EFFECTS_2: &[(&str, CardRules)] = &[
     // The Last One Standing: Rally: give a friendly minion of each type
     // +15/+15 (golden: twice).
     ("BG34_320", exact(&[Trigger::Rally(&[PER_TRIBE])])),
-    ("BG34_320_G", exact(&[Trigger::Rally(&[PER_TRIBE, PER_TRIBE])])),
+    (
+        "BG34_320_G",
+        exact(&[Trigger::Rally(&[PER_TRIBE, PER_TRIBE])]),
+    ),
     // Cage Gnawer: whenever a friendly Beast attacks, give your Beasts
     // +2/+1 (golden +4/+2).
     (

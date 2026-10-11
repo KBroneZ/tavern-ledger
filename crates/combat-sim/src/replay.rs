@@ -172,7 +172,12 @@ fn side_word(side: usize) -> &'static str {
 
 impl Combat<'_> {
     /// Checks one logged attack against the engine and plays it.
-    fn check_step(&mut self, k: usize, step: &LoggedStep, turn: &mut Turn) -> Result<(), Difference> {
+    fn check_step(
+        &mut self,
+        k: usize,
+        step: &LoggedStep,
+        turn: &mut Turn,
+    ) -> Result<(), Difference> {
         let n = k + 1;
         self.compare_boards(n, &step.before)?;
         let (side, ix) = step.attacker;
@@ -202,7 +207,10 @@ impl Combat<'_> {
         }
         if ix != want_ix {
             let unit = &self.sides[side].units;
-            let card = |i: usize| unit.get(i).map_or("-", |u| self.p.cards[u.card as usize].id.as_str());
+            let card = |i: usize| {
+                unit.get(i)
+                    .map_or("-", |u| self.p.cards[u.card as usize].id.as_str())
+            };
             return Err(diff(
                 n,
                 Rule::AttackOrder,
@@ -236,7 +244,9 @@ impl Combat<'_> {
             ));
         };
         if !self.target_pool(foe).contains(&target) {
-            let card = self.p.cards[self.sides[foe].units[target_ix].card as usize].id.as_str();
+            let card = self.p.cards[self.sides[foe].units[target_ix].card as usize]
+                .id
+                .as_str();
             return Err(diff(
                 n,
                 Rule::Target,

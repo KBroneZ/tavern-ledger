@@ -13,8 +13,19 @@ fn line(indent: usize, body: &str) -> String {
     format!("{T}{}{body}", "    ".repeat(indent))
 }
 
-fn minion(id: i64, card: &str, controller: i64, pos: i64, atk: i64, hp: i64, tags: &[&str]) -> Vec<String> {
-    let mut out = vec![line(1, &format!("FULL_ENTITY - Creating ID={id} CardID={card}"))];
+fn minion(
+    id: i64,
+    card: &str,
+    controller: i64,
+    pos: i64,
+    atk: i64,
+    hp: i64,
+    tags: &[&str],
+) -> Vec<String> {
+    let mut out = vec![line(
+        1,
+        &format!("FULL_ENTITY - Creating ID={id} CardID={card}"),
+    )];
     for (tag, value) in [
         ("CARDTYPE", "MINION".to_string()),
         ("CONTROLLER", controller.to_string()),
@@ -33,12 +44,18 @@ fn minion(id: i64, card: &str, controller: i64, pos: i64, atk: i64, hp: i64, tag
 }
 
 fn hero(id: i64, card: &str, controller: i64, pid: i64, place: i64, zone: &str) -> Vec<String> {
-    let mut out = vec![line(1, &format!("FULL_ENTITY - Creating ID={id} CardID={card}"))];
+    let mut out = vec![line(
+        1,
+        &format!("FULL_ENTITY - Creating ID={id} CardID={card}"),
+    )];
     out.push(line(2, &format!("tag=CONTROLLER value={controller}")));
     out.push(line(2, &format!("tag=ZONE value={zone}")));
     if pid > 0 {
         out.push(line(2, &format!("tag=PLAYER_ID value={pid}")));
-        out.push(line(2, &format!("tag=PLAYER_LEADERBOARD_PLACE value={place}")));
+        out.push(line(
+            2,
+            &format!("tag=PLAYER_LEADERBOARD_PLACE value={place}"),
+        ));
     }
     out.push(line(2, "tag=CARDTYPE value=HERO"));
     out.push(line(2, "tag=HEALTH value=30"));
@@ -47,7 +64,10 @@ fn hero(id: i64, card: &str, controller: i64, pid: i64, place: i64, zone: &str) 
 }
 
 fn tag(entity: &str, tag: &str, value: &str) -> String {
-    line(1, &format!("TAG_CHANGE Entity={entity} tag={tag} value={value} "))
+    line(
+        1,
+        &format!("TAG_CHANGE Entity={entity} tag={tag} value={value} "),
+    )
 }
 
 fn attack(attacker: i64) -> String {
@@ -87,7 +107,15 @@ fn game() -> Vec<String> {
     l.push(tag("2", "HERO_ENTITY", "102"));
     l.push(tag("GameEntity", "TURN", "1"));
     l.extend(minion(20, "SYN_POISON", 2, 1, 1, 1, &["POISONOUS"]));
-    l.extend(minion(21, "SYN_MEGA", 2, 2, 3, 3, &["MEGA_WINDFURY", "TAUNT"]));
+    l.extend(minion(
+        21,
+        "SYN_MEGA",
+        2,
+        2,
+        3,
+        3,
+        &["MEGA_WINDFURY", "TAUNT"],
+    ));
     // Any later line closes the last minion's packet.
     l.push(tag("2", "RESOURCES", "1"));
     l.push(tag("GameEntity", "TURN", "2"));
@@ -97,7 +125,15 @@ fn game() -> Vec<String> {
     l.extend(hero(44, "SYN_HERO_B", 10, 0, 0, "PLAY"));
     l.push(tag("3", "HERO_ENTITY", "44"));
     l.extend(minion(30, "SYN_POISON", 2, 1, 1, 1, &["POISONOUS"]));
-    l.extend(minion(31, "SYN_MEGA", 2, 2, 3, 3, &["MEGA_WINDFURY", "TAUNT"]));
+    l.extend(minion(
+        31,
+        "SYN_MEGA",
+        2,
+        2,
+        3,
+        3,
+        &["MEGA_WINDFURY", "TAUNT"],
+    ));
     l.extend(minion(40, "SYN_FOE_A", 10, 1, 2, 4, &["DIVINE_SHIELD"]));
     l.extend(minion(41, "SYN_FOE_B", 10, 2, 1, 2, &[]));
     l.push(attack(30));
@@ -167,7 +203,9 @@ fn the_own_board_now_is_given_in_a_shop_turn_only() {
     let all = game();
     let at = |needle: &str| all.iter().position(|l| l.contains(needle)).unwrap();
     let mut reader = LogReader::default();
-    all[..at("tag=TURN value=2")].iter().for_each(|l| reader.feed(l));
+    all[..at("tag=TURN value=2")]
+        .iter()
+        .for_each(|l| reader.feed(l));
     let board = reader.own_board_now().expect("shop turn 1");
     let cards: Vec<_> = board.iter().map(|m| m.card_id.as_deref()).collect();
     assert_eq!(cards, [Some("SYN_POISON"), Some("SYN_MEGA")]);
@@ -177,7 +215,9 @@ fn the_own_board_now_is_given_in_a_shop_turn_only() {
         .iter()
         .for_each(|l| reader.feed(l));
     assert!(reader.own_board_now().is_none(), "a combat turn");
-    all[at("tag=TURN value=3")..].iter().for_each(|l| reader.feed(l));
+    all[at("tag=TURN value=3")..]
+        .iter()
+        .for_each(|l| reader.feed(l));
     assert!(reader.own_board_now().is_none(), "the game is over");
     assert!(LogReader::default().own_board_now().is_none());
 }

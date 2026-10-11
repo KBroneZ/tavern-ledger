@@ -95,7 +95,10 @@ impl CombatFacts {
             && self.tribes.len() <= MAX_TRIBES
             && self.tribes.iter().all(|t| valid_name(t))
             && self.keywords.len() <= COMBAT_KEYWORDS.len()
-            && self.keywords.iter().all(|k| COMBAT_KEYWORDS.contains(&k.as_str()));
+            && self
+                .keywords
+                .iter()
+                .all(|k| COMBAT_KEYWORDS.contains(&k.as_str()));
         ok.then_some(self)
     }
 }
@@ -119,8 +122,11 @@ mod tests {
 
     #[test]
     fn keeps_a_battlegrounds_minions_stats_tier_types_and_keywords() {
-        let f = facts("BATTLEGROUNDS", json!(["DIVINE_SHIELD", "BATTLECRY", "POISONOUS"]))
-            .expect("a minion");
+        let f = facts(
+            "BATTLEGROUNDS",
+            json!(["DIVINE_SHIELD", "BATTLECRY", "POISONOUS"]),
+        )
+        .expect("a minion");
         assert_eq!((f.attack, f.health, f.tier), (2, 3, Some(1)));
         assert_eq!(f.tribes, ["BEAST"]);
         assert_eq!(f.keywords, ["DIVINE_SHIELD", "POISONOUS"]);

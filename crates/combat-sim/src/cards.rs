@@ -135,7 +135,9 @@ pub enum Trigger {
     },
     /// After a friendly minion with a Rally attacks, trigger the left-most
     /// friendly Deathrattle `times` times.
-    AfterFriendlyRallyAttacks { times: u8 },
+    AfterFriendlyRallyAttacks {
+        times: u8,
+    },
 }
 
 impl Trigger {

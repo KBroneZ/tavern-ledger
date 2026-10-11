@@ -159,7 +159,11 @@ pub fn hero_links(cards: &Cards) -> tracker::stats::HeroLinks {
 pub fn combat_facts(cards: &Cards, id: &str) -> Option<tracker::odds::Facts> {
     let f = cards.store.get()?.combat_facts(id)?;
     Some(tracker::odds::Facts::from_names(
-        f.attack, f.health, f.tier, &f.tribes, &f.keywords,
+        f.attack,
+        f.health,
+        f.tier,
+        &f.tribes,
+        &f.keywords,
     ))
 }
 

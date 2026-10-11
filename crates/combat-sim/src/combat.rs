@@ -496,7 +496,12 @@ impl Combat<'_> {
 
         self.after_damage_dealt([
             (side, uid, a_tribes, a_atk > 0 && !t_shield),
-            (foe, target, t_tribes, t_atk > 0 && !a_kw.contains(Keywords::DIVINE_SHIELD)),
+            (
+                foe,
+                target,
+                t_tribes,
+                t_atk > 0 && !a_kw.contains(Keywords::DIVINE_SHIELD),
+            ),
         ]);
         let attacker_alive = self.unit(side, uid).is_some_and(Unit::alive);
         if a_triggers.contains(&Trigger::ExcessToAdjacent) && !t_shield && a_atk > t_health {

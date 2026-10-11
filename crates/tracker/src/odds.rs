@@ -13,7 +13,9 @@ use std::time::{Duration, Instant};
 
 use bg_parser::report::{GameReport, LobbySlot, Minion as LogMinion, Side};
 use combat_sim::cards::has_start_of_combat;
-use combat_sim::{simulate, BaseCard, CombatResult, Keywords, Minion, Odds, Options, Tribes, Verdict, Warband};
+use combat_sim::{
+    simulate, BaseCard, CombatResult, Keywords, Minion, Odds, Options, Tribes, Verdict, Warband,
+};
 use serde::Serialize;
 
 /// Trials for a full answer: the share's standard error is at most 0.5 point.
@@ -98,6 +100,24 @@ pub enum Gap {
     BadBoard,
 }
 
+/// No odds now, and why; the seat when known.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct NoOdds {
+    pub gap: Gap,
+    pub seat: Option<i64>,
+}
+
+impl NoOdds {
+    fn new(gap: Gap, seat: Option<i64>) -> Self {
+        NoOdds { gap, seat }
+    }
+
+    /// As the overlay shows it.
+    pub fn odds(self) -> LiveOdds {
+        LiveOdds::gap(self.gap, self.seat, None)
+    }
+}
+
 /// The damage of the trials with that result, after the game's damage cap.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub struct Spread {
@@ -172,18 +192,18 @@ pub fn odds_input(
     next: Option<i64>,
     lobby: &[LobbySlot],
     damage_cap: Option<i64>,
-) -> Result<OddsInput, LiveOdds> {
+) -> Result<OddsInput, NoOdds> {
     if report.game_type.as_deref() == Some("GT_BATTLEGROUNDS_DUO") {
-        return Err(LiveOdds::gap(Gap::Duos, next, None));
+        return Err(NoOdds::new(Gap::Duos, next));
     }
     let Some(seat) = next else {
-        return Err(LiveOdds::gap(Gap::NoNextOpponent, None, None));
+        return Err(NoOdds::new(Gap::NoNextOpponent, None));
     };
     let Some(own) = own_now else {
-        return Err(LiveOdds::gap(Gap::NotInShop, Some(seat), None));
+        return Err(NoOdds::new(Gap::NotInShop, Some(seat)));
     };
     let Some((opponent, seen_round)) = last_board(report, seat) else {
-        return Err(LiveOdds::gap(Gap::NoBoardSeen, Some(seat), None));
+        return Err(NoOdds::new(Gap::NoBoardSeen, Some(seat)));
     };
     let tier = |pid: Option<i64>| {
         lobby
@@ -334,7 +354,12 @@ pub fn run_odds(
         trials: o.trials,
         dealt: spread(&o.damage_dealt, input.damage_cap).filter(|_| known),
         taken: spread(&o.damage_taken, input.damage_cap).filter(|_| known),
-        approximate: o.coverage.approximate.into_iter().map(|(id, _)| id).collect(),
+        approximate: o
+            .coverage
+            .approximate
+            .into_iter()
+            .map(|(id, _)| id)
+            .collect(),
         missing: Vec::new(),
         start_of_combat,
     }

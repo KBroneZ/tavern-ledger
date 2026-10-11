@@ -554,7 +554,8 @@ impl Collector {
             self.slot(new).map(|s| (s, DefenderSource::Game))
         } else {
             let old = old.unwrap_or(0);
-            let hit = (tag == "DAMAGE" && new > old) || (tag == "DIVINE_SHIELD" && new == 0 && old > 0);
+            let hit =
+                (tag == "DAMAGE" && new > old) || (tag == "DIVINE_SHIELD" && new == 0 && old > 0);
             hit.then(|| self.slot(id))
                 .flatten()
                 .map(|s| (s, DefenderSource::FirstHit))

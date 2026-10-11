@@ -13,7 +13,7 @@ use std::time::Duration;
 
 use bg_parser::report::Status;
 use tauri::{AppHandle, Emitter, Manager};
-use tracker::odds::{odds_input, run_odds, Gap, LiveOdds, OddsInput};
+use tracker::odds::{odds_input, run_odds, Gap, LiveOdds, NoOdds, OddsInput};
 use tracker::Watcher;
 
 use crate::overlay::lock;
@@ -27,7 +27,7 @@ pub const BUDGET: Duration = Duration::from_millis(150);
 
 /// What the odds are worked out from now: nothing (no game on, or switched
 /// off), a reason for no odds, or the input of a run.
-pub type Wanted = Option<Result<OddsInput, LiveOdds>>;
+pub type Wanted = Option<Result<OddsInput, NoOdds>>;
 
 #[derive(Default)]
 pub struct Odds {
@@ -49,13 +49,13 @@ pub enum Step {
 pub fn step(wanted: &Wanted, shown: Option<&LiveOdds>) -> Step {
     match wanted {
         None => Step::Show(None),
-        Some(Err(gap)) => {
-            let fighting = gap.gap == Some(Gap::NotInShop)
-                && shown.is_some_and(|s| s.seat == gap.seat && s.gap != Some(Gap::NotInShop));
+        Some(Err(no)) => {
+            let fighting = no.gap == Gap::NotInShop
+                && shown.is_some_and(|s| s.seat == no.seat && s.gap != Some(Gap::NotInShop));
             if fighting {
                 Step::Keep
             } else {
-                Step::Show(Some(gap.clone()))
+                Step::Show(Some(no.odds()))
             }
         }
         Some(Ok(input)) => Step::Run(input.clone()),
@@ -153,7 +153,11 @@ pub fn start(app: AppHandle, state: Arc<AppState>) {
             // A bug in the simulator must not take the app down: no odds then.
             let odds = catch_unwind(AssertUnwindSafe(|| run_odds(&input, &facts, BUDGET)))
                 .unwrap_or_else(|_| {
-                    LiveOdds::gap(Gap::BadBoard, Some(input.opponent_seat), Some(input.seen_round))
+                    LiveOdds::gap(
+                        Gap::BadBoard,
+                        Some(input.opponent_seat),
+                        Some(input.seen_round),
+                    )
                 });
             // A newer input may have come while it ran; that one is queued.
             if state.odds.is_wanted(&input) {
@@ -167,8 +171,11 @@ pub fn start(app: AppHandle, state: Arc<AppState>) {
 mod tests {
     use super::*;
 
-    fn gap(gap: Gap, seat: i64) -> LiveOdds {
-        LiveOdds::gap(gap, Some(seat), None)
+    fn gap(gap: Gap, seat: i64) -> NoOdds {
+        NoOdds {
+            gap,
+            seat: Some(seat),
+        }
     }
 
     fn input(seat: i64) -> OddsInput {
@@ -187,13 +194,13 @@ mod tests {
     fn a_reason_shows_at_once_and_a_run_waits_for_the_thread() {
         assert_eq!(step(&None, None), Step::Show(None));
         let duos = gap(Gap::Duos, 3);
-        assert_eq!(step(&Some(Err(duos.clone())), None), Step::Show(Some(duos)));
+        assert_eq!(step(&Some(Err(duos)), None), Step::Show(Some(duos.odds())));
         assert_eq!(step(&Some(Ok(input(3))), None), Step::Run(input(3)));
     }
 
     #[test]
     fn the_shop_odds_stay_while_the_game_shows_that_combat() {
-        let mut odds = gap(Gap::Duos, 3);
+        let mut odds = gap(Gap::Duos, 3).odds();
         odds.gap = None;
         let fighting = Some(Err(gap(Gap::NotInShop, 3)));
         assert_eq!(step(&fighting, Some(&odds)), Step::Keep);
@@ -210,6 +217,10 @@ mod tests {
         send.send(3).unwrap();
         assert_eq!(settled(&jobs, 1, Duration::from_millis(20)), Some(3));
         drop(send);
-        assert_eq!(settled(&jobs, 4, Duration::from_millis(20)), None, "closing");
+        assert_eq!(
+            settled(&jobs, 4, Duration::from_millis(20)),
+            None,
+            "closing"
+        );
     }
 }
