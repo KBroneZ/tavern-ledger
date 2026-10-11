@@ -261,6 +261,7 @@ test("the few-games line is D-082's old minimum: 20 games, 10 with the hero", ()
   const hero = (games: number) => boardRow(raw({ board: "hero_avg_place", hero: "BG20_HERO_202", games }), "solo");
   assert.equal(fewGames(hero(9)), true);
   assert.equal(fewGames(hero(10)), false);
+  assert.equal(fewGames(boardRow(raw({ board: "games", value: 1, games: 1 }), "solo")), false, "the games board is the count itself");
 });
 
 test("a row under the line is shown, with its games and the few-games mark; one over it has no mark", () => {

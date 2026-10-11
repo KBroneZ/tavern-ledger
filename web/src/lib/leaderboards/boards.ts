@@ -116,8 +116,12 @@ export function boardRow(value: unknown, m: Mode): BoardRow {
   };
 }
 
-/** True when the row's value rests on fewer games than its board's line. */
+/**
+ * True when the row's value rests on fewer games than its board's line. Not on
+ * the games board: there the value is the games, already shown.
+ */
 export function fewGames(row: BoardRow): boolean {
+  if (row.board === "games") return false;
   return row.games < (row.board === "hero_avg_place" ? FEW_HERO_GAMES : FEW_GAMES);
 }
 

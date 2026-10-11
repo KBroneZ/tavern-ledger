@@ -14,7 +14,7 @@ Rows show the display name (read at the moment of the request, so a rename shows
 
 **Few games (D-103).** The site has few players, and with 20 games every board was empty, so the user removed the minimum. The website instead marks a row that rests on fewer than 20 games (10 with the hero on the hero board) as "few games", next to the games behind it, so a 1-game 100% reads for what it is; the order stays by value, ties by more games. The community hero stats keep their own minimum (D-083: 50 games from 5 players): it protects players who are not public.
 
-**Why 20 (D-082, now the "few games" line).** A 1-game 100% must not top a board (D-075). Over 20 Solo games the average place has a standard error of about 2.3 / √20 ≈ 0.5 places, enough to separate a strong player from a lucky week, and 20 games in 7 days is about three a day, which an active player reaches. One number for every board and period keeps the explanation to one sentence. **Why 10 per hero:** a player rarely plays 20 games with one hero in a month; 10 still rules out one-game flukes, and the player must also have the 20 games overall.
+**Why 20 (D-082, now the "few games" line).** A 1-game 100% must not top a board (D-075). Over 20 Solo games the average place has a standard error of about 2.3 / √20 ≈ 0.5 places, enough to separate a strong player from a lucky week, and 20 games in 7 days is about three a day, which an active player reaches. One number for every board and period keeps the explanation to one sentence. **Why 10 per hero:** a player rarely plays 20 games with one hero in a month; 10 still rules out one-game flukes, and under D-082 the player also needed the 20 games overall (no longer, D-103).
 
 ## What counts
 
