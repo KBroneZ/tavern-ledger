@@ -1,0 +1,52 @@
+{
+  "blocking_cards": [
+    {
+      "card_id": "BG34_140",
+      "combats": 12
+    },
+    {
+      "card_id": "BG31_835",
+      "combats": 5
+    }
+  ],
+  "date": "2026-01-01",
+  "engine_version": "0.4.0",
+  "format": 1,
+  "modes": {
+    "duos": {
+      "blocked": 17,
+      "blocked_share": 0.085,
+      "brier": 0.31,
+      "calibration": [
+        { "from": 0.0, "to": 0.2, "predictions": 320, "mean_said": 0.04, "happened": 0.05 },
+        { "from": 0.2, "to": 0.4, "predictions": 40, "mean_said": 0.3, "happened": 0.35 },
+        { "from": 0.4, "to": 0.6, "predictions": 30, "mean_said": 0.5, "happened": 0.4 },
+        { "from": 0.6, "to": 0.8, "predictions": 35, "mean_said": 0.7, "happened": 0.6 },
+        { "from": 0.8, "to": 1.0, "predictions": 124, "mean_said": 0.95, "happened": 0.9 }
+      ],
+      "combats_with_result": 200,
+      "mean_p_real": 0.78,
+      "most_likely_right": 140,
+      "refused": 0,
+      "scored": 183
+    },
+    "solo": {
+      "blocked": 0,
+      "blocked_share": 0.0,
+      "brier": 0.1,
+      "calibration": [
+        { "from": 0.0, "to": 0.2, "predictions": 40, "mean_said": 0.02, "happened": 0.0 },
+        { "from": 0.2, "to": 0.4, "predictions": 0, "mean_said": null, "happened": null },
+        { "from": 0.4, "to": 0.6, "predictions": 2, "mean_said": 0.5, "happened": 0.5 },
+        { "from": 0.6, "to": 0.8, "predictions": 1, "mean_said": 0.7, "happened": 1.0 },
+        { "from": 0.8, "to": 1.0, "predictions": 17, "mean_said": 0.97, "happened": 0.94 }
+      ],
+      "combats_with_result": 20,
+      "mean_p_real": 0.9,
+      "most_likely_right": 18,
+      "refused": 0,
+      "scored": 20
+    }
+  },
+  "trials": 10000
+}

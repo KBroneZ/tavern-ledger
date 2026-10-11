@@ -65,14 +65,19 @@ impl Combat<'_> {
             if dead.is_empty() {
                 return;
             }
+            self.gain_deathrattles(&dead);
             for d in &dead {
                 let times = 1 + usize::from(self.extra_deathrattles(d.side));
                 let src = Source::Dead {
                     anchor: d.anchor,
                     killer: d.unit.hit_by,
+                    stats: (d.unit.attack, d.unit.max_health),
                 };
-                for _ in 0..times {
-                    for t in self.triggers(&d.unit) {
+                // Its card's Deathrattles, then those it gained in combat.
+                let cards = std::iter::once(d.unit.card).chain(d.unit.gained.iter().copied());
+                for card in cards.flat_map(|c| std::iter::repeat_n(c, times)) {
+                    let triggers = self.p.cards[card as usize].triggers;
+                    for t in triggers {
                         if let Trigger::Deathrattle(actions) = t {
                             for a in *actions {
                                 self.act(d.side, src, None, None, a);

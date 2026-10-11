@@ -19,8 +19,10 @@
 //! ```
 
 pub mod cards;
+mod cards_round1;
 mod cards_round2;
 mod cards_round3;
+mod cards_round4;
 pub mod combat;
 pub mod model;
 pub mod rng;
@@ -30,6 +32,8 @@ pub mod trials;
 pub mod harness;
 #[cfg(feature = "harness")]
 pub mod harness_duos;
+#[cfg(feature = "harness")]
+pub mod harness_export;
 #[cfg(feature = "harness")]
 pub mod harness_logs;
 pub mod score;

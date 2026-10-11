@@ -141,14 +141,18 @@ impl Combat<'_> {
             ),
         ]);
         let attacker_alive = self.unit(side, uid).is_some_and(Unit::alive);
-        if a_triggers.contains(&Trigger::ExcessToAdjacent) && !t_shield && a_atk > t_health {
-            let open: Vec<u32> = neighbours
+        let both = a_triggers.contains(&Trigger::ExcessToBothAdjacent);
+        let excess = both || a_triggers.contains(&Trigger::ExcessToAdjacent);
+        if excess && !t_shield && a_atk > t_health {
+            let mut open: Vec<u32> = neighbours
                 .iter()
                 .copied()
                 .filter(|n| self.unit(foe, *n).is_some_and(Unit::alive))
                 .collect();
-            if !open.is_empty() {
-                let n = open[self.rng.below(open.len())];
+            if !both && !open.is_empty() {
+                open = vec![open[self.rng.below(open.len())]];
+            }
+            for n in open {
                 self.damage(foe, n, a_atk.saturating_sub(t_health), Keywords::NONE, uid);
             }
         }
@@ -165,6 +169,7 @@ impl Combat<'_> {
         if a_triggers.iter().any(|t| matches!(t, Trigger::Rally(_))) {
             self.after_rally_attack(side);
         }
+        self.after_friendly_attack(side);
         self.process_deaths(side);
     }
 

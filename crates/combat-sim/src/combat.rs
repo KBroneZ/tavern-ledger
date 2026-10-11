@@ -158,11 +158,7 @@ fn intern(cards: &mut Vec<CardInfo>, id: &str, make: impl FnOnce() -> CardInfo) 
 pub(crate) fn summoned_tokens(triggers: &[Trigger]) -> Vec<&'static str> {
     let mut out = Vec::new();
     for t in triggers {
-        for a in t.actions() {
-            if let Action::Summon { token, .. } | Action::SummonAndAttack { token } = a {
-                out.push(*token);
-            }
-        }
+        out.extend(t.actions().iter().filter_map(Action::token));
     }
     out
 }
@@ -181,6 +177,10 @@ pub(crate) struct Unit {
     /// The enemy minion that last damaged it, for "destroy the minion that
     /// killed this".
     hit_by: Option<u32>,
+    /// Its Health before damage: buffs raise it, damage does not.
+    max_health: i32,
+    /// Cards whose Deathrattles it gained in this combat.
+    gained: Vec<u16>,
 }
 
 impl Unit {
@@ -194,6 +194,8 @@ impl Unit {
             avenge: 0,
             shield_done: false,
             hit_by: None,
+            max_health: health,
+            gained: Vec::new(),
         }
     }
 
@@ -243,6 +245,8 @@ enum Source {
     Dead {
         anchor: Option<u32>,
         killer: Option<u32>,
+        /// Its Attack and full Health when it died.
+        stats: (i32, i32),
     },
 }
 
@@ -421,6 +425,9 @@ mod round2;
 
 #[path = "combat_round3.rs"]
 mod round3;
+
+#[path = "combat_round4.rs"]
+mod round4;
 
 #[path = "combat_duos.rs"]
 mod duos;

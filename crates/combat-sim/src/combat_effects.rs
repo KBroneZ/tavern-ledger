@@ -13,6 +13,7 @@ impl Combat<'_> {
         };
         u.attack = u.attack.saturating_add(attack);
         u.health = u.health.saturating_add(health);
+        u.max_health = u.max_health.saturating_add(health);
         let (atk, done, card) = (u.attack, u.shield_done, u.card);
         if done {
             return;
@@ -173,6 +174,24 @@ impl Combat<'_> {
             }
             // Needs the reborn minion: played by `after_reborn`.
             Action::GiveRebornAttackToRightmost { .. } => {}
+            Action::SummonWithStats {
+                token,
+                factor,
+                attack_first,
+            } => self.summon_with_stats(side, src, target, token, factor, attack_first),
+            Action::BuffCards {
+                cards,
+                attack,
+                health,
+            } => self.buff_cards(side, cards, attack, health),
+            Action::DamageTargetNeighbours(amount) => {
+                if let (Some(uid), Some((foe, t))) = (me, target) {
+                    self.damage_neighbours(foe, t, amount, uid);
+                }
+            }
+            Action::TriggerAdjacentDeathrattle { both } => {
+                self.trigger_adjacent_deathrattle(side, src, both)
+            }
             Action::MultiplyAttackerAttack { factor } => {
                 if let Some(a) = attacker {
                     let gain = self
@@ -194,10 +213,7 @@ impl Combat<'_> {
         let Some(base) = self.p.cards[card as usize].base else {
             return;
         };
-        let at = match src {
-            Source::Unit(uid) => self.sides[side].pos(uid).map_or(0, |i| i + 1),
-            Source::Dead { anchor, .. } => self.anchor_pos(side, anchor),
-        };
+        let at = self.summon_pos(side, src);
         for k in 0..usize::from(count) {
             let unit = self.fresh(card, base.attack, base.health, base.keywords);
             let uid = unit.uid;
@@ -205,6 +221,14 @@ impl Combat<'_> {
                 break;
             }
             self.after_summon(side, uid);
+        }
+    }
+
+    /// Where a summon from `src` goes: right of the card, or where it died.
+    pub(super) fn summon_pos(&self, side: usize, src: Source) -> usize {
+        match src {
+            Source::Unit(uid) => self.sides[side].pos(uid).map_or(0, |i| i + 1),
+            Source::Dead { anchor, .. } => self.anchor_pos(side, anchor),
         }
     }
 
