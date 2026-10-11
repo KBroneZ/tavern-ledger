@@ -44,6 +44,18 @@ class Build(unittest.TestCase):
         self.assertNotIn("data-artifact-only hidden", self.out)
         self.assertNotIn("data-local-only", self.out)
 
+    def test_each_concept_has_a_desktop_and_a_phone_frame(self):
+        for name in CONCEPTS:
+            title = re.search(r"<title>(.*?)</title>", bhc.read(HOME / name)).group(1)
+            with self.subTest(name):
+                self.assertEqual(sum(f"<title>{title}</title>" in frame for frame in self.frames), 2)
+
+    def test_check_refuses_a_frame_left_with_src(self):
+        with self.assertRaises(ValueError):
+            bhc.check('<p data-artifact-only></p><iframe loading="lazy" src="a.html"></iframe>')
+        with self.assertRaises(ValueError):
+            bhc.check('<p data-artifact-only hidden></p>')
+
     def test_rejects_a_name_outside_the_concepts(self):
         with self.assertRaises(ValueError):
             bhc.concept_for_artifact("../index.html", "", "")

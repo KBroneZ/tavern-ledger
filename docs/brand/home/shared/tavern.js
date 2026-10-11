@@ -73,13 +73,19 @@
     return names[lang() === "es" ? 1 : 0];
   }
 
+  // A portrait next to its own visible caption keeps alt="" so the name is read once.
+  function setAlt(img) {
+    const captioned = img.parentElement?.parentElement?.querySelector("[data-hero-name]");
+    img.alt = captioned ? "" : heroName(img.dataset.hero);
+  }
+
   function loadPortraits() {
     const useSilhouettes = root.dataset.portraits === "silhouette";
     for (const img of document.querySelectorAll("img[data-hero]")) {
       const id = img.dataset.hero;
       if (!CARD_ID.test(id)) continue;
       img.decoding = "async";
-      img.alt = heroName(id);
+      setAlt(img);
       if (useSilhouettes) {
         img.src = silhouette(id);
         continue;
@@ -104,10 +110,11 @@
     root.lang = next;
     const title = root.dataset["title" + (next === "es" ? "Es" : "En")];
     if (title) document.title = title;
-    for (const img of document.querySelectorAll("img[data-hero]")) img.alt = heroName(img.dataset.hero);
+    for (const img of document.querySelectorAll("img[data-hero]")) setAlt(img);
     for (const el of document.querySelectorAll("[data-hero-name]")) el.textContent = heroName(el.dataset.heroName);
     for (const btn of document.querySelectorAll(".lang-toggle")) {
       btn.setAttribute("aria-label", next === "es" ? "Read this page in English" : "Leer esta página en español");
+      btn.lang = next === "es" ? "en" : "es";
     }
   }
 
@@ -140,6 +147,7 @@
     let dpr = 1;
     let parts = [];
     let raf = 0;
+    let onScreen = true;
 
     function spawnX() {
       if (side === "left") return Math.random() * w * 0.32;
@@ -198,10 +206,18 @@
     function start() {
       cancelAnimationFrame(raf);
       resize();
-      if (reduceMotion.matches || document.hidden) draw();
+      if (reduceMotion.matches || document.hidden || !onScreen) draw();
       else raf = requestAnimationFrame(step);
     }
     new ResizeObserver(start).observe(canvas);
+    // Pause while off screen (the review page runs twelve of these at once).
+    new IntersectionObserver((entries) => {
+      const visible = entries.some((e) => e.isIntersecting);
+      if (visible !== onScreen) {
+        onScreen = visible;
+        start();
+      }
+    }).observe(canvas);
     reduceMotion.addEventListener("change", start);
     document.addEventListener("visibilitychange", start);
   }

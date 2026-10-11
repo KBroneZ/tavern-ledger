@@ -89,7 +89,18 @@ def build() -> str:
         raise ValueError("review page has no concept frames")
     page = LOCAL_ONLY.sub("", page)
     page = page.replace(" data-artifact-only hidden>", " data-artifact-only>")
+    check(page)
     return strip_document(page)
+
+
+def check(page: str) -> None:
+    """Fails loudly when a markup edit slipped past the substitutions above."""
+    if any("srcdoc=" not in tag for tag in re.findall(r"<iframe[\s>][^>]*", page)):
+        raise ValueError("an <iframe> was not inlined: keep src as its first attribute")
+    if "data-local-only" in page:
+        raise ValueError("a data-local-only element was left in: keep the open-full link's shape")
+    if not re.search(r"data-artifact-only>", page):
+        raise ValueError("the artifact note is missing or still hidden")
 
 
 def main(argv: list[str]) -> int:
