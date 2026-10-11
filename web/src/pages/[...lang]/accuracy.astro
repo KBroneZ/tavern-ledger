@@ -1,0 +1,116 @@
+---
+// Simulator accuracy (/accuracy/, T-607, D-089, D-091): the numbers
+// `combat-validate --export` wrote on the user's own combats, committed as
+// src/data/accuracy.json and drawn at build time (no fetch, no script but
+// the Simple/Advanced switch). The export is read strictly, so a bad file
+// fails the build. Each mode shows its accuracy with the blocked share in
+// the same row: never one without the other. Public and indexable.
+import Base from "../../layouts/Base.astro";
+import CalibrationChart from "../../components/data/CalibrationChart.astro";
+import DataScript from "../../components/data/DataScript.astro";
+import StatTile from "../../components/data/StatTile.astro";
+import Switch from "../../components/data/Switch.astro";
+import "../../styles/data.css";
+import "../../styles/dash.css";
+import "../../styles/accuracy.css";
+import rawAccuracy from "../../data/accuracy.json";
+import rawNames from "../../data/accuracy-cards.json";
+import { MODES, parseAccuracy, parseCardNames } from "../../lib/accuracy/data.ts";
+import { at } from "../../lib/accuracy/strings.ts";
+import { blockingRows, calibrationBars, dayText, modeFigures } from "../../lib/accuracy/view.ts";
+import { langPaths, numberFormat, setLang } from "../../lib/i18n.ts";
+import { st } from "../../lib/site/strings.ts";
+
+export const getStaticPaths = langPaths;
+// Every string below is drawn in the page's language (T-508).
+setLang(Astro.props.lang);
+
+const data = parseAccuracy(rawAccuracy);
+const names = parseCardNames(rawNames);
+const modes = MODES.map((mode) => ({
+  mode,
+  figures: modeFigures(data.modes[mode], mode),
+  bars: calibrationBars(data.modes[mode].calibration),
+}));
+const cards = blockingRows(data.blocking_cards, names);
+const version = at("page.version", {
+  version: data.engine_version,
+  date: dayText(data.date),
+  trials: numberFormat({ maximumFractionDigits: 0 }).format(data.trials),
+});
+---
+
+<Base title={st("meta.accuracy.title")} description={st("meta.accuracy.description")}>
+  <div class="acc">
+    <header class="data-head dash-head">
+      <div>
+        <p class="kicker">{at("page.kicker")}</p>
+        <h1>{at("page.title")}</h1>
+        <p class="acc-intro">{at("page.intro")}</p>
+        <p class="data-note">{version}</p>
+      </div>
+      <div class="dash-switches">
+        <Switch kind="detail" />
+      </div>
+    </header>
+
+    {
+      modes.map(({ mode, figures: f, bars }) => (
+        <section class="data-section" aria-labelledby={`acc-${mode}`}>
+          <div class="acc-mode-head">
+            <h2 id={`acc-${mode}`}>{f.modeName}</h2>
+            <p>{f.combats}</p>
+          </div>
+          <div class="tiles">
+            <StatTile hero label={at("tile.right")} value={f.right.value} backing={f.right.backing} />
+            <StatTile label={at("tile.meanP")} value={f.meanP.value} backing={f.meanP.backing} />
+            <div class="acc-blocked">
+              <StatTile label={at("tile.blocked")} value={f.blocked.value} backing={f.blocked.note} />
+            </div>
+            <div class="adv">
+              <StatTile label={at("tile.brier")} value={f.brier.value} backing={f.brier.backing} />
+              <StatTile label={at("tile.refused")} value={f.refused} />
+            </div>
+          </div>
+          <CalibrationChart bars={bars} modeName={f.modeName} id={`acc-cal-${mode}`} />
+        </section>
+      ))
+    }
+
+    <section class="data-section" aria-labelledby="acc-cards">
+      <h2 id="acc-cards">{at("cards.title")}</h2>
+      <p class="data-note">{at("cards.desc")}</p>
+      {
+        cards.length === 0 ? (
+          <p>{at("cards.none")}</p>
+        ) : (
+          <table class="dtable">
+            <thead>
+              <tr>
+                <th scope="col">{at("cards.col.card")}</th>
+                <th scope="col" class="adv">{at("cards.col.id")}</th>
+                <th scope="col" class="num">{at("cards.col.combats")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cards.map((c) => (
+                <tr>
+                  <td>{c.name}</td>
+                  <td class="adv acc-id">{c.id}</td>
+                  <td class="num">{c.combats}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )
+      }
+    </section>
+
+    <section class="data-section acc-about" aria-labelledby="acc-about">
+      <h2 id="acc-about">{at("about.title")}</h2>
+      <p>{at("about.body")}</p>
+      <p>{at("about.refresh")}</p>
+    </section>
+    <DataScript />
+  </div>
+</Base>

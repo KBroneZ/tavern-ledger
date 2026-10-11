@@ -13,6 +13,7 @@ export const SITE_STRINGS = {
   "layout.home": "Home",
   "layout.privacy": "Privacy",
   "layout.terms": "Terms",
+  "layout.accuracy": "Simulator accuracy",
   "layout.leaderboards": "Leaderboards",
   "layout.heroes": "Hero stats",
   "layout.games": "Your games",
@@ -48,6 +49,9 @@ export const SITE_STRINGS = {
   "meta.leaderboards.title": "Leaderboards",
   "meta.leaderboards.description":
     "Public Tavern Ledger leaderboards: players who made their profile public, ranked on their uploaded Battlegrounds games. Self-reported, no ratings.",
+  "meta.accuracy.title": "Simulator accuracy",
+  "meta.accuracy.description":
+    "How often Tavern Ledger's combat odds are right, measured on real Battlegrounds combats: per mode, the share of combats with no odds beside every number.",
   "meta.signin.title": "Sign in",
   "meta.signin.description": "Sign in or create a Tavern Ledger account.",
   "meta.account.title": "Your account",
@@ -125,6 +129,14 @@ export const SITE_STRINGS = {
   "home.status.body": "The desktop app is a prototype and the website is being built.",
   "home.status.testing": "Accounts on this site are for testing only.",
   "home.status.closed": "Accounts are not open yet.",
+  // What's new (lib/site/news.ts): one short dated line each, newest first.
+  "news.title": "What's new",
+  "news.accuracy": "How often the overlay's combat odds are right, measured on real combats.",
+  "news.accuracy.link": "Simulator accuracy",
+  "news.heroes": "Community hero stats. Your games count only if you turn on the switch on your account page; it is off until you do.",
+  "news.heroes.link": "Hero stats",
+  "news.simulator": "A combat simulator on the website: load a board from one of your games, change it and run it.",
+  "news.simulator.link": "Simulator",
 } as const;
 
 export type SiteKey = keyof typeof SITE_STRINGS;

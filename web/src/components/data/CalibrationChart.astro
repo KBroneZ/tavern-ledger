@@ -1,0 +1,111 @@
+---
+// Calibration (T-607): for each group of chances the simulator gave (0–20%,
+// 20–40%, …), a pair of columns on one 0–100% scale: what it said on average
+// and how often that really happened. The percent sits on each cap and the
+// group under the pair, so colour is never the only cue; an empty group has
+// no columns, a dash and a count of 0. Every value is also in the table under it.
+import { columnPath } from "../../lib/data/format.ts";
+import type { CalibrationBar } from "../../lib/accuracy/view.ts";
+import { at } from "../../lib/accuracy/strings.ts";
+import Fold from "./Fold.astro";
+
+interface Props {
+  bars: CalibrationBar[];
+  /** The mode's name, for the description. */
+  modeName: string;
+  id: string;
+}
+
+const { bars, modeName, id } = Astro.props;
+const SLOT = 92;
+const BAR = 32;
+const GAP = 6;
+const TOP = 18;
+const BASE = 118;
+const HEIGHT = 154;
+const width = bars.length * SLOT;
+const length = (v: number | null) => (v === null || v <= 0 ? 0 : Math.max(2, Math.round(v * (BASE - TOP) * 100) / 100));
+const pairX = (i: number) => i * SLOT + (SLOT - 2 * BAR - GAP) / 2;
+---
+
+<figure class="chart chart-calibration">
+  <figcaption>
+    <p class="chart-title" id={`${id}-title`}>{at("cal.title")}</p>
+    <p class="chart-desc" id={`${id}-desc`}>{at("cal.desc", { mode: modeName })}</p>
+  </figcaption>
+  <ul class="chart-key" aria-hidden="true">
+    <li><i class="key-said" aria-hidden="true"></i>{at("cal.key.said")}</li>
+    <li><i class="key-happened" aria-hidden="true"></i>{at("cal.key.happened")}</li>
+  </ul>
+  <div class="scroll-x" role="region" aria-label={at("cal.title")} tabindex="0">
+  <svg viewBox={`0 0 ${width} ${HEIGHT}`} width={width} height={HEIGHT} role="img" aria-labelledby={`${id}-title`} aria-describedby={`${id}-desc`}>
+    <line class="grid" x1="0" x2={width} y1={TOP} y2={TOP} />
+    <line class="grid" x1="0" x2={width} y1={(TOP + BASE) / 2} y2={(TOP + BASE) / 2} />
+    <line class="axis" x1="0" x2={width} y1={BASE} y2={BASE} />
+    {
+      bars.map((b, i) => {
+        const x = pairX(i);
+        const said = length(b.said);
+        const happened = length(b.happened);
+        const mid = i * SLOT + SLOT / 2;
+        return (
+          <g class="mark">
+            <title>
+              {b.predictions === 0
+                ? `${b.range}: ${at("cal.none")}`
+                : at("cal.mark", { range: b.range, predictions: b.predictions, said: b.saidText, happened: b.happenedText })}
+            </title>
+            <rect class="hit" x={i * SLOT} y="0" width={SLOT} height={HEIGHT} />
+            {b.predictions === 0 ? (
+              <text x={mid} y={BASE - 6} text-anchor="middle">
+                —
+              </text>
+            ) : (
+              <>
+                {said > 0 && <path class="fill-said" d={columnPath(x, BASE, BAR, said, "up")} />}
+                {happened > 0 && <path class="fill-happened" d={columnPath(x + BAR + GAP, BASE, BAR, happened, "up")} />}
+                <text x={x + BAR / 2} y={BASE - said - 5} text-anchor="middle">
+                  {b.saidText}
+                </text>
+                <text x={x + BAR + GAP + BAR / 2} y={BASE - happened - 5} text-anchor="middle" class="label-strong">
+                  {b.happenedText}
+                </text>
+              </>
+            )}
+            <text x={mid} y={BASE + 15} text-anchor="middle" class="label-strong">
+              {b.range}
+            </text>
+            <text x={mid} y={BASE + 29} text-anchor="middle">
+              {`n = ${b.predictions}`}
+            </text>
+          </g>
+        );
+      })
+    }
+  </svg>
+  </div>
+  <Fold summary={at("cal.table")} context={`${at("cal.title")}, ${modeName}`} compact>
+    <table class="dtable">
+      <thead>
+        <tr>
+          <th scope="col">{at("cal.col.range")}</th>
+          <th scope="col" class="num">{at("cal.col.predictions")}</th>
+          <th scope="col" class="num">{at("cal.col.said")}</th>
+          <th scope="col" class="num">{at("cal.col.happened")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          bars.map((b) => (
+            <tr>
+              <td>{b.range}</td>
+              <td class="num">{b.predictions}</td>
+              <td class="num">{b.saidText}</td>
+              <td class="num">{b.happenedText}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </Fold>
+</figure>

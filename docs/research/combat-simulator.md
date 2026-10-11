@@ -206,6 +206,16 @@ Since session 075 `combat-validate` also plays every combat with a result as the
 
 A page shows the scored combats with their accuracy and, beside them, the blocked share ("no odds in 13% of Duos combats: a card is not modelled"), never one without the other.
 
+**The page (T-607, session 077, D-091).** `/accuracy/` and `/es/accuracy/`, public and indexable, built at build time from `web/src/data/accuracy.json` (the export of the user's history, published under D-089) and `web/src/data/accuracy-cards.json` (the blocking cards' names, below); no fetch. Both files are read strictly (`web/src/lib/accuracy/data.ts`): format 1 first, then exactly the export's keys, so a bad or wider file fails the tests and the build. Per mode: "most likely result was right" (with the counts), the mean probability of the real result and, in the same row, the blocked share; Advanced adds the Brier score, the refused count and the card ids; the calibration buckets as a "said / happened" chart with its table; the blocking cards by name; one paragraph on what is measured and its limits.
+
+**Refreshing it after a card round** (one command, then a PR). The card data (HearthstoneJSON's `cards.json` in English and Spanish) is fetched into a temporary folder, never committed:
+
+```
+cargo run --release --manifest-path crates/combat-sim/Cargo.toml --features harness --bin combat-validate -- --history %APPDATA%\TavernLedger\games.jsonl --cards <tmp>\cards.json --export web/src/data/accuracy.json && python tools/accuracy_card_names.py --export web/src/data/accuracy.json --cards-en <tmp>\cards.json --cards-es <tmp>\cards.es.json --out web/src/data/accuracy-cards.json
+```
+
+Then check the diff holds only the export's keys and counts (the web tests do too: `npm test` and `npm run build && npm run test:dist` in `web/`), and open a PR; merging deploys the page. Card names (D-091): only the up to 10 blocking card ids, their English and Spanish names and a golden flag, nothing else from the card data.
+
 ## 8. One engine for the app and the website
 
 **App (T-605, done in session 071, D-084).** During a shop turn the overlay runs the player's board as it is now against the next opponent's last board seen (D-004: only boards the player saw on screen; the opponent is the one the game marks as next, D-061). How:
@@ -216,7 +226,7 @@ A page shows the scored combats with their accuracy and, beside them, the blocke
 - **No number when it cannot be trusted.** No board of that opponent seen yet (in Duos, any of the three boards), a card the engine does not know ("a card is not modelled", Advanced names it), the card data missing for a card, boards it cannot read. No next opponent marked: nothing shown.
 - **Approximate.** Start of combat is off: the opponent's board was taken after theirs, the player's shop board has not had them yet. When a card on either board acts at the start of combat, or a card is approximate, the age line starts with "≈" and Advanced names the cards.
 - **Shown.** Simple, under the next opponent's line: Win, Tie and Lose with their shares, and "their board seen turn N". Advanced, in the next opponent's block: the same, the damage both ways (10th to 90th percentile and the median, after the damage cap; "unknown" when a tier is unknown), the approximate and missing cards and the trials. English and Spanish. A switch in Settings turns it off (on by default; `odds_off` in `overlay.json`).
-- **How good it is:** section 7.3.
+- **How good it is:** section 7.3; the public numbers per mode are on the site's accuracy page, `/accuracy/` (section 7.6).
 
 **Website (T-606), three ways:**
 

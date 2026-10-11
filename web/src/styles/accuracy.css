@@ -1,0 +1,79 @@
+/* Simulator accuracy page (T-607), on the data pages' pieces (data.css).
+   Built at build time from the committed export: no data arrives later. */
+
+.acc {
+  display: grid;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+.acc-intro {
+  max-width: var(--measure);
+  color: var(--text-2);
+}
+
+/* The blocked share sits in the same row as the accuracy, marked so it reads
+   as a caveat, not as one more score. */
+.acc-blocked .tile {
+  box-shadow:
+    inset 0 0 0 1px var(--line-soft),
+    inset 3px 0 0 var(--unknown);
+}
+
+.acc .tiles > .adv,
+.acc .tiles > .acc-blocked {
+  display: contents;
+}
+
+html:not([data-detail="advanced"]) .acc .tiles > .adv {
+  display: none;
+}
+
+.acc-mode-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-2) var(--s-4);
+}
+
+.acc-mode-head p {
+  color: var(--text-3);
+  font-size: var(--t-sm);
+}
+
+.chart-calibration svg {
+  background: var(--surface-chart);
+  border-radius: var(--r-tile);
+  padding: var(--s-2);
+  box-sizing: border-box;
+}
+
+.fill-said {
+  fill: var(--mark-tie);
+}
+
+.fill-happened {
+  fill: var(--mark-first);
+}
+
+.key-said {
+  background: var(--mark-tie);
+}
+
+.key-happened {
+  background: var(--mark-first);
+}
+
+.acc-id {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: var(--t-sm);
+  color: var(--text-2);
+}
+
+.acc-about {
+  max-width: var(--measure);
+}
+
+.acc-about p + p {
+  margin-top: var(--s-2);
+}
