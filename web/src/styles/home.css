@@ -21,7 +21,7 @@ body {
 
 /* At least twice as tall as the screen, so phones still feel the descent;
    on a narrow screen the centre of the painting, cropped at the sides.
-   scripts/descent.ts moves it with a transform. */
+   It moves in CSS (below), or by scripts/descent.ts where scripts run. */
 .backdrop-art {
   position: absolute;
   top: 0;
@@ -34,6 +34,34 @@ body {
   display: block;
   width: 100%;
   height: auto;
+}
+
+/* The descent in CSS, for every build (the accounts-closed one ships no
+   script): the root scroll moves the painting from the door (0) to the cellar
+   (its own height less the screen's) at an even speed. Where the script runs
+   it takes over (data-descent="script") and slows it in the pinned scene. */
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    /* Longhands, as in scene.css: a minified shorthand would carry the
+       timeline, which browsers do not accept there. */
+    .backdrop-art:not([data-descent="script"]) {
+      animation-name: descend;
+      animation-duration: auto;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: scroll(root block);
+      animation-range: normal;
+    }
+  }
+}
+
+@keyframes descend {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, calc(100lvh - 100%), 0);
+  }
 }
 
 /* The blue magic at the top right is soft enough to read as magic only. */
@@ -169,27 +197,6 @@ body {
   display: block;
 }
 
-/* The lead on a sheet of parchment pinned to the wall. */
-.parchment {
-  position: relative;
-  max-width: 40rem;
-  padding: clamp(16px, 2.4vw, 24px) clamp(20px, 3vw, 34px);
-  border-radius: 6px;
-  background:
-    radial-gradient(120% 90% at 50% 40%, #f3e2bd 0%, #e6cd9b 62%, #c9a66b 100%);
-  box-shadow:
-    inset 0 0 0 1px rgb(120 80 30 / 0.35),
-    inset 0 0 28px rgb(120 72 24 / 0.45),
-    0 14px 30px rgb(0 0 0 / 0.55);
-  transform: rotate(-0.6deg);
-}
-
-.parchment .lead {
-  max-width: none;
-  color: #3a2410;
-  font-weight: 600;
-}
-
 .ctas {
   display: grid;
   justify-items: center;
@@ -221,42 +228,21 @@ body {
 
 /* ---------- The rest of the page on the painting ---------- */
 
-/* Panels sit on the painting: darker and opaque enough to read on any part of it. */
-.layout-home .glass {
-  background: rgb(20 13 10 / 0.82);
-}
-
 /* Phones: the masthead scrolls away and wraps, so the hero is as tall as its
-   content; the scene's captions get a dark backing over the bright door. */
+   content. */
 @media (max-width: 560px) {
   .hero {
     min-height: 0;
     align-content: start;
   }
-
-  .layout-home .caption-col {
-    padding: 10px 12px 12px;
-    border-radius: var(--r-small);
-    background: rgb(14 9 7 / 0.72);
-  }
 }
 
-/* Windows high contrast: plain text in the system colours, no gold fill or parchment. */
+/* Windows high contrast: the headline in the system colours, no gold fill. */
 @media (forced-colors: active) {
   .gold-title {
     background: none;
     -webkit-text-fill-color: currentColor;
     filter: none;
-  }
-
-  .parchment {
-    background: Canvas;
-    border: 1px solid CanvasText;
-    box-shadow: none;
-  }
-
-  .parchment .lead {
-    color: CanvasText;
   }
 }
 
@@ -313,7 +299,7 @@ body {
   color: var(--dim);
 }
 
-.big {
+.trio .big {
   display: block;
   margin: 0;
   color: var(--amber-hi);
@@ -368,29 +354,21 @@ body {
   line-height: 1;
 }
 
-/* Your games stay yours: three columns split by hairlines. */
+/* Your games stay yours: three wooden boards (tavern.css). */
 .yours ul {
   margin: 20px 0 0;
   padding: 0;
   list-style: none;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-block: 1px solid var(--line);
+  gap: 16px;
 }
 
 .yours li {
-  padding: 18px 20px 20px;
+  padding: 0;
   display: grid;
   gap: 6px;
   align-content: start;
-}
-
-.yours li:first-child {
-  padding-inline-start: 0;
-}
-
-.yours li + li {
-  border-inline-start: 1px solid var(--line);
 }
 
 .yours li b {
@@ -464,12 +442,4 @@ body {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .yours li {
-    padding-inline: 0;
-  }
-
-  .yours li + li {
-    border-inline-start: 0;
-    border-top: 1px solid var(--line);
-  }
 }

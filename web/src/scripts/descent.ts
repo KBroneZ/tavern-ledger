@@ -1,6 +1,7 @@
-// Moves the home page's painting as the page scrolls (T-530, D-105). Without
-// this script (accounts closed) or with reduced motion the painting stays
-// still at the barrel door. Only a transform changes; the sizes are read again
+// Moves the home page's painting as the page scrolls (T-530, D-105), slower
+// while the five-step scene is pinned. Without this script (accounts closed)
+// home.css moves it at an even speed on the scroll timeline; with reduced
+// motion it stays still at the barrel door. Only a transform changes; the sizes are read again
 // when the page or the screen changes size, never while scrolling.
 import { backdropOffset, type Descent } from "../lib/home/descent.ts";
 
@@ -52,6 +53,8 @@ function remeasure(): void {
 }
 
 if (art) {
+  // Takes over from the CSS descent.
+  art.dataset.descent = "script";
   remeasure();
   window.addEventListener("scroll", schedule, { passive: true });
   window.addEventListener("resize", remeasure);

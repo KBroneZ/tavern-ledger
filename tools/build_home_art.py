@@ -9,6 +9,8 @@ Writes web/public/art/home/:
 - btn-key.webp, btn-key-lit.webp     gold stone with gems, at rest and lit (hover), each also @2x
 - btn-common.webp                    dark wood and bronze, also @2x
 - btn-small.webp                     small stone with a thin gold frame, also @2x
+- paper-edge.svg                     a torn, uneven sheet edge, the mask for the parchment (our own drawing)
+- grain.svg                          fine fibre noise laid over parchment and wood (our own, an SVG filter)
 
 Each button is cut out of the sheet: the dark backdrop is flooded in from the crop's edges, small
 gaps in the outline are closed, every hole inside is filled (the recess between frame and plate is
@@ -225,6 +227,47 @@ def save_backdrop(painting) -> list[str]:
     return written
 
 
+def torn_edge(seed: int = 92, width: int = 1000, height: int = 400, step: int = 10, depth: float = 9.0) -> str:
+    """SVG mask: a sheet with torn edges (deterministic). Stretched to any box
+    (preserveAspectRatio none), so the tears scale with the sheet."""
+    import random
+
+    rnd = random.Random(seed)
+
+    def jag(n: int) -> list[float]:
+        # Small tears on a slow wave, never deeper than `depth`.
+        out, drift = [], 0.0
+        for _ in range(n + 1):
+            drift = max(0.0, min(depth, drift + rnd.uniform(-2.6, 2.6)))
+            out.append(round(drift + rnd.uniform(0, 2.2), 1))
+        return out
+
+    nx, ny = width // step, height // step
+    top, bottom = jag(nx), jag(nx)
+    left, right = jag(ny), jag(ny)
+    pts = [(i * step, top[i]) for i in range(nx + 1)]
+    pts += [(width - right[j], j * step) for j in range(1, ny + 1)]
+    pts += [(width - i * step, height - bottom[i]) for i in range(1, nx + 1)]
+    pts += [(left[j], height - j * step) for j in range(1, ny)]
+    path = "M" + " L".join(f"{x:g} {y:g}" for x, y in pts) + " Z"
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" preserveAspectRatio="none">'
+            f'<path d="{path}" fill="#000"/></svg>\n')
+
+
+GRAIN_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220">'
+    '<filter id="g"><feTurbulence type="fractalNoise" baseFrequency="0.9 0.35" numOctaves="3" seed="9" stitchTiles="stitch"/>'
+    '<feColorMatrix values="0 0 0 0 0.24  0 0 0 0 0.14  0 0 0 0 0.05  0 0 0 0.55 -0.1"/></filter>'
+    '<rect width="100%" height="100%" filter="url(#g)"/></svg>\n'
+)
+
+
+def save_svgs() -> list[str]:
+    (OUT / "paper-edge.svg").write_text(torn_edge(), encoding="utf-8", newline="\n")
+    (OUT / "grain.svg").write_text(GRAIN_SVG, encoding="utf-8", newline="\n")
+    return ["paper-edge.svg", "grain.svg"]
+
+
 def preview(images: dict) -> None:
     from PIL import Image
 
@@ -252,6 +295,7 @@ def main() -> int:
     written = save_button(key, KEY.name, KEY.height) + save_button(lit, "btn-key-lit", KEY.height)
     written += save_button(common, COMMON.name, COMMON.height) + save_button(small, SMALL.name, SMALL.height)
     written += save_backdrop(Image.open(ART / "tavern-tall.webp").convert("RGB"))
+    written += save_svgs()
     if args.preview:
         preview({"btn-key": key, "btn-key-lit": lit, "btn-common": common, "btn-small": small})
     for name in written:

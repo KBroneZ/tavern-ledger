@@ -248,7 +248,7 @@ test("fonts and styles are our own files: every url() is a local font or the bra
     for (const url of urls) {
       // The masthead draws the logo (public/mark.svg, D-094) as a background,
       // the tavern buttons their painted art (T-530, D-105).
-      assert.match(url, /^\/(?:fonts\/[a-z0-9-]+\.woff2|mark\.svg|art\/home\/btn-[a-z-]+(?:@2x)?\.webp)$/, url);
+      assert.match(url, /^\/(?:fonts\/[a-z0-9-]+\.woff2|mark\.svg|art\/home\/(?:btn-[a-z-]+(?:@2x)?\.webp|paper-edge\.svg|grain\.svg))$/, url);
       assert.ok(existsSync(join(DIST, url)), url);
     }
   }
@@ -382,6 +382,12 @@ test("the home page's painting: decorative, sized, in AVIF and WebP with a small
     // The script that moves it ships only where scripts may run.
     assert.equal(/<script [^>]*src="\/_astro\//.test(html), CONFIG !== null, file);
   }
+  // The descent also works with no script (accounts closed): the root scroll
+  // timeline moves the painting by its own height less the screen's.
+  const home = readFileSync(join(DIST, "index.html"), "utf8");
+  const css = [...home.matchAll(/<link\b[^>]*rel="stylesheet"[^>]*href="\/([^"]+)"/g)].map((m) => readFileSync(join(DIST, m[1]), "utf8")).join("\n");
+  assert.match(css, /\.backdrop-art:not\(\[data-descent=script\]\)\{[^}]*animation-name:descend[^}]*animation-timeline:scroll\(root\)/);
+  assert.match(css, /@keyframes descend\{[^@]*translateY\(calc\(100lvh - 100%\)\)/);
   // A mid phone downloads one small painting, not the full one.
   assert.ok(statSync(join(DIST, "art", "home", "tavern-800.avif")).size < 120 * 1024);
 });
