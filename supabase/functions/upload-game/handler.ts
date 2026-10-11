@@ -5,7 +5,7 @@
 //   1. address, method and type; the body is read up to 64 KiB;
 //   2. the client's IP (hashed here, salted by the database: D-042) is not
 //      blocked; the token is valid (a refused token counts against the IP);
-//   3. the body inflates to at most 512 KiB of UTF-8 JSON that passes
+//   3. the body inflates to at most 1 MiB of UTF-8 JSON that passes
 //      validateRecord(): no player names, no fields outside the report;
 //   4. upload_begin(): revision, rate limits and total quota;
 //   5. the file, re-compressed here from the checked bytes, is written with
@@ -27,10 +27,16 @@ export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 type Bytes = Uint8Array<ArrayBuffer>;
 
-/** Largest gzipped body read (the largest real game is about 3.3 KB). */
+/**
+ * Largest gzipped body read (the largest real game is about 19 KB with its
+ * combat replays, parser revision 8).
+ */
 export const MAX_BODY = 64 * 1024;
-/** Largest inflated record (the largest real game is about 29 KB). */
-export const MAX_INFLATED = 512 * 1024;
+/**
+ * Largest inflated record (the largest real game is about 200 KB with its
+ * combat replays, D-099; 82 KB without them).
+ */
+export const MAX_INFLATED = 1024 * 1024;
 const TIMEOUT_MS = 10_000;
 /** Seconds a blocked IP is told to wait (the IP window is 10 minutes). */
 const IP_RETRY_AFTER = 600;

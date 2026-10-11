@@ -43,6 +43,7 @@ fn round(number: i64, opponent: i64, board: Option<Vec<LogMinion>>) -> Round {
         result: None,
         attacks: Vec::new(),
         own_shop_board: None,
+        replay: None,
     }
 }
 

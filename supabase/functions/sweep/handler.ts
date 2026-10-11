@@ -42,9 +42,9 @@ const BACKFILL_LIMIT = 500;
 // No summary is started after this long, so a slow Storage cannot run the
 // function past its wall-clock limit; the rest wait for the next run.
 const BACKFILL_BUDGET_MS = 100_000;
-// The upload function stores at most 64 KiB, inflating to at most 512 KiB.
+// The upload function stores at most 64 KiB, inflating to at most 1 MiB.
 const MAX_FILE = 64 * 1024;
-const MAX_INFLATED = 512 * 1024;
+const MAX_INFLATED = 1024 * 1024;
 const SHA256 = /^[0-9a-f]{64}$/;
 
 class StepError extends Error {

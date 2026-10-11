@@ -452,6 +452,126 @@
           3
         ],
         "own_health_after": 52,
+        "replay": {
+          "complete": true,
+          "events": [
+            {
+              "attacker": 1,
+              "defender": 0,
+              "kind": "attack"
+            },
+            {
+              "amount": 3,
+              "health": 0,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "amount": 3,
+              "health": 0,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "kind": "death",
+              "minion": 0
+            },
+            {
+              "kind": "death",
+              "minion": 1
+            },
+            {
+              "hero": "BG24_HERO_100_SKIN_E",
+              "kind": "board_in",
+              "side": "own"
+            },
+            {
+              "kind": "summon",
+              "minion": 2
+            },
+            {
+              "hero": "TB_BaconShop_HERO_36",
+              "kind": "board_in",
+              "side": "opponent"
+            },
+            {
+              "kind": "summon",
+              "minion": 3
+            },
+            {
+              "atk": 3,
+              "health": 3,
+              "kind": "stats",
+              "minion": 3
+            },
+            {
+              "attacker": 3,
+              "defender": 2,
+              "kind": "attack"
+            },
+            {
+              "amount": 3,
+              "health": -2,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "kind": "shield",
+              "minion": 3,
+              "on": false
+            },
+            {
+              "kind": "death",
+              "minion": 2
+            },
+            {
+              "amount": 2,
+              "kind": "hero_damage",
+              "side": "own"
+            }
+          ],
+          "minions": [
+            {
+              "atk": 3,
+              "card_id": "BG31_815",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 3,
+              "card_id": "BG31_815",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 3,
+              "card_id": "BG26_135",
+              "golden": false,
+              "health": 1,
+              "keywords": [],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG32_236",
+              "golden": true,
+              "health": 2,
+              "keywords": [
+                "divine_shield"
+              ],
+              "position": 1,
+              "side": "opponent"
+            }
+          ],
+          "start": 2
+        },
         "result": "lost"
       },
       {
@@ -543,6 +663,109 @@
           7
         ],
         "own_health_after": 52,
+        "replay": {
+          "complete": true,
+          "events": [
+            {
+              "attacker": 1,
+              "defender": 0,
+              "kind": "attack"
+            },
+            {
+              "amount": 3,
+              "health": 0,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "amount": 3,
+              "health": -1,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "kind": "death",
+              "minion": 0
+            },
+            {
+              "kind": "death",
+              "minion": 1
+            },
+            {
+              "hero": "BG24_HERO_100_SKIN_E",
+              "kind": "board_in",
+              "side": "own"
+            },
+            {
+              "kind": "summon",
+              "minion": 2
+            },
+            {
+              "kind": "summon",
+              "minion": 3
+            },
+            {
+              "kind": "summon",
+              "minion": 4
+            },
+            {
+              "amount": 4,
+              "kind": "hero_damage",
+              "side": "opponent"
+            }
+          ],
+          "minions": [
+            {
+              "atk": 3,
+              "card_id": "BG31_815",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 3,
+              "card_id": "BG36_098",
+              "golden": false,
+              "health": 2,
+              "keywords": [],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 1,
+              "card_id": "BG29_611",
+              "golden": false,
+              "health": 1,
+              "keywords": [
+                "divine_shield",
+                "deathrattle"
+              ],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 3,
+              "card_id": "BG26_135",
+              "golden": false,
+              "health": 1,
+              "keywords": [],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG26_146",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 0,
+              "side": "own"
+            }
+          ],
+          "start": 2
+        },
         "result": "won"
       },
       {
@@ -640,6 +863,288 @@
           8
         ],
         "own_health_after": 45,
+        "replay": {
+          "complete": true,
+          "events": [
+            {
+              "attacker": 0,
+              "defender": 4,
+              "kind": "attack"
+            },
+            {
+              "kind": "summon",
+              "minion": 6
+            },
+            {
+              "amount": 1,
+              "health": 4,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "kind": "shield",
+              "minion": 0,
+              "on": false
+            },
+            {
+              "attacker": 4,
+              "defender": 0,
+              "kind": "attack"
+            },
+            {
+              "amount": 2,
+              "health": -1,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "amount": 1,
+              "health": 3,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "kind": "death",
+              "minion": 0
+            },
+            {
+              "card_id": "BG29_611",
+              "kind": "trigger",
+              "side": "own",
+              "source": 0,
+              "trigger": "deathrattle"
+            },
+            {
+              "kind": "summon",
+              "minion": 7
+            },
+            {
+              "attacker": 7,
+              "defender": 4,
+              "kind": "attack"
+            },
+            {
+              "amount": 1,
+              "health": 2,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "amount": 2,
+              "health": -1,
+              "kind": "damage",
+              "minion": 7
+            },
+            {
+              "kind": "death",
+              "minion": 7
+            },
+            {
+              "attacker": 6,
+              "defender": 2,
+              "kind": "attack"
+            },
+            {
+              "amount": 3,
+              "health": 1,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "amount": 2,
+              "health": 1,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "attacker": 1,
+              "defender": 6,
+              "kind": "attack"
+            },
+            {
+              "amount": 3,
+              "health": -2,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "amount": 3,
+              "health": -2,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "kind": "death",
+              "minion": 1
+            },
+            {
+              "kind": "death",
+              "minion": 6
+            },
+            {
+              "attacker": 5,
+              "defender": 3,
+              "kind": "attack"
+            },
+            {
+              "amount": 2,
+              "health": 0,
+              "kind": "damage",
+              "minion": 3
+            },
+            {
+              "amount": 2,
+              "health": 1,
+              "kind": "damage",
+              "minion": 5
+            },
+            {
+              "kind": "death",
+              "minion": 3
+            },
+            {
+              "attacker": 2,
+              "defender": 4,
+              "kind": "attack"
+            },
+            {
+              "amount": 2,
+              "health": 0,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "amount": 2,
+              "health": -1,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "kind": "death",
+              "minion": 2
+            },
+            {
+              "kind": "death",
+              "minion": 4
+            },
+            {
+              "hero": "TB_BaconShop_HERO_43_SKIN_N",
+              "kind": "board_in",
+              "side": "own"
+            },
+            {
+              "kind": "summon",
+              "minion": 8
+            },
+            {
+              "kind": "summon",
+              "minion": 9
+            },
+            {
+              "amount": 7,
+              "kind": "hero_damage",
+              "side": "own"
+            }
+          ],
+          "minions": [
+            {
+              "atk": 1,
+              "card_id": "BG29_611",
+              "golden": false,
+              "health": 1,
+              "keywords": [
+                "divine_shield",
+                "deathrattle"
+              ],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 3,
+              "card_id": "BG26_135",
+              "golden": false,
+              "health": 1,
+              "keywords": [],
+              "position": 2,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG26_146",
+              "golden": false,
+              "health": 4,
+              "keywords": [],
+              "position": 3,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BGDUO_114",
+              "golden": false,
+              "health": 2,
+              "keywords": [],
+              "position": 4,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG26_146",
+              "golden": false,
+              "health": 5,
+              "keywords": [],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG26_146",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 2,
+              "side": "opponent"
+            },
+            {
+              "atk": 3,
+              "card_id": "BG26_146",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 0,
+              "side": "opponent"
+            },
+            {
+              "atk": 1,
+              "card_id": "BG_BOT_312t",
+              "golden": false,
+              "health": 1,
+              "keywords": [],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 3,
+              "card_id": "BG34_140",
+              "golden": false,
+              "health": 5,
+              "keywords": [
+                "rally"
+              ],
+              "position": 2,
+              "side": "opponent"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG36_342",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 3,
+              "side": "opponent"
+            }
+          ],
+          "start": 6
+        },
         "result": "lost"
       },
       {
@@ -776,6 +1281,381 @@
           3
         ],
         "own_health_after": 40,
+        "replay": {
+          "complete": true,
+          "events": [
+            {
+              "attacker": 0,
+              "defender": 3,
+              "kind": "attack"
+            },
+            {
+              "amount": 4,
+              "health": 2,
+              "kind": "damage",
+              "minion": 3
+            },
+            {
+              "amount": 4,
+              "health": 0,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "kind": "death",
+              "minion": 0
+            },
+            {
+              "attacker": 3,
+              "defender": 2,
+              "kind": "attack"
+            },
+            {
+              "amount": 4,
+              "health": 2,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "amount": 5,
+              "health": -3,
+              "kind": "damage",
+              "minion": 3
+            },
+            {
+              "kind": "death",
+              "minion": 3
+            },
+            {
+              "attacker": 1,
+              "defender": 4,
+              "kind": "attack"
+            },
+            {
+              "amount": 3,
+              "health": 8,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "amount": 11,
+              "health": -8,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "kind": "death",
+              "minion": 1
+            },
+            {
+              "attacker": 4,
+              "defender": 2,
+              "kind": "attack"
+            },
+            {
+              "amount": 11,
+              "health": -9,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "amount": 5,
+              "health": 3,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "kind": "death",
+              "minion": 2
+            },
+            {
+              "hero": "BG24_HERO_100_SKIN_E",
+              "kind": "board_in",
+              "side": "own"
+            },
+            {
+              "kind": "summon",
+              "minion": 5
+            },
+            {
+              "kind": "summon",
+              "minion": 6
+            },
+            {
+              "kind": "summon",
+              "minion": 7
+            },
+            {
+              "kind": "summon",
+              "minion": 8
+            },
+            {
+              "attacker": 5,
+              "defender": 4,
+              "kind": "attack"
+            },
+            {
+              "amount": 1,
+              "health": 2,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "kind": "shield",
+              "minion": 5,
+              "on": false
+            },
+            {
+              "attacker": 4,
+              "defender": 7,
+              "kind": "attack"
+            },
+            {
+              "amount": 11,
+              "health": -6,
+              "kind": "damage",
+              "minion": 7
+            },
+            {
+              "amount": 2,
+              "health": 0,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "kind": "death",
+              "minion": 4
+            },
+            {
+              "kind": "death",
+              "minion": 7
+            },
+            {
+              "hero": "TB_BaconShop_HERO_36",
+              "kind": "board_in",
+              "side": "opponent"
+            },
+            {
+              "kind": "summon",
+              "minion": 9
+            },
+            {
+              "atk": 6,
+              "health": 10,
+              "kind": "stats",
+              "minion": 9
+            },
+            {
+              "attacker": 6,
+              "defender": 9,
+              "kind": "attack"
+            },
+            {
+              "amount": 3,
+              "health": 7,
+              "kind": "damage",
+              "minion": 9
+            },
+            {
+              "amount": 6,
+              "health": -5,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "kind": "death",
+              "minion": 6
+            },
+            {
+              "attacker": 9,
+              "defender": 5,
+              "kind": "attack"
+            },
+            {
+              "amount": 6,
+              "health": -5,
+              "kind": "damage",
+              "minion": 5
+            },
+            {
+              "amount": 1,
+              "health": 6,
+              "kind": "damage",
+              "minion": 9
+            },
+            {
+              "kind": "death",
+              "minion": 5
+            },
+            {
+              "card_id": "BG29_611",
+              "kind": "trigger",
+              "side": "own",
+              "source": 5,
+              "trigger": "deathrattle"
+            },
+            {
+              "kind": "summon",
+              "minion": 10
+            },
+            {
+              "attacker": 8,
+              "defender": 9,
+              "kind": "attack"
+            },
+            {
+              "amount": 2,
+              "health": 4,
+              "kind": "damage",
+              "minion": 9
+            },
+            {
+              "amount": 6,
+              "health": -4,
+              "kind": "damage",
+              "minion": 8
+            },
+            {
+              "kind": "death",
+              "minion": 8
+            },
+            {
+              "attacker": 9,
+              "defender": 10,
+              "kind": "attack"
+            },
+            {
+              "amount": 6,
+              "health": -5,
+              "kind": "damage",
+              "minion": 10
+            },
+            {
+              "amount": 1,
+              "health": 3,
+              "kind": "damage",
+              "minion": 9
+            },
+            {
+              "kind": "death",
+              "minion": 10
+            },
+            {
+              "amount": 5,
+              "kind": "hero_damage",
+              "side": "own"
+            }
+          ],
+          "minions": [
+            {
+              "atk": 4,
+              "card_id": "BG34_170t3",
+              "golden": false,
+              "health": 4,
+              "keywords": [],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 3,
+              "card_id": "BG34_170",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 2,
+              "side": "own"
+            },
+            {
+              "atk": 5,
+              "card_id": "BGDUO_700",
+              "golden": false,
+              "health": 6,
+              "keywords": [],
+              "position": 3,
+              "side": "own"
+            },
+            {
+              "atk": 4,
+              "card_id": "BG33_822",
+              "golden": false,
+              "health": 6,
+              "keywords": [
+                "rally"
+              ],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 11,
+              "card_id": "BG31_815_G",
+              "golden": true,
+              "health": 11,
+              "keywords": [],
+              "position": 2,
+              "side": "opponent"
+            },
+            {
+              "atk": 1,
+              "card_id": "BG29_611",
+              "golden": false,
+              "health": 1,
+              "keywords": [
+                "divine_shield",
+                "deathrattle"
+              ],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 3,
+              "card_id": "BG26_135",
+              "golden": false,
+              "health": 1,
+              "keywords": [],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG26_146",
+              "golden": false,
+              "health": 5,
+              "keywords": [],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BGDUO_114",
+              "golden": false,
+              "health": 2,
+              "keywords": [],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG29_300",
+              "golden": false,
+              "health": 6,
+              "keywords": [
+                "taunt"
+              ],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 1,
+              "card_id": "BG_BOT_312t",
+              "golden": false,
+              "health": 1,
+              "keywords": [],
+              "position": 1,
+              "side": "own"
+            }
+          ],
+          "start": 5
+        },
         "result": "lost"
       },
       {
@@ -930,6 +1810,317 @@
           6
         ],
         "own_health_after": 40,
+        "replay": {
+          "complete": true,
+          "events": [
+            {
+              "attacker": 0,
+              "defender": 4,
+              "kind": "attack"
+            },
+            {
+              "amount": 3,
+              "health": 3,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "amount": 4,
+              "health": -1,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "kind": "death",
+              "minion": 0
+            },
+            {
+              "attacker": 4,
+              "defender": 3,
+              "kind": "attack"
+            },
+            {
+              "amount": 4,
+              "health": 0,
+              "kind": "damage",
+              "minion": 3
+            },
+            {
+              "amount": 5,
+              "health": -2,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "kind": "death",
+              "minion": 3
+            },
+            {
+              "kind": "death",
+              "minion": 4
+            },
+            {
+              "card_id": "BG36_854",
+              "kind": "trigger",
+              "side": "own",
+              "source": 3,
+              "trigger": "deathrattle"
+            },
+            {
+              "hero": "BG32_HERO_001",
+              "kind": "board_in",
+              "side": "opponent"
+            },
+            {
+              "kind": "summon",
+              "minion": 5
+            },
+            {
+              "kind": "summon",
+              "minion": 6
+            },
+            {
+              "attacker": 5,
+              "defender": 1,
+              "kind": "attack"
+            },
+            {
+              "amount": 6,
+              "health": -4,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "amount": 2,
+              "health": 1,
+              "kind": "damage",
+              "minion": 5
+            },
+            {
+              "kind": "death",
+              "minion": 1
+            },
+            {
+              "attacker": 2,
+              "defender": 6,
+              "kind": "attack"
+            },
+            {
+              "kind": "shield",
+              "minion": 6,
+              "on": false
+            },
+            {
+              "amount": 2,
+              "health": 4,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "attacker": 6,
+              "defender": 2,
+              "kind": "attack"
+            },
+            {
+              "amount": 2,
+              "health": 2,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "amount": 5,
+              "health": -3,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "kind": "death",
+              "minion": 6
+            },
+            {
+              "attacker": 2,
+              "defender": 5,
+              "kind": "attack"
+            },
+            {
+              "amount": 5,
+              "health": -4,
+              "kind": "damage",
+              "minion": 5
+            },
+            {
+              "amount": 6,
+              "health": -4,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "kind": "death",
+              "minion": 2
+            },
+            {
+              "kind": "death",
+              "minion": 5
+            },
+            {
+              "card_id": "BG36_521",
+              "kind": "trigger",
+              "side": "opponent",
+              "source": 5,
+              "trigger": "deathrattle"
+            },
+            {
+              "hero": "BG24_HERO_100_SKIN_E",
+              "kind": "board_in",
+              "side": "own"
+            },
+            {
+              "kind": "summon",
+              "minion": 7
+            },
+            {
+              "kind": "summon",
+              "minion": 8
+            },
+            {
+              "kind": "summon",
+              "minion": 9
+            },
+            {
+              "kind": "summon",
+              "minion": 10
+            },
+            {
+              "kind": "summon",
+              "minion": 11
+            },
+            {
+              "amount": 14,
+              "kind": "hero_damage",
+              "side": "opponent"
+            }
+          ],
+          "minions": [
+            {
+              "atk": 3,
+              "card_id": "BG34_170",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG36_311",
+              "golden": false,
+              "health": 2,
+              "keywords": [],
+              "position": 2,
+              "side": "own"
+            },
+            {
+              "atk": 5,
+              "card_id": "BGDUO_700",
+              "golden": false,
+              "health": 6,
+              "keywords": [],
+              "position": 3,
+              "side": "own"
+            },
+            {
+              "atk": 5,
+              "card_id": "BG36_854",
+              "golden": false,
+              "health": 4,
+              "keywords": [
+                "taunt",
+                "deathrattle"
+              ],
+              "position": 4,
+              "side": "own"
+            },
+            {
+              "atk": 4,
+              "card_id": "BG36_110_G",
+              "golden": true,
+              "health": 6,
+              "keywords": [],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 6,
+              "card_id": "BG36_521",
+              "golden": false,
+              "health": 3,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG32_236",
+              "golden": true,
+              "health": 2,
+              "keywords": [
+                "divine_shield"
+              ],
+              "position": 2,
+              "side": "opponent"
+            },
+            {
+              "atk": 6,
+              "card_id": "BGDUO_110",
+              "golden": false,
+              "health": 4,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 6,
+              "card_id": "BG26_135_G",
+              "golden": true,
+              "health": 2,
+              "keywords": [],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 4,
+              "card_id": "BGDUO_118_G",
+              "golden": true,
+              "health": 4,
+              "keywords": [],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 1,
+              "card_id": "BG36_100",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG26_146",
+              "golden": false,
+              "health": 6,
+              "keywords": [],
+              "position": 0,
+              "side": "own"
+            }
+          ],
+          "start": 5
+        },
         "result": "won"
       },
       {
@@ -1125,6 +2316,678 @@
           8
         ],
         "own_health_after": 25,
+        "replay": {
+          "complete": true,
+          "events": [
+            {
+              "attacker": 0,
+              "defender": 9,
+              "kind": "attack"
+            },
+            {
+              "kind": "summon",
+              "minion": 10
+            },
+            {
+              "amount": 6,
+              "health": -4,
+              "kind": "damage",
+              "minion": 9
+            },
+            {
+              "amount": 4,
+              "health": 0,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "kind": "death",
+              "minion": 0
+            },
+            {
+              "kind": "death",
+              "minion": 9
+            },
+            {
+              "card_id": "BGDUO_110",
+              "kind": "trigger",
+              "side": "own",
+              "source": 0,
+              "trigger": "deathrattle"
+            },
+            {
+              "card_id": "BG36_854_G",
+              "kind": "trigger",
+              "side": "opponent",
+              "source": 9,
+              "trigger": "deathrattle"
+            },
+            {
+              "attacker": 6,
+              "defender": 2,
+              "kind": "attack"
+            },
+            {
+              "amount": 33,
+              "health": -31,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "kind": "shield",
+              "minion": 6,
+              "on": false
+            },
+            {
+              "kind": "death",
+              "minion": 2
+            },
+            {
+              "attacker": 1,
+              "defender": 10,
+              "kind": "attack"
+            },
+            {
+              "amount": 6,
+              "health": -3,
+              "kind": "damage",
+              "minion": 10
+            },
+            {
+              "amount": 3,
+              "health": 0,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "kind": "death",
+              "minion": 1
+            },
+            {
+              "kind": "death",
+              "minion": 10
+            },
+            {
+              "card_id": "BGDUO31_207",
+              "kind": "trigger",
+              "side": "own",
+              "source": 1,
+              "trigger": "deathrattle"
+            },
+            {
+              "card_id": "BG36_854_G",
+              "kind": "trigger",
+              "side": "opponent",
+              "source": 10,
+              "trigger": "deathrattle"
+            },
+            {
+              "attacker": 7,
+              "defender": 3,
+              "kind": "attack"
+            },
+            {
+              "amount": 2,
+              "health": 2,
+              "kind": "damage",
+              "minion": 3
+            },
+            {
+              "amount": 4,
+              "health": 4,
+              "kind": "damage",
+              "minion": 7
+            },
+            {
+              "attacker": 3,
+              "defender": 8,
+              "kind": "attack"
+            },
+            {
+              "amount": 4,
+              "health": 2,
+              "kind": "damage",
+              "minion": 8
+            },
+            {
+              "amount": 2,
+              "health": 0,
+              "kind": "damage",
+              "minion": 3
+            },
+            {
+              "kind": "death",
+              "minion": 3
+            },
+            {
+              "attacker": 8,
+              "defender": 5,
+              "kind": "attack"
+            },
+            {
+              "amount": 2,
+              "health": 1,
+              "kind": "damage",
+              "minion": 5
+            },
+            {
+              "amount": 2,
+              "health": 0,
+              "kind": "damage",
+              "minion": 8
+            },
+            {
+              "kind": "death",
+              "minion": 8
+            },
+            {
+              "attacker": 4,
+              "defender": 6,
+              "kind": "attack"
+            },
+            {
+              "amount": 2,
+              "health": 44,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "amount": 33,
+              "health": -26,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "kind": "death",
+              "minion": 4
+            },
+            {
+              "attacker": 6,
+              "defender": 5,
+              "kind": "attack"
+            },
+            {
+              "amount": 33,
+              "health": -32,
+              "kind": "damage",
+              "minion": 5
+            },
+            {
+              "amount": 2,
+              "health": 42,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "kind": "death",
+              "minion": 5
+            },
+            {
+              "hero": "TB_BaconShop_HERO_43_SKIN_N",
+              "kind": "board_in",
+              "side": "own"
+            },
+            {
+              "kind": "summon",
+              "minion": 11
+            },
+            {
+              "kind": "summon",
+              "minion": 12
+            },
+            {
+              "kind": "summon",
+              "minion": 13
+            },
+            {
+              "atk": 5,
+              "health": 8,
+              "kind": "stats",
+              "minion": 13
+            },
+            {
+              "kind": "summon",
+              "minion": 14
+            },
+            {
+              "atk": 3,
+              "health": 8,
+              "kind": "stats",
+              "minion": 14
+            },
+            {
+              "kind": "summon",
+              "minion": 15
+            },
+            {
+              "atk": 11,
+              "health": 12,
+              "kind": "stats",
+              "minion": 15
+            },
+            {
+              "kind": "summon",
+              "minion": 16
+            },
+            {
+              "kind": "summon",
+              "minion": 17
+            },
+            {
+              "atk": 5,
+              "health": 4,
+              "kind": "stats",
+              "minion": 17
+            },
+            {
+              "attacker": 11,
+              "defender": 6,
+              "kind": "attack"
+            },
+            {
+              "amount": 6,
+              "health": 36,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "amount": 33,
+              "health": -27,
+              "kind": "damage",
+              "minion": 11
+            },
+            {
+              "kind": "death",
+              "minion": 11
+            },
+            {
+              "attacker": 7,
+              "defender": 17,
+              "kind": "attack"
+            },
+            {
+              "amount": 2,
+              "health": 2,
+              "kind": "damage",
+              "minion": 17
+            },
+            {
+              "amount": 5,
+              "health": -1,
+              "kind": "damage",
+              "minion": 7
+            },
+            {
+              "kind": "death",
+              "minion": 7
+            },
+            {
+              "attacker": 12,
+              "defender": 6,
+              "kind": "attack"
+            },
+            {
+              "amount": 2,
+              "health": 34,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "amount": 33,
+              "health": -31,
+              "kind": "damage",
+              "minion": 12
+            },
+            {
+              "kind": "death",
+              "minion": 12
+            },
+            {
+              "attacker": 6,
+              "defender": 17,
+              "kind": "attack"
+            },
+            {
+              "amount": 33,
+              "health": -31,
+              "kind": "damage",
+              "minion": 17
+            },
+            {
+              "amount": 5,
+              "health": 29,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "kind": "death",
+              "minion": 17
+            },
+            {
+              "card_id": "BG36_854",
+              "kind": "trigger",
+              "side": "own",
+              "source": 17,
+              "trigger": "deathrattle"
+            },
+            {
+              "attacker": 13,
+              "defender": 6,
+              "kind": "attack"
+            },
+            {
+              "amount": 5,
+              "health": 24,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "amount": 33,
+              "health": -25,
+              "kind": "damage",
+              "minion": 13
+            },
+            {
+              "kind": "death",
+              "minion": 13
+            },
+            {
+              "attacker": 6,
+              "defender": 14,
+              "kind": "attack"
+            },
+            {
+              "amount": 33,
+              "health": -25,
+              "kind": "damage",
+              "minion": 14
+            },
+            {
+              "amount": 3,
+              "health": 21,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "kind": "death",
+              "minion": 14
+            },
+            {
+              "attacker": 15,
+              "defender": 6,
+              "kind": "attack"
+            },
+            {
+              "amount": 11,
+              "health": 10,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "amount": 33,
+              "health": -21,
+              "kind": "damage",
+              "minion": 15
+            },
+            {
+              "kind": "death",
+              "minion": 15
+            },
+            {
+              "attacker": 6,
+              "defender": 16,
+              "kind": "attack"
+            },
+            {
+              "amount": 33,
+              "health": -27,
+              "kind": "damage",
+              "minion": 16
+            },
+            {
+              "amount": 5,
+              "health": 5,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "kind": "death",
+              "minion": 16
+            },
+            {
+              "kind": "summon",
+              "minion": 18
+            },
+            {
+              "atk": 10,
+              "health": 12,
+              "kind": "stats",
+              "minion": 18
+            },
+            {
+              "kind": "summon",
+              "minion": 19
+            },
+            {
+              "kind": "summon",
+              "minion": 20
+            },
+            {
+              "amount": 15,
+              "kind": "hero_damage",
+              "side": "own"
+            }
+          ],
+          "minions": [
+            {
+              "atk": 6,
+              "card_id": "BGDUO_110",
+              "golden": false,
+              "health": 4,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 6,
+              "card_id": "BGDUO31_207",
+              "golden": false,
+              "health": 3,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 2,
+              "side": "own"
+            },
+            {
+              "atk": 6,
+              "card_id": "BG26_135_G",
+              "golden": true,
+              "health": 2,
+              "keywords": [],
+              "position": 3,
+              "side": "own"
+            },
+            {
+              "atk": 4,
+              "card_id": "BGDUO_118_G",
+              "golden": true,
+              "health": 4,
+              "keywords": [],
+              "position": 4,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG26_146",
+              "golden": false,
+              "health": 7,
+              "keywords": [],
+              "position": 5,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG36_110",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 6,
+              "side": "own"
+            },
+            {
+              "atk": 33,
+              "card_id": "BG36_506",
+              "golden": false,
+              "health": 46,
+              "keywords": [
+                "divine_shield"
+              ],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG26_146",
+              "golden": false,
+              "health": 8,
+              "keywords": [],
+              "position": 2,
+              "side": "opponent"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG26_146",
+              "golden": false,
+              "health": 6,
+              "keywords": [],
+              "position": 3,
+              "side": "opponent"
+            },
+            {
+              "atk": 4,
+              "card_id": "BG36_854_G",
+              "golden": true,
+              "health": 2,
+              "keywords": [
+                "taunt",
+                "deathrattle"
+              ],
+              "position": 4,
+              "side": "opponent"
+            },
+            {
+              "atk": 3,
+              "card_id": "BG36_854_G",
+              "golden": true,
+              "health": 3,
+              "keywords": [
+                "taunt",
+                "deathrattle"
+              ],
+              "position": 0,
+              "side": "opponent"
+            },
+            {
+              "atk": 6,
+              "card_id": "BG34_170_G",
+              "golden": true,
+              "health": 6,
+              "keywords": [],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG36_311",
+              "golden": false,
+              "health": 2,
+              "keywords": [],
+              "position": 2,
+              "side": "own"
+            },
+            {
+              "atk": 3,
+              "card_id": "BG34_170t3",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 3,
+              "side": "own"
+            },
+            {
+              "atk": 1,
+              "card_id": "BG34_170t2",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 4,
+              "side": "own"
+            },
+            {
+              "atk": 6,
+              "card_id": "BG36_300",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 5,
+              "side": "own"
+            },
+            {
+              "atk": 5,
+              "card_id": "BGDUO_700",
+              "golden": false,
+              "health": 6,
+              "keywords": [],
+              "position": 6,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG36_854",
+              "golden": false,
+              "health": 1,
+              "keywords": [
+                "taunt",
+                "deathrattle"
+              ],
+              "position": 7,
+              "side": "own"
+            },
+            {
+              "atk": 4,
+              "card_id": "BG36_114",
+              "golden": false,
+              "health": 6,
+              "keywords": [],
+              "position": 2,
+              "side": "opponent"
+            },
+            {
+              "atk": 6,
+              "card_id": "BG36_312",
+              "golden": false,
+              "health": 2,
+              "keywords": [],
+              "position": 3,
+              "side": "opponent"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG36_116",
+              "golden": false,
+              "health": 2,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 4,
+              "side": "opponent"
+            }
+          ],
+          "start": 10
+        },
         "result": "lost"
       },
       {
@@ -1417,6 +3280,807 @@
           4
         ],
         "own_health_after": 10,
+        "replay": {
+          "complete": true,
+          "events": [
+            {
+              "attacker": 0,
+              "defender": 12,
+              "kind": "attack"
+            },
+            {
+              "amount": 5,
+              "health": 13,
+              "kind": "damage",
+              "minion": 12
+            },
+            {
+              "amount": 10,
+              "health": -8,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "kind": "death",
+              "minion": 0
+            },
+            {
+              "card_id": "BG34_171",
+              "kind": "trigger",
+              "side": "own",
+              "source": 0,
+              "trigger": "deathrattle"
+            },
+            {
+              "attacker": 7,
+              "defender": 6,
+              "kind": "attack"
+            },
+            {
+              "amount": 6,
+              "health": 0,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "amount": 7,
+              "health": -1,
+              "kind": "damage",
+              "minion": 7
+            },
+            {
+              "kind": "death",
+              "minion": 6
+            },
+            {
+              "kind": "death",
+              "minion": 7
+            },
+            {
+              "card_id": "BG36_854",
+              "kind": "trigger",
+              "side": "own",
+              "source": 6,
+              "trigger": "deathrattle"
+            },
+            {
+              "card_id": "BG36_318",
+              "kind": "trigger",
+              "side": "opponent",
+              "source": 7,
+              "trigger": "deathrattle"
+            },
+            {
+              "attacker": 1,
+              "defender": 12,
+              "kind": "attack"
+            },
+            {
+              "amount": 8,
+              "health": 5,
+              "kind": "damage",
+              "minion": 12
+            },
+            {
+              "amount": 10,
+              "health": -2,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "kind": "death",
+              "minion": 1
+            },
+            {
+              "attacker": 8,
+              "defender": 4,
+              "kind": "attack"
+            },
+            {
+              "atk": 21,
+              "health": 17,
+              "kind": "stats",
+              "minion": 8
+            },
+            {
+              "amount": 21,
+              "health": -7,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "amount": 13,
+              "health": 4,
+              "kind": "damage",
+              "minion": 8
+            },
+            {
+              "kind": "death",
+              "minion": 4
+            },
+            {
+              "attacker": 2,
+              "defender": 12,
+              "kind": "attack"
+            },
+            {
+              "amount": 4,
+              "health": 1,
+              "kind": "damage",
+              "minion": 12
+            },
+            {
+              "amount": 10,
+              "health": -6,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "kind": "death",
+              "minion": 2
+            },
+            {
+              "attacker": 9,
+              "defender": 3,
+              "kind": "attack"
+            },
+            {
+              "atk": 9,
+              "health": 11,
+              "kind": "stats",
+              "minion": 9
+            },
+            {
+              "amount": 9,
+              "health": 1,
+              "kind": "damage",
+              "minion": 3
+            },
+            {
+              "amount": 7,
+              "health": 4,
+              "kind": "damage",
+              "minion": 9
+            },
+            {
+              "attacker": 3,
+              "defender": 12,
+              "kind": "attack"
+            },
+            {
+              "amount": 7,
+              "health": -6,
+              "kind": "damage",
+              "minion": 12
+            },
+            {
+              "amount": 10,
+              "health": -9,
+              "kind": "damage",
+              "minion": 3
+            },
+            {
+              "kind": "death",
+              "minion": 3
+            },
+            {
+              "kind": "death",
+              "minion": 12
+            },
+            {
+              "attacker": 10,
+              "defender": 5,
+              "kind": "attack"
+            },
+            {
+              "amount": 11,
+              "health": -3,
+              "kind": "damage",
+              "minion": 5
+            },
+            {
+              "amount": 7,
+              "health": 2,
+              "kind": "damage",
+              "minion": 10
+            },
+            {
+              "kind": "death",
+              "minion": 5
+            },
+            {
+              "hero": "BG24_HERO_100_SKIN_E",
+              "kind": "board_in",
+              "side": "own"
+            },
+            {
+              "kind": "summon",
+              "minion": 13
+            },
+            {
+              "kind": "summon",
+              "minion": 14
+            },
+            {
+              "kind": "summon",
+              "minion": 15
+            },
+            {
+              "kind": "summon",
+              "minion": 16
+            },
+            {
+              "kind": "summon",
+              "minion": 17
+            },
+            {
+              "kind": "summon",
+              "minion": 18
+            },
+            {
+              "kind": "summon",
+              "minion": 19
+            },
+            {
+              "attacker": 13,
+              "defender": 9,
+              "kind": "attack"
+            },
+            {
+              "amount": 6,
+              "health": -2,
+              "kind": "damage",
+              "minion": 9
+            },
+            {
+              "amount": 9,
+              "health": -5,
+              "kind": "damage",
+              "minion": 13
+            },
+            {
+              "kind": "death",
+              "minion": 9
+            },
+            {
+              "kind": "death",
+              "minion": 13
+            },
+            {
+              "card_id": "BGDUO_110",
+              "kind": "trigger",
+              "side": "own",
+              "source": 13,
+              "trigger": "deathrattle"
+            },
+            {
+              "attacker": 11,
+              "defender": 16,
+              "kind": "attack"
+            },
+            {
+              "amount": 12,
+              "health": -8,
+              "kind": "damage",
+              "minion": 16
+            },
+            {
+              "amount": 4,
+              "health": 14,
+              "kind": "damage",
+              "minion": 11
+            },
+            {
+              "kind": "death",
+              "minion": 16
+            },
+            {
+              "attacker": 14,
+              "defender": 11,
+              "kind": "attack"
+            },
+            {
+              "amount": 12,
+              "health": 2,
+              "kind": "damage",
+              "minion": 11
+            },
+            {
+              "amount": 12,
+              "health": -6,
+              "kind": "damage",
+              "minion": 14
+            },
+            {
+              "kind": "death",
+              "minion": 14
+            },
+            {
+              "card_id": "BGDUO31_207_G",
+              "kind": "trigger",
+              "side": "own",
+              "source": 14,
+              "trigger": "deathrattle"
+            },
+            {
+              "attacker": 8,
+              "defender": 15,
+              "kind": "attack"
+            },
+            {
+              "atk": 27,
+              "health": 4,
+              "kind": "stats",
+              "minion": 8
+            },
+            {
+              "amount": 27,
+              "health": -25,
+              "kind": "damage",
+              "minion": 15
+            },
+            {
+              "amount": 6,
+              "health": -2,
+              "kind": "damage",
+              "minion": 8
+            },
+            {
+              "kind": "death",
+              "minion": 8
+            },
+            {
+              "kind": "death",
+              "minion": 15
+            },
+            {
+              "attacker": 17,
+              "defender": 10,
+              "kind": "attack"
+            },
+            {
+              "amount": 22,
+              "health": -20,
+              "kind": "damage",
+              "minion": 10
+            },
+            {
+              "amount": 11,
+              "health": 15,
+              "kind": "damage",
+              "minion": 17
+            },
+            {
+              "kind": "death",
+              "minion": 10
+            },
+            {
+              "attacker": 11,
+              "defender": 19,
+              "kind": "attack"
+            },
+            {
+              "amount": 12,
+              "health": -9,
+              "kind": "damage",
+              "minion": 19
+            },
+            {
+              "amount": 2,
+              "health": 0,
+              "kind": "damage",
+              "minion": 11
+            },
+            {
+              "kind": "death",
+              "minion": 11
+            },
+            {
+              "kind": "death",
+              "minion": 19
+            },
+            {
+              "hero": "BG31_HERO_802",
+              "kind": "board_in",
+              "side": "opponent"
+            },
+            {
+              "kind": "summon",
+              "minion": 20
+            },
+            {
+              "atk": 32,
+              "health": 29,
+              "kind": "stats",
+              "minion": 20
+            },
+            {
+              "kind": "summon",
+              "minion": 21
+            },
+            {
+              "atk": 9,
+              "health": 5,
+              "kind": "stats",
+              "minion": 21
+            },
+            {
+              "kind": "summon",
+              "minion": 22
+            },
+            {
+              "atk": 20,
+              "health": 13,
+              "kind": "stats",
+              "minion": 22
+            },
+            {
+              "kind": "summon",
+              "minion": 23
+            },
+            {
+              "atk": 16,
+              "health": 9,
+              "kind": "stats",
+              "minion": 23
+            },
+            {
+              "kind": "summon",
+              "minion": 24
+            },
+            {
+              "atk": 21,
+              "health": 10,
+              "kind": "stats",
+              "minion": 24
+            },
+            {
+              "kind": "summon",
+              "minion": 25
+            },
+            {
+              "kind": "summon",
+              "minion": 26
+            },
+            {
+              "atk": 11,
+              "health": 13,
+              "kind": "stats",
+              "minion": 26
+            },
+            {
+              "attacker": 20,
+              "defender": 17,
+              "kind": "attack"
+            },
+            {
+              "amount": 32,
+              "health": -17,
+              "kind": "damage",
+              "minion": 17
+            },
+            {
+              "amount": 22,
+              "health": 7,
+              "kind": "damage",
+              "minion": 20
+            },
+            {
+              "kind": "death",
+              "minion": 17
+            },
+            {
+              "attacker": 18,
+              "defender": 25,
+              "kind": "attack"
+            },
+            {
+              "amount": 2,
+              "health": 1,
+              "kind": "damage",
+              "minion": 25
+            },
+            {
+              "amount": 6,
+              "health": 2,
+              "kind": "damage",
+              "minion": 18
+            },
+            {
+              "attacker": 21,
+              "defender": 18,
+              "kind": "attack"
+            },
+            {
+              "amount": 9,
+              "health": -7,
+              "kind": "damage",
+              "minion": 18
+            },
+            {
+              "amount": 2,
+              "health": 3,
+              "kind": "damage",
+              "minion": 21
+            },
+            {
+              "kind": "death",
+              "minion": 18
+            },
+            {
+              "amount": 15,
+              "kind": "hero_damage",
+              "side": "own"
+            }
+          ],
+          "minions": [
+            {
+              "atk": 5,
+              "card_id": "BG34_171",
+              "golden": false,
+              "health": 2,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 8,
+              "card_id": "BG34_170_G",
+              "golden": true,
+              "health": 8,
+              "keywords": [],
+              "position": 2,
+              "side": "own"
+            },
+            {
+              "atk": 4,
+              "card_id": "BG36_311",
+              "golden": false,
+              "health": 4,
+              "keywords": [],
+              "position": 3,
+              "side": "own"
+            },
+            {
+              "atk": 7,
+              "card_id": "BG34_170t3",
+              "golden": false,
+              "health": 10,
+              "keywords": [],
+              "position": 4,
+              "side": "own"
+            },
+            {
+              "atk": 13,
+              "card_id": "BG36_300",
+              "golden": false,
+              "health": 14,
+              "keywords": [],
+              "position": 5,
+              "side": "own"
+            },
+            {
+              "atk": 7,
+              "card_id": "BGDUO_700",
+              "golden": false,
+              "health": 8,
+              "keywords": [],
+              "position": 6,
+              "side": "own"
+            },
+            {
+              "atk": 7,
+              "card_id": "BG36_854",
+              "golden": false,
+              "health": 6,
+              "keywords": [
+                "taunt",
+                "deathrattle"
+              ],
+              "position": 7,
+              "side": "own"
+            },
+            {
+              "atk": 6,
+              "card_id": "BG36_318",
+              "golden": false,
+              "health": 6,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 8,
+              "card_id": "BG34_604",
+              "golden": false,
+              "health": 17,
+              "keywords": [
+                "stealth",
+                "rally"
+              ],
+              "position": 2,
+              "side": "opponent"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG34_604",
+              "golden": false,
+              "health": 11,
+              "keywords": [
+                "stealth",
+                "rally"
+              ],
+              "position": 3,
+              "side": "opponent"
+            },
+            {
+              "atk": 11,
+              "card_id": "BG34_170t",
+              "golden": false,
+              "health": 9,
+              "keywords": [],
+              "position": 4,
+              "side": "opponent"
+            },
+            {
+              "atk": 12,
+              "card_id": "BGDUO33_140_G",
+              "golden": true,
+              "health": 18,
+              "keywords": [],
+              "position": 5,
+              "side": "opponent"
+            },
+            {
+              "atk": 10,
+              "card_id": "BG29_300",
+              "golden": false,
+              "health": 18,
+              "keywords": [
+                "taunt"
+              ],
+              "position": 6,
+              "side": "opponent"
+            },
+            {
+              "atk": 6,
+              "card_id": "BGDUO_110",
+              "golden": false,
+              "health": 4,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 12,
+              "card_id": "BGDUO31_207_G",
+              "golden": true,
+              "health": 6,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 6,
+              "card_id": "BG26_135_G",
+              "golden": true,
+              "health": 2,
+              "keywords": [],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 4,
+              "card_id": "BGDUO_118_G",
+              "golden": true,
+              "health": 4,
+              "keywords": [],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 22,
+              "card_id": "BG36_524",
+              "golden": false,
+              "health": 26,
+              "keywords": [],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG26_146",
+              "golden": false,
+              "health": 8,
+              "keywords": [],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG36_110",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 4,
+              "card_id": "BG33_822",
+              "golden": false,
+              "health": 6,
+              "keywords": [
+                "rally"
+              ],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 5,
+              "card_id": "BGDUO31_201",
+              "golden": false,
+              "health": 1,
+              "keywords": [],
+              "position": 2,
+              "side": "opponent"
+            },
+            {
+              "atk": 6,
+              "card_id": "BG31_815_G",
+              "golden": true,
+              "health": 6,
+              "keywords": [],
+              "position": 3,
+              "side": "opponent"
+            },
+            {
+              "atk": 7,
+              "card_id": "BG36_700",
+              "golden": false,
+              "health": 7,
+              "keywords": [],
+              "position": 4,
+              "side": "opponent"
+            },
+            {
+              "atk": 12,
+              "card_id": "BG33_830_G",
+              "golden": true,
+              "health": 8,
+              "keywords": [],
+              "position": 5,
+              "side": "opponent"
+            },
+            {
+              "atk": 6,
+              "card_id": "BG36_300",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 6,
+              "side": "opponent"
+            },
+            {
+              "atk": 4,
+              "card_id": "BG31_149_G",
+              "golden": true,
+              "health": 6,
+              "keywords": [],
+              "position": 7,
+              "side": "opponent"
+            }
+          ],
+          "start": 13
+        },
         "result": "lost"
       },
       {
@@ -1639,6 +4303,901 @@
           7
         ],
         "own_health_after": 0,
+        "replay": {
+          "complete": true,
+          "events": [
+            {
+              "attacker": 0,
+              "defender": 13,
+              "kind": "attack"
+            },
+            {
+              "amount": 8,
+              "health": 43,
+              "kind": "damage",
+              "minion": 13
+            },
+            {
+              "amount": 51,
+              "health": -46,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "kind": "death",
+              "minion": 0
+            },
+            {
+              "card_id": "BGDUO_110",
+              "kind": "trigger",
+              "side": "own",
+              "source": 0,
+              "trigger": "deathrattle"
+            },
+            {
+              "attacker": 7,
+              "defender": 2,
+              "kind": "attack"
+            },
+            {
+              "amount": 9,
+              "health": 88,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "amount": 6,
+              "health": 3,
+              "kind": "damage",
+              "minion": 7
+            },
+            {
+              "attacker": 1,
+              "defender": 8,
+              "kind": "attack"
+            },
+            {
+              "amount": 14,
+              "health": -10,
+              "kind": "damage",
+              "minion": 8
+            },
+            {
+              "amount": 7,
+              "health": 0,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "kind": "death",
+              "minion": 1
+            },
+            {
+              "kind": "death",
+              "minion": 8
+            },
+            {
+              "card_id": "BGDUO31_207_G",
+              "kind": "trigger",
+              "side": "own",
+              "source": 1,
+              "trigger": "deathrattle"
+            },
+            {
+              "card_id": "BG36_103",
+              "kind": "trigger",
+              "side": "opponent",
+              "source": 8,
+              "trigger": "deathrattle"
+            },
+            {
+              "attacker": 9,
+              "defender": 6,
+              "kind": "attack"
+            },
+            {
+              "amount": 17,
+              "health": -12,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "amount": 4,
+              "health": 23,
+              "kind": "damage",
+              "minion": 9
+            },
+            {
+              "kind": "death",
+              "minion": 6
+            },
+            {
+              "attacker": 2,
+              "defender": 13,
+              "kind": "attack"
+            },
+            {
+              "amount": 6,
+              "health": 37,
+              "kind": "damage",
+              "minion": 13
+            },
+            {
+              "amount": 51,
+              "health": 37,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "attacker": 10,
+              "defender": 5,
+              "kind": "attack"
+            },
+            {
+              "amount": 7,
+              "health": 0,
+              "kind": "damage",
+              "minion": 5
+            },
+            {
+              "amount": 8,
+              "health": -5,
+              "kind": "damage",
+              "minion": 10
+            },
+            {
+              "kind": "death",
+              "minion": 5
+            },
+            {
+              "kind": "death",
+              "minion": 10
+            },
+            {
+              "attacker": 3,
+              "defender": 7,
+              "kind": "attack"
+            },
+            {
+              "amount": 3,
+              "health": 0,
+              "kind": "damage",
+              "minion": 7
+            },
+            {
+              "amount": 9,
+              "health": -5,
+              "kind": "damage",
+              "minion": 3
+            },
+            {
+              "kind": "death",
+              "minion": 3
+            },
+            {
+              "kind": "death",
+              "minion": 7
+            },
+            {
+              "attacker": 11,
+              "defender": 4,
+              "kind": "attack"
+            },
+            {
+              "amount": 3,
+              "health": 218,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "amount": 38,
+              "health": -35,
+              "kind": "damage",
+              "minion": 11
+            },
+            {
+              "kind": "death",
+              "minion": 11
+            },
+            {
+              "kind": "summon",
+              "minion": 14
+            },
+            {
+              "atk": 90,
+              "health": 95,
+              "kind": "stats",
+              "minion": 14
+            },
+            {
+              "atk": 81,
+              "health": 69,
+              "kind": "stats",
+              "minion": 13
+            },
+            {
+              "atk": 69,
+              "health": 70,
+              "kind": "stats",
+              "minion": 12
+            },
+            {
+              "atk": 47,
+              "health": 55,
+              "kind": "stats",
+              "minion": 9
+            },
+            {
+              "attacker": 4,
+              "defender": 9,
+              "kind": "attack"
+            },
+            {
+              "amount": 38,
+              "health": 17,
+              "kind": "damage",
+              "minion": 9
+            },
+            {
+              "amount": 47,
+              "health": 171,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "attacker": 12,
+              "defender": 4,
+              "kind": "attack"
+            },
+            {
+              "amount": 69,
+              "health": 102,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "amount": 38,
+              "health": 32,
+              "kind": "damage",
+              "minion": 12
+            },
+            {
+              "attacker": 2,
+              "defender": 12,
+              "kind": "attack"
+            },
+            {
+              "amount": 6,
+              "health": 26,
+              "kind": "damage",
+              "minion": 12
+            },
+            {
+              "amount": 69,
+              "health": -32,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "kind": "death",
+              "minion": 2
+            },
+            {
+              "attacker": 13,
+              "defender": 4,
+              "kind": "attack"
+            },
+            {
+              "amount": 81,
+              "health": 21,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "amount": 38,
+              "health": 31,
+              "kind": "damage",
+              "minion": 13
+            },
+            {
+              "attacker": 4,
+              "defender": 9,
+              "kind": "attack"
+            },
+            {
+              "amount": 38,
+              "health": -21,
+              "kind": "damage",
+              "minion": 9
+            },
+            {
+              "amount": 47,
+              "health": -26,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "kind": "death",
+              "minion": 4
+            },
+            {
+              "kind": "death",
+              "minion": 9
+            },
+            {
+              "hero": "TB_BaconShop_HERO_43_SKIN_N",
+              "kind": "board_in",
+              "side": "own"
+            },
+            {
+              "kind": "summon",
+              "minion": 15
+            },
+            {
+              "kind": "summon",
+              "minion": 16
+            },
+            {
+              "atk": 8,
+              "health": 8,
+              "kind": "stats",
+              "minion": 16
+            },
+            {
+              "kind": "summon",
+              "minion": 17
+            },
+            {
+              "atk": 4,
+              "health": 4,
+              "kind": "stats",
+              "minion": 17
+            },
+            {
+              "kind": "summon",
+              "minion": 18
+            },
+            {
+              "atk": 7,
+              "health": 10,
+              "kind": "stats",
+              "minion": 18
+            },
+            {
+              "kind": "summon",
+              "minion": 19
+            },
+            {
+              "kind": "summon",
+              "minion": 20
+            },
+            {
+              "atk": 13,
+              "health": 14,
+              "kind": "stats",
+              "minion": 20
+            },
+            {
+              "kind": "summon",
+              "minion": 21
+            },
+            {
+              "atk": 7,
+              "health": 6,
+              "kind": "stats",
+              "minion": 21
+            },
+            {
+              "attacker": 15,
+              "defender": 12,
+              "kind": "attack"
+            },
+            {
+              "amount": 5,
+              "health": 21,
+              "kind": "damage",
+              "minion": 12
+            },
+            {
+              "amount": 69,
+              "health": -67,
+              "kind": "damage",
+              "minion": 15
+            },
+            {
+              "kind": "death",
+              "minion": 15
+            },
+            {
+              "card_id": "BG34_171",
+              "kind": "trigger",
+              "side": "own",
+              "source": 15,
+              "trigger": "deathrattle"
+            },
+            {
+              "attacker": 14,
+              "defender": 21,
+              "kind": "attack"
+            },
+            {
+              "amount": 90,
+              "health": -84,
+              "kind": "damage",
+              "minion": 21
+            },
+            {
+              "amount": 7,
+              "health": 88,
+              "kind": "damage",
+              "minion": 14
+            },
+            {
+              "kind": "death",
+              "minion": 21
+            },
+            {
+              "card_id": "BG36_854",
+              "kind": "trigger",
+              "side": "own",
+              "source": 21,
+              "trigger": "deathrattle"
+            },
+            {
+              "attacker": 16,
+              "defender": 12,
+              "kind": "attack"
+            },
+            {
+              "amount": 8,
+              "health": 13,
+              "kind": "damage",
+              "minion": 12
+            },
+            {
+              "amount": 69,
+              "health": -61,
+              "kind": "damage",
+              "minion": 16
+            },
+            {
+              "kind": "death",
+              "minion": 16
+            },
+            {
+              "attacker": 12,
+              "defender": 18,
+              "kind": "attack"
+            },
+            {
+              "amount": 69,
+              "health": -59,
+              "kind": "damage",
+              "minion": 18
+            },
+            {
+              "amount": 7,
+              "health": 6,
+              "kind": "damage",
+              "minion": 12
+            },
+            {
+              "kind": "death",
+              "minion": 18
+            },
+            {
+              "attacker": 17,
+              "defender": 13,
+              "kind": "attack"
+            },
+            {
+              "amount": 4,
+              "health": 27,
+              "kind": "damage",
+              "minion": 13
+            },
+            {
+              "amount": 81,
+              "health": -77,
+              "kind": "damage",
+              "minion": 17
+            },
+            {
+              "kind": "death",
+              "minion": 17
+            },
+            {
+              "attacker": 13,
+              "defender": 19,
+              "kind": "attack"
+            },
+            {
+              "amount": 81,
+              "health": -79,
+              "kind": "damage",
+              "minion": 19
+            },
+            {
+              "amount": 6,
+              "health": 21,
+              "kind": "damage",
+              "minion": 13
+            },
+            {
+              "kind": "death",
+              "minion": 19
+            },
+            {
+              "card_id": "BG23_318",
+              "kind": "trigger",
+              "side": "own",
+              "source": 19,
+              "trigger": "deathrattle"
+            },
+            {
+              "kind": "death",
+              "minion": 13
+            },
+            {
+              "attacker": 20,
+              "defender": 12,
+              "kind": "attack"
+            },
+            {
+              "amount": 13,
+              "health": -7,
+              "kind": "damage",
+              "minion": 12
+            },
+            {
+              "amount": 69,
+              "health": -55,
+              "kind": "damage",
+              "minion": 20
+            },
+            {
+              "kind": "death",
+              "minion": 12
+            },
+            {
+              "kind": "death",
+              "minion": 20
+            },
+            {
+              "kind": "summon",
+              "minion": 22
+            },
+            {
+              "atk": 83,
+              "health": 83,
+              "kind": "stats",
+              "minion": 22
+            },
+            {
+              "kind": "summon",
+              "minion": 23
+            },
+            {
+              "atk": 7,
+              "health": 9,
+              "kind": "stats",
+              "minion": 23
+            },
+            {
+              "kind": "summon",
+              "minion": 24
+            },
+            {
+              "atk": 134,
+              "health": 134,
+              "kind": "stats",
+              "minion": 24
+            },
+            {
+              "kind": "summon",
+              "minion": 25
+            },
+            {
+              "atk": 7,
+              "health": 9,
+              "kind": "stats",
+              "minion": 25
+            },
+            {
+              "kind": "summon",
+              "minion": 26
+            },
+            {
+              "atk": 102,
+              "health": 102,
+              "kind": "stats",
+              "minion": 26
+            },
+            {
+              "kind": "summon",
+              "minion": 27
+            },
+            {
+              "amount": 15,
+              "kind": "hero_damage",
+              "side": "own"
+            }
+          ],
+          "minions": [
+            {
+              "atk": 8,
+              "card_id": "BGDUO_110",
+              "golden": false,
+              "health": 5,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 14,
+              "card_id": "BGDUO31_207_G",
+              "golden": true,
+              "health": 7,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 2,
+              "side": "own"
+            },
+            {
+              "atk": 6,
+              "card_id": "BGDUO_118_G",
+              "golden": true,
+              "health": 97,
+              "keywords": [],
+              "position": 3,
+              "side": "own"
+            },
+            {
+              "atk": 3,
+              "card_id": "BG26_814",
+              "golden": false,
+              "health": 4,
+              "keywords": [],
+              "position": 4,
+              "side": "own"
+            },
+            {
+              "atk": 38,
+              "card_id": "BG36_524_G",
+              "golden": true,
+              "health": 221,
+              "keywords": [],
+              "position": 5,
+              "side": "own"
+            },
+            {
+              "atk": 8,
+              "card_id": "BG36_523",
+              "golden": false,
+              "health": 7,
+              "keywords": [],
+              "position": 6,
+              "side": "own"
+            },
+            {
+              "atk": 4,
+              "card_id": "BG_LOE_077",
+              "golden": false,
+              "health": 5,
+              "keywords": [],
+              "position": 7,
+              "side": "own"
+            },
+            {
+              "atk": 9,
+              "card_id": "BG36_311",
+              "golden": false,
+              "health": 9,
+              "keywords": [],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 7,
+              "card_id": "BG36_103",
+              "golden": false,
+              "health": 4,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 2,
+              "side": "opponent"
+            },
+            {
+              "atk": 17,
+              "card_id": "BG36_108",
+              "golden": false,
+              "health": 27,
+              "keywords": [],
+              "position": 3,
+              "side": "opponent"
+            },
+            {
+              "atk": 7,
+              "card_id": "BG36_312",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 4,
+              "side": "opponent"
+            },
+            {
+              "atk": 3,
+              "card_id": "BG36_311",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 5,
+              "side": "opponent"
+            },
+            {
+              "atk": 39,
+              "card_id": "BG36_106",
+              "golden": false,
+              "health": 39,
+              "keywords": [],
+              "position": 6,
+              "side": "opponent"
+            },
+            {
+              "atk": 51,
+              "card_id": "BG36_106",
+              "golden": false,
+              "health": 51,
+              "keywords": [],
+              "position": 7,
+              "side": "opponent"
+            },
+            {
+              "atk": 1,
+              "card_id": "BGFYM_000",
+              "golden": false,
+              "health": 1,
+              "keywords": [],
+              "position": 0,
+              "side": "opponent"
+            },
+            {
+              "atk": 5,
+              "card_id": "BG34_171",
+              "golden": false,
+              "health": 2,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 6,
+              "card_id": "BG34_170_G",
+              "golden": true,
+              "health": 6,
+              "keywords": [],
+              "position": 2,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG36_311",
+              "golden": false,
+              "health": 2,
+              "keywords": [],
+              "position": 3,
+              "side": "own"
+            },
+            {
+              "atk": 3,
+              "card_id": "BG34_170t3",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 4,
+              "side": "own"
+            },
+            {
+              "atk": 6,
+              "card_id": "BG23_318",
+              "golden": false,
+              "health": 2,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 5,
+              "side": "own"
+            },
+            {
+              "atk": 6,
+              "card_id": "BG36_300",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 6,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG36_854",
+              "golden": false,
+              "health": 1,
+              "keywords": [
+                "taunt",
+                "deathrattle"
+              ],
+              "position": 7,
+              "side": "own"
+            },
+            {
+              "atk": 20,
+              "card_id": "BG36_372_G",
+              "golden": true,
+              "health": 20,
+              "keywords": [
+                "divine_shield"
+              ],
+              "position": 2,
+              "side": "opponent"
+            },
+            {
+              "atk": 4,
+              "card_id": "BG35_881",
+              "golden": false,
+              "health": 6,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 3,
+              "side": "opponent"
+            },
+            {
+              "atk": 5,
+              "card_id": "BG34_865",
+              "golden": false,
+              "health": 5,
+              "keywords": [],
+              "position": 4,
+              "side": "opponent"
+            },
+            {
+              "atk": 4,
+              "card_id": "BG35_881",
+              "golden": false,
+              "health": 6,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 5,
+              "side": "opponent"
+            },
+            {
+              "atk": 5,
+              "card_id": "BG34_865",
+              "golden": false,
+              "health": 5,
+              "keywords": [],
+              "position": 6,
+              "side": "opponent"
+            },
+            {
+              "atk": 5,
+              "card_id": "BG36_701",
+              "golden": false,
+              "health": 5,
+              "keywords": [],
+              "position": 7,
+              "side": "opponent"
+            }
+          ],
+          "start": 14
+        },
         "result": "lost"
       }
     ],

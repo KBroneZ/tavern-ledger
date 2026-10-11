@@ -177,6 +177,23 @@ test("report reader: every synthetic parser report in the repo reads without a d
   }
 });
 
+test("report reader: real games with combat replays (revision 8) read without a dropped value", () => {
+  // The replay is for a later page (T-536); until then the reader skips it.
+  const dir = join(import.meta.dirname, "..", "..", "..", "crates", "bg-parser", "tests", "data", "real");
+  for (const file of ["b253216_solo.json", "b253216_duos.json"]) {
+    const games = JSON.parse(readFileSync(join(dir, file), "utf8")) as Record<string, any>[];
+    for (const game of games) {
+      assert.ok(game.rounds.some((r: Record<string, unknown>) => r.replay), `${file} has replays`);
+      const index = game.index as number;
+      const parser = { version: "0.1.0", revision: KNOWN_REVISION };
+      const result = readRecord({ session: SESSION, index, saved_at: 1, parser, report: game }, SESSION, index);
+      assert.ok(result.ok, file);
+      assert.equal(result.record.unreadable, 0, `${file} game ${index}`);
+      assert.equal(result.record.newer, false);
+    }
+  }
+});
+
 test("report reader: at most 3000 shop offers in a game, as the server checks", () => {
   const rep = soloReport() as Record<string, any>;
   const offers = Array.from({ length: 400 }, () => ({ card_id: "SYN_M_01", roll: 0, frozen: false }));

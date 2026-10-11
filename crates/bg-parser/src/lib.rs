@@ -14,6 +14,7 @@ pub mod hero_select;
 pub mod leaderboard;
 pub mod lines;
 pub mod power;
+pub mod replay;
 pub mod report;
 pub mod shop;
 pub mod state;
@@ -32,7 +33,7 @@ pub const PARSER_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Bump when a change makes the parser read the same log differently (new
 /// fields, fixed bugs). Saved with every game so `tavern-watch --reparse`
 /// and the server can tell which records an older parser wrote.
-pub const PARSER_REVISION: u32 = 7;
+pub const PARSER_REVISION: u32 = 8;
 
 /// Builds whose real logs this parser was checked against.
 pub const TESTED_BUILDS: &[i64] = &[253216];
@@ -649,6 +650,7 @@ fn rounds_of(c: &Collector, heroes: &[(i64, &Entity)], last_health: Option<i64>)
                 .filter(|_| c.result_tags_seen),
             attacks: c.attacks.get(&n).cloned().unwrap_or_default(),
             own_shop_board: c.shop_boards.get(&n).cloned(),
+            replay: c.replays.replay(n),
         })
         .collect()
 }

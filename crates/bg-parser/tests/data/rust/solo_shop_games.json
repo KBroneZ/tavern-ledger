@@ -59,7 +59,13 @@
           "2": 26,
           "3": 30
         },
-        "result": null
+        "result": null,
+        "replay": {
+          "minions": [],
+          "start": 0,
+          "events": [],
+          "complete": true
+        }
       },
       {
         "number": 2,
@@ -110,7 +116,41 @@
           "2": 26,
           "3": 0
         },
-        "result": null
+        "result": null,
+        "replay": {
+          "minions": [
+            {
+              "side": "opponent",
+              "card_id": "BG20_100",
+              "atk": 1,
+              "health": 1,
+              "position": 0,
+              "golden": false,
+              "keywords": []
+            },
+            {
+              "side": "opponent",
+              "card_id": "BG28_300",
+              "atk": 1,
+              "health": 1,
+              "position": 0,
+              "golden": false,
+              "keywords": []
+            },
+            {
+              "side": "opponent",
+              "card_id": "BG20_100",
+              "atk": 1,
+              "health": 1,
+              "position": 0,
+              "golden": false,
+              "keywords": []
+            }
+          ],
+          "start": 3,
+          "events": [],
+          "complete": true
+        }
       }
     ],
     "start_health": {
@@ -358,7 +398,13 @@
           "2": 26,
           "3": 30
         },
-        "result": null
+        "result": null,
+        "replay": {
+          "minions": [],
+          "start": 0,
+          "events": [],
+          "complete": true
+        }
       },
       {
         "number": 2,
@@ -406,7 +452,41 @@
           3
         ],
         "health_after": {},
-        "result": null
+        "result": null,
+        "replay": {
+          "minions": [
+            {
+              "side": "opponent",
+              "card_id": "BG20_100",
+              "atk": 1,
+              "health": 1,
+              "position": 0,
+              "golden": false,
+              "keywords": []
+            },
+            {
+              "side": "opponent",
+              "card_id": "BG28_300",
+              "atk": 1,
+              "health": 1,
+              "position": 0,
+              "golden": false,
+              "keywords": []
+            },
+            {
+              "side": "opponent",
+              "card_id": "BG20_100",
+              "atk": 1,
+              "health": 1,
+              "position": 0,
+              "golden": false,
+              "keywords": []
+            }
+          ],
+          "start": 3,
+          "events": [],
+          "complete": false
+        }
       }
     ],
     "start_health": {

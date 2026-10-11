@@ -19,10 +19,11 @@ fn check(name: &str) {
     let mut actual = serde_json::to_value(&reports).expect("serializable");
     // Hero names, the lobby's health, the shop, the hero pick, the skin links,
     // the combat results the game records, the leaderboard's triples and
-    // trinkets, board keywords, discovers and the Old God are Rust-only (the
-    // Python prototype does not read them); tests/card_names.rs,
-    // tests/lobby_health.rs, tests/shop.rs, tests/data_round.rs and
-    // tests/round_two.rs cover them.
+    // trinkets, board keywords, discovers, the Old God and the combat
+    // replays are Rust-only (the Python prototype does not read them);
+    // tests/card_names.rs, tests/lobby_health.rs, tests/shop.rs,
+    // tests/data_round.rs, tests/round_two.rs and tests/combat_replay.rs
+    // cover them.
     for game in actual.as_array_mut().expect("list of games") {
         let report = game.as_object_mut().expect("report object");
         report.remove("card_names");
@@ -41,6 +42,7 @@ fn check(name: &str) {
             let round = round.as_object_mut().expect("round");
             round.remove("health_after");
             round.remove("result");
+            round.remove("replay");
             for entry in round["entries"].as_array_mut().expect("entries") {
                 if let Some(board) = entry["board"].as_array_mut() {
                     for minion in board {

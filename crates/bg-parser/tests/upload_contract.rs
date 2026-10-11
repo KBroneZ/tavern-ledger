@@ -79,6 +79,16 @@ fn walk(level: &str, value: &Value, seen: &mut BTreeMap<String, BTreeSet<String>
         ("report.lobby[]", "trinkets", "report.lobby[].trinkets[]"),
         ("report", "discovers", "report.discovers[]"),
         (
+            "report.rounds[].replay",
+            "minions",
+            "report.rounds[].replay.minions[]",
+        ),
+        (
+            "report.rounds[].replay",
+            "events",
+            "report.rounds[].replay.events[]",
+        ),
+        (
             "report.discovers[]",
             "offered",
             "report.discovers[].offered[]",
@@ -89,6 +99,11 @@ fn walk(level: &str, value: &Value, seen: &mut BTreeMap<String, BTreeSet<String>
             for item in obj.get(key).and_then(Value::as_array).into_iter().flatten() {
                 walk(child, item, seen);
             }
+        }
+    }
+    if level == "report.rounds[]" {
+        if let Some(replay) = obj.get("replay") {
+            walk("report.rounds[].replay", replay, seen);
         }
     }
     if level == "report" {

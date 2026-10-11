@@ -591,6 +591,58 @@
           1
         ],
         "own_health_after": 40,
+        "replay": {
+          "complete": true,
+          "events": [
+            {
+              "attacker": 0,
+              "defender": 1,
+              "kind": "attack"
+            },
+            {
+              "amount": 4,
+              "health": -1,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "amount": 3,
+              "health": 1,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "kind": "death",
+              "minion": 1
+            },
+            {
+              "amount": 2,
+              "kind": "hero_damage",
+              "side": "opponent"
+            }
+          ],
+          "minions": [
+            {
+              "atk": 4,
+              "card_id": "BG36_345",
+              "golden": false,
+              "health": 4,
+              "keywords": [],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 3,
+              "card_id": "BG36_345",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 1,
+              "side": "opponent"
+            }
+          ],
+          "start": 2
+        },
         "result": "won"
       },
       {
@@ -654,6 +706,71 @@
           5
         ],
         "own_health_after": 40,
+        "replay": {
+          "complete": true,
+          "events": [
+            {
+              "attacker": 0,
+              "defender": 2,
+              "kind": "attack"
+            },
+            {
+              "amount": 6,
+              "health": -3,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "kind": "shield",
+              "minion": 0,
+              "on": false
+            },
+            {
+              "kind": "death",
+              "minion": 2
+            },
+            {
+              "amount": 3,
+              "kind": "hero_damage",
+              "side": "opponent"
+            }
+          ],
+          "minions": [
+            {
+              "atk": 6,
+              "card_id": "BGS_119",
+              "golden": false,
+              "health": 5,
+              "keywords": [
+                "divine_shield",
+                "windfury"
+              ],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 5,
+              "card_id": "BG36_345",
+              "golden": false,
+              "health": 5,
+              "keywords": [],
+              "position": 2,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG33_886",
+              "golden": false,
+              "health": 3,
+              "keywords": [
+                "rally"
+              ],
+              "position": 1,
+              "side": "opponent"
+            }
+          ],
+          "start": 3
+        },
         "result": "won"
       },
       {
@@ -726,6 +843,159 @@
           4
         ],
         "own_health_after": 40,
+        "replay": {
+          "complete": true,
+          "events": [
+            {
+              "attacker": 2,
+              "defender": 1,
+              "kind": "attack"
+            },
+            {
+              "amount": 3,
+              "health": 4,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "amount": 6,
+              "health": -3,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "kind": "death",
+              "minion": 2
+            },
+            {
+              "attacker": 0,
+              "defender": 3,
+              "kind": "attack"
+            },
+            {
+              "kind": "shield",
+              "minion": 3,
+              "on": false
+            },
+            {
+              "kind": "shield",
+              "minion": 0,
+              "on": false
+            },
+            {
+              "attacker": 0,
+              "defender": 3,
+              "kind": "attack"
+            },
+            {
+              "amount": 10,
+              "health": -9,
+              "kind": "damage",
+              "minion": 3
+            },
+            {
+              "amount": 1,
+              "health": 9,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "kind": "death",
+              "minion": 3
+            },
+            {
+              "card_id": "BG29_611",
+              "kind": "trigger",
+              "side": "opponent",
+              "source": 3,
+              "trigger": "deathrattle"
+            },
+            {
+              "kind": "summon",
+              "minion": 4
+            },
+            {
+              "attacker": 4,
+              "defender": 1,
+              "kind": "attack"
+            },
+            {
+              "amount": 1,
+              "health": 3,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "amount": 6,
+              "health": -5,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "kind": "death",
+              "minion": 4
+            },
+            {
+              "amount": 4,
+              "kind": "hero_damage",
+              "side": "opponent"
+            }
+          ],
+          "minions": [
+            {
+              "atk": 10,
+              "card_id": "BGS_119",
+              "golden": false,
+              "health": 10,
+              "keywords": [
+                "divine_shield",
+                "windfury"
+              ],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 6,
+              "card_id": "BG36_345",
+              "golden": false,
+              "health": 7,
+              "keywords": [],
+              "position": 2,
+              "side": "own"
+            },
+            {
+              "atk": 3,
+              "card_id": "BGS_115",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 1,
+              "card_id": "BG29_611",
+              "golden": false,
+              "health": 1,
+              "keywords": [
+                "divine_shield",
+                "deathrattle"
+              ],
+              "position": 2,
+              "side": "opponent"
+            },
+            {
+              "atk": 1,
+              "card_id": "BG_BOT_312t",
+              "golden": false,
+              "health": 1,
+              "keywords": [],
+              "position": 1,
+              "side": "opponent"
+            }
+          ],
+          "start": 4
+        },
         "result": "won"
       },
       {
@@ -813,6 +1083,172 @@
           2
         ],
         "own_health_after": 40,
+        "replay": {
+          "complete": true,
+          "events": [
+            {
+              "card_id": "BG32_330",
+              "kind": "trigger",
+              "side": "opponent",
+              "source": null,
+              "trigger": "start_of_combat"
+            },
+            {
+              "kind": "summon",
+              "minion": 5
+            },
+            {
+              "attacker": 2,
+              "defender": 1,
+              "kind": "attack"
+            },
+            {
+              "amount": 5,
+              "health": 4,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "amount": 8,
+              "health": -2,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "kind": "death",
+              "minion": 2
+            },
+            {
+              "attacker": 0,
+              "defender": 4,
+              "kind": "attack"
+            },
+            {
+              "amount": 12,
+              "health": -6,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "kind": "shield",
+              "minion": 0,
+              "on": false
+            },
+            {
+              "kind": "death",
+              "minion": 4
+            },
+            {
+              "attacker": 0,
+              "defender": 3,
+              "kind": "attack"
+            },
+            {
+              "amount": 12,
+              "health": -9,
+              "kind": "damage",
+              "minion": 3
+            },
+            {
+              "amount": 4,
+              "health": 8,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "kind": "death",
+              "minion": 3
+            },
+            {
+              "attacker": 5,
+              "defender": 1,
+              "kind": "attack"
+            },
+            {
+              "amount": 3,
+              "health": 1,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "amount": 8,
+              "health": -5,
+              "kind": "damage",
+              "minion": 5
+            },
+            {
+              "kind": "death",
+              "minion": 5
+            },
+            {
+              "amount": 5,
+              "kind": "hero_damage",
+              "side": "opponent"
+            }
+          ],
+          "minions": [
+            {
+              "atk": 12,
+              "card_id": "BGS_119",
+              "golden": false,
+              "health": 12,
+              "keywords": [
+                "divine_shield",
+                "windfury"
+              ],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 8,
+              "card_id": "BG36_345",
+              "golden": false,
+              "health": 9,
+              "keywords": [],
+              "position": 2,
+              "side": "own"
+            },
+            {
+              "atk": 5,
+              "card_id": "BG36_360t3",
+              "golden": false,
+              "health": 6,
+              "keywords": [],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 4,
+              "card_id": "BG31_816",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 2,
+              "side": "opponent"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG29_300",
+              "golden": false,
+              "health": 6,
+              "keywords": [
+                "taunt"
+              ],
+              "position": 3,
+              "side": "opponent"
+            },
+            {
+              "atk": 3,
+              "card_id": "BG32_330",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 0,
+              "side": "opponent"
+            }
+          ],
+          "start": 5
+        },
         "result": "won"
       },
       {
@@ -939,6 +1375,326 @@
           8
         ],
         "own_health_after": 40,
+        "replay": {
+          "complete": true,
+          "events": [
+            {
+              "attacker": 4,
+              "defender": 0,
+              "kind": "attack"
+            },
+            {
+              "amount": 2,
+              "health": 2,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "kind": "shield",
+              "minion": 4,
+              "on": false
+            },
+            {
+              "attacker": 4,
+              "defender": 1,
+              "kind": "attack"
+            },
+            {
+              "amount": 2,
+              "health": 2,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "amount": 5,
+              "health": -4,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "kind": "death",
+              "minion": 4
+            },
+            {
+              "card_id": "BG34_405",
+              "kind": "trigger",
+              "side": "opponent",
+              "source": 9,
+              "trigger": "avenge"
+            },
+            {
+              "attacker": 0,
+              "defender": 8,
+              "kind": "attack"
+            },
+            {
+              "amount": 5,
+              "health": -2,
+              "kind": "damage",
+              "minion": 8
+            },
+            {
+              "amount": 2,
+              "health": 0,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "kind": "death",
+              "minion": 0
+            },
+            {
+              "kind": "death",
+              "minion": 8
+            },
+            {
+              "card_id": "BG36_101",
+              "kind": "trigger",
+              "side": "own",
+              "source": 0,
+              "trigger": "deathrattle"
+            },
+            {
+              "card_id": "BG34_405",
+              "kind": "trigger",
+              "side": "opponent",
+              "source": 9,
+              "trigger": "avenge"
+            },
+            {
+              "attacker": 5,
+              "defender": 1,
+              "kind": "attack"
+            },
+            {
+              "amount": 5,
+              "health": -3,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "amount": 5,
+              "health": 0,
+              "kind": "damage",
+              "minion": 5
+            },
+            {
+              "kind": "death",
+              "minion": 1
+            },
+            {
+              "kind": "death",
+              "minion": 5
+            },
+            {
+              "card_id": "BG36_101",
+              "kind": "trigger",
+              "side": "own",
+              "source": 1,
+              "trigger": "deathrattle"
+            },
+            {
+              "card_id": "BG34_405",
+              "kind": "trigger",
+              "side": "opponent",
+              "source": 9,
+              "trigger": "avenge"
+            },
+            {
+              "kind": "shield",
+              "minion": 9,
+              "on": true
+            },
+            {
+              "attacker": 2,
+              "defender": 9,
+              "kind": "attack"
+            },
+            {
+              "kind": "shield",
+              "minion": 9,
+              "on": false
+            },
+            {
+              "kind": "shield",
+              "minion": 2,
+              "on": false
+            },
+            {
+              "attacker": 2,
+              "defender": 9,
+              "kind": "attack"
+            },
+            {
+              "amount": 15,
+              "health": -11,
+              "kind": "damage",
+              "minion": 9
+            },
+            {
+              "amount": 5,
+              "health": 10,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "kind": "death",
+              "minion": 9
+            },
+            {
+              "attacker": 6,
+              "defender": 2,
+              "kind": "attack"
+            },
+            {
+              "amount": 5,
+              "health": 5,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "amount": 15,
+              "health": -10,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "kind": "death",
+              "minion": 6
+            },
+            {
+              "attacker": 3,
+              "defender": 7,
+              "kind": "attack"
+            },
+            {
+              "amount": 10,
+              "health": -9,
+              "kind": "damage",
+              "minion": 7
+            },
+            {
+              "amount": 1,
+              "health": 10,
+              "kind": "damage",
+              "minion": 3
+            },
+            {
+              "kind": "death",
+              "minion": 7
+            },
+            {
+              "amount": 5,
+              "kind": "hero_damage",
+              "side": "opponent"
+            }
+          ],
+          "minions": [
+            {
+              "atk": 5,
+              "card_id": "BG36_101",
+              "golden": false,
+              "health": 4,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 5,
+              "card_id": "BG36_101",
+              "golden": false,
+              "health": 4,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 2,
+              "side": "own"
+            },
+            {
+              "atk": 15,
+              "card_id": "BGS_119",
+              "golden": false,
+              "health": 15,
+              "keywords": [
+                "divine_shield",
+                "windfury"
+              ],
+              "position": 3,
+              "side": "own"
+            },
+            {
+              "atk": 10,
+              "card_id": "BG36_345",
+              "golden": false,
+              "health": 11,
+              "keywords": [],
+              "position": 4,
+              "side": "own"
+            },
+            {
+              "atk": 2,
+              "card_id": "BGS_119",
+              "golden": false,
+              "health": 1,
+              "keywords": [
+                "divine_shield",
+                "windfury"
+              ],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 5,
+              "card_id": "BG34_170t3",
+              "golden": false,
+              "health": 5,
+              "keywords": [],
+              "position": 2,
+              "side": "opponent"
+            },
+            {
+              "atk": 5,
+              "card_id": "BG34_170t3",
+              "golden": false,
+              "health": 5,
+              "keywords": [],
+              "position": 3,
+              "side": "opponent"
+            },
+            {
+              "atk": 1,
+              "card_id": "BG24_715",
+              "golden": false,
+              "health": 1,
+              "keywords": [],
+              "position": 4,
+              "side": "opponent"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG31_149",
+              "golden": false,
+              "health": 3,
+              "keywords": [
+                "taunt"
+              ],
+              "position": 5,
+              "side": "opponent"
+            },
+            {
+              "atk": 5,
+              "card_id": "BG34_405",
+              "golden": false,
+              "health": 4,
+              "keywords": [],
+              "position": 6,
+              "side": "opponent"
+            }
+          ],
+          "start": 10
+        },
         "result": "won"
       },
       {
@@ -1080,6 +1836,441 @@
           3
         ],
         "own_health_after": 40,
+        "replay": {
+          "complete": true,
+          "events": [
+            {
+              "attacker": 4,
+              "defender": 1,
+              "kind": "attack"
+            },
+            {
+              "amount": 6,
+              "health": 3,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "kind": "shield",
+              "minion": 4,
+              "on": false
+            },
+            {
+              "kind": "death",
+              "minion": 1
+            },
+            {
+              "card_id": "BG36_101",
+              "kind": "trigger",
+              "side": "own",
+              "source": 1,
+              "trigger": "deathrattle"
+            },
+            {
+              "attacker": 4,
+              "defender": 2,
+              "kind": "attack"
+            },
+            {
+              "kind": "shield",
+              "minion": 2,
+              "on": false
+            },
+            {
+              "amount": 20,
+              "health": -12,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "kind": "death",
+              "minion": 4
+            },
+            {
+              "kind": "summon",
+              "minion": 11
+            },
+            {
+              "amount": 5,
+              "health": 1,
+              "kind": "damage",
+              "minion": 11
+            },
+            {
+              "attacker": 0,
+              "defender": 9,
+              "kind": "attack"
+            },
+            {
+              "amount": 7,
+              "health": -1,
+              "kind": "damage",
+              "minion": 9
+            },
+            {
+              "amount": 2,
+              "health": 4,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "kind": "death",
+              "minion": 9
+            },
+            {
+              "attacker": 11,
+              "defender": 3,
+              "kind": "attack"
+            },
+            {
+              "amount": 4,
+              "health": 9,
+              "kind": "damage",
+              "minion": 3
+            },
+            {
+              "amount": 12,
+              "health": -11,
+              "kind": "damage",
+              "minion": 11
+            },
+            {
+              "kind": "death",
+              "minion": 11
+            },
+            {
+              "attacker": 2,
+              "defender": 8,
+              "kind": "attack"
+            },
+            {
+              "amount": 20,
+              "health": -14,
+              "kind": "damage",
+              "minion": 8
+            },
+            {
+              "amount": 2,
+              "health": 18,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "kind": "death",
+              "minion": 8
+            },
+            {
+              "attacker": 2,
+              "defender": 5,
+              "kind": "attack"
+            },
+            {
+              "amount": 20,
+              "health": -16,
+              "kind": "damage",
+              "minion": 5
+            },
+            {
+              "amount": 2,
+              "health": 16,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "kind": "death",
+              "minion": 5
+            },
+            {
+              "attacker": 6,
+              "defender": 0,
+              "kind": "attack"
+            },
+            {
+              "amount": 2,
+              "health": 2,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "amount": 7,
+              "health": -3,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "kind": "death",
+              "minion": 6
+            },
+            {
+              "attacker": 3,
+              "defender": 10,
+              "kind": "attack"
+            },
+            {
+              "amount": 12,
+              "health": 7,
+              "kind": "damage",
+              "minion": 10
+            },
+            {
+              "amount": 17,
+              "health": -8,
+              "kind": "damage",
+              "minion": 3
+            },
+            {
+              "kind": "death",
+              "minion": 3
+            },
+            {
+              "attacker": 7,
+              "defender": 0,
+              "kind": "attack"
+            },
+            {
+              "amount": 3,
+              "health": -1,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "amount": 7,
+              "health": -3,
+              "kind": "damage",
+              "minion": 7
+            },
+            {
+              "kind": "death",
+              "minion": 7
+            },
+            {
+              "kind": "death",
+              "minion": 0
+            },
+            {
+              "card_id": "BG36_101",
+              "kind": "trigger",
+              "side": "own",
+              "source": 0,
+              "trigger": "deathrattle"
+            },
+            {
+              "attacker": 2,
+              "defender": 10,
+              "kind": "attack"
+            },
+            {
+              "amount": 20,
+              "health": -13,
+              "kind": "damage",
+              "minion": 10
+            },
+            {
+              "amount": 17,
+              "health": -1,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "kind": "death",
+              "minion": 10
+            },
+            {
+              "kind": "death",
+              "minion": 2
+            },
+            {
+              "kind": "summon",
+              "minion": 12
+            },
+            {
+              "kind": "summon",
+              "minion": 13
+            },
+            {
+              "kind": "summon",
+              "minion": 14
+            },
+            {
+              "kind": "summon",
+              "minion": 15
+            }
+          ],
+          "minions": [
+            {
+              "atk": 7,
+              "card_id": "BG36_101",
+              "golden": false,
+              "health": 6,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 7,
+              "card_id": "BG36_101",
+              "golden": false,
+              "health": 9,
+              "keywords": [
+                "taunt",
+                "deathrattle"
+              ],
+              "position": 2,
+              "side": "own"
+            },
+            {
+              "atk": 20,
+              "card_id": "BGS_119",
+              "golden": false,
+              "health": 20,
+              "keywords": [
+                "divine_shield",
+                "windfury"
+              ],
+              "position": 3,
+              "side": "own"
+            },
+            {
+              "atk": 12,
+              "card_id": "BG36_345",
+              "golden": false,
+              "health": 13,
+              "keywords": [],
+              "position": 4,
+              "side": "own"
+            },
+            {
+              "atk": 6,
+              "card_id": "BG31_149_G",
+              "golden": true,
+              "health": 8,
+              "keywords": [
+                "taunt",
+                "divine_shield",
+                "reborn",
+                "venomous",
+                "windfury",
+                "stealth"
+              ],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG30_123",
+              "golden": false,
+              "health": 4,
+              "keywords": [],
+              "position": 2,
+              "side": "opponent"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG30_123",
+              "golden": false,
+              "health": 4,
+              "keywords": [],
+              "position": 3,
+              "side": "opponent"
+            },
+            {
+              "atk": 3,
+              "card_id": "BG28_550",
+              "golden": false,
+              "health": 4,
+              "keywords": [],
+              "position": 4,
+              "side": "opponent"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG29_300",
+              "golden": false,
+              "health": 6,
+              "keywords": [
+                "taunt"
+              ],
+              "position": 5,
+              "side": "opponent"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG29_300",
+              "golden": false,
+              "health": 6,
+              "keywords": [
+                "taunt"
+              ],
+              "position": 6,
+              "side": "opponent"
+            },
+            {
+              "atk": 17,
+              "card_id": "BG_LOE_077",
+              "golden": false,
+              "health": 19,
+              "keywords": [],
+              "position": 7,
+              "side": "opponent"
+            },
+            {
+              "atk": 4,
+              "card_id": "BG31_149_G",
+              "golden": true,
+              "health": 6,
+              "keywords": [],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 7,
+              "card_id": "BG36_101",
+              "golden": false,
+              "health": 6,
+              "keywords": [
+                "deathrattle"
+              ],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 7,
+              "card_id": "BG36_101",
+              "golden": false,
+              "health": 9,
+              "keywords": [
+                "taunt",
+                "deathrattle"
+              ],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 20,
+              "card_id": "BGS_119",
+              "golden": false,
+              "health": 20,
+              "keywords": [
+                "divine_shield",
+                "windfury"
+              ],
+              "position": 0,
+              "side": "own"
+            },
+            {
+              "atk": 12,
+              "card_id": "BG36_345",
+              "golden": false,
+              "health": 13,
+              "keywords": [],
+              "position": 0,
+              "side": "own"
+            }
+          ],
+          "start": 11
+        },
         "result": "tie"
       },
       {
@@ -1237,6 +2428,363 @@
           6
         ],
         "own_health_after": 27,
+        "replay": {
+          "complete": true,
+          "events": [
+            {
+              "attacker": 5,
+              "defender": 1,
+              "kind": "attack"
+            },
+            {
+              "amount": 15,
+              "health": 3,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "kind": "shield",
+              "minion": 5,
+              "on": false
+            },
+            {
+              "attacker": 5,
+              "defender": 1,
+              "kind": "attack"
+            },
+            {
+              "amount": 15,
+              "health": -12,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "amount": 16,
+              "health": 13,
+              "kind": "damage",
+              "minion": 5
+            },
+            {
+              "kind": "death",
+              "minion": 1
+            },
+            {
+              "card_id": "BG36_101_G",
+              "kind": "trigger",
+              "side": "own",
+              "source": 1,
+              "trigger": "deathrattle"
+            },
+            {
+              "attacker": 0,
+              "defender": 11,
+              "kind": "attack"
+            },
+            {
+              "amount": 12,
+              "health": -10,
+              "kind": "damage",
+              "minion": 11
+            },
+            {
+              "kind": "death",
+              "minion": 11
+            },
+            {
+              "attacker": 6,
+              "defender": 0,
+              "kind": "attack"
+            },
+            {
+              "amount": 120,
+              "health": -111,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "kind": "shield",
+              "minion": 6,
+              "on": false
+            },
+            {
+              "kind": "death",
+              "minion": 0
+            },
+            {
+              "card_id": "BG23_017",
+              "kind": "trigger",
+              "side": "own",
+              "source": 0,
+              "trigger": "deathrattle"
+            },
+            {
+              "attacker": 6,
+              "defender": 4,
+              "kind": "attack"
+            },
+            {
+              "amount": 120,
+              "health": -104,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "amount": 14,
+              "health": 27,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "kind": "death",
+              "minion": 4
+            },
+            {
+              "attacker": 2,
+              "defender": 10,
+              "kind": "attack"
+            },
+            {
+              "kind": "shield",
+              "minion": 10,
+              "on": false
+            },
+            {
+              "kind": "shield",
+              "minion": 2,
+              "on": false
+            },
+            {
+              "attacker": 2,
+              "defender": 10,
+              "kind": "attack"
+            },
+            {
+              "amount": 20,
+              "health": -12,
+              "kind": "damage",
+              "minion": 10
+            },
+            {
+              "amount": 8,
+              "health": 12,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "kind": "death",
+              "minion": 10
+            },
+            {
+              "card_id": "BG29_611",
+              "kind": "trigger",
+              "side": "opponent",
+              "source": 10,
+              "trigger": "deathrattle"
+            },
+            {
+              "kind": "summon",
+              "minion": 12
+            },
+            {
+              "attacker": 7,
+              "defender": 3,
+              "kind": "attack"
+            },
+            {
+              "amount": 4,
+              "health": 6,
+              "kind": "damage",
+              "minion": 3
+            },
+            {
+              "amount": 5,
+              "health": -1,
+              "kind": "damage",
+              "minion": 7
+            },
+            {
+              "kind": "death",
+              "minion": 7
+            },
+            {
+              "kind": "death",
+              "minion": 3
+            },
+            {
+              "attacker": 2,
+              "defender": 6,
+              "kind": "attack"
+            },
+            {
+              "amount": 20,
+              "health": 7,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "amount": 120,
+              "health": -108,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "kind": "death",
+              "minion": 2
+            },
+            {
+              "amount": 10,
+              "kind": "hero_damage",
+              "side": "own"
+            }
+          ],
+          "minions": [
+            {
+              "atk": 12,
+              "card_id": "BG23_017",
+              "golden": false,
+              "health": 9,
+              "keywords": [
+                "taunt",
+                "deathrattle"
+              ],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 16,
+              "card_id": "BG36_101_G",
+              "golden": true,
+              "health": 18,
+              "keywords": [
+                "taunt",
+                "deathrattle"
+              ],
+              "position": 2,
+              "side": "own"
+            },
+            {
+              "atk": 20,
+              "card_id": "BGS_119",
+              "golden": false,
+              "health": 20,
+              "keywords": [
+                "divine_shield",
+                "windfury"
+              ],
+              "position": 3,
+              "side": "own"
+            },
+            {
+              "atk": 5,
+              "card_id": "BG30_121",
+              "golden": false,
+              "health": 10,
+              "keywords": [],
+              "position": 4,
+              "side": "own"
+            },
+            {
+              "atk": 14,
+              "card_id": "BG36_345",
+              "golden": false,
+              "health": 16,
+              "keywords": [],
+              "position": 5,
+              "side": "own"
+            },
+            {
+              "atk": 15,
+              "card_id": "BG20_101",
+              "golden": false,
+              "health": 29,
+              "keywords": [
+                "divine_shield",
+                "windfury",
+                "rally"
+              ],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 120,
+              "card_id": "BG31_326_G",
+              "golden": true,
+              "health": 41,
+              "keywords": [
+                "divine_shield",
+                "windfury"
+              ],
+              "position": 2,
+              "side": "opponent"
+            },
+            {
+              "atk": 4,
+              "card_id": "BG31_320_G",
+              "golden": true,
+              "health": 4,
+              "keywords": [
+                "venomous",
+                "windfury"
+              ],
+              "position": 3,
+              "side": "opponent"
+            },
+            {
+              "atk": 4,
+              "card_id": "BG31_327",
+              "golden": false,
+              "health": 5,
+              "keywords": [
+                "stealth"
+              ],
+              "position": 4,
+              "side": "opponent"
+            },
+            {
+              "atk": 4,
+              "card_id": "BG36_332",
+              "golden": false,
+              "health": 4,
+              "keywords": [],
+              "position": 5,
+              "side": "opponent"
+            },
+            {
+              "atk": 8,
+              "card_id": "BG29_611",
+              "golden": false,
+              "health": 8,
+              "keywords": [
+                "taunt",
+                "divine_shield",
+                "deathrattle"
+              ],
+              "position": 6,
+              "side": "opponent"
+            },
+            {
+              "atk": 0,
+              "card_id": "BGFYM_002t",
+              "golden": false,
+              "health": 2,
+              "keywords": [
+                "taunt"
+              ],
+              "position": 7,
+              "side": "opponent"
+            },
+            {
+              "atk": 1,
+              "card_id": "BG_BOT_312t",
+              "golden": false,
+              "health": 1,
+              "keywords": [],
+              "position": 6,
+              "side": "opponent"
+            }
+          ],
+          "start": 12
+        },
         "result": "lost"
       },
       {
@@ -1400,6 +2948,437 @@
           1
         ],
         "own_health_after": 12,
+        "replay": {
+          "complete": true,
+          "events": [
+            {
+              "attacker": 7,
+              "defender": 2,
+              "kind": "attack"
+            },
+            {
+              "amount": 63,
+              "health": -51,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "kind": "shield",
+              "minion": 7,
+              "on": false
+            },
+            {
+              "kind": "death",
+              "minion": 2
+            },
+            {
+              "card_id": "BG23_017",
+              "kind": "trigger",
+              "side": "own",
+              "source": 2,
+              "trigger": "deathrattle"
+            },
+            {
+              "card_id": "BG23_017",
+              "kind": "trigger",
+              "side": "own",
+              "source": 2,
+              "trigger": "deathrattle"
+            },
+            {
+              "attacker": 7,
+              "defender": 3,
+              "kind": "attack"
+            },
+            {
+              "atk": 50,
+              "health": 38,
+              "kind": "stats",
+              "minion": 1
+            },
+            {
+              "amount": 63,
+              "health": -45,
+              "kind": "damage",
+              "minion": 3
+            },
+            {
+              "amount": 16,
+              "health": 24,
+              "kind": "damage",
+              "minion": 7
+            },
+            {
+              "kind": "death",
+              "minion": 3
+            },
+            {
+              "card_id": "BG36_101_G",
+              "kind": "trigger",
+              "side": "own",
+              "source": 3,
+              "trigger": "deathrattle"
+            },
+            {
+              "card_id": "BG36_101_G",
+              "kind": "trigger",
+              "side": "own",
+              "source": 3,
+              "trigger": "deathrattle"
+            },
+            {
+              "atk": 54,
+              "health": 42,
+              "kind": "stats",
+              "minion": 1
+            },
+            {
+              "attacker": 0,
+              "defender": 9,
+              "kind": "attack"
+            },
+            {
+              "amount": 5,
+              "health": 47,
+              "kind": "damage",
+              "minion": 9
+            },
+            {
+              "amount": 67,
+              "health": -61,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "kind": "death",
+              "minion": 0
+            },
+            {
+              "attacker": 8,
+              "defender": 6,
+              "kind": "attack"
+            },
+            {
+              "amount": 5,
+              "health": 5,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "amount": 3,
+              "health": 0,
+              "kind": "damage",
+              "minion": 8
+            },
+            {
+              "kind": "death",
+              "minion": 8
+            },
+            {
+              "attacker": 1,
+              "defender": 9,
+              "kind": "attack"
+            },
+            {
+              "atk": 90,
+              "health": 62,
+              "kind": "stats",
+              "minion": 1
+            },
+            {
+              "amount": 90,
+              "health": -43,
+              "kind": "damage",
+              "minion": 9
+            },
+            {
+              "amount": 67,
+              "health": -5,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "kind": "death",
+              "minion": 9
+            },
+            {
+              "kind": "death",
+              "minion": 1
+            },
+            {
+              "kind": "summon",
+              "minion": 14
+            },
+            {
+              "amount": 5,
+              "health": 1,
+              "kind": "damage",
+              "minion": 14
+            },
+            {
+              "attacker": 14,
+              "defender": 5,
+              "kind": "attack"
+            },
+            {
+              "amount": 2,
+              "health": 11,
+              "kind": "damage",
+              "minion": 5
+            },
+            {
+              "amount": 7,
+              "health": -6,
+              "kind": "damage",
+              "minion": 14
+            },
+            {
+              "kind": "death",
+              "minion": 14
+            },
+            {
+              "attacker": 4,
+              "defender": 13,
+              "kind": "attack"
+            },
+            {
+              "amount": 22,
+              "health": 20,
+              "kind": "damage",
+              "minion": 13
+            },
+            {
+              "kind": "shield",
+              "minion": 4,
+              "on": false
+            },
+            {
+              "attacker": 4,
+              "defender": 10,
+              "kind": "attack"
+            },
+            {
+              "amount": 22,
+              "health": 57,
+              "kind": "damage",
+              "minion": 10
+            },
+            {
+              "amount": 110,
+              "health": -87,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "kind": "death",
+              "minion": 4
+            },
+            {
+              "attacker": 10,
+              "defender": 5,
+              "kind": "attack"
+            },
+            {
+              "amount": 110,
+              "health": -99,
+              "kind": "damage",
+              "minion": 5
+            },
+            {
+              "amount": 7,
+              "health": 50,
+              "kind": "damage",
+              "minion": 10
+            },
+            {
+              "kind": "death",
+              "minion": 5
+            },
+            {
+              "attacker": 6,
+              "defender": 13,
+              "kind": "attack"
+            },
+            {
+              "amount": 3,
+              "health": 17,
+              "kind": "damage",
+              "minion": 13
+            },
+            {
+              "amount": 58,
+              "health": -53,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "kind": "death",
+              "minion": 6
+            },
+            {
+              "amount": 15,
+              "kind": "hero_damage",
+              "side": "own"
+            }
+          ],
+          "minions": [
+            {
+              "atk": 5,
+              "card_id": "BG28_582",
+              "golden": false,
+              "health": 6,
+              "keywords": [],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 46,
+              "card_id": "BG33_883",
+              "golden": false,
+              "health": 34,
+              "keywords": [
+                "rally"
+              ],
+              "position": 2,
+              "side": "own"
+            },
+            {
+              "atk": 14,
+              "card_id": "BG23_017",
+              "golden": false,
+              "health": 12,
+              "keywords": [
+                "taunt",
+                "deathrattle"
+              ],
+              "position": 3,
+              "side": "own"
+            },
+            {
+              "atk": 16,
+              "card_id": "BG36_101_G",
+              "golden": true,
+              "health": 18,
+              "keywords": [
+                "taunt",
+                "deathrattle"
+              ],
+              "position": 4,
+              "side": "own"
+            },
+            {
+              "atk": 22,
+              "card_id": "BGS_119",
+              "golden": false,
+              "health": 23,
+              "keywords": [
+                "divine_shield",
+                "windfury"
+              ],
+              "position": 5,
+              "side": "own"
+            },
+            {
+              "atk": 7,
+              "card_id": "BG30_121",
+              "golden": false,
+              "health": 13,
+              "keywords": [],
+              "position": 6,
+              "side": "own"
+            },
+            {
+              "atk": 3,
+              "card_id": "BG25_354",
+              "golden": false,
+              "health": 10,
+              "keywords": [],
+              "position": 7,
+              "side": "own"
+            },
+            {
+              "atk": 63,
+              "card_id": "BGS_119",
+              "golden": false,
+              "health": 40,
+              "keywords": [
+                "divine_shield",
+                "windfury"
+              ],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 5,
+              "card_id": "BG31_148",
+              "golden": false,
+              "health": 3,
+              "keywords": [],
+              "position": 2,
+              "side": "opponent"
+            },
+            {
+              "atk": 67,
+              "card_id": "BG29_300",
+              "golden": false,
+              "health": 52,
+              "keywords": [
+                "taunt",
+                "reborn"
+              ],
+              "position": 3,
+              "side": "opponent"
+            },
+            {
+              "atk": 110,
+              "card_id": "BG36_853",
+              "golden": false,
+              "health": 79,
+              "keywords": [],
+              "position": 4,
+              "side": "opponent"
+            },
+            {
+              "atk": 45,
+              "card_id": "BG36_701",
+              "golden": false,
+              "health": 35,
+              "keywords": [],
+              "position": 5,
+              "side": "opponent"
+            },
+            {
+              "atk": 57,
+              "card_id": "BG_LOE_077",
+              "golden": false,
+              "health": 40,
+              "keywords": [],
+              "position": 6,
+              "side": "opponent"
+            },
+            {
+              "atk": 58,
+              "card_id": "BG36_346",
+              "golden": false,
+              "health": 42,
+              "keywords": [],
+              "position": 7,
+              "side": "opponent"
+            },
+            {
+              "atk": 2,
+              "card_id": "BG29_300",
+              "golden": false,
+              "health": 6,
+              "keywords": [
+                "taunt"
+              ],
+              "position": 2,
+              "side": "opponent"
+            }
+          ],
+          "start": 14
+        },
         "result": "lost"
       },
       {
@@ -1569,6 +3548,397 @@
           5
         ],
         "own_health_after": 0,
+        "replay": {
+          "complete": true,
+          "events": [
+            {
+              "attacker": 0,
+              "defender": 12,
+              "kind": "attack"
+            },
+            {
+              "kind": "shield",
+              "minion": 12,
+              "on": false
+            },
+            {
+              "kind": "shield",
+              "minion": 0,
+              "on": false
+            },
+            {
+              "attacker": 0,
+              "defender": 12,
+              "kind": "attack"
+            },
+            {
+              "amount": 113,
+              "health": -42,
+              "kind": "damage",
+              "minion": 12
+            },
+            {
+              "amount": 98,
+              "health": -29,
+              "kind": "damage",
+              "minion": 0
+            },
+            {
+              "kind": "death",
+              "minion": 12
+            },
+            {
+              "kind": "death",
+              "minion": 0
+            },
+            {
+              "attacker": 7,
+              "defender": 3,
+              "kind": "attack"
+            },
+            {
+              "amount": 44,
+              "health": -27,
+              "kind": "damage",
+              "minion": 3
+            },
+            {
+              "amount": 18,
+              "health": 50,
+              "kind": "damage",
+              "minion": 7
+            },
+            {
+              "kind": "death",
+              "minion": 3
+            },
+            {
+              "card_id": "BG23_017",
+              "kind": "trigger",
+              "side": "own",
+              "source": 3,
+              "trigger": "deathrattle"
+            },
+            {
+              "card_id": "BG23_017",
+              "kind": "trigger",
+              "side": "own",
+              "source": 3,
+              "trigger": "deathrattle"
+            },
+            {
+              "attacker": 1,
+              "defender": 13,
+              "kind": "attack"
+            },
+            {
+              "atk": 285,
+              "health": 174,
+              "kind": "stats",
+              "minion": 1
+            },
+            {
+              "amount": 285,
+              "health": -257,
+              "kind": "damage",
+              "minion": 13
+            },
+            {
+              "amount": 40,
+              "health": 134,
+              "kind": "damage",
+              "minion": 1
+            },
+            {
+              "kind": "death",
+              "minion": 13
+            },
+            {
+              "kind": "death",
+              "minion": 1
+            },
+            {
+              "attacker": 8,
+              "defender": 5,
+              "kind": "attack"
+            },
+            {
+              "amount": 47,
+              "health": -20,
+              "kind": "damage",
+              "minion": 5
+            },
+            {
+              "amount": 15,
+              "health": 42,
+              "kind": "damage",
+              "minion": 8
+            },
+            {
+              "kind": "death",
+              "minion": 5
+            },
+            {
+              "attacker": 2,
+              "defender": 11,
+              "kind": "attack"
+            },
+            {
+              "amount": 9,
+              "health": 20,
+              "kind": "damage",
+              "minion": 11
+            },
+            {
+              "amount": 35,
+              "health": -24,
+              "kind": "damage",
+              "minion": 2
+            },
+            {
+              "kind": "death",
+              "minion": 2
+            },
+            {
+              "attacker": 9,
+              "defender": 4,
+              "kind": "attack"
+            },
+            {
+              "amount": 54,
+              "health": -34,
+              "kind": "damage",
+              "minion": 4
+            },
+            {
+              "amount": 18,
+              "health": 23,
+              "kind": "damage",
+              "minion": 9
+            },
+            {
+              "kind": "death",
+              "minion": 4
+            },
+            {
+              "card_id": "BG36_101_G",
+              "kind": "trigger",
+              "side": "own",
+              "source": 4,
+              "trigger": "deathrattle"
+            },
+            {
+              "card_id": "BG36_101_G",
+              "kind": "trigger",
+              "side": "own",
+              "source": 4,
+              "trigger": "deathrattle"
+            },
+            {
+              "attacker": 6,
+              "defender": 11,
+              "kind": "attack"
+            },
+            {
+              "amount": 88,
+              "health": -68,
+              "kind": "damage",
+              "minion": 11
+            },
+            {
+              "amount": 35,
+              "health": 25,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "kind": "death",
+              "minion": 11
+            },
+            {
+              "attacker": 10,
+              "defender": 6,
+              "kind": "attack"
+            },
+            {
+              "amount": 45,
+              "health": -20,
+              "kind": "damage",
+              "minion": 6
+            },
+            {
+              "amount": 88,
+              "health": -39,
+              "kind": "damage",
+              "minion": 10
+            },
+            {
+              "kind": "death",
+              "minion": 10
+            },
+            {
+              "kind": "death",
+              "minion": 6
+            },
+            {
+              "amount": 15,
+              "kind": "hero_damage",
+              "side": "own"
+            }
+          ],
+          "minions": [
+            {
+              "atk": 113,
+              "card_id": "BG36_331",
+              "golden": false,
+              "health": 69,
+              "keywords": [
+                "divine_shield",
+                "windfury",
+                "rally"
+              ],
+              "position": 1,
+              "side": "own"
+            },
+            {
+              "atk": 229,
+              "card_id": "BG33_883",
+              "golden": false,
+              "health": 142,
+              "keywords": [
+                "rally"
+              ],
+              "position": 2,
+              "side": "own"
+            },
+            {
+              "atk": 9,
+              "card_id": "BG28_582",
+              "golden": false,
+              "health": 11,
+              "keywords": [],
+              "position": 3,
+              "side": "own"
+            },
+            {
+              "atk": 18,
+              "card_id": "BG23_017",
+              "golden": false,
+              "health": 17,
+              "keywords": [
+                "taunt",
+                "deathrattle"
+              ],
+              "position": 4,
+              "side": "own"
+            },
+            {
+              "atk": 18,
+              "card_id": "BG36_101_G",
+              "golden": true,
+              "health": 20,
+              "keywords": [
+                "taunt",
+                "deathrattle"
+              ],
+              "position": 5,
+              "side": "own"
+            },
+            {
+              "atk": 15,
+              "card_id": "BG30_121_G",
+              "golden": true,
+              "health": 27,
+              "keywords": [
+                "taunt"
+              ],
+              "position": 6,
+              "side": "own"
+            },
+            {
+              "atk": 88,
+              "card_id": "BG25_354",
+              "golden": false,
+              "health": 60,
+              "keywords": [],
+              "position": 7,
+              "side": "own"
+            },
+            {
+              "atk": 44,
+              "card_id": "BG33_318",
+              "golden": false,
+              "health": 68,
+              "keywords": [
+                "venomous",
+                "rally"
+              ],
+              "position": 1,
+              "side": "opponent"
+            },
+            {
+              "atk": 47,
+              "card_id": "BG31_148",
+              "golden": false,
+              "health": 57,
+              "keywords": [],
+              "position": 2,
+              "side": "opponent"
+            },
+            {
+              "atk": 54,
+              "card_id": "BG34_170t",
+              "golden": false,
+              "health": 41,
+              "keywords": [],
+              "position": 3,
+              "side": "opponent"
+            },
+            {
+              "atk": 45,
+              "card_id": "BG34_170t2",
+              "golden": false,
+              "health": 49,
+              "keywords": [],
+              "position": 4,
+              "side": "opponent"
+            },
+            {
+              "atk": 35,
+              "card_id": "BG34_170t2",
+              "golden": false,
+              "health": 29,
+              "keywords": [],
+              "position": 5,
+              "side": "opponent"
+            },
+            {
+              "atk": 98,
+              "card_id": "BG36_372",
+              "golden": false,
+              "health": 71,
+              "keywords": [
+                "taunt",
+                "divine_shield"
+              ],
+              "position": 6,
+              "side": "opponent"
+            },
+            {
+              "atk": 40,
+              "card_id": "BG31_149",
+              "golden": false,
+              "health": 28,
+              "keywords": [
+                "taunt",
+                "venomous"
+              ],
+              "position": 7,
+              "side": "opponent"
+            }
+          ],
+          "start": 14
+        },
         "result": "lost"
       }
     ],

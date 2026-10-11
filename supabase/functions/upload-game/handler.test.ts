@@ -325,7 +325,7 @@ Deno.test("a body over 64 KiB is 413, with or without Content-Length", async () 
   assertEquals(res.status, 413);
 });
 
-Deno.test("a gzip bomb stops at 512 KiB", async () => {
+Deno.test("a gzip bomb stops at 1 MiB", async () => {
   const bomb = await gzip(new Uint8Array(20 * MAX_INFLATED));
   assertEquals(bomb.length < MAX_BODY, true, "setup: the bomb fits in the body limit");
   const api = fakeApi();

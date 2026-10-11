@@ -9,21 +9,36 @@
 // cargo test ties to the parser's report (T-104h, D-047): a parser that
 // writes a new key fails CI until the key is listed there and checked here.
 
+import {
+  bool,
+  CARD_ID,
+  cardId,
+  int,
+  Invalid,
+  isObject,
+  keywords,
+  list,
+  MAX_INT,
+  type Obj,
+  optInt,
+  shape,
+} from "./checks.ts";
+import { replay } from "./replay.ts";
 import contract from "./report_keys.json" with { type: "json" };
 
 /**
  * Goes up by one each time the validator starts accepting records it used to
  * refuse, or a field it checks changes meaning (6: parser revision 6 reads
  * `golden` from PREMIUM, so always-golden cards and golden tokens are golden;
- * same key and type, D-061). Every answer carries it, and the desktop app
+ * same key and type, D-061; 7: each round's combat replay, parser revision 8,
+ * T-215, D-099). Every answer carries it, and the desktop app
  * retries a game this server refused once when it sees a higher number (D-047).
  */
-export const VALIDATOR_VERSION = 6;
+export const VALIDATOR_VERSION = 7;
 
 export const SESSION_PATTERN = /^Hearthstone_(\d{4})_(\d{2})_(\d{2})_\d{2}_\d{2}_\d{2}$/;
 const PATH_PATTERN = /\/v1\/games\/(Hearthstone_\d{4}(?:_\d{2}){5})\/([1-9][0-9]{0,3})$/;
 const MAX_INDEX = 1000;
-const CARD_ID = /^[A-Za-z0-9_]{1,64}$/;
 const TRIBE = /^[A-Z0-9_]{1,32}$/;
 // Warnings and problems are short sentences the parser writes itself.
 const NOTE = /^[A-Za-z0-9 _:.()-]{1,160}$/;
@@ -35,7 +50,6 @@ const BATTLETAG = /[#＃﹟]\s*\d{3,6}/;
 // symbols and spaces; no markup, '@', '#' or control characters.
 const NAME = /^[\p{L}\p{M}\p{N}\p{P}\p{S}\p{Zs}]{1,64}$/u;
 const NAME_FORBIDDEN = /[<>#＃﹟@＠\\"]/;
-const MAX_INT = 2 ** 31 - 1;
 // Health maps: player id ("1"-"64") -> health + armor - damage, never below 0.
 const PLAYER_KEY = /^[1-9][0-9]?$/;
 const MAX_HEALTH = 100000;
@@ -72,16 +86,6 @@ const TURN_KEYS_SINCE_R4 = [
 // choices (discovers, trinket offers, Dark Gifts) and the game's Old God.
 // Older records have none of them, so none is required. Bounds are the
 // parser's (leaderboard.rs, discover.rs).
-const KEYWORDS = new Set([
-  "taunt",
-  "divine_shield",
-  "reborn",
-  "venomous",
-  "windfury",
-  "stealth",
-  "deathrattle",
-  "rally",
-]);
 const TRINKET_SLOTS = new Set(["first", "second", "hero_power"]);
 const MAX_CHANGES = 64;
 const MAX_TRIPLES = 1000;
@@ -153,6 +157,32 @@ const KEYS: Record<string, string[]> = {
     "opponents",
     "health_after",
     "result",
+    "replay",
+  ],
+  "report.rounds[].replay": ["minions", "start", "events", "complete"],
+  "report.rounds[].replay.minions[]": [
+    "side",
+    "card_id",
+    "atk",
+    "health",
+    "position",
+    "golden",
+    "keywords",
+  ],
+  "report.rounds[].replay.events[]": [
+    "kind",
+    "attacker",
+    "defender",
+    "minion",
+    "amount",
+    "health",
+    "on",
+    "atk",
+    "trigger",
+    "side",
+    "card_id",
+    "source",
+    "hero",
   ],
   "report.rounds[].entries[]": ["side", "player_id", "hero", "board"],
   "report.rounds[].entries[].board[]": [
@@ -242,52 +272,6 @@ export function parsePath(url: string): { session: string; index: number } | nul
   return index <= MAX_INDEX ? { session: m[1], index } : null;
 }
 
-class Invalid extends Error {
-  constructor(readonly field: string) {
-    super(field);
-  }
-}
-
-type Obj = Record<string, unknown>;
-
-function isObject(v: unknown): v is Obj {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
-
-/** The object's keys must all be in `allowed`; those in `required` must exist. */
-function shape(v: unknown, field: string, allowed: string[], required: string[] = []): Obj {
-  if (!isObject(v)) throw new Invalid(field);
-  for (const key of Object.keys(v)) {
-    if (!allowed.includes(key)) throw new Invalid(field ? `${field}.${key}` : key);
-  }
-  for (const key of required) {
-    if (!(key in v) || v[key] === undefined) throw new Invalid(field ? `${field}.${key}` : key);
-  }
-  return v;
-}
-
-function int(v: unknown, field: string, min: number, max: number): number {
-  if (typeof v !== "number" || !Number.isInteger(v) || v < min || v > max) {
-    throw new Invalid(field);
-  }
-  return v;
-}
-
-function optInt(v: unknown, field: string, min: number, max: number): number | null {
-  return v === null || v === undefined ? null : int(v, field, min, max);
-}
-
-function cardId(v: unknown, field: string): string | null {
-  if (v === null || v === undefined) return null;
-  if (typeof v !== "string" || !CARD_ID.test(v)) throw new Invalid(field);
-  return v;
-}
-
-function list(v: unknown, field: string, max: number): unknown[] {
-  if (!Array.isArray(v) || v.length > max) throw new Invalid(field);
-  return v;
-}
-
 function notes(v: unknown, field: string): void {
   if (v === undefined) return;
   list(v, field, 16).forEach((s, i) => {
@@ -307,15 +291,7 @@ function minion(v: unknown, field: string): void {
   if (m.golden !== undefined && typeof m.golden !== "boolean") {
     throw new Invalid(`${field}.golden`);
   }
-  if (m.keywords !== undefined) {
-    const words = list(m.keywords, `${field}.keywords`, KEYWORDS.size);
-    if (
-      words.some((w) => typeof w !== "string" || !KEYWORDS.has(w)) ||
-      new Set(words).size !== words.length
-    ) {
-      throw new Invalid(`${field}.keywords`);
-    }
-  }
+  if (m.keywords !== undefined) keywords(m.keywords, `${field}.keywords`);
 }
 
 /** Hero card ids and player ids the report shows, outside the health maps. */
@@ -353,6 +329,7 @@ function round(v: unknown, field: string, seen: Seen): Obj {
       optInt(p, `${field}.opponents[${i}]`, 1, 64)
     );
   }
+  replay(r.replay, `${field}.replay`, KEYS, (id) => seen.heroes.add(id));
   return r;
 }
 
@@ -367,10 +344,6 @@ function healthMap(v: unknown, field: string, players: Set<number>): void {
     if (!PLAYER_KEY.test(pid) || !players.has(Number(pid))) throw new Invalid(field);
     int(health, field, 0, MAX_HEALTH);
   }
-}
-
-function bool(v: unknown, field: string): void {
-  if (typeof v !== "boolean") throw new Invalid(field);
 }
 
 function cards(v: unknown, field: string): void {
