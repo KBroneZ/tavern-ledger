@@ -51,7 +51,7 @@ export const ES: Record<AccountKey, string> = {
     "Hasta 32 letras, dígitos, espacios, _ . o -. No es tu BattleTag. Se rechazan las palabras ofensivas y los nombres que parezcan oficiales.",
   "account.public": "Perfil público",
   "account.public.hint.before":
-    "Desactivado por defecto. Si lo activas, cualquiera puede encontrar tu perfil y ver tu nombre visible y todas las partidas que has subido, con todo detalle: héroe, puesto, modo, fecha, tribus ofrecidas y los tableros que viste. Con un nombre visible y suficientes partidas, también apareces en las",
+    "Desactivado por defecto. Si lo activas, cualquiera puede encontrar tu perfil y ver tu nombre visible y todas las partidas que has subido, con todo detalle: héroe, puesto, modo, fecha, tribus ofrecidas y los tableros que viste. Con un nombre visible y una partida terminada, también apareces en las",
   "account.public.hint.link": "clasificaciones públicas",
   "account.public.hint.after":
     ". Nunca tu puntuación ni los nombres de otros jugadores. Si lo desactivas, dejas de aparecer en todas partes en cuanto guardes.",

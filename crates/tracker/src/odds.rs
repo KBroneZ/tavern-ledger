@@ -282,6 +282,7 @@ fn engine_minion(m: &LogMinion, facts: &dyn Fn(&str) -> Option<Facts>) -> Result
         tribes: f.tribes,
         tier: f.tier,
         base: Some(f.base),
+        gifts: Vec::new(), // Dark Gifts come from the log in T-528 (D-100).
         card_id: id,
     })
 }

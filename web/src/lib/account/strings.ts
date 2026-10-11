@@ -55,7 +55,7 @@ export const ACCOUNT_STRINGS = {
     "Up to 32 letters, digits, spaces, _ . or -. Not your BattleTag. Offensive words and names that look official are refused.",
   "account.public": "Public profile",
   "account.public.hint.before":
-    "Off by default. When on, anyone can find your profile and read your display name and every game you uploaded in full: hero, place, mode, date, tribes offered and the boards you saw. With a display name and enough games, you also appear on the",
+    "Off by default. When on, anyone can find your profile and read your display name and every game you uploaded in full: hero, place, mode, date, tribes offered and the boards you saw. With a display name and a finished game, you also appear on the",
   "account.public.hint.link": "public leaderboards",
   "account.public.hint.after":
     ". Never your rating or other players' names. Turning it off hides you everywhere as soon as you save.",

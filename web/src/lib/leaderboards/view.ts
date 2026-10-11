@@ -13,9 +13,10 @@ import {
   boardHow,
   boardTitle,
   BOARDS,
+  FEW_GAMES,
+  FEW_HERO_GAMES,
+  fewGames,
   formatValue,
-  MIN_GAMES,
-  MIN_HERO_GAMES,
   periodName,
   PERIODS,
   refreshedText,
@@ -46,6 +47,18 @@ function heroCell(hero: string | null): Cell {
   return { node: h("span", { class: "cell-hero" }, picture("hero", hero, name, HERO_PIC, true), h("span", { class: "hero-name" }, h("span", {}, name), id)) };
 }
 
+/** The "few games" mark after a value that rests on fewer games than its board's line. */
+export function fewMark(def: BoardDef): VNode {
+  const tip = def.key === "hero_avg_place" ? lt("few.tip.hero", { min: FEW_HERO_GAMES }) : lt("few.tip", { min: FEW_GAMES });
+  return h("span", { class: "mark-src mark-few", title: tip }, lt("few"));
+}
+
+/** The value, with the "few games" mark when it rests on few games. */
+function valueCell(def: BoardDef, row: BoardRow): Cell {
+  const value = formatValue(def, row.value);
+  return fewGames(row) ? { node: h("span", {}, value, fewMark(def)) } : value;
+}
+
 /** One table row: standing, the player linked to their public profile, (hero), value, games. */
 export function rowCells(def: BoardDef, row: BoardRow): Cell[] {
   const player: Cell = { node: h("a", { href: publicProfilePath(row.userId) }, row.name) };
@@ -53,23 +66,22 @@ export function rowCells(def: BoardDef, row: BoardRow): Cell[] {
     row.standing,
     player,
     ...(def.key === "hero_avg_place" ? [heroCell(row.hero)] : []),
-    formatValue(def, row.value),
+    valueCell(def, row),
     row.games,
   ];
 }
 
-/** The minimum a board needs, in words (the hero board also needs games with the hero). */
-function minimum(def: BoardDef, p: Period, kind: "how" | "empty"): string {
-  const vars = { period: periodName(p, true), min: MIN_GAMES, hero: MIN_HERO_GAMES };
-  if (def.key === "hero_avg_place") return lt(kind === "how" ? "board.how.min.hero" : "board.empty.body.hero", vars);
-  return lt(kind === "how" ? "board.how.min" : "board.empty.body", vars);
+/** What a board counts and when a row is marked "few games" (the hero board counts games with the hero). */
+function counted(def: BoardDef, p: Period): string {
+  const vars = { period: periodName(p, true), min: FEW_GAMES, hero: FEW_HERO_GAMES };
+  return lt(def.key === "hero_avg_place" ? "board.how.count.hero" : "board.how.count", vars);
 }
 
 function how(def: BoardDef, title: string, p: Period): VNode {
   return fold(
     { summary: lt("board.how"), context: title, compact: true },
     h("p", {}, boardHow(def)),
-    h("p", {}, minimum(def, p, "how")),
+    h("p", {}, counted(def, p)),
     h("p", {}, lt("board.how.ties")),
     h("p", {}, lt("board.how.source")),
   );
@@ -81,7 +93,7 @@ export function boardSection(def: BoardDef, rows: readonly BoardRow[], m: Mode, 
   const title = boardTitle(def, m);
   const body =
     rows.length === 0
-      ? stateBlock({ kind: "empty", title: lt("board.empty"), body: minimum(def, p, "empty") })
+      ? stateBlock({ kind: "empty", title: lt("board.empty"), body: lt("board.empty.body", { period: periodName(p, true) }) })
       : topTable({
           caption: lt("board.caption", { board: title, mode: t(`mode.${m}`), period: periodName(p, true) }),
           columns: columns(def, m),
@@ -128,12 +140,12 @@ export function updatedLine(refreshedAt: string | null): string {
   return time ? lt("page.updated", { time }) : lt("page.updated.never");
 }
 
-/** Who is listed, the minimums, the rebuild and where the data comes from. */
+/** Who is listed, the "few games" mark, the rebuild and where the data comes from. */
 export function aboutFold(): VNode {
   return fold(
     { summary: lt("about.summary") },
     h("p", {}, lt("about.who")),
-    h("p", {}, lt("about.min", { min: MIN_GAMES, hero: MIN_HERO_GAMES })),
+    h("p", {}, lt("about.min", { min: FEW_GAMES, hero: FEW_HERO_GAMES })),
     h("p", {}, lt("about.refresh")),
     h("p", {}, lt("about.data"), " ", h("a", { href: href("/privacy/#public-profiles-and-leaderboards") }, lt("about.privacy")), "."),
   );
