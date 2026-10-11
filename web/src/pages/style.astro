@@ -1,0 +1,257 @@
+---
+// The data pages' design system (T-501), every piece in every state, with
+// made-up data only: no real player, no game art. Not in the menu and kept
+// out of search engines.
+import Base from "../layouts/Base.astro";
+import "../styles/data.css";
+import { scriptsAllowed } from "../lib/config.ts";
+import { average, backing, compact, share, threshold, trend } from "../lib/data/format.ts";
+import { t } from "../lib/data/strings.ts";
+import StatTile from "../components/data/StatTile.astro";
+import TopTable, { type Cell } from "../components/data/TopTable.astro";
+import Fold from "../components/data/Fold.astro";
+import Switch from "../components/data/Switch.astro";
+import PlaceBadge from "../components/data/PlaceBadge.astro";
+import Picture from "../components/data/Picture.astro";
+import StateBlock from "../components/data/StateBlock.astro";
+import SourceMark from "../components/data/SourceMark.astro";
+import PlaceChart from "../components/data/PlaceChart.astro";
+import Sparkline from "../components/data/Sparkline.astro";
+import TurnBars, { type Turn } from "../components/data/TurnBars.astro";
+import DataScript from "../components/data/DataScript.astro";
+
+// Whether this build ships scripts; without them the switches stay hidden.
+const scripts = scriptsAllowed(import.meta.env, import.meta.env.DEV);
+
+// ---------- Made-up example data ----------
+
+const soloPlaces = [3, 1, 5, 2, 4, 7, 1, 3, 6, 2, 4, 8, 3, 2, 5, 1, 4, 3, null, 6, 2, 4, 3, 5, 1, 2, 7, 4, 3, 2, 4];
+const duosPlaces = [2, 1, 3, 2, 4, 1, 2, 3, 2, 1, 4, 2];
+const recent = soloPlaces.slice(-12);
+
+const heroes: { id: string; name: string; games: number; avg: number; top: number; best: number }[] = [
+  { id: "SAMPLE_HERO_01", name: "Lantern Keeper", games: 9, avg: 2.89, top: 7, best: 1 },
+  { id: "SAMPLE_HERO_02", name: "Brass Captain", games: 6, avg: 3.5, top: 4, best: 1 },
+  { id: "SAMPLE_HERO_03", name: "Moss Witch", games: 4, avg: 4.25, top: 2, best: 2 },
+  { id: "SAMPLE_HERO_04", name: "Tide Caller", games: 3, avg: 3.0, top: 2, best: 2 },
+  { id: "SAMPLE_HERO_05", name: "Ember Cook", games: 3, avg: 5.67, top: 1, best: 3 },
+  { id: "SAMPLE_HERO_06", name: "Clockwork Bard", games: 2, avg: 4.5, top: 1, best: 4 },
+  { id: "SAMPLE_HERO_07", name: "Salt Merchant", games: 2, avg: 6.0, top: 0, best: 5 },
+  { id: "SAMPLE_HERO_08", name: "Owl Sentry", games: 1, avg: 2.0, top: 1, best: 2 },
+  { id: "SAMPLE_HERO_09", name: "Frost Tinker", games: 1, avg: 8.0, top: 0, best: 8 },
+];
+const heroColumns = [
+  { label: "Hero" },
+  { label: "Games", numeric: true },
+  { label: "Avg place", numeric: true },
+  { label: "Top 4", numeric: true },
+  { label: "Best", numeric: true },
+];
+const heroRows: Cell[][] = heroes.map((h) => [
+  { hero: h.id, name: h.name },
+  h.games,
+  average(h.avg),
+  share(h.top, h.games),
+  { place: h.best, mode: "solo" },
+]);
+
+const gameColumns = [{ label: "Hero" }, { label: "Place", numeric: true }, { label: "Turns", numeric: true }, { label: "When" }];
+const gameRows: Cell[][] = [
+  [{ hero: "SAMPLE_HERO_01", name: "Lantern Keeper" }, { place: 1, mode: "solo" }, 14, "2 hours ago"],
+  [{ hero: "SAMPLE_HERO_03", name: "Moss Witch" }, { place: 4, mode: "solo" }, 12, "3 hours ago"],
+  [{ hero: null, name: "Hero not recorded" }, { place: null, mode: "solo" }, "—", "Yesterday"],
+  [{ hero: "SAMPLE_HERO_05", name: "Ember Cook" }, { place: 7, mode: "solo" }, 9, "Yesterday"],
+];
+
+const turns: Turn[] = [
+  { turn: 1, result: "tie", damage: 0 },
+  { turn: 2, result: "win", damage: 3 },
+  { turn: 3, result: "loss", damage: 4 },
+  { turn: 4, result: "win", damage: 5 },
+  { turn: 5, result: "win", damage: 6, inferred: true },
+  { turn: 6, result: "loss", damage: 9 },
+  { turn: 7, result: "unknown", damage: null },
+  { turn: 8, result: "win", damage: 11 },
+  { turn: 9, result: "loss", damage: 7 },
+  { turn: 10, result: "win", damage: 14 },
+  { turn: 11, result: "tie", damage: 0 },
+  { turn: 12, result: "loss", damage: 16 },
+  { turn: 13, result: "win", damage: 8 },
+];
+
+const cards = ["SAMPLE_CARD_01", "SAMPLE_CARD_02", "SAMPLE_CARD_03", "SAMPLE_CARD_04", "SAMPLE_CARD_05", "SAMPLE_CARD_06", "SAMPLE_CARD_07", "SAMPLE_CARD_08", "SAMPLE_CARD_09", "SAMPLE_CARD_10", "SAMPLE_CARD_11", "SAMPLE_CARD_12", "SAMPLE_CARD_13", "SAMPLE_CARD_14"];
+---
+
+<Base
+  title="Style"
+  description="The pieces the Tavern Ledger data pages are built from, shown with made-up data."
+  noindex
+>
+  <header class="data-head">
+    <div>
+      <h1>Style</h1>
+      <p class="data-note">
+        Every piece of the data pages in each of its states. All numbers, heroes and pictures here are made-up
+        examples: no player's data and no game art.
+      </p>
+    </div>
+    <Switch kind="detail" />
+  </header>
+  {
+    !scripts && (
+      <p class="data-note">This build ships no scripts, so the switches stay hidden and the page shows Simple and Solo.</p>
+    )
+  }
+
+  <section class="data-section" aria-labelledby="s-tokens">
+    <h2 id="s-tokens">Tokens</h2>
+    <ul class="swatches" aria-label="Surfaces and text">
+      <li><i class="sw-surface-sunk" aria-hidden="true"></i>Surface sunk</li>
+      <li><i class="sw-surface-1" aria-hidden="true"></i>Surface 1</li>
+      <li><i class="sw-surface-2" aria-hidden="true"></i>Surface 2</li>
+      <li><i class="sw-text-1" aria-hidden="true"></i>Text 1</li>
+      <li><i class="sw-text-2" aria-hidden="true"></i>Text 2</li>
+      <li><i class="sw-text-3" aria-hidden="true"></i>Text 3</li>
+      <li><i class="sw-better" aria-hidden="true"></i>Better</li>
+      <li><i class="sw-worse" aria-hidden="true"></i>Worse</li>
+      <li><i class="sw-inferred" aria-hidden="true"></i>Inferred</li>
+    </ul>
+    <ul class="chart-key" aria-label="Chart marks">
+      <li><i class="key-first" aria-hidden="true"></i>1st place</li>
+      <li><i class="key-top" aria-hidden="true"></i>Top half</li>
+      <li><i class="key-bottom" aria-hidden="true"></i>Bottom half</li>
+      <li><i class="key-win" aria-hidden="true"></i>Won</li>
+      <li><i class="key-loss" aria-hidden="true"></i>Lost</li>
+      <li><i class="key-tie" aria-hidden="true"></i>Tied</li>
+      <li><i class="key-unknown" aria-hidden="true"></i>Unknown</li>
+    </ul>
+    <div class="type-scale">
+      <p class="ts-value">3.42 value</p>
+      <p class="ts-lg">Large 1.125rem</p>
+      <p class="ts-md">Table text 0.9375rem</p>
+      <p class="ts-sm">Labels and backing lines 0.8125rem</p>
+      <p class="ts-xs">Marks 0.75rem</p>
+    </div>
+  </section>
+
+  <section class="data-section" aria-labelledby="s-tiles">
+    <div class="data-head">
+      <h2 id="s-tiles">Stat tiles</h2>
+      <Switch kind="mode" controls="tiles-modes" />
+    </div>
+    <div class="mode-panels" id="tiles-modes">
+      <div class="tiles" data-mode-panel="solo">
+        <StatTile
+          hero
+          label="Average place, Solo"
+          value={average(3.42)}
+          backing={backing(30, 31)}
+          trend={trend(-0.3, "lower")}
+          spark={{ values: recent, min: 1, max: 8, invert: true }}
+        />
+        <StatTile label="Top 4" value={share(19, 30)} backing={backing(30, 31)} trend={trend(0.05, "higher", "percent")} />
+        <StatTile label="Games" value={compact(31)} />
+        <StatTile label="Gold spent" value={compact(12_940)} backing={backing(29, 31)} />
+        <StatTile label="Gold beyond income" value="125" backing={backing(10, 11, "turns")} />
+        <StatTile label="Combats won" value="41" source="inferred" backing={backing(31, 31)} />
+        <StatTile label="Actions per minute" value={average(null)} source="unknown" backing={backing(0, 31)} />
+      </div>
+      <div class="tiles" data-mode-panel="duos">
+        <StatTile hero label="Average place, Duos" value={average(2.25)} backing={backing(12, 12)} trend={trend(0, "lower")} />
+        <StatTile label="Top 2" value={share(7, 12)} backing={backing(12, 12)} />
+        <StatTile label="Games" value={compact(12)} />
+      </div>
+    </div>
+    <p class="data-note">{threshold(12, 20)}</p>
+  </section>
+
+  <section class="data-section" aria-labelledby="s-detail">
+    <h2 id="s-detail">Simple and Advanced</h2>
+    <p class="data-note simple-only">Simple shows the key numbers. Switch to Advanced at the top to see more detail.</p>
+    <div class="tiles adv">
+      <StatTile label="Rolls per game" value={average(6.81)} backing={backing(31, 31)} />
+      <StatTile label="Free rolls per game" value={average(1.13)} backing={backing(27, 31)} />
+    </div>
+  </section>
+
+  <section class="data-section" aria-labelledby="s-tables">
+    <h2 id="s-tables">Compact tables</h2>
+    <TopTable caption="Heroes, most games first (made-up)" columns={heroColumns} rows={heroRows} top={5} />
+    <TopTable caption="Last games (made-up)" columns={gameColumns} rows={gameRows} />
+  </section>
+
+  <section class="data-section" aria-labelledby="s-folds">
+    <h2 id="s-folds">Folds</h2>
+    <Fold summary="About this" hint="How it is counted">
+      <p class="data-note">
+        The average place counts every game with a final place. A game cut off before its end has no place and is left
+        out, so the line under the value says how many games back it.
+      </p>
+    </Fold>
+    <Fold summary="Boards met" hint="3 boards" open>
+      <p class="data-note">An open fold. Enter or Space on the summary closes it.</p>
+      <Fold summary="Turn 6 board">
+        <p class="data-note">Folds can sit inside folds.</p>
+      </Fold>
+    </Fold>
+  </section>
+
+  <section class="data-section" aria-labelledby="s-places">
+    <h2 id="s-places">Place badges and source marks</h2>
+    <div class="pic-row" role="group" aria-label="Solo places">
+      {[1, 2, 3, 4, 5, 6, 7, 8].map((p) => <PlaceBadge place={p} mode="solo" />)}
+      <PlaceBadge place={null} mode="solo" />
+    </div>
+    <div class="pic-row" role="group" aria-label="Duos places">
+      {[1, 2, 3, 4].map((p) => <PlaceBadge place={p} mode="duos" />)}
+      <PlaceBadge place={1} mode="duos" size="lg" />
+    </div>
+    <ul class="legend-list">
+      <li><SourceMark kind="inferred" />{t("source.inferred.tip")}</li>
+      <li><SourceMark kind="unknown" />{t("source.unknown.tip")}</li>
+      <li>No mark: read straight from the game's log.</li>
+    </ul>
+  </section>
+
+  <section class="data-section" aria-labelledby="s-pictures">
+    <h2 id="s-pictures">Pictures</h2>
+    <p class="data-note">
+      Synthetic placeholders padded with white bars like the source art; the crop leaves no white edge. The source is one
+      setting, and card art waits on its own decision.
+    </p>
+    <p class="pic-row">
+      <Picture kind="hero" id="SAMPLE_HERO_01" name="Lantern Keeper" size={56} />
+      <Picture kind="hero" id="SAMPLE_HERO_02" name="Brass Captain" size={40} />
+      <Picture kind="hero" id="SAMPLE_HERO_03" name="Moss Witch" size={32} />
+      <Picture kind="hero" id="SAMPLE_HERO_04" name="Tide Caller" size={24} />
+      <Picture kind="hero" name="Hero not recorded" size={40} />
+    </p>
+    <div class="scroll-x" role="region" aria-label="A board of made-up cards" tabindex="0">
+      <p class="pic-row">
+        {cards.map((id, i) => <Picture kind="card" id={id} name={`Sample card ${i + 1}`} size={56} />)}
+      </p>
+    </div>
+  </section>
+
+  <section class="data-section" aria-labelledby="s-states">
+    <h2 id="s-states">Empty, unknown, loading and error</h2>
+    <div class="tiles">
+      <StateBlock kind="empty" />
+      <StateBlock kind="unknown" />
+      <StateBlock kind="loading" />
+      <StateBlock kind="error" />
+    </div>
+  </section>
+
+  <section class="data-section" aria-labelledby="s-charts">
+    <h2 id="s-charts">Charts</h2>
+    <div class="chart-grid">
+      <PlaceChart places={soloPlaces} mode="solo" id="places-solo" />
+      <PlaceChart places={duosPlaces} mode="duos" id="places-duos" />
+    </div>
+    <Sparkline variant="chart" values={recent} min={1} max={8} invert places id="trend" />
+    <TurnBars turns={turns} id="turns" />
+  </section>
+
+  <DataScript />
+</Base>

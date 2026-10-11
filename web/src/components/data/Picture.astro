@@ -1,0 +1,48 @@
+---
+// A hero portrait or a card picture, cropped to the art in a circle (no
+// white edges, D-062/D-065). The source is one setting (lib/data/pictures.ts);
+// width and height are fixed so nothing moves when it loads.
+import { pictureFor, type PictureKind } from "../../lib/data/pictures.ts";
+import { t } from "../../lib/data/strings.ts";
+
+interface Props {
+  kind: PictureKind;
+  /** The card id; none leaves a plain circle of the same size. */
+  id?: string | null;
+  /** The hero or card name, read out instead of the picture. */
+  name: string;
+  size?: 24 | 32 | 40 | 56;
+  /** Decorative when the name is already written next to it. */
+  decorative?: boolean;
+}
+
+const { kind, id = null, name, size = 32, decorative = false } = Astro.props;
+// An id that is not shaped like a card id gets the plain circle, never a
+// broken address (pictureFor refuses it).
+function safePicture(cardId: string | null) {
+  if (!cardId) return null;
+  try {
+    return pictureFor(kind, cardId);
+  } catch {
+    return null;
+  }
+}
+const picture = safePicture(id);
+---
+
+{
+  picture ? (
+    <span class={`pic pic-${kind}`} data-size={size}>
+      <img
+        src={picture.src}
+        alt={decorative ? "" : name}
+        width={size}
+        height={size}
+        loading="lazy"
+        decoding="async"
+      />
+    </span>
+  ) : (
+    <span class={`pic pic-${kind} pic-missing`} data-size={size} role={decorative ? undefined : "img"} aria-label={decorative ? undefined : `${name}: ${t("picture.missing")}`} />
+  )
+}

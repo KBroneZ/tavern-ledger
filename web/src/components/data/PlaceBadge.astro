@@ -1,0 +1,21 @@
+---
+// A final place: 1st lit, the top half a ring, the bottom half the bare
+// number, unknown a dashed "?". The shape says it as well as the colour.
+import { ordinal, placeGroup, type Mode } from "../../lib/data/format.ts";
+import { t } from "../../lib/data/strings.ts";
+
+interface Props {
+  place: number | null;
+  mode: Mode;
+  size?: "md" | "lg";
+}
+
+const { place, mode, size = "md" } = Astro.props;
+const group = placeGroup(place, mode);
+const label = group === "unknown" ? t("place.unknown") : t("place.label", { place: ordinal(place as number) });
+---
+
+<span class:list={["place", `place-${group}`, { "place-lg": size === "lg" }]}>
+  <span aria-hidden="true">{group === "unknown" ? "?" : place}</span>
+  <span class="visually-hidden">{label}</span>
+</span>
