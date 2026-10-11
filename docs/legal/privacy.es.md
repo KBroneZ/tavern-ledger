@@ -1,6 +1,6 @@
 # Política de privacidad
 
-*Traducción del original en inglés. Si esta versión y la [versión en inglés](/privacy/) dicen cosas distintas, prevalece la inglesa.*
+*Traducción del original en inglés. Si esta versión y la [versión en inglés](https://tavernledger.net/privacy/) dicen cosas distintas, prevalece la inglesa.*
 
 Última actualización: 11 de octubre de 2026
 

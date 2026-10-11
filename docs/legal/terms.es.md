@@ -1,6 +1,6 @@
 # Términos de uso
 
-*Traducción del original en inglés. Si esta versión y la [versión en inglés](/terms/) dicen cosas distintas, prevalece la inglesa.*
+*Traducción del original en inglés. Si esta versión y la [versión en inglés](https://tavernledger.net/terms/) dicen cosas distintas, prevalece la inglesa.*
 
 Última actualización: 11 de octubre de 2026
 

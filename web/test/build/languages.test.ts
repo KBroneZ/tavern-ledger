@@ -82,8 +82,6 @@ test("links stay in the page's language (the switch apart)", () => {
     const html = read(page).replace(/<a\b[^>]*data-lang-switch[^>]*>/g, "");
     const links = [...html.matchAll(/<(?:a|form)\b[^>]*\s(?:href|action)="(\/[^"]*)"/g)].map((m) => m[1]);
     for (const link of links) {
-      // A translated legal page links to the English text it translates.
-      if (page.startsWith("es/") && `es${link}index.html` === page) continue;
       if (page.startsWith("es/")) assert.match(link, /^\/es\//, `${page}: ${link}`);
       else assert.doesNotMatch(link, /^\/es\//, `${page}: ${link}`);
     }
@@ -134,6 +132,6 @@ test("the Spanish legal pages are marked as translations and dated as the Englis
     const [, day, month, year] = english;
     assert.ok(spanish.includes(`Última actualización: ${day} de ${meses[months.indexOf(month)]} de ${year}`), page);
     assert.match(spanish, /Traducción del original en inglés[\s\S]*?prevalece la inglesa/, page);
-    assert.match(spanish, /href="\/privacy\/"|href="\/terms\/"/, `${page}: links to the English it translates`);
+    assert.ok(spanish.includes(`href="https://tavernledger.net/${page.replace("index.html", "")}"`), `${page}: links to the English it translates`);
   }
 });
