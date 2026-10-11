@@ -9,7 +9,7 @@
 // * totals over turns say how many turns back them; unknown is never zero.
 // Opponents are shown by hero only: the report has no player names.
 import type { Result } from "../data/format.ts";
-import type { Choice, GameRecord, Minion, Report, Round, Seat, ShopTurn } from "./report.ts";
+import type { Choice, GameRecord, Minion, Report, Round, Seat, ShopTurn, TrinketSlot } from "./report.ts";
 
 export interface HeroRef {
   id: string | null;
@@ -87,7 +87,7 @@ export interface SeatView {
   team: number | null;
   /** The leaderboard's last count; null when not recorded for this game. */
   triples: number | null;
-  trinkets: { turn: number; slot: string; dbfId: number }[] | null;
+  trinkets: { turn: number; slot: TrinketSlot; dbfId: number }[] | null;
 }
 
 export type ChoiceKind = "trinket" | "dark_gift" | "quest" | "triple_reward" | "discover";

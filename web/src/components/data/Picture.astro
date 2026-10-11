@@ -38,6 +38,7 @@ const picture = safePicture(id);
     <span class={`pic pic-${kind}`} data-size={size}>
       <img
         src={picture.src}
+        data-fallback={picture.fallback}
         alt={decorative ? "" : name}
         width={size}
         height={size}

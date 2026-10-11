@@ -397,8 +397,12 @@ test("the browser pieces draw the same markup as the Astro components on /style/
     p.picture("hero", null, "Hero not recorded", 40),
     p.sourceMark("inferred"),
   ];
+  // Built pages show their pictures from the placeholders, live pages from the
+  // art host (D-074); the markup is otherwise the same.
+  const builtSource = (markup: string) =>
+    markup.replaceAll(/src="https:\/\/art\.hearthstonejson\.com\/v1\/256x\/[A-Za-z0-9_]+\.jpg" data-fallback="([^"]+)"/g, 'src="$1" data-fallback="$1"');
   for (const piece of pieces) {
-    const markup = toHtml(piece);
+    const markup = builtSource(toHtml(piece));
     assert.ok(html.includes(markup), `not on /style/: ${markup.slice(0, 160)}…`);
   }
 });

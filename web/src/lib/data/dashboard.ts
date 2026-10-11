@@ -7,6 +7,7 @@ import { RECORDS, type GameRow, type HeroRow, type Overview, type RecordRow } fr
 import { t } from "./strings.ts";
 import { unknownValue, sourceMark, type Cell, type Column, type TileProps } from "../view/pieces.ts";
 import { h, type VNode } from "../view/node.ts";
+import { gamePath } from "../game/url.ts";
 
 export const modeName = (m: Mode): string => (m === "solo" ? t("mode.solo") : t("mode.duos"));
 
@@ -161,13 +162,8 @@ export function gameColumns(withMode: boolean): Column[] {
   ];
 }
 
-/**
- * The game viewer's address (T-504, session 066's URL). Until its
- * lib/game/url.ts lands, built here with each value encoded.
- */
-export function gameHref(userId: string, session: string, gameIndex: number): string {
-  return `/game/?u=${encodeURIComponent(userId)}&s=${encodeURIComponent(session)}&g=${encodeURIComponent(String(gameIndex))}`;
-}
+/** The game viewer's address (T-504): lib/game/url.ts owns it. */
+export const gameHref = gamePath;
 
 /** The date, as a link to the game when its key is known. */
 function dateCell(g: GameRow, userId: string | null): Cell {
