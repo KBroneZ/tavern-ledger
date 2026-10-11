@@ -1,0 +1,17 @@
+---
+// One game in full (T-504): /game/?u=<user id>&s=<session>&g=<index>. The
+// owner, or anyone when the profile is public; the game's data comes from
+// the browser, so the page itself holds none and stays out of search engines.
+import Base from "../layouts/Base.astro";
+import AccountsClosed from "../components/AccountsClosed.astro";
+import GameViewer from "../components/game/GameViewer.astro";
+import { readConfig } from "../lib/config.ts";
+import { g } from "../lib/game/strings.ts";
+
+// With accounts closed the page shows a notice instead: no script.
+const accountsOpen = readConfig(import.meta.env) !== null;
+---
+
+<Base title={g("page.title")} description={g("page.description")} noindex>
+  {accountsOpen ? <GameViewer /> : <AccountsClosed heading={g("page.title")} />}
+</Base>
