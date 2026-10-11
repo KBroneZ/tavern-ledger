@@ -4,6 +4,7 @@
 import { average, compact, PLACES, type Mode } from "../data/format.ts";
 import { asRows, DataError } from "../data/rows.ts";
 import { lt, type LbKey } from "./strings.ts";
+import { dateFormat, numberFormat } from "../i18n.ts";
 
 export type Period = "7d" | "30d" | "all";
 export const PERIODS: readonly Period[] = ["7d", "30d", "all"];
@@ -117,12 +118,11 @@ export function groupBoards(rows: readonly BoardRow[]): Map<BoardKey, BoardRow[]
   return boards;
 }
 
-const PERCENT = new Intl.NumberFormat("en", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /** A board's value as the page shows it. */
 export function formatValue(def: BoardDef, value: number): string {
   if (def.format === "average") return average(value);
-  if (def.format === "percent") return `${PERCENT.format(value)}%`;
+  if (def.format === "percent") return numberFormat({ style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value / 100);
   return compact(value);
 }
 
@@ -165,13 +165,9 @@ export function refreshedText(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const at = new Date(value);
   if (Number.isNaN(at.getTime())) return null;
-  const text = new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "UTC",
-  }).format(at);
+  const text = dateFormat(
+    { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" },
+    "en-GB",
+  ).format(at);
   return `${text} UTC`;
 }

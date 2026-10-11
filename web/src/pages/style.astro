@@ -3,6 +3,7 @@
 // made-up data only: no real player, no game art. Not in the menu and kept
 // out of search engines.
 import Base from "../layouts/Base.astro";
+import { setLang } from "../lib/i18n.ts";
 import "../styles/data.css";
 import { scriptsAllowed } from "../lib/config.ts";
 import { average, backing, compact, share, threshold, trend } from "../lib/data/format.ts";
@@ -20,6 +21,9 @@ import Sparkline from "../components/data/Sparkline.astro";
 import TurnBars, { type Turn } from "../components/data/TurnBars.astro";
 import DataScript from "../components/data/DataScript.astro";
 import { duosPlaces, gameColumns, gameRows, heroColumns, heroRows, recent, soloPlaces } from "../lib/data/sample.ts";
+
+// The style page is in English only (T-508).
+setLang("en");
 
 // Whether this build ships scripts; without them the switches stay hidden.
 const scripts = scriptsAllowed(import.meta.env, import.meta.env.DEV);
@@ -49,6 +53,7 @@ const cards = ["SAMPLE_CARD_01", "SAMPLE_CARD_02", "SAMPLE_CARD_03", "SAMPLE_CAR
   title="Style"
   description="The pieces the Tavern Ledger data pages are built from, shown with made-up data."
   noindex
+  translated={false}
 >
   <header class="data-head">
     <div>
@@ -139,7 +144,7 @@ const cards = ["SAMPLE_CARD_01", "SAMPLE_CARD_02", "SAMPLE_CARD_03", "SAMPLE_CAR
 
   <section class="data-section" aria-labelledby="s-tables">
     <h2 id="s-tables">Compact tables</h2>
-    <TopTable caption="Heroes, most games first (made-up)" columns={heroColumns} rows={heroRows} top={5} />
+    <TopTable caption="Heroes, most games first (made-up)" columns={heroColumns} rows={heroRows()} top={5} />
     <TopTable caption="Last games (made-up)" columns={gameColumns} rows={gameRows} />
   </section>
 

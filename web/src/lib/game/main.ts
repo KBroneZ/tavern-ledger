@@ -2,6 +2,9 @@
 // The game viewer page's script (T-504): reads the address, fetches the
 // game's report once, and draws it or says why it cannot. A private game and
 // a missing one get the same words. Loaded only where scripts may run.
+// First: the page's language, before any module draws text (T-508).
+import "../i18n/boot.ts";
+import { dateText } from "../data/dashboard.ts";
 import { watchPictureFallback } from "../data/pictures.ts";
 import { h, mount, type VNode } from "../view/node.ts";
 import { stateBlock } from "../view/pieces.ts";
@@ -12,6 +15,7 @@ import { shapeGame } from "./shape.ts";
 import { g, type GameStringKey } from "./strings.ts";
 import { type GameRef, parseGameRef, playedOn } from "./url.ts";
 import { pageHeading } from "./words.ts";
+import { href } from "../i18n.ts";
 
 function byId(id: string): HTMLElement {
   const node = document.getElementById(id);
@@ -41,7 +45,7 @@ function showNotFound(): void {
 }
 
 function showUnavailable(signedIn: boolean): void {
-  const hint = signedIn ? [] : [h("p", {}, h("a", { href: "/signin/" }, g("state.unavailable.signIn")))];
+  const hint = signedIn ? [] : [h("p", {}, h("a", { href: href("/signin/") }, g("state.unavailable.signIn")))];
   show(g("state.unavailable.title"), [state("unknown", "state.unavailable.title", "state.unavailable.body", ...hint)], g("state.unavailable.title"));
 }
 
@@ -65,7 +69,7 @@ function showGame(result: Extract<LoadResult, { kind: "ok" }>, ref: GameRef): vo
     banners.push(h("p", { class: "state state-unknown gv-banner" }, text));
   }
   const title = pageHeading(view.summary);
-  show(title, [...banners, ...renderGame(view, playedOn(ref.session))], g("page.loaded", { title }));
+  show(title, [...banners, ...renderGame(view, dateText(playedOn(ref.session)))], g("page.loaded", { title }));
 }
 
 async function run(ref: GameRef, download: Download, signedIn: () => Promise<boolean>): Promise<void> {

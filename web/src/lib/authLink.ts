@@ -7,7 +7,10 @@
 //                                magic link, confirmation or recovery)
 //   ?error=…&error_code=…        (and the same in the hash) a link that failed
 //   #message=…                   the first half of a double-confirmed email change
-// and a custom template could send ?token_hash=…&type=… instead.
+// and a custom template could send ?token_hash=…&type=… instead. Messages are
+// drawn in the page's language (lib/account/strings.ts, T-508).
+
+import { at } from "./account/strings.ts";
 
 /** The email link types Supabase Auth sends, as `type` names them. */
 export const LINK_TYPES = ["signup", "invite", "magiclink", "recovery", "email_change", "email"] as const;
@@ -73,8 +76,6 @@ export function parseAuthLink(search: string, hash: string): AuthLink {
   return { kind: "none" };
 }
 
-const USE_FORGOT = "To choose a password, use “Forgot password?” on the sign-in page.";
-
 /**
  * What to say after a link made without PKCE. Its session is never used:
  * the site only signs in with a password or a flow it started itself.
@@ -82,32 +83,26 @@ const USE_FORGOT = "To choose a password, use “Forgot password?” on the sign
 export function implicitLinkMessage(type: LinkType | null): string {
   switch (type) {
     case "invite":
-      return `Your email is confirmed. ${USE_FORGOT}`;
+      return `${at("link.confirmed")} ${at("link.useForgot")}`;
     case "magiclink":
-      return "Sign-in links are for the Tavern Ledger app. Here, sign in with your password, " +
-        "or use “Forgot password?” on the sign-in page to set one.";
+      return at("link.magic");
     case "recovery":
-      return "This reset link cannot be used here. Ask for a new one with “Forgot password?” on the sign-in page.";
+      return at("link.recovery");
     case "email_change":
-      return "Your new email address is confirmed. Sign in to continue.";
+      return at("link.newEmailSignIn");
     default:
-      return "Your email is confirmed. Sign in to continue.";
+      return at("link.confirmedSignIn");
   }
 }
 
 /** What to say after a confirmation that needs no further step. */
 export function confirmedMessage(type: LinkType | null, signedIn: boolean): string {
-  if (type === "email_change") return "Your new email address is confirmed.";
-  return signedIn ? "Your email is confirmed." : "Your email is confirmed. Sign in to continue.";
+  if (type === "email_change") return at("link.newEmail");
+  return signedIn ? at("link.confirmed") : at("link.confirmedSignIn");
 }
 
-export const NOTICE_MESSAGE =
-  "Link accepted. Now open the link we sent to your other email address to finish the change.";
-
-const EXPIRED =
-  "This link has expired or was already used (each new email replaces the previous link). " +
-  "If you were confirming your email, try signing in: it may already be confirmed. " +
-  "Otherwise ask for a new link.";
+/** What to say when the first half of an email change was accepted. */
+export const noticeMessage = (): string => at("link.notice");
 
 /** What to say when a link failed, from the error code in the address or the server. */
 export function linkErrorMessage(code: string | null): string {
@@ -116,18 +111,15 @@ export function linkErrorMessage(code: string | null): string {
     case "flow_state_expired":
     case "flow_state_not_found":
     case "bad_code_verifier":
-      return EXPIRED;
+      return at("link.expired");
     case "pkce_code_verifier_not_found":
-      return "This link was opened in another browser than the one where you asked for it. " +
-        "If you were confirming your email, it is confirmed: sign in. " +
-        "If you were resetting your password, open the link in the browser where you asked for it, " +
-        "or ask for a new one.";
+      return at("link.otherBrowser");
     case "over_request_rate_limit":
     case "over_email_send_rate_limit":
-      return "Too many attempts. Wait a few minutes and try again.";
+      return at("auth.rateLimited");
     case "network":
-      return "Could not reach the server. Check your connection and reload the page.";
+      return at("link.unreachable");
     default:
-      return "This link did not work. Sign in, or ask for a new link.";
+      return at("link.failed");
   }
 }

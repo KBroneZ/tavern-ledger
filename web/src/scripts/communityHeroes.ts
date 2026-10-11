@@ -2,6 +2,9 @@
 // draws them into the reserved #ch-modes, and runs the period and sort
 // switches (both kept in the address, like Solo / Duos). The mode and detail
 // switches are the data pages' own (switches.ts).
+
+// First: the page's language, before any module draws text (T-508).
+import "../lib/i18n/boot.ts";
 import { watchPictureFallback } from "../lib/data/pictures.ts";
 import { loadCommunityStats, type CommunityStats } from "../lib/community/api.ts";
 import { parsePeriod, parseSort, PERIODS, SORTS, withParam, type HeroSort, type Period } from "../lib/community/heroes.ts";

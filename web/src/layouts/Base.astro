@@ -1,6 +1,8 @@
 ---
 import "../styles/global.css";
 import { contentSecurityPolicy, readConfig } from "../lib/config.ts";
+import { basePath, href, lang, LANGS, pathIn, type Lang } from "../lib/i18n.ts";
+import { st } from "../lib/site/strings.ts";
 
 interface Props {
   title: string;
@@ -9,22 +11,35 @@ interface Props {
   noindex?: boolean;
   /** "home" is full width, "reading" one column of about 68 characters. */
   layout?: "home" | "page" | "reading";
+  /** False on a page built in English only (the style page): no switch, no alternates. */
+  translated?: boolean;
 }
 
-const { title, description, noindex = false, layout = "page" } = Astro.props;
+const { title, description, noindex = false, layout = "page", translated = true } = Astro.props;
 // Fails the build if only one setting is given or the key is not the public
 // one; null means accounts are closed (no backend).
 const config = readConfig(import.meta.env);
 // Dev mode injects styles from JavaScript, which the policy would block; the
 // built site (and `npm run preview`) always carries it.
 const csp = import.meta.env.PROD ? contentSecurityPolicy(config?.url ?? null) : null;
+// The page's language was set by the page (setLang) before the layout renders.
+const pageLang: Lang = lang();
+const other: Lang = pageLang === "en" ? "es" : "en";
 const path = Astro.url.pathname;
-// Pages kept out of search engines (404, sign-in, account) name no canonical address.
+// The menu marks the current page by its path without the language prefix.
+const base = basePath(path);
+// Pages kept out of search engines (404, sign-in, account) name no canonical
+// address and no alternates; the others name both languages (T-508, D-086).
 const canonical = noindex ? null : new URL(path, Astro.site).href;
+const alternates = noindex || !translated ? [] : LANGS.map((l) => ({ lang: l, href: new URL(pathIn(base, l), Astro.site).href }));
+const xDefault = alternates.find((a) => a.lang === "en")?.href;
+// The language script (public/lang.js) needs scripts: only when accounts are open.
+const languageScript = config !== null && translated;
+const current = (match: boolean) => (match ? "page" : undefined);
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={pageLang}>
   <head>
     <meta charset="utf-8" />
     {csp && <meta http-equiv="Content-Security-Policy" content={csp} />}
@@ -33,6 +48,9 @@ const canonical = noindex ? null : new URL(path, Astro.site).href;
     <meta name="description" content={description} />
     {noindex && <meta name="robots" content="noindex" />}
     {canonical && <link rel="canonical" href={canonical} />}
+    {alternates.map((a) => <link rel="alternate" hreflang={a.lang} href={a.href} />)}
+    {xDefault && <link rel="alternate" hreflang="x-default" href={xDefault} />}
+    {languageScript && <script is:inline src="/lang.js"></script>}
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     {
       layout === "home" && (
@@ -48,24 +66,38 @@ const canonical = noindex ? null : new URL(path, Astro.site).href;
     <title>{title} · Tavern Ledger</title>
   </head>
   <body>
-    <a class="skip" href="#main">Skip to content</a>
+    <a class="skip" href="#main">{st("layout.skip")}</a>
     <header class="masthead">
-      <a class="brand" href="/">
+      <a class="brand" href={href("/")}>
         <span class="mark" aria-hidden="true"></span>
         <span>Tavern Ledger</span>
       </a>
-      <nav aria-label="Main">
-        <a href="/" aria-current={path === "/" ? "page" : undefined}>Home</a>
-        <a href="/privacy/" aria-current={path.startsWith("/privacy") ? "page" : undefined}>Privacy</a>
+      <nav aria-label={st("layout.nav")}>
+        <a href={href("/")} aria-current={current(base === "/")}>{st("layout.home")}</a>
+        <a href={href("/privacy/")} aria-current={current(base.startsWith("/privacy"))}>{st("layout.privacy")}</a>
         {config && (
           <>
-            <a href="/leaderboards/" aria-current={path.startsWith("/leaderboards") ? "page" : undefined}>Leaderboards</a>
-            <a href="/heroes/" aria-current={path.startsWith("/heroes") ? "page" : undefined}>Hero stats</a>
-            <a href="/me/" aria-current={path.startsWith("/me") || path.startsWith("/games") ? "page" : undefined}>Your games</a>
-            <a href="/signin/" aria-current={path.startsWith("/signin") ? "page" : undefined}>Sign in</a>
-            <a href="/account/" aria-current={path.startsWith("/account") ? "page" : undefined}>Account</a>
+            <a href={href("/leaderboards/")} aria-current={current(base.startsWith("/leaderboards"))}>{st("layout.leaderboards")}</a>
+            <a href={href("/heroes/")} aria-current={current(base.startsWith("/heroes"))}>{st("layout.heroes")}</a>
+            <a href={href("/me/")} aria-current={current(base.startsWith("/me") || base.startsWith("/games"))}>{st("layout.games")}</a>
+            <a href={href("/signin/")} aria-current={current(base.startsWith("/signin"))}>{st("layout.signin")}</a>
+            <a href={href("/account/")} aria-current={current(base.startsWith("/account"))}>{st("layout.account")}</a>
           </>
         )}
+        {
+          translated && (
+            <a
+              class="lang-switch"
+              href={pathIn(base, other)}
+              hreflang={other}
+              lang={other}
+              data-lang-switch={other}
+              aria-label={st("layout.switch.label")}
+            >
+              {st("layout.switch")}
+            </a>
+          )
+        }
       </nav>
     </header>
     <main id="main" class={`layout-${layout}`} tabindex="-1">
@@ -73,11 +105,14 @@ const canonical = noindex ? null : new URL(path, Astro.site).href;
     </main>
     <footer class="colophon">
       <p class="notice">
-        Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.
+        {st("layout.notice")}
+        {pageLang !== "en" && (
+          <span lang="en"> (Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.)</span>
+        )}
       </p>
-      <p>Open source (MIT). Not open to the public yet.</p>
-      <p><a href="/privacy/">Privacy</a></p>
-      <p><a href="/terms/">Terms</a></p>
+      <p>{st("layout.openSource")}</p>
+      <p><a href={href("/privacy/")}>{st("layout.privacy")}</a></p>
+      <p><a href={href("/terms/")}>{st("layout.terms")}</a></p>
     </footer>
   </body>
 </html>

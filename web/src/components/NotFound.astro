@@ -1,0 +1,13 @@
+---
+// The 404 page in the language set by the page (T-508). Cloudflare Pages
+// serves the nearest 404.html: /404.html for the site, /es/404.html under /es/.
+import Base from "../layouts/Base.astro";
+import { href } from "../lib/i18n.ts";
+import { st } from "../lib/site/strings.ts";
+---
+
+<Base title={st("notFound.title")} description={st("notFound.description")} noindex translated={false}>
+  <h1>{st("notFound.title")}</h1>
+  <p class="lead">{st("notFound.lead")}</p>
+  <p><a class="btn quiet" href={href("/")}>{st("notFound.back")}</a></p>
+</Base>

@@ -26,7 +26,9 @@ export const heroColumns: Column[] = [
   { label: "Top 4", numeric: true },
   { label: "Best", numeric: true },
 ];
-export const heroRows: Cell[][] = heroes.map((h) => [
+/** Formatted when called, in the page's language (the style page is English). */
+export const heroRows = (): Cell[][] =>
+  heroes.map((h) => [
   { hero: h.id, name: h.name },
   h.games,
   average(h.avg),

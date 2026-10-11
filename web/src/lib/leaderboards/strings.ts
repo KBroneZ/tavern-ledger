@@ -3,6 +3,9 @@
 // time; T-508 adds Spanish beside both. Same rules: {name} placeholders, and
 // lt() refuses a missing one.
 
+import { makeT } from "../i18n.ts";
+import { ES } from "./strings.es.ts";
+
 export const LB_STRINGS = {
   "page.kicker": "Public",
   "page.title": "Leaderboards",
@@ -106,12 +109,5 @@ export const LB_STRINGS = {
 
 export type LbKey = keyof typeof LB_STRINGS;
 
-/** The string for a key with its placeholders filled. */
-export function lt(key: LbKey, vars: Record<string, string | number> = {}): string {
-  const text: string | undefined = LB_STRINGS[key];
-  if (text === undefined) throw new Error(`no string ${key}`);
-  return text.replaceAll(/\{([a-z]+)\}/g, (_, name: string) => {
-    if (!(name in vars)) throw new Error(`string ${key} needs {${name}}`);
-    return String(vars[name]);
-  });
-}
+/** The string for a key in the page's language, with its placeholders filled. */
+export const lt = makeT<LbKey>({ name: "leaderboards", en: LB_STRINGS, es: ES });

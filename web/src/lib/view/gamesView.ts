@@ -6,6 +6,7 @@ import type { GameRow } from "../data/rows.ts";
 import { t } from "../data/strings.ts";
 import { h, type VNode } from "./node.ts";
 import { stateBlock, topTable } from "./pieces.ts";
+import { href } from "../i18n.ts";
 
 export interface ListPage {
   rows: GameRow[];
@@ -24,7 +25,7 @@ function pager(page: ListPage): VNode | null {
   const current = page.filters.page;
   if (pages <= 1 && current === 1) return null;
   const link = (to: number, text: string, rel: string) =>
-    h("a", { class: "btn quiet", href: `/games/${filtersQuery({ ...page.filters, page: to }, page.profileId)}`, rel }, text);
+    h("a", { class: "btn quiet", href: href(`/games/${filtersQuery({ ...page.filters, page: to }, page.profileId)}`), rel }, text);
   return h(
     "nav",
     { class: "pager", "aria-label": t("list.pages") },
@@ -41,7 +42,7 @@ export function listBody(page: ListPage): VNode[] {
     return [invalid, stateBlock({ kind: "empty", title: t("list.none"), body: t("list.none.body") })].filter((n): n is VNode => n !== null);
   }
   if (page.rows.length === 0) {
-    const first = `/games/${filtersQuery({ ...page.filters, page: 1 }, page.profileId)}`;
+    const first = href(`/games/${filtersQuery({ ...page.filters, page: 1 }, page.profileId)}`);
     return [invalid, stateBlock({ kind: "empty", title: t("list.pageEmpty"), body: "" }, h("a", { href: first }, t("list.pageEmpty.link")))].filter(
       (n): n is VNode => n !== null,
     );

@@ -1,0 +1,19 @@
+---
+import Base from "../../layouts/Base.astro";
+import AccountsClosed from "../../components/AccountsClosed.astro";
+import GamesList from "../../components/GamesList.astro";
+import { readConfig } from "../../lib/config.ts";
+import { langPaths, setLang } from "../../lib/i18n.ts";
+import { st } from "../../lib/site/strings.ts";
+
+export const getStaticPaths = langPaths;
+// Every string below is drawn in the page's language (T-508).
+setLang(Astro.props.lang);
+
+// With accounts closed the page shows a notice instead: no data, no script.
+const accountsOpen = readConfig(import.meta.env) !== null;
+---
+
+<Base title={st("meta.games.title")} description={st("meta.games.description")} noindex>
+  {accountsOpen ? <GamesList /> : <AccountsClosed heading={st("meta.games.title")} />}
+</Base>

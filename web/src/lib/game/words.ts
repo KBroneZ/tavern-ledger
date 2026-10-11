@@ -6,7 +6,8 @@ import type { Keyword, Minion } from "./report.ts";
 import type { BoardView, HeroRef, Known, Summary, TurnRow } from "./shape.ts";
 import { g } from "./strings.ts";
 
-const DASH = t("value.none");
+// The same in every language (test/unit/i18n.test.ts), so it can be a constant.
+const DASH = "—";
 const num = (v: number | null) => (v === null ? DASH : compact(v));
 
 /** The game's own hero name, else the card id, else "Unknown hero". */

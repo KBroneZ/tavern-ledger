@@ -1,6 +1,7 @@
 // Formatting and small calculations for the data pages (T-501). Pure
 // functions, built at build time or in the browser alike. An unknown value
 // is null and prints as a dash: unknown is never shown as 0.
+import { numberFormat, pluralForm } from "../i18n.ts";
 import { t } from "./strings.ts";
 
 export type Mode = "solo" | "duos";
@@ -8,12 +9,13 @@ export type PlaceGroup = "first" | "top" | "bottom" | "unknown";
 export type Result = "win" | "loss" | "tie" | "unknown";
 export type Unit = "games" | "turns";
 
-const LOCALE = "en";
-const DASH = t("value.none");
-const PLAIN = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 0 });
-const SHORT = new Intl.NumberFormat(LOCALE, { notation: "compact", maximumFractionDigits: 1 });
-const TWO = new Intl.NumberFormat(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const PERCENT = new Intl.NumberFormat(LOCALE, { style: "percent", maximumFractionDigits: 0 });
+// The same in every language (test/unit/i18n.test.ts), so it can be a constant.
+const DASH = "—";
+// In the page's language (T-508): 2.50 / 2,50, 12.9K / 12,9 mil, 50% / 50 %.
+const PLAIN = { format: (v: number) => numberFormat({ maximumFractionDigits: 0 }).format(v) };
+const SHORT = { format: (v: number) => numberFormat({ notation: "compact", maximumFractionDigits: 1 }).format(v) };
+const TWO = { format: (v: number) => numberFormat({ minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v) };
+const PERCENT = { format: (v: number) => numberFormat({ style: "percent", maximumFractionDigits: 0 }).format(v) };
 
 /** Plain up to 9,999, compact from 10,000 (12.9K, 4.2M). */
 const COMPACT_FROM = 10_000;
@@ -38,7 +40,7 @@ export function share(part: number | null | undefined, whole: number | null | un
 }
 
 function unitWord(unit: Unit, count: number): string {
-  return t(count === 1 ? `unit.${unit}.one` : `unit.${unit}.other`);
+  return t(`unit.${unit}.${pluralForm(count)}`);
 }
 
 function checkCount(value: number): void {
@@ -73,7 +75,7 @@ export function placeGroup(place: number | null | undefined, mode: Mode): PlaceG
   return place <= PLACES[mode] / 2 ? "top" : "bottom";
 }
 
-/** "1st", "2nd", "3rd", "4th"…; places only go to 8. */
+/** "1st", "2nd", "3rd", "4th"… (Spanish "1.º"); places only go to 8. */
 export function ordinal(place: number): string {
   if (place === 1) return t("place.1");
   if (place === 2) return t("place.2");

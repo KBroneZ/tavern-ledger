@@ -3,6 +3,9 @@
 // T-508 adds Spanish beside them. Same rules: {name} placeholders, and ct()
 // refuses a missing one.
 
+import { makeT } from "../i18n.ts";
+import { ES } from "./strings.es.ts";
+
 export const CH_STRINGS = {
   "page.kicker": "Community",
   "page.title": "Hero stats",
@@ -86,12 +89,5 @@ export const CH_STRINGS = {
 
 export type ChKey = keyof typeof CH_STRINGS;
 
-/** The string for a key with its placeholders filled. */
-export function ct(key: ChKey, vars: Record<string, string | number> = {}): string {
-  const text: string | undefined = CH_STRINGS[key];
-  if (text === undefined) throw new Error(`no string ${key}`);
-  return text.replaceAll(/\{([a-z]+)\}/gi, (_, name: string) => {
-    if (!(name in vars)) throw new Error(`string ${key} needs {${name}}`);
-    return String(vars[name]);
-  });
-}
+/** The string for a key in the page's language, with its placeholders filled. */
+export const ct = makeT<ChKey>({ name: "community", en: CH_STRINGS, es: ES });

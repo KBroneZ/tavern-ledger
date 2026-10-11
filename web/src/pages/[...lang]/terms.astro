@@ -1,0 +1,22 @@
+---
+// The text lives in docs/legal/terms.md (terms.es.md, the Spanish translation;
+// the English prevails), so the repository and the site can
+// never say different things.
+import Base from "../../layouts/Base.astro";
+import { Content as English } from "../../../../docs/legal/terms.md";
+import { Content as Spanish } from "../../../../docs/legal/terms.es.md";
+import { langPaths, setLang } from "../../lib/i18n.ts";
+import { st } from "../../lib/site/strings.ts";
+
+export const getStaticPaths = langPaths;
+// Every string below is drawn in the page's language (T-508).
+const Content = setLang(Astro.props.lang) === "es" ? Spanish : English;
+---
+
+<Base title={st("meta.terms.title")} description={st("meta.terms.description")}
+  layout="reading"
+>
+  <article class="legal">
+    <Content />
+  </article>
+</Base>

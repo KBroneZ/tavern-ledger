@@ -23,7 +23,7 @@ import {
   type CommunityState,
 } from "../../src/lib/community/heroes.ts";
 import { CH_STRINGS, ct } from "../../src/lib/community/strings.ts";
-import { howFold, JOIN_HREF, modePanels, periodPanel, POLICY_HREF, updatedLine } from "../../src/lib/community/view.ts";
+import { howFold, JOIN_PATH, modePanels, periodPanel, POLICY_PATH, updatedLine } from "../../src/lib/community/view.ts";
 import { DataError } from "../../src/lib/data/rows.ts";
 import { communityErrorMessage } from "../../src/lib/profile.ts";
 import { elements, textOf, toHtml } from "../helpers/html.ts";
@@ -194,7 +194,7 @@ test("no hero above the thresholds: the empty state says why and how to join", (
   assert.match(html, /Not enough games yet/);
   assert.match(html, /at least 50 games with it, in the last 30 days, come from at least 5 players/);
   assert.match(toHtml(periodPanel([], "solo", "all", "games")), /games with it, over all time, come from/);
-  assert.match(html, new RegExp(`href="${JOIN_HREF}"`));
+  assert.match(html, new RegExp(`href="${JOIN_PATH}"`));
   assert.doesNotMatch(html, /<table/);
 });
 
@@ -250,7 +250,7 @@ test("the explanation: opt-in only, thresholds, rounding, self-reported, validat
   assert.match(text, /checks each report/);
   assert.match(text, /no player, name or game is stored/);
   assert.match(text, /once a day/);
-  assert.match(toHtml(howFold()), new RegExp(`href="${POLICY_HREF}"`));
+  assert.match(toHtml(howFold()), new RegExp(`href="${POLICY_PATH}"`));
 });
 
 test("the updated line names the build time and the last day counted", () => {
