@@ -42,3 +42,9 @@ export function profileErrorMessage(e: { code?: string; message?: string }): str
   if (e.code === "PGRST301" || e.code === "42501") return "Your session ended. Sign in again.";
   return "Could not save. Try again in a moment.";
 }
+
+/** A failed save of the community stats switch, as the account page shows it. */
+export function communityErrorMessage(e: { code?: string }): string {
+  if (e.code === "PGRST301" || e.code === "42501") return "Your session ended. Sign in again.";
+  return "Could not save. Try again in a moment.";
+}

@@ -2,7 +2,7 @@
 
 Last updated: 11 October 2026
 
-**What changed on 11 October 2026:** public leaderboards (section 4) and the server's check of display names (section 3).
+**What changed on 11 October 2026:** public leaderboards (section 4), community hero stats (section 4) and the server's check of display names (section 3).
 
 These terms cover the Tavern Ledger website and the accounts on it. The desktop app and its source code are covered by their open-source licence (section 6).
 
@@ -36,9 +36,11 @@ Your profile is private until you make it public. A public profile shows your di
 
 With a public profile, a display name and enough games, you also appear on the public leaderboards, which rank players on their uploaded games. The privacy policy says what they show and how to leave them (turn the profile private: the boards stop showing you as soon as you save). Leaderboards are for fun: the numbers are self-reported by each player's app, there are no prizes, and we do not promise they are accurate or complete. If games look changed to climb a board, we may take the steps in section 3, such as leaving them off the boards.
 
+If you turn on "Include my games in community hero stats" on your account page (it is off until you do), your games count toward the community hero stats: totals per hero over many players that never name you. The privacy policy says what is used and how to stop. Like the leaderboards, these numbers are self-reported, for information and fun, and we do not promise they are accurate or complete; games that look changed may be left out.
+
 ## 5. Your data and leaving
 
-You keep your rights in your data. You allow us to store and process it only to run the service for you (and to show it to others if your profile is public). You can download your data and delete your account at any time from your account page; the privacy policy explains what that covers.
+You keep your rights in your data. You allow us to store and process it only to run the service for you (and to show it to others if your profile is public, or as rounded community totals if you turn on community hero stats). You can download your data and delete your account at any time from your account page; the privacy policy explains what that covers.
 
 ## 6. Code, game content and trademarks
 

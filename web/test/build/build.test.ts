@@ -15,7 +15,7 @@ const DIST = join(ROOT, "dist");
 const ENV = loadEnv("production", ROOT, "PUBLIC_");
 const CONFIG = readConfig(ENV);
 const SIGNUPS = signupsOpen(ENV);
-const DATA_PAGES = ["me/index.html", "games/index.html", "profile/index.html", "leaderboards/index.html", "player-heroes/index.html", "curious/index.html"];
+const DATA_PAGES = ["me/index.html", "games/index.html", "profile/index.html", "leaderboards/index.html", "player-heroes/index.html", "curious/index.html", "heroes/index.html"];
 const ACCOUNT_PAGES = ["signin/index.html", "account/index.html", "forgot-password/index.html", ...DATA_PAGES];
 
 function files(dir: string): string[] {
@@ -440,6 +440,34 @@ test("accounts open: the heroes and curious stats pages are a static frame with 
     assert.match(html, /id="pp-status" role="status" aria-live="polite"/, file);
     assert.match(html, /<meta name="robots" content="noindex">/, file);
   }
+});
+
+test("accounts open: the community hero stats are a static frame with reserved room, linked from the menu (T-507)", { skip: !CONFIG }, () => {
+  const page = (p: string) => readFileSync(join(DIST, p), "utf8");
+  const html = page("heroes/index.html");
+  assert.match(html, /id="ch" aria-busy="true"/);
+  assert.match(html, /class="dash-body ch-periods" id="ch-body" data-period="30d"/);
+  assert.match(html, /class="mode-panels" id="ch-modes"/);
+  assert.match(html, /data-switch="mode" data-controls="ch-modes"/);
+  assert.match(html, /data-switch="detail"/);
+  assert.match(html, /role="group" aria-label="Period" id="ch-period-switch"[^>]*hidden/);
+  for (const period of ["30d", "all"]) assert.match(html, new RegExp(`data-value="${period}"`), period);
+  assert.match(html, /state-loading/);
+  assert.match(html, /id="ch-status" role="status" aria-live="polite"/);
+  assert.match(html, /<meta name="robots" content="noindex">/);
+  assert.match(page("privacy/index.html"), /id="community-hero-stats"/);
+  for (const file of ["index.html", "me/index.html", "privacy/index.html"]) {
+    assert.match(page(file), /<a href="\/heroes\/"[^>]*>Hero stats<\/a>/, file);
+  }
+  assert.match(html, /<a href="\/heroes\/" aria-current="page">/);
+  // The player's own heroes page is not the community one.
+  assert.doesNotMatch(page("player-heroes/index.html"), /<a href="\/heroes\/" aria-current="page">/);
+  // The account page's switch: off until the script reads the owner's choice, with the policy link.
+  const account = page("account/index.html");
+  assert.match(account, /id="community-form"/);
+  assert.match(account, /<input type="checkbox" name="hero_stats">/);
+  assert.match(account, /Include my games in community hero stats/);
+  assert.match(account, /href="\/privacy\/#community-hero-stats"/);
 });
 
 test("accounts open: the leaderboards are a static frame with reserved room, linked from the menu", { skip: !CONFIG }, () => {

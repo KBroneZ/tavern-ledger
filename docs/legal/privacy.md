@@ -2,7 +2,7 @@
 
 Last updated: 11 October 2026
 
-**What changed on 11 October 2026:** public leaderboards (section 4, "Public profiles and leaderboards"): what they show, who appears on them, how to leave them and how long the numbers are kept; the check of display names against a short word list; the leaderboard numbers in the download (section 7). Also new that day: card and hero pictures loaded from HearthstoneJSON (sections 3 and 5).
+**What changed on 11 October 2026:** public leaderboards (section 4, "Public profiles and leaderboards"): what they show, who appears on them, how to leave them and how long the numbers are kept; the check of display names against a short word list; the leaderboard numbers in the download (section 7). Also new that day: card and hero pictures loaded from HearthstoneJSON (sections 3 and 5); community hero stats (section 4, "Community hero stats"), which count your games only if you turn them on, with the switch in the download (section 7) and its retention (section 6).
 
 Tavern Ledger is a free, open-source Hearthstone Battlegrounds tracker: a Windows app that reads the game's log files on your PC, and a website where you can keep and, if you want, share your games. This policy says what personal data we handle, why, where it goes and what you can do about it.
 
@@ -43,13 +43,15 @@ There are no ads, no analytics and no tracking.
 | Sign-in sessions: times, IP address and browser user agent; refresh and one-time tokens | To keep you signed in | Contract |
 | Security log: sign-up, sign-in, sign-out, password reset requests, password and email changes, with time and IP address, kept in our database for 90 days | To detect and stop abuse of accounts | Legitimate interest in keeping accounts secure (Art. 6(1)(f)) |
 | Profile: a display name you choose (optional) and whether your profile is public (off by default) | To show your profile and put you on the public leaderboards, if you make it public | Contract: publication only happens when you switch it on, and you can switch it off at any time |
+| Community stats choice: whether you turned on "Include my games in community hero stats" (off by default), when you last changed it and the policy version then in force | To count your games in the community hero stats only if you asked | Consent (Art. 6(1)(a)): you can withdraw it at any time by turning the switch off |
+| Community hero stats: from the games of accounts that turned the switch on, totals per hero, mode and period, rebuilt daily, with no account id | To show the community hero stats | Consent, as above |
 | Leaderboard numbers: for a public profile with a display name, the numbers each board ranks (worked out from your uploaded games) per mode and period, with how many games back each | To show the public leaderboards | Contract, as for the public profile |
 | Your games: a summary row per game (date, mode, hero, place, build, tribes offered, parser version) and the game's full record from the app (no player names), if you upload them | To show your history and stats | Contract |
 | Upload times: when each of your uploads happened, kept two days | To enforce the hourly and daily upload limits | Legitimate interest in keeping the service available for everyone (Art. 6(1)(f)) |
 | Refused requests: a salted hash of the IP address that sent an upload with an invalid sign-in (the address itself is not stored, and the secret salt is replaced every day), and a count, kept one hour at most | To block abusive requests | Legitimate interest in protecting the service |
 | Backups of all of the above, without live sign-in sessions | To recover from failures | Legitimate interest in not losing your data |
 
-Your email and a password are required to have an account; without them we cannot create one. Everything else is optional: a display name, uploading games and a public profile.
+Your email and a password are required to have an account; without them we cannot create one. Everything else is optional: a display name, uploading games, a public profile and the community hero stats.
 
 We do **not** collect player names, BattleTags, Battle.net accounts, ratings or MMR. We do not take any automated decision about you that has legal or similarly significant effects.
 
@@ -65,6 +67,20 @@ We do **not** collect player names, BattleTags, Battle.net accounts, ratings or 
 
 **Display names.** When you set a display name, our server checks it against a short list of offensive words and names that would look official (such as "admin" or "Blizzard") and refuses it if it matches; the account page then asks you for another one. A name set before a word was added to the list is hidden from the leaderboards until you change it. The check only compares words; it decides nothing else about you.
 
+### Community hero stats
+
+**What it is.** The hero stats page (`/heroes/`) shows, per mode (Solo, Duos) and period (the last 30 days, all time), how each hero does: roughly how many games and players are behind it, how often it is picked when offered, its average place, top 4 (Solo) or top 2 (Duos) rate and win rate.
+
+**Whose games.** Only the games of accounts that turned on "Include my games in community hero stats" on their account page. The switch is off for every account, including accounts made before this page existed, and no update turns it on. It is separate from your public profile: a public profile is not counted unless you turn the switch on, and a private profile can be. We keep whether the switch is on, when you last changed it and which version of this policy was in force then.
+
+**What is used.** From each of your finished uploaded games that our server has summarized, up to the day before each rebuild: the mode, the day it was played, your hero, your final place and, if the app recorded your hero choice, the heroes you were offered. Games with values no real game can have are left out, as on the leaderboards. To count distinct players and apply the rules below, the rebuild uses your account id internally; it is not stored with the totals.
+
+**What is shown.** Only totals per hero, and only for a hero with at least 50 games from at least 5 players, where no one player has more than half of the games and no two players more than three quarters. The pick rate follows the same rule over the games that offered the hero. All time shows a hero only if its games from before the last 30 days pass the same rule on their own (or there are none), so the two periods cannot be subtracted to single out a few games. Counts are shown in tens of games and fives of players ("50+", "5+"), average place to one decimal and rates in whole percent. No display name, account, BattleTag, rating or single game is shown, and the stored totals keep no account id. The page asks search engines not to index it.
+
+**What remains possible.** The totals are rebuilt once a day from whole days of games, so each change mixes everyone's games of that day. Still, with few players, someone who saves the page every day and already knows something about you (for example that you have just started or stopped sharing, or the games on your public profile) could make a rough guess about your results or about whether you share; the rounding keeps it to a guess, not an exact result. Anyone can save what the page shows; we keep no history of past totals ourselves.
+
+**Stopping.** Turn the switch off on your account page. Your games are left out from the next daily rebuild. If a rebuild ever fails, the page shows no numbers once the last one is more than 26 hours old, so your games never stay in what is shown for longer than that. Deleting your account works the same way. A page someone already has open keeps what it loaded until they reload it. Withdrawing your consent does not change what was shown before.
+
 ## 5. Who receives your data
 
 **Our providers**, as processors acting on our instructions, each under a data processing agreement (DPA) that is part of its terms:
@@ -79,7 +95,7 @@ You can ask us for a copy of the transfer safeguards at the contact address abov
 
 **HearthSim**, the independent service behind HearthstoneJSON, receives the requests for card pictures described in section 3.
 
-**Everyone**, if you make your profile public: your public profile and, with a display name and enough games, the leaderboards (section 4).
+**Everyone**, if you make your profile public: your public profile and, with a display name and enough games, the leaderboards (section 4). If you turn on community hero stats: totals per hero that include your games without naming you (section 4).
 
 **Authorities**, only when the law requires it.
 
@@ -89,6 +105,7 @@ We do not sell or rent your data.
 
 - **Account, profile, games and sessions:** until you delete your account (sessions also end when you sign out or they expire).
 - **Leaderboard numbers:** rebuilt every 10 minutes while your profile is public; deleted when you make it private or delete your account.
+- **Community stats choice:** until you delete your account. **Community hero stats:** rebuilt once a day; your games leave them at the first rebuild after you turn the switch off or delete your account, and the page shows nothing once the last rebuild is over 26 hours old.
 - **Security log:** 90 days, then deleted every day by our clean-up job; all of it goes earlier if you delete your account.
 - **Backups:** made weekly on the controller's own computer, readable only by their user account, and deleted after 35 days. After you delete your account, your data can remain in backups for up to 35 days. If we ever restore a backup, we delete again the accounts deleted since it was made.
 - **Upload times:** two days. **Refused-request counters:** one hour.
@@ -98,12 +115,13 @@ We do not sell or rent your data.
 
 You can, at any time:
 
-- **Download your data:** "Download my data" on your account page gives one JSON file with your account details (not your password hash or sign-in tokens), sign-in sessions, security log, profile, game rows, your leaderboard numbers and game files. It is machine-readable, so you can take it elsewhere (data portability).
+- **Download your data:** "Download my data" on your account page gives one JSON file with your account details (not your password hash or sign-in tokens), sign-in sessions, security log, profile, your community stats choice, game rows, your leaderboard numbers and game files. It is machine-readable, so you can take it elsewhere (data portability).
 - **Ask for access** to anything else we hold about you, such as what may be in provider logs or backups, by writing to us.
 - **Correct** your display name on the account page; for anything else, write to us.
-- **Delete** your account: "Delete account" on your account page removes your files, game rows, leaderboard numbers, profile, sessions, security log and the account itself. Backups and provider logs expire as in section 6.
+- **Delete** your account: "Delete account" on your account page removes your files, game rows, leaderboard numbers, community stats choice, profile, sessions, security log and the account itself. Backups and provider logs expire as in section 6.
 - **Object** to processing based on legitimate interest, or ask us to **restrict** processing.
 - **Stop publishing** your profile and leave the leaderboards by turning the switch off.
+- **Withdraw your consent** to the community hero stats by turning "Include my games in community hero stats" off; your games leave the totals at the next daily rebuild.
 
 Write to privacy@tavernledger.net for anything the site does not do by itself. We answer within one month.
 
