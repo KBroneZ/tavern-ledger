@@ -23,6 +23,7 @@ mod cards_round1;
 mod cards_round2;
 mod cards_round3;
 mod cards_round4;
+mod cards_round5;
 pub mod combat;
 pub mod model;
 pub mod rng;

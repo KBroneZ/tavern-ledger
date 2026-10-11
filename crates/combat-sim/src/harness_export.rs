@@ -23,19 +23,9 @@ use crate::trials::{simulate, simulate_teams, Odds, Options, Verdict};
 /// Version of the JSON's shape; a reader checks it before reading.
 pub const FORMAT: u32 = 1;
 
-/// The cards that summon a minion from the hand, which is not seen: kept
-/// blocking (section 10, question 4). `BG34_Giant_017` summons a minion
-/// from the hand on its Deathrattle.
-pub const HAND_SUMMONERS: [&str; 8] = [
-    "BG34_140",
-    "BG34_140_G",
-    "BG31_835",
-    "BG31_835_G",
-    "BG21_HERO_030t",
-    "BG21_HERO_030t_G",
-    "BG34_Giant_017",
-    "BG34_Giant_017_G",
-];
+/// The cards that summon a minion from the hand: approximate since round 5
+/// (D-097), counted apart.
+pub use crate::cards::HAND_SUMMONERS;
 
 /// Calibration buckets in the export and the report.
 const BUCKETS: usize = 5;
@@ -50,12 +40,17 @@ pub struct ModeAccuracy {
     pub with_result: u32,
     /// A card on a board is not modelled: the app shows no number.
     pub blocked: u32,
-    /// Blocked with a hand summoner on a board, and blocked by them only.
+    /// A hand summoner on a board (blocked or not).
     pub with_hand_summoner: u32,
-    pub blocked_by_hand_only: u32,
     /// Refused by the engine's board check.
     pub refused: u32,
     pub report: Report,
+    /// The scored combats with a hand summoner on a board (approximate:
+    /// the hand summon is left out, D-097). Not in the export.
+    pub hand_scored: Report,
+    /// The blocked combats played anyway, the cards not modelled as plain
+    /// minions: evidence for keeping a card blocking. Not in the export.
+    pub anyway: Report,
 }
 
 impl ModeAccuracy {
@@ -72,17 +67,32 @@ pub struct Accuracy {
     pub blockers: Vec<(String, u32)>,
 }
 
-/// The card ids on `boards` the engine does not model, each once.
-fn not_modelled<'a>(boards: impl IntoIterator<Item = &'a Warband>) -> Vec<String> {
-    let mut ids: Vec<String> = boards
+/// One combat with a result: the card ids on its boards the engine does not
+/// model (each once), and whether a hand summoner is on a board.
+struct Item {
+    result: CombatResult,
+    blocking: Vec<String>,
+    hand: bool,
+}
+
+fn item<'a>(result: CombatResult, boards: impl IntoIterator<Item = &'a Warband>) -> Item {
+    let ids: Vec<&str> = boards
         .into_iter()
         .flat_map(|b| &b.minions)
-        .filter(|m| cards::rules(&m.card_id).is_none())
-        .map(|m| m.card_id.clone())
+        .map(|m| m.card_id.as_str())
         .collect();
-    ids.sort();
-    ids.dedup();
-    ids
+    let mut blocking: Vec<String> = ids
+        .iter()
+        .filter(|id| cards::rules(id).is_none())
+        .map(|id| id.to_string())
+        .collect();
+    blocking.sort();
+    blocking.dedup();
+    Item {
+        result,
+        blocking,
+        hand: ids.iter().any(|id| HAND_SUMMONERS.contains(id)),
+    }
 }
 
 fn prediction(o: &Odds) -> Prediction {
@@ -93,44 +103,49 @@ fn prediction(o: &Odds) -> Prediction {
     }
 }
 
-/// Scores one mode: each combat with a result and its blocking cards;
-/// `play(i)` plays combat `i` (only when nothing blocks it).
+/// Scores one mode. `play(i, anyway)` plays combat `i`; `anyway` plays the
+/// cards not modelled as plain minions (only for a blocked combat, scored
+/// apart).
 fn mode(
-    combats: &[(CombatResult, Vec<String>)],
-    mut play: impl FnMut(usize) -> Option<Odds>,
+    combats: &[Item],
+    mut play: impl FnMut(usize, bool) -> Option<Odds>,
     blockers: &mut BTreeMap<String, u32>,
 ) -> ModeAccuracy {
     let mut out = ModeAccuracy {
         with_result: 0,
         blocked: 0,
         with_hand_summoner: 0,
-        blocked_by_hand_only: 0,
         refused: 0,
         report: score(&[], BUCKETS),
+        hand_scored: score(&[], BUCKETS),
+        anyway: score(&[], BUCKETS),
     };
-    let mut items = Vec::new();
-    for (i, (result, blocking)) in combats.iter().enumerate() {
+    let (mut items, mut hand, mut anyway) = (Vec::new(), Vec::new(), Vec::new());
+    for (i, c) in combats.iter().enumerate() {
         out.with_result += 1;
-        if !blocking.is_empty() {
+        out.with_hand_summoner += u32::from(c.hand);
+        if !c.blocking.is_empty() {
             out.blocked += 1;
-            let hand = |id: &String| HAND_SUMMONERS.contains(&id.as_str());
-            if blocking.iter().any(hand) {
-                out.with_hand_summoner += 1;
-            }
-            if blocking.iter().all(hand) {
-                out.blocked_by_hand_only += 1;
-            }
-            for id in blocking {
+            for id in &c.blocking {
                 *blockers.entry(id.clone()).or_insert(0) += 1;
             }
+            anyway.extend(play(i, true).map(|o| (prediction(&o), c.result)));
             continue;
         }
-        match play(i) {
-            Some(o) => items.push((prediction(&o), *result)),
+        match play(i, false) {
+            Some(o) => {
+                let scored = (prediction(&o), c.result);
+                if c.hand {
+                    hand.push(scored);
+                }
+                items.push(scored);
+            }
             None => out.refused += 1,
         }
     }
     out.report = score(&items, BUCKETS);
+    out.hand_scored = score(&hand, BUCKETS);
+    out.anyway = score(&anyway, BUCKETS);
     out
 }
 
@@ -149,14 +164,19 @@ pub fn accuracy(solo: &[LoggedCombat], duos: &[DuosCombat], options: &Options) -
         start_of_combat: false,
         ..*options
     };
+    let anyway = Options {
+        allow_unmodelled: true,
+        ..opts
+    };
+    let pick = |a: bool| if a { &anyway } else { &opts };
     let mut blockers = BTreeMap::new();
     let solo_items: Vec<_> = solo
         .iter()
-        .map(|c| (c.result, not_modelled([&c.player, &c.opponent])))
+        .map(|c| item(c.result, [&c.player, &c.opponent]))
         .collect();
     let solo_acc = mode(
         &solo_items,
-        |i| odds(simulate(&solo[i].player, &solo[i].opponent, &opts)),
+        |i, a| odds(simulate(&solo[i].player, &solo[i].opponent, pick(a))),
         &mut blockers,
     );
     let duos: Vec<&DuosCombat> = duos.iter().filter(|c| c.result.is_some()).collect();
@@ -164,17 +184,17 @@ pub fn accuracy(solo: &[LoggedCombat], duos: &[DuosCombat], options: &Options) -
         .iter()
         .filter_map(|c| {
             let boards = c.own.iter().chain(&c.opponent).map(|l| &l.board);
-            Some((c.result?, not_modelled(boards)))
+            Some(item(c.result?, boards))
         })
         .collect();
     let duos_acc = mode(
         &duos_items,
-        |i| {
+        |i, a| {
             let c = duos[i];
             odds(simulate_teams(
                 &team_of(&c.own),
                 &team_of(&c.opponent),
-                &opts,
+                pick(a),
             ))
         },
         &mut blockers,
@@ -203,40 +223,27 @@ pub fn render_accuracy(a: &Accuracy) -> String {
     );
     let _ = writeln!(
         out,
-        "| Mode | With a result | Blocked | With a hand summoner | By the hand summoners only | \
-         Refused | Scored | Mean p(real result) | Brier | Most likely = real |"
+        "| Mode | With a result | Blocked | With a hand summoner | Refused | Scored | \
+         Mean p(real result) | Brier | Most likely = real |"
     );
-    let _ = writeln!(out, "|---|---|---|---|---|---|---|---|---|---|");
+    let _ = writeln!(out, "|---|---|---|---|---|---|---|---|---|");
     for (label, m) in [("Solo", &a.solo), ("Duos", &a.duos)] {
-        let r = &m.report;
         let blocked = if m.with_result > 0 {
             format!("{} ({})", m.blocked, pct(m.blocked_share()))
         } else {
             "-".into()
         };
-        let scores = if r.combats > 0 {
-            format!(
-                "{} | {:.3} | {} of {}",
-                pct(r.mean_p_actual),
-                r.brier,
-                r.top_pick_hits,
-                r.combats
-            )
-        } else {
-            "- | - | -".into()
-        };
         let _ = writeln!(
             out,
-            "| {label} | {} | {blocked} | {} | {} | {} | {} | {scores} |",
-            m.with_result, m.with_hand_summoner, m.blocked_by_hand_only, m.refused, r.combats,
+            "| {label} | {} | {blocked} | {} | {} | {} | {} |",
+            m.with_result,
+            m.with_hand_summoner,
+            m.refused,
+            m.report.combats,
+            scores(&m.report),
         );
     }
-    let _ = writeln!(
-        out,
-        "\nThe hand summoners ({}) are kept blocking.\n\nCards that block a combat (card id: \
-         combats):\n",
-        HAND_SUMMONERS.join(", ")
-    );
+    let _ = writeln!(out, "\nCards that block a combat (card id: combats):\n");
     if a.blockers.is_empty() {
         let _ = writeln!(out, "None.");
     } else {
@@ -247,7 +254,46 @@ pub fn render_accuracy(a: &Accuracy) -> String {
             .collect();
         let _ = writeln!(out, "{}", list.join(", "));
     }
+    render_anyway(&mut out, a);
     out
+}
+
+/// Two parts of the combats, scored apart: the scored ones with a hand
+/// summoner, and the blocked ones played anyway.
+fn render_anyway(out: &mut String, a: &Accuracy) {
+    let _ = writeln!(
+        out,
+        "\nTwo parts of these combats, apart: the scored ones with a hand summoner ({}), \
+         approximate since round 5 (D-097: the hand summon is left out), and the blocked ones \
+         played anyway, the cards not modelled as plain minions (the app shows no number for \
+         these).\n\n\
+         | Mode | Combats | n | Mean p(real result) | Brier | Most likely = real |\n\
+         |---|---|---|---|---|---|",
+        HAND_SUMMONERS.join(", ")
+    );
+    for (label, m) in [("Solo", &a.solo), ("Duos", &a.duos)] {
+        let groups = [
+            ("scored, with a hand summoner", &m.hand_scored),
+            ("blocked, played anyway", &m.anyway),
+        ];
+        for (group, r) in groups {
+            let _ = writeln!(out, "| {label} | {group} | {} | {} |", r.combats, scores(r));
+        }
+    }
+}
+
+/// Mean p(real result), Brier and most-likely-right as table cells.
+fn scores(r: &Report) -> String {
+    if r.combats == 0 {
+        return "- | - | -".into();
+    }
+    format!(
+        "{} | {:.3} | {} of {}",
+        pct(r.mean_p_actual),
+        r.brier,
+        r.top_pick_hits,
+        r.combats
+    )
 }
 
 fn mode_json(m: &ModeAccuracy) -> Value {

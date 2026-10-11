@@ -6,8 +6,14 @@ use crate::cards::{Action, Trigger};
 use crate::model::{Keywords, Tribes};
 
 impl Combat<'_> {
-    /// Gives `uid` stats, then checks "once this reaches N Attack".
+    /// Gives `uid` stats, then checks "once this reaches N Attack"; the
+    /// friends that follow an Amalgam gain them too.
     pub(super) fn buff(&mut self, side: usize, uid: u32, attack: i32, health: i32) {
+        self.buff_one(side, uid, attack, health);
+        self.amalgam_gained(side, uid, attack, health);
+    }
+
+    fn buff_one(&mut self, side: usize, uid: u32, attack: i32, health: i32) {
         let Some(u) = self.unit_mut(side, uid) else {
             return;
         };
@@ -191,6 +197,11 @@ impl Combat<'_> {
             }
             Action::TriggerAdjacentDeathrattle { both } => {
                 self.trigger_adjacent_deathrattle(side, src, both)
+            }
+            Action::CopyLeftmostDeathrattles { count, times } => {
+                if let Some(uid) = me {
+                    self.copy_leftmost_deathrattles(side, uid, count, times);
+                }
             }
             Action::MultiplyAttackerAttack { factor } => {
                 if let Some(a) = attacker {

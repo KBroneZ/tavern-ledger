@@ -4,7 +4,7 @@
 //! [`crate::cards`]: exact card ids, golden cards written out, approximations
 //! named with the reason.
 //!
-//! Left blocking, and why: the hand summoners (`BG34_140`, `BG31_835`,
+//! Left blocking after round 4, and why: the hand summoners (`BG34_140`, `BG31_835`,
 //! `BG21_HERO_030t`, and `BG34_Giant_017`, which summons a minion from the
 //! hand too: the hand is not seen); `BG31_999` (its Deathrattle copies the
 //! minion it destroyed at the start of combat, which no board the app has
@@ -12,7 +12,8 @@
 //! `BG34_Giant_599` (copies Deathrattles at the start of combat, so its own
 //! are not on the board); `TB_BaconShop_HERO_33_Buddy` (follows the Amalgam,
 //! a hero power minion); the golden Fish of N'Zoth skin (gains each
-//! Deathrattle twice).
+//! Deathrattle twice). Round 5 (`cards_round5`) took up all of these but
+//! `BG31_999`, `BGS_008` and `BG34_Giant_590`.
 
 use crate::cards::{approx, exact, Action, CardRules, Trigger};
 use crate::model::{Keywords, Tribes};
@@ -92,11 +93,11 @@ pub const EFFECTS_4: &[(&str, CardRules)] = &[
     // Fish of N'Zoth (a hero power's minion) and its skin.
     (
         "TB_BaconShop_HP_105t",
-        approx(EARLIER_GAINS, &[Trigger::GainsDeathrattles]),
+        approx(EARLIER_GAINS, &[Trigger::GainsDeathrattles(1)]),
     ),
     (
         "TB_BaconShop_HP_105t_SKIN_A",
-        approx(EARLIER_GAINS, &[Trigger::GainsDeathrattles]),
+        approx(EARLIER_GAINS, &[Trigger::GainsDeathrattles(1)]),
     ),
     // Ravaging Scorpid: after a friendly minion attacks, your Beetles have
     // +4/+4 (golden +8/+8); Deathrattle: summon a 2/2 Beetle (golden two).
