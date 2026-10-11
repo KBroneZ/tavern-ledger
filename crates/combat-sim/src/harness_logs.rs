@@ -83,8 +83,7 @@ fn engine_minion(m: &LogMinion, db: &CardDb) -> Option<Minion> {
         tribes: facts.map_or(Default::default(), |f| f.tribes),
         tier: facts.and_then(|f| f.tier),
         base: facts.and_then(|f| f.base),
-        // The parser does not read Dark Gifts on board minions yet (T-528).
-        gifts: Vec::new(),
+        gifts: m.gifts.iter().map(|g| g.to_string()).collect(),
         card_id,
     })
 }

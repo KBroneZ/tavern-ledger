@@ -538,3 +538,57 @@ fn golden_by_premium_build_253216() {
         assert_eq!(extra, vec![Some("BG32_236"); laureates], "{name}");
     }
 }
+
+/// Dark Gifts on board minions (parser revision 9, T-528, D-107): gift
+/// enchantments attached to the minion, on the player's and the opponents'
+/// combat copies, in the replay too; stat holders are not gifts. Counts
+/// checked against the raw game the fixture was made from.
+#[test]
+fn dark_gifts_on_board_minions_build_253216() {
+    use bg_parser::report::Side;
+    let r = game("b253216_duos_gifts");
+    let boards: Vec<_> = r
+        .rounds
+        .iter()
+        .flat_map(|round| &round.entries)
+        .filter_map(|e| Some((e.side, e.board.as_ref()?)))
+        .collect();
+    let count = |side: Side, f: &dyn Fn(&bg_parser::report::Minion) -> bool| {
+        boards
+            .iter()
+            .filter(|(s, _)| *s == side)
+            .flat_map(|(_, b)| b.iter())
+            .filter(|m| f(m))
+            .count()
+    };
+    assert_eq!(count(Side::Own, &|m| !m.gifts.is_empty()), 9);
+    assert_eq!(count(Side::Opponent, &|m| !m.gifts.is_empty()), 14);
+    assert_eq!(count(Side::Opponent, &|m| m.gift_unknown), 1);
+    assert_eq!(count(Side::Own, &|m| m.gift_unknown), 0);
+    let all: Vec<_> = boards.iter().flat_map(|(_, b)| b.iter()).collect();
+    assert_eq!(all.iter().filter(|m| m.gifts.len() == 2).count(), 3);
+    assert!(all.iter().all(|m| !m.gift_unknown || m.gifts.is_empty()));
+    assert!(all.iter().flat_map(|m| &m.gifts).all(|g| g
+        .strip_prefix("BG36_MidGameEffect_000t")
+        .is_some_and(|n| !n.contains('e'))));
+    // Gilding makes the minion golden by PREMIUM, without a golden card id.
+    let gilded: Vec<_> = all
+        .iter()
+        .filter(|m| m.gifts.contains(&"BG36_MidGameEffect_000t14"))
+        .collect();
+    assert!(!gilded.is_empty());
+    assert!(gilded.iter().all(|m| m.golden));
+    // The replay's starting boards carry the same gifts.
+    let replay_gifted: usize = r
+        .rounds
+        .iter()
+        .filter_map(|round| round.replay.as_ref())
+        .map(|rp| {
+            rp.minions[..rp.start]
+                .iter()
+                .filter(|m| !m.gifts.is_empty())
+                .count()
+        })
+        .sum();
+    assert_eq!(replay_gifted, 12);
+}

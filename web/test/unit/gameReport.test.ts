@@ -31,6 +31,8 @@ test("report reader: a whole synthetic Solo game, nothing dropped", () => {
     health: 3,
     golden: true,
     keywords: ["taunt", "divine_shield"],
+    gifts: [],
+    giftUnknown: false,
   });
   assert.equal(r.rounds[2].entries[0].board, null, "no board is unknown");
   assert.deepEqual(r.rounds[2].entries[1].board, [], "an empty board stays empty");
@@ -202,4 +204,28 @@ test("report reader: at most 3000 shop offers in a game, as the server checks", 
   const kept = rec.report.shop!.turns.reduce((n, t) => n + t.offers.length, 0);
   assert.equal(kept, 3000);
   assert.equal(rec.unreadable, 1000);
+});
+
+test("report reader: Dark Gifts on board minions (revision 9), bad ones counted", () => {
+  const report = soloReport() as Record<string, any>;
+  const board = report.rounds[1].entries[0].board;
+  board[0].gifts = ["BG36_MidGameEffect_000t9", "BG36_MidGameEffect_000t9", "<b>"];
+  board[1].gift_unknown = true;
+  const rec = read(record(report));
+  const [first, second] = rec.report.rounds[1].entries[0].board ?? [];
+  assert.deepEqual(first.gifts, ["BG36_MidGameEffect_000t9"], "once each; markup dropped");
+  assert.equal(rec.unreadable, 1, "the bad id is counted");
+  assert.equal(second.giftUnknown, true);
+  assert.deepEqual(second.gifts, []);
+});
+
+test("report reader: the real game with Dark Gifts reads without a dropped value", () => {
+  const dir = join(import.meta.dirname, "..", "..", "..", "crates", "bg-parser", "tests", "data", "real");
+  const [game] = JSON.parse(readFileSync(join(dir, "b253216_duos_gifts.json"), "utf8")) as Record<string, any>[];
+  const parser = { version: "0.1.0", revision: KNOWN_REVISION };
+  const result = readRecord({ session: SESSION, index: game.index, saved_at: 1, parser, report: game }, SESSION, game.index);
+  assert.ok(result.ok);
+  assert.equal(result.record.unreadable, 0);
+  const gifted = result.record.report.rounds.flatMap((r) => r.entries.flatMap((e) => e.board ?? [])).filter((m) => m.gifts.length > 0);
+  assert.equal(gifted.length, 23);
 });

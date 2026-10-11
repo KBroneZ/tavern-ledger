@@ -245,6 +245,8 @@ function renderBoards(opponent) {
       chip.append(el("b", null, `${stat(m.atk)}/${stat(m.health)}`), label);
       const marks = keywordMarks(m.keywords);
       if (marks) chip.append(marks);
+      const gifts = giftMarks(m);
+      if (gifts) chip.append(gifts);
       row.append(chip);
     }
     if (named) row.append(mark("card_data"));
@@ -265,6 +267,23 @@ function keywordMarks(keywords) {
     line.append(mark);
   }
   line.append(el("span", "visually-hidden", marks.map((k) => k.full).join(", ")));
+  return line;
+}
+
+// A minion's Dark Gifts (T-528, D-107), in Simple and Advanced: a small mark
+// per gift, its name and summary as the tooltip and read out in words.
+// Nothing when it has none.
+function giftMarks(m) {
+  const gifts = TLCards.gifts(m);
+  if (!gifts.length) return null;
+  const line = el("span", "gifts");
+  for (const g of gifts) {
+    const mark = el("span", g.id ? "gift-mark" : "gift-mark is-unknown", g.id ? "✦" : "✦?");
+    mark.title = g.title;
+    mark.setAttribute("aria-hidden", "true");
+    line.append(mark);
+  }
+  line.append(el("span", "visually-hidden", gifts.map((g) => g.title).join("; ")));
   return line;
 }
 

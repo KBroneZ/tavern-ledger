@@ -1,9 +1,11 @@
 // The combat replay of each round (T-215, D-099, parser revision 8), as
 // upload-game checks it: the parser's own bounds
 // (crates/bg-parser/src/replay.rs). Older records have none.
-import { bool, cardId, int, Invalid, isObject, keywords, list, MAX_INT, shape } from "./checks.ts";
+import { bool, cardId, gifts, int, Invalid, isObject, keywords, list, MAX_INT, shape } from "./checks.ts";
 
 const MAX_REPLAY_MINIONS = 200;
+// Written only when the minion has a Dark Gift (parser revision 9).
+const OPTIONAL_MINION_KEYS = new Set(["gifts", "gift_unknown"]);
 const MAX_REPLAY_EVENTS = 2000;
 const SIDES = new Set(["own", "opponent"]);
 const TRIGGERS = new Set(["start_of_combat", "deathrattle", "avenge", "rally"]);
@@ -42,7 +44,7 @@ export function replay(
   const minionKeys = keys["report.rounds[].replay.minions[]"];
   minions.forEach((m, i) => {
     const at = `${field}.minions[${i}]`;
-    const one = shape(m, at, minionKeys, minionKeys);
+    const one = shape(m, at, minionKeys, minionKeys.filter((k) => !OPTIONAL_MINION_KEYS.has(k)));
     side(one.side, `${at}.side`);
     cardId(one.card_id, `${at}.card_id`);
     int(one.atk, `${at}.atk`, -MAX_INT, MAX_INT);
@@ -50,6 +52,7 @@ export function replay(
     int(one.position, `${at}.position`, 0, 64);
     bool(one.golden, `${at}.golden`);
     keywords(one.keywords, `${at}.keywords`);
+    gifts(one, at);
   });
   const start = int(r.start, `${field}.start`, 0, minions.length);
   bool(r.complete, `${field}.complete`);

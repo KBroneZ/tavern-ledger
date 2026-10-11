@@ -50,6 +50,8 @@
       golden: m.golden === true,
       shield: keywords.includes("divine_shield"),
       keywords,
+      gifts: list(m.gifts).filter((g) => typeof g === "string"),
+      gift_unknown: m.gift_unknown === true,
     };
   }
 
@@ -268,6 +270,14 @@
     const stats = ui.el("span", "replay-stats");
     stats.setAttribute("aria-hidden", "true");
     // The words a screen reader reads for the tile (the picture has none).
+    // Dark Gifts (T-528): they do not change during a combat.
+    const gifts = Turns.giftMarks(tile);
+    if (gifts.length) {
+      const line = ui.el("span", "replay-gifts");
+      line.setAttribute("aria-hidden", "true");
+      gifts.forEach((g) => line.append(Turns.giftMark(ui, g)));
+      box.append(line);
+    }
     box.append(stats, ui.el("span", "visually-hidden replay-words"));
     return box;
   }
@@ -289,7 +299,8 @@
       box.append(hurt);
     }
     const name = tile.id ? h.cardName(tile.id) || tile.id : t("shop.card.unknown");
-    const marks = [tile.golden && t("keyword.golden"), ...tile.keywords.map((k) => (`keyword.${k}` in I18n.tables().en ? t(`keyword.${k}`) : k))].filter(Boolean);
+    const gifts = Turns.giftMarks(tile).map((g) => g.title);
+    const marks = [tile.golden && t("keyword.golden"), ...tile.keywords.map((k) => (`keyword.${k}` in I18n.tables().en ? t(`keyword.${k}`) : k)), ...gifts].filter(Boolean);
     const words = [`${name} ${stats.textContent}`, marks.join(", ")].filter(Boolean).join(" · ");
     box.title = words;
     box.querySelector(".replay-words").textContent = words;

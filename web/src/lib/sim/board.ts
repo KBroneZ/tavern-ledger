@@ -126,7 +126,7 @@ function minionFrom(m: ReportMinion, cards: CardIndex): SimMinion | null {
     attack: Math.min(m.atk, MAX_STAT),
     health: Math.min(m.health, MAX_STAT),
     keywords,
-    gifts: [],
+    gifts: [...new Set(m.gifts.filter((g) => GIFT_ID.test(g)))].slice(0, MAX_GIFTS),
   };
 }
 

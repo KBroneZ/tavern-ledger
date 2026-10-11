@@ -45,6 +45,11 @@ pub struct LiveMinion {
     /// Keywords as it entered the combat (T-208); None when the record is
     /// older than parser revision 5 (not recorded), never "none".
     pub keywords: Option<Vec<String>>,
+    /// Dark Gifts as gift card ids (T-528, parser revision 9); empty when
+    /// none or when the record is older.
+    pub gifts: Vec<String>,
+    /// The game marks a Dark Gift the log does not name.
+    pub gift_unknown: bool,
 }
 
 /// A board that entered play in a combat, with the combat it was seen in.
@@ -513,6 +518,18 @@ pub(crate) fn minions_of(board: &[Value]) -> Vec<LiveMinion> {
                             .map(String::from)
                             .collect()
                     }),
+                    gifts: m
+                        .get("gifts")
+                        .and_then(Value::as_array)
+                        .map(|g| {
+                            g.iter()
+                                .filter_map(Value::as_str)
+                                .take(bg_parser::gifts::MAX_GIFTS)
+                                .map(String::from)
+                                .collect()
+                        })
+                        .unwrap_or_default(),
+                    gift_unknown: m.get("gift_unknown").and_then(Value::as_bool) == Some(true),
                 },
             )
         })

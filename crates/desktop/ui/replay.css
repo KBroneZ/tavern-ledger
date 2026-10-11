@@ -169,3 +169,21 @@
   .replay-minion.attacker .replay-art, .replay-minion.defender .replay-art { outline: 3px solid Highlight; }
   .replay-minion.shield .replay-art { outline: 3px dashed CanvasText; }
 }
+
+/* Dark Gifts (T-528, D-107): the marks sit on the picture's top edge. */
+.replay-gifts {
+  position: absolute;
+  top: -6px;
+  right: 0;
+  display: flex;
+  gap: 2px;
+}
+.replay-gifts .gift-mark {
+  padding: 0 3px;
+  border: 1px solid rgb(212 184 255 / 0.7);
+  border-radius: 4px;
+  background: rgb(12 8 7 / 0.85);
+  color: #d4b8ff;
+  font: 700 11px/1.4 var(--font-body);
+}
+.replay-gifts .gift-mark.is-unknown { border-style: dashed; }

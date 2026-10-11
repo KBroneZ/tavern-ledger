@@ -9,7 +9,7 @@
 // server does, BattleTag shapes refused) and the parser's short notes.
 
 /** The parser revision this site knows (crates/bg-parser PARSER_REVISION). */
-export const KNOWN_REVISION = 8;
+export const KNOWN_REVISION = 9;
 
 const CARD_ID = /^[A-Za-z0-9_]{1,64}$/;
 const NOTE = /^[A-Za-z0-9 _:.()-]{1,160}$/;
@@ -22,6 +22,8 @@ const MAX_INT = 2 ** 31 - 1;
 const MAX_HEALTH = 100_000;
 const MAX_COUNT = 10_000;
 const MAX_DBF_ID = 10_000_000;
+// The parser keeps at most 4 Dark Gifts on a minion (crates/bg-parser/src/gifts.rs).
+const MAX_GIFTS = 4;
 const MAX_TURN = 100;
 const MAX_GAME_OFFERS = 3000;
 
@@ -45,6 +47,10 @@ export interface Minion {
   health: number | null;
   golden: boolean;
   keywords: Keyword[];
+  /** Dark Gifts as gift card ids (parser revision 9, T-528); [] when none or older. */
+  gifts: string[];
+  /** The game marks a Dark Gift the log does not name. */
+  giftUnknown: boolean;
 }
 
 export interface Entry {
@@ -240,6 +246,8 @@ function minion(r: Reader, v: unknown): Minion {
     health: r.int(m.health, -MAX_INT, MAX_INT),
     golden: r.bool(m.golden),
     keywords,
+    gifts: absent(m.gifts) ? [] : [...new Set(r.list(m.gifts, MAX_GIFTS).map((v) => r.card(v)).filter((v): v is string => v !== null))],
+    giftUnknown: m.gift_unknown === true,
   };
 }
 
