@@ -20,24 +20,31 @@ import {
 import type { SiteConfig } from "./config.ts";
 import { type DeleteOutcome, deleteOutcome } from "./deleteAccount.ts";
 import { buildExport, type ExportFile, ownFileNames } from "./exportData.ts";
-import { type GameView, gameView, profileErrorMessage } from "./profile.ts";
+import { profileErrorMessage } from "./profile.ts";
 
 const TIMEOUT_MS = 15_000;
-// The public page shows the latest games only.
-export const PUBLIC_GAMES_LIMIT = 200;
 
-/** fetch with a timeout, so no request can hang a page. */
-function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
-  const timeout = AbortSignal.timeout(TIMEOUT_MS);
-  const signal = init.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
-  return fetch(input, { ...init, signal });
+/**
+ * fetch with a timeout, so no request can hang a page. It aborts with a
+ * plain AbortError: postgrest-js retries a TimeoutError like a network
+ * failure (three more tries), which held a page for over a minute (T-503).
+ */
+function withTimeout(ms: number): typeof fetch {
+  return (input, init = {}) => {
+    const timeout = new AbortController();
+    const timer = setTimeout(() => timeout.abort(), ms);
+    const signal = init.signal ? AbortSignal.any([init.signal, timeout.signal]) : timeout.signal;
+    return fetch(input, { ...init, signal }).finally(() => clearTimeout(timer));
+  };
 }
+
+const fetchWithTimeout = withTimeout(TIMEOUT_MS);
 
 /**
  * The browser keeps the session in Supabase's default storage
- * (localStorage); tests pass an in-memory store.
+ * (localStorage); tests pass an in-memory store and may shorten the timeout.
  */
-export function makeClient(config: SiteConfig, storage?: SupportedStorage): SupabaseClient {
+export function makeClient(config: SiteConfig, storage?: SupportedStorage, timeoutMs = TIMEOUT_MS): SupabaseClient {
   return createClient(config.url, config.anonKey, {
     auth: {
       flowType: "pkce",
@@ -49,7 +56,7 @@ export function makeClient(config: SiteConfig, storage?: SupportedStorage): Supa
       detectSessionInUrl: false,
       ...(storage ? { storage } : {}),
     },
-    global: { fetch: fetchWithTimeout },
+    global: { fetch: timeoutMs === TIMEOUT_MS ? fetchWithTimeout : withTimeout(timeoutMs) },
   });
 }
 
@@ -279,39 +286,4 @@ export async function deleteAccount(client: SupabaseClient, config: SiteConfig):
     body = null;
   }
   return deleteOutcome(res.status, body);
-}
-
-export type PublicProfile =
-  | { kind: "found"; name: string | null; games: GameView[] }
-  | { kind: "not-found" }
-  | { kind: "error" };
-
-/**
- * A profile that is private and one that does not exist look the same, so
- * the page cannot be used to find out which accounts exist.
- */
-export async function loadPublicProfile(client: SupabaseClient, userId: string): Promise<PublicProfile> {
-  try {
-    const profile = await client
-      .from("profiles")
-      .select("display_name")
-      .eq("user_id", userId)
-      .eq("is_public", true)
-      .maybeSingle();
-    if (profile.error) return { kind: "error" };
-    if (!profile.data) return { kind: "not-found" };
-    const games = await client
-      .from("games")
-      .select("game_type, status, hero_card_id, final_place, played_on")
-      .eq("user_id", userId)
-      .order("played_on", { ascending: false })
-      .order("session", { ascending: false })
-      .order("game_index", { ascending: false })
-      .limit(PUBLIC_GAMES_LIMIT);
-    if (games.error || !Array.isArray(games.data)) return { kind: "error" };
-    const name = typeof profile.data.display_name === "string" ? profile.data.display_name : null;
-    return { kind: "found", name, games: games.data.map(gameView) };
-  } catch {
-    return { kind: "error" };
-  }
 }
