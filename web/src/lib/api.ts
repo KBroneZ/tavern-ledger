@@ -32,9 +32,12 @@ const TIMEOUT_MS = 15_000;
 function withTimeout(ms: number): typeof fetch {
   return (input, init = {}) => {
     const timeout = new AbortController();
-    const timer = setTimeout(() => timeout.abort(), ms);
+    // Left running after the headers, so a body that stalls is cut off too;
+    // aborting a finished request does nothing. unref: Node (tests) only.
+    const timer: unknown = setTimeout(() => timeout.abort(), ms);
+    (timer as { unref?: () => void }).unref?.();
     const signal = init.signal ? AbortSignal.any([init.signal, timeout.signal]) : timeout.signal;
-    return fetch(input, { ...init, signal }).finally(() => clearTimeout(timer));
+    return fetch(input, { ...init, signal });
   };
 }
 

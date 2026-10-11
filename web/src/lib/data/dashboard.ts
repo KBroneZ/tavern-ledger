@@ -59,7 +59,11 @@ export function overviewTiles(ov: Overview, recentPlaces: (number | null)[]): Ti
     {
       label: t("tile.combats"),
       value: share(ov.combatsWon, fought),
-      backing: backed(ov.combatGames, ov.games),
+      // The share is of combats with a result; unknown ones are said, never hidden.
+      backing:
+        fought !== null && (ov.combatsUnknown ?? 0) > 0
+          ? t("tile.combats.back", { known: fought, unknown: ov.combatsUnknown as number })
+          : backed(ov.combatGames, ov.games),
       source: ov.combatGames === 0 ? "unknown" : (ov.combatsInferred ?? 0) > 0 ? "inferred" : undefined,
     },
     per("tile.damageDealt", ov.damageDealt, ov.damageDealtGames, true),
@@ -77,6 +81,7 @@ export function overviewTiles(ov: Overview, recentPlaces: (number | null)[]): Ti
   return { simple, advanced };
 }
 
+// Heroes go by card id until the card data reaches the site (D-074, T-504).
 const heroName = (hero: string | null) => hero ?? t("hero.unknown");
 
 export const HERO_COLUMNS = (m: Mode): Column[] => [
@@ -94,7 +99,8 @@ export function heroCells(rows: readonly HeroRow[], m: Mode): Cell[][] {
     .toSorted((a, b) => b.games - a.games || (a.avgPlace ?? 99) - (b.avgPlace ?? 99) || (a.hero ?? "").localeCompare(b.hero ?? ""))
     .map((r) => [
       { hero: r.hero, name: heroName(r.hero) },
-      r.games,
+      // Places count finished games only: say how many when some are not.
+      r.placedGames < r.games ? t("heroes.games.placed", { games: r.games, placed: r.placedGames }) : r.games,
       average(r.avgPlace),
       share(r.topHalf, r.placedGames),
       { place: r.bestPlace, mode: m },
@@ -167,7 +173,9 @@ export function gameHref(userId: string, session: string, gameIndex: number): st
 function dateCell(g: GameRow, userId: string | null): Cell {
   const text = dateText(g.playedOn);
   if (!userId || g.session === null || g.gameIndex === null) return text;
-  return { node: h("a", { href: gameHref(userId, g.session, g.gameIndex) }, text) };
+  // Same-day games would share the link text: the hero tells them apart for screen readers.
+  const which = h("span", { class: "visually-hidden" }, t("games.link", { hero: heroName(g.hero) }));
+  return { node: h("a", { href: gameHref(userId, g.session, g.gameIndex) }, text, which) };
 }
 
 /** One game as a row: hero, place badge (or why it has none), date (linking to the game) and the key numbers. */

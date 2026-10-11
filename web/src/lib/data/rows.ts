@@ -67,6 +67,13 @@ export function day(value: unknown): string | null {
   return date.toISOString().slice(0, 10) === value ? value : null;
 }
 
+/** The columns overview() reads, for the select. */
+export const OVERVIEW_COLUMNS =
+  "mode,games,incomplete_games,unsupported_games,placed_games,avg_place,top_half,wins,first_played_on,last_played_on,summarized_games," +
+  "combats_won,combats_lost,combats_tied,combats_unknown,combats_inferred,combat_games,damage_dealt,damage_dealt_games,damage_taken,damage_taken_games," +
+  "gold_spent,gold_spent_games,gold_beyond_income,gold_beyond_games,sell_gold,sell_gold_games,rolls,free_rolls,buys,sells,shop_games," +
+  "avg_apm,apm_games,triples,triples_games";
+
 export interface Overview {
   mode: Mode;
   games: number;
@@ -82,6 +89,7 @@ export interface Overview {
   combatsWon: number | null;
   combatsLost: number | null;
   combatsTied: number | null;
+  combatsUnknown: number | null;
   combatsInferred: number | null;
   combatGames: number;
   damageDealt: number | null;
@@ -131,6 +139,7 @@ export function overview(value: unknown): Overview {
     combatsWon: amount(r.combats_won),
     combatsLost: amount(r.combats_lost),
     combatsTied: amount(r.combats_tied),
+    combatsUnknown: amount(r.combats_unknown),
     combatsInferred: amount(r.combats_inferred),
     combatGames: part("combat_games"),
     damageDealt: amount(r.damage_dealt),

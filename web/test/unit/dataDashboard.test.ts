@@ -123,7 +123,21 @@ test("recentPlaces: the newest n, oldest first", () => {
 test("a game's date links to the game viewer when its key is known, each value encoded", () => {
   const id = "0f8fad5b-d9cb-469f-a165-70867728950e";
   const cells = gameCells(gameRow(gameRaw()), false, id);
-  assert.equal(toHtml((cells[2] as { node: VNode }).node), `<a href="/game/?u=${id}&amp;s=Hearthstone_2026_10_09_18_30_00&amp;g=2">Oct 9, 2026</a>`);
+  assert.equal(
+    toHtml((cells[2] as { node: VNode }).node),
+    `<a href="/game/?u=${id}&amp;s=Hearthstone_2026_10_09_18_30_00&amp;g=2">Oct 9, 2026<span class="visually-hidden">: game with BG20_HERO_202</span></a>`,
+  );
   assert.equal(gameCells(gameRow(gameRaw({ session: "a/b?c" })), false, id)[2], "Oct 9, 2026", "an odd key gets no link");
   assert.equal(gameCells(gameRow(gameRaw()), false)[2], "Oct 9, 2026");
+});
+
+test("combats won: unknown combats are said next to the share of known ones", () => {
+  const { advanced } = overviewTiles(overview(overviewRow({ combats_won: 5, combats_lost: 2, combats_tied: 0, combats_unknown: 6, combats_inferred: 0 })), []);
+  assert.equal(advanced[0].value, "71%");
+  assert.equal(advanced[0].backing, "of 7 combats with a result; 6 unknown");
+});
+
+test("heroes: games without a place are said next to the games, since places count finished games only", () => {
+  const cells = heroCells([heroRow(heroRaw({ games: 10, placed_games: 2, avg_place: 2, top_half: 2 }))], "solo");
+  assert.deepEqual(cells[0].slice(1, 4), ["10 (2 placed)", "2.00", "100%"]);
 });

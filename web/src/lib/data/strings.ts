@@ -127,6 +127,7 @@ export const STRINGS = {
   "tile.topHalf.duos": "Top 2",
   "tile.wins": "Wins (1st place)",
   "tile.combats": "Combats won",
+  "tile.combats.back": "of {known} combats with a result; {unknown} unknown",
   "tile.damageDealt": "Damage dealt per game",
   "tile.damageTaken": "Damage taken per game",
   "tile.goldSpent": "Gold spent per game",
@@ -143,6 +144,7 @@ export const STRINGS = {
   "heroes.caption": "Heroes, most games first, {mode}",
   "heroes.col.hero": "Hero",
   "heroes.col.games": "Games",
+  "heroes.games.placed": "{games} ({placed} placed)",
   "heroes.col.avg": "Avg place",
   "heroes.col.best": "Best",
   "heroes.empty": "No heroes recorded yet",
@@ -178,6 +180,7 @@ export const STRINGS = {
   "games.col.combats": "Combats won–lost",
   "games.col.triples": "Triples",
   "games.col.apm": "APM",
+  "games.link": ": game with {hero}",
   "games.status.incomplete": "unfinished",
   "games.status.unsupported": "unreadable",
 

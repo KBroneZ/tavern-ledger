@@ -13,6 +13,7 @@ import {
   gameRow,
   heroRow,
   overview,
+  OVERVIEW_COLUMNS,
   place,
   recordRow,
   type GameRow,
@@ -20,6 +21,8 @@ import {
   type Overview,
   type RecordRow,
 } from "./data/rows.ts";
+
+const HERO_COLUMNS = "mode,hero,games,placed_games,avg_place,top_half,wins,best_place";
 
 /** The charts count at most this many of the latest games per mode. */
 export const CHART_GAMES = 1000;
@@ -112,8 +115,8 @@ function totalOf(raw: number | null | undefined, fallback: number): number {
 /** Everything the dashboard shows for one player, both modes. */
 export async function loadDashboard(client: SupabaseClient, userId: string): Promise<Dashboard> {
   const [ov, heroes, records, solo, duos] = await Promise.all([
-    client.from("user_overview").select("*").eq("user_id", userId),
-    client.from("user_heroes").select("mode,hero,games,placed_games,avg_place,top_half,wins,best_place").eq("user_id", userId),
+    client.from("user_overview").select(OVERVIEW_COLUMNS).eq("user_id", userId),
+    client.from("user_heroes").select(HERO_COLUMNS).eq("user_id", userId),
     client.from("user_records").select("mode,record,value,played_on,games,inferred").eq("user_id", userId),
     modeData(client, userId, "solo"),
     modeData(client, userId, "duos"),
@@ -131,7 +134,7 @@ export async function loadDashboard(client: SupabaseClient, userId: string): Pro
 
 /** The heroes a player has games with (for the hero filter), most games first. */
 export async function loadHeroes(client: SupabaseClient, userId: string): Promise<string[]> {
-  const rows = rowsOf(await client.from("user_heroes").select("mode,hero,games,placed_games,avg_place,top_half,wins,best_place").eq("user_id", userId)).map(heroRow);
+  const rows = rowsOf(await client.from("user_heroes").select(HERO_COLUMNS).eq("user_id", userId)).map(heroRow);
   const games = new Map<string, number>();
   for (const r of rows) if (r.hero && r.games > 0) games.set(r.hero, (games.get(r.hero) ?? 0) + r.games);
   return [...games.entries()].toSorted((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([hero]) => hero);

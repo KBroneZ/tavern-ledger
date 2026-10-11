@@ -24,6 +24,11 @@ function settle(text: string): void {
   root.setAttribute("aria-busy", "false");
 }
 
+/** The form ships with "Show games" off, so it cannot be sent before it shows the filters in force. */
+function formReady(): void {
+  byId<HTMLButtonElement>("list-apply").disabled = false;
+}
+
 /** The form shows the filters in force (the address may have been typed by hand). */
 function fillForm(f: GameFilters, profileId: string | null): void {
   byId<HTMLSelectElement>("list-mode").value = f.mode;
@@ -55,6 +60,8 @@ function fillHeroes(heroes: string[], selected: string | null): void {
 function gate(title: string, text: string): void {
   mount(body, stateBlock({ kind: "unknown", title, body: text }));
   form.hidden = true;
+  back.hidden = true;
+  document.title = `${title} · Tavern Ledger`;
   settle(title);
 }
 
@@ -73,7 +80,6 @@ async function whose(profileId: string | null): Promise<string | null> {
   const access = await profileAccess(supabase, profileId, viewer);
   if (access.kind === "private") {
     gate(t("dash.private.title"), t("dash.private.body"));
-    document.title = `${t("dash.private.title")} · Tavern Ledger`;
     return null;
   }
   const name = access.name ?? t("dash.unnamed");
@@ -102,6 +108,7 @@ async function start(): Promise<void> {
   if (!userId) return;
   const [heroes, page] = await Promise.all([loadHeroes(supabase, userId), loadGames(supabase, userId, filters)]);
   fillHeroes(heroes, filters.hero);
+  formReady();
   mount(body, ...listBody({ ...page, filters, profileId, userId, invalid }));
   settle(page.total === 0 ? t("list.none") : t("dash.loaded"));
 }
@@ -109,6 +116,7 @@ async function start(): Promise<void> {
 function failed(): void {
   const retry = h("button", { type: "button", class: "secondary", id: "list-retry" }, t("dash.retry"));
   mount(body, stateBlock({ kind: "error", title: t("dash.error"), body: t("dash.error.body") }, retry));
+  form.hidden = true;
   settle(t("dash.error"));
   byId("list-retry").addEventListener("click", () => location.reload());
 }
