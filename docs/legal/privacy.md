@@ -2,7 +2,7 @@
 
 Last updated: 11 October 2026
 
-**What changed on 11 October 2026:** public leaderboards (section 4, "Public profiles and leaderboards"): what they show, who appears on them, how to leave them and how long the numbers are kept; the check of display names against a short word list; the leaderboard numbers in the download (section 7).
+**What changed on 11 October 2026:** public leaderboards (section 4, "Public profiles and leaderboards"): what they show, who appears on them, how to leave them and how long the numbers are kept; the check of display names against a short word list; the leaderboard numbers in the download (section 7). Also new that day: card and hero pictures loaded from HearthstoneJSON (sections 3 and 5).
 
 Tavern Ledger is a free, open-source Hearthstone Battlegrounds tracker: a Windows app that reads the game's log files on your PC, and a website where you can keep and, if you want, share your games. This policy says what personal data we handle, why, where it goes and what you can do about it.
 
@@ -29,6 +29,8 @@ Unless you turn on uploading, the app sends nothing over the internet and we nev
 When you load a page, our hosting provider (Cloudflare) and, for pages that talk to our server, our backend provider (Supabase) receive your IP address, browser user agent, the address requested and the time, as with any website. They use it to deliver the page and to protect the service, and keep it in their logs (section 6).
 
 Legal basis: our legitimate interest in running a website that works and is protected from attacks (Art. 6(1)(f) GDPR).
+
+**Card pictures.** Pages that show games (a game, your games, a public profile, the games list and the leaderboards) load card and hero pictures straight from HearthstoneJSON's image server (`art.hearthstonejson.com`), an independent service run by HearthSim, not a provider of ours. Your browser sends it your IP address, browser user agent and the address of each picture, which names only the card: our pages send no referrer, so it does not learn which page, account or game you are looking at. HearthSim decides what it logs; see hearthstonejson.com. Legal basis: our legitimate interest in showing games in a readable way (Art. 6(1)(f) GDPR). To avoid it, block that address in your browser: the pages then show a plain placeholder instead.
 
 There are no ads, no analytics and no tracking.
 
@@ -74,6 +76,8 @@ We do **not** collect player names, BattleTags, Battle.net accounts, ratings or 
 | Lettermint B.V., the Netherlands | Sends account emails from noreply@tavernledger.net (sign-up confirmation, sign-in links, email change and password reset). Open and click tracking is switched off on our account, so the links reach you unchanged | European Union | None for email data: Lettermint's data processing agreement (part of its terms) keeps it in the EU and allows no transfer outside the EEA without our approval. Two of its sub-processors, Slack (staff messaging) and Stripe (billing), are outside the EU and do not receive the emails |
 
 You can ask us for a copy of the transfer safeguards at the contact address above.
+
+**HearthSim**, the independent service behind HearthstoneJSON, receives the requests for card pictures described in section 3.
 
 **Everyone**, if you make your profile public: your public profile and, with a display name and enough games, the leaderboards (section 4).
 

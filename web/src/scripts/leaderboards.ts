@@ -2,6 +2,7 @@
 // draws both modes and the three periods into the reserved #lb-modes, and
 // runs the period switch (kept in the address, like Solo / Duos). The mode
 // and detail switches are the data pages' own (switches.ts).
+import { watchPictureFallback } from "../lib/data/pictures.ts";
 import { parsePeriod, PERIODS, withPeriod, type Period } from "../lib/leaderboards/boards.ts";
 import { loadLeaderboards } from "../lib/leaderboards/api.ts";
 import { lt } from "../lib/leaderboards/strings.ts";
@@ -16,6 +17,9 @@ const status = byId("lb-status");
 const body = byId("lb-body");
 const panels = byId("lb-modes");
 const periods = byId("lb-period");
+
+// Hero pictures on the per-hero board fall back to the local placeholder (D-074).
+watchPictureFallback(document);
 
 function settle(text: string): void {
   status.textContent = text;

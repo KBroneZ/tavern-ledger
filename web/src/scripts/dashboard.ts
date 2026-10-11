@@ -12,6 +12,10 @@ import { h, mount, type VNode } from "../lib/view/node.ts";
 import { stateBlock } from "../lib/view/pieces.ts";
 import { supabase } from "./client.ts";
 import { byId, moveFocus } from "./dom.ts";
+import { watchPictureFallback } from "../lib/data/pictures.ts";
+
+// A picture that fails to load shows its local placeholder (D-074).
+watchPictureFallback(document);
 
 const root = byId("dash");
 const own = root.dataset.kind === "own";

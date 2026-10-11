@@ -1,0 +1,257 @@
+/* The game viewer (T-504), on the data pages' tokens (data.css, D-070).
+   The body keeps a screen's height while the game loads, so the footer
+   stays below the fold and nothing it holds moves when the game arrives. */
+
+.gv {
+  display: grid;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+.gv-head {
+  align-items: end;
+}
+
+.gv-head h1 {
+  overflow-wrap: anywhere;
+}
+
+.gv-body {
+  display: grid;
+  gap: var(--s-4);
+  min-width: 0;
+  min-height: 100svh;
+  align-content: start;
+}
+
+.gv-banner {
+  margin: 0;
+}
+
+/* ---------- Summary bar ---------- */
+
+.gv-summary {
+  display: grid;
+  gap: var(--s-4);
+  padding: var(--s-4);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-panel);
+  background: var(--surface-1);
+}
+
+.gv-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3) var(--s-5);
+}
+
+.gv-hero-name {
+  font: 700 var(--t-lg) / 1.2 var(--display);
+  overflow-wrap: anywhere;
+}
+
+.gv-place {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-1);
+}
+
+.gv-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  margin: 0;
+  font-size: var(--t-sm);
+}
+
+.gv-facts dt {
+  color: var(--text-3);
+}
+
+.gv-facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.gv-status {
+  color: var(--text-2);
+  font-size: var(--t-md);
+}
+
+/* ---------- Shared bits ---------- */
+
+.gv-hero,
+.gv-opp {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  vertical-align: middle;
+}
+
+.gv-dim {
+  color: var(--text-2);
+  font-size: var(--t-sm);
+  font-weight: 400;
+}
+
+.gv-id {
+  font: var(--t-xs) / 1.3 var(--mono);
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+
+.gv-tierup {
+  color: var(--amber-hi);
+  font-size: var(--t-xs);
+}
+
+.gv-turns td,
+.gv-turns th {
+  white-space: nowrap;
+}
+
+/* ---------- Boards ---------- */
+
+.gv-board {
+  display: grid;
+  gap: var(--s-2);
+  padding-block: var(--s-2);
+}
+
+.gv-board-title {
+  font-weight: 700;
+}
+
+.gv-minions,
+.gv-offers,
+.gv-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gv-minion,
+.gv-offers li,
+.gv-options li {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.gv-minion-text {
+  display: grid;
+  line-height: 1.25;
+  min-width: 0;
+}
+
+.gv-stats {
+  font: 700 var(--t-md) / 1.2 var(--display);
+  font-variant-numeric: tabular-nums;
+}
+
+.gv-golden {
+  color: var(--amber-hi);
+  font-size: var(--t-xs);
+  font-weight: 700;
+}
+
+.gv-minion.is-golden .pic {
+  box-shadow: 0 0 0 2px var(--amber);
+}
+
+.gv-keywords {
+  color: var(--text-2);
+  font-size: var(--t-xs);
+}
+
+.gv-frozen,
+.gv-taken {
+  padding: 0 var(--s-2);
+  border-radius: var(--r-chip);
+  font-size: var(--t-xs);
+  font-weight: 700;
+}
+
+.gv-frozen {
+  border: 1px solid var(--info);
+  color: var(--info);
+}
+
+.gv-taken {
+  border: 1px solid var(--amber);
+  color: var(--amber-hi);
+}
+
+.gv-options li.is-taken .pic {
+  box-shadow: 0 0 0 2px var(--amber);
+}
+
+.gv-shop {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr));
+  gap: var(--s-2) var(--s-4);
+  margin: 0;
+  font-size: var(--t-sm);
+}
+
+.gv-shop dt {
+  color: var(--text-3);
+}
+
+.gv-shop dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.gv-shop .gv-cards {
+  grid-column: 1 / -1;
+}
+
+.gv-pics {
+  flex-wrap: wrap;
+  padding: var(--s-1) 0;
+}
+
+.gv-roll {
+  display: grid;
+  gap: var(--s-2);
+  padding-block: var(--s-2);
+}
+
+/* ---------- Choices, lobby, notes ---------- */
+
+.gv-choices {
+  display: grid;
+  gap: var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gv-choice {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.dtable tr.is-own > * {
+  background: var(--panel-hi);
+}
+
+.gv-notes {
+  margin: 0;
+  padding-left: 1.2em;
+  color: var(--text-2);
+}
+
+@media (forced-colors: active) {
+  .gv-minion.is-golden .pic,
+  .gv-options li.is-taken .pic {
+    outline: 2px solid CanvasText;
+  }
+}

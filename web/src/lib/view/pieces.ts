@@ -14,7 +14,7 @@ import {
   type Mode,
   type Trend,
 } from "../data/format.ts";
-import { pictureFor, type PictureKind } from "../data/pictures.ts";
+import { FALLBACK_ATTR, type Picture, pictureFor, type PictureKind } from "../data/pictures.ts";
 import { t } from "../data/strings.ts";
 import { cls, h, s, type VNode } from "./node.ts";
 
@@ -152,13 +152,13 @@ export function statTile(props: TileProps): VNode {
 }
 
 export function picture(kind: PictureKind, id: string | null, name: string, size: 24 | 32 | 40 | 56 = 32, decorative = false): VNode {
-  let src: string | null = null;
+  let pic: Picture | null = null;
   try {
-    src = id ? pictureFor(kind, id).src : null;
+    pic = id ? pictureFor(kind, id) : null;
   } catch {
-    src = null; // not shaped like a card id: the plain circle, never a broken address
+    pic = null; // not shaped like a card id: the plain circle, never a broken address
   }
-  if (!src) {
+  if (!pic) {
     return h("span", {
       class: `pic pic-${kind} pic-missing`,
       "data-size": size,
@@ -169,7 +169,8 @@ export function picture(kind: PictureKind, id: string | null, name: string, size
   return h(
     "span",
     { class: `pic pic-${kind}`, "data-size": size },
-    h("img", { src, alt: decorative ? "" : name, width: size, height: size, loading: "lazy", decoding: "async" }),
+    // A picture that fails falls back to its local placeholder (watchPictureFallback, D-074).
+    h("img", { src: pic.src, [FALLBACK_ATTR]: pic.fallback, alt: decorative ? "" : name, width: size, height: size, loading: "lazy", decoding: "async" }),
   );
 }
 

@@ -48,6 +48,8 @@ test("every page has the CSP as its first meta after the charset", () => {
     assert.match(csp, CONFIG ? /form-action 'self'(;|$)/ : /form-action 'none'(;|$)/, name(page));
     assert.match(csp, /style-src 'self'(;|$)/, name(page));
     assert.match(csp, /font-src 'self'(;|$)/, name(page));
+    // D-074: the open site adds exactly HearthstoneJSON's art host for pictures.
+    assert.match(csp, CONFIG ? /img-src 'self' https:\/\/art\.hearthstonejson\.com(;|$)/ : /img-src 'self'(;|$)/, name(page));
     if (CONFIG) assert.match(csp, /connect-src https?:\/\/[^\s;*]+(;|$)/, name(page));
     else assert.match(csp, /connect-src 'none'(;|$)/, name(page));
     assert.doesNotMatch(csp, /unsafe|\*/, name(page));
@@ -242,7 +244,8 @@ test("pictures are our own files, with their size and a text alternative", () =>
   for (const page of PAGES) {
     const html = readFileSync(page, "utf8");
     for (const [img] of html.matchAll(/<img\b[^>]*>/g)) {
-      // Our own files only (img-src 'self'); card art waits on its CSP decision (T-504).
+      // Built pages show made-up data only, so their pictures are our own
+      // placeholders; card art (D-074) is drawn in the browser by the game viewer.
       const src = /\ssrc="([^"]*)"/.exec(img)?.[1] ?? "";
       assert.match(src, /^\/placeholders\/(?:hero|card)-\d\.svg$/, `${name(page)}: ${img}`);
       assert.ok(existsSync(join(DIST, src)), src);
@@ -251,6 +254,28 @@ test("pictures are our own files, with their size and a text alternative", () =>
       assert.match(img, /\sheight="\d+"/, img);
       assert.match(img, /\salt(?:="[^"]*")?[\s>]/, img);
     }
+  }
+});
+
+test("the game viewer page: noindex, its script when accounts are open, the notice when closed", () => {
+  const html = readFileSync(join(DIST, "game/index.html"), "utf8");
+  assert.match(html, /<meta name="robots" content="noindex">/);
+  if (CONFIG) {
+    assert.match(html, /id="game-body"/);
+    assert.match(html, /aria-busy="true"/);
+    assert.match(html, /state-loading/, "the loading block keeps the room");
+    assert.match(html, /data-switch="detail"/);
+    const sources = [...html.matchAll(/<script\b[^>]*\ssrc="\/([^"]+)"/g)].map((m) => m[1]);
+    assert.ok(sources.length >= 1, "the viewer's script");
+    for (const src of sources) assert.ok(existsSync(join(DIST, src)), src);
+  } else {
+    assert.match(html, /Accounts are not open yet/);
+  }
+});
+
+test("the dev-only demo game is not in the built site", () => {
+  for (const file of ALL.filter((f) => /\.(js|html)$/.test(f))) {
+    assert.doesNotMatch(readFileSync(file, "utf8"), /SYN_HERO|gameFixtures/, name(file));
   }
 });
 
@@ -372,8 +397,12 @@ test("the browser pieces draw the same markup as the Astro components on /style/
     p.picture("hero", null, "Hero not recorded", 40),
     p.sourceMark("inferred"),
   ];
+  // Built pages show their pictures from the placeholders, live pages from the
+  // art host (D-074); the markup is otherwise the same.
+  const builtSource = (markup: string) =>
+    markup.replaceAll(/src="https:\/\/art\.hearthstonejson\.com\/v1\/256x\/[A-Za-z0-9_]+\.jpg" data-fallback="([^"]+)"/g, 'src="$1" data-fallback="$1"');
   for (const piece of pieces) {
-    const markup = toHtml(piece);
+    const markup = builtSource(toHtml(piece));
     assert.ok(html.includes(markup), `not on /style/: ${markup.slice(0, 160)}…`);
   }
 });

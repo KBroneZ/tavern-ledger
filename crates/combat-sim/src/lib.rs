@@ -1,0 +1,33 @@
+//! Battlegrounds combat simulator (F6, T-602): the odds that a combat between
+//! two known warbands is won, tied or lost, and the damage, by playing it
+//! many times with the game's random choices.
+//!
+//! One engine for the desktop app and, later, the website (see
+//! `docs/research/combat-simulator.md`). It has no dependencies, so it can be
+//! built for WebAssembly. A card the engine does not know is never guessed:
+//! [`simulate`] returns [`Verdict::NotModelled`] instead of a number.
+//!
+//! ```
+//! use combat_sim::{simulate, Minion, Options, Verdict, Warband};
+//!
+//! let player = Warband::new(vec![Minion::new("BGS_119", 2, 2)]);
+//! let opponent = Warband::new(vec![Minion::new("BG_ICC_026t", 1, 1)]);
+//! let Verdict::Odds(odds) = simulate(&player, &opponent, &Options::default()).unwrap() else {
+//!     panic!("both cards are known");
+//! };
+//! assert_eq!(odds.won, odds.trials);
+//! ```
+
+pub mod cards;
+pub mod combat;
+pub mod model;
+pub mod rng;
+pub mod trials;
+
+#[cfg(feature = "harness")]
+pub mod harness;
+pub mod score;
+
+pub use combat::{CombatResult, Outcome};
+pub use model::{BaseCard, BoardError, Keywords, Minion, Tribes, Warband, MAX_BOARD};
+pub use trials::{simulate, Coverage, Odds, Options, Verdict};
