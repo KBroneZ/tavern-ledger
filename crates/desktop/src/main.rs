@@ -357,14 +357,16 @@ fn read_from_game(app: &AppHandle, state: &AppState, client_build: Option<i64>) 
         .unwrap_or_else(|e| e.into_inner())
         .as_ref()
         .and_then(|live| live.build);
-    let (finished, last_duos) = last_game(&state.games.lock().unwrap_or_else(|e| e.into_inner()));
+    let last = last_game(&state.games.lock().unwrap_or_else(|e| e.into_inner()));
     let poll = game_memory::Poll {
         game: game.as_ref(),
         build,
         scene,
         client_build,
-        finished,
-        last_duos,
+        finished: last.finished,
+        last_duos: last.duos,
+        newest: last.newest.as_ref(),
+        previous: last.previous.as_ref(),
     };
     let tick = || state.game_memory.tick(&game_memory::GameReader, &poll);
     if catch_unwind(AssertUnwindSafe(tick)).is_err() {
@@ -374,20 +376,39 @@ fn read_from_game(app: &AppHandle, state: &AppState, client_build: Option<i64>) 
     }
 }
 
-/// How many games the history has, and whether the newest was Duos (`None`:
-/// none, or another mode). Games played with the reconnect dev tool are left
-/// out, as in the stats. The history is sorted by session and game number,
-/// so the last row is the newest game.
-fn last_game(rows: &[GameRow]) -> (usize, Option<bool>) {
+/// The history as the rating change needs it (see `last_game`).
+#[derive(Debug, PartialEq)]
+struct LastGames {
+    finished: usize,
+    /// Whether the newest game was Duos (`None`: none, or another mode).
+    duos: Option<bool>,
+    newest: Option<GameKey>,
+    previous: Option<GameKey>,
+}
+
+/// How many games the history has, whether the newest was Duos, and the
+/// newest two. Games played with the reconnect dev tool are left out, as in
+/// the stats. The history is sorted by session and game number, so the last
+/// row is the newest game.
+fn last_game(rows: &[GameRow]) -> LastGames {
     let counted: Vec<&GameRow> = rows.iter().filter(|r| !r.dev_reconnect).collect();
-    let last = counted
+    let key = |r: &&GameRow| GameKey {
+        session: r.session.clone(),
+        index: r.index,
+    };
+    let duos = counted
         .last()
         .and_then(|r| match r.report.get("game_type")?.as_str()? {
             "GT_BATTLEGROUNDS" => Some(false),
             "GT_BATTLEGROUNDS_DUO" => Some(true),
             _ => None,
         });
-    (counted.len(), last)
+    LastGames {
+        finished: counted.len(),
+        duos,
+        newest: counted.last().map(key),
+        previous: counted.len().checked_sub(2).map(|i| key(&counted[i])),
+    }
 }
 
 /// The lobby tribes entered by hand, the fixed list to pick from and the game
@@ -548,11 +569,13 @@ fn set_status(app: &AppHandle, state: &AppState, update: impl FnOnce(&mut Status
 fn live_now(watcher: &mut Watcher) -> Option<LiveGame> {
     let lobby = watcher.live_lobby();
     let next = watcher.live_next_opponent();
+    let cap = watcher.live_damage_cap();
     let report = serde_json::to_value(watcher.live_report()?).ok()?;
     Some(
         live_game(&report)
             .with_leaderboard(&lobby)
-            .with_next_opponent(next),
+            .with_next_opponent(next)
+            .with_damage_cap(cap),
     )
 }
 
@@ -1015,6 +1038,7 @@ fn main() {
             game_memory_set_enabled,
             settings::app_settings,
             settings::app_set_language,
+            settings::app_set_window_detail,
             settings::app_set_system_language,
             settings::app_autostart,
             settings::app_set_autostart,
@@ -1476,7 +1500,14 @@ mod tests {
         assert!(lobby_of(&state, (day.1, day.0), utc_is_local)
             .today
             .is_empty());
-        assert_eq!(last_game(&state.games.lock().unwrap()), (3, Some(false)));
+        let last = last_game(&state.games.lock().unwrap());
+        let at = |index| GameKey {
+            session: "Hearthstone_2026_10_11_04_58_30".into(),
+            index,
+        };
+        assert_eq!((last.finished, last.duos), (3, Some(false)));
+        assert_eq!(last.newest, Some(at(1)), "the dev tool game is left out");
+        assert_eq!(last.previous, Some(at(1)));
     }
 
     #[test]

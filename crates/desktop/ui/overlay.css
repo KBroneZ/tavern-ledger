@@ -543,6 +543,15 @@ body[data-detail="simple"] .panel { padding: 5px 7px 6px; }
 .tribe-chips .chip-count { color: var(--dim); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
 .tribe-chips .src { font-size: 0.72rem; padding: 0 4px; }
 
+/* The game's damage cap (T-315): one short line above the opponents. */
+.damage-cap {
+  margin: 0 0 4px;
+  font: 700 0.92rem/1.35 var(--font-body);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .opp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .opp {
   display: flex;

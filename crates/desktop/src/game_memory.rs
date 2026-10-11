@@ -18,8 +18,14 @@
 //!   one taken before that game, for that game's mode; it is shown only when
 //!   exactly one game was played between the two, never a guess.
 //!
-//! The values stay in memory on this PC: they are not saved with the games,
-//! not put in any report and not uploaded.
+//! The rating keeps being read every half minute for the rest of the visit,
+//! since the game can update it later than that (T-342).
+//!
+//! The values stay on this PC: they are not saved with the games, not put in
+//! any report and not uploaded. Only the last rating taken is written to a
+//! file of its own (`game_rating.json`, with the build and the newest game it
+//! includes), so the change after the next game is known across a restart of
+//! the app (T-342, D-072); turning the switch off deletes it.
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -36,6 +42,10 @@ use crate::overlay::lock;
 
 const FILE: &str = "game_memory.json";
 const FORMAT_VERSION: u32 = 1;
+/// The last rating taken, for the change across a restart of the app.
+const RATING_FILE: &str = "game_rating.json";
+const RATING_FORMAT_VERSION: u32 = 1;
+const RATING_SAVE_FAILED: &str = "The last rating could not be saved";
 /// Ticks (one per poll, about a second) between two reads of the tribes.
 const TRIBES_EVERY: u32 = 3;
 /// Reads of the tribes per game: about a minute, since the game fills them
@@ -46,6 +56,9 @@ const RATING_EVERY: u32 = 3;
 /// Reads of the rating per visit to the lobby screen: about a minute, since
 /// the game may update the rating some seconds after the lobby opens.
 const RATING_TRIES: u32 = 20;
+/// Ticks between two reads after that, for the rest of the visit: the game
+/// can update the rating later than a minute after the lobby opens (T-342).
+const RATING_SLOW_EVERY: u32 = 30;
 
 /// Asks the game for the two values. The real one opens the game read-only;
 /// tests use a fake that counts calls.
@@ -78,6 +91,10 @@ pub struct Poll<'a> {
     pub client_build: Option<i64>,
     /// Games finished so far in the history.
     pub finished: usize,
+    /// The newest game in the history and the one before it (the same games
+    /// `finished` counts), to place a rating saved by an earlier run.
+    pub newest: Option<&'a GameKey>,
+    pub previous: Option<&'a GameKey>,
     /// Whether the last finished game was Duos (`None`: no game, or another
     /// mode).
     pub last_duos: Option<bool>,
@@ -94,6 +111,39 @@ pub struct RatingChange {
 struct FileFormat {
     version: u32,
     enabled: bool,
+}
+
+/// A game of the history, as saved with the rating.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+struct SavedGame {
+    session: String,
+    index: u64,
+}
+
+impl SavedGame {
+    fn of(key: &GameKey) -> SavedGame {
+        SavedGame {
+            session: key.session.clone(),
+            index: key.index,
+        }
+    }
+
+    fn is(&self, key: Option<&GameKey>) -> bool {
+        key.is_some_and(|k| k.session == self.session && k.index == self.index)
+    }
+}
+
+/// The last rating taken (`game_rating.json`): its client build, the newest
+/// game of the history then (`None`: no game yet) and whether it was known
+/// to include that game (see `take_rating`).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+struct SavedRating {
+    version: u32,
+    build: i64,
+    solo: Option<u32>,
+    duos: Option<u32>,
+    after: Option<SavedGame>,
+    settled: bool,
 }
 
 #[derive(Default)]
@@ -134,6 +184,16 @@ struct State {
     /// finished then, settled.
     rating_prior: Option<(Rating, usize, bool)>,
     rating_change: Option<RatingChange>,
+    /// The newest game of the history when `rating` was taken.
+    rating_after: Option<SavedGame>,
+    /// `rating` was read in this run; one from the file is only a base for
+    /// the change, never shown.
+    rating_read: bool,
+    /// The rating file's content, waiting for the first read on the lobby
+    /// screen to be placed in the history.
+    restored: Option<SavedRating>,
+    /// What the rating file holds now.
+    saved: Option<SavedRating>,
 }
 
 #[derive(Default)]
@@ -213,6 +273,12 @@ impl GameMemory {
             }
         };
         self.apply(enabled);
+        if enabled {
+            let saved = read_saved_rating(&data_dir.join(RATING_FILE));
+            let mut s = lock(&self.state);
+            s.restored = saved.clone();
+            s.saved = saved;
+        }
         Ok(())
     }
 
@@ -225,6 +291,9 @@ impl GameMemory {
     /// value read. The choice holds for this run even if saving fails.
     pub fn set_enabled(&self, on: bool) -> Result<(), String> {
         self.apply(on);
+        if !on {
+            self.delete_saved_rating();
+        }
         let failed = |kind: io::ErrorKind| {
             format!("The setting could not be saved ({kind:?}); it will be lost after a restart.")
         };
@@ -270,6 +339,73 @@ impl GameMemory {
         s.ticks = s.ticks.wrapping_add(1);
         tick_tribes(&mut s, reader, poll.game, poll.build);
         tick_rating(&mut s, reader, poll);
+        self.save_rating(&mut s);
+    }
+
+    fn rating_path(&self) -> Option<PathBuf> {
+        lock(&self.path)
+            .as_ref()
+            .map(|p| p.with_file_name(RATING_FILE))
+    }
+
+    /// Writes the rating file when the rating taken changed and deletes it
+    /// when the rating was dropped. A failed write is said in the warning.
+    fn save_rating(&self, s: &mut State) {
+        if s.restored.is_some() {
+            return; // not placed yet: the file stays as it is
+        }
+        let now = match (s.rating, s.rating_build) {
+            (Some(r), Some(build)) => Some(SavedRating {
+                version: RATING_FORMAT_VERSION,
+                build,
+                solo: r.solo,
+                duos: r.duos,
+                after: s.rating_after.clone(),
+                settled: s.rating_settled,
+            }),
+            _ => None,
+        };
+        if now == s.saved {
+            return;
+        }
+        let Some(path) = self.rating_path() else {
+            return;
+        };
+        let result = match &now {
+            Some(saved) => serde_json::to_string_pretty(saved)
+                .map_err(|_| io::Error::from(io::ErrorKind::InvalidData))
+                .and_then(|text| write_whole(&path, &text)),
+            None => match std::fs::remove_file(&path) {
+                Err(e) if e.kind() != io::ErrorKind::NotFound => Err(e),
+                _ => Ok(()),
+            },
+        };
+        match result {
+            Ok(()) => {
+                // Only this warning goes away: the switch's own stays.
+                let mut warning = lock(&self.warning);
+                if warning
+                    .as_deref()
+                    .is_some_and(|w| w.starts_with(RATING_SAVE_FAILED))
+                {
+                    *warning = None;
+                }
+            }
+            Err(e) => {
+                *lock(&self.warning) = Some(format!(
+                    "{RATING_SAVE_FAILED} ({:?}); the change after a restart may be missing.",
+                    e.kind()
+                ));
+            }
+        }
+        // Tried once per change, not again every poll.
+        s.saved = now;
+    }
+
+    fn delete_saved_rating(&self) {
+        if let Some(path) = self.rating_path() {
+            let _ = std::fs::remove_file(path);
+        }
     }
 
     /// The tavern contradicted the tribes read for `game`: they are dropped
@@ -303,8 +439,8 @@ impl GameMemory {
             status: overall(s.tribes_status, s.rating_status),
             tribes_status: s.tribes_status,
             rating: OwnRating {
-                solo: s.rating.and_then(|r| r.solo),
-                duos: s.rating.and_then(|r| r.duos),
+                solo: s.rating.filter(|_| s.rating_read).and_then(|r| r.solo),
+                duos: s.rating.filter(|_| s.rating_read).and_then(|r| r.duos),
                 status: s.rating_status,
             },
             rating_change: s.rating_change,
@@ -388,6 +524,12 @@ fn tick_rating(s: &mut State, reader: &dyn Reader, poll: &Poll) {
     // no longer known, nothing read on the old one is kept.
     if s.rating_build.is_some() && s.rating_build != poll.client_build {
         forget_rating(s);
+        // An unknown build (the game closed, a new session not read yet) is
+        // not a new build: the saved base stays in its file and is placed
+        // again, against the build, at the next read (T-342).
+        if poll.client_build.is_none() {
+            s.restored = s.saved.clone();
+        }
     }
     // A change belongs to the game that made it: one more game finished and
     // it no longer says anything about the last game.
@@ -405,7 +547,12 @@ fn tick_rating(s: &mut State, reader: &dyn Reader, poll: &Poll) {
         return;
     }
     s.rating_ticks = s.rating_ticks.saturating_add(1);
-    if !(s.rating_ticks - 1).is_multiple_of(RATING_EVERY) {
+    let every = if s.rating_tries < RATING_TRIES {
+        RATING_EVERY
+    } else {
+        RATING_SLOW_EVERY
+    };
+    if !(s.rating_ticks - 1).is_multiple_of(every) {
         return;
     }
     // Trusted only on a checked build of the running client: on any other
@@ -422,7 +569,10 @@ fn tick_rating(s: &mut State, reader: &dyn Reader, poll: &Poll) {
         }
         Some(b) => b,
     };
-    s.rating_tries += 1;
+    if let Some(saved) = s.restored.take() {
+        restore(s, saved, build, poll);
+    }
+    s.rating_tries = s.rating_tries.saturating_add(1);
     match reader.own_rating() {
         // Taken only when two reads in a row agree.
         Ok(rating) if s.rating_pending == Some(rating) => {
@@ -449,9 +599,55 @@ fn tick_rating(s: &mut State, reader: &dyn Reader, poll: &Poll) {
             s.rating_done = true;
         }
     }
-    if s.rating_tries >= RATING_TRIES {
-        s.rating_done = true;
+}
+
+/// Places a rating saved by an earlier run in the history: it is the base for
+/// the next change only when it was read on this build and the newest game
+/// then is still the newest game, or the one before it. Otherwise it is
+/// dropped: never a guess.
+fn restore(s: &mut State, saved: SavedRating, build: i64, poll: &Poll) {
+    if s.rating.is_some() || saved.build != build {
+        return;
     }
+    let same = |game: Option<&GameKey>| match &saved.after {
+        None => game.is_none(),
+        Some(g) => g.is(game),
+    };
+    let at = if same(poll.newest) {
+        poll.finished
+    } else if saved.after.is_some() && same(poll.previous) && poll.finished > 0 {
+        poll.finished - 1
+    } else {
+        return;
+    };
+    let rating = Rating {
+        solo: saved.solo,
+        duos: saved.duos,
+    };
+    if !rating_in_range(rating) {
+        return;
+    }
+    s.rating = Some(rating);
+    s.rating_at = Some(at);
+    s.rating_build = Some(build);
+    s.rating_settled = saved.settled;
+    s.rating_first = saved.settled.then_some(at);
+    s.rating_after = saved.after;
+    s.rating_read = false;
+}
+
+/// The reader's own bounds (1 to 30 000), for a value from the file.
+fn rating_in_range(r: Rating) -> bool {
+    let ok = |v: Option<u32>| v.is_none_or(|v| (1..=30_000).contains(&v));
+    (r.solo.is_some() || r.duos.is_some()) && ok(r.solo) && ok(r.duos)
+}
+
+/// The rating file, if it holds a rating of the known format.
+fn read_saved_rating(path: &Path) -> Option<SavedRating> {
+    let text = std::fs::read_to_string(path).ok()?;
+    serde_json::from_str::<SavedRating>(&text)
+        .ok()
+        .filter(|r| r.version == RATING_FORMAT_VERSION)
 }
 
 /// Drops the rating and everything worked out from it.
@@ -464,6 +660,8 @@ fn forget_rating(s: &mut State) {
     s.rating_first = None;
     s.rating_prior = None;
     s.rating_change = None;
+    s.rating_after = None;
+    s.rating_read = false;
     if s.rating_status == ReaderStatus::Ok {
         s.rating_status = ReaderStatus::Waiting;
     }
@@ -489,6 +687,8 @@ fn take_rating(s: &mut State, rating: Rating, poll: &Poll) {
     }
     s.rating = Some(rating);
     s.rating_at = Some(finished);
+    s.rating_after = poll.newest.map(SavedGame::of);
+    s.rating_read = true;
     let pick = |r: Rating, duos: bool| if duos { r.duos } else { r.solo };
     let moved = |a: Rating, b: Rating| {
         poll.last_duos.is_some_and(|duos| {
@@ -911,16 +1111,175 @@ mod tests {
         assert_eq!((view.rating.solo, view.rating.duos), (Some(6543), None));
         assert_eq!(view.rating.status, ReaderStatus::Ok);
         assert_eq!(view.source, Source::Game);
-        // Bounded per visit, then read again after a game.
-        in_lobby(&gm, &reader, 0, None, 500);
+        // Every few seconds for a minute, then every half minute for the
+        // rest of the visit; read again at once after a game.
+        let fast = RATING_EVERY * (RATING_TRIES - 2);
+        in_lobby(&gm, &reader, 0, None, fast);
         assert_eq!(reader.calls.get(), RATING_TRIES);
+        in_lobby(&gm, &reader, 0, None, 10 * RATING_SLOW_EVERY);
+        assert_eq!(reader.calls.get(), RATING_TRIES + 10);
         leave(&gm, &reader);
         in_lobby(&gm, &reader, 1, Some(false), 1);
         assert_eq!(
             reader.calls.get(),
-            RATING_TRIES + 1,
+            RATING_TRIES + 11,
             "read again after a game"
         );
+    }
+
+    #[test]
+    fn a_rating_the_game_updates_after_a_minute_still_gives_the_change() {
+        let mut reads = vec![Ok(rating(6000, 7197)); 2 + RATING_TRIES as usize];
+        reads.extend([Ok(rating(6000, 7272)), Ok(rating(6000, 7272))]);
+        let gm = on("rating-late");
+        let reader = FakeReader::new(vec![Ok(lobby())], reads);
+        in_lobby(&gm, &reader, 3, Some(false), 2 * RATING_EVERY);
+        leave(&gm, &reader);
+        // The game shows the old value for the whole first minute.
+        in_lobby(&gm, &reader, 4, Some(true), RATING_EVERY * RATING_TRIES);
+        assert_eq!(gm.view().rating.duos, Some(7197));
+        in_lobby(&gm, &reader, 4, Some(true), 3 * RATING_SLOW_EVERY);
+        assert_eq!(gm.view().rating.duos, Some(7272));
+        assert_eq!(gm.view().rating_change.map(|c| c.delta), Some(75));
+    }
+
+    fn in_lobby_after(
+        gm: &GameMemory,
+        reader: &dyn Reader,
+        history: &[GameKey],
+        last_duos: Option<bool>,
+        n: u32,
+    ) {
+        for _ in 0..n {
+            gm.tick(
+                reader,
+                &Poll {
+                    scene: Some(Scene::BattlegroundsLobby),
+                    client_build: BUILD,
+                    finished: history.len(),
+                    last_duos,
+                    newest: history.last(),
+                    previous: history.len().checked_sub(2).map(|i| &history[i]),
+                    ..Poll::default()
+                },
+            );
+        }
+    }
+
+    /// Takes a rating in one run, then starts the app again.
+    fn restarted(tag: &str, before: Rating, history: &[GameKey]) -> (PathBuf, GameMemory) {
+        let dir = temp_dir(tag);
+        let gm = GameMemory::default();
+        gm.load(&dir).unwrap();
+        gm.set_enabled(true).unwrap();
+        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(before)]);
+        in_lobby_after(&gm, &reader, history, Some(true), 2 * RATING_EVERY);
+        assert_eq!(gm.view().rating.duos, before.duos);
+        assert!(dir.join(RATING_FILE).exists());
+        let again = GameMemory::default();
+        again.load(&dir).unwrap();
+        (dir, again)
+    }
+
+    #[test]
+    fn the_change_is_known_across_a_restart_of_the_app() {
+        // The case reported on 2026-10-11: Duos 7197, the app restarts, one
+        // Duos game, 7272 on the lobby screen.
+        let history = [key(1), key(2)];
+        let (_, gm) = restarted("rating-restart", rating(6651, 7197), &history[..1]);
+        assert_eq!(gm.view().rating.duos, None, "a saved rating is not shown");
+        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(rating(6651, 7272))]);
+        in_lobby_after(&gm, &reader, &history, Some(true), 2 * RATING_EVERY);
+        assert_eq!(gm.view().rating.duos, Some(7272));
+        assert_eq!(
+            gm.view().rating_change,
+            Some(RatingChange {
+                duos: true,
+                delta: 75
+            })
+        );
+    }
+
+    #[test]
+    fn a_restart_with_no_game_in_between_keeps_the_base() {
+        let history = [key(1), key(2)];
+        let (_, gm) = restarted("rating-restart-same", rating(6651, 7197), &history[..1]);
+        // Same history, same value: the base stays settled for the next game.
+        let reader = FakeReader::new(
+            vec![Ok(lobby())],
+            vec![
+                Ok(rating(6651, 7197)),
+                Ok(rating(6651, 7197)),
+                Ok(rating(6651, 7272)),
+            ],
+        );
+        in_lobby_after(&gm, &reader, &history[..1], Some(true), 2 * RATING_EVERY);
+        assert_eq!(gm.view().rating_change, None);
+        leave(&gm, &reader);
+        in_lobby_after(&gm, &reader, &history, Some(true), 2 * RATING_EVERY);
+        assert_eq!(gm.view().rating_change.map(|c| c.delta), Some(75));
+    }
+
+    #[test]
+    fn a_saved_rating_two_games_old_or_from_another_build_gives_no_change() {
+        let history = [key(1), key(2), key(3)];
+        let (_, gm) = restarted("rating-restart-gap", rating(6651, 7197), &history[..1]);
+        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(rating(6651, 7272))]);
+        in_lobby_after(&gm, &reader, &history, Some(true), 2 * RATING_EVERY);
+        assert_eq!(gm.view().rating.duos, Some(7272));
+        assert_eq!(gm.view().rating_change, None, "two games since");
+
+        let (dir, _) = restarted("rating-restart-build", rating(6651, 7197), &history[..2]);
+        let text = std::fs::read_to_string(dir.join(RATING_FILE)).unwrap();
+        std::fs::write(dir.join(RATING_FILE), text.replace("253216", "253000")).unwrap();
+        let gm = GameMemory::default();
+        gm.load(&dir).unwrap();
+        in_lobby_after(&gm, &reader, &history, Some(true), 2 * RATING_EVERY);
+        assert_eq!(gm.view().rating_change, None, "another build");
+    }
+
+    #[test]
+    fn the_game_closing_keeps_the_saved_base_for_after_a_restart() {
+        let history = [key(1), key(2)];
+        let (dir, gm) = restarted("rating-closed", rating(6651, 7197), &history[..1]);
+        drop(gm);
+        // The app runs on while the game is closed: the build is unknown.
+        let gm = GameMemory::default();
+        gm.load(&dir).unwrap();
+        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(rating(6651, 7197))]);
+        in_lobby_after(&gm, &reader, &history[..1], Some(true), 2 * RATING_EVERY);
+        gm.tick(&reader, &Poll::default());
+        assert!(
+            dir.join(RATING_FILE).exists(),
+            "an unknown build deletes nothing"
+        );
+        let again = GameMemory::default();
+        again.load(&dir).unwrap();
+        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(rating(6651, 7272))]);
+        in_lobby_after(&again, &reader, &history, Some(true), 2 * RATING_EVERY);
+        assert_eq!(again.view().rating_change.map(|c| c.delta), Some(75));
+    }
+
+    #[test]
+    fn a_broken_rating_file_is_ignored_and_off_deletes_it() {
+        let history = [key(1), key(2)];
+        let (dir, _) = restarted("rating-file", rating(6651, 7197), &history[..1]);
+        std::fs::write(dir.join(RATING_FILE), "{ not json").unwrap();
+        let gm = GameMemory::default();
+        gm.load(&dir).unwrap();
+        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(rating(6651, 7272))]);
+        in_lobby_after(&gm, &reader, &history, Some(true), 2 * RATING_EVERY);
+        assert_eq!(gm.view().rating_change, None);
+        assert!(dir.join(RATING_FILE).exists(), "the new rating is saved");
+        gm.set_enabled(false).unwrap();
+        assert!(!dir.join(RATING_FILE).exists());
+        let text = r#"{"version":1,"build":253216,"solo":99999,"duos":7197,"after":{"session":"Hearthstone_2026_10_11_01_10_48","index":1},"settled":true}"#;
+        std::fs::write(dir.join(RATING_FILE), text).unwrap();
+        gm.set_enabled(true).unwrap();
+        let gm = GameMemory::default();
+        gm.load(&dir).unwrap();
+        in_lobby_after(&gm, &reader, &history[..1], Some(true), 2 * RATING_EVERY);
+        assert_eq!(gm.view().rating_change, None, "out of range: not a base");
     }
 
     #[test]

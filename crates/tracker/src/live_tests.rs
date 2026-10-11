@@ -635,6 +635,17 @@ fn our_own_seat_is_never_marked_as_next() {
     assert!(live.opponents.iter().all(|o| !o.next));
 }
 
+#[test]
+fn the_damage_cap_shows_only_while_the_game_is_on() {
+    let live = live_game(&solo(vec![], "incomplete"));
+    assert_eq!(live.phase, Phase::Playing);
+    assert_eq!(live.clone().with_damage_cap(Some(15)).damage_cap, Some(15));
+    assert_eq!(live.with_damage_cap(None).damage_cap, None);
+    let over = live_game(&solo(vec![], "ok"));
+    assert_eq!(over.phase, Phase::Over);
+    assert_eq!(over.with_damage_cap(Some(15)).damage_cap, None);
+}
+
 fn strings(list: &[&str]) -> Vec<String> {
     list.iter().map(|s| s.to_string()).collect()
 }

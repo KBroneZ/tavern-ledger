@@ -882,6 +882,12 @@ function messagesSection(r) {
   return section;
 }
 
+// Marks a part of the window as Advanced only (detail-switch.js, T-344).
+function advancedOnly(node) {
+  node.classList.add("adv-only");
+  return node;
+}
+
 function renderRecap(r, game) {
   TLFocus.keep(document, () => renderRecapNow(r, game));
 }
@@ -897,10 +903,13 @@ function renderRecapNow(r, game) {
   const top = el("div", "recap-top");
   top.append(recapFacts(r), health);
   const turnTools = { card: TLShop.card, cardRow: TLShop.cardRow, fold: TLCompact.fold, art, heroText, game: key };
+  // Simple (T-344) keeps the facts, health, shop summary, record and
+  // messages; the rest waits for Advanced.
   document.getElementById("recap-body").replaceChildren(
-    top, TLShop.recapSummary(r.shop, SHOP_UI, r.is_duos, key), TLTurns.section(SHOP_UI, r, report, turnTools),
-    recordSection(r), TLExtras.heroPickSection(r.hero_pick, SHOP_UI, portrait),
-    TLRoundTwo.choicesSection(SHOP_UI, r.choices, key), enteredSection(r), tribesSection(r), messagesSection(r),
+    top, TLShop.recapSummary(r.shop, SHOP_UI, r.is_duos, key), advancedOnly(TLTurns.section(SHOP_UI, r, report, turnTools)),
+    recordSection(r), advancedOnly(TLExtras.heroPickSection(r.hero_pick, SHOP_UI, portrait)),
+    advancedOnly(TLRoundTwo.choicesSection(SHOP_UI, r.choices, key)), advancedOnly(enteredSection(r)), advancedOnly(tribesSection(r)),
+    messagesSection(r),
   );
 }
 

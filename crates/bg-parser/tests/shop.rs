@@ -158,6 +158,64 @@ fn a_turn_without_gold_in_the_log_has_unknown_gold_not_zero() {
     assert!(s.turns[0].offers.is_empty());
 }
 
+/// `solo_shop_game` with turn 1 as on 2026-10-11 (T-332): the log sets no
+/// gold tag of the player during it and the player only picks a discover;
+/// `turn_one` replaces turn 1's three actions.
+fn late_gold_game(turn_one: &str) -> String {
+    let text = read("solo_shop_game");
+    let gold = "D 12:00:10.0000000 GameState.DebugPrintPower() -     TAG_CHANGE Entity=2 tag=RESOURCES value=3 \n";
+    let first = "D 12:00:15.0000000 GameState.SendOption()";
+    let turn_two = "D 12:00:40.0000000 GameState.DebugPrintPower() -     TAG_CHANGE Entity=GameEntity tag=TURN value=2 ";
+    let (from, to) = (text.find(first).unwrap(), text.find(turn_two).unwrap());
+    let text = format!("{}{turn_one}{}", &text[..from], &text[to..]);
+    assert!(text.contains(gold));
+    text.replacen(gold, "", 1)
+}
+
+const PICK: &str = "D 12:00:15.0000000 GameState.SendChoices() - id=4 ChoiceType=GENERAL\n";
+
+#[test]
+fn a_turn_with_no_gold_tags_spent_nothing_when_the_log_proves_it() {
+    let s = report(&late_gold_game(PICK)).shop.expect("a shop record");
+    let one = &s.turns[0];
+    assert_eq!(one.gold, None, "the turn's own gold stays unknown");
+    assert_eq!(one.gold_spent, Some(0));
+    assert_eq!(
+        (one.extra_gold, one.sell_gold, one.buy_gold),
+        (None, None, None)
+    );
+    assert_eq!(s.turns[1].gold, Some(10));
+    assert_eq!(s.actions[0].kind, ActionKind::Choose);
+}
+
+#[test]
+fn a_turn_with_no_gold_tags_stays_unknown_without_that_proof() {
+    // A roll could have spent gold the log does not show.
+    let roll = "D 12:00:15.0000000 GameState.SendOption() - selectedOption=1 selectedSubOption=-1 selectedTarget=0 selectedPosition=0\n\
+                D 12:00:15.0000000 GameState.DebugPrintPower() - BLOCK_START BlockType=PLAY Entity=60 EffectCardId=X EffectIndex=0 Target=0 SubOption=-1 \n\
+                D 12:00:15.0000000 GameState.DebugPrintPower() - BLOCK_END\n";
+    let s = report(&late_gold_game(roll)).shop.expect("a shop record");
+    assert_eq!(s.turns[0].rolls, 1);
+    assert_eq!(s.turns[0].gold_spent, None);
+    // The next turn has no gold tags either: nothing proves turn 1.
+    let text = late_gold_game(PICK).replace("tag=RESOURCES value=10 ", "tag=ARMOR value=0 ");
+    let s = report(&text).shop.expect("a shop record");
+    assert_eq!(s.turns[1].gold, None);
+    assert_eq!(s.turns[0].gold_spent, None);
+    // Gold spent so far moved during the turn.
+    let spend = "D 12:00:15.0000000 GameState.DebugPrintPower() -     TAG_CHANGE Entity=2 tag=NUM_RESOURCES_SPENT_THIS_GAME value=1 \n";
+    let s = report(&late_gold_game(&format!("{PICK}{spend}")))
+        .shop
+        .unwrap();
+    assert_eq!(s.turns[0].gold_spent, None);
+    // The last turn of a log has no next turn to prove it.
+    let cut = late_gold_game(PICK);
+    let cut = &cut[..cut.find("D 12:00:40.0000000 ").unwrap()];
+    let s = report(cut).shop.expect("a shop record");
+    assert_eq!(s.turns.len(), 1);
+    assert_eq!(s.turns[0].gold_spent, None);
+}
+
 #[test]
 fn a_game_past_midnight_keeps_counting() {
     let text = read("solo_shop_game")

@@ -481,6 +481,9 @@ pub struct ModeSummary {
     pub mode: String,
     /// Places that count as top half (4 in Solo, 2 in Duos).
     pub top_half: i64,
+    /// Games with a counted place in the top half, out of `tally.placed`
+    /// (T-342: every number says how many games are behind it).
+    pub top_half_games: usize,
     pub tally: Tally,
 }
 
@@ -507,6 +510,7 @@ pub fn summary<'a>(reports: impl IntoIterator<Item = &'a Value>) -> Vec<ModeSumm
             Some(ModeSummary {
                 mode: mode.to_string(),
                 top_half,
+                top_half_games: c.places.iter().filter(|&&p| p <= top_half).count(),
                 tally: c.tally(Some(top_half)),
             })
         })
@@ -589,6 +593,7 @@ mod tests {
         assert_eq!((s[0].tally.games, s[0].tally.placed), (3, 2));
         assert_eq!(s[0].tally.average_place, Some(4.0));
         assert_eq!(s[0].tally.top_half_share, Some(0.5));
+        assert_eq!(s[0].top_half_games, 1, "1 of the 2 placed games");
         let duos = [json!({"status": "ok", "game_type": DUOS, "final_place": 2})];
         let s = summary(duos.iter());
         assert_eq!((s[0].mode.as_str(), s[0].top_half), (DUOS, 2));

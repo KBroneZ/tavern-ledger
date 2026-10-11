@@ -32,7 +32,7 @@ pub const PARSER_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Bump when a change makes the parser read the same log differently (new
 /// fields, fixed bugs). Saved with every game so `tavern-watch --reparse`
 /// and the server can tell which records an older parser wrote.
-pub const PARSER_REVISION: u32 = 6;
+pub const PARSER_REVISION: u32 = 7;
 
 /// Builds whose real logs this parser was checked against.
 pub const TESTED_BUILDS: &[i64] = &[253216];
@@ -52,6 +52,11 @@ const MAX_HERO_MAPS: usize = 64;
 const OLD_GOD: &str = "BACON_GLOBAL_OLD_GOD_DBID";
 /// The next opponent's seat, on the local leaderboard hero (T-313).
 const NEXT_OPPONENT: &str = "NEXT_OPPONENT_PLAYER_ID";
+/// The combat damage cap on the game entity, and whether it applies (T-315).
+const DAMAGE_CAP: &str = "BACON_COMBAT_DAMAGE_CAP";
+const DAMAGE_CAP_ON: &str = "BACON_COMBAT_DAMAGE_CAP_ENABLED";
+/// Far above any cap the game has used (15 on the user's games).
+const MAX_DAMAGE_CAP: i64 = 99;
 
 /// One game being read.
 #[derive(Debug, Default)]
@@ -205,6 +210,26 @@ impl GameReader {
             .then_some(next)
     }
 
+    /// The most damage a lost combat can deal now, which the game shows the
+    /// player ("Max damage: 15", T-315): the game entity's
+    /// `BACON_COMBAT_DAMAGE_CAP` while `BACON_COMBAT_DAMAGE_CAP_ENABLED` is 1.
+    /// On the user's 7 Duos games of 2026-10-11 it is 15 from the first shop
+    /// turn (the game holds another value before it) until the game turns it
+    /// off late in the game (game turns 18 to 28), or to the end. Live only;
+    /// `None` before the first shop turn, when off or not set, or when the
+    /// game could not be read.
+    pub fn damage_cap_now(&self) -> Option<i64> {
+        if self.error.is_some() {
+            return None;
+        }
+        let game = self.collector.board.game()?;
+        if game.opt_int("TURN")? < 1 || game.opt_int(DAMAGE_CAP_ON)? != 1 {
+            return None;
+        }
+        game.opt_int(DAMAGE_CAP)
+            .filter(|cap| (1..=MAX_DAMAGE_CAP).contains(cap))
+    }
+
     /// True when the log says this is a Battlegrounds game (solo or Duos).
     pub fn is_battlegrounds(&self) -> bool {
         self.game_type
@@ -313,6 +338,13 @@ impl LogReader {
     pub fn next_opponent_now(&self) -> Option<i64> {
         self.in_progress_index()?;
         self.current.as_ref()?.next_opponent_now()
+    }
+
+    /// The damage cap of the Battlegrounds game in progress (see
+    /// [`GameReader::damage_cap_now`]); `None` when no such game is on.
+    pub fn damage_cap_now(&self) -> Option<i64> {
+        self.in_progress_index()?;
+        self.current.as_ref()?.damage_cap_now()
     }
 
     /// Number of the Battlegrounds game being played right now (the `index`

@@ -57,6 +57,7 @@ struct LiveView {
     report: Option<GameReport>,
     lobby: Vec<LobbySlot>,
     next: Option<i64>,
+    damage_cap: Option<i64>,
 }
 
 /// The session being read: its games and when each one was played.
@@ -91,6 +92,7 @@ impl SessionReader {
                 report: self.log.snapshot_current(),
                 lobby: self.log.lobby_now(),
                 next: self.log.next_opponent_now(),
+                damage_cap: self.log.damage_cap_now(),
             },
             None => LiveView::default(),
         };
@@ -355,6 +357,12 @@ impl Watcher {
     /// Battlegrounds game is on or the log has no mark yet.
     pub fn live_next_opponent(&self) -> Option<i64> {
         self.shown_live()?.next
+    }
+
+    /// The combat damage cap the game shows now (T-315); None when no
+    /// Battlegrounds game is on or no cap applies.
+    pub fn live_damage_cap(&self) -> Option<i64> {
+        self.shown_live()?.damage_cap
     }
 
     fn shown_live(&self) -> Option<&LiveView> {

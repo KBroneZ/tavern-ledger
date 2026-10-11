@@ -111,7 +111,7 @@ pub fn overlay_area(screen: &Screen) -> (Area, f64) {
 /// Space kept between the card and the game window's or the screen's edges.
 pub const GAP: f64 = 8.0;
 /// The card is never narrower than this, even on a tiny screen.
-const MIN_CARD_WIDTH: f64 = 120.0;
+pub const MIN_CARD_WIDTH: f64 = 120.0;
 
 /// Where the hover card goes, in the overlay window's own pixels: its
 /// top-left corner, its width and the most height it may take before it is

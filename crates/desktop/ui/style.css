@@ -245,7 +245,7 @@ footer { padding: 12px var(--space) 14px; border-top: 1px solid var(--line); col
   html { scroll-padding-top: 124px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  tbody tr, .modes button, .report-btn, .dialog-actions button, .masthead, .recap-bar, body::after { transition: none; }
+  tbody tr, .modes button, .detail-switch button, .report-btn, .dialog-actions button, .masthead, .recap-bar, body::after { transition: none; }
 }
 
 .setup {
@@ -473,6 +473,25 @@ table.record .opponent { font-weight: 700; }
 .view-bar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 16px; border-bottom: 1px solid var(--line); }
 .view-bar .view-tabs { border-bottom: 0; }
 .view-bar .modes { align-self: center; margin-bottom: 6px; }
+
+/* Simple or Advanced (T-344): the same look as the mode switch, smaller.
+   In Simple every part marked adv-only waits for Advanced. */
+body[data-detail="simple"] .adv-only { display: none !important; }
+.detail-switch { display: inline-flex; flex: none; white-space: nowrap; align-self: center; margin-bottom: 6px; padding: 3px; border-radius: 10px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
+.detail-switch.in-bar { margin-bottom: 0; }
+.detail-switch button {
+  min-height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--dim);
+  font: 700 13px/1 var(--font-body);
+  cursor: pointer;
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+.detail-switch button:hover { color: var(--text); }
+.detail-switch button[aria-pressed="true"] { background: var(--amber); color: var(--bg); }
 
 /* The ledger: the note under the hero, the recap button at the end. */
 td.played { white-space: nowrap; color: var(--dim); font-variant-numeric: tabular-nums; }

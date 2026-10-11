@@ -185,3 +185,47 @@ fn a_next_opponent_mark_that_is_not_an_opponent_seat_is_ignored() {
 fn no_game_no_next_opponent() {
     assert_eq!(LogReader::default().next_opponent_now(), None);
 }
+
+fn game_tag(tag: &str, value: i64) -> String {
+    format!(
+        "D 12:00:00.0000000 GameState.DebugPrintPower() -     TAG_CHANGE Entity=GameEntity tag={tag} value={value} "
+    )
+}
+
+/// The combat damage cap the game shows (T-315), as on the user's games of
+/// 2026-10-11: another value at hero select, 15 from the first shop turn,
+/// turned off late in the game.
+#[test]
+fn the_damage_cap_is_the_game_entitys_while_it_is_on() {
+    let all = lines("solo_game");
+    let mut part = up_to(&all, "tag=TURN value=1");
+    part.push(game_tag("BACON_COMBAT_DAMAGE_CAP", 2));
+    part.push(game_tag("BACON_COMBAT_DAMAGE_CAP_ENABLED", 1));
+    assert_eq!(
+        reader_with(&part).damage_cap_now(),
+        None,
+        "before the first shop"
+    );
+    part.push(game_tag("TURN", 1));
+    part.push(game_tag("BACON_COMBAT_DAMAGE_CAP", 15));
+    assert_eq!(reader_with(&part).damage_cap_now(), Some(15));
+    part.push(game_tag("TURN", 2));
+    assert_eq!(reader_with(&part).damage_cap_now(), Some(15), "combat too");
+    part.push(game_tag("BACON_COMBAT_DAMAGE_CAP_ENABLED", 0));
+    assert_eq!(reader_with(&part).damage_cap_now(), None, "turned off");
+}
+
+#[test]
+fn no_damage_cap_without_the_game_setting_it_or_a_game_on() {
+    let all = lines("solo_game");
+    let mut part = up_to(&all, "tag=TURN value=2");
+    assert_eq!(reader_with(&part).damage_cap_now(), None, "never set");
+    part.push(game_tag("BACON_COMBAT_DAMAGE_CAP", 15));
+    assert_eq!(reader_with(&part).damage_cap_now(), None, "not on");
+    part.push(game_tag("BACON_COMBAT_DAMAGE_CAP_ENABLED", 1));
+    part.push(game_tag("BACON_COMBAT_DAMAGE_CAP", 500));
+    assert_eq!(reader_with(&part).damage_cap_now(), None, "out of range");
+    assert_eq!(LogReader::default().damage_cap_now(), None);
+    let ended = reader_with(&all);
+    assert_eq!(ended.damage_cap_now(), None, "the game is over");
+}
