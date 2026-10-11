@@ -66,7 +66,7 @@ test("a total the log lacks for one turn sums the others and says how many", () 
   assert.equal(facts[0].sub, "10 of 11 turns");
   assert.equal(facts[0].source, "log");
   assert.match(facts[0].tip, /Summed over the 10 turns whose number is in the log; the log lacks it for 1 turn/);
-  assert.match(facts[0].tip, /^Gold beyond each turn's own/, "the fact's own tip comes first");
+  assert.match(facts[0].tip, /^Gold that is not the turn's own gold/, "the fact's own tip comes first");
   assert.equal(facts[2].value, "no data", "no turn has the sum of both: no data");
   const sum = X.turnSum({ value: 138, turns: 10, of: 11 });
   assert.deepEqual([sum.value, sum.sub], ["138", "10 of 11 turns"]);
@@ -109,7 +109,7 @@ test("in Spanish the words, numbers and shares follow the language", () => {
     const facts = X.shopExtraStats({ extra_gold: 2.5, sell_gold: 4, gold_beyond_income: 6.5, free_refreshes: null, passes: 0, extras_games: 4, extras_turns: { known: 39, of: 40 }, pass_games: 4, free_refresh_games: 0 });
     assert.equal(facts[0].label, "Oro extra / partida");
     assert.equal(facts[0].value, "2,5");
-    assert.equal(facts[0].tip, "Media sobre 4 partidas con este registro. En esas partidas, 39 de 40 turnos lo tienen; un turno sin él queda fuera.");
+    assert.equal(facts[0].tip, "Media de 4 partidas con este registro. En esas partidas, 39 de 40 turnos lo tienen; un turno sin él queda fuera.");
     assert.equal(X.turnSum({ value: 138, turns: 10, of: 11 }).sub, "10 de 11 turnos");
     assert.equal(facts[3].value, "no registrado");
     const p = X.heroPick({ state: "recorded", source: "log", rerolls: 1, offered: [{ id: "H_A", name: "Alpha" }], picked: { id: "H_A", name: "Alpha" } });

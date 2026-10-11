@@ -69,7 +69,7 @@ test("a reason replaces the numbers, and some reasons say nothing", () => {
   assert.deepEqual(gap("no_board_seen").shares, []);
   assert.equal(gap("order").text, "Odds: who fights first, or who is on which team, is not known yet");
   const missing = gap("not_modelled", { missing: ["SYN_A"] });
-  assert.deepEqual(missing.lines, ["Not modelled: Made-up Minion"]);
+  assert.deepEqual(missing.lines, ["Not simulated: Made-up Minion"]);
   assert.deepEqual(gap("no_card_data", { missing: ["SYN_X"] }).lines, ["No card data for: SYN_X"]);
   assert.equal(gap("no_next_opponent"), null);
   assert.equal(gap("not_in_shop"), null);
@@ -92,7 +92,7 @@ test("shares that are not shares are never drawn", () => {
 test("Spanish writes the shares its own way", () => {
   I18n.setLang("es");
   const v = oddsView(odds(), true, nameOf);
-  assert.deepEqual(v.shares.map((s) => s.text.replace(/\s/g, " ")), ["Ganar 62 %", "Empate 8 %", "Perder 30 %"]);
+  assert.deepEqual(v.shares.map((s) => s.text.replace(/\s/g, " ")), ["Ganar 62 %", "Empatar 8 %", "Perder 30 %"]);
   assert.equal(v.age, "su tablero visto en el turno 6");
   assert.equal(v.lines[0], "Infliges 4–9, lo más probable 6");
   I18n.setLang("en");

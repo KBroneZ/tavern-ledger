@@ -239,6 +239,11 @@ fn overlay_state(
     state: State<'_, Arc<AppState>>,
     cards: State<'_, card_data::Cards>,
 ) -> Option<LiveGame> {
+    // Overlay off: no overlay work at all (T-531); the main window still
+    // records everything.
+    if !state.overlay.enabled() {
+        return None;
+    }
     let pool = card_data::pool_cards(&cards);
     let store = card_data::store_with_data(&cards);
     let card_of = |dbf: i64| store.and_then(|s| s.card_of_dbf(dbf));
@@ -375,6 +380,7 @@ fn read_from_game(app: &AppHandle, state: &AppState, client_build: Option<i64>) 
         last_duos: last.duos,
         newest: last.newest.as_ref(),
         previous: last.previous.as_ref(),
+        skip_tribes: !state.overlay.enabled(),
     };
     let tick = || state.game_memory.tick(&game_memory::GameReader, &poll);
     if catch_unwind(AssertUnwindSafe(tick)).is_err() {
@@ -766,7 +772,7 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
         match catch_unwind(AssertUnwindSafe(|| live_now(&mut watcher))) {
             Ok(live) => {
                 publish_live(&app, &state, live);
-                let on = state.overlay.odds_shown();
+                let on = state.overlay.odds_running();
                 if let Ok(wanted) = catch_unwind(AssertUnwindSafe(|| odds::wanted(&watcher, on))) {
                     state.odds.submit(&app, wanted);
                 }
@@ -1074,6 +1080,7 @@ fn main() {
             overlay::overlay_reset_layout,
             overlay::overlay_set_unlocked,
             overlay::overlay_set_enabled,
+            overlay::overlay_asks_first,
             overlay::overlay_save_leaderboard,
             overlay::overlay_reset_leaderboard,
             upload::upload_status,

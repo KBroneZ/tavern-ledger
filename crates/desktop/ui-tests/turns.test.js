@@ -158,7 +158,7 @@ test("in Spanish a turn's summary and shop facts follow the language", () => {
   I18n.setLang("es");
   try {
     const [, two] = TLTurns.rows(recap(), report);
-    assert.equal(TLTurns.summaryWords(two, (h) => h.name || h.id), "Turno 2, nivel 2, mejora de taberna, perdido contra HERO_C, vida −5, tu tablero 1 esbirro");
+    assert.equal(TLTurns.summaryWords(two, (h) => h.name || h.id), "Turno 2, nivel 2, mejora de taberna, derrota contra HERO_C, vida −5, tu tablero 1 esbirro");
     const facts = TLTurns.shopFacts(shopTurn(1, { apm: 4.25, rolls: 3, free_rolls: 2 }));
     assert.deepEqual(facts.map((f) => f.label), ["Oro", "Gastado", "Refrescos", "Compras", "Ventas", "APM"]);
     assert.equal(facts[5].value, "4,3");

@@ -70,6 +70,10 @@ pub struct Overlay {
     unlock_item: Mutex<Option<CheckMenuItem<Wry>>>,
     /// Held while a change is made and saved, so two saves cannot cross.
     saving: Mutex<()>,
+    /// An overlay choice exists: `overlay.json` was there at start, or the
+    /// user changed an overlay setting in this run. Until then the main
+    /// window asks once whether they want the overlay (T-531, D-106).
+    chosen: AtomicBool,
 }
 
 /// What the overlay page needs to draw itself.
@@ -120,13 +124,18 @@ impl Overlay {
         let path = data_dir.join(PREFS_FILE);
         *lock(&self.prefs) = Some(path.clone());
         match std::fs::read_to_string(&path) {
-            Ok(text) => *lock(&self.settings) = Settings::parse(&text)?,
+            Ok(text) => {
+                self.chosen.store(true, Ordering::SeqCst);
+                *lock(&self.settings) = Settings::parse(&text)?;
+            }
             Err(e) if e.kind() == io::ErrorKind::NotFound => {}
             Err(e) => {
+                // A file is there, only unreadable: the choice was made once.
+                self.chosen.store(true, Ordering::SeqCst);
                 return Err(format!(
                     "The overlay settings could not be read ({:?}); the defaults are used.",
                     e.kind()
-                ))
+                ));
             }
         }
         Ok(())
@@ -146,6 +155,18 @@ impl Overlay {
     /// Whether the combat odds (T-605) are on; on by default.
     pub fn odds_shown(&self) -> bool {
         !lock(&self.settings).odds_off
+    }
+
+    /// Whether the combat odds are worked out: only with the overlay on and
+    /// the odds left on (T-531: overlay off runs no overlay work).
+    pub fn odds_running(&self) -> bool {
+        self.enabled() && self.odds_shown()
+    }
+
+    /// The first-start question (T-531): asked while no overlay choice
+    /// exists. Never in a `--overlay-dev` run, which is on whatever is saved.
+    pub fn asks_first(&self) -> bool {
+        !self.chosen.load(Ordering::SeqCst) && !self.ignores_foreground()
     }
 
     /// Whether the lobby panel (T-338) is left on; on by default.
@@ -175,6 +196,8 @@ impl Overlay {
     /// restart.
     pub fn change(&self, apply: impl FnOnce(&mut Settings, (f64, f64))) -> Result<(), String> {
         let _one_at_a_time = lock(&self.saving);
+        // Held for this run even if saving fails; the next start asks again.
+        self.chosen.store(true, Ordering::SeqCst);
         let screen = *lock(&self.screen);
         let text = {
             let mut settings = lock(&self.settings);
@@ -465,6 +488,13 @@ pub fn overlay_reset_layout(app: AppHandle, state: State<'_, Arc<AppState>>) -> 
     change(&app, &state, |s, _| s.reset_layout())
 }
 
+/// Whether the main window asks once if the player wants the overlay or only
+/// the stats (T-531); the answer goes through `overlay_set_enabled`.
+#[tauri::command]
+pub fn overlay_asks_first(state: State<'_, Arc<AppState>>) -> bool {
+    state.overlay.asks_first()
+}
+
 #[tauri::command]
 pub fn overlay_set_enabled(app: AppHandle, state: State<'_, Arc<AppState>>, enabled: bool) -> View {
     if let Err(message) = set_enabled(&app, &state, enabled) {
@@ -641,6 +671,62 @@ mod tests {
         let overlay = Overlay::default();
         overlay.load(&dir, false).unwrap();
         assert!(overlay.enabled());
+    }
+
+    #[test]
+    fn the_first_start_asks_until_an_overlay_choice_is_kept() {
+        let dir = temp_dir("first");
+        let first = Overlay::default();
+        first.load(&dir, false).unwrap();
+        assert!(first.asks_first(), "no overlay.json: never chosen");
+        first.set_enabled(false).unwrap();
+        assert!(!first.asks_first(), "answered in this run");
+        let again = Overlay::default();
+        again.load(&dir, false).unwrap();
+        assert!(!again.asks_first(), "the answer was kept");
+        assert!(!again.enabled(), "only stats");
+    }
+
+    #[test]
+    fn an_answer_that_cannot_be_saved_holds_for_this_run_and_is_asked_again() {
+        let dir = temp_dir("first-unsaved");
+        let overlay = Overlay::default();
+        overlay.load(&dir, false).unwrap();
+        *overlay.prefs.lock().unwrap() = None;
+        assert!(overlay.set_enabled(true).is_err());
+        assert!(!overlay.asks_first(), "not twice in one run");
+        assert!(overlay.enabled());
+        let next = Overlay::default();
+        next.load(&dir, false).unwrap();
+        assert!(next.asks_first());
+    }
+
+    #[test]
+    fn any_kept_overlay_setting_counts_as_a_choice_and_dev_runs_never_ask() {
+        let dir = temp_dir("first-other");
+        std::fs::write(dir.join(PREFS_FILE), r#"{"theme":"contrast"}"#).unwrap();
+        let overlay = Overlay::default();
+        overlay.load(&dir, false).unwrap();
+        assert!(!overlay.asks_first());
+        let dev = Overlay::default();
+        dev.load(&temp_dir("first-dev"), true).unwrap();
+        assert!(!dev.asks_first());
+    }
+
+    #[test]
+    fn the_odds_run_only_while_the_overlay_is_on() {
+        let dir = temp_dir("odds");
+        let overlay = Overlay::default();
+        overlay.load(&dir, false).unwrap();
+        assert!(overlay.odds_shown(), "on by default");
+        assert!(!overlay.odds_running(), "overlay off: no odds work");
+        overlay.set_enabled(true).unwrap();
+        assert!(overlay.odds_running());
+        overlay.change(|s, _| s.odds_off = true).unwrap();
+        assert!(!overlay.odds_running());
+        overlay.change(|s, _| s.odds_off = false).unwrap();
+        overlay.disable();
+        assert!(!overlay.odds_running(), "a broken overlay runs nothing");
     }
 
     #[test]

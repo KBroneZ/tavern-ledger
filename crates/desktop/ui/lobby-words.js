@@ -65,7 +65,7 @@
   // One line per mode played today: games, average place, top-half games.
   // Every number says how many games are behind it (T-342): a game with no
   // place (not finished in the log) counts in the games but not in the
-  // average or the top half, so those say "9 placed" and "6 of 9".
+  // average or the top half, so those say "9 with a place" and "6 of 9".
   function summaryLines(view) {
     const today = Array.isArray(view && view.today) ? view.today : [];
     const lines = today
