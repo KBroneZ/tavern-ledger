@@ -10,9 +10,14 @@ export type Period = "7d" | "30d" | "all";
 export const PERIODS: readonly Period[] = ["7d", "30d", "all"];
 export const DEFAULT_PERIOD: Period = "30d";
 
-/** The database's minimums (private.leaderboard_min_games and _min_hero_games). */
-export const MIN_GAMES = 20;
-export const MIN_HERO_GAMES = 10;
+/**
+ * A row that rests on fewer games than this is marked "few games" (D-103).
+ * The database lists every public player with one finished game; these were
+ * D-082's minimums, kept as the line under which a value is shown with care.
+ */
+export const FEW_GAMES = 20;
+/** The same line for the hero board, counted in games with the hero. */
+export const FEW_HERO_GAMES = 10;
 /** Rows a board shows before "Show all" (the server sends at most 50). */
 export const TOP_ROWS = 10;
 export const MAX_ROWS = 50;
@@ -111,6 +116,15 @@ export function boardRow(value: unknown, m: Mode): BoardRow {
   };
 }
 
+/**
+ * True when the row's value rests on fewer games than its board's line. Not on
+ * the games board: there the value is the games, already shown.
+ */
+export function fewGames(row: BoardRow): boolean {
+  if (row.board === "games") return false;
+  return row.games < (row.board === "hero_avg_place" ? FEW_HERO_GAMES : FEW_GAMES);
+}
+
 /** Rows grouped per board, in the server's order (standing, then more games). */
 export function groupBoards(rows: readonly BoardRow[]): Map<BoardKey, BoardRow[]> {
   const boards = new Map<BoardKey, BoardRow[]>(BOARD_KEYS.map((k) => [k, []]));
@@ -139,7 +153,7 @@ export function valueLabel(def: BoardDef, m: Mode): string {
 }
 
 export function boardHow(def: BoardDef): string {
-  return lt(`board.${def.key}.how` as LbKey, { hero: MIN_HERO_GAMES });
+  return lt(`board.${def.key}.how` as LbKey);
 }
 
 export function periodName(p: Period, long = false): string {
