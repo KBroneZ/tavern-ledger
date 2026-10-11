@@ -75,6 +75,9 @@ impl DuosInput {
     }
 }
 
+/// A board and the combat it was seen in.
+pub(crate) type LastBoard<'a> = (&'a [LogMinion], i64);
+
 /// The newest board of `seat` on `side` that entered play in a combat the
 /// game has shown, with its combat number.
 pub(crate) fn last_board(
@@ -115,7 +118,7 @@ pub fn duos_input<'a>(
     next: i64,
     fights_first: Option<bool>,
     lobby: &[LobbySlot],
-) -> Result<(DuosInput, Option<(&'a [LogMinion], i64)>), NoOdds> {
+) -> Result<(DuosInput, Option<LastBoard<'a>>), NoOdds> {
     let order = || NoOdds::new(Gap::Order, Some(next));
     let local_first = fights_first.ok_or_else(order)?;
     let mate = report.teammate_player_id.ok_or_else(order)?;
