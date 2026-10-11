@@ -618,6 +618,7 @@ fn rounds_of(c: &Collector, heroes: &[(i64, &Entity)], last_health: Option<i64>)
                 .flatten()
                 .filter(|_| c.result_tags_seen),
             attacks: c.attacks.get(&n).cloned().unwrap_or_default(),
+            own_shop_board: c.shop_boards.get(&n).cloned(),
         })
         .collect()
 }

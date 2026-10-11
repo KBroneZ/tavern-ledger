@@ -14,10 +14,11 @@ use std::path::{Path, PathBuf};
 
 use bg_parser::report::{GameReport, LoggedAttack, Minion as LogMinion, Round, Side};
 
-use crate::combat::replay::{replay, LoggedStep, Replay, Rule, Span};
+use crate::combat::replay::{replay_teams, LoggedStep, Replay, Rule, Span};
 use crate::combat::CombatResult;
 use crate::harness::{CardDb, History, LoggedCombat, Scored};
-use crate::model::{Keywords, Minion, Warband};
+use crate::harness_duos::{duos_combats, team_of, DuosCombat};
+use crate::model::{Keywords, Minion, Team, Warband};
 use crate::score::{score, Prediction};
 use crate::trials::{simulate, Options, Verdict};
 
@@ -43,8 +44,9 @@ pub struct LogCombat {
     pub game: usize,
     pub round: i64,
     pub duos: bool,
-    pub player: Warband,
-    pub opponent: Warband,
+    /// Each team's boards in the order they fought (one in Solo).
+    pub player: Team,
+    pub opponent: Team,
     pub steps: Vec<LoggedStep>,
     pub result: Option<CombatResult>,
 }
@@ -53,8 +55,10 @@ pub struct LogCombat {
 pub struct LogHistory {
     /// The Solo combats for the accuracy report, as from the saved history.
     pub history: History,
-    /// Solo combats and Duos first legs with attacks.
+    /// Solo and Duos combats with attacks.
     pub combats: Vec<LogCombat>,
+    /// The Duos combats with each team's boards (T-608).
+    pub duos: Vec<DuosCombat>,
     /// Rounds with attacks that could not be turned into steps (a card id
     /// missing, an attacker or defender not on the board before).
     pub unreadable: usize,
@@ -83,7 +87,7 @@ fn engine_minion(m: &LogMinion, db: &CardDb) -> Option<Minion> {
     })
 }
 
-fn engine_board(board: &[LogMinion], db: &CardDb) -> Option<Vec<Minion>> {
+pub(crate) fn engine_board(board: &[LogMinion], db: &CardDb) -> Option<Vec<Minion>> {
     board.iter().map(|m| engine_minion(m, db)).collect()
 }
 
@@ -127,20 +131,25 @@ fn solo_boards(round: &Round) -> Option<(&[LogMinion], &[LogMinion], Option<i64>
 
 /// Adds one game's combats.
 fn add_game(out: &mut LogHistory, game: usize, report: &GameReport, db: &CardDb) {
-    let duos = match report.game_type.as_deref() {
+    let is_duos = match report.game_type.as_deref() {
         Some("GT_BATTLEGROUNDS") => false,
         Some("GT_BATTLEGROUNDS_DUO") => true,
         _ => return,
     };
     out.history.games += 1;
-    if duos {
+    let duos: Vec<DuosCombat> = if is_duos {
+        duos_combats(report, game, db)
+    } else {
+        Vec::new()
+    };
+    if is_duos {
         out.history.duos_games += 1;
     } else {
         out.history.solo_games += 1;
     }
     for round in &report.rounds {
         let result = round.result.map(result_of);
-        if !duos {
+        if !is_duos {
             let scored = solo_boards(round).and_then(|(own, opp, seat)| {
                 Some((engine_board(own, db)?, engine_board(opp, db)?, seat))
             });
@@ -173,27 +182,33 @@ fn add_game(out: &mut LogHistory, game: usize, report: &GameReport, db: &CardDb)
             continue;
         };
         let [p, o] = steps[0].before.clone();
-        // In Duos, only a first leg the player's own board fights: the
-        // first own entry's board is the one the attacks start from.
-        let own_first = round
-            .entries
-            .iter()
-            .find(|e| e.side == Side::Own)
-            .and_then(|e| e.board.as_deref())
-            .and_then(|b| engine_board(b, db));
-        if duos && own_first.as_deref() != Some(&p[..]) {
-            continue;
-        }
+        let (player, opponent) = if is_duos {
+            // Each team's boards in the order they fought; the first ones
+            // are the boards the attacks start from.
+            let Some(c) = duos.iter().find(|c| c.round == round.number) else {
+                out.unreadable += 1;
+                continue;
+            };
+            let (player, opponent) = (team_of(&c.own), team_of(&c.opponent));
+            if player.first.minions != p || opponent.first.minions != o {
+                out.unreadable += 1;
+                continue;
+            }
+            (player, opponent)
+        } else {
+            (Team::solo(Warband::new(p)), Team::solo(Warband::new(o)))
+        };
         out.combats.push(LogCombat {
             game,
             round: round.number,
-            duos,
-            player: Warband::new(p),
-            opponent: Warband::new(o),
+            duos: is_duos,
+            player,
+            opponent,
             steps,
             result,
         });
     }
+    out.duos.extend(duos);
 }
 
 /// Reads every game of `logs`.
@@ -233,18 +248,17 @@ pub struct Replayed {
 pub fn replay_all(combats: &[LogCombat], seed: u64) -> Vec<Replayed> {
     combats
         .iter()
-        .map(|c| {
-            let span = if c.duos {
-                Span::FirstLeg
-            } else {
-                Span::Whole(c.result)
-            };
-            Replayed {
-                game: c.game,
-                round: c.round,
-                duos: c.duos,
-                replay: replay(&c.player, &c.opponent, &c.steps, span, seed),
-            }
+        .map(|c| Replayed {
+            game: c.game,
+            round: c.round,
+            duos: c.duos,
+            replay: replay_teams(
+                &c.player,
+                &c.opponent,
+                &c.steps,
+                Span::Whole(c.result),
+                seed,
+            ),
         })
         .collect()
 }
@@ -267,7 +281,7 @@ pub fn render_replays(rows: &[Replayed], scored: &[Scored], unreadable: usize) -
     let _ = writeln!(out, "\n## Attack order replay (T-603b)\n");
     let _ = writeln!(
         out,
-        "Combats replayed: {} ({} Solo, {} Duos first legs); {} rounds with attacks could not \
+        "Combats replayed: {} ({} Solo, {} Duos, both legs); {} rounds with attacks could not \
          be read. Replayed without a difference: {}. Attacks played as the log did before the \
          first difference: {} of {}.\n",
         rows.len(),

@@ -3,7 +3,7 @@
 //! the logs are marked there.
 
 use crate::cards::{self, Action, Trigger};
-use crate::model::{BaseCard, Keywords, Tribes, Warband, MAX_BOARD};
+use crate::model::{BaseCard, Keywords, Team, Tribes, Warband, MAX_BOARD};
 use crate::rng::Rng;
 
 /// Attack turns before a combat is called a tie. A real combat ends in far
@@ -49,6 +49,10 @@ pub(crate) struct Prepared {
     pub tokens: Vec<(&'static str, u16)>,
     pub start: [Vec<Unit>; 2],
     pub tavern_tier: [Option<u8>; 2],
+    /// Duos: the teammate's board, which comes in once `start` is gone, and
+    /// its hero's tavern tier. `None` in Solo or without a teammate.
+    pub second: [Option<Vec<Unit>>; 2],
+    pub second_tier: [Option<u8>; 2],
     pub start_of_combat: bool,
 }
 
@@ -56,22 +60,44 @@ impl Prepared {
     /// Builds the engine's form. Cards not in the registry play as plain
     /// minions; the caller decides whether that is allowed (see `trials`).
     pub fn new(player: &Warband, opponent: &Warband, start_of_combat: bool) -> Self {
+        Prepared::boards([player, opponent], [None, None], start_of_combat)
+    }
+
+    /// Both teams of a Duos combat (a team without a second board plays as
+    /// in Solo).
+    pub fn teams(player: &Team, opponent: &Team, start_of_combat: bool) -> Self {
+        Prepared::boards(
+            [&player.first, &opponent.first],
+            [player.second.as_ref(), opponent.second.as_ref()],
+            start_of_combat,
+        )
+    }
+
+    fn boards(first: [&Warband; 2], second: [Option<&Warband>; 2], start_of_combat: bool) -> Self {
         let mut cards: Vec<CardInfo> = Vec::new();
-        let mut start = [Vec::new(), Vec::new()];
         let mut uid = 0;
-        for (side, band) in [player, opponent].into_iter().enumerate() {
-            for m in &band.minions {
-                let card = intern(&mut cards, &m.card_id, || CardInfo {
-                    id: m.card_id.clone(),
-                    triggers: cards::rules(&m.card_id).map(|r| r.triggers).unwrap_or(&[]),
-                    tier: m.tier,
-                    tribes: m.tribes,
-                    base: m.base,
-                });
-                uid += 1;
-                start[side].push(Unit::new(uid, card, m.attack, m.health, m.keywords));
-            }
-        }
+        let mut units = |band: &Warband, cards: &mut Vec<CardInfo>| -> Vec<Unit> {
+            band.minions
+                .iter()
+                .map(|m| {
+                    let card = intern(cards, &m.card_id, || CardInfo {
+                        id: m.card_id.clone(),
+                        triggers: cards::rules(&m.card_id).map(|r| r.triggers).unwrap_or(&[]),
+                        tier: m.tier,
+                        tribes: m.tribes,
+                        base: m.base,
+                    });
+                    uid += 1;
+                    Unit::new(uid, card, m.attack, m.health, m.keywords)
+                })
+                .collect()
+        };
+        let mut start = [units(first[0], &mut cards), units(first[1], &mut cards)];
+        let second_tier = second.map(|b| b.and_then(|b| b.tavern_tier));
+        let mut second = [
+            second[0].map(|b| units(b, &mut cards)),
+            second[1].map(|b| units(b, &mut cards)),
+        ];
         // Tokens any of these cards can summon, and what those summon.
         let mut tokens: Vec<(&'static str, u16)> = Vec::new();
         let mut i = 0;
@@ -98,8 +124,10 @@ impl Prepared {
             }
             i += 1;
         }
-        for side in &mut start {
-            for unit in side.iter_mut() {
+        let [s0, s1] = &mut second;
+        let boards = start.iter_mut().chain([s0, s1].into_iter().flatten());
+        for board in boards {
+            for unit in board.iter_mut() {
                 let triggers = cards[unit.card as usize].triggers;
                 unit.shield_done = triggers.iter().any(|t| match t {
                     Trigger::ShieldAtAttack(n) => unit.attack >= *n,
@@ -111,7 +139,9 @@ impl Prepared {
             cards,
             tokens,
             start,
-            tavern_tier: [player.tavern_tier, opponent.tavern_tier],
+            tavern_tier: [first[0].tavern_tier, first[1].tavern_tier],
+            second,
+            second_tier,
             start_of_combat,
         }
     }
@@ -230,6 +260,24 @@ struct Combat<'a> {
     /// The target of the next swing when it is not the engine's to choose
     /// (the replay of a logged combat, `replay`).
     forced_target: Option<u32>,
+    legs: Legs,
+}
+
+/// Duos: whether each side's second board is still to come in, and the
+/// tavern tier of the hero whose board fights now (part of the damage).
+#[derive(Clone, Copy, Debug)]
+struct Legs {
+    waiting: [bool; 2],
+    tier: [Option<u8>; 2],
+}
+
+impl Legs {
+    fn of(p: &Prepared) -> Legs {
+        Legs {
+            waiting: [p.second[0].is_some(), p.second[1].is_some()],
+            tier: p.tavern_tier,
+        }
+    }
 }
 
 /// Plays one combat with `rng`.
@@ -239,7 +287,9 @@ pub(crate) fn play(p: &Prepared, rng: &mut Rng) -> Outcome {
 
 impl<'a> Combat<'a> {
     fn new(p: &'a Prepared, rng: &'a mut Rng) -> Self {
-        let next_uid = p.start.iter().map(|s| s.len() as u32).sum::<u32>() + 1;
+        let waiting: usize = p.second.iter().flatten().map(Vec::len).sum();
+        let next_uid = p.start.iter().map(Vec::len).sum::<usize>() + waiting + 1;
+        let next_uid = next_uid as u32;
         Combat {
             p,
             rng,
@@ -255,23 +305,27 @@ impl<'a> Combat<'a> {
             ],
             next_uid,
             forced_target: None,
+            legs: Legs::of(p),
         }
     }
 }
 
 impl Combat<'_> {
     fn run(&mut self) -> Outcome {
-        let mut turn = match self.first_by_count() {
-            Some(side) => side,
-            None => usize::from(self.rng.coin()),
-        };
+        let mut turn = self.first_attacker();
         if self.p.start_of_combat {
-            self.start_of_combat(turn);
+            self.start_of_combat(turn, [true, true]);
         }
         let mut turns = 0;
-        while !self.finished() {
+        loop {
+            if let Some(first) = self.bring_in_teammates() {
+                turn = first;
+            }
+            if self.finished() {
+                return self.outcome(false);
+            }
             let attacked = self.attack_turn(turn);
-            if !attacked && self.attacker_index(1 - turn).is_none() {
+            if !attacked && !self.finished() && self.attacker_index(1 - turn).is_none() {
                 return self.outcome(false);
             }
             turn = 1 - turn;
@@ -280,7 +334,57 @@ impl Combat<'_> {
                 return self.outcome(true);
             }
         }
-        self.outcome(false)
+    }
+
+    /// The side with more minions, else a coin flip.
+    fn first_attacker(&mut self) -> usize {
+        match self.first_by_count() {
+            Some(side) => side,
+            None => usize::from(self.rng.coin()),
+        }
+    }
+
+    /// Duos: a side whose board is gone brings in its teammate's board, which
+    /// starts its attacks from its left-most minion; the other side keeps its
+    /// place in its own order. Who attacks next is then decided as at the
+    /// start of a combat (more minions, else a coin flip). Returns that side
+    /// when a board came in (both user logs and the rule table in
+    /// `docs/research/combat-simulator.md`, section 3).
+    fn bring_in_teammates(&mut self) -> Option<usize> {
+        let mut entered = self.enter_waiting();
+        if entered == [false, false] {
+            return None;
+        }
+        loop {
+            // Counted before start of combat, as at the start (section 3).
+            let first = self.first_attacker();
+            if !self.p.start_of_combat {
+                return Some(first);
+            }
+            self.start_of_combat(first, entered);
+            // Its start of combat can empty a board again.
+            entered = self.enter_waiting();
+            if entered == [false, false] {
+                return Some(first);
+            }
+        }
+    }
+
+    /// Puts each waiting teammate's board in place of a board that is gone;
+    /// says which sides got one.
+    fn enter_waiting(&mut self) -> [bool; 2] {
+        [0, 1].map(|side| {
+            let enters = self.sides[side].units.is_empty() && self.legs.waiting[side];
+            if enters {
+                self.legs.waiting[side] = false;
+                self.legs.tier[side] = self.p.second_tier[side];
+                self.sides[side] = SideState {
+                    units: self.p.second[side].clone().unwrap_or_default(),
+                    next: 0,
+                };
+            }
+            enters
+        })
     }
 
     /// The side with more minions attacks first; `None` on equal counts (a
@@ -294,6 +398,8 @@ impl Combat<'_> {
         }
     }
 
+    /// A board is gone. In Duos its teammate's may still come in (see
+    /// [`Combat::bring_in_teammates`]); the combat is over when none is left.
     fn finished(&self) -> bool {
         self.sides.iter().any(|s| s.units.is_empty())
     }
@@ -315,12 +421,19 @@ impl Combat<'_> {
                 stalled,
             },
             Some(w) => {
+                // In Duos a teammate's board that never came in survives whole.
+                let waiting = self.p.second[w]
+                    .iter()
+                    .flatten()
+                    .filter(|_| self.legs.waiting[w]);
                 let tiers: Option<i32> = self.sides[w]
                     .units
                     .iter()
+                    .chain(waiting)
                     .map(|u| self.p.cards[u.card as usize].tier.map(i32::from))
                     .sum();
-                let hero = self.p.tavern_tier[w].map(i32::from);
+                // The hero whose board is on the field at the end.
+                let hero = self.legs.tier[w].map(i32::from);
                 Outcome {
                     result: if w == 0 {
                         CombatResult::Won
@@ -350,8 +463,9 @@ impl Combat<'_> {
         self.sides[side].units.iter_mut().find(|u| u.uid == uid)
     }
 
-    fn start_of_combat(&mut self, first: usize) {
-        for side in [first, 1 - first] {
+    /// Start-of-combat effects of the boards that are coming in (`sides`).
+    fn start_of_combat(&mut self, first: usize, sides: [bool; 2]) {
+        for side in [first, 1 - first].into_iter().filter(|s| sides[*s]) {
             let uids: Vec<u32> = self.sides[side].units.iter().map(|u| u.uid).collect();
             for uid in uids {
                 let Some(unit) = self.unit(side, uid) else {
@@ -788,6 +902,14 @@ impl Combat<'_> {
             }
             // Needs the reborn minion: played by `after_reborn`.
             Action::GiveRebornAttackToRightmost { .. } => {}
+            Action::MultiplyAttackerAttack { factor } => {
+                if let Some(a) = attacker {
+                    let gain = self
+                        .unit(side, a)
+                        .map_or(0, |u| u.attack.saturating_mul(factor.saturating_sub(1)));
+                    self.buff(side, a, gain, 0);
+                }
+            }
         }
     }
 
@@ -807,9 +929,11 @@ impl Combat<'_> {
         };
         for k in 0..usize::from(count) {
             let unit = self.fresh(card, base.attack, base.health, base.keywords);
+            let uid = unit.uid;
             if !self.sides[side].insert(at + k, unit) {
                 break;
             }
+            self.after_summon(side, uid);
         }
     }
 
@@ -880,6 +1004,7 @@ impl Combat<'_> {
                             for a in *actions {
                                 self.act(d.side, src, None, None, a);
                             }
+                            self.after_friendly_deathrattle(d.side);
                         }
                     }
                 }
@@ -931,6 +1056,7 @@ impl Combat<'_> {
         let uid = unit.uid;
         let at = self.anchor_pos(d.side, d.anchor);
         if self.sides[d.side].insert(at, unit) {
+            self.after_summon(d.side, uid);
             self.after_reborn(d.side, uid);
         }
     }
@@ -942,6 +1068,13 @@ pub mod replay;
 #[path = "combat_round2.rs"]
 mod round2;
 
+#[path = "combat_round3.rs"]
+mod round3;
+
 #[cfg(test)]
 #[path = "combat_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "combat_duos_tests.rs"]
+mod duos_tests;
