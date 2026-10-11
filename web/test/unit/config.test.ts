@@ -100,6 +100,17 @@ test("with accounts closed the CSP allows no script, form or connection", () => 
   assert.match(csp, /(^|; )font-src 'self'(;|$)/);
 });
 
+test("pictures: the open site adds exactly HearthstoneJSON's art host to img-src (D-074)", () => {
+  // The whole header, so any other change shows up here.
+  assert.equal(
+    contentSecurityPolicy("https://abcd.supabase.co"),
+    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://art.hearthstonejson.com; " +
+      "font-src 'self'; connect-src https://abcd.supabase.co; base-uri 'none'; form-action 'self'",
+  );
+  // Accounts closed: no script draws a game, so no picture comes from outside.
+  assert.match(contentSecurityPolicy(null), /(^|; )img-src 'self'(;|$)/);
+});
+
 const BACKEND = { PUBLIC_SUPABASE_URL: "https://abcd.supabase.co", PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_x" };
 
 test("sign-ups are closed unless the build says exactly true", () => {
