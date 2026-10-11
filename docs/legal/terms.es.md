@@ -2,7 +2,7 @@
 
 *Traducción del original en inglés. Si esta versión y la [versión en inglés](https://tavernledger.net/terms/) dicen cosas distintas, prevalece la inglesa.*
 
-Última actualización: 11 de octubre de 2026
+Última actualización: 12 de octubre de 2026
 
 **Qué cambió el 11 de octubre de 2026:** clasificaciones públicas (apartado 4), estadísticas de héroes de la comunidad (apartado 4) y la comprobación de los nombres visibles por parte del servidor (apartado 3).
 
@@ -46,8 +46,8 @@ Conservas tus derechos sobre tus datos. Nos permites almacenarlos y tratarlos so
 
 ## 6. Código, contenido del juego y marcas comerciales
 
-- El código fuente de Tavern Ledger es de código abierto bajo la licencia MIT: github.com/KBroneZ/tavern-ledger.
-- La licencia MIT cubre solo nuestro código. Los nombres, cartas, imágenes y demás contenido del juego de Hearthstone pertenecen a Blizzard Entertainment y se usan, en su caso, bajo la Política de contenido de fans de Blizzard; no forman parte de la licencia MIT y no obtienes de nosotros ningún derecho sobre ellos.
+- El código fuente de Tavern Ledger es de código abierto bajo la Licencia Pública General Affero de GNU, solo la versión 3 (AGPL-3.0-only): github.com/KBroneZ/tavern-ledger. Las versiones publicadas antes del 12 de octubre de 2026 siguen disponibles bajo la licencia MIT con la que se publicaron.
+- Esa licencia cubre solo nuestro código. Los nombres, cartas, imágenes y demás contenido del juego de Hearthstone pertenecen a Blizzard Entertainment y se usan, en su caso, bajo la Política de contenido de fans de Blizzard; no forman parte de esa licencia y no obtienes de nosotros ningún derecho sobre ellos.
 
 ## 7. Sin garantía
 

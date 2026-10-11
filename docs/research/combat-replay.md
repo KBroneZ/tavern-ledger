@@ -49,6 +49,6 @@ The largest game's record is 196 KB compact (19.5 KB gzipped), 82 KB of it witho
 
 ## 4. Not done
 
-- The website's replay (T-527): the record is uploaded and checked, the page is a later task.
+- The website's replay (T-533): the record is uploaded and checked, the page is a later task.
 - `CHANGE_ENTITY` of a board minion during a combat (a minion that turns into another card) keeps its first card in the replay.
 - Damage to heroes during the combat (not at the end) and hero power effects other than start-of-combat triggers are not events.

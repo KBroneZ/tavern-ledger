@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="es" data-title-es="B · Carteles de «Se busca» · Tavern Ledger" data-title-en="B · Wanted posters · Tavern Ledger">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B · Wanted posters · Tavern Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600..800&family=Figtree:wght@400..700&family=Fraunces:opsz,wght,SOFT@9..144,600..900,0..100&display=swap">
+<link rel="stylesheet" href="shared/tavern.css">
+<style>
+  /* Concept B: hero portraits hung on the wall as "wanted" posters, lit by
+     candles on a shelf; the copy on parchment in front. */
+  .hero-b {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    padding: clamp(28px, 4vw, 56px) 16px clamp(48px, 6vw, 84px);
+  }
+  .posters {
+    list-style: none;
+    margin: 0 auto;
+    padding: 0;
+    max-width: 1180px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: clamp(10px, 2vw, 28px);
+  }
+  .poster {
+    --rot: 0deg;
+    --drop: 0px;
+    position: relative;
+    flex: 0 1 190px;
+    min-width: 0;
+    padding: 26px 14px 14px;
+    text-align: center;
+    transform: translateY(var(--drop)) rotate(var(--rot));
+    transform-origin: 50% 8px;
+  }
+  .poster::after {
+    /* the nail it hangs from */
+    content: "";
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    margin-left: -6px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #d8d0c4 0 1.5px, #6d655c 3px, #2a2420 6px);
+    box-shadow: 0 2px 3px rgb(0 0 0 / 0.6);
+  }
+  .poster:nth-child(1) { --rot: -3deg; --drop: 26px; }
+  .poster:nth-child(2) { --rot: 2deg; --drop: 4px; }
+  .poster:nth-child(3) { --rot: -1deg; --drop: 0px; flex-basis: 210px; }
+  .poster:nth-child(4) { --rot: 2.5deg; --drop: 10px; }
+  .poster:nth-child(5) { --rot: -2deg; --drop: 30px; }
+  .poster .wanted {
+    display: block;
+    margin-bottom: 8px;
+    font: 900 clamp(1rem, 0.7rem + 1vw, 1.5rem)/1 var(--display-serif);
+    font-variation-settings: "SOFT" 0, "opsz" 72;
+    letter-spacing: 0.08em;
+    color: #5a1a0c;
+    text-transform: uppercase;
+  }
+  .poster .frame {
+    aspect-ratio: 1;
+    border-width: 5px;
+  }
+  .poster .portrait {
+    filter: sepia(0.35) contrast(1.05) saturate(0.85);
+  }
+  .poster .name {
+    display: block;
+    margin-top: 8px;
+    font: 800 0.95rem/1.15 var(--display-serif);
+    font-variation-settings: "SOFT" 100;
+  }
+  .poster .seen {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+  .shelf {
+    position: relative;
+    max-width: 1180px;
+    height: 18px;
+    margin: clamp(26px, 4vw, 54px) auto 0;
+    background: linear-gradient(180deg, #7a4a24, #4a2a16 40%, #2a160a);
+    border-radius: 2px;
+    box-shadow: 0 14px 22px rgb(0 0 0 / 0.65);
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+  }
+  .shelf .candle {
+    margin-bottom: 18px;
+  }
+  .shelf .candle:nth-child(2) {
+    height: 34px;
+  }
+  .hero-b .glow-warm.g1 { left: 2%; top: 30%; width: 34%; height: 70%; }
+  .hero-b .glow-warm.g2 { left: 33%; top: 26%; width: 34%; height: 70%; }
+  .hero-b .glow-warm.g3 { right: 2%; top: 30%; width: 34%; height: 70%; }
+  .hero-b .content {
+    position: relative;
+    z-index: 2;
+    max-width: 760px;
+    margin: clamp(-8px, -1vw, 0px) auto 0;
+    display: grid;
+    justify-items: center;
+    gap: 24px;
+    text-align: center;
+  }
+  .hero-b .content .parchment {
+    padding: clamp(24px, 3.4vw, 36px) clamp(22px, 4vw, 46px) clamp(26px, 3.4vw, 34px);
+    display: grid;
+    gap: 16px;
+    transform: rotate(0.5deg);
+  }
+  .hero-b h1 {
+    margin: 0;
+    font-size: clamp(2.1rem, 1rem + 4.2vw, 4.4rem);
+  }
+  .hero-b h1 .line2 {
+    display: block;
+    font-size: 0.66em;
+  }
+  .hero-b .lead {
+    margin: 0;
+    font-size: var(--t-lead);
+  }
+  .example {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--dim);
+  }
+  @media (max-width: 720px) {
+    .poster:nth-child(1),
+    .poster:nth-child(5) {
+      display: none;
+    }
+  }
+  @media (max-width: 480px) {
+    .poster {
+      padding: 22px 7px 10px;
+    }
+    .poster .seen {
+      display: none;
+    }
+    .poster .name {
+      font-size: 0.78rem;
+    }
+    .shelf {
+      margin-top: 78px;
+    }
+    .hero-b .content {
+      margin-top: 18px;
+    }
+    .hero-b .btn-row {
+      flex-direction: column;
+      align-items: stretch;
+      width: 100%;
+      max-width: 320px;
+    }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#main"><span data-l="es">Ir al contenido</span><span data-l="en">Skip to content</span></a>
+<header class="masthead">
+  <a class="brand" href="#main"><svg viewBox="0 0 98 91" aria-hidden="true"><path fill="#ffb24a" d="M1.2 0L53 0L54.2 18L47.1 18L47.1 16.2C46.6 14.2 44.1 11.7 42.1 11.7L35.2 11.7Q33.7 11.7 33.7 13.2L33.7 64A1.9 1.9 0 0 1 31.8 65.9A3.6 3.6 0 0 0 28.2 69.5L28.2 75.7L19.27 75.7L20.91 13.2Q20.95 11.7 19.45 11.7L12.1 11.7C10.1 11.7 7.6 14.2 7.1 16.2L7.1 18L0 18Z"/><path fill="#ffd08a" d="M12.59 15.3L17.26 15.3L15.57 79.3L73.25 79.3C76.2 79.3 78.25 81.3 78.25 84.3L78.25 91L4.25 91L4.25 85.5C4.25 82.4 8.51 80.5 8.71 77.5ZM37.3 15.3L40.72 15.3L43.51 17.81A3.6 3.6 0 0 0 47.1 21.6L49.7 21.6L49.7 63.3L60.8 63.3Q65.3 63.3 65.3 58.8L65.3 57.2L72.65 57.2L73.88 75.7L31.8 75.7L31.8 69.5A5.5 5.5 0 0 0 37.3 64ZM56.6 0L72.25 0L72.25 6.3Q69.7 6.6 69.5 10L72.41 53.6L64.67 53.6C62.67 53.6 60.96 54.95 60.36 56.35ZM73.23 12L79.5 12C89.5 12 95.04 17.5 95.79 27L97.88 52C97.97 64.5 93 72 82 72L77.23 72L76.55 61.7L79 61.7C85.2 61.7 87.22 59.5 87.22 53.5L85.05 27.5C85.05 24.2 84.05 22.7 81.85 22.7L73.95 22.7Z"/></svg>Tavern Ledger</a>
+  <nav aria-label="Site">
+    <a href="#"><span data-l="es">Tus partidas</span><span data-l="en">Your games</span></a>
+    <a href="#"><span data-l="es">Clasificaciones</span><span data-l="en">Leaderboards</span></a>
+    <a href="#"><span data-l="es">Simulador</span><span data-l="en">Simulator</span></a>
+  </nav>
+  <button class="hs-btn hs-btn--small lang-toggle" type="button"><span class="label"><span data-l="es">English</span><span data-l="en">Español</span></span></button>
+</header>
+<main id="main">
+  <section class="hero-b wood-wall" aria-labelledby="title-b">
+    <div class="glow-warm g1" aria-hidden="true"></div>
+    <div class="glow-warm g2" aria-hidden="true"></div>
+    <div class="glow-warm g3" aria-hidden="true"></div>
+    <canvas class="sparks" data-side="all" data-count="26" aria-hidden="true"></canvas>
+    <div class="vignette" aria-hidden="true"></div>
+
+    <ul class="posters">
+      <li class="poster parchment">
+        <span class="wanted"><span data-l="es">Se busca</span><span data-l="en">Wanted</span></span>
+        <span class="frame"><img class="portrait" data-hero="TB_BaconShop_HERO_18" alt="" width="256" height="256"></span>
+        <span class="name" data-hero-name="TB_BaconShop_HERO_18"></span>
+        <span class="seen"><span data-l="es">Visto en 21 partidas</span><span data-l="en">Seen in 21 games</span></span>
+      </li>
+      <li class="poster parchment">
+        <span class="wanted"><span data-l="es">Se busca</span><span data-l="en">Wanted</span></span>
+        <span class="frame"><img class="portrait" data-hero="TB_BaconShop_HERO_22" alt="" width="256" height="256"></span>
+        <span class="name" data-hero-name="TB_BaconShop_HERO_22"></span>
+        <span class="seen"><span data-l="es">Visto en 29 partidas</span><span data-l="en">Seen in 29 games</span></span>
+      </li>
+      <li class="poster parchment">
+        <span class="wanted"><span data-l="es">Se busca</span><span data-l="en">Wanted</span></span>
+        <span class="frame"><img class="portrait" data-hero="BG23_HERO_306" alt="" width="256" height="256"></span>
+        <span class="name" data-hero-name="BG23_HERO_306"></span>
+        <span class="seen"><span data-l="es">Visto en 38 partidas</span><span data-l="en">Seen in 38 games</span></span>
+      </li>
+      <li class="poster parchment">
+        <span class="wanted"><span data-l="es">Se busca</span><span data-l="en">Wanted</span></span>
+        <span class="frame"><img class="portrait" data-hero="BG22_HERO_305" alt="" width="256" height="256"></span>
+        <span class="name" data-hero-name="BG22_HERO_305"></span>
+        <span class="seen"><span data-l="es">Visto en 17 partidas</span><span data-l="en">Seen in 17 games</span></span>
+      </li>
+      <li class="poster parchment">
+        <span class="wanted"><span data-l="es">Se busca</span><span data-l="en">Wanted</span></span>
+        <span class="frame"><img class="portrait" data-hero="TB_BaconShop_HERO_49" alt="" width="256" height="256"></span>
+        <span class="name" data-hero-name="TB_BaconShop_HERO_49"></span>
+        <span class="seen"><span data-l="es">Visto en 12 partidas</span><span data-l="en">Seen in 12 games</span></span>
+      </li>
+    </ul>
+    <div class="shelf" aria-hidden="true"><span class="candle"></span><span class="candle"></span><span class="candle"></span></div>
+
+    <div class="content">
+      <div class="parchment nailed">
+        <h1 class="gold" id="title-b">
+          <span data-l="es">Acerca un taburete.<span class="line2">Te hemos guardado las partidas.</span></span>
+          <span data-l="en">Pull up a stool.<span class="line2">We kept your games.</span></span>
+        </h1>
+        <p class="lead" data-l="es">Una aplicación gratuita para Windows que lee el registro del propio Hearthstone en tu PC y guarda todas tus partidas de Campos de Batalla: tu héroe, tu puesto y los tableros a los que te enfrentaste.</p>
+        <p class="lead" data-l="en">A free Windows app that reads Hearthstone's own log on your PC and keeps every Battlegrounds game: your hero, your place and the boards you faced.</p>
+      </div>
+      <div class="btn-row">
+        <a class="hs-btn hs-btn--primary" href="#"><span class="label"><span data-l="es">Enséñamelo</span><span data-l="en">Show me</span></span></a>
+        <a class="hs-btn hs-btn--secondary" href="#"><span class="label"><span data-l="es">¿Es seguro?</span><span data-l="en">Is it safe?</span></span></a>
+      </div>
+      <p class="example"><span data-l="es">Los carteles son un ejemplo: con tu cuenta, son los héroes que más juegas.</span><span data-l="en">The posters are an example: signed in, they are the heroes you play most.</span></p>
+    </div>
+  </section>
+</main>
+<p class="fan-note"><span data-l="es">Proyecto no oficial de fans. Sin afiliación con Blizzard Entertainment ni respaldo de esta.</span><span data-l="en">Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.</span></p>
+<script src="shared/tavern.js"></script>
+</body>
+</html>

@@ -7,7 +7,7 @@ exclude = ["spikes"]
 edition = "2021"
 # File::try_lock (D-016)
 rust-version = "1.89"
-license = "MIT"
+license = "AGPL-3.0-only"
 publish = false
 
 # The website's WebAssembly engine (crates/sim-wasm, T-606): small and

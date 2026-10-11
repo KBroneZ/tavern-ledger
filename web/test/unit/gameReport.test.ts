@@ -178,7 +178,7 @@ test("report reader: every synthetic parser report in the repo reads without a d
 });
 
 test("report reader: real games with combat replays (revision 8) read without a dropped value", () => {
-  // The replay is for a later page (T-527); until then the reader skips it.
+  // The replay is for a later page (T-533); until then the reader skips it.
   const dir = join(import.meta.dirname, "..", "..", "..", "crates", "bg-parser", "tests", "data", "real");
   for (const file of ["b253216_solo.json", "b253216_duos.json"]) {
     const games = JSON.parse(readFileSync(join(dir, file), "utf8")) as Record<string, any>[];

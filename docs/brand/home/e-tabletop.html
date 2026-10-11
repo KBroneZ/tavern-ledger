@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="es" data-title-es="E · La mesa · Tavern Ledger" data-title-en="E · Tabletop · Tavern Ledger">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E · Tabletop · Tavern Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600..800&family=Figtree:wght@400..700&family=Fraunces:opsz,wght,SOFT@9..144,600..900,0..100&display=swap">
+<link rel="stylesheet" href="shared/tavern.css">
+<style>
+  /* Concept E: the table seen from above. An open ledger holds the copy;
+     tankards, coins and hero tokens lie around it. */
+  .hero-e {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    padding: clamp(40px, 6vw, 90px) 16px clamp(48px, 7vw, 100px);
+  }
+  .hero-e .glow-warm {
+    left: 20%;
+    top: 0;
+    width: 60%;
+    height: 100%;
+    opacity: 0.8;
+  }
+  .ledger {
+    position: relative;
+    z-index: 2;
+    max-width: 980px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    transform: rotate(-1.2deg);
+    filter: drop-shadow(0 30px 40px rgb(0 0 0 / 0.75));
+  }
+  .ledger::before {
+    /* leather cover peeking out */
+    content: "";
+    position: absolute;
+    inset: -14px -16px;
+    z-index: -1;
+    border-radius: 10px;
+    background:
+      var(--grain-paper),
+      linear-gradient(135deg, #5a1e14, #3a120c 60%, #2a0c08);
+    box-shadow: inset 0 0 0 2px #1c0604, inset 0 0 0 4px #8a5a1e, inset 0 0 0 5px #1c0604;
+  }
+  .page {
+    position: relative;
+    min-width: 0;
+    padding: clamp(26px, 4vw, 52px) clamp(22px, 3.6vw, 46px);
+    border-radius: 3px;
+  }
+  .page.left {
+    border-radius: 4px 0 0 4px;
+    box-shadow:
+      inset -30px 0 30px -18px rgb(70 40 10 / 0.6),
+      inset 0 0 26px 4px rgb(120 70 25 / 0.35);
+  }
+  .page.right {
+    border-radius: 0 4px 4px 0;
+    box-shadow:
+      inset 30px 0 30px -18px rgb(70 40 10 / 0.6),
+      inset 0 0 26px 4px rgb(120 70 25 / 0.35);
+    background-image:
+      repeating-linear-gradient(180deg, transparent 0 31px, rgb(110 70 30 / 0.22) 31px 32px),
+      var(--grain-paper),
+      var(--grain-blot);
+  }
+  .page h1 {
+    margin: 0 0 18px;
+    font: 900 clamp(2rem, 1.1rem + 3.4vw, 3.8rem)/1 var(--display-serif);
+    font-variation-settings: "SOFT" 100, "opsz" 144;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+  .page h1 .line2 {
+    display: block;
+    margin-top: 0.15em;
+    font-size: 0.62em;
+    color: #8a3b12;
+  }
+  .page .lead {
+    margin: 0 0 22px;
+    font-size: var(--t-lead);
+  }
+  .entries {
+    margin: 0 0 22px;
+    padding: 0;
+    list-style: none;
+    font: 600 0.95rem/32px var(--display-serif);
+    font-variation-settings: "SOFT" 100;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+  }
+  .entries li {
+    display: grid;
+    grid-template-columns: 3.4em 1fr auto;
+    gap: 10px;
+  }
+  .entries .pl {
+    color: var(--ink);
+    font-weight: 900;
+  }
+  .totals {
+    margin: 0;
+    padding-top: 2px;
+    border-top: 3px double rgb(110 70 30 / 0.6);
+    font: 900 1rem/32px var(--display-serif);
+    font-variation-settings: "SOFT" 100;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .page .caption {
+    display: block;
+    font: italic 500 0.8rem/32px var(--body);
+  }
+
+  /* props on the table */
+  .prop {
+    position: absolute;
+    z-index: 1;
+  }
+  .tankard {
+    width: clamp(90px, 11vw, 150px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 30% 35%, #fffaf0 0 6%, transparent 7%),
+      radial-gradient(circle at 60% 55%, #fff 0 4%, transparent 5%),
+      radial-gradient(circle at 45% 70%, #fffaf0 0 5%, transparent 6%),
+      radial-gradient(circle, #f6ead2 0 44%, #e2c58e 48%, #b8661a 52% 58%, transparent 59%),
+      radial-gradient(circle, transparent 0 58%, #6a420e 59%, #c98f2e 62% 70%, #6a420e 73%, #2a160a 76%, transparent 77%);
+    filter: drop-shadow(0 16px 18px rgb(0 0 0 / 0.7));
+  }
+  .tankard::after {
+    /* handle */
+    content: "";
+    position: absolute;
+    right: -24%;
+    top: 36%;
+    width: 30%;
+    height: 28%;
+    border: clamp(6px, 0.8vw, 10px) solid #6a420e;
+    border-left: 0;
+    border-radius: 0 40% 40% 0;
+  }
+  .t1 { left: 2%; top: 10%; }
+  .t2 { right: 4%; bottom: 6%; transform: rotate(140deg); }
+  .coins {
+    width: clamp(46px, 5vw, 64px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 40% 35%, #fff3c9 0 6%, transparent 30%),
+      radial-gradient(circle, #ffd27a 0 50%, #b5781e 58%, #ffd27a 62%, #8a5a14 70%);
+    box-shadow:
+      0 4px 0 #8a5a14,
+      0 8px 0 #6e4610,
+      0 12px 0 #8a5a14,
+      0 18px 14px rgb(0 0 0 / 0.6);
+  }
+  .c1 { left: 9%; bottom: 14%; }
+  .c2 { right: 2%; top: 46%; transform: scale(0.8); }
+  .tokens {
+    position: absolute;
+    z-index: 3;
+    left: 0;
+    right: 0;
+    bottom: clamp(8px, 2vw, 26px);
+    display: flex;
+    justify-content: center;
+    gap: clamp(10px, 2vw, 24px);
+    pointer-events: none;
+  }
+  .tokens .token {
+    width: clamp(48px, 6vw, 84px);
+  }
+  .tokens .token:nth-child(odd) { transform: translateY(-10px) rotate(-6deg); }
+  .tokens .token:nth-child(even) { transform: rotate(5deg); }
+  .hero-e .ledger { margin-bottom: clamp(50px, 7vw, 80px); }
+  @media (max-width: 720px) {
+    .ledger {
+      grid-template-columns: 1fr;
+      transform: none;
+    }
+    .page.left,
+    .page.right {
+      border-radius: 4px;
+      box-shadow: inset 0 0 26px 4px rgb(120 70 25 / 0.35);
+    }
+    .page.left {
+      border-bottom: 1px dashed rgb(110 70 30 / 0.4);
+    }
+    .t1 { left: -40px; top: -20px; }
+    .t2 { right: -50px; bottom: 30px; }
+    .c2 { display: none; }
+  }
+  @media (max-width: 480px) {
+    .page .btn-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .tokens .token:nth-child(n + 5) {
+      display: none;
+    }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#main"><span data-l="es">Ir al contenido</span><span data-l="en">Skip to content</span></a>
+<header class="masthead">
+  <a class="brand" href="#main"><svg viewBox="0 0 98 91" aria-hidden="true"><path fill="#ffb24a" d="M1.2 0L53 0L54.2 18L47.1 18L47.1 16.2C46.6 14.2 44.1 11.7 42.1 11.7L35.2 11.7Q33.7 11.7 33.7 13.2L33.7 64A1.9 1.9 0 0 1 31.8 65.9A3.6 3.6 0 0 0 28.2 69.5L28.2 75.7L19.27 75.7L20.91 13.2Q20.95 11.7 19.45 11.7L12.1 11.7C10.1 11.7 7.6 14.2 7.1 16.2L7.1 18L0 18Z"/><path fill="#ffd08a" d="M12.59 15.3L17.26 15.3L15.57 79.3L73.25 79.3C76.2 79.3 78.25 81.3 78.25 84.3L78.25 91L4.25 91L4.25 85.5C4.25 82.4 8.51 80.5 8.71 77.5ZM37.3 15.3L40.72 15.3L43.51 17.81A3.6 3.6 0 0 0 47.1 21.6L49.7 21.6L49.7 63.3L60.8 63.3Q65.3 63.3 65.3 58.8L65.3 57.2L72.65 57.2L73.88 75.7L31.8 75.7L31.8 69.5A5.5 5.5 0 0 0 37.3 64ZM56.6 0L72.25 0L72.25 6.3Q69.7 6.6 69.5 10L72.41 53.6L64.67 53.6C62.67 53.6 60.96 54.95 60.36 56.35ZM73.23 12L79.5 12C89.5 12 95.04 17.5 95.79 27L97.88 52C97.97 64.5 93 72 82 72L77.23 72L76.55 61.7L79 61.7C85.2 61.7 87.22 59.5 87.22 53.5L85.05 27.5C85.05 24.2 84.05 22.7 81.85 22.7L73.95 22.7Z"/></svg>Tavern Ledger</a>
+  <nav aria-label="Site">
+    <a href="#"><span data-l="es">Tus partidas</span><span data-l="en">Your games</span></a>
+    <a href="#"><span data-l="es">Clasificaciones</span><span data-l="en">Leaderboards</span></a>
+    <a href="#"><span data-l="es">Simulador</span><span data-l="en">Simulator</span></a>
+  </nav>
+  <button class="hs-btn hs-btn--small lang-toggle" type="button"><span class="label"><span data-l="es">English</span><span data-l="en">Español</span></span></button>
+</header>
+<main id="main">
+  <section class="hero-e wood-table" aria-labelledby="title-e">
+    <div class="glow-warm" aria-hidden="true"></div>
+    <span class="prop tankard t1" aria-hidden="true"></span>
+    <span class="prop tankard t2" aria-hidden="true"></span>
+    <span class="prop coins c1" aria-hidden="true"></span>
+    <span class="prop coins c2" aria-hidden="true"></span>
+
+    <div class="ledger">
+      <div class="page left parchment">
+        <h1 id="title-e">
+          <span data-l="es">Acerca un taburete.<span class="line2">Te hemos guardado las partidas.</span></span>
+          <span data-l="en">Pull up a stool.<span class="line2">We kept your games.</span></span>
+        </h1>
+        <p class="lead" data-l="es">Una aplicación gratuita para Windows que lee el registro del propio Hearthstone en tu PC y guarda todas tus partidas de Campos de Batalla: tu héroe, tu puesto y los tableros a los que te enfrentaste.</p>
+        <p class="lead" data-l="en">A free Windows app that reads Hearthstone's own log on your PC and keeps every Battlegrounds game: your hero, your place and the boards you faced.</p>
+        <div class="btn-row">
+          <a class="hs-btn hs-btn--primary" href="#"><span class="label"><span data-l="es">Enséñamelo</span><span data-l="en">Show me</span></span></a>
+          <a class="hs-btn hs-btn--secondary" href="#"><span class="label"><span data-l="es">¿Es seguro?</span><span data-l="en">Is it safe?</span></span></a>
+        </div>
+      </div>
+      <div class="page right parchment">
+        <ol class="entries">
+          <li><span class="pl"><span data-l="es">1.º</span><span data-l="en">1st</span></span><span data-hero-name="BG23_HERO_306"></span><span><span data-l="es">Solo</span><span data-l="en">Solo</span></span></li>
+          <li><span class="pl"><span data-l="es">3.º</span><span data-l="en">3rd</span></span><span data-hero-name="TB_BaconShop_HERO_52"></span><span><span data-l="es">Dúos</span><span data-l="en">Duos</span></span></li>
+          <li><span class="pl"><span data-l="es">6.º</span><span data-l="en">6th</span></span><span data-hero-name="BG22_HERO_007"></span><span>Solo</span></li>
+          <li><span class="pl"><span data-l="es">2.º</span><span data-l="en">2nd</span></span><span data-hero-name="TB_BaconShop_HERO_41"></span><span>Solo</span></li>
+          <li><span class="pl"><span data-l="es">4.º</span><span data-l="en">4th</span></span><span data-hero-name="TB_BaconShop_HERO_22"></span><span><span data-l="es">Dúos</span><span data-l="en">Duos</span></span></li>
+          <li><span class="pl"><span data-l="es">7.º</span><span data-l="en">7th</span></span><span data-hero-name="TB_BaconShop_HERO_11"></span><span>Solo</span></li>
+          <li><span class="pl"><span data-l="es">1.º</span><span data-l="en">1st</span></span><span data-hero-name="BG23_HERO_306"></span><span>Solo</span></li>
+          <li><span class="pl"><span data-l="es">2.º</span><span data-l="en">2nd</span></span><span data-hero-name="TB_BaconShop_HERO_49"></span><span><span data-l="es">Dúos</span><span data-l="en">Duos</span></span></li>
+        </ol>
+        <p class="totals"><span data-l="es">Solo: puesto medio 3,4 · top 4: 3 de 5</span><span data-l="en">Solo: average place 3.4 · top 4: 3 of 5</span></p>
+        <span class="caption"><span data-l="es">Ejemplo de libro: con tu cuenta, tus últimas partidas.</span><span data-l="en">An example ledger: signed in, your last games.</span></span>
+      </div>
+    </div>
+
+    <div class="tokens" aria-hidden="true">
+      <span class="token"><img class="portrait" data-hero="BG23_HERO_306" alt="" width="256" height="256"></span>
+      <span class="token"><img class="portrait" data-hero="TB_BaconShop_HERO_52" alt="" width="256" height="256"></span>
+      <span class="token"><img class="portrait" data-hero="BG22_HERO_007" alt="" width="256" height="256"></span>
+      <span class="token"><img class="portrait" data-hero="TB_BaconShop_HERO_41" alt="" width="256" height="256"></span>
+      <span class="token"><img class="portrait" data-hero="TB_BaconShop_HERO_22" alt="" width="256" height="256"></span>
+      <span class="token"><img class="portrait" data-hero="TB_BaconShop_HERO_11" alt="" width="256" height="256"></span>
+    </div>
+  </section>
+</main>
+<p class="fan-note"><span data-l="es">Proyecto no oficial de fans. Sin afiliación con Blizzard Entertainment ni respaldo de esta.</span><span data-l="en">Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.</span></p>
+<script src="shared/tavern.js"></script>
+</body>
+</html>
