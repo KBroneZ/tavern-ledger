@@ -17,7 +17,6 @@ interface Props {
 }
 
 const { page } = Astro.props;
-const kicker = page === "heroes" ? t("player.heroes.kicker") : t("player.curious.kicker");
 const title = page === "heroes" ? t("player.heroes.title.own") : t("player.curious.title.own");
 ---
 
