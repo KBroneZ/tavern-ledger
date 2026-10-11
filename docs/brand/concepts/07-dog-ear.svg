@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"><defs><mask id="m07" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+<rect width="64" height="64" fill="#fff"/>
+<path d="M6 52L22 37L31 44L46 28" fill="none" stroke="#000" stroke-width="6" stroke-linecap="square"/>
+</mask></defs><path fill="#ffb24a" mask="url(#m07)" d="M10 4h26v20h20v36H10z"/>
+<path fill="#ffd08a" d="M40 4l16 16H40z"/></svg>
