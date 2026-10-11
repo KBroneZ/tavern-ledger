@@ -95,8 +95,11 @@ async function setUpCommunity(user: User): Promise<void> {
   const form = byId<HTMLFormElement>("community-form");
   const message = byId("community-message");
   const box = field(form, "hero_stats");
+  // The choice as the server last confirmed it.
+  let saved: boolean;
   try {
-    box.checked = await loadCommunityConsent(supabase, user.id);
+    saved = await loadCommunityConsent(supabase, user.id);
+    box.checked = saved;
   } catch {
     // Saving an unknown state could turn the switch off, or on, by mistake.
     for (const el of form.querySelectorAll<HTMLInputElement | HTMLButtonElement>("input, button")) {
@@ -112,11 +115,12 @@ async function setUpCommunity(user: User): Promise<void> {
       say(message, "Saving…");
       const error = await saveCommunityConsent(supabase, on);
       if (error) {
-        // The stored choice still holds: show it, never the one that failed.
-        box.checked = !on;
+        // Show the choice the server last confirmed, never the one that failed.
+        box.checked = saved;
         say(message, `${error} Your setting is unchanged.`, "error");
         return;
       }
+      saved = on;
       say(message, on ? "Saved. Your games count from the next daily update." : "Saved. Your games are out from the next daily update.", "ok");
     });
   });
