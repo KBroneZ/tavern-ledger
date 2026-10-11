@@ -1,5 +1,7 @@
 //! The app's own settings (T-324): the language of the window, the overlay
-//! and the tray menu (T-325, D-065). Kept in `settings.json` in the data
+//! and the tray menu (T-325, D-065), and how much the main window shows
+//! (Simple or Advanced, T-344, D-072; the overlay has its own in
+//! `overlay.json`). Kept in `settings.json` in the data
 //! folder, next to `overlay.json` and the upload settings. A missing file
 //! means the defaults (the system language); a broken one leaves them and
 //! says so. The other options of the Settings page keep their own files
@@ -16,6 +18,7 @@ use tauri::{AppHandle, Emitter, Manager, State, Wry};
 use tauri_plugin_autostart::ManagerExt;
 
 use crate::overlay::lock;
+use crate::overlay_layout::Detail;
 use crate::AppState;
 
 pub const FILE: &str = "settings.json";
@@ -31,11 +34,14 @@ pub enum Language {
     Es,
 }
 
-/// What is saved. `language: None` follows the system language.
+/// What is saved. `language: None` follows the system language; a missing
+/// `window_detail` is Simple (D-067's default).
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Saved {
     #[serde(default)]
     pub language: Option<Language>,
+    #[serde(default)]
+    pub window_detail: Detail,
 }
 
 impl Saved {
@@ -53,6 +59,7 @@ impl Saved {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct View {
     language: Option<Language>,
+    window_detail: Detail,
 }
 
 /// The tray menu's items, kept to change their words and the start-up tick.
@@ -97,8 +104,10 @@ impl Settings {
     }
 
     pub fn view(&self) -> View {
+        let saved = lock(&self.saved);
         View {
-            language: lock(&self.saved).language,
+            language: saved.language,
+            window_detail: saved.window_detail,
         }
     }
 
@@ -110,16 +119,26 @@ impl Settings {
     /// Saves the choice. It holds for this run even if saving fails; the
     /// error says it will not survive a restart.
     fn set_language(&self, language: Option<Language>) -> Result<(), String> {
+        self.save(|saved| saved.language = language, SAVE_FAILED)
+    }
+
+    fn set_window_detail(&self, detail: Detail) -> Result<(), String> {
+        self.save(|saved| saved.window_detail = detail, DETAIL_SAVE_FAILED)
+    }
+
+    /// Changes the saved settings and writes them; the change holds for
+    /// this run even when writing fails.
+    fn save(&self, change: impl FnOnce(&mut Saved), failed: &str) -> Result<(), String> {
         let text = {
             let mut saved = lock(&self.saved);
-            saved.language = language;
+            change(&mut saved);
             serde_json::to_string_pretty(&*saved)
         };
         let path = lock(&self.path).clone();
         let (Some(path), Ok(text)) = (path, text) else {
-            return Err(SAVE_FAILED.into());
+            return Err(failed.into());
         };
-        write_whole(&path, &text).map_err(|_| SAVE_FAILED.to_string())
+        write_whole(&path, &text).map_err(|_| failed.to_string())
     }
 
     pub fn keep_tray(&self, items: TrayItems) {
@@ -161,6 +180,8 @@ impl Settings {
 }
 
 const SAVE_FAILED: &str = "The language could not be saved; it will be lost after a restart.";
+const DETAIL_SAVE_FAILED: &str =
+    "The main window's detail could not be saved; it will be lost after a restart.";
 
 /// Written whole to a side file first, so a crash never leaves half a file.
 fn write_whole(path: &Path, text: &str) -> io::Result<()> {
@@ -232,6 +253,20 @@ pub fn app_set_language(
         crate::set_status(&app, &state, |s| s.notice = Some(message.clone()));
     }
     settings.relabel_tray();
+    let view = settings.view();
+    let _ = app.emit(CHANGED, view.clone());
+    result.map(|()| view)
+}
+
+/// Simple or Advanced for the main window (T-344). Every window hears it
+/// (`CHANGED`); the main window redraws without reloading.
+#[tauri::command]
+pub fn app_set_window_detail(
+    app: AppHandle,
+    settings: State<'_, Arc<Settings>>,
+    detail: Detail,
+) -> Result<View, String> {
+    let result = settings.set_window_detail(detail);
     let view = settings.view();
     let _ = app.emit(CHANGED, view.clone());
     result.map(|()| view)
@@ -319,7 +354,13 @@ mod tests {
     fn no_file_means_the_system_language() {
         let settings = Settings::default();
         settings.load(&dir("none")).unwrap();
-        assert_eq!(settings.view(), View { language: None });
+        assert_eq!(
+            settings.view(),
+            View {
+                language: None,
+                window_detail: Detail::Simple
+            }
+        );
         assert_eq!(settings.language(), Language::En);
         *lock(&settings.system) = Language::Es;
         assert_eq!(settings.language(), Language::Es);
@@ -336,14 +377,21 @@ mod tests {
         assert_eq!(
             again.view(),
             View {
-                language: Some(Language::Es)
+                language: Some(Language::Es),
+                window_detail: Detail::Simple,
             }
         );
         assert_eq!(again.language(), Language::Es);
         again.set_language(None).unwrap();
         let back = Settings::default();
         back.load(&dir).unwrap();
-        assert_eq!(back.view(), View { language: None });
+        assert_eq!(
+            back.view(),
+            View {
+                language: None,
+                window_detail: Detail::Simple
+            }
+        );
     }
 
     #[test]
@@ -353,7 +401,13 @@ mod tests {
         let settings = Settings::default();
         let err = settings.load(&dir).unwrap_err();
         assert!(err.contains("defaults are used"), "{err}");
-        assert_eq!(settings.view(), View { language: None });
+        assert_eq!(
+            settings.view(),
+            View {
+                language: None,
+                window_detail: Detail::Simple
+            }
+        );
         // An unknown language is not guessed either.
         std::fs::write(dir.join(FILE), r#"{"language":"fr"}"#).unwrap();
         assert!(Settings::default().load(&dir).is_err());
@@ -363,9 +417,33 @@ mod tests {
     fn the_language_is_written_as_its_short_code() {
         let text = serde_json::to_string(&Saved {
             language: Some(Language::Es),
+            window_detail: Detail::Simple,
         })
         .unwrap();
-        assert_eq!(text, r#"{"language":"es"}"#);
+        assert_eq!(text, r#"{"language":"es","window_detail":"simple"}"#);
+    }
+
+    #[test]
+    fn the_main_windows_detail_is_simple_until_chosen_and_kept() {
+        let dir = dir("detail");
+        // A file from before T-344 has no detail: Simple, the language kept.
+        std::fs::write(dir.join(FILE), r#"{"language":"es"}"#).unwrap();
+        let settings = Settings::default();
+        settings.load(&dir).unwrap();
+        assert_eq!(settings.view().window_detail, Detail::Simple);
+        settings.set_window_detail(Detail::Advanced).unwrap();
+        let again = Settings::default();
+        again.load(&dir).unwrap();
+        assert_eq!(
+            again.view(),
+            View {
+                language: Some(Language::Es),
+                window_detail: Detail::Advanced,
+            }
+        );
+        // An unknown detail is not guessed.
+        std::fs::write(dir.join(FILE), r#"{"window_detail":"pro"}"#).unwrap();
+        assert!(Settings::default().load(&dir).is_err());
     }
 
     #[test]

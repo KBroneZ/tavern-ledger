@@ -216,3 +216,16 @@ test("without a known portrait the hover keeps the whole team", () => {
   const solo = words.seatViews({ heroes: [{ id: "X" }], seats: [3], boards: [], tiers: [] });
   assert.equal(words.hoveredViews(solo, 1).length, 1, "Solo has one hero anyway");
 });
+
+test("the damage cap is the game's own number, in its words, or nothing", () => {
+  assert.deepEqual(words.damageCap({ damage_cap: 15 }).text, "Max damage 15");
+  assert.match(words.damageCap({ damage_cap: 15 }).about, /lost combat/);
+  for (const cap of [null, undefined, 0, -1, 1.5, "15"]) assert.equal(words.damageCap({ damage_cap: cap }), null, String(cap));
+  assert.equal(words.damageCap(null), null);
+  I18n.setLang("es");
+  try {
+    assert.equal(words.damageCap({ damage_cap: 15 }).text, "Daño máximo 15");
+  } finally {
+    I18n.setLang("en");
+  }
+});

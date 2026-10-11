@@ -29,6 +29,10 @@
 //! - a pass to the teammate (Duos) is a top-level `DECK_ACTION` block of the
 //!   player's own card.
 //!
+//! Parser revision 7 (T-332): a turn whose gold tags are not in the log has
+//! `gold_spent` 0 when the log proves it spent nothing (`prove_no_spending`);
+//! its own gold stays unknown.
+//!
 //! Only the local player's shop: other players' shops are not in the log.
 //! Times are milliseconds from the game's first log line, never a clock time.
 
@@ -228,6 +232,8 @@ pub struct ShopTracker {
     /// The log gave the roll button's free rolls at least once this game.
     /// Without it, "no free roll used" would be a guess: unknown instead.
     free_refreshes_seen: bool,
+    /// `NUM_RESOURCES_SPENT_THIS_GAME` at the start of each closed turn.
+    spent_at_starts: Vec<Option<i64>>,
 }
 
 impl ShopTracker {
@@ -572,6 +578,39 @@ impl ShopTracker {
             .filter(|t| (1..=MAX_TIER).contains(t));
         turn.end_ms = ms.clamp(turn.start_ms, MAX_MS);
         self.turns.push(turn);
+        self.spent_at_starts.push(self.spent_at_turn_start);
+    }
+
+    /// A turn whose gold tags are not in the log (T-332: on 2026-10-11 three
+    /// discovers took the user's whole turn 1 and the log set no gold tag of
+    /// the player during it) spent 0 when the log proves it: the turn's shop
+    /// is in the log, the player sent only picks and moves (the client's own
+    /// lines, which the log has even when the gold tags are late), the
+    /// gold spent so far (`NUM_RESOURCES_SPENT_THIS_GAME`) did not move over
+    /// the turn, and the next turn has its gold tags again. The turn's own
+    /// gold stays unknown.
+    fn prove_no_spending(&mut self) {
+        for i in 0..self.turns.len().saturating_sub(1) {
+            let (turn, next) = (&self.turns[i], &self.turns[i + 1]);
+            if turn.gold.is_some() || turn.gold_spent.is_some() {
+                continue;
+            }
+            let quiet = self
+                .actions
+                .iter()
+                .filter(|a| a.turn == turn.turn)
+                .all(|a| matches!(a.kind, ActionKind::Choose | ActionKind::Move));
+            let start = self.spent_at_starts.get(i).copied().flatten();
+            let unmoved =
+                start.is_some() && start == self.spent_at_starts.get(i + 1).copied().flatten();
+            let shown = !turn.offers.is_empty() && turn.buys.is_empty() && turn.rolls == 0;
+            let back = next.gold.is_some() && next.gold_spent.is_some();
+            // Past the action bound an action may be missing: no proof.
+            let complete = self.actions.len() < MAX_ACTIONS;
+            if quiet && unmoved && shown && back && complete {
+                self.turns[i].gold_spent = Some(0);
+            }
+        }
     }
 
     /// The record so far. A game in progress has its open turn up to the
@@ -581,6 +620,7 @@ impl ShopTracker {
         let end = copy.end_ms.unwrap_or(copy.last_ms).min(MAX_MS);
         copy.close_block(board, seats);
         copy.close_turn(board, seats, end);
+        copy.prove_no_spending();
         let start_ms = copy.turns.first().map(|t| t.start_ms);
         // A turn (shop and combat) lasts until the next shop phase starts;
         // the last one until the game's end.

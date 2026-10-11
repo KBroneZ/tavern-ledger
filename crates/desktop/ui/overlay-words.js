@@ -134,8 +134,12 @@
   // The hovered hero of a Duos team (T-340): the app says which of the
   // team's two portraits the mouse is on (hover.rs, 0 the top one), and the
   // seats are in the order the team is listed in (lower player id first).
-  // That this is the game's top portrait is not in the log: unconfirmed
-  // until a real Duos game is checked (T-336). With no portrait known
+  // That this is the game's top portrait is not in the log. The user says
+  // their own hero is the top one of their own team (T-343), while they have
+  // the higher player id in 33 of their 39 Duos games: the game does not
+  // put the lower id on top there. Our own slot shows nothing on hover; for
+  // opposing teams the first seat stays the top one until a real game
+  // confirms or refutes it (one line here). With no portrait known
   // (an older app or Solo), the whole team stays.
   function hoveredViews(views, member) {
     const list = Array.isArray(views) ? views : [];
@@ -181,6 +185,15 @@
     return null;
   }
 
+  // The combat damage cap the game shows (T-315): "Max damage 15", the
+  // game's own words, in Simple and Advanced; null when no cap applies or
+  // the log has none (never a guess).
+  function damageCap(game) {
+    const cap = game ? game.damage_cap : null;
+    if (!Number.isInteger(cap) || cap <= 0) return null;
+    return { text: I18n.t("ov.cap", { value: I18n.num(cap) }), about: I18n.t("ov.cap.about") };
+  }
+
   const api = {
     KEYWORDS,
     keywordMarks,
@@ -195,6 +208,7 @@
     hoveredViews,
     simpleRow,
     simpleTribes,
+    damageCap,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLWords = api;

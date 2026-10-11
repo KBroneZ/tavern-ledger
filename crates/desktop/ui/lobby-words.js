@@ -62,17 +62,24 @@
     return null;
   }
 
-  // One line per mode played today: games, average place, top-half share.
+  // One line per mode played today: games, average place, top-half games.
+  // Every number says how many games are behind it (T-342): a game with no
+  // place (not finished in the log) counts in the games but not in the
+  // average or the top half, so those say "9 placed" and "6 of 9".
   function summaryLines(view) {
     const today = Array.isArray(view && view.today) ? view.today : [];
     const lines = today
       .filter((m) => (m.mode === SOLO || m.mode === DUOS) && m.tally && m.tally.games > 0)
       .map((m) => {
         const t = m.tally;
+        const placed = Number.isInteger(t.placed) ? t.placed : 0;
         const parts = [I18n.plural("lobby.games", t.games)];
-        if (typeof t.average_place === "number") parts.push(I18n.t("lobby.avg", { value: I18n.num(t.average_place, 1) }));
-        if (typeof t.top_half_share === "number") {
-          parts.push(I18n.t("lobby.top", { top: m.top_half, value: I18n.percent(t.top_half_share) }));
+        if (placed > 0 && placed < t.games) parts.push(I18n.t("lobby.placed", { n: I18n.num(placed) }));
+        if (placed > 0 && typeof t.average_place === "number") {
+          parts.push(I18n.t("lobby.avg", { value: I18n.num(t.average_place, 1) }));
+        }
+        if (placed > 0 && Number.isInteger(m.top_half_games)) {
+          parts.push(I18n.t("lobby.top", { top: m.top_half, count: I18n.num(m.top_half_games), of: I18n.num(placed) }));
         }
         const mode = I18n.t(`mode.${m.mode}`);
         return I18n.t("lobby.today", { mode, list: parts.join(" · ") });
