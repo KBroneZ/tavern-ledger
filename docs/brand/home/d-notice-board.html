@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="es" data-title-es="D · Tablón de anuncios · Tavern Ledger" data-title-en="D · Notice board · Tavern Ledger">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D · Notice board · Tavern Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600..800&family=Figtree:wght@400..700&family=Fraunces:opsz,wght,SOFT@9..144,600..900,0..100&display=swap">
+<link rel="stylesheet" href="shared/tavern.css">
+<style>
+  /* Concept D: the tavern's notice board. Notes pinned with brass tacks show
+     the numbers the site keeps; signed out they are stamped as an example. */
+  .hero-d {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    padding: clamp(34px, 5vw, 70px) 16px clamp(48px, 6vw, 84px);
+  }
+  .hero-d .glow-warm {
+    left: 10%;
+    top: -20%;
+    width: 80%;
+    height: 90%;
+  }
+  .hero-d .inner {
+    position: relative;
+    z-index: 2;
+    max-width: 1080px;
+    margin: 0 auto;
+    display: grid;
+    gap: clamp(22px, 3vw, 34px);
+    justify-items: center;
+  }
+  .hero-d h1 {
+    margin: 0;
+    font-size: var(--t-hero);
+    text-align: center;
+  }
+  .hero-d h1 .line2 {
+    display: block;
+    font-size: 0.66em;
+  }
+  .board {
+    position: relative;
+    width: 100%;
+    padding: clamp(22px, 3vw, 40px);
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr;
+    grid-template-areas:
+      "lead games hero"
+      "lead top4 hero";
+    gap: clamp(16px, 2.4vw, 30px);
+    background:
+      var(--grain-wood),
+      repeating-linear-gradient(90deg, rgb(0 0 0 / 0.35) 0 2px, transparent 2px 25%),
+      linear-gradient(#3a2110, #2c180b);
+    background-size: 240px 240px, 100% 100%, 100% 100%;
+    border: 14px solid #24130a;
+    border-image: linear-gradient(135deg, #6e4123, #2a160a 40%, #1d0f07 70%, #4a2a16) 1;
+    box-shadow:
+      inset 0 0 40px rgb(0 0 0 / 0.7),
+      0 24px 50px rgb(0 0 0 / 0.7);
+  }
+  .note {
+    --rot: 0deg;
+    position: relative;
+    padding: 30px 22px 22px;
+    transform: rotate(var(--rot));
+  }
+  .note::before {
+    /* brass tack */
+    content: "";
+    position: absolute;
+    top: 9px;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin-left: -8px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff3c9 0 2px, var(--brass) 5px, #6a420e 8px);
+    box-shadow: 0 3px 4px rgb(0 0 0 / 0.55);
+  }
+  .note h2 {
+    margin: 0 0 6px;
+    font: 800 0.86rem/1.2 var(--display-serif);
+    font-variation-settings: "SOFT" 100;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .note .big {
+    margin: 0;
+    font: 900 clamp(2.4rem, 1.6rem + 2.6vw, 3.6rem)/1 var(--display-serif);
+    font-variation-settings: "SOFT" 100, "opsz" 144;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .note .small {
+    margin: 6px 0 0;
+    font-size: 0.86rem;
+    color: var(--ink-soft);
+  }
+  .n-lead { grid-area: lead; --rot: -1deg; align-self: start; padding: 34px 28px 28px; }
+  .n-lead p { margin: 0 0 18px; font-size: var(--t-lead); }
+  .n-games { grid-area: games; --rot: 2deg; }
+  .n-top4 { grid-area: top4; --rot: -2.5deg; }
+  .n-hero { grid-area: hero; --rot: 1.5deg; display: grid; gap: 10px; align-content: start; }
+  .n-hero .frame { aspect-ratio: 1; border-width: 6px; }
+  .n-hero .name { font: 800 1.15rem/1.15 var(--display-serif); font-variation-settings: "SOFT" 100; }
+  .stamp {
+    position: absolute;
+    z-index: 3;
+    right: clamp(18px, 4vw, 48px);
+    top: -22px;
+    padding: 6px 14px;
+    transform: rotate(-9deg);
+    font: 900 clamp(1rem, 0.8rem + 0.8vw, 1.4rem)/1 var(--display-serif);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #c6402a;
+    border: 3px solid #c6402a;
+    border-radius: 6px;
+    background: rgb(20 10 6 / 0.55);
+    margin: 0;
+  }
+  @media (max-width: 760px) {
+    .board {
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas:
+        "lead lead"
+        "games hero"
+        "top4 hero";
+    }
+  }
+  @media (max-width: 480px) {
+    .board {
+      border-width: 10px;
+      padding: 26px 12px 16px;
+      gap: 14px;
+    }
+    .note {
+      padding: 26px 14px 16px;
+    }
+    .n-lead .btn-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#main"><span data-l="es">Ir al contenido</span><span data-l="en">Skip to content</span></a>
+<header class="masthead">
+  <a class="brand" href="#main"><svg viewBox="0 0 98 91" aria-hidden="true"><path fill="#ffb24a" d="M1.2 0L53 0L54.2 18L47.1 18L47.1 16.2C46.6 14.2 44.1 11.7 42.1 11.7L35.2 11.7Q33.7 11.7 33.7 13.2L33.7 64A1.9 1.9 0 0 1 31.8 65.9A3.6 3.6 0 0 0 28.2 69.5L28.2 75.7L19.27 75.7L20.91 13.2Q20.95 11.7 19.45 11.7L12.1 11.7C10.1 11.7 7.6 14.2 7.1 16.2L7.1 18L0 18Z"/><path fill="#ffd08a" d="M12.59 15.3L17.26 15.3L15.57 79.3L73.25 79.3C76.2 79.3 78.25 81.3 78.25 84.3L78.25 91L4.25 91L4.25 85.5C4.25 82.4 8.51 80.5 8.71 77.5ZM37.3 15.3L40.72 15.3L43.51 17.81A3.6 3.6 0 0 0 47.1 21.6L49.7 21.6L49.7 63.3L60.8 63.3Q65.3 63.3 65.3 58.8L65.3 57.2L72.65 57.2L73.88 75.7L31.8 75.7L31.8 69.5A5.5 5.5 0 0 0 37.3 64ZM56.6 0L72.25 0L72.25 6.3Q69.7 6.6 69.5 10L72.41 53.6L64.67 53.6C62.67 53.6 60.96 54.95 60.36 56.35ZM73.23 12L79.5 12C89.5 12 95.04 17.5 95.79 27L97.88 52C97.97 64.5 93 72 82 72L77.23 72L76.55 61.7L79 61.7C85.2 61.7 87.22 59.5 87.22 53.5L85.05 27.5C85.05 24.2 84.05 22.7 81.85 22.7L73.95 22.7Z"/></svg>Tavern Ledger</a>
+  <nav aria-label="Site">
+    <a href="#"><span data-l="es">Tus partidas</span><span data-l="en">Your games</span></a>
+    <a href="#"><span data-l="es">Clasificaciones</span><span data-l="en">Leaderboards</span></a>
+    <a href="#"><span data-l="es">Simulador</span><span data-l="en">Simulator</span></a>
+  </nav>
+  <button class="hs-btn hs-btn--small lang-toggle" type="button"><span class="label"><span data-l="es">English</span><span data-l="en">Español</span></span></button>
+</header>
+<main id="main">
+  <section class="hero-d wood-wall" aria-labelledby="title-d">
+    <div class="glow-warm" aria-hidden="true"></div>
+    <div class="vignette" aria-hidden="true"></div>
+    <div class="inner">
+      <h1 class="gold" id="title-d">
+        <span data-l="es">Acerca un taburete.<span class="line2">Te hemos guardado las partidas.</span></span>
+        <span data-l="en">Pull up a stool.<span class="line2">We kept your games.</span></span>
+      </h1>
+
+      <div class="board">
+        <article class="note parchment n-lead">
+          <h2><span data-l="es">Se anuncia</span><span data-l="en">Notice</span></h2>
+          <p data-l="es">Una aplicación gratuita para Windows que lee el registro del propio Hearthstone en tu PC y guarda todas tus partidas de Campos de Batalla: tu héroe, tu puesto y los tableros a los que te enfrentaste.</p>
+          <p data-l="en">A free Windows app that reads Hearthstone's own log on your PC and keeps every Battlegrounds game: your hero, your place and the boards you faced.</p>
+          <div class="btn-row">
+            <a class="hs-btn hs-btn--primary" href="#"><span class="label"><span data-l="es">Enséñamelo</span><span data-l="en">Show me</span></span></a>
+            <a class="hs-btn hs-btn--secondary" href="#"><span class="label"><span data-l="es">¿Es seguro?</span><span data-l="en">Is it safe?</span></span></a>
+          </div>
+        </article>
+        <article class="note parchment n-games">
+          <h2><span data-l="es">Partidas guardadas</span><span data-l="en">Games kept</span></h2>
+          <p class="big">412</p>
+          <p class="small"><span data-l="es">Solo y Dúos</span><span data-l="en">Solo and Duos</span></p>
+        </article>
+        <article class="note parchment n-top4">
+          <h2><span data-l="es">Top 4 en Solo</span><span data-l="en">Top 4 in Solo</span></h2>
+          <p class="big"><span data-l="es">61&#8239;%</span><span data-l="en">61%</span></p>
+          <p class="small"><span data-l="es">183 de 300 partidas</span><span data-l="en">183 of 300 games</span></p>
+        </article>
+        <article class="note parchment n-hero">
+          <h2><span data-l="es">Héroe más jugado</span><span data-l="en">Most played hero</span></h2>
+          <span class="frame"><img class="portrait" data-hero="BG23_HERO_306" alt="" width="256" height="256"></span>
+          <span class="name" data-hero-name="BG23_HERO_306"></span>
+          <p class="small"><span data-l="es">38 partidas · puesto medio 3,4</span><span data-l="en">38 games · average place 3.4</span></p>
+        </article>
+        <p class="stamp"><span data-l="es">Ejemplo</span><span data-l="en">Example</span></p>
+      </div>
+    </div>
+  </section>
+</main>
+<p class="fan-note"><span data-l="es">Proyecto no oficial de fans. Sin afiliación con Blizzard Entertainment ni respaldo de esta.</span><span data-l="en">Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.</span></p>
+<script src="shared/tavern.js"></script>
+</body>
+</html>

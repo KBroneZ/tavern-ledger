@@ -2,7 +2,7 @@
   "name": "tavern-ledger-web",
   "private": true,
   "description": "Tavern Ledger website: static Astro site that talks to Supabase from the browser.",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "engines": {
     "node": ">=22.18.0"

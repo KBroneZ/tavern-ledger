@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="es" data-title-es="A · Pared de la taberna · Tavern Ledger" data-title-en="A · Tavern wall · Tavern Ledger">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A · Tavern wall · Tavern Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600..800&family=Figtree:wght@400..700&family=Fraunces:opsz,wght,SOFT@9..144,600..900,0..100&display=swap">
+<link rel="stylesheet" href="shared/tavern.css">
+<style>
+  /* Concept A: the second reference rebuilt from our own pieces. A wall of
+     barrel ends in the middle, embers on the left, blue magic on the right,
+     a gold headline, a nailed parchment and two gem buttons. */
+  .hero-a {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    padding: clamp(44px, 7vw, 96px) 16px clamp(48px, 7vw, 92px);
+  }
+  .barrels {
+    position: absolute;
+    z-index: -1;
+    left: 50%;
+    top: 50%;
+    width: min(980px, 118%);
+    transform: translate(-50%, -50%);
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: clamp(6px, 1.2vw, 14px);
+    padding: clamp(10px, 1.6vw, 18px);
+    background:
+      linear-gradient(180deg, transparent 31%, #1d0f07 31% 35%, transparent 35% 64%, #1d0f07 64% 68%, transparent 68%),
+      #160b05;
+    box-shadow: 0 0 80px 40px #160b05;
+    opacity: 0.9;
+  }
+  .barrel {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 50% 50%, transparent 0 8%, rgb(0 0 0 / 0.25) 8.5% 10%, transparent 10.5%),
+      radial-gradient(circle at 40% 35%, rgb(255 200 130 / 0.18), transparent 60%),
+      repeating-linear-gradient(90deg, #5c341a 0 15%, #2a160a 15% 16%, #6a3d1f 16% 31%, #2a160a 31% 32%),
+      #4a2a16;
+    box-shadow:
+      inset 0 0 0 clamp(4px, 0.7vw, 8px) #3a2010,
+      inset 0 0 18px 6px rgb(0 0 0 / 0.55),
+      0 0 0 clamp(3px, 0.5vw, 6px) #2b2724,
+      0 0 0 clamp(4px, 0.62vw, 7.5px) #6a625a,
+      0 10px 20px rgb(0 0 0 / 0.6);
+  }
+  .barrel::after {
+    /* the bung */
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 9%;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #8a6a4a, #2a160a 70%);
+  }
+  .hero-a .glow-warm {
+    left: -18%;
+    top: 0;
+    width: 60%;
+    height: 120%;
+  }
+  .hero-a .glow-cool {
+    right: -20%;
+    top: -10%;
+    width: 60%;
+    height: 120%;
+  }
+  .hero-a .content {
+    position: relative;
+    z-index: 2;
+    max-width: 900px;
+    margin: 0 auto;
+    display: grid;
+    justify-items: center;
+    gap: clamp(22px, 3vw, 34px);
+    text-align: center;
+  }
+  .hero-a h1 {
+    margin: 0;
+    font-size: var(--t-hero);
+  }
+  .hero-a h1 .line2 {
+    display: block;
+    font-size: 0.7em;
+    margin-top: 0.12em;
+  }
+  .hero-a .parchment {
+    max-width: 640px;
+    padding: clamp(22px, 3.4vw, 34px) clamp(24px, 4vw, 44px);
+    font-size: var(--t-lead);
+    transform: rotate(-0.4deg);
+  }
+  .hero-a .parchment p {
+    margin: 0;
+  }
+  .hero-a .btn-row {
+    justify-content: center;
+  }
+  .eyebrow {
+    margin: 0;
+  }
+
+  .mosaic {
+    position: relative;
+    padding: clamp(36px, 5vw, 64px) 16px clamp(40px, 5vw, 64px);
+    background: linear-gradient(#0c0807, #160d08 30%, #0c0807);
+    border-top: 6px solid #1d0f07;
+    box-shadow: inset 0 1px 0 rgb(255 208 138 / 0.12);
+  }
+  .mosaic .inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    display: grid;
+    gap: 22px;
+  }
+  .mosaic h2 {
+    margin: 0;
+    font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.4rem);
+  }
+  .mosaic .note {
+    margin: 0;
+    color: var(--dim);
+    max-width: 60ch;
+  }
+  .mosaic ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(112px, 28vw), 1fr));
+    gap: 18px 14px;
+  }
+  .mosaic li {
+    display: grid;
+    gap: 8px;
+    justify-items: center;
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--dim);
+  }
+  .mosaic .frame {
+    width: 100%;
+    aspect-ratio: 1;
+  }
+  @media (max-width: 480px) {
+    .barrels {
+      grid-template-columns: repeat(3, 1fr);
+      width: 130%;
+    }
+    .barrel:nth-child(n + 10) {
+      display: none;
+    }
+    .hero-a .btn-row {
+      flex-direction: column;
+      align-items: stretch;
+      width: 100%;
+      max-width: 320px;
+    }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#main"><span data-l="es">Ir al contenido</span><span data-l="en">Skip to content</span></a>
+<header class="masthead">
+  <a class="brand" href="#main"><svg viewBox="0 0 98 91" aria-hidden="true"><path fill="#ffb24a" d="M1.2 0L53 0L54.2 18L47.1 18L47.1 16.2C46.6 14.2 44.1 11.7 42.1 11.7L35.2 11.7Q33.7 11.7 33.7 13.2L33.7 64A1.9 1.9 0 0 1 31.8 65.9A3.6 3.6 0 0 0 28.2 69.5L28.2 75.7L19.27 75.7L20.91 13.2Q20.95 11.7 19.45 11.7L12.1 11.7C10.1 11.7 7.6 14.2 7.1 16.2L7.1 18L0 18Z"/><path fill="#ffd08a" d="M12.59 15.3L17.26 15.3L15.57 79.3L73.25 79.3C76.2 79.3 78.25 81.3 78.25 84.3L78.25 91L4.25 91L4.25 85.5C4.25 82.4 8.51 80.5 8.71 77.5ZM37.3 15.3L40.72 15.3L43.51 17.81A3.6 3.6 0 0 0 47.1 21.6L49.7 21.6L49.7 63.3L60.8 63.3Q65.3 63.3 65.3 58.8L65.3 57.2L72.65 57.2L73.88 75.7L31.8 75.7L31.8 69.5A5.5 5.5 0 0 0 37.3 64ZM56.6 0L72.25 0L72.25 6.3Q69.7 6.6 69.5 10L72.41 53.6L64.67 53.6C62.67 53.6 60.96 54.95 60.36 56.35ZM73.23 12L79.5 12C89.5 12 95.04 17.5 95.79 27L97.88 52C97.97 64.5 93 72 82 72L77.23 72L76.55 61.7L79 61.7C85.2 61.7 87.22 59.5 87.22 53.5L85.05 27.5C85.05 24.2 84.05 22.7 81.85 22.7L73.95 22.7Z"/></svg>Tavern Ledger</a>
+  <nav aria-label="Site">
+    <a href="#"><span data-l="es">Tus partidas</span><span data-l="en">Your games</span></a>
+    <a href="#"><span data-l="es">Clasificaciones</span><span data-l="en">Leaderboards</span></a>
+    <a href="#"><span data-l="es">Simulador</span><span data-l="en">Simulator</span></a>
+  </nav>
+  <button class="hs-btn hs-btn--small lang-toggle" type="button"><span class="label"><span data-l="es">English</span><span data-l="en">Español</span></span></button>
+</header>
+
+<main id="main">
+  <section class="hero-a wood-wall" aria-labelledby="title-a">
+    <div class="barrels" aria-hidden="true">
+      <span class="barrel"></span><span class="barrel"></span><span class="barrel"></span><span class="barrel"></span><span class="barrel"></span>
+      <span class="barrel"></span><span class="barrel"></span><span class="barrel"></span><span class="barrel"></span><span class="barrel"></span>
+      <span class="barrel"></span><span class="barrel"></span><span class="barrel"></span><span class="barrel"></span><span class="barrel"></span>
+    </div>
+    <div class="glow-warm" aria-hidden="true"></div>
+    <div class="glow-cool" aria-hidden="true"></div>
+    <canvas class="sparks" data-side="left" data-count="54" aria-hidden="true"></canvas>
+    <canvas class="sparks" data-side="right" data-hue="blue" data-count="22" aria-hidden="true"></canvas>
+    <div class="vignette" aria-hidden="true"></div>
+
+    <div class="content">
+      <p class="eyebrow brass-plate"><span data-l="es">Rastreador de Campos de Batalla</span><span data-l="en">Battlegrounds tracker</span></p>
+      <h1 class="gold" id="title-a">
+        <span data-l="es">Acerca un taburete.<span class="line2">Te hemos guardado las partidas.</span></span>
+        <span data-l="en">Pull up a stool.<span class="line2">We kept your games.</span></span>
+      </h1>
+      <div class="parchment nailed">
+        <p data-l="es">Una aplicación gratuita para Windows que lee el registro del propio Hearthstone en tu PC y guarda todas tus partidas de Campos de Batalla: tu héroe, tu puesto y los tableros a los que te enfrentaste.</p>
+        <p data-l="en">A free Windows app that reads Hearthstone's own log on your PC and keeps every Battlegrounds game: your hero, your place and the boards you faced.</p>
+      </div>
+      <div class="btn-row">
+        <a class="hs-btn hs-btn--primary" href="#"><span class="label"><span data-l="es">Enséñamelo</span><span data-l="en">Show me</span></span></a>
+        <a class="hs-btn hs-btn--secondary" href="#"><span class="label"><span data-l="es">¿Es seguro?</span><span data-l="en">Is it safe?</span></span></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="mosaic" aria-labelledby="mosaic-a">
+    <div class="inner">
+      <h2 class="gold" id="mosaic-a"><span data-l="es">Los héroes de tus partidas</span><span data-l="en">The heroes of your games</span></h2>
+      <p class="note"><span data-l="es">Ejemplo. Con tu cuenta, aquí salen los héroes que más juegas, cada uno con sus partidas.</span><span data-l="en">An example. Signed in, this shows the heroes you play most, each with its games.</span></p>
+      <ul>
+        <li><span class="frame"><img class="portrait" data-hero="BG23_HERO_306" alt="" width="256" height="256"></span><span data-hero-name="BG23_HERO_306"></span></li>
+        <li><span class="frame"><img class="portrait" data-hero="TB_BaconShop_HERO_22" alt="" width="256" height="256"></span><span data-hero-name="TB_BaconShop_HERO_22"></span></li>
+        <li><span class="frame"><img class="portrait" data-hero="BG22_HERO_305" alt="" width="256" height="256"></span><span data-hero-name="BG22_HERO_305"></span></li>
+        <li><span class="frame"><img class="portrait" data-hero="TB_BaconShop_HERO_41" alt="" width="256" height="256"></span><span data-hero-name="TB_BaconShop_HERO_41"></span></li>
+        <li><span class="frame"><img class="portrait" data-hero="TB_BaconShop_HERO_11" alt="" width="256" height="256"></span><span data-hero-name="TB_BaconShop_HERO_11"></span></li>
+        <li><span class="frame"><img class="portrait" data-hero="TB_BaconShop_HERO_52" alt="" width="256" height="256"></span><span data-hero-name="TB_BaconShop_HERO_52"></span></li>
+        <li><span class="frame"><img class="portrait" data-hero="BG22_HERO_007" alt="" width="256" height="256"></span><span data-hero-name="BG22_HERO_007"></span></li>
+        <li><span class="frame"><img class="portrait" data-hero="TB_BaconShop_HERO_18" alt="" width="256" height="256"></span><span data-hero-name="TB_BaconShop_HERO_18"></span></li>
+        <li><span class="frame"><img class="portrait" data-hero="TB_BaconShop_HERO_49" alt="" width="256" height="256"></span><span data-hero-name="TB_BaconShop_HERO_49"></span></li>
+        <li><span class="frame"><img class="portrait" data-hero="TB_BaconShop_HERO_08" alt="" width="256" height="256"></span><span data-hero-name="TB_BaconShop_HERO_08"></span></li>
+        <li><span class="frame"><img class="portrait" data-hero="BG20_HERO_100" alt="" width="256" height="256"></span><span data-hero-name="BG20_HERO_100"></span></li>
+        <li><span class="frame"><img class="portrait" data-hero="BG25_HERO_100" alt="" width="256" height="256"></span><span data-hero-name="BG25_HERO_100"></span></li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<p class="fan-note"><span data-l="es">Proyecto no oficial de fans. Sin afiliación con Blizzard Entertainment ni respaldo de esta.</span><span data-l="en">Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.</span></p>
+<script src="shared/tavern.js"></script>
+</body>
+</html>

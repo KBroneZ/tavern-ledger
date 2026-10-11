@@ -79,6 +79,12 @@ jobs:
       - name: Rust tests
         run: cargo test --locked --workspace --exclude desktop
 
+      # Every crate in Cargo.lock and package in the npm lockfiles has a
+      # license compatible with AGPL-3.0-only; our own ones say AGPL-3.0-only
+      # (D-101). Standard library only, after the Rust tests fetched the crates.
+      - name: Dependency licenses
+        run: python tools/check_licenses.py
+
       - name: Parser fixtures match the Python prototype
         run: |
           python tools/gen_parser_fixtures.py

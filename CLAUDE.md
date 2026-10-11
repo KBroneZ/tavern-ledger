@@ -1,6 +1,6 @@
 # Tavern Ledger — Hearthstone Battlegrounds tracker
 
-Personal project (name chosen in D-007; repo and local folder `tavern-ledger`): a Windows desktop app that reads the Hearthstone log and a website to follow your progress. Free by default, with optional paid extras. Open source (D-002).
+Personal project (name chosen in D-007; repo and local folder `tavern-ledger`): a Windows desktop app that reads the Hearthstone log and a website to follow your progress. Free by default, with optional paid extras. Open source under AGPL-3.0-only (D-002, D-101).
 
 **Team:** the user (the only human: decides, approves, publishes) + Claude Code (engineering) + ChatGPT Plus (research and second opinion with the `ask-chatgpt` skill).
 
