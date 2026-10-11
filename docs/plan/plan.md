@@ -289,6 +289,24 @@ The user's request (2026-10-11): everything the app knows on the website, detail
 
 **Notes T-502 (2026-10-11, session 063).** D-071; API notes in [web-data-api.md](../research/web-data-api.md). **Summary:** `public.game_stats`, one row per game, written by `upload-game` with the game row (`supabase/functions/_shared/game_summary.ts` ports the desktop app's rules: results from the log or inferred from health, win streak, damage taken and dealt, shop totals with the turns behind each gold sum, APM, triples, final board, hero choice); null is unknown. **Backfill:** the daily sweep fills games stored before (or summarized by an older version) from their files, checked by SHA-256 and the validator, 500 per run in random order within 100 seconds. **Views** (`security_invoker`, same RLS as `games`): `game_summaries` (games list: filter by mode, hero, date, place; paged), `user_overview`, `user_heroes` (with pick rate from known hero choices), `user_records` (best value, its game, the games behind it, inferred or not). Export and account deletion cover the new table; a summary goes with its game. **Tests:** 66 new database tests (privacy for anon and another user on every view, writes refused, backfill races, export, deletion) and the old ones updated (207 in all); 30 new function tests (summary rules, upload sends it and falls back before the migration, sweep backfill and its time budget; 128 in all); an end-to-end test on the local stack (upload writes the summary, the sweep makes the same one again). Not summarized: tribes on the final board (need the card data), opponents' boards and choices (the game viewer reads the file). Leaderboards stay T-506.
 
+## F6 — Combat simulator
+
+The user's request (2026-10-11): the odds to win, tie or lose (and the damage) before each combat in the app, from the boards the player has seen, and an interactive simulator on the website that can load old boards or pairings. Design: [combat-simulator.md](../research/combat-simulator.md); D-081. Clean room: no simulator code read (rule 1).
+
+| ID | Task | Depends on | Status |
+|----|------|------------|--------|
+| T-601 | Design: combat rules, card model, randomness, speed, app and website use | | done (session 068) |
+| T-602 | Engine core `crates/combat-sim`: board model, combat loop with the keywords, deathrattles and summons, seeded RNG, trial runner, "not modelled" | T-601 | done (session 068) |
+| T-603 | Validation harness on the user's logged combats: accuracy, calibration, misses | T-602 | done (session 068): `combat-validate`, 19 Solo combats |
+| T-603b | Save each combat's attack order in the parser and replay it in the harness to find the first rule that differs | T-603 | pending (small `bg-parser` export: tell the hub first) |
+| T-604 | Card coverage rounds, most seen cards first; parser reads `POISONOUS` and `MEGA_WINDFURY` | T-602 | round 1 done (session 068): 95% of seen appearances known; next list in the design doc |
+| T-605 | Overlay odds in the app during the recruit phase (own board against the next opponent's last seen board); card facts in `crates/cards` | T-602, T-604 | pending |
+| T-606 | Website simulator: load an old board or pairing, edit, run | T-602, user's choice of how the site runs it | pending |
+| T-607 | Accuracy page: the harness numbers, kept up to date | T-603 | pending |
+| T-608 | Duos combats (two boards per team) in the engine and the harness | T-602, T-213 data | pending |
+
+**Notes T-601 to T-604 (2026-10-11, session 068).** D-081; everything in [combat-simulator.md](../research/combat-simulator.md). **Engine:** no dependencies (WebAssembly-ready); a card in neither list of the registry gives `Verdict::NotModelled`, never a number; approximate cards are named with the reason. **Tests:** 47 unit tests on small boards whose outcome is certain, plus the harness on synthetic fixtures. **Harness run** on the user's history (41 games, 2 Solo): 19 Solo combats, mean probability of the real result 96%, the most likely result was the real one in 18 of 19; Duos not scored yet. **Speed:** 10 000 trials in 32 ms on average, 73 ms at most. **Questions for the user:** how the website runs the engine (WebAssembly with `'wasm-unsafe-eval'` in the CSP, recommended; a TypeScript port; a server function) and whether the website may load other public players' boards (recommended: own games only at first).
+
 ## F4 — Community and extras
 
 | ID | Task | Status |
