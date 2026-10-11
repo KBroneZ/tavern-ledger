@@ -282,6 +282,7 @@ fn engine_minion(m: &LogMinion, facts: &dyn Fn(&str) -> Option<Facts>) -> Result
         tribes: f.tribes,
         tier: f.tier,
         base: Some(f.base),
+        gifts: Vec::new(),
         card_id: id,
     })
 }

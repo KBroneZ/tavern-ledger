@@ -25,6 +25,7 @@ mod cards_round3;
 mod cards_round4;
 mod cards_round5;
 pub mod combat;
+pub mod gifts;
 pub mod model;
 pub mod rng;
 pub mod trials;

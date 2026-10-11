@@ -137,6 +137,10 @@ pub struct Minion {
     /// Tavern tier, for the damage a surviving minion deals.
     pub tier: Option<u8>,
     pub base: Option<BaseCard>,
+    /// The Dark Gifts the minion carries, by the gift's card id
+    /// (`BG36_MidGameEffect_000t16`), as the offer names it (D-058); see
+    /// [`crate::gifts`]. Empty for most minions.
+    pub gifts: Vec<String>,
 }
 
 impl Minion {
@@ -152,6 +156,7 @@ impl Minion {
             tribes: Tribes::NONE,
             tier: None,
             base: None,
+            gifts: Vec::new(),
         }
     }
 
@@ -167,6 +172,12 @@ impl Minion {
 
     pub fn tier(mut self, tier: u8) -> Self {
         self.tier = Some(tier);
+        self
+    }
+
+    /// Adds a Dark Gift by its card id.
+    pub fn gift(mut self, id: impl Into<String>) -> Self {
+        self.gifts.push(id.into());
         self
     }
 }

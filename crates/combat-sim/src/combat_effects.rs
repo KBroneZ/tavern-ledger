@@ -203,6 +203,29 @@ impl Combat<'_> {
                     self.copy_leftmost_deathrattles(side, uid, count, times);
                 }
             }
+            Action::GiveOwnStats { attack, health } => {
+                self.give_own_stats(side, src, attack, health)
+            }
+            Action::MultiplyStats { attack, health } => {
+                if let Some(uid) = me {
+                    self.multiply_stats(side, uid, attack, health);
+                }
+            }
+            Action::GainLeftAttack => {
+                if let Some(uid) = me {
+                    self.gain_left_attack(side, uid);
+                }
+            }
+            Action::TriggerOwnDeathrattles => {
+                if let Some(uid) = me {
+                    self.trigger_own_deathrattles(side, uid);
+                }
+            }
+            Action::SummonCopy => {
+                if let Some(uid) = me {
+                    self.summon_copy(side, uid);
+                }
+            }
             Action::MultiplyAttackerAttack { factor } => {
                 if let Some(a) = attacker {
                     let gain = self

@@ -193,10 +193,27 @@ test("the request carries every board in order with the card facts; an empty sec
   assert.equal(req.damage_cap, 15);
   assert.deepEqual(req.opponent[0], {
     tier: 3,
-    minions: [{ card_id: "BG28_300", golden: false, attack: 1, health: 1, keywords: [], facts: { tier: 1, tribes: ["UNDEAD"], attack: 1, health: 1, keywords: [] } }],
+    minions: [{ card_id: "BG28_300", golden: false, attack: 1, health: 1, keywords: [], gifts: [], facts: { tier: 1, tribes: ["UNDEAD"], attack: 1, health: 1, keywords: [] } }],
   });
   assert.equal(B.notReady(B.emptyState()), "empty");
   assert.equal(B.notReady(s), null);
+});
+
+test("Dark Gifts: added once each, at most four, removed, and sent with the minion", () => {
+  const golemancy = "BG36_MidGameEffect_000t61";
+  let s = B.addMinion(B.emptyState(), "player", 0, "BGS_119", cards);
+  const key = s.player[0].minions[0].key;
+  assert.deepEqual(s.player[0].minions[0].gifts, [], "a new minion has none");
+  s = B.addGift(s, "player", 0, key, golemancy);
+  assert.equal(B.addGift(s, "player", 0, key, golemancy), s, "the same gift once");
+  assert.equal(B.addGift(s, "player", 0, key, "bad id"), s, "a bad id changes nothing");
+  for (const g of ["G1", "G2", "G3", "G4"]) s = B.addGift(s, "player", 0, key, g);
+  assert.deepEqual(s.player[0].minions[0].gifts, [golemancy, "G1", "G2", "G3"], "four at most");
+  const req = JSON.parse(B.toRequest(s, cards));
+  assert.deepEqual(req.player[0].minions[0].gifts, [golemancy, "G1", "G2", "G3"]);
+  s = B.removeGift(s, "player", 0, key, "G1");
+  assert.deepEqual(s.player[0].minions[0].gifts, [golemancy, "G2", "G3"]);
+  assert.equal(B.removeGift(s, "player", 0, key, "G1"), s, "removing a missing gift changes nothing");
 });
 
 test("round trip: a stored game's round, played by the built engine, gives a readable answer", async () => {
@@ -214,6 +231,11 @@ test("round trip: a stored game's round, played by the built engine, gives a rea
   const blocked = B.addMinion(loaded.state, "opponent", 0, "BG_NOT_A_CARD", cards);
   const refused = readAnswer(engine.run(B.toRequest(blocked, cards)));
   assert.deepEqual(refused.kind === "not_modelled" && refused.notModelled, ["BG_NOT_A_CARD"]);
+  // A Dark Gift the engine does not know blocks the same way, by its id.
+  const own = loaded.state.player[0].minions[0];
+  const gifted = B.addGift(loaded.state, "player", 0, own.key, "BG99_NOT_A_GIFT");
+  const unknownGift = readAnswer(engine.run(B.toRequest(gifted, cards)));
+  assert.deepEqual(unknownGift.kind === "not_modelled" && unknownGift.notModelled, ["BG99_NOT_A_GIFT"]);
   // The Duos round plays both teams' boards.
   const duos = B.fromRound(game(duosReport()), 1, cards);
   assert.ok(duos);
