@@ -1,6 +1,6 @@
 # Terms of use
 
-Last updated: 11 October 2026
+Last updated: 12 October 2026
 
 **What changed on 11 October 2026:** public leaderboards (section 4), community hero stats (section 4) and the server's check of display names (section 3).
 
@@ -44,8 +44,8 @@ You keep your rights in your data. You allow us to store and process it only to 
 
 ## 6. Code, game content and trademarks
 
-- Tavern Ledger's source code is open source under the MIT licence: github.com/KBroneZ/tavern-ledger.
-- The MIT licence covers our code only. Hearthstone's names, cards, images and other game content belong to Blizzard Entertainment and are used, if at all, under Blizzard's Fan Content Policy; they are not part of the MIT licence and you get no rights in them from us.
+- Tavern Ledger's source code is open source under the GNU Affero General Public License, version 3 only (AGPL-3.0-only): github.com/KBroneZ/tavern-ledger. Versions published before 12 October 2026 remain available under the MIT licence they were released with.
+- That licence covers our code only. Hearthstone's names, cards, images and other game content belong to Blizzard Entertainment and are used, if at all, under Blizzard's Fan Content Policy; they are not part of that licence and you get no rights in them from us.
 
 ## 7. No warranty
 
