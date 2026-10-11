@@ -4,9 +4,9 @@
 
 Última actualización: 12 de octubre de 2026
 
-**Qué cambió el 11 de octubre de 2026:** clasificaciones públicas (apartado 4), estadísticas de héroes de la comunidad (apartado 4) y la comprobación de los nombres visibles por parte del servidor (apartado 3).
+**Qué cambió el 11 de octubre de 2026:** clasificaciones públicas (apartado 4), estadísticas de héroes de la comunidad (apartado 4) y la comprobación de los nombres visibles que hace el servidor (apartado 3).
 
-Estos términos cubren el sitio web de Tavern Ledger y las cuentas de este. La aplicación de escritorio y su código fuente se rigen por su licencia de código abierto (apartado 6).
+Estos términos cubren el sitio web de Tavern Ledger y las cuentas creadas en él. La aplicación de escritorio y su código fuente se rigen por su licencia de código abierto (apartado 6).
 
 ## 1. Qué es Tavern Ledger
 
@@ -26,11 +26,11 @@ No:
 
 - subas datos que no sean de tus propias partidas, o que se hayan modificado para engañar;
 - pongas datos personales de otras personas (por ejemplo, un BattleTag) en tu nombre visible ni en ningún otro sitio;
-- uses un nombre visible que sea ofensivo, suplante a alguien o infrinja los derechos de alguien. El servidor rechaza los nombres con palabras de una lista corta (palabras ofensivas y nombres que parecen oficiales); un nombre que acepta no es por ello automáticamente aceptable;
-- intentes romper, sobrecargar o eludir los límites y la seguridad del sitio, ni acceder a datos privados de otras personas (los perfiles públicos están pensados para verse);
+- uses un nombre visible que sea ofensivo, suplante a otra persona o infrinja sus derechos. El servidor rechaza los nombres con palabras de una lista corta (palabras ofensivas y nombres que parecen oficiales); un nombre que acepta no es por ello automáticamente aceptable;
+- intentes romper, sobrecargar o eludir los límites y la seguridad del sitio, ni accedas a datos privados de otras personas (los perfiles públicos están pensados para verse);
 - copies perfiles públicos en masa con herramientas automatizadas, ni uses el sitio de un modo que perjudique a otros usuarios o al proyecto. Descargar tus propios datos desde la página de tu cuenta siempre está permitido.
 
-Si una cuenta incumple estas normas, podemos tomar una medida proporcionada: pedirte que cambies algo, retirar el contenido, o suspender la cuenta o, en caso de incumplimientos graves o repetidos, borrarla. Te diremos por qué y te daremos la oportunidad de descargar antes tus datos, salvo que tengamos que actuar de inmediato para detener un daño (por ejemplo, un ataque o contenido ilegal). Puedes responder para pedirnos que lo reconsideremos.
+Si una cuenta incumple estas normas, podemos tomar una medida proporcionada: pedirte que cambies algo, retirar el contenido, o suspender la cuenta o, si el incumplimiento es grave o repetido, borrarla. Te diremos por qué y te daremos la oportunidad de descargar tus datos antes, salvo que tengamos que actuar de inmediato para detener un daño (por ejemplo, un ataque o contenido ilegal). Puedes responder para pedirnos que lo reconsideremos.
 
 ## 4. Perfiles públicos y clasificaciones
 
@@ -59,7 +59,7 @@ En la medida en que la ley lo permita, no somos responsables de las pérdidas in
 
 ## 9. El juego
 
-Tavern Ledger lee los archivos de registro que el juego escribe en tu PC. Si lo activas (está desactivado por defecto), la aplicación también lee dos valores que el juego te muestra, las cinco tribus de la partida y tu propia puntuación de Campos de Batalla, desde la memoria del juego mientras se ejecuta, con acceso de solo lectura. Leer la memoria del juego va contra la letra del Contrato de Licencia de Usuario Final de Blizzard; Blizzard lleva años tolerando lecturas así por parte de otros rastreadores, pero podría actuar contra ellos en cualquier momento, y el riesgo para tu cuenta de Battle.net es tuyo si lo activas. Tavern Ledger nunca cambia archivos del juego, inyecta código ni actúa en el juego por ti. Tu uso de Hearthstone sigue sujeto a las propias condiciones de Blizzard.
+Tavern Ledger lee los archivos de registro que el juego escribe en tu PC. Si lo activas (está desactivado por defecto), la aplicación también lee dos valores que el juego te muestra, las cinco tribus de la partida y tu propia puntuación de Campos de Batalla, desde la memoria del juego mientras se ejecuta, con acceso de solo lectura. Leer la memoria del juego va contra la letra del Contrato de Licencia de Usuario Final de Blizzard; Blizzard lleva años tolerando lecturas así por parte de otros rastreadores, pero podría actuar contra ellos en cualquier momento, y si lo activas, asumes el riesgo para tu cuenta de Battle.net. Tavern Ledger nunca cambia archivos del juego, inyecta código ni actúa en el juego por ti. Tu uso de Hearthstone sigue sujeto a las propias condiciones de Blizzard.
 
 ## 10. Finalización
 
@@ -67,4 +67,4 @@ Puedes dejar de usar el servicio y borrar tu cuenta en cualquier momento. Si dec
 
 ## 11. Cambios y legislación
 
-Podemos cambiar estos términos cuando cambien el servicio, la ley o nuestros proveedores. Publicaremos aquí los cambios con una fecha nueva y avisaremos por correo electrónico a los usuarios registrados con al menos 30 días de antelación de que se aplique un cambio que les afecte. Si no estás de acuerdo, puedes borrar tu cuenta antes de entonces. Estos términos se rigen por la ley de Bulgaria, sin privarte de la protección de la ley del país donde vives como consumidor.
+Podemos cambiar estos términos cuando cambien el servicio, la ley o nuestros proveedores. Publicaremos aquí los cambios con una fecha nueva y avisaremos por correo electrónico a los usuarios registrados al menos 30 días antes de que se aplique un cambio que les afecte. Si no estás de acuerdo, puedes borrar tu cuenta antes de entonces. Estos términos se rigen por la ley de Bulgaria, sin privarte de la protección de la ley del país donde vives como consumidor.

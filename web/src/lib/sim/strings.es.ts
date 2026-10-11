@@ -3,7 +3,7 @@ import type { SimStringKey } from "./strings.ts";
 
 export const ES: Record<SimStringKey, string> = {
   "page.title": "Simulador de combates",
-  "page.description": "Prueba un combate de Campos de Batalla: carga una ronda de una de tus partidas o monta los tableros y mira las probabilidades.",
+  "page.description": "Prueba un combate de Campos de Batalla: carga una ronda de una de tus partidas o monta los tableros, y mira las probabilidades.",
   "page.kicker": "Prueba un combate",
   "page.noscript": "El simulador necesita JavaScript.",
   "page.loading": "Cargando el simulador…",
@@ -13,9 +13,9 @@ export const ES: Record<SimStringKey, string> = {
   "load.signIn": "Iniciar sesión",
   "load.games": "Tus partidas",
   "load.loading": "Cargando tus partidas…",
-  "load.none": "Aún no hay partidas subidas. La aplicación las sube cuando lo activas.",
+  "load.none": "Aún no hay partidas subidas. Activa la subida de partidas en los Ajustes de la aplicación y aparecerán aquí.",
   "load.more": "Más partidas",
-  "load.error": "No se pudieron cargar tus partidas. Comprueba la conexión e inténtalo de nuevo.",
+  "load.error": "No se han podido cargar tus partidas. Comprueba la conexión y vuelve a intentarlo.",
   "load.retry": "Reintentar",
   "load.rounds": "Rondas de esta partida",
   "load.round": "Turno {n}",
@@ -24,7 +24,7 @@ export const ES: Record<SimStringKey, string> = {
   "load.loaded": "Turno {n} cargado.",
   "load.skipped.one": "Se ha dejado fuera 1 esbirro: el registro no dice cuál era.",
   "load.skipped.other": "Se han dejado fuera {count} esbirros: el registro no dice cuáles eran.",
-  "load.unknownTiers": "El registro solo tiene tu nivel de taberna. Pon los demás para el daño.",
+  "load.unknownTiers": "El registro solo tiene tu nivel de taberna. Pon los de los demás para ver el daño.",
 
   "mode.label": "Combate",
 
@@ -46,7 +46,7 @@ export const ES: Record<SimStringKey, string> = {
 
   "minion.golden": "Dorado",
   "minion.attack": "Ataque",
-  "minion.health": "Salud",
+  "minion.health": "Vida",
   "minion.left": "Mover a la izquierda",
   "minion.right": "Mover a la derecha",
   "minion.remove": "Quitar",
@@ -68,7 +68,7 @@ export const ES: Record<SimStringKey, string> = {
   "add.button": "Añadir un esbirro",
   "add.label": "Busca un esbirro por su nombre",
   "add.placeholder": "Nombre del esbirro",
-  "add.none": "Ningún esbirro con ese nombre.",
+  "add.none": "No hay ningún esbirro con ese nombre.",
   "add.tier": "Nivel {n}",
   "add.close": "Cerrar",
 
@@ -95,14 +95,14 @@ export const ES: Record<SimStringKey, string> = {
   "result.cap": "Tope de daño",
   "result.capNone": "Sin tope",
   "result.approx": "≈ Aproximado",
-  "result.approx.one": "1 carta se juega con una diferencia conocida.",
-  "result.approx.other": "{count} cartas se juegan con una diferencia conocida.",
+  "result.approx.one": "1 carta se simula con una diferencia conocida respecto al juego.",
+  "result.approx.other": "{count} cartas se simulan con una diferencia conocida respecto al juego.",
   "result.soc": "Una carta de aquí actúa al inicio del combate, que el simulador no juega: los tableros cargados de una partida ya muestran su efecto; los que montas tú, no.",
   "result.notModelled": "No se puede jugar: el simulador no conoce estas cartas y nunca adivina.",
   "result.notModelledHint": "Quítalas para ver las probabilidades.",
   "result.noCardData": "No se puede jugar: faltan estas cartas en los datos de cartas.",
   "result.badBoard": "Estos tableros no se pueden jugar.",
-  "result.failed": "El simulador se ha parado de forma inesperada.",
+  "result.failed": "El simulador se ha detenido de forma inesperada.",
   "result.retry": "Reintentar",
 
   "credit": "Datos y arte de las cartas © Blizzard Entertainment, de HearthstoneJSON. Las probabilidades salen del mismo motor que la aplicación: solo lo que hay en los tableros, sin poderes de héroe, abalorios ni hechizos.",

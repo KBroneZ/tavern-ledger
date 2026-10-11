@@ -43,7 +43,7 @@ test("a record's cells: label, value with its inferred mark, the game's link and
   const link = cellHtml(game);
   assert.match(link, new RegExp(`href="/game/\\?u=${ID}&amp;s=${SESSION}&amp;g=1"`));
   assert.match(link, /Oct 2, 2026/);
-  assert.match(link, /visually-hidden">: the game of the record Most damage taken in one combat/);
+  assert.match(link, /visually-hidden">: the game that set the record Most damage taken in one combat/);
   assert.equal(back, "in 12 of 31 games");
 });
 

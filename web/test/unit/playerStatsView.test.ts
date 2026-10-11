@@ -62,7 +62,7 @@ test("heroes: the sort switch shows the sort in force and drives the table", () 
     assert.equal(attr(group as VNode, "aria-labelledby"), "heroes-solo-sort");
     assert.equal(textOf(elements(panel).find((e) => attr(e, "id") === "heroes-solo-sort") as VNode), "Sort by");
   }
-  assert.match(textOf(heroesPanel("solo", heroes, { profileId: null, sort: "avg" })), /best average place first/);
+  assert.match(textOf(heroesPanel("solo", heroes, { profileId: null, sort: "avg" })), /by average place, best first/);
 });
 
 test("heroes: never-played heroes are an Advanced fold; the few-games note is there", () => {
@@ -93,7 +93,7 @@ function curious(over: Partial<Curious> = {}): Curious {
 test("curious: records with their games, Simple totals and Advanced totals, per mode", () => {
   const [solo, duos] = curiousPanels(curious(), ID);
   const html = toHtml(solo);
-  assert.match(html, /Records, the game each came from/);
+  assert.match(html, /Records, the game that set each one/);
   assert.match(html, /href="\/game\/\?u=/);
   assert.match(html, /mark-inferred/);
   // Each record's name heads its row, so its value and game are read with it.
@@ -125,7 +125,7 @@ test("the dashboard links to both pages when given their addresses", () => {
   const base = { gamesHref: () => "/games/", owner: true, userId: ID };
   const html = toHtml(modePanel("solo", dash, { ...base, heroesHref: () => "/player-heroes/", curiousHref: () => "/curious/" }));
   assert.match(html, /href="\/player-heroes\/">All Solo heroes/);
-  assert.match(html, /href="\/curious\/">All records and curious stats/);
+  assert.match(html, /href="\/curious\/">All records and totals/);
   // Without them (an older caller) the dashboard is as before.
   assert.doesNotMatch(toHtml(modePanel("solo", dash, base)), /player-heroes|curious\//);
 });

@@ -31,7 +31,7 @@ export const ACCOUNT_STRINGS = {
 
   // Forgot password (components/ForgotPassword.astro, scripts/forgot.ts).
   "forgot.title": "Forgot password",
-  "forgot.meta": "Enter the email of your account. We send a link to choose a new password; open it in this browser.",
+  "forgot.meta": "Enter your account's email. We'll send you a link to choose a new password; open it in this browser.",
   "forgot.heading": "Get a reset link",
   "forgot.submit": "Send the link",
   "forgot.back": "Back to sign in",
@@ -45,7 +45,7 @@ export const ACCOUNT_STRINGS = {
   "account.signedOut.after": "to see your account.",
   "account.setPassword": "Set a new password",
   "account.newPassword": "New password",
-  "account.repeat": "Repeat it",
+  "account.repeat": "Repeat the new password",
   "account.savePassword": "Save the new password",
   "account.deleted": "Your account and all its data are deleted. Thank you for trying Tavern Ledger.",
   "account.signedInAs.before": "Signed in as",
@@ -79,7 +79,7 @@ export const ACCOUNT_STRINGS = {
   "account.delete.type.after": "to confirm",
   "account.delete.phrase": "delete my account",
   "account.reauth": "For your safety, enter your password again",
-  "account.reauth.hint": "Deleting needs a sign-in from the last 10 minutes.",
+  "account.reauth.hint": "To delete your account, you need to have signed in within the last 10 minutes.",
   "account.delete.submit": "Delete my account",
   "account.signOut": "Sign out",
   "account.profile.loadFailed": "Could not load your profile. Reload the page to try again.",
@@ -87,7 +87,7 @@ export const ACCOUNT_STRINGS = {
   "account.saved": "Saved.",
   "account.setting.loadFailed": "Could not load this setting. Reload the page to try again.",
   "account.community.savedOn": "Saved. Your games count from the next daily update.",
-  "account.community.savedOff": "Saved. Your games are out from the next daily update.",
+  "account.community.savedOff": "Saved. Your games are left out from the next daily update.",
   "account.community.unchanged": "{error} Your setting is unchanged.",
   "account.export.preparing": "Preparing your file…",
   "account.export.done": "Downloaded.",
@@ -127,7 +127,7 @@ export const ACCOUNT_STRINGS = {
   "link.expired":
     "This link has expired or was already used (each new email replaces the previous link). If you were confirming your email, try signing in: it may already be confirmed. Otherwise ask for a new link.",
   "link.otherBrowser":
-    "This link was opened in another browser than the one where you asked for it. If you were confirming your email, it is confirmed: sign in. If you were resetting your password, open the link in the browser where you asked for it, or ask for a new one.",
+    "This link was opened in a different browser from the one where you asked for it. If you were confirming your email, it is confirmed: sign in. If you were resetting your password, open the link in the browser where you asked for it, or ask for a new one.",
   "link.unreachable": "Could not reach the server. Check your connection and reload the page.",
   "link.failed": "This link did not work. Sign in, or ask for a new link.",
 
@@ -135,7 +135,7 @@ export const ACCOUNT_STRINGS = {
   "profile.maxLength": "Up to {max} characters.",
   "profile.chars": "Use letters, digits, spaces, _ . or - only.",
   "profile.notAllowed": "This name is not allowed. Choose another one: names show on public pages and leaderboards.",
-  "profile.charsRange": "Use 1-32 letters, digits, spaces, _ . or - only.",
+  "profile.charsRange": "Use 1 to 32 letters, digits, spaces, _ . or - only.",
   "profile.sessionEnded": "Your session ended. Sign in again.",
   "profile.saveFailed": "Could not save. Try again in a moment.",
 

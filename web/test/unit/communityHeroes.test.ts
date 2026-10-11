@@ -230,7 +230,7 @@ test("both modes, each with both periods; unique ids", () => {
 test("a snapshot too old to show: one notice, not 'not enough games'", () => {
   const stats: CommunityStats = { heroes: empty(), state: state({ available: false }) };
   const html = modePanels(stats, "games").map(toHtml).join("");
-  assert.match(html, /Being rebuilt/);
+  assert.match(html, /Being updated/);
   assert.doesNotMatch(html, /Not enough games yet/);
   // Before the first rebuild there is nothing to rebuild: the empty state.
   const never = modePanels({ heroes: empty(), state: { refreshedAt: null, countedUntil: null, available: false } }, "games");
@@ -255,7 +255,7 @@ test("the explanation: opt-in only, thresholds, rounding, self-reported, validat
 
 test("the updated line names the build time and the last day counted", () => {
   assert.equal(updatedLine(state()), "Updated 11 Oct 2026, 04:05 UTC, with games up to 10 Oct 2026.");
-  assert.equal(updatedLine({ refreshedAt: null, countedUntil: null, available: false }), "Not built yet.");
+  assert.equal(updatedLine({ refreshedAt: null, countedUntil: null, available: false }), "Not calculated yet.");
 });
 
 test("strings: placeholders are required, and no player names or ratings are promised", () => {
