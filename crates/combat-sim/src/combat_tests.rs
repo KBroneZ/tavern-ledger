@@ -144,6 +144,7 @@ fn with_combat<R>(
             },
         ],
         next_uid: 100,
+        forced_target: None,
     };
     f(&mut c)
 }
@@ -332,6 +333,7 @@ fn summons_stop_at_seven_minions() {
             },
         ],
         next_uid: 100,
+        forced_target: None,
     };
     c.sides[0].units[0].health = 0;
     c.process_deaths(0);
@@ -362,6 +364,7 @@ fn titus_makes_deathrattles_trigger_again() {
             SideState::default(),
         ],
         next_uid: 100,
+        forced_target: None,
     };
     c.sides[0].units[0].health = 0;
     c.process_deaths(0);
@@ -400,6 +403,7 @@ fn avenge_regains_divine_shield_and_with_it_taunt() {
             SideState::default(),
         ],
         next_uid: 100,
+        forced_target: None,
     };
     // Only the Deflector can be targeted while it has the shield.
     for _ in 0..20 {
@@ -438,6 +442,7 @@ fn scarlet_survivor_gains_shield_once_at_six_attack() {
             },
         ],
         next_uid: 100,
+        forced_target: None,
     };
     c.swing(0, 1);
     let s = &c.sides[0].units[1];
@@ -464,6 +469,7 @@ fn attack_order_goes_left_to_right_and_wraps() {
             },
         ],
         next_uid: 100,
+        forced_target: None,
     };
     let order: Vec<usize> = (0..5)
         .map(|_| {
@@ -496,6 +502,7 @@ fn a_summon_in_the_attackers_place_attacks_next() {
             },
         ],
         next_uid: 100,
+        forced_target: None,
     };
     c.attack_turn(0);
     let next = c.attacker_index(0).unwrap();
@@ -592,6 +599,7 @@ fn leeroy_destroys_the_minion_that_killed_it_even_through_a_shield() {
             },
         ],
         next_uid: 100,
+        forced_target: None,
     };
     // The 2/9 attacks Leeroy (uids: Leeroy 1, 2/9 is 2).
     c.swing(1, 2);
@@ -628,6 +636,7 @@ fn rally_strips_taunt_and_reborn_from_the_target() {
             },
         ],
         next_uid: 100,
+        forced_target: None,
     };
     c.swing(0, 1);
     assert!(c.sides[1].units.is_empty(), "no Reborn copy");
@@ -648,6 +657,7 @@ fn rally_strips_taunt_and_reborn_from_the_target() {
             },
         ],
         next_uid: 100,
+        forced_target: None,
     };
     c.swing(0, 1);
     assert_eq!(c.sides[1].units.len(), 1);
@@ -677,8 +687,20 @@ fn stealth_hides_taunt() {
             },
         ],
         next_uid: 100,
+        forced_target: None,
     };
     for _ in 0..20 {
         assert_eq!(c.choose_target(1), Some(3));
     }
+}
+
+#[test]
+fn two_runs_merged_add_up() {
+    let mut a = odds(vec![plain(1, 1), plain(1, 1)], vec![plain(1, 1)]);
+    let b = a.clone();
+    a.merge(&b);
+    assert_eq!(a.trials, 2 * b.trials);
+    assert_eq!(a.won, 2 * b.won);
+    let dealt: u32 = a.damage_dealt.values().sum();
+    assert_eq!(dealt, 2 * b.damage_dealt.values().sum::<u32>());
 }

@@ -6,6 +6,7 @@
 
 pub mod art;
 pub mod catalog;
+pub mod combat_facts;
 pub mod net;
 pub mod store;
 

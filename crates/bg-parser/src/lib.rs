@@ -230,6 +230,22 @@ impl GameReader {
             .filter(|cap| (1..=MAX_DAMAGE_CAP).contains(cap))
     }
 
+    /// The player's own board as it is now in a shop turn (T-605): what the
+    /// player sees on their side of the tavern, with the lasting keywords the
+    /// simulator reads. `None` in a combat turn, before the first shop turn,
+    /// or when the game could not be read.
+    pub fn own_board_now(&self) -> Option<Vec<report::Minion>> {
+        if self.error.is_some() {
+            return None;
+        }
+        let turn = self.collector.turn();
+        if turn < 1 || turn % 2 == 0 {
+            return None;
+        }
+        let pid = self.collector.local_pid?;
+        Some(collector::board_of(&self.collector.board, pid))
+    }
+
     /// True when the log says this is a Battlegrounds game (solo or Duos).
     pub fn is_battlegrounds(&self) -> bool {
         self.game_type
@@ -345,6 +361,13 @@ impl LogReader {
     pub fn damage_cap_now(&self) -> Option<i64> {
         self.in_progress_index()?;
         self.current.as_ref()?.damage_cap_now()
+    }
+
+    /// The own board in a shop turn of the Battlegrounds game in progress
+    /// (see [`GameReader::own_board_now`]); `None` when no such game is on.
+    pub fn own_board_now(&self) -> Option<Vec<report::Minion>> {
+        self.in_progress_index()?;
+        self.current.as_ref()?.own_board_now()
     }
 
     /// Number of the Battlegrounds game being played right now (the `index`
@@ -594,6 +617,7 @@ fn rounds_of(c: &Collector, heroes: &[(i64, &Entity)], last_health: Option<i64>)
                 .copied()
                 .flatten()
                 .filter(|_| c.result_tags_seen),
+            attacks: c.attacks.get(&n).cloned().unwrap_or_default(),
         })
         .collect()
 }

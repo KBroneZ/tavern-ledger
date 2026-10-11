@@ -70,6 +70,20 @@ pub enum Action {
     /// Destroy the enemy minion that last damaged the card (Divine Shield
     /// does not stop it).
     DestroyKiller,
+    /// Give friendly minions that have `keyword` stats.
+    BuffAllWithKeyword {
+        attack: i32,
+        health: i32,
+        keyword: Keywords,
+    },
+    /// Summon one token, which attacks at once (a random target, as usual).
+    SummonAndAttack { token: &'static str },
+    /// For each minion type, give one random friendly minion of that type
+    /// stats (the card itself can be picked).
+    BuffOnePerTribe { attack: i32, health: i32 },
+    /// After a Reborn: give the right-most friendly minion of `tribe` stats
+    /// equal to the reborn minion's Attack, `times` over.
+    GiveRebornAttackToRightmost { tribe: Tribes, times: i32 },
 }
 
 /// When a card acts.
@@ -105,6 +119,42 @@ pub enum Trigger {
     ExtraDeathrattles(u8),
     /// Once its Attack reaches `n`, gains Divine Shield (once).
     ShieldAtAttack(i32),
+    /// Whenever a friendly minion of `tribe` attacks, this one included,
+    /// before the damage.
+    WheneverFriendlyAttacks {
+        tribe: Tribes,
+        actions: &'static [Action],
+    },
+    /// After a friendly minion comes back with Reborn.
+    AfterFriendlyReborn(&'static [Action]),
+    /// After another friendly minion of `tribe` deals damage by attacking or
+    /// being attacked.
+    AfterFriendlyDealsDamage {
+        tribe: Tribes,
+        actions: &'static [Action],
+    },
+    /// After a friendly minion with a Rally attacks, trigger the left-most
+    /// friendly Deathrattle `times` times.
+    AfterFriendlyRallyAttacks {
+        times: u8,
+    },
+}
+
+impl Trigger {
+    /// The actions this trigger runs, when it has a list.
+    pub fn actions(&self) -> &'static [Action] {
+        match *self {
+            Trigger::Deathrattle(a)
+            | Trigger::Rally(a)
+            | Trigger::Avenge(_, a)
+            | Trigger::StartOfCombat(a)
+            | Trigger::AfterFriendlyReborn(a) => a,
+            Trigger::FriendlyAttacks { actions, .. }
+            | Trigger::WheneverFriendlyAttacks { actions, .. }
+            | Trigger::AfterFriendlyDealsDamage { actions, .. } => actions,
+            _ => &[],
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -120,10 +170,24 @@ const PLAIN: CardRules = CardRules {
 
 /// The rules for a card id. `None`: not modelled.
 pub fn rules(card_id: &str) -> Option<CardRules> {
-    if let Some((_, rules)) = EFFECTS.iter().find(|(id, _)| *id == card_id) {
+    let all = EFFECTS.iter().chain(crate::cards_round2::EFFECTS_2);
+    if let Some((_, rules)) = all.into_iter().find(|(id, _)| *id == card_id) {
         return Some(*rules);
     }
     NO_COMBAT_EFFECT.contains(&card_id).then_some(PLAIN)
+}
+
+/// True when the card acts at the start of combat (played or not). A board
+/// taken in the shop has not had those effects yet.
+pub fn has_start_of_combat(card_id: &str) -> bool {
+    rules(card_id).is_some_and(|r| {
+        r.triggers.iter().any(|t| {
+            matches!(
+                t,
+                Trigger::StartOfCombat(_) | Trigger::StartOfCombatUnmodelled
+            )
+        })
+    })
 }
 
 /// A minion summoned in combat. Its stats are the card's own: buffs the game
@@ -187,14 +251,14 @@ const fn summon(token: &'static str, count: u8) -> Action {
     Action::Summon { token, count }
 }
 
-const fn exact(triggers: &'static [Trigger]) -> CardRules {
+pub(crate) const fn exact(triggers: &'static [Trigger]) -> CardRules {
     CardRules {
         triggers,
         fidelity: Fidelity::Exact,
     }
 }
 
-const fn approx(reason: &'static str, triggers: &'static [Trigger]) -> CardRules {
+pub(crate) const fn approx(reason: &'static str, triggers: &'static [Trigger]) -> CardRules {
     CardRules {
         triggers,
         fidelity: Fidelity::Approximate(reason),
@@ -1145,15 +1209,19 @@ pub const NO_COMBAT_EFFECT: &[&str] = &[
 mod tests {
     use super::*;
 
+    fn all_effects() -> impl Iterator<Item = &'static (&'static str, CardRules)> {
+        EFFECTS.iter().chain(crate::cards_round2::EFFECTS_2)
+    }
+
     #[test]
     fn a_card_is_in_one_list_only() {
-        for (id, _) in EFFECTS {
+        for (id, _) in all_effects() {
             assert!(!NO_COMBAT_EFFECT.contains(id), "{id} is in both lists");
         }
         let mut seen = std::collections::HashSet::new();
         for id in NO_COMBAT_EFFECT
             .iter()
-            .chain(EFFECTS.iter().map(|(id, _)| id))
+            .chain(all_effects().map(|(id, _)| id))
         {
             assert!(seen.insert(*id), "{id} is listed twice");
         }
@@ -1161,23 +1229,29 @@ mod tests {
 
     #[test]
     fn every_summoned_token_is_known() {
-        for (id, rules) in EFFECTS {
+        for (id, rules) in all_effects() {
             for trigger in rules.triggers {
-                let actions: &[Action] = match trigger {
-                    Trigger::Deathrattle(a)
-                    | Trigger::Rally(a)
-                    | Trigger::Avenge(_, a)
-                    | Trigger::StartOfCombat(a) => a,
-                    Trigger::FriendlyAttacks { actions, .. } => actions,
-                    _ => &[],
-                };
-                for action in actions {
-                    if let Action::Summon { token: t, .. } = action {
+                for action in trigger.actions() {
+                    if let Action::Summon { token: t, .. } | Action::SummonAndAttack { token: t } =
+                        action
+                    {
                         assert!(token(t).is_some(), "{id} summons unknown {t}");
                     }
                 }
             }
         }
+    }
+
+    #[test]
+    fn start_of_combat_cards_are_known_as_such() {
+        let soc = EFFECTS
+            .iter()
+            .find(|(_, r)| r.triggers.contains(&Trigger::StartOfCombatUnmodelled))
+            .map(|(id, _)| *id)
+            .expect("some card acts at the start of combat");
+        assert!(has_start_of_combat(soc));
+        assert!(!has_start_of_combat("BGS_119"));
+        assert!(!has_start_of_combat("NOT_A_CARD"));
     }
 
     #[test]

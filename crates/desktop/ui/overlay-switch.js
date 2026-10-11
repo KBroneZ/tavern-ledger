@@ -2,7 +2,8 @@
 // the tray's "Show overlay during a game" (saved in overlay.json); both show
 // the real state after any change. The overlay theme (T-324) is on the same
 // page, and the lobby panel's switch (T-338: a panel of the overlay, shown
-// or hidden like the others, on by default). Own scope.
+// or hidden like the others, on by default) and the combat odds' (T-605,
+// on by default). Own scope.
 "use strict";
 
 (() => {
@@ -11,6 +12,7 @@
   const { t, backend } = window.TLI18n;
   const box = document.getElementById("overlay-enabled");
   const lobby = document.getElementById("overlay-lobby");
+  const odds = document.getElementById("overlay-odds");
   const arrange = document.getElementById("overlay-arrange");
   const theme = document.getElementById("overlay-theme");
   const problem = document.getElementById("overlay-switch-problem");
@@ -42,6 +44,8 @@
     box.disabled = false;
     lobby.checked = !(Array.isArray(view.hidden) && view.hidden.includes("lobby"));
     lobby.disabled = false;
+    odds.checked = view.odds !== false;
+    odds.disabled = false;
     // The label says the state; a pressed state on top would say it twice, differently.
     arrange.dataset.unlocked = String(Boolean(view.unlocked));
     arrange.textContent = view.unlocked ? t("win.overlay.lock") : t("win.overlay.arrange");
@@ -87,6 +91,16 @@
   lobby.addEventListener("change", () => {
     lobby.disabled = true;
     call("overlay_set_shown", { panel: "lobby", shown: lobby.checked })
+      .then(show)
+      .catch((error) => {
+        fail(error);
+        refresh().catch(fail);
+      });
+  });
+
+  odds.addEventListener("change", () => {
+    odds.disabled = true;
+    call("overlay_set_odds", { shown: odds.checked })
       .then(show)
       .catch((error) => {
         fail(error);

@@ -9,7 +9,9 @@ use crate::discover::DiscoverTracker;
 use crate::hero_select::HeroSelectTracker;
 use crate::leaderboard::{is_leaderboard_tag, LeaderboardTracker};
 use crate::power::{EntityRef, Packet, ParseError, Value};
-use crate::report::{CombatResult, Minion, Side, KEYWORDS};
+use crate::report::{
+    AttackSlot, CombatResult, DefenderSource, LoggedAttack, Minion, Side, KEYWORDS, SIM_KEYWORDS,
+};
 use crate::shop::{Seats, ShopTracker};
 use crate::state::{Board, Entity, Players, Tags};
 
@@ -39,6 +41,9 @@ pub const MAX_SKIN_LINKS: usize = 256;
 pub const MAX_DBF_ID: i64 = 10_000_000;
 const SKIN_PARENT: &str = "BACON_SKIN_PARENT_ID";
 const RESULT_TAGS: [&str; 2] = ["BACON_WON_LAST_COMBAT", "DAMAGE_DEALT_TO_HERO_LAST_TURN"];
+/// Attacks kept per combat: far more than a combat has (about 30), so a
+/// strange log cannot grow the record.
+pub const MAX_ATTACKS: usize = 300;
 
 #[derive(Debug, Default)]
 pub struct Collector {
@@ -79,6 +84,10 @@ pub struct Collector {
     /// game without any (a log that lacks them) has no read results: all
     /// ties would be a guess.
     pub result_tags_seen: bool,
+    /// Round -> its attacks in the log's order (T-603b).
+    pub attacks: BTreeMap<i64, Vec<LoggedAttack>>,
+    /// The newest attack while its defender is not known yet: (round, index).
+    open_attack: Option<(i64, usize)>,
     /// Time of the line being read, in ms from the game's first line.
     pub now_ms: i64,
     /// Nesting of the line being read (0 is the log's top level).
@@ -131,6 +140,7 @@ impl Collector {
                 self.mention(&entity);
                 if block_type == "ATTACK" && self.in_combat() {
                     self.snapshot_open_legs();
+                    self.on_attack(&entity);
                 }
                 if self.indent == 0 {
                     let seats = self.seats();
@@ -349,7 +359,8 @@ impl Collector {
                 | "BACON_FREE_REFRESH_COUNT"
         )
         .then(|| tag.clone());
-        self.board.set_tag(id, tag, value)?;
+        self.board.set_tag(id, tag.clone(), value)?;
+        self.note_defender(id, &tag, old, new_int);
         if is_skin_parent {
             self.note_skin(id, Some(new_int).filter(|v| (1..=MAX_DBF_ID).contains(v)));
         }
@@ -381,6 +392,7 @@ impl Collector {
     }
 
     fn on_turn(&mut self, turn: i64, old: Option<i64>) {
+        self.open_attack = None;
         // The previous turn's legs that never reached an attack were not visible.
         let previous = turn.saturating_sub(1).div_euclid(2);
         // A combat the log has from start to end: its result is read as the
@@ -485,6 +497,77 @@ impl Collector {
         }
         self.open_own = None;
         self.open_opp = None;
+    }
+
+    /// Which side of the combat a minion's controller is on.
+    fn combat_side(&self, controller: i64) -> Option<Side> {
+        if Some(controller) == self.local_pid {
+            Some(Side::Own)
+        } else if Some(controller) == self.dummy_pid {
+            Some(Side::Opponent)
+        } else {
+            None
+        }
+    }
+
+    fn slot(&self, id: i64) -> Option<AttackSlot> {
+        let e = self.board.get(id).filter(|e| e.is("CARDTYPE", "MINION"))?;
+        Some(AttackSlot {
+            side: self.combat_side(e.int("CONTROLLER"))?,
+            position: e.int("ZONE_POSITION"),
+            card_id: e.card_id.clone(),
+        })
+    }
+
+    /// An attack starts (T-603b): its attacker and both boards as they are
+    /// now. A minion of neither combat side (a Duos teammate's copy) is left
+    /// out.
+    fn on_attack(&mut self, entity: &EntityRef) {
+        self.open_attack = None;
+        let EntityRef::Id(id) = entity else { return };
+        let Some(attacker) = self.slot(*id) else {
+            return;
+        };
+        let round = self.turn() / 2;
+        let board = |pid: Option<i64>| pid.map(|p| board_of(&self.board, p)).unwrap_or_default();
+        let attack = LoggedAttack {
+            attacker,
+            defender: None,
+            own: board(self.local_pid),
+            opponent: board(self.dummy_pid),
+        };
+        let list = self.attacks.entry(round).or_default();
+        if list.len() < MAX_ATTACKS {
+            list.push(attack);
+            self.open_attack = Some((round, list.len() - 1));
+        }
+    }
+
+    /// The defender of the open attack: the game's `PROPOSED_DEFENDER`, or,
+    /// in a log without it, the first enemy minion the attack damages or
+    /// strips of its Divine Shield.
+    fn note_defender(&mut self, id: i64, tag: &str, old: Option<i64>, new: i64) {
+        let Some((round, index)) = self.open_attack else {
+            return;
+        };
+        let found = if Some(id) == self.board.game_id && tag == "PROPOSED_DEFENDER" && new > 0 {
+            self.slot(new).map(|s| (s, DefenderSource::Game))
+        } else {
+            let old = old.unwrap_or(0);
+            let hit =
+                (tag == "DAMAGE" && new > old) || (tag == "DIVINE_SHIELD" && new == 0 && old > 0);
+            hit.then(|| self.slot(id))
+                .flatten()
+                .map(|s| (s, DefenderSource::FirstHit))
+        };
+        let Some((slot, source)) = found else { return };
+        let Some(attack) = self.attacks.get_mut(&round).and_then(|a| a.get_mut(index)) else {
+            return;
+        };
+        if slot.side != attack.attacker.side {
+            attack.defender = Some((slot, source));
+            self.open_attack = None;
+        }
     }
 
     fn track_shop(&mut self, id: i64) {
@@ -595,6 +678,11 @@ pub fn board_of(board: &Board, controller: i64) -> Vec<Minion> {
             position: e.int("ZONE_POSITION"),
             golden: is_golden_minion(e),
             keywords: KEYWORDS
+                .iter()
+                .filter(|(tag, _)| e.int(tag) > 0)
+                .map(|(_, name)| *name)
+                .collect(),
+            sim_keywords: SIM_KEYWORDS
                 .iter()
                 .filter(|(tag, _)| e.int(tag) > 0)
                 .map(|(_, name)| *name)

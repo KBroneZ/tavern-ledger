@@ -51,6 +51,11 @@ pub struct Minion {
     /// Keywords the minion had as it entered the combat (T-208, parser
     /// revision 5), by name: see [`KEYWORDS`]. Rust-only.
     pub keywords: Vec<&'static str>,
+    /// Lasting keywords the combat simulator reads that the saved report
+    /// does not carry (T-604): see [`SIM_KEYWORDS`]. Never serialized, so
+    /// neither the history nor the upload changes.
+    #[serde(skip)]
+    pub sim_keywords: Vec<&'static str>,
 }
 
 /// Keyword tags read on board minions and the name each is saved under, in
@@ -65,6 +70,43 @@ pub const KEYWORDS: [(&str, &str); 8] = [
     ("DEATHRATTLE", "deathrattle"),
     ("BACON_RALLY", "rally"),
 ];
+
+/// Keyword tags read on board minions for the combat simulator only (T-604),
+/// kept out of the saved report: upload-game checks every saved keyword
+/// against [`KEYWORDS`]'s names.
+pub const SIM_KEYWORDS: [(&str, &str); 2] = [
+    ("POISONOUS", "poisonous"),
+    ("MEGA_WINDFURY", "mega_windfury"),
+];
+
+/// A minion's place in one attack (T-603b): its side, its board position
+/// (1 is the left-most) and its card.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AttackSlot {
+    pub side: Side,
+    pub position: i64,
+    pub card_id: Option<String>,
+}
+
+/// How the defender of an attack was read.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DefenderSource {
+    /// The game entity's `PROPOSED_DEFENDER`.
+    Game,
+    /// The first enemy minion the attack damaged or stripped of its Divine
+    /// Shield (a log trimmed of `PROPOSED_DEFENDER`).
+    FirstHit,
+}
+
+/// One attack as the log plays it (T-603b), with both boards just before
+/// it. Rust-only: not in the saved report nor the upload.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LoggedAttack {
+    pub attacker: AttackSlot,
+    pub defender: Option<(AttackSlot, DefenderSource)>,
+    pub own: Vec<Minion>,
+    pub opponent: Vec<Minion>,
+}
 
 /// One side stepping into a combat. `board` is None when the fight never
 /// plays out in the local log: unknown, not empty.
@@ -89,6 +131,9 @@ pub struct Round {
     /// over (parser revision 4). None when the log does not have the whole
     /// combat or its tags disagree: unknown, never a tie. Rust-only.
     pub result: Option<CombatResult>,
+    /// Every attack of the combat in the log's order (T-603b). Rust-only and
+    /// not serialized: the harness reads it straight from the logs.
+    pub attacks: Vec<LoggedAttack>,
 }
 
 impl Round {

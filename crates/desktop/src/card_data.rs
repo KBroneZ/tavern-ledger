@@ -154,6 +154,19 @@ pub fn hero_links(cards: &Cards) -> tracker::stats::HeroLinks {
         .unwrap_or_default()
 }
 
+/// A minion's combat facts from the card data (T-605); None while there is
+/// no card data or it lacks the card (the odds then say so).
+pub fn combat_facts(cards: &Cards, id: &str) -> Option<tracker::odds::Facts> {
+    let f = cards.store.get()?.combat_facts(id)?;
+    Some(tracker::odds::Facts::from_names(
+        f.attack,
+        f.health,
+        f.tier,
+        &f.tribes,
+        &f.keywords,
+    ))
+}
+
 /// The card data's store, once it is open and holds data; None before.
 pub fn store_with_data(cards: &Cards) -> Option<&CardStore> {
     cards
