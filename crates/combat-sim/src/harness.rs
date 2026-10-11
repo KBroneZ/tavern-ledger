@@ -181,17 +181,14 @@ pub fn load_history(jsonl: &str, db: &CardDb) -> History {
             h.bad_lines += 1;
             continue;
         };
-        let key = (
-            v.get("session")
-                .and_then(Value::as_str)
-                .unwrap_or("")
-                .to_string(),
-            v.get("index").and_then(Value::as_u64).unwrap_or(0),
-        );
-        let Some(report) = v.get("report").cloned() else {
+        let session = v.get("session").and_then(Value::as_str);
+        let index = v.get("index").and_then(Value::as_u64);
+        let (Some(session), Some(index), Some(report)) = (session, index, v.get("report")) else {
             h.bad_lines += 1;
             continue;
         };
+        let key = (session.to_string(), index);
+        let report = report.clone();
         match latest.iter_mut().find(|(k, _)| *k == key) {
             Some(slot) => slot.1 = report,
             None => latest.push((key, report)),
@@ -300,34 +297,51 @@ pub struct Scored {
     pub micros: u128,
 }
 
-pub fn run(history: &History, options: &Options) -> Vec<Scored> {
+/// Every logged combat played, or the reason the engine refused it.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Run {
+    pub scored: Vec<Scored>,
+    /// Combats the engine refused, by reason (`BoardError`), never dropped
+    /// without a count.
+    pub rejected: BTreeMap<String, u32>,
+}
+
+pub fn run(history: &History, options: &Options) -> Run {
     let opts = Options {
         allow_unmodelled: true,
         ..*options
     };
-    history
-        .combats
-        .iter()
-        .filter_map(|c| {
-            let start = Instant::now();
-            let verdict = simulate(&c.player, &c.opponent, &opts).ok()?;
-            let micros = start.elapsed().as_micros();
-            let Verdict::Odds(o) = verdict else {
-                return None;
-            };
-            Some(Scored {
-                prediction: Prediction {
-                    won: o.share(CombatResult::Won),
-                    tied: o.share(CombatResult::Tie),
-                    lost: o.share(CombatResult::Lost),
-                },
-                class: Class::of(&o.coverage),
-                coverage: o.coverage,
-                combat: c.clone(),
-                micros,
-            })
-        })
-        .collect()
+    let mut out = Run::default();
+    for c in &history.combats {
+        let start = Instant::now();
+        let verdict = simulate(&c.player, &c.opponent, &opts);
+        let micros = start.elapsed().as_micros();
+        let o = match verdict {
+            Ok(Verdict::Odds(o)) => o,
+            // `allow_unmodelled` is on, so this does not happen; counted if
+            // it ever does.
+            Ok(Verdict::NotModelled(_)) => {
+                *out.rejected.entry("not modelled".into()).or_insert(0) += 1;
+                continue;
+            }
+            Err(e) => {
+                *out.rejected.entry(e.to_string()).or_insert(0) += 1;
+                continue;
+            }
+        };
+        out.scored.push(Scored {
+            prediction: Prediction {
+                won: o.share(CombatResult::Won),
+                tied: o.share(CombatResult::Tie),
+                lost: o.share(CombatResult::Lost),
+            },
+            class: Class::of(&o.coverage),
+            coverage: o.coverage,
+            combat: c.clone(),
+            micros,
+        });
+    }
+    out
 }
 
 fn pct(x: f64) -> String {
@@ -358,7 +372,8 @@ fn result_word(r: CombatResult) -> &'static str {
 }
 
 /// The accuracy report, in Markdown: counts, shares and card ids only.
-pub fn render(history: &History, scored: &[Scored], options: &Options) -> String {
+pub fn render(history: &History, run: &Run, options: &Options) -> String {
+    let scored = &run.scored;
     let mut out = String::new();
     let _ = writeln!(out, "# Combat simulator accuracy\n");
     let _ = writeln!(
@@ -380,6 +395,20 @@ pub fn render(history: &History, scored: &[Scored], options: &Options) -> String
          replayed). Unknown cards played as plain minions for this measurement only.\n",
         options.trials, options.seed
     );
+    let rejected: u32 = run.rejected.values().sum();
+    if rejected > 0 {
+        let why: Vec<String> = run
+            .rejected
+            .iter()
+            .map(|(reason, n)| format!("{n} ({reason})"))
+            .collect();
+        let _ = writeln!(
+            out,
+            "Refused by the engine's board check, not scored: {}.
+",
+            why.join(", ")
+        );
+    }
     let _ = writeln!(
         out,
         "| Combats | n | Mean p(real result) | Brier | Most likely = real |"
@@ -546,11 +575,12 @@ mod tests {
     fn reads_solo_combats_and_counts_the_rest() {
         let db = load_cards(CARDS).unwrap();
         let h = load_history(GAMES, &db);
-        // Two records of game 1 (the second wins), one Duos game, one bad line.
+        // Two records of game 1 (the second wins), one Duos game, a line with
+        // no session or index and a line that is not JSON.
         assert_eq!(h.games, 2);
         assert_eq!((h.solo_games, h.duos_games), (1, 1));
-        assert_eq!(h.bad_lines, 1);
-        assert_eq!(h.combats.len(), 2);
+        assert_eq!(h.bad_lines, 2);
+        assert_eq!(h.combats.len(), 3);
         assert_eq!(h.solo_rounds_skipped, 1);
         assert_eq!((h.duos_rounds, h.duos_rounds_complete), (1, 1));
         let c = &h.combats[0];
@@ -570,15 +600,22 @@ mod tests {
             trials: 500,
             ..Options::default()
         };
-        let scored = run(&h, &opts);
+        let run = run(&h, &opts);
+        let scored = &run.scored;
         assert_eq!(scored.len(), 2);
+        // Round 4 has a minion with no health left: counted, not dropped.
+        assert_eq!(run.rejected.values().sum::<u32>(), 1);
         // A 3/3 Divine Shield against a 1/1: certain win.
         assert_eq!(scored[0].prediction.won, 1.0);
         assert_eq!(scored[0].class, Class::Exact);
         assert_eq!(scored[1].class, Class::NotModelled);
-        let text = render(&h, &scored, &opts);
+        let text = render(&h, &run, &opts);
         assert!(text.contains("| exact | 1 | 100% |"), "{text}");
         assert!(text.contains("`SYNTH_UNKNOWN` 1"), "{text}");
+        assert!(
+            text.contains("not scored: 1 (minion 0 has no health left)"),
+            "{text}"
+        );
         assert!(!text.contains("SYNTH_HERO"), "hero ids are not printed");
     }
 }

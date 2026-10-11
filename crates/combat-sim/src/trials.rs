@@ -3,9 +3,9 @@
 
 use std::collections::BTreeMap;
 
-use crate::cards::{self, Fidelity, Trigger};
+use crate::cards::{self, Action, Fidelity, Trigger};
 use crate::combat::{play, CombatResult, Prepared};
-use crate::model::{BoardError, Keywords, Warband};
+use crate::model::{BoardError, Keywords, Tribes, Warband};
 use crate::rng::Rng;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -62,12 +62,21 @@ impl Coverage {
                     }
                 }
             }
-            if m.keywords.contains(Keywords::REBORN)
-                && m.base.is_none()
-                && !cov.approximate.iter().any(|(c, _)| c == id)
-            {
-                cov.approximate
-                    .push((id.clone(), "comes back with Reborn; card stats unknown"));
+        }
+        for band in [player, opponent] {
+            let grants = reborn_grants(band);
+            for m in &band.minions {
+                let may_reborn = m.keywords.contains(Keywords::REBORN)
+                    || grants.iter().any(|t| *t == Tribes::NONE || m.tribes.is(*t));
+                if may_reborn
+                    && m.base.is_none()
+                    && !cov.approximate.iter().any(|(c, _)| *c == m.card_id)
+                {
+                    cov.approximate.push((
+                        m.card_id.clone(),
+                        "may come back with Reborn; card stats unknown",
+                    ));
+                }
             }
         }
         cov
@@ -76,6 +85,34 @@ impl Coverage {
     pub fn is_exact(&self) -> bool {
         self.not_modelled.is_empty() && self.approximate.is_empty()
     }
+}
+
+/// Tribes a card on this warband can give Reborn to in combat.
+fn reborn_grants(band: &Warband) -> Vec<Tribes> {
+    let mut out = Vec::new();
+    for m in &band.minions {
+        let Some(rules) = cards::rules(&m.card_id) else {
+            continue;
+        };
+        for t in rules.triggers {
+            let actions: &[Action] = match t {
+                Trigger::Deathrattle(a)
+                | Trigger::Rally(a)
+                | Trigger::Avenge(_, a)
+                | Trigger::StartOfCombat(a) => a,
+                Trigger::FriendlyAttacks { actions, .. } => actions,
+                _ => &[],
+            };
+            for a in actions {
+                if let Action::GiveKeyword { keyword, tribe, .. } = a {
+                    if keyword.contains(Keywords::REBORN) {
+                        out.push(*tribe);
+                    }
+                }
+            }
+        }
+    }
+    out
 }
 
 fn push_unique(list: &mut Vec<String>, id: String) {

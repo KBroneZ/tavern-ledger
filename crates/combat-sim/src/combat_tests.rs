@@ -121,22 +121,136 @@ fn divine_shield_absorbs_one_hit() {
     always(&odds(vec![shielded], vec![plain(1, 1)]), CombatResult::Won);
 }
 
+/// Runs `f` on a fresh combat between the two boards (uids: the player's
+/// minions from 1, then the opponent's).
+fn with_combat<R>(
+    player: Vec<Minion>,
+    opponent: Vec<Minion>,
+    f: impl FnOnce(&mut Combat) -> R,
+) -> R {
+    let p = Prepared::new(&band(player), &band(opponent), false);
+    let mut rng = Rng::new(21);
+    let mut c = Combat {
+        p: &p,
+        rng: &mut rng,
+        sides: [
+            SideState {
+                units: p.start[0].clone(),
+                next: 0,
+            },
+            SideState {
+                units: p.start[1].clone(),
+                next: 0,
+            },
+        ],
+        next_uid: 100,
+    };
+    f(&mut c)
+}
+
+fn healths(c: &Combat, side: usize) -> Vec<i32> {
+    c.sides[side].units.iter().map(|u| u.health).collect()
+}
+
 #[test]
 fn taunt_must_be_attacked_first() {
-    // Opponent: a 1/1 Taunt and a 10/10. Player's 1/10 must hit the Taunt
-    // first, then trade blows with the 10/10 and lose.
-    let opp = vec![plain(1, 1).with(Keywords::TAUNT), plain(10, 10)];
-    let o = odds(vec![plain(1, 10)], opp);
-    always(&o, CombatResult::Lost);
+    let opp = vec![plain(0, 5), plain(0, 5).with(Keywords::TAUNT), plain(0, 5)];
+    with_combat(vec![plain(1, 1)], opp, |c| {
+        for _ in 0..30 {
+            assert_eq!(c.choose_target(1), Some(3));
+        }
+    });
 }
 
 #[test]
 fn stealth_is_not_targeted_while_others_are_open() {
-    // Player's 2/3 attacks first (more minions? no: equal). Opponent: a
-    // Stealthed 0/1 and an open 0/1, both unable to attack. Whatever happens
-    // the player wins, and it never needs more than two swings.
     let opp = vec![plain(0, 1).with(Keywords::STEALTH), plain(0, 1)];
-    always(&odds(vec![plain(2, 3)], opp), CombatResult::Won);
+    with_combat(vec![plain(1, 1)], opp.clone(), |c| {
+        for _ in 0..30 {
+            assert_eq!(c.choose_target(1), Some(3));
+        }
+    });
+    // All Stealthed: any of them.
+    let hidden = vec![plain(0, 1).with(Keywords::STEALTH); 2];
+    with_combat(vec![plain(1, 1)], hidden, |c| {
+        let picks: std::collections::HashSet<_> = (0..30).map(|_| c.choose_target(1)).collect();
+        assert_eq!(picks.len(), 2);
+    });
+}
+
+#[test]
+fn windfury_attacks_twice_in_one_turn_and_mega_windfury_four_times() {
+    let opp = || vec![plain(0, 1); 5];
+    for (kw, left) in [
+        (Keywords::NONE, 4),
+        (Keywords::WINDFURY, 3),
+        (Keywords::MEGA_WINDFURY, 1),
+    ] {
+        with_combat(vec![plain(1, 50).with(kw)], opp(), |c| {
+            assert!(c.attack_turn(0));
+            assert_eq!(c.sides[1].units.len(), left, "{kw:?}");
+        });
+    }
+}
+
+#[test]
+fn cleave_hits_the_target_and_its_neighbours() {
+    // The Taunt in the middle is the target; both neighbours take 3 too.
+    let collector = Minion::new("BG26_817", 3, 9).tier(4);
+    let opp = vec![
+        plain(0, 5),
+        plain(0, 5).with(Keywords::TAUNT),
+        plain(0, 5),
+        plain(0, 5),
+    ];
+    with_combat(vec![collector], opp, |c| {
+        c.swing(0, 1);
+        assert_eq!(healths(c, 1), [2, 2, 2, 5]);
+    });
+    // A plain minion hits only the target.
+    let opp = vec![plain(0, 5), plain(0, 5).with(Keywords::TAUNT), plain(0, 5)];
+    with_combat(vec![plain(3, 9)], opp, |c| {
+        c.swing(0, 1);
+        assert_eq!(healths(c, 1), [5, 2, 5]);
+    });
+}
+
+#[test]
+fn a_token_already_on_the_board_is_still_summoned_with_its_own_stats() {
+    // The opponent has a Skeleton with unknown card facts; the player's
+    // Bonehead must still summon two 1/1 Skeletons.
+    let bonehead = Minion::new("BG28_300", 1, 1);
+    let skeleton = Minion::new("BG_ICC_026t", 1, 1);
+    with_combat(vec![bonehead], vec![skeleton], |c| {
+        c.sides[0].units[0].health = 0;
+        c.process_deaths(0);
+        let stats: Vec<(i32, i32)> = c.sides[0]
+            .units
+            .iter()
+            .map(|u| (u.attack, u.health))
+            .collect();
+        assert_eq!(stats, [(1, 1), (1, 1)]);
+    });
+}
+
+#[test]
+fn huge_stats_saturate_instead_of_overflowing() {
+    let big = Minion::new("BG36_102_G", i32::MAX - 1, 10).tier(5);
+    with_combat(vec![big], vec![plain(0, 5), plain(0, 5)], |c| {
+        c.swing(0, 1);
+        assert!(c.sides[1].units.is_empty());
+    });
+}
+
+#[test]
+fn a_card_that_gives_reborn_flags_minions_without_card_stats() {
+    let mummifier = Minion::new("BG28_309", 5, 2).tribe(Tribes::UNDEAD);
+    let undead = Minion::new("BG_ICC_026t", 1, 1).tribe(Tribes::UNDEAD);
+    let cov = crate::trials::Coverage::of(&band(vec![mummifier, undead]), &band(vec![]), false);
+    assert!(
+        cov.approximate.iter().any(|(id, _)| id == "BG_ICC_026t"),
+        "{cov:?}"
+    );
 }
 
 #[test]
@@ -159,26 +273,6 @@ fn venomous_is_used_up_but_poisonous_is_not() {
     assert_eq!(venom.won, 0, "{venom:?}");
     let poison = odds(vec![plain(1, 10).with(Keywords::POISONOUS)], opp());
     always(&poison, CombatResult::Won);
-}
-
-#[test]
-fn windfury_attacks_twice_in_a_row() {
-    // The 1/5 Windfury goes first (more minions) and kills both 1/1s in its
-    // first turn; the 0/1 partner is never needed.
-    let o = odds(
-        vec![plain(1, 5).with(Keywords::WINDFURY), plain(0, 1)],
-        vec![plain(1, 1)],
-    );
-    always(&o, CombatResult::Won);
-    let o = odds(
-        vec![
-            plain(1, 5).with(Keywords::WINDFURY),
-            plain(0, 1),
-            plain(0, 1),
-        ],
-        vec![plain(1, 1), plain(1, 1)],
-    );
-    always(&o, CombatResult::Won);
 }
 
 #[test]
@@ -277,19 +371,6 @@ fn titus_makes_deathrattles_trigger_again() {
         .map(|u| c.p.cards[u.card as usize].id.as_str())
         .collect();
     assert_eq!(ids, ["BG_BOT_312t", "BG_BOT_312t", "BG25_354"]);
-}
-
-#[test]
-fn cleave_hits_the_target_and_its_neighbours() {
-    // Blade Collector 3/9 against three 1/3s: every swing kills up to three.
-    let collector = Minion::new("BG26_817", 3, 9).tier(4);
-    let o = odds(
-        vec![collector, plain(0, 1), plain(0, 1)],
-        vec![plain(1, 3), plain(1, 3), plain(1, 3)],
-    );
-    // One swing kills all three only when it hits the middle one; it always
-    // wins either way (the 1/3s cannot get through 9 Health).
-    always(&o, CombatResult::Won);
 }
 
 #[test]

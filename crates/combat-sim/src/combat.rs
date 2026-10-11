@@ -43,6 +43,10 @@ pub(crate) struct CardInfo {
 #[derive(Clone, Debug)]
 pub(crate) struct Prepared {
     pub cards: Vec<CardInfo>,
+    /// Token id -> its own entry in `cards`, with the printed facts from
+    /// `cards::TOKENS`, apart from any board minion with the same id (whose
+    /// facts may be unknown).
+    pub tokens: Vec<(&'static str, u16)>,
     pub start: [Vec<Unit>; 2],
     pub tavern_tier: [Option<u8>; 2],
     pub start_of_combat: bool,
@@ -69,22 +73,28 @@ impl Prepared {
             }
         }
         // Tokens any of these cards can summon, and what those summon.
+        let mut tokens: Vec<(&'static str, u16)> = Vec::new();
         let mut i = 0;
         while i < cards.len() {
             for t in summoned_tokens(cards[i].triggers) {
-                if let Some(token) = cards::token(t) {
-                    intern(&mut cards, token.id, || CardInfo {
-                        id: token.id.to_string(),
-                        triggers: cards::rules(token.id).map(|r| r.triggers).unwrap_or(&[]),
-                        tier: Some(token.tier),
-                        tribes: token.tribes,
-                        base: Some(BaseCard {
-                            attack: token.attack,
-                            health: token.health,
-                            keywords: token.keywords,
-                        }),
-                    });
+                let Some(token) = cards::token(t) else {
+                    continue;
+                };
+                if tokens.iter().any(|(id, _)| *id == token.id) {
+                    continue;
                 }
+                cards.push(CardInfo {
+                    id: token.id.to_string(),
+                    triggers: cards::rules(token.id).map(|r| r.triggers).unwrap_or(&[]),
+                    tier: Some(token.tier),
+                    tribes: token.tribes,
+                    base: Some(BaseCard {
+                        attack: token.attack,
+                        health: token.health,
+                        keywords: token.keywords,
+                    }),
+                });
+                tokens.push((token.id, (cards.len() - 1) as u16));
             }
             i += 1;
         }
@@ -99,6 +109,7 @@ impl Prepared {
         }
         Prepared {
             cards,
+            tokens,
             start,
             tavern_tier: [player.tavern_tier, opponent.tavern_tier],
             start_of_combat,
@@ -473,7 +484,7 @@ impl Combat<'_> {
                 .collect();
             if !open.is_empty() {
                 let n = open[self.rng.below(open.len())];
-                self.damage(foe, n, a_atk - t_health, Keywords::NONE, uid);
+                self.damage(foe, n, a_atk.saturating_sub(t_health), Keywords::NONE, uid);
             }
         }
         for t in a_triggers {
@@ -481,7 +492,7 @@ impl Combat<'_> {
                 if attacker_alive {
                     let atk = self.unit(side, uid).map_or(0, |u| u.attack);
                     if let Some(h) = self.highest_health(foe) {
-                        self.damage(foe, h, atk * times, Keywords::NONE, uid);
+                        self.damage(foe, h, atk.saturating_mul(*times), Keywords::NONE, uid);
                     }
                 }
             }
@@ -566,7 +577,7 @@ impl Combat<'_> {
             u.kw = u.kw.without(Keywords::DIVINE_SHIELD);
             return false;
         }
-        u.health -= amount;
+        u.health = u.health.saturating_sub(amount);
         let poisonous = source.contains(Keywords::POISONOUS);
         let venomous = source.contains(Keywords::VENOMOUS);
         if (poisonous || venomous) && u.health > 0 {
@@ -586,8 +597,8 @@ impl Combat<'_> {
         let Some(u) = self.unit_mut(side, uid) else {
             return;
         };
-        u.attack += attack;
-        u.health += health;
+        u.attack = u.attack.saturating_add(attack);
+        u.health = u.health.saturating_add(health);
         let (atk, done, card) = (u.attack, u.shield_done, u.card);
         if done {
             return;
@@ -707,7 +718,10 @@ impl Combat<'_> {
                 let (Some(uid), Some((foe, t))) = (me, target) else {
                     return;
                 };
-                let gain = self.unit(foe, t).map_or(0, |u| u.attack) * times;
+                let gain = self
+                    .unit(foe, t)
+                    .map_or(0, |u| u.attack)
+                    .saturating_mul(times);
                 self.buff(side, uid, gain, 0);
             }
             Action::StripTarget(k) => {
@@ -729,10 +743,13 @@ impl Combat<'_> {
     }
 
     fn summon(&mut self, side: usize, src: Source, token: &str, count: u8) {
-        let Some(card) = self.p.cards.iter().position(|c| c.id == token) else {
+        // Every token a card can summon is entered in `Prepared::new`, with
+        // its printed facts; a test in `cards` checks the token table is complete.
+        let Some(&(_, card)) = self.p.tokens.iter().find(|(id, _)| *id == token) else {
+            debug_assert!(false, "token {token} was not prepared");
             return;
         };
-        let Some(base) = self.p.cards[card].base else {
+        let Some(base) = self.p.cards[card as usize].base else {
             return;
         };
         let at = match src {
@@ -740,7 +757,7 @@ impl Combat<'_> {
             Source::Dead { anchor, .. } => self.anchor_pos(side, anchor),
         };
         for k in 0..usize::from(count) {
-            let unit = self.fresh(card as u16, base.attack, base.health, base.keywords);
+            let unit = self.fresh(card, base.attack, base.health, base.keywords);
             if !self.sides[side].insert(at + k, unit) {
                 break;
             }
