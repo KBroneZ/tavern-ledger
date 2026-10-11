@@ -118,13 +118,16 @@ stable
 security definer
 set search_path = ''
 as $$
+  -- Each spelling's forms once (materialized: otherwise the planner runs them
+  -- inside the join, once per listed word), then matched against the list.
+  with forms as materialized (
+    select regexp_replace(v.n, '[ _.-]+', '', 'g') as joined,
+      regexp_split_to_array(v.n, '[ _.-]+') as words
+    from unnest(private.name_spellings(p_name)) as v(n)
+  )
   select p_name is null or not exists (
     select 1
-    from unnest(private.name_spellings(p_name)) as v(n)
-    cross join lateral (
-      select regexp_replace(v.n, '[ _.-]+', '', 'g') as joined,
-        regexp_split_to_array(v.n, '[ _.-]+') as words
-    ) f
+    from forms f
     join private.name_blocklist b on case b.match
       when 'part' then strpos(f.joined, b.word) > 0
       else b.word = any (f.words) or b.word = f.joined
@@ -393,7 +396,9 @@ revoke all on function private.refresh_leaderboards() from public, anon, authent
 -- once (the reads below also
 -- check it, so this only keeps the stored copy as small as what is shown).
 -- Rows a running rebuild holds are skipped, never waited for: that rebuild
--- deletes them itself, or its last step drops the profile's new rows.
+-- deletes them itself, and its swap reads the profiles afresh. Only rows it
+-- inserted from an earlier look at the profiles stay stored until the next
+-- rebuild, hidden by the reads.
 create function private.leaderboard_forget_private()
 returns trigger
 language plpgsql
@@ -454,17 +459,22 @@ begin
     raise exception 'leaderboard: period is 7d, 30d or all' using errcode = '22023';
   end if;
   return query
-  -- Each player on these boards is checked once (public, named, name allowed).
-  with shown as materialized (
-    select p.user_id as id, p.display_name as name
-    from public.profiles p
-    where p.user_id in (
-        select r.user_id from private.leaderboard_rows r
-        where r.mode = p_mode and r.period = p_period
-      )
-      and p.is_public
-      and p.display_name is not null
-      and private.display_name_allowed(p.display_name)
+  -- Each player on these boards is checked once (public, named, name allowed):
+  -- the players first, then the name check on their rows only.
+  with ids as materialized (
+    select distinct r.user_id as id
+    from private.leaderboard_rows r
+    where r.mode = p_mode and r.period = p_period
+  ),
+  checked as materialized (
+    select p.user_id as id, p.display_name as name,
+      private.display_name_allowed(p.display_name) as allowed
+    from ids
+    join public.profiles p on p.user_id = ids.id
+    where p.is_public and p.display_name is not null
+  ),
+  shown as (
+    select c.id, c.name from checked c where c.allowed
   )
   select x.board, x.standing, x.user_id, x.name, x.hero, x.value, x.games
   from (
