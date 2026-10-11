@@ -2,11 +2,16 @@
 // One game in full (T-504): /game/?u=<user id>&s=<session>&g=<index>. The
 // owner, or anyone when the profile is public; the game's data comes from
 // the browser, so the page itself holds none and stays out of search engines.
-import Base from "../layouts/Base.astro";
-import AccountsClosed from "../components/AccountsClosed.astro";
-import GameViewer from "../components/game/GameViewer.astro";
-import { readConfig } from "../lib/config.ts";
-import { g } from "../lib/game/strings.ts";
+import Base from "../../layouts/Base.astro";
+import AccountsClosed from "../../components/AccountsClosed.astro";
+import GameViewer from "../../components/game/GameViewer.astro";
+import { readConfig } from "../../lib/config.ts";
+import { g } from "../../lib/game/strings.ts";
+import { langPaths, setLang } from "../../lib/i18n.ts";
+
+export const getStaticPaths = langPaths;
+// Every string below is drawn in the page's language (T-508).
+setLang(Astro.props.lang);
 
 // With accounts closed the page shows a notice instead: no script.
 const accountsOpen = readConfig(import.meta.env) !== null;

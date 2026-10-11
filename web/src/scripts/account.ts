@@ -1,3 +1,7 @@
+// First: the page's language, before any module draws text (T-508).
+import "../lib/i18n/boot.ts";
+import { at } from "../lib/account/strings.ts";
+import { href } from "../lib/i18n.ts";
 import type { User } from "@supabase/supabase-js";
 import {
   deleteAccount,
@@ -62,7 +66,7 @@ async function setUpProfile(user: User): Promise<void> {
     for (const el of form.querySelectorAll<HTMLInputElement | HTMLButtonElement>("input, button")) {
       el.disabled = true;
     }
-    say(message, "Could not load your profile. Reload the page to try again.", "error");
+    say(message, at("account.profile.loadFailed"), "error");
     return;
   }
   form.addEventListener("submit", (event) => {
@@ -74,7 +78,7 @@ async function setUpProfile(user: User): Promise<void> {
       return;
     }
     void busy(form.querySelector("button") as HTMLButtonElement, async () => {
-      say(message, "Saving…");
+      say(message, at("account.saving"));
       const error = await saveProfile(supabase, user.id, {
         displayName: checked.value,
         isPublic: isPublic.checked,
@@ -85,7 +89,7 @@ async function setUpProfile(user: User): Promise<void> {
       }
       name.value = checked.value ?? "";
       setPublicLink(user.id, isPublic.checked);
-      say(message, "Saved.", "ok");
+      say(message, at("account.saved"), "ok");
     });
   });
 }
@@ -105,23 +109,23 @@ async function setUpCommunity(user: User): Promise<void> {
     for (const el of form.querySelectorAll<HTMLInputElement | HTMLButtonElement>("input, button")) {
       el.disabled = true;
     }
-    say(message, "Could not load this setting. Reload the page to try again.", "error");
+    say(message, at("account.setting.loadFailed"), "error");
     return;
   }
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     const on = box.checked;
     void busy(form.querySelector("button") as HTMLButtonElement, async () => {
-      say(message, "Saving…");
+      say(message, at("account.saving"));
       const error = await saveCommunityConsent(supabase, on);
       if (error) {
         // Show the choice the server last confirmed, never the one that failed.
         box.checked = saved;
-        say(message, `${error} Your setting is unchanged.`, "error");
+        say(message, at("account.community.unchanged", { error }), "error");
         return;
       }
       saved = on;
-      say(message, on ? "Saved. Your games count from the next daily update." : "Saved. Your games are out from the next daily update.", "ok");
+      say(message, on ? at("account.community.savedOn") : at("account.community.savedOff"), "ok");
     });
   });
 }
@@ -140,13 +144,13 @@ function setUpExport(): void {
   const message = byId("export-message");
   button.addEventListener("click", () => {
     void busy(button, async () => {
-      say(message, "Preparing your file…");
+      say(message, at("account.export.preparing"));
       try {
         const data = await exportAll(supabase);
         download(exportFileName(new Date()), JSON.stringify(data, null, 2));
-        say(message, "Downloaded.", "ok");
+        say(message, at("account.export.done"), "ok");
       } catch {
-        say(message, "The export failed. Try again in a moment.", "error");
+        say(message, at("account.export.failed"), "error");
       }
     });
   });
@@ -161,19 +165,19 @@ function setUpDelete(user: User): void {
     event.preventDefault();
     clearInvalid(form);
     if (!isConfirmed(field(form, "confirm").value)) {
-      failField(field(form, "confirm"), message, "Type the phrase exactly to confirm.");
+      failField(field(form, "confirm"), message, at("account.delete.typeExactly"));
       return;
     }
     void busy(form.querySelector("button") as HTMLButtonElement, async () => {
       if (!reauth.hidden) {
-        say(message, "Checking your password…");
+        say(message, at("account.delete.checking"));
         const error = await signIn(supabase, user.email ?? "", password.value);
         if (error) {
           failField(password, message, error);
           return;
         }
       }
-      say(message, "Deleting…");
+      say(message, at("account.delete.deleting"));
       const outcome = await deleteAccount(supabase, config);
       password.value = "";
       switch (outcome.kind) {
@@ -184,7 +188,7 @@ function setUpDelete(user: User): void {
         case "reauthenticate":
           show(reauth, true);
           password.focus();
-          say(message, "Enter your password, then press Delete my account again.", "error");
+          say(message, at("account.delete.needPassword"), "error");
           return;
         case "signed-out":
           await signedOut(true);
@@ -208,7 +212,7 @@ function setUpSignOut(): void {
   button.addEventListener("click", () => {
     void busy(button, async () => {
       await supabase.auth.signOut();
-      location.assign("/");
+      location.assign(href("/"));
     });
   });
 }
@@ -229,7 +233,7 @@ function setUpNewPassword(user: User): void {
       return;
     }
     void busy(form.querySelector("button") as HTMLButtonElement, async () => {
-      say(message, "Saving…");
+      say(message, at("account.saving"));
       const error = await setNewPassword(supabase, password);
       if (error) {
         say(message, error, "error");
@@ -237,7 +241,7 @@ function setUpNewPassword(user: User): void {
       }
       form.reset();
       say(message, "");
-      say(pageMessage, "Your new password is saved.", "ok");
+      say(pageMessage, at("account.password.saved"), "ok");
       await showAccount(user);
       moveFocus(byId("account-heading"));
     });
@@ -260,7 +264,7 @@ async function start(): Promise<void> {
   say(pageMessage, outcome.message ?? "", outcome.tone);
   if (error || !data.user) {
     if (outcome.recovery) {
-      say(pageMessage, "This reset has expired. Ask for a new link with “Forgot password?” on the sign-in page.", "error");
+      say(pageMessage, at("auth.resetExpired"), "error");
     }
     await signedOut();
     return;
@@ -273,5 +277,5 @@ async function start(): Promise<void> {
 }
 
 start().catch(() => {
-  say(pageMessage, "Could not load your account. Reload the page to try again.", "error");
+  say(pageMessage, at("account.loadFailed"), "error");
 });

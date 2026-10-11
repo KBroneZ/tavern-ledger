@@ -1,6 +1,9 @@
 // The games list (/games/ for your own, /games/?id=… for a public profile)
 // (T-503): filters from the address, one page of games from the data API,
 // drawn in the reserved #list-body in one go (D-073).
+
+// First: the page's language, before any module draws text (T-508).
+import "../lib/i18n/boot.ts";
 import { loadGames, loadHeroes, profileAccess } from "../lib/dataApi.ts";
 import { parseFilters, type GameFilters } from "../lib/data/filters.ts";
 import { t } from "../lib/data/strings.ts";
@@ -11,6 +14,7 @@ import { stateBlock } from "../lib/view/pieces.ts";
 import { supabase } from "./client.ts";
 import { byId } from "./dom.ts";
 import { watchPictureFallback } from "../lib/data/pictures.ts";
+import { href } from "../lib/i18n.ts";
 
 // A picture that fails to load shows its local placeholder (D-074).
 watchPictureFallback(document);
@@ -74,7 +78,7 @@ async function whose(profileId: string | null): Promise<string | null> {
   const viewer = data.session?.user.id ?? null;
   if (profileId === null) {
     if (!viewer) {
-      mount(body, stateBlock({ kind: "empty", title: t("dash.signedOut"), body: "" }, h("p", {}, h("a", { href: "/signin/" }, t("dash.signedOut.link")))));
+      mount(body, stateBlock({ kind: "empty", title: t("dash.signedOut"), body: "" }, h("p", {}, h("a", { href: href("/signin/") }, t("dash.signedOut.link")))));
       form.hidden = true;
       settle(t("dash.signedOut"));
       return null;
@@ -106,7 +110,7 @@ async function start(): Promise<void> {
   if (profileId) {
     back.href = publicProfilePath(profileId);
     back.textContent = t("list.back.public");
-    byId<HTMLAnchorElement>("list-reset").href = `/games/?id=${encodeURIComponent(profileId)}`;
+    byId<HTMLAnchorElement>("list-reset").href = href(`/games/?id=${encodeURIComponent(profileId)}`);
   }
   const userId = await whose(profileId);
   if (!userId) return;

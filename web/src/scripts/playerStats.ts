@@ -2,6 +2,9 @@
 // (T-505): yours when signed in, or a public profile's with ?id=…, with the
 // dashboard's privacy (a private profile and a missing one look the same).
 // Every update lands in one go inside the reserved #pp-body (D-073).
+
+// First: the page's language, before any module draws text (T-508).
+import "../lib/i18n/boot.ts";
 import { profileAccess, type ProfileAccess } from "../lib/dataApi.ts";
 import { t } from "../lib/data/strings.ts";
 import { watchPictureFallback } from "../lib/data/pictures.ts";
@@ -13,6 +16,7 @@ import { h, mount, type VNode } from "../lib/view/node.ts";
 import { stateBlock } from "../lib/view/pieces.ts";
 import { supabase } from "./client.ts";
 import { byId, moveFocus } from "./dom.ts";
+import { href } from "../lib/i18n.ts";
 
 // A picture that fails to load shows its local placeholder (D-074).
 watchPictureFallback(document);
@@ -57,7 +61,7 @@ async function subject(): Promise<{ userId: string; profileId: string | null; ac
   const hasId = new URLSearchParams(location.search).has("id");
   if (!hasId) {
     if (!viewer) {
-      const link = h("a", { href: "/signin/" }, t("dash.signedOut.link"));
+      const link = h("a", { href: href("/signin/") }, t("dash.signedOut.link"));
       showGate(stateBlock({ kind: "empty", title: t("dash.signedOut"), body: "" }, h("p", {}, link)), t("dash.signedOut"));
       return undefined;
     }
@@ -83,7 +87,7 @@ function nameTitle(access: ProfileAccess): void {
 
 function ownerNote(access: ProfileAccess): VNode[] {
   if (access.kind !== "own-private") return [];
-  return [h("p", { class: "data-note" }, `${t("dash.private.own")} `, h("a", { href: "/account/" }, t("dash.private.own.link")))];
+  return [h("p", { class: "data-note" }, `${t("dash.private.own")} `, h("a", { href: href("/account/") }, t("dash.private.own.link")))];
 }
 
 function emptyGate(own: boolean, extra: VNode[]): void {

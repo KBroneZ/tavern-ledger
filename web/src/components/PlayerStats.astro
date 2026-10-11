@@ -6,6 +6,7 @@
 import "../styles/data.css";
 import "../styles/dash.css";
 import "../styles/player.css";
+import { href } from "../lib/i18n.ts";
 import { t } from "../lib/data/strings.ts";
 import Switch from "./data/Switch.astro";
 import DataScript from "./data/DataScript.astro";
@@ -23,7 +24,7 @@ const title = page === "heroes" ? t("player.heroes.title.own") : t("player.curio
 <div class="dash" id="pp" data-page={page} aria-busy="true">
   <header class="data-head dash-head">
     <div>
-      <p class="kicker"><a id="pp-back" href="/me/">{t("player.back.own")}</a> · <span>{kicker}</span></p>
+      <p class="kicker"><a id="pp-back" href={href("/me/")}>{t("player.back.own")}</a> · <span>{kicker}</span></p>
       <h1 id="pp-title">{title}</h1>
     </div>
     <div class="dash-switches is-off" id="pp-switches">

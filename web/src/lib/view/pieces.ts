@@ -18,7 +18,8 @@ import { FALLBACK_ATTR, type Picture, pictureFor, type PictureKind } from "../da
 import { t } from "../data/strings.ts";
 import { cls, h, s, type VNode } from "./node.ts";
 
-const DASH = t("value.none");
+// The same in every language (test/unit/i18n.test.ts), so it can be a constant.
+const DASH = "—";
 
 export function sourceMark(kind: "inferred" | "unknown"): VNode {
   return h("span", { class: `mark-src mark-${kind}` }, kind === "inferred" ? t("source.inferred") : t("source.unknown"));

@@ -2,6 +2,9 @@
 // may see what, then the panels drawn in the browser from the data API.
 // Every update lands in one go inside the reserved #dash-body, so nothing on
 // screen moves while it loads (D-073).
+
+// First: the page's language, before any module draws text (T-508).
+import "../lib/i18n/boot.ts";
 import { loadDashboard, profileAccess, type ProfileAccess } from "../lib/dataApi.ts";
 import type { Mode } from "../lib/data/format.ts";
 import { filtersQuery, DEFAULT_FILTERS } from "../lib/data/filters.ts";
@@ -14,6 +17,7 @@ import { stateBlock } from "../lib/view/pieces.ts";
 import { supabase } from "./client.ts";
 import { byId, moveFocus } from "./dom.ts";
 import { watchPictureFallback } from "../lib/data/pictures.ts";
+import { href } from "../lib/i18n.ts";
 
 // A picture that fails to load shows its local placeholder (D-074).
 watchPictureFallback(document);
@@ -44,7 +48,7 @@ function showGate(node: VNode, announce: string): void {
 
 function ownerNote(access: ProfileAccess, userId: string): VNode | null {
   if (access.kind === "own-private") {
-    return h("p", { class: "data-note" }, `${t("dash.private.own")} `, h("a", { href: "/account/" }, t("dash.private.own.link")));
+    return h("p", { class: "data-note" }, `${t("dash.private.own")} `, h("a", { href: href("/account/") }, t("dash.private.own.link")));
   }
   if (access.kind === "public" && access.own) {
     return h("p", { class: "data-note" }, `${t("dash.public.own")} `, h("a", { href: publicProfilePath(userId) }, t("dash.public.own.link")));
@@ -67,7 +71,7 @@ async function subject(): Promise<{ userId: string; access: ProfileAccess } | nu
   const viewer = await viewerId();
   if (own) {
     if (!viewer) {
-      const link = h("a", { href: "/signin/" }, t("dash.signedOut.link"));
+      const link = h("a", { href: href("/signin/") }, t("dash.signedOut.link"));
       showGate(stateBlock({ kind: "empty", title: t("dash.signedOut"), body: "" }, h("p", {}, link)), t("dash.signedOut"));
       return null;
     }
@@ -90,7 +94,7 @@ async function start(): Promise<void> {
   if (!who) return;
   const { userId, access } = who;
   const dash = await loadDashboard(supabase, userId);
-  const gamesHref = (m: Mode) => `/games/${filtersQuery({ ...DEFAULT_FILTERS, mode: m }, own ? null : userId)}`;
+  const gamesHref = (m: Mode) => href(`/games/${filtersQuery({ ...DEFAULT_FILTERS, mode: m }, own ? null : userId)}`);
   const profileId = own ? null : userId;
   const name = access.kind === "private" ? null : (access.name ?? t("dash.unnamed"));
   if (!own && name) {

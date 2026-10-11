@@ -4,24 +4,30 @@
 // and the three periods and draws every board into #lb-modes in one go.
 // With accounts closed the page shows a notice instead: no data, no script.
 // Kept out of search engines: it lists players' display names (privacy.md).
-import Base from "../layouts/Base.astro";
-import AccountsClosed from "../components/AccountsClosed.astro";
-import Switch from "../components/data/Switch.astro";
-import DataScript from "../components/data/DataScript.astro";
-import StateBlock from "../components/data/StateBlock.astro";
-import "../styles/data.css";
-import "../styles/dash.css";
-import "../styles/leaderboards.css";
-import { readConfig } from "../lib/config.ts";
-import { DEFAULT_PERIOD, PERIODS, periodName } from "../lib/leaderboards/boards.ts";
-import { lt } from "../lib/leaderboards/strings.ts";
+import Base from "../../layouts/Base.astro";
+import AccountsClosed from "../../components/AccountsClosed.astro";
+import Switch from "../../components/data/Switch.astro";
+import DataScript from "../../components/data/DataScript.astro";
+import StateBlock from "../../components/data/StateBlock.astro";
+import "../../styles/data.css";
+import "../../styles/dash.css";
+import "../../styles/leaderboards.css";
+import { readConfig } from "../../lib/config.ts";
+import { DEFAULT_PERIOD, PERIODS, periodName } from "../../lib/leaderboards/boards.ts";
+import { lt } from "../../lib/leaderboards/strings.ts";
+import { langPaths, setLang } from "../../lib/i18n.ts";
+import { st } from "../../lib/site/strings.ts";
+
+export const getStaticPaths = langPaths;
+// Every string below is drawn in the page's language (T-508).
+setLang(Astro.props.lang);
 
 const accountsOpen = readConfig(import.meta.env) !== null;
 ---
 
 <Base
-  title="Leaderboards"
-  description="Public Tavern Ledger leaderboards: players who made their profile public, ranked on their uploaded Battlegrounds games. Self-reported, no ratings."
+  title={st("meta.leaderboards.title")}
+  description={st("meta.leaderboards.description")}
   noindex
 >
   {
@@ -67,10 +73,10 @@ const accountsOpen = readConfig(import.meta.env) !== null;
           <div id="lb-about" />
         </div>
         <DataScript />
-        <script src="../scripts/leaderboards.ts" />
+        <script src="../../scripts/leaderboards.ts" />
       </div>
     ) : (
-      <AccountsClosed heading="Leaderboards" />
+      <AccountsClosed heading={st("meta.leaderboards.title")} />
     )
   }
 </Base>

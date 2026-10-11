@@ -1,4 +1,8 @@
-// Display name rules and the public profile address.
+// Display name rules and the public profile address. Messages are drawn in
+// the page's language (lib/account/strings.ts, T-508).
+
+import { at } from "./account/strings.ts";
+import { href } from "./i18n.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 // Same rule as the profiles.display_name check (letters, digits, space, _ . -),
@@ -14,10 +18,10 @@ export function checkDisplayName(raw: string): NameCheck {
   const value = raw.trim();
   if (value === "") return { ok: true, value: null };
   if ([...value].length > MAX_NAME) {
-    return { ok: false, message: `Up to ${MAX_NAME} characters.` };
+    return { ok: false, message: at("profile.maxLength", { max: MAX_NAME }) };
   }
   if (!NAME.test(value)) {
-    return { ok: false, message: "Use letters, digits, spaces, _ . or - only." };
+    return { ok: false, message: at("profile.chars") };
   }
   return { ok: true, value };
 }
@@ -29,22 +33,22 @@ export function parseProfileId(search: string): string | null {
 }
 
 export function publicProfilePath(userId: string): string {
-  return `/profile/?id=${encodeURIComponent(userId)}`;
+  return href(`/profile/?id=${encodeURIComponent(userId)}`);
 }
 
 /** A PostgREST error as the profile form shows it. */
 export function profileErrorMessage(e: { code?: string; message?: string }): string {
   // The server's word list (D-077) refused the name; the list stays on the server.
   if (e.code === "23514" && e.message === NAME_NOT_ALLOWED) {
-    return "This name is not allowed. Choose another one: names show on public pages and leaderboards.";
+    return at("profile.notAllowed");
   }
-  if (e.code === "23514") return "Use 1-32 letters, digits, spaces, _ . or - only.";
-  if (e.code === "PGRST301" || e.code === "42501") return "Your session ended. Sign in again.";
-  return "Could not save. Try again in a moment.";
+  if (e.code === "23514") return at("profile.charsRange");
+  if (e.code === "PGRST301" || e.code === "42501") return at("profile.sessionEnded");
+  return at("profile.saveFailed");
 }
 
 /** A failed save of the community stats switch, as the account page shows it. */
 export function communityErrorMessage(e: { code?: string }): string {
-  if (e.code === "PGRST301" || e.code === "42501") return "Your session ended. Sign in again.";
-  return "Could not save. Try again in a moment.";
+  if (e.code === "PGRST301" || e.code === "42501") return at("profile.sessionEnded");
+  return at("profile.saveFailed");
 }

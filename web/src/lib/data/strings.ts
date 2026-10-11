@@ -2,6 +2,9 @@
 // Spanish beside it without hunting through components. Placeholders are
 // {name}; t() refuses a missing one rather than print "{total}".
 
+import { makeT } from "../i18n.ts";
+import { ES } from "./strings.es.ts";
+
 export const STRINGS = {
   "value.none": "—",
   "unit.games.one": "game",
@@ -277,14 +280,6 @@ export const STRINGS = {
 } as const;
 
 export type StringKey = keyof typeof STRINGS;
-export type Vars = Record<string, string | number>;
 
-/** The string for a key with its placeholders filled. */
-export function t(key: StringKey, vars: Vars = {}): string {
-  const text: string | undefined = STRINGS[key];
-  if (text === undefined) throw new Error(`no string ${key}`);
-  return text.replaceAll(/\{([a-z]+)\}/g, (_, name: string) => {
-    if (!(name in vars)) throw new Error(`string ${key} needs {${name}}`);
-    return String(vars[name]);
-  });
-}
+/** The string for a key in the page's language, with its placeholders filled. */
+export const t = makeT<StringKey>({ name: "data", en: STRINGS, es: ES });

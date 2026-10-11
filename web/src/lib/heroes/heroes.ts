@@ -8,6 +8,7 @@ import { count, DataError, heroRow, place, type HeroRow } from "../data/rows.ts"
 import { t } from "../data/strings.ts";
 import { h, type VNode } from "../view/node.ts";
 import { unknownValue, type Cell, type Column } from "../view/pieces.ts";
+import { href } from "../i18n.ts";
 
 /** Below this many games, an average or a rate is marked "few games". */
 export const MIN_GAMES = 5;
@@ -111,7 +112,7 @@ export function pickCell(r: HeroStat): Cell {
 
 /** The games list filtered by this hero and mode (the owner's, or the public profile's). */
 export function heroGamesHref(hero: string | null, m: Mode, profileId: string | null): string | undefined {
-  return hero === null ? undefined : `/games/${filtersQuery({ ...DEFAULT_FILTERS, mode: m, hero }, profileId)}`;
+  return hero === null ? undefined : href(`/games/${filtersQuery({ ...DEFAULT_FILTERS, mode: m, hero }, profileId)}`);
 }
 
 // Heroes go by card id until the card data reaches the site (D-074, T-504).
@@ -132,7 +133,8 @@ export function heroStatCells(r: HeroStat, profileId: string | null): Cell[] {
   ];
 }
 
-export const OFFERED_COLUMNS: Column[] = [{ label: t("heroes.col.hero") }, { label: t("hstats.col.offered"), numeric: true }];
+/** The offered-heroes table's columns, in the page's language. */
+export const offeredColumns = (): Column[] => [{ label: t("heroes.col.hero") }, { label: t("hstats.col.offered"), numeric: true }];
 
 export function offeredCells(r: HeroStat): Cell[] {
   return [{ hero: r.hero, name: heroName(r.hero) }, compact(r.offeredGames)];
@@ -148,5 +150,5 @@ export function statsPagePath(page: StatsPage, m: Mode, profileId: string | null
   if (profileId) q.set("id", profileId);
   if (m === "duos") q.set("mode", "duos");
   const text = q.toString();
-  return text ? `${STATS_PATHS[page]}?${text}` : STATS_PATHS[page];
+  return href(text ? `${STATS_PATHS[page]}?${text}` : STATS_PATHS[page]);
 }

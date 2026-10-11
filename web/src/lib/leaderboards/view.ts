@@ -25,6 +25,7 @@ import {
   type Period,
 } from "./boards.ts";
 import { lt } from "./strings.ts";
+import { href } from "../i18n.ts";
 
 const MODES: readonly Mode[] = ["solo", "duos"];
 
@@ -132,6 +133,6 @@ export function aboutFold(): VNode {
     h("p", {}, lt("about.who")),
     h("p", {}, lt("about.min", { min: MIN_GAMES, hero: MIN_HERO_GAMES })),
     h("p", {}, lt("about.refresh")),
-    h("p", {}, lt("about.data"), " ", h("a", { href: "/privacy/#public-profiles-and-leaderboards" }, lt("about.privacy")), "."),
+    h("p", {}, lt("about.data"), " ", h("a", { href: href("/privacy/#public-profiles-and-leaderboards") }, lt("about.privacy")), "."),
   );
 }
