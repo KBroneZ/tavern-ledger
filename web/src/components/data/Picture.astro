@@ -1,8 +1,11 @@
 ---
 // A hero portrait or a card picture, cropped to the art in a circle (no
-// white edges, D-062/D-065). The source is one setting (lib/data/pictures.ts);
-// width and height are fixed so nothing moves when it loads.
-import { pictureFor, type PictureKind } from "../../lib/data/pictures.ts";
+// white edges, D-062/D-065). Built pages only show made-up data, so this
+// piece always uses the local placeholders (no built page loads anything from
+// another origin); real games draw their pictures in the browser from
+// PICTURE_SOURCE (lib/data/pictures.ts). Width and height are fixed so nothing
+// moves when it loads.
+import { pictureFor, PLACEHOLDER_SOURCE, type PictureKind } from "../../lib/data/pictures.ts";
 import { t } from "../../lib/data/strings.ts";
 
 interface Props {
@@ -22,7 +25,7 @@ const { kind, id = null, name, size = 32, decorative = false } = Astro.props;
 function safePicture(cardId: string | null) {
   if (!cardId) return null;
   try {
-    return pictureFor(kind, cardId);
+    return pictureFor(kind, cardId, PLACEHOLDER_SOURCE);
   } catch {
     return null;
   }
@@ -35,6 +38,7 @@ const picture = safePicture(id);
     <span class={`pic pic-${kind}`} data-size={size}>
       <img
         src={picture.src}
+        data-fallback={picture.fallback}
         alt={decorative ? "" : name}
         width={size}
         height={size}

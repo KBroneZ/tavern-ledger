@@ -1,0 +1,29 @@
+---
+// The game viewer's frame (T-504): the heading, the Simple/Advanced switch
+// and a loading block that keeps the room the game will need, so nothing
+// moves when it arrives. The page script (lib/game/main.ts) fills it.
+import "../../styles/data.css";
+import "./game.css";
+import Switch from "../data/Switch.astro";
+import StateBlock from "../data/StateBlock.astro";
+import DataScript from "../data/DataScript.astro";
+import { g } from "../../lib/game/strings.ts";
+---
+
+<article class="gv" aria-labelledby="game-title">
+  <div class="data-head gv-head">
+    <div>
+      <p class="kicker">{g("page.kicker")}</p>
+      <h1 id="game-title" tabindex="-1">{g("page.title")}</h1>
+    </div>
+    <Switch kind="detail" />
+  </div>
+  <p class="visually-hidden" id="game-status" role="status" aria-live="polite"></p>
+  <div class="gv-body" id="game-body" aria-busy="true">
+    <StateBlock kind="loading" title={g("page.loading")} lines={10} />
+  </div>
+  <noscript><p class="state state-error">{g("page.noscript")}</p></noscript>
+</article>
+
+<DataScript />
+<script src="../../lib/game/main.ts"></script>

@@ -524,13 +524,11 @@ html,
     inset 0 -2px 0 var(--amber);
 }
 
-/* Simple by default: Advanced-only detail shows once the viewer picks it. */
-.adv {
+/* Simple by default: Advanced-only detail shows once the viewer picks it.
+   Hidden only while Advanced is off, so a shown piece keeps its own display
+   (a tile's grid, a section's gap) instead of the browser's default. */
+html:not([data-detail="advanced"]) .adv {
   display: none;
-}
-
-html[data-detail="advanced"] .adv {
-  display: revert;
 }
 
 html[data-detail="advanced"] .simple-only {
