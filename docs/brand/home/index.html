@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tavern Home Concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600..800&family=Figtree:wght@400..700&family=Fraunces:opsz,wght,SOFT@9..144,600..900,0..100&display=swap">
+<link rel="stylesheet" href="shared/tavern.css">
+<style>
+  /* Review page for T-525: a working sheet, not a hero of its own. Each
+     concept runs live in a frame at desktop (scaled) and phone width. */
+  :root {
+    --sheet: #17110d;
+    --sheet-line: rgb(255 228 200 / 0.12);
+    --note-bg: rgb(255 238 220 / 0.04);
+    --keep: #8fe0a8;
+    --drop: #ff9a8a;
+  }
+  body {
+    background: var(--bg-deep);
+  }
+  .wrap {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding-inline: 16px;
+  }
+  .top {
+    padding-block: clamp(28px, 5vw, 56px) 8px;
+    display: grid;
+    gap: 14px;
+  }
+  .top .kicker {
+    margin: 0;
+    font: 700 0.78rem/1 var(--display);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+  .top h1 {
+    margin: 0;
+    font-size: clamp(2.2rem, 1.4rem + 3vw, 3.6rem);
+  }
+  .top p {
+    margin: 0;
+    max-width: 68ch;
+    color: var(--dim);
+  }
+  .top strong {
+    color: var(--text);
+  }
+  .tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 18px;
+    align-items: center;
+    margin-top: 6px;
+    font-size: 0.9rem;
+    color: var(--dim);
+  }
+  .rules {
+    margin: 0;
+    padding: 14px 18px;
+    border: 1px solid var(--sheet-line);
+    border-radius: 10px;
+    background: var(--note-bg);
+    font-size: 0.92rem;
+    color: var(--dim);
+    max-width: 80ch;
+  }
+  .artifact-note {
+    margin: 0;
+    padding: 12px 16px;
+    border-left: 3px solid var(--info);
+    background: rgb(169 200 255 / 0.08);
+    color: var(--text);
+    font-size: 0.92rem;
+    max-width: 80ch;
+  }
+  section.block {
+    padding-block: clamp(30px, 4vw, 52px);
+    border-top: 1px solid var(--sheet-line);
+  }
+  section.block > header {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  section.block h2 {
+    margin: 0;
+    font: 800 clamp(1.4rem, 1.1rem + 1vw, 1.9rem)/1.1 var(--display);
+    color: var(--text);
+  }
+  section.block h2 .letter {
+    display: inline-grid;
+    place-items: center;
+    width: 1.5em;
+    height: 1.5em;
+    margin-right: 10px;
+    border-radius: 6px;
+    font-family: var(--display-serif);
+    font-weight: 900;
+    color: var(--amber-ink);
+    background: linear-gradient(180deg, var(--brass-hi), var(--brass));
+    vertical-align: 0.05em;
+  }
+  .notes {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px 22px;
+    margin: 0 0 22px;
+    font-size: 0.92rem;
+    color: var(--dim);
+  }
+  .notes div {
+    min-width: 0;
+  }
+  .notes dt {
+    margin-bottom: 4px;
+    font: 700 0.74rem/1 var(--display);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .notes .k dt { color: var(--keep); }
+  .notes .d dt { color: var(--drop); }
+  .notes .w dt { color: var(--amber-hi); }
+  .notes dd {
+    margin: 0;
+  }
+  .previews {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 20px;
+    align-items: start;
+  }
+  figure {
+    margin: 0;
+    min-width: 0;
+  }
+  figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 6px 12px;
+    margin-top: 8px;
+    font-size: 0.82rem;
+    color: var(--dim);
+  }
+  figcaption a {
+    color: var(--amber-hi);
+  }
+  .viewport {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: var(--w) / var(--h);
+    overflow: hidden;
+    border-radius: 10px;
+    background: var(--sheet);
+    box-shadow: 0 0 0 1px var(--sheet-line), 0 18px 40px rgb(0 0 0 / 0.5);
+  }
+  .viewport iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(var(--w) * 1px);
+    height: calc(var(--h) * 1px);
+    border: 0;
+    transform-origin: 0 0;
+    transform: scale(var(--s, 1));
+  }
+  .phone .viewport {
+    border-radius: 22px;
+    box-shadow: 0 0 0 6px #050302, 0 0 0 7px var(--sheet-line), 0 18px 40px rgb(0 0 0 / 0.5);
+  }
+
+  /* Button strip */
+  .strip {
+    overflow-x: auto;
+    border-radius: 12px;
+    background:
+      radial-gradient(70% 120% at 30% 0%, rgb(255 170 70 / 0.18), transparent 70%),
+      var(--grain-wood),
+      #2a170d;
+    box-shadow: inset 0 0 0 1px var(--sheet-line);
+  }
+  .strip table {
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 760px;
+    width: 100%;
+  }
+  .strip th {
+    padding: 14px 18px 4px;
+    font: 700 0.74rem/1 var(--display);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dim);
+    text-align: left;
+  }
+  .strip tbody th {
+    padding: 0 18px;
+    width: 120px;
+  }
+  .strip td {
+    padding: 22px 18px;
+  }
+  .try {
+    margin-top: 18px;
+    display: grid;
+    gap: 10px;
+  }
+  .try p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--dim);
+  }
+  .shared {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 28px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.92rem;
+    color: var(--dim);
+  }
+  .shared li {
+    min-width: 0;
+  }
+  .shared b {
+    color: var(--text);
+  }
+  @media (max-width: 860px) {
+    .notes {
+      grid-template-columns: 1fr;
+    }
+    .previews {
+      grid-template-columns: 1fr;
+    }
+    .phone {
+      max-width: 300px;
+    }
+    .shared {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <p class="kicker">Tavern Ledger · T-525 · concepts only</p>
+    <h1 class="gold">Home page concepts</h1>
+    <p>Six ways to give the home page a Hearthstone-like tavern feel, built from the two references (the framed tavern with medallions, and the barrel wall the user liked). Every concept is a working page with real text, Spanish first and English one click away, at desktop and at 400 px. <strong>Pick a letter</strong> (or a mix, such as A with D's numbers) and a later session builds it into the site.</p>
+    <p class="rules">Nothing here comes from the game: no Blizzard or Hearthstone logo (the blue swirl), no card backs, no frames or other game UI, nothing cut from game files or screenshots. Wood, iron, brass, parchment, candles, sparks and the buttons are drawn in CSS and SVG here; the medallion is our TL tankard. The only game art is hero portraits, loaded at view time from HearthstoneJSON under the Fan Content Policy (D-038, D-074) and never committed.</p>
+    <p class="artifact-note" data-artifact-only hidden>In this published copy the portraits are our own drawn silhouettes: the page's security policy does not allow HearthstoneJSON's image host. The files in <code>docs/brand/home/</code> show the real portraits.</p>
+    <div class="tools">
+      <button class="hs-btn hs-btn--small" type="button" id="all-lang"><span class="label">Show all in English</span></button>
+      <span>Each frame also has its own language button.</span>
+    </div>
+  </header>
+
+  <section class="block" aria-labelledby="h-buttons">
+    <header>
+      <h2 id="h-buttons">Buttons</h2>
+      <p class="rules">Our own Hearthstone-style buttons, drawn in CSS: <b>primary</b> (brass rim, amber enamel, a blue gem at each end, a warm glow on hover), <b>secondary</b> (dark iron plate, thin brass rim, a small amber gem) and <b>small</b> (brass pill, for the language switch and minor actions). Focus is a ring of blue magic that is never removed; pressed pushes the plate in and drops the glow. They are real links and buttons, so keyboard and touch work as usual.</p>
+    </header>
+    <div class="strip">
+      <table>
+        <thead>
+          <tr><th scope="col"><span class="skip">Variant</span></th><th scope="col">Rest</th><th scope="col">Hover</th><th scope="col">Focus</th><th scope="col">Pressed</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Primary</th>
+            <td><span class="hs-btn hs-btn--primary" aria-hidden="true"><span class="label">Enséñamelo</span></span></td>
+            <td><span class="hs-btn hs-btn--primary is-hover" aria-hidden="true"><span class="label">Enséñamelo</span></span></td>
+            <td><span class="hs-btn hs-btn--primary is-focus" aria-hidden="true"><span class="label">Enséñamelo</span></span></td>
+            <td><span class="hs-btn hs-btn--primary is-active" aria-hidden="true"><span class="label">Enséñamelo</span></span></td>
+          </tr>
+          <tr>
+            <th scope="row">Secondary</th>
+            <td><span class="hs-btn hs-btn--secondary" aria-hidden="true"><span class="label">¿Es seguro?</span></span></td>
+            <td><span class="hs-btn hs-btn--secondary is-hover" aria-hidden="true"><span class="label">¿Es seguro?</span></span></td>
+            <td><span class="hs-btn hs-btn--secondary is-focus" aria-hidden="true"><span class="label">¿Es seguro?</span></span></td>
+            <td><span class="hs-btn hs-btn--secondary is-active" aria-hidden="true"><span class="label">¿Es seguro?</span></span></td>
+          </tr>
+          <tr>
+            <th scope="row">Small</th>
+            <td><span class="hs-btn hs-btn--small" aria-hidden="true"><span class="label">English</span></span></td>
+            <td><span class="hs-btn hs-btn--small is-hover" aria-hidden="true"><span class="label">English</span></span></td>
+            <td><span class="hs-btn hs-btn--small is-focus" aria-hidden="true"><span class="label">English</span></span></td>
+            <td><span class="hs-btn hs-btn--small is-active" aria-hidden="true"><span class="label">English</span></span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="try">
+      <p>Try them: hover, tab to them, press them.</p>
+      <div class="btn-row">
+        <button class="hs-btn hs-btn--primary" type="button"><span class="label">Show me</span></button>
+        <button class="hs-btn hs-btn--secondary" type="button"><span class="label">Is it safe?</span></button>
+        <button class="hs-btn hs-btn--small" type="button"><span class="label">Español</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="h-a">
+    <header>
+      <h2 id="h-a"><span class="letter">A</span>Tavern wall</h2>
+      <dl class="notes">
+        <div class="k"><dt>Borrows</dt><dd>The second reference almost whole: a wall of barrel ends in the middle, golden sparks on the left and a cool blue glow on the right, the big gold serif headline with a dark outline, the parchment with nails at the corners, the two gem buttons. Adds the hero mosaic the user asked for, below the fold.</dd></div>
+        <div class="d"><dt>Leaves out</dt><dd>The first reference's stone and gem frame, the medallions and the card backs, and above all the blue swirl logo on them, which is Blizzard's.</dd></div>
+        <div class="w"><dt>Why</dt><dd>The closest to what the user liked, and the cheapest to build: all of it is CSS over the site's own colours.</dd></div>
+      </dl>
+    </header>
+    <div class="previews">
+      <figure class="desk"><div class="viewport" style="--w: 1280; --h: 1180"><iframe src="a-tavern-wall.html" title="Concept A at desktop width" loading="lazy"></iframe></div><figcaption><span>Desktop, 1280 px wide, scaled</span><a class="open-full" data-local-only href="a-tavern-wall.html">Open the page</a></figcaption></figure>
+      <figure class="phone"><div class="viewport" style="--w: 400; --h: 860"><iframe src="a-tavern-wall.html" title="Concept A at phone width" loading="lazy"></iframe></div><figcaption><span>Phone, 400 px</span></figcaption></figure>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="h-b">
+    <header>
+      <h2 id="h-b"><span class="letter">B</span>Wanted posters</h2>
+      <dl class="notes">
+        <div class="k"><dt>Borrows</dt><dd>Dark wood, candle light and parchment. Real hero portraits hang on the wall as "Se busca" posters, each with how many games it was seen in; the copy is a nailed notice in front.</dd></div>
+        <div class="d"><dt>Leaves out</dt><dd>Frames, medallions and card backs. The portraits are the only game art on the page, loaded when it is viewed.</dd></div>
+        <div class="w"><dt>Why</dt><dd>The portraits become the decoration. Signed out they are an example (said under the buttons); signed in they are the heroes you play most.</dd></div>
+      </dl>
+    </header>
+    <div class="previews">
+      <figure class="desk"><div class="viewport" style="--w: 1280; --h: 900"><iframe src="b-wanted-posters.html" title="Concept B at desktop width" loading="lazy"></iframe></div><figcaption><span>Desktop, 1280 px wide, scaled</span><a class="open-full" data-local-only href="b-wanted-posters.html">Open the page</a></figcaption></figure>
+      <figure class="phone"><div class="viewport" style="--w: 400; --h: 860"><iframe src="b-wanted-posters.html" title="Concept B at phone width" loading="lazy"></iframe></div><figcaption><span>Phone, 400 px: three posters</span></figcaption></figure>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="h-c">
+    <header>
+      <h2 id="h-c"><span class="letter">C</span>Lobby of eight</h2>
+      <dl class="notes">
+        <div class="k"><dt>Borrows</dt><dd>The gold headline, the warm and cool light, brass. Eight hero tokens in an arc behind the title are the eight places of a lobby, each with its place engraved in brass: the 1st lit, the top four in brass, the bottom four in iron.</dd></div>
+        <div class="d"><dt>Leaves out</dt><dd>The game's own leaderboard look and portrait frames: the tokens and plates are ours.</dd></div>
+        <div class="w"><dt>Why</dt><dd>Says "Battlegrounds" at a glance. Signed in, the arc can be your last game. On a phone the arc becomes two rows of four.</dd></div>
+      </dl>
+    </header>
+    <div class="previews">
+      <figure class="desk"><div class="viewport" style="--w: 1280; --h: 900"><iframe src="c-lobby-of-eight.html" title="Concept C at desktop width" loading="lazy"></iframe></div><figcaption><span>Desktop, 1280 px wide, scaled</span><a class="open-full" data-local-only href="c-lobby-of-eight.html">Open the page</a></figcaption></figure>
+      <figure class="phone"><div class="viewport" style="--w: 400; --h: 860"><iframe src="c-lobby-of-eight.html" title="Concept C at phone width" loading="lazy"></iframe></div><figcaption><span>Phone, 400 px: two rows of four</span></figcaption></figure>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="h-d">
+    <header>
+      <h2 id="h-d"><span class="letter">D</span>Notice board</h2>
+      <dl class="notes">
+        <div class="k"><dt>Borrows</dt><dd>Wood, parchment, brass tacks. The wall is the tavern's notice board, with notes for the numbers the site keeps: games kept, top 4 share, most played hero with its portrait. Signed out it is stamped "Ejemplo".</dd></div>
+        <div class="d"><dt>Leaves out</dt><dd>The frame, the medallions, the barrels. The least decorated of the six.</dd></div>
+        <div class="w"><dt>Why</dt><dd>The home page shows what the site does instead of saying it. Signed in, the notes carry your own numbers, each with the games behind it.</dd></div>
+      </dl>
+    </header>
+    <div class="previews">
+      <figure class="desk"><div class="viewport" style="--w: 1280; --h: 900"><iframe src="d-notice-board.html" title="Concept D at desktop width" loading="lazy"></iframe></div><figcaption><span>Desktop, 1280 px wide, scaled</span><a class="open-full" data-local-only href="d-notice-board.html">Open the page</a></figcaption></figure>
+      <figure class="phone"><div class="viewport" style="--w: 400; --h: 860"><iframe src="d-notice-board.html" title="Concept D at phone width" loading="lazy"></iframe></div><figcaption><span>Phone, 400 px</span></figcaption></figure>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="h-e">
+    <header>
+      <h2 id="h-e"><span class="letter">E</span>Tabletop</h2>
+      <dl class="notes">
+        <div class="k"><dt>Borrows</dt><dd>Tankards, coins and parchment, seen from above. The copy is written in an open ledger; its other page lists the last games; hero portraits lie on the table as tokens.</dd></div>
+        <div class="d"><dt>Leaves out</dt><dd>The card backs the first reference had on its table, and every frame.</dd></div>
+        <div class="w"><dt>Why</dt><dd>It is the name: a tavern and a ledger. The ledger page is a natural place for real rows once you sign in.</dd></div>
+      </dl>
+    </header>
+    <div class="previews">
+      <figure class="desk"><div class="viewport" style="--w: 1280; --h: 900"><iframe src="e-tabletop.html" title="Concept E at desktop width" loading="lazy"></iframe></div><figcaption><span>Desktop, 1280 px wide, scaled</span><a class="open-full" data-local-only href="e-tabletop.html">Open the page</a></figcaption></figure>
+      <figure class="phone"><div class="viewport" style="--w: 400; --h: 860"><iframe src="e-tabletop.html" title="Concept E at phone width" loading="lazy"></iframe></div><figcaption><span>Phone, 400 px: one page</span></figcaption></figure>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="h-f">
+    <header>
+      <h2 id="h-f"><span class="letter">F</span>Tavern sign <small>(our own idea)</small></h2>
+      <dl class="notes">
+        <div class="k"><dt>Borrows</dt><dd>Warm light, iron and the gold headline. Outside the tavern, a carved sign hangs from an iron bracket on the stone wall with our tankard on it and the headline in gold leaf; the copy is a notice nailed by the door. The sign sways a little and stops with reduced motion.</dd></div>
+        <div class="d"><dt>Leaves out</dt><dd>Everything from the game, portraits included: the hero mosaic from A could follow below it.</dd></div>
+        <div class="w"><dt>Why</dt><dd>Our own mark takes the place the medallions had in the reference, so the brand carries the page.</dd></div>
+      </dl>
+    </header>
+    <div class="previews">
+      <figure class="desk"><div class="viewport" style="--w: 1280; --h: 860"><iframe src="f-tavern-sign.html" title="Concept F at desktop width" loading="lazy"></iframe></div><figcaption><span>Desktop, 1280 px wide, scaled</span><a class="open-full" data-local-only href="f-tavern-sign.html">Open the page</a></figcaption></figure>
+      <figure class="phone"><div class="viewport" style="--w: 400; --h: 860"><iframe src="f-tavern-sign.html" title="Concept F at phone width" loading="lazy"></iframe></div><figcaption><span>Phone, 400 px</span></figcaption></figure>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="h-shared">
+    <header><h2 id="h-shared">Shared by all six</h2></header>
+    <ul class="shared">
+      <li><b>Type.</b> The site's Figtree and Bricolage Grotesque, plus one candidate for the gold headline: Fraunces (SIL Open Font License), at its heaviest and softest. Building a concept would self-host it like the other two and record it in PROVENANCE.md.</li>
+      <li><b>Text.</b> Everything is real HTML text: Spanish first, English one click away, readable by screen readers and translation tools. The gold is painted on the letters, not an image.</li>
+      <li><b>Phones.</b> Each concept holds at 400 px without sideways scrolling; buttons stack full width.</li>
+      <li><b>Reduced motion.</b> The sparks are drawn once and stay still, candle flames and the sign stop, hover lifts do not animate.</li>
+      <li><b>Examples.</b> Every number and every hero choice shown signed out is labelled as an example; nothing claims to be a real player's data.</li>
+      <li><b>Notice.</b> Each page keeps "Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment." in its language.</li>
+    </ul>
+  </section>
+</div>
+<p class="fan-note">Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.</p>
+<script>
+  // Scale each desktop frame to its column, and switch every frame's language.
+  (() => {
+    "use strict";
+    for (const vp of document.querySelectorAll(".viewport")) {
+      const w = Number(getComputedStyle(vp).getPropertyValue("--w"));
+      new ResizeObserver(() => vp.style.setProperty("--s", String(vp.clientWidth / w))).observe(vp);
+    }
+    const btn = document.getElementById("all-lang");
+    let lang = "es";
+    btn.addEventListener("click", () => {
+      lang = lang === "es" ? "en" : "es";
+      btn.querySelector(".label").textContent = lang === "es" ? "Show all in English" : "Mostrar todo en español";
+      for (const f of document.querySelectorAll(".viewport iframe")) {
+        f.contentWindow?.postMessage({ tavernLang: lang }, "*");
+      }
+    });
+  })();
+</script>
+</body>
+</html>
