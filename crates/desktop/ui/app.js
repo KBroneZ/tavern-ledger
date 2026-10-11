@@ -903,10 +903,12 @@ function renderRecapNow(r, game) {
   const top = el("div", "recap-top");
   top.append(recapFacts(r), health);
   const turnTools = { card: TLShop.card, cardRow: TLShop.cardRow, fold: TLCompact.fold, art, heroText, game: key };
-  // Simple (T-344) keeps the facts, health, shop summary, record and
-  // messages; the rest waits for Advanced.
+  const replayTools = { art, heroText, cardName: (id) => TLCards.display(id), fold: TLCompact.fold, game: key };
+  // Simple (T-344) keeps the facts, health, shop summary, combat replays
+  // (T-215), record and messages; the rest waits for Advanced.
   document.getElementById("recap-body").replaceChildren(
-    top, TLShop.recapSummary(r.shop, SHOP_UI, r.is_duos, key), advancedOnly(TLTurns.section(SHOP_UI, r, report, turnTools)),
+    top, TLShop.recapSummary(r.shop, SHOP_UI, r.is_duos, key), TLReplay.section(SHOP_UI, r, report, replayTools),
+    advancedOnly(TLTurns.section(SHOP_UI, r, report, turnTools)),
     recordSection(r), advancedOnly(TLExtras.heroPickSection(r.hero_pick, SHOP_UI, portrait)),
     advancedOnly(TLRoundTwo.choicesSection(SHOP_UI, r.choices, key)), advancedOnly(enteredSection(r)), advancedOnly(tribesSection(r)),
     messagesSection(r),

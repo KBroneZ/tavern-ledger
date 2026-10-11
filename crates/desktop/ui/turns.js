@@ -346,7 +346,7 @@
     return part;
   }
 
-  const api = { rows, healthWords, totalsWords, keywordsRecorded, summaryWords, shopFacts, section };
+  const api = { rows, combatAt, healthWords, totalsWords, keywordsRecorded, summaryWords, shopFacts, section };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLTurns = api;
 })();
