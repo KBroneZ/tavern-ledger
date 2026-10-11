@@ -4,6 +4,7 @@
 import { type Env, type Fetch, handle, MAX_BODY, MAX_INFLATED } from "./handler.ts";
 import { realDuos, realRecord, record, SESSION } from "./testdata.ts";
 import { VALIDATOR_VERSION } from "./validate.ts";
+import { summarize, SUMMARY_VERSION } from "../_shared/game_summary.ts";
 
 type Bytes = Uint8Array<ArrayBuffer>;
 
@@ -48,6 +49,8 @@ interface Call {
 function fakeApi(opts: {
   begin?: unknown;
   commit?: unknown;
+  /** The database before the T-502 migration: no upload_commit with a summary. */
+  noSummaryCommit?: boolean;
   user?: number;
   blocked?: boolean;
   fail?: string;
@@ -76,6 +79,9 @@ function fakeApi(opts: {
       case "/rest/v1/rpc/upload_begin":
         return reply(200, opts.begin ?? { result: "create" });
       case "/rest/v1/rpc/upload_commit":
+        if (opts.noSummaryCommit && "p_stats" in (body as object)) {
+          return reply(404, { code: "PGRST202" });
+        }
         return reply(200, opts.commit ?? "created");
       case FILE:
         return reply(200, { Key: `games/${USER}/${SESSION}-1.json.gz` });
@@ -143,7 +149,37 @@ Deno.test("a new game: checks, then the file, then the row", async () => {
     p_sha256: sha,
     p_size: file.raw!.length,
     p_parser_version: "0.1.0+r1",
+    p_stats: summarize(record().report),
+    p_summary_version: SUMMARY_VERSION,
   });
+});
+
+Deno.test("before the T-502 migration lands the row is written without the summary", async () => {
+  const api = fakeApi({ noSummaryCommit: true });
+  const res = await handle(await upload(), ENV, api.fetchFn);
+  assertEquals(res.status, 201);
+  const commits = api.calls.filter((c) => c.path === "/rest/v1/rpc/upload_commit");
+  assertEquals(commits.length, 2);
+  const second = commits[1].body as Record<string, unknown>;
+  assertEquals(["p_stats" in second, "p_summary_version" in second], [false, false]);
+  assertEquals(second.p_parser_version, "0.1.0+r1");
+});
+
+Deno.test("any other failed row write is still a 500", async () => {
+  const api = fakeApi({ fail: "/rest/v1/rpc/upload_commit" });
+  const res = await handle(await upload(), ENV, api.fetchFn);
+  assertEquals([res.status, (await res.json()).step], [500, "write row"]);
+  assertEquals(api.calls.filter((c) => c.path === "/rest/v1/rpc/upload_commit").length, 1);
+});
+
+Deno.test("the summary of a real game goes with its row (T-502)", async () => {
+  const api = fakeApi();
+  const res = await handle(await upload(realRecord(realDuos[0])), ENV, api.fetchFn);
+  assertEquals(res.status, 201);
+  const commit = api.calls.find((c) => c.path === "/rest/v1/rpc/upload_commit")!;
+  const body = commit.body as Record<string, Record<string, unknown>>;
+  assertEquals(body.p_stats, summarize(realDuos[0]));
+  assertEquals(body.p_stats.teammate_hero, realDuos[0].teammate_hero);
 });
 
 Deno.test("the file stored is re-compressed by the server, not the bytes sent", async () => {

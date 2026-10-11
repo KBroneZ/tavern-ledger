@@ -1,0 +1,90 @@
+---
+// How many games ended in each place: one column per place on one scale,
+// coloured by 1st / top half / bottom half (with a key, and the place under
+// each column, so colour is never the only cue). The count sits on each cap;
+// every value is also in the table under it.
+import { barScale, columnPath, ordinal, placeDistribution, share, type Mode } from "../../lib/data/format.ts";
+import { t } from "../../lib/data/strings.ts";
+import Fold from "./Fold.astro";
+import StateBlock from "./StateBlock.astro";
+
+interface Props {
+  places: (number | null)[];
+  mode: Mode;
+  id: string;
+}
+
+const { places, mode, id } = Astro.props;
+const { bars, unknown, total } = placeDistribution(places, mode);
+const SLOT = mode === "solo" ? 44 : 64;
+const BAR = 24;
+const TOP = 18;
+const BASE = 104;
+const HEIGHT = 124;
+const width = bars.length * SLOT;
+const scale = barScale(
+  bars.map((b) => b.count),
+  BASE - TOP,
+);
+const modeName = mode === "solo" ? t("mode.solo") : t("mode.duos");
+const topLabel = mode === "solo" ? t("place.group.top.solo") : t("place.group.top.duos");
+---
+
+{places.length === 0 ? <StateBlock kind="empty" title={t("chart.places.title")} /> : (
+<figure class="chart chart-places">
+  <figcaption>
+    <p class="chart-title" id={`${id}-title`}>{t("chart.places.title")}</p>
+    <p class="chart-desc" id={`${id}-desc`}>{t("chart.places.desc", { mode: modeName })}</p>
+  </figcaption>
+  <ul class="chart-key" aria-hidden="true">
+    <li><i class="key-first" aria-hidden="true"></i>{t("place.group.first")}</li>
+    <li><i class="key-top" aria-hidden="true"></i>{topLabel}</li>
+    <li><i class="key-bottom" aria-hidden="true"></i>{t("place.group.bottom")}</li>
+  </ul>
+  <svg viewBox={`0 0 ${width} ${HEIGHT}`} width={width} height={HEIGHT} role="img" aria-labelledby={`${id}-title`} aria-describedby={`${id}-desc`}>
+    <line class="axis" x1="0" x2={width} y1={BASE} y2={BASE} />
+    {
+      bars.map((b, i) => {
+        const x = i * SLOT + (SLOT - BAR) / 2;
+        const length = scale(b.count);
+        return (
+          <g class="mark">
+            <title>{`${ordinal(b.place)}: ${b.count} (${share(b.count, total)})`}</title>
+            <rect class="hit" x={i * SLOT} y="0" width={SLOT} height={HEIGHT} />
+            {length > 0 && <path class={`fill-${b.group}`} d={columnPath(x, BASE, BAR, length, "up")} />}
+            <text x={x + BAR / 2} y={BASE - length - 5} text-anchor="middle" class:list={{ "label-strong": b.count > 0 }}>
+              {b.count}
+            </text>
+            <text x={x + BAR / 2} y={BASE + 15} text-anchor="middle">
+              {ordinal(b.place)}
+            </text>
+          </g>
+        );
+      })
+    }
+  </svg>
+  {unknown > 0 && <p class="chart-desc">{unknown === 1 ? t("chart.places.unknown.one") : t("chart.places.unknown.other", { count: unknown })}</p>}
+  <Fold summary={t("chart.table")} context={`${t("chart.places.title")}, ${modeName}`} compact>
+    <table class="dtable">
+      <thead>
+        <tr>
+          <th scope="col">{t("chart.places.col.place")}</th>
+          <th scope="col" class="num">{t("chart.places.col.games")}</th>
+          <th scope="col" class="num">{t("chart.places.col.share")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          bars.map((b) => (
+            <tr>
+              <td>{ordinal(b.place)}</td>
+              <td class="num">{b.count}</td>
+              <td class="num">{share(b.count, total)}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </Fold>
+</figure>
+)}

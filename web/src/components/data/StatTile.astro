@@ -1,0 +1,53 @@
+---
+// One number with what it means: label, value, the games behind it ("in 28
+// of 31 games") and, if given, the change since the previous period with an
+// arrow and words (never colour alone) and a small trend line.
+import { t } from "../../lib/data/strings.ts";
+import type { Trend } from "../../lib/data/format.ts";
+import SourceMark from "./SourceMark.astro";
+import Sparkline from "./Sparkline.astro";
+
+interface Props {
+  label: string;
+  /** Already formatted; a dash when unknown. */
+  value: string;
+  backing?: string;
+  trend?: Trend | null;
+  spark?: { values: (number | null)[]; min: number; max: number; invert?: boolean };
+  source?: "inferred" | "unknown";
+  /** The one headline number of a view. */
+  hero?: boolean;
+}
+
+const { label, value, backing, trend = null, spark, source, hero = false } = Astro.props;
+const unknown = value === t("value.none");
+// Up is not always good (a lower average place is better): the arrow
+// follows the number, the colour and the words follow better or worse.
+const arrow = !trend || trend.sign === 0 ? "▬" : trend.sign < 0 ? "▼" : "▲";
+---
+
+<div class:list={["tile", { "tile-hero": hero }]}>
+  <p class="tile-label">{label}</p>
+  <p class:list={["tile-value", { "is-unknown": unknown }]}>
+    {unknown ? (
+      <>
+        <span aria-hidden="true">{value}</span>
+        <span class="visually-hidden">{t("result.unknown")}</span>
+      </>
+    ) : (
+      <span>{value}</span>
+    )}
+    {source && <SourceMark kind={source} />}
+  </p>
+  {
+    trend && (
+      <p class:list={["tile-trend", trend.direction]}>
+        <span aria-hidden="true">{arrow}</span>
+        <span>{trend.text}</span>
+        <span class="visually-hidden">{t(`trend.${trend.direction}`)}</span>
+      </p>
+    )
+  }
+  {backing && <p class="tile-back">{backing}</p>}
+  {spark && <Sparkline values={spark.values} min={spark.min} max={spark.max} invert={spark.invert} />}
+</div>

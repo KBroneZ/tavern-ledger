@@ -65,6 +65,8 @@ Built as SQL views or materialized views refreshed on a schedule (like the sweep
 | T-508 | **Spanish** for the site (strings, dates, numbers) | T-503 | R1 |
 | T-509 | **Legal and privacy texts** for public stats and leaderboards (what is public, how to opt out, retention) | before T-506 ships | R2 |
 
+**T-501 notes (done, D-070):** the switches need the page's script, so on a page without one (the accounts-closed build) they stay hidden and the page shows Simple and Solo; the data pages need a script for their data anyway. "Show all" and folds use native disclosures. Pictures are one setting in `web/src/lib/data/pictures.ts`; T-504 switches it once the CSP allows the image host. Build on the pieces as shown on `/style/`.
+
 Order: T-501 and T-502 in parallel (they do not overlap: `web/` design vs `supabase/`), then T-503 and T-504, then T-505 to T-509.
 
 ## Decisions the user must make (the hub asks, one at a time)

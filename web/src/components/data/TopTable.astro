@@ -1,0 +1,85 @@
+---
+// A compact table that shows its top rows and folds the rest behind "Show
+// all". The toggle is a native disclosure (no script): keyboard, screen
+// readers and a page without scripts all get it. Cells are text, a number,
+// a place badge or a hero with its picture.
+import { topN, type Mode } from "../../lib/data/format.ts";
+import { t } from "../../lib/data/strings.ts";
+import PlaceBadge from "./PlaceBadge.astro";
+import Picture from "./Picture.astro";
+
+export type Cell =
+  | string
+  | number
+  | { place: number | null; mode: Mode }
+  | { hero: string | null; name: string };
+
+export interface Column {
+  label: string;
+  numeric?: boolean;
+}
+
+interface Props {
+  caption: string;
+  columns: Column[];
+  rows: Cell[][];
+  /** Rows in view before "Show all". */
+  top?: number;
+  /** Names the scrolling region on a narrow screen. */
+  label?: string;
+}
+
+const { caption, columns, rows, top = 5, label = caption } = Astro.props;
+const { shown, rest } = topN(rows, top);
+const all = [...shown.map((r) => ({ cells: r, more: false })), ...rest.map((r) => ({ cells: r, more: true }))];
+const isPlace = (c: Cell): c is { place: number | null; mode: Mode } => typeof c === "object" && "place" in c;
+const isHero = (c: Cell): c is { hero: string | null; name: string } => typeof c === "object" && "hero" in c;
+---
+
+<div class="topn">
+  <div class="scroll-x" role="region" aria-label={label} tabindex="0">
+    <table class="dtable">
+      <caption>{caption}</caption>
+      <thead>
+        <tr>
+          {columns.map((c) => <th scope="col" class:list={{ num: c.numeric }}>{c.label}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {
+          all.map(({ cells, more }) => (
+            <tr class:list={{ more }}>
+              {cells.map((cell, i) =>
+                isHero(cell) ? (
+                  <th scope="row">
+                    <span class="cell-hero">
+                      <Picture kind="hero" id={cell.hero} name={cell.name} size={24} decorative />
+                      <span>{cell.name}</span>
+                    </span>
+                  </th>
+                ) : isPlace(cell) ? (
+                  <td class:list={{ num: columns[i]?.numeric }}>
+                    <PlaceBadge place={cell.place} mode={cell.mode} />
+                  </td>
+                ) : (
+                  <td class:list={{ num: columns[i]?.numeric }}>{cell}</td>
+                ),
+              )}
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+  {
+    rest.length > 0 && (
+      <details class="topn-toggle">
+        <summary>
+          <span class="when-closed">{t("table.showAll", { count: rows.length })}</span>
+          <span class="visually-hidden">: {caption}</span>
+          <span class="when-open">{t("table.showTop", { count: top })}</span>
+        </summary>
+      </details>
+    )
+  }
+</div>

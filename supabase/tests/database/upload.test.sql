@@ -211,7 +211,7 @@ select ok(
   not exists (
     select 1 from unnest(array[
       'public.upload_begin(uuid,text,integer,bigint,text,integer)',
-      'public.upload_commit(uuid,text,integer,text,text,text,integer,integer,date,jsonb,bigint,text,integer,text)',
+      'public.upload_commit(uuid,text,integer,text,text,text,integer,integer,date,jsonb,bigint,text,integer,text,jsonb,integer)',
       'public.upload_ip_blocked(text)', 'public.upload_ip_failed(text)',
       'public.sweep_orphan_files(interval)', 'public.sweep_housekeeping()']) as f(sig),
       unnest(array['anon', 'authenticated']) as r(role)

@@ -1,0 +1,10 @@
+---
+// The data pages' script (switches). Only where scripts may run: the
+// accounts-closed build ships none (script-src 'none'), and its pages show
+// Simple and Solo.
+import { scriptsAllowed } from "../../lib/config.ts";
+
+const scripts = scriptsAllowed(import.meta.env, import.meta.env.DEV);
+---
+
+{scripts && <script src="../../scripts/switches.ts"></script>}
