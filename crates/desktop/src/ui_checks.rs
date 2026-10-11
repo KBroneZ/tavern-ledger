@@ -19,19 +19,21 @@ const SHOP_CSS: &str = include_str!("../ui/shop.css");
 const CURIOUS_CSS: &str = include_str!("../ui/curious.css");
 const TURNS_CSS: &str = include_str!("../ui/turns.css");
 const COMPACT_CSS: &str = include_str!("../ui/compact.css");
+const REPLAY_CSS: &str = include_str!("../ui/replay.css");
 const SETTINGS_JS: &str = include_str!("../ui/settings.js");
 const I18N: &str = include_str!("../ui/i18n.js");
 const COMMON_WORDS: &str = include_str!("../ui/strings/common.js");
 const WINDOW_WORDS: &str = include_str!("../ui/strings/window.js");
 const DETAIL_WORDS: &str = include_str!("../ui/strings/details.js");
 /// The main window's scripts that draw pictures or tables, besides app.js.
-const WINDOW_SCRIPTS: [(&str, &str); 6] = [
+const WINDOW_SCRIPTS: [(&str, &str); 7] = [
     ("shop.js", include_str!("../ui/shop.js")),
     ("extras.js", include_str!("../ui/extras.js")),
     ("round-two.js", include_str!("../ui/round-two.js")),
     ("curious.js", include_str!("../ui/curious.js")),
     ("turns.js", include_str!("../ui/turns.js")),
     ("compact.js", include_str!("../ui/compact.js")),
+    ("replay.js", include_str!("../ui/replay.js")),
 ];
 
 /// The checked-in files are LF; a Windows checkout may turn them into CRLF.
@@ -210,7 +212,7 @@ fn card_pictures_are_cropped_to_the_art_with_no_white_edges() {
     let style = lf(STYLE);
     let shared = rule(
         &style,
-        ".portrait, .recap-art, .shop-art, .face, .curious-art {",
+        ".portrait, .recap-art, .shop-art, .face, .curious-art, .replay-art {",
     );
     for needed in [
         "border-radius: 50%;",
@@ -222,14 +224,15 @@ fn card_pictures_are_cropped_to_the_art_with_no_white_edges() {
     // At the start of a line: the shared rule above names them too.
     let heroes = rule(&style, "\n.portrait, .recap-art {");
     assert!(heroes.contains("object-view-box: inset("));
-    let cards = rule(&style, "\n.shop-art, .face, .curious-art {");
+    let cards = rule(&style, "\n.shop-art, .face, .curious-art, .replay-art {");
     assert!(cards.contains("object-view-box: inset(1% 16%"));
     for (name, css) in [
         ("shop.css", SHOP_CSS),
         ("curious.css", CURIOUS_CSS),
         ("turns.css", TURNS_CSS),
+        ("replay.css", REPLAY_CSS),
     ] {
-        for art in [".shop-art {", ".curious-art {", ".face {"] {
+        for art in [".shop-art {", ".curious-art {", ".face {", ".replay-art {"] {
             if let Some(at) = css.find(art) {
                 let end = at + css[at..].find('}').unwrap();
                 for banned in ["border-radius", "object-fit", "background"] {
@@ -245,6 +248,7 @@ fn card_pictures_are_cropped_to_the_art_with_no_white_edges() {
         TURNS_CSS,
         COMPACT_CSS,
         ROUND_TWO_CSS,
+        REPLAY_CSS,
     ] {
         let css = css.to_lowercase();
         for banned in [
