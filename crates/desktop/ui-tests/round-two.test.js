@@ -112,7 +112,7 @@ test("in Spanish keywords, kinds and counts follow the language", () => {
     assert.equal(R.choiceRows(choices()).rows[1].kind, "Don siniestro");
     const t = R.choiceTable({ games: 3, not_recorded: 0, no_data: 0, trinkets: [{ card_id: "T_A", offered: 4, picked: 1, pick_rate: 0.25, placed_when_picked: 1, average_place_when_picked: 2.5 }], dark_gifts: [] }, "trinkets");
     assert.equal(t.rows[0].place, "2,50");
-    assert.match(t.note, /^Sobre 3 partidas cuyas elecciones/);
+    assert.match(t.note, /^En 3 partidas cuyas elecciones/);
     assert.match(R.choiceRows({ state: "not_recorded" }).empty, /^Elecciones no registradas/);
   } finally {
     I18n.setLang("en");

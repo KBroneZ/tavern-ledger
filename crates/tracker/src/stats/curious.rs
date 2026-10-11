@@ -27,7 +27,7 @@ const WHY_NO_SHOP: &str = "No game has a shop record. Games saved before the app
 const WHY_NO_GOLD_DETAIL: &str = "No game has this gold record yet: it is kept since parser revision 4. Older games need tavern-watch --reparse while their logs are on disk.";
 const WHY_NO_CARD_DATA: &str =
     "The card data is not on this PC yet, so the sold minions cannot be named.";
-const WHY_UNNAMED: &str = "Every game with a shop record sold a golden minion the card data does not know, so it cannot be told.";
+const WHY_UNNAMED: &str = "Every game with a shop record sold a golden minion the card data does not know, so Tavern Ledger can't tell.";
 const WHY_NO_BUYS: &str = "No minion bought in the games with a shop record.";
 const WHY_NO_RESULTS: &str = "No combat result is known in any game.";
 const WHY_NO_HEALTH: &str = "No game has your health before and after the same combat.";
@@ -347,7 +347,7 @@ impl Counts {
                     .stat("gold_spent", "Gold spent", BASIS_GOLD_SPENT, shop_why),
                 self.extra_gold.stat(
                     "extra_gold",
-                    "Gold beyond the fixed income",
+                    "Gold beyond base income",
                     BASIS_EXTRA_GOLD,
                     WHY_NO_GOLD_DETAIL,
                 ),

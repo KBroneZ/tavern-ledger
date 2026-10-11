@@ -17,6 +17,7 @@ Writes:
 - web/public/favicon-32.png          32 px fallback for browsers without SVG icons
 - web/public/apple-touch-icon.png    180 px, square (iOS rounds the corners itself)
 - web/public/mark.svg                copy of mark.svg (the masthead)
+- crates/desktop/ui/mark.svg         copy of mark.svg (the app's masthead, T-531)
 - web/public/social-card.png         1200 x 630 link preview (og:image, twitter:image)
 - docs/brand/logo/avatar-500.png     500 px GitHub avatar (uploaded by hand)
 - docs/brand/logo/renders/tray-preview.png    the tray sizes on a light and a dark taskbar, for review
@@ -57,6 +58,7 @@ APPLE_SIZE = 180
 AMBER = "#ffb24a"
 INK = "#120d0b"
 COPIES = {"app-tile-small.svg": "favicon.svg", "mark.svg": "mark.svg"}
+APP_MARK = ROOT / "crates" / "desktop" / "ui" / "mark.svg"
 # Windows draws the tray icon at 16 px at 100 % scaling, 20 at 125 %, 24 at 150 % and 32 at 200 %.
 TRAY_SOURCES = {16: "app-tile-small.svg", 20: "tray-20.svg", 24: "tray-24.svg", 32: "app-tile-small.svg"}
 TRAY_SIZES = tuple(TRAY_SOURCES)
@@ -315,6 +317,8 @@ def build() -> None:
     for src, dst in COPIES.items():
         shutil.copyfile(LOGO / src, PUBLIC / dst)
     print("wrote web/public/favicon.svg and mark.svg")
+    shutil.copyfile(LOGO / "mark.svg", APP_MARK)
+    print(f"wrote {APP_MARK.relative_to(ROOT).as_posix()}")
     for size in TRAY_SIZES:
         write(ICONS / f"tray-{size}.png", render(chrome, svgs[TRAY_SOURCES[size]], size))
     write(PUBLIC / "social-card.png", social_card(chrome))

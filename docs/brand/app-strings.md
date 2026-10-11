@@ -1,6 +1,14 @@
 # Desktop app strings: proposed wording (T-533 for T-531)
 
-These are wording proposals for the next app session (T-531) to apply. Nothing is applied yet and every key stays the same. Only strings worth changing are listed; where one row covers a `.one` and a `.other` key, the two proposals are separated by ` // `.
+These were wording proposals for the app session T-531; **session 093 applied them** (D-106), keys unchanged, with these differences:
+
+- `tribe.MECHANICAL` and `ov.tribeShort.MECHANICAL` (ES) stay **Robot**: the esES game's own string for the Mech tribe (`GLOBAL_RACE_MECHANICAL`) is "Robot", so "Mecánico" was not applied.
+- The esES game writes "Campos de batalla" (lowercase b) in its own strings; the app keeps "Campos de Batalla", as the voice guide and the website do. Changing it is one decision for both.
+- Checked against the esES game strings: Venomous is "Ponzoña" and Rally is "Alentar", as the app already had them.
+- `lobby.placed` (EN) is now "{n} with a place": it counts the day's games with a known final place (lobby-words.js).
+- Not in the table but done for the same reasons: the tray's Spanish tooltip says "Campos de Batalla", the tray's Spanish overlay item matches the Settings switch ("Mostrar overlay durante la partida"), and the Settings switch has a one-line note on what "off" means.
+
+Only strings worth changing were listed; where one row covers a `.one` and a `.other` key, the two proposals are separated by ` // `.
 
 Rows marked "Rust" are sentences the Rust side writes: the Spanish table is keyed by the English text, so changing the English there means changing the key too. Rows whose key is an English sentence are Rust-side.
 

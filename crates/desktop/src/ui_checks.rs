@@ -415,3 +415,31 @@ fn both_windows_follow_the_language_setting() {
     assert!(I18N.contains("window.location.reload()"));
     assert_eq!(crate::settings::CHANGED, "app-settings-changed");
 }
+
+#[test]
+fn the_masthead_shows_the_tl_tankard_mark() {
+    // T-531, D-094: the app's own copy of the mark is the brand file, and the
+    // old lantern pane drawn in CSS is gone.
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let app = std::fs::read_to_string(dir.join("ui/mark.svg")).expect("ui/mark.svg");
+    let brand = std::fs::read_to_string(dir.join("../../docs/brand/logo/mark.svg"))
+        .expect("docs/brand/logo/mark.svg");
+    assert_eq!(lf(&app), lf(&brand));
+    let masthead = &INDEX[position(INDEX, "<header id=\"masthead\"")..position(INDEX, "</header>")];
+    assert!(masthead.contains("<img class=\"mark\" src=\"mark.svg\" alt=\"\""));
+    assert!(!STYLE.contains(".brand::before"), "the old lantern pane");
+    assert!(!STYLE.contains("lantern"));
+}
+
+#[test]
+fn the_first_start_question_is_a_labelled_dialog_with_the_overlay_first() {
+    // T-531: asked once, the overlay is the default answer (focused first).
+    let dialog = &INDEX[position(INDEX, "<dialog id=\"first-start\"")..];
+    let dialog = &dialog[..position(dialog, "</dialog>")];
+    assert!(dialog.contains("aria-labelledby=\"first-start-title\""));
+    let on = position(dialog, "data-overlay-answer=\"on\" autofocus");
+    let off = position(dialog, "data-overlay-answer=\"off\"");
+    assert!(on < off);
+    assert!(dialog.contains("id=\"first-start-problem\" class=\"problem\" role=\"status\""));
+    assert!(position(INDEX, "first-start.js") > position(INDEX, "app.js"));
+}
