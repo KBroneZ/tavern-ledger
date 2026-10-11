@@ -38,6 +38,7 @@
       "settings.memory.status.no_access": "On, but Windows refused to let the app read the game (is the game running as administrator?).",
       "settings.memory.rating": "Your rating (from the game): Solo {solo}, Duos {duos}",
       "settings.memory.rating.none": "none shown",
+      "settings.memory.rating.unsupported": "Your rating: unsupported game version (not read).",
       "settings.memory.failed": "The setting could not be read or changed ({error}).",
 
       "theme.glass": "Glass (dark)",
@@ -135,6 +136,7 @@
       "settings.memory.status.no_access": "Activado, pero Windows no deja a la app leer el juego (¿se está ejecutando como administrador?).",
       "settings.memory.rating": "Tu puntuación (del juego): Solo {solo}, Dúos {duos}",
       "settings.memory.rating.none": "no se muestra",
+      "settings.memory.rating.unsupported": "Tu puntuación: versión del juego no compatible (no se lee).",
       "settings.memory.failed": "No se ha podido leer o cambiar el ajuste ({error}).",
 
       "theme.glass": "Cristal (oscuro)",

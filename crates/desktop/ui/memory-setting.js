@@ -21,11 +21,18 @@
     box.disabled = false;
     const status = STATUSES.includes(view.status) ? view.status : "unsupported_version";
     $("memory-status").textContent = t(`settings.memory.status.${view.enabled ? status : "off"}`);
+    // The rating line: the values when a read passed; "not supported" when
+    // the reader does not know this game version (never a value then).
     const rating = view.rating || {};
-    const shown = view.enabled && rating.status === "ok";
     const line = $("memory-rating");
-    line.textContent = shown ? t("settings.memory.rating", { solo: value(rating.solo), duos: value(rating.duos) }) : "";
-    line.hidden = !shown;
+    let text = "";
+    if (view.enabled && rating.status === "ok") {
+      text = t("settings.memory.rating", { solo: value(rating.solo), duos: value(rating.duos) });
+    } else if (view.enabled && rating.status === "unsupported_version") {
+      text = t("settings.memory.rating.unsupported");
+    }
+    line.textContent = text;
+    line.hidden = !text;
     $("memory-problem").textContent = view.warning ? I18n.backend(view.warning) : "";
   }
 

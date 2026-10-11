@@ -74,8 +74,6 @@ struct State {
     rating_tries: u32,
     /// Read (or given up) on this visit to the lobby screen.
     rating_done: bool,
-    /// The last status of any read, for the settings page.
-    status: ReaderStatus,
 }
 
 #[derive(Default)]
@@ -108,6 +106,22 @@ fn status_of(e: &ReadFailure) -> ReaderStatus {
         ReadFailure::NoAccess => ReaderStatus::NoAccess,
         ReadFailure::NotYet => ReaderStatus::Waiting,
         ReadFailure::Unsupported(_) => ReaderStatus::UnsupportedVersion,
+    }
+}
+
+/// The settings page's one-line status. The tribes lead: a rating the
+/// reader cannot map (T-337) must not say the tribes are unsupported. A
+/// refused access shows from either read; before any game, the rating read
+/// says whether the game runs.
+fn overall(tribes: ReaderStatus, rating: ReaderStatus) -> ReaderStatus {
+    use ReaderStatus::*;
+    if tribes == NoAccess || rating == NoAccess {
+        return NoAccess;
+    }
+    match (tribes, rating) {
+        (Waiting, NotRunning) => NotRunning,
+        (Waiting, Ok) => Ok,
+        (t, _) => t,
     }
 }
 
@@ -169,11 +183,6 @@ impl GameMemory {
         let mut s = lock(&self.state);
         *s = State {
             enabled: on,
-            status: if on {
-                ReaderStatus::Waiting
-            } else {
-                ReaderStatus::Off
-            },
             tribes_status: if on {
                 ReaderStatus::Waiting
             } else {
@@ -217,7 +226,7 @@ impl GameMemory {
         let s = lock(&self.state);
         View {
             enabled: s.enabled,
-            status: s.status,
+            status: overall(s.tribes_status, s.rating_status),
             tribes_status: s.tribes_status,
             rating: OwnRating {
                 solo: s.rating.and_then(|r| r.solo),
@@ -252,7 +261,6 @@ fn tick_tribes(s: &mut State, reader: &dyn Reader, game: Option<&GameKey>) {
         Ok(_) => ReaderStatus::Ok,
         Err(e) => status_of(e),
     };
-    s.status = s.tribes_status;
     match result {
         Ok(tribes) => {
             s.tribes = Some(tribes);
@@ -267,7 +275,6 @@ fn tick_tribes(s: &mut State, reader: &dyn Reader, game: Option<&GameKey>) {
         s.tribes_done = true;
         if s.tribes_status == ReaderStatus::Waiting {
             s.tribes_status = ReaderStatus::UnsupportedVersion;
-            s.status = s.tribes_status;
         }
     }
 }
@@ -287,7 +294,6 @@ fn tick_rating(s: &mut State, reader: &dyn Reader, scene: Option<Scene>) {
         Ok(_) => ReaderStatus::Ok,
         Err(e) => status_of(e),
     };
-    s.status = s.rating_status;
     match result {
         Ok(rating) => {
             s.rating = Some(rating);
@@ -573,5 +579,36 @@ mod tests {
         let view = gm.view();
         assert_eq!(view.rating.solo, None);
         assert_eq!(view.rating.status, ReaderStatus::UnsupportedVersion);
+    }
+
+    #[test]
+    fn an_unsupported_rating_does_not_mark_good_tribes_unsupported() {
+        // The rating path is not mapped on build 253216 (T-337): the lobby
+        // screen's failed rating read must not hide that the tribes work.
+        let gm = on("rating-unmapped");
+        let reader = FakeReader::new(
+            vec![Ok(lobby())],
+            vec![Err(ReadFailure::Unsupported(
+                "rating path not mapped".into(),
+            ))],
+        );
+        ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 3);
+        ticks(&gm, &reader, None, Some(Scene::BattlegroundsLobby), 3);
+        let view = gm.view();
+        assert_eq!(view.status, ReaderStatus::Ok);
+        assert_eq!(view.tribes_status, ReaderStatus::Ok);
+        assert_eq!(view.rating.status, ReaderStatus::UnsupportedVersion);
+    }
+
+    #[test]
+    fn the_overall_status_follows_the_tribes_and_shows_access_problems() {
+        use ReaderStatus::*;
+        assert_eq!(overall(Ok, UnsupportedVersion), Ok);
+        assert_eq!(overall(UnsupportedVersion, Ok), UnsupportedVersion);
+        assert_eq!(overall(Waiting, NotRunning), NotRunning);
+        assert_eq!(overall(Waiting, NoAccess), NoAccess);
+        assert_eq!(overall(Ok, NoAccess), NoAccess);
+        assert_eq!(overall(Waiting, UnsupportedVersion), Waiting);
+        assert_eq!(overall(Waiting, Ok), Ok);
     }
 }
