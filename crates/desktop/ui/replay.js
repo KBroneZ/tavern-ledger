@@ -20,6 +20,8 @@
   /** Playback speeds; 1× shows a step every STEP_MS. */
   const SPEEDS = [0.5, 1, 2, 4];
   const STEP_MS = 900;
+  /** The parser's bound on events per combat (crates/bg-parser/src/replay.rs). */
+  const MAX_EVENTS = 2000;
 
   const usable = (r) => r !== null && typeof r === "object" && Array.isArray(r.minions) && Array.isArray(r.events);
 
@@ -80,89 +82,98 @@
     }
   }
 
-  // Every board state of a replay: the start, then one per step. A frame has
-  // both boards (tiles left to right), the hero damage so far, the step's
-  // event and its marks (attacker, defender, hurt, summoned, dying).
-  // `skipped` counts the events this page could not play.
-  function frames(replay) {
+  // The boards as the combat starts: every minion before `start` on its side.
+  function startState(replay) {
     const minions = list(replay && replay.minions).map((m) => (m && typeof m === "object" ? m : {}));
     const start = isInt(replay && replay.start) ? Math.min(Math.max(replay.start, 0), minions.length) : 0;
-    const tiles = new Map();
-    const boards = { own: [], opponent: [] };
+    const st = { minions, tiles: new Map(), boards: { own: [], opponent: [] }, hero: { own: 0, opponent: 0 }, heroes: { own: null, opponent: null }, dying: [] };
     for (let ref = 0; ref < start; ref++) {
       const side = minions[ref].side;
       if (!SIDES.includes(side)) continue;
-      tiles.set(ref, tileOf(minions[ref], ref));
-      boards[side].push(ref);
+      st.tiles.set(ref, tileOf(minions[ref], ref));
+      st.boards[side].push(ref);
     }
-    const hero = { own: 0, opponent: 0 };
-    // A Duos board coming in brings its hero.
-    const heroes = { own: null, opponent: null };
-    const shot = (event, marks) => ({
-      event,
-      hero: { ...hero },
-      heroes: { ...heroes },
-      own: boards.own.map((ref) => ({ ...tiles.get(ref), ...(marks[ref] || {}) })),
-      opponent: boards.opponent.map((ref) => ({ ...tiles.get(ref), ...(marks[ref] || {}) })),
-    });
-    const out = [shot(null, {})];
-    let dying = [];
+    return st;
+  }
+
+  // Plays event `e` on the state; returns the step's marks per minion.
+  function applyEvent(st, e) {
+    const marks = {};
+    const mark = (ref, what) => (marks[ref] = { ...(marks[ref] || {}), ...what });
+    const set = (ref, what) => st.tiles.set(ref, { ...st.tiles.get(ref), ...what });
+    switch (e.kind) {
+      case "attack":
+        mark(e.attacker, { attacker: true });
+        if (e.defender !== null) mark(e.defender, { defender: true });
+        break;
+      case "damage":
+        set(e.minion, { health: e.health });
+        mark(e.minion, { hurt: e.amount });
+        break;
+      case "shield":
+        set(e.minion, { shield: e.on });
+        mark(e.minion, { popped: !e.on });
+        break;
+      case "stats":
+        set(e.minion, { atk: e.atk, health: e.health });
+        mark(e.minion, { buffed: true });
+        break;
+      case "death":
+        mark(e.minion, { dying: true });
+        st.dying.push(e.minion);
+        break;
+      case "summon": {
+        const m = st.minions[e.minion];
+        const board = st.boards[m.side];
+        const at = isInt(m.position) ? m.position - 1 : board.length;
+        st.tiles.set(e.minion, tileOf(m, e.minion));
+        board.splice(Math.min(Math.max(at, 0), board.length), 0, e.minion);
+        mark(e.minion, { summoned: true });
+        break;
+      }
+      case "trigger":
+        if (isInt(e.source) && st.tiles.has(e.source)) mark(e.source, { triggered: true });
+        break;
+      case "hero_damage":
+        st.hero[e.side] += e.amount;
+        break;
+      case "board_in":
+        // A Duos board coming in brings its hero.
+        st.heroes[e.side] = typeof e.hero === "string" ? e.hero : null;
+        break;
+      default:
+        break;
+    }
+    return marks;
+  }
+
+  const snapshot = (st, event, marks) => ({
+    event,
+    hero: { ...st.hero },
+    heroes: { ...st.heroes },
+    own: st.boards.own.map((ref) => ({ ...st.tiles.get(ref), ...(marks[ref] || {}) })),
+    opponent: st.boards.opponent.map((ref) => ({ ...st.tiles.get(ref), ...(marks[ref] || {}) })),
+  });
+
+  // Every board state of a replay: the start, then one per step. A frame has
+  // both boards (tiles left to right), the hero damage so far, the step's
+  // event and its marks (attacker, defender, hurt, summoned, dying).
+  // `skipped` counts the events this page could not play; a hand-edited
+  // file is cut at the parser's own bound.
+  function frames(replay) {
+    const st = startState(replay);
+    const out = [snapshot(st, null, {})];
     let skipped = 0;
-    list(replay && replay.events).forEach((e) => {
+    list(replay && replay.events).slice(0, MAX_EVENTS).forEach((e) => {
       // Who died at the last step leaves the board now.
-      dying.forEach((ref) => SIDES.forEach((s) => (boards[s] = boards[s].filter((x) => x !== ref))));
-      dying.forEach((ref) => tiles.delete(ref));
-      dying = [];
-      if (!playable(e, minions, tiles)) {
+      st.dying.forEach((ref) => SIDES.forEach((s) => (st.boards[s] = st.boards[s].filter((x) => x !== ref))));
+      st.dying.forEach((ref) => st.tiles.delete(ref));
+      st.dying = [];
+      if (!playable(e, st.minions, st.tiles)) {
         skipped += 1;
         return;
       }
-      const marks = {};
-      const mark = (ref, what) => (marks[ref] = { ...(marks[ref] || {}), ...what });
-      const set = (ref, what) => tiles.set(ref, { ...tiles.get(ref), ...what });
-      switch (e.kind) {
-        case "attack":
-          mark(e.attacker, { attacker: true });
-          if (e.defender !== null) mark(e.defender, { defender: true });
-          break;
-        case "damage":
-          set(e.minion, { health: e.health });
-          mark(e.minion, { hurt: e.amount });
-          break;
-        case "shield":
-          set(e.minion, { shield: e.on });
-          mark(e.minion, { popped: !e.on });
-          break;
-        case "stats":
-          set(e.minion, { atk: e.atk, health: e.health });
-          mark(e.minion, { buffed: true });
-          break;
-        case "death":
-          mark(e.minion, { dying: true });
-          dying.push(e.minion);
-          break;
-        case "summon": {
-          const tile = tileOf(minions[e.minion], e.minion);
-          const board = boards[minions[e.minion].side];
-          const at = isInt(minions[e.minion].position) ? minions[e.minion].position - 1 : board.length;
-          tiles.set(e.minion, tile);
-          board.splice(Math.min(Math.max(at, 0), board.length), 0, e.minion);
-          mark(e.minion, { summoned: true });
-          break;
-        }
-        case "trigger":
-          if (isInt(e.source) && tiles.has(e.source)) mark(e.source, { triggered: true });
-          break;
-        case "hero_damage":
-          hero[e.side] += e.amount;
-          break;
-        case "board_in":
-          heroes[e.side] = typeof e.hero === "string" ? e.hero : null;
-          break;
-        default:
-          break;
-      }
-      out.push(shot(e, marks));
+      out.push(snapshot(st, e, applyEvent(st, e)));
     });
     out.skipped = skipped;
     return out;
@@ -228,11 +239,17 @@
   // of the recap (card names arriving, a game saved again).
   const memory = new Map();
   let speed = 1;
+  // The game whose recap was drawn last: playback resumes after a redraw of
+  // the same recap, never by itself when coming back from another game.
+  let lastGame = null;
 
   function remembered(game, shown) {
     const saved = memory.get(game);
+    const same = game === lastGame;
+    lastGame = game;
     const round = saved && shown.some((c) => c.round === saved.round) ? saved.round : shown[shown.length - 1].round;
-    return { round, step: saved && saved.round === round ? saved.step : 0, playing: Boolean(saved && saved.playing && saved.round === round) };
+    const kept = saved && saved.round === round;
+    return { round, step: kept ? saved.step : 0, playing: Boolean(kept && same && saved.playing) };
   }
 
   function nameOf(replay, h) {
@@ -248,7 +265,10 @@
     const box = ui.el("span", "replay-minion");
     const img = h.art(tile.id, "replay-art");
     box.append(img || ui.el("span", "replay-art art-missing"));
-    box.append(ui.el("span", "replay-stats"));
+    const stats = ui.el("span", "replay-stats");
+    stats.setAttribute("aria-hidden", "true");
+    // The words a screen reader reads for the tile (the picture has none).
+    box.append(stats, ui.el("span", "visually-hidden replay-words"));
     return box;
   }
 
@@ -264,12 +284,15 @@
     if (tile.hurt) {
       const hurt = document.createElement("span");
       hurt.className = "replay-hurt";
+      hurt.setAttribute("aria-hidden", "true");
       hurt.textContent = `−${I18n.num(tile.hurt)}`;
       box.append(hurt);
     }
     const name = tile.id ? h.cardName(tile.id) || tile.id : t("shop.card.unknown");
     const marks = [tile.golden && t("keyword.golden"), ...tile.keywords.map((k) => (`keyword.${k}` in I18n.tables().en ? t(`keyword.${k}`) : k))].filter(Boolean);
-    box.title = [`${name} ${stats.textContent}`, marks.join(", ")].filter(Boolean).join(" · ");
+    const words = [`${name} ${stats.textContent}`, marks.join(", ")].filter(Boolean).join(" · ");
+    box.title = words;
+    box.querySelector(".replay-words").textContent = words;
   }
 
   function heroBadge(ui) {
@@ -294,20 +317,10 @@
     return b;
   }
 
-  // The player of one combat.
-  function player(ui, combat, outcome, heroes, h, state) {
-    const replay = combat.replay;
-    const all = frames(replay);
-    const name = nameOf(replay, h);
-    const heroName = (id) => h.heroText({ id });
-    const box = ui.el("div", "replay-player");
-    const head = ui.el("div", "replay-head");
-    const result = ui.el("span", `chip chip-${outcome.outcome}`, t(`outcome.${outcome.outcome}`));
-    ui.addTip(result, outcome.source);
-    const counter = ui.el("span", "replay-counter");
-    head.append(result, ui.el("span", "replay-title", t("replay.combat_of", { turn: combat.round, who: outcome.who || t("turns.opponent_unknown") })), counter);
-    const sides = {};
+  // Theirs on top, yours below, as in the game.
+  function buildStage(ui) {
     const stage = ui.el("div", "replay-stage");
+    const sides = {};
     SIDES.slice().reverse().forEach((side) => {
       const row = ui.el("div", `replay-side ${side}`);
       const badge = heroBadge(ui);
@@ -316,106 +329,135 @@
       sides[side] = { board, badge, tiles: new Map() };
       stage.append(row);
     });
-    const caption = ui.el("p", "replay-caption");
-    caption.setAttribute("aria-live", "polite");
-    const controls = ui.el("div", "replay-controls");
-    const restart = button(ui, "replay-btn adv-only", "⏮", t("replay.restart"));
-    const back = button(ui, "replay-btn adv-only", "◀", t("replay.back"));
-    const play = button(ui, "replay-btn replay-play", "", null);
-    const forward = button(ui, "replay-btn adv-only", "▶", t("replay.forward"));
-    const speedBox = ui.el("label", "replay-speed adv-only", `${t("replay.speed")} `);
-    const select = document.createElement("select");
+    return { stage, sides };
+  }
+
+  // Draws frame `f` on the stage, reusing each minion's tile (no picture
+  // loads twice). `heroes` are the round's heroes before any board comes in.
+  function drawStage(ui, sides, f, heroes, h) {
+    SIDES.forEach((side) => {
+      const s = sides[side];
+      const nodes = f[side].map((tile) => {
+        if (!s.tiles.has(tile.ref)) s.tiles.set(tile.ref, minionTile(ui, tile, h));
+        const node = s.tiles.get(tile.ref);
+        updateTile(node, tile, h);
+        return node;
+      });
+      s.board.replaceChildren(...nodes);
+      if (!nodes.length) s.board.append(ui.el("span", "replay-empty", t("turns.board.empty")));
+      setHero(ui, s.badge, f.heroes[side] || heroes[side], h);
+      s.badge.querySelector(".replay-hero-hit").textContent = f.hero[side] ? `−${I18n.num(f.hero[side])}` : "";
+    });
+  }
+
+  // Play and pause for everyone; back, forward, the start and the speed in Advanced.
+  function buildControls(ui) {
+    const box = ui.el("div", "replay-controls");
+    const c = {
+      box,
+      restart: button(ui, "replay-btn adv-only", "⏮", t("replay.restart")),
+      back: button(ui, "replay-btn adv-only", "‹", t("replay.back")),
+      play: button(ui, "replay-btn replay-play", "", null),
+      forward: button(ui, "replay-btn adv-only", "›", t("replay.forward")),
+      select: document.createElement("select"),
+    };
     SPEEDS.forEach((s) => {
       const o = document.createElement("option");
       o.value = String(s);
       o.textContent = t("replay.speed_x", { n: I18n.num(s) });
       o.selected = s === speed;
-      select.append(o);
+      c.select.append(o);
     });
-    speedBox.append(select);
-    controls.append(restart, back, play, forward, speedBox);
-    const steps = h.fold(ui, `${h.game}:replay-steps:${combat.round}`, t("replay.steps", { n: I18n.num(all.length - 1) }), "replay-steps adv-only");
-    // Numbered from 0, the start, like the step counter.
+    const speedBox = ui.el("label", "replay-speed adv-only", `${t("replay.speed")} `);
+    speedBox.append(c.select);
+    box.append(c.restart, c.back, c.play, c.forward, speedBox);
+    return c;
+  }
+
+  // Every step in words, numbered from 0 (the start) like the counter.
+  function buildSteps(ui, all, words, h, round, go) {
+    const fold = h.fold(ui, `${h.game}:replay-steps:${round}`, t("replay.steps", { n: I18n.num(all.length - 1) }), "replay-steps adv-only");
     const ol = ui.el("ol", "replay-list");
     ol.setAttribute("start", "0");
     const items = all.map((f, i) => {
       const li = ui.el("li");
-      const b = button(ui, "replay-step", stepWords(f.event, name, heroName), null);
+      const b = button(ui, "replay-step", words(f.event), null);
       b.addEventListener("click", () => go(i, false));
       li.append(b);
       return li;
     });
     ol.append(...items);
-    steps.append(ol);
-    box.append(head, stage, caption, controls);
-    if (!replay.complete) box.append(ui.withSource(ui.el("p", "note", t("replay.cut")), "unknown"));
-    if (all.skipped) box.append(ui.withSource(ui.el("p", "note", I18n.plural("replay.skipped", all.skipped)), "unknown"));
-    box.append(steps);
+    fold.append(ol);
+    return { fold, items };
+  }
 
+  // The playback clock: `draw` after every step; it stops by itself once
+  // the player has left the page.
+  function clock(state, last, box, draw) {
     let timer = null;
-    const stop = () => {
-      if (timer) clearTimeout(timer);
-      timer = null;
-    };
-    function draw() {
-      const f = all[state.step];
-      SIDES.forEach((side) => {
-        const s = sides[side];
-        const nodes = f[side].map((tile) => {
-          if (!s.tiles.has(tile.ref)) s.tiles.set(tile.ref, minionTile(ui, tile, h));
-          const node = s.tiles.get(tile.ref);
-          updateTile(node, tile, h);
-          return node;
-        });
-        s.board.replaceChildren(...nodes);
-        if (!nodes.length) s.board.append(ui.el("span", "replay-empty", t("turns.board.empty")));
-        setHero(ui, s.badge, f.heroes[side] || heroes[side], h);
-        const hit = s.badge.querySelector(".replay-hero-hit");
-        hit.textContent = f.hero[side] ? `−${I18n.num(f.hero[side])}` : "";
-      });
-      caption.textContent = stepWords(f.event, name, heroName);
-      counter.textContent = t("replay.step_of", { n: I18n.num(state.step), total: I18n.num(all.length - 1) });
-      play.textContent = state.playing ? "⏸" : "▶";
-      play.setAttribute("aria-label", t(state.playing ? "replay.pause" : "replay.play"));
-      play.title = play.getAttribute("aria-label");
-      play.setAttribute("aria-pressed", String(state.playing));
-      back.disabled = state.step === 0;
-      restart.disabled = state.step === 0;
-      forward.disabled = state.step === all.length - 1;
-      items.forEach((li, i) => li.classList.toggle("now", i === state.step));
-      memory.set(h.game, { ...state });
-    }
     function tick() {
       timer = null;
       if (!box.isConnected || !state.playing) return;
-      if (state.step >= all.length - 1) {
-        state.playing = false;
-        draw();
-        return;
-      }
-      state.step += 1;
+      if (state.step >= last) state.playing = false;
+      else state.step += 1;
       draw();
-      timer = setTimeout(tick, STEP_MS / speed);
+      if (state.playing) timer = setTimeout(tick, STEP_MS / speed);
     }
-    function go(step, playing) {
-      stop();
-      state.step = Math.min(Math.max(step, 0), all.length - 1);
+    return function go(step, playing) {
+      if (timer) clearTimeout(timer);
+      timer = null;
+      state.step = Math.min(Math.max(step, 0), last);
       state.playing = playing;
       draw();
       if (playing) timer = setTimeout(tick, STEP_MS / speed);
-    }
-    play.addEventListener("click", () => {
-      if (state.playing) return go(state.step, false);
-      // At the end, play starts over.
-      go(state.step >= all.length - 1 ? 0 : state.step, true);
-    });
-    back.addEventListener("click", () => go(state.step - 1, false));
-    forward.addEventListener("click", () => go(state.step + 1, false));
-    restart.addEventListener("click", () => go(0, false));
-    select.addEventListener("change", () => {
-      speed = SPEEDS.includes(Number(select.value)) ? Number(select.value) : 1;
+    };
+  }
+
+  // The player of one combat.
+  function player(ui, combat, outcome, heroes, h, state) {
+    const all = frames(combat.replay);
+    const name = nameOf(combat.replay, h);
+    const words = (e) => stepWords(e, name, (id) => h.heroText({ id }));
+    const box = ui.el("div", "replay-player");
+    const head = ui.el("div", "replay-head");
+    const result = ui.el("span", `chip chip-${outcome.outcome}`, t(`outcome.${outcome.outcome}`));
+    ui.addTip(result, outcome.source);
+    const counter = ui.el("span", "replay-counter");
+    head.append(result, ui.el("span", "replay-title", t("replay.combat_of", { turn: combat.round, who: outcome.who || t("turns.opponent_unknown") })), counter);
+    const { stage, sides } = buildStage(ui);
+    const caption = ui.el("p", "replay-caption");
+    const c = buildControls(ui);
+    const last = all.length - 1;
+    let go = null;
+    const steps = buildSteps(ui, all, words, h, combat.round, (i, p) => go(i, p));
+    const draw = () => {
+      drawStage(ui, sides, all[state.step], heroes, h);
+      caption.textContent = words(all[state.step].event);
+      // Read aloud on a step or a pause only, not at every step of playback.
+      caption.setAttribute("aria-live", state.playing ? "off" : "polite");
+      counter.textContent = t("replay.step_of", { n: I18n.num(state.step), total: I18n.num(last) });
+      c.play.textContent = state.playing ? "⏸" : "▶";
+      c.play.setAttribute("aria-label", t(state.playing ? "replay.pause" : "replay.play"));
+      c.play.title = c.play.getAttribute("aria-label");
+      c.back.disabled = c.restart.disabled = state.step === 0;
+      c.forward.disabled = state.step === last;
+      steps.items.forEach((li, i) => li.classList.toggle("now", i === state.step));
+      memory.set(h.game, { ...state });
+    };
+    go = clock(state, last, box, draw);
+    // At the end, play starts over.
+    c.play.addEventListener("click", () => (state.playing ? go(state.step, false) : go(state.step >= last ? 0 : state.step, true)));
+    c.back.addEventListener("click", () => go(state.step - 1, false));
+    c.forward.addEventListener("click", () => go(state.step + 1, false));
+    c.restart.addEventListener("click", () => go(0, false));
+    c.select.addEventListener("change", () => {
+      speed = SPEEDS.includes(Number(c.select.value)) ? Number(c.select.value) : 1;
       if (state.playing) go(state.step, true);
     });
+    box.append(head, stage, caption, c.box);
+    if (!combat.replay.complete) box.append(ui.withSource(ui.el("p", "note", t("replay.cut")), "unknown"));
+    if (all.skipped) box.append(ui.withSource(ui.el("p", "note", I18n.plural("replay.skipped", all.skipped)), "unknown"));
+    box.append(steps.fold);
     go(state.step, state.playing);
     return box;
   }

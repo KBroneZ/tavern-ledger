@@ -3,7 +3,7 @@
 //! user's two real games (tests/data/real) checked against what the report
 //! already says about each combat.
 
-use bg_parser::replay::{CombatEvent, CombatReplay, TriggerKind};
+use bg_parser::replay::{CombatEvent, CombatReplay, TriggerKind, MAX_REPLAY_EVENTS};
 use bg_parser::report::{CombatResult, GameReport, Side};
 use bg_parser::LogReader;
 
@@ -520,4 +520,34 @@ fn check_events(replay: &CombatReplay, what: &str) -> std::collections::BTreeSet
         }
     }
     alive
+}
+
+#[test]
+fn a_combat_past_the_event_bound_stops_and_says_so() {
+    let mut l = start();
+    l.extend(minion(30, "SYN_BIG", 2, 1, (1, 100_000), &[]));
+    l.extend(minion(40, "SYN_FOE", 10, 1, (1, 100_000), &[]));
+    l.push(block("ATTACK", 30, ""));
+    for damage in 1..=MAX_REPLAY_EVENTS as i64 + 5 {
+        l.push(tag("40", "DAMAGE", &damage.to_string()));
+    }
+    l.push(end());
+    // Past the bound: neither the attack nor the summon is kept, and no
+    // later hit names a defender for an attack that is not there.
+    l.push(block("ATTACK", 40, ""));
+    l.push(tag("30", "DAMAGE", "1"));
+    l.push(end());
+    l.extend(minion(50, "SYN_LATE", 2, 2, (1, 1), &[]));
+    let r = finished(l);
+    let replay = replay(&r, 1);
+    assert!(!replay.complete);
+    assert_eq!(replay.events.len(), MAX_REPLAY_EVENTS);
+    assert_eq!(replay.minions.len(), 2, "no minion without its summon");
+    assert_eq!(
+        replay.events[0],
+        CombatEvent::Attack {
+            attacker: 0,
+            defender: Some(1)
+        }
+    );
 }

@@ -61,7 +61,10 @@ export function replay(
   };
   list(r.events, `${field}.events`, MAX_REPLAY_EVENTS).forEach((x, i) => {
     const at = `${field}.events[${i}]`;
-    const kind = isObject(x) && typeof x.kind === "string" ? EVENT_KEYS[x.kind] : undefined;
+    // Own keys only: "constructor" or "toString" must not find an inherited value.
+    const kind = isObject(x) && typeof x.kind === "string" && Object.hasOwn(EVENT_KEYS, x.kind)
+      ? EVENT_KEYS[x.kind]
+      : undefined;
     if (!kind) throw new Invalid(`${at}.kind`);
     const e = shape(x, at, kind, kind);
     switch (e.kind) {

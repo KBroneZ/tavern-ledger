@@ -396,11 +396,13 @@ impl Live {
                 run.ended = true;
             }
         } else if let Some(&attacker) = run.refs.get(&e.id) {
-            run.push(CombatEvent::Attack {
+            let attack = CombatEvent::Attack {
                 attacker,
                 defender: None,
-            });
-            run.open_attack = Some(run.replay.events.len() - 1);
+            };
+            if run.push(attack) {
+                run.open_attack = Some(run.replay.events.len() - 1);
+            }
         }
     }
 
@@ -449,7 +451,9 @@ impl Live {
         if !self.created.contains(&id) && run.incoming != Some(side) {
             return;
         }
-        if run.replay.minions.len() >= MAX_REPLAY_MINIONS {
+        // A minion without its summon event would never be drawn.
+        let full = run.replay.events.len() >= MAX_REPLAY_EVENTS;
+        if run.replay.minions.len() >= MAX_REPLAY_MINIONS || full {
             run.replay.complete = false;
             return;
         }
@@ -500,11 +504,14 @@ impl Run {
         }
     }
 
-    fn push(&mut self, event: CombatEvent) {
+    /// Adds `event`; false (and the replay marked incomplete) past the bound.
+    fn push(&mut self, event: CombatEvent) -> bool {
         if self.replay.events.len() < MAX_REPLAY_EVENTS {
             self.replay.events.push(event);
+            true
         } else {
             self.replay.complete = false;
+            false
         }
     }
 
