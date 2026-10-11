@@ -6,7 +6,7 @@
 use std::collections::BTreeMap;
 
 use combat_sim::cards::has_start_of_combat;
-use combat_sim::{simulate_teams, Odds, Options, Verdict};
+use combat_sim::{gifts, simulate_teams, Odds, Options, Verdict};
 use serde_json::{json, Value};
 
 use crate::input::Request;
@@ -102,7 +102,9 @@ pub fn run(request: &Request) -> Value {
         .boards()
         .chain(request.opponent.boards())
         .flat_map(|b| &b.minions)
-        .any(|m| has_start_of_combat(&m.card_id));
+        .any(|m| {
+            has_start_of_combat(&m.card_id) || m.gifts.iter().any(|g| gifts::has_start_of_combat(g))
+        });
     let known = odds.damage_unknown == 0;
     let cap = request.damage_cap;
     let approximate: Vec<Value> = odds

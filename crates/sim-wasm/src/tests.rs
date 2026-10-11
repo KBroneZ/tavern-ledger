@@ -128,6 +128,79 @@ fn a_start_of_combat_card_is_flagged() {
     assert_eq!(run(&req)["start_of_combat"], true);
 }
 
+const GOLEMANCY: &str = "BG36_MidGameEffect_000t61";
+
+fn gifted(id: &str, attack: i64, health: i64, gifts: Value) -> Value {
+    let mut m = minion(id, attack, health);
+    m["gifts"] = gifts;
+    m
+}
+
+#[test]
+fn a_dark_gift_on_a_minion_plays() {
+    let opponent = || vec![board(vec![minion(SKELETON, 1, 1)], Some(1))];
+    let bare = request(vec![board(vec![minion(PLAIN, 1, 1)], Some(1))], opponent());
+    assert_eq!(run(&bare)["tied"], 10_000);
+    // Golemancy: the Golem it leaves behind wins the trade.
+    let with_gift = request(
+        vec![board(
+            vec![gifted(PLAIN, 1, 1, json!([GOLEMANCY]))],
+            Some(1),
+        )],
+        opponent(),
+    );
+    let a = run(&with_gift);
+    assert_eq!(
+        (a["status"].as_str(), a["won"].as_i64()),
+        (Some("odds"), Some(10_000))
+    );
+}
+
+#[test]
+fn a_gift_the_engine_does_not_know_is_named_never_ignored() {
+    let req = request(
+        vec![board(
+            vec![gifted(PLAIN, 2, 2, json!(["BG99_NOT_A_GIFT"]))],
+            Some(1),
+        )],
+        vec![board(vec![minion(SKELETON, 1, 1)], Some(1))],
+    );
+    let a = run(&req);
+    assert_eq!(a["status"], "not_modelled");
+    assert_eq!(a["not_modelled"], json!(["BG99_NOT_A_GIFT"]));
+}
+
+#[test]
+fn a_start_of_combat_gift_is_flagged() {
+    let hostility = json!(["BG36_MidGameEffect_000t71"]);
+    let req = request(
+        vec![board(vec![gifted(PLAIN, 2, 2, hostility)], Some(1))],
+        vec![board(vec![minion(SKELETON, 1, 1)], Some(1))],
+    );
+    assert_eq!(run(&req)["start_of_combat"], true);
+}
+
+#[test]
+fn bad_gift_lists_are_refused() {
+    for gifts in [
+        json!("BG36_MidGameEffect_000t61"),
+        json!(["a", "b", "c", "d", "e"]),
+        json!(["bad id"]),
+        json!([3]),
+    ] {
+        let req = request(
+            vec![board(vec![gifted(PLAIN, 1, 1, gifts.clone())], Some(1))],
+            vec![board(vec![minion(PLAIN, 1, 1)], Some(1))],
+        );
+        assert_eq!(run(&req)["status"], "bad_input", "{gifts}");
+    }
+    let null = request(
+        vec![board(vec![gifted(PLAIN, 1, 1, Value::Null)], Some(1))],
+        vec![board(vec![minion(PLAIN, 1, 1)], Some(1))],
+    );
+    assert_eq!(run(&null)["status"], "odds", "null is no gifts");
+}
+
 #[test]
 fn duos_teams_bring_two_boards() {
     let req = request(

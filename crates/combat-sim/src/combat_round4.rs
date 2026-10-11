@@ -13,7 +13,7 @@ impl Combat<'_> {
     /// gained in this combat.
     pub(super) fn deathrattles(&self, unit: &Unit) -> Vec<&'static [Action]> {
         let own = std::iter::once(unit.card).chain(unit.gained.iter().copied());
-        own.flat_map(|c| self.p.cards[c as usize].triggers)
+        own.flat_map(|c| self.p.cards[c as usize].triggers.iter())
             .filter_map(|t| match t {
                 Trigger::Deathrattle(actions) => Some(*actions),
                 _ => None,
@@ -178,7 +178,7 @@ impl Combat<'_> {
             .p
             .cards
             .iter()
-            .any(|c: &CardInfo| times(c.triggers) > 0)
+            .any(|c: &CardInfo| times(&c.triggers) > 0)
         {
             return;
         }

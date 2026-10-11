@@ -1,5 +1,5 @@
 // Why a card is "approximate" (T-606): the engine gives each reason in
-// English (crates/combat-sim, its card lists and trials.rs). Spanish pages
+// English (crates/combat-sim, its card lists, gifts.rs and trials.rs). Spanish pages
 // show them in Spanish from this table; a test fails when the engine has a
 // reason the table lacks. A reason the table does not know (a newer engine)
 // is shown as the engine wrote it, marked as English.
@@ -41,6 +41,10 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
     "invoca un esbirro de la mano, que no se ve: la invocación se deja fuera",
   "on a board taken after the start of combat, the Deathrattles it copied are not on the board":
     "en un tablero tomado después del inicio del combate, los Últimos alientos que copió no están en el tablero",
+  "comes back whole with its keywords; what it keeps is not checked against the logs":
+    "vuelve entero con sus palabras clave; no se ha comprobado con los registros qué conserva",
+  "gilded, but its golden card is not modelled: it plays the plain card":
+    "dorado, pero su carta dorada no está modelada: se juega como la carta normal",
 };
 
 /** The reason in the page's language, and whether it had to stay in English. */

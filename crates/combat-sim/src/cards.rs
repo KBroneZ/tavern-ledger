@@ -109,6 +109,18 @@ pub enum Action {
     /// Gain the Deathrattles of the `count` left-most friendly minions that
     /// have one (not other cards that do this), `times` over (round 5).
     CopyLeftmostDeathrattles { count: u8, times: u8 },
+    /// Give this minion's Attack, its full Health or both to another random
+    /// friendly minion (Dark Gifts, `crate::gifts`).
+    GiveOwnStats { attack: bool, health: bool },
+    /// Multiply this minion's Attack and Health (Dark Gifts).
+    MultiplyStats { attack: i32, health: i32 },
+    /// Gain the Attack of the minion to the left (Dark Gifts).
+    GainLeftAttack,
+    /// Trigger this minion's own Deathrattles (Dark Gifts).
+    TriggerOwnDeathrattles,
+    /// Summon a copy of this minion, its gifts included, to its right (Dark
+    /// Gifts).
+    SummonCopy,
 }
 
 impl Action {
@@ -194,6 +206,13 @@ pub enum Trigger {
     /// Whenever a friendly Amalgam ([`AMALGAMS`]) gains stats, this gains
     /// them `n` times over (round 5).
     GainsWithAmalgam(i32),
+    /// Its Divine Shield takes `n` hits to break (Dark Gifts).
+    ShieldTakesHits(u8),
+    /// Takes no damage from the minion it attacks (Dark Gifts).
+    ImmuneWhileAttacking,
+    /// Comes back with Reborn with its Attack and full Health and its
+    /// keywords, not as a fresh card (Dark Gifts).
+    RebornWithStats,
 }
 
 impl Trigger {
@@ -316,6 +335,9 @@ pub const TOKENS: &[Token] = &[
     // Round 5: Foul Egg's Chicken (Foul Fowl), an Undead and a Beast in the
     // card data.
     tok("BG_RLK_833t", 3, 3, Tribes::UNDEAD.union(Tribes::BEAST), 1),
+    // The Golemancy gift's Golem (the user's logs); its stats are set when
+    // summoned.
+    tok("BG29_864t", 5, 5, Tribes::NONE, 1),
 ];
 
 pub(crate) const fn exact(triggers: &'static [Trigger]) -> CardRules {
