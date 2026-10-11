@@ -59,6 +59,7 @@ const canonical = noindex ? null : new URL(path, Astro.site).href;
         <a href="/privacy/" aria-current={path.startsWith("/privacy") ? "page" : undefined}>Privacy</a>
         {config && (
           <>
+            <a href="/me/" aria-current={path.startsWith("/me") || path.startsWith("/games") ? "page" : undefined}>Your games</a>
             <a href="/signin/" aria-current={path.startsWith("/signin") ? "page" : undefined}>Sign in</a>
             <a href="/account/" aria-current={path.startsWith("/account") ? "page" : undefined}>Account</a>
           </>

@@ -1,0 +1,61 @@
+---
+// The games list (/games/, /games/?id=…) (T-503, D-073): filters in a plain
+// GET form (the address is the state, so a link opens the same list), and
+// one page of games drawn by the script into the reserved #list-body.
+import "../styles/data.css";
+import "../styles/dash.css";
+import { t } from "../lib/data/strings.ts";
+import { PLACE_FILTERS } from "../lib/data/filters.ts";
+import StateBlock from "./data/StateBlock.astro";
+
+const places = PLACE_FILTERS.map((p) => [p, t(`list.place.${p}`)]);
+---
+
+<div class="dash" id="list" aria-busy="true">
+  <header class="data-head dash-head">
+    <div>
+      <p class="kicker"><a id="list-back" href="/me/">{t("list.back.own")}</a></p>
+      <h1 id="list-title">{t("list.title")}</h1>
+    </div>
+  </header>
+  <p class="visually-hidden" id="list-status" role="status" aria-live="polite"></p>
+  <form class="list-filters" id="list-filters" method="get" action="/games/" aria-label={t("list.filters")}>
+    <label>
+      {t("list.mode")}
+      <select name="mode" id="list-mode">
+        <option value="all">{t("list.mode.all")}</option>
+        <option value="solo">{t("mode.solo")}</option>
+        <option value="duos">{t("mode.duos")}</option>
+      </select>
+    </label>
+    <label>
+      {t("list.hero")}
+      <select name="hero" id="list-hero">
+        <option value="">{t("list.hero.any")}</option>
+      </select>
+    </label>
+    <label>
+      {t("list.from")}
+      <input type="date" name="from" id="list-from" />
+    </label>
+    <label>
+      {t("list.to")}
+      <input type="date" name="to" id="list-to" />
+    </label>
+    <label>
+      {t("list.place")}
+      <select name="place" id="list-place">
+        {places.map(([value, label]) => <option value={value}>{label}</option>)}
+      </select>
+    </label>
+    <div class="list-actions">
+      <button type="submit" id="list-apply" disabled>{t("list.apply")}</button>
+      <a class="btn quiet" href="/games/" id="list-reset">{t("list.reset")}</a>
+    </div>
+  </form>
+  <div class="dash-body" id="list-body">
+    <StateBlock kind="loading" lines={12} />
+  </div>
+</div>
+
+<script src="../scripts/games.ts"></script>

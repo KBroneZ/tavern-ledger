@@ -15,7 +15,8 @@ const DIST = join(ROOT, "dist");
 const ENV = loadEnv("production", ROOT, "PUBLIC_");
 const CONFIG = readConfig(ENV);
 const SIGNUPS = signupsOpen(ENV);
-const ACCOUNT_PAGES = ["signin/index.html", "account/index.html", "profile/index.html", "forgot-password/index.html"];
+const DATA_PAGES = ["me/index.html", "games/index.html", "profile/index.html"];
+const ACCOUNT_PAGES = ["signin/index.html", "account/index.html", "forgot-password/index.html", ...DATA_PAGES];
 
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -342,4 +343,58 @@ test("the still picture is the default: every animation sits behind the two scro
   assert.doesNotMatch(rest, /animation-(?:name|timeline)\s*:/);
   for (const shorthand of rest.matchAll(/animation\s*:\s*([^;}]+)/g)) assert.match(shorthand[1], /^none/);
   assert.doesNotMatch(rest, /view-timeline/);
+});
+
+// The browser pieces (T-503, D-073) must draw exactly what the Astro
+// components draw: the same made-up data, rendered both ways.
+test("the browser pieces draw the same markup as the Astro components on /style/", async () => {
+  const html = readFileSync(join(DIST, "style/index.html"), "utf8");
+  const p = await import("../../src/lib/view/pieces.ts");
+  const f = await import("../../src/lib/data/format.ts");
+  const sample = await import("../../src/lib/data/sample.ts");
+  const { toHtml } = await import("../helpers/html.ts");
+  const pieces = [
+    p.statTile({ hero: true, label: "Average place, Solo", value: f.average(3.42), backing: f.backing(30, 31), trend: f.trend(-0.3, "lower"), spark: { values: sample.recent, min: 1, max: 8, invert: true } }),
+    p.statTile({ label: "Combats won", value: "41", source: "inferred", backing: f.backing(31, 31) }),
+    p.statTile({ label: "Actions per minute", value: f.average(null), source: "unknown", backing: f.backing(0, 31) }),
+    p.topTable({ caption: "Heroes, most games first (made-up)", columns: sample.heroColumns, rows: sample.heroRows, top: 5 }),
+    p.topTable({ caption: "Last games (made-up)", columns: sample.gameColumns, rows: sample.gameRows }),
+    p.placeChart(sample.soloPlaces, "solo", "places-solo"),
+    p.placeChart(sample.duosPlaces, "duos", "places-duos"),
+    p.placeTrend(sample.recent, 8, "trend"),
+    p.stateBlock({ kind: "empty" }),
+    p.stateBlock({ kind: "unknown" }),
+    p.stateBlock({ kind: "loading" }),
+    p.stateBlock({ kind: "error" }),
+    p.placeBadge(null, "solo"),
+    p.placeBadge(1, "duos", "lg"),
+    p.picture("hero", "SAMPLE_HERO_01", "Lantern Keeper", 56),
+    p.picture("hero", null, "Hero not recorded", 40),
+    p.sourceMark("inferred"),
+  ];
+  for (const piece of pieces) {
+    const markup = toHtml(piece);
+    assert.ok(html.includes(markup), `not on /style/: ${markup.slice(0, 160)}…`);
+  }
+});
+
+test("accounts open: the data pages are a static frame with reserved room for the data", { skip: !CONFIG }, () => {
+  const page = (p: string) => readFileSync(join(DIST, p), "utf8");
+  for (const [file, kind] of [["me/index.html", "own"], ["profile/index.html", "public"]]) {
+    const html = page(file);
+    assert.match(html, new RegExp(`id="dash" data-kind="${kind}" aria-busy="true"`), file);
+    assert.match(html, /class="dash-body" id="dash-body"/, file);
+    assert.match(html, /class="mode-panels" id="dash-modes"/, file);
+    assert.match(html, /data-switch="mode" data-controls="dash-modes"/, file);
+    assert.match(html, /data-switch="detail"/, file);
+    assert.match(html, /state-loading/, file);
+    assert.match(html, /id="dash-status" role="status" aria-live="polite"/, file);
+  }
+  const games = page("games/index.html");
+  assert.match(games, /<form class="list-filters" id="list-filters" method="get" action="\/games\/"/);
+  for (const name of ["mode", "hero", "from", "to", "place"]) assert.match(games, new RegExp(`name="${name}"`), name);
+  assert.match(games, /class="dash-body" id="list-body"/);
+  // The owner's pages stay out of search engines; the menu links to the dashboard.
+  for (const file of ["me/index.html", "games/index.html"]) assert.match(page(file), /<meta name="robots" content="noindex">/, file);
+  assert.match(page("index.html"), /href="\/me\/"/);
 });
