@@ -2,16 +2,18 @@
 //! prints the accuracy report (T-603), then the accuracy of the overlay's
 //! inputs (T-605). With `--logs` it reads the game's own logs instead and
 //! also replays each combat's attacks (T-603b). Reads only local files;
-//! prints counts, shares, rules and card ids, never names.
+//! prints counts, shares, rules and card ids, never names. `--export` also
+//! writes the accuracy numbers as a small JSON file for the website (T-607).
 //!
 //! combat-validate (--history <games.jsonl> | --logs <Logs folder or Power.log>)
-//!                 --cards <cards.json> [--trials N] [--seed N]
+//!                 --cards <cards.json> [--trials N] [--seed N] [--export <file.json>]
 
 use std::path::Path;
 use std::process::ExitCode;
 
 use combat_sim::harness::{load_cards, load_history, render, run};
 use combat_sim::harness_duos::{render_duos, Source};
+use combat_sim::harness_export::{accuracy, date_of_day, export_json, render_accuracy};
 use combat_sim::harness_logs::{
     load_logs, power_logs, render_overlay_path, render_replays, replay_all,
 };
@@ -31,6 +33,7 @@ fn real_main() -> Result<(), String> {
     let mut history = None;
     let mut logs = None;
     let mut cards = None;
+    let mut export = None;
     let mut options = Options::default();
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
@@ -39,6 +42,7 @@ fn real_main() -> Result<(), String> {
             "--history" => history = Some(value()?),
             "--logs" => logs = Some(value()?),
             "--cards" => cards = Some(value()?),
+            "--export" => export = Some(value()?),
             "--trials" => {
                 options.trials = value()?
                     .parse()
@@ -55,13 +59,14 @@ fn real_main() -> Result<(), String> {
     let cards = cards.ok_or("--cards <cards.json> is required")?;
     let read = |p: &str| std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}"));
     let db = load_cards(&read(&cards)?)?;
-    match (history, logs) {
+    let (solo, duos) = match (history, logs) {
         (Some(history), None) => {
             let history = load_history(&read(&history)?, &db);
             let run = run(&history, &options);
             print!("{}", render(&history, &run, &options));
             print!("{}", render_overlay_path(&history, &options));
             print!("{}", render_duos(&history.duos, &options, Source::History));
+            (history.combats, history.duos)
         }
         (None, Some(logs)) => {
             let files = power_logs(Path::new(&logs))?;
@@ -75,8 +80,28 @@ fn real_main() -> Result<(), String> {
             print!("{}", render_replays(&rows, &run.scored, read.unreadable));
             print!("{}", render_overlay_path(&read.history, &options));
             print!("{}", render_duos(&read.duos, &options, Source::Logs));
+            (read.history.combats, read.duos)
         }
         _ => return Err("give one of --history <games.jsonl> or --logs <folder>".into()),
+    };
+    let acc = accuracy(&solo, &duos, &options);
+    print!("{}", render_accuracy(&acc));
+    if let Some(path) = export {
+        let json = export_json(&acc, &options, &date_of_day(today()?));
+        std::fs::write(&path, json).map_err(|e| format!("{path}: {e}"))?;
+        println!(
+            "
+Accuracy written to {path}."
+        );
     }
     Ok(())
+}
+
+/// Days since 1970-01-01, UTC, from the system clock.
+fn today() -> Result<i64, String> {
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|_| "the system clock is before 1970")?
+        .as_secs();
+    i64::try_from(secs / 86_400).map_err(|_| "the system clock is out of range".into())
 }

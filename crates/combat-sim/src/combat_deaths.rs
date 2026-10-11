@@ -1,0 +1,141 @@
+//! Start of combat and deaths: Deathrattles (extra ones included), Avenge
+//! and Reborn, resolved until nothing else dies.
+
+use super::{Combat, Dead, Source};
+use crate::cards::Trigger;
+use crate::model::{Keywords, Tribes};
+
+impl Combat<'_> {
+    /// Start-of-combat effects of the boards that are coming in (`sides`).
+    pub(super) fn start_of_combat(&mut self, first: usize, sides: [bool; 2]) {
+        for side in [first, 1 - first].into_iter().filter(|s| sides[*s]) {
+            let uids: Vec<u32> = self.sides[side].units.iter().map(|u| u.uid).collect();
+            for uid in uids {
+                let Some(unit) = self.unit(side, uid) else {
+                    continue;
+                };
+                for t in self.triggers(unit) {
+                    if let Trigger::StartOfCombat(actions) = t {
+                        for a in *actions {
+                            self.act(side, Source::Unit(uid), None, None, a);
+                        }
+                    }
+                }
+            }
+        }
+        self.process_deaths(first);
+    }
+
+    pub(super) fn extra_deathrattles(&self, side: usize) -> u8 {
+        self.sides[side]
+            .units
+            .iter()
+            .filter(|u| u.alive())
+            .flat_map(|u| self.triggers(u).iter())
+            .map(|t| match t {
+                Trigger::ExtraDeathrattles(n) => *n,
+                _ => 0,
+            })
+            .sum()
+    }
+
+    /// Removes the dead and resolves what their deaths cause, until nothing
+    /// else dies: deathrattles (the attacking side first, each side left to
+    /// right), then Avenge, then Reborn.
+    pub(super) fn process_deaths(&mut self, first: usize) {
+        loop {
+            let mut dead: Vec<Dead> = Vec::new();
+            for side in [first, 1 - first] {
+                let units = &self.sides[side].units;
+                let mut found = Vec::new();
+                for (i, u) in units.iter().enumerate() {
+                    if !u.alive() {
+                        let anchor = units[i + 1..].iter().find(|v| v.alive()).map(|v| v.uid);
+                        found.push((i, anchor));
+                    }
+                }
+                for &(i, anchor) in found.iter().rev() {
+                    let unit = self.sides[side].remove(i);
+                    dead.push(Dead { side, unit, anchor });
+                }
+                // Removed right to left; put this side's dead back in order.
+                let start = dead.len() - found.len();
+                dead[start..].reverse();
+            }
+            if dead.is_empty() {
+                return;
+            }
+            self.gain_deathrattles(&dead);
+            for d in &dead {
+                let times = 1 + usize::from(self.extra_deathrattles(d.side));
+                let src = Source::Dead {
+                    anchor: d.anchor,
+                    killer: d.unit.hit_by,
+                    stats: (d.unit.attack, d.unit.max_health),
+                };
+                // Its card's Deathrattles, then those it gained in combat.
+                let cards = std::iter::once(d.unit.card).chain(d.unit.gained.iter().copied());
+                for card in cards.flat_map(|c| std::iter::repeat_n(c, times)) {
+                    let triggers = self.p.cards[card as usize].triggers;
+                    for t in triggers {
+                        if let Trigger::Deathrattle(actions) = t {
+                            for a in *actions {
+                                self.act(d.side, src, None, None, a);
+                            }
+                            self.after_friendly_deathrattle(d.side);
+                        }
+                    }
+                }
+            }
+            for d in &dead {
+                self.avenge(d.side);
+            }
+            for d in &dead {
+                if d.unit.kw.contains(Keywords::REBORN) {
+                    self.reborn(d);
+                }
+            }
+        }
+    }
+
+    pub(super) fn avenge(&mut self, side: usize) {
+        let uids: Vec<u32> = self.friends(side, Tribes::NONE, None);
+        for uid in uids {
+            let Some(unit) = self.unit(side, uid) else {
+                continue;
+            };
+            for t in self.triggers(unit) {
+                if let Trigger::Avenge(n, actions) = t {
+                    let Some(u) = self.unit_mut(side, uid) else {
+                        continue;
+                    };
+                    u.avenge += 1;
+                    if u.avenge >= *n {
+                        u.avenge = 0;
+                        for a in *actions {
+                            self.act(side, Source::Unit(uid), None, None, a);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// The minion comes back where it died as a fresh copy of its card with
+    /// 1 Health and no Reborn. Without the card's stats, its last Attack and
+    /// keywords are used (an approximation the caller reports).
+    pub(super) fn reborn(&mut self, d: &Dead) {
+        let card = d.unit.card;
+        let (attack, kw) = match self.p.cards[card as usize].base {
+            Some(b) => (b.attack, b.keywords),
+            None => (d.unit.attack, d.unit.kw),
+        };
+        let unit = self.fresh(card, attack, 1, kw.without(Keywords::REBORN));
+        let uid = unit.uid;
+        let at = self.anchor_pos(d.side, d.anchor);
+        if self.sides[d.side].insert(at, unit) {
+            self.after_summon(d.side, uid);
+            self.after_reborn(d.side, uid);
+        }
+    }
+}

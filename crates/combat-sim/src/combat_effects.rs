@@ -1,0 +1,250 @@
+//! What a card does: the actions of `cards::Action` (buffs, keywords,
+//! damage, summons) and the helpers they share.
+
+use super::{Combat, Source, Unit};
+use crate::cards::{Action, Trigger};
+use crate::model::{Keywords, Tribes};
+
+impl Combat<'_> {
+    /// Gives `uid` stats, then checks "once this reaches N Attack".
+    pub(super) fn buff(&mut self, side: usize, uid: u32, attack: i32, health: i32) {
+        let Some(u) = self.unit_mut(side, uid) else {
+            return;
+        };
+        u.attack = u.attack.saturating_add(attack);
+        u.health = u.health.saturating_add(health);
+        u.max_health = u.max_health.saturating_add(health);
+        let (atk, done, card) = (u.attack, u.shield_done, u.card);
+        if done {
+            return;
+        }
+        let reaches = self.p.cards[card as usize]
+            .triggers
+            .iter()
+            .any(|t| matches!(t, Trigger::ShieldAtAttack(n) if atk >= *n));
+        if reaches {
+            if let Some(u) = self.unit_mut(side, uid) {
+                u.kw = u.kw.union(Keywords::DIVINE_SHIELD);
+                u.shield_done = true;
+            }
+        }
+    }
+
+    /// Living friendly minions of `tribe` (any when NONE), without `skip`.
+    pub(super) fn friends(&self, side: usize, tribe: Tribes, skip: Option<u32>) -> Vec<u32> {
+        self.sides[side]
+            .units
+            .iter()
+            .filter(|u| u.alive() && Some(u.uid) != skip)
+            .filter(|u| tribe == Tribes::NONE || self.tribes(u).is(tribe))
+            .map(|u| u.uid)
+            .collect()
+    }
+
+    pub(super) fn pick(&mut self, mut pool: Vec<u32>, count: u8) -> Vec<u32> {
+        let mut out = Vec::new();
+        while out.len() < usize::from(count) && !pool.is_empty() {
+            out.push(pool.swap_remove(self.rng.below(pool.len())));
+        }
+        out
+    }
+
+    pub(super) fn act(
+        &mut self,
+        side: usize,
+        src: Source,
+        target: Option<(usize, u32)>,
+        attacker: Option<u32>,
+        action: &Action,
+    ) {
+        let (me, killer) = match src {
+            Source::Unit(uid) => (Some(uid), None),
+            Source::Dead { killer, .. } => (None, killer),
+        };
+        match *action {
+            Action::Summon { token, count } => self.summon(side, src, token, count),
+            Action::BuffAll {
+                attack,
+                health,
+                tribe,
+                others,
+            } => {
+                let skip = if others { me } else { None };
+                for uid in self.friends(side, tribe, skip) {
+                    self.buff(side, uid, attack, health);
+                }
+            }
+            Action::BuffRandom {
+                attack,
+                health,
+                tribe,
+                count,
+            } => {
+                let pool = self.friends(side, tribe, me);
+                for uid in self.pick(pool, count) {
+                    self.buff(side, uid, attack, health);
+                }
+            }
+            Action::GainStats { attack, health } => {
+                if let Some(uid) = me {
+                    self.buff(side, uid, attack, health);
+                }
+            }
+            Action::GainKeyword(k) => {
+                if let Some(u) = me.and_then(|uid| self.unit_mut(side, uid)) {
+                    u.kw = u.kw.union(k);
+                }
+            }
+            Action::GiveKeyword {
+                keyword,
+                tribe,
+                count,
+            } => {
+                let pool: Vec<u32> = self
+                    .friends(side, tribe, me)
+                    .into_iter()
+                    .filter(|uid| {
+                        self.unit(side, *uid)
+                            .is_some_and(|u| !u.kw.contains(keyword))
+                    })
+                    .collect();
+                for uid in self.pick(pool, count) {
+                    if let Some(u) = self.unit_mut(side, uid) {
+                        u.kw = u.kw.union(keyword);
+                    }
+                }
+            }
+            Action::DamageTargetAndAdjacent => {
+                let (Some(uid), Some((foe, t))) = (me, target) else {
+                    return;
+                };
+                let atk = self.unit(side, uid).map_or(0, |u| u.attack);
+                let Some(t_ix) = self.sides[foe].pos(t) else {
+                    return;
+                };
+                let adjacent = self.neighbours(foe, t_ix);
+                self.damage(foe, t, atk, Keywords::NONE, uid);
+                if !adjacent.is_empty() {
+                    let n = adjacent[self.rng.below(adjacent.len())];
+                    self.damage(foe, n, atk, Keywords::NONE, uid);
+                }
+            }
+            Action::GainTargetAttack { times } => {
+                let (Some(uid), Some((foe, t))) = (me, target) else {
+                    return;
+                };
+                let gain = self
+                    .unit(foe, t)
+                    .map_or(0, |u| u.attack)
+                    .saturating_mul(times);
+                self.buff(side, uid, gain, 0);
+            }
+            Action::StripTarget(k) => {
+                if let Some(u) = target.and_then(|(foe, t)| self.unit_mut(foe, t)) {
+                    u.kw = u.kw.without(k);
+                }
+            }
+            Action::DestroyKiller => {
+                if let Some(u) = killer.and_then(|k| self.unit_mut(1 - side, k)) {
+                    u.health = u.health.min(0);
+                }
+            }
+            Action::BuffAttacker { attack, health } => {
+                if let Some(a) = attacker {
+                    self.buff(side, a, attack, health);
+                }
+            }
+            Action::BuffAllWithKeyword {
+                attack,
+                health,
+                keyword,
+            } => {
+                let shielded: Vec<u32> = self
+                    .friends(side, Tribes::NONE, None)
+                    .into_iter()
+                    .filter(|f| self.unit(side, *f).is_some_and(|u| u.kw.contains(keyword)))
+                    .collect();
+                for f in shielded {
+                    self.buff(side, f, attack, health);
+                }
+            }
+            Action::SummonAndAttack { token } => self.summon_and_attack(side, src, token),
+            Action::BuffOnePerTribe { attack, health } => {
+                self.buff_one_per_tribe(side, attack, health)
+            }
+            // Needs the reborn minion: played by `after_reborn`.
+            Action::GiveRebornAttackToRightmost { .. } => {}
+            Action::SummonWithStats {
+                token,
+                factor,
+                attack_first,
+            } => self.summon_with_stats(side, src, target, token, factor, attack_first),
+            Action::BuffCards {
+                cards,
+                attack,
+                health,
+            } => self.buff_cards(side, cards, attack, health),
+            Action::DamageTargetNeighbours(amount) => {
+                if let (Some(uid), Some((foe, t))) = (me, target) {
+                    self.damage_neighbours(foe, t, amount, uid);
+                }
+            }
+            Action::TriggerAdjacentDeathrattle { both } => {
+                self.trigger_adjacent_deathrattle(side, src, both)
+            }
+            Action::MultiplyAttackerAttack { factor } => {
+                if let Some(a) = attacker {
+                    let gain = self
+                        .unit(side, a)
+                        .map_or(0, |u| u.attack.saturating_mul(factor.saturating_sub(1)));
+                    self.buff(side, a, gain, 0);
+                }
+            }
+        }
+    }
+
+    pub(super) fn summon(&mut self, side: usize, src: Source, token: &str, count: u8) {
+        // Every token a card can summon is entered in `Prepared::new`, with
+        // its printed facts; a test in `cards` checks the token table is complete.
+        let Some(&(_, card)) = self.p.tokens.iter().find(|(id, _)| *id == token) else {
+            debug_assert!(false, "token {token} was not prepared");
+            return;
+        };
+        let Some(base) = self.p.cards[card as usize].base else {
+            return;
+        };
+        let at = self.summon_pos(side, src);
+        for k in 0..usize::from(count) {
+            let unit = self.fresh(card, base.attack, base.health, base.keywords);
+            let uid = unit.uid;
+            if !self.sides[side].insert(at + k, unit) {
+                break;
+            }
+            self.after_summon(side, uid);
+        }
+    }
+
+    /// Where a summon from `src` goes: right of the card, or where it died.
+    pub(super) fn summon_pos(&self, side: usize, src: Source) -> usize {
+        match src {
+            Source::Unit(uid) => self.sides[side].pos(uid).map_or(0, |i| i + 1),
+            Source::Dead { anchor, .. } => self.anchor_pos(side, anchor),
+        }
+    }
+
+    pub(super) fn anchor_pos(&self, side: usize, anchor: Option<u32>) -> usize {
+        anchor
+            .and_then(|a| self.sides[side].pos(a))
+            .unwrap_or(self.sides[side].units.len())
+    }
+
+    pub(super) fn fresh(&mut self, card: u16, attack: i32, health: i32, kw: Keywords) -> Unit {
+        self.next_uid += 1;
+        let mut unit = Unit::new(self.next_uid, card, attack, health, kw);
+        unit.shield_done = self.p.cards[card as usize]
+            .triggers
+            .iter()
+            .any(|t| matches!(t, Trigger::ShieldAtAttack(n) if attack >= *n));
+        unit
+    }
+}
