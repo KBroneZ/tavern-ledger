@@ -41,15 +41,15 @@ export interface HeroesOptions {
   sort: HeroSort;
 }
 
-/** Two buttons with aria-pressed; the page script re-sorts on a click. */
+/** Two buttons with aria-pressed, named by the visible "Sort by"; the page script re-sorts both modes on a click. */
 function sortSwitch(m: Mode, sort: HeroSort): VNode {
-  const button = (value: HeroSort, label: string) =>
-    h("button", { type: "button", "data-sort": value, "aria-pressed": String(sort === value), "aria-controls": `heroes-${m}-table` }, label);
+  const button = (value: HeroSort, label: string) => h("button", { type: "button", "data-sort": value, "aria-pressed": String(sort === value) }, label);
+  const label = `heroes-${m}-sort`;
   return h(
     "div",
     { class: "hstats-sort" },
-    h("span", { class: "hstats-sort-label", "aria-hidden": "true" }, t("hstats.sort")),
-    h("div", { class: "seg", role: "group", "aria-label": t("hstats.sort.label", { mode: modeName(m) }) }, button("games", t("hstats.sort.games")), button("avg", t("hstats.sort.avg"))),
+    h("span", { class: "hstats-sort-label", id: label }, t("hstats.sort")),
+    h("div", { class: "seg", role: "group", "aria-labelledby": label }, button("games", t("hstats.sort.games")), button("avg", t("hstats.sort.avg"))),
   );
 }
 

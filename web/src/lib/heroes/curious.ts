@@ -36,7 +36,7 @@ export function modeRecords(rows: readonly CuriousRecord[], m: Mode): CuriousRec
 }
 
 export const CURIOUS_RECORD_COLUMNS_VIEW: Column[] = [
-  { label: t("records.col.record") },
+  { label: t("records.col.record"), rowHeader: true },
   { label: t("records.col.value"), numeric: true },
   { label: t("curious.col.game") },
   { label: t("records.col.games") },

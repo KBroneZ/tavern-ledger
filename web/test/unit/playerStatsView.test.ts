@@ -58,8 +58,9 @@ test("heroes: the sort switch shows the sort in force and drives the table", () 
     const panel = heroesPanel("solo", heroes, { profileId: null, sort });
     const buttons = elements(panel).filter((e) => e.tag === "button" && attr(e, "data-sort"));
     assert.deepEqual(buttons.map((b) => [attr(b, "data-sort"), attr(b, "aria-pressed")]), [["games", String(sort === "games")], ["avg", String(sort === "avg")]]);
-    for (const b of buttons) assert.equal(attr(b, "aria-controls"), "heroes-solo-table");
-    assert.ok(elements(panel).some((e) => attr(e, "id") === "heroes-solo-table"));
+    const group = elements(panel).find((e) => attr(e, "role") === "group");
+    assert.equal(attr(group as VNode, "aria-labelledby"), "heroes-solo-sort");
+    assert.equal(textOf(elements(panel).find((e) => attr(e, "id") === "heroes-solo-sort") as VNode), "Sort by");
   }
   assert.match(textOf(heroesPanel("solo", heroes, { profileId: null, sort: "avg" })), /best average place first/);
 });
@@ -95,6 +96,8 @@ test("curious: records with their games, Simple totals and Advanced totals, per 
   assert.match(html, /Records, the game each came from/);
   assert.match(html, /href="\/game\/\?u=/);
   assert.match(html, /mark-inferred/);
+  // Each record's name heads its row, so its value and game are read with it.
+  assert.match(html, /<th scope="row">Most combats won in a row<\/th>/);
   const tiles = elements(solo).filter((e) => hasClass(e, "tiles"));
   assert.equal(tiles.length, 2);
   assert.equal(hasClass(tiles[1], "adv"), true);

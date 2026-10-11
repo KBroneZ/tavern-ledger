@@ -229,7 +229,6 @@ export const STRINGS = {
   "hstats.caption.games": "Heroes, most games first, {mode}",
   "hstats.caption.avg": "Heroes, best average place first, {mode}",
   "hstats.sort": "Sort by",
-  "hstats.sort.label": "Sort the {mode} heroes by",
   "hstats.sort.games": "Games",
   "hstats.sort.avg": "Average place",
   "hstats.sorted.games": "Heroes sorted by games.",

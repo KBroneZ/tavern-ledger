@@ -96,8 +96,9 @@ export function fewMark(): VNode {
   return h("span", { class: "mark-src mark-few", title: t("hstats.few.tip", { min: MIN_GAMES }) }, t("hstats.few"));
 }
 
-function withFew(text: string, few: boolean): Cell {
-  if (text === t("value.none")) return { node: unknownValue() };
+/** A value (null: unknown, a dash read as "Unknown"), with the mark when it rests on few games. */
+function withFew(value: number | null, text: string, few: boolean): Cell {
+  if (value === null) return { node: unknownValue() };
   return few ? { node: [h("span", {}, text), fewMark()] } : text;
 }
 
@@ -105,7 +106,7 @@ function withFew(text: string, few: boolean): Cell {
 export function pickCell(r: HeroStat): Cell {
   if (r.offeredGames === 0) return { node: unknownValue() };
   const text = t("hstats.picked.value", { rate: share(r.pickedGames, r.offeredGames), picked: r.pickedGames, offered: r.offeredGames });
-  return withFew(text, r.offeredGames < MIN_GAMES);
+  return withFew(r.pickedGames, text, r.offeredGames < MIN_GAMES);
 }
 
 /** The games list filtered by this hero and mode (the owner's, or the public profile's). */
@@ -122,8 +123,8 @@ export function heroStatCells(r: HeroStat, profileId: string | null): Cell[] {
     { hero: r.hero, name: heroName(r.hero), href: heroGamesHref(r.hero, r.mode, profileId) },
     // Places count finished games only: say how many when some are not.
     r.placedGames < r.games ? t("heroes.games.placed", { games: r.games, placed: r.placedGames }) : compact(r.games),
-    withFew(average(r.avgPlace), few),
-    withFew(share(r.topHalf, r.placedGames), few),
+    withFew(r.avgPlace, average(r.avgPlace), few),
+    withFew(r.placedGames === 0 ? null : r.topHalf, share(r.topHalf, r.placedGames), few),
     r.placedGames === 0 ? { node: unknownValue() } : compact(r.wins),
     { place: r.bestPlace, mode: r.mode },
     { place: r.worstPlace, mode: r.mode },

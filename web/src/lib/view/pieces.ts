@@ -201,6 +201,8 @@ export interface Column {
   numeric?: boolean;
   /** Shown in Advanced only (the .adv rule). */
   advanced?: boolean;
+  /** Text cells of this column are the row's header (th scope="row"). */
+  rowHeader?: boolean;
 }
 
 function tableCell(cell: Cell, column: Column | undefined): VNode {
@@ -211,6 +213,7 @@ function tableCell(cell: Cell, column: Column | undefined): VNode {
   const klass = cls({ num: !!column?.numeric, adv: !!column?.advanced }) || undefined;
   if (typeof cell === "object" && "place" in cell) return h("td", { class: klass }, placeBadge(cell.place, cell.mode));
   if (typeof cell === "object") return h("td", { class: klass }, cell.node);
+  if (column?.rowHeader) return h("th", { scope: "row", class: klass }, String(cell));
   return h("td", { class: klass }, String(cell));
 }
 

@@ -28,9 +28,10 @@ const note = byId("pp-note");
 const about = byId("pp-about");
 const switches = byId("pp-switches");
 
+// Not busy first: some screen readers skip a live region's change inside a busy element.
 function settle(text: string): void {
-  status.textContent = text;
   root.setAttribute("aria-busy", "false");
+  status.textContent = text;
 }
 
 /** A whole-page message (signed out, private, empty, error) in place of the panels. */
@@ -44,6 +45,7 @@ function showGate(node: VNode, announce: string): void {
 
 function privateGate(): void {
   back.hidden = true;
+  title.textContent = t("dash.private.title");
   showGate(stateBlock({ kind: "unknown", title: t("dash.private.title"), body: t("dash.private.body") }), t("dash.private.title"));
   document.title = `${t("dash.private.title")} · Tavern Ledger`;
 }
@@ -108,8 +110,14 @@ function watchSort(rows: HeroStat[], profileId: string | null): void {
     if (button?.getAttribute("aria-pressed") === "true") return;
     const panel = button?.closest<HTMLElement>("[data-mode-panel]")?.dataset.modePanel;
     history.replaceState(history.state, "", withSort(location.href, value));
+    // A re-sort keeps every fold as the viewer left it (same panels, same folds, same order).
+    const open = [...panels.querySelectorAll<HTMLDetailsElement>("details")].map((d) => d.open);
     mount(panels, ...heroesPanels(rows, { profileId, sort: value }));
-    panels.querySelector<HTMLButtonElement>(`[data-mode-panel="${panel}"] button[data-sort="${value}"]`)?.focus();
+    panels.querySelectorAll<HTMLDetailsElement>("details").forEach((d, i) => (d.open = open[i] ?? false));
+    const target =
+      panels.querySelector<HTMLButtonElement>(`[data-mode-panel="${panel}"] button[data-sort="${value}"]`) ??
+      panels.querySelector<HTMLButtonElement>('button[data-sort][aria-pressed="true"]');
+    target?.focus();
     status.textContent = t(value === "avg" ? "hstats.sorted.avg" : "hstats.sorted.games");
   });
 }
