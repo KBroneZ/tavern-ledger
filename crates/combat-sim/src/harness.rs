@@ -16,6 +16,7 @@ use serde_json::Value;
 
 use crate::cards::{self, Fidelity};
 use crate::combat::CombatResult;
+use crate::harness_duos::{duos_from_saved, DuosCombat};
 use crate::model::{BaseCard, Keywords, Minion, Tribes, Warband};
 use crate::score::{score, Prediction, Report};
 use crate::trials::{simulate, Coverage, Options, Verdict};
@@ -109,9 +110,11 @@ pub struct History {
     pub combats: Vec<LoggedCombat>,
     /// Solo rounds without both boards or without a result.
     pub solo_rounds_skipped: usize,
-    /// Duos rounds: not scored yet (the engine plays Solo combats).
+    /// Duos rounds, and those with every board and a result.
     pub duos_rounds: usize,
     pub duos_rounds_complete: usize,
+    /// The Duos combats with each team's boards (T-608).
+    pub duos: Vec<DuosCombat>,
     /// Every minion seen on a board entering combat (Solo and Duos): card id
     /// -> appearances. For the coverage list.
     pub card_counts: BTreeMap<String, u32>,
@@ -153,7 +156,7 @@ fn minion(v: &Value, db: &CardDb) -> Option<Minion> {
     })
 }
 
-fn board(entry: &Value, db: &CardDb) -> Option<Warband> {
+pub(crate) fn board(entry: &Value, db: &CardDb) -> Option<Warband> {
     let minions: Option<Vec<Minion>> = entry
         .get("board")?
         .as_array()?
@@ -166,7 +169,7 @@ fn board(entry: &Value, db: &CardDb) -> Option<Warband> {
     })
 }
 
-fn result(round: &Value) -> Option<CombatResult> {
+pub(crate) fn result(round: &Value) -> Option<CombatResult> {
     match round.get("result")?.as_str()? {
         "won" => Some(CombatResult::Won),
         "lost" => Some(CombatResult::Lost),
@@ -208,6 +211,7 @@ pub fn load_history(jsonl: &str, db: &CardDb) -> History {
             h.solo_games += 1;
         } else {
             h.duos_games += 1;
+            h.duos.extend(duos_from_saved(report, game + 1, db));
         }
         let rounds = report.get("rounds").and_then(Value::as_array);
         for round in rounds.into_iter().flatten() {
@@ -383,8 +387,8 @@ pub fn render(history: &History, run: &Run, options: &Options) -> String {
     let _ = writeln!(
         out,
         "History: {} games ({} Solo, {} Duos). Solo combats with both boards and a result: {} \
-         (skipped {}). Duos rounds: {} ({} with every board and a result), not scored: the engine \
-         plays Solo combats only.\n",
+         (skipped {}). Duos rounds: {} ({} with every board and a result), scored apart below \
+         (T-608).\n",
         history.games,
         history.solo_games,
         history.duos_games,

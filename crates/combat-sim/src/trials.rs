@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use crate::cards::{self, Action, Fidelity, Trigger};
 use crate::combat::{play, CombatResult, Prepared};
-use crate::model::{BoardError, Keywords, Tribes, Warband};
+use crate::model::{BoardError, Keywords, Team, Tribes, Warband};
 use crate::rng::Rng;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -44,8 +44,18 @@ pub struct Coverage {
 
 impl Coverage {
     pub fn of(player: &Warband, opponent: &Warband, start_of_combat: bool) -> Coverage {
+        Coverage::of_boards(&[player, opponent], start_of_combat)
+    }
+
+    /// Every board of both teams (Duos).
+    pub fn of_teams(player: &Team, opponent: &Team, start_of_combat: bool) -> Coverage {
+        let boards: Vec<&Warband> = player.boards().chain(opponent.boards()).collect();
+        Coverage::of_boards(&boards, start_of_combat)
+    }
+
+    fn of_boards(boards: &[&Warband], start_of_combat: bool) -> Coverage {
         let mut cov = Coverage::default();
-        for m in player.minions.iter().chain(&opponent.minions) {
+        for m in boards.iter().flat_map(|b| &b.minions) {
             let id = &m.card_id;
             match cards::rules(id) {
                 None => push_unique(&mut cov.not_modelled, id.clone()),
@@ -63,7 +73,7 @@ impl Coverage {
                 }
             }
         }
-        for band in [player, opponent] {
+        for band in boards {
             let grants = reborn_grants(band);
             for m in &band.minions {
                 let may_reborn = m.keywords.contains(Keywords::REBORN)
@@ -187,6 +197,34 @@ pub fn simulate(
         return Ok(Verdict::NotModelled(coverage));
     }
     let prepared = Prepared::new(player, opponent, options.start_of_combat);
+    Ok(Verdict::Odds(run_trials(&prepared, coverage, options)))
+}
+
+/// A Duos combat (T-608): each team's first board fights; once one is gone
+/// its teammate's board comes in, and the combat ends when a team has no
+/// board left. The damage is the tier of the hero whose board is on the
+/// field at the end plus the tiers of every surviving minion of the team,
+/// a teammate's board that never came in included. A team without a second
+/// board plays as in Solo. Deterministic for a given seed.
+pub fn simulate_teams(
+    player: &Team,
+    opponent: &Team,
+    options: &Options,
+) -> Result<Verdict, BoardError> {
+    player.validate()?;
+    opponent.validate()?;
+    if options.trials == 0 {
+        return Err(BoardError::NoTrials);
+    }
+    let coverage = Coverage::of_teams(player, opponent, options.start_of_combat);
+    if !coverage.not_modelled.is_empty() && !options.allow_unmodelled {
+        return Ok(Verdict::NotModelled(coverage));
+    }
+    let prepared = Prepared::teams(player, opponent, options.start_of_combat);
+    Ok(Verdict::Odds(run_trials(&prepared, coverage, options)))
+}
+
+fn run_trials(prepared: &Prepared, coverage: Coverage, options: &Options) -> Odds {
     let mut rng = Rng::new(options.seed);
     let mut odds = Odds {
         trials: options.trials,
@@ -200,7 +238,7 @@ pub fn simulate(
         coverage,
     };
     for _ in 0..options.trials {
-        let outcome = play(&prepared, &mut rng);
+        let outcome = play(prepared, &mut rng);
         if outcome.stalled {
             odds.stalled += 1;
         }
@@ -223,5 +261,5 @@ pub fn simulate(
             None => odds.damage_unknown += 1,
         }
     }
-    Ok(Verdict::Odds(odds))
+    odds
 }

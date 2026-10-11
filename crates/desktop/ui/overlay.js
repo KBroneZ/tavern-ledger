@@ -376,7 +376,7 @@ function renderOdds(g, advanced) {
   const v = TLOdds.oddsView(g.odds, advanced, (id) => TLCards.name(id) || null);
   if (!v) return null;
   const box = el("div", `odds ${v.kind}`);
-  box.title = TLI18n.t("ov.odds.about");
+  box.title = v.about;
   if (v.kind === "note") {
     box.append(el("p", "odds-note", v.text));
   } else {

@@ -88,6 +88,9 @@ pub struct Collector {
     pub attacks: BTreeMap<i64, Vec<LoggedAttack>>,
     /// The newest attack while its defender is not known yet: (round, index).
     open_attack: Option<(i64, usize)>,
+    /// Round -> the player's own board as the shop turn before it ended
+    /// (T-608).
+    pub shop_boards: BTreeMap<i64, Vec<Minion>>,
     /// Time of the line being read, in ms from the game's first line.
     pub now_ms: i64,
     /// Nesting of the line being read (0 is the log's top level).
@@ -405,6 +408,11 @@ impl Collector {
         self.close_unseen(Side::Own, previous);
         self.close_unseen(Side::Opponent, previous);
         if self.in_combat() {
+            let shop_seen = old.is_some_and(|o| o % 2 == 1 && o + 1 == turn);
+            if let Some(pid) = self.local_pid.filter(|_| shop_seen) {
+                self.shop_boards
+                    .insert(turn / 2, board_of(&self.board, pid));
+            }
             self.open_own = Some(OpenLeg {
                 explicit: false,
                 hero: None,

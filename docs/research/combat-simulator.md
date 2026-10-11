@@ -1,8 +1,8 @@
 # Combat simulator (F6, T-601 to T-603)
 
-Sessions 068 and 071, 2026-10-11. The user asked for (1) the odds to win, tie or lose a combat, and the damage, before each combat in the app, from the boards the player has seen, and (2) an interactive simulator on the website that can load old boards or pairings. This page is the design (T-601), what the engine core does today (T-602), how it is checked against the user's own combats (T-603) and replayed attack by attack (T-603b), the card coverage (T-604, two rounds) and the odds in the overlay (T-605, section 8).
+Sessions 068, 071 and 074, 2026-10-11. The user asked for (1) the odds to win, tie or lose a combat, and the damage, before each combat in the app, from the boards the player has seen, and (2) an interactive simulator on the website that can load old boards or pairings. This page is the design (T-601), what the engine core does today (T-602), how it is checked against the user's own combats (T-603) and replayed attack by attack (T-603b), the card coverage (T-604, three rounds) and the odds in the overlay (T-605, section 8). Session 074 added Duos (T-608): the rules in section 3, the numbers in sections 7.4 and 7.5, the overlay in section 8.
 
-Code: [`crates/combat-sim`](../../crates/combat-sim), [`crates/tracker/src/odds.rs`](../../crates/tracker/src/odds.rs), [`crates/desktop/src/odds.rs`](../../crates/desktop/src/odds.rs). Decisions: D-081, D-084.
+Code: [`crates/combat-sim`](../../crates/combat-sim), [`crates/tracker/src/odds.rs`](../../crates/tracker/src/odds.rs), [`crates/desktop/src/odds.rs`](../../crates/desktop/src/odds.rs), Duos: [`crates/tracker/src/odds_duos.rs`](../../crates/tracker/src/odds_duos.rs), [`crates/combat-sim/src/harness_duos.rs`](../../crates/combat-sim/src/harness_duos.rs). Decisions: D-081, D-084, D-087.
 
 ## 1. Clean room (CLAUDE.md rule 1)
 
@@ -26,6 +26,7 @@ The engine adds, from the card data (HearthstoneJSON in the harness; `crates/car
 | `POISONOUS`, `MEGA_WINDFURY` tags | Read by the parser since session 071 (`Minion::sim_keywords`), but kept out of the saved report: upload-game checks every saved keyword name. The overlay and `combat-validate --logs` use them; `--history` still takes them from the card's own keywords. |
 | Stats a card's text grows with the game (Tasty Lobster, Hopebringer) | Printed values are used: "approximate". |
 | The player's tavern tier | Damage needs it; unknown means damage unknown, never 0. |
+| Duos: the teammate's board during the shop | Not in the local log at all (only the player's and the shop's minions are; checked on a whole Duos game of 2026-10-11). The overlay uses the teammate's last board seen in a combat the game played on screen (section 8). |
 | Who attacked first | Not in the saved report. Since session 071 the parser keeps each attack (attacker, defender, both boards before it) in `Round::attacks`, Rust-only; the harness reads the logs for it (section 7.2). |
 
 ## 3. Combat rules
@@ -54,7 +55,13 @@ Status: **done** = in the engine and tested; **to check** = in the engine, to be
 | "Start of Combat: attack immediately" (`BG36_849`) | Not played: the logged board is taken at that first attack, so the replay sees it as an attack out of order. | not yet |
 | Effects that follow a friendly attack, damage dealt or a Reborn (round 2) | Before the damage for "whenever a friendly minion attacks" (the attacker included); after the damage, before deaths, for "after a friend deals damage" and "after a Rally minion attacks"; right after the Reborn copy is placed for "after a friendly minion is Reborn". A summon that "attacks immediately" swings at once, inside the death step. | done; timings: to check against more replays |
 | Damage to the hero | Winner's tavern tier plus the tiers of its surviving minions; a tie deals none. The game's damage cap (D-072 shows it) is applied by the caller. | done (cap: the app) |
-| Duos | Each team's two boards fight in turn; the teammate's board comes in when the first is gone. | not yet: the saved Duos legs (section 7) do not show the starting boards of the second legs clearly; needs the T-213 data |
+| Duos: two boards per team | Each team's first board fights; when a team's board is gone, its teammate's board comes in, and the combat goes on against what is left of the other side. A team with no board left loses; both at once is a tie. A team plays one board when the other is not known to it. | done (replay: 68 teammate boards came in on the user's 79 Duos combats before any difference) |
+| Duos: who attacks after a board comes in | Decided again as at the start: the side with more minions, else a coin flip. The board that comes in starts from its left-most minion; the other side keeps its place in its order. | done (0 differences in those 68; found on the user's logs: 6 of 6 switches in one game fit the count, none fit "the other side" or "the same side") |
+| Duos: start of combat of the board that comes in | Its start-of-combat effects (and its hero's) happen when it comes in: a hero power attack by the incoming board's right-most minion was seen right after a switch. The engine plays them when start of combat is on; logged boards are taken after them. | partly, as at the start |
+| Duos: which board fights first | The game sets `BACON_DUO_PLAYER_FIGHTS_FIRST_NEXT_COMBAT` on every lobby hero each shop turn from the second one, and it alternates within each team. The overlay reads the player's own flag for their team and takes the opponent the game marks as next (D-061) as the opposing first board. | done (on the 6 Duos sessions of 2026-10-11, rounds 2 and later: the player's flag named their team's first board in 74 of 77 combats and the marked opponent the opposing one in 73 of 77; the misses had an empty first board) |
+| Duos: damage | The winning team deals the tier of the hero whose board is on the field at the end plus the tiers of every surviving minion of the team, the teammate's board that never came in counted whole; both heroes of the losing team lose that much (shared health). The cap applies as in Solo. | done (the game's end-of-combat attack on 81 Duos combats: 45 exactly this sum, 36 lower, 35 of them at the cap of 15) |
+| Duos: what carries over | Minions keep their damage and buffs; a board that comes in has fresh Avenge counts (each minion counts deaths from when it is on the field). | Avenge across boards: to check |
+| Duos: teammate effects in combat | Only two Duos cards act on the teammate's board in combat: `BGDUO_105` (Deathrattle: copy a minion of the teammate's warband) and `BGDUO_125` (start of combat: become a copy of the teammate's minion), both not modelled yet, neither seen on the user's boards. The others act on the hand or the shop (no combat effect). | not yet (unseen) |
 | Hero powers, trinkets, Deity, spells cast in combat | Not on the board. | not yet |
 
 ## 4. Cards
@@ -73,6 +80,8 @@ Status: **done** = in the engine and tested; **to check** = in the engine, to be
 ## 6. Speed
 
 Release build on the user's PC, the 19 logged Solo combats, 10 000 trials each: **32 ms on average, 73 ms at most** (target: under 200 ms). One thread, no allocation-heavy work per attack beyond small vectors; fast enough to run on every board change in the overlay.
+
+Duos (session 074), the same 10 000 trials on each Duos combat's boards: **74 ms on average, 308 ms at most** on the 84 combats of the logs, 105 and 389 ms on the 232 of the history: four boards, and late games with boards in the thousands make long combats. The overlay keeps its 150 ms budget: such a run stops after fewer trials (at least 1 000) and says how many in Advanced.
 
 ## 7. Validation on the user's combats (T-603, T-603b)
 
@@ -99,7 +108,10 @@ Run of 2026-10-11 on what is on the PC: the Solo game of 2026-10-09 (the one wit
 | Input | Combats | Replayed with no difference | Attacks matched before the first difference |
 |---|---|---|---|
 | Solo (fixture) | 9 | 8 | 48 of 56 |
-| Duos first legs | 78 | 43 | 313 of 1 306 |
+| Duos first legs (session 071) | 78 | 43 | 313 of 1 306 |
+| Duos, both boards of each team (session 074) | 79 | 32 | 500 of 1 308 |
+
+First differences of session 071 (the session 074 run, whole Duos combats: stats 25, deaths and summons 16, attack order 4, who attacks first 2, who attacks after a teammate's board comes in 0):
 
 | First difference | Solo | Duos first legs |
 |---|---|---|
@@ -115,6 +127,8 @@ Run of 2026-10-11 on what is on the PC: the Solo game of 2026-10-09 (the one wit
 - Too few Solo combats to change a rule on this alone; the replay is now the tool to check each "to check" rule as more Solo games are logged.
 - Known limits of the replay (session 071 review): it decides the first attacker from the boards at the first attack, after start-of-combat effects, where the engine counts before them, so a start-of-combat summon or kill can give a false "who attacks first"; an attack made inside another one ("attacks immediately") is a step of its own in the log, so the next comparison names another rule; in a log without `PROPOSED_DEFENDER` the defender is the first enemy hit, which an effect before the swing can get wrong.
 
+- Session 074 replays whole Duos combats: when a board is gone in the log, the team's next board comes in in the engine too, from the log's board as it came in. Fewer combats run to the end than first legs did (a longer combat meets more of the card gaps above), but no difference is about the boards coming in.
+
 ### 7.3 The overlay's inputs (T-605)
 
 The overlay does not have the board the opponent brings to the combat: it has the last one the player saw, often several turns old, and the player's own board in the shop. `combat-validate` scores that too: for each Solo combat, the player's board against the board of the same opponent from the last earlier combat with them, cards not modelled refused as in the app.
@@ -127,13 +141,42 @@ The overlay does not have the board the opponent brings to the combat: it has th
 - The proxy is generous on one side and strict on the other: it uses the player's board as it entered the combat (after start of combat), where the app has the shop board (before it).
 - 5 combats is far too few to give a number to the user as a promise; the harness gives it again as more Solo games are logged.
 
+### 7.4 Duos combats (T-608)
+
+`combat-validate` builds each Duos combat from the boards as they came in, in order, one per seat (`harness_duos.rs`); a board the log has no attack after is left out (an empty board replaced at once, the hero switching back after the combat, or a combat the game does not play back, whose copies are never read: D-054). A team whose second board never came in plays its first board alone. Run of 2026-10-11, unknown cards played as plain minions:
+
+| Source | Combats with a result | Mean p(real result) | Brier | Most likely = real |
+|---|---|---|---|---|
+| Logs on the PC (8 Duos games) | 84 | 83% | 0.260 | 71 of 84 |
+| … both teams' two boards fought | 51 | 81% | 0.290 | 42 of 51 |
+| Saved history (39 Duos games) | 232 | 80% | 0.294 | 188 of 232 |
+| … both teams' two boards fought | 153 | 80% | 0.299 | 123 of 153 |
+
+- About as good as on Solo boards with the cards the engine knows; the misses are the card gaps the replay lists (game-long buffs, Deities and hero powers' minions on the board, hand summons).
+- The history has 449 Duos combats with a board on each side; 232 of them have the game's result in the saved record.
+
+### 7.5 The overlay's inputs in Duos
+
+As 7.3, for Duos: the player's board before the combat (the shop board in the logs, read since session 074; the history has none, so there the board as it came into the combat stands in for it), the teammate's last board seen in an earlier combat, both opponents' last boards seen in earlier combats, each team in the order it fought. Cards not modelled are refused, as in the app.
+
+| Source | Combats with a result | No board of someone seen before | Not modelled | Scored | Mean p(real result) | Most likely = real | Board age (mean) |
+|---|---|---|---|---|---|---|---|
+| Logs | 84 | 30 (teammate 12, opponent 18) | 18 | 36 | 72% | 26 of 36 | 2.4 rounds |
+| History | 232 | 68 (teammate 20, opponent 48) | 31 | 104 | 49% | 51 of 104 | 2.4 rounds |
+
+- **Much better than Solo's 2 of 5** on the logs: in Duos every board fights often, so the boards are only 2.4 rounds old. The history's older games do worse (51 of 104), so the number is a hint, as in Solo.
+- With boards from the same combat instead of earlier ones, the same pipeline gives 79% (history) and 85% (logs): what is lost is the boards' age, not the Duos rules.
+- The order of each team is taken from the combat itself; the app reads the game's flag and its marked opponent, which named the first boards in 74 and 73 of 77 combats (section 3), so these scores are a little kinder than the app's.
+- In 29 history combats the player's own board did not fight, so the history has no board for it; the app has the shop board then.
+
 ## 8. One engine for the app and the website
 
 **App (T-605, done in session 071, D-084).** During a shop turn the overlay runs the player's board as it is now against the next opponent's last board seen (D-004: only boards the player saw on screen; the opponent is the one the game marks as next, D-061). How:
 
 - **Inputs.** The parser gives the own board in a shop turn (`own_board_now`, with Poisonous and Mega-Windfury); the opponent's board is the newest that entered play in a combat the game has shown (the live view follows the screen, D-067). Tavern tiers come from the leaderboard (the opponent's as it is now). The card facts the board does not show (tier, types, the card's own stats and keywords for Reborn) come from the card data: `crates/cards` keeps them for every Battlegrounds minion (saved format 5).
 - **Running.** On its own thread, never the window's: the tracker's loop says what the odds should be worked out from; the thread waits until it has not changed for 300 ms, then runs 10 000 trials in batches of 1 000, stopping early after 150 ms (about 30 ms is usual). The same boards give the same odds (fixed seed). During the combat on screen the shop's odds stay.
-- **No number when it cannot be trusted.** Duos ("not in Duos yet", T-608), no board of that opponent seen yet, a card the engine does not know ("a card is not modelled", Advanced names it), the card data missing for a card, boards it cannot read. No next opponent marked: nothing shown.
+- **Duos (T-608, session 074, D-087).** The player's shop board and the teammate's last board seen in a combat the game played on screen, in the order the game set (the player's own `BACON_DUO_PLAYER_FIGHTS_FIRST_NEXT_COMBAT`, read live, Rust-only), against the last boards seen of the opponent the game marks as next (first) and of their teammate (second, from the lobby's teams). Never a `SETASIDE` copy of a combat the game did not play back (D-054): the parser gives those no board. Tiers from the leaderboard. Simple shows the oldest board's age ("oldest board seen turn 4"); Advanced each board's ("Your teammate's board: seen turn 7", "Their first board…", "Their second board…"). When a board was never seen, the overlay names it instead of a number ("not seen yet: your teammate's board and their second board"); when the order or the teams are not known yet (the first shop turn), "who fights first, or who is on which team, is not known yet". English and Spanish.
+- **No number when it cannot be trusted.** No board of that opponent seen yet (in Duos, any of the three boards), a card the engine does not know ("a card is not modelled", Advanced names it), the card data missing for a card, boards it cannot read. No next opponent marked: nothing shown.
 - **Approximate.** Start of combat is off: the opponent's board was taken after theirs, the player's shop board has not had them yet. When a card on either board acts at the start of combat, or a card is approximate, the age line starts with "≈" and Advanced names the cards.
 - **Shown.** Simple, under the next opponent's line: Win, Tie and Lose with their shares, and "their board seen turn N". Advanced, in the next opponent's block: the same, the damage both ways (10th to 90th percentile and the median, after the damage cap; "unknown" when a tier is unknown), the approximate and missing cards and the trials. English and Spanish. A switch in Settings turns it off (on by default; `odds_off` in `overlay.json`).
 - **How good it is:** section 7.3.
@@ -163,8 +206,11 @@ Every minion seen entering a combat in the user's history (Solo and Duos): **534
 
 Left for round 3, most seen first: `BG34_140` and `BG21_HERO_030t` (summon from the hand: not known), `BG31_999` (start of combat destroy, copy on death), `BG31_835` (summons from the hand), `BG36_360t9` (Golem with its stats), `TB_BaconShop_HP_105t` (gains Deathrattles), `BG35_342` (grows with Deathrattles this game), `BG36_209`, `BG26_802`, `BG34_690`, `BG34_Giant_017`, `BG34_Giant_331`, `BG35_602`.
 
+**Round 3 (session 074, Duos)**, the most seen of the Duos history that the board alone can play, each with its golden card: `BG35_342` (gains for each friendly Deathrattle, exact), `BG34_690` (Deathrattle: Undead +2 Attack; approximate: Undead summoned later miss it), `BG26_802` (doubles a summoned Beast's Attack; approximate: order with other summon effects), `BG35_602` (+3 Attack to a summoned Beast; approximate: the bonus grows during the game). New primitives: after a friendly Deathrattle, after a friendly summon (a Reborn copy counts). Not modelled appearances: 163 → 139 (35 → 27 cards). Left, most seen first, and why: `BG34_140`, `BG31_835`, `BG21_HERO_030t` (summon from the hand, which is not seen), `BG31_999` (copies the minion it destroyed at the start of combat, gone from a logged board), `BG36_360t9` (its Golem's card id is not in the card data), `TB_BaconShop_HP_105t` (gains other minions' Deathrattles).
+
 ## 10. Questions for the user
 
 1. **How the website runs the engine.** WebAssembly (needs `'wasm-unsafe-eval'` in the CSP), a TypeScript port, or a server function. Recommendation: WebAssembly, the CSP change limited to the simulator page if possible.
 2. **Which boards the website's simulator may load.** Only your own games, or also other public players' boards. Recommendation: your own games only at first (your boards and the opponents' boards you met, which you saw on screen); other players' boards only from public profiles and only after T-509's privacy texts cover it.
-3. **Duos odds (T-608).** You mostly play Duos, and the overlay says "not in Duos yet" there. The replay now checks Duos first legs; the engine needs the second legs (the teammate's board coming in) to give Duos odds. Recommendation: T-608 next.
+3. **Duos odds (T-608, done in session 074).** Please check in your next Duos game that "their first board" is the one that fights your first board (the overlay takes the opponent the game marks as next).
+4. **Cards that summon from the hand** (`BG34_140` Expert Aviator, the most seen card not modelled, and `BG31_835`, `BG21_HERO_030t`): today they block the odds ("a card is not modelled"). They could play as approximate, with the hand summon left out and the card named. Recommendation: keep them blocking; the summon is often the biggest minion of the combat.

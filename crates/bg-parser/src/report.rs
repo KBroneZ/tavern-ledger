@@ -134,6 +134,10 @@ pub struct Round {
     /// Every attack of the combat in the log's order (T-603b). Rust-only and
     /// not serialized: the harness reads it straight from the logs.
     pub attacks: Vec<LoggedAttack>,
+    /// The player's own board as the shop turn before this combat ended
+    /// (T-608): what the overlay's odds start from. None when the log does
+    /// not have that shop turn. Rust-only and not serialized.
+    pub own_shop_board: Option<Vec<Minion>>,
 }
 
 impl Round {

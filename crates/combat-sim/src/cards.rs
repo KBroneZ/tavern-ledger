@@ -84,6 +84,9 @@ pub enum Action {
     /// After a Reborn: give the right-most friendly minion of `tribe` stats
     /// equal to the reborn minion's Attack, `times` over.
     GiveRebornAttackToRightmost { tribe: Tribes, times: i32 },
+    /// Multiply the Attack of the minion the trigger is about (the one just
+    /// summoned) by `factor`.
+    MultiplyAttackerAttack { factor: i32 },
 }
 
 /// When a card acts.
@@ -138,6 +141,14 @@ pub enum Trigger {
     AfterFriendlyRallyAttacks {
         times: u8,
     },
+    /// After each friendly Deathrattle that triggers (round 3).
+    FriendlyDeathrattle(&'static [Action]),
+    /// After a friendly minion of `tribe` is summoned (Reborn included); the
+    /// actions' "attacker" is the summoned minion (round 3).
+    AfterFriendlySummon {
+        tribe: Tribes,
+        actions: &'static [Action],
+    },
 }
 
 impl Trigger {
@@ -148,10 +159,12 @@ impl Trigger {
             | Trigger::Rally(a)
             | Trigger::Avenge(_, a)
             | Trigger::StartOfCombat(a)
-            | Trigger::AfterFriendlyReborn(a) => a,
+            | Trigger::AfterFriendlyReborn(a)
+            | Trigger::FriendlyDeathrattle(a) => a,
             Trigger::FriendlyAttacks { actions, .. }
             | Trigger::WheneverFriendlyAttacks { actions, .. }
-            | Trigger::AfterFriendlyDealsDamage { actions, .. } => actions,
+            | Trigger::AfterFriendlyDealsDamage { actions, .. }
+            | Trigger::AfterFriendlySummon { actions, .. } => actions,
             _ => &[],
         }
     }
@@ -170,7 +183,10 @@ const PLAIN: CardRules = CardRules {
 
 /// The rules for a card id. `None`: not modelled.
 pub fn rules(card_id: &str) -> Option<CardRules> {
-    let all = EFFECTS.iter().chain(crate::cards_round2::EFFECTS_2);
+    let all = EFFECTS
+        .iter()
+        .chain(crate::cards_round2::EFFECTS_2)
+        .chain(crate::cards_round3::EFFECTS_3);
     if let Some((_, rules)) = all.into_iter().find(|(id, _)| *id == card_id) {
         return Some(*rules);
     }
@@ -1210,7 +1226,10 @@ mod tests {
     use super::*;
 
     fn all_effects() -> impl Iterator<Item = &'static (&'static str, CardRules)> {
-        EFFECTS.iter().chain(crate::cards_round2::EFFECTS_2)
+        EFFECTS
+            .iter()
+            .chain(crate::cards_round2::EFFECTS_2)
+            .chain(crate::cards_round3::EFFECTS_3)
     }
 
     #[test]

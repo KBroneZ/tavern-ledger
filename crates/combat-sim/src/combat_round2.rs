@@ -109,6 +109,7 @@ impl Combat<'_> {
                     for a in *actions {
                         self.act(side, Source::Unit(uid), None, None, a);
                     }
+                    self.after_friendly_deathrattle(side);
                 }
             }
         }

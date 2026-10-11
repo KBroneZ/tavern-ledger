@@ -20,6 +20,7 @@
 
 pub mod cards;
 mod cards_round2;
+mod cards_round3;
 pub mod combat;
 pub mod model;
 pub mod rng;
@@ -28,9 +29,11 @@ pub mod trials;
 #[cfg(feature = "harness")]
 pub mod harness;
 #[cfg(feature = "harness")]
+pub mod harness_duos;
+#[cfg(feature = "harness")]
 pub mod harness_logs;
 pub mod score;
 
 pub use combat::{CombatResult, Outcome};
-pub use model::{BaseCard, BoardError, Keywords, Minion, Tribes, Warband, MAX_BOARD};
-pub use trials::{simulate, Coverage, Odds, Options, Verdict};
+pub use model::{BaseCard, BoardError, Keywords, Minion, Team, Tribes, Warband, MAX_BOARD};
+pub use trials::{simulate, simulate_teams, Coverage, Odds, Options, Verdict};

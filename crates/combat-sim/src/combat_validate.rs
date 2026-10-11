@@ -11,6 +11,7 @@ use std::path::Path;
 use std::process::ExitCode;
 
 use combat_sim::harness::{load_cards, load_history, render, run};
+use combat_sim::harness_duos::{render_duos, Source};
 use combat_sim::harness_logs::{
     load_logs, power_logs, render_overlay_path, render_replays, replay_all,
 };
@@ -60,6 +61,7 @@ fn real_main() -> Result<(), String> {
             let run = run(&history, &options);
             print!("{}", render(&history, &run, &options));
             print!("{}", render_overlay_path(&history, &options));
+            print!("{}", render_duos(&history.duos, &options, Source::History));
         }
         (None, Some(logs)) => {
             let files = power_logs(Path::new(&logs))?;
@@ -72,6 +74,7 @@ fn real_main() -> Result<(), String> {
             let rows = replay_all(&read.combats, options.seed);
             print!("{}", render_replays(&rows, &run.scored, read.unreadable));
             print!("{}", render_overlay_path(&read.history, &options));
+            print!("{}", render_duos(&read.duos, &options, Source::Logs));
         }
         _ => return Err("give one of --history <games.jsonl> or --logs <folder>".into()),
     }
