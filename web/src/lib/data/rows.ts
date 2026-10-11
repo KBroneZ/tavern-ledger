@@ -227,6 +227,16 @@ export function recordRow(value: unknown): RecordRow | null {
   return { mode: m, record: name, value: v, playedOn: day(r.played_on), games: count(r.games, "games"), inferred: r.inferred === true };
 }
 
+/** A game's key (session and index) for its link; each part null when not shaped as expected. */
+export function gameKey(value: unknown): { session: string | null; gameIndex: number | null } {
+  const r = asRow(value);
+  const index = num(r.game_index);
+  return {
+    session: typeof r.session === "string" && SESSION.test(r.session) ? r.session : null,
+    gameIndex: index !== null && Number.isInteger(index) && index >= 0 ? index : null,
+  };
+}
+
 export type GameStatus = "ok" | "incomplete" | "unsupported" | "unknown";
 
 export interface GameRow {
@@ -251,10 +261,8 @@ export function gameRow(value: unknown): GameRow {
   const r = asRow(value);
   const m = mode(r.mode);
   const status: GameStatus = r.status === "ok" || r.status === "incomplete" || r.status === "unsupported" ? r.status : "unknown";
-  const index = num(r.game_index);
   return {
-    session: typeof r.session === "string" && SESSION.test(r.session) ? r.session : null,
-    gameIndex: index !== null && Number.isInteger(index) && index >= 0 ? index : null,
+    ...gameKey(r),
     mode: m,
     status,
     playedOn: day(r.played_on),

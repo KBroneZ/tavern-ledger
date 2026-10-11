@@ -1,0 +1,13 @@
+---
+import Base from "../layouts/Base.astro";
+import AccountsClosed from "../components/AccountsClosed.astro";
+import PlayerStats from "../components/PlayerStats.astro";
+import { readConfig } from "../lib/config.ts";
+
+// With accounts closed the page shows a notice instead: no data, no script.
+const accountsOpen = readConfig(import.meta.env) !== null;
+---
+
+<Base title="Curious stats" description="A Tavern Ledger player's records and fun totals, each with the games behind it." noindex>
+  {accountsOpen ? <PlayerStats page="curious" /> : <AccountsClosed heading="Curious stats" />}
+</Base>
