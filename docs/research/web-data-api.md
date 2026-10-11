@@ -92,6 +92,6 @@ One game in full (the game viewer, T-504) still reads its report file: `storage/
 
 Not summarized, read per game by the viewer when needed: opponents' boards, keywords and trinkets, the lobby's triples, every discover and Dark Gift, the shop's offers per roll, the Old God. **Top tribes on the final board** need each minion's tribe, which is in the card data, not the report: the site can map `final_board` card ids with the card data (T-504's pictures decision) instead of the server guessing.
 
-## Leaderboards later (T-506)
+## Leaderboards (T-506)
 
-Not built here. They can rank `game_stats` joined with `games` over public profiles only (a materialized view refreshed by a schedule, with minimum game counts), using the same columns; the user's decisions in the master plan come first.
+Built in session 069 (D-082): a private snapshot of `game_stats` joined with `games` over public profiles only, rebuilt every 10 minutes, read through `public.leaderboard(p_mode, p_period)`. Rules, boards and limits: [leaderboards.md](leaderboards.md).

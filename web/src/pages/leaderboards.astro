@@ -1,0 +1,78 @@
+---
+// Public leaderboards (/leaderboards/) (T-506, D-075, D-082): a static frame
+// with reserved room; the script reads public.leaderboard() for both modes
+// and the three periods and draws every board into #lb-modes in one go.
+// With accounts closed the page shows a notice instead: no data, no script.
+// Kept out of search engines: it lists players' display names (privacy.md).
+import Base from "../layouts/Base.astro";
+import AccountsClosed from "../components/AccountsClosed.astro";
+import Switch from "../components/data/Switch.astro";
+import DataScript from "../components/data/DataScript.astro";
+import StateBlock from "../components/data/StateBlock.astro";
+import "../styles/data.css";
+import "../styles/dash.css";
+import "../styles/leaderboards.css";
+import { readConfig } from "../lib/config.ts";
+import { DEFAULT_PERIOD, PERIODS, periodName } from "../lib/leaderboards/boards.ts";
+import { lt } from "../lib/leaderboards/strings.ts";
+
+const accountsOpen = readConfig(import.meta.env) !== null;
+---
+
+<Base
+  title="Leaderboards"
+  description="Public Tavern Ledger leaderboards: players who made their profile public, ranked on their uploaded Battlegrounds games. Self-reported, no ratings."
+  noindex
+>
+  {
+    accountsOpen ? (
+      <div class="dash lb" id="lb" aria-busy="true">
+        <header class="data-head dash-head">
+          <div>
+            <p class="kicker">{lt("page.kicker")}</p>
+            <h1>{lt("page.title")}</h1>
+            <p class="lb-intro">{lt("page.intro")}</p>
+            <p class="data-note lb-updated" id="lb-updated" />
+          </div>
+          <div class="dash-switches lb-switches is-off" id="lb-switches">
+            <Switch kind="mode" controls="lb-modes" />
+            <div
+              class="seg"
+              role="group"
+              aria-label={lt("period.label")}
+              id="lb-period"
+              data-controls="lb-body"
+              hidden
+            >
+              {PERIODS.map((p) => (
+                <button type="button" data-value={p} aria-pressed={p === DEFAULT_PERIOD ? "true" : "false"} aria-controls="lb-body">
+                  {periodName(p)}
+                </button>
+              ))}
+            </div>
+            <Switch kind="detail" />
+          </div>
+        </header>
+        <p class="visually-hidden" id="lb-status" role="status" aria-live="polite" />
+        <div class="dash-body lb-periods" id="lb-body" data-period={DEFAULT_PERIOD}>
+          <div class="mode-panels" id="lb-modes">
+            <div class="lb-skeleton">
+              <div class="lb-grid">
+                <StateBlock kind="loading" lines={10} />
+                <StateBlock kind="loading" lines={10} />
+                <StateBlock kind="loading" lines={10} />
+                <StateBlock kind="loading" lines={10} />
+              </div>
+            </div>
+          </div>
+          <div id="lb-about" />
+        </div>
+        <DataScript />
+        <script src="../scripts/leaderboards.ts" />
+      </div>
+    ) : (
+      <AccountsClosed heading="Leaderboards" />
+    )
+  }
+</Base>
+

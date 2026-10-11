@@ -2,6 +2,8 @@
 
 Last updated: 11 October 2026
 
+**What changed on 11 October 2026:** public leaderboards (section 4, "Public profiles and leaderboards"): what they show, who appears on them, how to leave them and how long the numbers are kept; the check of display names against a short word list; the leaderboard numbers in the download (section 7).
+
 Tavern Ledger is a free, open-source Hearthstone Battlegrounds tracker: a Windows app that reads the game's log files on your PC, and a website where you can keep and, if you want, share your games. This policy says what personal data we handle, why, where it goes and what you can do about it.
 
 Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.
@@ -38,7 +40,8 @@ There are no ads, no analytics and no tracking.
 | Account emails: your address, the message (a confirmation, sign-in or password reset link) and its delivery status | To confirm your address and secure your account | Contract |
 | Sign-in sessions: times, IP address and browser user agent; refresh and one-time tokens | To keep you signed in | Contract |
 | Security log: sign-up, sign-in, sign-out, password reset requests, password and email changes, with time and IP address, kept in our database for 90 days | To detect and stop abuse of accounts | Legitimate interest in keeping accounts secure (Art. 6(1)(f)) |
-| Profile: a display name you choose (optional) and whether your profile is public (off by default) | To show your profile, if you make it public | Contract: publication only happens when you switch it on, and you can switch it off at any time |
+| Profile: a display name you choose (optional) and whether your profile is public (off by default) | To show your profile and put you on the public leaderboards, if you make it public | Contract: publication only happens when you switch it on, and you can switch it off at any time |
+| Leaderboard numbers: for a public profile with a display name, the numbers each board ranks (worked out from your uploaded games) per mode and period, with how many games back each | To show the public leaderboards | Contract, as for the public profile |
 | Your games: a summary row per game (date, mode, hero, place, build, tribes offered, parser version) and the game's full record from the app (no player names), if you upload them | To show your history and stats | Contract |
 | Upload times: when each of your uploads happened, kept two days | To enforce the hourly and daily upload limits | Legitimate interest in keeping the service available for everyone (Art. 6(1)(f)) |
 | Refused requests: a salted hash of the IP address that sent an upload with an invalid sign-in (the address itself is not stored, and the secret salt is replaced every day), and a count, kept one hour at most | To block abusive requests | Legitimate interest in protecting the service |
@@ -48,7 +51,17 @@ Your email and a password are required to have an account; without them we canno
 
 We do **not** collect player names, BattleTags, Battle.net accounts, ratings or MMR. We do not take any automated decision about you that has legal or similarly significant effects.
 
+### Public profiles and leaderboards
+
 **Public profile.** If you turn it on, anyone on the internet can see your display name and read every game you uploaded, in full, and can link to or copy them. Turning it off stops access through our site; copies others already made are out of our reach.
+
+**Leaderboards** (`/leaderboards/`). While your profile is public and has a display name, you can also appear on the public leaderboards, which rank players on their uploaded games, per mode (Solo, Duos) and period (the last 7 days, the last 30 days, all time). A board shows your display name with a link to your public profile, your place on the board, the number it ranks (for example your average place, top 4 or top 2 rate, win rate, games played, longest top-half streak, average place with a hero and that hero, actions per minute, gold beyond income, rolls or triples per game, your biggest board or most golden minions) and how many games it is based on. You appear on a board only with at least 20 finished games in that mode and period that have the number (10 with a hero for the per-hero board). The numbers are self-reported: they come from the games your app uploaded; our server checks each game's record and leaves out games with values no real game can have, but cannot prove a game was played as uploaded. The leaderboards never show your email, BattleTag, rating or other players' names. The page asks search engines not to index it.
+
+**Leaving the leaderboards.** Turn "Public profile" off on your account page, or remove your display name: you disappear from every board at once, and your copy of the leaderboard numbers is deleted at the same moment when you make the profile private. If you make it public again, you come back at the next rebuild, within 10 minutes.
+
+**How long the numbers are kept.** The boards are rebuilt from the current games every 10 minutes; each rebuild replaces the last one, so no history of past boards is kept. Your numbers go when you make your profile private or delete your account, and from backups as in section 6.
+
+**Display names.** When you set a display name, our server checks it against a short list of offensive words and names that would look official (such as "admin" or "Blizzard") and refuses it if it matches; the account page then asks you for another one. A name set before a word was added to the list is hidden from the leaderboards until you change it. The check only compares words; it decides nothing else about you.
 
 ## 5. Who receives your data
 
@@ -62,7 +75,7 @@ We do **not** collect player names, BattleTags, Battle.net accounts, ratings or 
 
 You can ask us for a copy of the transfer safeguards at the contact address above.
 
-**Everyone**, if you make your profile public (section 4).
+**Everyone**, if you make your profile public: your public profile and, with a display name and enough games, the leaderboards (section 4).
 
 **Authorities**, only when the law requires it.
 
@@ -71,6 +84,7 @@ We do not sell or rent your data.
 ## 6. How long we keep it
 
 - **Account, profile, games and sessions:** until you delete your account (sessions also end when you sign out or they expire).
+- **Leaderboard numbers:** rebuilt every 10 minutes while your profile is public; deleted when you make it private or delete your account.
 - **Security log:** 90 days, then deleted every day by our clean-up job; all of it goes earlier if you delete your account.
 - **Backups:** made weekly on the controller's own computer, readable only by their user account, and deleted after 35 days. After you delete your account, your data can remain in backups for up to 35 days. If we ever restore a backup, we delete again the accounts deleted since it was made.
 - **Upload times:** two days. **Refused-request counters:** one hour.
@@ -80,12 +94,12 @@ We do not sell or rent your data.
 
 You can, at any time:
 
-- **Download your data:** "Download my data" on your account page gives one JSON file with your account details (not your password hash or sign-in tokens), sign-in sessions, security log, profile, game rows and game files. It is machine-readable, so you can take it elsewhere (data portability).
+- **Download your data:** "Download my data" on your account page gives one JSON file with your account details (not your password hash or sign-in tokens), sign-in sessions, security log, profile, game rows, your leaderboard numbers and game files. It is machine-readable, so you can take it elsewhere (data portability).
 - **Ask for access** to anything else we hold about you, such as what may be in provider logs or backups, by writing to us.
 - **Correct** your display name on the account page; for anything else, write to us.
-- **Delete** your account: "Delete account" on your account page removes your files, game rows, profile, sessions, security log and the account itself. Backups and provider logs expire as in section 6.
+- **Delete** your account: "Delete account" on your account page removes your files, game rows, leaderboard numbers, profile, sessions, security log and the account itself. Backups and provider logs expire as in section 6.
 - **Object** to processing based on legitimate interest, or ask us to **restrict** processing.
-- **Stop publishing** your profile by turning the switch off.
+- **Stop publishing** your profile and leave the leaderboards by turning the switch off.
 
 Write to privacy@tavernledger.net for anything the site does not do by itself. We answer within one month.
 
