@@ -447,3 +447,25 @@ Deno.test("callers that are refused or cannot be checked record nothing", async 
     assertEquals(failures(api), []);
   }
 });
+
+Deno.test("a file cut off while reading is no_file; one too large is bad_file", async () => {
+  const cut = await stored(1);
+  const big = await stored(2);
+  const api = fakeApi({ missing: [cut.row, big.row] });
+  const fetchFn: Fetch = (input, init) => {
+    if (input.endsWith(cut.name)) {
+      const body = new ReadableStream<Uint8Array>({
+        pull(c) {
+          c.error(new TypeError("connection reset"));
+        },
+      });
+      return Promise.resolve(new Response(body, { status: 200 }));
+    }
+    if (input.endsWith(big.name)) {
+      return Promise.resolve(new Response(new Uint8Array(64 * 1024 + 1), { status: 200 }));
+    }
+    return api.fetchFn(input, init);
+  };
+  const res = await handle(request(), ENV, fetchFn);
+  assertEquals((await res.json()).stats, counts(2, 2, 0, 0, { no_file: 1, bad_file: 1 }));
+});

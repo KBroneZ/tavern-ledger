@@ -167,6 +167,12 @@ function isMissing(v: unknown): v is Missing {
     m.storage_path === `${m.user_id}/${m.session}-${m.game_index}.json.gz`;
 }
 
+class TooLarge extends Error {
+  constructor() {
+    super("too large");
+  }
+}
+
 async function readCapped(stream: ReadableStream<Uint8Array>, max: number): Promise<Uint8Array> {
   const reader = stream.getReader();
   const chunks: Uint8Array[] = [];
@@ -176,7 +182,7 @@ async function readCapped(stream: ReadableStream<Uint8Array>, max: number): Prom
       const { done, value } = await reader.read();
       if (done) break;
       size += value.length;
-      if (size > max) throw new Error("too large");
+      if (size > max) throw new TooLarge();
       chunks.push(value);
     }
   } finally {
@@ -239,8 +245,14 @@ async function summaryOf(
     await res.body?.cancel();
     return { skip: "no_file" };
   }
+  let file: Uint8Array;
   try {
-    const file = await readCapped(res.body, MAX_FILE);
+    file = await readCapped(res.body, MAX_FILE);
+  } catch (e) {
+    // Cut off while reading: Storage, not the file, may be at fault.
+    return { skip: e instanceof TooLarge ? "bad_file" : "no_file" };
+  }
+  try {
     const bytes = await readCapped(
       new Blob([file as BlobPart]).stream().pipeThrough(new DecompressionStream("gzip")),
       MAX_INFLATED,

@@ -3,7 +3,7 @@
 -- The sweep function's side is tested in supabase/functions/sweep/.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(30);
+select plan(32);
 
 create temporary table ok_stats as select jsonb_build_object(
   'listed', 5, 'looked_at', 4, 'filled', 2, 'left', 1,
@@ -74,6 +74,16 @@ select throws_ok(
   $$ select public.sweep_record_result((select (r ->> 'run_id')::bigint from hk), 3, (select s from ok_stats)) $$,
   '22023', null,
   'a run is ended once'
+);
+select is(
+  public.sweep_record_failure((select (r ->> 'run_id')::bigint from hk), 'record run'),
+  (select (r ->> 'run_id')::bigint from hk),
+  'a failure reported after the run ended (its answer was lost) points at that run'
+);
+select results_eq(
+  $$ select count(*)::int, bool_or(result ? 'failed_step') from private.sweep_runs $$,
+  $$ values (1, false) $$,
+  'and adds no row and changes nothing: the run did finish'
 );
 select throws_ok(
   $$ select public.sweep_record_result(-1, 0, (select s from ok_stats)) $$,

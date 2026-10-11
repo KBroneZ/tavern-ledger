@@ -65,11 +65,11 @@ begin
       return false;
     end if;
     if k = any(reasons) then
-      skipped := skipped + (v #>> '{}')::bigint;
+      skipped := skipped + (v #>> '{}')::numeric::bigint;
     end if;
   end loop;
-  return (s ->> 'looked_at')::bigint + (s ->> 'left')::bigint = (s ->> 'listed')::bigint
-     and (s ->> 'filled')::bigint + skipped = (s ->> 'looked_at')::bigint;
+  return (s ->> 'looked_at')::numeric + (s ->> 'left')::numeric = (s ->> 'listed')::numeric
+     and (s ->> 'filled')::numeric + skipped = (s ->> 'looked_at')::numeric;
 end;
 $$;
 
@@ -137,8 +137,11 @@ begin
 end;
 $$;
 
--- Records the step a run failed at: on its row when it has one (and has not
--- ended), else on a new row. Returns that row's id.
+-- Records the step a run failed at: on its row when it has one, else on a
+-- new row. Returns that row's id. A row that has already ended is left as it
+-- is (its result was stored and only the answer to that call was lost), so a
+-- row with only failed_step always means a run that failed before
+-- housekeeping gave it a row.
 create function public.sweep_record_failure(p_run_id bigint, p_step text)
 returns bigint
 language plpgsql
@@ -157,6 +160,9 @@ begin
   set result = r.result || jsonb_build_object('failed_step', p_step)
   where r.id = p_run_id and not (r.result ? 'stats') and not (r.result ? 'failed_step')
   returning r.id into v_id;
+  if v_id is null then
+    select r.id into v_id from private.sweep_runs r where r.id = p_run_id;
+  end if;
   if v_id is null then
     delete from private.sweep_runs r where r.ran_at < now() - interval '90 days';
     insert into private.sweep_runs (result)
