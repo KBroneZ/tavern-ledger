@@ -38,8 +38,11 @@ const newsDay = (date: string) =>
       <p class="lead">{st("home.lead")}</p>
     </div>
     <div class="ctas">
-      {/* Nothing to download yet: the key button says so and leads to the project's status. */}
-      <Button kind="key" href="#doors" note={st("home.cta.download.note")}>{st("home.cta.download")}</Button>
+      {/* The real Download button, unavailable until the app is packaged (T-105): it does nothing and says so. */}
+      <div class="key-action">
+        <Button kind="key" unavailable describedby="download-note">{st("home.cta.download")}</Button>
+        <p class="key-note" id="download-note">{st("home.cta.download.note")}</p>
+      </div>
       <div class="ctas-row">
         <Button kind="common" href="#scene">{st("home.cta.show")}</Button>
         <Button kind="common" href="#safe">{st("home.cta.safe")}</Button>

@@ -45,9 +45,6 @@ button.tb:active {
 }
 
 .tb-label {
-  display: grid;
-  justify-items: center;
-  gap: 2px;
   line-height: 1;
 }
 
@@ -89,15 +86,25 @@ button.tb:active {
   opacity: 1;
 }
 
-.tb-key small {
-  font: 700 0.78rem / 1.1 var(--body);
-  letter-spacing: 0.02em;
-  color: #3b2a1a;
-}
-
 .tb-key:active {
   transform: scale(0.97);
   transition: transform var(--tb-press);
+}
+
+/* Unavailable (aria-disabled): the finished look at rest, but it neither
+   lights up nor presses; focus still shows the ring. */
+.tb[aria-disabled="true"] {
+  opacity: 1;
+  cursor: default;
+}
+
+.tb[aria-disabled="true"]:active {
+  transform: none;
+}
+
+.tb-key[aria-disabled="true"]:hover::after,
+.tb-key[aria-disabled="true"]:focus-visible::after {
+  opacity: 0;
 }
 
 /* ---------- Common: dark wood and bronze ---------- */

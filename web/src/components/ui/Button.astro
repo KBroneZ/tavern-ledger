@@ -4,38 +4,33 @@
 // - key:    gold stone with gems, for the few key actions; it lights up on hover and focus
 // - common: dark wood and bronze, for common actions; it knocks when pressed
 // - small:  small stone in a thin gold frame, for small actions
-// A link when given href, otherwise a button. The home page uses it first; the
-// other pages adopt it later.
+// A link when given href, otherwise a button. `unavailable` keeps a button in its
+// final look but does nothing (aria-disabled, so it stays focusable and is
+// announced as unavailable); `describedby` names the text that says why.
+// The home page uses it first; the other pages adopt it later.
 import "../../styles/buttons.css";
 
 interface Props {
   kind: "key" | "common" | "small";
   href?: string;
   type?: "button" | "submit";
-  /** A second, smaller line under the label (key buttons only). */
-  note?: string;
+  unavailable?: boolean;
+  describedby?: string;
   class?: string;
 }
 
-const { kind, href, type = "button", note, class: extra } = Astro.props;
+const { kind, href, type = "button", unavailable = false, describedby, class: extra } = Astro.props;
 const classes = ["tb", `tb-${kind}`, extra].filter(Boolean).join(" ");
-const label = kind === "key" && note ? "tb-label tb-two" : "tb-label";
 ---
 
 {
-  href ? (
-    <a class={classes} href={href}>
-      <span class={label}>
-        <slot />
-        {kind === "key" && note && <small>{note}</small>}
-      </span>
+  href && !unavailable ? (
+    <a class={classes} href={href} aria-describedby={describedby}>
+      <span class="tb-label"><slot /></span>
     </a>
   ) : (
-    <button class={classes} type={type}>
-      <span class={label}>
-        <slot />
-        {kind === "key" && note && <small>{note}</small>}
-      </span>
+    <button class={classes} type={type} aria-disabled={unavailable ? "true" : undefined} aria-describedby={describedby}>
+      <span class="tb-label"><slot /></span>
     </button>
   )
 }

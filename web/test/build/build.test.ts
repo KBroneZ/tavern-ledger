@@ -388,18 +388,25 @@ test("the home page's painting: decorative, sized, in AVIF and WebP with a small
 
 test("the home page's buttons by role: one gold key action, wood for common ones, small stone for small ones", () => {
   const html = readFileSync(join(DIST, "index.html"), "utf8");
-  const roles = [...html.matchAll(/<a class="tb tb-(key|common|small)" href="([^"]+)">\s*<span class="tb-label[^"]*">([^<]+)/g)].map((m) => [m[1], m[2], m[3].trim()]);
+  const roles = [...html.matchAll(/<a class="tb tb-(key|common|small)" href="([^"]+)">\s*<span class="tb-label">([^<]+)/g)].map((m) => [m[1], m[2], m[3].trim()]);
   assert.deepEqual(roles, [
-    ["key", "#doors", "Download"],
     ["common", "#scene", "Show me"],
     ["common", "#safe", "Is it safe?"],
     ["small", "#main", "Back up to the door"],
   ]);
-  // Nothing to download yet: the key button says so and leads to the status.
-  assert.match(html, /<small>Not out yet<\/small>/);
-  assert.match(html, /<aside class="doors glass" id="doors"/);
-  const es = readFileSync(join(DIST, "es", "index.html"), "utf8");
-  assert.match(es, /Descargar\s*<small>Aún no ha salido<\/small>/);
+  // Nothing to download yet (T-105): the real gold button, unavailable, links
+  // nowhere, and the line it points to says so (rule 8).
+  for (const [file, label, note] of [["index.html", "Download", "Not out yet"], ["es/index.html", "Descargar", "Aún no ha salido"]]) {
+    const page = readFileSync(join(DIST, file), "utf8");
+    const key = [...page.matchAll(/<(a|button) class="tb tb-key"[^>]*>\s*<span class="tb-label">([^<]+)/g)];
+    assert.equal(key.length, 1, `${file}: one key action`);
+    assert.equal(key[0][1], "button", `${file}: not a link`);
+    assert.equal(key[0][2].trim(), label);
+    assert.match(key[0][0], /type="button"/);
+    assert.match(key[0][0], /aria-disabled="true"/);
+    assert.match(key[0][0], /aria-describedby="download-note"/);
+    assert.match(page, new RegExp(`<p class="key-note" id="download-note">${note}</p>`), file);
+  }
   for (const art of ["btn-key", "btn-key-lit", "btn-common", "btn-small"]) {
     for (const scale of ["", "@2x"]) assert.ok(existsSync(join(DIST, "art", "home", `${art}${scale}.webp`)), `${art}${scale}`);
   }
