@@ -20,7 +20,7 @@ import {
 import type { SiteConfig } from "./config.ts";
 import { type DeleteOutcome, deleteOutcome } from "./deleteAccount.ts";
 import { buildExport, type ExportFile, ownFileNames } from "./exportData.ts";
-import { profileErrorMessage } from "./profile.ts";
+import { communityErrorMessage, profileErrorMessage } from "./profile.ts";
 
 const TIMEOUT_MS = 15_000;
 
@@ -251,6 +251,31 @@ export async function saveProfile(
     return null;
   } catch {
     return profileErrorMessage({});
+  }
+}
+
+/**
+ * The community hero stats switch (T-507): off unless the account turned it
+ * on (no row is off). Throws when it cannot be read, so the page never shows
+ * "off" for an account that may have it on.
+ */
+export async function loadCommunityConsent(client: SupabaseClient, userId: string): Promise<boolean> {
+  const { data, error } = await client.from("community_consent").select("hero_stats").eq("user_id", userId).maybeSingle();
+  if (error) throw new Error("could not load the community stats setting");
+  if (data === null) return false;
+  if (typeof data.hero_stats !== "boolean") throw new Error("could not load the community stats setting");
+  return data.hero_stats;
+}
+
+/** null when saved, else the message to show. Only the signed-in owner can set it (set_community_consent). */
+export async function saveCommunityConsent(client: SupabaseClient, on: boolean): Promise<string | null> {
+  try {
+    const { data, error } = await client.rpc("set_community_consent", { p_hero_stats: on });
+    if (error) return communityErrorMessage(error);
+    if (data !== on) return communityErrorMessage({});
+    return null;
+  } catch {
+    return communityErrorMessage({});
   }
 }
 

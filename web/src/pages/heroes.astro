@@ -1,0 +1,67 @@
+---
+// Community hero stats (/heroes/) (T-507, T-401, D-085): a static frame with
+// reserved room; the script reads public.community_heroes() and its summary
+// for both modes and periods and draws them into #ch-modes in one go. Only
+// heroes above the thresholds ever reach the page; no player is shown.
+// With accounts closed the page shows a notice instead: no data, no script.
+// Kept out of search engines, like the leaderboards.
+import Base from "../layouts/Base.astro";
+import AccountsClosed from "../components/AccountsClosed.astro";
+import Switch from "../components/data/Switch.astro";
+import DataScript from "../components/data/DataScript.astro";
+import StateBlock from "../components/data/StateBlock.astro";
+import "../styles/data.css";
+import "../styles/dash.css";
+import "../styles/player.css";
+import "../styles/community.css";
+import { readConfig } from "../lib/config.ts";
+import { DEFAULT_PERIOD, PERIODS, periodName } from "../lib/community/heroes.ts";
+import { ct } from "../lib/community/strings.ts";
+
+const accountsOpen = readConfig(import.meta.env) !== null;
+---
+
+<Base
+  title="Hero stats"
+  description="Community Battlegrounds hero stats from Tavern Ledger players who chose to share their games: games, pick rate, average place and top-half rate. Self-reported, no players shown."
+  noindex
+>
+  {
+    accountsOpen ? (
+      <div class="dash ch" id="ch" aria-busy="true">
+        <header class="data-head dash-head">
+          <div>
+            <p class="kicker">{ct("page.kicker")}</p>
+            <h1>{ct("page.title")}</h1>
+            <p class="ch-intro">{ct("page.intro")}</p>
+            <p class="data-note ch-updated" id="ch-updated" />
+          </div>
+          <div class="dash-switches ch-switches is-off" id="ch-switches">
+            <Switch kind="mode" controls="ch-modes" />
+            <div class="seg" role="group" aria-label={ct("period.label")} id="ch-period-switch" hidden>
+              {PERIODS.map((p) => (
+                <button type="button" data-value={p} aria-pressed={p === DEFAULT_PERIOD ? "true" : "false"} aria-controls="ch-body">
+                  {periodName(p)}
+                </button>
+              ))}
+            </div>
+            <Switch kind="detail" />
+          </div>
+        </header>
+        <p class="visually-hidden" id="ch-status" role="status" aria-live="polite" />
+        <div class="dash-body ch-periods" id="ch-body" data-period={DEFAULT_PERIOD}>
+          <div class="mode-panels" id="ch-modes">
+            <div class="ch-skeleton">
+              <StateBlock kind="loading" lines={14} />
+            </div>
+          </div>
+          <div id="ch-about" />
+        </div>
+        <DataScript />
+        <script src="../scripts/communityHeroes.ts" />
+      </div>
+    ) : (
+      <AccountsClosed heading="Hero stats" />
+    )
+  }
+</Base>

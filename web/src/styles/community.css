@@ -1,0 +1,37 @@
+/* Community hero stats (T-507), on the data pages' pieces (data.css), the
+   dashboard's frame (dash.css) and the heroes page's sort switch
+   (player.css): the body keeps a screen of room from the start and the
+   tables land inside it, so nothing in view moves (CLS 0). */
+
+.ch-intro {
+  max-width: 62ch;
+  margin-top: var(--s-2);
+  color: var(--text-2);
+}
+
+/* Room for "Updated …" from the first paint: it fills in with the data. */
+.ch-updated {
+  min-height: 1.5em;
+}
+
+.ch-switches {
+  align-content: start;
+}
+
+/* The switches keep their room while the script has not shown them yet
+   (they wrap onto more lines on a phone), so showing them moves nothing. */
+.ch-switches .seg[hidden] {
+  /* Beats the global [hidden] rule, which is !important too. */
+  display: inline-flex !important;
+  visibility: hidden;
+}
+
+/* One period shows at a time; 30 days until the script says otherwise. */
+.ch-periods:not([data-period="all"]) [data-period-panel="all"],
+.ch-periods[data-period="all"] [data-period-panel="30d"] {
+  display: none;
+}
+
+.ch-skeleton .state {
+  min-height: 480px;
+}
