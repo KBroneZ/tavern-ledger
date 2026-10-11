@@ -12,6 +12,9 @@ import {
   boardRow,
   boardTitle,
   DEFAULT_PERIOD,
+  FEW_GAMES,
+  FEW_HERO_GAMES,
+  fewGames,
   formatValue,
   groupBoards,
   parsePeriod,
@@ -133,7 +136,7 @@ test("no string promises a rating or names other players", () => {
   for (const text of Object.values(LB_STRINGS)) {
     assert.doesNotMatch(text, /\bmmr\b|battletag(?!s)/i, text);
   }
-  assert.throws(() => lt("board.how.min"), /needs/);
+  assert.throws(() => lt("board.how.count"), /needs/);
 });
 
 // ------------------------------------------------------------------ the period in the address
@@ -225,24 +228,61 @@ test("a board: titled section, table with a caption, top 10 then Show all, and h
   assert.match(html, /Show all 12/);
   const text = textOf(section);
   assert.match(text, /How this is counted/);
-  assert.match(text, /at least 20/);
+  assert.match(text, /listed from their first one/);
+  assert.match(text, /fewer than 20 games is marked "few games"/);
   assert.match(text, /Self-reported/);
   assert.match(text, /Equal values share a place/);
 });
 
-test("an empty board says why", () => {
-  const text = textOf(boardSection(def("apm"), [], "solo", "7d"));
-  assert.match(text, /Nobody here yet/);
-  assert.match(text, /20 finished games in the last 7 days/);
+test("an empty board says so plainly, with no minimum", () => {
+  for (const key of ["apm", "hero_avg_place"] as const) {
+    const text = textOf(boardSection(def(key), [], "solo", "7d"));
+    assert.match(text, /No public players yet/);
+    assert.match(text, /No player with a public profile has a finished game for this board in the last 7 days/);
+    assert.doesNotMatch(text, /20|10|at least|minimum/);
+  }
 });
 
-test("the hero board names both minimums: 20 games and 10 with the hero", () => {
-  const empty = textOf(boardSection(def("hero_avg_place"), [], "solo", "all"));
-  assert.match(empty, /20 finished games in all time with 10 of them on one hero/);
+test("the hero board's line is games with the hero", () => {
   const row = boardRow(raw({ board: "hero_avg_place", hero: "BG20_HERO_202" }), "solo");
   const listed = textOf(boardSection(def("hero_avg_place"), [row], "solo", "30d"));
-  assert.match(listed, /at least 20 of them, and at least 10 with the hero/);
-  assert.doesNotMatch(listed, /at least 20 of them, with this number/);
+  assert.match(listed, /first game with a hero; a value from fewer than 10 games with the hero is marked "few games"/);
+  assert.doesNotMatch(listed, /at least \d+ of them/);
+});
+
+// ------------------------------------------------------------------ few games (D-103)
+
+test("the few-games line is D-082's old minimum: 20 games, 10 with the hero", () => {
+  assert.equal(FEW_GAMES, 20);
+  assert.equal(FEW_HERO_GAMES, 10);
+  assert.equal(fewGames(boardRow(raw({ games: 1 }), "solo")), true);
+  assert.equal(fewGames(boardRow(raw({ games: 19 }), "solo")), true);
+  assert.equal(fewGames(boardRow(raw({ games: 20 }), "solo")), false);
+  const hero = (games: number) => boardRow(raw({ board: "hero_avg_place", hero: "BG20_HERO_202", games }), "solo");
+  assert.equal(fewGames(hero(9)), true);
+  assert.equal(fewGames(hero(10)), false);
+});
+
+test("a row under the line is shown, with its games and the few-games mark; one over it has no mark", () => {
+  const one = rowCells(def("win_rate"), boardRow(raw({ board: "win_rate", value: 100, games: 1 }), "solo"));
+  const value = toHtml((one[2] as { node: never }).node);
+  assert.match(value, /100\.0%/);
+  assert.match(value, /<span class="mark-src mark-few" title="Rests on fewer than 20 games: it can change a lot with the next one\.">few games<\/span>/);
+  assert.equal(one[3], 1);
+  const many = rowCells(def("win_rate"), boardRow(raw({ board: "win_rate", value: 50, games: 20 }), "solo"));
+  assert.equal(many[2], "50.0%");
+  const hero = rowCells(def("hero_avg_place"), boardRow(raw({ board: "hero_avg_place", hero: "BG20_HERO_202", games: 9 }), "solo"));
+  assert.match(toHtml((hero[3] as { node: never }).node), /fewer than 10 games with this hero/);
+});
+
+test("rows keep the server's order: by value, ties by more games, few-game rows not moved or hidden", () => {
+  const rows = [
+    boardRow(raw({ standing: 1, value: 1, games: 25, display_name: "Many" }), "solo"),
+    boardRow(raw({ standing: 1, value: 1, games: 1, user_id: B, display_name: "One" }), "solo"),
+  ];
+  const text = textOf(boardSection(def("avg_place"), rows, "solo", "7d"));
+  assert.ok(text.indexOf("Many") < text.indexOf("One"));
+  assert.equal(text.match(/few games/g)?.length, 2, "the row's mark and the explanation");
 });
 
 test("both modes, three periods each; Advanced boards marked for the switch", () => {
@@ -270,7 +310,8 @@ test("the about fold says who is listed, how to opt out and links the privacy po
   assert.match(text, /Public profile/);
   assert.match(text, /as soon as they save/);
   assert.match(text, /every 10 minutes/);
-  assert.match(text, /20 finished games/);
+  assert.match(text, /every public player with a finished game/);
+  assert.match(text, /fewer than 20 games \(10 with the hero on the hero board\) is marked "few games"/);
   assert.match(text, /no ratings, no BattleTags/);
   assert.match(toHtml(fold), /href="\/privacy\/#public-profiles-and-leaderboards"/);
 });

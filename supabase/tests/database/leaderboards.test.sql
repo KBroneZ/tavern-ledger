@@ -1,9 +1,19 @@
 -- Public leaderboards and the display name filter (T-506, D-075, D-077).
 -- Run: npx supabase test db. Users and games are made up; everything rolls
 -- back at the end.
+--
+-- These tests run the boards with D-082's old minimums (20 games per board,
+-- 10 with the hero), set back inside this transaction, so they also show
+-- that raising the minimum again works. The live rule since D-103 (one
+-- finished game) is tested in leaderboard_minimums.test.sql.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(62);
+select plan(61);
+
+create or replace function private.leaderboard_min_games()
+returns integer language sql immutable set search_path = '' as $$ select 20 $$;
+create or replace function private.leaderboard_min_hero_games()
+returns integer language sql immutable set search_path = '' as $$ select 10 $$;
 
 -- Players (ids end in their letter where hex allows):
 --   A  Alpha   public, 25 Solo games yesterday (+1 impossible, +2 unfinished)
@@ -387,8 +397,6 @@ select results_eq(
   $$ select private.display_name_allowed(n) from unnest(array['Hotel', 'fuck']) as n $$,
   $$ values (true), (false) $$,
   'the same check is used by the trigger and the boards');
-select ok(private.leaderboard_min_games() = 20 and private.leaderboard_min_hero_games() = 10,
-  'the minimums are 20 games per board and 10 per hero');
 select ok(
   not private.leaderboard_game_plausible(jsonb_populate_record(null::public.game_stats, '{"apm": 100.5}'))
   and private.leaderboard_game_plausible(jsonb_populate_record(null::public.game_stats, '{"apm": 100}'))

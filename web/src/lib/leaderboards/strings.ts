@@ -59,7 +59,7 @@ export const LB_STRINGS = {
   "board.hero_avg_place": "Best average place per hero",
   "board.hero_avg_place.col": "Avg place",
   "board.hero_avg_place.how":
-    "Average place with one hero (a skin counts as its hero), for heroes the player finished at least {hero} games with in the period. A player can appear once per hero.",
+    "Average place with one hero (a skin counts as its hero), over the player's finished games with it in the period. A player can appear once per hero.",
   "board.apm": "Actions per minute",
   "board.apm.col": "APM",
   "board.apm.how":
@@ -83,22 +83,24 @@ export const LB_STRINGS = {
   "board.most_golden.how": "The most golden minions on the player's own board entering a combat, in any one game of the period.",
 
   "board.how": "How this is counted",
-  "board.how.min":
-    "Counts finished games from {period}. A player needs at least {min} of them, with this number recorded, to be listed.",
-  "board.how.min.hero":
-    "Counts finished games from {period}. A player needs at least {min} of them, and at least {hero} with the hero, to be listed.",
+  "board.how.count":
+    "Counts finished games from {period} that recorded this number. A player is listed from their first one; a value from fewer than {min} games is marked \"few games\", as it can change a lot with the next game.",
+  "board.how.count.hero":
+    "Counts finished games from {period}. A player is listed from their first game with a hero; a value from fewer than {hero} games with the hero is marked \"few games\", as it can change a lot with the next game.",
   "board.how.source":
     "Self-reported: every game comes from the player's own app, and the server checks each report before storing it. A game with a value no real game can have is left out of every board.",
   "board.how.ties": "Equal values share a place; then more games come first.",
-  "board.empty": "Nobody here yet",
-  "board.empty.body": "No public player has {min} finished games in {period} for this board.",
-  "board.empty.body.hero": "No public player has {min} finished games in {period} with {hero} of them on one hero.",
+  "board.empty": "No public players yet",
+  "board.empty.body": "No player with a public profile has a finished game for this board in {period}.",
+  "few": "few games",
+  "few.tip": "Rests on fewer than {min} games: it can change a lot with the next one.",
+  "few.tip.hero": "Rests on fewer than {min} games with this hero: it can change a lot with the next one.",
   "board.caption": "{board}, {mode}, {period}",
 
   "about.summary": "About these boards",
   "about.who":
     "Only players who turned on \"Public profile\" on their account page are listed, by the display name they chose, with a link to their public profile. Turning the profile private removes them from every board as soon as they save.",
-  "about.min": "A board lists a player once they have {min} finished games in the mode and period ({hero} with a hero on the hero board). Each board shows its top 50.",
+  "about.min": "A board lists every public player with a finished game in the mode and period. A value from fewer than {min} games ({hero} with the hero on the hero board) is marked \"few games\": a 100% win rate from one game is one win. Each board shows its top 50.",
   "about.refresh": "The boards are rebuilt from the uploaded games every 10 minutes. A new public profile or new games show at the next rebuild.",
   "about.data":
     "Nothing here comes from Blizzard: no ratings, no BattleTags and no other players' names. Numbers are self-reported by each player's app; see the privacy policy for what becomes public.",

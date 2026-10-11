@@ -54,7 +54,7 @@ export const ES: Record<LbKey, string> = {
   "board.hero_avg_place": "Mejor puesto medio por héroe",
   "board.hero_avg_place.col": "Puesto medio",
   "board.hero_avg_place.how":
-    "Puesto medio con un héroe (un aspecto cuenta como su héroe), para los héroes con los que el jugador ha terminado al menos {hero} partidas en el periodo. Un jugador puede aparecer una vez por héroe.",
+    "Puesto medio con un héroe (un aspecto cuenta como su héroe), sobre las partidas terminadas del jugador con él en el periodo. Un jugador puede aparecer una vez por héroe.",
   "board.apm": "Acciones por minuto",
   "board.apm.col": "APM",
   "board.apm.how":
@@ -78,22 +78,24 @@ export const ES: Record<LbKey, string> = {
   "board.most_golden.how": "El mayor número de esbirros dorados en el propio tablero del jugador al entrar en un combate, en una sola partida del periodo.",
 
   "board.how": "Cómo se cuenta",
-  "board.how.min":
-    "Cuenta las partidas terminadas de {period}. Un jugador necesita al menos {min} de ellas, con este dato registrado, para aparecer.",
-  "board.how.min.hero":
-    "Cuenta las partidas terminadas de {period}. Un jugador necesita al menos {min} de ellas, y al menos {hero} con el héroe, para aparecer.",
+  "board.how.count":
+    "Cuenta las partidas terminadas del periodo ({period}) que registraron este dato. Un jugador aparece desde la primera; un valor de menos de {min} partidas lleva la marca «pocas partidas», porque puede cambiar mucho con la siguiente.",
+  "board.how.count.hero":
+    "Cuenta las partidas terminadas del periodo ({period}). Un jugador aparece desde su primera partida con un héroe; un valor de menos de {hero} partidas con el héroe lleva la marca «pocas partidas», porque puede cambiar mucho con la siguiente.",
   "board.how.source":
     "Autodeclarado: cada partida procede de la propia aplicación del jugador, y el servidor comprueba cada informe antes de guardarlo. Una partida con un valor que ninguna partida real puede tener queda fuera de todas las clasificaciones.",
   "board.how.ties": "Los valores iguales comparten puesto; después van primero los que tienen más partidas.",
-  "board.empty": "Aún no hay nadie",
-  "board.empty.body": "Ningún jugador público tiene {min} partidas terminadas en {period} para esta clasificación.",
-  "board.empty.body.hero": "Ningún jugador público tiene {min} partidas terminadas en {period} con {hero} de ellas con un mismo héroe.",
+  "board.empty": "Aún no hay jugadores públicos",
+  "board.empty.body": "Ningún jugador con perfil público tiene una partida terminada para esta clasificación ({period}).",
+  "few": "pocas partidas",
+  "few.tip": "Se basa en menos de {min} partidas: puede cambiar mucho con la siguiente.",
+  "few.tip.hero": "Se basa en menos de {min} partidas con este héroe: puede cambiar mucho con la siguiente.",
   "board.caption": "{board}, {mode}, {period}",
 
   "about.summary": "Acerca de estas clasificaciones",
   "about.who":
     "Solo aparecen los jugadores que han activado «Perfil público» en la página de su cuenta, con el nombre visible que han elegido y un enlace a su perfil público. Si vuelven a poner el perfil en privado, desaparecen de todas las clasificaciones en cuanto guardan.",
-  "about.min": "Una clasificación incluye a un jugador cuando tiene {min} partidas terminadas en el modo y el periodo ({hero} con un héroe en la clasificación de héroes). Cada clasificación muestra sus 50 primeros.",
+  "about.min": "Una clasificación incluye a todos los jugadores públicos con una partida terminada en el modo y el periodo. Un valor de menos de {min} partidas ({hero} con el héroe en la clasificación de héroes) lleva la marca «pocas partidas»: un 100 % de victorias en una partida es una victoria. Cada clasificación muestra sus 50 primeros.",
   "about.refresh": "Las clasificaciones se regeneran cada 10 minutos a partir de las partidas subidas. Un perfil público nuevo o partidas nuevas aparecen en la siguiente regeneración.",
   "about.data":
     "Nada de esto procede de Blizzard: ni puntuaciones, ni BattleTags, ni nombres de otros jugadores. Las cifras son autodeclaradas por la aplicación de cada jugador; consulta la política de privacidad para saber qué se hace público.",
