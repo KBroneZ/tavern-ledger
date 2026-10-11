@@ -19,6 +19,7 @@ export const ES: Record<SiteKey, string> = {
   "layout.openSource": "Código abierto (MIT). Aún no está abierto al público.",
   "layout.switch": "English",
   "layout.switch.label": "Read this page in English",
+  "layout.socialAlt": "Logotipo de Tavern Ledger, una jarra dibujada con las letras TL, sobre la frase Hearthstone Battlegrounds tracker",
 
   // Page titles and descriptions.
   "meta.index.title": "Tus partidas de Campos de Batalla, guardadas para ti",
