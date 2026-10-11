@@ -4,8 +4,9 @@
 //! When on, the reader (`game-memory` crate, read-only rights) is asked for:
 //! - the lobby's five tribes while a Battlegrounds game is in progress (from
 //!   hero select), every few seconds for about a minute, until a read passes
-//!   its checks; a failed check stops it for that game ("unsupported game
-//!   version") and the app keeps its log-based tribes;
+//!   its checks and is not the last game's five again (the game may still
+//!   hold those as a game starts); a failed check stops it for that game
+//!   ("unsupported game version") and the app keeps its log-based tribes;
 //! - the player's own rating each time the Battlegrounds lobby screen opens.
 //!
 //! The values stay in memory on this PC: they are not saved with the games,
@@ -65,6 +66,9 @@ struct State {
     /// The game the tribes belong to.
     game: Option<GameKey>,
     tribes: Option<Vec<String>>,
+    /// The last game's tribes: at the start of a game the game may still
+    /// hold them, so the same five are not taken for the new game.
+    last_tribes: Option<Vec<String>>,
     tribes_status: ReaderStatus,
     tribes_tries: u32,
     tribes_done: bool,
@@ -246,7 +250,9 @@ fn tick_tribes(s: &mut State, reader: &dyn Reader, game: Option<&GameKey>) {
     };
     if s.game.as_ref() != Some(game) {
         s.game = Some(game.clone());
-        s.tribes = None;
+        if let Some(last) = s.tribes.take() {
+            s.last_tribes = Some(last);
+        }
         s.tribes_status = ReaderStatus::Waiting;
         s.tribes_tries = 0;
         s.tribes_done = false;
@@ -256,7 +262,10 @@ fn tick_tribes(s: &mut State, reader: &dyn Reader, game: Option<&GameKey>) {
         return;
     }
     s.tribes_tries += 1;
-    let result = reader.lobby_tribes();
+    let result = match reader.lobby_tribes() {
+        Ok(tribes) if s.last_tribes.as_ref() == Some(&tribes) => Err(ReadFailure::NotYet),
+        other => other,
+    };
     s.tribes_status = match &result {
         Ok(_) => ReaderStatus::Ok,
         Err(e) => status_of(e),
@@ -503,7 +512,50 @@ mod tests {
         // Another game starts fresh.
         assert_eq!(gm.tribes_for(Some(&key(2))), (None, ReaderStatus::Waiting));
         ticks(&gm, &reader, Some(&key(2)), Some(Scene::Game), 3);
-        assert_eq!(gm.tribes_for(Some(&key(2))).1, ReaderStatus::Ok);
+        // The same five as the last game are not taken (see below).
+        assert_eq!(gm.tribes_for(Some(&key(2))), (None, ReaderStatus::Waiting));
+        assert_eq!(reader.calls.get(), calls + 1, "game 2 is read again");
+    }
+
+    fn other_lobby() -> Vec<String> {
+        ["ABERRATION", "DEMON", "DRAGON", "ELEMENTAL", "MECHANICAL"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect()
+    }
+
+    #[test]
+    fn the_last_games_tribes_are_not_taken_for_the_next_game() {
+        // At the start of a game the game may still hold the last lobby:
+        // the same five again are read once more until they change.
+        let gm = on("stale");
+        let reader = FakeReader::new(
+            vec![Ok(lobby()), Ok(lobby()), Ok(lobby()), Ok(other_lobby())],
+            vec![Ok(RATING)],
+        );
+        ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 3);
+        assert_eq!(gm.tribes_for(Some(&key(1))).0, Some(lobby()));
+        ticks(&gm, &reader, Some(&key(2)), Some(Scene::Game), 3);
+        assert_eq!(gm.tribes_for(Some(&key(2))), (None, ReaderStatus::Waiting));
+        ticks(&gm, &reader, Some(&key(2)), Some(Scene::Game), 6);
+        assert_eq!(
+            gm.tribes_for(Some(&key(2))),
+            (Some(other_lobby()), ReaderStatus::Ok)
+        );
+    }
+
+    #[test]
+    fn the_same_lobby_for_a_whole_minute_falls_back() {
+        // Two lobbies in a row can be the same (1 in 252); then the app
+        // keeps its log-based tribes rather than risk the old value.
+        let gm = on("same-lobby");
+        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(RATING)]);
+        ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 3);
+        ticks(&gm, &reader, Some(&key(2)), Some(Scene::Game), 200);
+        assert_eq!(
+            gm.tribes_for(Some(&key(2))),
+            (None, ReaderStatus::UnsupportedVersion)
+        );
     }
 
     #[test]

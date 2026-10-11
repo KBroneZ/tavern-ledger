@@ -163,7 +163,7 @@ pub fn read_lobby_tribes(mono: &Mono) -> Result<Vec<&'static str>, ReadFailure> 
 /// Reads the player's own rating through `mono`.
 pub fn read_own_rating(mono: &Mono) -> Result<Rating, ReadFailure> {
     let _ = mono;
-    // TODO(T-327): the fixed path to the rating object is not mapped yet.
+    // Not mapped on build 253216 yet (T-337): never a value until it is.
     Err(unsupported("rating path not mapped for this build"))
 }
 
