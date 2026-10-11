@@ -204,7 +204,7 @@ test("heroes above the thresholds: a sorted table with its caption, the sort swi
   const html = toHtml(panel);
   assert.match(html, /<caption>Heroes, Duos, over all time, sorted by average place<\/caption>/);
   const heroes = elements(panel).filter((e) => e.tag === "th" && e.attrs.some(([k, v]) => k === "scope" && v === "row"));
-  assert.deepEqual(heroes.map((e) => textOf(e).trim()), ["BG20_HERO_202", "BG23_HERO_303"], "better average place first");
+  assert.deepEqual(heroes.map((e) => textOf(e).trim()), ["Master Nguyen", "Murloc Holmes"], "better average place first, by name");
   assert.match(html, /50\+ means 50 to 59 games/);
   const pressed = elements(panel).filter((e) => e.tag === "button" && e.attrs.some(([k, v]) => k === "aria-pressed" && v === "true"));
   assert.deepEqual(pressed.map((e) => textOf(e)), ["Avg place"]);

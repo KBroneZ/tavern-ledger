@@ -10,10 +10,9 @@ import { g } from "./strings.ts";
 const DASH = "—";
 const num = (v: number | null) => (v === null ? DASH : compact(v));
 
-/** The game's own hero name, else the card id, else "Unknown hero". */
+/** The hero's name, else "Unknown hero": never the bare card id (T-510). */
 export function heroLabel(hero: HeroRef | null): string {
-  if (!hero || !hero.id) return g("hero.unknown");
-  return hero.name ?? hero.id;
+  return hero?.name ?? g("hero.unknown");
 }
 
 export function pageHeading(summary: Summary): string {

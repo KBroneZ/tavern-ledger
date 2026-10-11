@@ -83,8 +83,9 @@ const current = (match: boolean) => (match ? "page" : undefined);
             <a href={href("/heroes/")} aria-current={current(base.startsWith("/heroes"))}>{st("layout.heroes")}</a>
             <a href={href("/me/")} aria-current={current(base.startsWith("/me") || base.startsWith("/games"))}>{st("layout.games")}</a>
             <a href={href("/simulator/")} aria-current={current(base.startsWith("/simulator"))}>{st("layout.simulator")}</a>
-            <a href={href("/signin/")} aria-current={current(base.startsWith("/signin"))}>{st("layout.signin")}</a>
-            <a href={href("/account/")} aria-current={current(base.startsWith("/account"))}>{st("layout.account")}</a>
+            {/* public/lang.js marks <html data-auth>, so only the right one shows (T-513). */}
+            <a class="nav-signin" href={href("/signin/")} aria-current={current(base.startsWith("/signin"))}>{st("layout.signin")}</a>
+            <a class="nav-account" href={href("/account/")} aria-current={current(base.startsWith("/account"))}>{st("layout.account")}</a>
           </>
         )}
         {
@@ -116,6 +117,7 @@ const current = (match: boolean) => (match ? "page" : undefined);
       <p>{st("layout.openSource")}</p>
       <p><a href={href("/privacy/")}>{st("layout.privacy")}</a></p>
       <p><a href={href("/terms/")}>{st("layout.terms")}</a></p>
+      <p><a href={href("/accuracy/")}>{st("layout.accuracy")}</a></p>
     </footer>
   </body>
 </html>

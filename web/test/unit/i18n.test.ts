@@ -10,6 +10,7 @@ import { runInNewContext } from "node:vm";
 import { basePath, href, isLang, langPaths, pathIn, pathLang, placeholders, pluralForm, setLang, TABLES } from "../../src/lib/i18n.ts";
 // Each table registers itself when imported.
 import { ACCOUNT_STRINGS } from "../../src/lib/account/strings.ts";
+import { ACC_STRINGS } from "../../src/lib/accuracy/strings.ts";
 import { CH_STRINGS } from "../../src/lib/community/strings.ts";
 import { STRINGS, t } from "../../src/lib/data/strings.ts";
 import { GAME_STRINGS } from "../../src/lib/game/strings.ts";
@@ -38,9 +39,9 @@ const ROOT = join(import.meta.dirname, "..", "..");
 
 afterEach(() => setLang("en"));
 
-test("every table is registered: site, account, data, game, leaderboards, community, simulator", () => {
-  assert.deepEqual(TABLES.map((x) => x.name).sort(), ["account", "community", "data", "game", "leaderboards", "simulator", "site"]);
-  const english = [ACCOUNT_STRINGS, CH_STRINGS, STRINGS, GAME_STRINGS, LB_STRINGS, SITE_STRINGS, SIM_STRINGS];
+test("every table is registered: site, account, data, game, leaderboards, community, accuracy, simulator", () => {
+  assert.deepEqual(TABLES.map((x) => x.name).sort(), ["account", "accuracy", "community", "data", "game", "leaderboards", "simulator", "site"]);
+  const english = [ACCOUNT_STRINGS, ACC_STRINGS, CH_STRINGS, STRINGS, GAME_STRINGS, LB_STRINGS, SITE_STRINGS, SIM_STRINGS];
   for (const en of english) assert.ok(TABLES.some((x) => x.en === en));
 });
 
@@ -212,9 +213,11 @@ test("the dashboard draws in Spanish", () => {
 
 const SCRIPT = readFileSync(join(ROOT, "public", "lang.js"), "utf8");
 
-function runScript(path: string, opts: { saved?: string | null; languages?: string[]; search?: string; hash?: string; storage?: "blocked" } = {}) {
+function runScript(path: string, opts: { saved?: string | null; languages?: string[]; search?: string; hash?: string; storage?: "blocked"; keys?: string[] } = {}) {
   const store = new Map<string, string>();
   if (opts.saved) store.set("tl-lang", opts.saved);
+  for (const k of opts.keys ?? []) store.set(k, "{}");
+  const htmlAttrs: Record<string, string> = {};
   const replaced: string[] = [];
   const listeners: Record<string, (e: unknown) => void> = {};
   const localStorage =
@@ -226,16 +229,31 @@ function runScript(path: string, opts: { saved?: string | null; languages?: stri
           setItem: () => {
             throw new Error("blocked");
           },
+          get length(): number {
+            throw new Error("blocked");
+          },
         }
-      : { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), removeItem: (k: string) => void store.delete(k) };
+      : {
+          getItem: (k: string) => store.get(k) ?? null,
+          setItem: (k: string, v: string) => void store.set(k, v),
+          removeItem: (k: string) => void store.delete(k),
+          get length() {
+            return store.size;
+          },
+          key: (i: number) => [...store.keys()][i] ?? null,
+        };
   const window = {
     localStorage,
     navigator: { languages: opts.languages ?? ["en-GB"], language: (opts.languages ?? ["en-GB"])[0] },
     location: { pathname: path, search: opts.search ?? "", hash: opts.hash ?? "", href: `https://tavernledger.net${path}${opts.search ?? ""}`, replace: (to: string) => replaced.push(to) },
-    document: { addEventListener: (name: string, fn: (e: unknown) => void) => (listeners[name] = fn), querySelectorAll: () => [] },
+    document: {
+      addEventListener: (name: string, fn: (e: unknown) => void) => (listeners[name] = fn),
+      querySelectorAll: () => [],
+      documentElement: { setAttribute: (n: string, v: string) => void (htmlAttrs[n] = v) },
+    },
   };
   runInNewContext(SCRIPT, { window, URL });
-  return { replaced, store, listeners };
+  return { replaced, store, listeners, htmlAttrs };
 }
 
 test("lang.js: a first visit follows the browser's language, keeping query and hash", () => {
@@ -274,4 +292,12 @@ test("lang.js: the switch saves the choice; blocked storage still lets the page 
   assert.deepEqual(runScript("/es/games/", { storage: "blocked", languages: ["es"] }).replaced, []);
   listeners.auxclick({ target: { closest: () => ({ ...link, attrs: { href: "/games/", "data-lang-switch": "en" } }) } });
   assert.equal(store.get("tl-lang"), "en", "a middle click saves the choice too");
+});
+
+test("lang.js: the menu knows whether a session is stored, from the key's name only (T-513)", () => {
+  assert.equal(runScript("/me/", { keys: ["sb-abcdef123-auth-token"] }).htmlAttrs["data-auth"], "in");
+  assert.equal(runScript("/me/").htmlAttrs["data-auth"], "out");
+  assert.equal(runScript("/me/", { keys: ["sb-abcdef123-auth-token-code-verifier"] }).htmlAttrs["data-auth"], "out", "a sign-in in progress is not a session");
+  assert.equal(runScript("/me/", { storage: "blocked" }).htmlAttrs["data-auth"], undefined, "unknown: both links stay");
+  assert.equal(runScript("/me/", { languages: ["es"], keys: ["sb-x-auth-token"] }).htmlAttrs["data-auth"], undefined, "a page that redirects marks nothing");
 });

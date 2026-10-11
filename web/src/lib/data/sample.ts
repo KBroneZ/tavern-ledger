@@ -41,5 +41,7 @@ export const gameRows: Cell[][] = [
   [{ hero: "SAMPLE_HERO_01", name: "Lantern Keeper" }, { place: 1, mode: "solo" }, 14, "2 hours ago"],
   [{ hero: "SAMPLE_HERO_03", name: "Moss Witch" }, { place: 4, mode: "solo" }, 12, "3 hours ago"],
   [{ hero: null, name: "Hero not recorded" }, { place: null, mode: "solo" }, "—", "Yesterday"],
-  [{ hero: "SAMPLE_HERO_05", name: "Ember Cook" }, { place: 7, mode: "solo" }, 9, "Yesterday"],
+  [{ hero: "SAMPLE_HERO_05", name: "Ember Cook", href: "/games/" }, { place: 7, mode: "solo" }, 9, "Yesterday"],
+  // An id the name table does not know: the id shows in Advanced only (T-510).
+  [{ hero: "SAMPLE_HERO_02", name: "Unknown hero", unknownId: "SAMPLE_HERO_02" }, { place: 2, mode: "solo" }, 11, "Last week"],
 ];

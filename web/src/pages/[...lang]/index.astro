@@ -3,7 +3,8 @@ import Base from "../../layouts/Base.astro";
 import "../../styles/home.css";
 import "../../styles/scene.css";
 import { readConfig } from "../../lib/config.ts";
-import { langPaths, numberFormat, setLang } from "../../lib/i18n.ts";
+import { dateFormat, href, langPaths, numberFormat, setLang } from "../../lib/i18n.ts";
+import { NEWS } from "../../lib/site/news.ts";
 import { st } from "../../lib/site/strings.ts";
 
 export const getStaticPaths = langPaths;
@@ -21,6 +22,9 @@ const steps = ([1, 2, 3, 4, 5] as const).map((n) => ({
 }));
 const sceneLabel = st("home.scene.label");
 const count = (n: number) => numberFormat({ maximumFractionDigits: 0 }).format(n);
+// "What's new" (D-089): the day in the page's language, "11 Oct 2026" / "11 oct 2026".
+const newsDay = (date: string) =>
+  dateFormat({ day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }, "en-GB").format(new Date(`${date}T00:00:00Z`));
 ---
 
 <Base title={st("meta.index.title")} description={st("meta.index.description")} layout="home">
@@ -118,6 +122,22 @@ const count = (n: number) => numberFormat({ maximumFractionDigits: 0 }).format(n
       <li><b>{st("home.yours.private.title")}</b><span>{st("home.yours.private.body")}</span></li>
       <li><b>{st("home.yours.take.title")}</b><span>{st("home.yours.take.body")}</span></li>
       <li><b>{st("home.yours.gone.title")}</b><span>{st("home.yours.gone.body")}</span></li>
+    </ul>
+  </section>
+
+  <section class="sec news" aria-labelledby="news-heading">
+    <h2 id="news-heading" class="sec-h">{st("news.title")}</h2>
+    <ul role="list">
+      {
+        NEWS.map((item) => (
+          <li>
+            <time datetime={item.date}>{newsDay(item.date)}</time>
+            <span>
+              {st(item.text)} <a href={href(item.href)}>{st(item.link)}</a>
+            </span>
+          </li>
+        ))
+      }
     </ul>
   </section>
 

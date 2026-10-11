@@ -29,7 +29,7 @@ const text = (n: VNode | string): string => (typeof n === "string" ? n : n.child
 
 test("words: hero names, headings, minions and unknown values", () => {
   assert.equal(heroLabel({ id: "SYN_HERO_A", name: "Lantern Keeper" }), "Lantern Keeper");
-  assert.equal(heroLabel({ id: "SYN_HERO_D", name: null }), "SYN_HERO_D");
+  assert.equal(heroLabel({ id: "SYN_HERO_D", name: null }), "Unknown hero", "never the bare card id (T-510)");
   assert.equal(heroLabel({ id: null, name: null }), "Unknown hero");
   const v = view();
   assert.equal(pageHeading(v.summary), "Lantern Keeper · 3rd");
@@ -97,8 +97,9 @@ test("render: Duos shows the teammate and the lobby's teams", () => {
   assert.match(all, /TeammateBrass Captain/);
   assert.match(all, /Team/);
   assert.match(all, /This game has no shop record/);
-  assert.match(all, /SYN_HERO_C's board/);
-  assert.match(all, /SYN_HERO_D's board/);
+  assert.match(all, /Unknown hero's board 1 minion/);
+  assert.match(all, /Unknown hero's board 2 minions/);
+  assert.doesNotMatch(all, /SYN_HERO_/, "no card id as a hero name");
   assert.doesNotMatch(all, /Not in the record/);
 });
 

@@ -206,7 +206,7 @@ test("a row: standing, the name linked to the public profile, value, games", () 
   assert.equal(cells[3], 25);
   const hero = rowCells(def("hero_avg_place"), boardRow(raw({ board: "hero_avg_place", hero: "BG20_HERO_202" }), "solo"));
   assert.equal(hero.length, 5);
-  assert.match(textOf((hero[2] as { node: never }).node), /BG20_HERO_202/);
+  assert.match(textOf((hero[2] as { node: never }).node), /^\s*Master Nguyen$/);
 });
 
 test("a name is text, never markup", () => {

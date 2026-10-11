@@ -103,7 +103,7 @@ test("pick rate: the rate with both counts; marked on few choices; unknown with 
 
 test("a hero's cells: link to its games, few-games marks, wins, best and worst", () => {
   const few = heroStatCells(rows[1], null);
-  assert.deepEqual(few[0], { hero: "BG_B", name: "BG_B", href: "/games/?mode=solo&hero=BG_B" });
+  assert.deepEqual(few[0], { hero: "BG_B", name: "Unknown hero", href: "/games/?mode=solo&hero=BG_B", unknownId: "BG_B" });
   assert.match(JSON.stringify(few[2]), /few games/);
   assert.match(JSON.stringify(few[3]), /few games/);
   const enough = heroStatCells(rows[0], ID);

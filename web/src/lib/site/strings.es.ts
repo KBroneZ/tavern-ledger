@@ -8,6 +8,7 @@ export const ES: Record<SiteKey, string> = {
   "layout.home": "Inicio",
   "layout.privacy": "Privacidad",
   "layout.terms": "Términos",
+  "layout.accuracy": "Precisión del simulador",
   "layout.leaderboards": "Clasificaciones",
   "layout.heroes": "Héroes",
   "layout.games": "Tus partidas",
@@ -43,6 +44,9 @@ export const ES: Record<SiteKey, string> = {
   "meta.leaderboards.title": "Clasificaciones",
   "meta.leaderboards.description":
     "Clasificaciones públicas de Tavern Ledger: jugadores que hicieron público su perfil, ordenados según las partidas de Campos de Batalla que subieron. Autodeclaradas, sin puntuaciones.",
+  "meta.accuracy.title": "Precisión del simulador",
+  "meta.accuracy.description":
+    "Cuántas veces aciertan las probabilidades de combate de Tavern Ledger, medido con combates reales de Campos de Batalla: por modo, con la parte de combates sin probabilidades al lado de cada cifra.",
   "meta.signin.title": "Iniciar sesión",
   "meta.signin.description": "Inicia sesión o crea una cuenta de Tavern Ledger.",
   "meta.account.title": "Tu cuenta",
@@ -120,4 +124,11 @@ export const ES: Record<SiteKey, string> = {
   "home.status.body": "La aplicación de escritorio es un prototipo y la web está en construcción.",
   "home.status.testing": "Las cuentas de esta web son solo para pruebas.",
   "home.status.closed": "Las cuentas aún no están abiertas.",
+  "news.title": "Novedades",
+  "news.accuracy": "Cuántas veces aciertan las probabilidades de combate del overlay, medido con combates reales.",
+  "news.accuracy.link": "Precisión del simulador",
+  "news.heroes": "Estadísticas de héroes de la comunidad. Tus partidas solo cuentan si activas el interruptor de la página de tu cuenta; está desactivado hasta que lo hagas.",
+  "news.heroes.link": "Estadísticas de héroes",
+  "news.simulator": "Un simulador de combates en la web: carga un tablero de una de tus partidas, cámbialo y simúlalo.",
+  "news.simulator.link": "Simulador",
 };
