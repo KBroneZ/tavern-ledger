@@ -67,6 +67,8 @@ Built as SQL views or materialized views refreshed on a schedule (like the sweep
 
 **T-501 notes (done, D-070):** the switches need the page's script, so on a page without one (the accounts-closed build) they stay hidden and the page shows Simple and Solo; the data pages need a script for their data anyway. "Show all" and folds use native disclosures. Pictures are one setting in `web/src/lib/data/pictures.ts`; T-504 switches it once the CSP allows the image host. Build on the pieces as shown on `/style/`.
 
+**T-503 notes (done, D-073):** the data pages stay static: a frame with reserved room and a script that draws the T-501 pieces from the data API (same markup, checked by a build test). Addresses are `/me/`, `/profile/?id=<uuid>` and `/games/` (`?id=` for a public profile) rather than `/u/<name>/`: a static host has no server routing and display names are not unique handles. New pieces for later pages: `web/src/lib/view/` (element trees), `web/src/lib/data/rows.ts` (checked rows), `dashboard.ts`, `filters.ts`, `web/src/lib/dataApi.ts`.
+
 Order: T-501 and T-502 in parallel (they do not overlap: `web/` design vs `supabase/`), then T-503 and T-504, then T-505 to T-509.
 
 ## Decisions the user must make (the hub asks, one at a time)

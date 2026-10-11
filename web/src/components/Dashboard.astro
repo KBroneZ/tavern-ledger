@@ -1,0 +1,54 @@
+---
+// The dashboard (/me/) and the public profile (/profile/?id=…) (T-503,
+// D-073): a static frame with reserved room; the script reads the data API
+// in the browser and draws the panels into #dash-body in one go.
+import "../styles/data.css";
+import "../styles/dash.css";
+import { t } from "../lib/data/strings.ts";
+import Switch from "./data/Switch.astro";
+import DataScript from "./data/DataScript.astro";
+import StateBlock from "./data/StateBlock.astro";
+
+interface Props {
+  kind: "own" | "public";
+}
+
+const { kind } = Astro.props;
+---
+
+<div class="dash" id="dash" data-kind={kind} aria-busy="true">
+  <header class="data-head dash-head">
+    <div>
+      <p class="kicker">{kind === "own" ? t("dash.kicker.own") : t("dash.kicker.public")}</p>
+      <h1 id="dash-title">{kind === "own" ? t("dash.title.own") : t("dash.title.public")}</h1>
+    </div>
+    <div class="dash-switches is-off" id="dash-switches">
+      <Switch kind="mode" controls="dash-modes" />
+      <Switch kind="detail" />
+    </div>
+  </header>
+  <p class="visually-hidden" id="dash-status" role="status" aria-live="polite"></p>
+  <div class="dash-body" id="dash-body">
+    <div id="dash-note"></div>
+    <div id="dash-gate" hidden></div>
+    <div class="mode-panels" id="dash-modes">
+      <div class="dash-skeleton">
+        <div class="tiles">
+          <StateBlock kind="loading" lines={4} />
+          <StateBlock kind="loading" lines={4} />
+          <StateBlock kind="loading" lines={4} />
+          <StateBlock kind="loading" lines={4} />
+        </div>
+        <div class="chart-grid">
+          <StateBlock kind="loading" lines={8} />
+          <StateBlock kind="loading" lines={8} />
+        </div>
+        <StateBlock kind="loading" lines={6} />
+      </div>
+    </div>
+    <div id="dash-about"></div>
+  </div>
+</div>
+
+<DataScript />
+<script src="../scripts/dashboard.ts"></script>

@@ -202,10 +202,35 @@ test("Simple tribes: nothing when only the tavern's offers or nothing is known",
   assert.equal(words.simpleTribes(null), null);
 });
 
-test("a Duos hover shows only the hovered hero's view", () => {
+test("a Duos hover shows only the hovered hero's view, the higher player id on top", () => {
   const views = words.seatViews({ ...duoTeam, boards: [] });
-  assert.deepEqual(words.hoveredViews(views, 0).map((v) => v.seat), [3]);
-  assert.deepEqual(words.hoveredViews(views, 1).map((v) => v.seat), [4]);
+  assert.deepEqual(words.hoveredViews(views, 0).map((v) => v.seat), [4]);
+  assert.deepEqual(words.hoveredViews(views, 1).map((v) => v.seat), [3]);
+});
+
+test("the top portrait is the higher player id whatever order the seats come in", () => {
+  // Synthetic Duos team with each hero's own board, seats listed both ways.
+  const boards = [
+    { seat: 5, round: 4, minions: [{ id: "MINION_LOW" }] },
+    { seat: 8, round: 4, minions: [{ id: "MINION_HIGH" }] },
+  ];
+  const lowFirst = { heroes: [{ id: "HERO_LOW" }, { id: "HERO_HIGH" }], seats: [5, 8], tiers: [], boards };
+  const highFirst = { heroes: [{ id: "HERO_HIGH" }, { id: "HERO_LOW" }], seats: [8, 5], tiers: [], boards };
+  for (const team of [lowFirst, highFirst]) {
+    const views = words.seatViews(team);
+    const [top] = words.hoveredViews(views, 0);
+    const [bottom] = words.hoveredViews(views, 1);
+    assert.equal(top.hero.id, "HERO_HIGH");
+    assert.equal(top.board.minions[0].id, "MINION_HIGH");
+    assert.equal(bottom.hero.id, "HERO_LOW");
+    assert.equal(bottom.board.minions[0].id, "MINION_LOW");
+  }
+});
+
+test("the top portrait rule leaves the views it was given unchanged", () => {
+  const views = words.seatViews({ ...duoTeam, boards: [] });
+  words.hoveredViews(views, 0);
+  assert.deepEqual(views.map((v) => v.seat), [3, 4]);
 });
 
 test("without a known portrait the hover keeps the whole team", () => {

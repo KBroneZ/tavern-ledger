@@ -1,0 +1,154 @@
+/* Dashboard, public profile and games list (T-503), on the data pages'
+   pieces (data.css). The data arrives after the page: the body keeps a
+   screen of room from the start, and everything new lands inside it, so
+   nothing already on screen moves (CLS 0, D-073). */
+
+.dash {
+  display: grid;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+.dash-head h1 {
+  overflow-wrap: anywhere;
+}
+
+/* Room for the switches from the first paint; they show once there is data. */
+.dash-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  min-height: 44px;
+}
+
+.dash-switches.is-off {
+  visibility: hidden;
+}
+
+/* At least a screen tall, so the footer is out of view while loading and
+   the panels never push anything that is already in view. */
+.dash-body {
+  display: grid;
+  gap: var(--s-4);
+  align-content: start;
+  min-height: 100vh;
+  min-width: 0;
+}
+
+.dash-body > *,
+.dash-panel,
+.dash-panel > * {
+  min-width: 0;
+}
+
+.dash-skeleton {
+  display: grid;
+  gap: var(--s-5);
+}
+
+.dash-skeleton .tiles > .state {
+  min-height: 132px;
+}
+
+.dash-skeleton .chart-grid > .state {
+  min-height: 260px;
+}
+
+.dash-panel > .data-section:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.dash-more {
+  font-weight: 700;
+}
+
+/* A game with no place: the dashed "?" and why, in words. */
+.cell-note {
+  margin-inline-start: var(--s-2);
+  color: var(--text-2);
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+
+.dtable td .mark-src {
+  margin-inline-start: var(--s-1);
+}
+
+/* ---------- Games list ---------- */
+
+.list-filters {
+  max-width: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
+  gap: var(--s-3);
+  align-items: end;
+}
+
+.list-filters label {
+  font-size: var(--t-sm);
+  color: var(--text-2);
+}
+
+.list-filters select,
+.list-filters input[type="date"] {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--s-3);
+  font: 500 var(--t-md) / 1.2 var(--body);
+  color: var(--text-1);
+  color-scheme: dark;
+  background: var(--bg-deep);
+  border: 1.5px solid var(--field-line);
+  border-radius: var(--r-small);
+}
+
+.list-filters select:hover,
+.list-filters input[type="date"]:hover {
+  border-color: var(--dim);
+}
+
+.list-filters select:focus-visible,
+.list-filters input[type="date"]:focus-visible {
+  border-color: var(--amber);
+  outline-offset: 2px;
+}
+
+.list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  grid-column: 1 / -1;
+}
+
+.list-actions > * {
+  min-height: 44px;
+}
+
+.pager {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.pager > :last-child {
+  justify-self: end;
+}
+
+.pager-at {
+  color: var(--text-2);
+  font-size: var(--t-sm);
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .pager {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pager-at {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+}
