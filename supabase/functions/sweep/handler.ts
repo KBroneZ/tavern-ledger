@@ -13,6 +13,11 @@
 //      one from their stored report, read through the Storage API, checked
 //      again by validateRecord() and against the row's SHA-256. At most 500
 //      per run and 100 seconds; the rest wait for the next run.
+// Each run ends by recording in private.sweep_runs (T-524, D-096) the files
+// deleted and the backfill's counts, skips by reason, next to the
+// housekeeping counts; a step that fails is recorded too, so a run that
+// reported nothing is never read as one that did nothing. The response
+// carries the same counts.
 // Safe to run any time and as often as wanted. No dependencies.
 
 import { summarize, SUMMARY_VERSION } from "../_shared/game_summary.ts";
@@ -162,6 +167,12 @@ function isMissing(v: unknown): v is Missing {
     m.storage_path === `${m.user_id}/${m.session}-${m.game_index}.json.gz`;
 }
 
+class TooLarge extends Error {
+  constructor() {
+    super("too large");
+  }
+}
+
 async function readCapped(stream: ReadableStream<Uint8Array>, max: number): Promise<Uint8Array> {
   const reader = stream.getReader();
   const chunks: Uint8Array[] = [];
@@ -171,7 +182,7 @@ async function readCapped(stream: ReadableStream<Uint8Array>, max: number): Prom
       const { done, value } = await reader.read();
       if (done) break;
       size += value.length;
-      if (size > max) throw new Error("too large");
+      if (size > max) throw new TooLarge();
       chunks.push(value);
     }
   } finally {
@@ -191,11 +202,36 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
   return Array.from(digest, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** Why a game got no summary; the keys private.sweep_stats_valid() checks. */
+const SKIP_REASONS = [
+  "no_file", // the stored file could not be read
+  "bad_file", // too large, not gzip or JSON, or it fails the upload check
+  "file_mismatch", // its SHA-256 is not the row's
+  "write_failed", // the write call failed or gave an unknown answer
+  "missing", // the game is gone (game_stats_backfill_put)
+  "changed", // another copy was uploaded meanwhile
+  "newer", // a summary of a newer version is there
+] as const;
+type SkipReason = typeof SKIP_REASONS[number];
+const PUT_SKIPS: readonly unknown[] = ["missing", "changed", "newer"];
+
+export interface BackfillCounts {
+  listed: number;
+  looked_at: number;
+  filled: number;
+  left: number;
+  skipped: Record<SkipReason, number>;
+}
+
 /**
- * The summary of one stored game, or null when its file is missing, is not
- * the copy the row names, or no longer passes the upload check.
+ * The summary of one stored game, or why there is none: its file is missing,
+ * is not the copy the row names, or no longer passes the upload check.
  */
-async function summaryOf(env: Env, fetchFn: Fetch, game: Missing) {
+async function summaryOf(
+  env: Env,
+  fetchFn: Fetch,
+  game: Missing,
+): Promise<{ stats: unknown } | { skip: SkipReason }> {
   let res: Response;
   try {
     res = await fetchFn(`${env.url}/storage/v1/object/authenticated/games/${game.storage_path}`, {
@@ -203,29 +239,35 @@ async function summaryOf(env: Env, fetchFn: Fetch, game: Missing) {
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (_e) {
-    return null;
+    return { skip: "no_file" };
   }
   if (!res.ok || !res.body) {
     await res.body?.cancel();
-    return null;
+    return { skip: "no_file" };
+  }
+  let file: Uint8Array;
+  try {
+    file = await readCapped(res.body, MAX_FILE);
+  } catch (e) {
+    // Cut off while reading: Storage, not the file, may be at fault.
+    return { skip: e instanceof TooLarge ? "bad_file" : "no_file" };
   }
   try {
-    const file = await readCapped(res.body, MAX_FILE);
     const bytes = await readCapped(
       new Blob([file as BlobPart]).stream().pipeThrough(new DecompressionStream("gzip")),
       MAX_INFLATED,
     );
-    if ((await sha256Hex(bytes)) !== game.content_sha256) return null;
+    if ((await sha256Hex(bytes)) !== game.content_sha256) return { skip: "file_mismatch" };
     const record = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
-    if (!validateRecord(record, game.session, game.game_index).ok) return null;
-    return summarize(record.report);
+    if (!validateRecord(record, game.session, game.game_index).ok) return { skip: "bad_file" };
+    return { stats: summarize(record.report) };
   } catch (_e) {
-    return null;
+    return { skip: "bad_file" };
   }
 }
 
 /** Fills missing or outdated game summaries; counts what happened to each. */
-async function backfillStats(env: Env, fetchFn: Fetch) {
+async function backfillStats(env: Env, fetchFn: Fetch): Promise<BackfillCounts> {
   const res = await call(
     fetchFn,
     "list summaries",
@@ -243,15 +285,23 @@ async function backfillStats(env: Env, fetchFn: Fetch) {
   }
   const now = env.now ?? Date.now;
   const deadline = now() + BACKFILL_BUDGET_MS;
-  const counts = { listed: games.length, stored: 0, skipped: 0, failed: 0, left: 0 };
+  const skipped = Object.fromEntries(SKIP_REASONS.map((r) => [r, 0])) as Record<SkipReason, number>;
+  const counts: BackfillCounts = {
+    listed: games.length,
+    looked_at: 0,
+    filled: 0,
+    left: 0,
+    skipped,
+  };
   for (const game of games) {
     if (now() >= deadline) {
       counts.left += 1;
       continue;
     }
-    const stats = await summaryOf(env, fetchFn, game);
-    if (stats === null) {
-      counts.failed += 1;
+    counts.looked_at += 1;
+    const summary = await summaryOf(env, fetchFn, game);
+    if ("skip" in summary) {
+      skipped[summary.skip] += 1;
       continue;
     }
     let result: unknown;
@@ -269,32 +319,51 @@ async function backfillStats(env: Env, fetchFn: Fetch) {
             p_game_index: game.game_index,
             p_sha256: game.content_sha256,
             p_summary_version: SUMMARY_VERSION,
-            p_stats: stats,
+            p_stats: summary.stats,
           }),
         },
       );
       result = await put.json();
     } catch (_e) {
-      counts.failed += 1;
+      skipped.write_failed += 1;
       continue;
     }
     // changed, newer or missing: another copy or version won; nothing to do.
-    if (result === "stored") counts.stored += 1;
-    else counts.skipped += 1;
+    if (result === "stored") counts.filled += 1;
+    else if (PUT_SKIPS.includes(result)) skipped[result as SkipReason] += 1;
+    else skipped.write_failed += 1;
   }
-  if (counts.failed > 0) {
+  const failed = skipped.no_file + skipped.bad_file + skipped.file_mismatch + skipped.write_failed;
+  if (failed > 0) {
     // Counts only: no user id, session or file name in the logs.
-    console.error(`sweep: ${counts.failed} of ${counts.listed} game summaries could not be made`);
+    console.error(`sweep: ${failed} of ${counts.listed} game summaries could not be made`);
   }
   return counts;
 }
 
-export async function handle(req: Request, env: Env, fetchFn: Fetch = fetch): Promise<Response> {
+/** Records the step a run failed at; a failure to record is logged, not thrown. */
+async function recordFailure(env: Env, fetchFn: Fetch, runId: number | null, step: string) {
   try {
-    if (!isServiceRole(req, env) && !(await hasSweepToken(req, env, fetchFn))) {
-      return json(401, { error: "service role only" });
-    }
-    if (req.method !== "POST") return json(405, { error: "use POST" });
+    const res = await call(
+      fetchFn,
+      "record failure",
+      `${env.url}/rest/v1/rpc/sweep_record_failure`,
+      {
+        method: "POST",
+        headers: serviceHeaders(env),
+        body: JSON.stringify({ p_run_id: runId, p_step: step }),
+      },
+    );
+    await res.body?.cancel();
+  } catch (e) {
+    console.error(`sweep: ${e instanceof StepError ? e.message : "record failure failed"}`);
+  }
+}
+
+/** Deletes orphan files, does the housekeeping and the backfill, records the run. */
+async function sweep(env: Env, fetchFn: Fetch): Promise<Response> {
+  let runId: number | null = null;
+  try {
     const files = await deleteOrphans(env, fetchFn);
     const res = await call(
       fetchFn,
@@ -302,20 +371,38 @@ export async function handle(req: Request, env: Env, fetchFn: Fetch = fetch): Pr
       `${env.url}/rest/v1/rpc/sweep_housekeeping`,
       { method: "POST", headers: serviceHeaders(env), body: "{}" },
     );
-    const counts = await res.json();
+    const { run_id, ...counts } = await res.json();
+    if (!Number.isSafeInteger(run_id)) throw new StepError("housekeeping", 502);
+    runId = run_id;
     const stats = await backfillStats(env, fetchFn);
-    return json(200, { files, ...counts, stats });
+    const done = await call(fetchFn, "record run", `${env.url}/rest/v1/rpc/sweep_record_result`, {
+      method: "POST",
+      headers: serviceHeaders(env),
+      body: JSON.stringify({ p_run_id: runId, p_files: files, p_stats: stats }),
+    });
+    await done.body?.cancel();
+    return json(200, { run_id: runId, files, ...counts, stats });
   } catch (e) {
-    if (e instanceof StepError && e.step === "check token") {
-      // Callers without a valid key may reach this: say nothing about the database.
-      console.error(`sweep: ${e.message}`);
-      return json(503, { error: "try again later" });
-    }
-    if (e instanceof StepError) {
-      console.error(`sweep: ${e.message}`);
-      return json(500, { error: "the sweep did not finish; run it again", step: e.step });
-    }
-    console.error("sweep: unexpected error");
-    return json(500, { error: "the sweep did not finish; run it again" });
+    const step = e instanceof StepError ? e.step : "unexpected";
+    console.error(`sweep: ${e instanceof StepError ? e.message : "unexpected error"}`);
+    await recordFailure(env, fetchFn, runId, step);
+    return step === "unexpected"
+      ? json(500, { error: "the sweep did not finish; run it again" })
+      : json(500, { error: "the sweep did not finish; run it again", step });
   }
+}
+
+export async function handle(req: Request, env: Env, fetchFn: Fetch = fetch): Promise<Response> {
+  try {
+    if (!isServiceRole(req, env) && !(await hasSweepToken(req, env, fetchFn))) {
+      return json(401, { error: "service role only" });
+    }
+  } catch (e) {
+    // Callers without a valid key may reach this: say nothing about the
+    // database, and record nothing (anyone could fill the record).
+    console.error(`sweep: ${e instanceof StepError ? e.message : "token check failed"}`);
+    return json(503, { error: "try again later" });
+  }
+  if (req.method !== "POST") return json(405, { error: "use POST" });
+  return await sweep(env, fetchFn);
 }
