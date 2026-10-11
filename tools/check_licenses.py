@@ -6,6 +6,7 @@ web/package-lock.json). Our own crates and packages must say AGPL-3.0-only;
 every third-party one must have an SPDX expression that ALLOWED satisfies
 (OR needs one allowed side, AND needs all of them). A missing or unreadable
 license counts as a problem. Standard library only; it changes nothing.
+The throwaway spikes (`spikes/`, own lockfiles, never shipped) are not checked.
 
 Usage:
     python tools/check_licenses.py
@@ -99,12 +100,12 @@ def _parse_atom(tokens: list[str], pos: int) -> tuple[bool, int]:
 
 def is_allowed(expr: str | None) -> bool:
     """True if the SPDX expression is satisfied by ALLOWED; malformed is False."""
-    if not expr or not expr.strip():
+    if not isinstance(expr, str) or not expr.strip():
         return False
     tokens = _tokens(expr)
     try:
         value, pos = _parse_or(tokens, 0)
-    except ValueError:
+    except (ValueError, RecursionError):
         return False
     return value and pos == len(tokens)
 
@@ -159,6 +160,10 @@ def main() -> int:
     try:
         metadata = _cargo_metadata()
         locks = [(label, json.loads(path.read_text(encoding="utf-8"))) for label, path in NPM_LOCKS]
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr.decode("utf-8", "replace").strip() if exc.stderr else ""
+        print(f"error: cargo metadata failed: {stderr or exc}", file=sys.stderr)
+        return 2
     except (OSError, subprocess.SubprocessError, ValueError) as exc:
         print(f"error: could not read the dependency metadata: {exc}", file=sys.stderr)
         return 2

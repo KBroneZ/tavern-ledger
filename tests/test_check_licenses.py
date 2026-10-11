@@ -45,7 +45,13 @@ class IsAllowedTest(unittest.TestCase):
                 self.assertFalse(is_allowed(expr))
 
     def test_empty_or_malformed_expression_fails(self):
-        for expr in ("", "   ", None, "MIT OR", "(MIT", "MIT)", "AND MIT", "MIT WITH"):
+        for expr in ("", "   ", None, "MIT OR", "(MIT", "MIT)", "AND MIT", "MIT WITH", "()", "(" * 5000 + "MIT"):
+            with self.subTest(expr=expr):
+                self.assertFalse(is_allowed(expr))
+
+    def test_non_string_license_fails(self):
+        # Old npm metadata can hold {"type": "MIT"} or a list.
+        for expr in ({"type": "MIT"}, ["MIT"], 1):
             with self.subTest(expr=expr):
                 self.assertFalse(is_allowed(expr))
 
