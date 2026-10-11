@@ -263,7 +263,8 @@ pub fn duos_from_saved(report: &Value, game: usize, db: &CardDb) -> Vec<DuosComb
     out
 }
 
-/// A team from the boards that fought, in order.
+/// A team from the boards that fought, in order. `legs` is never empty
+/// ([`DuosCombat`] has a board on each side).
 pub fn team_of(legs: &[Leg]) -> Team {
     Team {
         first: legs[0].board.clone(),
@@ -378,8 +379,6 @@ fn prediction(o: &crate::trials::Odds) -> Prediction {
     }
 }
 
-/// The Duos report: the engine on each combat's own boards (both legs, as
-/// they came in), then the odds the overlay would show.
 /// Where the Duos combats were read from: the shop board is in the logs
 /// only; the saved history has the player's board as it came into the
 /// combat instead.
@@ -389,6 +388,8 @@ pub enum Source {
     History,
 }
 
+/// The Duos report: the engine on each combat's own boards (both legs, as
+/// they came in), then the odds the overlay would show.
 pub fn render_duos(combats: &[DuosCombat], options: &Options, source: Source) -> String {
     let mut out = String::new();
     let with_result: Vec<&DuosCombat> = combats.iter().filter(|c| c.result.is_some()).collect();

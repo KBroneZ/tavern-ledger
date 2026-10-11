@@ -67,7 +67,7 @@ test("a reason replaces the numbers, and some reasons say nothing", () => {
   const gap = (g, extra) => oddsView({ ...odds(), gap: g, won: 0, tied: 0, lost: 0, trials: 0, ...extra }, true, nameOf);
   assert.equal(gap("no_board_seen").text, "Odds: no board of theirs seen yet");
   assert.deepEqual(gap("no_board_seen").shares, []);
-  assert.equal(gap("order").text, "Odds: who fights first is not known yet");
+  assert.equal(gap("order").text, "Odds: who fights first, or who is on which team, is not known yet");
   const missing = gap("not_modelled", { missing: ["SYN_A"] });
   assert.deepEqual(missing.lines, ["Not modelled: Made-up Minion"]);
   assert.deepEqual(gap("no_card_data", { missing: ["SYN_X"] }).lines, ["No card data for: SYN_X"]);
