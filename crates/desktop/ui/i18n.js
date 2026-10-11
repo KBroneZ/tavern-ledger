@@ -3,7 +3,7 @@
 // `t(key)`; the tables are in ui/strings/, one file per part of the app, and
 // a test (ui-tests/i18n.test.js) fails when a key is missing in a language.
 // Numbers and dates are formatted for the language with Intl. Card and hero
-// names stay as the card data or the game's log gives them.
+// names come from the card data in the language (cards.js), else the log's.
 //
 // The language is the one chosen in Settings, else Windows' own (read from
 // the web view, which follows it), else English. A change in Settings reloads

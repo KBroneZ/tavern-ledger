@@ -19,6 +19,14 @@ test("each stat says how many games back it", () => {
   assert.equal(TLCurious.coverage(0, 0), "No games yet.");
 });
 
+test("a sum over shop turns says how many turns back it when some lack it", () => {
+  assert.equal(TLCurious.coverage(14, 29, { known: 130, of: 131 }), "In 14 of 29 games. 130 of their 131 turns have it.");
+  assert.equal(TLCurious.coverage(29, 29, { known: 300, of: 300 }), "In all 29 games.");
+  const [row] = TLCurious.rows({ games: 29, stats: [stat({ turns: { known: 9, of: 10 } })], dropped: [] });
+  assert.equal(row.coverage, "In 14 of 29 games. 9 of their 10 turns have it.");
+  assert.equal(row.value, "1,234");
+});
+
 test("a stat with a value shows it with its source and game count", () => {
   const [row] = TLCurious.rows({ games: 29, stats: [stat()], dropped: [] });
   assert.equal(row.value, "1,234");

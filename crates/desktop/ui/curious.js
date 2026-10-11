@@ -9,12 +9,16 @@
   const t = I18n.t;
   const known = (v) => v !== null && v !== undefined;
 
-  // "in 14 of 29 games"; the whole history when it is every game.
-  function coverage(games, total) {
+  // "in 14 of 29 games"; the whole history when it is every game. A sum over
+  // shop turns adds how many of those games' turns have it when some lack it.
+  function coverage(games, total, turns) {
     if (!total) return t("curious.none_yet");
     if (!games) return I18n.plural("curious.in_none", total);
-    if (games === total) return I18n.plural("curious.in_all", total);
-    return t("curious.in_some", { games: I18n.num(games), total: I18n.num(total) });
+    const base = games === total
+      ? I18n.plural("curious.in_all", total)
+      : t("curious.in_some", { games: I18n.num(games), total: I18n.num(total) });
+    if (!turns || turns.known >= turns.of) return base;
+    return `${base} ${t("curious.turns", { turns: I18n.num(turns.known), of: I18n.num(turns.of) })}`;
   }
 
   // A count with the language's thousands separator (1,234 / 1234 in Spanish).
@@ -30,7 +34,7 @@
       times: s.card && known(s.value) ? I18n.plural("curious.bought", s.value) : null,
       card: s.card || null,
       source: known(s.value) ? s.source : "unknown",
-      coverage: coverage(s.games, curious.games),
+      coverage: coverage(s.games, curious.games, s.turns),
       why: known(s.value) ? null : I18n.backend(s.missing),
       basis: I18n.backend(s.basis),
     }));

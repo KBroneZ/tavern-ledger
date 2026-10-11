@@ -76,9 +76,13 @@
     ["extras.reparse", "re-read it with tavern-watch --reparse while its log is still on disk", "vuelve a leerla con tavern-watch --reparse mientras su registro siga en el disco"],
     ["extras.reparse_many", "re-read them with tavern-watch --reparse while their logs are still on disk", "vuelve a leerlas con tavern-watch --reparse mientras sus registros sigan en el disco"],
     ["extras.not_recorded", "not recorded", "no registrado"],
-    ["extras.incomplete", "not every turn", "no en todos los turnos"],
-    ["extras.incomplete_tip", "The game kept this, but the log lacks it for at least one turn (often turn 1's gold), so there is no total.",
-      "El juego lo guardó, pero al registro le falta en al menos un turno (a menudo el oro del turno 1), así que no hay total."],
+    ["extras.no_data", "no data", "sin datos"],
+    ["extras.no_data_tip", "No turn of this game has it in the log. Games saved before the app kept it need tavern-watch --reparse while their logs are on disk.",
+      "Ningún turno de esta partida lo tiene en el registro. Las partidas guardadas antes de que la app lo guardara necesitan tavern-watch --reparse mientras sus registros sigan en el disco."],
+    ["extras.turns_of", "{turns} of {of} turns", "{turns} de {of} turnos"],
+    ["extras.turns_of_tip", "Summed over the {turns} turns whose number is in the log; the log lacks it for {missing} turn(s), often turn 1. A turn without it is left out, never counted as 0.",
+      "Suma de los {turns} turnos cuyo número está en el registro; al registro le falta en {missing} turno(s), a menudo el turno 1. Un turno sin él queda fuera, nunca cuenta como 0."],
+    ["extras.avg_turns", "In those games, {turns} of {of} turns have it; a turn without it is left out.", "En esas partidas, {turns} de {of} turnos lo tienen; un turno sin él queda fuera."],
     ["extras.hero.unknown", "Unknown hero", "Héroe desconocido"],
     ["extras.results.none", "No combat in the log.", "Ningún combate en el registro."],
     ["extras.results.log", "{n} from the game's log", "{n} del registro del juego"],
@@ -269,6 +273,7 @@
     ["curious.in_all.one", "In all {n} game.", "En tu única partida ({n})."],
     ["curious.in_all.other", "In all {n} games.", "En todas tus {n} partidas."],
     ["curious.in_some", "In {games} of {total} games.", "En {games} de {total} partidas."],
+    ["curious.turns", "{turns} of their {of} turns have it.", "{turns} de sus {of} turnos lo tienen."],
     ["curious.no_data", "No data", "Sin datos"],
     ["curious.bought.one", "bought {n} time", "comprado {n} vez"],
     ["curious.bought.other", "bought {n} times", "comprado {n} veces"],
@@ -324,7 +329,7 @@
     "No finished game has the leaderboard's triple count yet: it is kept since parser revision 5. Older games need tavern-watch --reparse while their logs are on disk.":
       "Ninguna partida terminada tiene aún el recuento de triples de la clasificación: se guarda desde la revisión 5 del analizador. Las partidas anteriores necesitan tavern-watch --reparse mientras sus registros sigan en el disco.",
     // Curious stats: how each is counted.
-    "Gold you spent in the tavern, summed over every turn the log has.": "Oro que gastaste en la taberna, sumado en todos los turnos que tiene el registro.",
+    "Gold you spent in the tavern, summed over every turn whose gold the log has.": "Oro que gastaste en la taberna, sumado en todos los turnos cuyo oro tiene el registro.",
     "Gold beyond each turn's own: from cards, trinkets, refunds and the like (the game's temporary gold). Gold from selling is apart.":
       "Oro más allá del propio de cada turno: de cartas, abalorios, reembolsos y similares (el oro temporal del juego). El oro por vender va aparte.",
     "Gold you got for selling minions.": "Oro que obtuviste por vender esbirros.",

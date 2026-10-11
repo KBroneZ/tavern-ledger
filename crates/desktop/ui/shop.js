@@ -33,6 +33,9 @@ window.TLShop = (() => {
     });
   });
 
+  // A hero row's name: the card data's in the app's language, else the log's.
+  const heroName = (h) => (h.hero ? window.TLCards.display(h.hero, h.name) : h.name);
+
   const one = (v, digits = 1) => (v === null || v === undefined ? "—" : I18n.num(v, digits));
   const num = (v) => (v === null || v === undefined ? "—" : I18n.num(v));
 
@@ -74,6 +77,12 @@ window.TLShop = (() => {
     return item;
   }
 
+  // A sum over the turns that have it, with "10 of 11 turns" under it when
+  // some turn lacks it (extras.js turnSum).
+  function sumFact(ui, label, sum) {
+    return window.TLExtras.factList(ui, [{ label, ...window.TLExtras.turnSum(sum) }]).firstChild;
+  }
+
   // The game's shop in numbers: the key ones in view, the rest folded (T-323).
   // The turns themselves are drawn by turns.js.
   function recapSummary(shop, ui, isDuos, game) {
@@ -96,7 +105,7 @@ window.TLShop = (() => {
       fact(ui, t("shop.apm"), one(shop.apm), I18n.backend(shop.apm_definition)),
       fact(ui, t("shop.rolls"), tot.free_rolls ? t("shop.rolls_free", { rolls: num(tot.rolls), free: num(tot.free_rolls) }) : num(tot.rolls)),
       fact(ui, t("shop.buys_sells"), `${num(tot.buys + tot.spell_buys)} · ${num(tot.sells)}`),
-      fact(ui, t("shop.gold_spent"), num(tot.gold_spent)),
+      sumFact(ui, t("shop.gold_spent"), tot.gold_spent),
     );
     section.append(facts);
     const more = window.TLCompact.fold(ui, `${game}:shop-more`, t("shop.more"));
@@ -106,11 +115,11 @@ window.TLShop = (() => {
       fact(ui, t("shop.minutes"), one(shop.minutes)),
     );
     // Gold extras and free rolls (T-210): "not recorded" in older games, never 0.
-    more.append(moreFacts, window.TLExtras.factList(ui, window.TLExtras.shopExtras(tot, isDuos, shop.turns)));
+    more.append(moreFacts, window.TLExtras.factList(ui, window.TLExtras.shopExtras(tot, isDuos)));
     const ups = shop.tier_ups.map((u) => t("shop.tier_up_item", { tier: u.tier, turn: u.turn })).join(" · ");
     more.append(ui.el("p", "note", ups ? t("shop.tier_ups", { list: ups }) : t("shop.tier_ups.none")));
-    more.append(ui.el("p", "note", I18n.backend(shop.apm_definition)));
-    more.append(ui.el("p", "note", t("shop.frozen_note")));
+    // The long definitions wait behind "About this" (T-323).
+    more.append(window.TLCompact.about(ui, `${game}:shop-about`, `${I18n.backend(shop.apm_definition)} ${t("shop.frozen_note")}`));
     section.append(more);
     if (shop.ended === false) {
       section.append(ui.withSource(ui.el("p", "note", t("shop.cut_short")), "unknown"));
@@ -129,7 +138,7 @@ window.TLShop = (() => {
     const tr = ui.el("tr");
     const s = h.shop;
     tr.append(
-      ui.el("td", h.name ? "hero-name" : "hero", h.name || h.hero || t("shop.hero.unknown")),
+      ui.el("td", h.name || h.hero ? "hero-name" : "hero", heroName(h) || t("shop.hero.unknown")),
       statCell(ui, s.games || "—", s.source),
       statCell(ui, one(s.rolls), s.source),
       statCell(ui, one(s.buys), s.source),
@@ -161,7 +170,7 @@ window.TLShop = (() => {
       fact(ui, t("shop.apm"), one(s.apm), I18n.backend(s.apm_definition)),
       fact(ui, t("shop.rolls_game"), one(s.rolls)),
       fact(ui, t("shop.buys_game"), one(s.buys)),
-      fact(ui, t("shop.gold_game"), one(s.gold_spent)),
+      fact(ui, t("shop.gold_game"), one(s.gold_spent), window.TLExtras.averageTip(s.gold_games, s.gold_turns)),
     );
     const more = window.TLCompact.fold(ui, `stats:${mode}:shop-more`, t("shop.stats.more"));
     const moreFacts = ui.el("dl", "facts");
@@ -179,7 +188,7 @@ window.TLShop = (() => {
     }
     const perHero = heroShopTable(ui, m, mode);
     if (perHero) more.append(ui.el("p", "note", t("shop.per_hero")), perHero);
-    more.append(ui.el("p", "note", I18n.backend(s.apm_definition)));
+    more.append(window.TLCompact.about(ui, `stats:${mode}:shop-about`, I18n.backend(s.apm_definition)));
     box.replaceChildren(facts, ...left, more);
   }
 
@@ -187,7 +196,7 @@ window.TLShop = (() => {
   function heroShopTable(ui, m, mode) {
     const heroes = m.heroes.filter((h) => h.shop && h.shop.games > 0);
     if (!heroes.length) return null;
-    const name = (h) => h.name || h.hero || "";
+    const name = (h) => heroName(h) || "";
     const ranked = window.TLCompact.rank(heroes, { games: (h) => h.shop.games, name });
     const columns = [
       { label: t("shop.col.hero"), sort: name, text: true },
