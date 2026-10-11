@@ -95,15 +95,7 @@ fn reborn_grants(band: &Warband) -> Vec<Tribes> {
             continue;
         };
         for t in rules.triggers {
-            let actions: &[Action] = match t {
-                Trigger::Deathrattle(a)
-                | Trigger::Rally(a)
-                | Trigger::Avenge(_, a)
-                | Trigger::StartOfCombat(a) => a,
-                Trigger::FriendlyAttacks { actions, .. } => actions,
-                _ => &[],
-            };
-            for a in actions {
+            for a in t.actions() {
                 if let Action::GiveKeyword { keyword, tribe, .. } = a {
                     if keyword.contains(Keywords::REBORN) {
                         out.push(*tribe);
@@ -141,6 +133,25 @@ pub struct Odds {
 }
 
 impl Odds {
+    /// Adds another run over the same boards (another seed): the counts and
+    /// spreads add up.
+    pub fn merge(&mut self, other: &Odds) {
+        self.trials += other.trials;
+        self.won += other.won;
+        self.tied += other.tied;
+        self.lost += other.lost;
+        for (mine, theirs) in [
+            (&mut self.damage_dealt, &other.damage_dealt),
+            (&mut self.damage_taken, &other.damage_taken),
+        ] {
+            for (d, n) in theirs {
+                *mine.entry(*d).or_insert(0) += n;
+            }
+        }
+        self.damage_unknown += other.damage_unknown;
+        self.stalled += other.stalled;
+    }
+
     pub fn share(&self, result: CombatResult) -> f64 {
         let n = match result {
             CombatResult::Won => self.won,

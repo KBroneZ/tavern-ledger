@@ -369,11 +369,47 @@ function simpleOpponent(opponent) {
   return row;
 }
 
+// The combat odds against the next opponent (T-605), or why there are none.
+// Simple: the three shares and the board's age; Advanced adds the damage and
+// the cards played with a gap. Null when there is nothing to say.
+function renderOdds(g, advanced) {
+  const v = TLOdds.oddsView(g.odds, advanced, (id) => TLCards.name(id) || null);
+  if (!v) return null;
+  const box = el("div", `odds ${v.kind}`);
+  box.title = TLI18n.t("ov.odds.about");
+  if (v.kind === "note") {
+    box.append(el("p", "odds-note", v.text));
+  } else {
+    const grid = el("div", "odds-shares");
+    for (const s of v.shares) {
+      const cell = el("span", `odds-share ${s.key}`);
+      cell.append(el("span", "odds-label", s.label), el("b", "odds-value", s.value));
+      grid.append(cell);
+    }
+    grid.setAttribute("aria-hidden", "true");
+    box.append(grid);
+    // "≈" when a card is played with a gap; Advanced names them.
+    if (v.age) box.append(el("p", "odds-age", v.approx ? `≈ ${v.age}` : v.age));
+  }
+  for (const text of v.lines) box.append(el("p", "odds-line", text));
+  box.append(el("span", "visually-hidden", v.said));
+  return box;
+}
+
 function renderOpponents(g) {
   const panel = document.getElementById("opponents");
   const list = el("ol", "opp-list simple-only");
   list.setAttribute("aria-label", TLI18n.t("ov.slot.opponents"));
-  list.append(...g.opponents.map(simpleOpponent));
+  for (const opponent of g.opponents) {
+    list.append(simpleOpponent(opponent));
+    // Under the next opponent's line (T-605).
+    const odds = opponent.next ? renderOdds(g, false) : null;
+    if (odds) {
+      const item = el("li", "odds-row");
+      item.append(odds);
+      list.append(item);
+    }
+  }
   const full = el("div", "adv");
   // The damage cap the game shows (T-315), above the opponents in both modes.
   const cap = TLWords.damageCap(g);
@@ -393,7 +429,8 @@ function renderOpponents(g) {
     // The heading already says "next".
     const badge = head.querySelector(".next-badge");
     if (badge) badge.remove();
-    block.append(el("h3", null, TLWords.nextLabels(g).heading), head, ...renderShown(next), ...renderBoards(next));
+    const odds = renderOdds(g, true);
+    block.append(el("h3", null, TLWords.nextLabels(g).heading), head, ...(odds ? [odds] : []), ...renderShown(next), ...renderBoards(next));
     full.append(block);
   }
   for (const opponent of g.opponents) {

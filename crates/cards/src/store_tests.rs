@@ -71,6 +71,7 @@ fn with_no_card_data_names_are_unknown_and_nothing_is_fetched_for_art() {
         "no image for an id the data does not know"
     );
     assert_eq!(store.status().cards, 0);
+    assert_eq!(store.combat_facts("CARD_1"), None);
 }
 
 #[test]

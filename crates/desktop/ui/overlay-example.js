@@ -16,6 +16,11 @@ const EXAMPLE_GAME = {
   leaderboard_slots: 3,
   own_health: { value: 32, source: "log" },
   damage_cap: 15,
+  odds: {
+    seat: 1, gap: null, seen_round: 5, won: 0.58, tied: 0.09, lost: 0.33, trials: 10000,
+    dealt: { low: 5, likely: 7, high: 10 }, taken: { low: 4, likely: 6, high: 9 },
+    approximate: [], missing: [], start_of_combat: false,
+  },
   tribes: [
     { tribe: "BEAST", offers: 6 },
     { tribe: "MURLOC", offers: 4 },

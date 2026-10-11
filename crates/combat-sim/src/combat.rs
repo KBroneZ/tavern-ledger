@@ -128,16 +128,8 @@ fn intern(cards: &mut Vec<CardInfo>, id: &str, make: impl FnOnce() -> CardInfo) 
 pub(crate) fn summoned_tokens(triggers: &[Trigger]) -> Vec<&'static str> {
     let mut out = Vec::new();
     for t in triggers {
-        let actions: &[Action] = match t {
-            Trigger::Deathrattle(a)
-            | Trigger::Rally(a)
-            | Trigger::Avenge(_, a)
-            | Trigger::StartOfCombat(a) => a,
-            Trigger::FriendlyAttacks { actions, .. } => actions,
-            _ => &[],
-        };
-        for a in actions {
-            if let Action::Summon { token, .. } = a {
+        for a in t.actions() {
+            if let Action::Summon { token, .. } | Action::SummonAndAttack { token } = a {
                 out.push(*token);
             }
         }
@@ -235,36 +227,43 @@ struct Combat<'a> {
     rng: &'a mut Rng,
     sides: [SideState; 2],
     next_uid: u32,
+    /// The target of the next swing when it is not the engine's to choose
+    /// (the replay of a logged combat, `replay`).
+    forced_target: Option<u32>,
 }
 
 /// Plays one combat with `rng`.
 pub(crate) fn play(p: &Prepared, rng: &mut Rng) -> Outcome {
-    let next_uid = p.start.iter().map(|s| s.len() as u32).sum::<u32>() + 1;
-    let mut c = Combat {
-        p,
-        rng,
-        sides: [
-            SideState {
-                units: p.start[0].clone(),
-                next: 0,
-            },
-            SideState {
-                units: p.start[1].clone(),
-                next: 0,
-            },
-        ],
-        next_uid,
-    };
-    c.run()
+    Combat::new(p, rng).run()
+}
+
+impl<'a> Combat<'a> {
+    fn new(p: &'a Prepared, rng: &'a mut Rng) -> Self {
+        let next_uid = p.start.iter().map(|s| s.len() as u32).sum::<u32>() + 1;
+        Combat {
+            p,
+            rng,
+            sides: [
+                SideState {
+                    units: p.start[0].clone(),
+                    next: 0,
+                },
+                SideState {
+                    units: p.start[1].clone(),
+                    next: 0,
+                },
+            ],
+            next_uid,
+            forced_target: None,
+        }
+    }
 }
 
 impl Combat<'_> {
     fn run(&mut self) -> Outcome {
-        let (a, b) = (self.sides[0].units.len(), self.sides[1].units.len());
-        let mut turn = match a.cmp(&b) {
-            std::cmp::Ordering::Greater => 0,
-            std::cmp::Ordering::Less => 1,
-            std::cmp::Ordering::Equal => usize::from(self.rng.coin()),
+        let mut turn = match self.first_by_count() {
+            Some(side) => side,
+            None => usize::from(self.rng.coin()),
         };
         if self.p.start_of_combat {
             self.start_of_combat(turn);
@@ -282,6 +281,17 @@ impl Combat<'_> {
             }
         }
         self.outcome(false)
+    }
+
+    /// The side with more minions attacks first; `None` on equal counts (a
+    /// coin flip).
+    fn first_by_count(&self) -> Option<usize> {
+        let (a, b) = (self.sides[0].units.len(), self.sides[1].units.len());
+        match a.cmp(&b) {
+            std::cmp::Ordering::Greater => Some(0),
+            std::cmp::Ordering::Less => Some(1),
+            std::cmp::Ordering::Equal => None,
+        }
     }
 
     fn finished(&self) -> bool {
@@ -406,34 +416,42 @@ impl Combat<'_> {
                     .contains(&Trigger::TauntWhileDivineShield))
     }
 
-    /// A random enemy to attack: a Taunt minion if there is one that is not
-    /// Stealthed (Stealth hides its Taunt), else any minion that is not
-    /// Stealthed, else any at all.
+    /// A random enemy to attack from [`Combat::target_pool`], unless the
+    /// replay forces one.
     fn choose_target(&mut self, foe: usize) -> Option<u32> {
+        if let Some(t) = self.forced_target.take() {
+            return Some(t);
+        }
+        let pool = self.target_pool(foe);
+        if pool.is_empty() {
+            return None;
+        }
+        Some(pool[self.rng.below(pool.len())])
+    }
+
+    /// The enemies an attack may hit: the Taunt minions that are not
+    /// Stealthed (Stealth hides its Taunt), else the minions that are not
+    /// Stealthed, else all.
+    fn target_pool(&self, foe: usize) -> Vec<u32> {
         let units = &self.sides[foe].units;
         let taunts: Vec<u32> = units
             .iter()
             .filter(|u| self.is_taunt(u) && !u.kw.contains(Keywords::STEALTH))
             .map(|u| u.uid)
             .collect();
-        let pool: Vec<u32> = if !taunts.is_empty() {
-            taunts
-        } else {
-            let open: Vec<u32> = units
-                .iter()
-                .filter(|u| !u.kw.contains(Keywords::STEALTH))
-                .map(|u| u.uid)
-                .collect();
-            if open.is_empty() {
-                units.iter().map(|u| u.uid).collect()
-            } else {
-                open
-            }
-        };
-        if pool.is_empty() {
-            return None;
+        if !taunts.is_empty() {
+            return taunts;
         }
-        Some(pool[self.rng.below(pool.len())])
+        let open: Vec<u32> = units
+            .iter()
+            .filter(|u| !u.kw.contains(Keywords::STEALTH))
+            .map(|u| u.uid)
+            .collect();
+        if open.is_empty() {
+            units.iter().map(|u| u.uid).collect()
+        } else {
+            open
+        }
     }
 
     fn swing(&mut self, side: usize, uid: u32) {
@@ -455,6 +473,7 @@ impl Combat<'_> {
         }
         let (a_atk, a_kw, t_atk, t_kw) = (a.attack, a.kw, t.attack, t.kw);
         let a_triggers = self.triggers(a);
+        let (a_tribes, t_tribes) = (self.tribes(a), self.tribes(t));
         let t_health = t.health;
         let t_shield = t.kw.contains(Keywords::DIVINE_SHIELD);
         let t_ix = self.sides[foe].pos(target).unwrap_or(0);
@@ -475,6 +494,15 @@ impl Combat<'_> {
             self.lose_venomous(foe, target);
         }
 
+        self.after_damage_dealt([
+            (side, uid, a_tribes, a_atk > 0 && !t_shield),
+            (
+                foe,
+                target,
+                t_tribes,
+                t_atk > 0 && !a_kw.contains(Keywords::DIVINE_SHIELD),
+            ),
+        ]);
         let attacker_alive = self.unit(side, uid).is_some_and(Unit::alive);
         if a_triggers.contains(&Trigger::ExcessToAdjacent) && !t_shield && a_atk > t_health {
             let open: Vec<u32> = neighbours
@@ -497,6 +525,9 @@ impl Combat<'_> {
                 }
             }
         }
+        if a_triggers.iter().any(|t| matches!(t, Trigger::Rally(_))) {
+            self.after_rally_attack(side);
+        }
         self.process_deaths(side);
     }
 
@@ -514,22 +545,20 @@ impl Combat<'_> {
                 }
             }
         }
-        let friends: Vec<u32> = self.sides[side]
-            .units
-            .iter()
-            .filter(|u| u.uid != uid)
-            .map(|u| u.uid)
-            .collect();
+        let friends: Vec<u32> = self.sides[side].units.iter().map(|u| u.uid).collect();
         for f in friends {
             let Some(friend) = self.unit(side, f) else {
                 continue;
             };
             for t in self.triggers(friend) {
-                if let Trigger::FriendlyAttacks { tribe, actions } = t {
-                    if *tribe == Tribes::NONE || attacker_tribes.is(*tribe) {
-                        for a in *actions {
-                            self.act(side, Source::Unit(f), Some((foe, target)), Some(uid), a);
-                        }
+                let (tribe, actions) = match *t {
+                    Trigger::FriendlyAttacks { tribe, actions } if f != uid => (tribe, actions),
+                    Trigger::WheneverFriendlyAttacks { tribe, actions } => (tribe, actions),
+                    _ => continue,
+                };
+                if tribe == Tribes::NONE || attacker_tribes.is(tribe) {
+                    for a in actions {
+                        self.act(side, Source::Unit(f), Some((foe, target)), Some(uid), a);
                     }
                 }
             }
@@ -739,6 +768,26 @@ impl Combat<'_> {
                     self.buff(side, a, attack, health);
                 }
             }
+            Action::BuffAllWithKeyword {
+                attack,
+                health,
+                keyword,
+            } => {
+                let shielded: Vec<u32> = self
+                    .friends(side, Tribes::NONE, None)
+                    .into_iter()
+                    .filter(|f| self.unit(side, *f).is_some_and(|u| u.kw.contains(keyword)))
+                    .collect();
+                for f in shielded {
+                    self.buff(side, f, attack, health);
+                }
+            }
+            Action::SummonAndAttack { token } => self.summon_and_attack(side, src, token),
+            Action::BuffOnePerTribe { attack, health } => {
+                self.buff_one_per_tribe(side, attack, health)
+            }
+            // Needs the reborn minion: played by `after_reborn`.
+            Action::GiveRebornAttackToRightmost { .. } => {}
         }
     }
 
@@ -879,10 +928,19 @@ impl Combat<'_> {
             None => (d.unit.attack, d.unit.kw),
         };
         let unit = self.fresh(card, attack, 1, kw.without(Keywords::REBORN));
+        let uid = unit.uid;
         let at = self.anchor_pos(d.side, d.anchor);
-        self.sides[d.side].insert(at, unit);
+        if self.sides[d.side].insert(at, unit) {
+            self.after_reborn(d.side, uid);
+        }
     }
 }
+
+#[path = "replay.rs"]
+pub mod replay;
+
+#[path = "combat_round2.rs"]
+mod round2;
 
 #[cfg(test)]
 #[path = "combat_tests.rs"]

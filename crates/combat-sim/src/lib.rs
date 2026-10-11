@@ -19,6 +19,7 @@
 //! ```
 
 pub mod cards;
+mod cards_round2;
 pub mod combat;
 pub mod model;
 pub mod rng;
@@ -26,6 +27,8 @@ pub mod trials;
 
 #[cfg(feature = "harness")]
 pub mod harness;
+#[cfg(feature = "harness")]
+pub mod harness_logs;
 pub mod score;
 
 pub use combat::{CombatResult, Outcome};

@@ -91,6 +91,8 @@ pub struct View {
     leaderboard: Option<BoardView>,
     vars: BTreeMap<&'static str, String>,
     warning: Option<String>,
+    /// The combat odds are on (T-605).
+    odds: bool,
 }
 
 #[derive(Serialize)]
@@ -139,6 +141,11 @@ impl Overlay {
     pub fn disable(&self) {
         self.broken.store(true, Ordering::SeqCst);
         self.unlocked.store(false, Ordering::SeqCst);
+    }
+
+    /// Whether the combat odds (T-605) are on; on by default.
+    pub fn odds_shown(&self) -> bool {
+        !lock(&self.settings).odds_off
     }
 
     /// Whether the lobby panel (T-338) is left on; on by default.
@@ -288,6 +295,7 @@ impl Overlay {
             screen,
             vars: settings.theme.css_vars(settings.opacity),
             warning: lock(&self.warning).clone(),
+            odds: !settings.odds_off,
         }
     }
 }
@@ -444,6 +452,12 @@ pub fn overlay_set_shown(
     shown: bool,
 ) -> View {
     change(&app, &state, |s, _| s.set_shown(panel, shown))
+}
+
+/// Switches the combat odds (T-605) on or off.
+#[tauri::command]
+pub fn overlay_set_odds(app: AppHandle, state: State<'_, Arc<AppState>>, shown: bool) -> View {
+    change(&app, &state, |s, _| s.odds_off = !shown)
 }
 
 #[tauri::command]
@@ -662,7 +676,7 @@ mod tests {
             .skip(1)
             .filter_map(|rest| rest.split('"').next())
             .collect();
-        assert_eq!(scripts.len(), 14);
+        assert_eq!(scripts.len(), 15);
         for script in scripts {
             assert!(ui.join(script).is_file(), "{script} is missing");
         }
@@ -679,6 +693,7 @@ mod tests {
             include_str!("../ui/overlay-place.js"),
             include_str!("../ui/overlay-words.js"),
             include_str!("../ui/lobby-words.js"),
+            include_str!("../ui/odds-words.js"),
             include_str!("../ui/overlay-scale.js"),
             include_str!("../ui/focus-keeper.js"),
         ] {
