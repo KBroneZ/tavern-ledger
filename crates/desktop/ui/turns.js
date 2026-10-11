@@ -25,7 +25,16 @@
     health: known(m.health) ? m.health : null,
     golden: m.golden === true,
     keywords: Array.isArray(m.keywords) ? m.keywords.filter((k) => typeof k === "string") : null,
+    gifts: list(m.gifts).filter((g) => typeof g === "string"),
+    gift_unknown: m.gift_unknown === true,
   });
+
+  // Dark Gift marks of a minion (T-528): cards.js draws the words; none
+  // where it is not loaded (the tests).
+  const giftMarks = (m) => {
+    const cards = typeof window !== "undefined" ? window.TLCards : null;
+    return cards && cards.gifts ? cards.gifts(m) : [];
+  };
 
   // Your board as the combat began, from the game's report. In Duos the
   // board may be your teammate's: `mine` says whose it is.
@@ -195,7 +204,8 @@
     }
     const faces = ui.el("span", "turn-faces");
     own.minions.slice(0, 7).forEach((m) => {
-      const img = art(m.id, m.golden ? "face golden" : "face");
+      const gifted = giftMarks(m).length > 0;
+      const img = art(m.id, `face${m.golden ? " golden" : ""}${gifted ? " gifted" : ""}`);
       if (img) faces.append(img);
     });
     const totals = own.totals;
@@ -206,19 +216,30 @@
     return box;
   }
 
+  // One Dark Gift: a small mark, its name and summary as the tooltip and for
+  // screen readers.
+  function giftMark(ui, g) {
+    const mark = ui.el("span", g.id ? "kw gift-mark" : "kw gift-mark is-unknown", g.id ? "✦" : "✦?");
+    mark.title = g.title;
+    mark.setAttribute("aria-label", g.title);
+    return mark;
+  }
+
   function minionTile(ui, m, card) {
     const tile = card(ui, m.id, m.golden ? "golden" : "");
     tile.append(ui.el("span", "minion-stats", `${num(m.atk)}/${num(m.health)}`));
     const marks = [];
     if (m.golden) marks.push([t("keyword.golden"), t("keyword.golden")]);
     (m.keywords || []).forEach((k) => marks.push(keywordWords(k)));
-    if (marks.length) {
+    const gifts = giftMarks(m);
+    if (marks.length || gifts.length) {
       const line = ui.el("span", "tile-marks");
       marks.forEach(([short, full]) => {
         const mark = ui.el("span", "kw", short);
         mark.title = full;
         line.append(mark);
       });
+      gifts.forEach((g) => line.append(giftMark(ui, g)));
       tile.append(line);
     }
     return tile;
@@ -346,7 +367,7 @@
     return part;
   }
 
-  const api = { rows, combatAt, healthWords, totalsWords, keywordsRecorded, summaryWords, shopFacts, section };
+  const api = { giftMark, giftMarks, rows, combatAt, healthWords, totalsWords, keywordsRecorded, summaryWords, shopFacts, section };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLTurns = api;
 })();

@@ -19,6 +19,8 @@ fn minion(card: &str, atk: i64, health: i64, position: i64) -> LogMinion {
         golden: false,
         keywords: Vec::new(),
         sim_keywords: Vec::new(),
+        gifts: Vec::new(),
+        gift_unknown: false,
     }
 }
 
@@ -209,6 +211,65 @@ fn a_start_of_combat_card_is_flagged() {
     let i = odds_input(&r, live).expect("odds");
     assert!(i.seen_after_start_of_combat);
     assert!(run_odds(&i, &facts, Duration::from_secs(5)).start_of_combat);
+}
+
+/// Admiration: "Start of Combat: gain the Attack of the minion to the
+/// left" (T-528).
+const ADMIRATION: &str = "BG36_MidGameEffect_000t9";
+
+#[test]
+fn dark_gifts_reach_the_engine() {
+    let gifted = LogMinion {
+        gifts: vec![ADMIRATION, "BG36_MidGameEffect_000t13"],
+        ..minion(PLAIN, 2, 3, 1)
+    };
+    let m = engine_minion(&gifted, &facts).expect("known card");
+    assert_eq!(m.gifts, [ADMIRATION, "BG36_MidGameEffect_000t13"]);
+    assert!(engine_minion(&minion(PLAIN, 2, 3, 1), &facts)
+        .expect("known card")
+        .gifts
+        .is_empty());
+}
+
+#[test]
+fn a_start_of_combat_gift_is_flagged() {
+    let mut i = input();
+    i.own.push(LogMinion {
+        gifts: vec![ADMIRATION],
+        ..minion(PLAIN, 1, 1, 2)
+    });
+    assert!(run_odds(&i, &facts, Duration::from_secs(5)).start_of_combat);
+
+    // A gift that acted where the opponent's board was seen.
+    let mut seen = round(3, 5, Some(vec![minion(PLAIN, 1, 1, 1)]));
+    seen.entries[0].board = Some(vec![LogMinion {
+        gifts: vec![ADMIRATION],
+        ..minion(PLAIN, 1, 1, 1)
+    }]);
+    let r = report(GAME, vec![seen]);
+    let own = [minion(PLAIN, 6, 6, 1)];
+    let live = LiveFacts {
+        own_now: Some(&own),
+        next: Some(5),
+        ..LiveFacts::default()
+    };
+    assert!(
+        odds_input(&r, live)
+            .expect("odds")
+            .seen_after_start_of_combat
+    );
+}
+
+#[test]
+fn a_gift_the_log_does_not_name_makes_the_odds_approximate() {
+    let mut i = input();
+    i.opponent[0].gift_unknown = true;
+    let o = run_odds(&i, &facts, Duration::from_secs(5));
+    assert_eq!(o.gap, None);
+    assert_eq!(o.approximate, [PLAIN]);
+    assert!(run_odds(&input(), &facts, Duration::from_secs(5))
+        .approximate
+        .is_empty());
 }
 
 #[test]

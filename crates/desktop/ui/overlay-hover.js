@@ -126,6 +126,9 @@ window.TLHover = (() => {
     // Letters, Advanced only (keywordMarks marks them so).
     const marks = keywordMarks(m.keywords);
     if (marks) frame.append(marks);
+    // Dark Gifts (T-528): a mark per gift, in Simple too.
+    const gifts = giftMarks(m);
+    if (gifts) frame.append(gifts);
     item.append(frame);
     const name = TLCards.name(m.card_id);
     item.append(el("i", name === null ? "hb-name unnamed" : "hb-name", name || m.card_id || "?"));

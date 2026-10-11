@@ -8,6 +8,7 @@ import { t } from "../data/strings.ts";
 import { cls, h, type VNode } from "../view/node.ts";
 import { fold, picture, placeBadge, sourceMark, statTile, type TileProps, unknownValue } from "../view/pieces.ts";
 import { turnChart } from "./chart.ts";
+import { giftMarks, giftName } from "./gifts.ts";
 import type { Minion, ShopTurn } from "./report.ts";
 import type { BoardView, ChoiceView, GameView, HeroRef, OpponentView, SeatView, TurnRow } from "./shape.ts";
 import { g } from "./strings.ts";
@@ -150,6 +151,26 @@ function minionItem(m: Minion): VNode {
       cardId(m.cardId),
       m.golden ? h("span", { class: "gv-golden" }, g("minion.golden")) : null,
       m.keywords.length > 0 ? h("span", { class: "gv-keywords" }, w.keywordWords(m.keywords)) : null,
+      giftList(m),
+    ),
+  );
+}
+
+/** The minion's Dark Gifts (T-528): a mark per gift, its name and summary as the tooltip. */
+function giftList(m: Minion): VNode | null {
+  const marks = giftMarks(m);
+  if (marks.length === 0) return null;
+  return h(
+    "span",
+    { class: "gv-gifts" },
+    ...marks.map((k) =>
+      h(
+        "span",
+        { class: cls("gv-gift", { "is-unknown": k.id === null }), title: k.title },
+        h("span", { "aria-hidden": "true" }, "✦ "),
+        h("span", { class: "visually-hidden" }, k.title),
+        h("span", { "aria-hidden": "true" }, k.name),
+      ),
     ),
   );
 }
@@ -265,7 +286,7 @@ function choiceItem(c: ChoiceView, index: number): VNode {
           { class: o.taken ? "is-taken" : undefined },
           picture("card", o.cardId, o.cardId ?? g("minion.unknownCard"), 40, true),
           cardId(o.cardId),
-          o.gift ? h("span", { class: "gv-dim" }, g("choices.gift", { gift: o.gift })) : null,
+          o.gift ? h("span", { class: "gv-dim" }, g("choices.gift", { gift: giftName(o.gift) })) : null,
           o.taken ? h("span", { class: "gv-taken" }, g("choices.taken")) : null,
         ),
       ),

@@ -17,6 +17,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::Serialize;
 
+use crate::gifts::gifts_on;
 use crate::report::{Minion, Side};
 use crate::state::{Board, Entity};
 
@@ -41,6 +42,11 @@ pub struct ReplayMinion {
     pub position: i64,
     pub golden: bool,
     pub keywords: Vec<&'static str>,
+    /// Dark Gifts, as on a board minion (T-528); left out when empty.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub gifts: Vec<&'static str>,
+    #[serde(skip_serializing_if = "crate::report::is_false")]
+    pub gift_unknown: bool,
 }
 
 impl ReplayMinion {
@@ -53,6 +59,8 @@ impl ReplayMinion {
             position: m.position,
             golden: m.golden,
             keywords: m.keywords,
+            gifts: m.gifts,
+            gift_unknown: m.gift_unknown,
         }
     }
 }
@@ -349,12 +357,14 @@ impl Live {
         self.run.get_or_insert_with(|| {
             let mut minions = Vec::new();
             let mut refs = BTreeMap::new();
+            let mut gifts = crate::gifts::gift_index(board);
             for (side, pid) in [(Side::Own, sides.own), (Side::Opponent, sides.opponent)] {
                 let Some(pid) = pid else { continue };
                 for e in board_entities(board, pid) {
                     if minions.len() < MAX_REPLAY_MINIONS {
                         refs.insert(e.id, minions.len());
-                        minions.push(ReplayMinion::new(side, minion_of(e)));
+                        let on = gifts.remove(&e.id).unwrap_or_default();
+                        minions.push(ReplayMinion::new(side, minion_of(e, on)));
                     }
                 }
             }
@@ -460,7 +470,7 @@ impl Live {
         let minion = run.replay.minions.len();
         run.replay
             .minions
-            .push(ReplayMinion::new(side, minion_of(e)));
+            .push(ReplayMinion::new(side, minion_of(e, gifts_on(board, id))));
         run.refs.insert(id, minion);
         run.alive.insert(minion);
         run.push(CombatEvent::Summon { minion });
@@ -568,8 +578,9 @@ pub(crate) fn board_entities(board: &Board, controller: i64) -> Vec<&Entity> {
     minions
 }
 
-/// A board minion as the report keeps it.
-pub(crate) fn minion_of(e: &Entity) -> Minion {
+/// A board minion as the report keeps it, with `gifts` its Dark Gifts
+/// (from [`crate::gifts::gift_index`] or [`crate::gifts::gifts_on`]).
+pub(crate) fn minion_of(e: &Entity, gifts: Vec<&'static str>) -> Minion {
     use crate::collector::is_golden_minion;
     use crate::report::{KEYWORDS, SIM_KEYWORDS};
     let named = |tags: &[(&str, &'static str)]| -> Vec<&'static str> {
@@ -586,5 +597,7 @@ pub(crate) fn minion_of(e: &Entity) -> Minion {
         golden: is_golden_minion(e),
         keywords: named(&KEYWORDS),
         sim_keywords: named(&SIM_KEYWORDS),
+        gift_unknown: crate::gifts::gift_unknown(e, &gifts),
+        gifts,
     }
 }

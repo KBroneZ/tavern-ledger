@@ -125,3 +125,25 @@ test("game strings: every key the viewer names exists", () => {
   assert.ok(keys.length > 40);
   for (const key of keys) assert.ok(key in GAME_STRINGS, key);
 });
+
+test("render: a gifted minion shows a mark per gift with its name and summary, in English and Spanish (T-528)", async () => {
+  const { setLang } = await import("../../src/lib/i18n.ts");
+  const report = soloReport() as Record<string, any>;
+  const board = report.rounds[1].entries[0].board;
+  board[0].gifts = ["BG36_MidGameEffect_000t9", "BG99_Unknown_1"];
+  board[1].gift_unknown = true;
+  const gifts = (nodes: VNode[]) =>
+    nodes.flatMap((n) => [...walk(n)]).filter((n) => attr(n, "class")?.split(" ").includes("gv-gift"));
+  const en = gifts(renderGame(view(report), "2026-10-09"));
+  assert.ok(en.length >= 3);
+  assert.equal(attr(en[0], "title"), "Dark Gift: Admiration: Start of Combat: gain the Attack of the minion to its left.");
+  assert.equal(attr(en[1], "title"), "Dark Gift: BG99_Unknown_1", "a gift the table does not know: its id");
+  assert.ok(en.some((n) => attr(n, "class")?.includes("is-unknown")));
+  setLang("es");
+  try {
+    const es = gifts(renderGame(view(report), "2026-10-09"));
+    assert.equal(attr(es[0], "title"), "Don siniestro: Admiración: Inicio del combate: gana el ataque del esbirro a su izquierda.");
+  } finally {
+    setLang("en");
+  }
+});

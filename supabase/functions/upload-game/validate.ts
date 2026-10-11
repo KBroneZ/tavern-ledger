@@ -13,6 +13,7 @@ import {
   bool,
   CARD_ID,
   cardId,
+  gifts,
   int,
   Invalid,
   isObject,
@@ -31,10 +32,11 @@ import contract from "./report_keys.json" with { type: "json" };
  * refuse, or a field it checks changes meaning (6: parser revision 6 reads
  * `golden` from PREMIUM, so always-golden cards and golden tokens are golden;
  * same key and type, D-061; 7: each round's combat replay, parser revision 8,
- * T-215, D-099). Every answer carries it, and the desktop app
+ * T-215, D-099; 8: Dark Gifts on board and replay minions, parser revision
+ * 9, T-528, D-107). Every answer carries it, and the desktop app
  * retries a game this server refused once when it sees a higher number (D-047).
  */
-export const VALIDATOR_VERSION = 7;
+export const VALIDATOR_VERSION = 8;
 
 export const SESSION_PATTERN = /^Hearthstone_(\d{4})_(\d{2})_(\d{2})_\d{2}_\d{2}_\d{2}$/;
 const PATH_PATTERN = /\/v1\/games\/(Hearthstone_\d{4}(?:_\d{2}){5})\/([1-9][0-9]{0,3})$/;
@@ -168,6 +170,8 @@ const KEYS: Record<string, string[]> = {
     "position",
     "golden",
     "keywords",
+    "gifts",
+    "gift_unknown",
   ],
   "report.rounds[].replay.events[]": [
     "kind",
@@ -192,6 +196,8 @@ const KEYS: Record<string, string[]> = {
     "position",
     "golden",
     "keywords",
+    "gifts",
+    "gift_unknown",
   ],
   "report.shop": ["turns", "tier_ups", "actions", "start_ms", "end_ms", "ended"],
   "report.shop.turns[]": [
@@ -292,6 +298,7 @@ function minion(v: unknown, field: string): void {
     throw new Invalid(`${field}.golden`);
   }
   if (m.keywords !== undefined) keywords(m.keywords, `${field}.keywords`);
+  gifts(m, field);
 }
 
 /** Hero card ids and player ids the report shows, outside the health maps. */

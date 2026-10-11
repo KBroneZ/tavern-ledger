@@ -344,6 +344,8 @@ function loadRound(n: number): void {
   if (loaded.skipped > 0) notes.push(loaded.skipped === 1 ? sm("load.skipped.one") : sm("load.skipped.other", { count: loaded.skipped }));
   const boards = [...loaded.state.player, ...loaded.state.opponent];
   if (boards.some((b) => b.tier === null)) notes.push(sm("load.unknownTiers"));
+  if (loaded.giftsNotRecorded) notes.push(sm("load.giftsNotRecorded"));
+  if (loaded.unknownGifts > 0) notes.push(loaded.unknownGifts === 1 ? sm("load.unknownGifts.one") : sm("load.unknownGifts.other", { count: loaded.unknownGifts }));
   drawLoad();
   drawNotes();
   update({ ...loaded.state, cap: sim.cap });

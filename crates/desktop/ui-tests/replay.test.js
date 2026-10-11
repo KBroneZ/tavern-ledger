@@ -173,3 +173,17 @@ test("every replay of the user's two real games plays to the end", () => {
   }
   assert.equal(played, 17);
 });
+
+test("frames keep each minion's Dark Gifts through the combat (T-528)", () => {
+  const r = replay();
+  r.minions[0].gifts = ["BG36_MidGameEffect_000t13"];
+  r.minions[2].gift_unknown = true;
+  const f = TLReplay.frames(r);
+  f.forEach((frame) => {
+    const own = frame.own.find((x) => x.id === "OWN_A");
+    if (own) assert.deepEqual(own.gifts, ["BG36_MidGameEffect_000t13"]);
+  });
+  assert.equal(f[0].opponent[0].gift_unknown, true);
+  assert.deepEqual(f[0].own[1].gifts, [], "no gifts: an empty list");
+  assert.equal(f[0].own[1].gift_unknown, false);
+});

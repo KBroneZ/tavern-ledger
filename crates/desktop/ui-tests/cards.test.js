@@ -23,6 +23,7 @@ class Node {
 const I18n = require("../ui/i18n.js");
 require("../ui/strings/common.js");
 require("../ui/strings/details.js");
+require("../ui/strings/gifts.js");
 
 // The app's answer to card_names: Spanish names when asked in Spanish.
 const asked = [];
@@ -96,4 +97,26 @@ test("names are asked in the app's language; the log's name and the id are the f
   } finally {
     I18n.setLang("en");
   }
+});
+
+test("each Dark Gift is a mark with its name and summary, in the minion's order", () => {
+  I18n.setLang("en");
+  const marks = TLCards.gifts({ gifts: ["BG36_MidGameEffect_000t9", "BG36_MidGameEffect_000t13"] });
+  assert.deepEqual(marks.map((m) => m.name), ["Admiration", "Harpy's Talons"]);
+  assert.equal(marks[0].title, "Dark Gift: Admiration: Start of Combat: gain the Attack of the minion to its left.");
+  I18n.setLang("es");
+  assert.equal(TLCards.gifts({ gifts: ["BG36_MidGameEffect_000t13"] })[0].title, "Don siniestro: Garfas de arpía: Escudo divino y Viento furioso.");
+  I18n.setLang("en");
+});
+
+test("a minion with no gift has no mark, and an unknown gift says so", () => {
+  assert.deepEqual(TLCards.gifts({}), []);
+  assert.deepEqual(TLCards.gifts({ gifts: [] }), []);
+  assert.deepEqual(TLCards.gifts(null), []);
+  const unknown = TLCards.gifts({ gift_unknown: true });
+  assert.equal(unknown.length, 1);
+  assert.equal(unknown[0].name, "Dark Gift (unknown)");
+  // A gift the table does not know: its id, no summary; ids that are not card ids are dropped.
+  const other = TLCards.gifts({ gifts: ["BG99_New_000t1", "<b>", 7] });
+  assert.deepEqual(other.map((m) => [m.id, m.title]), [["BG99_New_000t1", "Dark Gift: BG99_New_000t1"]]);
 });

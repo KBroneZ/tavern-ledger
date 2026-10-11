@@ -57,6 +57,20 @@ pub struct Minion {
     /// neither the history nor the upload changes.
     #[serde(skip)]
     pub sim_keywords: Vec<&'static str>,
+    /// Dark Gifts on the minion as gift spell ids (`BG36_MidGameEffect_000tNN`,
+    /// T-528, parser revision 9), at most [`crate::gifts::MAX_GIFTS`]. Left
+    /// out of the JSON when empty: a revision 9 record without the key has
+    /// none, an older one did not read them.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub gifts: Vec<&'static str>,
+    /// The game marks the minion as gifted but no gift enchantment says
+    /// which ("Dark Gift (unknown)"). Left out of the JSON when false.
+    #[serde(skip_serializing_if = "is_false")]
+    pub gift_unknown: bool,
+}
+
+pub(crate) fn is_false(v: &bool) -> bool {
+    !*v
 }
 
 /// Keyword tags read on board minions and the name each is saved under, in

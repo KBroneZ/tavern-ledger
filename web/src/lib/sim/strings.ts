@@ -27,6 +27,9 @@ export const SIM_STRINGS = {
   "load.loaded": "Loaded turn {n}.",
   "load.skipped.one": "1 minion was left out: the record does not say what it was.",
   "load.skipped.other": "{count} minions were left out: the record does not say what they were.",
+  "load.giftsNotRecorded": "This game was saved before Dark Gifts were recorded: a gifted minion plays as the plain card.",
+  "load.unknownGifts.one": "1 minion has a Dark Gift the game's log does not name: it plays as the plain card, so the odds are approximate.",
+  "load.unknownGifts.other": "{count} minions have a Dark Gift the game's log does not name: they play as the plain card, so the odds are approximate.",
   "load.unknownTiers": "Only your own tavern tier is in the record. Set the others to see the damage.",
 
   "mode.label": "Combat",

@@ -64,6 +64,27 @@ export function bool(v: unknown, field: string): void {
   if (typeof v !== "boolean") throw new Invalid(field);
 }
 
+// Dark Gifts on a minion (parser revision 9, T-528, D-107): gift spell
+// card ids, each once; the parser keeps at most 4.
+export const MAX_GIFTS = 4;
+
+/** Optional `gifts` and `gift_unknown` of a board or replay minion. */
+export function gifts(m: Obj, field: string): void {
+  if (m.gifts !== undefined) {
+    const ids = list(m.gifts, `${field}.gifts`, MAX_GIFTS);
+    if (
+      ids.length === 0 ||
+      ids.some((g) => typeof g !== "string" || !CARD_ID.test(g)) ||
+      new Set(ids).size !== ids.length
+    ) {
+      throw new Invalid(`${field}.gifts`);
+    }
+  }
+  if (m.gift_unknown !== undefined && m.gift_unknown !== true) {
+    throw new Invalid(`${field}.gift_unknown`);
+  }
+}
+
 export function keywords(v: unknown, field: string): void {
   const words = list(v, field, KEYWORDS.size);
   if (

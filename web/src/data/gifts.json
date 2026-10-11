@@ -1,0 +1,475 @@
+{
+  "about": "Dark Gifts of season 36 (T-528, D-107): the 47 gift spells' names in English and Spanish from HearthstoneJSON's card data, and a short summary of each written for this project (not the card text). Used by the website's game viewer and, through tools/gift_words.py, the desktop app (crates/desktop/ui/strings/gifts.js).",
+  "gifts": {
+    "BG36_MidGameEffect_000t": {
+      "en": {
+        "name": "Offensive Sacrifice",
+        "text": "+10 Attack. Deathrattle: its Attack goes to another friendly minion."
+      },
+      "es": {
+        "name": "Sacrificio ofensivo",
+        "text": "+10 de ataque. Último aliento: su ataque pasa a otro esbirro aliado."
+      }
+    },
+    "BG36_MidGameEffect_000t2": {
+      "en": {
+        "name": "Defensive Sacrifice",
+        "text": "+10 Health. Deathrattle: its full Health goes to another friendly minion."
+      },
+      "es": {
+        "name": "Sacrificio defensivo",
+        "text": "+10 de vida. Último aliento: su vida máxima pasa a otro esbirro aliado."
+      }
+    },
+    "BG36_MidGameEffect_000t3": {
+      "en": {
+        "name": "Charisma",
+        "text": "Rally: a minion of your most common type to your hand."
+      },
+      "es": {
+        "name": "Carisma",
+        "text": "Alentar: un esbirro de tu tipo más común a tu mano."
+      }
+    },
+    "BG36_MidGameEffect_000t4": {
+      "en": {
+        "name": "Incubation",
+        "text": "+4/+4; its stats double two turns later."
+      },
+      "es": {
+        "name": "Incubación",
+        "text": "+4/+4; sus estadísticas se duplican dos turnos después."
+      }
+    },
+    "BG36_MidGameEffect_000t5": {
+      "en": {
+        "name": "Mystic Essence",
+        "text": "Deathrattle: a Tavern spell to your hand."
+      },
+      "es": {
+        "name": "Esencia mística",
+        "text": "Último aliento: un hechizo de taberna a tu mano."
+      }
+    },
+    "BG36_MidGameEffect_000t7": {
+      "en": {
+        "name": "Resistance",
+        "text": "Start of Combat: double its Health."
+      },
+      "es": {
+        "name": "Resistencia",
+        "text": "Inicio del combate: duplica su vida."
+      }
+    },
+    "BG36_MidGameEffect_000t9": {
+      "en": {
+        "name": "Admiration",
+        "text": "Start of Combat: gain the Attack of the minion to its left."
+      },
+      "es": {
+        "name": "Admiración",
+        "text": "Inicio del combate: gana el ataque del esbirro a su izquierda."
+      }
+    },
+    "BG36_MidGameEffect_000t10": {
+      "en": {
+        "name": "Echoing Voice",
+        "text": "End of turn: trigger its Battlecries."
+      },
+      "es": {
+        "name": "Voz resonante",
+        "text": "Fin del turno: activa sus gritos de batalla."
+      }
+    },
+    "BG36_MidGameEffect_000t11": {
+      "en": {
+        "name": "Double Vision",
+        "text": "An extra copy when you get it."
+      },
+      "es": {
+        "name": "Visión doble",
+        "text": "Una copia extra al obtenerlo."
+      }
+    },
+    "BG36_MidGameEffect_000t12": {
+      "en": {
+        "name": "Persisting Horror",
+        "text": "Reborn; comes back with full stats and its bonus keywords."
+      },
+      "es": {
+        "name": "Horror persistente",
+        "text": "Renacer; vuelve con todas sus estadísticas y sus palabras clave extra."
+      }
+    },
+    "BG36_MidGameEffect_000t13": {
+      "en": {
+        "name": "Harpy's Talons",
+        "text": "Divine Shield and Windfury."
+      },
+      "es": {
+        "name": "Garfas de arpía",
+        "text": "Escudo divino y Viento furioso."
+      }
+    },
+    "BG36_MidGameEffect_000t14": {
+      "en": {
+        "name": "Gilding",
+        "text": "Golden (no Triple reward)."
+      },
+      "es": {
+        "name": "Doración",
+        "text": "Dorado (sin recompensa de triple)."
+      }
+    },
+    "BG36_MidGameEffect_000t15": {
+      "en": {
+        "name": "Toreth's Blessing",
+        "text": "Its Divine Shield takes 3 hits to break."
+      },
+      "es": {
+        "name": "Bendición de Toreth",
+        "text": "Su Escudo divino aguanta 3 golpes."
+      }
+    },
+    "BG36_MidGameEffect_000t16": {
+      "en": {
+        "name": "Jaws of Death",
+        "text": "Start of Combat: trigger its Deathrattles."
+      },
+      "es": {
+        "name": "Fauces de la Muerte",
+        "text": "Inicio del combate: activa sus últimos alientos."
+      }
+    },
+    "BG36_MidGameEffect_000t18": {
+      "en": {
+        "name": "Replication",
+        "text": "Every 2 turns: a plain copy to your hand."
+      },
+      "es": {
+        "name": "Replicación",
+        "text": "Cada 2 turnos: una copia normal a tu mano."
+      }
+    },
+    "BG36_MidGameEffect_000t21": {
+      "en": {
+        "name": "Time Turning",
+        "text": "Its end-of-turn effects also trigger at the start of turn."
+      },
+      "es": {
+        "name": "Tiempo volteado",
+        "text": "Sus efectos de fin de turno también se activan al empezar el turno."
+      }
+    },
+    "BG36_MidGameEffect_000t22": {
+      "en": {
+        "name": "Amalgamation",
+        "text": "Has every minion type."
+      },
+      "es": {
+        "name": "Amalgamado",
+        "text": "Tiene todos los tipos de esbirro."
+      }
+    },
+    "BG36_MidGameEffect_000t28": {
+      "en": {
+        "name": "Battle Scars",
+        "text": "+3/+3 per Battlecry triggered this game."
+      },
+      "es": {
+        "name": "Cicatrices de batalla",
+        "text": "+3/+3 por cada grito de batalla activado en la partida."
+      }
+    },
+    "BG36_MidGameEffect_000t28t": {
+      "en": {
+        "name": "Battle Scars",
+        "text": "+2/+2 per Battlecry triggered this game."
+      },
+      "es": {
+        "name": "Cicatrices de batalla",
+        "text": "+2/+2 por cada grito de batalla activado en la partida."
+      }
+    },
+    "BG36_MidGameEffect_000t29": {
+      "en": {
+        "name": "Death's Embrace",
+        "text": "+2/+2 per Deathrattle triggered this game."
+      },
+      "es": {
+        "name": "Abrazo de la Muerte",
+        "text": "+2/+2 por cada último aliento activado en la partida."
+      }
+    },
+    "BG36_MidGameEffect_000t29t": {
+      "en": {
+        "name": "Death's Embrace",
+        "text": "+1/+1 per Deathrattle triggered this game."
+      },
+      "es": {
+        "name": "Abrazo de la Muerte",
+        "text": "+1/+1 por cada último aliento activado en la partida."
+      }
+    },
+    "BG36_MidGameEffect_000t30": {
+      "en": {
+        "name": "Spell Siphon",
+        "text": "+3/+3 per Tavern spell cast this game."
+      },
+      "es": {
+        "name": "Succión de hechizos",
+        "text": "+3/+3 por cada hechizo de taberna lanzado en la partida."
+      }
+    },
+    "BG36_MidGameEffect_000t30t": {
+      "en": {
+        "name": "Spell Siphon",
+        "text": "+2/+2 per Tavern spell cast this game."
+      },
+      "es": {
+        "name": "Succión de hechizos",
+        "text": "+2/+2 por cada hechizo de taberna lanzado en la partida."
+      }
+    },
+    "BG36_MidGameEffect_000t50": {
+      "en": {
+        "name": "Tarecgosa's Blessing",
+        "text": "After combat: keeps its bonus keywords and doubles the stats it gained."
+      },
+      "es": {
+        "name": "Bendición de Tarecgosa",
+        "text": "Tras el combate: conserva sus palabras clave extra y duplica las estadísticas ganadas."
+      }
+    },
+    "BG36_MidGameEffect_000t51": {
+      "en": {
+        "name": "Steady Growth",
+        "text": "End of turn: gains stats."
+      },
+      "es": {
+        "name": "Crecimiento constante",
+        "text": "Fin del turno: gana estadísticas."
+      }
+    },
+    "BG36_MidGameEffect_000t52": {
+      "en": {
+        "name": "Fresh Perspective",
+        "text": "Deathrattle: 2 free Refreshes."
+      },
+      "es": {
+        "name": "Perspectiva renovada",
+        "text": "Último aliento: 2 actualizaciones gratis."
+      }
+    },
+    "BG36_MidGameEffect_000t60": {
+      "en": {
+        "name": "Invulnerability",
+        "text": "Immune while attacking."
+      },
+      "es": {
+        "name": "Invulnerabilidad",
+        "text": "Inmune mientras ataca."
+      }
+    },
+    "BG36_MidGameEffect_000t61": {
+      "en": {
+        "name": "Golemancy",
+        "text": "Deathrattle: summon a Golem with its stats."
+      },
+      "es": {
+        "name": "Golemancia",
+        "text": "Último aliento: invoca un gólem con sus estadísticas."
+      }
+    },
+    "BG36_MidGameEffect_000t62": {
+      "en": {
+        "name": "Sunken Persistence",
+        "text": "Its Spellcrafts are permanent."
+      },
+      "es": {
+        "name": "Persistencia sumergida",
+        "text": "Sus hechicerías son permanentes."
+      }
+    },
+    "BG36_MidGameEffect_000t64": {
+      "en": {
+        "name": "Dexterity",
+        "text": "+2/+2 whenever you play a card."
+      },
+      "es": {
+        "name": "Destreza",
+        "text": "+2/+2 cada vez que juegas una carta."
+      }
+    },
+    "BG36_MidGameEffect_000t64t": {
+      "en": {
+        "name": "Dexterity",
+        "text": "+4/+4 whenever you play a card."
+      },
+      "es": {
+        "name": "Destreza",
+        "text": "+4/+4 cada vez que juegas una carta."
+      }
+    },
+    "BG36_MidGameEffect_000t65": {
+      "en": {
+        "name": "Polarization",
+        "text": "End of turn: magnetize a random Mech to it."
+      },
+      "es": {
+        "name": "Polarización",
+        "text": "Fin del turno: le magnetiza un meca al azar."
+      }
+    },
+    "BG36_MidGameEffect_000t66": {
+      "en": {
+        "name": "Demonology",
+        "text": "Rally: a Fodder in your next 3 Refreshes."
+      },
+      "es": {
+        "name": "Demonología",
+        "text": "Alentar: un pienso en tus 3 próximas actualizaciones."
+      }
+    },
+    "BG36_MidGameEffect_000t69": {
+      "en": {
+        "name": "Toxicity",
+        "text": "Venomous."
+      },
+      "es": {
+        "name": "Toxicidad",
+        "text": "Ponzoña."
+      }
+    },
+    "BG36_MidGameEffect_000t71": {
+      "en": {
+        "name": "Hostility",
+        "text": "Start of Combat: double its Attack."
+      },
+      "es": {
+        "name": "Hostilidad",
+        "text": "Inicio del combate: duplica su ataque."
+      }
+    },
+    "BG36_MidGameEffect_000t72": {
+      "en": {
+        "name": "Titanic Strength",
+        "text": "+1000 Attack."
+      },
+      "es": {
+        "name": "Fuerza titánica",
+        "text": "+1000 de ataque."
+      }
+    },
+    "BG36_MidGameEffect_000t73": {
+      "en": {
+        "name": "Fortitude",
+        "text": "+5/+5."
+      },
+      "es": {
+        "name": "Entereza",
+        "text": "+5/+5."
+      }
+    },
+    "BG36_MidGameEffect_000t74": {
+      "en": {
+        "name": "Sharpened Sword",
+        "text": "+3 Attack whenever you play a card."
+      },
+      "es": {
+        "name": "Espada afilada",
+        "text": "+3 de ataque cada vez que juegas una carta."
+      }
+    },
+    "BG36_MidGameEffect_000t75": {
+      "en": {
+        "name": "Toughened Shield",
+        "text": "+3 Health whenever you play a card."
+      },
+      "es": {
+        "name": "Escudo reforzado",
+        "text": "+3 de vida cada vez que juegas una carta."
+      }
+    },
+    "BG36_MidGameEffect_000t78": {
+      "en": {
+        "name": "Efficiency",
+        "text": "Its Activate triggers twice."
+      },
+      "es": {
+        "name": "Eficiencia",
+        "text": "Su efecto de activar se activa dos veces."
+      }
+    },
+    "BG36_MidGameEffect_000t79": {
+      "en": {
+        "name": "Furtiveness",
+        "text": "Stealth."
+      },
+      "es": {
+        "name": "Furtividad",
+        "text": "Sigilo."
+      }
+    },
+    "BG36_MidGameEffect_000t80": {
+      "en": {
+        "name": "Consanguinity",
+        "text": "Rally: 2 Blood Gems to your hand."
+      },
+      "es": {
+        "name": "Consanguinidad",
+        "text": "Alentar: 2 gemas de sangre a tu mano."
+      }
+    },
+    "BG36_MidGameEffect_000t81": {
+      "en": {
+        "name": "Transcendence",
+        "text": "Start of Combat: triple its stats."
+      },
+      "es": {
+        "name": "Trascendencia",
+        "text": "Inicio del combate: triplica sus estadísticas."
+      }
+    },
+    "BG36_MidGameEffect_000t82": {
+      "en": {
+        "name": "Affinity",
+        "text": "Every 2 turns: a minion of its type to your hand."
+      },
+      "es": {
+        "name": "Conexión",
+        "text": "Cada 2 turnos: un esbirro de su tipo a tu mano."
+      }
+    },
+    "BG36_MidGameEffect_000t88": {
+      "en": {
+        "name": "Desecration",
+        "text": "+3/+3 per card discarded this game."
+      },
+      "es": {
+        "name": "Profanación",
+        "text": "+3/+3 por cada carta descartada en la partida."
+      }
+    },
+    "BG36_MidGameEffect_000t89": {
+      "en": {
+        "name": "Worship",
+        "text": "Start of Combat: gain your Deity's stats."
+      },
+      "es": {
+        "name": "Adoración",
+        "text": "Inicio del combate: gana las estadísticas de tu deidad."
+      }
+    },
+    "BG36_MidGameEffect_000t90": {
+      "en": {
+        "name": "Doppelganger",
+        "text": "Start of Combat: summon a copy of it."
+      },
+      "es": {
+        "name": "Doble",
+        "text": "Inicio del combate: invoca una copia de sí mismo."
+      }
+    }
+  }
+}

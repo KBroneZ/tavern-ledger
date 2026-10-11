@@ -120,6 +120,10 @@ Stripping a suffix is not enough: the Golem the Golemancy gift summons carries `
 4. **Display:** a gift mark on the minion wherever a minion shows (recap, overlay, website boards) with the gift's name from the card data (names only, D-038, D-091), Advanced: the id.
 5. **D-054:** gifts on unplayed Duos boards only after the game, as the boards themselves.
 
+## 5b. What T-528 did (session 094, D-107)
+
+All of section 5: `crates/bg-parser/src/gifts.rs` (the table above as code, one pass over the board), parser revision 9 with `gifts` and `gift_unknown` on every board and replay minion, `VALIDATOR_VERSION` 8, the odds and the harness pass the gifts, and a gift mark on every minion picture in the app, the overlay and the website. Counts on the same 6 log sessions, at combat start (the boards the report keeps), which is earlier than the first attack used above: 101 of the player's and 122 of the opponents' gifted minions (per combat), 58 of 84 combats, 5 minions with two gifts, 2 marked with no enchantment (the same two as above), 24 gifted minions summoned in replays (Doppelganger's copies among them). `combat-validate` before and after is in plan.md (notes T-528).
+
 ## 6. Harness
 
 `combat-validate` cannot use gifts until T-528 saves them: the history (`games.jsonl`, 41 games) has none. In the logs on the PC, 53 of 84 combats had a gifted minion, 12 with a gift that changes a board taken after start of combat (Deathrattle, Reborn, shield, attack, type or golden gifts); none of these would be blocked by a gift (no Worship seen). Once T-528 lands, `combat-validate --logs` gives the first measured effect.
