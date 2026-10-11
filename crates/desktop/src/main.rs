@@ -1015,6 +1015,7 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
             }
         });
     // The taskbar sits on the primary screen in most set-ups; 100 % if unknown.
+    // Picked once at start: after a scaling change Windows rescales this image.
     let scale = app
         .primary_monitor()
         .ok()

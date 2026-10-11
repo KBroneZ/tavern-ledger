@@ -151,5 +151,7 @@ test("every page has the social card for link previews, its alt text in the page
     assert.deepEqual(meta("og:site_name"), ["Tavern Ledger"], page);
     assert.equal(meta("og:title").length, 1, page);
     assert.equal(meta("og:description").length, 1, page);
+    const canonical = /<link rel="canonical" href="([^"]+)">/.exec(html)?.[1];
+    assert.deepEqual(meta("og:url"), canonical ? [canonical] : [], page);
   }
 });
