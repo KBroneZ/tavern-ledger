@@ -46,3 +46,10 @@ test("profile save errors: the database check reads as a name rule", () => {
   assert.match(profileErrorMessage({ code: "PGRST301" }), /sign in/i);
   assert.doesNotMatch(profileErrorMessage({ code: "XX000", message: "secret detail" }), /secret/);
 });
+
+test("profile save errors: a name the word list refuses says so, without the list", () => {
+  const text = profileErrorMessage({ code: "23514", message: "display_name_not_allowed" });
+  assert.match(text, /not allowed/i);
+  assert.match(text, /leaderboards/i);
+  assert.doesNotMatch(profileErrorMessage({ code: "23514", message: "new row violates check constraint" }), /not allowed/i);
+});

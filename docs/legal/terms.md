@@ -2,6 +2,8 @@
 
 Last updated: 11 October 2026
 
+**What changed on 11 October 2026:** public leaderboards (section 4) and the server's check of display names (section 3).
+
 These terms cover the Tavern Ledger website and the accounts on it. The desktop app and its source code are covered by their open-source licence (section 6).
 
 ## 1. What Tavern Ledger is
@@ -22,15 +24,17 @@ Do not:
 
 - upload data that is not from your own games, or that has been changed to mislead;
 - put other people's personal data (for example a BattleTag) in your display name or anywhere else;
-- use a display name that is offensive, impersonates someone, or infringes someone's rights;
+- use a display name that is offensive, impersonates someone, or infringes someone's rights. The server refuses names with words from a short list (offensive words and names that look official); a name it accepts is not automatically acceptable;
 - try to break, overload or get around the limits and security of the site, or access other people's private data (public profiles are meant to be seen);
 - copy public profiles in bulk with automated tools, or use the site in a way that harms other users or the project. Downloading your own data from your account page is always fine.
 
 If an account breaks these rules, we may take a proportionate step: ask you to change something, remove the content, or suspend or, for serious or repeated breaches, delete the account. We will tell you why and give you the chance to download your data first, unless we must act at once to stop harm (for example an attack or illegal content). You can reply to us to ask us to reconsider.
 
-## 4. Public profiles
+## 4. Public profiles and leaderboards
 
 Your profile is private until you make it public. A public profile shows your display name and every game you uploaded, in full, to anyone, and anyone can link to it or copy what it shows. You can make it private again at any time; copies others already made are out of our control.
+
+With a public profile, a display name and enough games, you also appear on the public leaderboards, which rank players on their uploaded games. The privacy policy says what they show and how to leave them (turn the profile private: the boards stop showing you as soon as you save). Leaderboards are for fun: the numbers are self-reported by each player's app, there are no prizes, and we do not promise they are accurate or complete. If games look changed to climb a board, we may take the steps in section 3, such as leaving them off the boards.
 
 ## 5. Your data and leaving
 

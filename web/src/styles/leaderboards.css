@@ -1,0 +1,74 @@
+/* Public leaderboards (T-506), on the data pages' pieces (data.css) and the
+   dashboard's frame (dash.css): the body keeps a screen of room from the
+   start and the boards land inside it, so nothing in view moves (CLS 0). */
+
+.lb-intro {
+  max-width: 62ch;
+  margin-top: var(--s-2);
+  color: var(--text-2);
+}
+
+/* Room for "Updated …" from the first paint: it fills in with the data. */
+.lb-updated {
+  min-height: 1.5em;
+}
+
+.lb-switches {
+  align-content: start;
+}
+
+/* The three switches keep their room while the script has not shown them
+   yet (they wrap onto more lines on a phone), so showing them moves nothing. */
+.lb-switches .seg[hidden] {
+  /* Beats the global [hidden] rule, which is !important too. */
+  display: inline-flex !important;
+  visibility: hidden;
+}
+
+/* One period shows at a time; 30 days until the script says otherwise. */
+.lb-periods:not([data-period="7d"]) [data-period-panel="7d"],
+.lb-periods:not([data-period="30d"]) [data-period-panel="30d"],
+.lb-periods:not([data-period="all"]) [data-period-panel="all"] {
+  display: none;
+}
+
+.lb-period {
+  display: grid;
+  gap: var(--s-6);
+}
+
+.lb-group {
+  display: grid;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+.lb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 25rem), 1fr));
+  gap: var(--s-4);
+  align-items: start;
+}
+
+.lb-board {
+  display: grid;
+  gap: var(--s-3);
+  min-width: 0;
+  padding: var(--s-4);
+  border-radius: var(--r-tile);
+  background: var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.lb-board h3 {
+  font-size: var(--t-lg);
+}
+
+.lb-board .dtable a {
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.lb-skeleton .state {
+  min-height: 420px;
+}
