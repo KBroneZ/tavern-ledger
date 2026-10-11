@@ -320,6 +320,13 @@ a:hover {
   border-inline-start: 1px solid rgb(255 255 255 / 0.14);
 }
 
+/* "Sign in" or "Account", not both (T-513): public/lang.js sets data-auth
+   from the stored session; with no answer both stay. */
+html[data-auth="in"] .masthead nav a.nav-signin,
+html[data-auth="out"] .masthead nav a.nav-account {
+  display: none;
+}
+
 main {
   flex: 1;
   width: 100%;

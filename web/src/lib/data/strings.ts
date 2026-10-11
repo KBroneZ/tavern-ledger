@@ -144,6 +144,7 @@ export const STRINGS = {
   "tile.triples": "Triples per game",
 
   "hero.unknown": "Hero not recorded",
+  "hero.unknownId": "Unknown hero",
   "heroes.caption": "Heroes, most games first, {mode}",
   "heroes.col.hero": "Hero",
   "heroes.col.games": "Games",

@@ -16,6 +16,7 @@ import {
 } from "../data/format.ts";
 import { FALLBACK_ATTR, type Picture, pictureFor, type PictureKind } from "../data/pictures.ts";
 import { t } from "../data/strings.ts";
+import { heroLabel } from "../heroes/names.ts";
 import { cls, h, s, type VNode } from "./node.ts";
 
 // The same in every language (test/unit/i18n.test.ts), so it can be a constant.
@@ -192,10 +193,23 @@ export type Cell =
   | string
   | number
   | { place: number | null; mode: Mode }
-  /** With href, the hero's name links there (the heroes page's link to that hero's games). */
-  | { hero: string | null; name: string; href?: string }
+  /**
+   * With href, the hero's name links there (the heroes page's link to that
+   * hero's games). unknownId: an id the name table does not know, shown in
+   * Advanced only (T-510).
+   */
+  | { hero: string | null; name: string; href?: string; unknownId?: string | null }
   /** Anything else (a value with a mark); the client pages only. */
   | { node: VNode | VNode[] };
+
+/** The portrait size in hero lists (T-510): picture first, big enough to tell heroes apart. */
+export const HERO_PIC = 56;
+
+/** A hero's table cell: its name in the page's language, never the bare card id (T-510). */
+export function heroCell(id: string | null, href?: string): Cell {
+  const label = heroLabel(id, t("hero.unknown"), t("hero.unknownId"));
+  return { hero: id, name: label.name, href, unknownId: label.unknownId };
+}
 
 export interface Column {
   label: string;
@@ -209,7 +223,12 @@ export interface Column {
 function tableCell(cell: Cell, column: Column | undefined): VNode {
   if (typeof cell === "object" && "hero" in cell) {
     const name = cell.href ? h("a", { href: cell.href }, cell.name) : h("span", {}, cell.name);
-    return h("th", { scope: "row", class: cls({ adv: !!column?.advanced }) || undefined }, h("span", { class: "cell-hero" }, picture("hero", cell.hero, cell.name, 24, true), name));
+    const id = cell.unknownId ? h("span", { class: "adv cell-note hero-id" }, cell.unknownId) : null;
+    return h(
+      "th",
+      { scope: "row", class: cls({ adv: !!column?.advanced }) || undefined },
+      h("span", { class: "cell-hero" }, picture("hero", cell.hero, cell.name, HERO_PIC, true), h("span", { class: "hero-name" }, name, id)),
+    );
   }
   const klass = cls({ num: !!column?.numeric, adv: !!column?.advanced }) || undefined;
   if (typeof cell === "object" && "place" in cell) return h("td", { class: klass }, placeBadge(cell.place, cell.mode));

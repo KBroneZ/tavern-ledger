@@ -69,16 +69,16 @@ test("combats from the log only carry no inferred mark", () => {
   assert.equal(advanced[0].source, undefined);
 });
 
-test("heroes: one mode, most games first, then the better average, then the id; offered-only heroes left out", () => {
+test("heroes: one mode, most games first, then the better average, then the name; offered-only heroes left out", () => {
   const rows = [
-    heroRaw({ hero: "B_HERO", games: 3, avg_place: 4 }),
-    heroRaw({ hero: "A_HERO", games: 3, avg_place: 2.5 }),
-    heroRaw({ hero: "C_HERO", games: 7 }),
+    heroRaw({ hero: "TB_BaconShop_HERO_41", games: 3, avg_place: 4 }),
+    heroRaw({ hero: "BG22_HERO_002", games: 3, avg_place: 2.5 }),
+    heroRaw({ hero: "BG20_HERO_202", games: 7 }),
     heroRaw({ hero: "OFFERED", games: 0, placed_games: 0, avg_place: null, top_half: 0, wins: 0, best_place: null }),
     heroRaw({ hero: "DUOS_HERO", mode: "duos" }),
   ].map(heroRow);
   const cells = heroCells(rows, "solo");
-  assert.deepEqual(cells.map((r) => (r[0] as { name: string }).name), ["C_HERO", "A_HERO", "B_HERO"]);
+  assert.deepEqual(cells.map((r) => (r[0] as { name: string }).name), ["Master Nguyen", "Drek'Thar", "Reno Jackson"]);
   assert.deepEqual(cells[1].slice(1), [3, "2.50", "60%", { place: 1, mode: "solo" }]);
 });
 
@@ -100,7 +100,7 @@ test("records: fixed order, value with its mark, date and the games that back it
 test("a game row: hero, place badge, date and the key numbers; unknown read as unknown", () => {
   const cells = gameCells(gameRow(gameRaw({ apm: null, combats_inferred: 2 })), false);
   assert.equal(cells.length, gameColumns(false).length);
-  assert.deepEqual(cells.slice(0, 4), [{ hero: "BG20_HERO_202", name: "BG20_HERO_202" }, { place: 3, mode: "solo" }, "Oct 9, 2026", "13"]);
+  assert.deepEqual(cells.slice(0, 4), [{ hero: "BG20_HERO_202", name: "Master Nguyen", href: undefined, unknownId: null }, { place: 3, mode: "solo" }, "Oct 9, 2026", "13"]);
   const html = (c: unknown) => [(c as { node: VNode | VNode[] }).node].flat().map(toHtml).join("");
   assert.equal(html(cells[4]), '<span>7–5</span><span class="mark-src mark-inferred">inferred</span>');
   assert.equal(html(cells[6]), '<span aria-hidden="true">—</span><span class="visually-hidden">Unknown</span>');
@@ -109,7 +109,7 @@ test("a game row: hero, place badge, date and the key numbers; unknown read as u
 test("an unfinished game says so instead of a place; the list of every mode adds the mode", () => {
   const cells = gameCells(gameRow(gameRaw({ status: "incomplete", mode: "duos", hero: null, rounds: null })), true);
   assert.equal(cells.length, gameColumns(true).length);
-  assert.deepEqual(cells[0], { hero: null, name: "Hero not recorded" });
+  assert.deepEqual(cells[0], { hero: null, name: "Hero not recorded", href: undefined, unknownId: null });
   assert.match(textOf((cells[1] as { node: VNode[] }).node[1]), /unfinished/);
   assert.equal(cells[3], "Duos");
   assert.ok("node" in (cells[4] as object), "rounds unknown");
@@ -125,7 +125,7 @@ test("a game's date links to the game viewer when its key is known, each value e
   const cells = gameCells(gameRow(gameRaw()), false, id);
   assert.equal(
     toHtml((cells[2] as { node: VNode }).node),
-    `<a href="/game/?u=${id}&amp;s=Hearthstone_2026_10_09_18_30_00&amp;g=2">Oct 9, 2026<span class="visually-hidden">: game with BG20_HERO_202</span></a>`,
+    `<a href="/game/?u=${id}&amp;s=Hearthstone_2026_10_09_18_30_00&amp;g=2">Oct 9, 2026<span class="visually-hidden">: game with Master Nguyen</span></a>`,
   );
   assert.equal(gameCells(gameRow(gameRaw({ session: "a/b?c" })), false, id)[2], "Oct 9, 2026", "an odd key gets no link");
   assert.equal(gameCells(gameRow(gameRaw()), false)[2], "Oct 9, 2026");

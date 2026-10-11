@@ -8,7 +8,8 @@ import { compact, PLACES, type Mode } from "../data/format.ts";
 import { asRows, count, DataError } from "../data/rows.ts";
 import { t } from "../data/strings.ts";
 import { h, type VNode } from "../view/node.ts";
-import type { Cell, Column } from "../view/pieces.ts";
+import { heroCell, type Cell, type Column } from "../view/pieces.ts";
+import { byHeroName } from "../heroes/names.ts";
 import { ct, type ChKey } from "./strings.ts";
 import { numberFormat } from "../i18n.ts";
 
@@ -143,7 +144,7 @@ export function rowsWhileUnavailable(state: CommunityState, heroes: CommunityHer
 export type HeroSort = "games" | "avg" | "top" | "pick";
 export const SORTS: readonly HeroSort[] = ["games", "avg", "top", "pick"];
 
-const byHero = (a: CommunityHero, b: CommunityHero) => a.hero.localeCompare(b.hero);
+const byHero = (a: CommunityHero, b: CommunityHero) => byHeroName(a.hero, b.hero);
 // Heroes with no pick rate go last; two of them tie (0), then the next rule decides.
 const pickOrder = (a: CommunityHero, b: CommunityHero) => {
   if (a.pick && b.pick) return b.pick.rate - a.pick.rate;
@@ -153,7 +154,7 @@ const pickOrder = (a: CommunityHero, b: CommunityHero) => {
 /**
  * "games": most games first. "avg": the better (lower) average place first.
  * "top": the higher top-half rate first. "pick": the higher pick rate first,
- * heroes without one last. Then more games, then the card id, so the order
+ * heroes without one last. Then more games, then the name, so the order
  * is the same on every read.
  */
 export function sortHeroes(rows: readonly CommunityHero[], sort: HeroSort): CommunityHero[] {
@@ -233,9 +234,8 @@ export function fewPicks(): VNode[] {
 }
 
 export function heroCells(r: CommunityHero): Cell[] {
-  // Heroes go by card id until the card data reaches the site (D-074, T-504).
   return [
-    { hero: r.hero, name: r.hero },
+    heroCell(r.hero),
     atLeast(r.games),
     atLeast(r.players),
     r.pick ? rate(r.pick.rate) : { node: fewPicks() },

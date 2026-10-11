@@ -80,8 +80,9 @@ const current = (match: boolean) => (match ? "page" : undefined);
             <a href={href("/leaderboards/")} aria-current={current(base.startsWith("/leaderboards"))}>{st("layout.leaderboards")}</a>
             <a href={href("/heroes/")} aria-current={current(base.startsWith("/heroes"))}>{st("layout.heroes")}</a>
             <a href={href("/me/")} aria-current={current(base.startsWith("/me") || base.startsWith("/games"))}>{st("layout.games")}</a>
-            <a href={href("/signin/")} aria-current={current(base.startsWith("/signin"))}>{st("layout.signin")}</a>
-            <a href={href("/account/")} aria-current={current(base.startsWith("/account"))}>{st("layout.account")}</a>
+            {/* public/lang.js marks <html data-auth>, so only the right one shows (T-513). */}
+            <a class="nav-signin" href={href("/signin/")} aria-current={current(base.startsWith("/signin"))}>{st("layout.signin")}</a>
+            <a class="nav-account" href={href("/account/")} aria-current={current(base.startsWith("/account"))}>{st("layout.account")}</a>
           </>
         )}
         {

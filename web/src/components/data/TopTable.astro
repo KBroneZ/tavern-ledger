@@ -7,6 +7,7 @@ import { topN, type Mode } from "../../lib/data/format.ts";
 import { t } from "../../lib/data/strings.ts";
 import PlaceBadge from "./PlaceBadge.astro";
 import Picture from "./Picture.astro";
+import { HERO_PIC } from "../../lib/view/pieces.ts";
 
 export type Cell =
   | string
@@ -53,8 +54,8 @@ const isHero = (c: Cell): c is { hero: string | null; name: string } => typeof c
                 isHero(cell) ? (
                   <th scope="row">
                     <span class="cell-hero">
-                      <Picture kind="hero" id={cell.hero} name={cell.name} size={24} decorative />
-                      <span>{cell.name}</span>
+                      <Picture kind="hero" id={cell.hero} name={cell.name} size={HERO_PIC} decorative />
+                      <span class="hero-name"><span>{cell.name}</span></span>
                     </span>
                   </th>
                 ) : isPlace(cell) ? (

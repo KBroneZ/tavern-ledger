@@ -925,3 +925,66 @@ html[data-detail="advanced"] .simple-only {
     padding-inline: var(--s-2);
   }
 }
+
+/* ---------- Hero lists (T-510) ----------
+   Picture first: every hero list (games, your heroes, the dashboard,
+   community heroes, the hero leaderboard) leads each row with a big portrait
+   (HERO_PIC, cropped as above, so no white edge), the name beside it and the
+   numbers next to them. The row lights the portrait's ring on hover. On a
+   phone the portrait steps down so the key numbers still fit beside it. */
+.dtable .cell-hero {
+  gap: var(--s-3);
+  min-width: 10.5rem;
+}
+
+.cell-hero > .pic-hero[data-size="56"] {
+  outline: 2px solid var(--line-soft);
+  outline-offset: 2px;
+  margin: 4px;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 0.35);
+  transition: outline-color 160ms var(--ease-out);
+}
+
+.dtable tbody tr:hover .cell-hero > .pic-hero,
+.dtable tbody tr:focus-within .cell-hero > .pic-hero {
+  outline-color: var(--amber);
+}
+
+.hero-name {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.hero-id {
+  color: var(--text-3);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: var(--t-xs);
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.dtable tbody th:has(> .cell-hero),
+.dtable td:has(> .cell-hero) {
+  padding-block: var(--s-1);
+}
+
+@media (max-width: 480px) {
+  .dtable .cell-hero {
+    gap: var(--s-2);
+    min-width: 8.5rem;
+  }
+
+  .cell-hero > .pic-hero[data-size="56"] {
+    width: 44px;
+    height: 44px;
+    margin: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell-hero > .pic-hero[data-size="56"] {
+    transition: none;
+  }
+}

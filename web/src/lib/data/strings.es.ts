@@ -140,6 +140,7 @@ export const ES: Record<StringKey, string> = {
   "tile.triples": "Triples por partida",
 
   "hero.unknown": "Héroe sin registrar",
+  "hero.unknownId": "Héroe desconocido",
   "heroes.caption": "Héroes, con más partidas primero, {mode}",
   "heroes.col.hero": "Héroe",
   "heroes.col.games": "Partidas",
