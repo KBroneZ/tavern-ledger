@@ -76,3 +76,11 @@ const EXAMPLE_GAME = {
     { source: "unknown", label: "unknown" },
   ],
 };
+
+// The lobby panel's example (T-338), shown while arranging with no game on.
+const EXAMPLE_LOBBY = {
+  in_lobby: true,
+  rating: { solo: 6400, duos: 5800, status: "ok" },
+  rating_change: { duos: false, delta: 45 },
+  today: [{ mode: "GT_BATTLEGROUNDS", top_half: 4, tally: { games: 3, placed: 3, average_place: 3.7, top_half_share: 2 / 3 } }],
+};

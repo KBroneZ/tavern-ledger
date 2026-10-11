@@ -10,7 +10,13 @@
 //!   failed check, or the tavern contradicting the tribes, stops it for that
 //!   game ("unsupported game version") and the app keeps its log-based
 //!   tribes;
-//! - the player's own rating each time the Battlegrounds lobby screen opens.
+//! - the player's own rating while the Battlegrounds lobby screen is open
+//!   (T-337): every few seconds for about a minute per visit, only when the
+//!   running client's build is one the reader was checked on (from the
+//!   session's log, also before its first game), taken only when two reads in
+//!   a row agree. The change since the last game is the new rating minus the
+//!   one taken before that game, for that game's mode; it is shown only when
+//!   exactly one game was played between the two, never a guess.
 //!
 //! The values stay in memory on this PC: they are not saved with the games,
 //! not put in any report and not uploaded.
@@ -35,8 +41,11 @@ const TRIBES_EVERY: u32 = 3;
 /// Reads of the tribes per game: about a minute, since the game fills them
 /// some seconds into hero select.
 const TRIBES_TRIES: u32 = 20;
-/// Reads of the rating per visit to the lobby screen.
-const RATING_TRIES: u32 = 10;
+/// Ticks between two reads of the rating on the lobby screen.
+const RATING_EVERY: u32 = 3;
+/// Reads of the rating per visit to the lobby screen: about a minute, since
+/// the game may update the rating some seconds after the lobby opens.
+const RATING_TRIES: u32 = 20;
 
 /// Asks the game for the two values. The real one opens the game read-only;
 /// tests use a fake that counts calls.
@@ -55,6 +64,30 @@ impl Reader for GameReader {
     fn own_rating(&self) -> Result<Rating, ReadFailure> {
         game_memory::own_rating()
     }
+}
+
+/// What the app knows on one poll, for the reader.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Poll<'a> {
+    /// The Battlegrounds game in progress, if any.
+    pub game: Option<&'a GameKey>,
+    /// The build of the game in progress, from its log.
+    pub build: Option<i64>,
+    pub scene: Option<Scene>,
+    /// The running client's build, also before its first game (T-337).
+    pub client_build: Option<i64>,
+    /// Games finished so far in the history.
+    pub finished: usize,
+    /// Whether the last finished game was Duos (`None`: no game, or another
+    /// mode).
+    pub last_duos: Option<bool>,
+}
+
+/// The rating change the last game made, in its mode.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+pub struct RatingChange {
+    pub duos: bool,
+    pub delta: i32,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -81,8 +114,26 @@ struct State {
     rating: Option<Rating>,
     rating_status: ReaderStatus,
     rating_tries: u32,
-    /// Read (or given up) on this visit to the lobby screen.
+    /// Ticks on this visit to the lobby screen.
+    rating_ticks: u32,
+    /// Given up on this visit to the lobby screen.
     rating_done: bool,
+    /// A read that passed, waiting for the next read to give the same.
+    rating_pending: Option<Rating>,
+    /// Games finished when `rating` was taken.
+    rating_at: Option<usize>,
+    /// The client build `rating` was read on: any other build drops it.
+    rating_build: Option<i64>,
+    /// `rating` is known to include every game finished when it was taken
+    /// (see `take_rating`); only such a rating can be the base of a change.
+    rating_settled: bool,
+    /// Games finished when the first rating since the switch went on (or
+    /// since the build changed) was taken.
+    rating_first: Option<usize>,
+    /// The last rating taken before the latest game(s): value, games
+    /// finished then, settled.
+    rating_prior: Option<(Rating, usize, bool)>,
+    rating_change: Option<RatingChange>,
 }
 
 #[derive(Default)]
@@ -101,6 +152,8 @@ pub struct View {
     pub status: ReaderStatus,
     pub tribes_status: ReaderStatus,
     pub rating: OwnRating,
+    /// The change the last game made, when known for sure.
+    pub rating_change: Option<RatingChange>,
     /// `game`: the label "from the game". The switch's words and the risk
     /// paragraph are the window's (`settings.memory.*`, English and Spanish).
     pub source: Source,
@@ -209,20 +262,14 @@ impl GameMemory {
     /// Called once per poll with the game in progress, its build from the
     /// log and the scene. Asks the reader only when the switch is on, and
     /// only when there is something to read.
-    pub fn tick(
-        &self,
-        reader: &dyn Reader,
-        game: Option<&GameKey>,
-        build: Option<i64>,
-        scene: Option<Scene>,
-    ) {
+    pub fn tick(&self, reader: &dyn Reader, poll: &Poll) {
         let mut s = lock(&self.state);
         if !s.enabled {
             return;
         }
         s.ticks = s.ticks.wrapping_add(1);
-        tick_tribes(&mut s, reader, game, build);
-        tick_rating(&mut s, reader, scene);
+        tick_tribes(&mut s, reader, poll.game, poll.build);
+        tick_rating(&mut s, reader, poll);
     }
 
     /// The tavern contradicted the tribes read for `game`: they are dropped
@@ -260,6 +307,7 @@ impl GameMemory {
                 duos: s.rating.and_then(|r| r.duos),
                 status: s.rating_status,
             },
+            rating_change: s.rating_change,
             source: Source::Game,
             checked_builds: CHECKED_BUILDS,
             warning: lock(&self.warning).clone(),
@@ -335,35 +383,133 @@ fn tick_tribes(s: &mut State, reader: &dyn Reader, game: Option<&GameKey>, build
     }
 }
 
-fn tick_rating(s: &mut State, reader: &dyn Reader, scene: Option<Scene>) {
-    if scene != Some(Scene::BattlegroundsLobby) {
+fn tick_rating(s: &mut State, reader: &dyn Reader, poll: &Poll) {
+    // A rating belongs to one client build: when the build changes or is
+    // no longer known, nothing read on the old one is kept.
+    if s.rating_build.is_some() && s.rating_build != poll.client_build {
+        forget_rating(s);
+    }
+    // A change belongs to the game that made it: one more game finished and
+    // it no longer says anything about the last game.
+    if s.rating_at != Some(poll.finished) {
+        s.rating_change = None;
+    }
+    if poll.scene != Some(Scene::BattlegroundsLobby) {
         s.rating_done = false;
         s.rating_tries = 0;
+        s.rating_ticks = 0;
+        s.rating_pending = None;
         return;
     }
     if s.rating_done {
         return;
     }
-    s.rating_tries += 1;
-    let result = reader.own_rating();
-    s.rating_status = match &result {
-        Ok(_) => ReaderStatus::Ok,
-        Err(e) => status_of(e),
-    };
-    match result {
-        Ok(rating) => {
-            s.rating = Some(rating);
+    s.rating_ticks = s.rating_ticks.saturating_add(1);
+    if !(s.rating_ticks - 1).is_multiple_of(RATING_EVERY) {
+        return;
+    }
+    // Trusted only on a checked build of the running client: on any other
+    // build the game is not even opened (D-063's fail-safe rule).
+    let build = match poll.client_build {
+        None => {
+            s.rating_status = ReaderStatus::Waiting;
+            return;
+        }
+        Some(b) if !CHECKED_BUILDS.contains(&b) => {
+            s.rating_status = ReaderStatus::UnsupportedVersion;
             s.rating_done = true;
+            return;
         }
-        Err(ReadFailure::NotYet) | Err(ReadFailure::NotRunning) => {
-            s.rating_done = s.rating_tries >= RATING_TRIES;
+        Some(b) => b,
+    };
+    s.rating_tries += 1;
+    match reader.own_rating() {
+        // Taken only when two reads in a row agree.
+        Ok(rating) if s.rating_pending == Some(rating) => {
+            s.rating_status = ReaderStatus::Ok;
+            s.rating_build = Some(build);
+            take_rating(s, rating, poll);
         }
-        Err(_) => {
+        Ok(rating) => {
+            s.rating_pending = Some(rating);
+            if s.rating.is_none() {
+                s.rating_status = ReaderStatus::Waiting;
+            }
+        }
+        Err(e @ (ReadFailure::NotYet | ReadFailure::NotRunning)) => {
+            s.rating_pending = None;
+            if s.rating.is_none() {
+                s.rating_status = status_of(&e);
+            }
+        }
+        Err(e) => {
             // A value that failed its checks is never kept.
-            s.rating = None;
+            forget_rating(s);
+            s.rating_status = status_of(&e);
             s.rating_done = true;
         }
     }
+    if s.rating_tries >= RATING_TRIES {
+        s.rating_done = true;
+    }
+}
+
+/// Drops the rating and everything worked out from it.
+fn forget_rating(s: &mut State) {
+    s.rating = None;
+    s.rating_pending = None;
+    s.rating_at = None;
+    s.rating_build = None;
+    s.rating_settled = false;
+    s.rating_first = None;
+    s.rating_prior = None;
+    s.rating_change = None;
+    if s.rating_status == ReaderStatus::Ok {
+        s.rating_status = ReaderStatus::Waiting;
+    }
+}
+
+/// Keeps a rating two reads agreed on, and works out the change the last
+/// game made.
+///
+/// The game may show the old rating for a moment after a game, so a rating
+/// taken after a game counts as including it ("settled") only when it moved
+/// in that game's mode; the first rating taken counts as settled. The change
+/// is the rating now minus the settled one taken before the last game, only
+/// when exactly one game finished between the two and the value moved. On
+/// any doubt there is no change, never a guess.
+fn take_rating(s: &mut State, rating: Rating, poll: &Poll) {
+    let finished = poll.finished;
+    match (s.rating, s.rating_at) {
+        (Some(old), Some(at)) if at < finished => {
+            s.rating_prior = Some((old, at, s.rating_settled));
+        }
+        (Some(_), Some(_)) => {}
+        _ => s.rating_first = Some(finished),
+    }
+    s.rating = Some(rating);
+    s.rating_at = Some(finished);
+    let pick = |r: Rating, duos: bool| if duos { r.duos } else { r.solo };
+    let moved = |a: Rating, b: Rating| {
+        poll.last_duos.is_some_and(|duos| {
+            pick(a, duos).is_some() && pick(b, duos).is_some() && pick(a, duos) != pick(b, duos)
+        })
+    };
+    s.rating_settled = s.rating_first == Some(finished)
+        || s.rating_prior
+            .is_some_and(|(prior, _, _)| moved(prior, rating));
+    s.rating_change = match (s.rating_prior, poll.last_duos) {
+        (Some((prior, at, true)), Some(duos)) if at + 1 == finished && moved(prior, rating) => {
+            match (pick(prior, duos), pick(rating, duos)) {
+                (Some(b), Some(n)) => Some(RatingChange {
+                    duos,
+                    delta: n as i32 - b as i32,
+                }),
+                _ => None,
+            }
+        }
+        _ => None,
+    };
 }
 
 /// Written whole to a side file first, so a crash never leaves half a file.
@@ -458,11 +604,21 @@ mod tests {
         n: u32,
     ) {
         for _ in 0..n {
-            gm.tick(reader, game, BUILD, scene);
+            gm.tick(reader, &poll(game, BUILD, scene));
         }
     }
 
     const BUILD: Option<i64> = Some(253216);
+
+    fn poll<'a>(game: Option<&'a GameKey>, build: Option<i64>, scene: Option<Scene>) -> Poll<'a> {
+        Poll {
+            game,
+            build,
+            scene,
+            client_build: BUILD,
+            ..Poll::default()
+        }
+    }
 
     const RATING: Rating = Rating {
         solo: Some(6543),
@@ -496,9 +652,7 @@ mod tests {
         let unloaded = GameMemory::default();
         unloaded.tick(
             &reader,
-            Some(&key(1)),
-            BUILD,
-            Some(Scene::BattlegroundsLobby),
+            &poll(Some(&key(1)), BUILD, Some(Scene::BattlegroundsLobby)),
         );
         assert_eq!(reader.calls.get(), 0);
     }
@@ -634,7 +788,10 @@ mod tests {
         let gm = on("build");
         let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(RATING)]);
         for _ in 0..60 {
-            gm.tick(&reader, Some(&key(1)), Some(999_999), Some(Scene::Game));
+            gm.tick(
+                &reader,
+                &poll(Some(&key(1)), Some(999_999), Some(Scene::Game)),
+            );
         }
         assert_eq!(reader.calls.get(), 0);
         assert_eq!(
@@ -643,7 +800,7 @@ mod tests {
         );
         // No build from the log yet: wait, without reading.
         for _ in 0..60 {
-            gm.tick(&reader, Some(&key(2)), None, Some(Scene::Game));
+            gm.tick(&reader, &poll(Some(&key(2)), None, Some(Scene::Game)));
         }
         assert_eq!(reader.calls.get(), 0);
         assert_eq!(gm.tribes_for(Some(&key(2))), (None, ReaderStatus::Waiting));
@@ -707,21 +864,242 @@ mod tests {
         );
     }
 
+    fn in_lobby(
+        gm: &GameMemory,
+        reader: &dyn Reader,
+        finished: usize,
+        last_duos: Option<bool>,
+        n: u32,
+    ) {
+        for _ in 0..n {
+            gm.tick(
+                reader,
+                &Poll {
+                    scene: Some(Scene::BattlegroundsLobby),
+                    client_build: BUILD,
+                    finished,
+                    last_duos,
+                    ..Poll::default()
+                },
+            );
+        }
+    }
+
+    fn leave(gm: &GameMemory, reader: &dyn Reader) {
+        gm.tick(reader, &poll(None, BUILD, Some(Scene::Game)));
+    }
+
+    fn rating(solo: u32, duos: u32) -> Rating {
+        Rating {
+            solo: Some(solo),
+            duos: Some(duos),
+        }
+    }
+
     #[test]
-    fn the_rating_is_read_once_per_visit_to_the_lobby_screen() {
+    fn the_rating_is_read_on_the_lobby_screen_and_taken_when_two_reads_agree() {
         let gm = on("rating");
         let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(RATING)]);
         ticks(&gm, &reader, None, Some(Scene::Menu), 5);
         assert_eq!(reader.calls.get(), 0);
-        ticks(&gm, &reader, None, Some(Scene::BattlegroundsLobby), 5);
+        in_lobby(&gm, &reader, 0, None, 1);
         assert_eq!(reader.calls.get(), 1);
+        assert_eq!(gm.view().rating.solo, None, "one read is not enough");
+        in_lobby(&gm, &reader, 0, None, RATING_EVERY);
+        assert_eq!(reader.calls.get(), 2);
         let view = gm.view();
         assert_eq!((view.rating.solo, view.rating.duos), (Some(6543), None));
         assert_eq!(view.rating.status, ReaderStatus::Ok);
         assert_eq!(view.source, Source::Game);
-        ticks(&gm, &reader, None, Some(Scene::Game), 1);
-        ticks(&gm, &reader, None, Some(Scene::BattlegroundsLobby), 5);
-        assert_eq!(reader.calls.get(), 2, "read again after a game");
+        // Bounded per visit, then read again after a game.
+        in_lobby(&gm, &reader, 0, None, 500);
+        assert_eq!(reader.calls.get(), RATING_TRIES);
+        leave(&gm, &reader);
+        in_lobby(&gm, &reader, 1, Some(false), 1);
+        assert_eq!(
+            reader.calls.get(),
+            RATING_TRIES + 1,
+            "read again after a game"
+        );
+    }
+
+    #[test]
+    fn two_rating_reads_that_differ_are_not_taken() {
+        let gm = on("rating-differ");
+        let reader = FakeReader::new(
+            vec![Ok(lobby())],
+            vec![
+                Ok(rating(6000, 5000)),
+                Ok(rating(6100, 5000)),
+                Ok(rating(6200, 5000)),
+            ],
+        );
+        in_lobby(&gm, &reader, 0, None, 3 * RATING_EVERY);
+        assert_eq!(gm.view().rating.solo, None);
+        assert_eq!(gm.view().rating.status, ReaderStatus::Waiting);
+    }
+
+    #[test]
+    fn the_rating_is_not_read_on_an_unchecked_or_unknown_client_build() {
+        let gm = on("rating-build");
+        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(RATING)]);
+        let at = |client_build| Poll {
+            scene: Some(Scene::BattlegroundsLobby),
+            client_build,
+            ..Poll::default()
+        };
+        for _ in 0..30 {
+            gm.tick(&reader, &at(None));
+        }
+        assert_eq!(reader.calls.get(), 0);
+        assert_eq!(gm.view().rating.status, ReaderStatus::Waiting);
+        for _ in 0..30 {
+            gm.tick(&reader, &at(Some(999_999)));
+        }
+        assert_eq!(reader.calls.get(), 0);
+        assert_eq!(gm.view().rating.status, ReaderStatus::UnsupportedVersion);
+        assert_eq!(gm.view().rating.solo, None);
+    }
+
+    #[test]
+    fn the_change_is_the_last_games_mode_after_exactly_one_game() {
+        let gm = on("rating-change");
+        let reader = FakeReader::new(
+            vec![Ok(lobby())],
+            vec![
+                Ok(rating(6000, 5000)),
+                Ok(rating(6000, 5000)),
+                // After one Duos game: the game still shows the old value
+                // for a moment, then the new one.
+                Ok(rating(6000, 5000)),
+                Ok(rating(6000, 5000)),
+                Ok(rating(6000, 5040)),
+                Ok(rating(6000, 5040)),
+            ],
+        );
+        in_lobby(&gm, &reader, 3, Some(false), 2 * RATING_EVERY);
+        assert_eq!(gm.view().rating.duos, Some(5000));
+        assert_eq!(
+            gm.view().rating_change,
+            None,
+            "no game since the app started"
+        );
+        leave(&gm, &reader);
+        in_lobby(&gm, &reader, 4, Some(true), 2 * RATING_EVERY);
+        assert_eq!(
+            gm.view().rating_change,
+            None,
+            "not updated yet is not a change"
+        );
+        in_lobby(&gm, &reader, 4, Some(true), 2 * RATING_EVERY);
+        assert_eq!(gm.view().rating.duos, Some(5040));
+        assert_eq!(
+            gm.view().rating_change,
+            Some(RatingChange {
+                duos: true,
+                delta: 40
+            })
+        );
+        // Back to the lobby with no game in between: the change stays.
+        leave(&gm, &reader);
+        in_lobby(&gm, &reader, 4, Some(true), 2 * RATING_EVERY);
+        assert_eq!(gm.view().rating_change.map(|c| c.delta), Some(40));
+    }
+
+    #[test]
+    fn no_change_is_shown_when_more_than_one_game_was_played_between() {
+        let gm = on("rating-gap");
+        let reader = FakeReader::new(
+            vec![Ok(lobby())],
+            vec![
+                Ok(rating(6000, 5000)),
+                Ok(rating(6000, 5000)),
+                Ok(rating(6100, 5000)),
+            ],
+        );
+        in_lobby(&gm, &reader, 3, Some(false), 2 * RATING_EVERY);
+        leave(&gm, &reader);
+        in_lobby(&gm, &reader, 5, Some(false), 2 * RATING_EVERY);
+        assert_eq!(gm.view().rating.solo, Some(6100));
+        assert_eq!(gm.view().rating_change, None);
+    }
+
+    #[test]
+    fn a_rating_taken_before_the_game_updated_it_is_no_base_for_the_next_change() {
+        // Game A: the lobby only ever showed the old 6000 (not updated yet).
+        // Game B: 6100. The +100 covers two games: no change is shown.
+        let gm = on("rating-unsettled");
+        let reader = FakeReader::new(
+            vec![Ok(lobby())],
+            vec![
+                Ok(rating(6000, 5000)),
+                Ok(rating(6000, 5000)),
+                Ok(rating(6000, 5000)),
+                Ok(rating(6000, 5000)),
+                Ok(rating(6100, 5000)),
+            ],
+        );
+        in_lobby(&gm, &reader, 0, Some(false), 2 * RATING_EVERY);
+        leave(&gm, &reader);
+        in_lobby(&gm, &reader, 1, Some(false), 2 * RATING_EVERY);
+        assert_eq!(gm.view().rating_change, None);
+        leave(&gm, &reader);
+        in_lobby(&gm, &reader, 2, Some(false), 2 * RATING_EVERY);
+        assert_eq!(gm.view().rating.solo, Some(6100));
+        assert_eq!(gm.view().rating_change, None);
+    }
+
+    #[test]
+    fn the_change_goes_away_once_another_game_finishes() {
+        let gm = on("rating-stale-change");
+        let reader = FakeReader::new(
+            vec![Ok(lobby())],
+            vec![
+                Ok(rating(6000, 5000)),
+                Ok(rating(6000, 5000)),
+                Ok(rating(6040, 5000)),
+                Ok(rating(6040, 5000)),
+                Err(ReadFailure::NotYet),
+            ],
+        );
+        in_lobby(&gm, &reader, 0, Some(false), 2 * RATING_EVERY);
+        leave(&gm, &reader);
+        in_lobby(&gm, &reader, 1, Some(false), 2 * RATING_EVERY);
+        assert_eq!(gm.view().rating_change.map(|c| c.delta), Some(40));
+        // Game B ends; the lobby cannot be read this time.
+        gm.tick(
+            &reader,
+            &Poll {
+                scene: Some(Scene::Game),
+                client_build: BUILD,
+                finished: 2,
+                last_duos: Some(false),
+                ..Poll::default()
+            },
+        );
+        assert_eq!(gm.view().rating_change, None);
+    }
+
+    #[test]
+    fn a_rating_read_on_one_build_is_dropped_when_the_build_changes_or_is_unknown() {
+        let gm = on("rating-build-change");
+        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(RATING)]);
+        in_lobby(&gm, &reader, 0, None, 500);
+        assert_eq!(gm.view().rating.solo, Some(6543));
+        for build in [None, Some(999_999)] {
+            gm.tick(
+                &reader,
+                &Poll {
+                    scene: Some(Scene::BattlegroundsLobby),
+                    client_build: build,
+                    ..Poll::default()
+                },
+            );
+            assert_eq!(gm.view().rating.solo, None, "{build:?}");
+            assert_ne!(gm.view().rating.status, ReaderStatus::Ok);
+            in_lobby(&gm, &reader, 0, None, 2 * RATING_EVERY);
+            leave(&gm, &reader);
+        }
     }
 
     #[test]
@@ -731,27 +1109,31 @@ mod tests {
             vec![Ok(lobby())],
             vec![
                 Ok(RATING),
+                Ok(RATING),
                 Err(ReadFailure::Unsupported("rating out of range".into())),
             ],
         );
-        ticks(&gm, &reader, None, Some(Scene::BattlegroundsLobby), 1);
+        in_lobby(&gm, &reader, 0, None, 2 * RATING_EVERY);
         assert_eq!(gm.view().rating.solo, Some(6543));
-        ticks(&gm, &reader, None, Some(Scene::Game), 1);
-        ticks(&gm, &reader, None, Some(Scene::BattlegroundsLobby), 1);
+        leave(&gm, &reader);
+        in_lobby(&gm, &reader, 0, None, 1);
         let view = gm.view();
         assert_eq!(view.rating.solo, None);
         assert_eq!(view.rating.status, ReaderStatus::UnsupportedVersion);
+        let calls = reader.calls.get();
+        in_lobby(&gm, &reader, 0, None, 30);
+        assert_eq!(reader.calls.get(), calls, "not read again on that visit");
     }
 
     #[test]
     fn an_unsupported_rating_does_not_mark_good_tribes_unsupported() {
-        // The rating path is not mapped on build 253216 (T-337): the lobby
-        // screen's failed rating read must not hide that the tribes work.
+        // A rating the reader cannot use on the lobby screen must not hide
+        // that the tribes work.
         let gm = on("rating-unmapped");
         let reader = FakeReader::new(
             vec![Ok(lobby())],
             vec![Err(ReadFailure::Unsupported(
-                "rating path not mapped".into(),
+                "class NetCache not found".into(),
             ))],
         );
         ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 6);

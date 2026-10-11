@@ -23,6 +23,8 @@ pub enum Panel {
     Tribes,
     Opponents,
     Legend,
+    /// The short panel on the Battlegrounds lobby screen (T-338).
+    Lobby,
 }
 
 impl Panel {

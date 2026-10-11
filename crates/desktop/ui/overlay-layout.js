@@ -10,15 +10,16 @@
   const { listen: onEvent } = window.__TAURI__.event;
   const I18n = window.TLI18n;
 
-  const PANEL_IDS = ["status", "tribes", "opponents", "legend"];
+  const PANEL_IDS = ["status", "tribes", "opponents", "legend", "lobby"];
   // The panels' names are read when used, so they follow the language.
   const SLOT_NAMES = {
     status: () => I18n.t("ov.slot.status"),
     tribes: () => I18n.t("ov.slot.tribes"),
     opponents: () => I18n.t("ov.slot.opponents"),
     legend: () => I18n.t("ov.slot.legend"),
+    lobby: () => I18n.t("ov.slot.lobby"),
   };
-  const TOGGLE_IDS = ["status", "tribes", "opponents"];
+  const TOGGLE_IDS = ["status", "tribes", "opponents", "lobby"];
   const slotName = (id) => SLOT_NAMES[id]();
   const panelTitle = (id) => I18n.t("ov.slot.panel", { name: slotName(id) });
   // Rough limits while dragging; the app enforces the real ones when it saves.
@@ -37,6 +38,8 @@
   const BOX_MIN_H = 40;
 
   const stack = document.getElementById("stack");
+  // The lobby panel's own corner while the user has not placed it (T-338).
+  const lobbyDock = document.getElementById("lobby-dock");
   const slots = new Map(
     PANEL_IDS.map((id) => [id, document.querySelector(`.slot[data-panel="${id}"]`)]),
   );
@@ -197,6 +200,7 @@
       slot.querySelector(".grip").hidden = !v.unlocked;
       makeReachable(id, slot, v.unlocked);
       if (place(id, slot)) document.body.append(slot);
+      else if (id === "lobby") lobbyDock.append(slot);
       else inStack.push(slot);
     }
     stack.append(...inStack);

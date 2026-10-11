@@ -4,6 +4,7 @@
 //! game itself is in `game-memory` (D-063).
 
 pub mod choices;
+pub mod client_build;
 pub mod dev_reconnect;
 pub mod discover;
 pub mod game_clock;
@@ -36,6 +37,7 @@ use bg_parser::report::{GameReport, Status};
 use bg_parser::LogReader;
 
 use bg_parser::report::LobbySlot;
+use client_build::ClientBuild;
 use game_clock::{GameClock, LocalToUtc, Played};
 use playback::Playback;
 use scene::{Scene, SceneTracker};
@@ -139,6 +141,9 @@ pub struct Watcher {
     /// A game the player left before its end (session, game index): it
     /// stays over even when the next game's loading screen comes.
     left: Option<(String, usize)>,
+    logs_dir: PathBuf,
+    /// The running client's build, also before its first game (T-337).
+    build: ClientBuild,
 }
 
 impl Watcher {
@@ -151,10 +156,12 @@ impl Watcher {
             pending: VecDeque::new(),
             live_stale: true,
             to_utc: game_clock::system_local_to_utc,
-            scenes: Follower::loading_screen(logs_dir),
+            scenes: Follower::loading_screen(logs_dir.clone()),
             scene: SceneTracker::default(),
             scene_error: None,
             left: None,
+            logs_dir,
+            build: ClientBuild::default(),
         }
     }
 
@@ -171,10 +178,12 @@ impl Watcher {
         let reader = &mut self.reader;
         let pending = &mut self.pending;
         let live_stale = &mut self.live_stale;
+        let build = &mut self.build;
         let to_utc = self.to_utc;
         let read = self.follower.poll(&mut |event| match event {
             Event::Session(name) => {
                 *live_stale = true;
+                build.start(name);
                 if let Some(old) = reader.take() {
                     old.finish(pending, to_utc);
                 }
@@ -182,6 +191,7 @@ impl Watcher {
             }
             Event::Line(line) => {
                 *live_stale = true;
+                build.feed_power(line);
                 if let Some(r) = reader.as_mut() {
                     r.feed(line);
                     let done: Vec<GameReport> = r
@@ -205,6 +215,7 @@ impl Watcher {
                 r.record_live();
             }
         }
+        self.build.look_in_net_log(&self.logs_dir);
         self.poll_scenes();
         match self.scene() {
             Some(scene) if scene.left_game() => {
@@ -240,6 +251,12 @@ impl Watcher {
             self.live_stale = true;
         }
         self.scene_error = error;
+    }
+
+    /// The game build of the running client: from the session's games, else
+    /// from the start of its `Net.log`; None when unknown (T-337).
+    pub fn client_build(&self) -> Option<i64> {
+        self.build.now()
     }
 
     /// Why `LoadingScreen.log` could not be read in the last poll; None when

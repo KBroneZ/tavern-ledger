@@ -118,7 +118,7 @@
       "win.overlay.arrange": "Arrange overlay",
       "win.overlay.lock": "Lock overlay",
       "win.overlay.howTitle": "How the overlay works",
-      "win.overlay.how": "Also in the tray menu. It shows over Hearthstone only while a game is on; hover a hero on the game's leaderboard to see the last board you met. \"Arrange overlay\" lets you move the panels and fit the leaderboard box (the whole screen takes clicks until you press \"Lock overlay\"). Exclusive fullscreen hides any overlay: run Hearthstone windowed or borderless.",
+      "win.overlay.how": "Also in the tray menu. It shows over Hearthstone only while a game is on, and its small lobby panel on the Battlegrounds lobby screen; hover a hero on the game's leaderboard to see the last board you met. \"Arrange overlay\" lets you move the panels and fit the leaderboard box (the whole screen takes clicks until you press \"Lock overlay\"). Exclusive fullscreen hides any overlay: run Hearthstone windowed or borderless.",
       "win.overlay.failed": "The overlay setting could not be read or changed ({error}).",
 
       "win.upload.title": "Upload to the website",
@@ -214,7 +214,7 @@
       "win.cards.getting": "Card pictures: getting the card data…",
 
       "win.footer.fan": "Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.",
-      "win.footer.names": "Hero names come from your game's log, in your game's language. MMR is not in the game's log.",
+      "win.footer.names": "Card and hero names follow the app's language (from the card data). Your rating is not in the game's log: it shows only when reading from the game is on in Settings.",
       "win.footer.cards": "Card pictures and minion names come from HearthstoneJSON (hearthstonejson.com) and are kept on this PC; card art and card data © Blizzard Entertainment.",
     },
 
@@ -331,7 +331,7 @@
       "win.overlay.arrange": "Organizar overlay",
       "win.overlay.lock": "Bloquear overlay",
       "win.overlay.howTitle": "Cómo funciona el overlay",
-      "win.overlay.how": "También está en el menú de la bandeja. Se muestra sobre Hearthstone solo mientras hay una partida en curso; pasa el ratón por un héroe de la clasificación del juego para ver el último tablero que te encontraste. «Organizar overlay» te deja mover los paneles y ajustar el recuadro de la clasificación (toda la pantalla recibe los clics hasta que pulses «Bloquear overlay»). El pantalla completa exclusivo oculta cualquier overlay: usa Hearthstone en ventana o sin bordes.",
+      "win.overlay.how": "También está en el menú de la bandeja. Se muestra sobre Hearthstone solo mientras hay una partida en curso, y su pequeño panel de la sala en la pantalla de Battlegrounds; pasa el ratón por un héroe de la clasificación del juego para ver el último tablero que te encontraste. «Organizar overlay» te deja mover los paneles y ajustar el recuadro de la clasificación (toda la pantalla recibe los clics hasta que pulses «Bloquear overlay»). El pantalla completa exclusivo oculta cualquier overlay: usa Hearthstone en ventana o sin bordes.",
       "win.overlay.failed": "No se ha podido leer o cambiar el ajuste del overlay ({error}).",
 
       "win.upload.title": "Subir a la web",
@@ -427,7 +427,7 @@
       "win.cards.getting": "Imágenes de cartas: obteniendo los datos de cartas…",
 
       "win.footer.fan": "Proyecto no oficial de aficionados. No está afiliado a Blizzard Entertainment ni cuenta con su respaldo.",
-      "win.footer.names": "Los nombres de héroes vienen del registro de tu juego, en el idioma de tu juego. La puntuación (MMR) no está en el registro del juego.",
+      "win.footer.names": "Los nombres de cartas y héroes siguen el idioma de la app (de los datos de cartas). Tu puntuación no está en el registro del juego: solo sale si activas la lectura del juego en Ajustes.",
       "win.footer.cards": "Las imágenes de cartas y los nombres de esbirros vienen de HearthstoneJSON (hearthstonejson.com) y se guardan en este PC; arte y datos de cartas © Blizzard Entertainment.",
     },
 

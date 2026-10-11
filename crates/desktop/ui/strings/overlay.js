@@ -63,6 +63,19 @@
 
       // Status panel.
       "ov.status.waiting": "Waiting for a game…",
+
+      // Lobby panel (T-338): on the Battlegrounds lobby screen, before a game.
+      "ov.slot.lobby": "Lobby",
+      "lobby.change.label": "since your last game",
+      "lobby.rating.unsupported": "Rating: unsupported game version",
+      "lobby.rating.noAccess": "Rating: no read access to the game",
+      "lobby.rating.off": "Your rating shows here when reading from the game is on (Settings).",
+      "lobby.games.one": "{n} game",
+      "lobby.games.other": "{n} games",
+      "lobby.avg": "avg {value}",
+      "lobby.top": "top {top} {value}",
+      "lobby.today": "{mode} today: {list}",
+      "lobby.today.none": "No games yet today",
       "ov.status.loading": "Battlegrounds game loading…",
       "ov.status.starting": "Game starting… waiting for the lobby.",
       "ov.status.unreadable.title": "Cannot read this game",
@@ -214,6 +227,18 @@
       "ov.announce.panel": "Panel {name}: x {x}, y {y}, ancho {w}",
 
       "ov.status.waiting": "Esperando una partida…",
+
+      "ov.slot.lobby": "Sala",
+      "lobby.change.label": "desde tu última partida",
+      "lobby.rating.unsupported": "Puntuación: versión del juego no compatible",
+      "lobby.rating.noAccess": "Puntuación: sin permiso de lectura del juego",
+      "lobby.rating.off": "Tu puntuación sale aquí si activas la lectura del juego (Ajustes).",
+      "lobby.games.one": "{n} partida",
+      "lobby.games.other": "{n} partidas",
+      "lobby.avg": "media {value}",
+      "lobby.top": "top {top} {value}",
+      "lobby.today": "{mode} hoy: {list}",
+      "lobby.today.none": "Aún no has jugado hoy",
       "ov.status.loading": "Cargando una partida de Battlegrounds…",
       "ov.status.starting": "Empieza la partida… esperando a la sala.",
       "ov.status.unreadable.title": "No se puede leer esta partida",

@@ -25,6 +25,11 @@
   --stack-right: 8px;
   --stack-top: 96px;
   --stack-width: 26rem;
+  /* The lobby panel's corner (T-338): top left, clear of the lobby screen's
+     menu and friends buttons at the bottom corners. */
+  --lobby-left: 16px;
+  --lobby-top: 16px;
+  --lobby-width: 17rem;
 }
 
 * { box-sizing: border-box; }
@@ -590,3 +595,26 @@ body[data-detail="simple"] .panel { padding: 5px 7px 6px; }
 .opp .nums { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
 .opp .opp-hp { font: 800 1.15rem/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
 .opp .opp-triples { color: var(--accent); font-weight: 700; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+
+/* Lobby panel (T-338): small, on the Battlegrounds lobby screen only. */
+#lobby-dock {
+  position: absolute;
+  left: var(--lobby-left);
+  top: var(--lobby-top);
+  width: var(--lobby-width);
+  display: flex;
+  flex-direction: column;
+}
+.lobby-rating { display: flex; align-items: baseline; gap: 6px; margin: 0; }
+.lobby-rating + .lobby-rating { margin-top: 2px; }
+.lobby-mode { min-width: 4.6em; color: var(--dim); }
+.lobby-value { font: 700 1.231rem/1.25 var(--font-display); font-stretch: 88%; color: var(--accent); font-variant-numeric: tabular-nums; }
+.lobby-change { font-weight: 700; font-variant-numeric: tabular-nums; }
+.lobby-change.up { color: var(--won); }
+.lobby-change.down { color: var(--lost); }
+.lobby-change.up::before { content: "\25B2\00a0"; font-size: 0.7em; }
+.lobby-change.down::before { content: "\25BC\00a0"; font-size: 0.7em; }
+.lobby .notes { margin: 3px 0 0; color: var(--amber); font-size: 0.923rem; }
+.lobby-today .nowrap { white-space: nowrap; }
+.lobby-today { margin: 4px 0 0; color: var(--dim); font-size: 0.923rem; }
+.lobby-rating + .lobby-today, .lobby .src + .lobby-today { padding-top: 4px; border-top: 1px solid color-mix(in srgb, var(--border) 45%, transparent); }

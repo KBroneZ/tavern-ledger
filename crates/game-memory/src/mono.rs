@@ -74,6 +74,8 @@ const MAX_VTABLE: u32 = 65_536;
 /// `FIELD_ATTRIBUTE_STATIC` and `FIELD_ATTRIBUTE_LITERAL` (ECMA-335).
 const ATTR_STATIC: u32 = 0x10;
 const ATTR_LITERAL: u32 = 0x40;
+/// `MONO_TYPE_I4`: a field of type `int` (ECMA-335 element type).
+pub const TYPE_I4: u32 = 0x08;
 
 /// Why a walk stopped. Reasons name only Mono metadata (assembly, class and
 /// field names), never game data.
@@ -96,6 +98,7 @@ impl std::fmt::Display for WalkError {
         match self {
             WalkError::Read(ReadError::Unreadable(_)) => write!(f, "memory not readable"),
             WalkError::Read(ReadError::BadName(_)) => write!(f, "unreadable name"),
+            WalkError::Read(ReadError::BadPointer(_)) => write!(f, "not a pointer"),
             WalkError::Unsupported(why) => write!(f, "{why}"),
         }
     }
@@ -110,6 +113,8 @@ fn unsupported(why: impl Into<String>) -> WalkError {
 pub struct Field {
     pub offset: u64,
     pub is_static: bool,
+    /// The element type (`MONO_TYPE_*`), bits 16 to 23 after the attributes.
+    pub type_code: u32,
 }
 
 pub struct Mono<'a> {
@@ -168,9 +173,9 @@ impl<'a> Mono<'a> {
                 }
                 return Ok(image);
             }
-            match self.mem.read_u64(node + 8)? {
-                0 => break,
-                next => node = next,
+            match self.mem.read_link(node + 8)? {
+                None => break,
+                Some(next) => node = next,
             }
         }
         Err(unsupported(format!("assembly {assembly} not loaded")))
@@ -188,8 +193,8 @@ impl<'a> Mono<'a> {
         let table = self.mem.read_ptr(cache + 32)?;
         let mut seen = 0usize;
         for i in 0..u64::from(buckets) {
-            let mut class = self.mem.read_u64(table + i * 8)?;
-            while class != 0 {
+            let mut link = self.mem.read_link(table + i * 8)?;
+            while let Some(class) = link {
                 seen += 1;
                 if seen > MAX_CLASSES {
                     return Err(unsupported("class cache too long"));
@@ -205,16 +210,16 @@ impl<'a> Mono<'a> {
                 {
                     return Ok(class);
                 }
-                class = self.mem.read_u64(class + l.class_next_cached)?;
+                link = self.mem.read_link(class + l.class_next_cached)?;
             }
         }
         Err(unsupported(format!("class {name} not found")))
     }
 
     fn class_namespace(&self, class: u64) -> Result<String, WalkError> {
-        match self.mem.read_u64(class + self.layout.class_namespace)? {
-            0 => Ok(String::new()),
-            p => Ok(self.mem.read_name(p)?),
+        match self.mem.read_link(class + self.layout.class_namespace)? {
+            None => Ok(String::new()),
+            Some(p) => Ok(self.mem.read_name(p)?),
         }
     }
 
@@ -272,7 +277,8 @@ impl<'a> Mono<'a> {
                 return Err(unsupported("field does not point back to its class"));
             }
             let ty = self.mem.read_ptr(entry)?;
-            let attrs = self.mem.read_u32(ty + l.type_attrs)? & 0xffff;
+            let word = self.mem.read_u32(ty + l.type_attrs)?;
+            let attrs = word & 0xffff;
             if attrs & ATTR_LITERAL != 0 {
                 return Err(unsupported(format!("field {name} is a constant")));
             }
@@ -281,6 +287,7 @@ impl<'a> Mono<'a> {
             return Ok(Field {
                 offset,
                 is_static: attrs & ATTR_STATIC != 0,
+                type_code: (word >> 16) & 0xff,
             });
         }
         Err(unsupported(format!("field {name} not found")))
@@ -312,23 +319,68 @@ impl<'a> Mono<'a> {
             return Err(unsupported(format!("field {field} is not static")));
         }
         let data = self.static_data(class)?;
-        self.mem
-            .read_ptr(data + f.offset)
-            .map_err(|_| unsupported(format!("{field} is not set")))
+        reference(self.mem.read_ptr(data + f.offset), field)
     }
 
     /// The object in an instance reference field of `object` (of `class`).
     pub fn object_field(&self, object: u64, class: u64, field: &str) -> Result<u64, WalkError> {
         let f = self.instance_field(class, field)?;
-        self.mem
-            .read_ptr(object + f.offset)
-            .map_err(|_| unsupported(format!("{field} is not set")))
+        reference(self.mem.read_ptr(object + f.offset), field)
     }
 
-    /// A 32-bit integer instance field of `object` (of `class`).
+    /// A 32-bit integer instance field of `object` (of `class`); a field of
+    /// any other type is refused.
     pub fn int_field(&self, object: u64, class: u64, field: &str) -> Result<i32, WalkError> {
         let f = self.instance_field(class, field)?;
+        if f.type_code != TYPE_I4 {
+            return Err(unsupported(format!("field {field} is not an int")));
+        }
         Ok(self.mem.read_i32(object + f.offset)?)
+    }
+
+    /// The elements of an array object of references, after checking that
+    /// its class is `array_class` (for example `Object[]`), that it has at
+    /// most `max` elements and that it holds at least `used`. Empty slots are
+    /// `None`.
+    pub fn ref_array(
+        &self,
+        array: u64,
+        array_class: &str,
+        used: usize,
+        max: usize,
+    ) -> Result<Vec<Option<u64>>, WalkError> {
+        self.struct_array_refs(array, array_class, used, max, 8, 0)
+    }
+
+    /// The `stride`-byte entries of an array object of structs, read as the
+    /// reference at `at` in each entry; same checks as [`Mono::ref_array`].
+    pub fn struct_array_refs(
+        &self,
+        array: u64,
+        array_class: &str,
+        used: usize,
+        max: usize,
+        stride: u64,
+        at: u64,
+    ) -> Result<Vec<Option<u64>>, WalkError> {
+        if self.object_class_name(array)? != array_class {
+            return Err(unsupported("array of another type"));
+        }
+        let len = self.mem.read_u64(array + 0x18)?;
+        let fits = at.checked_add(8).is_some_and(|end| end <= stride);
+        if !fits || used > max || (used as u64) > len {
+            return Err(unsupported("array shorter than its count"));
+        }
+        (0..used as u64)
+            .map(|i| {
+                let addr = i
+                    .checked_mul(stride)
+                    .and_then(|o| o.checked_add(0x20 + at))
+                    .and_then(|o| array.checked_add(o))
+                    .ok_or_else(|| unsupported("array out of range"))?;
+                Ok(self.mem.read_link(addr)?)
+            })
+            .collect()
     }
 
     fn instance_field(&self, class: u64, field: &str) -> Result<Field, WalkError> {
@@ -337,6 +389,17 @@ impl<'a> Mono<'a> {
             return Err(unsupported(format!("field {field} is static")));
         }
         Ok(f)
+    }
+}
+
+/// A reference field's value: null is "not set" (the game has not made the
+/// object yet); a value that is not a pointer, or memory that cannot be read,
+/// is passed on as it is.
+fn reference(read: Result<u64, ReadError>, field: &str) -> Result<u64, WalkError> {
+    match read {
+        Ok(p) => Ok(p),
+        Err(ReadError::Unreadable(0)) => Err(unsupported(format!("{field} is not set"))),
+        Err(e) => Err(WalkError::Read(e)),
     }
 }
 
@@ -381,6 +444,16 @@ pub(crate) mod fake {
         pub offset: u64,
         pub is_static: bool,
     }
+
+    /// Fields the fake types as `int`; every other field is a class.
+    pub const INT_FIELDS: [&str; 6] = [
+        "m_count",
+        "<Rating>k__BackingField",
+        "<DuosRating>k__BackingField",
+        "_count",
+        "touchedSlots",
+        "m_int",
+    ];
 
     impl FakeMono {
         pub fn new() -> FakeMono {
@@ -471,7 +544,12 @@ pub(crate) mod fake {
                 let e = entries + i as u64 * L.field_size;
                 let ty = self.alloc(16);
                 let attrs = if f.is_static { ATTR_STATIC } else { 0 };
-                self.mem.put_u32(ty + L.type_attrs, attrs | (0x12 << 16));
+                let code = if INT_FIELDS.contains(&f.name) {
+                    TYPE_I4
+                } else {
+                    0x12
+                };
+                self.mem.put_u32(ty + L.type_attrs, attrs | (code << 16));
                 let fname = self.string(f.name);
                 self.mem.put_u64(e, ty);
                 self.mem.put_u64(e + L.field_name, fname);

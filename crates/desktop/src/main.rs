@@ -9,6 +9,7 @@ mod foreground;
 mod game_memory;
 mod hover;
 mod leaderboard;
+mod lobby_panel;
 mod over_game_guard;
 mod overlay;
 mod overlay_layout;
@@ -116,6 +117,8 @@ struct GameRow {
     /// Played with the reconnect dev tool (D-043): marked in the history and
     /// left out of the stats and the upload.
     dev_reconnect: bool,
+    /// When the game ended (UTC seconds, from the log's clock), when known.
+    ended: Option<i64>,
 }
 
 /// Shared with the window. The watcher itself lives only in the tracker
@@ -278,6 +281,53 @@ fn overlay_state_of(state: &AppState) -> Option<LiveGame> {
     )
 }
 
+/// The lobby panel (T-338): the own rating from the game, the last game's
+/// change and the day's summary. `day_start` and `day_end` are the page's
+/// local midnights in UTC seconds; a span that is not a day gives no summary.
+#[tauri::command]
+fn overlay_lobby(
+    state: State<'_, Arc<AppState>>,
+    day_start: i64,
+    day_end: i64,
+) -> lobby_panel::LobbyView {
+    lobby_of(
+        &state,
+        (day_start, day_end),
+        tracker::game_clock::system_local_to_utc,
+    )
+}
+
+fn lobby_of(
+    state: &AppState,
+    day: (i64, i64),
+    to_utc: tracker::game_clock::LocalToUtc,
+) -> lobby_panel::LobbyView {
+    let scene = *state.scene.lock().unwrap_or_else(|e| e.into_inner());
+    let game_on = state
+        .live
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .is_some();
+    let memory = state.game_memory.view();
+    let today = if lobby_panel::sane_day(day.0, day.1) {
+        let rows = state.games.lock().unwrap_or_else(|e| e.into_inner());
+        tracker::stats::summary(
+            rows.iter()
+                .filter(|r| !r.dev_reconnect)
+                .filter(|r| lobby_panel::played_in(r.ended, &r.session, day, to_utc))
+                .map(|r| &r.report),
+        )
+    } else {
+        Vec::new()
+    };
+    lobby_panel::LobbyView {
+        in_lobby: scene == Some(Scene::BattlegroundsLobby) && !game_on,
+        rating: memory.rating,
+        rating_change: memory.rating_change,
+        today,
+    }
+}
+
 /// The switch for reading from the game (D-063), its status and the own
 /// rating read, for the settings page.
 #[tauri::command]
@@ -294,7 +344,7 @@ fn game_memory_set_enabled(state: State<'_, Arc<AppState>>, enabled: bool) -> ga
 
 /// Asks the game for its values when the switch is on (D-063). A bug in the
 /// reader turns it off for this run instead of stopping the tracker.
-fn read_from_game(app: &AppHandle, state: &AppState) {
+fn read_from_game(app: &AppHandle, state: &AppState, client_build: Option<i64>) {
     let game = state
         .in_progress
         .lock()
@@ -307,16 +357,37 @@ fn read_from_game(app: &AppHandle, state: &AppState) {
         .unwrap_or_else(|e| e.into_inner())
         .as_ref()
         .and_then(|live| live.build);
-    let tick = || {
-        state
-            .game_memory
-            .tick(&game_memory::GameReader, game.as_ref(), build, scene)
+    let (finished, last_duos) = last_game(&state.games.lock().unwrap_or_else(|e| e.into_inner()));
+    let poll = game_memory::Poll {
+        game: game.as_ref(),
+        build,
+        scene,
+        client_build,
+        finished,
+        last_duos,
     };
+    let tick = || state.game_memory.tick(&game_memory::GameReader, &poll);
     if catch_unwind(AssertUnwindSafe(tick)).is_err() {
         state.game_memory.stop_for_run();
         let msg = "Reading from the game stopped after an internal error; it is off until the app restarts.";
         set_status(app, state, |s| s.notice = Some(msg.into()));
     }
+}
+
+/// How many games the history has, and whether the newest was Duos (`None`:
+/// none, or another mode). Games played with the reconnect dev tool are left
+/// out, as in the stats. The history is sorted by session and game number,
+/// so the last row is the newest game.
+fn last_game(rows: &[GameRow]) -> (usize, Option<bool>) {
+    let counted: Vec<&GameRow> = rows.iter().filter(|r| !r.dev_reconnect).collect();
+    let last = counted
+        .last()
+        .and_then(|r| match r.report.get("game_type")?.as_str()? {
+            "GT_BATTLEGROUNDS" => Some(false),
+            "GT_BATTLEGROUNDS_DUO" => Some(true),
+            _ => None,
+        });
+    (counted.len(), last)
 }
 
 /// The lobby tribes entered by hand, the fixed list to pick from and the game
@@ -547,6 +618,7 @@ fn rows_of(store: &Store, reconnects: &Reconnects) -> Vec<GameRow> {
             parser: store.parser(key).cloned(),
             sources: row_sources(&key.session, report),
             dev_reconnect: marked.contains(key),
+            ended: store.played(key).map(|p| p.to),
         })
         .collect()
 }
@@ -670,7 +742,7 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
         }
         publish_scene(&app, &state, watcher.scene(), watcher.scene_error());
         track_game_in_progress(&app, &state, &mut starts, watcher.in_progress());
-        read_from_game(&app, &state);
+        read_from_game(&app, &state, watcher.client_build());
         let session = watcher.session().map(String::from);
         let power_log = watcher.has_power_log();
         match result {
@@ -920,6 +992,7 @@ fn main() {
             edit_lobby_tribes,
             overlay_state,
             overlay_scene,
+            overlay_lobby,
             overlay::overlay_settings,
             overlay::overlay_save_layout,
             overlay::overlay_set_theme,
@@ -1010,6 +1083,7 @@ mod tests {
             parser: None,
             sources: row_sources("", &serde_json::Value::Null),
             dev_reconnect: false,
+            ended: None,
             report: serde_json::json!({
                 "status": "ok", "game_type": game_type, "hero": "H", "final_place": place,
             }),
@@ -1035,6 +1109,7 @@ mod tests {
             parser: None,
             sources: row_sources("", &serde_json::Value::Null),
             dev_reconnect,
+            ended: None,
             report,
         }
     }
@@ -1142,6 +1217,7 @@ mod tests {
             sources: row_sources("Hearthstone_2026_10_09_00_00_00", &report),
             parser: None,
             dev_reconnect: false,
+            ended: None,
             report,
         });
         state
@@ -1337,6 +1413,70 @@ mod tests {
             "hero": "H", "lobby": [{"player_id": 1, "hero": "H"}, {"player_id": 2, "hero": "O"}],
             "start_health": {"1": 40, "2": 40}, "shop_tribes": tribes, "rounds": [],
         }))
+    }
+
+    fn utc_is_local(local: i64) -> Option<i64> {
+        Some(local)
+    }
+
+    #[test]
+    fn the_lobby_panel_is_up_only_on_the_lobby_screen_with_the_days_games() {
+        let row = |session: &str, game_type: &str, place: i64, ended: Option<i64>, dev| GameRow {
+            session: session.into(),
+            index: 1,
+            parser: None,
+            sources: row_sources("", &serde_json::Value::Null),
+            dev_reconnect: dev,
+            ended,
+            report: serde_json::json!({"status": "ok", "game_type": game_type, "final_place": place}),
+        };
+        // 2026-10-11, UTC as local time.
+        let day = (1_791_676_800, 1_791_676_800 + 86_400);
+        let state = AppState::default();
+        *state.games.lock().unwrap() = vec![
+            row(
+                "Hearthstone_2026_10_10_20_00_00",
+                "GT_BATTLEGROUNDS",
+                1,
+                Some(day.0 - 60),
+                false,
+            ),
+            row(
+                "Hearthstone_2026_10_11_04_58_30",
+                "GT_BATTLEGROUNDS",
+                3,
+                None,
+                false,
+            ),
+            row(
+                "Hearthstone_2026_10_11_04_58_30",
+                "GT_BATTLEGROUNDS",
+                5,
+                Some(day.0 + 7200),
+                false,
+            ),
+            row(
+                "Hearthstone_2026_10_11_04_58_30",
+                "GT_BATTLEGROUNDS_DUO",
+                1,
+                Some(day.0 + 9000),
+                true,
+            ),
+        ];
+        let view = lobby_of(&state, day, utc_is_local);
+        assert!(!view.in_lobby, "scene unknown");
+        assert_eq!(view.rating.status, tracker::game_values::ReaderStatus::Off);
+        assert_eq!(view.rating_change, None);
+        assert_eq!(view.today.len(), 1, "the dev tool game is not counted");
+        assert_eq!(view.today[0].tally.games, 2);
+        assert_eq!(view.today[0].tally.average_place, Some(4.0));
+        *state.scene.lock().unwrap() = Some(Scene::BattlegroundsLobby);
+        assert!(lobby_of(&state, day, utc_is_local).in_lobby);
+        // A day that is not one gives no summary.
+        assert!(lobby_of(&state, (day.1, day.0), utc_is_local)
+            .today
+            .is_empty());
+        assert_eq!(last_game(&state.games.lock().unwrap()), (3, Some(false)));
     }
 
     #[test]

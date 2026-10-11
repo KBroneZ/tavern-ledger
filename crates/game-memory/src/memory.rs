@@ -6,6 +6,11 @@ use std::collections::BTreeMap;
 /// Longest C string the walker reads (class, field and assembly names).
 pub const MAX_NAME: usize = 256;
 
+/// The user-mode address range of a 64-bit Windows process. Every pointer
+/// the walker follows must be inside it; the first 64 KiB are never mapped.
+pub const MIN_ADDRESS: u64 = 0x1_0000;
+pub const MAX_ADDRESS: u64 = 0x7fff_ffff_ffff;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ReadError {
     /// The address range is not readable (or a pointer that must be set is
@@ -13,6 +18,9 @@ pub enum ReadError {
     Unreadable(u64),
     /// A name was not NUL-terminated within [`MAX_NAME`] bytes, or not UTF-8.
     BadName(u64),
+    /// A pointer read from memory is outside the user-mode address range:
+    /// not something the game wrote there as a pointer.
+    BadPointer(u64),
 }
 
 pub trait Memory {
@@ -48,11 +56,22 @@ pub trait Memory {
     }
 
     /// A pointer; null is an error, since every pointer the walker follows
-    /// must be set.
+    /// must be set. A value outside the user-mode address range is refused
+    /// too, so adding a structure offset to a pointer can never overflow.
     fn read_ptr(&self, addr: u64) -> Result<u64, ReadError> {
+        match self.read_link(addr)? {
+            Some(p) => Ok(p),
+            None => Err(ReadError::Unreadable(0)),
+        }
+    }
+
+    /// A pointer that may be null (the end of a chain): `None` for null, an
+    /// error for a value outside the user-mode address range.
+    fn read_link(&self, addr: u64) -> Result<Option<u64>, ReadError> {
         match self.read_u64(addr)? {
-            0 => Err(ReadError::Unreadable(0)),
-            p => Ok(p),
+            0 => Ok(None),
+            p if (MIN_ADDRESS..=MAX_ADDRESS).contains(&p) => Ok(Some(p)),
+            p => Err(ReadError::BadPointer(p)),
         }
     }
 
@@ -187,6 +206,23 @@ mod tests {
         let mut m = FakeMemory::new();
         m.zeroed(0x1000, 8);
         assert!(m.read_ptr(0x1000).is_err());
+    }
+
+    #[test]
+    fn pointers_outside_user_space_are_refused() {
+        let mut m = FakeMemory::new();
+        m.zeroed(0x1000, 32);
+        m.put_u64(0x1000, 0xffff_ffff_ffff_fff0);
+        m.put_u64(0x1008, 0x10);
+        m.put_u64(0x1010, 0x7ff0_0000_0000);
+        assert_eq!(
+            m.read_ptr(0x1000),
+            Err(ReadError::BadPointer(0xffff_ffff_ffff_fff0))
+        );
+        assert!(m.read_ptr(0x1008).is_err());
+        assert_eq!(m.read_ptr(0x1010), Ok(0x7ff0_0000_0000));
+        assert_eq!(m.read_link(0x1018), Ok(None));
+        assert!(m.read_link(0x1000).is_err());
     }
 
     #[test]

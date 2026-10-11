@@ -35,6 +35,9 @@ fn with_mono<T>(
     let mono = mono::Mono::attach(&game, game.mono_base(), mono::LAYOUT_BDWGC_X64).map_err(
         |e| match e {
             mono::WalkError::Unsupported(why) => ReadFailure::Unsupported(why),
+            mono::WalkError::Read(memory::ReadError::BadPointer(_)) => {
+                ReadFailure::Unsupported("a pointer out of range".into())
+            }
             mono::WalkError::Read(_) => ReadFailure::NotYet,
         },
     )?;
@@ -81,7 +84,7 @@ mod scope_tests {
 
     /// Every name the walker may look up or check a type against, and
     /// nothing else.
-    const ALLOWED: [&str; 10] = [
+    const ALLOWED: [&str; 28] = [
         "Assembly-CSharp",
         "",
         "GameState",
@@ -92,6 +95,24 @@ mod scope_tests {
         "NetCacheBaconRatingInfo",
         "<Rating>k__BackingField",
         "<DuosRating>k__BackingField",
+        "Blizzard.T5.ServiceLocator",
+        "Blizzard.T5.Services",
+        "ServiceManager",
+        "s_runtimeServices",
+        "ServiceLocator",
+        "m_services",
+        "Dictionary`2",
+        "_entries",
+        "_count",
+        "ServiceInfo",
+        "<Service>k__BackingField",
+        "NetCache",
+        "m_netCache",
+        "Map`2",
+        "valueSlots",
+        "touchedSlots",
+        "Entry[]",
+        "Object[]",
     ];
 
     fn code(src: &str) -> String {
