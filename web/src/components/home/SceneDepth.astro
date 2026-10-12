@@ -1,6 +1,6 @@
 ---
 // Depth behind the pinned five-step scene (T-530, D-105): blurred hero tokens
-// on layers that drift at different speeds, dust motes, soft light shafts and
+// on layers that drift at different speeds, dust motes and
 // a short glow at each step. Decorative only, hidden from screen readers; the
 // scene's steps, timing and text are scene.css's and do not change.
 // The tokens are empty here: scripts/tokens.ts (in scripts/home.ts) fills them with hero portraits
@@ -12,7 +12,6 @@ const motes = Array.from({ length: 10 });
 ---
 
 <div class="pin-depth" aria-hidden="true">
-  <div class="pin-shafts"></div>
   <div class="pin-pulse"></div>
   {tokens.map(() => <span class="token"></span>)}
   {motes.map(() => <i class="mote"></i>)}

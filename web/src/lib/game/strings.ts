@@ -28,6 +28,8 @@ export const GAME_STRINGS = {
   "state.newer": "Saved by a newer version of the app than this site knows. The site shows what it can read.",
   "state.unreadableValues.one": "1 value in this record could not be read and shows as unknown.",
   "state.unreadableValues.other": "{count} values in this record could not be read and show as unknown.",
+  "state.expired": "Full details are kept 28 days; this game's have expired.",
+  "state.expired.caption": "Game summary",
 
   "status.ok": "Finished",
   "status.incomplete": "Unfinished: the log ends before the game does.",

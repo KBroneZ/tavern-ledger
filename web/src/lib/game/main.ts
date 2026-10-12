@@ -8,6 +8,7 @@ import { dateText } from "../data/dashboard.ts";
 import { watchPictureFallback } from "../data/pictures.ts";
 import { h, mount, type VNode } from "../view/node.ts";
 import { stateBlock } from "../view/pieces.ts";
+import { EXPIRED_COLUMNS, expiredHeading, loadExpired, type ReadSummary, renderExpired } from "./expired.ts";
 import { loadGame, type Download, type LoadResult } from "./load.ts";
 import { renderGame } from "./render.ts";
 import { startReplays } from "./replayPlayer.ts";
@@ -75,19 +76,39 @@ function showGame(result: Extract<LoadResult, { kind: "ok" }>, ref: GameRef): vo
   if (replays) startReplays(replays, view.replays);
 }
 
-async function run(ref: GameRef, download: Download, signedIn: () => Promise<boolean>): Promise<void> {
+/** A game whose full file has expired (T-544): its summary and why the details are gone. */
+function showExpired(row: Parameters<typeof renderExpired>[0]): void {
+  const title = expiredHeading(row);
+  show(title, renderExpired(row), g("page.loaded", { title }));
+}
+
+interface Sources {
+  download: Download;
+  readSummary: ReadSummary;
+  signedIn: () => Promise<boolean>;
+}
+
+async function run(ref: GameRef, sources: Sources): Promise<void> {
+  const { download, readSummary, signedIn } = sources;
   // The loading block replaces whatever was there (an error and its button), so a retry runs once.
   mount(body, stateBlock({ kind: "loading", title: g("page.loading"), lines: 10 }));
   body.setAttribute("aria-busy", "true");
   status.textContent = g("page.loading");
   const result = await loadGame(download, ref);
   if (result.kind === "ok") return showGame(result, ref);
-  if (result.kind === "unavailable") return showUnavailable(await signedIn().catch(() => false));
-  showError(result.kind, () => {
+  const retry = () => {
     // The button goes away with the block: focus moves to the page's heading first.
     heading.focus();
-    run(ref, download, signedIn).catch(() => showError("error", () => location.reload()));
-  });
+    run(ref, sources).catch(() => showError("error", () => location.reload()));
+  };
+  if (result.kind === "unavailable") {
+    // Refused by Storage: private, missing, or a file the retention deleted.
+    const expired = await loadExpired(readSummary, ref);
+    if (expired.kind === "expired") return showExpired(expired.row);
+    if (expired.kind === "error") return showError("error", retry);
+    return showUnavailable(await signedIn().catch(() => false));
+  }
+  showError(result.kind, retry);
 }
 
 async function start(): Promise<void> {
@@ -102,8 +123,16 @@ async function start(): Promise<void> {
   }
   const { supabase } = await import("../../scripts/client.ts");
   const download: Download = (path) => supabase.storage.from("games").download(path);
+  const readSummary: ReadSummary = async (r) =>
+    await supabase
+      .from("game_summaries")
+      .select(EXPIRED_COLUMNS)
+      .eq("user_id", r.userId)
+      .eq("session", r.session)
+      .eq("game_index", r.index)
+      .limit(1);
   const signedIn = async () => (await supabase.auth.getSession()).data.session !== null;
-  await run(ref, download, signedIn);
+  await run(ref, { download, readSummary, signedIn });
 }
 
 start().catch(() => showError("error", () => location.reload()));
