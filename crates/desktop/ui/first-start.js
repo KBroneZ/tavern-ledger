@@ -8,13 +8,26 @@
 "use strict";
 
 (() => {
+  // How often and how long to wait for the app to finish reading its
+  // settings: the window can load before it has (the app answers null then).
+  const READ_TRIES = 40;
+  const READ_WAIT_MS = 250;
+  const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
   // Opens the dialog when the app says no overlay choice exists yet. When the
   // app cannot say, nothing is asked: the overlay stays as it is.
-  async function ask(call, dialog) {
-    const asks = await call("overlay_asks_first").catch(() => false);
-    if (asks !== true) return false;
-    if (!dialog.open) dialog.showModal();
-    return true;
+  async function ask(call, dialog, wait = pause) {
+    for (let tried = 0; tried < READ_TRIES; tried += 1) {
+      const asks = await call("overlay_asks_first").catch(() => false);
+      if (asks === null) {
+        await wait(READ_WAIT_MS);
+        continue;
+      }
+      if (asks !== true) return false;
+      if (!dialog.open) dialog.showModal();
+      return true;
+    }
+    return false;
   }
 
   // Saves the answer and closes the dialog; null when done, else the error,

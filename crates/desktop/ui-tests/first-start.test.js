@@ -43,6 +43,23 @@ test("once a choice exists the question never opens", async () => {
   assert.equal(dialog.shown, 0);
 });
 
+test("the question waits until the app has read its settings", async () => {
+  const dialog = fakeDialog();
+  const replies = [null, null, true];
+  const waits = [];
+  const call = async () => replies.shift();
+  assert.equal(await TLFirstStart.ask(call, dialog, async (ms) => waits.push(ms)), true);
+  assert.equal(waits.length, 2);
+  assert.equal(dialog.open, true);
+});
+
+test("an app that never finishes reading its settings is not asked about", async () => {
+  const dialog = fakeDialog();
+  const call = async () => null;
+  assert.equal(await TLFirstStart.ask(call, dialog, async () => {}), false);
+  assert.equal(dialog.shown, 0);
+});
+
 test("when the app cannot say, nothing is asked (the overlay stays as it is)", async () => {
   const dialog = fakeDialog();
   const { call } = fakeCall({ overlay_asks_first: new Error("ipc") });
