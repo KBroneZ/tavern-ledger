@@ -632,6 +632,43 @@ html[data-detail="advanced"] .simple-only {
   margin: 0;
 }
 
+/* Data on the painting sits in a dark well with a bronze edge: the chart
+   colours were checked on this surface (--surface-chart), and table rows
+   read the same over any part of the painting. Inside a panel, a fold, a
+   tile or another well, the surface around it is the well already. The game
+   page keeps its own boxes. */
+.chart,
+.scroll-x:has(> .dtable),
+.data-section > .dtable {
+  border-radius: var(--r-tile);
+  background: var(--surface-chart);
+  box-shadow:
+    inset 0 0 0 1px var(--bronze-lo),
+    0 10px 22px rgb(0 0 0 / 0.35);
+}
+
+.chart,
+.scroll-x:has(> .dtable) {
+  padding: var(--s-3) var(--s-4);
+}
+
+/* A bare table: separate borders so its corners can round. */
+.data-section > .dtable {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.data-section > .dtable tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+:is(.chart, .panel, .fold, .tile, .gv) :is(.chart, .scroll-x:has(> .dtable)),
+.gv .chart {
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+
 .chart-title {
   font-size: var(--t-md);
   font-weight: 700;

@@ -56,11 +56,13 @@
   min-width: 0;
   padding: var(--s-4);
   border-radius: var(--r-tile);
-  background: var(--surface-1);
-  box-shadow: inset 0 0 0 1px var(--line);
+  /* A board is a wood panel (ui.css); its table is a well inside it. */
+  background: var(--panel-wood);
+  box-shadow: var(--panel-edge);
 }
 
 .lb-board h3 {
+  color: var(--parchment);
   font-size: var(--t-lg);
 }
 

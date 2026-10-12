@@ -327,9 +327,15 @@ main:focus {
 
 /* ---------- Legal pages (privacy, terms): rendered from docs/legal/*.md ---------- */
 
+/* Long reading sits on one wood panel, the same over any part of the
+   painting. */
 .legal {
   display: grid;
   gap: 14px;
+  padding: clamp(20px, 4vw, 44px);
+  border-radius: var(--r-panel);
+  background: var(--panel-wood);
+  box-shadow: var(--panel-edge);
 }
 
 .legal > * {
@@ -425,6 +431,10 @@ main:focus {
   .glass {
     background: var(--panel-solid);
   }
+
+  .legal {
+    background: var(--wood);
+  }
 }
 
 /* More contrast: brighter lines, plain gold titles without the gradient. */
@@ -455,6 +465,7 @@ main:focus {
   }
 
   .glass,
+  .legal,
   .legal blockquote {
     border: 1px solid CanvasText;
   }
