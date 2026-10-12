@@ -2,7 +2,7 @@
 //! and Tavern spells with the side's spell upgrades.
 
 use super::{Combat, Dead, Source};
-use crate::cards::{Action, GemTo};
+use crate::cards::{Action, GemTo, Trigger};
 use crate::model::Tribes;
 
 /// Eternal Knight and its golden card, with what each Knight that died this
@@ -33,6 +33,31 @@ impl Combat<'_> {
             out.1 += v.beetle.1;
         }
         out
+    }
+
+    /// How many times over a Dragon gains stats: twice for each neighbour
+    /// that doubles its neighbours' gains (golden Persistent Poet).
+    pub(super) fn gain_factor(&self, side: usize, uid: u32) -> i32 {
+        if !self.p.gain_doublers {
+            return 1;
+        }
+        let units = &self.sides[side].units;
+        let Some(ix) = units.iter().position(|u| u.uid == uid) else {
+            return 1;
+        };
+        if !self.tribes(&units[ix]).is(Tribes::DRAGON) {
+            return 1;
+        }
+        let doublers = self
+            .neighbours(side, ix)
+            .into_iter()
+            .filter_map(|n| self.unit(side, n))
+            .filter(|n| {
+                self.triggers(n)
+                    .contains(&Trigger::DoublesAdjacentDragonGains)
+            })
+            .count();
+        1 << doublers.min(2)
     }
 
     /// Each Eternal Knight that died adds to the side's count, and every

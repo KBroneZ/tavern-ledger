@@ -9,6 +9,8 @@ impl Combat<'_> {
     /// Gives `uid` stats, then checks "once this reaches N Attack"; the
     /// friends that follow an Amalgam gain them too.
     pub(super) fn buff(&mut self, side: usize, uid: u32, attack: i32, health: i32) {
+        let factor = self.gain_factor(side, uid);
+        let (attack, health) = (attack.saturating_mul(factor), health.saturating_mul(factor));
         self.buff_one(side, uid, attack, health);
         self.amalgam_gained(side, uid, attack, health);
     }

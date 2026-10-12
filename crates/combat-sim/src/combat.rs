@@ -67,6 +67,8 @@ pub(crate) struct Prepared {
     /// Some card here gains what the Amalgam gains (round 5): checked once,
     /// not on every buff.
     pub amalgam_followers: bool,
+    /// Some card here doubles its neighbours' gains (T-609).
+    pub gain_doublers: bool,
 }
 
 impl Prepared {
@@ -150,8 +152,12 @@ impl Prepared {
                 .iter()
                 .any(|t| matches!(t, Trigger::GainsWithAmalgam(_)))
         });
+        let gain_doublers = cards
+            .iter()
+            .any(|c| c.triggers.contains(&Trigger::DoublesAdjacentDragonGains));
         Prepared {
             amalgam_followers,
+            gain_doublers,
             cards,
             tokens,
             start,

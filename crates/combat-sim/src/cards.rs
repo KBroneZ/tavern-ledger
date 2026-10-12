@@ -238,6 +238,9 @@ pub enum Trigger {
     /// Comes back with Reborn with its Attack and full Health and its
     /// keywords, not as a fresh card (Dark Gifts).
     RebornWithStats,
+    /// The Dragons next to this one gain twice the stats they gain in
+    /// combat (golden Persistent Poet; T-609).
+    DoublesAdjacentDragonGains,
 }
 
 impl Trigger {
@@ -678,7 +681,6 @@ pub const NO_COMBAT_EFFECT: &[&str] = &[
     "BG30_121",
     "BG30_121_G",
     "BG29_813",
-    "BG29_813_G",
     "BG29_300",
     "BG29_300_G",
     "BG28_741",

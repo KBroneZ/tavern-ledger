@@ -242,3 +242,21 @@ fn de_volition_ist_hits_the_highest_health_enemy_even_when_it_dies() {
     assert!(c.sides[0].units.is_empty());
     assert_eq!(c.sides[1].units[0].health, 38);
 }
+
+#[test]
+fn golden_persistent_poet_doubles_what_the_dragons_next_to_it_gain() {
+    // Mighty Dragonbreath from a Crimson Vindicator: both Dragons next to
+    // the golden Poet get each buff twice; the Poet itself once.
+    let dragon = |id: &str, a, h| Minion::new(id, a, h).tribe(Tribes::DRAGON).tier(3);
+    let got = after_swing(
+        vec![
+            dragon("BG36_241", 8, 9),
+            dragon("BG29_813_G", 4, 6),
+            dragon("TEST_PLAIN", 1, 10),
+        ],
+        GameValues::default(),
+        &[0],
+    );
+    // +3/+2 to all, again to Dragons: +6/+4, doubled next to the Poet.
+    assert_eq!(got, vec![(20, 17), (10, 10), (13, 18)]);
+}
