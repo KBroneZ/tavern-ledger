@@ -965,12 +965,6 @@ fn toggle_overlay(app: &AppHandle) {
     }
 }
 
-/// The start-up entry holds the exe path unquoted (auto-launch 0.5), so a
-/// path with spaces could run the wrong program or nothing at all.
-fn can_autostart(exe: &Path) -> bool {
-    !exe.to_string_lossy().contains(char::is_whitespace)
-}
-
 /// Sizes of the tray images (`crates/desktop/icons/tray-NN.png`, T-523): drawn
 /// on a pixel grid for 100, 125, 150 and 200 % scaling, so none is blurred by
 /// Windows shrinking the 256 px app icon.
@@ -1004,7 +998,8 @@ fn tray_image(px: u32) -> Image<'static> {
 fn setup_tray(app: &App) -> tauri::Result<()> {
     // Off by default: only the user turns it on, from this menu.
     let enabled = app.autolaunch().is_enabled().unwrap_or(false);
-    let available = std::env::current_exe().is_ok_and(|exe| can_autostart(&exe));
+    // The start-up entry quotes the exe path (settings::set_autostart).
+    let available = std::env::current_exe().is_ok();
     // Built with the English words; `keep_tray` puts them in the app's language.
     let words = settings::tray_words(settings::Language::En);
     let label = if available {
@@ -1713,17 +1708,6 @@ mod tests {
             shown.tribes[0].tribe, "MURLOC",
             "the tavern list is untouched"
         );
-    }
-
-    #[test]
-    fn autostart_needs_a_path_without_spaces() {
-        // The start-up entry is written unquoted (auto-launch 0.5).
-        assert!(can_autostart(Path::new(
-            r"C:\Apps\TavernLedger\desktop.exe"
-        )));
-        assert!(!can_autostart(Path::new(
-            r"C:\Program Files\Tavern Ledger\desktop.exe"
-        )));
     }
 
     #[test]

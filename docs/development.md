@@ -1,6 +1,6 @@
 # Development
 
-How to run the tools, the desktop app, the backend and the website from a clone. Everything here is for development; the desktop app has no installer yet.
+How to run the tools, the desktop app, the backend and the website from a clone. Everything here is for development; no installer is published yet, but you can build one (below).
 
 ## Check your log setup
 
@@ -87,6 +87,29 @@ To see the overlay on a replayed game, follow the replayed folder with the app a
 ```
 cargo run -p desktop -- --data-dir "$env:TEMP\replay\data" --logs-dir "$env:TEMP\replay\Logs" --overlay-dev
 ```
+
+## Windows installer
+
+Needs the same Rust toolchain as the app, Node.js 22.12 or later and an internet connection. From a clean checkout:
+
+```
+npm ci
+npm run installer
+```
+
+`npm run installer` runs the pinned Tauri CLI (`@tauri-apps/cli` in `package.json`), which builds the app in release mode and makes `target\release\bundle\nsis\Tavern Ledger_<version>_x64-setup.exe` (about 6.5 MB). The version is `version` in `crates/desktop/tauri.conf.json`. To try an upgrade without changing it, build a second time from `crates\desktop` with `npx tauri build --bundles nsis --config '{"version":"0.1.1"}'`. The build also leaves `target\release\TavernLedger.exe`; `cargo build --release -p desktop` still makes `target\release\desktop.exe`.
+
+On its first run the CLI downloads, into `%LOCALAPPDATA%\tauri`: NSIS 3.11 and the `nsis_tauri_utils` 0.5.3 plugin from Tauri's GitHub releases (checked against hashes built into the CLI), and Microsoft's WebView2 bootstrapper (not hash-checked; `Get-AuthenticodeSignature "$env:LOCALAPPDATA\tauri\MicrosoftEdgeWebview2Setup.exe"` should say `Valid` and `CN=Microsoft Corporation`).
+
+What the installer does:
+
+- **Per user, no administrator rights:** installs to `%LOCALAPPDATA%\Tavern Ledger` with a Start menu shortcut (and a desktop one if you tick it), and registers an uninstaller in Settings > Apps. Silent: `/S`; uninstall silently with `"%LOCALAPPDATA%\Tavern Ledger\uninstall.exe" /S`.
+- **License page:** the fan-project notice, what the app reads and the privacy link, then `LICENSE` (`crates/desktop/installer/license.txt`; a test checks that it ends with `LICENSE` unchanged).
+- **Compression:** zlib (NSIS's LZMA module is CPL-1.0, which does not mix with AGPL-3.0).
+- **WebView2:** the bootstrapper is embedded (about 1.8 MB) and runs silently only when WebView2 is missing (Windows 11 and up-to-date Windows 10 have it); it still needs internet to fetch the runtime.
+- **Upgrade:** a newer installer replaces the app in place. If the installed app is running, the installer closes that copy only (by its path), never a build run from source.
+- **Your data:** install, upgrade and uninstall never touch `%APPDATA%\TavernLedger` (history, settings, upload settings). The uninstaller's "Delete the application data" box removes only `%LOCALAPPDATA%\dev.tavernledger.app` (the window's WebView2 cache, shared with builds run from source) and the installer's own registry keys. Uninstalling also removes the "Start with Windows" entry, which a build run from source writes under the same name.
+- **Not signed:** Windows SmartScreen warns before it runs. No automatic updates.
 
 ## Development
 

@@ -1,9 +1,13 @@
 {
   "name": "tavern-ledger",
   "private": true,
-  "description": "Dev tooling only (Supabase CLI for the local stack).",
+  "description": "Dev tooling only (Supabase CLI for the local stack, Tauri CLI for the Windows installer).",
   "license": "AGPL-3.0-only",
+  "scripts": {
+    "installer": "cd crates && cd desktop && tauri build --bundles nsis"
+  },
   "devDependencies": {
+    "@tauri-apps/cli": "2.12.1",
     "supabase": "2.118.0"
   }
 }

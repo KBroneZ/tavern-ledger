@@ -323,9 +323,15 @@ pub fn set_autostart(
 ) -> Result<(), String> {
     let launcher = app.autolaunch();
     let result = if on {
-        launcher.enable()
+        launcher.enable().map_err(|e| e.to_string()).and_then(|()| {
+            // An unquoted entry could start the wrong program: take it back.
+            quote_startup_entry(app).map_err(|e| {
+                let _ = launcher.disable();
+                e.to_string()
+            })
+        })
     } else {
-        launcher.disable()
+        launcher.disable().map_err(|e| e.to_string())
     };
     settings.tick_autostart(launcher.is_enabled().unwrap_or(false));
     let notice = result.is_err().then(|| AUTOSTART_FAILED.to_string());
@@ -339,9 +345,61 @@ pub fn set_autostart(
     }
 }
 
+/// Windows' list of programs to run at sign-in, where auto-launch writes the
+/// start-up entry.
+#[cfg(windows)]
+const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
+
+/// The start-up entry's command line with the exe path in quotes. auto-launch
+/// 0.5 writes the path unquoted, and Windows cuts an unquoted path at its
+/// first space (the installer's folder `Tavern Ledger`, or a user name with a
+/// space), which runs the wrong program or none.
+fn startup_command(exe: &Path, args: &[&str]) -> String {
+    let mut command = format!("\"{}\"", exe.display());
+    for arg in args {
+        command.push(' ');
+        command.push_str(arg);
+    }
+    command
+}
+
+/// Writes the entry auto-launch just made again, under the same name, with
+/// the path quoted.
+#[cfg(windows)]
+fn quote_startup_entry(app: &AppHandle) -> io::Result<()> {
+    use winreg::enums::{HKEY_CURRENT_USER, KEY_SET_VALUE};
+    let exe = std::env::current_exe()?;
+    winreg::RegKey::predef(HKEY_CURRENT_USER)
+        .open_subkey_with_flags(RUN_KEY, KEY_SET_VALUE)?
+        .set_value(
+            &app.package_info().name,
+            &startup_command(&exe, &[crate::MINIMIZED_ARG]),
+        )
+}
+
+#[cfg(not(windows))]
+fn quote_startup_entry(_app: &AppHandle) -> io::Result<()> {
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn startup_command_quotes_the_path() {
+        let exe = Path::new(r"C:\Users\A B\AppData\Local\Tavern Ledger\TavernLedger.exe");
+        assert_eq!(
+            startup_command(exe, &["--minimized"]),
+            r#""C:\Users\A B\AppData\Local\Tavern Ledger\TavernLedger.exe" --minimized"#
+        );
+    }
+
+    #[test]
+    fn startup_command_quotes_a_path_without_spaces_too() {
+        let exe = Path::new(r"C:\Apps\desktop.exe");
+        assert_eq!(startup_command(exe, &[]), r#""C:\Apps\desktop.exe""#);
+    }
 
     fn dir(name: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!("tl-settings-{name}-{}", std::process::id()));
