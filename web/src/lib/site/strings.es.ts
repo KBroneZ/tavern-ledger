@@ -126,7 +126,7 @@ export const ES: Record<SiteKey, string> = {
   "home.top": "Volver a la puerta",
   "home.status.title": "Las puertas aún no están abiertas.",
   "home.status.body": "La aplicación de escritorio es un prototipo y la web está en construcción.",
-  "home.status.testing": "Las cuentas de esta web son solo para pruebas.",
+  "home.status.testing": "Las cuentas están abiertas.",
   "home.status.closed": "Las cuentas aún no están abiertas.",
   "news.title": "Novedades",
   "news.accuracy": "Cuántas veces aciertan las probabilidades de combate del overlay, medido con combates reales.",

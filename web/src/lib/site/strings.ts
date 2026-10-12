@@ -133,7 +133,7 @@ export const SITE_STRINGS = {
   "home.top": "Back up to the door",
   "home.status.title": "The doors are not open yet.",
   "home.status.body": "The desktop app is a prototype and the website is being built.",
-  "home.status.testing": "Accounts on this site are for testing only.",
+  "home.status.testing": "Accounts are open.",
   "home.status.closed": "Accounts are not open yet.",
   // What's new (lib/site/news.ts): one short dated line each, newest first.
   "news.title": "What's new",
