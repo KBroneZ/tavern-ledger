@@ -174,6 +174,28 @@ fn the_record_is_worked_out_from_health_and_inferred() {
 }
 
 #[test]
+fn a_record_of_results_from_the_log_is_marked_from_the_log() {
+    let mut first = round(1, 2, json!([]), json!({"1": 35, "2": 40, "3": 40, "4": 40}));
+    first["result"] = json!("lost");
+    let mut second = round(2, 2, json!([]), json!({"1": 35, "2": 30, "3": 40, "4": 40}));
+    second["result"] = json!("won");
+    let live = live_game(&solo(vec![first, second], "incomplete"));
+    let two = opponent(&live, 2);
+    let record = two.record.as_ref().expect("fought");
+    assert_eq!((record.won, record.lost, record.tie), (1, 1, 0));
+    assert_eq!(two.record_source, Source::Log);
+}
+
+#[test]
+fn a_record_with_one_result_from_health_is_inferred() {
+    let mut first = round(1, 2, json!([]), json!({"1": 35, "2": 40, "3": 40, "4": 40}));
+    first["result"] = json!("lost");
+    let second = round(2, 2, json!([]), json!({"1": 35, "2": 30, "3": 40, "4": 40}));
+    let live = live_game(&solo(vec![first, second], "incomplete"));
+    assert_eq!(opponent(&live, 2).record_source, Source::Inferred);
+}
+
+#[test]
 fn health_during_a_combat_is_the_one_after_the_last_closed_combat() {
     // Round 2 is on but its health is not known yet (the combat is open).
     let mut open = round(2, 3, json!([]), json!({}));

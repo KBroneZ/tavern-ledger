@@ -21,11 +21,14 @@
 //! The rating keeps being read every half minute for the rest of the visit,
 //! since the game can update it later than that (T-342).
 //!
-//! The values stay on this PC: they are not saved with the games, not put in
-//! any report and not uploaded. Only the last rating taken is written to a
-//! file of its own (`game_rating.json`, with the build and the newest game it
-//! includes), so the change after the next game is known across a restart of
-//! the app (T-342, D-072); turning the switch off deletes it.
+//! The values stay on this PC: they are not put in any report and not
+//! uploaded. The last rating taken is written to a file of its own
+//! (`game_rating.json`, with the build and the newest game it includes), so
+//! the change after the next game is known across a restart of the app
+//! (T-342, D-072), and each game's tribes, once checked, to
+//! `game_tribes.json` next to the history (T-540, D-104, `saved_tribes.rs`);
+//! turning the switch off deletes both. The tribes are read whether or not
+//! the overlay is on, since the recap and the stats use them too (D-106).
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -98,10 +101,6 @@ pub struct Poll<'a> {
     /// Whether the last finished game was Duos (`None`: no game, or another
     /// mode).
     pub last_duos: Option<bool>,
-    /// The overlay is off: the lobby's tribes, which only the overlay shows,
-    /// are not read (T-531, D-106). The rating is read as before. Saving the
-    /// tribes with each game (D-104) will need them read again.
-    pub skip_tribes: bool,
 }
 
 /// The rating change the last game made, in its mode.
@@ -341,9 +340,7 @@ impl GameMemory {
             return;
         }
         s.ticks = s.ticks.wrapping_add(1);
-        if !poll.skip_tribes {
-            tick_tribes(&mut s, reader, poll.game, poll.build);
-        }
+        tick_tribes(&mut s, reader, poll.game, poll.build);
         tick_rating(&mut s, reader, poll);
         self.save_rating(&mut s);
     }
@@ -901,23 +898,6 @@ mod tests {
         let gm = GameMemory::default();
         assert!(gm.load(&dir).is_err());
         assert!(!gm.view().enabled);
-    }
-
-    #[test]
-    fn with_the_overlay_off_the_tribes_are_not_read() {
-        // T-531: only the overlay shows them, so overlay off reads nothing.
-        let gm = on("tribes-overlay-off");
-        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(RATING)]);
-        let game = key(1);
-        let off = Poll {
-            skip_tribes: true,
-            ..poll(Some(&game), BUILD, Some(Scene::Game))
-        };
-        for _ in 0..9 {
-            gm.tick(&reader, &off);
-        }
-        assert_eq!(reader.calls.get(), 0);
-        assert_eq!(gm.tribes_for(Some(&key(1))).0, None);
     }
 
     #[test]

@@ -15,6 +15,7 @@ mod over_game_guard;
 mod overlay;
 mod overlay_layout;
 mod overlay_window;
+mod saved_tribes;
 mod screen_fit;
 mod settings;
 #[cfg(test)]
@@ -36,6 +37,7 @@ use tauri::{include_image, App, AppHandle, Emitter, Manager, State, WindowEvent}
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tracker::dev_reconnect::Reconnects;
 use tracker::discover::find_logs_dir;
+use tracker::game_values::ReaderStatus;
 use tracker::live::{live_game, LiveGame};
 use tracker::lobby_tribes::{self, Action, Entries, GameStarts, LobbyView};
 use tracker::lock::{HistoryLock, LockError};
@@ -45,7 +47,7 @@ use tracker::report_bundle::{self, BundleInput};
 use tracker::scene::Scene;
 use tracker::setup::{check_setup, client_config_path, default_log_config_path};
 use tracker::stats::curious::{CardNames, Curious};
-use tracker::stats::{HeroLinks, Stats};
+use tracker::stats::{HeroLinks, Lobby, Stats};
 use tracker::store::{GameKey, ParserStamp, Store};
 use tracker::Watcher;
 
@@ -119,7 +121,9 @@ struct GameRow {
     /// Played with the reconnect dev tool (D-043): marked in the history and
     /// left out of the stats and the upload.
     dev_reconnect: bool,
-    /// When the game ended (UTC seconds, from the log's clock), when known.
+    /// When the game started and ended (UTC seconds, from the log's clock),
+    /// when known (T-540: the window shows each game's own time).
+    started: Option<i64>,
     ended: Option<i64>,
 }
 
@@ -143,6 +147,8 @@ struct AppState {
     overlay: overlay::Overlay,
     /// The switch and the values read from the game (D-063); off by default.
     game_memory: game_memory::GameMemory,
+    /// The lobby tribes read from the game, saved with each game (T-540).
+    saved_tribes: saved_tribes::Kept,
     /// The combat odds for the overlay (T-605).
     odds: odds::Odds,
 }
@@ -163,21 +169,34 @@ fn game_stats(state: State<'_, Arc<AppState>>, cards: State<'_, card_data::Cards
     let links = card_data::hero_links(&cards);
     let games = state.games.lock().unwrap_or_else(|e| e.into_inner());
     let entries = state.entries.lock().unwrap_or_else(|e| e.into_inner());
-    stats_of(&games, entries.as_ref(), &links)
+    state
+        .saved_tribes
+        .with(|read| stats_of(&games, entries.as_ref(), read, &links))
 }
 
 /// Games played with the reconnect dev tool are not counted (D-043). Skins
-/// are grouped by the game's own link looked up in `links` (T-214); the
-/// D-019 name rule only where that link is missing, and labelled so.
-fn stats_of(rows: &[GameRow], entries: Option<&Entries>, links: &HeroLinks) -> Stats {
+/// are grouped by the game's own link looked up in `links` (T-214), else
+/// the card data's parent (T-540); the D-019 name rule only where neither
+/// knows the skin, and labelled so. `read` holds the lobby tribes read from
+/// the game and saved with each game (T-540).
+fn stats_of(
+    rows: &[GameRow],
+    entries: Option<&Entries>,
+    read: Option<&tracker::game_tribes::SavedTribes>,
+    links: &HeroLinks,
+) -> Stats {
     let counted = rows.iter().filter(|row| !row.dev_reconnect);
-    tracker::stats::compute_with_links(
+    tracker::stats::compute_with_lobby(
         counted.map(|row| {
             let key = GameKey {
                 session: row.session.clone(),
                 index: row.index,
             };
-            (&row.report, entries.and_then(|e| e.entry(&key)))
+            let lobby = Lobby {
+                entered: entries.and_then(|e| e.entry(&key)),
+                from_game: read.and_then(|r| r.get(&key)),
+            };
+            (&row.report, lobby)
         }),
         links,
     )
@@ -227,7 +246,9 @@ fn recap_of(state: &AppState, session: &str, index: u64) -> Result<Recap, String
         .iter()
         .find(|g| g.session == session && g.index == index)
         .map(|row| {
-            recap(&row.report).with_entered_tribes(entries.as_ref().and_then(|e| e.entry(&key)))
+            recap(&row.report)
+                .with_entered_tribes(entries.as_ref().and_then(|e| e.entry(&key)))
+                .with_game_tribes(state.saved_tribes.get(&key).as_deref())
         })
         .ok_or_else(|| "That game is not in the history.".to_string())
 }
@@ -352,6 +373,13 @@ fn game_memory_status(state: State<'_, Arc<AppState>>) -> game_memory::View {
 fn game_memory_set_enabled(state: State<'_, Arc<AppState>>, enabled: bool) -> game_memory::View {
     // A failed save is in the view's warning; the choice holds for this run.
     let _ = state.game_memory.set_enabled(enabled);
+    // Off forgets every value read, the tribes saved with games too (T-540).
+    if !enabled {
+        if let Err(msg) = state.saved_tribes.forget_all() {
+            let mut status = state.status.lock().unwrap_or_else(|e| e.into_inner());
+            status.notice = Some(msg);
+        }
+    }
     state.game_memory.view()
 }
 
@@ -380,13 +408,36 @@ fn read_from_game(app: &AppHandle, state: &AppState, client_build: Option<i64>) 
         last_duos: last.duos,
         newest: last.newest.as_ref(),
         previous: last.previous.as_ref(),
-        skip_tribes: !state.overlay.enabled(),
     };
     let tick = || state.game_memory.tick(&game_memory::GameReader, &poll);
     if catch_unwind(AssertUnwindSafe(tick)).is_err() {
         state.game_memory.stop_for_run();
         let msg = "Reading from the game stopped after an internal error; it is off until the app restarts.";
         set_status(app, state, |s| s.notice = Some(msg.into()));
+        return;
+    }
+    keep_read_tribes(app, state, game.as_ref());
+}
+
+/// Saves the game in progress's tribes from the game once they pass the
+/// overlay's checks, or drops them when the tavern contradicts them (T-540).
+fn keep_read_tribes(app: &AppHandle, state: &AppState, game: Option<&GameKey>) {
+    let read = state.game_memory.tribes_for(game);
+    // Nothing read and nothing refused: nothing to save or drop.
+    if read.0.is_none() && read.1 != ReaderStatus::UnsupportedVersion {
+        return;
+    }
+    let pool = card_data::pool_cards(&app.state::<card_data::Cards>());
+    let live = state.live.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    match state
+        .saved_tribes
+        .after_read(game, read, live.as_ref(), &pool)
+    {
+        saved_tribes::Outcome::Unchanged => {}
+        saved_tribes::Outcome::Changed => {
+            let _ = app.emit(LOBBY_TRIBES_CHANGED, ());
+        }
+        saved_tribes::Outcome::Failed(msg) => set_status(app, state, |s| s.notice = Some(msg)),
     }
 }
 
@@ -655,6 +706,7 @@ fn rows_of(store: &Store, reconnects: &Reconnects) -> Vec<GameRow> {
             parser: store.parser(key).cloned(),
             sources: row_sources(&key.session, report),
             dev_reconnect: marked.contains(key),
+            started: store.played(key).map(|p| p.from),
             ended: store.played(key).map(|p| p.to),
         })
         .collect()
@@ -720,6 +772,9 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
         Err(LockError::Busy) => return show_read_only(&app, &state, &data_dir),
         Err(e) => return problem(&app, &state, format!("Cannot use the game history: {e}.")),
     };
+    if let Err(msg) = state.saved_tribes.open(&data_dir) {
+        set_status(&app, &state, |s| s.notice = Some(msg));
+    }
     match Entries::open(&data_dir) {
         Ok(entries) => *state.entries.lock().unwrap_or_else(|e| e.into_inner()) = Some(entries),
         Err(e) => {
@@ -1164,6 +1219,7 @@ mod tests {
             parser: None,
             sources: row_sources("", &serde_json::Value::Null),
             dev_reconnect: false,
+            started: None,
             ended: None,
             report: serde_json::json!({
                 "status": "ok", "game_type": game_type, "hero": "H", "final_place": place,
@@ -1171,6 +1227,7 @@ mod tests {
         };
         let stats = stats_of(
             &[row("GT_BATTLEGROUNDS", 3), row("GT_BATTLEGROUNDS_DUO", 1)],
+            None,
             None,
             &HeroLinks::new(),
         );
@@ -1190,6 +1247,7 @@ mod tests {
             parser: None,
             sources: row_sources("", &serde_json::Value::Null),
             dev_reconnect,
+            started: None,
             ended: None,
             report,
         }
@@ -1214,15 +1272,15 @@ mod tests {
             plain_row(skin, false),
             plain_row(old, false),
         ];
-        let links = HeroLinks::from([(59_999, "BG20_HERO_102".to_string())]);
-        let stats = stats_of(&rows, None, &links);
+        let links = HeroLinks::of_heroes([(59_999, "BG20_HERO_102".to_string())]);
+        let stats = stats_of(&rows, None, None, &links);
         let heroes = &stats.modes[0].heroes;
         assert_eq!(heroes.len(), 1, "all three under one hero");
         assert_eq!(heroes[0].tally.games, 3);
         assert_eq!(heroes[0].variants_by_rule, ["BG20_HERO_102_SKIN_C"]);
         assert_eq!(heroes[0].grouping, tracker::provenance::Source::Inferred);
         // Without the card data the linked skin stays apart: nothing is guessed.
-        let plain = stats_of(&rows, None, &HeroLinks::new());
+        let plain = stats_of(&rows, None, None, &HeroLinks::new());
         assert_eq!(plain.modes[0].heroes.len(), 2);
     }
 
@@ -1283,7 +1341,7 @@ mod tests {
             rows.iter().map(|r| r.dev_reconnect).collect::<Vec<_>>(),
             [true, false]
         );
-        let stats = stats_of(&rows, None, &HeroLinks::new());
+        let stats = stats_of(&rows, None, None, &HeroLinks::new());
         assert_eq!(stats.modes[0].totals.games, 1);
         assert_eq!(stats.modes[0].totals.average_place, Some(7.0));
         assert_eq!(stats.modes[0].heroes[0].tally.games, 1);
@@ -1298,6 +1356,7 @@ mod tests {
             sources: row_sources("Hearthstone_2026_10_09_00_00_00", &report),
             parser: None,
             dev_reconnect: false,
+            started: None,
             ended: None,
             report,
         });
@@ -1341,7 +1400,7 @@ mod tests {
         assert_eq!(r.tribes[0].tribe, "MURLOC", "the tavern list is untouched");
         let games = state.games.lock().unwrap();
         let entries = state.entries.lock().unwrap();
-        let stats = stats_of(&games, entries.as_ref(), &HeroLinks::new());
+        let stats = stats_of(&games, entries.as_ref(), None, &HeroLinks::new());
         assert_eq!(stats.modes[0].games_with_entered_tribes, 1);
         assert_eq!(stats.modes[0].games_with_tribes, 1);
     }
@@ -1400,6 +1459,61 @@ mod tests {
         GameKey {
             session: session.into(),
             index,
+        }
+    }
+
+    /// A listed game whose lobby tribes were read from the game and saved.
+    fn state_with_read_tribes(tag: &str) -> AppState {
+        let state = state_with(serde_json::json!({
+            "status": "ok", "hero": "H", "game_type": "GT_BATTLEGROUNDS", "final_place": 2,
+            "local_player_id": 1, "build": tracker::game_values::CHECKED_BUILDS[0],
+            "lobby": [{"player_id": 1, "hero": "H"}], "rounds": [],
+        }));
+        let dir =
+            std::env::temp_dir().join(format!("tl-main-read-tribes-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        state.saved_tribes.open(&dir).unwrap();
+        let game = key("Hearthstone_2026_10_09_00_00_00", 1);
+        let mut live = tracker::live::live_game(&serde_json::json!({
+            "status": "incomplete", "build": tracker::game_values::CHECKED_BUILDS[0], "rounds": [],
+        }));
+        live.offered = Vec::new();
+        let read = (
+            Some(five(["UNDEAD", "BEAST", "DEMON", "MURLOC", "NAGA"])),
+            ReaderStatus::Ok,
+        );
+        state
+            .saved_tribes
+            .after_read(Some(&game), read, Some(&live), &[]);
+        state
+    }
+
+    #[test]
+    fn tribes_read_from_the_game_show_in_the_recap_and_the_stats() {
+        let state = state_with_read_tribes("recap");
+        let r = recap_of(&state, "Hearthstone_2026_10_09_00_00_00", 1).unwrap();
+        assert_eq!(
+            r.game_tribes,
+            five(["BEAST", "DEMON", "MURLOC", "NAGA", "UNDEAD"])
+        );
+        assert_eq!(r.game_tribes_source, tracker::provenance::Source::Game);
+        let games = state.games.lock().unwrap();
+        let stats = state
+            .saved_tribes
+            .with(|read| stats_of(&games, None, read, &HeroLinks::new()));
+        assert_eq!(stats.modes[0].games_with_game_tribes, 1);
+    }
+
+    #[test]
+    fn tribes_read_from_the_game_never_go_into_a_problem_report() {
+        let state = state_with_read_tribes("report");
+        assert!(state
+            .saved_tribes
+            .get(&key("Hearthstone_2026_10_09_00_00_00", 1))
+            .is_some());
+        let text = problem_report_text(&state, "Hearthstone_2026_10_09_00_00_00", 1).unwrap();
+        for tribe in ["UNDEAD", "NAGA", "MURLOC", "game_tribes"] {
+            assert!(!text.contains(tribe), "{tribe} leaked into the report");
         }
     }
 
@@ -1508,6 +1622,7 @@ mod tests {
             parser: None,
             sources: row_sources("", &serde_json::Value::Null),
             dev_reconnect: dev,
+            started: None,
             ended,
             report: serde_json::json!({"status": "ok", "game_type": game_type, "final_place": place}),
         };

@@ -150,6 +150,9 @@ pub struct Recap {
     /// Own health before the first combat and after each combat.
     pub health: Vec<HealthPoint>,
     pub health_source: Source,
+    /// Each combat's hit as the game dealt it, where the record has it
+    /// (T-540, from the log); a combat left out is not in the record.
+    pub damage: Vec<crate::damage::CombatDamage>,
     pub record: Vec<OpponentRecord>,
     /// Combats where the log does not say who was faced.
     pub unattributed: Vec<Combat>,
@@ -166,6 +169,11 @@ pub struct Recap {
     /// entered. Never merged with `tribes`: shown next to them.
     pub entered_tribes: Vec<String>,
     pub entered_tribes_source: Source,
+    /// The lobby's five tribes read from the game and saved with it on this
+    /// PC (T-540, D-104); empty when the game has none (the tavern's
+    /// inferred tribes are then all there is).
+    pub game_tribes: Vec<String>,
+    pub game_tribes_source: Source,
     /// The player's own shop turn by turn and logged actions (T-204, T-205).
     pub shop: ShopRecap,
     /// The heroes offered, the rerolls and the hero picked (T-209).
@@ -586,6 +594,18 @@ impl Recap {
         self
     }
 
+    /// Adds the lobby's tribes read from the game and saved with it (T-540),
+    /// labelled "from the game". Exact, so shown before the tavern's.
+    pub fn with_game_tribes(mut self, read: Option<&[String]>) -> Self {
+        self.game_tribes = read.map(<[String]>::to_vec).unwrap_or_default();
+        self.game_tribes_source = if self.game_tribes.is_empty() {
+            Source::Unknown
+        } else {
+            Source::Game
+        };
+        self
+    }
+
     /// Names the trinkets and the Old God, which the log gives as database
     /// ids, with the card data (`card_of` turns a database id into a card id).
     pub fn with_dbf_cards(mut self, card_of: &dyn Fn(i64) -> Option<String>) -> Self {
@@ -613,6 +633,7 @@ pub fn recap(report: &Value) -> Recap {
         rounds_played: Sourced::log((!view.rounds.is_empty()).then_some(view.rounds.len())),
         health: own_health(&view),
         health_source: Source::log_if(!view.rounds.is_empty()),
+        damage: crate::damage::game_damage(report),
         record: records
             .order
             .into_iter()
@@ -633,6 +654,8 @@ pub fn recap(report: &Value) -> Recap {
         tribes,
         entered_tribes: Vec::new(),
         entered_tribes_source: Source::Unknown,
+        game_tribes: Vec::new(),
+        game_tribes_source: Source::Unknown,
         shop: shop_recap(report),
         hero_pick: hero_pick(&view, report),
         choices: game_choices(report),

@@ -212,6 +212,10 @@
     ["turns.s.vs", "{outcome} against {who}", "{outcome} contra {who}"],
     ["turns.s.no_combat", "no combat in the log", "sin combate en el registro"],
     ["turns.s.health", "health {change}", "vida {change}"],
+    ["turns.s.took", "your hero took {n} damage", "tu héroe recibió {n} de daño"],
+    ["turns.s.dealt", "you dealt {n} damage", "infligiste {n} de daño"],
+    ["turns.s.no_damage", "no damage", "sin daño"],
+    ["turns.damage_tip", "Combat: {hit}, from the game's log.", "Combate: {hit}, según el registro del juego."],
     ["turns.s.board.one", "your board {n} minion", "tu tablero {n} esbirro"],
     ["turns.s.board.other", "your board {n} minions", "tu tablero {n} esbirros"],
     ["turns.empty", "empty", "vacío"],
@@ -341,8 +345,8 @@
       "El esbirro que más compraste en todas las partidas, por id de carta: una copia dorada comprada en la taberna cuenta como carta aparte (en caso de empate, gana el primer id de carta por orden alfabético).",
     "Most combats won in a row inside one game. A tie, a loss, an unknown result or a round the log lacks ends the streak. Inferred when any result in it was worked out from health.":
       "Más combates ganados seguidos dentro de una partida. Un empate, una derrota, un resultado desconocido o una ronda que falta en el registro cortan la racha. Es un dato deducido si algún resultado salió de la vida.",
-    "Your health before a combat minus your health after it (armor included), the largest over all games. Inferred: health paid or healed during the shop turn before the combat is counted in it too, and a combat with no health after it in the log (often the last one) is left out.":
-      "Tu vida antes de un combate menos tu vida después (armadura incluida), el mayor valor de todas las partidas. Deducido: también cuenta la vida pagada o curada durante el turno de tienda previo al combate, y se deja fuera un combate sin vida posterior en el registro (a menudo el último).",
+    "The largest hit your hero took at the end of a combat, over all games: the game's own number from the log where the combat's replay has it. Older games use your health before the combat minus your health after it (armor included), marked inferred: health paid or healed during the shop turn before is counted in it too, and a combat with no health after it (often the last one) is left out.":
+      "El mayor golpe que recibió tu héroe al final de un combate, de todas las partidas: el número del propio juego, del registro, cuando la repetición del combate lo tiene. Las partidas antiguas usan tu vida antes del combate menos tu vida después (armadura incluida), marcado como deducido: también cuenta la vida pagada o curada en el turno de tienda previo, y se deja fuera un combate sin vida posterior (a menudo el último).",
     "Triples you made, as the game's leaderboard counted them at the end of each finished game (golden minions from cards or discovers are not triples). In Duos it is your own hero's count.":
       "Triples que hiciste, según los contó la clasificación del juego al final de cada partida terminada (los esbirros dorados de cartas o descubrimientos no son triples). En Dúos es el recuento de tu propio héroe.",
   };

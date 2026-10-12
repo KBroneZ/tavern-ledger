@@ -15,8 +15,9 @@ use serde::Serialize;
 use serde_json::Value;
 
 use crate::choices::own_triples;
+use crate::damage::{damage_taken, Taken};
 use crate::provenance::Source;
-use crate::recap::{combats_in_order, own_health_points, Outcome};
+use crate::recap::{combats_in_order, Outcome};
 use crate::shop::{record_of, totals, TurnCount, TurnSum};
 
 /// Card names (English, from the card data) that count as golden Brann or
@@ -41,7 +42,7 @@ const BASIS_FREE_ROLLS: &str = "Rolls that spent no gold.";
 const BASIS_BRANN_TITUS: &str = "Golden minions you sold whose card name is Brann Bronzebeard or Titus Rivendare. The sells are from the log; the names from the card database.";
 const BASIS_MOST_BOUGHT: &str = "The minion you bought most often over all games, by card id: a golden copy bought from the tavern counts as its own card (a tie takes the first card id in alphabetical order).";
 const BASIS_WIN_STREAK: &str = "Most combats won in a row inside one game. A tie, a loss, an unknown result or a round the log lacks ends the streak. Inferred when any result in it was worked out from health.";
-const BASIS_DAMAGE: &str = "Your health before a combat minus your health after it (armor included), the largest over all games. Inferred: health paid or healed during the shop turn before the combat is counted in it too, and a combat with no health after it in the log (often the last one) is left out.";
+const BASIS_DAMAGE: &str = "The largest hit your hero took at the end of a combat, over all games: the game's own number from the log where the combat's replay has it. Older games use your health before the combat minus your health after it (armor included), marked inferred: health paid or healed during the shop turn before is counted in it too, and a combat with no health after it (often the last one) is left out.";
 
 const WHY_NO_TRIPLES: &str = "No finished game has the leaderboard's triple count yet: it is kept since parser revision 5. Older games need tavern-watch --reparse while their logs are on disk.";
 const BASIS_TRIPLES: &str = "Triples you made, as the game's leaderboard counted them at the end of each finished game (golden minions from cards or discovers are not triples). In Duos it is your own hero's count.";
@@ -190,14 +191,19 @@ fn game_streak(report: &Value) -> Option<Streak> {
     Some(best)
 }
 
-/// The most health lost in one combat of a game; None when no combat has
-/// the health before and after it.
-fn game_damage(report: &Value) -> Option<i64> {
-    own_health_points(report)
-        .windows(2)
-        .filter(|pair| pair[1].round == pair[0].round + 1)
-        .filter_map(|pair| Some((pair[0].health? - pair[1].health?).max(0)))
-        .max()
+/// The most damage taken in one combat of a game (T-540: the game's own
+/// hit where the record has it, else the health rule); None when no combat
+/// has either. A tie between the two takes the one from the log.
+fn game_damage(report: &Value) -> Option<Taken> {
+    damage_taken(report).into_iter().reduce(better_damage)
+}
+
+fn better_damage(a: Taken, b: Taken) -> Taken {
+    if (b.amount, b.from_log) > (a.amount, a.from_log) {
+        b
+    } else {
+        a
+    }
 }
 
 /// Golden Brann and Titus sold in one game; None when a golden minion sold
@@ -230,7 +236,7 @@ struct Counts {
     bought: BTreeMap<String, i64>,
     streak: Option<Streak>,
     streak_games: usize,
-    damage: Option<i64>,
+    damage: Option<Taken>,
     damage_games: usize,
 }
 
@@ -260,7 +266,7 @@ impl Counts {
         }
         if let Some(damage) = game_damage(report) {
             self.damage_games += 1;
-            self.damage = Some(self.damage.map_or(damage, |d| d.max(damage)));
+            self.damage = Some(self.damage.map_or(damage, |d| better_damage(d, damage)));
         }
     }
 
@@ -327,12 +333,12 @@ impl Counts {
         let damage = CuriousStat {
             key: "most_damage_one_combat",
             label: "Most damage taken in one combat",
-            value: self.damage,
+            value: self.damage.map(|d| d.amount),
             card: None,
-            source: if self.damage.is_some() {
-                Source::Inferred
-            } else {
-                Source::Unknown
+            source: match self.damage {
+                Some(d) if d.from_log => Source::Log,
+                Some(_) => Source::Inferred,
+                None => Source::Unknown,
             },
             games: self.damage_games,
             turns: None,
@@ -679,6 +685,26 @@ mod tests {
             (s.value, s.games, s.source),
             (Some(22), 2, Source::Inferred)
         );
+    }
+
+    #[test]
+    fn most_damage_takes_the_games_own_hit_where_the_replay_has_it() {
+        // Health says 28 (the shop cost some); the game's hit was 26, from the log.
+        let mut a = fights(&[(Some("lost"), 22)]);
+        a["start_health"]["1"] = json!(50);
+        a["rounds"][0]["replay"] =
+            json!({"events": [{"kind": "hero_damage", "side": "own", "amount": 26}]});
+        let mut b = fights(&[(Some("lost"), 25)]);
+        b["start_health"]["1"] = json!(40);
+        let c = compute(&[a.clone(), b], no_names());
+        let s = stat(&c, "most_damage_one_combat");
+        assert_eq!((s.value, s.games, s.source), (Some(26), 2, Source::Log));
+        // An inferred drop larger than every hit wins, marked inferred.
+        let mut big = fights(&[(Some("lost"), 25)]);
+        big["start_health"]["1"] = json!(60);
+        let c = compute(&[a, big], no_names());
+        let s = stat(&c, "most_damage_one_combat");
+        assert_eq!((s.value, s.source), (Some(35), Source::Inferred));
     }
 
     #[test]

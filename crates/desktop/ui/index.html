@@ -90,6 +90,12 @@
         <p id="heroes-empty" class="empty" hidden data-i18n="win.heroes.empty">No heroes yet.</p>
       </section>
 
+      <section class="ledger tribes adv-only" id="game-tribes-section" aria-labelledby="game-tribes-title" hidden>
+        <h2 id="game-tribes-title" data-i18n="win.gameTribes.title">Lobby tribes from the game</h2>
+        <p class="note" data-i18n="win.gameTribes.about">Read from the game at hero select and saved with each game on this PC, when reading from the game is on. Exact; never uploaded. Games without them have only the tribes seen in the tavern.</p>
+        <div id="game-tribes"></div>
+      </section>
+
       <section class="ledger tribes adv-only" aria-labelledby="tribes-title">
         <h2 id="tribes-title" data-i18n="win.tribes.seen.title">Tribes seen in the tavern</h2>
         <div id="tribes"></div>
@@ -315,6 +321,7 @@
   <script src="curious.js"></script>
   <script src="tabs.js"></script>
   <script src="detail-switch.js"></script>
+  <script src="game-time.js"></script>
   <script src="app.js"></script>
   <script src="upload.js"></script>
   <script src="overlay-switch.js"></script>

@@ -84,6 +84,20 @@
     return { before, after, change: known(before) && known(after) ? after - before : null };
   }
 
+  // The combat's hit as the game dealt it (T-540); null when the record lacks it.
+  function damageAt(r, round) {
+    const d = list(r.damage).find((x) => x.round === round);
+    return d && Number.isInteger(d.taken) && Number.isInteger(d.dealt) ? { taken: d.taken, dealt: d.dealt } : null;
+  }
+
+  // "your hero took 7 damage", "you dealt 12 damage", "no damage"; null when unknown.
+  function damageWords(d) {
+    if (!d) return null;
+    if (d.taken > 0) return t("turns.s.took", { n: num(d.taken) });
+    if (d.dealt > 0) return t("turns.s.dealt", { n: num(d.dealt) });
+    return t("turns.s.no_damage");
+  }
+
   // One row per turn that has a shop, a combat or a board in the record.
   function rows(r, report) {
     const shopTurns = r.shop && r.shop.state === "recorded" ? list(r.shop.turns) : [];
@@ -100,6 +114,7 @@
         tier: shop && shop.in_log && known(shop.tier) ? { value: shop.tier, up: shop.tier_up === true } : null,
         combat: combatAt(r, turn),
         health: healthAt(r, turn),
+        damage: damageAt(r, turn),
         own: ownBoard(report, turn),
       };
     });
@@ -130,6 +145,8 @@
       parts.push(who ? t("turns.s.vs", { outcome, who }) : outcome);
     } else parts.push(t("turns.s.no_combat"));
     parts.push(t("turns.s.health", { change: healthWords(row.health) }));
+    const hit = damageWords(row.damage);
+    if (hit) parts.push(hit);
     if (row.own) parts.push(I18n.plural("turns.s.board", row.own.totals.count));
     return parts.join(", ");
   }
@@ -186,11 +203,13 @@
     return box;
   }
 
-  function health(ui, h, source) {
+  function health(ui, h, source, damage) {
     const words = healthWords(h);
     const kind = !known(h.change) ? "unknown" : h.change < 0 ? "hurt" : h.change > 0 ? "healed" : "even";
     const node = ui.el("span", `turn-health ${kind}`, words);
     node.title = known(h.after) ? t("turns.health_tip", { before: num(h.before), after: num(h.after) }) : t("turns.health_none");
+    const hit = damageWords(damage);
+    if (hit) node.title += ` ${t("turns.damage_tip", { hit })}`;
     ui.addTip(node, known(h.change) ? source : "unknown");
     return node;
   }
@@ -324,7 +343,7 @@
       ui.el("span", "turn-no", row.turn),
       tier(ui, row.tier),
       result(ui, row.combat, h.heroText, h.art),
-      health(ui, row.health, healthSource),
+      health(ui, row.health, healthSource, row.damage),
       strip(ui, row.own, h.art),
     );
     const label = ui.el("span", "visually-hidden", words);
@@ -367,7 +386,7 @@
     return part;
   }
 
-  const api = { giftMark, giftMarks, rows, combatAt, healthWords, totalsWords, keywordsRecorded, summaryWords, shopFacts, section };
+  const api = { giftMark, giftMarks, rows, combatAt, healthWords, damageWords, totalsWords, keywordsRecorded, summaryWords, shopFacts, section };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLTurns = api;
 })();

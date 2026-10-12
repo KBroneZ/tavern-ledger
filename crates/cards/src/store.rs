@@ -220,6 +220,16 @@ impl CardStore {
             .unwrap_or_default()
     }
 
+    /// Each hero skin's base hero as a database id (T-540); empty while
+    /// there is no card data or the data has none.
+    pub fn skin_parents(&self) -> std::collections::BTreeMap<String, i64> {
+        lock(&self.inner)
+            .saved
+            .as_ref()
+            .map(|s| s.catalog.skin_parents().clone())
+            .unwrap_or_default()
+    }
+
     /// The card id of a database id (the trinkets and the Old God, T-207);
     /// None while there is no card data or the data does not know it.
     pub fn card_of_dbf(&self, dbf: i64) -> Option<String> {

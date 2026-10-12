@@ -62,8 +62,9 @@ pub struct LiveBoard {
     pub minions: Vec<LiveMinion>,
 }
 
-/// Combats won, lost or tied against an opponent (a team in Duos), worked out
-/// from health (D-028): always inferred.
+/// Combats won, lost or tied against an opponent (a team in Duos): the
+/// game's own results (D-055), or worked out from health (D-028) when the
+/// log has none; `record_source` says which.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct LiveRecord {
     pub won: usize,
@@ -415,15 +416,13 @@ fn opponent_of(
         .iter()
         .filter_map(|&pid| last_board(view, pid))
         .collect();
-    let record = records
-        .iter()
-        .find(|r| r.seats == seats)
-        .map(|r| LiveRecord {
-            won: r.won,
-            lost: r.lost,
-            tie: r.tie,
-            unknown: r.unknown,
-        });
+    let found = records.iter().find(|r| r.seats == seats);
+    let record = found.map(|r| LiveRecord {
+        won: r.won,
+        lost: r.lost,
+        tie: r.tie,
+        unknown: r.unknown,
+    });
     LiveOpponent {
         health: Sourced::log(current_health(view, &seats)),
         place: Sourced::log(None),
@@ -433,11 +432,8 @@ fn opponent_of(
         shown_source: Source::Unknown,
         next: false,
         boards_source: Source::log_if(!boards.is_empty()),
-        record_source: if record.is_some() {
-            Source::Inferred
-        } else {
-            Source::Unknown
-        },
+        // The recap's rule: from the log only when every result is the game's.
+        record_source: found.map_or(Source::Unknown, |r| r.counts_source),
         heroes,
         boards,
         record,

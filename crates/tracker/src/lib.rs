@@ -5,9 +5,11 @@
 
 pub mod choices;
 pub mod client_build;
+pub mod damage;
 pub mod dev_reconnect;
 pub mod discover;
 pub mod game_clock;
+pub mod game_tribes;
 pub mod game_values;
 pub mod hero_pick;
 pub mod live;
