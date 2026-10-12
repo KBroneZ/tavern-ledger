@@ -145,6 +145,10 @@ One at a time, each with a recommendation.
 5. **Should a longer history (full files beyond 90 days) become a paid extra later?** Recommended: yes, but not built until payments exist (R3); until then the 90 days apply to everyone.
 6. **Should the stored file be compressed harder (xz or brotli)?** Recommended: no; it saves 7 % to 24 % for a new format on both sides.
 
+### 6.1 Built: storage alert (T-543, session 098)
+
+Answer 1 is built: each daily sweep stores the database size, the `games` bucket's file bytes and file count, and the level reached against each Free limit (`none`, `50%`, `80%`) on its row of `private.sweep_runs`, and its answer carries the same numbers. The limits of section 2.1 live in `private.capacity_limits()` (migration `20261012150000_storage_alert.sql`). The hub's query and what it does at each level: [deploy.md](deploy.md) section 10.5.
+
 ## 7. Query for the hosted project (read only)
 
 Run once by the hub on 2026-10-12; results in 7.1. Run it again at a few thousand games to measure the database bytes per game. It returns only totals and sizes, no ids or names. To run in the Supabase SQL editor:

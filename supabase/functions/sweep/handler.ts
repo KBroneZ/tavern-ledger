@@ -18,6 +18,12 @@
 // housekeeping counts; a step that fails is recorded too, so a run that
 // reported nothing is never read as one that did nothing. The response
 // carries the same counts.
+// Housekeeping also measures how full the project is (T-543, D-109): the
+// database size and the games bucket's file bytes and count, each with the
+// Free plan's limit and the level reached ("none", "50%", "80%"). It is
+// stored on the run's row and passed on in the response as "capacity"; a
+// failed measurement is recorded there and never stops the sweep. 50 % and
+// 80 % are logged too (percentages only).
 // Safe to run any time and as often as wanted. No dependencies.
 
 import { summarize, SUMMARY_VERSION } from "../_shared/game_summary.ts";
@@ -341,6 +347,78 @@ async function backfillStats(env: Env, fetchFn: Fetch): Promise<BackfillCounts> 
   return counts;
 }
 
+const LEVELS: readonly unknown[] = ["none", "50%", "80%"];
+
+interface Measure {
+  bytes: number;
+  limit: number;
+  level: string;
+}
+
+export type Capacity =
+  | {
+    database: Measure;
+    files: Measure & { count: number };
+    level: string;
+    limits_read_on: string;
+  }
+  | { failed: true; sqlstate: string };
+
+const count = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) >= 0;
+
+function measure(v: unknown): Measure | null {
+  if (typeof v !== "object" || v === null) return null;
+  const m = v as Record<string, unknown>;
+  if (!count(m.bytes) || !count(m.limit) || m.limit === 0 || !LEVELS.includes(m.level)) {
+    return null;
+  }
+  return { bytes: m.bytes, limit: m.limit, level: m.level as string };
+}
+
+/**
+ * sweep_housekeeping()'s capacity, rebuilt from its known fields only, or
+ * null when it is missing (a database from before T-543) or out of shape.
+ */
+function checkCapacity(v: unknown): Capacity | null {
+  if (typeof v !== "object" || v === null) return null;
+  const c = v as Record<string, unknown>;
+  if (c.failed === true) {
+    return typeof c.sqlstate === "string" && /^[0-9A-Z]{5}$/.test(c.sqlstate)
+      ? { failed: true, sqlstate: c.sqlstate }
+      : null;
+  }
+  const database = measure(c.database);
+  const files = measure(c.files);
+  const fileCount = (c.files as Record<string, unknown> | null)?.count;
+  if (
+    !database || !files || !count(fileCount) || !LEVELS.includes(c.level) ||
+    typeof c.limits_read_on !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(c.limits_read_on)
+  ) {
+    return null;
+  }
+  return {
+    database,
+    files: { bytes: files.bytes, count: fileCount, limit: files.limit, level: files.level },
+    level: c.level as string,
+    limits_read_on: c.limits_read_on,
+  };
+}
+
+/** Logs a failed or missing measurement, and 50 % or 80 % of a limit. */
+function logCapacity(capacity: Capacity | null) {
+  if (capacity === null) {
+    console.error("sweep: capacity missing or out of shape");
+  } else if ("failed" in capacity) {
+    console.error(`sweep: capacity not measured (SQLSTATE ${capacity.sqlstate})`);
+  } else if (capacity.level !== "none") {
+    const pct = (m: Measure) => Math.floor((m.bytes * 100) / m.limit);
+    console.warn(
+      `sweep: storage at ${capacity.level} of a Free plan limit ` +
+        `(database ${pct(capacity.database)} %, files ${pct(capacity.files)} %)`,
+    );
+  }
+}
+
 /** Records the step a run failed at; a failure to record is logged, not thrown. */
 async function recordFailure(env: Env, fetchFn: Fetch, runId: number | null, step: string) {
   try {
@@ -371,9 +449,11 @@ async function sweep(env: Env, fetchFn: Fetch): Promise<Response> {
       `${env.url}/rest/v1/rpc/sweep_housekeeping`,
       { method: "POST", headers: serviceHeaders(env), body: "{}" },
     );
-    const { run_id, ...counts } = await res.json();
+    const { run_id, capacity: measured, ...counts } = await res.json();
     if (!Number.isSafeInteger(run_id)) throw new StepError("housekeeping", 502);
     runId = run_id;
+    const capacity = checkCapacity(measured);
+    logCapacity(capacity);
     const stats = await backfillStats(env, fetchFn);
     const done = await call(fetchFn, "record run", `${env.url}/rest/v1/rpc/sweep_record_result`, {
       method: "POST",
@@ -381,7 +461,7 @@ async function sweep(env: Env, fetchFn: Fetch): Promise<Response> {
       body: JSON.stringify({ p_run_id: runId, p_files: files, p_stats: stats }),
     });
     await done.body?.cancel();
-    return json(200, { run_id: runId, files, ...counts, stats });
+    return json(200, { run_id: runId, files, ...counts, stats, capacity });
   } catch (e) {
     const step = e instanceof StepError ? e.step : "unexpected";
     console.error(`sweep: ${e instanceof StepError ? e.message : "unexpected error"}`);

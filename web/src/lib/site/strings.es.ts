@@ -91,6 +91,8 @@ export const ES: Record<SiteKey, string> = {
   "home.hero.lit": "Te hemos guardado las partidas.",
   "home.lead":
     "Una aplicación gratuita para Windows que lee el registro del propio Hearthstone en tu PC y guarda todas tus partidas de Campos de Batalla: tu héroe, tu puesto y los tableros a los que te enfrentaste.",
+  "home.cta.download": "Descargar",
+  "home.cta.download.note": "Aún no ha salido",
   "home.cta.show": "Enséñamelo",
   "home.cta.safe": "¿Es seguro?",
   "home.scene.title": "Lo que Tavern Ledger añade a tu pantalla",
@@ -121,6 +123,7 @@ export const ES: Record<SiteKey, string> = {
   "home.yours.gone.title": "Borrado cuando lo pidas",
   "home.yours.gone.body": "Borra tu cuenta y todas tus partidas con ella.",
   "home.status.label": "Estado del proyecto",
+  "home.top": "Volver a la puerta",
   "home.status.title": "Las puertas aún no están abiertas.",
   "home.status.body": "La aplicación de escritorio es un prototipo y la web está en construcción.",
   "home.status.testing": "Las cuentas de esta web son solo para pruebas.",
