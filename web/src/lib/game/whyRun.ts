@@ -10,23 +10,37 @@ import { giftName } from "./gifts.ts";
 import { explainRequest, readWhy, type WhyCombat } from "./why.ts";
 import { type NameOf, WHY_ID, whyLines } from "./whyView.ts";
 
-/** The engine's answer to one request (JSON text). */
-function askEngine(request: string): Promise<string> {
+/**
+ * How long the engine may take: a real game takes a few seconds; past this
+ * the worker is stopped and the section says the odds could not be worked out.
+ */
+export const ENGINE_TIMEOUT_MS = 60_000;
+
+/** The engine's answer to one request (JSON text); `makeWorker` is the simulator's worker, or a stand-in in tests. */
+export function askEngine(request: string, makeWorker: () => Worker = simWorker, timeoutMs = ENGINE_TIMEOUT_MS): Promise<string> {
   return new Promise((resolve, reject) => {
-    const worker = new Worker(new URL("../sim/simWorker.ts", import.meta.url), { type: "module" });
+    const worker = makeWorker();
+    const stop = (error: Error | null, answer = "") => {
+      clearTimeout(timer);
+      worker.terminate();
+      if (error) reject(error);
+      else resolve(answer);
+    };
+    const timer = setTimeout(() => stop(new Error("the engine took too long")), timeoutMs);
     worker.addEventListener("message", (event: MessageEvent<unknown>) => {
       const data = event.data as { id?: unknown; answer?: unknown } | null;
       if (data?.id !== 1) return;
-      worker.terminate();
-      if (typeof data.answer === "string") resolve(data.answer);
-      else reject(new Error("the engine failed"));
+      if (typeof data.answer === "string") stop(null, data.answer);
+      else stop(new Error("the engine failed"));
     });
-    worker.addEventListener("error", () => {
-      worker.terminate();
-      reject(new Error("the engine did not start"));
-    });
+    worker.addEventListener("error", () => stop(new Error("the engine did not start")));
+    worker.addEventListener("messageerror", () => stop(new Error("the answer could not be read")));
     worker.postMessage({ id: 1, request });
   });
+}
+
+function simWorker(): Worker {
+  return new Worker(new URL("../sim/simWorker.ts", import.meta.url), { type: "module" });
 }
 
 async function cardIndex(): Promise<CardIndex> {

@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import { loadEngine } from "../../src/lib/sim/engine.ts";
 import { cardIdsOf, explainRequest, readWhy, type WhyCombat } from "../../src/lib/game/why.ts";
 import { causeLine, evidence, whyLines } from "../../src/lib/game/whyView.ts";
+import { askEngine } from "../../src/lib/game/whyRun.ts";
 import { setLang } from "../../src/lib/i18n.ts";
 import type { VNode } from "../../src/lib/view/node.ts";
 import { WASM_PATH } from "../../tools/simStamp.ts";
@@ -133,4 +134,56 @@ test("the built engine explains a stored game combat by combat", async () => {
     [4, "no_replay_exact"],
   ]);
   assert.equal(combats[1].cause?.card, PLAIN);
+});
+
+test("the built engine's missing inputs and approximate cards read as the page expects", async () => {
+  const engine = await loadEngine(readFileSync(WASM_PATH));
+  // A Blood Gem card with no upgrades saved, and a card that picks minions at random (approximate).
+  const withCard = (id: string) => {
+    const r = report();
+    const rounds = r.rounds as { entries: { board: { card_id: string }[] }[]; replay?: { minions: { card_id: string }[] } }[];
+    const round = structuredClone(rounds[1]);
+    round.entries[0].board[1].card_id = id;
+    round.replay!.minions[1].card_id = id;
+    return { ...r, rounds: [round] };
+  };
+  const facts = () => FACTS;
+  const gems = readWhy(engine.run(explainRequest(withCard("BG33_886"), facts)))!;
+  assert.equal(gems[0].cause?.id, "missing_inputs");
+  assert.deepEqual(gems[0].cause?.inputs, [{ what: "blood_gems", card: "BG33_886" }]);
+  assert.equal(gems[0].cause?.rule, "replay_first_attacker");
+  const picks = readWhy(engine.run(explainRequest(withCard("BG28_309"), facts)))!;
+  assert.equal(picks[0].cause?.id, "approximate_card");
+  assert.deepEqual(picks[0].cause?.cards, ["BG28_309"]);
+});
+
+/** A stand-in for the simulator's worker: answers (or not) as told, and notes when it is stopped. */
+class FakeWorker extends EventTarget {
+  stopped = false;
+  private readonly reply: (request: string) => unknown;
+  constructor(reply: (request: string) => unknown) {
+    super();
+    this.reply = reply;
+  }
+  postMessage(message: { id: number; request: string }): void {
+    const data = this.reply(message.request);
+    if (data !== undefined) queueMicrotask(() => this.dispatchEvent(new MessageEvent("message", { data })));
+  }
+  terminate(): void {
+    this.stopped = true;
+  }
+}
+
+test("the engine's worker is stopped once it answers, fails or takes too long", async () => {
+  const answered = new FakeWorker((request) => ({ id: 1, answer: `echo ${request.length}` }));
+  assert.equal(await askEngine("abc", () => answered as unknown as Worker), "echo 3");
+  assert.ok(answered.stopped);
+  const failed = new FakeWorker(() => ({ id: 1, failed: true }));
+  await assert.rejects(askEngine("x", () => failed as unknown as Worker), /failed/);
+  assert.ok(failed.stopped);
+  const silent = new FakeWorker(() => undefined);
+  await assert.rejects(askEngine("x", () => silent as unknown as Worker, 10), /too long/);
+  assert.ok(silent.stopped);
+  const other = new FakeWorker(() => ({ id: 2, answer: "not ours" }));
+  await assert.rejects(askEngine("x", () => other as unknown as Worker, 10), /too long/, "another request's answer is not taken");
 });

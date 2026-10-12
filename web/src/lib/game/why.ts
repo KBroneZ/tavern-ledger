@@ -63,7 +63,8 @@ function maybe<T>(v: unknown, read: (v: unknown) => T): T | null {
   return v === undefined || v === null ? null : read(v);
 }
 
-function int(v: unknown, max = 999): number {
+/** Turns and attacks: far above the engine's own limit on attacks (1 000) and the server's on replay events (2 000). */
+function int(v: unknown, max = 9_999): number {
   if (typeof v !== "number" || !Number.isInteger(v) || v < 0 || v > max) throw new Bad();
   return v;
 }

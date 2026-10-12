@@ -75,7 +75,7 @@ function showGame(result: Extract<LoadResult, { kind: "ok" }>, ref: GameRef): vo
   show(title, [...banners, ...renderGame(view, dateText(playedOn(ref.session)))], g("page.loaded", { title }));
   const replays = document.getElementById("gv-replays");
   if (replays) startReplays(replays, view.replays);
-  explainCombats(result.report).catch(() => {});
+  void explainCombats(result.report);
 }
 
 /** A game whose full file has expired (T-544): its summary and why the details are gone. */
