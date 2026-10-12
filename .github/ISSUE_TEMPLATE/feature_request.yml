@@ -1,0 +1,29 @@
+name: Feature request
+description: An idea for the app or the website.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas are welcome. Tavern Ledger only shows what the player could see on their own screen, and never injects into or automates the game, so ideas that need either cannot be taken.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you want to do
+      description: The problem or the question you want answered, in your own words.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: How it could work. Mockups and examples help.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options:
+        - Desktop app
+        - Overlay
+        - Website
+        - Not sure
