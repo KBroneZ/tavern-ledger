@@ -1,0 +1,636 @@
+-- T-544 (session 101, D-109, D-113): 28-day rolling retention of full game
+-- files for accounts without unlimited history.
+--
+-- A game's full file (the gzipped report in the `games` bucket: turn-by-turn
+-- boards, combat replays) is deleted by the daily sweep once the game is
+-- older than the retention; its summary rows (public.games, public.game_stats)
+-- stay while the account exists. Accounts in private.unlimited_history keep
+-- every file (the owner, beta testers, later the paid plan).
+--
+-- * private.file_retention: the one place for the number of days (28) and
+--   the switch. It ships with live = false: the sweep then only counts what
+--   it would delete (report-only). Turning it on is one line, run by the
+--   owner (deploy.md 10.5):
+--     update private.file_retention set live = true, updated_at = now();
+-- * private.unlimited_history: one row per exempt account. Written by the
+--   owner only (SQL editor); no grant to anon, authenticated or service_role,
+--   no client UI. Removed with the account.
+-- * public.games.file_expired_at: set when the sweep has deleted the game's
+--   file, so the website can say the details have expired instead of failing.
+--   A new copy of the game (another SHA-256) clears it, and the sweep deletes
+--   that copy again on its next run.
+-- * public.file_retention_list(limit): what is due, and in live mode the
+--   files to delete (at most 1000 per call). public.file_retention_mark():
+--   called after the Storage API has deleted a batch. Both service role only.
+--   The sweep deletes first and marks after, so a failed delete leaves the
+--   game unmarked and it is tried again on the next run; a failed mark is
+--   tried again the same way (deleting a missing file is a no-op).
+-- * The sweep's run record gains "retention" (counts only, never ids).
+-- * The backfill of game summaries skips games whose file has expired.
+-- * Export: the games rows carry file_expired_at, and the export says
+--   whether the account has unlimited history. Account deletion removes the
+--   mark.
+--
+-- When a game is "played": its played_on date (the client's local date) or
+-- the day it was first uploaded, whichever is earlier, so a date in the
+-- future cannot keep a file forever. The file is deleted once that day is
+-- more than days + 1 days before today (UTC): with 28 days, a game played on
+-- 1 September is deleted from 1 October on. The extra day covers time zones,
+-- so every file is kept at least 28 full days.
+--
+-- A game with no summary row is never deleted (its file is the only way to
+-- make one); it is counted as skipped "no_summary".
+
+-- ---------------------------------------------------------------------------
+-- Settings and the exemption
+-- ---------------------------------------------------------------------------
+
+create table private.file_retention (
+  id boolean primary key default true check (id),
+  days integer not null check (days between 1 and 3650),
+  live boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+insert into private.file_retention (days, live) values (28, false);
+revoke all on private.file_retention from public, anon, authenticated, service_role;
+
+create table private.unlimited_history (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  since timestamptz not null default now()
+);
+revoke all on private.unlimited_history from public, anon, authenticated, service_role;
+
+comment on table private.unlimited_history is
+  'Accounts whose full game files are kept without limit (T-544). Written by the owner only.';
+
+-- ---------------------------------------------------------------------------
+-- games.file_expired_at
+-- ---------------------------------------------------------------------------
+
+alter table public.games add column file_expired_at timestamptz;
+
+comment on column public.games.file_expired_at is
+  'When the daily sweep deleted this game''s full file (T-544); null while the file is kept.';
+
+-- A new copy of the game is a new file: it is kept until the next sweep.
+create function private.games_file_replaced()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if new.content_sha256 is distinct from old.content_sha256 then
+    new.file_expired_at := null;
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function private.games_file_replaced() from public, anon, authenticated, service_role;
+
+create trigger games_file_replaced before update of content_sha256 on public.games
+  for each row execute function private.games_file_replaced();
+
+create index games_file_kept on public.games (played_on) where file_expired_at is null;
+
+-- ---------------------------------------------------------------------------
+-- Selection
+-- ---------------------------------------------------------------------------
+
+-- The first day whose games are kept: games played before it are past the
+-- retention (see the header). Null when the settings row is missing.
+create function private.file_retention_cutoff()
+returns date
+language sql
+stable
+set search_path = ''
+as $$
+  select (now() at time zone 'utc')::date - (r.days + 1) from private.file_retention r;
+$$;
+
+-- True when the game's file is past the retention, whatever the account.
+create function private.file_past_retention(p_played_on date, p_created_at timestamptz, p_cutoff date)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $$
+  select least(p_played_on, (p_created_at at time zone 'utc')::date) < p_cutoff;
+$$;
+
+revoke all on function private.file_retention_cutoff() from public, anon, authenticated, service_role;
+revoke all on function private.file_past_retention(date, timestamptz, date)
+  from public, anon, authenticated, service_role;
+
+-- What the retention would delete now, for the sweep. Returns
+--   {"live": bool, "days": 28, "due": n,
+--    "skipped": {"exempt": n, "no_summary": n},
+--    "files": [{"path": "...", "sha256": "..."}, ...]}
+-- due counts the files past the retention that would be deleted;
+-- skipped counts the ones that are kept (unlimited history; no summary yet).
+-- files is empty in report-only mode, and at most p_limit (capped at 1000)
+-- in live mode, oldest first. Raises 55000 when the settings row is missing.
+create function public.file_retention_list(p_limit integer)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_days integer;
+  v_live boolean;
+  v_cutoff date;
+  v_due bigint;
+  v_exempt bigint;
+  v_no_summary bigint;
+  v_files jsonb := '[]'::jsonb;
+begin
+  select r.days, r.live into v_days, v_live from private.file_retention r;
+  if v_days is null then
+    raise exception 'file_retention_list: settings missing' using errcode = '55000';
+  end if;
+  v_cutoff := private.file_retention_cutoff();
+
+  select
+    count(*) filter (where not c.exempt and c.summarized),
+    count(*) filter (where c.exempt),
+    count(*) filter (where not c.exempt and not c.summarized)
+  into v_due, v_exempt, v_no_summary
+  from (
+    select
+      exists (select 1 from private.unlimited_history u where u.user_id = g.user_id) as exempt,
+      exists (
+        select 1 from public.game_stats s
+        where s.user_id = g.user_id and s.session = g.session and s.game_index = g.game_index
+      ) as summarized
+    from public.games g
+    where g.file_expired_at is null
+      and private.file_past_retention(g.played_on, g.created_at, v_cutoff)
+  ) c;
+
+  if v_live then
+    select coalesce(jsonb_agg(jsonb_build_object('path', f.storage_path, 'sha256', f.content_sha256)
+                              order by f.played_on, f.storage_path), '[]'::jsonb)
+    into v_files
+    from (
+      select g.storage_path, g.content_sha256, g.played_on
+      from public.games g
+      where g.file_expired_at is null
+        and private.file_past_retention(g.played_on, g.created_at, v_cutoff)
+        and not exists (select 1 from private.unlimited_history u where u.user_id = g.user_id)
+        and exists (
+          select 1 from public.game_stats s
+          where s.user_id = g.user_id and s.session = g.session and s.game_index = g.game_index
+        )
+      order by g.played_on, g.storage_path
+      limit least(greatest(coalesce(p_limit, 0), 0), 1000)
+    ) f;
+  end if;
+
+  return jsonb_build_object(
+    'live', v_live,
+    'days', v_days,
+    'due', v_due,
+    'skipped', jsonb_build_object('exempt', v_exempt, 'no_summary', v_no_summary),
+    'files', v_files
+  );
+end;
+$$;
+
+-- Marks games whose file the Storage API has just deleted: only the copy the
+-- list named (same SHA-256), only while the game is still past the retention
+-- on an account without unlimited history, and only in live mode. Returns
+-- how many rows it marked. Refuses (22023) lists of different lengths or
+-- longer than 1000.
+create function public.file_retention_mark(p_paths text[], p_sha256 text[])
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_cutoff date := private.file_retention_cutoff();
+  n integer;
+begin
+  if p_paths is null or p_sha256 is null
+     or coalesce(array_length(p_paths, 1), 0) <> coalesce(array_length(p_sha256, 1), 0)
+     or coalesce(array_length(p_paths, 1), 0) > 1000 then
+    raise exception 'file_retention_mark: lists out of shape' using errcode = '22023';
+  end if;
+  if not coalesce((select r.live from private.file_retention r), false) then
+    return 0;
+  end if;
+  update public.games g
+  set file_expired_at = now()
+  from unnest(p_paths, p_sha256) as f(path, sha256)
+  where g.storage_path = f.path
+    and g.content_sha256 = f.sha256
+    and g.file_expired_at is null
+    and private.file_past_retention(g.played_on, g.created_at, v_cutoff)
+    and not exists (select 1 from private.unlimited_history u where u.user_id = g.user_id);
+  get diagnostics n = row_count;
+  return n;
+end;
+$$;
+
+revoke all on function public.file_retention_list(integer) from public, anon, authenticated;
+revoke all on function public.file_retention_mark(text[], text[]) from public, anon, authenticated;
+grant execute on function public.file_retention_list(integer) to service_role;
+grant execute on function public.file_retention_mark(text[], text[]) to service_role;
+
+-- ---------------------------------------------------------------------------
+-- The backfill skips games whose file has expired
+-- ---------------------------------------------------------------------------
+
+-- As in 20261011120000_game_stats.sql, without games whose file has expired
+-- (they would count as no_file on every run).
+create or replace function public.game_stats_backfill_list(p_version integer, p_limit integer)
+returns table (
+  user_id uuid,
+  session text,
+  game_index integer,
+  storage_path text,
+  content_sha256 text
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select g.user_id, g.session, g.game_index, g.storage_path, g.content_sha256
+  from public.games g
+  left join public.game_stats s
+    on s.user_id = g.user_id and s.session = g.session and s.game_index = g.game_index
+  where (s.user_id is null or s.summary_version < p_version)
+    and g.file_expired_at is null
+  -- Random, so files that keep failing cannot hold back the others forever.
+  order by random()
+  limit least(greatest(coalesce(p_limit, 0), 0), 500);
+$$;
+
+-- ---------------------------------------------------------------------------
+-- The website reads file_expired_at with the summary
+-- ---------------------------------------------------------------------------
+
+-- As in 20261011120000_game_stats.sql, plus file_expired_at at the end
+-- (create or replace keeps the grants and the views built on it).
+create or replace view public.game_summaries with (security_invoker = true) as
+select
+  g.user_id,
+  g.session,
+  g.game_index,
+  case g.game_type when 'GT_BATTLEGROUNDS' then 'solo' else 'duos' end as mode,
+  g.game_type,
+  g.status,
+  g.played_on,
+  g.hero_card_id,
+  coalesce(substring(g.hero_card_id from '^(.+)_SKIN_[A-Za-z0-9]+$'), g.hero_card_id) as hero,
+  g.final_place,
+  p.counted_place,
+  p.counted_place <= case g.game_type when 'GT_BATTLEGROUNDS' then 4 else 2 end as top_half,
+  p.counted_place = 1 as won,
+  g.build,
+  g.parser_version,
+  g.tribes_offered,
+  g.storage_path,
+  s.summary_version,
+  s.teammate_hero,
+  s.rounds,
+  s.combats_won,
+  s.combats_lost,
+  s.combats_tied,
+  s.combats_unknown,
+  s.combats_inferred,
+  s.win_streak,
+  s.win_streak_inferred,
+  s.damage_taken,
+  s.damage_taken_combats,
+  s.damage_taken_max,
+  s.damage_dealt,
+  s.damage_dealt_combats,
+  s.damage_dealt_max,
+  s.shop_turns,
+  s.final_tier,
+  s.gold_spent,
+  s.gold_spent_turns,
+  s.gold_beyond_income,
+  s.gold_beyond_turns,
+  s.sell_gold,
+  s.sell_gold_turns,
+  s.rolls,
+  s.free_rolls,
+  s.buys,
+  s.spell_buys,
+  s.sells,
+  s.freezes,
+  s.actions,
+  s.apm,
+  s.triples,
+  s.final_board,
+  s.final_board_round,
+  s.board_stats_max,
+  s.golden_max,
+  s.heroes_offered,
+  s.hero_rerolls,
+  g.file_expired_at
+from public.games g
+cross join lateral (
+  select case when g.status = 'ok' then g.final_place end as counted_place
+) p
+left join public.game_stats s
+  on s.user_id = g.user_id and s.session = g.session and s.game_index = g.game_index;
+
+-- ---------------------------------------------------------------------------
+-- The run record
+-- ---------------------------------------------------------------------------
+
+-- The retention's counts as the sweep records them, one of:
+--   {"error": "list"}   the list call failed or answered out of shape
+--   {"mode": "report" | "live", "days": 28, "due": n, "listed": n,
+--    "deleted": n, "failed": n, "unmarked": n, "left": n,
+--    "skipped": {"exempt": n, "no_summary": n}}
+-- due: files past the retention that would be deleted; listed: handed to the
+-- sweep this run; deleted: deleted through the Storage API; failed: the
+-- delete call failed (tried again next run); unmarked: deleted but not
+-- marked yet (marked next run); left: not reached before the time budget.
+-- Report-only runs list, delete and mark nothing.
+create function private.sweep_retention_valid(r jsonb)
+returns boolean
+language plpgsql
+immutable
+set search_path = ''
+as $$
+declare
+  top constant text[] := array[
+    'mode', 'days', 'due', 'listed', 'deleted', 'failed', 'unmarked', 'left', 'skipped'
+  ];
+  reasons constant text[] := array['exempt', 'no_summary'];
+  counts constant text[] := array['due', 'listed', 'deleted', 'failed', 'unmarked', 'left'];
+  k text;
+  v jsonb;
+  n numeric;
+begin
+  if jsonb_typeof(r) is distinct from 'object' then
+    return false;
+  end if;
+  if r = '{"error": "list"}'::jsonb then
+    return true;
+  end if;
+  if jsonb_typeof(r -> 'skipped') is distinct from 'object'
+     or not (array(select jsonb_object_keys(r)) @> top and array(select jsonb_object_keys(r)) <@ top)
+     or not (array(select jsonb_object_keys(r -> 'skipped')) @> reasons
+             and array(select jsonb_object_keys(r -> 'skipped')) <@ reasons)
+     or r ->> 'mode' is null or r ->> 'mode' not in ('report', 'live') then
+    return false;
+  end if;
+  for k, v in
+    select e.key, e.value from jsonb_each(r) e where e.key = any(counts) or e.key = 'days'
+    union all
+    select e.key, e.value from jsonb_each(r -> 'skipped') e
+  loop
+    if jsonb_typeof(v) <> 'number' then
+      return false;
+    end if;
+    n := (v #>> '{}')::numeric;
+    if n <> trunc(n) or n < 0 or n > 1000000000000 then
+      return false;
+    end if;
+  end loop;
+  if (r ->> 'days')::numeric not between 1 and 3650 or (r ->> 'listed')::numeric > 1000 then
+    return false;
+  end if;
+  if r ->> 'mode' = 'report' then
+    return (r ->> 'listed')::numeric = 0 and (r ->> 'deleted')::numeric = 0
+       and (r ->> 'failed')::numeric = 0 and (r ->> 'unmarked')::numeric = 0
+       and (r ->> 'left')::numeric = 0;
+  end if;
+  return (r ->> 'listed')::numeric
+           = (r ->> 'deleted')::numeric + (r ->> 'failed')::numeric + (r ->> 'left')::numeric
+     and (r ->> 'unmarked')::numeric <= (r ->> 'deleted')::numeric
+     and (r ->> 'listed')::numeric <= (r ->> 'due')::numeric;
+end;
+$$;
+
+revoke all on function private.sweep_retention_valid(jsonb)
+  from public, anon, authenticated, service_role;
+
+-- As in 20261011200000_sweep_counts.sql, plus the retention's counts. The
+-- new argument has a default, so a sweep function deployed before this
+-- migration's (three arguments) still records its runs.
+drop function public.sweep_record_result(bigint, integer, jsonb);
+
+create function public.sweep_record_result(
+  p_run_id bigint,
+  p_files integer,
+  p_stats jsonb,
+  p_retention jsonb default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if p_files is null or p_files < 0 or not private.sweep_stats_valid(p_stats)
+     or (p_retention is not null and not private.sweep_retention_valid(p_retention)) then
+    raise exception 'sweep_record_result: counts out of shape' using errcode = '22023';
+  end if;
+  update private.sweep_runs r
+  set result = r.result || jsonb_build_object('files', p_files, 'stats', p_stats)
+    || case when p_retention is null then '{}'::jsonb
+            else jsonb_build_object('retention', p_retention) end
+  where r.id = p_run_id and not (r.result ? 'stats') and not (r.result ? 'failed_step');
+  if not found then
+    raise exception 'sweep_record_result: no open run %', p_run_id using errcode = '22023';
+  end if;
+end;
+$$;
+
+revoke all on function public.sweep_record_result(bigint, integer, jsonb, jsonb)
+  from public, anon, authenticated;
+grant execute on function public.sweep_record_result(bigint, integer, jsonb, jsonb) to service_role;
+
+-- ---------------------------------------------------------------------------
+-- Export and account deletion
+-- ---------------------------------------------------------------------------
+
+-- As in 20261011180000_community_heroes.sql, plus unlimited_history (when the
+-- account has unlimited file history, else null). The games rows carry
+-- file_expired_at.
+create or replace function public.export_my_data()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  uid uuid := auth.uid();
+begin
+  if uid is null then
+    raise exception 'not signed in' using errcode = '42501';
+  end if;
+
+  return jsonb_build_object(
+    'format', 'tavern-ledger-export',
+    'format_version', 1,
+    'exported_at', now(),
+    'account', (
+      select jsonb_build_object(
+        'id', u.id,
+        'email', u.email,
+        'phone', u.phone,
+        'created_at', u.created_at,
+        'updated_at', u.updated_at,
+        'email_confirmed_at', u.email_confirmed_at,
+        'last_sign_in_at', u.last_sign_in_at,
+        'app_metadata', u.raw_app_meta_data,
+        'user_metadata', u.raw_user_meta_data
+      )
+      from auth.users u where u.id = uid
+    ),
+    'identities', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'provider', i.provider,
+        'identity_data', i.identity_data,
+        'created_at', i.created_at,
+        'updated_at', i.updated_at,
+        'last_sign_in_at', i.last_sign_in_at
+      ) order by i.created_at)
+      from auth.identities i where i.user_id = uid
+    ), '[]'::jsonb),
+    'sessions', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'created_at', s.created_at,
+        'updated_at', s.updated_at,
+        'not_after', s.not_after,
+        'user_agent', s.user_agent,
+        'ip', s.ip
+      ) order by s.created_at)
+      from auth.sessions s where s.user_id = uid
+    ), '[]'::jsonb),
+    -- Second factors (metadata only; secrets stay out).
+    'mfa_factors', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'factor_type', f.factor_type,
+        'friendly_name', f.friendly_name,
+        'status', f.status,
+        'created_at', f.created_at,
+        'updated_at', f.updated_at
+      ) order by f.created_at)
+      from auth.mfa_factors f where f.user_id = uid
+    ), '[]'::jsonb),
+    'auth_events', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'created_at', a.created_at,
+        'ip_address', a.ip_address,
+        'payload', a.payload
+      ) order by a.created_at)
+      from auth.audit_log_entries a where (a.payload ->> 'actor_id' = uid::text
+             or a.payload -> 'traits' ->> 'user_id' = uid::text)
+    ), '[]'::jsonb),
+    'profile', (
+      select to_jsonb(p) from public.profiles p where p.user_id = uid
+    ),
+    -- The switch as it is now; updated_at and policy_version are null when
+    -- it was never set.
+    'community_consent', jsonb_build_object(
+      'hero_stats', coalesce((
+        select c.hero_stats from public.community_consent c where c.user_id = uid
+      ), false),
+      'updated_at', (
+        select c.updated_at from public.community_consent c where c.user_id = uid
+      ),
+      'policy_version', (
+        select c.policy_version from public.community_consent c where c.user_id = uid
+      )
+    ),
+    'games', coalesce((
+      select jsonb_agg(to_jsonb(g) order by g.session, g.game_index)
+      from public.games g where g.user_id = uid
+    ), '[]'::jsonb),
+    'game_stats', coalesce((
+      select jsonb_agg(to_jsonb(s) order by s.session, s.game_index)
+      from public.game_stats s where s.user_id = uid
+    ), '[]'::jsonb),
+    'leaderboard_rows', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'mode', r.mode,
+        'period', r.period,
+        'board', r.board,
+        'hero', r.hero,
+        'value', r.value,
+        'games', r.games
+      ) order by r.mode, r.period, r.board, r.hero)
+      from private.leaderboard_rows r where r.user_id = uid
+    ), '[]'::jsonb),
+    'files', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'bucket', o.bucket_id,
+        'name', o.name,
+        'created_at', o.created_at,
+        'updated_at', o.updated_at,
+        'metadata', o.metadata
+      ) order by o.name)
+      from storage.objects o
+      where o.bucket_id = 'games' and (storage.foldername(o.name))[1] = uid::text
+    ), '[]'::jsonb),
+    'unlimited_history', (
+      select jsonb_build_object('since', u.since)
+      from private.unlimited_history u where u.user_id = uid
+    ),
+    'upload_events', coalesce((
+      select jsonb_agg(e.at order by e.at)
+      from private.upload_events e where e.user_id = uid
+    ), '[]'::jsonb)
+  );
+end;
+$$;
+
+-- As in 20261011180000_community_heroes.sql, plus the unlimited history mark
+-- (the foreign key to auth.users would also remove it with the account).
+create or replace function public.delete_user_data(target uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  n_stats bigint;
+  n_games bigint;
+  n_profiles bigint;
+  n_events bigint;
+begin
+  if exists (
+    select 1 from storage.objects o
+    where o.bucket_id = 'games' and (storage.foldername(o.name))[1] = target::text
+  ) then
+    raise exception 'files remain for this user; delete them first'
+      using errcode = '55000';
+  end if;
+
+  delete from private.leaderboard_rows where user_id = target;
+  delete from public.community_consent where user_id = target;
+  delete from private.unlimited_history where user_id = target;
+  delete from public.game_stats where user_id = target;
+  get diagnostics n_stats = row_count;
+  delete from public.games where user_id = target;
+  get diagnostics n_games = row_count;
+  delete from public.profiles where user_id = target;
+  get diagnostics n_profiles = row_count;
+  -- Auth audit entries have no foreign key to the user and would survive the
+  -- auth user's deletion.
+  delete from auth.audit_log_entries
+  where payload ->> 'actor_id' = target::text
+     or payload -> 'traits' ->> 'user_id' = target::text;
+  get diagnostics n_events = row_count;
+
+  return jsonb_build_object(
+    'game_stats', n_stats, 'games', n_games, 'profiles', n_profiles, 'auth_events', n_events
+  );
+end;
+$$;
+
+revoke all on function public.delete_user_data(uuid) from public, anon, authenticated;
+grant execute on function public.delete_user_data(uuid) to service_role;

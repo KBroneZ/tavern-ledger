@@ -24,6 +24,17 @@
 // stored on the run's row and passed on in the response as "capacity"; a
 // failed measurement is recorded there and never stops the sweep. 50 % and
 // 80 % are logged too (percentages only).
+// Then the file retention (T-544, D-109, D-113): file_retention_list() names
+// the full game files past the retention (28 days) of accounts without
+// unlimited history, at most 1000 per run; they are deleted through the
+// Storage API in batches of 100 within 20 seconds, and each batch is then
+// marked expired on its game rows (file_retention_mark), which keeps the
+// summaries. Delete first, mark after: a failed delete leaves the games
+// unmarked for the next run, and a failed mark is redone then (deleting a
+// missing file is a no-op). Report-only (the setting ships off) lists no
+// file and only counts what is due. The counts are stored as "retention" on
+// the run's row and in the response; a failed step there is recorded and
+// never stops the sweep.
 // Safe to run any time and as often as wanted. No dependencies.
 
 import { summarize, SUMMARY_VERSION } from "../_shared/game_summary.ts";
@@ -52,6 +63,11 @@ const BACKFILL_BUDGET_MS = 100_000;
 const MAX_FILE = 64 * 1024;
 const MAX_INFLATED = 1024 * 1024;
 const SHA256 = /^[0-9a-f]{64}$/;
+// File retention: files listed per run, deleted per Storage call, and the
+// time after which no batch is started (the rest wait for the next run).
+const RETENTION_LIMIT = 1000;
+const RETENTION_BATCH = 100;
+const RETENTION_BUDGET_MS = 20_000;
 
 class StepError extends Error {
   constructor(readonly step: string, readonly status: number) {
@@ -419,6 +435,156 @@ function logCapacity(capacity: Capacity | null) {
   }
 }
 
+interface Due {
+  path: string;
+  sha256: string;
+}
+
+interface RetentionList {
+  live: boolean;
+  days: number;
+  due: number;
+  skipped: { exempt: number; no_summary: number };
+  files: Due[];
+}
+
+export type Retention =
+  | { error: "list" }
+  | {
+    mode: "report" | "live";
+    days: number;
+    due: number;
+    listed: number;
+    deleted: number;
+    failed: number;
+    unmarked: number;
+    left: number;
+    skipped: { exempt: number; no_summary: number };
+  };
+
+/** A file named by file_retention_list(), or null when it is out of shape. */
+function due(v: unknown): Due | null {
+  if (typeof v !== "object" || v === null) return null;
+  const d = v as Record<string, unknown>;
+  return typeof d.path === "string" && GAME_FILE.test(d.path) &&
+      typeof d.sha256 === "string" && SHA256.test(d.sha256)
+    ? { path: d.path, sha256: d.sha256 }
+    : null;
+}
+
+/**
+ * file_retention_list()'s answer, or null when it is out of shape. Every
+ * file must be shaped like a game file, and a report-only answer may name
+ * none: nothing is deleted from an answer that is not exactly as expected.
+ */
+function checkRetentionList(v: unknown): RetentionList | null {
+  if (typeof v !== "object" || v === null) return null;
+  const r = v as Record<string, unknown>;
+  const skipped = r.skipped as Record<string, unknown> | null;
+  if (
+    typeof r.live !== "boolean" || !Number.isInteger(r.days) || (r.days as number) < 1 ||
+    (r.days as number) > 3650 || !count(r.due) || typeof skipped !== "object" ||
+    skipped === null || !count(skipped.exempt) || !count(skipped.no_summary) ||
+    !Array.isArray(r.files) || r.files.length > RETENTION_LIMIT || r.files.length > r.due ||
+    (!r.live && r.files.length > 0)
+  ) {
+    return null;
+  }
+  const files = r.files.map(due);
+  if (!files.every((f): f is Due => f !== null)) return null;
+  return {
+    live: r.live,
+    days: r.days as number,
+    due: r.due,
+    skipped: { exempt: skipped.exempt, no_summary: skipped.no_summary },
+    files,
+  };
+}
+
+async function listExpired(env: Env, fetchFn: Fetch): Promise<RetentionList | null> {
+  try {
+    const res = await call(fetchFn, "list expired", `${env.url}/rest/v1/rpc/file_retention_list`, {
+      method: "POST",
+      headers: serviceHeaders(env),
+      body: JSON.stringify({ p_limit: RETENTION_LIMIT }),
+    });
+    return checkRetentionList(await res.json());
+  } catch (_e) {
+    return null;
+  }
+}
+
+/** How many games file_retention_mark() marked; 0 when the call failed. */
+async function markExpired(env: Env, fetchFn: Fetch, batch: Due[]): Promise<number> {
+  try {
+    const res = await call(fetchFn, "mark expired", `${env.url}/rest/v1/rpc/file_retention_mark`, {
+      method: "POST",
+      headers: serviceHeaders(env),
+      body: JSON.stringify({
+        p_paths: batch.map((f) => f.path),
+        p_sha256: batch.map((f) => f.sha256),
+      }),
+    });
+    const marked = await res.json();
+    return count(marked) && marked <= batch.length ? marked : 0;
+  } catch (_e) {
+    return 0;
+  }
+}
+
+/** Deletes the files past the retention (or counts them, report-only). Never throws. */
+async function expireFiles(env: Env, fetchFn: Fetch): Promise<Retention> {
+  const list = await listExpired(env, fetchFn);
+  if (list === null) {
+    console.error("sweep: file retention not run (list failed or out of shape)");
+    return { error: "list" };
+  }
+  const counts = {
+    mode: list.live ? "live" as const : "report" as const,
+    days: list.days,
+    due: list.due,
+    listed: list.files.length,
+    deleted: 0,
+    failed: 0,
+    unmarked: 0,
+    left: 0,
+    skipped: list.skipped,
+  };
+  const now = env.now ?? Date.now;
+  const deadline = now() + RETENTION_BUDGET_MS;
+  for (let i = 0; list.live && i < list.files.length; i += RETENTION_BATCH) {
+    const batch = list.files.slice(i, i + RETENTION_BATCH);
+    if (now() >= deadline) {
+      counts.left += batch.length;
+      continue;
+    }
+    try {
+      const res = await call(fetchFn, "delete expired", `${env.url}/storage/v1/object/games`, {
+        method: "DELETE",
+        headers: serviceHeaders(env),
+        body: JSON.stringify({ prefixes: batch.map((f) => f.path) }),
+      });
+      await res.body?.cancel();
+    } catch (_e) {
+      counts.failed += batch.length;
+      continue;
+    }
+    counts.deleted += batch.length;
+    // Fewer marked than deleted: a game changed meanwhile, or the call failed.
+    counts.unmarked += batch.length - await markExpired(env, fetchFn, batch);
+  }
+  // Counts only: no user id, session or file name in the logs.
+  if (!list.live) {
+    console.info(`sweep: file retention report-only, ${counts.due} files due`);
+  } else if (counts.failed + counts.unmarked + counts.left > 0) {
+    console.error(
+      `sweep: file retention deleted ${counts.deleted} of ${counts.listed} ` +
+        `(${counts.failed} failed, ${counts.unmarked} unmarked, ${counts.left} left)`,
+    );
+  }
+  return counts;
+}
+
 /** Records the step a run failed at; a failure to record is logged, not thrown. */
 async function recordFailure(env: Env, fetchFn: Fetch, runId: number | null, step: string) {
   try {
@@ -438,7 +604,10 @@ async function recordFailure(env: Env, fetchFn: Fetch, runId: number | null, ste
   }
 }
 
-/** Deletes orphan files, does the housekeeping and the backfill, records the run. */
+/**
+ * Deletes orphan files, does the housekeeping, the backfill and the file
+ * retention, records the run.
+ */
 async function sweep(env: Env, fetchFn: Fetch): Promise<Response> {
   let runId: number | null = null;
   try {
@@ -455,13 +624,19 @@ async function sweep(env: Env, fetchFn: Fetch): Promise<Response> {
     const capacity = checkCapacity(measured);
     logCapacity(capacity);
     const stats = await backfillStats(env, fetchFn);
+    const retention = await expireFiles(env, fetchFn);
     const done = await call(fetchFn, "record run", `${env.url}/rest/v1/rpc/sweep_record_result`, {
       method: "POST",
       headers: serviceHeaders(env),
-      body: JSON.stringify({ p_run_id: runId, p_files: files, p_stats: stats }),
+      body: JSON.stringify({
+        p_run_id: runId,
+        p_files: files,
+        p_stats: stats,
+        p_retention: retention,
+      }),
     });
     await done.body?.cancel();
-    return json(200, { run_id: runId, files, ...counts, stats, capacity });
+    return json(200, { run_id: runId, files, ...counts, stats, capacity, retention });
   } catch (e) {
     const step = e instanceof StepError ? e.step : "unexpected";
     console.error(`sweep: ${e instanceof StepError ? e.message : "unexpected error"}`);

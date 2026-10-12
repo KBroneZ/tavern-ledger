@@ -50,6 +50,28 @@ const CAPACITY = {
   limits_read_on: "2026-10-12",
 };
 
+/** file_retention_list() in report-only mode, nothing due (T-544). */
+const REPORT = {
+  live: false,
+  days: 28,
+  due: 0,
+  skipped: { exempt: 0, no_summary: 0 },
+  files: [],
+};
+/** The retention's counts; zero unless given. */
+const retained = (over: Record<string, unknown> = {}) => ({
+  mode: "report",
+  days: 28,
+  due: 0,
+  listed: 0,
+  deleted: 0,
+  failed: 0,
+  unmarked: 0,
+  left: 0,
+  skipped: { exempt: 0, no_summary: 0 },
+  ...over,
+});
+
 type Bytes = Uint8Array<ArrayBuffer>;
 
 interface Missing {
@@ -71,6 +93,12 @@ function fakeApi(
     put?: string;
     /** sweep_housekeeping()'s capacity; CAPACITY unless given, left out if undefined. */
     capacity?: unknown;
+    /** file_retention_list()'s answer; REPORT unless given. */
+    retention?: unknown;
+    /** True for the retention deletes (by their first file) that Storage refuses. */
+    deleteFails?: (first: string) => boolean;
+    /** file_retention_mark()'s answer for a batch; all of it unless given. */
+    marked?: (n: number) => unknown;
   } = {},
 ) {
   let files = [...(opts.files ?? [])];
@@ -89,8 +117,16 @@ function fakeApi(
       return reply(200, body.p_token === (opts.token ?? TOKEN));
     }
     if (path === "/storage/v1/object/games" && method === "DELETE") {
+      if (opts.deleteFails?.(body.prefixes[0])) return reply(503, {});
       if (!opts.sticky) files = files.filter((f) => !body.prefixes.includes(f));
       return reply(200, []);
+    }
+    if (path === "/rest/v1/rpc/file_retention_list") {
+      return reply(200, "retention" in opts ? opts.retention : REPORT);
+    }
+    if (path === "/rest/v1/rpc/file_retention_mark") {
+      const n = body.p_paths.length;
+      return reply(200, opts.marked ? opts.marked(n) : n);
     }
     if (path === "/rest/v1/rpc/sweep_housekeeping") {
       const capacity = "capacity" in opts ? opts.capacity : CAPACITY;
@@ -136,6 +172,7 @@ Deno.test("deletes orphan files through the Storage API, then housekeeping", asy
     ip_failures: 3,
     stats: counts(0, 0, 0, 0),
     capacity: CAPACITY,
+    retention: retained(),
   });
   assertEquals(api.files(), []);
   assertEquals(api.calls.map((c) => `${c.method} ${c.path}`), [
@@ -144,9 +181,15 @@ Deno.test("deletes orphan files through the Storage API, then housekeeping", asy
     "POST /rest/v1/rpc/sweep_orphan_files",
     "POST /rest/v1/rpc/sweep_housekeeping",
     "POST /rest/v1/rpc/game_stats_backfill_list",
+    "POST /rest/v1/rpc/file_retention_list",
     "POST /rest/v1/rpc/sweep_record_result",
   ]);
-  assertEquals(api.calls.at(-1)?.body, { p_run_id: RUN, p_files: 2, p_stats: counts(0, 0, 0, 0) });
+  assertEquals(api.calls.at(-1)?.body, {
+    p_run_id: RUN,
+    p_files: 2,
+    p_stats: counts(0, 0, 0, 0),
+    p_retention: retained(),
+  });
   assertEquals(api.calls[0].body, { min_age: "1 hour" });
 });
 
@@ -404,6 +447,7 @@ Deno.test("the run's counts are recorded on the row housekeeping made", async ()
     p_run_id: RUN,
     p_files: 1,
     p_stats: counts(1, 1, 1, 0),
+    p_retention: retained(),
   }]);
   assertEquals(failures(api), []);
 });
@@ -580,4 +624,195 @@ Deno.test("only the known capacity fields reach the response", async () => {
   const api = fakeApi({ capacity: extra });
   const body = await (await handle(request(), ENV, api.fetchFn)).json();
   assertEquals(body.capacity, CAPACITY);
+});
+
+// ------------------------------------------------------------ file retention (T-544)
+
+const B = "00000000-0000-4000-8000-00000000000b";
+const old = (i: number, user = B) => ({
+  path: `${user}/Hearthstone_2026_08_01_18_30_00-${i}.json.gz`,
+  sha256: (i % 16).toString(16).repeat(64),
+});
+const live = (n: number, over: Record<string, unknown> = {}) => ({
+  live: true,
+  days: 28,
+  due: n,
+  skipped: { exempt: 2, no_summary: 1 },
+  files: Array.from({ length: n }, (_, i) => old(i + 1)),
+  ...over,
+});
+const retentionCalls = (api: ReturnType<typeof fakeApi>) =>
+  api.calls.filter((c) =>
+    c.path === "/rest/v1/rpc/file_retention_mark" ||
+    (c.path === "/storage/v1/object/games" &&
+      (c.body as { prefixes: string[] }).prefixes[0].includes("2026_08_01"))
+  );
+const recorded = (api: ReturnType<typeof fakeApi>) =>
+  (api.calls.find((c) => c.path === "/rest/v1/rpc/sweep_record_result")?.body as {
+    p_retention: unknown;
+  }).p_retention;
+
+/** Runs the sweep with the logs captured; its answer's body and the logs. */
+async function run(api: ReturnType<typeof fakeApi>, env: Env = ENV, fetchFn = api.fetchFn) {
+  let status = 0;
+  let body: Record<string, unknown> = {};
+  const logs = await captureLogs(async () => {
+    const res = await handle(request(), env, fetchFn);
+    status = res.status;
+    body = await res.json();
+  });
+  return { status, body, logs };
+}
+
+Deno.test("retention, report-only: counts what is due and deletes nothing", async () => {
+  const api = fakeApi({
+    retention: { ...REPORT, due: 5, skipped: { exempt: 2, no_summary: 1 } },
+  });
+  const { status, body } = await run(api);
+  assertEquals(status, 200);
+  const expected = retained({ due: 5, skipped: { exempt: 2, no_summary: 1 } });
+  assertEquals(body.retention, expected);
+  assertEquals(recorded(api), expected);
+  assertEquals(retentionCalls(api), []);
+  const list = api.calls.find((c) => c.path === "/rest/v1/rpc/file_retention_list");
+  assertEquals(list?.body, { p_limit: 1000 });
+});
+
+Deno.test("retention, live: deletes through the Storage API, then marks the games", async () => {
+  const api = fakeApi({ retention: live(3) });
+  const { status, body, logs } = await run(api);
+  assertEquals(status, 200);
+  const expected = retained({
+    mode: "live",
+    due: 3,
+    listed: 3,
+    deleted: 3,
+    skipped: { exempt: 2, no_summary: 1 },
+  });
+  assertEquals(body.retention, expected);
+  assertEquals(recorded(api), expected);
+  assertEquals(logs, []);
+  const calls = retentionCalls(api);
+  assertEquals(calls.map((c) => `${c.method} ${c.path}`), [
+    "DELETE /storage/v1/object/games",
+    "POST /rest/v1/rpc/file_retention_mark",
+  ]);
+  assertEquals(calls[0].body, { prefixes: [old(1).path, old(2).path, old(3).path] });
+  assertEquals(calls[1].body, {
+    p_paths: [old(1).path, old(2).path, old(3).path],
+    p_sha256: [old(1).sha256, old(2).sha256, old(3).sha256],
+  });
+  assertEquals(calls[0].headers.apikey, ENV.serviceKey);
+  // After the backfill (which needs the files) and before the run is recorded.
+  const order = api.calls.map((c) => c.path);
+  const at = (p: string) => order.indexOf(p);
+  assertEquals(
+    at("/rest/v1/rpc/game_stats_backfill_list") < at("/rest/v1/rpc/file_retention_list") &&
+      at("/rest/v1/rpc/file_retention_list") < at("/rest/v1/rpc/sweep_record_result"),
+    true,
+  );
+});
+
+Deno.test("retention, live: batches of 100", async () => {
+  const api = fakeApi({ retention: live(250) });
+  const { body } = await run(api);
+  assertEquals((body.retention as { deleted: number }).deleted, 250);
+  const deletes = retentionCalls(api).filter((c) => c.method === "DELETE");
+  assertEquals(deletes.map((c) => (c.body as { prefixes: string[] }).prefixes.length), [
+    100,
+    100,
+    50,
+  ]);
+});
+
+Deno.test("retention: a failed delete is counted and its games stay unmarked", async () => {
+  const api = fakeApi({ retention: live(250), deleteFails: (first) => first === old(101).path });
+  const { status, body, logs } = await run(api);
+  assertEquals(status, 200);
+  const r = body.retention as Record<string, number>;
+  assertEquals([r.listed, r.deleted, r.failed, r.unmarked, r.left], [250, 150, 100, 0, 0]);
+  const marks = retentionCalls(api).filter((c) => c.path.endsWith("file_retention_mark"));
+  assertEquals(marks.map((c) => (c.body as { p_paths: string[] }).p_paths[0]), [
+    old(1).path,
+    old(201).path,
+  ]);
+  assertEquals(logs, [
+    "sweep: file retention deleted 150 of 250 (100 failed, 0 unmarked, 0 left)",
+  ]);
+});
+
+Deno.test("retention: a failed or short mark is counted as unmarked, never fatal", async () => {
+  const cases: [(n: number) => unknown, number][] = [
+    [(n) => n - 1, 1],
+    [() => "odd", 3],
+    [() => 99, 3],
+    [() => -1, 3],
+  ];
+  for (const [marked, unmarked] of cases) {
+    const { status, body } = await run(fakeApi({ retention: live(3), marked }));
+    assertEquals(status, 200);
+    const r = body.retention as Record<string, number>;
+    assertEquals([r.deleted, r.unmarked], [3, unmarked], String(marked));
+  }
+  const api = fakeApi({ retention: live(3), fail: "/rest/v1/rpc/file_retention_mark" });
+  const { status, body } = await run(api);
+  assertEquals(status, 200);
+  assertEquals((body.retention as Record<string, number>).unmarked, 3);
+});
+
+Deno.test("retention: no batch starts after the time budget; the rest is left", async () => {
+  let t = 0;
+  const api = fakeApi({ retention: live(250) });
+  const fetchFn: Fetch = (input, init) => {
+    if (input.endsWith("/rest/v1/rpc/file_retention_mark")) t += 15_000;
+    return api.fetchFn(input, init);
+  };
+  const { body } = await run(api, { ...ENV, now: () => t }, fetchFn);
+  const r = body.retention as Record<string, number>;
+  assertEquals([r.listed, r.deleted, r.left], [250, 200, 50]);
+});
+
+Deno.test("retention: a failed list is recorded, never fatal, and deletes nothing", async () => {
+  const api = fakeApi({ fail: "/rest/v1/rpc/file_retention_list" });
+  const { status, body, logs } = await run(api);
+  assertEquals(status, 200);
+  assertEquals(body.retention, { error: "list" });
+  assertEquals(recorded(api), { error: "list" });
+  assertEquals(retentionCalls(api), []);
+  assertEquals(logs, ["sweep: file retention not run (list failed or out of shape)"]);
+});
+
+Deno.test("retention: an answer out of shape deletes nothing", async () => {
+  const bad: unknown[] = [
+    null,
+    [],
+    "x",
+    { ...REPORT, files: [old(1)], due: 1 }, // report-only naming a file
+    live(1, { files: [{ path: "../etc/passwd", sha256: old(1).sha256 }] }),
+    live(1, { files: [{ path: `${A}/notes.txt`, sha256: old(1).sha256 }] }),
+    live(1, { files: [{ path: old(1).path, sha256: "x" }] }),
+    live(1, { files: [old(1).path] }),
+    live(2, { due: 1 }), // more files than due
+    live(1001), // over the limit
+    live(1, { days: 0 }),
+    live(1, { days: 1.5 }),
+    live(1, { live: "yes" }),
+    live(1, { due: -1 }),
+    live(1, { skipped: { exempt: 1 } }),
+    live(1, { skipped: null }),
+  ];
+  for (const retention of bad) {
+    const api = fakeApi({ retention });
+    const { status, body } = await run(api);
+    const label = JSON.stringify(retention)?.slice(0, 80);
+    assertEquals(status, 200, label);
+    assertEquals(body.retention, { error: "list" }, label);
+    assertEquals(retentionCalls(api), [], label);
+  }
+});
+
+Deno.test("retention: the logs hold counts, never a user id or file name", async () => {
+  const { logs } = await run(fakeApi({ retention: live(3), deleteFails: () => true }));
+  assertEquals(logs.length, 1);
+  assertEquals(/[0-9a-f]{8}-|Hearthstone|\.json/.test(logs.join("\n")), false);
 });
