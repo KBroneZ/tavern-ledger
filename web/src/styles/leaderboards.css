@@ -83,3 +83,15 @@
   border-style: solid;
   border-color: var(--line);
 }
+
+@media (prefers-reduced-transparency: reduce) {
+  .lb-board {
+    background: var(--wood);
+  }
+}
+
+@media (forced-colors: active) {
+  .lb-board {
+    border: 1px solid CanvasText;
+  }
+}

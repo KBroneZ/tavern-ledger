@@ -658,8 +658,18 @@ html[data-detail="advanced"] .simple-only {
   border-spacing: 0;
 }
 
-.data-section > .dtable tbody tr:last-child > * {
+/* The last row needs no rule above the well's edge, and its corners follow
+   the well's when a hover tints it. */
+:is(.scroll-x, .data-section) > .dtable tbody tr:last-child > * {
   border-bottom: 0;
+}
+
+.data-section > .dtable tbody tr:last-child > :first-child {
+  border-bottom-left-radius: var(--r-tile);
+}
+
+.data-section > .dtable tbody tr:last-child > :last-child {
+  border-bottom-right-radius: var(--r-tile);
 }
 
 :is(.chart, .panel, .fold, .tile, .gv) :is(.chart, .scroll-x:has(> .dtable)),
@@ -911,8 +921,15 @@ html[data-detail="advanced"] .simple-only {
   .tile,
   .fold,
   .state,
-  .seg {
+  .seg,
+  .chart,
+  .scroll-x:has(> .dtable),
+  .data-section > .dtable {
     border: 1px solid CanvasText;
+  }
+
+  :is(.chart, .panel, .fold, .tile, .gv) :is(.chart, .scroll-x:has(> .dtable)) {
+    border: 0;
   }
 
   .seg button[aria-pressed="true"] {
