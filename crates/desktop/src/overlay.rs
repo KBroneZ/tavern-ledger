@@ -4,9 +4,11 @@
 //! draws on top of the game and never touches it: no memory, no injection, no
 //! clicks or keys sent to the game (D-004, D-006).
 //!
-//! The window covers the work area of the monitor that holds the game (the
-//! main one when no game window is known, T-308) and the panels are placed
-//! inside it.
+//! The window covers the game's client area (its picture, without title bar
+//! or borders) on the monitor that holds the game, cut to that monitor's work
+//! area (the whole work area when no game window is known, T-308, T-349), and
+//! the panels are placed inside it, so they sit on the game's picture in
+//! windowed, borderless and full-screen modes.
 //! Locked (the default, and always at start and when a game starts) every
 //! click goes through it. Unlocked, the panels take the mouse so they can be
 //! moved and resized; the window shows even with no game, with example data.
@@ -54,7 +56,8 @@ pub struct Overlay {
     /// Layout editing: the panels take the mouse. Never saved.
     unlocked: AtomicBool,
     prefs: Mutex<Option<PathBuf>>,
-    /// The overlay window's size in logical pixels (a monitor's work area).
+    /// The overlay window's size in logical pixels (the game's picture on its
+    /// monitor).
     screen: Mutex<(f64, f64)>,
     /// Where the window is now: x, y, width, height in physical pixels, and
     /// the monitor's scale in thousandths (a DPI change moves it too).
@@ -258,6 +261,12 @@ impl Overlay {
         if client.usable() {
             *lock(&self.game) = Some(client);
         }
+    }
+
+    /// Forgets where the game window was: it is gone, so the overlay goes
+    /// back to the whole work area (layout editing with no game running).
+    pub fn forget_game(&self) {
+        *lock(&self.game) = None;
     }
 
     pub fn frame(&self) -> Option<OverlayFrame> {

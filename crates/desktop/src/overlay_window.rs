@@ -1,7 +1,8 @@
-//! Where the overlay window is and when it shows (T-301, T-308): it covers
-//! the work area of the monitor that holds the game (the main one when no
-//! game window is known), follows the game and the window in front, and
-//! locks itself again when a game starts. Split from `overlay.rs`.
+//! Where the overlay window is and when it shows (T-301, T-308, T-349): it
+//! covers the game's client area (its picture, without title bar or borders)
+//! cut to the work area of the monitor that holds the game, or that work area
+//! when no game window is known; it follows the game and the window in front,
+//! and locks itself again when a game starts. Split from `overlay.rs`.
 
 use std::sync::Arc;
 use std::thread;
@@ -67,7 +68,7 @@ pub fn still_loading(loading: bool, since: &mut Option<Instant>, now: Instant) -
     now.duration_since(began) < LOADING_LIMIT
 }
 
-/// Covers the game's monitor with the window, and makes every click go
+/// Covers the game's picture with the window, and makes every click go
 /// through it to the window below. It never takes focus.
 pub fn prepare(app: &AppHandle) -> tauri::Result<()> {
     let window = app
@@ -104,8 +105,9 @@ fn screens(window: &WebviewWindow) -> tauri::Result<Vec<Screen>> {
         .collect())
 }
 
-/// Makes the window cover the work area of the monitor that holds the game
-/// (T-308), as it is now: a resolution, DPI or monitor change moves it too.
+/// Makes the window cover the game's client area on the monitor that holds
+/// the game (T-308, T-349), as it is now: a move or resize of the game window
+/// and a resolution, DPI or monitor change move it too.
 /// Only touches the window when that changed. True if it did.
 fn fit_window(app: &AppHandle) -> tauri::Result<bool> {
     let window = app
@@ -116,7 +118,7 @@ fn fit_window(app: &AppHandle) -> tauri::Result<bool> {
     let Some(index) = pick_screen(&screens, state.overlay.game()) else {
         return Ok(false);
     };
-    let (area, scale) = overlay_area(&screens[index]);
+    let (area, scale) = overlay_area(&screens[index], state.overlay.game());
     let (x, y, w, h) = (area.x as i32, area.y as i32, area.w as u32, area.h as u32);
     let placed = (x, y, w, h, (scale * 1000.0).round() as u32);
     let (position, size) = (PhysicalPosition::new(x, y), PhysicalSize::new(w, h));
@@ -137,7 +139,7 @@ fn fit_window(app: &AppHandle) -> tauri::Result<bool> {
             OverlayFrame {
                 origin: (f64::from(x), f64::from(y)),
                 scale,
-                size: (f64::from(w) / scale, f64::from(h) / scale),
+                size: area.logical_size(scale),
             },
         );
         let _ = app.emit(SETTINGS_CHANGED, ());
@@ -175,6 +177,10 @@ pub fn follow(app: AppHandle, state: Arc<AppState>, guarded: bool) {
             }
             game_was_on = game_on;
             let seen = hover::game_client(state.overlay.ignores_foreground());
+            if seen.is_none() && !game_on {
+                // No game running: do not keep covering where it was.
+                state.overlay.forget_game();
+            }
             if let Some(client) = seen {
                 let moved = state.overlay.game() != Some(client);
                 state.overlay.saw_game(client);

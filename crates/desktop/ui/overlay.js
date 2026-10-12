@@ -557,7 +557,7 @@ async function refresh() {
 }
 
 // Text follows the screen (T-334): the base size is a share of the window's
-// height, which covers the game's monitor (overlay-scale.js).
+// height, which covers the game's picture (overlay-scale.js).
 function fitText() {
   document.documentElement.style.fontSize = `${TLScale.rootPx(window.innerHeight)}px`;
 }

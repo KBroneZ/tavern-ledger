@@ -4,7 +4,8 @@ const assert = require("node:assert/strict");
 const { rootPx, cardPx, turnsAgo, MIN_PX } = require("../ui/overlay-scale.js");
 
 // The two screens the user asked about (T-334): the overlay window covers the
-// monitor's work area (taskbar left out) in its own pixels.
+// game's picture, here full screen, so the monitor's work area (taskbar left
+// out), in its own pixels.
 const SCREENS = [
   { name: "3840x2160 at 150%", height: 2160, scale: 1.5, work: 2112 / 1.5 },
   { name: "1920x1080 at 100%", height: 1080, scale: 1, work: 1040 },

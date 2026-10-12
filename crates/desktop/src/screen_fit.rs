@@ -1,6 +1,6 @@
-//! Keeping the overlay on screen (T-308): which monitor the overlay covers,
-//! and where the hover card goes so it never leaves that monitor's work
-//! area. Pure rectangles, no window code, so every rule here has a test.
+//! Keeping the overlay on screen (T-308, T-349): which monitor the overlay
+//! covers, which part of it (the game's picture, not its title bar), and
+//! where the hover card goes so it never leaves that monitor's work area. Pure rectangles, no window code, so every rule here has a test.
 
 use serde::{Deserialize, Serialize};
 
@@ -47,6 +47,30 @@ impl Area {
         }
     }
 
+    /// The part both rectangles share, `None` when they only touch or miss.
+    pub fn intersection(&self, other: &Area) -> Option<Area> {
+        let x = self.x.max(other.x);
+        let y = self.y.max(other.y);
+        let shared = Area {
+            x,
+            y,
+            w: self.right().min(other.right()) - x,
+            h: self.bottom().min(other.bottom()) - y,
+        };
+        shared.usable().then_some(shared)
+    }
+
+    /// The size in a window's own (logical) pixels at this scale; a scale
+    /// that is not a number is taken as 1.
+    pub fn logical_size(&self, scale: f64) -> (f64, f64) {
+        let scale = if scale.is_finite() && scale > 0.0 {
+            scale
+        } else {
+            1.0
+        };
+        (self.w / scale, self.h / scale)
+    }
+
     /// The same rectangle in another unit: `(self - origin) / scale`.
     pub fn in_frame(self, origin: (f64, f64), scale: f64) -> Area {
         let scale = if scale.is_finite() && scale > 0.0 {
@@ -91,15 +115,30 @@ pub fn pick_screen(screens: &[Screen], game: Option<Area>) -> Option<usize> {
         .or_else(|| (!screens.is_empty()).then_some(0))
 }
 
+/// The least of the game's picture (physical pixels) worth covering: a
+/// window dragged mostly off the monitor leaves the whole work area instead,
+/// so the layout is never saved for, or scaled from, a sliver.
+pub const MIN_COVER: (f64, f64) = (320.0, 180.0);
+
 /// The rectangle the overlay window covers on this monitor, in physical
-/// pixels, and the monitor's scale: the work area, or the whole monitor when
-/// the work area has no size; a scale that is not a number is taken as 1.
-pub fn overlay_area(screen: &Screen) -> (Area, f64) {
-    let area = if screen.work.usable() {
+/// pixels, and the monitor's scale. It is the game's client area (its picture,
+/// without title bar or borders: `GetClientRect` + `ClientToScreen`) cut to
+/// the monitor's work area, so every overlay piece is placed inside the game
+/// in windowed, borderless and full-screen modes alike (T-349). With no
+/// usable game window, or one that misses this monitor, it is the work area,
+/// or the whole monitor when the work area has no size. A scale that is not a
+/// number is taken as 1.
+pub fn overlay_area(screen: &Screen, game: Option<Area>) -> (Area, f64) {
+    let monitor = if screen.work.usable() {
         screen.work
     } else {
         screen.whole
     };
+    let area = game
+        .filter(Area::usable)
+        .and_then(|client| monitor.intersection(&client))
+        .filter(|shown| shown.w >= MIN_COVER.0 && shown.h >= MIN_COVER.1)
+        .unwrap_or(monitor);
     let scale = if screen.scale.is_finite() && screen.scale > 0.0 {
         screen.scale
     } else {
@@ -127,7 +166,7 @@ pub struct CardPlace {
 /// Puts a card of `want_width` at the top of `game` (the game window's
 /// client area), centred on it, like the board strip the game itself shows
 /// (T-309, D-049). It stays inside `bounds` (the overlay window, which covers
-/// the monitor holding the game): narrower than the game window or the
+/// the game's picture on the monitor holding it): narrower than the game window or the
 /// screen when it must be, moved in when the game window reaches past the
 /// screen's edge.
 pub fn place_card(game: Area, bounds: Area, want_width: f64) -> CardPlace {
@@ -231,13 +270,159 @@ mod tests {
     #[test]
     fn the_overlay_covers_the_work_area_not_the_taskbar() {
         let s = screen(0.0, 3840.0, 2160.0, true);
-        assert_eq!(overlay_area(&s), (s.work, 1.0));
+        assert_eq!(overlay_area(&s, None), (s.work, 1.0));
         let broken = Screen {
             work: Area::default(),
             scale: f64::NAN,
             ..s
         };
-        assert_eq!(overlay_area(&broken), (s.whole, 1.0));
+        assert_eq!(overlay_area(&broken, None), (s.whole, 1.0));
+    }
+
+    /// What `GetClientRect` + `ClientToScreen` give for a framed window: its
+    /// rectangle less the title bar (31 px at 100 %) and the borders (8 px).
+    fn framed_client(window: Area, scale: f64) -> Area {
+        let (title, border) = (31.0 * scale, 8.0 * scale);
+        area(
+            window.x + border,
+            window.y + title,
+            window.w - 2.0 * border,
+            window.h - title - border,
+        )
+    }
+
+    #[test]
+    fn a_windowed_game_gets_the_overlay_on_its_picture_not_its_title_bar() {
+        let s = screen(0.0, 1920.0, 1080.0, true);
+        let window = area(100.0, 80.0, 1296.0, 759.0);
+        let client = framed_client(window, 1.0);
+        let (covered, scale) = overlay_area(&s, Some(client));
+        assert_eq!((covered, scale), (client, 1.0));
+        assert!(covered.y >= window.y + 31.0, "below the title bar");
+        assert!(covered.x > window.x && covered.right() < window.right());
+    }
+
+    #[test]
+    fn a_borderless_game_is_covered_whole_and_a_full_screen_one_as_before() {
+        let s = screen(0.0, 1920.0, 1080.0, true);
+        // Borderless on the monitor: the client is the monitor, the taskbar
+        // is still left free.
+        assert_eq!(overlay_area(&s, Some(s.whole)).0, s.work);
+        // Full screen with the taskbar off the screen's edge: unchanged.
+        assert_eq!(overlay_area(&s, Some(s.whole)), overlay_area(&s, None));
+        // A bigger client than the monitor (game 4K on a 1080p screen) is cut.
+        assert_eq!(
+            overlay_area(&s, Some(area(0.0, 0.0, 3840.0, 2160.0))).0,
+            s.work
+        );
+    }
+
+    #[test]
+    fn a_game_window_reaching_off_the_monitor_is_cut_to_what_is_on_it() {
+        let s = screen(0.0, 1920.0, 1080.0, true);
+        let (covered, _) = overlay_area(&s, Some(area(-300.0, -100.0, 1280.0, 720.0)));
+        assert_eq!(covered, area(0.0, 0.0, 980.0, 620.0));
+        let (covered, _) = overlay_area(&s, Some(area(1500.0, 800.0, 1280.0, 720.0)));
+        assert_eq!(covered, area(1500.0, 800.0, 420.0, 232.0));
+    }
+
+    #[test]
+    fn a_game_window_that_cannot_be_used_leaves_the_whole_work_area() {
+        let s = screen(0.0, 1920.0, 1080.0, true);
+        for game in [
+            area(f64::NAN, 0.0, 800.0, 600.0),
+            area(10.0, 10.0, 0.0, 0.0),
+            // Entirely on another monitor.
+            area(5000.0, 0.0, 800.0, 600.0),
+        ] {
+            assert_eq!(overlay_area(&s, Some(game)).0, s.work, "{game:?}");
+        }
+    }
+
+    #[test]
+    fn at_125_and_150_percent_the_overlay_keeps_the_client_in_physical_pixels() {
+        for scale in [1.25, 1.5] {
+            let s = Screen {
+                scale,
+                ..screen(0.0, 2560.0, 1440.0, true)
+            };
+            let window = area(160.0, 120.0, 1600.0, 900.0);
+            let client = framed_client(window, scale);
+            let (covered, got) = overlay_area(&s, Some(client));
+            assert_eq!((covered, got), (client, scale));
+            // The page works in logical pixels: the same rectangle divided.
+            let (lw, lh) = covered.logical_size(got);
+            assert_eq!((lw, lh), (client.w / scale, client.h / scale));
+            // A hover inside the client lands inside the overlay's page.
+            let inside = (client.x + client.w / 2.0, client.y + 10.0);
+            let page = covered.in_frame((covered.x, covered.y), got);
+            assert!(page.contains(((inside.0 - covered.x) / got, (inside.1 - covered.y) / got)));
+        }
+    }
+
+    #[test]
+    fn a_game_on_a_second_monitor_at_negative_coordinates_is_covered_there() {
+        let left = Screen {
+            scale: 1.5,
+            ..screen(-2560.0, 2560.0, 1440.0, false)
+        };
+        let main = screen(0.0, 1920.0, 1080.0, true);
+        let screens = [main, left];
+        let client = framed_client(area(-2200.0, 100.0, 1600.0, 900.0), 1.5);
+        let index = pick_screen(&screens, Some(client)).unwrap();
+        assert_eq!(index, 1);
+        let (covered, scale) = overlay_area(&screens[index], Some(client));
+        assert_eq!((covered, scale), (client, 1.5));
+        assert!(covered.x < 0.0);
+        // Straddling the two monitors: the overlay stays on the one with most
+        // of the game, and goes no further than its edge.
+        let straddle = area(-600.0, 100.0, 1280.0, 720.0);
+        let index = pick_screen(&screens, Some(straddle)).unwrap();
+        assert_eq!(index, 0);
+        let (covered, _) = overlay_area(&screens[index], Some(straddle));
+        assert_eq!(covered.x, 0.0);
+        assert_eq!(covered.w, 680.0);
+    }
+
+    #[test]
+    fn a_sliver_of_the_game_left_on_the_monitor_leaves_the_whole_work_area() {
+        let s = screen(0.0, 1920.0, 1080.0, true);
+        // Dragged almost off the left edge: 60 px of the game still show.
+        let sliver = area(-1220.0, 100.0, 1280.0, 720.0);
+        assert_eq!(overlay_area(&s, Some(sliver)).0, s.work);
+        // Just big enough to keep.
+        let enough = area(0.0, 0.0, MIN_COVER.0, MIN_COVER.1);
+        assert_eq!(overlay_area(&s, Some(enough)).0, enough);
+        let short = area(0.0, 0.0, MIN_COVER.0, MIN_COVER.1 - 1.0);
+        assert_eq!(overlay_area(&s, Some(short)).0, s.work);
+    }
+
+    #[test]
+    fn a_game_only_over_the_taskbar_strip_leaves_the_whole_work_area() {
+        let s = screen(0.0, 1920.0, 1080.0, true);
+        let on_taskbar = area(100.0, 1040.0, 1280.0, 40.0);
+        assert_eq!(pick_screen(&[s], Some(on_taskbar)), Some(0));
+        assert_eq!(overlay_area(&s, Some(on_taskbar)).0, s.work);
+    }
+
+    #[test]
+    fn rectangles_that_only_touch_or_miss_share_nothing() {
+        let a = area(0.0, 0.0, 100.0, 100.0);
+        assert_eq!(a.intersection(&area(100.0, 0.0, 50.0, 50.0)), None);
+        assert_eq!(a.intersection(&area(50.0, 100.0, 50.0, 50.0)), None);
+        assert_eq!(a.intersection(&area(0.5, 0.5, 0.2, 0.2)), None);
+        assert_eq!(
+            a.intersection(&area(99.0, 99.0, 50.0, 50.0)),
+            Some(area(99.0, 99.0, 1.0, 1.0))
+        );
+    }
+
+    #[test]
+    fn the_overlay_window_size_is_the_covered_area_in_logical_pixels() {
+        let a = area(10.0, 20.0, 1500.0, 900.0);
+        assert_eq!(a.logical_size(1.5), (1000.0, 600.0));
+        assert_eq!(a.logical_size(0.0), (1500.0, 900.0));
+        assert_eq!(a.logical_size(f64::NAN), (1500.0, 900.0));
     }
 
     const UHD: Area = Area {

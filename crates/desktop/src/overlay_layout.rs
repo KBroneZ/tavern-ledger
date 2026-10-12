@@ -4,8 +4,8 @@
 //! rules, no window code, so every rule here has a test.
 //!
 //! Positions are in logical pixels of the overlay window, which covers the
-//! game's monitor. A panel with no saved rectangle stays in the default stack
-//! (top right since T-306, clear of the game's leaderboard).
+//! game's picture (its client area, T-349), so panels stay relative to it. A
+//! panel with no saved rectangle stays in the default stack (top right since T-306, clear of the game's leaderboard).
 
 use std::collections::{BTreeMap, BTreeSet};
 
