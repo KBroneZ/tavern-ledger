@@ -192,19 +192,25 @@ body {
   filter: drop-shadow(0 2px 0 #3a1f07) drop-shadow(0 8px 18px rgb(0 0 0 / 0.75));
 }
 
-/* The second line stays on one line at every width: its size follows the
-   viewport so the whole line fits inside the page's side gutters (the line is
-   8.8 em wide in English and 13.6 em in Spanish; a little room is kept for a
-   scrollbar). At desktop widths the cap is the title's own size. */
+/* The second line: on phones it wraps at the title's own size (no tiny text);
+   from 560 px up it stays on one line at every width, and its size follows
+   the viewport so the whole line fits inside the page's side gutters (the
+   line is 8.8 em wide in English and 13.6 em in Spanish; a little room is
+   kept for a scrollbar). From about 1100 px the cap is the title's own size. */
 .gold-title .lit {
-  --lit-em: 8.9;
   display: block;
-  white-space: nowrap;
-  font-size: min(1em, calc((100vw - 2 * var(--gutter) - 1rem) / var(--lit-em)));
 }
 
-.gold-title .lit:lang(es) {
-  --lit-em: 13.8;
+@media (min-width: 560px) {
+  .gold-title .lit {
+    --lit-em: 8.9;
+    white-space: nowrap;
+    font-size: min(1em, calc((100vw - 2 * var(--gutter) - 1rem) / var(--lit-em)));
+  }
+
+  .gold-title .lit:lang(es) {
+    --lit-em: 13.8;
+  }
 }
 
 .ctas {
