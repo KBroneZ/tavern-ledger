@@ -1,7 +1,7 @@
 //! The player's own shop, turn by turn, and the actions the log records
 //! (T-204, T-205, D-046). Rust-only: the Python prototype does not read it.
 //!
-//! What the log gives (docs/research/shop-and-apm.md):
+//! What the log gives (design notes):
 //! - a shop turn starts when the game's `TURN` goes odd;
 //! - offers are pool minions that enter play on the shop (Bob's) side during
 //!   a shop turn; a minion frozen last turn comes back as a new entity that
@@ -15,7 +15,7 @@
 //!   the hero pick) is one action the client sent, at the line's time; its
 //!   kind is the top-level block that answers it.
 //!
-//! Parser revision 4 (T-210, D-055, docs/research/parser-data-round.md):
+//! Parser revision 4 (T-210, D-055, design notes):
 //! - a buy's price is the change of `NUM_RESOURCES_SPENT_THIS_GAME` over its
 //!   block (2 when the minion has `BACON_OVERRIDE_BG_COST` 2, else 3);
 //! - the gold the player has is `RESOURCES - RESOURCES_USED + TEMP_RESOURCES`;

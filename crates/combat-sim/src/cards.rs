@@ -11,8 +11,8 @@
 //! a number (or, when asked, plays it as a plain minion and flags the result).
 //!
 //! Written from the card texts in HearthstoneJSON (D-038) and the rules in
-//! `docs/research/combat-simulator.md`; no simulator code was read (clean
-//! room, CLAUDE.md rule 1). Effects carry only numbers and token ids, never
+//! design notes; no simulator code was read (clean
+//! room, project rules). Effects carry only numbers and token ids, never
 //! card text or art.
 
 use crate::model::{Keywords, Tribes};
@@ -384,12 +384,12 @@ pub(crate) const fn approx(reason: &'static str, triggers: &'static [Trigger]) -
     }
 }
 
-/// Round 1 (session 068); later rounds are in `cards_round2` to `cards_round5`.
+/// Round 1; later rounds are in `cards_round2` to `cards_round5`.
 pub use crate::cards_round1::EFFECTS;
 pub use crate::cards_round5::{AMALGAMS, HAND_SUMMONERS};
 
 /// Cards whose text never changes a combat, checked one by one against the
-/// card data (session 068). Keywords they have are on the board already.
+/// card data. Keywords they have are on the board already.
 pub const NO_COMBAT_EFFECT: &[&str] = &[
     // Keywords only, or no text.
     "BG28_603t",
@@ -737,7 +737,7 @@ pub const NO_COMBAT_EFFECT: &[&str] = &[
     "BG20_101_G",
     "BG20_100",
     "BG20_100_G",
-    // Second pass over the not-modelled list (session 068).
+    // Second pass over the not-modelled list.
     "BG34_500",
     "BG34_500_G",
     "BG34_638t",

@@ -3,7 +3,7 @@
 //! many times with the game's random choices.
 //!
 //! One engine for the desktop app and, later, the website (see
-//! `docs/research/combat-simulator.md`). It has no dependencies, so it can be
+//! design notes). It has no dependencies, so it can be
 //! built for WebAssembly. A card the engine does not know is never guessed:
 //! [`simulate`] returns [`Verdict::NotModelled`] instead of a number.
 //!

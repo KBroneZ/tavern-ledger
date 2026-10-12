@@ -1,4 +1,4 @@
--- T-543 (session 098, D-109): every sweep run records how full the hosted
+-- T-543 (D-109): every sweep run records how full the hosted
 -- project is, and flags 50 % and 80 % of the Free plan's limits.
 --
 -- sweep_housekeeping() now also measures the database size

@@ -1,4 +1,4 @@
-//! The effects card coverage round 4 added (T-604, session 075): a token
+//! The effects card coverage round 4 added (T-604): a token
 //! with the card's own stats (one that can attack first), a buff for some
 //! card ids, damage to the target's neighbours, an adjacent minion's
 //! Deathrattle, "after a friendly minion attacks", and Deathrattles gained

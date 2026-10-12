@@ -14,7 +14,7 @@ Tavern Ledger is licensed under the [GNU Affero General Public License, version 
 
 ## Project rules every change must keep
 
-These come from the project's [decisions](docs/decisions/DECISIONS.md) and are not negotiable in a pull request:
+These are the project's rules and are not negotiable in a pull request:
 
 1. **Clean room.** Do not copy, port or paraphrase code from projects whose license does not allow it, including Hearthstone Deck Tracker, Firestone, HearthMirror, BobsBuddy and their simulators. Nomi's Kitchen is also off limits: its license forbids use with AI tools, and this project uses them. Code under a compatible license (MIT, Apache-2.0, BSD…) is fine when it is recorded in [PROVENANCE.md](PROVENANCE.md).
 2. **Only what the player can see.** The app reads the game's log files and, only behind its off-by-default switch, two values the game shows the player. No injection, no changes to game files, no automated actions, and nothing the player could not see on their own screen.

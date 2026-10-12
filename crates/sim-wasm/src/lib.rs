@@ -10,8 +10,8 @@
 //!    the answer's length in bytes;
 //! 4. `sim_answer()` returns where the answer is (valid until the next run).
 //!
-//! The request and answer formats are in `docs/research/combat-simulator.md`
-//! section 8 and in [`input`] and [`odds`].
+//! The request and answer formats are in the design notes
+//! and in [`input`] and [`odds`].
 
 pub mod input;
 pub mod odds;

@@ -2,7 +2,7 @@
 
 **Outcome (2026-10-11, T-522, D-094):** the user picked a "TL" monogram that forms a tankard, made in Gemini (closest to direction 4 with the tankard of direction 2). It is redrawn by hand in [logo/](logo/index.html); the AI images stay in [reference/](reference/) as reference only.
 
-Task T-520 (session 079, D-093). The brief for a Tavern Ledger mark that works in the app, on the website and everywhere else. Ready-to-paste image prompts: [logo-prompts.md](logo-prompts.md).
+Task T-520 (D-093). The brief for a Tavern Ledger mark that works in the app, on the website and everywhere else. Ready-to-paste image prompts: [logo-prompts.md](logo-prompts.md).
 
 ## The product
 
@@ -53,7 +53,7 @@ The site's thin "prism" edge (`#ffd7a1`, `#ff9db8`, `#b3b8ff`, `#8ff0e6`) is a U
 1. A simple mark that still reads at **16 px**: two to four shapes, thick enough strokes, no fine detail.
 2. **No text inside the small mark** (an initial is a shape, not text, and still has to read at 16 px).
 3. **No gradients that die at small sizes.** Flat fills; a soft glow is allowed only in large versions.
-4. **Nothing from Blizzard or Hearthstone** (CLAUDE.md rule 5): no logos, no names, no card frames, no mana gems, no coin, no tavern sign or swirl, no hero portraits, no game typefaces, nothing that could pass as official. The brand never says "Hearthstone" or "Battlegrounds" in the mark or wordmark.
+4. **Nothing from Blizzard or Hearthstone** (brand rules): no logos, no names, no card frames, no mana gems, no coin, no tavern sign or swirl, no hero portraits, no game typefaces, nothing that could pass as official. The brand never says "Hearthstone" or "Battlegrounds" in the mark or wordmark.
 5. The fan-project notice ("Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.") goes next to the brand wherever it is shown in public, as it already does on the site and in the app.
 6. No claims in brand material that the app does not make (rule 8).
 
@@ -70,9 +70,9 @@ Suggested order to try: 1, 3, 2, then 4 and 5.
 ## After the user picks one
 
 1. **Pick and check.** The user picks one image and does a reverse image search (Google Images or TinEye) for it, to see that it is not too close to an existing trademark or app icon. Anything close → drop it.
-2. **Rebuild by hand.** In a later session the chosen image is only a reference: the mark is redrawn as a clean, hand-made SVG (few paths, whole-pixel alignment for 16 and 32 px, a separate simplified version for 16 px if needed), and the wordmark is set in Bricolage Grotesque. The AI raster is never shipped as the logo.
+2. **Rebuild by hand.** Later, the chosen image is only a reference: the mark is redrawn as a clean, hand-made SVG (few paths, whole-pixel alignment for 16 and 32 px, a separate simplified version for 16 px if needed), and the wordmark is set in Bricolage Grotesque. The AI raster is never shipped as the logo.
 3. **Asset set.** From that SVG: `favicon.svg` plus 16/32 px PNG or `.ico` for the site; the app `.ico` (16 to 256 px); the installer images; the overlay badge; the masthead (mark + wordmark); the 1200 × 630 social card; the GitHub avatar; light, dark and single-colour versions. Then replace `web/public/favicon.svg` and `crates/desktop/icons/icon.ico`.
-4. **Record it.** A decision in `DECISIONS.md` and the origin of the mark in `PROVENANCE.md` (which tool helped, that the final file was drawn by us).
+4. **Record it.** The origin of the mark in `PROVENANCE.md` (which tool helped, that the final file was drawn by us).
 
 ## Licence point
 
@@ -80,4 +80,4 @@ Suggested order to try: 1, 3, 2, then 4 and 5.
 
 What this means for us: OpenAI does not claim the image, but it does not promise it is unique or that it can be protected, and an AI image alone may not be protected by copyright in some countries. That is one more reason to redraw the final mark by hand (step 2) and to do the reverse image search (step 1).
 
-**Ideogram and Recraft: unverified.** Their terms on ownership, and whether a free plan makes images public, were not read in this session. Read them before using either tool, and prefer ChatGPT if in doubt.
+**Ideogram and Recraft: unverified.** Their terms on ownership, and whether a free plan makes images public, were not read. Read them before using either tool, and prefer ChatGPT if in doubt.

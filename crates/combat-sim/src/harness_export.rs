@@ -2,7 +2,7 @@
 //! combats a card not modelled blocks, by card, and the accuracy of the odds
 //! on the combats it does not block, per mode. The same numbers go to a
 //! small JSON file for the website (`--export`); its format is in
-//! `docs/research/combat-simulator.md`, section 7.6.
+//! the design notes.
 //!
 //! The JSON holds counts, shares, the date, the engine version and card ids
 //! only: no names, seats, heroes, games or rounds.

@@ -1,6 +1,6 @@
 // Card names and art (T-304, D-038), shared by the window and the overlay.
 // Names come from the app (HearthstoneJSON's card data, cached on this PC)
-// in the app's language (session 057: Spanish names with the app in
+// in the app's language (Spanish names with the app in
 // Spanish, English ones in English), whatever language the game's log is in;
 // art comes from the app's cardart protocol. A card the data does not know
 // shows its id; an image that does not load is removed, so no wrong or

@@ -3,7 +3,7 @@
 //! trinket offers and picks, Dark Gifts, quests. Rust-only: the Python
 //! prototype does not read them.
 //!
-//! What the log gives (checked on 11 real games, docs/research/parser-round-2.md):
+//! What the log gives (checked on 11 real games, design notes):
 //! - `DebugPrintEntityChoices` with `ChoiceType=GENERAL` lists one choice the
 //!   player is offered: its `Source` (the card that discovers) and every
 //!   offered card, one `Entities[i]=` line each. The client prints only its

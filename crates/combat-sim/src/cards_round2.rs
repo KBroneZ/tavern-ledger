@@ -1,4 +1,4 @@
-//! Card coverage, round 2 (T-604, session 071): the cards most seen on the
+//! Card coverage, round 2 (T-604): the cards most seen on the
 //! user's boards that round 1 left "not modelled", from their card texts in
 //! HearthstoneJSON (D-038). Same rules as [`crate::cards`]: exact card ids,
 //! golden cards written out, approximations named with the reason.

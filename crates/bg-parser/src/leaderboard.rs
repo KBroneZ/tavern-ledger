@@ -2,7 +2,7 @@
 //! shows them (T-207, D-058). Rust-only: the Python prototype does not read
 //! them.
 //!
-//! What the log gives (checked on 11 real games, docs/research/parser-round-2.md):
+//! What the log gives (checked on 11 real games, design notes):
 //! - `PLAYER_TRIPLES` on each leaderboard hero is its triple count; on the
 //!   local hero it equals the triple rewards the player got in Solo;
 //! - `BACON_FIRST_TRINKET_DATABASE_ID` and `BACON_SECOND_TRINKET_DATABASE_ID`

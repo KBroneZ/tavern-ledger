@@ -1,4 +1,4 @@
-//! Rules fixed in the accuracy rounds of session 106 (T-609), on small
+//! Rules fixed in the accuracy rounds (T-609), on small
 //! boards whose outcome is certain.
 
 use super::{Combat, Prepared};

@@ -117,7 +117,7 @@ pub struct HeroStats {
 }
 
 /// A tribe offered in the tavern. Not the exact lobby tribes: the log does
-/// not give those (see docs/research/parser-hslog.md).
+/// not give those (see design notes).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct TribeSeen {
     pub tribe: String,

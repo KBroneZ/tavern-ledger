@@ -1,6 +1,6 @@
 //! Duos combats (T-608): each team's second board comes in once its first
 //! is gone. The rules and how they were found are in
-//! `docs/research/combat-simulator.md`, section 3.
+//! design notes
 
 use super::{Combat, Prepared, SideState};
 
@@ -27,7 +27,7 @@ impl Combat<'_> {
     /// place in its own order. Who attacks next is then decided as at the
     /// start of a combat (more minions, else a coin flip). Returns that side
     /// when a board came in (both user logs and the rule table in
-    /// `docs/research/combat-simulator.md`, section 3).
+    /// design notes).
     pub(super) fn bring_in_teammates(&mut self) -> Option<usize> {
         let mut entered = self.enter_waiting();
         if entered == [false, false] {

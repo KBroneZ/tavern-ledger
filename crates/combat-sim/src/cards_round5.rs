@@ -1,4 +1,4 @@
-//! Card coverage, round 5 (T-604, session 083): no game was played since
+//! Card coverage, round 5 (T-604): no game was played since
 //! round 4, so this round takes the rest of the not-modelled list that the
 //! board can play, from the card texts in HearthstoneJSON (D-038), and the
 //! hand summoners, which play as approximate since this round (D-097). Same

@@ -237,7 +237,7 @@ def is_golden_minion(entity) -> bool:
     """A board minion is golden when it has PREMIUM or a golden card id.
 
     PREMIUM also marks cards that are always golden and golden tokens, which
-    have no golden id (session 052). It is set for a moment on minions set
+    have no golden id. It is set for a moment on minions set
     aside during a triple in the shop, never on a board at a combat.
     """
     return bool(entity.tags.get(GameTag.PREMIUM)) or is_golden(entity.card_id)

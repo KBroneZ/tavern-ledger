@@ -1,4 +1,4 @@
--- Daily sweep schedule (session 022). Run: npx supabase test db
+-- Daily sweep schedule. Run: npx supabase test db
 -- The sweep function's side is tested in supabase/functions/sweep/.
 begin;
 create extension if not exists pgtap with schema extensions;

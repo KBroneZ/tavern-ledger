@@ -2,7 +2,7 @@
 //! enchantment in `PLAY` attached to the minion (`ATTACHED` = the minion's
 //! id); the minion also has `HAS_DARK_GIFT` 1. Combat copies carry both, for
 //! the player's and the opponent's minions alike, and the game shows the
-//! gift on the minion (docs/research/dark-gifts.md, section 3).
+//! gift on the minion (design notes).
 //!
 //! A gift is saved as the gift spell's card id (`BG36_MidGameEffect_000tNN`,
 //! the id the offers name, D-058, D-100), not the enchantment's: the

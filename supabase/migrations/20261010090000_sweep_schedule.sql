@@ -1,4 +1,4 @@
--- T-104a hosted (session 022): run the daily sweep (T-104d) from the database.
+-- T-104a hosted: run the daily sweep (T-104d) from the database.
 --
 -- pg_cron calls private.run_sweep() once a day; it posts to the `sweep` Edge
 -- Function with a token kept in Vault. The token is made here from random
@@ -6,7 +6,7 @@
 -- function asks public.sweep_token_valid() (service role only) whether the
 -- token it got is the right one. The project's own URL is a second Vault
 -- entry, `project_url`, set by hand on the hosted project
--- (docs/research/deploy.md, section 10.5). Without it the job sends nothing
+-- (design notes). Without it the job sends nothing
 -- and says so, which is what happens on the local stack.
 --
 -- pg_cron only says that the request was queued and pg_net keeps the answer

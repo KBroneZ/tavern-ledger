@@ -12,7 +12,7 @@ Never shipped: not in the app, the installer, releases or user docs. For collect
 
 **Risk.** Dropping the game's connection changes how the client behaves on the network. It can carry risk for your Battle.net account. Use it only by hand, on your own account, to collect test games, knowing that. It is never automatic: no timers, nothing triggered by the log.
 
-**What it does.** While it runs, each press of the hotkey (default `Ctrl+Alt+F9`, at most once every 10 seconds) resets every open IPv4 TCP connection owned by `Hearthstone.exe`, found by process id, with Windows' `SetTcpEntry`. The client notices and reconnects. Nothing else is touched: no other program's connections, no firewall rule, no setting, no game file, no memory, no packet capture. Method and Microsoft sources: [docs/research/dev-reconnect.md](../../docs/research/dev-reconnect.md).
+**What it does.** While it runs, each press of the hotkey (default `Ctrl+Alt+F9`, at most once every 10 seconds) resets every open IPv4 TCP connection owned by `Hearthstone.exe`, found by process id, with Windows' `SetTcpEntry`. The client notices and reconnects. Nothing else is touched: no other program's connections, no firewall rule, no setting, no game file, no memory, no packet capture.
 
 **Admin.** Windows only lets an elevated process reset connections. Open the terminal with "Run as administrator"; without it the tool says so and does nothing.
 

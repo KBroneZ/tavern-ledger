@@ -1,4 +1,4 @@
--- T-104a: data export and account deletion (GDPR, CLAUDE.md rule 6).
+-- T-104a: data export and account deletion (GDPR, project rules).
 --
 -- Export: public.export_my_data() returns, as one JSON document, everything
 -- this project holds about the signed-in user: the auth account (without

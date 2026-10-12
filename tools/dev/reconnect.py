@@ -56,7 +56,7 @@ MIN_COOLDOWN = 2.0
 POLL_SECONDS = 0.05
 
 # tcpmib.h, iprtrmib.h, winerror.h, winuser.h (Microsoft Learn; see
-# docs/research/dev-reconnect.md).
+# design notes).
 MIB_TCP_STATE_ESTAB = 5
 MIB_TCP_STATE_DELETE_TCB = 12
 AF_INET = 2
@@ -214,7 +214,7 @@ class Cooldown:
 
 
 # --- Windows calls (ctypes, declared by hand; Microsoft Learn pages in
-# docs/research/dev-reconnect.md) ---
+# design notes) ---
 
 class Win32:
     def __init__(self) -> None:

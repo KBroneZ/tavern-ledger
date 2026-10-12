@@ -12,8 +12,7 @@
 --   to measure and fix the combat simulator (`combat-validate --games`):
 --   files still in the bucket of accounts whose switch is on at that moment.
 --   Service role only (the owner, from the SQL editor); no client can call it.
---   How the owner uses it: docs/research/combat-simulator.md section 7.8 and
---   docs/research/deploy.md section 10.15.
+--   The owner runs it from the SQL editor.
 -- * Export: export_my_data() gains simulator_consent. Deletion: the row goes
 --   with the account (delete_user_data() and the foreign key to the profile).
 

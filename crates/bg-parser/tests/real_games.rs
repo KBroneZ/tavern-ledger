@@ -225,7 +225,7 @@ fn no_player_name_or_account_id_is_in_a_fixture() {
     }
 }
 
-// Checked by hand when the fixtures were made (session 032).
+// Checked by hand when the fixtures were made.
 
 #[test]
 fn solo_build_253216() {
@@ -287,7 +287,7 @@ fn duos_build_253216() {
 }
 
 // Shop and actions (T-204, T-205), checked against counts of the raw logs in
-// session 034 (docs/research/shop-and-apm.md): options and choices sent,
+// the design notes: options and choices sent,
 // top-level shop blocks, gold tags and tier changes.
 
 fn shop(name: &str) -> bg_parser::shop::ShopRecord {
@@ -341,7 +341,7 @@ fn duos_shop_build_253216() {
 }
 
 // Parser revision 4 (T-206, T-209, T-210, T-214, D-055), checked against the
-// raw games the fixtures were made from (docs/research/parser-data-round.md).
+// raw games the fixtures were made from (design notes).
 
 #[test]
 fn solo_data_round_build_253216() {
@@ -404,7 +404,7 @@ fn duos_data_round_build_253216() {
 }
 
 // Parser revision 5 (T-207, T-208, T-211, T-212, D-058), checked against the
-// raw games the fixtures were made from (docs/research/parser-round-2.md).
+// raw games the fixtures were made from (design notes).
 
 fn local_seat(r: &GameReport) -> &bg_parser::report::LobbyPlayer {
     let pid = r.local_player_id.expect("local player");
@@ -510,7 +510,7 @@ fn duos_round_two_build_253216() {
     assert_eq!(r.old_god, Some(130610));
 }
 
-/// Golden board minions by `PREMIUM` (parser revision 6, session 052): every
+/// Golden board minions by `PREMIUM` (parser revision 6): every
 /// golden card id stays golden, and Aureate Laureate (always golden, no golden
 /// id) is golden too; no other minion is.
 #[test]

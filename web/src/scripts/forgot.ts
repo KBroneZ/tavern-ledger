@@ -7,7 +7,7 @@ import { supabase } from "./client.ts";
 import { busy, byId, clearInvalid, failField, field, ready, say } from "./dom.ts";
 
 // The reset link comes back to the account page, the one return address
-// the project allows (docs/research/deploy.md, section 10.3): the English
+// the project allows (design notes): the English
 // address; public/lang.js then takes a viewer who chose Spanish to
 // /es/account/ with the link intact (T-508).
 const RETURN_PAGE = "/account/";

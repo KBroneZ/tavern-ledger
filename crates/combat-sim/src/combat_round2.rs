@@ -1,4 +1,4 @@
-//! The effects card coverage round 2 added (T-604, session 071): Reborn
+//! The effects card coverage round 2 added (T-604): Reborn
 //! followers, damage dealt by a friend, a Rally attack that triggers a
 //! Deathrattle, a summon that attacks at once and one buff per type.
 

@@ -1,4 +1,4 @@
-//! Card rules of the accuracy rounds (T-609, session 106, engine `0.7.0`):
+//! Card rules of the accuracy rounds (T-609, engine `0.7.0`):
 //! cards whose combat effect the replays of the user's logs showed was
 //! missing, some of which need the side's game-long values
 //! ([`crate::model::GameValues`]). From the card texts in HearthstoneJSON
