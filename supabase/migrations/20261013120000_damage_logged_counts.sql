@@ -14,6 +14,11 @@
 --   public.user_overview counts, per mode, the games whose damage total is
 --   not all the game's hit (damage_dealt_inferred_games,
 --   damage_taken_inferred_games); create or replace keeps the grants.
+-- * Deploy order: this migration before the functions. A function with
+--   SUMMARY_VERSION 4 sends the two new keys, which put_game_stats refuses
+--   (22023) until the columns exist: upload_commit then stores the game
+--   without a summary and the sweep counts the write as failed, so nothing is
+--   lost and the sweep fills it once the migration is in.
 
 alter table public.game_stats
   add column damage_taken_logged smallint,
