@@ -10,7 +10,6 @@ use std::fmt::Write as _;
 
 use std::collections::BTreeMap;
 
-use crate::combat::replay::Rule;
 use crate::combat::CombatResult;
 use crate::harness::Scored;
 use crate::harness_duos::{team_of, DuosCombat};
@@ -18,7 +17,7 @@ use crate::harness_logs::Replayed;
 use crate::model::Team;
 use crate::score::Prediction;
 use crate::trials::{simulate_teams, Coverage, Options, Verdict};
-use crate::why::{cards_of, not_seen, parted, Cards, Cause, NoReplay, NotSeen};
+use crate::why::{cards_of, not_seen, parted, Cause, NoReplay, NotSeen};
 
 /// One combat whose most likely result was not the real one.
 #[derive(Clone, Debug, PartialEq)]
@@ -106,33 +105,6 @@ fn find(m: &Miss, replays: &[Replayed]) -> Cause {
             why: NoReplay::NotSaved,
             cards: cards_of(&m.coverage, false),
         },
-    }
-}
-
-/// The likely cause of a miss, in a few words.
-pub fn cause(m: &Miss, replays: &[Replayed]) -> String {
-    match find(m, replays) {
-        Cause::Matched => "matched".into(),
-        Cause::Chance { .. } => "chance: the replay follows the game to the end".into(),
-        Cause::MissingInputs { parted, .. } => format!(
-            "something the log does not show; the replay parts at: {}",
-            parted.rule.label()
-        ),
-        Cause::ApproximateCard { parted, .. } => format!(
-            "a card not modelled or approximate; the replay parts at: {}",
-            parted.rule.label()
-        ),
-        Cause::RuleDifference(d) => format!("replay parts at: {}", d.rule.label()),
-        Cause::NoReplay {
-            why: NoReplay::Stops,
-            ..
-        } => format!("replay parts at: {}", Rule::NoDefender.label()),
-        Cause::NoReplay { cards, .. } => match cards {
-            Cards::NotModelled => "no replay; a card not modelled (played as a plain minion)",
-            Cards::Approximate => "no replay; a card played approximately",
-            Cards::Exact => "no replay; every card exact",
-        }
-        .into(),
     }
 }
 

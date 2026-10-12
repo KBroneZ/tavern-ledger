@@ -1,5 +1,5 @@
 use super::*;
-use crate::combat::replay::{Difference, Replay};
+use crate::combat::replay::{Difference, Replay, Rule};
 
 fn miss(duos: bool, coverage: Coverage) -> Miss {
     Miss {
