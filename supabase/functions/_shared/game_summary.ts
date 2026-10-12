@@ -23,7 +23,8 @@
 //
 // 2: damage from the game's own hit in each combat's replay (T-545, D-108).
 // 3: the damage records say whether the max came from the game's own hit.
-export const SUMMARY_VERSION = 3;
+// 4: how many combats behind each damage total are the game's own hit.
+export const SUMMARY_VERSION = 4;
 
 // deno-lint-ignore no-explicit-any
 type Json = any;
@@ -69,6 +70,10 @@ export interface GameStats {
   golden_max: number | null;
   heroes_offered: string[] | null;
   hero_rerolls: number | null;
+  /** Of damage_taken_combats, how many are the game's own hit (the rest worked out from health). */
+  damage_taken_logged: number | null;
+  /** Of damage_dealt_combats, how many are the game's own hit. */
+  damage_dealt_logged: number | null;
 }
 
 /** The columns of public.game_stats this summary fills, in table order. */
@@ -113,6 +118,8 @@ export const STATS_KEYS: readonly (keyof GameStats)[] = [
   "golden_max",
   "heroes_offered",
   "hero_rerolls",
+  "damage_taken_logged",
+  "damage_dealt_logged",
 ];
 
 const DUOS = "GT_BATTLEGROUNDS_DUO";
@@ -298,6 +305,8 @@ interface Drops {
   max: number;
   /** No combat at the max value has the game's own hit: the max is worked out from health. */
   maxInferred: boolean;
+  /** How many of the combats are the game's own hit. */
+  logged: number;
 }
 
 /** One combat's damage, and whether it is the game's own hit (not worked out from health). */
@@ -314,6 +323,7 @@ function drops(damages: Damage[]): Drops | null {
     combats: damages.length,
     max,
     maxInferred: !damages.some((d) => d.value === max && d.logged),
+    logged: damages.filter((d) => d.logged).length,
   };
 }
 
@@ -561,6 +571,8 @@ export function summarize(report: Json): GameStats {
     triples: triples(report),
     ...boards(report, rounds),
     ...heroPick(report),
+    damage_taken_logged: taken?.logged ?? null,
+    damage_dealt_logged: dealt?.logged ?? null,
   };
   // Table order, so the JSON sent to the database is stable.
   return Object.fromEntries(STATS_KEYS.map((k) => [k, stats[k]])) as unknown as GameStats;
