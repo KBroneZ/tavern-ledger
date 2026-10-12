@@ -156,11 +156,11 @@
 .layout-home .sec-h {
   width: fit-content;
   color: #ffd27a;
-  background: linear-gradient(180deg, #fff3cf 10%, #ffd27a 45%, #e3a03c 75%, #b8701f 95%);
+  background: var(--gold-lit);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 0 #3a1f07) drop-shadow(0 6px 14px rgb(0 0 0 / 0.7));
+  filter: drop-shadow(0 2px 0 var(--gold-rim)) drop-shadow(0 6px 14px rgb(0 0 0 / 0.7));
 }
 
 .layout-home .glass .sec-h {

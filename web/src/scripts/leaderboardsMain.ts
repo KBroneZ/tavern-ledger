@@ -62,7 +62,7 @@ async function start(): Promise<void> {
 }
 
 function failed(): void {
-  const retry = h("button", { type: "button", class: "secondary", id: "lb-retry" }, lt("page.retry"));
+  const retry = h("button", { type: "button", class: "tb tb-small", id: "lb-retry" }, lt("page.retry"));
   mount(panels, stateBlock({ kind: "error", title: lt("page.error"), body: lt("page.error.body") }, retry));
   settle(lt("page.error"));
   byId("lb-retry").addEventListener("click", () => location.reload());

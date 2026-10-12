@@ -163,6 +163,18 @@ test("the simulator page: noindex, its script and frame when accounts are open, 
   }
 });
 
+test("the footer says whether accounts are open, as the build is", () => {
+  const en = readFileSync(join(DIST, "index.html"), "utf8");
+  const es = readFileSync(join(DIST, "es", "index.html"), "utf8");
+  if (CONFIG) {
+    assert.match(en, /Open source \(AGPL-3\.0\)\. Accounts are open;/);
+    assert.match(es, /Código abierto \(AGPL-3\.0\)\. Las cuentas están abiertas;/);
+  } else {
+    assert.match(en, /Open source \(AGPL-3\.0\)\. Accounts are not open yet;/);
+    assert.match(es, /Código abierto \(AGPL-3\.0\)\. Las cuentas aún no están abiertas;/);
+  }
+});
+
 test("accounts open: the account pages have their forms and scripts", { skip: !CONFIG }, () => {
   for (const page of ACCOUNT_PAGES) {
     const html = readFileSync(join(DIST, page), "utf8");
