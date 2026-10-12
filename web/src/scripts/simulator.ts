@@ -7,11 +7,15 @@
 import "../lib/i18n/boot.ts";
 import { sm } from "../lib/sim/strings.ts";
 import { afterPaint } from "../lib/view/afterPaint.ts";
+import { showLoadFailure } from "../lib/view/loadFailure.ts";
 
 afterPaint()
   .then(() => import("../lib/sim/main.ts"))
   .catch(() => {
-    // The script itself could not be loaded: say so instead of leaving a table that does nothing.
+    // The script itself could not be loaded: say so, with a way to try again.
+    const result = document.getElementById("sim-result");
+    if (result) showLoadFailure(result, sm("result.failed"), "", sm("result.retry"));
     const status = document.getElementById("sim-status");
     if (status) status.textContent = sm("result.failed");
+    for (const id of ["sim-opponent", "sim-player"]) document.getElementById(id)?.setAttribute("aria-busy", "false");
   });

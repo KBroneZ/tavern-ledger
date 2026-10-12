@@ -7,13 +7,14 @@ import { afterPaint } from "../../src/lib/view/afterPaint.ts";
 const g = globalThis as Record<string, unknown>;
 const saved = { document: g.document, PerformanceObserver: g.PerformanceObserver, requestAnimationFrame: g.requestAnimationFrame };
 
-type PaintCallback = (list: { getEntriesByName: (name: string) => unknown[] }, observer: { disconnect: () => void }) => void;
+type PaintCallback = (list: { getEntriesByName: (name: string) => unknown[] }) => void;
 
 /** A PerformanceObserver that records its callback so the test can report a paint when it likes. */
-function stubObserver(): { report: (names: string[]) => void; disconnected: () => boolean } {
+function stubObserver(supported: string[] = ["paint"]): { report: (names: string[]) => void; disconnected: () => boolean } {
   let callback: PaintCallback | null = null;
   let disconnected = false;
   g.PerformanceObserver = class {
+    static supportedEntryTypes = supported;
     constructor(cb: PaintCallback) {
       callback = cb;
     }
@@ -23,10 +24,19 @@ function stubObserver(): { report: (names: string[]) => void; disconnected: () =
     }
   };
   return {
-    report: (names) =>
-      callback?.({ getEntriesByName: (name) => names.filter((n) => n === name) }, { disconnect: () => (disconnected = true) }),
+    report: (names) => callback?.({ getEntriesByName: (name) => names.filter((n) => n === name) }),
     disconnected: () => disconnected,
   };
+}
+
+function stubFrames(): () => number {
+  let frames = 0;
+  g.requestAnimationFrame = (cb: () => void) => {
+    frames += 1;
+    setTimeout(cb, 0);
+    return frames;
+  };
+  return () => frames;
 }
 
 afterEach(() => {
@@ -56,17 +66,16 @@ test("it waits for the first-contentful-paint report, not for any other paint", 
 
 test("a browser without paint timing falls back to the next animation frame", async () => {
   g.document = { visibilityState: "visible" };
-  g.PerformanceObserver = class {
-    constructor() {
-      throw new TypeError("unsupported");
-    }
-  };
-  let frames = 0;
-  g.requestAnimationFrame = (cb: () => void) => {
-    frames += 1;
-    setTimeout(cb, 0);
-    return frames;
-  };
+  stubObserver(["largest-contentful-paint"]);
+  const frames = stubFrames();
   await afterPaint();
-  assert.equal(frames, 1);
+  assert.equal(frames(), 1);
+});
+
+test("a browser with no PerformanceObserver at all falls back too", async () => {
+  g.document = { visibilityState: "visible" };
+  g.PerformanceObserver = undefined;
+  const frames = stubFrames();
+  await afterPaint();
+  assert.equal(frames(), 1);
 });

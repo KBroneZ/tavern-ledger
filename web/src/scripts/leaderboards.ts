@@ -6,12 +6,14 @@
 import "../lib/i18n/boot.ts";
 import { lt } from "../lib/leaderboards/strings.ts";
 import { afterPaint } from "../lib/view/afterPaint.ts";
+import { showLoadFailure } from "../lib/view/loadFailure.ts";
 import { byId } from "./dom.ts";
 
 afterPaint()
   .then(() => import("./leaderboardsMain.ts"))
   .catch(() => {
-    // The script itself could not be loaded: say so instead of leaving the skeleton.
+    // The script itself could not be loaded: say so, with a way to try again.
+    showLoadFailure(byId("lb-modes"), lt("page.error"), lt("page.error.body"), lt("page.retry"));
     byId("lb-status").textContent = lt("page.error");
     byId("lb").setAttribute("aria-busy", "false");
   });

@@ -6,12 +6,14 @@
 import "../lib/i18n/boot.ts";
 import { ct } from "../lib/community/strings.ts";
 import { afterPaint } from "../lib/view/afterPaint.ts";
+import { showLoadFailure } from "../lib/view/loadFailure.ts";
 import { byId } from "./dom.ts";
 
 afterPaint()
   .then(() => import("./communityHeroesMain.ts"))
   .catch(() => {
-    // The script itself could not be loaded: say so instead of leaving the skeleton.
+    // The script itself could not be loaded: say so, with a way to try again.
+    showLoadFailure(byId("ch-modes"), ct("page.error"), ct("page.error.body"), ct("page.retry"));
     byId("ch-status").textContent = ct("page.error");
     byId("ch").setAttribute("aria-busy", "false");
   });
