@@ -194,6 +194,13 @@ pub struct GameValues {
     pub blood_gem: (i32, i32),
     /// What each buff of a Tavern spell gives beyond its text.
     pub spell: (i32, i32),
+    /// Eternal Knights that died this game: each Knight has +4/+2 for each
+    /// (golden +8/+4).
+    pub knights_dead: i32,
+    /// Attack the side's Undead have on top this game.
+    pub undead_attack: i32,
+    /// Attack and Health the side's Beetles have on top this game.
+    pub beetle: (i32, i32),
 }
 
 /// One side of a combat: its minions left to right, its hero's tavern

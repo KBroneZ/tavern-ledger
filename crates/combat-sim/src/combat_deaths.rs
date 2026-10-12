@@ -116,6 +116,7 @@ impl Combat<'_> {
             if dead.is_empty() {
                 return;
             }
+            self.count_dead_knights(&dead);
             self.gain_deathrattles(&dead);
             for d in &dead {
                 let times = 1 + usize::from(self.extra_deathrattles(d.side));
@@ -178,7 +179,13 @@ impl Combat<'_> {
     /// the card's stats, its last Attack and keywords are used (an
     /// approximation the caller reports).
     pub(super) fn reborn(&mut self, d: &Dead) {
-        let (card, attack, health, kw) = self.reborn_form(d);
+        let (card, mut attack, health, kw) = self.reborn_form(d);
+        // A fresh copy of a card with known stats gets the side's game-long
+        // Attack (its Health stays 1).
+        let info = &self.p.cards[card as usize];
+        if info.base.is_some() && !info.triggers.contains(&Trigger::RebornWithStats) {
+            attack += self.game_stats(d.side, card).0;
+        }
         let unit = self.fresh(card, attack, health, kw.without(Keywords::REBORN));
         let uid = unit.uid;
         let at = self.anchor_pos(d.side, d.anchor);

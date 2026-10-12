@@ -134,6 +134,15 @@ pub struct CombatValues {
     /// What the side's Tavern spells give beyond their text
     /// (`TAVERN_SPELL_ATTACK_INCREASE`, `TAVERN_SPELL_HEALTH_INCREASE`).
     pub spell: (i64, i64),
+    /// Eternal Knights that died this game: the player enchantment
+    /// `BG25_008pe` ("Counts the number of Eternal Knights that died").
+    pub knights_dead: i64,
+    /// What the side's Undead have on top this game: `BG25_011pe` ("Give
+    /// Attack to Undead").
+    pub undead_attack: i64,
+    /// What the side's Beetles have on top this game: `BG31_808pe` ("Gives
+    /// Beetle stats"), Attack and Health.
+    pub beetle: (i64, i64),
 }
 
 /// One side stepping into a combat. `board` is None when the fight never

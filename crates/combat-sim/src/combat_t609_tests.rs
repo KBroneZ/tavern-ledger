@@ -3,7 +3,7 @@
 
 use super::{Combat, Prepared};
 use crate::combat::CombatResult;
-use crate::model::{GameValues, Minion, Tribes, Warband};
+use crate::model::{GameValues, Keywords, Minion, Tribes, Warband};
 use crate::rng::Rng;
 use crate::trials::{simulate, Options, Verdict};
 
@@ -98,7 +98,11 @@ fn after_swing(player: Vec<Minion>, values: GameValues, ixs: &[usize]) -> Vec<(i
 }
 
 fn values(blood_gem: (i32, i32), spell: (i32, i32)) -> GameValues {
-    GameValues { blood_gem, spell }
+    GameValues {
+        blood_gem,
+        spell,
+        ..GameValues::default()
+    }
 }
 
 #[test]
@@ -147,4 +151,80 @@ fn mighty_dragonbreath_buffs_get_the_spell_upgrades() {
     let got = after_swing(vec![vindicator, plain(1, 10)], values((0, 0), (1, 1)), &[0]);
     // The Vindicator: twice (all, Dragons); the plain minion: once.
     assert_eq!(got, vec![(16, 15), (5, 13)]);
+}
+
+/// The player's board after the minions at `ixs` die at once.
+fn after_deaths(player: Vec<Minion>, values: GameValues, ixs: &[usize]) -> Vec<(String, i32, i32)> {
+    let band = Warband {
+        values,
+        ..band(player)
+    };
+    let p = Prepared::new(&band, &self::band(vec![plain(0, 50)]), false);
+    let mut rng = Rng::new(1);
+    let mut c = Combat::new(&p, &mut rng);
+    for &ix in ixs {
+        c.sides[0].units[ix].health = 0;
+    }
+    c.process_deaths(0);
+    c.sides[0]
+        .units
+        .iter()
+        .map(|u| (c.p.cards[u.card as usize].id.clone(), u.attack, u.health))
+        .collect()
+}
+
+fn knights_and_undead(knights_dead: i32, undead_attack: i32) -> GameValues {
+    GameValues {
+        knights_dead,
+        undead_attack,
+        ..GameValues::default()
+    }
+}
+
+#[test]
+fn a_summoned_eternal_knight_has_the_knights_that_died_and_the_undead_attack() {
+    // Eternal Summoner: Reborn, Deathrattle: summon an Eternal Knight. Five
+    // Knights died this game (+20/+10) and Undead have +71 Attack: the log's
+    // 95/12 Knight (the user's game 4 round 10).
+    let summoner = Minion::new("BG25_009", 8, 1).tribe(Tribes::UNDEAD).tier(5);
+    let got = after_deaths(vec![summoner], knights_and_undead(5, 71), &[0]);
+    assert!(got.contains(&("BG25_008".to_string(), 95, 12)), "{got:?}");
+}
+
+#[test]
+fn an_eternal_knight_grows_when_another_dies() {
+    let knight = || Minion::new("BG25_008", 8, 4).tribe(Tribes::UNDEAD).tier(2);
+    let got = after_deaths(vec![knight(), knight()], GameValues::default(), &[0]);
+    assert_eq!(got, vec![("BG25_008".to_string(), 12, 6)]);
+}
+
+#[test]
+fn a_reborn_undead_gets_the_undead_attack_and_one_health() {
+    // A 2/1 card with Reborn, 30/1 on the board: it comes back as a fresh
+    // 2/1 with the side's +6 Undead Attack.
+    let undead = Minion {
+        base: Some(crate::model::BaseCard {
+            attack: 2,
+            health: 1,
+            keywords: Keywords::REBORN,
+        }),
+        ..Minion::new("BG25_001", 30, 1)
+            .with(Keywords::REBORN)
+            .tribe(Tribes::UNDEAD)
+            .tier(1)
+    };
+    let got = after_deaths(vec![undead], knights_and_undead(0, 6), &[0]);
+    assert_eq!(got, vec![("BG25_001".to_string(), 8, 1)]);
+}
+
+#[test]
+fn a_summoned_beetle_has_the_beetle_buffs() {
+    // Buzzing Vermin: Deathrattle, summon a 2/2 Beetle.
+    let vermin = Minion::new("BG31_803", 1, 1).tribe(Tribes::BEAST).tier(1);
+    let values = GameValues {
+        beetle: (12, 12),
+        ..GameValues::default()
+    };
+    let got = after_deaths(vec![vermin], values, &[0]);
+    assert_eq!(got, vec![("BG28_603t".to_string(), 14, 14)]);
 }

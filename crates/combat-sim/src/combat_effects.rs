@@ -257,8 +257,10 @@ impl Combat<'_> {
             return;
         };
         let at = self.summon_pos(side, src);
+        let (more_attack, more_health) = self.game_stats(side, card);
+        let (attack, health) = (base.attack + more_attack, base.health + more_health);
         for k in 0..usize::from(count) {
-            let unit = self.fresh(card, base.attack, base.health, base.keywords);
+            let unit = self.fresh(card, attack, health, base.keywords);
             let uid = unit.uid;
             if !self.sides[side].insert(at + k, unit) {
                 break;

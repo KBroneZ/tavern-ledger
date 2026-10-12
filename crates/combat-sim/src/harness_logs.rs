@@ -102,6 +102,9 @@ pub(crate) fn game_values(v: Option<CombatValues>) -> GameValues {
     GameValues {
         blood_gem: (int(v.blood_gem.0), int(v.blood_gem.1)),
         spell: (int(v.spell.0), int(v.spell.1)),
+        knights_dead: int(v.knights_dead),
+        undead_attack: int(v.undead_attack),
+        beetle: (int(v.beetle.0), int(v.beetle.1)),
     }
 }
 

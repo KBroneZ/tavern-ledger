@@ -522,6 +522,23 @@ impl Collector {
         let Some(p) = player.and_then(|id| self.board.get(id)) else {
             return CombatValues::default();
         };
+        // A player enchantment's two numbers (`TAG_SCRIPT_DATA_NUM_1`, `_2`),
+        // when one with this card id is in play on the player.
+        let enchant = |card: &str| -> (i64, i64) {
+            self.board
+                .iter()
+                .find(|e| {
+                    e.card_id.as_deref() == Some(card)
+                        && e.int("ATTACHED") == p.id
+                        && e.is("ZONE", "PLAY")
+                })
+                .map_or((0, 0), |e| {
+                    (
+                        e.int("TAG_SCRIPT_DATA_NUM_1"),
+                        e.int("TAG_SCRIPT_DATA_NUM_2"),
+                    )
+                })
+        };
         CombatValues {
             blood_gem: (
                 p.int("BACON_BLOODGEMBUFFATKVALUE"),
@@ -531,6 +548,9 @@ impl Collector {
                 p.int("TAVERN_SPELL_ATTACK_INCREASE"),
                 p.int("TAVERN_SPELL_HEALTH_INCREASE"),
             ),
+            knights_dead: enchant("BG25_008pe").0,
+            undead_attack: enchant("BG25_011pe").0,
+            beetle: enchant("BG31_808pe"),
         }
     }
 
