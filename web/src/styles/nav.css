@@ -1,0 +1,283 @@
+/* The menus (T-556): the masthead with its menu, folded behind a "Menu"
+   button where it does not fit, and the footer. Loaded on every page by
+   layouts/Base.astro, after global.css. */
+
+/* Brand: the TL tankard mark (docs/brand/logo/mark.svg, D-094). */
+.brand .mark {
+  flex: none;
+  width: 30px;
+  height: 28px;
+  background: url("/mark.svg") center / contain no-repeat;
+}
+
+/* ---------- Masthead: a dark beam on a bronze rail ---------- */
+
+.masthead {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  min-height: var(--nav-h);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 26px;
+  padding: 8px var(--gutter);
+  background: linear-gradient(180deg, rgb(38 24 14 / 0.97), rgb(19 12 7 / 0.96));
+  box-shadow:
+    0 1px 0 var(--bronze-lo),
+    0 2px 0 rgb(0 0 0 / 0.55),
+    0 12px 26px rgb(0 0 0 / 0.4);
+}
+
+/* A lit line along the rail, brightest in the middle. */
+.masthead::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--bronze-hi) 25% 75%, transparent);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--gold);
+  text-decoration: none;
+  font: 700 1.25rem / 1 var(--display);
+  font-stretch: 88%;
+  letter-spacing: -0.01em;
+  text-shadow: 0 2px 0 rgb(0 0 0 / 0.6);
+}
+
+/* The menu. Where it does not fit on one line it folds behind a "Menu"
+   button (a popover: no script, so it also works in the accounts-closed
+   build). Here, the wide form; the folded one is under "Small or short
+   screens". The resets undo the browser's own popover box. */
+.site-nav,
+.site-nav[popover] {
+  position: static;
+  inset: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 20px;
+  width: auto;
+  height: auto;
+  margin: 0 0 0 auto;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-weight: 600;
+}
+
+.site-nav a {
+  display: inline-block;
+  padding-block: 10px;
+  color: var(--dim);
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+.site-nav a:hover {
+  color: var(--text);
+}
+
+/* The current page: gold, on a short lit bar. */
+.site-nav a[aria-current="page"] {
+  color: var(--gold);
+  background: linear-gradient(90deg, transparent, var(--bronze-hi) 18% 82%, transparent) bottom / 100% 2px no-repeat;
+}
+
+/* Sign in or Account, and the language switch: small bronze-edged plaques,
+   set apart from the pages. */
+.site-nav a:is(.nav-signin, .nav-account, .lang-switch) {
+  padding: 7px 14px;
+  border-radius: var(--r-small);
+  background: rgb(0 0 0 / 0.25);
+  box-shadow: inset 0 0 0 1.5px var(--bronze-lo);
+  transition:
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.site-nav a:is(.nav-signin, .nav-account) {
+  color: var(--parchment);
+}
+
+.site-nav a:is(.nav-signin, .nav-account, .lang-switch):hover,
+.site-nav a:is(.nav-signin, .nav-account)[aria-current="page"] {
+  color: var(--gold);
+  box-shadow: inset 0 0 0 1.5px var(--bronze-hi);
+}
+
+.site-nav a:is(.nav-signin, .nav-account)[aria-current="page"] {
+  background: rgb(0 0 0 / 0.25);
+}
+
+/* "Sign in" or "Account", not both (T-513): public/lang.js sets data-auth
+   from the stored session; with no answer both stay. */
+html[data-auth="in"] .site-nav a.nav-signin,
+html[data-auth="out"] .site-nav a.nav-account {
+  display: none;
+}
+
+/* The buttons that open and close the folded menu; hidden while it fits. */
+.nav-open,
+.nav-close {
+  display: none;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: var(--r-small);
+  background: rgb(0 0 0 / 0.25);
+  color: var(--parchment);
+  font: 700 1rem / 1 var(--body);
+  box-shadow: inset 0 0 0 1.5px var(--bronze-lo);
+}
+
+.nav-open:hover,
+.nav-close:hover {
+  color: var(--gold);
+  box-shadow: inset 0 0 0 1.5px var(--bronze-hi);
+}
+
+/* Three bars for "Menu", a cross for "Close". */
+.nav-open i,
+.nav-close i {
+  width: 18px;
+  height: 14px;
+  background:
+    linear-gradient(currentColor 0 0) top / 100% 2px no-repeat,
+    linear-gradient(currentColor 0 0) center / 100% 2px no-repeat,
+    linear-gradient(currentColor 0 0) bottom / 100% 2px no-repeat;
+}
+
+.nav-close i {
+  height: 18px;
+  background:
+    linear-gradient(45deg, transparent calc(50% - 1px), currentColor calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
+    linear-gradient(-45deg, transparent calc(50% - 1px), currentColor calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px));
+}
+
+/* The footer: the tavern's floor, dark wood under a bronze rail. */
+.colophon {
+  margin-top: 40px;
+  padding: 22px var(--gutter) 26px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 24px;
+  font-size: 0.95rem;
+  color: var(--dim);
+  background: linear-gradient(180deg, rgb(26 16 9 / 0.95), rgb(12 8 5 / 0.97));
+  box-shadow:
+    inset 0 1px 0 var(--bronze-lo),
+    inset 0 2px 0 rgb(0 0 0 / 0.5),
+    0 -10px 24px rgb(0 0 0 / 0.3);
+}
+
+.colophon .notice {
+  color: var(--text);
+}
+
+.colophon a {
+  color: var(--dim);
+}
+
+.colophon a:hover {
+  color: var(--gold);
+}
+
+/* ---------- Small or short screens ---------- */
+
+/* The menu folds where its links no longer fit on one line: "Menu" opens
+   it as a sheet from the top, "Close", Escape or a tap outside closes it.
+   Only where the browser has popovers; elsewhere the links wrap as before. */
+@media (max-width: 1080px) {
+  @supports selector(:popover-open) {
+    .nav-open {
+      display: inline-flex;
+      margin-inline-start: auto;
+    }
+
+    .site-nav[popover]:not(:popover-open) {
+      display: none;
+    }
+
+    .site-nav[popover]:popover-open {
+      position: fixed;
+      inset: 0 0 auto;
+      flex-direction: column;
+      flex-wrap: nowrap;
+      align-items: stretch;
+      gap: 0;
+      max-height: 100dvh;
+      overflow-y: auto;
+      padding: 10px var(--gutter) 22px;
+      background: var(--panel-wood), var(--wood-deep);
+      box-shadow:
+        0 1px 0 var(--bronze-lo),
+        0 24px 48px rgb(0 0 0 / 0.7);
+    }
+
+    .site-nav[popover]::backdrop {
+      background: rgb(8 5 3 / 0.65);
+    }
+
+    .site-nav[popover] .nav-close {
+      display: inline-flex;
+      align-self: flex-end;
+      margin-bottom: 6px;
+    }
+
+    .site-nav[popover] a {
+      padding: 13px 4px;
+      font-size: 1.125rem;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .site-nav[popover] a[aria-current="page"] {
+      padding-inline-start: 16px;
+      background: linear-gradient(var(--bronze-hi), var(--bronze-hi)) left center / 3px 60% no-repeat;
+    }
+
+    .site-nav[popover] a:is(.nav-signin, .nav-account, .lang-switch) {
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-bottom: 0;
+      text-align: center;
+    }
+  }
+}
+
+@media (max-width: 560px) {
+  .site-nav {
+    gap: 0 18px;
+    margin-inline-start: 0;
+  }
+}
+
+/* ---------- Preferences ---------- */
+
+@media (prefers-reduced-transparency: reduce) {
+  .masthead {
+    background: var(--wood-deep);
+  }
+}
+
+/* Windows high contrast: the current page is underlined, the open sheet
+   has a real edge. */
+@media (forced-colors: active) {
+  .site-nav a[aria-current="page"] {
+    text-decoration: underline 2px;
+    text-underline-offset: 6px;
+  }
+
+  .site-nav[popover]:popover-open {
+    border-bottom: 2px solid CanvasText;
+  }
+}

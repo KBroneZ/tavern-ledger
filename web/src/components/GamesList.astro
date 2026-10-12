@@ -50,8 +50,8 @@ const places = PLACE_FILTERS.map((p) => [p, t(`list.place.${p}`)]);
       </select>
     </label>
     <div class="list-actions">
-      <button type="submit" id="list-apply" disabled>{t("list.apply")}</button>
-      <a class="btn quiet" href={href("/games/")} id="list-reset">{t("list.reset")}</a>
+      <button class="tb tb-common" type="submit" id="list-apply" disabled>{t("list.apply")}</button>
+      <a class="tb tb-small" href={href("/games/")} id="list-reset">{t("list.reset")}</a>
     </div>
   </form>
   <div class="dash-body" id="list-body">

@@ -32,7 +32,7 @@ import { at } from "../lib/account/strings.ts";
       {at("account.repeat")}
       <input type="password" name="repeat" autocomplete="new-password" required />
     </label>
-    <button type="submit">{at("account.savePassword")}</button>
+    <button class="tb tb-common" type="submit">{at("account.savePassword")}</button>
     <p class="message" id="set-password-message" role="status" aria-live="polite"></p>
   </form>
 </section>
@@ -54,7 +54,7 @@ import { at } from "../lib/account/strings.ts";
           <input type="text" name="display_name" maxlength="32" autocomplete="nickname" />
         </label>
         <label class="check">
-          <input type="checkbox" name="is_public" />
+          <input class="toggle" type="checkbox" name="is_public" />
           <span>
             {at("account.public")}
             <span class="hint">
@@ -63,7 +63,7 @@ import { at } from "../lib/account/strings.ts";
             </span>
           </span>
         </label>
-        <button type="submit">{at("account.save")}</button>
+        <button class="tb tb-common" type="submit">{at("account.save")}</button>
         <p class="message" id="profile-message" role="status" aria-live="polite"></p>
       </form>
       <p id="public-link-row" class="meta" hidden>
@@ -74,7 +74,7 @@ import { at } from "../lib/account/strings.ts";
     <section class="panel" aria-labelledby="export-heading">
       <h2 id="export-heading">{at("account.data")}</h2>
       <p>{at("account.data.body")}</p>
-      <button type="button" id="export-button" class="secondary">{at("account.download")}</button>
+      <button class="tb tb-common" type="button" id="export-button">{at("account.download")}</button>
       <p class="message" id="export-message" role="status" aria-live="polite"></p>
     </section>
 
@@ -82,7 +82,7 @@ import { at } from "../lib/account/strings.ts";
       <h2 id="community-heading">{at("account.community")}</h2>
       <form id="community-form" novalidate>
         <label class="check">
-          <input type="checkbox" name="hero_stats" />
+          <input class="toggle" type="checkbox" name="hero_stats" />
           <span>
             {at("account.community.label")}
             <span class="hint">
@@ -92,7 +92,7 @@ import { at } from "../lib/account/strings.ts";
             </span>
           </span>
         </label>
-        <button type="submit">{at("account.save")}</button>
+        <button class="tb tb-common" type="submit">{at("account.save")}</button>
         <p class="message" id="community-message" role="status" aria-live="polite"></p>
       </form>
     </section>
@@ -101,7 +101,7 @@ import { at } from "../lib/account/strings.ts";
       <h2 id="simulator-heading">{at("account.simulator")}</h2>
       <form id="simulator-form" novalidate>
         <label class="check">
-          <input type="checkbox" name="improve_simulator" />
+          <input class="toggle" type="checkbox" name="improve_simulator" />
           <span>
             {at("account.simulator.label")}
             <span class="hint">
@@ -110,7 +110,7 @@ import { at } from "../lib/account/strings.ts";
             </span>
           </span>
         </label>
-        <button type="submit">{at("account.save")}</button>
+        <button class="tb tb-common" type="submit">{at("account.save")}</button>
         <p class="message" id="simulator-message" role="status" aria-live="polite"></p>
       </form>
     </section>
@@ -131,12 +131,12 @@ import { at } from "../lib/account/strings.ts";
           <input type="password" name="password" autocomplete="current-password" />
         </label>
       </div>
-      <button type="submit" class="danger">{at("account.delete.submit")}</button>
+      <button class="tb tb-danger" type="submit">{at("account.delete.submit")}</button>
       <p class="message" id="delete-message" role="status" aria-live="polite"></p>
     </form>
   </section>
 
-  <p><button type="button" id="signout-button" class="secondary">{at("account.signOut")}</button></p>
+  <p><button class="tb tb-small" type="button" id="signout-button">{at("account.signOut")}</button></p>
 </div>
 
 <script src="../scripts/account.ts"></script>

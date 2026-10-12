@@ -1,5 +1,6 @@
-/* Data pages (T-501): tokens and pieces on top of Lamplight glass (D-052,
-   global.css). Dark only. Loaded by the pages that show stats, so the home
+/* Data pages (T-501): tokens and pieces on top of the tavern's look (D-105,
+   T-556: global.css and ui.css). Tiles and folds are the same dark wood as
+   the panels; switches are a slot with a bronze plate for the picked one. Dark only. Loaded by the pages that show stats, so the home
    page and the legal pages carry none of it. Chart colours were checked with
    the dataviz skill's validator on the panel surface (#1e1612): results as a
    categorical pair, places as an ordinal ramp, both passing every check. */
@@ -65,7 +66,7 @@
   --t-value: clamp(1.6rem, 1.3rem + 1vw, 2rem);
   --t-hero: clamp(2.6rem, 2rem + 2.4vw, 3.5rem);
 
-  --r-tile: 14px;
+  --r-tile: 8px;
   --r-chip: 999px;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
@@ -136,15 +137,18 @@ html,
   min-width: 0;
   padding: var(--s-3) var(--s-4) var(--s-4);
   border-radius: var(--r-tile);
-  background: var(--surface-1);
-  box-shadow: inset 0 0 0 1px var(--line-soft);
+  background: var(--panel-wood);
+  box-shadow:
+    inset 0 1px 0 rgb(255 214 160 / 0.1),
+    inset 0 0 0 1px var(--bronze-lo),
+    0 10px 22px rgb(0 0 0 / 0.4);
 }
 
 .tile-hero {
   grid-column: span 2;
   background:
-    radial-gradient(120% 90% at 0% 0%, rgb(255 178 74 / 0.12), transparent 60%),
-    var(--surface-1);
+    radial-gradient(120% 90% at 0% 0%, rgb(255 178 74 / 0.14), transparent 60%),
+    var(--panel-wood);
 }
 
 @media (max-width: 380px) {
@@ -367,12 +371,12 @@ html,
 
 .dtable th {
   padding: var(--s-2) var(--s-3);
-  color: var(--text-2);
+  color: var(--label);
   font-size: var(--t-sm);
   font-weight: 700;
   text-align: start;
   white-space: nowrap;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--bronze-lo);
 }
 
 .dtable td {
@@ -443,8 +447,17 @@ html,
 
 .fold {
   border-radius: var(--r-tile);
-  background: var(--surface-1);
-  box-shadow: inset 0 0 0 1px var(--line-soft);
+  background: var(--panel-wood);
+  box-shadow:
+    inset 0 1px 0 rgb(255 214 160 / 0.1),
+    inset 0 0 0 1px var(--bronze-lo),
+    0 10px 22px rgb(0 0 0 / 0.35);
+}
+
+/* A fold inside a panel or another fold needs no second plank. */
+:is(.panel, .fold, .tile) .fold {
+  background: rgb(0 0 0 / 0.2);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 
 .fold > summary {
@@ -497,6 +510,7 @@ html,
 
 /* ---------- Switches (Simple / Advanced, Solo / Duos) ---------- */
 
+/* A slot cut into dark wood; the picked choice is a bronze plate in it. */
 .seg {
   display: inline-flex;
   /* A longer language wraps its buttons rather than widen a phone's page. */
@@ -505,14 +519,16 @@ html,
   gap: 2px;
   padding: 3px;
   border-radius: var(--r-button);
-  background: var(--surface-sunk);
-  box-shadow: inset 0 0 0 1px var(--line);
+  background: rgb(10 6 4 / 0.78);
+  box-shadow:
+    inset 0 0 0 1px var(--bronze-lo),
+    inset 0 2px 6px rgb(0 0 0 / 0.55);
 }
 
 .seg button {
   min-height: 36px;
   padding: 0 var(--s-4);
-  border-radius: 9px;
+  border-radius: 6px;
   background: transparent;
   color: var(--text-2);
   font: 700 var(--t-md) / 1 var(--body);
@@ -521,15 +537,18 @@ html,
 
 .seg button:hover {
   color: var(--text-1);
-  box-shadow: none;
+  box-shadow: inset 0 0 0 1px var(--bronze-lo);
 }
 
+/* Dark ink on the bronze: 6.5:1 or more behind the label. */
 .seg button[aria-pressed="true"] {
-  background: var(--surface-2);
-  color: var(--text-1);
+  background: linear-gradient(180deg, #f0c98a, #c8914c 60%, #a8733a);
+  color: #24150a;
+  text-shadow: 0 1px 0 rgb(255 240 210 / 0.45);
   box-shadow:
-    inset 0 0 0 1px var(--line),
-    inset 0 -2px 0 var(--amber);
+    inset 0 1px 0 rgb(255 245 220 / 0.6),
+    inset 0 -1px 0 rgb(80 45 15 / 0.6),
+    0 2px 6px rgb(0 0 0 / 0.5);
 }
 
 /* Simple by default: Advanced-only detail shows once the viewer picks it.
@@ -557,7 +576,8 @@ html[data-detail="advanced"] .simple-only {
   gap: var(--s-1);
   padding: var(--s-4);
   border-radius: var(--r-tile);
-  border: 1px dashed var(--line);
+  border: 1px dashed var(--bronze-lo);
+  background: rgb(0 0 0 / 0.22);
   color: var(--text-2);
 }
 
@@ -775,6 +795,26 @@ html[data-detail="advanced"] .simple-only {
 }
 
 /* ---------- Token swatches (style page) ---------- */
+
+/* The style page's rows of buttons and its heading samples. */
+.style-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-4) var(--s-5);
+}
+
+.style-title {
+  font: 700 clamp(2rem, 4vw, 2.8rem) / 1.05 var(--display);
+  font-stretch: 88%;
+}
+
+.style-h2 {
+  color: var(--parchment);
+  font: 700 1.45rem / 1.15 var(--display);
+  font-stretch: 88%;
+  text-shadow: 0 2px 0 rgb(0 0 0 / 0.55);
+}
 
 .swatches {
   display: grid;

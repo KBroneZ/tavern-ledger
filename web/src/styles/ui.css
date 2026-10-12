@@ -1,0 +1,377 @@
+/* The tavern's pieces for every page (T-556, D-129): wood panels, the look
+   of a button with no role, fields and toggles, notices and tables. The
+   buttons with a role are in buttons.css. Loaded on every page by
+   layouts/Base.astro, after global.css. */
+
+/* ---------- Wood panels ---------- */
+
+/* Wood: the panel family on every page but the home page (which has its own
+   painted frames, tavern.css). Dark carved wood with a faint grain, a bronze
+   edge and bronze corner brackets; the words stay light on dark, so data
+   reads as plainly as before. CSS only: no picture to load. */
+.panel,
+.status {
+  /* Bronze corner brackets, drawn on ::before. Declared here rather than on
+     :root so a panel that recolours its bronze (.danger) recolours them. */
+  --brackets:
+    linear-gradient(var(--bronze-hi), var(--bronze)) top left / 20px 3px,
+    linear-gradient(var(--bronze-hi), var(--bronze)) top left / 3px 20px,
+    linear-gradient(var(--bronze-hi), var(--bronze)) top right / 20px 3px,
+    linear-gradient(var(--bronze-hi), var(--bronze)) top right / 3px 20px,
+    linear-gradient(var(--bronze), var(--bronze-lo)) bottom left / 20px 3px,
+    linear-gradient(var(--bronze), var(--bronze-lo)) bottom left / 3px 20px,
+    linear-gradient(var(--bronze), var(--bronze-lo)) bottom right / 20px 3px,
+    linear-gradient(var(--bronze), var(--bronze-lo)) bottom right / 3px 20px;
+  position: relative;
+  background: var(--panel-wood);
+  border-radius: var(--r-panel);
+  box-shadow: var(--panel-edge);
+}
+
+.panel::before,
+.status::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--brackets);
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+/* ---------- Buttons ---------- */
+
+/* The look of a button with no role: a small dark plaque with a bronze edge.
+   Buttons with a job wear their role (buttons.css: key, common, small,
+   danger); switches, folds and the simulator's own buttons start from this
+   and add their own. */
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--r-button);
+  background: rgb(0 0 0 / 0.28);
+  color: var(--text);
+  font: 700 1rem / 1 var(--body);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1.5px var(--bronze-lo);
+  transition:
+    transform var(--press),
+    box-shadow 200ms ease,
+    color 160ms ease;
+}
+
+button:hover {
+  box-shadow: inset 0 0 0 1.5px var(--bronze-hi);
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+button:disabled,
+button[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: progress;
+  transform: none;
+}
+
+/* ---------- Panels, forms and notices ---------- */
+
+.lead {
+  max-width: 60ch;
+  color: var(--dim);
+  font-size: clamp(1.125rem, 2vw, 1.3rem);
+  line-height: 1.55;
+}
+
+.panels {
+  display: grid;
+  gap: var(--group);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  align-items: start;
+}
+
+.panel {
+  min-width: 0;
+  padding: 24px 26px 26px;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+/* The danger zone: the same wood, with an ember edge and red brackets. */
+.panel.danger {
+  --bronze-hi: #ff9a8a;
+  --bronze: #c2533f;
+  --bronze-lo: #8c2f22;
+  box-shadow:
+    inset 0 1px 0 rgb(255 214 160 / 0.1),
+    inset 0 0 0 1.5px rgb(255 154 138 / 0.6),
+    0 16px 32px rgb(0 0 0 / 0.5);
+}
+
+.panel.danger h2 {
+  color: var(--bad);
+}
+
+.panel p,
+.status p {
+  max-width: 60ch;
+}
+
+form {
+  display: grid;
+  gap: 16px;
+  max-width: 30rem;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.hint {
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--dim);
+}
+
+/* Fields: a dark well cut into the wood, a bronze edge that lights on focus. */
+input:is([type="email"], [type="password"], [type="text"], [type="search"]) {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  font: 500 1.0625rem / 1.2 var(--body);
+  color: var(--text);
+  background: rgb(10 6 4 / 0.82);
+  border: 1.5px solid var(--field-line);
+  border-radius: var(--r-small);
+  box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.55);
+  transition: border-color 160ms ease;
+}
+
+input:is([type="email"], [type="password"], [type="text"], [type="search"]):hover {
+  border-color: var(--bronze);
+}
+
+input:is([type="email"], [type="password"], [type="text"], [type="search"]):focus-visible {
+  border-color: var(--bronze-hi);
+  outline-offset: 2px;
+}
+
+input[aria-invalid="true"] {
+  border-color: var(--bad);
+}
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.check > span {
+  display: grid;
+  gap: 4px;
+}
+
+.check input {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 2px 0 0;
+  accent-color: var(--bronze-hi);
+}
+
+/* A setting that is on or off: a bronze lever in a dark slot. Still a
+   checkbox to the keyboard and to screen readers. */
+.check input.toggle {
+  appearance: none;
+  position: relative;
+  width: 48px;
+  height: 28px;
+  margin: 0;
+  border-radius: 14px;
+  background: rgb(10 6 4 / 0.82);
+  box-shadow:
+    inset 0 0 0 1.5px var(--field-line),
+    inset 0 2px 6px rgb(0 0 0 / 0.55);
+  cursor: pointer;
+  transition: background-color 200ms ease;
+}
+
+.check input.toggle::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #cdbfae, #8d7f72);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
+  transition: transform 200ms var(--press);
+}
+
+.check input.toggle:checked {
+  background: linear-gradient(180deg, #7a5326, #4e3417);
+  box-shadow:
+    inset 0 0 0 1.5px var(--bronze-hi),
+    inset 0 2px 6px rgb(0 0 0 / 0.4);
+}
+
+.check input.toggle:checked::before {
+  background: linear-gradient(180deg, #fff3cf, var(--gold) 55%, #c98a35);
+  transform: translateX(20px);
+}
+
+.check input.toggle:hover {
+  box-shadow:
+    inset 0 0 0 1.5px var(--bronze-hi),
+    inset 0 2px 6px rgb(0 0 0 / 0.55);
+}
+
+.message {
+  min-height: 1.6em;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--dim);
+}
+
+.message.error {
+  color: var(--bad);
+}
+
+.message.ok {
+  color: var(--good);
+}
+
+.callout {
+  padding: 14px 16px;
+  border-radius: var(--r-small);
+  background: rgb(60 18 12 / 0.55);
+  box-shadow: inset 3px 0 0 var(--bad);
+}
+
+.mono {
+  font-family: var(--mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  color: var(--dim);
+  font-size: 0.95rem;
+}
+
+/* A plain notice on wood (accounts closed). */
+.status {
+  padding: 22px 26px;
+  display: grid;
+  gap: 10px;
+}
+
+.status strong {
+  color: var(--gold);
+}
+
+/* ---------- Tables ---------- */
+
+/* Plain on purpose: numbers in the body font with even figures, labels in
+   warm parchment over a bronze rule. */
+.table-wrap {
+  overflow-x: auto;
+}
+
+.ledger {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger caption {
+  padding-bottom: 8px;
+  text-align: start;
+  color: var(--parchment);
+  font: 700 1.2rem / 1.2 var(--display);
+  font-stretch: 88%;
+}
+
+.ledger th {
+  padding: 8px 12px 8px 0;
+  text-align: start;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--label);
+  border-bottom: 1px solid var(--bronze-lo);
+  white-space: nowrap;
+}
+
+.ledger td {
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+
+.ledger tbody tr:hover {
+  background: var(--panel-hi);
+}
+
+.ledger td.num,
+.ledger th.num {
+  text-align: end;
+  padding-inline-end: 0;
+}
+
+.ledger .mono {
+  overflow-wrap: anywhere;
+}
+/* ---------- Preferences ---------- */
+
+@media (prefers-reduced-transparency: reduce) {
+  .panel,
+  .status {
+    background: var(--wood);
+  }
+}
+
+/* Windows high contrast drops shadows and backgrounds: buttons and panels
+   get a real border instead. */
+@media (forced-colors: active) {
+  button {
+    border: 2px solid ButtonText;
+  }
+
+  .panel::before,
+  .status::before {
+    display: none;
+  }
+
+  .panel,
+  .status,
+  .callout {
+    border: 1px solid CanvasText;
+  }
+
+  .check input.toggle {
+    border: 2px solid ButtonText;
+  }
+
+  .check input.toggle::before {
+    forced-color-adjust: none;
+    background: ButtonText;
+  }
+
+  .check input.toggle:checked::before {
+    background: Highlight;
+  }
+}
