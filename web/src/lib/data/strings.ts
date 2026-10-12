@@ -277,7 +277,7 @@ export const STRINGS = {
   "curious.gap.extraGold": "Extra gold on its own: the server only keeps it added to gold from selling, as gold beyond income.",
   "curious.gap.bothModes": "Solo and Duos together: the app adds both modes up, while here each mode has its own numbers.",
   "curious.about.body":
-    "Self-reported by the player's desktop app, from the game's own log. Each record links to the first game that reached it and says how many games it is based on; totals add up every game that has the value. Damage is worked out from health, so it is marked inferred. A value no game has shows as a dash, never as 0.",
+    "Self-reported by the player's desktop app, from the game's own log. Each record links to the first game that reached it and says how many games it is based on; totals add up every game that has the value. Damage totals use the game's own hit where the log has it and health where it does not, so they are marked inferred; a damage record is marked inferred only when no combat behind it has the hit. A value no game has shows as a dash, never as 0.",
 } as const;
 
 export type StringKey = keyof typeof STRINGS;
