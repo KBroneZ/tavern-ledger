@@ -70,10 +70,14 @@ pub struct Overlay {
     unlock_item: Mutex<Option<CheckMenuItem<Wry>>>,
     /// Held while a change is made and saved, so two saves cannot cross.
     saving: Mutex<()>,
-    /// An overlay choice exists: `overlay.json` was there at start, or the
-    /// user changed an overlay setting in this run. Until then the main
-    /// window asks once whether they want the overlay (T-531, D-106).
+    /// An overlay choice exists: `overlay.json` was read at start (whatever
+    /// it holds), or the user changed an overlay setting in this run. Until
+    /// then the main window asks once whether they want the overlay (T-531,
+    /// D-106).
     chosen: AtomicBool,
+    /// `load` has finished. The main window can ask before the start-up
+    /// code has read the settings, and must not take that for "no choice".
+    loaded: AtomicBool,
 }
 
 /// What the overlay page needs to draw itself.
@@ -123,22 +127,25 @@ impl Overlay {
         self.dev.store(dev, Ordering::SeqCst);
         let path = data_dir.join(PREFS_FILE);
         *lock(&self.prefs) = Some(path.clone());
-        match std::fs::read_to_string(&path) {
+        let result = match std::fs::read_to_string(&path) {
             Ok(text) => {
-                self.chosen.store(true, Ordering::SeqCst);
-                *lock(&self.settings) = Settings::parse(&text)?;
+                // Any settings file counts as a choice, whatever it holds:
+                // one from before the question existed has no `enabled`.
+                // One that cannot be understood does not, so the question
+                // is asked and its answer replaces the file.
+                Settings::parse(&text).map(|settings| {
+                    self.chosen.store(true, Ordering::SeqCst);
+                    *lock(&self.settings) = settings;
+                })
             }
-            Err(e) if e.kind() == io::ErrorKind::NotFound => {}
-            Err(e) => {
-                // A file is there, only unreadable: the choice was made once.
-                self.chosen.store(true, Ordering::SeqCst);
-                return Err(format!(
-                    "The overlay settings could not be read ({:?}); the defaults are used.",
-                    e.kind()
-                ));
-            }
-        }
-        Ok(())
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(format!(
+                "The overlay settings could not be read ({:?}); the defaults are used.",
+                e.kind()
+            )),
+        };
+        self.loaded.store(true, Ordering::SeqCst);
+        result
     }
 
     pub fn enabled(&self) -> bool {
@@ -166,7 +173,14 @@ impl Overlay {
     /// The first-start question (T-531): asked while no overlay choice
     /// exists. Never in a `--overlay-dev` run, which is on whatever is saved.
     pub fn asks_first(&self) -> bool {
-        !self.chosen.load(Ordering::SeqCst) && !self.ignores_foreground()
+        self.loaded.load(Ordering::SeqCst)
+            && !self.chosen.load(Ordering::SeqCst)
+            && !self.ignores_foreground()
+    }
+
+    /// Whether the saved settings have been read yet.
+    pub fn is_loaded(&self) -> bool {
+        self.loaded.load(Ordering::SeqCst)
     }
 
     /// Whether the lobby panel (T-338) is left on; on by default.
@@ -489,10 +503,12 @@ pub fn overlay_reset_layout(app: AppHandle, state: State<'_, Arc<AppState>>) -> 
 }
 
 /// Whether the main window asks once if the player wants the overlay or only
-/// the stats (T-531); the answer goes through `overlay_set_enabled`.
+/// the stats (T-531); the answer goes through `overlay_set_enabled`. `None`
+/// while the settings are not read yet: the window asks again shortly.
 #[tauri::command]
-pub fn overlay_asks_first(state: State<'_, Arc<AppState>>) -> bool {
-    state.overlay.asks_first()
+pub fn overlay_asks_first(state: State<'_, Arc<AppState>>) -> Option<bool> {
+    let overlay = &state.overlay;
+    overlay.is_loaded().then(|| overlay.asks_first())
 }
 
 #[tauri::command]
@@ -685,6 +701,68 @@ mod tests {
         again.load(&dir, false).unwrap();
         assert!(!again.asks_first(), "the answer was kept");
         assert!(!again.enabled(), "only stats");
+    }
+
+    #[test]
+    fn a_file_from_before_the_question_counts_as_the_choice() {
+        let dir = temp_dir("first-old");
+        std::fs::write(dir.join(PREFS_FILE), r#"{"enabled":true,"theme":"glass"}"#).unwrap();
+        let overlay = Overlay::default();
+        overlay.load(&dir, false).unwrap();
+        assert!(!overlay.asks_first(), "old settings are a choice");
+        assert!(overlay.enabled(), "overlay on stays on");
+    }
+
+    #[test]
+    fn a_file_without_enabled_counts_as_a_choice_and_is_off() {
+        let dir = temp_dir("first-no-enabled");
+        std::fs::write(dir.join(PREFS_FILE), r#"{"theme":"contrast"}"#).unwrap();
+        let overlay = Overlay::default();
+        overlay.load(&dir, false).unwrap();
+        assert!(!overlay.asks_first());
+        assert!(!overlay.enabled());
+        assert_eq!(
+            overlay.view().theme,
+            "contrast",
+            "the other settings are kept"
+        );
+    }
+
+    #[test]
+    fn an_empty_settings_object_counts_as_a_choice() {
+        let dir = temp_dir("first-empty-object");
+        std::fs::write(dir.join(PREFS_FILE), "{}").unwrap();
+        let overlay = Overlay::default();
+        overlay.load(&dir, false).unwrap();
+        assert!(!overlay.asks_first());
+    }
+
+    #[test]
+    fn an_unreadable_file_asks_and_does_not_crash() {
+        let dir = temp_dir("first-unreadable");
+        std::fs::write(dir.join(PREFS_FILE), "not json").unwrap();
+        let broken = Overlay::default();
+        assert!(broken.load(&dir, false).is_err());
+        assert!(broken.asks_first(), "nothing usable was saved");
+        assert!(!broken.enabled());
+
+        // A folder where the file should be cannot be read as text.
+        let dir = temp_dir("first-folder");
+        std::fs::create_dir(dir.join(PREFS_FILE)).unwrap();
+        let folder = Overlay::default();
+        assert!(folder.load(&dir, false).is_err());
+        assert!(folder.asks_first());
+        assert!(!folder.enabled());
+    }
+
+    #[test]
+    fn nothing_is_asked_before_the_settings_are_read() {
+        let overlay = Overlay::default();
+        assert!(!overlay.is_loaded());
+        assert!(!overlay.asks_first(), "not read yet is not 'no choice'");
+        overlay.load(&temp_dir("first-loaded"), false).unwrap();
+        assert!(overlay.is_loaded());
+        assert!(overlay.asks_first());
     }
 
     #[test]
