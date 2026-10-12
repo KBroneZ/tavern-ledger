@@ -94,8 +94,19 @@ button[aria-disabled="true"] {
 .panels {
   display: grid;
   gap: var(--group);
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Two equal columns once there is room; a panel stretches to its row, so
+   the rows stay level instead of leaving holes under the short panels. */
+@media (min-width: 52rem) {
+  .panels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.panels + .panel {
+  margin-top: var(--group);
 }
 
 .panel {
@@ -146,6 +157,70 @@ label {
   color: var(--dim);
 }
 
+/* "Read more" (components/ui/More.astro, more() in lib/view/pieces.ts, D-130):
+   a short line stays in view and the rest folds behind a native <details>.
+   The summary is a lit link with a chevron, a 44 px target; the opened text
+   reads like the hint it continues. */
+.more > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-block: -4px;
+  padding-inline-end: 12px;
+  border-radius: var(--r-small);
+  color: var(--amber-hi);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.more > summary::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentcolor;
+  border-bottom: 2px solid currentcolor;
+  transform: rotate(-45deg);
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.more[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.more > summary:hover {
+  color: var(--gold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.more-body {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 4px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--dim);
+}
+
+.more-body p {
+  max-width: 60ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .more > summary::before {
+    transition: none;
+  }
+}
+
 /* Fields: a dark well cut into the wood, a bronze edge that lights on focus. */
 input:is([type="email"], [type="password"], [type="text"], [type="search"]) {
   width: 100%;
@@ -179,9 +254,20 @@ input[aria-invalid="true"] {
   gap: 12px;
 }
 
-.check > span {
+.check > :is(span, div) {
   display: grid;
   gap: 4px;
+  min-width: 0;
+}
+
+/* A field with its own label, hint and fold above the input. */
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field > label {
+  display: block;
 }
 
 .check input {

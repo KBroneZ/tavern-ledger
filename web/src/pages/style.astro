@@ -12,6 +12,7 @@ import { t } from "../lib/data/strings.ts";
 import StatTile from "../components/data/StatTile.astro";
 import TopTable from "../components/data/TopTable.astro";
 import Fold from "../components/data/Fold.astro";
+import More from "../components/ui/More.astro";
 import Switch from "../components/data/Switch.astro";
 import PlaceBadge from "../components/data/PlaceBadge.astro";
 import Picture from "../components/data/Picture.astro";
@@ -124,13 +125,18 @@ const cards = ["SAMPLE_CARD_01", "SAMPLE_CARD_02", "SAMPLE_CARD_03", "SAMPLE_CAR
                 <span class="hint">A hint under the label.</span>
                 <input type="text" name="style-name" autocomplete="off" value="Lantern Keeper" />
               </label>
-              <label class="check">
-                <input class="toggle" type="checkbox" name="style-public" checked />
-                <span>
-                  A setting that is on
-                  <span class="hint">Toggles are checkboxes: Space turns them on and off.</span>
-                </span>
-              </label>
+              <div class="check">
+                <input class="toggle" type="checkbox" id="style-public" name="style-public" checked aria-describedby="style-public-hint" />
+                <div>
+                  <label for="style-public">A setting that is on</label>
+                  <p class="hint" id="style-public-hint">
+                    One short line says what it does. For a setting that shares data, it also says what it shares and that it can be turned off.
+                  </p>
+                  <More context="A setting that is on">
+                    <p>The rest goes in the fold, after the short line. Toggles are checkboxes: Space turns them on and off.</p>
+                  </More>
+                </div>
+              </div>
               <label class="check">
                 <input class="toggle" type="checkbox" name="style-other" />
                 <span>A setting that is off</span>
@@ -250,6 +256,18 @@ const cards = ["SAMPLE_CARD_01", "SAMPLE_CARD_02", "SAMPLE_CARD_03", "SAMPLE_CAR
         <p class="data-note">Folds can sit inside folds.</p>
       </Fold>
     </Fold>
+  </section>
+
+  <section class="data-section" aria-labelledby="s-more">
+    <h2 id="s-more">Short line and Read more</h2>
+    <p class="data-note">
+      Helper text is one short line in view; anything longer folds behind Read more. The fold is a native disclosure, so
+      it needs no script and works from the keyboard.
+    </p>
+    <More context="Short line and Read more">
+      <p>The rest of the text sits here, in the same words the page would have shown in full.</p>
+      <p>It can have more than one paragraph, and links.</p>
+    </More>
   </section>
 
   <section class="data-section" aria-labelledby="s-places">

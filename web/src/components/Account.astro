@@ -3,6 +3,7 @@ import { MIN_PASSWORD_LENGTH } from "../lib/auth.ts";
 import { confirmPhrase } from "../lib/deleteAccount.ts";
 import { href } from "../lib/i18n.ts";
 import { at } from "../lib/account/strings.ts";
+import More from "./ui/More.astro";
 ---
 
 <h1 id="account-heading">{at("account.title")}</h1>
@@ -48,21 +49,34 @@ import { at } from "../lib/account/strings.ts";
     <section class="panel" aria-labelledby="profile-heading">
       <h2 id="profile-heading">{at("account.profile")}</h2>
       <form id="profile-form" novalidate>
-        <label>
-          {at("account.displayName")}
-          <span class="hint">{at("account.displayName.hint")}</span>
-          <input type="text" name="display_name" maxlength="32" autocomplete="nickname" />
-        </label>
-        <label class="check">
-          <input class="toggle" type="checkbox" name="is_public" />
-          <span>
-            {at("account.public")}
-            <span class="hint">
-              {at("account.public.hint.before")}{" "}
-              <a href={href("/leaderboards/")}>{at("account.public.hint.link")}</a>{at("account.public.hint.after")}
-            </span>
-          </span>
-        </label>
+        <div class="field">
+          <label for="display-name">{at("account.displayName")}</label>
+          <span class="hint" id="display-name-hint">{at("account.displayName.hint")}</span>
+          <More context={at("account.displayName")}>
+            <p>{at("account.displayName.more")}</p>
+          </More>
+          <input
+            type="text"
+            id="display-name"
+            name="display_name"
+            maxlength="32"
+            autocomplete="nickname"
+            aria-describedby="display-name-hint"
+          />
+        </div>
+        <div class="check">
+          <input class="toggle" type="checkbox" id="is-public" name="is_public" aria-describedby="is-public-hint" />
+          <div>
+            <label for="is-public">{at("account.public")}</label>
+            <p class="hint" id="is-public-hint">{at("account.public.hint")}</p>
+            <More context={at("account.public")}>
+              <p>
+                {at("account.public.more.before")}{" "}
+                <a href={href("/leaderboards/")}>{at("account.public.more.link")}</a>{at("account.public.more.after")}
+              </p>
+            </More>
+          </div>
+        </div>
         <button class="tb tb-common" type="submit">{at("account.save")}</button>
         <p class="message" id="profile-message" role="status" aria-live="polite"></p>
       </form>
@@ -71,27 +85,25 @@ import { at } from "../lib/account/strings.ts";
       </p>
     </section>
 
-    <section class="panel" aria-labelledby="export-heading">
-      <h2 id="export-heading">{at("account.data")}</h2>
-      <p>{at("account.data.body")}</p>
-      <button class="tb tb-common" type="button" id="export-button">{at("account.download")}</button>
-      <p class="message" id="export-message" role="status" aria-live="polite"></p>
-    </section>
-
     <section class="panel" aria-labelledby="community-heading">
       <h2 id="community-heading">{at("account.community")}</h2>
       <form id="community-form" novalidate>
-        <label class="check">
-          <input class="toggle" type="checkbox" name="hero_stats" />
-          <span>
-            {at("account.community.label")}
-            <span class="hint">
+        <div class="check">
+          <input class="toggle" type="checkbox" id="hero-stats" name="hero_stats" aria-describedby="hero-stats-hint" />
+          <div>
+            <label for="hero-stats">{at("account.community.label")}</label>
+            <p class="hint" id="hero-stats-hint">
               {at("account.community.hint.before")}{" "}
-              <a href={href("/heroes/")}>{at("account.community.hint.link")}</a>{at("account.community.hint.after")}{" "}
-              <a href={href("/privacy/#community-hero-stats")}>{at("account.community.how")}</a>.
-            </span>
-          </span>
-        </label>
+              <a href={href("/heroes/")}>{at("account.community.hint.link")}</a>{at("account.community.hint.after")}
+            </p>
+            <More context={at("account.community")}>
+              <p>
+                {at("account.community.more")}{" "}
+                <a href={href("/privacy/#community-hero-stats")}>{at("account.community.how")}</a>.
+              </p>
+            </More>
+          </div>
+        </div>
         <button class="tb tb-common" type="submit">{at("account.save")}</button>
         <p class="message" id="community-message" role="status" aria-live="polite"></p>
       </form>
@@ -100,19 +112,38 @@ import { at } from "../lib/account/strings.ts";
     <section class="panel" aria-labelledby="simulator-heading">
       <h2 id="simulator-heading">{at("account.simulator")}</h2>
       <form id="simulator-form" novalidate>
-        <label class="check">
-          <input class="toggle" type="checkbox" name="improve_simulator" />
-          <span>
-            {at("account.simulator.label")}
-            <span class="hint">
-              {at("account.simulator.hint")}{" "}
-              <a href={href("/privacy/#improving-the-simulator")}>{at("account.simulator.how")}</a>.
-            </span>
-          </span>
-        </label>
+        <div class="check">
+          <input
+            class="toggle"
+            type="checkbox"
+            id="improve-simulator"
+            name="improve_simulator"
+            aria-describedby="improve-simulator-hint"
+          />
+          <div>
+            <label for="improve-simulator">{at("account.simulator.label")}</label>
+            <p class="hint" id="improve-simulator-hint">{at("account.simulator.hint")}</p>
+            <More context={at("account.simulator")}>
+              <p>
+                {at("account.simulator.more")}{" "}
+                <a href={href("/privacy/#improving-the-simulator")}>{at("account.simulator.how")}</a>.
+              </p>
+            </More>
+          </div>
+        </div>
         <button class="tb tb-common" type="submit">{at("account.save")}</button>
         <p class="message" id="simulator-message" role="status" aria-live="polite"></p>
       </form>
+    </section>
+
+    <section class="panel" aria-labelledby="export-heading">
+      <h2 id="export-heading">{at("account.data")}</h2>
+      <p>{at("account.data.body")}</p>
+      <More context={at("account.data")}>
+        <p>{at("account.data.more")}</p>
+      </More>
+      <button class="tb tb-common" type="button" id="export-button">{at("account.download")}</button>
+      <p class="message" id="export-message" role="status" aria-live="polite"></p>
     </section>
   </div>
 

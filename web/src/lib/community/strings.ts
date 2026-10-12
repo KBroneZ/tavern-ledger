@@ -54,8 +54,8 @@ export const CH_STRINGS = {
 
   "count.atLeast": "{n}+",
   "pick.few": "Not enough hero choices yet",
-  "rounding.note":
-    "50+ means 50 to 59 games, and 5+ means 5 to 9 players: counts are shown in tens and fives, average place to one decimal and rates in whole percent.",
+  "rounding.note": "50+ means 50 to 59 games, and 5+ means 5 to 9 players.",
+  "rounding.more": "Counts are shown in tens and fives, average place to one decimal and rates in whole percent.",
   "simple.more": "Advanced adds the win rate and how often each hero was offered.",
   "pick.note":
     "Picked: of the games whose hero choice the app recorded and that offered the hero, the share where the player took it. A dash means those games do not reach the same minimum yet.",

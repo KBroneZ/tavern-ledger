@@ -57,6 +57,7 @@ test("the texts say what is used, how, and what withdrawing does, in both langua
     "account.simulator",
     "account.simulator.label",
     "account.simulator.hint",
+    "account.simulator.more",
     "account.simulator.how",
     "account.simulator.savedOn",
     "account.simulator.savedOff",
@@ -66,16 +67,23 @@ test("the texts say what is used, how, and what withdrawing does, in both langua
     assert.ok(ACCOUNT_STRINGS[key], key);
     assert.ok(ACCOUNT_STRINGS_ES[key], key);
   }
+  // The line in view says what is used, that it is off by default and that it can be withdrawn;
+  // the fold (T-557, D-130) carries the rest of the text.
   const en = ACCOUNT_STRINGS["account.simulator.hint"];
   assert.match(en, /Off by default/);
   assert.match(en, /board/);
   assert.match(en, /combat replays/);
-  assert.match(en, /never published per player/);
-  assert.match(en, /turn it off/i);
+  assert.match(en, /turn it off at any time/i);
+  const enMore = ACCOUNT_STRINGS["account.simulator.more"];
+  assert.match(enMore, /never published per player/);
+  assert.match(enMore, /cannot be traced back to you/);
   const es = ACCOUNT_STRINGS_ES["account.simulator.hint"];
   assert.match(es, /Desactivado por defecto/);
   assert.match(es, /repeticiones de los combates/);
-  assert.doesNotMatch(es, /app\b|autodeclarad/, "voice guide: la aplicación, never la app");
+  assert.match(es, /desactivarlo cuando quieras/);
+  const esMore = ACCOUNT_STRINGS_ES["account.simulator.more"];
+  assert.match(esMore, /nunca se publican por jugador/);
+  assert.doesNotMatch(es + esMore, /app\b|autodeclarad/, "voice guide: la aplicación, never la app");
 });
 
 test("a consent records the policy version whose \"What changed\" line introduced the simulator section", () => {

@@ -29,8 +29,8 @@ export const ACC_STRINGS = {
   "blocked.empty": "No {mode} combats with a result yet.",
 
   "cal.title": "Predicted and real",
-  "cal.desc":
-    "Every chance the simulator gave in {mode} (a win, a tie and a loss per combat), grouped by what it predicted. Beside each group, how often that result really happened. When the two bars are close, the odds can be trusted.",
+  "cal.desc": "Every chance the simulator gave in {mode} (a win, a tie and a loss per combat), grouped by what it predicted.",
+  "cal.more": "Beside each group, how often that result really happened. When the two bars are close, the odds can be trusted.",
   "cal.key.said": "Predicted",
   "cal.key.happened": "Real",
   "cal.none": "no predictions",
@@ -42,8 +42,8 @@ export const ACC_STRINGS = {
   "cal.col.happened": "Real",
 
   "causes.title": "Why the odds missed",
-  "causes.desc":
-    "{total} combats where the most likely result was not the real one, played on every board as it fought (a card the simulator does not know counts as a plain minion). Largest cause first; Solo and Duos counted together.",
+  "causes.desc": "{total} combats where the most likely result was not the real one, played on every board as it fought.",
+  "causes.more": "A card the simulator does not know counts as a plain minion. Largest cause first; Solo and Duos counted together.",
   "causes.col.cause": "Cause",
   "causes.col.combats": "Combats",
   "causes.col.share": "Share",
@@ -98,8 +98,8 @@ export const ACC_STRINGS = {
   "card.golden": "{name} (golden)",
 
   "about.title": "What is measured, and its limits",
-  "about.body":
-    "Only the combats of the person who builds Tavern Ledger, from their own games, with the boards as they entered each combat (the first attack). Start of combat effects are off, as in the overlay. A combat counts as scored when the simulator could play it; the share of combats with no odds is always shown beside it. Small numbers, one player: a guide, not a promise.",
+  "about.body": "Only the combats of the person who builds Tavern Ledger, from their own games, with the boards as they entered each combat (the first attack). Small numbers, one player: a guide, not a promise.",
+  "about.more": "Start of combat effects are off, as in the overlay. A combat counts as scored when the simulator could play it; the share of combats with no odds is always shown beside it.",
   "about.refresh": "These numbers are refreshed after each round of new cards.",
 } as const;
 
