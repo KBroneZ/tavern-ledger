@@ -104,6 +104,21 @@ For the hub to ask one at a time. Each amends D-063 only for the named value; in
 
 The log and card-data fixes (#5, #6, #15 and the overlay label) need no decision beyond the hub's usual call on parser revisions and upload keys.
 
+## 7. Done in session 095 (T-540, T-539, D-108)
+
+The user's answers are D-104; what was built and the counts are D-108.
+
+| # | Value | Now | Before → after on the 41 saved games |
+|---|---|---|---|
+| 1 | Lobby tribes | The D-063 read is saved per game in `game_tribes.json` (local only) once it passes the overlay's checks; recap and stats show it "from the game" | Exact 0 → 0 (no read was saved before); every game from now on while the switch is on |
+| 5 | Damage per combat | The game's end-of-combat hit from the saved replay (`hero_damage`), or 0 after a recorded tie; the health rule only as fallback. No parser revision: the replay already carries it | From the log 0 → 98 of 468 (81 hits, 17 ties); inferred 467 → 370; unknown 1 → 0 |
+| 6 | Skin grouping | The game's link, else the card data's `battlegroundsSkinParentId`, else D-019 | Own hero by the rule 10 → 0; lobby skin ids by the rule 48 → 0 |
+| 15 | Play time | The game's own start and length when the record has its span | 0 → 31 of 41 games |
+| — | Overlay record label | Inferred only when a result came from health | Live only |
+| 14 | Duos teammate's board (T-539) | **Not in the log.** 7 Duos games still in the logs on the PC, 73 shop turns: no minion of the teammate's board created or shown during a shop turn, no change of the player's hero entity outside combat; the only portal traces are cards passed to the hand (`ReuseFX_Generic_SpawnToHand_FromBGPortal_Super`). "Portal" in `Power.log` is a card's name. The log does not mark when the portal is opened, so this assumes the user looked through it in those games. | Duos odds keep the teammate's last board seen in a combat (D-087) |
+
+Left for later: the website and the server's summary still work damage out from health (T-545).
+
 ### Draft D-104 (to fill in after the answers; not in `DECISIONS.md`)
 
 > D-104 | 2026-10-1x | Amends D-063 (T-535). **(1)** The lobby tribes read from the game are kept with each game in the local game record, marked "from the game", never uploaded, removed when the switch's data is deleted; the recap and stats prefer them over the tavern-inferred ones. **(2)** [If yes] Research step: find, on the user's client, a read-only path to each leaderboard hero's most common minion type and count as the game's hover shows it; nothing else from that object; no build until the path is checked on real games and written down per build. **(3)** The Duos teammate's board is checked in the log only; no memory read. Every other D-063 rule stays. | The user's answers to [inferred-values.md](../research/inferred-values.md) section 6. |

@@ -113,6 +113,18 @@ test("a turn's summary line is short and in words, for the screen reader too", (
   assert.equal(TLTurns.summaryWords(two, (h) => h.name || h.id), "Turn 2, tier 2, up a tier, lost against HERO_C, health −5, your board 1 minion");
 });
 
+test("the combat's hit from the log joins its turn, and an unknown one stays out", () => {
+  const r = recap({ damage: [{ round: 2, taken: 4, dealt: 0 }, { round: 3, taken: 0, dealt: 9 }, { round: 1, taken: "7", dealt: 0 }] });
+  const [one, two, three] = TLTurns.rows(r, report);
+  assert.equal(one.damage, null, "not a number: not used");
+  assert.deepEqual(two.damage, { taken: 4, dealt: 0 });
+  assert.equal(TLTurns.damageWords(two.damage), "your hero took 4 damage");
+  assert.equal(TLTurns.damageWords(three.damage), "you dealt 9 damage");
+  assert.equal(TLTurns.damageWords({ taken: 0, dealt: 0 }), "no damage");
+  assert.equal(TLTurns.damageWords(null), null);
+  assert.equal(TLTurns.summaryWords(two, (h) => h.name || h.id), "Turn 2, tier 2, up a tier, lost against HERO_C, health −5, your hero took 4 damage, your board 1 minion");
+});
+
 test("shop facts are counted, never shown as zero when not in the log", () => {
   const [one] = TLTurns.rows(recap(), report);
   assert.deepEqual(TLTurns.shopFacts(one.shop), [

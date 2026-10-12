@@ -68,13 +68,9 @@ function withSource(node, source) {
   return node;
 }
 
-// "Hearthstone_2026_10_09_15_26_25" + game 2 -> "09/10/2026, 15:26 · 2" (as the language writes dates)
-// (the session start time; the log has no per-game date yet)
-function played(session, index) {
-  const m = /^Hearthstone_(\d{4})_(\d{2})_(\d{2})_(\d{2})_(\d{2})_\d{2}$/.exec(session);
-  const when = m ? TLI18n.dateTime(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]))) : session;
-  return `${when} · ${index}`;
-}
+// When a game was played: its own start from the log's clock, else the
+// session's start and its number (game-time.js, T-540).
+const played = (game) => TLGameTime.when(game);
 
 // Tooltip of a game: the game build and the parser that read it. A record
 // from before the parser was saved is "unknown version", not an error.
@@ -162,7 +158,7 @@ function row(game, top) {
   const r = game.report;
   const tr = el("tr", game.dev_reconnect === true ? "dev-reconnect" : null);
   const src = game.sources || {};
-  const playedCell = el("td", "played", played(game.session, game.index));
+  const playedCell = el("td", "played", played(game));
   playedCell.title = provenance(game);
   const hero = heroCell(r, src.hero);
   // "Other" holds several game types: each row says its own.
@@ -277,11 +273,11 @@ function entryOf(target) {
   return found ? found.tribes : null;
 }
 
-function tribeChips(tribes) {
+function tribeChips(tribes, source = "entered") {
   return tribes.map((t) => {
     const li = el("li", null, tribeLabel(t));
     li.title = t;
-    return withSource(li, "entered");
+    return withSource(li, source);
   });
 }
 
@@ -369,7 +365,7 @@ document.querySelectorAll("dialog").forEach((dialog) => {
 function tribesTargetText(target) {
   if (target.kind === "pending") return tl("win.tribes.forNext");
   const game = allGames.find((g) => g.session === target.session && g.index === target.index);
-  return game ? tl("win.tribes.forGame", { game: played(game.session, game.index) }) : tl("win.tribes.forLive");
+  return game ? tl("win.tribes.forGame", { game: played(game) }) : tl("win.tribes.forLive");
 }
 
 function pickedTribes() {
@@ -391,7 +387,7 @@ function moveTargets(target) {
   const withEntry = new Set(lobby.games.map(gameKey));
   const options = allGames
     .filter((g) => !withEntry.has(gameKey(g)) && !(g.session === target.session && g.index === target.index))
-    .map((g) => ({ session: g.session, index: g.index, text: played(g.session, g.index) }));
+    .map((g) => ({ session: g.session, index: g.index, text: played(g) }));
   const live = lobby.in_progress;
   if (live && !withEntry.has(gameKey(live)) && !(live.session === target.session && live.index === target.index)) {
     options.unshift({ session: live.session, index: live.index, text: tl("win.tribes.gameLive") });
@@ -515,6 +511,14 @@ function enteredTable(m, entered) {
   });
 }
 
+function gameTribesTable(m, read) {
+  const rows = TLCompact.rank(read, { games: (t) => t.games, name: (t) => tribeLabel(t.tribe) });
+  const columns = [{ label: tl("win.col.tribe") }, { label: tl("win.col.games"), num: true }];
+  return TLCompact.table(SHOP_UI, {
+    key: `game-tribes:${mode}`, columns, rows, row: (t) => enteredRow(t, m.games_with_game_tribes, m.game_tribes_source), label: tl("win.gameTribes.title"),
+  });
+}
+
 function enteredRow(t, total, source) {
   const tr = el("tr");
   const cell = el("td", null, tribeLabel(t.tribe));
@@ -540,6 +544,9 @@ function renderBreakdown(m) {
   document.getElementById("heroes-empty").hidden = m.heroes.length > 0;
   document.getElementById("tribes").replaceChildren(...(m.tribes.length ? [tribesTable(m)] : []));
   document.getElementById("tribes-empty").hidden = m.tribes.length > 0;
+  const read = list(m.game_tribes);
+  document.getElementById("game-tribes-section").hidden = read.length === 0;
+  document.getElementById("game-tribes").replaceChildren(...(read.length ? [gameTribesTable(m, read)] : []));
   const entered = list(m.entered_tribes);
   document.getElementById("entered-tribes-section").hidden = entered.length === 0;
   document.getElementById("entered-tribes").replaceChildren(...(entered.length ? [enteredTable(m, entered)] : []));
@@ -626,7 +633,7 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 function recapButton(game) {
   const button = el("button", "report-btn", tl("win.recap.button"));
   button.type = "button";
-  button.setAttribute("aria-label", tl("win.recap.buttonLabel", { game: played(game.session, game.index) }));
+  button.setAttribute("aria-label", tl("win.recap.buttonLabel", { game: played(game) }));
   button.setAttribute("data-focus", `recap:${game.session}:${game.index}`);
   button.addEventListener("click", () => openRecap(game));
   return button;
@@ -678,8 +685,8 @@ function renderRecapBar(r, game) {
   document.getElementById("recap-portrait").replaceChildren(...(img ? [img] : []));
   const kind = r ? modeName(r.game_type.value) || r.game_type.value : null;
   const sub = document.getElementById("recap-sub");
-  sub.textContent = [kind, played(game.session, game.index)].filter(Boolean).join(" · ");
-  sub.title = tl("win.recap.subTip");
+  sub.textContent = [kind, played(game), TLGameTime.length(game)].filter(Boolean).join(" · ");
+  sub.title = TLGameTime.tip(game);
   if (r) addTip(sub, r.game_type.source);
   const place = document.getElementById("recap-place");
   place.replaceChildren();
@@ -846,6 +853,21 @@ function tribesSection(r) {
   return section;
 }
 
+// The lobby's five tribes read from the game and saved with it (T-540): exact,
+// so they come before the tavern's list. A game without them shows nothing
+// here; the tavern's tribes below stay marked inferred.
+function gameTribesSection(r) {
+  if (!list(r.game_tribes).length) return null;
+  const section = el("section", "recap-part");
+  const heading = el("h3", null, tl("win.lobby.title"));
+  heading.append(sourceMark(r.game_tribes_source));
+  section.append(heading);
+  const items = el("ul", "tribe-list");
+  items.append(...tribeChips(r.game_tribes, r.game_tribes_source));
+  section.append(items, el("p", "note", tl("win.gameTribes.note")));
+  return section;
+}
+
 // What the user entered for this game. Shown next to the tavern list, never
 // merged with it and never used to correct it, whether the two agree or not.
 function enteredSection(r) {
@@ -910,7 +932,8 @@ function renderRecapNow(r, game) {
     top, TLShop.recapSummary(r.shop, SHOP_UI, r.is_duos, key), TLReplay.section(SHOP_UI, r, report, replayTools),
     advancedOnly(TLTurns.section(SHOP_UI, r, report, turnTools)),
     recordSection(r), advancedOnly(TLExtras.heroPickSection(r.hero_pick, SHOP_UI, portrait)),
-    advancedOnly(TLRoundTwo.choicesSection(SHOP_UI, r.choices, key)), advancedOnly(enteredSection(r)), advancedOnly(tribesSection(r)),
+    advancedOnly(TLRoundTwo.choicesSection(SHOP_UI, r.choices, key)),
+    ...[gameTribesSection(r)].filter(Boolean).map(advancedOnly), advancedOnly(enteredSection(r)), advancedOnly(tribesSection(r)),
     messagesSection(r),
   );
 }

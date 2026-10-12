@@ -191,6 +191,55 @@ fn a_re_imported_game_is_uploaded_again() {
     assert_eq!(puts(&r.http), vec![format!("{S1}/1"), format!("{S1}/1")]);
 }
 
+/// The body of the last PUT, inflated.
+fn last_put_body(http: &FakeHttp) -> String {
+    use std::io::Read;
+    let body = http
+        .requests
+        .lock()
+        .unwrap()
+        .iter()
+        .rfind(|r| r.method == Method::Put)
+        .unwrap()
+        .body
+        .clone();
+    let mut text = String::new();
+    flate2::read::GzDecoder::new(body.as_slice())
+        .read_to_string(&mut text)
+        .unwrap();
+    text
+}
+
+#[test]
+fn the_tribes_read_from_the_game_are_never_uploaded() {
+    // T-540, D-104: the five tribes saved with a game stay on this PC.
+    let plain = {
+        let mut r = ready(&[(S1, 1, SOLO)]);
+        r.http.on(PUT, stored(&r, 0));
+        r.engine.run(Instant::now(), 10);
+        last_put_body(&r.http)
+    };
+    let mut r = ready(&[(S1, 1, SOLO)]);
+    let mut saved = tracker::game_tribes::SavedTribes::open(&r.dir).unwrap();
+    let tribes: Vec<String> = ["UNDEAD", "BEAST", "DEMON", "MURLOC", "NAGA"]
+        .iter()
+        .map(|t| t.to_string())
+        .collect();
+    let key = GameKey {
+        session: S1.into(),
+        index: 1,
+    };
+    saved.record(&key, &tribes).unwrap();
+    r.http.on(PUT, stored(&r, 0));
+    r.engine.run(Instant::now(), 10);
+    assert_eq!(puts(&r.http), vec![format!("{S1}/1")]);
+    let sent = last_put_body(&r.http);
+    assert_eq!(sent, plain, "the same bytes as without saved tribes");
+    for tribe in &tribes {
+        assert!(!sent.contains(tribe.as_str()));
+    }
+}
+
 #[test]
 fn a_budget_leaves_the_rest_for_the_next_call() {
     let mut r = ready(&[(S1, 1, SOLO), (S1, 2, SOLO), (S1, 3, SOLO)]);
