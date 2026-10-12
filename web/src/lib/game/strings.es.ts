@@ -52,6 +52,7 @@ export const ES: Record<GameStringKey, string> = {
   "summary.apm": "Acciones por minuto",
   "summary.triples": "Triples",
   "summary.backing.combats": "sobre {known} de {total} combates",
+  "summary.backing.logged": "{n} del registro",
   "summary.source": "Lo envía la aplicación de escritorio del jugador, a partir del registro del propio juego.",
 
   "turns.title": "Turnos",
@@ -72,7 +73,7 @@ export const ES: Record<GameStringKey, string> = {
   "turns.dealt": "infligió {n}",
   "turns.taken": "recibió {n}",
   "turns.gold": "{spent} de {gold} gastados",
-  "turns.damage.note": "El daño es la vida que perdió cada lado, así que siempre es un dato deducido.",
+  "turns.damage.note": "El daño marcado del registro es el golpe del propio juego al final del combate. El resto es la vida que perdió cada lado, así que es un dato deducido.",
 
   "boards.title": "Tableros y tiendas por turno",
   "boards.turn": "Turno {turn}",

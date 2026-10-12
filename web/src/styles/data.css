@@ -223,6 +223,11 @@ html,
   color: var(--inferred);
 }
 
+.mark-log {
+  border-style: solid;
+  color: var(--good);
+}
+
 .mark-unknown {
   border-style: dotted;
   color: var(--unknown);

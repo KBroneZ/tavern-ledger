@@ -4,7 +4,11 @@
 // app and the games list agree:
 // * a combat's result is the one the game records; without it, it is worked
 //   out from health and marked inferred; when neither can say, unknown;
-// * damage is a health drop between rounds in a row, so always inferred;
+// * damage is the game's own hit at the end of the combat, which the combat's
+//   replay keeps (crates/tracker damage.rs, D-108), or 0 after a tie the game
+//   recorded: marked "from the log". Without it, it is a health drop between
+//   rounds in a row, marked inferred. The replay is untrusted input (D-079,
+//   D-111): a hit outside the bounds is not a hit;
 // * a combat follows the shop turn of the same number (D-060);
 // * totals over turns say how many turns back them; unknown is never zero.
 // Opponents are shown by hero only: the report has no player names.
@@ -31,7 +35,12 @@ export interface Known {
   /** How many turns (or combats) the value comes from, of `total`. */
   known: number;
   total: number;
+  /** Of `known`, how many are the game's own number from the log (damage only; 0 for the rest). */
+  logged: number;
 }
+
+/** Where a combat's damage comes from: the game's own hit, or health worked out; null when neither. */
+export type DamageSource = "log" | "inferred" | null;
 
 export interface TurnRow {
   turn: number;
@@ -43,10 +52,11 @@ export interface TurnRow {
   result: Result | null;
   inferred: boolean;
   opponents: HeroRef[];
-  /** Health the opposing side lost in this combat (inferred). */
+  /** Health the opposing side lost in this combat. */
   dealt: number | null;
-  /** Own (or the team's) health lost in this combat (inferred). */
+  /** Own (or the team's) health lost in this combat. */
   taken: number | null;
+  damageSource: DamageSource;
   healthAfter: number | null;
   ownBoard: BoardView | null;
   /** Whose board ownBoard is, in Duos when it is the teammate's. */
@@ -136,6 +146,9 @@ const TRIPLE_REWARD = "TB_BaconShop_Triples_01";
 const MS_PER_MINUTE = 60_000;
 // The server summary's cap: more is a log the clock cannot back.
 const MAX_APM = 99_999;
+// No hero attack in the game comes near this; a larger number is a
+// hand-edited record, not a hit (crates/tracker damage.rs).
+const MAX_HIT = 1_000;
 
 /** The hero's name in the page's language from the name table (T-510), else the game's own name. */
 export function heroRef(report: Report, id: string | null): HeroRef {
@@ -220,7 +233,22 @@ interface Combat {
   inferred: boolean;
   dealt: number | null;
   taken: number | null;
+  /** The damage is the game's own hit (or a recorded tie), not worked out from health. */
+  logged: boolean;
   side: number[] | null;
+}
+
+/**
+ * The damage the game dealt in one combat: the last hero hit in a replay the
+ * site can read, or nothing after a tie the game recorded; null when the
+ * record has neither. A hit with a side or amount out of range is not one.
+ */
+function loggedDamage(round: Round): { taken: number; dealt: number } | null {
+  const events = round.replay?.ok ? round.replay.replay.events : [];
+  const hit = events.findLast((e) => e.kind === "hero_damage");
+  if (hit === undefined) return round.result === "tie" ? { taken: 0, dealt: 0 } : null;
+  if (hit.kind !== "hero_damage" || hit.amount < 1 || hit.amount > MAX_HIT) return null;
+  return hit.side === "own" ? { taken: hit.amount, dealt: 0 } : { taken: 0, dealt: hit.amount };
 }
 
 function combats(report: Report, sides: Sides): Combat[] {
@@ -237,11 +265,13 @@ function combats(report: Report, sides: Sides): Combat[] {
     const before = ownHealth.get(round.number - 1);
     const after = ownHealth.get(round.number);
     const taken = round.number > 0 && before != null && after != null ? Math.max(0, before - after) : null;
-    if (round.result !== null) return { round, outcome: round.result, inferred: false, dealt, taken, side };
+    const hit = round.number > 0 ? loggedDamage(round) : null;
+    const damage = hit ? { dealt: hit.dealt, taken: hit.taken, logged: true } : { dealt, taken, logged: false };
+    if (round.result !== null) return { round, outcome: round.result, inferred: false, ...damage, side };
     const outcome = side && own
       ? judge([sides.healthOf(own, round.number - 1), sides.healthOf(own, round.number)], [oppBefore, oppAfter])
       : "unknown";
-    return { round, outcome, inferred: outcome !== "unknown", dealt, taken, side };
+    return { round, outcome, inferred: outcome !== "unknown", ...damage, side };
   });
 }
 
@@ -278,6 +308,7 @@ function turnRows(report: Report, list: Combat[]): TurnRow[] {
       opponents: [...opponents.values()].map((e) => heroRef(report, e.hero)),
       dealt: combat?.dealt ?? null,
       taken: combat?.taken ?? null,
+      damageSource: !combat || (combat.dealt === null && combat.taken === null) ? null : combat.logged ? "log" : "inferred",
       healthAfter: combat?.round.ownHealthAfter ?? null,
       ownBoard: boardView(own?.board ?? null),
       ownBoardHero: own && own.playerId !== report.localPlayerId && own.hero !== report.hero ? heroRef(report, own.hero) : null,
@@ -290,9 +321,9 @@ function turnRows(report: Report, list: Combat[]): TurnRow[] {
   });
 }
 
-function known(values: (number | null)[], total: number): Known {
+function known(values: (number | null)[], total: number, logged = 0): Known {
   const have = values.filter((v): v is number => v !== null);
-  return { value: have.length > 0 ? have.reduce((a, b) => a + b, 0) : null, known: have.length, total };
+  return { value: have.length > 0 ? have.reduce((a, b) => a + b, 0) : null, known: have.length, total, logged };
 }
 
 function summary(report: Report, list: Combat[]): Summary {
@@ -314,8 +345,8 @@ function summary(report: Report, list: Combat[]): Summary {
     teammate: report.mode === "duos" ? heroRef(report, report.teammateHero) : null,
     rounds: list.length,
     results: { won: count("won"), lost: count("lost"), tie: count("tie"), unknown: count("unknown"), inferred: list.filter((c) => c.inferred).length },
-    dealt: known(list.map((c) => c.dealt), list.length),
-    taken: known(list.map((c) => c.taken), list.length),
+    dealt: known(list.map((c) => c.dealt), list.length, list.filter((c) => c.logged).length),
+    taken: known(list.map((c) => c.taken), list.length, list.filter((c) => c.logged).length),
     goldSpent: known(turns.map((t) => t.goldSpent), turns.length),
     rolls: sum((t) => t.rolls),
     buys: turns.length === 0 ? null : turns.reduce((n, t) => n + t.buys.length, 0),

@@ -117,7 +117,7 @@ The user's answers are D-104; what was built and the counts are D-108.
 | — | Overlay record label | Inferred only when a result came from health | Live only |
 | 14 | Duos teammate's board (T-539) | **Not in the log.** 7 Duos games still in the logs on the PC, 73 shop turns: no minion of the teammate's board created or shown during a shop turn, no change of the player's hero entity outside combat; the only portal traces are cards passed to the hand (`ReuseFX_Generic_SpawnToHand_FromBGPortal_Super`). "Portal" in `Power.log` is a card's name. The log does not mark when the portal is opened, so this assumes the user looked through it in those games. | Duos odds keep the teammate's last board seen in a combat (D-087) |
 
-Left for later: the website and the server's summary still work damage out from health (T-545).
+The website and the server's summary take damage from the game's hit too since T-545 (D-116).
 
 ### Draft D-104 (to fill in after the answers; not in `DECISIONS.md`)
 

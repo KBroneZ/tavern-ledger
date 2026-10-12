@@ -39,6 +39,8 @@ export const ES: Record<StringKey, string> = {
 
   "source.inferred": "deducido",
   "source.inferred.tip": "Calculado a partir de otros valores, no leído directamente del registro del juego.",
+  "source.log": "del registro",
+  "source.log.tip": "El número del propio juego, leído directamente de su registro.",
   "source.unknown": "desconocido",
   "source.unknown.tip": "El registro no lo dice. Desconocido no es cero.",
 

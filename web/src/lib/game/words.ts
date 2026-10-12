@@ -30,7 +30,13 @@ export function turnsBacking(k: Known): string {
 }
 
 export function combatsBacking(k: Known): string {
-  return g("summary.backing.combats", { known: k.known, total: k.total });
+  const base = g("summary.backing.combats", { known: k.known, total: k.total });
+  return k.logged > 0 && k.logged < k.known ? `${base} · ${g("summary.backing.logged", { n: k.logged })}` : base;
+}
+
+/** "From the log" only when every combat behind a damage total has the game's own hit. */
+export function damageSource(k: Known): "log" | "inferred" {
+  return k.known > 0 && k.logged === k.known ? "log" : "inferred";
 }
 
 export function resultsLine(s: Summary): string {

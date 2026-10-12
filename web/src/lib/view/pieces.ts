@@ -22,8 +22,8 @@ import { cls, h, s, type VNode } from "./node.ts";
 // The same in every language (test/unit/i18n.test.ts), so it can be a constant.
 const DASH = "—";
 
-export function sourceMark(kind: "inferred" | "unknown"): VNode {
-  return h("span", { class: `mark-src mark-${kind}` }, kind === "inferred" ? t("source.inferred") : t("source.unknown"));
+export function sourceMark(kind: "inferred" | "unknown" | "log"): VNode {
+  return h("span", { class: `mark-src mark-${kind}` }, t(`source.${kind}`));
 }
 
 export function placeBadge(place: number | null, mode: Mode, size: "md" | "lg" = "md"): VNode {
@@ -121,7 +121,7 @@ export interface TileProps {
   backing?: string;
   trend?: Trend | null;
   spark?: SparkProps;
-  source?: "inferred" | "unknown";
+  source?: "inferred" | "unknown" | "log";
   hero?: boolean;
 }
 

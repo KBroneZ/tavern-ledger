@@ -43,6 +43,8 @@ export const STRINGS = {
 
   "source.inferred": "inferred",
   "source.inferred.tip": "Worked out from other values, not read straight from the game's log.",
+  "source.log": "from the log",
+  "source.log.tip": "The game's own number, read straight from its log.",
   "source.unknown": "unknown",
   "source.unknown.tip": "The log does not say. Unknown is not zero.",
 
