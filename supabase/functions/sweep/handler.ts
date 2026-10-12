@@ -31,9 +31,10 @@
 // says which are still due right before the delete (the switch, a new
 // exemption, a new copy or a recent upload keep a file), those are deleted
 // through the Storage API, and file_retention_mark() marks their game rows
-// once the objects are gone, which keeps the summaries. A failed check,
-// delete or mark is redone on the next run (deleting a missing file is a
-// no-op). Report-only (the setting ships off) lists no file and only counts
+// once the objects are gone (so "deleted" counts confirmed deletes), which
+// keeps the summaries, and counts an attempt on the files still there, which
+// are listed after the untried ones next time. A failed check, delete or
+// mark is redone on the next run (deleting a missing file is a no-op). Report-only (the setting ships off) lists no file and only counts
 // what is due. The counts are stored as "retention" on
 // the run's row and in the response; a failed step there is recorded and
 // never stops the sweep.
@@ -456,6 +457,7 @@ interface RetentionList {
   days: number;
   due: number;
   skipped: Skipped;
+  no_summary_oldest_days: number | null;
   files: Due[];
 }
 
@@ -472,6 +474,7 @@ export type Retention =
     unmarked: number;
     left: number;
     skipped: Skipped;
+    no_summary_oldest_days: number | null;
   };
 
 /** A file named by file_retention_list(), or null when it is out of shape. */
@@ -501,7 +504,9 @@ function checkRetentionList(v: unknown): RetentionList | null {
   if (typeof v !== "object" || v === null) return null;
   const r = v as Record<string, unknown>;
   const skipped = skippedOf(r.skipped);
+  const oldest = r.no_summary_oldest_days;
   if (
+    !(oldest === null || (count(oldest) && oldest <= 100_000)) ||
     typeof r.live !== "boolean" || !Number.isInteger(r.days) || (r.days as number) < 1 ||
     (r.days as number) > 3650 || !count(r.due) || skipped === null ||
     !Array.isArray(r.files) || r.files.length > RETENTION_LIMIT || r.files.length > r.due ||
@@ -511,7 +516,14 @@ function checkRetentionList(v: unknown): RetentionList | null {
   }
   const files = r.files.map(due);
   if (!files.every((f): f is Due => f !== null)) return null;
-  return { live: r.live, days: r.days as number, due: r.due, skipped, files };
+  return {
+    live: r.live,
+    days: r.days as number,
+    due: r.due,
+    skipped,
+    no_summary_oldest_days: oldest as number | null,
+    files,
+  };
 }
 
 async function rpc(env: Env, fetchFn: Fetch, step: string, name: string, body: unknown) {
@@ -596,6 +608,7 @@ async function expireFiles(env: Env, fetchFn: Fetch, runDeadline: number): Promi
     unmarked: 0,
     left: 0,
     skipped: list.skipped,
+    no_summary_oldest_days: list.no_summary_oldest_days,
   };
   const now = env.now ?? Date.now;
   const deadline = Math.min(now() + RETENTION_BUDGET_MS, runDeadline);
@@ -614,6 +627,7 @@ async function expireFiles(env: Env, fetchFn: Fetch, runDeadline: number): Promi
     }
     counts.changed += batch.length - files.length;
     if (files.length === 0) continue;
+    let answered = true;
     try {
       const res = await call(fetchFn, "delete expired", `${env.url}/storage/v1/object/games`, {
         method: "DELETE",
@@ -622,12 +636,14 @@ async function expireFiles(env: Env, fetchFn: Fetch, runDeadline: number): Promi
       });
       await res.body?.cancel();
     } catch (_e) {
-      counts.failed += files.length;
-      continue;
+      answered = false;
     }
-    counts.deleted += files.length;
-    // Marked only where the object is really gone: the rest is redone next run.
-    counts.unmarked += files.length - await markExpired(env, fetchFn, files);
+    // Marked only where the object is really gone, so "deleted" is confirmed;
+    // the database counts an attempt on the rest, which is redone next run.
+    const marked = await markExpired(env, fetchFn, files);
+    counts.deleted += marked;
+    if (answered) counts.unmarked += files.length - marked;
+    else counts.failed += files.length - marked;
   }
   // Counts only: no user id, session or file name in the logs.
   if (!list.live) {

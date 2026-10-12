@@ -56,6 +56,7 @@ const REPORT = {
   days: 28,
   due: 0,
   skipped: { exempt: 0, recent: 0, no_summary: 0 },
+  no_summary_oldest_days: null,
   files: [],
 };
 /** The retention's counts; zero unless given. */
@@ -70,6 +71,7 @@ const retained = (over: Record<string, unknown> = {}) => ({
   unmarked: 0,
   left: 0,
   skipped: { exempt: 0, recent: 0, no_summary: 0 },
+  no_summary_oldest_days: null,
   ...over,
 });
 
@@ -105,6 +107,8 @@ function fakeApi(
   } = {},
 ) {
   let files = [...(opts.files ?? [])];
+  // Retention files the fake Storage deleted; the fake mark confirms these.
+  const gone = new Set<string>();
   const calls: Call[] = [];
   const reply = (status: number, body: unknown) =>
     Promise.resolve(new Response(JSON.stringify(body), { status }));
@@ -121,6 +125,7 @@ function fakeApi(
     }
     if (path === "/storage/v1/object/games" && method === "DELETE") {
       if (opts.deleteFails?.(body.prefixes[0])) return reply(503, {});
+      for (const p of body.prefixes) gone.add(p);
       if (!opts.sticky) files = files.filter((f) => !body.prefixes.includes(f));
       return reply(200, []);
     }
@@ -131,7 +136,7 @@ function fakeApi(
       return reply(200, opts.stillDue ? opts.stillDue(body.p_paths) : body.p_paths);
     }
     if (path === "/rest/v1/rpc/file_retention_mark") {
-      const n = body.p_paths.length;
+      const n = body.p_paths.filter((p: string) => gone.has(p)).length;
       return reply(200, opts.marked ? opts.marked(n) : n);
     }
     if (path === "/rest/v1/rpc/sweep_housekeeping") {
@@ -644,6 +649,7 @@ const live = (n: number, over: Record<string, unknown> = {}) => ({
   days: 28,
   due: n,
   skipped: { exempt: 2, recent: 4, no_summary: 1 },
+  no_summary_oldest_days: 40,
   files: Array.from({ length: n }, (_, i) => old(i + 1)),
   ...over,
 });
@@ -673,11 +679,20 @@ async function run(api: ReturnType<typeof fakeApi>, env: Env = ENV, fetchFn = ap
 
 Deno.test("retention, report-only: counts what is due and deletes nothing", async () => {
   const api = fakeApi({
-    retention: { ...REPORT, due: 5, skipped: { exempt: 2, recent: 4, no_summary: 1 } },
+    retention: {
+      ...REPORT,
+      due: 5,
+      skipped: { exempt: 2, recent: 4, no_summary: 1 },
+      no_summary_oldest_days: 40,
+    },
   });
   const { status, body } = await run(api);
   assertEquals(status, 200);
-  const expected = retained({ due: 5, skipped: { exempt: 2, recent: 4, no_summary: 1 } });
+  const expected = retained({
+    due: 5,
+    skipped: { exempt: 2, recent: 4, no_summary: 1 },
+    no_summary_oldest_days: 40,
+  });
   assertEquals(body.retention, expected);
   assertEquals(recorded(api), expected);
   assertEquals(retentionCalls(api), []);
@@ -695,6 +710,7 @@ Deno.test("retention, live: deletes through the Storage API, then marks the game
     listed: 3,
     deleted: 3,
     skipped: { exempt: 2, recent: 4, no_summary: 1 },
+    no_summary_oldest_days: 40,
   });
   assertEquals(body.retention, expected);
   assertEquals(recorded(api), expected);
@@ -735,15 +751,17 @@ Deno.test("retention, live: batches of 100", async () => {
   ]);
 });
 
-Deno.test("retention: a failed delete is counted and its games stay unmarked", async () => {
+Deno.test("retention: a failed delete is counted, still checked, and its games stay unmarked", async () => {
   const api = fakeApi({ retention: live(250), deleteFails: (first) => first === old(101).path });
   const { status, body, logs } = await run(api);
   assertEquals(status, 200);
   const r = body.retention as Record<string, number>;
   assertEquals([r.listed, r.deleted, r.failed, r.unmarked, r.left], [250, 150, 100, 0, 0]);
   const marks = retentionCalls(api).filter((c) => c.path.endsWith("file_retention_mark"));
+  // Marked after every delete, failed or not: the database counts the attempt.
   assertEquals(marks.map((c) => (c.body as { p_paths: string[] }).p_paths[0]), [
     old(1).path,
+    old(101).path,
     old(201).path,
   ]);
   assertEquals(logs, [
@@ -762,12 +780,14 @@ Deno.test("retention: a failed or short mark is counted as unmarked, never fatal
     const { status, body } = await run(fakeApi({ retention: live(3), marked }));
     assertEquals(status, 200);
     const r = body.retention as Record<string, number>;
-    assertEquals([r.deleted, r.unmarked], [3, unmarked], String(marked));
+    // "deleted" is what the mark confirmed; the rest is unmarked.
+    assertEquals([r.deleted, r.unmarked], [3 - unmarked, unmarked], String(marked));
   }
   const api = fakeApi({ retention: live(3), fail: "/rest/v1/rpc/file_retention_mark" });
   const { status, body } = await run(api);
   assertEquals(status, 200);
-  assertEquals((body.retention as Record<string, number>).unmarked, 3);
+  const r = body.retention as Record<string, number>;
+  assertEquals([r.deleted, r.unmarked], [0, 3]);
 });
 
 Deno.test("retention: no batch starts after the time budget; the rest is left", async () => {
@@ -810,6 +830,9 @@ Deno.test("retention: an answer out of shape deletes nothing", async () => {
     live(1, { due: -1 }),
     live(1, { skipped: { exempt: 1, no_summary: 0 } }),
     live(1, { skipped: null }),
+    live(1, { no_summary_oldest_days: -1 }),
+    live(1, { no_summary_oldest_days: "40" }),
+    live(1, { no_summary_oldest_days: undefined }),
   ];
   for (const retention of bad) {
     const api = fakeApi({ retention });
