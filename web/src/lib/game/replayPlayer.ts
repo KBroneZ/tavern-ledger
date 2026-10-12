@@ -2,12 +2,13 @@
 // pauses and steps through it. It redraws only what a step changes (each
 // minion's numbers and marks, the hero damage, the words), so a picture
 // never loads twice and a button keeps focus; buttons at either end are
-// aria-disabled rather than disabled for the same reason. The step's words
-// are a polite live region, quiet while playing and read on a step or a
-// pause. With reduced motion nothing plays by itself: step by step only.
+// aria-disabled rather than disabled for the same reason. A hidden polite
+// live region reads the step's words on a step or a pause, never while
+// playing. With reduced motion nothing plays by itself: step by step only.
+// What each button and key does is plain data (replay.ts control, keyAction).
 // Everything drawn comes from replayView.ts (text only, lib/view/node.ts).
 import { mount, toDom } from "../view/node.ts";
-import { type Frame, type Playback, SPEEDS, STEP_MS, stepWords } from "./replay.ts";
+import { control, type Frame, keyAction, type PlayAction, type Playback, SPEEDS, STEP_MS, stepWords } from "./replay.ts";
 import type { Side } from "./replayRead.ts";
 import {
   counterText,
@@ -113,21 +114,31 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     one<HTMLElement>(row, ".rp-board").replaceChildren(...(nodes.length > 0 ? nodes : [toDom(emptyBoard())]));
   }
 
-  function draw(): void {
+  /** Says the step's words once, in the hidden live region; quiet while playing. */
+  function announce(text: string): void {
+    const live = one<HTMLElement>(player.box, ".rp-live");
+    live.textContent = "";
+    // A new text a frame later, so a repeated one is read too.
+    window.requestAnimationFrame(() => {
+      live.textContent = text;
+    });
+  }
+
+  function draw(speak: boolean): void {
     const { box, pb, step, playing, combat } = player;
     const last = pb.frames.length - 1;
     const frame = pb.frames[step];
     for (const side of SIDES) drawSide(frame, side);
-    const caption = one<HTMLElement>(box, ".rp-caption");
-    caption.setAttribute("aria-live", playing ? "off" : "polite");
-    caption.textContent = combat.replay ? stepWords(frame.event, combat.replay, namerFor(combat)) : "";
+    const words = combat.replay ? stepWords(frame.event, combat.replay, namerFor(combat)) : "";
+    one<HTMLElement>(box, ".rp-caption").textContent = words;
+    if (speak && !playing) announce(words);
     one<HTMLElement>(box, ".rp-counter").textContent = counterText(step, last);
     const play = one<HTMLElement>(box, '[data-act="play"]');
-    const words = playText(playing);
-    play.textContent = words.text;
-    play.setAttribute("aria-label", words.label);
-    play.title = words.label;
-    for (const act of ["restart", "back"]) one(box, `[data-act="${act}"]`).setAttribute("aria-disabled", String(step === 0));
+    const label = playText(playing);
+    play.textContent = label.text;
+    play.setAttribute("aria-label", label.label);
+    play.title = label.label;
+    for (const name of ["restart", "back"]) one(box, `[data-act="${name}"]`).setAttribute("aria-disabled", String(step === 0));
     one(box, '[data-act="forward"]').setAttribute("aria-disabled", String(step === last));
     play.setAttribute("aria-disabled", String(last === 0));
     for (const b of box.querySelectorAll<HTMLElement>(".rp-step")) {
@@ -138,12 +149,13 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     steps.set(combat.round, step);
   }
 
-  function go(step: number, playing: boolean): void {
+  /** Applies an action (replay.ts control) and draws the result. */
+  function act(action: PlayAction, speak = true): void {
     stop();
-    const last = player.pb.frames.length - 1;
-    player.step = Math.min(Math.max(step, 0), last);
-    player.playing = playing && !motion.matches && player.step < last;
-    draw();
+    const next = control(player, action, player.pb.frames.length - 1, motion.matches);
+    player.step = next.step;
+    player.playing = next.playing;
+    draw(speak);
     if (player.playing) timer = window.setTimeout(tick, STEP_MS / speed);
   }
 
@@ -151,34 +163,25 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     timer = null;
     // Stops by itself once the game is no longer on the page.
     if (!section.isConnected) return;
-    go(player.step + 1, true);
+    act("tick");
   }
 
   function open(round: number): void {
     const combat = combats.find((c) => c.round === round && c.replay !== null);
     if (!combat || combat.round === player.combat.round) return;
     stop();
+    // The step list stays open or closed as it was, and each combat keeps its step.
+    const listOpen = player.box.querySelector<HTMLDetailsElement>(".rp-steps")?.open ?? false;
     const step = steps.get(round) ?? 0;
     mount(holder as HTMLElement, playerView(combat, playbackOf(combat), step));
     player = adopt(combat, step);
     one<HTMLSelectElement>(player.box, 'select[data-act="speed"]').value = String(speed);
+    one<HTMLDetailsElement>(player.box, ".rp-steps").open = listOpen;
     for (const chip of section.querySelectorAll<HTMLElement>(".rp-chip")) {
       chip.setAttribute("aria-pressed", String(chip.dataset.round === String(round)));
     }
-    go(step, false);
-  }
-
-  function act(name: string | undefined): void {
-    const { step, playing } = player;
-    const last = player.pb.frames.length - 1;
-    if (name === "play") {
-      // At the end, play starts over.
-      if (playing) go(step, false);
-      else go(step >= last ? 0 : step, true);
-    } else if (name === "back") go(step - 1, false);
-    else if (name === "forward") go(step + 1, false);
-    else if (name === "restart") go(0, false);
-    else if (name === "end") go(last, false);
+    // The chip's pressed state says which combat; its first words need no reading.
+    act({ goto: step }, false);
   }
 
   section.addEventListener("click", (event) => {
@@ -186,9 +189,11 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     const chip = target.closest<HTMLElement>(".rp-chip");
     if (chip) return open(Number(chip.dataset.round));
     const stepButton = target.closest<HTMLElement>(".rp-step");
-    if (stepButton) return go(Number(stepButton.dataset.step), false);
-    const control = target.closest<HTMLElement>("button[data-act]");
-    if (control && control.getAttribute("aria-disabled") !== "true") act(control.dataset.act);
+    if (stepButton) return act({ goto: Number(stepButton.dataset.step) });
+    const button = target.closest<HTMLElement>("button[data-act]");
+    const name = button?.dataset.act;
+    if (!button || button.getAttribute("aria-disabled") === "true") return;
+    if (name === "play" || name === "back" || name === "forward" || name === "restart") act(name);
   });
 
   section.addEventListener("change", (event) => {
@@ -196,26 +201,28 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     if (!select) return;
     const value = Number(select.value);
     speed = (SPEEDS as readonly number[]).includes(value) ? value : DEFAULT_SPEED;
-    if (player.playing) go(player.step, true);
+    if (player.playing) {
+      stop();
+      timer = window.setTimeout(tick, STEP_MS / speed);
+    }
   });
 
   // The arrow keys, Home and End on the controls step through the combat.
   section.addEventListener("keydown", (event) => {
     const target = event.target as HTMLElement;
     if (!target.closest(".rp-controls") || target.tagName === "SELECT") return;
-    const keys: Record<string, string> = { ArrowLeft: "back", ArrowRight: "forward", Home: "restart", End: "end" };
-    const name = keys[event.key];
-    if (!name) return;
+    const action = keyAction(event);
+    if (!action) return;
     event.preventDefault();
-    act(name);
+    act(action);
   });
 
   // Opening the step list shows the current step ("toggle" does not bubble).
   section.addEventListener("toggle", () => keepInView(player.box, player.step), true);
 
   motion.addEventListener("change", () => {
-    if (motion.matches && player.playing) go(player.step, false);
+    if (motion.matches && player.playing) act({ goto: player.step });
   });
 
-  go(0, false);
+  act({ goto: 0 }, false);
 }

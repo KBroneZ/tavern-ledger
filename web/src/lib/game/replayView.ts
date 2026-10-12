@@ -214,7 +214,9 @@ export function playerView(combat: ReplayCombat, pb: Playback, step: number): VN
       h("span", { class: "rp-counter" }, counterText(step, last)),
     ),
     h("div", { class: "rp-stage" }, sideView(combat, frame, "opponent"), h("div", { class: "rp-line", "aria-hidden": "true" }), sideView(combat, frame, "own")),
-    h("p", { class: "rp-caption", "aria-live": "polite", "aria-atomic": "true" }, words),
+    h("p", { class: "rp-caption" }, words),
+    // Read on a step or a pause (replayPlayer.ts), never while playing.
+    h("p", { class: "visually-hidden rp-live", "aria-live": "polite", "aria-atomic": "true" }),
     controls(),
     h("p", { class: "data-note rp-reduced" }, g("replay.reduced")),
     combat.replay?.complete === false ? h("p", { class: "data-note" }, sourceMark("unknown"), " ", g("replay.cut")) : null,

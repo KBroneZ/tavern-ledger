@@ -154,9 +154,10 @@ function apply(st: State, e: ReplayEvent): Map<number, Marks> {
     case "summon": {
       const m = st.replay.minions[e.minion];
       const board = st.boards[m.side];
-      const at = m.position > 0 ? m.position - 1 : board.length;
+      // The app's rule: slot 1 is the left-most; a slot of 0 (none in the log) goes left too.
+      const at = Math.min(Math.max(m.position - 1, 0), board.length);
       st.tiles.set(e.minion, tileOf(st.replay, e.minion));
-      board.splice(Math.min(at, board.length), 0, e.minion);
+      board.splice(at, 0, e.minion);
       mark(e.minion, { summoned: true });
       break;
     }
@@ -244,4 +245,47 @@ export function stepWords(e: ReplayEvent | null, replay: Replay, namer: Namer): 
     case "unknown":
       return g("replay.ev.unknown");
   }
+}
+
+// ---------- Playback control (the page's buttons and keys, as plain data) ----------
+
+export interface PlayState {
+  step: number;
+  playing: boolean;
+}
+
+export type PlayAction = "play" | "back" | "forward" | "restart" | "end" | "tick" | { goto: number };
+
+/**
+ * The next state after an action, for a replay whose last step is `last`.
+ * Nothing plays with reduced motion, nor past the end; play at the end
+ * starts over (the app's rule).
+ */
+export function control(state: PlayState, action: PlayAction, last: number, reduced: boolean): PlayState {
+  const at = (step: number, playing: boolean): PlayState => {
+    const clamped = Math.min(Math.max(step, 0), last);
+    return { step: clamped, playing: playing && !reduced && clamped < last };
+  };
+  if (typeof action === "object") return at(action.goto, false);
+  switch (action) {
+    case "play":
+      return state.playing ? at(state.step, false) : at(state.step >= last ? 0 : state.step, true);
+    case "tick":
+      return state.playing ? at(state.step + 1, true) : state;
+    case "back":
+      return at(state.step - 1, false);
+    case "forward":
+      return at(state.step + 1, false);
+    case "restart":
+      return at(0, false);
+    case "end":
+      return at(last, false);
+  }
+}
+
+/** The step a key asks for on the controls; none with a modifier (Alt+Left is the browser's Back). */
+export function keyAction(e: { key: string; altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }): PlayAction | null {
+  if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return null;
+  const keys: Record<string, PlayAction> = { ArrowLeft: "back", ArrowRight: "forward", Home: "restart", End: "end" };
+  return Object.prototype.hasOwnProperty.call(keys, e.key) ? keys[e.key] : null;
 }

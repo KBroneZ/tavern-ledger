@@ -44,8 +44,10 @@ test("replay section: a chip per combat with a replay, the last one open at its 
   assert.match(text(byClass(player, "rp-title")[0]), /^Turn 2 against Moss Witch$/);
   assert.equal(text(byClass(player, "rp-counter")[0]), "Step 0 of 24");
   const caption = byClass(player, "rp-caption")[0];
-  assert.equal(attr(caption, "aria-live"), "polite");
+  assert.equal(attr(caption, "aria-live"), undefined, "the visible words are not a live region");
   assert.equal(text(caption), "Both boards as the combat starts.");
+  const live = byClass(player, "rp-live")[0];
+  assert.deepEqual([attr(live, "aria-live"), attr(live, "aria-atomic"), classes(live).includes("visually-hidden")], ["polite", "true", true]);
   // Theirs on top, yours below, as in the game.
   assert.deepEqual(byClass(player, "rp-side").map((s) => attr(s, "data-side")), ["opponent", "own"]);
   assert.deepEqual(byClass(player, "rp-board").map((b) => attr(b, "aria-label")), ["Their board", "Your board"]);

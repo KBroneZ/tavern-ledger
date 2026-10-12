@@ -7,7 +7,7 @@
 .rp {
   --rp-tile: clamp(42px, 11vw, 66px);
   --rp-atk: #ffcf5a;
-  --rp-hp: #e2554a;
+  --rp-hp: #b3261e;
   --rp-hit: #ff9a8a;
   --rp-buff: var(--good);
   --rp-shield: #fff1b8;
@@ -234,6 +234,7 @@
   background: var(--rp-atk);
 }
 
+/* White on this red is 6.5:1 (WCAG 1.4.3). */
 .rp-hp {
   border-radius: 50% 50% 50% 6px;
   background: var(--rp-hp);
@@ -247,7 +248,7 @@
   translate: -50% 0;
   padding: 2px 6px;
   border-radius: 6px;
-  background: #b3261e;
+  background: #7a1410;
   color: #fff;
   font: 800 var(--t-sm) / 1 var(--display);
   box-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
@@ -276,10 +277,10 @@
 .rp-minion.has-shield .rp-art::after {
   content: "";
   position: absolute;
-  inset: -5px;
-  border: 2px solid var(--rp-shield);
+  inset: -6px;
+  border: 3px solid var(--rp-shield);
   border-radius: 50%;
-  box-shadow: 0 0 10px rgb(255 241 184 / 0.6);
+  box-shadow: 0 0 14px rgb(255 241 184 / 0.75), inset 0 0 8px rgb(255 241 184 / 0.5);
   pointer-events: none;
 }
 

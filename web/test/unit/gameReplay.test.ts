@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { setLang } from "../../src/lib/i18n.ts";
-import { playback, stepWords, type Frame, type Tile } from "../../src/lib/game/replay.ts";
+import { control, keyAction, playback, stepWords, type Frame, type Tile } from "../../src/lib/game/replay.ts";
 import { MAX_REPLAY_EVENTS, MAX_REPLAY_MINIONS, readReplay, type Replay } from "../../src/lib/game/replayRead.ts";
 import { readRecord } from "../../src/lib/game/report.ts";
 import { shapeGame } from "../../src/lib/game/shape.ts";
@@ -321,4 +321,69 @@ test("every replay of the user's real games is read and plays to the end", () =>
     }
   }
   assert.ok(played >= 17, `played ${played}`);
+});
+
+test("step model: a summon goes to its slot, the left end when the log has none (the app's rule)", () => {
+  const r = good(edited((x) => {
+    x.minions[4].position = 0;
+    x.events = [
+      { kind: "death", minion: 2 },
+      { kind: "summon", minion: 4 },
+    ];
+  }));
+  const f = playback(r, NO_HEROES).frames;
+  // The dead minion leaves before the summon lands: their board is [null card], then the token on the left.
+  assert.deepEqual(cards(f[1].opponent), ["SYN_M_05", null]);
+  assert.deepEqual(cards(f[2].opponent), ["SYN_M_09", null]);
+  const far = good(edited((x) => {
+    x.minions[4].position = 9;
+    x.events = [{ kind: "summon", minion: 4 }];
+  }));
+  assert.deepEqual(cards(playback(far, NO_HEROES).frames[1].opponent), ["SYN_M_05", null, "SYN_M_09"], "past the end: the right end");
+});
+
+test("step model: a Duos board coming in with no hero named is an unknown hero", () => {
+  const r = good(edited((x) => (x.events = [{ kind: "board_in", side: "own", hero: null }])));
+  const f = playback(r, { own: "SYN_HERO_A", opponent: "SYN_HERO_C" }).frames;
+  assert.deepEqual(f[1].heroes, { own: null, opponent: "SYN_HERO_C" });
+});
+
+test("playback control: play, pause, steps, the ends and reduced motion", () => {
+  const at = (step: number, playing = false) => ({ step, playing });
+  assert.deepEqual(control(at(0), "play", 5, false), at(0, true));
+  assert.deepEqual(control(at(2, true), "play", 5, false), at(2), "play again pauses");
+  assert.deepEqual(control(at(5), "play", 5, false), at(0, true), "at the end, play starts over");
+  assert.deepEqual(control(at(2, true), "tick", 5, false), at(3, true));
+  assert.deepEqual(control(at(4, true), "tick", 5, false), at(5), "the last step stops playback");
+  assert.deepEqual(control(at(4), "tick", 5, false), at(4), "a late tick after a pause does nothing");
+  assert.deepEqual(control(at(0), "back", 5, false), at(0));
+  assert.deepEqual(control(at(5), "forward", 5, false), at(5));
+  assert.deepEqual(control(at(3, true), "forward", 5, false), at(4), "a step pauses");
+  assert.deepEqual(control(at(3), "restart", 5, false), at(0));
+  assert.deepEqual(control(at(3), "end", 5, false), at(5));
+  assert.deepEqual(control(at(3), { goto: 99 }, 5, false), at(5));
+  assert.deepEqual(control(at(3), { goto: -1 }, 5, false), at(0));
+  // Reduced motion: never plays, steps still work.
+  assert.deepEqual(control(at(0), "play", 5, true), at(0));
+  assert.deepEqual(control(at(0, true), "tick", 5, true), at(1));
+  assert.deepEqual(control(at(1), "forward", 5, true), at(2));
+  // A replay with only its start: nothing to play.
+  assert.deepEqual(control(at(0), "play", 0, false), at(0));
+});
+
+test("playback keys: arrows, Home and End; never with a modifier (Alt+Left is the browser's Back)", () => {
+  const key = (k: string, mods: Partial<Record<"altKey" | "ctrlKey" | "metaKey" | "shiftKey", boolean>> = {}) =>
+    keyAction({ key: k, altKey: false, ctrlKey: false, metaKey: false, shiftKey: false, ...mods });
+  assert.deepEqual(["ArrowLeft", "ArrowRight", "Home", "End", "Enter", " ", "constructor"].map((k) => key(k)), ["back", "forward", "restart", "end", null, null, null]);
+  for (const mod of ["altKey", "ctrlKey", "metaKey", "shiftKey"] as const) assert.equal(key("ArrowLeft", { [mod]: true }), null, mod);
+});
+
+test("the reader's bounds are upload-game's and the parser's", () => {
+  const server = readFileSync(join(import.meta.dirname, "..", "..", "..", "supabase", "functions", "upload-game", "replay.ts"), "utf8");
+  const parser = readFileSync(join(import.meta.dirname, "..", "..", "..", "crates", "bg-parser", "src", "replay.rs"), "utf8");
+  const bound = (src: string, name: string) => Number(new RegExp(String.raw`${name}(?::\s*usize)?\s*=\s*([\d_]+)`).exec(src)?.[1].replaceAll("_", ""));
+  for (const src of [server, parser]) {
+    assert.equal(bound(src, "MAX_REPLAY_MINIONS"), MAX_REPLAY_MINIONS);
+    assert.equal(bound(src, "MAX_REPLAY_EVENTS"), MAX_REPLAY_EVENTS);
+  }
 });
