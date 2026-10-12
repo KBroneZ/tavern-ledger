@@ -94,3 +94,9 @@ test("totals: the games line stays in view only when a total misses some games; 
   assert.equal(none.backingAlways, false, "unknown is a dash, not a partial sum");
   assert.deepEqual(CURIOUS_RECORD_COLUMNS_VIEW.filter((c) => c.advanced).map((c) => c.label), ["Based on"]);
 });
+
+test("damage totals are inferred only when some game's total is worked out (T-559)", () => {
+  const dealt = (n: number) => totalTiles(overview(overviewRow({ damage_dealt_inferred_games: n }))).advanced.find((x) => x.label === "Damage dealt")?.source;
+  assert.equal(dealt(0), undefined);
+  assert.equal(dealt(1), "inferred");
+});

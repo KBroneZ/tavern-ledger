@@ -160,3 +160,14 @@ test("an unfinished game's triples say why there is no count; rounds, APM and th
   const unsupported = gameCells(gameRow(gameRaw({ status: "unsupported", triples: null })), false);
   assert.match(toHtml((unsupported[triples] as { node: VNode[] }).node[1]), />Unknown</);
 });
+
+test("per-game damage is marked inferred only when some game's total is not all the game's own hit (T-559)", () => {
+  const tiles = (dealt: number, taken: number) => {
+    const { advanced } = overviewTiles(overview(overviewRow({ damage_dealt_inferred_games: dealt, damage_taken_inferred_games: taken })), []);
+    const by = Object.fromEntries(advanced.map((x) => [x.label, x.source]));
+    return [by["Damage dealt per game"], by["Damage taken per game"]];
+  };
+  assert.deepEqual(tiles(0, 0), [undefined, undefined]);
+  assert.deepEqual(tiles(3, 0), ["inferred", undefined]);
+  assert.throws(() => overview(overviewRow({ damage_taken_inferred_games: 40 })), /more than games/);
+});

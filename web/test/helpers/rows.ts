@@ -44,6 +44,8 @@ export function overviewRow(over: RawRow = {}): RawRow {
     apm_games: 29,
     triples: 58,
     triples_games: 28,
+    damage_dealt_inferred_games: 2,
+    damage_taken_inferred_games: 1,
     ...over,
   };
 }

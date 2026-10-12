@@ -78,8 +78,9 @@ export function overviewTiles(ov: Overview, recentPlaces: (number | null)[]): Ti
     source: games === 0 ? "unknown" : inferred ? "inferred" : undefined,
   });
   const advanced: TileProps[] = [
-    per("tile.damageDealt", ov.damageDealt, ov.damageDealtGames, true),
-    per("tile.damageTaken", ov.damageTaken, ov.damageTakenGames, true),
+    // Marked only when some game's total is worked out from health (or not known to be the hit).
+    per("tile.damageDealt", ov.damageDealt, ov.damageDealtGames, ov.damageDealtInferredGames > 0),
+    per("tile.damageTaken", ov.damageTaken, ov.damageTakenGames, ov.damageTakenInferredGames > 0),
     per("tile.goldSpent", ov.goldSpent, ov.goldSpentGames),
     per("tile.goldBeyond", ov.goldBeyond, ov.goldBeyondGames),
     per("tile.sellGold", ov.sellGold, ov.sellGoldGames),

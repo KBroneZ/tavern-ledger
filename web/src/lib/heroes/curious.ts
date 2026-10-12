@@ -67,7 +67,8 @@ interface TotalSpec {
   label: StringKey;
   sum: (o: Overview) => number | null;
   games: (o: Overview) => number;
-  inferred?: boolean;
+  /** The total is marked inferred when this says so for the mode. */
+  inferred?: (o: Overview) => boolean;
   advanced?: boolean;
 }
 
@@ -85,8 +86,8 @@ export const TOTALS: readonly TotalSpec[] = [
   { label: "curious.total.freeRolls", sum: (o) => o.freeRolls, games: shop, advanced: true },
   { label: "curious.total.buys", sum: (o) => o.buys, games: shop, advanced: true },
   { label: "curious.total.sells", sum: (o) => o.sells, games: shop, advanced: true },
-  { label: "curious.total.damageDealt", sum: (o) => o.damageDealt, games: (o) => o.damageDealtGames, inferred: true, advanced: true },
-  { label: "curious.total.damageTaken", sum: (o) => o.damageTaken, games: (o) => o.damageTakenGames, inferred: true, advanced: true },
+  { label: "curious.total.damageDealt", sum: (o) => o.damageDealt, games: (o) => o.damageDealtGames, inferred: (o) => o.damageDealtInferredGames > 0, advanced: true },
+  { label: "curious.total.damageTaken", sum: (o) => o.damageTaken, games: (o) => o.damageTakenGames, inferred: (o) => o.damageTakenInferredGames > 0, advanced: true },
 ];
 
 /** One total as a tile: the sum, the games behind it, and its source mark. */
@@ -99,7 +100,7 @@ export function totalTile(spec: TotalSpec, o: Overview): TileProps {
     backing: backing(games, o.games),
     // A sum over only some games stays said in view, so it does not read as every game's.
     backingAlways: sum !== null && games < o.games,
-    source: sum === null ? "unknown" : spec.inferred ? "inferred" : undefined,
+    source: sum === null ? "unknown" : spec.inferred?.(o) ? "inferred" : undefined,
   };
 }
 
