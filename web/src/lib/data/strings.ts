@@ -247,6 +247,7 @@ export const STRINGS = {
   "hstats.few": "few games",
   "hstats.few.tip": "Based on fewer than {min} games: the next one can change it a lot.",
   "hstats.few.note": "The average place and top rate are based on fewer than {min} finished games, and the pick rate on fewer than {min} hero choices.",
+  "hstats.few.all": "Every hero here has fewer than {min} finished games, so these averages can still change a lot.",
   "hstats.few.more": "When sorted by average place, heroes with enough games come first.",
   "hstats.simple.more": "Switch to Advanced at the top to also see wins, best and worst place, and how often you picked each hero when the game offered it.",
   "hstats.picked.note":

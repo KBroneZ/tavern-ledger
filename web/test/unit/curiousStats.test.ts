@@ -47,8 +47,9 @@ test("a record's cells: label, value with its inferred mark, the game's link and
   assert.equal(back, "in 12 of 31 games");
 });
 
-test("APM keeps two decimals; a game with no key is a date only; the top streak names its mode", () => {
-  assert.match(cellHtml(recordCellsOf(rec({ record: "apm", value: 51.5 }), ID, 31)[1]), /51\.50/);
+test("APM is whole from 10 up (one decimal below); a game with no key is a date only; the top streak names its mode", () => {
+  assert.match(cellHtml(recordCellsOf(rec({ record: "apm", value: 51.5 }), ID, 31)[1]), /<span>52<\/span>/);
+  assert.match(cellHtml(recordCellsOf(rec({ record: "apm", value: 8.25 }), ID, 31)[1]), /<span>8\.3<\/span>/);
   assert.equal(recordCellsOf(rec({ session: null }), ID, 31)[2], "Oct 2, 2026");
   assert.equal(recordCellsOf(rec({ mode: "duos", record: "top_half_streak" }), ID, 31)[0], "Most top-2 finishes in a row");
   // A record backed by more games than the mode says it has stays honest.
@@ -60,7 +61,8 @@ test("totals: sums over the games that have them, with the games behind and the 
   const tiles = totalTiles(ov);
   assert.equal(tiles.simple.length, 4);
   assert.equal(tiles.simple.length + tiles.advanced.length, TOTALS.length);
-  assert.deepEqual(tiles.simple[0], { label: "Gold spent", value: "4,060", backing: "in 29 of 31 games", source: undefined });
+  // A sum over only some games keeps its line in view (T-559).
+  assert.deepEqual(tiles.simple[0], { label: "Gold spent", value: "4,060", backing: "in 29 of 31 games", backingAlways: true, source: undefined });
   const dealt = tiles.advanced.find((x) => x.label === "Damage dealt");
   assert.equal(dealt?.source, "inferred");
 });

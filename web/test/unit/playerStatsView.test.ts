@@ -168,3 +168,13 @@ test("reads: a server error or a broken answer throws instead of showing part of
   stubFetch({ "/rest/v1/user_overview": rows([overviewRow()]), "/rest/v1/user_records": () => json({ message: "boom" }, 500) });
   await assert.rejects(loadCurious(client(), ID), DataError);
 });
+
+test("heroes: when every hero has few games, one line says so instead of a mark on each row (T-559)", () => {
+  const few = Array.from({ length: 3 }, (_, i) => heroStat(heroRaw({ hero: `BG_FEW_${i}`, games: 2, placed_games: 2, top_half: 1, wins: 0, offered_games: 6, picked_games: 2 })));
+  const html = toHtml(heroesPanel("solo", few, { profileId: null, sort: "games" }));
+  assert.doesNotMatch(html, /mark-few/);
+  assert.match(html, /Every hero here has fewer than 5 finished games/);
+  // A mix keeps the mark, once per row, on the few-games heroes only.
+  const mixed = toHtml(heroesPanel("solo", [...heroes, ...few], { profileId: null, sort: "games" }));
+  assert.equal((mixed.match(/class="mark-src mark-few"/g) ?? []).length, few.length + 1, "each few row and the note");
+});

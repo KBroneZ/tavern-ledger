@@ -69,6 +69,7 @@ function offeredFold(m: Mode, rows: readonly HeroStat[]): VNode | null {
 export function heroesPanel(m: Mode, rows: readonly HeroStat[], opts: HeroesOptions): VNode {
   if (!hasHeroes(rows, m)) return emptyPanel(m);
   const sorted = sortHeroes(rows, m, opts.sort);
+  const allFew = sorted.every((r) => r.placedGames < MIN_GAMES);
   const caption = t(opts.sort === "avg" ? "hstats.caption.avg" : "hstats.caption.games", { mode: modeName(m) });
   return h(
     "div",
@@ -80,9 +81,12 @@ export function heroesPanel(m: Mode, rows: readonly HeroStat[], opts: HeroesOpti
       h(
         "div",
         { id: `heroes-${m}-table` },
-        topTable({ caption, columns: heroColumns(m), rows: sorted.map((r) => heroStatCells(r, opts.profileId)), top: TOP_HEROES }),
+        topTable({ caption, columns: heroColumns(m), rows: sorted.map((r) => heroStatCells(r, opts.profileId, !allFew)), top: TOP_HEROES }),
       ),
-      h("p", { class: "data-note" }, fewMark(), ` ${t("hstats.few.note", { min: MIN_GAMES })}`),
+      // When every hero has few games, one line says so instead of a mark on every row (T-559).
+      allFew
+        ? h("p", { class: "data-note" }, t("hstats.few.all", { min: MIN_GAMES }))
+        : h("p", { class: "data-note" }, fewMark(), ` ${t("hstats.few.note", { min: MIN_GAMES })}`),
       more({ context: caption }, h("p", {}, t("hstats.few.more")), h("p", { class: "adv" }, t("hstats.picked.note"))),
       h("p", { class: "data-note simple-only" }, t("hstats.simple.more")),
       offeredFold(m, rows),

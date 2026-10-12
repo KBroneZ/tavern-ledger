@@ -8,6 +8,7 @@ import "../lib/i18n/boot.ts";
 import { profileAccess, type ProfileAccess } from "../lib/dataApi.ts";
 import { t } from "../lib/data/strings.ts";
 import { watchPictureFallback } from "../lib/data/pictures.ts";
+import { busierMode, MODE_DEFAULT_EVENT, type ModeChoice } from "../lib/data/prefs.ts";
 import { parseSort, withSort, type HeroSort, type HeroStat } from "../lib/heroes/heroes.ts";
 import { loadCurious, loadHeroStats } from "../lib/heroes/load.ts";
 import { curiousAbout, curiousEmpty, curiousPanels, heroesAbout, heroesEmpty, heroesPanels } from "../lib/heroes/views.ts";
@@ -95,6 +96,11 @@ function emptyGate(own: boolean, extra: VNode[]): void {
   showGate(stateBlock({ kind: "empty", title: heading, body }, ...extra), heading);
 }
 
+/** Opens on the mode with more games, unless the address names one (switches.ts). */
+function defaultMode(games: Record<ModeChoice, number>): void {
+  switches.querySelector("[data-switch=mode]")?.dispatchEvent(new CustomEvent(MODE_DEFAULT_EVENT, { detail: busierMode(games) }));
+}
+
 function showPanels(nodes: VNode[], extra: VNode[], aboutNodes: VNode[]): void {
   mount(note, ...extra);
   mount(panels, ...nodes);
@@ -143,12 +149,16 @@ async function start(): Promise<void> {
     const rows = await loadHeroStats(supabase, userId);
     if (heroesEmpty(rows)) return emptyGate(own, extra);
     const sort: HeroSort = parseSort(location.search);
+    const played = (m: ModeChoice) => rows.filter((r) => r.mode === m).reduce((n, r) => n + r.games, 0);
+    defaultMode({ solo: played("solo"), duos: played("duos") });
     showPanels(heroesPanels(rows, { profileId, sort }), extra, [heroesAbout()]);
     watchSort(rows, profileId);
     return;
   }
   const data = await loadCurious(supabase, userId);
   if (curiousEmpty(data)) return emptyGate(own, extra);
+  const games = (m: ModeChoice) => data.overviews.find((o) => o.mode === m)?.games ?? 0;
+  defaultMode({ solo: games("solo"), duos: games("duos") });
   showPanels(curiousPanels(data, userId), extra, curiousAbout());
 }
 

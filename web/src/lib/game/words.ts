@@ -1,6 +1,6 @@
 // The game viewer's values as words (T-504): plain data in, text out, so the
 // page and its tests say the same. Unknown is a dash or "unknown", never 0.
-import { backing, compact, average, ordinal } from "../data/format.ts";
+import { backing, compact, ordinal, perGameText } from "../data/format.ts";
 import { t } from "../data/strings.ts";
 import { cardLabel } from "./names.ts";
 import type { Keyword, Minion, ShopTurn } from "./report.ts";
@@ -52,7 +52,7 @@ export function resultsShort(s: Summary): string {
 }
 
 export function apmText(apm: number | null): string {
-  return apm === null ? DASH : average(apm);
+  return apm === null ? DASH : perGameText(apm);
 }
 
 export function damageText(turn: TurnRow): string {
