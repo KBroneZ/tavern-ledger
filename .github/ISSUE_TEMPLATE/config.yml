@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security problem
+    url: https://github.com/KBroneZ/tavern-ledger/security/advisories/new
+    about: Report it privately, not in a public issue.
+  - name: Your account or your data on the website
+    url: https://tavernledger.net/privacy/
+    about: The privacy policy says how to reach us about your data.

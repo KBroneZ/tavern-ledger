@@ -1,320 +1,87 @@
-# Tavern Ledger
+<p align="center">
+  <img src="docs/brand/logo/app-tile.svg" width="96" height="96" alt="Tavern Ledger logo: a T and an L that form a tankard">
+</p>
 
-Free, open-source Battlegrounds tracker for Windows, plus a website to follow your progress. It reads the game's local log files and, only if you turn it on, values the game already shows you (the lobby's five tribes and your own Battlegrounds rating) from the game's memory, read-only. No injection, no game file changes, nothing done for you in the game.
+<h1 align="center">Tavern Ledger</h1>
+
+<p align="center">
+  A free, open-source Hearthstone Battlegrounds tracker for Windows, with a website to follow your progress.<br>
+  Review every game, replay its combats, keep an overlay beside the board. Solo and Duos. Your games stay on your PC.
+</p>
+
+<p align="center">
+  <a href="https://tavernledger.net">tavernledger.net</a> ·
+  <a href="#status">Status</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#privacy-and-your-account">Privacy</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
 
 > Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.
 
+![The desktop app's list of games: games played, average place, top 2 rate and wins in Duos, then each game with its hero, place, health and rounds](docs/screenshots/app-games.webp)
+
 ## Status
 
-**Phase F0, feasibility proof.** Nothing to install yet. Plan in [docs/plan/plan.md](docs/plan/plan.md), decisions in [docs/decisions/DECISIONS.md](docs/decisions/DECISIONS.md), research in [docs/research/](docs/research/feasibility.md).
+- **Desktop app: not released yet.** There is no installer; it runs from source on the developer's PC while the installer and code signing are prepared. To build it yourself, see [docs/development.md](docs/development.md).
+- **Website: online at [tavernledger.net](https://tavernledger.net), and you can create an account.** Uploading games needs the desktop app; the combat simulator and its accuracy page work without one.
+- Progress, area by area: [docs/status.md](docs/status.md). Plan: [docs/plan/plan.md](docs/plan/plan.md).
 
-A prototype parser rebuilds each Battlegrounds game from `Power.log`: hero, Duos teammate, lobby, health per round, opponents, boards at the start of each combat and final place. It was checked against 23 real games (22 Duos, 1 Solo). MMR and the exact lobby tribes are not in the log. Findings: [docs/research/parser-hslog.md](docs/research/parser-hslog.md).
+## Features
 
-No local log has the MMR value. The public leaderboard only covers ratings of 8000 and above: players in it will see their rating, everyone else "below the leaderboard cut-off", never a made-up number. Findings: [docs/research/mmr-sources.md](docs/research/mmr-sources.md).
+### Desktop app (Windows)
 
-A prototype client looks up your own row in the public leaderboard with a local cache and a small, capped number of requests. It never stores other players' rows. Strategy and measurements: [docs/research/leaderboard-client.md](docs/research/leaderboard-client.md).
+- **Every Battlegrounds game kept**, read from the game's own log as it is played: hero, Duos teammate, place, health each round, the opponents you met and both boards at each combat.
+- **A recap of each game**: your health over the rounds, the shop turn by turn (rolls, buys, sells, gold, tier-ups, logged actions per minute), the heroes you were offered, the trinkets, Dark Gifts and discovers you took, and your record against each opponent.
+- **Combat replays**, attack by attack, from the log: what the game played on your screen, never a simulation.
+- **Stats** for Solo and Duos apart: totals, every hero you played, tribes, trinkets and Dark Gifts with their pick rates, plus a Records tab.
+- **An in-game overlay**, if you want one: hover a hero on the game's leaderboard to see the last board you met from them, with tier, health, triples and your record; the next opponent is marked.
+- **Combat odds** in the overlay, from the project's own simulator: the chance to win, tie or lose against your next opponent, in Solo and Duos. A hint, not a promise; the website shows [how often it is right](https://tavernledger.net/accuracy/).
+- **Every value says where it comes from**: from the log, inferred, entered by you or unknown. When the app cannot tell, it says so instead of guessing.
+- English and Spanish.
 
-Desktop stack (T-005): the comparison recommends Tauri 2. A minimal Tauri overlay (transparent, always on top, clicks pass through) works on Windows 11, also over the game in borderless fullscreen. Decision: Tauri 2 (D-014). Findings: [docs/research/desktop-stack.md](docs/research/desktop-stack.md).
+![A game's recap in the app: the hero, the place, the health over twelve rounds and the shop numbers](docs/screenshots/app-recap.webp)
 
-Personal stats (T-102) are in the app: totals, per-hero numbers and tribes seen in the tavern, per mode.
+![A combat replay in the app: both boards as the combat starts, with a play button and the step count](docs/screenshots/app-combat-replay.webp)
 
-Web stack (T-103): a static Astro site plus Supabase in the EU (Postgres, login, file storage); the desktop app will upload each finished game, about 2.5 KB gzipped, only after you sign in and turn it on. No Battle.net login: Blizzard's developer terms do not allow it in an app with paid extras. Decision D-020; findings: [docs/research/web-stack.md](docs/research/web-stack.md). Nothing is online yet.
+### Website
 
-Backend (T-104a): the database schema, row-level security, export, account deletion and backups exist and are tested on a local Supabase stack. Clients can only read their own data and public profiles; game uploads go through one server function. **Hosted project** (session 022): Supabase in Frankfurt, sign-ups closed, nothing deployed yet; once Supabase's GitHub integration is connected (pending the user), each merge to `main` applies the migrations and deploys the server functions, and a daily job in the database runs the clean-up. Plan and live state: [docs/research/deploy.md](docs/research/deploy.md) section 10.
+- **Upload your games** from the app, only once you sign in and turn it on.
+- **Your dashboard** with your numbers per mode, a filterable games list and a full view of each game, combat replays included.
+- **Public profile, leaderboards and community hero stats**, each one opt-in and off until you turn it on. Leaderboards show display names and numbers from uploaded games, never ratings or BattleTags.
+- **[Combat simulator](https://tavernledger.net/simulator/)** in your browser: load a fight from one of your games (signed in) or set up both boards yourself and see the odds.
+- English and Spanish.
 
-Backend follow-ups (T-104g): the counter of refused uploads per IP keeps only a salted hash, with a random salt kept in the database's vault and replaced every day; the server functions use Supabase's new secret key; the daily clean-up's effect on the Free plan's pause after a week without activity is written down in [deploy.md](docs/research/deploy.md) section 10.5 and watched (D-042).
+![The website's home page: a painted tavern with "Pull up a stool. We kept your games." and a Download button marked "Not out yet"](docs/screenshots/web-home.webp)
 
-No legacy keys (T-104j, D-053): the server functions read only the new secret key and stop with a clear error, never a silent fallback, if it is missing; production logs showed all three already on it. Nothing in the backend, the site or the app needs Supabase's legacy JWT keys any more, so the user can turn them off in the dashboard (steps and rollback in [deploy.md](docs/research/deploy.md) section 10.6). DMARC aggregate reports for the domain are live.
+![The simulator accuracy page: how often the most likely result was right on real Solo combats, with a predicted-and-real chart](docs/screenshots/web-accuracy.webp)
 
-Website data API (T-502, D-071): each uploaded game now gets a summary worked out on the server from its checked report (place, hero, rounds, combat results from the log or inferred from health, win streak, damage taken and dealt, gold, rolls, buys and sells, APM, triples, final board, hero choice), with unknown values left empty, never zero; the daily clean-up fills the games stored before. Views give the website each player's overview per mode, heroes, records and a filterable, paged games list, every number with the games behind it, readable only by the owner or by everyone when the profile is public, exactly like the games themselves. The summaries are in the data export and go with account deletion. How to call it: [docs/research/web-data-api.md](docs/research/web-data-api.md).
+Screenshots are from the app and the live website, on the developer's own games. Card art © Blizzard Entertainment, from [HearthstoneJSON](https://hearthstonejson.com/).
 
-Dashboard and games list (T-503, D-073): signed in, "Your games" (`/me/`) shows your Solo and Duos numbers (average place, games, top 4 or top 2, wins), the places chart, place over time, your last games, top heroes and records, each number with the games behind it; Advanced adds the economy, combats, APM and triples. A public profile (`/profile/?id=…`) shows the same, read only; a private one says "This profile is private" to everyone else. The games list (`/games/`) filters by mode, hero, dates and place, 25 a page. Everything is read in the browser from the data API with no new dependency and the same strict CSP, and nothing on the page moves while it loads.
+## Privacy and your account
 
-Game viewer (T-504, T-201, D-079): each game in the games list opens in full at `/game/?u=…&s=…&g=…`, for you or, when your profile is public, for anyone. Simple shows the summary (hero, place, mode, date, combats, damage, gold, tier, triples, each with the turns or combats behind it) and the turns, as a chart and a table with each combat's result (from the log, or worked out from health and marked), the opponent's hero, the damage and the gold; Advanced adds both boards and the shop of every turn (the shops behind "See shops"), the boards met per opponent, your choices and hero pick, and the lobby with each hero's triples and trinkets. The page reads only the game's own file, checks it as untrusted input and says what it could not read; a private game and a missing one look the same. Card and hero pictures now load from HearthstoneJSON's image host (D-074; the only change to the site's security policy), with a local placeholder when one fails; minions are named by card id, as the site has no card names yet.
+- **Your games stay on your PC.** Nothing is uploaded unless you sign in and turn uploading on.
+- **No other players' names.** The app keeps opponents by hero, never by name or BattleTag.
+- **What the app does with the game:** it reads the game's log files and, for the overlay, where your pointer is over the game window. If you turn it on in Settings (off by default), it also reads two values the game already shows you, the lobby's five tribes and your own Battlegrounds rating, read-only from the game's memory; they stay on your PC. Reading the game's memory goes against the letter of Blizzard's EULA, so the app explains that risk before you turn it on.
+- **What it never does:** no injection, no changes to game files, nothing played or clicked for you.
+- **The website** keeps accounts and games on servers in the EU (Supabase, Frankfurt), has no analytics and lets you download all your data or delete your account at any time. On a free account, each game's full file (turn-by-turn boards, shops, combat replays) is kept on the server for 28 days from the day it was played; its summary stays in your stats, and the app keeps every game in full on your PC. Details: [privacy policy](https://tavernledger.net/privacy/) and [terms](https://tavernledger.net/terms/).
 
-Heroes and curious stats (T-505, D-083): from your dashboard or a public profile, "All heroes" (`/player-heroes/`) lists every hero you played per mode with its games, average place and top 4 or top 2, and in Advanced wins, best and worst place and how often you picked it when the game offered it ("75% · 3 of 4"); sort by games or average place, and each hero opens its games. A value that rests on fewer than 5 games is marked "few games". "All records and curious stats" (`/curious/`) shows every record with the game it came from (one click to the game viewer) and the games behind it, plus totals over all your games (gold spent, rolls, triples, combats won; Advanced adds the rest), inferred values marked. It also lists the app's curious stats the website cannot show yet (golden Brann or Titus sold, the most bought minion, extra gold apart, both modes together) and why. Same privacy as the dashboard.
+## How it is built
 
-Hero names and portraits (T-510 to T-513, D-092): the website now names every hero, skins included, by its base hero's name in the page's language (English, or the game's Spanish on `/es/…`), from a small table built from HearthstoneJSON by `tools/hero_names.py` and kept in the repo; an id it does not know reads "Unknown hero", never the card id. The games list's hero filter lists names, sorted. Hero lists (games, your heroes, the dashboard, community heroes, the hero leaderboard) lead each row with a big portrait. The menu shows "Sign in" or "Account", not both. Games uploaded before the per-game summaries (T-502) got their rounds, combats, triples and APM when the hub ran the sweep by hand on 2026-10-11 (41 of 41 filled).
+A Rust workspace (log parser, tracker, combat simulator and a [Tauri 2](https://tauri.app/) desktop app), a static [Astro](https://astro.build/) website and a [Supabase](https://supabase.com/) backend in Frankfurt, with Python tools for checks and research. The origin and license of every dependency is in [PROVENANCE.md](PROVENANCE.md).
 
-License (T-529, D-101): the project is now under the GNU Affero General Public License, version 3 only (`AGPL-3.0-only`) instead of MIT. Anyone may use, change and share the code, and whoever shares a changed copy, or runs one for others over a network, must publish its source under the same license; versions published before 12 October 2026 stay available under MIT. Contributions are welcome. CI now checks that every Rust crate and npm package the project uses has a license compatible with it (`tools/check_licenses.py`).
+Tavern Ledger is made by one developer with help from AI coding tools.
 
-Wording (T-533, D-102): the "Curious stats" page is now "Records" ("Récords"), with a title that no longer repeats the line above it, and every page of the website was read in English and Spanish and reworded where it sounded stiff, literal or unclear; the Spanish uses the game's own terms. The voice guide for later work is [docs/brand/voice.md](docs/brand/voice.md); the app's strings had the same review in [docs/brand/app-strings.md](docs/brand/app-strings.md), now applied (T-531).
+More reading: [development guide](docs/development.md), [decisions](docs/decisions/DECISIONS.md), [research notes](docs/research/feasibility.md).
 
-What the app infers (T-535, research): of the 15 values the app or the site marks inferred, unknown or not recorded, three can be made exact from the log or the card data (each combat's damage, skins grouped by the card data, each game's own time), five come from old games whose logs are gone, one is never shown in the game, and two could come from memory only with a new decision by the user (each opponent's main minion type, the Duos teammate's board). The questions for that decision (D-104) are in [docs/research/inferred-values.md](docs/research/inferred-values.md).
+## Contributing and security
 
-Damage from the log on the website (T-545, D-116): the game viewer and each game's server summary now take a combat's damage from the game's own end-of-combat hit in its replay, or 0 after a tie the game recorded, as the app does; the health difference stays as the fallback, marked inferred. The turns table marks the damage "from the log", and a summary tile does when every combat behind it has the hit. Games stored before are filled again by the daily clean-up. The dashboard's "most damage in one combat" record keeps its "inferred" mark for now.
-
-Fewer inferred values (T-540, T-539, D-108): the lobby's five tribes the app reads from the game (when that switch is on) are now saved with each game on this PC, in their own file, so the recap and the stats show them as "from the game" after the game; they are never uploaded or put in a problem report, and turning the switch off deletes them. Each combat's damage is the game's own end-of-combat hit, from the combat replay already saved, where the record has it (98 of the user's 468 combats; the rest keep the health rule, marked inferred). Skins the game's own link does not cover are grouped by the card data's parent hero instead of the old name rule (10 of the user's games). Each game shows its own start time and length. The overlay no longer marks an opponent's record inferred when every result came from the log. The Duos teammate's current board is not in the log while you look through the portal, so Duos odds keep the teammate's last board seen in a combat.
-
-Data capacity (T-537, research): a game saved today weighs about 15 KB gzipped with its combat replays (7 KB without), measured on the user's own games. On Supabase's Free plan the 1 GB of game files would last about 4.5 months with 100 active players and about two weeks with 1,000; Pro ($25 a month) holds 1,000 players for years. The options (a storage alert, replays on the PC only, a retention window, harder compression, long history as a paid extra, moving to Pro) are in [docs/research/data-capacity.md](docs/research/data-capacity.md). The user decided (D-109): replays stay on the server, a storage alert in the daily sweep (T-543), free accounts keep full game files 28 days from each game (T-544), the paid plan and beta testers keep them without limit, and Pro comes at 80 % of a Free limit or about 100 active players.
-
-Storage alert (T-543, D-109): each daily sweep also records how full the hosted project is (database size, game file bytes and file count) and the level reached against each Free plan limit: none, 50 % or 80 %. The limits live in one database function with the date and source they were read from, a failed measurement is recorded and never stops the sweep, and nothing new is readable by the website or the app. After each sweep the hub reads the latest level; at 50 % it tells the user, at 80 % it tells the user it is time for Supabase Pro (query in [deploy.md](docs/research/deploy.md) section 10.5).
-
-File retention (T-544, D-109, D-113): a free account's full game files (turn-by-turn boards, shops, combat replays) are kept on the server for 28 days from the day each game was played, then the daily sweep deletes them; the summaries (games list, stats, records, leaderboards) stay while the account exists, and the app keeps every game in full on the PC. Accounts with unlimited history (the owner and beta testers now, the paid plan later) keep their files; the mark is set by the owner on the server only. The game page shows an expired game's summary and says its full details have expired. It ships switched off: the sweep only counts what it would delete until the owner checks a run and turns it on ([deploy.md](docs/research/deploy.md) section 10.5). The privacy policy and the data inventory say so.
-
-Sweep record (T-524, D-096): each daily sweep now records, next to its clean-up counts, how many game summaries its backfill listed, looked at, filled and left for the next run, and the ones it skipped by reason, or the step it failed at; a run that reported nothing shows as such, never as zero. Last runs, read only in the SQL editor: `select ran_at, result from private.sweep_runs order by ran_at desc limit 10;` (details in [deploy.md](docs/research/deploy.md) section 10.5).
-
-Robustness (session 014): the app and `check_logs.py` check that the game is set up to write a complete log (`log.config` and `client.config`), every saved game records which parser version read it, `tavern-watch --reparse` re-reads old sessions after a parser fix, and a dev tool replays a saved log so the app can be tested without playing.
-
-Website (T-104c): a static Astro site in `web/` with sign-in by email, an account page (display name, public profile switch, download all your data, delete your account) and a public profile page that only exists when you turn it on. It shows no ratings and no other players' names. **Online at [tavernledger.net](https://tavernledger.net) with accounts closed** (session 021): home, privacy policy and terms; sign-in, account and profile say "Accounts are not open yet" until the hosted backend is wired in. Hosted on Cloudflare Pages from `main`, no scripts, no analytics. Contact mail: `contact@` and `privacy@tavernledger.net` (D-030); deploy notes in [docs/research/deploy.md](docs/research/deploy.md).
-
-Upload (T-104d): the desktop app can upload each finished game to your account. It is off until you sign in and turn it on. You sign in with a one-time link from your email, opened in your browser; the app never asks for your password and keeps the sign-in in Windows Credential Manager. Only the game's report goes up (heroes, card ids, places, boards), never player names, BattleTags or ratings, and the server checks that again before storing it. The app uses the hosted project unless its data folder has a `server.json` (for the local stack).
-
-Uploads refused (T-104h): the first upload to the hosted project refused all 26 games, because the server's check did not know the health fields the parser has written since revision 2. The check now accepts them (only player ids of the same game and plain numbers), one shared list of the report's fields ties the parser to the server's check so a new field fails the tests instead of the upload, and the app sends a refused game once more when the server's check has changed, never in a loop. Decision D-047.
-
-Game recap (T-202) and record against each opponent (T-203): a "Recap" button on each game, and it opens by itself when a new game ends. It shows hero (and teammate in Duos), place, health over the rounds, tribes seen in the tavern and the parser's warnings, and for each opponent in that game (by hero and seat, never by name) the combats won, lost, tied or unknown. The log never says who won, so results are worked out from health changes and marked inferred; when the numbers cannot say, the result is unknown. In Duos each round counts once for your team against the opposing team. Games saved before parser revision 2 show unknown results until re-read with `tavern-watch --reparse`.
-
-Shop and actions per minute (T-204, T-205, D-046): every game now keeps its own shop, turn by turn, from the log only: the minions offered in each shop (and after each roll, with the ones a freeze kept marked), rolls (free ones apart), buys, sells, freezes, the turn's gold, gold spent, the tavern tier and the turn of each tier-up. The recap has a "Shop and actions" section (one line per turn, open it to see the shops with card pictures) and the stats average them per game, per mode and per hero. APM is "logged actions per minute": each option and choice the log records the game client sending for you (buys, sells, rolls, freezes, tier-ups, cards and hero powers played, minions moved, discover picks) over the minutes from the first shop to the end of the game, per game and per turn; no keyboard or mouse input is read and nothing is injected. Only your own shop is in the log. Games saved before this (parser revision 3) say "not recorded" until `tavern-watch --reparse` re-reads them while their logs are still on disk. The upload check accepts the new fields (server check version 3). Research: [docs/research/shop-and-apm.md](docs/research/shop-and-apm.md).
-
-Parser data round (T-206, T-209, T-210, T-214, D-055): each combat's result is now the one the game records for you (from the log), with the health rule only as the fallback for older games, which removes most "unknown" results; on the user's 11 games the two agree on every combat both can judge. Each game also keeps its hero pick (heroes offered, rerolls, hero picked; the stats give each hero's pick rate and average place when picked), more of the shop (extra gold beyond the turn's own, gold from sells, buy and spell prices, free rolls the game gave, cards passed to a Duos teammate) and the game's own link from each skin to its base hero, which the stats use with the card data instead of guessing from the card id. Older games say "not recorded" until `tavern-watch --reparse`; the upload check accepts the new fields (server check version 4). The turn timer is left out: the log's value does not match a length it can be checked against. Since session 048 the window shows all this: the recap counts each game's results by source (from the log, inferred from health, unknown) and has the hero pick and the gold extras, the stats have a "Hero picks" table and the gold extras per game, and skins are grouped by the game's link when the card data is on the PC. Research: [docs/research/parser-data-round.md](docs/research/parser-data-round.md).
-
-Curious stats (T-216, D-057): a second tab in the main window with fun totals over all your games, Solo and Duos together: gold spent, gold beyond the fixed income, gold from selling, golden Brann or Titus sold, rolls paid with gold and free rolls, the most bought minion, the longest win streak (combats won in a row in one game) and the most damage taken in one combat. Each says where it comes from and how many games back it ("In 14 of 29 games"); a game saved before a value was kept is left out of that count, and a stat with no data says so. Triples are left out: the saved record has no triple count, and golden minions also come from cards, so a count would be a guess.
-
-Round 2 in the window (D-060): the recap now shows your choices (the trinkets you took and the Old God up front; every discover, trinket offer, Dark Gift, quest and triple reward, named by the card data with the one you took marked "taken", folded away), and, under the record table, one folded block per opponent with each board you met (minions, attack/health, Golden and keyword marks in words) and their triples and trinkets that turn and at the end. The stats have a "Trinkets and Dark Gifts" section with the games behind it (offered, taken, pick rate, average place when taken), and the Curious stats tab a "Triples" total from the leaderboard. Every new detail starts folded, as the user asked; older games say "not recorded". Trinkets and the Old God are named through a new map in the card data (saved format 4, fetched again once).
-
-Parser round 2 (T-207, T-208, T-211, T-212, D-058): each game now also keeps every hero's triples and trinkets as the game's leaderboard shows them, turn by turn (by seat and hero, never by name); the keywords of every minion on the boards seen as it enters the combat (taunt, divine shield, reborn, venomous, windfury, stealth, deathrattle, rally); every choice the game offered you and what you took: discovers, the trinket offers, Dark Gifts (each with its gift), quests and triple rewards; and the game's Old God. The stats count, per trinket and per Dark Gift, how often it was offered and taken and your average place when you took it. On the user's 11 games the trinket you took is the one the leaderboard shows every time. Left out: quest rewards and Timewarped buys (too little in the logs to check), and the Duos combats the game does not play back (T-213): the game's copies of them mix each player's hand and board with nothing to tell them apart, so the user chose to leave them out. Older games say "not recorded" until `tavern-watch --reparse`; the upload check accepts the new fields (server check version 5). Research: [docs/research/parser-round-2.md](docs/research/parser-round-2.md).
-
-Overlay data (T-312 to T-314, D-061): the overlay marks the opponent the game marks as next on its leaderboard ("Next"; the whole team in Duos), and its opponents panel opens with that opponent's triples, trinkets and last board seen. The hover card shows each opponent's triple count and trinkets as the leaderboard tooltip shows them (trinkets named by the card data) and each minion's keywords as short letters (T Taunt, DS Divine Shield, R Reborn, V Venomous, W Windfury, S Stealth, DR Deathrattle, Ra Rally), spelled out in the legend. Golden minions are now read from the game's golden flag, so always-golden cards and golden tokens count (parser revision 6, server check version 6). With `[LoadingScreen]` in `log.config` (optional; the setup box says how), the app says when you are in the main menu, the Battlegrounds lobby or a game is loading, the overlay starts with the loading screen, and a game cut off without an end stops showing as soon as you leave it. The combat damage cap is left out: no source says the game shows it on screen. Research: [docs/research/overlay-data.md](docs/research/overlay-data.md).
-
-Combat replay (T-215, D-099): each game's recap has "Combat replays": every combat the game played on your screen, step by step, from the log (never a simulation): both boards with their pictures, each attack, damage, Divine Shield popped, buff, death, summon, start-of-combat, deathrattle, avenge and rally trigger, a Duos board coming in and the hero hit at the end. Simple shows the board, a play button and the result; Advanced adds step back and forward, the speed and every step in words; English and Spanish. Combats the game does not show have none, and games saved before parser revision 8 say "not recorded" until `tavern-watch --reparse` re-reads them while their logs are on disk. Replays go up with the game (server check version 7); the website shows them too (T-536). Research: [docs/research/combat-replay.md](docs/research/combat-replay.md).
-
-Combat replay on the website (T-536, D-111): the game viewer has "Combat replays" after the turns: a button per turn with a replay, both boards with their pictures and Dark Gift marks, play and pause, the result and each step in words; Advanced adds step back and forward, the speed and every step as a list. English and Spanish, usable with the keyboard and a screen reader; with reduced motion nothing moves and the replay goes step by step. A replay the site cannot read is "not available" instead of a guess, and a round without one shows nothing new.
-
-Log inventory (T-111): everything the game's logs hold on the user's PC, listed in [docs/research/log-inventory.md](docs/research/log-inventory.md): 16 file kinds, every line kind and all 792 `Power.log` tags (24 read today), each with its meaning, current use, possible use, whether showing it keeps to "only what the player sees" (D-004) and the effort, plus a ranked list of what is worth adding next for the user to choose. Made with `tools/log_inventory.py`, a read-only script that prints only tag, key and line names, enum values, card ids, counts and line shapes with the values replaced; outside `Power.log` it shows only what comes back in two or more sessions, and its guard withholds or refuses anything that looks like a name, account id, IP or deck code.
-
-Real-game tests (T-108): the parser is also tested on real games of the user's own, one Solo and one Duos so far, trimmed to the lines the parser reads and scrubbed of every player name, account id and card text by `tools/make_fixture.py`, which refuses to write if anything personal is left (D-044). The logs on hand hold one game build; the next patch adds the second.
-
-Where values come from (T-109): every number or label in the window says where it comes from. Values straight from the game's log carry no mark; inferred ones (tribes seen in the tavern, skins grouped under one hero) and unknown ones carry a mark, every value has a tooltip, and a legend explains them. "Report a problem" (T-110): a button in each game's recap shows the whole report file (game report, parser version, game build, app version, log setup check, warnings) and saves it to your Downloads folder if you choose. The app refuses to make it if it finds anything that looks like a player name, and it never sends it anywhere; you send it yourself.
-
-
-Main window rework (T-320 to T-323, D-062): less at once, as the user asked. Three tabs (Your games, Stats, Curious stats) with the Solo/Duos switch on the tab bar; every long table shows its top rows (most games first, ties by the better average place, then the name) with "Show all" and headings that sort; explanations wait in "About this" folds. A recap now fills the window, with a close button (X) at the top right and Escape, and goes back to the same place in the list. Each turn is one visual row (tier, result and opponent, health change, your board at a glance); opening it shows both boards and the shop numbers, with the shops behind "See shops". Pictures no longer show white edges (the source art is padded with white bars; the app now crops to the art), load only when they come into view and leave a plain circle if they fail. The side scrollbar stays thin and hidden until you scroll.
-
-Settings and Spanish (T-324, T-325, D-065): a gear on the tab bar opens Settings, with the app's language, the overlay (on or off, arrange, theme), start with Windows and the upload to the website in one place; changes apply at once and are kept on your PC. The app, the overlay and the tray menu are in English and Spanish (Spain): Windows' language by default, or the one you choose; numbers and dates follow it. The overlay's pictures no longer show white edges.
-
-Overlay or only stats (T-531, D-106): the overlay is now a first-class choice. At first start the app asks once whether you want the in-game overlay or only the stats, and "Show overlay during a game" in Settings is the same setting as the tray's check. With it off nothing of the overlay runs during a game (no window, no hover watch, no combat odds) and the main window still records every game, so the app works next to another tracker. The window's masthead shows the TL tankard logo (D-094), and the app's English and Spanish wording follows the voice guide (D-102), with the "Curious stats" tab now "Records".
-
-Recap fixes (T-329 to T-331, D-066): a total the log lacks for one turn (often turn 1's gold) is now summed over the turns that have it and says how many ("125 · 10 of 11 turns"), in the recap, the stats and the curious stats; "no data" only when no turn has it. The recap keeps a readable width in a wide window, with its numbers as compact tiles and long explanations behind "About this". Card and hero names follow the app's language: the card data in English or Spanish, the game's own name only when the card data does not have the card.
-
-Overlay board and the wrong-board fix (T-333 to T-335, D-067): the game writes each fight to its log when it starts and plays it on screen up to a minute later; the overlay used the log's new leaderboard order during the fight, so hovering a hero could show another opponent, and results showed early. It now follows what the game has played on screen. Hovering a hero shows their last board across the top of the game window, laid out like the game's board (pictures with attack and health, golden marked) with the turn it was seen ("2 turns ago"); in Duos each hero of the team has their own row. Text follows the screen size, so it reads at 4K as at 1080p. The overlay has two modes, switched in its toolbar: Simple (default: board, hero, tier, health, triples) and Advanced (also keyword letters, trinket names, the minions they could have and where each value comes from).
-
-Slim overlay (T-339, T-340, D-068): in Simple (the default) the side panel is a narrow column that fits beside the game's play area: the lobby's tribes as short chips, then one row per opponent with their portraits, tier, health, triples (when above 0) and the next opponent lit; no names and nothing unknown. Hovering one hero of a Duos team shows only that hero's board. Advanced keeps every detail. A test build of the app never shows its overlay while Hearthstone runs, unless started with `--allow-over-game`.
-
-Lobby panel (T-338, D-069): on the Battlegrounds lobby screen, before a game, a small overlay panel in the top-left corner shows your own rating (Solo and Duos, from the game when reading from the game is on; otherwise none, since the app has no leaderboard rating of its own yet), the change your last game made (only when it is known for sure: exactly one game since the rating before it), and one line per mode for today's games (games, average place, top-4 share in Solo, top-2 in Duos). It goes away when a game loads, follows Simple and Advanced, is in English and Spanish, and can be turned off in Settings or moved with "Arrange overlay". The main window's footer now says card and hero names follow the app's language and that your rating shows only when reading from the game is on.
-
-Round 4 follow-ups (T-315, T-332, T-341 to T-344, D-072): the overlay shows the game's own combat damage cap ("Max damage 15") above the opponents while it applies. The hover board now starts right of the game window's centre, so it never covers the game's own hover card. The lobby panel's change since your last game now survives a restart of the app and a rating the game updates late, and its day line says how many games are behind each number ("10 games · 9 placed · avg 2.1 · top 2: 6 of 9"). The main window has Simple and Advanced too (Simple by default; a switch in the view bar, the recap and Settings). A turn the log has no gold for now counts as spending 0 when the log proves it (parser revision 7).
-
-Lobby tribes by hand (T-303): the log never says which five tribes are in the lobby, so you can pick them yourself from a fixed list, at hero select or later from the history (`Tribes` button in each game's recap; you can change, clear or move the entry). If no game is on when you pick them, they go to the next game that starts. They are saved on your computer next to the history, not inside the game's report, so re-reading a game keeps them. They are always marked "entered by you" and shown next to the tribes seen in the tavern, never mixed with them; the stats count them in a separate table. Decision D-029.
-
-Overlay (T-301): a small transparent window on top of the game with three panels: the tribes seen in the tavern (inferred) and the ones you entered (entered by you), each opponent by hero (health, the last board of theirs that entered play with the round it was seen, and your record against them, inferred from health), and a one-line status. It is off until you tick "Show overlay during a game" in the tray menu (the choice is kept), and it only shows while a Battlegrounds game is on and Hearthstone is the window in front (read from the front window's title and class only; nothing is opened or read in the game). Clicks go through it and it never takes focus. Every source is written on the panel (no mark: from the log); unknown values show `?`, an opponent not fought yet shows "not fought", and a game the parser cannot read says so instead of guessing. Boards show each minion's picture, name and attack/health (T-304). **Exclusive fullscreen hides any overlay: run Hearthstone windowed or borderless.** Decision D-032.
-
-Customizable overlay (T-302): from the tray, "Unlock overlay to move and resize panels" lets you drag the panels (or Tab to one and use the arrow keys; Shift for bigger steps, Alt to resize; or click one and use the move and size buttons shown next to it, since T-319), resize them by their corner, pick a theme (Glass or High contrast since T-311), set the opacity (80-100%), choose which panels show and reset the layout; the bar at the top has a "Lock overlay" button. While unlocked the overlay takes every click on the screen (a dim layer says so) and shows example data if no game is on. The bar and the key hint move out of the way of any panel, at any screen edge, and keyboard focus has a light ring with a dark one around it, so it shows over a light or a dark game. It locks itself again when a game starts and is always locked when the app starts. Your layout is saved per screen resolution in `overlay.json` and kept on screen if the resolution changes; if that file is broken the defaults are used and the app says so. There is no hotkey. Decision D-033.
-
-Card pictures (T-304): the overlay boards show each minion's art and English name, and the overlay, the history, the hero stats and the recap show hero portraits. They come from [HearthstoneJSON](https://hearthstonejson.com/), fetched by the app the first time they are needed and kept on your computer only (`card-cache` in the data folder; pictures capped at 50 MB); nothing is in this repository. The app asks for the card data at most once an hour, and only when its copy is a week old or a card is missing from it, and for each picture once. Names and pictures are marked "card database"; if anything fails, or a card is not in the data, the app shows the card id instead, never a guess. Card art and card data © Blizzard Entertainment; they are only used in free features. Decision D-038; sources and terms in [docs/research/card-images.md](docs/research/card-images.md).
-
-Look (T-311, D-052): the app window and the overlay use "Lamplight glass": smoky warm black, amber lamplight for actions and wins, glass panels with a thin prism edge, no frames around minions, Bricolage Grotesque and Figtree (fonts shipped inside the app). A win is a lit disc, the top half a ring, the bottom half the bare number. The overlay's themes are now Glass (default) and High contrast; a saved Combat Round, Tavern or Parchment choice opens as Glass. The website has the same look since T-316 (see "Website look" below; [plan](docs/research/redesign.md)). Design skills for Claude (third-party, read and pinned, [list and rules](.claude/skills/README.md)) live in `.claude/skills/`.
-
-Overlay v2 (T-306 to T-308, D-045): hover a hero on the game's own leaderboard (the column of heroes at the left of the game) and the overlay shows that opponent at the top of the game window (since T-309): hero, tavern tier, health, your record against them and the last board you met with the round it was seen. On game turns 2 and 3 (since T-309; before, at tier 1 or 2) it also lists the minions of their tier or lower they could have from the lobby's tribes (the ones you entered, else the ones seen in the tavern, marked inferred), each marked "possible"; with no tribes known it says so instead of guessing. The app only watches the mouse position and the game window's rectangle, about 20 times a second while a game is on and Hearthstone is in front; the overlay stays click-through and nothing is read from the game. Where the leaderboard is comes from the window size; if a patch moves it, "Arrange overlay" shows a "Leaderboard" box you can drag over it (kept per window size). The opponents panel is now one line per opponent (hero, tier, health, record) and can be hidden; the panels start at the right edge. The overlay covers the monitor that holds the game and never goes past its edges, also after a resolution, scaling or monitor change. The switch "Overlay during a game" and "Arrange overlay" are in the main window too, in sync with the tray menu.
-
-Overlay polish (T-309, D-049): the hover card now opens at the top of the game window, centred, with each board in one row, and stays inside the screen. The "possible" minions are listed only on game turns 2 and 3 (Solo and Duos), never on turn 1 or from turn 4 on. A Duos game with 10 sells in a turn was checked against the raw log: they are real sells, and the shop record is right.
-
-Lobby tribes and unmet opponents (T-310, D-050): the game does not write the lobby's tribes to its logs, nor the tribe and count it shows for each player ([research](docs/research/lobby-tribes-log.md)). The overlay now works the tribes out from Bob's offers with the card data (a minion of a single tribe proves that tribe; exact on all 18 games checked) and shows them as "Lobby (N of 5 confirmed)", marked inferred; the tribes you enter still come first. From turn 4 on, hovering an opponent you have not met yet lists the minions of their tier and the tier below from those tribes, marked "possible".
-
-Exact lobby tribes (T-326): the research is done. No log the game writes and no public source has the lobby's five tribes (checked tag by tag on all 11 raw games on disk, every log file); every app that shows them at hero select reads the game's memory. A design for a read-only memory read of two values the game shows you (the lobby's tribes and your own rating), with the account risk said plainly, is decision D-063, **approved by the user on 2026-10-11**. Built in T-327 and T-328 (below). Research: [docs/research/lobby-tribes-exact.md](docs/research/lobby-tribes-exact.md).
-
-Reading from the game (T-327, T-328, D-063): off by default; turn it on in Settings, where what it reads and the account risk are written above the switch. With it on, the app reads the lobby's five tribes from the game while a Battlegrounds game runs, read-only (query and read rights only, no injection, nothing written), checks them (the objects' types, five distinct tribes, two reads in a row that agree, not the last game's five, and later the tavern must agree) and shows them "from the game" in the overlay; on any doubt it shows "Lobby tribes: unsupported game version" and the tribes from the log. Checked on build 253216 over 2 games; on any other game build it does not read at all until that build is checked. Your own rating (T-337, D-069) is read on the Battlegrounds lobby screen, only on a checked game build (known before your first game from the start of `Net.log`), when two reads agree; checked against the screen on build 253216. The values stay on your PC and are never uploaded. How the fields were found: [docs/research/memory-reader.md](docs/research/memory-reader.md).
-
-Privacy and terms (T-104b): a data inventory written from the code, and the privacy policy and terms in [docs/legal/](docs/legal/), shown on the site at `/privacy/` and `/terms/`. In force from 10 October 2026, approved by the user; every provider detail is checked against the live setup (Supabase in Frankfurt, Cloudflare Pages and Email Routing, Lettermint, salted IP hashes). No analytics, minimum age 16, the security log is kept 90 days.
-
-Sign-in follow-ups (T-104i, D-048): every link in an account email lands on the account page and says what happened (email confirmed, link expired or already used, opened in another browser), and the page takes the code or token out of the address before doing anything with it. A link made from the dashboard is never used as a sign-in. "Forgot password?" on the sign-in page sends a reset link (the same answer whether the email has an account or not) that opens a "Set a new password" form. The account export was missing the security log because the hosted project did not write it to the database (a dashboard switch the user turns on); it is now kept 90 days. The desktop app says to use the newest email when a sign-in link from an earlier attempt is opened.
-
-Website look (T-316, D-052, D-056): the site is in "Lamplight glass": smoky warm black, amber for what you can press, frosted glass panels with a thin prism edge, Bricolage Grotesque and Figtree served from the site itself (about 106 KB of fonts). The home page opens on a pinned scene drawn with our own shapes: as you scroll, the game screen seen from the side comes apart into four panes of glass (board, tavern, leaderboard, then Tavern Ledger's pane lit in front), one caption at a time. It is plain CSS, no script; in a browser without scroll-driven animations or when you ask for less motion it is one still picture with every caption. The Content-Security-Policy, the routes and the sign-in flows did not change.
-
-The website in Spanish (T-508, D-086): every page of the site is also in Spanish (Spain) at `/es/…`, with the game's own Spanish words; a switch at the end of the menu ("Español" / "English") opens the same page in the other language, keeps its filters and remembers the choice in your browser, and your browser's language picks the first page you see. Numbers and dates follow the language. The privacy policy and the terms are translated and say that the English version prevails.
-
-Logo (T-520 to T-522, D-093, D-094): the brand mark is the **TL tankard**, a T and an L that form a tankard, picked by the user from a Gemini image and redrawn by hand as SVG in [docs/brand/logo/](docs/brand/logo/index.html) (two-tone, one-colour, with foam, small-size variants, the amber app tile and a lockup with the wordmark). It is the website's favicon and masthead mark and the desktop app's icon; `python tools/build_icons.py` rebuilds the icons from the SVGs. From the same script (T-523): the link preview image every page names for social sites (`web/public/social-card.png`), a tray icon drawn on the pixel grid at 16, 20, 24 and 32 px that the app picks for the screen's scaling, the GitHub avatar (`docs/brand/logo/avatar-500.png`) and the installer header and sidebar images for when the installer is built (T-105). The brief and prompts are in [docs/brand/](docs/brand/logo-brief.md), the twelve earlier concepts in [docs/brand/concepts/](docs/brand/concepts/index.html).
-
-Home page (T-530, D-105): the home page is a painted tavern made by the user in Gemini. The painting stays behind the whole page and moves as you scroll, from the barrel door at the top down to the cellar at the bottom, slowing almost to a stop while the five-step scene is pinned (the slowdown needs the page's small script; the descent itself is CSS); with reduced motion it stays still. Buttons have three roles, cut from the user's painted sheet with `python tools/build_home_art.py` (needs Pillow and numpy): gold stone with gems for the few key actions, dark wood for common ones, small stone for small ones (`web/src/components/ui/Button.astro`). The gold Download button is in place but unavailable, with "Not out yet" under it, until there is an installer. Every box on the page sits on the user's painted panels (carved oak, iron corners, burnt parchment), cut by the same tool. Behind the pinned scene, blurred hero portraits (loaded at view time from HearthstoneJSON, as the game viewer does) drift on depth layers with dust motes and a glow at each step. The earlier concepts (T-525, D-098) stay in [docs/brand/home/](docs/brand/home/index.html).
-
-Community hero stats (T-507, T-401, D-085): `/heroes/` ("Hero stats" in the menu) shows how each hero does in the games of the players who chose to share them: games, players, pick rate when offered, average place and top 4 or top 2 rate (Advanced adds win rate), for Solo and Duos over the last 30 days or all time, sortable. Sharing is a switch of its own on the account page, "Include my games in community hero stats", off for everyone until they turn it on and separate from the public profile. A hero shows only with at least 50 games from at least 5 players, none with more than half and no two with more than three quarters; until then the page says "Not enough games yet". The numbers are rebuilt once a day from whole days of games and shown rounded ("50+" games, "5+" players), never per player; turning the switch off takes your games out at the next daily rebuild. The privacy policy and terms say what is used, what remains possible and how to stop. Rules: [docs/research/community-heroes.md](docs/research/community-heroes.md).
-
-Public leaderboards (T-506, T-509, D-082): `/leaderboards/` ranks players who made their profile public, by their display name, on their uploaded games: Solo and Duos, the last 7 days, 30 days or all time; average place, top 4 or top 2 rate, win rate, games, longest top-half streak and best average place per hero, and in Advanced APM, gold beyond income, rolls and triples per game, biggest board and most golden minions. Since T-534 (D-103) a public player is listed from their first finished game in the mode and period, and a value from fewer than 20 games (10 with the hero) is marked "few games" instead of hidden; every value shows the games behind it and says how it is counted; games with impossible values are left out. The boards are rebuilt every 10 minutes; a profile made private leaves them at once. Display names are checked on the server against a short word list (offensive words and official-looking names). The privacy policy and terms say what becomes public, how to leave and how long the numbers are kept. No ratings, no BattleTags. Rules: [docs/research/leaderboards.md](docs/research/leaderboards.md).
-
-Data page pieces (T-501, D-070): the shared parts of the coming data pages (stat tiles that say how many games back each number, compact tables with "Show all", folds, Simple/Advanced and Solo/Duos switches, place badges, pictures cropped with no white edges, empty, unknown, loading and error states, and three charts drawn at build time) are on a hidden style page, `/style/`, with made-up data only and no game art. Nothing else on the site changed; the Content-Security-Policy is the same.
-
-Auth emails (T-104f): sign-up and sign-in emails go out from `noreply@tavernledger.net` through Lettermint (Netherlands, data kept in the EU, logs deleted after 28 days), with open and click tracking off, so the one-time link goes straight to the sign-in server. Tested end to end on 2026-10-10 (DMARC pass, no unsubscribe header, sign-in, export and deletion on the site). Decision D-041; details in [docs/research/deploy.md](docs/research/deploy.md) sections 10.11 and 10.12. Lettermint approved the account the same day. Sign-ups stay closed until the user opens them.
-
-Auth emails in English and Spanish (T-542, D-114): the sign-up, sign-in link, password reset, email change and invite emails have the Tavern Ledger logo, the site's colours, one clear button with the plain link under it, what to do if you did not ask for it and the fan notice. Each email is in Spanish for accounts made on the Spanish site (the site keeps the page's language with the account at sign-up) and in English otherwise, subject included. The links are Supabase's own, unchanged. Templates in `supabase/templates/` (written by `tools/build_auth_emails.py`), checked on the local stack; the hosted project gets them by hand ([deploy.md](docs/research/deploy.md) section 10.14).
-
-
-Combat simulator (T-601 to T-604, D-081): a new engine, `crates/combat-sim`, plays a combat between two boards many times and gives the odds to win, tie or lose and the damage. It knows a card only when it is in its checked lists; any other card gives "not modelled" instead of a number. Checked on the user's 19 logged Solo combats: the real result got 96% on average, and 10 000 trials take about 32 ms. Not on the website yet (T-606); how the website runs it is the user's choice. Design and numbers: [docs/research/combat-simulator.md](docs/research/combat-simulator.md).
-
-Combat odds in the overlay (T-603b, T-604, T-605, D-084): in Solo, during each shop turn, the overlay shows the odds to win, tie or lose against your next opponent, under their line, worked out from your board now and the last board of theirs you saw, with how old that board is ("their board seen turn 6"). Advanced adds the damage both ways and the cards played with a gap. No number when it cannot be trusted: no board of theirs seen, a card the simulator does not know, card data missing. It runs on its own thread, so the overlay never waits for it, and a switch in Settings turns it off. Honest about its strength: on the user's Solo games the board last seen was 7 rounds old on average and the most likely result was right 2 times in 5, so take it as a hint. The simulator now also replays each logged combat attack by attack to find which rule differs (the one Solo miss turned out to be the dice), and knows more cards: 2% of the minions seen are still not modelled, down from 5%.
-
-Duos odds (T-608, D-087): the simulator now plays Duos combats, each team's second board coming in when the first is gone, and the overlay shows the odds against your next opposing team in Duos too: your board now and your teammate's last board you saw, in the order the game set, against the last boards of both opponents you saw. When one of those boards was never seen, it says which instead of a number. Checked on the user's Duos games: with each combat's own boards the engine gave the real result 80% on average; with the boards seen before (2.4 rounds old on average) the most likely result was right 26 times in 36 on the games still in the game's logs and 51 in 104 over the whole history, so it is a hint, not a promise. Four more cards are modelled.
-
-Simulator round 4 (T-604, T-607, D-088): the simulator knows the cards that most often blocked the odds after round 3, so far fewer Duos combats get no number: 30 of 232 in the user's history instead of 50 (13% instead of 22%), with the real result still given 81% on average where it does give one. Cards that summon from the hand stay blocking, as recommended, since the minion they summon is not seen; alone they now block 21 of those 30. `combat-validate --export` writes these accuracy numbers per mode as a small JSON file, with no names or game details, for a future accuracy page on the website.
-
-Simulator round 5 (T-604, D-097): cards that summon a minion from your hand no longer block the odds. Checked first on the user's combats: played with that summon left out, the odds were about as good as everywhere else (17 of 21 combats right), so they now play as approximate and are named ("≈"). With a few more cards (Foul Egg, golden Fish of N'Zoth, Mishmash, Timewarped Whirl-O-Tron), only 8 of the 232 Duos combats in the user's history get no number (3%, from 13%), and the real result is still given 81% on average. Stitched Salvager and Ghastcoiler still block. The website's simulator and accuracy page use the new engine (0.5.0).
-
-Dark Gifts in the simulator (T-527, D-100): the simulator now knows all 47 of this season's Dark Gifts. The 23 that act in combat play their effect (start of combat, Deathrattles, Reborn, a shield that takes three hits, golden, all types), the others change nothing in combat, and a gift it does not know gives no number, by name. In the user's logs, 53 of 84 combats had a gifted minion. Findings: [docs/research/dark-gifts.md](docs/research/dark-gifts.md). The website's simulator uses the new engine (0.6.0).
-
-Dark Gifts on every minion (T-528, D-107): the app now reads each minion's Dark Gifts from the log, on your board and your opponents' (as the game shows them), and shows a small star on every minion picture that has one (recap boards, combat replays, the overlay, the website's game viewer), with the gift's name and a short summary as the tooltip, in English or Spanish. The overlay's odds and the accuracy check play the gifts; a gift the log does not name is marked "unknown" and the odds say approximate. On the logs on the PC the odds' Brier score went from 0.260 to 0.251. Older games keep no gifts until they are read again from their logs.
-
-Combat simulator on the website (T-606, D-090): [tavernledger.net/simulator/](https://tavernledger.net/simulator/) (and `/es/simulator/`) runs the app's own combat engine in your browser. Signed in, pick one of your games and a round: your board and the opponent's from that combat load (in Duos both teams' boards, in the game's order); change them (remove, move, Attack and Health, golden, keywords, add a minion by name, tavern tiers) and the odds to win, tie or lose and the likely damage update in a moment, the same as the overlay would give for those boards. A card the engine does not know is named and no number is shown; approximate ones are marked "≈" with the reason. Without an account the editor works on its own. Only that page may run WebAssembly; the rest of the site's security policy is unchanged.
-
-Simulator page in the tavern (T-526, D-112): `/simulator/` is now a duel table in the painted tavern, with its own scene (the barrel door between the forge's sparks and blue magic, held still behind the page). Three numbered steps: pick one of your games and pick a fight on the parchment beside the table, then the odds, written large on a slip in the middle of the table between the opponent's board (across) and yours (near). Minions are cards with their art, Attack, Health, keywords and a violet star per Dark Gift, and the picked minion's panel can now add or remove Dark Gifts. The list of games wraps and scrolls inside its box instead of running off the page. The art is cut with `python tools/build_sim_art.py`.
-
-Simulator accuracy page (T-607, D-091): [tavernledger.net/accuracy/](https://tavernledger.net/accuracy/) (and `/es/accuracy/`) shows how often the combat odds were right on the user's own combats, per mode, always next to the share of combats that got no odds because a card is not modelled (Duos: 166 of 202 scored combats right, no odds in 13%), with a "said / happened" calibration chart, the cards that block most and, in Advanced, the Brier score. Built from a committed export; refreshing it after a card round is one command and a PR ([combat-simulator.md](docs/research/combat-simulator.md) section 7.6). The home page has a short dated "What's new" list instead of an email.
-
-Simulator accuracy, deep iteration (T-609, D-115): every miss on the user's logged combats was traced to its cause with the attack-by-attack replay, and six rounds fixed what public card texts and the user's logs could: Heroic Broodmother's start-of-combat attack, De-volition-ist's hit when it dies, golden Persistent Poet, and the game-long values the board does not show (Blood Gem and Tavern spell upgrades, Eternal Knights, the Undead Attack, Beetles), which the harness now reads from the log. On the 73 combats of the logs, the most likely result was right 60 → 61 times (Brier 0.287 → 0.253) and 33 of 69 combats replay move for move to the end (29 before). `combat-validate --games <files or folders> --summary` now checks any set of games with one command (counts only, no names) and replays the combats saved with them. The app and the website do not have the game-long values yet (a follow-up); the website's engine is 0.7.0. Findings: [docs/research/combat-simulator.md](docs/research/combat-simulator.md), section 7.7.
-
-Next tasks, in the user's order (2026-10-10, evening; hub prompt [prompts/sessions/036-hub.md](prompts/sessions/036-hub.md)): (1) the user's real-game test of the hover overlay (T-306 to T-308) and the shop record (T-204, T-205), then a fix and polish session; (2) before opening sign-ups: done in session 037 (T-104i), waiting on the user for the audit log switch and the DMARC report record; (3) waiting on the user: opening sign-ups, the installer and code signing (T-105), HSTS at one year (not before 2026-10-23), T-108's second game build after the next patch. Rounds 1 and 2 (sessions 016 to 035) are merged.
-
-## Check your log setup
-
-Read-only script (Python 3.10+, no dependencies). It reports whether `log.config` enables the Power log, where the game writes its logs, and which game types each log contains. It never writes anything and never prints player names.
-
-```
-python tools/check_logs.py
-```
-
-It also checks `client.config` next to `Hearthstone.exe`: without `[Log]` `FileSizeLimit.Int=-1` the game stops writing the log at about 10 MB. A missing file, an unreadable file and a missing setting are reported as three different problems, with the lines to add. The script never edits either file.
-
-Options: `--config PATH`, `--client-config PATH` and `--logs-dir PATH` if your install is not found automatically.
-
-## Parse a log (prototype)
-
-Needs Python 3.10+ and the pinned dependencies. Read-only; the output has card ids and lobby player numbers, never player names.
-
-```
-python -m pip install --require-hashes --only-binary=:all: -r requirements.txt
-python tools/parse_bg.py "<Hearthstone folder>\Logs\Hearthstone_<date>\Power_old.log"
-```
-
-Add `--json` for machine-readable output.
-
-## Look up your leaderboard rating (prototype)
-
-Python 3.10+, no dependencies. It asks the public leaderboard for your own row only and prints one of four states: your rating, below the leaderboard cut-off, ambiguous (your name appears more than once) or unknown. It never prints your name.
-
-```
-python tools/leaderboard.py --name "<your BattleTag>" --mode solo --region EU
-```
-
-Use `--mode duos` for Duos, `--hearthstone-log PATH` to read the region from the game's `Hearthstone.log` instead of `--region`, and `--json` for machine-readable output. To answer "below the cut-off" it must check every page (about 170 requests, a few minutes), so it does that at most once a day per region and mode and otherwise shows the last result with its time. The cache lives in `.local/leaderboard-cache.json`.
-
-## Desktop app and tracker (prototype)
-
-Rust workspace (Tauri 2, D-014). `tavern-watch` follows the game's `Power.log`
-and saves each Battlegrounds game to `%APPDATA%\TavernLedger\games.jsonl` as
-soon as it ends; the desktop app does the same in the background and shows
-the history. Both read the log files; the app can also read two values from
-the game itself if you turn that on (D-063, below). The history holds card ids,
-places and boards, never player names. Hero names come from the log itself,
-in your game's language; a hero the log does not name shows its card id.
-Only one of them can write the history at a time: a second copy says so and
-does not write. The app lives in the system tray: closing the window keeps it
-following the log, and "Quit" in the tray menu exits. "Start with Windows" in
-the same menu is off until you turn it on.
-
-Per mode (Solo and Duos apart), the app shows your totals, your numbers per
-hero (skins of a hero grouped together) and the tribes the tavern offered you.
-Those are not the lobby's tribes: the log does not say which tribes were in
-the lobby. Unfinished or unreadable games are counted apart, never as places.
-
-```
-cargo run --release -p tracker -- --import    # follow live, after importing older sessions
-cargo run --release -p desktop                # the app
-cargo run --release -p tracker -- --reparse   # re-read saved sessions after a parser fix
-cargo run --release -p bg-parser -- "<path>\Power_old.log" --json
-```
-
-Upload to the website: the "Upload to the website" panel at the top of the window signs you in by email link, shows how many games are waiting, the last result and why uploading stopped, if it did, and holds the "Upload games" switch (off until you turn it on). The app uploads to the hosted project; a `server.json` in the data folder (`{"url": "...", "anon_key": "..."}`, the public key only) points it at another server, such as the local stack. `--data-dir <folder>` makes the app use another folder for the history and the upload settings, e.g. to try a build:
-
-```
-cargo run -p desktop -- --data-dir "$env:TEMP\tl-try"
-```
-
-Each saved game records the parser version that read it (shown in the tooltip of its date in the app; older records say "unknown version"). `--reparse` saves only games whose report changed and lists the ones whose logs are gone; it does not run while the app is open.
-
-### Replay a log (development only)
-
-To try the app or `tavern-watch` without playing, replay a saved log into a temporary folder. Never shipped to users; it only writes under the folder you give it.
-
-```
-python tools/dev/replay_log.py "<path>\Power_old.log" --dest-dir "$env:TEMP\replay" --lines-per-second 500
-cargo run -p tracker -- --logs-dir "$env:TEMP\replay\Logs" --data-dir "$env:TEMP\replay\data"
-```
-
-### Reconnect dev tool (development only)
-
-To collect test games faster, `tools/dev/reconnect.py` drops Hearthstone's own connections on a hotkey so the client reconnects past combat animations. Never shipped to users; needs an elevated terminal; it can carry risk for your Battle.net account, so only use it by hand on your own account. Games played with it are marked in the history and left out of the stats, the upload and fixtures. Details, risk and how to undo: [tools/dev/README.md](tools/dev/README.md).
-
-To see the overlay on a replayed game, follow the replayed folder with the app and force the overlay on (`--overlay-dev` turns it on, shows it whatever window is in front and does not save the on/off choice (layout and theme are saved in the data folder you give; `--overlay-unlock` starts it unlocked); `--logs-dir` is for this and nothing else):
-
-```
-cargo run -p desktop -- --data-dir "$env:TEMP\replay\data" --logs-dir "$env:TEMP\replay\Logs" --overlay-dev
-```
-
-## Development
-
-```
-python -m pip install --require-hashes --only-binary=:all: -r requirements.txt
-python -m unittest discover -s tests
-cargo test --workspace
-```
-
-CI runs the tests, checks relative Markdown links and scans the history for secrets.
-
-### Real-game fixtures
-
-Copy the raw log into `.local/` (never commit it), build the parser and make one fixture per game; the script writes nothing if the log has a game played with the reconnect dev tool (D-043), if a name or id would be left, or if the fixture would read differently from the raw game:
-
-```
-cargo build --release -p bg-parser
-python tools/make_fixture.py .local/fixtures-raw/Power_old.log --game 3 --session Hearthstone_<date> --out crates/bg-parser/tests/data/real/b<build>_duos.log --parser target/release/bg-parse
-```
-
-Check the report it writes next to the fixture (`.json`) by hand, add the build to `TESTED_BUILDS` if it is new (then make the fixture again, so the report has no "not tested" warning), and get the user's OK before committing. Fixture times count from the game's first line (D-046), so durations and APM are tested too.
-
-### Backend (local Supabase stack)
-
-Needs Node.js and Docker Desktop. The CLI is pinned in `package.json`.
-
-```
-npm ci
-npx supabase start                    # first run pulls the images (a few GB)
-npx supabase test db                  # pgTAP: schema, row-level security, export
-deno test supabase/functions/        # delete-account, upload-game, sweep
-$env:TAVERN_SUPABASE_LOCAL = "1"; python -m unittest tests.test_supabase_local -v
-$env:TAVERN_SUPABASE_LOCAL = "1"; cargo test -p uploader --features http --test local_stack -- --nocapture
-pwsh tools/backup_supabase.ps1 -Local # backup into .local/backups/
-```
-
-These run on the developer's machine, not in CI. The desktop end-to-end test sends one sign-in email and the website one sends two (sign-up, password reset); the local stack allows 30 an hour, as the hosted project. The daily sweep (files with no row, audit entries of deleted accounts or older than 90 days, expired counters) is the `sweep` function: `POST /functions/v1/sweep` with the service-role key, or with the sweep token that `pg_cron` sends every day at 03:17 UTC (migration `20261010090000_sweep_schedule.sql`; on the local stack the job sends nothing because Vault has no `project_url`). Each finished sweep leaves a row in `private.sweep_runs`.
-
-Hosted project (session 022, [deploy.md](docs/research/deploy.md) section 10): migrations and the three functions will reach it through the Supabase GitHub integration on each merge to `main` once the user connects it; auth settings (sign-ups closed, site URL, redirect URL, password length) are set in the dashboard. The desktop app has the hosted URL and publishable key built in. Without `-Local`, the backup script backs up the linked hosted project, reading `SUPABASE_URL` and `SUPABASE_SECRET_KEY` (an `sb_secret_…` key; legacy keys are refused) from `.local/supabase.env`; the Free plan has no Supabase backups, so this is the only one.
-
-### Website (`web/`)
-
-Needs Node.js 22.12 or later. Copy `web/.env.example` to `web/.env` and fill in the local stack's API URL and anon key from `npx supabase status` (only the public key: the build refuses any other). `PUBLIC_SIGNUPS_OPEN=true` shows the sign-up form; unset, as on the live site, `/signin/` offers sign-in only.
-
-```
-cd web
-npm ci
-npm test                    # unit tests (Node's built-in runner)
-npm run build               # static site in web/dist/
-npm run test:dist           # checks on the built files: CSP, nothing inlined, no secret key
-npm run preview             # http://127.0.0.1:3000, the address the local stack's auth expects
-$env:TAVERN_SUPABASE_LOCAL = "1"; npm run test:local   # end to end against the local stack
-```
-
-CI runs the unit tests, the build and the built-file checks.
+Contributions are welcome under the project's license: read [CONTRIBUTING.md](CONTRIBUTING.md) first. To report a security problem privately, see [SECURITY.md](SECURITY.md).
 
 ## License
 
 GNU Affero General Public License, version 3 only (`AGPL-3.0-only`). See [LICENSE](LICENSE). You can use, study, change and share the code; if you share a changed version, or run it for others over a network, you share its source under the same license.
 
-Versions published before 12 October 2026 were released under the MIT license and stay available under it (D-101).
+Versions published before 12 October 2026 were released under the MIT license and stay available under it.
 
-Contributions are welcome under the same license. Hearthstone's names, cards and art belong to Blizzard Entertainment and are not covered by this license.
+Hearthstone's names, cards and art belong to Blizzard Entertainment and are not covered by this license.
