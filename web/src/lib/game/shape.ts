@@ -11,6 +11,7 @@
 import type { Result } from "../data/format.ts";
 import type { Choice, Entry, GameRecord, Minion, Report, Round, Seat, ShopTurn, TrinketSlot } from "./report.ts";
 import { heroName } from "../heroes/names.ts";
+import type { Replay, Side } from "./replayRead.ts";
 
 export interface HeroRef {
   id: string | null;
@@ -101,6 +102,20 @@ export interface ChoiceView {
   takenKnown: boolean;
 }
 
+/** One round's combat replay (T-536), with what the turns table says of that combat. */
+export interface ReplayCombat {
+  round: number;
+  result: Result | null;
+  inferred: boolean;
+  opponents: HeroRef[];
+  /** Each side's hero as the combat starts. */
+  heroes: Record<Side, string | null>;
+  /** Every hero the replay names (the start and each Duos board coming in), by id. */
+  heroNames: ReadonlyMap<string, HeroRef>;
+  /** null: the record has one this site cannot read ("not available"). */
+  replay: Replay | null;
+}
+
 export interface GameView {
   summary: Summary;
   turns: TurnRow[];
@@ -111,6 +126,8 @@ export interface GameView {
   heroPick: { offered: HeroRef[]; picked: string | null; rerolls: number | null } | null;
   oldGod: number | null;
   notes: string[];
+  /** The rounds that have a replay, in order; a round without one is not listed. */
+  replays: ReplayCombat[];
 }
 
 const TRINKET_SOURCES = new Set(["BG30_Trinket_1st", "BG30_Trinket_2nd"]);
@@ -372,19 +389,48 @@ function choiceViews(choices: Choice[]): ChoiceView[] {
     }));
 }
 
+/** The heroes as the combat starts: the first of each side in the round (the app's rule). */
+function startHeroes(round: Round): Record<Side, string | null> {
+  const first = (side: Side) => round.entries.find((e) => e.side === side && e.hero !== null)?.hero ?? null;
+  return { own: first("own"), opponent: first("opponent") };
+}
+
+function replayCombats(report: Report, turns: TurnRow[]): ReplayCombat[] {
+  const byTurn = new Map(turns.map((x) => [x.turn, x]));
+  return report.rounds.flatMap((round) => {
+    if (round.replay === null) return [];
+    const row = byTurn.get(round.number);
+    const heroes = startHeroes(round);
+    const replay = round.replay.ok ? round.replay.replay : null;
+    const ids = [heroes.own, heroes.opponent, ...(replay?.events ?? []).map((e) => (e.kind === "board_in" ? e.hero : null))];
+    const heroNames = new Map(ids.filter((id): id is string => id !== null).map((id) => [id, heroRef(report, id)]));
+    return [{
+      round: round.number,
+      result: row?.result ?? null,
+      inferred: row?.inferred ?? false,
+      opponents: row?.opponents ?? [],
+      heroes,
+      heroNames,
+      replay,
+    }];
+  });
+}
+
 export function shapeGame(record: GameRecord): GameView {
   const report = record.report;
   const sides = new Sides(report);
   const list = combats(report, sides);
   const pick = report.heroSelect;
+  const turns = turnRows(report, list);
   return {
     summary: summary(report, list),
-    turns: turnRows(report, list),
+    turns,
     opponents: opponentsMet(report, list),
     lobby: seatViews(report),
     choices: report.choices === null ? null : choiceViews(report.choices),
     heroPick: pick ? { offered: pick.offered.map((id) => heroRef(report, id)), picked: pick.picked, rerolls: pick.rerolls } : null,
     oldGod: report.oldGod,
     notes: [...report.problems, ...report.warnings],
+    replays: replayCombats(report, turns),
   };
 }

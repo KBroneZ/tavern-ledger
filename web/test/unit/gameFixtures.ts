@@ -1,5 +1,5 @@
 // Synthetic game records for the game viewer's tests (T-504): made-up heroes,
-// card ids and numbers, shaped like the parser's report (revision 7). No real
+// card ids and numbers, shaped like the parser's report (revision 9). No real
 // player data, no real card names.
 
 export const USER = "0f8fad5b-d9cb-469f-a165-70867728950e";
@@ -46,7 +46,79 @@ const turn = (n: number, extra: Json = {}): Json => ({
   ...extra,
 });
 
-/** A finished Solo game: 3 shop turns, 3 combats (log, inferred, unknown). */
+const rm = (side: "own" | "opponent", card_id: string | null, atk: number, health: number, position: number, extra: Json = {}): Json => ({
+  side,
+  card_id,
+  atk,
+  health,
+  position,
+  golden: false,
+  keywords: [],
+  ...extra,
+});
+
+/** Turn 1's combat replay: your 2/3 kills their 1/1, then hits their hero for 3. */
+export function shortReplay(): Json {
+  return {
+    minions: [rm("own", "SYN_M_01", 2, 3, 1), rm("opponent", "SYN_M_04", 1, 1, 1)],
+    start: 2,
+    events: [
+      { kind: "attack", attacker: 0, defender: 1 },
+      { kind: "damage", minion: 1, amount: 2, health: -1 },
+      { kind: "damage", minion: 0, amount: 1, health: 2 },
+      { kind: "death", minion: 1 },
+      { kind: "hero_damage", side: "opponent", amount: 3 },
+    ],
+    complete: true,
+  };
+}
+
+/**
+ * Turn 2's combat replay: a start-of-combat trigger, a Divine Shield popped,
+ * a death with a deathrattle summon in the middle of their board, a buff and
+ * a Dark Gift on a golden minion; your hero takes 5.
+ */
+export function longReplay(): Json {
+  return {
+    minions: [
+      rm("own", "SYN_M_01", 2, 3, 1, { keywords: ["deathrattle"] }),
+      rm("own", "SYN_M_02", 3, 3, 2, { golden: true, keywords: ["taunt", "divine_shield"], gifts: ["SYN_GIFT_1"] }),
+      rm("opponent", "SYN_M_05", 5, 5, 1),
+      rm("opponent", null, 1, 2, 2, { gift_unknown: true }),
+      rm("opponent", "SYN_M_09", 2, 2, 2),
+    ],
+    start: 4,
+    events: [
+      { kind: "trigger", trigger: "start_of_combat", side: "opponent", card_id: "SYN_TRINKET_1", source: null },
+      { kind: "stats", minion: 2, atk: 6, health: 9 },
+      { kind: "attack", attacker: 2, defender: 1 },
+      { kind: "shield", minion: 1, on: false },
+      { kind: "damage", minion: 2, amount: 3, health: 6 },
+      { kind: "attack", attacker: 1, defender: 3 },
+      { kind: "damage", minion: 3, amount: 3, health: -1 },
+      { kind: "death", minion: 3 },
+      { kind: "trigger", trigger: "deathrattle", side: "opponent", card_id: "SYN_M_09", source: 3 },
+      { kind: "summon", minion: 4 },
+      { kind: "attack", attacker: 4, defender: 0 },
+      { kind: "damage", minion: 0, amount: 2, health: 1 },
+      { kind: "damage", minion: 4, amount: 2, health: 0 },
+      { kind: "death", minion: 4 },
+      { kind: "attack", attacker: 2, defender: 1 },
+      { kind: "damage", minion: 1, amount: 6, health: -3 },
+      { kind: "damage", minion: 2, amount: 3, health: 3 },
+      { kind: "death", minion: 1 },
+      { kind: "attack", attacker: 0, defender: 2 },
+      { kind: "damage", minion: 0, amount: 6, health: -5 },
+      { kind: "damage", minion: 2, amount: 2, health: 1 },
+      { kind: "death", minion: 0 },
+      { kind: "trigger", trigger: "deathrattle", side: "own", card_id: "SYN_M_01", source: 0 },
+      { kind: "hero_damage", side: "own", amount: 5 },
+    ],
+    complete: true,
+  };
+}
+
+/** A finished Solo game: 3 shop turns, 3 combats (log, inferred, unknown); turns 1 and 2 have replays. */
 export function soloReport(): Json {
   return {
     index: INDEX,
@@ -77,6 +149,7 @@ export function soloReport(): Json {
         opponents: [3],
         health_after: { "2": 30, "3": 27, "4": 30 },
         result: "won",
+        replay: shortReplay(),
       },
       {
         number: 2,
@@ -88,6 +161,7 @@ export function soloReport(): Json {
         opponents: [4],
         health_after: { "2": 25, "3": 27, "4": 30 },
         result: null,
+        replay: longReplay(),
       },
       {
         number: 3,

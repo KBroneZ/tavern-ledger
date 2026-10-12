@@ -10,6 +10,7 @@ import { h, mount, type VNode } from "../view/node.ts";
 import { stateBlock } from "../view/pieces.ts";
 import { loadGame, type Download, type LoadResult } from "./load.ts";
 import { renderGame } from "./render.ts";
+import { startReplays } from "./replayPlayer.ts";
 import { readRecord } from "./report.ts";
 import { shapeGame } from "./shape.ts";
 import { g, type GameStringKey } from "./strings.ts";
@@ -70,6 +71,8 @@ function showGame(result: Extract<LoadResult, { kind: "ok" }>, ref: GameRef): vo
   }
   const title = pageHeading(view.summary);
   show(title, [...banners, ...renderGame(view, dateText(playedOn(ref.session)))], g("page.loaded", { title }));
+  const replays = document.getElementById("gv-replays");
+  if (replays) startReplays(replays, view.replays);
 }
 
 async function run(ref: GameRef, download: Download, signedIn: () => Promise<boolean>): Promise<void> {

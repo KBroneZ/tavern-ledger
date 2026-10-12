@@ -8,6 +8,11 @@
 // No free text passes except hero names (the game's own, checked like the
 // server does, BattleTag shapes refused) and the parser's short notes.
 
+import { KEYWORDS, type Keyword } from "./keywords.ts";
+import { readReplay, type ReplayRead } from "./replayRead.ts";
+
+export { KEYWORDS, type Keyword };
+
 /** The parser revision this site knows (crates/bg-parser PARSER_REVISION). */
 export const KNOWN_REVISION = 9;
 
@@ -27,17 +32,6 @@ const MAX_GIFTS = 4;
 const MAX_TURN = 100;
 const MAX_GAME_OFFERS = 3000;
 
-export const KEYWORDS = [
-  "taunt",
-  "divine_shield",
-  "reborn",
-  "venomous",
-  "windfury",
-  "stealth",
-  "deathrattle",
-  "rally",
-] as const;
-export type Keyword = (typeof KEYWORDS)[number];
 export type Outcome = "won" | "lost" | "tie";
 export type TrinketSlot = "first" | "second" | "hero_power";
 
@@ -68,6 +62,8 @@ export interface Round {
   healthAfter: ReadonlyMap<number, number>;
   /** The result the game records; null when the log does not say. */
   result: Outcome | null;
+  /** The combat replay (parser revision 8, T-536): null when the round has none; not ok when it cannot be read. */
+  replay: ReplayRead | null;
 }
 
 export interface Seat {
@@ -269,7 +265,15 @@ function round(r: Reader, v: unknown): Round | null {
     ownHealthAfter: r.int(o.own_health_after, -MAX_HEALTH, MAX_HEALTH),
     healthAfter: r.health(o.health_after),
     result: r.oneOf(o.result, ["won", "lost", "tie"] as const),
+    replay: replayOf(r, o.replay),
   };
+}
+
+/** A replay that cannot be read is one unreadable value, shown as "not available". */
+function replayOf(r: Reader, v: unknown): ReplayRead | null {
+  const read = readReplay(v);
+  if (read && !read.ok) r.bad(null);
+  return read;
 }
 
 /** One round per number (a repeated number keeps the last, like the server), in order. */

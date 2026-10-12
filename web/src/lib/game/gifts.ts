@@ -5,6 +5,7 @@
 // no gift named shows "Dark Gift (unknown)".
 import table from "../../data/gifts.json" with { type: "json" };
 import { lang } from "../i18n.ts";
+import { cls, h, type VNode } from "../view/node.ts";
 import { g } from "./strings.ts";
 
 interface Words {
@@ -37,4 +38,23 @@ export function giftMarks(m: { gifts: readonly string[]; giftUnknown: boolean })
 /** A gift's name in the page's language, else its card id (the choices list). */
 export function giftName(id: string): string {
   return Object.prototype.hasOwnProperty.call(GIFTS, id) ? GIFTS[id][lang()].name : id;
+}
+
+/** The minion's Dark Gifts (T-528): a mark per gift, its name and summary as the tooltip. */
+export function giftList(m: { gifts: readonly string[]; giftUnknown: boolean }): VNode | null {
+  const marks = giftMarks(m);
+  if (marks.length === 0) return null;
+  return h(
+    "span",
+    { class: "gv-gifts" },
+    ...marks.map((k) =>
+      h(
+        "span",
+        { class: cls("gv-gift", { "is-unknown": k.id === null }), title: k.title },
+        h("span", { "aria-hidden": "true" }, "✦ "),
+        h("span", { class: "visually-hidden" }, k.title),
+        h("span", { "aria-hidden": "true" }, k.name),
+      ),
+    ),
+  );
 }
