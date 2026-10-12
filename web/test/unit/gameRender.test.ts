@@ -51,7 +51,7 @@ test("render: Simple has the summary and the turns; the rest is Advanced only", 
   const sections = nodes.filter((n) => n.tag === "section");
   const simple = sections.filter((n) => !attr(n, "class")?.split(" ").includes("adv")).map((n) => attr(n, "aria-labelledby"));
   const adv = sections.filter((n) => attr(n, "class")?.split(" ").includes("adv")).map((n) => attr(n, "aria-labelledby"));
-  assert.deepEqual(simple, ["gv-turns-title"]);
+  assert.deepEqual(simple, ["gv-turns-title", "gv-replays-title"]);
   assert.deepEqual(adv, ["gv-boards-title", "gv-opponents-title", "gv-choices-title", "gv-lobby-title", "gv-notes-title"]);
   assert.equal(attr(nodes[0], "class"), "gv-summary");
   const advTiles = [...walk(nodes[0])].filter((n) => attr(n, "class") === "tile adv").map((n) => text(n.children[0]));
@@ -132,8 +132,12 @@ test("render: a gifted minion shows a mark per gift with its name and summary, i
   const board = report.rounds[1].entries[0].board;
   board[0].gifts = ["BG36_MidGameEffect_000t9", "BG99_Unknown_1"];
   board[1].gift_unknown = true;
+  // The boards section's marks (the replay section draws its own: gameReplayView.test.ts).
   const gifts = (nodes: VNode[]) =>
-    nodes.flatMap((n) => [...walk(n)]).filter((n) => attr(n, "class")?.split(" ").includes("gv-gift"));
+    nodes
+      .filter((n) => attr(n, "aria-labelledby") === "gv-boards-title")
+      .flatMap((n) => [...walk(n)])
+      .filter((n) => attr(n, "class")?.split(" ").includes("gv-gift"));
   const en = gifts(renderGame(view(report), "2026-10-09"));
   assert.ok(en.length >= 3);
   assert.equal(attr(en[0], "title"), "Dark Gift: Admiration: Start of Combat: gain the Attack of the minion to its left.");

@@ -62,7 +62,7 @@ test("every key exists in both languages, none is empty, and the placeholders ma
 
 test("the Spanish tables are Spanish: no key keeps its English text, but for names and symbols", () => {
   // Same in both: symbols, abbreviations, brand and mode names.
-  const same = new Set(["—", "?", "#", "Solo", "Triples", "APM", "Top 4", "Top 2", "top 4", "top 2", "Top 4 / Top 2", "{n}+", "{hero}", "{hero} · {place}", "{attack}/{health}", "{board}, {mode}, {period}", "{name}: {text}"]);
+  const same = new Set(["—", "?", "#", "Solo", "Triples", "APM", "Top 4", "Top 2", "top 4", "top 2", "Top 4 / Top 2", "{n}+", "{hero}", "{hero} · {place}", "{attack}/{health}", "{board}, {mode}, {period}", "{name}: {text}", "{n}×"]);
   for (const table of TABLES) {
     for (const key of Object.keys(table.en)) {
       const english = table.en[key];

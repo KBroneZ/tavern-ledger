@@ -1,0 +1,574 @@
+/* Combat replays on the game viewer (T-536), on the data pages' tokens.
+   A sunk tavern table: theirs on top, yours below, each minion an oval
+   portrait with its attack and health. Every mark is a shape or a word as
+   well as a colour (the step's words say what happened). Motion only where
+   the viewer allows it; with reduced motion the replay goes step by step. */
+
+.rp {
+  --rp-tile: clamp(42px, 11vw, 66px);
+  --rp-atk: #ffcf5a;
+  --rp-hp: #e2554a;
+  --rp-hit: #ff9a8a;
+  --rp-buff: var(--good);
+  --rp-shield: #fff1b8;
+  --rp-trigger: var(--info);
+  --rp-move: 220ms;
+}
+
+/* ---------- Picking a combat ---------- */
+
+.rp-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.rp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 36px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-chip);
+  background: var(--surface-1);
+  color: var(--text-2);
+  font: 600 var(--t-sm) / 1 var(--body);
+  box-shadow: none;
+  cursor: pointer;
+}
+
+/* The result as a dot shape per outcome: a disc, a ring, a bar. */
+.rp-chip::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mark-tie);
+}
+
+.rp-chip.is-win::before {
+  background: var(--mark-win);
+}
+
+.rp-chip.is-loss::before {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--mark-loss);
+}
+
+.rp-chip.is-tie::before,
+.rp-chip.is-unknown::before {
+  height: 2px;
+  border-radius: 1px;
+}
+
+.rp-chip:hover {
+  background: var(--panel-hi);
+  color: var(--text-1);
+  box-shadow: none;
+}
+
+.rp-chip[aria-pressed="true"],
+.rp-chip[aria-pressed="true"]:hover {
+  background: var(--surface-2);
+  color: var(--text-1);
+  box-shadow: inset 0 -2px 0 var(--amber);
+}
+
+/* ---------- The player ---------- */
+
+.rp-player {
+  display: grid;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.rp-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-1) var(--s-3);
+}
+
+.rp-title {
+  font: 700 var(--t-lg) / 1.25 var(--display);
+  overflow-wrap: anywhere;
+}
+
+.rp-result {
+  font-weight: 700;
+}
+
+.rp-counter {
+  margin-left: auto;
+  color: var(--text-2);
+  font-size: var(--t-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.rp-stage {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-panel);
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 50%, rgb(255 178 74 / 0.09), transparent 70%),
+    linear-gradient(180deg, rgb(116 128 224 / 0.06), transparent 40%, transparent 60%, rgb(255 178 74 / 0.06)),
+    var(--surface-sunk);
+  overflow: hidden;
+}
+
+.rp-side {
+  display: grid;
+  grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) minmax(0, 11rem);
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.rp-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.rp-hero-face {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+  font-size: var(--t-sm);
+  font-weight: 700;
+}
+
+.rp-hero-name {
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.rp-hit {
+  color: var(--rp-hit);
+  font: 800 var(--t-md) / 1 var(--display);
+  font-variant-numeric: tabular-nums;
+}
+
+.rp-board {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  min-height: calc(var(--rp-tile) * 1.2 + 14px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rp-empty {
+  color: var(--text-3);
+  font-size: var(--t-sm);
+}
+
+.rp-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line), transparent);
+}
+
+/* ---------- A minion ---------- */
+
+.rp-minion {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: var(--rp-tile);
+  transition:
+    transform var(--rp-move) var(--ease-out),
+    opacity var(--rp-move) var(--ease-out),
+    filter var(--rp-move) var(--ease-out);
+}
+
+.rp-art {
+  position: relative;
+  display: block;
+}
+
+.rp-art .pic {
+  display: block;
+  width: var(--rp-tile);
+  height: calc(var(--rp-tile) * 1.2);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 0.55), 0 4px 10px rgb(0 0 0 / 0.4);
+}
+
+.rp-info {
+  position: absolute;
+  inset: 0;
+  height: calc(var(--rp-tile) * 1.2);
+  pointer-events: none;
+}
+
+.rp-stats {
+  position: absolute;
+  inset: auto -4px -4px;
+  display: flex;
+  justify-content: space-between;
+  font: 800 var(--t-sm) / 1 var(--display);
+  font-variant-numeric: tabular-nums;
+}
+
+.rp-atk,
+.rp-hp {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 3px;
+  border: 1px solid rgb(0 0 0 / 0.6);
+  color: #1d1208;
+}
+
+/* Attack a diamond-cut square, health a drop: shapes as well as colours. */
+.rp-atk {
+  border-radius: 6px 2px;
+  background: var(--rp-atk);
+}
+
+.rp-hp {
+  border-radius: 50% 50% 50% 6px;
+  background: var(--rp-hp);
+  color: #fff;
+}
+
+.rp-hurt {
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  translate: -50% 0;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #b3261e;
+  color: #fff;
+  font: 800 var(--t-sm) / 1 var(--display);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
+  animation: rp-hurt 420ms var(--ease-out);
+}
+
+.rp-minion .gv-gifts {
+  justify-content: center;
+  max-width: calc(var(--rp-tile) + 12px);
+}
+
+.rp-minion .gv-gift {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0 4px;
+  font-size: 0.6875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rp-minion.is-golden .pic {
+  box-shadow: 0 0 0 2px var(--amber), 0 0 0 4px rgb(0 0 0 / 0.5), 0 4px 10px rgb(0 0 0 / 0.4);
+}
+
+/* Divine Shield: a pale halo around the portrait. */
+.rp-minion.has-shield .rp-art::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border: 2px solid var(--rp-shield);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgb(255 241 184 / 0.6);
+  pointer-events: none;
+}
+
+.rp-minion.is-popped .rp-art::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border: 2px dashed var(--rp-shield);
+  border-radius: 50%;
+  opacity: 0;
+  animation: rp-pop 480ms var(--ease-out);
+}
+
+.rp-minion.is-attacker .pic {
+  outline: 3px solid var(--amber-hi);
+  outline-offset: 2px;
+}
+
+.rp-side.is-own .rp-minion.is-attacker {
+  transform: translateY(-10px);
+}
+
+.rp-side.is-opponent .rp-minion.is-attacker {
+  transform: translateY(10px);
+}
+
+.rp-minion.is-defender .pic {
+  outline: 3px dotted var(--rp-hit);
+  outline-offset: 2px;
+}
+
+.rp-minion.is-defender {
+  animation: rp-shake 300ms ease-in-out;
+}
+
+.rp-minion.is-buffed .rp-stats {
+  filter: drop-shadow(0 0 4px var(--rp-buff));
+}
+
+.rp-minion.is-buffed .pic {
+  outline: 2px solid var(--rp-buff);
+  outline-offset: 2px;
+}
+
+.rp-minion.is-triggered .pic {
+  outline: 2px double var(--rp-trigger);
+  outline-offset: 3px;
+}
+
+.rp-minion.is-summoned {
+  animation: rp-in 300ms var(--ease-out);
+}
+
+.rp-minion.is-dying {
+  opacity: 0.4;
+  filter: grayscale(1);
+  transform: scale(0.9);
+}
+
+.rp-minion.is-dying .rp-art::before {
+  content: "✕";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font: 800 1.5rem / 1 var(--display);
+  text-shadow: 0 1px 4px #000;
+}
+
+@keyframes rp-shake {
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+@keyframes rp-in {
+  from { opacity: 0; transform: scale(0.6); }
+}
+
+@keyframes rp-pop {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(1.25); }
+}
+
+@keyframes rp-hurt {
+  from { opacity: 0; translate: -50% 6px; }
+}
+
+/* ---------- Words and controls ---------- */
+
+.rp-caption {
+  min-height: calc(2 * 1.5em);
+  margin: 0;
+  padding: var(--s-1) var(--s-3);
+  border-left: 3px solid var(--amber);
+  font-size: var(--t-md);
+  line-height: 1.5;
+}
+
+.rp-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.rp-btn {
+  display: inline-grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-chip);
+  background: var(--surface-2);
+  color: var(--text-1);
+  font: 700 var(--t-md) / 1 var(--body);
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.rp-btn:hover {
+  background: var(--panel-hi);
+  box-shadow: none;
+}
+
+/* Play keeps the site's main button look (global.css), a little smaller. */
+.rp-btn.rp-play {
+  min-width: 8.5rem;
+  border: 0;
+  background: linear-gradient(180deg, var(--amber-hi), var(--amber) 55%, #f09a2c);
+  color: var(--amber-ink);
+  font-weight: 800;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.55);
+}
+
+.rp-btn.rp-play:hover {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.55), 0 6px 18px rgb(255 160 60 / 0.35);
+}
+
+.rp-btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.rp-speed {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-left: auto;
+  color: var(--text-2);
+  font-size: var(--t-sm);
+}
+
+.rp-speed select {
+  min-height: 36px;
+  padding: 0 var(--s-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-solid);
+  color: var(--text-1);
+  font: inherit;
+}
+
+/* Step back and forward are Advanced, except with reduced motion (below). */
+html:not([data-detail="advanced"]) .rp-stepper {
+  display: none;
+}
+
+.rp-reduced {
+  display: none;
+}
+
+/* Positioned, so each step's offsetTop is within the list (replayPlayer.ts keepInView). */
+.rp-list {
+  position: relative;
+  display: grid;
+  max-height: 22rem;
+  margin: 0;
+  padding: 0 0 0 2.4em;
+  overflow-y: auto;
+  font-size: var(--t-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.rp .rp-step {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  padding: 6px var(--s-2);
+  border: 0;
+  border-left: 3px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--text-2);
+  font: 500 var(--t-sm) / 1.4 var(--body);
+  text-align: left;
+  white-space: normal;
+  box-shadow: none;
+  transform: none;
+  cursor: pointer;
+}
+
+.rp .rp-step:hover {
+  background: var(--panel-hi);
+  color: var(--text-1);
+  box-shadow: none;
+}
+
+.rp .rp-step[aria-current="step"] {
+  border-left-color: var(--amber);
+  background: var(--surface-2);
+  color: var(--text-1);
+  font-weight: 700;
+}
+
+/* ---------- Narrow screens ---------- */
+
+@media (max-width: 720px) {
+  .rp-side {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-1);
+  }
+
+  .rp-side.is-own .rp-hero {
+    order: 1;
+  }
+
+  .rp-board {
+    gap: 6px;
+  }
+
+  .rp-stats {
+    inset: auto -2px -3px;
+  }
+
+  .rp-atk,
+  .rp-hp {
+    min-width: 18px;
+    height: 18px;
+    font-size: var(--t-xs);
+  }
+
+  .rp-speed {
+    margin-left: 0;
+  }
+}
+
+/* ---------- Reduced motion: no animation, step by step only ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .rp-minion,
+  .rp-minion.is-defender,
+  .rp-minion.is-summoned,
+  .rp-hurt {
+    animation: none;
+    transition: none;
+  }
+
+  .rp-side .rp-minion.is-attacker,
+  .rp-minion.is-dying {
+    transform: none;
+  }
+
+  .rp-btn.rp-play {
+    display: none;
+  }
+
+  html:not([data-detail="advanced"]) .rp-stepper {
+    display: inline-grid;
+  }
+
+  .rp-reduced {
+    display: block;
+  }
+}
+
+@media (forced-colors: active) {
+  .rp-minion.is-golden .pic,
+  .rp-minion.is-attacker .pic,
+  .rp-minion.is-defender .pic {
+    outline: 2px solid CanvasText;
+  }
+
+  .rp-step[aria-current="step"],
+  .rp-chip[aria-pressed="true"],
+.rp-chip[aria-pressed="true"]:hover {
+    outline: 2px solid Highlight;
+  }
+}
