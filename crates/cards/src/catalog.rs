@@ -24,14 +24,15 @@ pub const MAX_ENTRIES: usize = 200_000;
 /// The real file is about 10 MB; this stops a gzip bomb.
 pub const MAX_INFLATED: usize = 32 * 1024 * 1024;
 /// Version of the file we keep on the PC. Format 1 had names only, format 2
-/// no hero links, format 3 no card links, format 4 no combat facts; all
-/// still load, without what they lack, and are fetched again (T-307, T-214,
-/// T-207, T-605).
-const SAVED_FORMAT: u32 = 5;
+/// no hero links, format 3 no card links, format 4 no combat facts, format 5
+/// no skin parents; all still load, without what they lack, and are fetched
+/// again (T-307, T-214, T-207, T-605, T-540).
+const SAVED_FORMAT: u32 = 6;
 const NAMES_ONLY_FORMAT: u32 = 1;
 const NO_HERO_LINKS_FORMAT: u32 = 2;
 const NO_CARD_LINKS_FORMAT: u32 = 3;
 const NO_COMBAT_FACTS_FORMAT: u32 = 4;
+const NO_SKIN_PARENTS_FORMAT: u32 = 5;
 /// The real data has about 3,000 hero cards (skins included).
 pub const MAX_HEROES: usize = 20_000;
 /// Database ids are positive and far below this.
@@ -138,6 +139,13 @@ struct RawCard {
     dbf: Option<i64>,
     #[serde(default, rename = "type", deserialize_with = "string_or_none")]
     card_type: Option<String>,
+    /// A Battlegrounds skin's base hero, by database id (T-540).
+    #[serde(
+        default,
+        rename = "battlegroundsSkinParentId",
+        deserialize_with = "int_or_none"
+    )]
+    skin_parent: Option<i64>,
     /// Combat facts (T-605).
     #[serde(default, deserialize_with = "string_or_none")]
     set: Option<String>,
@@ -157,6 +165,13 @@ fn card_dbf(card: &RawCard) -> Option<i64> {
 /// The database id of a hero card, the only kind a skin links to.
 fn hero_dbf(card: &RawCard) -> Option<i64> {
     card_dbf(card).filter(|_| card.card_type.as_deref() == Some("HERO"))
+}
+
+/// The base hero's database id of a hero skin, when it is a plain one.
+fn skin_parent(card: &RawCard) -> Option<i64> {
+    card.skin_parent
+        .filter(|d| (1..=MAX_DBF_ID).contains(d))
+        .filter(|_| card.card_type.as_deref() == Some("HERO"))
 }
 
 fn string_or_none<'de, D: Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {
@@ -254,6 +269,7 @@ struct Entry {
     pool: Option<PoolMinion>,
     hero: Option<i64>,
     dbf: Option<i64>,
+    skin_parent: Option<i64>,
     combat: Option<CombatFacts>,
 }
 
@@ -280,6 +296,7 @@ impl<'de> Deserialize<'de> for Pairs {
                     let pool = pool_minion(&card);
                     let hero = hero_dbf(&card);
                     let dbf = card_dbf(&card);
+                    let skin_parent = skin_parent(&card);
                     let combat = combat_facts(&card);
                     let (Some(id), Some(name)) = (card.id, card.name) else {
                         continue;
@@ -291,6 +308,7 @@ impl<'de> Deserialize<'de> for Pairs {
                             pool,
                             hero,
                             dbf,
+                            skin_parent,
                             combat,
                         });
                     }
@@ -312,6 +330,9 @@ pub struct Catalog {
     /// Every card id by database id, for the trinkets and the Old God the log
     /// gives as database ids (T-207); every id here has a name.
     cards: BTreeMap<i64, String>,
+    /// Each hero skin's base hero as a database id (`battlegroundsSkinParentId`,
+    /// T-540); every id here has a name.
+    skin_parents: BTreeMap<String, i64>,
     /// Battlegrounds minions' combat facts by card id (T-605); every id here
     /// has a name.
     combat: BTreeMap<String, CombatFacts>,
@@ -353,6 +374,7 @@ impl Catalog {
         let mut pool = BTreeMap::new();
         let mut heroes = Vec::new();
         let mut cards = Vec::new();
+        let mut skin_parents = BTreeMap::new();
         let mut combat = BTreeMap::new();
         let mut pairs = Vec::with_capacity(entries.len());
         for e in entries {
@@ -365,6 +387,9 @@ impl Catalog {
             if let Some(dbf) = e.dbf {
                 cards.push((dbf, e.id.clone()));
             }
+            if let Some(parent) = e.skin_parent {
+                skin_parents.insert(e.id.clone(), parent);
+            }
             if let Some(facts) = e.combat {
                 combat.insert(e.id.clone(), facts);
             }
@@ -375,6 +400,7 @@ impl Catalog {
             pool,
             heroes.into_iter(),
             cards.into_iter(),
+            skin_parents,
             combat,
         )
     }
@@ -388,6 +414,7 @@ impl Catalog {
         mut pool: BTreeMap<String, PoolMinion>,
         hero_ids: impl Iterator<Item = (i64, String)>,
         card_ids: impl Iterator<Item = (i64, String)>,
+        mut skin_parents: BTreeMap<String, i64>,
         mut combat: BTreeMap<String, CombatFacts>,
     ) -> Result<Catalog, CatalogError> {
         let mut names = BTreeMap::new();
@@ -412,6 +439,10 @@ impl Catalog {
         if combat.len() > MAX_COMBAT_CARDS {
             combat.clear();
         }
+        skin_parents.retain(|id, dbf| names.contains_key(id) && (1..=MAX_DBF_ID).contains(dbf));
+        if skin_parents.len() > MAX_HEROES {
+            skin_parents.clear();
+        }
         let heroes = links(hero_ids, &names, MAX_HEROES);
         let cards = links(card_ids, &names, MAX_CARDS);
         if names.len() > MAX_CARDS {
@@ -425,6 +456,7 @@ impl Catalog {
             pool,
             heroes,
             cards,
+            skin_parents,
             combat,
         })
     }
@@ -449,6 +481,12 @@ impl Catalog {
     /// copy saved before T-214).
     pub fn hero_links(&self) -> &BTreeMap<i64, String> {
         &self.heroes
+    }
+
+    /// Each hero skin's base hero as a database id (empty when the data has
+    /// none, e.g. a copy saved before T-540).
+    pub fn skin_parents(&self) -> &BTreeMap<String, i64> {
+        &self.skin_parents
     }
 
     /// The card id of a database id; None when the data has none (e.g. a
@@ -485,6 +523,8 @@ struct Saved {
     #[serde(default)]
     cards: BTreeMap<i64, String>,
     #[serde(default)]
+    skin_parents: BTreeMap<String, i64>,
+    #[serde(default)]
     combat: BTreeMap<String, CombatFacts>,
 }
 
@@ -512,6 +552,7 @@ impl SavedCatalog {
             pool: self.catalog.pool.clone(),
             heroes: self.catalog.heroes.clone(),
             cards: self.catalog.cards.clone(),
+            skin_parents: self.catalog.skin_parents.clone(),
             combat: self.catalog.combat.clone(),
         };
         serde_json::to_vec(&saved).unwrap_or_default()
@@ -527,6 +568,7 @@ impl SavedCatalog {
             NO_HERO_LINKS_FORMAT,
             NO_CARD_LINKS_FORMAT,
             NO_COMBAT_FACTS_FORMAT,
+            NO_SKIN_PARENTS_FORMAT,
         ]
         .contains(&saved.format);
         if saved.format != SAVED_FORMAT && !old {
@@ -558,6 +600,11 @@ impl SavedCatalog {
                 pool,
                 saved.heroes.into_iter(),
                 saved.cards.into_iter(),
+                saved
+                    .skin_parents
+                    .into_iter()
+                    .filter(|(id, _)| valid_id(id))
+                    .collect(),
                 combat,
             )?,
             // An older copy counts as old, so it is replaced soon.
@@ -568,394 +615,5 @@ impl SavedCatalog {
 }
 
 #[cfg(test)]
-pub mod tests {
-    use super::*;
-    use serde_json::json;
-    use std::io::Write;
-
-    /// A made-up card list with `n` cards (`CARD_0` … named `Card 0` …) plus
-    /// the extra entries given. No real card data in the tests (D-038).
-    pub fn synthetic(n: usize, extra: Vec<Value>) -> Vec<u8> {
-        let mut cards: Vec<Value> = (0..n)
-            .map(|i| json!({"id": format!("CARD_{i}"), "name": format!("Card {i}"), "type": "MINION"}))
-            .collect();
-        cards.extend(extra);
-        serde_json::to_vec(&cards).unwrap()
-    }
-
-    pub fn gzip(bytes: &[u8]) -> Vec<u8> {
-        let mut enc = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
-        enc.write_all(bytes).unwrap();
-        enc.finish().unwrap()
-    }
-
-    #[test]
-    fn names_are_read_by_card_id() {
-        let extra = vec![json!({"id": "HERO_X", "name": "  Made-up Hero  ", "type": "HERO"})];
-        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
-        assert_eq!(catalog.name("CARD_7"), Some("Card 7"));
-        assert_eq!(catalog.name("HERO_X"), Some("Made-up Hero"), "trimmed");
-        assert_eq!(catalog.name("NOT_THERE"), None);
-        assert_eq!(catalog.len(), MIN_CARDS + 1);
-    }
-
-    #[test]
-    fn anything_but_an_array_of_cards_is_refused_whole() {
-        for body in [
-            b"<html>Error</html>".to_vec(),
-            b"{\"cards\": []}".to_vec(),
-            b"[1, 2, 3]".to_vec(),
-            b"".to_vec(),
-        ] {
-            assert_eq!(
-                Catalog::from_hearthstonejson(&body),
-                Err(CatalogError::Shape)
-            );
-        }
-    }
-
-    #[test]
-    fn a_short_list_is_not_the_card_data() {
-        assert_eq!(
-            Catalog::from_hearthstonejson(&synthetic(10, vec![])),
-            Err(CatalogError::TooFew(10))
-        );
-    }
-
-    #[test]
-    fn cards_with_a_bad_id_or_name_are_left_out() {
-        let long = "x".repeat(MAX_NAME_CHARS + 1);
-        let extra = vec![
-            json!({"id": "BAD ID", "name": "Space in id"}),
-            json!({"id": "../ESCAPE", "name": "Path in id"}),
-            json!({"id": "NO_NAME"}),
-            json!({"id": "EMPTY_NAME", "name": "   "}),
-            json!({"id": "LONG_NAME", "name": long}),
-            json!({"id": "CONTROL", "name": "Bell\u{7}"}),
-            json!({"id": "BIDI", "name": "Evil\u{202E}lacol"}),
-            json!({"id": "ZERO_WIDTH", "name": "Zero\u{200B}Width"}),
-            json!({"id": "NUMBER_NAME", "name": 5}),
-            json!({"id": 42, "name": "Number id"}),
-            json!({"name": "No id"}),
-        ];
-        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
-        assert_eq!(catalog.len(), MIN_CARDS);
-        for id in [
-            "BAD ID",
-            "../ESCAPE",
-            "NO_NAME",
-            "EMPTY_NAME",
-            "LONG_NAME",
-            "CONTROL",
-            "BIDI",
-            "ZERO_WIDTH",
-            "NUMBER_NAME",
-        ] {
-            assert_eq!(catalog.name(id), None, "{id}");
-        }
-    }
-
-    #[test]
-    fn a_file_of_millions_of_entries_or_cards_is_refused() {
-        let empties = format!("[{}{{}}]", "{},".repeat(MAX_ENTRIES));
-        assert_eq!(
-            Catalog::from_hearthstonejson(empties.as_bytes()),
-            Err(CatalogError::Shape)
-        );
-        let many = synthetic(MAX_CARDS + 1, vec![]);
-        assert_eq!(
-            Catalog::from_hearthstonejson(&many),
-            Err(CatalogError::TooMany)
-        );
-    }
-
-    #[test]
-    fn only_visible_ascii_etags_are_sent_back() {
-        assert!(valid_etag(r#""a7fd90b783d1ce0883662523f079c7f4-2""#));
-        assert!(valid_etag(r#"W/"x""#));
-        for bad in ["", "a\nb", "caf\u{e9}", &"x".repeat(201)] {
-            assert!(!valid_etag(bad), "{bad:?}");
-        }
-    }
-
-    #[test]
-    fn an_id_with_two_different_names_is_dropped_not_guessed() {
-        let extra = vec![
-            json!({"id": "TWICE", "name": "First"}),
-            json!({"id": "TWICE", "name": "Second"}),
-            json!({"id": "SAME", "name": "Same"}),
-            json!({"id": "SAME", "name": "Same"}),
-        ];
-        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
-        assert_eq!(catalog.name("TWICE"), None);
-        assert_eq!(catalog.name("SAME"), Some("Same"));
-    }
-
-    #[test]
-    fn pool_minions_keep_their_tier_and_tribes() {
-        let extra = vec![
-            json!({"id": "BG_A", "name": "A", "isBattlegroundsPoolMinion": true, "techLevel": 1, "races": ["BEAST"], "race": "BEAST"}),
-            json!({"id": "BG_B", "name": "B", "isBattlegroundsPoolMinion": true, "techLevel": 2, "races": ["MURLOC", "PIRATE"]}),
-            json!({"id": "BG_N", "name": "N", "isBattlegroundsPoolMinion": true, "techLevel": 1}),
-            json!({"id": "BG_OLD", "name": "Old", "isBattlegroundsPoolMinion": true, "techLevel": 3, "race": "DEMON"}),
-            json!({"id": "BG_D", "name": "D", "isBattlegroundsPoolMinion": true, "techLevel": 1, "isBattlegroundsDuosExclusive": true}),
-            json!({"id": "BG_OUT", "name": "Out", "isBattlegroundsPoolMinion": false, "techLevel": 1}),
-            json!({"id": "BG_NOT", "name": "Not", "techLevel": 1}),
-        ];
-        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
-        let pool = catalog.pool();
-        let minion = |tier: u8, tribes: &[&str], duos_only: bool| PoolMinion {
-            tier,
-            tribes: tribes.iter().map(|t| t.to_string()).collect(),
-            duos_only,
-        };
-        assert_eq!(pool["BG_A"], minion(1, &["BEAST"], false));
-        assert_eq!(pool["BG_B"], minion(2, &["MURLOC", "PIRATE"], false));
-        assert_eq!(pool["BG_N"], minion(1, &[], false), "neutral");
-        assert_eq!(
-            pool["BG_OLD"],
-            minion(3, &["DEMON"], false),
-            "the old single race"
-        );
-        assert_eq!(pool["BG_D"], minion(1, &[], true));
-        assert!(!pool.contains_key("BG_OUT") && !pool.contains_key("BG_NOT"));
-        assert!(
-            !pool.contains_key("CARD_1"),
-            "an ordinary card is not in the pool"
-        );
-    }
-
-    #[test]
-    fn pool_minions_with_odd_fields_are_never_listed() {
-        let extra = vec![
-            json!({"id": "T0", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": 0}),
-            json!({"id": "T8", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": 8}),
-            json!({"id": "TS", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": "1"}),
-            json!({"id": "TN", "name": "x", "isBattlegroundsPoolMinion": true}),
-            json!({"id": "RL", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": 1, "races": ["beast"]}),
-            json!({"id": "RN", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": 1, "races": ["BEAST", 5]}),
-            json!({"id": "RM", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": 1, "races": ["A", "B", "C", "D", "E"]}),
-            json!({"id": "RX", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": 1, "races": ["<b>"]}),
-            json!({"id": "RO", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": 1, "races": "BEAST"}),
-            json!({"id": "R1", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": 1, "race": 7}),
-            json!({"id": "BAD ID", "name": "x", "isBattlegroundsPoolMinion": true, "techLevel": 1}),
-        ];
-        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
-        assert!(catalog.pool().is_empty(), "{:?}", catalog.pool());
-        assert_eq!(catalog.name("RN"), Some("x"), "the name still shows");
-    }
-
-    #[test]
-    fn the_pool_is_saved_and_checked_again_when_read() {
-        let extra = vec![
-            json!({"id": "BG_A", "name": "A", "isBattlegroundsPoolMinion": true, "techLevel": 1, "races": ["BEAST"]}),
-        ];
-        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
-        let saved = SavedCatalog {
-            catalog,
-            fetched_at: 1_700_000_000,
-            etag: Some("\"abc\"".into()),
-        };
-        let back = SavedCatalog::from_json(&saved.to_json()).unwrap();
-        assert_eq!(back, saved);
-        let mut edited: Value = serde_json::from_slice(&saved.to_json()).unwrap();
-        edited["pool"]["BG_A"]["tier"] = json!(9);
-        edited["pool"]["NO_NAME"] = json!({"tier": 1, "tribes": []});
-        let back = SavedCatalog::from_json(&serde_json::to_vec(&edited).unwrap()).unwrap();
-        assert!(back.catalog.pool().is_empty());
-    }
-
-    #[test]
-    fn a_names_only_copy_still_loads_and_is_replaced_soon() {
-        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, vec![])).unwrap();
-        let saved = SavedCatalog {
-            catalog,
-            fetched_at: 1_700_000_000,
-            etag: Some("\"abc\"".into()),
-        };
-        let mut old: Value = serde_json::from_slice(&saved.to_json()).unwrap();
-        old["format"] = json!(1);
-        old.as_object_mut().unwrap().remove("pool");
-        let back = SavedCatalog::from_json(&serde_json::to_vec(&old).unwrap()).unwrap();
-        assert_eq!(back.catalog.name("CARD_1"), Some("Card 1"));
-        assert!(back.catalog.pool().is_empty());
-        assert_eq!(back.fetched_at, 0, "old: fetched again at the next chance");
-        assert_eq!(back.etag, None, "the whole file, not \"unchanged\"");
-    }
-
-    #[test]
-    fn hero_cards_are_found_by_their_database_id() {
-        let extra = vec![
-            json!({"id": "HERO_BASE", "name": "Base", "type": "HERO", "dbfId": 59999}),
-            json!({"id": "HERO_BASE_SKIN_A", "name": "Base", "type": "HERO", "dbfId": 70001}),
-            json!({"id": "MINION_X", "name": "Minion", "type": "MINION", "dbfId": 12}),
-            json!({"id": "HERO_NO_DBF", "name": "No id", "type": "HERO"}),
-            json!({"id": "HERO_BAD_DBF", "name": "Bad id", "type": "HERO", "dbfId": "5"}),
-            json!({"id": "HERO_ZERO", "name": "Zero", "type": "HERO", "dbfId": 0}),
-            json!({"id": "HERO_TWIN_A", "name": "Twin A", "type": "HERO", "dbfId": 333}),
-            json!({"id": "HERO_TWIN_B", "name": "Twin B", "type": "HERO", "dbfId": 333}),
-            json!({"id": "BAD ID", "name": "Bad", "type": "HERO", "dbfId": 444}),
-        ];
-        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
-        let links: Vec<_> = catalog
-            .hero_links()
-            .iter()
-            .map(|(d, id)| (*d, id.as_str()))
-            .collect();
-        // Only heroes; a database id two cards claim is dropped, not guessed.
-        assert_eq!(links, [(59999, "HERO_BASE"), (70001, "HERO_BASE_SKIN_A")]);
-    }
-
-    #[test]
-    fn any_card_is_found_by_its_database_id_and_saved() {
-        let extra = vec![
-            json!({"id": "TRINKET_A", "name": "Trinket", "type": "BATTLEGROUND_TRINKET", "dbfId": 1234}),
-            json!({"id": "HERO_BASE", "name": "Base", "type": "HERO", "dbfId": 59999}),
-            json!({"id": "TWIN_A", "name": "Twin A", "dbfId": 333}),
-            json!({"id": "TWIN_B", "name": "Twin B", "dbfId": 333}),
-        ];
-        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
-        assert_eq!(catalog.card_of_dbf(1234), Some("TRINKET_A"));
-        assert_eq!(catalog.card_of_dbf(59999), Some("HERO_BASE"));
-        assert_eq!(catalog.card_of_dbf(333), None, "claimed twice: not guessed");
-        assert_eq!(catalog.card_of_dbf(-1), None);
-        let saved = SavedCatalog {
-            catalog,
-            fetched_at: 1_700_000_000,
-            etag: Some("\"abc\"".into()),
-        };
-        let back = SavedCatalog::from_json(&saved.to_json()).unwrap();
-        assert_eq!(back, saved);
-        let mut edited: Value = serde_json::from_slice(&saved.to_json()).unwrap();
-        edited["cards"]["7"] = json!("../EVIL");
-        edited["cards"]["8"] = json!("NOT_A_CARD");
-        let back = SavedCatalog::from_json(&serde_json::to_vec(&edited).unwrap()).unwrap();
-        assert_eq!(
-            (back.catalog.card_of_dbf(7), back.catalog.card_of_dbf(8)),
-            (None, None)
-        );
-        // A copy from before the card links loads without them and is fetched again soon.
-        let mut old: Value = serde_json::from_slice(&saved.to_json()).unwrap();
-        old["format"] = json!(3);
-        old.as_object_mut().unwrap().remove("cards");
-        let back = SavedCatalog::from_json(&serde_json::to_vec(&old).unwrap()).unwrap();
-        assert_eq!(back.catalog.card_of_dbf(1234), None);
-        assert_eq!(back.catalog.hero_links().len(), 1);
-        assert_eq!((back.fetched_at, back.etag), (0, None));
-    }
-
-    #[test]
-    fn hero_links_are_saved_and_checked_again_when_read() {
-        let extra =
-            vec![json!({"id": "HERO_BASE", "name": "Base", "type": "HERO", "dbfId": 59999})];
-        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
-        let saved = SavedCatalog {
-            catalog,
-            fetched_at: 1_700_000_000,
-            etag: Some("\"abc\"".into()),
-        };
-        let back = SavedCatalog::from_json(&saved.to_json()).unwrap();
-        assert_eq!(back, saved);
-        let mut edited: Value = serde_json::from_slice(&saved.to_json()).unwrap();
-        edited["heroes"]["7"] = json!("../EVIL");
-        edited["heroes"]["8"] = json!("NOT_A_CARD");
-        edited["heroes"]["-1"] = json!("HERO_BASE");
-        let back = SavedCatalog::from_json(&serde_json::to_vec(&edited).unwrap()).unwrap();
-        assert_eq!(back.catalog.hero_links().len(), 1);
-        // A copy from before the links loads and is fetched again soon.
-        let mut old: Value = serde_json::from_slice(&saved.to_json()).unwrap();
-        old["format"] = json!(2);
-        old.as_object_mut().unwrap().remove("heroes");
-        let back = SavedCatalog::from_json(&serde_json::to_vec(&old).unwrap()).unwrap();
-        assert!(back.catalog.hero_links().is_empty());
-        assert_eq!((back.fetched_at, back.etag), (0, None));
-        assert_eq!(back.catalog.name("HERO_BASE"), Some("Base"));
-    }
-
-    #[test]
-    fn card_ids_are_plain() {
-        assert!(valid_id("BG_CFM_315"));
-        assert!(valid_id("TB_BaconShop_HERO_01"));
-        for bad in [
-            "",
-            "a/b",
-            "a\\b",
-            "..",
-            "a.jpg",
-            "a b",
-            "a%2F",
-            &"A".repeat(65),
-        ] {
-            assert!(!valid_id(bad), "{bad:?}");
-        }
-    }
-
-    #[test]
-    fn gzip_is_inflated_and_garbage_is_refused() {
-        let body = synthetic(3, vec![]);
-        assert_eq!(gunzip(&gzip(&body)).unwrap(), body);
-        assert_eq!(gunzip(b"not gzip"), Err(CatalogError::Encoding));
-    }
-
-    #[test]
-    fn a_saved_catalog_reads_back_and_is_checked_again() {
-        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS + 1, vec![])).unwrap();
-        let saved = SavedCatalog {
-            catalog,
-            fetched_at: 1_700_000_000,
-            etag: Some("\"abc\"".into()),
-        };
-        assert_eq!(SavedCatalog::from_json(&saved.to_json()).unwrap(), saved);
-
-        let mut edited: Value = serde_json::from_slice(&saved.to_json()).unwrap();
-        edited["names"]["../EVIL"] = json!("Evil");
-        edited["names"]["CARD_1"] = json!("\u{1b}[31m");
-        let back = SavedCatalog::from_json(&serde_json::to_vec(&edited).unwrap()).unwrap();
-        assert_eq!(back.catalog.name("../EVIL"), None);
-        assert_eq!(back.catalog.name("CARD_1"), None);
-
-        edited["format"] = json!(99);
-        assert!(SavedCatalog::from_json(&serde_json::to_vec(&edited).unwrap()).is_err());
-        assert!(SavedCatalog::from_json(b"{broken").is_err());
-    }
-
-    #[test]
-    fn combat_facts_are_read_saved_and_checked_again() {
-        let extra = vec![
-            json!({"id": "BG_SYN_1", "name": "Synth", "type": "MINION", "set": "BATTLEGROUNDS",
-                   "attack": 2, "health": 3, "techLevel": 2, "races": ["MECHANICAL"],
-                   "mechanics": ["DIVINE_SHIELD", "TRIGGER_VISUAL"]}),
-            json!({"id": "CORE_SYN", "name": "Core", "type": "MINION", "set": "CORE",
-                   "attack": 1, "health": 1}),
-        ];
-        let catalog = Catalog::from_hearthstonejson(&synthetic(MIN_CARDS, extra)).unwrap();
-        let facts = catalog
-            .combat_facts("BG_SYN_1")
-            .expect("a Battlegrounds minion");
-        assert_eq!((facts.attack, facts.health, facts.tier), (2, 3, Some(2)));
-        assert_eq!(facts.tribes, ["MECHANICAL"]);
-        assert_eq!(facts.keywords, ["DIVINE_SHIELD"]);
-        assert!(catalog.combat_facts("CORE_SYN").is_none());
-        let saved = SavedCatalog {
-            catalog,
-            fetched_at: 5,
-            etag: Some("\"e\"".into()),
-        };
-        let back = SavedCatalog::from_json(&saved.to_json()).unwrap();
-        assert_eq!(back, saved);
-        let mut edited: Value = serde_json::from_slice(&saved.to_json()).unwrap();
-        edited["combat"]["BG_SYN_1"]["health"] = json!(-4);
-        let back = SavedCatalog::from_json(&serde_json::to_vec(&edited).unwrap()).unwrap();
-        assert!(
-            back.catalog.combat_facts("BG_SYN_1").is_none(),
-            "checked when read"
-        );
-        // A copy from before the combat facts loads without them and is fetched again soon.
-        let mut old: Value = serde_json::from_slice(&saved.to_json()).unwrap();
-        old["format"] = json!(4);
-        old.as_object_mut().unwrap().remove("combat");
-        let back = SavedCatalog::from_json(&serde_json::to_vec(&old).unwrap()).unwrap();
-        assert!(back.catalog.combat_facts("BG_SYN_1").is_none());
-        assert_eq!((back.fetched_at, back.etag), (0, None));
-    }
-}
+#[path = "catalog_tests.rs"]
+pub mod tests;

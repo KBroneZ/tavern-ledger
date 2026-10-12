@@ -144,13 +144,17 @@ pub fn pool_cards(cards: &Cards) -> Vec<tracker::possible::PoolCard> {
 }
 
 /// The card data's link from each base hero's database id to its card id
-/// (T-214), so the stats group skins by the game's own link; empty while
-/// there is no card data (the stats then use the D-019 rule and say so).
+/// (T-214) and from each skin to its base hero (T-540), so the stats group
+/// skins by the game's own link or the card data's; empty while there is no
+/// card data (the stats then use the D-019 rule and say so).
 pub fn hero_links(cards: &Cards) -> tracker::stats::HeroLinks {
     cards
         .store
         .get()
-        .map(|store| store.hero_links())
+        .map(|store| tracker::stats::HeroLinks {
+            heroes: store.hero_links(),
+            skin_parents: store.skin_parents(),
+        })
         .unwrap_or_default()
 }
 
