@@ -29,8 +29,3 @@
   font-size: var(--t-sm);
   font-weight: 600;
 }
-
-/* The hero's name links to its games: the link takes the cell's text style. */
-.cell-hero a {
-  font-weight: 700;
-}

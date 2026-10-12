@@ -72,7 +72,7 @@ export const OVERVIEW_COLUMNS =
   "mode,games,incomplete_games,unsupported_games,placed_games,avg_place,top_half,wins,first_played_on,last_played_on,summarized_games," +
   "combats_won,combats_lost,combats_tied,combats_unknown,combats_inferred,combat_games,damage_dealt,damage_dealt_games,damage_taken,damage_taken_games," +
   "gold_spent,gold_spent_games,gold_beyond_income,gold_beyond_games,sell_gold,sell_gold_games,rolls,free_rolls,buys,sells,shop_games," +
-  "avg_apm,apm_games,triples,triples_games";
+  "avg_apm,apm_games,triples,triples_games,damage_dealt_inferred_games,damage_taken_inferred_games";
 
 export interface Overview {
   mode: Mode;
@@ -111,6 +111,9 @@ export interface Overview {
   apmGames: number;
   triples: number | null;
   triplesGames: number;
+  /** Of the games with a damage total, those not all from the game's own hit (or not known to be). */
+  damageDealtInferredGames: number;
+  damageTakenInferredGames: number;
 }
 
 export function overview(value: unknown): Overview {
@@ -161,6 +164,8 @@ export function overview(value: unknown): Overview {
     apmGames: part("apm_games"),
     triples: amount(r.triples),
     triplesGames: part("triples_games"),
+    damageDealtInferredGames: part("damage_dealt_inferred_games"),
+    damageTakenInferredGames: part("damage_taken_inferred_games"),
   };
 }
 

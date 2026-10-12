@@ -187,7 +187,7 @@ export const STRINGS = {
   "games.col.combats": "Combats won–lost",
   "games.col.triples": "Triples",
   "games.col.apm": "APM",
-  "games.link": ": game with {hero}",
+  "games.link": ": game of {date}",
   "games.status.incomplete": "unfinished",
   "games.triples.unfinished": "Not counted: the game is unfinished",
   "games.status.unsupported": "unreadable",

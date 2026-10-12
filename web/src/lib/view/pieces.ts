@@ -214,11 +214,13 @@ export type Cell =
   | number
   | { place: number | null; mode: Mode }
   /**
-   * With href, the hero's name links there (the heroes page's link to that
-   * hero's games). unknownId: an id the name table does not know, shown in
-   * Advanced only (T-510).
+   * With href, the hero's portrait and name are one link there (a game, or
+   * the heroes page's link to that hero's games); context is read after the
+   * name by screen readers only, to tell same-name links apart (T-559).
+   * unknownId: an id the name table does not know, shown in Advanced only
+   * (T-510).
    */
-  | { hero: string | null; name: string; href?: string; unknownId?: string | null }
+  | { hero: string | null; name: string; href?: string; context?: string; unknownId?: string | null }
   /** Anything else (a value with a mark); the client pages only. */
   | { node: VNode | VNode[] };
 
@@ -226,9 +228,9 @@ export type Cell =
 export const HERO_PIC = 56;
 
 /** A hero's table cell: its name in the page's language, never the bare card id (T-510). */
-export function heroCell(id: string | null, href?: string): Cell {
+export function heroCell(id: string | null, href?: string, context?: string): Cell {
   const label = heroLabel(id, t("hero.unknown"), t("hero.unknownId"));
-  return { hero: id, name: label.name, href, unknownId: label.unknownId };
+  return { hero: id, name: label.name, href, ...(context ? { context } : {}), unknownId: label.unknownId };
 }
 
 export interface Column {
@@ -242,13 +244,14 @@ export interface Column {
 
 function tableCell(cell: Cell, column: Column | undefined): VNode {
   if (typeof cell === "object" && "hero" in cell) {
-    const name = cell.href ? h("a", { href: cell.href }, cell.name) : h("span", {}, cell.name);
     const id = cell.unknownId ? h("span", { class: "adv cell-note hero-id" }, cell.unknownId) : null;
-    return h(
-      "th",
-      { scope: "row", class: cls({ adv: !!column?.advanced }) || undefined },
-      h("span", { class: "cell-hero" }, picture("hero", cell.hero, cell.name, HERO_PIC, true), h("span", { class: "hero-name" }, name, id)),
-    );
+    const pic = picture("hero", cell.hero, cell.name, HERO_PIC, true);
+    const context = cell.context ? h("span", { class: "visually-hidden" }, cell.context) : null;
+    // A link takes the portrait and the name together, so either opens it (T-559).
+    const body = cell.href
+      ? h("a", { class: "cell-hero", href: cell.href }, pic, h("span", { class: "hero-name" }, h("span", { class: "hero-link" }, cell.name, context), id))
+      : h("span", { class: "cell-hero" }, pic, h("span", { class: "hero-name" }, h("span", {}, cell.name), id));
+    return h("th", { scope: "row", class: cls({ adv: !!column?.advanced }) || undefined }, body);
   }
   const klass = cls({ num: !!column?.numeric, adv: !!column?.advanced }) || undefined;
   if (typeof cell === "object" && "place" in cell) return h("td", { class: klass }, placeBadge(cell.place, cell.mode));
