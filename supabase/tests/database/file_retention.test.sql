@@ -3,7 +3,7 @@
 -- The sweep function's side is tested in supabase/functions/sweep/.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(49);
+select plan(61);
 
 -- A: a free account; B: another free account; E: unlimited history.
 insert into auth.users (id, email) values
@@ -17,35 +17,54 @@ delete from public.games;
 
 create temporary table today as select (now() at time zone 'utc')::date as d;
 
--- index: 1 boundary (kept), 2 one day past (due), 3 past with no summary,
--- 4 today, 5 a future played_on first uploaded 40 days ago (due),
--- 6 past and already expired.
+-- A's games, by index: 1 boundary (kept), 2 one day past (due), 3 past with
+-- no summary (kept), 4 today, 5 a future played_on first uploaded 40 days
+-- ago (due), 6 already expired, 7 no summary but past 90 days (due),
+-- 8 past but changed in the last hour (kept).
 insert into public.games (user_id, session, game_index, game_type, status, played_on,
-  saved_at, content_sha256, size_bytes, created_at, file_expired_at)
+  saved_at, content_sha256, size_bytes, created_at, updated_at, file_expired_at)
 select u::uuid, 'Hearthstone_2026_01_01_00_00_00', i, 'GT_BATTLEGROUNDS', 'ok', p, 1791000000,
-  repeat(s, 64), 2000, c, x
-from today, (values
-  ('00000000-0000-4000-8000-0000000000a1', 1, (select d from today) - 29, now(), null::timestamptz, 'a'),
-  ('00000000-0000-4000-8000-0000000000a1', 2, (select d from today) - 30, now(), null, 'b'),
-  ('00000000-0000-4000-8000-0000000000a1', 3, (select d from today) - 40, now(), null, 'c'),
-  ('00000000-0000-4000-8000-0000000000a1', 4, (select d from today), now(), null, 'd'),
+  repeat(s, 64), 2000, c, m, x
+from (values
+  ('00000000-0000-4000-8000-0000000000a1', 1, (select d from today) - 29, now(),
+    now() - interval '2 hours', null::timestamptz, 'a'),
+  ('00000000-0000-4000-8000-0000000000a1', 2, (select d from today) - 30, now(),
+    now() - interval '2 hours', null, 'b'),
+  ('00000000-0000-4000-8000-0000000000a1', 3, (select d from today) - 40, now(),
+    now() - interval '2 hours', null, 'c'),
+  ('00000000-0000-4000-8000-0000000000a1', 4, (select d from today), now(),
+    now() - interval '2 hours', null, 'd'),
   ('00000000-0000-4000-8000-0000000000a1', 5, (select d from today) + 400,
-    now() - interval '40 days', null, 'e'),
-  ('00000000-0000-4000-8000-0000000000a1', 6, (select d from today) - 30, now(), now(), 'f'),
-  ('00000000-0000-4000-8000-0000000000b1', 1, (select d from today) - 35, now(), null, 'a'),
-  ('00000000-0000-4000-8000-0000000000e1', 1, (select d from today) - 60, now(), null, 'a')
-) as v(u, i, p, c, x, s);
+    now() - interval '40 days', now() - interval '2 hours', null, 'e'),
+  ('00000000-0000-4000-8000-0000000000a1', 6, (select d from today) - 30, now(),
+    now() - interval '2 hours', now(), 'f'),
+  ('00000000-0000-4000-8000-0000000000a1', 7, (select d from today) - 100, now(),
+    now() - interval '2 hours', null, '7'),
+  ('00000000-0000-4000-8000-0000000000a1', 8, (select d from today) - 35, now(),
+    now(), null, '8'),
+  ('00000000-0000-4000-8000-0000000000b1', 1, (select d from today) - 35, now(),
+    now() - interval '2 hours', null, 'a'),
+  ('00000000-0000-4000-8000-0000000000e1', 1, (select d from today) - 60, now(),
+    now() - interval '2 hours', null, 'a')
+) as v(u, i, p, c, m, x, s);
 insert into public.game_stats (user_id, session, game_index, summary_version)
 select g.user_id, g.session, g.game_index, 1 from public.games g
-where not (g.user_id = '00000000-0000-4000-8000-0000000000a1' and g.game_index = 3);
+where not (g.user_id = '00000000-0000-4000-8000-0000000000a1' and g.game_index in (3, 7));
 insert into private.unlimited_history (user_id) values ('00000000-0000-4000-8000-0000000000e1');
 
 create function pg_temp.path(u text, i int) returns text language sql immutable as $$
   select u || '/Hearthstone_2026_01_01_00_00_00-' || i || '.json.gz';
 $$;
+create function pg_temp.a(i int) returns text language sql immutable as $$
+  select pg_temp.path('00000000-0000-4000-8000-0000000000a1', i);
+$$;
 create function pg_temp.paths(l jsonb) returns text[] language sql immutable as $$
   select coalesce(array_agg(f ->> 'path' order by f ->> 'path'), '{}')
   from jsonb_array_elements(l -> 'files') f;
+$$;
+create function pg_temp.counts(l jsonb) returns int[] language sql immutable as $$
+  select array[(l ->> 'due')::int, (l #>> '{skipped,exempt}')::int,
+               (l #>> '{skipped,recent}')::int, (l #>> '{skipped,no_summary}')::int];
 $$;
 
 -- ------------------------------------------------------------ privileges
@@ -60,8 +79,8 @@ select ok(
 select ok(
   not exists (
     select 1 from unnest(array['public', 'anon', 'authenticated', 'service_role']) as r(role)
-    where has_function_privilege(r.role, 'private.file_retention_cutoff()', 'execute')
-       or has_function_privilege(r.role, 'private.file_past_retention(date, timestamptz, date)', 'execute')
+    where has_function_privilege(r.role, 'private.game_day(date, timestamptz)', 'execute')
+       or has_function_privilege(r.role, 'private.file_retention_state(public.games, integer)', 'execute')
        or has_function_privilege(r.role, 'private.games_file_replaced()', 'execute')
        or has_function_privilege(r.role, 'private.sweep_retention_valid(jsonb)', 'execute')
   ),
@@ -70,15 +89,17 @@ select ok(
 select ok(
   not exists (
     select 1 from unnest(array['anon', 'authenticated']) as r(role)
-    where has_function_privilege(r.role, 'public.file_retention_list(integer)', 'execute')
+    where has_function_privilege(r.role, 'public.file_retention_list(integer, integer)', 'execute')
+       or has_function_privilege(r.role, 'public.file_retention_check(text[], text[], integer)', 'execute')
        or has_function_privilege(r.role, 'public.file_retention_mark(text[], text[])', 'execute')
        or has_function_privilege(r.role,
             'public.sweep_record_result(bigint, integer, jsonb, jsonb)', 'execute')
   ),
-  'clients cannot list, mark or record'
+  'clients cannot list, check, mark or record'
 );
 select ok(
-  has_function_privilege('service_role', 'public.file_retention_list(integer)', 'execute')
+  has_function_privilege('service_role', 'public.file_retention_list(integer, integer)', 'execute')
+  and has_function_privilege('service_role', 'public.file_retention_check(text[], text[], integer)', 'execute')
   and has_function_privilege('service_role', 'public.file_retention_mark(text[], text[])', 'execute')
   and has_function_privilege('service_role',
         'public.sweep_record_result(bigint, integer, jsonb, jsonb)', 'execute'),
@@ -103,7 +124,7 @@ select throws_ok(
 );
 select throws_ok($$ update public.games set file_expired_at = null $$, '42501', null,
   'a signed-in user cannot clear the expiry');
-select throws_ok($$ select public.file_retention_list(10) $$, '42501', null,
+select throws_ok($$ select public.file_retention_list(10, 1) $$, '42501', null,
   'a signed-in user cannot list files');
 select is(
   (select file_expired_at is not null from public.game_summaries
@@ -114,90 +135,122 @@ reset role;
 
 -- ------------------------------------------------------------ settings
 select results_eq(
-  $$ select days, live from private.file_retention $$,
-  $$ values (28, false) $$,
-  'ships with 28 days, report-only'
+  $$ select days, no_summary_days, live from private.file_retention $$,
+  $$ values (28, 90, false) $$,
+  'ships with 28 days, 90 without a summary, report-only'
 );
-select throws_ok($$ insert into private.file_retention (days) values (90) $$, '23505', null,
-  'one settings row only');
-select is(private.file_retention_cutoff(), (select d - 29 from today),
-  'cutoff: 28 days plus one for time zones');
-select ok(
-  private.file_past_retention((select d - 30 from today), now(), private.file_retention_cutoff())
-  and not private.file_past_retention((select d - 29 from today), now(), private.file_retention_cutoff()),
-  'boundary: 29 days ago is kept, 30 days ago is past'
+select throws_ok($$ insert into private.file_retention (days, no_summary_days) values (90, 90) $$,
+  '23505', null, 'one settings row only');
+select throws_ok($$ update private.file_retention set no_summary_days = 7 $$, '23514', null,
+  'a file waiting for its summary is kept at least the retention');
+select is(private.game_day((select d + 400 from today), now() - interval '40 days'),
+  (select d - 40 from today), 'a played_on in the future counts from the first upload');
+
+-- ------------------------------------------------------------ states
+select results_eq(
+  $$ select g.user_id::text, g.game_index, private.file_retention_state(g, 1)
+     from public.games g order by 1, 2 $$,
+  $$ values
+     ('00000000-0000-4000-8000-0000000000a1'::text, 1, null::text),
+     ('00000000-0000-4000-8000-0000000000a1', 2, 'due'),
+     ('00000000-0000-4000-8000-0000000000a1', 3, 'no_summary'),
+     ('00000000-0000-4000-8000-0000000000a1', 4, null),
+     ('00000000-0000-4000-8000-0000000000a1', 5, 'due'),
+     ('00000000-0000-4000-8000-0000000000a1', 6, null),
+     ('00000000-0000-4000-8000-0000000000a1', 7, 'due'),
+     ('00000000-0000-4000-8000-0000000000a1', 8, 'recent'),
+     ('00000000-0000-4000-8000-0000000000b1', 1, 'due'),
+     ('00000000-0000-4000-8000-0000000000e1', 1, 'exempt') $$,
+  'states: 29 days kept, 30 due, no summary kept until 90 days, recent and exempt kept'
 );
-select ok(
-  private.file_past_retention((select d + 400 from today), now() - interval '40 days',
-    private.file_retention_cutoff()),
-  'a played_on in the future counts from the first upload'
+select is(
+  (select private.file_retention_state(g, 2) from public.games g
+   where g.user_id = '00000000-0000-4000-8000-0000000000a1' and g.game_index = 2),
+  'no_summary', 'a summary of an older version is no summary (the backfill needs the file)'
 );
 
 -- ------------------------------------------------------------ report-only
-create temporary table report as select public.file_retention_list(1000) as l;
-select results_eq(
-  $$ select (l ->> 'live')::boolean, (l ->> 'days')::int, (l ->> 'due')::int,
-            (l #>> '{skipped,exempt}')::int, (l #>> '{skipped,no_summary}')::int,
-            jsonb_array_length(l -> 'files')
-     from report $$,
-  $$ values (false, 28, 3, 1, 1, 0) $$,
-  'report-only: counts what is due (A2, A5, B1) and what is kept, hands out no file'
-);
+create temporary table report as select public.file_retention_list(1000, 1) as l;
+select is((select pg_temp.counts(l) from report), array[4, 1, 1, 1],
+  'report-only: due A2, A5, A7, B1; kept by reason: exempt, recent, no summary');
+select is((select (l ->> 'live')::boolean from report), false, 'report-only: says so');
+select is((select jsonb_array_length(l -> 'files') from report), 0, 'report-only: hands out no file');
+select is(pg_temp.counts(public.file_retention_list(1000, 2)), array[1, 1, 1, 4],
+  'a newer summary version keeps the files whose summary is older, until 90 days');
+select throws_ok($$ select public.file_retention_list(10, null) $$, '22023', null,
+  'list: needs the summary version');
 select is(
-  public.file_retention_mark(
-    array[pg_temp.path('00000000-0000-4000-8000-0000000000a1', 2)], array[repeat('b', 64)]),
-  0, 'report-only: marking does nothing'
+  public.file_retention_check(array[pg_temp.a(2)], array[repeat('b', 64)], 1), '{}'::text[],
+  'report-only: the check keeps everything'
 );
+select is(public.file_retention_mark(array[pg_temp.a(2)], array[repeat('b', 64)]), 0,
+  'report-only: marking does nothing');
 select is((select count(*)::int from public.games where file_expired_at is not null), 1,
   'report-only: only the game expired before is marked');
 
 -- ------------------------------------------------------------ live
 update private.file_retention set live = true;
-create temporary table live as select public.file_retention_list(1000) as l;
+create temporary table live as select public.file_retention_list(1000, 1) as l;
 select is((select (l ->> 'live')::boolean from live), true, 'live: says so');
 select is(
   (select pg_temp.paths(l) from live),
-  array[
-    pg_temp.path('00000000-0000-4000-8000-0000000000a1', 2),
-    pg_temp.path('00000000-0000-4000-8000-0000000000a1', 5),
-    pg_temp.path('00000000-0000-4000-8000-0000000000b1', 1)
-  ],
-  'live: the files past the retention of accounts without unlimited history, with a summary'
+  array[pg_temp.a(2), pg_temp.a(5), pg_temp.a(7),
+        pg_temp.path('00000000-0000-4000-8000-0000000000b1', 1)],
+  'live: the due files only'
 );
 select is(
-  (select l -> 'files' -> 0 ->> 'sha256' from live), repeat('a', 64),
-  'live: oldest first, with the SHA-256 of the stored copy'
+  (select array[l -> 'files' -> 0 ->> 'path', l -> 'files' -> 0 ->> 'sha256'] from live),
+  array[pg_temp.a(7), repeat('7', 64)],
+  'live: oldest game day first, with the SHA-256 of the stored copy'
 );
-select is(jsonb_array_length(public.file_retention_list(1) -> 'files'), 1, 'live: bounded by the limit');
-select is(jsonb_array_length(public.file_retention_list(0) -> 'files'), 0, 'live: limit 0 lists nothing');
-select is(jsonb_array_length(public.file_retention_list(null) -> 'files'), 0, 'live: no limit lists nothing');
-select is((public.file_retention_list(100000) ->> 'due')::int, 3, 'live: the count is not capped');
 select is(
-  (select bool_and(f ->> 'path' not like '00000000-0000-4000-8000-0000000000e1/%')
-   from jsonb_array_elements(public.file_retention_list(1000) -> 'files') f),
-  true, 'live: never a file of an account with unlimited history'
+  (select l -> 'files' -> 1 ->> 'path' from live), pg_temp.a(5),
+  'live: ordered by the game day (A5 counts from its first upload)'
 );
+select is(jsonb_array_length(public.file_retention_list(1, 1) -> 'files'), 1, 'live: bounded by the limit');
+select is(jsonb_array_length(public.file_retention_list(0, 1) -> 'files'), 0, 'live: limit 0 lists nothing');
+select is(jsonb_array_length(public.file_retention_list(null, 1) -> 'files'), 0, 'live: no limit lists nothing');
+select is((public.file_retention_list(100000, 1) ->> 'due')::int, 4, 'live: the count is not capped');
 
--- Marks: only the named copy, only past the retention, never an exempt account.
+-- The check right before a delete.
+select is(
+  public.file_retention_check(
+    array[pg_temp.a(2), pg_temp.a(1), pg_temp.path('00000000-0000-4000-8000-0000000000e1', 1),
+          pg_temp.path('00000000-0000-4000-8000-0000000000b1', 1), pg_temp.a(8), pg_temp.a(3)],
+    array[repeat('b', 64), repeat('a', 64), repeat('a', 64), repeat('f', 64), repeat('8', 64),
+          repeat('c', 64)],
+    1),
+  array[pg_temp.a(2)],
+  'check: only still-due files of the same copy (not kept, exempt, another copy, recent, no summary)'
+);
+insert into private.unlimited_history (user_id) values ('00000000-0000-4000-8000-0000000000b1');
+select is(
+  public.file_retention_check(
+    array[pg_temp.path('00000000-0000-4000-8000-0000000000b1', 1)], array[repeat('a', 64)], 1),
+  '{}'::text[], 'check: an exemption added after the list keeps the file'
+);
+delete from private.unlimited_history where user_id = '00000000-0000-4000-8000-0000000000b1';
+select throws_ok($$ select public.file_retention_check(array['x'], array[]::text[], 1) $$,
+  '22023', null, 'check: lists of different lengths are refused');
+
+-- Marks: only once the object is gone, only the named copy, never exempt.
+insert into storage.objects (bucket_id, name) values ('games', pg_temp.a(5));
 select is(
   public.file_retention_mark(
-    array[
-      pg_temp.path('00000000-0000-4000-8000-0000000000a1', 2),
-      pg_temp.path('00000000-0000-4000-8000-0000000000a1', 1),
-      pg_temp.path('00000000-0000-4000-8000-0000000000e1', 1),
-      pg_temp.path('00000000-0000-4000-8000-0000000000b1', 1)
-    ],
-    array[repeat('b', 64), repeat('a', 64), repeat('a', 64), repeat('f', 64)]),
+    array[pg_temp.a(2), pg_temp.a(5), pg_temp.a(1),
+          pg_temp.path('00000000-0000-4000-8000-0000000000e1', 1),
+          pg_temp.path('00000000-0000-4000-8000-0000000000b1', 1)],
+    array[repeat('b', 64), repeat('e', 64), repeat('a', 64), repeat('a', 64), repeat('f', 64)]),
   1, 'mark: one game marked'
 );
 select results_eq(
   $$ select user_id::text, game_index from public.games
      where file_expired_at is not null order by user_id, game_index $$,
   $$ values ('00000000-0000-4000-8000-0000000000a1'::text, 2), ('00000000-0000-4000-8000-0000000000a1', 6) $$,
-  'mark: A2 only (A1 is kept, E has unlimited history, B1 named another copy)'
+  'mark: A2 only (A5''s object is still there, A1 is kept, E is exempt, B1 named another copy)'
 );
-select is((select count(*)::int from public.game_stats), 7, 'mark: every summary stays');
-select is((public.file_retention_list(1000) ->> 'due')::int, 2, 'a marked game is no longer due');
+select is((select count(*)::int from public.game_stats), 8, 'mark: every summary stays');
+select is((public.file_retention_list(1000, 1) ->> 'due')::int, 3, 'a marked game is no longer due');
 select throws_ok(
   $$ select public.file_retention_mark(array['x'], array[]::text[]) $$, '22023', null,
   'mark: lists of different lengths are refused'
@@ -210,13 +263,19 @@ select throws_ok(
 select throws_ok($$ select public.file_retention_mark(null, null) $$, '22023', null,
   'mark: null lists are refused');
 
--- A new copy of an expired game is a new file, kept until the next sweep.
-update public.games set content_sha256 = repeat('9', 64)
-where user_id = '00000000-0000-4000-8000-0000000000a1' and game_index = 2;
+-- A new copy of an expired game, through the upload's own commit, is a new
+-- file: the mark goes, and the game is recent (kept) for an hour.
 select is(
-  (select file_expired_at from public.games
-   where user_id = '00000000-0000-4000-8000-0000000000a1' and game_index = 2),
-  null, 'a new copy clears the expiry'
+  public.upload_commit('00000000-0000-4000-8000-0000000000a1', 'Hearthstone_2026_01_01_00_00_00', 2,
+    'GT_BATTLEGROUNDS', 'ok', null, null, null, (select d - 30 from today), '{}'::jsonb,
+    1791000001, repeat('9', 64), 2000, null),
+  'replaced', 'a new copy of an expired game is stored'
+);
+select results_eq(
+  $$ select g.file_expired_at, private.file_retention_state(g, 1) from public.games g
+     where g.user_id = '00000000-0000-4000-8000-0000000000a1' and g.game_index = 2 $$,
+  $$ values (null::timestamptz, 'recent'::text) $$,
+  'a new copy clears the expiry and waits for a later sweep'
 );
 update public.games set status = 'incomplete'
 where user_id = '00000000-0000-4000-8000-0000000000a1' and game_index = 6;
@@ -238,6 +297,27 @@ select ok(
   'backfill: not once its file has expired'
 );
 
+-- ------------------------------------------------------------ upload quota
+-- B fills the 50 MiB bytes quota; expired files no longer count.
+insert into public.games (user_id, session, game_index, game_type, status, played_on,
+  saved_at, content_sha256, size_bytes)
+select '00000000-0000-4000-8000-0000000000b1', 'Hearthstone_2026_02_02_00_00_00', i,
+  'GT_BATTLEGROUNDS', 'ok', '2026-02-02', 1791000000, repeat('a', 64), 65536
+from generate_series(1, 800) as i;
+select is(
+  public.upload_begin('00000000-0000-4000-8000-0000000000b1', 'Hearthstone_2026_03_03_00_00_00',
+    1, 1791000000, repeat('c', 64), 2000) ->> 'result',
+  'quota_bytes', 'quota: full'
+);
+update public.games set file_expired_at = now()
+where user_id = '00000000-0000-4000-8000-0000000000b1' and session = 'Hearthstone_2026_02_02_00_00_00'
+  and game_index <= 10;
+select is(
+  public.upload_begin('00000000-0000-4000-8000-0000000000b1', 'Hearthstone_2026_03_03_00_00_00',
+    1, 1791000000, repeat('c', 64), 2000) ->> 'result',
+  'create', 'quota: expired files free their bytes'
+);
+
 -- ------------------------------------------------------------ run record
 delete from private.sweep_runs;
 create temporary table run as select (public.sweep_housekeeping() ->> 'run_id')::bigint as id;
@@ -246,41 +326,42 @@ create function pg_temp.stats() returns jsonb language sql immutable as $$
     "bad_file": 0, "file_mismatch": 0, "write_failed": 0, "missing": 0, "changed": 0,
     "newer": 0}}'::jsonb;
 $$;
-create function pg_temp.ret(mode text, due int, listed int, deleted int, failed int,
+create function pg_temp.ret(mode text, due int, listed int, changed int, deleted int, failed int,
   unmarked int, lft int) returns jsonb language sql immutable as $$
   select jsonb_build_object('mode', mode, 'days', 28, 'due', due, 'listed', listed,
-    'deleted', deleted, 'failed', failed, 'unmarked', unmarked, 'left', lft,
-    'skipped', jsonb_build_object('exempt', 1, 'no_summary', 0));
+    'changed', changed, 'deleted', deleted, 'failed', failed, 'unmarked', unmarked, 'left', lft,
+    'skipped', jsonb_build_object('exempt', 1, 'recent', 0, 'no_summary', 0));
 $$;
-select ok(private.sweep_retention_valid(pg_temp.ret('report', 3, 0, 0, 0, 0, 0)), 'record: report-only');
-select ok(private.sweep_retention_valid(pg_temp.ret('live', 9, 6, 3, 1, 1, 2)), 'record: live');
+select ok(private.sweep_retention_valid(pg_temp.ret('report', 3, 0, 0, 0, 0, 0, 0)), 'record: report-only');
+select ok(private.sweep_retention_valid(pg_temp.ret('live', 9, 7, 1, 3, 1, 1, 2)), 'record: live');
 select ok(private.sweep_retention_valid('{"error": "list"}'), 'record: a failed list');
 select ok(
-  not private.sweep_retention_valid(pg_temp.ret('report', 3, 1, 1, 0, 0, 0))
-  and not private.sweep_retention_valid(pg_temp.ret('live', 9, 6, 3, 1, 1, 1))
-  and not private.sweep_retention_valid(pg_temp.ret('live', 2, 6, 6, 0, 0, 0))
-  and not private.sweep_retention_valid(pg_temp.ret('live', 9, 3, 3, 0, 4, 0))
-  and not private.sweep_retention_valid(pg_temp.ret('live', 9, 3, 3, 0, 0, 0) || '{"ids": 1}')
-  and not private.sweep_retention_valid(pg_temp.ret('live', 9, 3, 3, 0, 0, 0) || '{"due": -1}')
-  and not private.sweep_retention_valid(pg_temp.ret('live', 9, 3, 3, 0, 0, 0) || '{"due": 1.5}')
-  and not private.sweep_retention_valid(pg_temp.ret('other', 0, 0, 0, 0, 0, 0))
+  not private.sweep_retention_valid(pg_temp.ret('report', 3, 1, 0, 1, 0, 0, 0))
+  and not private.sweep_retention_valid(pg_temp.ret('report', 3, 0, 1, 0, 0, 0, 0))
+  and not private.sweep_retention_valid(pg_temp.ret('live', 9, 7, 0, 3, 1, 1, 2))
+  and not private.sweep_retention_valid(pg_temp.ret('live', 2, 6, 0, 6, 0, 0, 0))
+  and not private.sweep_retention_valid(pg_temp.ret('live', 9, 3, 0, 3, 0, 4, 0))
+  and not private.sweep_retention_valid(pg_temp.ret('live', 9, 3, 0, 3, 0, 0, 0) || '{"ids": 1}')
+  and not private.sweep_retention_valid(pg_temp.ret('live', 9, 3, 0, 3, 0, 0, 0) || '{"due": -1}')
+  and not private.sweep_retention_valid(pg_temp.ret('live', 9, 3, 0, 3, 0, 0, 0) || '{"due": 1.5}')
+  and not private.sweep_retention_valid(pg_temp.ret('other', 0, 0, 0, 0, 0, 0, 0))
   and not private.sweep_retention_valid('{"error": "other"}')
   and not private.sweep_retention_valid('[]'),
   'record: counts that do not add up, extra keys, bad numbers or modes are refused'
 );
 select throws_ok(
   format($$ select public.sweep_record_result(%s, 0, %L, %L) $$,
-    (select id from run), pg_temp.stats(), pg_temp.ret('report', 3, 1, 1, 0, 0, 0)),
+    (select id from run), pg_temp.stats(), pg_temp.ret('report', 3, 1, 0, 1, 0, 0, 0)),
   '22023', null, 'record: refuses retention counts out of shape'
 );
 select lives_ok(
   format($$ select public.sweep_record_result(%s, 0, %L, %L) $$,
-    (select id from run), pg_temp.stats(), pg_temp.ret('report', 3, 0, 0, 0, 0, 0)),
+    (select id from run), pg_temp.stats(), pg_temp.ret('report', 3, 0, 0, 0, 0, 0, 0)),
   'record: stores retention counts'
 );
 select is(
   (select result -> 'retention' from private.sweep_runs where id = (select id from run)),
-  pg_temp.ret('report', 3, 0, 0, 0, 0, 0), 'record: the retention is on the run''s row'
+  pg_temp.ret('report', 3, 0, 0, 0, 0, 0, 0), 'record: the retention is on the run''s row'
 );
 create temporary table run2 as select (public.sweep_housekeeping() ->> 'run_id')::bigint as id;
 select lives_ok(

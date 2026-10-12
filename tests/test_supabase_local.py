@@ -410,9 +410,15 @@ class LocalStackTests(unittest.TestCase):
         for tok in (token, keep_token):
             status, body = self.upload(tok, _real_record("b253216_solo", 1), index=1)
             self.assertEqual((status, body.get("result")), (201, "created"), body)
-        _psql("update public.games set played_on = current_date - 40,"
-              " created_at = now() - interval '40 days'"
-              " where user_id in ('{a}', '{b}')".format(a=uid, b=keep))
+        # A recent game whose name starts like the old one's: the Storage
+        # delete must take exact names, never prefixes.
+        status, body = self.upload(token, _real_record("b253216_solo", 10), index=10)
+        self.assertEqual(status, 201, body)
+        # Replica mode skips the trigger that would set updated_at back to now().
+        _psql("set session_replication_role = replica;"
+              " update public.games set played_on = current_date - 40,"
+              " created_at = now() - interval '40 days', updated_at = now() - interval '2 hours'"
+              " where user_id in ('{a}', '{b}') and game_index = 1".format(a=uid, b=keep))
         _psql(f"insert into private.unlimited_history (user_id) values ('{keep}')")
         files = ("select count(*) from storage.objects"
                  " where bucket_id = 'games' and name like '{u}/%'")
@@ -423,7 +429,7 @@ class LocalStackTests(unittest.TestCase):
             self.assertEqual((r["mode"], r["listed"], r["deleted"]), ("report", 0, 0), r)
             self.assertGreaterEqual(r["due"], 1)
             self.assertGreaterEqual(r["skipped"]["exempt"], 1)
-            self.assertEqual(_psql(files.format(u=uid)), "1", "report-only deletes nothing")
+            self.assertEqual(_psql(files.format(u=uid)), "2", "report-only deletes nothing")
 
             _psql("update private.file_retention set live = true")
             status, body = self.api.secret("POST", "/functions/v1/sweep", body={})
@@ -431,19 +437,24 @@ class LocalStackTests(unittest.TestCase):
             r = body["retention"]
             self.assertEqual(r["mode"], "live", r)
             self.assertGreaterEqual(r["deleted"], 1)
-            self.assertEqual((r["failed"], r["unmarked"], r["left"]), (0, 0, 0), r)
+            self.assertEqual((r["changed"], r["failed"], r["unmarked"], r["left"]), (0, 0, 0, 0), r)
             self.assertEqual(
                 _psql("select result -> 'retention' = '{r}'::jsonb from private.sweep_runs"
                       " where id = {i}".format(r=json.dumps(r), i=int(body["run_id"]))),
                 "t", "the sweep records the retention on its run's row")
-            self.assertEqual(_psql(files.format(u=uid)), "0", "the old file is gone")
+            self.assertEqual(
+                _psql("select string_agg(name, ',') from storage.objects"
+                      " where bucket_id = 'games' and name like '{u}/%'".format(u=uid)),
+                f"{uid}/{SESSION}-10.json.gz", "the old file is gone, the recent -10 stays")
             self.assertEqual(_psql(files.format(u=keep)), "1", "unlimited history keeps it")
             _, rows = self.api.request(
                 "GET", f"/rest/v1/game_summaries?user_id=eq.{uid}"
                 "&select=game_index,counted_place,rounds,file_expired_at", token=token)
-            self.assertEqual(len(rows), 1, "the summary stays")
-            self.assertIsNotNone(rows[0]["file_expired_at"], "and says the file expired")
-            self.assertIsNotNone(rows[0]["rounds"])
+            rows = {row["game_index"]: row for row in rows}
+            self.assertEqual(sorted(rows), [1, 10], "the summaries stay")
+            self.assertIsNotNone(rows[1]["file_expired_at"], "and say the file expired")
+            self.assertIsNone(rows[10]["file_expired_at"])
+            self.assertIsNotNone(rows[1]["rounds"])
             _, kept = self.api.request(
                 "GET", f"/rest/v1/game_summaries?user_id=eq.{keep}&select=file_expired_at",
                 token=keep_token)

@@ -55,7 +55,7 @@ const REPORT = {
   live: false,
   days: 28,
   due: 0,
-  skipped: { exempt: 0, no_summary: 0 },
+  skipped: { exempt: 0, recent: 0, no_summary: 0 },
   files: [],
 };
 /** The retention's counts; zero unless given. */
@@ -64,11 +64,12 @@ const retained = (over: Record<string, unknown> = {}) => ({
   days: 28,
   due: 0,
   listed: 0,
+  changed: 0,
   deleted: 0,
   failed: 0,
   unmarked: 0,
   left: 0,
-  skipped: { exempt: 0, no_summary: 0 },
+  skipped: { exempt: 0, recent: 0, no_summary: 0 },
   ...over,
 });
 
@@ -97,6 +98,8 @@ function fakeApi(
     retention?: unknown;
     /** True for the retention deletes (by their first file) that Storage refuses. */
     deleteFails?: (first: string) => boolean;
+    /** file_retention_check()'s answer for a batch; all of it unless given. */
+    stillDue?: (paths: string[]) => unknown;
     /** file_retention_mark()'s answer for a batch; all of it unless given. */
     marked?: (n: number) => unknown;
   } = {},
@@ -123,6 +126,9 @@ function fakeApi(
     }
     if (path === "/rest/v1/rpc/file_retention_list") {
       return reply(200, "retention" in opts ? opts.retention : REPORT);
+    }
+    if (path === "/rest/v1/rpc/file_retention_check") {
+      return reply(200, opts.stillDue ? opts.stillDue(body.p_paths) : body.p_paths);
     }
     if (path === "/rest/v1/rpc/file_retention_mark") {
       const n = body.p_paths.length;
@@ -637,13 +643,14 @@ const live = (n: number, over: Record<string, unknown> = {}) => ({
   live: true,
   days: 28,
   due: n,
-  skipped: { exempt: 2, no_summary: 1 },
+  skipped: { exempt: 2, recent: 4, no_summary: 1 },
   files: Array.from({ length: n }, (_, i) => old(i + 1)),
   ...over,
 });
 const retentionCalls = (api: ReturnType<typeof fakeApi>) =>
   api.calls.filter((c) =>
     c.path === "/rest/v1/rpc/file_retention_mark" ||
+    c.path === "/rest/v1/rpc/file_retention_check" ||
     (c.path === "/storage/v1/object/games" &&
       (c.body as { prefixes: string[] }).prefixes[0].includes("2026_08_01"))
   );
@@ -666,16 +673,16 @@ async function run(api: ReturnType<typeof fakeApi>, env: Env = ENV, fetchFn = ap
 
 Deno.test("retention, report-only: counts what is due and deletes nothing", async () => {
   const api = fakeApi({
-    retention: { ...REPORT, due: 5, skipped: { exempt: 2, no_summary: 1 } },
+    retention: { ...REPORT, due: 5, skipped: { exempt: 2, recent: 4, no_summary: 1 } },
   });
   const { status, body } = await run(api);
   assertEquals(status, 200);
-  const expected = retained({ due: 5, skipped: { exempt: 2, no_summary: 1 } });
+  const expected = retained({ due: 5, skipped: { exempt: 2, recent: 4, no_summary: 1 } });
   assertEquals(body.retention, expected);
   assertEquals(recorded(api), expected);
   assertEquals(retentionCalls(api), []);
   const list = api.calls.find((c) => c.path === "/rest/v1/rpc/file_retention_list");
-  assertEquals(list?.body, { p_limit: 1000 });
+  assertEquals(list?.body, { p_limit: 1000, p_version: SUMMARY_VERSION });
 });
 
 Deno.test("retention, live: deletes through the Storage API, then marks the games", async () => {
@@ -687,22 +694,25 @@ Deno.test("retention, live: deletes through the Storage API, then marks the game
     due: 3,
     listed: 3,
     deleted: 3,
-    skipped: { exempt: 2, no_summary: 1 },
+    skipped: { exempt: 2, recent: 4, no_summary: 1 },
   });
   assertEquals(body.retention, expected);
   assertEquals(recorded(api), expected);
   assertEquals(logs, []);
   const calls = retentionCalls(api);
   assertEquals(calls.map((c) => `${c.method} ${c.path}`), [
+    "POST /rest/v1/rpc/file_retention_check",
     "DELETE /storage/v1/object/games",
     "POST /rest/v1/rpc/file_retention_mark",
   ]);
-  assertEquals(calls[0].body, { prefixes: [old(1).path, old(2).path, old(3).path] });
-  assertEquals(calls[1].body, {
+  const named = {
     p_paths: [old(1).path, old(2).path, old(3).path],
     p_sha256: [old(1).sha256, old(2).sha256, old(3).sha256],
-  });
-  assertEquals(calls[0].headers.apikey, ENV.serviceKey);
+  };
+  assertEquals(calls[0].body, { ...named, p_version: SUMMARY_VERSION });
+  assertEquals(calls[1].body, { prefixes: [old(1).path, old(2).path, old(3).path] });
+  assertEquals(calls[2].body, named);
+  assertEquals(calls[1].headers.apikey, ENV.serviceKey);
   // After the backfill (which needs the files) and before the run is recorded.
   const order = api.calls.map((c) => c.path);
   const at = (p: string) => order.indexOf(p);
@@ -798,7 +808,7 @@ Deno.test("retention: an answer out of shape deletes nothing", async () => {
     live(1, { days: 1.5 }),
     live(1, { live: "yes" }),
     live(1, { due: -1 }),
-    live(1, { skipped: { exempt: 1 } }),
+    live(1, { skipped: { exempt: 1, no_summary: 0 } }),
     live(1, { skipped: null }),
   ];
   for (const retention of bad) {
@@ -815,4 +825,56 @@ Deno.test("retention: the logs hold counts, never a user id or file name", async
   const { logs } = await run(fakeApi({ retention: live(3), deleteFails: () => true }));
   assertEquals(logs.length, 1);
   assertEquals(/[0-9a-f]{8}-|Hearthstone|\.json/.test(logs.join("\n")), false);
+});
+
+Deno.test("retention: a file no longer due at its batch's check is kept and counted", async () => {
+  const api = fakeApi({
+    retention: live(3),
+    stillDue: (paths) => paths.filter((p) => p !== old(2).path),
+  });
+  const { status, body } = await run(api);
+  assertEquals(status, 200);
+  const r = body.retention as Record<string, number>;
+  assertEquals([r.listed, r.changed, r.deleted, r.unmarked], [3, 1, 2, 0]);
+  const del = retentionCalls(api).find((c) => c.method === "DELETE");
+  assertEquals(del?.body, { prefixes: [old(1).path, old(3).path] });
+});
+
+Deno.test("retention: nothing still due, no delete; a failed or odd check deletes nothing", async () => {
+  const none = fakeApi({ retention: live(3), stillDue: () => [] });
+  const r0 = (await run(none)).body.retention as Record<string, number>;
+  assertEquals([r0.changed, r0.deleted], [3, 0]);
+  assertEquals(retentionCalls(none).filter((c) => c.method === "DELETE"), []);
+  const odd: ((paths: string[]) => unknown)[] = [
+    () => null,
+    () => "x",
+    () => [old(9).path], // not in the batch
+    (paths) => [paths[0], paths[0]], // twice
+    (paths) => [...paths, old(9).path], // longer than the batch
+  ];
+  for (const stillDue of odd) {
+    const api = fakeApi({ retention: live(3), stillDue });
+    const { status, body } = await run(api);
+    assertEquals(status, 200);
+    const r = body.retention as Record<string, number>;
+    assertEquals([r.failed, r.deleted], [3, 0], String(stillDue));
+    assertEquals(retentionCalls(api).filter((c) => c.method === "DELETE"), [], String(stillDue));
+  }
+  const failing = fakeApi({ retention: live(3), fail: "/rest/v1/rpc/file_retention_check" });
+  const r1 = (await run(failing)).body.retention as Record<string, number>;
+  assertEquals([r1.failed, r1.deleted], [3, 0]);
+});
+
+Deno.test("retention: no batch starts past the run's deadline, whatever the backfill took", async () => {
+  let t = 0;
+  const api = fakeApi({ retention: live(3) });
+  const fetchFn: Fetch = (input, init) => {
+    // The backfill's list call takes the run past its 130 s.
+    if (input.endsWith("/rest/v1/rpc/game_stats_backfill_list")) t += 131_000;
+    return api.fetchFn(input, init);
+  };
+  const { body } = await run(api, { ...ENV, now: () => t }, fetchFn);
+  const r = body.retention as Record<string, number>;
+  assertEquals([r.listed, r.deleted, r.left], [3, 0, 3]);
+  assertEquals(retentionCalls(api), []);
 });

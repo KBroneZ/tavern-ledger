@@ -26,13 +26,15 @@
 // 80 % are logged too (percentages only).
 // Then the file retention (T-544, D-109, D-113): file_retention_list() names
 // the full game files past the retention (28 days) of accounts without
-// unlimited history, at most 1000 per run; they are deleted through the
-// Storage API in batches of 100 within 20 seconds, and each batch is then
-// marked expired on its game rows (file_retention_mark), which keeps the
-// summaries. Delete first, mark after: a failed delete leaves the games
-// unmarked for the next run, and a failed mark is redone then (deleting a
-// missing file is a no-op). Report-only (the setting ships off) lists no
-// file and only counts what is due. The counts are stored as "retention" on
+// unlimited history, at most 1000 per run, oldest first. In batches of 100,
+// within 20 seconds and 130 seconds of the run's start, file_retention_check()
+// says which are still due right before the delete (the switch, a new
+// exemption, a new copy or a recent upload keep a file), those are deleted
+// through the Storage API, and file_retention_mark() marks their game rows
+// once the objects are gone, which keeps the summaries. A failed check,
+// delete or mark is redone on the next run (deleting a missing file is a
+// no-op). Report-only (the setting ships off) lists no file and only counts
+// what is due. The counts are stored as "retention" on
 // the run's row and in the response; a failed step there is recorded and
 // never stops the sweep.
 // Safe to run any time and as often as wanted. No dependencies.
@@ -68,6 +70,9 @@ const SHA256 = /^[0-9a-f]{64}$/;
 const RETENTION_LIMIT = 1000;
 const RETENTION_BATCH = 100;
 const RETENTION_BUDGET_MS = 20_000;
+// No retention batch starts later than this after the run began, whatever
+// the backfill took, so the whole run stays under the wall-clock limit.
+const RUN_BUDGET_MS = 130_000;
 
 class StepError extends Error {
   constructor(readonly step: string, readonly status: number) {
@@ -440,11 +445,17 @@ interface Due {
   sha256: string;
 }
 
+interface Skipped {
+  exempt: number;
+  recent: number;
+  no_summary: number;
+}
+
 interface RetentionList {
   live: boolean;
   days: number;
   due: number;
-  skipped: { exempt: number; no_summary: number };
+  skipped: Skipped;
   files: Due[];
 }
 
@@ -455,11 +466,12 @@ export type Retention =
     days: number;
     due: number;
     listed: number;
+    changed: number;
     deleted: number;
     failed: number;
     unmarked: number;
     left: number;
-    skipped: { exempt: number; no_summary: number };
+    skipped: Skipped;
   };
 
 /** A file named by file_retention_list(), or null when it is out of shape. */
@@ -472,6 +484,14 @@ function due(v: unknown): Due | null {
     : null;
 }
 
+function skippedOf(v: unknown): Skipped | null {
+  if (typeof v !== "object" || v === null) return null;
+  const s = v as Record<string, unknown>;
+  return count(s.exempt) && count(s.recent) && count(s.no_summary)
+    ? { exempt: s.exempt, recent: s.recent, no_summary: s.no_summary }
+    : null;
+}
+
 /**
  * file_retention_list()'s answer, or null when it is out of shape. Every
  * file must be shaped like a game file, and a report-only answer may name
@@ -480,11 +500,10 @@ function due(v: unknown): Due | null {
 function checkRetentionList(v: unknown): RetentionList | null {
   if (typeof v !== "object" || v === null) return null;
   const r = v as Record<string, unknown>;
-  const skipped = r.skipped as Record<string, unknown> | null;
+  const skipped = skippedOf(r.skipped);
   if (
     typeof r.live !== "boolean" || !Number.isInteger(r.days) || (r.days as number) < 1 ||
-    (r.days as number) > 3650 || !count(r.due) || typeof skipped !== "object" ||
-    skipped === null || !count(skipped.exempt) || !count(skipped.no_summary) ||
+    (r.days as number) > 3650 || !count(r.due) || skipped === null ||
     !Array.isArray(r.files) || r.files.length > RETENTION_LIMIT || r.files.length > r.due ||
     (!r.live && r.files.length > 0)
   ) {
@@ -492,48 +511,75 @@ function checkRetentionList(v: unknown): RetentionList | null {
   }
   const files = r.files.map(due);
   if (!files.every((f): f is Due => f !== null)) return null;
-  return {
-    live: r.live,
-    days: r.days as number,
-    due: r.due,
-    skipped: { exempt: skipped.exempt, no_summary: skipped.no_summary },
-    files,
-  };
+  return { live: r.live, days: r.days as number, due: r.due, skipped, files };
+}
+
+async function rpc(env: Env, fetchFn: Fetch, step: string, name: string, body: unknown) {
+  const res = await call(fetchFn, step, `${env.url}/rest/v1/rpc/${name}`, {
+    method: "POST",
+    headers: serviceHeaders(env),
+    body: JSON.stringify(body),
+  });
+  return await res.json();
 }
 
 async function listExpired(env: Env, fetchFn: Fetch): Promise<RetentionList | null> {
   try {
-    const res = await call(fetchFn, "list expired", `${env.url}/rest/v1/rpc/file_retention_list`, {
-      method: "POST",
-      headers: serviceHeaders(env),
-      body: JSON.stringify({ p_limit: RETENTION_LIMIT }),
-    });
-    return checkRetentionList(await res.json());
+    return checkRetentionList(
+      await rpc(env, fetchFn, "list expired", "file_retention_list", {
+        p_limit: RETENTION_LIMIT,
+        p_version: SUMMARY_VERSION,
+      }),
+    );
   } catch (_e) {
     return null;
   }
 }
 
-/** How many games file_retention_mark() marked; 0 when the call failed. */
-async function markExpired(env: Env, fetchFn: Fetch, batch: Due[]): Promise<number> {
+/**
+ * The files of a batch that are still due right before their delete
+ * (file_retention_check), or null when the call failed or answered anything
+ * but a subset of the batch's names.
+ */
+async function stillDue(env: Env, fetchFn: Fetch, batch: Due[]): Promise<Due[] | null> {
+  let names: unknown;
   try {
-    const res = await call(fetchFn, "mark expired", `${env.url}/rest/v1/rpc/file_retention_mark`, {
-      method: "POST",
-      headers: serviceHeaders(env),
-      body: JSON.stringify({
-        p_paths: batch.map((f) => f.path),
-        p_sha256: batch.map((f) => f.sha256),
-      }),
+    names = await rpc(env, fetchFn, "check expired", "file_retention_check", {
+      p_paths: batch.map((f) => f.path),
+      p_sha256: batch.map((f) => f.sha256),
+      p_version: SUMMARY_VERSION,
     });
-    const marked = await res.json();
-    return count(marked) && marked <= batch.length ? marked : 0;
+  } catch (_e) {
+    return null;
+  }
+  if (!Array.isArray(names) || names.length > batch.length) return null;
+  const byPath = new Map(batch.map((f) => [f.path, f]));
+  const kept = new Set<string>();
+  for (const n of names) {
+    if (typeof n !== "string" || !byPath.has(n) || kept.has(n)) return null;
+    kept.add(n);
+  }
+  return batch.filter((f) => kept.has(f.path));
+}
+
+/** How many games file_retention_mark() marked; 0 when the call failed. */
+async function markExpired(env: Env, fetchFn: Fetch, files: Due[]): Promise<number> {
+  try {
+    const marked = await rpc(env, fetchFn, "mark expired", "file_retention_mark", {
+      p_paths: files.map((f) => f.path),
+      p_sha256: files.map((f) => f.sha256),
+    });
+    return count(marked) && marked <= files.length ? marked : 0;
   } catch (_e) {
     return 0;
   }
 }
 
-/** Deletes the files past the retention (or counts them, report-only). Never throws. */
-async function expireFiles(env: Env, fetchFn: Fetch): Promise<Retention> {
+/**
+ * Deletes the files past the retention (or counts them, report-only); no
+ * batch starts after its own budget or the run's deadline. Never throws.
+ */
+async function expireFiles(env: Env, fetchFn: Fetch, runDeadline: number): Promise<Retention> {
   const list = await listExpired(env, fetchFn);
   if (list === null) {
     console.error("sweep: file retention not run (list failed or out of shape)");
@@ -544,6 +590,7 @@ async function expireFiles(env: Env, fetchFn: Fetch): Promise<Retention> {
     days: list.days,
     due: list.due,
     listed: list.files.length,
+    changed: 0,
     deleted: 0,
     failed: 0,
     unmarked: 0,
@@ -551,27 +598,36 @@ async function expireFiles(env: Env, fetchFn: Fetch): Promise<Retention> {
     skipped: list.skipped,
   };
   const now = env.now ?? Date.now;
-  const deadline = now() + RETENTION_BUDGET_MS;
+  const deadline = Math.min(now() + RETENTION_BUDGET_MS, runDeadline);
   for (let i = 0; list.live && i < list.files.length; i += RETENTION_BATCH) {
     const batch = list.files.slice(i, i + RETENTION_BATCH);
     if (now() >= deadline) {
       counts.left += batch.length;
       continue;
     }
+    // Checked again right before the delete: the switch, a new exemption, a
+    // new copy or a recent upload since the list keep the file.
+    const files = await stillDue(env, fetchFn, batch);
+    if (files === null) {
+      counts.failed += batch.length;
+      continue;
+    }
+    counts.changed += batch.length - files.length;
+    if (files.length === 0) continue;
     try {
       const res = await call(fetchFn, "delete expired", `${env.url}/storage/v1/object/games`, {
         method: "DELETE",
         headers: serviceHeaders(env),
-        body: JSON.stringify({ prefixes: batch.map((f) => f.path) }),
+        body: JSON.stringify({ prefixes: files.map((f) => f.path) }),
       });
       await res.body?.cancel();
     } catch (_e) {
-      counts.failed += batch.length;
+      counts.failed += files.length;
       continue;
     }
-    counts.deleted += batch.length;
-    // Fewer marked than deleted: a game changed meanwhile, or the call failed.
-    counts.unmarked += batch.length - await markExpired(env, fetchFn, batch);
+    counts.deleted += files.length;
+    // Marked only where the object is really gone: the rest is redone next run.
+    counts.unmarked += files.length - await markExpired(env, fetchFn, files);
   }
   // Counts only: no user id, session or file name in the logs.
   if (!list.live) {
@@ -610,6 +666,7 @@ async function recordFailure(env: Env, fetchFn: Fetch, runId: number | null, ste
  */
 async function sweep(env: Env, fetchFn: Fetch): Promise<Response> {
   let runId: number | null = null;
+  const started = (env.now ?? Date.now)();
   try {
     const files = await deleteOrphans(env, fetchFn);
     const res = await call(
@@ -624,7 +681,7 @@ async function sweep(env: Env, fetchFn: Fetch): Promise<Response> {
     const capacity = checkCapacity(measured);
     logCapacity(capacity);
     const stats = await backfillStats(env, fetchFn);
-    const retention = await expireFiles(env, fetchFn);
+    const retention = await expireFiles(env, fetchFn, started + RUN_BUDGET_MS);
     const done = await call(fetchFn, "record run", `${env.url}/rest/v1/rpc/sweep_record_result`, {
       method: "POST",
       headers: serviceHeaders(env),
