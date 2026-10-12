@@ -102,7 +102,7 @@ export const ES: Record<GameStringKey, string> = {
   "shop.line.gold": "Oro {gold}",
   "shop.line.sell": "+ {n} por ventas",
   "shop.line.extra": "+ {n} de otros efectos",
-  "shop.line.spent": "{n} gastados",
+  "shop.line.spent": "oro gastado: {n}",
   "shop.line.rolls.one": "1 refresco",
   "shop.line.rolls.other": "{count} refrescos",
   "shop.line.free": "({n} gratis)",
@@ -111,7 +111,6 @@ export const ES: Record<GameStringKey, string> = {
 
   "minion.golden": "Dorado",
   "minion.stats": "{attack}/{health}",
-  "minion.statsWords": "{attack} de ataque, {health} de vida",
   "minion.unknownStat": "desconocido",
   "minion.unknownCard": "Carta desconocida",
   "gift.title": "Don siniestro: {tip}",

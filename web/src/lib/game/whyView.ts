@@ -85,7 +85,7 @@ export function oddsCell(c: WhyCombat): VNode[] {
 
 /** A turn's detail: the odds in full, and the cause with its evidence when the likeliest result did not happen. */
 export function whyDetail(c: WhyCombat, nameOf: NameOf): VNode[] {
-  const differed = c.noOdds !== null || (c.cause !== null && c.cause.id !== "matched") || c.cause === null;
+  const differed = c.noOdds !== null || (c.cause !== null && c.cause.id !== "matched");
   const more = evidence(c, nameOf);
   return [
     h("p", {}, h("span", { class: "tile-label" }, g("why.oddsTitle")), " ", oddsText(c)),

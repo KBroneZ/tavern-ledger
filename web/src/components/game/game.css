@@ -233,7 +233,7 @@
   font-size: var(--t-sm);
 }
 
-/* Narrow screens: the tier and the gold move into the row's detail, opponents show by portrait. */
+/* Narrow screens: the tier and the gold are in the row's detail (the shop line), opponents show by portrait. */
 @media (max-width: 40rem) {
   .gv-turns .gv-wide,
   .gv-turns .gv-long {

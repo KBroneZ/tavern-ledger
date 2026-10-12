@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { loadEngine } from "../../src/lib/sim/engine.ts";
 import { cardIdsOf, explainRequest, readWhy, type WhyCombat } from "../../src/lib/game/why.ts";
 import { causeLine, causeMark, evidence, oddsCell, whyDetail } from "../../src/lib/game/whyView.ts";
-import { askEngine } from "../../src/lib/game/whyRun.ts";
+import { askEngine, fillWhy } from "../../src/lib/game/whyRun.ts";
 import { setLang } from "../../src/lib/i18n.ts";
 import type { VNode } from "../../src/lib/view/node.ts";
 import { WASM_PATH } from "../../tools/simStamp.ts";
@@ -199,4 +199,43 @@ test("the engine's worker is stopped once it answers, fails or takes too long", 
   assert.ok(silent.stopped);
   const other = new FakeWorker(() => ({ id: 2, answer: "not ours" }));
   await assert.rejects(askEngine("x", () => other as unknown as Worker, 10), /too long/, "another request's answer is not taken");
+});
+
+/** A stand-in for the page: the turn table's odds cells, the detail boxes and the status line. */
+function fakePage(rounds: number[]) {
+  const text = (n: unknown): string =>
+    typeof n === "object" && n !== null && "data" in n ? String((n as { data: string }).data) : ((n as { kids?: unknown[] }).kids ?? []).map(text).join("");
+  const doc = {
+    createElement: () => {
+      const el = { kids: [] as unknown[], setAttribute() {}, appendChild: (c: unknown) => void el.kids.push(c) };
+      return el;
+    },
+    createElementNS: () => doc.createElement(),
+    createTextNode: (data: string) => ({ data }),
+  };
+  const box = (key: string, round: number) => {
+    const node = { dataset: { [key]: String(round) }, ownerDocument: doc, kids: [] as unknown[], replaceChildren: (...k: unknown[]) => void (node.kids = k) };
+    return node;
+  };
+  const odds = rounds.map((r) => box("odds", r));
+  const why = rounds.map((r) => box("why", r));
+  const status = { textContent: "the note" };
+  const root = {
+    querySelectorAll: (sel: string) => (sel === "[data-odds]" ? odds : why),
+    querySelector: () => status,
+  } as unknown as ParentNode;
+  return { root, status, oddsText: () => odds.map((c) => c.kids.map(text).join("")), whyCount: () => why.map((c) => c.kids.length) };
+}
+
+test("the engine's answer fills each row; a combat it does not answer, or no answer at all, ends as a dash", () => {
+  const page = fakePage([1, 3]);
+  const chance = { ...good, round: 1, result: "lost", odds: { won: 0.58, tied: 0.04, lost: 0.38 }, cause: { id: "chance", attacks: 9 } };
+  fillWhy(page.root, readWhy(answer([chance])));
+  assert.deepEqual(page.oddsText(), ["58% Chance", "—"], "never left waiting");
+  assert.deepEqual(page.whyCount(), [3, 0]);
+  assert.equal(page.status.textContent, "the note");
+  const failed = fakePage([1, 3]);
+  fillWhy(failed.root, null);
+  assert.deepEqual(failed.oddsText(), ["—", "—"]);
+  assert.match(failed.status.textContent, /could not be worked out/);
 });

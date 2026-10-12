@@ -53,9 +53,10 @@ function damageCell(x: TurnRow): VNode {
   );
 }
 
-/** Waits for the engine: a quiet ellipsis, and words for screen readers. */
+/** Waits for the engine: a quiet ellipsis, and words for screen readers. No combat: empty; a result not known: no odds. */
 function oddsCell(x: TurnRow): VNode {
-  if (!x.result || x.result === "unknown") return h("td", { class: "num gv-odds" });
+  if (!x.result) return h("td", { class: "num gv-odds" });
+  if (x.result === "unknown") return h("td", { class: "num gv-odds" }, unknownValue());
   return h(
     "td",
     { class: "num gv-odds", "data-odds": String(x.turn) },

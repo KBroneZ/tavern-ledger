@@ -61,11 +61,18 @@ test("render: Simple has the key numbers, the turns and the replays; the rest is
   const label = (n: VNode) => text(n.children[0]);
   assert.deepEqual(tiles.filter((n) => attr(n, "class") === "tile").map(label), ["Combats won–lost", "Damage dealt", "Damage taken", "Final tavern tier"]);
   assert.deepEqual(tiles.filter((n) => attr(n, "class") === "tile adv").map(label), ["Gold spent", "Triples", "Rolls", "Buys", "Sells", "Actions per minute"]);
-  // The combats in one short figure; how many back each number only in Advanced.
+  // The combats in one short figure; how many back each number only in Advanced,
+  // unless the number is partial: one combat's result is unknown, so that line stays in view.
   assert.match(text(tiles[0]), /^Combats won–lost1–1/);
-  const backs = [...walk(nodes[0])].filter((n) => attr(n, "class")?.startsWith("tile-back"));
-  assert.ok(backs.length > 0);
-  for (const b of backs) assert.equal(attr(b, "class"), "tile-back adv");
+  const back = (tile: VNode) => [...walk(tile)].find((n) => attr(n, "class")?.startsWith("tile-back"));
+  assert.equal(attr(back(tiles[0])!, "class"), "tile-back");
+  assert.match(text(back(tiles[0])!), /1 unknown/);
+  // Damage dealt is known for 2 of 3 combats: a partial sum keeps its line in view too.
+  assert.equal(attr(back(tiles[1])!, "class"), "tile-back");
+  assert.match(text(back(tiles[1])!), /over 2 of 3 combats/);
+  const rest = tiles.slice(2).map(back).filter((n): n is VNode => n !== undefined);
+  assert.ok(rest.length > 0);
+  for (const b of rest) assert.equal(attr(b, "class"), "tile-back adv");
 });
 
 test("render: each turn is one row whose toggle opens its boards, shop and odds (T-559, D-131)", () => {

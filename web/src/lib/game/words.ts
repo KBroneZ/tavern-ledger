@@ -35,6 +35,11 @@ export function combatsBacking(k: Known): string {
   return k.logged > 0 && k.logged < k.known ? `${base} · ${g("summary.backing.logged", { n: k.logged })}` : base;
 }
 
+/** A total over only some of its combats: its backing line stays in view, so it does not read as the whole game. */
+export function partial(k: Known): boolean {
+  return k.value !== null && k.known < k.total;
+}
+
 /** A damage total is marked inferred when any combat behind it was worked out from health (T-559: only inferred is marked). */
 export function damageMark(k: Known): "inferred" | undefined {
   return k.known > 0 && k.logged < k.known ? "inferred" : undefined;
@@ -102,12 +107,6 @@ export function keywordWords(keywords: readonly Keyword[]): string {
 /** "3/3", with "?" for a stat the record lacks. */
 export function statsText(m: Pick<Minion, "atk" | "health">): string {
   return g("minion.stats", { attack: m.atk === null ? "?" : m.atk, health: m.health === null ? "?" : m.health });
-}
-
-/** "3 attack, 3 health", for screen readers next to the short "3/3". */
-export function statsWords(m: Minion): string {
-  const unknown = g("minion.unknownStat");
-  return g("minion.statsWords", { attack: m.atk ?? unknown, health: m.health ?? unknown });
 }
 
 /** "Lantern Moth, 3/3, Golden, Taunt, Divine Shield" (the id when the card data lacks it): a minion's alt and tooltip. */

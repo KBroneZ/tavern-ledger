@@ -115,7 +115,6 @@ export const GAME_STRINGS = {
 
   "minion.golden": "Golden",
   "minion.stats": "{attack}/{health}",
-  "minion.statsWords": "{attack} attack, {health} health",
   "minion.unknownStat": "unknown",
   "minion.unknownCard": "Unknown card",
   "gift.title": "Dark Gift: {tip}",

@@ -73,8 +73,23 @@ export function readNameFile(value: unknown): Pick<CardNames, "names" | "trinket
   return { names, trinkets };
 }
 
-/** Loads both files for the page's language; null when either cannot be loaded (ids show). */
-export async function loadCardNames(): Promise<CardNames | null> {
+/** Past this the page draws the game without names (ids show) rather than wait. */
+export const NAMES_TIMEOUT_MS = 8_000;
+
+/** Loads both files for the page's language; null when either cannot be loaded in time (ids show). */
+export async function loadCardNames(timeoutMs = NAMES_TIMEOUT_MS): Promise<CardNames | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), timeoutMs);
+  });
+  try {
+    return await Promise.race([readCardNames(), late]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function readCardNames(): Promise<CardNames | null> {
   try {
     const es = lang() === "es";
     const [cards, others] = await Promise.all([
