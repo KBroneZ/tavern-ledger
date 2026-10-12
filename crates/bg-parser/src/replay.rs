@@ -288,7 +288,9 @@ impl ReplayTracker {
         let Some(e) = entity.and_then(|id| board.get(id)) else {
             return;
         };
-        if !live.ready() {
+        // A trigger waits for the set-up; an attack is always the combat's,
+        // so a log that never announces the action step still has a replay.
+        if kind != "ATTACK" && !live.ready() {
             return;
         }
         match kind {
