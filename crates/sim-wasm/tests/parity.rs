@@ -136,13 +136,7 @@ fn requests() -> Vec<(&'static str, Value)> {
                 board(
                     Some(5),
                     vec![
-                        m(
-                            "BG33_430",
-                            2,
-                            5,
-                            &[],
-                            facts(3, &["QUILBOAR"], 2, 5, &[]),
-                        ),
+                        m("BG33_430", 2, 5, &[], facts(3, &["QUILBOAR"], 2, 5, &[])),
                         m(
                             "BG33_886",
                             3,
