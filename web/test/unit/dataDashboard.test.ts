@@ -180,3 +180,11 @@ test("per-game damage is marked inferred only when some game's total is not all 
   assert.deepEqual(tiles(3, 0), ["inferred", undefined]);
   assert.throws(() => overview(overviewRow({ damage_taken_inferred_games: 40 })), /more than games/);
 });
+
+test("a linked game with no date known gets no words after the hero's name (T-559)", () => {
+  const id = "0f8fad5b-d9cb-469f-a165-70867728950e";
+  const row = { ...gameRow(gameRaw()), playedOn: null };
+  const cell = gameCells(row, false, id)[0] as { href?: string; context?: string };
+  assert.ok(cell.href);
+  assert.equal(cell.context, undefined);
+});

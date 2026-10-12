@@ -94,7 +94,6 @@ export function overviewTiles(ov: Overview, recentPlaces: (number | null)[]): Ti
   return { simple, advanced };
 }
 
-
 export const HERO_COLUMNS = (m: Mode): Column[] => [
   { label: t("heroes.col.hero") },
   { label: t("heroes.col.games"), numeric: true },
@@ -190,7 +189,9 @@ export const gameHref = gamePath;
  */
 function gameHeroCell(g: GameRow, userId: string | null): Cell {
   if (!userId || g.session === null || g.gameIndex === null) return heroCell(g.hero);
-  return heroCell(g.hero, gameHref(userId, g.session, g.gameIndex), t("games.link", { date: dateText(g.playedOn) }));
+  // No date known: no words after the name, rather than a dash read aloud.
+  const context = g.playedOn === null ? undefined : t("games.link", { date: dateText(g.playedOn) });
+  return heroCell(g.hero, gameHref(userId, g.session, g.gameIndex), context);
 }
 
 /** One game as a row: hero (linking to the game), place badge (or why it has none), date and the key numbers. */
