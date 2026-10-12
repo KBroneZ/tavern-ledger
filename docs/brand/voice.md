@@ -18,6 +18,7 @@ How the website and the app talk to players (T-533, D-102). Read this before wri
 | Headings name the thing ("Your records") | A heading that repeats the line above it (breadcrumb, kicker) |
 | Buttons say what they do: verb + object ("Download my data", "Show games") | "OK", "Submit", "Change" on its own |
 | Spanish buttons in the infinitive ("Descargar mis datos", "Reintentar") | Mixing "Inténtalo de nuevo" / "Intentarlo de nuevo" / "Reintentar" for the same action |
+| Helper text under a field or a switch: one short line in view, the rest behind "Read more" / "Leer más" (`More.astro`, `more()`). A switch that shares data keeps what it shares, that it is off by default and that it can be withdrawn in the line in view | A paragraph under every switch; hiding what a consent switch shares behind the fold |
 | Errors: what failed, then what to do ("Could not load your games. Check your connection and try again.") | "Something went wrong" alone, jokes, "Oops" |
 | Empty states: why it is empty and how to fill it | "No data" |
 | Mode in headings as "Overview · Solo"; in captions as "(Solo)" | "Overview, Solo" (reads like a list) |

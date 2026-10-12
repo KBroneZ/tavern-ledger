@@ -6,7 +6,7 @@ import type { Mode } from "../data/format.ts";
 import { t } from "../data/strings.ts";
 import { refreshedText } from "../leaderboards/boards.ts";
 import { h, type VNode } from "../view/node.ts";
-import { fold, stateBlock, topTable } from "../view/pieces.ts";
+import { fold, more, stateBlock, topTable } from "../view/pieces.ts";
 import type { CommunityStats } from "./api.ts";
 import {
   heroCells,
@@ -71,8 +71,8 @@ export function periodPanel(heroes: readonly CommunityHero[], m: Mode, p: Period
     sortSwitch(id, sort),
     topTable({ caption, columns: heroColumns(m), rows: sortHeroes(heroes, sort).map(heroCells), top: TOP_HEROES }),
     h("p", { class: "data-note" }, ct("rounding.note")),
+    more({ context: caption }, h("p", {}, ct("rounding.more")), h("p", {}, ct("pick.note"))),
     h("p", { class: "data-note simple-only" }, ct("simple.more")),
-    h("p", { class: "data-note" }, ct("pick.note")),
   );
 }
 

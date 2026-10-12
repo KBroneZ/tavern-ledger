@@ -1,0 +1,27 @@
+---
+// "Read more": the short line stays in view, the rest folds behind a native
+// <details> (Enter and Space open it, screen readers say whether it is
+// expanded, no script). Put it right after the short line. Styled in
+// styles/ui.css; lib/view/pieces.ts has the same markup for pages drawn in
+// the browser (more()).
+import { t } from "../../lib/data/strings.ts";
+
+interface Props {
+  /** What this is about, read after "Read more" by screen readers only, to tell the folds on a page apart. */
+  context?: string;
+  /** Another summary, when "Read more" does not fit ("How this works"). */
+  summary?: string;
+  open?: boolean;
+}
+
+const { context, summary = t("more.label"), open = false } = Astro.props;
+---
+
+<details class="more" open={open}>
+  <summary>
+    <span>{summary}{context && <span class="visually-hidden">: {context}</span>}</span>
+  </summary>
+  <div class="more-body">
+    <slot />
+  </div>
+</details>

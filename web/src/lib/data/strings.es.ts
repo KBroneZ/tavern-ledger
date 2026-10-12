@@ -53,6 +53,7 @@ export const ES: Record<StringKey, string> = {
 
   "table.showAll": "Mostrar todo ({count})",
   "table.showTop": "Mostrar los {count} primeros",
+  "more.label": "Leer más",
 
   "state.empty": "Aún no hay nada aquí",
   "state.empty.body": "Sube una partida desde la aplicación y aparecerá aquí.",
@@ -240,8 +241,8 @@ export const ES: Record<StringKey, string> = {
   "hstats.picked.value": "{rate} · {picked} de {offered}",
   "hstats.few": "pocas partidas",
   "hstats.few.tip": "Se basa en menos de {min} partidas: la siguiente puede cambiarlo mucho.",
-  "hstats.few.note":
-    "El puesto medio y el porcentaje de top se basan en menos de {min} partidas terminadas, y el porcentaje de elección, en menos de {min} elecciones de héroe. Al ordenar por puesto medio, los héroes con suficientes partidas van primero.",
+  "hstats.few.note": "El puesto medio y el porcentaje de top se basan en menos de {min} partidas terminadas, y el porcentaje de elección, en menos de {min} elecciones de héroe.",
+  "hstats.few.more": "Al ordenar por puesto medio, los héroes con suficientes partidas van primero.",
   "hstats.simple.more": "Cambia a Avanzado, arriba, para ver también las victorias, el mejor y el peor puesto, y cuántas veces elegiste cada héroe cuando te salió.",
   "hstats.picked.note":
     "Elegido cuando salió: de las partidas con la elección de héroe registrada en las que te salió este héroe, en cuántas jugaste con él. No cuentan las partidas guardadas antes de que registráramos la elección de héroe.",

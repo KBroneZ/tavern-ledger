@@ -357,7 +357,7 @@ test("the dev-only demo game is not in the built site", () => {
 test("the style page has every piece, made-up data only, and stays out of search engines", () => {
   const html = readFileSync(join(DIST, "style/index.html"), "utf8");
   assert.match(html, /<meta name="robots" content="noindex">/);
-  const pieces = ['class="tile', 'class="topn"', 'class="fold', 'data-switch="detail"', 'data-switch="mode"', "place-first",
+  const pieces = ['class="tile', 'class="topn"', 'class="fold', 'class="more"', 'data-switch="detail"', 'data-switch="mode"', "place-first",
     'class="pic ', "pic-missing", "state-loading", "chart-places", "chart-trend", "chart-turns"];
   for (const piece of pieces) assert.ok(html.includes(piece), piece);
   assert.match(html, /made-up/);
@@ -625,7 +625,7 @@ test("accounts open: the community hero stats are a static frame with reserved r
   // The account page's switch: off until the script reads the owner's choice, with the policy link.
   const account = page("account/index.html");
   assert.match(account, /id="community-form"/);
-  assert.match(account, /<input class="toggle" type="checkbox" name="hero_stats">/);
+  assert.match(account, /<input class="toggle" type="checkbox" id="hero-stats" name="hero_stats" aria-describedby="hero-stats-hint">/);
   assert.match(account, /Include my games in community hero stats/);
   assert.match(account, /href="\/privacy\/#community-hero-stats"/);
 });
@@ -638,7 +638,7 @@ test("accounts open: the account page has the simulator switch, off until read, 
   ] as const) {
     const account = page(file);
     assert.match(account, /id="simulator-form"/, lang);
-    assert.match(account, /<input class="toggle" type="checkbox" name="improve_simulator">/, lang);
+    assert.match(account, /<input class="toggle" type="checkbox" id="improve-simulator" name="improve_simulator" aria-describedby="improve-simulator-hint">/, lang);
     assert.match(account, label, lang);
     assert.match(account, new RegExp(`href="${lang === "es" ? "/es" : ""}/privacy/#improving-the-simulator"`), lang);
     assert.match(account, /id="simulator-message" role="status" aria-live="polite"/, lang);

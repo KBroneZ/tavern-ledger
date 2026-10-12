@@ -10,6 +10,7 @@ import CalibrationChart from "../../components/data/CalibrationChart.astro";
 import DataScript from "../../components/data/DataScript.astro";
 import StatTile from "../../components/data/StatTile.astro";
 import Switch from "../../components/data/Switch.astro";
+import More from "../../components/ui/More.astro";
 import "../../styles/data.css";
 import "../../styles/dash.css";
 import "../../styles/accuracy.css";
@@ -82,6 +83,9 @@ const version = at("page.version", {
     <section class="data-section" aria-labelledby="acc-causes">
       <h2 id="acc-causes">{at("causes.title")}</h2>
       <p class="data-note">{at("causes.desc", { total: numberFormat({ maximumFractionDigits: 0 }).format(data.misses.total) })}</p>
+      <More context={at("causes.title")}>
+        <p>{at("causes.more")}</p>
+      </More>
       {
         causes.length === 0 ? (
           <p>{at("causes.none")}</p>
@@ -175,7 +179,10 @@ const version = at("page.version", {
     <section class="data-section acc-about" aria-labelledby="acc-about">
       <h2 id="acc-about">{at("about.title")}</h2>
       <p>{at("about.body")}</p>
-      <p>{at("about.refresh")}</p>
+      <More context={at("about.title")}>
+        <p>{at("about.more")}</p>
+        <p>{at("about.refresh")}</p>
+      </More>
     </section>
     <DataScript />
   </div>

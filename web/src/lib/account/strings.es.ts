@@ -47,32 +47,35 @@ export const ES: Record<AccountKey, string> = {
   "account.signedInAs.before": "Sesión iniciada como",
   "account.profile": "Perfil",
   "account.displayName": "Nombre visible",
-  "account.displayName.hint":
-    "Hasta 32 letras, dígitos, espacios, _ . o -. No es tu BattleTag. Se rechazan las palabras ofensivas y los nombres que parezcan oficiales.",
+  "account.displayName.hint": "Hasta 32 letras, dígitos, espacios, _ . o -. No es tu BattleTag.",
+  "account.displayName.more": "Se rechazan las palabras ofensivas y los nombres que parezcan oficiales.",
   "account.public": "Perfil público",
-  "account.public.hint.before":
-    "Desactivado por defecto. Si lo activas, cualquiera puede encontrar tu perfil y ver tu nombre visible y todas las partidas que has subido, con todo detalle: héroe, puesto, modo, fecha, tribus ofrecidas y los tableros que viste. Con un nombre visible y una partida terminada, también apareces en las",
-  "account.public.hint.link": "clasificaciones públicas",
-  "account.public.hint.after":
-    ". Nunca tu puntuación ni los nombres de otros jugadores. Si lo desactivas, dejas de aparecer en todas partes en cuanto guardes.",
+  "account.public.hint":
+    "Desactivado por defecto. Si lo activas, cualquiera puede encontrar tu perfil y ver tu nombre visible y todas las partidas que has subido, con todo detalle, y puedes aparecer en las clasificaciones públicas. Si lo desactivas, dejas de aparecer en todas partes en cuanto guardes.",
+  "account.public.more.before":
+    "Es decir, de cada partida: héroe, puesto, modo, fecha, tribus ofrecidas y los tableros que viste. Con un nombre visible y una partida terminada, también apareces en las",
+  "account.public.more.link": "clasificaciones públicas",
+  "account.public.more.after": ". Nunca tu puntuación ni los nombres de otros jugadores.",
   "account.save": "Guardar",
   "account.publicPage": "Tu página pública:",
   "account.data": "Tus datos",
-  "account.data.body":
-    "Descarga todo lo que esta web guarda sobre ti en un solo archivo JSON: cuenta, historial de inicios de sesión, perfil y ajustes, todas las partidas y los propios archivos del juego.",
+  "account.data.body": "Descarga todo lo que esta web guarda sobre ti en un solo archivo JSON.",
+  "account.data.more": "Incluye tu cuenta, el historial de inicios de sesión, el perfil y los ajustes, todas las partidas y los propios archivos del juego.",
   "account.download": "Descargar mis datos",
   "account.community": "Estadísticas de la comunidad",
   "account.community.label": "Incluir mis partidas en las estadísticas de héroes de la comunidad",
   "account.community.hint.before":
     "Desactivado por defecto y independiente de tu perfil público. Si lo activas, tus partidas terminadas cuentan para las",
   "account.community.hint.link": "estadísticas de héroes",
-  "account.community.hint.after":
-    ", que se muestran solo como totales redondeados de al menos 5 jugadores y nunca con tu nombre. Si lo desactivas, tus partidas se retiran en la siguiente actualización diaria.",
+  "account.community.hint.after": ", nunca con tu nombre. Si lo desactivas, tus partidas se retiran en la siguiente actualización diaria.",
+  "account.community.more": "Tus partidas se muestran solo como totales redondeados de al menos 5 jugadores y nunca con tu nombre.",
   "account.community.how": "Cómo funciona",
   "account.simulator": "Mejorar el simulador",
   "account.simulator.label": "Permitir que se usen mis partidas para mejorar el simulador",
   "account.simulator.hint":
-    "Desactivado por defecto. Si lo activas, los tableros y las repeticiones de los combates de tus partidas subidas (mientras se conserven sus archivos) se pueden usar para medir cuántas veces acierta el simulador de combates y para corregir sus reglas. Los resultados son siempre totales de muchas partidas: nunca se publican por jugador ni con tu nombre. Puedes desactivarlo cuando quieras: desde ese momento tus partidas no se vuelven a usar, y los totales ya calculados con ellas no permiten llegar hasta ti.",
+    "Desactivado por defecto. Si lo activas, los tableros y las repeticiones de los combates de tus partidas subidas (mientras se conserven sus archivos) se pueden usar para medir cuántas veces acierta el simulador de combates y para corregir sus reglas, solo como totales de muchas partidas y nunca con tu nombre. Puedes desactivarlo cuando quieras.",
+  "account.simulator.more":
+    "Los resultados son siempre totales de muchas partidas: nunca se publican por jugador ni con tu nombre. Si lo desactivas, desde ese momento tus partidas no se vuelven a usar, y los totales ya calculados con ellas no permiten llegar hasta ti.",
   "account.simulator.how": "Cómo funciona",
   "account.delete": "Borrar cuenta",
   "account.delete.body":

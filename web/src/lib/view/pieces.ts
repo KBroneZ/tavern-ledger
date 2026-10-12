@@ -65,6 +65,23 @@ export function fold(props: FoldProps, ...body: VNode[]): VNode {
   );
 }
 
+export interface MoreProps {
+  context?: string;
+  summary?: string;
+  open?: boolean;
+}
+
+/** "Read more": the short line stays in view and the rest folds (components/ui/More.astro). */
+export function more(props: MoreProps, ...body: VNode[]): VNode {
+  const { context, summary = t("more.label"), open = false } = props;
+  return h(
+    "details",
+    { class: "more", open },
+    h("summary", {}, h("span", {}, summary, context ? h("span", { class: "visually-hidden" }, `: ${context}`) : null)),
+    h("div", { class: "more-body" }, ...body),
+  );
+}
+
 export interface StateProps {
   kind: "empty" | "unknown" | "loading" | "error";
   title?: string;

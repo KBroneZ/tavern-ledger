@@ -49,8 +49,8 @@ export const ES: Record<ChKey, string> = {
 
   "count.atLeast": "{n}+",
   "pick.few": "Aún no hay suficientes elecciones de héroe",
-  "rounding.note":
-    "50+ significa de 50 a 59 partidas, y 5+, de 5 a 9 jugadores: las partidas se cuentan de diez en diez y los jugadores de cinco en cinco, el puesto medio va con un decimal y los porcentajes, sin decimales.",
+  "rounding.note": "50+ significa de 50 a 59 partidas, y 5+, de 5 a 9 jugadores.",
+  "rounding.more": "Las partidas se cuentan de diez en diez y los jugadores de cinco en cinco, el puesto medio va con un decimal y los porcentajes, sin decimales.",
   "simple.more": "Avanzado añade el porcentaje de victorias y cuántas veces salió cada héroe.",
   "pick.note":
     "Elegido: de las partidas con la elección de héroe registrada por la aplicación en las que salió el héroe, el porcentaje en que el jugador lo eligió. Un guion significa que esas partidas aún no llegan al mismo mínimo.",

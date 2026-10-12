@@ -26,8 +26,8 @@ export const ES: Record<AccKey, string> = {
   "blocked.empty": "Aún no hay combates de {mode} con resultado.",
 
   "cal.title": "Previsto y real",
-  "cal.desc":
-    "Cada probabilidad que dio el simulador en {mode} (victoria, empate y derrota en cada combate), agrupada según lo que previó. Al lado de cada grupo, cuántas veces pasó de verdad ese resultado. Si las dos barras se parecen, las probabilidades son fiables.",
+  "cal.desc": "Cada probabilidad que dio el simulador en {mode} (victoria, empate y derrota en cada combate), agrupada según lo que previó.",
+  "cal.more": "Al lado de cada grupo, cuántas veces pasó de verdad ese resultado. Si las dos barras se parecen, las probabilidades son fiables.",
   "cal.key.said": "Previsto",
   "cal.key.happened": "Lo que pasó",
   "cal.none": "sin predicciones",
@@ -39,8 +39,8 @@ export const ES: Record<AccKey, string> = {
   "cal.col.happened": "Lo que pasó",
 
   "causes.title": "Por qué fallaron las probabilidades",
-  "causes.desc":
-    "{total} combates en los que el resultado más probable no fue el real, jugados con cada tablero tal como combatió (una carta que el simulador no conoce cuenta como un esbirro normal). Primero la causa más grande; Solo y Dúos juntos.",
+  "causes.desc": "{total} combates en los que el resultado más probable no fue el real, jugados con cada tablero tal como combatió.",
+  "causes.more": "Una carta que el simulador no conoce cuenta como un esbirro normal. Primero la causa más grande; Solo y Dúos juntos.",
   "causes.col.cause": "Causa",
   "causes.col.combats": "Combates",
   "causes.col.share": "% del total",
@@ -95,7 +95,7 @@ export const ES: Record<AccKey, string> = {
   "card.golden": "{name} (dorado)",
 
   "about.title": "Qué se mide y sus límites",
-  "about.body":
-    "Solo los combates de quien hace Tavern Ledger, de sus propias partidas, con los tableros tal como entraron en cada combate (el primer ataque). Los efectos de inicio de combate están desactivados, como en el overlay. Un combate cuenta como puntuado cuando el simulador pudo jugarlo, y al lado siempre se muestra el porcentaje de combates sin probabilidades. Pocas cifras y un solo jugador: una orientación, no una promesa.",
+  "about.body": "Solo los combates de quien hace Tavern Ledger, de sus propias partidas, con los tableros tal como entraron en cada combate (el primer ataque). Pocas cifras y un solo jugador: una orientación, no una promesa.",
+  "about.more": "Los efectos de inicio de combate están desactivados, como en el overlay. Un combate cuenta como puntuado cuando el simulador pudo jugarlo, y al lado siempre se muestra el porcentaje de combates sin probabilidades.",
   "about.refresh": "Estas cifras se actualizan después de cada ronda de cartas nuevas.",
 };

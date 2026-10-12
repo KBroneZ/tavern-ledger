@@ -51,31 +51,34 @@ export const ACCOUNT_STRINGS = {
   "account.signedInAs.before": "Signed in as",
   "account.profile": "Profile",
   "account.displayName": "Display name",
-  "account.displayName.hint":
-    "Up to 32 letters, digits, spaces, _ . or -. Not your BattleTag. Offensive words and names that look official are refused.",
+  "account.displayName.hint": "Up to 32 letters, digits, spaces, _ . or -. Not your BattleTag.",
+  "account.displayName.more": "Offensive words and names that look official are refused.",
   "account.public": "Public profile",
-  "account.public.hint.before":
-    "Off by default. When on, anyone can find your profile and read your display name and every game you uploaded in full: hero, place, mode, date, tribes offered and the boards you saw. With a display name and a finished game, you also appear on the",
-  "account.public.hint.link": "public leaderboards",
-  "account.public.hint.after":
-    ". Never your rating or other players' names. Turning it off hides you everywhere as soon as you save.",
+  "account.public.hint":
+    "Off by default. When on, anyone can find your profile and read your display name and every game you uploaded in full, and you can appear on the public leaderboards. Turning it off hides you everywhere as soon as you save.",
+  "account.public.more.before":
+    "That is, for each game: hero, place, mode, date, tribes offered and the boards you saw. With a display name and a finished game, you also appear on the",
+  "account.public.more.link": "public leaderboards",
+  "account.public.more.after": ". Never your rating or other players' names.",
   "account.save": "Save",
   "account.publicPage": "Your public page:",
   "account.data": "Your data",
-  "account.data.body":
-    "Download everything this site holds about you as one JSON file: account, sign-in history, profile and settings, every game and the game files themselves.",
+  "account.data.body": "Download everything this site holds about you as one JSON file.",
+  "account.data.more": "It includes your account, sign-in history, profile and settings, every game and the game files themselves.",
   "account.download": "Download my data",
   "account.community": "Community stats",
   "account.community.label": "Include my games in community hero stats",
   "account.community.hint.before": "Off by default, and separate from your public profile. When on, your finished games count toward the",
   "account.community.hint.link": "hero stats",
-  "account.community.hint.after":
-    ", shown only as rounded totals over at least 5 players and never with your name; turning it off takes them out at the next daily update.",
+  "account.community.hint.after": ", never with your name; turning it off takes them out at the next daily update.",
+  "account.community.more": "Your games are shown only as rounded totals over at least 5 players and never with your name.",
   "account.community.how": "How this works",
   "account.simulator": "Improve the simulator",
   "account.simulator.label": "Let my games be used to improve the simulator",
   "account.simulator.hint":
-    "Off by default. When on, the boards and combat replays of your uploaded games (while their files are kept) can be used to measure how often the combat simulator is right and to fix its rules. Results are only ever totals over many games: never published per player, never with your name. You can turn it off at any time: from then on your games are not used again, and totals already worked out from them cannot be traced back to you.",
+    "Off by default. When on, the boards and combat replays of your uploaded games (while their files are kept) can be used to measure how often the combat simulator is right and to fix its rules, only as totals over many games and never with your name. You can turn it off at any time.",
+  "account.simulator.more":
+    "Results are only ever totals over many games: never published per player, never with your name. If you turn it off, from then on your games are not used again, and totals already worked out from them cannot be traced back to you.",
   "account.simulator.how": "How this works",
   "account.delete": "Delete account",
   "account.delete.body":
