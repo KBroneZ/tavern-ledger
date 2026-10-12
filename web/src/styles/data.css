@@ -123,9 +123,10 @@ html,
 
 /* ---------- Stat tiles ---------- */
 
+/* Two tiles a row from 320 px up, so a phone does not scroll past one tall tile each (T-559). */
 .tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 168px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 136px), 1fr));
   gap: var(--s-3);
 }
 
@@ -151,7 +152,8 @@ html,
     var(--panel-wood);
 }
 
-@media (max-width: 380px) {
+/* Below two columns the headline tile takes the one column. */
+@media (max-width: 300px) {
   .tile-hero {
     grid-column: auto;
   }

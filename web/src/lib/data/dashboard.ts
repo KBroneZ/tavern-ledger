@@ -2,7 +2,7 @@
 // worked out from the parsed view rows (rows.ts). Pure functions: the
 // pages draw these with lib/view/pieces.ts. Every value says how many games
 // back it; a value no game backs is a dash, never 0.
-import { average, backing, compact, PLACES, share, type Mode } from "./format.ts";
+import { backing, compact, perGameText, placeAverage, PLACES, share, type Mode } from "./format.ts";
 import { RECORDS, type GameRow, type HeroRow, type Overview, type RecordRow } from "./rows.ts";
 import { t } from "./strings.ts";
 import { heroCell, unknownValue, sourceMark, type Cell, type Column, type TileProps } from "../view/pieces.ts";
@@ -36,40 +36,48 @@ export interface Tiles {
   advanced: TileProps[];
 }
 
-/** The key numbers (Simple) and the rest (Advanced) for one mode. */
+/**
+ * The key numbers (Simple: average place, games, top half, wins, combats
+ * won) and the rest (Advanced) for one mode (T-559, D-131). Per-game
+ * figures are whole from 10 up; how many games back each is in Advanced.
+ */
 export function overviewTiles(ov: Overview, recentPlaces: (number | null)[]): Tiles {
   const unplaced = ov.games - ov.placedGames;
+  const known = [ov.combatsWon, ov.combatsLost, ov.combatsTied];
+  const fought = known.every((x) => x !== null) ? (known as number[]).reduce((a, b) => a + b, 0) : null;
+  const combats: TileProps = {
+    label: t("tile.combats"),
+    value: share(ov.combatsWon, fought),
+    // The share is of combats with a result; unknown ones are said, never hidden.
+    backing:
+      fought !== null && (ov.combatsUnknown ?? 0) > 0
+        ? t("tile.combats.back", { known: fought, unknown: ov.combatsUnknown as number })
+        : backed(ov.combatGames, ov.games),
+    // Unknown results stay in view: the share is of the known ones only.
+    backingAlways: fought !== null && (ov.combatsUnknown ?? 0) > 0,
+    source: ov.combatGames === 0 ? "unknown" : (ov.combatsInferred ?? 0) > 0 ? "inferred" : undefined,
+  };
   const simple: TileProps[] = [
     {
       hero: true,
       label: t("tile.avgPlace"),
-      value: average(ov.avgPlace),
+      value: placeAverage(ov.avgPlace),
       backing: backed(ov.placedGames, ov.games),
       spark: recentPlaces.length > 1 ? { values: recentPlaces, min: 1, max: PLACES[ov.mode], invert: true } : undefined,
     },
-    { label: t("tile.games"), value: compact(ov.games), backing: unplaced > 0 ? t("tile.games.back", { count: unplaced }) : undefined },
+    // Games without a place stay in view: the places above count finished games only.
+    { label: t("tile.games"), value: compact(ov.games), backing: unplaced > 0 ? t("tile.games.back", { count: unplaced }) : undefined, backingAlways: true },
     { label: t(ov.mode === "solo" ? "tile.topHalf.solo" : "tile.topHalf.duos"), value: share(ov.topHalf, ov.placedGames), backing: backed(ov.placedGames, ov.games) },
     { label: t("tile.wins"), value: ov.placedGames === 0 ? t("value.none") : compact(ov.wins), backing: backed(ov.placedGames, ov.games) },
+    combats,
   ];
-  const known = [ov.combatsWon, ov.combatsLost, ov.combatsTied];
-  const fought = known.every((x) => x !== null) ? (known as number[]).reduce((a, b) => a + b, 0) : null;
   const per = (label: Parameters<typeof t>[0], sum: number | null, games: number, inferred = false): TileProps => ({
     label: t(label),
-    value: average(perGame(sum, games)),
+    value: perGameText(perGame(sum, games)),
     backing: backed(games, ov.games),
     source: games === 0 ? "unknown" : inferred ? "inferred" : undefined,
   });
   const advanced: TileProps[] = [
-    {
-      label: t("tile.combats"),
-      value: share(ov.combatsWon, fought),
-      // The share is of combats with a result; unknown ones are said, never hidden.
-      backing:
-        fought !== null && (ov.combatsUnknown ?? 0) > 0
-          ? t("tile.combats.back", { known: fought, unknown: ov.combatsUnknown as number })
-          : backed(ov.combatGames, ov.games),
-      source: ov.combatGames === 0 ? "unknown" : (ov.combatsInferred ?? 0) > 0 ? "inferred" : undefined,
-    },
     per("tile.damageDealt", ov.damageDealt, ov.damageDealtGames, true),
     per("tile.damageTaken", ov.damageTaken, ov.damageTakenGames, true),
     per("tile.goldSpent", ov.goldSpent, ov.goldSpentGames),
@@ -79,7 +87,7 @@ export function overviewTiles(ov: Overview, recentPlaces: (number | null)[]): Ti
     per("tile.freeRolls", ov.freeRolls, ov.shopGames),
     per("tile.buys", ov.buys, ov.shopGames),
     per("tile.sells", ov.sells, ov.shopGames),
-    { label: t("tile.apm"), value: average(ov.avgApm), backing: backed(ov.apmGames, ov.games), source: ov.apmGames === 0 ? "unknown" : undefined },
+    { label: t("tile.apm"), value: perGameText(ov.avgApm), backing: backed(ov.apmGames, ov.games), source: ov.apmGames === 0 ? "unknown" : undefined },
     per("tile.triples", ov.triples, ov.triplesGames),
   ];
   return { simple, advanced };
@@ -105,7 +113,7 @@ export function heroCells(rows: readonly HeroRow[], m: Mode): Cell[][] {
       heroCell(r.hero),
       // Places count finished games only: say how many when some are not.
       r.placedGames < r.games ? t("heroes.games.placed", { games: r.games, placed: r.placedGames }) : r.games,
-      average(r.avgPlace),
+      placeAverage(r.avgPlace),
       share(r.topHalf, r.placedGames),
       { place: r.bestPlace, mode: m },
     ]);
@@ -115,7 +123,8 @@ export const RECORD_COLUMNS: Column[] = [
   { label: t("records.col.record") },
   { label: t("records.col.value"), numeric: true },
   { label: t("records.col.date") },
-  { label: t("records.col.games") },
+  // How many games back a record: Advanced only (T-559, D-131).
+  { label: t("records.col.games"), advanced: true },
 ];
 
 function recordLabel(r: RecordRow): string {
@@ -130,7 +139,7 @@ export function recordCells(rows: readonly RecordRow[], m: Mode, totalGames: num
     .toSorted((a, b) => RECORDS.indexOf(a.record) - RECORDS.indexOf(b.record))
     .map((r) => [
       recordLabel(r),
-      { node: [h("span", {}, r.record === "apm" ? average(r.value) : compact(r.value)), r.inferred ? sourceMark("inferred") : null].filter((n): n is VNode => n !== null) },
+      { node: [h("span", {}, r.record === "apm" ? perGameText(r.value) : compact(r.value)), r.inferred ? sourceMark("inferred") : null].filter((n): n is VNode => n !== null) },
       dateText(r.playedOn),
       backed(r.games, Math.max(totalGames, r.games)),
     ]);
@@ -152,16 +161,23 @@ function combatsCell(g: GameRow): Cell {
   return { node: (g.combatsInferred ?? 0) > 0 ? [text, sourceMark("inferred")] : [text] };
 }
 
+/** Triples count at the end of a finished game: an unfinished one says why it has none, not "unknown". */
+function triplesCell(g: GameRow): Cell {
+  if (g.triples !== null || g.status === "ok") return maybe(g.triples);
+  return { node: [h("span", { "aria-hidden": "true" }, t("value.none")), h("span", { class: "visually-hidden" }, t("games.triples.unfinished"))] };
+}
+
 export function gameColumns(withMode: boolean): Column[] {
   return [
     { label: t("games.col.hero") },
     { label: t("games.col.place"), numeric: true },
     { label: t("games.col.date") },
     ...(withMode ? [{ label: t("games.col.mode") }] : []),
-    { label: t("games.col.rounds"), numeric: true },
+    // Simple keeps the key ones; rounds and actions per minute are Advanced (T-559).
+    { label: t("games.col.rounds"), numeric: true, advanced: true },
     { label: t("games.col.combats"), numeric: true },
     { label: t("games.col.triples"), numeric: true },
-    { label: t("games.col.apm"), numeric: true },
+    { label: t("games.col.apm"), numeric: true, advanced: true },
   ];
 }
 
@@ -186,8 +202,8 @@ export function gameCells(g: GameRow, withMode: boolean, userId: string | null =
     ...(withMode ? [modeName(g.mode)] : []),
     maybe(g.rounds),
     combatsCell(g),
-    maybe(g.triples),
-    maybe(g.apm, average),
+    triplesCell(g),
+    maybe(g.apm, perGameText),
   ];
 }
 

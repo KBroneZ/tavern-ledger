@@ -15,6 +15,7 @@ const DASH = "—";
 const PLAIN = { format: (v: number) => numberFormat({ maximumFractionDigits: 0 }).format(v) };
 const SHORT = { format: (v: number) => numberFormat({ notation: "compact", maximumFractionDigits: 1 }).format(v) };
 const TWO = { format: (v: number) => numberFormat({ minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v) };
+const ONE = { format: (v: number) => numberFormat({ minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(v) };
 const PERCENT = { format: (v: number) => numberFormat({ style: "percent", maximumFractionDigits: 0 }).format(v) };
 
 /** Plain up to 9,999, compact from 10,000 (12.9K, 4.2M). */
@@ -31,6 +32,20 @@ export function compact(value: number | null | undefined): string {
 /** An average (place, gold per game) with two decimals. */
 export function average(value: number | null | undefined): string {
   return known(value) ? TWO.format(value) : DASH;
+}
+
+/** An average place on a player's pages, with one decimal (4.3): T-559, D-131. */
+export function placeAverage(value: number | null | undefined): string {
+  return known(value) ? ONE.format(value) : DASH;
+}
+
+/** Where a figure stops being a whole number: from here up the decimal adds nothing. */
+const WHOLE_FROM = 10;
+
+/** A per-game figure (gold, damage, rolls, actions per minute): whole from 10 up (63), one decimal below (2.1). */
+export function perGameText(value: number | null | undefined): string {
+  if (!known(value)) return DASH;
+  return Math.abs(value) >= WHOLE_FROM ? compact(Math.round(value)) : ONE.format(value);
 }
 
 /** part / whole as a whole percent; a dash when the whole is 0 or unknown. */

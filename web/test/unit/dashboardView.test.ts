@@ -36,10 +36,11 @@ test("one panel per mode, marked for the mode switch", () => {
   assert.deepEqual(panels.map((p) => attr(p, "data-mode-panel")), ["solo", "duos"]);
 });
 
-test("Simple shows four key tiles; the economy and combats are Advanced only", () => {
+test("Simple shows five key numbers; damage, the economy and the rest are Advanced only (T-559)", () => {
   const solo = modePanel("solo", dashboard(), opts);
   const [simple, advanced] = byClass(solo, "tiles");
-  assert.equal(byClass(simple, "tile").length, 4);
+  assert.equal(byClass(simple, "tile").length, 5);
+  assert.match(textOf(simple), /Combats won/);
   assert.equal(attr(advanced, "class"), "tiles adv");
   assert.match(textOf(advanced), /Gold spent per game/);
   assert.equal(byClass(solo, "simple-only").length, 1);

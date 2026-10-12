@@ -3,20 +3,7 @@
 // thresholds and the chart geometry.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  average,
-  backing,
-  barScale,
-  columnPath,
-  compact,
-  placeDistribution,
-  placeGroup,
-  share,
-  sparkline,
-  threshold,
-  topN,
-  trend,
-} from "../../src/lib/data/format.ts";
+import { average, backing, barScale, columnPath, compact, placeDistribution, placeGroup, share, sparkline, threshold, topN, trend, perGameText, placeAverage } from "../../src/lib/data/format.ts";
 
 test("compact: plain up to 9,999, then K and M with one decimal", () => {
   assert.equal(compact(0), "0");
@@ -163,4 +150,17 @@ test("sparkline: a value outside the range is a gap, never drawn at the edge", (
 test("barScale ignores values that are not numbers", () => {
   assert.equal(barScale([Number.NaN, 10], 100)(10), 100);
   assert.equal(barScale([Number.NaN], 100)(5), 0);
+});
+
+test("an average place has one decimal; a per-game figure is whole from 10 up (T-559)", () => {
+  assert.equal(placeAverage(3.418), "3.4");
+  assert.equal(placeAverage(7), "7.0");
+  assert.equal(placeAverage(null), "—");
+  assert.equal(perGameText(62.97), "63");
+  assert.equal(perGameText(137.28), "137");
+  assert.equal(perGameText(2.08), "2.1");
+  assert.equal(perGameText(9.96), "10.0", "just below 10 keeps its decimal");
+  assert.equal(perGameText(0), "0.0");
+  assert.equal(perGameText(12_345.6), "12.3K");
+  assert.equal(perGameText(undefined), "—");
 });
