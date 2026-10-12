@@ -10,7 +10,9 @@ use crate::hero_select::HeroSelectTracker;
 use crate::leaderboard::{is_leaderboard_tag, LeaderboardTracker};
 use crate::power::{EntityRef, Packet, ParseError, Value};
 use crate::replay::{board_entities, minion_of, ReplayTracker, Sides};
-use crate::report::{AttackSlot, CombatResult, DefenderSource, LoggedAttack, Minion, Side};
+use crate::report::{
+    AttackSlot, CombatResult, CombatValues, DefenderSource, LoggedAttack, Minion, Side,
+};
 use crate::shop::{Seats, ShopTracker};
 use crate::state::{Board, Entity, Players, Tags};
 
@@ -59,6 +61,9 @@ pub struct Collector {
     /// Shop minion entity id -> tribe, in first-seen order.
     pub shop_races: Vec<(i64, String)>,
     pub entries: BTreeMap<i64, Vec<RawEntry>>,
+    /// (round, index in `entries`) -> the side's game-long values as its
+    /// board was taken (T-609).
+    pub entry_values: BTreeMap<(i64, usize), CombatValues>,
     pub health: BTreeMap<i64, Option<i64>>,
     /// Round -> health of every lobby hero by player id when its combat
     /// closed. Round 0 is the health before the first combat.
@@ -507,6 +512,48 @@ impl Collector {
         (hero, hint)
     }
 
+    /// The game-long values on the player entity of `side` (T-609): the
+    /// local player, or the dummy player that stands for the opponent.
+    fn combat_values(&self, side: Side) -> CombatValues {
+        let player = match side {
+            Side::Own => self.local,
+            Side::Opponent => self.dummy,
+        };
+        let Some(p) = player.and_then(|id| self.board.get(id)) else {
+            return CombatValues::default();
+        };
+        // A player enchantment's two numbers (`TAG_SCRIPT_DATA_NUM_1`, `_2`),
+        // when one with this card id is in play on the player.
+        let enchant = |card: &str| -> (i64, i64) {
+            self.board
+                .iter()
+                .find(|e| {
+                    e.card_id.as_deref() == Some(card)
+                        && e.int("ATTACHED") == p.id
+                        && e.is("ZONE", "PLAY")
+                })
+                .map_or((0, 0), |e| {
+                    (
+                        e.int("TAG_SCRIPT_DATA_NUM_1"),
+                        e.int("TAG_SCRIPT_DATA_NUM_2"),
+                    )
+                })
+        };
+        CombatValues {
+            blood_gem: (
+                p.int("BACON_BLOODGEMBUFFATKVALUE"),
+                p.int("BACON_BLOODGEMBUFFHEALTHVALUE"),
+            ),
+            spell: (
+                p.int("TAVERN_SPELL_ATTACK_INCREASE"),
+                p.int("TAVERN_SPELL_HEALTH_INCREASE"),
+            ),
+            knights_dead: enchant("BG25_008pe").0,
+            undead_attack: enchant("BG25_011pe").0,
+            beetle: enchant("BG31_808pe"),
+        }
+    }
+
     fn close_unseen(&mut self, side: Side, round: i64) {
         if let Some(leg) = self.open_mut(side).take() {
             if leg.explicit {
@@ -528,10 +575,12 @@ impl Collector {
                 };
                 let (hero, hint) = self.current(side);
                 let board = pid.map(|pid| board_of(&self.board, pid));
-                self.entries
-                    .entry(round)
-                    .or_default()
-                    .push((side, hero, hint, board));
+                let values = self.combat_values(side);
+                let list = self.entries.entry(round).or_default();
+                if board.is_some() {
+                    self.entry_values.insert((round, list.len()), values);
+                }
+                list.push((side, hero, hint, board));
             }
         }
         self.open_own = None;

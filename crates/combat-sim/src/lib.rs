@@ -24,6 +24,7 @@ mod cards_round2;
 mod cards_round3;
 mod cards_round4;
 mod cards_round5;
+mod cards_round7;
 pub mod combat;
 pub mod gifts;
 pub mod model;
@@ -37,11 +38,21 @@ pub mod harness_duos;
 #[cfg(feature = "harness")]
 pub mod harness_export;
 #[cfg(feature = "harness")]
+pub mod harness_games;
+#[cfg(feature = "harness")]
 pub mod harness_logs;
+#[cfg(feature = "harness")]
+pub mod harness_misses;
+#[cfg(feature = "harness")]
+pub mod harness_saved;
+#[cfg(feature = "harness")]
+pub mod harness_summary;
 pub mod score;
 
 pub use combat::{CombatResult, Outcome};
-pub use model::{BaseCard, BoardError, Keywords, Minion, Team, Tribes, Warband, MAX_BOARD};
+pub use model::{
+    BaseCard, BoardError, GameValues, Keywords, Minion, Team, Tribes, Warband, MAX_BOARD,
+};
 pub use trials::{simulate, simulate_teams, Coverage, Odds, Options, Verdict};
 
 /// The engine's version: its minor number is the card round (D-088). The

@@ -36,10 +36,11 @@ impl Combat<'_> {
         loop {
             // Counted before start of combat, as at the start (section 3).
             let first = self.first_attacker();
-            if !self.p.start_of_combat {
-                return Some(first);
+            if self.p.start_of_combat {
+                self.start_of_combat(first, entered);
+            } else {
+                self.attack_immediately(first, entered);
             }
-            self.start_of_combat(first, entered);
             // Its start of combat can empty a board again.
             entered = self.enter_waiting();
             if entered == [false, false] {
@@ -59,6 +60,7 @@ impl Combat<'_> {
                 self.sides[side] = SideState {
                     units: self.p.second[side].clone().unwrap_or_default(),
                     next: 0,
+                    values: self.p.second_values[side],
                 };
             }
             enters

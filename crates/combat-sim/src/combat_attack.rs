@@ -141,7 +141,6 @@ impl Combat<'_> {
                 t_atk > 0 && !immune && !a_kw.contains(Keywords::DIVINE_SHIELD),
             ),
         ]);
-        let attacker_alive = self.unit(side, uid).is_some_and(Unit::alive);
         let both = a_triggers.contains(&Trigger::ExcessToBothAdjacent);
         let excess = both || a_triggers.contains(&Trigger::ExcessToAdjacent);
         if excess && !t_shield && a_atk > t_health {
@@ -157,13 +156,14 @@ impl Combat<'_> {
                 self.damage(foe, n, a_atk.saturating_sub(t_health), Keywords::NONE, uid);
             }
         }
+        // "After this attacks" resolves before the dead are removed, so it
+        // happens even when the attack killed this minion (the user's logs,
+        // De-volition-ist; T-609).
         for t in a_triggers {
             if let Trigger::AfterAttackHitHighestHealth { times } = t {
-                if attacker_alive {
-                    let atk = self.unit(side, uid).map_or(0, |u| u.attack);
-                    if let Some(h) = self.highest_health(foe) {
-                        self.damage(foe, h, atk.saturating_mul(*times), Keywords::NONE, uid);
-                    }
+                let atk = self.unit(side, uid).map_or(0, |u| u.attack);
+                if let Some(h) = self.highest_health(foe) {
+                    self.damage(foe, h, atk.saturating_mul(*times), Keywords::NONE, uid);
                 }
             }
         }

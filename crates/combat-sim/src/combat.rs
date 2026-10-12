@@ -3,7 +3,7 @@
 //! the logs are marked there.
 
 use crate::cards::{self, Action, Trigger};
-use crate::model::{BaseCard, Keywords, Team, Tribes, Warband, MAX_BOARD};
+use crate::model::{BaseCard, GameValues, Keywords, Team, Tribes, Warband, MAX_BOARD};
 use crate::rng::Rng;
 
 /// Attack turns before a combat is called a tie. A real combat ends in far
@@ -60,10 +60,15 @@ pub(crate) struct Prepared {
     /// its hero's tavern tier. `None` in Solo or without a teammate.
     pub second: [Option<Vec<Unit>>; 2],
     pub second_tier: [Option<u8>; 2],
+    /// Each side's game-long values, and its teammate's (T-609).
+    pub values: [GameValues; 2],
+    pub second_values: [GameValues; 2],
     pub start_of_combat: bool,
     /// Some card here gains what the Amalgam gains (round 5): checked once,
     /// not on every buff.
     pub amalgam_followers: bool,
+    /// Some card here doubles its neighbours' gains (T-609).
+    pub gain_doublers: bool,
 }
 
 impl Prepared {
@@ -98,6 +103,7 @@ impl Prepared {
         };
         let mut start = [units(first[0], &mut cards), units(first[1], &mut cards)];
         let second_tier = second.map(|b| b.and_then(|b| b.tavern_tier));
+        let second_values = second.map(|b| b.map_or(GameValues::default(), |b| b.values));
         let mut second = [
             second[0].map(|b| units(b, &mut cards)),
             second[1].map(|b| units(b, &mut cards)),
@@ -146,14 +152,20 @@ impl Prepared {
                 .iter()
                 .any(|t| matches!(t, Trigger::GainsWithAmalgam(_)))
         });
+        let gain_doublers = cards
+            .iter()
+            .any(|c| c.triggers.contains(&Trigger::DoublesAdjacentDragonGains));
         Prepared {
             amalgam_followers,
+            gain_doublers,
             cards,
             tokens,
             start,
             tavern_tier: [first[0].tavern_tier, first[1].tavern_tier],
             second,
             second_tier,
+            values: [first[0].values, first[1].values],
+            second_values,
             start_of_combat,
         }
     }
@@ -230,6 +242,8 @@ struct SideState {
     /// Index of the next attacker (wraps to 0 past the end). Removals and
     /// summons to its left move it, so it keeps pointing at the same slot.
     next: usize,
+    /// The game-long values of the board fighting now (T-609).
+    values: GameValues,
 }
 
 impl SideState {
@@ -304,10 +318,12 @@ impl<'a> Combat<'a> {
                 SideState {
                     units: p.start[0].clone(),
                     next: 0,
+                    values: p.values[0],
                 },
                 SideState {
                     units: p.start[1].clone(),
                     next: 0,
+                    values: p.values[1],
                 },
             ],
             next_uid,
@@ -322,6 +338,8 @@ impl<'a> Combat<'a> {
         let mut turn = self.first_attacker();
         if self.p.start_of_combat {
             self.start_of_combat(turn, [true, true]);
+        } else {
+            self.attack_immediately(turn, [true, true]);
         }
         let mut turns = 0;
         loop {
@@ -458,6 +476,9 @@ mod duos;
 
 #[path = "combat_gifts.rs"]
 mod gifts;
+
+#[path = "combat_values.rs"]
+mod values;
 use duos::Legs;
 
 #[cfg(test)]
@@ -471,3 +492,7 @@ mod duos_tests;
 #[cfg(test)]
 #[path = "combat_gifts_tests.rs"]
 mod gifts_tests;
+
+#[cfg(test)]
+#[path = "combat_t609_tests.rs"]
+mod t609_tests;

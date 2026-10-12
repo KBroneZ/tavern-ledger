@@ -2,7 +2,7 @@
 //! from their card texts in HearthstoneJSON (D-038). The rules for writing
 //! them are in [`crate::cards`].
 
-use crate::cards::{approx, exact, Action, CardRules, Trigger};
+use crate::cards::{approx, exact, Action, CardRules, GemTo, Trigger};
 use crate::model::{Keywords, Tribes};
 
 const ANY: Tribes = Tribes::NONE;
@@ -267,14 +267,14 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
         "BG36_849",
         exact(&[
             Trigger::Rally(&[Action::GainKeyword(Keywords::DIVINE_SHIELD)]),
-            Trigger::StartOfCombatUnmodelled,
+            Trigger::AttackImmediately(1),
         ]),
     ),
     (
         "BG36_849_G",
         exact(&[
             Trigger::Rally(&[Action::GainKeyword(Keywords::DIVINE_SHIELD)]),
-            Trigger::StartOfCombatUnmodelled,
+            Trigger::AttackImmediately(2),
         ]),
     ),
     (
@@ -311,14 +311,14 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
             }])],
         ),
     ),
-    // Blood Gems (+1/+1 each before upgrades).
+    // Blood Gems (+1/+1 each plus the side's upgrades, T-609).
     (
         "BG33_886",
         approx(
             BLOOD_GEM,
-            &[Trigger::Rally(&[Action::GainStats {
-                attack: 1,
-                health: 1,
+            &[Trigger::Rally(&[Action::Gems {
+                to: GemTo::Itself,
+                count: 1,
             }])],
         ),
     ),
@@ -326,9 +326,9 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
         "BG33_886_G",
         approx(
             BLOOD_GEM,
-            &[Trigger::Rally(&[Action::GainStats {
-                attack: 2,
-                health: 2,
+            &[Trigger::Rally(&[Action::Gems {
+                to: GemTo::Itself,
+                count: 2,
             }])],
         ),
     ),
@@ -336,9 +336,9 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
         "BG33_883",
         approx(
             BLOOD_GEM,
-            &[Trigger::Rally(&[Action::GainStats {
-                attack: 4,
-                health: 4,
+            &[Trigger::Rally(&[Action::Gems {
+                to: GemTo::Itself,
+                count: 4,
             }])],
         ),
     ),
@@ -346,9 +346,9 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
         "BG33_883_G",
         approx(
             BLOOD_GEM,
-            &[Trigger::Rally(&[Action::GainStats {
-                attack: 8,
-                health: 8,
+            &[Trigger::Rally(&[Action::Gems {
+                to: GemTo::Itself,
+                count: 8,
             }])],
         ),
     ),
@@ -356,11 +356,9 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
         "BG20_104",
         approx(
             BLOOD_GEM,
-            &[Trigger::Rally(&[Action::BuffAll {
-                attack: 1,
-                health: 1,
-                tribe: ANY,
-                others: true,
+            &[Trigger::Rally(&[Action::Gems {
+                to: GemTo::Others,
+                count: 1,
             }])],
         ),
     ),
@@ -368,11 +366,9 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
         "BG20_104_G",
         approx(
             BLOOD_GEM,
-            &[Trigger::Rally(&[Action::BuffAll {
-                attack: 2,
-                health: 2,
-                tribe: ANY,
-                others: true,
+            &[Trigger::Rally(&[Action::Gems {
+                to: GemTo::Others,
+                count: 2,
             }])],
         ),
     ),
@@ -382,9 +378,9 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
             BLOOD_GEM,
             &[Trigger::FriendlyAttacks {
                 tribe: ANY,
-                actions: &[Action::BuffAttacker {
-                    attack: 1,
-                    health: 1,
+                actions: &[Action::Gems {
+                    to: GemTo::Attacker,
+                    count: 1,
                 }],
             }],
         ),

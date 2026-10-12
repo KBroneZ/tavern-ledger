@@ -16,8 +16,10 @@ use serde_json::Value;
 
 use crate::cards::{self, Fidelity};
 use crate::combat::CombatResult;
-use crate::harness_duos::{duos_from_saved, DuosCombat};
-use crate::model::{BaseCard, Keywords, Minion, Tribes, Warband};
+use crate::harness_duos::{duos_from_saved, team_of, DuosCombat};
+use crate::harness_logs::LogCombat;
+use crate::harness_saved::{saved_combat, Saved};
+use crate::model::{BaseCard, Keywords, Minion, Team, Tribes, Warband};
 use crate::score::{score, Prediction, Report};
 use crate::trials::{simulate, Coverage, Options, Verdict};
 
@@ -119,9 +121,13 @@ pub struct History {
     /// -> appearances. For the coverage list.
     pub card_counts: BTreeMap<String, u32>,
     pub bad_lines: usize,
+    /// Combats with a saved replay rebuilt for the attack-by-attack replay
+    /// (T-609), and the saved replays that could not be.
+    pub saved: Vec<LogCombat>,
+    pub saved_unreadable: usize,
 }
 
-fn minion(v: &Value, db: &CardDb) -> Option<Minion> {
+pub(crate) fn minion(v: &Value, db: &CardDb) -> Option<Minion> {
     let card_id = v.get("card_id")?.as_str()?.to_string();
     let attack = i32::try_from(v.get("atk")?.as_i64()?).ok()?;
     let health = i32::try_from(v.get("health")?.as_i64()?).ok()?;
@@ -177,6 +183,7 @@ pub(crate) fn board(entry: &Value, db: &CardDb) -> Option<Warband> {
     Some(Warband {
         minions: minions?,
         tavern_tier: None,
+        values: Default::default(),
     })
 }
 
@@ -218,14 +225,28 @@ pub fn load_history(jsonl: &str, db: &CardDb) -> History {
             Some("GT_BATTLEGROUNDS_DUO") => false,
             _ => continue,
         };
-        if solo {
+        let duos = if solo {
             h.solo_games += 1;
+            Vec::new()
         } else {
             h.duos_games += 1;
-            h.duos.extend(duos_from_saved(report, game + 1, db));
-        }
+            duos_from_saved(report, game + 1, db)
+        };
         let rounds = report.get("rounds").and_then(Value::as_array);
         for round in rounds.into_iter().flatten() {
+            let number = round.get("number").and_then(Value::as_i64).unwrap_or(0);
+            let teams = if solo {
+                solo_teams(round, db)
+            } else {
+                duos.iter()
+                    .find(|c| c.round == number)
+                    .map(|c| (team_of(&c.own), team_of(&c.opponent)))
+            };
+            match saved_combat(round, game + 1, !solo, teams, db) {
+                Saved::None => {}
+                Saved::Unreadable => h.saved_unreadable += 1,
+                Saved::Combat(c) => h.saved.push(*c),
+            }
             let entries: Vec<&Value> = round
                 .get("entries")
                 .and_then(Value::as_array)
@@ -275,8 +296,24 @@ pub fn load_history(jsonl: &str, db: &CardDb) -> History {
                 None => h.solo_rounds_skipped += 1,
             }
         }
+        h.duos.extend(duos);
     }
     h
+}
+
+/// A Solo round's two boards, one entry a side.
+fn solo_teams(round: &Value, db: &CardDb) -> Option<(Team, Team)> {
+    let entries = round.get("entries")?.as_array()?;
+    let side = |s: &str| -> Vec<&Value> {
+        entries
+            .iter()
+            .filter(|e| e.get("side").and_then(Value::as_str) == Some(s))
+            .collect()
+    };
+    match (side("own").as_slice(), side("opponent").as_slice()) {
+        ([o], [p]) => Some((Team::solo(board(o, db)?), Team::solo(board(p, db)?))),
+        _ => None,
+    }
 }
 
 /// How well the engine knows a combat's cards.

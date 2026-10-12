@@ -15,7 +15,7 @@
 //! Deathrattle twice). Round 5 (`cards_round5`) took up all of these but
 //! `BG31_999`, `BGS_008` and `BG34_Giant_590`.
 
-use crate::cards::{approx, exact, Action, CardRules, Trigger};
+use crate::cards::{approx, exact, Action, CardRules, GemTo, Trigger};
 use crate::model::{Keywords, Tribes};
 
 /// The Golem "with this minion's stats": the token the user's log shows for
@@ -198,9 +198,9 @@ pub const EFFECTS_4: &[(&str, CardRules)] = &[
             BLOOD_GEMS,
             &[Trigger::FriendlyAttacks {
                 tribe: Tribes::NONE,
-                actions: &[Action::BuffAttacker {
-                    attack: 2,
-                    health: 2,
+                actions: &[Action::Gems {
+                    to: GemTo::Attacker,
+                    count: 2,
                 }],
             }],
         ),

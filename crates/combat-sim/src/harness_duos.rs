@@ -16,7 +16,7 @@ use serde_json::Value;
 
 use crate::combat::CombatResult;
 use crate::harness::{board, result, CardDb};
-use crate::harness_logs::engine_board;
+use crate::harness_logs::{engine_board, entry_band};
 use crate::model::{Team, Warband};
 use crate::score::{score, Prediction};
 use crate::trials::{simulate_teams, Options, Verdict};
@@ -163,14 +163,10 @@ pub fn duos_combats(report: &GameReport, game: usize, db: &CardDb) -> Vec<DuosCo
             .entries
             .iter()
             .map(|e| {
-                let board = match e.board.as_deref() {
-                    Some(b) => Some(Warband::new(engine_board(b, db)?)),
-                    None => None,
-                };
                 Some(Entry {
                     side: e.side,
                     seat: e.player_id,
-                    board,
+                    board: entry_band(e, db)?,
                 })
             })
             .collect();

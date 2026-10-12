@@ -9,6 +9,8 @@ impl Combat<'_> {
     /// Gives `uid` stats, then checks "once this reaches N Attack"; the
     /// friends that follow an Amalgam gain them too.
     pub(super) fn buff(&mut self, side: usize, uid: u32, attack: i32, health: i32) {
+        let factor = self.gain_factor(side, uid);
+        let (attack, health) = (attack.saturating_mul(factor), health.saturating_mul(factor));
         self.buff_one(side, uid, attack, health);
         self.amalgam_gained(side, uid, attack, health);
     }
@@ -237,6 +239,12 @@ impl Combat<'_> {
                     self.buff(side, a, gain, 0);
                 }
             }
+            Action::Gems { to, count } => self.play_gems(side, me, attacker, to, count),
+            Action::UpgradeGems { attack, health } => {
+                let gem = &mut self.sides[side].values.blood_gem;
+                *gem = (gem.0.saturating_add(attack), gem.1.saturating_add(health));
+            }
+            Action::Spell(actions) => self.cast_spell(side, src, target, attacker, actions),
         }
     }
 
@@ -251,8 +259,10 @@ impl Combat<'_> {
             return;
         };
         let at = self.summon_pos(side, src);
+        let (more_attack, more_health) = self.game_stats(side, card);
+        let (attack, health) = (base.attack + more_attack, base.health + more_health);
         for k in 0..usize::from(count) {
-            let unit = self.fresh(card, base.attack, base.health, base.keywords);
+            let unit = self.fresh(card, attack, health, base.keywords);
             let uid = unit.uid;
             if !self.sides[side].insert(at + k, unit) {
                 break;

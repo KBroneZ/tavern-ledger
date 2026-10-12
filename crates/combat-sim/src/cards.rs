@@ -121,6 +121,25 @@ pub enum Action {
     /// Summon a copy of this minion, its gifts included, to its right (Dark
     /// Gifts).
     SummonCopy,
+    /// Play `count` Blood Gems on `to`: +1/+1 each plus the side's upgrades
+    /// ([`crate::model::GameValues::blood_gem`]; T-609).
+    Gems { to: GemTo, count: i32 },
+    /// Upgrade the side's Blood Gems for the rest of the game (T-609).
+    UpgradeGems { attack: i32, health: i32 },
+    /// Cast a Tavern spell made of these buffs: each gives the side's spell
+    /// upgrades on top ([`crate::model::GameValues::spell`]; T-609).
+    Spell(&'static [Action]),
+}
+
+/// Where Blood Gems go.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GemTo {
+    /// The card itself.
+    Itself,
+    /// Every other friendly minion.
+    Others,
+    /// The minion that is attacking (an attack trigger).
+    Attacker,
 }
 
 impl Action {
@@ -147,6 +166,12 @@ pub enum Trigger {
     /// A start-of-combat effect the engine does not play. Harmless when the
     /// board is taken after start of combat (the logged boards are).
     StartOfCombatUnmodelled,
+    /// "Start of Combat: attack immediately", `n` times (T-609). Played with
+    /// start of combat on or off: a logged board is taken at this very
+    /// attack, so no board the engine is given has had it yet. It comes after
+    /// its side's other start-of-combat effects and is not one of the side's
+    /// turns.
+    AttackImmediately(u8),
     /// Whenever another friendly minion of `tribe` attacks, before the damage.
     FriendlyAttacks {
         tribe: Tribes,
@@ -213,6 +238,9 @@ pub enum Trigger {
     /// Comes back with Reborn with its Attack and full Health and its
     /// keywords, not as a fresh card (Dark Gifts).
     RebornWithStats,
+    /// The Dragons next to this one gain twice the stats they gain in
+    /// combat (golden Persistent Poet; T-609).
+    DoublesAdjacentDragonGains,
 }
 
 impl Trigger {
@@ -253,7 +281,8 @@ pub fn rules(card_id: &str) -> Option<CardRules> {
         .chain(crate::cards_round2::EFFECTS_2)
         .chain(crate::cards_round3::EFFECTS_3)
         .chain(crate::cards_round4::EFFECTS_4)
-        .chain(crate::cards_round5::EFFECTS_5);
+        .chain(crate::cards_round5::EFFECTS_5)
+        .chain(crate::cards_round7::EFFECTS_7);
     if let Some((_, rules)) = all.into_iter().find(|(id, _)| *id == card_id) {
         return Some(*rules);
     }
@@ -261,7 +290,8 @@ pub fn rules(card_id: &str) -> Option<CardRules> {
 }
 
 /// True when the card acts at the start of combat (played or not). A board
-/// taken in the shop has not had those effects yet.
+/// taken in the shop has not had those effects yet. "Attack immediately" is
+/// left out: the engine plays it on every board.
 pub fn has_start_of_combat(card_id: &str) -> bool {
     rules(card_id).is_some_and(|r| {
         r.triggers.iter().any(|t| {
@@ -594,8 +624,6 @@ pub const NO_COMBAT_EFFECT: &[&str] = &[
     "BG33_924_G",
     "BG33_891",
     "BG33_890t",
-    "BG33_885",
-    "BG33_885_G",
     "BG33_825",
     "BG33_825_G",
     "BG33_823",
@@ -653,7 +681,6 @@ pub const NO_COMBAT_EFFECT: &[&str] = &[
     "BG30_121",
     "BG30_121_G",
     "BG29_813",
-    "BG29_813_G",
     "BG29_300",
     "BG29_300_G",
     "BG28_741",

@@ -634,11 +634,13 @@ fn rounds_of(c: &Collector, heroes: &[(i64, &Entity)], last_health: Option<i64>)
             number: n,
             entries: entries
                 .iter()
-                .map(|(side, card, hint, board)| CombatEntry {
+                .enumerate()
+                .map(|(i, (side, card, hint, board))| CombatEntry {
                     side: *side,
                     player_id: by_card(card).or(*hint),
                     hero: card.clone(),
                     board: board.clone(),
+                    values: c.entry_values.get(&(n, i)).copied(),
                 })
                 .collect(),
             own_health_after: health.get(&n).copied().flatten(),

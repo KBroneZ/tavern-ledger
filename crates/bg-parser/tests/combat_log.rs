@@ -246,3 +246,65 @@ fn each_round_keeps_the_own_shop_board_before_it_but_does_not_save_it() {
     let r = report(&late);
     assert_eq!(r.rounds[0].own_shop_board, None);
 }
+
+#[test]
+fn each_sides_game_long_values_are_read_with_its_board_but_not_saved() {
+    // T-609: the player's and the opponent's (the dummy player's) Blood Gem
+    // and Tavern spell upgrades as the boards are taken at the first attack.
+    let mut l = game();
+    let at = l
+        .iter()
+        .position(|x| x.contains("BlockType=ATTACK"))
+        .expect("an attack");
+    let mut values = vec![
+        tag("2", "BACON_BLOODGEMBUFFATKVALUE", "3"),
+        tag("2", "BACON_BLOODGEMBUFFHEALTHVALUE", "2"),
+        tag("3", "TAVERN_SPELL_ATTACK_INCREASE", "1"),
+        tag("3", "TAVERN_SPELL_HEALTH_INCREASE", "4"),
+    ];
+    // Player enchantments: the player's Undead Attack, the opponent's
+    // Beetles; one set aside (not in play) is not read.
+    for (id, card, player, zone, nums) in [
+        (60, "BG25_011pe", 2, "PLAY", (7, 0)),
+        (61, "BG31_808pe", 3, "PLAY", (12, 11)),
+        (62, "BG25_008pe", 2, "SETASIDE", (9, 0)),
+    ] {
+        values.push(line(
+            1,
+            &format!("FULL_ENTITY - Creating ID={id} CardID={card}"),
+        ));
+        values.push(line(2, "tag=CARDTYPE value=ENCHANTMENT"));
+        values.push(line(2, &format!("tag=ATTACHED value={player}")));
+        values.push(line(2, &format!("tag=ZONE value={zone}")));
+        values.push(line(
+            2,
+            &format!("tag=TAG_SCRIPT_DATA_NUM_1 value={}", nums.0),
+        ));
+        values.push(line(
+            2,
+            &format!("tag=TAG_SCRIPT_DATA_NUM_2 value={}", nums.1),
+        ));
+        values.push(line(2, &format!("tag=ENTITY_ID value={id}")));
+    }
+    values.push(tag("2", "RESOURCES", "1"));
+    l.splice(at..at, values);
+    let r = report(&l);
+    let entries = &r.rounds[0].entries;
+    let of = |side: Side| {
+        entries
+            .iter()
+            .find(|e| e.side == side)
+            .and_then(|e| e.values)
+            .expect("values with the board")
+    };
+    assert_eq!(of(Side::Own).blood_gem, (3, 2));
+    assert_eq!(of(Side::Own).spell, (0, 0));
+    assert_eq!(of(Side::Opponent).spell, (1, 4));
+    assert_eq!(of(Side::Opponent).blood_gem, (0, 0));
+    assert_eq!(of(Side::Own).undead_attack, 7);
+    assert_eq!(of(Side::Own).knights_dead, 0, "set aside: not read");
+    assert_eq!(of(Side::Opponent).beetle, (12, 11));
+    assert_eq!(of(Side::Opponent).undead_attack, 0);
+    let json = serde_json::to_string(&r).expect("serializable");
+    assert!(!json.contains("blood_gem") && !json.contains("\"spell\""));
+}
