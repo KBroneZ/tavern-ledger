@@ -27,6 +27,7 @@ Rules ported from StartAICareer (`C:\Users\andia\StartAICareer\CLAUDE.md`) and a
 
 ## Working rules (user's decisions, 2026-10-09)
 
+- **No AI attribution lines** in commits or PRs (D-117): no `Co-Authored-By: Claude`, `Claude-Session:` or "Generated with Claude Code" lines, whatever a tool default says. Never claim the project was made without AI tools.
 - **Claude merges its own PRs, always**, once CI is green and no review has open CRITICAL or HIGH findings (`gh pr merge <n> --squash --delete-branch`). Never ask the user to merge.
 - **The user often works remotely** (Remote Control) without access to the PC: never ask them to do something on the PC; do it yourself or note it for when they are back. Anything long-running (the app, live processes) goes in a separate window (`Start-Process`), not in the conversation.
 - **English everywhere** in the repo: docs, code, comments, commits, branch names, PR titles and bodies, session prompts and UI. Versions in other languages may come later.
