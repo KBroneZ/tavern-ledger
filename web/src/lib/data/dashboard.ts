@@ -6,7 +6,7 @@ import { backing, compact, perGameText, placeAverage, PLACES, share, type Mode }
 import { RECORDS, type GameRow, type HeroRow, type Overview, type RecordRow } from "./rows.ts";
 import { t } from "./strings.ts";
 import { heroCell, unknownValue, sourceMark, type Cell, type Column, type TileProps } from "../view/pieces.ts";
-import { byHeroName, heroLabel } from "../heroes/names.ts";
+import { byHeroName } from "../heroes/names.ts";
 import { h, type VNode } from "../view/node.ts";
 import { gamePath } from "../game/url.ts";
 import { dateFormat } from "../i18n.ts";
@@ -94,8 +94,6 @@ export function overviewTiles(ov: Overview, recentPlaces: (number | null)[]): Ti
   return { simple, advanced };
 }
 
-/** The hero's name in the page's language (T-510), never the bare card id. */
-const heroName = (hero: string | null) => heroLabel(hero, t("hero.unknown"), t("hero.unknownId")).name;
 
 export const HERO_COLUMNS = (m: Mode): Column[] => [
   { label: t("heroes.col.hero") },
@@ -185,21 +183,22 @@ export function gameColumns(withMode: boolean): Column[] {
 /** The game viewer's address (T-504): lib/game/url.ts owns it. */
 export const gameHref = gamePath;
 
-/** The date, as a link to the game when its key is known. */
-function dateCell(g: GameRow, userId: string | null): Cell {
-  const text = dateText(g.playedOn);
-  if (!userId || g.session === null || g.gameIndex === null) return text;
-  // Same-day games would share the link text: the hero tells them apart for screen readers.
-  const which = h("span", { class: "visually-hidden" }, t("games.link", { hero: heroName(g.hero) }));
-  return { node: h("a", { href: gameHref(userId, g.session, g.gameIndex) }, text, which) };
+/**
+ * The hero (portrait and name) as the link to the game when its key is known
+ * (T-559: was the date); the date is read after the name by screen readers,
+ * since the same hero can be played many times.
+ */
+function gameHeroCell(g: GameRow, userId: string | null): Cell {
+  if (!userId || g.session === null || g.gameIndex === null) return heroCell(g.hero);
+  return heroCell(g.hero, gameHref(userId, g.session, g.gameIndex), t("games.link", { date: dateText(g.playedOn) }));
 }
 
-/** One game as a row: hero, place badge (or why it has none), date (linking to the game) and the key numbers. */
+/** One game as a row: hero (linking to the game), place badge (or why it has none), date and the key numbers. */
 export function gameCells(g: GameRow, withMode: boolean, userId: string | null = null): Cell[] {
   return [
-    heroCell(g.hero),
+    gameHeroCell(g, userId),
     placeCell(g),
-    dateCell(g, userId),
+    dateText(g.playedOn),
     ...(withMode ? [modeName(g.mode)] : []),
     maybe(g.rounds),
     combatsCell(g),

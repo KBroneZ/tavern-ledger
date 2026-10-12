@@ -7,6 +7,7 @@ import { gameRow, heroRow, overview, recordRow, type RecordRow } from "../../src
 import { gameRaw, heroRaw, overviewRow, recordRaw } from "../helpers/rows.ts";
 import { textOf, toHtml } from "../helpers/html.ts";
 import type { VNode } from "../../src/lib/view/node.ts";
+import { topTable } from "../../src/lib/view/pieces.ts";
 
 test("perGame: a sum over the games that have it; no game is unknown", () => {
   assert.equal(perGame(4060, 29), 140);
@@ -123,15 +124,23 @@ test("recentPlaces: the newest n, oldest first", () => {
   assert.deepEqual(recentPlaces([], 20), []);
 });
 
-test("a game's date links to the game viewer when its key is known, each value encoded", () => {
+test("a game's hero (portrait and name) links to the game viewer when its key is known; the date is plain text (T-559)", () => {
   const id = "0f8fad5b-d9cb-469f-a165-70867728950e";
   const cells = gameCells(gameRow(gameRaw()), false, id);
-  assert.equal(
-    toHtml((cells[2] as { node: VNode }).node),
-    `<a href="/game/?u=${id}&amp;s=Hearthstone_2026_10_09_18_30_00&amp;g=2">Oct 9, 2026<span class="visually-hidden">: game with Master Nguyen</span></a>`,
-  );
-  assert.equal(gameCells(gameRow(gameRaw({ session: "a/b?c" })), false, id)[2], "Oct 9, 2026", "an odd key gets no link");
-  assert.equal(gameCells(gameRow(gameRaw()), false)[2], "Oct 9, 2026");
+  assert.deepEqual(cells[0], {
+    hero: "BG20_HERO_202",
+    name: "Master Nguyen",
+    href: `/game/?u=${id}&s=Hearthstone_2026_10_09_18_30_00&g=2`,
+    context: ": game of Oct 9, 2026",
+    unknownId: null,
+  });
+  assert.equal(cells[2], "Oct 9, 2026");
+  const html = toHtml(topTable({ caption: "c", columns: gameColumns(false), rows: [cells] }));
+  assert.ok(html.includes(`<a class="cell-hero" href="/game/?u=${id}&amp;s=Hearthstone_2026_10_09_18_30_00&amp;g=2"><span class="pic pic-hero"`), "the portrait is inside the link");
+  assert.ok(html.includes('<span class="hero-link">Master Nguyen<span class="visually-hidden">: game of Oct 9, 2026</span></span></span></a></th>'), "and so is the name");
+  assert.ok(html.includes("<td>Oct 9, 2026</td>"), "the date is plain text");
+  assert.equal((gameCells(gameRow(gameRaw({ session: "a/b?c" })), false, id)[0] as { href?: string }).href, undefined, "an odd key gets no link");
+  assert.equal((gameCells(gameRow(gameRaw()), false)[0] as { href?: string }).href, undefined);
 });
 
 test("combats won: unknown combats are said next to the share of known ones", () => {

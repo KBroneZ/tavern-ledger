@@ -183,7 +183,7 @@ export const ES: Record<StringKey, string> = {
   "games.col.combats": "Combates ganados–perdidos",
   "games.col.triples": "Triples",
   "games.col.apm": "APM",
-  "games.link": ": partida con {hero}",
+  "games.link": ": partida del {date}",
   "games.status.incomplete": "sin terminar",
   "games.triples.unfinished": "No se cuentan: la partida no terminó",
   "games.status.unsupported": "ilegible",

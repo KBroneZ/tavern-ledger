@@ -50,7 +50,7 @@ test("heroes: top 10 with Show all; each hero links to its games", () => {
   const html = toHtml(heroesPanel("solo", heroes, { profileId: ID, sort: "games" }));
   assert.equal((html.match(/<tr class="more">/g) ?? []).length, heroes.length - TOP_HEROES);
   assert.match(html, /Show all 13/);
-  assert.match(html, new RegExp(`<a href="/games/\\?id=${ID}&amp;mode=solo&amp;hero=BG_HERO_00">Unknown hero</a><span class="adv cell-note hero-id">BG_HERO_00</span>`));
+  assert.match(html, new RegExp(`<a class="cell-hero" href="/games/\\?id=${ID}&amp;mode=solo&amp;hero=BG_HERO_00"><span class="pic pic-hero"[^]*?<span class="hero-link">Unknown hero</span><span class="adv cell-note hero-id">BG_HERO_00</span>`));
 });
 
 test("heroes: the sort switch shows the sort in force and drives the table", () => {
