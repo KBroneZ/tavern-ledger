@@ -13,7 +13,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # Both already in Cargo.lock (PROVENANCE.md); no new crates.
-combat-sim = { path = "../combat-sim", default-features = false }
+combat-sim = { path = "../combat-sim", default-features = false, features = ["saved"] }
 serde_json = "1"
 
 [dev-dependencies]

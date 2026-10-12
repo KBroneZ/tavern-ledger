@@ -53,6 +53,8 @@ pub mod harness_why;
 pub mod saved;
 pub mod score;
 pub mod why;
+#[cfg(feature = "saved")]
+pub mod why_json;
 
 pub use combat::{CombatResult, Outcome};
 pub use model::{

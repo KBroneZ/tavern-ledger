@@ -12,6 +12,7 @@ import { EXPIRED_COLUMNS, expiredHeading, loadExpired, type ReadSummary, renderE
 import { loadGame, type Download, type LoadResult } from "./load.ts";
 import { renderGame } from "./render.ts";
 import { startReplays } from "./replayPlayer.ts";
+import { explainCombats } from "./whyRun.ts";
 import { readRecord } from "./report.ts";
 import { shapeGame } from "./shape.ts";
 import { g, type GameStringKey } from "./strings.ts";
@@ -74,6 +75,7 @@ function showGame(result: Extract<LoadResult, { kind: "ok" }>, ref: GameRef): vo
   show(title, [...banners, ...renderGame(view, dateText(playedOn(ref.session)))], g("page.loaded", { title }));
   const replays = document.getElementById("gv-replays");
   if (replays) startReplays(replays, view.replays);
+  void explainCombats(result.report);
 }
 
 /** A game whose full file has expired (T-544): its summary and why the details are gone. */
@@ -119,7 +121,7 @@ async function start(): Promise<void> {
   if (import.meta.env.DEV && new URLSearchParams(location.search).has("demo")) {
     const { record } = await import("../../../test/unit/gameFixtures.ts");
     const read = readRecord(record(), ref.session, ref.index);
-    if (read.ok) return showGame({ kind: "ok", record: read.record }, ref);
+    if (read.ok) return showGame({ kind: "ok", record: read.record, report: record().report }, ref);
   }
   const { supabase } = await import("../../scripts/client.ts");
   const download: Download = (path) => supabase.storage.from("games").download(path);

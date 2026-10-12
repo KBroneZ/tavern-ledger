@@ -272,6 +272,26 @@
   color: var(--text-2);
 }
 
+/* Why each result went as it did (T-549): one line per combat. */
+.gv-why {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gv-why-line {
+  margin: 0.25em 0;
+}
+
+.gv-why-turn,
+.gv-why-odds {
+  font-variant-numeric: tabular-nums;
+}
+
+.gv-why-odds {
+  color: var(--text-2);
+}
+
 @media (forced-colors: active) {
   .gv-minion.is-golden .pic,
   .gv-options li.is-taken .pic {

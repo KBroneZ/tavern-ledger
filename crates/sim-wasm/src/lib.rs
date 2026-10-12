@@ -13,6 +13,7 @@
 //! The request and answer formats are in the design notes
 //! and in [`input`] and [`odds`].
 
+pub mod explain;
 pub mod input;
 pub mod odds;
 
@@ -21,6 +22,15 @@ use std::cell::RefCell;
 /// Plays one request (JSON text) and returns the answer (JSON text). Never
 /// panics on bad input: a refusal is an answer too.
 pub fn run_json(request: &str) -> String {
+    // A game to explain (T-549) is larger than a request for odds: it is
+    // read with its own cap.
+    if request.len() <= explain::MAX_EXPLAIN_BYTES {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(request) {
+            if let Some(e) = explain::explain_of(&v) {
+                return explain::run(e).to_string();
+            }
+        }
+    }
     let answer = match input::read(request) {
         Ok(req) => odds::run(&req),
         Err(reason) => odds::refused(&reason),
