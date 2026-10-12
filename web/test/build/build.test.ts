@@ -246,8 +246,9 @@ test("fonts and styles are our own files: every url() is a local font or the bra
     const urls = [...text.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)].map((m) => m[1]);
 
     for (const url of urls) {
-      // The masthead draws the logo (public/mark.svg, D-094) as a background.
-      assert.match(url, /^\/(?:fonts\/[a-z0-9-]+\.woff2|mark\.svg)$/, url);
+      // The masthead draws the logo (public/mark.svg, D-094) as a background,
+      // the tavern buttons and panels their painted art (T-530, D-105).
+      assert.match(url, /^\/(?:fonts\/[a-z0-9-]+\.woff2|mark\.svg|art\/home\/(?:btn-[a-z-]+(?:@2x)?|panel-(?:lead|card|strip))\.webp)$/, url);
       assert.ok(existsSync(join(DIST, url)), url);
     }
   }
@@ -303,9 +304,10 @@ test("pictures are our own files, with their size and a text alternative", () =>
     const html = readFileSync(page, "utf8");
     for (const [img] of html.matchAll(/<img\b[^>]*>/g)) {
       // Built pages show made-up data only, so their pictures are our own
-      // placeholders; card art (D-074) is drawn in the browser by the game viewer.
+      // placeholders, plus the home page's painting (T-530); card art (D-074)
+      // is drawn in the browser by the game viewer.
       const src = /\ssrc="([^"]*)"/.exec(img)?.[1] ?? "";
-      assert.match(src, /^\/placeholders\/(?:hero|card)-\d\.svg$/, `${name(page)}: ${img}`);
+      assert.match(src, /^\/(?:placeholders\/(?:hero|card)-\d\.svg|art\/home\/tavern-\d+\.webp)$/, `${name(page)}: ${img}`);
       assert.ok(existsSync(join(DIST, src)), src);
       // Width and height keep the room (no layout shift); alt is there, empty when decorative.
       assert.match(img, /\swidth="\d+"/, img);
@@ -366,6 +368,71 @@ test("the home page's pinned scene is one described picture plus five captions a
   assert.doesNotMatch(section, /<img\b|<svg\b|url\(/);
 });
 
+test("the home page's painting: decorative, sized, in AVIF and WebP with a small file for phones", () => {
+  for (const file of ["index.html", "es/index.html"]) {
+    const html = readFileSync(join(DIST, file), "utf8");
+    const backdrop = /<div class="backdrop" aria-hidden="true">[\s\S]*?<\/picture>/.exec(html)?.[0] ?? "";
+    assert.ok(backdrop, `${file}: the backdrop is hidden from screen readers`);
+    assert.match(backdrop, /<source type="image\/avif" media="\(max-width: 560px\)" srcset="\/art\/home\/tavern-800\.avif"/);
+    assert.match(backdrop, /<source type="image\/avif" srcset="\/art\/home\/tavern-1080\.avif 1080w, \/art\/home\/tavern-1344\.avif 1344w"/);
+    assert.match(backdrop, /<img [^>]*width="1344" height="3168" alt=""/);
+    for (const src of backdrop.matchAll(/\/art\/home\/(tavern-\d+\.(?:avif|webp))/g)) {
+      assert.ok(existsSync(join(DIST, "art", "home", src[1])), src[1]);
+    }
+    // The script that moves it ships only where scripts may run.
+    assert.equal(/<script [^>]*src="\/_astro\//.test(html), CONFIG !== null, file);
+  }
+  // The descent also works with no script (accounts closed): the root scroll
+  // timeline moves the painting by its own height less the screen's.
+  const home = readFileSync(join(DIST, "index.html"), "utf8");
+  const css = [...home.matchAll(/<link\b[^>]*rel="stylesheet"[^>]*href="\/([^"]+)"/g)].map((m) => readFileSync(join(DIST, m[1]), "utf8")).join("\n");
+  assert.match(css, /\.backdrop-art:not\(\[data-descent=script\]\)\{[^}]*animation-name:descend[^}]*animation-timeline:scroll\(root\)/);
+  assert.match(css, /@keyframes descend\{[^@]*translateY\(calc\(100lvh - 100%\)\)/);
+  // A mid phone downloads one small painting, not the full one.
+  assert.ok(statSync(join(DIST, "art", "home", "tavern-800.avif")).size < 120 * 1024);
+});
+
+test("the home page's buttons by role: one gold key action, wood for common ones, small stone for small ones", () => {
+  const html = readFileSync(join(DIST, "index.html"), "utf8");
+  const roles = [...html.matchAll(/<a class="tb tb-(key|common|small)" href="([^"]+)">\s*<span class="tb-label">([^<]+)/g)].map((m) => [m[1], m[2], m[3].trim()]);
+  assert.deepEqual(roles, [
+    ["common", "#scene", "Show me"],
+    ["common", "#safe", "Is it safe?"],
+    ["small", "#main", "Back up to the door"],
+  ]);
+  // Nothing to download yet (T-105): the real gold button, unavailable, links
+  // nowhere, and the line it points to says so (rule 8).
+  for (const [file, label, note] of [["index.html", "Download", "Not out yet"], ["es/index.html", "Descargar", "Aún no ha salido"]]) {
+    const page = readFileSync(join(DIST, file), "utf8");
+    const key = [...page.matchAll(/<(a|button) class="tb tb-key"[^>]*>\s*<span class="tb-label">([^<]+)/g)];
+    assert.equal(key.length, 1, `${file}: one key action`);
+    assert.equal(key[0][1], "button", `${file}: not a link`);
+    assert.equal(key[0][2].trim(), label);
+    assert.match(key[0][0], /type="button"/);
+    assert.match(key[0][0], /aria-disabled="true"/);
+    assert.match(key[0][0], /aria-describedby="download-note"/);
+    assert.match(page, new RegExp(`<p class="key-note" id="download-note">${note}</p>`), file);
+  }
+  for (const art of ["btn-key", "btn-key-lit", "btn-common", "btn-small"]) {
+    for (const scale of ["", "@2x"]) assert.ok(existsSync(join(DIST, "art", "home", `${art}${scale}.webp`)), `${art}${scale}`);
+  }
+});
+
+test("the scene's depth: decorative, empty hero tokens filled only at view time, nothing loaded from outside", () => {
+  for (const file of ["index.html", "es/index.html"]) {
+    const html = readFileSync(join(DIST, file), "utf8");
+    const section = /<section class="pin" id="scene"[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
+    const depth = /<div class="pin-depth" aria-hidden="true">([\s\S]*?)<\/div>\s*<div class="caption-col">/.exec(section);
+    assert.ok(depth, `${file}: the depth layer comes first in the stage and is hidden from screen readers`);
+    assert.equal([...depth[1].matchAll(/<span class="token"><\/span>/g)].length, 6, `${file}: six empty tokens`);
+    // Hero portraits come from HearthstoneJSON at view time (D-074), never in the page.
+    assert.doesNotMatch(depth[1], /<img\b|hearthstonejson/);
+    // One home script, and only where scripts may run.
+    const scripts = [...html.matchAll(/<script\b[^>]*src="\/_astro\/[^"]+"/g)];
+    assert.equal(scripts.length, CONFIG !== null ? 1 : 0, file);
+  }
+});
+
 test("every number on the home page that is not real is labelled as made up", () => {
   const html = readFileSync(join(DIST, "index.html"), "utf8");
   const big = [...html.matchAll(/<p class="big">\s*(\d+)\s*<small>([^<]+)<\/small>/g)];
@@ -386,7 +453,7 @@ test("the pinned scene takes at most about 1.5 screens of scrolling", () => {
   }
 });
 
-test("the still picture is the default: every animation sits behind the two scroll-timeline queries", () => {
+test("the still picture is the default: scroll-driven motion sits behind both queries, any other behind no-preference", () => {
   // The home page's own stylesheets: the data pages' loading shimmer is not part of the scene.
   const home = readFileSync(join(DIST, "index.html"), "utf8");
   const sheets = [...home.matchAll(/<link\b[^>]*rel="stylesheet"[^>]*href="\/([^"]+)"/g)].map((m) => join(DIST, m[1]));
@@ -423,6 +490,23 @@ test("the still picture is the default: every animation sits behind the two scro
     at = rest.indexOf("@supports", at);
   }
   assert.ok(rest.length < css.length, "the moving scene is there");
+  // Then each top-level @media (prefers-reduced-motion: no-preference) block:
+  // time-based motion only (the sparks, T-530); nothing scroll-driven in it.
+  const before = rest.length;
+  at = rest.search(/@media\s*\(prefers-reduced-motion:\s*no-preference\)\s*\{/);
+  while (at !== -1) {
+    const open = rest.indexOf("{", at);
+    let depth = 0;
+    let end = open;
+    for (; end < rest.length; end++) {
+      if (rest[end] === "{") depth++;
+      else if (rest[end] === "}" && --depth === 0) break;
+    }
+    assert.doesNotMatch(rest.slice(open, end), /animation-timeline|view-timeline|scroll-timeline/);
+    rest = rest.slice(0, at) + rest.slice(end + 1);
+    at = rest.search(/@media\s*\(prefers-reduced-motion:\s*no-preference\)\s*\{/);
+  }
+  assert.ok(rest.length < before, "the sparks wait for no-preference");
   assert.doesNotMatch(rest, /animation-(?:name|timeline)\s*:/);
   for (const shorthand of rest.matchAll(/animation\s*:\s*([^;}]+)/g)) assert.match(shorthand[1], /^none/);
   assert.doesNotMatch(rest, /view-timeline/);

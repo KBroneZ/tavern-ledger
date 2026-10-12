@@ -1,0 +1,230 @@
+/* Details behind the pinned scene (T-530, D-105): components/home/SceneDepth.astro.
+   Blurred hero tokens on depth layers, dust motes, soft light shafts and a
+   short glow at each step. scene.css is untouched: the steps, their timing,
+   the pinning and the captions work exactly as before. Everything here sits
+   behind the scene's content and moves only with transform and opacity; the
+   scroll-driven parts wait for the same two queries as the scene. */
+
+.pin-stage {
+  isolation: isolate;
+}
+
+/* Not clipped here: on wide or tall screens the stage is capped and a token
+   at its edge would be cut; the section itself clips sideways (scene.css). */
+.pin-depth {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ---------- Light shafts ---------- */
+
+.pin-shafts {
+  position: absolute;
+  inset: -10% -5%;
+  background: repeating-linear-gradient(
+    104deg,
+    transparent 0 90px,
+    rgb(255 206 140 / 0.055) 90px 150px,
+    transparent 150px 280px
+  );
+  -webkit-mask: radial-gradient(70% 80% at 62% 30%, #000, transparent 75%);
+  mask: radial-gradient(70% 80% at 62% 30%, #000, transparent 75%);
+}
+
+/* A warm glow behind the panes that swells briefly as each step begins. */
+.pin-pulse {
+  position: absolute;
+  left: 62%;
+  top: 50%;
+  width: min(70vw, 760px);
+  aspect-ratio: 1.4;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(255 178 74 / 0.22), transparent);
+  opacity: 0.35;
+}
+
+/* ---------- Hero tokens ---------- */
+
+.token {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--s);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  overflow: hidden;
+  filter: blur(var(--b)) saturate(0.85);
+  box-shadow:
+    0 0 0 2px rgb(255 206 140 / 0.35),
+    0 0 30px rgb(255 170 60 / 0.25);
+  opacity: 0;
+  transition: opacity 900ms ease;
+}
+
+.token.ready {
+  opacity: var(--o);
+}
+
+.token img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Far tokens are bigger, softer and fainter; near ones smaller and sharper. */
+.token:nth-of-type(1) { --x: 38%; --y: 10%; --s: 120px; --b: 5px; --o: 0.4; --from: 50px; --to: -70px; }
+.token:nth-of-type(2) { --x: 88%; --y: 14%; --s: 150px; --b: 7px; --o: 0.32; --from: 30px; --to: -40px; }
+.token:nth-of-type(3) { --x: 94%; --y: 62%; --s: 96px; --b: 3px; --o: 0.5; --from: 90px; --to: -110px; }
+.token:nth-of-type(4) { --x: 46%; --y: 78%; --s: 84px; --b: 2.5px; --o: 0.45; --from: 110px; --to: -130px; }
+.token:nth-of-type(5) { --x: 72%; --y: 90%; --s: 130px; --b: 8px; --o: 0.28; --from: 20px; --to: -30px; }
+.token:nth-of-type(6) { --x: 6%; --y: 86%; --s: 100px; --b: 6px; --o: 0.3; --from: 40px; --to: -60px; }
+
+@media (max-width: 860px) {
+  .token {
+    width: calc(var(--s) * 0.6);
+    filter: blur(calc(var(--b) * 0.6)) saturate(0.85);
+  }
+
+  /* One column: the first token would sit behind the captions. */
+  .token:nth-of-type(1) {
+    --x: 78%;
+    --o: 0.25;
+  }
+
+  .token:nth-of-type(4),
+  .token:nth-of-type(6) {
+    display: none;
+  }
+}
+
+/* ---------- Dust motes ---------- */
+
+.mote {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--m, 3px);
+  height: var(--m, 3px);
+  border-radius: 50%;
+  background: #ffe3b0;
+  box-shadow: 0 0 6px rgb(255 200 120 / 0.8);
+  opacity: 0;
+  display: none;
+}
+
+.mote:nth-of-type(1) { --x: 30%; --y: 70%; --d: 11s; --w: -2s; }
+.mote:nth-of-type(2) { --x: 52%; --y: 30%; --d: 14s; --w: -9s; --m: 2px; }
+.mote:nth-of-type(3) { --x: 64%; --y: 80%; --d: 12s; --w: -5s; }
+.mote:nth-of-type(4) { --x: 78%; --y: 40%; --d: 16s; --w: -12s; --m: 2px; }
+.mote:nth-of-type(5) { --x: 86%; --y: 75%; --d: 13s; --w: -3s; }
+.mote:nth-of-type(6) { --x: 42%; --y: 55%; --d: 15s; --w: -7s; --m: 2px; }
+.mote:nth-of-type(7) { --x: 58%; --y: 62%; --d: 10s; --w: -1s; }
+.mote:nth-of-type(8) { --x: 70%; --y: 20%; --d: 17s; --w: -14s; --m: 2px; }
+.mote:nth-of-type(9) { --x: 20%; --y: 40%; --d: 12s; --w: -6s; --m: 2px; }
+.mote:nth-of-type(10) { --x: 92%; --y: 30%; --d: 14s; --w: -10s; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .mote {
+    display: block;
+    animation: drift var(--d) ease-in-out var(--w) infinite;
+  }
+}
+
+@keyframes drift {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0);
+  }
+  20% {
+    opacity: 0.7;
+  }
+  80% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(24px, -90px, 0);
+  }
+}
+
+/* ---------- On the scene's own timeline ---------- */
+
+/* The same gate as the moving scene (scene.css); --pin is its view timeline.
+   Tokens drift at their own depth; the glow swells as each step begins
+   (at 26, 44, 61 and 78 % of the scene, where scene.css lights the next pane). */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) and (min-height: 560px) {
+    .token,
+    .pin-pulse {
+      animation-timeline: --pin;
+      animation-range: contain 0% contain 100%;
+      animation-fill-mode: both;
+      animation-timing-function: linear;
+      animation-duration: auto;
+    }
+
+    .token {
+      animation-name: token-depth;
+    }
+
+    .pin-pulse {
+      animation-name: step-glow;
+    }
+  }
+}
+
+@keyframes token-depth {
+  from {
+    transform: translateY(var(--from));
+  }
+  to {
+    transform: translateY(var(--to));
+  }
+}
+
+@keyframes step-glow {
+  0%,
+  22% {
+    opacity: 0.35;
+  }
+  26% {
+    opacity: 1;
+  }
+  32%,
+  40% {
+    opacity: 0.35;
+  }
+  44% {
+    opacity: 1;
+  }
+  50%,
+  57% {
+    opacity: 0.35;
+  }
+  61% {
+    opacity: 1;
+  }
+  67%,
+  74% {
+    opacity: 0.35;
+  }
+  78% {
+    opacity: 1;
+  }
+  84%,
+  100% {
+    opacity: 0.6;
+  }
+}
+
+/* Windows high contrast: no decoration behind the scene. */
+@media (forced-colors: active) {
+  .pin-depth {
+    display: none;
+  }
+}

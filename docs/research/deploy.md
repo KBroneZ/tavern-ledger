@@ -36,7 +36,7 @@ Pages project settings:
 | Project name | `tavern-ledger` | `tavern-ledger.pages.dev` |
 | Production branch | `main` | `main` is always releasable (CLAUDE.md) |
 | Automatic production deployments | on | each merge to `main` goes live |
-| Preview deployments | **Custom branches: `092-home-tavern` only** (2026-10-12, hub 096, the user's OK) | the user reviews T-530 on a real preview; set back to **None** once 092 merges |
+| Preview deployments | **None** (back to None on 2026-10-12 after #163; briefly "custom branches: `092-home-tavern`" for the user's T-530 review, with their OK) | previews are public by default; turn one on per branch only for a visual review the user asks for. A preview builds without the Production variables, so it is the accounts-closed build (no scripts that need the accounts setup) |
 | Root directory | `web` | the site's own lockfile; Pages clones the whole repo, so `docs/legal/*.md` (rendered by `/privacy/` and `/terms/`) are there |
 | Build command | `npm test && npm run build && npm run test:dist` | the same checks as CI; a failing check stops the deploy and the previous deployment stays live |
 | Output directory | `dist` | Astro's default |
