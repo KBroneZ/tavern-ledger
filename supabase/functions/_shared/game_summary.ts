@@ -22,7 +22,8 @@
 // daily sweep then fills the summary again from the stored reports.
 //
 // 2: damage from the game's own hit in each combat's replay (T-545, D-108).
-export const SUMMARY_VERSION = 2;
+// 3: the damage records say whether the max came from the game's own hit.
+export const SUMMARY_VERSION = 3;
 
 // deno-lint-ignore no-explicit-any
 type Json = any;
@@ -40,9 +41,11 @@ export interface GameStats {
   damage_taken: number | null;
   damage_taken_combats: number | null;
   damage_taken_max: number | null;
+  damage_taken_max_inferred: boolean | null;
   damage_dealt: number | null;
   damage_dealt_combats: number | null;
   damage_dealt_max: number | null;
+  damage_dealt_max_inferred: boolean | null;
   shop_turns: number | null;
   final_tier: number | null;
   gold_spent: number | null;
@@ -82,9 +85,11 @@ export const STATS_KEYS: readonly (keyof GameStats)[] = [
   "damage_taken",
   "damage_taken_combats",
   "damage_taken_max",
+  "damage_taken_max_inferred",
   "damage_dealt",
   "damage_dealt_combats",
   "damage_dealt_max",
+  "damage_dealt_max_inferred",
   "shop_turns",
   "final_tier",
   "gold_spent",
@@ -291,14 +296,24 @@ interface Drops {
   total: number;
   combats: number;
   max: number;
+  /** No combat at the max value has the game's own hit: the max is worked out from health. */
+  maxInferred: boolean;
 }
 
-function drops(values: number[]): Drops | null {
-  if (values.length === 0) return null;
+/** One combat's damage, and whether it is the game's own hit (not worked out from health). */
+interface Damage {
+  value: number;
+  logged: boolean;
+}
+
+function drops(damages: Damage[]): Drops | null {
+  if (damages.length === 0) return null;
+  const max = Math.max(...damages.map((d) => d.value));
   return {
-    total: cap(values.reduce((a, b) => a + b, 0)),
-    combats: values.length,
-    max: Math.max(...values),
+    total: cap(damages.reduce((a, d) => a + d.value, 0)),
+    combats: damages.length,
+    max,
+    maxInferred: !damages.some((d) => d.value === max && d.logged),
   };
 }
 
@@ -351,17 +366,17 @@ function damageTaken(sides: Sides, rounds: Map<number, Json>, hits: Map<number, 
   for (const [number, r] of rounds) {
     points.set(number, isInt(r.own_health_after) ? r.own_health_after : null);
   }
-  const values: number[] = [];
+  const values: Damage[] = [];
   for (const number of rounds.keys()) {
     const hit = hits.get(number);
     if (hit !== undefined) {
-      values.push(hit.taken);
+      values.push({ value: hit.taken, logged: true });
       continue;
     }
     const after = points.get(number);
     const before = points.get(number - 1);
     if (number > 0 && after != null && before != null) {
-      values.push(Math.max(0, before - after));
+      values.push({ value: Math.max(0, before - after), logged: false });
     }
   }
   return drops(values);
@@ -369,11 +384,11 @@ function damageTaken(sides: Sides, rounds: Map<number, Json>, hits: Map<number, 
 
 /** Health the one opposing side lost in each round: the game's hit, else the drop where known before and after. */
 function damageDealt(sides: Sides, rounds: Map<number, Json>, hits: Map<number, Hit>): Drops | null {
-  const values: number[] = [];
+  const values: Damage[] = [];
   for (const [number, r] of rounds) {
     const hit = hits.get(number);
     if (hit !== undefined) {
-      values.push(hit.dealt);
+      values.push({ value: hit.dealt, logged: true });
       continue;
     }
     const opposing = sides.opposing(r);
@@ -382,7 +397,7 @@ function damageDealt(sides: Sides, rounds: Map<number, Json>, hits: Map<number, 
     const after = sides.healthOf(opposing[0], number);
     // A side already out comes back as a ghost: nothing to read.
     if (before === null || after === null || before === 0) continue;
-    values.push(Math.max(0, before - after));
+    values.push({ value: Math.max(0, before - after), logged: false });
   }
   return drops(values);
 }
@@ -537,9 +552,11 @@ export function summarize(report: Json): GameStats {
     damage_taken: taken?.total ?? null,
     damage_taken_combats: taken?.combats ?? null,
     damage_taken_max: taken?.max ?? null,
+    damage_taken_max_inferred: taken?.maxInferred ?? null,
     damage_dealt: dealt?.total ?? null,
     damage_dealt_combats: dealt?.combats ?? null,
     damage_dealt_max: dealt?.max ?? null,
+    damage_dealt_max_inferred: dealt?.maxInferred ?? null,
     ...shop(report),
     triples: triples(report),
     ...boards(report, rounds),
