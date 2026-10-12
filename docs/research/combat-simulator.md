@@ -1,6 +1,6 @@
-# Combat simulator (F6, T-601 to T-603)
+# Combat simulator (F6, T-601 to T-603, T-609)
 
-Sessions 068, 071 and 074, 2026-10-11. The user asked for (1) the odds to win, tie or lose a combat, and the damage, before each combat in the app, from the boards the player has seen, and (2) an interactive simulator on the website that can load old boards or pairings. This page is the design (T-601), what the engine core does today (T-602), how it is checked against the user's own combats (T-603) and replayed attack by attack (T-603b), the card coverage (T-604, three rounds) and the odds in the overlay (T-605, section 8). Session 074 added Duos (T-608): the rules in section 3, the numbers in sections 7.4 and 7.5, the overlay in section 8.
+Sessions 068, 071 and 074, 2026-10-11. The user asked for (1) the odds to win, tie or lose a combat, and the damage, before each combat in the app, from the boards the player has seen, and (2) an interactive simulator on the website that can load old boards or pairings. This page is the design (T-601), what the engine core does today (T-602), how it is checked against the user's own combats (T-603) and replayed attack by attack (T-603b), the card coverage (T-604, three rounds) and the odds in the overlay (T-605, section 8). Session 074 added Duos (T-608): the rules in section 3, the numbers in sections 7.4 and 7.5, the overlay in section 8. Session 106 (T-609) iterated on accuracy: the misses by cause, six rounds of rules and the tools to check any set of games, in section 7.7.
 
 Code: [`crates/combat-sim`](../../crates/combat-sim), [`crates/tracker/src/odds.rs`](../../crates/tracker/src/odds.rs), [`crates/desktop/src/odds.rs`](../../crates/desktop/src/odds.rs), Duos: [`crates/tracker/src/odds_duos.rs`](../../crates/tracker/src/odds_duos.rs), [`crates/combat-sim/src/harness_duos.rs`](../../crates/combat-sim/src/harness_duos.rs). Decisions: D-081, D-084, D-087.
 
@@ -22,7 +22,7 @@ The engine adds, from the card data (HearthstoneJSON in the harness; `crates/car
 |---|---|
 | Hero powers, trinkets, quest rewards, anomalies, the Deity that act in combat | None of them is on the board. Results are "board only". |
 | The hand (cards that summon "from your hand") | Those cards are not modelled. |
-| Game-long buffs to tokens ("your Beetles have +2/+1 this game", Blood Gem upgrades, "your Undead have +1 Attack") | Tokens are summoned with their printed stats: those cards are "approximate". |
+| Game-long buffs to tokens ("your Beetles have +2/+1 this game", Blood Gem upgrades, "your Undead have +1 Attack") | Since T-609 the parser reads five of them from the log with each board (Rust-only, not saved): Blood Gems, Tavern spells, Eternal Knights that died, the Undead Attack and the Beetles (section 7.7). `combat-validate --logs` plays them; the app, the saved history and the website do not have them yet, so there the tokens keep their printed stats and the cards stay "approximate". |
 | `POISONOUS`, `MEGA_WINDFURY` tags | Read by the parser since session 071 (`Minion::sim_keywords`), but kept out of the saved report: upload-game checks every saved keyword name. The overlay and `combat-validate --logs` use them; `--history` still takes them from the card's own keywords. |
 | Stats a card's text grows with the game (Tasty Lobster, Hopebringer) | Printed values are used: "approximate". |
 | The player's tavern tier | Damage needs it; unknown means damage unknown, never 0. |
@@ -50,9 +50,9 @@ Status: **done** = in the engine and tested; **to check** = in the engine, to be
 | Avenge (N) | Counts friendly deaths from the start of combat; triggers every N. | done |
 | Rally | Before the damage of each attack it makes. | to check (before or after the hit) |
 | "Whenever another friendly minion attacks" | Before the damage, left to right. | done |
-| "After this attacks" | After the damage, only if it survived. | done |
+| "After this attacks" | After the damage, only if it survived; De-volition-ist's hit on the highest-Health enemy happens even when the attack killed it (it resolves before the dead are removed: the user's log, T-609). | done |
 | Start of combat | Off for logged boards (already applied). On for boards taken in the shop: modelled effects play (first attacker's side first, left to right); unmodelled ones make the result "not modelled". The overlay runs with it off and marks the odds approximate when a card on either board acts at the start of combat (section 8). | partly: few cards |
-| "Start of Combat: attack immediately" (`BG36_849`) | Not played: the logged board is taken at that first attack, so the replay sees it as an attack out of order. | not yet |
+| "Start of Combat: attack immediately" (`BG36_849`, golden twice) | Played on every board, start of combat on or off: a logged board is taken at that very attack. It comes after its side's other start-of-combat effects; it is not one of the side's turns, so the first turn still goes to the side with more minions (counted before start of combat) and each side starts from its left-most minion. Its Rally plays (T-609, from the card text and the user's log, game 1 round 12). | done; with two such minions on opposite sides, the order between the sides: to check |
 | Effects that follow a friendly attack, damage dealt or a Reborn (round 2) | Before the damage for "whenever a friendly minion attacks" (the attacker included); after the damage, before deaths, for "after a friend deals damage" and "after a Rally minion attacks"; right after the Reborn copy is placed for "after a friendly minion is Reborn". A summon that "attacks immediately" swings at once, inside the death step. | done; timings: to check against more replays |
 | Damage to the hero | Winner's tavern tier plus the tiers of its surviving minions; a tie deals none. The game's damage cap (D-072 shows it) is applied by the caller. | done (cap: the app) |
 | Duos: two boards per team | Each team's first board fights; when a team's board is gone, its teammate's board comes in, and the combat goes on against what is left of the other side. A team with no board left loses; both at once is a tie. A team plays one board when the other is not known to it. | done (replay: 68 teammate boards came in on the user's 79 Duos combats before any difference) |
@@ -66,7 +66,7 @@ Status: **done** = in the engine and tested; **to check** = in the engine, to be
 
 ## 4. Cards
 
-- **Registry keyed by exact card id** (`cards.rs`, with the cards of each round in `cards_round1.rs` to `cards_round4.rs`). Golden cards have their own ids (`BG25_354_G`, `TB_BaconUps_045`), so a golden effect is written out, never "double the normal one" by guess.
+- **Registry keyed by exact card id** (`cards.rs`, with the cards of each round in `cards_round1.rs` to `cards_round5.rs`, and `cards_round7.rs` for the accuracy rounds of T-609). Golden cards have their own ids (`BG25_354_G`, `TB_BaconUps_045`), so a golden effect is written out, never "double the normal one" by guess.
 - **Two lists:** `NO_COMBAT_EFFECT` (text never changes a combat: shop, hand, Tavern, teammate, or keywords the board already shows; checked card by card) and `EFFECTS` (built from a few primitives: summon, buff all, buff random, gain stats or a keyword, give a keyword, damage, strip keywords, destroy the killer; triggers Deathrattle, Rally, Avenge, start of combat, friendly attacks, after attack, plus static ones such as Cleave, Taunt while shielded, extra Deathrattles, shield at 6 Attack).
 - **Fidelity:** each effect is `Exact` or `Approximate(reason)`. A card in neither list is **not modelled**: `simulate` returns `Verdict::NotModelled` with the card ids, never a number. The harness alone may play unknown cards as plain minions, and says so.
 - **Tokens** (`TOKENS`): id, printed stats, keywords, tribe, tier.
@@ -242,6 +242,56 @@ cargo run --release --manifest-path crates/combat-sim/Cargo.toml --features harn
 
 Then check the diff holds only the export's keys and counts (the web tests do too: `npm test` and `npm run build && npm run test:dist` in `web/`), and open a PR; merging deploys the page. Card names (D-091): only the up to 10 blocking card ids, their English and Spanish names and a golden flag, nothing else from the card data.
 
+### 7.7 Accuracy, deep iteration (T-609, session 106)
+
+The user's ask (2026-10-12): iterate and research until the simulator is accurate, ready for more players' combats. Engine `0.7.0`, D-115. Everything here is from card texts (HearthstoneJSON, D-038) and the user's own logs; no other simulator was read (section 1).
+
+**Inputs.** The game keeps only its last few log sessions: on the PC now, 5 `Power.log` sessions with 7 Duos games and 73 combats with a result (one session of D-107's 8 games rotated out; that game is only in the saved history). The saved history (`games.jsonl`) has 41 games (2 Solo, 39 Duos); the 8 newest have the combat replay (parser revisions 8 and 9).
+
+**How each miss was traced.** A miss is a combat whose most likely result was not the real one, on every board that fought (cards not modelled played as plain minions). `combat-validate` now lists each one with the replay's first difference (`--logs`, and the saved replays of the history, below), and the saved replay (`rounds[].replay`, which starts before start of combat and names the triggers of hero powers and trinkets) shows what happened there. The causes of the 13 misses in the logs before the rounds, and of the 12 after:
+
+| Cause | Before | After | Combats |
+|---|---|---|---|
+| A game-long value the board does not show | 4 | 1 | Eternal Knights and the Undead Attack (game 4 round 10), Mighty Dragonbreath's spell upgrades (game 7 rounds 6 and 9), Tasty Lobster's growth (game 4 round 13 before; game 4 round 10 after: the Lobster's growth is what is left there) |
+| Chance: the replay follows the game to the end with the engine's rules | 4 | 5 | the engine gave the real result 8% to 37% |
+| A hero power or trinket the board does not show | 3 | 3 | Lock and Load fires a minion that attacks first (game 3 round 4); Rapid Reanimation destroys a minion and brings it back "when you have space" (game 3 round 8, game 4 round 14) |
+| A card rule not played | 1 | 0 | Heroic Broodmother's start-of-combat attack (game 1 round 12) |
+| The other side's start of combat after a start-of-combat attack | 0 | 1 | game 1 round 12: Doppelganger's copy comes after the Broodmother's attack, so the board taken at that attack does not have it |
+| A hand summon (approximate since D-097) | 1 | 1 | Sneed's New Shredder (game 1 round 1) |
+| A later difference uncovered by a fix | 0 | 1 | game 1 round 15: with the Broodmother's attack right, a teammate board's Broodmother doubles its Attack on its Rally, which no card on the board explains |
+
+**Rounds.** Each one: the rule, where it came from, and the numbers on the logs (every board that fought; what the app would show; replays followed to the end and attacks matched before the first difference).
+
+| Round | Rule (source) | Every board: right, Brier | App path: right, Brier | Replays: to the end, attacks matched |
+|---|---|---|---|---|
+| before | | 60 of 73, 0.287 | 59 of 70, 0.244 | 29 of 69, 449 of 1 154 |
+| 1 | Heroic Broodmother attacks immediately at the start of combat (card text; the log's order: the opponent's turn still came first after it, from its left-most minion) | 59, 0.292 | 58, 0.249 | 29, 450 |
+| 2 | Each side's Blood Gem and Tavern spell upgrades read from the log (the player tags `BACON_BLOODGEMBUFFATKVALUE` and `…HEALTHVALUE`, `TAVERN_SPELL_ATTACK_INCREASE` and `…HEALTH_INCREASE`); Blood Gems and Mighty Dragonbreath play with them; Sanguine Refiner's Rally upgrades the gems played after it (card text; it was listed as having no combat effect) | 60, 0.288 | 59, 0.245 | 33, 544 |
+| 3 | No rule: the replays of saved games, `--games` and `--summary` (below) | | | |
+| 4 | Eternal Knights that died, the Undead Attack and the Beetles' buffs read from the log: the player enchantments `BG25_008pe` ("Counts the number of Eternal Knights that died"), `BG25_011pe` ("Give Attack to Undead") and `BG31_808pe` ("Gives Beetle stats"), two numbers each; minions summoned or reborn in combat get them (a reborn minion keeps 1 Health), and every Eternal Knight grows when another one dies (card text) | 61, 0.253 | 59, 0.246 | 33, 544 |
+| 5 | De-volition-ist's "after this attacks" hit happens even when the attack killed it (the user's log, game 1 round 10: a 34-Attack one died hitting a 106/106 and still dealt 34 to it) | 61, 0.253 | 59, 0.246 | 33, 550 |
+| 6 | Golden Persistent Poet: the Dragons next to it gain twice what they gain in combat (card text; the user's log, game 1 round 12: of a trinket's "Health equal to half its Attack", the Dragon next to it got twice the others' share) | 61, 0.253 | 59, 0.246 | 33, 550 |
+
+- Round 1 alone moved one combat the wrong way (game 1 round 15): the rule is right (the log's order), and the combat now fails at a later difference (last row of the cause table). In the saved history, one Solo combat with two Broodmothers is now given 54% for the real loss instead of about 100% (Solo Brier 0.058 → 0.078). Kept: the log shows the attack.
+- The values of rounds 2 and 4 are used only where a board comes with them: the harness on the logs today. On the saved history, in the app and on the website they are zero, so those cards stay "approximate" with their reasons unchanged, and those numbers do not move with rounds 2 and 4. The overlay could take them from the log as the parser now does (the player's own live, the opponents' from the combat their board was seen in), and the saved report could carry them (a parser revision, the upload validator, the website's request): a follow-up (D-115).
+- On the saved history (no values): every board 189 → 188 of 232 right, Brier 0.287 → 0.285; the app's path, Duos 184 → 183 of 224, Brier 0.274 → 0.275; Solo 18 of 19 (Brier 0.058 → 0.078). These are the numbers the accuracy page shows (`web/src/data/accuracy.json`, engine `0.7.0`).
+- The approximations stay named as before (D-088): the hand summoners, the Lobster's growth, Persisting Horror and the rest of section 9.
+
+**Stopped, because the next step would be a guess.** Tasty Lobster's "Improve your future Tasty Lobsters" (no player enchantment for it in the logs; the improvement is on no board); the Deities that join a combat (`BGFYM_011`, `BGFYM_000`: when they awaken and with what stats); hero powers and trinkets that act in combat (Lock and Load, Rapid Reanimation, Broodmother's Whelps: each its own rule and hidden state); random picks the log shows but the engine rolls (Offensive Sacrifice's target, Bile Spitter's Murloc), which a replay reports as a stats difference but which are chance.
+
+**The tools (task 4).**
+
+- **Saved replays.** `combat-validate` rebuilds each saved combat replay into the boards before every attack (damage, stat changes, Divine Shield, deaths, summons; a summon whose slot the log did not have yet goes where the same card died, else at the right end) and replays it as it does the logs (section 7.2). Only Divine Shield is compared among the keywords (the replay follows no other), and a replay whose rebuilt boards at the first attack are not the ones the report saved is not replayed (counted as unreadable). On the history: 77 combats replayed, 7 unreadable, 33 to the end, 515 of 1 273 attacks matched; on the 7 games the logs also have, the first differences are the logs' ones. So a game whose `Power.log` is gone, or a game someone else lends, gets the step-by-step check.
+- **Any set of games, one command.** `--games <file or folder>` (repeatable) reads history files (`.jsonl`) and single game records (`.json`, the app's upload format, unpacked, or a list of them); records from different files are never merged, since two players can share a session name. `--summary` prints only counts, shares, rules and card ids: the games read, the combats with a board on each side and a result (and how many were left out), what the app would show with the blocked share and the blocking cards, the engine on every board, the replays, and the misses by cause (from the replay when there is one, else from the cards: approximate, not modelled or every card exact). No name, player, hero, game or round.
+
+```
+cargo run --release -p combat-sim --bin combat-validate -- --games <folder or file>... --cards <tmp>\cards.json --summary
+```
+
+- **Other players' games.** The privacy policy (section 4) does not list measuring the simulator as a use of uploaded games, so the summary is run only on games their owners hand over for it (their own `games.jsonl`, with their consent) until the user decides otherwise (section 10, question 5). Nothing of theirs was read in this session.
+
+**Tests.** Unit tests for each rule (`combat_t609_tests.rs`, some with the numbers of the user's combats: the 95/12 Eternal Knight of game 4 round 10, the De-volition-ist of game 1 round 10), the replay of a start-of-combat attack (`replay_tests.rs`), the parser reading the values and keeping them out of the JSON (`bg-parser/tests/combat_log.rs`), the saved-replay rebuild (`harness_saved_tests.rs`), the game files and the summary; a parity case with a Broodmother and Blood Gems so the website's engine is checked on the new rules.
+
 ## 8. One engine for the app and the website
 
 **App (T-605, done in session 071, D-084).** During a shop turn the overlay runs the player's board as it is now against the next opponent's last board seen (D-004: only boards the player saw on screen; the opponent is the one the game marks as next, D-061). How:
@@ -310,3 +360,4 @@ Left blocking, and why: `BG31_999` Stitched Salvager (its Deathrattle copies the
 2. **Which boards the website's simulator may load.** Only your own games, or also other public players' boards. Recommendation: your own games only at first (your boards and the opponents' boards you met, which you saw on screen); other players' boards only from public profiles and only after T-509's privacy texts cover it.
 3. **Duos odds (T-608, done in session 074).** Please check in your next Duos game that "their first board" is the one that fights your first board (the overlay takes the opponent the game marks as next).
 4. **Cards that summon from the hand** (`BG34_140` Expert Aviator, the most seen card not modelled, and `BG31_835`, `BG21_HERO_030t`): today they block the odds ("a card is not modelled"). They could play as approximate, with the hand summon left out and the card named. Recommendation: keep them blocking; the summon is often the biggest minion of the combat. **Applied** (the hub's call, session 075): after round 4, counting `BG34_Giant_017` (also from the hand), they are on a board in 25 of the 232 Duos combats of the history (15 of 84 in the logs) and alone block 21 of them (13 in the logs), 9% of the Duos combats. **Changed in round 5 (session 083, D-097):** the 21 combats played with the hand summon left out gave the real result as often as the combats already scored (17 of 21 right; section 7.6), so the hand summoners now play as approximate and are named with the reason; the harness keeps scoring their combats apart to check this as games come in.
+5. **Other players' games for the accuracy numbers (T-609).** `combat-validate --games … --summary` gives only counts, rules and card ids, but the privacy policy does not list this use of uploaded games. Options: (a) only games their owners hand over with their consent (their own `games.jsonl`); (b) add "measuring and improving the simulator, in aggregate" to the policy's uses of uploaded games, with a legal basis and an opt-out, before running it on uploads. Recommendation: (a) now; (b) only if the numbers need more games than the testers hand over.
