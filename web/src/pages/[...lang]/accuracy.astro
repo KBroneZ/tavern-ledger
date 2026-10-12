@@ -65,13 +65,13 @@ const version = at("page.version", {
             <p>{f.combats}</p>
           </div>
           <div class="tiles">
-            <StatTile hero label={at("tile.right")} value={f.right.value} backing={f.right.backing} />
-            <StatTile label={at("tile.meanP")} value={f.meanP.value} backing={f.meanP.backing} />
+            <StatTile hero label={at("tile.right")} value={f.right.value} backing={f.right.backing} backingAlways />
+            <StatTile label={at("tile.meanP")} value={f.meanP.value} backing={f.meanP.backing} backingAlways />
             <div class="acc-blocked">
-              <StatTile label={at("tile.blocked")} value={f.blocked.value} backing={f.blocked.note} />
+              <StatTile label={at("tile.blocked")} value={f.blocked.value} backing={f.blocked.note} backingAlways />
             </div>
             <div class="adv">
-              <StatTile label={at("tile.brier")} value={f.brier.value} backing={f.brier.backing} />
+              <StatTile label={at("tile.brier")} value={f.brier.value} backing={f.brier.backing} backingAlways />
               <StatTile label={at("tile.refused")} value={f.refused} />
             </div>
           </div>

@@ -136,6 +136,8 @@ export interface TileProps {
   label: string;
   value: string;
   backing?: string;
+  /** Show the backing line in Simple too (a note the number needs, not how many games back it). */
+  backingAlways?: boolean;
   trend?: Trend | null;
   spark?: SparkProps;
   source?: "inferred" | "unknown" | "log";
@@ -143,7 +145,7 @@ export interface TileProps {
 }
 
 export function statTile(props: TileProps): VNode {
-  const { label, value, backing, trend = null, spark, source, hero = false } = props;
+  const { label, value, backing, backingAlways = false, trend = null, spark, source, hero = false } = props;
   const unknown = value === DASH;
   const arrow = !trend || trend.sign === 0 ? "▬" : trend.sign < 0 ? "▼" : "▲";
   return h(
@@ -165,7 +167,8 @@ export function statTile(props: TileProps): VNode {
           h("span", { class: "visually-hidden" }, t(`trend.${trend.direction}`)),
         )
       : null,
-    backing ? h("p", { class: "tile-back" }, backing) : null,
+    // How many games or combats back the value: Advanced only (T-559, D-131).
+    backing ? h("p", { class: cls("tile-back", { adv: !backingAlways }) }, backing) : null,
     spark ? sparkTile(spark) : null,
   );
 }

@@ -17,6 +17,6 @@ setLang(Astro.props.lang);
 const accountsOpen = readConfig(import.meta.env) !== null;
 ---
 
-<Base backdrop="archive" title={g("page.title")} description={g("page.description")} noindex>
+<Base backdrop="archive" layout="data" title={g("page.title")} description={g("page.description")} noindex>
   {accountsOpen ? <GameViewer /> : <AccountsClosed heading={g("page.title")} />}
 </Base>

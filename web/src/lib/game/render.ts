@@ -1,18 +1,19 @@
 // One shaped game (T-504) as the page's element trees, on the T-501 pieces
-// (lib/view). Simple shows the summary and the turns; Advanced (the T-501
-// switch, `.adv`) adds the boards and shops by turn, the boards met, the
-// choices, the lobby and the parser's notes. Every value from the record goes
-// in as text (lib/view/node.ts never parses HTML).
-import { compact, type Mode, type Result } from "../data/format.ts";
+// (lib/view). Simple shows the summary's key numbers, the turns (one table
+// whose rows open on the boards, shop and odds, T-559) and the replays;
+// Advanced (the T-501 switch, `.adv`) adds the other numbers, the boards
+// met, the choices, the lobby and the parser's notes. Every value from the
+// record goes in as text (lib/view/node.ts never parses HTML).
+import { compact, type Mode } from "../data/format.ts";
 import { t } from "../data/strings.ts";
 import { cls, h, type VNode } from "../view/node.ts";
-import { fold, picture, placeBadge, sourceMark, statTile, type TileProps, unknownValue } from "../view/pieces.ts";
-import { turnChart } from "./chart.ts";
+import { picture, placeBadge, statTile, type TileProps } from "../view/pieces.ts";
+import { boardBlock } from "./boards.ts";
 import { replaySection } from "./replayView.ts";
-import { whyShell } from "./whyView.ts";
-import { giftList, giftName } from "./gifts.ts";
-import type { Minion, ShopTurn } from "./report.ts";
-import type { BoardView, ChoiceView, GameView, HeroRef, OpponentView, SeatView, TurnRow } from "./shape.ts";
+import { turnsSection } from "./turnsView.ts";
+import { giftName } from "./gifts.ts";
+import { cardLabel, trinketName } from "./names.ts";
+import type { ChoiceView, GameView, HeroRef, OpponentView, SeatView } from "./shape.ts";
 import { g } from "./strings.ts";
 import * as w from "./words.ts";
 
@@ -35,18 +36,15 @@ function note(text: string): VNode {
   return h("p", { class: "data-note" }, text);
 }
 
-/** A card id as text: an identifier, not words to translate. */
-function cardId(id: string | null): VNode {
-  return id ? h("span", { class: "gv-id", translate: "no" }, id) : h("span", { class: "gv-id" }, g("minion.unknownCard"));
+/** A card's name; its id (an identifier, not words to translate) when the card data lacks it. */
+function cardText(id: string | null): VNode {
+  const label = cardLabel(id, g("minion.unknownCard"));
+  return h("span", { class: label === id ? "gv-id" : undefined, translate: label === id ? "no" : undefined }, label);
 }
 
 function heroCell(hero: HeroRef, size: 24 | 32 = 24): VNode {
   const label = w.heroLabel(hero);
   return h("span", { class: "gv-hero" }, picture("hero", hero.id, label, size, true), h("span", {}, label));
-}
-
-function resultChip(result: Result, inferred: boolean): VNode {
-  return h("span", {}, h("span", { class: `res-${result}` }, t(`result.${result}`)), inferred ? " " : null, inferred ? sourceMark("inferred") : null);
 }
 
 function tile(props: TileProps, adv = false): VNode {
@@ -62,6 +60,7 @@ function summaryBar(view: GameView, date: string | null): VNode {
     results.unknown > 0 ? g("summary.results.unknown", { count: results.unknown }) : "",
     results.inferred > 0 ? g("summary.results.inferred", { count: results.inferred }) : "",
   ].filter(Boolean).join(" · ");
+  const fought = results.won + results.lost + results.tie > 0;
   return h(
     "div",
     { class: "gv-summary", role: "group", "aria-label": g("summary.label") },
@@ -83,156 +82,24 @@ function summaryBar(view: GameView, date: string | null): VNode {
     s.status && s.status !== "ok" ? h("p", { class: "gv-status" }, g(`status.${s.status}`)) : null,
     h(
       "div",
-      { class: "tiles" },
-      tile({ label: g("summary.results"), value: results.won + results.lost + results.tie > 0 ? w.resultsLine(s) : DASH, backing: resultsBacking || undefined, source: results.inferred > 0 ? "inferred" : undefined }),
-      tile({ label: g("summary.dealt"), value: w.knownValue(s.dealt), backing: w.combatsBacking(s.dealt), source: w.damageSource(s.dealt) }),
-      tile({ label: g("summary.taken"), value: w.knownValue(s.taken), backing: w.combatsBacking(s.taken), source: w.damageSource(s.taken) }),
-      tile({ label: g("summary.gold"), value: w.knownValue(s.goldSpent), backing: w.turnsBacking(s.goldSpent) }),
+      { class: "tiles gv-tiles" },
+      tile({
+        label: results.tie > 0 ? g("summary.results.wlt") : g("summary.results.wl"),
+        value: fought ? w.resultsShort(s) : DASH,
+        backing: resultsBacking || undefined,
+        source: results.inferred > 0 ? "inferred" : undefined,
+      }),
+      tile({ label: g("summary.dealt"), value: w.knownValue(s.dealt), backing: w.combatsBacking(s.dealt), source: w.damageMark(s.dealt) }),
+      tile({ label: g("summary.taken"), value: w.knownValue(s.taken), backing: w.combatsBacking(s.taken), source: w.damageMark(s.taken) }),
       tile({ label: g("summary.tier"), value: num(s.finalTier) }),
-      tile({ label: g("summary.triples"), value: num(s.triples) }),
+      tile({ label: g("summary.gold"), value: w.knownValue(s.goldSpent), backing: w.turnsBacking(s.goldSpent) }, true),
+      tile({ label: g("summary.triples"), value: num(s.triples) }, true),
       tile({ label: g("summary.rolls"), value: num(s.rolls) }, true),
       tile({ label: g("summary.buys"), value: num(s.buys) }, true),
       tile({ label: g("summary.sells"), value: num(s.sells) }, true),
       tile({ label: g("summary.apm"), value: w.apmText(s.apm) }, true),
     ),
-    note(g("summary.source")),
   );
-}
-
-function turnsTable(turns: TurnRow[]): VNode {
-  const head = ["turns.col.turn", "turns.col.tier", "turns.col.result", "turns.col.opponent", "turns.col.damage", "turns.col.gold"] as const;
-  const rows = turns.map((x) =>
-    h(
-      "tr",
-      {},
-      h("th", { scope: "row" }, String(x.turn)),
-      h("td", {}, w.tierText(x), x.tierUp ? h("span", { class: "gv-tierup" }, ` ${g("turns.tierUp")}`) : null),
-      h("td", {}, x.result ? resultChip(x.result, x.inferred) : h("span", { class: "gv-dim" }, g("turns.noCombat"))),
-      h("td", {}, x.opponents.length === 0 ? unknownValue() : x.opponents.flatMap((o, i) => (i === 0 ? [heroCell(o)] : [", ", heroCell(o)]))),
-      h("td", { class: "num" }, w.damageText(x), x.damageSource === "log" ? " " : null, x.damageSource === "log" ? sourceMark("log") : null),
-      h("td", { class: "num" }, w.goldText(x)),
-    ),
-  );
-  return h(
-    "div",
-    { class: "scroll-x", role: "region", "aria-label": g("turns.table"), tabindex: 0 },
-    h(
-      "table",
-      { class: "dtable gv-turns" },
-      h("caption", { class: "visually-hidden" }, g("turns.caption")),
-      h("thead", {}, h("tr", {}, head.map((k, i) => h("th", { scope: "col", class: i >= 4 ? "num" : undefined }, g(k))))),
-      h("tbody", {}, rows),
-    ),
-  );
-}
-
-function turnsSection(view: GameView): VNode {
-  const turns = view.turns;
-  if (turns.length === 0) return section("gv-turns", g("turns.title"), [note(g("turns.empty"))]);
-  const chartTurns = turns.flatMap((x) =>
-    x.result === null
-      ? []
-      : [{ turn: x.turn, result: x.result, damage: x.result === "win" ? x.dealt : x.result === "loss" ? x.taken : x.result === "tie" ? 0 : null }],
-  );
-  return section("gv-turns", g("turns.title"), [
-    chartTurns.length > 0 ? turnChart(chartTurns, "gv-chart") : null,
-    turnsTable(turns),
-    h("p", { class: "data-note" }, sourceMark("log"), " ", sourceMark("inferred"), " ", g("turns.damage.note")),
-  ]);
-}
-
-function minionItem(m: Minion): VNode {
-  return h(
-    "li",
-    { class: cls("gv-minion", { "is-golden": m.golden }) },
-    picture("card", m.cardId, w.minionWords(m), 40, true),
-    h(
-      "span",
-      { class: "gv-minion-text" },
-      h("span", { class: "gv-stats" }, h("span", { "aria-hidden": "true" }, w.statsText(m)), h("span", { class: "visually-hidden" }, w.statsWords(m))),
-      cardId(m.cardId),
-      m.golden ? h("span", { class: "gv-golden" }, g("minion.golden")) : null,
-      m.keywords.length > 0 ? h("span", { class: "gv-keywords" }, w.keywordWords(m.keywords)) : null,
-      giftList(m),
-    ),
-  );
-}
-
-function board(id: string, title: string, view: BoardView | null): VNode {
-  return h(
-    "div",
-    { class: "gv-board" },
-    h("p", { class: "gv-board-title", id }, title, " ", h("span", { class: "gv-dim" }, view ? w.boardTotals(view) : g("boards.unknown"))),
-    view && view.minions.length > 0 ? h("ul", { class: "gv-minions", role: "list", "aria-labelledby": id }, view.minions.map(minionItem)) : null,
-  );
-}
-
-function cardList(label: string, cards: (string | null)[]): VNode {
-  return h(
-    "div",
-    { class: "gv-cards" },
-    h("dt", {}, label),
-    h("dd", {}, cards.length === 0 ? g("boards.none") : h("ul", { class: "pic-row gv-pics", role: "list" }, cards.map((c) => h("li", {}, picture("card", c, c ?? g("minion.unknownCard"), 32))))),
-  );
-}
-
-function shopFacts(shop: ShopTurn): VNode {
-  const fact = (label: string, value: string) => h("div", {}, h("dt", {}, label), h("dd", {}, value));
-  const rolls = shop.rolls === null ? DASH : `${shop.rolls}${shop.freeRolls ? ` (${shop.freeRolls} ${g("shop.freeRolls")})` : ""}`;
-  return h(
-    "dl",
-    { class: "gv-shop" },
-    fact(g("shop.gold"), num(shop.gold)),
-    fact(g("shop.spent"), num(shop.goldSpent)),
-    fact(g("shop.rolls"), rolls),
-    fact(g("shop.freezes"), num(shop.freezes)),
-    shop.extraGold !== null ? fact(g("shop.extra"), num(shop.extraGold)) : null,
-    shop.sellGold !== null ? fact(g("shop.sellGold"), num(shop.sellGold)) : null,
-    cardList(g("boards.bought"), shop.buys),
-    cardList(g("boards.sold"), shop.sells),
-    shop.passes && shop.passes.length > 0 ? cardList(g("boards.passed"), shop.passes) : null,
-  );
-}
-
-function shops(shop: ShopTurn, turn: number): VNode {
-  const rolls = [...new Set(shop.offers.map((o) => o.roll))].sort((a, b) => a - b);
-  if (rolls.length === 0) return note(g("boards.noShops"));
-  const offers = (roll: number) =>
-    shop.offers
-      .filter((o) => o.roll === roll)
-      .map((o) => h("li", {}, picture("card", o.cardId, o.cardId ?? g("minion.unknownCard"), 40), o.frozen ? h("span", { class: "gv-frozen" }, g("boards.frozen")) : null));
-  return fold(
-    { summary: g("boards.seeShops"), context: g("boards.turn", { turn }), compact: true },
-    ...rolls.map((roll) =>
-      h(
-        "div",
-        { class: "gv-roll" },
-        h("p", { class: "gv-board-title" }, roll === 0 ? g("boards.roll.first") : g("boards.roll", { roll })),
-        h("ul", { class: "gv-offers", role: "list", "aria-label": roll === 0 ? g("boards.roll.first") : g("boards.roll", { roll }) }, offers(roll)),
-      ),
-    ),
-  );
-}
-
-function turnFold(x: TurnRow): VNode {
-  const ownTitle = x.ownBoardHero ? g("boards.teammates", { hero: w.heroLabel(x.ownBoardHero) }) : g("boards.yours");
-  const theirs = (hero: string) => g("boards.theirs", { hero });
-  const opponentBoards = x.opponentBoards.length > 0
-    ? x.opponentBoards.map((b, i) => board(`gv-t${x.turn}-opp${i}`, theirs(w.heroLabel(b.hero)), b.board))
-    : [board(`gv-t${x.turn}-opp`, theirs(x.opponents.map(w.heroLabel).join(" + ") || g("hero.unknown")), null)];
-  const body = [
-    x.result ? board(`gv-t${x.turn}-own`, ownTitle, x.ownBoard) : null,
-    ...(x.result ? opponentBoards : []),
-    x.shop ? h("p", { class: "gv-board-title" }, g("boards.shopFacts")) : null,
-    x.shop ? shopFacts(x.shop) : null,
-    x.shop ? shops(x.shop, x.turn) : null,
-  ].filter((n): n is VNode => n !== null);
-  return fold({ summary: g("boards.turn", { turn: x.turn }), hint: x.result ? t(`result.${x.result}`) : g("turns.noCombat") }, ...body);
-}
-
-function boardsSection(view: GameView): VNode {
-  const hasShop = view.turns.some((x) => x.shop !== null);
-  return section("gv-boards", g("boards.title"), [hasShop ? null : note(g("boards.noShopRecord")), ...view.turns.map(turnFold)], true);
 }
 
 function opponentFold(o: OpponentView, index: number): VNode {
@@ -246,7 +113,7 @@ function opponentFold(o: OpponentView, index: number): VNode {
       h("span", { class: "gv-opp" }, o.heroes.map((hero) => picture("hero", hero.id, w.heroLabel(hero), 32, true)), h("span", {}, title)),
       h("span", { class: "fold-hint" }, g("opponents.record", o.record)),
     ),
-    h("div", { class: "fold-body" }, o.boards.map((b, j) => board(`gv-o${index}-${j}`, `${g("opponents.round", { turn: b.round })} · ${w.heroLabel(b.hero)}`, b.board))),
+    h("div", { class: "fold-body" }, o.boards.map((b, j) => boardBlock(`gv-o${index}-${j}`, `${g("opponents.round", { turn: b.round })} · ${w.heroLabel(b.hero)}`, b.hero, b.board))),
   );
 }
 
@@ -267,8 +134,8 @@ function choiceItem(c: ChoiceView, index: number): VNode {
         h(
           "li",
           { class: o.taken ? "is-taken" : undefined },
-          picture("card", o.cardId, o.cardId ?? g("minion.unknownCard"), 40, true),
-          cardId(o.cardId),
+          picture("card", o.cardId, cardLabel(o.cardId, g("minion.unknownCard")), 40, true),
+          cardText(o.cardId),
           o.gift ? h("span", { class: "gv-dim" }, g("choices.gift", { gift: giftName(o.gift) })) : null,
           o.taken ? h("span", { class: "gv-taken" }, g("choices.taken")) : null,
         ),
@@ -316,7 +183,13 @@ function seatRow(seat: SeatView, mode: Mode, duos: boolean): VNode {
     ? g("lobby.notRecorded")
     : seat.trinkets.length === 0
       ? DASH
-      : seat.trinkets.map((x) => g("lobby.trinket", { id: x.dbfId, slot: g(SLOTS[x.slot]), turn: x.turn })).join("; ");
+      : seat.trinkets
+        .map((x) => {
+          const name = trinketName(x.dbfId);
+          const where = { slot: g(SLOTS[x.slot]), turn: x.turn };
+          return name ? g("lobby.trinketNamed", { name, ...where }) : g("lobby.trinket", { id: x.dbfId, ...where });
+        })
+        .join("; ");
   return h(
     "tr",
     { class: seat.own ? "is-own" : undefined },
@@ -366,12 +239,10 @@ export function renderGame(view: GameView, date: string | null): VNode[] {
     summaryBar(view, date),
     turnsSection(view),
     replaySection(view),
-    whyShell(),
-    boardsSection(view),
     opponentsSection(view),
     choicesSection(view),
     lobbySection(view),
     notesSection(view),
-    note(g("credit")),
+    note(`${g("summary.source")} ${g("credit")}`),
   ].filter((n): n is VNode => n !== null);
 }

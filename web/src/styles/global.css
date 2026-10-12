@@ -318,6 +318,17 @@ main:focus {
   align-content: start;
 }
 
+/* The data pages (a game, the dashboard, the lists): the same column, wider
+   on large screens, where tables and boards need the room (T-559). */
+.layout-data {
+  max-width: calc(var(--wide) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding: clamp(28px, 5vw, 52px) var(--gutter) var(--section);
+  display: grid;
+  gap: var(--group);
+  align-content: start;
+}
+
 /* The reading layout for privacy and terms. */
 .layout-reading {
   max-width: calc(var(--measure) + 2 * var(--gutter));

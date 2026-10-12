@@ -1,6 +1,6 @@
 ---
 // One number with what it means: label, value, the games behind it ("in 28
-// of 31 games") and, if given, the change since the previous period with an
+// of 31 games", shown in Advanced only unless backingAlways, T-559) and, if given, the change since the previous period with an
 // arrow and words (never colour alone) and a small trend line.
 import { t } from "../../lib/data/strings.ts";
 import type { Trend } from "../../lib/data/format.ts";
@@ -12,6 +12,8 @@ interface Props {
   /** Already formatted; a dash when unknown. */
   value: string;
   backing?: string;
+  /** Show the backing line in Simple too (a note the number needs, not how many games back it). */
+  backingAlways?: boolean;
   trend?: Trend | null;
   spark?: { values: (number | null)[]; min: number; max: number; invert?: boolean };
   source?: "inferred" | "unknown";
@@ -19,7 +21,7 @@ interface Props {
   hero?: boolean;
 }
 
-const { label, value, backing, trend = null, spark, source, hero = false } = Astro.props;
+const { label, value, backing, backingAlways = false, trend = null, spark, source, hero = false } = Astro.props;
 const unknown = value === t("value.none");
 // Up is not always good (a lower average place is better): the arrow
 // follows the number, the colour and the words follow better or worse.
@@ -48,6 +50,6 @@ const arrow = !trend || trend.sign === 0 ? "▬" : trend.sign < 0 ? "▼" : "▲
       </p>
     )
   }
-  {backing && <p class="tile-back">{backing}</p>}
+  {backing && <p class:list={["tile-back", { adv: !backingAlways }]}>{backing}</p>}
   {spark && <Sparkline values={spark.values} min={spark.min} max={spark.max} invert={spark.invert} />}
 </div>

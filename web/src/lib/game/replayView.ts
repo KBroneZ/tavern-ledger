@@ -9,6 +9,7 @@ import { t } from "../data/strings.ts";
 import { cls, h, type VNode } from "../view/node.ts";
 import { picture, sourceMark } from "../view/pieces.ts";
 import { giftList } from "./gifts.ts";
+import { cardLabel } from "./names.ts";
 import { KEYWORDS } from "./keywords.ts";
 import { type Frame, type Namer, type Playback, playback, SPEEDS, stepWords, type Tile } from "./replay.ts";
 import type { Side } from "./replayRead.ts";
@@ -20,11 +21,11 @@ const SECTION_ID = "gv-replays";
 /** The speed a page starts at. */
 export const DEFAULT_SPEED = 1;
 
-/** How a combat's words name its minions (by card id: the site has no card names yet), cards and heroes. */
+/** How a combat's words name its minions and cards (by name from the card data, else the id) and heroes. */
 export function namerFor(combat: ReplayCombat): Namer {
   return {
-    minion: (ref) => combat.replay?.minions[ref]?.cardId ?? g("minion.unknownCard"),
-    card: (id) => id,
+    minion: (ref) => cardLabel(combat.replay?.minions[ref]?.cardId ?? null, g("minion.unknownCard")),
+    card: (id) => cardLabel(id, id),
     hero: (id) => heroLabel(id === null ? null : (combat.heroNames.get(id) ?? { id, name: null })),
   };
 }
@@ -56,12 +57,12 @@ export function tileClass(tile: Tile): string {
   });
 }
 
-/** What a screen reader hears for a minion: "SYN_M_02, 3/3, Golden, Taunt, Divine Shield". Its Dark Gifts follow (giftList). */
+/** What a screen reader hears for a minion: "Lantern Moth, 3/3, Golden, Taunt, Divine Shield". Its Dark Gifts follow (giftList). */
 export function tileWords(tile: Tile): string {
   // Divine Shield as it is at this step: it can pop, or be given.
   const keywords = KEYWORDS.filter((k) => (k === "divine_shield" ? tile.shield : tile.keywords.includes(k)));
   return [
-    tile.cardId ?? g("minion.unknownCard"),
+    cardLabel(tile.cardId, g("minion.unknownCard")),
     g("minion.stats", { attack: tile.atk, health: Math.max(tile.health, 0) }),
     tile.golden ? g("minion.golden") : "",
     keywordWords(keywords),
@@ -86,7 +87,7 @@ export function tileView(tile: Tile): VNode {
   return h(
     "li",
     { class: tileClass(tile), "data-ref": tile.ref },
-    h("span", { class: "rp-art" }, picture("card", tile.cardId, tile.cardId ?? g("minion.unknownCard"), 56, true)),
+    h("span", { class: "rp-art", title: tileWords(tile) }, picture("card", tile.cardId, cardLabel(tile.cardId, g("minion.unknownCard")), 56, true)),
     h("span", { class: "rp-info" }, ...tileInfo(tile)),
     giftList(tile),
   );

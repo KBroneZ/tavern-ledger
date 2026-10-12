@@ -6,9 +6,9 @@
 // © Blizzard Entertainment (D-038): it is never committed; the build writes
 // it next to the page's code and the site serves it from its own origin.
 
-import type { SimCard, SimCardFile } from "../src/lib/sim/cardFile.ts";
+import type { CardNameFile, SimCard, SimCardFile } from "../src/lib/sim/cardFile.ts";
 
-export type { SimCard, SimCardFile };
+export type { CardNameFile, SimCard, SimCardFile };
 
 /** The keywords the engine tracks, as HearthstoneJSON spells them. */
 export const COMBAT_KEYWORDS = ["TAUNT", "DIVINE_SHIELD", "REBORN", "VENOMOUS", "POISONOUS", "WINDFURY", "MEGA_WINDFURY", "STEALTH"];
@@ -104,4 +104,37 @@ export function extractCards(english: unknown, local: unknown, source: string): 
   });
   cards.sort((a, b) => (a.i < b.i ? -1 : a.i > b.i ? 1 : 0));
   return { version: 1, source, cards };
+}
+
+/** The Battlegrounds card types the game page names besides minions (T-559). */
+export const NAMED_TYPES = ["BATTLEGROUND_SPELL", "SPELL", "BATTLEGROUND_TRINKET", "BATTLEGROUND_QUEST_REWARD", "BATTLEGROUND_ANOMALY", "HERO_POWER"];
+const TRINKET = "BATTLEGROUND_TRINKET";
+
+/**
+ * The names of the Battlegrounds cards that are not minions, from the same
+ * lists as extractCards: the name in the page's language, else English.
+ * Only ids and names are kept (and a trinket's database id, for the lobby).
+ */
+export function extractNames(english: unknown, local: unknown, source: string): CardNameFile {
+  if (!Array.isArray(english) || !Array.isArray(local)) throw new Error("the card data is not a list");
+  const localNames = new Map<string, string>();
+  for (const c of local) {
+    if (!isObj(c) || !validId(c.id)) continue;
+    const name = cleanName(c.name);
+    if (name) localNames.set(c.id, name);
+  }
+  const names: Record<string, string> = {};
+  const trinkets: Record<string, string> = {};
+  let count = 0;
+  for (const c of english) {
+    if (!isObj(c) || c.set !== "BATTLEGROUNDS" || typeof c.type !== "string" || !NAMED_TYPES.includes(c.type) || !validId(c.id)) continue;
+    const name = localNames.get(c.id) ?? cleanName(c.name);
+    if (!name || Object.hasOwn(names, c.id)) continue;
+    names[c.id] = name;
+    count += 1;
+    const dbf = int(c.dbfId);
+    if (c.type === TRINKET && dbf !== null && dbf > 0) trinkets[String(dbf)] = c.id;
+  }
+  if (count > MAX_CARDS) throw new Error(`${count} named cards: not the real card data`);
+  return { version: 1, source, names, trinkets };
 }
