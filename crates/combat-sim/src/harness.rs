@@ -12,7 +12,6 @@ use std::collections::{BTreeMap, HashMap};
 use std::fmt::Write as _;
 use std::time::Instant;
 
-use bg_parser::report::MAX_GAME_VALUE;
 use serde_json::Value;
 
 use crate::cards::{self, Fidelity};
@@ -20,20 +19,14 @@ use crate::combat::CombatResult;
 use crate::harness_duos::{duos_from_saved, team_of, DuosCombat};
 use crate::harness_logs::LogCombat;
 use crate::harness_saved::{saved_combat, Saved};
-use crate::model::{BaseCard, GameValues, Keywords, Minion, Team, Tribes, Warband};
+use crate::model::{BaseCard, Keywords, Minion, Team, Tribes, Warband};
 use crate::score::{score, Prediction, Report};
 use crate::trials::{simulate, Coverage, Options, Verdict};
 
 /// A combat whose real result got less than this is listed as a miss.
 const MISS: f64 = 0.5;
 
-/// Card facts from HearthstoneJSON.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CardFacts {
-    pub tier: Option<u8>,
-    pub tribes: Tribes,
-    pub base: Option<BaseCard>,
-}
+pub use crate::saved::CardFacts;
 
 pub type CardDb = HashMap<String, CardFacts>;
 
@@ -126,95 +119,20 @@ pub struct History {
     /// (T-609), and the saved replays that could not be.
     pub saved: Vec<LogCombat>,
     pub saved_unreadable: usize,
+    /// The latest record of each game, for why each result differed
+    /// (T-346); empty when read from the logs.
+    pub reports: Vec<Value>,
 }
 
 pub(crate) fn minion(v: &Value, db: &CardDb) -> Option<Minion> {
-    let card_id = v.get("card_id")?.as_str()?.to_string();
-    let attack = i32::try_from(v.get("atk")?.as_i64()?).ok()?;
-    let health = i32::try_from(v.get("health")?.as_i64()?).ok()?;
-    let keywords = v
-        .get("keywords")
-        .and_then(Value::as_array)
-        .map(|a| {
-            a.iter()
-                .filter_map(Value::as_str)
-                .filter_map(Keywords::from_name)
-                .fold(Keywords::NONE, Keywords::union)
-        })
-        .unwrap_or(Keywords::NONE);
-    let facts = db.get(&card_id);
-    // The parser does not read the Poisonous and Mega-Windfury tags (T-208);
-    // both are lasting, so the card's own count.
-    let unread = facts.and_then(|f| f.base).map_or(Keywords::NONE, |b| {
-        [Keywords::POISONOUS, Keywords::MEGA_WINDFURY]
-            .into_iter()
-            .filter(|k| b.keywords.contains(*k))
-            .fold(Keywords::NONE, Keywords::union)
-    });
-    Some(Minion {
-        golden: v.get("golden").and_then(Value::as_bool).unwrap_or(false),
-        attack,
-        health,
-        keywords: keywords.union(unread),
-        tribes: facts.map_or(Tribes::NONE, |f| f.tribes),
-        tier: facts.and_then(|f| f.tier),
-        base: facts.and_then(|f| f.base),
-        // Dark Gifts (parser revision 9, T-528); older records have none.
-        gifts: v
-            .get("gifts")
-            .and_then(Value::as_array)
-            .map(|a| {
-                a.iter()
-                    .filter_map(Value::as_str)
-                    .map(String::from)
-                    .collect()
-            })
-            .unwrap_or_default(),
-        card_id,
-    })
+    crate::saved::minion(v, &|id| db.get(id).copied())
 }
 
 pub(crate) fn board(entry: &Value, db: &CardDb) -> Option<Warband> {
-    let minions: Option<Vec<Minion>> = entry
-        .get("board")?
-        .as_array()?
-        .iter()
-        .map(|m| minion(m, db))
-        .collect();
-    Some(Warband {
-        minions: minions?,
-        tavern_tier: None,
-        values: saved_values(entry.get("values")),
-    })
+    crate::saved::board(entry, &|id| db.get(id).copied())
 }
 
-/// A saved board's game-long values (parser revision 10, T-610), by the
-/// report's names. A name left out, or a value outside what the report
-/// saves (1 to 99 999), is zero: unknown, the cards' printed numbers.
-fn saved_values(v: Option<&Value>) -> GameValues {
-    let n = |name: &str| {
-        v.and_then(|v| v.get(name))
-            .and_then(Value::as_i64)
-            .filter(|n| (1..=MAX_GAME_VALUE).contains(n))
-            .map_or(0, |n| n as i32)
-    };
-    GameValues {
-        blood_gem: (n("blood_gem_atk"), n("blood_gem_health")),
-        spell: (n("spell_atk"), n("spell_health")),
-        knights_dead: n("knights_dead"),
-        undead_attack: n("undead_atk"),
-        beetle: (n("beetle_atk"), n("beetle_health")),
-    }
-}
-
-pub(crate) fn result(round: &Value) -> Option<CombatResult> {
-    match round.get("result")?.as_str()? {
-        "won" => Some(CombatResult::Won),
-        "lost" => Some(CombatResult::Lost),
-        "tie" => Some(CombatResult::Tie),
-        _ => None,
-    }
-}
+pub(crate) use crate::saved::result;
 
 /// Reads the history: the last record of each game wins, as in the app.
 pub fn load_history(jsonl: &str, db: &CardDb) -> History {
@@ -318,6 +236,7 @@ pub fn load_history(jsonl: &str, db: &CardDb) -> History {
         }
         h.duos.extend(duos);
     }
+    h.reports = latest.into_iter().map(|(_, report)| report).collect();
     h
 }
 
@@ -630,6 +549,7 @@ fn render_coverage(out: &mut String, history: &History) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::GameValues;
 
     const CARDS: &str = include_str!("../tests/data/cards.json");
     const GAMES: &str = include_str!("../tests/data/games.jsonl");

@@ -14,7 +14,7 @@ use crate::cards::{approx, exact, Action, CardRules, Trigger};
 use crate::model::Tribes;
 
 const LATER_UNDEAD: &str = "Undead summoned after it died do not get the Attack";
-const IMPROVES: &str = "its bonus grows during the game; the printed one is used";
+pub(crate) const IMPROVES: &str = "its bonus grows during the game; the printed one is used";
 const SUMMON_ORDER: &str = "its order with other summon effects is not checked yet";
 
 const fn gain(attack: i32, health: i32) -> Action {

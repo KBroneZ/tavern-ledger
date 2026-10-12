@@ -1,14 +1,11 @@
 //! The Duos combats the odds missed (T-609): each one with what the engine
 //! does not know about it (approximate or unknown cards) and, when the log
-//! has the attacks, the first step where the replay parts from the log. This
-//! is the raw material for the miss breakdown by cause in
-//! the design notes.
+//! has the attacks, the first step where the replay parts from the log. The
+//! causes the app shows are [`crate::why`]'s; this list is the raw detail.
 //!
 //! Local only, like the rest of the harness: card ids, numbers and rules.
 
 use std::fmt::Write as _;
-
-use std::collections::BTreeMap;
 
 use crate::combat::CombatResult;
 use crate::harness::Scored;
@@ -76,40 +73,6 @@ pub fn solo_misses(scored: &[Scored]) -> Vec<Miss> {
             coverage: s.coverage.clone(),
         })
         .collect()
-}
-
-/// The likely cause of a miss, in a few words: from the attack-by-attack
-/// replay when the game has one (the first rule that differs, or chance
-/// when the replay follows the game to the end), else from the cards.
-pub fn cause(m: &Miss, replays: &[Replayed]) -> String {
-    let row = replays
-        .iter()
-        .find(|r| r.duos == m.duos && r.game == m.game && r.round == m.round);
-    match row.map(|r| &r.replay.difference) {
-        Some(None) => "chance: the replay follows the game to the end".into(),
-        Some(Some(d)) => format!("replay parts at: {}", d.rule.label()),
-        None if !m.coverage.not_modelled.is_empty() => {
-            "no replay; a card not modelled (played as a plain minion)".into()
-        }
-        None if !m.coverage.approximate.is_empty() => {
-            "no replay; a card played approximately".into()
-        }
-        None => "no replay; every card exact".into(),
-    }
-}
-
-/// Misses counted by cause: cause -> (Solo, Duos).
-pub fn causes(misses: &[Miss], replays: &[Replayed]) -> BTreeMap<String, (u32, u32)> {
-    let mut out: BTreeMap<String, (u32, u32)> = BTreeMap::new();
-    for m in misses {
-        let slot = out.entry(cause(m, replays)).or_insert((0, 0));
-        if m.duos {
-            slot.1 += 1;
-        } else {
-            slot.0 += 1;
-        }
-    }
-    out
 }
 
 fn pct(x: f64) -> String {

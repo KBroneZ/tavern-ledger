@@ -5,6 +5,7 @@ use crate::harness::{load_cards, load_history, run};
 use crate::harness_export::accuracy;
 use crate::harness_logs::replay_all;
 use crate::harness_misses::{duos_misses, solo_misses};
+use crate::harness_why::tally;
 
 const CARDS: &str = include_str!("../tests/data/cards.json");
 const GAMES: &str = include_str!("../tests/data/games.jsonl");
@@ -30,6 +31,7 @@ fn the_summary_has_counts_and_no_game_or_round() {
         replays: &rows,
         unreadable: history.saved_unreadable,
         misses: &misses,
+        why: &tally(&history.reports, &db, &options),
         options: &options,
     });
     assert!(
@@ -40,7 +42,8 @@ fn the_summary_has_counts_and_no_game_or_round() {
         text.contains("| Solo |") && text.contains("| Duos |"),
         "{text}"
     );
-    assert!(text.contains("## Misses by cause"), "{text}");
+    assert!(text.contains("## Why the result differed"), "{text}");
+    assert!(text.contains("| matched |"), "{text}");
     // No game, round, session, hero or name: only counts, rules and card ids.
     let lower = text.to_lowercase();
     // "#" and a number would be a BattleTag; "#" alone is a heading.

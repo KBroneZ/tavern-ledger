@@ -25,6 +25,7 @@ use combat_sim::harness_logs::{
 };
 use combat_sim::harness_misses::{duos_misses, render_misses, solo_misses};
 use combat_sim::harness_summary::{render_summary, Summary};
+use combat_sim::harness_why::tally;
 use combat_sim::Options;
 
 fn main() -> ExitCode {
@@ -142,6 +143,7 @@ fn real_main() -> Result<(), String> {
                 replays: &rows,
                 unreadable,
                 misses: &misses,
+                why: &tally(&history.reports, &db, &options),
                 options: &options,
             })
         );

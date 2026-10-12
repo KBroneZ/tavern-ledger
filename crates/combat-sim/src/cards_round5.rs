@@ -28,10 +28,12 @@ pub const HAND_SUMMONERS: [&str; 8] = [
     "BG34_Giant_017_G",
 ];
 
-const FROM_HAND: &str = "summons a minion from the hand, which is not seen: the summon is left out";
-const COPIED_EARLIER: &str =
+pub(crate) const FROM_HAND: &str =
+    "summons a minion from the hand, which is not seen: the summon is left out";
+pub(crate) const COPIED_EARLIER: &str =
     "on a board taken after the start of combat, the Deathrattles it copied are not on the board";
-const EARLIER_GAINS: &str = "Deathrattles it gained in earlier combats are not on the board";
+pub(crate) const EARLIER_GAINS: &str =
+    "Deathrattles it gained in earlier combats are not on the board";
 
 const fn copy_leftmost(times: u8) -> Action {
     Action::CopyLeftmostDeathrattles { count: 2, times }
