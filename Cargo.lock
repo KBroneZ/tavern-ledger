@@ -617,6 +617,7 @@ dependencies = [
  "tauri-plugin-autostart",
  "tracker",
  "uploader",
+ "winreg 0.10.1",
 ]
 
 [[package]]

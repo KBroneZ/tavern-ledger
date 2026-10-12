@@ -20,3 +20,7 @@ tracker = { path = "../tracker" }
 uploader = { path = "../uploader", features = ["http"] }
 cards = { path = "../cards", features = ["http"] }
 game-memory = { path = "../game-memory" }
+
+[target.'cfg(windows)'.dependencies]
+# Already in the build through auto-launch; quotes the start-up entry.
+winreg = "0.10"

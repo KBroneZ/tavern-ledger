@@ -23,7 +23,7 @@
 
 ## Status
 
-- **Desktop app: not released yet.** There is no installer; it runs from source on the developer's PC while the installer and code signing are prepared. To build it yourself, see [docs/development.md](docs/development.md).
+- **Desktop app: not released yet.** No installer is published yet; it runs from source on the developer's PC while the first release is prepared. To build the app or its Windows installer yourself, see [docs/development.md](docs/development.md).
 - **Website: online at [tavernledger.net](https://tavernledger.net), and you can create an account.** Uploading games needs the desktop app; the combat simulator and its accuracy page work without one.
 
 ## Features
