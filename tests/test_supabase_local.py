@@ -334,6 +334,15 @@ class LocalStackTests(unittest.TestCase):
                   " and not result ? 'failed_step' from private.sweep_runs"
                   " where id = {i}".format(s=json.dumps(body["stats"]), i=int(body["run_id"]))),
             "t", "the sweep records its backfill counts on its run's row")
+        # T-543: and how full the project is, the same in the answer.
+        capacity = body["capacity"]
+        self.assertIn(capacity["level"], ("none", "50%", "80%"), capacity)
+        self.assertGreaterEqual(capacity["files"]["count"], 2)
+        self.assertGreater(capacity["database"]["bytes"], 0)
+        self.assertEqual(
+            _psql("select result -> 'capacity' = '{c}'::jsonb from private.sweep_runs"
+                  " where id = {i}".format(c=json.dumps(capacity), i=int(body["run_id"]))),
+            "t", "the sweep records the capacity on its run's row")
         _, again = self.api.request("GET", query, token=token)
         drop = ("computed_at",)
         self.assertEqual([{k: v for k, v in s.items() if k not in drop} for s in again],
