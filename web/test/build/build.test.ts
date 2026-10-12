@@ -415,17 +415,20 @@ test("the home page's buttons by role: one gold key action, wood for common ones
     ["common", "#safe", "Is it safe?"],
     ["small", "#main", "Back up to the door"],
   ]);
-  // Nothing to download yet (T-105): the real gold button, unavailable, links
-  // nowhere, and the line it points to says so (rule 8).
-  for (const [file, label, note] of [["index.html", "Download", "Not out yet"], ["es/index.html", "Descargar", "Aún no ha salido"]]) {
+  // The Download button (T-558): the one gold key action, a link to the
+  // download page in the page's language, with what the build is under it.
+  for (const [file, label, target, note] of [
+    ["index.html", "Download", "/download/", "Beta for Windows"],
+    ["es/index.html", "Descargar", "/es/download/", "Beta para Windows"],
+  ]) {
     const page = readFileSync(join(DIST, file), "utf8");
     const key = [...page.matchAll(/<(a|button) class="tb tb-key"[^>]*>\s*<span class="tb-label">([^<]+)/g)];
     assert.equal(key.length, 1, `${file}: one key action`);
-    assert.equal(key[0][1], "button", `${file}: not a link`);
+    assert.equal(key[0][1], "a", `${file}: a link`);
     assert.equal(key[0][2].trim(), label);
-    assert.match(key[0][0], /type="button"/);
-    assert.match(key[0][0], /aria-disabled="true"/);
+    assert.match(key[0][0], new RegExp(`href="${target}"`), file);
     assert.match(key[0][0], /aria-describedby="download-note"/);
+    assert.doesNotMatch(key[0][0], /aria-disabled/);
     assert.match(page, new RegExp(`<p class="key-note" id="download-note">${note}</p>`), file);
   }
   for (const art of ["btn-key", "btn-key-lit", "btn-common", "btn-small"]) {

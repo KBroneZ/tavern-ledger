@@ -13,6 +13,7 @@ export const SITE_STRINGS = {
   "layout.menu": "Menu",
   "layout.menu.close": "Close",
   "layout.home": "Home",
+  "layout.download": "Download",
   "layout.privacy": "Privacy",
   "layout.terms": "Terms",
   "layout.accuracy": "Simulator accuracy",
@@ -23,9 +24,9 @@ export const SITE_STRINGS = {
   "layout.signin": "Sign in",
   "layout.account": "Account",
   "layout.notice": "Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.",
-  "layout.openSource": "Open source (AGPL-3.0). Accounts are open; the desktop app is not out yet.",
+  "layout.openSource": "Open source (AGPL-3.0). Accounts are open; the desktop app is in beta for Windows.",
   // The same line in the accounts-closed build.
-  "layout.openSource.closed": "Open source (AGPL-3.0). Accounts are not open yet; the desktop app is not out yet.",
+  "layout.openSource.closed": "Open source (AGPL-3.0). Accounts are not open yet; the desktop app is in beta for Windows.",
   // The switch names the other language in that language: on an English page "Español".
   "layout.switch": "Español",
   "layout.switch.label": "Leer esta página en español",
@@ -36,6 +37,9 @@ export const SITE_STRINGS = {
   "meta.index.title": "Your Battlegrounds games, kept for you",
   "meta.index.description":
     "Free, open-source Battlegrounds tracker for Windows that reads the game's log files, plus a website to follow your progress.",
+  "meta.download.title": "Download for Windows",
+  "meta.download.description":
+    "Download the Tavern Ledger beta for Windows 10 and 11: a free app that keeps your Hearthstone Battlegrounds games. Four small steps to install it.",
   "meta.privacy.title": "Privacy",
   "meta.privacy.description": "Tavern Ledger privacy policy: what personal data we handle, why, and your rights.",
   "meta.terms.title": "Terms",
@@ -103,7 +107,7 @@ export const SITE_STRINGS = {
   "home.lead":
     "A free Windows app that reads Hearthstone's own log on your PC and keeps every Battlegrounds game: your hero, your place and the boards you faced.",
   "home.cta.download": "Download",
-  "home.cta.download.note": "Not out yet",
+  "home.cta.download.note": "Beta for Windows",
   "home.cta.show": "Show me",
   "home.cta.safe": "Is it safe?",
   "home.scene.title": "What Tavern Ledger adds to your screen",
@@ -136,7 +140,7 @@ export const SITE_STRINGS = {
   "home.status.label": "Project status",
   "home.top": "Back up to the door",
   "home.status.title": "The doors are not open yet.",
-  "home.status.body": "The desktop app is a prototype and the website is being built.",
+  "home.status.body": "The desktop app is an early beta for Windows and the website is being built.",
   "home.status.testing": "Accounts are open.",
   "home.status.closed": "Accounts are not open yet.",
   // What's new (lib/site/news.ts): one short dated line each, newest first.

@@ -1,6 +1,6 @@
 # Development
 
-How to run the tools, the desktop app, the backend and the website from a clone. Everything here is for development; no installer is published yet, but you can build one (below).
+How to run the tools, the desktop app, the backend and the website from a clone. Everything here is for development. To only use the app, take the installer from the [download page](https://tavernledger.net/download/); to build the same installer yourself, see below.
 
 ## Check your log setup
 

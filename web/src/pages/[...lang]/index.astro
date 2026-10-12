@@ -43,9 +43,9 @@ const newsDay = (date: string) =>
       <p class="lead">{st("home.lead")}</p>
     </div>
     <div class="ctas">
-      {/* The real Download button, unavailable until the app is packaged (T-105): it does nothing and says so. */}
+      {/* The one key action (D-129): the download page (T-558), with what the build is under it. */}
       <div class="key-action">
-        <Button kind="key" unavailable describedby="download-note">{st("home.cta.download")}</Button>
+        <Button kind="key" href={href("/download/")} describedby="download-note">{st("home.cta.download")}</Button>
         <p class="key-note" id="download-note">{st("home.cta.download.note")}</p>
       </div>
       <div class="ctas-row">

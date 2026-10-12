@@ -1,0 +1,31 @@
+// The release facts the download page and the home page's button share
+// (T-558): one source, and the addresses must agree with the version.
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { RELEASE, installerUrl, releasePageUrl, releasesUrl, sizeMb } from "../../src/lib/site/release.ts";
+
+test("the file name, tag and addresses all follow from the version", () => {
+  assert.match(RELEASE.version, /^\d+\.\d+\.\d+$/);
+  assert.equal(RELEASE.tag, `v${RELEASE.version}`);
+  assert.equal(RELEASE.file, `TavernLedger_${RELEASE.version}_x64-setup.exe`);
+  assert.equal(installerUrl(), `https://github.com/KBroneZ/tavern-ledger/releases/download/${RELEASE.tag}/${RELEASE.file}`);
+  assert.equal(releasePageUrl(), `https://github.com/KBroneZ/tavern-ledger/releases/tag/${RELEASE.tag}`);
+  assert.equal(releasesUrl(), "https://github.com/KBroneZ/tavern-ledger/releases");
+});
+
+test("the hash is 64 lower-case hex digits and the date is a day", () => {
+  assert.match(RELEASE.sha256, /^[0-9a-f]{64}$/);
+  assert.match(RELEASE.date, /^\d{4}-\d{2}-\d{2}$/);
+  assert.ok(!Number.isNaN(Date.parse(`${RELEASE.date}T00:00:00Z`)));
+});
+
+test("the size is shown in megabytes with one decimal, the way Windows shows it", () => {
+  assert.equal(sizeMb(6_847_192), 6.5);
+  assert.equal(sizeMb(RELEASE.bytes), 6.5);
+  assert.ok(RELEASE.bytes > 1_000_000 && RELEASE.bytes < 50_000_000);
+});
+
+test("the facts are those of the published v0.1.0 pre-release", () => {
+  assert.equal(RELEASE.version, "0.1.0");
+  assert.equal(RELEASE.sha256, "e52f3a76a4ffb7717f017e431a6e56df7d86826e95d0372e75f5e3215e9386ee");
+});
