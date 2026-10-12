@@ -101,13 +101,14 @@ test("pick rate: the rate with both counts; marked on few choices; unknown with 
   assert.match(cell(stat({ offered_games: 0, picked_games: 0 })), /Unknown/);
 });
 
-test("a hero's cells: link to its games, few-games marks, wins, best and worst", () => {
+test("a hero's cells: link to its games, one few-games mark per row, wins, best and worst", () => {
   const few = heroStatCells(rows[1], null);
   assert.deepEqual(few[0], { hero: "BG_B", name: "Unknown hero", href: "/games/?mode=solo&hero=BG_B", unknownId: "BG_B" });
-  assert.match(JSON.stringify(few[2]), /few games/);
-  assert.match(JSON.stringify(few[3]), /few games/);
+  assert.match(JSON.stringify(few[1]), /few games/, "on the games the values rest on");
+  assert.doesNotMatch(JSON.stringify(few[2]), /few games/);
+  assert.doesNotMatch(JSON.stringify(few[3]), /few games/);
   const enough = heroStatCells(rows[0], ID);
-  assert.equal(enough[2], "4.10");
+  assert.equal(enough[2], "4.1");
   assert.equal(enough[3], "50%");
   assert.equal(enough[4], "1");
   assert.deepEqual(enough[5], { place: 1, mode: "solo" });
@@ -124,7 +125,7 @@ test("no link for a hero with no card id", () => {
 });
 
 test("the stats pages' addresses keep the profile and the mode", () => {
-  assert.equal(statsPagePath("heroes", "solo", null), "/player-heroes/");
+  assert.equal(statsPagePath("heroes", "solo", null), "/player-heroes/?mode=solo", "named: the page's own default follows the games");
   assert.equal(statsPagePath("curious", "duos", null), "/curious/?mode=duos");
   assert.equal(statsPagePath("heroes", "duos", ID), `/player-heroes/?id=${ID}&mode=duos`);
 });

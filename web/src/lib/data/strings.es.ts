@@ -243,6 +243,7 @@ export const ES: Record<StringKey, string> = {
   "hstats.few": "pocas partidas",
   "hstats.few.tip": "Se basa en menos de {min} partidas: la siguiente puede cambiarlo mucho.",
   "hstats.few.note": "El puesto medio y el porcentaje de top se basan en menos de {min} partidas terminadas, y el porcentaje de elección, en menos de {min} elecciones de héroe.",
+  "hstats.few.all": "Todos los héroes de aquí tienen menos de {min} partidas terminadas, así que estas medias aún pueden cambiar mucho.",
   "hstats.few.more": "Al ordenar por puesto medio, los héroes con suficientes partidas van primero.",
   "hstats.simple.more": "Cambia a Avanzado, arriba, para ver también las victorias, el mejor y el peor puesto, y cuántas veces elegiste cada héroe cuando te salió.",
   "hstats.picked.note":

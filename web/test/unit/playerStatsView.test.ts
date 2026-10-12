@@ -65,11 +65,15 @@ test("heroes: the sort switch shows the sort in force and drives the table", () 
   assert.match(textOf(heroesPanel("solo", heroes, { profileId: null, sort: "avg" })), /by average place, best first/);
 });
 
-test("heroes: never-played heroes are an Advanced fold; the few-games note is there", () => {
+test("heroes: never-played heroes are an Advanced fold; the few-games note shows only where a mark does", () => {
   const html = toHtml(heroesPanel("solo", [...heroes, offered], { profileId: null, sort: "games" }));
   assert.match(html, /<div class="adv"><details class="fold">.*Offered but never played \(1\)/);
-  assert.match(html, /mark-few/);
-  assert.match(html, /fewer than 5 finished games/);
+  assert.doesNotMatch(html, /mark-few/, "every hero has enough games and choices: no mark, no legend");
+  // Few hero choices only: the picks are marked in Advanced, and so is the legend.
+  const fewPicks = heroes.map((r) => ({ ...r, offeredGames: 2, pickedGames: 1 }));
+  const picks = toHtml(heroesPanel("solo", fewPicks, { profileId: null, sort: "games" }));
+  assert.match(picks, /<p class="data-note adv"><span class="mark-src mark-few"/);
+  assert.match(picks, /fewer than 5 finished games/);
 });
 
 test("heroes and curious: ids are unique across both panels", () => {
@@ -167,4 +171,14 @@ test("reads: a server error or a broken answer throws instead of showing part of
   await assert.rejects(loadHeroStats(client(), ID), DataError);
   stubFetch({ "/rest/v1/user_overview": rows([overviewRow()]), "/rest/v1/user_records": () => json({ message: "boom" }, 500) });
   await assert.rejects(loadCurious(client(), ID), DataError);
+});
+
+test("heroes: when every hero has few games, one line says so instead of a mark on each row (T-559)", () => {
+  const few = Array.from({ length: 3 }, (_, i) => heroStat(heroRaw({ hero: `BG_FEW_${i}`, games: 2, placed_games: 2, top_half: 1, wins: 0, offered_games: 6, picked_games: 2 })));
+  const html = toHtml(heroesPanel("solo", few, { profileId: null, sort: "games" }));
+  assert.doesNotMatch(html, /mark-few/);
+  assert.match(html, /Every hero here has fewer than 5 finished games/);
+  // A mix keeps the mark, once per row, on the few-games heroes only.
+  const mixed = toHtml(heroesPanel("solo", [...heroes, ...few], { profileId: null, sort: "games" }));
+  assert.equal((mixed.match(/class="mark-src mark-few"/g) ?? []).length, few.length + 1, "each few row and the note");
 });

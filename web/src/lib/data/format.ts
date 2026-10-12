@@ -29,7 +29,7 @@ export function compact(value: number | null | undefined): string {
   return Math.abs(value) < COMPACT_FROM ? PLAIN.format(value) : SHORT.format(value);
 }
 
-/** An average (place, gold per game) with two decimals. */
+/** An average with two decimals (community and leaderboard figures; a player's own pages use placeAverage and perGameText). */
 export function average(value: number | null | undefined): string {
   return known(value) ? TWO.format(value) : DASH;
 }

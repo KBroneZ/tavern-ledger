@@ -2,7 +2,7 @@
 // (user_records, each with the game it came from) and fun totals over all
 // games (user_overview), per mode. Pure functions; lib/heroes/views.ts draws
 // them. Every value says how many games back it; inferred ones are marked.
-import { average, backing, compact, type Mode } from "../data/format.ts";
+import { backing, compact, perGameText, type Mode } from "../data/format.ts";
 import { gameKey, RECORDS, recordRow, type Overview, type RecordRow } from "../data/rows.ts";
 import { t, type StringKey } from "../data/strings.ts";
 import { dateText } from "../data/dashboard.ts";
@@ -39,7 +39,8 @@ export const CURIOUS_RECORD_COLUMNS_VIEW: Column[] = [
   { label: t("records.col.record"), rowHeader: true },
   { label: t("records.col.value"), numeric: true },
   { label: t("curious.col.game") },
-  { label: t("records.col.games") },
+  // How many games back a record: Advanced only (T-559, D-131).
+  { label: t("records.col.games"), advanced: true },
 ];
 
 /** The game's date, linked to the game viewer when its key is known. */
@@ -52,7 +53,7 @@ function gameCell(r: CuriousRecord, userId: string): Cell {
 }
 
 export function recordCellsOf(r: CuriousRecord, userId: string, totalGames: number): Cell[] {
-  const value = h("span", {}, r.record === "apm" ? average(r.value) : compact(r.value));
+  const value = h("span", {}, r.record === "apm" ? perGameText(r.value) : compact(r.value));
   return [
     recordLabel(r),
     { node: r.inferred ? [value, sourceMark("inferred")] : [value] },
@@ -96,6 +97,8 @@ export function totalTile(spec: TotalSpec, o: Overview): TileProps {
     label: t(spec.label),
     value: compact(sum),
     backing: backing(games, o.games),
+    // A sum over only some games stays said in view, so it does not read as every game's.
+    backingAlways: sum !== null && games < o.games,
     source: sum === null ? "unknown" : spec.inferred ? "inferred" : undefined,
   };
 }

@@ -2,7 +2,7 @@
 // (T-502), read as untrusted input, sorted, and shaped into table cells.
 // Pure functions; lib/heroes/views.ts draws them. A rate that rests on few
 // games says so; a hero only ever offered, never played, is listed apart.
-import { average, compact, share, type Mode } from "../data/format.ts";
+import { compact, placeAverage, share, type Mode } from "../data/format.ts";
 import { DEFAULT_FILTERS, filtersQuery } from "../data/filters.ts";
 import { count, DataError, heroRow, place, type HeroRow } from "../data/rows.ts";
 import { t } from "../data/strings.ts";
@@ -104,11 +104,14 @@ function withFew(value: number | null, text: string, few: boolean): Cell {
   return few ? { node: [h("span", {}, text), fewMark()] } : text;
 }
 
+/** True when a hero's pick rate rests on fewer than MIN_GAMES hero choices. */
+export const fewPicks = (r: HeroStat): boolean => r.offeredGames > 0 && r.offeredGames < MIN_GAMES;
+
 /** "40% · 2 of 5", marked when offered in few games; unknown when never offered in a known choice. */
 export function pickCell(r: HeroStat): Cell {
   if (r.offeredGames === 0) return { node: unknownValue() };
   const text = t("hstats.picked.value", { rate: share(r.pickedGames, r.offeredGames), picked: r.pickedGames, offered: r.offeredGames });
-  return withFew(r.pickedGames, text, r.offeredGames < MIN_GAMES);
+  return withFew(r.pickedGames, text, fewPicks(r));
 }
 
 /** The games list filtered by this hero and mode (the owner's, or the public profile's). */
@@ -116,14 +119,20 @@ export function heroGamesHref(hero: string | null, m: Mode, profileId: string | 
   return hero === null ? undefined : href(`/games/${filtersQuery({ ...DEFAULT_FILTERS, mode: m, hero }, profileId)}`);
 }
 
-export function heroStatCells(r: HeroStat, profileId: string | null): Cell[] {
-  const few = r.placedGames > 0 && r.placedGames < MIN_GAMES;
+/** True when a hero's average and rate rest on fewer than MIN_GAMES finished games. */
+export const fewGames = (r: HeroStat): boolean => r.placedGames > 0 && r.placedGames < MIN_GAMES;
+
+/** A hero's row; markFew is false when every row would carry the mark (the note then says it once). */
+export function heroStatCells(r: HeroStat, profileId: string | null, markFew = true): Cell[] {
+  const few = markFew && fewGames(r);
+  // Places count finished games only: say how many when some are not.
+  const games = r.placedGames < r.games ? t("heroes.games.placed", { games: r.games, placed: r.placedGames }) : compact(r.games);
   return [
     heroCell(r.hero, heroGamesHref(r.hero, r.mode, profileId)),
-    // Places count finished games only: say how many when some are not.
-    r.placedGames < r.games ? t("heroes.games.placed", { games: r.games, placed: r.placedGames }) : compact(r.games),
-    withFew(r.avgPlace, average(r.avgPlace), few),
-    withFew(r.placedGames === 0 ? null : r.topHalf, share(r.topHalf, r.placedGames), few),
+    // "Few games" once per row, on the games it rests on, not on every value (T-559).
+    few ? { node: [h("span", {}, games), fewMark()] } : games,
+    r.avgPlace === null ? { node: unknownValue() } : placeAverage(r.avgPlace),
+    r.placedGames === 0 ? { node: unknownValue() } : share(r.topHalf, r.placedGames),
     r.placedGames === 0 ? { node: unknownValue() } : compact(r.wins),
     { place: r.bestPlace, mode: r.mode },
     { place: r.worstPlace, mode: r.mode },
@@ -146,7 +155,7 @@ const STATS_PATHS: Record<StatsPage, string> = { heroes: "/player-heroes/", curi
 export function statsPagePath(page: StatsPage, m: Mode, profileId: string | null): string {
   const q = new URLSearchParams();
   if (profileId) q.set("id", profileId);
-  if (m === "duos") q.set("mode", "duos");
-  const text = q.toString();
-  return href(text ? `${STATS_PATHS[page]}?${text}` : STATS_PATHS[page]);
+  // Always named: without a mode the page opens on the one with more games (T-559).
+  q.set("mode", m);
+  return href(`${STATS_PATHS[page]}?${q.toString()}`);
 }
