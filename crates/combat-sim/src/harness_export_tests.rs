@@ -15,6 +15,7 @@ fn solo(player: &[&str], opponent: &[&str], result: CombatResult) -> LoggedComba
         player: band(player),
         opponent: band(opponent),
         result,
+        unknown_gifts: Vec::new(),
     }
 }
 
@@ -34,6 +35,7 @@ fn duos(own: &[&str], opponent: &[&str], result: Option<CombatResult>) -> DuosCo
         out: Vec::new(),
         own_shop: None,
         result,
+        unknown_gifts: Vec::new(),
     }
 }
 
@@ -65,6 +67,7 @@ fn a_miss(duos: bool) -> Miss {
         },
         result: CombatResult::Lost,
         coverage: Default::default(),
+        inputs: Vec::new(),
     }
 }
 

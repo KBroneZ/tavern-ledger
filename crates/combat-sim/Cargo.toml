@@ -11,7 +11,10 @@ description = "Battlegrounds combat simulator: odds to win, tie or lose from two
 # The validation harness (T-603): reads saved games and HearthstoneJSON card
 # data. Off for a WebAssembly build, which needs only the engine (no deps).
 default = ["harness"]
-harness = ["dep:serde_json", "dep:bg-parser"]
+harness = ["saved", "dep:bg-parser"]
+# Reading the games the app saves (T-346): the app's recap and the
+# website's engine need it, without the harness's parser.
+saved = ["dep:serde_json"]
 
 [dependencies]
 # Already in Cargo.lock through bg-parser (PROVENANCE.md); no new crates.

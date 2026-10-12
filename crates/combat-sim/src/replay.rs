@@ -72,6 +72,10 @@ pub struct Difference {
     pub rule: Rule,
     /// Card ids, positions and numbers only.
     pub detail: String,
+    /// The card the difference is about, as the log has it: the attacker
+    /// the log played, the target it hit, the first minion that differs.
+    /// `None` when no single card is (who attacks first, the end).
+    pub card: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -218,6 +222,16 @@ fn diff(attack: usize, rule: Rule, detail: String) -> Difference {
         attack,
         rule,
         detail,
+        card: None,
+    }
+}
+
+impl Difference {
+    fn about(self, card: &str) -> Difference {
+        Difference {
+            card: Some(card.to_string()),
+            ..self
+        }
     }
 }
 
@@ -250,6 +264,10 @@ impl Combat<'_> {
                 "the engine has no attacker left; the log attacks again".into(),
             ));
         };
+        // The attacker the log played: the card a difference in the order is about.
+        let logged = step.before[side]
+            .get(ix)
+            .map_or("-", |m| m.card_id.as_str());
         if side != want_side {
             let rule = if k == 0 {
                 Rule::FirstAttacker
@@ -266,7 +284,8 @@ impl Combat<'_> {
                     side_word(want_side),
                     side_word(side)
                 ),
-            ));
+            )
+            .about(logged));
         }
         if ix != want_ix {
             let unit = &self.sides[side].units;
@@ -285,7 +304,8 @@ impl Combat<'_> {
                     ix + 1,
                     card(ix)
                 ),
-            ));
+            )
+            .about(logged));
         }
         let uid = self.sides[side].units[ix].uid;
         let swings = match turn.current {
@@ -319,7 +339,8 @@ impl Combat<'_> {
                     side_word(foe),
                     target_ix + 1
                 ),
-            ));
+            )
+            .about(card));
         }
         self.forced_target = Some(target);
         self.swing(side, uid);
@@ -392,6 +413,18 @@ impl Combat<'_> {
             let engine_ids: Vec<&str> = self.sides[side].units.iter().map(id).collect();
             let log_ids: Vec<&str> = log.iter().map(|m| m.card_id.as_str()).collect();
             if engine_ids != log_ids {
+                // The first place they part: the log's minion there, else
+                // the engine's (the log has fewer).
+                let at = engine_ids
+                    .iter()
+                    .zip(&log_ids)
+                    .take_while(|(a, b)| a == b)
+                    .count();
+                let card = log_ids
+                    .get(at)
+                    .or(engine_ids.get(at))
+                    .copied()
+                    .unwrap_or("-");
                 return Err(diff(
                     n,
                     Rule::Minions,
@@ -401,7 +434,8 @@ impl Combat<'_> {
                         engine_ids.join(", "),
                         log_ids.join(", ")
                     ),
-                ));
+                )
+                .about(card));
             }
         }
         // The same minions on both sides: now their numbers.
@@ -433,7 +467,8 @@ impl Combat<'_> {
                             m.health,
                             keyword_names(log_kw)
                         ),
-                    ));
+                    )
+                    .about(&m.card_id));
                 }
             }
         }

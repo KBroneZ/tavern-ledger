@@ -5,7 +5,7 @@
 // export's keys with their types, so a key the export does not have (a name,
 // a seat, a game) or one it lost fails the build instead of reaching the page.
 
-export const ACCURACY_FORMAT = 2;
+export const ACCURACY_FORMAT = 3;
 export const MODES = ["solo", "duos"] as const;
 export type AccuracyMode = (typeof MODES)[number];
 
@@ -38,13 +38,17 @@ export interface BlockingCard {
 }
 
 /**
- * Why a combat's most likely result was not the real one (D-115), as the
- * export names them: chance (the replay follows the game to the end), the
- * first rule where the replay parts from the game, or, with no replay saved,
- * what the cards say.
+ * Why a combat's most likely result was not the real one (D-115, D-127), as
+ * the export names them: chance (the replay follows the game to the end);
+ * where the replay parts from the game, something the log does not show
+ * (missing inputs), else a card or Dark Gift not modelled or approximate,
+ * else the first rule that differs; or, with no replay saved, what the cards
+ * say. The app's recap and the game page use the same ids.
  */
 export const CAUSE_IDS = [
   "chance",
+  "missing_inputs",
+  "approximate_card",
   "replay_first_attacker",
   "replay_after_teammate",
   "replay_attack_order",

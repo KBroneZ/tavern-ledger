@@ -191,6 +191,7 @@ fn add_game(out: &mut LogHistory, game: usize, report: &GameReport, db: &CardDb)
                         player,
                         opponent,
                         result,
+                        unknown_gifts: unknown_gifts(round),
                     })
                 }
                 _ => out.history.solo_rounds_skipped += 1,
@@ -277,6 +278,21 @@ pub fn load_logs(logs: &[PathBuf], db: &CardDb) -> Result<LogHistory, String> {
         }
     }
     Ok(out)
+}
+
+/// Card ids of the minions the game marks as gifted with no gift named,
+/// on the round's boards.
+pub(crate) fn unknown_gifts(round: &Round) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    let minions = round.entries.iter().flat_map(|e| e.board.iter().flatten());
+    for m in minions.filter(|m| m.gift_unknown) {
+        if let Some(id) = &m.card_id {
+            if !out.contains(id) {
+                out.push(id.clone());
+            }
+        }
+    }
+    out
 }
 
 /// One replayed combat.
@@ -522,6 +538,7 @@ mod tests {
             player: Warband::new(vec![m("BGS_119", 5, 5)]),
             opponent: Warband::new(opp),
             result,
+            unknown_gifts: Vec::new(),
         };
         let history = History {
             combats: vec![

@@ -245,3 +245,49 @@ fn a_normal_first_attack_before_the_start_of_combat_one_is_named() {
         .expect("differs");
     assert_eq!((d.attack, d.rule), (1, Rule::FirstAttacker));
 }
+
+#[test]
+fn a_difference_names_the_card_it_is_about() {
+    let other = |a, h| Minion::new("TEST_OTHER", a, h).tier(1);
+    // The log's attacker when the order differs.
+    let p0 = [m(1, 9), other(1, 9)];
+    let o0 = [m(1, 9)];
+    let d = run(&[step((0, 1), 0, &p0, &o0)], CombatResult::Tie)
+        .difference
+        .expect("differs");
+    assert_eq!(d.card.as_deref(), Some("TEST_OTHER"));
+    // The target the engine does not allow.
+    let p0 = [m(3, 3), m(1, 1)];
+    let o0 = [other(1, 1), m(1, 1).with(Keywords::TAUNT)];
+    let d = run(&[step((0, 0), 0, &p0, &o0)], CombatResult::Won)
+        .difference
+        .expect("differs");
+    assert_eq!(d.card.as_deref(), Some("TEST_OTHER"));
+    // The minion whose numbers differ.
+    let p0 = [m(2, 3), m(1, 1)];
+    let o0 = [other(1, 5)];
+    let steps = [
+        step((0, 0), 0, &p0, &o0),
+        step((1, 0), 0, &[m(2, 2), m(1, 1)], &[other(1, 4)]),
+    ];
+    let d = run(&steps, CombatResult::Lost).difference.expect("differs");
+    assert_eq!(
+        (d.rule, d.card.as_deref()),
+        (Rule::Stats, Some("TEST_OTHER"))
+    );
+    // Who attacks first: the log's attacker.
+    let p0 = [m(2, 3), m(1, 1)];
+    let o0 = [other(1, 2)];
+    let d = run(&[step((1, 0), 0, &p0, &o0)], CombatResult::Won)
+        .difference
+        .expect("differs");
+    assert_eq!(d.rule, Rule::FirstAttacker);
+    assert_eq!(d.card.as_deref(), Some("TEST_OTHER"));
+    // The end of combat is about no card.
+    let p0 = [m(1, 5)];
+    let o0 = [m(1, 5)];
+    let d = run(&[step((1, 0), 0, &p0, &o0)], CombatResult::Tie)
+        .difference
+        .expect("the log stops early");
+    assert_eq!((d.rule, d.card), (Rule::End, None));
+}

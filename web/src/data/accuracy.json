@@ -20,7 +20,7 @@
   },
   "date": "2026-10-12",
   "engine_version": "0.8.0",
-  "format": 2,
+  "format": 3,
   "misses": {
     "causes": [
       {
@@ -36,31 +36,19 @@
         "solo": 1
       },
       {
+        "cause": "missing_inputs",
+        "duos": 7,
+        "share": 0.16279069767441862,
+        "solo": 0
+      },
+      {
         "cause": "chance",
         "duos": 5,
         "share": 0.11627906976744186,
         "solo": 0
       },
       {
-        "cause": "replay_minions",
-        "duos": 4,
-        "share": 0.09302325581395349,
-        "solo": 0
-      },
-      {
-        "cause": "replay_stats",
-        "duos": 2,
-        "share": 0.046511627906976744,
-        "solo": 0
-      },
-      {
         "cause": "no_replay_not_modelled",
-        "duos": 1,
-        "share": 0.023255813953488372,
-        "solo": 0
-      },
-      {
-        "cause": "replay_first_attacker",
         "duos": 1,
         "share": 0.023255813953488372,
         "solo": 0

@@ -47,7 +47,12 @@ pub mod harness_misses;
 pub mod harness_saved;
 #[cfg(feature = "harness")]
 pub mod harness_summary;
+#[cfg(feature = "harness")]
+pub mod harness_why;
+#[cfg(feature = "saved")]
+pub mod saved;
 pub mod score;
+pub mod why;
 
 pub use combat::{CombatResult, Outcome};
 pub use model::{
