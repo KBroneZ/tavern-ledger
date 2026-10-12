@@ -273,5 +273,5 @@ export const ES: Record<StringKey, string> = {
   "curious.gap.extraGold": "El oro extra por separado: el servidor solo lo guarda sumado al oro por ventas, como oro más allá de los ingresos.",
   "curious.gap.bothModes": "Solo y Dúos juntos: la aplicación suma los dos modos, y aquí cada modo tiene sus propias cifras.",
   "curious.about.body":
-    "Los envía la aplicación de escritorio del jugador, a partir del registro del propio juego. Cada récord enlaza a la primera partida que lo alcanzó e indica en cuántas partidas se basa; los totales suman todas las partidas que tienen el dato. El daño se calcula a partir de la vida, por eso aparece marcado como deducido. Un valor que no tiene ninguna partida aparece como un guion, nunca como 0.",
+    "Los envía la aplicación de escritorio del jugador, a partir del registro del propio juego. Cada récord enlaza a la primera partida que lo alcanzó e indica en cuántas partidas se basa; los totales suman todas las partidas que tienen el dato. Los totales de daño usan el golpe del propio juego donde el registro lo tiene y la vida donde no, por eso aparecen marcados como deducidos; un récord de daño solo se marca como deducido cuando ningún combate que lo respalda tiene el golpe. Un valor que no tiene ninguna partida aparece como un guion, nunca como 0.",
 };

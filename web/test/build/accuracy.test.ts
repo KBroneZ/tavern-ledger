@@ -63,6 +63,25 @@ test("the page shows the committed numbers: counts, version and date", () => {
   assert.ok(es.includes(`${data.modes.duos.most_likely_right} de ${data.modes.duos.scored} combates`));
 });
 
+test("the page lists the misses by cause, largest first, and the game builds", () => {
+  const total = data.misses.total;
+  for (const page of PAGES) {
+    const es = page.startsWith("es/");
+    const html = read(page);
+    const section = html.slice(html.indexOf('aria-labelledby="acc-causes"'), html.indexOf('aria-labelledby="acc-cards"'));
+    assert.ok(section.includes(es ? "Por qué fallaron las probabilidades" : "Why the odds missed"), page);
+    assert.equal((section.match(/<tr>/g) ?? []).length - 1, data.misses.causes.length, `${page}: a row for each cause`);
+    assert.ok(text(section).includes(String(total)), `${page}: the total`);
+    assert.match(section, /<th scope="col" class="num adv">/, `${page}: Solo and Duos columns are Advanced only`);
+    const builds = html.slice(html.indexOf('aria-labelledby="acc-builds"'), html.indexOf('aria-labelledby="acc-about"'));
+    assert.ok(builds.includes(es ? "Versiones del juego comprobadas" : "Supported game versions"), page);
+    for (const b of data.builds.checked) assert.ok(builds.includes(`<td>${b.build}</td>`), `${page}: build ${b.build}`);
+    assert.ok(text(builds).includes(String(data.builds.newest)), page);
+  }
+  const names = text(read("accuracy/index.html"));
+  assert.ok(names.includes("Chance") || data.misses.causes.every((c) => c.cause !== "chance"));
+});
+
 test("the accuracy page fetches nothing and runs no script of its own", () => {
   for (const page of PAGES) {
     const html = read(page);

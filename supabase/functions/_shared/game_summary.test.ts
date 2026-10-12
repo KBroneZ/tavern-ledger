@@ -57,7 +57,7 @@ function minion(atk: number, health: number, golden = false, card_id: string | n
 Deno.test("the summary has exactly the game_stats columns", () => {
   const s = summarize(report());
   assertEquals(Object.keys(s).sort(), [...STATS_KEYS].sort());
-  assertEquals(SUMMARY_VERSION, 2);
+  assertEquals(SUMMARY_VERSION, 3);
 });
 
 Deno.test("a report with no rounds, shop or pick backs nothing: every number is null", () => {
@@ -258,6 +258,59 @@ Deno.test("a hit that is not a plain number in range is not used (the replay is 
     // Falls back to the health drop, 30 -> 22.
     assertEquals([s.damage_taken, s.damage_taken_max], [8, 8], JSON.stringify(extra));
   }
+});
+
+Deno.test("the max damage is inferred only when no combat at that value has the game's hit", () => {
+  const all = summarize(report({
+    rounds: [
+      round(1, 2, { own_health_after: 26, result: "lost", ...withHit("own", 4) }),
+      round(2, 3, { own_health_after: 26, result: "won", ...withHit("opponent", 7) }),
+    ],
+  }));
+  assertEquals([all.damage_taken_max_inferred, all.damage_dealt_max_inferred], [false, false]);
+
+  // No replay: both maxima come from health.
+  const health = summarize(report({
+    rounds: [
+      round(1, 2, {
+        own_health_after: 24,
+        health_after: { "1": 24, "2": 30, "3": 30 },
+        result: "lost",
+      }),
+      round(2, 3, {
+        own_health_after: 24,
+        health_after: { "1": 24, "2": 30, "3": 20 },
+        result: "won",
+      }),
+    ],
+  }));
+  assertEquals([health.damage_taken_max, health.damage_taken_max_inferred], [6, true]);
+  assertEquals([health.damage_dealt_max, health.damage_dealt_max_inferred], [10, true]);
+});
+
+Deno.test("a bigger health drop than every hit keeps the max inferred; an equal hit makes it logged", () => {
+  const rounds = (hit: number) => [
+    // Health says 9 (some of it paid in the shop), no replay.
+    round(1, 2, { own_health_after: 21, result: "lost" }),
+    // The game's hit.
+    round(2, 3, { own_health_after: 21, result: "lost", ...withHit("own", hit) }),
+  ];
+  const smaller = summarize(report({ rounds: rounds(5) }));
+  assertEquals([smaller.damage_taken_max, smaller.damage_taken_max_inferred], [9, true]);
+  const equal = summarize(report({ rounds: rounds(9) }));
+  assertEquals([equal.damage_taken_max, equal.damage_taken_max_inferred], [9, false]);
+});
+
+Deno.test("a recorded tie is from the log: a max of 0 is not inferred", () => {
+  const s = summarize(report({ rounds: [round(1, 2, { own_health_after: null, result: "tie" })] }));
+  assertEquals([s.damage_taken_max, s.damage_taken_max_inferred], [0, false]);
+  assertEquals([s.damage_dealt_max, s.damage_dealt_max_inferred], [0, false]);
+});
+
+Deno.test("no damage max, no flag: unknown stays unknown", () => {
+  const s = summarize(report());
+  assertEquals([s.damage_taken_max, s.damage_taken_max_inferred], [null, null]);
+  assertEquals([s.damage_dealt_max, s.damage_dealt_max_inferred], [null, null]);
 });
 
 Deno.test("the last hit of the replay is the one that counts", () => {

@@ -91,6 +91,8 @@ describe("heroes and curious stats on the local stack", { skip: !ENABLED && "set
       damage_dealt: g.dealt * 2,
       damage_dealt_combats: 4,
       damage_dealt_max: g.dealt,
+      // Games 2 and 3 tie at 14; only the later one has the game's own hit, and it wins the record.
+      damage_dealt_max_inferred: g.i === 3 ? false : null,
       gold_spent: 100,
       gold_spent_turns: 10,
       shop_turns: 10,
@@ -122,7 +124,7 @@ describe("heroes and curious stats on the local stack", { skip: !ENABLED && "set
     const data = await loadCurious(owner().client, owner().id);
     const dealt = data.records.find((r) => r.mode === "solo" && r.record === "damage_dealt_max");
     assert.ok(dealt);
-    assert.deepEqual([dealt.value, dealt.session, dealt.gameIndex, dealt.games, dealt.inferred], [14, SESSION, 2, 3, true]);
+    assert.deepEqual([dealt.value, dealt.session, dealt.gameIndex, dealt.games, dealt.inferred], [14, SESSION, 3, 3, false]);
     const solo = data.overviews.find((o) => o.mode === "solo");
     assert.deepEqual([solo?.goldSpent, solo?.goldSpentGames, solo?.games], [300, 3, 3]);
   });

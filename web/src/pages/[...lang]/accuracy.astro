@@ -17,7 +17,7 @@ import rawAccuracy from "../../data/accuracy.json";
 import rawNames from "../../data/accuracy-cards.json";
 import { MODES, parseAccuracy, parseCardNames } from "../../lib/accuracy/data.ts";
 import { at } from "../../lib/accuracy/strings.ts";
-import { blockingRows, calibrationBars, dayText, modeFigures } from "../../lib/accuracy/view.ts";
+import { blockingRows, buildsView, calibrationBars, causeRows, dayText, modeFigures } from "../../lib/accuracy/view.ts";
 import { langPaths, numberFormat, setLang } from "../../lib/i18n.ts";
 import { st } from "../../lib/site/strings.ts";
 
@@ -33,6 +33,8 @@ const modes = MODES.map((mode) => ({
   bars: calibrationBars(data.modes[mode].calibration),
 }));
 const cards = blockingRows(data.blocking_cards, names);
+const causes = causeRows(data.misses.causes);
+const builds = buildsView(data.builds, data.date);
 const version = at("page.version", {
   version: data.engine_version,
   date: dayText(data.date),
@@ -77,6 +79,42 @@ const version = at("page.version", {
       ))
     }
 
+    <section class="data-section" aria-labelledby="acc-causes">
+      <h2 id="acc-causes">{at("causes.title")}</h2>
+      <p class="data-note">{at("causes.desc", { total: numberFormat({ maximumFractionDigits: 0 }).format(data.misses.total) })}</p>
+      {
+        causes.length === 0 ? (
+          <p>{at("causes.none")}</p>
+        ) : (
+          <table class="dtable acc-causes">
+            <thead>
+              <tr>
+                <th scope="col">{at("causes.col.cause")}</th>
+                <th scope="col" class="num">{at("causes.col.combats")}</th>
+                <th scope="col" class="num">{at("causes.col.share")}</th>
+                <th scope="col" class="num adv">{at("causes.col.solo")}</th>
+                <th scope="col" class="num adv">{at("causes.col.duos")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {causes.map((c) => (
+                <tr>
+                  <th scope="row">
+                    <span class="acc-cause">{c.name}</span>
+                    <span class="acc-why">{c.why}</span>
+                  </th>
+                  <td class="num">{c.combats}</td>
+                  <td class="num">{c.share}</td>
+                  <td class="num adv">{c.solo}</td>
+                  <td class="num adv">{c.duos}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )
+      }
+    </section>
+
     <section class="data-section" aria-labelledby="acc-cards">
       <h2 id="acc-cards">{at("cards.title")}</h2>
       <p class="data-note">{at("cards.desc")}</p>
@@ -102,6 +140,34 @@ const version = at("page.version", {
               ))}
             </tbody>
           </table>
+        )
+      }
+    </section>
+
+    <section class="data-section acc-builds" aria-labelledby="acc-builds">
+      <h2 id="acc-builds">{at("builds.title")}</h2>
+      <p>{builds.summary}</p>
+      {
+        builds.rows.length > 0 && (
+          <>
+            <p class="data-note">{at("builds.desc")}</p>
+            <table class="dtable">
+              <thead>
+                <tr>
+                  <th scope="col">{at("builds.col.build")}</th>
+                  <th scope="col" class="num">{at("builds.col.games")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {builds.rows.map((b) => (
+                  <tr>
+                    <td>{b.build}</td>
+                    <td class="num">{b.games}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
         )
       }
     </section>
