@@ -42,6 +42,14 @@ const counts = (
   skips: Partial<typeof NO_SKIPS> = {},
 ) => ({ listed, looked_at, filled, left, skipped: { ...NO_SKIPS, ...skips } });
 
+/** What sweep_housekeeping() measures (T-543); far from the limits. */
+const CAPACITY = {
+  database: { bytes: 13_276_851, limit: 500_000_000, level: "none" },
+  files: { bytes: 292_626, count: 41, limit: 1_000_000_000, level: "none" },
+  level: "none",
+  limits_read_on: "2026-10-12",
+};
+
 type Bytes = Uint8Array<ArrayBuffer>;
 
 interface Missing {
@@ -61,6 +69,8 @@ function fakeApi(
     missing?: Missing[];
     objects?: Record<string, Bytes>;
     put?: string;
+    /** sweep_housekeeping()'s capacity; CAPACITY unless given, left out if undefined. */
+    capacity?: unknown;
   } = {},
 ) {
   let files = [...(opts.files ?? [])];
@@ -83,7 +93,14 @@ function fakeApi(
       return reply(200, []);
     }
     if (path === "/rest/v1/rpc/sweep_housekeeping") {
-      return reply(200, { auth_events: 1, upload_events: 2, ip_failures: 3, run_id: RUN });
+      const capacity = "capacity" in opts ? opts.capacity : CAPACITY;
+      return reply(200, {
+        auth_events: 1,
+        upload_events: 2,
+        ip_failures: 3,
+        capacity,
+        run_id: RUN,
+      });
     }
     if (path === "/rest/v1/rpc/sweep_record_result") return reply(200, null);
     if (path === "/rest/v1/rpc/sweep_record_failure") return reply(200, RUN);
@@ -118,6 +135,7 @@ Deno.test("deletes orphan files through the Storage API, then housekeeping", asy
     upload_events: 2,
     ip_failures: 3,
     stats: counts(0, 0, 0, 0),
+    capacity: CAPACITY,
   });
   assertEquals(api.files(), []);
   assertEquals(api.calls.map((c) => `${c.method} ${c.path}`), [
@@ -468,4 +486,98 @@ Deno.test("a file cut off while reading is no_file; one too large is bad_file", 
   };
   const res = await handle(request(), ENV, fetchFn);
   assertEquals((await res.json()).stats, counts(2, 2, 0, 0, { no_file: 1, bad_file: 1 }));
+});
+
+/** Runs fn with console.warn and console.error captured. */
+async function captureLogs(fn: () => Promise<void>): Promise<string[]> {
+  const lines: string[] = [];
+  const { warn, error } = console;
+  console.warn = (...a: unknown[]) => lines.push(a.join(" "));
+  console.error = (...a: unknown[]) => lines.push(a.join(" "));
+  try {
+    await fn();
+  } finally {
+    console.warn = warn;
+    console.error = error;
+  }
+  return lines;
+}
+
+const finished = (api: ReturnType<typeof fakeApi>) =>
+  api.calls.some((c) => c.path === "/rest/v1/rpc/sweep_record_result");
+
+Deno.test("the response carries the capacity; far from the limits nothing is logged", async () => {
+  const api = fakeApi();
+  let body: Record<string, unknown> = {};
+  const logs = await captureLogs(async () => {
+    body = await (await handle(request(), ENV, api.fetchFn)).json();
+  });
+  assertEquals(body.capacity, CAPACITY);
+  assertEquals(logs, []);
+});
+
+Deno.test("50 % or 80 % of a limit is logged with the percentages only", async () => {
+  const at80 = {
+    ...CAPACITY,
+    files: { bytes: 820_000_000, count: 54_000, limit: 1_000_000_000, level: "80%" },
+    database: { bytes: 260_000_000, limit: 500_000_000, level: "50%" },
+    level: "80%",
+  };
+  const api = fakeApi({ capacity: at80 });
+  let res = new Response();
+  const logs = await captureLogs(async () => {
+    res = await handle(request(), ENV, api.fetchFn);
+  });
+  assertEquals(res.status, 200);
+  assertEquals((await res.json()).capacity, at80);
+  assertEquals(logs, ["sweep: storage at 80% of a Free plan limit (database 52 %, files 82 %)"]);
+  assertEquals(finished(api), true);
+});
+
+Deno.test("a failed measurement is passed on and logged, never fatal", async () => {
+  const failed = { failed: true, sqlstate: "XX000" };
+  const api = fakeApi({ capacity: failed });
+  let res = new Response();
+  const logs = await captureLogs(async () => {
+    res = await handle(request(), ENV, api.fetchFn);
+  });
+  assertEquals(res.status, 200);
+  const body = await res.json();
+  assertEquals([body.capacity, body.stats], [failed, counts(0, 0, 0, 0)]);
+  assertEquals(logs, ["sweep: capacity not measured (SQLSTATE XX000)"]);
+  assertEquals(finished(api), true);
+});
+
+Deno.test("a missing or odd capacity is null in the response, logged, never fatal", async () => {
+  const odd: unknown[] = [
+    undefined, // a database from before the migration
+    null,
+    "full",
+    { ...CAPACITY, level: "90%" },
+    { ...CAPACITY, files: { ...CAPACITY.files, bytes: -1 } },
+    { ...CAPACITY, database: { ...CAPACITY.database, bytes: "13 MB" } },
+    { ...CAPACITY, database: { ...CAPACITY.database, limit: 0 } },
+    { ...CAPACITY, limits_read_on: "yesterday" },
+    { failed: true, sqlstate: "not a state" },
+    { failed: false, sqlstate: "XX000" },
+  ];
+  for (const capacity of odd) {
+    // JSON leaves out an undefined capacity, as a database before T-543 does.
+    const api = fakeApi({ capacity });
+    let res = new Response();
+    const logs = await captureLogs(async () => {
+      res = await handle(request(), ENV, api.fetchFn);
+    });
+    assertEquals(res.status, 200, JSON.stringify(capacity));
+    assertEquals((await res.json()).capacity, null, JSON.stringify(capacity));
+    assertEquals(logs, ["sweep: capacity missing or out of shape"], JSON.stringify(capacity));
+    assertEquals(finished(api), true);
+  }
+});
+
+Deno.test("only the known capacity fields reach the response", async () => {
+  const extra = { ...CAPACITY, note: "x", files: { ...CAPACITY.files, name: "y" } };
+  const api = fakeApi({ capacity: extra });
+  const body = await (await handle(request(), ENV, api.fetchFn)).json();
+  assertEquals(body.capacity, CAPACITY);
 });
