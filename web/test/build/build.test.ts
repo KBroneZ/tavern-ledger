@@ -583,6 +583,9 @@ test("accounts open: the data pages are a static frame with reserved room for th
   assert.match(games, /<form class="list-filters" id="list-filters" method="get" action="\/games\/"/);
   for (const name of ["mode", "hero", "from", "to", "place"]) assert.match(games, new RegExp(`name="${name}"`), name);
   assert.match(games, /class="dash-body" id="list-body"/);
+  // Its Advanced columns (rounds, APM) need the detail switch and its script (T-559).
+  assert.match(games, /data-switch="detail"/);
+  assert.match(games, /<script type="module" src="\/_astro\/DataScript[^"]*"/);
   // The owner's pages stay out of search engines; the menu links to the dashboard.
   for (const file of ["me/index.html", "games/index.html"]) assert.match(page(file), /<meta name="robots" content="noindex">/, file);
   assert.match(page("index.html"), /href="\/me\/"/);

@@ -152,8 +152,8 @@ html,
     var(--panel-wood);
 }
 
-/* Below two columns the headline tile takes the one column. */
-@media (max-width: 300px) {
+/* Where two columns may not fit (a narrow window with a scroll bar), the headline tile takes one. */
+@media (max-width: 340px) {
   .tile-hero {
     grid-column: auto;
   }

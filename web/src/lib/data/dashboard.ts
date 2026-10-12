@@ -54,7 +54,7 @@ export function overviewTiles(ov: Overview, recentPlaces: (number | null)[]): Ti
         ? t("tile.combats.back", { known: fought, unknown: ov.combatsUnknown as number })
         : backed(ov.combatGames, ov.games),
     // Unknown results stay in view: the share is of the known ones only.
-    backingAlways: fought !== null && (ov.combatsUnknown ?? 0) > 0,
+    backingAlways: fought !== null && ((ov.combatsUnknown ?? 0) > 0 || ov.combatGames < ov.games),
     source: ov.combatGames === 0 ? "unknown" : (ov.combatsInferred ?? 0) > 0 ? "inferred" : undefined,
   };
   const simple: TileProps[] = [
@@ -163,7 +163,7 @@ function combatsCell(g: GameRow): Cell {
 
 /** Triples count at the end of a finished game: an unfinished one says why it has none, not "unknown". */
 function triplesCell(g: GameRow): Cell {
-  if (g.triples !== null || g.status === "ok") return maybe(g.triples);
+  if (g.triples !== null || g.status !== "incomplete") return maybe(g.triples);
   return { node: [h("span", { "aria-hidden": "true" }, t("value.none")), h("span", { class: "visually-hidden" }, t("games.triples.unfinished"))] };
 }
 

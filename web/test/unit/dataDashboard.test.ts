@@ -139,6 +139,10 @@ test("combats won: unknown combats are said next to the share of known ones", ()
   assert.equal(simple[4].value, "71%");
   assert.equal(simple[4].backing, "of 7 combats with a known result; 6 unknown");
   assert.equal(simple[4].backingAlways, true);
+  // Combats known in only some games: also partial, so the line stays in view.
+  const some = overviewTiles(overview(overviewRow({ combats_unknown: 0, combat_games: 5 })), []).simple[4];
+  assert.equal(some.backingAlways, true);
+  assert.equal(overviewTiles(overview(overviewRow({ combats_unknown: 0, combat_games: 31 })), []).simple[4].backingAlways, false);
 });
 
 test("heroes: games without a place are said next to the games, since places count finished games only", () => {
@@ -152,4 +156,7 @@ test("an unfinished game's triples say why there is no count; rounds, APM and th
   assert.equal(toHtml((cells[triples] as { node: VNode[] }).node[1]), '<span class="visually-hidden">Not counted: the game is unfinished</span>');
   assert.deepEqual(gameColumns(false).filter((c) => c.advanced).map((c) => c.label), ["Rounds", "APM"]);
   assert.deepEqual(RECORD_COLUMNS.filter((c) => c.advanced).map((c) => c.label), ["Based on"]);
+  // An unreadable game is not unfinished: its triples stay a plain unknown.
+  const unsupported = gameCells(gameRow(gameRaw({ status: "unsupported", triples: null })), false);
+  assert.match(toHtml((unsupported[triples] as { node: VNode[] }).node[1]), />Unknown</);
 });
