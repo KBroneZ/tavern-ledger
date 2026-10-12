@@ -1,11 +1,13 @@
 ---
 import Base from "../../layouts/Base.astro";
+import SceneDepth from "../../components/home/SceneDepth.astro";
 import TavernBackdrop from "../../components/home/TavernBackdrop.astro";
 import Button from "../../components/ui/Button.astro";
 import "../../styles/home.css";
 import "../../styles/scene.css";
+import "../../styles/scene-details.css";
 import "../../styles/tavern.css";
-import { readConfig } from "../../lib/config.ts";
+import { readConfig, scriptsAllowed } from "../../lib/config.ts";
 import { dateFormat, href, langPaths, numberFormat, setLang } from "../../lib/i18n.ts";
 import { NEWS } from "../../lib/site/news.ts";
 import { st } from "../../lib/site/strings.ts";
@@ -15,6 +17,8 @@ export const getStaticPaths = langPaths;
 setLang(Astro.props.lang);
 
 const accountsOpen = readConfig(import.meta.env) !== null;
+// The descent's pinned-scene slowdown and the scene's hero tokens (T-530).
+const homeScript = scriptsAllowed(import.meta.env, import.meta.env.DEV);
 
 // The scene's five steps (D-052). The captions stay readable to screen
 // readers in both the moving and the still scene; the picture's description
@@ -54,6 +58,7 @@ const newsDay = (date: string) =>
   <section class="pin" id="scene" aria-labelledby="scene-title">
     <h2 id="scene-title" class="visually-hidden">{st("home.scene.title")}</h2>
     <div class="pin-stage">
+      <SceneDepth />
       <div class="caption-col">
         <div class="pips" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
         <ol class="captions" role="list">
@@ -165,4 +170,5 @@ const newsDay = (date: string) =>
   <div class="cellar">
     <Button kind="small" href="#main">{st("home.top")}</Button>
   </div>
+  {homeScript && <script src="../../scripts/home.ts"></script>}
 </Base>

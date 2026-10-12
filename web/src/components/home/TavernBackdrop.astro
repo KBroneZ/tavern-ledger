@@ -1,13 +1,10 @@
 ---
 // The home page's painting (T-530, D-105): fixed behind the whole page, from
-// the barrel door at the top to the cellar at the bottom; scripts/descent.ts
-// moves it as the page scrolls (only with accounts open: the closed build has
-// no script, and then it stays still at the door, as with reduced motion).
+// the barrel door at the top to the cellar at the bottom. home.css moves it on
+// the scroll timeline; scripts/descent.ts (in scripts/home.ts, loaded by the
+// home page where scripts may run) takes over and slows it in the pinned scene.
 // In front of it, a shade that keeps the centre dark for reading and a few
 // rising sparks. Decorative only: hidden from screen readers.
-import { scriptsAllowed } from "../../lib/config.ts";
-
-const moves = scriptsAllowed(import.meta.env, import.meta.env.DEV);
 // Gold sparks on the left, blue on the right, as in the painting.
 const sparks = Array.from({ length: 16 });
 ---
@@ -37,4 +34,3 @@ const sparks = Array.from({ length: 16 });
   <div class="backdrop-shade"></div>
   <div class="sparks">{sparks.map(() => <i></i>)}</div>
 </div>
-{moves && <script src="../../scripts/descent.ts"></script>}

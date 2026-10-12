@@ -418,6 +418,21 @@ test("the home page's buttons by role: one gold key action, wood for common ones
   }
 });
 
+test("the scene's depth: decorative, empty hero tokens filled only at view time, nothing loaded from outside", () => {
+  for (const file of ["index.html", "es/index.html"]) {
+    const html = readFileSync(join(DIST, file), "utf8");
+    const section = /<section class="pin" id="scene"[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
+    const depth = /<div class="pin-depth" aria-hidden="true">([\s\S]*?)<\/div>\s*<div class="caption-col">/.exec(section);
+    assert.ok(depth, `${file}: the depth layer comes first in the stage and is hidden from screen readers`);
+    assert.equal([...depth[1].matchAll(/<span class="token"><\/span>/g)].length, 6, `${file}: six empty tokens`);
+    // Hero portraits come from HearthstoneJSON at view time (D-074), never in the page.
+    assert.doesNotMatch(depth[1], /<img\b|hearthstonejson/);
+    // One home script, and only where scripts may run.
+    const scripts = [...html.matchAll(/<script\b[^>]*src="\/_astro\/[^"]+"/g)];
+    assert.equal(scripts.length, CONFIG !== null ? 1 : 0, file);
+  }
+});
+
 test("every number on the home page that is not real is labelled as made up", () => {
   const html = readFileSync(join(DIST, "index.html"), "utf8");
   const big = [...html.matchAll(/<p class="big">\s*(\d+)\s*<small>([^<]+)<\/small>/g)];
