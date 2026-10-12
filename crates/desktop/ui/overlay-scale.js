@@ -1,7 +1,7 @@
 // Text sizes of the overlay (T-334): they follow the screen, not fixed pixels,
 // so the text reads at a glance at 3840x2160 at 150% as at 1920x1080 at 100%.
-// The overlay window covers the game's monitor in its own (logical) pixels,
-// so a share of its height is the same share of the screen at any scaling.
+// The overlay window covers the game's picture in its own (logical) pixels,
+// so a share of its height is the same share of the game at any scaling.
 // The hover board's text follows the board's width, which the app sizes to
 // the game window (hover.rs). Pure, so it is tested without a page
 // (ui-tests/overlay-scale.test.js).
