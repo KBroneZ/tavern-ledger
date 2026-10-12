@@ -635,8 +635,7 @@ html[data-detail="advanced"] .simple-only {
 /* Data on the painting sits in a dark well with a bronze edge: the chart
    colours were checked on this surface (--surface-chart), and table rows
    read the same over any part of the painting. Inside a panel, a fold, a
-   tile or another well, the surface around it is the well already. The game
-   page keeps its own boxes. */
+   tile or another well, the surface around it is the well already. */
 .chart,
 .scroll-x:has(> .dtable),
 .data-section > .dtable {
@@ -672,8 +671,7 @@ html[data-detail="advanced"] .simple-only {
   border-bottom-right-radius: var(--r-tile);
 }
 
-:is(.chart, .panel, .fold, .tile, .gv) :is(.chart, .scroll-x:has(> .dtable)),
-.gv .chart {
+:is(.chart, .panel, .fold, .tile) :is(.chart, .scroll-x:has(> .dtable)) {
   padding: 0;
   background: none;
   box-shadow: none;
@@ -928,7 +926,7 @@ html[data-detail="advanced"] .simple-only {
     border: 1px solid CanvasText;
   }
 
-  :is(.chart, .panel, .fold, .tile, .gv) :is(.chart, .scroll-x:has(> .dtable)) {
+  :is(.chart, .panel, .fold, .tile) :is(.chart, .scroll-x:has(> .dtable)) {
     border: 0;
   }
 

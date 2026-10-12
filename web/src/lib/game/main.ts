@@ -57,7 +57,7 @@ function showError(kind: "unreadable" | "error", retry: () => void): void {
     show(g("state.unreadable.title"), [state("error", "state.unreadable.title", "state.unreadable.body")], g("state.unreadable.title"));
     return;
   }
-  const button = h("button", { type: "button", id: RETRY }, g("state.retry"));
+  const button = h("button", { type: "button", class: "tb tb-small", id: RETRY }, g("state.retry"));
   show(g("state.error.title"), [state("error", "state.error.title", "state.error.body", button)], g("state.error.title"));
   byId(RETRY).addEventListener("click", retry);
 }
