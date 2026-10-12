@@ -47,8 +47,8 @@ export function profileErrorMessage(e: { code?: string; message?: string }): str
   return at("profile.saveFailed");
 }
 
-/** A failed save of the community stats switch, as the account page shows it. */
-export function communityErrorMessage(e: { code?: string }): string {
+/** A failed save of an account switch (community stats, simulator), as the account page shows it. */
+export function switchErrorMessage(e: { code?: string }): string {
   if (e.code === "PGRST301" || e.code === "42501") return at("profile.sessionEnded");
   return at("profile.saveFailed");
 }

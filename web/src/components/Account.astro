@@ -87,13 +87,31 @@ import { at } from "../lib/account/strings.ts";
             {at("account.community.label")}
             <span class="hint">
               {at("account.community.hint.before")}
-              <a href={href("/heroes/")}>{at("account.community.hint.link")}</a>{at("account.community.hint.after")}
+              <a href={href("/heroes/")}>{at("account.community.hint.link")}</a>{at("account.community.hint.after")}{" "}
               <a href={href("/privacy/#community-hero-stats")}>{at("account.community.how")}</a>.
             </span>
           </span>
         </label>
         <button type="submit">{at("account.save")}</button>
         <p class="message" id="community-message" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="panel" aria-labelledby="simulator-heading">
+      <h2 id="simulator-heading">{at("account.simulator")}</h2>
+      <form id="simulator-form" novalidate>
+        <label class="check">
+          <input type="checkbox" name="improve_simulator" />
+          <span>
+            {at("account.simulator.label")}
+            <span class="hint">
+              {at("account.simulator.hint")}{" "}
+              <a href={href("/privacy/#improving-the-simulator")}>{at("account.simulator.how")}</a>.
+            </span>
+          </span>
+        </label>
+        <button type="submit">{at("account.save")}</button>
+        <p class="message" id="simulator-message" role="status" aria-live="polite"></p>
       </form>
     </section>
   </div>

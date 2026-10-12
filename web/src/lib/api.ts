@@ -21,7 +21,7 @@ import type { SiteConfig } from "./config.ts";
 import type { Lang } from "./i18n.ts";
 import { type DeleteOutcome, deleteOutcome } from "./deleteAccount.ts";
 import { buildExport, type ExportFile, ownFileNames } from "./exportData.ts";
-import { communityErrorMessage, profileErrorMessage } from "./profile.ts";
+import { profileErrorMessage, switchErrorMessage } from "./profile.ts";
 
 const TIMEOUT_MS = 15_000;
 
@@ -277,11 +277,40 @@ export async function loadCommunityConsent(client: SupabaseClient, userId: strin
 export async function saveCommunityConsent(client: SupabaseClient, on: boolean): Promise<string | null> {
   try {
     const { data, error } = await client.rpc("set_community_consent", { p_hero_stats: on });
-    if (error) return communityErrorMessage(error);
-    if (data !== on) return communityErrorMessage({});
+    if (error) return switchErrorMessage(error);
+    if (data !== on) return switchErrorMessage({});
     return null;
   } catch {
-    return communityErrorMessage({});
+    return switchErrorMessage({});
+  }
+}
+
+/**
+ * The "improve the simulator" switch (T-547): off unless the account turned
+ * it on (no row is off). Throws when it cannot be read, so the page never
+ * shows "off" for an account that may have it on.
+ */
+export async function loadSimulatorConsent(client: SupabaseClient, userId: string): Promise<boolean> {
+  const { data, error } = await client
+    .from("simulator_consent")
+    .select("improve_simulator")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error("could not load the simulator setting");
+  if (data === null) return false;
+  if (typeof data.improve_simulator !== "boolean") throw new Error("could not load the simulator setting");
+  return data.improve_simulator;
+}
+
+/** null when saved, else the message to show. Only the signed-in owner can set it (set_simulator_consent). */
+export async function saveSimulatorConsent(client: SupabaseClient, on: boolean): Promise<string | null> {
+  try {
+    const { data, error } = await client.rpc("set_simulator_consent", { p_improve: on });
+    if (error) return switchErrorMessage(error);
+    if (data !== on) return switchErrorMessage({});
+    return null;
+  } catch {
+    return switchErrorMessage({});
   }
 }
 

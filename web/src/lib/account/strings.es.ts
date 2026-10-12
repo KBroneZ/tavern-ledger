@@ -69,6 +69,11 @@ export const ES: Record<AccountKey, string> = {
   "account.community.hint.after":
     ", que se muestran solo como totales redondeados de al menos 5 jugadores y nunca con tu nombre. Si lo desactivas, tus partidas se retiran en la siguiente actualización diaria.",
   "account.community.how": "Cómo funciona",
+  "account.simulator": "Mejorar el simulador",
+  "account.simulator.label": "Permitir que se usen mis partidas para mejorar el simulador",
+  "account.simulator.hint":
+    "Desactivado por defecto. Si lo activas, los tableros y las repeticiones de los combates de tus partidas subidas (mientras se conserven sus archivos) se pueden usar para medir cuántas veces acierta el simulador de combates y para corregir sus reglas. Los resultados son siempre totales de muchas partidas: nunca se publican por jugador ni con tu nombre. Puedes desactivarlo cuando quieras: desde ese momento tus partidas no se vuelven a usar, y los totales ya calculados con ellas no permiten llegar hasta ti.",
+  "account.simulator.how": "Cómo funciona",
   "account.delete": "Borrar cuenta",
   "account.delete.body":
     "Esto borra tu cuenta, tu perfil, todas las partidas y archivos subidos y tu historial de inicios de sesión. No se puede deshacer. Descarga antes tus datos si quieres conservarlos.",
@@ -86,6 +91,9 @@ export const ES: Record<AccountKey, string> = {
   "account.community.savedOn": "Guardado. Tus partidas cuentan a partir de la siguiente actualización diaria.",
   "account.community.savedOff": "Guardado. Tus partidas quedan fuera a partir de la siguiente actualización diaria.",
   "account.community.unchanged": "{error} Tu ajuste no ha cambiado.",
+  "account.simulator.savedOn": "Guardado. Tus partidas ya se pueden usar para mejorar el simulador.",
+  "account.simulator.savedOff": "Guardado. Tus partidas ya no se usan para el simulador.",
+  "account.simulator.unchanged": "{error} Tu ajuste no ha cambiado.",
   "account.export.preparing": "Preparando tu archivo…",
   "account.export.done": "Descargado.",
   "account.export.failed": "La exportación ha fallado. Vuelve a intentarlo en un momento.",

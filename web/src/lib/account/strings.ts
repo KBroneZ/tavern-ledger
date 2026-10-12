@@ -72,6 +72,11 @@ export const ACCOUNT_STRINGS = {
   "account.community.hint.after":
     ", shown only as rounded totals over at least 5 players and never with your name; turning it off takes them out at the next daily update.",
   "account.community.how": "How this works",
+  "account.simulator": "Improve the simulator",
+  "account.simulator.label": "Let my games be used to improve the simulator",
+  "account.simulator.hint":
+    "Off by default. When on, the boards and combat replays of your uploaded games (while their files are kept) can be used to measure how often the combat simulator is right and to fix its rules. Results are only ever totals over many games: never published per player, never with your name. You can turn it off at any time: from then on your games are not used again, and totals already worked out from them cannot be traced back to you.",
+  "account.simulator.how": "How this works",
   "account.delete": "Delete account",
   "account.delete.body":
     "This deletes your account, your profile, every uploaded game and file, and your sign-in history. It cannot be undone. Download your data first if you want to keep it.",
@@ -89,6 +94,9 @@ export const ACCOUNT_STRINGS = {
   "account.community.savedOn": "Saved. Your games count from the next daily update.",
   "account.community.savedOff": "Saved. Your games are left out from the next daily update.",
   "account.community.unchanged": "{error} Your setting is unchanged.",
+  "account.simulator.savedOn": "Saved. Your games can now be used to improve the simulator.",
+  "account.simulator.savedOff": "Saved. Your games are no longer used for the simulator.",
+  "account.simulator.unchanged": "{error} Your setting is unchanged.",
   "account.export.preparing": "Preparing your file…",
   "account.export.done": "Downloaded.",
   "account.export.failed": "The export failed. Try again in a moment.",

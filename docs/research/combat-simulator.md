@@ -288,9 +288,29 @@ The user's ask (2026-10-12): iterate and research until the simulator is accurat
 cargo run --release -p combat-sim --bin combat-validate -- --games <folder or file>... --cards <tmp>\cards.json --summary
 ```
 
-- **Other players' games.** The privacy policy (section 4) does not list measuring the simulator as a use of uploaded games, so the summary is run only on games their owners hand over for it (their own `games.jsonl`, with their consent) until the user decides otherwise (section 10, question 5). Nothing of theirs was read in this session.
+- **Other players' games.** The privacy policy (section 4) does not list measuring the simulator as a use of uploaded games, so the summary is run only on games their owners hand over for it (their own `games.jsonl`, with their consent) until the user decides otherwise (section 10, question 5). Nothing of theirs was read in this session. Since T-547 (D-119) uploaded games can also be used with their owner's consent: section 7.8.
 
 **Tests.** Unit tests for each rule (`combat_t609_tests.rs`, some with the numbers of the user's combats: the 95/12 Eternal Knight of game 4 round 10, the De-volition-ist of game 1 round 10), the replay of a start-of-combat attack (`replay_tests.rs`), the parser reading the values and keeping them out of the JSON (`bg-parser/tests/combat_log.rs`), the saved-replay rebuild (`harness_saved_tests.rs`), the game files and the summary; a parity case with a Broodmother and Blood Gems so the website's engine is checked on the new rules.
+
+### 7.8 Uploaded games with their owner's consent (T-547, session 110)
+
+The user's decision (2026-10-12): "Add it to the privacy policy, and give each account an option to allow its games to be used to improve the simulator, or not." D-119.
+
+**Consent.** "Let my games be used to improve the simulator" on the account page, off for every account, stored in `public.simulator_consent` with the time it was last given or withdrawn and the privacy policy version (`set_simulator_consent()`, owner only; migration `20261012200000_simulator_consent.sql`). In the export, removed with the account. Privacy policy section 4, "Improving the simulator"; data inventory S20 and S21.
+
+**What may be used.** Only the full game files still kept (28 days for free accounts, D-109) of accounts whose switch is on at the moment of the run. `public.simulator_files(p_limit)` lists them (storage path, SHA-256, size), newest first; service role only, so no client can call it.
+
+**How the owner runs it** (one command; nothing is kept):
+
+```
+pwsh tools\sim_consented_games.ps1 -Cards <tmp>\cards.json [-Limit 1000]
+```
+
+It reads `.local\supabase.env` (as the backup script, deploy.md 10.2), lists the files, downloads each into `.local\sim-games\<UTC time>\` as `0001.json`, `0002.json`, … (the account id in the Storage path is never written or printed; the folder is readable by the owner's Windows user only), skips any file whose SHA-256 differs from the stored one, runs `combat-validate --games <folder> --cards <file> --summary` (counts, shares, rules and card ids only) and deletes the folder in a `finally`, whatever happened; a file it cannot download or inflate (over 16 MiB inflated, or broken) is skipped and counted, and copies left by a run that could not finish (window closed, power cut) are deleted at the start of the next one. `-Local` runs it on the local stack. Tested only on the local stack with synthetic users and the fixture games (an opted-in account, a file whose hash differs, a withdrawn account); not run on real data in session 110.
+
+**What may be kept and published.** Totals over all the games measured (the summary's counts and shares, causes, card ids) and the rules fixed in the code. Never a per-player number, display name, account id, BattleTag, date or single game. A test added with a fix uses made-up boards, never a copy of a player's game (CLAUDE.md fixtures rule). The accuracy page (section 7.6) still shows the user's own history only; mixing in consented games would be its own change to that page and its texts.
+
+**Withdrawal.** From the moment the switch is off, the account's files are no longer listed. A run under way finishes with its copies and deletes them. Totals and fixes already made stay.
 
 ## 8. One engine for the app and the website
 
@@ -360,4 +380,4 @@ Left blocking, and why: `BG31_999` Stitched Salvager (its Deathrattle copies the
 2. **Which boards the website's simulator may load.** Only your own games, or also other public players' boards. Recommendation: your own games only at first (your boards and the opponents' boards you met, which you saw on screen); other players' boards only from public profiles and only after T-509's privacy texts cover it.
 3. **Duos odds (T-608, done in session 074).** Please check in your next Duos game that "their first board" is the one that fights your first board (the overlay takes the opponent the game marks as next).
 4. **Cards that summon from the hand** (`BG34_140` Expert Aviator, the most seen card not modelled, and `BG31_835`, `BG21_HERO_030t`): today they block the odds ("a card is not modelled"). They could play as approximate, with the hand summon left out and the card named. Recommendation: keep them blocking; the summon is often the biggest minion of the combat. **Applied** (the hub's call, session 075): after round 4, counting `BG34_Giant_017` (also from the hand), they are on a board in 25 of the 232 Duos combats of the history (15 of 84 in the logs) and alone block 21 of them (13 in the logs), 9% of the Duos combats. **Changed in round 5 (session 083, D-097):** the 21 combats played with the hand summon left out gave the real result as often as the combats already scored (17 of 21 right; section 7.6), so the hand summoners now play as approximate and are named with the reason; the harness keeps scoring their combats apart to check this as games come in.
-5. **Other players' games for the accuracy numbers (T-609).** `combat-validate --games … --summary` gives only counts, rules and card ids, but the privacy policy does not list this use of uploaded games. Options: (a) only games their owners hand over with their consent (their own `games.jsonl`); (b) add "measuring and improving the simulator, in aggregate" to the policy's uses of uploaded games, with a legal basis and an opt-out, before running it on uploads. Recommendation: (a) now; (b) only if the numbers need more games than the testers hand over.
+5. **Other players' games for the accuracy numbers (T-609).** `combat-validate --games … --summary` gives only counts, rules and card ids, but the privacy policy does not list this use of uploaded games. Options: (a) only games their owners hand over with their consent (their own `games.jsonl`); (b) add "measuring and improving the simulator, in aggregate" to the policy's uses of uploaded games, with a legal basis and an opt-out, before running it on uploads. Recommendation: (a) now; (b) only if the numbers need more games than the testers hand over. **Decided** (the user, 2026-10-12): (b) as opt-in consent, not an opt-out: an account switch, off by default, in the privacy policy (T-547, D-119; section 7.8).

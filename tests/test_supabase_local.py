@@ -190,11 +190,25 @@ class LocalStackTests(unittest.TestCase):
         self.assertNotIn("encrypted_password", json.dumps(doc))
         self.assertEqual(doc["community_consent"],
                          {"hero_stats": False, "updated_at": None, "policy_version": None})
+        self.assertEqual(doc["simulator_consent"],
+                         {"improve_simulator": False, "updated_at": None, "policy_version": None})
 
         # Opted in to the community hero stats: the choice goes with the account.
         status, on = self.api.request("POST", "/rest/v1/rpc/set_community_consent",
                                       token=token, body={"p_hero_stats": True})
         self.assertEqual((status, on), (200, True))
+        # And to the use of their games for the simulator (T-547).
+        status, on = self.api.request("POST", "/rest/v1/rpc/set_simulator_consent",
+                                      token=token, body={"p_improve": True})
+        self.assertEqual((status, on), (200, True))
+        status, files = self.api.request("POST", "/rest/v1/rpc/simulator_files",
+                                         token=token, body={"p_limit": 10})
+        self.assertNotEqual(status, 200, "a user cannot list the opted-in games")
+        status, files = self.api.service("POST", "/rest/v1/rpc/simulator_files",
+                                         body={"p_limit": 10000})
+        self.assertEqual(status, 200)
+        self.assertIn(path, [f["storage_path"] for f in files],
+                      "the owner's list has the opted-in game")
 
         status, result = self.api.request(
             "DELETE", "/functions/v1/delete-account", token=token)
@@ -210,6 +224,7 @@ class LocalStackTests(unittest.TestCase):
             "select (select count(*) from public.games where user_id = '{u}')"
             " + (select count(*) from public.profiles where user_id = '{u}')"
             " + (select count(*) from public.community_consent where user_id = '{u}')"
+            " + (select count(*) from public.simulator_consent where user_id = '{u}')"
             " + (select count(*) from storage.objects where name like '{u}/%')"
             " + (select count(*) from auth.users where id = '{u}')"
             " + (select count(*) from auth.identities where user_id = '{u}')"
@@ -423,6 +438,8 @@ class LocalStackTests(unittest.TestCase):
         files = ("select count(*) from storage.objects"
                  " where bucket_id = 'games' and name like '{u}/%'")
         try:
+            # Report-only first; the migrations ship it live (D-113).
+            _psql("update private.file_retention set live = false")
             status, body = self.api.secret("POST", "/functions/v1/sweep", body={})
             self.assertEqual(status, 200, body)
             r = body["retention"]
@@ -465,7 +482,7 @@ class LocalStackTests(unittest.TestCase):
             self.assertEqual(again["retention"]["due"], r["due"] - r["deleted"],
                              "a marked game is not due again")
         finally:
-            _psql("update private.file_retention set live = false")
+            _psql("update private.file_retention set live = true")
 
     def add_file_only(self, uid, index):
         path = f"{uid}/{SESSION}-{index}.json.gz"
