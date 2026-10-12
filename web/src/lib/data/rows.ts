@@ -1,4 +1,4 @@
-// Rows from the data API's views (T-502, docs/research/web-data-api.md),
+// Rows from the data API's views (T-502, design notes),
 // read as untrusted input (T-503). A count that is not a count, or a mode
 // that is not Solo or Duos, refuses the whole answer: the page says it could
 // not read the data rather than show a wrong number. A value out of its range

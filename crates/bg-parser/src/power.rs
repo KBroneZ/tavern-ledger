@@ -1,6 +1,6 @@
 //! Tokenizes `GameState.DebugPrintPower()` lines into packets.
 //!
-//! Written from the format documented in `docs/research/parser-hslog.md` and
+//! Written from the format documented in the design notes and
 //! the line grammar of hslog (MIT), which the Python prototype used.
 
 /// A tag value: the log prints numbers or enum names (ZONE=PLAY).

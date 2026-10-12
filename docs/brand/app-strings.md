@@ -1,6 +1,6 @@
 # Desktop app strings: proposed wording (T-533 for T-531)
 
-These were wording proposals for the app session T-531; **session 093 applied them** (D-106), keys unchanged, with these differences:
+These were wording proposals for T-531; **they were applied** (D-106), keys unchanged, with these differences:
 
 - `tribe.MECHANICAL` and `ov.tribeShort.MECHANICAL` (ES) stay **Robot**: the esES game's own string for the Mech tribe (`GLOBAL_RACE_MECHANICAL`) is "Robot", so "Mecánico" was not applied.
 - The esES game writes "Campos de batalla" (lowercase b) in its own strings; the app keeps "Campos de Batalla", as the voice guide and the website do. Changing it is one decision for both.

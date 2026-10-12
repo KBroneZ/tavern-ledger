@@ -3,7 +3,7 @@
 //! the names (a command) and the images (the `cardart` protocol, so an
 //! `<img>` can show a cached JPEG). Anything missing shows the card id.
 //!
-//! Names follow the app's language (session 057): the English card data
+//! Names follow the app's language: the English card data
 //! always (the app's logic, the pool and the art rely on it), and the
 //! Spanish one, fetched and kept only once a page asks for Spanish names.
 //! A name the Spanish data lacks comes from the English data.

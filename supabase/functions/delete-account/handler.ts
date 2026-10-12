@@ -1,4 +1,4 @@
-// Account deletion (T-104a, CLAUDE.md rule 6). The signed-in user calls
+// Account deletion (T-104a, project rules). The signed-in user calls
 // DELETE /functions/v1/delete-account with their access token. In this order:
 //   1. the user's files in the `games` bucket, through the Storage API
 //      (deleting storage.objects rows in SQL would leave the bytes behind);

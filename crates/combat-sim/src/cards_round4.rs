@@ -1,4 +1,4 @@
-//! Card coverage, round 4 (T-604, session 075): the cards that blocked most
+//! Card coverage, round 4 (T-604): the cards that blocked most
 //! of the user's combats after round 3 and that the board alone can play,
 //! from their card texts in HearthstoneJSON (D-038). Same rules as
 //! [`crate::cards`]: exact card ids, golden cards written out, approximations

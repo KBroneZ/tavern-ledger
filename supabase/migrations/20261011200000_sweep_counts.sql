@@ -1,4 +1,4 @@
--- T-524 (session 084, D-096): every sweep run records what its stats
+-- T-524 (D-096): every sweep run records what its stats
 -- backfill did, or which step failed.
 --
 -- private.sweep_runs held only the housekeeping counts, written half-way

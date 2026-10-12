@@ -1,4 +1,4 @@
--- T-544 (session 101, D-109, D-113): 28-day rolling retention of full game
+-- T-544 (D-109, D-113): 28-day rolling retention of full game
 -- files for accounts without unlimited history.
 --
 -- A game's full file (the gzipped report in the `games` bucket: turn-by-turn

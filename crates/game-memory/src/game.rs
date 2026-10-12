@@ -1,7 +1,7 @@
 //! The two values D-063 allows, and nothing else: the lobby's five tribes
 //! and the player's own Battlegrounds rating (Solo, Duos). Each has one fixed
 //! path of named fields, found on the user's own client (build 253216,
-//! `docs/research/memory-reader.md`). Every value is checked before it is
+//! design notes). Every value is checked before it is
 //! returned; a value that fails a check is never returned.
 
 use crate::memory::ReadError;

@@ -13,7 +13,7 @@ use serde::Deserialize;
 
 pub const FILE_NAME: &str = "server.json";
 
-/// The hosted Supabase project (docs/research/deploy.md, section 10) and its
+/// The hosted Supabase project (design notes) and its
 /// publishable key, which is public by design: what it can reach is limited
 /// by row-level security and the upload function's own checks.
 const HOSTED_URL: &str = "https://vgttflmexobrqhcyxjks.supabase.co";

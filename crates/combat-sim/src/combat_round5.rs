@@ -1,4 +1,4 @@
-//! The effects card coverage round 5 added (T-604, session 083): a minion
+//! The effects card coverage round 5 added (T-604): a minion
 //! that gains what the Amalgam gains, and Deathrattles copied from the
 //! left-most friends at the start of combat.
 

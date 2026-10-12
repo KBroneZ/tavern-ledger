@@ -729,7 +729,7 @@ pub fn is_golden(card_id: Option<&str>) -> bool {
 /// golden tokens, which have no golden id; on the user's 11 games it is on
 /// every golden-id board minion and on no other board minion at a combat. The
 /// game sets it for a moment on minions set aside during a triple in the shop,
-/// which never reach a board this way (session 052).
+/// which never reach a board this way.
 pub fn is_golden_minion(e: &Entity) -> bool {
     e.int("PREMIUM") > 0 || is_golden(e.card_id.as_deref())
 }

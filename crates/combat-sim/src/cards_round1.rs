@@ -1,4 +1,4 @@
-//! Card coverage, round 1 (session 068): the first cards the engine plays,
+//! Card coverage, round 1: the first cards the engine plays,
 //! from their card texts in HearthstoneJSON (D-038). The rules for writing
 //! them are in [`crate::cards`].
 

@@ -45,7 +45,7 @@ impl Combat<'_> {
 
     /// The start-of-combat swings of `side`. They are not the side's turn:
     /// the attack order starts as if they had not happened (the user's logs,
-    /// `docs/research/combat-simulator.md` section 3).
+    /// design notes).
     fn side_attacks_immediately(&mut self, side: usize) {
         for (uid, times) in self.immediate_attackers(side) {
             for _ in 0..times {

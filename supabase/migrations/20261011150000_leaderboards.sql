@@ -20,7 +20,7 @@
 --   snapshot at the same moment. Rows carry the player's site account id
 --   (already public for a public profile), never an email, BattleTag or
 --   rating (D-076: no rating on the website).
--- Rules and numbers: docs/research/leaderboards.md.
+-- Rules and numbers: design notes.
 
 -- ---------------------------------------------------------------------------
 -- Display name filter
@@ -208,7 +208,7 @@ returns integer language sql immutable set search_path = '' as $$ select 10 $$;
 
 -- A game the boards can count: no value beyond what a real game can have.
 -- Board size and golden minions are capped at 7 by the game; the other limits
--- are far above anything seen (docs/research/leaderboards.md), so only a
+-- are far above anything seen (design notes), so only a
 -- broken or edited report reaches them. Unknown values do not exclude a game.
 create function private.leaderboard_game_plausible(s public.game_stats)
 returns boolean

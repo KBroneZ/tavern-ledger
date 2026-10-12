@@ -27,7 +27,7 @@
 --   so a withdrawn consent never stays in the numbers past that.
 -- * Opting out (or deleting the account) takes the player's games out at the
 --   next daily rebuild; no stored row names them.
--- Rules and numbers: docs/research/community-heroes.md.
+-- Rules and numbers: design notes.
 
 -- ---------------------------------------------------------------------------
 -- Consent

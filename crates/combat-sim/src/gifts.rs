@@ -5,13 +5,13 @@
 //!
 //! Every gift is keyed by the card id of the gift itself, the spell the
 //! offer names (`DARK_GIFT_ENTITY`, D-058), not by the enchantment the game
-//! attaches to the minion; `docs/research/dark-gifts.md` maps one to the
+//! attaches to the minion; the design notes map one to the
 //! other. A gift in no list here is not modelled: the odds are blocked, as
 //! for a card (D-088). Gifts that act only in the shop, or only add stats
 //! the board already shows, are known and change nothing in combat.
 //!
 //! Written from the gift texts in HearthstoneJSON and the user's own logs;
-//! no simulator code was read (clean room, CLAUDE.md rule 1).
+//! no simulator code was read (clean room, project rules).
 
 use crate::cards::{self, Action, Fidelity, Trigger};
 use crate::model::Keywords;

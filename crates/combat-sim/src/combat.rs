@@ -1,5 +1,5 @@
 //! One combat, played to the end. The rules and their sources are in
-//! `docs/research/combat-simulator.md`; the ones still to be checked against
+//! design notes; the ones still to be checked against
 //! the logs are marked there.
 
 use crate::cards::{self, Action, Trigger};

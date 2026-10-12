@@ -1,7 +1,7 @@
 //! Walks Mono's runtime structures (domain, assembly, image, class, field,
 //! vtable) to one named field. Mono is open source (MIT); the structure
 //! offsets below were measured on the user's own client through names Mono
-//! keeps at run time (see `docs/research/memory-reader.md`), not taken from
+//! keeps at run time (see design notes), not taken from
 //! any other tracker. Every step checks what it finds (a name, a back
 //! pointer, a bound), so a different layout fails instead of reading the
 //! wrong thing.

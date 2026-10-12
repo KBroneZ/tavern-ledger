@@ -1,4 +1,4 @@
-//! Card coverage, round 3 (T-608, session 074): the cards most seen on the
+//! Card coverage, round 3 (T-608): the cards most seen on the
 //! user's Duos boards that rounds 1 and 2 left "not modelled" and that the
 //! board alone can play, from their card texts in HearthstoneJSON (D-038).
 //! Same rules as [`crate::cards`]: exact card ids, golden cards written out,

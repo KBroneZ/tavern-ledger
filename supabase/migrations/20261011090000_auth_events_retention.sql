@@ -1,4 +1,4 @@
--- T-104i (session 037, D-048): Auth's security log is kept 90 days.
+-- T-104i (D-048): Auth's security log is kept 90 days.
 --
 -- auth.audit_log_entries (data inventory S5: event, time, IP address) is
 -- exported with the account (export_my_data() -> auth_events) and deleted
@@ -7,14 +7,14 @@
 -- none. Long enough to look into an abuse report, short enough that a
 -- years-old account does not keep every IP address it ever signed in from.
 --
--- Why the hosted export had no auth_events (session 029): the hosted
+-- Why the hosted export had no auth_events: the hosted
 -- project's "Write audit logs to the database" switch (Authentication ->
 -- Audit Logs) was off, so Supabase Auth kept the log only in its own logs
 -- (one day on the Free plan) and never wrote this table. Nothing in the
 -- migrations, the export's filter or row-level security was at fault: the
 -- local stack writes the table and its export holds the entries (web
 -- test/local). The switch is a dashboard setting with no SQL or config.toml
--- equivalent; the owner turns it on (docs/research/deploy.md, section 10.13).
+-- equivalent; the owner turns it on (design notes).
 
 -- As in 20261010090000_sweep_schedule.sql, plus the 90-day limit.
 create or replace function public.sweep_housekeeping()

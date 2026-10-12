@@ -1,6 +1,6 @@
 -- T-104a: profiles, game summary rows and the private `games` bucket.
 --
--- Rules this schema enforces (see docs/research/web-stack.md, D-012, D-017, D-020):
+-- Rules this schema enforces (see design notes, D-012, D-017, D-020):
 -- * Clients (anon, authenticated) only read. They read their own rows and the
 --   rows of profiles the owner made public. The only client write is a user
 --   changing their own display name and visibility.

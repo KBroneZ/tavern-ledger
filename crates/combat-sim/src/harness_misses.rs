@@ -2,7 +2,7 @@
 //! does not know about it (approximate or unknown cards) and, when the log
 //! has the attacks, the first step where the replay parts from the log. This
 //! is the raw material for the miss breakdown by cause in
-//! `docs/research/combat-simulator.md`.
+//! the design notes.
 //!
 //! Local only, like the rest of the harness: card ids, numbers and rules.
 

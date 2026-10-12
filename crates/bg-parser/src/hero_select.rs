@@ -2,7 +2,7 @@
 //! rerolls used and the hero picked. Rust-only: the Python prototype does not
 //! read it.
 //!
-//! What the log gives (checked on 11 real games, docs/research/parser-data-round.md):
+//! What the log gives (checked on 11 real games, design notes):
 //! - `DebugPrintEntityChoices` with `ChoiceType=MULLIGAN` lists the heroes the
 //!   player is offered, one `Entities[i]=` line each;
 //! - a reroll is a `CHANGE_ENTITY` of one of those heroes to a new card while

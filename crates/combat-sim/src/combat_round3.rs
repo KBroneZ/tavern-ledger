@@ -1,4 +1,4 @@
-//! The effects card coverage round 3 added (T-608, session 074): a friendly
+//! The effects card coverage round 3 added (T-608): a friendly
 //! Deathrattle that triggers, and a friendly minion summoned.
 
 use super::{Combat, Source};

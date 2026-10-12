@@ -21,3 +21,11 @@ target/
 card-cache/
 # The website simulator's card data, written at build time (T-606, D-038).
 web/src/lib/sim/generated/
+# Working notes live outside this repo; never commit a local copy.
+/CLAUDE.md
+/docs/process/
+/docs/plan/
+/docs/decisions/
+/docs/research/
+/docs/status.md
+/.claude/skills/

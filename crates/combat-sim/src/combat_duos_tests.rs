@@ -1,6 +1,6 @@
 //! Duos combats (T-608): two boards per team, the second coming in once the
-//! first is gone. Rules from the user's logged Duos combats, section 3 of
-//! `docs/research/combat-simulator.md`.
+//! first is gone. Rules from the user's logged Duos combats (see the
+//! design notes).
 
 use super::*;
 use crate::model::{Minion, Team};

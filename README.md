@@ -25,7 +25,6 @@
 
 - **Desktop app: not released yet.** There is no installer; it runs from source on the developer's PC while the installer and code signing are prepared. To build it yourself, see [docs/development.md](docs/development.md).
 - **Website: online at [tavernledger.net](https://tavernledger.net), and you can create an account.** Uploading games needs the desktop app; the combat simulator and its accuracy page work without one.
-- Progress, area by area: [docs/status.md](docs/status.md). Plan: [docs/plan/plan.md](docs/plan/plan.md).
 
 ## Features
 
@@ -72,7 +71,7 @@ A Rust workspace (log parser, tracker, combat simulator and a [Tauri 2](https://
 
 Tavern Ledger is made by one developer with help from AI coding tools.
 
-More reading: [development guide](docs/development.md), [decisions](docs/decisions/DECISIONS.md), [research notes](docs/research/feasibility.md).
+More reading: [development guide](docs/development.md).
 
 ## Contributing and security
 

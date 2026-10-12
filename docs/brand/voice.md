@@ -95,7 +95,7 @@ Game terms follow the game's own esES client (D-086). Prose uses "vida" for heal
 | display name | nombre visible | |
 | sign in / sign up | iniciar sesión / registrarse | "Entrar" only in the menu |
 
-## Open items for other sessions
+## Open items
 
 **Home page (T-530, copy left as it is while it is redesigned):**
 
@@ -105,7 +105,7 @@ Game terms follow the game's own esES client (D-086). Prose uses "vida" for heal
 - `home.hero.lit`: "We kept your games." reads as if it already happened to a new visitor; consider "Every game, kept." / "Todas tus partidas, guardadas."
 - `home.status.title`: "The doors are not open yet." says almost the same as `home.status.closed` ("Accounts are not open yet.") just below it; keep one.
 
-**Leaderboards (session 090 owns `web/src/lib/leaderboards/`):**
+**Leaderboards (`web/src/lib/leaderboards/`):**
 
 - `page.kicker`: "Public" / "Público" → "Community" / "Comunidad", as on hero stats.
 - `section.advanced`: "Economy and fun" / "Economía y curiosidades" → "Economy and boards" / "Economía y tableros".
