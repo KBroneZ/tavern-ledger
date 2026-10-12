@@ -16,12 +16,14 @@ use crate::cards;
 use crate::combat::CombatResult;
 use crate::harness::LoggedCombat;
 use crate::harness_duos::{team_of, DuosCombat};
+use crate::harness_logs::Replayed;
+use crate::harness_misses::{causes_by_id, Miss};
 use crate::model::{BoardError, Warband};
 use crate::score::{score, Prediction, Report};
 use crate::trials::{simulate, simulate_teams, Odds, Options, Verdict};
 
 /// Version of the JSON's shape; a reader checks it before reading.
-pub const FORMAT: u32 = 1;
+pub const FORMAT: u32 = 3;
 
 /// The cards that summon a minion from the hand: approximate since round 5
 /// (D-097), counted apart.
@@ -32,6 +34,9 @@ const BUCKETS: usize = 5;
 
 /// Card ids listed in the export, most blocking first.
 const EXPORT_BLOCKERS: usize = 10;
+
+/// Game builds listed in the export, newest first.
+const EXPORT_BUILDS: usize = 20;
 
 /// One mode's combats with a result: blocked, refused, and the score of the
 /// rest.
@@ -325,10 +330,49 @@ fn mode_json(m: &ModeAccuracy) -> Value {
     })
 }
 
-/// The export (T-607): counts and shares per mode, the date (`YYYY-MM-DD`),
-/// the engine version and the card ids that block most. Pretty-printed,
+/// What was checked besides the odds (T-553): the misses and the replays
+/// that tell their cause, and the game builds of the games read (build ->
+/// games).
+pub struct Checked<'a> {
+    pub misses: &'a [Miss],
+    pub replays: &'a [Replayed],
+    pub builds: &'a BTreeMap<i64, u32>,
+}
+
+fn misses_json(c: &Checked) -> Value {
+    let total = c.misses.len();
+    let causes: Vec<Value> = causes_by_id(c.misses, c.replays)
+        .into_iter()
+        .map(|(id, solo, duos)| {
+            json!({
+                "cause": id,
+                "solo": solo,
+                "duos": duos,
+                "share": f64::from(solo + duos) / total as f64,
+            })
+        })
+        .collect();
+    json!({ "total": total, "causes": causes })
+}
+
+fn builds_json(builds: &BTreeMap<i64, u32>) -> Value {
+    let checked: Vec<Value> = builds
+        .iter()
+        .rev()
+        .take(EXPORT_BUILDS)
+        .map(|(build, games)| json!({ "build": build, "count": games }))
+        .collect();
+    json!({
+        "newest": builds.keys().next_back(),
+        "checked": checked,
+    })
+}
+
+/// The export (T-607, T-553): counts and shares per mode, the date
+/// (`YYYY-MM-DD`), the engine version, the card ids that block most, the
+/// misses by cause and the game builds checked (newest first). Pretty-printed,
 /// ending in a new line.
-pub fn export_json(a: &Accuracy, options: &Options, date: &str) -> String {
+pub fn export_json(a: &Accuracy, options: &Options, date: &str, checked: &Checked) -> String {
     let blockers: Vec<Value> = a
         .blockers
         .iter()
@@ -345,6 +389,8 @@ pub fn export_json(a: &Accuracy, options: &Options, date: &str) -> String {
             "duos": mode_json(&a.duos),
         },
         "blocking_cards": blockers,
+        "misses": misses_json(checked),
+        "builds": builds_json(checked.builds),
     });
     let mut s = serde_json::to_string_pretty(&v).unwrap_or_default();
     s.push('\n');

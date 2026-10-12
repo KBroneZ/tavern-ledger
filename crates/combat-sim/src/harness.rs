@@ -122,7 +122,13 @@ pub struct History {
     /// The latest record of each game, for why each result differed
     /// (T-346); empty when read from the logs.
     pub reports: Vec<Value>,
+    /// Game build number -> games read on it (Solo and Duos games; a game
+    /// with no build is not counted).
+    pub builds: BTreeMap<i64, u32>,
 }
+
+/// The highest build number kept (a larger one is not a game build).
+const MAX_BUILD: i64 = 1_000_000_000;
 
 pub(crate) fn minion(v: &Value, db: &CardDb) -> Option<Minion> {
     crate::saved::minion(v, &|id| db.get(id).copied())
@@ -163,6 +169,10 @@ pub fn load_history(jsonl: &str, db: &CardDb) -> History {
             Some("GT_BATTLEGROUNDS_DUO") => false,
             _ => continue,
         };
+        let build = report.get("build").and_then(Value::as_i64);
+        if let Some(build) = build.filter(|b| (1..=MAX_BUILD).contains(b)) {
+            *h.builds.entry(build).or_insert(0) += 1;
+        }
         let duos = if solo {
             h.solo_games += 1;
             Vec::new()

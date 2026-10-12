@@ -25,7 +25,7 @@
 use crate::cards::{self, Fidelity};
 use crate::combat::replay::{replay_teams, Difference, LoggedStep, Rule, Span};
 use crate::combat::CombatResult;
-use crate::model::{Team, Warband};
+use crate::model::Team;
 use crate::score::Prediction;
 use crate::trials::{simulate_teams, Coverage, Options, Verdict};
 use crate::{cards_round1 as r1, cards_round2 as r2, cards_round3 as r3};
@@ -228,17 +228,20 @@ pub fn explain(c: &CombatFacts, options: &Options) -> Explained {
 }
 
 fn missed(c: &CombatFacts, coverage: &Coverage, seed: u64) -> Cause {
-    let cards = if !coverage.not_modelled.is_empty() {
-        Cards::NotModelled
-    } else if !coverage.approximate.is_empty() || !c.unknown_gifts.is_empty() {
-        Cards::Approximate
-    } else {
-        Cards::Exact
-    };
-    let no_replay = |why| Cause::NoReplay { why, cards };
+    let cards = cards_of(coverage, !c.unknown_gifts.is_empty());
     let steps = match c.replay {
-        Replayable::NotSaved => return no_replay(NoReplay::NotSaved),
-        Replayable::Unreadable | Replayable::Steps([]) => return no_replay(NoReplay::Unreadable),
+        Replayable::NotSaved => {
+            return Cause::NoReplay {
+                why: NoReplay::NotSaved,
+                cards,
+            }
+        }
+        Replayable::Unreadable | Replayable::Steps([]) => {
+            return Cause::NoReplay {
+                why: NoReplay::Unreadable,
+                cards,
+            }
+        }
         Replayable::Steps(s) => s,
     };
     let replay = replay_teams(
@@ -248,28 +251,51 @@ fn missed(c: &CombatFacts, coverage: &Coverage, seed: u64) -> Cause {
         Span::Whole(Some(c.result)),
         seed,
     );
-    let Some(parted) = replay.difference else {
-        return Cause::Chance {
+    match replay.difference {
+        None => Cause::Chance {
             attacks: replay.attacks,
-        };
-    };
-    if parted.rule == Rule::NoDefender {
-        return no_replay(NoReplay::Stops);
+        },
+        Some(d) => parted(d, not_seen(c.player, c.opponent, c.unknown_gifts), coverage),
     }
-    let inputs = not_seen(c);
+}
+
+/// How well the engine knows the cards of a combat with this coverage
+/// (`unknown_gift`: a Dark Gift the log does not name is on a board).
+pub fn cards_of(coverage: &Coverage, unknown_gift: bool) -> Cards {
+    if !coverage.not_modelled.is_empty() {
+        Cards::NotModelled
+    } else if !coverage.approximate.is_empty() || unknown_gift {
+        Cards::Approximate
+    } else {
+        Cards::Exact
+    }
+}
+
+/// The cause of a miss whose replay parts from the game at `d` (rule 4 of
+/// the module): what the log does not show (`inputs`), else the cards the
+/// engine does not know or plays approximately, else the rule. A replay
+/// that stops at an attack without a target checks nothing.
+pub fn parted(d: Difference, inputs: Vec<NotSeen>, coverage: &Coverage) -> Cause {
+    if d.rule == Rule::NoDefender {
+        return Cause::NoReplay {
+            why: NoReplay::Stops,
+            cards: cards_of(coverage, inputs.iter().any(|n| n.what == Unseen::Gift)),
+        };
+    }
     if !inputs.is_empty() {
-        return Cause::MissingInputs { inputs, parted };
+        return Cause::MissingInputs { inputs, parted: d };
     }
     // Coverage names each id once.
     let cards: Vec<String> = coverage
-        .approximate
+        .not_modelled
         .iter()
-        .map(|(id, _)| id.clone())
+        .cloned()
+        .chain(coverage.approximate.iter().map(|(id, _)| id.clone()))
         .collect();
     if !cards.is_empty() {
-        return Cause::ApproximateCard { cards, parted };
+        return Cause::ApproximateCard { cards, parted: d };
     }
-    Cause::RuleDifference(parted)
+    Cause::RuleDifference(d)
 }
 
 /// Which approximation reasons are something the log does not show. A
@@ -299,12 +325,9 @@ fn unseen_of(why: &str, values: &crate::model::GameValues) -> Option<Unseen> {
     }
 }
 
-fn boards<'a>(c: &'a CombatFacts) -> impl Iterator<Item = &'a Warband> {
-    c.player.boards().chain(c.opponent.boards())
-}
-
-/// Everything on the combat's boards that the log does not show.
-fn not_seen(c: &CombatFacts) -> Vec<NotSeen> {
+/// Everything on both teams' boards that the log does not show;
+/// `unknown_gifts`: cards marked gifted with no gift the log names.
+pub fn not_seen(player: &Team, opponent: &Team, unknown_gifts: &[String]) -> Vec<NotSeen> {
     let mut out: Vec<NotSeen> = Vec::new();
     let mut add = |what: Unseen, card: &str| {
         if !out.iter().any(|n| n.what == what && n.card == card) {
@@ -314,7 +337,7 @@ fn not_seen(c: &CombatFacts) -> Vec<NotSeen> {
             });
         }
     };
-    for band in boards(c) {
+    for band in player.boards().chain(opponent.boards()) {
         for m in &band.minions {
             let rules = cards::rules(&m.card_id);
             if let Some(Fidelity::Approximate(why)) = rules.map(|r| r.fidelity) {
@@ -324,7 +347,7 @@ fn not_seen(c: &CombatFacts) -> Vec<NotSeen> {
             }
         }
     }
-    for card in c.unknown_gifts {
+    for card in unknown_gifts {
         add(Unseen::Gift, card);
     }
     out

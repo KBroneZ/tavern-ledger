@@ -20,6 +20,7 @@ from pathlib import Path
 
 CARD_ID = re.compile(r"^[A-Za-z0-9_]{1,64}$")
 FORMAT = 1
+EXPORT_FORMAT = 3  # the accuracy export's own format
 
 
 def load_cards(path):
@@ -32,8 +33,8 @@ def load_cards(path):
 
 def card_ids(export):
     """The blocking card ids of an accuracy export, checked."""
-    if export.get("format") != 1:
-        raise ValueError("export: format is not 1")
+    if export.get("format") != EXPORT_FORMAT:
+        raise ValueError(f"export: format is not {EXPORT_FORMAT}")
     ids = []
     for card in export.get("blocking_cards", []):
         card_id = card.get("card_id") if isinstance(card, dict) else None

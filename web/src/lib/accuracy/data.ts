@@ -5,7 +5,7 @@
 // export's keys with their types, so a key the export does not have (a name,
 // a seat, a game) or one it lost fails the build instead of reaching the page.
 
-export const ACCURACY_FORMAT = 1;
+export const ACCURACY_FORMAT = 3;
 export const MODES = ["solo", "duos"] as const;
 export type AccuracyMode = (typeof MODES)[number];
 
@@ -37,6 +37,59 @@ export interface BlockingCard {
   combats: number;
 }
 
+/**
+ * Why a combat's most likely result was not the real one (D-115, D-127), as
+ * the export names them: chance (the replay follows the game to the end);
+ * where the replay parts from the game, something the log does not show
+ * (missing inputs), else a card or Dark Gift not modelled or approximate,
+ * else the first rule that differs; or, with no replay saved, what the cards
+ * say. The app's recap and the game page use the same ids.
+ */
+export const CAUSE_IDS = [
+  "chance",
+  "missing_inputs",
+  "approximate_card",
+  "replay_first_attacker",
+  "replay_after_teammate",
+  "replay_attack_order",
+  "replay_target",
+  "replay_minions",
+  "replay_stats",
+  "replay_end",
+  "replay_no_defender",
+  "no_replay_not_modelled",
+  "no_replay_approximate",
+  "no_replay_exact",
+] as const;
+export type CauseId = (typeof CAUSE_IDS)[number];
+
+export interface MissCause {
+  cause: CauseId;
+  solo: number;
+  duos: number;
+  /** Of all the misses. */
+  share: number;
+}
+
+export interface Misses {
+  total: number;
+  /** Largest first. */
+  causes: MissCause[];
+}
+
+export interface CheckedBuild {
+  build: number;
+  /** Games read on this build. */
+  count: number;
+}
+
+export interface Builds {
+  /** null when no game gave a build. */
+  newest: number | null;
+  /** Newest first. */
+  checked: CheckedBuild[];
+}
+
 export interface Accuracy {
   format: number;
   date: string;
@@ -44,6 +97,8 @@ export interface Accuracy {
   trials: number;
   modes: Record<AccuracyMode, ModeAccuracy>;
   blocking_cards: BlockingCard[];
+  misses: Misses;
+  builds: Builds;
 }
 
 /** Card names for the blocking cards, from the card data (D-091). */
@@ -59,6 +114,8 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const VERSION = /^\d+\.\d+\.\d+$/;
 const BUCKETS = 5;
 const MAX_BLOCKING = 10;
+const MAX_BUILDS = 20;
+const MAX_BUILD = 1_000_000_000;
 const BRIER_MAX = 2;
 /** A share written as a float may differ from part / whole in its last digits. */
 const SHARE_TOLERANCE = 1e-9;
@@ -159,12 +216,69 @@ function blockingCard(value: unknown, where: string): BlockingCard {
   return { card_id: raw.card_id, combats: count(raw.combats, `${where}.combats`) };
 }
 
+function missCause(value: unknown, where: string): MissCause {
+  const raw = object(value, where);
+  keys(raw, ["cause", "solo", "duos", "share"], where);
+  if (typeof raw.cause !== "string" || !(CAUSE_IDS as readonly string[]).includes(raw.cause)) throw new Error(`${where}.cause: not a known cause`);
+  return {
+    cause: raw.cause as CauseId,
+    solo: count(raw.solo, `${where}.solo`),
+    duos: count(raw.duos, `${where}.duos`),
+    share: between(raw.share, 1, `${where}.share`),
+  };
+}
+
+function misses(value: unknown): Misses {
+  const raw = object(value, "accuracy.misses");
+  keys(raw, ["total", "causes"], "accuracy.misses");
+  const total = count(raw.total, "accuracy.misses.total");
+  if (!Array.isArray(raw.causes) || raw.causes.length > CAUSE_IDS.length) throw new Error("accuracy.misses.causes: not a list of causes");
+  const causes = raw.causes.map((c, i) => missCause(c, `accuracy.misses.causes[${i}]`));
+  const seen = new Set<string>();
+  let sum = 0;
+  let previous = Infinity;
+  for (const c of causes) {
+    const n = c.solo + c.duos;
+    if (seen.has(c.cause)) throw new Error(`accuracy.misses.causes: ${c.cause} twice`);
+    seen.add(c.cause);
+    if (n === 0) throw new Error(`accuracy.misses.causes: ${c.cause} has no combat`);
+    if (n > previous) throw new Error("accuracy.misses.causes: not the largest first");
+    if (total === 0 || Math.abs(c.share - n / total) > SHARE_TOLERANCE) throw new Error(`accuracy.misses.causes: ${c.cause} share is not its combats / total`);
+    previous = n;
+    sum += n;
+  }
+  if (sum !== total) throw new Error("accuracy.misses.total: not the sum of the causes");
+  return { total, causes };
+}
+
+function builds(value: unknown): Builds {
+  const raw = object(value, "accuracy.builds");
+  keys(raw, ["newest", "checked"], "accuracy.builds");
+  if (!Array.isArray(raw.checked) || raw.checked.length > MAX_BUILDS) throw new Error(`accuracy.builds.checked: not a list of up to ${MAX_BUILDS}`);
+  const checked = raw.checked.map((b, i): CheckedBuild => {
+    const where = `accuracy.builds.checked[${i}]`;
+    const row = object(b, where);
+    keys(row, ["build", "count"], where);
+    const build = count(row.build, `${where}.build`);
+    if (build === 0 || build > MAX_BUILD) throw new Error(`${where}.build: not a build number`);
+    const games = count(row.count, `${where}.count`);
+    if (games === 0) throw new Error(`${where}.count: not a count above 0`);
+    return { build, count: games };
+  });
+  checked.forEach((b, i) => {
+    if (i > 0 && b.build >= checked[i - 1].build) throw new Error("accuracy.builds.checked: builds twice or not newest first");
+  });
+  const newest = raw.newest === null ? null : count(raw.newest, "accuracy.builds.newest");
+  if (newest !== (checked[0]?.build ?? null)) throw new Error("accuracy.builds.newest: not the first build of the list");
+  return { newest, checked };
+}
+
 /** Reads the export (untrusted until checked); throws, naming the key, on anything else. */
 export function parseAccuracy(value: unknown): Accuracy {
   const raw = object(value, "accuracy");
   // The format first: another shape is not read at all.
   if (raw.format !== ACCURACY_FORMAT) throw new Error(`accuracy: format is not ${ACCURACY_FORMAT}`);
-  keys(raw, ["format", "date", "engine_version", "trials", "modes", "blocking_cards"], "accuracy");
+  keys(raw, ["format", "date", "engine_version", "trials", "modes", "blocking_cards", "misses", "builds"], "accuracy");
   if (typeof raw.date !== "string" || !isDay(raw.date)) throw new Error("accuracy.date: not a YYYY-MM-DD day");
   if (typeof raw.engine_version !== "string" || !VERSION.test(raw.engine_version)) throw new Error("accuracy.engine_version: not a version");
   const modes = object(raw.modes, "accuracy.modes");
@@ -179,6 +293,8 @@ export function parseAccuracy(value: unknown): Accuracy {
     trials,
     modes: { solo: modeAccuracy(modes.solo, "accuracy.modes.solo"), duos: modeAccuracy(modes.duos, "accuracy.modes.duos") },
     blocking_cards: raw.blocking_cards.map((c, i) => blockingCard(c, `accuracy.blocking_cards[${i}]`)),
+    misses: misses(raw.misses),
+    builds: builds(raw.builds),
   };
 }
 

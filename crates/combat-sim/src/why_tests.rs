@@ -2,7 +2,7 @@
 //! told it lost, with a log that does (or does not) follow the engine.
 
 use super::*;
-use crate::model::{GameValues, Minion};
+use crate::model::{GameValues, Minion, Warband};
 
 /// A card with no combat text (`cards::NO_COMBAT_EFFECT`).
 const PLAIN: &str = "BG28_603t";

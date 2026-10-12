@@ -18,7 +18,7 @@ use std::process::ExitCode;
 
 use combat_sim::harness::{load_cards, load_history, render, run, CardDb, History};
 use combat_sim::harness_duos::{render_duos, Source};
-use combat_sim::harness_export::{accuracy, date_of_day, export_json, render_accuracy};
+use combat_sim::harness_export::{accuracy, date_of_day, export_json, render_accuracy, Checked};
 use combat_sim::harness_games::read_games;
 use combat_sim::harness_logs::{
     load_logs, power_logs, render_overlay_path, render_replays, replay_all,
@@ -160,7 +160,12 @@ fn real_main() -> Result<(), String> {
         print!("{}", render_accuracy(&acc));
     }
     if let Some(path) = args.export {
-        let json = export_json(&acc, &options, &date_of_day(today()?));
+        let checked = Checked {
+            misses: &misses,
+            replays: &rows,
+            builds: &history.builds,
+        };
+        let json = export_json(&acc, &options, &date_of_day(today()?), &checked);
         std::fs::write(&path, json).map_err(|e| format!("{path}: {e}"))?;
         println!("\nAccuracy written to {path}.");
     }

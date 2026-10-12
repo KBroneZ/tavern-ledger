@@ -6,8 +6,8 @@ import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { ACCURACY_FORMAT, parseAccuracy, parseCardNames, type Accuracy } from "../../src/lib/accuracy/data.ts";
-import { blockingRows, calibrationBars, modeFigures } from "../../src/lib/accuracy/view.ts";
+import { ACCURACY_FORMAT, CAUSE_IDS, parseAccuracy, parseCardNames, type Accuracy } from "../../src/lib/accuracy/data.ts";
+import { blockingRows, buildsView, calibrationBars, causeRows, modeFigures } from "../../src/lib/accuracy/view.ts";
 import { setLang } from "../../src/lib/i18n.ts";
 
 const DATA = join(import.meta.dirname, "..", "..", "src", "data");
@@ -19,7 +19,7 @@ afterEach(() => setLang("en"));
 
 // ---------- The committed export ----------
 
-test("the committed export reads with the export's keys and format 1", () => {
+test("the committed export reads with the export's keys and format 3", () => {
   const data = parseAccuracy(committed());
   assert.equal(data.format, ACCURACY_FORMAT);
   assert.match(data.date, /^\d{4}-\d{2}-\d{2}$/);
@@ -71,11 +71,11 @@ test("a missing top-level key, mode key or bucket key fails", () => {
 });
 
 test("another format fails before anything else is read", () => {
-  for (const format of [2, 0, "1", null]) {
+  for (const format of [1, 2, "3", null]) {
     const raw = { ...committed(), format };
     assert.throws(() => parseAccuracy(raw), /format/);
   }
-  assert.throws(() => parseAccuracy({ format: 2 }), /format/);
+  assert.throws(() => parseAccuracy({ format: 1 }), /format/);
 });
 
 test("an extra key anywhere fails: the page shows only the export's fields", () => {
@@ -250,4 +250,138 @@ test("the export is not changed by reading it", () => {
   const before = clone(raw);
   parseAccuracy(raw);
   assert.deepEqual(raw, before);
+});
+
+// ---------- Misses by cause and game builds (T-553) ----------
+
+const withMisses = (misses: unknown) => ({ ...committed(), misses });
+const withBuilds = (builds: unknown) => ({ ...committed(), builds });
+const MISSES = {
+  total: 8,
+  causes: [
+    { cause: "chance", solo: 0, duos: 4, share: 0.5 },
+    { cause: "replay_minions", solo: 0, duos: 2, share: 0.25 },
+    { cause: "no_replay_not_modelled", solo: 1, duos: 1, share: 0.25 },
+  ],
+};
+const BUILDS = {
+  newest: 260001,
+  checked: [
+    { build: 260001, count: 3 },
+    { build: 253216, count: 150 },
+  ],
+};
+
+test("misses and builds are read with their keys", () => {
+  const data = parseAccuracy({ ...committed(), misses: MISSES, builds: BUILDS });
+  assert.equal(data.misses.total, 8);
+  assert.deepEqual(data.misses.causes[0], { cause: "chance", solo: 0, duos: 4, share: 0.5 });
+  assert.equal(data.builds.newest, 260001);
+  assert.equal(data.builds.checked.length, 2);
+});
+
+test("no misses and no builds are read as empty, not as missing", () => {
+  const data = parseAccuracy({ ...committed(), misses: { total: 0, causes: [] }, builds: { newest: null, checked: [] } });
+  assert.deepEqual(data.misses.causes, []);
+  assert.equal(data.builds.newest, null);
+});
+
+test("misses: an unknown cause, a wrong total or share, or an extra key fails", () => {
+  const bad = (change: (m: typeof MISSES) => void) => {
+    const m = clone(MISSES);
+    change(m);
+    return () => parseAccuracy(withMisses(m));
+  };
+  assert.throws(bad((m) => (m.causes[0].cause = "a_new_cause")), /cause/);
+  assert.throws(bad((m) => (m.total = 9)), /total/);
+  assert.throws(bad((m) => (m.causes[0].share = 0.9)), /share/);
+  assert.throws(bad((m) => m.causes.push({ ...m.causes[0] })), /twice/);
+  assert.throws(bad((m) => (m.causes[1].solo = 5)), /total|share|largest/);
+  assert.throws(bad((m) => m.causes.reverse()), /largest/);
+  assert.throws(() => parseAccuracy(withMisses({ ...MISSES, game: 1 })), /game/);
+  assert.throws(() => parseAccuracy(withMisses({ total: 0, causes: [{ ...MISSES.causes[0] }] })), /total/);
+  const raw = withMisses(MISSES);
+  delete (raw as Record<string, unknown>).misses;
+  assert.throws(() => parseAccuracy(raw), /misses/);
+});
+
+test("builds: newest must lead the list; bad numbers, repeats and extra keys fail", () => {
+  const bad = (change: (b: typeof BUILDS) => void) => {
+    const b = clone(BUILDS);
+    change(b);
+    return () => parseAccuracy(withBuilds(b));
+  };
+  assert.throws(bad((b) => (b.newest = 253216)), /newest/);
+  assert.throws(bad((b) => b.checked.reverse()), /newest|newest first/);
+  assert.throws(bad((b) => (b.checked[1].build = 260001)), /twice|newest first/);
+  assert.throws(bad((b) => (b.checked[0].build = -1)), /build/);
+  assert.throws(bad((b) => (b.checked[0].count = 0)), /count/);
+  assert.throws(() => parseAccuracy(withBuilds({ newest: null, checked: BUILDS.checked })), /newest/);
+  assert.throws(() => parseAccuracy(withBuilds({ ...BUILDS, date: "2026-10-12" })), /date/);
+  assert.throws(() => parseAccuracy(withBuilds({ newest: 1, checked: [{ build: 1, count: 1, session: "x" }] })), /session/);
+});
+
+test("every cause id has a name and a one-line why in both languages", () => {
+  for (const lang of ["en", "es"] as const) {
+    setLang(lang);
+    const rows = causeRows(
+      CAUSE_IDS.map((cause) => ({ cause, solo: 1, duos: 1, share: 1 / CAUSE_IDS.length })),
+    );
+    assert.equal(rows.length, CAUSE_IDS.length);
+    for (const r of rows) {
+      assert.ok(r.name.length > 0 && r.why.length > 0, `${lang} ${r.id}`);
+      assert.ok(!r.name.startsWith("cause."), `${lang} ${r.id}`);
+      assert.ok(r.why.length <= 140, `${lang} ${r.id}: one line`);
+    }
+  }
+});
+
+test("the example export's cause ids are all known to the page", () => {
+  const example = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "..", "crates", "combat-sim", "tests", "data", "accuracy_example.json"), "utf8"));
+  const parsed = parseAccuracy({ ...committed(), misses: example.misses, builds: example.builds });
+  for (const c of parsed.misses.causes) assert.ok((CAUSE_IDS as readonly string[]).includes(c.cause), c.cause);
+});
+
+test("a share of 99.5% or more is never written as 100%, and a tiny one is <1%", () => {
+  const rows = causeRows([{ cause: "chance", solo: 995, duos: 0, share: 0.995 }, { cause: "replay_end", solo: 4, duos: 0, share: 0.0049 }]);
+  assert.equal(rows[0].share, "99%");
+  assert.equal(rows[1].share, "<1%");
+});
+
+test("cause rows in English and Spanish: counts and shares", () => {
+  const data = parseAccuracy({ ...committed(), misses: MISSES, builds: BUILDS });
+  const en = causeRows(data.misses.causes);
+  assert.equal(en[0].id, "chance");
+  assert.equal(en[0].name, "Chance");
+  assert.equal(en[0].combats, "4");
+  assert.equal(en[0].share, "50%");
+  assert.equal(en[2].solo, "1");
+  assert.equal(en[2].duos, "1");
+  setLang("es");
+  assert.equal(causeRows(data.misses.causes)[0].name, "Azar");
+});
+
+test("a share never rounds to a claim the counts do not make", () => {
+  const rows = causeRows([
+    { cause: "chance", solo: 999, duos: 0, share: 999 / 1000 },
+    { cause: "replay_end", solo: 1, duos: 0, share: 1 / 1000 },
+  ]);
+  assert.equal(rows[0].share, "99%");
+  assert.equal(rows[1].share, "<1%");
+});
+
+test("the builds block: newest build, the day, and each build's games", () => {
+  const data = parseAccuracy({ ...committed(), misses: MISSES, builds: BUILDS });
+  const en = buildsView(data.builds, data.date);
+  assert.match(en.summary, /^Newest build checked: 260001, on \d+ \w+ \d{4}\.$/);
+  assert.deepEqual(en.rows.map((r) => r.build), ["260001", "253216"]);
+  assert.equal(en.rows[0].games, "3 games");
+  assert.equal(en.rows[1].games, "150 games");
+  const one = buildsView({ newest: 5, checked: [{ build: 5, count: 1 }] }, data.date);
+  assert.equal(one.rows[0].games, "1 game");
+  setLang("es");
+  const es = buildsView(data.builds, data.date);
+  assert.match(es.summary, /^Última versión comprobada: 260001, el /);
+  assert.equal(es.rows[0].games, "3 partidas");
+  assert.equal(buildsView({ newest: null, checked: [] }, data.date).summary, "Aún no se ha leído ninguna versión del juego.");
 });
