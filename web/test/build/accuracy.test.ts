@@ -74,7 +74,7 @@ test("the page lists the misses by cause, largest first, and the game builds", (
     assert.ok(text(section).includes(String(total)), `${page}: the total`);
     assert.match(section, /<th scope="col" class="num adv">/, `${page}: Solo and Duos columns are Advanced only`);
     const builds = html.slice(html.indexOf('aria-labelledby="acc-builds"'), html.indexOf('aria-labelledby="acc-about"'));
-    assert.ok(builds.includes(es ? "Versiones del juego compatibles" : "Supported game versions"), page);
+    assert.ok(builds.includes(es ? "Versiones del juego comprobadas" : "Supported game versions"), page);
     for (const b of data.builds.checked) assert.ok(builds.includes(`<td>${b.build}</td>`), `${page}: build ${b.build}`);
     assert.ok(text(builds).includes(String(data.builds.newest)), page);
   }
