@@ -162,5 +162,26 @@
   "set": "BATTLEGROUNDS",
   "attack": -1,
   "health": 1
+ },
+ {
+  "id": "BG_TRINKET_SYN",
+  "dbfId": 910004,
+  "name": "A trinket",
+  "type": "BATTLEGROUND_TRINKET",
+  "set": "BATTLEGROUNDS"
+ },
+ {
+  "id": "BG_ENCH_SYN",
+  "dbfId": 910005,
+  "name": "An enchantment",
+  "type": "ENCHANTMENT",
+  "set": "BATTLEGROUNDS"
+ },
+ {
+  "id": "BG_HP_SYN",
+  "dbfId": 910006,
+  "name": "A hero power",
+  "type": "HERO_POWER",
+  "set": "BATTLEGROUNDS"
  }
 ]

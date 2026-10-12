@@ -1,14 +1,15 @@
 // "Why the result differed" on the game page (T-549, D-127): the request
 // carries the stored report and its cards' facts, the engine's answer is
-// read strictly, and each combat gets one plain line with its evidence
-// folded, in English and Spanish. The built engine answers a real request.
+// read strictly, and each combat gets its odds and a mark in its turn's row
+// and one plain line with its evidence in the row's detail, in English and
+// Spanish. The built engine answers a real request.
 import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { loadEngine } from "../../src/lib/sim/engine.ts";
 import { cardIdsOf, explainRequest, readWhy, type WhyCombat } from "../../src/lib/game/why.ts";
-import { causeLine, evidence, whyLines } from "../../src/lib/game/whyView.ts";
-import { askEngine } from "../../src/lib/game/whyRun.ts";
+import { causeLine, causeMark, evidence, oddsCell, whyDetail } from "../../src/lib/game/whyView.ts";
+import { askEngine, fillWhy } from "../../src/lib/game/whyRun.ts";
 import { setLang } from "../../src/lib/i18n.ts";
 import type { VNode } from "../../src/lib/view/node.ts";
 import { WASM_PATH } from "../../tools/simStamp.ts";
@@ -113,15 +114,27 @@ test("each cause gets one plain line and its evidence, in English and Spanish", 
   assert.match(evidence(lines.missing, nameOf)[0], /ataque 4 \(Estadísticas y palabras clave\), en Plain Card/);
 });
 
-test("the section counts the misses and links to the accuracy page's cause list", () => {
-  const combats = readWhy(answer([good, { ...good, round: 3, result: "lost", cause: { id: "chance", attacks: 1 } }]))!;
-  const nodes = whyLines(combats, nameOf);
-  const all = nodes.flatMap((n) => [...walk(n)]);
-  assert.equal(text(nodes[0]), "1 of 2 combats did not go the likeliest way.");
-  const link = all.find((n) => n.tag === "a");
-  assert.match(String(link?.attrs.find(([k]) => k === "href")?.[1]), /\/accuracy\/#acc-causes$/);
-  assert.equal(all.filter((n) => n.tag === "details").length, 1, "only the miss has a fold");
-  assert.match(text(whyLines(null, nameOf)[0]), /could not be worked out/);
+test("a row shows the win odds, and a mark only when the likeliest result did not happen (T-559, D-131)", () => {
+  const combat = (extra: Record<string, unknown>) => readWhy(answer([{ ...good, ...extra }]))![0];
+  const matched = combat({});
+  assert.equal(causeMark(matched), null, "nothing said for the expected result");
+  assert.equal(oddsCell(matched).map(text).join(""), "100%");
+  const chance = combat({ result: "lost", odds: { won: 0.58, tied: 0.04, lost: 0.38 }, cause: { id: "chance", attacks: 9 } });
+  assert.equal(oddsCell(chance).map(text).join(""), "58% Chance");
+  const noReplay = combat({ result: "lost", odds: { won: 0.58, tied: 0.04, lost: 0.38 }, cause: { id: "no_replay_exact", replay: "not_saved" } });
+  assert.equal(text(causeMark(noReplay)!), "—no cause given", "a quiet dash, the words for screen readers only");
+  const rule = combat({ result: "lost", odds: { won: 0.7, tied: 0, lost: 0.3 }, cause: { id: "replay_stats", attack: 4, rule: "replay_stats", card: PLAIN } });
+  assert.equal(text(causeMark(rule)!), "Rule");
+  const noOdds = combat({ odds: null, no_odds: "no_card_data", cards: [PLAIN], cause: null });
+  assert.equal(oddsCell(noOdds).map(text).join(""), "—");
+  // The detail: the odds in full, then the cause and its evidence.
+  const detail = whyDetail(chance, nameOf).map(text);
+  assert.equal(detail[0], "Odds 58% win · 4% tie · 38% loss");
+  assert.equal(detail[1], "Chance: the replay matched until the dice.");
+  assert.match(detail[2], /all 9 attacks/);
+  assert.equal(whyDetail(matched, nameOf).length, 1, "the expected result: the odds only");
+  setLang("es");
+  assert.match(oddsCell(chance).map(text).join(""), /^58\s%\sAzar$/);
 });
 
 test("the built engine explains a stored game combat by combat", async () => {
@@ -186,4 +199,43 @@ test("the engine's worker is stopped once it answers, fails or takes too long", 
   assert.ok(silent.stopped);
   const other = new FakeWorker(() => ({ id: 2, answer: "not ours" }));
   await assert.rejects(askEngine("x", () => other as unknown as Worker, 10), /too long/, "another request's answer is not taken");
+});
+
+/** A stand-in for the page: the turn table's odds cells, the detail boxes and the status line. */
+function fakePage(rounds: number[]) {
+  const text = (n: unknown): string =>
+    typeof n === "object" && n !== null && "data" in n ? String((n as { data: string }).data) : ((n as { kids?: unknown[] }).kids ?? []).map(text).join("");
+  const doc = {
+    createElement: () => {
+      const el = { kids: [] as unknown[], setAttribute() {}, appendChild: (c: unknown) => void el.kids.push(c) };
+      return el;
+    },
+    createElementNS: () => doc.createElement(),
+    createTextNode: (data: string) => ({ data }),
+  };
+  const box = (key: string, round: number) => {
+    const node = { dataset: { [key]: String(round) }, ownerDocument: doc, kids: [] as unknown[], replaceChildren: (...k: unknown[]) => void (node.kids = k) };
+    return node;
+  };
+  const odds = rounds.map((r) => box("odds", r));
+  const why = rounds.map((r) => box("why", r));
+  const status = { textContent: "the note" };
+  const root = {
+    querySelectorAll: (sel: string) => (sel === "[data-odds]" ? odds : why),
+    querySelector: () => status,
+  } as unknown as ParentNode;
+  return { root, status, oddsText: () => odds.map((c) => c.kids.map(text).join("")), whyCount: () => why.map((c) => c.kids.length) };
+}
+
+test("the engine's answer fills each row; a combat it does not answer, or no answer at all, ends as a dash", () => {
+  const page = fakePage([1, 3]);
+  const chance = { ...good, round: 1, result: "lost", odds: { won: 0.58, tied: 0.04, lost: 0.38 }, cause: { id: "chance", attacks: 9 } };
+  fillWhy(page.root, readWhy(answer([chance])));
+  assert.deepEqual(page.oddsText(), ["58% Chance", "—"], "never left waiting");
+  assert.deepEqual(page.whyCount(), [3, 0]);
+  assert.equal(page.status.textContent, "the note");
+  const failed = fakePage([1, 3]);
+  fillWhy(failed.root, null);
+  assert.deepEqual(failed.oddsText(), ["—", "—"]);
+  assert.match(failed.status.textContent, /could not be worked out/);
 });

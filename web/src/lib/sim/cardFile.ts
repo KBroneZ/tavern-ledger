@@ -27,3 +27,17 @@ export interface SimCardFile {
   source: string;
   cards: SimCard[];
 }
+
+/**
+ * The names of the Battlegrounds cards that are not minions (tavern spells,
+ * trinkets, quest rewards, anomalies, hero powers): written at build time
+ * next to the minions, read by the game page only (T-559).
+ */
+export interface CardNameFile {
+  version: 1;
+  source: string;
+  /** Card id to name, in the file's language. */
+  names: Record<string, string>;
+  /** A trinket's card database id to its card id (the lobby names trinkets by database id). */
+  trinkets: Record<string, string>;
+}

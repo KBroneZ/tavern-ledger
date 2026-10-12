@@ -10,6 +10,7 @@ import { h, mount, type VNode } from "../view/node.ts";
 import { stateBlock } from "../view/pieces.ts";
 import { EXPIRED_COLUMNS, expiredHeading, loadExpired, type ReadSummary, renderExpired } from "./expired.ts";
 import { loadGame, type Download, type LoadResult } from "./load.ts";
+import { loadCardNames, useCardNames } from "./names.ts";
 import { renderGame } from "./render.ts";
 import { startReplays } from "./replayPlayer.ts";
 import { explainCombats } from "./whyRun.ts";
@@ -18,6 +19,7 @@ import { shapeGame } from "./shape.ts";
 import { g, type GameStringKey } from "./strings.ts";
 import { type GameRef, parseGameRef, playedOn } from "./url.ts";
 import { pageHeading } from "./words.ts";
+import { toggleTurn } from "./turnsView.ts";
 import { href } from "../i18n.ts";
 
 function byId(id: string): HTMLElement {
@@ -78,6 +80,25 @@ function showGame(result: Extract<LoadResult, { kind: "ok" }>, ref: GameRef): vo
   void explainCombats(result.report);
 }
 
+/** Opens the replay of a turn from its row: picks it in the player and moves there. */
+function watch(turn: string): void {
+  const section = document.getElementById("gv-replays");
+  if (!section) return;
+  const chip = section.querySelector<HTMLElement>(`.rp-chip[data-round="${CSS.escape(turn)}"]`);
+  chip?.click();
+  section.scrollIntoView({ block: "start" });
+  chip?.focus({ preventScroll: true });
+}
+
+/** One listener for the turn table: a row's toggle opens its detail; "Watch this combat" opens its replay. */
+body.addEventListener("click", (event) => {
+  const target = event.target as HTMLElement;
+  const toggle = target.closest<HTMLElement>("[data-toggle]");
+  if (toggle) return toggleTurn(toggle);
+  const replay = target.closest<HTMLElement>("[data-replay]");
+  if (replay?.dataset.replay) watch(replay.dataset.replay);
+});
+
 /** A game whose full file has expired (T-544): its summary and why the details are gone. */
 function showExpired(row: Parameters<typeof renderExpired>[0]): void {
   const title = expiredHeading(row);
@@ -96,7 +117,9 @@ async function run(ref: GameRef, sources: Sources): Promise<void> {
   mount(body, stateBlock({ kind: "loading", title: g("page.loading"), lines: 10 }));
   body.setAttribute("aria-busy", "true");
   status.textContent = g("page.loading");
-  const result = await loadGame(download, ref);
+  // The card names load beside the game (a script chunk from this site); without them, ids show.
+  const [result, names] = await Promise.all([loadGame(download, ref), loadCardNames()]);
+  useCardNames(names);
   if (result.kind === "ok") return showGame(result, ref);
   const retry = () => {
     // The button goes away with the block: focus moves to the page's heading first.
@@ -121,6 +144,7 @@ async function start(): Promise<void> {
   if (import.meta.env.DEV && new URLSearchParams(location.search).has("demo")) {
     const { record } = await import("../../../test/unit/gameFixtures.ts");
     const read = readRecord(record(), ref.session, ref.index);
+    useCardNames(await loadCardNames());
     if (read.ok) return showGame({ kind: "ok", record: read.record, report: record().report }, ref);
   }
   const { supabase } = await import("../../scripts/client.ts");

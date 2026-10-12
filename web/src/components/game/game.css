@@ -75,6 +75,11 @@
   font-weight: 600;
 }
 
+/* Two key numbers a row on a phone, not one tall tile each. */
+.gv-tiles {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 136px), 1fr));
+}
+
 .gv-status {
   color: var(--text-2);
   font-size: var(--t-md);
@@ -107,25 +112,231 @@
   font-size: var(--t-xs);
 }
 
+/* ---------- The turns: one table, a row opens on its detail (T-559) ---------- */
+
 .gv-turns td,
 .gv-turns th {
   white-space: nowrap;
 }
 
-/* ---------- Boards ---------- */
+.gv-turns .gv-turn > * {
+  vertical-align: middle;
+}
+
+.gv-turn.is-open > * {
+  background: var(--panel-hi);
+}
+
+.gv-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 44px;
+  min-height: 36px;
+  padding: 0 var(--s-2);
+  border: 1px solid transparent;
+  border-radius: var(--r-chip);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.gv-toggle:hover {
+  border-color: var(--line);
+  background: var(--panel-hi);
+}
+
+.gv-toggle:focus-visible {
+  outline: 2px solid var(--amber-hi);
+  outline-offset: 2px;
+}
+
+/* A chevron that turns when the row is open. */
+.gv-chev {
+  width: 0.45em;
+  height: 0.45em;
+  border-right: 2px solid var(--amber-hi);
+  border-bottom: 2px solid var(--amber-hi);
+  rotate: -45deg;
+  transition: rotate 150ms var(--ease-out);
+}
+
+.gv-toggle[aria-expanded="true"] .gv-chev {
+  rotate: 45deg;
+}
+
+.gv-short {
+  display: none;
+}
+
+.gv-opps {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-3);
+}
+
+.gv-odds {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The cause, in a word, only when the likeliest result did not happen. */
+.gv-cause {
+  padding: 0 var(--s-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-chip);
+  color: var(--amber-hi);
+  font-size: var(--t-xs);
+  font-weight: 700;
+}
+
+.gv-cause.is-quiet {
+  border-color: transparent;
+  color: var(--text-3);
+}
+
+.gv-turn-more > td {
+  padding: 0;
+  white-space: normal;
+}
+
+.gv-detail {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-hi);
+  /* The detail is as wide as the scroll box shows, not as the table. */
+  position: sticky;
+  left: 0;
+  max-width: min(100vw - 2 * var(--gutter, 16px), 100%);
+}
+
+.gv-detail p {
+  margin: 0;
+}
+
+.gv-why-more:empty {
+  display: none;
+}
+
+.gv-why-line {
+  font-weight: 600;
+}
+
+.gv-why-ev {
+  margin: 0;
+  padding-left: 1.2em;
+  color: var(--text-2);
+  font-size: var(--t-sm);
+}
+
+/* Narrow screens: the tier and the gold are in the row's detail (the shop line), opponents show by portrait. */
+@media (max-width: 40rem) {
+  .gv-turns .gv-wide,
+  .gv-turns .gv-long {
+    display: none;
+  }
+
+  .gv-turns .gv-short {
+    display: inline;
+  }
+
+  .gv-turns th,
+  .gv-turns td {
+    padding-inline: var(--s-2);
+  }
+
+  .gv-opps {
+    flex-wrap: wrap;
+  }
+
+  .gv-opp-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* ---------- Boards: as in the game (the replay's minions, replay.css) ---------- */
+
+.gv-boards {
+  display: grid;
+  gap: var(--s-2);
+}
 
 .gv-board {
   display: grid;
   gap: var(--s-2);
-  padding-block: var(--s-2);
 }
 
 .gv-board-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
   font-weight: 700;
 }
 
-.gv-minions,
-.gv-offers,
+.gv-board .rp-board {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: start;
+  gap: var(--s-3) var(--s-2);
+}
+
+.gv-minion {
+  width: calc(var(--rp-tile) + 14px);
+}
+
+.gv-minion-name {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 4px;
+  color: var(--text-2);
+  font-size: 0.6875rem;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* Cards in a row (bought, sold, offered, choices): a small picture and its name. */
+.gv-cardrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--t-sm);
+}
+
+.gv-cardrow li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.gv-shop {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.gv-shop-row {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, max-content) 1fr;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+}
+
 .gv-options {
   display: flex;
   flex-wrap: wrap;
@@ -135,40 +346,12 @@
   list-style: none;
 }
 
-.gv-minion,
-.gv-offers li,
 .gv-options li {
   display: flex;
   align-items: center;
   gap: var(--s-2);
   min-width: 0;
   max-width: 100%;
-}
-
-.gv-minion-text {
-  display: grid;
-  line-height: 1.25;
-  min-width: 0;
-}
-
-.gv-stats {
-  font: 700 var(--t-md) / 1.2 var(--display);
-  font-variant-numeric: tabular-nums;
-}
-
-.gv-golden {
-  color: var(--amber-hi);
-  font-size: var(--t-xs);
-  font-weight: 700;
-}
-
-.gv-minion.is-golden .pic {
-  box-shadow: 0 0 0 2px var(--amber);
-}
-
-.gv-keywords {
-  color: var(--text-2);
-  font-size: var(--t-xs);
 }
 
 /* Dark Gifts (T-528, D-107): a violet star and the gift's name; the summary
@@ -216,32 +399,6 @@
   box-shadow: 0 0 0 2px var(--amber);
 }
 
-.gv-shop {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr));
-  gap: var(--s-2) var(--s-4);
-  margin: 0;
-  font-size: var(--t-sm);
-}
-
-.gv-shop dt {
-  color: var(--text-3);
-}
-
-.gv-shop dd {
-  margin: 0;
-  font-weight: 600;
-}
-
-.gv-shop .gv-cards {
-  grid-column: 1 / -1;
-}
-
-.gv-pics {
-  flex-wrap: wrap;
-  padding: var(--s-1) 0;
-}
-
 .gv-roll {
   display: grid;
   gap: var(--s-2);
@@ -273,29 +430,20 @@
   color: var(--text-2);
 }
 
-/* Why each result went as it did (T-549): one line per combat. */
-.gv-why {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
+/* The narrowest phones: the opponents are in each row's detail (their boards). */
+@media (max-width: 26rem) {
+  .gv-turns .gv-opp-col {
+    display: none;
+  }
 
-.gv-why-line {
-  margin: 0.25em 0;
-}
-
-.gv-why-turn,
-.gv-why-odds {
-  font-variant-numeric: tabular-nums;
-}
-
-.gv-why-odds {
-  color: var(--text-2);
+  .gv-shop-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (forced-colors: active) {
-  .gv-minion.is-golden .pic,
-  .gv-options li.is-taken .pic {
+  .gv-options li.is-taken .pic,
+  .gv-toggle[aria-expanded="true"] {
     outline: 2px solid CanvasText;
   }
 }

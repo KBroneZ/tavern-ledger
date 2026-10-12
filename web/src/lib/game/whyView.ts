@@ -1,36 +1,17 @@
-// "Why the result differed" on the game page (T-549, D-127) as element
-// trees: one short line per combat (the turn, the odds the engine gives on
-// the boards as they fought, the result and the cause), and a fold with the
-// evidence. Simple by default; the cause list on the accuracy page explains
-// every cause. The page's script (main.ts) fills the section once the
-// engine answers.
+// "Why the result differed" on the game page (T-549, D-127; one turn table
+// since T-559, D-131) as element trees: each combat's win odds in its turn's
+// row, with a short mark only when the likeliest result did not happen, and
+// the odds in full, the cause and its evidence in the row's detail. The cause
+// list on the accuracy page explains every cause. whyRun.ts fills the cells
+// once the engine answers.
 import { type AccKey, at } from "../accuracy/strings.ts";
 import { share } from "../data/format.ts";
-import { t } from "../data/strings.ts";
-import { href } from "../i18n.ts";
 import { h, type VNode } from "../view/node.ts";
-import { fold, stateBlock } from "../view/pieces.ts";
 import { g, type GameStringKey } from "./strings.ts";
 import type { WhyCause, WhyCombat } from "./why.ts";
 
-export const WHY_ID = "gv-why";
-
-/** The engine's result words as the site's (lib/data/format.ts). */
-const RESULT = { won: "win", lost: "loss", tie: "tie" } as const;
-
 /** A card's name in the page's language (the card data, else the id). */
 export type NameOf = (id: string) => string;
-
-/** The section as the page first draws it: the heading and a loading line. */
-export function whyShell(): VNode {
-  return h(
-    "section",
-    { class: "data-section", "aria-labelledby": `${WHY_ID}-title` },
-    h("h2", { id: `${WHY_ID}-title` }, g("why.title")),
-    h("p", { class: "data-note" }, g("why.desc")),
-    h("div", { id: WHY_ID, "aria-live": "polite" }, stateBlock({ kind: "loading", title: g("why.loading"), lines: 3 })),
-  );
-}
 
 function names(ids: readonly string[], nameOf: NameOf): string {
   return ids.map(nameOf).join(", ");
@@ -84,38 +65,31 @@ export function evidence(c: WhyCombat, nameOf: NameOf): string[] {
   return out;
 }
 
-function combatRow(c: WhyCombat, nameOf: NameOf): VNode {
-  const word = RESULT[c.result];
-  const result = h("span", { class: `res-${word}` }, t(`result.${word}`));
-  const line = h(
-    "p",
-    { class: "gv-why-line" },
-    h("span", { class: "gv-why-turn" }, g("why.turn", { turn: c.round })),
-    " ",
-    result,
-    " ",
-    h("span", { class: "gv-why-odds" }, oddsText(c)),
-    " · ",
-    h("span", { class: "gv-why-cause" }, causeLine(c, nameOf)),
-  );
-  const more = evidence(c, nameOf);
-  if (more.length === 0) return h("li", { "data-round": String(c.round) }, line);
-  return h(
-    "li",
-    { "data-round": String(c.round) },
-    line,
-    fold({ summary: g("why.more"), context: g("why.turn", { turn: c.round }), compact: true }, h("ul", {}, more.map((m) => h("li", {}, m)))),
-  );
+/** The mark in a row: the cause in a word; a quiet dash when no replay could give one; none when the likeliest result happened. */
+export function causeMark(c: WhyCombat): VNode | null {
+  const cause = c.cause;
+  if (c.noOdds || !cause || cause.id === "matched") return null;
+  if (cause.replay !== null) {
+    return h("span", { class: "gv-cause is-quiet" }, h("span", { "aria-hidden": "true" }, "—"), h("span", { class: "visually-hidden" }, g("why.mark.none")));
+  }
+  const kind = cause.id === "chance" || cause.id === "missing_inputs" || cause.id === "approximate_card" ? cause.id : "rule";
+  return h("span", { class: `gv-cause is-${kind}` }, g(`why.mark.${kind}` as GameStringKey));
 }
 
-/** The lines once the engine has answered (`null`: it could not). */
-export function whyLines(combats: WhyCombat[] | null, nameOf: NameOf): VNode[] {
-  if (combats === null) return [stateBlock({ kind: "error", title: g("why.failed.title"), body: g("why.failed.body") })];
-  if (combats.length === 0) return [h("p", { class: "data-note" }, g("why.none"))];
-  const missed = combats.filter((c) => c.cause !== null && c.cause.id !== "matched").length;
+/** What a turn's odds cell shows: the chance to win, then the mark. */
+export function oddsCell(c: WhyCombat): VNode[] {
+  const mark = causeMark(c);
+  const odds = c.odds ? share(c.odds.won, 1) : "—";
+  return [h("span", {}, odds), mark ? " " : null, mark].filter((n): n is VNode => n !== null);
+}
+
+/** A turn's detail: the odds in full, and the cause with its evidence when the likeliest result did not happen. */
+export function whyDetail(c: WhyCombat, nameOf: NameOf): VNode[] {
+  const differed = c.noOdds !== null || (c.cause !== null && c.cause.id !== "matched");
+  const more = evidence(c, nameOf);
   return [
-    h("p", { class: "data-note" }, g("why.count", { missed, total: combats.length })),
-    h("ul", { class: "gv-why" }, combats.map((c) => combatRow(c, nameOf))),
-    h("p", { class: "data-note" }, h("a", { href: `${href("/accuracy/")}#acc-causes` }, g("why.link"))),
-  ];
+    h("p", {}, h("span", { class: "tile-label" }, g("why.oddsTitle")), " ", oddsText(c)),
+    differed ? h("p", { class: "gv-why-line" }, causeLine(c, nameOf)) : null,
+    more.length > 0 ? h("ul", { class: "gv-why-ev" }, more.map((m) => h("li", {}, m))) : null,
+  ].filter((n): n is VNode => n !== null);
 }

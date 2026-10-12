@@ -43,5 +43,15 @@
   "id": "BG_NOT_A_CARD",
   "dbfId": 900009,
   "name": "Desconocido sintético"
+ },
+ {
+  "id": "BG_SPELL_SYN",
+  "dbfId": 910002,
+  "name": "Un hechizo"
+ },
+ {
+  "id": "BG_TRINKET_SYN",
+  "dbfId": 910004,
+  "name": "Una baratija"
  }
 ]

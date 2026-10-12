@@ -13,8 +13,8 @@ interface Props {
   description: string;
   /** Pages about one account are kept out of search engines. */
   noindex?: boolean;
-  /** "home" is full width, "reading" one column of about 68 characters. */
-  layout?: "home" | "page" | "reading";
+  /** "home" is full width, "data" wider for tables and boards (T-559), "reading" one column of about 68 characters. */
+  layout?: "home" | "page" | "data" | "reading";
   /** False on a page built in English only (the style page): no switch, no alternates. */
   translated?: boolean;
   /** The page's own painting behind it (T-546); none on the home page, which has its own. */

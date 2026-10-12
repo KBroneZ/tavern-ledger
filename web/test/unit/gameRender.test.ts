@@ -6,7 +6,9 @@ import { renderGame } from "../../src/lib/game/render.ts";
 import { readRecord } from "../../src/lib/game/report.ts";
 import { shapeGame } from "../../src/lib/game/shape.ts";
 import { GAME_STRINGS } from "../../src/lib/game/strings.ts";
-import { combatsBacking, damageSource, damageText, goldText, heroLabel, minionWords, pageHeading } from "../../src/lib/game/words.ts";
+import { combatsBacking, damageMark, damageShort, damageText, heroLabel, minionWords, pageHeading, shopLine } from "../../src/lib/game/words.ts";
+import { useCardNames } from "../../src/lib/game/names.ts";
+import { CardIndex } from "../../src/lib/sim/cards.ts";
 import type { VNode } from "../../src/lib/view/node.ts";
 import { duosReport, INDEX, record, SESSION, soloReport } from "./gameFixtures.ts";
 
@@ -36,8 +38,9 @@ test("words: hero names, headings, minions and unknown values", () => {
   assert.equal(damageText(v.turns[0]), "dealt 3");
   assert.equal(damageText(v.turns[1]), "took 5");
   assert.equal(damageText(v.turns[2]), "took 13");
-  assert.equal(goldText(v.turns[0]), "3 of 3 spent");
-  assert.equal(goldText(v.turns[1]), "—", "a turn without gold is unknown, never 0");
+  assert.equal(damageShort(v.turns[0]), "+3");
+  assert.equal(damageShort(v.turns[1]), "−5");
+  assert.equal(shopLine(v.turns[0].shop!, v.turns[0]), "Tier 1 · Gold 3 · 3 spent · 1 roll");
   // A lost combat whose own health after it is unknown: the damage that matters is unknown, not 0.
   assert.equal(damageText({ ...v.turns[1], dealt: 0, taken: null }), "—");
   assert.equal(damageText({ ...v.turns[0], dealt: null, taken: 0 }), "—");
@@ -46,16 +49,56 @@ test("words: hero names, headings, minions and unknown values", () => {
   assert.equal(minionWords({ cardId: null, atk: null, health: 2, golden: false, keywords: [] }), "Unknown card, ?/2");
 });
 
-test("render: Simple has the summary and the turns; the rest is Advanced only", () => {
+test("render: Simple has the key numbers, the turns and the replays; the rest is Advanced only (T-559)", () => {
   const nodes = renderGame(view(), "2026-10-09");
   const sections = nodes.filter((n) => n.tag === "section");
   const simple = sections.filter((n) => !attr(n, "class")?.split(" ").includes("adv")).map((n) => attr(n, "aria-labelledby"));
   const adv = sections.filter((n) => attr(n, "class")?.split(" ").includes("adv")).map((n) => attr(n, "aria-labelledby"));
-  assert.deepEqual(simple, ["gv-turns-title", "gv-replays-title", "gv-why-title"]);
-  assert.deepEqual(adv, ["gv-boards-title", "gv-opponents-title", "gv-choices-title", "gv-lobby-title", "gv-notes-title"]);
+  assert.deepEqual(simple, ["gv-turns-title", "gv-replays-title"], "one turn table: no separate boards or odds lists");
+  assert.deepEqual(adv, ["gv-opponents-title", "gv-choices-title", "gv-lobby-title", "gv-notes-title"]);
   assert.equal(attr(nodes[0], "class"), "gv-summary");
-  const advTiles = [...walk(nodes[0])].filter((n) => attr(n, "class") === "tile adv").map((n) => text(n.children[0]));
-  assert.deepEqual(advTiles, ["Rolls", "Buys", "Sells", "Actions per minute"]);
+  const tiles = [...walk(nodes[0])].filter((n) => attr(n, "class")?.split(" ").includes("tile"));
+  const label = (n: VNode) => text(n.children[0]);
+  assert.deepEqual(tiles.filter((n) => attr(n, "class") === "tile").map(label), ["Combats won–lost", "Damage dealt", "Damage taken", "Final tavern tier"]);
+  assert.deepEqual(tiles.filter((n) => attr(n, "class") === "tile adv").map(label), ["Gold spent", "Triples", "Rolls", "Buys", "Sells", "Actions per minute"]);
+  // The combats in one short figure; how many back each number only in Advanced,
+  // unless the number is partial: one combat's result is unknown, so that line stays in view.
+  assert.match(text(tiles[0]), /^Combats won–lost1–1/);
+  const back = (tile: VNode) => [...walk(tile)].find((n) => attr(n, "class")?.startsWith("tile-back"));
+  assert.equal(attr(back(tiles[0])!, "class"), "tile-back");
+  assert.match(text(back(tiles[0])!), /1 unknown/);
+  // Damage dealt is known for 2 of 3 combats: a partial sum keeps its line in view too.
+  assert.equal(attr(back(tiles[1])!, "class"), "tile-back");
+  assert.match(text(back(tiles[1])!), /over 2 of 3 combats/);
+  const rest = tiles.slice(2).map(back).filter((n): n is VNode => n !== undefined);
+  assert.ok(rest.length > 0);
+  for (const b of rest) assert.equal(attr(b, "class"), "tile-back adv");
+});
+
+test("render: each turn is one row whose toggle opens its boards, shop and odds (T-559, D-131)", () => {
+  const nodes = renderGame(view(), "2026-10-09");
+  const turns = nodes.find((n) => attr(n, "aria-labelledby") === "gv-turns-title")!;
+  const all = [...walk(turns)];
+  const rows = all.filter((n) => attr(n, "class") === "gv-turn");
+  const details = all.filter((n) => attr(n, "class") === "gv-turn-more");
+  assert.equal(rows.length, 3);
+  assert.equal(details.length, 3);
+  for (const [i, row] of rows.entries()) {
+    const toggle = [...walk(row)].find((n) => attr(n, "data-toggle") !== undefined)!;
+    assert.equal(toggle.tag, "button");
+    assert.equal(attr(toggle, "aria-expanded"), "false");
+    assert.equal(attr(toggle, "aria-controls"), attr(details[i], "id"));
+    assert.equal(attr(details[i], "hidden"), "", "closed until opened");
+  }
+  // Every combat with a result waits for its odds; the unknown one has none.
+  assert.deepEqual(all.filter((n) => attr(n, "data-odds") !== undefined).map((n) => attr(n, "data-odds")), ["1", "2"]);
+  assert.deepEqual(all.filter((n) => attr(n, "data-why") !== undefined).map((n) => attr(n, "data-why")), ["1", "2", "3"]);
+  // The detail holds the boards and the shop: theirs and yours, then the shop's line.
+  const first = text(details[0]);
+  assert.match(first, /Brass Captain's board/);
+  assert.match(first, /Your board/);
+  assert.match(first, /Shop Tier 1 · Gold 3 · 3 spent · 1 roll/);
+  assert.match(first, /Watch this combat$/, "a combat with a replay opens it from its row");
 });
 
 test("render: every picture has its size, a text alternative and a local fallback", () => {
@@ -85,9 +128,9 @@ test("render: a record with no combats shows dashes, not 0 won", () => {
 test("render: inferred results are marked and unknown values are dashes, never 0", () => {
   const nodes = renderGame(view(), "2026-10-09");
   const turns = nodes.find((n) => attr(n, "aria-labelledby") === "gv-turns-title")!;
-  const rows = [...walk(turns)].filter((n) => n.tag === "tr").slice(1).map(text);
-  assert.match(rows[0], /^1.*Won.*Brass Captain.*dealt 3.*3 of 3 spent$/);
-  assert.match(rows[1], /^22 tier up.*Lost inferred.*Moss Witch.*took 5 from the log—$/);
+  const rows = [...walk(turns)].filter((n) => attr(n, "class") === "gv-turn").map(text);
+  assert.match(rows[0], /^1Turn 1: boards, shop and odds1WonBrass Captain.*dealt 3\+3/);
+  assert.match(rows[1], /^2.*2 ▲Lost inferredMoss Witch.*took 5−5—/);
   assert.match(rows[2], /Unknown/);
 });
 
@@ -96,7 +139,7 @@ test("render: Duos shows the teammate and the lobby's teams", () => {
   const all = nodes.map(text).join("\n");
   assert.match(all, /TeammateBrass Captain/);
   assert.match(all, /Team/);
-  assert.match(all, /This game has no shop record/);
+  assert.match(all, /No shop record for this turn/);
   assert.match(all, /Unknown hero's board 1 minion/);
   assert.match(all, /Unknown hero's board 2 minions/);
   assert.doesNotMatch(all, /SYN_HERO_/, "no card id as a hero name");
@@ -132,10 +175,10 @@ test("render: a gifted minion shows a mark per gift with its name and summary, i
   const board = report.rounds[1].entries[0].board;
   board[0].gifts = ["BG36_MidGameEffect_000t9", "BG99_Unknown_1"];
   board[1].gift_unknown = true;
-  // The boards section's marks (the replay section draws its own: gameReplayView.test.ts).
+  // The turn table's boards (the replay section draws its own: gameReplayView.test.ts).
   const gifts = (nodes: VNode[]) =>
     nodes
-      .filter((n) => attr(n, "aria-labelledby") === "gv-boards-title")
+      .filter((n) => attr(n, "aria-labelledby") === "gv-turns-title")
       .flatMap((n) => [...walk(n)])
       .filter((n) => attr(n, "class")?.split(" ").includes("gv-gift"));
   const en = gifts(renderGame(view(report), "2026-10-09"));
@@ -152,24 +195,40 @@ test("render: a gifted minion shows a mark per gift with its name and summary, i
   }
 });
 
-test("render: damage from the game's own hit is marked from the log; worked-out damage is not", () => {
+test("render: only worked-out damage is marked, with one short legend (T-559)", () => {
   const nodes = renderGame(view(), "2026-10-09");
   const all = [...nodes].flatMap((n) => [...walk(n)]);
-  const marks = (kind: string) => all.filter((n) => attr(n, "class") === `mark-src mark-${kind}`).map(text);
-  const cells = all.filter((n) => n.tag === "td" && attr(n, "class") === "num").map(text);
-  // Turns 1 and 2 have the hit in their replay, turn 3 has only health.
-  assert.deepEqual(cells.filter((c) => c.includes("from the log")), ["dealt 3 from the log", "took 5 from the log"]);
-  // Two cells, the note, and the "dealt" tile (both its combats have the hit); "taken" is mixed, so inferred.
-  assert.equal(marks("log").length, 4);
-  assert.ok(marks("inferred").length >= 3);
+  const marks = (kind: string) => all.filter((n) => attr(n, "class") === `mark-src mark-${kind}`);
+  assert.equal(marks("log").length, 0, "the game's own hit needs no mark");
+  const inferred = marks("inferred");
+  const marked = all.filter((n) => n.tag === "td" && attr(n, "class") === "num" && n.children.some((c) => typeof c !== "string" && inferred.includes(c)));
+  // Turn 3 has only health; turns 1 and 2 have the hit in their replay.
+  assert.deepEqual(marked.map(text), ["took 13−13 inferred"]);
+  const tiles = all.filter((n) => attr(n, "class") === "tile");
+  assert.ok(!inferred.some((m) => [...walk(tiles[1])].includes(m)), "dealt: every combat had the hit");
+  assert.ok(inferred.some((m) => [...walk(tiles[2])].includes(m)), "taken: one combat was worked out");
+  assert.equal(all.filter((n) => n.tag === "p" && text(n).includes("Worked out from the health")).length, 1);
 });
 
-test("words: a damage total is from the log only when every combat behind it is", () => {
+test("render: cards go by their name from the card data, else by their id (T-559)", () => {
+  const cards = new CardIndex({ version: 1, source: "test", cards: [{ i: "SYN_M_02", n: "Lantern Moth", t: 1, a: 3, h: 3, r: [], k: [] }] });
+  useCardNames({ cards, names: new Map(), trinkets: new Map() });
+  try {
+    const v = view();
+    assert.equal(minionWords(v.turns[1].ownBoard!.minions[1]), "Lantern Moth, 3/3, Golden, Taunt, Divine Shield");
+    assert.match(renderGame(v, "2026-10-09").map(text).join("\n"), /Lantern Moth/);
+  } finally {
+    useCardNames(null);
+  }
+  assert.equal(minionWords(view().turns[1].ownBoard!.minions[1]), "SYN_M_02, 3/3, Golden, Taunt, Divine Shield");
+});
+
+test("words: a damage total is marked inferred when any combat behind it was worked out", () => {
   const known = (value: number, n: number, logged: number) => ({ value, known: n, total: 3, logged });
-  assert.equal(damageSource(known(8, 3, 3)), "log");
-  assert.equal(damageSource(known(8, 3, 2)), "inferred");
-  assert.equal(damageSource(known(8, 3, 0)), "inferred");
-  assert.equal(damageSource({ value: null, known: 0, total: 3, logged: 0 }), "inferred");
+  assert.equal(damageMark(known(8, 3, 3)), undefined);
+  assert.equal(damageMark(known(8, 3, 2)), "inferred");
+  assert.equal(damageMark(known(8, 3, 0)), "inferred");
+  assert.equal(damageMark({ value: null, known: 0, total: 3, logged: 0 }), undefined, "nothing known: the value is a dash");
   assert.equal(combatsBacking(known(8, 3, 3)), "over 3 of 3 combats");
   assert.equal(combatsBacking(known(8, 3, 2)), "over 3 of 3 combats · 2 from the log");
 });

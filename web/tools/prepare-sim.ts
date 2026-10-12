@@ -2,7 +2,9 @@
 // src/lib/sim/generated/ (git-ignored):
 // - engine.ts: the committed engine (src/lib/sim/engine.wasm) as a base64
 //   string the worker carries, after checking it is the one its stamp names;
-// - cards.en.json and cards.es.json: the card data.
+// - cards.en.json and cards.es.json: the card data;
+// - names.en.json and names.es.json: the names of the other Battlegrounds
+//   cards (spells, trinkets...), for the game page (T-559).
 //
 //   node tools/prepare-sim.ts                fetch the cards from HearthstoneJSON (the Pages build)
 //   node tools/prepare-sim.ts --if-missing   the same, but keep card files already there (dev)
@@ -16,7 +18,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadEnv } from "vite";
 import { readConfig } from "../src/lib/config.ts";
-import { extractCards, type SimCardFile } from "./simCards.ts";
+import { type CardNameFile, extractCards, extractNames, type SimCardFile } from "./simCards.ts";
 import { sha256, STAMP_PATH, type Stamp, WASM_PATH } from "./simStamp.ts";
 
 const WEB = join(import.meta.dirname, "..");
@@ -29,6 +31,7 @@ const TIMEOUT_MS = 120_000;
 const USER_AGENT = "TavernLedger-site-build (+https://tavernledger.net)";
 
 const out = (lang: string) => join(OUT, `cards.${lang}.json`);
+const namesOut = (lang: string) => join(OUT, `names.${lang}.json`);
 
 async function fetchList(locale: string): Promise<{ list: unknown; build: string }> {
   const signal = AbortSignal.timeout(TIMEOUT_MS);
@@ -63,9 +66,11 @@ async function fetchList(locale: string): Promise<{ list: unknown; build: string
   return { list: JSON.parse(text), build };
 }
 
-function write(lang: string, file: SimCardFile): void {
+function write(lang: string, file: SimCardFile, names: CardNameFile): void {
   writeFileSync(out(lang), `${JSON.stringify(file)}\n`);
-  process.stdout.write(`prepare-sim: ${file.cards.length} minions (${lang}, ${file.source})\n`);
+  writeFileSync(namesOut(lang), `${JSON.stringify(names)}\n`);
+  const named = Object.keys(names.names).length;
+  process.stdout.write(`prepare-sim: ${file.cards.length} minions, ${named} other cards (${lang}, ${file.source})\n`);
 }
 
 /** The engine as a module the worker imports: no fetch, so the CSP needs no connection. */
@@ -85,10 +90,11 @@ function writeEngine(): void {
 async function main(): Promise<void> {
   mkdirSync(OUT, { recursive: true });
   writeEngine();
-  if (process.argv.includes("--if-missing") && existsSync(out("en")) && existsSync(out("es"))) return;
+  if (process.argv.includes("--if-missing") && ["en", "es"].every((l) => existsSync(out(l)) && existsSync(namesOut(l)))) return;
   const config = readConfig(loadEnv("production", WEB, "PUBLIC_"));
   if (!config) {
-    for (const lang of ["en", "es"]) write(lang, { version: 1, source: "none (accounts closed)", cards: [] });
+    const none = "none (accounts closed)";
+    for (const lang of ["en", "es"]) write(lang, { version: 1, source: none, cards: [] }, { version: 1, source: none, names: {}, trinkets: {} });
     return;
   }
   const dir = process.env.SIM_CARDS_DIR;
@@ -97,8 +103,8 @@ async function main(): Promise<void> {
   const en = await read("enUS");
   const es = await read("esES");
   const source = (build: string) => (build === "fixture" ? build : `HearthstoneJSON (${build})`);
-  write("en", extractCards(en.list, en.list, source(en.build)));
-  write("es", extractCards(en.list, es.list, source(es.build)));
+  write("en", extractCards(en.list, en.list, source(en.build)), extractNames(en.list, en.list, source(en.build)));
+  write("es", extractCards(en.list, es.list, source(es.build)), extractNames(en.list, es.list, source(es.build)));
 }
 
 main().catch((error: unknown) => {
