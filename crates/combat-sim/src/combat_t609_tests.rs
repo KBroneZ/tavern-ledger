@@ -289,3 +289,58 @@ fn a_teammates_board_comes_in_with_its_own_game_values() {
         (2, 11)
     );
 }
+
+fn reasons(minions: Vec<Minion>, values: GameValues) -> Vec<(String, &'static str)> {
+    let player = Warband {
+        values,
+        ..band(minions)
+    };
+    crate::trials::Coverage::of(&player, &band(vec![plain(1, 1)]), false).approximate
+}
+
+#[test]
+fn blood_gem_and_spell_cards_are_exact_when_the_board_brings_their_upgrades() {
+    // T-610: a board from the log or a saved round carries the upgrades; a
+    // zero is unknown (an older record), so the card stays approximate.
+    let gems = || vec![Minion::new("BG33_886", 3, 4).tier(1)];
+    let spell = || vec![Minion::new("BG36_241", 4, 4).tier(4)];
+    assert_eq!(reasons(gems(), GameValues::default()).len(), 1);
+    assert_eq!(reasons(gems(), values((1, 0), (0, 0))), vec![]);
+    assert_eq!(
+        reasons(gems(), values((0, 0), (2, 2))).len(),
+        1,
+        "not its value"
+    );
+    assert_eq!(reasons(spell(), GameValues::default()).len(), 1);
+    assert_eq!(reasons(spell(), values((0, 0), (0, 1))), vec![]);
+    // The other side's upgrades are not this board's.
+    let theirs = Warband {
+        values: values((1, 1), (1, 1)),
+        ..band(vec![plain(1, 1)])
+    };
+    let cov = crate::trials::Coverage::of(&band(gems()), &theirs, false);
+    assert_eq!(cov.approximate.len(), 1);
+}
+
+#[test]
+fn every_blood_gem_and_spell_upgrade_reason_is_the_shared_one() {
+    // `played_with` (trials.rs) matches the reason itself: a card that words
+    // the same gap its own way would stay approximate with its upgrades.
+    let ids = crate::cards::EFFECTS
+        .iter()
+        .chain(crate::cards_round2::EFFECTS_2)
+        .chain(crate::cards_round3::EFFECTS_3)
+        .chain(crate::cards_round4::EFFECTS_4)
+        .chain(crate::cards_round5::EFFECTS_5)
+        .chain(crate::cards_round7::EFFECTS_7);
+    for (id, rules) in ids {
+        if let crate::cards::Fidelity::Approximate(why) = rules.fidelity {
+            if why.contains("Blood Gem") && why.contains("upgrade") {
+                assert_eq!(why, crate::cards_round1::BLOOD_GEM, "{id}");
+            }
+            if why.contains("spell") && why.contains("grow") {
+                assert_eq!(why, crate::cards_round2::SPELL, "{id}");
+            }
+        }
+    }
+}

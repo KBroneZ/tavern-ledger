@@ -9,7 +9,7 @@
 //! never read (the parser gives no board for them). When a board was never
 //! seen, the overlay names it instead of a number.
 
-use bg_parser::report::{GameReport, LobbySlot, Minion as LogMinion, Side};
+use bg_parser::report::{CombatValues, GameReport, LobbySlot, Minion as LogMinion, Side};
 use serde::Serialize;
 
 use crate::odds::{start_of_combat_in, Gap, NoOdds};
@@ -41,6 +41,8 @@ pub struct Seen {
     pub board: Vec<LogMinion>,
     /// The seat's tavern tier now (shown on the leaderboard).
     pub tier: Option<i64>,
+    /// The seat's game-long values as that board was seen (T-610).
+    pub values: CombatValues,
 }
 
 /// The boards Duos odds add to the player's own and the next opponent's.
@@ -75,23 +77,20 @@ impl DuosInput {
     }
 }
 
-/// A board and the combat it was seen in.
-pub(crate) type LastBoard<'a> = (&'a [LogMinion], i64);
+/// A board, the combat it was seen in and the seat's game-long values then.
+pub(crate) type LastBoard<'a> = (&'a [LogMinion], i64, CombatValues);
 
 /// The newest board of `seat` on `side` that entered play in a combat the
-/// game has shown, with its combat number.
-pub(crate) fn last_board(
-    report: &GameReport,
-    seat: i64,
-    side: Side,
-) -> Option<(&[LogMinion], i64)> {
+/// game has shown, with its combat number and the seat's values then (zero
+/// when the log gave none).
+pub(crate) fn last_board(report: &GameReport, seat: i64, side: Side) -> Option<LastBoard<'_>> {
     report.rounds.iter().rev().find_map(|round| {
         round
             .entries
             .iter()
             .filter(|e| e.side == side && e.player_id == Some(seat))
-            .find_map(|e| e.board.as_deref())
-            .map(|b| (b, round.number))
+            .find_map(|e| Some((e.board.as_deref()?, e.values.unwrap_or_default())))
+            .map(|(b, values)| (b, round.number, values.bounded()))
     })
 }
 
@@ -130,11 +129,12 @@ pub fn duos_input<'a>(
             .and_then(|s| s.tech_level)
     };
     let seen = |seat: i64, side: Side| {
-        last_board(report, seat, side).map(|(board, round)| Seen {
+        last_board(report, seat, side).map(|(board, round, values)| Seen {
             seat,
             round,
             board: board.to_vec(),
             tier: tier(seat),
+            values,
         })
     };
     let teammate = seen(mate, Side::Own);
@@ -159,7 +159,7 @@ pub fn duos_input<'a>(
                 BoardSeen {
                     role: Role::Opponent,
                     seat: next,
-                    round: opponent.map(|(_, r)| r),
+                    round: opponent.map(|(_, r, _)| r),
                 },
                 BoardSeen {
                     role: Role::OpponentTeammate,

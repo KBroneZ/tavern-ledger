@@ -261,3 +261,21 @@ test("a loaded round keeps each minion's Dark Gifts and sends them to the engine
   const sent = request.player[0].minions[1];
   assert.deepEqual(sent.gifts, ["BG36_MidGameEffect_000t9", "BG36_MidGameEffect_000t13"]);
 });
+
+test("a loaded round keeps each board's game-long values and sends them to the engine (T-610)", () => {
+  const report = soloReport() as Record<string, any>;
+  report.rounds[1].entries[0].values = { blood_gem_atk: 2, blood_gem_health: 1, knights_dead: 3 };
+  const loaded = B.fromRound(game(report), 2, cards);
+  assert.ok(loaded);
+  assert.deepEqual(loaded.state.player[0].values, { blood_gem_atk: 2, blood_gem_health: 1, knights_dead: 3 });
+  assert.equal(loaded.state.opponent[0].values, undefined, "none saved: the printed numbers, as before");
+  // Editing the board keeps its hero's values.
+  const minion = loaded.state.player[0].minions[0];
+  const edited = B.removeMinion(loaded.state, "player", 0, minion.key);
+  assert.deepEqual(edited.player[0].values, loaded.state.player[0].values);
+  const request = JSON.parse(B.toRequest(edited, cards));
+  assert.deepEqual(request.player[0].values, { blood_gem_atk: 2, blood_gem_health: 1, knights_dead: 3 });
+  assert.equal("values" in request.opponent[0], false, "a board without values sends none");
+  // A board started in the editor has none.
+  assert.equal("values" in JSON.parse(B.toRequest(B.emptyState(), cards)).player[0], false);
+});

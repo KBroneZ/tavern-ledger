@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use bg_parser::report::Minion as LogMinion;
+use bg_parser::report::{CombatValues, Minion as LogMinion};
 use combat_sim::{BaseCard, Keywords, Tribes};
 use serde_json::{json, Value};
 use tracker::odds::{run_odds, DuosInput, Facts, OddsInput, Seen};
@@ -208,7 +208,70 @@ fn requests() -> Vec<(&'static str, Value)> {
                 "damage_cap": 15
             }),
         ),
+        (
+            // T-610: each board's game-long values from the saved round.
+            "solo game-long values",
+            solo(
+                with_values(
+                    board(
+                        Some(5),
+                        vec![
+                            m("BG33_430", 2, 5, &[], facts(3, &["QUILBOAR"], 2, 5, &[])),
+                            m(
+                                "BG33_886",
+                                3,
+                                4,
+                                &["rally"],
+                                facts(1, &["QUILBOAR"], 2, 3, &[]),
+                            ),
+                        ],
+                    ),
+                    json!({ "blood_gem_atk": 3, "blood_gem_health": 2 }),
+                ),
+                with_values(
+                    board(
+                        Some(4),
+                        vec![
+                            m(
+                                "BG28_300",
+                                4,
+                                3,
+                                &["reborn"],
+                                facts(3, &["UNDEAD"], 2, 2, &[]),
+                            ),
+                            m("BGS_119", 3, 5, &[], plain(1, 2)),
+                        ],
+                    ),
+                    json!({ "undead_atk": 4 }),
+                ),
+            ),
+        ),
+        (
+            "duos game-long values",
+            json!({
+                "player": [
+                    board(Some(4), vec![m("BGS_119", 3, 3, &[], plain(1, 2))]),
+                    with_values(
+                        board(Some(3), vec![m("BG28_300", 2, 2, &["reborn"], facts(3, &["UNDEAD"], 2, 2, &[]))]),
+                        json!({ "undead_atk": 6 }),
+                    ),
+                ],
+                "opponent": [
+                    board(Some(5), vec![m("BGS_119", 5, 4, &[], plain(1, 2))]),
+                    with_values(
+                        board(Some(2), vec![m("BG_ICC_026t", 1, 1, &["reborn"], skeleton())]),
+                        json!({ "undead_atk": 2 }),
+                    ),
+                ],
+                "damage_cap": 15
+            }),
+        ),
     ]
+}
+
+fn with_values(mut board: Value, values: Value) -> Value {
+    board["values"] = values;
+    board
 }
 
 fn statics(names: &[Value], list: &[&'static str]) -> Vec<&'static str> {
@@ -274,12 +337,25 @@ fn fact_table(req: &Value) -> BTreeMap<String, Facts> {
     out
 }
 
+/// A board's game-long values by the request's (and the saved report's) names.
+fn values(b: &Value) -> CombatValues {
+    let n = |name: &str| b["values"][name].as_i64().unwrap_or(0);
+    CombatValues {
+        blood_gem: (n("blood_gem_atk"), n("blood_gem_health")),
+        spell: (n("spell_atk"), n("spell_health")),
+        knights_dead: n("knights_dead"),
+        undead_attack: n("undead_atk"),
+        beetle: (n("beetle_atk"), n("beetle_health")),
+    }
+}
+
 fn seen(b: &Value) -> Seen {
     Seen {
         seat: 9,
         round: 1,
         board: log_board(b),
         tier: b["tier"].as_i64(),
+        values: values(b),
     }
 }
 
@@ -296,6 +372,8 @@ fn app_input(req: &Value) -> OddsInput {
         seen_after_start_of_combat: false,
         own: log_board(&p[0]),
         opponent: log_board(&o[0]),
+        own_values: values(&p[0]),
+        opponent_values: values(&o[0]),
         own_tier: p[0]["tier"].as_i64(),
         opponent_tier: o[0]["tier"].as_i64(),
         damage_cap: req["damage_cap"].as_i64(),

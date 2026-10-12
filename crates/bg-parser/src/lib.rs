@@ -34,7 +34,7 @@ pub const PARSER_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Bump when a change makes the parser read the same log differently (new
 /// fields, fixed bugs). Saved with every game so `tavern-watch --reparse`
 /// and the server can tell which records an older parser wrote.
-pub const PARSER_REVISION: u32 = 9;
+pub const PARSER_REVISION: u32 = 10;
 
 /// Builds whose real logs this parser was checked against.
 pub const TESTED_BUILDS: &[i64] = &[253216];
@@ -271,6 +271,14 @@ impl GameReader {
         Some(collector::board_of(&self.collector.board, pid))
     }
 
+    /// The player's game-long values as they are now in a shop turn (T-610):
+    /// what the overlay's odds play the player's board with. `None` when
+    /// [`Self::own_board_now`] is.
+    pub fn own_values_now(&self) -> Option<report::CombatValues> {
+        self.own_board_now()?;
+        Some(self.collector.combat_values(report::Side::Own))
+    }
+
     /// True when the log says this is a Battlegrounds game (solo or Duos).
     pub fn is_battlegrounds(&self) -> bool {
         self.game_type
@@ -400,6 +408,13 @@ impl LogReader {
     pub fn own_board_now(&self) -> Option<Vec<report::Minion>> {
         self.in_progress_index()?;
         self.current.as_ref()?.own_board_now()
+    }
+
+    /// The player's game-long values in a shop turn of the Battlegrounds game
+    /// in progress (see [`GameReader::own_values_now`]).
+    pub fn own_values_now(&self) -> Option<report::CombatValues> {
+        self.in_progress_index()?;
+        self.current.as_ref()?.own_values_now()
     }
 
     /// Number of the Battlegrounds game being played right now (the `index`

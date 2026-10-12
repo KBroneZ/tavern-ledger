@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use bg_parser::report::{CombatEntry, Round, Status};
+use bg_parser::report::{CombatEntry, CombatValues, Round, Status};
 use combat_sim::cards::{Trigger, EFFECTS};
 
 use super::*;
@@ -95,6 +95,7 @@ fn input() -> OddsInput {
     let own = [minion(PLAIN, 6, 6, 1)];
     let live = LiveFacts {
         own_now: Some(&own),
+        own_values: None,
         next: Some(5),
         lobby: &[slot(2, 3), slot(5, 4)],
         damage_cap: Some(5),
@@ -356,6 +357,7 @@ fn duos_rounds() -> Vec<Round> {
 fn duos_live(own: &[LogMinion], first: Option<bool>) -> LiveFacts<'_> {
     LiveFacts {
         own_now: Some(own),
+        own_values: None,
         next: Some(5),
         lobby: &[],
         damage_cap: None,
@@ -452,4 +454,92 @@ fn duos_odds_flag_a_start_of_combat_card_where_a_board_was_seen() {
     let own = [minion(PLAIN, 4, 4, 1)];
     let i = odds_input(&r, duos_live(&own, Some(true))).expect("odds");
     assert!(i.seen_after_start_of_combat);
+}
+
+fn values(undead_attack: i64, blood_gem: (i64, i64)) -> Option<CombatValues> {
+    Some(CombatValues {
+        undead_attack,
+        blood_gem,
+        ..CombatValues::default()
+    })
+}
+
+#[test]
+fn each_board_plays_with_its_game_long_values() {
+    // T-610: the player's values now, the opponent's from the combat their
+    // board was seen in.
+    let mut rounds = vec![round(3, 5, Some(vec![minion(PLAIN, 1, 1, 1)]))];
+    rounds[0].entries[1].values = values(4, (0, 0));
+    rounds[0].entries[0].values = values(9, (9, 9));
+    let r = report(GAME, rounds);
+    let own = [minion(PLAIN, 6, 6, 1)];
+    let live = LiveFacts {
+        own_now: Some(&own),
+        own_values: values(0, (2, 1)),
+        next: Some(5),
+        ..LiveFacts::default()
+    };
+    let i = odds_input(&r, live).expect("odds");
+    assert_eq!(i.own_values.blood_gem, (2, 1), "now, not the combat's");
+    assert_eq!(i.own_values.undead_attack, 0);
+    assert_eq!(i.opponent_values.undead_attack, 4);
+    let mut missing = Vec::new();
+    let (player, foe) = teams(&i, &facts, &mut missing);
+    assert_eq!(player.first.values.blood_gem, (2, 1));
+    assert_eq!(foe.first.values.undead_attack, 4);
+
+    // Without values (none read yet): the printed numbers, as before.
+    let none = odds_input(
+        &r,
+        LiveFacts {
+            own_values: None,
+            ..live
+        },
+    )
+    .expect("odds");
+    let (player, _) = teams(&none, &facts, &mut missing);
+    assert_eq!(player.first.values, combat_sim::GameValues::default());
+}
+
+#[test]
+fn game_long_values_past_what_the_report_saves_play_as_unknown() {
+    let mut rounds = vec![round(3, 5, Some(vec![minion(PLAIN, 1, 1, 1)]))];
+    rounds[0].entries[1].values = values(i64::MAX, (-2, 3));
+    let r = report(GAME, rounds);
+    let own = [minion(PLAIN, 6, 6, 1)];
+    let live = LiveFacts {
+        own_now: Some(&own),
+        next: Some(5),
+        ..LiveFacts::default()
+    };
+    let i = odds_input(&r, live).expect("odds");
+    let mut missing = Vec::new();
+    let (_, foe) = teams(&i, &facts, &mut missing);
+    assert_eq!(foe.first.values.undead_attack, 0);
+    assert_eq!(foe.first.values.blood_gem, (0, 3));
+}
+
+#[test]
+fn duos_boards_play_with_their_own_game_long_values() {
+    let mut rounds = duos_rounds();
+    // Round 3: the teammate (seat 3) against seat 6; round 4: seat 6 again.
+    rounds[0].entries[0].values = values(3, (0, 0));
+    rounds[1].entries[1].values = values(5, (0, 0));
+    rounds[2].entries[1].values = values(0, (4, 4));
+    let r = duos_report(rounds);
+    let own = [minion(PLAIN, 4, 4, 1)];
+    let live = LiveFacts {
+        own_values: values(0, (1, 1)),
+        ..duos_live(&own, Some(true))
+    };
+    let i = odds_input(&r, live).expect("odds");
+    let d = i.duos.clone().expect("Duos");
+    assert_eq!(d.teammate.values.undead_attack, 3);
+    assert_eq!(d.opponent_teammate.values.undead_attack, 5);
+    let mut missing = Vec::new();
+    let (player, foe) = teams(&i, &facts, &mut missing);
+    assert_eq!(player.first.values.blood_gem, (1, 1), "the player first");
+    assert_eq!(player.second.expect("two").values.undead_attack, 3);
+    assert_eq!(foe.first.values.blood_gem, (4, 4), "seat 5, round 5");
+    assert_eq!(foe.second.expect("two").values.undead_attack, 5);
 }

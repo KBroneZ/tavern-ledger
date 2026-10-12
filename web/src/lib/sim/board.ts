@@ -6,7 +6,7 @@
 // the ones the player saw on screen. The saved report never holds the
 // combats the game does not play back (T-213 left them out), so no
 // SETASIDE board can come in this way.
-import type { GameRecord, Minion as ReportMinion, Round } from "../game/report.ts";
+import type { GameRecord, GameValues, Minion as ReportMinion, Round } from "../game/report.ts";
 import type { CardIndex } from "./cards.ts";
 
 /** The keywords the engine tracks, by the names the request uses. */
@@ -53,6 +53,12 @@ export interface SimBoard {
   /** The hero's tavern tier; null is unknown (the damage is then unknown). */
   tier: number | null;
   minions: SimMinion[];
+  /**
+   * The hero's game-long values from the saved round (parser revision 10,
+   * T-610): Blood Gem and spell upgrades, Eternal Knights, Undead Attack,
+   * Beetles. Absent when the record holds none: the printed numbers.
+   */
+  values?: GameValues;
 }
 
 export type Mode = "solo" | "duos";
@@ -86,6 +92,7 @@ export interface RoundChoice {
 interface Fought {
   playerId: number | null;
   board: ReportMinion[];
+  values: GameValues | null;
 }
 
 /** The boards that fought on one side, in the order they came in, one per player. */
@@ -96,7 +103,7 @@ function sideBoards(round: Round, side: "own" | "opponent"): Fought[] {
     if (e.side !== side || e.board === null) continue;
     if (e.playerId !== null && seen.has(e.playerId)) continue;
     if (e.playerId !== null) seen.add(e.playerId);
-    out.push({ playerId: e.playerId, board: e.board });
+    out.push({ playerId: e.playerId, board: e.board, values: e.values });
   }
   return out;
 }
@@ -156,19 +163,20 @@ export function fromRound(record: GameRecord, roundNumber: number, cards: CardIn
   const keep = mode === "duos" ? 2 : 1;
   let skipped = 0;
   let unknownGifts = 0;
-  const board = (list: ReportMinion[], tier: number | null): SimBoard => {
-    const kept = list.map((m) => [m, minionFrom(m, cards)] as const).filter((p): p is readonly [ReportMinion, SimMinion] => p[1] !== null).slice(0, MAX_MINIONS);
-    skipped += list.length - kept.length;
+  const board = (f: Fought, tier: number | null): SimBoard => {
+    const kept = f.board.map((m) => [m, minionFrom(m, cards)] as const).filter((p): p is readonly [ReportMinion, SimMinion] => p[1] !== null).slice(0, MAX_MINIONS);
+    skipped += f.board.length - kept.length;
     unknownGifts += kept.filter(([m]) => m.giftUnknown).length;
-    return { tier, minions: kept.map(([, s]) => s) };
+    const out: SimBoard = { tier, minions: kept.map(([, s]) => s) };
+    return f.values ? { ...out, values: f.values } : out;
   };
   const ownTier = report.shop?.turns.find((t) => t.turn === roundNumber)?.tier ?? null;
   const isLocal = (f: Fought) => f.playerId !== null && f.playerId === report.localPlayerId;
   return {
     state: {
       mode,
-      player: own.slice(0, keep).map((f) => board(f.board, isLocal(f) ? ownTier : null)),
-      opponent: opp.slice(0, keep).map((f) => board(f.board, null)),
+      player: own.slice(0, keep).map((f) => board(f, isLocal(f) ? ownTier : null)),
+      opponent: opp.slice(0, keep).map((f) => board(f, null)),
       cap: null,
     },
     skipped,
@@ -307,6 +315,7 @@ export function notReady(state: SimState): "empty" | null {
 export function toRequest(state: SimState, cards: CardIndex): string {
   const board = (b: SimBoard) => ({
     tier: b.tier,
+    ...(b.values ? { values: b.values } : {}),
     minions: b.minions.map((m) => ({
       card_id: m.cardId,
       golden: m.golden,

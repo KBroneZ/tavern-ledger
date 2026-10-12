@@ -123,9 +123,16 @@ pub struct LoggedAttack {
     pub opponent: Vec<Minion>,
 }
 
+/// The largest game-long value the saved report keeps (parser revision 10);
+/// upload-game refuses one past it.
+pub const MAX_GAME_VALUE: i64 = 99_999;
+
 /// Game-long values of one combat side that change what its cards do in
 /// combat (T-609), read from the side's player entity when its board is
-/// taken. Rust-only: the combat simulator's harness reads them from the logs.
+/// taken. Saved with the board since parser revision 10 (T-610): only the
+/// values from 1 to [`MAX_GAME_VALUE`], by the names in [`Self::saved`];
+/// zero, or a number the game would not show, is left out, so it reads as
+/// unknown (the card's printed numbers), as in an older record.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct CombatValues {
     /// What the side's Blood Gems give beyond +1/+1
@@ -145,6 +152,67 @@ pub struct CombatValues {
     pub beetle: (i64, i64),
 }
 
+impl CombatValues {
+    /// Each value by the name the saved report gives it.
+    pub fn saved(&self) -> [(&'static str, i64); 8] {
+        [
+            ("blood_gem_atk", self.blood_gem.0),
+            ("blood_gem_health", self.blood_gem.1),
+            ("spell_atk", self.spell.0),
+            ("spell_health", self.spell.1),
+            ("knights_dead", self.knights_dead),
+            ("undead_atk", self.undead_attack),
+            ("beetle_atk", self.beetle.0),
+            ("beetle_health", self.beetle.1),
+        ]
+    }
+
+    fn kept(&self) -> impl Iterator<Item = (&'static str, i64)> {
+        self.saved()
+            .into_iter()
+            .filter(|(_, v)| (1..=MAX_GAME_VALUE).contains(v))
+    }
+
+    /// True when no value would be saved.
+    pub fn is_empty(&self) -> bool {
+        self.kept().next().is_none()
+    }
+
+    /// The values as the saved report keeps them: one outside 1 to
+    /// [`MAX_GAME_VALUE`] is zero (unknown), so the overlay plays what the
+    /// saved game will.
+    pub fn bounded(&self) -> CombatValues {
+        let b = |v: i64| {
+            if (1..=MAX_GAME_VALUE).contains(&v) {
+                v
+            } else {
+                0
+            }
+        };
+        CombatValues {
+            blood_gem: (b(self.blood_gem.0), b(self.blood_gem.1)),
+            spell: (b(self.spell.0), b(self.spell.1)),
+            knights_dead: b(self.knights_dead),
+            undead_attack: b(self.undead_attack),
+            beetle: (b(self.beetle.0), b(self.beetle.1)),
+        }
+    }
+}
+
+impl Serialize for CombatValues {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        let mut map = s.serialize_map(None)?;
+        for (name, value) in self.kept() {
+            map.serialize_entry(name, &value)?;
+        }
+        map.end()
+    }
+}
+
+fn no_values(v: &Option<CombatValues>) -> bool {
+    v.as_ref().is_none_or(CombatValues::is_empty)
+}
+
 /// One side stepping into a combat. `board` is None when the fight never
 /// plays out in the local log: unknown, not empty.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -154,9 +222,9 @@ pub struct CombatEntry {
     pub hero: Option<String>,
     pub board: Option<Vec<Minion>>,
     /// The side's game-long values as its board was taken (T-609); None
-    /// without a board. Never serialized, so neither the history nor the
-    /// upload changes.
-    #[serde(skip)]
+    /// without a board. Saved since parser revision 10 (T-610) when one is
+    /// above zero: a record without the key read none, or is older.
+    #[serde(skip_serializing_if = "no_values")]
     pub values: Option<CombatValues>,
 }
 

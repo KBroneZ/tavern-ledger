@@ -64,6 +64,8 @@ struct LiveView {
     damage_cap: Option<i64>,
     /// The player's own board in a shop turn (T-605).
     own_board: Option<Vec<bg_parser::report::Minion>>,
+    /// The player's game-long values in a shop turn (T-610).
+    own_values: Option<bg_parser::report::CombatValues>,
     /// Duos: the player fights first next combat (T-608).
     fights_first: Option<bool>,
 }
@@ -102,6 +104,7 @@ impl SessionReader {
                 next: self.log.next_opponent_now(),
                 damage_cap: self.log.damage_cap_now(),
                 own_board: self.log.own_board_now(),
+                own_values: self.log.own_values_now(),
                 fights_first: self.log.fights_first_now(),
             },
             None => LiveView::default(),
@@ -379,6 +382,12 @@ impl Watcher {
     /// None in a combat turn or when no Battlegrounds game is on.
     pub fn live_own_board(&self) -> Option<&[bg_parser::report::Minion]> {
         self.shown_live()?.own_board.as_deref()
+    }
+
+    /// The player's game-long values in a shop turn, as the log has them
+    /// (T-610); None in a combat turn or when no Battlegrounds game is on.
+    pub fn live_own_values(&self) -> Option<bg_parser::report::CombatValues> {
+        self.shown_live()?.own_values
     }
 
     /// Duos: whether the player's board fights first next combat, as the

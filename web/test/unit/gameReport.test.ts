@@ -168,7 +168,7 @@ test("report reader: older records say not recorded (null), never empty", () => 
 
 test("report reader: every synthetic parser report in the repo reads without a dropped value", () => {
   const dir = join(import.meta.dirname, "..", "..", "..", "crates", "bg-parser", "tests", "data", "rust");
-  for (const file of ["round_two_games.json", "data_round_games.json", "solo_shop_games.json"]) {
+  for (const file of ["round_two_games.json", "data_round_games.json", "solo_shop_games.json", "game_values_games.json"]) {
     const games = JSON.parse(readFileSync(join(dir, file), "utf8")) as Record<string, unknown>[];
     for (const game of games) {
       const index = game.index as number;
@@ -232,4 +232,17 @@ test("report reader: the real game with Dark Gifts reads without a dropped value
   assert.equal(result.record.unreadable, 0);
   const gifted = result.record.report.rounds.flatMap((r) => r.entries.flatMap((e) => e.board ?? [])).filter((m) => m.gifts.length > 0);
   assert.equal(gifted.length, 23);
+});
+
+test("report reader: each board's game-long values (revision 10), bad ones counted", () => {
+  const report = soloReport() as Record<string, any>;
+  const entries = report.rounds[1].entries;
+  entries[0].values = { blood_gem_atk: 3, undead_atk: 7, spell_atk: 0, beetle_atk: "2", knights_dead: 100_000, tasty_lobster: 5 };
+  entries[1].values = [3, 2];
+  const rec = read(record(report));
+  const [own, opponent] = rec.report.rounds[1].entries;
+  assert.deepEqual(own.values, { blood_gem_atk: 3, undead_atk: 7 }, "past the server's bounds dropped; unknown names ignored");
+  assert.equal(opponent.values, null);
+  assert.equal(rec.unreadable, 4, "zero, a string, too large and a list are counted");
+  assert.equal(read(record()).report.rounds[1].entries[0].values, null, "none saved: the printed numbers");
 });

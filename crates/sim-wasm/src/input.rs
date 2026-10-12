@@ -3,7 +3,7 @@
 //! field is checked, a wrong one refuses the whole request with a short
 //! reason, and nothing here panics.
 
-use combat_sim::{BaseCard, Keywords, Minion, Team, Tribes, Warband};
+use combat_sim::{BaseCard, GameValues, Keywords, Minion, Team, Tribes, Warband};
 use serde_json::{Map, Value};
 
 /// Far above any real request (four boards of seven minions).
@@ -19,6 +19,8 @@ const MAX_NAME: usize = 32;
 const MAX_CAP: i64 = 1_000;
 /// Dark Gifts on one minion: one is usual; the user's logs show two at most.
 const MAX_GIFTS: usize = 4;
+/// A game-long value as the saved report keeps it (bg-parser's MAX_GAME_VALUE).
+const MAX_GAME_VALUE: i64 = 99_999;
 
 /// Card facts a board does not show, as the page sends them (the same
 /// words as `crates/cards` keeps: types `BEAST`, keywords `DIVINE_SHIELD`).
@@ -178,6 +180,31 @@ fn gifts(v: Option<&Value>) -> Res<Vec<String>> {
         .collect()
 }
 
+/// The board's game-long values (T-610), by the saved report's names; a
+/// name left out is zero (the printed numbers), as in the app.
+fn game_values(v: Option<&Value>) -> Res<GameValues> {
+    let Some(v) = v.filter(|v| !v.is_null()) else {
+        return Ok(GameValues::default());
+    };
+    let o = object(v, "values")?;
+    let mut out = GameValues::default();
+    for (name, n) in o {
+        let slot = match name.as_str() {
+            "blood_gem_atk" => &mut out.blood_gem.0,
+            "blood_gem_health" => &mut out.blood_gem.1,
+            "spell_atk" => &mut out.spell.0,
+            "spell_health" => &mut out.spell.1,
+            "knights_dead" => &mut out.knights_dead,
+            "undead_atk" => &mut out.undead_attack,
+            "beetle_atk" => &mut out.beetle.0,
+            "beetle_health" => &mut out.beetle.1,
+            _ => return Err("values holds an unknown name".into()),
+        };
+        *slot = int(Some(n), "a game-long value", 0, MAX_GAME_VALUE)? as i32;
+    }
+    Ok(out)
+}
+
 fn board(v: &Value, missing: &mut Vec<String>) -> Res<Warband> {
     let b = object(v, "board")?;
     let list = b
@@ -192,7 +219,7 @@ fn board(v: &Value, missing: &mut Vec<String>) -> Res<Warband> {
     Ok(Warband {
         minions,
         tavern_tier: tier(b.get("tier"), "tavern tier")?,
-        values: Default::default(),
+        values: game_values(b.get("values"))?,
     })
 }
 

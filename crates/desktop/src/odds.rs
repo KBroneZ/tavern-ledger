@@ -58,7 +58,7 @@ pub enum Step {
     /// Work these odds out; `clear` when what is shown is for another
     /// opponent and must go at once.
     Run {
-        input: OddsInput,
+        input: Box<OddsInput>,
         clear: bool,
     },
 }
@@ -77,7 +77,7 @@ pub fn step(wanted: &Wanted, run: Option<&OddsInput>, shown: Option<&LiveOdds>) 
             }
         }
         Some(Ok(input)) => Step::Run {
-            input: input.clone(),
+            input: Box::new(input.clone()),
             clear: shown.is_some_and(|s| s.seat != Some(input.opponent_seat)),
         },
     }
@@ -95,6 +95,7 @@ pub fn wanted(watcher: &Watcher, on: bool) -> Wanted {
     let lobby = watcher.live_lobby();
     let live = LiveFacts {
         own_now: watcher.live_own_board(),
+        own_values: watcher.live_own_values(),
         next: watcher.live_next_opponent(),
         lobby: &lobby,
         damage_cap: watcher.live_damage_cap(),
@@ -126,11 +127,11 @@ impl Odds {
                 }
                 Step::Keep => None,
                 Step::Run { input, clear } => {
-                    inner.run = Some(input.clone());
+                    inner.run = Some((*input).clone());
                     if clear {
                         inner.shown = None;
                     }
-                    Some(input)
+                    Some(*input)
                 }
             };
             (inner.shown != before, job)
@@ -228,6 +229,8 @@ mod tests {
             seen_after_start_of_combat: false,
             own: Vec::new(),
             opponent: Vec::new(),
+            own_values: Default::default(),
+            opponent_values: Default::default(),
             own_tier: None,
             opponent_tier: None,
             damage_cap: None,
@@ -246,7 +249,7 @@ mod tests {
         assert_eq!(
             step(&Some(Ok(input(3))), None, None),
             Step::Run {
-                input: input(3),
+                input: Box::new(input(3)),
                 clear: false
             }
         );
@@ -259,14 +262,14 @@ mod tests {
         assert_eq!(
             step(&Some(Ok(input(4))), None, Some(&shown)),
             Step::Run {
-                input: input(4),
+                input: Box::new(input(4)),
                 clear: true
             }
         );
         assert_eq!(
             step(&Some(Ok(input(3))), None, Some(&shown)),
             Step::Run {
-                input: input(3),
+                input: Box::new(input(3)),
                 clear: false
             }
         );
