@@ -272,18 +272,20 @@ test("only the two D-052 families ship, within the 120 KB font budget", () => {
   assert.ok(total <= 120 * 1024, `${total} bytes of fonts`);
 });
 
-test("only the home page preloads a font, and it is the headline font", () => {
+test("every page preloads the two fonts its first words use, and nothing else", () => {
+  const FONTS = [
+    "/fonts/bricolage-grotesque-latin-wdth-normal.woff2",
+    "/fonts/figtree-latin-wght-normal.woff2",
+  ];
   for (const page of PAGES) {
     const html = readFileSync(page, "utf8");
     const preloads = [...html.matchAll(/<link\b[^>]*rel="preload"[^>]*>/g)].map((m) => m[0]);
-    if (name(page) !== "index.html" && name(page) !== "es/index.html") {
-      assert.deepEqual(preloads, [], name(page));
-      continue;
-    }
-    assert.equal(preloads.length, 1);
-    assert.match(preloads[0], /href="\/fonts\/bricolage-grotesque-latin-wdth-normal\.woff2"/);
-    assert.match(preloads[0], /as="font"/);
-    assert.match(preloads[0], /crossorigin/);
+    assert.equal(preloads.length, FONTS.length, name(page));
+    FONTS.forEach((font, i) => {
+      assert.ok(preloads[i].includes(`href="${font}"`), name(page));
+      assert.match(preloads[i], /as="font"/, name(page));
+      assert.match(preloads[i], /crossorigin/, name(page));
+    });
   }
 });
 

@@ -74,17 +74,9 @@ const socialCard = new URL("/social-card.png", Astro.site).href;
     <meta property="og:image:alt" content={st("layout.socialAlt")} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content={socialCard} />
-    {
-      layout === "home" && (
-        <link
-          rel="preload"
-          href="/fonts/bricolage-grotesque-latin-wdth-normal.woff2"
-          as="font"
-          type="font/woff2"
-          crossorigin
-        />
-      )
-    }
+    {/* The two fonts every page draws its first words in, asked for with the HTML rather than after the styles (T-554). */}
+    <link rel="preload" href="/fonts/bricolage-grotesque-latin-wdth-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/figtree-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
     <title>{title} · Tavern Ledger</title>
   </head>
   <body>
