@@ -131,7 +131,7 @@ export const ES: Record<GameStringKey, string> = {
   "why.none": "Ningún combate de esta partida tiene resultado.",
   "why.more": "Detalles",
   "why.link": "Qué significa cada causa, en la página de precisión",
-  "why.matched": "Lo esperado: pasó el resultado más probable.",
+  "why.matched": "Lo esperado.",
   "why.chance": "Azar: la repetición coincidió hasta los dados.",
   "why.missing": "No visto: {what}.",
   "why.approximate": "Aproximado: {cards}.",

@@ -135,7 +135,7 @@ export const GAME_STRINGS = {
   "why.none": "No combat of this game has a result.",
   "why.more": "Details",
   "why.link": "What each cause means, on the accuracy page",
-  "why.matched": "As expected: the likeliest result happened.",
+  "why.matched": "As expected.",
   "why.chance": "Chance: the replay matched until the dice.",
   "why.missing": "Not seen: {what}.",
   "why.approximate": "Approximate: {cards}.",
