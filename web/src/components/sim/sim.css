@@ -1,11 +1,12 @@
 /* The combat simulator (T-606), as the duel table in the painted tavern
    (T-526, D-112). The home page's world (D-105: the user's Gemini art,
    carved oak, iron corners, burnt parchment, gold headings) with its own
-   scene: the barrel arena between the forge's sparks (the player's side,
-   warm) and the blue magic (the opponent's, cold), held still behind the
-   page. The main flow reads in three wax-sealed steps: (1) pick a game and
-   (2) pick a fight on the tall parchment, (3) the odds written on a slip in
-   the middle of the table, the opponent's board across, the player's near.
+   scene: the duel table between the fireplace (the player's side, warm)
+   and the blue magic (the opponent's, cold), held still behind the page
+   (components/PageBackdrop.astro, T-546). The main flow reads in three
+   wax-sealed steps: (1) pick a game and (2) pick a fight on the tall
+   parchment, (3) the odds written on a slip in the middle of the table,
+   the opponent's board across, the player's near.
    Minions are cards. Every region keeps its room while the script loads.
    Only transform and opacity move; reduced motion and Windows high contrast
    at the end (the cards' and the slip's own in sim-cards.css and
@@ -43,41 +44,6 @@
 /* The table needs more room than the data pages' column. */
 .layout-page:has(> .sim) {
   max-width: calc(1240px + 2 * var(--gutter));
-}
-
-/* ---------- The painting behind the page ---------- */
-
-body:has(.sim-backdrop) {
-  background: transparent;
-}
-
-.sim-backdrop {
-  position: fixed;
-  inset: 0 0 auto;
-  z-index: -1;
-  height: 100lvh;
-  overflow: hidden;
-  pointer-events: none;
-  background: var(--bg-deep);
-}
-
-.sim-backdrop img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 40%;
-}
-
-/* Dark enough to read on, lighter at the sides where the sparks and the
-   magic are; the barrel stays a shape behind the table. */
-.sim-backdrop::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(70% 70% at 50% 42%, rgb(10 6 4 / 0.72), rgb(10 6 4 / 0.5) 75%, rgb(10 6 4 / 0.4)),
-    linear-gradient(180deg, rgb(10 6 4 / 0.55), rgb(10 6 4 / 0.2) 30%, rgb(10 6 4 / 0.55));
 }
 
 /* ---------- Heading ---------- */
@@ -584,10 +550,6 @@ html[data-auth="in"] .sim-load-body:has(> .sim-load-wait) {
 /* ---------- Windows high contrast: plain panels and cards in system colours ---------- */
 
 @media (forced-colors: active) {
-  .sim-backdrop {
-    display: none;
-  }
-
   .sim-title {
     background: none;
     -webkit-text-fill-color: currentColor;

@@ -1,14 +1,13 @@
-"""Builds the simulator page's images from the user's Gemini paintings (T-526, D-112).
+"""Builds the simulator page's parchment from the user's Gemini panel sheet (T-526, D-112).
 
-Sources (docs/brand/art/home/, made by the user's Gemini account for this project):
-- barrel-wide.webp     2752 x 1536, the barrel door between a forge's sparks (left) and blue magic (right)
+Source (docs/brand/art/home/, made by the user's Gemini account for this project):
 - panels-sheet.webp    four panels (carved oak, iron corner brackets, burnt parchment) on black
 
 Writes web/public/art/sim/:
-- arena-<w>.avif, arena-<w>.webp   the painting behind the page at 1376 and 1920 px wide
-- arena-phone.avif, arena-phone.webp   its centre (the barrel), 720 px wide, for narrow screens
-- panel-tall.webp                  the tall card of the panels sheet (the home page does not use it),
-                                   nine-sliced by the page (sim.css)
+- panel-tall.webp      the tall card of the panels sheet (the home page does not use it),
+                       nine-sliced by the page (sim.css)
+
+The page's painting behind it is every page's backdrop since T-546 (tools/build_page_art.py).
 
 The tall card is cut like the home page's panels (tools/build_home_art.py, whose helpers it uses):
 the black backdrop is flooded in from the crop's edges, the loose embers are dropped, and it is
@@ -27,35 +26,12 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build_home_art import ART, AVIF_QUALITY, MIN_AREA, PANEL_DARK, PANEL_QUALITY, ROOT, SHEET_SIZE, WEBP_QUALITY, silhouette, with_alpha  # noqa: E402
+from build_home_art import ART, MIN_AREA, PANEL_DARK, PANEL_QUALITY, ROOT, SHEET_SIZE, silhouette, with_alpha  # noqa: E402
 
 OUT = ROOT / "web" / "public" / "art" / "sim"
-ARENA_WIDTHS = (1376, 1920)
-PHONE_WIDTH = 720
-# The barrel and its stone feet: the middle of the painting, for portrait screens.
-PHONE_BOX = (826, 0, 1926, 1536)
 # Measured on panels-sheet.webp (2752 x 1536): the tall card on the right.
 TALL_BOX = (1770, 66, 2666, 1194)
 TALL_SCALE = 0.47
-
-
-def save_pair(img, name: str) -> list[str]:
-    img.save(OUT / f"{name}.avif", "AVIF", quality=AVIF_QUALITY, speed=4)
-    img.save(OUT / f"{name}.webp", "WEBP", quality=WEBP_QUALITY, method=6)
-    return [f"{name}.avif", f"{name}.webp"]
-
-
-def save_arena(painting) -> list[str]:
-    from PIL import Image
-
-    written = []
-    for width in ARENA_WIDTHS:
-        height = round(painting.height * width / painting.width)
-        written += save_pair(painting.resize((width, height), Image.Resampling.LANCZOS), f"arena-{width}")
-    crop = painting.crop(PHONE_BOX)
-    height = round(crop.height * PHONE_WIDTH / crop.width)
-    written += save_pair(crop.resize((PHONE_WIDTH, height), Image.Resampling.LANCZOS), "arena-phone")
-    return written
 
 
 def save_tall_panel() -> list[str]:
@@ -77,14 +53,8 @@ def save_tall_panel() -> list[str]:
 
 
 def main() -> int:
-    from PIL import Image
-
     OUT.mkdir(parents=True, exist_ok=True)
-    painting = Image.open(ART / "barrel-wide.webp").convert("RGB")
-    if painting.size != (2752, 1536):
-        raise SystemExit(f"barrel-wide.webp is {painting.size}, not (2752, 1536): check the crop box")
-    written = save_arena(painting) + save_tall_panel()
-    for name in written:
+    for name in save_tall_panel():
         print(f"wrote web/public/art/sim/{name} ({(OUT / name).stat().st_size // 1024} KiB)")
     return 0
 

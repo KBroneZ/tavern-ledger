@@ -18,6 +18,6 @@ setLang(Astro.props.lang);
 const accountsOpen = readConfig(import.meta.env) !== null;
 ---
 
-<Base title={sm("page.title")} description={sm("page.description")} noindex>
+<Base backdrop="duel" title={sm("page.title")} description={sm("page.description")} noindex>
   {accountsOpen ? <Simulator /> : <AccountsClosed heading={sm("page.title")} />}
 </Base>

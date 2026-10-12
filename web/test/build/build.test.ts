@@ -305,10 +305,10 @@ test("pictures are our own files, with their size and a text alternative", () =>
     const html = readFileSync(page, "utf8");
     for (const [img] of html.matchAll(/<img\b[^>]*>/g)) {
       // Built pages show made-up data only, so their pictures are our own
-      // placeholders, plus the home page's painting (T-530) and the
-      // simulator's (T-526); card art (D-074) is drawn in the browser.
+      // placeholders, plus the home page's painting (T-530) and every other
+      // page's (T-546); card art (D-074) is drawn in the browser.
       const src = /\ssrc="([^"]*)"/.exec(img)?.[1] ?? "";
-      assert.match(src, /^\/(?:placeholders\/(?:hero|card)-\d\.svg|art\/home\/tavern-\d+\.webp|art\/sim\/arena-\d+\.webp)$/, `${name(page)}: ${img}`);
+      assert.match(src, /^\/(?:placeholders\/(?:hero|card)-\d\.svg|art\/home\/tavern-\d+\.webp|art\/pages\/[a-z]+-\d+\.webp)$/, `${name(page)}: ${img}`);
       assert.ok(existsSync(join(DIST, src)), src);
       // Width and height keep the room (no layout shift); alt is there, empty when decorative.
       assert.match(img, /\swidth="\d+"/, img);

@@ -1,0 +1,63 @@
+/* Every page's own painting (T-546; components/PageBackdrop.astro), in the
+   home page's painted world (D-105). Held still behind the page: no motion,
+   so nothing changes with reduced motion. A shade keeps the reading centre
+   dark and lets the painting show at the sides and top. More contrast
+   darkens the shade; Windows high contrast gets the plain page. */
+
+/* The painting shows through: only the canvas (html) keeps the dark colour. */
+body:has(.page-backdrop) {
+  background: transparent;
+}
+
+.page-backdrop {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: -1;
+  height: 100lvh;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--bg-deep);
+}
+
+.page-backdrop img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 40%;
+}
+
+/* The reading centre: darkest where the page's column runs, lighter at the
+   sides and just under the masthead, darker again at the bottom. */
+.page-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgb(10 6 4 / 0.42), rgb(10 6 4 / 0.8) 24%, rgb(10 6 4 / 0.8) 76%, rgb(10 6 4 / 0.42)),
+    linear-gradient(180deg, rgb(10 6 4 / 0.25), transparent 22%, transparent 60%, rgb(10 6 4 / 0.45));
+}
+
+/* Narrow screens: the whole width is the column. */
+@media (max-width: 700px) {
+  .page-backdrop::after {
+    background:
+      linear-gradient(180deg, rgb(10 6 4 / 0.42), rgb(10 6 4 / 0.66) 30%, rgb(10 6 4 / 0.76));
+  }
+}
+
+@media (prefers-contrast: more) {
+  .page-backdrop::after {
+    background: rgb(10 6 4 / 0.86);
+  }
+}
+
+@media (forced-colors: active) {
+  .page-backdrop {
+    display: none;
+  }
+
+  body:has(.page-backdrop) {
+    background: var(--bg);
+  }
+}

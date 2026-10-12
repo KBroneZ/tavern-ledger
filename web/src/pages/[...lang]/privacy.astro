@@ -13,7 +13,7 @@ export const getStaticPaths = langPaths;
 const Content = setLang(Astro.props.lang) === "es" ? Spanish : English;
 ---
 
-<Base title={st("meta.privacy.title")} description={st("meta.privacy.description")}
+<Base backdrop="study" title={st("meta.privacy.title")} description={st("meta.privacy.description")}
   layout="reading"
 >
   <article class="legal">

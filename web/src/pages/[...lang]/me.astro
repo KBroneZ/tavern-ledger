@@ -14,6 +14,6 @@ setLang(Astro.props.lang);
 const accountsOpen = readConfig(import.meta.env) !== null;
 ---
 
-<Base title={st("meta.me.title")} description={st("meta.me.description")} noindex>
+<Base backdrop="archive" title={st("meta.me.title")} description={st("meta.me.description")} noindex>
   {accountsOpen ? <Dashboard kind="own" /> : <AccountsClosed heading={st("meta.me.title")} />}
 </Base>
