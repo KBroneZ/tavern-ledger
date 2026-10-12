@@ -1,0 +1,105 @@
+{{ if eq (print .Data.lang) "es" }}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>Te han invitado a Tavern Ledger</title>
+<style>
+    :root { color-scheme: light dark; supported-color-schemes: light dark; }
+    body { margin: 0; padding: 0; }
+    a.plain { color: #7d3a0c; }
+    @media (max-width: 600px) {
+      .card { padding: 24px 18px !important; }
+    }
+    @media (prefers-color-scheme: dark) {
+      .card { background: #24180f !important; border-color: #5c3d22 !important; }
+      .card h1, .card p { color: #f1e3c6 !important; }
+      .card a.plain { color: #ffb24a !important; }
+    }
+</style>
+</head>
+<body style="margin:0;padding:0;background:#120d0b;" bgcolor="#120d0b">
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Te han invitado a crear una cuenta de Tavern Ledger con este correo.&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#120d0b" style="background:#120d0b;">
+<tr><td align="center" style="padding:32px 16px;">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px;">
+<tr><td align="center" style="padding:0 0 20px;">
+<a href="https://tavernledger.net/" style="text-decoration:none;"><img src="https://tavernledger.net/email/logo.png" width="56" height="56" alt="Tavern Ledger" style="display:block;border:0;width:56px;height:56px;"></a>
+<p style="margin:10px 0 0;font-family:Georgia, 'Times New Roman', serif;font-size:20px;line-height:26px;font-weight:bold;color:#ffd08a;">Tavern Ledger</p>
+</td></tr>
+<tr><td class="card" bgcolor="#f3e4c4" style="background:#f3e4c4;border:1px solid #8a5a2b;border-radius:10px;padding:32px 28px;">
+<h1 style="margin:0 0 16px;font-family:Georgia, 'Times New Roman', serif;font-size:26px;line-height:32px;font-weight:bold;color:#2b1d13;">Te han invitado</h1>
+<p style="margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;color:#2b1d13;">Te han invitado a crear una cuenta de Tavern Ledger con este correo.</p><p style="margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;color:#2b1d13;">Acepta para confirmarla y luego usa «¿Has olvidado la contraseña?» en la página de inicio de sesión para elegir una contraseña.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 24px;">
+<tr><td align="center" bgcolor="#ffb24a" style="background:#ffb24a;border:1px solid #c47f22;border-radius:8px;mso-padding-alt:14px 28px;">
+<a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 28px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:20px;font-weight:bold;color:#120d0b;text-decoration:none;border-radius:8px;">Aceptar la invitación</a>
+</td></tr>
+</table>
+<p style="margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:20px;color:#2b1d13;">¿No funciona el botón? Copia este enlace en tu navegador:<br><a class="plain" href="{{ .ConfirmationURL }}" style="color:#7d3a0c;word-break:break-all;">{{ .ConfirmationURL }}</a></p>
+<p style="margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:20px;color:#2b1d13;margin:0;">¿No te lo esperabas? Ignora este correo: sin este enlace, nadie puede usar la invitación.</p>
+</td></tr>
+<tr><td align="center" bgcolor="#120d0b" style="background:#120d0b;padding:20px 8px 0;">
+<p style="margin:0 0 8px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:18px;color:#cdb995;">Te llega este correo porque se usó esta dirección en <a href="https://tavernledger.net/" style="color:#cdb995;">tavernledger.net</a>.</p>
+<p style="margin:0;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:18px;color:#cdb995;">Proyecto no oficial de fans. Sin afiliación con Blizzard Entertainment ni respaldo de esta. <span lang="en">(Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.)</span></p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>
+{{ else }}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>You're invited to Tavern Ledger</title>
+<style>
+    :root { color-scheme: light dark; supported-color-schemes: light dark; }
+    body { margin: 0; padding: 0; }
+    a.plain { color: #7d3a0c; }
+    @media (max-width: 600px) {
+      .card { padding: 24px 18px !important; }
+    }
+    @media (prefers-color-scheme: dark) {
+      .card { background: #24180f !important; border-color: #5c3d22 !important; }
+      .card h1, .card p { color: #f1e3c6 !important; }
+      .card a.plain { color: #ffb24a !important; }
+    }
+</style>
+</head>
+<body style="margin:0;padding:0;background:#120d0b;" bgcolor="#120d0b">
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">You've been invited to make a Tavern Ledger account with this email.&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#120d0b" style="background:#120d0b;">
+<tr><td align="center" style="padding:32px 16px;">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px;">
+<tr><td align="center" style="padding:0 0 20px;">
+<a href="https://tavernledger.net/" style="text-decoration:none;"><img src="https://tavernledger.net/email/logo.png" width="56" height="56" alt="Tavern Ledger" style="display:block;border:0;width:56px;height:56px;"></a>
+<p style="margin:10px 0 0;font-family:Georgia, 'Times New Roman', serif;font-size:20px;line-height:26px;font-weight:bold;color:#ffd08a;">Tavern Ledger</p>
+</td></tr>
+<tr><td class="card" bgcolor="#f3e4c4" style="background:#f3e4c4;border:1px solid #8a5a2b;border-radius:10px;padding:32px 28px;">
+<h1 style="margin:0 0 16px;font-family:Georgia, 'Times New Roman', serif;font-size:26px;line-height:32px;font-weight:bold;color:#2b1d13;">You're invited</h1>
+<p style="margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;color:#2b1d13;">You've been invited to make a Tavern Ledger account with this email.</p><p style="margin:0 0 16px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;color:#2b1d13;">Accept to confirm it, then use “Forgot password?” on the sign-in page to choose a password.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 24px;">
+<tr><td align="center" bgcolor="#ffb24a" style="background:#ffb24a;border:1px solid #c47f22;border-radius:8px;mso-padding-alt:14px 28px;">
+<a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 28px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:20px;font-weight:bold;color:#120d0b;text-decoration:none;border-radius:8px;">Accept the invite</a>
+</td></tr>
+</table>
+<p style="margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:20px;color:#2b1d13;">Button not working? Copy this link into your browser:<br><a class="plain" href="{{ .ConfirmationURL }}" style="color:#7d3a0c;word-break:break-all;">{{ .ConfirmationURL }}</a></p>
+<p style="margin:0 0 12px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:13px;line-height:20px;color:#2b1d13;margin:0;">Weren't expecting it? Ignore this email: nobody can use the invite without this link.</p>
+</td></tr>
+<tr><td align="center" bgcolor="#120d0b" style="background:#120d0b;padding:20px 8px 0;">
+<p style="margin:0 0 8px;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:18px;color:#cdb995;">You got this email because this address was used on <a href="https://tavernledger.net/" style="color:#cdb995;">tavernledger.net</a>.</p>
+<p style="margin:0;font-family:-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:18px;color:#cdb995;">Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>
+{{ end }}

@@ -5,7 +5,7 @@ import { signIn, signUp } from "../lib/api.ts";
 import { checkCredentials, checkEmail } from "../lib/auth.ts";
 import { supabase } from "./client.ts";
 import { busy, byId, clearInvalid, failField, field, ready, say } from "./dom.ts";
-import { href } from "../lib/i18n.ts";
+import { href, lang } from "../lib/i18n.ts";
 
 const ACCOUNT_PAGE = href("/account/");
 // Links in emails come back to the English address, the one return address
@@ -51,7 +51,7 @@ wire("signin-form", "signin-message", async (email, password, message) => {
 if (document.getElementById("signup-form")) {
   wire("signup-form", "signup-message", async (email, password, message) => {
     say(message, at("signin.creating"));
-    const outcome = await signUp(supabase, email, password, new URL(RETURN_PAGE, location.origin).href);
+    const outcome = await signUp(supabase, email, password, new URL(RETURN_PAGE, location.origin).href, lang());
     say(message, outcome.message, outcome.kind === "error" ? "error" : "ok");
     if (outcome.kind === "check-email") byId<HTMLFormElement>("signup-form").reset();
   });

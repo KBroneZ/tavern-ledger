@@ -218,7 +218,7 @@ Not secrets: `delete-account` reads `SITE_ORIGINS`, which `config.toml` sets to 
 | Email OTP / link expiry | 3600 s | as `config.toml` |
 | Anonymous sign-ins, phone, OAuth providers, MFA | off | not used |
 | Rate limits | emails 30 an hour (Supabase's default once custom SMTP is on), sign-ups and sign-ins 30 per 5 minutes per IP, token verifications 30 per 5 minutes per IP, token refreshes 150 per 5 minutes per IP | the defaults; low enough for a project that is not public |
-| Email templates | Supabase's defaults (the magic link, confirmation, invite and reset links go through `/auth/v1/verify` via `{{ .ConfirmationURL }}`, which the desktop and the site's PKCE flow need; the reset template checked in the dashboard on 2026-10-10) | branding later; the site also reads `?token_hash=` links if a template ever uses them (D-048) |
+| Email templates | Our own, English and Spanish (section 10.14, D-114); the links stay Supabase's `{{ .ConfirmationURL }}` through `/auth/v1/verify`, which the desktop and the site's PKCE flow need | the site also reads `?token_hash=` links if a template ever uses them (D-048) |
 | Audit logs → Write audit logs to the database | **on**: was off; the user turns it on before sign-ups open (section 10.13) | the export's `auth_events` and the security log in the privacy policy need `auth.audit_log_entries` (D-048, section 10.13) |
 | GraphQL (`pg_graphql`) | off if the extension is on | as the local schema; nothing uses it |
 
@@ -413,6 +413,43 @@ What the reports hold: the receiving organisation, the sending IPs, counts, and 
 4. **Local stack:** `email_sent` raised from 2 to 30 an hour in `config.toml` (the hosted value with custom SMTP), so the website's (sign-up and reset) and the desktop's end-to-end tests can run twice in an hour.
 5. **DMARC `rua`:** proposed in 10.11; waiting on the user.
 6. **Privacy policy and terms** out of draft (effective 10 October 2026, the user's approval). Facts read for them on 2026-10-10: Cloudflare Customer DPA version 6.4 of 2026-04-03; the zone's Challenge Passage is 30 minutes; Email Routing keeps routing events 31 days; Cloudflare's privacy policy sets no fixed period for request logs.
+
+### 10.14 Auth email templates, English and Spanish (session 103, T-542, D-114)
+
+The five emails Supabase Auth sends for this project have our own templates: the logo, the parchment card on the site's dark ground, one button plus the plain link, what to do if you did not ask for it and the fan notice. Each file holds the email in Spanish and in English and picks one with `{{ if eq (print .Data.lang) "es" }}`: `.Data` is the account's user metadata, where the website writes `lang` (`"en"` or `"es"`, the page's language) at sign-up. Anything else (no `lang`, an older account, a number someone wrote into their own metadata) gets English; `print` turns any value into text, so the condition never fails on a strange one. **Subjects** take the same condition, so they are per language too (checked on the local stack). Links are Supabase's own `{{ .ConfirmationURL }}`, exactly as in the defaults (row "Email templates" in 10.3): same `/auth/v1/verify` address, no rewriting, no extra parameter.
+
+- **Source of truth:** `tools/build_auth_emails.py` (copy table and layout) writes `supabase/templates/*.html`; the local stack reads them through `[auth.email.template.*]` in `supabase/config.toml`. `python tools/build_auth_emails.py --check` and `tests/test_build_auth_emails.py` fail when a file or a subject is out of date, when a template loses the link, the fan notice or the "did not ask" line, or gains `http://`, a script, a stylesheet link, a data URI or an address outside `https://tavernledger.net/`.
+- **Logo:** `https://tavernledger.net/email/logo.png` (`web/public/email/logo.png`, 112 px shown at 56 px, alt "Tavern Ledger", made by `tools/build_icons.py` from `app-tile.svg`). No tracking pixel; the only image is the logo, served by the site like any page, at one fixed address with no per-recipient parameter (like any image, its fetch shows in Cloudflare's request logs, unless the mail client loads it through its own proxy, as Gmail does).
+- **Not templated:** reauthentication (nothing calls `reauthenticate()`; it carries a code, not a link) and the security notification emails (password or email changed; off on the local stack, and not turned on for the hosted project by any session). If either is turned on, add it to the generator first.
+- **The desktop app's sign-in** asks for its link with `create_user: false`; Supabase ignores `data` there for an existing account (checked locally), so the app sends nothing new: its email follows the language stored at sign-up.
+- **Checked on the local stack (2026-10-12, auth `gotrue:v2.197.0`):** every email sent in both languages and received by Mailpit with the right subject and body; an account with no `lang`, `"en"`, a number or an object gets English; the link in each is the default `/auth/v1/verify?token=…&type=…&redirect_to=…`; the website's local end-to-end test signs up in Spanish, gets "Confirma tu cuenta de Tavern Ledger" and confirms through the link as before. Rendered in Chrome in light and dark mode and at 375 px.
+
+**Dashboard steps (the hub, with the user's OK; one template at a time):**
+
+1. The site must serve the logo first: `https://tavernledger.net/email/logo.png` answers 200 with `image/png` (deployed with the PR's merge).
+2. Supabase → project tavern-ledger → Authentication → Emails → Templates. Before changing a template, copy its current subject and body into `.local/auth-email-backup/<name>.txt` (the rollback; never committed).
+3. For each row below, in this order: open the template, paste the subject (the whole line, conditions included), switch the body to its source view, replace it with the whole file (from `{{ if` to the final `{{ end }}`), press Save changes. The dashboard's preview has no `.Data.lang`, so it shows English.
+
+| Order | Dashboard template | Subject (paste as is) | Body file |
+|---|---|---|---|
+| 1 | Magic link | `{{ if eq (print .Data.lang) "es" }}Tu enlace para iniciar sesión en Tavern Ledger{{ else }}Your Tavern Ledger sign-in link{{ end }}` | `supabase/templates/magic_link.html` |
+| 2 | Reset password | `{{ if eq (print .Data.lang) "es" }}Cambia tu contraseña de Tavern Ledger{{ else }}Reset your Tavern Ledger password{{ end }}` | `supabase/templates/recovery.html` |
+| 3 | Confirm sign up | `{{ if eq (print .Data.lang) "es" }}Confirma tu cuenta de Tavern Ledger{{ else }}Confirm your Tavern Ledger account{{ end }}` | `supabase/templates/confirmation.html` |
+| 4 | Change email address | `{{ if eq (print .Data.lang) "es" }}Confirma el cambio de correo en Tavern Ledger{{ else }}Confirm the email change on Tavern Ledger{{ end }}` | `supabase/templates/email_change.html` |
+| 5 | Invite user | `{{ if eq (print .Data.lang) "es" }}Te han invitado a Tavern Ledger{{ else }}You're invited to Tavern Ledger{{ end }}` | `supabase/templates/invite.html` |
+
+4. **Test** after row 1: ask for a sign-in link for the user's own account as in 10.12 step 5 (`POST /auth/v1/otp`, `create_user: false`, `redirect_to=https://tavernledger.net/account/`); the user checks that it arrives with the logo, in English (their account has no `lang`), and that the button and the plain link both work. After row 2, the same with "Forgot password?" on the site. **Spanish:** set `lang` to `es` on the user's own account (SQL in the known limits below), ask for one more sign-in link and check the Spanish subject and body, then remove it (`raw_user_meta_data - 'lang'`). After row 3, a test sign-up on `https://tavernledger.net/es/signin/` with an address the user owns gets "Confirma tu cuenta de Tavern Ledger"; delete that test account afterwards (account page, "Delete account"). In Gmail's "Show original", the link still starts with `https://vgttflmexobrqhcyxjks.supabase.co/auth/v1/verify?token=`, and no address other than that one and `https://tavernledger.net/` is in the message.
+5. **Rollback** of a template: paste back its subject and body from `.local/auth-email-backup/`, Save. If the backup is lost, these are Supabase Auth's defaults (read from the local auth server, `gotrue:v2.197.0`, on 2026-10-12; the hosted text may be older, and either works):
+
+| Template | Default subject | Default body |
+|---|---|---|
+| Confirm sign up | Confirm your email address | `<h2>Confirm your email address</h2>` `<p>Follow the link below to confirm this email address and finish signing up.</p>` `<p><a href="{{ .ConfirmationURL }}">Confirm email address</a></p>` |
+| Invite user | You've been invited | `<h2>You've been invited</h2>` `<p>You've been invited to create an account. Follow the link below to accept.</p>` `<p><a href="{{ .ConfirmationURL }}">Accept invitation</a></p>` |
+| Magic link | Your sign-in link | `<h2>Your sign-in link</h2>` `<p>Follow the link below to sign in. This link expires shortly and can only be used once.</p>` `<p><a href="{{ .ConfirmationURL }}">Sign in</a></p>` |
+| Change email address | Confirm your new email address | `<h2>Confirm your new email address</h2>` `<p>Follow the link below to confirm {{ .NewEmail }} as your new email address.</p>` `<p><a href="{{ .ConfirmationURL }}">Confirm new email address</a></p>` |
+| Reset password | Reset your password | `<h2>Reset your password</h2>` `<p>We received a request to reset your password. Follow the link below to choose a new one.</p>` `<p><a href="{{ .ConfirmationURL }}">Reset password</a></p>` |
+
+**Known limits:** accounts made before this change have no `lang` and get English (the owner can add it to their own account in the SQL editor: `update auth.users set raw_user_meta_data = raw_user_meta_data || '{"lang":"es"}' where id = '<own id>';`). A user can change their own `lang` through the Auth API; that only changes the language of their own emails. Supabase's renderer drops HTML comments, so there are no Outlook conditional comments: the button's size in Outlook comes from `mso-padding-alt`. Outlook on Windows shows square corners, may stretch the card to the window's width (it ignores `max-width`), and only the button's text is clickable there, and Gmail ignores the dark-mode colours (its apps may darken the light card themselves); both stay readable.
 
 ## Second opinion (ChatGPT, 2026-10-09)
 

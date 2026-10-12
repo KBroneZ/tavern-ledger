@@ -87,6 +87,13 @@ async function confirmationLink(mail: string, email: string): Promise<string> {
   throw new Error("no confirmation email arrived");
 }
 
+/** The subject of the newest email to `email` (the templates pick the account's language, D-114). */
+async function latestSubject(mail: string, email: string): Promise<string> {
+  const search = await fetch(`${mail}/api/v1/search?query=${encodeURIComponent(`to:"${email}"`)}`);
+  const found = (await search.json()) as { messages?: { Subject?: string }[] };
+  return found.messages?.[0]?.Subject ?? "";
+}
+
 /** Where an email link's /auth/v1/verify sends the browser. */
 async function landing(link: string): Promise<URL> {
   const res = await fetch(link, { redirect: "manual" });
@@ -143,9 +150,10 @@ describe("website account flow on the local stack", { skip: !ENABLED && "set TAV
   });
 
   test("sign up, confirm by email and get a session", async () => {
-    const outcome = await signUp(client, email, password, `${SITE}/account/`);
+    const outcome = await signUp(client, email, password, `${SITE}/account/`, "es");
     assert.deepEqual(outcome, { kind: "check-email", message: CHECK_EMAIL });
     const link = await confirmationLink(s.mail, email);
+    assert.equal(await latestSubject(s.mail, email), "Confirma tu cuenta de Tavern Ledger", "the email is in the page's language");
     const target = await landing(link);
     assert.equal(target.origin + target.pathname, `${SITE}/account/`, "the link goes back to the account page");
     const parsed = parseAuthLink(target.search, target.hash);
@@ -155,6 +163,7 @@ describe("website account flow on the local stack", { skip: !ENABLED && "set TAV
     const { data } = await client.auth.getUser();
     userId = data.user?.id ?? "";
     assert.match(userId, /^[0-9a-f-]{36}$/);
+    assert.equal(data.user?.user_metadata?.lang, "es", "the email language is kept with the account");
   });
 
   test("password reset: the link opens the new password form and only the new password works", async () => {
@@ -210,7 +219,7 @@ describe("website account flow on the local stack", { skip: !ENABLED && "set TAV
 
   test("sign-up and sign-in answers do not reveal that the email exists", async () => {
     const other = makeClient(config, memoryStorage());
-    const again = await signUp(other, email, randomBytes(12).toString("base64url"), `${SITE}/account/`);
+    const again = await signUp(other, email, randomBytes(12).toString("base64url"), `${SITE}/account/`, "en");
     assert.deepEqual(again, { kind: "check-email", message: CHECK_EMAIL });
     const wrongPassword = await signIn(other, email, "wrong-password-123");
     const noAccount = await signIn(other, `nobody-${randomBytes(4).toString("hex")}@example.test`, "wrong-password-123");
