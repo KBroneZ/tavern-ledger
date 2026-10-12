@@ -2,7 +2,7 @@
 
 Last updated: 12 October 2026
 
-**What changed on 12 October 2026:** with your profile public, you now appear on a leaderboard from your first finished game in that mode and period, not after 20 (section 4, "Public profiles and leaderboards"); a number from few games is marked "few games".
+**What changed on 12 October 2026:** with your profile public, you now appear on a leaderboard from your first finished game in that mode and period, not after 20 (section 4, "Public profiles and leaderboards"); a number from few games is marked "few games". Also new that day: each game's full record (turn-by-turn boards, shops, combat replays) is kept on our server for 28 days after the game was played, then deleted (deletion starts in the days after this date); its summary stays while you have an account, the app keeps every game in full on your PC, and accounts with unlimited history keep the full records (sections 4, 6 and 7).
 
 **What changed on 11 October 2026:** public leaderboards (section 4, "Public profiles and leaderboards"): what they show, who appears on them, how to leave them and how long the numbers are kept; the check of display names against a short word list; the leaderboard numbers in the download (section 7). Also new that day: card and hero pictures loaded from HearthstoneJSON (sections 3 and 5); community hero stats (section 4, "Community hero stats"), which count your games only if you turn them on, with the switch in the download (section 7) and its retention (section 6).
 
@@ -48,7 +48,8 @@ There are no ads, no analytics and no tracking.
 | Community stats choice: whether you turned on "Include my games in community hero stats" (off by default), when you last changed it and the policy version then in force | To count your games in the community hero stats only if you asked | Consent (Art. 6(1)(a)): you can withdraw it at any time by turning the switch off |
 | Community hero stats: from the games of accounts that turned the switch on, totals per hero, mode and period, rebuilt daily, with no account id | To show the community hero stats | Consent, as above |
 | Leaderboard numbers: for a public profile with a display name, the numbers each board ranks (worked out from your uploaded games) per mode and period, with how many games back each | To show the public leaderboards | Contract, as for the public profile |
-| Your games: a summary row per game (date, mode, hero, place, build, tribes offered, parser version) and the game's full record from the app (no player names), if you upload them | To show your history and stats | Contract |
+| Your games: a summary row per game (date, mode, hero, place, build, tribes offered, parser version, the numbers on your games and stats pages) and, for 28 days, the game's full record from the app (no player names), if you upload them; when a full record was deleted | To show your history and stats | Contract |
+| Unlimited history: whether your account keeps full game records without the 28-day limit, and since when. We set it by hand for the project's owner and beta testers (later also the paid plan); you cannot set it yourself | To keep those accounts' full records | Contract |
 | Upload times: when each of your uploads happened, kept two days | To enforce the hourly and daily upload limits | Legitimate interest in keeping the service available for everyone (Art. 6(1)(f)) |
 | Refused requests: a salted hash of the IP address that sent an upload with an invalid sign-in (the address itself is not stored, and the secret salt is replaced every day), and a count, kept one hour at most | To block abusive requests | Legitimate interest in protecting the service |
 | Backups of all of the above, without live sign-in sessions | To recover from failures | Legitimate interest in not losing your data |
@@ -59,7 +60,7 @@ We do **not** collect player names, BattleTags, Battle.net accounts, ratings or 
 
 ### Public profiles and leaderboards
 
-**Public profile.** If you turn it on, anyone on the internet can see your display name and read every game you uploaded, in full, and can link to or copy them. Turning it off stops access through our site; copies others already made are out of our reach.
+**Public profile.** If you turn it on, anyone on the internet can see your display name and read every game you uploaded (in full while its full record is kept, section 6, and its summary after that), and can link to or copy them. Turning it off stops access through our site; copies others already made are out of our reach.
 
 **Leaderboards** (`/leaderboards/`). While your profile is public and has a display name, you can also appear on the public leaderboards, which rank players on their uploaded games, per mode (Solo, Duos) and period (the last 7 days, the last 30 days, all time). A board shows your display name with a link to your public profile, your place on the board, the number it ranks (for example your average place, top 4 or top 2 rate, win rate, games played, longest top-half streak, average place with a hero and that hero, actions per minute, gold beyond income, rolls or triples per game, your biggest board or most golden minions) and how many games it is based on. You appear on a board once you have one finished game in that mode and period that has the number (one with the hero for the per-hero board); a number from fewer than 20 games (10 with the hero) is marked "few games". The numbers are self-reported: they come from the games your app uploaded; our server checks each game's record and leaves out games with values no real game can have, but cannot prove a game was played as uploaded. The leaderboards never show your email, BattleTag, rating or other players' names. The page asks search engines not to index it.
 
@@ -105,7 +106,8 @@ We do not sell or rent your data.
 
 ## 6. How long we keep it
 
-- **Account, profile, games and sessions:** until you delete your account (sessions also end when you sign out or they expire).
+- **Account, profile, game summaries and sessions:** until you delete your account (sessions also end when you sign out or they expire).
+- **Full game records** (each game's turn-by-turn boards, shops and combat replays, as uploaded by the app): 28 days from the day the game was played (the date on your PC, or the day we first received the game if that is earlier), then deleted (we wait one more day to allow for time zones). Deletion runs in daily batches after that date and can take longer: some days when this rule starts and older records are cleared, and a game uploaded again in the last hour waits for a later day. A game whose summary our server has not been able to make keeps its full record until it has one, since the record is the only way to make it. Copies in backups expire after 35 days (below). The game's summary stays, so your games list, stats and leaderboard numbers do not change, and the game's page then shows that summary with a line saying its full details have expired. The app keeps every game in full on your PC (section 2). If the app uploads a new copy of an old game, that copy is deleted by a later clean-up, under the same conditions and with the same possible delays. Accounts with unlimited history (section 4) keep their full records until the account is deleted.
 - **Leaderboard numbers:** rebuilt every 10 minutes while your profile is public; deleted when you make it private or delete your account.
 - **Community stats choice:** until you delete your account. **Community hero stats:** rebuilt once a day; your games leave them at the first rebuild after you turn the switch off or delete your account, and the page shows nothing once the last rebuild is over 26 hours old.
 - **Security log:** 90 days, then deleted every day by our clean-up job; all of it goes earlier if you delete your account.
@@ -117,10 +119,10 @@ We do not sell or rent your data.
 
 You can, at any time:
 
-- **Download your data:** "Download my data" on your account page gives one JSON file with your account details (not your password hash or sign-in tokens), sign-in sessions, security log, profile, your community stats choice, game rows, your leaderboard numbers and game files. It is machine-readable, so you can take it elsewhere (data portability).
+- **Download your data:** "Download my data" on your account page gives one JSON file with your account details (not your password hash or sign-in tokens), sign-in sessions, security log, profile, your community stats choice, game rows (each says when its full record was deleted, if it was), your leaderboard numbers, the full game records still kept (section 6) and whether your account has unlimited history. It is machine-readable, so you can take it elsewhere (data portability).
 - **Ask for access** to anything else we hold about you, such as what may be in provider logs or backups, by writing to us.
 - **Correct** your display name on the account page; for anything else, write to us.
-- **Delete** your account: "Delete account" on your account page removes your files, game rows, leaderboard numbers, community stats choice, profile, sessions, security log and the account itself. Backups and provider logs expire as in section 6.
+- **Delete** your account: "Delete account" on your account page removes your files, game rows, leaderboard numbers, community stats choice, unlimited history mark, profile, sessions, security log and the account itself. Backups and provider logs expire as in section 6.
 - **Object** to processing based on legitimate interest, or ask us to **restrict** processing.
 - **Stop publishing** your profile and leave the leaderboards by turning the switch off.
 - **Withdraw your consent** to the community hero stats by turning "Include my games in community hero stats" off; your games leave the totals at the next daily rebuild.

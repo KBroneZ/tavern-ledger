@@ -401,6 +401,72 @@ class LocalStackTests(unittest.TestCase):
         status, _ = self.api.request("POST", "/functions/v1/sweep", token=token, body={})
         self.assertEqual(status, 401, "a user cannot run the sweep")
 
+    def test_retention_deletes_old_files_and_keeps_summaries(self):
+        # T-544 (D-109, D-113): report-only counts and deletes nothing; live
+        # deletes the file through the Storage API and marks the row; the
+        # summary stays; an account with unlimited history keeps its file.
+        uid, _, token = self.make_user()
+        keep, _, keep_token = self.make_user()
+        for tok in (token, keep_token):
+            status, body = self.upload(tok, _real_record("b253216_solo", 1), index=1)
+            self.assertEqual((status, body.get("result")), (201, "created"), body)
+        # A recent game whose name starts like the old one's: the Storage
+        # delete must take exact names, never prefixes.
+        status, body = self.upload(token, _real_record("b253216_solo", 10), index=10)
+        self.assertEqual(status, 201, body)
+        # Replica mode skips the trigger that would set updated_at back to now().
+        _psql("set session_replication_role = replica;"
+              " update public.games set played_on = current_date - 40,"
+              " created_at = now() - interval '40 days', updated_at = now() - interval '2 hours'"
+              " where user_id in ('{a}', '{b}') and game_index = 1".format(a=uid, b=keep))
+        _psql(f"insert into private.unlimited_history (user_id) values ('{keep}')")
+        files = ("select count(*) from storage.objects"
+                 " where bucket_id = 'games' and name like '{u}/%'")
+        try:
+            status, body = self.api.secret("POST", "/functions/v1/sweep", body={})
+            self.assertEqual(status, 200, body)
+            r = body["retention"]
+            self.assertEqual((r["mode"], r["listed"], r["deleted"]), ("report", 0, 0), r)
+            self.assertGreaterEqual(r["due"], 1)
+            self.assertGreaterEqual(r["skipped"]["exempt"], 1)
+            self.assertEqual(_psql(files.format(u=uid)), "2", "report-only deletes nothing")
+
+            _psql("update private.file_retention set live = true")
+            status, body = self.api.secret("POST", "/functions/v1/sweep", body={})
+            self.assertEqual(status, 200, body)
+            r = body["retention"]
+            self.assertEqual(r["mode"], "live", r)
+            self.assertGreaterEqual(r["deleted"], 1)
+            self.assertEqual((r["changed"], r["failed"], r["unmarked"], r["left"]), (0, 0, 0, 0), r)
+            self.assertEqual(
+                _psql("select result -> 'retention' = '{r}'::jsonb from private.sweep_runs"
+                      " where id = {i}".format(r=json.dumps(r), i=int(body["run_id"]))),
+                "t", "the sweep records the retention on its run's row")
+            self.assertEqual(
+                _psql("select string_agg(name, ',') from storage.objects"
+                      " where bucket_id = 'games' and name like '{u}/%'".format(u=uid)),
+                f"{uid}/{SESSION}-10.json.gz", "the old file is gone, the recent -10 stays")
+            self.assertEqual(_psql(files.format(u=keep)), "1", "unlimited history keeps it")
+            _, rows = self.api.request(
+                "GET", f"/rest/v1/game_summaries?user_id=eq.{uid}"
+                "&select=game_index,counted_place,rounds,file_expired_at", token=token)
+            rows = {row["game_index"]: row for row in rows}
+            self.assertEqual(sorted(rows), [1, 10], "the summaries stay")
+            self.assertIsNotNone(rows[1]["file_expired_at"], "and say the file expired")
+            self.assertIsNone(rows[10]["file_expired_at"])
+            self.assertIsNotNone(rows[1]["rounds"])
+            _, kept = self.api.request(
+                "GET", f"/rest/v1/game_summaries?user_id=eq.{keep}&select=file_expired_at",
+                token=keep_token)
+            self.assertEqual(kept, [{"file_expired_at": None}])
+
+            status, again = self.api.secret("POST", "/functions/v1/sweep", body={})
+            self.assertEqual(status, 200, again)
+            self.assertEqual(again["retention"]["due"], r["due"] - r["deleted"],
+                             "a marked game is not due again")
+        finally:
+            _psql("update private.file_retention set live = false")
+
     def add_file_only(self, uid, index):
         path = f"{uid}/{SESSION}-{index}.json.gz"
         status, _ = self.api.service(

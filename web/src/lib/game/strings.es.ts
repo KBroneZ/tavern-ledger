@@ -24,6 +24,8 @@ export const ES: Record<GameStringKey, string> = {
   "state.newer": "La guardó una versión de la aplicación más nueva de las que conoce la web. Se muestra lo que la web puede leer.",
   "state.unreadableValues.one": "1 valor de este registro no se pudo leer y aparece como desconocido.",
   "state.unreadableValues.other": "{count} valores de este registro no se pudieron leer y aparecen como desconocidos.",
+  "state.expired": "Los detalles completos se guardan 28 días; los de esta partida han caducado.",
+  "state.expired.caption": "Resumen de la partida",
 
   "status.ok": "Terminada",
   "status.incomplete": "Sin terminar: el registro acaba antes que la partida.",
