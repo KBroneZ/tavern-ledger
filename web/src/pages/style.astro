@@ -111,34 +111,41 @@ const cards = ["SAMPLE_CARD_01", "SAMPLE_CARD_02", "SAMPLE_CARD_03", "SAMPLE_CAR
     <div class="panels">
       <section class="panel" aria-labelledby="style-panel-a">
         <h3 id="style-panel-a">A wood panel</h3>
-        <form novalidate>
-          <label>
-            Email
-            <input type="email" name="style-email" autocomplete="off" />
-          </label>
-          <label>
-            Display name
-            <span class="hint">A hint under the label.</span>
-            <input type="text" name="style-name" autocomplete="off" value="Lantern Keeper" />
-          </label>
-          <label class="check">
-            <input class="toggle" type="checkbox" name="style-public" checked />
-            <span>
-              A setting that is on
-              <span class="hint">Toggles are checkboxes: Space turns them on and off.</span>
-            </span>
-          </label>
-          <label class="check">
-            <input class="toggle" type="checkbox" name="style-other" />
-            <span>A setting that is off</span>
-          </label>
-          <label class="check">
-            <input type="checkbox" name="style-check" checked />
-            <span>A plain checkbox</span>
-          </label>
-          <Button kind="common">Save</Button>
-          <p class="message ok">Saved.</p>
-        </form>
+        {
+          /* The accounts-closed build has no form or field anywhere (test/build). */
+          scripts ? (
+            <form novalidate>
+              <label>
+                Email
+                <input type="email" name="style-email" autocomplete="off" />
+              </label>
+              <label>
+                Display name
+                <span class="hint">A hint under the label.</span>
+                <input type="text" name="style-name" autocomplete="off" value="Lantern Keeper" />
+              </label>
+              <label class="check">
+                <input class="toggle" type="checkbox" name="style-public" checked />
+                <span>
+                  A setting that is on
+                  <span class="hint">Toggles are checkboxes: Space turns them on and off.</span>
+                </span>
+              </label>
+              <label class="check">
+                <input class="toggle" type="checkbox" name="style-other" />
+                <span>A setting that is off</span>
+              </label>
+              <label class="check">
+                <input type="checkbox" name="style-check" checked />
+                <span>A plain checkbox</span>
+              </label>
+              <Button kind="common">Save</Button>
+              <p class="message ok">Saved.</p>
+            </form>
+          ) : (
+            <p class="data-note">This build has no forms, so the fields are not shown.</p>
+          )
+        }
       </section>
       <section class="panel danger" aria-labelledby="style-panel-b">
         <h3 id="style-panel-b">The danger panel</h3>
