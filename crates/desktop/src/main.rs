@@ -431,8 +431,9 @@ fn keep_read_tribes(app: &AppHandle, state: &AppState, game: Option<&GameKey>) {
     let live = state.live.lock().unwrap_or_else(|e| e.into_inner()).clone();
     match state
         .saved_tribes
-        .after_read(game, read, live.as_ref(), &pool)
-    {
+        .after_read(game, read, live.as_ref(), &pool, || {
+            state.game_memory.view().enabled
+        }) {
         saved_tribes::Outcome::Unchanged => {}
         saved_tribes::Outcome::Changed => {
             let _ = app.emit(LOBBY_TRIBES_CHANGED, ());
@@ -1166,6 +1167,7 @@ fn main() {
                 data_dir_from(std::env::args()).unwrap_or_else(tracker::store::default_dir);
             let loaded = state.overlay.load(&data_dir, overlay_dev(std::env::args()));
             let game_memory_loaded = state.game_memory.load(&data_dir);
+            state.saved_tribes.set_dir(&data_dir);
             let settings_loaded = app_settings.load(&data_dir);
             card_data::start(app.handle(), &data_dir);
             setup_tray(app)?;
@@ -1484,7 +1486,7 @@ mod tests {
         );
         state
             .saved_tribes
-            .after_read(Some(&game), read, Some(&live), &[]);
+            .after_read(Some(&game), read, Some(&live), &[], || true);
         state
     }
 

@@ -8,10 +8,11 @@
 //! off deletes them all. They never go into a report, so they are neither
 //! uploaded nor in a problem report.
 
-use std::path::Path;
+use std::io;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use tracker::game_tribes::{keep, Keep, SavedTribes};
+use tracker::game_tribes::{keep, Keep, SavedTribes, FILE_NAME};
 use tracker::game_values::ReaderStatus;
 use tracker::live::LiveGame;
 use tracker::possible::PoolCard;
@@ -22,6 +23,10 @@ use crate::overlay::lock;
 #[derive(Debug, Default)]
 pub struct Kept {
     saved: Mutex<Option<SavedTribes>>,
+    /// The data folder, known to every window, so turning the switch off
+    /// deletes the file even where it is not open (the read-only window, or
+    /// a file that could not be read).
+    dir: Mutex<Option<PathBuf>>,
 }
 
 /// What a read of the game in progress did to the saved tribes.
@@ -34,6 +39,11 @@ pub enum Outcome {
 }
 
 impl Kept {
+    /// Where the file lives; every window calls this at start.
+    pub fn set_dir(&self, data_dir: &Path) {
+        *lock(&self.dir) = Some(data_dir.to_path_buf());
+    }
+
     /// Opens the file next to the history. Only the window that owns the
     /// history calls this; the other one shows none.
     pub fn open(&self, data_dir: &Path) -> Result<(), String> {
@@ -43,6 +53,7 @@ impl Kept {
                 e.kind()
             )
         })?;
+        self.set_dir(data_dir);
         *lock(&self.saved) = Some(opened);
         Ok(())
     }
@@ -58,13 +69,16 @@ impl Kept {
     }
 
     /// After a read: saves the game in progress's tribes once they pass the
-    /// checks, or drops them when the tavern contradicted them.
+    /// checks, or drops them when the tavern contradicted them. `still_on` is
+    /// asked under the lock, just before a save, so a switch turned off since
+    /// the read (which deletes the file under the same lock) is never undone.
     pub fn after_read(
         &self,
         game: Option<&GameKey>,
         read: (Option<Vec<String>>, ReaderStatus),
         live: Option<&LiveGame>,
         pool: &[PoolCard],
+        still_on: impl Fn() -> bool,
     ) -> Outcome {
         let (Some(game), Some(live)) = (game, live) else {
             return Outcome::Unchanged;
@@ -75,6 +89,7 @@ impl Kept {
         };
         let decided = keep(read.0.as_deref(), read.1, live.build, &live.offered, pool);
         let done = match decided {
+            Keep::Save(_) if !still_on() => Ok(false),
             Keep::Save(tribes) => saved.record(game, &tribes),
             Keep::Drop => saved.remove(game),
             Keep::Nothing => Ok(false),
@@ -89,16 +104,26 @@ impl Kept {
         }
     }
 
-    /// The switch was turned off: every saved game's tribes go.
+    /// The switch was turned off: every saved game's tribes go, the file too
+    /// when this window does not have it open.
     pub fn forget_all(&self) -> Result<(), String> {
-        match lock(&self.saved).as_mut() {
-            Some(saved) => saved.forget_all().map_err(|e| {
-                format!(
-                    "The tribes saved from the game could not be deleted ({:?}).",
-                    e.kind()
-                )
-            }),
-            None => Ok(()),
+        let failed = |e: io::Error| {
+            format!(
+                "The tribes saved from the game could not be deleted ({:?}).",
+                e.kind()
+            )
+        };
+        let mut saved = lock(&self.saved);
+        if let Some(saved) = saved.as_mut() {
+            return saved.forget_all().map_err(failed);
+        }
+        let Some(dir) = lock(&self.dir).clone() else {
+            return Ok(());
+        };
+        match std::fs::remove_file(dir.join(FILE_NAME)) {
+            Ok(()) => Ok(()),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(failed(e)),
         }
     }
 }
@@ -162,18 +187,18 @@ mod tests {
         let read = (Some(lobby()), ReaderStatus::Ok);
         let game = live(&[]);
         assert_eq!(
-            kept.after_read(Some(&key()), read.clone(), Some(&game), &pool()),
+            kept.after_read(Some(&key()), read.clone(), Some(&game), &pool(), || true),
             Outcome::Changed
         );
         assert_eq!(kept.get(&key()), Some(lobby()));
         assert_eq!(
-            kept.after_read(Some(&key()), read.clone(), Some(&game), &pool()),
+            kept.after_read(Some(&key()), read.clone(), Some(&game), &pool(), || true),
             Outcome::Unchanged
         );
         // Later the tavern offers a mech: the read was wrong, so it goes.
         let mech = live(&["MECH_1"]);
         assert_eq!(
-            kept.after_read(Some(&key()), read, Some(&mech), &pool()),
+            kept.after_read(Some(&key()), read, Some(&mech), &pool(), || true),
             Outcome::Changed
         );
         assert_eq!(kept.get(&key()), None);
@@ -185,22 +210,22 @@ mod tests {
         let read = (Some(lobby()), ReaderStatus::Ok);
         let game = live(&[]);
         assert_eq!(
-            kept.after_read(Some(&key()), read.clone(), Some(&game), &pool()),
+            kept.after_read(Some(&key()), read.clone(), Some(&game), &pool(), || true),
             Outcome::Unchanged,
             "not the window that owns the history"
         );
         kept.open(&temp_dir("none")).unwrap();
         assert_eq!(
-            kept.after_read(None, read.clone(), Some(&game), &pool()),
+            kept.after_read(None, read.clone(), Some(&game), &pool(), || true),
             Outcome::Unchanged
         );
         assert_eq!(
-            kept.after_read(Some(&key()), read, None, &pool()),
+            kept.after_read(Some(&key()), read, None, &pool(), || true),
             Outcome::Unchanged
         );
         let off = (None, ReaderStatus::Off);
         assert_eq!(
-            kept.after_read(Some(&key()), off, Some(&game), &pool()),
+            kept.after_read(Some(&key()), off, Some(&game), &pool(), || true),
             Outcome::Unchanged
         );
         assert_eq!(kept.get(&key()), None);
@@ -217,10 +242,36 @@ mod tests {
             (Some(lobby()), ReaderStatus::Ok),
             Some(&game),
             &pool(),
+            || true,
         );
         assert!(dir.join(tracker::game_tribes::FILE_NAME).exists());
         kept.forget_all().unwrap();
         assert_eq!(kept.get(&key()), None);
         assert!(!dir.join(tracker::game_tribes::FILE_NAME).exists());
+    }
+
+    #[test]
+    fn a_read_taken_before_the_switch_went_off_is_not_saved_after() {
+        let kept = Kept::default();
+        kept.open(&temp_dir("race")).unwrap();
+        let read = (Some(lobby()), ReaderStatus::Ok);
+        let game = live(&[]);
+        let outcome = kept.after_read(Some(&key()), read, Some(&game), &pool(), || false);
+        assert_eq!(outcome, Outcome::Unchanged);
+        assert_eq!(kept.get(&key()), None);
+    }
+
+    #[test]
+    fn off_deletes_the_file_also_where_it_is_not_open() {
+        // The read-only window, or a file that could not be read.
+        let dir = temp_dir("closed");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(FILE_NAME), "not json").unwrap();
+        let kept = Kept::default();
+        assert!(kept.open(&dir).is_err());
+        kept.set_dir(&dir);
+        kept.forget_all().unwrap();
+        assert!(!dir.join(FILE_NAME).exists());
+        kept.forget_all().unwrap();
     }
 }
