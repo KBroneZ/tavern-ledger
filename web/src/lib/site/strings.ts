@@ -21,7 +21,7 @@ export const SITE_STRINGS = {
   "layout.signin": "Sign in",
   "layout.account": "Account",
   "layout.notice": "Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.",
-  "layout.openSource": "Open source (AGPL-3.0). The site is not open to the public yet.",
+  "layout.openSource": "Open source (AGPL-3.0). Accounts are open; the desktop app is not out yet.",
   // The switch names the other language in that language: on an English page "Español".
   "layout.switch": "Español",
   "layout.switch.label": "Leer esta página en español",
@@ -133,7 +133,7 @@ export const SITE_STRINGS = {
   "home.top": "Back up to the door",
   "home.status.title": "The doors are not open yet.",
   "home.status.body": "The desktop app is a prototype and the website is being built.",
-  "home.status.testing": "Accounts on this site are for testing only.",
+  "home.status.testing": "Accounts are open.",
   "home.status.closed": "Accounts are not open yet.",
   // What's new (lib/site/news.ts): one short dated line each, newest first.
   "news.title": "What's new",

@@ -5,11 +5,12 @@ export const ES: Record<SimStringKey, string> = {
   "page.title": "Simulador de combates",
   "page.description": "Prueba un combate de Campos de Batalla: carga una ronda de una de tus partidas o monta los tableros, y mira las probabilidades.",
   "page.kicker": "Prueba un combate",
+  "page.lead": "Elige una de tus partidas, elige un combate y mira las probabilidades. O pon tú los esbirros de los dos lados.",
   "page.noscript": "El simulador necesita JavaScript.",
   "page.loading": "Cargando el simulador…",
 
-  "load.title": "Cargar un combate",
-  "load.signedOut": "Inicia sesión para cargar un combate de una de tus partidas. El editor de abajo funciona sin cuenta.",
+  "load.title": "Elige una partida",
+  "load.signedOut": "Inicia sesión para cargar un combate de una de tus partidas. La mesa funciona sin cuenta: pon esbirros de los dos lados.",
   "load.signIn": "Iniciar sesión",
   "load.games": "Tus partidas",
   "load.loading": "Cargando tus partidas…",
@@ -17,7 +18,7 @@ export const ES: Record<SimStringKey, string> = {
   "load.more": "Más partidas",
   "load.error": "No se han podido cargar tus partidas. Comprueba la conexión y vuelve a intentarlo.",
   "load.retry": "Reintentar",
-  "load.rounds": "Rondas de esta partida",
+  "load.rounds": "Elige un combate",
   "load.round": "Turno {n}",
   "load.noRounds": "Esta partida no tiene ningún combate con los dos tableros para cargar.",
   "load.gameError": "No se puede leer esta partida.",
@@ -30,6 +31,7 @@ export const ES: Record<SimStringKey, string> = {
   "load.unknownTiers": "El registro solo tiene tu nivel de taberna. Pon los de los demás para ver el daño.",
 
   "mode.label": "Combate",
+  "table.label": "Mesa de combate",
 
   "side.player": "Tú",
   "side.opponent": "Rival",
@@ -39,7 +41,6 @@ export const ES: Record<SimStringKey, string> = {
   "board.second": "Segundo tablero",
   "board.addSecond": "Añadir un segundo tablero",
   "board.remove": "Quitar este tablero",
-  "board.empty": "Aún no hay esbirros.",
   "board.full": "Un tablero admite 7 esbirros.",
 
   "tier.label": "Nivel de taberna",
@@ -58,6 +59,14 @@ export const ES: Record<SimStringKey, string> = {
   "minion.notModelled": "Sin modelar",
   "minion.approximate": "Aproximado",
   "minion.noData": "No está en los datos de cartas",
+  "minion.gift": "Don siniestro: {name}",
+
+  "gift.label": "Dones siniestros",
+  "gift.add": "Añadir un don siniestro",
+  "gift.choose": "Elige un don",
+  "gift.addButton": "Añadir",
+  "gift.remove": "Quitar {name}",
+  "gift.full": "Un esbirro admite 4 dones siniestros.",
 
   "keyword.taunt": "Provocar",
   "keyword.divine_shield": "Escudo divino",

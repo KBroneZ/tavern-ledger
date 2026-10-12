@@ -1,45 +1,77 @@
 ---
-// The combat simulator's frame (T-606): the heading and Simple/Advanced
-// switch, then "Load a combat", the boards and the odds. Each region keeps
-// the room it will need while the script (lib/sim/main.ts) loads, so
-// nothing moves when it arrives.
+// The combat simulator's frame (T-606; the duel table, T-526, D-112): the
+// painted arena behind the page, the gold heading and Simple/Advanced
+// switch, then the main flow in three numbered steps: (1) pick one of your
+// games and (2) pick a fight, on the parchment beside the table; (3) the
+// odds, on a plaque in the middle of the table, between the opponent's side
+// (across) and the player's (near). Each region keeps the room it will need
+// while the script (lib/sim/main.ts) loads, so nothing moves when it arrives.
 import "../../styles/data.css";
 import "./sim.css";
+import "./sim-cards.css";
+import "./sim-odds.css";
 import Switch from "../data/Switch.astro";
 import StateBlock from "../data/StateBlock.astro";
 import DataScript from "../data/DataScript.astro";
 import { sm } from "../../lib/sim/strings.ts";
+import { href } from "../../lib/i18n.ts";
 ---
 
+<div class="sim-backdrop" aria-hidden="true">
+  <picture>
+    <source type="image/avif" media="(max-width: 700px)" srcset="/art/sim/arena-phone.avif" />
+    <source type="image/webp" media="(max-width: 700px)" srcset="/art/sim/arena-phone.webp" />
+    <source type="image/avif" srcset="/art/sim/arena-1376.avif 1376w, /art/sim/arena-1920.avif 1920w" sizes="100vw" />
+    <img
+      src="/art/sim/arena-1376.webp"
+      srcset="/art/sim/arena-1376.webp 1376w, /art/sim/arena-1920.webp 1920w"
+      sizes="100vw"
+      width="1376"
+      height="768"
+      alt=""
+      decoding="async"
+      fetchpriority="low"
+    />
+  </picture>
+</div>
+
 <article class="sim" aria-labelledby="sim-title">
-  <div class="data-head">
-    <div>
-      <p class="kicker">{sm("page.kicker")}</p>
-      <h1 id="sim-title">{sm("page.title")}</h1>
+  <header class="sim-head">
+    <div class="sim-head-words">
+      <p class="sim-kicker">{sm("page.kicker")}</p>
+      <h1 id="sim-title" class="sim-title">{sm("page.title")}</h1>
+      <p class="sim-lead">{sm("page.lead")}</p>
     </div>
-    <Switch kind="detail" />
-  </div>
+    <div class="sim-switch-slot"><Switch kind="detail" /></div>
+  </header>
   <p class="visually-hidden" id="sim-status" role="status" aria-live="polite"></p>
 
-  <section class="sim-panel sim-load-panel" aria-labelledby="sim-load-title">
-    <h2 class="sim-panel-title" id="sim-load-title">{sm("load.title")}</h2>
-    <div id="sim-load">
-      <StateBlock kind="loading" title={sm("page.loading")} lines={2} />
-    </div>
-  </section>
-
-  <div class="sim-note" id="sim-note" role="status"></div>
-
-  <div class="sim-main">
-    <div class="sim-boards">
-      <div id="sim-mode" class="sim-mode-slot"></div>
-      <div class="sim-editor" id="sim-editor" aria-busy="true">
-        <StateBlock kind="loading" title={sm("page.loading")} lines={6} />
+  <div class="sim-layout">
+    <section class="sim-load" aria-labelledby="sim-load-title">
+      <h2 class="sim-load-title" id="sim-load-title"><span class="sim-step" aria-hidden="true">1</span>{sm("load.title")}</h2>
+      <div id="sim-load" class="sim-load-body">
+        {/* Signed out (public/lang.js sets data-auth before the page is drawn), the note
+            the script will draw anyway shows at once; otherwise the wait for the games. */}
+        <p class="sim-dim sim-load-out">{sm("load.signedOut")} <a href={href("/signin/")}>{sm("load.signIn")}</a></p>
+        <div class="sim-load-wait"><StateBlock kind="loading" title={sm("page.loading")} lines={2} /></div>
       </div>
-    </div>
-    <section class="sim-panel sim-result" aria-labelledby="sim-result-title">
-      <h2 class="sim-panel-title" id="sim-result-title">{sm("result.title")}</h2>
-      <div id="sim-result" aria-live="off">
+    </section>
+
+    <section class="sim-table" id="sim-table" aria-label={sm("table.label")}>
+      <div class="sim-table-head">
+        <div id="sim-mode" class="sim-mode-slot"></div>
+        <div class="sim-note" id="sim-note" role="status"></div>
+      </div>
+      <div class="sim-half sim-half-opponent" id="sim-opponent" aria-busy="true">
+        <StateBlock kind="loading" title={sm("page.loading")} lines={3} />
+      </div>
+      <section class="sim-odds" aria-labelledby="sim-result-title">
+        <h2 class="sim-odds-title" id="sim-result-title"><span class="sim-step" aria-hidden="true">3</span>{sm("result.title")}</h2>
+        <div id="sim-result" aria-live="off">
+          <StateBlock kind="loading" title={sm("page.loading")} lines={2} />
+        </div>
+      </section>
+      <div class="sim-half sim-half-player" id="sim-player" aria-busy="true">
         <StateBlock kind="loading" title={sm("page.loading")} lines={3} />
       </div>
     </section>

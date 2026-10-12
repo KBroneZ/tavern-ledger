@@ -8,11 +8,12 @@ export const SIM_STRINGS = {
   "page.title": "Combat simulator",
   "page.description": "Try a Battlegrounds combat: load a round from one of your games or build the boards, then see the odds.",
   "page.kicker": "Try a combat",
+  "page.lead": "Pick one of your games, pick a fight and see the odds. Or put the minions on both sides yourself.",
   "page.noscript": "The simulator needs JavaScript.",
   "page.loading": "Loading the simulator…",
 
-  "load.title": "Load a combat",
-  "load.signedOut": "Sign in to load a combat from one of your games. The editor below works without an account.",
+  "load.title": "Pick a game",
+  "load.signedOut": "Sign in to load a combat from one of your games. The table works without an account: put minions on both sides.",
   "load.signIn": "Sign in",
   "load.games": "Your games",
   "load.loading": "Loading your games…",
@@ -20,7 +21,7 @@ export const SIM_STRINGS = {
   "load.more": "More games",
   "load.error": "Could not load your games. Check your connection and try again.",
   "load.retry": "Try again",
-  "load.rounds": "Rounds of this game",
+  "load.rounds": "Pick a fight",
   "load.round": "Turn {n}",
   "load.noRounds": "This game has no combat with both boards to load.",
   "load.gameError": "This game cannot be read.",
@@ -33,6 +34,7 @@ export const SIM_STRINGS = {
   "load.unknownTiers": "Only your own tavern tier is in the record. Set the others to see the damage.",
 
   "mode.label": "Combat",
+  "table.label": "Combat table",
 
   "side.player": "You",
   "side.opponent": "Opponent",
@@ -42,7 +44,6 @@ export const SIM_STRINGS = {
   "board.second": "Second board",
   "board.addSecond": "Add a second board",
   "board.remove": "Remove this board",
-  "board.empty": "No minions yet.",
   "board.full": "A board holds 7 minions.",
 
   "tier.label": "Tavern tier",
@@ -61,6 +62,14 @@ export const SIM_STRINGS = {
   "minion.notModelled": "Not modelled",
   "minion.approximate": "Approximate",
   "minion.noData": "Not in the card data",
+  "minion.gift": "Dark Gift: {name}",
+
+  "gift.label": "Dark Gifts",
+  "gift.add": "Add a Dark Gift",
+  "gift.choose": "Choose a gift",
+  "gift.addButton": "Add",
+  "gift.remove": "Remove {name}",
+  "gift.full": "A minion holds 4 Dark Gifts.",
 
   "keyword.taunt": "Taunt",
   "keyword.divine_shield": "Divine Shield",

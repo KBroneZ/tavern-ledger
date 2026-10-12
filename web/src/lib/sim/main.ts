@@ -1,7 +1,8 @@
 /// <reference path="../../env.d.ts" />
-// The combat simulator page's script (T-606, D-090). It keeps the boards,
-// redraws the editor after each edit, and plays the boards in a Web Worker
-// (the engine is crates/sim-wasm built to WebAssembly), so the page never
+// The combat simulator page's script (T-606, D-090; the duel table, T-526).
+// It keeps the boards, redraws both halves of the table after each edit,
+// and plays the boards in a Web Worker (the engine is crates/sim-wasm
+// built to WebAssembly), so the page never
 // freezes. Signed in, it lists the player's own games and loads a round
 // from one; signed out, the editor works with nothing read.
 // First: the page's language, before any module draws text (T-508).
@@ -21,7 +22,7 @@ import { CardIndex, readCardFile } from "./cards.ts";
 import { gameKey, type GamesState, loadView, type PickedGame } from "./loadView.ts";
 import { resultView, type ResultState } from "./resultView.ts";
 import { sm } from "./strings.ts";
-import { type Adding, editorView, type Marks, modeSwitch, NO_MARKS, type Selection } from "./view.ts";
+import { type Adding, type Marks, modeSwitch, NO_MARKS, type Selection, sideView } from "./view.ts";
 
 /** Wait after the last edit before playing the boards (as the app's overlay). */
 const SETTLE_MS = 300;
@@ -36,7 +37,10 @@ const els = {
   load: byId("sim-load"),
   note: byId("sim-note"),
   mode: byId("sim-mode"),
-  editor: byId("sim-editor"),
+  /** The whole table: both halves, the mode switch and the odds. */
+  table: byId("sim-table"),
+  opponent: byId("sim-opponent"),
+  player: byId("sim-player"),
   result: byId("sim-result"),
   status: byId("sim-status"),
 };
@@ -68,8 +72,15 @@ function draw(target: HTMLElement, nodes: VNode[]): void {
 }
 
 function drawEditor(): void {
+  const props = { state: sim, cards, selected, adding, marks };
   draw(els.mode, [modeSwitch(sim, t("mode.solo"), t("mode.duos"))]);
-  draw(els.editor, editorView({ state: sim, cards, selected, adding, marks }));
+  draw(els.opponent, sideView("opponent", props));
+  draw(els.player, sideView("player", props));
+}
+
+/** Puts focus on the first control of the table that matches. */
+function focusOn(selector: string): void {
+  els.table.querySelector<HTMLElement>(selector)?.focus();
 }
 
 function drawResult(): void {
@@ -209,22 +220,29 @@ function onEditorClick(event: Event): void {
       adding = adding?.side === side && adding.board === board ? null : { side, board, query: "" };
       selected = null;
       drawEditor();
-      if (adding) els.editor.querySelector<HTMLElement>(`[data-focus="q-${side}-${board}"]`)?.focus();
+      if (adding) focusOn(`[data-focus="q-${side}-${board}"]`);
       return;
     case "add-close":
       adding = null;
       drawEditor();
-      els.editor.querySelector<HTMLElement>(`[data-focus="add-${side}-${board}"]`)?.focus();
+      focusOn(`[data-focus="add-${side}-${board}"]`);
       return;
     case "pick": {
       const next = B.addMinion(sim, side, board, el.dataset.card ?? "", cards);
       adding = next[side][board].minions.length >= B.MAX_MINIONS ? null : adding && { ...adding, query: "" };
       update(next);
-      els.editor.querySelector<HTMLElement>(`[data-focus="q-${side}-${board}"]`)?.focus();
+      focusOn(`[data-focus="q-${side}-${board}"]`);
       return;
     }
     case "golden":
       return update(B.toggleGolden(sim, side, board, key, cards));
+    case "gift-add":
+      return addGift(key, side, board);
+    case "gift-remove":
+      update(B.removeGift(sim, side, board, key, el.dataset.gift ?? ""));
+      // The chip is gone: the gift list takes focus.
+      focusOn(`[data-focus="ga${key}"]`);
+      return;
     case "keyword":
       if ((B.SIM_KEYWORDS as readonly string[]).includes(el.dataset.keyword ?? "")) {
         update(B.toggleKeyword(sim, side, board, key, el.dataset.keyword as B.SimKeyword));
@@ -235,7 +253,7 @@ function onEditorClick(event: Event): void {
     case "remove":
       selected = null;
       update(B.removeMinion(sim, side, board, key));
-      els.editor.querySelector<HTMLElement>(`[data-focus="add-${side}-${board}"]`)?.focus();
+      focusOn(`[data-focus="add-${side}-${board}"]`);
       return;
     case "board-remove":
       selected = null;
@@ -268,6 +286,14 @@ function onEditorChange(event: Event): void {
   // A value clamped back to the one kept still redraws, so the field shows it.
   if (next === sim) return drawEditor();
   update(next);
+}
+
+/** Adds the gift chosen in the picked minion's list; at four, focus goes to its first gift. */
+function addGift(key: number, side: B.Side, board: number): void {
+  const list = els.table.querySelector<HTMLSelectElement>(`[data-focus="ga${key}"]`);
+  if (!list || list.value === "") return list?.focus();
+  update(B.addGift(sim, side, board, key, list.value));
+  if (!els.table.querySelector(`[data-focus="ga${key}"]`)) focusOn(`[data-focus^="gr${key}-"]`);
 }
 
 function onResultChange(event: Event): void {
@@ -335,6 +361,11 @@ async function pickGame(key: string): Promise<void> {
 
 function loadRound(n: number): void {
   if (!record || !picked) return;
+  // Without the card data a round would load with every minion left out: it says so instead.
+  if (cards.size === 0) {
+    els.status.textContent = sm("page.loading");
+    return;
+  }
   const loaded = B.fromRound(record, n, cards);
   if (!loaded) return;
   picked = { ...picked, loaded: n };
@@ -372,7 +403,13 @@ async function signIn(): Promise<void> {
   const user = (await supabase.auth.getSession()).data.session?.user ?? null;
   if (!user) {
     games = { kind: "signed-out" };
-    return drawLoad();
+    // The page already holds this note (Simulator.astro): kept as it is, so
+    // it is not drawn a second time; shown even if the page guessed "in".
+    const note = els.load.querySelector(".sim-load-out");
+    if (!note) return drawLoad();
+    els.load.querySelector(".sim-load-wait")?.remove();
+    note.classList.remove("sim-load-out");
+    return;
   }
   // Only the signed-in player's own games: the id comes from their session, never from the address.
   account = {
@@ -391,24 +428,36 @@ async function loadCards(): Promise<void> {
   cards = new CardIndex(readCardFile(file.default));
 }
 
-async function start(): Promise<void> {
+/** The page's listeners, once: "Try again" runs start() again without adding them twice. */
+function listen(): void {
   watchPictureFallback(document);
-  els.editor.addEventListener("click", onEditorClick);
-  els.mode.addEventListener("click", onEditorClick);
-  els.result.addEventListener("click", onEditorClick);
-  els.editor.addEventListener("input", onEditorInput);
-  els.editor.addEventListener("change", onEditorChange);
-  els.result.addEventListener("change", onResultChange);
+  els.table.addEventListener("click", onEditorClick);
+  els.table.addEventListener("input", onEditorInput);
+  els.table.addEventListener("change", onEditorChange);
+  els.table.addEventListener("change", onResultChange);
   els.load.addEventListener("click", onLoadClick);
-  await loadCards();
-  els.editor.removeAttribute("aria-busy");
-  drawEditor();
-  drawResult();
-  drawLoad();
-  await signIn().catch(() => {
+}
+
+async function start(): Promise<void> {
+  // The games list does not need the card data: it is asked for at once.
+  const listed = signIn().catch(() => {
     games = { kind: "error" };
     drawLoad();
   });
+  await loadCards();
+  els.opponent.removeAttribute("aria-busy");
+  els.player.removeAttribute("aria-busy");
+  drawEditor();
+  drawResult();
+  await listed;
 }
 
-start().catch(() => showFailed());
+/** After the page's first paint: the card data and the sign-in client load behind it. */
+const afterPaint = (): Promise<void> =>
+  // A tab opened in the background paints nothing yet (and pauses animation frames): it starts at once.
+  document.visibilityState === "hidden" ? Promise.resolve() : new Promise((done) => requestAnimationFrame(() => setTimeout(done, 0)));
+
+listen();
+afterPaint()
+  .then(start)
+  .catch(() => showFailed());
