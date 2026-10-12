@@ -235,24 +235,6 @@ button.tb:active {
   display: none;
 }
 
-/* Busy: the request is on its way (scripts/dom.ts sets aria-busy with
-   aria-disabled). The wood glows slowly; nothing presses. */
-.tb[aria-busy="true"] {
-  cursor: progress;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .tb[aria-busy="true"]::before {
-    animation: tb-busy 900ms ease-in-out infinite alternate;
-  }
-}
-
-@keyframes tb-busy {
-  to {
-    filter: drop-shadow(0 0 12px rgb(255 196 92 / 0.55)) brightness(1.25);
-  }
-}
-
 /* Unavailable (aria-disabled): the finished look at rest, but it neither
    lights up nor presses; focus still shows the ring. */
 .tb[aria-disabled="true"] {
@@ -262,6 +244,43 @@ button.tb:active {
 
 .tb[aria-disabled="true"]:is(:hover, :active) {
   transform: none;
+}
+
+/* Busy: the request is on its way (scripts/dom.ts sets aria-busy with
+   aria-disabled). The art glows slowly; nothing presses. Each role keeps
+   its own filter list, so the glow fades in smoothly instead of jumping. */
+.tb[aria-busy="true"][aria-disabled="true"] {
+  cursor: progress;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tb[aria-busy="true"]::before {
+    animation: tb-busy 900ms ease-in-out infinite alternate;
+  }
+
+  .tb-danger[aria-busy="true"]::before {
+    animation-name: tb-busy-danger;
+  }
+}
+
+@keyframes tb-busy {
+  from {
+    filter: drop-shadow(0 0 0 rgb(255 196 92 / 0)) brightness(1);
+  }
+
+  to {
+    filter: drop-shadow(0 0 12px rgb(255 196 92 / 0.55)) brightness(1.25);
+  }
+}
+
+@keyframes tb-busy-danger {
+  from {
+    filter: drop-shadow(0 0 0 rgb(255 110 80 / 0)) sepia(0.4) hue-rotate(-22deg) saturate(1.7) brightness(0.72);
+  }
+
+  to {
+    filter: drop-shadow(0 0 12px rgb(255 110 80 / 0.5)) sepia(0.4) hue-rotate(-22deg) saturate(1.9) brightness(0.9);
+  }
 }
 
 .tb-small[aria-disabled="true"]::after {

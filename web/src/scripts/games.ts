@@ -122,7 +122,7 @@ async function start(): Promise<void> {
 }
 
 function failed(): void {
-  const retry = h("button", { type: "button", class: "secondary", id: "list-retry" }, t("dash.retry"));
+  const retry = h("button", { type: "button", class: "tb tb-small", id: "list-retry" }, t("dash.retry"));
   mount(body, stateBlock({ kind: "error", title: t("dash.error"), body: t("dash.error.body") }, retry));
   form.hidden = true;
   settle(t("dash.error"));

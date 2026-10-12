@@ -460,6 +460,17 @@ main:focus {
   }
 }
 
+/* Printers drop backgrounds, which would leave the gold titles blank. */
+@media print {
+  .lit-gold,
+  main:not(.layout-home) h1 {
+    background: none;
+    color: #000;
+    -webkit-text-fill-color: currentColor;
+    filter: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

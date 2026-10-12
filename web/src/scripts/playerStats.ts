@@ -153,7 +153,7 @@ async function start(): Promise<void> {
 }
 
 function failed(): void {
-  const retry = h("button", { type: "button", class: "secondary", id: "pp-retry" }, t("dash.retry"));
+  const retry = h("button", { type: "button", class: "tb tb-small", id: "pp-retry" }, t("dash.retry"));
   showGate(stateBlock({ kind: "error", title: t("dash.error"), body: t("dash.error.body") }, retry), t("dash.error"));
   byId("pp-retry").addEventListener("click", () => {
     mount(gate, stateBlock({ kind: "loading", lines: 6 }));
