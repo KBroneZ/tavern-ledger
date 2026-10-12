@@ -610,7 +610,7 @@ test("accounts open: the community hero stats are a static frame with reserved r
   // The account page's switch: off until the script reads the owner's choice, with the policy link.
   const account = page("account/index.html");
   assert.match(account, /id="community-form"/);
-  assert.match(account, /<input type="checkbox" name="hero_stats">/);
+  assert.match(account, /<input class="toggle" type="checkbox" name="hero_stats">/);
   assert.match(account, /Include my games in community hero stats/);
   assert.match(account, /href="\/privacy\/#community-hero-stats"/);
 });
@@ -623,7 +623,7 @@ test("accounts open: the account page has the simulator switch, off until read, 
   ] as const) {
     const account = page(file);
     assert.match(account, /id="simulator-form"/, lang);
-    assert.match(account, /<input type="checkbox" name="improve_simulator">/, lang);
+    assert.match(account, /<input class="toggle" type="checkbox" name="improve_simulator">/, lang);
     assert.match(account, label, lang);
     assert.match(account, new RegExp(`href="${lang === "es" ? "/es" : ""}/privacy/#improving-the-simulator"`), lang);
     assert.match(account, /id="simulator-message" role="status" aria-live="polite"/, lang);

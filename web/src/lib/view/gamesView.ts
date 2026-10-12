@@ -25,7 +25,7 @@ function pager(page: ListPage): VNode | null {
   const current = page.filters.page;
   if (pages <= 1 && current === 1) return null;
   const link = (to: number, text: string, rel: string) =>
-    h("a", { class: "btn quiet", href: href(`/games/${filtersQuery({ ...page.filters, page: to }, page.profileId)}`), rel }, text);
+    h("a", { class: "tb tb-small", href: href(`/games/${filtersQuery({ ...page.filters, page: to }, page.profileId)}`), rel }, text);
   return h(
     "nav",
     { class: "pager", "aria-label": t("list.pages") },

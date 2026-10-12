@@ -1,35 +1,48 @@
 ---
-// The tavern buttons (T-530, D-105), one per role. The words are real text on
-// top of painted art cut from the user's Gemini sheet (tools/build_home_art.py):
-// - key:    gold stone with gems, for the few key actions; it lights up on hover and focus
+// The tavern buttons (T-530, D-105; every page since T-556, D-129), one per
+// role. The words are real text on top of painted art cut from the user's
+// Gemini sheet (tools/build_home_art.py):
+// - key:    gold stone with gems, the one key action of a screen; it lights up on hover and focus
 // - common: dark wood and bronze, for common actions; it knocks when pressed
-// - small:  small stone in a thin gold frame, for small actions
-// A link when given href, otherwise a button. `unavailable` keeps a button in its
-// final look but does nothing (aria-disabled, so it stays focusable and is
-// announced as unavailable); `describedby` names the text that says why.
-// The home page uses it first; the other pages adopt it later.
+// - small:  small stone in a thin gold frame, for minor actions
+// - danger: charred wood with an ember label, for what cannot be undone
+// A link when given href, otherwise a button. `unavailable` keeps a button in
+// its final look but does nothing (aria-disabled, so it stays focusable and
+// is announced as unavailable); `describedby` names the text that says why.
+// `disabled` ships a form's button off until its script turns it on
+// (scripts/dom.ts); while a request runs the script marks it aria-busy.
+// Scripts that draw buttons use the same classes: class="tb tb-common".
 import "../../styles/buttons.css";
 
 interface Props {
-  kind: "key" | "common" | "small";
+  kind: "key" | "common" | "small" | "danger";
   href?: string;
   type?: "button" | "submit";
   unavailable?: boolean;
+  disabled?: boolean;
   describedby?: string;
+  id?: string;
   class?: string;
 }
 
-const { kind, href, type = "button", unavailable = false, describedby, class: extra } = Astro.props;
+const { kind, href, type = "button", unavailable = false, disabled = false, describedby, id, class: extra } = Astro.props;
 const classes = ["tb", `tb-${kind}`, extra].filter(Boolean).join(" ");
 ---
 
 {
   href && !unavailable ? (
-    <a class={classes} href={href} aria-describedby={describedby}>
+    <a class={classes} href={href} id={id} aria-describedby={describedby}>
       <span class="tb-label"><slot /></span>
     </a>
   ) : (
-    <button class={classes} type={type} aria-disabled={unavailable ? "true" : undefined} aria-describedby={describedby}>
+    <button
+      class={classes}
+      type={type}
+      id={id}
+      disabled={disabled}
+      aria-disabled={unavailable ? "true" : undefined}
+      aria-describedby={describedby}
+    >
       <span class="tb-label"><slot /></span>
     </button>
   )

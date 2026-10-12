@@ -1,8 +1,9 @@
 ---
-// The data pages' design system (T-501), every piece in every state, with
-// made-up data only: no real player, no game art. Not in the menu and kept
-// out of search engines.
+// The site's design system (T-501; the tavern's pieces since T-556): every
+// piece in every state, with made-up data only: no real player, no game art.
+// Not in the menu and kept out of search engines.
 import Base from "../layouts/Base.astro";
+import Button from "../components/ui/Button.astro";
 import { setLang } from "../lib/i18n.ts";
 import "../styles/data.css";
 import { scriptsAllowed } from "../lib/config.ts";
@@ -51,7 +52,7 @@ const cards = ["SAMPLE_CARD_01", "SAMPLE_CARD_02", "SAMPLE_CARD_03", "SAMPLE_CAR
 
 <Base
   title="Style"
-  description="The pieces the Tavern Ledger data pages are built from, shown with made-up data."
+  description="The pieces the Tavern Ledger pages are built from, shown with made-up data."
   noindex
   translated={false}
 >
@@ -59,7 +60,7 @@ const cards = ["SAMPLE_CARD_01", "SAMPLE_CARD_02", "SAMPLE_CARD_03", "SAMPLE_CAR
     <div>
       <h1>Style</h1>
       <p class="data-note">
-        Every piece of the data pages in each of its states. All numbers, heroes and pictures here are made-up
+        Every piece of the pages in each of its states. All numbers, heroes and pictures here are made-up
         examples: no player's data and no game art.
       </p>
     </div>
@@ -70,6 +71,93 @@ const cards = ["SAMPLE_CARD_01", "SAMPLE_CARD_02", "SAMPLE_CARD_03", "SAMPLE_CAR
       <p class="data-note">This build ships no scripts, so the switches stay hidden and the page shows Simple and Solo.</p>
     )
   }
+
+  <section class="data-section" aria-labelledby="s-buttons">
+    <h2 id="s-buttons">Buttons by role</h2>
+    <p class="data-note">
+      One gold stone at most per screen, for the action the screen is for. Wood and bronze for every other action, the
+      small stone for minor ones, charred wood for what cannot be undone.
+    </p>
+    <div class="style-row">
+      <Button kind="key">Sign in</Button>
+      <Button kind="common">Save</Button>
+      <Button kind="small">Sign out</Button>
+      <Button kind="danger">Delete my account</Button>
+    </div>
+    <p class="data-note">Disabled until the page's script loads, busy while a request runs, and unavailable (not yet).</p>
+    <div class="style-row">
+      <Button kind="common" disabled>Disabled</Button>
+      <button class="tb tb-common" type="button" aria-disabled="true" aria-busy="true">Busy</button>
+      <Button kind="small" disabled>Disabled</Button>
+      <Button kind="key" unavailable describedby="style-not-yet">Download</Button>
+      <span class="hint" id="style-not-yet">Not out yet</span>
+    </div>
+    <div class="style-row">
+      <button type="button">A button with no role</button>
+      <a href="#s-buttons">A link in the text</a>
+    </div>
+  </section>
+
+  <section class="data-section" aria-labelledby="s-headings">
+    <h2 id="s-headings">Headings and labels</h2>
+    <p class="kicker">Small label</p>
+    <p class="lit-gold style-title">A page title in lit gold</p>
+    <p class="style-h2">A section heading in parchment</p>
+    <p class="data-note">Body text stays plain and light, and numbers stay in the body font: 3.42, 63%, 12.9K.</p>
+  </section>
+
+  <section class="data-section" aria-labelledby="s-panels">
+    <h2 id="s-panels">Panels and fields</h2>
+    <div class="panels">
+      <section class="panel" aria-labelledby="style-panel-a">
+        <h3 id="style-panel-a">A wood panel</h3>
+        {
+          /* The accounts-closed build has no form or field anywhere (test/build). */
+          scripts ? (
+            <form novalidate>
+              <label>
+                Email
+                <input type="email" name="style-email" autocomplete="off" />
+              </label>
+              <label>
+                Display name
+                <span class="hint">A hint under the label.</span>
+                <input type="text" name="style-name" autocomplete="off" value="Lantern Keeper" />
+              </label>
+              <label class="check">
+                <input class="toggle" type="checkbox" name="style-public" checked />
+                <span>
+                  A setting that is on
+                  <span class="hint">Toggles are checkboxes: Space turns them on and off.</span>
+                </span>
+              </label>
+              <label class="check">
+                <input class="toggle" type="checkbox" name="style-other" />
+                <span>A setting that is off</span>
+              </label>
+              <label class="check">
+                <input type="checkbox" name="style-check" checked />
+                <span>A plain checkbox</span>
+              </label>
+              <Button kind="common">Save</Button>
+              <p class="message ok">Saved.</p>
+            </form>
+          ) : (
+            <p class="data-note">This build has no forms, so the fields are not shown.</p>
+          )
+        }
+      </section>
+      <section class="panel danger" aria-labelledby="style-panel-b">
+        <h3 id="style-panel-b">The danger panel</h3>
+        <p>For what cannot be undone.</p>
+        <div class="callout"><p>A callout: something to read before going on.</p></div>
+        <p class="message error">An error message.</p>
+      </section>
+    </div>
+    <div class="status">
+      <p><strong>A notice on wood.</strong> Used where a whole page has one message.</p>
+    </div>
+  </section>
 
   <section class="data-section" aria-labelledby="s-tokens">
     <h2 id="s-tokens">Tokens</h2>

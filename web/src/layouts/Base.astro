@@ -1,5 +1,8 @@
 ---
 import "../styles/global.css";
+import "../styles/nav.css";
+import "../styles/ui.css";
+import "../styles/buttons.css";
 import { contentSecurityPolicy, readConfig, WASM_PAGES } from "../lib/config.ts";
 import { basePath, href, lang, LANGS, pathIn, type Lang } from "../lib/i18n.ts";
 import { st } from "../lib/site/strings.ts";
@@ -84,7 +87,20 @@ const socialCard = new URL("/social-card.png", Astro.site).href;
         <span class="mark" aria-hidden="true"></span>
         <span>Tavern Ledger</span>
       </a>
-      <nav aria-label={st("layout.nav")}>
+      {/* Where the links do not fit on one line, the menu folds behind this
+          button (a popover: no script needed; nav.css). With accounts
+          closed the menu is short and never folds. */}
+      {config && (
+        <button class="nav-open" type="button" popovertarget="site-nav">
+          <i aria-hidden="true"></i>{st("layout.menu")}
+        </button>
+      )}
+      <nav class="site-nav" id="site-nav" popover={config ? "auto" : undefined} aria-label={st("layout.nav")}>
+        {config && (
+          <button class="nav-close" type="button" popovertarget="site-nav" popovertargetaction="hide">
+            <i aria-hidden="true"></i>{st("layout.menu.close")}
+          </button>
+        )}
         <a href={href("/")} aria-current={current(base === "/")}>{st("layout.home")}</a>
         <a href={href("/privacy/")} aria-current={current(base.startsWith("/privacy"))}>{st("layout.privacy")}</a>
         {config && (

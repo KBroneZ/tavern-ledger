@@ -1,9 +1,21 @@
-/* The tavern buttons (T-530, D-105): web/src/components/ui/Button.astro.
-   Painted art from web/public/art/home/ (cut by tools/build_home_art.py) sits
-   in ::before and ::after; the label is real text on top. Wood and the small
-   stone are nine-sliced (border-image), so they stretch to any label without
-   bending their corners; the gold stone keeps its shape and only scales.
-   Only transform, opacity and filter move. */
+/* The tavern buttons (T-530, D-105; every page since T-556, D-129):
+   web/src/components/ui/Button.astro, or class="tb tb-<role>" on a button
+   or link drawn by a script. Painted art from web/public/art/home/ (cut by
+   tools/build_home_art.py) sits in ::before and ::after, under the label,
+   which is real text. Wood and the small stone are nine-sliced
+   (border-image), so they stretch to any label without bending their
+   corners; the gold stone keeps its shape and only scales. Only transform,
+   opacity and filter move.
+
+   Roles (one key action per screen at most):
+   - key:    gold stone with gems, the one action a screen is for
+   - common: dark wood and bronze, every other action
+   - small:  small stone in a thin gold frame, minor actions
+   - danger: charred wood with an ember label, for what cannot be undone
+   States: hover and focus light them, pressing knocks them; disabled (the
+   form's script has not loaded) dims them; aria-busy (the request is on
+   its way) makes the wood glow slowly; aria-disabled on the key means "not
+   yet" and keeps its finished look (D-105). */
 
 .tb {
   --tb-press: 90ms ease-out;
@@ -22,6 +34,7 @@
   box-shadow: none;
   font-family: var(--display);
   font-stretch: 88%;
+  line-height: 1;
   text-align: center;
   text-decoration: none;
   white-space: nowrap;
@@ -30,12 +43,18 @@
   transition: transform var(--tb-spring);
 }
 
-/* The global button rules (global.css) do not apply to these. */
+/* In a form or a panel the button sits at the start, like the fields. */
+:is(form, .panel, .status, .state) .tb {
+  justify-self: start;
+}
+
+/* The plain button rules (ui.css) do not apply to these. */
 button.tb:hover,
 button.tb:active {
   box-shadow: none;
 }
 
+/* Both art layers sit under the label (::after over ::before). */
 .tb::before,
 .tb::after {
   content: "";
@@ -91,25 +110,10 @@ button.tb:active {
   transition: transform var(--tb-press);
 }
 
-/* Unavailable (aria-disabled): the finished look at rest, but it neither
-   lights up nor presses; focus still shows the ring. */
-.tb[aria-disabled="true"] {
-  opacity: 1;
-  cursor: default;
-}
-
-.tb[aria-disabled="true"]:active {
-  transform: none;
-}
-
-/* Not drawn at all, so the lit art is not even downloaded. */
-.tb-key[aria-disabled="true"]::after {
-  display: none;
-}
-
 /* ---------- Common: dark wood and bronze ---------- */
 
-.tb-common {
+.tb-common,
+.tb-danger {
   padding: 0 34px;
   min-height: 56px;
   color: #fbeed8;
@@ -120,7 +124,8 @@ button.tb:active {
     0 0 8px rgb(0 0 0 / 0.6);
 }
 
-.tb-common::before {
+.tb-common::before,
+.tb-danger::before {
   inset: 0;
   border-style: solid;
   border-width: 17px 27px;
@@ -132,19 +137,34 @@ button.tb:active {
   transition: filter 200ms ease;
 }
 
-.tb-common:hover {
+.tb-common:hover,
+.tb-danger:hover {
   transform: translateY(-1px);
 }
 
-.tb-common:hover::before,
-.tb-common:focus-visible::before {
+.tb-common:not([aria-disabled="true"]):is(:hover, :focus-visible)::before {
   filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.45)) brightness(1.12);
 }
 
 /* Knock: pressed in fast, sprung back on release. */
-.tb-common:active {
+.tb-common:active,
+.tb-danger:active {
   transform: translateY(2px) scale(0.97) rotate(-0.6deg);
   transition: transform var(--tb-press);
+}
+
+/* ---------- Danger: the same wood, charred, with an ember label ---------- */
+
+.tb-danger {
+  color: #ffc4b8;
+}
+
+.tb-danger::before {
+  filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.45)) sepia(0.4) hue-rotate(-22deg) saturate(1.7) brightness(0.72);
+}
+
+.tb-danger:not([aria-disabled="true"]):is(:hover, :focus-visible)::before {
+  filter: drop-shadow(0 0 12px rgb(255 110 80 / 0.45)) sepia(0.4) hue-rotate(-22deg) saturate(1.9) brightness(0.85);
 }
 
 /* ---------- Small: small stone in a thin gold frame ---------- */
@@ -173,7 +193,6 @@ button.tb:active {
 /* A glint that runs over the worn stone on hover and focus. */
 .tb-small::after {
   inset: 0;
-  z-index: 0;
   background: linear-gradient(105deg, transparent 35%, rgb(255 246 220 / 0.55) 50%, transparent 65%);
   transform: translateX(-120%);
 }
@@ -184,14 +203,93 @@ button.tb:active {
   transition: transform 700ms ease-in-out;
 }
 
-.tb-small .tb-label {
-  position: relative;
-  z-index: 1;
-}
-
 .tb-small:active {
   transform: scale(0.94);
   transition: transform var(--tb-press);
+}
+
+/* ---------- Disabled, busy and unavailable ---------- */
+
+/* Disabled until the form's script has loaded: dimmed and still. */
+.tb:disabled {
+  cursor: progress;
+}
+
+.tb:disabled::before {
+  filter: grayscale(0.6) brightness(0.62);
+}
+
+/* The light stone under dark words: dimmed less, so the words still read. */
+.tb-small:disabled::before {
+  filter: grayscale(0.7) brightness(0.85);
+}
+
+.tb:disabled,
+.tb:disabled:hover,
+.tb:disabled:active {
+  transform: none;
+  opacity: 0.8;
+}
+
+.tb:disabled::after {
+  display: none;
+}
+
+/* Unavailable (aria-disabled): the finished look at rest, but it neither
+   lights up nor presses; focus still shows the ring. */
+.tb[aria-disabled="true"] {
+  opacity: 1;
+  cursor: default;
+}
+
+.tb[aria-disabled="true"]:is(:hover, :active) {
+  transform: none;
+}
+
+/* Busy: the request is on its way (scripts/dom.ts sets aria-busy with
+   aria-disabled). The art glows slowly; nothing presses. Each role keeps
+   its own filter list, so the glow fades in smoothly instead of jumping. */
+.tb[aria-busy="true"][aria-disabled="true"] {
+  cursor: progress;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tb[aria-busy="true"]::before {
+    animation: tb-busy 900ms ease-in-out infinite alternate;
+  }
+
+  .tb-danger[aria-busy="true"]::before {
+    animation-name: tb-busy-danger;
+  }
+}
+
+@keyframes tb-busy {
+  from {
+    filter: drop-shadow(0 0 0 rgb(255 196 92 / 0)) brightness(1);
+  }
+
+  to {
+    filter: drop-shadow(0 0 12px rgb(255 196 92 / 0.55)) brightness(1.25);
+  }
+}
+
+@keyframes tb-busy-danger {
+  from {
+    filter: drop-shadow(0 0 0 rgb(255 110 80 / 0)) sepia(0.4) hue-rotate(-22deg) saturate(1.7) brightness(0.72);
+  }
+
+  to {
+    filter: drop-shadow(0 0 12px rgb(255 110 80 / 0.5)) sepia(0.4) hue-rotate(-22deg) saturate(1.9) brightness(0.9);
+  }
+}
+
+.tb-small[aria-disabled="true"]::after {
+  display: none;
+}
+
+/* Not drawn at all, so the lit art is not even downloaded. */
+.tb-key[aria-disabled="true"]::after {
+  display: none;
 }
 
 /* ---------- Preferences ---------- */
@@ -208,5 +306,10 @@ button.tb:active {
     border: 2px solid ButtonText;
     color: ButtonText;
     text-shadow: none;
+  }
+
+  .tb:disabled {
+    border-color: GrayText;
+    color: GrayText;
   }
 }

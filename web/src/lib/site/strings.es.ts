@@ -5,6 +5,8 @@ export const ES: Record<SiteKey, string> = {
   // Layout (layouts/Base.astro).
   "layout.skip": "Saltar al contenido",
   "layout.nav": "Principal",
+  "layout.menu": "Menú",
+  "layout.menu.close": "Cerrar",
   "layout.home": "Inicio",
   "layout.privacy": "Privacidad",
   "layout.terms": "Términos",

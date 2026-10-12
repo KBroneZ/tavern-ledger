@@ -10,6 +10,8 @@ export const SITE_STRINGS = {
   // Layout (layouts/Base.astro).
   "layout.skip": "Skip to content",
   "layout.nav": "Main",
+  "layout.menu": "Menu",
+  "layout.menu.close": "Close",
   "layout.home": "Home",
   "layout.privacy": "Privacy",
   "layout.terms": "Terms",
