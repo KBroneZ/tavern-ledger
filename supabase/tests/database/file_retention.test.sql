@@ -137,8 +137,8 @@ reset role;
 -- ------------------------------------------------------------ settings
 select results_eq(
   $$ select days, live from private.file_retention $$,
-  $$ values (28, false) $$,
-  'ships with 28 days, report-only'
+  $$ values (28, true) $$,
+  '28 days, live since migration 20261012190000 (the user turned it on)'
 );
 select throws_ok($$ insert into private.file_retention (days) values (90) $$,
   '23505', null, 'one settings row only');
@@ -169,6 +169,7 @@ select is(
 );
 
 -- ------------------------------------------------------------ report-only
+update private.file_retention set live = false;
 create temporary table report as select public.file_retention_list(1000, 1) as l;
 select is((select pg_temp.counts(l) from report), array[3, 1, 1, 2],
   'report-only: due A2, A5, B1; kept by reason: exempt, recent, no summary (A3, A7)');
