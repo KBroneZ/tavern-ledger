@@ -1,0 +1,204 @@
+/* The home page's panels (T-530, D-105): carved oak, iron corner brackets and
+   burnt parchment, painted by the user in Gemini (panels-sheet.webp, cut by
+   tools/build_home_art.py). They never reuse the buttons' art. By role:
+   - lead:  the wide banner under the headline (.parchment)
+   - card:  every box below (.glass, the three "yours" items, what's new)
+   - strip: the one-line status (.doors)
+   Each is nine-sliced: the iron corners keep their shape, the rails and the
+   parchment stretch (repeating the side rails showed seams in the paper at
+   their inner edge). The words sit on the parchment in dark ink. Loaded by
+   index.astro after home.css. */
+
+.layout-home {
+  --ink: #3a2410;
+  --ink-soft: #553519;
+  --ink-mark: #662c08;
+  --ink-link: #6b2c06;
+  --ink-line: rgb(90 50 20 / 0.28);
+  --corner: 44px;
+}
+
+@media (max-width: 560px) {
+  .layout-home {
+    --corner: 24px;
+  }
+}
+
+/* ---------- The frame ---------- */
+
+.parchment,
+.layout-home .glass,
+.layout-home .yours li,
+.layout-home .news ul {
+  --frame-src: url("/art/home/panel-card.webp");
+  --frame-slice: 22% 17%;
+  border-style: solid;
+  border-color: transparent;
+  border-width: var(--corner);
+  border-radius: 0;
+  background: none;
+  border-image: var(--frame-src) var(--frame-slice) fill / var(--corner) / 0 stretch;
+  box-shadow: none;
+  filter: drop-shadow(0 14px 22px rgb(0 0 0 / 0.55));
+  color: var(--ink);
+}
+
+.parchment {
+  --frame-src: url("/art/home/panel-lead.webp");
+  --frame-slice: 33% 11%;
+}
+
+.layout-home .doors {
+  --frame-src: url("/art/home/panel-strip.webp");
+  --frame-slice: 49% 13.5%;
+}
+
+/* Lamplight glass's prism ring does not belong on a carved frame. */
+.layout-home .glass::before {
+  display: none;
+}
+
+/* ---------- The words on the parchment ---------- */
+
+.parchment {
+  max-width: 42rem;
+  padding: 10px clamp(10px, 2vw, 22px);
+}
+
+.parchment .lead {
+  max-width: none;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.layout-home .trio > .glass {
+  padding: 8px 10px 12px;
+}
+
+.layout-home .trio h3,
+.layout-home .yours li b {
+  color: var(--ink);
+}
+
+.layout-home .trio p,
+.layout-home .yours li span,
+.layout-home .safe .sec-p,
+.layout-home .doors span {
+  color: var(--ink-soft);
+}
+
+.layout-home .trio .big {
+  color: var(--ink-mark);
+}
+
+.layout-home .trio .big small {
+  color: var(--ink-soft);
+}
+
+.layout-home .safe {
+  padding: clamp(8px, 1.6vw, 18px);
+}
+
+.layout-home .safe li {
+  color: var(--ink);
+}
+
+.layout-home .safe li::before {
+  background: rgb(140 30 16 / 0.14);
+  color: #8c1e10;
+}
+
+.layout-home .yours li {
+  padding: 6px 8px 10px;
+}
+
+.layout-home .doors {
+  padding: 2px 10px;
+}
+
+.layout-home .doors strong {
+  color: var(--ink-mark);
+}
+
+/* What's new, written on a card. */
+.layout-home .news ul {
+  padding: 4px clamp(8px, 2vw, 18px);
+}
+
+.layout-home .news li {
+  border-bottom-color: var(--ink-line);
+}
+
+.layout-home .news li:last-child {
+  border-bottom: 0;
+}
+
+.layout-home .news time {
+  color: var(--ink-mark);
+}
+
+.layout-home .news li span {
+  color: var(--ink);
+}
+
+.layout-home a:not(.tb):is(.news *, .glass *) {
+  color: var(--ink-link);
+  text-decoration-thickness: 1.5px;
+}
+
+.layout-home :is(.news, .glass, .parchment) :focus-visible {
+  outline-color: var(--ink-link);
+}
+
+/* ---------- Headings ---------- */
+
+/* On the painting: gold, like the headline. On parchment: ink. */
+.layout-home .sec-h {
+  width: fit-content;
+  color: #ffd27a;
+  background: linear-gradient(180deg, #fff3cf 10%, #ffd27a 45%, #e3a03c 75%, #b8701f 95%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 0 #3a1f07) drop-shadow(0 6px 14px rgb(0 0 0 / 0.7));
+}
+
+.layout-home .glass .sec-h {
+  color: var(--ink);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  filter: none;
+}
+
+/* The scene's captions on phones sit over the bright door: a plain dark backing. */
+@media (max-width: 560px) {
+  .layout-home .caption-col {
+    padding: 10px 12px 12px;
+    border-radius: 6px;
+    background: linear-gradient(180deg, rgb(61 39 23 / 0.92), rgb(31 19 11 / 0.92));
+    box-shadow:
+      inset 0 0 0 1.5px #8a6232,
+      0 10px 22px rgb(0 0 0 / 0.5);
+  }
+}
+
+/* ---------- Windows high contrast: plain panels in the system colours ---------- */
+
+@media (forced-colors: active) {
+  .parchment,
+  .layout-home .glass,
+  .layout-home .yours li,
+  .layout-home .news ul {
+    border: 1px solid CanvasText;
+    border-image: none;
+    background: Canvas;
+    filter: none;
+    padding: 16px;
+  }
+
+  .layout-home .sec-h {
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    filter: none;
+  }
+}

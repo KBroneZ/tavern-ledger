@@ -1,0 +1,36 @@
+---
+// The home page's painting (T-530, D-105): fixed behind the whole page, from
+// the barrel door at the top to the cellar at the bottom. home.css moves it on
+// the scroll timeline; scripts/descent.ts (in scripts/home.ts, loaded by the
+// home page where scripts may run) takes over and slows it in the pinned scene.
+// In front of it, a shade that keeps the centre dark for reading and a few
+// rising sparks. Decorative only: hidden from screen readers.
+// Gold sparks on the left, blue on the right, as in the painting.
+const sparks = Array.from({ length: 16 });
+---
+
+<div class="backdrop" aria-hidden="true">
+  <div class="backdrop-art" data-descent>
+    <picture>
+      <source type="image/avif" media="(max-width: 560px)" srcset="/art/home/tavern-800.avif" />
+      <source type="image/webp" media="(max-width: 560px)" srcset="/art/home/tavern-800.webp" />
+      <source
+        type="image/avif"
+        srcset="/art/home/tavern-1080.avif 1080w, /art/home/tavern-1344.avif 1344w"
+        sizes="100vw"
+      />
+      <img
+        src="/art/home/tavern-1344.webp"
+        srcset="/art/home/tavern-1080.webp 1080w, /art/home/tavern-1344.webp 1344w"
+        sizes="100vw"
+        width="1344"
+        height="3168"
+        alt=""
+        decoding="async"
+        fetchpriority="low"
+      />
+    </picture>
+  </div>
+  <div class="backdrop-shade"></div>
+  <div class="sparks">{sparks.map(() => <i></i>)}</div>
+</div>

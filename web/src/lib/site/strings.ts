@@ -98,6 +98,8 @@ export const SITE_STRINGS = {
   "home.hero.lit": "We kept your games.",
   "home.lead":
     "A free Windows app that reads Hearthstone's own log on your PC and keeps every Battlegrounds game: your hero, your place and the boards you faced.",
+  "home.cta.download": "Download",
+  "home.cta.download.note": "Not out yet",
   "home.cta.show": "Show me",
   "home.cta.safe": "Is it safe?",
   "home.scene.title": "What Tavern Ledger adds to your screen",
@@ -128,6 +130,7 @@ export const SITE_STRINGS = {
   "home.yours.gone.title": "Gone when you ask",
   "home.yours.gone.body": "Delete your account and every game with it.",
   "home.status.label": "Project status",
+  "home.top": "Back up to the door",
   "home.status.title": "The doors are not open yet.",
   "home.status.body": "The desktop app is a prototype and the website is being built.",
   "home.status.testing": "Accounts on this site are for testing only.",
