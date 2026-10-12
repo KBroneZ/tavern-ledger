@@ -125,8 +125,10 @@ function fakeApi(
     }
     if (path === "/storage/v1/object/games" && method === "DELETE") {
       if (opts.deleteFails?.(body.prefixes[0])) return reply(503, {});
-      for (const p of body.prefixes) gone.add(p);
-      if (!opts.sticky) files = files.filter((f) => !body.prefixes.includes(f));
+      if (!opts.sticky) {
+        for (const p of body.prefixes) gone.add(p);
+        files = files.filter((f) => !body.prefixes.includes(f));
+      }
       return reply(200, []);
     }
     if (path === "/rest/v1/rpc/file_retention_list") {
@@ -900,4 +902,12 @@ Deno.test("retention: no batch starts past the run's deadline, whatever the back
   const r = body.retention as Record<string, number>;
   assertEquals([r.listed, r.deleted, r.left], [3, 0, 3]);
   assertEquals(retentionCalls(api), []);
+});
+
+Deno.test("retention: a delete Storage answered but did not do is unmarked, not deleted", async () => {
+  const api = fakeApi({ retention: live(3), sticky: true });
+  const { status, body } = await run(api);
+  assertEquals(status, 200);
+  const r = body.retention as Record<string, number>;
+  assertEquals([r.listed, r.deleted, r.unmarked, r.failed], [3, 0, 3, 0]);
 });

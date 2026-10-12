@@ -326,17 +326,23 @@ begin
   )
   select count(*) into n from marked;
 
-  insert into private.file_retention_attempts as a (user_id, session, game_index)
-  select g.user_id, g.session, g.game_index
-  from public.games g
-  join unnest(p_paths, p_sha256) as f(path, sha256)
-    on g.storage_path = f.path and g.content_sha256 = f.sha256
-  where g.file_expired_at is null
-    and exists (
-      select 1 from storage.objects o where o.bucket_id = 'games' and o.name = g.storage_path
-    )
-  on conflict (user_id, session, game_index)
-  do update set fails = a.fails + 1, last_at = now();
+  -- A game deleted meanwhile (its account being deleted) would fail the
+  -- foreign key: then no attempt is counted, and the marks above stay.
+  begin
+    insert into private.file_retention_attempts as a (user_id, session, game_index)
+    select g.user_id, g.session, g.game_index
+    from public.games g
+    join unnest(p_paths, p_sha256) as f(path, sha256)
+      on g.storage_path = f.path and g.content_sha256 = f.sha256
+    where g.file_expired_at is null
+      and exists (
+        select 1 from storage.objects o where o.bucket_id = 'games' and o.name = g.storage_path
+      )
+    on conflict (user_id, session, game_index)
+    do update set fails = a.fails + 1, last_at = now();
+  exception when foreign_key_violation then
+    null;
+  end;
   return n;
 end;
 $$;
