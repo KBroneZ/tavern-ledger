@@ -12,12 +12,12 @@
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
-use bg_parser::report::{GameReport, LobbySlot, Minion as LogMinion, Side};
+use bg_parser::report::{CombatValues, GameReport, LobbySlot, Minion as LogMinion, Side};
 use combat_sim::cards::has_start_of_combat;
 use combat_sim::gifts;
 use combat_sim::{
-    simulate_teams, BaseCard, CombatResult, Keywords, Minion, Odds, Options, Team, Tribes, Verdict,
-    Warband,
+    simulate_teams, BaseCard, CombatResult, GameValues, Keywords, Minion, Odds, Options, Team,
+    Tribes, Verdict, Warband,
 };
 use serde::Serialize;
 
@@ -84,6 +84,10 @@ pub struct OddsInput {
     pub seen_after_start_of_combat: bool,
     pub own: Vec<LogMinion>,
     pub opponent: Vec<LogMinion>,
+    /// The player's game-long values now (T-610); zero when unknown.
+    pub own_values: CombatValues,
+    /// The opponent's game-long values as their board was seen.
+    pub opponent_values: CombatValues,
     pub own_tier: Option<i64>,
     /// The opponent's tavern tier now (it is shown on the leaderboard).
     pub opponent_tier: Option<i64>,
@@ -241,6 +245,8 @@ fn unknown_gifts(input: &OddsInput) -> Vec<String> {
 pub struct LiveFacts<'a> {
     /// The player's board in the shop; `None` outside a shop turn.
     pub own_now: Option<&'a [LogMinion]>,
+    /// The player's game-long values now (T-610); `None` when not read.
+    pub own_values: Option<CombatValues>,
     /// The seat the game marks as the next opponent.
     pub next: Option<i64>,
     pub lobby: &'a [LobbySlot],
@@ -264,7 +270,7 @@ pub fn odds_input(report: &GameReport, live: LiveFacts) -> Result<OddsInput, NoO
     } else {
         (None, last_board(report, seat, Side::Opponent))
     };
-    let Some((opponent, seen_round)) = opponent else {
+    let Some((opponent, seen_round, opponent_values)) = opponent else {
         return Err(NoOdds::new(Gap::NoBoardSeen, Some(seat)));
     };
     let seen_after_start_of_combat = start_of_combat_in(report, seen_round)
@@ -283,6 +289,8 @@ pub fn odds_input(report: &GameReport, live: LiveFacts) -> Result<OddsInput, NoO
         seen_after_start_of_combat,
         own: own.to_vec(),
         opponent: opponent.to_vec(),
+        own_values: live.own_values.unwrap_or_default().bounded(),
+        opponent_values,
         own_tier: tier(report.local_player_id),
         opponent_tier: tier(Some(seat)),
         damage_cap: live.damage_cap,
@@ -312,9 +320,23 @@ fn engine_minion(m: &LogMinion, facts: &dyn Fn(&str) -> Option<Facts>) -> Result
     })
 }
 
+/// The engine's form of values already bounded to at most 99 999
+/// ([`CombatValues::bounded`]).
+fn engine_values(v: &CombatValues) -> GameValues {
+    let n = |x: i64| i32::try_from(x).unwrap_or(0);
+    GameValues {
+        blood_gem: (n(v.blood_gem.0), n(v.blood_gem.1)),
+        spell: (n(v.spell.0), n(v.spell.1)),
+        knights_dead: n(v.knights_dead),
+        undead_attack: n(v.undead_attack),
+        beetle: (n(v.beetle.0), n(v.beetle.1)),
+    }
+}
+
 fn warband(
     board: &[LogMinion],
     tier: Option<i64>,
+    values: &CombatValues,
     facts: &dyn Fn(&str) -> Option<Facts>,
     missing: &mut Vec<String>,
 ) -> Warband {
@@ -329,7 +351,7 @@ fn warband(
     Warband {
         minions,
         tavern_tier: tier.and_then(|t| u8::try_from(t).ok()),
-        values: Default::default(),
+        values: engine_values(values),
     }
 }
 
@@ -341,12 +363,25 @@ fn teams(
     facts: &dyn Fn(&str) -> Option<Facts>,
     missing: &mut Vec<String>,
 ) -> (Team, Team) {
-    let own = warband(&input.own, input.own_tier, facts, missing);
-    let opponent = warband(&input.opponent, input.opponent_tier, facts, missing);
+    let own = warband(
+        &input.own,
+        input.own_tier,
+        &input.own_values,
+        facts,
+        missing,
+    );
+    let opponent = warband(
+        &input.opponent,
+        input.opponent_tier,
+        &input.opponent_values,
+        facts,
+        missing,
+    );
     let Some(duos) = &input.duos else {
         return (Team::solo(own), Team::solo(opponent));
     };
-    let seen = |s: &Seen, missing: &mut Vec<String>| warband(&s.board, s.tier, facts, missing);
+    let seen =
+        |s: &Seen, missing: &mut Vec<String>| warband(&s.board, s.tier, &s.values, facts, missing);
     let mate = seen(&duos.teammate, missing);
     let player = if duos.local_first {
         Team::duo(own, mate)

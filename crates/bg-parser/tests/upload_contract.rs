@@ -1,7 +1,7 @@
 //! The parser's report and upload-game's validator must agree on every key
 //! (T-104h, D-047). `supabase/functions/upload-game/report_keys.json` lists
 //! them per level; this test serializes every game in the fixtures (real and
-//! synthetic) and fails when the parser writes a key the list lacks, or the
+//! synthetic, and the Rust-only reports in `tests/data/rust`) and fails when the parser writes a key the list lacks, or the
 //! list keeps a key the parser no longer writes. The validator imports the
 //! same list and will not start if it checks a different set; CI does not run
 //! Deno, so this test also reads that table from validate.ts and compares it.
@@ -47,6 +47,27 @@ fn reports() -> Vec<(String, Value)> {
         }
     }
     assert!(out.len() > 10, "fixtures found");
+    out
+}
+
+/// The Rust-only reports other tests keep current (BLESS=1): synthetic games
+/// with the fields the trimmed real fixtures lack. Their lobbies are partial,
+/// so only their keys are checked.
+fn saved_reports() -> Vec<(String, Value)> {
+    let data = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/rust");
+    let mut out = Vec::new();
+    let mut saved: Vec<PathBuf> = fs::read_dir(&data)
+        .expect("fixture dir")
+        .map(|e| e.expect("dir entry").path())
+        .filter(|p| p.extension().is_some_and(|x| x == "json"))
+        .collect();
+    saved.sort();
+    for path in saved {
+        let text = fs::read_to_string(&path).expect("saved reports");
+        let list: Vec<Value> = serde_json::from_str(&text).expect("a list of reports");
+        let name = path.file_name().unwrap().to_string_lossy().into_owned();
+        out.extend(list.into_iter().map(|r| (name.clone(), r)));
+    }
     out
 }
 
@@ -101,6 +122,11 @@ fn walk(level: &str, value: &Value, seen: &mut BTreeMap<String, BTreeSet<String>
             }
         }
     }
+    if level == "report.rounds[].entries[]" {
+        if let Some(values) = obj.get("values") {
+            walk("report.rounds[].entries[].values", values, seen);
+        }
+    }
     if level == "report.rounds[]" {
         if let Some(replay) = obj.get("replay") {
             walk("report.rounds[].replay", replay, seen);
@@ -119,7 +145,7 @@ fn walk(level: &str, value: &Value, seen: &mut BTreeMap<String, BTreeSet<String>
 #[test]
 fn the_parser_writes_exactly_the_keys_upload_game_checks() {
     let mut seen = BTreeMap::new();
-    for (_, report) in reports() {
+    for (_, report) in reports().into_iter().chain(saved_reports()) {
         walk("report", &report, &mut seen);
     }
     let contract = contract();
@@ -140,6 +166,22 @@ fn the_parser_writes_exactly_the_keys_upload_game_checks() {
             "report_keys.json lists {level} keys the parser no longer writes: {gone:?}"
         );
     }
+}
+
+/// The real fixtures were trimmed before the game-long values were saved
+/// (parser revision 10), so their level is checked against the names the
+/// parser gives them: every one is a key upload-game checks, and back.
+#[test]
+fn the_game_long_values_have_exactly_the_keys_upload_game_checks() {
+    let names: BTreeSet<String> = bg_parser::report::CombatValues::default()
+        .saved()
+        .iter()
+        .map(|(name, _)| name.to_string())
+        .collect();
+    assert_eq!(
+        contract().get("report.rounds[].entries[].values"),
+        Some(&names)
+    );
 }
 
 /// The `KEYS` table in validate.ts, level by level: a quoted string outside

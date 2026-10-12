@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use crate::cards::{self, Action, Fidelity, Trigger};
 use crate::combat::{play, CombatResult, Prepared};
 use crate::gifts;
-use crate::model::{BoardError, Keywords, Minion, Team, Tribes, Warband};
+use crate::model::{BoardError, GameValues, Keywords, Minion, Team, Tribes, Warband};
 use crate::rng::Rng;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -56,7 +56,10 @@ impl Coverage {
 
     fn of_boards(boards: &[&Warband], start_of_combat: bool) -> Coverage {
         let mut cov = Coverage::default();
-        for m in boards.iter().flat_map(|b| &b.minions) {
+        let minions = boards
+            .iter()
+            .flat_map(|b| b.minions.iter().map(|m| (m, &b.values)));
+        for (m, values) in minions {
             let id = &m.card_id;
             match cards::rules(id) {
                 None => push_unique(&mut cov.not_modelled, id.clone()),
@@ -67,7 +70,9 @@ impl Coverage {
                         push_unique(&mut cov.not_modelled, id.clone());
                     }
                     if let Fidelity::Approximate(why) = rules.fidelity {
-                        if !cov.approximate.iter().any(|(c, _)| c == id) {
+                        if !played_with(why, values)
+                            && !cov.approximate.iter().any(|(c, _)| c == id)
+                        {
                             cov.approximate.push((id.clone(), why));
                         }
                     }
@@ -118,6 +123,17 @@ impl Coverage {
 
     pub fn is_exact(&self) -> bool {
         self.not_modelled.is_empty() && self.approximate.is_empty()
+    }
+}
+
+/// True when the card's only gap is a game-long value its board brings
+/// (T-610): Blood Gem or Tavern spell upgrades above zero. Zero is unknown
+/// (a board without values), so the card stays approximate then.
+fn played_with(why: &str, values: &GameValues) -> bool {
+    match why {
+        w if w == crate::cards_round1::BLOOD_GEM => values.blood_gem != (0, 0),
+        w if w == crate::cards_round2::SPELL => values.spell != (0, 0),
+        _ => false,
     }
 }
 

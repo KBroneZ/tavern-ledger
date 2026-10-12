@@ -14,7 +14,7 @@ import { readReplay, type ReplayRead } from "./replayRead.ts";
 export { KEYWORDS, type Keyword };
 
 /** The parser revision this site knows (crates/bg-parser PARSER_REVISION). */
-export const KNOWN_REVISION = 9;
+export const KNOWN_REVISION = 10;
 
 const CARD_ID = /^[A-Za-z0-9_]{1,64}$/;
 const NOTE = /^[A-Za-z0-9 _:.()-]{1,160}$/;
@@ -31,6 +31,23 @@ const MAX_DBF_ID = 10_000_000;
 const MAX_GIFTS = 4;
 const MAX_TURN = 100;
 const MAX_GAME_OFFERS = 3000;
+
+// A board's game-long values (parser revision 10, T-610): the names the
+// parser saves (crates/bg-parser/src/report.rs CombatValues), each 1 to 99 999.
+export const GAME_VALUES = [
+  "blood_gem_atk",
+  "blood_gem_health",
+  "spell_atk",
+  "spell_health",
+  "knights_dead",
+  "undead_atk",
+  "beetle_atk",
+  "beetle_health",
+] as const;
+export type GameValue = (typeof GAME_VALUES)[number];
+/** Only the values above zero the record holds; a name left out is not known (the printed numbers). */
+export type GameValues = Readonly<Partial<Record<GameValue, number>>>;
+const MAX_GAME_VALUE = 99_999;
 
 export type Outcome = "won" | "lost" | "tie";
 export type TrinketSlot = "first" | "second" | "hero_power";
@@ -53,6 +70,8 @@ export interface Entry {
   hero: string | null;
   /** null: no board in the record (unknown); [] is a real empty board. */
   board: Minion[] | null;
+  /** The board's game-long values (revision 10); null when the record holds none. */
+  values: GameValues | null;
 }
 
 export interface Round {
@@ -247,12 +266,24 @@ function minion(r: Reader, v: unknown): Minion {
   };
 }
 
+function gameValues(r: Reader, v: unknown): GameValues | null {
+  const o = r.obj(v);
+  if (!o) return null;
+  const values: Partial<Record<GameValue, number>> = {};
+  for (const name of GAME_VALUES) {
+    const n = r.int(o[name], 1, MAX_GAME_VALUE);
+    if (n !== null) values[name] = n;
+  }
+  return Object.keys(values).length > 0 ? values : null;
+}
+
 function entry(r: Reader, v: unknown): Entry | null {
   const e = r.obj(v);
   const side = e ? r.oneOf(e.side, ["own", "opponent"] as const) : null;
   if (!e || !side) return r.bad(null);
   const board = absent(e.board) ? null : r.list(e.board, 16).map((m) => minion(r, m));
-  return { side, playerId: r.int(e.player_id, 1, 64), hero: r.card(e.hero), board };
+  const values = board === null ? null : gameValues(r, e.values);
+  return { side, playerId: r.int(e.player_id, 1, 64), hero: r.card(e.hero), board, values };
 }
 
 function round(r: Reader, v: unknown): Round | null {

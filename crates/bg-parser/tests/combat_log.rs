@@ -1,10 +1,11 @@
 //! What the combat simulator reads from the parser (T-603b, T-604, T-605):
 //! each combat's attacks in order with both boards before each one, the
-//! lasting keywords the saved report leaves out, and the own board in a shop
-//! turn. Synthetic log written out below; nothing here reaches the saved
-//! report's JSON.
+//! lasting keywords the saved report leaves out, the own board in a shop
+//! turn and each side's game-long values. Synthetic log written out below;
+//! of all this, only the game-long values reach the saved report's JSON
+//! (parser revision 10).
 
-use bg_parser::report::{DefenderSource, GameReport, Side};
+use bg_parser::report::{CombatValues, DefenderSource, GameReport, Side, MAX_GAME_VALUE};
 use bg_parser::LogReader;
 
 const T: &str = "D 12:00:00.0000000 GameState.DebugPrintPower() - ";
@@ -247,27 +248,23 @@ fn each_round_keeps_the_own_shop_board_before_it_but_does_not_save_it() {
     assert_eq!(r.rounds[0].own_shop_board, None);
 }
 
-#[test]
-fn each_sides_game_long_values_are_read_with_its_board_but_not_saved() {
-    // T-609: the player's and the opponent's (the dummy player's) Blood Gem
-    // and Tavern spell upgrades as the boards are taken at the first attack.
-    let mut l = game();
-    let at = l
-        .iter()
-        .position(|x| x.contains("BlockType=ATTACK"))
-        .expect("an attack");
+/// The game-long value tags and player enchantments (T-609), as the log
+/// gives them, for the player (entity 2) and the opponent (the dummy
+/// player, entity 3): the player's Blood Gems and Undead Attack, the
+/// opponent's Tavern spells, Eternal Knights and Beetles; the player's set
+/// aside Knights are not in play.
+fn value_lines() -> Vec<String> {
     let mut values = vec![
         tag("2", "BACON_BLOODGEMBUFFATKVALUE", "3"),
         tag("2", "BACON_BLOODGEMBUFFHEALTHVALUE", "2"),
         tag("3", "TAVERN_SPELL_ATTACK_INCREASE", "1"),
         tag("3", "TAVERN_SPELL_HEALTH_INCREASE", "4"),
     ];
-    // Player enchantments: the player's Undead Attack, the opponent's
-    // Beetles; one set aside (not in play) is not read.
     for (id, card, player, zone, nums) in [
         (60, "BG25_011pe", 2, "PLAY", (7, 0)),
         (61, "BG31_808pe", 3, "PLAY", (12, 11)),
         (62, "BG25_008pe", 2, "SETASIDE", (9, 0)),
+        (63, "BG25_008pe", 3, "PLAY", (2, 0)),
     ] {
         values.push(line(
             1,
@@ -287,8 +284,22 @@ fn each_sides_game_long_values_are_read_with_its_board_but_not_saved() {
         values.push(line(2, &format!("tag=ENTITY_ID value={id}")));
     }
     values.push(tag("2", "RESOURCES", "1"));
-    l.splice(at..at, values);
-    let r = report(&l);
+    values
+}
+
+/// [`game`] with [`value_lines`] just before the line that holds `needle`.
+fn game_with_values(needle: &str) -> Vec<String> {
+    let mut l = game();
+    let at = l.iter().position(|x| x.contains(needle)).expect("needle");
+    l.splice(at..at, value_lines());
+    l
+}
+
+#[test]
+fn each_sides_game_long_values_are_read_with_its_board() {
+    // T-609: the player's and the opponent's (the dummy player's) values as
+    // the boards are taken at the first attack.
+    let r = report(&game_with_values("BlockType=ATTACK"));
     let entries = &r.rounds[0].entries;
     let of = |side: Side| {
         entries
@@ -305,6 +316,105 @@ fn each_sides_game_long_values_are_read_with_its_board_but_not_saved() {
     assert_eq!(of(Side::Own).knights_dead, 0, "set aside: not read");
     assert_eq!(of(Side::Opponent).beetle, (12, 11));
     assert_eq!(of(Side::Opponent).undead_attack, 0);
+    assert_eq!(of(Side::Opponent).knights_dead, 2);
+}
+
+#[test]
+fn each_sides_game_long_values_are_saved_with_its_board_above_zero_only() {
+    // Parser revision 10: the values above zero go with each board in the
+    // saved report; zero is left out, so an older record (no key) and a
+    // value the log never raised read the same: the printed numbers.
+    let r = report(&game_with_values("BlockType=ATTACK"));
+    let json = serde_json::to_value(&r).expect("serializable");
+    let entries = json["rounds"][0]["entries"].as_array().expect("entries");
+    let of = |side: &str| {
+        entries
+            .iter()
+            .find(|e| e["side"] == side)
+            .map(|e| e["values"].clone())
+            .expect("entry")
+    };
+    assert_eq!(
+        of("own"),
+        serde_json::json!({"blood_gem_atk": 3, "blood_gem_health": 2, "undead_atk": 7})
+    );
+    assert_eq!(
+        of("opponent"),
+        serde_json::json!({
+            "spell_atk": 1, "spell_health": 4, "knights_dead": 2,
+            "beetle_atk": 12, "beetle_health": 11
+        })
+    );
+}
+
+#[test]
+fn a_board_with_no_game_long_value_above_zero_saves_no_values() {
+    let r = report(&game());
+    assert!(r.rounds[0].entries.iter().all(|e| e.values.is_some()));
     let json = serde_json::to_string(&r).expect("serializable");
-    assert!(!json.contains("blood_gem") && !json.contains("\"spell\""));
+    assert!(!json.contains("\"values\""), "{json}");
+}
+
+#[test]
+fn game_long_values_outside_the_saved_bounds_are_left_out() {
+    // Negative or past MAX_GAME_VALUE: not a number the game shows; left
+    // out (unknown) rather than refused by upload-game.
+    let values = CombatValues {
+        blood_gem: (-1, MAX_GAME_VALUE + 1),
+        spell: (MAX_GAME_VALUE, 1),
+        knights_dead: 0,
+        undead_attack: i64::MAX,
+        beetle: (i64::MIN, 2),
+    };
+    assert_eq!(
+        serde_json::to_value(values).expect("serializable"),
+        serde_json::json!({"spell_atk": MAX_GAME_VALUE, "spell_health": 1, "beetle_health": 2})
+    );
+    assert!(!values.is_empty());
+    assert!(CombatValues {
+        blood_gem: (-3, 0),
+        ..CombatValues::default()
+    }
+    .is_empty());
+}
+
+#[test]
+fn the_own_game_long_values_now_are_given_in_a_shop_turn_only() {
+    // T-610: the overlay's odds play the player's values as they are now.
+    let all = game_with_values("tag=TURN value=2");
+    let at = |needle: &str| all.iter().position(|l| l.contains(needle)).unwrap();
+    let mut reader = LogReader::default();
+    assert_eq!(reader.own_values_now(), None);
+    all[..at("tag=TURN value=2")]
+        .iter()
+        .for_each(|l| reader.feed(l));
+    let now = reader.own_values_now().expect("shop turn 1");
+    assert_eq!(now.blood_gem, (3, 2));
+    assert_eq!(now.undead_attack, 7);
+    assert_eq!(now.spell, (0, 0), "the opponent's, not the player's");
+    all[at("tag=TURN value=2")..at("tag=TURN value=3")]
+        .iter()
+        .for_each(|l| reader.feed(l));
+    assert_eq!(reader.own_values_now(), None, "a combat turn");
+}
+
+/// The parser's report of the game with values, saved for upload-game's Deno
+/// tests and the key contract (`tests/upload_contract.rs`).
+/// `BLESS=1 cargo test -p bg-parser --test combat_log` writes it again.
+#[test]
+fn the_saved_report_with_values_for_upload_game_is_current() {
+    let reports = vec![report(&game_with_values("BlockType=ATTACK"))];
+    let text = serde_json::to_string_pretty(&reports).unwrap() + "\n";
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/data/rust/game_values_games.json");
+    if std::env::var_os("BLESS").is_some() {
+        std::fs::write(&path, &text).unwrap();
+    }
+    let saved = std::fs::read_to_string(&path)
+        .unwrap_or_default()
+        .replace("\r\n", "\n");
+    assert_eq!(
+        saved, text,
+        "run BLESS=1 cargo test -p bg-parser --test combat_log"
+    );
 }

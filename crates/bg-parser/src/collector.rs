@@ -514,7 +514,7 @@ impl Collector {
 
     /// The game-long values on the player entity of `side` (T-609): the
     /// local player, or the dummy player that stands for the opponent.
-    fn combat_values(&self, side: Side) -> CombatValues {
+    pub(crate) fn combat_values(&self, side: Side) -> CombatValues {
         let player = match side {
             Side::Own => self.local,
             Side::Opponent => self.dummy,

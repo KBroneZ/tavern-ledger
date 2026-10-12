@@ -19,7 +19,7 @@ use crate::combat::CombatResult;
 use crate::harness_duos::{duos_from_saved, team_of, DuosCombat};
 use crate::harness_logs::LogCombat;
 use crate::harness_saved::{saved_combat, Saved};
-use crate::model::{BaseCard, Keywords, Minion, Team, Tribes, Warband};
+use crate::model::{BaseCard, GameValues, Keywords, Minion, Team, Tribes, Warband};
 use crate::score::{score, Prediction, Report};
 use crate::trials::{simulate, Coverage, Options, Verdict};
 
@@ -183,8 +183,27 @@ pub(crate) fn board(entry: &Value, db: &CardDb) -> Option<Warband> {
     Some(Warband {
         minions: minions?,
         tavern_tier: None,
-        values: Default::default(),
+        values: saved_values(entry.get("values")),
     })
+}
+
+/// A saved board's game-long values (parser revision 10, T-610), by the
+/// report's names. A name left out, or a value outside what the report
+/// saves (1 to 99 999), is zero: unknown, the cards' printed numbers.
+fn saved_values(v: Option<&Value>) -> GameValues {
+    let n = |name: &str| {
+        v.and_then(|v| v.get(name))
+            .and_then(Value::as_i64)
+            .filter(|n| (1..=99_999).contains(n))
+            .map_or(0, |n| n as i32)
+    };
+    GameValues {
+        blood_gem: (n("blood_gem_atk"), n("blood_gem_health")),
+        spell: (n("spell_atk"), n("spell_health")),
+        knights_dead: n("knights_dead"),
+        undead_attack: n("undead_atk"),
+        beetle: (n("beetle_atk"), n("beetle_health")),
+    }
 }
 
 pub(crate) fn result(round: &Value) -> Option<CombatResult> {
@@ -662,6 +681,33 @@ mod tests {
         );
         let older = serde_json::json!({"card_id": "BG28_300", "atk": 3, "health": 2});
         assert!(minion(&older, &db).unwrap().gifts.is_empty());
+    }
+
+    #[test]
+    fn reads_the_game_long_values_a_saved_board_has() {
+        // Parser revision 10 (T-610): only the values above zero are saved.
+        let db = load_cards(CARDS).unwrap();
+        let entry = serde_json::json!({
+            "side": "own", "board": [{"card_id": "BG28_300", "atk": 3, "health": 2}],
+            "values": {
+                "blood_gem_atk": 2, "blood_gem_health": 1, "undead_atk": 5,
+                "knights_dead": 3, "beetle_health": -4, "spell_atk": 100_000,
+                "spell_health": "7",
+            },
+        });
+        let got = board(&entry, &db).unwrap().values;
+        assert_eq!(
+            got,
+            GameValues {
+                blood_gem: (2, 1),
+                knights_dead: 3,
+                undead_attack: 5,
+                ..GameValues::default()
+            },
+            "values past the saved bounds are unknown (zero)"
+        );
+        let older = serde_json::json!({"side": "own", "board": []});
+        assert_eq!(board(&older, &db).unwrap().values, GameValues::default());
     }
 
     #[test]

@@ -16,6 +16,7 @@
 //! `BG31_999`, `BGS_008` and `BG34_Giant_590`.
 
 use crate::cards::{approx, exact, Action, CardRules, GemTo, Trigger};
+use crate::cards_round1::BLOOD_GEM as BLOOD_GEMS;
 use crate::model::{Keywords, Tribes};
 
 /// The Golem "with this minion's stats": the token the user's log shows for
@@ -35,7 +36,6 @@ const BOTH_NEIGHBOURS: &str = "neighbours that die with it are not checked";
 const SCRIBES: &str = "Scribes that die in this combat do not buff it yet";
 const PROTOSS: &str = "it improves during the game; the card's printed numbers are used";
 const KEYWORD_PICK: &str = "picks only minions that miss one of the keywords";
-const BLOOD_GEMS: &str = "Blood Gems are played as +1/+1; upgrades are not in the log";
 
 const fn golem(factor: i32, attack_first: bool) -> Action {
     Action::SummonWithStats {

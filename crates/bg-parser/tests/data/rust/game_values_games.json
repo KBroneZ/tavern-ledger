@@ -1,0 +1,253 @@
+[
+  {
+    "index": 1,
+    "status": "ok",
+    "game_type": "GT_BATTLEGROUNDS",
+    "build": 253216,
+    "local_player_id": 2,
+    "hero": "SYN_HERO_A",
+    "teammate_player_id": null,
+    "teammate_hero": null,
+    "card_names": {},
+    "final_place": 1,
+    "final_health": 30,
+    "lobby": [
+      {
+        "player_id": 2,
+        "hero": "SYN_HERO_A",
+        "duo_team": null,
+        "final_place": 1,
+        "final_health": 30,
+        "triples": [],
+        "trinkets": []
+      }
+    ],
+    "shop_tribes": {},
+    "rounds": [
+      {
+        "number": 1,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "SYN_HERO_A",
+            "board": [
+              {
+                "card_id": "SYN_POISON",
+                "atk": 1,
+                "health": 1,
+                "position": 1,
+                "golden": false,
+                "keywords": []
+              },
+              {
+                "card_id": "SYN_MEGA",
+                "atk": 3,
+                "health": 3,
+                "position": 2,
+                "golden": false,
+                "keywords": [
+                  "taunt"
+                ]
+              }
+            ],
+            "values": {
+              "blood_gem_atk": 3,
+              "blood_gem_health": 2,
+              "undead_atk": 7
+            }
+          },
+          {
+            "side": "opponent",
+            "player_id": null,
+            "hero": "SYN_HERO_B",
+            "board": [
+              {
+                "card_id": "SYN_FOE_A",
+                "atk": 2,
+                "health": 4,
+                "position": 1,
+                "golden": false,
+                "keywords": [
+                  "divine_shield"
+                ]
+              },
+              {
+                "card_id": "SYN_FOE_B",
+                "atk": 1,
+                "health": 2,
+                "position": 2,
+                "golden": false,
+                "keywords": []
+              }
+            ],
+            "values": {
+              "spell_atk": 1,
+              "spell_health": 4,
+              "knights_dead": 2,
+              "beetle_atk": 12,
+              "beetle_health": 11
+            }
+          }
+        ],
+        "own_health_after": 30,
+        "opponents": [
+          null
+        ],
+        "health_after": {
+          "2": 30
+        },
+        "result": null,
+        "replay": {
+          "minions": [
+            {
+              "side": "own",
+              "card_id": "SYN_POISON",
+              "atk": 1,
+              "health": 1,
+              "position": 1,
+              "golden": false,
+              "keywords": []
+            },
+            {
+              "side": "own",
+              "card_id": "SYN_MEGA",
+              "atk": 3,
+              "health": 3,
+              "position": 2,
+              "golden": false,
+              "keywords": [
+                "taunt"
+              ]
+            },
+            {
+              "side": "opponent",
+              "card_id": "SYN_FOE_A",
+              "atk": 2,
+              "health": 4,
+              "position": 1,
+              "golden": false,
+              "keywords": [
+                "divine_shield"
+              ]
+            },
+            {
+              "side": "opponent",
+              "card_id": "SYN_FOE_B",
+              "atk": 1,
+              "health": 2,
+              "position": 2,
+              "golden": false,
+              "keywords": []
+            }
+          ],
+          "start": 4,
+          "events": [
+            {
+              "kind": "attack",
+              "attacker": 0,
+              "defender": 3
+            },
+            {
+              "kind": "damage",
+              "minion": 2,
+              "amount": 1,
+              "health": 3
+            },
+            {
+              "kind": "damage",
+              "minion": 3,
+              "amount": 1,
+              "health": 1
+            },
+            {
+              "kind": "attack",
+              "attacker": 2,
+              "defender": 0
+            },
+            {
+              "kind": "damage",
+              "minion": 0,
+              "amount": 2,
+              "health": -1
+            },
+            {
+              "kind": "damage",
+              "minion": 2,
+              "amount": 1,
+              "health": 2
+            }
+          ],
+          "complete": true
+        }
+      }
+    ],
+    "start_health": {
+      "2": 30,
+      "3": 30
+    },
+    "shop": {
+      "turns": [
+        {
+          "turn": 1,
+          "start_ms": 0,
+          "end_ms": 0,
+          "tier": null,
+          "gold": 1,
+          "gold_spent": 0,
+          "rolls": 0,
+          "free_rolls": 0,
+          "buys": [],
+          "spell_buys": 0,
+          "sells": [],
+          "freezes": 0,
+          "offers": [],
+          "actions": 0,
+          "extra_gold": 1,
+          "sell_gold": 0,
+          "buy_gold": 0,
+          "spell_gold": 0,
+          "free_refreshes": null,
+          "passes": []
+        },
+        {
+          "turn": 2,
+          "start_ms": 0,
+          "end_ms": 0,
+          "tier": null,
+          "gold": 1,
+          "gold_spent": 0,
+          "rolls": 0,
+          "free_rolls": 0,
+          "buys": [],
+          "spell_buys": 0,
+          "sells": [],
+          "freezes": 0,
+          "offers": [],
+          "actions": 0,
+          "extra_gold": 0,
+          "sell_gold": 0,
+          "buy_gold": 0,
+          "spell_gold": 0,
+          "free_refreshes": null,
+          "passes": []
+        }
+      ],
+      "tier_ups": [],
+      "actions": [],
+      "start_ms": 0,
+      "end_ms": 0,
+      "ended": true
+    },
+    "hero_select": null,
+    "skin_parents": {},
+    "discovers": [],
+    "old_god": null,
+    "warnings": [],
+    "problems": [],
+    "not_in_log": [
+      "MMR",
+      "available tribes (exact list)"
+    ]
+  }
+]

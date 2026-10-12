@@ -5,7 +5,7 @@
         "approximate": [],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.7.0",
+        "engine": "0.8.0",
         "lost": 7508,
         "stalled": 0,
         "start_of_combat": false,
@@ -105,7 +105,7 @@
         "approximate": [],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.7.0",
+        "engine": "0.8.0",
         "lost": 10000,
         "stalled": 0,
         "start_of_combat": false,
@@ -258,7 +258,7 @@
           "likely": 6,
           "low": 6
         },
-        "engine": "0.7.0",
+        "engine": "0.8.0",
         "lost": 2593,
         "stalled": 0,
         "start_of_combat": true,
@@ -367,7 +367,7 @@
         ],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.7.0",
+        "engine": "0.8.0",
         "lost": 10000,
         "stalled": 0,
         "start_of_combat": false,
@@ -471,7 +471,7 @@
         "approximate": [],
         "damage_known": false,
         "dealt": null,
-        "engine": "0.7.0",
+        "engine": "0.8.0",
         "lost": 1275,
         "stalled": 0,
         "start_of_combat": false,
@@ -559,7 +559,7 @@
     {
       "answer": {
         "approximate": [],
-        "engine": "0.7.0",
+        "engine": "0.8.0",
         "not_modelled": [
           "BG_NOT_A_CARD"
         ],
@@ -614,7 +614,7 @@
     },
     {
       "answer": {
-        "engine": "0.7.0",
+        "engine": "0.8.0",
         "missing": [
           "BG_ICC_026t"
         ],
@@ -670,7 +670,7 @@
           "likely": 4,
           "low": 4
         },
-        "engine": "0.7.0",
+        "engine": "0.8.0",
         "lost": 5609,
         "stalled": 0,
         "start_of_combat": false,
@@ -803,6 +803,235 @@
               }
             ],
             "tier": 3
+          }
+        ]
+      }
+    },
+    {
+      "answer": {
+        "approximate": [],
+        "damage_known": true,
+        "dealt": null,
+        "engine": "0.8.0",
+        "lost": 10000,
+        "stalled": 0,
+        "start_of_combat": false,
+        "status": "odds",
+        "taken": {
+          "high": 9,
+          "likely": 9,
+          "low": 8
+        },
+        "tied": 0,
+        "trials": 10000,
+        "won": 0
+      },
+      "name": "solo game-long values",
+      "request": {
+        "damage_cap": 15,
+        "opponent": [
+          {
+            "minions": [
+              {
+                "attack": 4,
+                "card_id": "BG28_300",
+                "facts": {
+                  "attack": 2,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 3,
+                  "tribes": [
+                    "UNDEAD"
+                  ]
+                },
+                "golden": false,
+                "health": 3,
+                "keywords": [
+                  "reborn"
+                ]
+              },
+              {
+                "attack": 3,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 5,
+                "keywords": []
+              }
+            ],
+            "tier": 4,
+            "values": {
+              "undead_atk": 4
+            }
+          }
+        ],
+        "player": [
+          {
+            "minions": [
+              {
+                "attack": 2,
+                "card_id": "BG33_430",
+                "facts": {
+                  "attack": 2,
+                  "health": 5,
+                  "keywords": [],
+                  "tier": 3,
+                  "tribes": [
+                    "QUILBOAR"
+                  ]
+                },
+                "golden": false,
+                "health": 5,
+                "keywords": []
+              },
+              {
+                "attack": 3,
+                "card_id": "BG33_886",
+                "facts": {
+                  "attack": 2,
+                  "health": 3,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": [
+                    "QUILBOAR"
+                  ]
+                },
+                "golden": false,
+                "health": 4,
+                "keywords": [
+                  "rally"
+                ]
+              }
+            ],
+            "tier": 5,
+            "values": {
+              "blood_gem_atk": 3,
+              "blood_gem_health": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "answer": {
+        "approximate": [],
+        "damage_known": true,
+        "dealt": {
+          "high": 6,
+          "likely": 6,
+          "low": 6
+        },
+        "engine": "0.8.0",
+        "lost": 0,
+        "stalled": 0,
+        "start_of_combat": false,
+        "status": "odds",
+        "taken": null,
+        "tied": 0,
+        "trials": 10000,
+        "won": 10000
+      },
+      "name": "duos game-long values",
+      "request": {
+        "damage_cap": 15,
+        "opponent": [
+          {
+            "minions": [
+              {
+                "attack": 5,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 4,
+                "keywords": []
+              }
+            ],
+            "tier": 5
+          },
+          {
+            "minions": [
+              {
+                "attack": 1,
+                "card_id": "BG_ICC_026t",
+                "facts": {
+                  "attack": 1,
+                  "health": 1,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": [
+                    "UNDEAD"
+                  ]
+                },
+                "golden": false,
+                "health": 1,
+                "keywords": [
+                  "reborn"
+                ]
+              }
+            ],
+            "tier": 2,
+            "values": {
+              "undead_atk": 2
+            }
+          }
+        ],
+        "player": [
+          {
+            "minions": [
+              {
+                "attack": 3,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 3,
+                "keywords": []
+              }
+            ],
+            "tier": 4
+          },
+          {
+            "minions": [
+              {
+                "attack": 2,
+                "card_id": "BG28_300",
+                "facts": {
+                  "attack": 2,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 3,
+                  "tribes": [
+                    "UNDEAD"
+                  ]
+                },
+                "golden": false,
+                "health": 2,
+                "keywords": [
+                  "reborn"
+                ]
+              }
+            ],
+            "tier": 3,
+            "values": {
+              "undead_atk": 6
+            }
           }
         ]
       }

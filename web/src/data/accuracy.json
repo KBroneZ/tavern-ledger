@@ -10,53 +10,53 @@
     }
   ],
   "date": "2026-10-12",
-  "engine_version": "0.7.0",
+  "engine_version": "0.8.0",
   "format": 1,
   "modes": {
     "duos": {
       "blocked": 8,
       "blocked_share": 0.034482758620689655,
-      "brier": 0.27522109294642866,
+      "brier": 0.2740555996428573,
       "calibration": [
         {
           "from": 0.0,
           "happened": 0.06009615384615385,
-          "mean_said": 0.014690144230769227,
+          "mean_said": 0.015899759615384614,
           "predictions": 416,
           "to": 0.2
         },
         {
           "from": 0.2,
-          "happened": 0.5517241379310345,
-          "mean_said": 0.3039827586206897,
-          "predictions": 29,
+          "happened": 0.5,
+          "mean_said": 0.30767333333333335,
+          "predictions": 30,
           "to": 0.4
         },
         {
           "from": 0.4,
-          "happened": 0.22727272727272727,
-          "mean_said": 0.5129863636363636,
-          "predictions": 22,
+          "happened": 0.3,
+          "mean_said": 0.511615,
+          "predictions": 20,
           "to": 0.6000000000000001
         },
         {
           "from": 0.6000000000000001,
-          "happened": 0.5384615384615384,
-          "mean_said": 0.6974076923076923,
-          "predictions": 13,
+          "happened": 0.5294117647058824,
+          "mean_said": 0.6987235294117647,
+          "predictions": 17,
           "to": 0.8
         },
         {
           "from": 0.8,
-          "happened": 0.890625,
-          "mean_said": 0.9829239583333332,
-          "predictions": 192,
+          "happened": 0.8941798941798942,
+          "mean_said": 0.98436455026455,
+          "predictions": 189,
           "to": 1.0
         }
       ],
       "combats_with_result": 232,
-      "mean_p_real": 0.8123785714285713,
-      "most_likely_right": 183,
+      "mean_p_real": 0.8114071428571428,
+      "most_likely_right": 184,
       "refused": 0,
       "scored": 224
     },

@@ -33,10 +33,11 @@ import contract from "./report_keys.json" with { type: "json" };
  * `golden` from PREMIUM, so always-golden cards and golden tokens are golden;
  * same key and type, D-061; 7: each round's combat replay, parser revision 8,
  * T-215, D-099; 8: Dark Gifts on board and replay minions, parser revision
- * 9, T-528, D-107). Every answer carries it, and the desktop app
+ * 9, T-528, D-107; 9: each board's game-long values, parser revision 10,
+ * T-610, D-122). Every answer carries it, and the desktop app
  * retries a game this server refused once when it sees a higher number (D-047).
  */
-export const VALIDATOR_VERSION = 8;
+export const VALIDATOR_VERSION = 9;
 
 export const SESSION_PATTERN = /^Hearthstone_(\d{4})_(\d{2})_(\d{2})_\d{2}_\d{2}_\d{2}$/;
 const PATH_PATTERN = /\/v1\/games\/(Hearthstone_\d{4}(?:_\d{2}){5})\/([1-9][0-9]{0,3})$/;
@@ -56,6 +57,8 @@ const NAME_FORBIDDEN = /[<>#＃﹟@＠\\"]/;
 const PLAYER_KEY = /^[1-9][0-9]?$/;
 const MAX_HEALTH = 100000;
 const MAX_HEALTH_ENTRIES = 16;
+// A board's game-long values (crates/bg-parser/src/report.rs MAX_GAME_VALUE).
+const MAX_GAME_VALUE = 99_999;
 // The shop record (parser revision 3, T-204, T-205, D-046): the parser's own
 // bounds (crates/bg-parser/src/shop.rs). Times are ms from the game's first
 // log line, never a clock time; a day is far longer than any game.
@@ -188,7 +191,17 @@ const KEYS: Record<string, string[]> = {
     "source",
     "hero",
   ],
-  "report.rounds[].entries[]": ["side", "player_id", "hero", "board"],
+  "report.rounds[].entries[]": ["side", "player_id", "hero", "board", "values"],
+  "report.rounds[].entries[].values": [
+    "blood_gem_atk",
+    "blood_gem_health",
+    "spell_atk",
+    "spell_health",
+    "knights_dead",
+    "undead_atk",
+    "beetle_atk",
+    "beetle_health",
+  ],
   "report.rounds[].entries[].board[]": [
     "card_id",
     "atk",
@@ -314,9 +327,27 @@ function entry(v: unknown, field: string, seen: Seen): void {
   if (pid !== null) seen.players.add(pid);
   const hero = cardId(e.hero, `${field}.hero`);
   if (hero) seen.heroes.add(hero);
-  if (e.board !== null && e.board !== undefined) {
+  const hasBoard = e.board !== null && e.board !== undefined;
+  if (hasBoard) {
     list(e.board, `${field}.board`, 16).forEach((m, i) => minion(m, `${field}.board[${i}]`));
   }
+  if (e.values !== undefined) {
+    if (!hasBoard) throw new Invalid(`${field}.values`);
+    gameValues(e.values, `${field}.values`);
+  }
+}
+
+/**
+ * A board's game-long values (parser revision 10, T-610, D-122): whole
+ * numbers from 1 to MAX_GAME_VALUE by the parser's names; zero is left out,
+ * so an empty object is never written.
+ */
+function gameValues(v: unknown, field: string): void {
+  const names = KEYS["report.rounds[].entries[].values"];
+  const o = shape(v, field, names);
+  const keys = Object.keys(o);
+  if (keys.length === 0) throw new Invalid(field);
+  for (const key of keys) int(o[key], `${field}.${key}`, 1, MAX_GAME_VALUE);
 }
 
 function round(v: unknown, field: string, seen: Seen): Obj {

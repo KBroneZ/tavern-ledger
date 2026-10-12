@@ -201,6 +201,52 @@ fn bad_gift_lists_are_refused() {
     assert_eq!(run(&null)["status"], "odds", "null is no gifts");
 }
 
+/// A Reborn Undead with no combat effect of its own.
+fn reborn_undead() -> Value {
+    json!({
+        "card_id": PLAIN, "attack": 1, "health": 1, "keywords": ["reborn"],
+        "facts": { "tier": 1, "tribes": ["UNDEAD"], "attack": 1, "health": 1, "keywords": [] }
+    })
+}
+
+#[test]
+fn a_boards_game_long_values_play() {
+    // T-610: the Undead Attack of the saved round goes to the reborn Undead.
+    let opponent = || vec![board(vec![minion(PLAIN, 3, 3)], Some(1))];
+    let bare = request(vec![board(vec![reborn_undead()], Some(1))], opponent());
+    assert_eq!(
+        run(&bare)["lost"],
+        10_000,
+        "1/1, then 1/1 again: never enough"
+    );
+    let mut with_values = board(vec![reborn_undead()], Some(1));
+    with_values["values"] = json!({ "undead_atk": 5 });
+    let a = run(&request(vec![with_values], opponent()));
+    assert_eq!(a["status"], "odds");
+    assert_eq!(a["lost"], 0, "the reborn 6/1 kills the 3/3: {a}");
+}
+
+#[test]
+fn bad_game_long_values_are_refused() {
+    for values in [
+        json!([5]),
+        json!("5"),
+        json!({ "undead_atk": -1 }),
+        json!({ "undead_atk": 100_000 }),
+        json!({ "undead_atk": "5" }),
+        json!({ "tasty_lobster": 1 }),
+    ] {
+        let mut b = board(vec![minion(PLAIN, 1, 1)], Some(1));
+        b["values"] = values.clone();
+        let req = request(vec![b], vec![board(vec![minion(PLAIN, 1, 1)], Some(1))]);
+        assert_eq!(run(&req)["status"], "bad_input", "{values}");
+    }
+    let mut none = board(vec![minion(PLAIN, 1, 1)], Some(1));
+    none["values"] = Value::Null;
+    let req = request(vec![none], vec![board(vec![minion(PLAIN, 1, 1)], Some(1))]);
+    assert_eq!(run(&req)["status"], "odds", "null is none");
+}
+
 #[test]
 fn duos_teams_bring_two_boards() {
     let req = request(

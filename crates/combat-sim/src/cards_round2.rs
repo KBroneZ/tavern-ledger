@@ -7,7 +7,9 @@ use crate::cards::{approx, exact, Action, CardRules, Trigger};
 use crate::model::{Keywords, Tribes};
 
 const ANY: Tribes = Tribes::NONE;
-const SPELL: &str = "the spell's values can grow during the game; the printed ones are used";
+/// Played with the board's spell upgrades when it brings them (T-610).
+pub(crate) const SPELL: &str =
+    "the spell's values can grow during the game; the printed ones are used";
 const ATTACK_DAMAGE: &str = "counts damage from attacks only, not from effects";
 const LEFT_MOST: &str =
     "which Deathrattle it triggers and when is not checked against the game yet";
