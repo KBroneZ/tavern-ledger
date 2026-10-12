@@ -21,6 +21,8 @@ import {
   sortHeroes,
   type HeroSort,
   type HeroStat,
+  fewGames,
+  fewPicks,
 } from "./heroes.ts";
 
 const MODES: Mode[] = ["solo", "duos"];
@@ -70,6 +72,8 @@ export function heroesPanel(m: Mode, rows: readonly HeroStat[], opts: HeroesOpti
   if (!hasHeroes(rows, m)) return emptyPanel(m);
   const sorted = sortHeroes(rows, m, opts.sort);
   const allFew = sorted.every((r) => r.placedGames < MIN_GAMES);
+  const someMarked = !allFew && sorted.some(fewGames);
+  const pickMarked = sorted.some(fewPicks);
   const caption = t(opts.sort === "avg" ? "hstats.caption.avg" : "hstats.caption.games", { mode: modeName(m) });
   return h(
     "div",
@@ -83,10 +87,12 @@ export function heroesPanel(m: Mode, rows: readonly HeroStat[], opts: HeroesOpti
         { id: `heroes-${m}-table` },
         topTable({ caption, columns: heroColumns(m), rows: sorted.map((r) => heroStatCells(r, opts.profileId, !allFew)), top: TOP_HEROES }),
       ),
-      // When every hero has few games, one line says so instead of a mark on every row (T-559).
-      allFew
-        ? h("p", { class: "data-note" }, t("hstats.few.all", { min: MIN_GAMES }))
-        : h("p", { class: "data-note" }, fewMark(), ` ${t("hstats.few.note", { min: MIN_GAMES })}`),
+      // When every hero has few games, one line says so instead of a mark on every row (T-559);
+      // the mark's legend shows only where a mark does (the picks keep theirs in Advanced).
+      allFew ? h("p", { class: "data-note" }, t("hstats.few.all", { min: MIN_GAMES })) : null,
+      someMarked || pickMarked
+        ? h("p", { class: cls("data-note", { adv: !someMarked }) }, fewMark(), ` ${t("hstats.few.note", { min: MIN_GAMES })}`)
+        : null,
       more({ context: caption }, h("p", {}, t("hstats.few.more")), h("p", { class: "adv" }, t("hstats.picked.note"))),
       h("p", { class: "data-note simple-only" }, t("hstats.simple.more")),
       offeredFold(m, rows),

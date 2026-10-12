@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { overview } from "../../src/lib/data/rows.ts";
-import { curiousRecord, gapItems, modeRecords, NOT_YET, recordCellsOf, totalTile, totalTiles, TOTALS, type CuriousRecord } from "../../src/lib/heroes/curious.ts";
+import { CURIOUS_RECORD_COLUMNS_VIEW, curiousRecord, gapItems, modeRecords, NOT_YET, recordCellsOf, totalTile, totalTiles, TOTALS, type CuriousRecord } from "../../src/lib/heroes/curious.ts";
 import { textOf, toHtml } from "../helpers/html.ts";
 import { overviewRow, recordRaw, type RawRow } from "../helpers/rows.ts";
 
@@ -84,4 +84,13 @@ test("the app's curious stats the website cannot show are each listed with the r
   assert.match(text, /Golden Brann or Titus sold/);
   assert.match(text, /most bought minion/);
   assert.match(text, /Solo and Duos together/);
+});
+
+test("totals: the games line stays in view only when a total misses some games; the records' games are Advanced (T-559)", () => {
+  const full = totalTiles(overview(overviewRow({ gold_spent_games: 31 }))).simple[0];
+  assert.equal(full.backingAlways, false);
+  const none = totalTiles(overview(overviewRow({ gold_spent_games: 0 }))).simple[0];
+  assert.equal(none.value, "—");
+  assert.equal(none.backingAlways, false, "unknown is a dash, not a partial sum");
+  assert.deepEqual(CURIOUS_RECORD_COLUMNS_VIEW.filter((c) => c.advanced).map((c) => c.label), ["Based on"]);
 });

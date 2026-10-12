@@ -65,11 +65,15 @@ test("heroes: the sort switch shows the sort in force and drives the table", () 
   assert.match(textOf(heroesPanel("solo", heroes, { profileId: null, sort: "avg" })), /by average place, best first/);
 });
 
-test("heroes: never-played heroes are an Advanced fold; the few-games note is there", () => {
+test("heroes: never-played heroes are an Advanced fold; the few-games note shows only where a mark does", () => {
   const html = toHtml(heroesPanel("solo", [...heroes, offered], { profileId: null, sort: "games" }));
   assert.match(html, /<div class="adv"><details class="fold">.*Offered but never played \(1\)/);
-  assert.match(html, /mark-few/);
-  assert.match(html, /fewer than 5 finished games/);
+  assert.doesNotMatch(html, /mark-few/, "every hero has enough games and choices: no mark, no legend");
+  // Few hero choices only: the picks are marked in Advanced, and so is the legend.
+  const fewPicks = heroes.map((r) => ({ ...r, offeredGames: 2, pickedGames: 1 }));
+  const picks = toHtml(heroesPanel("solo", fewPicks, { profileId: null, sort: "games" }));
+  assert.match(picks, /<p class="data-note adv"><span class="mark-src mark-few"/);
+  assert.match(picks, /fewer than 5 finished games/);
 });
 
 test("heroes and curious: ids are unique across both panels", () => {
