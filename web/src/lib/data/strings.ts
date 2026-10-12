@@ -57,6 +57,7 @@ export const STRINGS = {
 
   "table.showAll": "Show all {count}",
   "table.showTop": "Show top {count}",
+  "more.label": "Read more",
 
   "state.empty": "Nothing here yet",
   "state.empty.body": "Upload a game from the app and it shows up here.",
@@ -244,8 +245,8 @@ export const STRINGS = {
   "hstats.picked.value": "{rate} · {picked} of {offered}",
   "hstats.few": "few games",
   "hstats.few.tip": "Based on fewer than {min} games: the next one can change it a lot.",
-  "hstats.few.note":
-    "The average place and top rate are based on fewer than {min} finished games, and the pick rate on fewer than {min} hero choices. When sorted by average place, heroes with enough games come first.",
+  "hstats.few.note": "The average place and top rate are based on fewer than {min} finished games, and the pick rate on fewer than {min} hero choices.",
+  "hstats.few.more": "When sorted by average place, heroes with enough games come first.",
   "hstats.simple.more": "Switch to Advanced at the top to also see wins, best and worst place, and how often you picked each hero when the game offered it.",
   "hstats.picked.note":
     "Picked when offered: out of the games where the hero choice was recorded and this hero was offered, how many you played with it. Games saved before we kept hero choices are not counted.",

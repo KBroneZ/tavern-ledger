@@ -6,7 +6,7 @@ import { modeName } from "../data/dashboard.ts";
 import { RECORDS } from "../data/rows.ts";
 import { t } from "../data/strings.ts";
 import { cls, h, type VNode } from "../view/node.ts";
-import { fold, stateBlock, statTile, topTable } from "../view/pieces.ts";
+import { fold, more, stateBlock, statTile, topTable } from "../view/pieces.ts";
 import type { Curious } from "./load.ts";
 import { CURIOUS_RECORD_COLUMNS_VIEW, gapItems, modeRecords, recordCellsOf, totalTiles } from "./curious.ts";
 import {
@@ -83,8 +83,8 @@ export function heroesPanel(m: Mode, rows: readonly HeroStat[], opts: HeroesOpti
         topTable({ caption, columns: heroColumns(m), rows: sorted.map((r) => heroStatCells(r, opts.profileId)), top: TOP_HEROES }),
       ),
       h("p", { class: "data-note" }, fewMark(), ` ${t("hstats.few.note", { min: MIN_GAMES })}`),
+      more({ context: caption }, h("p", {}, t("hstats.few.more")), h("p", { class: "adv" }, t("hstats.picked.note"))),
       h("p", { class: "data-note simple-only" }, t("hstats.simple.more")),
-      h("p", { class: "data-note adv" }, t("hstats.picked.note")),
       offeredFold(m, rows),
     ),
   );

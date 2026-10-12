@@ -8,6 +8,7 @@ import { columnPath } from "../../lib/data/format.ts";
 import type { CalibrationBar } from "../../lib/accuracy/view.ts";
 import { at } from "../../lib/accuracy/strings.ts";
 import Fold from "./Fold.astro";
+import More from "../ui/More.astro";
 
 interface Props {
   bars: CalibrationBar[];
@@ -32,6 +33,9 @@ const pairX = (i: number) => i * SLOT + (SLOT - 2 * BAR - GAP) / 2;
   <figcaption>
     <p class="chart-title" id={`${id}-title`}>{at("cal.title")}</p>
     <p class="chart-desc" id={`${id}-desc`}>{at("cal.desc", { mode: modeName })}</p>
+    <More context={at("cal.title")}>
+      <p>{at("cal.more")}</p>
+    </More>
   </figcaption>
   <ul class="chart-key" aria-hidden="true">
     <li><i class="key-said" aria-hidden="true"></i>{at("cal.key.said")}</li>
