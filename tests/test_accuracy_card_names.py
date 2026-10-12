@@ -14,7 +14,7 @@ sys.path.insert(0, str(HERE.parent / "tools"))
 import accuracy_card_names as acn  # noqa: E402
 
 EXPORT = {
-    "format": 1,
+    "format": 2,
     "blocking_cards": [{"card_id": "BGX_1", "combats": 4}, {"card_id": "BGX_1_G", "combats": 1}],
 }
 ENGLISH = [
@@ -65,9 +65,9 @@ class AccuracyCardNamesTest(unittest.TestCase):
         self.assertIn("BGX_1", err)
 
     def test_another_format_or_a_bad_id_writes_nothing(self):
-        code, raw, _ = self.run_tool(export={**EXPORT, "format": 2})
+        code, raw, _ = self.run_tool(export={**EXPORT, "format": 1})
         self.assertEqual((code, raw), (1, None))
-        code, raw, _ = self.run_tool(export={"format": 1, "blocking_cards": [{"card_id": "../x", "combats": 1}]})
+        code, raw, _ = self.run_tool(export={"format": 2, "blocking_cards": [{"card_id": "../x", "combats": 1}]})
         self.assertEqual((code, raw), (1, None))
 
     def test_card_data_that_is_not_a_list_writes_nothing(self):

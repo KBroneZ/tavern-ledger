@@ -1,4 +1,11 @@
 {
+  "builds": {
+    "checked": [
+      { "build": 260001, "count": 3 },
+      { "build": 253216, "count": 150 }
+    ],
+    "newest": 260001
+  },
   "blocking_cards": [
     {
       "card_id": "BG34_140",
@@ -11,7 +18,15 @@
   ],
   "date": "2026-01-01",
   "engine_version": "0.4.0",
-  "format": 1,
+  "format": 2,
+  "misses": {
+    "causes": [
+      { "cause": "chance", "duos": 4, "share": 0.5, "solo": 0 },
+      { "cause": "replay_minions", "duos": 2, "share": 0.25, "solo": 0 },
+      { "cause": "no_replay_not_modelled", "duos": 1, "share": 0.25, "solo": 1 }
+    ],
+    "total": 8
+  },
   "modes": {
     "duos": {
       "blocked": 17,

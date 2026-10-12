@@ -2,8 +2,8 @@
 // export, drawn at build time in the page's language. Every accuracy figure
 // comes with the blocked share beside it (D-089): modeFigures returns both,
 // and the page draws them in one row. Unknown is a dash, never 0.
-import { dateFormat, lang, numberFormat } from "../i18n.ts";
-import type { AccuracyMode, BlockingCard, Bucket, CardNames, ModeAccuracy } from "./data.ts";
+import { dateFormat, lang, numberFormat, pluralForm } from "../i18n.ts";
+import type { AccuracyMode, BlockingCard, Bucket, Builds, CardNames, MissCause, ModeAccuracy } from "./data.ts";
 import { at } from "./strings.ts";
 
 const DASH = "—";
@@ -129,4 +129,53 @@ export function dayText(date: string): string {
   const [y, m, d] = date.split("-").map(Number);
   const day = new Date(Date.UTC(y, m - 1, d));
   return dateFormat({ day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }, "en-GB").format(day);
+}
+
+export interface CauseRow {
+  id: string;
+  name: string;
+  /** One plain line. */
+  why: string;
+  solo: string;
+  duos: string;
+  combats: string;
+  share: string;
+}
+
+/** A share as a whole percent that never rounds to a claim the counts do not make. */
+function shareText(share: number): string {
+  if (share > 0 && share < 0.005) return `<${percent(0.01)}`;
+  if (share < 1 && share >= 0.995) return percent(0.99);
+  return percent(share);
+}
+
+/** The causes of the misses in the page's language, in the export's order (largest first). */
+export function causeRows(causes: readonly MissCause[]): CauseRow[] {
+  return causes.map((c) => ({
+    id: c.cause,
+    name: at(`cause.${c.cause}`),
+    why: at(`cause.${c.cause}.why`),
+    solo: plain(c.solo),
+    duos: plain(c.duos),
+    combats: plain(c.solo + c.duos),
+    share: shareText(c.share),
+  }));
+}
+
+export interface BuildsView {
+  /** The newest build and the day, or that none was read. */
+  summary: string;
+  rows: { build: string; games: string }[];
+}
+
+/** The game builds checked, newest first; a build number is not a count, so it is never grouped. */
+export function buildsView(builds: Builds, date: string): BuildsView {
+  if (builds.newest === null) return { summary: at("builds.none"), rows: [] };
+  return {
+    summary: at("builds.newest", { build: String(builds.newest), date: dayText(date) }),
+    rows: builds.checked.map((b) => ({
+      build: String(b.build),
+      games: at(`builds.row.${pluralForm(b.count)}`, { count: plain(b.count) }),
+    })),
+  };
 }

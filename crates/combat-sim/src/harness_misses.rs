@@ -10,6 +10,7 @@ use std::fmt::Write as _;
 
 use std::collections::BTreeMap;
 
+use crate::combat::replay::Rule;
 use crate::combat::CombatResult;
 use crate::harness::Scored;
 use crate::harness_duos::{team_of, DuosCombat};
@@ -78,23 +79,61 @@ pub fn solo_misses(scored: &[Scored]) -> Vec<Miss> {
         .collect()
 }
 
-/// The likely cause of a miss, in a few words: from the attack-by-attack
-/// replay when the game has one (the first rule that differs, or chance
-/// when the replay follows the game to the end), else from the cards.
-pub fn cause(m: &Miss, replays: &[Replayed]) -> String {
+/// Where a miss most likely comes from, found from the attack-by-attack
+/// replay when the game has one, else from the cards.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Found {
+    /// The replay follows the game to the end: the dice.
+    Chance,
+    /// The first rule where the replay parts from the log.
+    Replay(Rule),
+    NotModelled,
+    Approximate,
+    Exact,
+}
+
+fn find(m: &Miss, replays: &[Replayed]) -> Found {
     let row = replays
         .iter()
         .find(|r| r.duos == m.duos && r.game == m.game && r.round == m.round);
     match row.map(|r| &r.replay.difference) {
-        Some(None) => "chance: the replay follows the game to the end".into(),
-        Some(Some(d)) => format!("replay parts at: {}", d.rule.label()),
-        None if !m.coverage.not_modelled.is_empty() => {
-            "no replay; a card not modelled (played as a plain minion)".into()
-        }
-        None if !m.coverage.approximate.is_empty() => {
-            "no replay; a card played approximately".into()
-        }
-        None => "no replay; every card exact".into(),
+        Some(None) => Found::Chance,
+        Some(Some(d)) => Found::Replay(d.rule),
+        None if !m.coverage.not_modelled.is_empty() => Found::NotModelled,
+        None if !m.coverage.approximate.is_empty() => Found::Approximate,
+        None => Found::Exact,
+    }
+}
+
+/// The likely cause of a miss, in a few words: from the attack-by-attack
+/// replay when the game has one (the first rule that differs, or chance
+/// when the replay follows the game to the end), else from the cards.
+pub fn cause(m: &Miss, replays: &[Replayed]) -> String {
+    match find(m, replays) {
+        Found::Chance => "chance: the replay follows the game to the end".into(),
+        Found::Replay(rule) => format!("replay parts at: {}", rule.label()),
+        Found::NotModelled => "no replay; a card not modelled (played as a plain minion)".into(),
+        Found::Approximate => "no replay; a card played approximately".into(),
+        Found::Exact => "no replay; every card exact".into(),
+    }
+}
+
+/// The same cause as a short stable id, for the accuracy export and the
+/// website's words. A new rule or cause needs a new id there.
+pub fn cause_id(m: &Miss, replays: &[Replayed]) -> &'static str {
+    match find(m, replays) {
+        Found::Chance => "chance",
+        Found::Replay(Rule::FirstAttacker) => "replay_first_attacker",
+        Found::Replay(Rule::AfterTeammate) => "replay_after_teammate",
+        Found::Replay(Rule::AttackOrder) => "replay_attack_order",
+        Found::Replay(Rule::Target) => "replay_target",
+        Found::Replay(Rule::Minions) => "replay_minions",
+        Found::Replay(Rule::Stats) => "replay_stats",
+        Found::Replay(Rule::End) => "replay_end",
+        Found::Replay(Rule::NoDefender) => "replay_no_defender",
+        Found::NotModelled => "no_replay_not_modelled",
+        Found::Approximate => "no_replay_approximate",
+        Found::Exact => "no_replay_exact",
     }
 }
 
@@ -109,6 +148,22 @@ pub fn causes(misses: &[Miss], replays: &[Replayed]) -> BTreeMap<String, (u32, u
             slot.0 += 1;
         }
     }
+    out
+}
+
+/// Misses counted by cause id: (id, Solo, Duos), most first, then by id.
+pub fn causes_by_id(misses: &[Miss], replays: &[Replayed]) -> Vec<(&'static str, u32, u32)> {
+    let mut counts: BTreeMap<&'static str, (u32, u32)> = BTreeMap::new();
+    for m in misses {
+        let slot = counts.entry(cause_id(m, replays)).or_insert((0, 0));
+        if m.duos {
+            slot.1 += 1;
+        } else {
+            slot.0 += 1;
+        }
+    }
+    let mut out: Vec<_> = counts.into_iter().map(|(id, (s, d))| (id, s, d)).collect();
+    out.sort_by(|a, b| (b.1 + b.2).cmp(&(a.1 + a.2)).then(a.0.cmp(b.0)));
     out
 }
 
@@ -164,3 +219,7 @@ pub fn render_misses(misses: &[Miss], replays: Option<&[Replayed]>) -> String {
     }
     out
 }
+
+#[cfg(test)]
+#[path = "harness_misses_tests.rs"]
+mod tests;
