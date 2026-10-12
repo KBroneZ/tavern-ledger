@@ -17,7 +17,7 @@ use crate::harness_logs::Replayed;
 use crate::model::Team;
 use crate::score::Prediction;
 use crate::trials::{simulate_teams, Coverage, Options, Verdict};
-use crate::why::{cards_of, not_seen, parted, Cause, NoReplay, NotSeen};
+use crate::why::{cards_of, not_seen, parted, Cause, NoReplay, NotSeen, Unseen};
 
 /// One combat whose most likely result was not the real one.
 #[derive(Clone, Debug, PartialEq)]
@@ -60,7 +60,7 @@ pub fn duos_misses(combats: &[DuosCombat], options: &Options) -> Vec<Miss> {
                 prediction,
                 result,
                 coverage: Coverage::of_teams(&own, &opponent, opts.start_of_combat),
-                inputs: not_seen(&own, &opponent, &[]),
+                inputs: not_seen(&own, &opponent, &c.unknown_gifts),
             });
         }
     }
@@ -82,7 +82,7 @@ pub fn solo_misses(scored: &[Scored]) -> Vec<Miss> {
             inputs: not_seen(
                 &Team::solo(s.combat.player.clone()),
                 &Team::solo(s.combat.opponent.clone()),
-                &[],
+                &s.combat.unknown_gifts,
             ),
         })
         .collect()
@@ -103,7 +103,7 @@ fn find(m: &Miss, replays: &[Replayed]) -> Cause {
         },
         None => Cause::NoReplay {
             why: NoReplay::NotSaved,
-            cards: cards_of(&m.coverage, false),
+            cards: cards_of(&m.coverage, m.inputs.iter().any(|n| n.what == Unseen::Gift)),
         },
     }
 }

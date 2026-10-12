@@ -5,13 +5,10 @@ use serde_json::json;
 
 use super::*;
 use crate::combat::replay::Rule;
-use crate::harness::{load_cards, CardDb};
 use crate::why::{Cause, NoReplay, NotSeen, Said, Unseen};
 
-const CARDS: &str = include_str!("../tests/data/cards.json");
-
-fn steps_of(replay: &Value, db: &CardDb) -> Option<Vec<LoggedStep>> {
-    saved_steps(replay, &|m| crate::harness::minion(m, db))
+fn steps_of(replay: &Value) -> Option<Vec<LoggedStep>> {
+    saved_steps(replay, &|m| minion(m, &facts))
 }
 
 fn m(side: &str, card: &str, atk: i64, health: i64, position: i64) -> Value {
@@ -21,7 +18,6 @@ fn m(side: &str, card: &str, atk: i64, health: i64, position: i64) -> Value {
 
 #[test]
 fn a_saved_replay_gives_the_boards_before_each_attack() {
-    let db = load_cards(CARDS).unwrap();
     let replay = json!({
         "complete": true,
         "start": 3,
@@ -42,7 +38,7 @@ fn a_saved_replay_gives_the_boards_before_each_attack() {
             {"kind": "attack", "attacker": 2, "defender": 0},
         ],
     });
-    let steps = steps_of(&replay, &db).expect("readable");
+    let steps = steps_of(&replay).expect("readable");
     assert_eq!(steps.len(), 2);
     assert_eq!(steps[0].attacker, (0, 1));
     assert_eq!(steps[0].defender, Some(0));
@@ -62,15 +58,14 @@ fn a_saved_replay_gives_the_boards_before_each_attack() {
 
 #[test]
 fn an_incomplete_or_broken_replay_is_not_read() {
-    let db = load_cards(CARDS).unwrap();
     let incomplete = json!({"complete": false, "start": 0, "minions": [], "events": []});
-    assert!(steps_of(&incomplete, &db).is_none());
+    assert!(steps_of(&incomplete).is_none());
     let unknown_minion = json!({
         "complete": true, "start": 1,
         "minions": [m("own", "BGS_119", 1, 1, 1)],
         "events": [{"kind": "attack", "attacker": 5, "defender": null}],
     });
-    assert!(steps_of(&unknown_minion, &db).is_none());
+    assert!(steps_of(&unknown_minion).is_none());
 }
 
 /// A card with no combat text (`cards::NO_COMBAT_EFFECT`).
@@ -259,6 +254,7 @@ fn a_game_that_is_not_battlegrounds_gives_nothing() {
     assert!(whys(&json!({ "rounds": rounds })).is_empty());
 }
 
+#[cfg(feature = "harness")]
 #[test]
 fn the_kept_values_match_the_parsers_bound() {
     assert_eq!(MAX_GAME_VALUE, bg_parser::report::MAX_GAME_VALUE);

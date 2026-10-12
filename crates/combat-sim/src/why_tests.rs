@@ -250,3 +250,38 @@ fn every_cause_has_an_id_from_the_shared_list() {
     assert_eq!(ids.len(), 8);
     assert!(ids.iter().all(|id| id.starts_with("replay_")));
 }
+
+#[test]
+fn a_game_long_value_is_not_seen_only_while_its_board_has_none() {
+    let none = GameValues::default();
+    let all = GameValues {
+        blood_gem: (1, 1),
+        spell: (1, 1),
+        knights_dead: 2,
+        undead_attack: 1,
+        beetle: (1, 1),
+    };
+    let cases = [
+        (r1::BLOOD_GEM, Unseen::BloodGems),
+        (r2::SPELL, Unseen::Spells),
+        (r2::KNIGHTS, Unseen::Knights),
+        (r4::BEETLE_BUFFS, Unseen::Beetles),
+    ];
+    for (why, what) in cases {
+        assert_eq!(unseen_of(why, &none), Some(what), "{why}");
+        assert_eq!(unseen_of(why, &all), None, "{why}");
+    }
+    // A hand summon is never seen; a rule gap is not about what is seen.
+    assert_eq!(unseen_of(r5::FROM_HAND, &all), Some(Unseen::Hand));
+    assert_eq!(unseen_of("which minions it picks", &none), None);
+}
+
+#[test]
+fn missing_inputs_and_approximate_cards_have_their_own_ids() {
+    let gems = cause_of(Some(GEMS), GameValues::default(), &[]);
+    assert_eq!(gems.id(), "missing_inputs");
+    assert_eq!(
+        cause_of(Some(PICKS), GameValues::default(), &[]).id(),
+        "approximate_card"
+    );
+}

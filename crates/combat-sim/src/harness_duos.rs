@@ -46,6 +46,8 @@ pub struct DuosCombat {
     /// The player's board as the shop turn before ended (the overlay's input).
     pub own_shop: Option<Warband>,
     pub result: Option<CombatResult>,
+    /// Cards the game marks as gifted with no gift named (D-127).
+    pub unknown_gifts: Vec<String>,
 }
 
 /// One side stepping into a combat, from the logs or the saved history.
@@ -93,6 +95,7 @@ struct RoundFacts {
     out: Vec<i64>,
     own_shop: Option<Warband>,
     result: Option<CombatResult>,
+    unknown_gifts: Vec<String>,
 }
 
 /// One combat from its entries; `None` without a board on each side.
@@ -122,6 +125,7 @@ fn combat(entries: &[Entry], seats: &Seats, facts: RoundFacts) -> Option<DuosCom
         out: facts.out,
         own_shop: facts.own_shop,
         result: facts.result,
+        unknown_gifts: facts.unknown_gifts,
     })
 }
 
@@ -183,6 +187,7 @@ pub fn duos_combats(report: &GameReport, game: usize, db: &CardDb) -> Vec<DuosCo
                 .and_then(|b| engine_board(b, db))
                 .map(Warband::new),
             result: round.result.map(result_of),
+            unknown_gifts: crate::harness_logs::unknown_gifts(round),
         };
         out.extend(combat(&entries, &seats, facts));
     }
@@ -244,6 +249,13 @@ pub fn duos_from_saved(report: &Value, game: usize, db: &CardDb) -> Vec<DuosComb
                 out: gone.clone(),
                 own_shop,
                 result: result(round),
+                unknown_gifts: crate::saved::unknown_gifts(
+                    round
+                        .get("entries")
+                        .and_then(Value::as_array)
+                        .into_iter()
+                        .flatten(),
+                ),
             };
             out.extend(combat(&entries, &seats, facts));
         }

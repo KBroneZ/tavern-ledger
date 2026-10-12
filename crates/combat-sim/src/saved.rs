@@ -349,11 +349,12 @@ fn team(mut boards: Vec<Warband>) -> Team {
     }
 }
 
-/// Card ids of the minions the game marks as gifted with no gift named.
-fn unknown_gifts(entries: &[Value]) -> Vec<String> {
+/// Card ids of the minions the game marks as gifted with no gift named,
+/// on the boards of a round's entries.
+pub fn unknown_gifts<'a>(entries: impl IntoIterator<Item = &'a Value>) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     let boards = entries
-        .iter()
+        .into_iter()
         .filter_map(|e| e.get("board").and_then(Value::as_array));
     for m in boards.flatten() {
         let unknown = m.get("gift_unknown").and_then(Value::as_bool) == Some(true);

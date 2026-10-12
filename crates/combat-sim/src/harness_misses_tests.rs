@@ -126,3 +126,18 @@ fn a_replay_that_parts_names_what_was_not_seen_then_the_cards_then_the_rule() {
     // To the end it is chance whatever the cards.
     assert_eq!(cause_id(&m, &[replayed(false, None)]), "chance");
 }
+
+#[test]
+fn an_unnamed_dark_gift_counts_as_not_seen_in_the_export_too() {
+    let mut m = miss(true, Coverage::default());
+    m.inputs = vec![NotSeen {
+        what: crate::why::Unseen::Gift,
+        card: "ZZ_GIFTED".into(),
+    }];
+    assert_eq!(
+        cause_id(&m, &[replayed(true, Some(Rule::Stats))]),
+        "missing_inputs"
+    );
+    // With no replay, the cards are approximate (as the app says).
+    assert_eq!(cause_id(&m, &[]), "no_replay_approximate");
+}

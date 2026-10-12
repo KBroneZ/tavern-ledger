@@ -77,6 +77,7 @@ fn labels(why: &Why) -> (String, Vec<String>) {
                 .iter()
                 .map(|n| format!("not seen: {}", unseen_word(n.what)))
                 .collect();
+            words.sort();
             words.dedup();
             words
         }

@@ -385,3 +385,10 @@ test("the builds block: newest build, the day, and each build's games", () => {
   assert.equal(es.rows[0].games, "3 partidas");
   assert.equal(buildsView({ newest: null, checked: [] }, data.date).summary, "Aún no se ha leído ninguna versión del juego.");
 });
+
+test("the cause ids are exactly the ones the Rust side writes (one vocabulary, D-127)", () => {
+  const why = readFileSync(join(import.meta.dirname, "..", "..", "..", "crates", "combat-sim", "src", "why.rs"), "utf8");
+  // Every id the engine's cause functions return, as `=> "id"`; "matched" is not a miss.
+  const rust = new Set([...why.matchAll(/=> "([a-z_]+)"/g)].map((m) => m[1]).filter((id) => id !== "matched"));
+  assert.deepEqual([...rust].sort(), [...CAUSE_IDS].sort());
+});

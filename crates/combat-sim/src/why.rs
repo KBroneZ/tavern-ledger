@@ -301,12 +301,13 @@ pub fn parted(d: Difference, inputs: Vec<NotSeen>, coverage: &Coverage) -> Cause
 /// Which approximation reasons are something the log does not show. A
 /// game-long value the board brings (above zero) is seen.
 fn unseen_of(why: &str, values: &crate::model::GameValues) -> Option<Unseen> {
-    let known = |v: bool| (!v).then_some(());
+    // `unseen(known)`: the value counts as not seen while the board has none.
+    let unseen = |known: bool| (!known).then_some(());
     match why {
-        w if w == r1::BLOOD_GEM => known(values.blood_gem != (0, 0)).map(|_| Unseen::BloodGems),
-        w if w == r2::SPELL => known(values.spell != (0, 0)).map(|_| Unseen::Spells),
-        w if w == r2::KNIGHTS => known(values.knights_dead > 0).map(|_| Unseen::Knights),
-        w if w == r4::BEETLE_BUFFS => known(values.beetle != (0, 0)).map(|_| Unseen::Beetles),
+        w if w == r1::BLOOD_GEM => unseen(values.blood_gem != (0, 0)).map(|_| Unseen::BloodGems),
+        w if w == r2::SPELL => unseen(values.spell != (0, 0)).map(|_| Unseen::Spells),
+        w if w == r2::KNIGHTS => unseen(values.knights_dead > 0).map(|_| Unseen::Knights),
+        w if w == r4::BEETLE_BUFFS => unseen(values.beetle != (0, 0)).map(|_| Unseen::Beetles),
         w if w == r5::FROM_HAND => Some(Unseen::Hand),
         w if [
             r1::GAME_BUFFS,

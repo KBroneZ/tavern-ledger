@@ -96,6 +96,8 @@ pub struct LoggedCombat {
     pub player: Warband,
     pub opponent: Warband,
     pub result: CombatResult,
+    /// Cards the game marks as gifted with no gift named (D-127).
+    pub unknown_gifts: Vec<String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -240,6 +242,7 @@ pub fn load_history(jsonl: &str, db: &CardDb) -> History {
                     player,
                     opponent,
                     result,
+                    unknown_gifts: crate::saved::unknown_gifts(entries.iter().copied()),
                 }),
                 None => h.solo_rounds_skipped += 1,
             }
