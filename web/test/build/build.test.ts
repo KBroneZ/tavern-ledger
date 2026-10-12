@@ -247,8 +247,8 @@ test("fonts and styles are our own files: every url() is a local font or the bra
 
     for (const url of urls) {
       // The masthead draws the logo (public/mark.svg, D-094) as a background,
-      // the tavern buttons their painted art (T-530, D-105).
-      assert.match(url, /^\/(?:fonts\/[a-z0-9-]+\.woff2|mark\.svg|art\/home\/(?:btn-[a-z-]+(?:@2x)?\.webp|paper-edge\.svg|grain\.svg))$/, url);
+      // the tavern buttons and panels their painted art (T-530, D-105).
+      assert.match(url, /^\/(?:fonts\/[a-z0-9-]+\.woff2|mark\.svg|art\/home\/(?:btn-[a-z-]+(?:@2x)?|panel-(?:lead|card|strip))\.webp)$/, url);
       assert.ok(existsSync(join(DIST, url)), url);
     }
   }

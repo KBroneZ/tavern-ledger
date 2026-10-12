@@ -3,20 +3,23 @@
 Sources (docs/brand/art/home/, made by the user's Gemini account for this project):
 - tavern-tall.webp     1344 x 3168, the barrel door at the top down to the cellar
 - buttons-sheet.webp   four buttons painted on a dark tavern backdrop
+- panels-sheet.webp    four panels (carved oak, iron corner brackets, burnt parchment) on black
 
 Writes web/public/art/home/:
 - tavern-<w>.avif, tavern-<w>.webp   the backdrop at 800, 1080 and 1344 px wide
 - btn-key.webp, btn-key-lit.webp     gold stone with gems, at rest and lit (hover), each also @2x
 - btn-common.webp                    dark wood and bronze, also @2x
 - btn-small.webp                     small stone with a thin gold frame, also @2x
-- paper-edge.svg                     a torn, uneven sheet edge, the mask for the parchment (our own drawing)
-- grain.svg                          fine fibre noise laid over parchment and wood (our own, an SVG filter)
+- panel-lead.webp, panel-card.webp, panel-strip.webp   the wide banner, the medium card and the
+                                     small strip, nine-sliced by the page (tavern.css)
 
 Each button is cut out of the sheet: the dark backdrop is flooded in from the crop's edges, small
 gaps in the outline are closed, every hole inside is filled (the recess between frame and plate is
 part of the button), and only the piece that holds the crop's centre is kept. The lit button's glow
 spills over the backdrop, so it is cut with the plain button's outline after lining the two up
-(the page draws the glow around it in CSS).
+(the page draws the glow around it in CSS). The panels are cut the same way from their black
+backdrop (the loose embers around them are dropped) and scaled so their iron corners are about
+80 px, sharp at twice the 36 px the page draws them.
 
 Needs Pillow (with AVIF) and numpy, local tools only: they are not in requirements.txt and nothing
 here ships except the images (PROVENANCE.md).
@@ -64,6 +67,23 @@ SHEET_SIZE = (2752, 1536)  # the boxes below are measured on this export
 MIN_AREA = 0.25  # a cut must cover at least this share of its box, or the outline was lost
 MAX_MISMATCH = 1500.0  # mean squared grey difference over the outline: lined up the sheet gives about 1300, 8 px off about 1600
 DULL = 90  # max - min channel: anything this grey and this dark is backdrop
+PANEL_QUALITY = 84
+
+
+@dataclass(frozen=True)
+class Panel:
+    name: str
+    box: tuple[int, int, int, int]  # left, top, right, bottom in panels-sheet.webp
+    scale: float                    # the iron corners come out about 80 px
+
+
+# Boxes measured on panels-sheet.webp (2752 x 1536); the tall card is not used yet.
+PANELS = (
+    Panel("panel-lead", (90, 50, 1720, 610), 0.5),
+    Panel("panel-card", (330, 610, 1430, 1470), 0.47),
+    Panel("panel-strip", (1760, 1210, 2660, 1480), 0.72),
+)
+PANEL_DARK = 28  # the sheet's backdrop is pure black
 
 
 def flood(passable, seeds):
@@ -227,45 +247,25 @@ def save_backdrop(painting) -> list[str]:
     return written
 
 
-def torn_edge(seed: int = 92, width: int = 1000, height: int = 400, step: int = 10, depth: float = 9.0) -> str:
-    """SVG mask: a sheet with torn edges (deterministic). Stretched to any box
-    (preserveAspectRatio none), so the tears scale with the sheet."""
-    import random
+def save_panels() -> list[str]:
+    from PIL import Image
+    import numpy as np
 
-    rnd = random.Random(seed)
-
-    def jag(n: int) -> list[float]:
-        # Small tears on a slow wave, never deeper than `depth`.
-        out, drift = [], 0.0
-        for _ in range(n + 1):
-            drift = max(0.0, min(depth, drift + rnd.uniform(-2.6, 2.6)))
-            out.append(round(drift + rnd.uniform(0, 2.2), 1))
-        return out
-
-    nx, ny = width // step, height // step
-    top, bottom = jag(nx), jag(nx)
-    left, right = jag(ny), jag(ny)
-    pts = [(i * step, top[i]) for i in range(nx + 1)]
-    pts += [(width - right[j], j * step) for j in range(1, ny + 1)]
-    pts += [(width - i * step, height - bottom[i]) for i in range(1, nx + 1)]
-    pts += [(left[j], height - j * step) for j in range(1, ny)]
-    path = "M" + " L".join(f"{x:g} {y:g}" for x, y in pts) + " Z"
-    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" preserveAspectRatio="none">'
-            f'<path d="{path}" fill="#000"/></svg>\n')
-
-
-GRAIN_SVG = (
-    '<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220">'
-    '<filter id="g"><feTurbulence type="fractalNoise" baseFrequency="0.9 0.35" numOctaves="3" seed="9" stitchTiles="stitch"/>'
-    '<feColorMatrix values="0 0 0 0 0.24  0 0 0 0 0.14  0 0 0 0 0.05  0 0 0 0.55 -0.1"/></filter>'
-    '<rect width="100%" height="100%" filter="url(#g)"/></svg>\n'
-)
-
-
-def save_svgs() -> list[str]:
-    (OUT / "paper-edge.svg").write_text(torn_edge(), encoding="utf-8", newline="\n")
-    (OUT / "grain.svg").write_text(GRAIN_SVG, encoding="utf-8", newline="\n")
-    return ["paper-edge.svg", "grain.svg"]
+    sheet = Image.open(ART / "panels-sheet.webp").convert("RGB")
+    if sheet.size != SHEET_SIZE:
+        raise SystemExit(f"panels-sheet.webp is {sheet.size}, not {SHEET_SIZE}: measure the boxes again")
+    written = []
+    for panel in PANELS:
+        crop = sheet.crop(panel.box)
+        mask = silhouette(np.asarray(crop), PANEL_DARK)
+        if mask.mean() < MIN_AREA:
+            raise SystemExit(f"{panel.name}: the cut covers {mask.mean():.0%} of its box; the outline was lost")
+        ys, xs = np.nonzero(mask)
+        img = with_alpha(crop, mask).crop((int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1))
+        size = (round(img.width * panel.scale), round(img.height * panel.scale))
+        img.resize(size, Image.Resampling.LANCZOS).save(OUT / f"{panel.name}.webp", "WEBP", quality=PANEL_QUALITY, method=6, exact=True)
+        written.append(f"{panel.name}.webp")
+    return written
 
 
 def preview(images: dict) -> None:
@@ -295,7 +295,7 @@ def main() -> int:
     written = save_button(key, KEY.name, KEY.height) + save_button(lit, "btn-key-lit", KEY.height)
     written += save_button(common, COMMON.name, COMMON.height) + save_button(small, SMALL.name, SMALL.height)
     written += save_backdrop(Image.open(ART / "tavern-tall.webp").convert("RGB"))
-    written += save_svgs()
+    written += save_panels()
     if args.preview:
         preview({"btn-key": key, "btn-key-lit": lit, "btn-common": common, "btn-small": small})
     for name in written:

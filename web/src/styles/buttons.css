@@ -102,9 +102,9 @@ button.tb:active {
   transform: none;
 }
 
-.tb-key[aria-disabled="true"]:hover::after,
-.tb-key[aria-disabled="true"]:focus-visible::after {
-  opacity: 0;
+/* Not drawn at all, so the lit art is not even downloaded. */
+.tb-key[aria-disabled="true"]::after {
+  display: none;
 }
 
 /* ---------- Common: dark wood and bronze ---------- */
