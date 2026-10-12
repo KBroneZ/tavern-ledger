@@ -1,7 +1,9 @@
 // Simple / Advanced and Solo / Duos switches on the data pages (T-501).
 // The switches ship hidden; this shows them, so a page without scripts
-// simply stays on Simple and Solo.
-import { parseMode, readDetail, saveDetail, withMode, type Detail, type ModeChoice } from "../lib/data/prefs.ts";
+// simply stays on Simple and Solo. A page that loads the player's games
+// may name the mode with more games (MODE_DEFAULT_EVENT, T-559): the switch
+// takes it unless the address or the viewer already chose one.
+import { MODE_DEFAULT_EVENT, modeInAddress, parseMode, readDetail, saveDetail, withMode, type Detail, type ModeChoice } from "../lib/data/prefs.ts";
 
 function storage(): Storage | null {
   try {
@@ -42,9 +44,15 @@ function setupMode(group: HTMLElement): boolean {
     press(group, mode);
   };
   apply(parseMode(location.search));
+  let chosen = modeInAddress(location.search) !== null;
+  group.addEventListener(MODE_DEFAULT_EVENT, (event) => {
+    const mode = (event as CustomEvent<unknown>).detail;
+    if (!chosen && (mode === "solo" || mode === "duos")) apply(mode);
+  });
   group.addEventListener("click", (event) => {
     const value = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-value]")?.dataset.value;
     if (value !== "solo" && value !== "duos") return;
+    chosen = true;
     apply(value);
     history.replaceState(history.state, "", withMode(location.href, value));
   });

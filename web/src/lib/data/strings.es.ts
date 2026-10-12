@@ -116,7 +116,7 @@ export const ES: Record<StringKey, string> = {
   "dash.section.last": "Últimas partidas · {mode}",
   "dash.section.heroes": "Mejores héroes · {mode}",
   "dash.section.records": "Récords · {mode}",
-  "dash.simple.more": "Cambia a Avanzado, arriba, para ver también la economía, los combates, las acciones por minuto y los triples.",
+  "dash.simple.more": "Cambia a Avanzado, arriba, para ver también el daño, la economía, las acciones por minuto y los triples.",
   "dash.trend.capped": "Los gráficos muestran las últimas {count} partidas.",
   "dash.about": "Sobre estos números",
   "dash.about.body":
@@ -185,6 +185,7 @@ export const ES: Record<StringKey, string> = {
   "games.col.apm": "APM",
   "games.link": ": partida con {hero}",
   "games.status.incomplete": "sin terminar",
+  "games.triples.unfinished": "No se cuentan: la partida no terminó",
   "games.status.unsupported": "ilegible",
 
   "list.title": "Partidas",

@@ -2,7 +2,7 @@
 // (kept in the address) for the data pages (T-501).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { DETAIL_KEY, parseMode, readDetail, saveDetail, withMode } from "../../src/lib/data/prefs.ts";
+import { busierMode, DETAIL_KEY, modeInAddress, parseMode, readDetail, saveDetail, withMode } from "../../src/lib/data/prefs.ts";
 
 const store = (value: string | null) => ({ getItem: (k: string) => (k === DETAIL_KEY ? value : null) });
 
@@ -30,8 +30,18 @@ test("parseMode: duos only when the address says so, Solo otherwise", () => {
   assert.equal(parseMode(""), "solo");
 });
 
-test("withMode: Solo drops the parameter, Duos sets it, the rest of the address stays", () => {
+test("withMode: the address names the mode either way (the default follows the games), the rest stays", () => {
   assert.equal(withMode("https://tavernledger.net/style/?a=1#tables", "duos"), "/style/?a=1&mode=duos#tables");
-  assert.equal(withMode("https://tavernledger.net/style/?mode=duos&a=1", "solo"), "/style/?a=1");
-  assert.equal(withMode("https://tavernledger.net/style/?mode=duos", "solo"), "/style/");
+  assert.equal(withMode("https://tavernledger.net/style/?mode=duos&a=1", "solo"), "/style/?mode=solo&a=1");
+  assert.equal(withMode("https://tavernledger.net/style/", "solo"), "/style/?mode=solo");
+});
+
+test("with no mode in the address, a page opens on the mode with more games (T-559)", () => {
+  assert.equal(modeInAddress("?mode=duos"), "duos");
+  assert.equal(modeInAddress("?mode=solo"), "solo");
+  assert.equal(modeInAddress(""), null);
+  assert.equal(modeInAddress("?mode=DUOS"), null);
+  assert.equal(busierMode({ solo: 2, duos: 39 }), "duos");
+  assert.equal(busierMode({ solo: 5, duos: 5 }), "solo", "a tie keeps Solo");
+  assert.equal(busierMode({ solo: 0, duos: 0 }), "solo");
 });

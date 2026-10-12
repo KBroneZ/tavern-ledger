@@ -8,6 +8,7 @@ import "../lib/i18n/boot.ts";
 import { loadDashboard, profileAccess, type ProfileAccess } from "../lib/dataApi.ts";
 import type { Mode } from "../lib/data/format.ts";
 import { filtersQuery, DEFAULT_FILTERS } from "../lib/data/filters.ts";
+import { busierMode, MODE_DEFAULT_EVENT } from "../lib/data/prefs.ts";
 import { statsPagePath } from "../lib/heroes/heroes.ts";
 import { t } from "../lib/data/strings.ts";
 import { parseProfileId, publicProfilePath } from "../lib/profile.ts";
@@ -110,6 +111,9 @@ async function start(): Promise<void> {
   mount(note, ...(extra ? [extra] : []));
   const heroesHref = (m: Mode) => statsPagePath("heroes", m, profileId);
   const curiousHref = (m: Mode) => statsPagePath("curious", m, profileId);
+  // Opens on the mode with more games, unless the address names one (switches.ts).
+  const games = { solo: dash.modes.solo.overview?.games ?? 0, duos: dash.modes.duos.overview?.games ?? 0 };
+  switches.querySelector("[data-switch=mode]")?.dispatchEvent(new CustomEvent(MODE_DEFAULT_EVENT, { detail: busierMode(games) }));
   mount(panels, ...dashboardPanels(dash, { gamesHref, owner: own, userId, heroesHref, curiousHref }));
   mount(about, aboutFold());
   gate.hidden = true;

@@ -8,6 +8,8 @@ import { href } from "../lib/i18n.ts";
 import { t } from "../lib/data/strings.ts";
 import { PLACE_FILTERS } from "../lib/data/filters.ts";
 import StateBlock from "./data/StateBlock.astro";
+import Switch from "./data/Switch.astro";
+import DataScript from "./data/DataScript.astro";
 
 const places = PLACE_FILTERS.map((p) => [p, t(`list.place.${p}`)]);
 ---
@@ -18,6 +20,7 @@ const places = PLACE_FILTERS.map((p) => [p, t(`list.place.${p}`)]);
       <p class="kicker"><a id="list-back" href={href("/me/")}>{t("list.back.own")}</a></p>
       <h1 id="list-title">{t("list.title")}</h1>
     </div>
+    <Switch kind="detail" />
   </header>
   <p class="visually-hidden" id="list-status" role="status" aria-live="polite"></p>
   <form class="list-filters" id="list-filters" method="get" action={href("/games/")} aria-label={t("list.filters")}>
@@ -59,4 +62,5 @@ const places = PLACE_FILTERS.map((p) => [p, t(`list.place.${p}`)]);
   </div>
 </div>
 
+<DataScript />
 <script src="../scripts/games.ts"></script>

@@ -120,7 +120,7 @@ export const STRINGS = {
   "dash.section.last": "Latest games · {mode}",
   "dash.section.heroes": "Top heroes · {mode}",
   "dash.section.records": "Records · {mode}",
-  "dash.simple.more": "Switch to Advanced at the top to also see economy, combats, actions per minute and triples.",
+  "dash.simple.more": "Switch to Advanced at the top to also see damage, economy, actions per minute and triples.",
   "dash.trend.capped": "The charts cover the last {count} games.",
   "dash.about": "About these numbers",
   "dash.about.body":
@@ -189,6 +189,7 @@ export const STRINGS = {
   "games.col.apm": "APM",
   "games.link": ": game with {hero}",
   "games.status.incomplete": "unfinished",
+  "games.triples.unfinished": "Not counted: the game is unfinished",
   "games.status.unsupported": "unreadable",
 
   "list.title": "Games",
