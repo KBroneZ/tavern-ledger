@@ -2,6 +2,8 @@
 // owner-only save and the texts in both languages.
 import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { loadSimulatorConsent, makeClient, saveSimulatorConsent } from "../../src/lib/api.ts";
 import { ES as ACCOUNT_STRINGS_ES } from "../../src/lib/account/strings.es.ts";
 import { ACCOUNT_STRINGS } from "../../src/lib/account/strings.ts";
@@ -74,4 +76,17 @@ test("the texts say what is used, how, and what withdrawing does, in both langua
   assert.match(es, /Desactivado por defecto/);
   assert.match(es, /repeticiones de los combates/);
   assert.doesNotMatch(es, /app\b|autodeclarad/, "voice guide: la aplicación, never la app");
+});
+
+test("a consent records the policy version whose \"What changed\" line introduced the simulator section", () => {
+  const repo = join(import.meta.dirname, "..", "..", "..");
+  const migration = readFileSync(join(repo, "supabase", "migrations", "20261012200000_simulator_consent.sql"), "utf8");
+  const version = /simulator_policy_version\(\)[^$]*\$\$ select '(\d{4})-(\d{2})-(\d{2})' \$\$/.exec(migration);
+  assert.ok(version, "the migration names the policy version");
+  const [, year, month, day] = version;
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const date = `${Number(day)} ${months[Number(month) - 1]} ${year}`;
+  const policy = readFileSync(join(repo, "docs", "legal", "privacy.md"), "utf8");
+  const changed = policy.split("\n").filter((line) => line.startsWith(`**What changed on ${date}`));
+  assert.ok(changed.some((line) => /improve the simulator/.test(line)), `a "What changed on ${date}" line names the switch`);
 });

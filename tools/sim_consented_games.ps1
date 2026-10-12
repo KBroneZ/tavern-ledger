@@ -15,7 +15,8 @@ Runs on the owner's own machine, never in CI. In one go:
   4. runs `combat-validate --games <folder> --cards <file> --summary`, which
      prints counts, shares, rules and card ids only;
   5. deletes the folder, whatever happened (the privacy policy promises the
-     copies are deleted when the run ends).
+     copies are deleted when the run ends); a run that could not finish
+     (window closed, power cut) is cleaned up at the start of the next one.
 Only counts are printed: never a path, account id or file name.
 
 Hosted project (default): .local\supabase.env with SUPABASE_URL and
@@ -44,6 +45,8 @@ $repo = Split-Path -Parent $PSScriptRoot
 $workRoot = Join-Path $repo '.local\sim-games'
 $bucket = 'games'
 $timeoutSec = 30
+# A game record is a few hundred KB at most; anything bigger is not one.
+$maxInflatedBytes = 16MB
 
 # As in tools\backup_supabase.ps1.
 function Get-Connection {
@@ -89,16 +92,31 @@ function Get-ConsentedFiles($conn) {
     return @($res.Content | ConvertFrom-Json)
 }
 
-# The inflated bytes of a gzipped file.
+# The inflated bytes of a gzipped file; throws past $maxInflatedBytes.
 function Expand-Gzip([string]$path) {
     $in = [System.IO.File]::OpenRead($path)
+    $gz = [System.IO.Compression.GZipStream]::new($in, [System.IO.Compression.CompressionMode]::Decompress)
+    $out = [System.IO.MemoryStream]::new()
     try {
-        $gz = [System.IO.Compression.GZipStream]::new($in, [System.IO.Compression.CompressionMode]::Decompress)
-        $out = [System.IO.MemoryStream]::new()
-        $gz.CopyTo($out)
+        $buffer = [byte[]]::new(81920)
+        while (($read = $gz.Read($buffer, 0, $buffer.Length)) -gt 0) {
+            if ($out.Length + $read -gt $maxInflatedBytes) { throw 'Inflated file too large.' }
+            $out.Write($buffer, 0, $read)
+        }
         return $out.ToArray()
     } finally {
+        $out.Dispose()
+        $gz.Dispose()
         $in.Dispose()
+    }
+}
+
+# Copies left by a run that could not finish (window closed, power cut).
+function Remove-Leftovers {
+    Get-ChildItem $workRoot -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+        Remove-Item -Recurse -Force -Confirm:$false $_.FullName -ErrorAction SilentlyContinue
+        if (Test-Path $_.FullName) { throw 'Could not delete copies left by an earlier run under .local\sim-games; delete them by hand.' }
+        Write-Host 'Deleted copies left by an earlier run.'
     }
 }
 
@@ -108,6 +126,7 @@ function Get-Sha256([byte[]]$bytes) {
 
 if (-not (Test-Path $Cards -PathType Leaf)) { throw "No card data at $Cards (HearthstoneJSON cards.json)." }
 
+Remove-Leftovers
 $conn = Get-Connection
 $stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss')
 $dir = Join-Path $workRoot $stamp
@@ -131,10 +150,18 @@ try {
         }
         $escaped = ($row.storage_path -split '/' | ForEach-Object { [uri]::EscapeDataString($_) }) -join '/'
         $gzFile = Join-Path $dir ('{0:D4}.json.gz' -f $n)
-        Invoke-WebRequest -Uri "$($conn.Url)/storage/v1/object/$bucket/$escaped" `
-            -Headers (Get-Headers $conn) -OutFile $gzFile -TimeoutSec $timeoutSec | Out-Null
-        $bytes = Expand-Gzip $gzFile
-        Remove-Item -Force $gzFile
+        # A file deleted since the list (the daily retention), broken or
+        # replaced is skipped. The error is not printed: it names the path.
+        try {
+            Invoke-WebRequest -Uri "$($conn.Url)/storage/v1/object/$bucket/$escaped" `
+                -Headers (Get-Headers $conn) -OutFile $gzFile -TimeoutSec $timeoutSec | Out-Null
+            $bytes = Expand-Gzip $gzFile
+        } catch {
+            $skipped++
+            continue
+        } finally {
+            Remove-Item -Force $gzFile -ErrorAction SilentlyContinue
+        }
         if ((Get-Sha256 $bytes) -ne $row.content_sha256) {
             $skipped++
             continue
