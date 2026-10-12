@@ -7,8 +7,12 @@
 // playing. With reduced motion nothing plays by itself: step by step only.
 // What each button and key does is plain data (replay.ts control, keyAction).
 // Everything drawn comes from replayView.ts (text only, lib/view/node.ts).
+// Each step stays for its own beat, close to the game's pace (replay.ts
+// beats), and moving one step on plays it (replayMotion.ts): the attacker
+// flies to its target, the board slides into place; a jump does not move.
 import { mount, toDom } from "../view/node.ts";
-import { control, type Frame, keyAction, type PlayAction, type Playback, SPEEDS, STEP_MS, stepWords } from "./replay.ts";
+import { beats, control, type Frame, keyAction, type PlayAction, type Playback, SPEEDS, stepWords } from "./replay.ts";
+import { hit, lunge, measure, slide } from "./replayMotion.ts";
 import type { Side } from "./replayRead.ts";
 import {
   counterText,
@@ -37,6 +41,8 @@ interface Player {
   box: HTMLElement;
   /** Each minion's element, by its index in the replay. */
   tiles: Map<number, HTMLElement>;
+  /** Each step's beat at 1× (replay.ts beats). */
+  beats: number[];
   step: number;
   playing: boolean;
 }
@@ -83,7 +89,8 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     const box = one<HTMLElement>(holder as HTMLElement, ".rp-player");
     const tiles = new Map<number, HTMLElement>();
     for (const li of box.querySelectorAll<HTMLElement>(".rp-minion[data-ref]")) tiles.set(Number(li.dataset.ref), li);
-    return { combat, pb: playbackOf(combat), box, tiles, step, playing: false };
+    const pb = playbackOf(combat);
+    return { combat, pb, box, tiles, beats: beats(pb.frames.map((f) => f.event)), step, playing: false };
   }
 
   function stop(): void {
@@ -91,7 +98,8 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     timer = null;
   }
 
-  function drawSide(frame: Frame, side: Side): void {
+  /** Draws one side; returns its minions' elements, left to right. */
+  function drawSide(frame: Frame, side: Side): HTMLElement[] {
     const row = one<HTMLElement>(player.box, `.rp-side[data-side="${side}"]`);
     const face = one<HTMLElement>(row, ".rp-hero-face");
     const hero = heroAt(player.combat, frame, side);
@@ -111,7 +119,33 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
       }
       return li;
     });
-    one<HTMLElement>(row, ".rp-board").replaceChildren(...(nodes.length > 0 ? nodes : [toDom(emptyBoard())]));
+    const board = one<HTMLElement>(row, ".rp-board");
+    // The board is rebuilt only when its minions change: a running motion
+    // or a mark's animation is not restarted by a step that leaves it be.
+    const same = nodes.length === board.children.length && nodes.every((n, i) => board.children[i] === n);
+    const stillEmpty = nodes.length === 0 && board.children.length === 1 && board.firstElementChild?.classList.contains("rp-empty");
+    if (!same && !stillEmpty) board.replaceChildren(...(nodes.length > 0 ? nodes : [toDom(emptyBoard())]));
+    return nodes;
+  }
+
+  /** The step's motion, once the boards are drawn: an attack, the hero's hit, the board sliding into place. */
+  function move(frame: Frame, before: ReturnType<typeof measure>, nodes: HTMLElement[]): void {
+    slide(before, nodes, speed);
+    const e = frame.event;
+    if (e?.kind === "attack" && e.defender !== null) {
+      const attacker = player.tiles.get(e.attacker);
+      const defender = player.tiles.get(e.defender);
+      if (attacker?.isConnected && defender?.isConnected) {
+        lunge(attacker, defender, speed);
+        hit(defender, speed);
+      }
+    } else if (e?.kind === "hero_damage") {
+      // The winner's hero hits the loser's.
+      const face = (side: Side) => one<HTMLElement>(player.box, `.rp-side[data-side="${side}"] .rp-hero-face`);
+      const winner = e.side === "own" ? "opponent" : "own";
+      lunge(face(winner), face(e.side), speed);
+      hit(face(e.side), speed);
+    }
   }
 
   /** Says the step's words once, in the hidden live region; quiet while playing. */
@@ -124,11 +158,14 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     });
   }
 
-  function draw(speak: boolean): void {
+  function draw(speak: boolean, animate: boolean): void {
     const { box, pb, step, playing, combat } = player;
     const last = pb.frames.length - 1;
     const frame = pb.frames[step];
-    for (const side of SIDES) drawSide(frame, side);
+    // Measured before the boards change and once after, never in between.
+    const before = animate ? measure(player.tiles.values()) : null;
+    const nodes = SIDES.flatMap((side) => drawSide(frame, side));
+    if (before) move(frame, before, nodes);
     const words = combat.replay ? stepWords(frame.event, combat.replay, namerFor(combat)) : "";
     one<HTMLElement>(box, ".rp-caption").textContent = words;
     if (speak && !playing) announce(words);
@@ -153,10 +190,17 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
   function act(action: PlayAction, speak = true): void {
     stop();
     const next = control(player, action, player.pb.frames.length - 1, motion.matches);
+    // Only one step on moves; a jump, a step back or reduced motion draws the step as it is.
+    const animate = !motion.matches && next.step === player.step + 1;
     player.step = next.step;
     player.playing = next.playing;
-    draw(speak);
-    if (player.playing) timer = window.setTimeout(tick, STEP_MS / speed);
+    draw(speak, animate);
+    schedule();
+  }
+
+  /** The next step plays after this one's beat, at the chosen speed. */
+  function schedule(): void {
+    if (player.playing) timer = window.setTimeout(tick, player.beats[player.step] / speed);
   }
 
   function tick(): void {
@@ -203,7 +247,7 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     speed = (SPEEDS as readonly number[]).includes(value) ? value : DEFAULT_SPEED;
     if (player.playing) {
       stop();
-      timer = window.setTimeout(tick, STEP_MS / speed);
+      schedule();
     }
   });
 

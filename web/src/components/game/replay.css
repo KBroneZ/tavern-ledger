@@ -2,7 +2,10 @@
    A sunk tavern table: theirs on top, yours below, each minion an oval
    portrait with its attack and health. Every mark is a shape or a word as
    well as a colour (the step's words say what happened). Motion only where
-   the viewer allows it; with reduced motion the replay goes step by step. */
+   the viewer allows it; with reduced motion the replay goes step by step.
+   T-560, D-132: the attack's flight, the hit's shake and the board sliding
+   into place are Web Animations on the minion (replayMotion.ts), so no rule
+   here sets a minion's own transform; marks animate its parts. */
 
 .rp {
   --rp-tile: clamp(42px, 11vw, 66px);
@@ -153,6 +156,30 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Both boards of 7 fit the stage at any width: a minion is a seventh of
+   its board (container units), from 28px on a 320px phone to 80px, and its
+   Attack and Health scale with it. */
+.rp-stage {
+  --rp-gap: 12px;
+}
+
+.rp-stage .rp-board {
+  container-type: inline-size;
+  gap: var(--rp-gap);
+}
+
+.rp-stage .rp-minion {
+  --rp-tile: clamp(28px, calc((100cqi - 6 * var(--rp-gap)) / 7), 80px);
+}
+
+.rp-stage .rp-atk,
+.rp-stage .rp-hp {
+  min-width: clamp(15px, calc(var(--rp-tile) * 0.36), 26px);
+  height: clamp(15px, calc(var(--rp-tile) * 0.36), 26px);
+  padding: 0 2px;
+  font-size: clamp(0.625rem, calc(var(--rp-tile) * 0.2), 0.9375rem);
+}
+
 .rp-board {
   display: flex;
   justify-content: center;
@@ -182,9 +209,17 @@
   justify-items: center;
   gap: 2px;
   width: var(--rp-tile);
+}
+
+/* The attacker flies over its neighbours and the other board. */
+.rp-minion.is-lunging {
+  z-index: 2;
+}
+
+.rp-art {
   transition:
-    transform var(--rp-move) var(--ease-out),
     opacity var(--rp-move) var(--ease-out),
+    transform var(--rp-move) var(--ease-out),
     filter var(--rp-move) var(--ease-out);
 }
 
@@ -241,18 +276,21 @@
   color: #fff;
 }
 
+/* The damage taken, a red burst on the portrait as in the game. */
 .rp-hurt {
   position: absolute;
-  top: 18%;
+  top: 22%;
   left: 50%;
+  z-index: 1;
   translate: -50% 0;
-  padding: 2px 6px;
-  border-radius: 6px;
-  background: #7a1410;
+  padding: 3px 7px;
+  border-radius: 46% 54% 50% 50% / 55% 45% 55% 45%;
+  background: radial-gradient(circle at 40% 35%, #e0412f, #8f1a12 70%);
   color: #fff;
   font: 800 var(--t-sm) / 1 var(--display);
-  box-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
-  animation: rp-hurt 420ms var(--ease-out);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.7);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.55);
+  animation: rp-hurt 320ms var(--ease-out);
 }
 
 .rp-minion .gv-gifts {
@@ -299,25 +337,15 @@
   outline-offset: 2px;
 }
 
-.rp-side.is-own .rp-minion.is-attacker {
-  transform: translateY(-10px);
-}
-
-.rp-side.is-opponent .rp-minion.is-attacker {
-  transform: translateY(10px);
-}
-
 .rp-minion.is-defender .pic {
   outline: 3px dotted var(--rp-hit);
   outline-offset: 2px;
 }
 
-.rp-minion.is-defender {
-  animation: rp-shake 300ms ease-in-out;
-}
-
+/* New numbers pop, as the game's do. */
 .rp-minion.is-buffed .rp-stats {
   filter: drop-shadow(0 0 4px var(--rp-buff));
+  animation: rp-pump 260ms var(--ease-out);
 }
 
 .rp-minion.is-buffed .pic {
@@ -330,14 +358,33 @@
   outline-offset: 3px;
 }
 
-.rp-minion.is-summoned {
-  animation: rp-in 300ms var(--ease-out);
+/* A start-of-combat, deathrattle, avenge or rally effect flashes on the minion. */
+.rp-minion.is-triggered .rp-art::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  z-index: 1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(169 200 255 / 0.65), transparent);
+  opacity: 0;
+  pointer-events: none;
+  animation: rp-flash 480ms var(--ease-out);
 }
 
-.rp-minion.is-dying {
-  opacity: 0.4;
+/* A summon slides in from its own side of the table. */
+.rp-side.is-own .rp-minion.is-summoned :is(.rp-art, .rp-info, .gv-gifts) {
+  animation: rp-in-own 380ms var(--ease-out);
+}
+
+.rp-side.is-opponent .rp-minion.is-summoned :is(.rp-art, .rp-info, .gv-gifts) {
+  animation: rp-in-theirs 380ms var(--ease-out);
+}
+
+/* A death fades out; the board closes the gap at the next step. */
+.rp-minion.is-dying .rp-art {
+  opacity: 0.3;
   filter: grayscale(1);
-  transform: scale(0.9);
+  transform: scale(0.85);
 }
 
 .rp-minion.is-dying .rp-art::before {
@@ -352,13 +399,21 @@
   text-shadow: 0 1px 4px #000;
 }
 
-@keyframes rp-shake {
-  25% { transform: translateX(-3px); }
-  75% { transform: translateX(3px); }
+@keyframes rp-in-own {
+  from { opacity: 0; transform: translateY(14px) scale(0.9); }
 }
 
-@keyframes rp-in {
-  from { opacity: 0; transform: scale(0.6); }
+@keyframes rp-in-theirs {
+  from { opacity: 0; transform: translateY(-14px) scale(0.9); }
+}
+
+@keyframes rp-flash {
+  30% { opacity: 1; }
+  to { opacity: 0; transform: scale(1.15); }
+}
+
+@keyframes rp-pump {
+  40% { transform: scale(1.2); }
 }
 
 @keyframes rp-pop {
@@ -367,7 +422,8 @@
 }
 
 @keyframes rp-hurt {
-  from { opacity: 0; translate: -50% 6px; }
+  from { opacity: 0; transform: scale(0.6); }
+  60% { opacity: 1; transform: scale(1.12); }
 }
 
 /* ---------- Words and controls ---------- */
@@ -534,6 +590,19 @@ html:not([data-detail="advanced"]) .rp-stepper {
     font-size: var(--t-xs);
   }
 
+  .rp-stage {
+    --rp-gap: 4px;
+  }
+
+  /* A Dark Gift is its star on a phone; its name is in the minion's words. */
+  .rp-stage .gv-gift > span:last-child {
+    display: none;
+  }
+
+  .rp-stage {
+    padding-inline: var(--s-2);
+  }
+
   .rp-speed {
     margin-left: 0;
   }
@@ -542,16 +611,16 @@ html:not([data-detail="advanced"]) .rp-stepper {
 /* ---------- Reduced motion: no animation, step by step only ---------- */
 
 @media (prefers-reduced-motion: reduce) {
-  .rp-minion,
-  .rp-minion.is-defender,
-  .rp-minion.is-summoned,
+  .rp-art,
+  .rp-minion .rp-art::before,
+  .rp-minion.is-summoned :is(.rp-art, .rp-info, .gv-gifts),
+  .rp-minion.is-buffed .rp-stats,
   .rp-hurt {
     animation: none;
     transition: none;
   }
 
-  .rp-side .rp-minion.is-attacker,
-  .rp-minion.is-dying {
+  .rp-minion.is-dying .rp-art {
     transform: none;
   }
 

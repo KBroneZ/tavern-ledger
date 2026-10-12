@@ -5,7 +5,8 @@
 // What the log says happened, never a simulation. A combat the game did not
 // play back has none ("not shown"); a game saved before revision 8 has no
 // replays at all ("not recorded"). `combats`, `frames` and `stepWords` are
-// plain data in, plain data out (ui-tests/replay.test.js).
+// plain data in, plain data out (ui-tests/replay.test.js), and so are the
+// pace (`beats`) and the motion's geometry (T-560, D-132).
 "use strict";
 
 (() => {
@@ -17,9 +18,28 @@
   const isInt = (v) => Number.isInteger(v);
   const SIDES = ["own", "opponent"];
   const TRIGGERS = ["start_of_combat", "deathrattle", "avenge", "rally"];
-  /** Playback speeds; 1× shows a step every STEP_MS. */
+  /** Playback speeds; at 1× each step stays for its beat (BEAT_MS). */
   const SPEEDS = [0.5, 1, 2, 4];
-  const STEP_MS = 900;
+  // How long each kind of step stays at 1× before the next one plays (T-560,
+  // D-132), the website's too (web/src/lib/game/replay.ts; a test keeps them
+  // equal). Set from the game's own playback on the owner's 73 combats: about
+  // 1.2 s from one attack to the next with no death, 1.3 s with one, 2.1 s
+  // with two or more. An attack's beat ends as it hits.
+  const BEAT_MS = {
+    start: 900,
+    attack: 600,
+    damage: 260,
+    shield: 120,
+    stats: 220,
+    death: 300,
+    summon: 380,
+    trigger: 480,
+    hero_damage: 1200,
+    board_in: 800,
+    unknown: 0,
+  };
+  /** What the log writes between an attack and its first damage (a buff, a shield) plays at the impact. */
+  const AT_IMPACT_MS = 60;
   /** The parser's bound on events per combat (crates/bg-parser/src/replay.rs). */
   const MAX_EVENTS = 2000;
 
@@ -181,6 +201,105 @@
     return out;
   }
 
+  // Each step's beat at 1× (the steps' events, null for the start), with the
+  // attack's damage on its impact.
+  function beats(events) {
+    let landing = false;
+    return events.map((e) => {
+      const kind = e ? (Object.prototype.hasOwnProperty.call(BEAT_MS, e.kind) ? e.kind : "unknown") : "start";
+      if (kind === "attack") landing = true;
+      else if (kind === "damage" || kind === "death" || kind === "hero_damage") landing = false;
+      else if (landing) return AT_IMPACT_MS;
+      return BEAT_MS[kind];
+    });
+  }
+
+  // --- Motion (T-560, D-132): the attacker winds up, flies to its target and
+  // back, the target shakes as it is hit, a board that loses or gains a
+  // minion slides its others into place. Web Animations on transform only;
+  // the boards are measured once before a step and once after it, and none
+  // of it plays with reduced motion. The website's replayMotion.ts does the same.
+  const IMPACT_MS = BEAT_MS.attack;
+  const ATTACK_MS = IMPACT_MS + 300;
+  const HIT_MS = 260;
+  const SLIDE_MS = 260;
+  /** How far towards the target's centre the attacker flies: it stops at its edge. */
+  const REACH = 0.78;
+  const WIND_UP_PX = 8;
+  const EASE_OUT = "cubic-bezier(0.23, 1, 0.32, 1)";
+  const EASE_IN_OUT = "cubic-bezier(0.77, 0, 0.175, 1)";
+  // One decimal, and never "-0px".
+  const px = (v) => `${Math.round(v * 10) / 10 + 0}px`;
+  const translate = (x, y) => `translate(${px(x)}, ${px(y)})`;
+  const centre = (b) => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
+
+  // The attacker's flight from box `from` to box `to`, as keyframes over ATTACK_MS.
+  function lungeFrames(from, to) {
+    const a = centre(from);
+    const b = centre(to);
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const length = Math.hypot(dx, dy) || 1;
+    const hit = IMPACT_MS / ATTACK_MS;
+    return [
+      { offset: 0, transform: translate(0, 0), easing: EASE_OUT },
+      { offset: hit * 0.3, transform: `${translate((-dx / length) * WIND_UP_PX, (-dy / length) * WIND_UP_PX)} scale(1.08)`, easing: EASE_IN_OUT },
+      { offset: hit, transform: `${translate(dx * REACH, dy * REACH)} scale(1.08)`, easing: EASE_OUT },
+      { offset: 1, transform: translate(0, 0) },
+    ];
+  }
+
+  // How far a minion moved between two boxes; null when it did not (under a pixel).
+  function flipDelta(before, after) {
+    const dx = before.x - after.x;
+    const dy = before.y - after.y;
+    return Math.abs(dx) < 1 && Math.abs(dy) < 1 ? null : { dx, dy };
+  }
+
+  function boxOf(el) {
+    const r = el.getBoundingClientRect();
+    return { x: r.left, y: r.top, width: r.width, height: r.height };
+  }
+
+  // Where each element is now: read before a step changes the boards.
+  function measure(els) {
+    const out = new Map();
+    for (const el of els) if (el.isConnected) out.set(el, boxOf(el));
+    return out;
+  }
+
+  // Stops the motion of this kind already running on `el`, so the new one starts from where it is.
+  function restart(el, id) {
+    el.getAnimations().forEach((a) => {
+      if (a.id === id) a.cancel();
+    });
+  }
+
+  function lunge(attacker, target, speed) {
+    restart(attacker, "replay-lunge");
+    attacker.classList.add("lunging");
+    const motion = attacker.animate(lungeFrames(boxOf(attacker), boxOf(target)), { duration: ATTACK_MS / speed, id: "replay-lunge" });
+    const done = () => attacker.classList.remove("lunging");
+    motion.addEventListener("finish", done);
+    motion.addEventListener("cancel", done);
+  }
+
+  function hit(el, speed) {
+    restart(el, "replay-hit");
+    const shake = [0, -4, 4, -2, 0].map((x) => ({ transform: translate(x, 0) }));
+    el.animate(shake, { duration: HIT_MS / speed, delay: IMPACT_MS / speed, easing: "ease-in-out", id: "replay-hit" });
+  }
+
+  function slide(before, els, speed) {
+    els.forEach((el) => {
+      const was = before.get(el);
+      const delta = was ? flipDelta(was, boxOf(el)) : null;
+      if (!delta) return;
+      restart(el, "replay-slide");
+      el.animate([{ transform: translate(delta.dx, delta.dy) }, { transform: translate(0, 0) }], { duration: SLIDE_MS / speed, easing: EASE_OUT, id: "replay-slide" });
+    });
+  }
+
   // The heroes as the combat starts: the first of each side in the round.
   function heroesOf(report, round) {
     const r = list(report && report.rounds).find((x) => x && x.number === round);
@@ -263,12 +382,18 @@
     };
   }
 
+  // A minion as the game page draws it (D-131): an oval portrait, Attack in
+  // a gold diamond and Health in a red drop, a gold ring when golden, a halo
+  // while it has Divine Shield.
   function minionTile(ui, tile, h) {
     const box = ui.el("span", "replay-minion");
+    const frame = ui.el("span", "replay-frame");
     const img = h.art(tile.id, "replay-art");
-    box.append(img || ui.el("span", "replay-art art-missing"));
+    frame.append(img || ui.el("span", "replay-art art-missing"));
+    box.append(frame);
     const stats = ui.el("span", "replay-stats");
     stats.setAttribute("aria-hidden", "true");
+    stats.append(ui.el("span", "replay-atk"), ui.el("span", "replay-hp"));
     // The words a screen reader reads for the tile (the picture has none).
     // Dark Gifts (T-528): they do not change during a combat.
     const gifts = Turns.giftMarks(tile);
@@ -285,10 +410,11 @@
   function updateTile(box, tile, h) {
     const flags = ["golden", "shield", "attacker", "defender", "dying", "summoned", "buffed", "popped", "triggered"];
     flags.forEach((f) => box.classList.toggle(f, Boolean(tile[f])));
-    const stats = box.querySelector(".replay-stats");
     // Damage past 0 (overkill) shows as 0, as on the game's board.
+    const atk = tile.atk === null ? "?" : I18n.num(tile.atk);
     const health = tile.health === null ? "?" : I18n.num(Math.max(tile.health, 0));
-    stats.textContent = `${tile.atk === null ? "?" : I18n.num(tile.atk)}/${health}`;
+    box.querySelector(".replay-atk").textContent = atk;
+    box.querySelector(".replay-hp").textContent = health;
     const old = box.querySelector(".replay-hurt");
     if (old) old.remove();
     if (tile.hurt) {
@@ -301,7 +427,7 @@
     const name = tile.id ? h.cardName(tile.id) || tile.id : t("shop.card.unknown");
     const gifts = Turns.giftMarks(tile).map((g) => g.title);
     const marks = [tile.golden && t("keyword.golden"), ...tile.keywords.map((k) => (`keyword.${k}` in I18n.tables().en ? t(`keyword.${k}`) : k)), ...gifts].filter(Boolean);
-    const words = [`${name} ${stats.textContent}`, marks.join(", ")].filter(Boolean).join(" · ");
+    const words = [`${name} ${atk}/${health}`, marks.join(", ")].filter(Boolean).join(" · ");
     box.title = words;
     box.querySelector(".replay-words").textContent = words;
   }
@@ -345,7 +471,10 @@
 
   // Draws frame `f` on the stage, reusing each minion's tile (no picture
   // loads twice). `heroes` are the round's heroes before any board comes in.
+  // A board is rebuilt only when its minions change, so a running motion or
+  // a mark's animation is not restarted. Returns the minions drawn.
   function drawStage(ui, sides, f, heroes, h) {
+    const drawn = [];
     SIDES.forEach((side) => {
       const s = sides[side];
       const nodes = f[side].map((tile) => {
@@ -354,11 +483,38 @@
         updateTile(node, tile, h);
         return node;
       });
-      s.board.replaceChildren(...nodes);
-      if (!nodes.length) s.board.append(ui.el("span", "replay-empty", t("turns.board.empty")));
+      const kids = s.board.children;
+      const same = nodes.length === kids.length && nodes.every((n, i) => kids[i] === n);
+      const stillEmpty = !nodes.length && kids.length === 1 && kids[0].classList.contains("replay-empty");
+      if (!same && !stillEmpty) {
+        s.board.replaceChildren(...nodes);
+        if (!nodes.length) s.board.append(ui.el("span", "replay-empty", t("turns.board.empty")));
+      }
       setHero(ui, s.badge, f.heroes[side] || heroes[side], h);
       s.badge.querySelector(".replay-hero-hit").textContent = f.hero[side] ? `−${I18n.num(f.hero[side])}` : "";
+      drawn.push(...nodes);
     });
+    return drawn;
+  }
+
+  // The step's motion, once the boards are drawn: the board sliding into
+  // place, an attack, the winner's hero hitting the loser's.
+  function move(sides, f, before, drawn, speed) {
+    slide(before, drawn, speed);
+    const e = f.event;
+    const tileOfRef = (ref) => SIDES.map((side) => sides[side].tiles.get(ref)).find(Boolean);
+    if (e && e.kind === "attack" && e.defender !== null) {
+      const a = tileOfRef(e.attacker);
+      const d = tileOfRef(e.defender);
+      if (a && d && a.isConnected && d.isConnected) {
+        lunge(a, d, speed);
+        hit(d, speed);
+      }
+    } else if (e && e.kind === "hero_damage") {
+      const face = (side) => sides[side].badge.querySelector(".replay-hero-face");
+      lunge(face(e.side === "own" ? "opponent" : "own"), face(e.side), speed);
+      hit(face(e.side), speed);
+    }
   }
 
   // Play and pause for everyone; back, forward, the start and the speed in Advanced.
@@ -402,25 +558,29 @@
     return { fold, items };
   }
 
-  // The playback clock: `draw` after every step; it stops by itself once
-  // the player has left the page.
-  function clock(state, last, box, draw) {
+  // The playback clock: `draw(animate)` after every step, each step staying
+  // for its beat; it stops by itself once the player has left the page.
+  // Moving one step on animates; a jump or a step back does not.
+  function clock(state, last, box, beat, draw) {
     let timer = null;
+    const later = () => setTimeout(tick, beat[state.step] / speed);
     function tick() {
       timer = null;
       if (!box.isConnected || !state.playing) return;
       if (state.step >= last) state.playing = false;
       else state.step += 1;
-      draw();
-      if (state.playing) timer = setTimeout(tick, STEP_MS / speed);
+      draw(true);
+      if (state.playing) timer = later();
     }
     return function go(step, playing) {
       if (timer) clearTimeout(timer);
       timer = null;
-      state.step = Math.min(Math.max(step, 0), last);
+      const next = Math.min(Math.max(step, 0), last);
+      const animate = next === state.step + 1;
+      state.step = next;
       state.playing = playing;
-      draw();
-      if (playing) timer = setTimeout(tick, STEP_MS / speed);
+      draw(animate);
+      if (playing) timer = later();
     };
   }
 
@@ -441,8 +601,12 @@
     const last = all.length - 1;
     let go = null;
     const steps = buildSteps(ui, all, words, h, combat.round, (i, p) => go(i, p));
-    const draw = () => {
-      drawStage(ui, sides, all[state.step], heroes, h);
+    const still = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const draw = (animate) => {
+      // Measured before the boards change and once after, never in between.
+      const before = animate && !still() ? measure(SIDES.flatMap((side) => [...sides[side].tiles.values()])) : null;
+      const drawn = drawStage(ui, sides, all[state.step], heroes, h);
+      if (before) move(sides, all[state.step], before, drawn, speed);
       caption.textContent = words(all[state.step].event);
       // Read aloud on a step or a pause only, not at every step of playback.
       caption.setAttribute("aria-live", state.playing ? "off" : "polite");
@@ -455,7 +619,7 @@
       steps.items.forEach((li, i) => li.classList.toggle("now", i === state.step));
       memory.set(h.game, { ...state });
     };
-    go = clock(state, last, box, draw);
+    go = clock(state, last, box, beats(all.map((f) => f.event)), draw);
     // At the end, play starts over.
     c.play.addEventListener("click", () => (state.playing ? go(state.step, false) : go(state.step >= last ? 0 : state.step, true)));
     c.back.addEventListener("click", () => go(state.step - 1, false));
@@ -515,7 +679,7 @@
     return part;
   }
 
-  const api = { SPEEDS, combats, frames, stepWords, heroesOf, outcomeOf, section };
+  const api = { SPEEDS, BEAT_MS, IMPACT_MS, ATTACK_MS, combats, frames, beats, lungeFrames, flipDelta, stepWords, heroesOf, outcomeOf, section };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLReplay = api;
 })();
