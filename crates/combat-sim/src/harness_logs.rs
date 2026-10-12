@@ -134,6 +134,7 @@ fn step_of(a: &LoggedAttack, db: &CardDb) -> Option<LoggedStep> {
         attacker: (attacker_side, attacker),
         defender,
         before: [engine_board(&a.own, db)?, engine_board(&a.opponent, db)?],
+        all_keywords: true,
     })
 }
 

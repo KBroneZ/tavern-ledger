@@ -26,6 +26,7 @@ fn step(
         attacker,
         defender: Some(defender),
         before: [player.to_vec(), opponent.to_vec()],
+        all_keywords: true,
     }
 }
 

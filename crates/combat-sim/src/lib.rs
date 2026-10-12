@@ -38,9 +38,15 @@ pub mod harness_duos;
 #[cfg(feature = "harness")]
 pub mod harness_export;
 #[cfg(feature = "harness")]
+pub mod harness_games;
+#[cfg(feature = "harness")]
 pub mod harness_logs;
 #[cfg(feature = "harness")]
 pub mod harness_misses;
+#[cfg(feature = "harness")]
+pub mod harness_saved;
+#[cfg(feature = "harness")]
+pub mod harness_summary;
 pub mod score;
 
 pub use combat::{CombatResult, Outcome};

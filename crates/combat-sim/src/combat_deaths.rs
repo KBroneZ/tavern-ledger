@@ -49,7 +49,7 @@ impl Combat<'_> {
     fn side_attacks_immediately(&mut self, side: usize) {
         for (uid, times) in self.immediate_attackers(side) {
             for _ in 0..times {
-                if self.finished() || !self.unit(side, uid).is_some_and(|u| u.attack > 0) {
+                if self.finished() || self.unit(side, uid).is_none_or(|u| u.attack <= 0) {
                     break;
                 }
                 self.swing(side, uid);

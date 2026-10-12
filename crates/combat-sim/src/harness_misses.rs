@@ -8,7 +8,10 @@
 
 use std::fmt::Write as _;
 
+use std::collections::BTreeMap;
+
 use crate::combat::CombatResult;
+use crate::harness::Scored;
 use crate::harness_duos::{team_of, DuosCombat};
 use crate::harness_logs::Replayed;
 use crate::score::Prediction;
@@ -19,6 +22,7 @@ use crate::trials::{simulate_teams, Coverage, Options, Verdict};
 pub struct Miss {
     pub game: usize,
     pub round: i64,
+    pub duos: bool,
     pub prediction: Prediction,
     pub result: CombatResult,
     pub coverage: Coverage,
@@ -48,10 +52,61 @@ pub fn duos_misses(combats: &[DuosCombat], options: &Options) -> Vec<Miss> {
             out.push(Miss {
                 game: c.game,
                 round: c.round,
+                duos: true,
                 prediction,
                 result,
                 coverage: Coverage::of_teams(&own, &opponent, opts.start_of_combat),
             });
+        }
+    }
+    out
+}
+
+/// The Solo combats of a run whose most likely result was wrong.
+pub fn solo_misses(scored: &[Scored]) -> Vec<Miss> {
+    scored
+        .iter()
+        .filter(|s| s.prediction.top() != s.combat.result)
+        .map(|s| Miss {
+            game: s.combat.game,
+            round: s.combat.round,
+            duos: false,
+            prediction: s.prediction,
+            result: s.combat.result,
+            coverage: s.coverage.clone(),
+        })
+        .collect()
+}
+
+/// The likely cause of a miss, in a few words: from the attack-by-attack
+/// replay when the game has one (the first rule that differs, or chance
+/// when the replay follows the game to the end), else from the cards.
+pub fn cause(m: &Miss, replays: &[Replayed]) -> String {
+    let row = replays
+        .iter()
+        .find(|r| r.duos == m.duos && r.game == m.game && r.round == m.round);
+    match row.map(|r| &r.replay.difference) {
+        Some(None) => "chance: the replay follows the game to the end".into(),
+        Some(Some(d)) => format!("replay parts at: {}", d.rule.label()),
+        None if !m.coverage.not_modelled.is_empty() => {
+            "no replay; a card not modelled (played as a plain minion)".into()
+        }
+        None if !m.coverage.approximate.is_empty() => {
+            "no replay; a card played approximately".into()
+        }
+        None => "no replay; every card exact".into(),
+    }
+}
+
+/// Misses counted by cause: cause -> (Solo, Duos).
+pub fn causes(misses: &[Miss], replays: &[Replayed]) -> BTreeMap<String, (u32, u32)> {
+    let mut out: BTreeMap<String, (u32, u32)> = BTreeMap::new();
+    for m in misses {
+        let slot = out.entry(cause(m, replays)).or_insert((0, 0));
+        if m.duos {
+            slot.1 += 1;
+        } else {
+            slot.0 += 1;
         }
     }
     out
@@ -83,7 +138,7 @@ pub fn render_misses(misses: &[Miss], replays: Option<&[Replayed]>) -> String {
             Some(rows) => {
                 let row = rows
                     .iter()
-                    .find(|r| r.duos && r.game == m.game && r.round == m.round);
+                    .find(|r| r.duos == m.duos && r.game == m.game && r.round == m.round);
                 match row.map(|r| (&r.replay.difference, r.replay.attacks)) {
                     None => "; replay: no attacks in the log".into(),
                     Some((None, _)) => "; replay: follows the log to the end (chance)".into(),

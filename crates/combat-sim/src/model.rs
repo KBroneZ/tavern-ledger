@@ -50,6 +50,10 @@ impl Keywords {
         Keywords(self.0 & !other.0)
     }
 
+    pub const fn intersection(self, other: Keywords) -> Keywords {
+        Keywords(self.0 & other.0)
+    }
+
     /// A keyword by its saved name (`divine_shield`) or its card data tag
     /// (`DIVINE_SHIELD`). Other names (deathrattle, rally) are card text,
     /// not keywords the engine tracks: `None`.

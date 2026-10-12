@@ -20,6 +20,9 @@ pub struct LoggedStep {
     pub attacker: (usize, usize),
     pub defender: Option<usize>,
     pub before: [Vec<Minion>; 2],
+    /// Every compared keyword is known. False for a board rebuilt from a
+    /// saved replay (T-609), which follows Divine Shield only.
+    pub all_keywords: bool,
 }
 
 /// The rule a replay found to differ first.
@@ -235,7 +238,7 @@ impl Combat<'_> {
         turn: &mut Turn,
     ) -> Result<(), Difference> {
         let n = k + 1;
-        self.compare_boards(n, &step.before)?;
+        self.compare_boards(n, &step.before, step.all_keywords)?;
         let (side, ix) = step.attacker;
         self.drop_spent(turn);
         let immediate = !turn.pending.is_empty();
@@ -378,7 +381,12 @@ impl Combat<'_> {
         }
     }
 
-    fn compare_boards(&self, n: usize, logged: &[Vec<Minion>; 2]) -> Result<(), Difference> {
+    fn compare_boards(
+        &self,
+        n: usize,
+        logged: &[Vec<Minion>; 2],
+        all_keywords: bool,
+    ) -> Result<(), Difference> {
         let id = |u: &Unit| self.p.cards[u.card as usize].id.as_str();
         for (side, log) in logged.iter().enumerate() {
             let engine_ids: Vec<&str> = self.sides[side].units.iter().map(id).collect();
@@ -404,7 +412,11 @@ impl Combat<'_> {
                 if self.is_taunt(u) {
                     engine_kw = engine_kw.union(Keywords::TAUNT);
                 }
-                let (engine_kw, log_kw) = (compared(engine_kw), compared(m.keywords));
+                let (mut engine_kw, mut log_kw) = (compared(engine_kw), compared(m.keywords));
+                if !all_keywords {
+                    engine_kw = engine_kw.intersection(Keywords::DIVINE_SHIELD);
+                    log_kw = log_kw.intersection(Keywords::DIVINE_SHIELD);
+                }
                 if u.attack != m.attack || u.health != m.health || engine_kw != log_kw {
                     return Err(diff(
                         n,
