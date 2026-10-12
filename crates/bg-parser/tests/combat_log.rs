@@ -137,6 +137,7 @@ fn game() -> Vec<String> {
     ));
     l.extend(minion(40, "SYN_FOE_A", 10, 1, 2, 4, &["DIVINE_SHIELD"]));
     l.extend(minion(41, "SYN_FOE_B", 10, 2, 1, 2, &[]));
+    l.push(tag("GameEntity", "NEXT_STEP", "MAIN_ACTION"));
     l.push(attack(30));
     l.push(tag("GameEntity", "PROPOSED_ATTACKER", "30"));
     l.push(tag("GameEntity", "PROPOSED_DEFENDER", "41"));

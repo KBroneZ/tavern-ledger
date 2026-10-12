@@ -158,6 +158,7 @@ impl Collector {
                         &block_type,
                         Some(id),
                         trigger.as_deref(),
+                        self.indent == 0,
                         &self.board,
                         sides,
                     );

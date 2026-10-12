@@ -80,6 +80,9 @@ KEEP_TAGS = frozenset({
     # Parser revision 9 (T-528): Dark Gifts on board minions, enchantments
     # attached to the minion.
     "ATTACHED", "HAS_DARK_GIFT",
+    # Parser revision 11 (T-560): the game's steps; a combat replay starts
+    # once the combat's action step is announced.
+    "STEP", "NEXT_STEP",
 })
 # Power packets kept (their tag= lines are filtered by KEEP_TAGS). Of the
 # blocks, ATTACK is kept at any depth (the parser takes the combat boards
