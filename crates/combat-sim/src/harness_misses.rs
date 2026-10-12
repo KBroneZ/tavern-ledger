@@ -1,8 +1,8 @@
 //! The Duos combats the odds missed (T-609): each one with what the engine
 //! does not know about it (approximate or unknown cards) and, when the log
-//! has the attacks, the first step where the replay parts from the log. This
-//! is the raw material for the miss breakdown by cause in
-//! the design notes.
+//! has the attacks, the first step where the replay parts from the log. The
+//! cause of each is [`crate::why`]'s (D-127), the one the app and the
+//! website show; its id is the accuracy export's.
 //!
 //! Local only, like the rest of the harness: card ids, numbers and rules.
 
@@ -10,13 +10,14 @@ use std::fmt::Write as _;
 
 use std::collections::BTreeMap;
 
-use crate::combat::replay::Rule;
 use crate::combat::CombatResult;
 use crate::harness::Scored;
 use crate::harness_duos::{team_of, DuosCombat};
 use crate::harness_logs::Replayed;
+use crate::model::Team;
 use crate::score::Prediction;
 use crate::trials::{simulate_teams, Coverage, Options, Verdict};
+use crate::why::{cards_of, not_seen, parted, Cause, NoReplay, NotSeen, Unseen};
 
 /// One combat whose most likely result was not the real one.
 #[derive(Clone, Debug, PartialEq)]
@@ -27,6 +28,8 @@ pub struct Miss {
     pub prediction: Prediction,
     pub result: CombatResult,
     pub coverage: Coverage,
+    /// What the boards bring that the log does not show (D-127).
+    pub inputs: Vec<NotSeen>,
 }
 
 /// The Duos combats with a result whose most likely result was wrong,
@@ -57,6 +60,7 @@ pub fn duos_misses(combats: &[DuosCombat], options: &Options) -> Vec<Miss> {
                 prediction,
                 result,
                 coverage: Coverage::of_teams(&own, &opponent, opts.start_of_combat),
+                inputs: not_seen(&own, &opponent, &c.unknown_gifts),
             });
         }
     }
@@ -75,80 +79,39 @@ pub fn solo_misses(scored: &[Scored]) -> Vec<Miss> {
             prediction: s.prediction,
             result: s.combat.result,
             coverage: s.coverage.clone(),
+            inputs: not_seen(
+                &Team::solo(s.combat.player.clone()),
+                &Team::solo(s.combat.opponent.clone()),
+                &s.combat.unknown_gifts,
+            ),
         })
         .collect()
 }
 
-/// Where a miss most likely comes from, found from the attack-by-attack
-/// replay when the game has one, else from the cards.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Found {
-    /// The replay follows the game to the end: the dice.
-    Chance,
-    /// The first rule where the replay parts from the log.
-    Replay(Rule),
-    NotModelled,
-    Approximate,
-    Exact,
-}
-
-fn find(m: &Miss, replays: &[Replayed]) -> Found {
+/// Why a miss happened (D-127): from the attack-by-attack replay when the
+/// game has one, else only how well the engine knows its cards.
+fn find(m: &Miss, replays: &[Replayed]) -> Cause {
     let row = replays
         .iter()
         .find(|r| r.duos == m.duos && r.game == m.game && r.round == m.round);
-    match row.map(|r| &r.replay.difference) {
-        Some(None) => Found::Chance,
-        Some(Some(d)) => Found::Replay(d.rule),
-        None if !m.coverage.not_modelled.is_empty() => Found::NotModelled,
-        None if !m.coverage.approximate.is_empty() => Found::Approximate,
-        None => Found::Exact,
+    match row {
+        Some(r) => match &r.replay.difference {
+            None => Cause::Chance {
+                attacks: r.replay.attacks,
+            },
+            Some(d) => parted(d.clone(), m.inputs.clone(), &m.coverage),
+        },
+        None => Cause::NoReplay {
+            why: NoReplay::NotSaved,
+            cards: cards_of(&m.coverage, m.inputs.iter().any(|n| n.what == Unseen::Gift)),
+        },
     }
 }
 
-/// The likely cause of a miss, in a few words: from the attack-by-attack
-/// replay when the game has one (the first rule that differs, or chance
-/// when the replay follows the game to the end), else from the cards.
-pub fn cause(m: &Miss, replays: &[Replayed]) -> String {
-    match find(m, replays) {
-        Found::Chance => "chance: the replay follows the game to the end".into(),
-        Found::Replay(rule) => format!("replay parts at: {}", rule.label()),
-        Found::NotModelled => "no replay; a card not modelled (played as a plain minion)".into(),
-        Found::Approximate => "no replay; a card played approximately".into(),
-        Found::Exact => "no replay; every card exact".into(),
-    }
-}
-
-/// The same cause as a short stable id, for the accuracy export and the
-/// website's words. A new rule or cause needs a new id there.
+/// The same cause as a short stable id ([`Cause::id`]), for the accuracy
+/// export and the website's words. A new rule or cause needs a new id there.
 pub fn cause_id(m: &Miss, replays: &[Replayed]) -> &'static str {
-    match find(m, replays) {
-        Found::Chance => "chance",
-        Found::Replay(Rule::FirstAttacker) => "replay_first_attacker",
-        Found::Replay(Rule::AfterTeammate) => "replay_after_teammate",
-        Found::Replay(Rule::AttackOrder) => "replay_attack_order",
-        Found::Replay(Rule::Target) => "replay_target",
-        Found::Replay(Rule::Minions) => "replay_minions",
-        Found::Replay(Rule::Stats) => "replay_stats",
-        Found::Replay(Rule::End) => "replay_end",
-        Found::Replay(Rule::NoDefender) => "replay_no_defender",
-        Found::NotModelled => "no_replay_not_modelled",
-        Found::Approximate => "no_replay_approximate",
-        Found::Exact => "no_replay_exact",
-    }
-}
-
-/// Misses counted by cause: cause -> (Solo, Duos).
-pub fn causes(misses: &[Miss], replays: &[Replayed]) -> BTreeMap<String, (u32, u32)> {
-    let mut out: BTreeMap<String, (u32, u32)> = BTreeMap::new();
-    for m in misses {
-        let slot = out.entry(cause(m, replays)).or_insert((0, 0));
-        if m.duos {
-            slot.1 += 1;
-        } else {
-            slot.0 += 1;
-        }
-    }
-    out
+    find(m, replays).id()
 }
 
 /// Misses counted by cause id: (id, Solo, Duos), most first, then by id.

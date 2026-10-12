@@ -20,7 +20,8 @@ export const MAX_GZIPPED = 64 * 1024;
 export const MAX_INFLATED = 1024 * 1024;
 
 export type LoadResult =
-  | { kind: "ok"; record: GameRecord }
+  /** `report`: the stored report as read, for the engine (T-549). */
+  | { kind: "ok"; record: GameRecord; report: unknown }
   /** Private or missing: the same answer for both. */
   | { kind: "unavailable" }
   /** The file is there but is not a game record this site can read. */
@@ -94,5 +95,5 @@ export async function loadGame(download: Download, ref: GameRef): Promise<LoadRe
     return { kind: "unreadable" };
   }
   const result = readRecord(value, ref.session, ref.index);
-  return result.ok ? { kind: "ok", record: result.record } : { kind: "unreadable" };
+  return result.ok ? { kind: "ok", record: result.record, report: (value as { report: unknown }).report } : { kind: "unreadable" };
 }

@@ -12,7 +12,8 @@ use crate::harness::{History, Run};
 use crate::harness_duos::{team_of, DuosCombat};
 use crate::harness_export::{Accuracy, ModeAccuracy};
 use crate::harness_logs::Replayed;
-use crate::harness_misses::{causes, Miss};
+use crate::harness_misses::Miss;
+use crate::harness_why::{render_why, Tally};
 use crate::score::{score, Prediction, Report};
 use crate::trials::{simulate_teams, Options, Verdict};
 use crate::CombatResult;
@@ -26,6 +27,8 @@ pub struct Summary<'a> {
     pub replays: &'a [Replayed],
     pub unreadable: usize,
     pub misses: &'a [Miss],
+    /// Every combat by why its result differed (D-127).
+    pub why: &'a Tally,
     pub options: &'a Options,
 }
 
@@ -167,14 +170,10 @@ pub fn render_summary(s: &Summary) -> String {
     render_replay_counts(&mut out, s.replays, s.unreadable);
     let _ = writeln!(
         out,
-        "\n## Misses by cause\n\nCombats whose most likely result was not the real one ({}).\n",
+        "\nMost likely result not the real one, on every board that fought: {} combats.",
         s.misses.len()
     );
-    let _ = writeln!(out, "| Cause | Solo | Duos |");
-    let _ = writeln!(out, "|---|---|---|");
-    for (cause, (solo, duos)) in causes(s.misses, s.replays) {
-        let _ = writeln!(out, "| {cause} | {solo} | {duos} |");
-    }
+    out.push_str(&render_why(s.why));
     out
 }
 

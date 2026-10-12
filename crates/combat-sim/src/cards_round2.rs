@@ -14,7 +14,7 @@ const ATTACK_DAMAGE: &str = "counts damage from attacks only, not from effects";
 const LEFT_MOST: &str =
     "which Deathrattle it triggers and when is not checked against the game yet";
 const GEM_CHAIN: &str = "Blood Gems played on it in combat are not passed on";
-const KNIGHTS: &str =
+pub(crate) const KNIGHTS: &str =
     "Eternal Knights grow with the Knights that died this game, which the log does not show";
 
 /// "Give your minions +3/+2. Repeat for your Dragons. Repeat for your

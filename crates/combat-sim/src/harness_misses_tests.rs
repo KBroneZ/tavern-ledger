@@ -1,5 +1,5 @@
 use super::*;
-use crate::combat::replay::{Difference, Replay};
+use crate::combat::replay::{Difference, Replay, Rule};
 
 fn miss(duos: bool, coverage: Coverage) -> Miss {
     Miss {
@@ -13,6 +13,7 @@ fn miss(duos: bool, coverage: Coverage) -> Miss {
         },
         result: CombatResult::Lost,
         coverage,
+        inputs: Vec::new(),
     }
 }
 
@@ -29,6 +30,7 @@ fn replayed(duos: bool, difference: Option<Rule>) -> Replayed {
                 attack: 3,
                 rule,
                 detail: String::new(),
+                card: None,
             }),
         },
     }
@@ -101,4 +103,41 @@ fn causes_by_id_count_per_mode_most_first_then_by_id() {
     let rows = causes_by_id(&misses, &[replayed(true, None)]);
     // Both Duos misses are the same combat here, so both read the replay.
     assert_eq!(rows, vec![("chance", 0, 2), ("no_replay_exact", 1, 0)]);
+}
+
+#[test]
+fn a_replay_that_parts_names_what_was_not_seen_then_the_cards_then_the_rule() {
+    let rough = Coverage {
+        not_modelled: Vec::new(),
+        approximate: vec![("ZZ_ROUGH".into(), "a gap")],
+    };
+    let parts = [replayed(false, Some(Rule::Stats))];
+    let mut m = miss(false, rough);
+    assert_eq!(cause_id(&m, &parts), "approximate_card");
+    m.inputs = vec![NotSeen {
+        what: crate::why::Unseen::BloodGems,
+        card: "ZZ_GEMS".into(),
+    }];
+    assert_eq!(cause_id(&m, &parts), "missing_inputs");
+    assert_eq!(
+        cause_id(&miss(false, Coverage::default()), &parts),
+        "replay_stats"
+    );
+    // To the end it is chance whatever the cards.
+    assert_eq!(cause_id(&m, &[replayed(false, None)]), "chance");
+}
+
+#[test]
+fn an_unnamed_dark_gift_counts_as_not_seen_in_the_export_too() {
+    let mut m = miss(true, Coverage::default());
+    m.inputs = vec![NotSeen {
+        what: crate::why::Unseen::Gift,
+        card: "ZZ_GIFTED".into(),
+    }];
+    assert_eq!(
+        cause_id(&m, &[replayed(true, Some(Rule::Stats))]),
+        "missing_inputs"
+    );
+    // With no replay, the cards are approximate (as the app says).
+    assert_eq!(cause_id(&m, &[]), "no_replay_approximate");
 }

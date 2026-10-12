@@ -23,7 +23,7 @@ use crate::score::{score, Prediction, Report};
 use crate::trials::{simulate, simulate_teams, Odds, Options, Verdict};
 
 /// Version of the JSON's shape; a reader checks it before reading.
-pub const FORMAT: u32 = 2;
+pub const FORMAT: u32 = 3;
 
 /// The cards that summon a minion from the hand: approximate since round 5
 /// (D-097), counted apart.

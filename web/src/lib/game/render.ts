@@ -9,6 +9,7 @@ import { cls, h, type VNode } from "../view/node.ts";
 import { fold, picture, placeBadge, sourceMark, statTile, type TileProps, unknownValue } from "../view/pieces.ts";
 import { turnChart } from "./chart.ts";
 import { replaySection } from "./replayView.ts";
+import { whyShell } from "./whyView.ts";
 import { giftList, giftName } from "./gifts.ts";
 import type { Minion, ShopTurn } from "./report.ts";
 import type { BoardView, ChoiceView, GameView, HeroRef, OpponentView, SeatView, TurnRow } from "./shape.ts";
@@ -365,6 +366,7 @@ export function renderGame(view: GameView, date: string | null): VNode[] {
     summaryBar(view, date),
     turnsSection(view),
     replaySection(view),
+    whyShell(),
     boardsSection(view),
     opponentsSection(view),
     choicesSection(view),

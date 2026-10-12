@@ -20,7 +20,7 @@ from pathlib import Path
 
 CARD_ID = re.compile(r"^[A-Za-z0-9_]{1,64}$")
 FORMAT = 1
-EXPORT_FORMAT = 2  # the accuracy export's own format
+EXPORT_FORMAT = 3  # the accuracy export's own format
 
 
 def load_cards(path):

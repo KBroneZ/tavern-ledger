@@ -18,7 +18,7 @@
   ],
   "date": "2026-01-01",
   "engine_version": "0.4.0",
-  "format": 2,
+  "format": 3,
   "misses": {
     "causes": [
       { "cause": "chance", "duos": 4, "share": 0.5, "solo": 0 },

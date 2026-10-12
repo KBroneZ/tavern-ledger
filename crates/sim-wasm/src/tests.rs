@@ -390,3 +390,62 @@ fn the_c_abi_round_trip_gives_the_same_answer() {
     let len = unsafe { sim_run(ptr, 0) };
     assert!(len > 0);
 }
+
+// ---------- Why each combat went as it did (T-549) ----------
+
+fn saved_minion(id: &str, atk: i64, health: i64, position: i64) -> Value {
+    json!({ "card_id": id, "golden": false, "atk": atk, "health": health,
+            "position": position, "keywords": [] })
+}
+
+fn explain_request(facts_of_plain: Value) -> Value {
+    let entries = json!([
+        { "side": "own", "player_id": 1, "board": [saved_minion(PLAIN, 3, 3, 1)] },
+        { "side": "opponent", "player_id": 2, "board": [saved_minion(PLAIN, 1, 1, 1)] },
+    ]);
+    let report = json!({
+        "game_type": "GT_BATTLEGROUNDS",
+        "rounds": [
+            { "number": 2, "result": "won", "entries": entries },
+            { "number": 3, "result": "lost", "entries": entries },
+        ],
+    });
+    json!({ "explain": { "report": report, "facts": { PLAIN: facts_of_plain } } })
+}
+
+#[test]
+fn a_saved_game_is_explained_combat_by_combat() {
+    let a = run(&explain_request(facts()));
+    assert_eq!(a["status"], "explained", "{a}");
+    assert_eq!(a["engine"], combat_sim::VERSION);
+    let combats = a["combats"].as_array().expect("a list");
+    assert_eq!(combats.len(), 2);
+    assert_eq!(combats[0]["cause"]["id"], "matched");
+    assert_eq!(combats[0]["odds"]["won"], 1.0);
+    // The 3/3 always wins; the game says it lost and saved no replay.
+    assert_eq!(combats[1]["cause"]["id"], "no_replay_exact");
+    assert_eq!(combats[1]["cause"]["replay"], "not_saved");
+}
+
+#[test]
+fn a_card_without_facts_gives_no_odds_by_name() {
+    let a = run(&explain_request(Value::Null));
+    assert_eq!(a["combats"][0]["no_odds"], "no_card_data");
+    assert_eq!(a["combats"][0]["cards"], json!([PLAIN]));
+}
+
+#[test]
+fn a_bad_explain_request_is_refused_with_a_reason() {
+    let bad_facts = json!({ "explain": { "report": {}, "facts": { "../x": facts() } } });
+    assert_eq!(run(&bad_facts)["status"], "bad_input");
+    let wrong_facts = json!({ "explain": { "report": {}, "facts": { PLAIN: { "tier": 99 } } } });
+    assert_eq!(run(&wrong_facts)["status"], "bad_input");
+    let no_report = json!({ "explain": { "report": [], "facts": {} } });
+    assert_eq!(run(&no_report)["status"], "bad_input");
+    let huge = format!(
+        "{{\"explain\": {{\"report\": {{\"pad\": \"{}\"}}, \"facts\": {{}}}}}}",
+        "x".repeat(explain::MAX_EXPLAIN_BYTES)
+    );
+    let a: Value = serde_json::from_str(&run_json(&huge)).unwrap();
+    assert_eq!(a["status"], "bad_input");
+}
