@@ -12,6 +12,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::fmt::Write as _;
 use std::time::Instant;
 
+use bg_parser::report::MAX_GAME_VALUE;
 use serde_json::Value;
 
 use crate::cards::{self, Fidelity};
@@ -194,7 +195,7 @@ fn saved_values(v: Option<&Value>) -> GameValues {
     let n = |name: &str| {
         v.and_then(|v| v.get(name))
             .and_then(Value::as_i64)
-            .filter(|n| (1..=99_999).contains(n))
+            .filter(|n| (1..=MAX_GAME_VALUE).contains(n))
             .map_or(0, |n| n as i32)
     };
     GameValues {
