@@ -3,6 +3,7 @@ import "../styles/global.css";
 import { contentSecurityPolicy, readConfig, WASM_PAGES } from "../lib/config.ts";
 import { basePath, href, lang, LANGS, pathIn, type Lang } from "../lib/i18n.ts";
 import { st } from "../lib/site/strings.ts";
+import PageBackdrop, { type Scene } from "../components/PageBackdrop.astro";
 
 interface Props {
   title: string;
@@ -13,9 +14,11 @@ interface Props {
   layout?: "home" | "page" | "reading";
   /** False on a page built in English only (the style page): no switch, no alternates. */
   translated?: boolean;
+  /** The page's own painting behind it (T-546); none on the home page, which has its own. */
+  backdrop?: Scene;
 }
 
-const { title, description, noindex = false, layout = "page", translated = true } = Astro.props;
+const { title, description, noindex = false, layout = "page", translated = true, backdrop } = Astro.props;
 // Fails the build if only one setting is given or the key is not the public
 // one; null means accounts are closed (no backend).
 const config = readConfig(import.meta.env);
@@ -82,6 +85,7 @@ const socialCard = new URL("/social-card.png", Astro.site).href;
     <title>{title} · Tavern Ledger</title>
   </head>
   <body>
+    {backdrop && <PageBackdrop scene={backdrop} />}
     <a class="skip" href="#main">{st("layout.skip")}</a>
     <header class="masthead">
       <a class="brand" href={href("/")}>

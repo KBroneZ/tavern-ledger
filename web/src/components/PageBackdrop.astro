@@ -1,0 +1,37 @@
+---
+// Every page's own painting (T-546), in the home page's painted world
+// (D-105): held still behind the page under a shade that keeps the reading
+// centre dark. Phones get a portrait crop of the painting's middle; wider
+// screens the whole painting. Images by tools/build_page_art.py; low fetch
+// priority so the words come first. Decorative only: hidden from screen
+// readers, and hidden in Windows high contrast (styles/backdrop.css).
+import "../styles/backdrop.css";
+
+export type Scene = "duel" | "hall" | "gallery" | "archive" | "study";
+
+interface Props {
+  scene: Scene;
+}
+
+const { scene } = Astro.props;
+const art = `/art/pages/${scene}`;
+const wide = (ext: string) => `${art}-1080.${ext} 1080w, ${art}-1344.${ext} 1344w, ${art}-1920.${ext} 1920w`;
+---
+
+<div class="page-backdrop" data-scene={scene} aria-hidden="true">
+  <picture>
+    <source type="image/avif" media="(max-width: 700px) and (orientation: portrait)" srcset={`${art}-phone.avif`} />
+    <source type="image/webp" media="(max-width: 700px) and (orientation: portrait)" srcset={`${art}-phone.webp`} />
+    <source type="image/avif" srcset={wide("avif")} sizes="100vw" />
+    <img
+      src={`${art}-1344.webp`}
+      srcset={wide("webp")}
+      sizes="100vw"
+      width="1344"
+      height="750"
+      alt=""
+      decoding="async"
+      fetchpriority="low"
+    />
+  </picture>
+</div>

@@ -1,6 +1,6 @@
 ---
-// The combat simulator's frame (T-606; the duel table, T-526, D-112): the
-// painted arena behind the page, the gold heading and Simple/Advanced
+// The combat simulator's frame (T-606; the duel table, T-526, D-112; its
+// painting is the layout's, T-546): the gold heading and Simple/Advanced
 // switch, then the main flow in three numbered steps: (1) pick one of your
 // games and (2) pick a fight, on the parchment beside the table; (3) the
 // odds, on a plaque in the middle of the table, between the opponent's side
@@ -16,24 +16,6 @@ import DataScript from "../data/DataScript.astro";
 import { sm } from "../../lib/sim/strings.ts";
 import { href } from "../../lib/i18n.ts";
 ---
-
-<div class="sim-backdrop" aria-hidden="true">
-  <picture>
-    <source type="image/avif" media="(max-width: 700px)" srcset="/art/sim/arena-phone.avif" />
-    <source type="image/webp" media="(max-width: 700px)" srcset="/art/sim/arena-phone.webp" />
-    <source type="image/avif" srcset="/art/sim/arena-1376.avif 1376w, /art/sim/arena-1920.avif 1920w" sizes="100vw" />
-    <img
-      src="/art/sim/arena-1376.webp"
-      srcset="/art/sim/arena-1376.webp 1376w, /art/sim/arena-1920.webp 1920w"
-      sizes="100vw"
-      width="1376"
-      height="768"
-      alt=""
-      decoding="async"
-      fetchpriority="low"
-    />
-  </picture>
-</div>
 
 <article class="sim" aria-labelledby="sim-title">
   <header class="sim-head">
