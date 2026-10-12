@@ -191,6 +191,16 @@ struct Live {
     /// is a summon only if it is one of them (the shop's minions come back
     /// as the combat ends), or a Duos board is coming in on its side.
     created: BTreeSet<i64>,
+    /// The game has announced the combat's action step (`STEP` or
+    /// `NEXT_STEP` `MAIN_ACTION`): both boards are set up. Nothing before
+    /// it starts the combat; a shop effect can fire while the shop board is
+    /// still in play (T-560).
+    action: bool,
+    /// The game has announced a step this turn. A log without step tags
+    /// (a trimmed fixture) takes the opponent's hero being set instead.
+    steps: bool,
+    /// The opponent's hero was set this turn.
+    opponent_set: bool,
     run: Option<Run>,
 }
 
@@ -222,6 +232,9 @@ impl ReplayTracker {
             self.live = Some(Live {
                 round: turn / 2,
                 created: BTreeSet::new(),
+                action: false,
+                steps: false,
+                opponent_set: false,
                 run: None,
             });
         }
@@ -258,12 +271,14 @@ impl ReplayTracker {
         }
     }
 
-    /// A block starts: an attack, or a trigger the log may name.
+    /// A block starts: an attack, or a trigger the log may name. `top` is
+    /// a block nested in no other.
     pub fn on_block(
         &mut self,
         kind: &str,
         entity: Option<i64>,
         keyword: Option<&str>,
+        top: bool,
         board: &Board,
         sides: Sides,
     ) {
@@ -273,9 +288,14 @@ impl ReplayTracker {
         let Some(e) = entity.and_then(|id| board.get(id)) else {
             return;
         };
+        // A trigger waits for the set-up; an attack is always the combat's,
+        // so a log that never announces the action step still has a replay.
+        if kind != "ATTACK" && !live.ready() {
+            return;
+        }
         match kind {
             "ATTACK" => live.attack(e, board, sides),
-            "TRIGGER" => live.trigger(e, keyword, board, sides),
+            "TRIGGER" => live.trigger(e, keyword, top, board, sides),
             _ => {}
         }
     }
@@ -292,6 +312,7 @@ impl ReplayTracker {
         let Some(live) = self.live.as_mut() else {
             return;
         };
+        live.on_setup_tag(id, tag, board, sides);
         if tag == "ZONE" || tag == "CONTROLLER" {
             live.summon(id, board, sides);
         }
@@ -352,6 +373,22 @@ impl ReplayTracker {
 }
 
 impl Live {
+    /// Both boards are set up: the combat can start.
+    fn ready(&self) -> bool {
+        self.action || (!self.steps && self.opponent_set)
+    }
+
+    /// Notes the tags that tell the combat is set up.
+    fn on_setup_tag(&mut self, id: i64, tag: &str, board: &Board, sides: Sides) {
+        let Some(e) = board.get(id) else { return };
+        if (tag == "STEP" || tag == "NEXT_STEP") && board.game().is_some_and(|g| g.id == id) {
+            self.steps = true;
+            self.action |= e.is(tag, "MAIN_ACTION");
+        } else if tag == "HERO_ENTITY" && e.is("CARDTYPE", "PLAYER") {
+            self.opponent_set |= Some(e.int("PLAYER_ID")) == sides.opponent;
+        }
+    }
+
     /// The run, started now with both boards as they are.
     fn run(&mut self, board: &Board, sides: Sides) -> &mut Run {
         self.run.get_or_insert_with(|| {
@@ -416,7 +453,20 @@ impl Live {
         }
     }
 
-    fn trigger(&mut self, e: &Entity, keyword: Option<&str>, board: &Board, sides: Sides) {
+    fn trigger(
+        &mut self,
+        e: &Entity,
+        keyword: Option<&str>,
+        top: bool,
+        board: &Board,
+        sides: Sides,
+    ) {
+        // The game sets both boards up in blocks of its own, and a trinket
+        // or minion can fire inside them before every minion is placed: only
+        // a trigger of its own, or an attack, starts the combat.
+        if self.run.is_none() && !top {
+            return;
+        }
         let Some(side) = sides.of(e) else { return };
         let Some(card_id) = e.card_id.clone() else {
             return;

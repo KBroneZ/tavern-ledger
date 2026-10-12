@@ -80,8 +80,18 @@ fn end() -> String {
 }
 
 /// A Solo game, local player 2 against the shop's player 10, up to its
-/// first combat's first line.
+/// first combat's first line, with the combat set up.
 fn start() -> Vec<String> {
+    let mut l = combat_turn();
+    l.push(tag("20", "ZONE", "SETASIDE"));
+    l.extend(hero(44, "SYN_HERO_B", 10, 0, "PLAY"));
+    l.push(tag("3", "HERO_ENTITY", "44"));
+    l.push(tag("GameEntity", "NEXT_STEP", "MAIN_ACTION"));
+    l
+}
+
+/// The same game up to the first combat turn, the shop board still in play.
+fn combat_turn() -> Vec<String> {
     let mut l = vec![
         line(0, "CREATE_GAME"),
         line(1, "GameEntity EntityID=1"),
@@ -110,9 +120,6 @@ fn start() -> Vec<String> {
     l.extend(minion(20, "SYN_SHOP", 2, 1, (1, 1), &[]));
     l.push(tag("2", "RESOURCES", "3"));
     l.push(tag("GameEntity", "TURN", "2"));
-    l.push(tag("20", "ZONE", "SETASIDE"));
-    l.extend(hero(44, "SYN_HERO_B", 10, 0, "PLAY"));
-    l.push(tag("3", "HERO_ENTITY", "44"));
     l
 }
 
@@ -550,4 +557,232 @@ fn a_combat_past_the_event_bound_stops_and_says_so() {
             defender: Some(1)
         }
     );
+}
+
+/// A block nested `depth` levels deep, as the log indents it.
+fn nested_block(depth: usize, kind: &str, entity: i64, keyword: &str) -> String {
+    line(
+        depth,
+        &format!(
+            "BLOCK_START BlockType={kind} Entity={entity} EffectCardId=System.Collections.Generic.List`1[System.String] EffectIndex=0 Target=0 SubOption=-1 TriggerKeyword={keyword}"
+        ),
+    )
+}
+
+#[test]
+fn a_trinket_firing_while_the_game_sets_the_boards_up_does_not_start_the_combat() {
+    let mut l = start();
+    l.extend(minion(30, "SYN_OWN", 2, 1, (2, 2), &[]));
+    // The game sets the opponent's board up in a block of the player
+    // entity; their trinket fires inside it before their minions are placed.
+    l.push(block("TRIGGER", 2, "TAG_NOT_SET"));
+    l.extend(entity(
+        70,
+        "SYN_TRINKET",
+        &[
+            ("CARDTYPE", "BATTLEGROUND_TRINKET".to_string()),
+            ("CONTROLLER", "10".to_string()),
+            ("ZONE", "PLAY".to_string()),
+        ],
+    ));
+    l.push(nested_block(1, "TRIGGER", 70, "TAG_NOT_SET"));
+    l.push(line(1, "BLOCK_END"));
+    l.extend(minion(40, "SYN_FOE_A", 10, 1, (3, 3), &[]));
+    l.extend(minion(41, "SYN_FOE_B", 10, 2, (1, 1), &[]));
+    l.push(end());
+    l.push(block("ATTACK", 30, ""));
+    l.push(tag("GameEntity", "PROPOSED_DEFENDER", "41"));
+    l.push(tag("41", "DAMAGE", "2"));
+    l.push(end());
+    let r = finished(l);
+    let replay = replay(&r, 1);
+    assert_eq!(replay.start, 3, "both whole boards as the combat starts");
+    let cards: Vec<_> = replay
+        .minions
+        .iter()
+        .map(|m| (m.side, m.card_id.as_deref().unwrap()))
+        .collect();
+    assert_eq!(
+        cards,
+        [
+            (Side::Own, "SYN_OWN"),
+            (Side::Opponent, "SYN_FOE_A"),
+            (Side::Opponent, "SYN_FOE_B")
+        ]
+    );
+    assert!(
+        !replay
+            .events
+            .iter()
+            .any(|e| matches!(e, CombatEvent::Summon { .. })),
+        "the board set up is not a summon"
+    );
+    assert_eq!(
+        replay.events[0],
+        CombatEvent::Attack {
+            attacker: 0,
+            defender: Some(2)
+        }
+    );
+}
+
+#[test]
+fn a_shop_effect_before_the_combat_is_set_up_does_not_start_it() {
+    let mut l = combat_turn();
+    l.extend(minion(25, "SYN_SHOP_B", 2, 2, (9, 9), &[]));
+    // An end-of-turn effect of the shop board, before the game announces
+    // the combat's action step.
+    l.push(block("TRIGGER", 25, "1724"));
+    l.push(end());
+    l.push(tag("20", "ZONE", "SETASIDE"));
+    l.push(tag("25", "ZONE", "SETASIDE"));
+    l.extend(hero(44, "SYN_HERO_B", 10, 0, "PLAY"));
+    l.push(tag("3", "HERO_ENTITY", "44"));
+    l.extend(minion(30, "SYN_COPY", 2, 1, (9, 9), &[]));
+    l.extend(minion(40, "SYN_FOE_A", 10, 1, (1, 1), &[]));
+    l.push(tag("GameEntity", "NEXT_STEP", "MAIN_ACTION"));
+    l.push(block("ATTACK", 30, ""));
+    l.push(tag("GameEntity", "PROPOSED_DEFENDER", "40"));
+    l.push(tag("40", "DAMAGE", "9"));
+    l.push(end());
+    let r = finished(l);
+    let replay = replay(&r, 1);
+    let cards: Vec<_> = replay
+        .minions
+        .iter()
+        .map(|m| m.card_id.as_deref().unwrap())
+        .collect();
+    assert_eq!(
+        cards,
+        ["SYN_COPY", "SYN_FOE_A"],
+        "the combat's boards, not the shop's"
+    );
+    assert_eq!(replay.start, 2);
+    assert_eq!(
+        replay.events[0],
+        CombatEvent::Attack {
+            attacker: 0,
+            defender: Some(1)
+        }
+    );
+}
+
+#[test]
+fn a_combat_whose_action_step_is_never_announced_still_starts_at_its_first_attack() {
+    let mut l = combat_turn();
+    // The log announces a step, but not the action step (a log cut and
+    // resumed, a reconnect): the triggers wait, the first attack starts it.
+    l.push(tag("GameEntity", "NEXT_STEP", "MAIN_READY"));
+    l.push(tag("20", "ZONE", "SETASIDE"));
+    l.extend(hero(44, "SYN_HERO_B", 10, 0, "PLAY"));
+    l.push(tag("3", "HERO_ENTITY", "44"));
+    l.extend(minion(30, "SYN_OWN", 2, 1, (2, 2), &[]));
+    l.extend(minion(40, "SYN_FOE", 10, 1, (1, 1), &[]));
+    l.push(block("TRIGGER", 30, "TAG_NOT_SET"));
+    l.push(end());
+    l.push(block("ATTACK", 30, ""));
+    l.push(tag("GameEntity", "PROPOSED_DEFENDER", "40"));
+    l.push(tag("40", "DAMAGE", "2"));
+    l.push(end());
+    let r = finished(l);
+    let replay = replay(&r, 1);
+    assert_eq!(replay.start, 2);
+    assert_eq!(
+        replay.events[0],
+        CombatEvent::Attack {
+            attacker: 0,
+            defender: Some(1)
+        }
+    );
+}
+
+#[test]
+fn a_log_without_step_tags_waits_for_the_opponents_hero() {
+    // A trimmed fixture keeps no step tags: the shop effect before the
+    // opponent's hero is set is the shop's, the trigger after it the combat's.
+    let mut l = combat_turn();
+    l.extend(minion(25, "SYN_SHOP_B", 2, 2, (9, 9), &[]));
+    l.push(block("TRIGGER", 25, "1724"));
+    l.push(end());
+    l.push(tag("20", "ZONE", "SETASIDE"));
+    l.push(tag("25", "ZONE", "SETASIDE"));
+    l.extend(hero(44, "SYN_HERO_B", 10, 0, "PLAY"));
+    l.push(tag("3", "HERO_ENTITY", "44"));
+    l.extend(minion(30, "SYN_COPY", 2, 1, (9, 9), &[]));
+    l.extend(minion(40, "SYN_FOE_A", 10, 1, (1, 1), &[]));
+    l.push(block("TRIGGER", 30, "TAG_NOT_SET"));
+    l.push(end());
+    l.push(block("ATTACK", 30, ""));
+    l.push(end());
+    let r = finished(l);
+    let replay = replay(&r, 1);
+    let cards: Vec<_> = replay
+        .minions
+        .iter()
+        .map(|m| m.card_id.as_deref().unwrap())
+        .collect();
+    assert_eq!(cards, ["SYN_COPY", "SYN_FOE_A"]);
+    assert!(matches!(
+        replay.events[0],
+        CombatEvent::Trigger {
+            trigger: TriggerKind::StartOfCombat,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn once_the_combat_has_started_a_nested_trigger_is_kept() {
+    let mut l = start();
+    l.extend(minion(30, "SYN_OWN", 2, 1, (2, 2), &[]));
+    l.extend(minion(40, "SYN_FOE", 10, 1, (1, 3), &["DEATHRATTLE"]));
+    l.push(block("ATTACK", 30, ""));
+    l.push(tag("GameEntity", "PROPOSED_DEFENDER", "40"));
+    l.push(tag("40", "DAMAGE", "3"));
+    l.push(nested_block(1, "TRIGGER", 40, "DEATHRATTLE"));
+    l.push(line(1, "BLOCK_END"));
+    l.push(end());
+    let r = finished(l);
+    let replay = replay(&r, 1);
+    assert!(replay.events.iter().any(|e| matches!(
+        e,
+        CombatEvent::Trigger {
+            trigger: TriggerKind::Deathrattle,
+            source: Some(1),
+            ..
+        }
+    )));
+}
+
+#[test]
+fn each_combat_turn_waits_for_its_own_action_step() {
+    let mut l = won_combat();
+    l.push(tag("GameEntity", "TURN", "3"));
+    l.push(tag("GameEntity", "TURN", "4"));
+    // Round 2: a shop effect before this turn's action step is not the
+    // combat's, even though round 1 announced its own.
+    l.extend(minion(26, "SYN_SHOP_C", 2, 1, (4, 4), &[]));
+    l.push(block("TRIGGER", 26, "1724"));
+    l.push(end());
+    l.push(tag("26", "ZONE", "SETASIDE"));
+    l.extend(hero(45, "SYN_HERO_C", 10, 0, "PLAY"));
+    l.push(tag("3", "HERO_ENTITY", "45"));
+    l.extend(minion(60, "SYN_R2_OWN", 2, 1, (3, 3), &[]));
+    l.extend(minion(70, "SYN_R2_FOE", 10, 1, (1, 1), &[]));
+    l.push(tag("GameEntity", "NEXT_STEP", "MAIN_ACTION"));
+    l.push(block("ATTACK", 60, ""));
+    l.push(tag("GameEntity", "PROPOSED_DEFENDER", "70"));
+    l.push(tag("70", "DAMAGE", "3"));
+    l.push(end());
+    l.push(tag("GameEntity", "TURN", "5"));
+    l.push(tag("GameEntity", "STATE", "COMPLETE"));
+    let r = read(&l);
+    let replay = replay(&r, 2);
+    let cards: Vec<_> = replay
+        .minions
+        .iter()
+        .map(|m| m.card_id.as_deref().unwrap())
+        .collect();
+    assert!(!cards.contains(&"SYN_SHOP_C"), "{cards:?}");
+    assert!(matches!(replay.events[0], CombatEvent::Attack { .. }));
 }
