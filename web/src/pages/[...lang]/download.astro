@@ -1,0 +1,117 @@
+---
+// Download (/download/, T-558, D-126): the Windows installer from the GitHub
+// pre-release, with the four small steps to install it and the extras folded
+// away. Public and indexable, static, no script: the page works the same
+// with accounts open or closed. The release facts (version, file, size, hash,
+// day) come from lib/site/release.ts, the same source as the home page's
+// button; the words are in lib/download/strings.ts.
+import Base from "../../layouts/Base.astro";
+import Button from "../../components/ui/Button.astro";
+import "../../styles/download.css";
+import { readConfig } from "../../lib/config.ts";
+import { dl } from "../../lib/download/strings.ts";
+import { dateFormat, href, langPaths, numberFormat, setLang } from "../../lib/i18n.ts";
+import { installerUrl, RELEASE, releasesUrl, repoUrl, sizeMb } from "../../lib/site/release.ts";
+import { st } from "../../lib/site/strings.ts";
+
+export const getStaticPaths = langPaths;
+// Every string below is drawn in the page's language (T-508).
+setLang(Astro.props.lang);
+
+const accountsOpen = readConfig(import.meta.env) !== null;
+const published = dateFormat({ day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }, "en-GB").format(
+  new Date(`${RELEASE.date}T00:00:00Z`),
+);
+const facts = [
+  { label: dl("fact.version"), value: dl("fact.version.value", { version: RELEASE.version }) },
+  { label: dl("fact.windows"), value: dl("fact.windows.value") },
+  {
+    label: dl("fact.size"),
+    value: dl("fact.size.value", { size: numberFormat({ minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(sizeMb(RELEASE.bytes)) }),
+  },
+  { label: dl("fact.date"), value: published },
+];
+const steps = ([1, 2, 3, 4] as const).map((n) => ({ title: dl(`step${n}.title`), text: dl(`step${n}.text`) }));
+const reads = (["reads.1", "reads.2", "reads.3", "reads.4"] as const).map((key) => dl(key));
+---
+
+<Base backdrop="hall" title={st("meta.download.title")} description={st("meta.download.description")}>
+  <div class="dl">
+    <header class="dl-head">
+      <p class="kicker">{dl("page.kicker")}</p>
+      <h1>{dl("page.title")}</h1>
+      <p class="lead">{dl("page.lead")}</p>
+    </header>
+
+    <section class="panel dl-get" aria-labelledby="dl-get-title">
+      <h2 id="dl-get-title" class="visually-hidden">{dl("get.title")}</h2>
+      <dl class="dl-facts">
+        {
+          facts.map((fact) => (
+            <div>
+              <dt>{fact.label}</dt>
+              <dd>{fact.value}</dd>
+            </div>
+          ))
+        }
+      </dl>
+      <div class="dl-actions">
+        <Button kind="key" href={installerUrl()}>{dl("action.download")}</Button>
+        <Button kind="common" href={releasesUrl()}>{dl("action.github")}</Button>
+      </div>
+      <p class="meta mono dl-file">{dl("action.download.file", { file: RELEASE.file })}</p>
+      <p class="dl-note"><strong>{dl("beta.title")}.</strong> {dl("beta.body")}</p>
+    </section>
+
+    <section class="panel" aria-labelledby="dl-steps-title">
+      <h2 id="dl-steps-title">{dl("steps.title")}</h2>
+      <ol class="dl-steps" role="list">
+        {
+          steps.map((step, i) => (
+            <li>
+              <h3>{step.title}</h3>
+              <p>{step.text}</p>
+              {i === 3 && (
+                <p class="meta">{accountsOpen ? dl("step4.account") : dl("step4.closed")}</p>
+              )}
+            </li>
+          ))
+        }
+      </ol>
+    </section>
+
+    <section class="panel dl-extras" aria-label={dl("check.title")}>
+      <details class="dl-more">
+        <summary>{dl("check.title")}</summary>
+        <div class="dl-more-body">
+          <p>{dl("check.body")}</p>
+          <p class="mono dl-code">{RELEASE.sha256}</p>
+          <p class="mono dl-code">{dl("check.command", { file: RELEASE.file })}</p>
+        </div>
+      </details>
+      <details class="dl-more">
+        <summary>{dl("reads.title")}</summary>
+        <div class="dl-more-body">
+          <ul role="list">
+            {reads.map((line) => <li>{line}</li>)}
+          </ul>
+          <p>{dl("reads.data")} <a href={href("/privacy/")}>{dl("reads.privacy")}</a>.</p>
+        </div>
+      </details>
+      <details class="dl-more">
+        <summary>{dl("update.title")}</summary>
+        <div class="dl-more-body">
+          <p>{dl("update.body")}</p>
+        </div>
+      </details>
+      <details class="dl-more">
+        <summary>{dl("remove.title")}</summary>
+        <div class="dl-more-body">
+          <p>{dl("remove.body")}</p>
+        </div>
+      </details>
+    </section>
+
+    <p class="meta dl-source">{dl("source.body")} <a href={repoUrl()}>{dl("source.link")}</a>.</p>
+  </div>
+</Base>

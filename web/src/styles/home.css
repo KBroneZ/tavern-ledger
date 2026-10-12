@@ -225,7 +225,7 @@ body {
   gap: 4px;
 }
 
-/* "Not out yet" under the unavailable Download button. */
+/* "Beta for Windows" under the Download button. */
 .key-note {
   padding: 2px 10px;
   border-radius: 999px;

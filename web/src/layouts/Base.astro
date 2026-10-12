@@ -102,6 +102,7 @@ const socialCard = new URL("/social-card.png", Astro.site).href;
           </button>
         )}
         <a href={href("/")} aria-current={current(base === "/")}>{st("layout.home")}</a>
+        <a href={href("/download/")} aria-current={current(base.startsWith("/download"))}>{st("layout.download")}</a>
         <a href={href("/privacy/")} aria-current={current(base.startsWith("/privacy"))}>{st("layout.privacy")}</a>
         {config && (
           <>

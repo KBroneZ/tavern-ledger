@@ -1,0 +1,245 @@
+/* The download page (T-558): the installer's facts and button on one wood
+   panel, the four steps, and the extras folded behind native <details>.
+   Loaded by download.astro only; the panel, buttons and tokens are in
+   ui.css, buttons.css and global.css. */
+
+.dl {
+  display: grid;
+  gap: var(--group);
+}
+
+.dl-head {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+/* ---------- The installer ---------- */
+
+.dl-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+  gap: 14px 22px;
+  margin: 0;
+}
+
+/* Two by two on a phone: the four facts, not four rows. */
+@media (max-width: 30rem) {
+  .dl-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.dl-facts > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dl-facts dt {
+  color: var(--label);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.dl-facts dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.dl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+  padding-block: 4px;
+}
+
+/* On the narrowest phones the panel is narrower than the gold stone's
+   smallest size and the wood's one-line label: shrink the stone, wrap the label. */
+.dl-get {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dl-actions .tb {
+  max-width: 100%;
+}
+
+.dl-actions .tb-common {
+  white-space: normal;
+  padding-block: 10px;
+}
+
+.dl-actions .tb-common .tb-label {
+  line-height: 1.2;
+}
+
+.dl-file {
+  overflow-wrap: anywhere;
+}
+
+/* The beta and unsigned notice: an amber edge, not the red of an error. */
+.dl-note {
+  padding: 12px 16px;
+  border-radius: var(--r-small);
+  background: rgb(0 0 0 / 0.24);
+  box-shadow: inset 3px 0 0 var(--bronze-hi);
+}
+
+.dl-note strong {
+  color: var(--gold);
+}
+
+/* ---------- The steps ---------- */
+
+.dl-steps {
+  display: grid;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.dl-steps > li {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding-inline-start: 52px;
+  counter-increment: step;
+}
+
+/* A bronze coin with the step's number. */
+.dl-steps > li::before {
+  content: counter(step);
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--bronze-hi), var(--bronze) 55%, var(--bronze-lo));
+  box-shadow:
+    inset 0 1px 0 rgb(255 240 210 / 0.5),
+    0 2px 4px rgb(0 0 0 / 0.5);
+  color: var(--amber-ink);
+  font: 800 1.0625rem / 1 var(--display);
+}
+
+.dl-steps h3 {
+  margin: 0;
+  color: var(--parchment);
+  font-size: 1.1875rem;
+}
+
+.dl-steps p {
+  max-width: 62ch;
+}
+
+/* ---------- The extras ---------- */
+
+.dl-extras {
+  gap: 0;
+  padding-block: 8px;
+}
+
+.dl-more + .dl-more {
+  border-top: 1px solid var(--line-soft);
+}
+
+.dl-more > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding-block: 4px;
+  color: var(--amber-hi);
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.dl-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.dl-more > summary::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentcolor;
+  border-bottom: 2px solid currentcolor;
+  transform: rotate(-45deg);
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.dl-more[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.dl-more > summary:hover {
+  color: var(--gold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dl-more-body {
+  display: grid;
+  gap: 10px;
+  padding: 2px 0 16px 18px;
+  color: var(--dim);
+  font-size: 0.975rem;
+  line-height: 1.55;
+}
+
+.dl-more-body p,
+.dl-more-body li {
+  max-width: 64ch;
+}
+
+.dl-more-body ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-inline-start: 1.1em;
+  list-style: disc;
+}
+
+/* The hash and the command: a dark well, wrapped rather than scrolled sideways. */
+.dl-code {
+  padding: 10px 12px;
+  border-radius: var(--r-small);
+  background: rgb(0 0 0 / 0.35);
+  box-shadow: inset 0 0 0 1px var(--line-soft);
+  color: var(--text);
+  user-select: all;
+}
+
+.dl-source {
+  max-width: 62ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dl-more > summary::before {
+    transition: none;
+  }
+}
+
+/* Windows high contrast: the coins and wells keep a visible edge. */
+@media (forced-colors: active) {
+  .dl-steps > li::before {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .dl-code {
+    border: 1px solid CanvasText;
+  }
+}
