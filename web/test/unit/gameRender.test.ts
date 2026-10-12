@@ -51,7 +51,7 @@ test("render: Simple has the summary and the turns; the rest is Advanced only", 
   const sections = nodes.filter((n) => n.tag === "section");
   const simple = sections.filter((n) => !attr(n, "class")?.split(" ").includes("adv")).map((n) => attr(n, "aria-labelledby"));
   const adv = sections.filter((n) => attr(n, "class")?.split(" ").includes("adv")).map((n) => attr(n, "aria-labelledby"));
-  assert.deepEqual(simple, ["gv-turns-title", "gv-replays-title"]);
+  assert.deepEqual(simple, ["gv-turns-title", "gv-replays-title", "gv-why-title"]);
   assert.deepEqual(adv, ["gv-boards-title", "gv-opponents-title", "gv-choices-title", "gv-lobby-title", "gv-notes-title"]);
   assert.equal(attr(nodes[0], "class"), "gv-summary");
   const advTiles = [...walk(nodes[0])].filter((n) => attr(n, "class") === "tile adv").map((n) => text(n.children[0]));
