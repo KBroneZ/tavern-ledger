@@ -108,8 +108,8 @@ What the installer does:
 - **Compression:** zlib (NSIS's LZMA module is CPL-1.0, which does not mix with AGPL-3.0).
 - **WebView2:** the bootstrapper is embedded (about 1.8 MB) and runs silently only when WebView2 is missing (Windows 11 and up-to-date Windows 10 have it); it still needs internet to fetch the runtime.
 - **Upgrade:** a newer installer replaces the app in place. If the installed app is running, the installer closes that copy only (by its path), never a build run from source.
-- **Your data:** install, upgrade and uninstall never touch `%APPDATA%\TavernLedger` (history, settings, upload settings). The uninstaller's "Delete the application data" box removes only `%LOCALAPPDATA%\dev.tavernledger.app` (the window's WebView2 cache, shared with builds run from source) and the installer's own registry keys. Uninstalling also removes the "Start with Windows" entry, which a build run from source writes under the same name.
-- **Not signed:** Windows SmartScreen warns before it runs. No automatic updates.
+- **Your data:** install, upgrade and uninstall never touch `%APPDATA%\TavernLedger` (history, settings, upload settings). The uninstaller's "Delete the application data" box removes only the folders named after the app's identifier, `%APPDATA%\dev.tavernledger.app` (unused) and `%LOCALAPPDATA%\dev.tavernledger.app` (the window's WebView2 cache, shared with builds run from source), and the installer's own registry keys. Uninstalling also removes the "Start with Windows" entry, which a build run from source writes under the same name.
+- **Not signed:** Windows SmartScreen warns before it runs, so a published build should list its SHA-256 next to the download (`Get-FileHash "<setup file>"` to compare). No automatic updates.
 
 ## Development
 

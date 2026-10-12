@@ -325,6 +325,7 @@ pub fn set_autostart(
     let result = if on {
         launcher.enable().map_err(|e| e.to_string()).and_then(|()| {
             // An unquoted entry could start the wrong program: take it back.
+            // The rewrite's error is the one reported.
             quote_startup_entry(app).map_err(|e| {
                 let _ = launcher.disable();
                 e.to_string()
