@@ -1,5 +1,6 @@
 use super::*;
 use crate::harness_duos::Leg;
+use crate::harness_misses::Miss;
 use crate::model::Minion;
 
 fn band(ids: &[&str]) -> Warband {
@@ -40,6 +41,30 @@ fn options() -> Options {
     Options {
         trials: 200,
         ..Options::default()
+    }
+}
+
+fn none() -> Checked<'static> {
+    static NO_BUILDS: BTreeMap<i64, u32> = BTreeMap::new();
+    Checked {
+        misses: &[],
+        replays: &[],
+        builds: &NO_BUILDS,
+    }
+}
+
+fn a_miss(duos: bool) -> Miss {
+    Miss {
+        game: 7,
+        round: 9,
+        duos,
+        prediction: crate::score::Prediction {
+            won: 1.0,
+            tied: 0.0,
+            lost: 0.0,
+        },
+        result: CombatResult::Lost,
+        coverage: Default::default(),
     }
 }
 
@@ -130,7 +155,8 @@ fn blocked_combats_are_also_played_anyway_and_scored_apart() {
         "{text}"
     );
     // The export keeps its keys: nothing of this goes in it.
-    let v: Value = serde_json::from_str(&export_json(&a, &options(), "2026-10-11")).unwrap();
+    let v: Value =
+        serde_json::from_str(&export_json(&a, &options(), "2026-10-11", &none())).unwrap();
     assert!(v["modes"]["solo"].get("anyway").is_none());
     assert!(v["modes"]["solo"].get("hand_scored").is_none());
 }
@@ -155,7 +181,7 @@ fn export_has_numbers_per_mode_and_no_combat_detail() {
     ];
     let a = accuracy(&solo, &[], &options());
 
-    let text = export_json(&a, &options(), "2026-10-11");
+    let text = export_json(&a, &options(), "2026-10-11", &none());
     let v: Value = serde_json::from_str(&text).unwrap();
 
     assert!(text.ends_with('\n'));
@@ -189,10 +215,18 @@ fn export_has_numbers_per_mode_and_no_combat_detail() {
 fn the_synthetic_example_in_the_docs_has_the_export_shape() {
     let example = include_str!("../tests/data/accuracy_example.json");
     let v: Value = serde_json::from_str(example).unwrap();
+    let misses = vec![a_miss(false)];
+    let builds = BTreeMap::from([(253_216, 1)]);
+    let checked = Checked {
+        misses: &misses,
+        replays: &[],
+        builds: &builds,
+    };
     let ours: Value = serde_json::from_str(&export_json(
         &accuracy(&[], &[], &options()),
         &options(),
         "2026-01-01",
+        &checked,
     ))
     .unwrap();
     let keys = |v: &Value| -> Vec<String> {
@@ -206,6 +240,16 @@ fn the_synthetic_example_in_the_docs_has_the_export_shape() {
     assert_eq!(
         keys(&v["modes"]["solo"]["calibration"][0]),
         keys(&ours["modes"]["solo"]["calibration"][0])
+    );
+    assert_eq!(keys(&v["misses"]), keys(&ours["misses"]));
+    assert_eq!(keys(&v["builds"]), keys(&ours["builds"]));
+    assert_eq!(
+        keys(&v["misses"]["causes"][0]),
+        keys(&ours["misses"]["causes"][0])
+    );
+    assert_eq!(
+        keys(&v["builds"]["checked"][0]),
+        keys(&ours["builds"]["checked"][0])
     );
     assert_eq!(v["format"], FORMAT);
 }
@@ -228,4 +272,127 @@ fn dates_from_days_since_1970() {
     assert_eq!(date_of_day(19_723), "2024-01-01");
     assert_eq!(date_of_day(20_737), "2026-10-11");
     assert_eq!(date_of_day(-1), "1969-12-31");
+}
+
+#[test]
+fn the_export_has_the_misses_by_cause_with_counts_and_shares() {
+    let misses = vec![a_miss(false), a_miss(true), a_miss(true), a_miss(true)];
+    let builds = BTreeMap::new();
+    let checked = Checked {
+        misses: &misses,
+        replays: &[],
+        builds: &builds,
+    };
+    let a = accuracy(&[], &[], &options());
+
+    let text = export_json(&a, &options(), "2026-10-12", &checked);
+    let v: Value = serde_json::from_str(&text).unwrap();
+
+    assert_eq!(v["misses"]["total"], 4);
+    let rows = v["misses"]["causes"].as_array().unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0]["cause"], "no_replay_exact");
+    assert_eq!(rows[0]["solo"], 1);
+    assert_eq!(rows[0]["duos"], 3);
+    assert_eq!(rows[0]["share"], 1.0);
+    // Counts and ids only: nothing of the combat itself.
+    assert!(!text.contains("\"round\"") && !text.contains("\"game\""));
+}
+
+#[test]
+fn no_misses_is_an_empty_list_not_a_missing_key() {
+    let a = accuracy(&[], &[], &options());
+    let v: Value =
+        serde_json::from_str(&export_json(&a, &options(), "2026-10-12", &none())).unwrap();
+    assert_eq!(v["misses"]["total"], 0);
+    assert_eq!(v["misses"]["causes"], serde_json::json!([]));
+}
+
+#[test]
+fn the_export_has_the_game_builds_newest_first() {
+    let builds = BTreeMap::from([(253_216, 150), (260_001, 3)]);
+    let checked = Checked {
+        misses: &[],
+        replays: &[],
+        builds: &builds,
+    };
+    let a = accuracy(&[], &[], &options());
+
+    let v: Value =
+        serde_json::from_str(&export_json(&a, &options(), "2026-10-12", &checked)).unwrap();
+
+    assert_eq!(v["builds"]["newest"], 260_001);
+    assert_eq!(v["builds"]["checked"][0]["build"], 260_001);
+    assert_eq!(v["builds"]["checked"][0]["count"], 3);
+    assert_eq!(v["builds"]["checked"][1]["build"], 253_216);
+    let none: Value =
+        serde_json::from_str(&export_json(&a, &options(), "2026-10-12", &self::none())).unwrap();
+    assert_eq!(none["builds"]["newest"], Value::Null);
+}
+
+#[test]
+fn only_the_newest_builds_are_exported() {
+    let builds: BTreeMap<i64, u32> = (1..=25).map(|b| (250_000 + b, 1)).collect();
+    let checked = Checked {
+        misses: &[],
+        replays: &[],
+        builds: &builds,
+    };
+    let a = accuracy(&[], &[], &options());
+
+    let v: Value =
+        serde_json::from_str(&export_json(&a, &options(), "2026-10-12", &checked)).unwrap();
+
+    assert_eq!(v["builds"]["checked"].as_array().unwrap().len(), 20);
+    assert_eq!(v["builds"]["newest"], 250_025);
+    assert_eq!(v["builds"]["checked"][19]["build"], 250_006);
+}
+
+#[test]
+fn a_build_that_is_not_a_build_number_is_not_counted() {
+    let db = crate::harness::load_cards(include_str!("../tests/data/cards.json")).unwrap();
+    let line = |session: &str, build: i64| {
+        format!(
+            r#"{{"session": "{session}", "index": 1, "saved_at": 1, "report": {{"game_type": "GT_BATTLEGROUNDS", "build": {build}, "rounds": []}}}}"#
+        )
+    };
+    let jsonl = [
+        line("a", 0),
+        line("b", -5),
+        line("c", 9_999_999_999),
+        line("d", 253_216),
+    ]
+    .join(
+        "
+",
+    );
+
+    let h = crate::harness::load_history(&jsonl, &db);
+
+    assert_eq!(h.builds, BTreeMap::from([(253_216, 1)]));
+}
+
+#[test]
+fn the_history_counts_games_by_build() {
+    let db = crate::harness::load_cards(include_str!("../tests/data/cards.json")).unwrap();
+    let line = |session: &str, build: &str| {
+        format!(
+            r#"{{"session": "{session}", "index": 1, "saved_at": 1, "report": {{"game_type": "GT_BATTLEGROUNDS", {build}"rounds": []}}}}"#
+        )
+    };
+    let jsonl = [
+        line("a", r#""build": 253216, "#),
+        line("b", r#""build": 253216, "#),
+        line("c", r#""build": 260001, "#),
+        line("d", ""),
+    ]
+    .join(
+        "
+",
+    );
+
+    let h = crate::harness::load_history(&jsonl, &db);
+
+    assert_eq!(h.builds, BTreeMap::from([(253_216, 2), (260_001, 1)]));
+    assert_eq!(h.games, 4);
 }

@@ -77,3 +77,30 @@ html:not([data-detail="advanced"]) .acc .tiles > .adv {
 .acc-about p + p {
   margin-top: var(--s-2);
 }
+
+/* Misses by cause: the cause's name with its one-line explanation under it. */
+.acc-causes th[scope="row"] {
+  font-weight: inherit;
+  text-align: start;
+}
+
+.acc-cause {
+  display: block;
+  font-weight: 600;
+}
+
+.acc-why {
+  display: block;
+  max-width: var(--measure);
+  color: var(--text-3);
+  font-size: var(--t-sm);
+  font-weight: 400;
+}
+
+html:not([data-detail="advanced"]) .acc-causes .adv {
+  display: none;
+}
+
+.acc-builds {
+  max-width: var(--measure);
+}
