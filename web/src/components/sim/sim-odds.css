@@ -1,0 +1,200 @@
+/* The simulator's odds (T-526, D-112), beside sim.css: step 3, written in
+   ink on the home page's parchment strip as a slip in the middle of the
+   table, the three shares at hero size, then the bar, the likely damage and
+   the details. Uses sim.css's tokens. */
+
+/* ---------- Step 3: the odds, written on a slip between the boards ---------- */
+
+.sim-odds {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  min-height: 150px;
+  padding: 2px clamp(4px, 1.5vw, 16px) 6px;
+  border: var(--corner) solid transparent;
+  border-image: url("/art/home/panel-strip.webp") 49% 13.5% fill / var(--corner) / 0 stretch;
+  color: var(--ink);
+  filter: drop-shadow(0 12px 20px rgb(0 0 0 / 0.6));
+}
+
+.sim-odds-title {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  color: var(--ink);
+  font: 800 var(--t-md) / 1.2 var(--display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sim-odds :is(.sim-dim, .sim-meta, .sim-range dt, .sim-cap, .fold-hint) {
+  color: var(--ink-soft);
+}
+
+.sim-odds .fold-compact > summary {
+  color: #1f4a78;
+}
+
+.sim-odds .fold > summary::before {
+  border-color: #1f4a78;
+}
+
+.sim-odds .fold > summary:hover {
+  background: var(--ink-wash);
+}
+
+.sim-odds :focus-visible {
+  outline: 3px solid #6b2c06;
+  outline-offset: 2px;
+}
+
+.sim-result-body {
+  display: grid;
+  gap: 10px;
+  transition: opacity 200ms ease;
+}
+
+.sim-result-body.is-stale {
+  opacity: 0.55;
+}
+
+.sim-wait {
+  margin: 0;
+  font-style: italic;
+  text-align: center;
+}
+
+.sim-shares {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  text-align: center;
+}
+
+.sim-share {
+  display: grid;
+  gap: 4px;
+}
+
+.sim-share-value {
+  font: 800 clamp(2rem, 1.2rem + 3.6vw, 3.6rem) / 1 var(--display);
+  font-variant-numeric: tabular-nums;
+  animation: sim-reveal 260ms var(--ease-out, ease-out);
+}
+
+@keyframes sim-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.sim-share-label {
+  font-size: var(--t-xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Inks measured on the parchment: each at least 5.5:1 on its lightest paper. */
+.sim-share-win { color: #1d5a26; }
+.sim-share-tie { color: #4a3c2e; }
+.sim-share-lose { color: #8c1e10; }
+
+.sim-bar {
+  display: block;
+  width: 100%;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1.5px var(--ink-line);
+}
+
+.sim-bar-win { fill: #2f7a3a; }
+.sim-bar-tie { fill: #8a7a68; }
+.sim-bar-lose { fill: #a3321f; }
+
+.sim-likely {
+  margin: 0;
+  font-weight: 700;
+  text-align: center;
+}
+
+.sim-ranges {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.sim-range {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--t-sm);
+}
+
+.sim-range dd,
+.sim-ranges p,
+.sim-blocked p {
+  margin: 0;
+}
+
+.sim-approx {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--t-sm);
+}
+
+.sim-odds .sim-note,
+.sim-odds .sim-reason {
+  margin: 0;
+  color: #1f4a78;
+  font-size: var(--t-sm);
+}
+
+.sim-meta {
+  margin: 0;
+  font-size: var(--t-xs);
+}
+
+.sim-settings {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--ink-line);
+}
+
+.sim .sim-odds input[type="number"] {
+  background: var(--ink-wash);
+  color: var(--ink);
+  border-color: var(--ink-soft);
+}
+
+.sim-odds .state-error {
+  color: #8c1e10;
+}
+
+.sim-odds .state button {
+  background: var(--ink);
+  color: #fbeed8;
+}
+
+/* Reduced motion: the numbers do not slide in. */
+@media (prefers-reduced-motion: reduce) {
+  .sim-share-value {
+    animation: none;
+  }
+}
+
+/* Windows high contrast: a plain bordered box. */
+@media (forced-colors: active) {
+  .sim-odds {
+    padding: 16px;
+    border: 1px solid CanvasText;
+    border-image: none;
+    filter: none;
+  }
+}

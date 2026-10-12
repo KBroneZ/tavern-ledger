@@ -1,11 +1,17 @@
-// The simulator's board editor as element trees (T-606): plain data in,
-// markup out, so tests can render it without a browser. The page script
+// The simulator's board editor as element trees (T-606, T-526): plain data
+// in, markup out, so tests can render it without a browser. The page script
 // (main.ts) reads the data-act and data-field attributes to edit the state.
+// Each minion is drawn as a card (its art, Attack, Health, keywords and Dark
+// Gifts, D-107) in one of a board's seven places; the page draws each side
+// on its half of the table, the opponent's across from the player's.
 // Text goes in as text nodes only (lib/view/node.ts).
+import giftTable from "../../data/gifts.json" with { type: "json" };
 import { compact } from "../data/format.ts";
+import { lang } from "../i18n.ts";
+import { giftMarks, giftName } from "../game/gifts.ts";
 import { cls, h, type VNode } from "../view/node.ts";
 import { picture } from "../view/pieces.ts";
-import { MAX_MINIONS, MAX_STAT, MAX_TIER, SIM_KEYWORDS, type Side, type SimBoard, type SimKeyword, type SimMinion, type SimState } from "./board.ts";
+import { MAX_GIFTS, MAX_MINIONS, MAX_STAT, MAX_TIER, SIM_KEYWORDS, type Side, type SimBoard, type SimKeyword, type SimMinion, type SimState } from "./board.ts";
 import type { CardIndex, SimCard } from "./cards.ts";
 import { reasonText } from "./reasons.ts";
 import { sm } from "./strings.ts";
@@ -56,21 +62,33 @@ const where = (side: Side, board: number) => ({ "data-side": side, "data-board":
 
 export const keywordName = (k: SimKeyword): string => sm(`keyword.${k}`);
 
+/** Every Dark Gift the shared table names (src/data/gifts.json), by card id. */
+const GIFT_IDS = Object.keys(giftTable.gifts);
+
 function minionLabel(m: SimMinion, cards: CardIndex, marks: Marks): string {
   const parts = [`${cards.name(m.cardId)}, ${m.attack}/${m.health}`];
   if (m.golden) parts.push(sm("minion.golden"));
   parts.push(...m.keywords.map(keywordName));
+  parts.push(...m.gifts.map((id) => sm("minion.gift", { name: giftName(id) })));
   if (marks.notModelled.has(m.cardId)) parts.push(sm("minion.notModelled"));
   if (marks.missing.has(m.cardId)) parts.push(sm("minion.noData"));
   if (marks.approximate.has(m.cardId)) parts.push(sm("minion.approximate"));
   return parts.join(", ");
 }
 
-function token(m: SimMinion, side: Side, board: number, props: EditorProps): VNode {
+/** A star per Dark Gift, its name and our summary as the tooltip (the card's label says it too). */
+function giftStars(m: SimMinion): VNode | null {
+  if (m.gifts.length === 0) return null;
+  const marks = giftMarks({ gifts: m.gifts, giftUnknown: false });
+  return h("span", { class: "sim-gifts", "aria-hidden": "true" }, marks.map((k) => h("span", { class: "sim-gift", title: k.title }, "✦")));
+}
+
+function card(m: SimMinion, side: Side, board: number, props: EditorProps): VNode {
   const { cards, marks, selected } = props;
   const isSelected = selected?.side === side && selected.board === board && selected.key === m.key;
   const blocked = marks.notModelled.has(m.cardId) || marks.missing.has(m.cardId);
   const approx = marks.approximate.has(m.cardId);
+  const name = cards.name(m.cardId);
   return h(
     "li",
     { class: "sim-slot" },
@@ -78,19 +96,28 @@ function token(m: SimMinion, side: Side, board: number, props: EditorProps): VNo
       "button",
       {
         type: "button",
-        class: cls("sim-token", { "is-golden": m.golden, "is-selected": isSelected, "is-blocked": blocked, "is-approx": approx }),
+        class: cls("sim-card", {
+          "is-golden": m.golden,
+          "is-selected": isSelected,
+          "is-blocked": blocked,
+          "is-approx": approx,
+          "is-taunt": m.keywords.includes("taunt"),
+          "has-shield": m.keywords.includes("divine_shield"),
+        }),
         "data-act": "select",
         "data-key": m.key,
         "data-focus": `m${m.key}`,
         ...where(side, board),
         "aria-pressed": isSelected ? "true" : "false",
         "aria-label": minionLabel(m, cards, marks),
+        title: name,
       },
-      picture("card", m.cardId, cards.name(m.cardId), 56, true),
+      h("span", { class: "sim-card-art" }, picture("card", m.cardId, name, 56, true)),
+      m.keywords.length > 0 ? h("span", { class: "sim-kw", "aria-hidden": "true" }, m.keywords.map((k) => SHORT[k]).join(" ")) : null,
+      giftStars(m),
+      blocked ? h("span", { class: "sim-flag sim-flag-blocked", "aria-hidden": "true" }, "!") : approx ? h("span", { class: "sim-flag", "aria-hidden": "true" }, "≈") : null,
       h("span", { class: "sim-atk", "aria-hidden": "true" }, compact(m.attack)),
       h("span", { class: "sim-hp", "aria-hidden": "true" }, compact(m.health)),
-      m.keywords.length > 0 ? h("span", { class: "sim-kw", "aria-hidden": "true" }, m.keywords.map((k) => SHORT[k]).join(" ")) : null,
-      blocked ? h("span", { class: "sim-flag sim-flag-blocked", "aria-hidden": "true" }, "!") : approx ? h("span", { class: "sim-flag", "aria-hidden": "true" }, "≈") : null,
     ),
   );
 }
@@ -169,6 +196,7 @@ function inspector(m: SimMinion, side: Side, board: number, count: number, props
       chip(sm("minion.golden"), m.golden, { "data-act": "golden", "data-focus": `g${m.key}`, ...at }),
       SIM_KEYWORDS.map((k) => chip(keywordName(k), m.keywords.includes(k), { "data-act": "keyword", "data-keyword": k, "data-focus": `k${m.key}-${k}`, ...at })),
     ),
+    giftEditor(m, side, board),
     h(
       "div",
       { class: "sim-actions" },
@@ -177,6 +205,67 @@ function inspector(m: SimMinion, side: Side, board: number, count: number, props
       h("button", { type: "button", class: "sim-btn sim-btn-danger", "data-act": "remove", ...at }, sm("minion.remove")),
       h("button", { type: "button", class: "sim-btn", "data-act": "close", ...at }, sm("minion.close")),
     ),
+  );
+}
+
+/** The picked minion's Dark Gifts: each one can be removed; a list adds one, up to four. */
+function giftEditor(m: SimMinion, side: Side, board: number): VNode {
+  const at = { "data-key": m.key, ...where(side, board) };
+  const id = `sim-gift-${side}-${board}-${m.key}`;
+  const others = GIFT_IDS.filter((g) => !m.gifts.includes(g))
+    .map((g) => ({ id: g, name: giftName(g) }))
+    .sort((x, y) => x.name.localeCompare(y.name, lang()));
+  const marks = giftMarks({ gifts: m.gifts, giftUnknown: false });
+  return h(
+    "div",
+    { class: "sim-gift-edit", role: "group", "aria-label": sm("gift.label") },
+    marks.length > 0
+      ? h(
+          "ul",
+          { class: "sim-chips", role: "list" },
+          marks.map((k) =>
+            h(
+              "li",
+              {},
+              h(
+                "button",
+                {
+                  type: "button",
+                  class: "sim-chip sim-gift-chip",
+                  "data-act": "gift-remove",
+                  "data-gift": k.id ?? "",
+                  "data-focus": `gr${m.key}-${k.id}`,
+                  ...at,
+                  title: k.title,
+                  "aria-label": sm("gift.remove", { name: k.name }),
+                },
+                h("span", { "aria-hidden": "true" }, "✦ "),
+                k.name,
+                h("span", { "aria-hidden": "true" }, " ×"),
+              ),
+            ),
+          ),
+        )
+      : null,
+    m.gifts.length >= MAX_GIFTS
+      ? h("p", { class: "sim-dim" }, sm("gift.full"))
+      : // The list only chooses: a closed list changes on every arrow key, so the button adds.
+        h(
+          "div",
+          { class: "sim-gift-add" },
+          h("label", { for: id }, sm("gift.add")),
+          h(
+            "div",
+            { class: "sim-gift-pick" },
+            h(
+              "select",
+              { id, "data-field": "gift", "data-focus": `ga${m.key}`, ...at },
+              h("option", { value: "" }, sm("gift.choose")),
+              others.map((g) => h("option", { value: g.id }, g.name)),
+            ),
+            h("button", { type: "button", class: "sim-btn", "data-act": "gift-add", "data-focus": `gb${m.key}`, ...at }, sm("gift.addButton")),
+          ),
+        ),
   );
 }
 
@@ -246,7 +335,7 @@ function boardView(side: Side, index: number, props: EditorProps): VNode {
     h(
       "ul",
       { class: "sim-row", role: "list", "aria-label": title },
-      b.minions.map((m) => token(m, side, index, props)),
+      b.minions.map((m) => card(m, side, index, props)),
       full
         ? null
         : h(
@@ -254,23 +343,25 @@ function boardView(side: Side, index: number, props: EditorProps): VNode {
             { class: "sim-slot" },
             h(
               "button",
-              { type: "button", class: "sim-token sim-token-add", "data-act": "add-open", "data-focus": `add-${side}-${index}`, ...where(side, index), "aria-expanded": isAdding ? "true" : "false" },
-              h("span", { "aria-hidden": "true" }, "+"),
-              h("span", { class: "visually-hidden" }, sm("add.button")),
+              { type: "button", class: "sim-card sim-card-add", "data-act": "add-open", "data-focus": `add-${side}-${index}`, ...where(side, index), "aria-expanded": isAdding ? "true" : "false" },
+              h("span", { class: "sim-card-plus", "aria-hidden": "true" }, "+"),
+              h("span", { class: "sim-card-add-label" }, sm("add.button")),
             ),
           ),
+      // The places still free, so every board reads as seven.
+      Array.from({ length: Math.max(0, MAX_MINIONS - b.minions.length - 1) }, () => h("li", { class: "sim-slot is-empty", "aria-hidden": "true" })),
     ),
-    b.minions.length === 0 && !isAdding ? h("p", { class: "sim-dim sim-empty" }, sm("board.empty")) : null,
     full ? h("p", { class: "sim-dim" }, sm("board.full")) : null,
     chosen ? inspector(chosen, side, index, b.minions.length, props) : null,
     isAdding && adding ? adder(adding, props) : null,
   );
 }
 
-function sideView(side: Side, props: EditorProps): VNode {
+/** One side of the table: its board, or its two boards in Duos. */
+export function sideView(side: Side, props: EditorProps): VNode[] {
   const { state } = props;
   const duos = state.mode === "duos";
-  return h(
+  const view = h(
     "div",
     { class: cls("sim-side", `sim-side-${side}`) },
     duos ? h("h2", { class: "sim-side-title" }, sm(side === "player" ? "side.player.duos" : "side.opponent.duos")) : null,
@@ -279,6 +370,7 @@ function sideView(side: Side, props: EditorProps): VNode {
       ? h("button", { type: "button", class: "sim-btn sim-btn-quiet", "data-act": "board-add", "data-side": side }, sm("board.addSecond"))
       : null,
   );
+  return [view];
 }
 
 export function modeSwitch(state: SimState, solo: string, duos: string): VNode {
@@ -291,7 +383,7 @@ export function modeSwitch(state: SimState, solo: string, duos: string): VNode {
   );
 }
 
-/** Both sides, the player's first. */
+/** Both sides as the table shows them: the opponent's across from the player's. */
 export function editorView(props: EditorProps): VNode[] {
-  return [sideView("player", props), h("div", { class: "sim-vs", "aria-hidden": "true" }, "vs"), sideView("opponent", props)];
+  return [...sideView("opponent", props), ...sideView("player", props)];
 }

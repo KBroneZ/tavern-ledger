@@ -1,5 +1,5 @@
-// "Load a combat" as element trees (T-606): the signed-in player's own
-// games, newest first, then the rounds of the one picked. Signed out, a
+// "Pick a game" as element trees (T-606, T-526): the signed-in player's own
+// games, newest first, then the rounds of the one picked ("Pick a fight"). Signed out, a
 // note and a link to sign in; the editor works either way.
 import { dateText, modeName } from "../data/dashboard.ts";
 import type { GameRow } from "../data/rows.ts";
@@ -51,6 +51,9 @@ function gameButton(row: GameRow, picked: PickedGame | null): VNode | null {
   );
 }
 
+/** A step of the main flow (pick a game, pick a fight, the odds), as a wax seal before its heading. */
+export const stepSeal = (n: number): VNode => h("span", { class: "sim-step", "aria-hidden": "true" }, String(n));
+
 const RESULT_CLASS = { won: "is-won", lost: "is-lost", tie: "is-tie" } as const;
 
 function rounds(picked: PickedGame): VNode {
@@ -60,7 +63,7 @@ function rounds(picked: PickedGame): VNode {
   return h(
     "div",
     { class: "sim-rounds-wrap" },
-    h("p", { class: "sim-label", id: "sim-rounds-label" }, sm("load.rounds")),
+    h("h3", { class: "sim-sub", id: "sim-rounds-label" }, stepSeal(2), sm("load.rounds")),
     h(
       "ul",
       { class: "sim-rounds", role: "list", "aria-labelledby": "sim-rounds-label" },
