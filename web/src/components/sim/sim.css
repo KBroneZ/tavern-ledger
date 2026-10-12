@@ -1,36 +1,144 @@
-/* The combat simulator (T-606), on the data pages' tokens (data.css).
-   Boards read like the game's: round portraits left to right, Attack and
-   Health in the bottom corners, golden ones ringed in gold. The odds stay
-   in view beside the boards on a wide screen and come first on a phone
-   (key numbers first). Every region keeps its room while the script loads. */
+/* The combat simulator (T-606), as the duel table in the painted tavern
+   (T-526, D-112). The home page's world (D-105: the user's Gemini art,
+   carved oak, iron corners, burnt parchment, gold headings) with its own
+   scene: the barrel arena between the forge's sparks (the player's side,
+   warm) and the blue magic (the opponent's, cold), held still behind the
+   page. The main flow reads in three wax-sealed steps: (1) pick a game and
+   (2) pick a fight on the tall parchment, (3) the odds written on a slip in
+   the middle of the table, the opponent's board across, the player's near.
+   Minions are cards. Every region keeps its room while the script loads.
+   Only transform and opacity move; reduced motion and Windows high contrast
+   at the end (the cards' and the slip's own in sim-cards.css and
+   sim-odds.css). */
+
+/* ---------- Tokens ---------- */
 
 .sim {
+  --ink: #3a2410;
+  --ink-soft: #553519;
+  --ink-mark: #662c08;
+  --ink-line: rgb(90 50 20 / 0.3);
+  --ink-wash: rgb(255 246 226 / 0.42);
+  --gold: #ffd27a;
+  --fire: #ffb15c;
+  --arcane: #9fdcff;
+  --wood-hi: #6b4a2c;
+  --wood: #3a2616;
+  --wood-lo: #21150d;
+  --bronze: rgb(201 154 74 / 0.55);
+  --corner: 40px;
+  --card-r: 12px;
+
   display: grid;
-  gap: var(--s-4);
+  gap: clamp(20px, 3vw, 32px);
   min-width: 0;
 }
 
-.sim h1 {
-  overflow-wrap: anywhere;
+@media (max-width: 560px) {
+  .sim {
+    --corner: 26px;
+  }
 }
 
-.sim-panel {
+/* The table needs more room than the data pages' column. */
+.layout-page:has(> .sim) {
+  max-width: calc(1240px + 2 * var(--gutter));
+}
+
+/* ---------- The painting behind the page ---------- */
+
+body:has(.sim-backdrop) {
+  background: transparent;
+}
+
+.sim-backdrop {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: -1;
+  height: 100lvh;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--bg-deep);
+}
+
+.sim-backdrop img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 40%;
+}
+
+/* Dark enough to read on, lighter at the sides where the sparks and the
+   magic are; the barrel stays a shape behind the table. */
+.sim-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(70% 70% at 50% 42%, rgb(10 6 4 / 0.72), rgb(10 6 4 / 0.5) 75%, rgb(10 6 4 / 0.4)),
+    linear-gradient(180deg, rgb(10 6 4 / 0.55), rgb(10 6 4 / 0.2) 30%, rgb(10 6 4 / 0.55));
+}
+
+/* ---------- Heading ---------- */
+
+.sim-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 24px;
+}
+
+/* The switch shows once the script runs: its room is kept from the start. */
+.sim-switch-slot {
+  min-height: 42px;
+}
+
+.sim-head-words {
   display: grid;
-  gap: var(--s-3);
+  gap: 6px;
   min-width: 0;
-  padding: var(--s-4);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-panel);
-  background: var(--surface-1);
 }
 
-.sim-panel-title,
-.sim-side-title {
+.sim-kicker {
   margin: 0;
-  font: 700 var(--t-md) / 1.2 var(--body);
-  letter-spacing: 0.02em;
-  color: var(--text-2);
+  color: var(--fire);
+  font: 700 var(--t-sm) / 1.2 var(--body);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  text-shadow: 0 1px 6px rgb(0 0 0 / 0.8);
+}
+
+/* Gold, like the home page's headline (D-105). */
+.sim-title {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font: 800 clamp(2.1rem, 1.2rem + 4vw, 3.6rem) / 1.02 var(--display);
+  color: var(--gold);
+  background: linear-gradient(180deg, #fff3cf 10%, #ffd27a 45%, #e3a03c 75%, #b8701f 95%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 0 #3a1f07) drop-shadow(0 6px 14px rgb(0 0 0 / 0.7));
+}
+
+/* Phones: room for two lines from the start, so the web font arriving
+   (wider than its fallback) never pushes the page down. */
+@media (max-width: 559px) {
+  .sim-title {
+    min-height: 2.04em;
+  }
+}
+
+.sim-lead {
+  max-width: 58ch;
+  margin: 0;
+  color: #f1e2cf;
+  font-size: var(--t-md);
+  text-shadow: 0 1px 8px rgb(0 0 0 / 0.9);
 }
 
 .sim-dim {
@@ -39,13 +147,293 @@
   font-weight: 400;
 }
 
-.sim-label {
+/* A wax seal with the step's number before each step's heading. */
+.sim-step {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.9em;
+  height: 1.9em;
+  margin-inline-end: 0.45em;
+  border-radius: 50% 46% 52% 48%;
+  background: radial-gradient(circle at 35% 30%, #d4553d, #8c1e10 60%, #5c1208);
+  color: #ffe7c2;
+  font: 800 0.8em / 1 var(--display);
+  box-shadow:
+    inset 0 0 0 2px rgb(255 200 160 / 0.25),
+    0 2px 4px rgb(0 0 0 / 0.45);
+  vertical-align: middle;
+}
+
+/* ---------- Layout: the parchment beside the table ---------- */
+
+.sim-layout {
+  display: grid;
+  gap: clamp(20px, 3vw, 28px);
+  min-width: 0;
+}
+
+@media (min-width: 1100px) {
+  .sim-layout {
+    grid-template-columns: minmax(270px, 310px) minmax(0, 1fr);
+    align-items: start;
+  }
+
+}
+
+/* ---------- Step 1 and 2: the tall parchment ---------- */
+
+.sim-load {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 6px clamp(4px, 1vw, 10px) 10px;
+  border: var(--corner) solid transparent;
+  border-image: url("/art/sim/panel-tall.webp") 12% 15% fill / var(--corner) / 0 stretch;
+  color: var(--ink);
+  filter: drop-shadow(0 16px 24px rgb(0 0 0 / 0.6));
+}
+
+.sim-load-title,
+.sim-sub {
+  display: flex;
+  align-items: center;
   margin: 0;
-  color: var(--text-3);
-  font-size: var(--t-xs);
+  color: var(--ink);
+  font: 800 var(--t-lg) / 1.15 var(--display);
+}
+
+.sim-sub {
+  font-size: var(--t-md);
+}
+
+.sim-load-body {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sim-load-body > p {
+  margin: 0;
+}
+
+html:not([data-auth="out"]) .sim-load-out,
+html[data-auth="out"] .sim-load-wait {
+  display: none;
+}
+
+/* Signed in: room for the games before they arrive. */
+html[data-auth="in"] .sim-load-body:has(> .sim-load-wait) {
+  min-height: 12rem;
+}
+
+.sim-load .sim-dim,
+.sim-load .state {
+  color: var(--ink-soft);
+}
+
+.sim-load a {
+  color: #6b2c06;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  text-decoration-thickness: 1.5px;
+}
+
+.sim-load :focus-visible {
+  outline: 3px solid #6b2c06;
+  outline-offset: 2px;
+}
+
+/* The games: they wrap in the box's width and scroll inside it, never out of it. */
+.sim-games {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14.5rem), 1fr));
+  gap: 6px;
+  max-height: 15.5rem;
+  margin: 0;
+  padding: 2px 6px 2px 2px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+
+@media (min-width: 1100px) {
+  .sim-games {
+    grid-template-columns: minmax(0, 1fr);
+    max-height: 30rem;
+  }
+}
+
+/* A designed scrollbar: a bronze bar in a faint ink groove. */
+.sim-games::-webkit-scrollbar {
+  width: 10px;
+}
+
+.sim-games::-webkit-scrollbar-track {
+  border-radius: 6px;
+  background: var(--ink-line);
+}
+
+.sim-games::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #c99a4a, #7a4f1d) padding-box;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .sim-games {
+    scrollbar-width: thin;
+    scrollbar-color: #8a5a24 var(--ink-line);
+  }
+}
+
+/* Small controls: none of the site's big amber pills here. */
+.sim :where(button:not(.seg button, .sim-card)) {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: var(--r-small);
+  font: 700 var(--t-sm) / 1 var(--body);
+  box-shadow: none;
+}
+
+.sim .sim-game,
+.sim .sim-round,
+.sim-load .sim-btn,
+.sim-load .state button {
+  background: var(--ink-wash);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink-line);
+  transition:
+    transform var(--press),
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.sim .sim-game:hover,
+.sim .sim-round:hover,
+.sim-load .sim-btn:hover,
+.sim-load .state button:hover {
+  background: rgb(255 246 226 / 0.7);
+  box-shadow: inset 0 0 0 1.5px var(--ink-mark);
+}
+
+.sim .sim-game {
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 999px;
+  white-space: normal;
+}
+
+.sim-game-text {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+  text-align: start;
+}
+
+.sim-game-text > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sim .sim-game .sim-dim {
+  color: var(--ink-soft);
+  font-size: var(--t-xs);
+  font-weight: 600;
+}
+
+/* The game picked: ink on the parchment, like a ticked line in a ledger. */
+.sim [aria-pressed="true"]:is(.sim-game, .sim-round) {
+  background: var(--ink);
+  color: #fbeed8;
+  box-shadow: inset 0 0 0 1.5px #c99a4a;
+}
+
+.sim .sim-game[aria-pressed="true"] .sim-dim {
+  color: #e6cfae;
+}
+
+/* Places in ink, as on the rest of the parchment: the first still gold. */
+.sim-load .place:not(.place-first) {
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--ink-soft);
+}
+
+.sim-load .place-bottom {
+  color: var(--ink-soft);
+  box-shadow: none;
+}
+
+.sim .sim-game[aria-pressed="true"] .place:not(.place-first) {
+  color: #fbeed8;
+  box-shadow: inset 0 0 0 1.5px #e6cfae;
+}
+
+.sim-rounds-wrap {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--ink-line);
+}
+
+.sim-rounds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sim .sim-round {
+  min-height: 36px;
+  border-radius: 999px;
+  border-bottom: 3px solid transparent;
+}
+
+.sim .sim-round.is-won { border-bottom-color: #2f7a3a; }
+.sim .sim-round.is-lost { border-bottom-color: #a3321f; }
+.sim .sim-round.is-tie { border-bottom-color: #8a7a68; }
+
+/* ---------- The table ---------- */
+
+.sim-table {
+  position: relative;
+  display: grid;
+  gap: clamp(12px, 2vw, 18px);
+  min-width: 0;
+  padding: clamp(12px, 2.4vw, 26px);
+  border-radius: 22px;
+  /* Felt over oak: the opponent's side lit by the blue magic, the player's by the forge. */
+  background:
+    radial-gradient(110% 45% at 50% 0%, rgb(92 200 255 / 0.12), transparent 70%),
+    radial-gradient(110% 45% at 50% 100%, rgb(255 140 50 / 0.16), transparent 70%),
+    repeating-linear-gradient(92deg, rgb(255 255 255 / 0.012) 0 3px, transparent 3px 9px),
+    linear-gradient(180deg, rgb(32 22 17 / 0.94), rgb(22 15 12 / 0.96));
+  box-shadow:
+    inset 0 0 0 2px #7a5430,
+    inset 0 0 0 7px #2a1a10,
+    inset 0 0 0 8px var(--bronze),
+    inset 0 0 40px rgb(0 0 0 / 0.55),
+    0 30px 60px rgb(0 0 0 / 0.55);
+}
+
+.sim-table-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  min-height: 42px;
+}
+
+.sim-note {
+  display: grid;
+  flex: 1 1 18rem;
+  gap: 2px;
 }
 
 .sim-note:empty {
@@ -54,650 +442,182 @@
 
 .sim-note p {
   margin: 0;
-  color: var(--text-2);
+  color: #e9d9c4;
   font-size: var(--t-sm);
 }
 
-.sim-credit {
-  margin: 0;
-  max-width: 80ch;
-  color: var(--text-3);
-  font-size: var(--t-xs);
-}
-
-/* ---------- Small buttons (the site's buttons are big amber pills) ---------- */
-
-.sim button:not(.seg button) {
-  min-height: 36px;
-  padding: 0 var(--s-3);
-  border-radius: var(--r-small);
-  font: 700 var(--t-sm) / 1 var(--body);
-  box-shadow: none;
-}
-
-.sim .sim-btn,
-.sim .sim-chip,
-.sim .sim-tier button,
-.sim .sim-round,
-.sim .sim-game,
-.sim .sim-result-row {
-  background: var(--surface-2);
-  color: var(--text-1);
-  box-shadow: inset 0 0 0 1px var(--line);
-  transition:
-    transform var(--press),
-    box-shadow 160ms ease,
-    background-color 160ms ease;
-}
-
-.sim .sim-btn:hover,
-.sim .sim-chip:hover,
-.sim .sim-tier button:hover,
-.sim .sim-round:hover,
-.sim .sim-game:hover,
-.sim .sim-result-row:hover {
-  box-shadow: inset 0 0 0 1px var(--amber);
-}
-
-.sim .sim-btn-quiet {
-  background: transparent;
-  color: var(--text-2);
-}
-
-.sim .sim-btn-danger {
-  color: var(--bad);
-}
-
-.sim [aria-pressed="true"]:is(.sim-chip, .sim-round, .sim-game) {
-  background: var(--panel-hi);
-  box-shadow:
-    inset 0 0 0 1px var(--amber),
-    inset 0 -2px 0 var(--amber);
-}
-
-/* ---------- Load a combat ---------- */
-
-.sim-games {
-  display: flex;
-  gap: var(--s-2);
-  margin: 0;
-  padding: 2px 2px var(--s-2);
-  list-style: none;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgb(255 178 74 / 0.45) transparent;
-}
-
-.sim .sim-game {
-  display: inline-flex;
-  gap: var(--s-2);
-  min-height: 52px;
-  padding: var(--s-1) var(--s-3) var(--s-1) var(--s-1);
-  border-radius: var(--r-chip);
-}
-
-.sim-game-text {
+.sim-half {
   display: grid;
-  gap: 2px;
-  text-align: start;
-}
-
-.sim-rounds-wrap {
-  display: grid;
-  gap: var(--s-2);
-}
-
-.sim-rounds {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.sim .sim-round {
-  min-height: 32px;
-  border-radius: var(--r-chip);
-  border-bottom: 2px solid transparent;
-}
-
-.sim .sim-round.is-won { border-bottom-color: var(--mark-win); }
-.sim .sim-round.is-lost { border-bottom-color: var(--mark-loss); }
-.sim .sim-round.is-tie { border-bottom-color: var(--mark-tie); }
-
-/* ---------- Layout ---------- */
-
-.sim-main {
-  display: grid;
-  gap: var(--s-4);
+  gap: 12px;
   min-width: 0;
-}
-
-.sim-boards {
-  display: grid;
-  gap: var(--s-3);
-  min-width: 0;
+  min-height: 180px;
   align-content: start;
-}
-
-.sim-mode-slot {
-  min-height: 42px;
-}
-
-.sim-editor {
-  display: grid;
-  gap: var(--s-3);
-  min-width: 0;
-  min-height: 420px;
-  align-content: start;
-}
-
-/* Phones: the odds first, the boards under them. */
-.sim-result {
-  order: -1;
-  min-height: 190px;
-  align-content: start;
-}
-
-@media (min-width: 960px) {
-  .sim-main {
-    grid-template-columns: minmax(0, 1fr) 320px;
-    align-items: start;
-  }
-
-  .sim-result {
-    order: 0;
-    position: sticky;
-    top: calc(var(--nav-h) + var(--s-3));
-  }
 }
 
 .sim-side {
   display: grid;
-  gap: var(--s-2);
+  gap: 10px;
   min-width: 0;
 }
 
-.sim-vs {
-  justify-self: center;
-  color: var(--text-3);
-  font: 800 var(--t-sm) / 1 var(--display);
-  letter-spacing: 0.2em;
+.sim-side-title {
+  margin: 0;
+  font: 800 var(--t-md) / 1.2 var(--display);
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-/* ---------- A board ---------- */
-
 .sim-board {
   display: grid;
-  gap: var(--s-2);
+  gap: 8px;
   min-width: 0;
-  padding: var(--s-3);
-  border-radius: var(--r-panel);
-  /* The tavern table: warm felt under the minions. */
-  background:
-    radial-gradient(120% 90% at 50% 120%, rgb(255 178 74 / 0.1), transparent 60%),
-    var(--surface-sunk);
-  box-shadow: inset 0 0 0 1px var(--line-soft);
 }
 
-.sim-side-opponent .sim-board {
-  background:
-    radial-gradient(120% 90% at 50% -20%, rgb(116 128 224 / 0.12), transparent 60%),
-    var(--surface-sunk);
+.sim-board > p {
+  margin: 0;
 }
 
 .sim-board-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--s-2) var(--s-3);
+  gap: 6px 14px;
 }
 
 .sim-board-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
-  font: 700 var(--t-lg) / 1.2 var(--display);
+  font: 800 var(--t-lg) / 1.2 var(--display);
 }
 
+/* A rune for the opponent, an ember for the player: colour and shape. */
+.sim-board-title::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  flex: none;
+}
+
+.sim-half-opponent :is(.sim-board-title, .sim-side-title) {
+  color: var(--arcane);
+}
+
+.sim-half-opponent .sim-board-title::before {
+  rotate: 45deg;
+  background: var(--arcane);
+  box-shadow: 0 0 10px rgb(92 200 255 / 0.8);
+}
+
+.sim-half-player :is(.sim-board-title, .sim-side-title) {
+  color: var(--fire);
+}
+
+.sim-half-player .sim-board-title::before {
+  border-radius: 50%;
+  background: var(--fire);
+  box-shadow: 0 0 10px rgb(255 140 50 / 0.8);
+}
+
+/* The tavern tier as a row of coins. */
 .sim-tier {
-  margin-inline-start: auto;
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
+  margin-inline-start: auto;
+}
+
+/* Phones: the coins get their own row under the board's name. */
+@media (max-width: 559px) {
+  .sim-tier {
+    flex: 1 1 100%;
+    margin-inline-start: 0;
+  }
+
+  .sim .sim-board .sim-tier button {
+    min-width: 30px;
+    min-height: 30px;
+  }
 }
 
 .sim-tier-label {
-  margin-inline-end: var(--s-1);
+  margin-inline-end: 4px;
   color: var(--text-3);
   font-size: var(--t-xs);
 }
 
 .sim .sim-tier button {
-  min-width: 28px;
-  min-height: 28px;
-  padding: 0 6px;
-  border-radius: 8px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #4a3828, #2a1d14);
+  color: #e9d9c4;
   font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 0 0 1px rgb(201 154 74 / 0.4);
+}
+
+.sim .sim-tier button:hover {
+  box-shadow: inset 0 0 0 1.5px var(--amber);
 }
 
 .sim .sim-tier button[aria-pressed="true"] {
-  background: var(--amber);
-  color: var(--amber-ink);
-  box-shadow: none;
-}
-
-.sim-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
-  margin: 0;
-  padding: var(--s-2) 0;
-  list-style: none;
-}
-
-.sim-empty {
-  margin: 0;
-}
-
-/* ---------- A minion ---------- */
-
-.sim .sim-token {
-  position: relative;
-  width: 64px;
-  height: 72px;
-  padding: 0;
-  border-radius: 50% 50% 46% 46%;
-  background: transparent;
-  box-shadow: none;
-  transition: transform var(--press);
-}
-
-.sim .sim-token .pic {
-  width: 64px;
-  height: 64px;
-  box-shadow:
-    0 0 0 2px #3a2c22,
-    0 6px 14px rgb(0 0 0 / 0.45);
-}
-
-.sim .sim-token.is-golden .pic {
-  box-shadow:
-    0 0 0 3px #e7b04b,
-    0 0 0 5px rgb(255 208 138 / 0.25),
-    0 6px 14px rgb(0 0 0 / 0.45);
-}
-
-.sim .sim-token:hover {
-  transform: translateY(-2px);
-}
-
-.sim .sim-token.is-selected .pic {
-  box-shadow:
-    0 0 0 3px var(--amber),
-    0 0 18px rgb(255 178 74 / 0.55);
-}
-
-.sim .sim-token.is-blocked .pic {
-  box-shadow: 0 0 0 3px var(--bad);
-  filter: grayscale(0.7);
-}
-
-.sim-atk,
-.sim-hp {
-  position: absolute;
-  bottom: 0;
-  display: grid;
-  place-items: center;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 4px;
-  border-radius: 12px;
-  font: 800 var(--t-sm) / 1 var(--display);
-  font-variant-numeric: tabular-nums;
-  box-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
-}
-
-.sim-atk {
-  left: -2px;
-  background: linear-gradient(180deg, #ffd08a, #e99a2e);
+  background: radial-gradient(circle at 40% 35%, #ffe3a1, #e3a03c 60%, #a8681c);
   color: #2a1600;
+  box-shadow: 0 0 10px rgb(255 178 74 / 0.45);
 }
 
-.sim-hp {
-  right: -2px;
-  background: linear-gradient(180deg, #ff8a78, #c23a2a);
-  color: #fff6f0;
-}
+/* ---------- Credit ---------- */
 
-.sim-kw {
-  position: absolute;
-  top: -4px;
-  left: 50%;
-  translate: -50% 0;
-  padding: 1px 5px;
-  border-radius: var(--r-chip);
-  background: rgb(18 13 11 / 0.88);
-  color: var(--amber-hi);
-  font: 700 0.625rem / 1.3 var(--body);
-  white-space: nowrap;
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-
-.sim-flag {
-  position: absolute;
-  top: 18px;
-  right: -4px;
-  display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--info);
-  color: #0c0807;
-  font: 800 0.75rem / 1 var(--body);
-}
-
-.sim-flag-blocked {
-  background: var(--bad);
-}
-
-.sim .sim-token-add {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--text-2);
-  font: 300 1.75rem / 1 var(--body);
-  box-shadow: inset 0 0 0 1.5px dashed var(--field-line);
-  outline: 1.5px dashed var(--field-line);
-  outline-offset: -1.5px;
-}
-
-.sim .sim-token-add:hover,
-.sim .sim-token-add[aria-expanded="true"] {
-  color: var(--amber);
-  outline-color: var(--amber);
-  transform: none;
-}
-
-/* ---------- The picked minion and the search ---------- */
-
-.sim-inspect,
-.sim-add {
-  display: grid;
-  gap: var(--s-3);
-  padding: var(--s-3);
-  border-radius: var(--r-tile);
-  background: var(--surface-2);
-  box-shadow: inset 0 0 0 1px var(--line);
-  animation: sim-in 180ms var(--ease-out);
-}
-
-@keyframes sim-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sim-inspect,
-  .sim-add {
-    animation: none;
-  }
-
-  .sim .sim-token,
-  .sim .sim-token:hover {
-    transition: none;
-    transform: none;
-  }
-}
-
-.sim-inspect-name {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s-2);
+.sim-credit {
+  max-width: 80ch;
   margin: 0;
-  font: 700 var(--t-lg) / 1.2 var(--display);
-}
-
-.sim-badge {
-  padding: 2px 8px;
-  border-radius: var(--r-chip);
-  font: 700 var(--t-xs) / 1.4 var(--body);
-}
-
-.sim-badge-blocked {
-  background: rgb(255 154 138 / 0.14);
-  color: var(--bad);
-}
-
-.sim-reason {
-  margin: 0;
-  color: var(--info);
-  font-size: var(--t-sm);
-}
-
-.sim-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-3);
-}
-
-.sim-stat,
-.sim-cap {
-  display: inline-grid;
-  gap: 4px;
+  color: #c7b39b;
   font-size: var(--t-xs);
-  font-weight: 700;
-  color: var(--text-2);
+  text-shadow: 0 1px 4px rgb(0 0 0 / 0.9);
 }
 
-.sim input[type="number"],
-.sim input[type="search"] {
-  min-height: 40px;
-  padding: 0 10px;
-  font: 600 var(--t-md) / 1.2 var(--body);
-  color: var(--text);
-  background: var(--bg-deep);
-  border: 1.5px solid var(--field-line);
-  border-radius: var(--r-small);
-}
+/* ---------- Reduced motion: nothing moves ---------- */
 
-.sim input[type="number"] {
-  width: 6.5rem;
-  font-variant-numeric: tabular-nums;
-}
+/* ---------- Windows high contrast: plain panels and cards in system colours ---------- */
 
-.sim input[type="search"] {
-  width: 100%;
-}
-
-.sim input:focus-visible {
-  border-color: var(--amber);
-  outline-offset: 2px;
-}
-
-.sim-stat-attack input { border-color: #b8812e; }
-.sim-stat-health input { border-color: #a8473a; }
-
-.sim-chips,
-.sim-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-1);
-}
-
-.sim .sim-chip {
-  min-height: 32px;
-  border-radius: var(--r-chip);
-  font-weight: 600;
-}
-
-.sim-add-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-2);
-  font-size: var(--t-sm);
-}
-
-.sim-results {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
-  gap: var(--s-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.sim .sim-result-row {
-  justify-content: flex-start;
-  gap: var(--s-2);
-  width: 100%;
-  min-height: 44px;
-  padding: 4px var(--s-2) 4px 4px;
-  border-radius: var(--r-chip);
-  text-align: start;
-  white-space: normal;
-}
-
-.sim-result-name {
-  flex: 1;
-  font-weight: 600;
-}
-
-/* ---------- The odds ---------- */
-
-.sim-result-body {
-  display: grid;
-  gap: var(--s-3);
-  transition: opacity 200ms ease;
-}
-
-.sim-result-body.is-stale {
-  opacity: 0.55;
-}
-
-.sim-wait {
-  margin: 0;
-}
-
-.sim-shares {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--s-2);
-}
-
-.sim-share {
-  display: grid;
-  gap: 2px;
-}
-
-.sim-share-value {
-  font: 800 var(--t-value) / 1 var(--display);
-  font-variant-numeric: tabular-nums;
-}
-
-.sim-share-label {
-  color: var(--text-2);
-  font-size: var(--t-xs);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.sim-share-win .sim-share-value { color: var(--win-text); }
-.sim-share-lose .sim-share-value { color: var(--loss-text); }
-.sim-share-tie .sim-share-value { color: var(--tie-text); }
-
-.sim-bar {
-  display: block;
-  width: 100%;
-  height: 10px;
-  border-radius: 5px;
-  overflow: hidden;
-}
-
-.sim-bar-win { fill: var(--mark-win); }
-.sim-bar-tie { fill: var(--mark-tie); }
-.sim-bar-lose { fill: var(--mark-loss); }
-
-.sim-likely {
-  margin: 0;
-  font-weight: 700;
-}
-
-.sim-ranges {
-  display: grid;
-  gap: var(--s-1);
-  margin: 0;
-}
-
-.sim-range {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--s-2);
-  font-size: var(--t-sm);
-}
-
-.sim-range dt {
-  color: var(--text-2);
-}
-
-.sim-range dd {
-  margin: 0;
-}
-
-.sim-ranges p {
-  margin: 0;
-}
-
-.sim-approx {
-  display: grid;
-  gap: var(--s-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: var(--t-sm);
-}
-
-.sim-note,
-.sim-result .sim-note {
-  margin: 0;
-  color: var(--info);
-  font-size: var(--t-sm);
-}
-
-.sim-blocked p {
-  margin: 0;
-}
-
-.sim-meta {
-  margin: 0;
-  color: var(--text-3);
-  font-size: var(--t-xs);
-}
-
-.sim-settings {
-  display: grid;
-  gap: var(--s-2);
-  padding-top: var(--s-3);
-  border-top: 1px solid var(--line-soft);
-}
-
-@media (max-width: 480px) {
-  .sim .sim-token {
-    width: 52px;
-    height: 60px;
+@media (forced-colors: active) {
+  .sim-backdrop {
+    display: none;
   }
 
-  .sim .sim-token .pic,
-  .sim .sim-token-add {
-    width: 52px;
-    height: 52px;
+  .sim-title {
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    filter: none;
+  }
+
+  .sim-load {
+    padding: 16px;
+    border: 1px solid CanvasText;
+    border-image: none;
+    filter: none;
+  }
+
+  .sim-table,
+  .sim .sim-card,
+  .sim-slot.is-empty {
+    border: 1px solid CanvasText;
+  }
+
+  .sim .sim-card.is-selected,
+  .sim [aria-pressed="true"]:is(.sim-game, .sim-round, .sim-chip) {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  .sim-atk,
+  .sim-hp,
+  .sim-gift,
+  .sim-step {
+    border: 1px solid CanvasText;
+    forced-color-adjust: auto;
   }
 }

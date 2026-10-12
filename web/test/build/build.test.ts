@@ -152,7 +152,7 @@ test("the simulator page: noindex, its script and frame when accounts are open, 
     const html = readFileSync(join(DIST, file), "utf8");
     assert.match(html, /<meta name="robots" content="noindex">/, file);
     if (CONFIG) {
-      for (const id of ["sim-load", "sim-editor", "sim-result", "sim-mode"]) assert.match(html, new RegExp(`id="${id}"`), `${file}: ${id}`);
+      for (const id of ["sim-load", "sim-table", "sim-opponent", "sim-player", "sim-result", "sim-mode"]) assert.match(html, new RegExp(`id="${id}"`), `${file}: ${id}`);
       assert.match(html, /state-loading/, "the loading blocks keep the room");
       const sources = [...html.matchAll(/<script\b[^>]*\ssrc="\/([^"]+)"/g)].map((m) => m[1]);
       assert.ok(sources.length >= 1, "the simulator's script");
@@ -247,8 +247,9 @@ test("fonts and styles are our own files: every url() is a local font or the bra
 
     for (const url of urls) {
       // The masthead draws the logo (public/mark.svg, D-094) as a background,
-      // the tavern buttons and panels their painted art (T-530, D-105).
-      assert.match(url, /^\/(?:fonts\/[a-z0-9-]+\.woff2|mark\.svg|art\/home\/(?:btn-[a-z-]+(?:@2x)?|panel-(?:lead|card|strip))\.webp)$/, url);
+      // the tavern buttons and panels their painted art (T-530, D-105), the
+      // simulator its tall panel (T-526, D-112).
+      assert.match(url, /^\/(?:fonts\/[a-z0-9-]+\.woff2|mark\.svg|art\/home\/(?:btn-[a-z-]+(?:@2x)?|panel-(?:lead|card|strip))\.webp|art\/sim\/panel-tall\.webp)$/, url);
       assert.ok(existsSync(join(DIST, url)), url);
     }
   }
@@ -304,10 +305,10 @@ test("pictures are our own files, with their size and a text alternative", () =>
     const html = readFileSync(page, "utf8");
     for (const [img] of html.matchAll(/<img\b[^>]*>/g)) {
       // Built pages show made-up data only, so their pictures are our own
-      // placeholders, plus the home page's painting (T-530); card art (D-074)
-      // is drawn in the browser by the game viewer.
+      // placeholders, plus the home page's painting (T-530) and the
+      // simulator's (T-526); card art (D-074) is drawn in the browser.
       const src = /\ssrc="([^"]*)"/.exec(img)?.[1] ?? "";
-      assert.match(src, /^\/(?:placeholders\/(?:hero|card)-\d\.svg|art\/home\/tavern-\d+\.webp)$/, `${name(page)}: ${img}`);
+      assert.match(src, /^\/(?:placeholders\/(?:hero|card)-\d\.svg|art\/home\/tavern-\d+\.webp|art\/sim\/arena-\d+\.webp)$/, `${name(page)}: ${img}`);
       assert.ok(existsSync(join(DIST, src)), src);
       // Width and height keep the room (no layout shift); alt is there, empty when decorative.
       assert.match(img, /\swidth="\d+"/, img);
