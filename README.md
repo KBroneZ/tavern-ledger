@@ -24,7 +24,7 @@
 ## Status
 
 - **Desktop app: not released yet.** There is no installer; it runs from source on the developer's PC while the installer and code signing are prepared. To build it yourself, see [docs/development.md](docs/development.md).
-- **Website: online at [tavernledger.net](https://tavernledger.net), accounts not open yet.** The combat simulator and its accuracy page work without an account.
+- **Website: online at [tavernledger.net](https://tavernledger.net), and you can create an account.** Uploading games needs the desktop app; the combat simulator and its accuracy page work without one.
 - Progress, area by area: [docs/status.md](docs/status.md). Plan: [docs/plan/plan.md](docs/plan/plan.md).
 
 ## Features
@@ -64,7 +64,7 @@ Screenshots are from the app and the live website, on the developer's own games.
 - **No other players' names.** The app keeps opponents by hero, never by name or BattleTag.
 - **What the app does with the game:** it reads the game's log files and, for the overlay, where your pointer is over the game window. If you turn it on in Settings (off by default), it also reads two values the game already shows you, the lobby's five tribes and your own Battlegrounds rating, read-only from the game's memory; they stay on your PC. Reading the game's memory goes against the letter of Blizzard's EULA, so the app explains that risk before you turn it on.
 - **What it never does:** no injection, no changes to game files, nothing played or clicked for you.
-- **The website** keeps accounts and games on servers in the EU (Supabase, Frankfurt), has no analytics and lets you download all your data or delete your account at any time. Details: [privacy policy](https://tavernledger.net/privacy/) and [terms](https://tavernledger.net/terms/).
+- **The website** keeps accounts and games on servers in the EU (Supabase, Frankfurt), has no analytics and lets you download all your data or delete your account at any time. On a free account, each game's full file (turn-by-turn boards, shops, combat replays) is kept on the server for 28 days from the day it was played; its summary stays in your stats, and the app keeps every game in full on your PC. Details: [privacy policy](https://tavernledger.net/privacy/) and [terms](https://tavernledger.net/terms/).
 
 ## How it is built
 

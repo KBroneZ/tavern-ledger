@@ -11,7 +11,7 @@ Rules ported from StartAICareer (`C:\Users\andia\StartAICareer\CLAUDE.md`) and a
 1. At the start: read `docs/status.md` (status) and the task in `docs/plan/plan.md`. Check `docs/decisions/DECISIONS.md` if the task touches something pending.
 2. One task per conversation. Conversation title: `#NNN <name>` (this repo's own numbering).
 3. At the end: task status in the plan, new decisions in `DECISIONS.md` and `docs/status.md` up to date, in the same commit or PR as the task. `README.md` is the public face (D-118): change it only when what a visitor should know changes (features, status, privacy), never as a log.
-4. Ask whether the user wants the prompt for the next session; write it only if they ask, in `prompts/sessions/NNN-slug.md`, with effort per phase and the subagent model (Haiku for searches, Sonnet for code, Opus only for architecture, security or irreversible decisions).
+4. Ask whether the user wants the prompt for the next session; write it only if they ask, in `docs/process/sessions/NNN-slug.md`, with effort per phase and the subagent model (Haiku for searches, Sonnet for code, Opus only for architecture, security or irreversible decisions).
 
 ## Absolute rules
 
@@ -71,7 +71,7 @@ docs/screenshots/        README screenshots (real app and site, own games only)
 docs/plan/plan.md        phases and tasks
 docs/decisions/          decisions taken and pending
 docs/research/           verified research
-prompts/sessions/        session prompts (only if the user asks)
+docs/process/sessions/   session prompts (only if the user asks)
 tools/                   read-only scripts (check_logs.py, parse_bg.py)
 spikes/                  throwaway tests (overlay-tauri: the T-005 overlay test)
 tests/                   tests (unittest; dependencies pinned in requirements.txt)
