@@ -275,11 +275,31 @@
     });
   }
 
+  const MOTIONS = ["replay-lunge", "replay-hit", "replay-slide"];
+
+  // Stops every motion on `els`: a jump or a step back draws the step as it is.
+  function still(els) {
+    for (const el of els) {
+      el.getAnimations().forEach((a) => {
+        if (MOTIONS.includes(a.id)) a.cancel();
+      });
+      delete el.dataset.lunging;
+    }
+  }
+
+  // The lunge running on each element: only its own end clears the mark.
+  const lunging = new WeakMap();
+
+  // `attacker` flies to `target` and back, drawn above its neighbours and the
+  // other board meanwhile (`data-lunging`).
   function lunge(attacker, target, speed) {
     restart(attacker, "replay-lunge");
-    attacker.classList.add("lunging");
+    attacker.dataset.lunging = "";
     const motion = attacker.animate(lungeFrames(boxOf(attacker), boxOf(target)), { duration: ATTACK_MS / speed, id: "replay-lunge" });
-    const done = () => attacker.classList.remove("lunging");
+    lunging.set(attacker, motion);
+    const done = () => {
+      if (lunging.get(attacker) === motion) delete attacker.dataset.lunging;
+    };
     motion.addEventListener("finish", done);
     motion.addEventListener("cancel", done);
   }
@@ -558,28 +578,34 @@
     return { fold, items };
   }
 
-  // The playback clock: `draw(animate)` after every step, each step staying
-  // for its beat; it stops by itself once the player has left the page.
-  // Moving one step on animates; a jump or a step back does not.
+  // The playback clock: `draw(how)` after every step, each step staying for
+  // its beat; it stops by itself once the player has left the page. "move":
+  // one step on, played; "still": a jump, a step back or a player just
+  // built, drawn as it is; "keep": the same step (a pause), left as it is.
   function clock(state, last, box, beat, draw) {
     let timer = null;
     const later = () => setTimeout(tick, beat[state.step] / speed);
     function tick() {
       timer = null;
       if (!box.isConnected || !state.playing) return;
-      if (state.step >= last) state.playing = false;
-      else state.step += 1;
-      draw(true);
+      if (state.step >= last) {
+        // The end: the last step has played already.
+        state.playing = false;
+        draw("keep");
+        return;
+      }
+      state.step += 1;
+      draw("move");
       if (state.playing) timer = later();
     }
-    return function go(step, playing) {
+    return function go(step, playing, fresh = false) {
       if (timer) clearTimeout(timer);
       timer = null;
       const next = Math.min(Math.max(step, 0), last);
-      const animate = next === state.step + 1;
+      const how = !fresh && next === state.step + 1 ? "move" : fresh || next !== state.step ? "still" : "keep";
       state.step = next;
       state.playing = playing;
-      draw(animate);
+      draw(how);
       if (playing) timer = later();
     };
   }
@@ -601,10 +627,14 @@
     const last = all.length - 1;
     let go = null;
     const steps = buildSteps(ui, all, words, h, combat.round, (i, p) => go(i, p));
-    const still = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const draw = (animate) => {
+    const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const movers = () => [...SIDES.flatMap((side) => [...sides[side].tiles.values()]), ...stage.querySelectorAll(".replay-hero-face")];
+    const draw = (how) => {
+      const moving = how === "move" && !reduced();
+      if (how === "still" || (how === "move" && !moving)) still(movers());
+      if (how !== "keep") stage.classList.toggle("still", !moving);
       // Measured before the boards change and once after, never in between.
-      const before = animate && !still() ? measure(SIDES.flatMap((side) => [...sides[side].tiles.values()])) : null;
+      const before = moving ? measure(SIDES.flatMap((side) => [...sides[side].tiles.values()])) : null;
       const drawn = drawStage(ui, sides, all[state.step], heroes, h);
       if (before) move(sides, all[state.step], before, drawn, speed);
       caption.textContent = words(all[state.step].event);
@@ -633,7 +663,7 @@
     if (!combat.replay.complete) box.append(ui.withSource(ui.el("p", "note", t("replay.cut")), "unknown"));
     if (all.skipped) box.append(ui.withSource(ui.el("p", "note", I18n.plural("replay.skipped", all.skipped)), "unknown"));
     box.append(steps.fold);
-    go(state.step, state.playing);
+    go(state.step, state.playing, true);
     return box;
   }
 

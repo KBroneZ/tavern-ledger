@@ -12,7 +12,7 @@
 // flies to its target, the board slides into place; a jump does not move.
 import { mount, toDom } from "../view/node.ts";
 import { beats, control, type Frame, keyAction, type PlayAction, type Playback, SPEEDS, stepWords } from "./replay.ts";
-import { hit, lunge, measure, slide } from "./replayMotion.ts";
+import { hit, lunge, measure, slide, still } from "./replayMotion.ts";
 import type { Side } from "./replayRead.ts";
 import {
   counterText,
@@ -158,12 +158,24 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     });
   }
 
-  function draw(speak: boolean, animate: boolean): void {
+  /** The minions and both heroes' faces: everything that can move. */
+  function movers(): HTMLElement[] {
+    return [...player.tiles.values(), ...player.box.querySelectorAll<HTMLElement>(".rp-hero-face")];
+  }
+
+  /**
+   * Draws the step. "move": one step on, played; "still": a jump, a step back
+   * or another combat, drawn as it is, every motion and mark animation
+   * stopped; "keep": the same step (a pause), left as it is.
+   */
+  function draw(speak: boolean, how: "move" | "still" | "keep"): void {
     const { box, pb, step, playing, combat } = player;
     const last = pb.frames.length - 1;
     const frame = pb.frames[step];
+    if (how === "still") still(movers());
+    if (how !== "keep") one(box, ".rp-stage").classList.toggle("is-still", how === "still");
     // Measured before the boards change and once after, never in between.
-    const before = animate ? measure(player.tiles.values()) : null;
+    const before = how === "move" ? measure(player.tiles.values()) : null;
     const nodes = SIDES.flatMap((side) => drawSide(frame, side));
     if (before) move(frame, before, nodes);
     const words = combat.replay ? stepWords(frame.event, combat.replay, namerFor(combat)) : "";
@@ -186,15 +198,15 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     steps.set(combat.round, step);
   }
 
-  /** Applies an action (replay.ts control) and draws the result. */
-  function act(action: PlayAction, speak = true): void {
+  /** Applies an action (replay.ts control) and draws the result; `fresh`: a combat just drawn. */
+  function act(action: PlayAction, speak = true, fresh = false): void {
     stop();
     const next = control(player, action, player.pb.frames.length - 1, motion.matches);
     // Only one step on moves; a jump, a step back or reduced motion draws the step as it is.
-    const animate = !motion.matches && next.step === player.step + 1;
+    const how = !fresh && !motion.matches && next.step === player.step + 1 ? "move" : fresh || next.step !== player.step ? "still" : "keep";
     player.step = next.step;
     player.playing = next.playing;
-    draw(speak, animate);
+    draw(speak, how);
     schedule();
   }
 
@@ -225,7 +237,7 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
       chip.setAttribute("aria-pressed", String(chip.dataset.round === String(round)));
     }
     // The chip's pressed state says which combat; its first words need no reading.
-    act({ goto: step }, false);
+    act({ goto: step }, false, true);
   }
 
   section.addEventListener("click", (event) => {
@@ -265,8 +277,8 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
   section.addEventListener("toggle", () => keepInView(player.box, player.step), true);
 
   motion.addEventListener("change", () => {
-    if (motion.matches && player.playing) act({ goto: player.step });
+    if (motion.matches) act({ goto: player.step }, false, true);
   });
 
-  act({ goto: 0 }, false);
+  act({ goto: 0 }, false, true);
 }

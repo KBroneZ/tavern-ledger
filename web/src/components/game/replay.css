@@ -211,21 +211,20 @@
   width: var(--rp-tile);
 }
 
-/* The attacker flies over its neighbours and the other board. */
-.rp-minion.is-lunging {
+/* The attacker flies over its neighbours and the other board: each board is
+   its own stacking context (container-type), so its side is raised too. */
+.rp-stage [data-lunging],
+.rp-side:has([data-lunging]) {
   z-index: 2;
-}
-
-.rp-art {
-  transition:
-    opacity var(--rp-move) var(--ease-out),
-    transform var(--rp-move) var(--ease-out),
-    filter var(--rp-move) var(--ease-out);
 }
 
 .rp-art {
   position: relative;
   display: block;
+  transition:
+    opacity var(--rp-move) var(--ease-out),
+    transform var(--rp-move) var(--ease-out),
+    filter var(--rp-move) var(--ease-out);
 }
 
 .rp-art .pic {
@@ -592,6 +591,7 @@ html:not([data-detail="advanced"]) .rp-stepper {
 
   .rp-stage {
     --rp-gap: 4px;
+    padding-inline: var(--s-2);
   }
 
   /* A Dark Gift is its star on a phone; its name is in the minion's words. */
@@ -599,25 +599,25 @@ html:not([data-detail="advanced"]) .rp-stepper {
     display: none;
   }
 
-  .rp-stage {
-    padding-inline: var(--s-2);
-  }
-
   .rp-speed {
     margin-left: 0;
   }
 }
 
+/* A step drawn without moving on (a jump, a step back, another combat) shows
+   its marks as they are, without their animations (replayPlayer.ts). */
+.rp-stage.is-still :is(*, *::before, *::after) {
+  animation: none;
+  transition: none;
+}
+
 /* ---------- Reduced motion: no animation, step by step only ---------- */
 
 @media (prefers-reduced-motion: reduce) {
-  .rp-art,
-  .rp-minion .rp-art::before,
-  .rp-minion.is-summoned :is(.rp-art, .rp-info, .gv-gifts),
-  .rp-minion.is-buffed .rp-stats,
-  .rp-hurt {
-    animation: none;
-    transition: none;
+  /* Every mark's rule outranks a plain one: these win whatever they meet. */
+  .rp-stage :is(*, *::before, *::after) {
+    animation: none !important;
+    transition: none !important;
   }
 
   .rp-minion.is-dying .rp-art {

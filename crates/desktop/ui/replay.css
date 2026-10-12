@@ -82,7 +82,9 @@
   justify-items: center;
   width: var(--tile);
 }
-.replay-minion.lunging { z-index: 2; }
+/* The attacker flies over its neighbours and the other board: each board is
+   its own stacking context (container-type), so its side is raised too. */
+.replay-stage [data-lunging], .replay-side:has([data-lunging]) { z-index: 2; }
 .replay-frame {
   position: relative;
   display: block;
@@ -232,11 +234,14 @@
   .replay-side { grid-template-columns: minmax(0, 1fr); }
   .replay-stage { --replay-gap: 4px; padding-inline: 6px; }
 }
-/* Reduced motion: the steps change without movement (replay.js plays no motion either). */
+/* A step drawn without moving on (a jump, a step back, a player just built)
+   shows its marks as they are, without their animations (replay.js). */
+.replay-stage.still :is(*, *::before, *::after) { animation: none; transition: none; }
+/* Reduced motion: the steps change without movement (replay.js plays no
+   motion either). Every mark's rule outranks a plain one: these win. */
 @media (prefers-reduced-motion: reduce) {
-  .replay-chip, .replay-frame { transition: none; }
-  .replay-minion .replay-frame, .replay-minion .replay-frame::before, .replay-minion .replay-frame::after,
-  .replay-minion .replay-stats, .replay-minion .replay-gifts, .replay-hurt { animation: none; }
+  .replay-chip { transition: none; }
+  .replay-stage :is(*, *::before, *::after) { animation: none !important; transition: none !important; }
   .replay-minion.dying .replay-frame { transform: none; }
 }
 @media (forced-colors: active) {

@@ -69,17 +69,37 @@ export function measure(els: Iterable<HTMLElement>): Map<HTMLElement, Box> {
   return out;
 }
 
+const MOTIONS = ["rp-lunge", "rp-hit", "rp-slide"];
+
 /** Stops the motion of this kind already running on `el`, so the new one starts from where it is. */
 function restart(el: HTMLElement, id: string): void {
   for (const a of el.getAnimations()) if (a.id === id) a.cancel();
 }
 
-/** `attacker` flies to `target` and back; it is drawn above its neighbours meanwhile. */
+/** Stops every motion on `els`: a jump or a step back draws the step as it is. */
+export function still(els: Iterable<HTMLElement>): void {
+  for (const el of els) {
+    for (const a of el.getAnimations()) if (MOTIONS.includes(a.id)) a.cancel();
+    delete el.dataset.lunging;
+  }
+}
+
+/** The lunge running on each element: only its own end clears the mark. */
+const lunging = new WeakMap<HTMLElement, Animation>();
+
+/**
+ * `attacker` flies to `target` and back, drawn above its neighbours and the
+ * other board meanwhile (`data-lunging`: an attribute, so redrawing the
+ * minion's classes keeps it).
+ */
 export function lunge(attacker: HTMLElement, target: Element, speed: number): void {
   restart(attacker, "rp-lunge");
-  attacker.classList.add("is-lunging");
+  attacker.dataset.lunging = "";
   const motion = attacker.animate(lungeFrames(boxOf(attacker), boxOf(target)), { duration: ATTACK_MS / speed, id: "rp-lunge" });
-  const done = () => attacker.classList.remove("is-lunging");
+  lunging.set(attacker, motion);
+  const done = () => {
+    if (lunging.get(attacker) === motion) delete attacker.dataset.lunging;
+  };
   motion.addEventListener("finish", done);
   motion.addEventListener("cancel", done);
 }

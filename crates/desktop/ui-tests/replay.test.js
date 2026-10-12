@@ -218,3 +218,14 @@ test("motion: the attacker winds up, hits short of its target and comes back; a 
   assert.deepEqual(TLReplay.flipDelta({ x: 100, y: 0, width: 1, height: 1 }, { x: 70, y: 0, width: 1, height: 1 }), { dx: 30, dy: 0 });
   assert.equal(TLReplay.flipDelta({ x: 70.4, y: 0, width: 1, height: 1 }, { x: 70, y: 0, width: 1, height: 1 }), null);
 });
+
+test("motion: the app moves with the website's numbers", () => {
+  const web = (file) => fs.readFileSync(path.join(__dirname, "..", "..", "..", "web", "src", "lib", "game", file), "utf8");
+  const site = web("replay.ts") + web("replayMotion.ts");
+  const app = fs.readFileSync(path.join(__dirname, "..", "ui", "replay.js"), "utf8");
+  const value = (src, name) => new RegExp(String.raw`const ${name}(?::[^=]+)? = ([^;]+);`).exec(src)?.[1];
+  for (const name of ["AT_IMPACT_MS", "ATTACK_MS", "HIT_MS", "SLIDE_MS", "REACH", "WIND_UP_PX", "EASE_OUT", "EASE_IN_OUT"]) {
+    assert.ok(value(site, name), `${name} on the website`);
+    assert.equal(value(app, name), value(site, name), name);
+  }
+});
