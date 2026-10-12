@@ -1,0 +1,53 @@
+name: Bug report
+description: Something in the app or the website does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. **Do not attach raw Hearthstone logs**: they contain other players' names. In the app, "Report a problem" in a game's recap saves a report file without names; attach that instead.
+        Security problems go through [SECURITY.md](https://github.com/KBroneZ/tavern-ledger/blob/main/SECURITY.md), not here.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options:
+        - Desktop app
+        - Overlay
+        - Website
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Game mode
+      options:
+        - Solo
+        - Duos
+        - Both
+        - Not about a game
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected to see instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Click ...
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: For the app, the commit you built from (`git rev-parse --short HEAD`). For the website, the page's address.
+  - type: textarea
+    id: extra
+    attributes:
+      label: Report file, screenshots or anything else
+      description: Check screenshots for other players' names before you post them.

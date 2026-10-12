@@ -8,9 +8,9 @@ Rules ported from StartAICareer (`C:\Users\andia\StartAICareer\CLAUDE.md`) and a
 
 ## Session protocol
 
-1. At the start: read `README.md` (status) and the task in `docs/plan/plan.md`. Check `docs/decisions/DECISIONS.md` if the task touches something pending.
+1. At the start: read `docs/status.md` (status) and the task in `docs/plan/plan.md`. Check `docs/decisions/DECISIONS.md` if the task touches something pending.
 2. One task per conversation. Conversation title: `#NNN <name>` (this repo's own numbering).
-3. At the end: task status in the plan, new decisions in `DECISIONS.md` and README up to date, in the same commit or PR as the task.
+3. At the end: task status in the plan, new decisions in `DECISIONS.md` and `docs/status.md` up to date, in the same commit or PR as the task. `README.md` is the public face (D-118): change it only when what a visitor should know changes (features, status, privacy), never as a log.
 4. Ask whether the user wants the prompt for the next session; write it only if they ask, in `prompts/sessions/NNN-slug.md`, with effort per phase and the subagent model (Haiku for searches, Sonnet for code, Opus only for architecture, security or irreversible decisions).
 
 ## Absolute rules
@@ -62,8 +62,12 @@ Rules ported from StartAICareer (`C:\Users\andia\StartAICareer\CLAUDE.md`) and a
 
 ```
 CLAUDE.md                rules (this file)
-README.md                current status
+README.md                public face: pitch, status, features, privacy (D-118)
+CONTRIBUTING.md          how to contribute; SECURITY.md: how to report problems
 PROVENANCE.md            origin and license of dependencies and data
+docs/status.md           current status, area by area
+docs/development.md      how to run the tools, app, backend and website
+docs/screenshots/        README screenshots (real app and site, own games only)
 docs/plan/plan.md        phases and tasks
 docs/decisions/          decisions taken and pending
 docs/research/           verified research
@@ -75,6 +79,7 @@ supabase/                backend: migrations, database tests, Edge Functions (lo
 package.json             dev tooling only (Supabase CLI, pinned)
 requirements.txt         Python dependencies with version and hash
 .github/workflows/       CI: tests, links and secrets
+.github/ISSUE_TEMPLATE/  bug and feature forms; pull_request_template.md
 .claude/skills/          design skills (third-party, PROVENANCE.md)
 .local/                  local only, never in git
 ```
