@@ -29,6 +29,7 @@ pub mod shop;
 pub mod stats;
 pub mod store;
 pub mod tail;
+pub mod why;
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fs::File;
