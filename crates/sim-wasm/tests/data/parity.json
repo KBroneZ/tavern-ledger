@@ -5,7 +5,7 @@
         "approximate": [],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.6.0",
+        "engine": "0.7.0",
         "lost": 7508,
         "stalled": 0,
         "start_of_combat": false,
@@ -105,7 +105,7 @@
         "approximate": [],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.6.0",
+        "engine": "0.7.0",
         "lost": 10000,
         "stalled": 0,
         "start_of_combat": false,
@@ -258,7 +258,7 @@
           "likely": 6,
           "low": 6
         },
-        "engine": "0.6.0",
+        "engine": "0.7.0",
         "lost": 2593,
         "stalled": 0,
         "start_of_combat": true,
@@ -355,10 +355,123 @@
     },
     {
       "answer": {
+        "approximate": [
+          {
+            "card_id": "BG33_430",
+            "reason": "Blood Gems are played as +1/+1; upgrades are not in the log"
+          },
+          {
+            "card_id": "BG33_886",
+            "reason": "Blood Gems are played as +1/+1; upgrades are not in the log"
+          }
+        ],
+        "damage_known": true,
+        "dealt": null,
+        "engine": "0.7.0",
+        "lost": 10000,
+        "stalled": 0,
+        "start_of_combat": false,
+        "status": "odds",
+        "taken": {
+          "high": 13,
+          "likely": 13,
+          "low": 13
+        },
+        "tied": 0,
+        "trials": 10000,
+        "won": 0
+      },
+      "name": "solo start-of-combat attack and Blood Gems",
+      "request": {
+        "damage_cap": 15,
+        "opponent": [
+          {
+            "minions": [
+              {
+                "attack": 7,
+                "card_id": "BG36_849",
+                "facts": {
+                  "attack": 7,
+                  "health": 7,
+                  "keywords": [],
+                  "tier": 6,
+                  "tribes": [
+                    "DRAGON"
+                  ]
+                },
+                "golden": false,
+                "health": 7,
+                "keywords": [
+                  "rally"
+                ]
+              },
+              {
+                "attack": 3,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 5,
+                "keywords": []
+              }
+            ],
+            "tier": 6
+          }
+        ],
+        "player": [
+          {
+            "minions": [
+              {
+                "attack": 2,
+                "card_id": "BG33_430",
+                "facts": {
+                  "attack": 2,
+                  "health": 5,
+                  "keywords": [],
+                  "tier": 3,
+                  "tribes": [
+                    "QUILBOAR"
+                  ]
+                },
+                "golden": false,
+                "health": 5,
+                "keywords": []
+              },
+              {
+                "attack": 3,
+                "card_id": "BG33_886",
+                "facts": {
+                  "attack": 2,
+                  "health": 3,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": [
+                    "QUILBOAR"
+                  ]
+                },
+                "golden": false,
+                "health": 4,
+                "keywords": [
+                  "rally"
+                ]
+              }
+            ],
+            "tier": 5
+          }
+        ]
+      }
+    },
+    {
+      "answer": {
         "approximate": [],
         "damage_known": false,
         "dealt": null,
-        "engine": "0.6.0",
+        "engine": "0.7.0",
         "lost": 1275,
         "stalled": 0,
         "start_of_combat": false,
@@ -446,7 +559,7 @@
     {
       "answer": {
         "approximate": [],
-        "engine": "0.6.0",
+        "engine": "0.7.0",
         "not_modelled": [
           "BG_NOT_A_CARD"
         ],
@@ -501,7 +614,7 @@
     },
     {
       "answer": {
-        "engine": "0.6.0",
+        "engine": "0.7.0",
         "missing": [
           "BG_ICC_026t"
         ],
@@ -557,7 +670,7 @@
           "likely": 4,
           "low": 4
         },
-        "engine": "0.6.0",
+        "engine": "0.7.0",
         "lost": 5609,
         "stalled": 0,
         "start_of_combat": false,

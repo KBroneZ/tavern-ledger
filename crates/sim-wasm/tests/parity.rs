@@ -131,6 +131,43 @@ fn requests() -> Vec<(&'static str, Value)> {
             ),
         ),
         (
+            "solo start-of-combat attack and Blood Gems",
+            solo(
+                board(
+                    Some(5),
+                    vec![
+                        m(
+                            "BG33_430",
+                            2,
+                            5,
+                            &[],
+                            facts(3, &["QUILBOAR"], 2, 5, &[]),
+                        ),
+                        m(
+                            "BG33_886",
+                            3,
+                            4,
+                            &["rally"],
+                            facts(1, &["QUILBOAR"], 2, 3, &[]),
+                        ),
+                    ],
+                ),
+                board(
+                    Some(6),
+                    vec![
+                        m(
+                            "BG36_849",
+                            7,
+                            7,
+                            &["rally"],
+                            facts(6, &["DRAGON"], 7, 7, &[]),
+                        ),
+                        m("BGS_119", 3, 5, &[], plain(1, 2)),
+                    ],
+                ),
+            ),
+        ),
+        (
             "solo unknown tier",
             solo(
                 board(

@@ -207,7 +207,11 @@ test("shares never round to a claim the counts do not make", () => {
 });
 
 test("calibration bars: percents per bucket, empty buckets marked, never drawn as 0", () => {
-  const bars = calibrationBars(sample().modes.solo.calibration);
+  // The middle bucket emptied, whatever the committed export holds.
+  const raw = committed();
+  const solo = (raw.modes as Record<string, { calibration: Record<string, unknown>[] }>).solo;
+  Object.assign(solo.calibration[2], { predictions: 0, mean_said: null, happened: null });
+  const bars = calibrationBars(parseAccuracy(raw).modes.solo.calibration);
   assert.equal(bars.length, 5);
   assert.deepEqual(bars.map((b) => b.range), ["0–20%", "20–40%", "40–60%", "60–80%", "80–100%"]);
   const empty = bars[2];
