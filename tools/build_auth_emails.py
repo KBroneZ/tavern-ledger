@@ -36,6 +36,8 @@ SITE_URL = "https://tavernledger.net/"
 LINK = "{{ .ConfirmationURL }}"
 # `print` turns any value (missing, null, a number) into text, so `eq` never fails on a strange one.
 IS_SPANISH = '{{ if eq (print .Data.lang) "es" }}'
+# Invisible characters after the preheader, so inbox previews stop at its sentence.
+PREHEADER_FILLER = "&#847;&zwnj;&nbsp;" * 40
 NOTICE_EN = "Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment."
 
 # Colours: the site's ink and amber (D-094) around a parchment card (D-105), dark by default so
@@ -118,14 +120,14 @@ COPY: dict[str, dict[str, dict[str, object]]] = {
         "en": {
             "subject": "Confirm the email change on Tavern Ledger",
             "heading": "Confirm the email change",
-            "body": ["Someone asked to change the email of a Tavern Ledger account from {{ .Email }} to {{ .NewEmail }}. Confirm to make the change."],
+            "body": ["Someone asked to change the email of a Tavern Ledger account from {{ .Email }} to {{ .NewEmail }}.", "Both addresses get this email: the change is made once the link in each one is opened."],
             "button": "Confirm the change",
             "ignore": "Didn't ask for it? Don't open the link, and change your password: someone else may be signed in to your account.",
         },
         "es": {
             "subject": "Confirma el cambio de correo en Tavern Ledger",
             "heading": "Confirma el cambio de correo",
-            "body": ["Alguien ha pedido cambiar el correo de una cuenta de Tavern Ledger de {{ .Email }} a {{ .NewEmail }}. Confírmalo para hacer el cambio."],
+            "body": ["Alguien ha pedido cambiar el correo de una cuenta de Tavern Ledger de {{ .Email }} a {{ .NewEmail }}.", "Este correo llega a las dos direcciones: el cambio se hace cuando se abra el enlace de cada una."],
             "button": "Confirmar el cambio",
             "ignore": "¿No lo has pedido tú? No abras el enlace y cambia tu contraseña: puede que otra persona tenga tu sesión abierta.",
         },
@@ -139,7 +141,7 @@ COPY: dict[str, dict[str, dict[str, object]]] = {
                 "Accept to confirm it, then use “Forgot password?” on the sign-in page to choose a password.",
             ],
             "button": "Accept the invite",
-            "ignore": "Weren't expecting it? Ignore this email: no account is made without your answer.",
+            "ignore": "Weren't expecting it? Ignore this email: nobody can use the invite without this link.",
         },
         "es": {
             "subject": "Te han invitado a Tavern Ledger",
@@ -149,7 +151,7 @@ COPY: dict[str, dict[str, dict[str, object]]] = {
                 "Acepta para confirmarla y luego usa «¿Has olvidado la contraseña?» en la página de inicio de sesión para elegir una contraseña.",
             ],
             "button": "Aceptar la invitación",
-            "ignore": "¿No te lo esperabas? Ignora este correo: sin tu respuesta no se crea ninguna cuenta.",
+            "ignore": "¿No te lo esperabas? Ignora este correo: sin este enlace, nadie puede usar la invitación.",
         },
     },
 }
@@ -213,11 +215,10 @@ def email(name: str, lang: str) -> str:
 <style>{STYLE}</style>
 </head>
 <body style="margin:0;padding:0;background:{INK};" bgcolor="{INK}">
-<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">{text(str(list(copy["body"])[0]))}</div>
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">{text(str(list(copy["body"])[0]))}{PREHEADER_FILLER}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{INK}" style="background:{INK};">
 <tr><td align="center" style="padding:32px 16px;">
-<!--[if mso]><table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px;">
 <tr><td align="center" style="padding:0 0 20px;">
 <a href="{SITE_URL}" style="text-decoration:none;"><img src="{LOGO_URL}" width="{LOGO_SIZE}" height="{LOGO_SIZE}" alt="Tavern Ledger" style="display:block;border:0;width:{LOGO_SIZE}px;height:{LOGO_SIZE}px;"></a>
 <p style="margin:10px 0 0;font-family:{SERIF};font-size:20px;line-height:26px;font-weight:bold;color:{FOAM};">Tavern Ledger</p>
@@ -226,7 +227,7 @@ def email(name: str, lang: str) -> str:
 <h1 style="margin:0 0 16px;font-family:{SERIF};font-size:26px;line-height:32px;font-weight:bold;color:{TEXT};">{text(str(copy["heading"]))}</h1>
 {paragraphs(list(copy["body"]))}
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 24px;">
-<tr><td align="center" bgcolor="{AMBER}" style="background:{AMBER};border:1px solid #c47f22;border-radius:8px;">
+<tr><td align="center" bgcolor="{AMBER}" style="background:{AMBER};border:1px solid #c47f22;border-radius:8px;mso-padding-alt:14px 28px;">
 <a href="{LINK}" style="display:inline-block;padding:14px 28px;font-family:{SANS};font-size:16px;line-height:20px;font-weight:bold;color:{INK};text-decoration:none;border-radius:8px;">{text(str(copy["button"]))}</a>
 </td></tr>
 </table>
@@ -238,7 +239,6 @@ def email(name: str, lang: str) -> str:
 <p style="margin:0;font-family:{SANS};font-size:12px;line-height:18px;color:{FOOT};">{text(ui["notice"])}{notice_en}</p>
 </td></tr>
 </table>
-<!--[if mso]></td></tr></table><![endif]-->
 </td></tr>
 </table>
 </body>
@@ -272,7 +272,12 @@ def stale() -> list[str]:
         if not path.is_file() or path.read_text(encoding="utf-8") != template(name):
             out.append(path.relative_to(ROOT).as_posix())
     config = CONFIG.read_text(encoding="utf-8")
-    out += [f"supabase/config.toml [auth.email.template.{n}]" for n in COPY if config_block(n) not in config]
+    out += [f"supabase/config.toml [auth.email.template.{n}]" for n in COPY
+            if config_block(n) not in config or config.count(f"[auth.email.template.{n}]") != 1]
+    out += [f"supabase/config.toml: {header} is not made here"
+            for header in re.findall(r"^\[auth\.email\.template\.(\w+)\]", config, re.M) if header not in COPY]
+    out += [p.relative_to(ROOT).as_posix() + " is not made here"
+            for p in sorted(TEMPLATES.glob("*.html")) if p.stem not in COPY]
     return out
 
 

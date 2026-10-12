@@ -107,6 +107,21 @@ class Safety(unittest.TestCase):
         self.assertEqual(struct.unpack(">II", data[16:24]), (2 * ae.LOGO_SIZE, 2 * ae.LOGO_SIZE))
 
 
+class Facts(unittest.TestCase):
+    def test_the_expiry_in_the_copy_is_the_configured_one(self):
+        config = ae.CONFIG.read_text(encoding="utf-8")
+        expiry = int(re.search(r"^otp_expiry = (\d+)$", config, re.M).group(1))
+        self.assertEqual(expiry, 3600, "the emails say 1 hour; change their copy with this value")
+        for name in ("magic_link", "recovery"):
+            self.assertIn("expires in 1 hour", " ".join(ae.COPY[name]["en"]["body"]), name)
+            self.assertIn("caduca en 1 hora", " ".join(ae.COPY[name]["es"]["body"]), name)
+
+    def test_no_html_comments(self):
+        # Supabase's renderer (Go html/template) drops them, so nothing may rely on one.
+        for name in ae.COPY:
+            self.assertNotIn("<!--", committed(name), name)
+
+
 class Languages(unittest.TestCase):
     def test_spanish_first_english_otherwise(self):
         for name in ae.COPY:
