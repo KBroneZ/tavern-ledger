@@ -101,7 +101,7 @@ fn board_keywords(v: Option<&Value>) -> Res<Keywords> {
 
 /// The card data's facts. Types and keywords the engine does not know are
 /// left out, exactly as `tracker::odds::Facts::from_names` does.
-fn facts(v: &Value) -> Res<Option<Facts>> {
+pub(crate) fn facts(v: &Value) -> Res<Option<Facts>> {
     if v.is_null() {
         return Ok(None);
     }

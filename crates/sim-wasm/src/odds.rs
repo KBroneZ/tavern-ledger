@@ -43,7 +43,7 @@ fn spread(counts: &BTreeMap<i32, u32>, cap: Option<i64>) -> Option<Value> {
     Some(json!({ "low": at(LOW), "likely": at(0.5), "high": at(HIGH) }))
 }
 
-fn answer(status: &str, fields: Value) -> Value {
+pub(crate) fn answer(status: &str, fields: Value) -> Value {
     let mut out = json!({ "engine": ENGINE, "status": status });
     if let (Some(o), Value::Object(extra)) = (out.as_object_mut(), fields) {
         o.extend(extra);
