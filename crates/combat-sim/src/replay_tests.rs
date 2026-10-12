@@ -12,6 +12,7 @@ fn band(minions: &[Minion]) -> Warband {
     Warband {
         minions: minions.to_vec(),
         tavern_tier: Some(1),
+        values: Default::default(),
     }
 }
 
@@ -208,4 +209,38 @@ fn the_wrong_side_after_a_teammate_comes_in_is_named() {
     let d = r.difference.expect("differs");
     assert_eq!((d.attack, d.rule), (2, Rule::AfterTeammate));
     assert_eq!(r.boards_in, 1);
+}
+
+#[test]
+fn a_start_of_combat_attack_comes_before_the_first_turn() {
+    // Heroic Broodmother attacks first though the opponent has more minions;
+    // then the opponent takes the first turn, and the player's turn starts
+    // from its left-most minion (the start-of-combat swing is not a turn).
+    let brood = Minion::new("BG36_849", 3, 7).tier(6);
+    let p0 = [m(1, 3), brood.clone()];
+    let o0 = [m(1, 5), m(1, 5), m(1, 5)];
+    // The Rally's Divine Shield takes the hit back.
+    let o1 = [m(1, 2), m(1, 5), m(1, 5)];
+    let p2 = [m(1, 2), brood.clone()];
+    let o2 = [m(1, 1), m(1, 5), m(1, 5)];
+    let steps = [
+        step((0, 1), 0, &p0, &o0),
+        step((1, 0), 0, &p0, &o1),
+        step((0, 0), 1, &p2, &o2),
+    ];
+    let r = replay(&band(&p0), &band(&o0), &steps, Span::FirstLeg, 1);
+    assert_eq!(r.difference, None, "{r:?}");
+    assert_eq!(r.matched, 3);
+}
+
+#[test]
+fn a_normal_first_attack_before_the_start_of_combat_one_is_named() {
+    let brood = Minion::new("BG36_849", 3, 7).tier(6);
+    let p0 = [m(1, 3), brood];
+    let o0 = [m(1, 5), m(1, 5), m(1, 5)];
+    let steps = [step((1, 0), 0, &p0, &o0)];
+    let d = replay(&band(&p0), &band(&o0), &steps, Span::FirstLeg, 1)
+        .difference
+        .expect("differs");
+    assert_eq!((d.attack, d.rule), (1, Rule::FirstAttacker));
 }

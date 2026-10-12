@@ -182,12 +182,24 @@ impl Minion {
     }
 }
 
-/// One side of a combat: its minions left to right and its hero's tavern
-/// tier (part of the damage when it wins; `None` when unknown).
+/// Game-long values of a warband that change what its cards do in combat
+/// (T-609). Zero when unknown: the cards' printed values are used.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct GameValues {
+    /// What each Blood Gem gives beyond +1/+1 (Attack, Health).
+    pub blood_gem: (i32, i32),
+    /// What each buff of a Tavern spell gives beyond its text.
+    pub spell: (i32, i32),
+}
+
+/// One side of a combat: its minions left to right, its hero's tavern
+/// tier (part of the damage when it wins; `None` when unknown) and its
+/// game-long values.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Warband {
     pub minions: Vec<Minion>,
     pub tavern_tier: Option<u8>,
+    pub values: GameValues,
 }
 
 impl Warband {
@@ -195,6 +207,7 @@ impl Warband {
         Warband {
             minions,
             tavern_tier: None,
+            values: GameValues::default(),
         }
     }
 

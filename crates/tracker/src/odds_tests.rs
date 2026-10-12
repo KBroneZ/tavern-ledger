@@ -30,6 +30,7 @@ fn entry(side: Side, seat: i64, board: Option<Vec<LogMinion>>) -> CombatEntry {
         player_id: Some(seat),
         hero: None,
         board,
+        values: None,
     }
 }
 

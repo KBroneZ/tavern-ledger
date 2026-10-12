@@ -152,6 +152,11 @@ fn replay_prepared(prepared: &Prepared, steps: &[LoggedStep], span: Span, seed: 
         boards_in: 0,
     };
     let mut turn = Turn::default();
+    if let Some(step) = steps.first() {
+        // Counted before start of combat, as the engine does.
+        turn.first = c.first_by_count();
+        turn.pending = c.pending_immediate(turn.first.unwrap_or(step.attacker.0), [true, true]);
+    }
     for (k, step) in steps.iter().enumerate() {
         if let Err(d) = c.check_step(k, step, &mut turn) {
             out.difference = Some(d);
@@ -169,10 +174,15 @@ fn replay_prepared(prepared: &Prepared, steps: &[LoggedStep], span: Span, seed: 
         if entered != [false, false] {
             out.boards_in += entered.iter().filter(|e| **e).count();
             // Who attacks next is decided again, as at the start.
+            let first = c.first_by_count();
+            let side = first
+                .or(steps.get(k + 1).map(|s| s.attacker.0))
+                .unwrap_or(0);
             turn = Turn {
-                current: None,
-                last: None,
+                first,
+                pending: c.pending_immediate(side, entered),
                 after_teammate: true,
+                ..Turn::default()
             };
         }
     }
@@ -184,7 +194,7 @@ fn replay_prepared(prepared: &Prepared, steps: &[LoggedStep], span: Span, seed: 
 }
 
 /// Whose turn it is during a replay.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 struct Turn {
     /// The attacker still swinging: side, uid, swings left.
     current: Option<(usize, u32, u8)>,
@@ -192,6 +202,12 @@ struct Turn {
     last: Option<usize>,
     /// A teammate's board has just come in.
     after_teammate: bool,
+    /// The side the minion count gives the first attack, counted before
+    /// start of combat (`None`: equal counts).
+    first: Option<usize>,
+    /// Start-of-combat attacks still to come, in order: side and uid, one
+    /// entry per swing. They are not the side's turn.
+    pending: Vec<(usize, u32)>,
 }
 
 fn diff(attack: usize, rule: Rule, detail: String) -> Difference {
@@ -221,7 +237,9 @@ impl Combat<'_> {
         let n = k + 1;
         self.compare_boards(n, &step.before)?;
         let (side, ix) = step.attacker;
-        let expected = self.expected_attacker(*turn, side);
+        self.drop_spent(turn);
+        let immediate = !turn.pending.is_empty();
+        let expected = self.expected_attacker(turn, side);
         let Some((want_side, want_ix)) = expected else {
             return Err(diff(
                 n,
@@ -268,6 +286,7 @@ impl Combat<'_> {
         }
         let uid = self.sides[side].units[ix].uid;
         let swings = match turn.current {
+            _ if immediate => 1,
             Some((s, u, left)) if s == side && u == uid => left,
             _ => {
                 self.sides[side].next = ix + 1;
@@ -302,6 +321,10 @@ impl Combat<'_> {
         self.forced_target = Some(target);
         self.swing(side, uid);
         self.forced_target = None;
+        if immediate {
+            turn.pending.remove(0);
+            return Ok(());
+        }
         let left = swings.saturating_sub(1);
         let still = self.unit(side, uid).is_some_and(|u| u.attack > 0);
         turn.current = (left > 0 && still && !self.finished()).then_some((side, uid, left));
@@ -314,18 +337,45 @@ impl Combat<'_> {
     /// has swings left, else the other side's next attacker (a side that
     /// cannot attack passes). The first attack: the side with more minions,
     /// else a coin flip, which `logged` (the log's side) is taken to have won.
-    fn expected_attacker(&self, turn: Turn, logged: usize) -> Option<(usize, usize)> {
+    fn expected_attacker(&self, turn: &Turn, logged: usize) -> Option<(usize, usize)> {
+        if let Some(&(side, uid)) = turn.pending.first() {
+            return self.sides[side].pos(uid).map(|ix| (side, ix));
+        }
         if let Some((side, uid, _)) = turn.current {
             return self.sides[side].pos(uid).map(|ix| (side, ix));
         }
         let first = match turn.last {
             Some(last) => 1 - last,
-            None => self.first_by_count().unwrap_or(logged),
+            None => turn.first.unwrap_or(logged),
         };
         let order = [first, 1 - first];
         order
             .into_iter()
             .find_map(|s| self.attacker_index(s).map(|ix| (s, ix)))
+    }
+
+    /// The start-of-combat attacks of the boards coming in (`sides`), in the
+    /// engine's order (see `Combat::attack_immediately`).
+    fn pending_immediate(&self, first: usize, sides: [bool; 2]) -> Vec<(usize, u32)> {
+        let mut out = Vec::new();
+        for side in [first, 1 - first].into_iter().filter(|s| sides[*s]) {
+            for (uid, times) in self.immediate_attackers(side) {
+                out.extend(std::iter::repeat_n((side, uid), usize::from(times)));
+            }
+        }
+        out
+    }
+
+    /// Drops the start-of-combat attacks the engine would not make: their
+    /// minion is gone or has no Attack, or the combat is over.
+    fn drop_spent(&self, turn: &mut Turn) {
+        while let Some(&(side, uid)) = turn.pending.first() {
+            let can = !self.finished() && self.unit(side, uid).is_some_and(|u| u.attack > 0);
+            if can {
+                return;
+            }
+            turn.pending.retain(|p| *p != (side, uid));
+        }
     }
 
     fn compare_boards(&self, n: usize, logged: &[Vec<Minion>; 2]) -> Result<(), Difference> {

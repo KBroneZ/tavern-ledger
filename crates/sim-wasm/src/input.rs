@@ -192,6 +192,7 @@ fn board(v: &Value, missing: &mut Vec<String>) -> Res<Warband> {
     Ok(Warband {
         minions,
         tavern_tier: tier(b.get("tier"), "tavern tier")?,
+        values: Default::default(),
     })
 }
 

@@ -36,14 +36,11 @@ const DRAGONBREATH: [Action; 3] = [
         keyword: Keywords::DIVINE_SHIELD,
     },
 ];
-const DRAGONBREATH_TWICE: [Action; 6] = [
-    DRAGONBREATH[0],
-    DRAGONBREATH[1],
-    DRAGONBREATH[2],
-    DRAGONBREATH[0],
-    DRAGONBREATH[1],
-    DRAGONBREATH[2],
-];
+/// Cast once, or twice (golden); each buff gets the side's spell upgrades
+/// (T-609).
+const DRAGONBREATH_ONCE: [Action; 1] = [Action::Spell(&DRAGONBREATH)];
+const DRAGONBREATH_TWICE: [Action; 2] =
+    [Action::Spell(&DRAGONBREATH), Action::Spell(&DRAGONBREATH)];
 
 const fn gain(attack: i32, health: i32) -> Action {
     Action::GainStats { attack, health }
@@ -72,7 +69,10 @@ const PER_TRIBE: Action = Action::BuffOnePerTribe {
 
 pub const EFFECTS_2: &[(&str, CardRules)] = &[
     // Crimson Vindicator: Rally: cast Mighty Dragonbreath (golden: twice).
-    ("BG36_241", approx(SPELL, &[Trigger::Rally(&DRAGONBREATH)])),
+    (
+        "BG36_241",
+        approx(SPELL, &[Trigger::Rally(&DRAGONBREATH_ONCE)]),
+    ),
     (
         "BG36_241_G",
         approx(SPELL, &[Trigger::Rally(&DRAGONBREATH_TWICE)]),

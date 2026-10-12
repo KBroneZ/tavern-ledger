@@ -12,13 +12,15 @@ use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use bg_parser::report::{GameReport, LoggedAttack, Minion as LogMinion, Round, Side};
+use bg_parser::report::{
+    CombatEntry, CombatValues, GameReport, LoggedAttack, Minion as LogMinion, Round, Side,
+};
 
 use crate::combat::replay::{replay_teams, LoggedStep, Replay, Rule, Span};
 use crate::combat::CombatResult;
 use crate::harness::{CardDb, History, LoggedCombat, Scored};
 use crate::harness_duos::{duos_combats, team_of, DuosCombat};
-use crate::model::{Keywords, Minion, Team, Warband};
+use crate::model::{GameValues, Keywords, Minion, Team, Warband};
 use crate::score::{score, Prediction};
 use crate::trials::{simulate, Options, Verdict};
 
@@ -92,6 +94,28 @@ pub(crate) fn engine_board(board: &[LogMinion], db: &CardDb) -> Option<Vec<Minio
     board.iter().map(|m| engine_minion(m, db)).collect()
 }
 
+/// The side's game-long values as the log gave them (T-609); zero when the
+/// log had none.
+pub(crate) fn game_values(v: Option<CombatValues>) -> GameValues {
+    let v = v.unwrap_or_default();
+    let int = |x: i64| i32::try_from(x).unwrap_or(0);
+    GameValues {
+        blood_gem: (int(v.blood_gem.0), int(v.blood_gem.1)),
+        spell: (int(v.spell.0), int(v.spell.1)),
+    }
+}
+
+/// A combat entry's board as a warband with its game-long values.
+pub(crate) fn entry_band(e: &CombatEntry, db: &CardDb) -> Option<Option<Warband>> {
+    match e.board.as_deref() {
+        None => Some(None),
+        Some(b) => Some(Some(Warband {
+            values: game_values(e.values),
+            ..Warband::new(engine_board(b, db)?)
+        })),
+    }
+}
+
 /// Index of the minion at `position` on a board sorted by position.
 fn index_at(board: &[LogMinion], position: i64) -> Option<usize> {
     board.iter().position(|m| m.position == position)
@@ -122,10 +146,10 @@ fn result_of(r: bg_parser::report::CombatResult) -> CombatResult {
 }
 
 /// The own and opponent entries of a Solo round: one each, with boards.
-fn solo_boards(round: &Round) -> Option<(&[LogMinion], &[LogMinion], Option<i64>)> {
+fn solo_boards(round: &Round) -> Option<(&CombatEntry, &CombatEntry)> {
     let pick = |s: Side| -> Vec<_> { round.entries.iter().filter(|e| e.side == s).collect() };
     match (pick(Side::Own).as_slice(), pick(Side::Opponent).as_slice()) {
-        ([o], [p]) => Some((o.board.as_deref()?, p.board.as_deref()?, p.player_id)),
+        ([o], [p]) if o.board.is_some() && p.board.is_some() => Some((o, p)),
         _ => None,
     }
 }
@@ -151,8 +175,8 @@ fn add_game(out: &mut LogHistory, game: usize, report: &GameReport, db: &CardDb)
     for round in &report.rounds {
         let result = round.result.map(result_of);
         if !is_duos {
-            let scored = solo_boards(round).and_then(|(own, opp, seat)| {
-                Some((engine_board(own, db)?, engine_board(opp, db)?, seat))
+            let scored = solo_boards(round).and_then(|(own, opp)| {
+                Some((entry_band(own, db)??, entry_band(opp, db)??, opp.player_id))
             });
             match (scored, result) {
                 (Some((player, opponent, seat)), Some(result)) => {
@@ -160,8 +184,8 @@ fn add_game(out: &mut LogHistory, game: usize, report: &GameReport, db: &CardDb)
                         game,
                         round: round.number,
                         opponent_seat: seat,
-                        player: Warband::new(player),
-                        opponent: Warband::new(opponent),
+                        player,
+                        opponent,
                         result,
                     })
                 }
@@ -197,7 +221,21 @@ fn add_game(out: &mut LogHistory, game: usize, report: &GameReport, db: &CardDb)
             }
             (player, opponent)
         } else {
-            (Team::solo(Warband::new(p)), Team::solo(Warband::new(o)))
+            let values = |s: Side| {
+                let e = round
+                    .entries
+                    .iter()
+                    .find(|e| e.side == s && e.board.is_some());
+                game_values(e.and_then(|e| e.values))
+            };
+            let band = |minions, s| Warband {
+                values: values(s),
+                ..Warband::new(minions)
+            };
+            (
+                Team::solo(band(p, Side::Own)),
+                Team::solo(band(o, Side::Opponent)),
+            )
         };
         out.combats.push(LogCombat {
             game,

@@ -16,6 +16,7 @@ fn band(tier: u8, minions: Vec<Minion>) -> Warband {
     Warband {
         minions,
         tavern_tier: Some(tier),
+        values: Default::default(),
     }
 }
 

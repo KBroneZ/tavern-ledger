@@ -177,6 +177,7 @@ pub(crate) fn board(entry: &Value, db: &CardDb) -> Option<Warband> {
     Some(Warband {
         minions: minions?,
         tavern_tier: None,
+        values: Default::default(),
     })
 }
 

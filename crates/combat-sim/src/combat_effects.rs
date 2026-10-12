@@ -237,6 +237,12 @@ impl Combat<'_> {
                     self.buff(side, a, gain, 0);
                 }
             }
+            Action::Gems { to, count } => self.play_gems(side, me, attacker, to, count),
+            Action::UpgradeGems { attack, health } => {
+                let gem = &mut self.sides[side].values.blood_gem;
+                *gem = (gem.0.saturating_add(attack), gem.1.saturating_add(health));
+            }
+            Action::Spell(actions) => self.cast_spell(side, src, target, attacker, actions),
         }
     }
 

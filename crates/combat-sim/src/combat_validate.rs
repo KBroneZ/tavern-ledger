@@ -17,6 +17,7 @@ use combat_sim::harness_export::{accuracy, date_of_day, export_json, render_accu
 use combat_sim::harness_logs::{
     load_logs, power_logs, render_overlay_path, render_replays, replay_all,
 };
+use combat_sim::harness_misses::{duos_misses, render_misses};
 use combat_sim::Options;
 
 fn main() -> ExitCode {
@@ -66,6 +67,8 @@ fn real_main() -> Result<(), String> {
             print!("{}", render(&history, &run, &options));
             print!("{}", render_overlay_path(&history, &options));
             print!("{}", render_duos(&history.duos, &options, Source::History));
+            let misses = duos_misses(&history.duos, &options);
+            print!("{}", render_misses(&misses, None));
             (history.combats, history.duos)
         }
         (None, Some(logs)) => {
@@ -80,6 +83,8 @@ fn real_main() -> Result<(), String> {
             print!("{}", render_replays(&rows, &run.scored, read.unreadable));
             print!("{}", render_overlay_path(&read.history, &options));
             print!("{}", render_duos(&read.duos, &options, Source::Logs));
+            let misses = duos_misses(&read.duos, &options);
+            print!("{}", render_misses(&misses, Some(&rows)));
             (read.history.combats, read.duos)
         }
         _ => return Err("give one of --history <games.jsonl> or --logs <folder>".into()),

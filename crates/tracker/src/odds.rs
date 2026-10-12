@@ -329,6 +329,7 @@ fn warband(
     Warband {
         minions,
         tavern_tier: tier.and_then(|t| u8::try_from(t).ok()),
+        values: Default::default(),
     }
 }
 

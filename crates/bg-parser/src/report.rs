@@ -123,6 +123,19 @@ pub struct LoggedAttack {
     pub opponent: Vec<Minion>,
 }
 
+/// Game-long values of one combat side that change what its cards do in
+/// combat (T-609), read from the side's player entity when its board is
+/// taken. Rust-only: the combat simulator's harness reads them from the logs.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct CombatValues {
+    /// What the side's Blood Gems give beyond +1/+1
+    /// (`BACON_BLOODGEMBUFFATKVALUE`, `BACON_BLOODGEMBUFFHEALTHVALUE`).
+    pub blood_gem: (i64, i64),
+    /// What the side's Tavern spells give beyond their text
+    /// (`TAVERN_SPELL_ATTACK_INCREASE`, `TAVERN_SPELL_HEALTH_INCREASE`).
+    pub spell: (i64, i64),
+}
+
 /// One side stepping into a combat. `board` is None when the fight never
 /// plays out in the local log: unknown, not empty.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -131,6 +144,11 @@ pub struct CombatEntry {
     pub player_id: Option<i64>,
     pub hero: Option<String>,
     pub board: Option<Vec<Minion>>,
+    /// The side's game-long values as its board was taken (T-609); None
+    /// without a board. Never serialized, so neither the history nor the
+    /// upload changes.
+    #[serde(skip)]
+    pub values: Option<CombatValues>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
