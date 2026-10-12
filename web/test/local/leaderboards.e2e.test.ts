@@ -1,8 +1,9 @@
 // End-to-end run of the public leaderboards (T-506) against the local
 // Supabase stack, with the functions the page and the account page use: a
-// public player with enough games is listed, a private one and one under
-// the minimum are not, a refused display name says so, and a profile made
-// private leaves the boards at once. Synthetic users and games only.
+// public player is listed from the first game (D-103: no minimum) and a row
+// on few games is marked, a private one is never listed, a refused display
+// name says so, and a profile made private leaves the boards at once.
+// Synthetic users and games only.
 //
 // Skipped unless TAVERN_SUPABASE_LOCAL=1 and `npx supabase start` is running.
 // Keys are read from `npx supabase status` into memory and never printed.
@@ -20,6 +21,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { makeClient, saveProfile, signIn } from "../../src/lib/api.ts";
 import type { SiteConfig } from "../../src/lib/config.ts";
 import { loadLeaderboards, type Leaderboards } from "../../src/lib/leaderboards/api.ts";
+import { fewGames } from "../../src/lib/leaderboards/boards.ts";
 import { memoryStorage } from "../helpers/fetchStub.ts";
 
 const ENABLED = process.env.TAVERN_SUPABASE_LOCAL === "1";
@@ -121,7 +123,7 @@ describe("leaderboards on the local stack", { skip: !ENABLED && "set TAVERN_SUPA
     for (const u of users) await service(`/auth/v1/admin/users/${u.id}`, { method: "DELETE" });
   });
 
-  test("anonymous: the public player is listed with the games behind each value; nobody else", async () => {
+  test("anonymous: public players are listed with the games behind each value, few games marked; no private one", async () => {
     const [pub, priv, few] = users;
     const data = await loadLeaderboards(anon());
     assert.ok(data.refreshedAt, "the rebuild time is there");
@@ -130,12 +132,20 @@ describe("leaderboards on the local stack", { skip: !ENABLED && "set TAVERN_SUPA
       assert.ok(row, board);
       assert.equal(row.name, pub.name);
       assert.equal(row.games, 20);
+      assert.equal(fewGames(row), false, `${board}: 20 games is not few`);
+    }
+    // D-103: 19 games are listed (no minimum), marked "few games" (under 20), and 19 > 10 on the hero board.
+    for (const board of ["avg_place", "apm", "hero_avg_place"] as const) {
+      const row = (data.boards.solo["7d"].get(board) ?? []).find((r) => r.userId === few.id);
+      assert.ok(row, `${board}: a public player with 19 games is listed`);
+      assert.equal(row.games, 19);
+      assert.equal(fewGames(row), board !== "hero_avg_place", board);
     }
     for (const period of ["7d", "30d", "all"] as const) {
       const listed = [...data.boards.solo[period].values()].flat().map((r) => r.userId);
       assert.ok(listed.includes(pub.id), period);
       assert.ok(!listed.includes(priv.id), `${period}: a private profile is never listed`);
-      assert.ok(!listed.includes(few.id), `${period}: 19 games are under the minimum`);
+      assert.ok(listed.includes(few.id), `${period}: no minimum, 19 games are listed`);
     }
     assert.ok(!ids(data).includes(priv.id));
   });

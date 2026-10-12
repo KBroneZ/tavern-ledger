@@ -57,7 +57,7 @@ function minion(atk: number, health: number, golden = false, card_id: string | n
 Deno.test("the summary has exactly the game_stats columns", () => {
   const s = summarize(report());
   assertEquals(Object.keys(s).sort(), [...STATS_KEYS].sort());
-  assertEquals(SUMMARY_VERSION, 1);
+  assertEquals(SUMMARY_VERSION, 2);
 });
 
 Deno.test("a report with no rounds, shop or pick backs nothing: every number is null", () => {
@@ -166,6 +166,115 @@ Deno.test("damage dealt is the opponent's health drop in that round", () => {
     ],
   }));
   assertEquals([s.damage_dealt, s.damage_dealt_combats, s.damage_dealt_max], [16, 2, 9]);
+});
+
+/** A combat replay that ends with the game's own hit on a hero (T-215, parser revision 8). */
+function withHit(side: string, amount: unknown): Json {
+  return {
+    replay: {
+      start: 0,
+      complete: true,
+      minions: [],
+      events: [{ kind: "attack" }, { kind: "hero_damage", side, amount }],
+    },
+  };
+}
+
+Deno.test("damage is the game's own hit at the end of the combat, not the health drop (D-108)", () => {
+  const s = summarize(report({
+    rounds: [
+      // Lost 5 health, the game hit for 4 (1 health was paid in the shop): 4.
+      round(1, 2, {
+        own_health_after: 25,
+        health_after: { "1": 25, "2": 30 },
+        result: "lost",
+        ...withHit("own", 4),
+      }),
+      // Won: the hit is on the opponent, health says 6, the hit says 7.
+      round(2, 3, {
+        own_health_after: 25,
+        health_after: { "1": 25, "2": 30, "3": 24 },
+        result: "won",
+        ...withHit("opponent", 7),
+      }),
+    ],
+  }));
+  assertEquals([s.damage_taken, s.damage_taken_combats, s.damage_taken_max], [4, 2, 4]);
+  assertEquals([s.damage_dealt, s.damage_dealt_combats, s.damage_dealt_max], [7, 2, 7]);
+});
+
+Deno.test("a combat with a hit counts without health after it; a recorded tie hit nobody", () => {
+  const s = summarize(report({
+    rounds: [
+      round(1, 2, { own_health_after: 30, result: "won", ...withHit("opponent", 6) }),
+      // A tie the game recorded, no replay: 0 taken and 0 dealt, from the log.
+      round(2, 3, { own_health_after: null, result: "tie" }),
+      // The last combat: no health after it, but the game's hit is there.
+      round(3, 2, { own_health_after: null, result: "lost", ...withHit("own", 15) }),
+    ],
+  }));
+  assertEquals([s.damage_taken, s.damage_taken_combats, s.damage_taken_max], [15, 3, 15]);
+  assertEquals([s.damage_dealt, s.damage_dealt_combats, s.damage_dealt_max], [6, 3, 6]);
+});
+
+Deno.test("without the hit the health rule stays, and a combat with neither is left out", () => {
+  const s = summarize(report({
+    rounds: [
+      round(1, 2, { own_health_after: 30, result: "won", ...withHit("opponent", 3) }),
+      // No replay: health drop 30 -> 24.
+      round(2, 3, {
+        own_health_after: 24,
+        health_after: { "1": 24, "2": 30, "3": 20 },
+        result: "lost",
+      }),
+      // A replay cut short before the hit and no result: nothing to read.
+      round(3, 2, {
+        own_health_after: null,
+        replay: { start: 0, complete: false, minions: [], events: [] },
+      }),
+    ],
+  }));
+  assertEquals([s.damage_taken, s.damage_taken_combats], [6, 2]);
+});
+
+Deno.test("a hit that is not a plain number in range is not used (the replay is untrusted)", () => {
+  const bad = [
+    withHit("own", "9"),
+    withHit("own", 0),
+    withHit("own", -3),
+    withHit("own", 1001),
+    withHit("own", 2.5),
+    withHit("nobody", 4),
+    withHit("constructor", 4),
+    { replay: "x" },
+    { replay: { events: "x" } },
+    { replay: { events: [null, 5, { kind: "hero_damage" }] } },
+    { replay: { events: { length: 1 } } },
+  ];
+  for (const extra of bad) {
+    const s = summarize(report({
+      rounds: [round(1, 2, { own_health_after: 22, result: "lost", ...extra })],
+    }));
+    // Falls back to the health drop, 30 -> 22.
+    assertEquals([s.damage_taken, s.damage_taken_max], [8, 8], JSON.stringify(extra));
+  }
+});
+
+Deno.test("the last hit of the replay is the one that counts", () => {
+  const events = [
+    { kind: "hero_damage", side: "own", amount: 2 },
+    { kind: "hero_damage", side: "own", amount: 9 },
+  ];
+  const s = summarize(report({
+    rounds: [
+      round(1, 2, {
+        own_health_after: 30,
+        result: "lost",
+        replay: { start: 0, complete: true, minions: [], events },
+      }),
+    ],
+  }));
+  assertEquals(s.damage_taken, 9);
 });
 
 Deno.test("an opponent already out (0 health) is not counted as damage dealt", () => {

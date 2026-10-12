@@ -84,8 +84,8 @@ function summaryBar(view: GameView, date: string | null): VNode {
       "div",
       { class: "tiles" },
       tile({ label: g("summary.results"), value: results.won + results.lost + results.tie > 0 ? w.resultsLine(s) : DASH, backing: resultsBacking || undefined, source: results.inferred > 0 ? "inferred" : undefined }),
-      tile({ label: g("summary.dealt"), value: w.knownValue(s.dealt), backing: w.combatsBacking(s.dealt), source: "inferred" }),
-      tile({ label: g("summary.taken"), value: w.knownValue(s.taken), backing: w.combatsBacking(s.taken), source: "inferred" }),
+      tile({ label: g("summary.dealt"), value: w.knownValue(s.dealt), backing: w.combatsBacking(s.dealt), source: w.damageSource(s.dealt) }),
+      tile({ label: g("summary.taken"), value: w.knownValue(s.taken), backing: w.combatsBacking(s.taken), source: w.damageSource(s.taken) }),
       tile({ label: g("summary.gold"), value: w.knownValue(s.goldSpent), backing: w.turnsBacking(s.goldSpent) }),
       tile({ label: g("summary.tier"), value: num(s.finalTier) }),
       tile({ label: g("summary.triples"), value: num(s.triples) }),
@@ -108,7 +108,7 @@ function turnsTable(turns: TurnRow[]): VNode {
       h("td", {}, w.tierText(x), x.tierUp ? h("span", { class: "gv-tierup" }, ` ${g("turns.tierUp")}`) : null),
       h("td", {}, x.result ? resultChip(x.result, x.inferred) : h("span", { class: "gv-dim" }, g("turns.noCombat"))),
       h("td", {}, x.opponents.length === 0 ? unknownValue() : x.opponents.flatMap((o, i) => (i === 0 ? [heroCell(o)] : [", ", heroCell(o)]))),
-      h("td", { class: "num" }, w.damageText(x)),
+      h("td", { class: "num" }, w.damageText(x), x.damageSource === "log" ? " " : null, x.damageSource === "log" ? sourceMark("log") : null),
       h("td", { class: "num" }, w.goldText(x)),
     ),
   );
@@ -136,7 +136,7 @@ function turnsSection(view: GameView): VNode {
   return section("gv-turns", g("turns.title"), [
     chartTurns.length > 0 ? turnChart(chartTurns, "gv-chart") : null,
     turnsTable(turns),
-    h("p", { class: "data-note" }, sourceMark("inferred"), " ", g("turns.damage.note")),
+    h("p", { class: "data-note" }, sourceMark("log"), " ", sourceMark("inferred"), " ", g("turns.damage.note")),
   ]);
 }
 

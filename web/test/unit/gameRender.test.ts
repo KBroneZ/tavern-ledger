@@ -6,7 +6,7 @@ import { renderGame } from "../../src/lib/game/render.ts";
 import { readRecord } from "../../src/lib/game/report.ts";
 import { shapeGame } from "../../src/lib/game/shape.ts";
 import { GAME_STRINGS } from "../../src/lib/game/strings.ts";
-import { damageText, goldText, heroLabel, minionWords, pageHeading } from "../../src/lib/game/words.ts";
+import { combatsBacking, damageSource, damageText, goldText, heroLabel, minionWords, pageHeading } from "../../src/lib/game/words.ts";
 import type { VNode } from "../../src/lib/view/node.ts";
 import { duosReport, INDEX, record, SESSION, soloReport } from "./gameFixtures.ts";
 
@@ -87,7 +87,7 @@ test("render: inferred results are marked and unknown values are dashes, never 0
   const turns = nodes.find((n) => attr(n, "aria-labelledby") === "gv-turns-title")!;
   const rows = [...walk(turns)].filter((n) => n.tag === "tr").slice(1).map(text);
   assert.match(rows[0], /^1.*Won.*Brass Captain.*dealt 3.*3 of 3 spent$/);
-  assert.match(rows[1], /^22 tier up.*Lost inferred.*Moss Witch.*took 5—$/);
+  assert.match(rows[1], /^22 tier up.*Lost inferred.*Moss Witch.*took 5 from the log—$/);
   assert.match(rows[2], /Unknown/);
 });
 
@@ -150,4 +150,26 @@ test("render: a gifted minion shows a mark per gift with its name and summary, i
   } finally {
     setLang("en");
   }
+});
+
+test("render: damage from the game's own hit is marked from the log; worked-out damage is not", () => {
+  const nodes = renderGame(view(), "2026-10-09");
+  const all = [...nodes].flatMap((n) => [...walk(n)]);
+  const marks = (kind: string) => all.filter((n) => attr(n, "class") === `mark-src mark-${kind}`).map(text);
+  const cells = all.filter((n) => n.tag === "td" && attr(n, "class") === "num").map(text);
+  // Turns 1 and 2 have the hit in their replay, turn 3 has only health.
+  assert.deepEqual(cells.filter((c) => c.includes("from the log")), ["dealt 3 from the log", "took 5 from the log"]);
+  // Two cells, the note, and the "dealt" tile (both its combats have the hit); "taken" is mixed, so inferred.
+  assert.equal(marks("log").length, 4);
+  assert.ok(marks("inferred").length >= 3);
+});
+
+test("words: a damage total is from the log only when every combat behind it is", () => {
+  const known = (value: number, n: number, logged: number) => ({ value, known: n, total: 3, logged });
+  assert.equal(damageSource(known(8, 3, 3)), "log");
+  assert.equal(damageSource(known(8, 3, 2)), "inferred");
+  assert.equal(damageSource(known(8, 3, 0)), "inferred");
+  assert.equal(damageSource({ value: null, known: 0, total: 3, logged: 0 }), "inferred");
+  assert.equal(combatsBacking(known(8, 3, 3)), "over 3 of 3 combats");
+  assert.equal(combatsBacking(known(8, 3, 2)), "over 3 of 3 combats · 2 from the log");
 });

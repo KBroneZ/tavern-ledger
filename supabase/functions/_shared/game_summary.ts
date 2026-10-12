@@ -9,15 +9,20 @@
 // * a combat's result is the one the game records (from the log); without
 //   it, it is worked out from health and counted as inferred; when neither
 //   can say, it is unknown;
-// * damage taken and dealt are health drops between rounds in a row, so they
-//   are inferred (health paid or healed in the shop counts too);
+// * damage taken and dealt are the game's own hit at the end of each combat,
+//   which the combat's replay keeps (crates/tracker/src/damage.rs, D-108), or
+//   0 after a tie the game recorded; a combat with neither falls back to the
+//   health drop between rounds in a row (inferred: health paid or healed in
+//   the shop counts too);
 // * shop gold totals are sums over the turns that have the number, with the
 //   count of those turns;
 // * triples are the leaderboard's own count at the end of a finished game.
 //
 // Goes up by one each time a value changes meaning or a value is added; the
 // daily sweep then fills the summary again from the stored reports.
-export const SUMMARY_VERSION = 1;
+//
+// 2: damage from the game's own hit in each combat's replay (T-545, D-108).
+export const SUMMARY_VERSION = 2;
 
 // deno-lint-ignore no-explicit-any
 type Json = any;
@@ -110,6 +115,9 @@ const MS_PER_MINUTE = 60_000;
 // The parser's own cap on shop turns (crates/bg-parser/src/shop.rs).
 const MAX_TURN = 100;
 const MAX_INT = 2 ** 31 - 1;
+// No hero attack in the game comes near this; a larger number is a
+// hand-edited record, not a hit (crates/tracker/src/damage.rs).
+const MAX_HIT = 1_000;
 
 type Outcome = "won" | "lost" | "tie" | "unknown";
 interface Combat {
@@ -294,8 +302,48 @@ function drops(values: number[]): Drops | null {
   };
 }
 
-/** Own health lost in each combat whose health before and after is known. */
-function damageTaken(sides: Sides, rounds: Map<number, Json>): Drops | null {
+interface Hit {
+  taken: number;
+  dealt: number;
+}
+
+/**
+ * One combat's damage as the game dealt it: the last hero hit in the replay
+ * (the winner's hit as the combat ends), or nothing after a tie the game
+ * recorded. null when the record does not have it. The replay is untrusted
+ * (D-079): anything but a plain whole number in range on a known side is not
+ * a hit.
+ */
+function loggedHit(round: Json): Hit | null {
+  const events = round.replay?.events;
+  let hit: Json = undefined;
+  if (Array.isArray(events)) {
+    for (let i = events.length - 1; i >= 0; i--) {
+      if (events[i]?.kind === "hero_damage") {
+        hit = events[i];
+        break;
+      }
+    }
+  }
+  if (hit === undefined) return round.result === "tie" ? { taken: 0, dealt: 0 } : null;
+  if (!isInt(hit.amount) || hit.amount < 1 || hit.amount > MAX_HIT) return null;
+  if (hit.side === "own") return { taken: hit.amount, dealt: 0 };
+  if (hit.side === "opponent") return { taken: 0, dealt: hit.amount };
+  return null;
+}
+
+/** Each combat's logged damage by round number; rounds the record lacks it for are left out. */
+function loggedHits(rounds: Map<number, Json>): Map<number, Hit> {
+  const hits = new Map<number, Hit>();
+  for (const [number, r] of rounds) {
+    const hit = number > 0 ? loggedHit(r) : null;
+    if (hit !== null) hits.set(number, hit);
+  }
+  return hits;
+}
+
+/** Own health lost in each combat: the game's hit, else the drop where health before and after is known. */
+function damageTaken(sides: Sides, rounds: Map<number, Json>, hits: Map<number, Hit>): Drops | null {
   const points = new Map<number, number | null>();
   const own = sides.own();
   const start = own === null ? null : sides.healthOf(own, 0);
@@ -304,19 +352,30 @@ function damageTaken(sides: Sides, rounds: Map<number, Json>): Drops | null {
     points.set(number, isInt(r.own_health_after) ? r.own_health_after : null);
   }
   const values: number[] = [];
-  for (const [number, after] of points) {
+  for (const number of rounds.keys()) {
+    const hit = hits.get(number);
+    if (hit !== undefined) {
+      values.push(hit.taken);
+      continue;
+    }
+    const after = points.get(number);
     const before = points.get(number - 1);
-    if (number > 0 && after !== null && before !== undefined && before !== null) {
+    if (number > 0 && after != null && before != null) {
       values.push(Math.max(0, before - after));
     }
   }
   return drops(values);
 }
 
-/** Health the one opposing side lost in each round, when known before and after. */
-function damageDealt(sides: Sides, rounds: Map<number, Json>): Drops | null {
+/** Health the one opposing side lost in each round: the game's hit, else the drop where known before and after. */
+function damageDealt(sides: Sides, rounds: Map<number, Json>, hits: Map<number, Hit>): Drops | null {
   const values: number[] = [];
   for (const [number, r] of rounds) {
+    const hit = hits.get(number);
+    if (hit !== undefined) {
+      values.push(hit.dealt);
+      continue;
+    }
     const opposing = sides.opposing(r);
     if (opposing.length !== 1) continue;
     const before = sides.healthOf(opposing[0], number - 1);
@@ -467,8 +526,9 @@ export function summarize(report: Json): GameStats {
   const rounds = roundsByNumber(report);
   const sides = new Sides(report, rounds);
   const list = combats(sides, rounds);
-  const taken = damageTaken(sides, rounds);
-  const dealt = damageDealt(sides, rounds);
+  const hits = loggedHits(rounds);
+  const taken = damageTaken(sides, rounds, hits);
+  const dealt = damageDealt(sides, rounds, hits);
   const stats: GameStats = {
     teammate_hero: typeof report.teammate_hero === "string" ? report.teammate_hero : null,
     rounds: rounds.size > 0 ? rounds.size : null,

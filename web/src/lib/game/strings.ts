@@ -56,6 +56,7 @@ export const GAME_STRINGS = {
   "summary.apm": "Actions per minute",
   "summary.triples": "Triples",
   "summary.backing.combats": "over {known} of {total} combats",
+  "summary.backing.logged": "{n} from the log",
   "summary.source": "Self-reported by the player's desktop app, from the game's own log.",
 
   "turns.title": "Turns",
@@ -76,7 +77,7 @@ export const GAME_STRINGS = {
   "turns.dealt": "dealt {n}",
   "turns.taken": "took {n}",
   "turns.gold": "{spent} of {gold} spent",
-  "turns.damage.note": "Damage is the health each side lost, so it is always worked out (inferred).",
+  "turns.damage.note": "Damage marked from the log is the game's own hit at the end of the combat. The rest is the health each side lost, so it is worked out (inferred).",
 
   "boards.title": "Boards and shops by turn",
   "boards.turn": "Turn {turn}",

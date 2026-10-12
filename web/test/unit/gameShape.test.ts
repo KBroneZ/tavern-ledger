@@ -19,9 +19,10 @@ test("summary: place, hero, results by source and totals with what backs them", 
   assert.equal(s.rounds, 3);
   // Round 1 from the log, round 2 from health, round 3 unknown (no health for the opponent after it).
   assert.deepEqual(s.results, { won: 1, lost: 1, tie: 0, unknown: 1, inferred: 1 });
-  assert.deepEqual(s.dealt, { value: 3, known: 2, total: 3 });
-  assert.deepEqual(s.taken, { value: 18, known: 3, total: 3 });
-  assert.deepEqual(s.goldSpent, { value: 8, known: 2, total: 3 });
+  // Damage: rounds 1 and 2 have the game's own hit in their replay, round 3 only health.
+  assert.deepEqual(s.dealt, { value: 3, known: 2, total: 3, logged: 2 });
+  assert.deepEqual(s.taken, { value: 18, known: 3, total: 3, logged: 2 });
+  assert.deepEqual(s.goldSpent, { value: 8, known: 2, total: 3, logged: 0 });
   assert.equal(s.rolls, 3);
   assert.equal(s.buys, 3);
   assert.equal(s.sells, 1);
@@ -39,6 +40,7 @@ test("turns: one row per shop turn or combat, joined by number", () => {
   assert.deepEqual(one.opponents, [{ id: "SYN_HERO_B", name: "Brass Captain" }]);
   assert.equal(one.dealt, 3);
   assert.equal(one.taken, 0);
+  assert.deepEqual([one.damageSource, two.damageSource, three.damageSource], ["log", "log", "inferred"]);
   assert.equal(two.result, "loss");
   assert.equal(two.inferred, true);
   assert.equal(two.tier, 2);
@@ -67,7 +69,7 @@ test("turns: a combat without a shop turn still gets its row; a stat it lacks le
   assert.equal(v.turns[0].ownBoard?.health, 3);
   assert.equal(v.summary.rolls, null);
   assert.equal(v.summary.buys, null);
-  assert.deepEqual(v.summary.goldSpent, { value: null, known: 0, total: 0 });
+  assert.deepEqual(v.summary.goldSpent, { value: null, known: 0, total: 0, logged: 0 });
   assert.equal(v.summary.apm, null);
 });
 
@@ -165,4 +167,71 @@ test("summary: APM is capped like the server's, and triples need every seat's re
   const s = view(rep).summary;
   assert.equal(s.apm, null, "an impossible APM is unknown, like the server's summary");
   assert.equal(s.triples, null, "a seat without the leaderboard record makes the count unknown");
+});
+
+/** The fixture's round 1 and 2 replays end with a hero hit; this swaps the hit of one round. */
+function withHit(round: number, hit: Record<string, unknown> | null, health: { own: number; foe: number }) {
+  const rep = soloReport() as Record<string, any>;
+  const r = rep.rounds[round - 1];
+  r.replay.events = r.replay.events.filter((e: any) => e.kind !== "hero_damage");
+  if (hit) r.replay.events.push({ kind: "hero_damage", ...hit });
+  r.own_health_after = health.own;
+  r.health_after = { ...r.health_after, "2": health.own, "3": health.foe };
+  return rep;
+}
+
+test("damage: the game's own hit replaces the health drop, marked from the log (D-108)", () => {
+  // Health says 6 lost, the game hit for 4 (health paid in the shop).
+  const v = view(withHit(1, { side: "own", amount: 4 }, { own: 24, foe: 27 }));
+  const one = v.turns[0];
+  assert.deepEqual([one.taken, one.dealt, one.damageSource], [4, 0, "log"]);
+  assert.deepEqual([v.summary.taken.logged, v.summary.dealt.logged], [2, 2]);
+});
+
+test("damage: a tie the game recorded hit nobody, with or without a replay", () => {
+  const rep = withHit(1, null, { own: 30, foe: 27 }) as Record<string, any>;
+  rep.rounds[0].result = "tie";
+  assert.deepEqual([view(rep).turns[0].taken, view(rep).turns[0].dealt, view(rep).turns[0].damageSource], [0, 0, "log"]);
+  rep.rounds[0].replay = null;
+  const one = view(rep).turns[0];
+  assert.deepEqual([one.taken, one.dealt, one.damageSource], [0, 0, "log"]);
+});
+
+test("damage: without the hit it is the health drop, inferred, and a combat with neither is unknown", () => {
+  // A win with the hit missing from the replay: health says the foe lost 3.
+  const v = view(withHit(1, null, { own: 30, foe: 27 }));
+  assert.deepEqual([v.turns[0].dealt, v.turns[0].damageSource], [3, "inferred"]);
+  assert.equal(v.summary.dealt.logged, 1);
+  const rep = withHit(1, null, { own: 30, foe: 27 }) as Record<string, any>;
+  rep.rounds[2].own_health_after = null;
+  rep.rounds[2].health_after = {};
+  const three = view(rep).turns[2];
+  assert.deepEqual([three.taken, three.dealt, three.damageSource], [null, null, null]);
+});
+
+test("damage: a replay or hit the site cannot read is not used (untrusted input, D-079)", () => {
+  const bad: Record<string, unknown>[] = [
+    { side: "own", amount: 0 },
+    { side: "own", amount: 1001 },
+    { side: "own", amount: 2.5 },
+    { side: "own", amount: "4" },
+    { side: "nobody", amount: 4 },
+    { amount: 4 },
+  ];
+  for (const hit of bad) {
+    // Health says 6 lost in round 1.
+    const v = view(withHit(1, hit, { own: 24, foe: 30 }));
+    assert.deepEqual([v.turns[0].taken, v.turns[0].damageSource], [6, "inferred"], JSON.stringify(hit));
+  }
+  // A replay that fails the reader: not available, and so no hit to read.
+  const rep = withHit(1, { side: "own", amount: 4 }, { own: 24, foe: 30 }) as Record<string, any>;
+  rep.rounds[0].replay.events.push({ kind: "attack", attacker: 99, defender: 0 });
+  const v = view(rep);
+  assert.deepEqual([v.turns[0].taken, v.turns[0].damageSource], [6, "inferred"]);
+});
+
+test("damage: the last hit of the replay is the one that counts", () => {
+  const rep = withHit(2, { side: "own", amount: 5 }, { own: 25, foe: 27 }) as Record<string, any>;
+  rep.rounds[1].replay.events.unshift({ kind: "hero_damage", side: "own", amount: 2 });
+  assert.equal(view(rep).turns[1].taken, 5);
 });
