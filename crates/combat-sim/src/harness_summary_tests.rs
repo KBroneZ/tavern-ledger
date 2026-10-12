@@ -41,8 +41,16 @@ fn the_summary_has_counts_and_no_game_or_round() {
         "{text}"
     );
     assert!(text.contains("## Misses by cause"), "{text}");
-    assert!(
-        !text.contains("game 1") && !text.contains("round 1"),
-        "{text}"
-    );
+    // No game, round, session, hero or name: only counts, rules and card ids.
+    let lower = text.to_lowercase();
+    // "#" and a number would be a BattleTag; "#" alone is a heading.
+    for word in ["game ", "round ", "seat ", "#"] {
+        for (i, _) in lower.match_indices(word) {
+            let next = lower[i + word.len()..].chars().next();
+            assert!(!next.is_some_and(|c| c.is_ascii_digit()), "{word}N: {text}");
+        }
+    }
+    for leak in ["hearthstone_", "_hero_"] {
+        assert!(!lower.contains(leak), "{leak}: {text}");
+    }
 }

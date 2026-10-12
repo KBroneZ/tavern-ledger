@@ -52,6 +52,7 @@ impl Combat<'_> {
             .neighbours(side, ix)
             .into_iter()
             .filter_map(|n| self.unit(side, n))
+            .filter(|n| n.alive())
             .filter(|n| {
                 self.triggers(n)
                     .contains(&Trigger::DoublesAdjacentDragonGains)

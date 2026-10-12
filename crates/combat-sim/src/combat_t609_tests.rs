@@ -3,7 +3,7 @@
 
 use super::{Combat, Prepared};
 use crate::combat::CombatResult;
-use crate::model::{GameValues, Keywords, Minion, Tribes, Warband};
+use crate::model::{GameValues, Keywords, Minion, Team, Tribes, Warband};
 use crate::rng::Rng;
 use crate::trials::{simulate, Options, Verdict};
 
@@ -259,4 +259,33 @@ fn golden_persistent_poet_doubles_what_the_dragons_next_to_it_gain() {
     );
     // +3/+2 to all, again to Dragons: +6/+4, doubled next to the Poet.
     assert_eq!(got, vec![(20, 17), (10, 10), (13, 18)]);
+}
+
+#[test]
+fn a_teammates_board_comes_in_with_its_own_game_values() {
+    // The first board's gems give +3/+3 more; the teammate's give none.
+    let first = Warband {
+        values: GameValues {
+            blood_gem: (3, 3),
+            ..GameValues::default()
+        },
+        ..band(vec![plain(1, 1)])
+    };
+    let second = band(vec![Minion::new("BG33_886", 1, 10).tier(1)]);
+    let p = Prepared::teams(
+        &Team::duo(first, second),
+        &Team::solo(band(vec![plain(0, 50)])),
+        false,
+    );
+    let mut rng = Rng::new(1);
+    let mut c = Combat::new(&p, &mut rng);
+    c.sides[0].units[0].health = 0;
+    c.process_deaths(0);
+    assert!(c.bring_in_teammates().is_some());
+    let uid = c.sides[0].units[0].uid;
+    c.swing(0, uid);
+    assert_eq!(
+        (c.sides[0].units[0].attack, c.sides[0].units[0].health),
+        (2, 11)
+    );
 }

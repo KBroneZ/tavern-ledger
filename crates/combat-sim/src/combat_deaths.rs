@@ -58,7 +58,9 @@ impl Combat<'_> {
     }
 
     /// The minions of `side` that attack at the start of combat, left to
-    /// right, with how many times.
+    /// right, with how many times. The replay's pending list
+    /// (`replay::pending_immediate`) mirrors this: a minion that cannot
+    /// swing loses all its swings in both.
     pub(super) fn immediate_attackers(&self, side: usize) -> Vec<(u32, u8)> {
         self.sides[side]
             .units
