@@ -2,6 +2,8 @@
 
 Last updated: 12 October 2026
 
+**What changed on 12 October 2026 (later that day):** a new switch on your account page, off by default, "Let my games be used to improve the simulator": if you turn it on, the boards and combat replays of your uploaded games can be used to measure and fix the combat simulator, only as totals over many games and never per player (section 4, "Improving the simulator"), for as long as the switch is on and the full records are kept (section 6); the switch is in the download and goes with your account (section 7). Nothing changes for an account that leaves it off.
+
 **What changed on 12 October 2026:** with your profile public, you now appear on a leaderboard from your first finished game in that mode and period, not after 20 (section 4, "Public profiles and leaderboards"); a number from few games is marked "few games". Also new that day: each game's full record (turn-by-turn boards, shops, combat replays) is kept on our server for 28 days after the game was played, then deleted (deletion starts in the days after this date); its summary stays while you have an account, the app keeps every game in full on your PC, and accounts with unlimited history keep the full records (sections 4, 6 and 7).
 
 **What changed on 11 October 2026:** public leaderboards (section 4, "Public profiles and leaderboards"): what they show, who appears on them, how to leave them and how long the numbers are kept; the check of display names against a short word list; the leaderboard numbers in the download (section 7). Also new that day: card and hero pictures loaded from HearthstoneJSON (sections 3 and 5); community hero stats (section 4, "Community hero stats"), which count your games only if you turn them on, with the switch in the download (section 7) and its retention (section 6).
@@ -47,6 +49,8 @@ There are no ads, no analytics and no tracking.
 | Profile: a display name you choose (optional) and whether your profile is public (off by default) | To show your profile and put you on the public leaderboards, if you make it public | Contract: publication only happens when you switch it on, and you can switch it off at any time |
 | Community stats choice: whether you turned on "Include my games in community hero stats" (off by default), when you last changed it and the policy version then in force | To count your games in the community hero stats only if you asked | Consent (Art. 6(1)(a)): you can withdraw it at any time by turning the switch off |
 | Community hero stats: from the games of accounts that turned the switch on, totals per hero, mode and period, rebuilt daily, with no account id | To show the community hero stats | Consent, as above |
+| Simulator choice: whether you turned on "Let my games be used to improve the simulator" (off by default), when you last changed it and the policy version then in force | To use your games for the simulator only if you asked | Consent (Art. 6(1)(a)): you can withdraw it at any time by turning the switch off |
+| Simulator measurements: from the full game records still kept of accounts that turned the switch on, totals over all the games measured (how often the simulator was right, the combats it got wrong by cause, the cards involved), with no account id or name | To measure and improve the combat simulator | Consent, as above |
 | Leaderboard numbers: for a public profile with a display name, the numbers each board ranks (worked out from your uploaded games) per mode and period, with how many games back each | To show the public leaderboards | Contract, as for the public profile |
 | Your games: a summary row per game (date, mode, hero, place, build, tribes offered, parser version, the numbers on your games and stats pages) and, for 28 days, the game's full record from the app (no player names), if you upload them; when a full record was deleted | To show your history and stats | Contract |
 | Unlimited history: whether your account keeps full game records without the 28-day limit, and since when. We set it by hand for the project's owner and beta testers (later also the paid plan); you cannot set it yourself | To keep those accounts' full records | Contract |
@@ -54,7 +58,7 @@ There are no ads, no analytics and no tracking.
 | Refused requests: a salted hash of the IP address that sent an upload with an invalid sign-in (the address itself is not stored, and the secret salt is replaced every day), and a count, kept one hour at most | To block abusive requests | Legitimate interest in protecting the service |
 | Backups of all of the above, without live sign-in sessions | To recover from failures | Legitimate interest in not losing your data |
 
-Your email and a password are required to have an account; without them we cannot create one. Everything else is optional: a display name, uploading games, a public profile and the community hero stats.
+Your email and a password are required to have an account; without them we cannot create one. Everything else is optional: a display name, uploading games, a public profile, the community hero stats and the simulator switch.
 
 We do **not** collect player names, BattleTags, Battle.net accounts, ratings or MMR. We do not take any automated decision about you that has legal or similarly significant effects.
 
@@ -84,6 +88,18 @@ We do **not** collect player names, BattleTags, Battle.net accounts, ratings or 
 
 **Stopping.** Turn the switch off on your account page. Your games are left out from the next daily rebuild. If a rebuild ever fails, the page shows no numbers once the last one is more than 26 hours old, so your games never stay in what is shown for longer than that. Deleting your account works the same way. A page someone already has open keeps what it loaded until they reload it. Withdrawing your consent does not change what was shown before.
 
+### Improving the simulator
+
+**What it is.** The combat simulator (the odds on the website's simulator page and in the app's overlay) is checked against what really happened in games, to find the card rules it gets wrong. Until now it was checked only on the project owner's own games. If you turn on "Let my games be used to improve the simulator" on your account page, yours can be used too.
+
+**Whose games.** Only the games of accounts that turned the switch on. It is off for every account, including accounts made before it existed, and no update turns it on. It is separate from your public profile and from the community hero stats: neither implies it. We keep whether the switch is on, when you last turned it on or off and which version of this policy was in force then.
+
+**What is used.** The full records of your uploaded games that our server still keeps (section 6), including games uploaded before you turned the switch on: the boards at each combat, yours and your opponents' (card ids, Attack, Health, keywords), and the combat replays (each attack and what it did), with the game's mode and build. The records hold no player names, BattleTags or ratings (section 2). Game summaries, your profile and your account details are not used.
+
+**How.** From time to time the project's owner lists the full records of the accounts whose switch is on at that moment, downloads them to their own computer, removes the account id from each file name, and runs the project's own open-source measuring tool on them. The tool counts how often the simulator's odds matched the real result and lists the combats it got wrong with their cause, so the card rule behind them can be found and fixed. The downloaded copies are deleted from that computer when the run ends, the same day. What is kept: totals over all the games measured (counts, shares, causes, card ids) and the fixed rules in the code. Totals may be published (for example on the accuracy page or in the project's repository), only as totals over all the games measured: never per player, never with a display name, account id, BattleTag or date, and never a single game. A test added to the code with a fix uses made-up boards, never a copy of your game.
+
+**Stopping.** Turn the switch off on your account page. From that moment your games are no longer listed, so no later measurement uses them. A run already under way when you turn it off finishes with the copies it has, and they are deleted the same day. Totals already worked out and rules already fixed stay, because they cannot be traced back to you or to your games. Deleting your account works the same way. Withdrawing your consent does not change what was measured before.
+
 ## 5. Who receives your data
 
 **Our providers**, as processors acting on our instructions, each under a data processing agreement (DPA) that is part of its terms:
@@ -98,7 +114,7 @@ You can ask us for a copy of the transfer safeguards at the contact address abov
 
 **HearthSim**, the independent service behind HearthstoneJSON, receives the requests for card pictures described in section 3.
 
-**Everyone**, if you make your profile public: your public profile and, with a display name and enough games, the leaderboards (section 4). If you turn on community hero stats: totals per hero that include your games without naming you (section 4).
+**Everyone**, if you make your profile public: your public profile and, with a display name and enough games, the leaderboards (section 4). If you turn on community hero stats: totals per hero that include your games without naming you (section 4). If you turn on the simulator switch: published totals over all the games measured, never per player (section 4).
 
 **Authorities**, only when the law requires it.
 
@@ -110,6 +126,7 @@ We do not sell or rent your data.
 - **Full game records** (each game's turn-by-turn boards, shops and combat replays, as uploaded by the app): 28 days from the day the game was played (the date on your PC, or the day we first received the game if that is earlier), then deleted (we wait one more day to allow for time zones). Deletion runs in daily batches after that date and can take longer: some days when this rule starts and older records are cleared, and a game uploaded again in the last hour waits for a later day. A game whose summary our server has not been able to make keeps its full record until it has one, since the record is the only way to make it. Copies in backups expire after 35 days (below). The game's summary stays, so your games list, stats and leaderboard numbers do not change, and the game's page then shows that summary with a line saying its full details have expired. The app keeps every game in full on your PC (section 2). If the app uploads a new copy of an old game, that copy is deleted by a later clean-up, under the same conditions and with the same possible delays. Accounts with unlimited history (section 4) keep their full records until the account is deleted.
 - **Leaderboard numbers:** rebuilt every 10 minutes while your profile is public; deleted when you make it private or delete your account.
 - **Community stats choice:** until you delete your account. **Community hero stats:** rebuilt once a day; your games leave them at the first rebuild after you turn the switch off or delete your account, and the page shows nothing once the last rebuild is over 26 hours old.
+- **Simulator choice:** until you delete your account. **Use of your games for the simulator:** only while the switch is on, and only the full records still kept (28 days for accounts without unlimited history, as above); the owner's downloaded copies are deleted the same day as each run. The totals keep no account id and are kept as long as they are useful for the simulator.
 - **Security log:** 90 days, then deleted every day by our clean-up job; all of it goes earlier if you delete your account.
 - **Backups:** made weekly on the controller's own computer, readable only by their user account, and deleted after 35 days. After you delete your account, your data can remain in backups for up to 35 days. If we ever restore a backup, we delete again the accounts deleted since it was made.
 - **Upload times:** two days. **Refused-request counters:** one hour.
@@ -119,13 +136,14 @@ We do not sell or rent your data.
 
 You can, at any time:
 
-- **Download your data:** "Download my data" on your account page gives one JSON file with your account details (not your password hash or sign-in tokens), sign-in sessions, security log, profile, your community stats choice, game rows (each says when its full record was deleted, if it was), your leaderboard numbers, the full game records still kept (section 6) and whether your account has unlimited history. It is machine-readable, so you can take it elsewhere (data portability).
+- **Download your data:** "Download my data" on your account page gives one JSON file with your account details (not your password hash or sign-in tokens), sign-in sessions, security log, profile, your community stats choice, your simulator choice, game rows (each says when its full record was deleted, if it was), your leaderboard numbers, the full game records still kept (section 6) and whether your account has unlimited history. It is machine-readable, so you can take it elsewhere (data portability).
 - **Ask for access** to anything else we hold about you, such as what may be in provider logs or backups, by writing to us.
 - **Correct** your display name on the account page; for anything else, write to us.
-- **Delete** your account: "Delete account" on your account page removes your files, game rows, leaderboard numbers, community stats choice, unlimited history mark, profile, sessions, security log and the account itself. Backups and provider logs expire as in section 6.
+- **Delete** your account: "Delete account" on your account page removes your files, game rows, leaderboard numbers, community stats choice, simulator choice, unlimited history mark, profile, sessions, security log and the account itself. Backups and provider logs expire as in section 6.
 - **Object** to processing based on legitimate interest, or ask us to **restrict** processing.
 - **Stop publishing** your profile and leave the leaderboards by turning the switch off.
 - **Withdraw your consent** to the community hero stats by turning "Include my games in community hero stats" off; your games leave the totals at the next daily rebuild.
+- **Withdraw your consent** to the use of your games for the simulator by turning "Let my games be used to improve the simulator" off; your games are not used again from that moment.
 
 Write to privacy@tavernledger.net for anything the site does not do by itself. We answer within one month.
 

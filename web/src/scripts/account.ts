@@ -1,6 +1,6 @@
 // First: the page's language, before any module draws text (T-508).
 import "../lib/i18n/boot.ts";
-import { at } from "../lib/account/strings.ts";
+import { at, type AccountKey } from "../lib/account/strings.ts";
 import { href } from "../lib/i18n.ts";
 import type { User } from "@supabase/supabase-js";
 import {
@@ -9,8 +9,10 @@ import {
   finishAuthLink,
   loadCommunityConsent,
   loadOwnProfile,
+  loadSimulatorConsent,
   saveCommunityConsent,
   saveProfile,
+  saveSimulatorConsent,
   setNewPassword,
   signIn,
 } from "../lib/api.ts";
@@ -94,15 +96,50 @@ async function setUpProfile(user: User): Promise<void> {
   });
 }
 
-/** The community hero stats switch (T-507): its own form, apart from the public profile. */
-async function setUpCommunity(user: User): Promise<void> {
-  const form = byId<HTMLFormElement>("community-form");
-  const message = byId("community-message");
-  const box = field(form, "hero_stats");
+/** An opt-in switch with its own form: how to read and save it, and what to say. */
+interface ConsentSwitch {
+  form: string;
+  message: string;
+  box: string;
+  load: (client: typeof supabase, userId: string) => Promise<boolean>;
+  save: (client: typeof supabase, on: boolean) => Promise<string | null>;
+  savedOn: AccountKey;
+  savedOff: AccountKey;
+  unchanged: AccountKey;
+}
+
+/** The community hero stats switch (T-507), apart from the public profile. */
+const COMMUNITY: ConsentSwitch = {
+  form: "community-form",
+  message: "community-message",
+  box: "hero_stats",
+  load: loadCommunityConsent,
+  save: saveCommunityConsent,
+  savedOn: "account.community.savedOn",
+  savedOff: "account.community.savedOff",
+  unchanged: "account.community.unchanged",
+};
+
+/** The "improve the simulator" switch (T-547). */
+const SIMULATOR: ConsentSwitch = {
+  form: "simulator-form",
+  message: "simulator-message",
+  box: "improve_simulator",
+  load: loadSimulatorConsent,
+  save: saveSimulatorConsent,
+  savedOn: "account.simulator.savedOn",
+  savedOff: "account.simulator.savedOff",
+  unchanged: "account.simulator.unchanged",
+};
+
+async function setUpSwitch(user: User, sw: ConsentSwitch): Promise<void> {
+  const form = byId<HTMLFormElement>(sw.form);
+  const message = byId(sw.message);
+  const box = field(form, sw.box);
   // The choice as the server last confirmed it.
   let saved: boolean;
   try {
-    saved = await loadCommunityConsent(supabase, user.id);
+    saved = await sw.load(supabase, user.id);
     box.checked = saved;
   } catch {
     // Saving an unknown state could turn the switch off, or on, by mistake.
@@ -117,15 +154,15 @@ async function setUpCommunity(user: User): Promise<void> {
     const on = box.checked;
     void busy(form.querySelector("button") as HTMLButtonElement, async () => {
       say(message, at("account.saving"));
-      const error = await saveCommunityConsent(supabase, on);
+      const error = await sw.save(supabase, on);
       if (error) {
         // Show the choice the server last confirmed, never the one that failed.
         box.checked = saved;
-        say(message, at("account.community.unchanged", { error }), "error");
+        say(message, at(sw.unchanged, { error }), "error");
         return;
       }
       saved = on;
-      say(message, on ? at("account.community.savedOn") : at("account.community.savedOff"), "ok");
+      say(message, on ? at(sw.savedOn) : at(sw.savedOff), "ok");
     });
   });
 }
@@ -254,7 +291,7 @@ async function showAccount(user: User): Promise<void> {
   setUpExport();
   setUpDelete(user);
   setUpSignOut();
-  await Promise.all([setUpProfile(user), setUpCommunity(user)]);
+  await Promise.all([setUpProfile(user), setUpSwitch(user, COMMUNITY), setUpSwitch(user, SIMULATOR)]);
 }
 
 async function start(): Promise<void> {

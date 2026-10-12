@@ -25,7 +25,7 @@ import {
 import { CH_STRINGS, ct } from "../../src/lib/community/strings.ts";
 import { howFold, JOIN_PATH, modePanels, periodPanel, POLICY_PATH, updatedLine } from "../../src/lib/community/view.ts";
 import { DataError } from "../../src/lib/data/rows.ts";
-import { communityErrorMessage } from "../../src/lib/profile.ts";
+import { switchErrorMessage } from "../../src/lib/profile.ts";
 import { elements, textOf, toHtml } from "../helpers/html.ts";
 import { json, memoryStorage, stubFetch } from "../helpers/fetchStub.ts";
 
@@ -317,5 +317,5 @@ test("saving the switch calls the owner-only function and checks its answer", as
   assert.match((await saveCommunityConsent(makeClient(CONFIG, memoryStorage()), true)) ?? "", /Sign in again/);
   stubFetch({ "/rest/v1/rpc/set_community_consent": () => json({ message: "down" }, 500) });
   assert.match((await saveCommunityConsent(makeClient(CONFIG, memoryStorage()), false)) ?? "", /Could not save/);
-  assert.equal(communityErrorMessage({}), "Could not save. Try again in a moment.");
+  assert.equal(switchErrorMessage({}), "Could not save. Try again in a moment.");
 });

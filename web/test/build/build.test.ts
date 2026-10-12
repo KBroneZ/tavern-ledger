@@ -613,6 +613,22 @@ test("accounts open: the community hero stats are a static frame with reserved r
   assert.match(account, /href="\/privacy\/#community-hero-stats"/);
 });
 
+test("accounts open: the account page has the simulator switch, off until read, with the policy link (T-547)", { skip: !CONFIG }, () => {
+  const page = (p: string) => readFileSync(join(DIST, p), "utf8");
+  for (const [lang, file, privacy, label] of [
+    ["en", "account/index.html", "privacy/index.html", /Let my games be used to improve the simulator/],
+    ["es", "es/account/index.html", "es/privacy/index.html", /Permitir que se usen mis partidas para mejorar el simulador/],
+  ] as const) {
+    const account = page(file);
+    assert.match(account, /id="simulator-form"/, lang);
+    assert.match(account, /<input type="checkbox" name="improve_simulator">/, lang);
+    assert.match(account, label, lang);
+    assert.match(account, new RegExp(`href="${lang === "es" ? "/es" : ""}/privacy/#improving-the-simulator"`), lang);
+    assert.match(account, /id="simulator-message" role="status" aria-live="polite"/, lang);
+    assert.match(page(privacy), /id="improving-the-simulator"/, lang);
+  }
+});
+
 test("accounts open: the leaderboards are a static frame with reserved room, linked from the menu", { skip: !CONFIG }, () => {
   const page = (p: string) => readFileSync(join(DIST, p), "utf8");
   const html = page("leaderboards/index.html");

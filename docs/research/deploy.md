@@ -451,6 +451,14 @@ The five emails Supabase Auth sends for this project have our own templates: the
 
 **Known limits:** accounts made before this change have no `lang` and get English (the owner can add it to their own account in the SQL editor: `update auth.users set raw_user_meta_data = raw_user_meta_data || '{"lang":"es"}' where id = '<own id>';`). A user can change their own `lang` through the Auth API; that only changes the language of their own emails. Supabase's renderer drops HTML comments, so there are no Outlook conditional comments: the button's size in Outlook comes from `mso-padding-alt`. Outlook on Windows shows square corners, may stretch the card to the window's width (it ignores `max-width`), and only the button's text is clickable there, and Gmail ignores the dark-mode colours (its apps may darken the light card themselves); both stay readable.
 
+### 10.15 Games shared to improve the simulator (session 110, T-547, D-119)
+
+Accounts can turn on "Let my games be used to improve the simulator" (off by default; privacy policy section 4, "Improving the simulator"). Migration `20261012200000_simulator_consent.sql` reaches the hosted project with the merge, like every migration (10.1); there is no dashboard step.
+
+- **Who may list the games:** `public.simulator_files(p_limit)`, granted to `service_role` only (and runnable by the owner in the SQL editor). It returns storage path, SHA-256 and size of the files still kept of accounts whose switch is on at that moment. The path holds the account id, so the owner does not copy it anywhere.
+- **How the owner uses them:** `pwsh tools\sim_consented_games.ps1 -Cards <tmp>\cards.json`, with the same `.local\supabase.env` as the backup (10.2). It downloads the files under running numbers into `.local\sim-games\<UTC time>\`, checks each against its SHA-256, runs `combat-validate --summary` and deletes the folder in all cases; it prints counts only. Details: [combat-simulator.md](combat-simulator.md) section 7.8.
+- **Checks after the merge** (no personal data printed): in the SQL editor, `select count(*) from public.simulator_consent;` and `select count(*) from public.simulator_files(10);` both answer 0 right after the merge (no account has used the switch yet); the account page shows the switch off, and turning it on and off on the owner's own account changes the second count. Not run on real data in session 110.
+
 ## Second opinion (ChatGPT, 2026-10-09)
 
 Code and security reviews (Claude subagents) found no CRITICAL or HIGH; applied: HSTS starts at one day, no canonical link on `noindex` pages, the open-mode build test checks that every script a page loads exists, the privacy draft names Cloudflare's possible security cookies, the takedown order above.
