@@ -149,6 +149,23 @@ test("delete: a non-JSON answer is an error, not a crash", async () => {
   assert.equal((await deleteAccount(withSession("tok"), CONFIG)).kind, "error");
 });
 
+// --- sign-up ---
+
+test("sign-up: stores the page's language for the emails and nothing else", async () => {
+  for (const lang of ["en", "es"] as const) {
+    let sent: Record<string, unknown> = {};
+    stubFetch({
+      "/auth/v1/signup": (_url, init) => {
+        sent = JSON.parse(String(init.body)) as Record<string, unknown>;
+        return json({ id: USER });
+      },
+    });
+    await signUp(client(), " someone@example.test ", "0123456789ab", "https://x.test/account/", lang);
+    assert.equal(sent.email, "someone@example.test");
+    assert.deepEqual(sent.data, { lang });
+  }
+});
+
 // --- email links and password reset (D-048) ---
 
 function b64url(value: unknown): string {
@@ -240,7 +257,7 @@ test("link: a code opened in another browser says what to do, with no request", 
 test("link: a sign-up code started here signs in and says the email is confirmed", async () => {
   const c = client();
   stubFetch({ "/auth/v1/signup": () => json({ id: USER }) });
-  await signUp(c, "someone@example.test", "0123456789ab", "https://x.test/account/");
+  await signUp(c, "someone@example.test", "0123456789ab", "https://x.test/account/", "en");
   stubFetch({ "/auth/v1/token": () => json(session()) });
   const outcome = await finishAuthLink(c, CONFIG, { kind: "code", code: "0b5c4a1e-1111", flowId: null });
   assert.deepEqual(outcome, { recovery: false, message: "Your email is confirmed.", tone: "ok" });

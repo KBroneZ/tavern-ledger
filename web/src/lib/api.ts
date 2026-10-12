@@ -18,6 +18,7 @@ import {
   noticeMessage,
 } from "./authLink.ts";
 import type { SiteConfig } from "./config.ts";
+import type { Lang } from "./i18n.ts";
 import { type DeleteOutcome, deleteOutcome } from "./deleteAccount.ts";
 import { buildExport, type ExportFile, ownFileNames } from "./exportData.ts";
 import { communityErrorMessage, profileErrorMessage } from "./profile.ts";
@@ -63,17 +64,22 @@ export function makeClient(config: SiteConfig, storage?: SupportedStorage, timeo
   });
 }
 
+/**
+ * `emailLang` is the page's language, kept as the account's `lang` metadata:
+ * Supabase's email templates pick Spanish or English from it (D-114).
+ */
 export async function signUp(
   client: SupabaseClient,
   email: string,
   password: string,
   redirectTo: string,
+  emailLang: Lang,
 ): Promise<SignUpOutcome> {
   try {
     const { error } = await client.auth.signUp({
       email: email.trim(),
       password,
-      options: { emailRedirectTo: redirectTo },
+      options: { emailRedirectTo: redirectTo, data: { lang: emailLang } },
     });
     return signUpOutcome(error as AuthErrorLike | null);
   } catch {
