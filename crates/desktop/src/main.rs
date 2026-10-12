@@ -237,16 +237,17 @@ fn game_recap(
 
 /// Why each combat of a game in the history went as it did (T-346, D-127):
 /// the odds on the boards as they fought, the result and the cause of each
-/// miss, as the website's game page shows them. It plays every combat, so
-/// it runs off the window's thread; the recap asks for it after it draws.
-#[tauri::command(async)]
-fn game_why(
-    state: State<'_, Arc<AppState>>,
-    cards: State<'_, card_data::Cards>,
+/// miss, as the website's game page shows them. It plays every combat (a few
+/// seconds), so it runs on a blocking thread, never the window's or the async
+/// runtime's; the recap asks for it once per game after it draws.
+#[tauri::command]
+async fn game_why(
+    app: AppHandle,
     session: String,
     index: u64,
 ) -> Result<serde_json::Value, String> {
     let report = {
+        let state = app.state::<Arc<AppState>>();
         let games = state.games.lock().unwrap_or_else(|e| e.into_inner());
         games
             .iter()
@@ -254,11 +255,17 @@ fn game_why(
             .map(|row| row.report.clone())
             .ok_or_else(|| "That game is not in the history.".to_string())?
     };
-    let facts = |id: &str| card_data::combat_facts(&cards, id);
-    catch_unwind(AssertUnwindSafe(|| {
-        tracker::why::combat_whys(&report, &facts)
-    }))
-    .map_err(|_| "The odds of this game could not be worked out.".to_string())
+    let failed = || "The odds of this game could not be worked out.".to_string();
+    tauri::async_runtime::spawn_blocking(move || {
+        let cards = app.state::<card_data::Cards>();
+        let facts = |id: &str| card_data::combat_facts(&cards, id);
+        catch_unwind(AssertUnwindSafe(|| {
+            tracker::why::combat_whys(&report, &facts)
+        }))
+    })
+    .await
+    .map_err(|_| failed())?
+    .map_err(|_| failed())
 }
 
 fn recap_of(state: &AppState, session: &str, index: u64) -> Result<Recap, String> {

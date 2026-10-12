@@ -15,7 +15,7 @@ test("the app's answer is read defensively: a combat out of shape is left out", 
   const read = TLWhy.lines([combat(), { round: "x", result: "won" }, combat({ result: "draw" }), null, combat({ odds: { won: 2, tied: 0, lost: 0 } })]);
   assert.equal(read.length, 2);
   assert.equal(read[1].odds, null, "odds out of range are not shown");
-  assert.deepEqual(TLWhy.lines("not a list"), []);
+  assert.equal(TLWhy.lines("not a list"), null, "not a list: a failure, not an empty game");
   const bad = TLWhy.lines([combat({ cause: { id: "replay_stats", card: "../x", rule: "chance" } })])[0];
   assert.equal(bad.cause.card, null);
   assert.equal(bad.cause.rule, null);

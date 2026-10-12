@@ -626,32 +626,37 @@ document.getElementById("report-dialog").addEventListener("close", () => { repor
 let recapGame = null;
 // The recap on screen, drawn again (focus kept) when card names arrive.
 let recapShown = null;
-// Why each combat went as it did (T-346): asked once per opened game, after
-// the recap draws (it plays every combat); `state` is "loading", "failed" or
-// the combats.
-let whyShown = { key: null, state: "loading" };
+// Why each combat went as it did (T-346): asked once per game after its recap
+// draws (it plays every combat). Answers are kept for the last games opened;
+// one request per game at a time; a failure is asked again when reopened.
+const WHY_KEPT = 8;
+const whyKept = new Map();
+const whyAsked = new Set();
+let whyFailed = null;
 
 function whySection(game) {
   const key = gameKey(game);
-  if (whyShown.key !== key) {
-    whyShown = { key, state: "loading" };
-    loadWhy(game, key);
-  }
+  const state = whyKept.get(key) || (whyFailed === key ? "failed" : "loading");
+  if (state === "loading" && !whyAsked.has(key)) loadWhy(game, key);
   const tools = { fold: TLCompact.fold, game: key, cardName: (id) => TLCards.display(id) || id };
-  const section = TLWhy.section(SHOP_UI, whyShown.state, tools);
+  const section = TLWhy.section(SHOP_UI, state, tools);
   section.id = "recap-why";
   return section;
 }
 
 async function loadWhy(game, key) {
-  let state;
+  whyAsked.add(key);
   try {
-    state = TLWhy.lines(await invoke("game_why", { session: game.session, index: game.index }));
+    const combats = TLWhy.lines(await invoke("game_why", { session: game.session, index: game.index }));
+    if (!combats) throw new Error("unreadable");
+    whyKept.delete(key);
+    whyKept.set(key, combats);
+    if (whyKept.size > WHY_KEPT) whyKept.delete(whyKept.keys().next().value);
+    if (whyFailed === key) whyFailed = null;
   } catch {
-    state = "failed";
+    whyFailed = key;
   }
-  if (whyShown.key !== key) return;
-  whyShown = { key, state };
+  whyAsked.delete(key);
   const shown = document.getElementById("recap-why");
   if (shown && recapGame && gameKey(recapGame) === key) TLFocus.keep(document, () => shown.replaceWith(whySection(game)));
 }
@@ -956,7 +961,8 @@ function renderRecapNow(r, game) {
   const turnTools = { card: TLShop.card, cardRow: TLShop.cardRow, fold: TLCompact.fold, art, heroText, game: key };
   const replayTools = { art, heroText, cardName: (id) => TLCards.display(id), fold: TLCompact.fold, game: key };
   // Simple (T-344) keeps the facts, health, shop summary, combat replays
-  // (T-215), record and messages; the rest waits for Advanced.
+  // (T-215), why each result differed (T-346), record and messages; the rest
+  // waits for Advanced.
   document.getElementById("recap-body").replaceChildren(
     top, TLShop.recapSummary(r.shop, SHOP_UI, r.is_duos, key), TLReplay.section(SHOP_UI, r, report, replayTools), whySection(game),
     advancedOnly(TLTurns.section(SHOP_UI, r, report, turnTools)),
@@ -986,8 +992,8 @@ async function openRecap(game) {
   const reload = recapView.isOpen() && recapGame && gameKey(recapGame) === gameKey(target);
   recapGame = target;
   if (!reload) {
-    // Another game, or the same one opened again: its odds are asked afresh.
-    whyShown = { key: null, state: "loading" };
+    // Odds that failed last time are asked again.
+    if (whyFailed === gameKey(target)) whyFailed = null;
     renderRecapBar(null, target);
     updateTribesButton(target);
     document.getElementById("recap-body").replaceChildren();

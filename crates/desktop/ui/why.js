@@ -17,9 +17,11 @@
   const card = (v) => (typeof v === "string" && CARD_ID.test(v) ? v : null);
   const share = (v) => (typeof v === "number" && v >= 0 && v <= 1 ? v : null);
 
-  // The app's answer, read defensively: a combat out of shape is left out.
+  // The app's answer, read defensively: a combat out of shape is left out;
+  // an answer that is not a list is null (shown as a failure).
   function lines(answer) {
-    return list(answer).filter((c) => c && Number.isInteger(c.round) && RESULTS.includes(c.result)).map((c) => {
+    if (!Array.isArray(answer)) return null;
+    return answer.filter((c) => c && Number.isInteger(c.round) && RESULTS.includes(c.result)).map((c) => {
       const o = c.odds && typeof c.odds === "object" ? c.odds : null;
       const odds = o && [o.won, o.tied, o.lost].every((x) => share(x) !== null) ? { won: o.won, tied: o.tied, lost: o.lost } : null;
       const cause = c.cause && typeof c.cause === "object" && typeof c.cause.id === "string" ? c.cause : null;
@@ -110,7 +112,7 @@
     const part = ui.el("section", "recap-part why");
     part.append(ui.el("h3", null, t("why.title")));
     if (state === "loading") part.append(ui.el("p", "note", t("why.loading")));
-    else if (state === "failed" || !Array.isArray(state)) part.append(ui.withSource(ui.el("p", "note", t("why.failed")), "unknown"));
+    else if (state === "failed" || !Array.isArray(state)) part.append(ui.el("p", "note", t("why.failed")));
     else if (!state.length) part.append(ui.el("p", "note", t("why.none")));
     else {
       const missed = state.filter((c) => c.cause && c.cause.id !== "matched").length;
