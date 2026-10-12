@@ -187,3 +187,9 @@
   font: 700 11px/1.4 var(--font-body);
 }
 .replay-gifts .gift-mark.is-unknown { border-style: dashed; }
+
+/* Why each result went as it did (T-346): one line per combat, below the replays. */
+.why-list { list-style: none; margin: 0; padding: 0; }
+.why-line { margin: 4px 0; }
+.why-turn, .why-odds { font-variant-numeric: tabular-nums; }
+.why-odds { color: var(--dim); }
