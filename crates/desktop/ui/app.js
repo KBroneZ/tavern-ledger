@@ -626,6 +626,35 @@ document.getElementById("report-dialog").addEventListener("close", () => { repor
 let recapGame = null;
 // The recap on screen, drawn again (focus kept) when card names arrive.
 let recapShown = null;
+// Why each combat went as it did (T-346): asked once per opened game, after
+// the recap draws (it plays every combat); `state` is "loading", "failed" or
+// the combats.
+let whyShown = { key: null, state: "loading" };
+
+function whySection(game) {
+  const key = gameKey(game);
+  if (whyShown.key !== key) {
+    whyShown = { key, state: "loading" };
+    loadWhy(game, key);
+  }
+  const tools = { fold: TLCompact.fold, game: key, cardName: (id) => TLCards.display(id) || id };
+  const section = TLWhy.section(SHOP_UI, whyShown.state, tools);
+  section.id = "recap-why";
+  return section;
+}
+
+async function loadWhy(game, key) {
+  let state;
+  try {
+    state = TLWhy.lines(await invoke("game_why", { session: game.session, index: game.index }));
+  } catch {
+    state = "failed";
+  }
+  if (whyShown.key !== key) return;
+  whyShown = { key, state };
+  const shown = document.getElementById("recap-why");
+  if (shown && recapGame && gameKey(recapGame) === key) TLFocus.keep(document, () => shown.replaceWith(whySection(game)));
+}
 const OUTCOMES = ["won", "lost", "tie", "unknown"];
 const outcomeWord = (outcome) => tl(`outcome.${OUTCOMES.includes(outcome) ? outcome : "unknown"}`);
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -929,7 +958,7 @@ function renderRecapNow(r, game) {
   // Simple (T-344) keeps the facts, health, shop summary, combat replays
   // (T-215), record and messages; the rest waits for Advanced.
   document.getElementById("recap-body").replaceChildren(
-    top, TLShop.recapSummary(r.shop, SHOP_UI, r.is_duos, key), TLReplay.section(SHOP_UI, r, report, replayTools),
+    top, TLShop.recapSummary(r.shop, SHOP_UI, r.is_duos, key), TLReplay.section(SHOP_UI, r, report, replayTools), whySection(game),
     advancedOnly(TLTurns.section(SHOP_UI, r, report, turnTools)),
     recordSection(r), advancedOnly(TLExtras.heroPickSection(r.hero_pick, SHOP_UI, portrait)),
     advancedOnly(TLRoundTwo.choicesSection(SHOP_UI, r.choices, key)),
@@ -957,6 +986,8 @@ async function openRecap(game) {
   const reload = recapView.isOpen() && recapGame && gameKey(recapGame) === gameKey(target);
   recapGame = target;
   if (!reload) {
+    // Another game, or the same one opened again: its odds are asked afresh.
+    whyShown = { key: null, state: "loading" };
     renderRecapBar(null, target);
     updateTribesButton(target);
     document.getElementById("recap-body").replaceChildren();
