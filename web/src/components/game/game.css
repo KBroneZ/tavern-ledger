@@ -34,9 +34,10 @@
   display: grid;
   gap: var(--s-4);
   padding: var(--s-4);
-  border: 1px solid var(--line-soft);
   border-radius: var(--r-panel);
-  background: var(--surface-1);
+  /* A wood panel, as on every page (ui.css). */
+  background: var(--panel-wood);
+  box-shadow: var(--panel-edge);
 }
 
 .gv-who {
