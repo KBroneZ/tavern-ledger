@@ -17,7 +17,7 @@ export function showLoadFailure(target: HTMLElement, title: string, body: string
   }
   const button = document.createElement("button");
   button.type = "button";
-  button.className = "secondary";
+  button.className = "tb tb-small";
   button.textContent = retry;
   button.addEventListener("click", () => location.reload());
   block.append(button);

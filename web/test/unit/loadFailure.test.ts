@@ -54,6 +54,8 @@ test("the block has a title, the text, and a button that reloads the page", () =
   ]);
   assert.equal(block.children[0].className, "state-title");
   assert.equal(block.children[2].type, "button");
+  // The small stone, as every retry button on the site (buttons.css).
+  assert.equal(block.children[2].className, "tb tb-small");
   block.children[2].listeners.get("click")?.();
   assert.equal(page.reloads(), 1);
 });

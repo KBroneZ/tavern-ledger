@@ -185,11 +185,11 @@ body {
   font-size: clamp(2.6rem, 6.8vw, 5.25rem);
   line-height: 0.98;
   color: #ffd27a;
-  background: linear-gradient(180deg, #fff3cf 8%, #ffd27a 42%, #e9a43a 68%, #b8701f 92%);
+  background: var(--gold-lit);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 0 #3a1f07) drop-shadow(0 8px 18px rgb(0 0 0 / 0.75));
+  filter: drop-shadow(0 2px 0 var(--gold-rim)) drop-shadow(0 8px 18px rgb(0 0 0 / 0.75));
 }
 
 /* The second line: on phones it wraps at the title's own size (no tiny text);

@@ -24,6 +24,8 @@ export const SITE_STRINGS = {
   "layout.account": "Account",
   "layout.notice": "Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.",
   "layout.openSource": "Open source (AGPL-3.0). Accounts are open; the desktop app is not out yet.",
+  // The same line in the accounts-closed build.
+  "layout.openSource.closed": "Open source (AGPL-3.0). Accounts are not open yet; the desktop app is not out yet.",
   // The switch names the other language in that language: on an English page "Español".
   "layout.switch": "Español",
   "layout.switch.label": "Leer esta página en español",

@@ -140,7 +140,7 @@ const socialCard = new URL("/social-card.png", Astro.site).href;
           <span lang="en"> (Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.)</span>
         )}
       </p>
-      <p>{st("layout.openSource")}</p>
+      <p>{st(config ? "layout.openSource" : "layout.openSource.closed")}</p>
       <p><a href={href("/privacy/")}>{st("layout.privacy")}</a></p>
       <p><a href={href("/terms/")}>{st("layout.terms")}</a></p>
       <p><a href={href("/accuracy/")}>{st("layout.accuracy")}</a></p>
