@@ -88,10 +88,6 @@
   box-shadow: inset 3px 0 0 var(--bronze-hi);
 }
 
-.dl-note strong {
-  color: var(--gold);
-}
-
 /* ---------- The steps ---------- */
 
 .dl-steps {
@@ -131,14 +127,15 @@
   font: 800 1.0625rem / 1 var(--display);
 }
 
-.dl-steps h3 {
-  margin: 0;
-  color: var(--parchment);
-  font-size: 1.1875rem;
+/* One short line in view; the rest is in the shared "Read more" fold. */
+.dl-step-line {
+  max-width: 62ch;
+  font-weight: 700;
 }
 
-.dl-steps p {
-  max-width: 62ch;
+.dl-steps > li {
+  align-content: center;
+  min-height: 36px;
 }
 
 /* ---------- The extras ---------- */

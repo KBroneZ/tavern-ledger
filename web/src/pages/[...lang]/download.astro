@@ -32,7 +32,7 @@ const facts = [
   },
   { label: dl("fact.date"), value: published },
 ];
-const steps = ([1, 2, 3, 4] as const).map((n) => ({ title: dl(`step${n}.title`), text: dl(`step${n}.text`) }));
+const steps = ([1, 2, 3, 4] as const).map((n) => ({ title: dl(`step${n}.title`), line: dl(`step${n}.line`), more: dl(`step${n}.more`) }));
 const reads = (["reads.1", "reads.2", "reads.3", "reads.4"] as const).map((key) => dl(key));
 ---
 
@@ -61,7 +61,7 @@ const reads = (["reads.1", "reads.2", "reads.3", "reads.4"] as const).map((key) 
         <Button kind="common" href={releasesUrl()}>{dl("action.github")}</Button>
       </div>
       <p class="meta mono dl-file">{dl("action.download.file", { file: RELEASE.file })}</p>
-      <p class="dl-note"><strong>{dl("beta.title")}.</strong> {dl("beta.body")}</p>
+      <p class="dl-note">{dl("beta.line")}</p>
     </section>
 
     <section class="panel" aria-labelledby="dl-steps-title">
@@ -70,11 +70,11 @@ const reads = (["reads.1", "reads.2", "reads.3", "reads.4"] as const).map((key) 
         {
           steps.map((step, i) => (
             <li>
-              <h3>{step.title}</h3>
-              <p>{step.text}</p>
-              {i === 3 && (
-                <p class="meta">{accountsOpen ? dl("step4.account") : dl("step4.closed")}</p>
-              )}
+              <p class="dl-step-line">{step.line}</p>
+              <More context={step.title}>
+                <p>{step.more}</p>
+                {i === 3 && <p>{accountsOpen ? dl("step4.account") : dl("step4.closed")}</p>}
+              </More>
             </li>
           ))
         }

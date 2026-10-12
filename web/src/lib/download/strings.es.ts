@@ -5,7 +5,7 @@ export const ES: Record<DlKey, string> = {
   "page.kicker": "Windows · beta",
   "page.title": "Descargar Tavern Ledger",
   "page.lead":
-    "Una aplicación gratuita para Windows que guarda todas las partidas de Campos de Batalla que juegas. Es una versión temprana para probadores beta: puede tener fallos.",
+    "Una aplicación gratuita para Windows que guarda todas tus partidas de Campos de Batalla. Beta temprana: puede tener fallos.",
 
   "get.title": "El instalador",
   "fact.version": "Versión",
@@ -19,22 +19,26 @@ export const ES: Record<DlKey, string> = {
   "action.download.file": "Archivo: {file}",
   "action.github": "Todas las versiones en GitHub",
 
-  "beta.title": "Una versión temprana, y aún sin firmar",
-  "beta.body":
-    "Windows te avisará al abrir el instalador (paso 2). Es normal por ahora. Si algo falla, cuéntalo con el botón «Informar de un problema» de la aplicación o en GitHub.",
+  "beta.line":
+    "Versión temprana y sin firmar: Windows te avisará (paso 2). ¿Algún fallo? Usa «Informar de un problema» en la aplicación.",
 
   "steps.title": "Instálala en cuatro pasos",
   "step1.title": "Descarga el instalador",
-  "step1.text":
-    "Pulsa el botón dorado. Tu navegador puede pedirte que confirmes que quieres conservar un archivo que no conoce; conserva el archivo.",
+  "step1.line": "Pulsa Descargar y conserva el archivo.",
+  "step1.more":
+    "Tu navegador puede pedirte que confirmes que quieres conservar un archivo que no conoce; conserva el archivo.",
   "step2.title": "Pasa el aviso de Windows",
-  "step2.text":
-    "Puede que Windows diga «Windows protegió su PC». Lo muestra porque el instalador aún no tiene certificado de firma de código y lo han descargado pocas personas. Pulsa Más información, comprueba que el nombre del archivo coincide y pulsa Ejecutar de todas formas. Hazlo solo con el archivo de esta página o de las versiones del proyecto en GitHub.",
+  "step2.line": "Windows avisará: pulsa «Más información» → «Ejecutar de todas formas».",
+  "step2.more":
+    "Puede que Windows diga «Windows protegió su PC». Lo muestra porque el instalador aún no está firmado y lo han descargado pocas personas. Comprueba que el nombre del archivo coincide y hazlo solo con el archivo de esta página o de las versiones del proyecto en GitHub.",
   "step3.title": "Instálala",
-  "step3.text":
-    "Sigue el instalador. Se instala solo para tu usuario de Windows, así que no pide permisos de administrador, y añade un acceso directo en el menú Inicio. Si falta Microsoft Edge WebView2, el instalador lo obtiene de Microsoft (hace falta internet).",
+  "step3.line": "Sigue el instalador; no pide permisos de administrador.",
+  "step3.more":
+    "Se instala solo para tu usuario de Windows y añade un acceso directo en el menú Inicio. Si falta Microsoft Edge WebView2, el instalador lo obtiene de Microsoft (hace falta internet).",
   "step4.title": "Ábrela y juega",
-  "step4.text": "Abre Tavern Ledger desde el menú Inicio. Guarda tus partidas de Campos de Batalla mientras juegas, y funciona sin cuenta.",
+  "step4.line": "Abre Tavern Ledger desde el menú Inicio y juega.",
+  "step4.more":
+    "Guarda tus partidas de Campos de Batalla mientras juegas, y funciona sin cuenta.",
   "step4.account":
     "¿Quieres tus partidas también en la web? Crea una cuenta en la web, abre los Ajustes de la aplicación, busca «Subir a la web», pide el enlace de inicio de sesión y activa la subida. Es opcional.",
   "step4.closed": "Las cuentas de la web aún no están abiertas; la aplicación no necesita una.",

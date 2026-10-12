@@ -8,7 +8,7 @@ export const DL_STRINGS = {
   "page.kicker": "Windows · beta",
   "page.title": "Download Tavern Ledger",
   "page.lead":
-    "A free Windows app that keeps every Battlegrounds game you play. This is an early build for beta testers: expect rough edges.",
+    "A free Windows app that keeps every Battlegrounds game you play. Early beta, so expect rough edges.",
 
   "get.title": "The installer",
   "fact.version": "Version",
@@ -22,21 +22,26 @@ export const DL_STRINGS = {
   "action.download.file": "File: {file}",
   "action.github": "All releases on GitHub",
 
-  "beta.title": "An early build, and not signed yet",
-  "beta.body":
-    "Windows will warn you when you open the installer (step 2). That is expected for now. Please report problems with the app's “Report a problem” button or on GitHub.",
+  "beta.line":
+    "Early build, not signed yet: Windows will warn you (step 2). Problems? Use the app's “Report a problem” button.",
 
   "steps.title": "Install it in four steps",
   "step1.title": "Download the installer",
-  "step1.text": "Press the gold button. Your browser may ask you to confirm that you want to keep a file it does not know; keep it.",
+  "step1.line": "Press Download and keep the file.",
+  "step1.more":
+    "Your browser may ask you to confirm that you want to keep a file it does not know; keep it.",
   "step2.title": "Get past the Windows warning",
-  "step2.text":
-    "Windows may say “Windows protected your PC”. It shows this because the installer has no code-signing certificate yet and few people have downloaded it. Click More info, check that the file name matches, then click Run anyway. Do this only with the file from this page or from the project's GitHub releases.",
+  "step2.line": "Windows will warn you: click “More info”, then “Run anyway”.",
+  "step2.more":
+    "Windows may say “Windows protected your PC”. It shows this because the installer has no code-signing certificate yet and few people have downloaded it. Check that the file name matches, and do this only with the file from this page or from the project's GitHub releases.",
   "step3.title": "Install it",
-  "step3.text":
-    "Follow the installer. It installs for your Windows user only, so it needs no administrator rights, and adds a Start menu shortcut. If Microsoft Edge WebView2 is missing, the installer gets it from Microsoft (internet needed).",
+  "step3.line": "Follow the installer; it needs no administrator rights.",
+  "step3.more":
+    "It installs for your Windows user only and adds a Start menu shortcut. If Microsoft Edge WebView2 is missing, the installer gets it from Microsoft (internet needed).",
   "step4.title": "Open it and play",
-  "step4.text": "Open Tavern Ledger from the Start menu. It keeps your Battlegrounds games as you play them, and it works without an account.",
+  "step4.line": "Open Tavern Ledger from the Start menu and play.",
+  "step4.more":
+    "It keeps your Battlegrounds games as you play them, and it works without an account.",
   "step4.account": "Want your games on the website too? Create an account on the website, then open Settings in the app, find “Upload to the website”, ask for a sign-in link and turn uploading on. That part is optional.",
   "step4.closed": "Accounts on the website are not open yet; the app does not need one.",
 

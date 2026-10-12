@@ -56,18 +56,20 @@ test("the page shows the release's own facts: version, file, size, day and SHA-2
   }
 });
 
-test("four steps, and the extras folded shut behind native details", () => {
+test("four one-line steps and four extras, each with its Read more folded shut", () => {
   for (const page of PAGES) {
     const html = read(page.file);
     const steps = /<ol class="dl-steps"[^>]*>([\s\S]*?)<\/ol>/.exec(html)?.[1] ?? "";
     assert.equal([...steps.matchAll(/<li>/g)].length, 4, `${page.file}: four steps`);
+    assert.equal([...steps.matchAll(/<p class="dl-step-line">/g)].length, 4, `${page.file}: a line each`);
+    assert.equal([...steps.matchAll(/<details class="more"/g)].length, 4, `${page.file}: each step has its Read more`);
     assert.ok(html.includes(page.steps), page.file);
     const folds = [...html.matchAll(/<details\b[^>]*>/g)].map((m) => m[0]);
-    assert.equal(folds.length, 4, `${page.file}: four extras`);
+    assert.equal(folds.length, 8, `${page.file}: four steps and four extras`);
     for (const fold of folds) assert.doesNotMatch(fold, /\sopen\b/, `${page.file}: closed at first`);
-    assert.equal([...html.matchAll(/<summary>/g)].length, 4, page.file);
+    assert.equal([...html.matchAll(/<summary>/g)].length, 8, page.file);
     // The shared "Read more" fold (D-130) after a short line that stays in view.
-    assert.equal([...html.matchAll(/<details class="more"/g)].length, 4, `${page.file}: Read more`);
+    assert.equal([...html.matchAll(/<details class="more"/g)].length, 8, `${page.file}: Read more`);
     assert.equal([...html.matchAll(/<p class="dl-short">/g)].length, 4, `${page.file}: a short line each`);
   }
 });
