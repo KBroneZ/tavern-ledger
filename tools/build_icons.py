@@ -19,6 +19,7 @@ Writes:
 - web/public/mark.svg                copy of mark.svg (the masthead)
 - crates/desktop/ui/mark.svg         copy of mark.svg (the app's masthead, T-531)
 - web/public/social-card.png         1200 x 630 link preview (og:image, twitter:image)
+- web/public/email/logo.png          112 px, the auth emails' logo shown at 56 px (T-542, tools/build_auth_emails.py)
 - docs/brand/logo/avatar-500.png     500 px GitHub avatar (uploaded by hand)
 - docs/brand/logo/renders/tray-preview.png    the tray sizes on a light and a dark taskbar, for review
 
@@ -65,6 +66,7 @@ TRAY_SIZES = tuple(TRAY_SOURCES)
 SOCIAL_SIZE = (1200, 630)
 PREVIEW_SIZE = (900, 380)
 AVATAR_SIZE = 500
+EMAIL_LOGO_SIZE = 112
 INSTALLER = {"installer-header.bmp": (150, 57), "installer-sidebar.bmp": (164, 314)}
 # Windows 11 taskbar grounds, light and dark theme.
 TASKBARS = ("#f3f3f3", "#202020")
@@ -322,6 +324,8 @@ def build() -> None:
     for size in TRAY_SIZES:
         write(ICONS / f"tray-{size}.png", render(chrome, svgs[TRAY_SOURCES[size]], size))
     write(PUBLIC / "social-card.png", social_card(chrome))
+    # Emails cannot use SVG: a PNG at twice the size it is shown, transparent around the rounded tile.
+    write(PUBLIC / "email" / "logo.png", render(chrome, svgs["app-tile.svg"], EMAIL_LOGO_SIZE))
     # GitHub crops avatars to a circle: a square amber ground keeps the corners clean.
     write(LOGO / "avatar-500.png", render(chrome, svgs["app-tile.svg"], AVATAR_SIZE, AMBER))
     write(ICONS / "installer-header.bmp", bmp_bytes(*png_pixels(installer_header(chrome))))
