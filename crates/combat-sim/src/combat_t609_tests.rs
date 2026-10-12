@@ -228,3 +228,17 @@ fn a_summoned_beetle_has_the_beetle_buffs() {
     let got = after_deaths(vec![vermin], values, &[0]);
     assert_eq!(got, vec![("BG28_603t".to_string(), 14, 14)]);
 }
+
+#[test]
+fn de_volition_ist_hits_the_highest_health_enemy_even_when_it_dies() {
+    // The user's game 1 round 10: a 34/2 De-volition-ist attacks a 106/106,
+    // dies, and its "after this attacks" still deals 34 to that minion.
+    let devo = Minion::new("BG36_102", 34, 2).tier(5);
+    let p = Prepared::new(&band(vec![devo]), &band(vec![plain(106, 106)]), false);
+    let mut rng = Rng::new(1);
+    let mut c = Combat::new(&p, &mut rng);
+    let uid = c.sides[0].units[0].uid;
+    c.swing(0, uid);
+    assert!(c.sides[0].units.is_empty());
+    assert_eq!(c.sides[1].units[0].health, 38);
+}
