@@ -37,14 +37,16 @@ export const DL_STRINGS = {
     "Follow the installer. It installs for your Windows user only, so it needs no administrator rights, and adds a Start menu shortcut. If Microsoft Edge WebView2 is missing, the installer gets it from Microsoft (internet needed).",
   "step4.title": "Open it and play",
   "step4.text": "Open Tavern Ledger from the Start menu. It keeps your Battlegrounds games as you play them, and it works without an account.",
-  "step4.account": "Want your games on the website too? Sign in there, then turn on uploading in the app's Settings. That part is optional.",
+  "step4.account": "Want your games on the website too? Create an account on the website, then open Settings in the app, find “Upload to the website”, ask for a sign-in link and turn uploading on. That part is optional.",
   "step4.closed": "Accounts on the website are not open yet; the app does not need one.",
 
+  "extras.title": "Good to know",
   "check.title": "Check the file",
-  "check.body":
-    "The installer is not signed, so you can check that it is the file we published. In PowerShell, in the folder where you saved it, run the command below; the result should be the same as this SHA-256:",
+  "check.short": "The installer is not signed, so you can check that it is the file we published.",
+  "check.body": "In PowerShell, in the folder where you saved it, run the command below. The result should be the same as this SHA-256 (PowerShell writes it in capital letters; the case does not matter):",
   "check.command": "Get-FileHash \"{file}\"",
   "reads.title": "What the app reads",
+  "reads.short": "It reads the game's log files on your PC, and it never changes the game.",
   "reads.1": "The game's log files on your PC, to record your Battlegrounds games.",
   "reads.2": "For the overlay, where your pointer is over the game window.",
   "reads.3":
@@ -54,11 +56,12 @@ export const DL_STRINGS = {
     "Your games stay on your PC in %APPDATA%\\TavernLedger. Nothing is uploaded unless you sign in and turn uploading on.",
   "reads.privacy": "Privacy policy",
   "update.title": "Updating",
-  "update.body":
-    "There are no automatic updates yet. To update, download the new installer from this page and run it: it replaces the app and keeps your games and settings.",
+  "update.short": "There are no automatic updates yet: download the new installer from this page and run it.",
+  "update.body": "It replaces the app and keeps your games and settings.",
   "remove.title": "Uninstalling",
+  "remove.short": "Remove it in Windows Settings, under Apps. Your games are kept.",
   "remove.body":
-    "Remove it in Windows Settings under Apps. Your games and settings in %APPDATA%\\TavernLedger are kept, so a reinstall finds them; delete that folder by hand if you want them gone.",
+    "Your games and settings in %APPDATA%\\TavernLedger stay, so a reinstall finds them. Delete that folder by hand if you want them gone.",
 
   "source.body": "Open source under AGPL-3.0. You can read the code, or build the same installer yourself, on",
   "source.link": "GitHub",

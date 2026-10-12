@@ -6,9 +6,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { loadEnv } from "vite";
+import { readConfig } from "../../src/lib/config.ts";
 import { RELEASE, installerUrl, releasesUrl } from "../../src/lib/site/release.ts";
 
-const DIST = join(import.meta.dirname, "..", "..", "dist");
+const ROOT = join(import.meta.dirname, "..", "..");
+const DIST = join(ROOT, "dist");
+const CONFIG = readConfig(loadEnv("production", ROOT, "PUBLIC_"));
 const PAGES = [
   { file: "download/index.html", lang: "en", download: "Download", all: "All releases on GitHub", steps: "Install it in four steps" },
   { file: "es/download/index.html", lang: "es", download: "Descargar", all: "Todas las versiones en GitHub", steps: "Instálala en cuatro pasos" },
@@ -41,7 +45,7 @@ test("one gold key button: a link to the release's installer, plus the releases 
 test("the page shows the release's own facts: version, file, size, day and SHA-256", () => {
   for (const page of PAGES) {
     const html = read(page.file);
-    assert.ok(html.includes(RELEASE.version), `${page.file}: version`);
+    assert.match(html, new RegExp(`<dd>${RELEASE.version} \\(beta\\)</dd>`), `${page.file}: version`);
     assert.ok(html.includes(RELEASE.file), `${page.file}: file name`);
     assert.ok(html.includes(RELEASE.sha256), `${page.file}: hash`);
     assert.match(html, page.lang === "en" ? /6\.5 MB/ : /6,5 MB/, `${page.file}: size`);
@@ -62,6 +66,19 @@ test("four steps, and the extras folded shut behind native details", () => {
     assert.equal(folds.length, 4, `${page.file}: four extras`);
     for (const fold of folds) assert.doesNotMatch(fold, /\sopen\b/, `${page.file}: closed at first`);
     assert.equal([...html.matchAll(/<summary>/g)].length, 4, page.file);
+    // The shared "Read more" fold (D-130) after a short line that stays in view.
+    assert.equal([...html.matchAll(/<details class="more"/g)].length, 4, `${page.file}: Read more`);
+    assert.equal([...html.matchAll(/<p class="dl-short">/g)].length, 4, `${page.file}: a short line each`);
+  }
+});
+
+test("step 4 says how to sign in when accounts are open and that they are not open yet when closed", () => {
+  for (const page of PAGES) {
+    const html = read(page.file);
+    const open = page.lang === "en" ? /Create an account on the website/ : /Crea una cuenta en la web/;
+    const closed = page.lang === "en" ? /Accounts on the website are not open yet/ : /Las cuentas de la web aún no están abiertas/;
+    assert.match(html, CONFIG ? open : closed, page.file);
+    assert.doesNotMatch(html, CONFIG ? closed : open, page.file);
   }
 });
 
@@ -79,6 +96,7 @@ test("the page needs no script of its own, and says plainly that the installer i
     const html = read(page.file);
     const named = [...html.matchAll(/<script\b[^>]*\ssrc="\/_astro\/([^"]+)"/g)].map((m) => m[1]);
     assert.deepEqual(named, [], `${page.file}: no bundle`);
+    assert.doesNotMatch(html, /<script\b(?![^>]*\ssrc="\/lang\.js")/, `${page.file}: no other script`);
     assert.match(html, page.lang === "en" ? /not signed yet/ : /sin firmar/, page.file);
     assert.match(html, page.lang === "en" ? /More info/ : /Más información/, page.file);
   }

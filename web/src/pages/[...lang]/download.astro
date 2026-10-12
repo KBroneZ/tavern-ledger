@@ -1,12 +1,13 @@
 ---
 // Download (/download/, T-558, D-126): the Windows installer from the GitHub
 // pre-release, with the four small steps to install it and the extras folded
-// away. Public and indexable, static, no script: the page works the same
+// behind "Read more". Public and indexable, static, no script: the page works the same
 // with accounts open or closed. The release facts (version, file, size, hash,
 // day) come from lib/site/release.ts, the same source as the home page's
 // button; the words are in lib/download/strings.ts.
 import Base from "../../layouts/Base.astro";
 import Button from "../../components/ui/Button.astro";
+import More from "../../components/ui/More.astro";
 import "../../styles/download.css";
 import { readConfig } from "../../lib/config.ts";
 import { dl } from "../../lib/download/strings.ts";
@@ -80,36 +81,41 @@ const reads = (["reads.1", "reads.2", "reads.3", "reads.4"] as const).map((key) 
       </ol>
     </section>
 
-    <section class="panel dl-extras" aria-label={dl("check.title")}>
-      <details class="dl-more">
-        <summary>{dl("check.title")}</summary>
-        <div class="dl-more-body">
+    <section class="panel dl-extras" aria-labelledby="dl-extras-title">
+      <h2 id="dl-extras-title">{dl("extras.title")}</h2>
+      <div class="dl-extra">
+        <h3>{dl("check.title")}</h3>
+        <p class="dl-short">{dl("check.short")}</p>
+        <More context={dl("check.title")}>
           <p>{dl("check.body")}</p>
           <p class="mono dl-code">{RELEASE.sha256}</p>
           <p class="mono dl-code">{dl("check.command", { file: RELEASE.file })}</p>
-        </div>
-      </details>
-      <details class="dl-more">
-        <summary>{dl("reads.title")}</summary>
-        <div class="dl-more-body">
+        </More>
+      </div>
+      <div class="dl-extra">
+        <h3>{dl("reads.title")}</h3>
+        <p class="dl-short">{dl("reads.short")}</p>
+        <More context={dl("reads.title")}>
           <ul role="list">
             {reads.map((line) => <li>{line}</li>)}
           </ul>
           <p>{dl("reads.data")} <a href={href("/privacy/")}>{dl("reads.privacy")}</a>.</p>
-        </div>
-      </details>
-      <details class="dl-more">
-        <summary>{dl("update.title")}</summary>
-        <div class="dl-more-body">
+        </More>
+      </div>
+      <div class="dl-extra">
+        <h3>{dl("update.title")}</h3>
+        <p class="dl-short">{dl("update.short")}</p>
+        <More context={dl("update.title")}>
           <p>{dl("update.body")}</p>
-        </div>
-      </details>
-      <details class="dl-more">
-        <summary>{dl("remove.title")}</summary>
-        <div class="dl-more-body">
+        </More>
+      </div>
+      <div class="dl-extra">
+        <h3>{dl("remove.title")}</h3>
+        <p class="dl-short">{dl("remove.short")}</p>
+        <More context={dl("remove.title")}>
           <p>{dl("remove.body")}</p>
-        </div>
-      </details>
+        </More>
+      </div>
     </section>
 
     <p class="meta dl-source">{dl("source.body")} <a href={repoUrl()}>{dl("source.link")}</a>.</p>
