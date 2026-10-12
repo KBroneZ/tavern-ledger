@@ -3,7 +3,7 @@
 -- Users and games are made up; everything rolls back at the end.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(13);
+select plan(14);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-00000000000a', 'a@example.test');
@@ -46,7 +46,13 @@ select throws_ok(
   $$ select public.game_stats_backfill_put('00000000-0000-4000-8000-00000000000a',
        'Hearthstone_2026_10_09_18_30_00', 1, repeat('a', 64), 3,
        '{"rounds": 7, "damage_taken_max_inferred": true}') $$,
-  '23514', null, 'a flag with no max is refused'
+  '23514', null, 'a taken flag with no taken max is refused'
+);
+select throws_ok(
+  $$ select public.game_stats_backfill_put('00000000-0000-4000-8000-00000000000a',
+       'Hearthstone_2026_10_09_18_30_00', 1, repeat('a', 64), 3,
+       '{"rounds": 7, "damage_dealt_max_inferred": false}') $$,
+  '23514', null, 'a dealt flag with no dealt max is refused'
 );
 select throws_ok(
   $$ select public.game_stats_backfill_put('00000000-0000-4000-8000-00000000000a',
@@ -102,10 +108,10 @@ select results_eq(
   $$ values (true, null::boolean) $$,
   'a missing flag is unknown (null), not false'
 );
-select is(
-  (select inferred from public.user_records where mode = 'duos' and record = 'damage_dealt_max'
-     and value = 0),
-  null, 'the best value wins, not the log: a zero from a tie does not replace 20'
+select is_empty(
+  $$ select * from public.user_records
+     where mode = 'duos' and record = 'damage_dealt_max' and value = 0 $$,
+  'the best value wins, not the log: a zero from a recorded tie does not replace 20'
 );
 
 select * from finish();
