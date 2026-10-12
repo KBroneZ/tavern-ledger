@@ -16,7 +16,7 @@ export const ES: Record<SiteKey, string> = {
   "layout.signin": "Entrar",
   "layout.account": "Cuenta",
   "layout.notice": "Proyecto no oficial de fans. Sin afiliación con Blizzard Entertainment ni respaldo de esta.",
-  "layout.openSource": "Código abierto (AGPL-3.0). La web aún no está abierta al público.",
+  "layout.openSource": "Código abierto (AGPL-3.0). Las cuentas están abiertas; la aplicación de escritorio aún no ha salido.",
   "layout.switch": "English",
   "layout.switch.label": "Read this page in English",
   "layout.socialAlt": "Logotipo de Tavern Ledger, una jarra dibujada con las letras TL, sobre la frase Hearthstone Battlegrounds tracker",

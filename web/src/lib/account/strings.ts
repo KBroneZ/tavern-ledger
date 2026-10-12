@@ -9,9 +9,9 @@ import { ES } from "./strings.es.ts";
 export const ACCOUNT_STRINGS = {
   // Sign in (components/SignIn.astro, scripts/signin.ts).
   "signin.title": "Sign in",
-  "signin.meta.before": "Email and password. The site is",
-  "signin.meta.link": "not open to the public yet",
-  "signin.meta.after": ": accounts are for testing only.",
+  "signin.meta.before": "Email and password. See",
+  "signin.meta.link": "how your data is kept",
+  "signin.meta.after": ".",
   "signin.have": "I have an account",
   "signin.email": "Email",
   "signin.password": "Password",

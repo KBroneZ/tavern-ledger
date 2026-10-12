@@ -4,9 +4,9 @@ import type { AccountKey } from "./strings.ts";
 export const ES: Record<AccountKey, string> = {
   // Sign in (components/SignIn.astro, scripts/signin.ts).
   "signin.title": "Iniciar sesión",
-  "signin.meta.before": "Correo electrónico y contraseña. La web",
-  "signin.meta.link": "aún no está abierta al público",
-  "signin.meta.after": ": las cuentas son solo para pruebas.",
+  "signin.meta.before": "Correo electrónico y contraseña. Mira",
+  "signin.meta.link": "cómo se guardan tus datos",
+  "signin.meta.after": ".",
   "signin.have": "Ya tengo una cuenta",
   "signin.email": "Correo electrónico",
   "signin.password": "Contraseña",
