@@ -626,6 +626,8 @@ test("accounts open: the account page has the simulator switch, off until read, 
     assert.match(account, new RegExp(`href="${lang === "es" ? "/es" : ""}/privacy/#improving-the-simulator"`), lang);
     assert.match(account, /id="simulator-message" role="status" aria-live="polite"/, lang);
     assert.match(page(privacy), /id="improving-the-simulator"/, lang);
+    // The sentence and the link are separate words.
+    assert.doesNotMatch(account, /[.,]<a href="(\/es)?\/privacy\//, lang);
   }
 });
 
