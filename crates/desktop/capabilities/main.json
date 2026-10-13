@@ -40,6 +40,10 @@
     "allow-app-set-window-detail",
     "allow-app-set-system-language",
     "allow-app-autostart",
-    "allow-app-set-autostart"
+    "allow-app-set-autostart",
+    "allow-game-folder-choose",
+    "allow-game-folder-reset",
+    "allow-game-folder-use-running",
+    "allow-game-folder-decline-running"
   ]
 }

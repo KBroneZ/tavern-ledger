@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-game-folder-choose"
+description = "Enables the game_folder_choose command without any pre-configured scope."
+commands.allow = ["game_folder_choose"]
+
+[[permission]]
+identifier = "deny-game-folder-choose"
+description = "Denies the game_folder_choose command without any pre-configured scope."
+commands.deny = ["game_folder_choose"]

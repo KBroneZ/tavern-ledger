@@ -237,6 +237,30 @@
           "markdownDescription": "Enables the edit_lobby_tribes command without any pre-configured scope."
         },
         {
+          "description": "Enables the game_folder_choose command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-game-folder-choose",
+          "markdownDescription": "Enables the game_folder_choose command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the game_folder_decline_running command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-game-folder-decline-running",
+          "markdownDescription": "Enables the game_folder_decline_running command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the game_folder_reset command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-game-folder-reset",
+          "markdownDescription": "Enables the game_folder_reset command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the game_folder_use_running command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-game-folder-use-running",
+          "markdownDescription": "Enables the game_folder_use_running command without any pre-configured scope."
+        },
+        {
           "description": "Enables the game_memory_set_enabled command without any pre-configured scope.",
           "type": "string",
           "const": "allow-game-memory-set-enabled",
@@ -481,6 +505,30 @@
           "type": "string",
           "const": "deny-edit-lobby-tribes",
           "markdownDescription": "Denies the edit_lobby_tribes command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the game_folder_choose command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-game-folder-choose",
+          "markdownDescription": "Denies the game_folder_choose command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the game_folder_decline_running command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-game-folder-decline-running",
+          "markdownDescription": "Denies the game_folder_decline_running command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the game_folder_reset command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-game-folder-reset",
+          "markdownDescription": "Denies the game_folder_reset command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the game_folder_use_running command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-game-folder-use-running",
+          "markdownDescription": "Denies the game_folder_use_running command without any pre-configured scope."
         },
         {
           "description": "Denies the game_memory_set_enabled command without any pre-configured scope.",

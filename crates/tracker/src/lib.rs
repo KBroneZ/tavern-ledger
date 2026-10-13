@@ -181,6 +181,18 @@ impl Watcher {
         }
     }
 
+    /// Finished games that could not be saved yet; a watcher in this state
+    /// must not be let go.
+    pub fn has_pending(&self) -> bool {
+        !self.pending.is_empty()
+    }
+
+    /// The history this watcher saves into, to follow another Logs folder
+    /// with the same history.
+    pub fn into_store(self) -> Store {
+        self.store
+    }
+
     /// Uses `to_utc` instead of the system's time zone (for tests).
     pub fn with_local_time(mut self, to_utc: LocalToUtc) -> Self {
         self.to_utc = to_utc;

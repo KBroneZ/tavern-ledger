@@ -13,6 +13,9 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2.12", features = ["tray-icon"] }
 tauri-plugin-autostart = "=2.5.1"
+# The system's folder picker for "Hearthstone folder" in the settings (T-579).
+# Pinned, a release from January 2026; no default features (no Linux portals).
+rfd = { version = "=0.17.2", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 bg-parser = { path = "../bg-parser" }

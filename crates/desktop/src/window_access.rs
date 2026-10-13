@@ -165,6 +165,10 @@ fn the_overlay_cannot_reach_the_main_window_s_commands() {
         "game_memory_set_enabled",
         "app_set_autostart",
         "overlay_set_enabled",
+        "game_folder_choose",
+        "game_folder_reset",
+        "game_folder_use_running",
+        "game_folder_decline_running",
     ] {
         assert!(!overlay.contains(command), "{command}");
     }

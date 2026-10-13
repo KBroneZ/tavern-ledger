@@ -45,4 +45,8 @@ pub const APP_COMMANDS: &[&str] = &[
     "app_set_system_language",
     "app_autostart",
     "app_set_autostart",
+    "game_folder_choose",
+    "game_folder_reset",
+    "game_folder_use_running",
+    "game_folder_decline_running",
 ];
