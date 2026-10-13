@@ -100,14 +100,15 @@ const socialCard = new URL("/social-card.png", Astro.site).href;
           </button>
         )}
         <a href={href("/")} aria-current={current(base === "/")}>{st("layout.home")}</a>
+        {config && (
+          <a href={href("/simulator/")} aria-current={current(base.startsWith("/simulator"))}>{st("layout.simulator")}</a>
+        )}
         <a href={href("/download/")} aria-current={current(base.startsWith("/download"))}>{st("layout.download")}</a>
-        <a href={href("/privacy/")} aria-current={current(base.startsWith("/privacy"))}>{st("layout.privacy")}</a>
         {config && (
           <>
             <a href={href("/leaderboards/")} aria-current={current(base.startsWith("/leaderboards"))}>{st("layout.leaderboards")}</a>
             <a href={href("/heroes/")} aria-current={current(base.startsWith("/heroes"))}>{st("layout.heroes")}</a>
             <a href={href("/me/")} aria-current={current(base.startsWith("/me") || base.startsWith("/games"))}>{st("layout.games")}</a>
-            <a href={href("/simulator/")} aria-current={current(base.startsWith("/simulator"))}>{st("layout.simulator")}</a>
             {/* public/lang.js marks <html data-auth>, so only the right one shows (T-513). */}
             <a class="nav-signin" href={href("/signin/")} aria-current={current(base.startsWith("/signin"))}>{st("layout.signin")}</a>
             <a class="nav-account" href={href("/account/")} aria-current={current(base.startsWith("/account"))}>{st("layout.account")}</a>

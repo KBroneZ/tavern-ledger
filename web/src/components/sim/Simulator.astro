@@ -35,6 +35,7 @@ import { href } from "../../lib/i18n.ts";
         {/* Signed out (public/lang.js sets data-auth before the page is drawn), the note
             the script will draw anyway shows at once; otherwise the wait for the games. */}
         <p class="sim-dim sim-load-out">{sm("load.signedOut")} <a href={href("/signin/")}>{sm("load.signIn")}</a></p>
+        <div class="sim-rounds-wrap sim-load-out"><h3 class="sim-sub"><span class="sim-step" aria-hidden="true">2</span>{sm("load.rounds")}</h3><p class="sim-dim">{sm("load.roundsWait")}</p></div>
         <div class="sim-load-wait"><StateBlock kind="loading" title={sm("page.loading")} lines={2} /></div>
       </div>
     </section>

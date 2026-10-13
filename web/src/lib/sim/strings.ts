@@ -22,6 +22,7 @@ export const SIM_STRINGS = {
   "load.error": "Could not load your games. Check your connection and try again.",
   "load.retry": "Try again",
   "load.rounds": "Pick a fight",
+  "load.roundsWait": "Pick a game first.",
   "load.round": "Turn {n}",
   "load.noRounds": "This game has no combat with both boards to load.",
   "load.gameError": "This game cannot be read.",

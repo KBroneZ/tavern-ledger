@@ -89,9 +89,14 @@ function rounds(picked: PickedGame): VNode {
   );
 }
 
+/** Step 2 before a game is picked: kept on the page, so the seals read 1, 2, 3 in order. */
+export function roundsWaiting(): VNode {
+  return h("div", { class: "sim-rounds-wrap" }, h("h3", { class: "sim-sub" }, stepSeal(2), sm("load.rounds")), h("p", { class: "sim-dim" }, sm("load.roundsWait")));
+}
+
 export function loadView(games: GamesState, picked: PickedGame | null): VNode[] {
   if (games.kind === "signed-out") {
-    return [h("p", { class: "sim-dim" }, sm("load.signedOut"), " ", h("a", { href: href("/signin/") }, sm("load.signIn")))];
+    return [h("p", { class: "sim-dim" }, sm("load.signedOut"), " ", h("a", { href: href("/signin/") }, sm("load.signIn"))), roundsWaiting()];
   }
   if (games.kind === "loading") return [stateBlock({ kind: "loading", title: sm("load.loading"), lines: 2 })];
   if (games.kind === "error") {
@@ -107,6 +112,6 @@ export function loadView(games: GamesState, picked: PickedGame | null): VNode[] 
       games.rows.map((r) => gameButton(r, picked)),
     ),
     games.more ? h("button", { type: "button", class: "sim-btn sim-btn-quiet", "data-act": "games-more", "data-focus": "games-more" }, sm("load.more")) : null,
-    picked ? rounds(picked) : null,
+    picked ? rounds(picked) : roundsWaiting(),
   ].filter((n): n is VNode => n !== null);
 }

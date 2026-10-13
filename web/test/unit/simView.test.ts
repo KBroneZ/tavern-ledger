@@ -142,6 +142,9 @@ test("Duos shows each team's boards and offers a second one; Solo does not", () 
 
 test("signed out, loading a combat asks to sign in; the list shows only the rows it was given", () => {
   assert.match(html(loadView({ kind: "signed-out" }, null)), /href="\/signin\/"/);
+  const out2 = html(loadView({ kind: "signed-out" }, null));
+  assert.match(out2, /class="sim-step"[^>]*>2</, "step 2 stays on the page so the seals read 1, 2, 3");
+  assert.match(out2, /Pick a game first/);
   const row = { session: "Hearthstone_2026_10_09_20_15_03", gameIndex: 2, mode: "solo" as const, status: "ok" as const, playedOn: "2026-10-09", hero: "SYN_HERO_A", place: 3, rounds: 3, combatsWon: 1, combatsLost: 1, combatsInferred: 0, triples: 1, apm: 3, goldSpent: 9 };
   const out = html(loadView({ kind: "ready", rows: [row], total: 1, more: false }, { key: "Hearthstone_2026_10_09_20_15_03#2", rounds: [{ number: 1, result: "won" }, { number: 2, result: null }], failed: false, loaded: 2 }));
   assert.match(out, /data-act="game"/);
