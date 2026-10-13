@@ -24,6 +24,7 @@
     "allow-card-names",
     "allow-card-data-status",
     "allow-app-settings",
-    "allow-app-set-system-language"
+    "allow-app-set-system-language",
+    "allow-log-ui-error"
   ]
 }

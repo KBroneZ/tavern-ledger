@@ -158,18 +158,18 @@
 
 /* Both boards of 7 fit the stage at any width: a minion is a seventh of
    its board (container units), from 28px on a 320px phone to 104px on a
-   wide screen (T-575), and its Attack, Health and marks scale with it. */
-.rp-stage {
-  --rp-gap: 14px;
-}
-
+   wide screen (T-575), and its Attack, Health and marks scale with it. The
+   space between two minions is a quarter of a minion (T-581), so two Taunt
+   shields side by side about touch, as on the game's board; on a narrow
+   board it shrinks to what is left once the minions are 28px. */
 .rp-stage .rp-board {
   container-type: inline-size;
-  gap: var(--rp-gap);
+  gap: 0;
 }
 
 .rp-stage .rp-minion {
-  --rp-tile: clamp(28px, calc((100cqi - 6 * var(--rp-gap)) / 7), 104px);
+  --rp-tile: clamp(28px, calc(100cqi / 8.82), 104px);
+  margin-inline: min(calc(var(--rp-tile) * 0.13), max(1px, calc((100cqi - 7 * var(--rp-tile)) / 14)));
 }
 
 .rp-stage .rp-atk,
@@ -220,11 +220,13 @@
    its own stacking context (container-type), so its side is raised too. */
 .rp-stage [data-lunging],
 .rp-side:has([data-lunging]) {
-  z-index: 2;
+  z-index: 6;
 }
 
+/* The portrait sits over every Taunt shield, its own and a neighbour's. */
 .rp-art {
   position: relative;
+  z-index: 1;
   display: block;
   transition:
     opacity var(--rp-move) var(--ease-out),
@@ -243,6 +245,7 @@
 .rp-info {
   position: absolute;
   inset: 0;
+  z-index: 4;
   height: calc(var(--rp-tile) * 1.2);
   pointer-events: none;
 }
@@ -374,25 +377,31 @@
     0 0 16px 4px rgb(255 196 64 / 0.55);
 }
 
-/* Divine Shield: a golden bubble over the portrait, as in the game. */
+/* Divine Shield: a golden bubble around the portrait, a little larger than
+   it, with a bright rim and glow and a clear middle, as in the game. */
 .rp-minion.has-shield .rp-art::after {
   content: "";
   position: absolute;
-  inset: -6px;
+  inset: calc(var(--rp-tile) * -0.1) calc(var(--rp-tile) * -0.11);
   z-index: 1;
-  border: 3px solid var(--rp-shield);
+  border: 1.5px solid rgb(255 246 190 / 0.8);
   border-radius: 50%;
-  background: radial-gradient(ellipse at 35% 25%, rgb(255 250 225 / 0.45), rgb(255 214 110 / 0.16) 45%, rgb(255 200 80 / 0.28) 100%);
-  box-shadow: 0 0 14px rgb(255 221 130 / 0.8), inset 0 0 12px rgb(255 236 170 / 0.6);
+  background: radial-gradient(ellipse at 50% 45%, rgb(255 240 160 / 0.05) 50%, rgb(255 224 90 / 0.35) 82%, rgb(255 214 70 / 0.55));
+  box-shadow:
+    0 0 calc(var(--rp-tile) * 0.14) calc(var(--rp-tile) * 0.04) rgb(255 205 60 / 0.7),
+    inset 0 0 calc(var(--rp-tile) * 0.12) calc(var(--rp-tile) * 0.03) rgb(255 228 110 / 0.75);
   pointer-events: none;
 }
 
-/* ---------- Keyword marks (T-575) ----------
-   Each keyword the token has wears the game's kind of mark, drawn here in
-   our own shapes: Taunt a stone shield behind the portrait, Reborn a ghostly
-   blue glow, Venomous a green drop, Stealth a smoky veil, Windfury a swirl.
-   A mark shows while the token has the keyword (has-*), and pops in or
-   fades out on the step the log gives or takes it (gains-*, loses-*). */
+/* ---------- Keyword marks (T-575, T-581) ----------
+   Each keyword the token has wears the game's mark, as the game draws it on
+   a Battlegrounds board (D-136): Taunt the steel shield behind the portrait
+   (gold on a golden minion), Venomous the green vial and Deathrattle the
+   skull and crossed bones under it, Reborn a cracked cyan glow, Stealth a
+   grey smoke, Windfury wind streaks. The drawings are SVG files in
+   /art/keywords/, the same in the simulator and the app. A mark shows while
+   the token has the keyword (has-*), and pops in or goes on the step the
+   log gives or takes it (gains-*, loses-*). */
 .rp-keys {
   position: absolute;
   inset: 0;
@@ -405,79 +414,94 @@
   display: none;
 }
 
-/* Taunt: a grey stone shield, wider than the token at the top and coming to
-   a point below it, with a raised rim (an outer and an inner face). */
+/* Taunt: the game's shield measured around its portrait: its arched top
+   just above the oval, its sides about a fifth of the oval's width out, its
+   point a quarter of it below. */
 .rp-k-taunt {
-  inset: calc(var(--rp-tile) * -0.12) calc(var(--rp-tile) * -0.13) calc(var(--rp-tile) * -0.3);
+  inset: calc(var(--rp-tile) * -0.09) calc(var(--rp-tile) * -0.18) calc(var(--rp-tile) * -0.27);
   z-index: 0;
-  clip-path: polygon(4% 6%, 18% 0, 50% 3%, 82% 0, 96% 6%, 100% 40%, 94% 62%, 78% 82%, 50% 100%, 22% 82%, 6% 62%, 0 40%);
-  background: linear-gradient(180deg, #d9d4ca, #8d877d 55%, #5d5850);
-  filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.6));
+  background: url("/art/keywords/taunt.svg") center / 100% 100% no-repeat;
+  filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.5));
 }
 
-.rp-k-taunt::before {
-  content: "";
-  position: absolute;
-  inset: 7% 8% 9%;
-  clip-path: inherit;
-  background:
-    radial-gradient(ellipse 60% 40% at 50% 20%, rgb(255 255 255 / 0.18), transparent),
-    linear-gradient(180deg, #8f897f, #6b665e 60%, #4a463f);
+.rp-minion.is-golden .rp-k-taunt {
+  background-image: url("/art/keywords/taunt-golden.svg");
 }
 
-/* Venomous: a green drop at the portrait's top right. */
+/* Venomous: the vial over the oval's bottom edge, between Attack and
+   Health, where the game puts it. */
 .rp-k-venomous {
-  top: 2%;
-  right: -4%;
-  z-index: 2;
-  width: calc(var(--rp-tile) * 0.3);
-  height: calc(var(--rp-tile) * 0.3);
-  border: 1px solid rgb(0 0 0 / 0.7);
-  border-radius: 0 50% 50% 50%;
-  background: radial-gradient(circle at 60% 60%, #b6ff8a, #3fae2a 55%, #1d6514);
-  box-shadow: 0 0 8px rgb(110 230 80 / 0.7);
-  rotate: 45deg;
+  top: calc(var(--rp-tile) * 0.9);
+  left: 50%;
+  z-index: 5;
+  width: calc(var(--rp-tile) * 0.36);
+  height: calc(var(--rp-tile) * 0.36);
+  translate: -50% 0;
+  background: url("/art/keywords/venomous.svg") center / contain no-repeat;
+  filter: drop-shadow(0 0 4px rgb(120 255 90 / 0.6)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.6));
 }
 
-/* Reborn: the portrait glows a ghostly blue. */
+/* Deathrattle: the skull and crossed bones in the same place. With Venomous
+   too, the vial stands in front of the bones in the skull's place, as the
+   game draws both. */
+.rp-k-deathrattle {
+  top: calc(var(--rp-tile) * 0.86);
+  left: 50%;
+  z-index: 4;
+  width: calc(var(--rp-tile) * 0.4);
+  height: calc(var(--rp-tile) * 0.43);
+  translate: -50% 0;
+  background: url("/art/keywords/deathrattle.svg") center / contain no-repeat;
+  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.6));
+}
+
+.rp-minion.has-venomous .rp-k-deathrattle {
+  background-image: url("/art/keywords/deathrattle-bones.svg");
+}
+
+/* Reborn: cracks of cyan light over the portrait, a bright rim inside it. */
 .rp-k-reborn {
-  inset: -5px;
-  z-index: 0;
+  inset: 0;
+  z-index: 2;
   border-radius: 50%;
-  box-shadow: 0 0 0 2px rgb(150 215 255 / 0.85), 0 0 18px 5px rgb(110 190 255 / 0.65);
-  background: radial-gradient(closest-side, transparent 70%, rgb(140 205 255 / 0.35));
+  background:
+    url("/art/keywords/reborn.svg") center / 100% 100% no-repeat,
+    radial-gradient(closest-side, rgb(70 220 255 / 0.28) 55%, rgb(60 210 255 / 0.55));
+  box-shadow:
+    inset 0 0 0 2px #8ff3ff,
+    inset 0 0 calc(var(--rp-tile) * 0.1) rgb(70 225 255 / 0.9),
+    0 0 10px 2px rgb(70 220 255 / 0.6);
 }
 
-/* Stealth: a smoky veil over the portrait. */
+/* Stealth: a grey smoke over the portrait; the art barely shows. */
 .rp-k-stealth {
   inset: 0;
-  z-index: 1;
+  z-index: 2;
   border-radius: 50%;
   background:
-    radial-gradient(ellipse 50% 35% at 30% 30%, rgb(120 110 150 / 0.55), transparent),
-    radial-gradient(ellipse 45% 40% at 70% 65%, rgb(90 85 120 / 0.6), transparent),
-    radial-gradient(closest-side, rgb(40 36 60 / 0.25), rgb(30 26 46 / 0.55));
+    radial-gradient(ellipse 55% 30% at 35% 28%, rgb(190 198 208 / 0.6), transparent),
+    radial-gradient(ellipse 50% 35% at 66% 62%, rgb(175 184 196 / 0.6), transparent),
+    radial-gradient(ellipse 40% 22% at 38% 84%, rgb(185 192 202 / 0.5), transparent),
+    rgb(100 107 117 / 0.78);
 }
 
-/* Windfury: a swirl of wind around the token's lower half. */
+/* Windfury: grey-white wind streaks around and across the portrait. */
 .rp-k-windfury {
-  inset: 18% -10% -8%;
-  z-index: 2;
-  border: 3px solid transparent;
-  border-bottom-color: rgb(200 240 255 / 0.9);
-  border-left-color: rgb(200 240 255 / 0.55);
-  border-radius: 50%;
-  filter: drop-shadow(0 0 3px rgb(140 220 255 / 0.9));
-  rotate: -18deg;
+  inset: 0 calc(var(--rp-tile) * -0.08);
+  z-index: 3;
+  background: url("/art/keywords/windfury.svg") center / 100% 100% no-repeat;
+  filter: drop-shadow(0 0 2px rgb(255 255 255 / 0.6)) drop-shadow(0 1px 1px rgb(0 0 0 / 0.45));
 }
 
 .rp-minion.has-taunt .rp-k-taunt,
 .rp-minion.has-venomous .rp-k-venomous,
+.rp-minion.has-deathrattle .rp-k-deathrattle,
 .rp-minion.has-reborn .rp-k-reborn,
 .rp-minion.has-stealth .rp-k-stealth,
 .rp-minion.has-windfury .rp-k-windfury,
 .rp-minion:is(.loses-taunt) .rp-k-taunt,
 .rp-minion:is(.loses-venomous) .rp-k-venomous,
+.rp-minion:is(.loses-deathrattle) .rp-k-deathrattle,
 .rp-minion:is(.loses-reborn) .rp-k-reborn,
 .rp-minion:is(.loses-stealth) .rp-k-stealth,
 .rp-minion:is(.loses-windfury) .rp-k-windfury {
@@ -486,6 +510,7 @@
 
 .rp-minion.gains-taunt .rp-k-taunt,
 .rp-minion.gains-venomous .rp-k-venomous,
+.rp-minion.gains-deathrattle .rp-k-deathrattle,
 .rp-minion.gains-reborn .rp-k-reborn,
 .rp-minion.gains-stealth .rp-k-stealth,
 .rp-minion.gains-windfury .rp-k-windfury {
@@ -493,15 +518,32 @@
 }
 
 .rp-minion.loses-taunt .rp-k-taunt,
-.rp-minion.loses-venomous .rp-k-venomous,
+.rp-minion.loses-deathrattle .rp-k-deathrattle,
 .rp-minion.loses-reborn .rp-k-reborn,
 .rp-minion.loses-stealth .rp-k-stealth,
 .rp-minion.loses-windfury .rp-k-windfury {
   animation: rp-mark-out 420ms var(--ease-out) forwards;
 }
 
+/* Venomous gained: a green, bubbling poison cloud bursts over the portrait,
+   then the vial shows, as in the game. Without motion only the vial shows. */
+.rp-minion.gains-venomous .rp-keys::after {
+  content: "";
+  position: absolute;
+  inset: calc(var(--rp-tile) * -0.12);
+  z-index: 5;
+  background: url("/art/keywords/venom-cloud.svg") center / 100% 100% no-repeat;
+  opacity: 0;
+  animation: rp-venom-cloud 700ms var(--ease-out);
+}
+
+/* Venomous used: the vial flares green and breaks away. */
+.rp-minion.loses-venomous .rp-k-venomous {
+  animation: rp-venom-used 520ms var(--ease-out) forwards;
+}
+
 /* A mark the token just lost stays faded on that step without motion. */
-.rp-stage.is-still .rp-minion:is(.loses-taunt, .loses-venomous, .loses-reborn, .loses-stealth, .loses-windfury) .rp-k {
+.rp-stage.is-still .rp-minion:is(.loses-taunt, .loses-venomous, .loses-deathrattle, .loses-reborn, .loses-stealth, .loses-windfury) .rp-k {
   opacity: 0.25;
 }
 
@@ -514,10 +556,22 @@
   to { opacity: 0; scale: 1.25; }
 }
 
+@keyframes rp-venom-cloud {
+  from { opacity: 0; scale: 0.6; }
+  25% { opacity: 1; scale: 1; }
+  70% { opacity: 0.9; }
+  to { opacity: 0; scale: 1.15; }
+}
+
+@keyframes rp-venom-used {
+  35% { opacity: 1; scale: 1.35; filter: drop-shadow(0 0 10px rgb(120 255 90 / 0.95)); }
+  to { opacity: 0; scale: 1.6; translate: -50% -40%; }
+}
+
 .rp-minion.is-popped .rp-art::after {
   content: "";
   position: absolute;
-  inset: -5px;
+  inset: calc(var(--rp-tile) * -0.1) calc(var(--rp-tile) * -0.11);
   border: 2px dashed var(--rp-shield);
   border-radius: 50%;
   opacity: 0;
@@ -783,7 +837,6 @@ html:not([data-detail="advanced"]) .rp-stepper {
   }
 
   .rp-stage {
-    --rp-gap: 4px;
     padding-inline: var(--s-2);
   }
 
@@ -800,8 +853,8 @@ html:not([data-detail="advanced"]) .rp-stepper {
 /* A step drawn without moving on (a jump, a step back, another combat) shows
    its marks as they are, without their animations (replayPlayer.ts). */
 .rp-stage.is-still :is(*, *::before, *::after) {
-  animation: none;
-  transition: none;
+  animation: none !important;
+  transition: none !important;
 }
 
 /* ---------- Reduced motion: no animation; Play and the steps still work ---------- */
@@ -817,7 +870,7 @@ html:not([data-detail="advanced"]) .rp-stepper {
     transform: none;
   }
 
-  .rp-minion:is(.loses-taunt, .loses-venomous, .loses-reborn, .loses-stealth, .loses-windfury) .rp-k {
+  .rp-minion:is(.loses-taunt, .loses-venomous, .loses-deathrattle, .loses-reborn, .loses-stealth, .loses-windfury) .rp-k {
     opacity: 0.25;
   }
 

@@ -22,6 +22,7 @@ use tracker::discover::{
 };
 use tracker::setup::folder_messages;
 
+use crate::applog::Logged;
 use crate::overlay::lock;
 use crate::settings::{Language, Settings};
 use crate::{set_status, AppState};
@@ -277,6 +278,16 @@ pub async fn game_folder_choose(
     settings: State<'_, Arc<Settings>>,
     state: State<'_, Arc<AppState>>,
 ) -> Result<bool, String> {
+    choose_folder(window, settings, state)
+        .await
+        .logged("game_folder_choose")
+}
+
+async fn choose_folder(
+    window: WebviewWindow,
+    settings: State<'_, Arc<Settings>>,
+    state: State<'_, Arc<AppState>>,
+) -> Result<bool, String> {
     if state.folder.picking.swap(true, Ordering::SeqCst) {
         return Ok(false);
     }
@@ -304,7 +315,7 @@ pub fn game_folder_reset(
     settings: State<'_, Arc<Settings>>,
     state: State<'_, Arc<AppState>>,
 ) -> Result<(), String> {
-    keep(&settings, &state, None)
+    keep(&settings, &state, None).logged("game_folder_reset")
 }
 
 /// Yes to the notice "Hearthstone is running from <folder>. Use this folder?".
@@ -316,8 +327,9 @@ pub fn game_folder_use_running(
     let offered = lock(&state.folder.offer).clone();
     let dir = offered
         .ok_or_else(|| "Hearthstone is not running from another folder now.".to_string())
-        .and_then(|dir| validate_chosen(&dir).map_err(|p| p.message().to_string()))?;
-    keep(&settings, &state, Some(dir))
+        .and_then(|dir| validate_chosen(&dir).map_err(|p| p.message().to_string()))
+        .logged("game_folder_use_running")?;
+    keep(&settings, &state, Some(dir)).logged("game_folder_use_running")
 }
 
 /// No to that notice: the folder is not offered again.
@@ -332,7 +344,7 @@ pub fn game_folder_decline_running(
         None => Ok(()),
     };
     state.folder.changed();
-    result
+    result.logged("game_folder_decline_running")
 }
 
 /// Saves the choice and makes the tracker look again, also when saving

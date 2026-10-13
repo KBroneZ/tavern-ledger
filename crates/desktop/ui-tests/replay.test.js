@@ -391,3 +391,24 @@ test("revision 13: a buff marks what it gave, and every token has the same box",
   for (const selector of [".replay-gifts", ".replay-keys", ".replay-stats", ".replay-hurt, .replay-gain"]) assert.match(rule(selector), /position: absolute/, selector);
   assert.match(rule(".replay-minion"), /width: var\(--tile\)/);
 });
+
+test("a Taunt taken mid-combat drops its shield on that step (T-581)", () => {
+  // Sin'dorei Straight Shot's Rally, from the owner's game of 2026-10-11 (synthetic copy).
+  const f = TLReplay.frames({
+    minions: [m("own", "BG25_016", 1, 1, 1), m("opponent", "BG26_149", 2, 3, 1, { keywords: ["taunt", "divine_shield"] }), m("opponent", "BG26_152", 2, 3, 2, { keywords: ["taunt", "divine_shield"] })],
+    start: 3,
+    events: [
+      { kind: "attack", attacker: 0, defender: 1 },
+      { kind: "trigger", trigger: "rally", side: "own", card_id: "BG25_016", source: 0 },
+      { kind: "keyword", minion: 1, keyword: "taunt", on: false },
+      { kind: "shield", minion: 1, on: false },
+    ],
+    beats: [1, 2, 1],
+    complete: true,
+  });
+  assert.ok(f[1].opponent[0].keywords.includes("taunt"), "before the Rally");
+  assert.ok(!f[2].opponent[0].keywords.includes("taunt"));
+  assert.deepEqual(f[2].opponent[0].lost, ["taunt"]);
+  assert.ok(f[2].opponent[1].keywords.includes("taunt"), "the other keeps it");
+  assert.ok(!f[3].opponent[0].keywords.includes("taunt"));
+});

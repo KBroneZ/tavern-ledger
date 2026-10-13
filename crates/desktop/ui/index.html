@@ -228,6 +228,12 @@
         <p id="update-warning" class="problem" role="status"></p>
         <p id="update-problem" class="problem" role="status"></p>
       </section>
+      <section id="log-setting" class="settings-group" aria-labelledby="log-title">
+        <h3 id="log-title" data-i18n="settings.log.title">Error log</h3>
+        <p class="setting-row"><button type="button" id="log-open" class="report-btn" data-i18n="settings.log.open">Open log folder</button></p>
+        <p class="note" data-i18n="settings.log.note">When something goes wrong, the app writes a line about it to a small log file on this PC (up to 3 MB). It holds no player names, accounts, emails or keys, and it is never uploaded. A problem report includes its last lines, and you choose whether to send that report.</p>
+        <p id="log-problem" class="problem" role="status"></p>
+      </section>
       <section id="upload" class="upload settings-group" aria-labelledby="upload-title">
         <h3 id="upload-title" class="upload-head"><span data-i18n="win.upload.title">Upload to the website</span><span id="upload-summary">…</span></h3>
         <p id="upload-unavailable" hidden></p>
@@ -318,7 +324,7 @@
 
   <dialog id="report-dialog" aria-labelledby="report-title">
     <h2 id="report-title" data-i18n="win.report.title">Report a problem</h2>
-    <p class="note" data-i18n="win.report.note">This is the file that will be saved; only its timestamp is set again when you save. It has no player names: the app won't create it if it finds one. Nothing is sent anywhere. Saving puts the file in your Downloads folder, and you can send it yourself.</p>
+    <p class="note" data-i18n="win.report.note">This is the file that will be saved; only its timestamp and the newest lines of the error log can change when you save. It includes the last lines of the app's error log (no player names, accounts, emails or keys). It has no player names: the app won't create it if it finds one. Nothing is sent anywhere. Saving puts the file in your Downloads folder, and you can send it yourself.</p>
     <p id="report-error" class="report-error" role="alert" hidden></p>
     <pre id="report-text" tabindex="0"></pre>
     <p id="report-saved" class="note" role="status" hidden></p>
@@ -345,6 +351,7 @@
     <span id="card-status" class="card-status" role="status"></span>
   </footer>
   <script src="i18n.js"></script>
+  <script src="error-forward.js"></script>
   <script src="strings/common.js"></script>
   <script src="strings/window.js"></script>
   <script src="strings/details.js"></script>
@@ -375,6 +382,7 @@
   <script src="update-words.js"></script>
   <script src="updates.js"></script>
   <script src="game-folder.js"></script>
+  <script src="log-setting.js"></script>
   <script src="first-start.js"></script>
 </body>
 </html>

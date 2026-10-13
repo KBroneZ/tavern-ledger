@@ -4,18 +4,23 @@
 //! lobby's tribes and the player's own rating (D-063, `game_memory`).
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod applog;
 mod card_data;
+#[cfg(test)]
+mod fake_secrets;
 mod foreground;
 mod game_folder;
 mod game_memory;
 mod hover;
 mod leaderboard;
 mod lobby_panel;
+mod log_commands;
 mod odds;
 mod over_game_guard;
 mod overlay;
 mod overlay_layout;
 mod overlay_window;
+mod redact;
 mod saved_tribes;
 mod screen_fit;
 mod settings;
@@ -57,6 +62,7 @@ use tracker::stats::{HeroLinks, Lobby, Stats};
 use tracker::store::{GameKey, ParserStamp, Store};
 use tracker::Watcher;
 
+use crate::applog::Logged;
 use crate::game_folder::Finder;
 use crate::settings::Settings;
 
@@ -66,6 +72,10 @@ const POLL_INTERVAL: Duration = Duration::from_secs(1);
 const SETUP_CHECK_EVERY: u32 = 30;
 /// A game's recap that stopped on a history line no game writes.
 const RECAP_FAILED: &str = "This game's summary could not be worked out from the history.";
+/// The key of "could not read the log" in the error log, so a read that keeps
+/// failing is logged once, not every second.
+const LOG_READ: &str = "read-log";
+const LOG_UNSUPPORTED: &str = "unsupported-version";
 const GAMES_CHANGED: &str = "games-changed";
 const STATUS_CHANGED: &str = "status-changed";
 /// Lobby tribes entered by hand changed, or the game in progress did (T-303).
@@ -256,6 +266,7 @@ fn game_recap(
         recap_of(&state, &session, index).map(|r| r.with_dbf_cards(&card_of))
     }))
     .unwrap_or_else(|_| Err(RECAP_FAILED.to_string()))
+    .logged("game_recap")
 }
 
 /// Why each combat of a game in the history went as it did (T-346, D-127):
@@ -265,6 +276,14 @@ fn game_recap(
 /// runtime's; the recap asks for it once per game after it draws.
 #[tauri::command]
 async fn game_why(
+    app: AppHandle,
+    session: String,
+    index: u64,
+) -> Result<serde_json::Value, String> {
+    game_why_of(app, session, index).await.logged("game_why")
+}
+
+async fn game_why_of(
     app: AppHandle,
     session: String,
     index: u64,
@@ -468,6 +487,10 @@ fn read_from_game(app: &AppHandle, state: &AppState, client_build: Option<i64>) 
     let tick = || state.game_memory.tick(&game_memory::GameReader, &poll);
     if catch_unwind(AssertUnwindSafe(tick)).is_err() {
         state.game_memory.stop_for_run();
+        applog::error(
+            "game-memory",
+            "reading from the game stopped after an internal error",
+        );
         let msg = "Reading from the game stopped after an internal error; it is off until the app restarts.";
         set_status(app, state, |s| s.notice = Some(msg.into()));
         return;
@@ -479,6 +502,15 @@ fn read_from_game(app: &AppHandle, state: &AppState, client_build: Option<i64>) 
 /// overlay's checks, or drops them when the tavern contradicts them (T-540).
 fn keep_read_tribes(app: &AppHandle, state: &AppState, game: Option<&GameKey>) {
     let read = state.game_memory.tribes_for(game);
+    if read.1 == ReaderStatus::UnsupportedVersion {
+        applog::warn_once(
+            LOG_UNSUPPORTED,
+            "game-memory",
+            "unsupported game version: the lobby's tribes are not read",
+        );
+    } else {
+        applog::recovered(LOG_UNSUPPORTED);
+    }
     // Nothing read and nothing refused: nothing to save or drop.
     if read.0.is_none() && read.1 != ReaderStatus::UnsupportedVersion {
         return;
@@ -548,7 +580,7 @@ fn edit_lobby_tribes(
     app: AppHandle,
     action: Action,
 ) -> Result<LobbyView, String> {
-    edit_lobby_tribes_of(&state, action)?;
+    edit_lobby_tribes_of(&state, action).logged("edit_lobby_tribes")?;
     let _ = app.emit(LOBBY_TRIBES_CHANGED, ());
     Ok(lobby_view_of(&state))
 }
@@ -608,7 +640,7 @@ fn preview_problem_report(
     session: String,
     index: u64,
 ) -> Result<String, String> {
-    problem_report_text(&state, &session, index)
+    problem_report_text(&state, &session, index).logged("preview_problem_report")
 }
 
 /// Builds the bundle again (never trusts text from the window) and saves it
@@ -619,10 +651,14 @@ fn save_problem_report(
     session: String,
     index: u64,
 ) -> Result<String, String> {
-    let text = problem_report_text(&state, &session, index)?;
+    save_report_of(&state, &session, index).logged("save_problem_report")
+}
+
+fn save_report_of(state: &AppState, session: &str, index: u64) -> Result<String, String> {
+    let text = problem_report_text(state, session, index)?;
     let dir = report_bundle::downloads_dir()
         .ok_or("The Downloads folder was not found, so nothing was saved.")?;
-    let name = report_bundle::file_name(&session, index);
+    let name = report_bundle::file_name(session, index);
     report_bundle::save_in(&dir, &name, &text)
         .map(|path| path.display().to_string())
         .map_err(|e| format!("Could not save the report ({:?}).", e.kind()))
@@ -647,6 +683,7 @@ fn problem_report_text(state: &AppState, session: &str, index: u64) -> Result<St
         default_log_config_path().as_deref(),
         client_config.as_deref(),
     );
+    let app_log = applog::get().map_or_else(Vec::new, |log| log.tail(report_bundle::MAX_LOG_LINES));
     let input = BundleInput {
         session: &row.session,
         index: row.index,
@@ -654,6 +691,7 @@ fn problem_report_text(state: &AppState, session: &str, index: u64) -> Result<St
         parser: row.parser.as_ref(),
         app_version: env!("CARGO_PKG_VERSION"),
         setup: &setup,
+        app_log: &app_log,
         created_unix: std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_or(0, |d| d.as_secs()),
@@ -799,6 +837,10 @@ fn show_read_only(app: &AppHandle, state: &AppState, data_dir: &std::path::Path)
         publish_games(app, state, &store);
     }
     let msg = "Tavern Ledger is already running (or tavern-watch is). This window only shows the history; use the other one to follow your games.";
+    applog::info(
+        "app",
+        "another Tavern Ledger holds the history; this one is read-only",
+    );
     problem(app, state, msg.into());
 }
 
@@ -863,9 +905,14 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
     let _lock = match HistoryLock::acquire(&data_dir) {
         Ok(lock) => lock,
         Err(LockError::Busy) => return show_read_only(&app, &state, &data_dir),
-        Err(e) => return problem(&app, &state, format!("Cannot use the game history: {e}.")),
+        Err(e) => {
+            applog::error("tracker", &format!("cannot use the game history: {e}"));
+            return problem(&app, &state, format!("Cannot use the game history: {e}."));
+        }
     };
+    applog::history_held();
     if let Err(msg) = state.saved_tribes.open(&data_dir) {
+        applog::warn("io", &format!("saved tribes: {msg}"));
         set_status(&app, &state, |s| s.notice = Some(msg));
     }
     match Entries::open(&data_dir) {
@@ -875,6 +922,7 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
                 "Cannot open the entered tribes ({:?}); they are off.",
                 e.kind()
             );
+            applog::warn("io", &msg);
             *state
                 .entries_problem
                 .lock()
@@ -884,13 +932,24 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
     let store = match Store::open(&data_dir) {
         Ok(store) => store,
         Err(e) => {
-            return problem(
-                &app,
-                &state,
-                format!("Cannot open the game history ({:?}).", e.kind()),
-            )
+            let msg = format!("Cannot open the game history ({:?}).", e.kind());
+            applog::error("io", &msg);
+            return problem(&app, &state, msg);
         }
     };
+    applog::info(
+        "app",
+        &format!("following the Logs folder {}", redact::place(&logs_dir)),
+    );
+    if store.unreadable_lines > 0 {
+        applog::warn(
+            "io",
+            &format!(
+                "the game history has {} lines that could not be read",
+                store.unreadable_lines
+            ),
+        );
+    }
     set_status(&app, &state, |s| {
         s.logs_dir = Some(logs_dir.display().to_string());
         s.history = Some(store.path().display().to_string());
@@ -926,6 +985,10 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
                 switch_to = Some(next);
             } else {
                 logs_dir = next;
+                applog::info(
+                    "app",
+                    &format!("following the Logs folder {}", redact::place(&logs_dir)),
+                );
                 watcher = Watcher::new(&logs_dir, watcher.into_store());
                 starts = GameStarts::default();
                 finished_while_behind = None;
@@ -945,6 +1008,7 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
         let Ok(result) = catch_unwind(AssertUnwindSafe(|| watcher.poll())) else {
             // The overlay must not keep showing a game nobody follows any more.
             publish_live(&app, &state, None);
+            applog::error("tracker", "the tracker stopped after an internal error");
             let msg = "The tracker stopped after an internal error. Restart the app; your history is safe.";
             return problem(&app, &state, msg.into());
         };
@@ -959,6 +1023,7 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
             }
             Err(_) => {
                 publish_live(&app, &state, None);
+                applog::error("overlay", "the overlay stopped after an internal error");
                 let msg = "The overlay stopped after an internal error. Restart the app; your history is safe.";
                 set_status(&app, &state, |s| s.notice = Some(msg.into()));
             }
@@ -976,6 +1041,8 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
                     s.power_log = power_log;
                     s.problem = None;
                 });
+                applog::recovered(LOG_READ);
+                saved.iter().for_each(applog::saved_game);
                 if !saved.is_empty() {
                     publish_games(&app, &state, watcher.store());
                     upload::kick(&app);
@@ -999,6 +1066,12 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
             Err(e) => {
                 // Games read before the error are already saved.
                 publish_games(&app, &state, watcher.store());
+                // Once per kind of error: it comes back every second.
+                applog::error_once(
+                    LOG_READ,
+                    "tracker",
+                    &format!("could not read the log ({:?}); retrying", e.kind()),
+                );
                 problem(
                     &app,
                     &state,
@@ -1045,6 +1118,12 @@ fn track_game_in_progress(
         *current = now.clone();
         changed
     };
+    if let Some(key) = now.as_ref().filter(|_| changed) {
+        applog::info(
+            "game",
+            &format!("game {} started ({})", key.index, key.session),
+        );
+    }
     let mut entries = state.entries.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(entries) = entries.as_mut() {
         match starts.observe(entries, now) {
@@ -1230,6 +1309,17 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
 }
 
 fn main() {
+    // The log starts first, so a panic anywhere after this is in it (T-580).
+    let startup_dir = data_dir_from(std::env::args()).unwrap_or_else(tracker::store::default_dir);
+    applog::init(&startup_dir);
+    applog::info(
+        "app",
+        &format!(
+            "Tavern Ledger {} started; data folder {}",
+            env!("CARGO_PKG_VERSION"),
+            redact::place(&startup_dir)
+        ),
+    );
     let state = Arc::new(AppState::default());
     let app_settings = Arc::new(settings::Settings::default());
     let context = tauri::generate_context!();
@@ -1247,12 +1337,13 @@ fn main() {
     if release_key.is_some() {
         builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
     }
-    builder
+    let app = builder
         .manage(state.clone())
         .manage(app_updates.clone())
         .manage(app_settings.clone())
         .manage(upload::Upload::default())
         .manage(card_data::Cards::default())
+        .manage(log_commands::UiErrors::default())
         .register_asynchronous_uri_scheme_protocol(card_data::SCHEME, card_data::protocol)
         .invoke_handler(tauri::generate_handler![
             list_games,
@@ -1300,6 +1391,8 @@ fn main() {
             game_folder::game_folder_reset,
             game_folder::game_folder_use_running,
             game_folder::game_folder_decline_running,
+            log_commands::log_ui_error,
+            log_commands::open_log_folder,
             updates::update_status,
             updates::update_set_auto,
             updates::update_check_now,
@@ -1314,8 +1407,7 @@ fn main() {
             }
         })
         .setup(move |app| {
-            let data_dir =
-                data_dir_from(std::env::args()).unwrap_or_else(tracker::store::default_dir);
+            let data_dir = startup_dir.clone();
             let loaded = state.overlay.load(&data_dir, overlay_dev(std::env::args()));
             let game_memory_loaded = state.game_memory.load(&data_dir);
             state.saved_tribes.set_dir(&data_dir);
@@ -1347,6 +1439,7 @@ fn main() {
                 .or(settings_loaded.err())
                 .or(game_memory_loaded.err())
             {
+                applog::warn("app", &format!("start-up notice: {message}"));
                 set_status(app.handle(), &state, |s| s.notice = Some(message));
             }
             // The window starts hidden (tauri.conf.json), so a start-up
@@ -1359,8 +1452,18 @@ fn main() {
             thread::spawn(move || run_tracker(handle, state));
             Ok(())
         })
-        .run(context)
-        .expect("failed to start Tavern Ledger");
+        .build(context)
+        .unwrap_or_else(|e| {
+            applog::error("app", &format!("failed to start: {e}"));
+            panic!("failed to start Tavern Ledger: {e}");
+        });
+    app.run(|_app, event| {
+        // Every way out that goes through Tauri (the tray's Quit, an update,
+        // the system closing the app) ends here: a clean stop (T-580).
+        if let tauri::RunEvent::Exit = event {
+            applog::stopped();
+        }
+    });
 }
 
 #[cfg(test)]

@@ -42,7 +42,7 @@ export function heroAt(combat: ReplayCombat, frame: Frame, side: Side): HeroRef 
 // ---------- A minion ----------
 
 /** The keywords a token wears as a mark, as the game shows them on the board. */
-export const MARKED: readonly Keyword[] = ["taunt", "reborn", "venomous", "windfury", "stealth"];
+export const MARKED: readonly Keyword[] = ["taunt", "reborn", "venomous", "deathrattle", "windfury", "stealth"];
 
 export function tileClass(tile: Tile): string {
   const m = tile.marks;
@@ -97,7 +97,7 @@ export function tileInfo(tile: Tile): VNode[] {
 /**
  * Each keyword's mark, drawn by the stylesheet only while the token has it
  * (its has-* class), so a mark appears and goes with the log's own steps.
- * Shapes of our own (D-074: no game art but the portraits).
+ * Drawn as the game draws them, in our own SVG files (D-136).
  */
 function keywordMarks(): VNode {
   return h("span", { class: "rp-keys", "aria-hidden": "true" }, MARKED.map((k) => h("i", { class: `rp-k rp-k-${k}` })));

@@ -650,6 +650,7 @@ dependencies = [
  "game-memory",
  "minisign",
  "minisign-verify",
+ "regex",
  "reqwest",
  "rfd",
  "serde",

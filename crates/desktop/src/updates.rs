@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 use tauri_plugin_updater::{Error as PluginError, Update, UpdaterExt};
 
+use crate::applog::{self, Logged};
 use crate::overlay::lock;
 use crate::AppState;
 
@@ -463,7 +464,7 @@ fn https_redirects_only() -> reqwest::redirect::Policy {
 
 /// The window's code for a failure; the plugin's own words go to the log.
 fn reason(error: &PluginError) -> Reason {
-    eprintln!("update check failed: {error}");
+    applog::warn("updates", &format!("update check failed: {error}"));
     match error {
         PluginError::Minisign(_)
         | PluginError::Base64(_)
@@ -502,18 +503,19 @@ pub fn update_set_auto(
     let result = updates.set_auto_check(enabled);
     let view = updates.view();
     notify_window(&app)(view.clone());
-    result.map(|()| view)
+    result.map(|()| view).logged("update_set_auto")
 }
 
 #[tauri::command]
 pub fn update_check_now(updates: State<'_, Arc<Updates>>) -> Result<View, String> {
-    if !updates.is_on() {
-        return Err("Updates are not set up in this build.".into());
-    }
-    if !updates.wake() {
-        return Err("Checking for updates stopped. Restart the app.".into());
-    }
-    Ok(updates.view())
+    let asked = if !updates.is_on() {
+        Err("Updates are not set up in this build.".to_string())
+    } else if !updates.wake() {
+        Err("Checking for updates stopped. Restart the app.".to_string())
+    } else {
+        Ok(updates.view())
+    };
+    asked.logged("update_check_now")
 }
 
 #[tauri::command]
@@ -522,7 +524,9 @@ pub fn update_install(
     updates: State<'_, Arc<Updates>>,
     state: State<'_, Arc<AppState>>,
 ) -> Result<(), String> {
-    updates.install(&|| game_on(&state), &notify_window(&app))
+    updates
+        .install(&|| game_on(&state), &notify_window(&app))
+        .logged("update_install")
 }
 
 #[tauri::command]
