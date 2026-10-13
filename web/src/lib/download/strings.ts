@@ -65,7 +65,7 @@ export const DL_STRINGS = {
   "reads.privacy": "Privacy policy",
   "update.title": "Updating",
   "update.short":
-    "From version 0.2.0 the app updates itself: it checks for a new version when it starts and every few hours, and asks you to restart when one is ready.",
+    "From version 0.2.1 the app updates itself: it checks for a new version when it starts and every few hours, and asks you to restart when one is ready.",
   "update.body":
     "If you have version 0.1.0, install the new version from this page over it once: it replaces the app and keeps your games and settings. After that, updates arrive by themselves, signed by the project, and are installed only when you press “Restart now”. You can turn the checks off in the app's Settings, under Updates.",
   "remove.title": "Uninstalling",

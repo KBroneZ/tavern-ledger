@@ -48,8 +48,8 @@ test("the page shows the release's own facts: version, file, size, day and SHA-2
     assert.match(html, new RegExp(`<dd>${RELEASE.version} \\(beta\\)</dd>`), `${page.file}: version`);
     assert.ok(html.includes(RELEASE.file), `${page.file}: file name`);
     assert.ok(html.includes(RELEASE.sha256), `${page.file}: hash`);
-    assert.match(html, page.lang === "en" ? /6\.5 MB/ : /6,5 MB/, `${page.file}: size`);
-    assert.match(html, page.lang === "en" ? /12 Oct 2026/ : /12 oct 2026/, `${page.file}: day`);
+    assert.match(html, page.lang === "en" ? /7\.6 MB/ : /7,6 MB/, `${page.file}: size`);
+    assert.match(html, page.lang === "en" ? /13 Oct 2026/ : /13 oct 2026/, `${page.file}: day`);
     assert.match(html, /Windows 10 (and|y) 11/, `${page.file}: Windows`);
     // The hash and the command are text, never a link or a script.
     assert.ok(html.includes(`Get-FileHash &quot;${RELEASE.file}&quot;`), `${page.file}: command`);
@@ -117,7 +117,7 @@ test("the menu has a Download link on every page, current on the download page",
   assert.match(read("es/download/index.html"), /<a href="\/es\/download\/" aria-current="page">Descargar<\/a>/);
 });
 
-test("Updating says the app updates itself from 0.2.0, and 0.1.0 is installed over once", () => {
+test("Updating says the app updates itself from 0.2.1, and 0.1.0 is installed over once", () => {
   for (const page of PAGES) {
     const html = read(page.file);
     const start = html.indexOf(page.lang === "en" ? ">Updating<" : ">Actualizar<");
@@ -126,7 +126,7 @@ test("Updating says the app updates itself from 0.2.0, and 0.1.0 is installed ov
     const end = updating.indexOf('<div class="dl-extra">');
     assert.ok(end > 0, `${page.file}: the extra after Updating`);
     const block = updating.slice(0, end);
-    assert.match(block, page.lang === "en" ? /From version 0\.2\.0 the app updates itself/ : /Desde la versión 0\.2\.0 la aplicación se actualiza sola/, page.file);
+    assert.match(block, page.lang === "en" ? /From version 0\.2\.1 the app updates itself/ : /Desde la versión 0\.2\.1 la aplicación se actualiza sola/, page.file);
     assert.match(block, page.lang === "en" ? /version 0\.1\.0/ : /versión 0\.1\.0/, page.file);
     assert.match(block, page.lang === "en" ? /keeps your games and settings/ : /conserva tus partidas y ajustes/, page.file);
     assert.doesNotMatch(block, page.lang === "en" ? /no automatic updates/i : /no hay actualizaciones automáticas/i, page.file);
