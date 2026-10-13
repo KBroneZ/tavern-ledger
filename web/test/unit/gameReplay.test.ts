@@ -354,22 +354,20 @@ test("step model: a Duos board coming in with no hero named is an unknown hero",
 
 test("playback control: play, pause, steps, the ends and reduced motion", () => {
   const at = (step: number, playing = false) => ({ step, playing });
-  assert.deepEqual(control(at(0), "play", 5, false), at(0, true));
-  assert.deepEqual(control(at(2, true), "play", 5, false), at(2), "play again pauses");
-  assert.deepEqual(control(at(5), "play", 5, false), at(0, true), "at the end, play starts over");
-  assert.deepEqual(control(at(2, true), "tick", 5, false), at(3, true));
-  assert.deepEqual(control(at(4, true), "tick", 5, false), at(5), "the last step stops playback");
-  assert.deepEqual(control(at(4), "tick", 5, false), at(4), "a late tick after a pause does nothing");
-  assert.deepEqual(control(at(0), "back", 5, false), at(0));
-  assert.deepEqual(control(at(5), "forward", 5, false), at(5));
-  assert.deepEqual(control(at(3, true), "forward", 5, false), at(4), "a step pauses");
-  assert.deepEqual(control(at(3), "restart", 5, false), at(0));
-  assert.deepEqual(control(at(3), "end", 5, false), at(5));
-  assert.deepEqual(control(at(3), { goto: 99 }, 5, false), at(5));
-  assert.deepEqual(control(at(3), { goto: -1 }, 5, false), at(0));
-  // Reduced motion: never plays, steps still work.
-  assert.deepEqual(control(at(0), "play", 5, true), at(0));
-  assert.deepEqual(control(at(0, true), "tick", 5, true), at(1));
+  assert.deepEqual(control(at(0), "play", 5), at(0, true));
+  assert.deepEqual(control(at(2, true), "play", 5), at(2), "play again pauses");
+  assert.deepEqual(control(at(5), "play", 5), at(0, true), "at the end, play starts over");
+  assert.deepEqual(control(at(2, true), "tick", 5), at(3, true));
+  assert.deepEqual(control(at(4, true), "tick", 5), at(5), "the last step stops playback");
+  assert.deepEqual(control(at(4), "tick", 5), at(4), "a late tick after a pause does nothing");
+  assert.deepEqual(control(at(0), "back", 5), at(0));
+  assert.deepEqual(control(at(5), "forward", 5), at(5));
+  assert.deepEqual(control(at(3, true), "forward", 5), at(4), "a step pauses");
+  assert.deepEqual(control(at(3), "restart", 5), at(0));
+  assert.deepEqual(control(at(3), "end", 5), at(5));
+  assert.deepEqual(control(at(3), { goto: 99 }, 5), at(5));
+  assert.deepEqual(control(at(3), { goto: -1 }, 5), at(0));
+  // Reduced motion plays too (without movement, replayPlayer.ts): the same states.
   assert.deepEqual(control(at(1), "forward", 5, true), at(2));
   // A replay with only its start: nothing to play.
   assert.deepEqual(control(at(0), "play", 0, false), at(0));

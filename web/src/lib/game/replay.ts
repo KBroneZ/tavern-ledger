@@ -436,13 +436,14 @@ export type PlayAction = "play" | "back" | "forward" | "restart" | "end" | "tick
 
 /**
  * The next state after an action, for a replay whose last step is `last`.
- * Nothing plays with reduced motion, nor past the end; play at the end
- * starts over (the app's rule).
+ * Nothing plays past the end; play at the end starts over (the app's rule).
+ * With reduced motion it plays too, step by step at the same pace, with no
+ * movement (replayPlayer.ts draws each step as it is); nothing plays by itself.
  */
-export function control(state: PlayState, action: PlayAction, last: number, reduced: boolean): PlayState {
+export function control(state: PlayState, action: PlayAction, last: number): PlayState {
   const at = (step: number, playing: boolean): PlayState => {
     const clamped = Math.min(Math.max(step, 0), last);
-    return { step: clamped, playing: playing && !reduced && clamped < last };
+    return { step: clamped, playing: playing && clamped < last };
   };
   if (typeof action === "object") return at(action.goto, false);
   switch (action) {

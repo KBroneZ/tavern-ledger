@@ -4,7 +4,8 @@
 // never loads twice and a button keeps focus; buttons at either end are
 // aria-disabled rather than disabled for the same reason. A hidden polite
 // live region reads the step's words on a step or a pause, never while
-// playing. With reduced motion nothing plays by itself: step by step only.
+// playing. Nothing plays by itself; with reduced motion Play still plays, a
+// step at a time at the same pace, without movement.
 // What each button and key does is plain data (replay.ts control, keyAction).
 // Everything drawn comes from replayView.ts (text only, lib/view/node.ts).
 // Each step stays for its own beat, close to the game's pace (replay.ts
@@ -216,7 +217,7 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
   /** Applies an action (replay.ts control) and draws the result; `fresh`: a combat just drawn. */
   function act(action: PlayAction, speak = true, fresh = false): void {
     stop();
-    const next = control(player, action, player.pb.frames.length - 1, motion.matches);
+    const next = control(player, action, player.pb.frames.length - 1);
     // Only one step on moves; a jump, a step back or reduced motion draws the step as it is.
     const how = !fresh && !motion.matches && next.step === player.step + 1 ? "move" : fresh || next.step !== player.step ? "still" : "keep";
     player.step = next.step;

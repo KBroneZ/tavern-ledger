@@ -239,6 +239,8 @@ function notesSection(view: GameView): VNode | null {
 export function renderGame(view: GameView, date: string | null): VNode[] {
   return [
     summaryBar(view, date),
+    // The replays come after the turn table: a link to them near the top.
+    view.replays.some((c) => c.replay !== null) ? h("p", { class: "gv-jump" }, h("a", { href: "#gv-replays" }, g("replay.jump"))) : null,
     turnsSection(view),
     replaySection(view),
     opponentsSection(view),

@@ -804,7 +804,7 @@ html:not([data-detail="advanced"]) .rp-stepper {
   transition: none;
 }
 
-/* ---------- Reduced motion: no animation, step by step only ---------- */
+/* ---------- Reduced motion: no animation; Play and the steps still work ---------- */
 
 @media (prefers-reduced-motion: reduce) {
   /* Every mark's rule outranks a plain one: these win whatever they meet. */
@@ -821,10 +821,7 @@ html:not([data-detail="advanced"]) .rp-stepper {
     opacity: 0.25;
   }
 
-  .rp-btn.rp-play {
-    display: none;
-  }
-
+  /* Play stays: it plays a step at a time at the same pace, without movement. */
   html:not([data-detail="advanced"]) .rp-stepper {
     display: inline-grid;
   }
