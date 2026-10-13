@@ -28,6 +28,13 @@ function files(dir: string): string[] {
 const ALL = existsSync(DIST) ? files(DIST) : [];
 const PAGES = ALL.filter((f) => f.endsWith(".html"));
 const name = (f: string) => relative(DIST, f).replaceAll("\\", "/");
+/** The minion pages (T-578, D-134): the only built pages with card art and structured data. */
+const isMinionPage = (f: string) => /^(?:es\/)?minions\//.test(name(f));
+/** Card art from HearthstoneJSON's image host (D-074), as the minion pages show it: lazy, with a local fallback. */
+const CARD_ART =
+  /^<img src="https:\/\/art\.hearthstonejson\.com\/v1\/256x\/[A-Za-z0-9_]{1,64}\.jpg" data-fallback="\/placeholders\/card-\d\.svg" alt="" width="\d+" height="\d+" loading="lazy" decoding="async">$/;
+/** The minion pages' structured data: a data block, never run (minions.test.ts parses it). */
+const JSON_LD = /<script type="application\/ld\+json">[^<]*<\/script>/g;
 /** The simulator page in each language: it never compiles WebAssembly, its worker does. */
 const SIMULATOR_FILES = ["simulator/index.html", "es/simulator/index.html"];
 
@@ -61,7 +68,8 @@ test("every page has the CSP as its first meta after the charset", () => {
 
 test("no inline script, style or event handler in any page", () => {
   for (const page of PAGES) {
-    const html = readFileSync(page, "utf8");
+    const raw = readFileSync(page, "utf8");
+    const html = isMinionPage(page) ? raw.replace(JSON_LD, "") : raw;
     for (const tag of html.matchAll(/<script\b[^>]*>/g)) {
       // Our bundles, or the language script (public/lang.js, T-508).
       assert.match(tag[0], /\ssrc="(?:\/_astro\/[^"]+\.js|\/lang\.js)"/, `${name(page)}: ${tag[0]}`);
@@ -334,6 +342,8 @@ test("no page loads anything from another origin", () => {
     // the canonical link names an address and loads nothing either.
     for (const tag of html.matchAll(/<(?!a\b)([a-z]+)\b[^>]*\s(?:src|href|srcset|poster|data|action|formaction)="\s*(?:[a-z][a-z0-9+.-]*:|\/\/)[^"]*"[^>]*>/gi)) {
       if (tag[1] === "link" && /rel="(?:canonical|alternate)"/.test(tag[0])) continue;
+      // The minion pages show card art from the one image host the policy allows (D-074, D-134).
+      if (isMinionPage(page) && CARD_ART.test(tag[0])) continue;
       assert.fail(`${name(page)}: ${tag[0]}`);
     }
     assert.doesNotMatch(html, /<(?:iframe|object|embed)\b/, name(page));
@@ -346,7 +356,9 @@ test("pictures are our own files, with their size and a text alternative", () =>
     for (const [img] of html.matchAll(/<img\b[^>]*>/g)) {
       // Built pages show made-up data only, so their pictures are our own
       // placeholders, plus the home page's painting (T-530) and every other
-      // page's (T-546); card art (D-074) is drawn in the browser.
+      // page's (T-546); card art (D-074) is drawn in the browser, but on the
+      // minion pages (D-134), which are built from the card data.
+      if (isMinionPage(page) && CARD_ART.test(img)) continue;
       const src = /\ssrc="([^"]*)"/.exec(img)?.[1] ?? "";
       assert.match(src, /^\/(?:placeholders\/(?:hero|card)-\d\.svg|art\/home\/tavern-\d+\.webp|art\/pages\/[a-z]+-\d+\.webp)$/, `${name(page)}: ${img}`);
       assert.ok(existsSync(join(DIST, src)), src);

@@ -1,0 +1,146 @@
+---
+// The minion pages' index (/minions/, T-578, D-134): one tile per type with
+// its minion count and how they spread over the tavern tiers, linking to
+// that type's page. Built at build time from the card data; public and
+// indexable. Not built when the build has no card data (accounts closed).
+import Base from "../../../layouts/Base.astro";
+import Breadcrumb from "../../../components/minions/Breadcrumb.astro";
+import JsonLd from "../../../components/minions/JsonLd.astro";
+import "../../../styles/data.css";
+import "../../../styles/minions.css";
+import { pictureFor } from "../../../lib/data/pictures.ts";
+import { href, langPaths, lang, listFormat, setLang } from "../../../lib/i18n.ts";
+import { hasMinionPages, poolFor } from "../../../lib/minions/load.ts";
+import { mt } from "../../../lib/minions/strings.ts";
+import MinionEntry from "../../../components/minions/MinionEntry.astro";
+import {
+  breadcrumbLd,
+  countText,
+  itemListLd,
+  otherTypes,
+  tierGroups,
+  tierSpread,
+  tribeMinions,
+  tribeName,
+  tribePages,
+  tribePath,
+} from "../../../lib/minions/view.ts";
+
+export function getStaticPaths() {
+  return hasMinionPages() ? langPaths() : [];
+}
+
+// Every string below is drawn in the page's language (T-508).
+setLang(Astro.props.lang);
+
+const pool = poolFor(lang());
+const tiles = tribePages(pool).map((p) => {
+  const minions = tribeMinions(pool, p.key);
+  const spread = tierSpread(minions);
+  const most = Math.max(...spread);
+  // The tile's picture: its highest-tier minion, first by name.
+  const groups = tierGroups(minions);
+  const face = groups.at(-1)?.minions[0];
+  return {
+    ...p,
+    name: tribeName(p.slug, "plural"),
+    count: countText(minions.length),
+    // Bar heights in tenths of the tallest (CSS steps; the policy allows no inline style).
+    spread: spread.map((n, i) => ({ tier: i + 1, n, height: n > 0 ? Math.max(1, Math.round((n / most) * 10)) : 0 })),
+    spreadText: listFormat(spread.map((n, i) => mt("index.tierCell", { tier: i + 1, count: n }))),
+    face: face ? pictureFor("card", face.id) : null,
+  };
+});
+// Types new to the card data (no page yet, D-134): their minions are listed here.
+const others = otherTypes(pool);
+const absolute = (path: string) => new URL(path, Astro.site).href;
+const steps = [
+  { name: mt("crumb.home"), href: href("/") },
+  { name: mt("crumb.minions"), href: href("/minions/") },
+];
+const graph = [
+  breadcrumbLd(steps.map((s) => ({ name: s.name, url: absolute(s.href) }))),
+  itemListLd(
+    mt("index.title"),
+    tiles.map((t) => ({ name: t.name, url: absolute(href(tribePath(t.slug))) })),
+  ),
+];
+---
+
+<Base backdrop="gallery" layout="data" title={mt("meta.index.title")} description={mt("meta.index.description")}>
+  <div class="mn">
+    <Breadcrumb steps={steps} />
+    <header class="mn-head">
+      <p class="kicker">{mt("index.kicker")}</p>
+      <h1>{mt("index.title")}</h1>
+      <p class="mn-intro">{mt("index.intro")}</p>
+    </header>
+
+    <section aria-labelledby="mn-tribes">
+      <h2 id="mn-tribes" class="visually-hidden">{mt("index.tribes")}</h2>
+      <ul class="mn-tiles">
+        {
+          tiles.map((t) => (
+            <li>
+              <a class="mn-tile panel" href={href(tribePath(t.slug))}>
+                {t.face && (
+                  <span class="pic pic-card mn-face" aria-hidden="true">
+                    <img src={t.face.src} data-fallback={t.face.fallback} alt="" width="56" height="56" loading="lazy" decoding="async" />
+                  </span>
+                )}
+                <span class="mn-tile-name">{t.name}</span>
+                <span class="mn-tile-count">{t.count}</span>
+                <span class="mn-spread" aria-hidden="true">
+                  {t.spread.map((s) => (
+                    <span class="mn-bar" data-tier={s.tier} data-h={s.height}>
+                      <span>{s.n > 0 ? s.n : ""}</span>
+                    </span>
+                  ))}
+                </span>
+                <span class="mn-axis" aria-hidden="true">
+                  {t.spread.map((s) => (
+                    <span>{s.tier}</span>
+                  ))}
+                </span>
+                <span class="visually-hidden">
+                  {mt("index.tiers")}: {t.spreadText}.
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    {
+      others.length > 0 && (
+        <section class="mn-head" aria-labelledby="mn-other">
+          <h2 id="mn-other">{mt("index.others")}</h2>
+          <p class="mn-intro">{mt("index.others.note")}</p>
+        </section>
+      )
+    }
+    {
+      others.map((o) => (
+        <section class="mn-tier" aria-labelledby={`type-${o.key}`}>
+          <div class="mn-tier-head">
+            <h3 id={`type-${o.key}`}>{o.name}</h3>
+            <p>{countText(o.minions.length)}</p>
+          </div>
+          <ul class="mn-list">
+            {o.minions.map((m) => (
+              <MinionEntry minion={m} pageKey={o.key} level={4} />
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+
+    <p class="mn-source">{mt("source", { source: pool.source })}</p>
+    <JsonLd graph={graph} />
+  </div>
+  <script>
+    import { watchPictureFallback } from "../../../lib/data/pictures.ts";
+    watchPictureFallback(document);
+  </script>
+</Base>

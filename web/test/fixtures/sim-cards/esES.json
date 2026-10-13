@@ -45,6 +45,34 @@
   "name": "Desconocido sintético"
  },
  {
+  "id": "BG_SYN_MURPIR",
+  "dbfId": 900010,
+  "name": "Aleta grumete sintética",
+  "text": "[x]<b>Grito de batalla:</b> Otorga\n+1/+1 a un múrloc amistoso.\n<i>(Sintético.)</i>"
+ },
+ {
+  "id": "BG_SYN_MURPIR_G",
+  "dbfId": 900011,
+  "name": "Aleta grumete sintética"
+ },
+ {
+  "id": "BG_SYN_AMALGAM",
+  "dbfId": 900012,
+  "name": "Amalgama sintética",
+  "text": "<b>Provocar</b>\nEs de todos los tipos."
+ },
+ {
+  "id": "BG_SYN_OLDMUR",
+  "dbfId": 900013,
+  "name": "Múrloc retirado sintético"
+ },
+ {
+  "id": "BG_SYN_NEWTYPE",
+  "dbfId": 900014,
+  "name": "Recién llegado sintético",
+  "text": "Un tipo que las páginas aún no conocen."
+ },
+ {
   "id": "BG_SPELL_SYN",
   "dbfId": 910002,
   "name": "Un hechizo"

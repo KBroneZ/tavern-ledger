@@ -18,6 +18,7 @@ import { GAME_STRINGS } from "../../src/lib/game/strings.ts";
 import { LB_STRINGS } from "../../src/lib/leaderboards/strings.ts";
 import { SITE_STRINGS } from "../../src/lib/site/strings.ts";
 import { SIM_STRINGS } from "../../src/lib/sim/strings.ts";
+import { MIN_STRINGS } from "../../src/lib/minions/strings.ts";
 import { average, backing, compact, ordinal, share, trend } from "../../src/lib/data/format.ts";
 import { dateText } from "../../src/lib/data/dashboard.ts";
 import { formatValue, refreshedText } from "../../src/lib/leaderboards/boards.ts";
@@ -40,9 +41,9 @@ const ROOT = join(import.meta.dirname, "..", "..");
 
 afterEach(() => setLang("en"));
 
-test("every table is registered: site, account, data, download, game, leaderboards, community, accuracy, simulator", () => {
-  assert.deepEqual(TABLES.map((x) => x.name).sort(), ["account", "accuracy", "community", "data", "download", "game", "leaderboards", "simulator", "site"]);
-  const english = [ACCOUNT_STRINGS, ACC_STRINGS, CH_STRINGS, DL_STRINGS, STRINGS, GAME_STRINGS, LB_STRINGS, SITE_STRINGS, SIM_STRINGS];
+test("every table is registered: site, account, data, download, game, leaderboards, community, accuracy, simulator, minions", () => {
+  assert.deepEqual(TABLES.map((x) => x.name).sort(), ["account", "accuracy", "community", "data", "download", "game", "leaderboards", "minions", "simulator", "site"]);
+  const english = [ACCOUNT_STRINGS, ACC_STRINGS, CH_STRINGS, DL_STRINGS, STRINGS, GAME_STRINGS, LB_STRINGS, SITE_STRINGS, SIM_STRINGS, MIN_STRINGS];
   for (const en of english) assert.ok(TABLES.some((x) => x.en === en));
 });
 
@@ -62,8 +63,8 @@ test("every key exists in both languages, none is empty, and the placeholders ma
 });
 
 test("the Spanish tables are Spanish: no key keeps its English text, but for names and symbols", () => {
-  // Same in both: symbols, abbreviations, brand and mode names.
-  const same = new Set(["—", "?", "#", ".", "Solo", "Triples", "APM", "Top 4", "Top 2", "top 4", "top 2", "Top 4 / Top 2", "{n}+", "{hero}", "{hero} · {place}", "{attack}/{health}", "{board}, {mode}, {period}", "{name}: {text}", "{n}×", "Windows · beta", "{version} (beta)", "{size} MB", "Get-FileHash \"{file}\"", "GitHub"]);
+  // Same in both: symbols, abbreviations, brand, mode and minion type names.
+  const same = new Set(["—", "?", "#", ".", "Solo", "Triples", "APM", "Top 4", "Top 2", "top 4", "top 2", "Top 4 / Top 2", "{n}+", "{hero}", "{hero} · {place}", "{attack}/{health}", "{board}, {mode}, {period}", "{name}: {text}", "{n}×", "Windows · beta", "{version} (beta)", "{size} MB", "Get-FileHash \"{file}\"", "GitHub", "Elemental", "Naga"]);
   for (const table of TABLES) {
     for (const key of Object.keys(table.en)) {
       const english = table.en[key];
