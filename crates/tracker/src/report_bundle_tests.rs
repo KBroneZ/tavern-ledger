@@ -124,6 +124,8 @@ fn a_real_parser_report_passes_the_check() {
         "solo_data_game.log",
         "duo_data_game.log",
         "real/b253216_duos.log",
+        "real/b253216_duos_gifts.log",
+        "real/b253216_duos_rally.log",
     ] {
         let log = std::fs::read(data.join(name)).unwrap();
         let games = bg_parser::parse_reader(log.as_slice()).unwrap();

@@ -152,13 +152,21 @@
               "kind": "damage",
               "minion": 2,
               "amount": 1,
-              "health": 3
+              "health": 3,
+              "source": {
+                "how": "attack",
+                "minion": 0
+              }
             },
             {
               "kind": "damage",
               "minion": 3,
               "amount": 1,
-              "health": 1
+              "health": 1,
+              "source": {
+                "how": "attack",
+                "minion": 0
+              }
             },
             {
               "kind": "attack",
@@ -169,14 +177,26 @@
               "kind": "damage",
               "minion": 0,
               "amount": 2,
-              "health": -1
+              "health": -1,
+              "source": {
+                "how": "attack",
+                "minion": 2
+              }
             },
             {
               "kind": "damage",
               "minion": 2,
               "amount": 1,
-              "health": 2
+              "health": 2,
+              "source": {
+                "how": "attack",
+                "minion": 0
+              }
             }
+          ],
+          "beats": [
+            3,
+            3
           ],
           "complete": true
         }

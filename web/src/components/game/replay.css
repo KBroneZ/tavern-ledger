@@ -157,10 +157,10 @@
 }
 
 /* Both boards of 7 fit the stage at any width: a minion is a seventh of
-   its board (container units), from 28px on a 320px phone to 80px, and its
-   Attack and Health scale with it. */
+   its board (container units), from 28px on a 320px phone to 104px on a
+   wide screen (T-575), and its Attack, Health and marks scale with it. */
 .rp-stage {
-  --rp-gap: 12px;
+  --rp-gap: 14px;
 }
 
 .rp-stage .rp-board {
@@ -169,15 +169,19 @@
 }
 
 .rp-stage .rp-minion {
-  --rp-tile: clamp(28px, calc((100cqi - 6 * var(--rp-gap)) / 7), 80px);
+  --rp-tile: clamp(28px, calc((100cqi - 6 * var(--rp-gap)) / 7), 104px);
 }
 
 .rp-stage .rp-atk,
 .rp-stage .rp-hp {
-  min-width: clamp(15px, calc(var(--rp-tile) * 0.36), 26px);
-  height: clamp(15px, calc(var(--rp-tile) * 0.36), 26px);
+  min-width: clamp(15px, calc(var(--rp-tile) * 0.34), 32px);
+  height: clamp(15px, calc(var(--rp-tile) * 0.34), 32px);
   padding: 0 2px;
-  font-size: clamp(0.625rem, calc(var(--rp-tile) * 0.2), 0.9375rem);
+  font-size: clamp(0.625rem, calc(var(--rp-tile) * 0.19), 1.125rem);
+}
+
+.rp-stage .rp-hurt {
+  font-size: clamp(0.75rem, calc(var(--rp-tile) * 0.25), 1.6rem);
 }
 
 .rp-board {
@@ -187,7 +191,8 @@
   gap: 6px;
   min-height: calc(var(--rp-tile) * 1.2 + 14px);
   margin: 0;
-  padding: 0;
+  /* Room under the portraits for the Dark Gift marks, out of the layout. */
+  padding: 0 0 18px;
   list-style: none;
 }
 
@@ -275,26 +280,79 @@
   color: #fff;
 }
 
-/* The damage taken, a red burst on the portrait as in the game. */
-.rp-hurt {
+/* The damage taken: a big burst on the portrait, orange to red with a dark
+   rim and a white number outlined in black, as the game's splat (our own
+   shape); its tooltip says what dealt the hit (replayPlayer.ts). A buff or a
+   heal is the same burst in green with what it gave. */
+.rp-hurt,
+.rp-gain {
   position: absolute;
-  top: 22%;
+  top: 46%;
   left: 50%;
-  z-index: 1;
-  translate: -50% 0;
-  padding: 3px 7px;
-  border-radius: 46% 54% 50% 50% / 55% 45% 55% 45%;
-  background: radial-gradient(circle at 40% 35%, #e0412f, #8f1a12 70%);
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: clamp(26px, calc(var(--rp-tile) * 0.66), 70px);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  isolation: isolate;
   color: #fff;
-  font: 800 var(--t-sm) / 1 var(--display);
-  text-shadow: 0 1px 2px rgb(0 0 0 / 0.7);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.55);
+  font: 900 clamp(0.75rem, calc(var(--rp-tile) * 0.25), 1.6rem) / 1 var(--display);
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000,
+    0 2px 3px rgb(0 0 0 / 0.8);
   animation: rp-hurt 320ms var(--ease-out);
+  pointer-events: auto;
+  cursor: help;
 }
 
+.rp-hurt::before,
+.rp-hurt::after,
+.rp-gain::before,
+.rp-gain::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  clip-path: polygon(50% 0%, 59% 17%, 75% 7%, 74% 26%, 93% 25%, 83% 41%, 100% 50%, 83% 59%, 93% 75%, 74% 74%, 75% 93%, 59% 83%, 50% 100%, 41% 83%, 25% 93%, 26% 74%, 7% 75%, 17% 59%, 0% 50%, 17% 41%, 7% 25%, 26% 26%, 25% 7%, 41% 17%);
+}
+
+/* The dark rim, then the burst over it. */
+.rp-hurt::before,
+.rp-gain::before {
+  inset: -8%;
+  background: #1a0805;
+}
+
+.rp-hurt::after {
+  inset: 0;
+  background: radial-gradient(circle at 45% 40%, #ffd27a, #ff7a1f 40%, #d4301a 70%, #8f1a12);
+}
+
+.rp-gain {
+  font-size: clamp(0.625rem, calc(var(--rp-tile) * 0.17), 1.05rem);
+  letter-spacing: -0.02em;
+}
+
+.rp-gain::before {
+  background: #06200b;
+}
+
+.rp-gain::after {
+  inset: 0;
+  background: radial-gradient(circle at 45% 40%, #d8ffb0, #5fd04a 45%, #23862a 75%, #0f4d17);
+}
+
+/* Dark Gifts sit under the portrait out of the layout, so every token has
+   the same box whatever it carries (T-575). */
 .rp-minion .gv-gifts {
+  position: absolute;
+  top: calc(var(--rp-tile) * 1.2 + 6px);
+  left: 50%;
   justify-content: center;
+  width: max-content;
   max-width: calc(var(--rp-tile) + 12px);
+  translate: -50% 0;
 }
 
 .rp-minion .gv-gift {
@@ -306,19 +364,154 @@
   white-space: nowrap;
 }
 
+/* Golden: a thick bright gold frame around the oval with a soft glow, as
+   the game draws a golden minion (the Divine Shield bubble stays pale). */
 .rp-minion.is-golden .pic {
-  box-shadow: 0 0 0 2px var(--amber), 0 0 0 4px rgb(0 0 0 / 0.5), 0 4px 10px rgb(0 0 0 / 0.4);
+  box-shadow:
+    0 0 0 2px #4a2c06,
+    0 0 0 calc(2px + max(3px, var(--rp-tile) * 0.06)) #ffcf4a,
+    0 0 0 calc(3px + max(3px, var(--rp-tile) * 0.06)) #8a5a12,
+    0 0 16px 4px rgb(255 196 64 / 0.55);
 }
 
-/* Divine Shield: a pale halo around the portrait. */
+/* Divine Shield: a golden bubble over the portrait, as in the game. */
 .rp-minion.has-shield .rp-art::after {
   content: "";
   position: absolute;
   inset: -6px;
+  z-index: 1;
   border: 3px solid var(--rp-shield);
   border-radius: 50%;
-  box-shadow: 0 0 14px rgb(255 241 184 / 0.75), inset 0 0 8px rgb(255 241 184 / 0.5);
+  background: radial-gradient(ellipse at 35% 25%, rgb(255 250 225 / 0.45), rgb(255 214 110 / 0.16) 45%, rgb(255 200 80 / 0.28) 100%);
+  box-shadow: 0 0 14px rgb(255 221 130 / 0.8), inset 0 0 12px rgb(255 236 170 / 0.6);
   pointer-events: none;
+}
+
+/* ---------- Keyword marks (T-575) ----------
+   Each keyword the token has wears the game's kind of mark, drawn here in
+   our own shapes: Taunt a stone shield behind the portrait, Reborn a ghostly
+   blue glow, Venomous a green drop, Stealth a smoky veil, Windfury a swirl.
+   A mark shows while the token has the keyword (has-*), and pops in or
+   fades out on the step the log gives or takes it (gains-*, loses-*). */
+.rp-keys {
+  position: absolute;
+  inset: 0;
+  height: calc(var(--rp-tile) * 1.2);
+  pointer-events: none;
+}
+
+.rp-k {
+  position: absolute;
+  display: none;
+}
+
+/* Taunt: a grey stone shield, wider than the token at the top and coming to
+   a point below it, with a raised rim (an outer and an inner face). */
+.rp-k-taunt {
+  inset: calc(var(--rp-tile) * -0.12) calc(var(--rp-tile) * -0.13) calc(var(--rp-tile) * -0.3);
+  z-index: 0;
+  clip-path: polygon(4% 6%, 18% 0, 50% 3%, 82% 0, 96% 6%, 100% 40%, 94% 62%, 78% 82%, 50% 100%, 22% 82%, 6% 62%, 0 40%);
+  background: linear-gradient(180deg, #d9d4ca, #8d877d 55%, #5d5850);
+  filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.6));
+}
+
+.rp-k-taunt::before {
+  content: "";
+  position: absolute;
+  inset: 7% 8% 9%;
+  clip-path: inherit;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 20%, rgb(255 255 255 / 0.18), transparent),
+    linear-gradient(180deg, #8f897f, #6b665e 60%, #4a463f);
+}
+
+/* Venomous: a green drop at the portrait's top right. */
+.rp-k-venomous {
+  top: 2%;
+  right: -4%;
+  z-index: 2;
+  width: calc(var(--rp-tile) * 0.3);
+  height: calc(var(--rp-tile) * 0.3);
+  border: 1px solid rgb(0 0 0 / 0.7);
+  border-radius: 0 50% 50% 50%;
+  background: radial-gradient(circle at 60% 60%, #b6ff8a, #3fae2a 55%, #1d6514);
+  box-shadow: 0 0 8px rgb(110 230 80 / 0.7);
+  rotate: 45deg;
+}
+
+/* Reborn: the portrait glows a ghostly blue. */
+.rp-k-reborn {
+  inset: -5px;
+  z-index: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgb(150 215 255 / 0.85), 0 0 18px 5px rgb(110 190 255 / 0.65);
+  background: radial-gradient(closest-side, transparent 70%, rgb(140 205 255 / 0.35));
+}
+
+/* Stealth: a smoky veil over the portrait. */
+.rp-k-stealth {
+  inset: 0;
+  z-index: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse 50% 35% at 30% 30%, rgb(120 110 150 / 0.55), transparent),
+    radial-gradient(ellipse 45% 40% at 70% 65%, rgb(90 85 120 / 0.6), transparent),
+    radial-gradient(closest-side, rgb(40 36 60 / 0.25), rgb(30 26 46 / 0.55));
+}
+
+/* Windfury: a swirl of wind around the token's lower half. */
+.rp-k-windfury {
+  inset: 18% -10% -8%;
+  z-index: 2;
+  border: 3px solid transparent;
+  border-bottom-color: rgb(200 240 255 / 0.9);
+  border-left-color: rgb(200 240 255 / 0.55);
+  border-radius: 50%;
+  filter: drop-shadow(0 0 3px rgb(140 220 255 / 0.9));
+  rotate: -18deg;
+}
+
+.rp-minion.has-taunt .rp-k-taunt,
+.rp-minion.has-venomous .rp-k-venomous,
+.rp-minion.has-reborn .rp-k-reborn,
+.rp-minion.has-stealth .rp-k-stealth,
+.rp-minion.has-windfury .rp-k-windfury,
+.rp-minion:is(.loses-taunt) .rp-k-taunt,
+.rp-minion:is(.loses-venomous) .rp-k-venomous,
+.rp-minion:is(.loses-reborn) .rp-k-reborn,
+.rp-minion:is(.loses-stealth) .rp-k-stealth,
+.rp-minion:is(.loses-windfury) .rp-k-windfury {
+  display: block;
+}
+
+.rp-minion.gains-taunt .rp-k-taunt,
+.rp-minion.gains-venomous .rp-k-venomous,
+.rp-minion.gains-reborn .rp-k-reborn,
+.rp-minion.gains-stealth .rp-k-stealth,
+.rp-minion.gains-windfury .rp-k-windfury {
+  animation: rp-mark-in 420ms var(--ease-out);
+}
+
+.rp-minion.loses-taunt .rp-k-taunt,
+.rp-minion.loses-venomous .rp-k-venomous,
+.rp-minion.loses-reborn .rp-k-reborn,
+.rp-minion.loses-stealth .rp-k-stealth,
+.rp-minion.loses-windfury .rp-k-windfury {
+  animation: rp-mark-out 420ms var(--ease-out) forwards;
+}
+
+/* A mark the token just lost stays faded on that step without motion. */
+.rp-stage.is-still .rp-minion:is(.loses-taunt, .loses-venomous, .loses-reborn, .loses-stealth, .loses-windfury) .rp-k {
+  opacity: 0.25;
+}
+
+@keyframes rp-mark-in {
+  from { opacity: 0; scale: 1.35; }
+  60% { opacity: 1; }
+}
+
+@keyframes rp-mark-out {
+  to { opacity: 0; scale: 1.25; }
 }
 
 .rp-minion.is-popped .rp-art::after {
@@ -611,7 +804,7 @@ html:not([data-detail="advanced"]) .rp-stepper {
   transition: none;
 }
 
-/* ---------- Reduced motion: no animation, step by step only ---------- */
+/* ---------- Reduced motion: no animation; Play and the steps still work ---------- */
 
 @media (prefers-reduced-motion: reduce) {
   /* Every mark's rule outranks a plain one: these win whatever they meet. */
@@ -624,10 +817,11 @@ html:not([data-detail="advanced"]) .rp-stepper {
     transform: none;
   }
 
-  .rp-btn.rp-play {
-    display: none;
+  .rp-minion:is(.loses-taunt, .loses-venomous, .loses-reborn, .loses-stealth, .loses-windfury) .rp-k {
+    opacity: 0.25;
   }
 
+  /* Play stays: it plays a step at a time at the same pace, without movement. */
   html:not([data-detail="advanced"]) .rp-stepper {
     display: inline-grid;
   }

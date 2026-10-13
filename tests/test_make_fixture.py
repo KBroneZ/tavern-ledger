@@ -252,6 +252,47 @@ class DataRoundLinesTest(unittest.TestCase):
         self.assertEqual(parse_text(without_choices(self.out)), parse_text(without_choices(self.raw)))
 
 
+class CombatBlocksTest(unittest.TestCase):
+    """The blocks a combat replay groups its steps by (T-575): nested
+    TRIGGER, DEATHS and ATTACK blocks stay with their ends; other nested
+    blocks go, ends included."""
+
+    @classmethod
+    def setUpClass(cls):
+        nested = "\n".join([
+            POWER + "BLOCK_START BlockType=ATTACK Entity=[entityName=" + RIVAL
+            + " id=41 zone=PLAY zonePos=1 cardId=BG33_318 player=10] EffectCardId=X EffectIndex=0 "
+            "Target=0 SubOption=-1 ",
+            POWER + "    BLOCK_START BlockType=TRIGGER Entity=[entityName=Murloc id=41 zone=PLAY "
+            "zonePos=1 cardId=BG33_318 player=10] EffectCardId=X EffectIndex=0 Target=0 "
+            "SubOption=-1 TriggerKeyword=BACON_RALLY",
+            POWER + "        TAG_CHANGE Entity=41 tag=VENOMOUS value=1 ",
+            POWER + "    BLOCK_END",
+            POWER + "    BLOCK_START BlockType=PLAY Entity=65 EffectCardId=X EffectIndex=0 "
+            "Target=0 SubOption=-1 ",
+            POWER + "    BLOCK_END",
+            POWER + "    BLOCK_START BlockType=DEATHS Entity=GameEntity EffectCardId=X "
+            "EffectIndex=0 Target=0 SubOption=-1 ",
+            POWER + "    BLOCK_END",
+            POWER + "BLOCK_END",
+        ])
+        marker = "tag=STATE value=COMPLETE"
+        raw = noisy(solo_game())
+        at = raw.index(marker)
+        at = raw.rindex("\n", 0, at) + 1
+        cls.raw = raw[:at] + nested + "\n" + raw[at:]
+        cls.out = make_fixture.make_fixture(cls.raw, game=1)
+
+    def test_nested_combat_blocks_stay_with_their_ends(self):
+        self.assertIn("    BLOCK_START BlockType=TRIGGER Entity=41 ", self.out)
+        self.assertIn("TriggerKeyword=BACON_RALLY", self.out)
+        self.assertIn("TAG_CHANGE Entity=41 tag=VENOMOUS value=1", self.out)
+        self.assertIn("    BLOCK_START BlockType=DEATHS Entity=GameEntity ", self.out)
+        self.assertNotIn("BLOCK_START BlockType=PLAY Entity=65", self.out)
+        self.assertEqual(self.out.count("BLOCK_END"), self.out.count("BLOCK_START"))
+        self.assertEqual(self.out.count("    BLOCK_END"), 2, "the TRIGGER's and the DEATHS' ends")
+
+
 class RelativeTimeTest(unittest.TestCase):
     def test_past_midnight_keeps_counting(self):
         clock = make_fixture.Clock()

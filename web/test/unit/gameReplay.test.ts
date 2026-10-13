@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { setLang } from "../../src/lib/i18n.ts";
-import { control, keyAction, playback, stepWords, type Frame, type Tile } from "../../src/lib/game/replay.ts";
+import { control, keyAction, playback, steps, stepWords, type Frame, type Tile } from "../../src/lib/game/replay.ts";
 import { MAX_REPLAY_EVENTS, MAX_REPLAY_MINIONS, readReplay, type Replay } from "../../src/lib/game/replayRead.ts";
 import { readRecord } from "../../src/lib/game/report.ts";
 import { shapeGame } from "../../src/lib/game/shape.ts";
@@ -302,7 +302,8 @@ test("game view: each round with a replay, its result and opponent; malformed on
 test("every replay of the user's real games is read and plays to the end", () => {
   const dir = join(import.meta.dirname, "..", "..", "..", "crates", "bg-parser", "tests", "data", "real");
   let played = 0;
-  for (const file of ["b253216_solo.json", "b253216_duos.json", "b253216_duos_gifts.json"]) {
+  let grouped = 0;
+  for (const file of ["b253216_solo.json", "b253216_duos.json", "b253216_duos_gifts.json", "b253216_duos_rally.json"]) {
     const games = JSON.parse(readFileSync(join(dir, file), "utf8")) as Json[];
     for (const game of games) {
       for (const round of game.rounds as Json[]) {
@@ -311,7 +312,9 @@ test("every replay of the user's real games is read and plays to the end", () =>
         const p = playback(r, NO_HEROES);
         const where = `${file} turn ${String(round.number)}`;
         assert.equal(p.skipped, 0, where);
-        assert.equal(p.frames.length, r.events.length + 1, where);
+        assert.equal(p.frames.length, steps(r).length + 1, where);
+        assert.equal(p.frames.slice(1).reduce((n, f) => n + f.events.length, 0), r.events.length, where);
+        grouped += p.frames.filter((f) => f.events.length > 1).length;
         const last = p.frames.at(-1) as Frame;
         const alive = (side: "own" | "opponent") => last[side].filter((t) => !t.marks.dying).length;
         if (round.result === "won") assert.equal(alive("opponent"), 0, where);
@@ -321,6 +324,7 @@ test("every replay of the user's real games is read and plays to the end", () =>
     }
   }
   assert.ok(played >= 17, `played ${played}`);
+  assert.ok(grouped > 100, `${grouped} steps play several events at once`);
 });
 
 test("step model: a summon goes to its slot, the left end when the log has none (the app's rule)", () => {
@@ -350,22 +354,20 @@ test("step model: a Duos board coming in with no hero named is an unknown hero",
 
 test("playback control: play, pause, steps, the ends and reduced motion", () => {
   const at = (step: number, playing = false) => ({ step, playing });
-  assert.deepEqual(control(at(0), "play", 5, false), at(0, true));
-  assert.deepEqual(control(at(2, true), "play", 5, false), at(2), "play again pauses");
-  assert.deepEqual(control(at(5), "play", 5, false), at(0, true), "at the end, play starts over");
-  assert.deepEqual(control(at(2, true), "tick", 5, false), at(3, true));
-  assert.deepEqual(control(at(4, true), "tick", 5, false), at(5), "the last step stops playback");
-  assert.deepEqual(control(at(4), "tick", 5, false), at(4), "a late tick after a pause does nothing");
-  assert.deepEqual(control(at(0), "back", 5, false), at(0));
-  assert.deepEqual(control(at(5), "forward", 5, false), at(5));
-  assert.deepEqual(control(at(3, true), "forward", 5, false), at(4), "a step pauses");
-  assert.deepEqual(control(at(3), "restart", 5, false), at(0));
-  assert.deepEqual(control(at(3), "end", 5, false), at(5));
-  assert.deepEqual(control(at(3), { goto: 99 }, 5, false), at(5));
-  assert.deepEqual(control(at(3), { goto: -1 }, 5, false), at(0));
-  // Reduced motion: never plays, steps still work.
-  assert.deepEqual(control(at(0), "play", 5, true), at(0));
-  assert.deepEqual(control(at(0, true), "tick", 5, true), at(1));
+  assert.deepEqual(control(at(0), "play", 5), at(0, true));
+  assert.deepEqual(control(at(2, true), "play", 5), at(2), "play again pauses");
+  assert.deepEqual(control(at(5), "play", 5), at(0, true), "at the end, play starts over");
+  assert.deepEqual(control(at(2, true), "tick", 5), at(3, true));
+  assert.deepEqual(control(at(4, true), "tick", 5), at(5), "the last step stops playback");
+  assert.deepEqual(control(at(4), "tick", 5), at(4), "a late tick after a pause does nothing");
+  assert.deepEqual(control(at(0), "back", 5), at(0));
+  assert.deepEqual(control(at(5), "forward", 5), at(5));
+  assert.deepEqual(control(at(3, true), "forward", 5), at(4), "a step pauses");
+  assert.deepEqual(control(at(3), "restart", 5), at(0));
+  assert.deepEqual(control(at(3), "end", 5), at(5));
+  assert.deepEqual(control(at(3), { goto: 99 }, 5), at(5));
+  assert.deepEqual(control(at(3), { goto: -1 }, 5), at(0));
+  // Reduced motion plays too (without movement, replayPlayer.ts): the same states.
   assert.deepEqual(control(at(1), "forward", 5, true), at(2));
   // A replay with only its start: nothing to play.
   assert.deepEqual(control(at(0), "play", 0, false), at(0));

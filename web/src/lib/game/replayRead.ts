@@ -10,6 +10,10 @@
 //
 // Lists are refused on their length before any item is read, so an
 // oversized file costs nothing to turn down.
+//
+// Parser revision 13 (T-575) adds three things, each optional: the beats
+// (how many steps each log block gave, so the page plays them at once), each
+// damage's source, and keyword steps (a keyword given or used mid-combat).
 import { KEYWORDS, type Keyword } from "./keywords.ts";
 
 /** The parser's bounds (crates/bg-parser/src/replay.rs), as the server checks them. */
@@ -26,6 +30,14 @@ export type Side = "own" | "opponent";
 export const SIDES: readonly Side[] = ["own", "opponent"];
 export const TRIGGERS = ["start_of_combat", "deathrattle", "avenge", "rally"] as const;
 export type Trigger = (typeof TRIGGERS)[number];
+/** How a damage came about (revision 13). */
+export const CAUSES = ["attack", "start_of_combat", "deathrattle", "avenge", "rally", "hero_power", "trinket", "effect"] as const;
+export type Cause = (typeof CAUSES)[number];
+
+/** Where a damage came from: a minion of the replay, or a card (a hero power, a trinket) on a side. */
+export type DamageSource =
+  | { how: Cause; minion: number }
+  | { how: Cause; cardId: string; side: Side };
 
 /** A minion as it enters the replay; the events name it by its index. */
 export interface ReplayMinion {
@@ -43,7 +55,8 @@ export interface ReplayMinion {
 
 export type ReplayEvent =
   | { kind: "attack"; attacker: number; defender: number | null }
-  | { kind: "damage"; minion: number; amount: number; health: number }
+  /** `source`: undefined in a record older than revision 13, null when the log does not say. */
+  | { kind: "damage"; minion: number; amount: number; health: number; source?: DamageSource | null }
   | { kind: "shield"; minion: number; on: boolean }
   | { kind: "stats"; minion: number; atk: number; health: number }
   | { kind: "death"; minion: number }
@@ -51,6 +64,8 @@ export type ReplayEvent =
   | { kind: "trigger"; trigger: Trigger; side: Side; cardId: string; source: number | null }
   | { kind: "hero_damage"; side: Side; amount: number }
   | { kind: "board_in"; side: Side; hero: string | null }
+  /** A keyword other than Divine Shield given (`on`) or lost mid-combat (revision 13). */
+  | { kind: "keyword"; minion: number; keyword: Keyword; on: boolean }
   /** A step written by a newer app than this site knows. */
   | { kind: "unknown" };
 
@@ -59,6 +74,11 @@ export interface Replay {
   minions: ReplayMinion[];
   start: number;
   events: ReplayEvent[];
+  /**
+   * How many events each beat holds, in order (revision 13): the steps the
+   * game plays at once. null in an older record: each event is a beat.
+   */
+  beats: number[] | null;
   /** False when the log stops before the combat ends, or it had more steps than are kept. */
   complete: boolean;
 }
@@ -149,8 +169,19 @@ function events(raw: unknown[], count: number, start: number): ReplayEvent[] {
       case "attack":
         if (e.defender === undefined) throw new Malformed();
         return { kind: "attack", attacker: known(e.attacker), defender: e.defender === null ? null : known(e.defender) };
-      case "damage":
-        return { kind: "damage", amount: int(e.amount, 1, MAX_INT), health: int(e.health, -MAX_INT, MAX_INT), minion: known(e.minion) };
+      case "damage": {
+        const damage: Extract<ReplayEvent, { kind: "damage" }> = { kind: "damage", amount: int(e.amount, 1, MAX_INT), health: int(e.health, -MAX_INT, MAX_INT), minion: known(e.minion) };
+        if (e.source !== undefined) damage.source = e.source === null ? null : source(e.source, known);
+        return damage;
+      }
+      case "keyword": {
+        const minion = known(e.minion);
+        const on = bool(e.on);
+        if (typeof e.keyword !== "string") throw new Malformed();
+        // A keyword this site does not know (a newer app's) is a step it leaves out.
+        const keyword = KEYWORDS.find((k) => k === e.keyword && k !== "divine_shield");
+        return keyword ? { kind: "keyword", minion, keyword, on } : { kind: "unknown" };
+      }
       case "shield":
         return { kind: "shield", on: bool(e.on), minion: known(e.minion) };
       case "stats":
@@ -182,6 +213,36 @@ function events(raw: unknown[], count: number, start: number): ReplayEvent[] {
   });
 }
 
+/**
+ * A damage's source: a minion named by its index, or a card on a side; null
+ * for a cause a newer app names that this site does not know (an unknown
+ * source, as a step of an unknown kind is left out rather than breaking the
+ * replay).
+ */
+function source(v: unknown, known: (n: unknown) => number): DamageSource | null {
+  const s = obj(v);
+  if (typeof s.how !== "string") throw new Malformed();
+  const how = CAUSES.find((c) => c === s.how);
+  let named: DamageSource | null;
+  if (s.minion !== undefined) {
+    named = how ? { how, minion: known(s.minion) } : (known(s.minion), null);
+  } else {
+    const cardId = card(s.card_id, false);
+    if (cardId === null) throw new Malformed();
+    const at = side(s.side);
+    named = how ? { how, cardId, side: at } : null;
+  }
+  return named;
+}
+
+/** The beats: each at least one event, adding up to the events; null when the record has none. */
+function beats(v: unknown, events: number): number[] | null {
+  if (v === undefined || v === null) return null;
+  const runs = list(v, MAX_REPLAY_EVENTS).map((n) => int(n, 1, MAX_REPLAY_EVENTS));
+  if (runs.reduce((a, b) => a + b, 0) !== events) throw new Malformed();
+  return runs;
+}
+
 /** One round's replay: null when it has none, not ok when it cannot be read. */
 export function readReplay(v: unknown): ReplayRead | null {
   if (v === undefined || v === null) return null;
@@ -191,7 +252,7 @@ export function readReplay(v: unknown): ReplayRead | null {
     const raw = list(r.events, MAX_REPLAY_EVENTS);
     const start = int(r.start, 0, minions.length);
     const complete = bool(r.complete);
-    return { ok: true, replay: { minions, start, events: events(raw, minions.length, start), complete } };
+    return { ok: true, replay: { minions, start, events: events(raw, minions.length, start), beats: beats(r.beats, raw.length), complete } };
   } catch (error) {
     if (error instanceof Malformed) return { ok: false };
     throw error;

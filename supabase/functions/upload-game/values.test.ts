@@ -50,7 +50,7 @@ function refused(values: Json, field: (at: string) => string, msg: string) {
 }
 
 Deno.test("each board's game-long values are accepted (validator 9)", () => {
-  assertEquals(VALIDATOR_VERSION, 9);
+  assertEquals(VALIDATOR_VERSION >= 9, true);
   for (const side of ["own", "opponent"]) {
     const { rec } = withValues(ALL, side);
     const v = validateRecord(rec, SESSION, 1);

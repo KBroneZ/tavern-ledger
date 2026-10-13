@@ -21,8 +21,13 @@ export const ATTACK_MS = IMPACT_MS + 300;
 const HIT_MS = 260;
 /** A board closing a gap or making room. */
 const SLIDE_MS = 260;
-/** How far towards the target's centre the attacker flies: it stops at its edge. */
-const REACH = 0.78;
+/**
+ * Where the attacker stops: this share of the target's half-size along the
+ * attack's direction short of its centre, so it lands on the target whatever
+ * the distance and the angle; a share of the distance left long diagonals
+ * in the gap between two minions (T-575).
+ */
+const STOP = 0.5;
 const WIND_UP_PX = 8;
 const EASE_OUT = "cubic-bezier(0.23, 1, 0.32, 1)";
 const EASE_IN_OUT = "cubic-bezier(0.77, 0, 0.175, 1)";
@@ -40,12 +45,25 @@ export function lungeFrames(from: Box, to: Box): Keyframe[] {
   const dy = b.y - a.y;
   const length = Math.hypot(dx, dy) || 1;
   const hit = IMPACT_MS / ATTACK_MS;
+  const stop = STOP * ((Math.abs(dx) / length) * (to.width / 2) + (Math.abs(dy) / length) * (to.height / 2));
+  const reach = Math.max(length - stop, length * 0.25) / length;
   return [
     { offset: 0, transform: translate(0, 0), easing: EASE_OUT },
     { offset: hit * 0.3, transform: `${translate((-dx / length) * WIND_UP_PX, (-dy / length) * WIND_UP_PX)} scale(1.08)`, easing: EASE_IN_OUT },
-    { offset: hit, transform: `${translate(dx * REACH, dy * REACH)} scale(1.08)`, easing: EASE_OUT },
+    { offset: hit, transform: `${translate(dx * reach, dy * reach)} scale(1.08)`, easing: EASE_OUT },
     { offset: 1, transform: translate(0, 0) },
   ];
+}
+
+/**
+ * Where an element sits in the layout: its box on the page less the
+ * translation its running animations add (a board still sliding into place
+ * after a death or a summon), so an attack aims at where its target is, not
+ * where it was a moment ago. `translation` is the computed transform's
+ * (m41, m42); a scale about the centre leaves the centre where it is.
+ */
+export function layoutBox(seen: Box, translation: { x: number; y: number }): Box {
+  return { x: seen.x - translation.x, y: seen.y - translation.y, width: seen.width, height: seen.height };
 }
 
 /** How far a minion moved between two boxes; null when it did not (under a pixel). */
@@ -60,6 +78,13 @@ export function flipDelta(before: Box, after: Box): { dx: number; dy: number } |
 function boxOf(el: Element): Box {
   const r = el.getBoundingClientRect();
   return { x: r.left, y: r.top, width: r.width, height: r.height };
+}
+
+/** The element's layout box, without the translation of a motion running on it (layoutBox). */
+function placeOf(el: Element): Box {
+  const t = getComputedStyle(el).transform;
+  const m = t && t !== "none" ? new DOMMatrixReadOnly(t) : null;
+  return layoutBox(boxOf(el), { x: m?.m41 ?? 0, y: m?.m42 ?? 0 });
 }
 
 /** Where each element is now: read before a step changes the boards. */
@@ -93,9 +118,13 @@ const lunging = new WeakMap<HTMLElement, Animation>();
  * minion's classes keeps it).
  */
 export function lunge(attacker: HTMLElement, target: Element, speed: number): void {
+  // Both measured where they sit, not where a slide is drawing them now.
+  const from = placeOf(attacker);
+  const to = placeOf(target);
   restart(attacker, "rp-lunge");
+  restart(attacker, "rp-slide");
   attacker.dataset.lunging = "";
-  const motion = attacker.animate(lungeFrames(boxOf(attacker), boxOf(target)), { duration: ATTACK_MS / speed, id: "rp-lunge" });
+  const motion = attacker.animate(lungeFrames(from, to), { duration: ATTACK_MS / speed, id: "rp-lunge" });
   lunging.set(attacker, motion);
   const done = () => {
     if (lunging.get(attacker) === motion) delete attacker.dataset.lunging;

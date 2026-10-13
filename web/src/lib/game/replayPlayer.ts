@@ -4,14 +4,15 @@
 // never loads twice and a button keeps focus; buttons at either end are
 // aria-disabled rather than disabled for the same reason. A hidden polite
 // live region reads the step's words on a step or a pause, never while
-// playing. With reduced motion nothing plays by itself: step by step only.
+// playing. Nothing plays by itself; with reduced motion Play still plays, a
+// step at a time at the same pace, without movement.
 // What each button and key does is plain data (replay.ts control, keyAction).
 // Everything drawn comes from replayView.ts (text only, lib/view/node.ts).
 // Each step stays for its own beat, close to the game's pace (replay.ts
 // beats), and moving one step on plays it (replayMotion.ts): the attacker
 // flies to its target, the board slides into place; a jump does not move.
 import { mount, toDom } from "../view/node.ts";
-import { beats, control, type Frame, keyAction, type PlayAction, type Playback, SPEEDS, stepWords } from "./replay.ts";
+import { control, type Frame, frameBeats, frameWords, keyAction, type PlayAction, type Playback, SPEEDS, stepWords } from "./replay.ts";
 import { hit, lunge, measure, slide, still } from "./replayMotion.ts";
 import type { Side } from "./replayRead.ts";
 import {
@@ -41,7 +42,7 @@ interface Player {
   box: HTMLElement;
   /** Each minion's element, by its index in the replay. */
   tiles: Map<number, HTMLElement>;
-  /** Each step's beat at 1× (replay.ts beats). */
+  /** Each step's beat at 1× (replay.ts frameBeats). */
   beats: number[];
   step: number;
   playing: boolean;
@@ -90,7 +91,7 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     const tiles = new Map<number, HTMLElement>();
     for (const li of box.querySelectorAll<HTMLElement>(".rp-minion[data-ref]")) tiles.set(Number(li.dataset.ref), li);
     const pb = playbackOf(combat);
-    return { combat, pb, box, tiles, beats: beats(pb.frames.map((f) => f.event)), step, playing: false };
+    return { combat, pb, box, tiles, beats: frameBeats(pb), step, playing: false };
   }
 
   function stop(): void {
@@ -148,6 +149,20 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     }
   }
 
+  /** Each hit's tooltip says what dealt it ("… from their Cleave Hound (attack)"), as the step's words do. */
+  function hitTips(frame: Frame): void {
+    const replay = player.combat.replay;
+    if (!replay) return;
+    const tips = new Map<number, string[]>();
+    for (const e of frame.events) {
+      if (e.kind === "damage") tips.set(e.minion, [...(tips.get(e.minion) ?? []), stepWords(e, replay, namerFor(player.combat))]);
+    }
+    for (const [ref, lines] of tips) {
+      const hurt = player.tiles.get(ref)?.querySelector<HTMLElement>(".rp-hurt");
+      if (hurt) hurt.title = lines.join(". ");
+    }
+  }
+
   /** Says the step's words once, in the hidden live region; quiet while playing. */
   function announce(text: string): void {
     const live = one<HTMLElement>(player.box, ".rp-live");
@@ -178,8 +193,9 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     const before = how === "move" ? measure(player.tiles.values()) : null;
     const nodes = SIDES.flatMap((side) => drawSide(frame, side));
     if (before) move(frame, before, nodes);
-    const words = combat.replay ? stepWords(frame.event, combat.replay, namerFor(combat)) : "";
+    const words = combat.replay ? frameWords(frame, combat.replay, namerFor(combat)) : "";
     one<HTMLElement>(box, ".rp-caption").textContent = words;
+    hitTips(frame);
     if (speak && !playing) announce(words);
     one<HTMLElement>(box, ".rp-counter").textContent = counterText(step, last);
     const play = one<HTMLElement>(box, '[data-act="play"]');
@@ -201,7 +217,7 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
   /** Applies an action (replay.ts control) and draws the result; `fresh`: a combat just drawn. */
   function act(action: PlayAction, speak = true, fresh = false): void {
     stop();
-    const next = control(player, action, player.pb.frames.length - 1, motion.matches);
+    const next = control(player, action, player.pb.frames.length - 1);
     // Only one step on moves; a jump, a step back or reduced motion draws the step as it is.
     const how = !fresh && !motion.matches && next.step === player.step + 1 ? "move" : fresh || next.step !== player.step ? "still" : "keep";
     player.step = next.step;

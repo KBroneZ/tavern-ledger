@@ -5,7 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { BEAT_MS, beats, stepDelay } from "../../src/lib/game/replay.ts";
-import { ATTACK_MS, flipDelta, IMPACT_MS, lungeFrames } from "../../src/lib/game/replayMotion.ts";
+import { ATTACK_MS, type Box, flipDelta, IMPACT_MS, layoutBox, lungeFrames } from "../../src/lib/game/replayMotion.ts";
 import type { ReplayEvent } from "../../src/lib/game/replayRead.ts";
 
 const attack: ReplayEvent = { kind: "attack", attacker: 0, defender: 2 };
@@ -80,4 +80,30 @@ test("pace: what the log puts between an attack and its damage plays at the impa
   assert.equal(b[6], BEAT_MS.stats, "after the damage, a buff has its own beat");
   // Without an attack before it, a step keeps its beat.
   assert.deepEqual(beats([null, stats]), [BEAT_MS.start, BEAT_MS.stats]);
+});
+
+test("attack: the attacker lands on its target's edge at any distance, a long diagonal included (T-575)", () => {
+  const end = (from: Box, to: Box) => {
+    const f = lungeFrames(from, to).find((k) => k.offset === IMPACT_MS / ATTACK_MS) as Keyframe;
+    const [dx, dy] = /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(String(f.transform))!.slice(1).map(Number);
+    return { x: from.x + from.width / 2 + dx, y: from.y + from.height / 2 + dy };
+  };
+  const tile = (x: number, y: number, w = 100): Box => ({ x, y, width: w, height: w * 1.2 });
+  for (const w of [35, 43, 100]) {
+    const row = (y: number) => Array.from({ length: 7 }, (_, i) => tile(i * (w + 14), y, w));
+    const theirs = row(0);
+    const ours = row(w * 1.2 + 60);
+    // From our left-most to their right-most: the longest diagonal.
+    for (const [a, b] of [[ours[0], theirs[6]], [ours[6], theirs[0]], [ours[3], theirs[2]], [ours[1], theirs[1]]]) {
+      const p = end(a, b);
+      const centre = (t: Box) => ({ x: t.x + t.width / 2, y: t.y + t.height / 2 });
+      const nearest = [...theirs, ...ours.filter((t) => t !== a)].reduce((best, t) =>
+        Math.hypot(centre(t).x - p.x, centre(t).y - p.y) < Math.hypot(centre(best).x - p.x, centre(best).y - p.y) ? t : best);
+      assert.equal(nearest, b, `width ${w}: lands on its target, not between two`);
+    }
+  }
+});
+
+test("attack: a board still sliding into place is aimed at where it sits (layoutBox)", () => {
+  assert.deepEqual(layoutBox({ x: 130, y: 20, width: 100, height: 120 }, { x: 30, y: 0 }), { x: 100, y: 20, width: 100, height: 120 });
 });

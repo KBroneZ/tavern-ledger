@@ -138,6 +138,9 @@
               "defender": null
             }
           ],
+          "beats": [
+            1
+          ],
           "complete": true
         }
       }
@@ -465,6 +468,9 @@
               "attacker": 1,
               "defender": null
             }
+          ],
+          "beats": [
+            1
           ],
           "complete": true
         }

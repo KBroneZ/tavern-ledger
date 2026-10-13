@@ -271,3 +271,10 @@ test("words: a damage total is marked inferred when any combat behind it was wor
   assert.equal(combatsBacking(known(8, 3, 3)), "over 3 of 3 combats");
   assert.equal(combatsBacking(known(8, 3, 2)), "over 3 of 3 combats · 2 from the log");
 });
+
+test("a game with replays links to them near the top of the page (T-575)", () => {
+  const nodes = renderGame(view(), "2026-10-09");
+  const jump = JSON.stringify(nodes[1]);
+  assert.ok(jump.includes('["href","#gv-replays"]'), jump);
+  assert.match(jump, /Watch the combat replays/);
+});

@@ -64,6 +64,7 @@
           "minions": [],
           "start": 0,
           "events": [],
+          "beats": [],
           "complete": true
         }
       },
@@ -96,6 +97,7 @@
           "minions": [],
           "start": 0,
           "events": [],
+          "beats": [],
           "complete": true
         }
       },
@@ -128,6 +130,7 @@
           "minions": [],
           "start": 0,
           "events": [],
+          "beats": [],
           "complete": true
         }
       },
@@ -160,6 +163,7 @@
           "minions": [],
           "start": 0,
           "events": [],
+          "beats": [],
           "complete": true
         }
       }
@@ -438,6 +442,9 @@
               "attacker": 0,
               "defender": null
             }
+          ],
+          "beats": [
+            1
           ],
           "complete": true
         }
