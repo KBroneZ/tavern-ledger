@@ -94,7 +94,7 @@ select ok(
        or has_function_privilege(r.role, 'public.file_retention_check(text[], text[], integer)', 'execute')
        or has_function_privilege(r.role, 'public.file_retention_mark(text[], text[])', 'execute')
        or has_function_privilege(r.role,
-            'public.sweep_record_result(bigint, integer, jsonb, jsonb)', 'execute')
+            'public.sweep_record_result(bigint, integer, jsonb, jsonb, text[])', 'execute')
   ),
   'clients cannot list, check, mark or record'
 );
@@ -103,7 +103,7 @@ select ok(
   and has_function_privilege('service_role', 'public.file_retention_check(text[], text[], integer)', 'execute')
   and has_function_privilege('service_role', 'public.file_retention_mark(text[], text[])', 'execute')
   and has_function_privilege('service_role',
-        'public.sweep_record_result(bigint, integer, jsonb, jsonb)', 'execute'),
+        'public.sweep_record_result(bigint, integer, jsonb, jsonb, text[])', 'execute'),
   'the service role can (the sweep function does)'
 );
 select ok(

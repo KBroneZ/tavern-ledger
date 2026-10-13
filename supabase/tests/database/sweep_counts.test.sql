@@ -18,13 +18,13 @@ grant select on ok_stats to service_role;
 select ok(
   not exists (
     select 1 from unnest(array['anon', 'authenticated']) as r(role)
-    where has_function_privilege(r.role, 'public.sweep_record_result(bigint, integer, jsonb, jsonb)', 'execute')
+    where has_function_privilege(r.role, 'public.sweep_record_result(bigint, integer, jsonb, jsonb, text[])', 'execute')
        or has_function_privilege(r.role, 'public.sweep_record_failure(bigint, text)', 'execute')
   ),
   'clients cannot write run records'
 );
 select ok(
-  has_function_privilege('service_role', 'public.sweep_record_result(bigint, integer, jsonb, jsonb)', 'execute')
+  has_function_privilege('service_role', 'public.sweep_record_result(bigint, integer, jsonb, jsonb, text[])', 'execute')
   and has_function_privilege('service_role', 'public.sweep_record_failure(bigint, text)', 'execute'),
   'the service role can (the sweep function does)'
 );

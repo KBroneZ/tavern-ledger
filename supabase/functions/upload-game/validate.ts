@@ -42,6 +42,8 @@ export const VALIDATOR_VERSION = 9;
 export const SESSION_PATTERN = /^Hearthstone_(\d{4})_(\d{2})_(\d{2})_\d{2}_\d{2}_\d{2}$/;
 const PATH_PATTERN = /\/v1\/games\/(Hearthstone_\d{4}(?:_\d{2}){5})\/([1-9][0-9]{0,3})$/;
 const MAX_INDEX = 1000;
+/** No session is older than this year. */
+const MIN_YEAR = 2000;
 const TRIBE = /^[A-Z0-9_]{1,32}$/;
 // Warnings and problems are short sentences the parser writes itself.
 const NOTE = /^[A-Za-z0-9 _:.()-]{1,160}$/;
@@ -562,9 +564,16 @@ function hasBattleTag(v: unknown, depth = 0): boolean {
   return false;
 }
 
+/**
+ * The session's date, from 2000 to the end of next year (UTC): the game
+ * client names its logs with the PC's local time, which may run ahead of UTC.
+ * upload_begin() refuses the same range before any file is written.
+ */
 function playedOn(session: string): string {
   const m = SESSION_PATTERN.exec(session);
   if (!m) throw new Invalid("session");
+  const year = Number(m[1]);
+  if (year < MIN_YEAR || year > new Date().getUTCFullYear() + 1) throw new Invalid("session");
   const iso = `${m[1]}-${m[2]}-${m[3]}`;
   const d = new Date(`${iso}T00:00:00Z`);
   if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== iso) {
