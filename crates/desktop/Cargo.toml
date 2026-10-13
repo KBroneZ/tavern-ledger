@@ -12,7 +12,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2.12", features = ["tray-icon"] }
-tauri-plugin-autostart = "=2.5.1"
+tauri-plugin-autostart = "=2.7.0"
 # The system's folder picker for "Hearthstone folder" in the settings (T-579).
 # Pinned, a release from January 2026; no default features (no Linux portals).
 rfd = { version = "=0.17.2", default-features = false }
@@ -28,4 +28,4 @@ game-memory = { path = "../game-memory" }
 
 [target.'cfg(windows)'.dependencies]
 # Already in the build through auto-launch; quotes the start-up entry.
-winreg = "0.10"
+winreg = "0.56"

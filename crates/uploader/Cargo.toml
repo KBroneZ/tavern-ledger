@@ -17,10 +17,10 @@ tracker = { path = "../tracker" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # Already in Cargo.lock through Tauri (PROVENANCE.md).
-base64 = "0.22"
+base64 = "0.23"
 flate2 = "1.1"
-getrandom = "0.3"
-sha2 = "0.10"
+getrandom = "0.4"
+sha2 = "0.11"
 reqwest = { version = "0.13", default-features = false, features = ["blocking", "native-tls"], optional = true }
 
 [target.'cfg(windows)'.dependencies]
