@@ -93,6 +93,41 @@ test("a widget error or a script that never loads says how to get past it", asyn
   assert.deepEqual(noWidget.take(), { problem: ACCOUNT_STRINGS["captcha.failed"] });
 });
 
+test("a widget that throws while drawn, or a token Cloudflare never gives, says the check failed", async () => {
+  setLang("en");
+  const throwing: TurnstileApi = {
+    render() {
+      throw new Error("TurnstileError: invalid sitekey");
+    },
+    reset() {},
+  };
+  const captcha = startCaptcha(Promise.resolve(throwing), container, SITE_KEY, "en");
+  await settle();
+  assert.deepEqual(captcha.take(), { problem: ACCOUNT_STRINGS["captcha.failed"] });
+
+  const { api, options } = fakeTurnstile();
+  const odd = startCaptcha(Promise.resolve(api), container, SITE_KEY, "en");
+  await settle();
+  options().callback("a b");
+  assert.deepEqual(odd.take(), { problem: ACCOUNT_STRINGS["captcha.failed"] });
+});
+
+test("reset after an error runs the widget again and waits for its new answer", async () => {
+  setLang("en");
+  const { api, calls, options } = fakeTurnstile();
+  const captcha = startCaptcha(Promise.resolve(api), container, SITE_KEY, "en");
+  await settle();
+  options()["error-callback"]("300030");
+  assert.deepEqual(captcha.take(), { problem: ACCOUNT_STRINGS["captcha.failed"] });
+  captcha.reset();
+  assert.deepEqual(calls.resets, ["w1"]);
+  assert.deepEqual(captcha.take(), { problem: ACCOUNT_STRINGS["captcha.wait"] });
+  // A reset before the widget is drawn does nothing and breaks nothing.
+  const early = startCaptcha(new Promise<TurnstileApi>(() => {}), container, SITE_KEY, "en");
+  early.reset();
+  assert.deepEqual(early.take(), { problem: ACCOUNT_STRINGS["captcha.wait"] });
+});
+
 test("a token with spaces, controls or absurd length is not sent", async () => {
   const { api, options } = fakeTurnstile();
   const captcha = startCaptcha(Promise.resolve(api), container, SITE_KEY, "en");

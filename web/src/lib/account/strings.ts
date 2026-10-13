@@ -137,7 +137,7 @@ export const ACCOUNT_STRINGS = {
   // The desktop app's sign-in link (components/DesktopSignIn.astro, scripts/desktopSignIn.ts).
   "desktop.title": "Sign in to the app",
   "desktop.meta":
-    "Your Tavern Ledger app opened this page. We'll email you a sign-in link; open it on this PC and the app signs in. The app never sees your password.",
+    "Your Tavern Ledger app opened this page. We'll email you a sign-in link for the app; open it on this PC and the app signs in. The app never sees your password. If you did not start signing in from the app on this PC, close this page.",
   "desktop.heading": "Get a sign-in link for the app",
   "desktop.submit": "Send the link",
   "desktop.sending": "Sending…",

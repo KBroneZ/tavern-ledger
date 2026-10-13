@@ -12,6 +12,7 @@ import {
   TURNSTILE_ORIGIN,
   TURNSTILE_PAGES,
   TURNSTILE_SCRIPT,
+  TURNSTILE_SCRIPT_SOURCE,
   TURNSTILE_TEST_SITE_KEY,
   turnstileSiteKey,
   WASM_WORKER,
@@ -185,6 +186,15 @@ test("Turnstile: an open-accounts build needs the site key, a closed build does 
   assert.equal(TURNSTILE_TEST_SITE_KEY, TEST_SITE_KEY);
 });
 
+test("Turnstile: a Cloudflare Pages build refuses Cloudflare's test keys", () => {
+  for (const key of [TEST_SITE_KEY, "2x00000000000000000000AB", "3x00000000000000000000FF"]) {
+    assert.throws(() => turnstileSiteKey({ ...BACKEND, CF_PAGES: "1", PUBLIC_TURNSTILE_SITE_KEY: key }), /test keys/, key);
+  }
+  const real = "0x4AAAAAAABkMYinukE8nzKd";
+  assert.equal(turnstileSiteKey({ ...BACKEND, CF_PAGES: "1", PUBLIC_TURNSTILE_SITE_KEY: real }), real);
+  assert.equal(turnstileSiteKey({ ...BACKEND, PUBLIC_TURNSTILE_SITE_KEY: TEST_SITE_KEY }), TEST_SITE_KEY, "local and CI");
+});
+
 test("Turnstile: a secret key or anything else is refused and never echoed", () => {
   for (const key of [TEST_SECRET_KEY, "0x4AAAAAAABkMYinukE8nzKdAAAAAAAAAAAAA", "sitekey", "0x4AAA<script>", " 1x00000000000000000000AA"]) {
     assert.throws(
@@ -201,10 +211,12 @@ test("Turnstile's policy adds only its own origin, to script-src and frame-src, 
   assert.equal(
     withCaptcha,
     plain
-      .replace("script-src 'self'", `script-src 'self' ${TURNSTILE_ORIGIN}`)
+      .replace("script-src 'self'", `script-src 'self' ${TURNSTILE_SCRIPT_SOURCE}`)
       .replace("; base-uri", `; frame-src ${TURNSTILE_ORIGIN}; base-uri`),
   );
   assert.equal(TURNSTILE_ORIGIN, "https://challenges.cloudflare.com");
+  // Scripts: Cloudflare's one file only; the frame: its origin.
+  assert.equal(TURNSTILE_SCRIPT_SOURCE, "https://challenges.cloudflare.com/turnstile/v0/api.js");
   assert.doesNotMatch(withCaptcha, /unsafe|\*|data:/);
   // No frame anywhere else.
   assert.doesNotMatch(plain, /frame-src/);
@@ -228,5 +240,5 @@ test("Turnstile is on exactly the pages whose forms make Supabase send an email 
 
 test("every page's layout checks the Turnstile key, so an open-accounts build cannot ship without it", () => {
   const layout = readFileSync(join(import.meta.dirname, "..", "..", "src", "layouts", "Base.astro"), "utf8");
-  assert.match(layout, /^turnstileSiteKey\(import\.meta\.env\);$/m);
+  assert.match(layout, /^turnstileSiteKey\(\{ \.\.\.import\.meta\.env, CF_PAGES: process\.env\.CF_PAGES \}\);$/m);
 });

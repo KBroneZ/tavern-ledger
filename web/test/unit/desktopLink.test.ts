@@ -60,6 +60,9 @@ test("an email with no account gets the same answer as one with an account", () 
     { code: "user_not_found", status: 400 },
     // Only an account gets this one (a second link within the minute).
     { code: "over_email_send_rate_limit", status: 429 },
+    // Nor does any other refusal of one account tell it apart.
+    { code: "user_banned", status: 403 },
+    { status: 400 },
   ]) {
     assert.deepEqual(desktopLinkOutcome(e), sent, JSON.stringify(e));
   }

@@ -7,8 +7,8 @@ import { captchaSize, startCaptcha, type Captcha, type TurnstileApi } from "../l
 import { TURNSTILE_SCRIPT, turnstileSiteKey } from "../lib/config.ts";
 import { lang } from "../lib/i18n.ts";
 
-// The build stops without it when accounts are open, and pages with a form
-// are only built then.
+// Every page's build stops without it when accounts are open (layouts/
+// Base.astro), and forms only exist then.
 const SITE_KEY =
   turnstileSiteKey({
     PUBLIC_SUPABASE_URL: import.meta.env.PUBLIC_SUPABASE_URL,
@@ -36,5 +36,8 @@ function loadTurnstile(): Promise<TurnstileApi> {
 
 /** The widget in `container` (a `[data-captcha]` element of the form). */
 export function captchaIn(container: HTMLElement): Captcha {
-  return startCaptcha(loadTurnstile(), container, SITE_KEY, lang(), captchaSize(container.clientWidth));
+  const size = captchaSize(container.clientWidth);
+  // The space kept for it (ui.css): the compact widget is taller.
+  container.dataset.size = size;
+  return startCaptcha(loadTurnstile(), container, SITE_KEY, lang(), size);
 }

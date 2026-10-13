@@ -66,7 +66,9 @@ export function startCaptcha(
 
   api.then(
     (turnstile) => {
-      const id = turnstile.render(container, {
+      let id: string | null | undefined;
+      try {
+        id = turnstile.render(container, {
         sitekey: siteKey,
         theme: "dark",
         language: lang,
@@ -74,8 +76,9 @@ export function startCaptcha(
         "response-field": false,
         "refresh-expired": "auto",
         callback: (value) => {
+          // A token of a shape Cloudflare never gives: say the check failed.
           token = TOKEN.test(value) ? value : null;
-          failed = false;
+          failed = token === null;
         },
         "expired-callback": () => {
           token = null;
@@ -89,7 +92,11 @@ export function startCaptcha(
           // Handled: the widget shows its own error and the form says what to do.
           return true;
         },
-      });
+        });
+      } catch {
+        // Cloudflare throws on a bad container or site key: no widget.
+        id = null;
+      }
       if (typeof id === "string") widget = { api: turnstile, id };
       else failed = true;
     },
@@ -105,7 +112,11 @@ export function startCaptcha(
     },
     reset() {
       token = null;
-      if (widget) widget.api.reset(widget.id);
+      // A drawn widget runs again: a past error is no longer the answer.
+      if (widget) {
+        failed = false;
+        widget.api.reset(widget.id);
+      }
     },
   };
 }

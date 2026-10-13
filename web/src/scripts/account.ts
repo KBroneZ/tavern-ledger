@@ -218,9 +218,13 @@ function setUpDelete(user: User): void {
           return;
         }
         say(message, at("account.delete.checking"));
-        const error = await signIn(supabase, user.email ?? "", password.value, check.token);
-        // A token works once: the next try needs a new one.
-        captcha?.reset();
+        let error: string | null;
+        try {
+          error = await signIn(supabase, user.email ?? "", password.value, check.token);
+        } finally {
+          // A token works once: the next try needs a new one.
+          captcha?.reset();
+        }
         if (error) {
           failField(password, message, error);
           return;

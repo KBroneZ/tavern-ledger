@@ -33,14 +33,21 @@ function wire(
       failField(wrong, message, problem);
       return;
     }
-    const check = captcha.take();
-    if ("problem" in check) {
-      say(message, check.problem, "error");
-      return;
-    }
     const button = form.querySelector('button[type="submit"]') as HTMLButtonElement;
-    // A token works once: whatever the answer, the next try needs a new one.
-    void busy(button, () => submit(email, password, check.token, message)).finally(() => captcha.reset());
+    // Inside busy(): a second press while sending takes no token and resets nothing.
+    void busy(button, async () => {
+      const check = captcha.take();
+      if ("problem" in check) {
+        say(message, check.problem, "error");
+        return;
+      }
+      try {
+        await submit(email, password, check.token, message);
+      } finally {
+        // A token works once: whatever the answer, the next try needs a new one.
+        captcha.reset();
+      }
+    });
   });
   ready(form);
 }

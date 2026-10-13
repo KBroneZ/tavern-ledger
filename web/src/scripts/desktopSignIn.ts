@@ -18,7 +18,12 @@ if (request) {
   const form = byId<HTMLFormElement>("desktop-form");
   const message = byId("desktop-message");
   const email = field(form, "email");
-  email.value = request.email;
+  // The app's own email stays as given: a page opened from someone else's
+  // link cannot be turned to another address here. A typo is fixed in the app.
+  if (request.email) {
+    email.value = request.email;
+    email.readOnly = true;
+  }
   show(form, true);
   show(byId("desktop-not-from-app"), false);
   // Drawn once the form is shown, so it gets the form's width.
@@ -32,16 +37,21 @@ if (request) {
       failField(email, message, problem);
       return;
     }
-    const check = captcha.take();
-    if ("problem" in check) {
-      say(message, check.problem, "error");
-      return;
-    }
     void busy(form.querySelector('button[type="submit"]') as HTMLButtonElement, async () => {
+      const check = captcha.take();
+      if ("problem" in check) {
+        say(message, check.problem, "error");
+        return;
+      }
       say(message, at("desktop.sending"));
-      const outcome = await requestDesktopLink(config, { ...request, email: email.value }, check.token);
-      say(message, outcome.message, outcome.kind === "error" ? "error" : "ok");
-    }).finally(() => captcha.reset());
+      try {
+        const outcome = await requestDesktopLink(config, { ...request, email: email.value }, check.token);
+        say(message, outcome.message, outcome.kind === "error" ? "error" : "ok");
+      } finally {
+        // A token works once: the next try needs a new one.
+        captcha.reset();
+      }
+    });
   });
   ready(form);
 }

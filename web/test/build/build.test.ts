@@ -15,6 +15,7 @@ import {
   signupsOpen,
   TURNSTILE_ORIGIN,
   TURNSTILE_PAGES,
+  TURNSTILE_SCRIPT_SOURCE,
   WASM_WORKER,
 } from "../../src/lib/config.ts";
 
@@ -66,7 +67,7 @@ test("every page has the CSP as its first meta after the charset", () => {
     // The whole policy: Turnstile's origin only on its pages (T-562), never 'wasm-unsafe-eval' (D-090).
     assert.equal(csp, contentSecurityPolicy(CONFIG?.url ?? null, { turnstile: isTurnstilePage(page) }), name(page));
     // D-090: only the simulator's worker may compile WebAssembly, not a page.
-    const scripts = CONFIG && isTurnstilePage(page) ? `'self' ${TURNSTILE_ORIGIN}` : CONFIG ? "'self'" : "'none'";
+    const scripts = CONFIG && isTurnstilePage(page) ? `'self' ${TURNSTILE_SCRIPT_SOURCE}` : CONFIG ? "'self'" : "'none'";
     assert.ok(csp.includes(`script-src ${scripts};`), name(page));
     assert.equal(csp.includes("frame-src"), Boolean(CONFIG) && isTurnstilePage(page), name(page));
     assert.match(csp, CONFIG ? /form-action 'self'(;|$)/ : /form-action 'none'(;|$)/, name(page));

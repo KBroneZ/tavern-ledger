@@ -207,7 +207,9 @@ anonymous_users = 30
 # The three per-IP limits below are the hosted project's (set by hand in the
 # dashboard, which the GitHub integration leaves alone): low enough that one
 # address cannot pile up sessions and sign-in records or guess an emailed
-# code, high enough for a household behind one address.
+# code, high enough for a household behind one address. The local stack
+# names no client-address header (GOTRUE_RATE_LIMIT_HEADER), so it applies
+# no per-IP limit and the local end-to-end tests are not held back.
 # Number of sessions that can be refreshed in a 5 minute interval per IP address.
 token_refresh = 30
 # Number of sign up and sign-in requests that can be made in a 5 minute interval per IP address (excludes anonymous users).

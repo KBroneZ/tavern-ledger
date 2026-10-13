@@ -6,9 +6,32 @@ use std::io;
 
 const MAX_URL: usize = 4096;
 
-/// Whether `url` is a web address this module will hand to the system.
+/// Whether `url` is a web address this module will hand to the system: an
+/// https host name, or this PC's address with a port, then a path; no user
+/// part, nothing outside printable ASCII and no character a shell or a
+/// browser reads specially.
 pub fn is_openable(url: &str) -> bool {
-    (url.starts_with("https://") || url.starts_with("http://127.0.0.1:"))
+    let rest = if let Some(rest) = url.strip_prefix("https://") {
+        rest
+    } else if let Some(rest) = url.strip_prefix("http://127.0.0.1:") {
+        rest
+    } else {
+        return false;
+    };
+    let Some((authority, _path)) = rest.split_once('/') else {
+        return false;
+    };
+    let authority_ok = if url.starts_with("https://") {
+        let (host, port) = authority.split_once(':').unwrap_or((authority, ""));
+        !host.is_empty()
+            && host
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'-')
+            && port.bytes().all(|b| b.is_ascii_digit())
+    } else {
+        !authority.is_empty() && authority.bytes().all(|b| b.is_ascii_digit())
+    };
+    authority_ok
         && url.len() <= MAX_URL
         && url.bytes().all(|b| {
             b.is_ascii_graphic() && !matches!(b, b'"' | b'<' | b'>' | b'\\' | b'`' | b'^' | b'|')
@@ -101,6 +124,11 @@ mod tests {
             "https://a.test/é",
             "javascript:alert(1)",
             "ms-settings:",
+            "https://tavernledger.net",
+            "http://127.0.0.1:80@evil.test/",
+            "https://user@tavernledger.net/",
+            "https://tavernledger.net:x/",
+            "http://127.0.0.1:/x",
         ] {
             assert!(!is_openable(bad), "{bad:?}");
         }

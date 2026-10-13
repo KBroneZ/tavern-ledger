@@ -53,5 +53,8 @@ export function desktopLinkOutcome(e: AuthErrorLike | null): SignUpOutcome {
   if (e.status === 429 || (e.code ?? "").startsWith("over_")) return { kind: "error", message: at("auth.rateLimited") };
   if (e.status === 0 || e.name === "AuthRetryableFetchError") return { kind: "error", message: at("auth.unreachable") };
   if (e.code === "email_address_invalid") return { kind: "error", message: at("auth.email") };
+  // Any other refusal of this email (a blocked account, say) reads like a
+  // sent link too, so no account state shows through.
+  if (e.status !== undefined && e.status >= 400 && e.status < 500) return sent;
   return { kind: "error", message: at("auth.generic") };
 }

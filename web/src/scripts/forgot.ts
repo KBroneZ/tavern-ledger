@@ -26,17 +26,22 @@ form.addEventListener("submit", (event) => {
     failField(field(form, "email"), message, problem);
     return;
   }
-  const check = captcha.take();
-  if ("problem" in check) {
-    say(message, check.problem, "error");
-    return;
-  }
   void busy(form.querySelector('button[type="submit"]') as HTMLButtonElement, async () => {
+    const check = captcha.take();
+    if ("problem" in check) {
+      say(message, check.problem, "error");
+      return;
+    }
     say(message, at("forgot.sending"));
-    const returnTo = new URL(RETURN_PAGE, location.origin).href;
-    const outcome = await requestPasswordReset(supabase, email, returnTo, check.token);
-    say(message, outcome.message, outcome.kind === "error" ? "error" : "ok");
-    if (outcome.kind === "check-email") form.reset();
-  }).finally(() => captcha.reset());
+    try {
+      const returnTo = new URL(RETURN_PAGE, location.origin).href;
+      const outcome = await requestPasswordReset(supabase, email, returnTo, check.token);
+      say(message, outcome.message, outcome.kind === "error" ? "error" : "ok");
+      if (outcome.kind === "check-email") form.reset();
+    } finally {
+      // A token works once: the next try needs a new one.
+      captcha.reset();
+    }
+  });
 });
 ready(form);

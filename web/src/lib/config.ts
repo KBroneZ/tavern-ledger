@@ -17,8 +17,13 @@ export const NO_STORE_PAGES: readonly string[] = ["/account/", "/es/account/", "
 
 /** Cloudflare Turnstile (T-562): its script and its frame come from here, and from nowhere else. */
 export const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
-/** The widget's script, exactly as Cloudflare publishes it (never proxied or copied). */
-export const TURNSTILE_SCRIPT = `${TURNSTILE_ORIGIN}/turnstile/v0/api.js?render=explicit`;
+/**
+ * The widget's script, exactly as Cloudflare publishes it (never proxied or
+ * copied). script-src allows this one file, not the whole origin; its frame
+ * comes from the origin (frame-src).
+ */
+export const TURNSTILE_SCRIPT_SOURCE = `${TURNSTILE_ORIGIN}/turnstile/v0/api.js`;
+export const TURNSTILE_SCRIPT = `${TURNSTILE_SCRIPT_SOURCE}?render=explicit`;
 /** Cloudflare's published test site key that always passes: local development and CI. */
 export const TURNSTILE_TEST_SITE_KEY = "1x00000000000000000000AA";
 /**
@@ -100,6 +105,8 @@ export function readConfig(env: ConfigSource): SiteConfig | null {
 // A site key is "0x" (a test key "1x" to "3x") and about 22 letters; a secret
 // key has the same start and is longer, so it never fits.
 const TURNSTILE_SITE_KEY = /^[0-3]x[A-Za-z0-9_-]{18,28}$/;
+// Cloudflare's published test keys start "1x" to "3x"; a real one "0x".
+const TURNSTILE_TEST_KEY = /^[1-3]x/;
 
 /**
  * The Turnstile widget's site key (public by design), or null when accounts
@@ -114,6 +121,10 @@ export function turnstileSiteKey(env: ConfigSource): string | null {
   // Never echo it: a secret key put here by mistake must not reach the build log.
   if (!TURNSTILE_SITE_KEY.test(raw)) {
     throw new Error("PUBLIC_TURNSTILE_SITE_KEY must be the Turnstile widget's site key, never its secret key");
+  }
+  // Cloudflare Pages sets CF_PAGES=1: the deployed site never ships a test key.
+  if (env.CF_PAGES === "1" && TURNSTILE_TEST_KEY.test(raw)) {
+    throw new Error("PUBLIC_TURNSTILE_SITE_KEY is one of Cloudflare's test keys: the deployed site needs the real widget's key");
   }
   return raw;
 }
@@ -158,7 +169,9 @@ export function contentSecurityPolicy(
   // Accounts closed: no page has a script or a form, so allow none at all.
   const open = supabaseOrigin !== null;
   const captcha = open && options.turnstile === true;
-  const scripts = open ? ["'self'", options.wasm ? WASM_SOURCE : "", captcha ? TURNSTILE_ORIGIN : ""].filter(Boolean).join(" ") : "'none'";
+  const scripts = open
+    ? ["'self'", options.wasm ? WASM_SOURCE : "", captcha ? TURNSTILE_SCRIPT_SOURCE : ""].filter(Boolean).join(" ")
+    : "'none'";
   return [
     "default-src 'none'",
     `script-src ${scripts}`,

@@ -136,7 +136,7 @@ export const ES: Record<AccountKey, string> = {
   // The desktop app's sign-in link (components/DesktopSignIn.astro, scripts/desktopSignIn.ts).
   "desktop.title": "Iniciar sesión en la app",
   "desktop.meta":
-    "Tu app de Tavern Ledger ha abierto esta página. Te enviaremos por correo un enlace de inicio de sesión; ábrelo en este PC y la app iniciará sesión. La app nunca ve tu contraseña.",
+    "Tu app de Tavern Ledger ha abierto esta página. Te enviaremos por correo un enlace de inicio de sesión para la app; ábrelo en este PC y la app iniciará sesión. La app nunca ve tu contraseña. Si no has empezado a iniciar sesión desde la app en este PC, cierra esta página.",
   "desktop.heading": "Recibe un enlace de inicio de sesión para la app",
   "desktop.submit": "Enviar el enlace",
   "desktop.sending": "Enviando…",
