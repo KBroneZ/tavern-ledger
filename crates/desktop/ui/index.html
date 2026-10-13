@@ -32,9 +32,23 @@
       <button type="button" id="update-later" data-i18n="updates.later">Later</button>
       <p id="update-notice-problem" class="problem" role="status"></p>
     </section>
+    <section id="folder-offer" class="folder-offer" role="status" aria-live="polite" hidden>
+      <p id="folder-offer-text"></p>
+      <p class="folder-offer-actions">
+        <button type="button" id="folder-offer-yes" class="report-btn" data-i18n="folder.offer.yes">Yes, use it</button>
+        <button type="button" id="folder-offer-no" class="report-btn" data-i18n="folder.offer.no">No</button>
+      </p>
+    </section>
+
     <section id="setup" class="setup" role="status" aria-live="polite" hidden>
       <h2 data-i18n="win.setup.title">Game log setup</h2>
       <ul id="setup-list"></ul>
+      <p id="setup-folder" class="setup-folder"></p>
+      <p class="setup-actions">
+        <button type="button" id="setup-choose" class="report-btn setup-choose" data-i18n="folder.chooseBig">Choose the Hearthstone folder</button>
+        <button type="button" id="setup-settings" class="link-btn" data-i18n="folder.banner.settings">Folder settings</button>
+      </p>
+      <p id="setup-folder-problem" class="problem" role="status"></p>
     </section>
 
     <div class="view-bar">
@@ -187,6 +201,16 @@
           <p class="note" data-i18n="win.overlay.how">Also in the tray menu. The overlay shows over Hearthstone only during a game, plus a small lobby panel on the Battlegrounds lobby screen. Hover a hero on the game's leaderboard to see the last board you saw of theirs. "Arrange overlay" lets you move the panels and fit the leaderboard box; until you press "Lock overlay", clicks don't reach the game. Exclusive fullscreen hides any overlay, so run Hearthstone windowed or borderless.</p>
         </details>
         <p id="overlay-switch-problem" class="problem" role="status" hidden></p>
+      </section>
+      <section id="folder-setting" class="settings-group" aria-labelledby="folder-title">
+        <h3 id="folder-title" data-i18n="folder.title">Hearthstone folder</h3>
+        <p class="setting-row"><span data-i18n="folder.label">Folder in use:</span> <span id="folder-current" class="folder-current"></span></p>
+        <p class="setting-row">
+          <button type="button" id="folder-choose" class="report-btn" data-i18n="folder.choose">Choose…</button>
+          <button type="button" id="folder-reset" class="report-btn" hidden data-i18n="folder.reset">Back to automatic</button>
+        </p>
+        <p class="note" data-i18n="folder.note">Tavern Ledger finds the game by itself: the running game first, then Windows' install record, Battle.net and the usual folders, taking the install whose logs are newest. If it picked the wrong one, choose the folder where Hearthstone is installed (the one with Hearthstone.exe). The app only reads from it and checks client.config there; it never changes the game's files.</p>
+        <p id="folder-problem" class="problem" role="status"></p>
       </section>
       <section id="autostart-setting" class="settings-group" aria-labelledby="autostart-title">
         <h3 id="autostart-title" data-i18n="settings.windows.title">Startup</h3>
@@ -350,6 +374,7 @@
   <script src="memory-setting.js"></script>
   <script src="update-words.js"></script>
   <script src="updates.js"></script>
+  <script src="game-folder.js"></script>
   <script src="first-start.js"></script>
 </body>
 </html>

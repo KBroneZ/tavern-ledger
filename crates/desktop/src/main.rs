@@ -6,6 +6,7 @@
 
 mod card_data;
 mod foreground;
+mod game_folder;
 mod game_memory;
 mod hover;
 mod leaderboard;
@@ -41,7 +42,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{include_image, App, AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tracker::dev_reconnect::Reconnects;
-use tracker::discover::find_logs_dir;
+use tracker::discover::same_folder_key;
 use tracker::game_values::ReaderStatus;
 use tracker::live::{live_game, LiveGame};
 use tracker::lobby_tribes::{self, Action, Entries, GameStarts, LobbyView};
@@ -55,6 +56,9 @@ use tracker::stats::curious::{CardNames, Curious};
 use tracker::stats::{HeroLinks, Lobby, Stats};
 use tracker::store::{GameKey, ParserStamp, Store};
 use tracker::Watcher;
+
+use crate::game_folder::Finder;
+use crate::settings::Settings;
 
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
 /// The setup is checked again every this many polls (the user may fix it
@@ -114,6 +118,11 @@ struct Status {
     /// Where the game client is, from LoadingScreen.log (T-314), in words;
     /// None when that log is off or says nothing yet.
     scene: Option<String>,
+    /// The Hearthstone folder in use and how it was decided (T-579).
+    folder: game_folder::FolderStatus,
+    /// The folder of the running game when it is not the one in use: the
+    /// window asks whether to use it.
+    folder_offer: Option<String>,
 }
 
 #[derive(Clone, Serialize)]
@@ -158,6 +167,8 @@ struct AppState {
     saved_tribes: saved_tribes::Kept,
     /// The combat odds for the overlay (T-605).
     odds: odds::Odds,
+    /// Which Hearthstone folder is followed (T-579).
+    folder: game_folder::FolderState,
 }
 
 #[tauri::command]
@@ -792,25 +803,61 @@ fn show_read_only(app: &AppHandle, state: &AppState, data_dir: &std::path::Path)
 }
 
 /// Reads both config files (read-only) and puts what to fix in the status.
-fn refresh_setup(app: &AppHandle, state: &AppState, logs_dir: &Path) {
-    let log_config = default_log_config_path();
-    let client_config = client_config_path(logs_dir);
-    let report = check_setup(log_config.as_deref(), client_config.as_deref());
-    // What to fix first, then what is optional (T-314).
-    let messages: Vec<String> = report
-        .messages()
-        .into_iter()
-        .chain(report.notes())
-        .collect();
+/// While no Hearthstone folder can be used (`folder_lines`), that is what the
+/// banner says instead.
+fn refresh_setup(app: &AppHandle, state: &AppState, logs_dir: &Path, folder_lines: &[String]) {
+    let messages: Vec<String> = if folder_lines.is_empty() {
+        let log_config = default_log_config_path();
+        let client_config = client_config_path(logs_dir);
+        let report = check_setup(log_config.as_deref(), client_config.as_deref());
+        // What to fix first, then what is optional (T-314).
+        report
+            .messages()
+            .into_iter()
+            .chain(report.notes())
+            .collect()
+    } else {
+        folder_lines.to_vec()
+    };
     set_status(app, state, |s| s.setup = messages);
+}
+
+/// The Logs folder to follow: the one on the command line, else the folder
+/// the player chose or the best one found. While none can be used the window
+/// says so (and offers to choose one), and this looks again every second.
+fn wait_for_logs_dir(
+    app: &AppHandle,
+    state: &AppState,
+    finder: &mut Finder,
+    settings: &Settings,
+) -> PathBuf {
+    loop {
+        if let Some(decision) = finder.look(app, state, settings) {
+            if let Some(folder) = &decision.in_use {
+                set_status(app, state, |s| s.setup.clear());
+                return folder.logs_dir();
+            }
+            // One update, so the window never shows the problem without the banner.
+            let msg = "Hearthstone's Logs folder was not found. Is the game installed?";
+            set_status(app, state, |s| {
+                s.problem = Some(msg.into());
+                s.setup = decision.lines.clone();
+            });
+        }
+        thread::sleep(POLL_INTERVAL);
+    }
 }
 
 /// Opens the history and follows the log until the app quits.
 fn run_tracker(app: AppHandle, state: Arc<AppState>) {
-    let Some(logs_dir) = path_from(std::env::args(), LOGS_DIR_ARG).or_else(find_logs_dir) else {
-        let msg = "Hearthstone's Logs folder was not found. Is the game installed?";
-        return problem(&app, &state, msg.into());
+    let fixed_logs_dir = path_from(std::env::args(), LOGS_DIR_ARG);
+    let mut finder = Finder::new(fixed_logs_dir.is_some());
+    let app_settings = app.state::<Arc<Settings>>();
+    let mut logs_dir = match fixed_logs_dir {
+        Some(dir) => dir,
+        None => wait_for_logs_dir(&app, &state, &mut finder, &app_settings),
     };
+    let mut folder_lines: Vec<String> = Vec::new();
     let data_dir = data_dir_from(std::env::args()).unwrap_or_else(tracker::store::default_dir);
     // Held while this thread runs: only one process writes the history.
     let _lock = match HistoryLock::acquire(&data_dir) {
@@ -858,9 +905,39 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
     let mut finished_while_behind: Option<GameKey> = None;
 
     let mut polls_until_setup_check: u32 = 0;
+    // The Logs folder to follow from now on, when it is not the one followed.
+    let mut switch_to: Option<PathBuf> = None;
     loop {
+        if let Some(decision) = finder.look(&app, &state, &app_settings) {
+            folder_lines = decision.lines.clone();
+            // Another folder: the player chose one, or the game now runs from
+            // another install.
+            switch_to = decision
+                .in_use
+                .map(|f| f.logs_dir())
+                .filter(|dir| same_folder_key(dir) != same_folder_key(&logs_dir));
+            polls_until_setup_check = 0;
+        }
+        if let Some(next) = switch_to.take() {
+            // What the old log still holds is saved first; games that could
+            // not be saved wait (the switch is tried again next time round).
+            let _ = watcher.poll();
+            if watcher.has_pending() {
+                switch_to = Some(next);
+            } else {
+                logs_dir = next;
+                watcher = Watcher::new(&logs_dir, watcher.into_store());
+                starts = GameStarts::default();
+                finished_while_behind = None;
+                set_status(&app, &state, |s| {
+                    s.logs_dir = Some(logs_dir.display().to_string());
+                    s.session = None;
+                    s.power_log = false;
+                });
+            }
+        }
         if polls_until_setup_check == 0 {
-            refresh_setup(&app, &state, &logs_dir);
+            refresh_setup(&app, &state, &logs_dir, &folder_lines);
             polls_until_setup_check = SETUP_CHECK_EVERY;
         }
         polls_until_setup_check -= 1;
@@ -1219,6 +1296,10 @@ fn main() {
             settings::app_set_system_language,
             settings::app_autostart,
             settings::app_set_autostart,
+            game_folder::game_folder_choose,
+            game_folder::game_folder_reset,
+            game_folder::game_folder_use_running,
+            game_folder::game_folder_decline_running,
             updates::update_status,
             updates::update_set_auto,
             updates::update_check_now,

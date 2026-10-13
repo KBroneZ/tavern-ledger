@@ -66,3 +66,38 @@
 @media (forced-colors: active) {
   .settings-group, .settings select, .first-choice { border: 1.5px solid ButtonText; }
 }
+
+/* The Hearthstone folder (T-579): the setting, the button in the setup box
+   and the notice that the running game is elsewhere. */
+.folder-current { color: var(--text); font-weight: 600; overflow-wrap: anywhere; }
+.setup .setup-folder { margin: 10px 0 0; color: var(--text); font-size: 13.5px; overflow-wrap: anywhere; }
+.setup .setup-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 10px 0 0; }
+.setup .setup-choose { min-height: 44px; padding: 0 18px; font-size: 15px; }
+.setup .link-btn {
+  min-height: 30px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: 600 13.5px var(--font-body);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.setup .link-btn:hover { color: var(--amber); }
+.setup .problem { margin: 8px 0 0; }
+.folder-offer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 12px var(--space) 0;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1.5px var(--amber);
+  color: var(--text);
+  font-size: 14px;
+}
+.folder-offer[hidden] { display: none; }
+.folder-offer p { margin: 0; overflow-wrap: anywhere; }
+.folder-offer-actions { display: flex; gap: 8px; }

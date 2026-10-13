@@ -1,0 +1,131 @@
+---
+// One minion type's page (/minions/murloc/, T-578, D-134): every minion of
+// that type in the tavern's current pool, by tavern tier, built at build
+// time from the card data (lib/minions/load.ts); no fetch, public and
+// indexable. A minion of two types is on both pages, one of every type on
+// all of them. One page per type, never one per minion (D-134).
+import Base from "../../../layouts/Base.astro";
+import Breadcrumb from "../../../components/minions/Breadcrumb.astro";
+import JsonLd from "../../../components/minions/JsonLd.astro";
+import MinionEntry from "../../../components/minions/MinionEntry.astro";
+import "../../../styles/data.css";
+import "../../../styles/minions.css";
+import { href, langPaths, lang, setLang } from "../../../lib/i18n.ts";
+import { hasMinionPages, poolFor } from "../../../lib/minions/load.ts";
+import { mt } from "../../../lib/minions/strings.ts";
+import {
+  breadcrumbLd,
+  countText,
+  itemListLd,
+  minionAnchor,
+  tierGroups,
+  tribeMinions,
+  tribeName,
+  tribePages,
+  tribePath,
+} from "../../../lib/minions/view.ts";
+
+export function getStaticPaths() {
+  if (!hasMinionPages()) return [];
+  // The same pages in both languages: the pool is the same, only the words change.
+  const pages = tribePages(poolFor("en"));
+  return langPaths().flatMap((l) => pages.map((p) => ({ params: { ...l.params, tribe: p.slug }, props: { ...l.props, slug: p.slug } })));
+}
+
+// Every string below is drawn in the page's language (T-508).
+setLang(Astro.props.lang);
+
+const { slug } = Astro.props;
+const pool = poolFor(lang());
+const page = tribePages(pool).find((p) => p.slug === slug)!;
+const none = page.key === null;
+const minions = tribeMinions(pool, page.key);
+const groups = tierGroups(minions);
+const others = tribePages(pool).filter((p) => p.slug !== slug);
+const title = tribeName(slug, "title");
+const inline = tribeName(slug, "inline");
+const count = minions.length;
+const pageTitle = none ? mt("meta.none.title") : mt("meta.tribe.title", { title });
+const description = none ? mt("meta.none.description", { count }) : mt("meta.tribe.description", { count, inline });
+const absolute = (path: string) => new URL(path, Astro.site).href;
+const steps = [
+  { name: mt("crumb.home"), href: href("/") },
+  { name: mt("crumb.minions"), href: href("/minions/") },
+  { name: title, href: href(tribePath(slug)) },
+];
+const self = absolute(href(tribePath(slug)));
+const graph = [
+  breadcrumbLd(steps.map((s) => ({ name: s.name, url: absolute(s.href) }))),
+  itemListLd(
+    title,
+    groups.flatMap((g) => g.minions).map((m) => ({ name: m.name, url: `${self}#${minionAnchor(m.id)}` })),
+  ),
+];
+---
+
+<Base backdrop="gallery" layout="data" title={pageTitle} description={description}>
+  <div class="mn">
+    <Breadcrumb steps={steps} />
+    <header class="mn-head">
+      <p class="kicker">{mt("tribe.kicker")}</p>
+      <h1>{title}</h1>
+      <p class="mn-intro">{none ? mt("tribe.intro.none") : mt("tribe.intro", { inline })} {countText(count)}.</p>
+    </header>
+
+    <nav class="mn-jump" aria-label={mt("tribe.jump")}>
+      <ul>
+        {
+          groups.map((g) => (
+            <li>
+              <a href={`#tier-${g.tier}`}>{mt("tier", { tier: g.tier })}</a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    {
+      groups.map((g) => (
+        <section class="mn-tier" aria-labelledby={`tier-${g.tier}`}>
+          <div class="mn-tier-head">
+            <h2 id={`tier-${g.tier}`}>{mt("tier", { tier: g.tier })}</h2>
+            <span class="mn-pips" aria-hidden="true">
+              {Array.from({ length: g.tier }, () => (
+                <i />
+              ))}
+            </span>
+            <p>{countText(g.minions.length)}</p>
+          </div>
+          <ul class="mn-list">
+            {g.minions.map((m) => (
+              <MinionEntry minion={m} pageKey={page.key} />
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+
+    <nav class="mn-others" aria-labelledby="mn-others">
+      <h2 id="mn-others">{mt("tribe.others")}</h2>
+      <ul>
+        {
+          others.map((p) => (
+            <li>
+              <a href={href(tribePath(p.slug))}>{tribeName(p.slug, "plural")}</a>
+            </li>
+          ))
+        }
+        <li>
+          <a href={href("/minions/")}>{mt("index.title")}</a>
+        </li>
+      </ul>
+    </nav>
+
+    <p class="mn-source">{mt("source", { source: pool.source })}</p>
+    <JsonLd graph={graph} />
+  </div>
+  <script>
+    import { watchPictureFallback } from "../../../lib/data/pictures.ts";
+    watchPictureFallback(document);
+  </script>
+</Base>

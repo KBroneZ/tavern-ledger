@@ -21,6 +21,7 @@ const TURNS_CSS: &str = include_str!("../ui/turns.css");
 const COMPACT_CSS: &str = include_str!("../ui/compact.css");
 const REPLAY_CSS: &str = include_str!("../ui/replay.css");
 const SETTINGS_JS: &str = include_str!("../ui/settings.js");
+const FOLDER_JS: &str = include_str!("../ui/game-folder.js");
 const I18N: &str = include_str!("../ui/i18n.js");
 const COMMON_WORDS: &str = include_str!("../ui/strings/common.js");
 const WINDOW_WORDS: &str = include_str!("../ui/strings/window.js");
@@ -399,6 +400,67 @@ fn settings_are_a_tab_with_a_named_gear_and_labelled_controls() {
     assert!(INDEX.contains("href=\"settings.css\""));
     // A language change comes back to the language control.
     assert!(SETTINGS_JS.contains("$(\"setting-language\").focus();"));
+}
+
+#[test]
+fn the_setup_box_offers_the_folder_picker_and_the_setting_sits_in_settings() {
+    // T-579: the box that says what is wrong has a large button that opens
+    // the picker right there, names the folder it checked and links to the
+    // setting; the running-game notice sits above it, inside <main>.
+    let index = lf(INDEX);
+    let setup = position(&index, "id=\"setup\"");
+    let setup_end = setup + index[setup..].find("</section>").unwrap();
+    for id in [
+        "id=\"setup-folder\"",
+        "id=\"setup-choose\"",
+        "id=\"setup-settings\"",
+        "id=\"setup-folder-problem\" class=\"problem\" role=\"status\"",
+    ] {
+        let at = position(&index, id);
+        assert!(
+            setup < at && at < setup_end,
+            "{id} is outside the setup box"
+        );
+    }
+    let main_start = position(&index, "<main id=\"home\">");
+    let main_end = position(&index, "</main>");
+    let offer = position(&index, "id=\"folder-offer\"");
+    assert!(main_start < offer && offer < position(&index, "id=\"setup\""));
+    assert!(offer < main_end);
+    assert!(index.contains(
+        "id=\"folder-offer\" class=\"folder-offer\" role=\"status\" aria-live=\"polite\" hidden"
+    ));
+    // The setting is a group in the Settings panel with its two buttons.
+    let panel = position(&index, "id=\"panel-settings\"");
+    let end = panel
+        + index[panel..]
+            .find(
+                "
+    </section>
+",
+            )
+            .unwrap();
+    for id in [
+        "id=\"folder-current\"",
+        "id=\"folder-choose\"",
+        "id=\"folder-reset\"",
+    ] {
+        let at = position(&index, id);
+        assert!(panel < at && at < end, "{id} is outside the Settings panel");
+    }
+    assert!(index.contains("id=\"folder-problem\" class=\"problem\" role=\"status\""));
+    assert!(position(&index, "game-folder.js") > position(&index, "app.js"));
+    // The page asks the app to open the picker; it never names a folder.
+    assert!(FOLDER_JS.contains("call(\"game_folder_choose\")"));
+    for (at, _) in FOLDER_JS.match_indices("call(\"game_folder_") {
+        let call = &FOLDER_JS[at..];
+        let close = call.find(')').unwrap();
+        assert!(
+            call[..close].ends_with('"'),
+            "an argument is sent: {}",
+            &call[..=close]
+        );
+    }
 }
 
 #[test]

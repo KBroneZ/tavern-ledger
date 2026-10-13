@@ -1,0 +1,27 @@
+---
+// Where a minion page sits: Home › Minions › a type. The last step is the
+// page itself (aria-current), not a link.
+import { mt } from "../../lib/minions/strings.ts";
+
+interface Props {
+  steps: { name: string; href: string }[];
+}
+
+const { steps } = Astro.props;
+---
+
+<nav class="mn-crumbs" aria-label={mt("crumb.label")}>
+  <ol>
+    {
+      steps.map((step, i) =>
+        i === steps.length - 1 ? (
+          <li aria-current="page">{step.name}</li>
+        ) : (
+          <li>
+            <a href={step.href}>{step.name}</a>
+          </li>
+        ),
+      )
+    }
+  </ol>
+</nav>

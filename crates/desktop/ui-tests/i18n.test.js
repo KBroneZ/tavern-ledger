@@ -184,6 +184,19 @@ test("the setup box's lines are translated with their paths and settings kept", 
   assert.equal(I18n.backend(missing), missing);
 });
 
+test("the folder lines from the app are translated with the path kept", () => {
+  I18n.setLang("es");
+  const none = "Tavern Ledger could not find Hearthstone on this PC. Choose the folder where the game is installed, or start the game once.";
+  assert.match(I18n.backend(none), /^Tavern Ledger no ha encontrado Hearthstone en este PC\./);
+  // As tracker::setup::folder_messages writes it, the reason a sentence of its own.
+  const gone = "The Hearthstone folder you chose (E:\Program Files (x86)\Hearthstone) cannot be used. That folder was not found. Choose it again, or go back to finding it automatically.";
+  assert.equal(I18n.backend(gone), "La carpeta de Hearthstone que elegiste (E:\Program Files (x86)\Hearthstone) no se puede usar. No se ha encontrado esa carpeta. Elígela de nuevo o vuelve a la búsqueda automática.");
+  const refused = "Hearthstone.exe is not in that folder, and it has no Logs folder with game sessions.";
+  assert.equal(I18n.backend(refused), "Hearthstone.exe no está en esa carpeta y no tiene una carpeta Logs con partidas.");
+  I18n.setLang("en");
+  assert.equal(I18n.backend(gone), gone);
+});
+
 test("English dates follow the PC's own English, en-GB when it has none", () => {
   const d = new Date(2026, 9, 9);
   I18n.setLang("en");

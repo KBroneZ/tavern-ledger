@@ -40,9 +40,9 @@
 .replay-side { display: grid; grid-template-columns: 124px minmax(0, 1fr); align-items: center; gap: 10px; }
 .replay-side.own { padding-top: 14px; border-top: 1px dashed var(--line-soft); }
 /* Both boards of 7 fit at any width: a minion is a seventh of its board
-   (container units), from 28px to 72px, and its Attack and Health scale
-   with it (T-560). */
-.replay-stage { --replay-gap: 10px; }
+   (container units), from 28px to 104px (T-575), and its Attack, Health and
+   marks scale with it. */
+.replay-stage { --replay-gap: 12px; }
 .replay-board {
   container-type: inline-size;
   display: flex;
@@ -76,7 +76,7 @@
    place are Web Animations on the minion (replay.js), so no rule here sets a
    minion's own transform; the marks animate its parts. */
 .replay-minion {
-  --tile: clamp(28px, calc((100cqi - 6 * var(--replay-gap)) / 7), 72px);
+  --tile: clamp(28px, calc((100cqi - 6 * var(--replay-gap)) / 7), 104px);
   position: relative;
   display: grid;
   justify-items: center;
@@ -101,30 +101,111 @@
   inset: auto -4px -4px;
   display: flex;
   justify-content: space-between;
-  font: 800 clamp(10px, calc(var(--tile) * 0.2), 14px)/1 var(--font-display);
+  font: 800 clamp(10px, calc(var(--tile) * 0.19), 18px)/1 var(--font-display);
   font-variant-numeric: tabular-nums;
 }
 .replay-atk, .replay-hp {
   display: grid;
   place-items: center;
-  min-width: clamp(15px, calc(var(--tile) * 0.36), 24px);
-  height: clamp(15px, calc(var(--tile) * 0.36), 24px);
+  min-width: clamp(15px, calc(var(--tile) * 0.34), 32px);
+  height: clamp(15px, calc(var(--tile) * 0.34), 32px);
   padding: 0 2px;
   border: 1px solid rgb(0 0 0 / 0.6);
 }
 .replay-atk { border-radius: 6px 2px; background: #ffcf5a; color: #1d1208; }
 /* White on this red is 6.5:1 (WCAG 1.4.3). */
 .replay-hp { border-radius: 50% 50% 50% 6px; background: #b3261e; color: #fff; }
-.replay-minion.golden .replay-art { box-shadow: 0 0 0 2px var(--amber), 0 0 0 4px rgb(0 0 0 / 0.5), 0 4px 10px rgb(0 0 0 / 0.4); }
+/* Golden: a thick bright gold frame around the oval with a soft glow, as
+   the game draws a golden minion (the Divine Shield bubble stays pale). */
+.replay-minion.golden .replay-art {
+  box-shadow:
+    0 0 0 2px #4a2c06,
+    0 0 0 calc(2px + max(3px, var(--tile) * 0.06)) #ffcf4a,
+    0 0 0 calc(3px + max(3px, var(--tile) * 0.06)) #8a5a12,
+    0 0 16px 4px rgb(255 196 64 / 0.55);
+}
+/* Divine Shield: a golden bubble over the portrait, as in the game. */
 .replay-minion.shield .replay-frame::after {
   content: "";
   position: absolute;
   inset: -6px;
+  z-index: 1;
   border: 3px solid #fff1b8;
   border-radius: 50%;
-  box-shadow: 0 0 14px rgb(255 241 184 / 0.75), inset 0 0 8px rgb(255 241 184 / 0.5);
+  background: radial-gradient(ellipse at 35% 25%, rgb(255 250 225 / 0.45), rgb(255 214 110 / 0.16) 45%, rgb(255 200 80 / 0.28) 100%);
+  box-shadow: 0 0 14px rgb(255 221 130 / 0.8), inset 0 0 12px rgb(255 236 170 / 0.6);
   pointer-events: none;
 }
+
+/* Keyword marks (T-575), the website's own (replay.css there): Taunt a stone
+   shield behind the portrait, Reborn a ghostly blue glow, Venomous a green
+   drop, Stealth a smoky veil, Windfury a swirl. A mark shows while the token
+   has the keyword, and pops in or fades out on the step the log gives or
+   takes it. Our own shapes: no game art but the portraits (D-074). */
+.replay-keys { position: absolute; inset: 0 0 auto; height: calc(var(--tile) * 1.2); pointer-events: none; }
+.replay-k { position: absolute; display: none; }
+.replay-k-taunt {
+  inset: calc(var(--tile) * -0.12) calc(var(--tile) * -0.13) calc(var(--tile) * -0.3);
+  z-index: 0;
+  clip-path: polygon(4% 6%, 18% 0, 50% 3%, 82% 0, 96% 6%, 100% 40%, 94% 62%, 78% 82%, 50% 100%, 22% 82%, 6% 62%, 0 40%);
+  background: linear-gradient(180deg, #d9d4ca, #8d877d 55%, #5d5850);
+  filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.6));
+}
+.replay-k-taunt::before {
+  content: "";
+  position: absolute;
+  inset: 7% 8% 9%;
+  clip-path: inherit;
+  background: radial-gradient(ellipse 60% 40% at 50% 20%, rgb(255 255 255 / 0.18), transparent), linear-gradient(180deg, #8f897f, #6b665e 60%, #4a463f);
+}
+.replay-k-venomous {
+  top: 2%;
+  right: -4%;
+  z-index: 2;
+  width: calc(var(--tile) * 0.3);
+  height: calc(var(--tile) * 0.3);
+  border: 1px solid rgb(0 0 0 / 0.7);
+  border-radius: 0 50% 50% 50%;
+  background: radial-gradient(circle at 60% 60%, #b6ff8a, #3fae2a 55%, #1d6514);
+  box-shadow: 0 0 8px rgb(110 230 80 / 0.7);
+  rotate: 45deg;
+}
+.replay-k-reborn { inset: -5px; z-index: 0; border-radius: 50%; box-shadow: 0 0 0 2px rgb(150 215 255 / 0.85), 0 0 18px 5px rgb(110 190 255 / 0.65); background: radial-gradient(closest-side, transparent 70%, rgb(140 205 255 / 0.35)); }
+.replay-k-stealth {
+  inset: 0;
+  z-index: 1;
+  border-radius: 50%;
+  background: radial-gradient(ellipse 50% 35% at 30% 30%, rgb(120 110 150 / 0.55), transparent), radial-gradient(ellipse 45% 40% at 70% 65%, rgb(90 85 120 / 0.6), transparent), radial-gradient(closest-side, rgb(40 36 60 / 0.25), rgb(30 26 46 / 0.55));
+}
+.replay-k-windfury {
+  inset: 18% -10% -8%;
+  z-index: 2;
+  border: 3px solid transparent;
+  border-bottom-color: rgb(200 240 255 / 0.9);
+  border-left-color: rgb(200 240 255 / 0.55);
+  border-radius: 50%;
+  filter: drop-shadow(0 0 3px rgb(140 220 255 / 0.9));
+  rotate: -18deg;
+}
+.replay-minion:is(.has-taunt, .loses-taunt) .replay-k-taunt,
+.replay-minion:is(.has-venomous, .loses-venomous) .replay-k-venomous,
+.replay-minion:is(.has-reborn, .loses-reborn) .replay-k-reborn,
+.replay-minion:is(.has-stealth, .loses-stealth) .replay-k-stealth,
+.replay-minion:is(.has-windfury, .loses-windfury) .replay-k-windfury { display: block; }
+.replay-minion.gains-taunt .replay-k-taunt,
+.replay-minion.gains-venomous .replay-k-venomous,
+.replay-minion.gains-reborn .replay-k-reborn,
+.replay-minion.gains-stealth .replay-k-stealth,
+.replay-minion.gains-windfury .replay-k-windfury { animation: replay-mark-in 420ms cubic-bezier(0.23, 1, 0.32, 1); }
+.replay-minion.loses-taunt .replay-k-taunt,
+.replay-minion.loses-venomous .replay-k-venomous,
+.replay-minion.loses-reborn .replay-k-reborn,
+.replay-minion.loses-stealth .replay-k-stealth,
+.replay-minion.loses-windfury .replay-k-windfury { animation: replay-mark-out 420ms cubic-bezier(0.23, 1, 0.32, 1) forwards; }
+/* A mark just lost stays faded on its step when nothing moves. */
+.replay-stage.still .replay-minion:is(.loses-taunt, .loses-venomous, .loses-reborn, .loses-stealth, .loses-windfury) .replay-k { opacity: 0.25; }
+@keyframes replay-mark-in { from { opacity: 0; scale: 1.35; } 60% { opacity: 1; } }
+@keyframes replay-mark-out { to { opacity: 0; scale: 1.25; } }
 .replay-minion.popped .replay-frame::after {
   content: "";
   position: absolute;
@@ -157,23 +238,33 @@
 /* A summon slides in from its own side of the table. */
 .replay-side.own .replay-minion.summoned :is(.replay-frame, .replay-stats, .replay-gifts) { animation: replay-in-own 380ms cubic-bezier(0.23, 1, 0.32, 1); }
 .replay-side.opponent .replay-minion.summoned :is(.replay-frame, .replay-stats, .replay-gifts) { animation: replay-in-theirs 380ms cubic-bezier(0.23, 1, 0.32, 1); }
-/* The damage taken, a red burst on the portrait as in the game. */
-.replay-hurt {
+/* The damage taken: a big burst on the portrait, orange to red with a dark
+   rim and a white number outlined in black, as the game's splat (the
+   website's, our own shape); a buff or a heal is the same burst in green. */
+.replay-hurt, .replay-gain {
   position: absolute;
-  top: 22%;
+  top: 46%;
   left: 50%;
-  z-index: 1;
-  translate: -50% 0;
-  padding: 3px 7px;
-  border-radius: 46% 54% 50% 50% / 55% 45% 55% 45%;
-  background: radial-gradient(circle at 40% 35%, #e0412f, #8f1a12 70%);
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: clamp(26px, calc(var(--tile) * 0.66), 70px);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  isolation: isolate;
   color: #fff;
-  font: 800 13px/1 var(--font-display);
+  font: 900 clamp(12px, calc(var(--tile) * 0.25), 26px)/1 var(--font-display);
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 2px rgb(0 0 0 / 0.7);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.55);
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 3px rgb(0 0 0 / 0.8);
   animation: replay-hurt 320ms cubic-bezier(0.23, 1, 0.32, 1);
+  cursor: help;
 }
+.replay-hurt::before, .replay-hurt::after, .replay-gain::before, .replay-gain::after { content: ""; position: absolute; z-index: -1; clip-path: polygon(50% 0%, 59% 17%, 75% 7%, 74% 26%, 93% 25%, 83% 41%, 100% 50%, 83% 59%, 93% 75%, 74% 74%, 75% 93%, 59% 83%, 50% 100%, 41% 83%, 25% 93%, 26% 74%, 7% 75%, 17% 59%, 0% 50%, 17% 41%, 7% 25%, 26% 26%, 25% 7%, 41% 17%); }
+.replay-hurt::before, .replay-gain::before { inset: -8%; background: #1a0805; }
+.replay-hurt::after { inset: 0; background: radial-gradient(circle at 45% 40%, #ffd27a, #ff7a1f 40%, #d4301a 70%, #8f1a12); }
+.replay-gain { font-size: clamp(10px, calc(var(--tile) * 0.17), 17px); letter-spacing: -0.02em; }
+.replay-gain::before { background: #06200b; }
+.replay-gain::after { inset: 0; background: radial-gradient(circle at 45% 40%, #d8ffb0, #5fd04a 45%, #23862a 75%, #0f4d17); }
 @keyframes replay-in-own { from { opacity: 0; transform: translateY(14px) scale(0.9); } }
 @keyframes replay-in-theirs { from { opacity: 0; transform: translateY(-14px) scale(0.9); } }
 @keyframes replay-hurt { from { opacity: 0; transform: scale(0.6); } 60% { opacity: 1; transform: scale(1.12); } }
@@ -243,6 +334,7 @@
   .replay-chip { transition: none; }
   .replay-stage :is(*, *::before, *::after) { animation: none !important; transition: none !important; }
   .replay-minion.dying .replay-frame { transform: none; }
+  .replay-minion:is(.loses-taunt, .loses-venomous, .loses-reborn, .loses-stealth, .loses-windfury) .replay-k { opacity: 0.25; }
 }
 @media (forced-colors: active) {
   .replay-minion.attacker .replay-art, .replay-minion.defender .replay-art { outline: 3px solid Highlight; }

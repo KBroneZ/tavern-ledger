@@ -34,10 +34,11 @@ import contract from "./report_keys.json" with { type: "json" };
  * same key and type, D-061; 7: each round's combat replay, parser revision 8,
  * T-215, D-099; 8: Dark Gifts on board and replay minions, parser revision
  * 9, T-528, D-107; 9: each board's game-long values, parser revision 10,
- * T-610, D-122). Every answer carries it, and the desktop app
+ * T-610, D-122; 10: each replay's beats, damage sources and keyword events,
+ * parser revision 13, T-575). Every answer carries it, and the desktop app
  * retries a game this server refused once when it sees a higher number (D-047).
  */
-export const VALIDATOR_VERSION = 9;
+export const VALIDATOR_VERSION = 10;
 
 export const SESSION_PATTERN = /^Hearthstone_(\d{4})_(\d{2})_(\d{2})_\d{2}_\d{2}_\d{2}$/;
 const PATH_PATTERN = /\/v1\/games\/(Hearthstone_\d{4}(?:_\d{2}){5})\/([1-9][0-9]{0,3})$/;
@@ -166,7 +167,7 @@ const KEYS: Record<string, string[]> = {
     "result",
     "replay",
   ],
-  "report.rounds[].replay": ["minions", "start", "events", "complete"],
+  "report.rounds[].replay": ["minions", "start", "events", "complete", "beats"],
   "report.rounds[].replay.minions[]": [
     "side",
     "card_id",
@@ -192,6 +193,7 @@ const KEYS: Record<string, string[]> = {
     "card_id",
     "source",
     "hero",
+    "keyword",
   ],
   "report.rounds[].entries[]": ["side", "player_id", "hero", "board", "values"],
   "report.rounds[].entries[].values": [

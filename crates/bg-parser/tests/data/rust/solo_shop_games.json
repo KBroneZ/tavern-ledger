@@ -64,6 +64,7 @@
           "minions": [],
           "start": 0,
           "events": [],
+          "beats": [],
           "complete": true
         }
       },
@@ -149,6 +150,7 @@
           ],
           "start": 3,
           "events": [],
+          "beats": [],
           "complete": true
         }
       }
@@ -403,6 +405,7 @@
           "minions": [],
           "start": 0,
           "events": [],
+          "beats": [],
           "complete": true
         }
       },
@@ -485,6 +488,7 @@
           ],
           "start": 3,
           "events": [],
+          "beats": [],
           "complete": false
         }
       }

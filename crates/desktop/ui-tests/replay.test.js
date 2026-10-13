@@ -154,15 +154,18 @@ test("the heroes and the result of a combat, as the recap has them", () => {
   assert.deepEqual(TLReplay.outcomeOf(recap, 9, heroText), { outcome: "unknown", source: "unknown", who: null });
 });
 
-test("every replay of the user's two real games plays to the end", () => {
+test("every replay of the user's real games plays to the end, a beat at a time", () => {
   const dir = path.join(__dirname, "..", "..", "bg-parser", "tests", "data", "real");
   let played = 0;
-  for (const file of ["b253216_solo.json", "b253216_duos.json"]) {
+  let together = 0;
+  for (const file of ["b253216_solo.json", "b253216_duos.json", "b253216_duos_rally.json"]) {
     const [game] = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8"));
     for (const c of TLReplay.combats(game).shown) {
       const f = TLReplay.frames(c.replay);
       assert.equal(f.skipped, 0, `${file} turn ${c.round}`);
-      assert.equal(f.length, c.replay.events.length + 1);
+      assert.equal(f.length, TLReplay.steps(c.replay).length + 1);
+      assert.equal(f.slice(1).reduce((n, x) => n + x.events.length, 0), c.replay.events.length);
+      together += f.filter((x) => x.events.length > 1).length;
       const round = game.rounds.find((r) => r.number === c.round);
       const last = f[f.length - 1];
       const alive = (side) => last[side].filter((t) => !t.dying).length;
@@ -171,7 +174,8 @@ test("every replay of the user's two real games plays to the end", () => {
       played += 1;
     }
   }
-  assert.equal(played, 17);
+  assert.ok(played > 17, `${played}`);
+  assert.ok(together > 100, `${together} steps play several events at once`);
 });
 
 test("frames keep each minion's Dark Gifts through the combat (T-528)", () => {
@@ -224,7 +228,7 @@ test("motion: the app moves with the website's numbers", () => {
   const site = web("replay.ts") + web("replayMotion.ts");
   const app = fs.readFileSync(path.join(__dirname, "..", "ui", "replay.js"), "utf8");
   const value = (src, name) => new RegExp(String.raw`const ${name}(?::[^=]+)? = ([^;]+);`).exec(src)?.[1];
-  for (const name of ["AT_IMPACT_MS", "ATTACK_MS", "HIT_MS", "SLIDE_MS", "REACH", "WIND_UP_PX", "EASE_OUT", "EASE_IN_OUT"]) {
+  for (const name of ["AT_IMPACT_MS", "ATTACK_MS", "HIT_MS", "SLIDE_MS", "STOP", "WIND_UP_PX", "EASE_OUT", "EASE_IN_OUT"]) {
     assert.ok(value(site, name), `${name} on the website`);
     assert.equal(value(app, name), value(site, name), name);
   }
@@ -291,4 +295,99 @@ test("both boards coming in at once each fill from the left; after the first att
   assert.deepEqual(cards(last.opponent), ["IN_FOE_1", "IN_FOE_2"]);
   assert.deepEqual(cards(last.own), ["TOKEN", "IN_OWN_1", "IN_OWN_2"]);
   assert.equal(f.skipped, 1, "a step naming a minion of a board that left is not played");
+});
+
+// Parser revision 13 (T-575): beats, damage sources and keyword marks, the
+// same rules as the website (web/test/unit/gameReplayBeats.test.ts).
+function rev13() {
+  return {
+    minions: [m("own", "OWN_RALLY", 2, 3, 1), m("own", "OWN_MATE", 2, 3, 2), m("opponent", "FOE_A", 2, 3, 1, { keywords: ["taunt"] }), m("opponent", "FOE_B", 2, 3, 2)],
+    start: 4,
+    events: [
+      { kind: "trigger", trigger: "start_of_combat", side: "own", card_id: "OWN_MATE", source: 1 },
+      { kind: "stats", minion: 0, atk: 4, health: 5 },
+      { kind: "stats", minion: 1, atk: 4, health: 5 },
+      { kind: "attack", attacker: 0, defender: 2 },
+      { kind: "trigger", trigger: "rally", side: "own", card_id: "OWN_RALLY", source: 0 },
+      { kind: "keyword", minion: 0, keyword: "venomous", on: true },
+      { kind: "keyword", minion: 1, keyword: "venomous", on: true },
+      { kind: "damage", minion: 2, amount: 4, health: -1, source: { how: "attack", minion: 0 } },
+      { kind: "damage", minion: 0, amount: 2, health: 3, source: { how: "attack", minion: 2 } },
+      { kind: "keyword", minion: 0, keyword: "venomous", on: false },
+      { kind: "death", minion: 2 },
+      { kind: "damage", minion: 3, amount: 1, health: 2, source: { how: "hero_power", card_id: "FOE_POWER", side: "opponent" } },
+      { kind: "damage", minion: 3, amount: 1, health: 1, source: null },
+    ],
+    beats: [3, 1, 3, 3, 1, 1, 1],
+    complete: true,
+  };
+}
+
+test("revision 13: a beat plays at once, keywords come and go, and a beat lasts each kind once", () => {
+  const f = TLReplay.frames(rev13());
+  assert.equal(f.length, 8);
+  assert.deepEqual([f[1].own[0].buffed, f[1].own[1].buffed], [true, true]);
+  assert.deepEqual(f[3].own.map((x) => x.gained), [["venomous"], ["venomous"]]);
+  assert.deepEqual(f[4].own[0].lost, ["venomous"]);
+  assert.deepEqual(f[4].own[0].keywords, []);
+  assert.deepEqual([f[4].opponent[0].hurt, f[4].own[0].hurt], [4, 2]);
+  const ms = TLReplay.frameBeats(f);
+  const B = TLReplay.BEAT_MS;
+  assert.deepEqual(ms.slice(0, 6), [B.start, B.trigger + B.stats, B.attack, B.trigger + B.keyword, 2 * B.damage + B.keyword, B.death]);
+  const old = { ...rev13(), beats: undefined };
+  const g = TLReplay.frames(old);
+  assert.equal(g.length, old.events.length + 1, "an older record: one event per step");
+});
+
+test("revision 13: each damage says where it came from", () => {
+  const r = rev13();
+  const names = ["Rally Murloc", "Mate", "Foe A", "Foe B"];
+  const name = (ref) => (r.minions[ref].side === "own" ? `your ${names[ref]}` : `their ${names[ref]}`);
+  const hero = (id) => (id === "FOE_POWER" ? "Their Power" : id);
+  const f = TLReplay.frames(r);
+  assert.equal(TLReplay.frameWords(f[3], name, hero), "Rally: your Rally Murloc. Your Rally Murloc gets Venomous. Your Mate gets Venomous");
+  assert.equal(TLReplay.frameWords(f[4], name, hero), "Their Foe A takes 4 damage from your Rally Murloc (attack). Your Rally Murloc takes 2 damage from their Foe A (attack; 3 health left). Your Rally Murloc loses Venomous");
+  assert.equal(TLReplay.frameWords(f[6], name, hero), "Their Foe B takes 1 damage from their Their Power (hero power; 2 health left)");
+  assert.equal(TLReplay.frameWords(f[7], name, hero), "Their Foe B takes 1 damage from an unknown source (1 health left)");
+});
+
+test("revision 13: the website and the app group the same steps", () => {
+  const site = fs.readFileSync(path.join(__dirname, "..", "..", "..", "web", "src", "lib", "game", "replay.ts"), "utf8");
+  // Both merge the opening's start-of-combat buffs and keep an attack alone.
+  assert.match(site, /onlyBuffs\(last\) && onlyBuffs\(run\)/);
+  const sot = (side, source) => ({ kind: "trigger", trigger: "start_of_combat", side, card_id: "SOT", source });
+  const r = {
+    minions: [m("own", "A", 1, 1, 1), m("own", "B", 1, 1, 2), m("opponent", "C", 1, 1, 1), m("opponent", "D", 1, 1, 2)],
+    start: 4,
+    events: [
+      sot("own", 0),
+      { kind: "stats", minion: 0, atk: 3, health: 4 },
+      sot("opponent", 2),
+      { kind: "stats", minion: 2, atk: 3, health: 4 },
+      { kind: "stats", minion: 3, atk: 3, health: 4 },
+      sot("opponent", 3),
+      { kind: "damage", minion: 1, amount: 1, health: 2, source: { how: "start_of_combat", minion: 3 } },
+      { kind: "attack", attacker: 0, defender: 2 },
+      sot("own", 1),
+      { kind: "stats", minion: 1, atk: 5, health: 5 },
+      sot("own", 0),
+      { kind: "stats", minion: 0, atk: 5, health: 5 },
+    ],
+    beats: [2, 3, 2, 1, 2, 2],
+    complete: true,
+  };
+  assert.deepEqual(TLReplay.steps(r).map((s) => s.length), [5, 2, 1, 2, 2], "the same as the website's test");
+});
+
+test("revision 13: a buff marks what it gave, and every token has the same box", () => {
+  const f = TLReplay.frames(rev13());
+  assert.deepEqual(f[1].own.map((x) => x.gain), [{ atk: 2, health: 2 }, { atk: 2, health: 2 }]);
+  const css = fs.readFileSync(path.join(__dirname, "..", "ui", "replay.css"), "utf8");
+  const rule = (selector) => {
+    const at = css.indexOf(`\n${selector} {`);
+    assert.ok(at >= 0, selector);
+    return css.slice(at, css.indexOf("}", at));
+  };
+  for (const selector of [".replay-gifts", ".replay-keys", ".replay-stats", ".replay-hurt, .replay-gain"]) assert.match(rule(selector), /position: absolute/, selector);
+  assert.match(rule(".replay-minion"), /width: var\(--tile\)/);
 });

@@ -45,10 +45,13 @@ const SINKS: [name: string, pattern: RegExp][] = [
 
 /**
  * The files allowed one of the sinks above, each with the sinks it may use.
- * Empty on purpose: a new entry is a decision, made in a review, not a fix
- * to a failing test.
+ * A new entry is a decision, made in a review, not a fix to a failing test.
+ * - JsonLd.astro (T-578, D-134): the minion pages' structured data, a
+ *   <script type="application/ld+json"> data block the browser never runs.
+ *   Its only input is jsonLd(), JSON.stringify with every "<" escaped, so
+ *   no value can end the block (minionView.test.ts, build test).
  */
-const ALLOWED: ReadonlyMap<string, readonly string[]> = new Map();
+const ALLOWED: ReadonlyMap<string, readonly string[]> = new Map([["src/components/minions/JsonLd.astro", ["set:html"]]]);
 
 /** The sinks a text uses that its file is not allowed (a file name is relative to web/, with slashes). */
 function sinksIn(file: string, text: string): string[] {
@@ -83,7 +86,8 @@ test("the sink scan catches each sink and nothing else", () => {
   assert.deepEqual(sinksIn("src/x.ts", "document . writeln(x)"), ["document.write"]);
   assert.deepEqual(sinksIn("src/x.ts", "setTimeout(() => run(), 0); el.textContent = x"), []);
   assert.deepEqual(sinksIn("src/ok.ts", "el.innerHTML = x"), ["innerHTML"], "not allow-listed here");
-  assert.equal(ALLOWED.size, 0, "no file is allowed a sink today");
+  assert.deepEqual([...ALLOWED.keys()], ["src/components/minions/JsonLd.astro"], "only the structured data block is allowed a sink");
+  assert.deepEqual(sinksIn("src/components/minions/JsonLd.astro", "<div set:html={x} /> el.innerHTML = x"), ["innerHTML"], "and only set:html");
 });
 
 test("no service key or secret in the site", () => {
