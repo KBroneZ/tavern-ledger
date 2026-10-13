@@ -2,7 +2,9 @@
 
 *Traducción del original en inglés. Si esta versión y la [versión en inglés](https://tavernledger.net/privacy/) dicen cosas distintas, prevalece la inglesa.*
 
-Última actualización: 12 de octubre de 2026
+Última actualización: 13 de octubre de 2026
+
+**Qué cambió el 13 de octubre de 2026:** la página del perfil público ahora pide a los buscadores que no la indexen, como ya hacían las clasificaciones (apartado 4, «Perfiles públicos y clasificaciones»). Nada más cambia.
 
 **Qué cambió el 12 de octubre de 2026 (más tarde ese día):** un interruptor nuevo en la página de tu cuenta, desactivado por defecto, «Permitir que se usen mis partidas para mejorar el simulador»: si lo activas, los tableros y las repeticiones de los combates de tus partidas subidas se pueden usar para medir y corregir el simulador de combates, solo como totales de muchas partidas y nunca por jugador (apartado 4, «Mejorar el simulador»), mientras el interruptor esté activado y se conserven los registros completos (apartado 6); el interruptor está en la descarga y se borra con tu cuenta (apartado 7). Nada cambia para una cuenta que lo deje desactivado.
 
@@ -68,7 +70,7 @@ Para tener una cuenta necesitamos tu correo electrónico y una contraseña; sin 
 
 ### Perfiles públicos y clasificaciones
 
-**Perfil público.** Si lo activas, cualquier persona en internet puede ver tu nombre visible, leer todas las partidas que subiste (completas mientras se guarde su registro completo, apartado 6, y su resumen después), y enlazarlas o copiarlas. Al desactivarlo deja de haber acceso a través de nuestro sitio; las copias que otros ya hayan hecho quedan fuera de nuestro alcance.
+**Perfil público.** Si lo activas, cualquier persona en internet puede ver tu nombre visible, leer todas las partidas que subiste (completas mientras se guarde su registro completo, apartado 6, y su resumen después), y enlazarlas o copiarlas. Al desactivarlo deja de haber acceso a través de nuestro sitio; las copias que otros ya hayan hecho quedan fuera de nuestro alcance. La página del perfil pide a los buscadores que no la indexen, pero es una petición, no una protección: cualquiera con la dirección puede abrirla.
 
 **Clasificaciones** (`/leaderboards/`). Mientras tu perfil sea público y tenga un nombre visible, también puedes aparecer en las clasificaciones públicas, que ordenan a los jugadores según sus partidas subidas, por modo (Solo, Dúos) y periodo (los últimos 7 días, los últimos 30 días, desde siempre). Una clasificación muestra tu nombre visible con un enlace a tu perfil público, tu posición en la clasificación, el número por el que se ordena (por ejemplo tu puesto medio, tu tasa de top 4 o top 2, tu tasa de victorias, partidas jugadas, tu racha más larga en la mitad superior, puesto medio con un héroe y ese héroe, acciones por minuto, oro más allá de los ingresos, refrescos o triples por partida, tu tablero más grande o más esbirros dorados) y en cuántas partidas se basa. Apareces en una clasificación en cuanto tienes una partida terminada en ese modo y periodo que tenga ese número (una con el héroe para la clasificación por héroe); un número de menos de 20 partidas (10 con el héroe) lleva la marca «pocas partidas». Los números son autodeclarados: proceden de las partidas que subió tu aplicación; nuestro servidor comprueba el registro de cada partida y deja fuera las partidas con valores que ninguna partida real puede tener, pero no puede demostrar que una partida se jugara tal como se subió. Las clasificaciones nunca muestran tu correo electrónico, BattleTag, puntuación ni los nombres de otros jugadores. La página pide a los buscadores que no la indexen.
 

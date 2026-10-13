@@ -4,12 +4,16 @@
 // forms, no scripts (until the hosted Supabase project exists).
 import { ART_ORIGIN } from "./data/pictures.ts";
 
-/** The one source the simulator page and its worker add to script-src (D-090). */
+/** The one source the simulator's worker adds to script-src (D-090). */
 export const WASM_SOURCE = "'wasm-unsafe-eval'";
-/** The pages that get it: the simulator in each language. Nothing else. */
-export const WASM_PAGES: readonly string[] = ["/simulator/", "/es/simulator/"];
-/** The simulator's worker script under /_astro/ (Vite names it after its source, simWorker.ts). */
+/**
+ * The simulator's worker script under /_astro/ (Vite names it after its
+ * source, simWorker.ts). It alone gets WASM_SOURCE: the worker compiles the
+ * engine, no page does.
+ */
 export const WASM_WORKER = /^simWorker-[A-Za-z0-9_-]+\.js$/;
+/** Pages about one account: the browser and the CDN must not keep a copy (Cache-Control: no-store). */
+export const NO_STORE_PAGES: readonly string[] = ["/account/", "/es/account/", "/me/", "/es/me/"];
 
 export interface SiteConfig {
   url: string;
@@ -95,7 +99,7 @@ export function signupsOpen(env: ConfigSource): boolean {
  * closed there is no script, form, connection or outside picture at all. frame-ancestors
  * only works as a header: the build writes it to dist/_headers (astro.config.mjs).
  *
- * `wasm` is for the simulator page and its worker only (T-606, D-089, D-090):
+ * `wasm` is for the simulator's worker script only (T-606, D-089, D-090):
  * script-src also gets 'wasm-unsafe-eval', which lets a script compile
  * WebAssembly and nothing else (no eval, no inline script). Every other
  * directive stays the same.

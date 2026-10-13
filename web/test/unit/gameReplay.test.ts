@@ -162,7 +162,7 @@ test("record reader: a malformed replay is one unreadable value; the rest of the
 });
 
 test("step model: the start, then one board state per step (the app's rule)", () => {
-  const p = playback(good(longReplay()), { own: "SYN_HERO_A", opponent: "SYN_HERO_C" });
+  const p = playback(good(longReplay()), { own: "BG22_HERO_002", opponent: "BG22_HERO_000" });
   const f = p.frames;
   assert.equal(p.skipped, 0);
   assert.equal(f.length, 25);
@@ -173,7 +173,7 @@ test("step model: the start, then one board state per step (the app's rule)", ()
   assert.equal(f[0].own[1].golden, true);
   assert.deepEqual(f[0].own[1].gifts, ["SYN_GIFT_1"], "Dark Gifts as the viewer draws them");
   assert.equal(f[0].opponent[1].giftUnknown, true);
-  assert.deepEqual(f[0].heroes, { own: "SYN_HERO_A", opponent: "SYN_HERO_C" });
+  assert.deepEqual(f[0].heroes, { own: "BG22_HERO_002", opponent: "BG22_HERO_000" });
   // A trigger from a trinket marks no minion; a buff does.
   assert.deepEqual(f[1].opponent.map((t) => t.marks), [{}, {}]);
   assert.deepEqual([f[2].opponent[0].atk, f[2].opponent[0].health, f[2].opponent[0].marks.buffed], [6, 9, true]);
@@ -289,9 +289,9 @@ test("game view: each round with a replay, its result and opponent; malformed on
     [2, "loss", true, true],
     [3, "unknown", false, false],
   ]);
-  assert.equal(view.replays[1].opponents[0].name, "Moss Witch");
-  assert.equal(view.replays[1].heroes.own, "SYN_HERO_A");
-  assert.equal(view.replays[1].heroes.opponent, "SYN_HERO_C");
+  assert.equal(view.replays[1].opponents[0].name, "Tavish Stormpike");
+  assert.equal(view.replays[1].heroes.own, "BG22_HERO_002");
+  assert.equal(view.replays[1].heroes.opponent, "BG22_HERO_000");
   // A round without a replay shows nothing new.
   delete (report.rounds as Json[])[2].replay;
   const again = readRecord(record(report), SESSION, INDEX);
@@ -344,8 +344,8 @@ test("step model: a summon goes to its slot, the left end when the log has none 
 
 test("step model: a Duos board coming in with no hero named is an unknown hero", () => {
   const r = good(edited((x) => (x.events = [{ kind: "board_in", side: "own", hero: null }])));
-  const f = playback(r, { own: "SYN_HERO_A", opponent: "SYN_HERO_C" }).frames;
-  assert.deepEqual(f[1].heroes, { own: null, opponent: "SYN_HERO_C" });
+  const f = playback(r, { own: "BG22_HERO_002", opponent: "BG22_HERO_000" }).frames;
+  assert.deepEqual(f[1].heroes, { own: null, opponent: "BG22_HERO_000" });
 });
 
 test("playback control: play, pause, steps, the ends and reduced motion", () => {

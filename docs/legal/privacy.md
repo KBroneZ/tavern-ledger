@@ -1,6 +1,8 @@
 # Privacy policy
 
-Last updated: 12 October 2026
+Last updated: 13 October 2026
+
+**What changed on 13 October 2026:** the public profile page now asks search engines not to index it, as the leaderboards already did (section 4, "Public profiles and leaderboards"). Nothing else changes.
 
 **What changed on 12 October 2026 (later that day):** a new switch on your account page, off by default, "Let my games be used to improve the simulator": if you turn it on, the boards and combat replays of your uploaded games can be used to measure and fix the combat simulator, only as totals over many games and never per player (section 4, "Improving the simulator"), for as long as the switch is on and the full records are kept (section 6); the switch is in the download and goes with your account (section 7). Nothing changes for an account that leaves it off.
 
@@ -64,7 +66,7 @@ We do **not** collect player names, BattleTags, Battle.net accounts, ratings or 
 
 ### Public profiles and leaderboards
 
-**Public profile.** If you turn it on, anyone on the internet can see your display name and read every game you uploaded (in full while its full record is kept, section 6, and its summary after that), and can link to or copy them. Turning it off stops access through our site; copies others already made are out of our reach.
+**Public profile.** If you turn it on, anyone on the internet can see your display name and read every game you uploaded (in full while its full record is kept, section 6, and its summary after that), and can link to or copy them. Turning it off stops access through our site; copies others already made are out of our reach. The profile page asks search engines not to index it, but that is a request, not protection: anyone with the address can open it.
 
 **Leaderboards** (`/leaderboards/`). While your profile is public and has a display name, you can also appear on the public leaderboards, which rank players on their uploaded games, per mode (Solo, Duos) and period (the last 7 days, the last 30 days, all time). A board shows your display name with a link to your public profile, your place on the board, the number it ranks (for example your average place, top 4 or top 2 rate, win rate, games played, longest top-half streak, average place with a hero and that hero, actions per minute, gold beyond income, rolls or triples per game, your biggest board or most golden minions) and how many games it is based on. You appear on a board once you have one finished game in that mode and period that has the number (one with the hero for the per-hero board); a number from fewer than 20 games (10 with the hero) is marked "few games". The numbers are self-reported: they come from the games your app uploaded; our server checks each game's record and leaves out games with values no real game can have, but cannot prove a game was played as uploaded. The leaderboards never show your email, BattleTag, rating or other players' names. The page asks search engines not to index it.
 

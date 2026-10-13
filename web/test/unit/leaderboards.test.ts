@@ -181,6 +181,37 @@ test("reads every mode and period once, each answer in its own place, plus the r
   }
 });
 
+test("a row whose name fails the check is skipped and logged once, and the boards still load", async (t) => {
+  const warn = t.mock.method(console, "warn", () => {});
+  stubFetch({
+    "/rest/v1/rpc/leaderboard": () =>
+      json([
+        raw({ display_name: "हिन्दी" }),
+        raw({ standing: 2, user_id: B, display_name: "Name#1234" }),
+        raw({ standing: 3, display_name: "Fine Name" }),
+      ]),
+    "/rest/v1/rpc/leaderboard_refreshed_at": () => json(null),
+  });
+  const data = await loadLeaderboards(makeClient(CONFIG, memoryStorage()));
+  for (const m of ["solo", "duos"] as const) {
+    for (const p of ["7d", "30d", "all"] as const) {
+      assert.deepEqual(data.boards[m][p].get("avg_place")?.map((r) => r.name), ["Fine Name"]);
+    }
+  }
+  assert.equal(warn.mock.callCount(), 1, "one line for the whole read, not one per row or board");
+  const line = String(warn.mock.calls[0].arguments.join(" "));
+  assert.match(line, /12/, "says how many rows were left out");
+  assert.doesNotMatch(line, /हिन्दी|Name#1234|Fine Name/, "never the names");
+});
+
+test("a bad row other than its name still fails the whole read", async () => {
+  stubFetch({
+    "/rest/v1/rpc/leaderboard": () => json([raw({ display_name: "Name#1234" }), raw({ user_id: "x" })]),
+    "/rest/v1/rpc/leaderboard_refreshed_at": () => json(null),
+  });
+  await assert.rejects(loadLeaderboards(makeClient(CONFIG, memoryStorage())), DataError);
+});
+
 test("a failed read, a bad row, too many rows or a bad time throws", async () => {
   const cases: Record<string, () => Response>[] = [
     { board: () => json({ message: "boom" }, 500), time: () => json(null) },

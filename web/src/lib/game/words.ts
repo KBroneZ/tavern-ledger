@@ -16,6 +16,11 @@ export function heroLabel(hero: HeroRef | null): string {
   return hero?.name ?? g("hero.unknown");
 }
 
+/** The tooltip of a hero the table does not know: its id, so two of them can be told apart. */
+export function heroTip(hero: HeroRef | null): string | undefined {
+  return hero && hero.name === null && hero.id !== null ? hero.id : undefined;
+}
+
 export function pageHeading(summary: Summary): string {
   const hero = heroLabel(summary.hero);
   return summary.place === null ? g("page.heading.noPlace", { hero }) : g("page.heading", { hero, place: ordinal(summary.place) });

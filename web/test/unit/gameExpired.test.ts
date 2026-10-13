@@ -16,7 +16,7 @@ const ROW = {
   mode: "solo",
   status: "ok",
   played_on: "2026-08-01",
-  hero: "SYN_HERO_A",
+  hero: "BG22_HERO_002",
   counted_place: 3,
   rounds: 12,
   combats_won: 7,

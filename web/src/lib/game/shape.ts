@@ -150,9 +150,12 @@ const MAX_APM = 99_999;
 // hand-edited record, not a hit (crates/tracker damage.rs).
 const MAX_HIT = 1_000;
 
-/** The hero's name in the page's language from the name table (T-510), else the game's own name. */
-export function heroRef(report: Report, id: string | null): HeroRef {
-  return { id, name: id ? (heroName(id) ?? report.heroNames.get(id) ?? null) : null };
+/**
+ * The hero's name in the page's language from the site's own name table
+ * (T-510). A name the file carries is never used: the file is the uploader's.
+ */
+export function heroRef(id: string | null): HeroRef {
+  return { id, name: heroName(id) };
 }
 
 function boardView(minions: Minion[] | null): BoardView | null {
@@ -305,16 +308,16 @@ function turnRows(report: Report, list: Combat[]): TurnRow[] {
       goldSpent: shop?.goldSpent ?? null,
       result: combat ? RESULT[combat.outcome] : null,
       inferred: combat?.inferred ?? false,
-      opponents: [...opponents.values()].map((e) => heroRef(report, e.hero)),
+      opponents: [...opponents.values()].map((e) => heroRef(e.hero)),
       dealt: combat?.dealt ?? null,
       taken: combat?.taken ?? null,
       damageSource: !combat || (combat.dealt === null && combat.taken === null) ? null : combat.logged ? "log" : "inferred",
       healthAfter: combat?.round.ownHealthAfter ?? null,
       ownBoard: boardView(own?.board ?? null),
-      ownBoardHero: own && own.playerId !== report.localPlayerId && own.hero !== report.hero ? heroRef(report, own.hero) : null,
+      ownBoardHero: own && own.playerId !== report.localPlayerId && own.hero !== report.hero ? heroRef(own.hero) : null,
       opponentBoards: [...opponents.values()].flatMap((e) => {
         const board = boardView(e.board);
-        return board ? [{ hero: heroRef(report, e.hero), board }] : [];
+        return board ? [{ hero: heroRef(e.hero), board }] : [];
       }),
       shop,
     };
@@ -341,8 +344,8 @@ function summary(report: Report, list: Combat[]): Summary {
     mode: report.mode,
     status: report.status,
     place: report.finalPlace,
-    hero: heroRef(report, report.hero),
-    teammate: report.mode === "duos" ? heroRef(report, report.teammateHero) : null,
+    hero: heroRef(report.hero),
+    teammate: report.mode === "duos" ? heroRef(report.teammateHero) : null,
     rounds: list.length,
     results: { won: count("won"), lost: count("lost"), tie: count("tie"), unknown: count("unknown"), inferred: list.filter((c) => c.inferred).length },
     dealt: known(list.map((c) => c.dealt), list.length, list.filter((c) => c.logged).length),
@@ -374,9 +377,9 @@ function opponentsMet(report: Report, list: Combat[]): OpponentView[] {
     group.record[c.outcome] += 1;
     for (const e of c.round.entries) {
       if (e.side !== "opponent" || e.playerId === null || !c.side.includes(e.playerId)) continue;
-      if (!group.heroes.some((h) => h.id === e.hero)) group.heroes.push(heroRef(report, e.hero));
+      if (!group.heroes.some((h) => h.id === e.hero)) group.heroes.push(heroRef(e.hero));
       const board = boardView(e.board);
-      if (board) group.boards.push({ round: c.round.number, hero: heroRef(report, e.hero), board });
+      if (board) group.boards.push({ round: c.round.number, hero: heroRef(e.hero), board });
     }
   }
   return [...groups.values()];
@@ -388,7 +391,7 @@ function seatViews(report: Report): SeatView[] {
   return [...report.lobby]
     .sort((a, b) => byPlace(a) - byPlace(b) || a.playerId - b.playerId)
     .map((s) => ({
-      hero: heroRef(report, s.hero),
+      hero: heroRef(s.hero),
       own: s.playerId === own,
       teammate: report.mode === "duos" && s.playerId === report.teammatePlayerId,
       place: s.finalPlace,
@@ -434,7 +437,7 @@ function replayCombats(report: Report, turns: TurnRow[]): ReplayCombat[] {
     const heroes = startHeroes(round);
     const replay = round.replay.ok ? round.replay.replay : null;
     const ids = [heroes.own, heroes.opponent, ...(replay?.events ?? []).map((e) => (e.kind === "board_in" ? e.hero : null))];
-    const heroNames = new Map(ids.filter((id): id is string => id !== null).map((id) => [id, heroRef(report, id)]));
+    const heroNames = new Map(ids.filter((id): id is string => id !== null).map((id) => [id, heroRef(id)]));
     return [{
       round: round.number,
       result: row?.result ?? null,
@@ -459,7 +462,7 @@ export function shapeGame(record: GameRecord): GameView {
     opponents: opponentsMet(report, list),
     lobby: seatViews(report),
     choices: report.choices === null ? null : choiceViews(report.choices),
-    heroPick: pick ? { offered: pick.offered.map((id) => heroRef(report, id)), picked: pick.picked, rerolls: pick.rerolls } : null,
+    heroPick: pick ? { offered: pick.offered.map((id) => heroRef(id)), picked: pick.picked, rerolls: pick.rerolls } : null,
     oldGod: report.oldGod,
     notes: [...report.problems, ...report.warnings],
     replays: replayCombats(report, turns),

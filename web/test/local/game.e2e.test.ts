@@ -82,7 +82,7 @@ describe("game viewer read on the local stack", { skip: !ENABLED && "set TAVERN_
       game_index: INDEX,
       game_type: "GT_BATTLEGROUNDS",
       status: "ok",
-      hero_card_id: "SYN_HERO_A",
+      hero_card_id: "BG22_HERO_002",
       final_place: 3,
       build: 250000,
       played_on: "2026-10-09",
@@ -116,7 +116,7 @@ describe("game viewer read on the local stack", { skip: !ENABLED && "set TAVERN_
     const result = await loadGame(downloadWith(users[0].client), ref());
     assert.equal(result.kind, "ok");
     if (result.kind === "ok") {
-      assert.equal(result.record.report.hero, "SYN_HERO_A");
+      assert.equal(result.record.report.hero, "BG22_HERO_002");
       assert.equal(result.record.unreadable, 0);
     }
   });

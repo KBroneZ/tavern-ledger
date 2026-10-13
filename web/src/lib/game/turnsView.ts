@@ -30,7 +30,7 @@ function opponentCell(opponents: HeroRef[]): VNode {
     h(
       "span",
       { class: "gv-opps" },
-      opponents.map((o) => h("span", { class: "gv-hero", title: w.heroLabel(o) }, picture("hero", o.id, w.heroLabel(o), 24, true), h("span", { class: "gv-opp-name" }, w.heroLabel(o)))),
+      opponents.map((o) => h("span", { class: "gv-hero", title: w.heroTip(o) }, picture("hero", o.id, w.heroLabel(o), 24, true), h("span", { class: "gv-opp-name" }, w.heroLabel(o)))),
     ),
   );
 }

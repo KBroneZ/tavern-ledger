@@ -3,7 +3,7 @@ import "../styles/global.css";
 import "../styles/nav.css";
 import "../styles/ui.css";
 import "../styles/buttons.css";
-import { contentSecurityPolicy, readConfig, WASM_PAGES } from "../lib/config.ts";
+import { contentSecurityPolicy, readConfig } from "../lib/config.ts";
 import { basePath, href, lang, LANGS, pathIn, type Lang } from "../lib/i18n.ts";
 import { st } from "../lib/site/strings.ts";
 import PageBackdrop, { type Scene } from "../components/PageBackdrop.astro";
@@ -27,9 +27,7 @@ const { title, description, noindex = false, layout = "page", translated = true,
 const config = readConfig(import.meta.env);
 // Dev mode injects styles from JavaScript, which the policy would block; the
 // built site (and `npm run preview`) always carries it.
-// The simulator page alone may also compile WebAssembly (D-090).
-const wasm = WASM_PAGES.includes(Astro.url.pathname);
-const csp = import.meta.env.PROD ? contentSecurityPolicy(config?.url ?? null, { wasm }) : null;
+const csp = import.meta.env.PROD ? contentSecurityPolicy(config?.url ?? null) : null;
 // The page's language was set by the page (setLang) before the layout renders.
 const pageLang: Lang = lang();
 const other: Lang = pageLang === "en" ? "es" : "en";

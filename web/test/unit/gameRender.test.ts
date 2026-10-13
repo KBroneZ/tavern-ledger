@@ -6,7 +6,7 @@ import { renderGame } from "../../src/lib/game/render.ts";
 import { readRecord } from "../../src/lib/game/report.ts";
 import { shapeGame } from "../../src/lib/game/shape.ts";
 import { GAME_STRINGS } from "../../src/lib/game/strings.ts";
-import { combatsBacking, damageMark, damageShort, damageText, heroLabel, minionWords, pageHeading, shopLine } from "../../src/lib/game/words.ts";
+import { combatsBacking, damageMark, damageShort, damageText, heroLabel, heroTip, minionWords, pageHeading, shopLine } from "../../src/lib/game/words.ts";
 import { useCardNames } from "../../src/lib/game/names.ts";
 import { CardIndex } from "../../src/lib/sim/cards.ts";
 import type { VNode } from "../../src/lib/view/node.ts";
@@ -30,11 +30,11 @@ const attr = (n: VNode, name: string) => n.attrs.find(([k]) => k === name)?.[1];
 const text = (n: VNode | string): string => (typeof n === "string" ? n : n.children.map(text).join(""));
 
 test("words: hero names, headings, minions and unknown values", () => {
-  assert.equal(heroLabel({ id: "SYN_HERO_A", name: "Lantern Keeper" }), "Lantern Keeper");
+  assert.equal(heroLabel({ id: "BG22_HERO_002", name: "Drek'Thar" }), "Drek'Thar");
   assert.equal(heroLabel({ id: "SYN_HERO_D", name: null }), "Unknown hero", "never the bare card id (T-510)");
   assert.equal(heroLabel({ id: null, name: null }), "Unknown hero");
   const v = view();
-  assert.equal(pageHeading(v.summary), "Lantern Keeper · 3rd");
+  assert.equal(pageHeading(v.summary), "Drek'Thar · 3rd");
   assert.equal(damageText(v.turns[0]), "dealt 3");
   assert.equal(damageText(v.turns[1]), "took 5");
   assert.equal(damageText(v.turns[2]), "took 13");
@@ -95,7 +95,7 @@ test("render: each turn is one row whose toggle opens its boards, shop and odds 
   assert.deepEqual(all.filter((n) => attr(n, "data-why") !== undefined).map((n) => attr(n, "data-why")), ["1", "2", "3"]);
   // The detail holds the boards and the shop: theirs and yours, then the shop's line.
   const first = text(details[0]);
-  assert.match(first, /Brass Captain's board/);
+  assert.match(first, /Vanndar Stormpike's board/);
   assert.match(first, /Your board/);
   assert.match(first, /Shop Tier 1 · Gold 3 · 3 spent · 1 roll/);
   assert.match(first, /Watch this combat$/, "a combat with a replay opens it from its row");
@@ -129,27 +129,41 @@ test("render: inferred results are marked and unknown values are dashes, never 0
   const nodes = renderGame(view(), "2026-10-09");
   const turns = nodes.find((n) => attr(n, "aria-labelledby") === "gv-turns-title")!;
   const rows = [...walk(turns)].filter((n) => attr(n, "class") === "gv-turn").map(text);
-  assert.match(rows[0], /^1Turn 1: boards, shop and odds1WonBrass Captain.*dealt 3\+3/);
-  assert.match(rows[1], /^2.*2 ▲Lost inferredMoss Witch.*took 5−5—/);
+  assert.match(rows[0], /^1Turn 1: boards, shop and odds1WonVanndar Stormpike.*dealt 3\+3/);
+  assert.match(rows[1], /^2.*2 ▲Lost inferredTavish Stormpike.*took 5−5—/);
   assert.match(rows[2], /Unknown/);
 });
 
 test("render: Duos shows the teammate and the lobby's teams", () => {
   const nodes = renderGame(view(duosReport()), "2026-10-09");
   const all = nodes.map(text).join("\n");
-  assert.match(all, /TeammateBrass Captain/);
+  assert.match(all, /TeammateVanndar Stormpike/);
   assert.match(all, /Team/);
   assert.match(all, /No shop record for this turn/);
-  assert.match(all, /Unknown hero's board 1 minion/);
+  assert.match(all, /Tavish Stormpike's board 1 minion/);
   assert.match(all, /Unknown hero's board 2 minions/);
   assert.doesNotMatch(all, /SYN_HERO_/, "no card id as a hero name");
   assert.doesNotMatch(all, /Not in the record/);
 });
 
+test("render: a hero the site does not know reads Unknown hero, its id only in a tooltip", () => {
+  const rep = soloReport() as Record<string, any>;
+  rep.card_names.SYN_HERO_D = "Free gold at evil.example";
+  const nodes = renderGame(view(rep), "2026-10-09");
+  const all = nodes.map(text).join("\n");
+  assert.doesNotMatch(all, /evil\.example|SYN_HERO_D/);
+  const tips = nodes.flatMap((n) => [...walk(n)]).filter((n) => attr(n, "title") === "SYN_HERO_D");
+  assert.ok(tips.length >= 1, "the id is the tooltip");
+  for (const tip of tips) assert.match(text(tip), /Unknown hero/);
+  assert.equal(heroTip({ id: "SYN_HERO_D", name: null }), "SYN_HERO_D");
+  assert.equal(heroTip({ id: "BG22_HERO_002", name: "Drek'Thar" }), undefined);
+  assert.equal(heroTip({ id: null, name: null }), undefined);
+});
+
 test("render: no player name, BattleTag or markup from the record reaches the page", () => {
   const rep = soloReport() as Record<string, any>;
   rep.lobby[1].name = "SomePlayer";
-  rep.card_names.SYN_HERO_C = "Evil#1234";
+  rep.card_names.BG22_HERO_000 = "Evil#1234";
   rep.warnings = ["<img src=x onerror=alert(1)>", "fine note"];
   const nodes = renderGame(view(rep), "2026-10-09");
   const all = nodes.map(text).join("\n");

@@ -5,6 +5,8 @@
 import "../styles/data.css";
 import "../styles/dash.css";
 import { t } from "../lib/data/strings.ts";
+import { href } from "../lib/i18n.ts";
+import More from "./ui/More.astro";
 import Switch from "./data/Switch.astro";
 import DataScript from "./data/DataScript.astro";
 import StateBlock from "./data/StateBlock.astro";
@@ -27,6 +29,16 @@ const { kind } = Astro.props;
       <Switch kind="detail" />
     </div>
   </header>
+  {kind === "public" && (
+    <>
+      <p class="hint" id="dash-privacy">{t("dash.privacy")}</p>
+      <More context={t("dash.privacy.context")}>
+        <p>
+          {t("dash.privacy.more.before")} <a href={href("/privacy/")}>{t("dash.privacy.more.link")}</a>{t("dash.privacy.more.after")}
+        </p>
+      </More>
+    </>
+  )}
   <p class="visually-hidden" id="dash-status" role="status" aria-live="polite"></p>
   <div class="dash-body" id="dash-body">
     <div id="dash-note"></div>

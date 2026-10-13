@@ -15,7 +15,7 @@ import { type Frame, type Namer, type Playback, playback, SPEEDS, stepWords, typ
 import type { Side } from "./replayRead.ts";
 import type { GameView, HeroRef, ReplayCombat } from "./shape.ts";
 import { g } from "./strings.ts";
-import { heroLabel, keywordWords } from "./words.ts";
+import { heroLabel, heroTip, keywordWords } from "./words.ts";
 
 const SECTION_ID = "gv-replays";
 /** The speed a page starts at. */
@@ -100,7 +100,7 @@ export function emptyBoard(): VNode {
 // ---------- A side: hero and board ----------
 
 export function heroFace(hero: HeroRef): VNode[] {
-  return [picture("hero", hero.id, heroLabel(hero), 40, true), h("span", { class: "rp-hero-name" }, heroLabel(hero))];
+  return [picture("hero", hero.id, heroLabel(hero), 40, true), h("span", { class: "rp-hero-name", title: heroTip(hero) }, heroLabel(hero))];
 }
 
 export function heroHit(damage: number): VNode[] {
