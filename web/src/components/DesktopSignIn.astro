@@ -1,0 +1,28 @@
+---
+import Captcha from "./Captcha.astro";
+import { href } from "../lib/i18n.ts";
+import { at } from "../lib/account/strings.ts";
+---
+
+<h1>{at("desktop.title")}</h1>
+<p class="meta">{at("desktop.meta")}</p>
+
+<section class="panel" aria-labelledby="desktop-heading">
+  <h2 id="desktop-heading">{at("desktop.heading")}</h2>
+  <form id="desktop-form" novalidate hidden>
+    <label>
+      {at("signin.email")}
+      <input type="email" name="email" autocomplete="email" maxlength="254" required />
+    </label>
+    <Captcha />
+    <button class="tb tb-key" type="submit" disabled>{at("desktop.submit")}</button>
+    <p class="message" id="desktop-message" role="status" aria-live="polite"></p>
+  </form>
+  <p id="desktop-not-from-app">{at("desktop.notFromApp")}</p>
+</section>
+
+<p class="meta">
+  {at("desktop.create.before")} <a href={href("/signin/")}>{at("desktop.create.link")}</a>{at("desktop.create.after")}
+</p>
+
+<script src="../scripts/desktopSignIn.ts"></script>

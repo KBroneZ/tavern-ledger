@@ -11,11 +11,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import build_auth_emails as ae  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-# The only Go template actions a template may use: the link, the addresses of an email change, and
-# the language switch. Supabase's {{ .Token }}, {{ .TokenHash }} or {{ .SiteURL }} would change the link.
+# The only Go template actions a template may use: the link, the new address of an email change, and
+# the language switch. Supabase's {{ .Token }}, {{ .TokenHash }} or {{ .SiteURL }} would change the link;
+# {{ .Email }} would print the account's current address in a mail that also goes to the new one.
 ALLOWED_ACTIONS = {
     "{{ .ConfirmationURL }}",
-    "{{ .Email }}",
     "{{ .NewEmail }}",
     ae.IS_SPANISH,
     "{{ else }}",
@@ -70,9 +70,9 @@ class Links(unittest.TestCase):
             actions = set(re.findall(r"\{\{.*?\}\}", committed(name)))
             self.assertLessEqual(actions, ALLOWED_ACTIONS, name)
 
-    def test_email_change_names_both_addresses(self):
+    def test_email_change_names_only_the_new_address(self):
         for email in branches("email_change"):
-            self.assertIn("{{ .Email }}", email)
+            self.assertNotIn("{{ .Email }}", email)
             self.assertIn("{{ .NewEmail }}", email)
 
 
@@ -111,10 +111,10 @@ class Facts(unittest.TestCase):
     def test_the_expiry_in_the_copy_is_the_configured_one(self):
         config = ae.CONFIG.read_text(encoding="utf-8")
         expiry = int(re.search(r"^otp_expiry = (\d+)$", config, re.M).group(1))
-        self.assertEqual(expiry, 3600, "the emails say 1 hour; change their copy with this value")
+        self.assertEqual(expiry, 900, "the emails say 15 minutes; change their copy with this value")
         for name in ("magic_link", "recovery"):
-            self.assertIn("expires in 1 hour", " ".join(ae.COPY[name]["en"]["body"]), name)
-            self.assertIn("caduca en 1 hora", " ".join(ae.COPY[name]["es"]["body"]), name)
+            self.assertIn("expires in 15 minutes", " ".join(ae.COPY[name]["en"]["body"]), name)
+            self.assertIn("caduca en 15 minutos", " ".join(ae.COPY[name]["es"]["body"]), name)
 
     def test_no_html_comments(self):
         # Supabase's renderer (Go html/template) drops them, so nothing may rely on one.

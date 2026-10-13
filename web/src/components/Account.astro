@@ -4,6 +4,7 @@ import { confirmPhrase } from "../lib/deleteAccount.ts";
 import { href } from "../lib/i18n.ts";
 import { at } from "../lib/account/strings.ts";
 import More from "./ui/More.astro";
+import Captcha from "./Captcha.astro";
 ---
 
 <h1 id="account-heading">{at("account.title")}</h1>
@@ -161,6 +162,7 @@ import More from "./ui/More.astro";
           <span class="hint">{at("account.reauth.hint")}</span>
           <input type="password" name="password" autocomplete="current-password" />
         </label>
+        <Captcha />
       </div>
       <button class="tb tb-danger" type="submit">{at("account.delete.submit")}</button>
       <p class="message" id="delete-message" role="status" aria-live="polite"></p>

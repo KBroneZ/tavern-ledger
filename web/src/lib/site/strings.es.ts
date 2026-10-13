@@ -61,6 +61,8 @@ export const ES: Record<SiteKey, string> = {
   "meta.account.description": "Tu cuenta de Tavern Ledger.",
   "meta.forgot.title": "¿Has olvidado la contraseña?",
   "meta.forgot.description": "Elige una contraseña nueva para tu cuenta de Tavern Ledger.",
+  "meta.desktopSignIn.title": "Iniciar sesión en la app",
+  "meta.desktopSignIn.description": "Recibe un enlace de inicio de sesión para la app de escritorio de Tavern Ledger.",
 
   // 404.
   "notFound.title": "Página no encontrada",

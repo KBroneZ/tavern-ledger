@@ -69,6 +69,8 @@ export const SITE_STRINGS = {
   "meta.account.description": "Your Tavern Ledger account.",
   "meta.forgot.title": "Forgot password",
   "meta.forgot.description": "Choose a new password for your Tavern Ledger account.",
+  "meta.desktopSignIn.title": "Sign in to the app",
+  "meta.desktopSignIn.description": "Get a sign-in link for the Tavern Ledger desktop app.",
 
   // 404.
   "notFound.title": "Page not found",

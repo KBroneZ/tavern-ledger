@@ -87,6 +87,8 @@ jobs:
           ASTRO_TELEMETRY_DISABLED: "1"
           PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
           PUBLIC_SUPABASE_ANON_KEY: sb_publishable_placeholder
+          # Cloudflare's published Turnstile test site key (always passes).
+          PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
           # The simulator's card data from synthetic files, not HearthstoneJSON
           # (the Pages build fetches the real one; T-606, D-090).
           SIM_CARDS_DIR: test/fixtures/sim-cards
@@ -97,8 +99,8 @@ jobs:
           npm run test:dist
           PUBLIC_SIGNUPS_OPEN=true npm run build
           PUBLIC_SIGNUPS_OPEN=true npm run test:dist
-          env -u PUBLIC_SUPABASE_URL -u PUBLIC_SUPABASE_ANON_KEY npm run build
-          env -u PUBLIC_SUPABASE_URL -u PUBLIC_SUPABASE_ANON_KEY npm run test:dist
+          env -u PUBLIC_SUPABASE_URL -u PUBLIC_SUPABASE_ANON_KEY -u PUBLIC_TURNSTILE_SITE_KEY npm run build
+          env -u PUBLIC_SUPABASE_URL -u PUBLIC_SUPABASE_ANON_KEY -u PUBLIC_TURNSTILE_SITE_KEY npm run test:dist
 
       # Rust workspace on the pinned toolchain: format, unit tests and parity
       # of bg-parser with tools/parse_bg.py. The Tauri app (desktop) needs

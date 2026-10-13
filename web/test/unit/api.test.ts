@@ -9,9 +9,11 @@ import {
   exportAll,
   finishAuthLink,
   makeClient,
+  requestDesktopLink,
   requestPasswordReset,
   saveProfile,
   setNewPassword,
+  signIn,
   signUp,
 } from "../../src/lib/api.ts";
 import { RESET_SENT } from "../../src/lib/auth.ts";
@@ -64,6 +66,8 @@ function rows(list: unknown[]): Route {
 }
 
 const client = () => makeClient(CONFIG, memoryStorage());
+/** Cloudflare's published dummy Turnstile token (passes with the test secret key). */
+const TOKEN = "XXXX.DUMMY.TOKEN.XXXX";
 
 // --- saveProfile ---
 
@@ -160,10 +164,77 @@ test("sign-up: stores the page's language for the emails and nothing else", asyn
         return json({ id: USER });
       },
     });
-    await signUp(client(), " someone@example.test ", "0123456789ab", "https://x.test/account/", lang);
+    await signUp(client(), " someone@example.test ", "0123456789ab", "https://x.test/account/", lang, TOKEN);
     assert.equal(sent.email, "someone@example.test");
     assert.deepEqual(sent.data, { lang });
   }
+});
+
+test("every form that sends an email or checks a password passes its anti-robot token (T-562)", async () => {
+  const bodies: Record<string, Record<string, unknown>> = {};
+  const keep = (name: string): Route => (_url, init) => {
+    bodies[name] = JSON.parse(String(init.body)) as Record<string, unknown>;
+    return name === "token" ? json(session()) : json({ id: USER });
+  };
+  stubFetch({ "/auth/v1/signup": keep("signup"), "/auth/v1/recover": keep("recover"), "/auth/v1/token": keep("token") });
+  await signUp(client(), "someone@example.test", "0123456789ab", "https://x.test/account/", "en", "token-1");
+  await requestPasswordReset(client(), "someone@example.test", "https://x.test/account/", "token-2");
+  assert.equal(await signIn(client(), "someone@example.test", "0123456789ab", "token-3"), null);
+  assert.deepEqual(bodies.signup.gotrue_meta_security, { captcha_token: "token-1" });
+  assert.deepEqual(bodies.recover.gotrue_meta_security, { captcha_token: "token-2" });
+  assert.deepEqual(bodies.token.gotrue_meta_security, { captcha_token: "token-3" });
+});
+
+test("a refused anti-robot token is said as such on sign-in", async () => {
+  stubFetch({ "/auth/v1/token": () => authError("captcha_failed", 400) });
+  assert.match((await signIn(client(), "someone@example.test", "0123456789ab", TOKEN)) ?? "", /not a robot/);
+});
+
+// --- the desktop app's sign-in link (T-562) ---
+
+const DESKTOP = {
+  challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+  redirect: "http://127.0.0.1:50000/desktop-callback/dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+  email: " player@example.test ",
+};
+
+test("desktop link: the app's challenge and loopback address, the token, and no account made", async () => {
+  let body: Record<string, unknown> = {};
+  let query = "";
+  let headers = new Headers();
+  stubFetch({
+    "/auth/v1/otp": (url, init) => {
+      body = JSON.parse(String(init.body)) as Record<string, unknown>;
+      query = url.search;
+      headers = new Headers(init.headers);
+      return json({});
+    },
+  });
+  const outcome = await requestDesktopLink(CONFIG, DESKTOP, TOKEN);
+  assert.equal(outcome.kind, "check-email");
+  assert.deepEqual(body, {
+    email: "player@example.test",
+    create_user: false,
+    code_challenge: DESKTOP.challenge,
+    code_challenge_method: "s256",
+    gotrue_meta_security: { captcha_token: TOKEN },
+  });
+  assert.equal(new URLSearchParams(query).get("redirect_to"), DESKTOP.redirect);
+  assert.equal(headers.get("apikey"), CONFIG.anonKey);
+  assert.equal(headers.get("Authorization"), null, "no session is sent");
+});
+
+test("desktop link: no account, a refused check, an odd answer and no connection", async () => {
+  stubFetch({ "/auth/v1/otp": () => authError("otp_disabled", 422) });
+  assert.equal((await requestDesktopLink(CONFIG, DESKTOP, TOKEN)).kind, "check-email", "same as a sent link");
+  stubFetch({ "/auth/v1/otp": () => json({ error_code: "captcha_failed" }, 400) });
+  assert.match((await requestDesktopLink(CONFIG, DESKTOP, TOKEN)).message, /not a robot/);
+  stubFetch({ "/auth/v1/otp": () => new Response("<html>bad gateway</html>", { status: 502 }) });
+  const odd = await requestDesktopLink(CONFIG, DESKTOP, TOKEN);
+  assert.equal(odd.kind, "error");
+  assert.doesNotMatch(odd.message, /gateway/);
+  globalThis.fetch = (() => Promise.reject(new TypeError("offline"))) as typeof fetch;
+  assert.match((await requestDesktopLink(CONFIG, DESKTOP, TOKEN)).message, /Could not reach/);
 });
 
 // --- email links and password reset (D-048) ---
@@ -203,7 +274,7 @@ test("reset request: sends a PKCE challenge and the account page as the return a
       return json({});
     },
   });
-  const outcome = await requestPasswordReset(client(), " someone@example.test ", "https://tavernledger.net/account/");
+  const outcome = await requestPasswordReset(client(), " someone@example.test ", "https://tavernledger.net/account/", TOKEN);
   assert.equal(outcome.kind, "check-email");
   assert.equal(body.email, "someone@example.test");
   assert.equal(body.code_challenge_method, "s256");
@@ -213,24 +284,24 @@ test("reset request: sends a PKCE challenge and the account page as the return a
 
 test("reset request: a refusal reads like a sent email, a rate limit and no connection say so", async () => {
   stubFetch({ "/auth/v1/recover": () => authError("user_not_found", 400) });
-  const refused = await requestPasswordReset(client(), "someone@example.test", "https://x.test/account/");
+  const refused = await requestPasswordReset(client(), "someone@example.test", "https://x.test/account/", TOKEN);
   assert.deepEqual(refused, { kind: "check-email", message: RESET_SENT });
   stubFetch({ "/auth/v1/recover": () => authError("over_email_send_rate_limit", 429) });
-  const again = await requestPasswordReset(client(), "someone@example.test", "https://x.test/account/");
+  const again = await requestPasswordReset(client(), "someone@example.test", "https://x.test/account/", TOKEN);
   assert.deepEqual(again, { kind: "check-email", message: RESET_SENT }, "a second email to an account looks like the first");
   stubFetch({ "/auth/v1/recover": () => authError("over_request_rate_limit", 429) });
-  const limited = await requestPasswordReset(client(), "someone@example.test", "https://x.test/account/");
+  const limited = await requestPasswordReset(client(), "someone@example.test", "https://x.test/account/", TOKEN);
   assert.equal(limited.kind, "error");
   assert.match(limited.message, /Too many attempts/);
   globalThis.fetch = (() => Promise.reject(new TypeError("offline"))) as typeof fetch;
-  const offline = await requestPasswordReset(client(), "someone@example.test", "https://x.test/account/");
+  const offline = await requestPasswordReset(client(), "someone@example.test", "https://x.test/account/", TOKEN);
   assert.match(offline.message, /Could not reach/);
 });
 
 test("link: a reset code started in this browser opens the new password form", async () => {
   const c = client();
   stubFetch({ "/auth/v1/recover": () => json({}) });
-  await requestPasswordReset(c, "someone@example.test", "https://x.test/account/");
+  await requestPasswordReset(c, "someone@example.test", "https://x.test/account/", TOKEN);
   let verifier = "";
   stubFetch({
     "/auth/v1/token": (url, init) => {
@@ -257,7 +328,7 @@ test("link: a code opened in another browser says what to do, with no request", 
 test("link: a sign-up code started here signs in and says the email is confirmed", async () => {
   const c = client();
   stubFetch({ "/auth/v1/signup": () => json({ id: USER }) });
-  await signUp(c, "someone@example.test", "0123456789ab", "https://x.test/account/", "en");
+  await signUp(c, "someone@example.test", "0123456789ab", "https://x.test/account/", "en", TOKEN);
   stubFetch({ "/auth/v1/token": () => json(session()) });
   const outcome = await finishAuthLink(c, CONFIG, { kind: "code", code: "0b5c4a1e-1111", flowId: null });
   assert.deepEqual(outcome, { recovery: false, message: "Your email is confirmed.", tone: "ok" });
@@ -266,7 +337,7 @@ test("link: a sign-up code started here signs in and says the email is confirmed
 test("link: an expired code from the server is explained", async () => {
   const c = client();
   stubFetch({ "/auth/v1/recover": () => json({}) });
-  await requestPasswordReset(c, "someone@example.test", "https://x.test/account/");
+  await requestPasswordReset(c, "someone@example.test", "https://x.test/account/", TOKEN);
   stubFetch({ "/auth/v1/token": () => authError("flow_state_not_found", 404) });
   const outcome = await finishAuthLink(c, CONFIG, { kind: "code", code: "0b5c4a1e-1111", flowId: null });
   assert.match(outcome.message ?? "", /expired or was already used/);

@@ -3,7 +3,7 @@ import "../styles/global.css";
 import "../styles/nav.css";
 import "../styles/ui.css";
 import "../styles/buttons.css";
-import { contentSecurityPolicy, readConfig } from "../lib/config.ts";
+import { contentSecurityPolicy, readConfig, turnstileSiteKey } from "../lib/config.ts";
 import { basePath, href, lang, LANGS, pathIn, type Lang } from "../lib/i18n.ts";
 import { st } from "../lib/site/strings.ts";
 import { hasMinionPages } from "../lib/minions/load.ts";
@@ -21,15 +21,20 @@ interface Props {
   translated?: boolean;
   /** The page's own painting behind it (T-546); none on the home page, which has its own. */
   backdrop?: Scene;
+  /** A form with the anti-robot check: one of TURNSTILE_PAGES (lib/config.ts, T-562). */
+  turnstile?: boolean;
 }
 
-const { title, description, noindex = false, layout = "page", translated = true, backdrop } = Astro.props;
+const { title, description, noindex = false, layout = "page", translated = true, backdrop, turnstile = false } = Astro.props;
 // Fails the build if only one setting is given or the key is not the public
 // one; null means accounts are closed (no backend).
 const config = readConfig(import.meta.env);
+// With accounts open the sign-in forms need the Turnstile site key: no build
+// without it, and no test key in a Cloudflare Pages build.
+turnstileSiteKey({ ...import.meta.env, CF_PAGES: process.env.CF_PAGES });
 // Dev mode injects styles from JavaScript, which the policy would block; the
 // built site (and `npm run preview`) always carries it.
-const csp = import.meta.env.PROD ? contentSecurityPolicy(config?.url ?? null) : null;
+const csp = import.meta.env.PROD ? contentSecurityPolicy(config?.url ?? null, { turnstile }) : null;
 // The page's language was set by the page (setLang) before the layout renders.
 const pageLang: Lang = lang();
 const other: Lang = pageLang === "en" ? "es" : "en";

@@ -35,6 +35,7 @@ import type { SiteConfig } from "../../src/lib/config.ts";
 import { deleteOutcome } from "../../src/lib/deleteAccount.ts";
 import { loadGames, profileAccess } from "../../src/lib/dataApi.ts";
 import { DEFAULT_FILTERS } from "../../src/lib/data/filters.ts";
+import { DUMMY_CAPTCHA } from "../helpers/captcha.ts";
 
 const ENABLED = process.env.TAVERN_SUPABASE_LOCAL === "1";
 const REPO = join(import.meta.dirname, "..", "..", "..");
@@ -150,7 +151,7 @@ describe("website account flow on the local stack", { skip: !ENABLED && "set TAV
   });
 
   test("sign up, confirm by email and get a session", async () => {
-    const outcome = await signUp(client, email, password, `${SITE}/account/`, "es");
+    const outcome = await signUp(client, email, password, `${SITE}/account/`, "es", DUMMY_CAPTCHA);
     assert.deepEqual(outcome, { kind: "check-email", message: CHECK_EMAIL });
     const link = await confirmationLink(s.mail, email);
     assert.equal(await latestSubject(s.mail, email), "Confirma tu cuenta de Tavern Ledger", "the email is in the page's language");
@@ -168,10 +169,10 @@ describe("website account flow on the local stack", { skip: !ENABLED && "set TAV
 
   test("password reset: the link opens the new password form and only the new password works", async () => {
     await deleteMail(s.mail, email);
-    const outcome = await requestPasswordReset(client, email, `${SITE}/account/`);
+    const outcome = await requestPasswordReset(client, email, `${SITE}/account/`, DUMMY_CAPTCHA);
     assert.deepEqual(outcome, { kind: "check-email", message: RESET_SENT });
     const nobody = `nobody-${randomBytes(4).toString("hex")}@example.test`;
-    assert.deepEqual(await requestPasswordReset(makeClient(config, memoryStorage()), nobody, `${SITE}/account/`), outcome);
+    assert.deepEqual(await requestPasswordReset(makeClient(config, memoryStorage()), nobody, `${SITE}/account/`, DUMMY_CAPTCHA), outcome);
 
     const link = await confirmationLink(s.mail, email);
     assert.match(link, /type=recovery/);
@@ -182,14 +183,14 @@ describe("website account flow on the local stack", { skip: !ENABLED && "set TAV
     assert.deepEqual(await finishAuthLink(client, config, parsed), { recovery: true, message: null, tone: "info" });
 
     const elsewhere = makeClient(config, memoryStorage());
-    assert.equal(await signIn(elsewhere, email, password), null);
+    assert.equal(await signIn(elsewhere, email, password, DUMMY_CAPTCHA), null);
     const newPassword = randomBytes(12).toString("base64url");
     assert.equal(await setNewPassword(client, newPassword), null);
     assert.ok((await elsewhere.auth.getUser()).error, "the session signed in elsewhere is ended");
     assert.equal((await client.auth.getUser()).error, null, "the one that reset stays");
     const other = makeClient(config, memoryStorage());
-    assert.ok(await signIn(other, email, password), "the old password is refused");
-    assert.equal(await signIn(other, email, newPassword), null);
+    assert.ok(await signIn(other, email, password, DUMMY_CAPTCHA), "the old password is refused");
+    assert.equal(await signIn(other, email, newPassword, DUMMY_CAPTCHA), null);
     password = newPassword;
 
     // The same link again: refused, and the page can say why.
@@ -219,10 +220,10 @@ describe("website account flow on the local stack", { skip: !ENABLED && "set TAV
 
   test("sign-up and sign-in answers do not reveal that the email exists", async () => {
     const other = makeClient(config, memoryStorage());
-    const again = await signUp(other, email, randomBytes(12).toString("base64url"), `${SITE}/account/`, "en");
+    const again = await signUp(other, email, randomBytes(12).toString("base64url"), `${SITE}/account/`, "en", DUMMY_CAPTCHA);
     assert.deepEqual(again, { kind: "check-email", message: CHECK_EMAIL });
-    const wrongPassword = await signIn(other, email, "wrong-password-123");
-    const noAccount = await signIn(other, `nobody-${randomBytes(4).toString("hex")}@example.test`, "wrong-password-123");
+    const wrongPassword = await signIn(other, email, "wrong-password-123", DUMMY_CAPTCHA);
+    const noAccount = await signIn(other, `nobody-${randomBytes(4).toString("hex")}@example.test`, "wrong-password-123", DUMMY_CAPTCHA);
     assert.ok(wrongPassword);
     assert.equal(wrongPassword, noAccount);
   });
@@ -331,7 +332,7 @@ describe("website account flow on the local stack", { skip: !ENABLED && "set TAV
     psql(`update auth.users set last_sign_in_at = now() - interval '1 hour' where id = '${userId}'`);
     assert.deepEqual(await deleteAccount(client, config), { kind: "reauthenticate" });
     assert.equal(psql(`select count(*) from storage.objects where name like '${userId}/%'`), "1");
-    assert.equal(await signIn(client, email, password), null);
+    assert.equal(await signIn(client, email, password, DUMMY_CAPTCHA), null);
   });
 
   test("deletion from the site's origin leaves nothing of the user", async () => {

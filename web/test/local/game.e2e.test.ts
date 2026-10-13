@@ -22,6 +22,7 @@ import type { SiteConfig } from "../../src/lib/config.ts";
 import { type Download, loadGame } from "../../src/lib/game/load.ts";
 import { storagePath } from "../../src/lib/game/url.ts";
 import { INDEX, record, SESSION } from "../unit/gameFixtures.ts";
+import { DUMMY_CAPTCHA } from "../helpers/captcha.ts";
 
 const ENABLED = process.env.TAVERN_SUPABASE_LOCAL === "1";
 const REPO = join(import.meta.dirname, "..", "..", "..");
@@ -72,7 +73,7 @@ describe("game viewer read on the local stack", { skip: !ENABLED && "set TAVERN_
       assert.equal(res.status, 200, "user created");
       const id = ((await res.json()) as { id: string }).id;
       const client = makeClient(config, memoryStorage());
-      assert.equal(await signIn(client, email, password), null);
+      assert.equal(await signIn(client, email, password, DUMMY_CAPTCHA), null);
       users.push({ id, email, client });
     }
     const gz = gzipSync(JSON.stringify(record()));

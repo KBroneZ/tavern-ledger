@@ -124,6 +124,29 @@ export const ES: Record<AccountKey, string> = {
   "auth.notSame": "Las dos contraseñas no coinciden.",
   "auth.samePassword": "Elige una contraseña distinta de la actual.",
   "auth.resetExpired": "Este enlace para cambiar la contraseña ha caducado. Pide uno nuevo con «¿Has olvidado la contraseña?» en la página de inicio de sesión.",
+  "auth.captcha": "La comprobación de que no eres un robot ha fallado o ha caducado. Vuelve a intentarlo.",
+
+  // The check that you are not a robot (lib/captcha.ts, components/Captcha.astro).
+  "captcha.label": "Comprobación de que no eres un robot",
+  "captcha.hint": "Esta comprobación la hace Cloudflare; puede pedirte que marques una casilla.",
+  "captcha.wait": "Espera a que termine la comprobación de que no eres un robot y vuelve a intentarlo.",
+  "captcha.failed":
+    "No se ha podido hacer la comprobación de que no eres un robot. Recarga la página; si sigue fallando, deja que cargue challenges.cloudflare.com (puede impedirlo un bloqueador).",
+
+  // The desktop app's sign-in link (components/DesktopSignIn.astro, scripts/desktopSignIn.ts).
+  "desktop.title": "Iniciar sesión en la app",
+  "desktop.meta":
+    "Tu app de Tavern Ledger ha abierto esta página. Te enviaremos por correo un enlace de inicio de sesión para la app; ábrelo en este PC y la app iniciará sesión. La app nunca ve tu contraseña. Si no has empezado a iniciar sesión desde la app en este PC, cierra esta página.",
+  "desktop.heading": "Recibe un enlace de inicio de sesión para la app",
+  "desktop.submit": "Enviar el enlace",
+  "desktop.sending": "Enviando…",
+  "desktop.sent":
+    "Revisa tu bandeja de entrada: si este correo tiene una cuenta, te llegará un enlace de inicio de sesión. Ábrelo en este PC para terminar en la app; funciona una vez y caduca en 15 minutos.",
+  "desktop.notFromApp":
+    "Esta página solo funciona cuando la abre la app de Tavern Ledger. En la app, abre los ajustes y elige «Iniciar sesión con el navegador» en «Subir a la web».",
+  "desktop.create.before": "¿Aún no tienes cuenta?",
+  "desktop.create.link": "Créala en la página de inicio de sesión",
+  "desktop.create.after": " y vuelve desde la app.",
 
   // Links from emails (lib/authLink.ts).
   "link.useForgot": "Para elegir una contraseña, usa «¿Has olvidado la contraseña?» en la página de inicio de sesión.",

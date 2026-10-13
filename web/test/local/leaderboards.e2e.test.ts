@@ -23,6 +23,7 @@ import type { SiteConfig } from "../../src/lib/config.ts";
 import { loadLeaderboards, type Leaderboards } from "../../src/lib/leaderboards/api.ts";
 import { fewGames } from "../../src/lib/leaderboards/boards.ts";
 import { memoryStorage } from "../helpers/fetchStub.ts";
+import { DUMMY_CAPTCHA } from "../helpers/captcha.ts";
 
 const ENABLED = process.env.TAVERN_SUPABASE_LOCAL === "1";
 const REPO = join(import.meta.dirname, "..", "..", "..");
@@ -78,7 +79,7 @@ describe("leaderboards on the local stack", { skip: !ENABLED && "set TAVERN_SUPA
     assert.equal(res.status, 200);
     const { id } = (await res.json()) as { id: string };
     const client = makeClient(config, memoryStorage());
-    assert.equal(await signIn(client, email, password), null);
+    assert.equal(await signIn(client, email, password, DUMMY_CAPTCHA), null);
     assert.equal(await saveProfile(client, id, { displayName: name, isPublic }), null);
     const day = yesterday();
     const rows = Array.from({ length: games }, (_, k) => ({

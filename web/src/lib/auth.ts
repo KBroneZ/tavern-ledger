@@ -18,6 +18,7 @@ const wrongCredentials = () => at("auth.wrong");
 const rateLimited = () => at("auth.rateLimited");
 const unreachable = () => at("auth.unreachable");
 const generic = () => at("auth.generic");
+const captchaRefused = () => at("auth.captcha");
 const invalidEmail = () => at("auth.email");
 const passwordLength = () => at("auth.passwordLength", { min: MIN_PASSWORD_LENGTH });
 const stronger = () => at("auth.stronger", { min: MIN_PASSWORD_LENGTH });
@@ -47,7 +48,16 @@ function isNetwork(e: AuthErrorLike): boolean {
   return e.name === "AuthRetryableFetchError" || e.status === 0;
 }
 
+/**
+ * Supabase Auth refused the anti-robot token (T-562). It checks the token
+ * before it looks at the email, so saying so tells nothing about an account.
+ */
+function isCaptchaRefused(e: AuthErrorLike): boolean {
+  return e.code === "captcha_failed";
+}
+
 export function signInErrorMessage(e: AuthErrorLike): string {
+  if (isCaptchaRefused(e)) return captchaRefused();
   if (isRateLimit(e)) return rateLimited();
   if (isNetwork(e)) return unreachable();
   // Only reachable with the right password, so it reveals nothing new.
@@ -66,6 +76,7 @@ export function signUpOutcome(e: AuthErrorLike | null): SignUpOutcome {
   if (e === null || e.code === "user_already_exists" || e.code === "email_exists") {
     return { kind: "check-email", message: checkEmailMessage() };
   }
+  if (isCaptchaRefused(e)) return { kind: "error", message: captchaRefused() };
   if (isRateLimit(e)) return { kind: "error", message: rateLimited() };
   if (isNetwork(e)) return { kind: "error", message: unreachable() };
   if (e.code === "weak_password") return { kind: "error", message: stronger() };
@@ -86,6 +97,7 @@ export function checkEmail(email: string): string | null {
  */
 export function resetRequestOutcome(e: AuthErrorLike | null): SignUpOutcome {
   if (e === null) return { kind: "check-email", message: resetSent() };
+  if (isCaptchaRefused(e)) return { kind: "error", message: captchaRefused() };
   // Supabase refuses a second reset email to the same account within a
   // minute; an unknown email is never refused, so saying so would tell
   // which emails have an account. Limits per address of the sender stay.

@@ -4,6 +4,7 @@
 //! server checks that again (supabase/functions/upload-game).
 
 pub mod auth;
+pub mod browser;
 pub mod config;
 pub mod engine;
 pub mod http;

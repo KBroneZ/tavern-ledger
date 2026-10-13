@@ -18,6 +18,7 @@ import {
   noticeMessage,
 } from "./authLink.ts";
 import type { SiteConfig } from "./config.ts";
+import { desktopLinkOutcome, type DesktopRequest } from "./desktopLink.ts";
 import type { Lang } from "./i18n.ts";
 import { type DeleteOutcome, deleteOutcome } from "./deleteAccount.ts";
 import { buildExport, type ExportFile, ownFileNames } from "./exportData.ts";
@@ -67,6 +68,8 @@ export function makeClient(config: SiteConfig, storage?: SupportedStorage, timeo
 /**
  * `emailLang` is the page's language, kept as the account's `lang` metadata:
  * Supabase's email templates pick Spanish or English from it (D-114).
+ * `captchaToken` is the form's anti-robot token (lib/captcha.ts, T-562); it
+ * works once, so every call needs a new one.
  */
 export async function signUp(
   client: SupabaseClient,
@@ -74,12 +77,13 @@ export async function signUp(
   password: string,
   redirectTo: string,
   emailLang: Lang,
+  captchaToken: string,
 ): Promise<SignUpOutcome> {
   try {
     const { error } = await client.auth.signUp({
       email: email.trim(),
       password,
-      options: { emailRedirectTo: redirectTo, data: { lang: emailLang } },
+      options: { emailRedirectTo: redirectTo, data: { lang: emailLang }, captchaToken },
     });
     return signUpOutcome(error as AuthErrorLike | null);
   } catch {
@@ -87,27 +91,82 @@ export async function signUp(
   }
 }
 
-/** null when signed in, else the message to show. */
-export async function signIn(client: SupabaseClient, email: string, password: string): Promise<string | null> {
+/** null when signed in, else the message to show. `captchaToken` as for signUp. */
+export async function signIn(
+  client: SupabaseClient,
+  email: string,
+  password: string,
+  captchaToken: string,
+): Promise<string | null> {
   try {
-    const { error } = await client.auth.signInWithPassword({ email: email.trim(), password });
+    const { error } = await client.auth.signInWithPassword({ email: email.trim(), password, options: { captchaToken } });
     return error ? signInErrorMessage(error as AuthErrorLike) : null;
   } catch {
     return signInErrorMessage({ status: 0 });
   }
 }
 
-/** Sends a password reset link; the answer never says whether the email has an account. */
+/**
+ * Sends a password reset link; the answer never says whether the email has an
+ * account. `captchaToken` as for signUp.
+ */
 export async function requestPasswordReset(
   client: SupabaseClient,
   email: string,
   redirectTo: string,
+  captchaToken: string,
 ): Promise<SignUpOutcome> {
   try {
-    const { error } = await client.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+    const { error } = await client.auth.resetPasswordForEmail(email.trim(), { redirectTo, captchaToken });
     return resetRequestOutcome(error as AuthErrorLike | null);
   } catch {
     return resetRequestOutcome({ status: 0 });
+  }
+}
+
+/**
+ * Asks Supabase Auth to email the desktop app's sign-in link (T-562): the
+ * app's own PKCE challenge and loopback address (lib/desktopLink.ts), with
+ * the form's anti-robot token. Only for existing accounts. supabase-js makes
+ * its own challenge, so this is the one request the site sends itself.
+ */
+export async function requestDesktopLink(
+  config: SiteConfig,
+  request: DesktopRequest,
+  captchaToken: string,
+): Promise<SignUpOutcome> {
+  try {
+    const res = await fetchWithTimeout(
+      `${config.url}/auth/v1/otp?redirect_to=${encodeURIComponent(request.redirect)}`,
+      {
+        method: "POST",
+        headers: {
+          apikey: config.anonKey,
+          "Content-Type": "application/json",
+          // Errors then carry `code`, as supabase-js reads them.
+          "X-Supabase-Api-Version": "2024-01-01",
+        },
+        body: JSON.stringify({
+          email: request.email.trim(),
+          create_user: false,
+          code_challenge: request.challenge,
+          code_challenge_method: "s256",
+          gotrue_meta_security: { captcha_token: captchaToken },
+        }),
+      },
+    );
+    if (res.ok) return desktopLinkOutcome(null);
+    let code: string | undefined;
+    try {
+      const body = (await res.json()) as { code?: unknown; error_code?: unknown };
+      const raw = body.code ?? body.error_code;
+      code = typeof raw === "string" ? raw : undefined;
+    } catch {
+      // Not JSON: the status alone decides.
+    }
+    return desktopLinkOutcome({ status: res.status, code });
+  } catch {
+    return desktopLinkOutcome({ status: 0 });
   }
 }
 

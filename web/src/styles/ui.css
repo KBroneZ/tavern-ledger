@@ -150,6 +150,23 @@ label {
   color: var(--text);
 }
 
+/* The anti-robot check (components/Captcha.astro, T-562): Cloudflare draws
+   its widget here, 65 px tall, or 140 px compact on a narrow phone (the
+   script marks which before drawing it); the space is kept so nothing below
+   it moves when it appears. Its hint sits right under it. */
+.captcha {
+  min-height: 65px;
+  max-width: 100%;
+}
+
+.captcha[data-size="compact"] {
+  min-height: 140px;
+}
+
+.captcha + .hint {
+  margin-top: -10px;
+}
+
 .hint {
   font-size: 0.95rem;
   font-weight: 500;
