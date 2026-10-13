@@ -45,4 +45,9 @@ pub const APP_COMMANDS: &[&str] = &[
     "app_set_system_language",
     "app_autostart",
     "app_set_autostart",
+    "update_status",
+    "update_set_auto",
+    "update_check_now",
+    "update_install",
+    "update_later",
 ];

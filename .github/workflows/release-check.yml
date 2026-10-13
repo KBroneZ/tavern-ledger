@@ -1,0 +1,39 @@
+name: Release files
+
+# Every day, the files of each published release must still be the ones
+# recorded in web/src/lib/site/releases.json (size and GitHub's SHA-256 of
+# each file). A changed, added or missing file, or a release turned back into
+# a draft or deleted, fails the run, and GitHub emails the repository's owner.
+# Read-only: it changes nothing.
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/release-check.yml
+      - tools/release.py
+      - web/src/lib/site/releases.json
+
+permissions:
+  contents: read
+
+jobs:
+  files:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.16"
+
+      # The token only raises the API's rate limit; the releases are public.
+      - name: Published files equal the recorded ones
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python tools/release.py check

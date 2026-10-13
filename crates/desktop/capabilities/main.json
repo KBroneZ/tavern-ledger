@@ -40,6 +40,11 @@
     "allow-app-set-window-detail",
     "allow-app-set-system-language",
     "allow-app-autostart",
-    "allow-app-set-autostart"
+    "allow-app-set-autostart",
+    "allow-update-status",
+    "allow-update-set-auto",
+    "allow-update-check-now",
+    "allow-update-install",
+    "allow-update-later"
   ]
 }

@@ -2,7 +2,8 @@
 // (T-558): one source, and the addresses must agree with the version.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { RELEASE, installerUrl, releasePageUrl, releasesUrl, sizeMb } from "../../src/lib/site/release.ts";
+import { RELEASE, installerUrl, releasePageUrl, releasesUrl, sizeMb, sumsUrls } from "../../src/lib/site/release.ts";
+import releases from "../../src/lib/site/releases.json" with { type: "json" };
 
 test("the file name, tag and addresses all follow from the version", () => {
   assert.match(RELEASE.version, /^\d+\.\d+\.\d+$/);
@@ -28,4 +29,18 @@ test("the size is shown in megabytes with one decimal, the way Windows shows it"
 test("the facts are those of the published v0.1.0 pre-release", () => {
   assert.equal(RELEASE.version, "0.1.0");
   assert.equal(RELEASE.sha256, "e52f3a76a4ffb7717f017e431a6e56df7d86826e95d0372e75f5e3215e9386ee");
+});
+
+test("the facts are the newest release recorded from GitHub, not typed by hand", () => {
+  const newest = releases[0];
+  assert.equal(RELEASE.version, newest.version);
+  assert.equal(RELEASE.sha256, newest.sha256);
+  assert.equal(RELEASE.bytes, newest.bytes);
+  // The installer's own record among the release's files says the same.
+  assert.deepEqual(newest.assets[RELEASE.file as keyof typeof newest.assets], { bytes: RELEASE.bytes, sha256: RELEASE.sha256 });
+});
+
+test("the signed list of hashes is linked only for a release that has one", () => {
+  assert.equal(RELEASE.sums, false, "v0.1.0 has no SHA256SUMS");
+  assert.equal(sumsUrls(), null);
 });

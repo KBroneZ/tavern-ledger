@@ -1,0 +1,18 @@
+[package]
+name = "release-check"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Checks a release file's updater signature against the app's public key (T-105b)"
+
+[dependencies]
+# The verifier the app's updater uses, so the release is checked the same way.
+minisign-verify = "0.2"
+base64 = "0.22"
+serde_json = "1"
+
+[dev-dependencies]
+# Throwaway keys made inside the tests; never a real key.
+minisign = "=0.9.1"

@@ -1,0 +1,42 @@
+/* The update notice at the top of the main window and the updates setting
+   (T-105b): quiet, the amber of a lamp left on, never a warning colour. */
+.update-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin: 12px var(--space) 0;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--panel-hi);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-size: 14px;
+}
+.update-notice p { margin: 0; }
+.update-notice-text { flex: 1 1 260px; color: var(--text); font-weight: 600; }
+.update-notice .problem { flex: 1 0 100%; }
+.update-notice .problem:empty { display: none; }
+.update-notice button, .update-setting button {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 9px;
+  background: var(--bg-deep);
+  color: var(--text);
+  font: 700 14px var(--font-body);
+  cursor: pointer;
+  transition: border-color 150ms ease-out, background-color 150ms ease-out;
+}
+.update-notice button:hover, .update-setting button:hover,
+.update-notice button:focus-visible, .update-setting button:focus-visible { border-color: var(--amber); }
+.update-notice button:active, .update-setting button:active { transform: scale(0.97); }
+.update-notice button:disabled, .update-setting button:disabled { opacity: 0.5; cursor: default; transform: none; }
+.update-notice .update-restart { background: var(--amber); border-color: var(--amber); color: var(--amber-ink); }
+.update-notice .update-restart:hover { background: var(--amber-hi); }
+.update-setting .update-current { margin: 0; color: var(--dim); }
+@media (prefers-reduced-motion: reduce) {
+  .update-notice button, .update-setting button { transition: none; }
+}
+@media (forced-colors: active) {
+  .update-notice, .update-notice button, .update-setting button { border: 1.5px solid ButtonText; }
+}
