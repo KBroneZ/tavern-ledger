@@ -989,9 +989,10 @@ fn each_beat_is_the_run_of_steps_one_log_block_gives() {
     let replay = replay(&r, 1);
     // Start-of-combat trigger and its damage; the first attack with its hit
     // and shield; a death outside any block; the second attack; a death; the
-    // deathrattle and its summon; the token's buff (outside any block); the
-    // token's attack; a death; the hero's hit.
-    assert_eq!(replay.beats, [2, 3, 1, 3, 1, 2, 1, 3, 1, 1]);
+    // deathrattle and its summon, with the token's buff after it (outside any
+    // block: the game refreshing it); the token's attack; a death; the hero's
+    // hit.
+    assert_eq!(replay.beats, [2, 3, 1, 3, 1, 3, 3, 1, 1]);
     assert_eq!(replay.beats.iter().sum::<usize>(), replay.events.len());
 }
 
@@ -1182,8 +1183,8 @@ fn a_keyword_given_or_used_mid_combat_is_a_step_of_its_own_block() {
     );
     assert_eq!(
         replay.beats,
-        [1, 2, 3, 1],
-        "attack, Rally, the hit, the taunt"
+        [1, 2, 4],
+        "the attack, the Rally, the hit with the Taunt the game takes off after it"
     );
 }
 

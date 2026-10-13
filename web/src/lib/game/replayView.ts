@@ -10,8 +10,8 @@ import { cls, h, type VNode } from "../view/node.ts";
 import { picture, sourceMark } from "../view/pieces.ts";
 import { giftList } from "./gifts.ts";
 import { cardLabel } from "./names.ts";
-import { KEYWORDS } from "./keywords.ts";
-import { type Frame, type Namer, type Playback, playback, SPEEDS, stepWords, type Tile } from "./replay.ts";
+import { KEYWORDS, type Keyword } from "./keywords.ts";
+import { type Frame, frameWords, type Namer, type Playback, playback, SPEEDS, type Tile } from "./replay.ts";
 import type { Side } from "./replayRead.ts";
 import type { GameView, HeroRef, ReplayCombat } from "./shape.ts";
 import { g } from "./strings.ts";
@@ -31,7 +31,7 @@ export function namerFor(combat: ReplayCombat): Namer {
 }
 
 export function framesOf(combat: ReplayCombat): Playback {
-  return combat.replay ? playback(combat.replay, combat.heroes) : { frames: [], skipped: 0 };
+  return combat.replay ? playback(combat.replay, combat.heroes) : { frames: [], skipped: 0, grouped: false };
 }
 
 export function heroAt(combat: ReplayCombat, frame: Frame, side: Side): HeroRef {
@@ -41,11 +41,20 @@ export function heroAt(combat: ReplayCombat, frame: Frame, side: Side): HeroRef 
 
 // ---------- A minion ----------
 
+/** The keywords a token wears as a mark, as the game shows them on the board. */
+export const MARKED: readonly Keyword[] = ["taunt", "reborn", "venomous", "windfury", "stealth"];
+
 export function tileClass(tile: Tile): string {
   const m = tile.marks;
+  const marks = Object.fromEntries(MARKED.map((k) => [`has-${k}`, tile.keywords.includes(k)]));
   return cls("rp-minion", {
     "is-golden": tile.golden,
     "has-shield": tile.shield,
+    ...marks,
+    "is-gaining": !!m.gained?.length,
+    "is-losing": !!m.lost?.length,
+    ...Object.fromEntries(MARKED.map((k) => [`gains-${k}`, !!m.gained?.includes(k)])),
+    ...Object.fromEntries(MARKED.map((k) => [`loses-${k}`, !!m.lost?.includes(k)])),
     "is-attacker": !!m.attacker,
     "is-defender": !!m.defender,
     "is-hurt": !!m.hurt,
@@ -83,10 +92,20 @@ export function tileInfo(tile: Tile): VNode[] {
   ].filter((n): n is VNode => n !== null);
 }
 
+/**
+ * Each keyword's mark, drawn by the stylesheet only while the token has it
+ * (its has-* class), so a mark appears and goes with the log's own steps.
+ * Shapes of our own (D-074: no game art but the portraits).
+ */
+function keywordMarks(): VNode {
+  return h("span", { class: "rp-keys", "aria-hidden": "true" }, MARKED.map((k) => h("i", { class: `rp-k rp-k-${k}` })));
+}
+
 export function tileView(tile: Tile): VNode {
   return h(
     "li",
     { class: tileClass(tile), "data-ref": tile.ref },
+    keywordMarks(),
     h("span", { class: "rp-art", title: tileWords(tile) }, picture("card", tile.cardId, cardLabel(tile.cardId, g("minion.unknownCard")), 56, true)),
     h("span", { class: "rp-info" }, ...tileInfo(tile)),
     giftList(tile),
@@ -186,7 +205,7 @@ function stepList(combat: ReplayCombat, pb: Playback, step: number): VNode {
       h(
         "button",
         { type: "button", class: "rp-step", "data-step": i, "aria-current": i === step ? "step" : undefined },
-        replay ? stepWords(f.event, replay, namer) : "",
+        replay ? frameWords(f, replay, namer) : "",
       ),
     ),
   );
@@ -203,7 +222,7 @@ export function playerView(combat: ReplayCombat, pb: Playback, step: number): VN
   const frame = pb.frames[step];
   const last = pb.frames.length - 1;
   const who = combat.opponents.map(heroLabel).join(" + ") || g("hero.unknown");
-  const words = combat.replay ? stepWords(frame.event, combat.replay, namerFor(combat)) : "";
+  const words = combat.replay ? frameWords(frame, combat.replay, namerFor(combat)) : "";
   return h(
     "div",
     { class: "rp-player", "data-round": combat.round },

@@ -11,7 +11,7 @@
 // beats), and moving one step on plays it (replayMotion.ts): the attacker
 // flies to its target, the board slides into place; a jump does not move.
 import { mount, toDom } from "../view/node.ts";
-import { beats, control, type Frame, keyAction, type PlayAction, type Playback, SPEEDS, stepWords } from "./replay.ts";
+import { control, type Frame, frameBeats, frameWords, keyAction, type PlayAction, type Playback, SPEEDS } from "./replay.ts";
 import { hit, lunge, measure, slide, still } from "./replayMotion.ts";
 import type { Side } from "./replayRead.ts";
 import {
@@ -41,7 +41,7 @@ interface Player {
   box: HTMLElement;
   /** Each minion's element, by its index in the replay. */
   tiles: Map<number, HTMLElement>;
-  /** Each step's beat at 1× (replay.ts beats). */
+  /** Each step's beat at 1× (replay.ts frameBeats). */
   beats: number[];
   step: number;
   playing: boolean;
@@ -90,7 +90,7 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     const tiles = new Map<number, HTMLElement>();
     for (const li of box.querySelectorAll<HTMLElement>(".rp-minion[data-ref]")) tiles.set(Number(li.dataset.ref), li);
     const pb = playbackOf(combat);
-    return { combat, pb, box, tiles, beats: beats(pb.frames.map((f) => f.event)), step, playing: false };
+    return { combat, pb, box, tiles, beats: frameBeats(pb), step, playing: false };
   }
 
   function stop(): void {
@@ -178,7 +178,7 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     const before = how === "move" ? measure(player.tiles.values()) : null;
     const nodes = SIDES.flatMap((side) => drawSide(frame, side));
     if (before) move(frame, before, nodes);
-    const words = combat.replay ? stepWords(frame.event, combat.replay, namerFor(combat)) : "";
+    const words = combat.replay ? frameWords(frame, combat.replay, namerFor(combat)) : "";
     one<HTMLElement>(box, ".rp-caption").textContent = words;
     if (speak && !playing) announce(words);
     one<HTMLElement>(box, ".rp-counter").textContent = counterText(step, last);

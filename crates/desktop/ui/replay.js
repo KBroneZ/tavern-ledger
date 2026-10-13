@@ -6,7 +6,12 @@
 // play back has none ("not shown"); a game saved before revision 8 has no
 // replays at all ("not recorded"). `combats`, `frames` and `stepWords` are
 // plain data in, plain data out (ui-tests/replay.test.js), and so are the
-// pace (`beats`) and the motion's geometry (T-560, D-132).
+// pace (`beats`) and the motion's geometry (T-560, D-132). Since parser
+// revision 13 (T-575) a step is a beat of the record: every event one log
+// block gave plays at once, an attack is always a step of its own, and the
+// opening's start-of-combat buffs play together; damage names its source
+// and keywords given or used mid-combat show as marks. The website's
+// replay.ts does the same.
 "use strict";
 
 (() => {
@@ -18,6 +23,11 @@
   const isInt = (v) => Number.isInteger(v);
   const SIDES = ["own", "opponent"];
   const TRIGGERS = ["start_of_combat", "deathrattle", "avenge", "rally"];
+  /** The keywords a token wears as a mark, as the game shows them on the board. */
+  const MARKED = ["taunt", "reborn", "venomous", "windfury", "stealth"];
+  /** Keywords a keyword step may give or take (Divine Shield has its own step). */
+  const STEP_KEYWORDS = ["taunt", "reborn", "venomous", "windfury", "stealth", "deathrattle", "rally"];
+  const CAUSES = ["attack", "start_of_combat", "deathrattle", "avenge", "rally", "hero_power", "trinket", "effect"];
   /** Playback speeds; at 1× each step stays for its beat (BEAT_MS). */
   const SPEEDS = [0.5, 1, 2, 4];
   // How long each kind of step stays at 1× before the next one plays (T-560,
@@ -36,6 +46,7 @@
     trigger: 480,
     hero_damage: 1200,
     board_in: 800,
+    keyword: 220,
     unknown: 0,
   };
   /** What the log writes between an attack and its first damage (a buff, a shield) plays at the impact. */
@@ -99,6 +110,8 @@
         return SIDES.includes(e.side) && isInt(e.amount);
       case "board_in":
         return SIDES.includes(e.side);
+      case "keyword":
+        return on(e.minion) && STEP_KEYWORDS.includes(e.keyword) && typeof e.on === "boolean";
       default:
         return false;
     }
@@ -163,6 +176,14 @@
       case "hero_damage":
         st.hero[e.side] += e.amount;
         break;
+      case "keyword": {
+        const now = st.tiles.get(e.minion).keywords;
+        if (e.on !== now.includes(e.keyword)) {
+          set(e.minion, { keywords: e.on ? [...now, e.keyword] : now.filter((k) => k !== e.keyword) });
+          mark(e.minion, e.on ? { gained: [e.keyword] } : { lost: [e.keyword] });
+        }
+        break;
+      }
       case "board_in":
         // A Duos board coming in brings its hero and replaces whatever is
         // still drawn on its side: apps before parser revision 11 left the
@@ -178,8 +199,9 @@
     return marks;
   }
 
-  const snapshot = (st, event, marks) => ({
-    event,
+  const snapshot = (st, events, marks) => ({
+    event: events[0] || null,
+    events,
     hero: { ...st.hero },
     heroes: { ...st.heroes },
     own: st.boards.own.map((ref) => ({ ...st.tiles.get(ref), ...(marks[ref] || {}) })),
@@ -193,21 +215,109 @@
   // file is cut at the parser's own bound.
   function frames(replay) {
     const st = startState(replay);
-    const out = [snapshot(st, null, {})];
+    const out = [snapshot(st, [], {})];
     let skipped = 0;
-    list(replay && replay.events).slice(0, MAX_EVENTS).forEach((e) => {
+    const grouped = steps(replay);
+    grouped.forEach((step) => {
       // Who died at the last step leaves the board now.
       st.dying.forEach((ref) => SIDES.forEach((s) => (st.boards[s] = st.boards[s].filter((x) => x !== ref))));
       st.dying.forEach((ref) => st.tiles.delete(ref));
       st.dying = [];
-      if (!playable(e, st.minions, st.tiles)) {
-        skipped += 1;
-        return;
-      }
-      out.push(snapshot(st, e, applyEvent(st, e)));
+      const played = [];
+      const marks = {};
+      step.forEach((e) => {
+        if (!playable(e, st.minions, st.tiles)) {
+          skipped += 1;
+          return;
+        }
+        const got = applyEvent(st, e);
+        Object.keys(got).forEach((ref) => (marks[ref] = together(marks[ref], got[ref])));
+        played.push(e);
+      });
+      if (played.length) out.push(snapshot(st, played, marks));
     });
     out.skipped = skipped;
+    out.grouped = beatsOf(replay) !== null;
     return out;
+  }
+
+  // Marks of several events on one minion, together: damage adds up, keywords gather.
+  function together(a, b) {
+    if (!a) return b;
+    const out = { ...a, ...b };
+    if (a.hurt && b.hurt) out.hurt = a.hurt + b.hurt;
+    ["gained", "lost"].forEach((k) => {
+      if (a[k] && b[k]) out[k] = [...new Set([...a[k], ...b[k]])];
+    });
+    return out;
+  }
+
+  // The record's beats (revision 13): each at least one event, adding up to
+  // the events; null in an older record, or one this page cannot trust.
+  function beatsOf(replay) {
+    const runs = replay && replay.beats;
+    const events = list(replay && replay.events).slice(0, MAX_EVENTS);
+    if (!Array.isArray(runs) || !runs.every((n) => isInt(n) && n > 0)) return null;
+    return runs.reduce((a, b) => a + b, 0) === events.length ? runs : null;
+  }
+
+  // A start-of-combat effect that only changes stats, shields or keywords.
+  function onlyBuffs(run) {
+    const sot = (e) => e.kind === "trigger" && e.trigger === "start_of_combat";
+    return run.length > 0 && sot(run[0]) && run.every((e) => sot(e) || ["stats", "shield", "keyword"].includes(e.kind));
+  }
+
+  // The steps of a replay, each the events played at once: a beat of the
+  // record, with an attack always a step of its own, and before the first
+  // attack the start-of-combat buffs of the whole table together; one event
+  // each in an older record.
+  function steps(replay) {
+    const events = list(replay && replay.events).slice(0, MAX_EVENTS).map((e) => (e && typeof e === "object" ? e : {}));
+    const runs = beatsOf(replay);
+    if (!runs) return events.map((e) => [e]);
+    const out = [];
+    let opening = true;
+    const push = (run) => {
+      const last = out[out.length - 1];
+      if (opening && last && onlyBuffs(last) && onlyBuffs(run)) last.push(...run);
+      else out.push(run);
+    };
+    let at = 0;
+    runs.forEach((n) => {
+      let run = [];
+      events.slice(at, at + n).forEach((e) => {
+        if (e.kind !== "attack") {
+          run.push(e);
+          return;
+        }
+        if (run.length) push(run);
+        opening = false;
+        out.push([e]);
+        run = [];
+      });
+      if (run.length) push(run);
+      at += n;
+    });
+    return out;
+  }
+
+  // A beat's length at 1× (revision 13): each kind of step in it once, at
+  // its own beat; damage counts for at most two minions.
+  function groupBeat(events) {
+    const counts = new Map();
+    events.forEach((e) => {
+      const kind = Object.prototype.hasOwnProperty.call(BEAT_MS, e.kind) ? e.kind : "unknown";
+      counts.set(kind, (counts.get(kind) || 0) + 1);
+    });
+    let ms = 0;
+    counts.forEach((n, kind) => (ms += BEAT_MS[kind] * (kind === "damage" ? Math.min(n, 2) : 1)));
+    return ms;
+  }
+
+  // Each frame's beat at 1×: by groupBeat for a record with beats, else as before.
+  function frameBeats(all) {
+    if (!all.grouped) return beats(all.map((f) => f.event));
+    return all.map((f) => (f.event ? groupBeat(f.events) : BEAT_MS.start));
   }
 
   // Each step's beat at 1× (the steps' events, null for the start), with the
@@ -349,6 +459,26 @@
 
   const capital = (s) => (s ? s.charAt(0).toLocaleUpperCase(I18n.locale()) + s.slice(1) : s);
 
+  // A damage in words: with its source since revision 13 ("from their
+  // Cleave Hound (attack)"), or "an unknown source"; as before without one.
+  function damageWords(e, m, heroText) {
+    const base = { m: m(e.minion), n: I18n.num(e.amount), left: I18n.num(e.health) };
+    const lethal = e.health <= 0;
+    if (e.source === undefined) return t(lethal ? "replay.ev.damage_lethal" : "replay.ev.damage", base);
+    const src = e.source;
+    if (src === null || typeof src !== "object" || !CAUSES.includes(src.how)) {
+      return t(lethal ? "replay.ev.damage_unknown_lethal" : "replay.ev.damage_unknown", base);
+    }
+    const from = isInt(src.minion) ? m(src.minion) : t(`replay.ev.card_${src.side === "own" ? "own" : "opponent"}`, { name: heroText(src.card_id) });
+    return t(lethal ? "replay.ev.damage_by_lethal" : "replay.ev.damage_by", { ...base, src: from, how: t(`replay.how.${src.how}`) });
+  }
+
+  // A frame's step in words: each of its events, in order; the start for none.
+  function frameWords(f, minionName, heroText) {
+    if (!f || !f.events || !f.events.length) return t("replay.start");
+    return f.events.map((e) => stepWords(e, minionName, heroText)).join(". ");
+  }
+
   // A step in words. `minionName(ref)` names a minion of the replay ("your
   // Imp", "their Imp"); `heroText(id)` names a hero.
   function stepWords(e, minionName, heroText) {
@@ -360,9 +490,9 @@
           ? t("replay.ev.attack_alone", { a: m(e.attacker) })
           : t("replay.ev.attack", { a: m(e.attacker), b: m(e.defender) }));
       case "damage":
-        return capital(e.health > 0
-          ? t("replay.ev.damage", { m: m(e.minion), n: I18n.num(e.amount), left: I18n.num(e.health) })
-          : t("replay.ev.damage_lethal", { m: m(e.minion), n: I18n.num(e.amount) }));
+        return capital(damageWords(e, m, heroText));
+      case "keyword":
+        return capital(t(e.on ? "replay.ev.keyword_on" : "replay.ev.keyword_off", { m: m(e.minion), k: t(`keyword.${e.keyword}`) }));
       case "shield":
         return capital(t(e.on ? "replay.ev.shield_on" : "replay.ev.shield_off", { m: m(e.minion) }));
       case "stats":
@@ -416,6 +546,11 @@
   // while it has Divine Shield.
   function minionTile(ui, tile, h) {
     const box = ui.el("span", "replay-minion");
+    // Each keyword's mark, shown by the stylesheet while the token has it.
+    const keys = ui.el("span", "replay-keys");
+    keys.setAttribute("aria-hidden", "true");
+    MARKED.forEach((k) => keys.append(ui.el("i", `replay-k replay-k-${k}`)));
+    box.append(keys);
     const frame = ui.el("span", "replay-frame");
     const img = h.art(tile.id, "replay-art");
     frame.append(img || ui.el("span", "replay-art art-missing"));
@@ -439,6 +574,11 @@
   function updateTile(box, tile, h) {
     const flags = ["golden", "shield", "attacker", "defender", "dying", "summoned", "buffed", "popped", "triggered"];
     flags.forEach((f) => box.classList.toggle(f, Boolean(tile[f])));
+    MARKED.forEach((k) => {
+      box.classList.toggle(`has-${k}`, tile.keywords.includes(k));
+      box.classList.toggle(`gains-${k}`, Boolean(tile.gained && tile.gained.includes(k)));
+      box.classList.toggle(`loses-${k}`, Boolean(tile.lost && tile.lost.includes(k)));
+    });
     // Damage past 0 (overkill) shows as 0, as on the game's board.
     const atk = tile.atk === null ? "?" : I18n.num(tile.atk);
     const health = tile.health === null ? "?" : I18n.num(Math.max(tile.health, 0));
@@ -577,7 +717,7 @@
     ol.setAttribute("start", "0");
     const items = all.map((f, i) => {
       const li = ui.el("li");
-      const b = button(ui, "replay-step", words(f.event), null);
+      const b = button(ui, "replay-step", words(f), null);
       b.addEventListener("click", () => go(i, false));
       li.append(b);
       return li;
@@ -623,7 +763,7 @@
   function player(ui, combat, outcome, heroes, h, state) {
     const all = frames(combat.replay);
     const name = nameOf(combat.replay, h);
-    const words = (e) => stepWords(e, name, (id) => h.heroText({ id }));
+    const words = (f) => frameWords(f, name, (id) => h.heroText({ id }));
     const box = ui.el("div", "replay-player");
     const head = ui.el("div", "replay-head");
     const result = ui.el("span", `chip chip-${outcome.outcome}`, t(`outcome.${outcome.outcome}`));
@@ -646,7 +786,7 @@
       const before = moving ? measure(SIDES.flatMap((side) => [...sides[side].tiles.values()])) : null;
       const drawn = drawStage(ui, sides, all[state.step], heroes, h);
       if (before) move(sides, all[state.step], before, drawn, speed);
-      caption.textContent = words(all[state.step].event);
+      caption.textContent = words(all[state.step]);
       // Read aloud on a step or a pause only, not at every step of playback.
       caption.setAttribute("aria-live", state.playing ? "off" : "polite");
       counter.textContent = t("replay.step_of", { n: I18n.num(state.step), total: I18n.num(last) });
@@ -658,7 +798,7 @@
       steps.items.forEach((li, i) => li.classList.toggle("now", i === state.step));
       memory.set(h.game, { ...state });
     };
-    go = clock(state, last, box, beats(all.map((f) => f.event)), draw);
+    go = clock(state, last, box, frameBeats(all), draw);
     // At the end, play starts over.
     c.play.addEventListener("click", () => (state.playing ? go(state.step, false) : go(state.step >= last ? 0 : state.step, true)));
     c.back.addEventListener("click", () => go(state.step - 1, false));
@@ -718,7 +858,7 @@
     return part;
   }
 
-  const api = { SPEEDS, BEAT_MS, IMPACT_MS, ATTACK_MS, combats, frames, beats, lungeFrames, flipDelta, stepWords, heroesOf, outcomeOf, section };
+  const api = { SPEEDS, BEAT_MS, IMPACT_MS, ATTACK_MS, combats, frames, steps, beats, groupBeat, frameBeats, lungeFrames, flipDelta, stepWords, frameWords, heroesOf, outcomeOf, section };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLReplay = api;
 })();

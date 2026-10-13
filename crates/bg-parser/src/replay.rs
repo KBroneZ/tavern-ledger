@@ -791,17 +791,28 @@ impl Live {
 }
 
 impl Run {
-    /// The replay with its beats: each run of events from one block (an
-    /// event outside any block alone).
+    /// The replay with its beats: each run of events from one block. A stat,
+    /// shield or keyword change outside any block is the game refreshing an
+    /// aura after the block before it, so it plays with that block; any
+    /// other event outside a block is a beat alone.
     fn sealed(&self) -> CombatReplay {
         let mut beats: Vec<usize> = Vec::new();
         let mut last = None;
-        for &block in &self.blocks {
+        for (event, &block) in self.replay.events.iter().zip(&self.blocks) {
+            let refresh = block == 0
+                && matches!(
+                    event,
+                    CombatEvent::Stats { .. }
+                        | CombatEvent::Shield { .. }
+                        | CombatEvent::Keyword { .. }
+                );
             match beats.last_mut() {
-                Some(n) if block != 0 && last == Some(block) => *n += 1,
+                Some(n) if refresh || (block != 0 && last == Some(block)) => *n += 1,
                 _ => beats.push(1),
             }
-            last = Some(block);
+            if !refresh {
+                last = Some(block);
+            }
         }
         CombatReplay {
             beats,

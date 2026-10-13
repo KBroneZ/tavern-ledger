@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { setLang } from "../../src/lib/i18n.ts";
-import { control, keyAction, playback, stepWords, type Frame, type Tile } from "../../src/lib/game/replay.ts";
+import { control, keyAction, playback, steps, stepWords, type Frame, type Tile } from "../../src/lib/game/replay.ts";
 import { MAX_REPLAY_EVENTS, MAX_REPLAY_MINIONS, readReplay, type Replay } from "../../src/lib/game/replayRead.ts";
 import { readRecord } from "../../src/lib/game/report.ts";
 import { shapeGame } from "../../src/lib/game/shape.ts";
@@ -302,7 +302,8 @@ test("game view: each round with a replay, its result and opponent; malformed on
 test("every replay of the user's real games is read and plays to the end", () => {
   const dir = join(import.meta.dirname, "..", "..", "..", "crates", "bg-parser", "tests", "data", "real");
   let played = 0;
-  for (const file of ["b253216_solo.json", "b253216_duos.json", "b253216_duos_gifts.json"]) {
+  let grouped = 0;
+  for (const file of ["b253216_solo.json", "b253216_duos.json", "b253216_duos_gifts.json", "b253216_duos_rally.json"]) {
     const games = JSON.parse(readFileSync(join(dir, file), "utf8")) as Json[];
     for (const game of games) {
       for (const round of game.rounds as Json[]) {
@@ -311,7 +312,9 @@ test("every replay of the user's real games is read and plays to the end", () =>
         const p = playback(r, NO_HEROES);
         const where = `${file} turn ${String(round.number)}`;
         assert.equal(p.skipped, 0, where);
-        assert.equal(p.frames.length, r.events.length + 1, where);
+        assert.equal(p.frames.length, steps(r).length + 1, where);
+        assert.equal(p.frames.slice(1).reduce((n, f) => n + f.events.length, 0), r.events.length, where);
+        grouped += p.frames.filter((f) => f.events.length > 1).length;
         const last = p.frames.at(-1) as Frame;
         const alive = (side: "own" | "opponent") => last[side].filter((t) => !t.marks.dying).length;
         if (round.result === "won") assert.equal(alive("opponent"), 0, where);
@@ -321,6 +324,7 @@ test("every replay of the user's real games is read and plays to the end", () =>
     }
   }
   assert.ok(played >= 17, `played ${played}`);
+  assert.ok(grouped > 100, `${grouped} steps play several events at once`);
 });
 
 test("step model: a summon goes to its slot, the left end when the log has none (the app's rule)", () => {
