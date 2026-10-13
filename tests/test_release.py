@@ -84,26 +84,36 @@ class TrustedKeyTest(unittest.TestCase):
     OLD = public_key(b"Ed" + bytes(8) + bytes(32))
     NEW = public_key()
 
-    def git(self, confs: dict, previous: str | None):
+    def git(self, confs: dict, earlier: list[str]):
         def run(args):
-            if args[0] == "describe":
-                return f"{previous}\n" if previous else None
+            if args[0] == "tag":
+                return "".join(f"{name}\n" for name in earlier)
             return confs.get(args[1].split(":")[0])
         return run
 
     def test_the_first_updater_release_is_checked_against_its_own_key(self):
-        git = self.git({"v0.2.0": conf(key=self.NEW), "v0.1.0": json.dumps({"version": "0.1.0"})}, "v0.1.0")
+        git = self.git({"v0.2.0": conf(key=self.NEW), "v0.1.0": json.dumps({"version": "0.1.0"})}, ["v0.1.0"])
         self.assertEqual(release.trusted_key("v0.2.0", git)[0], self.NEW)
-        self.assertEqual(release.trusted_key("v0.2.0", self.git({"v0.2.0": conf(key=self.NEW)}, None))[0], self.NEW)
+        self.assertEqual(release.trusted_key("v0.2.0", self.git({"v0.2.0": conf(key=self.NEW)}, []))[0], self.NEW)
 
     def test_a_release_that_changes_the_key_is_checked_against_the_old_one(self):
-        git = self.git({"v0.3.0": conf("0.3.0", self.NEW), "v0.2.0": conf(key=self.OLD)}, "v0.2.0")
+        git = self.git({"v0.3.0": conf("0.3.0", self.NEW), "v0.2.0": conf(key=self.OLD)}, ["v0.2.0"])
         key, note = release.trusted_key("v0.3.0", git)
         self.assertEqual(key, self.OLD)
         self.assertIn("changes the updater key", note)
 
+    def test_a_stray_or_keyless_tag_in_between_does_not_hide_the_trusted_key(self):
+        confs = {
+            "v0.4.0": conf("0.4.0", self.NEW),
+            "v0.3.1": json.dumps({"version": "0.3.1"}),
+            "vtest": conf("0.0.0", self.NEW),
+            "v0.3.0": conf("0.3.0", self.OLD),
+        }
+        git = self.git(confs, ["vtest", "v0.3.1", "v0.3.0", "v0.2.0"])
+        self.assertEqual(release.trusted_key("v0.4.0", git)[0], self.OLD)
+
     def test_a_tag_without_a_real_key_is_refused(self):
-        git = self.git({"v0.3.0": conf("0.3.0", "NOT-SET")}, "v0.2.0")
+        git = self.git({"v0.3.0": conf("0.3.0", "NOT-SET")}, ["v0.2.0"])
         with self.assertRaisesRegex(Refused, "no release public key"):
             release.trusted_key("v0.3.0", git)
 

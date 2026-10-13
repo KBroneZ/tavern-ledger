@@ -154,8 +154,16 @@ def trusted_key(tag: str, git: Git) -> tuple[str, str]:
     own = updater_key(git(["show", f"{tag}:{path}"]))
     if own is None:
         raise Refused(f"{tag}: tauri.conf.json has no release public key")
-    previous = (git(["describe", "--tags", "--abbrev=0", "--match", "v*", f"{tag}^"]) or "").strip()
-    old = updater_key(git(["show", f"{previous}:{path}"])) if previous else None
+    # The newest earlier release tag (vX.Y.Z only) whose config has a real
+    # key: a stray tag or an old release without the updater is skipped.
+    earlier = git(["tag", "--merged", f"{tag}^", "--list", "v*", "--sort=-v:refname"]) or ""
+    previous, old = "", None
+    for name in earlier.split():
+        if VERSION_RE.match(name[1:]) and name.startswith("v"):
+            old = updater_key(git(["show", f"{name}:{path}"]))
+            if old is not None:
+                previous = name
+                break
     if old is None:
         return own, f"{tag} is the first release with an updater key: checked against its own key"
     if old != own:
