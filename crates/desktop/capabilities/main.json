@@ -46,6 +46,11 @@
     "allow-game-folder-use-running",
     "allow-game-folder-decline-running",
     "allow-log-ui-error",
-    "allow-open-log-folder"
+    "allow-open-log-folder",
+    "allow-update-status",
+    "allow-update-set-auto",
+    "allow-update-check-now",
+    "allow-update-install",
+    "allow-update-later"
   ]
 }

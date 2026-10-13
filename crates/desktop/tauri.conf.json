@@ -40,8 +40,21 @@
       "csp": "default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data: http://cardart.localhost; connect-src ipc: http://ipc.localhost; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'"
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "NOT-SET-the-release-public-key-goes-here",
+      "endpoints": [
+        "https://github.com/KBroneZ/tavern-ledger/releases/latest/download/latest.json"
+      ],
+      "requireSignedVersion": true,
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": [
       "nsis"
     ],

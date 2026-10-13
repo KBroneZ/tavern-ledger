@@ -12,7 +12,7 @@ import "../../styles/download.css";
 import { readConfig } from "../../lib/config.ts";
 import { dl } from "../../lib/download/strings.ts";
 import { dateFormat, href, langPaths, numberFormat, setLang } from "../../lib/i18n.ts";
-import { installerUrl, RELEASE, releasesUrl, repoUrl, sizeMb } from "../../lib/site/release.ts";
+import { installerUrl, RELEASE, releasesUrl, repoUrl, sizeMb, sumsUrls } from "../../lib/site/release.ts";
 import { st } from "../../lib/site/strings.ts";
 
 export const getStaticPaths = langPaths;
@@ -33,6 +33,8 @@ const facts = [
   { label: dl("fact.date"), value: published },
 ];
 const steps = ([1, 2, 3, 4] as const).map((n) => ({ title: dl(`step${n}.title`), line: dl(`step${n}.line`), more: dl(`step${n}.more`) }));
+// Releases from v0.2.0 on carry a signed list of their files' hashes.
+const sums = sumsUrls();
 const reads = (["reads.1", "reads.2", "reads.3", "reads.4"] as const).map((key) => dl(key));
 ---
 
@@ -90,6 +92,13 @@ const reads = (["reads.1", "reads.2", "reads.3", "reads.4"] as const).map((key) 
           <p>{dl("check.body")}</p>
           <p class="mono dl-code">{RELEASE.sha256}</p>
           <p class="mono dl-code">{dl("check.command", { file: RELEASE.file })}</p>
+          {
+            sums && (
+              <p>
+                {dl("check.sums")} <a href={sums.list}>{dl("check.sums.list")}</a> · <a href={sums.signature}>{dl("check.sums.signature")}</a>
+              </p>
+            )
+          }
         </More>
       </div>
       <div class="dl-extra">

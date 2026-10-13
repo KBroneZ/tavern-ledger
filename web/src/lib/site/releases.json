@@ -1,0 +1,17 @@
+[
+  {
+    "version": "0.1.0",
+    "tag": "v0.1.0",
+    "file": "TavernLedger_0.1.0_x64-setup.exe",
+    "bytes": 6847192,
+    "sha256": "e52f3a76a4ffb7717f017e431a6e56df7d86826e95d0372e75f5e3215e9386ee",
+    "date": "2026-10-12",
+    "sums": false,
+    "assets": {
+      "TavernLedger_0.1.0_x64-setup.exe": {
+        "bytes": 6847192,
+        "sha256": "e52f3a76a4ffb7717f017e431a6e56df7d86826e95d0372e75f5e3215e9386ee"
+      }
+    }
+  }
+]

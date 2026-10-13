@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="turns.css">
 <link rel="stylesheet" href="replay.css">
 <link rel="stylesheet" href="settings.css">
+<link rel="stylesheet" href="updates.css">
 </head>
 <body>
   <header id="masthead" class="masthead">
@@ -25,6 +26,12 @@
   </header>
 
   <main id="home">
+    <section id="update-notice" class="update-notice" aria-labelledby="update-notice-text" hidden>
+      <p id="update-notice-text" class="update-notice-text"></p>
+      <button type="button" id="update-restart" class="update-restart" data-i18n="updates.restart">Restart now</button>
+      <button type="button" id="update-later" data-i18n="updates.later">Later</button>
+      <p id="update-notice-problem" class="problem" role="status"></p>
+    </section>
     <section id="folder-offer" class="folder-offer" role="status" aria-live="polite" hidden>
       <p id="folder-offer-text"></p>
       <p class="folder-offer-actions">
@@ -211,6 +218,16 @@
         <p id="autostart-note" class="note" hidden></p>
         <p id="autostart-problem" class="problem" role="status"></p>
       </section>
+      <section id="update-setting" class="update-setting settings-group" aria-labelledby="update-title">
+        <h3 id="update-title" data-i18n="updates.title">Updates</h3>
+        <p id="update-current" class="update-current"></p>
+        <label class="switch"><input id="update-auto" type="checkbox"> <span data-i18n="updates.auto">Check for updates automatically</span></label>
+        <button type="button" id="update-check" data-i18n="updates.checkNow">Check now</button>
+        <p id="update-line" class="note" role="status"></p>
+        <p class="note" data-i18n="updates.note">Updates come from the project's GitHub releases.</p>
+        <p id="update-warning" class="problem" role="status"></p>
+        <p id="update-problem" class="problem" role="status"></p>
+      </section>
       <section id="log-setting" class="settings-group" aria-labelledby="log-title">
         <h3 id="log-title" data-i18n="settings.log.title">Error log</h3>
         <p class="setting-row"><button type="button" id="log-open" class="report-btn" data-i18n="settings.log.open">Open log folder</button></p>
@@ -341,6 +358,7 @@
   <script src="strings/replay.js"></script>
   <script src="strings/why.js"></script>
   <script src="strings/gifts.js"></script>
+  <script src="strings/updates.js"></script>
   <script src="focus-keeper.js"></script>
   <script src="cards.js"></script>
   <script src="compact.js"></script>
@@ -361,6 +379,8 @@
   <script src="overlay-switch.js"></script>
   <script src="settings.js"></script>
   <script src="memory-setting.js"></script>
+  <script src="update-words.js"></script>
+  <script src="updates.js"></script>
   <script src="game-folder.js"></script>
   <script src="log-setting.js"></script>
   <script src="first-start.js"></script>

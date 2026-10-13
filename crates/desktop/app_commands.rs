@@ -51,4 +51,9 @@ pub const APP_COMMANDS: &[&str] = &[
     "game_folder_decline_running",
     "log_ui_error",
     "open_log_folder",
+    "update_status",
+    "update_set_auto",
+    "update_check_now",
+    "update_install",
+    "update_later",
 ];

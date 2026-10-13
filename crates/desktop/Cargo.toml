@@ -13,6 +13,15 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2.12", features = ["tray-icon"] }
 tauri-plugin-autostart = "=2.5.1"
+# Self-update from the project's signed GitHub releases (T-105b). Windows'
+# own TLS like the uploader; no zip (only for Tauri v1 update bundles).
+tauri-plugin-updater = { version = "=2.12.0", default-features = false, features = ["native-tls", "system-proxy"] }
+# The verifier the plugin uses; here only to tell a real public key from the
+# placeholder before the plugin is turned on.
+minisign-verify = "0.2"
+base64 = "0.22"
+# The updater's HTTP client, to refuse redirects that leave https.
+reqwest = { version = "0.13", default-features = false }
 # The system's folder picker for "Hearthstone folder" in the settings (T-579).
 # Pinned, a release from January 2026; no default features (no Linux portals).
 rfd = { version = "=0.17.2", default-features = false }
@@ -25,6 +34,12 @@ tracker = { path = "../tracker" }
 uploader = { path = "../uploader", features = ["http"] }
 cards = { path = "../cards", features = ["http"] }
 game-memory = { path = "../game-memory" }
+
+[dev-dependencies]
+# A mock app and runtime to drive the real updater plugin in tests.
+tauri = { version = "2.12", features = ["tray-icon", "test"] }
+# Throwaway signing keys made inside the updater tests; never a real key.
+minisign = "=0.9.1"
 
 [target.'cfg(windows)'.dependencies]
 # Already in the build through auto-launch; quotes the start-up entry.

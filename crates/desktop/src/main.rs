@@ -26,6 +26,9 @@ mod screen_fit;
 mod settings;
 #[cfg(test)]
 mod ui_checks;
+#[cfg(test)]
+mod update_checks;
+mod updates;
 mod upload;
 #[cfg(test)]
 mod window_access;
@@ -1319,12 +1322,24 @@ fn main() {
     );
     let state = Arc::new(AppState::default());
     let app_settings = Arc::new(settings::Settings::default());
-    let app = tauri::Builder::default()
-        .plugin(tauri_plugin_autostart::init(
-            MacosLauncher::LaunchAgent,
-            Some(vec![MINIMIZED_ARG]),
-        ))
+    let context = tauri::generate_context!();
+    // Without a real release key the updater plugin is not even registered,
+    // so nothing can ask GitHub for an update (D-135).
+    let release_key = updates::release_key(context.config().plugins.0.get("updater"));
+    let app_updates = Arc::new(updates::Updates::new(
+        release_key.is_some(),
+        &context.package_info().version.to_string(),
+    ));
+    let mut builder = tauri::Builder::default().plugin(tauri_plugin_autostart::init(
+        MacosLauncher::LaunchAgent,
+        Some(vec![MINIMIZED_ARG]),
+    ));
+    if release_key.is_some() {
+        builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    }
+    let app = builder
         .manage(state.clone())
+        .manage(app_updates.clone())
         .manage(app_settings.clone())
         .manage(upload::Upload::default())
         .manage(card_data::Cards::default())
@@ -1378,6 +1393,11 @@ fn main() {
             game_folder::game_folder_decline_running,
             log_commands::log_ui_error,
             log_commands::open_log_folder,
+            updates::update_status,
+            updates::update_set_auto,
+            updates::update_check_now,
+            updates::update_install,
+            updates::update_later,
         ])
         .on_window_event(|window, event| {
             // Closing the window hides it; "Quit" in the tray menu exits.
@@ -1392,6 +1412,13 @@ fn main() {
             let game_memory_loaded = state.game_memory.load(&data_dir);
             state.saved_tribes.set_dir(&data_dir);
             let settings_loaded = app_settings.load(&data_dir);
+            app_updates.load(&data_dir);
+            let releases = updates::GitHub {
+                app: app.handle().clone(),
+                releases: updates::RELEASES.into(),
+                no_proxy: false,
+            };
+            updates::start(app.handle(), Arc::new(releases));
             card_data::start(app.handle(), &data_dir);
             setup_tray(app)?;
             // A test build never shows its overlay over the user's game (T-336).
@@ -1425,7 +1452,7 @@ fn main() {
             thread::spawn(move || run_tracker(handle, state));
             Ok(())
         })
-        .build(tauri::generate_context!())
+        .build(context)
         .unwrap_or_else(|e| {
             applog::error("app", &format!("failed to start: {e}"));
             panic!("failed to start Tavern Ledger: {e}");

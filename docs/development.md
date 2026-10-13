@@ -97,7 +97,9 @@ npm ci
 npm run installer
 ```
 
-`npm run installer` runs the pinned Tauri CLI (`@tauri-apps/cli` in `package.json`), which builds the app in release mode and makes `target\release\bundle\nsis\Tavern Ledger_<version>_x64-setup.exe` (about 6.5 MB). The version is `version` in `crates/desktop/tauri.conf.json`. To try an upgrade without changing it, build a second time from `crates\desktop` with `npx tauri build --bundles nsis --config '{"version":"0.1.1"}'`. The build also leaves `target\release\TavernLedger.exe`; `cargo build --release -p desktop` still makes `target\release\desktop.exe`.
+`npm run installer` runs the pinned Tauri CLI (`@tauri-apps/cli` in `package.json`) as `tauri build --bundles nsis --no-sign -- --locked`, which builds the app in release mode from `Cargo.lock` as it is and makes `target\release\bundle\nsis\Tavern Ledger_<version>_x64-setup.exe` (about 6.5 MB). The version is `version` in `crates/desktop/tauri.conf.json`. To try an upgrade without changing it, build a second time from `crates\desktop` with `npx tauri build --bundles nsis --config '{"version":"0.1.1"}'`. The build also leaves `target\release\TavernLedger.exe`; `cargo build --release -p desktop` still makes `target\release\desktop.exe`.
+
+It never signs anything. A release for players is built, signed for the app's updater and drafted by GitHub Actions from a `v*` tag, and published by hand: see [docs/release/checklist.md](release/checklist.md). The app's updater is off in any build whose `plugins.updater.pubkey` (in `tauri.conf.json`) is not a real minisign public key, as in the repository today; such a build never asks for updates. `cargo test -p desktop` runs the updater against a local test server with throwaway keys made in the tests.
 
 On its first run the CLI downloads, into `%LOCALAPPDATA%\tauri`: NSIS 3.11 and the `nsis_tauri_utils` 0.5.3 plugin from Tauri's GitHub releases (checked against hashes built into the CLI), and Microsoft's WebView2 bootstrapper (not hash-checked; `Get-AuthenticodeSignature "$env:LOCALAPPDATA\tauri\MicrosoftEdgeWebview2Setup.exe"` should say `Valid` and `CN=Microsoft Corporation`).
 

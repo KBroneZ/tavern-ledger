@@ -1,0 +1,388 @@
+name: Release
+
+# Builds the Windows installer from a `v*` tag, signs it for the app's updater
+# and drafts the GitHub release; a person reads the draft and publishes it
+# (docs/release/checklist.md). Each step holds only what it needs:
+#   build    Windows, no secrets: clean checkout of a commit on `main`,
+#            `--locked`, never signs.
+#   sign     waits for approval in the `release` Environment, which holds the
+#            signing key. No checkout, no dependency install: a Tauri CLI
+#            pinned here by SHA-512 signs the bytes the build made.
+#   verify   no permissions: the signatures against the key installed apps
+#            trust (tools/release.py trusted-key), with the verifier the app
+#            uses (crates/release-check).
+#   draft    attests where the installer was built and drafts the release.
+# On a pull request that changes this chain, and when run by hand, the same
+# build and checks run with a throwaway key made in the job (`sign-dry-run`)
+# and nothing is signed with the real key or drafted.
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - tools/release.py
+      - crates/release-check/**
+      - crates/desktop/tauri.conf.json
+      - package.json
+      - package-lock.json
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # Keep equal to ci.yml's.
+  RUST_VERSION: 1.96.0
+  REAL: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+  # The Tauri CLI that signs, fetched from npm and checked against these
+  # SHA-512s (the same as package-lock.json's for 2.12.1). Bumping it means
+  # changing all three lines here, in a reviewed pull request.
+  SIGNER_VERSION: 2.12.1
+  SIGNER_CLI_SHA512: 9040c4886cc6fb201ce4578bc6d5e9112fd537e1760bc1f4af880356d7d12cac53f67a7dd74d5df51106fca828da5af484a8b42290ec3838879d4dfe9da3a62e
+  SIGNER_LINUX_SHA512: 6754063ebe3d1c964c92dbbe4a9bba4356ff7fd00d69d5efa99659b76eb8e6e6b5c757afea9ace829f397a21afda3473a2114430ba3a689c9a2e32d45f9288bc
+
+jobs:
+  build:
+    runs-on: windows-2025
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      version: ${{ steps.facts.outputs.version }}
+      file: ${{ steps.facts.outputs.file }}
+      sha256: ${{ steps.sums.outputs.sha256 }}
+      sums_sha256: ${{ steps.sums.outputs.sums_sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # to see whether the tag is on main
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.16"
+
+      # Tag = tauri.conf.json = desktop crate version, and the real public key
+      # is in the config (a dry run only warns about the key).
+      - name: Release facts
+        id: facts
+        run: |
+          if [ "$REAL" = true ]; then dry=""; else dry="--dry-run"; fi
+          python tools/release.py prepare --ref "$GITHUB_REF" $dry >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+
+      # Releases come from reviewed code only.
+      - name: The tag is on main
+        if: ${{ env.REAL == 'true' }}
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+            echo "::error::The tag's commit is not on main. Tag a commit of main."
+            exit 1
+          }
+
+      # No cache: a release is built from nothing but the tag and the lockfiles.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: web/.node-version
+
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal
+          rustup default "$RUST_VERSION"
+
+      # The Tauri CLI pinned in package-lock.json; no install scripts run.
+      - name: Tauri CLI
+        run: npm ci --ignore-scripts
+
+      # `npm run installer` is `tauri build --bundles nsis --no-sign -- --locked`.
+      - name: Build the installer
+        run: npm run installer
+
+      # By content: a file the build rewrites with other line ends is unchanged.
+      - name: The build changed no file of the checkout
+        run: |
+          git diff --exit-code --stat
+          untracked="$(git ls-files --others --exclude-standard)"
+          echo "$untracked"
+          test -z "$untracked"
+
+      - name: Installer and SHA256SUMS
+        id: sums
+        env:
+          VERSION: ${{ steps.facts.outputs.version }}
+          FILE: ${{ steps.facts.outputs.file }}
+        run: |
+          mkdir dist
+          cp "target/release/bundle/nsis/Tavern Ledger_${VERSION}_x64-setup.exe" "dist/$FILE"
+          python tools/release.py sums dist "$FILE"
+          echo "sha256=$(sha256sum "dist/$FILE" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "sums_sha256=$(sha256sum dist/SHA256SUMS | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: built
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  # The real signature. The job starts only after the user approves it in the
+  # `release` Environment (required reviewer, `v*` tags only); the key and its
+  # passphrase are that Environment's secrets and reach one step only. It
+  # checks out nothing and installs nothing from the repository.
+  sign:
+    needs: build
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: release
+    permissions: {}
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      FILE: ${{ needs.build.outputs.file }}
+      SHA256: ${{ needs.build.outputs.sha256 }}
+      SUMS_SHA256: ${{ needs.build.outputs.sums_sha256 }}
+    steps:
+      - name: The signing key is set
+        env:
+          HAS_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+          HAS_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD != '' }}
+        run: |
+          if [ "$HAS_KEY" != true ] || [ "$HAS_PASSWORD" != true ]; then
+            echo "::error::The release Environment has no TAURI_SIGNING_PRIVATE_KEY or TAURI_SIGNING_PRIVATE_KEY_PASSWORD secret. Nothing was signed; set them up as in the updater setup guide, then run this job again."
+            exit 1
+          fi
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: built
+          path: dist
+
+      - name: The bytes are the ones the build made
+        run: |
+          echo "$SHA256  dist/$FILE" | sha256sum -c -
+          echo "$SUMS_SHA256  dist/SHA256SUMS" | sha256sum -c -
+
+      - name: Tauri CLI (pinned, checksum verified)
+        run: |
+          s="$RUNNER_TEMP/signer"
+          mkdir -p "$s/cli" "$s/linux"
+          base="https://registry.npmjs.org/@tauri-apps"
+          curl -sSfL --max-time 60 -o "$s/cli.tgz" "$base/cli/-/cli-$SIGNER_VERSION.tgz"
+          curl -sSfL --max-time 60 -o "$s/linux.tgz" "$base/cli-linux-x64-gnu/-/cli-linux-x64-gnu-$SIGNER_VERSION.tgz"
+          echo "$SIGNER_CLI_SHA512  $s/cli.tgz" | sha512sum -c -
+          echo "$SIGNER_LINUX_SHA512  $s/linux.tgz" | sha512sum -c -
+          tar -xzf "$s/cli.tgz" -C "$s/cli" --strip-components=1
+          tar -xzf "$s/linux.tgz" -C "$s/linux" --strip-components=1
+          cp "$s/linux/cli.linux-x64-gnu.node" "$s/cli/"
+          node "$s/cli/tauri.js" --version
+
+      - name: Sign
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          tauri="$RUNNER_TEMP/signer/cli/tauri.js"
+          node "$tauri" signer sign --app-version "$VERSION" "dist/$FILE"
+          node "$tauri" signer sign --app-version "$VERSION" dist/SHA256SUMS
+          mkdir signed && mv dist/*.sig signed/
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: signatures
+          path: signed/
+          if-no-files-found: error
+          retention-days: 7
+
+  # The dry run's stand-in, with the same pinned CLI: a throwaway key made
+  # here and used once; its public key is passed on so the next job checks
+  # against it.
+  sign-dry-run:
+    needs: build
+    if: ${{ !(github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions: {}
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      FILE: ${{ needs.build.outputs.file }}
+      SHA256: ${{ needs.build.outputs.sha256 }}
+      SUMS_SHA256: ${{ needs.build.outputs.sums_sha256 }}
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: built
+          path: dist
+
+      - name: The bytes are the ones the build made
+        run: |
+          echo "$SHA256  dist/$FILE" | sha256sum -c -
+          echo "$SUMS_SHA256  dist/SHA256SUMS" | sha256sum -c -
+
+      - name: Tauri CLI (pinned, checksum verified)
+        run: |
+          s="$RUNNER_TEMP/signer"
+          mkdir -p "$s/cli" "$s/linux"
+          base="https://registry.npmjs.org/@tauri-apps"
+          curl -sSfL --max-time 60 -o "$s/cli.tgz" "$base/cli/-/cli-$SIGNER_VERSION.tgz"
+          curl -sSfL --max-time 60 -o "$s/linux.tgz" "$base/cli-linux-x64-gnu/-/cli-linux-x64-gnu-$SIGNER_VERSION.tgz"
+          echo "$SIGNER_CLI_SHA512  $s/cli.tgz" | sha512sum -c -
+          echo "$SIGNER_LINUX_SHA512  $s/linux.tgz" | sha512sum -c -
+          tar -xzf "$s/cli.tgz" -C "$s/cli" --strip-components=1
+          tar -xzf "$s/linux.tgz" -C "$s/linux" --strip-components=1
+          cp "$s/linux/cli.linux-x64-gnu.node" "$s/cli/"
+          node "$s/cli/tauri.js" --version
+
+      - name: Sign with a throwaway key
+        run: |
+          tauri="$RUNNER_TEMP/signer/cli/tauri.js"
+          key="$RUNNER_TEMP/throwaway.key"
+          pass="$(openssl rand -hex 16)"
+          node "$tauri" signer generate --ci -p "$pass" -w "$key"
+          export TAURI_SIGNING_PRIVATE_KEY_PATH="$key" TAURI_SIGNING_PRIVATE_KEY_PASSWORD="$pass"
+          node "$tauri" signer sign --app-version "$VERSION" "dist/$FILE"
+          node "$tauri" signer sign --app-version "$VERSION" dist/SHA256SUMS
+          mkdir signed && mv dist/*.sig signed/ && cp "$key.pub" signed/throwaway.key.pub
+          rm -f "$key"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: signatures
+          path: signed/
+          if-no-files-found: error
+          retention-days: 1
+
+  verify:
+    needs: [build, sign, sign-dry-run]
+    if: ${{ !cancelled() && needs.build.result == 'success' && (needs.sign.result == 'success' || needs.sign-dry-run.result == 'success') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      key_changes: ${{ steps.check.outputs.key_changes }}
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      FILE: ${{ needs.build.outputs.file }}
+      SHA256: ${{ needs.build.outputs.sha256 }}
+      SUMS_SHA256: ${{ needs.build.outputs.sums_sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the previous release's tag holds the key apps trust
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.16"
+
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal
+          rustup default "$RUST_VERSION"
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: built
+          path: dist
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: signatures
+          path: signed
+
+      - name: The bytes are the ones the build made
+        run: |
+          echo "$SHA256  dist/$FILE" | sha256sum -c -
+          echo "$SUMS_SHA256  dist/SHA256SUMS" | sha256sum -c -
+
+      # A real release is checked against the key the installed apps trust:
+      # the previous release's (or this tag's own for the first one).
+      - name: Signatures match the trusted key and this version
+        id: check
+        run: |
+          cargo build --locked --release -p release-check
+          check="target/release/release-check"
+          if [ "$REAL" = true ]; then
+            key="$(python tools/release.py trusted-key "$GITHUB_REF_NAME")"
+            own="$(python -c 'import json; print(json.load(open("crates/desktop/tauri.conf.json"))["plugins"]["updater"]["pubkey"])')"
+            if [ "$key" != "$own" ]; then
+              echo "::warning::This release changes the updater public key."
+              echo "key_changes=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            key="$(cat signed/throwaway.key.pub)"
+          fi
+          "$check" "dist/$FILE" "signed/$FILE.sig" "$VERSION" --key "$key"
+          "$check" dist/SHA256SUMS signed/SHA256SUMS.sig "$VERSION" --key "$key"
+          # A file the key did not sign, or another version, must be refused.
+          if "$check" dist/SHA256SUMS "signed/$FILE.sig" "$VERSION" --key "$key"; then exit 1; fi
+          if "$check" "dist/$FILE" "signed/$FILE.sig" 0.0.0 --key "$key"; then exit 1; fi
+
+      - name: latest.json and SHA256SUMS.minisig
+        run: |
+          mkdir release
+          cp "dist/$FILE" dist/SHA256SUMS "signed/$FILE.sig" release/
+          python tools/release.py latest-json "$VERSION" "signed/$FILE.sig" release/latest.json \
+            --notes "Tavern Ledger $VERSION. What changed: https://github.com/${GITHUB_REPOSITORY}/releases/tag/v$VERSION"
+          python tools/release.py minisig signed/SHA256SUMS.sig release/SHA256SUMS.minisig
+          cat release/latest.json
+          ls -l release
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release
+          path: release/
+          if-no-files-found: error
+          retention-days: 7
+
+  # Only for a tag. Compiles nothing; the token can write releases.
+  draft:
+    needs: [build, verify]
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      FILE: ${{ needs.build.outputs.file }}
+      SHA256: ${{ needs.build.outputs.sha256 }}
+      SUMS_SHA256: ${{ needs.build.outputs.sums_sha256 }}
+      KEY_CHANGES: ${{ needs.verify.outputs.key_changes }}
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release
+          path: release
+
+      - name: The files are the ones the build made
+        run: |
+          echo "$SHA256  release/$FILE" | sha256sum -c -
+          echo "$SUMS_SHA256  release/SHA256SUMS" | sha256sum -c -
+
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: release/${{ needs.build.outputs.file }}
+
+      # A draft: nothing is public until the user publishes it.
+      - name: Draft the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="Write the notes here before publishing (docs/release/checklist.md). SHA-256 of the installer: $SHA256"
+          if [ "$KEY_CHANGES" = true ]; then
+            notes="WARNING: this release changes the updater public key. Publish it only if you planned a key rotation; otherwise delete this draft. $notes"
+          fi
+          gh release create "v$VERSION" release/* \
+            --repo "$GITHUB_REPOSITORY" --draft --verify-tag \
+            --title "Tavern Ledger $VERSION" --notes "$notes"
