@@ -543,6 +543,8 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     const CONF: &str = include_str!("../tauri.conf.json");
+    /// The release public key, as `tauri signer generate` wrote it.
+    const RELEASE_KEY: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IENDOUNFMkM3RTZDRDMxRjgKUldUNE1jM214K0tjekNHS3pMSDNaamJ0TXM0NGdDM21qc3hjWHM4bHdDYzFIQjJtZjc5KzVVTlUK";
 
     fn updater_conf() -> serde_json::Value {
         let conf: serde_json::Value = serde_json::from_str(CONF).unwrap();
@@ -550,10 +552,28 @@ mod tests {
     }
 
     #[test]
-    fn the_committed_build_has_no_release_key_so_updates_are_off() {
+    fn the_committed_build_carries_the_release_key_so_updates_are_on() {
         let conf = updater_conf();
-        assert!(conf["pubkey"].is_string(), "the key's place is there");
-        assert_eq!(release_key(Some(&conf)), None);
+        let key = release_key(Some(&conf)).expect("a real minisign public key");
+        // Changing the release key is a deliberate change (see the release
+        // checklist): this test changes with it. The whole key is pinned,
+        // not only its comment line, which nothing checks.
+        assert_eq!(key, RELEASE_KEY);
+        let text = base64::engine::general_purpose::STANDARD
+            .decode(&key)
+            .unwrap();
+        let text = String::from_utf8(text).unwrap();
+        let raw = base64::engine::general_purpose::STANDARD
+            .decode(text.lines().nth(1).unwrap())
+            .unwrap();
+        // Ed25519, then the key id (little-endian) the comment names.
+        assert_eq!(&raw[..2], b"Ed");
+        let id: String = raw[2..10]
+            .iter()
+            .rev()
+            .map(|b| format!("{b:02X}"))
+            .collect();
+        assert_eq!(id, "CC9CE2C7E6CD31F8");
         assert_eq!(release_key(None), None);
     }
 

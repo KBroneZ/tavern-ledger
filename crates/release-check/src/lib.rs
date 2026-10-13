@@ -151,7 +151,12 @@ mod tests {
         let conf = serde_json::json!({ "plugins": { "updater": { "pubkey": key_of(&pair) } } });
         assert_eq!(key_from_conf(&conf.to_string()), Ok(key_of(&pair)));
         let committed = include_str!("../../desktop/tauri.conf.json");
-        assert_eq!(key_from_conf(committed), Err(Refusal::NoKey));
+        assert!(
+            key_from_conf(committed).is_ok(),
+            "the committed release key"
+        );
+        let placeholder = serde_json::json!({ "plugins": { "updater": { "pubkey": "NOT-SET-the-release-public-key-goes-here" } } });
+        assert_eq!(key_from_conf(&placeholder.to_string()), Err(Refusal::NoKey));
         assert_eq!(key_from_conf("{}"), Err(Refusal::NoKey));
         // The app would not read a key with a line break after it: neither does this.
         let padded = serde_json::json!({ "plugins": { "updater": { "pubkey": format!("{}\n", key_of(&pair)) } } });

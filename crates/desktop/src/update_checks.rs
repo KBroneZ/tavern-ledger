@@ -291,3 +291,25 @@ fn no_update_information_is_said_as_such() {
     let (result, _) = fetch(&source(&server, &key));
     assert_eq!(result, Err(Reason::NotFound));
 }
+
+#[test]
+fn the_committed_config_with_its_release_key_registers_the_updater_plugin() {
+    let conf: serde_json::Value = serde_json::from_str(CONF).unwrap();
+    let updater = conf["plugins"]["updater"].clone();
+    assert!(crate::updates::release_key(Some(&updater)).is_some());
+    let mut context = mock_context(noop_assets());
+    context
+        .config_mut()
+        .plugins
+        .0
+        .insert("updater".into(), updater);
+    let app = mock_builder()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .build(context)
+        .unwrap();
+    // Built exactly as the app builds it; no check is made, so no request.
+    let updater = tauri_plugin_updater::UpdaterExt::updater_builder(app.handle())
+        .timeout(std::time::Duration::from_secs(1))
+        .build();
+    assert!(updater.is_ok(), "{:?}", updater.err());
+}
