@@ -108,7 +108,7 @@
   function startState(replay) {
     const minions = list(replay && replay.minions).map((m) => (m && typeof m === "object" ? m : {}));
     const start = isInt(replay && replay.start) ? Math.min(Math.max(replay.start, 0), minions.length) : 0;
-    const st = { minions, tiles: new Map(), boards: { own: [], opponent: [] }, hero: { own: 0, opponent: 0 }, heroes: { own: null, opponent: null }, dying: [] };
+    const st = { minions, tiles: new Map(), boards: { own: [], opponent: [] }, hero: { own: 0, opponent: 0 }, heroes: { own: null, opponent: null }, dying: [], incoming: new Set() };
     for (let ref = 0; ref < start; ref++) {
       const side = minions[ref].side;
       if (!SIDES.includes(side)) continue;
@@ -125,6 +125,7 @@
     const set = (ref, what) => st.tiles.set(ref, { ...st.tiles.get(ref), ...what });
     switch (e.kind) {
       case "attack":
+        st.incoming.clear();
         mark(e.attacker, { attacker: true });
         if (e.defender !== null) mark(e.defender, { defender: true });
         break;
@@ -147,7 +148,10 @@
       case "summon": {
         const m = st.minions[e.minion];
         const board = st.boards[m.side];
-        const at = isInt(m.position) ? m.position - 1 : board.length;
+        // Slot 1 is the left-most; a slot of 0 (none in the log) goes left
+        // too, but a board coming in fills from the left.
+        const unplaced = !isInt(m.position) || (m.position <= 0 && st.incoming.has(m.side));
+        const at = unplaced ? board.length : m.position - 1;
         st.tiles.set(e.minion, tileOf(m, e.minion));
         board.splice(Math.min(Math.max(at, 0), board.length), 0, e.minion);
         mark(e.minion, { summoned: true });
@@ -160,8 +164,13 @@
         st.hero[e.side] += e.amount;
         break;
       case "board_in":
-        // A Duos board coming in brings its hero.
+        // A Duos board coming in brings its hero and replaces whatever is
+        // still drawn on its side: apps before parser revision 11 left the
+        // shop board there.
         st.heroes[e.side] = typeof e.hero === "string" ? e.hero : null;
+        st.incoming.add(e.side);
+        st.boards[e.side].forEach((ref) => st.tiles.delete(ref));
+        st.boards[e.side] = [];
         break;
       default:
         break;

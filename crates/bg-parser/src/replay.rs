@@ -181,6 +181,9 @@ struct Run {
     incoming: Option<Side>,
     /// The hero damage is in: what follows is the game cleaning up.
     ended: bool,
+    /// Summons that entered with no slot (0): the game sets it in the tag
+    /// change right after, before anything else happens.
+    unplaced: BTreeSet<usize>,
 }
 
 /// The combat of the turn being read.
@@ -346,6 +349,12 @@ impl ReplayTracker {
                 }
             }
             "ATK" | "HEALTH" => run.stats(minion, e.int("ATK"), health_of(e)),
+            "ZONE_POSITION" => {
+                let slot = e.int("ZONE_POSITION");
+                if slot > 0 && run.unplaced.remove(&minion) {
+                    run.replay.minions[minion].position = slot;
+                }
+            }
             "DIVINE_SHIELD" => {
                 let on = e.int("DIVINE_SHIELD") > 0;
                 if on != (old.unwrap_or(0) > 0) {
@@ -418,6 +427,7 @@ impl Live {
                 open_attack: None,
                 incoming: None,
                 ended: false,
+                unplaced: BTreeSet::new(),
             }
         })
     }
@@ -523,7 +533,9 @@ impl Live {
             .push(ReplayMinion::new(side, minion_of(e, gifts_on(board, id))));
         run.refs.insert(id, minion);
         run.alive.insert(minion);
-        run.push(CombatEvent::Summon { minion });
+        if run.push(CombatEvent::Summon { minion }) && e.int("ZONE_POSITION") <= 0 {
+            run.unplaced.insert(minion);
+        }
     }
 }
 
@@ -565,7 +577,12 @@ impl Run {
     }
 
     /// Adds `event`; false (and the replay marked incomplete) past the bound.
+    /// Anything but a summon settles the summons before it: a slot that
+    /// comes later is the game shifting the board, not where they came in.
     fn push(&mut self, event: CombatEvent) -> bool {
+        if !matches!(event, CombatEvent::Summon { .. }) {
+            self.unplaced.clear();
+        }
         if self.replay.events.len() < MAX_REPLAY_EVENTS {
             self.replay.events.push(event);
             true

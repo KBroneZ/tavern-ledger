@@ -555,7 +555,7 @@
               "golden": false,
               "health": 1,
               "keywords": [],
-              "position": 0,
+              "position": 1,
               "side": "own"
             },
             {
@@ -742,7 +742,7 @@
                 "divine_shield",
                 "deathrattle"
               ],
-              "position": 0,
+              "position": 1,
               "side": "own"
             },
             {
@@ -751,7 +751,7 @@
               "golden": false,
               "health": 1,
               "keywords": [],
-              "position": 0,
+              "position": 2,
               "side": "own"
             },
             {
@@ -760,7 +760,7 @@
               "golden": false,
               "health": 3,
               "keywords": [],
-              "position": 0,
+              "position": 3,
               "side": "own"
             }
           ],
@@ -1110,7 +1110,7 @@
               "golden": false,
               "health": 3,
               "keywords": [],
-              "position": 0,
+              "position": 2,
               "side": "opponent"
             },
             {
@@ -1603,7 +1603,7 @@
                 "divine_shield",
                 "deathrattle"
               ],
-              "position": 0,
+              "position": 1,
               "side": "own"
             },
             {
@@ -1612,7 +1612,7 @@
               "golden": false,
               "health": 1,
               "keywords": [],
-              "position": 0,
+              "position": 2,
               "side": "own"
             },
             {
@@ -1621,7 +1621,7 @@
               "golden": false,
               "health": 5,
               "keywords": [],
-              "position": 0,
+              "position": 3,
               "side": "own"
             },
             {
@@ -1630,7 +1630,7 @@
               "golden": false,
               "health": 2,
               "keywords": [],
-              "position": 0,
+              "position": 4,
               "side": "own"
             },
             {
@@ -2079,7 +2079,7 @@
               "keywords": [
                 "deathrattle"
               ],
-              "position": 0,
+              "position": 1,
               "side": "own"
             },
             {
@@ -2088,7 +2088,7 @@
               "golden": true,
               "health": 2,
               "keywords": [],
-              "position": 0,
+              "position": 2,
               "side": "own"
             },
             {
@@ -2097,7 +2097,7 @@
               "golden": true,
               "health": 4,
               "keywords": [],
-              "position": 0,
+              "position": 3,
               "side": "own"
             },
             {
@@ -2106,7 +2106,7 @@
               "golden": false,
               "health": 3,
               "keywords": [],
-              "position": 0,
+              "position": 4,
               "side": "own"
             },
             {
@@ -2115,7 +2115,7 @@
               "golden": false,
               "health": 6,
               "keywords": [],
-              "position": 0,
+              "position": 5,
               "side": "own"
             }
           ],
@@ -2887,7 +2887,7 @@
                 "taunt",
                 "deathrattle"
               ],
-              "position": 0,
+              "position": 5,
               "side": "opponent"
             },
             {
@@ -3954,7 +3954,7 @@
               "keywords": [
                 "deathrattle"
               ],
-              "position": 0,
+              "position": 1,
               "side": "own"
             },
             {
@@ -3965,7 +3965,7 @@
               "keywords": [
                 "deathrattle"
               ],
-              "position": 0,
+              "position": 2,
               "side": "own"
             },
             {
@@ -3974,7 +3974,7 @@
               "golden": true,
               "health": 2,
               "keywords": [],
-              "position": 0,
+              "position": 3,
               "side": "own"
             },
             {
@@ -3983,7 +3983,7 @@
               "golden": true,
               "health": 4,
               "keywords": [],
-              "position": 0,
+              "position": 4,
               "side": "own"
             },
             {
@@ -3992,7 +3992,7 @@
               "golden": false,
               "health": 26,
               "keywords": [],
-              "position": 0,
+              "position": 5,
               "side": "own"
             },
             {
@@ -4001,7 +4001,7 @@
               "golden": false,
               "health": 8,
               "keywords": [],
-              "position": 0,
+              "position": 6,
               "side": "own"
             },
             {
@@ -4010,7 +4010,7 @@
               "golden": false,
               "health": 3,
               "keywords": [],
-              "position": 0,
+              "position": 7,
               "side": "own"
             },
             {
@@ -5062,7 +5062,7 @@
               "golden": false,
               "health": 1,
               "keywords": [],
-              "position": 0,
+              "position": 4,
               "side": "opponent"
             },
             {

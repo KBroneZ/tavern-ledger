@@ -229,3 +229,66 @@ test("motion: the app moves with the website's numbers", () => {
     assert.equal(value(app, name), value(site, name), name);
   }
 });
+
+// Records from parser revision 10 or older start some Duos combats with the
+// shop board still on a side, then bring the real board in next to it;
+// before revision 12 a board coming in has no slots (0).
+test("a board coming in replaces what is still drawn on its side, left to right", () => {
+  const f = TLReplay.frames({
+    minions: [
+      m("own", "SHOP_1", 1, 1, 1),
+      m("own", "SHOP_2", 1, 1, 2),
+      m("opponent", "FOE", 1, 1, 1),
+      m("own", "IN_1", 2, 2, 0),
+      m("own", "IN_2", 2, 2, 0),
+      m("own", "IN_3", 2, 2, 0),
+    ],
+    start: 3,
+    events: [
+      { kind: "board_in", side: "own", hero: "MATE" },
+      { kind: "summon", minion: 3 },
+      { kind: "summon", minion: 4 },
+      { kind: "stats", minion: 4, atk: 3, health: 3 },
+      { kind: "summon", minion: 5 },
+      { kind: "attack", attacker: 3, defender: 2 },
+    ],
+    complete: true,
+  });
+  const cards = (board) => board.map((x) => x.id);
+  assert.deepEqual(cards(f[1].own), [], "the left-over shop board leaves");
+  assert.deepEqual(cards(f[1].opponent), ["FOE"]);
+  assert.deepEqual(cards(f[f.length - 1].own), ["IN_1", "IN_2", "IN_3"]);
+  assert.equal(f[f.length - 1].own[0].attacker, true);
+});
+
+test("both boards coming in at once each fill from the left; after the first attack a summon with no slot goes left", () => {
+  const f = TLReplay.frames({
+    minions: [
+      m("own", "OLD_OWN", 1, 1, 1),
+      m("opponent", "OLD_FOE", 1, 1, 1),
+      m("own", "IN_OWN_1", 1, 1, 0),
+      m("opponent", "IN_FOE_1", 1, 1, 0),
+      m("own", "IN_OWN_2", 1, 1, 0),
+      m("opponent", "IN_FOE_2", 1, 1, 0),
+      m("own", "TOKEN", 1, 1, 0),
+    ],
+    start: 2,
+    events: [
+      { kind: "board_in", side: "own", hero: null },
+      { kind: "board_in", side: "opponent", hero: null },
+      { kind: "summon", minion: 2 },
+      { kind: "summon", minion: 3 },
+      { kind: "summon", minion: 4 },
+      { kind: "summon", minion: 5 },
+      { kind: "stats", minion: 0, atk: 9, health: 9 },
+      { kind: "attack", attacker: 2, defender: 3 },
+      { kind: "summon", minion: 6 },
+    ],
+    complete: true,
+  });
+  const cards = (board) => board.map((x) => x.id);
+  const last = f[f.length - 1];
+  assert.deepEqual(cards(last.opponent), ["IN_FOE_1", "IN_FOE_2"]);
+  assert.deepEqual(cards(last.own), ["TOKEN", "IN_OWN_1", "IN_OWN_2"]);
+  assert.equal(f.skipped, 1, "a step naming a minion of a board that left is not played");
+});

@@ -14,7 +14,7 @@ import { readReplay, type ReplayRead } from "./replayRead.ts";
 export { KEYWORDS, type Keyword };
 
 /** The parser revision this site knows (crates/bg-parser PARSER_REVISION). */
-export const KNOWN_REVISION = 11;
+export const KNOWN_REVISION = 12;
 
 const CARD_ID = /^[A-Za-z0-9_]{1,64}$/;
 const NOTE = /^[A-Za-z0-9 _:.()-]{1,160}$/;
