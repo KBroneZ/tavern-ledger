@@ -274,6 +274,8 @@
         "That email is too long.": "Ese correo es demasiado largo.",
         "No upload server is set up yet.": "Aún no hay ningún servidor de subida configurado.",
         "The sign-in stopped after an internal error.": "El inicio de sesión se ha detenido por un error interno.",
+        "Type the email of your Tavern Ledger account.": "Escribe el correo de tu cuenta de Tavern Ledger.",
+        "This upload server has no sign-in page: the app signs in only with Tavern Ledger's own server or this PC's.": "Este servidor de subida no tiene página de inicio de sesión: la app solo inicia sesión con el servidor de Tavern Ledger o con el de este PC.",
         "Signed out on this PC, but the server session could not be ended (the server could not be reached or refused).": "Sesión cerrada en este PC, pero no se ha podido cerrar la sesión en el servidor (no responde o lo ha rechazado).",
         "Signed out: the sign-in on this PC is gone. Sign in again.": "Sesión cerrada: el inicio de sesión de este PC ya no está. Vuelve a iniciar sesión.",
         "Signed out: your sign-in expired or was ended. Sign in again.": "Sesión cerrada: tu sesión ha caducado o se ha cerrado. Vuelve a iniciar sesión.",
@@ -294,6 +296,8 @@
     // tracker::setup's lines (file, path, section, settings, reason).
     backendPatterns: {
       es: [
+        [String.raw`Could not open your browser \((\w+)\)\.`,
+          "No se ha podido abrir tu navegador ($1)."],
         [String.raw`Uploads go to (\S+), not to Tavern Ledger's own server\.`,
           "Las subidas van a $1, no al servidor de Tavern Ledger."],
         [String.raw`The setting for reading from the game could not be read \((\w+)\); it is off\.`,

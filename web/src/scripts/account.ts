@@ -21,6 +21,8 @@ import { hasLinkParams, parseAuthLink } from "../lib/authLink.ts";
 import { isConfirmed } from "../lib/deleteAccount.ts";
 import { exportFileName } from "../lib/exportData.ts";
 import { checkDisplayName, publicProfilePath } from "../lib/profile.ts";
+import type { Captcha } from "../lib/captcha.ts";
+import { captchaIn } from "./captcha.ts";
 import { config, supabase } from "./client.ts";
 import { busy, byId, clearInvalid, failField, field, moveFocus, say, show } from "./dom.ts";
 
@@ -198,6 +200,9 @@ function setUpDelete(user: User): void {
   const message = byId("delete-message");
   const reauth = byId("reauth");
   const password = field(form, "password");
+  // Drawn only when the password is asked for: Cloudflare's script is not
+  // loaded for an account page that never needs it.
+  let captcha: Captcha | null = null;
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     clearInvalid(form);
@@ -207,8 +212,15 @@ function setUpDelete(user: User): void {
     }
     void busy(form.querySelector("button") as HTMLButtonElement, async () => {
       if (!reauth.hidden) {
+        const check = captcha?.take() ?? { problem: at("captcha.wait") };
+        if ("problem" in check) {
+          say(message, check.problem, "error");
+          return;
+        }
         say(message, at("account.delete.checking"));
-        const error = await signIn(supabase, user.email ?? "", password.value);
+        const error = await signIn(supabase, user.email ?? "", password.value, check.token);
+        // A token works once: the next try needs a new one.
+        captcha?.reset();
         if (error) {
           failField(password, message, error);
           return;
@@ -224,6 +236,7 @@ function setUpDelete(user: User): void {
           return;
         case "reauthenticate":
           show(reauth, true);
+          captcha ??= captchaIn(reauth.querySelector<HTMLElement>("[data-captcha]") as HTMLElement);
           password.focus();
           say(message, at("account.delete.needPassword"), "error");
           return;

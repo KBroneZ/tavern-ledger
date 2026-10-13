@@ -3,7 +3,7 @@
 import { existsSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { defineConfig } from "astro/config";
 import { loadEnv } from "vite";
-import { contentSecurityPolicy, NO_STORE_PAGES, readConfig, WASM_WORKER } from "./src/lib/config.ts";
+import { contentSecurityPolicy, NO_STORE_PAGES, readConfig, TURNSTILE_PAGES, WASM_WORKER } from "./src/lib/config.ts";
 
 /**
  * The simulator's worker alone gets the same policy plus 'wasm-unsafe-eval'
@@ -25,6 +25,19 @@ function simulatorHeaders(config, dir) {
     `  Content-Security-Policy: ${policy}`,
     "",
   ];
+}
+
+/**
+ * The pages with the anti-robot check (T-562) get the same policy plus
+ * Cloudflare Turnstile's origin for its script and frame, the way the
+ * simulator's worker gets its own: drop the site-wide policy, set this one.
+ * The page's own meta policy says the same (layouts/Base.astro). Accounts
+ * closed: no form, no rule.
+ */
+function turnstileHeaders(config) {
+  if (!config) return [];
+  const policy = `${contentSecurityPolicy(config.url, { turnstile: true })}; frame-ancestors 'none'`;
+  return TURNSTILE_PAGES.flatMap((path) => [path, "  ! Content-Security-Policy", `  Content-Security-Policy: ${policy}`, ""]);
 }
 
 /** Writes dist/_headers (Cloudflare Pages) with the same policy as the pages. */
@@ -54,6 +67,7 @@ function securityHeaders() {
           // Pages about one account are never kept (Back after signing out).
           ...NO_STORE_PAGES.flatMap((path) => [path, "  Cache-Control: no-store", ""]),
           ...simulatorHeaders(config, dir),
+          ...turnstileHeaders(config),
         ].join("\n");
         writeFileSync(new URL("_headers", dir), headers);
         // Cloudflare Pages serves the nearest 404.html: the Spanish one must

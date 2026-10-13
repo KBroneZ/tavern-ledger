@@ -8,7 +8,15 @@ import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { loadEnv } from "vite";
-import { contentSecurityPolicy, NO_STORE_PAGES, readConfig, signupsOpen, WASM_WORKER } from "../../src/lib/config.ts";
+import {
+  contentSecurityPolicy,
+  NO_STORE_PAGES,
+  readConfig,
+  signupsOpen,
+  TURNSTILE_ORIGIN,
+  TURNSTILE_PAGES,
+  WASM_WORKER,
+} from "../../src/lib/config.ts";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const DIST = join(ROOT, "dist");
@@ -16,7 +24,7 @@ const ENV = loadEnv("production", ROOT, "PUBLIC_");
 const CONFIG = readConfig(ENV);
 const SIGNUPS = signupsOpen(ENV);
 const DATA_PAGES = ["me/index.html", "games/index.html", "profile/index.html", "leaderboards/index.html", "player-heroes/index.html", "curious/index.html", "heroes/index.html"];
-const ACCOUNT_PAGES = ["signin/index.html", "account/index.html", "forgot-password/index.html", ...DATA_PAGES];
+const ACCOUNT_PAGES = ["signin/index.html", "account/index.html", "forgot-password/index.html", "desktop-sign-in/index.html", ...DATA_PAGES];
 
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -35,6 +43,8 @@ const CARD_ART =
   /^<img src="https:\/\/art\.hearthstonejson\.com\/v1\/256x\/[A-Za-z0-9_]{1,64}\.jpg" data-fallback="\/placeholders\/card-\d\.svg" alt="" width="\d+" height="\d+" loading="lazy" decoding="async">$/;
 /** The minion pages' structured data: a data block, never run (minions.test.ts parses it). */
 const JSON_LD = /<script type="application\/ld\+json">[^<]*<\/script>/g;
+/** A page with the anti-robot check (T-562): its address is one of TURNSTILE_PAGES. */
+const isTurnstilePage = (f: string) => TURNSTILE_PAGES.includes(`/${name(f).replace(/index\.html$/, "")}`);
 /** The simulator page in each language: it never compiles WebAssembly, its worker does. */
 const SIMULATOR_FILES = ["simulator/index.html", "es/simulator/index.html"];
 
@@ -53,8 +63,12 @@ test("every page has the CSP as its first meta after the charset", () => {
     assert.match(metas[1] ?? "", /http-equiv="Content-Security-Policy"/, name(page));
     const csp = /content="([^"]*)"/.exec(metas[1])?.[1] ?? "";
     assert.match(csp, /default-src 'none'/, name(page));
+    // The whole policy: Turnstile's origin only on its pages (T-562), never 'wasm-unsafe-eval' (D-090).
+    assert.equal(csp, contentSecurityPolicy(CONFIG?.url ?? null, { turnstile: isTurnstilePage(page) }), name(page));
     // D-090: only the simulator's worker may compile WebAssembly, not a page.
-    assert.match(csp, CONFIG ? /script-src 'self'(;|$)/ : /script-src 'none'(;|$)/, name(page));
+    const scripts = CONFIG && isTurnstilePage(page) ? `'self' ${TURNSTILE_ORIGIN}` : CONFIG ? "'self'" : "'none'";
+    assert.ok(csp.includes(`script-src ${scripts};`), name(page));
+    assert.equal(csp.includes("frame-src"), Boolean(CONFIG) && isTurnstilePage(page), name(page));
     assert.match(csp, CONFIG ? /form-action 'self'(;|$)/ : /form-action 'none'(;|$)/, name(page));
     assert.match(csp, /style-src 'self'(;|$)/, name(page));
     assert.match(csp, /font-src 'self'(;|$)/, name(page));
@@ -154,6 +168,31 @@ test("_headers: the simulator's worker alone gets 'wasm-unsafe-eval', replacing 
   assert.doesNotMatch(worker, /\bfetch\(|importScripts|\bimport\(/);
 });
 
+test("_headers: the anti-robot pages alone get Turnstile's origin, replacing the site-wide policy (T-562)", () => {
+  const headers = readFileSync(join(DIST, "_headers"), "utf8");
+  const rules = headers.split(/\n(?=\S)/).map((block) => block.trim().split("\n").map((l) => l.trim()));
+  const withTurnstile = rules.filter((r) => r.some((l) => l.startsWith("Content-Security-Policy:") && l.includes(TURNSTILE_ORIGIN)));
+  if (!CONFIG) {
+    assert.deepEqual(withTurnstile, [], "accounts closed: no form, no widget");
+    assert.doesNotMatch(headers, /challenges\.cloudflare\.com/);
+    return;
+  }
+  assert.deepEqual(withTurnstile.map((r) => r[0]), [...TURNSTILE_PAGES]);
+  const expected = `Content-Security-Policy: ${contentSecurityPolicy(CONFIG.url, { turnstile: true })}; frame-ancestors 'none'`;
+  for (const rule of withTurnstile) {
+    // Pages joins repeated headers: each rule drops the site-wide policy first.
+    assert.deepEqual(rule.slice(1), ["! Content-Security-Policy", expected], rule[0]);
+    // The page's own meta policy says the same, without frame-ancestors (header only).
+    const file = join(DIST, rule[0].slice(1), "index.html");
+    const meta = /http-equiv="Content-Security-Policy" content="([^"]*)"/.exec(readFileSync(file, "utf8"))?.[1];
+    assert.equal(`Content-Security-Policy: ${meta}; frame-ancestors 'none'`, expected, rule[0]);
+  }
+  // Every built page that loads the widget is covered by a rule.
+  const drawn = PAGES.filter((f) => readFileSync(f, "utf8").includes("data-captcha")).map((f) => `/${name(f).replace(/index\.html$/, "")}`);
+  assert.deepEqual(drawn.toSorted(), [...TURNSTILE_PAGES].toSorted());
+  assert.doesNotMatch(rules[0].join("\n"), /challenges\.cloudflare\.com/, "not site-wide");
+});
+
 test("_headers: the account and dashboard pages are never stored, in both languages", () => {
   const headers = readFileSync(join(DIST, "_headers"), "utf8");
   const rules = headers.split(/\n(?=\S)/).map((block) => block.trim().split("\n").map((l) => l.trim()));
@@ -230,6 +269,22 @@ test("accounts open: the account pages have their forms and scripts", { skip: !C
   }
   const account = readFileSync(join(DIST, "account/index.html"), "utf8");
   assert.match(account, /id="set-password-form"/);
+  // The anti-robot check before the button of every form that sends an email or a password (T-562).
+  const desktop = readFileSync(join(DIST, "desktop-sign-in/index.html"), "utf8");
+  for (const [page, html, forms] of [
+    ["signin", signin, SIGNUPS ? 2 : 1],
+    ["forgot-password", forgot, 1],
+    ["account", account, 1],
+    ["desktop-sign-in", desktop, 1],
+  ] as const) {
+    assert.equal(html.match(/data-captcha/g)?.length, forms, page);
+    assert.doesNotMatch(html, /<script[^>]*challenges\.cloudflare\.com/, `${page}: the widget's script is loaded by ours, not in the page`);
+  }
+  assert.match(account, /<div id="reauth"[^>]*>[\s\S]*?data-captcha[\s\S]*?<\/div>/, "only in the password box shown before deleting");
+  // The desktop page's form waits for the app's request (in the fragment).
+  assert.match(desktop, /<form id="desktop-form" novalidate hidden>/);
+  assert.match(desktop, /<button class="tb tb-key" type="submit" disabled>/);
+  assert.match(desktop, /<meta name="robots" content="noindex">/);
   if (SIGNUPS) {
     assert.match(signin, /id="signup-form"/);
     assert.match(signin, /accept the <a href="\/terms\/">terms<\/a> and confirm you are\s+16 or older/);

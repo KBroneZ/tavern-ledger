@@ -144,7 +144,9 @@ fn sign_in_link(http: &dyn Http, email: &str) -> String {
                 Value::Null,
             );
             let text = full["Text"].as_str().unwrap();
-            let start = text.find("http").unwrap();
+            // The email's own link, not the site's logo or address before it.
+            let verify = text.find("/auth/v1/verify").unwrap();
+            let start = text[..verify].rfind("http").unwrap();
             let end = text[start..]
                 .find(|c: char| c.is_whitespace() || c == ')')
                 .map_or(text.len(), |e| start + e);
@@ -153,6 +155,52 @@ fn sign_in_link(http: &dyn Http, email: &str) -> String {
         thread::sleep(Duration::from_millis(250));
     }
     panic!("no sign-in email arrived");
+}
+
+/// What the website's /desktop-sign-in/ page sends (web/src/lib/api.ts,
+/// requestDesktopLink): the app's challenge and loopback address from the
+/// page's fragment, with Cloudflare's published dummy Turnstile token (the
+/// local stack runs with CAPTCHA off, or with the test secret that accepts it).
+fn ask_for_the_link_as_the_website_does(http: &dyn Http, api: &str, anon: &str, page_url: &str) {
+    let (_, fragment) = page_url.split_once('#').unwrap();
+    let value = |key: &str| {
+        let raw = fragment
+            .split('&')
+            .find_map(|pair| pair.strip_prefix(&format!("{key}=")))
+            .unwrap();
+        let bytes = raw.as_bytes();
+        let mut out = Vec::new();
+        let mut i = 0;
+        while i < bytes.len() {
+            if bytes[i] == b'%' {
+                out.push(u8::from_str_radix(&raw[i + 1..i + 3], 16).unwrap());
+                i += 3;
+            } else {
+                out.push(bytes[i]);
+                i += 1;
+            }
+        }
+        String::from_utf8(out).unwrap()
+    };
+    let redirect = value("redirect");
+    let (status, _) = call(
+        http,
+        Method::Post,
+        &format!(
+            "{api}/auth/v1/otp?redirect_to={}",
+            uploader::auth::encode_component(&redirect)
+        ),
+        anon,
+        anon,
+        json!({
+            "email": value("email"),
+            "create_user": false,
+            "code_challenge": value("challenge"),
+            "code_challenge_method": "s256",
+            "gotrue_meta_security": {"captcha_token": "XXXX.DUMMY.TOKEN.XXXX"},
+        }),
+    );
+    assert_eq!(status, 200, "the link request");
 }
 
 /// What the browser does with the link: one GET (the link works once), then
@@ -323,8 +371,10 @@ fn sign_in_upload_quota_and_sign_out_against_the_local_stack() {
     save_game(&dir, S1, &duo);
     save_game(&dir, S2, &solo);
 
-    // ---- sign in: magic link -> browser -> loopback -> code exchange
-    let flow = SignIn::start(&server, http.as_ref(), &email).unwrap();
+    // ---- sign in: the website's page asks for the link -> email -> browser
+    // -> loopback -> code exchange
+    let flow = SignIn::start(&server, &email).unwrap();
+    ask_for_the_link_as_the_website_does(http.as_ref(), &st.url, &st.anon, flow.page_url());
     let finisher = {
         let (server, http) = (server.clone(), http.clone());
         thread::spawn(move || {
@@ -340,7 +390,8 @@ fn sign_in_upload_quota_and_sign_out_against_the_local_stack() {
     assert!(
         link.contains("redirect_to=http://127.0.0.1:")
             || link.contains("redirect_to=http%3A%2F%2F127.0.0.1"),
-        "the link ends at the loopback listener"
+        "the link ends at the loopback listener: {}",
+        link.split('?').next().unwrap_or("")
     );
     let page = open_in_browser(&link);
     if !page.contains("200") {

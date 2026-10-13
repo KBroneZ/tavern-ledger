@@ -15,6 +15,6 @@ const accountsOpen = readConfig(import.meta.env) !== null;
 const canSignUp = signupsOpen(import.meta.env);
 ---
 
-<Base backdrop="study" title={st("meta.signin.title")} description={st("meta.signin.description")} noindex>
+<Base backdrop="study" title={st("meta.signin.title")} description={st("meta.signin.description")} noindex turnstile>
   {accountsOpen ? <SignIn signupsOpen={canSignUp} /> : <AccountsClosed heading={st("meta.signin.title")} />}
 </Base>

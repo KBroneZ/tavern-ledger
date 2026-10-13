@@ -164,8 +164,10 @@ fn publish(app: &AppHandle, update: impl FnOnce(&mut View)) {
     let _ = app.emit(UPLOAD_CHANGED, snapshot);
 }
 
-/// One sign-in attempt in its own thread: it waits up to 15 minutes for the
-/// link, and the worker must stay free meanwhile.
+/// One sign-in attempt in its own thread: it opens the website's sign-in
+/// page in the browser (the link is asked for there, behind the anti-robot
+/// check), then waits up to 15 minutes for the link; the worker must stay
+/// free meanwhile.
 fn sign_in_thread(engine: &Engine, email: String, tx: Sender<Msg>, cancel: Arc<AtomicBool>) {
     let Some(server) = engine.server().cloned() else {
         let _ = tx.send(Msg::SignedIn(Err("No upload server is set up yet.".into())));
@@ -175,7 +177,9 @@ fn sign_in_thread(engine: &Engine, email: String, tx: Sender<Msg>, cancel: Arc<A
     thread::spawn(move || {
         // A bug here must not leave the panel on "signing in" for ever.
         let attempt = catch_unwind(AssertUnwindSafe(|| {
-            SignIn::start(&server, http.as_ref(), &email).and_then(|flow| {
+            SignIn::start(&server, &email).and_then(|flow| {
+                uploader::browser::open(flow.page_url())
+                    .map_err(|e| format!("Could not open your browser ({:?}).", e.kind()))?;
                 let _ = tx.send(Msg::LinkSent);
                 flow.finish(
                     &server,

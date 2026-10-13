@@ -12,6 +12,7 @@ import {
   signInErrorMessage,
   signUpOutcome,
 } from "../../src/lib/auth.ts";
+import { ACCOUNT_STRINGS } from "../../src/lib/account/strings.ts";
 
 test("the password length matches supabase/config.toml", () => {
   assert.equal(MIN_PASSWORD_LENGTH, 10);
@@ -113,4 +114,15 @@ test("new password: server refusals in words, never the server's text", () => {
   assert.match(newPasswordErrorMessage({ status: 401 }), /new link/);
   assert.match(newPasswordErrorMessage({ status: 429 }), /Too many/);
   assert.doesNotMatch(newPasswordErrorMessage({ status: 500, message: "boom" }), /boom/);
+});
+
+test("a refused anti-robot check says so on every form, before anything about the account", () => {
+  const captcha = { code: "captcha_failed", status: 400 };
+  const said = ACCOUNT_STRINGS["auth.captcha"];
+  assert.equal(signInErrorMessage(captcha), said);
+  assert.deepEqual(signUpOutcome(captcha), { kind: "error", message: said });
+  // Not the "link sent" answer: Supabase checks the token before it looks at the email,
+  // so this reveals nothing about the account, and the user must try again.
+  assert.deepEqual(resetRequestOutcome(captcha), { kind: "error", message: said });
+  assert.doesNotMatch(said, /account|email/i);
 });

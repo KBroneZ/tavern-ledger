@@ -1,0 +1,9 @@
+---
+// The anti-robot check of one form (T-562): scripts/captcha.ts draws
+// Cloudflare Turnstile's widget in [data-captcha]. Only on TURNSTILE_PAGES
+// (lib/config.ts), whose policy allows Cloudflare's script and frame.
+import { at } from "../lib/account/strings.ts";
+---
+
+<div class="captcha" role="group" aria-label={at("captcha.label")} data-captcha></div>
+<p class="hint">{at("captcha.hint")}</p>

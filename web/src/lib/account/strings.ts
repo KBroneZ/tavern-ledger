@@ -125,6 +125,29 @@ export const ACCOUNT_STRINGS = {
   "auth.notSame": "The two passwords are not the same.",
   "auth.samePassword": "Choose a password different from your current one.",
   "auth.resetExpired": "This reset has expired. Ask for a new link with “Forgot password?” on the sign-in page.",
+  "auth.captcha": "The check that you are not a robot failed or expired. Try again.",
+
+  // The check that you are not a robot (lib/captcha.ts, components/Captcha.astro).
+  "captcha.label": "Check that you are not a robot",
+  "captcha.hint": "Cloudflare runs this check; it may ask you to tick a box.",
+  "captcha.wait": "Wait for the check that you are not a robot to finish, then try again.",
+  "captcha.failed":
+    "The check that you are not a robot could not run. Reload the page; if it keeps failing, let challenges.cloudflare.com load (a blocker may stop it).",
+
+  // The desktop app's sign-in link (components/DesktopSignIn.astro, scripts/desktopSignIn.ts).
+  "desktop.title": "Sign in to the app",
+  "desktop.meta":
+    "Your Tavern Ledger app opened this page. We'll email you a sign-in link; open it on this PC and the app signs in. The app never sees your password.",
+  "desktop.heading": "Get a sign-in link for the app",
+  "desktop.submit": "Send the link",
+  "desktop.sending": "Sending…",
+  "desktop.sent":
+    "Check your inbox: if this email has an account, a sign-in link is on its way. Open it on this PC to finish in the app; it works once and expires in 15 minutes.",
+  "desktop.notFromApp":
+    "This page only works when the Tavern Ledger app opens it. In the app, open the settings and choose “Sign in with your browser” under “Upload to the website”.",
+  "desktop.create.before": "No account yet?",
+  "desktop.create.link": "Create one on the sign-in page",
+  "desktop.create.after": ", then come back from the app.",
 
   // Links from emails (lib/authLink.ts).
   "link.useForgot": "To choose a password, use “Forgot password?” on the sign-in page.",

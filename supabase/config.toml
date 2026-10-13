@@ -204,20 +204,30 @@ email_sent = 30
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
 anonymous_users = 30
+# The three per-IP limits below are the hosted project's (set by hand in the
+# dashboard, which the GitHub integration leaves alone): low enough that one
+# address cannot pile up sessions and sign-in records or guess an emailed
+# code, high enough for a household behind one address.
 # Number of sessions that can be refreshed in a 5 minute interval per IP address.
-token_refresh = 150
+token_refresh = 30
 # Number of sign up and sign-in requests that can be made in a 5 minute interval per IP address (excludes anonymous users).
-sign_in_sign_ups = 30
+sign_in_sign_ups = 10
 # Number of OTP / Magic link verifications that can be made in a 5 minute interval per IP address.
-token_verifications = 30
+token_verifications = 10
 # Number of Web3 logins that can be made in a 5 minute interval per IP address.
 web3 = 30
 
 # Configure one of the supported captcha providers: `hcaptcha`, `turnstile`.
+# The hosted project uses Cloudflare Turnstile (Authentication > Attack
+# Protection, set by hand): sign-up, password sign-in, email links and
+# password reset need a token from the site's widget (web/src/lib/captcha.ts).
+# Off on the local stack, so the local end-to-end tests run offline. To try
+# it locally, uncomment: Cloudflare's published test secret accepts any token,
+# with the site's test key (web/.env.example), and needs internet access.
 # [auth.captcha]
 # enabled = true
-# provider = "hcaptcha"
-# secret = ""
+# provider = "turnstile"
+# secret = "1x0000000000000000000000000000000AA"
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
@@ -230,11 +240,16 @@ enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = true
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
-max_frequency = "1s"
-# Number of characters used in the email OTP.
-otp_length = 6
-# Number of seconds before the email OTP expires (defaults to 1 hour).
-otp_expiry = 3600
+# One a minute per address, as the hosted project: a bound on how often one
+# inbox can be sent our emails.
+max_frequency = "60s"
+# Number of characters used in the email OTP. The emails carry only links,
+# but Supabase also accepts the code itself: eight digits, valid for 15
+# minutes, are out of reach of guessing at the verification limit above.
+otp_length = 8
+# Number of seconds before the email OTP expires (defaults to 1 hour). The
+# emails say "15 minutes" (tools/build_auth_emails.py checks it).
+otp_expiry = 900
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]

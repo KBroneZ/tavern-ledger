@@ -1,0 +1,20 @@
+---
+import Base from "../../layouts/Base.astro";
+import AccountsClosed from "../../components/AccountsClosed.astro";
+import DesktopSignIn from "../../components/DesktopSignIn.astro";
+import { readConfig } from "../../lib/config.ts";
+import { langPaths, setLang } from "../../lib/i18n.ts";
+import { st } from "../../lib/site/strings.ts";
+
+export const getStaticPaths = langPaths;
+// Every string below is drawn in the page's language (T-508).
+setLang(Astro.props.lang);
+
+// The desktop app opens this page to ask for its sign-in link (T-562). With
+// accounts closed the page shows a notice instead: no form, no script.
+const accountsOpen = readConfig(import.meta.env) !== null;
+---
+
+<Base backdrop="study" title={st("meta.desktopSignIn.title")} description={st("meta.desktopSignIn.description")} noindex turnstile>
+  {accountsOpen ? <DesktopSignIn /> : <AccountsClosed heading={st("meta.desktopSignIn.title")} />}
+</Base>

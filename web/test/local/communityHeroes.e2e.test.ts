@@ -22,6 +22,7 @@ import { loadCommunityConsent, makeClient, saveCommunityConsent, saveProfile, si
 import type { SiteConfig } from "../../src/lib/config.ts";
 import { loadCommunityStats } from "../../src/lib/community/api.ts";
 import { memoryStorage } from "../helpers/fetchStub.ts";
+import { DUMMY_CAPTCHA } from "../helpers/captcha.ts";
 
 const ENABLED = process.env.TAVERN_SUPABASE_LOCAL === "1";
 const REPO = join(import.meta.dirname, "..", "..", "..");
@@ -79,7 +80,7 @@ describe("community hero stats on the local stack", { skip: !ENABLED && "set TAV
     assert.equal(res.status, 200);
     const { id } = (await res.json()) as { id: string };
     const client = makeClient(config, memoryStorage());
-    assert.equal(await signIn(client, email, password), null);
+    assert.equal(await signIn(client, email, password, DUMMY_CAPTCHA), null);
     if (isPublic) assert.equal(await saveProfile(client, id, { displayName: `CH ${tag} ${users.length}`, isPublic }), null);
     const day = yesterday();
     const rows = Array.from({ length: games }, (_, k) => ({

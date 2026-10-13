@@ -61,7 +61,7 @@ cargo run --release -p tracker -- --reparse   # re-read saved sessions after a p
 cargo run --release -p bg-parser -- "<path>\Power_old.log" --json
 ```
 
-Upload to the website: the "Upload to the website" panel at the top of the window signs you in by email link, shows how many games are waiting, the last result and why uploading stopped, if it did, and holds the "Upload games" switch (off until you turn it on). The app uploads to the hosted project; a `server.json` in the data folder (`{"url": "...", "anon_key": "..."}`, the public key only) points it at another server, such as the local stack (`http://127.0.0.1:<port>`). Any other HTTPS server is used only by a development build or when the app is started with `--allow-other-server`, and the panel then says where uploads go. The sign-in is stored with the server that issued it and is never sent to another one: after switching servers, sign in again. `--data-dir <folder>` makes the app use another folder for the history and the upload settings, e.g. to try a build:
+Upload to the website: the "Upload to the website" panel at the top of the window signs you in by email link (it opens the website's `/desktop-sign-in/` page in your browser, where the link is asked for behind the anti-robot check; with the local stack that is the local site, `http://127.0.0.1:3000`, so run `npm run dev` or `npm run preview` in `web/`), shows how many games are waiting, the last result and why uploading stopped, if it did, and holds the "Upload games" switch (off until you turn it on). The app uploads to the hosted project; a `server.json` in the data folder (`{"url": "...", "anon_key": "..."}`, the public key only) points it at another server, such as the local stack (`http://127.0.0.1:<port>`). Any other HTTPS server is used only by a development build or when the app is started with `--allow-other-server`, and the panel then says where uploads go. The sign-in is stored with the server that issued it and is never sent to another one: after switching servers, sign in again. `--data-dir <folder>` makes the app use another folder for the history and the upload settings, e.g. to try a build:
 
 ```
 cargo run -p desktop -- --data-dir "$env:TEMP\tl-try"
@@ -154,7 +154,7 @@ Hosted project: migrations and the three functions will reach it through the Sup
 
 ### Website (`web/`)
 
-Needs Node.js 22.12 or later. Copy `web/.env.example` to `web/.env` and fill in the local stack's API URL and anon key from `npx supabase status` (only the public key: the build refuses any other). `PUBLIC_SIGNUPS_OPEN=true` shows the sign-up form; unset, as on the live site, `/signin/` offers sign-in only.
+Needs Node.js 22.12 or later. Copy `web/.env.example` to `web/.env` and fill in the local stack's API URL and anon key from `npx supabase status` (only the public key: the build refuses any other). `PUBLIC_SIGNUPS_OPEN=true` shows the sign-up form; unset, as on the live site, `/signin/` offers sign-in only. `PUBLIC_TURNSTILE_SITE_KEY` is the anti-robot widget's site key on the forms that sign in, sign up or send an email: with the two Supabase settings set, the build stops without it; locally and in CI it is Cloudflare's published test key (`1x00000000000000000000AA`, always passes), on the live site the `tavernledger.net` widget's key. The local stack has CAPTCHA off, so it ignores the token (`[auth.captcha]` in `supabase/config.toml` says how to turn it on with Cloudflare's test secret).
 
 ```
 cd web

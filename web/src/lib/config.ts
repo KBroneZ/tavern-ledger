@@ -15,6 +15,29 @@ export const WASM_WORKER = /^simWorker-[A-Za-z0-9_-]+\.js$/;
 /** Pages about one account: the browser and the CDN must not keep a copy (Cache-Control: no-store). */
 export const NO_STORE_PAGES: readonly string[] = ["/account/", "/es/account/", "/me/", "/es/me/"];
 
+/** Cloudflare Turnstile (T-562): its script and its frame come from here, and from nowhere else. */
+export const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
+/** The widget's script, exactly as Cloudflare publishes it (never proxied or copied). */
+export const TURNSTILE_SCRIPT = `${TURNSTILE_ORIGIN}/turnstile/v0/api.js?render=explicit`;
+/** Cloudflare's published test site key that always passes: local development and CI. */
+export const TURNSTILE_TEST_SITE_KEY = "1x00000000000000000000AA";
+/**
+ * The pages with a form that makes Supabase Auth send an email or check a
+ * password (sign-in, sign-up, password reset, the password asked again before
+ * deleting an account, the desktop app's sign-in link). They alone load
+ * Turnstile, so they alone get its origin in their policy.
+ */
+export const TURNSTILE_PAGES: readonly string[] = [
+  "/signin/",
+  "/es/signin/",
+  "/forgot-password/",
+  "/es/forgot-password/",
+  "/account/",
+  "/es/account/",
+  "/desktop-sign-in/",
+  "/es/desktop-sign-in/",
+];
+
 export interface SiteConfig {
   url: string;
   anonKey: string;
@@ -74,6 +97,27 @@ export function readConfig(env: ConfigSource): SiteConfig | null {
   };
 }
 
+// A site key is "0x" (a test key "1x" to "3x") and about 22 letters; a secret
+// key has the same start and is longer, so it never fits.
+const TURNSTILE_SITE_KEY = /^[0-3]x[A-Za-z0-9_-]{18,28}$/;
+
+/**
+ * The Turnstile widget's site key (public by design), or null when accounts
+ * are closed (no form, so no widget). With accounts open it must be set:
+ * Supabase Auth refuses sign-ins and emails without a token once its CAPTCHA
+ * protection is on, so a build without the key would ship broken forms.
+ */
+export function turnstileSiteKey(env: ConfigSource): string | null {
+  if (readConfig(env) === null) return null;
+  const raw = env.PUBLIC_TURNSTILE_SITE_KEY;
+  if (!raw) throw new Error("PUBLIC_TURNSTILE_SITE_KEY is not set: the sign-in forms need it (see web/.env.example)");
+  // Never echo it: a secret key put here by mistake must not reach the build log.
+  if (!TURNSTILE_SITE_KEY.test(raw)) {
+    throw new Error("PUBLIC_TURNSTILE_SITE_KEY must be the Turnstile widget's site key, never its secret key");
+  }
+  return raw;
+}
+
 /**
  * Whether the site offers sign-up: only when the build says exactly "true"
  * (PUBLIC_SIGNUPS_OPEN) and has a backend. Closed by default, matching the
@@ -103,11 +147,18 @@ export function signupsOpen(env: ConfigSource): boolean {
  * script-src also gets 'wasm-unsafe-eval', which lets a script compile
  * WebAssembly and nothing else (no eval, no inline script). Every other
  * directive stays the same.
+ *
+ * `turnstile` is for TURNSTILE_PAGES only (T-562): script-src and frame-src
+ * get Cloudflare's challenge origin, for the widget's script and its frame.
  */
-export function contentSecurityPolicy(supabaseOrigin: string | null, options: { wasm?: boolean } = {}): string {
+export function contentSecurityPolicy(
+  supabaseOrigin: string | null,
+  options: { wasm?: boolean; turnstile?: boolean } = {},
+): string {
   // Accounts closed: no page has a script or a form, so allow none at all.
   const open = supabaseOrigin !== null;
-  const scripts = open ? (options.wasm ? `'self' ${WASM_SOURCE}` : "'self'") : "'none'";
+  const captcha = open && options.turnstile === true;
+  const scripts = open ? ["'self'", options.wasm ? WASM_SOURCE : "", captcha ? TURNSTILE_ORIGIN : ""].filter(Boolean).join(" ") : "'none'";
   return [
     "default-src 'none'",
     `script-src ${scripts}`,
@@ -115,6 +166,7 @@ export function contentSecurityPolicy(supabaseOrigin: string | null, options: { 
     `img-src ${open ? `'self' ${ART_ORIGIN}` : "'self'"}`,
     "font-src 'self'",
     `connect-src ${supabaseOrigin ?? "'none'"}`,
+    ...(captcha ? [`frame-src ${TURNSTILE_ORIGIN}`] : []),
     "base-uri 'none'",
     `form-action ${open ? "'self'" : "'none'"}`,
   ].join("; ");

@@ -78,7 +78,7 @@ COPY: dict[str, dict[str, dict[str, object]]] = {
             "heading": "Sign in to the app",
             "body": [
                 "Open this link on the PC where you asked for it to sign in to the Tavern Ledger app.",
-                "It works once and expires in 1 hour.",
+                "It works once and expires in 15 minutes.",
             ],
             "button": "Sign in",
             "ignore": "Didn't ask for it? Ignore this email: nobody can sign in without this link.",
@@ -88,7 +88,7 @@ COPY: dict[str, dict[str, dict[str, object]]] = {
             "heading": "Inicia sesión en la aplicación",
             "body": [
                 "Abre este enlace en el PC donde lo pediste para iniciar sesión en la aplicación de Tavern Ledger.",
-                "Solo sirve una vez y caduca en 1 hora.",
+                "Solo sirve una vez y caduca en 15 minutos.",
             ],
             "button": "Iniciar sesión",
             "ignore": "¿No lo has pedido tú? Ignora este correo: sin este enlace, nadie puede entrar en tu cuenta.",
@@ -100,7 +100,7 @@ COPY: dict[str, dict[str, dict[str, object]]] = {
             "heading": "Choose a new password",
             "body": [
                 "Someone asked to reset the password of the Tavern Ledger account with this email.",
-                "Open the link in the browser where you asked for it. It works once and expires in 1 hour.",
+                "Open the link in the browser where you asked for it. It works once and expires in 15 minutes.",
             ],
             "button": "Choose a new password",
             "ignore": "Didn't ask for it? Ignore this email: your password stays as it is.",
@@ -110,7 +110,7 @@ COPY: dict[str, dict[str, dict[str, object]]] = {
             "heading": "Elige una contraseña nueva",
             "body": [
                 "Alguien ha pedido cambiar la contraseña de la cuenta de Tavern Ledger con este correo.",
-                "Abre el enlace en el navegador donde lo pediste. Solo sirve una vez y caduca en 1 hora.",
+                "Abre el enlace en el navegador donde lo pediste. Solo sirve una vez y caduca en 15 minutos.",
             ],
             "button": "Elegir una contraseña nueva",
             "ignore": "¿No lo has pedido tú? Ignora este correo: tu contraseña no cambia.",
@@ -120,14 +120,14 @@ COPY: dict[str, dict[str, dict[str, object]]] = {
         "en": {
             "subject": "Confirm the email change on Tavern Ledger",
             "heading": "Confirm the email change",
-            "body": ["Someone asked to change the email of a Tavern Ledger account from {{ .Email }} to {{ .NewEmail }}.", "Both addresses get this email: the change is made once the link in each one is opened."],
+            "body": ["Someone asked to change the email of a Tavern Ledger account to {{ .NewEmail }}.", "Both addresses get this email: the change is made once the link in each one is opened."],
             "button": "Confirm the change",
             "ignore": "Didn't ask for it? Don't open the link, and change your password: someone else may be signed in to your account.",
         },
         "es": {
             "subject": "Confirma el cambio de correo en Tavern Ledger",
             "heading": "Confirma el cambio de correo",
-            "body": ["Alguien ha pedido cambiar el correo de una cuenta de Tavern Ledger de {{ .Email }} a {{ .NewEmail }}.", "Este correo llega a las dos direcciones: el cambio se hace cuando se abra el enlace de cada una."],
+            "body": ["Alguien ha pedido cambiar el correo de una cuenta de Tavern Ledger a {{ .NewEmail }}.", "Este correo llega a las dos direcciones: el cambio se hace cuando se abra el enlace de cada una."],
             "button": "Confirmar el cambio",
             "ignore": "¿No lo has pedido tú? No abras el enlace y cambia tu contraseña: puede que otra persona tenga tu sesión abierta.",
         },

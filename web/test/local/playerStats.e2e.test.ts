@@ -20,6 +20,7 @@ import type { SiteConfig } from "../../src/lib/config.ts";
 import { loadCurious, loadHeroStats } from "../../src/lib/heroes/load.ts";
 import { sortHeroes } from "../../src/lib/heroes/heroes.ts";
 import { memoryStorage } from "../helpers/fetchStub.ts";
+import { DUMMY_CAPTCHA } from "../helpers/captcha.ts";
 
 const ENABLED = process.env.TAVERN_SUPABASE_LOCAL === "1";
 const REPO = join(import.meta.dirname, "..", "..", "..");
@@ -58,7 +59,7 @@ describe("heroes and curious stats on the local stack", { skip: !ENABLED && "set
     assert.equal(res.status, 200);
     const { id } = (await res.json()) as { id: string };
     const client = makeClient(config, memoryStorage());
-    assert.equal(await signIn(client, email, password), null);
+    assert.equal(await signIn(client, email, password, DUMMY_CAPTCHA), null);
     users.push({ id, client });
   }
 

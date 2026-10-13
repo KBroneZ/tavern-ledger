@@ -159,45 +159,6 @@ impl Auth<'_> {
         })
     }
 
-    /// Asks Supabase to email a one-time sign-in link that ends at
-    /// `redirect_uri` with `?code=`. Only for existing accounts: accounts are
-    /// made on the website, where the terms are. The answer is the same
-    /// whether the email has an account or not.
-    pub fn request_link(
-        &self,
-        email: &str,
-        challenge: &str,
-        redirect_uri: &str,
-    ) -> Result<(), AuthError> {
-        let path = format!(
-            "/auth/v1/otp?redirect_to={}",
-            encode_component(redirect_uri)
-        );
-        let body = json!({
-            "email": email,
-            "create_user": false,
-            "code_challenge": challenge,
-            "code_challenge_method": "s256",
-        });
-        match self.send(self.request(Method::Post, &path, None, body)) {
-            Ok(_) => Ok(()),
-            // No account for this email (sign-ups are off for this call):
-            // answer as if a link went out, so the app does not tell anyone
-            // which emails have accounts.
-            Err(AuthError::Rejected {
-                status: 400 | 422,
-                code,
-            }) if matches!(
-                code.as_deref(),
-                Some("otp_disabled" | "signup_disabled" | "user_not_found")
-            ) =>
-            {
-                Ok(())
-            }
-            Err(e) => Err(e),
-        }
-    }
-
     /// Trades the one-time code from the redirect for a session.
     pub fn exchange(&self, code: &str, verifier: &str) -> Result<Session, AuthError> {
         let body = json!({ "auth_code": code, "code_verifier": verifier });
@@ -302,61 +263,6 @@ pub(crate) mod tests {
             "expires_in": 3600, "expires_at": 4_000_000_000u64,
             "user": {"id": USER, "email": "player@example.test"},
         })
-    }
-
-    #[test]
-    fn a_link_request_carries_the_challenge_and_the_loopback_redirect() {
-        let http = FakeHttp::default();
-        http.on("Post /auth/v1/otp", reply(200, json!({})));
-        let server = server();
-        let auth = Auth {
-            server: &server,
-            http: &http,
-        };
-        auth.request_link(
-            "player@example.test",
-            "CHALLENGE",
-            "http://127.0.0.1:50000/desktop-callback/S",
-        )
-        .unwrap();
-        let req = http.last();
-        assert_eq!(
-            req.url,
-            "https://api.test/auth/v1/otp?redirect_to=http%3A%2F%2F127.0.0.1%3A50000%2Fdesktop-callback%2FS"
-        );
-        assert_eq!(req.header("apikey"), Some("sb_publishable_test"));
-        let body: Value = serde_json::from_slice(&req.body).unwrap();
-        assert_eq!(
-            body,
-            json!({"email": "player@example.test", "create_user": false,
-                   "code_challenge": "CHALLENGE", "code_challenge_method": "s256"})
-        );
-    }
-
-    #[test]
-    fn an_email_with_no_account_looks_the_same_as_one_with_an_account() {
-        let http = FakeHttp::default();
-        http.on(
-            "Post /auth/v1/otp",
-            reply(422, json!({"error_code": "otp_disabled"})),
-        );
-        let server = server();
-        let auth = Auth {
-            server: &server,
-            http: &http,
-        };
-        assert_eq!(
-            auth.request_link("x@example.test", "C", "http://127.0.0.1:50000/d/S"),
-            Ok(())
-        );
-        http.on(
-            "Post /auth/v1/otp",
-            reply(429, json!({"error_code": "over_email_send_rate_limit"})),
-        );
-        assert!(matches!(
-            auth.request_link("x@example.test", "C", "http://127.0.0.1:50000/d/S"),
-            Err(AuthError::Rejected { status: 429, .. })
-        ));
     }
 
     #[test]

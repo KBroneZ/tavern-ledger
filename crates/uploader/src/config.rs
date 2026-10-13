@@ -22,6 +22,12 @@ pub const ALLOW_OTHER_SERVER: &str = "--allow-other-server";
 /// publishable key, which is public by design: what it can reach is limited
 /// by row-level security and the upload function's own checks.
 const HOSTED_URL: &str = "https://vgttflmexobrqhcyxjks.supabase.co";
+/// The website's page where the app's sign-in link is asked for (T-562):
+/// the hosted site for the hosted project, the local site (`npm run dev` or
+/// `npm run preview` in web/, the port of `site_url` in supabase/config.toml)
+/// for the local stack.
+const HOSTED_SIGN_IN_PAGE: &str = "https://tavernledger.net/desktop-sign-in/";
+const LOCAL_SIGN_IN_PAGE: &str = "http://127.0.0.1:3000/desktop-sign-in/";
 // Public key: gitleaks would flag its shape, hence the marker on the line below.
 const HOSTED_PUBLISHABLE_KEY: &str = "sb_publishable_pJF8WBoz25Ypn4xAcvp_7Q_slkw7glM"; // gitleaks:allow
 
@@ -41,6 +47,19 @@ impl ServerConfig {
     /// A server on this PC (the local development stack).
     pub fn is_loopback(&self) -> bool {
         self.url.starts_with("http://127.0.0.1:")
+    }
+
+    /// The website page that asks this server for the app's sign-in link,
+    /// with the anti-robot check the app cannot pass itself; none for
+    /// another server, whose website the app does not know.
+    pub fn sign_in_page(&self) -> Option<&'static str> {
+        if self.is_hosted() {
+            Some(HOSTED_SIGN_IN_PAGE)
+        } else if self.is_loopback() {
+            Some(LOCAL_SIGN_IN_PAGE)
+        } else {
+            None
+        }
     }
 }
 
@@ -304,6 +323,21 @@ mod tests {
         fs::write(dir.join(FILE_NAME), body.to_string()).unwrap();
         assert!(load_or_hosted(&dir, false).unwrap().is_hosted());
         fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn the_sign_in_page_is_the_website_of_the_same_server() {
+        assert_eq!(
+            hosted().sign_in_page(),
+            Some("https://tavernledger.net/desktop-sign-in/")
+        );
+        let local = parse("http://127.0.0.1:54321", &jwt("anon")).unwrap();
+        assert_eq!(
+            local.sign_in_page(),
+            Some("http://127.0.0.1:3000/desktop-sign-in/")
+        );
+        let other = parse("https://other.example", &jwt("anon")).unwrap();
+        assert_eq!(other.sign_in_page(), None);
     }
 
     #[test]

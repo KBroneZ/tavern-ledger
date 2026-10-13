@@ -20,6 +20,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadSimulatorConsent, makeClient, saveSimulatorConsent, signIn } from "../../src/lib/api.ts";
 import type { SiteConfig } from "../../src/lib/config.ts";
 import { memoryStorage } from "../helpers/fetchStub.ts";
+import { DUMMY_CAPTCHA } from "../helpers/captcha.ts";
 
 const ENABLED = process.env.TAVERN_SUPABASE_LOCAL === "1";
 const REPO = join(import.meta.dirname, "..", "..", "..");
@@ -69,7 +70,7 @@ describe("the simulator switch on the local stack", { skip: !ENABLED && "set TAV
     assert.equal(res.status, 200);
     const { id } = (await res.json()) as { id: string };
     const client = makeClient(config, memoryStorage());
-    assert.equal(await signIn(client, email, password), null);
+    assert.equal(await signIn(client, email, password, DUMMY_CAPTCHA), null);
     const game = {
       user_id: id,
       session: SESSION,

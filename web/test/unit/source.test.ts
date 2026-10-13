@@ -104,3 +104,13 @@ test("no inline event handlers or inline styles in the pages", () => {
     assert.doesNotMatch(text, /\son[a-z]+=|\sstyle=|<style|javascript:/i, relative(ROOT, file));
   }
 });
+
+test("the one script the site adds at run time is Cloudflare Turnstile's, on the forms that need it", () => {
+  const adders = SOURCES.filter((f) => /createElement\(\s*["'`]script/.test(readFileSync(f, "utf8"))).map((f) =>
+    relative(ROOT, f).replaceAll("\\", "/"),
+  );
+  assert.deepEqual(adders, ["src/scripts/captcha.ts"]);
+  const loader = readFileSync(join(ROOT, "src", "scripts", "captcha.ts"), "utf8");
+  assert.match(loader, /script\.src = TURNSTILE_SCRIPT;/, "only the published Turnstile address");
+  assert.equal(loader.match(/\.src\s*=/g)?.length, 1);
+});
