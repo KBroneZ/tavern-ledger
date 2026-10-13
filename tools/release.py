@@ -11,6 +11,11 @@ Usage:
         Checks that the tag, tauri.conf.json and the desktop crate agree on
         the version and that the updater public key is set; prints
         `version=...` and `file=...` lines for $GITHUB_OUTPUT.
+    python tools/release.py trusted-key TAG
+        Prints the public key that apps already installed trust, which must
+        verify TAG's signatures: the key in the previous `v*` tag's
+        tauri.conf.json, or TAG's own key for the first self-updating
+        release. A release that changes the key is signed with the old one.
     python tools/release.py sums DIR FILE...
         Writes DIR/SHA256SUMS for the files (in DIR), `sha256sum` style.
     python tools/release.py latest-json VERSION SIG OUT [--notes TEXT]
@@ -37,6 +42,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -120,6 +126,41 @@ def prepare(ref: str, dry_run: bool, conf_text: str, crate_text: str) -> dict[st
     if not is_public_key(key) and not dry_run:
         raise Refused("plugins.updater.pubkey in tauri.conf.json is not the release public key (still the placeholder?)")
     return {"version": version, "file": installer_name(version)}
+
+
+def updater_key(conf_text: str | None) -> str | None:
+    """The config's updater public key when it is a real one."""
+    if conf_text is None:
+        return None
+    try:
+        key = json.loads(conf_text).get("plugins", {}).get("updater", {}).get("pubkey")
+    except (json.JSONDecodeError, AttributeError):
+        return None
+    return key if is_public_key(key) else None
+
+
+Git = Callable[[list[str]], str | None]
+
+
+def run_git(args: list[str]) -> str | None:
+    """git's output, or None when it fails (no such tag or file)."""
+    res = subprocess.run(["git", *args], capture_output=True, text=True, cwd=ROOT, check=False)
+    return res.stdout if res.returncode == 0 else None
+
+
+def trusted_key(tag: str, git: Git) -> tuple[str, str]:
+    """The key that must verify `tag`'s signatures, and where it comes from."""
+    path = "crates/desktop/tauri.conf.json"
+    own = updater_key(git(["show", f"{tag}:{path}"]))
+    if own is None:
+        raise Refused(f"{tag}: tauri.conf.json has no release public key")
+    previous = (git(["describe", "--tags", "--abbrev=0", "--match", "v*", f"{tag}^"]) or "").strip()
+    old = updater_key(git(["show", f"{previous}:{path}"])) if previous else None
+    if old is None:
+        return own, f"{tag} is the first release with an updater key: checked against its own key"
+    if old != own:
+        return old, f"{tag} changes the updater key: checked against {previous}'s key, which installed apps trust"
+    return own, f"checked against the key of {tag} and {previous}"
 
 
 # --- files -----------------------------------------------------------------
@@ -286,6 +327,8 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("prepare")
     p.add_argument("--ref", required=True)
     p.add_argument("--dry-run", action="store_true")
+    p = sub.add_parser("trusted-key")
+    p.add_argument("tag")
     p = sub.add_parser("sums")
     p.add_argument("dir", type=Path)
     p.add_argument("files", nargs="+")
@@ -307,6 +350,10 @@ def main(argv: list[str] | None = None) -> int:
             if args.dry_run and not is_public_key(json.loads(CONF.read_text(encoding="utf-8"))["plugins"]["updater"]["pubkey"]):
                 print("::warning::dry run: the updater public key is still the placeholder", file=sys.stderr)
             print("\n".join(f"{k}={v}" for k, v in out.items()))
+        elif args.cmd == "trusted-key":
+            key, note = trusted_key(args.tag, run_git)
+            print(f"::notice::{note}", file=sys.stderr)
+            print(key)
         elif args.cmd == "sums":
             print(write_sums(args.dir, args.files), end="")
         elif args.cmd == "latest-json":

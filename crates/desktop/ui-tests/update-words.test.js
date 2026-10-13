@@ -39,6 +39,8 @@ test("a refused or failed check says why, and an unknown reason is not shown as 
 test("the notice shows only what the app offers, and check now waits while one runs", () => {
   assert.equal(words.notice(view("ready", { version: "0.2.0", notice: "0.2.0" })), "Version 0.2.0 is ready. Restart to update.");
   assert.equal(words.notice(view("ready", { version: "0.2.0", notice: null })), null, "after Later");
+  assert.match(words.notice(view("failed", { reason: "install" })), /couldn't be installed/, "after Restart now failed");
+  assert.equal(words.notice(view("failed", { reason: "network" })), null, "a failed check stays in Settings");
   for (const state of ["idle", "latest", "failed"]) assert.equal(words.canCheck(view(state)), true, state);
   for (const state of ["checking", "downloading", "ready", "installing"]) assert.equal(words.canCheck(view(state)), false, state);
 });

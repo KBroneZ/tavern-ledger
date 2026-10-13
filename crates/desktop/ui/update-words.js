@@ -26,8 +26,13 @@
     }
   }
 
-  // The main window's notice, or null when there is nothing to offer.
-  const notice = (view) => (view.notice ? t("updates.ready", { version: view.notice }) : null);
+  // The main window's notice, or null when there is nothing to say there: a
+  // ready version, or an installer that did not start after "Restart now".
+  function notice(view) {
+    if (view.notice) return t("updates.ready", { version: view.notice });
+    if (view.state === "failed" && view.reason === "install") return t("updates.failed.install");
+    return null;
+  }
 
   // Whether "Check now" can do anything right now.
   const canCheck = (view) => ["idle", "latest", "failed"].includes(view.state);

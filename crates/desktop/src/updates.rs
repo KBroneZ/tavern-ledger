@@ -12,6 +12,7 @@
 //! folder; a missing file means on.
 
 use std::io;
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex};
@@ -29,6 +30,8 @@ use crate::AppState;
 pub const FILE: &str = "updates.json";
 /// Sent to the main window with the new [`View`].
 pub const CHANGED: &str = "update-changed";
+/// The only window that shows updates.
+const WINDOW: &str = "main";
 /// Where every release's installer is, by tag: the only download address
 /// the app accepts.
 pub const RELEASES: &str = "https://github.com/KBroneZ/tavern-ledger/releases/download/";
@@ -269,7 +272,10 @@ impl Updates {
             };
             notify(self.view());
         };
-        let result = source.fetch(&mut found);
+        // A bug in the plugin or here must not leave "Checking…" for good
+        // and stop the checking thread.
+        let result = catch_unwind(AssertUnwindSafe(|| source.fetch(&mut found)))
+            .unwrap_or(Err(Reason::Invalid));
         {
             let mut inner = lock(&self.inner);
             inner.checked_at = Some(now());
@@ -289,10 +295,12 @@ impl Updates {
     }
 
     /// Installs the downloaded version when the user asks. Refused during a
-    /// game: the installer closes the app, overlay and all.
-    pub fn install(&self, game_on: bool, notify: &dyn Fn(View)) -> Result<(), String> {
-        if game_on {
-            return Err("Finish your game first: updating restarts the app.".into());
+    /// game: the installer closes the app, overlay and all. `game_on` is
+    /// asked again right before the installer starts.
+    pub fn install(&self, game_on: &dyn Fn() -> bool, notify: &dyn Fn(View)) -> Result<(), String> {
+        const IN_GAME: &str = "Finish your game first: updating restarts the app.";
+        if game_on() {
+            return Err(IN_GAME.into());
         }
         let downloaded = {
             let mut inner = lock(&self.inner);
@@ -303,8 +311,20 @@ impl Updates {
             inner.ready.take()
         };
         notify(self.view());
+        if game_on() {
+            {
+                let mut inner = lock(&self.inner);
+                if let Phase::Installing { version } = inner.phase.clone() {
+                    inner.phase = Phase::Ready { version };
+                }
+                inner.ready = downloaded;
+            }
+            notify(self.view());
+            return Err(IN_GAME.into());
+        }
         let result = downloaded.map_or(Err(Reason::Install), |d| d.install());
-        // Only reached when the installer did not start: the app is still here.
+        // Only reached when the installer did not start: the app is still here
+        // (on Windows a started installer ends this process).
         if let Err(reason) = result {
             lock(&self.inner).phase = Phase::Failed { reason };
             notify(self.view());
@@ -350,7 +370,7 @@ pub fn start<R: Runtime>(app: &AppHandle<R>, source: Arc<dyn Source>) {
     let app = app.clone();
     thread::spawn(move || {
         let notify = |view: View| {
-            let _ = app.emit(CHANGED, view);
+            let _ = app.emit_to(WINDOW, CHANGED, view);
         };
         let mut wait = FIRST_CHECK;
         loop {
@@ -359,14 +379,13 @@ pub fn start<R: Runtime>(app: &AppHandle<R>, source: Arc<dyn Source>) {
                 Err(RecvTimeoutError::Timeout) => false,
                 Err(RecvTimeoutError::Disconnected) => return,
             };
-            if asked {
-                updates.check(&*source, &notify);
-                continue;
-            }
+            // A check by hand also counts as the next automatic one.
             wait = EVERY;
-            if updates.auto_check() {
+            if asked || updates.auto_check() {
                 updates.check(&*source, &notify);
             }
+            // Clicks that came during that check asked for the one just made.
+            while rx.try_recv().is_ok() {}
         }
     });
 }
@@ -376,6 +395,8 @@ pub struct GitHub<R: Runtime> {
     pub app: AppHandle<R>,
     /// [`RELEASES`]; a test points it at its own server.
     pub releases: String,
+    /// Only for the tests' local server: skip the system proxy.
+    pub no_proxy: bool,
 }
 
 struct Download {
@@ -398,13 +419,15 @@ impl Downloaded for Download {
 impl<R: Runtime> Source for GitHub<R> {
     fn fetch(&self, found: &mut dyn FnMut(&str)) -> Fetched {
         tauri::async_runtime::block_on(async {
-            let updater = self
+            let mut builder = self
                 .app
                 .updater_builder()
                 .timeout(CHECK_TIMEOUT)
-                .configure_client(|client| client.redirect(https_redirects_only()))
-                .build()
-                .map_err(|e| reason(&e))?;
+                .configure_client(|client| client.redirect(https_redirects_only()));
+            if self.no_proxy {
+                builder = builder.no_proxy();
+            }
+            let updater = builder.build().map_err(|e| reason(&e))?;
             let Some(mut update) = updater.check().await.map_err(|e| reason(&e))? else {
                 return Ok(None);
             };
@@ -430,7 +453,7 @@ fn https_redirects_only() -> reqwest::redirect::Policy {
     reqwest::redirect::Policy::custom(|attempt| {
         if attempt.url().scheme() != "https" {
             attempt.error("an update redirect left https")
-        } else if attempt.previous().len() > MAX_REDIRECTS {
+        } else if attempt.previous().len() >= MAX_REDIRECTS {
             attempt.error("too many redirects")
         } else {
             attempt.follow()
@@ -438,13 +461,17 @@ fn https_redirects_only() -> reqwest::redirect::Policy {
     })
 }
 
+/// The window's code for a failure; the plugin's own words go to the log.
 fn reason(error: &PluginError) -> Reason {
+    eprintln!("update check failed: {error}");
     match error {
         PluginError::Minisign(_)
         | PluginError::Base64(_)
         | PluginError::SignatureUtf8(_)
         | PluginError::SignedVersionMismatch { .. }
         | PluginError::MissingSignedVersion => Reason::Signature,
+        // A latest.json that is not JSON is not a network problem.
+        PluginError::Reqwest(e) if e.is_decode() => Reason::Invalid,
         PluginError::Reqwest(_) | PluginError::Network(_) | PluginError::Io(_) => Reason::Network,
         PluginError::ReleaseNotFound => Reason::NotFound,
         _ => Reason::Invalid,
@@ -457,7 +484,7 @@ fn game_on(state: &AppState) -> bool {
 
 fn notify_window<R: Runtime>(app: &AppHandle<R>) -> impl Fn(View) + '_ {
     move |view| {
-        let _ = app.emit(CHANGED, view);
+        let _ = app.emit_to(WINDOW, CHANGED, view);
     }
 }
 
@@ -495,7 +522,7 @@ pub fn update_install(
     updates: State<'_, Arc<Updates>>,
     state: State<'_, Arc<AppState>>,
 ) -> Result<(), String> {
-    updates.install(game_on(&state), &notify_window(&app))
+    updates.install(&|| game_on(&state), &notify_window(&app))
 }
 
 #[tauri::command]
@@ -686,16 +713,19 @@ mod tests {
     #[test]
     fn install_is_refused_during_a_game_and_without_a_ready_version() {
         let updates = Updates::new(true, "0.1.0");
-        assert!(updates.install(false, &|_| {}).is_err(), "nothing ready");
+        assert!(
+            updates.install(&|| false, &|_| {}).is_err(),
+            "nothing ready"
+        );
         let installs = Arc::new(AtomicUsize::new(0));
         let counter = installs.clone();
         let source = FakeReady(counter);
         updates.check(&source, &|_| {});
-        let refused = updates.install(true, &|_| {}).unwrap_err();
+        let refused = updates.install(&|| true, &|_| {}).unwrap_err();
         assert!(refused.contains("Finish your game"), "{refused}");
         assert_eq!(installs.load(Ordering::SeqCst), 0);
         assert!(matches!(updates.view().phase, Phase::Ready { .. }));
-        updates.install(false, &|_| {}).unwrap();
+        updates.install(&|| false, &|_| {}).unwrap();
         assert_eq!(installs.load(Ordering::SeqCst), 1);
         assert_eq!(
             updates.view().phase,
@@ -705,12 +735,71 @@ mod tests {
         );
     }
 
+    struct Broken;
+
+    impl Downloaded for Broken {
+        fn version(&self) -> &str {
+            "0.2.0"
+        }
+        fn install(&self) -> Result<(), Reason> {
+            Err(Reason::Install)
+        }
+    }
+
+    #[test]
+    fn an_installer_that_does_not_start_is_said_and_a_game_starting_meanwhile_stops_it() {
+        let updates = Updates::new(true, "0.1.0");
+        updates.check(&fake(|| Ok(Some(Box::new(Broken)))), &|_| {});
+        let error = updates.install(&|| false, &|_| {}).unwrap_err();
+        assert_eq!(error, "The update could not be installed.");
+        assert_eq!(
+            updates.view().phase,
+            Phase::Failed {
+                reason: Reason::Install
+            }
+        );
+        // A game that starts between the click and the installer: still ready.
+        let installs = Arc::new(AtomicUsize::new(0));
+        let updates = Updates::new(true, "0.1.0");
+        updates.check(&FakeReady(installs.clone()), &|_| {});
+        let asked = AtomicUsize::new(0);
+        let game_on = || asked.fetch_add(1, Ordering::SeqCst) > 0;
+        assert!(updates.install(&game_on, &|_| {}).is_err());
+        assert_eq!(installs.load(Ordering::SeqCst), 0);
+        assert_eq!(updates.view().notice.as_deref(), Some("0.2.0"));
+        updates.install(&|| false, &|_| {}).unwrap();
+        assert_eq!(installs.load(Ordering::SeqCst), 1, "the download was kept");
+    }
+
     struct FakeReady(Arc<AtomicUsize>);
 
     impl Source for FakeReady {
         fn fetch(&self, _: &mut dyn FnMut(&str)) -> Fetched {
             Ok(Some(Box::new(Ready("0.2.0", self.0.clone()))))
         }
+    }
+
+    struct Panics;
+
+    impl Source for Panics {
+        fn fetch(&self, _: &mut dyn FnMut(&str)) -> Fetched {
+            panic!("a bug in the source")
+        }
+    }
+
+    #[test]
+    fn a_check_that_panics_ends_as_a_failure_and_can_run_again() {
+        let updates = Updates::new(true, "0.1.0");
+        updates.check(&Panics, &|_| {});
+        assert_eq!(
+            updates.view().phase,
+            Phase::Failed {
+                reason: Reason::Invalid
+            }
+        );
+        let again = fake(ready);
+        updates.check(&again, &|_| {});
+        assert_eq!(again.calls.load(Ordering::SeqCst), 1);
     }
 
     #[test]

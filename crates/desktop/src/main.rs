@@ -1243,6 +1243,7 @@ fn main() {
             let releases = updates::GitHub {
                 app: app.handle().clone(),
                 releases: updates::RELEASES.into(),
+                no_proxy: false,
             };
             updates::start(app.handle(), Arc::new(releases));
             card_data::start(app.handle(), &data_dir);

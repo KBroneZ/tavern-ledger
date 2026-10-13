@@ -11,6 +11,8 @@
   const { t } = I18n;
   const Words = window.TLUpdateWords;
   const $ = (id) => document.getElementById(id);
+  // "Later" on a failed install hides the notice for this page.
+  let dismissed = false;
 
   // Live regions: they stay in the page, empty when there is nothing to say.
   function problem(text) {
@@ -29,7 +31,7 @@
     $("update-check").disabled = off || !Words.canCheck(view);
     $("update-line").textContent = Words.line(view);
     $("update-warning").textContent = view.warning ? I18n.backend(view.warning) : "";
-    const notice = Words.notice(view);
+    const notice = dismissed && view.state === "failed" ? null : Words.notice(view);
     $("update-notice").hidden = !notice;
     $("update-notice-text").textContent = notice || "";
     $("update-restart").disabled = view.state !== "ready";
@@ -49,6 +51,7 @@
   });
   $("update-later").addEventListener("click", () => {
     problem("");
+    dismissed = true;
     call("update_later").then(render, failed);
   });
 

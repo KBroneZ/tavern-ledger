@@ -3,7 +3,8 @@
 //! Signing keys are made here for each test and thrown away; no real key is
 //! ever used or stored. Plain `http` is only possible because tests are debug
 //! builds (the plugin refuses it in release builds); everything else is
-//! what a release does.
+//! what a release does. Windows only, like the app: the plugin looks for
+//! the `windows-x86_64` entry of `latest.json`.
 
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
@@ -80,6 +81,8 @@ fn serve_with(files: impl FnOnce(&str) -> Vec<(String, Response)>) -> Server {
     thread::spawn(move || {
         for stream in listener.incoming() {
             let Ok(mut stream) = stream else { continue };
+            // A client that sends nothing must not hold up the next request.
+            let _ = stream.set_read_timeout(Some(std::time::Duration::from_secs(5)));
             let mut reader = BufReader::new(stream.try_clone().unwrap());
             let mut first = String::new();
             if reader.read_line(&mut first).is_err() {
@@ -156,6 +159,7 @@ fn source(server: &Server, trusted: &KeyPair) -> GitHub<MockRuntime> {
     GitHub {
         app: app.handle().clone(),
         releases: server.releases(),
+        no_proxy: true,
     }
 }
 

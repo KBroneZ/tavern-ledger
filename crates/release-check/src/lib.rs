@@ -33,9 +33,11 @@ impl std::fmt::Display for Refusal {
     }
 }
 
+/// Base64 to text, read exactly as the app's updater reads it (no trimming:
+/// a key the app would refuse must be refused here too).
 fn decode(text: &str) -> Option<String> {
     let bytes = base64::engine::general_purpose::STANDARD
-        .decode(text.trim())
+        .decode(text)
         .ok()?;
     String::from_utf8(bytes).ok()
 }
@@ -60,7 +62,8 @@ fn public_key(key: &str) -> Result<PublicKey, Refusal> {
 /// made for `version`.
 pub fn check(data: &[u8], signature: &str, key: &str, version: &str) -> Result<(), Refusal> {
     let key = public_key(key)?;
-    let text = decode(signature).ok_or(Refusal::BadSignature)?;
+    // A .sig file may end with a line break; its base64 never holds one.
+    let text = decode(signature.trim_end()).ok_or(Refusal::BadSignature)?;
     let signature = Signature::decode(&text).map_err(|_| Refusal::BadSignature)?;
     // Legacy (not prehashed) signatures are refused: the Tauri CLI never makes them.
     key.verify(data, &signature, false)
@@ -150,5 +153,8 @@ mod tests {
         let committed = include_str!("../../desktop/tauri.conf.json");
         assert_eq!(key_from_conf(committed), Err(Refusal::NoKey));
         assert_eq!(key_from_conf("{}"), Err(Refusal::NoKey));
+        // The app would not read a key with a line break after it: neither does this.
+        let padded = serde_json::json!({ "plugins": { "updater": { "pubkey": format!("{}\n", key_of(&pair)) } } });
+        assert_eq!(key_from_conf(&padded.to_string()), Err(Refusal::NoKey));
     }
 }
