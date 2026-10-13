@@ -309,7 +309,7 @@ impl Log {
         } else {
             PathBuf::from("xdg-open")
         };
-        std::process::Command::new(opener)
+        tracker::quiet::command(opener)
             .arg(std::path::absolute(&self.dir)?)
             .spawn()
             .map(|_| ())
