@@ -122,6 +122,13 @@ test("the combat's hit from the log joins its turn, and an unknown one stays out
   assert.equal(TLTurns.damageWords(three.damage), "you dealt 9 damage");
   assert.equal(TLTurns.damageWords({ taken: 0, dealt: 0 }), "no damage");
   assert.equal(TLTurns.damageWords(null), null);
+  // The badges: +dealt green, −taken red; a tie shows 0, an unknown hit a dash.
+  assert.deepEqual(TLTurns.damageBadges(two.damage), [{ kind: "taken", text: "−4", words: "your hero took 4 damage" }]);
+  assert.deepEqual(TLTurns.damageBadges(three.damage), [{ kind: "dealt", text: "+9", words: "you dealt 9 damage" }]);
+  assert.deepEqual(TLTurns.damageBadges({ taken: 3, dealt: 1 }).map((b) => b.text), ["+1", "−3"]);
+  assert.deepEqual(TLTurns.damageBadges({ taken: 0, dealt: 0 }), []);
+  assert.equal(TLTurns.damageQuiet({ taken: 0, dealt: 0 }), "0");
+  assert.equal(TLTurns.damageQuiet(null), "—");
   assert.equal(TLTurns.summaryWords(two, (h) => h.name || h.id), "Turn 2, tier 2, up a tier, lost against HERO_C, health −5, your hero took 4 damage, your board 1 minion");
 });
 
@@ -180,4 +187,24 @@ test("in Spanish a turn's summary and shop facts follow the language", () => {
     I18n.setLang("en");
   }
   assert.equal(TLTurns.totalsWords({ count: 0, attack: 0, health: 0 }), "empty");
+});
+
+test("in Duos the teammate's board joins the turn beside yours, from a stripped turn", () => {
+  const duos = {
+    hero: "HERO_A",
+    local_player_id: 2,
+    rounds: [
+      { number: 1, entries: [{ side: "own", player_id: 2, hero: "HERO_A", board: [] }, { side: "own", player_id: 3, hero: "HERO_M", board: [minion("BG_M", 5, 6)] }] },
+      { number: 2, entries: [{ side: "own", player_id: 2, hero: "HERO_A", board: [minion("BG_A", 1, 1)] }, { side: "own", player_id: 3, hero: "HERO_M", board: null }] },
+      { number: 3, entries: [{ side: "own", player_id: 3, hero: "HERO_M", board: [minion("BG_M", 2, 2)] }] },
+    ],
+  };
+  const [one, two, three] = TLTurns.rows(recap(), duos);
+  assert.deepEqual(one.own.minions, [], "your empty board stays yours");
+  assert.equal(one.partner.hero, "HERO_M");
+  assert.deepEqual(one.partner.minions.map((m) => m.id), ["BG_M"]);
+  assert.equal(two.partner, null, "a teammate board not in the log is not drawn");
+  assert.equal(three.own.mine, false, "no entry of yours: the teammate's shows in the first slot");
+  assert.equal(three.partner, null, "and is not drawn twice");
+  assert.equal(TLTurns.rows(recap(), report)[0].partner, null, "Solo has no partner");
 });

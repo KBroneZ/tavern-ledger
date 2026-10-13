@@ -70,14 +70,6 @@ export function damageText(turn: TurnRow): string {
   return zero ? "0" : DASH;
 }
 
-/** The damage as signed numbers ("+15", "−5"), for narrow screens; the same dash or 0 as damageText otherwise. */
-export function damageShort(turn: TurnRow): string {
-  const parts: string[] = [];
-  if (turn.dealt !== null && turn.dealt > 0) parts.push(`+${turn.dealt}`);
-  if (turn.taken !== null && turn.taken > 0) parts.push(`−${turn.taken}`);
-  return parts.length > 0 ? parts.join(" ") : damageText(turn);
-}
-
 /**
  * A turn's shop in one line (T-559): the tier, the gold the turn gave and
  * what selling and other effects added, what was spent, the rolls and the

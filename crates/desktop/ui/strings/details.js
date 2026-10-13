@@ -240,6 +240,7 @@
     ["turns.strip_tip", "{minions}, {attack} attack and {health} health in all.", "{minions}, {attack} de ataque y {health} de vida en total."],
     ["turns.board.empty", "Empty board.", "Tablero vacío."],
     ["turns.your_board", "Your board", "Tu tablero"],
+    ["turns.teammate_board", "Your teammate's board", "Tablero de tu compañero"],
     ["turns.their_board", "Their board", "Su tablero"],
     ["turns.board.not_in_round", "Not in the log for this round.", "No está en el registro de esta ronda."],
     ["turns.board.theirs_not", "Their board is not in the log for this round.", "Su tablero no está en el registro de esta ronda."],
@@ -267,6 +268,7 @@
     ["turns.col.tier", "Tier", "Nivel"],
     ["turns.col.combat", "Combat", "Combate"],
     ["turns.col.health", "Health", "Vida"],
+    ["turns.col.damage", "Damage", "Daño"],
     ["turns.col.board", "Your board", "Tu tablero"],
     ["turns.none", "No turn in the log.", "Ningún turno en el registro."],
 

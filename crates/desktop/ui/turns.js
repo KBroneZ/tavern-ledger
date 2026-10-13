@@ -36,15 +36,10 @@
     return cards && cards.gifts ? cards.gifts(m) : [];
   };
 
-  // Your board as the combat began, from the game's report. In Duos the
-  // board may be your teammate's: `mine` says whose it is.
-  function ownBoard(report, number) {
-    const round = list(report && report.rounds).find((r) => r && r.number === number);
-    const own = list(round && round.entries).filter((e) => e && e.side === "own");
-    if (!own.length) return null;
-    const entry = own.find((e) => e.player_id === report.local_player_id) || own[0];
-    // No board in the record is unknown; an empty list is a real empty board.
-    if (!Array.isArray(entry.board)) return null;
+  // A board from one report entry; null when the record has none (an empty
+  // list is a real empty board).
+  function boardOf(entry, report) {
+    if (!entry || !Array.isArray(entry.board)) return null;
     const minions = entry.board.map(minionOf);
     // One unknown stat makes the total unknown, never a smaller number.
     const sum = (key) => (minions.every((m) => known(m[key])) ? minions.reduce((n, m) => n + m[key], 0) : null);
@@ -54,6 +49,27 @@
       minions,
       totals: { count: minions.length, attack: sum("atk"), health: sum("health") },
     };
+  }
+
+  const ownEntries = (report, number) => {
+    const round = list(report && report.rounds).find((r) => r && r.number === number);
+    return list(round && round.entries).filter((e) => e && e.side === "own");
+  };
+  const mainEntry = (report, own) => own.find((e) => e.player_id === report.local_player_id) || own[0];
+
+  // Your board as the combat began, from the game's report. In Duos the
+  // board may be your teammate's: `mine` says whose it is.
+  function ownBoard(report, number) {
+    const own = ownEntries(report, number);
+    return own.length ? boardOf(mainEntry(report, own), report) : null;
+  }
+
+  // In Duos, the other own-side board of the turn (your teammate's), when the record has it.
+  function partnerBoard(report, number) {
+    const own = ownEntries(report, number);
+    if (own.length < 2) return null;
+    const main = mainEntry(report, own);
+    return boardOf(own.find((e) => e !== main && e.player_id !== main.player_id), report);
   }
 
   function combatAt(r, round) {
@@ -98,6 +114,18 @@
     return t("turns.s.no_damage");
   }
 
+  // The hit as badges, dealt first: "+9" (you dealt) and "−4" (your hero took); the sign carries the meaning, the colour helps.
+  function damageBadges(d) {
+    if (!d) return [];
+    const out = [];
+    if (d.dealt > 0) out.push({ kind: "dealt", text: `+${num(d.dealt)}`, words: t("turns.s.dealt", { n: num(d.dealt) }) });
+    if (d.taken > 0) out.push({ kind: "taken", text: `−${num(d.taken)}`, words: t("turns.s.took", { n: num(d.taken) }) });
+    return out;
+  }
+
+  // What shows when there is no badge: "0" for a combat with no damage, a dash when the log lacks the hit.
+  const damageQuiet = (d) => (d ? "0" : "—");
+
   // One row per turn that has a shop, a combat or a board in the record.
   function rows(r, report) {
     const shopTurns = r.shop && r.shop.state === "recorded" ? list(r.shop.turns) : [];
@@ -116,6 +144,7 @@
         health: healthAt(r, turn),
         damage: damageAt(r, turn),
         own: ownBoard(report, turn),
+        partner: partnerBoard(report, turn),
       };
     });
   }
@@ -214,6 +243,18 @@
     return node;
   }
 
+  function damage(ui, d) {
+    const badges = damageBadges(d);
+    if (!badges.length) return ui.el("span", "turn-damage quiet", damageQuiet(d));
+    const box = ui.el("span", "turn-damage");
+    box.append(...badges.map((b) => {
+      const hit = ui.el("span", `turn-hit turn-hit-${b.kind}`, b.text);
+      hit.title = b.words;
+      return hit;
+    }));
+    return box;
+  }
+
   // Your board at a glance: small pictures, then the minion count and total stats.
   function strip(ui, own, art) {
     const box = ui.el("span", "turn-strip");
@@ -308,6 +349,10 @@
     const own = row.own;
     const ownLabel = own && !own.mine && own.hero ? h.heroText({ id: own.hero }) : t("turns.your_board");
     body.push(boardRow(ui, ownLabel, own && own.minions, h.card, t("turns.board.not_in_round")));
+    if (row.partner) {
+      const mate = row.partner.hero ? h.heroText({ id: row.partner.hero }) : t("turns.teammate_board");
+      body.push(boardRow(ui, mate, row.partner.minions, h.card, t("turns.board.not_in_round")));
+    }
     if (row.combat) {
       const who = row.combat.opponents.map(h.heroText).join(" + ") || t("turns.their_board");
       body.push(boardRow(ui, who, row.combat.board, h.card, t("turns.board.theirs_not")));
@@ -344,6 +389,7 @@
       tier(ui, row.tier),
       result(ui, row.combat, h.heroText, h.art),
       health(ui, row.health, healthSource, row.damage),
+      damage(ui, row.damage),
       strip(ui, row.own, h.art),
     );
     const label = ui.el("span", "visually-hidden", words);
@@ -373,7 +419,7 @@
     // Column names over the rows; each row's summary also says it all in words.
     const cols = ui.el("div", "turn-cols");
     cols.setAttribute("aria-hidden", "true");
-    cols.append(...["turns.col.turn", "turns.col.tier", "turns.col.combat", "turns.col.health", "turns.col.board"].map((k) => ui.el("span", null, t(k))));
+    cols.append(...["turns.col.turn", "turns.col.tier", "turns.col.combat", "turns.col.health", "turns.col.damage", "turns.col.board"].map((k) => ui.el("span", null, t(k))));
     part.append(cols);
     const listNode = ui.el("div", "turn-list");
     const tools = { ...h, shopRecorded };
@@ -386,7 +432,7 @@
     return part;
   }
 
-  const api = { giftMark, giftMarks, rows, combatAt, healthWords, damageWords, totalsWords, keywordsRecorded, summaryWords, shopFacts, section };
+  const api = { giftMark, giftMarks, rows, combatAt, healthWords, damageWords, damageBadges, damageQuiet, totalsWords, keywordsRecorded, summaryWords, shopFacts, section };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLTurns = api;
 })();

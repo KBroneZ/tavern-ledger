@@ -61,6 +61,8 @@ export interface TurnRow {
   ownBoard: BoardView | null;
   /** Whose board ownBoard is, in Duos when it is the teammate's. */
   ownBoardHero: HeroRef | null;
+  /** In Duos, the other own-side board of the turn (the teammate's) beside ownBoard; null when the record has none. */
+  partnerBoard: { hero: HeroRef; board: BoardView } | null;
   /** Each opposing hero's board the record has (two in Duos); empty: none recorded. */
   opponentBoards: { hero: HeroRef; board: BoardView }[];
   shop: ShopTurn | null;
@@ -283,6 +285,11 @@ function ownEntry(report: Report, round: Round) {
   return own.find((e) => e.playerId === report.localPlayerId) ?? own[0] ?? null;
 }
 
+/** The own-side entry that is not the one shown as yours: the teammate's, with a board. */
+function partnerEntry(round: Round, own: ReturnType<typeof ownEntry>) {
+  return round.entries.find((e) => e.side === "own" && e !== own && e.playerId !== own?.playerId && e.board !== null) ?? null;
+}
+
 function turnRows(report: Report, list: Combat[]): TurnRow[] {
   const shopTurns = new Map((report.shop?.turns ?? []).map((t) => [t.turn, t]));
   const tierUps = new Set((report.shop?.tierUps ?? []).map((u) => u.turn));
@@ -292,6 +299,7 @@ function turnRows(report: Report, list: Combat[]): TurnRow[] {
     const shop = shopTurns.get(turn) ?? null;
     const combat = byRound.get(turn) ?? null;
     const own = combat ? ownEntry(report, combat.round) : null;
+    const partner = combat ? partnerEntry(combat.round, own) : null;
     // The game can log one opponent twice (once without a board): each hero once, with the board it has.
     const opponents = new Map<string, Entry>();
     for (const e of combat?.round.entries ?? []) {
@@ -315,6 +323,7 @@ function turnRows(report: Report, list: Combat[]): TurnRow[] {
       healthAfter: combat?.round.ownHealthAfter ?? null,
       ownBoard: boardView(own?.board ?? null),
       ownBoardHero: own && own.playerId !== report.localPlayerId && own.hero !== report.hero ? heroRef(own.hero) : null,
+      partnerBoard: partner && boardView(partner.board) ? { hero: heroRef(partner.hero), board: boardView(partner.board)! } : null,
       opponentBoards: [...opponents.values()].flatMap((e) => {
         const board = boardView(e.board);
         return board ? [{ hero: heroRef(e.hero), board }] : [];

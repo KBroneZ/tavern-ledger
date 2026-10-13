@@ -168,8 +168,43 @@
   rotate: 45deg;
 }
 
-.gv-short {
-  display: none;
+/* Turn damage: a small stone with a gold edge, like the game's damage splat (own CSS, no game art). The sign and number carry the meaning, the colour only helps. */
+.gv-hits {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s-1) var(--s-2);
+}
+
+.gv-hit {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s-1);
+}
+
+.gv-hit > [aria-hidden] {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.1em;
+  padding: 0.12em 0.5em;
+  border: 2px solid var(--amber);
+  border-radius: 40% 60% 50% 50% / 55% 45% 55% 45%;
+  background: radial-gradient(circle at 35% 28%, #3a2c24, var(--panel-solid) 70%);
+  box-shadow: inset 0 1px 0 rgb(255 220 160 / 0.25), 0 1px 3px rgb(0 0 0 / 0.5);
+  font: 800 var(--t-lg) / 1.1 var(--display);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 0 rgb(0 0 0 / 0.7);
+}
+
+.gv-hit-dealt > [aria-hidden] {
+  color: var(--good);
+}
+
+.gv-hit-taken > [aria-hidden] {
+  color: var(--bad);
 }
 
 .gv-opps {
@@ -235,13 +270,18 @@
 
 /* Narrow screens: the tier and the gold are in the row's detail (the shop line), opponents show by portrait. */
 @media (max-width: 40rem) {
-  .gv-turns .gv-wide,
-  .gv-turns .gv-long {
+  .gv-turns .gv-wide {
     display: none;
   }
 
-  .gv-turns .gv-short {
-    display: inline;
+  /* The "inferred" mark drops under the stone instead of widening the table. */
+  .gv-hits {
+    max-width: 4.5rem;
+  }
+
+  .gv-hit > [aria-hidden] {
+    min-width: 1.9em;
+    font-size: var(--t-md);
   }
 
   .gv-turns th,
