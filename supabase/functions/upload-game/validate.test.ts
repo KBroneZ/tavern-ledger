@@ -489,6 +489,20 @@ Deno.test("a session name with an impossible date is refused", () => {
   assertEquals(v.ok ? "accepted" : v.field, "session");
 });
 
+Deno.test("a session dated before 2000 or after next year is refused", () => {
+  const next = new Date().getUTCFullYear() + 1;
+  for (const year of ["0000", "0001", "1999", String(next + 1), "9999"]) {
+    const session = `Hearthstone_${year}_01_01_00_00_00`;
+    const v = validateRecord(record({ session }), session, 1);
+    assertEquals(v.ok ? "accepted" : v.field, "session", year);
+  }
+  for (const year of ["2000", String(next)]) {
+    const session = `Hearthstone_${year}_12_31_23_59_59`;
+    const v = validateRecord(record({ session }), session, 1);
+    assertEquals(v.ok ? v.summary.played_on : "refused", `${year}-12-31`, year);
+  }
+});
+
 Deno.test("only /v1/games/<session>/<index> with a strict session and index", () => {
   const base = "http://fn.test/upload-game/v1/games";
   assertEquals(parsePath(`${base}/${SESSION}/1`), { session: SESSION, index: 1 });

@@ -7,15 +7,18 @@
 //      blocked; the token is valid (a refused token counts against the IP);
 //   3. the body inflates to at most 1 MiB of UTF-8 JSON that passes
 //      validateRecord(): no player names, no fields outside the report;
-//   4. upload_begin(): revision, rate limits and total quota;
+//   4. upload_begin(): the session's date, revision, rate limits and total
+//      quota;
 //   5. the file, re-compressed here from the checked bytes, is written with
 //      the service role, then upload_commit() writes the game row and the
 //      game's summary for the website (T-502, D-071), in one transaction.
+//      If the database refuses a new game's row, its file is deleted again.
 // Same bytes again: 200 without writing. Answers carry a code and the
 // validator's version (D-047), never the values sent, a token or an id. No
 // dependencies: plain fetch against the project's own HTTP APIs.
 
 import { type GameStats, summarize, SUMMARY_VERSION } from "../_shared/game_summary.ts";
+import { inflateCapped, readCapped, TooLarge } from "../_shared/gzip.ts";
 import { parsePath, type Summary, validateRecord, VALIDATOR_VERSION } from "./validate.ts";
 
 export interface Env {
@@ -47,8 +50,6 @@ class StepError extends Error {
     super(`${step} failed with HTTP ${status}`);
   }
 }
-
-class TooLarge extends Error {}
 
 /** Every answer says which validator ran, so the app can retry games it refused. */
 function json(status: number, body: object, extra: Record<string, string> = {}): Response {
@@ -93,31 +94,6 @@ async function rpc(env: Env, fetchFn: Fetch, step: string, name: string, args: u
   });
   const text = await res.text();
   return text ? JSON.parse(text) : null;
-}
-
-/** Reads a stream into memory, or throws TooLarge past `max` bytes. */
-async function readCapped(stream: ReadableStream<Uint8Array>, max: number): Promise<Bytes> {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.length;
-      if (size > max) throw new TooLarge();
-      chunks.push(value);
-    }
-  } finally {
-    await reader.cancel().catch(() => {});
-  }
-  const out = new Uint8Array(size);
-  let at = 0;
-  for (const c of chunks) {
-    out.set(c, at);
-    at += c.length;
-  }
-  return out;
 }
 
 const streamOf = (bytes: Bytes) => new Blob([bytes]).stream();
@@ -174,10 +150,7 @@ type Decoded =
 async function decode(body: Bytes): Promise<Decoded> {
   let bytes: Bytes;
   try {
-    bytes = await readCapped(
-      streamOf(body).pipeThrough(new DecompressionStream("gzip")),
-      MAX_INFLATED,
-    );
+    bytes = await inflateCapped(body, MAX_INFLATED);
   } catch (e) {
     if (e instanceof TooLarge) {
       return { ok: false, response: refuse(413, "too_large", "the game is too large") };
@@ -245,6 +218,33 @@ async function commit(env: Env, fetchFn: Fetch, args: ReturnType<typeof commitAr
   }
 }
 
+/** A definite refusal: a client error other than a timeout. */
+const refused = (status: number) => status >= 400 && status < 500 && status !== 408;
+
+/** Deletes a stored file; a failure is logged (the daily sweep retries it). */
+async function removeFile(env: Env, fetchFn: Fetch, path: string) {
+  try {
+    const res = await call(fetchFn, "delete file", `${env.url}/storage/v1/object/games`, {
+      method: "DELETE",
+      headers: serviceHeaders(env),
+      body: JSON.stringify({ prefixes: [path] }),
+    });
+    await res.body?.cancel();
+  } catch (e) {
+    console.error(`upload-game: ${e instanceof StepError ? e.message : "delete file failed"}`);
+  }
+}
+
+function invalid(code: string, field: string): Response {
+  return json(400, {
+    error: code === "player_name"
+      ? "the game record holds something shaped like a player name"
+      : "the game record is not valid",
+    code,
+    field,
+  });
+}
+
 const BEGIN_REFUSALS: Record<string, [number, string]> = {
   older: [409, "a newer copy of this game is already stored"],
   quota_games: [403, "your account holds the most games it can"],
@@ -278,15 +278,7 @@ async function store(
   const decoded = await decode(body);
   if (!decoded.ok) return decoded.response;
   const checked = validateRecord(decoded.value, key.session, key.index);
-  if (!checked.ok) {
-    return json(400, {
-      error: checked.code === "player_name"
-        ? "the game record holds something shaped like a player name"
-        : "the game record is not valid",
-      code: checked.code,
-      field: checked.field,
-    });
-  }
+  if (!checked.ok) return invalid(checked.code, checked.field);
   // The record passed validateRecord(), so its report has the parser's shape.
   const stats = summarize((decoded.value as { report: unknown }).report);
   const sha = await sha256Hex(decoded.bytes);
@@ -314,6 +306,8 @@ async function store(
     const [status, message] = BEGIN_REFUSALS[result];
     return refuse(status, result === "older" ? "older_revision" : result, message);
   }
+  // The database checks the session's date too (validateRecord() did).
+  if (result === "bad_session") return invalid("invalid_report", "session");
   if (result !== "create" && result !== "replace") throw new StepError("begin", 502);
 
   const path = `${userId}/${key.session}-${key.index}.json.gz`;
@@ -324,11 +318,27 @@ async function store(
   });
   await write.body?.cancel();
 
-  const committed = await commit(
-    env,
-    fetchFn,
-    commitArgs(userId, key, checked.summary, stats, sha, file.length),
-  );
+  let committed: unknown;
+  try {
+    committed = await commit(
+      env,
+      fetchFn,
+      commitArgs(userId, key, checked.summary, stats, sha, file.length),
+    );
+  } catch (e) {
+    // The database refused the row (PostgREST answers 4xx for an error it
+    // raised, and rolls back), so no row names a new game's file: it goes
+    // now, not at the next sweep, as it would count against no quota
+    // meanwhile. A replaced game's file is the only copy its row has, and
+    // after no answer, a timeout or a 5xx the row may be there: all are kept
+    // (the sweep removes the file an hour later if no row names it). Two
+    // uploads of the same new game at once (the app sends one at a time)
+    // could still lose the other's file: the account's own data only.
+    if (result === "create" && e instanceof StepError && refused(e.status)) {
+      await removeFile(env, fetchFn, path);
+    }
+    throw e;
+  }
   if (committed === "created") return json(201, { result: "created", sha256: sha });
   if (committed === "replaced") return json(200, { result: "replaced", sha256: sha });
   if (committed === "older") {

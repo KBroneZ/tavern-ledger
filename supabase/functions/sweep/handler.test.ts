@@ -173,7 +173,7 @@ const request = (key: string | null = ENV.serviceKey, method = "POST") => {
   return new Request("http://fn.test/sweep", { method, headers });
 };
 
-Deno.test("deletes orphan files through the Storage API, then housekeeping", async () => {
+Deno.test("housekeeping, then orphan files deleted through the Storage API", async () => {
   const api = fakeApi({ files: [orphan(1), orphan(2)] });
   const res = await handle(request(), ENV, api.fetchFn);
   assertEquals(res.status, 200);
@@ -189,10 +189,10 @@ Deno.test("deletes orphan files through the Storage API, then housekeeping", asy
   });
   assertEquals(api.files(), []);
   assertEquals(api.calls.map((c) => `${c.method} ${c.path}`), [
+    "POST /rest/v1/rpc/sweep_housekeeping",
     "POST /rest/v1/rpc/sweep_orphan_files",
     "DELETE /storage/v1/object/games",
     "POST /rest/v1/rpc/sweep_orphan_files",
-    "POST /rest/v1/rpc/sweep_housekeeping",
     "POST /rest/v1/rpc/game_stats_backfill_list",
     "POST /rest/v1/rpc/file_retention_list",
     "POST /rest/v1/rpc/sweep_record_result",
@@ -203,7 +203,7 @@ Deno.test("deletes orphan files through the Storage API, then housekeeping", asy
     p_stats: counts(0, 0, 0, 0),
     p_retention: retained(),
   });
-  assertEquals(api.calls[0].body, { min_age: "1 hour" });
+  assertEquals(api.calls[1].body, { min_age: "1 hour" });
 });
 
 Deno.test("only the service role may run it", async () => {
@@ -270,7 +270,9 @@ Deno.test("a failed step is a 500 naming it", async () => {
   assertEquals((await res.json()).step, "delete files");
   const failing: Fetch = () => Promise.reject(new TypeError("network down"));
   const res2 = await handle(request(), ENV, failing);
-  assertEquals([res2.status, (await res2.json()).step], [500, "list files"]);
+  const body = await res2.json();
+  assertEquals([res2.status, body.step], [500, "housekeeping"]);
+  assertEquals(body.failed, ["housekeeping", "list files", "list summaries", "record run"]);
 });
 
 const tokenRequest = (token: string, extra: Record<string, string> = {}) =>
@@ -465,19 +467,73 @@ Deno.test("the run's counts are recorded on the row housekeeping made", async ()
   assertEquals(failures(api), []);
 });
 
-Deno.test("a step that fails before housekeeping leaves a row of its own", async () => {
-  const api = fakeApi({ files: [orphan(1)], fail: "/storage/v1/object/games" });
+const records = (api: ReturnType<typeof fakeApi>) =>
+  api.calls.filter((c) => c.path === "/rest/v1/rpc/sweep_record_result").map((c) => c.body);
+const ran = (api: ReturnType<typeof fakeApi>, path: string) =>
+  api.calls.some((c) => c.path === `/rest/v1/rpc/${path}`);
+
+Deno.test("a failed orphan delete is recorded on the run's row; the other steps still run", async () => {
+  const g = await stored(1);
+  const api = fakeApi({
+    files: [orphan(1)],
+    fail: "/storage/v1/object/games",
+    missing: [g.row],
+    objects: { [g.name]: g.file },
+  });
   const res = await handle(request(), ENV, api.fetchFn);
-  assertEquals([res.status, (await res.json()).step], [500, "delete files"]);
-  assertEquals(failures(api), [{ p_run_id: null, p_step: "delete files" }]);
+  const body = await res.json();
+  assertEquals([res.status, body.step, body.failed], [500, "delete files", ["delete files"]]);
+  assertEquals([body.run_id, body.files, body.auth_events], [RUN, 0, 1]);
+  assertEquals(body.stats, counts(1, 1, 1, 0));
+  assertEquals(body.retention, retained());
+  assertEquals(records(api), [{
+    p_run_id: RUN,
+    p_files: 0,
+    p_stats: counts(1, 1, 1, 0),
+    p_retention: retained(),
+    p_failed: ["delete files"],
+  }]);
+  assertEquals(failures(api), []);
 });
 
-Deno.test("a step that fails after housekeeping marks that run's row", async () => {
-  const api = fakeApi({ fail: "/rest/v1/rpc/game_stats_backfill_list" });
+Deno.test("a failed list of missing summaries is recorded with no counts; retention still runs", async () => {
+  const api = fakeApi({ files: [orphan(1)], fail: "/rest/v1/rpc/game_stats_backfill_list" });
   const res = await handle(request(), ENV, api.fetchFn);
-  assertEquals([res.status, (await res.json()).step], [500, "list summaries"]);
-  assertEquals(failures(api), [{ p_run_id: RUN, p_step: "list summaries" }]);
-  assertEquals(api.calls.some((c) => c.path === "/rest/v1/rpc/sweep_record_result"), false);
+  const body = await res.json();
+  assertEquals([res.status, body.step, body.stats, body.files], [500, "list summaries", null, 1]);
+  assertEquals(ran(api, "file_retention_list"), true);
+  assertEquals(records(api), [{
+    p_run_id: RUN,
+    p_files: 1,
+    p_stats: null,
+    p_retention: retained(),
+    p_failed: ["list summaries"],
+  }]);
+  assertEquals(failures(api), []);
+});
+
+Deno.test("an orphan file with no row is cleaned and a backlog does not stall the run", async () => {
+  // Files that never go away, and a clock that moves 20 seconds per look:
+  // the orphan rounds stop, and housekeeping (first), the backfill and the
+  // retention all run and are recorded.
+  const many = Array.from({ length: 3000 }, (_, i) => orphan(i + 1));
+  const api = fakeApi({ files: many });
+  let t = 0;
+  const env = { ...ENV, now: () => (t += 20_000) };
+  const res = await handle(request(), env, api.fetchFn);
+  const body = await res.json();
+  assertEquals([res.status, body.step, body.files], [500, "delete files", 2000]);
+  assertEquals(api.files().length, 1000, "the rest wait for the next run");
+  assertEquals(api.calls[0].path, "/rest/v1/rpc/sweep_housekeeping");
+  assertEquals(
+    ["game_stats_backfill_list", "file_retention_list"].map((p) => ran(api, p)),
+    [true, true],
+  );
+  assertEquals((records(api)[0] as Record<string, unknown>).p_failed, ["delete files"]);
+  // One orphan, a clock that stands still: cleaned, and the run is clean.
+  const one = fakeApi({ files: [orphan(1)] });
+  const ok = await handle(request(), ENV, one.fetchFn);
+  assertEquals([ok.status, (await ok.json()).files, one.files()], [200, 1, []]);
 });
 
 Deno.test("counts that cannot be recorded are a failed run, not a silent one", async () => {
@@ -487,15 +543,36 @@ Deno.test("counts that cannot be recorded are a failed run, not a silent one", a
   assertEquals(failures(api), [{ p_run_id: RUN, p_step: "record run" }]);
 });
 
-Deno.test("housekeeping with no run id is a failed step", async () => {
-  const api = fakeApi();
+Deno.test("housekeeping with no run id is a failed step; the others run on a row of their own", async () => {
+  const api = fakeApi({ files: [orphan(1)] });
   const fetchFn: Fetch = (input, init) =>
     input.endsWith("/rpc/sweep_housekeeping")
       ? Promise.resolve(new Response(JSON.stringify({ auth_events: 0 }), { status: 200 }))
       : api.fetchFn(input, init);
   const res = await handle(request(), ENV, fetchFn);
-  assertEquals([res.status, (await res.json()).step], [500, "housekeeping"]);
-  assertEquals(failures(api), [{ p_run_id: null, p_step: "housekeeping" }]);
+  const body = await res.json();
+  assertEquals([res.status, body.step, body.run_id, body.capacity], [
+    500,
+    "housekeeping",
+    null,
+    null,
+  ]);
+  assertEquals("auth_events" in body, false);
+  assertEquals(records(api), [{
+    p_run_id: null,
+    p_files: 1,
+    p_stats: counts(0, 0, 0, 0),
+    p_retention: retained(),
+    p_failed: ["housekeeping"],
+  }]);
+  assertEquals(failures(api), []);
+});
+
+Deno.test("a failed housekeeping call is recorded the same way", async () => {
+  const api = fakeApi({ fail: "/rest/v1/rpc/sweep_housekeeping" });
+  const res = await handle(request(), ENV, api.fetchFn);
+  assertEquals([res.status, (await res.json()).failed], [500, ["housekeeping"]]);
+  assertEquals((records(api)[0] as Record<string, unknown>).p_run_id, null);
 });
 
 Deno.test("a failure that cannot be recorded still answers 500 naming the step", async () => {

@@ -2,12 +2,14 @@
 // function itself uses (the new secret key, D-042; never a legacy key, D-053),
 // or with the sweep token that the scheduled job reads from Vault
 // (X-Sweep-Token; checked by the database, migration 20261010090000):
-//   1. game files with no summary row (an upload that wrote its file and then
-//      failed before the row), untouched for an hour, through the Storage
-//      API (deleting storage.objects rows in SQL would leave the bytes);
-//   2. public.sweep_housekeeping(): audit entries of deleted accounts (the
+//   1. public.sweep_housekeeping(): audit entries of deleted accounts (the
 //      T-104a leftover) and every audit entry older than 90 days (D-048),
 //      upload times older than two days and IP counters older than an hour;
+//   2. game files with no summary row (an upload that wrote its file and then
+//      failed before the row), untouched for an hour, through the Storage
+//      API (deleting storage.objects rows in SQL would leave the bytes), in
+//      rounds of 1000, none after the first started 30 seconds after the
+//      run began;
 //   3. game summaries for the website (T-502, D-071): games stored before
 //      the upload function wrote them, or summarized by an older version, get
 //      one from their stored report, read through the Storage API, checked
@@ -16,8 +18,10 @@
 // Each run ends by recording in private.sweep_runs (T-524, D-096) the files
 // deleted and the backfill's counts, skips by reason, next to the
 // housekeeping counts; a step that fails is recorded too, so a run that
-// reported nothing is never read as one that did nothing. The response
-// carries the same counts.
+// reported nothing is never read as one that did nothing. Each step runs
+// even when another one failed: the run's row names the failed steps
+// (failed_steps) next to the counts of the others, and the answer is a 500
+// naming them, with the same counts.
 // Housekeeping also measures how full the project is (T-543, D-109): the
 // database size and the games bucket's file bytes and count, each with the
 // Free plan's limit and the level reached ("none", "50%", "80%"). It is
@@ -41,6 +45,7 @@
 // Safe to run any time and as often as wanted. No dependencies.
 
 import { summarize, SUMMARY_VERSION } from "../_shared/game_summary.ts";
+import { inflateCapped, readCapped, TooLarge } from "../_shared/gzip.ts";
 import { validateRecord } from "../upload-game/validate.ts";
 
 export interface Env {
@@ -55,6 +60,9 @@ export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 const TIMEOUT_MS = 10_000;
 // sweep_orphan_files() returns at most 1000 names per call.
 const MAX_ROUNDS = 20;
+// No round of orphan deletion starts later than this after the run began;
+// the rest wait for the next run, and the other steps still get their time.
+const ORPHAN_BUDGET_MS = 30_000;
 const GAME_FILE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/Hearthstone_\d{4}(_\d{2}){5}-[1-9][0-9]{0,3}\.json\.gz$/;
 // Summaries filled per run; a stored game is about 2.5 KB gzipped.
@@ -156,24 +164,43 @@ async function orphanFiles(env: Env, fetchFn: Fetch): Promise<string[]> {
   return names.filter((n) => GAME_FILE.test(n));
 }
 
-async function deleteOrphans(env: Env, fetchFn: Fetch): Promise<number> {
+/** The files deleted, and the step that failed if the deletion did not finish. */
+interface Orphans {
+  deleted: number;
+  failed: "list files" | "delete files" | null;
+}
+
+/** Deletes orphan files in rounds, until none is left, a step fails or time is up. */
+async function deleteOrphans(env: Env, fetchFn: Fetch, deadline: number): Promise<Orphans> {
+  const now = env.now ?? Date.now;
   let deleted = 0;
   let previous = "";
-  for (let round = 0; round < MAX_ROUNDS; round++) {
-    const names = await orphanFiles(env, fetchFn);
-    if (names.length === 0) return deleted;
-    // The same list twice: the delete did not take; stop instead of looping.
-    if (names.join("\n") === previous) throw new StepError("delete files", 508);
-    previous = names.join("\n");
-    const res = await call(fetchFn, "delete files", `${env.url}/storage/v1/object/games`, {
-      method: "DELETE",
-      headers: serviceHeaders(env),
-      body: JSON.stringify({ prefixes: names }),
-    });
-    await res.body?.cancel();
-    deleted += names.length;
+  try {
+    for (let round = 0; round < MAX_ROUNDS && (round === 0 || now() < deadline); round++) {
+      const names = await orphanFiles(env, fetchFn);
+      if (names.length === 0) return { deleted, failed: null };
+      // The same list twice: the delete did not take; stop instead of looping.
+      if (names.join("\n") === previous) throw new StepError("delete files", 508);
+      previous = names.join("\n");
+      const res = await call(fetchFn, "delete files", `${env.url}/storage/v1/object/games`, {
+        method: "DELETE",
+        headers: serviceHeaders(env),
+        body: JSON.stringify({ prefixes: names }),
+      });
+      await res.body?.cancel();
+      deleted += names.length;
+    }
+    throw new StepError("delete files", 508);
+  } catch (e) {
+    const step = e instanceof StepError && e.step === "delete files" ? e.step : "list files";
+    logStep(e, step);
+    return { deleted, failed: step };
   }
-  throw new StepError("delete files", 508);
+}
+
+/** Logs a failed step: its name and HTTP status only. */
+function logStep(e: unknown, step: string) {
+  console.error(`sweep: ${e instanceof StepError ? e.message : `${step} failed`}`);
 }
 
 interface Missing {
@@ -193,36 +220,6 @@ function isMissing(v: unknown): v is Missing {
     typeof m.content_sha256 === "string" && SHA256.test(m.content_sha256) &&
     GAME_FILE.test(m.storage_path) &&
     m.storage_path === `${m.user_id}/${m.session}-${m.game_index}.json.gz`;
-}
-
-class TooLarge extends Error {
-  constructor() {
-    super("too large");
-  }
-}
-
-async function readCapped(stream: ReadableStream<Uint8Array>, max: number): Promise<Uint8Array> {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.length;
-      if (size > max) throw new TooLarge();
-      chunks.push(value);
-    }
-  } finally {
-    await reader.cancel().catch(() => {});
-  }
-  const out = new Uint8Array(size);
-  let at = 0;
-  for (const c of chunks) {
-    out.set(c, at);
-    at += c.length;
-  }
-  return out;
 }
 
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
@@ -281,10 +278,7 @@ async function summaryOf(
     return { skip: e instanceof TooLarge ? "bad_file" : "no_file" };
   }
   try {
-    const bytes = await readCapped(
-      new Blob([file as BlobPart]).stream().pipeThrough(new DecompressionStream("gzip")),
-      MAX_INFLATED,
-    );
+    const bytes = await inflateCapped(file, MAX_INFLATED);
     if ((await sha256Hex(bytes)) !== game.content_sha256) return { skip: "file_mismatch" };
     const record = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
     if (!validateRecord(record, game.session, game.game_index).ok) return { skip: "bad_file" };
@@ -676,15 +670,15 @@ async function recordFailure(env: Env, fetchFn: Fetch, runId: number | null, ste
   }
 }
 
-/**
- * Deletes orphan files, does the housekeeping, the backfill and the file
- * retention, records the run.
- */
-async function sweep(env: Env, fetchFn: Fetch): Promise<Response> {
-  let runId: number | null = null;
-  const started = (env.now ?? Date.now)();
+interface Housekeeping {
+  runId: number;
+  counts: Record<string, unknown>;
+  capacity: Capacity | null;
+}
+
+/** sweep_housekeeping(): the run's row, its counts and the capacity, or null if it failed. */
+async function housekeeping(env: Env, fetchFn: Fetch): Promise<Housekeeping | null> {
   try {
-    const files = await deleteOrphans(env, fetchFn);
     const res = await call(
       fetchFn,
       "housekeeping",
@@ -693,23 +687,79 @@ async function sweep(env: Env, fetchFn: Fetch): Promise<Response> {
     );
     const { run_id, capacity: measured, ...counts } = await res.json();
     if (!Number.isSafeInteger(run_id)) throw new StepError("housekeeping", 502);
-    runId = run_id;
     const capacity = checkCapacity(measured);
     logCapacity(capacity);
-    const stats = await backfillStats(env, fetchFn);
+    return { runId: run_id, counts, capacity };
+  } catch (e) {
+    logStep(e, "housekeeping");
+    return null;
+  }
+}
+
+/** The backfill's counts, or null when its list failed. */
+async function backfill(env: Env, fetchFn: Fetch): Promise<BackfillCounts | null> {
+  try {
+    return await backfillStats(env, fetchFn);
+  } catch (e) {
+    logStep(e, "list summaries");
+    return null;
+  }
+}
+
+/**
+ * Does the housekeeping, deletes orphan files, fills summaries and runs the
+ * file retention, then records the run. Housekeeping comes first, so a large
+ * orphan backlog never holds back the counts and the capacity check, and a
+ * step that fails is recorded while the others still run.
+ */
+async function sweep(env: Env, fetchFn: Fetch): Promise<Response> {
+  let runId: number | null = null;
+  const started = (env.now ?? Date.now)();
+  try {
+    const house = await housekeeping(env, fetchFn);
+    runId = house?.runId ?? null;
+    const orphans = await deleteOrphans(env, fetchFn, started + ORPHAN_BUDGET_MS);
+    const stats = await backfill(env, fetchFn);
     const retention = await expireFiles(env, fetchFn, started + RUN_BUDGET_MS);
-    const done = await call(fetchFn, "record run", `${env.url}/rest/v1/rpc/sweep_record_result`, {
-      method: "POST",
-      headers: serviceHeaders(env),
-      body: JSON.stringify({
-        p_run_id: runId,
-        p_files: files,
-        p_stats: stats,
-        p_retention: retention,
-      }),
+    const failed = [
+      ...(house === null ? ["housekeeping"] : []),
+      ...(orphans.failed === null ? [] : [orphans.failed]),
+      ...(stats === null ? ["list summaries"] : []),
+    ];
+    try {
+      const done = await call(fetchFn, "record run", `${env.url}/rest/v1/rpc/sweep_record_result`, {
+        method: "POST",
+        headers: serviceHeaders(env),
+        body: JSON.stringify({
+          p_run_id: runId,
+          p_files: orphans.deleted,
+          p_stats: stats,
+          p_retention: retention,
+          // Only when a step failed, so a database from before it still records runs.
+          ...(failed.length > 0 ? { p_failed: failed } : {}),
+        }),
+      });
+      await done.body?.cancel();
+    } catch (e) {
+      logStep(e, "record run");
+      await recordFailure(env, fetchFn, runId, "record run");
+      failed.push("record run");
+    }
+    const body = {
+      run_id: runId,
+      files: orphans.deleted,
+      ...house?.counts,
+      stats,
+      capacity: house?.capacity ?? null,
+      retention,
+    };
+    if (failed.length === 0) return json(200, body);
+    return json(500, {
+      error: "the sweep did not finish; run it again",
+      step: failed[0],
+      failed,
+      ...body,
     });
-    await done.body?.cancel();
-    return json(200, { run_id: runId, files, ...counts, stats, capacity, retention });
   } catch (e) {
     const step = e instanceof StepError ? e.step : "unexpected";
     console.error(`sweep: ${e instanceof StepError ? e.message : "unexpected error"}`);

@@ -54,6 +54,12 @@ function fakeApi(opts: {
   user?: number;
   blocked?: boolean;
   fail?: string;
+  /** What `fail` answers; 503 unless given. */
+  failStatus?: number;
+  /** A second path that answers 503. */
+  alsoFail?: string;
+  /** A path whose call gets no answer (network error or timeout). */
+  throwOn?: string;
 } = {}) {
   const calls: Call[] = [];
   const reply = (status: number, body: unknown) =>
@@ -67,7 +73,9 @@ function fakeApi(opts: {
     if (init.body instanceof Uint8Array) raw = init.body as Bytes;
     else if (typeof init.body === "string") body = JSON.parse(init.body);
     calls.push({ method, path, body, raw, headers });
-    if (opts.fail === path) return reply(503, {});
+    if (opts.fail === path) return reply(opts.failStatus ?? 503, {});
+    if (opts.alsoFail === path) return reply(503, {});
+    if (opts.throwOn === path) throw new DOMException("timed out", "TimeoutError");
     switch (path) {
       case "/rest/v1/rpc/upload_ip_blocked":
         return reply(200, opts.blocked ?? false);
@@ -170,6 +178,85 @@ Deno.test("any other failed row write is still a 500", async () => {
   const res = await handle(await upload(), ENV, api.fetchFn);
   assertEquals([res.status, (await res.json()).step], [500, "write row"]);
   assertEquals(api.calls.filter((c) => c.path === "/rest/v1/rpc/upload_commit").length, 1);
+});
+
+const DELETE_FILES = "DELETE /storage/v1/object/games";
+
+Deno.test("a new game's file is deleted when the database refuses its row", async () => {
+  // PostgREST answers 400 or 409 for an error the database raised: rolled back.
+  for (const status of [400, 409]) {
+    const api = fakeApi({ fail: "/rest/v1/rpc/upload_commit", failStatus: status });
+    const res = await handle(await upload(), ENV, api.fetchFn);
+    assertEquals([res.status, (await res.json()).step], [500, "write row"]);
+    assertEquals(api.paths().slice(-2), ["POST /rest/v1/rpc/upload_commit", DELETE_FILES]);
+    assertEquals(api.calls.at(-1)!.body, { prefixes: [`${USER}/${SESSION}-1.json.gz`] });
+  }
+});
+
+Deno.test("a failed delete after a refused row write still answers 500 with the row step", async () => {
+  const api = fakeApi({
+    fail: "/rest/v1/rpc/upload_commit",
+    failStatus: 400,
+    alsoFail: "/storage/v1/object/games",
+  });
+  const res = await handle(await upload(), ENV, api.fetchFn);
+  assertEquals([res.status, (await res.json()).step], [500, "write row"]);
+  assertEquals(api.paths().at(-1), DELETE_FILES);
+});
+
+Deno.test("the file is kept when the row write may have landed or a row names it", async () => {
+  // No answer: the row may be there, and the daily sweep removes the file
+  // an hour later if it is not.
+  const timedOut = fakeApi({ throwOn: "/rest/v1/rpc/upload_commit" });
+  const res = await handle(await upload(), ENV, timedOut.fetchFn);
+  assertEquals([res.status, (await res.json()).step], [500, "write row"]);
+  assertEquals(timedOut.paths().includes(DELETE_FILES), false, "after no answer");
+  // A server or gateway error, or a timeout answer: the row may be there too.
+  for (const status of [408, 500, 502, 503, 504]) {
+    const api = fakeApi({ fail: "/rest/v1/rpc/upload_commit", failStatus: status });
+    await handle(await upload(), ENV, api.fetchFn);
+    assertEquals(api.paths().includes(DELETE_FILES), false, `after HTTP ${status}`);
+  }
+  // A replaced game: the file is the only copy its row has.
+  const replaced = fakeApi({
+    begin: { result: "replace" },
+    fail: "/rest/v1/rpc/upload_commit",
+    failStatus: 400,
+  });
+  await handle(await upload(), ENV, replaced.fetchFn);
+  assertEquals(replaced.paths().includes(DELETE_FILES), false, "for a replaced game");
+  // An unknown answer: the row may be there.
+  const unknown = fakeApi({ commit: "something else" });
+  await handle(await upload(), ENV, unknown.fetchFn);
+  assertEquals(unknown.paths().includes(DELETE_FILES), false, "after an unknown answer");
+});
+
+Deno.test("a session the database refuses is 400 before any file is written", async () => {
+  const api = fakeApi({ begin: { result: "bad_session" } });
+  const res = await handle(await upload(), ENV, api.fetchFn);
+  assertEquals(res.status, 400);
+  assertEquals(await res.json(), {
+    error: "the game record is not valid",
+    code: "invalid_report",
+    field: "session",
+    validator: VALIDATOR_VERSION,
+  });
+  assertEquals(api.paths().some((p) => p.includes("/storage/")), false);
+});
+
+Deno.test("a session from before 2000 is refused before any call to the database", async () => {
+  const session = "Hearthstone_0000_01_01_00_00_00";
+  const api = fakeApi();
+  const res = await handle(
+    request(await gzip(enc(record({ session }))), { path: `/upload-game/v1/games/${session}/1` }),
+    ENV,
+    api.fetchFn,
+  );
+  assertEquals([res.status, (await res.json()).field], [400, "session"]);
+  assertEquals(
+    api.paths().some((p) => p.includes("upload_begin") || p.includes("/storage/")),
+    false,
+  );
 });
 
 Deno.test("the summary of a real game goes with its row (T-502)", async () => {
