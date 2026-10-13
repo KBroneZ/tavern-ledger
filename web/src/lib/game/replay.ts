@@ -96,6 +96,8 @@ export interface Marks {
   defender?: true;
   /** Damage taken at this step. */
   hurt?: number;
+  /** Attack and Health gained at this step (a buff or a heal), when neither went down. */
+  gain?: { atk: number; health: number };
   /** Lost its Divine Shield. */
   popped?: true;
   buffed?: true;
@@ -225,10 +227,13 @@ function apply(st: State, e: ReplayEvent): Map<number, Marks> {
       set(e.minion, { shield: e.on });
       if (!e.on) mark(e.minion, { popped: true });
       break;
-    case "stats":
+    case "stats": {
+      const was = st.tiles.get(e.minion) as Base;
+      const gain = { atk: e.atk - was.atk, health: e.health - was.health };
       set(e.minion, { atk: e.atk, health: e.health });
-      mark(e.minion, { buffed: true });
+      mark(e.minion, gain.atk >= 0 && gain.health >= 0 && gain.atk + gain.health > 0 ? { buffed: true, gain } : { buffed: true });
       break;
+    }
     case "death":
       mark(e.minion, { dying: true });
       st.dying.push(e.minion);
@@ -281,6 +286,7 @@ function together(a: Marks | undefined, b: Marks): Marks {
   if (!a) return b;
   const out: Marks = { ...a, ...b };
   if (a.hurt && b.hurt) out.hurt = a.hurt + b.hurt;
+  if (a.gain && b.gain) out.gain = { atk: a.gain.atk + b.gain.atk, health: a.gain.health + b.gain.health };
   for (const key of ["gained", "lost"] as const) {
     if (a[key] && b[key]) out[key] = [...new Set([...(a[key] ?? []), ...(b[key] ?? [])])];
   }

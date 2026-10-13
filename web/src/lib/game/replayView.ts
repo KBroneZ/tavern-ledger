@@ -87,7 +87,9 @@ export function tileInfo(tile: Tile): VNode[] {
       h("span", { class: "rp-atk" }, String(tile.atk)),
       h("span", { class: "rp-hp" }, String(Math.max(tile.health, 0))),
     ),
-    tile.marks.hurt ? h("span", { class: "rp-hurt", "aria-hidden": "true" }, `−${tile.marks.hurt}`) : null,
+    tile.marks.hurt ? h("span", { class: "rp-hurt", "aria-hidden": "true" }, h("b", {}, `−${tile.marks.hurt}`)) : null,
+    // A buff or a heal: a green burst with what it gave, as the game's.
+    !tile.marks.hurt && tile.marks.gain ? h("span", { class: "rp-gain", "aria-hidden": "true" }, h("b", {}, `+${tile.marks.gain.atk}/+${tile.marks.gain.health}`)) : null,
     h("span", { class: "visually-hidden" }, tileWords(tile)),
   ].filter((n): n is VNode => n !== null);
 }

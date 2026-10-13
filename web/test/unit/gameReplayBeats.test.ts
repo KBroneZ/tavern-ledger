@@ -2,6 +2,8 @@
 // beats, each damage's source in words, and keywords given or used
 // mid-combat. Every replay here is synthetic.
 import { test } from "node:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import assert from "node:assert/strict";
 import { setLang } from "../../src/lib/i18n.ts";
 import { BEAT_MS, frameBeats, frameWords, groupBeat, playback, steps, type Frame, type Namer } from "../../src/lib/game/replay.ts";
@@ -205,4 +207,24 @@ test("a cause a newer app names is an unknown source, not a broken replay", () =
   const read = readReplay(r);
   assert.ok(read && read.ok);
   assert.deepEqual(read.replay.events[7], { kind: "damage", amount: 4, health: -1, minion: 2, source: null });
+});
+
+test("a buff or a heal marks what it gave; a loss marks nothing", () => {
+  const f = playback(read(rev13()), NO_HEROES).frames;
+  // The opening buff: 2/3 to 4/5 on both.
+  assert.deepEqual(f[1].own.map((t) => t.marks.gain), [{ atk: 2, health: 2 }, { atk: 2, health: 2 }]);
+  const r = read({ ...rev13(), events: [{ kind: "stats", minion: 0, atk: 1, health: 9 }], beats: [1] });
+  assert.equal(playback(r, NO_HEROES).frames[1].own[0].marks.gain, undefined, "Attack went down: no green burst");
+});
+
+test("every token has the same box: what it carries sits out of the layout (T-575)", () => {
+  const css = readFileSync(join(import.meta.dirname, "..", "..", "src", "components", "game", "replay.css"), "utf8");
+  const rule = (selector: string) => {
+    const at = css.indexOf(`\n${selector} {`);
+    assert.ok(at >= 0, selector);
+    return css.slice(at, css.indexOf("}", at));
+  };
+  for (const selector of [".rp-minion .gv-gifts", ".rp-keys", ".rp-info", ".rp-k"]) assert.match(rule(selector), /position: absolute/, selector);
+  assert.match(css, /\.rp-hurt,\n\.rp-gain \{\n  position: absolute;/);
+  assert.match(rule(".rp-minion"), /width: var\(--rp-tile\)/);
 });

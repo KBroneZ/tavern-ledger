@@ -378,3 +378,16 @@ test("revision 13: the website and the app group the same steps", () => {
   };
   assert.deepEqual(TLReplay.steps(r).map((s) => s.length), [5, 2, 1, 2, 2], "the same as the website's test");
 });
+
+test("revision 13: a buff marks what it gave, and every token has the same box", () => {
+  const f = TLReplay.frames(rev13());
+  assert.deepEqual(f[1].own.map((x) => x.gain), [{ atk: 2, health: 2 }, { atk: 2, health: 2 }]);
+  const css = fs.readFileSync(path.join(__dirname, "..", "ui", "replay.css"), "utf8");
+  const rule = (selector) => {
+    const at = css.indexOf(`\n${selector} {`);
+    assert.ok(at >= 0, selector);
+    return css.slice(at, css.indexOf("}", at));
+  };
+  for (const selector of [".replay-gifts", ".replay-keys", ".replay-stats", ".replay-hurt, .replay-gain"]) assert.match(rule(selector), /position: absolute/, selector);
+  assert.match(rule(".replay-minion"), /width: var\(--tile\)/);
+});

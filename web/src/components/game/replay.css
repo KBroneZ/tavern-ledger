@@ -181,7 +181,7 @@
 }
 
 .rp-stage .rp-hurt {
-  font-size: clamp(0.6875rem, calc(var(--rp-tile) * 0.2), 1.25rem);
+  font-size: clamp(0.75rem, calc(var(--rp-tile) * 0.25), 1.6rem);
 }
 
 .rp-board {
@@ -190,6 +190,7 @@
   align-items: center;
   gap: 6px;
   min-height: calc(var(--rp-tile) * 1.2 + 14px);
+  padding-bottom: 18px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -279,29 +280,79 @@
   color: #fff;
 }
 
-/* The damage taken, a red burst on the portrait as in the game. */
-.rp-hurt {
+/* The damage taken: a big burst on the portrait, orange to red with a dark
+   rim and a white number outlined in black, as the game's splat (our own
+   shape); its tooltip says what dealt the hit (replayPlayer.ts). A buff or a
+   heal is the same burst in green with what it gave. */
+.rp-hurt,
+.rp-gain {
   position: absolute;
-  top: 22%;
+  top: 46%;
   left: 50%;
-  z-index: 1;
-  translate: -50% 0;
-  padding: 3px 7px;
-  border-radius: 46% 54% 50% 50% / 55% 45% 55% 45%;
-  background: radial-gradient(circle at 40% 35%, #e0412f, #8f1a12 70%);
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: clamp(26px, calc(var(--rp-tile) * 0.66), 70px);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  isolation: isolate;
   color: #fff;
-  font: 800 var(--t-sm) / 1 var(--display);
-  text-shadow: 0 1px 2px rgb(0 0 0 / 0.7);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.55);
+  font: 900 clamp(0.75rem, calc(var(--rp-tile) * 0.25), 1.6rem) / 1 var(--display);
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000,
+    0 2px 3px rgb(0 0 0 / 0.8);
   animation: rp-hurt 320ms var(--ease-out);
-  /* Its tooltip says what dealt the hit (replayPlayer.ts). */
   pointer-events: auto;
   cursor: help;
 }
 
+.rp-hurt::before,
+.rp-hurt::after,
+.rp-gain::before,
+.rp-gain::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  clip-path: polygon(50% 0%, 59% 17%, 75% 7%, 74% 26%, 93% 25%, 83% 41%, 100% 50%, 83% 59%, 93% 75%, 74% 74%, 75% 93%, 59% 83%, 50% 100%, 41% 83%, 25% 93%, 26% 74%, 7% 75%, 17% 59%, 0% 50%, 17% 41%, 7% 25%, 26% 26%, 25% 7%, 41% 17%);
+}
+
+/* The dark rim, then the burst over it. */
+.rp-hurt::before,
+.rp-gain::before {
+  inset: -8%;
+  background: #1a0805;
+}
+
+.rp-hurt::after {
+  inset: 0;
+  background: radial-gradient(circle at 45% 40%, #ffd27a, #ff7a1f 40%, #d4301a 70%, #8f1a12);
+}
+
+.rp-gain {
+  font-size: clamp(0.625rem, calc(var(--rp-tile) * 0.17), 1.05rem);
+  letter-spacing: -0.02em;
+}
+
+.rp-gain::before {
+  background: #06200b;
+}
+
+.rp-gain::after {
+  inset: 0;
+  background: radial-gradient(circle at 45% 40%, #d8ffb0, #5fd04a 45%, #23862a 75%, #0f4d17);
+}
+
+/* Dark Gifts sit under the portrait out of the layout, so every token has
+   the same box whatever it carries (T-575). */
 .rp-minion .gv-gifts {
+  position: absolute;
+  top: calc(var(--rp-tile) * 1.2 + 6px);
+  left: 50%;
   justify-content: center;
+  width: max-content;
   max-width: calc(var(--rp-tile) + 12px);
+  translate: -50% 0;
 }
 
 .rp-minion .gv-gift {
@@ -313,8 +364,14 @@
   white-space: nowrap;
 }
 
+/* Golden: a thick bright gold frame around the oval with a soft glow, as
+   the game draws a golden minion (the Divine Shield bubble stays pale). */
 .rp-minion.is-golden .pic {
-  box-shadow: 0 0 0 2px var(--amber), 0 0 0 4px rgb(0 0 0 / 0.5), 0 4px 10px rgb(0 0 0 / 0.4);
+  box-shadow:
+    0 0 0 2px #4a2c06,
+    0 0 0 calc(2px + max(3px, var(--rp-tile) * 0.06)) #ffcf4a,
+    0 0 0 calc(3px + max(3px, var(--rp-tile) * 0.06)) #8a5a12,
+    0 0 16px 4px rgb(255 196 64 / 0.55);
 }
 
 /* Divine Shield: a golden bubble over the portrait, as in the game. */

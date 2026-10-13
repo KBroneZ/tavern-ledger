@@ -150,10 +150,14 @@
         set(e.minion, { shield: e.on });
         mark(e.minion, { popped: !e.on });
         break;
-      case "stats":
+      case "stats": {
+        // A buff or a heal shows what it gave (the website's gain mark).
+        const was = st.tiles.get(e.minion);
+        const gain = isInt(was.atk) && isInt(was.health) ? { atk: e.atk - was.atk, health: e.health - was.health } : null;
         set(e.minion, { atk: e.atk, health: e.health });
-        mark(e.minion, { buffed: true });
+        mark(e.minion, gain && gain.atk >= 0 && gain.health >= 0 && gain.atk + gain.health > 0 ? { buffed: true, gain } : { buffed: true });
         break;
+      }
       case "death":
         mark(e.minion, { dying: true });
         st.dying.push(e.minion);
@@ -246,6 +250,7 @@
     if (!a) return b;
     const out = { ...a, ...b };
     if (a.hurt && b.hurt) out.hurt = a.hurt + b.hurt;
+    if (a.gain && b.gain) out.gain = { atk: a.gain.atk + b.gain.atk, health: a.gain.health + b.gain.health };
     ["gained", "lost"].forEach((k) => {
       if (a[k] && b[k]) out[k] = [...new Set([...a[k], ...b[k]])];
     });
@@ -601,15 +606,19 @@
     const health = tile.health === null ? "?" : I18n.num(Math.max(tile.health, 0));
     box.querySelector(".replay-atk").textContent = atk;
     box.querySelector(".replay-hp").textContent = health;
-    const old = box.querySelector(".replay-hurt");
-    if (old) old.remove();
-    if (tile.hurt) {
-      const hurt = document.createElement("span");
-      hurt.className = "replay-hurt";
-      hurt.setAttribute("aria-hidden", "true");
-      hurt.textContent = `−${I18n.num(tile.hurt)}`;
-      box.append(hurt);
-    }
+    box.querySelectorAll(".replay-hurt, .replay-gain").forEach((old) => old.remove());
+    // The hit as the game's splat; a buff or a heal as a green one.
+    const splat = (cls, text) => {
+      const s = document.createElement("span");
+      s.className = cls;
+      s.setAttribute("aria-hidden", "true");
+      const b = document.createElement("b");
+      b.textContent = text;
+      s.append(b);
+      box.append(s);
+    };
+    if (tile.hurt) splat("replay-hurt", `−${I18n.num(tile.hurt)}`);
+    else if (tile.gain) splat("replay-gain", `+${I18n.num(tile.gain.atk)}/+${I18n.num(tile.gain.health)}`);
     const name = tile.id ? h.cardName(tile.id) || tile.id : t("shop.card.unknown");
     const gifts = Turns.giftMarks(tile).map((g) => g.title);
     const marks = [tile.golden && t("keyword.golden"), ...tile.keywords.map((k) => (`keyword.${k}` in I18n.tables().en ? t(`keyword.${k}`) : k)), ...gifts].filter(Boolean);
