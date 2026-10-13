@@ -40,17 +40,26 @@ function resultCell(x: TurnRow): VNode {
   return h("td", {}, h("span", { class: `res-${x.result}` }, t(`result.${x.result}`)), x.inferred ? " " : null, x.inferred ? sourceMark("inferred") : null);
 }
 
-function damageCell(x: TurnRow): VNode {
-  const inferred = x.damageSource === "inferred";
-  // Narrow screens show "+15" / "−5", as the chart does; the words stay for the rest.
+/** One damage splat: the signed number is drawn (the sign carries it, not the colour), the words are read. */
+function hitBadge(kind: "dealt" | "taken", n: number, inferred: boolean): VNode {
   return h(
-    "td",
-    { class: "num" },
-    h("span", { class: "gv-long" }, w.damageText(x)),
-    h("span", { class: "gv-short" }, w.damageShort(x)),
+    "span",
+    { class: `gv-hit gv-hit-${kind}` },
+    h("span", { "aria-hidden": "true" }, `${kind === "dealt" ? "+" : "−"}${n}`),
+    h("span", { class: "visually-hidden" }, g(`turns.${kind}`, { n })),
     inferred ? " " : null,
     inferred ? sourceMark("inferred") : null,
   );
+}
+
+function damageCell(x: TurnRow): VNode {
+  const inferred = x.damageSource === "inferred";
+  const badges: VNode[] = [];
+  if (x.dealt !== null && x.dealt > 0) badges.push(hitBadge("dealt", x.dealt, inferred));
+  if (x.taken !== null && x.taken > 0) badges.push(hitBadge("taken", x.taken, inferred));
+  if (badges.length > 0) return h("td", { class: "num" }, h("span", { class: "gv-hits" }, badges));
+  // No damage either way: a quiet 0 or dash, with its mark when worked out.
+  return h("td", { class: "num" }, w.damageText(x), inferred ? " " : null, inferred ? sourceMark("inferred") : null);
 }
 
 /** Waits for the engine: a quiet ellipsis, and words for screen readers. No combat: empty; a result not known: no odds. */
@@ -128,9 +137,12 @@ function detailBody(x: TurnRow, replay: boolean): VNode[] {
   const theirs = x.opponentBoards.length > 0
     ? x.opponentBoards.map((b, i) => boardBlock(`gv-t${x.turn}-opp${i}`, g("boards.theirs", { hero: w.heroLabel(b.hero) }), b.hero, b.board))
     : [boardBlock(`gv-t${x.turn}-opp`, g("boards.theirs", { hero: x.opponents.map(w.heroLabel).join(" + ") || g("hero.unknown") }), null, null)];
+  const partner = x.partnerBoard
+    ? boardBlock(`gv-t${x.turn}-mate`, g("boards.teammates", { hero: w.heroLabel(x.partnerBoard.hero) }), x.partnerBoard.hero, x.partnerBoard.board)
+    : null;
   return [
     h("div", { class: "gv-why-more", "data-why": String(x.turn) }),
-    x.result ? h("div", { class: "gv-boards rp" }, ...theirs, boardBlock(`gv-t${x.turn}-own`, ownTitle, x.ownBoardHero, x.ownBoard)) : null,
+    x.result ? h("div", { class: "gv-boards rp" }, ...theirs, boardBlock(`gv-t${x.turn}-own`, ownTitle, x.ownBoardHero, x.ownBoard), partner) : null,
     x.shop ? shopBlock(x.shop, x) : h("p", { class: "data-note" }, g("boards.noShops")),
     replay
       ? h("p", {}, h("button", { type: "button", class: "tb tb-small", "data-replay": String(x.turn) }, g("turns.replay")))

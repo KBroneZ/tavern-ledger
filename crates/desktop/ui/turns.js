@@ -98,6 +98,18 @@
     return t("turns.s.no_damage");
   }
 
+  // The hit as badges, dealt first: "+9" (you dealt) and "−4" (your hero took); the sign carries the meaning, the colour helps.
+  function damageBadges(d) {
+    if (!d) return [];
+    const out = [];
+    if (d.dealt > 0) out.push({ kind: "dealt", text: `+${num(d.dealt)}`, words: t("turns.s.dealt", { n: num(d.dealt) }) });
+    if (d.taken > 0) out.push({ kind: "taken", text: `−${num(d.taken)}`, words: t("turns.s.took", { n: num(d.taken) }) });
+    return out;
+  }
+
+  // What shows when there is no badge: "0" for a combat with no damage, a dash when the log lacks the hit.
+  const damageQuiet = (d) => (d ? "0" : "—");
+
   // One row per turn that has a shop, a combat or a board in the record.
   function rows(r, report) {
     const shopTurns = r.shop && r.shop.state === "recorded" ? list(r.shop.turns) : [];
@@ -212,6 +224,18 @@
     if (hit) node.title += ` ${t("turns.damage_tip", { hit })}`;
     ui.addTip(node, known(h.change) ? source : "unknown");
     return node;
+  }
+
+  function damage(ui, d) {
+    const badges = damageBadges(d);
+    if (!badges.length) return ui.el("span", "turn-damage quiet", damageQuiet(d));
+    const box = ui.el("span", "turn-damage");
+    box.append(...badges.map((b) => {
+      const hit = ui.el("span", `turn-hit turn-hit-${b.kind}`, b.text);
+      hit.title = b.words;
+      return hit;
+    }));
+    return box;
   }
 
   // Your board at a glance: small pictures, then the minion count and total stats.
@@ -344,6 +368,7 @@
       tier(ui, row.tier),
       result(ui, row.combat, h.heroText, h.art),
       health(ui, row.health, healthSource, row.damage),
+      damage(ui, row.damage),
       strip(ui, row.own, h.art),
     );
     const label = ui.el("span", "visually-hidden", words);
@@ -373,7 +398,7 @@
     // Column names over the rows; each row's summary also says it all in words.
     const cols = ui.el("div", "turn-cols");
     cols.setAttribute("aria-hidden", "true");
-    cols.append(...["turns.col.turn", "turns.col.tier", "turns.col.combat", "turns.col.health", "turns.col.board"].map((k) => ui.el("span", null, t(k))));
+    cols.append(...["turns.col.turn", "turns.col.tier", "turns.col.combat", "turns.col.health", "turns.col.damage", "turns.col.board"].map((k) => ui.el("span", null, t(k))));
     part.append(cols);
     const listNode = ui.el("div", "turn-list");
     const tools = { ...h, shopRecorded };
@@ -386,7 +411,7 @@
     return part;
   }
 
-  const api = { giftMark, giftMarks, rows, combatAt, healthWords, damageWords, totalsWords, keywordsRecorded, summaryWords, shopFacts, section };
+  const api = { giftMark, giftMarks, rows, combatAt, healthWords, damageWords, damageBadges, damageQuiet, totalsWords, keywordsRecorded, summaryWords, shopFacts, section };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLTurns = api;
 })();

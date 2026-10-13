@@ -6,7 +6,7 @@ import { renderGame } from "../../src/lib/game/render.ts";
 import { readRecord } from "../../src/lib/game/report.ts";
 import { shapeGame } from "../../src/lib/game/shape.ts";
 import { GAME_STRINGS } from "../../src/lib/game/strings.ts";
-import { combatsBacking, damageMark, damageShort, damageText, heroLabel, heroTip, minionWords, pageHeading, shopLine } from "../../src/lib/game/words.ts";
+import { combatsBacking, damageMark, damageText, heroLabel, heroTip, minionWords, pageHeading, shopLine } from "../../src/lib/game/words.ts";
 import { useCardNames } from "../../src/lib/game/names.ts";
 import { CardIndex } from "../../src/lib/sim/cards.ts";
 import type { VNode } from "../../src/lib/view/node.ts";
@@ -35,11 +35,9 @@ test("words: hero names, headings, minions and unknown values", () => {
   assert.equal(heroLabel({ id: null, name: null }), "Unknown hero");
   const v = view();
   assert.equal(pageHeading(v.summary), "Drek'Thar · 3rd");
-  assert.equal(damageText(v.turns[0]), "dealt 3");
-  assert.equal(damageText(v.turns[1]), "took 5");
-  assert.equal(damageText(v.turns[2]), "took 13");
-  assert.equal(damageShort(v.turns[0]), "+3");
-  assert.equal(damageShort(v.turns[1]), "−5");
+  assert.equal(damageText(v.turns[0]), "you dealt 3 damage");
+  assert.equal(damageText(v.turns[1]), "you took 5 damage");
+  assert.equal(damageText(v.turns[2]), "you took 13 damage");
   assert.equal(shopLine(v.turns[0].shop!, v.turns[0]), "Tier 1 · Gold 3 · 3 spent · 1 roll");
   // A lost combat whose own health after it is unknown: the damage that matters is unknown, not 0.
   assert.equal(damageText({ ...v.turns[1], dealt: 0, taken: null }), "—");
@@ -129,9 +127,36 @@ test("render: inferred results are marked and unknown values are dashes, never 0
   const nodes = renderGame(view(), "2026-10-09");
   const turns = nodes.find((n) => attr(n, "aria-labelledby") === "gv-turns-title")!;
   const rows = [...walk(turns)].filter((n) => attr(n, "class") === "gv-turn").map(text);
-  assert.match(rows[0], /^1Turn 1: boards, shop and odds1WonVanndar Stormpike.*dealt 3\+3/);
-  assert.match(rows[1], /^2.*2 ▲Lost inferredTavish Stormpike.*took 5−5—/);
+  assert.match(rows[0], /^1Turn 1: boards, shop and odds1WonVanndar Stormpike.*\+3you dealt 3 damage/);
+  assert.match(rows[1], /^2.*2 ▲Lost inferredTavish Stormpike.*−5you took 5 damage/);
   assert.match(rows[2], /Unknown/);
+});
+
+test("render: turn damage is a +X green / −X red badge, words kept for screen readers", () => {
+  const nodes = renderGame(view(), "2026-10-09");
+  const all = nodes.flatMap((n) => [...walk(n)]);
+  const hits = (kind: string) => all.filter((n) => (attr(n, "class") ?? "").split(" ").includes(`gv-hit-${kind}`));
+  const dealt = hits("dealt")[0];
+  const taken = hits("taken")[0];
+  assert.equal(text(dealt.children[0]), "+3");
+  assert.equal(attr(dealt.children[0], "aria-hidden"), "true", "the sign and number are drawn, the words are read");
+  assert.equal(text(dealt.children[1]), "you dealt 3 damage");
+  assert.equal(attr(dealt.children[1], "class"), "visually-hidden");
+  assert.equal(text(taken.children[0]), "−5");
+  assert.equal(text(taken.children[1]), "you took 5 damage");
+  assert.equal(all.filter((n) => ["gv-long", "gv-short"].includes(attr(n, "class") ?? "")).length, 0);
+});
+
+test("render: in Duos a turn's detail shows the teammate's board beside yours, not instead of it", () => {
+  const v = view(duosReport());
+  const [turn] = v.turns;
+  assert.equal(turn.partnerBoard?.hero.id, "BG22_HERO_003");
+  assert.equal(turn.partnerBoard?.board.minions.length, 1);
+  assert.equal(turn.ownBoardHero, null, "your own board stays yours");
+  const all = renderGame(v, "2026-10-09").map(text).join(" ");
+  assert.match(all, /Vanndar Stormpike's board \(your teammate\)/);
+  // Solo has no partner.
+  assert.equal(view().turns[0].partnerBoard, null);
 });
 
 test("render: Duos shows the teammate and the lobby's teams", () => {
@@ -215,9 +240,9 @@ test("render: only worked-out damage is marked, with one short legend (T-559)", 
   const marks = (kind: string) => all.filter((n) => attr(n, "class") === `mark-src mark-${kind}`);
   assert.equal(marks("log").length, 0, "the game's own hit needs no mark");
   const inferred = marks("inferred");
-  const marked = all.filter((n) => n.tag === "td" && attr(n, "class") === "num" && n.children.some((c) => typeof c !== "string" && inferred.includes(c)));
+  const marked = all.filter((n) => (attr(n, "class") ?? "").startsWith("gv-hit ") && n.children.some((c) => typeof c !== "string" && inferred.includes(c)));
   // Turn 3 has only health; turns 1 and 2 have the hit in their replay.
-  assert.deepEqual(marked.map(text), ["took 13−13 inferred"]);
+  assert.deepEqual(marked.map(text), ["−13you took 13 damage inferred"]);
   const tiles = all.filter((n) => attr(n, "class") === "tile");
   assert.ok(!inferred.some((m) => [...walk(tiles[1])].includes(m)), "dealt: every combat had the hit");
   assert.ok(inferred.some((m) => [...walk(tiles[2])].includes(m)), "taken: one combat was worked out");

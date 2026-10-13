@@ -122,6 +122,13 @@ test("the combat's hit from the log joins its turn, and an unknown one stays out
   assert.equal(TLTurns.damageWords(three.damage), "you dealt 9 damage");
   assert.equal(TLTurns.damageWords({ taken: 0, dealt: 0 }), "no damage");
   assert.equal(TLTurns.damageWords(null), null);
+  // The badges: +dealt green, −taken red; a tie shows 0, an unknown hit a dash.
+  assert.deepEqual(TLTurns.damageBadges(two.damage), [{ kind: "taken", text: "−4", words: "your hero took 4 damage" }]);
+  assert.deepEqual(TLTurns.damageBadges(three.damage), [{ kind: "dealt", text: "+9", words: "you dealt 9 damage" }]);
+  assert.deepEqual(TLTurns.damageBadges({ taken: 3, dealt: 1 }).map((b) => b.text), ["+1", "−3"]);
+  assert.deepEqual(TLTurns.damageBadges({ taken: 0, dealt: 0 }), []);
+  assert.equal(TLTurns.damageQuiet({ taken: 0, dealt: 0 }), "0");
+  assert.equal(TLTurns.damageQuiet(null), "—");
   assert.equal(TLTurns.summaryWords(two, (h) => h.name || h.id), "Turn 2, tier 2, up a tier, lost against HERO_C, health −5, your hero took 4 damage, your board 1 minion");
 });
 

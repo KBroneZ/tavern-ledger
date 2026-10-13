@@ -267,6 +267,7 @@
     ["turns.col.tier", "Tier", "Nivel"],
     ["turns.col.combat", "Combat", "Combate"],
     ["turns.col.health", "Health", "Vida"],
+    ["turns.col.damage", "Damage", "Daño"],
     ["turns.col.board", "Your board", "Tu tablero"],
     ["turns.none", "No turn in the log.", "Ningún turno en el registro."],
 
