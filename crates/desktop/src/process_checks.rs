@@ -24,10 +24,11 @@ fn is_test_file(path: &Path) -> bool {
     name.ends_with("_tests") || name == "tests" || name == "ui_checks" || name == "process_checks"
 }
 
-/// Lines with `Command::new` before the file's test module.
+/// Lines with `Command::new` before the file's test module (an unindented `#[cfg(test)]`; an
+/// indented one only marks a single item).
 fn direct_spawns(text: &str) -> Vec<usize> {
     text.lines()
-        .take_while(|line| line.trim() != "#[cfg(test)]")
+        .take_while(|line| *line != "#[cfg(test)]")
         .enumerate()
         .filter(|(_, line)| line.contains("Command::new"))
         .map(|(at, _)| at + 1)
