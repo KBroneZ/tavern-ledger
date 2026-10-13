@@ -50,6 +50,9 @@ const GAME_REFUSALS: [&str; 6] = [
 const MAX_VALIDATOR: u64 = 1_000_000;
 /// Refresh the access token when it has less than this left.
 const REFRESH_MARGIN_SECS: u64 = 60;
+/// Why upload stops when the saved sign-in cannot be used with this server.
+const DAMAGED_SIGN_IN: &str =
+    "Upload stopped: the sign-in saved on this PC cannot be read. Sign out and sign in again.";
 /// Why upload stops when the saved sign-in belongs to another server.
 const OTHER_SERVER: &str = "Upload stopped: the sign-in on this PC was made with another server, and it is only ever sent to that one. Sign out and sign in again to use this server.";
 
@@ -254,7 +257,7 @@ impl Engine {
                         .load()
                         .ok()
                         .flatten()
-                        .and_then(|stored| secrets::token_for(&stored, &server.url)),
+                        .and_then(|stored| secrets::token_for(&stored, &server.url).ok()),
                 };
                 match refresh.map(|r| auth.refresh(&r)) {
                     Some(Ok(session)) => session.access_token,
@@ -404,9 +407,14 @@ impl Engine {
             Some(r) => r,
             None => match self.tokens.load() {
                 Ok(Some(stored)) => match secrets::token_for(&stored, &server.url) {
-                    Some(r) => r,
+                    Ok(r) => r,
                     // Kept as it is: removing server.json makes it work again.
-                    None => return Err(self.stop(OTHER_SERVER.into())),
+                    Err(secrets::Unusable::OtherServer) => {
+                        return Err(self.stop(OTHER_SERVER.into()))
+                    }
+                    Err(secrets::Unusable::Damaged) => {
+                        return Err(self.stop(DAMAGED_SIGN_IN.into()))
+                    }
                 },
                 Ok(None) => {
                     return Err(self.forget_and_stop(

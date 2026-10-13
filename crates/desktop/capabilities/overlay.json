@@ -1,12 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "overlay",
-  "description": "The overlay: the commands it draws and arranges itself with, and app events only.",
+  "description": "The overlay: the commands it draws and arranges itself with, and listening to app events only.",
   "windows": [
     "overlay"
   ],
   "permissions": [
-    "core:event:default",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
     "allow-overlay-state",
     "allow-overlay-scene",
     "allow-overlay-lobby",

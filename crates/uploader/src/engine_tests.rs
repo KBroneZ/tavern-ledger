@@ -54,7 +54,7 @@ fn rig(games: &[(&str, u64, &str)]) -> Rig {
 /// The refresh token stored for the test server.
 fn saved(tokens: &MemoryStore) -> Option<String> {
     let stored = tokens.token.lock().unwrap().clone()?;
-    crate::secrets::token_for(&stored, &server().url)
+    crate::secrets::token_for(&stored, &server().url).ok()
 }
 
 /// Another server than the one the sign-in was made with.
@@ -814,4 +814,38 @@ fn a_server_other_than_the_hosted_one_is_always_shown() {
         Box::new(MemoryStore::default()),
     );
     assert_eq!(hosted.status().server_warning, None);
+}
+
+#[test]
+fn a_damaged_saved_sign_in_says_so_and_sends_nothing() {
+    let r = ready(&[(S1, 1, SOLO)]);
+    *r.tokens.token.lock().unwrap() = Some("{not json".into());
+    let mut fresh = moved_to(&r, server());
+    assert_eq!(fresh.run(Instant::now(), 10), Wake::Idle);
+    assert!(r.http.routes().is_empty());
+    let problem = fresh.status().problem.clone().unwrap_or_default();
+    assert!(problem.contains("cannot be read"), "{problem}");
+}
+
+#[test]
+fn a_token_saved_before_binding_still_works_with_the_hosted_project_and_is_bound_on_refresh() {
+    let r = ready(&[(S1, 1, SOLO)]);
+    *r.tokens.token.lock().unwrap() = Some("RT-OLD".into());
+    let hosted = crate::config::hosted();
+    let mut fresh = moved_to(&r, hosted.clone());
+    r.http.on(
+        "Post /auth/v1/token",
+        reply(200, session_json("AT2", "RT2")),
+    );
+    r.http.on(PUT, stored(&r, 0));
+    fresh.run(Instant::now(), 10);
+    let refresh = &r.http.requests.lock().unwrap()[0];
+    assert!(refresh.url.starts_with(&hosted.url), "{}", refresh.url);
+    assert!(String::from_utf8_lossy(&refresh.body).contains("RT-OLD"));
+    assert_eq!(
+        r.tokens.token.lock().unwrap().clone(),
+        Some(crate::secrets::bind(&hosted.url, "RT2")),
+        "the rotated token is saved bound to the hosted project"
+    );
+    assert_eq!(fresh.status().counts.uploaded, 1);
 }

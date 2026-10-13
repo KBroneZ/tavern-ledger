@@ -22,10 +22,15 @@ impl Clock {
         let ticks = time_of_day_ticks(line)?;
         let first = *self.first.get_or_insert(ticks);
         if ticks < self.last - DAY_TICKS / 2 {
-            self.days += 1;
+            self.days = self.days.saturating_add(1);
         }
         self.last = ticks;
-        Some((ticks + self.days * DAY_TICKS - first).max(0) / TICKS_PER_MS)
+        let elapsed = self
+            .days
+            .saturating_mul(DAY_TICKS)
+            .saturating_add(ticks)
+            .saturating_sub(first);
+        Some(elapsed.max(0) / TICKS_PER_MS)
     }
 }
 

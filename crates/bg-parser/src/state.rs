@@ -18,6 +18,10 @@ pub type Tags = HashMap<String, Value>;
 pub const MAX_ENTITIES: usize = 200_000;
 /// Different tags on one entity: far more than the game gives any entity.
 pub const MAX_TAGS: usize = 1_000;
+/// Tags on all the entities of one game together: many times what a long
+/// real game holds, so the board's memory stays bounded however the
+/// entities and their tags are spread.
+pub const MAX_BOARD_TAGS: usize = 10_000_000;
 /// Hero entities in one game (a 20-turn game has about 80, combat copies
 /// included). The lobby is looked up among these on every leaderboard change.
 pub const MAX_HEROES: usize = 5_000;
@@ -60,6 +64,9 @@ pub struct Board {
     index: HashMap<i64, usize>,
     /// Positions in `entities` of every entity that has been a hero.
     heroes: BTreeSet<usize>,
+    /// Tags on all entities together, and how many there may be.
+    tags: usize,
+    tag_limit: Option<usize>,
     pub game_id: Option<i64>,
 }
 
@@ -90,6 +97,7 @@ impl Board {
         check_tags(&entity.tags)?;
         let i = match self.index.get(&entity.id) {
             Some(&i) => {
+                self.count_tags(entity.tags.len(), self.entities[i].tags.len())?;
                 self.entities[i] = entity;
                 i
             }
@@ -97,12 +105,23 @@ impl Board {
                 if self.entities.len() >= MAX_ENTITIES {
                     return Err(ParseError("TooManyEntities"));
                 }
+                self.count_tags(entity.tags.len(), 0)?;
                 self.index.insert(entity.id, self.entities.len());
                 self.entities.push(entity);
                 self.entities.len() - 1
             }
         };
         self.note_hero(i)
+    }
+
+    /// Keeps the board's tag count, refusing to grow past [`MAX_BOARD_TAGS`].
+    fn count_tags(&mut self, added: usize, removed: usize) -> Result<(), ParseError> {
+        let total = (self.tags + added).saturating_sub(removed);
+        if added > removed && total > self.tag_limit.unwrap_or(MAX_BOARD_TAGS) {
+            return Err(ParseError("TooManyTags"));
+        }
+        self.tags = total;
+        Ok(())
     }
 
     fn get_mut(&mut self, id: i64) -> Result<&mut Entity, ParseError> {
@@ -115,29 +134,46 @@ impl Board {
     }
 
     pub fn show(&mut self, id: i64, card_id: String, tags: Tags) -> Result<(), ParseError> {
-        let entity = self.get_mut(id)?;
-        entity.card_id = Some(card_id);
-        merge(entity, tags)?;
+        self.merge(id, tags)?;
+        self.get_mut(id)?.card_id = Some(card_id);
         self.note_hero_id(id)
     }
 
     pub fn change(&mut self, id: i64, card_id: String, tags: Tags) -> Result<(), ParseError> {
-        let entity = self.get_mut(id)?;
-        if entity.card_id.is_none() {
+        if self.get_mut(id)?.card_id.is_none() {
             return Err(ParseError("ExporterError"));
         }
-        entity.card_id = Some(card_id);
-        merge(entity, tags)?;
+        self.merge(id, tags)?;
+        self.get_mut(id)?.card_id = Some(card_id);
         self.note_hero_id(id)
+    }
+
+    /// Adds a packet's tags to an entity, within the per-entity and the
+    /// board's limits.
+    fn merge(&mut self, id: i64, tags: Tags) -> Result<(), ParseError> {
+        let entity = self.get_mut(id)?;
+        let new = tags
+            .keys()
+            .filter(|t| !entity.tags.contains_key(*t))
+            .count();
+        if entity.tags.len() + new > MAX_TAGS {
+            return Err(ParseError("TooManyTags"));
+        }
+        self.count_tags(new, 0)?;
+        self.get_mut(id)?.tags.extend(tags);
+        Ok(())
     }
 
     pub fn set_tag(&mut self, id: i64, tag: String, value: Value) -> Result<(), ParseError> {
         let is_type = tag == "CARDTYPE";
         let entity = self.get_mut(id)?;
-        if entity.tags.len() >= MAX_TAGS && !entity.tags.contains_key(&tag) {
-            return Err(ParseError("TooManyTags"));
+        if !entity.tags.contains_key(&tag) {
+            if entity.tags.len() >= MAX_TAGS {
+                return Err(ParseError("TooManyTags"));
+            }
+            self.count_tags(1, 0)?;
         }
-        entity.tags.insert(tag, value);
+        self.get_mut(id)?.tags.insert(tag, value);
         if is_type {
             self.note_hero_id(id)?;
         }
@@ -168,18 +204,6 @@ pub fn check_tags(tags: &Tags) -> Result<(), ParseError> {
     if tags.len() > MAX_TAGS {
         return Err(ParseError("TooManyTags"));
     }
-    Ok(())
-}
-
-fn merge(entity: &mut Entity, tags: Tags) -> Result<(), ParseError> {
-    let new = tags
-        .keys()
-        .filter(|t| !entity.tags.contains_key(*t))
-        .count();
-    if entity.tags.len() + new > MAX_TAGS {
-        return Err(ParseError("TooManyTags"));
-    }
-    entity.tags.extend(tags);
     Ok(())
 }
 
@@ -342,6 +366,42 @@ mod tests {
         let mut p = Players::default();
         p.register_entity(2, 5, false);
         assert_eq!(p.resolve("Someone"), Err(ParseError("MissingPlayerData")));
+    }
+
+    #[test]
+    fn tags_spread_over_entities_stop_at_the_board_s_limit() {
+        let mut b = Board {
+            tag_limit: Some(10),
+            ..Board::default()
+        };
+        let tags = |n: usize| {
+            (0..n)
+                .map(|t| (format!("T{t}"), Value::Int(1)))
+                .collect::<Tags>()
+        };
+        let entity = |id, n| Entity {
+            id,
+            tags: tags(n),
+            ..Entity::default()
+        };
+        b.create(entity(1, 4)).unwrap();
+        b.create(entity(2, 4)).unwrap();
+        // A reset entity gives its old tags back.
+        b.create(entity(1, 2)).unwrap();
+        b.set_tag(2, "T9".into(), Value::Int(1)).unwrap();
+        b.show(1, "X".into(), tags(3)).unwrap();
+        assert_eq!(b.tags, 8);
+        b.set_tag(2, "T9".into(), Value::Int(2)).unwrap();
+        b.create(entity(3, 2)).unwrap();
+        assert_eq!(
+            b.set_tag(3, "NEW".into(), Value::Int(1)),
+            Err(ParseError("TooManyTags"))
+        );
+        assert_eq!(b.create(entity(4, 1)), Err(ParseError("TooManyTags")));
+        assert_eq!(
+            b.show(2, "X".into(), tags(9)),
+            Err(ParseError("TooManyTags"))
+        );
     }
 
     #[test]

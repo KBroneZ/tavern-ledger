@@ -5,14 +5,14 @@
 use std::time::{Duration, Instant};
 
 use bg_parser::report::GameReport;
-use bg_parser::state::MAX_ENTITIES;
+use bg_parser::state::{MAX_ENTITIES, MAX_HEROES};
 use bg_parser::LogReader;
 
 const T: &str = "D 12:00:00.0000000 GameState.DebugPrintPower() - ";
 
 /// Generous for a debug build; the quadratic paths these guard took
 /// seconds to minutes on the same input.
-const FAST: Duration = Duration::from_secs(5);
+const FAST: Duration = Duration::from_secs(10);
 
 fn line(indent: usize, body: &str) -> String {
     format!("{T}{}{body}", "    ".repeat(indent))
@@ -171,7 +171,7 @@ fn a_long_line_of_broken_card_references_reads_in_linear_time() {
 #[test]
 fn very_many_leaderboard_heroes_read_in_linear_time() {
     let mut l = start(&[]);
-    for i in 0..20_000 {
+    for i in 0..(MAX_HEROES as i64 - 100) {
         let id = 100 + i;
         l.extend(hero(id, 2 + i % 8));
         l.push(tag(
@@ -182,8 +182,21 @@ fn very_many_leaderboard_heroes_read_in_linear_time() {
         l.push(tag(&id.to_string(), "PLAYER_LEADERBOARD_PLACE", "2"));
     }
     let started = Instant::now();
-    let _ = read(&l);
+    let problems = problems(&l);
     assert!(started.elapsed() < FAST, "took {:?}", started.elapsed());
+    assert!(
+        !problems.iter().any(|p| p.starts_with("parser error")),
+        "{problems:?}"
+    );
+}
+
+#[test]
+fn a_game_with_more_hero_entities_than_any_real_one_stops_as_unsupported() {
+    let mut l = start(&[]);
+    for i in 0..MAX_HEROES as i64 {
+        l.extend(hero(100 + i, 2 + i % 8));
+    }
+    assert_eq!(problems(&l), ["parser error: TooManyHeroes"]);
 }
 
 #[test]

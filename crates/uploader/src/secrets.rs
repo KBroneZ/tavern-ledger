@@ -27,15 +27,32 @@ pub fn bind(url: &str, refresh_token: &str) -> String {
     serde_json::json!({"url": url, "refresh_token": refresh_token}).to_string()
 }
 
+/// Why a stored credential gives no token for a server.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Unusable {
+    /// It was issued by another server.
+    OtherServer,
+    /// It is not what this app stores.
+    Damaged,
+}
+
 /// The refresh token in a stored credential, only when it was issued by the
 /// server at `url`. A credential saved before tokens were bound holds the
 /// bare token; the hosted project was the only server then.
-pub fn token_for(stored: &str, url: &str) -> Option<String> {
+pub fn token_for(stored: &str, url: &str) -> Result<String, Unusable> {
     if !stored.starts_with('{') {
-        return (url == config::hosted().url).then(|| stored.to_string());
+        return if url == config::hosted().url {
+            Ok(stored.to_string())
+        } else {
+            Err(Unusable::OtherServer)
+        };
     }
-    let bound: Bound = serde_json::from_str(stored).ok()?;
-    (bound.url == url).then_some(bound.refresh_token)
+    let bound: Bound = serde_json::from_str(stored).map_err(|_| Unusable::Damaged)?;
+    if bound.url == url {
+        Ok(bound.refresh_token)
+    } else {
+        Err(Unusable::OtherServer)
+    }
 }
 
 pub trait TokenStore: Send {
@@ -219,7 +236,7 @@ mod tests {
         let stored = bind("https://a.supabase.co", "RT");
         assert_eq!(
             token_for(&stored, "https://a.supabase.co").as_deref(),
-            Some("RT")
+            Ok("RT")
         );
         for other in [
             "https://b.supabase.co",
@@ -227,31 +244,48 @@ mod tests {
             "http://127.0.0.1:54321",
             "",
         ] {
-            assert_eq!(token_for(&stored, other), None, "{other}");
+            assert_eq!(
+                token_for(&stored, other),
+                Err(Unusable::OtherServer),
+                "{other}"
+            );
         }
     }
 
     #[test]
     fn a_token_saved_before_binding_belongs_to_the_hosted_project_only() {
         let hosted = config::hosted().url;
-        assert_eq!(token_for("RT", &hosted).as_deref(), Some("RT"));
-        assert_eq!(token_for("RT", "https://b.supabase.co"), None);
-        assert_eq!(token_for("RT", "http://127.0.0.1:54321"), None);
+        assert_eq!(token_for("RT", &hosted).as_deref(), Ok("RT"));
+        assert_eq!(
+            token_for("RT", "https://b.supabase.co"),
+            Err(Unusable::OtherServer)
+        );
+        assert_eq!(
+            token_for("RT", "http://127.0.0.1:54321"),
+            Err(Unusable::OtherServer)
+        );
     }
 
     #[test]
     fn a_damaged_credential_gives_no_token() {
         for stored in ["{", "{}", "{\"url\": \"https://a.supabase.co\"}"] {
-            assert_eq!(token_for(stored, "https://a.supabase.co"), None, "{stored}");
+            assert_eq!(
+                token_for(stored, "https://a.supabase.co"),
+                Err(Unusable::Damaged),
+                "{stored}"
+            );
         }
         let extra = r#"{"url":"https://a.supabase.co","refresh_token":"RT","x":1}"#;
-        assert_eq!(token_for(extra, "https://a.supabase.co"), None);
+        assert_eq!(
+            token_for(extra, "https://a.supabase.co"),
+            Err(Unusable::Damaged)
+        );
     }
 
     #[test]
     fn a_url_with_quotes_cannot_forge_another_field() {
         let stored = bind("https://a\",\"url\":\"https://b", "RT");
-        assert_eq!(token_for(&stored, "https://b"), None);
+        assert_eq!(token_for(&stored, "https://b"), Err(Unusable::OtherServer));
     }
 
     #[test]

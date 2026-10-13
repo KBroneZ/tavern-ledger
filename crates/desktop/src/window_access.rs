@@ -171,7 +171,7 @@ fn the_overlay_cannot_reach_the_main_window_s_commands() {
 }
 
 #[test]
-fn only_the_two_windows_have_capabilities_and_only_app_events_besides_commands() {
+fn only_the_two_windows_have_capabilities_and_may_only_listen_to_events_besides() {
     let files: BTreeSet<String> = fs::read_dir(dir().join("capabilities"))
         .unwrap()
         .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
@@ -180,10 +180,12 @@ fn only_the_two_windows_have_capabilities_and_only_app_events_besides_commands()
     for (_, _, file) in WINDOWS {
         let cap = capability(file);
         assert!(cap.get("remote").is_none(), "{file}: no remote origin");
+        // Pages listen to the app's events; none sends one.
+        const EVENTS: [&str; 2] = ["core:event:allow-listen", "core:event:allow-unlisten"];
         for p in cap["permissions"].as_array().unwrap() {
             let p = p.as_str().expect("a plain permission, no scope");
             assert!(
-                p == "core:event:default" || p.starts_with("allow-"),
+                EVENTS.contains(&p) || (p.starts_with("allow-") && !p.contains(':')),
                 "{file}: {p}"
             );
         }
@@ -194,6 +196,25 @@ fn only_the_two_windows_have_capabilities_and_only_app_events_besides_commands()
 fn the_pages_prototypes_are_frozen() {
     let conf: Value = serde_json::from_str(CONF).unwrap();
     assert_eq!(conf["app"]["security"]["freezePrototype"], true);
+}
+
+/// Every script under ui/ with its text.
+fn all_scripts() -> Vec<(PathBuf, String)> {
+    let mut out = Vec::new();
+    let mut stack = vec![dir().join("ui")];
+    while let Some(folder) = stack.pop() {
+        for entry in fs::read_dir(&folder).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                stack.push(path);
+            } else if path.extension().is_some_and(|e| e == "js") {
+                let js = read(&path);
+                out.push((path, js));
+            }
+        }
+    }
+    assert!(out.len() > 20, "the scripts were found");
+    out
 }
 
 #[test]
@@ -209,21 +230,19 @@ fn no_script_writes_html_from_a_string() {
         "setInterval(\"",
         "createContextualFragment",
     ];
-    let mut checked = 0;
-    let mut stack = vec![dir().join("ui")];
-    while let Some(folder) = stack.pop() {
-        for entry in fs::read_dir(&folder).unwrap() {
-            let path = entry.unwrap().path();
-            if path.is_dir() {
-                stack.push(path);
-            } else if path.extension().is_some_and(|e| e == "js") {
-                let js = read(&path);
-                for sink in SINKS {
-                    assert!(!js.contains(sink), "{}: {sink}", path.display());
-                }
-                checked += 1;
-            }
+    for (path, js) in all_scripts() {
+        for sink in SINKS {
+            assert!(!js.contains(sink), "{}: {sink}", path.display());
         }
     }
-    assert!(checked > 20, "the scripts were found");
+}
+
+#[test]
+fn no_page_sends_events() {
+    // Only listening is granted; a page that sends one would fail at run time.
+    for (path, js) in all_scripts() {
+        for call in ["emit(", "emitTo("] {
+            assert!(!js.contains(call), "{}: {call}", path.display());
+        }
+    }
 }
