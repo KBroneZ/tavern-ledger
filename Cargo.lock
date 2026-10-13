@@ -610,6 +610,7 @@ dependencies = [
  "bg-parser",
  "cards",
  "game-memory",
+ "regex",
  "rfd",
  "serde",
  "serde_json",

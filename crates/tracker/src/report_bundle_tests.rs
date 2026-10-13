@@ -37,6 +37,7 @@ fn input<'a>(report: &'a Value, setup: &'a SetupReport) -> BundleInput<'a> {
         parser: None,
         app_version: "0.1.0",
         setup,
+        app_log: &[],
         created_unix: 1_790_000_000,
     }
 }
@@ -361,4 +362,56 @@ fn saving_never_overwrites_a_file() {
 fn saving_into_a_missing_folder_is_an_error() {
     let dir = std::env::temp_dir().join("tl-no-such-folder-017");
     assert!(save_in(&dir, "r.json", "x").is_err());
+}
+
+// --- the app's error log (T-580) ---
+
+fn log_line(n: usize) -> String {
+    format!("2026-10-13T09:05:00Z INFO game game {n} saved (status ok)")
+}
+
+#[test]
+fn the_bundle_carries_the_last_log_lines_and_none_without_a_log() {
+    let report = report();
+    let setup = setup();
+    assert_eq!(
+        build(&input(&report, &setup)).unwrap()["app_log"],
+        json!([])
+    );
+    let lines = vec![log_line(1), log_line(2)];
+    let mut i = input(&report, &setup);
+    i.app_log = &lines;
+    assert_eq!(build(&i).unwrap()["app_log"], json!(lines));
+}
+
+#[test]
+fn only_the_newest_log_lines_go_in() {
+    let report = report();
+    let setup = setup();
+    let lines: Vec<String> = (0..MAX_LOG_LINES + 50).map(log_line).collect();
+    let mut i = input(&report, &setup);
+    i.app_log = &lines;
+    let bundle = build(&i).unwrap();
+    let kept = bundle["app_log"].as_array().unwrap();
+    assert_eq!(kept.len(), MAX_LOG_LINES);
+    assert_eq!(kept.last().unwrap(), &json!(lines.last().unwrap()));
+    assert_eq!(kept[0], json!(lines[50]));
+}
+
+#[test]
+fn a_log_line_that_looks_like_a_name_is_left_out_and_the_report_still_builds() {
+    let report = report();
+    let setup = setup();
+    let lines = vec![
+        log_line(1),
+        "2026-10-13T09:05:00Z WARN app seen Jaina#1234 here".to_string(),
+        "2026-10-13T09:05:00Z WARN app GameAccountId=[hi=1 lo=2]".to_string(),
+        log_line(2),
+    ];
+    let mut i = input(&report, &setup);
+    i.app_log = &lines;
+    let text = to_text(&build(&i).unwrap());
+    assert!(!text.contains("Jaina"));
+    assert!(!text.contains("GameAccountId"));
+    assert!(text.contains("game 1 saved") && text.contains("game 2 saved"));
 }

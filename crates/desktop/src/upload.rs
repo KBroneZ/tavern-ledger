@@ -14,6 +14,8 @@ use std::time::{Duration, Instant};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
+
+use crate::applog::{self, Logged};
 use uploader::config::{self, ConfigError};
 use uploader::http::{Http, NetError, Request, Response};
 use uploader::secrets::{credential_name, CredentialManager};
@@ -73,6 +75,15 @@ fn not_running(upload: &Upload) -> Result<(), String> {
     })
 }
 
+/// Hands a command's message to the worker, or says why it cannot.
+fn sent(upload: &Upload, msg: Msg) -> Result<(), String> {
+    if upload.send(msg) {
+        Ok(())
+    } else {
+        not_running(upload)
+    }
+}
+
 #[tauri::command]
 pub fn upload_status(upload: State<'_, Upload>) -> View {
     upload
@@ -84,41 +95,25 @@ pub fn upload_status(upload: State<'_, Upload>) -> View {
 
 #[tauri::command]
 pub fn upload_set_enabled(upload: State<'_, Upload>, on: bool) -> Result<(), String> {
-    if upload.send(Msg::SetEnabled(on)) {
-        Ok(())
-    } else {
-        not_running(&upload)
-    }
+    sent(&upload, Msg::SetEnabled(on)).logged("upload_set_enabled")
 }
 
 #[tauri::command]
 pub fn upload_sign_in(upload: State<'_, Upload>, email: String) -> Result<(), String> {
     if email.len() > 254 {
-        return Err("That email is too long.".into());
+        return Err("That email is too long.".to_string()).logged("upload_sign_in");
     }
-    if upload.send(Msg::SignIn(email)) {
-        Ok(())
-    } else {
-        not_running(&upload)
-    }
+    sent(&upload, Msg::SignIn(email)).logged("upload_sign_in")
 }
 
 #[tauri::command]
 pub fn upload_cancel_sign_in(upload: State<'_, Upload>) -> Result<(), String> {
-    if upload.send(Msg::CancelSignIn) {
-        Ok(())
-    } else {
-        not_running(&upload)
-    }
+    sent(&upload, Msg::CancelSignIn).logged("upload_cancel_sign_in")
 }
 
 #[tauri::command]
 pub fn upload_sign_out(upload: State<'_, Upload>) -> Result<(), String> {
-    if upload.send(Msg::SignOut) {
-        Ok(())
-    } else {
-        not_running(&upload)
-    }
+    sent(&upload, Msg::SignOut).logged("upload_sign_out")
 }
 
 /// New games were saved: look for games to send.
@@ -199,10 +194,35 @@ fn sign_in_thread(engine: &Engine, email: String, tx: Sender<Msg>, cancel: Arc<A
     });
 }
 
+/// What the error log already says about the upload engine's status.
+#[derive(Default)]
+struct Reported {
+    last_at: Option<u64>,
+    problem: Option<String>,
+}
+
+/// A run's result (counts and the server's status codes, in the engine's own
+/// plain words: no body, no token) and a new problem go to the error log once.
+fn log_changes(reported: &mut Reported, status: &Status) {
+    if status.last_at != reported.last_at {
+        reported.last_at = status.last_at;
+        if let Some(result) = &status.last_result {
+            applog::info("upload", result);
+        }
+    }
+    if status.problem != reported.problem {
+        reported.problem.clone_from(&status.problem);
+        if let Some(problem) = &status.problem {
+            applog::warn("upload", problem);
+        }
+    }
+}
+
 fn run(app: AppHandle, data_dir: PathBuf, tx: Sender<Msg>, rx: Receiver<Msg>) {
     let mut engine = engine_for(data_dir);
     let mut cancel: Option<Arc<AtomicBool>> = None;
     let mut wake = Wake::Now;
+    let mut reported = Reported::default();
     publish(&app, |v| {
         v.status = engine.status().clone();
         v.running = true;
@@ -257,6 +277,10 @@ fn run(app: AppHandle, data_dir: PathBuf, tx: Sender<Msg>, rx: Receiver<Msg>) {
             }
         }
         wake = engine.run(Instant::now(), BUDGET);
+        if let Some(Some(text)) = &notice {
+            applog::warn("upload", text);
+        }
+        log_changes(&mut reported, engine.status());
         publish(&app, |v| {
             v.status = engine.status().clone();
             if let Some(n) = notice {

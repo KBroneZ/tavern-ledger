@@ -17,6 +17,7 @@ use tauri::tray::TrayIcon;
 use tauri::{AppHandle, Emitter, Manager, State, Wry};
 use tauri_plugin_autostart::ManagerExt;
 
+use crate::applog::Logged;
 use crate::overlay::lock;
 use crate::overlay_layout::Detail;
 use crate::AppState;
@@ -311,7 +312,7 @@ pub fn app_set_language(
     settings.relabel_tray();
     let view = settings.view();
     let _ = app.emit(CHANGED, view.clone());
-    result.map(|()| view)
+    result.map(|()| view).logged("app_set_language")
 }
 
 /// Simple or Advanced for the main window (T-344). Every window hears it
@@ -325,7 +326,7 @@ pub fn app_set_window_detail(
     let result = settings.set_window_detail(detail);
     let view = settings.view();
     let _ = app.emit(CHANGED, view.clone());
-    result.map(|()| view)
+    result.map(|()| view).logged("app_set_window_detail")
 }
 
 /// The main window says which language the system has; the tray follows it
@@ -360,11 +361,11 @@ pub fn app_set_autostart(
     enabled: bool,
 ) -> Result<Autostart, String> {
     if !settings.autostart_available() {
-        return Err(AUTOSTART_FAILED.into());
+        return Err(AUTOSTART_FAILED.to_string()).logged("app_set_autostart");
     }
     let result = set_autostart(&app, &settings, &state, enabled);
     let now = app_autostart(app, settings);
-    result.map(|()| now)
+    result.map(|()| now).logged("app_set_autostart")
 }
 
 pub const AUTOSTART_FAILED: &str = "Could not change the Windows start-up setting.";
