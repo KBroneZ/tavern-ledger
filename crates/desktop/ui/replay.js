@@ -787,6 +787,16 @@
       const drawn = drawStage(ui, sides, all[state.step], heroes, h);
       if (before) move(sides, all[state.step], before, drawn, speed);
       caption.textContent = words(all[state.step]);
+      // Each hit's tooltip says what dealt it, as the step's words do.
+      const tips = new Map();
+      all[state.step].events.forEach((e) => {
+        if (e.kind === "damage") tips.set(e.minion, [...(tips.get(e.minion) || []), stepWords(e, name, (id) => h.heroText({ id }))]);
+      });
+      tips.forEach((lines, ref) => {
+        const tile = SIDES.map((side) => sides[side].tiles.get(ref)).find(Boolean);
+        const hurt = tile && tile.querySelector(".replay-hurt");
+        if (hurt) hurt.title = lines.join(". ");
+      });
       // Read aloud on a step or a pause only, not at every step of playback.
       caption.setAttribute("aria-live", state.playing ? "off" : "polite");
       counter.textContent = t("replay.step_of", { n: I18n.num(state.step), total: I18n.num(last) });

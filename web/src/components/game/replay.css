@@ -294,6 +294,9 @@
   text-shadow: 0 1px 2px rgb(0 0 0 / 0.7);
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.55);
   animation: rp-hurt 320ms var(--ease-out);
+  /* Its tooltip says what dealt the hit (replayPlayer.ts). */
+  pointer-events: auto;
+  cursor: help;
 }
 
 .rp-minion .gv-gifts {

@@ -11,7 +11,7 @@
 // beats), and moving one step on plays it (replayMotion.ts): the attacker
 // flies to its target, the board slides into place; a jump does not move.
 import { mount, toDom } from "../view/node.ts";
-import { control, type Frame, frameBeats, frameWords, keyAction, type PlayAction, type Playback, SPEEDS } from "./replay.ts";
+import { control, type Frame, frameBeats, frameWords, keyAction, type PlayAction, type Playback, SPEEDS, stepWords } from "./replay.ts";
 import { hit, lunge, measure, slide, still } from "./replayMotion.ts";
 import type { Side } from "./replayRead.ts";
 import {
@@ -148,6 +148,20 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     }
   }
 
+  /** Each hit's tooltip says what dealt it ("… from their Cleave Hound (attack)"), as the step's words do. */
+  function hitTips(frame: Frame): void {
+    const replay = player.combat.replay;
+    if (!replay) return;
+    const tips = new Map<number, string[]>();
+    for (const e of frame.events) {
+      if (e.kind === "damage") tips.set(e.minion, [...(tips.get(e.minion) ?? []), stepWords(e, replay, namerFor(player.combat))]);
+    }
+    for (const [ref, lines] of tips) {
+      const hurt = player.tiles.get(ref)?.querySelector<HTMLElement>(".rp-hurt");
+      if (hurt) hurt.title = lines.join(". ");
+    }
+  }
+
   /** Says the step's words once, in the hidden live region; quiet while playing. */
   function announce(text: string): void {
     const live = one<HTMLElement>(player.box, ".rp-live");
@@ -180,6 +194,7 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     if (before) move(frame, before, nodes);
     const words = combat.replay ? frameWords(frame, combat.replay, namerFor(combat)) : "";
     one<HTMLElement>(box, ".rp-caption").textContent = words;
+    hitTips(frame);
     if (speak && !playing) announce(words);
     one<HTMLElement>(box, ".rp-counter").textContent = counterText(step, last);
     const play = one<HTMLElement>(box, '[data-act="play"]');

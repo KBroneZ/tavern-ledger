@@ -186,3 +186,12 @@ test("every reason the engine can give has its Spanish", () => {
 test("the two string tables have the same keys", () => {
   assert.deepEqual(Object.keys(ES).sort(), Object.keys(SIM_STRINGS).sort());
 });
+
+test("a card wears its keywords as the combat replays' marks (T-575)", () => {
+  const s = B.addMinion(B.emptyState(), "player", 0, "BGS_119", cards);
+  const out = html(editorView({ state: s, cards, selected: null, adding: null, marks: NO_MARKS }));
+  // Synthetic Spark: Divine Shield and Windfury.
+  assert.match(out, /class="sim-card[^"]*\bhas-shield\b[^"]*\bhas-windfury\b/);
+  assert.doesNotMatch(out, /class="sim-card[^"]*\bis-taunt\b/);
+  for (const mark of ["sim-taunt", "sim-veil", "sim-venom", "sim-wind"]) assert.ok(out.includes(`class="${mark}" aria-hidden="true"`), mark);
+});
