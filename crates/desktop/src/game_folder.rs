@@ -10,6 +10,7 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -120,7 +121,9 @@ impl FolderState {
 }
 
 /// The tracker thread's side. The places the game may be are gathered once
-/// (with a scan of the drives) and again every [`REGATHER_EVERY`]; the
+/// (with a scan of the drives) and again every [`REGATHER_EVERY`], on a
+/// worker thread so a dead mapped drive or a slow disk never holds up the
+/// tracker or the window (the answer is used when it arrives); the
 /// running game is read every [`RUNNING_EVERY`] (a process list, no file
 /// access). The folders are ranked again only when something moved: the
 /// player changed the choice, the running game's folder changed, or the
@@ -129,6 +132,9 @@ impl FolderState {
 pub struct Finder {
     candidates: Vec<Candidate>,
     drives: Vec<Candidate>,
+    /// The worker gathering the places: the places and, the first time, the
+    /// drive scan.
+    gathering: Option<Receiver<Gathered>>,
     gathered_at: Option<Instant>,
     running_read_at: Option<Instant>,
     running: Option<PathBuf>,
@@ -142,11 +148,34 @@ impl Finder {
         Self {
             candidates: Vec::new(),
             drives: Vec::new(),
+            gathering: None,
             gathered_at: None,
             running_read_at: None,
             running: None,
             seen_generation: 0,
             fixed,
+        }
+    }
+
+    /// Takes in what the worker found, if it has finished.
+    fn collect_gathered(&mut self) -> bool {
+        let Some(receiver) = &self.gathering else {
+            return false;
+        };
+        match receiver.try_recv() {
+            Ok(found) => {
+                self.candidates = found.places;
+                if let Some(drives) = found.drives {
+                    self.drives = drives;
+                }
+                self.gathering = None;
+                true
+            }
+            Err(TryRecvError::Empty) => false,
+            Err(TryRecvError::Disconnected) => {
+                self.gathering = None;
+                false
+            }
         }
     }
 
@@ -164,16 +193,14 @@ impl Finder {
         let generation = state.folder.generation();
         let mut moved = generation != self.seen_generation;
         self.seen_generation = generation;
-        let gather_due = self
-            .gathered_at
-            .is_none_or(|at| at.elapsed() >= REGATHER_EVERY);
+        moved |= self.collect_gathered();
+        let gather_due = self.gathering.is_none()
+            && self
+                .gathered_at
+                .is_none_or(|at| at.elapsed() >= REGATHER_EVERY);
         if gather_due {
-            if self.gathered_at.is_none() {
-                self.drives = scan_drives();
-            }
-            self.candidates = gather();
+            self.gathering = Some(start_gathering(self.gathered_at.is_none()));
             self.gathered_at = Some(Instant::now());
-            moved = true;
         }
         let running_due = self
             .running_read_at
@@ -209,6 +236,28 @@ impl Finder {
         });
         Some(decision)
     }
+}
+
+/// What a gathering worker found.
+struct Gathered {
+    places: Vec<Candidate>,
+    /// The drive scan, done the first time only.
+    drives: Option<Vec<Candidate>>,
+}
+
+/// Gathers the places on another thread: file checks on a dead network
+/// drive can wait a long time, and nothing here may wait for them.
+fn start_gathering(with_drives: bool) -> Receiver<Gathered> {
+    let (sender, receiver) = mpsc::channel();
+    std::thread::spawn(move || {
+        let found = Gathered {
+            places: gather(),
+            drives: with_drives.then(scan_drives),
+        };
+        // The finder may be gone by now; nobody needs the answer then.
+        let _ = sender.send(found);
+    });
+    receiver
 }
 
 /// The picker's title.
