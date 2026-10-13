@@ -1243,7 +1243,7 @@
               "golden": false,
               "health": 3,
               "keywords": [],
-              "position": 0,
+              "position": 4,
               "side": "opponent"
             }
           ],
@@ -2232,7 +2232,7 @@
               "keywords": [
                 "deathrattle"
               ],
-              "position": 0,
+              "position": 1,
               "side": "own"
             },
             {
@@ -2244,7 +2244,7 @@
                 "taunt",
                 "deathrattle"
               ],
-              "position": 0,
+              "position": 2,
               "side": "own"
             },
             {
@@ -2256,7 +2256,7 @@
                 "divine_shield",
                 "windfury"
               ],
-              "position": 0,
+              "position": 3,
               "side": "own"
             },
             {
@@ -2265,7 +2265,7 @@
               "golden": false,
               "health": 13,
               "keywords": [],
-              "position": 0,
+              "position": 4,
               "side": "own"
             }
           ],

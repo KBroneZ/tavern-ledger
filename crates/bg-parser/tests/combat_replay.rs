@@ -786,3 +786,134 @@ fn each_combat_turn_waits_for_its_own_action_step() {
     assert!(!cards.contains(&"SYN_SHOP_C"), "{cards:?}");
     assert!(matches!(replay.events[0], CombatEvent::Attack { .. }));
 }
+
+/// A minion the game reveals as it summons it: `SHOW_ENTITY` puts it in
+/// play with no slot, and the slot comes in the tag change right after.
+fn shown_summon(id: i64, card: &str, controller: i64, slot: i64) -> Vec<String> {
+    vec![
+        line(1, &format!("FULL_ENTITY - Creating ID={id} CardID=")),
+        line(2, "tag=ZONE value=SETASIDE"),
+        line(2, &format!("tag=CONTROLLER value={controller}")),
+        line(
+            1,
+            &format!("SHOW_ENTITY - Updating Entity={id} CardID={card}"),
+        ),
+        line(2, &format!("tag=CONTROLLER value={controller}")),
+        line(2, "tag=CARDTYPE value=MINION"),
+        line(2, "tag=ATK value=1"),
+        line(2, "tag=HEALTH value=1"),
+        line(2, "tag=ZONE value=PLAY"),
+        tag(&id.to_string(), "ZONE_POSITION", &slot.to_string()),
+    ]
+}
+
+#[test]
+fn a_summon_takes_the_slot_the_game_gives_it_right_after() {
+    let mut l = start();
+    l.extend(minion(30, "SYN_OWN_A", 2, 1, (2, 2), &[]));
+    l.extend(minion(31, "SYN_OWN_B", 2, 2, (2, 2), &[]));
+    l.extend(minion(40, "SYN_FOE", 10, 1, (1, 9), &[]));
+    l.push(block("TRIGGER", 31, "TAG_NOT_SET"));
+    l.extend(shown_summon(50, "SYN_TOKEN", 2, 3));
+    l.push(end());
+    l.push(block("ATTACK", 30, ""));
+    l.push(tag("GameEntity", "PROPOSED_DEFENDER", "40"));
+    l.push(tag("40", "DAMAGE", "2"));
+    l.push(end());
+    // A later shift of the token's slot is not where it came in.
+    l.push(tag("50", "ZONE_POSITION", "2"));
+    let r = finished(l);
+    let replay = replay(&r, 1);
+    let token = &replay.minions[3];
+    assert_eq!(token.card_id.as_deref(), Some("SYN_TOKEN"));
+    assert_eq!(token.position, 3, "the slot set right after the summon");
+}
+
+#[test]
+fn duos_a_board_coming_in_keeps_each_minions_slot() {
+    let mut l = start();
+    l.extend(minion(30, "SYN_MATE", 2, 1, (1, 1), &[]));
+    l.extend(minion(40, "SYN_FOE_A", 10, 1, (5, 5), &[]));
+    l.push(block("ATTACK", 30, ""));
+    l.push(tag("GameEntity", "PROPOSED_DEFENDER", "40"));
+    l.push(tag("30", "DAMAGE", "5"));
+    l.push(end());
+    l.push(tag("30", "ZONE", "GRAVEYARD"));
+    l.extend(hero(103, "SYN_HERO_OWN", 2, 0, "PLAY"));
+    l.push(tag("2", "HERO_ENTITY", "103"));
+    // Each minion of the board coming in enters with no slot (0) and gets
+    // it one tag change later, left to right.
+    for (i, id) in [61, 62, 63].into_iter().enumerate() {
+        l.extend(minion(id, &format!("SYN_IN_{i}"), 2, 0, (1, 1), &[]));
+        l.push(tag(&id.to_string(), "ZONE_POSITION", &(i + 1).to_string()));
+    }
+    l.push(block("ATTACK", 61, ""));
+    l.push(tag("GameEntity", "PROPOSED_DEFENDER", "40"));
+    l.push(end());
+    let r = finished(l);
+    let replay = replay(&r, 1);
+    let slots: Vec<_> = replay.minions[2..]
+        .iter()
+        .map(|m| (m.card_id.as_deref().unwrap(), m.position))
+        .collect();
+    assert_eq!(slots, [("SYN_IN_0", 1), ("SYN_IN_1", 2), ("SYN_IN_2", 3)]);
+}
+
+/// Each attack of the user's real games, played back the way the website
+/// and the app draw a replay (a summon goes in at its slot, a minion that
+/// died leaves at the next step), comes from the slot the game had the
+/// attacker in, on both sides, in Solo and Duos.
+#[test]
+fn real_games_draw_every_attacker_in_its_own_slot() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/real");
+    let mut checked = 0;
+    for name in ["b253216_solo", "b253216_duos", "b253216_duos_gifts"] {
+        let text = std::fs::read_to_string(dir.join(format!("{name}.log"))).expect("fixture");
+        let reports = bg_parser::parse_reader(text.as_bytes()).expect("read");
+        for round in reports.iter().flat_map(|r| &r.rounds) {
+            let Some(replay) = &round.replay else {
+                continue;
+            };
+            let mut boards: [Vec<usize>; 2] = [Vec::new(), Vec::new()];
+            let index = |side: Side| usize::from(side == Side::Opponent);
+            for (i, m) in replay.minions[..replay.start].iter().enumerate() {
+                boards[index(m.side)].push(i);
+            }
+            let mut dying = Vec::new();
+            let mut logged = round.attacks.iter();
+            for e in &replay.events {
+                for gone in dying.drain(..) {
+                    boards.iter_mut().for_each(|b| b.retain(|&x| x != gone));
+                }
+                match e {
+                    CombatEvent::Death { minion } => dying.push(*minion),
+                    CombatEvent::Summon { minion } => {
+                        let m = &replay.minions[*minion];
+                        assert!(
+                            m.position > 0,
+                            "{name} round {}: a summon's slot",
+                            round.number
+                        );
+                        let board = &mut boards[index(m.side)];
+                        let at = usize::try_from(m.position - 1).unwrap().min(board.len());
+                        board.insert(at, *minion);
+                    }
+                    CombatEvent::Attack { attacker, .. } => {
+                        let side = replay.minions[*attacker].side;
+                        let drawn = boards[index(side)].iter().position(|x| x == attacker);
+                        let slot = logged.next().expect("the log's attack").attacker.position;
+                        assert_eq!(
+                            drawn.map(|d| d as i64 + 1),
+                            Some(slot),
+                            "{name} round {}: attack {checked}",
+                            round.number
+                        );
+                        checked += 1;
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+    assert!(checked > 100, "{checked} attacks checked");
+}
