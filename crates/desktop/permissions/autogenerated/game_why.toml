@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-game-why"
+description = "Enables the game_why command without any pre-configured scope."
+commands.allow = ["game_why"]
+
+[[permission]]
+identifier = "deny-game-why"
+description = "Denies the game_why command without any pre-configured scope."
+commands.deny = ["game_why"]

@@ -61,7 +61,7 @@ cargo run --release -p tracker -- --reparse   # re-read saved sessions after a p
 cargo run --release -p bg-parser -- "<path>\Power_old.log" --json
 ```
 
-Upload to the website: the "Upload to the website" panel at the top of the window signs you in by email link, shows how many games are waiting, the last result and why uploading stopped, if it did, and holds the "Upload games" switch (off until you turn it on). The app uploads to the hosted project; a `server.json` in the data folder (`{"url": "...", "anon_key": "..."}`, the public key only) points it at another server, such as the local stack. `--data-dir <folder>` makes the app use another folder for the history and the upload settings, e.g. to try a build:
+Upload to the website: the "Upload to the website" panel at the top of the window signs you in by email link, shows how many games are waiting, the last result and why uploading stopped, if it did, and holds the "Upload games" switch (off until you turn it on). The app uploads to the hosted project; a `server.json` in the data folder (`{"url": "...", "anon_key": "..."}`, the public key only) points it at another server, such as the local stack (`http://127.0.0.1:<port>`). Any other HTTPS server is used only by a development build or when the app is started with `--allow-other-server`, and the panel then says where uploads go. The sign-in is stored with the server that issued it and is never sent to another one: after switching servers, sign in again. `--data-dir <folder>` makes the app use another folder for the history and the upload settings, e.g. to try a build:
 
 ```
 cargo run -p desktop -- --data-dir "$env:TEMP\tl-try"

@@ -252,6 +252,12 @@ impl Watcher {
         read.map(|()| saved)
     }
 
+    /// The last poll stopped before the end of what the game wrote (a long
+    /// session read from its start): poll again without waiting.
+    pub fn catching_up(&self) -> bool {
+        self.follower.behind()
+    }
+
     /// Reads the new scene changes. A read error leaves the scene unknown
     /// (the app then works from Power.log alone) and never stops a game
     /// from being saved.

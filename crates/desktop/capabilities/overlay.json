@@ -1,0 +1,29 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "overlay",
+  "description": "The overlay: the commands it draws and arranges itself with, and listening to app events only.",
+  "windows": [
+    "overlay"
+  ],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "allow-overlay-state",
+    "allow-overlay-scene",
+    "allow-overlay-lobby",
+    "allow-overlay-settings",
+    "allow-overlay-save-layout",
+    "allow-overlay-set-theme",
+    "allow-overlay-set-detail",
+    "allow-overlay-set-opacity",
+    "allow-overlay-set-shown",
+    "allow-overlay-reset-layout",
+    "allow-overlay-set-unlocked",
+    "allow-overlay-save-leaderboard",
+    "allow-overlay-reset-leaderboard",
+    "allow-card-names",
+    "allow-card-data-status",
+    "allow-app-settings",
+    "allow-app-set-system-language"
+  ]
+}

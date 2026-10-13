@@ -258,7 +258,7 @@ fn parse_session(res: &Response) -> Result<Session, AuthError> {
         .or_else(|| {
             v.get("expires_in")
                 .and_then(Value::as_u64)
-                .map(|s| now_secs() + s)
+                .map(|s| now_secs().saturating_add(s))
         })
         .ok_or(AuthError::BadAnswer)?;
     let user = v.get("user").ok_or(AuthError::BadAnswer)?;

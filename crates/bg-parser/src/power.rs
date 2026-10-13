@@ -260,10 +260,15 @@ pub fn card_names(body: &str) -> Vec<(&str, &str)> {
 }
 
 /// Where the name ends: the first " id=<digits> zone=", as hslog's lazy regex.
+/// Only the window is searched, so a line of names with no id stays linear.
 fn name_end(text: &str) -> Option<usize> {
-    text.match_indices(" id=")
+    let mut window = text.len().min(NAME_WINDOW + " id=".len());
+    while !text.is_char_boundary(window) {
+        window -= 1;
+    }
+    text[..window]
+        .match_indices(" id=")
         .map(|(pos, _)| pos)
-        .take_while(|&pos| pos <= NAME_WINDOW)
         .find(|&pos| {
             let tail = &text[pos + " id=".len()..];
             let digits = tail.bytes().take_while(u8::is_ascii_digit).count();

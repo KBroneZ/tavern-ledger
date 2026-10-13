@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-game-recap"
+description = "Enables the game_recap command without any pre-configured scope."
+commands.allow = ["game_recap"]
+
+[[permission]]
+identifier = "deny-game-recap"
+description = "Denies the game_recap command without any pre-configured scope."
+commands.deny = ["game_recap"]

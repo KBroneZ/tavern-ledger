@@ -3,7 +3,7 @@
 //! combat with which board, the local health after each round, each combat's
 //! result as the game records it, the hero pick and the skins' base heroes.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::discover::DiscoverTracker;
 use crate::hero_select::HeroSelectTracker;
@@ -14,7 +14,7 @@ use crate::report::{
     AttackSlot, CombatResult, CombatValues, DefenderSource, LoggedAttack, Minion, Side,
 };
 use crate::shop::{Seats, ShopTracker};
-use crate::state::{Board, Entity, Players, Tags};
+use crate::state::{Board, Entity, Players, Tags, MAX_TAGS};
 
 /// An entity packet whose `tag=` lines are still arriving.
 #[derive(Debug)]
@@ -24,6 +24,18 @@ enum Pending {
     Full { id: i64, card_id: Option<String> },
     Show { id: i64, card_id: String },
     Change { id: i64, card_id: String },
+}
+
+impl Pending {
+    fn id(&self) -> i64 {
+        match self {
+            Pending::Game(id)
+            | Pending::Player { id, .. }
+            | Pending::Full { id, .. }
+            | Pending::Show { id, .. }
+            | Pending::Change { id, .. } => *id,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -45,6 +57,10 @@ const RESULT_TAGS: [&str; 2] = ["BACON_WON_LAST_COMBAT", "DAMAGE_DEALT_TO_HERO_L
 /// Attacks kept per combat: far more than a combat has (about 30), so a
 /// strange log cannot grow the record.
 pub const MAX_ATTACKS: usize = 300;
+/// The game's `TURN` counts shop turns and combats, so it stays below twice
+/// the most shop turns a game keeps. Any other value is not a game this
+/// parser knows: the game is unsupported, never read with a wild number.
+pub const MAX_GAME_TURN: i64 = 2 * crate::shop::MAX_TURNS as i64 + 1;
 
 #[derive(Debug, Default)]
 pub struct Collector {
@@ -108,6 +124,9 @@ impl Collector {
         if let Packet::Tag { tag, value } = packet {
             return match self.pending.as_mut() {
                 Some((_, tags)) => {
+                    if tags.len() >= MAX_TAGS && !tags.contains_key(&tag) {
+                        return Err(ParseError("TooManyTags"));
+                    }
                     tags.insert(tag, value);
                     Ok(())
                 }
@@ -232,12 +251,17 @@ impl Collector {
         let Some((pending, tags)) = self.pending.take() else {
             return Ok(());
         };
+        if matches!(pending, Pending::Game(_)) || Some(pending.id()) == self.board.game_id {
+            if let Some(turn) = tags.get("TURN") {
+                check_turn(turn)?;
+            }
+        }
         match pending {
             Pending::Game(id) => self.board.create(Entity {
                 id,
                 card_id: None,
                 tags,
-            }),
+            })?,
             Pending::Player { id, player_id, lo } => {
                 let player = Entity {
                     id,
@@ -253,12 +277,12 @@ impl Collector {
                     self.local = Some(id);
                     self.local_pid = Some(player_id);
                 }
-                self.board.create(player);
+                self.board.create(player)?;
             }
             Pending::Full { id, card_id } => {
                 let parent = skin_parent(&tags);
                 let shown = leaderboard_values(&tags);
-                self.board.create(Entity { id, card_id, tags });
+                self.board.create(Entity { id, card_id, tags })?;
                 self.note_skin(id, parent);
                 self.note_leaderboard_packet(id, shown);
                 self.track_shop(id);
@@ -366,6 +390,9 @@ impl Collector {
     ) -> Result<(), ParseError> {
         let id = self.players.entity_id(entity, &self.board)?;
         let is_turn = tag == "TURN" && Some(id) == self.board.game_id;
+        if is_turn {
+            check_turn(&value)?;
+        }
         let is_hero = tag == "HERO_ENTITY";
         let is_shop = tag == "ZONE" || tag == "CONTROLLER";
         let is_skin_parent = tag == SKIN_PARENT;
@@ -691,6 +718,14 @@ impl Collector {
     }
 }
 
+/// A `TURN` value a real game can have (see [`MAX_GAME_TURN`]).
+fn check_turn(value: &Value) -> Result<(), ParseError> {
+    match value {
+        Value::Int(turn) if (0..=MAX_GAME_TURN).contains(turn) => Ok(()),
+        _ => Err(ParseError("UnsupportedTurn")),
+    }
+}
+
 /// The leaderboard tags a packet carries with numbers, so a hero created
 /// or shown with a count already set keeps it.
 fn leaderboard_values(tags: &Tags) -> Vec<(String, i64)> {
@@ -771,13 +806,12 @@ pub fn board_of(board: &Board, controller: i64) -> Vec<Minion> {
 /// opponents' leaderboard heroes are copies of entities that are not.
 pub fn leaderboard_heroes(board: &Board) -> Vec<(i64, &Entity)> {
     let candidates: Vec<&Entity> = board
-        .iter()
-        .filter(|e| {
-            e.is("CARDTYPE", "HERO") && e.int("PLAYER_ID") != 0 && e.has("PLAYER_LEADERBOARD_PLACE")
-        })
+        .heroes()
+        .filter(|e| e.int("PLAYER_ID") != 0 && e.has("PLAYER_LEADERBOARD_PLACE"))
         .collect();
-    let ids: Vec<i64> = candidates.iter().map(|e| e.id).collect();
+    let ids: HashSet<i64> = candidates.iter().map(|e| e.id).collect();
     let mut heroes: Vec<(i64, &Entity)> = Vec::new();
+    let mut slots: HashMap<i64, usize> = HashMap::new();
     for e in candidates {
         if e.opt_int("COPIED_FROM_ENTITY_ID")
             .is_some_and(|src| ids.contains(&src))
@@ -785,9 +819,12 @@ pub fn leaderboard_heroes(board: &Board) -> Vec<(i64, &Entity)> {
             continue;
         }
         let pid = e.int("PLAYER_ID");
-        match heroes.iter_mut().find(|(p, _)| *p == pid) {
-            Some(slot) => slot.1 = e,
-            None => heroes.push((pid, e)),
+        match slots.get(&pid) {
+            Some(&slot) => heroes[slot].1 = e,
+            None => {
+                slots.insert(pid, heroes.len());
+                heroes.push((pid, e));
+            }
         }
     }
     heroes

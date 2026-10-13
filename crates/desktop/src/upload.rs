@@ -145,7 +145,10 @@ impl Http for NoHttp {
 
 fn engine_for(data_dir: PathBuf) -> Engine {
     let tokens = Box::new(CredentialManager::new(&credential_name(&data_dir)));
-    let mut server = config::load_or_hosted(&data_dir);
+    // Another HTTPS server in server.json only for a development build or
+    // when asked for on the command line; the panel then says where uploads go.
+    let allow_other = cfg!(debug_assertions) || config::other_server_allowed(std::env::args());
+    let mut server = config::load_or_hosted(&data_dir, allow_other);
     let http: Arc<dyn Http> = match uploader::http::ReqwestHttp::new() {
         Ok(client) => Arc::new(client),
         Err(_) => {

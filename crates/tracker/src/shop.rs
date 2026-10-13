@@ -22,7 +22,7 @@ pub const APM_DEFINITION: &str = "Logged actions per minute: each option and cho
 
 const MS_PER_MINUTE: f64 = 60_000.0;
 /// The parser never writes more shop turns than this.
-const MAX_TURN: i64 = 100;
+pub(crate) const MAX_TURN: i64 = 100;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -161,7 +161,7 @@ fn actions_logged(record: &ShopRecord) -> bool {
 }
 
 fn per_minute(count: usize, from_ms: i64, to_ms: i64) -> Option<f64> {
-    let minutes = (to_ms - from_ms) as f64 / MS_PER_MINUTE;
+    let minutes = to_ms.saturating_sub(from_ms) as f64 / MS_PER_MINUTE;
     (minutes > 0.0).then(|| count as f64 / minutes)
 }
 
@@ -188,7 +188,8 @@ fn turn_view(t: &ShopTurn, tier_up: bool, logged: bool) -> TurnView {
             }),
         }
     }
-    let seconds = (t.end_ms > t.start_ms).then(|| (t.end_ms - t.start_ms) as f64 / 1000.0);
+    let seconds =
+        (t.end_ms > t.start_ms).then(|| t.end_ms.saturating_sub(t.start_ms) as f64 / 1000.0);
     TurnView {
         turn: t.turn,
         in_log: true,
@@ -265,7 +266,8 @@ fn sum_known(record: &ShopRecord, f: impl Fn(&ShopTurn) -> Option<i64>) -> Optio
 }
 
 pub fn totals(record: &ShopRecord) -> ShopTotals {
-    let sum = |f: &dyn Fn(&ShopTurn) -> u32| record.turns.iter().map(f).sum();
+    let sum =
+        |f: &dyn Fn(&ShopTurn) -> u32| record.turns.iter().map(f).fold(0, u32::saturating_add);
     let gold = |f: fn(&ShopTurn) -> Option<u32>| sum_known(record, move |t| f(t).map(i64::from));
     ShopTotals {
         rolls: sum(&|t| t.rolls),
@@ -325,14 +327,16 @@ pub fn shop_recap(report: &Value) -> ShopRecap {
     for t in &record.turns {
         // Turns the log skipped show as gaps, not as zeros (a hand-edited
         // turn number cannot make the list grow without end).
-        let next = turns.last().map_or(1, |v| v.turn + 1);
+        let next = turns.last().map_or(1, |v| v.turn.saturating_add(1));
         turns.extend((next..t.turn.min(MAX_TURN)).map(gap));
         let tier_up = record.tier_ups.iter().any(|u| u.turn == t.turn);
         turns.push(turn_view(t, tier_up, logged));
     }
     let has_turns = !record.turns.is_empty();
     let minutes = match (record.start_ms, record.end_ms) {
-        (Some(start), Some(end)) if end > start => Some((end - start) as f64 / MS_PER_MINUTE),
+        (Some(start), Some(end)) if end > start => {
+            Some(end.saturating_sub(start) as f64 / MS_PER_MINUTE)
+        }
         _ => None,
     };
     ShopRecap {
@@ -876,5 +880,21 @@ mod tests {
         assert_eq!((s.rolls, s.apm, s.gold_spent), (None, None, None));
         assert_eq!(s.source, Source::Unknown);
         assert!(s.tier_turns.is_empty());
+    }
+
+    #[test]
+    fn times_and_counts_at_the_ends_of_their_range_do_not_overflow() {
+        let mut far = turn(i64::MAX, i64::MIN, i64::MAX, u32::MAX);
+        far["rolls"] = json!(u32::MAX);
+        let mut rep = report(vec![turn(1, 0, 60_000, 6), far.clone(), far], 6, true);
+        rep["shop"]["start_ms"] = json!(i64::MIN);
+        rep["shop"]["end_ms"] = json!(i64::MAX);
+        let r = shop_recap(&rep);
+        assert!(r.turns.len() <= 103);
+        assert_eq!(r.totals.map(|t| t.rolls), Some(u32::MAX));
+        let mut counts = ShopCounts::default();
+        counts.add(&rep);
+        counts.add(&rep);
+        let _ = counts.finish();
     }
 }

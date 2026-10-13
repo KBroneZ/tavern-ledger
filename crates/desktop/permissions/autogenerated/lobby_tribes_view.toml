@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-lobby-tribes-view"
+description = "Enables the lobby_tribes_view command without any pre-configured scope."
+commands.allow = ["lobby_tribes_view"]
+
+[[permission]]
+identifier = "deny-lobby-tribes-view"
+description = "Denies the lobby_tribes_view command without any pre-configured scope."
+commands.deny = ["lobby_tribes_view"]

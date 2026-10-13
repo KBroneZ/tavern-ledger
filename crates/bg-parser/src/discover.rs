@@ -231,13 +231,14 @@ mod tests {
 
     fn board() -> Board {
         let mut b = Board::default();
-        b.create(card(10, "BG36_Button_DarkGift", 5, None));
-        b.create(card(11, "BG36_MidGameEffect_010", 5, None));
-        b.create(card(20, "M_A", 5, Some(30)));
-        b.create(card(21, "M_B", 5, Some(31)));
-        b.create(card(22, "M_C", 9, None)); // someone else's card
-        b.create(card(30, "GIFT_A", 5, None));
-        b.create(card(31, "GIFT_B", 5, None));
+        b.create(card(10, "BG36_Button_DarkGift", 5, None)).unwrap();
+        b.create(card(11, "BG36_MidGameEffect_010", 5, None))
+            .unwrap();
+        b.create(card(20, "M_A", 5, Some(30))).unwrap();
+        b.create(card(21, "M_B", 5, Some(31))).unwrap();
+        b.create(card(22, "M_C", 9, None)).unwrap(); // someone else's card
+        b.create(card(30, "GIFT_A", 5, None)).unwrap();
+        b.create(card(31, "GIFT_B", 5, None)).unwrap();
         b
     }
 
@@ -323,7 +324,7 @@ mod tests {
     fn choices_and_options_are_bounded() {
         let mut b = Board::default();
         for id in 1..=20 {
-            b.create(card(id, "M_X", 5, None));
+            b.create(card(id, "M_X", 5, None)).unwrap();
         }
         let mut t = DiscoverTracker::default();
         for n in 0..MAX_DISCOVERS as i64 + 5 {

@@ -247,7 +247,7 @@ mod tests {
     fn board(entities: Vec<Entity>) -> Board {
         let mut board = Board::default();
         for e in entities {
-            board.create(e);
+            board.create(e).unwrap();
         }
         board
     }

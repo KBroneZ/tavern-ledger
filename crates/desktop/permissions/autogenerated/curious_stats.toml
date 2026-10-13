@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-curious-stats"
+description = "Enables the curious_stats command without any pre-configured scope."
+commands.allow = ["curious_stats"]
+
+[[permission]]
+identifier = "deny-curious-stats"
+description = "Denies the curious_stats command without any pre-configured scope."
+commands.deny = ["curious_stats"]

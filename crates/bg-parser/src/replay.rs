@@ -333,7 +333,7 @@ impl ReplayTracker {
             }
             "DAMAGE" => {
                 let health = health_of(e);
-                let amount = e.int("DAMAGE") - old.unwrap_or(0);
+                let amount = e.int("DAMAGE").saturating_sub(old.unwrap_or(0));
                 if amount > 0 {
                     run.defender(id);
                     run.push(CombatEvent::Damage {

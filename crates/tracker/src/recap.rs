@@ -531,12 +531,15 @@ fn opponent_record(view: &View, seats: Vec<i64>, combats: Vec<Combat>) -> Oppone
     }
 }
 
+/// Rounds between the first and the last the log has that it lacks. Only
+/// rounds a game can reach count: the history is a local file that can be
+/// edited by hand.
 fn missing_rounds(view: &View) -> Vec<i64> {
     let (Some(&first), Some(&last)) = (view.rounds.keys().next(), view.rounds.keys().next_back())
     else {
         return Vec::new();
     };
-    (first.min(1)..=last)
+    (first.clamp(0, 1)..=last.min(crate::shop::MAX_TURN))
         .filter(|n| !view.rounds.contains_key(n))
         .collect()
 }
@@ -1252,6 +1255,20 @@ mod tests {
                 r.hero_pick.picked.as_ref().map(|h| h.id.as_str()),
                 r.hero.value.as_ref().map(|h| h.id.as_str())
             );
+        }
+    }
+
+    #[test]
+    fn round_numbers_no_game_reaches_neither_panic_nor_fill_the_gaps() {
+        for numbers in [[1, i64::MAX], [i64::MIN, 3], [i64::MIN, i64::MAX]] {
+            let rounds: Vec<Value> = numbers
+                .iter()
+                .map(|n| json!({"number": n, "own_health_after": 30}))
+                .collect();
+            let report = json!({"status": "ok", "game_type": SOLO, "rounds": rounds});
+            let r = recap(&report);
+            assert!(r.missing_rounds.len() <= 101, "{numbers:?}");
+            assert!(r.health.len() <= 104, "{numbers:?}");
         }
     }
 }

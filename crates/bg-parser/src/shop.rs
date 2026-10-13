@@ -247,7 +247,7 @@ impl ShopTracker {
         self.close_block(board, seats);
         self.close_turn(board, seats, ms);
         self.pending = None;
-        let number = (turn + 1) / 2;
+        let number = turn.saturating_add(1) / 2;
         let fits = self.turns.len() < MAX_TURNS && number <= MAX_TURNS as i64 && ms <= MAX_MS;
         if turn >= 1 && turn % 2 == 1 && fits {
             self.spent_at_turn_start = spent(board, seats);

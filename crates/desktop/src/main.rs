@@ -21,6 +21,8 @@ mod settings;
 #[cfg(test)]
 mod ui_checks;
 mod upload;
+#[cfg(test)]
+mod window_access;
 
 use std::collections::BTreeSet;
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -55,6 +57,8 @@ const POLL_INTERVAL: Duration = Duration::from_secs(1);
 /// The setup is checked again every this many polls (the user may fix it
 /// while the app runs).
 const SETUP_CHECK_EVERY: u32 = 30;
+/// A game's recap that stopped on a history line no game writes.
+const RECAP_FAILED: &str = "This game's summary could not be worked out from the history.";
 const GAMES_CHANGED: &str = "games-changed";
 const STATUS_CHANGED: &str = "status-changed";
 /// Lobby tribes entered by hand changed, or the game in progress did (T-303).
@@ -232,7 +236,12 @@ fn game_recap(
 ) -> Result<Recap, String> {
     let store = card_data::store_with_data(&cards);
     let card_of = |dbf: i64| store.and_then(|s| s.card_of_dbf(dbf));
-    recap_of(&state, &session, index).map(|r| r.with_dbf_cards(&card_of))
+    // A history line no game writes (edited by hand) must not take the
+    // window down with it: it runs on the window's thread.
+    catch_unwind(AssertUnwindSafe(|| {
+        recap_of(&state, &session, index).map(|r| r.with_dbf_cards(&card_of))
+    }))
+    .unwrap_or_else(|_| Err(RECAP_FAILED.to_string()))
 }
 
 /// Why each combat of a game in the history went as it did (T-346, D-127):
@@ -842,6 +851,8 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
     let mut known: BTreeSet<GameKey> = store.games().map(|(key, _)| key.clone()).collect();
     let mut watcher = Watcher::new(&logs_dir, store);
     let mut starts = GameStarts::default();
+    // The newest game saved while a long log is still being caught up on.
+    let mut finished_while_behind: Option<GameKey> = None;
 
     let mut polls_until_setup_check: u32 = 0;
     loop {
@@ -877,6 +888,7 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
         read_from_game(&app, &state, watcher.client_build());
         let session = watcher.session().map(String::from);
         let power_log = watcher.has_power_log();
+        let behind = watcher.catching_up();
         match result {
             Ok(saved) => {
                 set_status(&app, &state, |s| {
@@ -888,8 +900,14 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
                     publish_games(&app, &state, watcher.store());
                     upload::kick(&app);
                     // Only the newest: games found at start-up (played while the
-                    // app was closed) must not each pop up a recap.
+                    // app was closed) must not each pop up a recap, also when
+                    // the log takes several polls to read.
                     if let Some(key) = new_games(&mut known, saved.iter().map(|s| &s.key)).pop() {
+                        finished_while_behind = Some(key);
+                    }
+                }
+                if !behind {
+                    if let Some(key) = finished_while_behind.take() {
                         let finished = GameFinished {
                             session: key.session,
                             index: key.index,
@@ -911,7 +929,10 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
                 );
             }
         }
-        thread::sleep(POLL_INTERVAL);
+        // A log still being caught up on is read on at once.
+        if !behind {
+            thread::sleep(POLL_INTERVAL);
+        }
     }
 }
 

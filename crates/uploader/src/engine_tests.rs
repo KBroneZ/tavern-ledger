@@ -51,6 +51,20 @@ fn rig(games: &[(&str, u64, &str)]) -> Rig {
     }
 }
 
+/// The refresh token stored for the test server.
+fn saved(tokens: &MemoryStore) -> Option<String> {
+    let stored = tokens.token.lock().unwrap().clone()?;
+    crate::secrets::token_for(&stored, &server().url).ok()
+}
+
+/// Another server than the one the sign-in was made with.
+fn other_server() -> ServerConfig {
+    ServerConfig {
+        url: "https://other.test".into(),
+        anon_key: "sb_publishable_other".into(),
+    }
+}
+
 /// Signed in with a fresh access token and upload turned on.
 fn ready(games: &[(&str, u64, &str)]) -> Rig {
     let mut r = rig(games);
@@ -119,7 +133,7 @@ fn the_switch_needs_a_sign_in_and_signing_in_does_not_turn_it_on() {
     assert!(!r.engine.status().enabled);
     assert_eq!(r.engine.run(Instant::now(), 10), Wake::Idle);
     assert!(r.http.routes().is_empty());
-    assert_eq!(r.tokens.token.lock().unwrap().as_deref(), Some("RT"));
+    assert_eq!(saved(&r.tokens).as_deref(), Some("RT"));
     let on_disk = std::fs::read_to_string(settings::path(&r.dir)).unwrap();
     assert!(
         !on_disk.contains("RT") && !on_disk.contains("AT"),
@@ -387,7 +401,7 @@ fn an_expired_access_token_is_refreshed_and_the_new_refresh_token_saved_first() 
     r.engine.run(Instant::now(), 10);
     assert_eq!(r.http.routes()[0], "Post /auth/v1/token");
     assert_eq!(r.http.last().header("authorization"), Some("Bearer AT2"));
-    assert_eq!(r.tokens.token.lock().unwrap().as_deref(), Some("RT2"));
+    assert_eq!(saved(&r.tokens).as_deref(), Some("RT2"));
 }
 
 #[test]
@@ -429,7 +443,7 @@ fn if_the_new_refresh_token_cannot_be_saved_nothing_is_uploaded_until_it_is() {
     *r.tokens.fail_save.lock().unwrap() = false;
     r.http.on(PUT, stored(&r, 0));
     assert_eq!(r.engine.run(Instant::now(), 10), Wake::Idle);
-    assert_eq!(r.tokens.token.lock().unwrap().as_deref(), Some("RT2"));
+    assert_eq!(saved(&r.tokens).as_deref(), Some("RT2"));
     let refreshes = r
         .http
         .routes()
@@ -498,7 +512,7 @@ fn a_refresh_refused_for_another_reason_stops_but_keeps_the_sign_in() {
     r.http.on("Post /auth/v1/token", reply(404, json!({})));
     assert_eq!(r.engine.run(Instant::now(), 10), Wake::Idle);
     assert!(r.engine.status().signed_in);
-    assert_eq!(r.tokens.token.lock().unwrap().as_deref(), Some("RT"));
+    assert_eq!(saved(&r.tokens).as_deref(), Some("RT"));
     assert!(r.engine.status().problem.is_some());
 }
 
@@ -557,7 +571,7 @@ fn a_refresh_that_cannot_reach_the_server_backs_off_and_keeps_the_sign_in() {
         Wake::In(Duration::from_secs(1))
     );
     assert!(r.engine.status().signed_in);
-    assert_eq!(r.tokens.token.lock().unwrap().as_deref(), Some("RT"));
+    assert_eq!(saved(&r.tokens).as_deref(), Some("RT"));
 }
 
 #[test]
@@ -727,4 +741,111 @@ fn a_refused_game_is_retried_once_when_a_newer_validator_answers() {
         (counts.uploaded, counts.rejected, counts.waiting),
         (2, 1, 0)
     );
+}
+
+#[test]
+fn the_saved_sign_in_names_the_server_that_issued_it() {
+    let r = ready(&[]);
+    let stored = r.tokens.token.lock().unwrap().clone().unwrap();
+    assert_eq!(stored, crate::secrets::bind(&server().url, "RT"));
+}
+
+/// The same data folder and Credential Manager entry, now with another server.
+fn moved_to(r: &Rig, to: ServerConfig) -> Engine {
+    Engine::new(
+        r.dir.clone(),
+        Ok(to),
+        r.http.clone(),
+        Box::new(r.tokens.clone()),
+    )
+}
+
+#[test]
+fn a_sign_in_saved_for_another_server_is_never_sent_to_it() {
+    let r = ready(&[(S1, 1, SOLO)]);
+    let before = r.tokens.token.lock().unwrap().clone();
+    let mut moved = moved_to(&r, other_server());
+    assert_eq!(moved.run(Instant::now(), 10), Wake::Idle);
+    assert!(
+        r.http.routes().is_empty(),
+        "nothing goes to the other server"
+    );
+    let problem = moved.status().problem.clone().unwrap_or_default();
+    assert!(problem.contains("another server"), "{problem}");
+    assert_eq!(
+        *r.tokens.token.lock().unwrap(),
+        before,
+        "the real sign-in is kept"
+    );
+}
+
+#[test]
+fn signing_out_with_another_server_sends_nothing_and_removes_the_sign_in() {
+    let r = ready(&[(S1, 1, SOLO)]);
+    let mut moved = moved_to(&r, other_server());
+    let message = moved.sign_out();
+    assert!(message.contains("could not be ended"), "{message}");
+    assert!(
+        r.http.routes().is_empty(),
+        "nothing goes to the other server"
+    );
+    assert_eq!(*r.tokens.token.lock().unwrap(), None);
+}
+
+#[test]
+fn a_token_saved_before_binding_is_never_sent_to_a_server_other_than_the_hosted_one() {
+    let r = ready(&[(S1, 1, SOLO)]);
+    *r.tokens.token.lock().unwrap() = Some("RT-UNBOUND".into());
+    let mut moved = moved_to(&r, server());
+    assert_eq!(moved.run(Instant::now(), 10), Wake::Idle);
+    assert!(r.http.routes().is_empty());
+    assert!(moved.status().problem.is_some());
+}
+
+#[test]
+fn a_server_other_than_the_hosted_one_is_always_shown() {
+    let r = rig(&[]);
+    let warning = r.engine.status().server_warning.clone().unwrap_or_default();
+    assert!(warning.contains("https://api.test"), "{warning}");
+    let hosted = Engine::new(
+        r.dir.clone(),
+        Ok(crate::config::hosted()),
+        r.http.clone(),
+        Box::new(MemoryStore::default()),
+    );
+    assert_eq!(hosted.status().server_warning, None);
+}
+
+#[test]
+fn a_damaged_saved_sign_in_says_so_and_sends_nothing() {
+    let r = ready(&[(S1, 1, SOLO)]);
+    *r.tokens.token.lock().unwrap() = Some("{not json".into());
+    let mut fresh = moved_to(&r, server());
+    assert_eq!(fresh.run(Instant::now(), 10), Wake::Idle);
+    assert!(r.http.routes().is_empty());
+    let problem = fresh.status().problem.clone().unwrap_or_default();
+    assert!(problem.contains("cannot be read"), "{problem}");
+}
+
+#[test]
+fn a_token_saved_before_binding_still_works_with_the_hosted_project_and_is_bound_on_refresh() {
+    let r = ready(&[(S1, 1, SOLO)]);
+    *r.tokens.token.lock().unwrap() = Some("RT-OLD".into());
+    let hosted = crate::config::hosted();
+    let mut fresh = moved_to(&r, hosted.clone());
+    r.http.on(
+        "Post /auth/v1/token",
+        reply(200, session_json("AT2", "RT2")),
+    );
+    r.http.on(PUT, stored(&r, 0));
+    fresh.run(Instant::now(), 10);
+    let refresh = &r.http.requests.lock().unwrap()[0];
+    assert!(refresh.url.starts_with(&hosted.url), "{}", refresh.url);
+    assert!(String::from_utf8_lossy(&refresh.body).contains("RT-OLD"));
+    assert_eq!(
+        r.tokens.token.lock().unwrap().clone(),
+        Some(crate::secrets::bind(&hosted.url, "RT2")),
+        "the rotated token is saved bound to the hosted project"
+    );
+    assert_eq!(fresh.status().counts.uploaded, 1);
 }

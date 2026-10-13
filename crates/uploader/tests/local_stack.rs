@@ -28,7 +28,7 @@ use uploader::auth::Auth;
 use uploader::config::{self, ServerConfig};
 use uploader::http::{Http, Method, Request, ReqwestHttp};
 use uploader::queue::{pending, Mark, Marks, Outcome};
-use uploader::secrets::{credential_name, CredentialManager, TokenStore};
+use uploader::secrets::{self, credential_name, CredentialManager, TokenStore};
 use uploader::signin::SignIn;
 use uploader::{Engine, Wake};
 
@@ -373,7 +373,7 @@ fn sign_in_upload_quota_and_sign_out_against_the_local_stack() {
     engine.signed_in_with(session.clone()).unwrap();
     assert_eq!(
         creds.load().unwrap().as_deref(),
-        Some(session.refresh_token.as_str())
+        Some(secrets::bind(&server.url, &session.refresh_token).as_str())
     );
     engine.set_enabled(true).unwrap();
     assert_eq!(engine.run(Instant::now(), 10), Wake::Idle);
@@ -462,7 +462,7 @@ fn sign_in_upload_quota_and_sign_out_against_the_local_stack() {
     no_token_in_files(&dir, &[&session.refresh_token, &session.access_token]);
 
     // ---- sign out: the server session ends and the tokens leave this PC
-    let current_refresh = creds.load().unwrap().unwrap();
+    let current_refresh = secrets::token_for(&creds.load().unwrap().unwrap(), &server.url).unwrap();
     assert_eq!(engine.sign_out(), "Signed out.");
     assert_eq!(creds.load().unwrap(), None, "the credential is gone");
     let auth = Auth {

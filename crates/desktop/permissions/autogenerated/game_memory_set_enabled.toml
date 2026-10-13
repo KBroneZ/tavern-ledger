@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-game-memory-set-enabled"
+description = "Enables the game_memory_set_enabled command without any pre-configured scope."
+commands.allow = ["game_memory_set_enabled"]
+
+[[permission]]
+identifier = "deny-game-memory-set-enabled"
+description = "Denies the game_memory_set_enabled command without any pre-configured scope."
+commands.deny = ["game_memory_set_enabled"]
