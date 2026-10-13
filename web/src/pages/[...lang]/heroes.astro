@@ -17,8 +17,10 @@ import "../../styles/community.css";
 import { readConfig } from "../../lib/config.ts";
 import { DEFAULT_PERIOD, PERIODS, periodName } from "../../lib/community/heroes.ts";
 import { ct } from "../../lib/community/strings.ts";
-import { langPaths, setLang } from "../../lib/i18n.ts";
+import { href, langPaths, setLang } from "../../lib/i18n.ts";
 import { st } from "../../lib/site/strings.ts";
+import { hasMinionPages } from "../../lib/minions/load.ts";
+import { mt } from "../../lib/minions/strings.ts";
 
 export const getStaticPaths = langPaths;
 // Every string below is drawn in the page's language (T-508).
@@ -40,6 +42,7 @@ const accountsOpen = readConfig(import.meta.env) !== null;
             <p class="kicker">{ct("page.kicker")}</p>
             <h1>{ct("page.title")}</h1>
             <p class="ch-intro">{ct("page.intro")}</p>
+            {hasMinionPages() && <p class="data-note"><a href={href("/minions/")}>{mt("heroes.minions")}</a></p>}
             <p class="data-note ch-updated" id="ch-updated" />
           </div>
           <div class="dash-switches ch-switches is-off" id="ch-switches">

@@ -6,6 +6,8 @@ import "../styles/buttons.css";
 import { contentSecurityPolicy, readConfig } from "../lib/config.ts";
 import { basePath, href, lang, LANGS, pathIn, type Lang } from "../lib/i18n.ts";
 import { st } from "../lib/site/strings.ts";
+import { hasMinionPages } from "../lib/minions/load.ts";
+import { mt } from "../lib/minions/strings.ts";
 import PageBackdrop, { type Scene } from "../components/PageBackdrop.astro";
 
 interface Props {
@@ -144,6 +146,7 @@ const socialCard = new URL("/social-card.png", Astro.site).href;
       <p><a href={href("/privacy/")}>{st("layout.privacy")}</a></p>
       <p><a href={href("/terms/")}>{st("layout.terms")}</a></p>
       <p><a href={href("/accuracy/")}>{st("layout.accuracy")}</a></p>
+      {hasMinionPages() && <p><a href={href("/minions/")}>{mt("layout.minions")}</a></p>}
     </footer>
   </body>
 </html>

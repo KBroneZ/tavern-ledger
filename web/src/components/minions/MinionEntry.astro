@@ -1,0 +1,67 @@
+---
+// One minion on a type's page (T-578): its token, name, marks (its other
+// types, every type, Duos only), card text and golden stats. Text is always
+// text: the card's bold and italic come as runs, never as markup, and a
+// keyword alone on its line keeps it (a NEW_LINE run).
+import { NEW_LINE, type PoolMinion } from "../../lib/minions/poolFile.ts";
+import { mt } from "../../lib/minions/strings.ts";
+import { marks, minionAnchor } from "../../lib/minions/view.ts";
+import MinionToken from "./MinionToken.astro";
+
+interface Props {
+  minion: PoolMinion;
+  /** The page's type, left out of the marks; null on the no-type page. */
+  pageKey: string | null;
+}
+
+const { minion, pageKey } = Astro.props;
+const shown = marks(minion, pageKey);
+const golden = minion.golden;
+---
+
+<li class="mn-entry" id={minionAnchor(minion.id)}>
+  <MinionToken id={minion.id} attack={minion.attack} health={minion.health} />
+  <div class="mn-body">
+    <h3>{minion.name}</h3>
+    <p class="visually-hidden">{mt("stats.label", { attack: minion.attack, health: minion.health })}</p>
+    {
+      shown.length > 0 && (
+        <ul class="mn-marks" aria-label={mt("types.label")}>
+          {shown.map((m) => (
+            <li>{m.href ? <a href={m.href}>{m.text}</a> : <span>{m.text}</span>}</li>
+          ))}
+        </ul>
+      )
+    }
+    {
+      minion.text && (
+        <p class="mn-text">
+          {minion.text.map((run) =>
+            run.s === NEW_LINE ? (
+              <br />
+            ) : run.b && run.i ? (
+              <b>
+                <i>{run.s}</i>
+              </b>
+            ) : run.b ? (
+              <b>{run.s}</b>
+            ) : run.i ? (
+              <i>{run.s}</i>
+            ) : (
+              run.s
+            ),
+          )}
+        </p>
+      )
+    }
+    {
+      golden && (
+        <p class="mn-golden">
+          <span class="visually-hidden">{mt("golden.label", { attack: golden.attack, health: golden.health })}</span>
+          <span aria-hidden="true">{mt("golden")}</span>
+          <MinionToken id={minion.id} attack={golden.attack} health={golden.health} golden />
+        </p>
+      )
+    }
+  </div>
+</li>

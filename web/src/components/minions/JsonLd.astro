@@ -1,0 +1,13 @@
+---
+// A page's structured data (schema.org, T-578): a data block, never run as a
+// script. jsonLd() escapes every "<", so no name can end the block early.
+import { jsonLd } from "../../lib/minions/view.ts";
+
+interface Props {
+  graph: object[];
+}
+
+const { graph } = Astro.props;
+---
+
+<script type="application/ld+json" is:inline set:html={jsonLd(graph)} />

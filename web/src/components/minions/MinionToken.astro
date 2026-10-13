@@ -1,0 +1,29 @@
+---
+// A minion as a token (T-578): its art in a circle (cropped as every card
+// picture on the site, D-062/D-065), Attack a gold gem and Health a red drop
+// as on the simulator's cards. The art loads from HearthstoneJSON's image
+// host (D-074) when it comes into view; a picture that fails falls back to a
+// local placeholder (the page's script). The numbers are read out by the
+// entry beside it, so the token is decorative.
+import { pictureFor } from "../../lib/data/pictures.ts";
+
+interface Props {
+  id: string;
+  attack: number;
+  health: number;
+  /** The golden version: a gold rim, smaller. */
+  golden?: boolean;
+}
+
+const { id, attack, health, golden = false } = Astro.props;
+const picture = pictureFor("card", id);
+const size = golden ? 44 : 88;
+---
+
+<span class:list={["mn-token", { "is-golden": golden }]} aria-hidden="true">
+  <span class="pic pic-card mn-art">
+    <img src={picture.src} data-fallback={picture.fallback} alt="" width={size} height={size} loading="lazy" decoding="async" />
+  </span>
+  <span class="mn-atk">{attack}</span>
+  <span class="mn-hp">{health}</span>
+</span>

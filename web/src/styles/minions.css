@@ -1,0 +1,514 @@
+/* The minion pages (T-578, D-134), in the tavern look (D-129): each tavern
+   tier one wood panel, its minions as entries on it, each with its token
+   (the art in a circle, Attack a gold gem, Health a red drop, as on the
+   simulator's cards). The index: one wood tile per type with a small bar
+   per tier. Uses global.css's tokens; the pictures' crop is data.css's .pic. */
+
+.mn {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+}
+
+/* ---------- Breadcrumb ---------- */
+
+.mn-crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--dim);
+  font-size: 0.9375rem;
+}
+
+.mn-crumbs li + li::before {
+  content: "›";
+  margin-inline: 8px;
+  color: var(--bronze);
+}
+
+.mn-crumbs a {
+  display: inline-block;
+  padding-block: 10px;
+}
+
+.mn-crumbs [aria-current] {
+  padding-block: 10px;
+  color: var(--text);
+}
+
+/* ---------- Head ---------- */
+
+.mn-head {
+  display: grid;
+  gap: 10px;
+}
+
+.mn-intro {
+  max-width: 62ch;
+  color: var(--dim);
+  font-size: clamp(1.05rem, 1.6vw, 1.2rem);
+  line-height: 1.5;
+}
+
+/* ---------- Jump to a tier ---------- */
+
+.mn-jump ul,
+.mn-others ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mn-jump a,
+.mn-others a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: var(--r-button);
+  background: rgb(20 12 7 / 0.78);
+  color: var(--parchment);
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: inset 0 0 0 1.5px var(--bronze-lo);
+  transition: box-shadow 160ms ease, color 160ms ease;
+}
+
+.mn-jump a:hover,
+.mn-others a:hover {
+  color: var(--gold);
+  box-shadow: inset 0 0 0 1.5px var(--bronze-hi);
+}
+
+/* ---------- A tier: one wood panel ---------- */
+
+.mn-tier {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  padding: 20px clamp(14px, 3vw, 26px) 8px;
+  border-radius: var(--r-panel);
+  background: var(--panel-wood);
+  box-shadow: var(--panel-edge);
+  /* The jump links land the heading below the top edge. */
+  scroll-margin-top: 12px;
+}
+
+.mn-tier-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.mn-tier-head h2 {
+  scroll-margin-top: 24px;
+}
+
+.mn-tier-head p {
+  margin-left: auto;
+  color: var(--label);
+  font-size: 0.9375rem;
+}
+
+/* The tier as bronze stars, as many as the tier. */
+.mn-pips {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.mn-pips i {
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(180deg, var(--bronze-hi), var(--bronze) 60%, var(--bronze-lo));
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+/* ---------- Minions on a tier ---------- */
+
+.mn-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* The last row's rules would double the panel's edge: cut them off. */
+  clip-path: inset(-12px -12px 1px -12px);
+}
+
+@media (min-width: 46rem) {
+  .mn-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 28px;
+  }
+}
+
+@media (min-width: 74rem) {
+  .mn-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.mn-entry {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  padding: 18px 0 16px;
+  border-bottom: 1px solid var(--line-soft);
+  scroll-margin-top: 16px;
+}
+
+.mn-entry:target {
+  border-radius: var(--r-small);
+  background: rgb(255 178 74 / 0.08);
+  box-shadow: 0 0 0 6px rgb(255 178 74 / 0.08);
+}
+
+.mn-body {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+main:not(.layout-home) .mn-body h3 {
+  color: var(--parchment);
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.mn-text {
+  color: var(--text);
+  font-size: 0.9875rem;
+  line-height: 1.5;
+}
+
+.mn-text b {
+  color: var(--amber-hi);
+  font-weight: 700;
+}
+
+.mn-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mn-marks :is(a, span) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.32);
+  color: var(--label);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px var(--bronze-lo);
+}
+
+.mn-marks a {
+  /* A small chip, but a 44 px target: the padding reaches out invisibly. */
+  position: relative;
+  color: var(--amber-hi);
+  text-decoration: none;
+}
+
+.mn-marks a::after {
+  content: "";
+  position: absolute;
+  inset: -9px -2px;
+}
+
+.mn-marks a:hover {
+  box-shadow: inset 0 0 0 1px var(--bronze-hi);
+}
+
+.mn-golden {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--gold);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+/* ---------- The token ---------- */
+
+.mn-token {
+  position: relative;
+  display: inline-block;
+  width: 88px;
+  height: 88px;
+  margin: 0 6px 8px;
+}
+
+.mn-token .mn-art {
+  width: 100%;
+  height: 100%;
+  box-shadow:
+    0 0 0 2px #1a110b,
+    0 0 0 4px var(--bronze),
+    0 6px 14px rgb(0 0 0 / 0.55);
+}
+
+.mn-atk,
+.mn-hp {
+  position: absolute;
+  bottom: -8px;
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 4px;
+  font: 800 1.05rem / 1 var(--display);
+  font-variant-numeric: tabular-nums;
+  box-shadow:
+    0 0 0 1.5px #1a110b,
+    0 3px 6px rgb(0 0 0 / 0.55);
+}
+
+.mn-atk {
+  left: -8px;
+  border-radius: 30% 50% 30% 50%;
+  background: linear-gradient(135deg, #ffe08a, #e99a2e 60%, #a8681c);
+  color: #2a1600;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.4);
+}
+
+.mn-hp {
+  right: -8px;
+  border-radius: 50% 50% 50% 50% / 42% 42% 58% 58%;
+  background: linear-gradient(180deg, #ff8a78, #c23a2a 60%, #861c12);
+  color: #fff6f0;
+  text-shadow: 0 1px 1px rgb(0 0 0 / 0.5);
+}
+
+/* The golden version: small, with a lit gold rim. */
+.mn-token.is-golden {
+  width: 44px;
+  height: 44px;
+  margin: 0 8px 6px;
+}
+
+.mn-token.is-golden .mn-art {
+  box-shadow:
+    0 0 0 2px #5a3a0e,
+    0 0 0 4px var(--gold),
+    0 0 12px rgb(255 208 138 / 0.5);
+}
+
+.mn-token.is-golden :is(.mn-atk, .mn-hp) {
+  bottom: -6px;
+  min-width: 22px;
+  height: 22px;
+  font-size: 0.8125rem;
+}
+
+.mn-token.is-golden .mn-atk {
+  left: -9px;
+}
+
+.mn-token.is-golden .mn-hp {
+  right: -9px;
+}
+
+/* ---------- Index: one tile per type ---------- */
+
+.mn-tiles {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 34rem) {
+  .mn-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 60rem) {
+  .mn-tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 74rem) {
+  .mn-tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.mn-tile {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "face name"
+    "face count"
+    "bars bars"
+    "axis axis";
+  align-items: center;
+  gap: 4px 14px;
+  height: 100%;
+  padding: 18px 20px 16px;
+  color: var(--text);
+  text-decoration: none;
+  transition: box-shadow 180ms ease;
+}
+
+.mn-tile:hover {
+  box-shadow:
+    var(--panel-edge),
+    inset 0 0 0 1.5px var(--bronze-hi);
+}
+
+.mn-tile:hover .mn-tile-name {
+  color: var(--gold);
+}
+
+.mn-face {
+  grid-area: face;
+  width: 56px;
+  height: 56px;
+  box-shadow:
+    0 0 0 2px #1a110b,
+    0 0 0 3.5px var(--bronze);
+}
+
+.mn-tile-name {
+  grid-area: name;
+  align-self: end;
+  color: var(--parchment);
+  font: 700 1.3rem / 1.1 var(--display);
+  font-stretch: 88%;
+  text-shadow: 0 2px 0 rgb(0 0 0 / 0.55);
+}
+
+.mn-tile-count {
+  grid-area: count;
+  align-self: start;
+  color: var(--label);
+  font-size: 0.9375rem;
+}
+
+/* Minions per tier, 1 to 7: a bar each, the count on it. */
+.mn-spread {
+  grid-area: bars;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: end;
+  gap: 4px;
+  height: 56px;
+  margin-top: 12px;
+  padding-top: 6px;
+  border-bottom: 1px solid var(--bronze-lo);
+}
+
+.mn-bar {
+  position: relative;
+  height: 0;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(180deg, var(--bronze-hi), var(--bronze-lo));
+}
+
+.mn-bar > span {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  color: var(--dim);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The tier under each bar. */
+.mn-axis {
+  grid-area: axis;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  color: var(--dim);
+  font-size: 0.6875rem;
+  text-align: center;
+}
+
+.mn-bar[data-h="1"] { height: 8%; }
+.mn-bar[data-h="2"] { height: 16%; }
+.mn-bar[data-h="3"] { height: 24%; }
+.mn-bar[data-h="4"] { height: 32%; }
+.mn-bar[data-h="5"] { height: 40%; }
+.mn-bar[data-h="6"] { height: 48%; }
+.mn-bar[data-h="7"] { height: 56%; }
+.mn-bar[data-h="8"] { height: 64%; }
+.mn-bar[data-h="9"] { height: 72%; }
+.mn-bar[data-h="10"] { height: 80%; }
+
+/* ---------- Foot ---------- */
+
+.mn-others {
+  display: grid;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.mn-others h2 {
+  font-size: 1.2rem;
+}
+
+.mn-source {
+  max-width: 68ch;
+  color: var(--dim);
+  font-size: 0.875rem;
+}
+
+/* ---------- Other modes ---------- */
+
+@media (forced-colors: active) {
+  .mn-tier,
+  .mn-tile {
+    border: 1px solid CanvasText;
+  }
+
+  .mn-pips i,
+  .mn-bar {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .mn-atk,
+  .mn-hp {
+    border: 1px solid CanvasText;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mn-jump a,
+  .mn-others a,
+  .mn-tile {
+    transition: none;
+  }
+}
+
+@media print {
+  .mn-jump,
+  .mn-others {
+    display: none;
+  }
+}

@@ -139,6 +139,77 @@
   "isBattlegroundsPoolMinion": true
  },
  {
+  "id": "BG_SYN_MURPIR",
+  "dbfId": 900010,
+  "name": "Synthetic Deckhand Fin",
+  "type": "MINION",
+  "set": "BATTLEGROUNDS",
+  "techLevel": 3,
+  "attack": 3,
+  "health": 4,
+  "races": [
+   "MURLOC",
+   "PIRATE"
+  ],
+  "mechanics": [
+   "BATTLECRY"
+  ],
+  "text": "[x]<b>Battlecry:</b> Give a\nfriendly Murloc +1/+1.\n<i>(Synthetic.)</i>",
+  "isBattlegroundsPoolMinion": true,
+  "battlegroundsPremiumDbfId": 900011
+ },
+ {
+  "id": "BG_SYN_MURPIR_G",
+  "dbfId": 900011,
+  "name": "Synthetic Deckhand Fin",
+  "type": "MINION",
+  "set": "BATTLEGROUNDS",
+  "techLevel": 3,
+  "attack": 6,
+  "health": 8,
+  "races": [
+   "MURLOC",
+   "PIRATE"
+  ],
+  "mechanics": [
+   "BATTLECRY"
+  ],
+  "text": "[x]<b>Battlecry:</b> Give a\nfriendly Murloc +2/+2."
+ },
+ {
+  "id": "BG_SYN_AMALGAM",
+  "dbfId": 900012,
+  "name": "Synthetic Amalgam",
+  "type": "MINION",
+  "set": "BATTLEGROUNDS",
+  "techLevel": 4,
+  "attack": 4,
+  "health": 4,
+  "races": [
+   "ALL"
+  ],
+  "mechanics": [
+   "TAUNT"
+  ],
+  "text": "<b>Taunt</b>\nThis is every type.",
+  "isBattlegroundsPoolMinion": true,
+  "isBattlegroundsDuosExclusive": true
+ },
+ {
+  "id": "BG_SYN_OLDMUR",
+  "dbfId": 900013,
+  "name": "Synthetic Retired Murloc",
+  "type": "MINION",
+  "set": "BATTLEGROUNDS",
+  "techLevel": 1,
+  "attack": 1,
+  "health": 1,
+  "races": [
+   "MURLOC"
+  ],
+  "text": "Not in the pool."
+ },
+ {
   "id": "CORE_SYN",
   "dbfId": 910001,
   "name": "Not battlegrounds",

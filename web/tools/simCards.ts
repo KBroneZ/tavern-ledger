@@ -27,7 +27,7 @@ export const validId = (id: unknown): id is string => typeof id === "string" && 
 const validName = (s: string) => s.length > 0 && s.length <= 32 && /^[A-Z_]+$/.test(s);
 
 /** Invisible characters that change how text reads (as crates/cards refuses them). */
-const FORMAT_CHARS = /[­؜᠎​-‏‪-‮⁠-⁯﻿]/;
+export const FORMAT_CHARS = /[­؜᠎​-‏‪-‮⁠-⁯﻿]/;
 
 /** A name we are willing to show (always as text, never markup), or null. */
 export function cleanName(v: unknown): string | null {
