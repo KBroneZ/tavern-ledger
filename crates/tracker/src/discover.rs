@@ -11,7 +11,7 @@
 
 use std::collections::HashSet;
 use std::io::Read;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub const GAME_EXE: &str = "Hearthstone.exe";
@@ -269,9 +269,11 @@ pub fn pick_best(candidates: Vec<Candidate>) -> Option<GameFolder> {
 
 /// Two spellings of one folder (case, a trailing slash) are the same.
 pub fn same_folder_key(dir: &Path) -> String {
-    dir.components()
-        .filter(|c| !matches!(c, Component::CurDir))
-        .map(|c| c.as_os_str().to_string_lossy().to_lowercase())
+    // By text, so both slashes and a trailing one count the same on any system.
+    dir.to_string_lossy()
+        .to_lowercase()
+        .split(['\\', '/'])
+        .filter(|part| !part.is_empty() && *part != ".")
         .collect::<Vec<_>>()
         .join("\\")
 }
@@ -322,7 +324,15 @@ pub fn folder_of_exe(exe: &Path) -> Option<PathBuf> {
 pub fn scan_roots(roots: &[PathBuf]) -> Vec<Candidate> {
     roots
         .iter()
-        .flat_map(|root| DRIVE_SUBFOLDERS.iter().map(|sub| root.join(sub)))
+        .flat_map(|root| {
+            DRIVE_SUBFOLDERS
+                .iter()
+                // `Games\Hearthstone` is two folders, whatever the system.
+                .map(|sub| {
+                    sub.split('\\')
+                        .fold(root.clone(), |dir, part| dir.join(part))
+                })
+        })
         .filter(|dir| is_game_folder(dir))
         .map(|dir| Candidate {
             dir,
@@ -695,15 +705,16 @@ mod tests {
 
     #[test]
     fn a_running_game_gives_its_exe_folder() {
+        let game = std::env::temp_dir().join("Games").join("Hearthstone");
         assert_eq!(
-            folder_of_exe(Path::new(r"D:\Games\Hearthstone\Hearthstone.exe")),
-            Some(PathBuf::from(r"D:\Games\Hearthstone"))
+            folder_of_exe(&game.join("Hearthstone.exe")),
+            Some(game.clone())
         );
         assert_eq!(
-            folder_of_exe(Path::new(r"D:\Games\Hearthstone\hearthstone.EXE")),
-            Some(PathBuf::from(r"D:\Games\Hearthstone"))
+            folder_of_exe(&game.join("hearthstone.EXE")),
+            Some(game.clone())
         );
-        assert_eq!(folder_of_exe(Path::new(r"D:\Games\Other.exe")), None);
+        assert_eq!(folder_of_exe(&game.with_file_name("Other.exe")), None);
     }
 
     #[test]
