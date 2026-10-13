@@ -21,6 +21,7 @@ pub mod odds_duos;
 pub mod playback;
 pub mod possible;
 pub mod provenance;
+pub mod quiet;
 pub mod recap;
 pub mod report_bundle;
 pub mod scene;

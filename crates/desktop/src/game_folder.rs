@@ -137,6 +137,9 @@ pub struct Finder {
     /// drive scan.
     gathering: Option<Receiver<Gathered>>,
     gathered_at: Option<Instant>,
+    /// A gathering has been taken in (the first one always counts as news,
+    /// even when it found nothing: the window still has to say so).
+    has_gathered: bool,
     running_read_at: Option<Instant>,
     running: Option<PathBuf>,
     seen_generation: u64,
@@ -151,6 +154,7 @@ impl Finder {
             drives: Vec::new(),
             gathering: None,
             gathered_at: None,
+            has_gathered: false,
             running_read_at: None,
             running: None,
             seen_generation: 0,
@@ -165,12 +169,16 @@ impl Finder {
         };
         match receiver.try_recv() {
             Ok(found) => {
+                // The same places as before: nothing to rank again.
+                let mut changed = !self.has_gathered || found.places != self.candidates;
+                self.has_gathered = true;
                 self.candidates = found.places;
                 if let Some(drives) = found.drives {
+                    changed |= drives != self.drives;
                     self.drives = drives;
                 }
                 self.gathering = None;
-                true
+                changed
             }
             Err(TryRecvError::Empty) => false,
             Err(TryRecvError::Disconnected) => {
