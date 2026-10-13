@@ -190,9 +190,9 @@
   align-items: center;
   gap: 6px;
   min-height: calc(var(--rp-tile) * 1.2 + 14px);
-  padding-bottom: 18px;
   margin: 0;
-  padding: 0;
+  /* Room under the portraits for the Dark Gift marks, out of the layout. */
+  padding: 0 0 18px;
   list-style: none;
 }
 

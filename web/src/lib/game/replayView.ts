@@ -1,8 +1,8 @@
 // Combat replays on the game viewer (T-536, D-099) as element trees. Simple
 // shows the two boards, play and pause, and the result; Advanced (`.adv`)
 // adds the start, step back and forward, the speed and every step in words.
-// With reduced motion there is no play: step back and forward show in Simple
-// too (replay.css). Theirs on top, yours below, as in the game. The page's
+// With reduced motion Play plays without movement, and step back and forward
+// show in Simple too (replay.css). Theirs on top, yours below, as in the game. The page's
 // script (replayPlayer.ts) moves through the steps; these trees are what it
 // draws, so the tests see the same markup.
 import { t } from "../data/strings.ts";
