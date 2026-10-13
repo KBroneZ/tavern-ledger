@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120">
+  <defs>
+    <radialGradient id="cloud" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#3fe02a" stop-opacity="0.7"/>
+      <stop offset="0.7" stop-color="#4cf035" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#6dff4a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <path d="M50 8L58 24L74 12L72 32L92 30L80 46L98 58L80 66L92 84L72 82L76 104L60 92L50 112L40 92L24 104L28 82L8 84L20 66L2 58L20 46L8 30L28 32L26 12L42 24Z" fill="url(#cloud)"/>
+  <g fill="#26a81a" fill-opacity="0.55" stroke="#157a10" stroke-width="1.2">
+    <circle cx="50" cy="58" r="17"/><circle cx="34" cy="48" r="7"/><circle cx="66" cy="44" r="6"/>
+    <circle cx="62" cy="76" r="8"/><circle cx="36" cy="72" r="5"/><circle cx="52" cy="34" r="4"/>
+  </g>
+  <g fill="#9dff7a" fill-opacity="0.75">
+    <circle cx="44" cy="52" r="3"/><circle cx="32" cy="46" r="1.6"/><circle cx="59" cy="73" r="2"/><circle cx="64" cy="42" r="1.4"/>
+  </g>
+</svg>

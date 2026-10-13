@@ -24,7 +24,7 @@
   const SIDES = ["own", "opponent"];
   const TRIGGERS = ["start_of_combat", "deathrattle", "avenge", "rally"];
   /** The keywords a token wears as a mark, as the game shows them on the board. */
-  const MARKED = ["taunt", "reborn", "venomous", "windfury", "stealth"];
+  const MARKED = ["taunt", "reborn", "venomous", "deathrattle", "windfury", "stealth"];
   /** Keywords a keyword step may give or take (Divine Shield has its own step). */
   const STEP_KEYWORDS = ["taunt", "reborn", "venomous", "windfury", "stealth", "deathrattle", "rally"];
   const CAUSES = ["attack", "start_of_combat", "deathrattle", "avenge", "rally", "hero_power", "trinket", "effect"];

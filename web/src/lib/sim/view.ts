@@ -103,10 +103,11 @@ function card(m: SimMinion, side: Side, board: number, props: EditorProps): VNod
           "is-approx": approx,
           "is-taunt": m.keywords.includes("taunt"),
           "has-shield": m.keywords.includes("divine_shield"),
-          // The marks a combat replay shows too (T-575): Venomous and
-          // Poisonous a green drop, Windfury a swirl.
+          // The marks a combat replay shows too (T-575, T-581); Poisonous
+          // keeps the game's older flask, Venomous its vial.
           "has-reborn": m.keywords.includes("reborn"),
-          "has-venomous": m.keywords.includes("venomous") || m.keywords.includes("poisonous"),
+          "has-venomous": m.keywords.includes("venomous"),
+          "has-poisonous": m.keywords.includes("poisonous"),
           "has-windfury": m.keywords.includes("windfury") || m.keywords.includes("mega_windfury"),
           "has-stealth": m.keywords.includes("stealth"),
         }),

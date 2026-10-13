@@ -198,3 +198,17 @@ test("a card wears its keywords as the combat replays' marks (T-575)", () => {
   assert.doesNotMatch(out, /class="sim-card[^"]*\bis-taunt\b/);
   for (const mark of ["sim-taunt", "sim-veil", "sim-venom", "sim-wind"]) assert.ok(out.includes(`class="${mark}" aria-hidden="true"`), mark);
 });
+
+test("Poisonous wears its own flask, Venomous its vial, the vial when both (T-581)", () => {
+  // BG29_611 has Venomous and Poisonous printed.
+  let s = B.addMinion(B.emptyState(), "player", 0, "BG29_611", cards);
+  const both = html(editorView({ state: s, cards, selected: null, adding: null, marks: NO_MARKS }));
+  assert.match(both, /class="sim-card[^"]*\bhas-venomous\b[^"]*\bhas-poisonous\b/);
+  const key = s.player[0].minions[0].key;
+  s = B.toggleKeyword(s, "player", 0, key, "venomous");
+  const poisonous = html(editorView({ state: s, cards, selected: null, adding: null, marks: NO_MARKS }));
+  assert.match(poisonous, /class="sim-card[^"]*\bhas-poisonous\b/);
+  assert.doesNotMatch(poisonous, /class="sim-card[^"]*\bhas-venomous\b/);
+  const css = readFileSync(join(ROOT, "src", "components", "sim", "sim-cards.css"), "utf8");
+  assert.match(css, /\n\.sim \.sim-card\.has-poisonous:not\(\.has-venomous\) \.sim-venom \{/, "the flask only without Venomous");
+});
