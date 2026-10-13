@@ -343,10 +343,13 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # Only for a tag. Compiles nothing; the token can write releases.
+  # Only for a tag. Compiles nothing; the token can write releases. The
+  # status check is explicit: verify follows the skipped dry-run job, and a
+  # plain `if:` would read that as a failure and skip this job too
+  # (tools/check_workflow_needs.py).
   draft:
     needs: [build, verify]
-    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.verify.result == 'success' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
