@@ -9,7 +9,11 @@
 // * a Duos board coming in with no hero named shows "unknown hero" instead
 //   of keeping the round's first hero;
 // * a trigger with no minion behind it (a hero power or trinket) is named by
-//   its card id, as the site names every card (it has no card names yet).
+//   its card id, as the site names every card (it has no card names yet);
+// * a Duos board coming in replaces whatever is still drawn on its side, and
+//   its minions with no slot go in left to right: apps before parser
+//   revision 11 left the shop board on a side, and before revision 12 a
+//   board coming in had no slots (each would go to the far left).
 // What the log says happened, never a simulation.
 import type { Keyword } from "./keywords.ts";
 import { type Replay, type ReplayEvent, type Side, SIDES } from "./replayRead.ts";
@@ -117,6 +121,8 @@ interface State {
   hero: Record<Side, number>;
   heroes: Record<Side, string | null>;
   dying: number[];
+  /** The side whose board is coming in (Duos), until the next attack. */
+  incoming: Side | null;
 }
 
 function tileOf(replay: Replay, ref: number): Base {
@@ -135,7 +141,7 @@ function tileOf(replay: Replay, ref: number): Base {
 }
 
 function startState(replay: Replay, heroes: Record<Side, string | null>): State {
-  const st: State = { replay, tiles: new Map(), boards: { own: [], opponent: [] }, hero: { own: 0, opponent: 0 }, heroes: { ...heroes }, dying: [] };
+  const st: State = { replay, tiles: new Map(), boards: { own: [], opponent: [] }, hero: { own: 0, opponent: 0 }, heroes: { ...heroes }, dying: [], incoming: null };
   for (let ref = 0; ref < replay.start; ref++) {
     st.tiles.set(ref, tileOf(replay, ref));
     st.boards[replay.minions[ref].side].push(ref);
@@ -172,6 +178,7 @@ function apply(st: State, e: ReplayEvent): Map<number, Marks> {
   const set = (ref: number, what: Partial<Base>) => st.tiles.set(ref, { ...(st.tiles.get(ref) as Base), ...what });
   switch (e.kind) {
     case "attack":
+      st.incoming = null;
       mark(e.attacker, { attacker: true });
       if (e.defender !== null) mark(e.defender, { defender: true });
       break;
@@ -194,8 +201,9 @@ function apply(st: State, e: ReplayEvent): Map<number, Marks> {
     case "summon": {
       const m = st.replay.minions[e.minion];
       const board = st.boards[m.side];
-      // The app's rule: slot 1 is the left-most; a slot of 0 (none in the log) goes left too.
-      const at = Math.min(Math.max(m.position - 1, 0), board.length);
+      // The app's rule: slot 1 is the left-most; a slot of 0 (none in the log)
+      // goes left too, but a board coming in fills from the left.
+      const at = m.position <= 0 && st.incoming === m.side ? board.length : Math.min(Math.max(m.position - 1, 0), board.length);
       st.tiles.set(e.minion, tileOf(st.replay, e.minion));
       board.splice(at, 0, e.minion);
       mark(e.minion, { summoned: true });
@@ -209,6 +217,9 @@ function apply(st: State, e: ReplayEvent): Map<number, Marks> {
       break;
     case "board_in":
       st.heroes[e.side] = e.hero;
+      st.incoming = e.side;
+      for (const ref of st.boards[e.side]) st.tiles.delete(ref);
+      st.boards[e.side] = [];
       break;
     case "unknown":
       break;

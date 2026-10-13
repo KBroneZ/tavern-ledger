@@ -387,3 +387,51 @@ test("the reader's bounds are upload-game's and the parser's", () => {
     assert.equal(bound(src, "MAX_REPLAY_EVENTS"), MAX_REPLAY_EVENTS);
   }
 });
+
+// Records from apps before parser revision 11 start some Duos combats with
+// the shop board still on a side, then bring the real board in next to it;
+// before revision 12 a board coming in has no slots (0). Drawn safely:
+// a board coming in replaces the side's board, left to right.
+function oldDuosRecord(): Replay {
+  return good({
+    minions: [
+      { side: "own", card_id: "SYN_SHOP_1", atk: 1, health: 1, position: 1, golden: false, keywords: [] },
+      { side: "own", card_id: "SYN_SHOP_2", atk: 1, health: 1, position: 2, golden: false, keywords: [] },
+      { side: "opponent", card_id: "SYN_FOE", atk: 1, health: 1, position: 1, golden: false, keywords: [] },
+      { side: "own", card_id: "SYN_IN_1", atk: 2, health: 2, position: 0, golden: false, keywords: [] },
+      { side: "own", card_id: "SYN_IN_2", atk: 2, health: 2, position: 0, golden: false, keywords: [] },
+      { side: "own", card_id: "SYN_IN_3", atk: 2, health: 2, position: 0, golden: false, keywords: [] },
+    ],
+    start: 3,
+    events: [
+      { kind: "board_in", side: "own", hero: "SYN_HERO_MATE" },
+      { kind: "summon", minion: 3 },
+      { kind: "summon", minion: 4 },
+      { kind: "stats", minion: 4, atk: 3, health: 3 },
+      { kind: "summon", minion: 5 },
+      { kind: "attack", attacker: 3, defender: 2 },
+    ],
+    complete: true,
+  });
+}
+
+test("step model: a board coming in replaces what is still drawn on its side", () => {
+  const f = playback(oldDuosRecord(), NO_HEROES).frames;
+  assert.deepEqual(cards(f[1].own), [], "the shop board left over by an older app leaves");
+  assert.deepEqual(cards(f[1].opponent), ["SYN_FOE"], "the other side stays");
+  assert.deepEqual(cards(f.at(-1)?.own ?? []), ["SYN_IN_1", "SYN_IN_2", "SYN_IN_3"]);
+});
+
+test("step model: a board coming in with no slots goes in left to right", () => {
+  const f = playback(oldDuosRecord(), NO_HEROES).frames;
+  assert.deepEqual(cards(f[3].own), ["SYN_IN_1", "SYN_IN_2"]);
+  assert.equal(f.at(-1)?.own[0].marks.attacker, true, "the left-most attacks first, as in the log");
+});
+
+test("step model: a lone summon with no slot still goes to the left", () => {
+  const r = good(edited((x) => {
+    x.minions[4].position = 0;
+    x.events = [{ kind: "summon", minion: 4 }];
+  }));
+  assert.deepEqual(cards(playback(r, NO_HEROES).frames[1].opponent), ["SYN_M_09", "SYN_M_05", null]);
+});
