@@ -453,6 +453,18 @@
         ],
         "own_health_after": 52,
         "replay": {
+          "beats": [
+            3,
+            2,
+            1,
+            1,
+            1,
+            1,
+            1,
+            3,
+            1,
+            1
+          ],
           "complete": true,
           "events": [
             {
@@ -464,13 +476,21 @@
               "amount": 3,
               "health": 0,
               "kind": "damage",
-              "minion": 0
+              "minion": 0,
+              "source": {
+                "how": "attack",
+                "minion": 1
+              }
             },
             {
               "amount": 3,
               "health": 0,
               "kind": "damage",
-              "minion": 1
+              "minion": 1,
+              "source": {
+                "how": "attack",
+                "minion": 0
+              }
             },
             {
               "kind": "death",
@@ -513,7 +533,11 @@
               "amount": 3,
               "health": -2,
               "kind": "damage",
-              "minion": 2
+              "minion": 2,
+              "source": {
+                "how": "attack",
+                "minion": 3
+              }
             },
             {
               "kind": "shield",
@@ -664,6 +688,15 @@
         ],
         "own_health_after": 52,
         "replay": {
+          "beats": [
+            3,
+            2,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
           "complete": true,
           "events": [
             {
@@ -675,13 +708,21 @@
               "amount": 3,
               "health": 0,
               "kind": "damage",
-              "minion": 0
+              "minion": 0,
+              "source": {
+                "how": "attack",
+                "minion": 1
+              }
             },
             {
               "amount": 3,
               "health": -1,
               "kind": "damage",
-              "minion": 1
+              "minion": 1,
+              "source": {
+                "how": "attack",
+                "minion": 0
+              }
             },
             {
               "kind": "death",
@@ -864,6 +905,25 @@
         ],
         "own_health_after": 45,
         "replay": {
+          "beats": [
+            4,
+            3,
+            1,
+            2,
+            3,
+            1,
+            3,
+            3,
+            2,
+            3,
+            1,
+            3,
+            2,
+            1,
+            1,
+            1,
+            1
+          ],
           "complete": true,
           "events": [
             {
@@ -879,7 +939,11 @@
               "amount": 1,
               "health": 4,
               "kind": "damage",
-              "minion": 4
+              "minion": 4,
+              "source": {
+                "how": "attack",
+                "minion": 0
+              }
             },
             {
               "kind": "shield",
@@ -895,13 +959,21 @@
               "amount": 2,
               "health": -1,
               "kind": "damage",
-              "minion": 0
+              "minion": 0,
+              "source": {
+                "how": "attack",
+                "minion": 4
+              }
             },
             {
               "amount": 1,
               "health": 3,
               "kind": "damage",
-              "minion": 4
+              "minion": 4,
+              "source": {
+                "how": "attack",
+                "minion": 0
+              }
             },
             {
               "kind": "death",
@@ -927,13 +999,21 @@
               "amount": 1,
               "health": 2,
               "kind": "damage",
-              "minion": 4
+              "minion": 4,
+              "source": {
+                "how": "attack",
+                "minion": 7
+              }
             },
             {
               "amount": 2,
               "health": -1,
               "kind": "damage",
-              "minion": 7
+              "minion": 7,
+              "source": {
+                "how": "attack",
+                "minion": 4
+              }
             },
             {
               "kind": "death",
@@ -948,13 +1028,21 @@
               "amount": 3,
               "health": 1,
               "kind": "damage",
-              "minion": 2
+              "minion": 2,
+              "source": {
+                "how": "attack",
+                "minion": 6
+              }
             },
             {
               "amount": 2,
               "health": 1,
               "kind": "damage",
-              "minion": 6
+              "minion": 6,
+              "source": {
+                "how": "attack",
+                "minion": 2
+              }
             },
             {
               "attacker": 1,
@@ -965,13 +1053,21 @@
               "amount": 3,
               "health": -2,
               "kind": "damage",
-              "minion": 6
+              "minion": 6,
+              "source": {
+                "how": "attack",
+                "minion": 1
+              }
             },
             {
               "amount": 3,
               "health": -2,
               "kind": "damage",
-              "minion": 1
+              "minion": 1,
+              "source": {
+                "how": "attack",
+                "minion": 6
+              }
             },
             {
               "kind": "death",
@@ -990,13 +1086,21 @@
               "amount": 2,
               "health": 0,
               "kind": "damage",
-              "minion": 3
+              "minion": 3,
+              "source": {
+                "how": "attack",
+                "minion": 5
+              }
             },
             {
               "amount": 2,
               "health": 1,
               "kind": "damage",
-              "minion": 5
+              "minion": 5,
+              "source": {
+                "how": "attack",
+                "minion": 3
+              }
             },
             {
               "kind": "death",
@@ -1011,13 +1115,21 @@
               "amount": 2,
               "health": 0,
               "kind": "damage",
-              "minion": 4
+              "minion": 4,
+              "source": {
+                "how": "attack",
+                "minion": 2
+              }
             },
             {
               "amount": 2,
               "health": -1,
               "kind": "damage",
-              "minion": 2
+              "minion": 2,
+              "source": {
+                "how": "attack",
+                "minion": 4
+              }
             },
             {
               "kind": "death",
@@ -1282,6 +1394,37 @@
         ],
         "own_health_after": 40,
         "replay": {
+          "beats": [
+            3,
+            1,
+            3,
+            1,
+            3,
+            1,
+            3,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            3,
+            3,
+            2,
+            1,
+            1,
+            1,
+            3,
+            1,
+            3,
+            1,
+            2,
+            3,
+            1,
+            3,
+            1,
+            1
+          ],
           "complete": true,
           "events": [
             {
@@ -1293,13 +1436,21 @@
               "amount": 4,
               "health": 2,
               "kind": "damage",
-              "minion": 3
+              "minion": 3,
+              "source": {
+                "how": "attack",
+                "minion": 0
+              }
             },
             {
               "amount": 4,
               "health": 0,
               "kind": "damage",
-              "minion": 0
+              "minion": 0,
+              "source": {
+                "how": "attack",
+                "minion": 3
+              }
             },
             {
               "kind": "death",
@@ -1314,13 +1465,21 @@
               "amount": 4,
               "health": 2,
               "kind": "damage",
-              "minion": 2
+              "minion": 2,
+              "source": {
+                "how": "attack",
+                "minion": 3
+              }
             },
             {
               "amount": 5,
               "health": -3,
               "kind": "damage",
-              "minion": 3
+              "minion": 3,
+              "source": {
+                "how": "attack",
+                "minion": 2
+              }
             },
             {
               "kind": "death",
@@ -1335,13 +1494,21 @@
               "amount": 3,
               "health": 8,
               "kind": "damage",
-              "minion": 4
+              "minion": 4,
+              "source": {
+                "how": "attack",
+                "minion": 1
+              }
             },
             {
               "amount": 11,
               "health": -8,
               "kind": "damage",
-              "minion": 1
+              "minion": 1,
+              "source": {
+                "how": "attack",
+                "minion": 4
+              }
             },
             {
               "kind": "death",
@@ -1356,13 +1523,21 @@
               "amount": 11,
               "health": -9,
               "kind": "damage",
-              "minion": 2
+              "minion": 2,
+              "source": {
+                "how": "attack",
+                "minion": 4
+              }
             },
             {
               "amount": 5,
               "health": 3,
               "kind": "damage",
-              "minion": 4
+              "minion": 4,
+              "source": {
+                "how": "attack",
+                "minion": 2
+              }
             },
             {
               "kind": "death",
@@ -1398,7 +1573,11 @@
               "amount": 1,
               "health": 2,
               "kind": "damage",
-              "minion": 4
+              "minion": 4,
+              "source": {
+                "how": "attack",
+                "minion": 5
+              }
             },
             {
               "kind": "shield",
@@ -1414,13 +1593,21 @@
               "amount": 11,
               "health": -6,
               "kind": "damage",
-              "minion": 7
+              "minion": 7,
+              "source": {
+                "how": "attack",
+                "minion": 4
+              }
             },
             {
               "amount": 2,
               "health": 0,
               "kind": "damage",
-              "minion": 4
+              "minion": 4,
+              "source": {
+                "how": "attack",
+                "minion": 7
+              }
             },
             {
               "kind": "death",
@@ -1454,13 +1641,21 @@
               "amount": 3,
               "health": 7,
               "kind": "damage",
-              "minion": 9
+              "minion": 9,
+              "source": {
+                "how": "attack",
+                "minion": 6
+              }
             },
             {
               "amount": 6,
               "health": -5,
               "kind": "damage",
-              "minion": 6
+              "minion": 6,
+              "source": {
+                "how": "attack",
+                "minion": 9
+              }
             },
             {
               "kind": "death",
@@ -1475,13 +1670,21 @@
               "amount": 6,
               "health": -5,
               "kind": "damage",
-              "minion": 5
+              "minion": 5,
+              "source": {
+                "how": "attack",
+                "minion": 9
+              }
             },
             {
               "amount": 1,
               "health": 6,
               "kind": "damage",
-              "minion": 9
+              "minion": 9,
+              "source": {
+                "how": "attack",
+                "minion": 5
+              }
             },
             {
               "kind": "death",
@@ -1507,13 +1710,21 @@
               "amount": 2,
               "health": 4,
               "kind": "damage",
-              "minion": 9
+              "minion": 9,
+              "source": {
+                "how": "attack",
+                "minion": 8
+              }
             },
             {
               "amount": 6,
               "health": -4,
               "kind": "damage",
-              "minion": 8
+              "minion": 8,
+              "source": {
+                "how": "attack",
+                "minion": 9
+              }
             },
             {
               "kind": "death",
@@ -1528,13 +1739,21 @@
               "amount": 6,
               "health": -5,
               "kind": "damage",
-              "minion": 10
+              "minion": 10,
+              "source": {
+                "how": "attack",
+                "minion": 9
+              }
             },
             {
               "amount": 1,
               "health": 3,
               "kind": "damage",
-              "minion": 9
+              "minion": 9,
+              "source": {
+                "how": "attack",
+                "minion": 10
+              }
             },
             {
               "kind": "death",
@@ -1811,6 +2030,31 @@
         ],
         "own_health_after": 40,
         "replay": {
+          "beats": [
+            3,
+            1,
+            3,
+            2,
+            1,
+            1,
+            1,
+            1,
+            3,
+            1,
+            3,
+            3,
+            1,
+            3,
+            2,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
           "complete": true,
           "events": [
             {
@@ -1822,13 +2066,21 @@
               "amount": 3,
               "health": 3,
               "kind": "damage",
-              "minion": 4
+              "minion": 4,
+              "source": {
+                "how": "attack",
+                "minion": 0
+              }
             },
             {
               "amount": 4,
               "health": -1,
               "kind": "damage",
-              "minion": 0
+              "minion": 0,
+              "source": {
+                "how": "attack",
+                "minion": 4
+              }
             },
             {
               "kind": "death",
@@ -1843,13 +2095,21 @@
               "amount": 4,
               "health": 0,
               "kind": "damage",
-              "minion": 3
+              "minion": 3,
+              "source": {
+                "how": "attack",
+                "minion": 4
+              }
             },
             {
               "amount": 5,
               "health": -2,
               "kind": "damage",
-              "minion": 4
+              "minion": 4,
+              "source": {
+                "how": "attack",
+                "minion": 3
+              }
             },
             {
               "kind": "death",
@@ -1888,13 +2148,21 @@
               "amount": 6,
               "health": -4,
               "kind": "damage",
-              "minion": 1
+              "minion": 1,
+              "source": {
+                "how": "attack",
+                "minion": 5
+              }
             },
             {
               "amount": 2,
               "health": 1,
               "kind": "damage",
-              "minion": 5
+              "minion": 5,
+              "source": {
+                "how": "attack",
+                "minion": 1
+              }
             },
             {
               "kind": "death",
@@ -1914,7 +2182,11 @@
               "amount": 2,
               "health": 4,
               "kind": "damage",
-              "minion": 2
+              "minion": 2,
+              "source": {
+                "how": "attack",
+                "minion": 6
+              }
             },
             {
               "attacker": 6,
@@ -1925,13 +2197,21 @@
               "amount": 2,
               "health": 2,
               "kind": "damage",
-              "minion": 2
+              "minion": 2,
+              "source": {
+                "how": "attack",
+                "minion": 6
+              }
             },
             {
               "amount": 5,
               "health": -3,
               "kind": "damage",
-              "minion": 6
+              "minion": 6,
+              "source": {
+                "how": "attack",
+                "minion": 2
+              }
             },
             {
               "kind": "death",
@@ -1946,13 +2226,21 @@
               "amount": 5,
               "health": -4,
               "kind": "damage",
-              "minion": 5
+              "minion": 5,
+              "source": {
+                "how": "attack",
+                "minion": 2
+              }
             },
             {
               "amount": 6,
               "health": -4,
               "kind": "damage",
-              "minion": 2
+              "minion": 2,
+              "source": {
+                "how": "attack",
+                "minion": 5
+              }
             },
             {
               "kind": "death",
@@ -2317,6 +2605,61 @@
         ],
         "own_health_after": 25,
         "replay": {
+          "beats": [
+            4,
+            2,
+            1,
+            1,
+            3,
+            1,
+            3,
+            2,
+            1,
+            1,
+            3,
+            3,
+            1,
+            3,
+            1,
+            3,
+            1,
+            3,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            3,
+            1,
+            3,
+            1,
+            3,
+            1,
+            3,
+            1,
+            1,
+            3,
+            1,
+            3,
+            1,
+            3,
+            1,
+            3,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
           "complete": true,
           "events": [
             {
@@ -2332,13 +2675,21 @@
               "amount": 6,
               "health": -4,
               "kind": "damage",
-              "minion": 9
+              "minion": 9,
+              "source": {
+                "how": "attack",
+                "minion": 0
+              }
             },
             {
               "amount": 4,
               "health": 0,
               "kind": "damage",
-              "minion": 0
+              "minion": 0,
+              "source": {
+                "how": "attack",
+                "minion": 9
+              }
             },
             {
               "kind": "death",
@@ -2371,7 +2722,11 @@
               "amount": 33,
               "health": -31,
               "kind": "damage",
-              "minion": 2
+              "minion": 2,
+              "source": {
+                "how": "attack",
+                "minion": 6
+              }
             },
             {
               "kind": "shield",
@@ -2391,13 +2746,21 @@
               "amount": 6,
               "health": -3,
               "kind": "damage",
-              "minion": 10
+              "minion": 10,
+              "source": {
+                "how": "attack",
+                "minion": 1
+              }
             },
             {
               "amount": 3,
               "health": 0,
               "kind": "damage",
-              "minion": 1
+              "minion": 1,
+              "source": {
+                "how": "attack",
+                "minion": 10
+              }
             },
             {
               "kind": "death",
@@ -2430,13 +2793,21 @@
               "amount": 2,
               "health": 2,
               "kind": "damage",
-              "minion": 3
+              "minion": 3,
+              "source": {
+                "how": "attack",
+                "minion": 7
+              }
             },
             {
               "amount": 4,
               "health": 4,
               "kind": "damage",
-              "minion": 7
+              "minion": 7,
+              "source": {
+                "how": "attack",
+                "minion": 3
+              }
             },
             {
               "attacker": 3,
@@ -2447,13 +2818,21 @@
               "amount": 4,
               "health": 2,
               "kind": "damage",
-              "minion": 8
+              "minion": 8,
+              "source": {
+                "how": "attack",
+                "minion": 3
+              }
             },
             {
               "amount": 2,
               "health": 0,
               "kind": "damage",
-              "minion": 3
+              "minion": 3,
+              "source": {
+                "how": "attack",
+                "minion": 8
+              }
             },
             {
               "kind": "death",
@@ -2468,13 +2847,21 @@
               "amount": 2,
               "health": 1,
               "kind": "damage",
-              "minion": 5
+              "minion": 5,
+              "source": {
+                "how": "attack",
+                "minion": 8
+              }
             },
             {
               "amount": 2,
               "health": 0,
               "kind": "damage",
-              "minion": 8
+              "minion": 8,
+              "source": {
+                "how": "attack",
+                "minion": 5
+              }
             },
             {
               "kind": "death",
@@ -2489,13 +2876,21 @@
               "amount": 2,
               "health": 44,
               "kind": "damage",
-              "minion": 6
+              "minion": 6,
+              "source": {
+                "how": "attack",
+                "minion": 4
+              }
             },
             {
               "amount": 33,
               "health": -26,
               "kind": "damage",
-              "minion": 4
+              "minion": 4,
+              "source": {
+                "how": "attack",
+                "minion": 6
+              }
             },
             {
               "kind": "death",
@@ -2510,13 +2905,21 @@
               "amount": 33,
               "health": -32,
               "kind": "damage",
-              "minion": 5
+              "minion": 5,
+              "source": {
+                "how": "attack",
+                "minion": 6
+              }
             },
             {
               "amount": 2,
               "health": 42,
               "kind": "damage",
-              "minion": 6
+              "minion": 6,
+              "source": {
+                "how": "attack",
+                "minion": 5
+              }
             },
             {
               "kind": "death",
@@ -2588,13 +2991,21 @@
               "amount": 6,
               "health": 36,
               "kind": "damage",
-              "minion": 6
+              "minion": 6,
+              "source": {
+                "how": "attack",
+                "minion": 11
+              }
             },
             {
               "amount": 33,
               "health": -27,
               "kind": "damage",
-              "minion": 11
+              "minion": 11,
+              "source": {
+                "how": "attack",
+                "minion": 6
+              }
             },
             {
               "kind": "death",
@@ -2609,13 +3020,21 @@
               "amount": 2,
               "health": 2,
               "kind": "damage",
-              "minion": 17
+              "minion": 17,
+              "source": {
+                "how": "attack",
+                "minion": 7
+              }
             },
             {
               "amount": 5,
               "health": -1,
               "kind": "damage",
-              "minion": 7
+              "minion": 7,
+              "source": {
+                "how": "attack",
+                "minion": 17
+              }
             },
             {
               "kind": "death",
@@ -2630,13 +3049,21 @@
               "amount": 2,
               "health": 34,
               "kind": "damage",
-              "minion": 6
+              "minion": 6,
+              "source": {
+                "how": "attack",
+                "minion": 12
+              }
             },
             {
               "amount": 33,
               "health": -31,
               "kind": "damage",
-              "minion": 12
+              "minion": 12,
+              "source": {
+                "how": "attack",
+                "minion": 6
+              }
             },
             {
               "kind": "death",
@@ -2651,13 +3078,21 @@
               "amount": 33,
               "health": -31,
               "kind": "damage",
-              "minion": 17
+              "minion": 17,
+              "source": {
+                "how": "attack",
+                "minion": 6
+              }
             },
             {
               "amount": 5,
               "health": 29,
               "kind": "damage",
-              "minion": 6
+              "minion": 6,
+              "source": {
+                "how": "attack",
+                "minion": 17
+              }
             },
             {
               "kind": "death",
@@ -2679,13 +3114,21 @@
               "amount": 5,
               "health": 24,
               "kind": "damage",
-              "minion": 6
+              "minion": 6,
+              "source": {
+                "how": "attack",
+                "minion": 13
+              }
             },
             {
               "amount": 33,
               "health": -25,
               "kind": "damage",
-              "minion": 13
+              "minion": 13,
+              "source": {
+                "how": "attack",
+                "minion": 6
+              }
             },
             {
               "kind": "death",
@@ -2700,13 +3143,21 @@
               "amount": 33,
               "health": -25,
               "kind": "damage",
-              "minion": 14
+              "minion": 14,
+              "source": {
+                "how": "attack",
+                "minion": 6
+              }
             },
             {
               "amount": 3,
               "health": 21,
               "kind": "damage",
-              "minion": 6
+              "minion": 6,
+              "source": {
+                "how": "attack",
+                "minion": 14
+              }
             },
             {
               "kind": "death",
@@ -2721,13 +3172,21 @@
               "amount": 11,
               "health": 10,
               "kind": "damage",
-              "minion": 6
+              "minion": 6,
+              "source": {
+                "how": "attack",
+                "minion": 15
+              }
             },
             {
               "amount": 33,
               "health": -21,
               "kind": "damage",
-              "minion": 15
+              "minion": 15,
+              "source": {
+                "how": "attack",
+                "minion": 6
+              }
             },
             {
               "kind": "death",
@@ -2742,13 +3201,21 @@
               "amount": 33,
               "health": -27,
               "kind": "damage",
-              "minion": 16
+              "minion": 16,
+              "source": {
+                "how": "attack",
+                "minion": 6
+              }
             },
             {
               "amount": 5,
               "health": 5,
               "kind": "damage",
-              "minion": 6
+              "minion": 6,
+              "source": {
+                "how": "attack",
+                "minion": 16
+              }
             },
             {
               "kind": "death",
@@ -3281,6 +3748,73 @@
         ],
         "own_health_after": 10,
         "replay": {
+          "beats": [
+            3,
+            1,
+            1,
+            3,
+            2,
+            1,
+            1,
+            3,
+            1,
+            5,
+            1,
+            3,
+            1,
+            5,
+            3,
+            2,
+            3,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            3,
+            2,
+            1,
+            3,
+            1,
+            3,
+            1,
+            1,
+            4,
+            2,
+            3,
+            1,
+            3,
+            2,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            3,
+            1,
+            3,
+            3,
+            1,
+            1
+          ],
           "complete": true,
           "events": [
             {
@@ -3292,13 +3826,21 @@
               "amount": 5,
               "health": 13,
               "kind": "damage",
-              "minion": 12
+              "minion": 12,
+              "source": {
+                "how": "attack",
+                "minion": 0
+              }
             },
             {
               "amount": 10,
               "health": -8,
               "kind": "damage",
-              "minion": 0
+              "minion": 0,
+              "source": {
+                "how": "attack",
+                "minion": 12
+              }
             },
             {
               "kind": "death",
@@ -3320,13 +3862,21 @@
               "amount": 6,
               "health": 0,
               "kind": "damage",
-              "minion": 6
+              "minion": 6,
+              "source": {
+                "how": "attack",
+                "minion": 7
+              }
             },
             {
               "amount": 7,
               "health": -1,
               "kind": "damage",
-              "minion": 7
+              "minion": 7,
+              "source": {
+                "how": "attack",
+                "minion": 6
+              }
             },
             {
               "kind": "death",
@@ -3359,13 +3909,21 @@
               "amount": 8,
               "health": 5,
               "kind": "damage",
-              "minion": 12
+              "minion": 12,
+              "source": {
+                "how": "attack",
+                "minion": 1
+              }
             },
             {
               "amount": 10,
               "health": -2,
               "kind": "damage",
-              "minion": 1
+              "minion": 1,
+              "source": {
+                "how": "attack",
+                "minion": 12
+              }
             },
             {
               "kind": "death",
@@ -3383,16 +3941,30 @@
               "minion": 8
             },
             {
+              "keyword": "stealth",
+              "kind": "keyword",
+              "minion": 8,
+              "on": false
+            },
+            {
               "amount": 21,
               "health": -7,
               "kind": "damage",
-              "minion": 4
+              "minion": 4,
+              "source": {
+                "how": "attack",
+                "minion": 8
+              }
             },
             {
               "amount": 13,
               "health": 4,
               "kind": "damage",
-              "minion": 8
+              "minion": 8,
+              "source": {
+                "how": "attack",
+                "minion": 4
+              }
             },
             {
               "kind": "death",
@@ -3407,13 +3979,21 @@
               "amount": 4,
               "health": 1,
               "kind": "damage",
-              "minion": 12
+              "minion": 12,
+              "source": {
+                "how": "attack",
+                "minion": 2
+              }
             },
             {
               "amount": 10,
               "health": -6,
               "kind": "damage",
-              "minion": 2
+              "minion": 2,
+              "source": {
+                "how": "attack",
+                "minion": 12
+              }
             },
             {
               "kind": "death",
@@ -3431,16 +4011,30 @@
               "minion": 9
             },
             {
+              "keyword": "stealth",
+              "kind": "keyword",
+              "minion": 9,
+              "on": false
+            },
+            {
               "amount": 9,
               "health": 1,
               "kind": "damage",
-              "minion": 3
+              "minion": 3,
+              "source": {
+                "how": "attack",
+                "minion": 9
+              }
             },
             {
               "amount": 7,
               "health": 4,
               "kind": "damage",
-              "minion": 9
+              "minion": 9,
+              "source": {
+                "how": "attack",
+                "minion": 3
+              }
             },
             {
               "attacker": 3,
@@ -3451,13 +4045,21 @@
               "amount": 7,
               "health": -6,
               "kind": "damage",
-              "minion": 12
+              "minion": 12,
+              "source": {
+                "how": "attack",
+                "minion": 3
+              }
             },
             {
               "amount": 10,
               "health": -9,
               "kind": "damage",
-              "minion": 3
+              "minion": 3,
+              "source": {
+                "how": "attack",
+                "minion": 12
+              }
             },
             {
               "kind": "death",
@@ -3476,13 +4078,21 @@
               "amount": 11,
               "health": -3,
               "kind": "damage",
-              "minion": 5
+              "minion": 5,
+              "source": {
+                "how": "attack",
+                "minion": 10
+              }
             },
             {
               "amount": 7,
               "health": 2,
               "kind": "damage",
-              "minion": 10
+              "minion": 10,
+              "source": {
+                "how": "attack",
+                "minion": 5
+              }
             },
             {
               "kind": "death",
@@ -3530,13 +4140,21 @@
               "amount": 6,
               "health": -2,
               "kind": "damage",
-              "minion": 9
+              "minion": 9,
+              "source": {
+                "how": "attack",
+                "minion": 13
+              }
             },
             {
               "amount": 9,
               "health": -5,
               "kind": "damage",
-              "minion": 13
+              "minion": 13,
+              "source": {
+                "how": "attack",
+                "minion": 9
+              }
             },
             {
               "kind": "death",
@@ -3562,13 +4180,21 @@
               "amount": 12,
               "health": -8,
               "kind": "damage",
-              "minion": 16
+              "minion": 16,
+              "source": {
+                "how": "attack",
+                "minion": 11
+              }
             },
             {
               "amount": 4,
               "health": 14,
               "kind": "damage",
-              "minion": 11
+              "minion": 11,
+              "source": {
+                "how": "attack",
+                "minion": 16
+              }
             },
             {
               "kind": "death",
@@ -3583,13 +4209,21 @@
               "amount": 12,
               "health": 2,
               "kind": "damage",
-              "minion": 11
+              "minion": 11,
+              "source": {
+                "how": "attack",
+                "minion": 14
+              }
             },
             {
               "amount": 12,
               "health": -6,
               "kind": "damage",
-              "minion": 14
+              "minion": 14,
+              "source": {
+                "how": "attack",
+                "minion": 11
+              }
             },
             {
               "kind": "death",
@@ -3617,13 +4251,21 @@
               "amount": 27,
               "health": -25,
               "kind": "damage",
-              "minion": 15
+              "minion": 15,
+              "source": {
+                "how": "attack",
+                "minion": 8
+              }
             },
             {
               "amount": 6,
               "health": -2,
               "kind": "damage",
-              "minion": 8
+              "minion": 8,
+              "source": {
+                "how": "attack",
+                "minion": 15
+              }
             },
             {
               "kind": "death",
@@ -3642,13 +4284,21 @@
               "amount": 22,
               "health": -20,
               "kind": "damage",
-              "minion": 10
+              "minion": 10,
+              "source": {
+                "how": "attack",
+                "minion": 17
+              }
             },
             {
               "amount": 11,
               "health": 15,
               "kind": "damage",
-              "minion": 17
+              "minion": 17,
+              "source": {
+                "how": "attack",
+                "minion": 10
+              }
             },
             {
               "kind": "death",
@@ -3663,13 +4313,21 @@
               "amount": 12,
               "health": -9,
               "kind": "damage",
-              "minion": 19
+              "minion": 19,
+              "source": {
+                "how": "attack",
+                "minion": 11
+              }
             },
             {
               "amount": 2,
               "health": 0,
               "kind": "damage",
-              "minion": 11
+              "minion": 11,
+              "source": {
+                "how": "attack",
+                "minion": 19
+              }
             },
             {
               "kind": "death",
@@ -3743,6 +4401,36 @@
               "minion": 26
             },
             {
+              "keyword": "reborn",
+              "kind": "keyword",
+              "minion": 26,
+              "on": true
+            },
+            {
+              "keyword": "windfury",
+              "kind": "keyword",
+              "minion": 26,
+              "on": true
+            },
+            {
+              "keyword": "taunt",
+              "kind": "keyword",
+              "minion": 26,
+              "on": true
+            },
+            {
+              "keyword": "stealth",
+              "kind": "keyword",
+              "minion": 26,
+              "on": true
+            },
+            {
+              "keyword": "venomous",
+              "kind": "keyword",
+              "minion": 26,
+              "on": true
+            },
+            {
               "atk": 11,
               "health": 13,
               "kind": "stats",
@@ -3757,13 +4445,21 @@
               "amount": 32,
               "health": -17,
               "kind": "damage",
-              "minion": 17
+              "minion": 17,
+              "source": {
+                "how": "attack",
+                "minion": 20
+              }
             },
             {
               "amount": 22,
               "health": 7,
               "kind": "damage",
-              "minion": 20
+              "minion": 20,
+              "source": {
+                "how": "attack",
+                "minion": 17
+              }
             },
             {
               "kind": "death",
@@ -3778,13 +4474,21 @@
               "amount": 2,
               "health": 1,
               "kind": "damage",
-              "minion": 25
+              "minion": 25,
+              "source": {
+                "how": "attack",
+                "minion": 18
+              }
             },
             {
               "amount": 6,
               "health": 2,
               "kind": "damage",
-              "minion": 18
+              "minion": 18,
+              "source": {
+                "how": "attack",
+                "minion": 25
+              }
             },
             {
               "attacker": 21,
@@ -3795,13 +4499,21 @@
               "amount": 9,
               "health": -7,
               "kind": "damage",
-              "minion": 18
+              "minion": 18,
+              "source": {
+                "how": "attack",
+                "minion": 21
+              }
             },
             {
               "amount": 2,
               "health": 3,
               "kind": "damage",
-              "minion": 21
+              "minion": 21,
+              "source": {
+                "how": "attack",
+                "minion": 18
+              }
             },
             {
               "kind": "death",
@@ -4304,6 +5016,79 @@
         ],
         "own_health_after": 0,
         "replay": {
+          "beats": [
+            3,
+            1,
+            1,
+            3,
+            3,
+            2,
+            1,
+            1,
+            3,
+            1,
+            3,
+            3,
+            2,
+            3,
+            2,
+            3,
+            1,
+            2,
+            1,
+            1,
+            1,
+            3,
+            3,
+            3,
+            1,
+            3,
+            3,
+            2,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            3,
+            1,
+            1,
+            3,
+            1,
+            1,
+            3,
+            1,
+            3,
+            1,
+            3,
+            1,
+            3,
+            1,
+            1,
+            1,
+            3,
+            2,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
           "complete": true,
           "events": [
             {
@@ -4315,13 +5100,21 @@
               "amount": 8,
               "health": 43,
               "kind": "damage",
-              "minion": 13
+              "minion": 13,
+              "source": {
+                "how": "attack",
+                "minion": 0
+              }
             },
             {
               "amount": 51,
               "health": -46,
               "kind": "damage",
-              "minion": 0
+              "minion": 0,
+              "source": {
+                "how": "attack",
+                "minion": 13
+              }
             },
             {
               "kind": "death",
@@ -4343,13 +5136,21 @@
               "amount": 9,
               "health": 88,
               "kind": "damage",
-              "minion": 2
+              "minion": 2,
+              "source": {
+                "how": "attack",
+                "minion": 7
+              }
             },
             {
               "amount": 6,
               "health": 3,
               "kind": "damage",
-              "minion": 7
+              "minion": 7,
+              "source": {
+                "how": "attack",
+                "minion": 2
+              }
             },
             {
               "attacker": 1,
@@ -4360,13 +5161,21 @@
               "amount": 14,
               "health": -10,
               "kind": "damage",
-              "minion": 8
+              "minion": 8,
+              "source": {
+                "how": "attack",
+                "minion": 1
+              }
             },
             {
               "amount": 7,
               "health": 0,
               "kind": "damage",
-              "minion": 1
+              "minion": 1,
+              "source": {
+                "how": "attack",
+                "minion": 8
+              }
             },
             {
               "kind": "death",
@@ -4399,13 +5208,21 @@
               "amount": 17,
               "health": -12,
               "kind": "damage",
-              "minion": 6
+              "minion": 6,
+              "source": {
+                "how": "attack",
+                "minion": 9
+              }
             },
             {
               "amount": 4,
               "health": 23,
               "kind": "damage",
-              "minion": 9
+              "minion": 9,
+              "source": {
+                "how": "attack",
+                "minion": 6
+              }
             },
             {
               "kind": "death",
@@ -4420,13 +5237,21 @@
               "amount": 6,
               "health": 37,
               "kind": "damage",
-              "minion": 13
+              "minion": 13,
+              "source": {
+                "how": "attack",
+                "minion": 2
+              }
             },
             {
               "amount": 51,
               "health": 37,
               "kind": "damage",
-              "minion": 2
+              "minion": 2,
+              "source": {
+                "how": "attack",
+                "minion": 13
+              }
             },
             {
               "attacker": 10,
@@ -4437,13 +5262,21 @@
               "amount": 7,
               "health": 0,
               "kind": "damage",
-              "minion": 5
+              "minion": 5,
+              "source": {
+                "how": "attack",
+                "minion": 10
+              }
             },
             {
               "amount": 8,
               "health": -5,
               "kind": "damage",
-              "minion": 10
+              "minion": 10,
+              "source": {
+                "how": "attack",
+                "minion": 5
+              }
             },
             {
               "kind": "death",
@@ -4462,13 +5295,21 @@
               "amount": 3,
               "health": 0,
               "kind": "damage",
-              "minion": 7
+              "minion": 7,
+              "source": {
+                "how": "attack",
+                "minion": 3
+              }
             },
             {
               "amount": 9,
               "health": -5,
               "kind": "damage",
-              "minion": 3
+              "minion": 3,
+              "source": {
+                "how": "attack",
+                "minion": 7
+              }
             },
             {
               "kind": "death",
@@ -4487,13 +5328,21 @@
               "amount": 3,
               "health": 218,
               "kind": "damage",
-              "minion": 4
+              "minion": 4,
+              "source": {
+                "how": "attack",
+                "minion": 11
+              }
             },
             {
               "amount": 38,
               "health": -35,
               "kind": "damage",
-              "minion": 11
+              "minion": 11,
+              "source": {
+                "how": "attack",
+                "minion": 4
+              }
             },
             {
               "kind": "death",
@@ -4536,13 +5385,21 @@
               "amount": 38,
               "health": 17,
               "kind": "damage",
-              "minion": 9
+              "minion": 9,
+              "source": {
+                "how": "attack",
+                "minion": 4
+              }
             },
             {
               "amount": 47,
               "health": 171,
               "kind": "damage",
-              "minion": 4
+              "minion": 4,
+              "source": {
+                "how": "attack",
+                "minion": 9
+              }
             },
             {
               "attacker": 12,
@@ -4553,13 +5410,21 @@
               "amount": 69,
               "health": 102,
               "kind": "damage",
-              "minion": 4
+              "minion": 4,
+              "source": {
+                "how": "attack",
+                "minion": 12
+              }
             },
             {
               "amount": 38,
               "health": 32,
               "kind": "damage",
-              "minion": 12
+              "minion": 12,
+              "source": {
+                "how": "attack",
+                "minion": 4
+              }
             },
             {
               "attacker": 2,
@@ -4570,13 +5435,21 @@
               "amount": 6,
               "health": 26,
               "kind": "damage",
-              "minion": 12
+              "minion": 12,
+              "source": {
+                "how": "attack",
+                "minion": 2
+              }
             },
             {
               "amount": 69,
               "health": -32,
               "kind": "damage",
-              "minion": 2
+              "minion": 2,
+              "source": {
+                "how": "attack",
+                "minion": 12
+              }
             },
             {
               "kind": "death",
@@ -4591,13 +5464,21 @@
               "amount": 81,
               "health": 21,
               "kind": "damage",
-              "minion": 4
+              "minion": 4,
+              "source": {
+                "how": "attack",
+                "minion": 13
+              }
             },
             {
               "amount": 38,
               "health": 31,
               "kind": "damage",
-              "minion": 13
+              "minion": 13,
+              "source": {
+                "how": "attack",
+                "minion": 4
+              }
             },
             {
               "attacker": 4,
@@ -4608,13 +5489,21 @@
               "amount": 38,
               "health": -21,
               "kind": "damage",
-              "minion": 9
+              "minion": 9,
+              "source": {
+                "how": "attack",
+                "minion": 4
+              }
             },
             {
               "amount": 47,
               "health": -26,
               "kind": "damage",
-              "minion": 4
+              "minion": 4,
+              "source": {
+                "how": "attack",
+                "minion": 9
+              }
             },
             {
               "kind": "death",
@@ -4696,13 +5585,21 @@
               "amount": 5,
               "health": 21,
               "kind": "damage",
-              "minion": 12
+              "minion": 12,
+              "source": {
+                "how": "attack",
+                "minion": 15
+              }
             },
             {
               "amount": 69,
               "health": -67,
               "kind": "damage",
-              "minion": 15
+              "minion": 15,
+              "source": {
+                "how": "attack",
+                "minion": 12
+              }
             },
             {
               "kind": "death",
@@ -4724,13 +5621,21 @@
               "amount": 90,
               "health": -84,
               "kind": "damage",
-              "minion": 21
+              "minion": 21,
+              "source": {
+                "how": "attack",
+                "minion": 14
+              }
             },
             {
               "amount": 7,
               "health": 88,
               "kind": "damage",
-              "minion": 14
+              "minion": 14,
+              "source": {
+                "how": "attack",
+                "minion": 21
+              }
             },
             {
               "kind": "death",
@@ -4752,13 +5657,21 @@
               "amount": 8,
               "health": 13,
               "kind": "damage",
-              "minion": 12
+              "minion": 12,
+              "source": {
+                "how": "attack",
+                "minion": 16
+              }
             },
             {
               "amount": 69,
               "health": -61,
               "kind": "damage",
-              "minion": 16
+              "minion": 16,
+              "source": {
+                "how": "attack",
+                "minion": 12
+              }
             },
             {
               "kind": "death",
@@ -4773,13 +5686,21 @@
               "amount": 69,
               "health": -59,
               "kind": "damage",
-              "minion": 18
+              "minion": 18,
+              "source": {
+                "how": "attack",
+                "minion": 12
+              }
             },
             {
               "amount": 7,
               "health": 6,
               "kind": "damage",
-              "minion": 12
+              "minion": 12,
+              "source": {
+                "how": "attack",
+                "minion": 18
+              }
             },
             {
               "kind": "death",
@@ -4794,13 +5715,21 @@
               "amount": 4,
               "health": 27,
               "kind": "damage",
-              "minion": 13
+              "minion": 13,
+              "source": {
+                "how": "attack",
+                "minion": 17
+              }
             },
             {
               "amount": 81,
               "health": -77,
               "kind": "damage",
-              "minion": 17
+              "minion": 17,
+              "source": {
+                "how": "attack",
+                "minion": 13
+              }
             },
             {
               "kind": "death",
@@ -4815,13 +5744,21 @@
               "amount": 81,
               "health": -79,
               "kind": "damage",
-              "minion": 19
+              "minion": 19,
+              "source": {
+                "how": "attack",
+                "minion": 13
+              }
             },
             {
               "amount": 6,
               "health": 21,
               "kind": "damage",
-              "minion": 13
+              "minion": 13,
+              "source": {
+                "how": "attack",
+                "minion": 19
+              }
             },
             {
               "kind": "death",
@@ -4847,13 +5784,21 @@
               "amount": 13,
               "health": -7,
               "kind": "damage",
-              "minion": 12
+              "minion": 12,
+              "source": {
+                "how": "attack",
+                "minion": 20
+              }
             },
             {
               "amount": 69,
               "health": -55,
               "kind": "damage",
-              "minion": 20
+              "minion": 20,
+              "source": {
+                "how": "attack",
+                "minion": 12
+              }
             },
             {
               "kind": "death",

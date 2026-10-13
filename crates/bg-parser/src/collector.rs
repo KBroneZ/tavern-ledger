@@ -171,17 +171,21 @@ impl Collector {
                     self.snapshot_open_legs();
                     self.on_attack(&entity);
                 }
-                if let EntityRef::Id(id) = entity {
-                    let sides = self.sides();
-                    self.replays.on_block(
-                        &block_type,
-                        Some(id),
-                        trigger.as_deref(),
-                        self.indent == 0,
-                        &self.board,
-                        sides,
-                    );
-                }
+                // Every block: an attack or a trigger is a step, and any
+                // block groups the steps inside it into one beat.
+                let id = match entity {
+                    EntityRef::Id(id) => Some(id),
+                    _ => None,
+                };
+                let sides = self.sides();
+                self.replays.on_block_start(
+                    &block_type,
+                    id,
+                    trigger.as_deref(),
+                    self.indent,
+                    &self.board,
+                    sides,
+                );
                 if self.indent == 0 {
                     let seats = self.seats();
                     // A player is named, not numbered (the turn's own gold
@@ -202,6 +206,7 @@ impl Collector {
                 }
             }
             Packet::BlockEnd => {
+                self.replays.on_block_end(self.indent);
                 if self.indent == 0 {
                     let seats = self.seats();
                     self.shop.on_top_block_end(&self.board, seats);

@@ -1,6 +1,6 @@
 // Run: deno test supabase/functions/upload-game/
 // Each round's combat replay (T-215, D-099, parser revision 8).
-import { type Json, realDuos, realRecord, realSolo, SESSION } from "./testdata.ts";
+import { type Json, realDuos, realRally, realRecord, realSolo, SESSION } from "./testdata.ts";
 import { validateRecord, VALIDATOR_VERSION } from "./validate.ts";
 
 function assertEquals(actual: unknown, expected: unknown, msg = ""): void {
@@ -131,4 +131,55 @@ Deno.test("a BattleTag in a replay is refused as a player name", () => {
   round.replay.minions[0].card_id = "Someone#1234";
   const v = validateRecord(rec, SESSION, 1);
   assertEquals(v.ok ? "accepted" : v.code, "player_name");
+});
+
+Deno.test("revision 13 replays (beats, damage sources, keyword events) are accepted", () => {
+  const report = realRally[0];
+  const events = report.rounds.flatMap((r: Json) => r.replay?.events ?? []);
+  assertEquals(events.some((e: Json) => e.kind === "keyword" && e.keyword === "venomous"), true, "a Venomous given");
+  assertEquals(events.some((e: Json) => e.kind === "damage" && e.source?.how === "attack"), true, "an attack's damage");
+  assertEquals(report.rounds.every((r: Json) => !r.replay || Array.isArray(r.replay.beats)), true, "beats");
+  const v = validateRecord(realRecord(report), SESSION, 1);
+  if (!v.ok) throw new Error(`refused: ${v.code} ${v.field}`);
+  assertEquals(VALIDATOR_VERSION >= 10, true, "a version that accepts them");
+});
+
+Deno.test("a replay without the revision 13 fields (older apps) is still accepted", () => {
+  const rec = realRecord(realRally[0]);
+  for (const r of rec.report.rounds) {
+    if (!r.replay) continue;
+    delete r.replay.beats;
+    r.replay.events = r.replay.events.filter((e: Json) => e.kind !== "keyword");
+    for (const e of r.replay.events) if (e.kind === "damage") delete e.source;
+  }
+  const v = validateRecord(rec, SESSION, 1);
+  if (!v.ok) throw new Error(`refused: ${v.code} ${v.field}`);
+});
+
+Deno.test("revision 13 fields keep to their shapes and references", () => {
+  const n = realRally[0].rounds.findIndex((r: Json) => r.replay?.events.some((e: Json) => e.kind === "damage"));
+  const round = realRally[0].rounds[n];
+  const at = `report.rounds[${n}].replay`;
+  const d = round.replay.events.findIndex((e: Json) => e.kind === "damage");
+  const ev = `${at}.events[${d}]`;
+  const cases: Array<[(r: Json) => void, string]> = [
+    [(r) => (r.replay.beats = [r.replay.events.length + 1]), `${at}.beats`],
+    [(r) => (r.replay.beats = [0, r.replay.events.length]), `${at}.beats[0]`],
+    [(r) => (r.replay.beats = "all"), `${at}.beats`],
+    [(r) => (r.replay.events[d].source = { how: "magic" }), `${ev}.source.how`],
+    [(r) => (r.replay.events[d].source = { how: "attack", minion: 999 }), `${ev}.source.minion`],
+    [(r) => (r.replay.events[d].source = { how: "attack", minion: 0, card_id: "BG_X" }), `${ev}.source`],
+    [(r) => (r.replay.events[d].source = { how: "trinket", card_id: "BG_X" }), `${ev}.source.side`],
+    [(r) => (r.replay.events[d].source = { how: "trinket", card_id: "a b", side: "own" }), `${ev}.source.card_id`],
+    [(r) => (r.replay.events[d].source = { how: "attack", minion: 0, name: "x" }), `${ev}.source.name`],
+    [(r) => (r.replay.events[0] = { kind: "keyword", minion: 0, keyword: "divine_shield", on: true }), `${at}.events[0].keyword`],
+    [(r) => (r.replay.events[0] = { kind: "keyword", minion: 0, keyword: "flying", on: true }), `${at}.events[0].keyword`],
+    [(r) => (r.replay.events[0] = { kind: "keyword", minion: 0, keyword: "taunt", on: 1 }), `${at}.events[0].on`],
+    [(r) => (r.replay.events[0] = { kind: "keyword", minion: 999, keyword: "taunt", on: true }), `${at}.events[0].minion`],
+  ];
+  for (const [forge, field] of cases) {
+    const rec = realRecord(realRally[0]);
+    forge(rec.report.rounds[n]);
+    refused(rec, field);
+  }
 });

@@ -3,7 +3,19 @@
 //! user's two real games (tests/data/real) checked against what the report
 //! already says about each combat.
 
-use bg_parser::replay::{CombatEvent, CombatReplay, TriggerKind, MAX_REPLAY_EVENTS};
+use bg_parser::replay::{
+    Cause, CombatEvent, CombatReplay, DamageSource, TriggerKind, MAX_REPLAY_EVENTS,
+};
+
+/// A damage put down to replay minion `minion`, as `how`.
+fn by(how: Cause, minion: usize) -> Option<DamageSource> {
+    Some(DamageSource {
+        how,
+        minion: Some(minion),
+        card_id: None,
+        side: None,
+    })
+}
 use bg_parser::report::{CombatResult, GameReport, Side};
 use bg_parser::LogReader;
 
@@ -233,7 +245,8 @@ fn a_shown_combat_keeps_every_event_in_the_logs_order() {
             Damage {
                 minion: 3,
                 amount: 1,
-                health: 3
+                health: 3,
+                source: by(Cause::StartOfCombat, 1),
             },
             Attack {
                 attacker: 0,
@@ -242,7 +255,8 @@ fn a_shown_combat_keeps_every_event_in_the_logs_order() {
             Damage {
                 minion: 2,
                 amount: 2,
-                health: 0
+                health: 0,
+                source: by(Cause::Attack, 0),
             },
             Shield {
                 minion: 0,
@@ -257,12 +271,14 @@ fn a_shown_combat_keeps_every_event_in_the_logs_order() {
             Damage {
                 minion: 1,
                 amount: 1,
-                health: 0
+                health: 0,
+                source: by(Cause::Attack, 3),
             },
             Damage {
                 minion: 3,
                 amount: 1,
-                health: 2
+                health: 2,
+                source: by(Cause::Attack, 1),
             },
             Death { minion: 1 },
             Trigger {
@@ -285,12 +301,14 @@ fn a_shown_combat_keeps_every_event_in_the_logs_order() {
             Damage {
                 minion: 3,
                 amount: 3,
-                health: -1
+                health: -1,
+                source: by(Cause::Attack, 4),
             },
             Damage {
                 minion: 4,
                 amount: 1,
-                health: 1
+                health: 1,
+                source: by(Cause::Attack, 3),
             },
             Death { minion: 3 },
             HeroDamage {
@@ -413,7 +431,8 @@ fn duos_a_board_coming_in_keeps_the_players_own_minions() {
             Damage {
                 minion: 2,
                 amount: 5,
-                health: -4
+                health: -4,
+                source: by(Cause::Attack, 1),
             },
             Death { minion: 2 },
             HeroDamage {
@@ -902,7 +921,12 @@ fn duos_a_board_coming_in_keeps_each_minions_slot() {
 fn real_games_draw_every_attacker_in_its_own_slot() {
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/real");
     let mut checked = 0;
-    for name in ["b253216_solo", "b253216_duos", "b253216_duos_gifts"] {
+    for name in [
+        "b253216_solo",
+        "b253216_duos",
+        "b253216_duos_gifts",
+        "b253216_duos_rally",
+    ] {
         let text = std::fs::read_to_string(dir.join(format!("{name}.log"))).expect("fixture");
         let reports = bg_parser::parse_reader(text.as_bytes()).expect("read");
         for round in reports.iter().flat_map(|r| &r.rounds) {
@@ -951,4 +975,267 @@ fn real_games_draw_every_attacker_in_its_own_slot() {
         }
     }
     assert!(checked > 100, "{checked} attacks checked");
+}
+
+// ---------- Parser revision 13: beats, damage sources, keyword marks ----------
+
+fn nested_end(depth: usize) -> String {
+    line(depth, "BLOCK_END")
+}
+
+#[test]
+fn each_beat_is_the_run_of_steps_one_log_block_gives() {
+    let r = finished(won_combat());
+    let replay = replay(&r, 1);
+    // Start-of-combat trigger and its damage; the first attack with its hit
+    // and shield; a death outside any block; the second attack; a death; the
+    // deathrattle and its summon; the token's buff (outside any block); the
+    // token's attack; a death; the hero's hit.
+    assert_eq!(replay.beats, [2, 3, 1, 3, 1, 2, 1, 3, 1, 1]);
+    assert_eq!(replay.beats.iter().sum::<usize>(), replay.events.len());
+}
+
+#[test]
+fn a_board_wide_buff_and_simultaneous_deaths_are_one_beat_each() {
+    let mut l = start();
+    l.extend(minion(30, "SYN_BUFFER", 2, 1, (1, 1), &[]));
+    l.extend(minion(31, "SYN_A", 2, 2, (1, 1), &[]));
+    l.extend(minion(32, "SYN_B", 2, 3, (1, 1), &[]));
+    l.extend(minion(40, "SYN_FOE_A", 10, 1, (1, 1), &[]));
+    l.extend(minion(41, "SYN_FOE_B", 10, 2, (1, 1), &[]));
+    l.push(block("TRIGGER", 30, "TAG_NOT_SET"));
+    for id in ["30", "31", "32"] {
+        l.push(tag(id, "ATK", "3"));
+        l.push(tag(id, "HEALTH", "3"));
+    }
+    l.push(end());
+    l.push(block("ATTACK", 30, ""));
+    l.push(tag("GameEntity", "PROPOSED_DEFENDER", "40"));
+    l.push(tag("40", "DAMAGE", "3"));
+    l.push(tag("30", "DAMAGE", "1"));
+    l.push(end());
+    l.push(line(0, "BLOCK_START BlockType=DEATHS Entity=GameEntity EffectCardId=System.Collections.Generic.List`1[System.String] EffectIndex=0 Target=0 SubOption=-1 "));
+    l.push(tag("40", "ZONE", "GRAVEYARD"));
+    l.push(tag("41", "ZONE", "GRAVEYARD"));
+    l.push(end());
+    let r = finished(l);
+    let replay = replay(&r, 1);
+    assert_eq!(replay.beats, [4, 3, 2], "{:?}", replay.events);
+    assert!(matches!(
+        replay.events[1..4],
+        [
+            CombatEvent::Stats {
+                minion: 0,
+                atk: 3,
+                health: 3
+            },
+            CombatEvent::Stats {
+                minion: 1,
+                atk: 3,
+                health: 3
+            },
+            CombatEvent::Stats {
+                minion: 2,
+                atk: 3,
+                health: 3
+            },
+        ]
+    ));
+}
+
+#[test]
+fn each_damage_names_where_it_came_from() {
+    let r = finished(won_combat());
+    let replay = replay(&r, 1);
+    let sources: Vec<_> = replay
+        .events
+        .iter()
+        .filter_map(|e| match e {
+            CombatEvent::Damage { minion, source, .. } => Some((*minion, source.clone())),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        sources,
+        [
+            (3, by(Cause::StartOfCombat, 1)),
+            (2, by(Cause::Attack, 0)),
+            // The attacker is hurt by its defender.
+            (1, by(Cause::Attack, 3)),
+            (3, by(Cause::Attack, 1)),
+            (3, by(Cause::Attack, 4)),
+            (4, by(Cause::Attack, 3)),
+        ]
+    );
+}
+
+#[test]
+fn a_hero_power_or_an_unknown_block_says_so() {
+    let mut l = start();
+    l.extend(minion(30, "SYN_OWN", 2, 1, (1, 5), &[]));
+    l.extend(minion(40, "SYN_FOE", 10, 1, (1, 5), &[]));
+    l.extend(entity(
+        45,
+        "SYN_FOE_POWER",
+        &[
+            ("CARDTYPE", "HERO_POWER".to_string()),
+            ("CONTROLLER", "10".to_string()),
+            ("ZONE", "PLAY".to_string()),
+        ],
+    ));
+    l.push(block("TRIGGER", 45, "TAG_NOT_SET"));
+    l.push(tag("30", "DAMAGE", "2"));
+    l.push(end());
+    // Damage outside any block the log names: unknown.
+    l.push(tag("30", "DAMAGE", "3"));
+    l.push(block("ATTACK", 30, ""));
+    l.push(tag("GameEntity", "PROPOSED_DEFENDER", "40"));
+    l.push(end());
+    let r = finished(l);
+    let replay = replay(&r, 1);
+    let sources: Vec<_> = replay
+        .events
+        .iter()
+        .filter_map(|e| match e {
+            CombatEvent::Damage { source, .. } => Some(source.clone()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        sources,
+        [
+            Some(DamageSource {
+                how: Cause::HeroPower,
+                minion: None,
+                card_id: Some("SYN_FOE_POWER".into()),
+                side: Some(Side::Opponent),
+            }),
+            None,
+        ]
+    );
+    let json = serde_json::to_value(&replay.events).unwrap();
+    let damages: Vec<_> = json
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e["kind"] == "damage")
+        .collect();
+    assert_eq!(
+        damages[0]["source"],
+        serde_json::json!({"how": "hero_power", "card_id": "SYN_FOE_POWER", "side": "opponent"})
+    );
+    assert_eq!(
+        damages[1]["source"],
+        serde_json::Value::Null,
+        "unknown is written, never left out"
+    );
+}
+
+/// A Rally that gives Venomous as its minion attacks, nested in the attack
+/// as the game logs it: the attack, then the Rally with the mark appearing,
+/// then the hit, which uses the Venomous up.
+#[test]
+fn a_keyword_given_or_used_mid_combat_is_a_step_of_its_own_block() {
+    let mut l = start();
+    l.extend(minion(30, "SYN_RALLY", 2, 1, (3, 3), &[]));
+    l.extend(minion(31, "SYN_MATE", 2, 2, (1, 1), &[]));
+    l.extend(minion(40, "SYN_FOE", 10, 1, (2, 9), &["TAUNT"]));
+    l.push(block("ATTACK", 30, ""));
+    l.push(tag("GameEntity", "PROPOSED_DEFENDER", "40"));
+    l.push(nested_block(1, "TRIGGER", 30, "BACON_RALLY"));
+    l.push(line(2, "TAG_CHANGE Entity=30 tag=VENOMOUS value=1 "));
+    l.push(nested_end(1));
+    l.push(tag("40", "DAMAGE", "3"));
+    l.push(tag("30", "VENOMOUS", "0"));
+    l.push(tag("30", "DAMAGE", "2"));
+    l.push(end());
+    l.push(tag("40", "TAUNT", "0"));
+    let r = finished(l);
+    let replay = replay(&r, 1);
+    use CombatEvent::*;
+    let kinds: Vec<_> = replay
+        .events
+        .iter()
+        .map(|e| match e {
+            Attack { .. } => "attack".to_string(),
+            Trigger { trigger, .. } => format!("{trigger:?}"),
+            Keyword {
+                minion,
+                keyword,
+                on,
+            } => format!("{keyword}:{minion}:{on}"),
+            Damage { minion, .. } => format!("damage:{minion}"),
+            other => format!("{other:?}"),
+        })
+        .collect();
+    assert_eq!(
+        kinds,
+        [
+            "attack",
+            "Rally",
+            "venomous:0:true",
+            "damage:2",
+            "venomous:0:false",
+            "damage:0",
+            "taunt:2:false"
+        ]
+    );
+    assert_eq!(
+        replay.beats,
+        [1, 2, 3, 1],
+        "attack, Rally, the hit, the taunt"
+    );
+}
+
+/// The owner's own game: as a Rally murloc attacks, its Rally gives
+/// Venomous to friendly minions in a beat of its own, between the attack
+/// and its hit, as the game plays it.
+#[test]
+fn a_real_rally_gives_venomous_in_a_beat_of_its_own() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/real");
+    let text = std::fs::read_to_string(dir.join("b253216_duos_rally.log")).expect("fixture");
+    let reports = bg_parser::parse_reader(text.as_bytes()).expect("read");
+    let mut found = 0;
+    for round in &reports[0].rounds {
+        let Some(replay) = &round.replay else {
+            continue;
+        };
+        assert_eq!(replay.beats.iter().sum::<usize>(), replay.events.len());
+        let mut at = 0;
+        for &beat in &replay.beats {
+            let steps = &replay.events[at..at + beat];
+            at += beat;
+            let rally = matches!(
+                steps.first(),
+                Some(CombatEvent::Trigger {
+                    trigger: TriggerKind::Rally,
+                    ..
+                })
+            );
+            let given: Vec<usize> = steps
+                .iter()
+                .filter_map(|e| match e {
+                    CombatEvent::Keyword {
+                        minion,
+                        keyword: "venomous",
+                        on: true,
+                    } => Some(*minion),
+                    _ => None,
+                })
+                .collect();
+            if !rally || given.is_empty() {
+                continue;
+            }
+            found += 1;
+            // The attack is the beat just before, and its hit comes after.
+            let before = at - beat - 1;
+            assert!(
+                matches!(replay.events[before], CombatEvent::Attack { .. }),
+                "round {}",
+                round.number
+            );
+            assert!(given.iter().all(|&m| replay.minions[m].card_id.is_some()));
+        }
+    }
+    assert!(found >= 2, "{found} Rally beats giving Venomous");
 }

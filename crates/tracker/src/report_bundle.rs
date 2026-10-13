@@ -42,6 +42,8 @@ enum Shape {
     List(&'static Shape),
     /// Only these keys.
     Object(&'static [(&'static str, Shape)]),
+    /// A scalar, or an object of this shape.
+    ScalarOr(&'static Shape),
 }
 
 const MINION: Shape = Shape::Object(&[
@@ -52,6 +54,9 @@ const MINION: Shape = Shape::Object(&[
     ("golden", Shape::Scalar),
     // Parser revision 5: keyword names.
     ("keywords", Shape::List(&Shape::Id)),
+    // Parser revision 9: Dark Gifts, by card id.
+    ("gifts", Shape::List(&Shape::Id)),
+    ("gift_unknown", Shape::Scalar),
 ]);
 
 const ENTRY: Shape = Shape::Object(&[
@@ -59,6 +64,8 @@ const ENTRY: Shape = Shape::Object(&[
     ("player_id", Shape::Scalar),
     ("hero", Shape::Id),
     ("board", Shape::List(&MINION)),
+    // Parser revision 10: the side's game-long values (numbers only).
+    ("values", Shape::Map),
 ]);
 
 // Parser revision 8 (T-215, D-099): each shown combat's replay.
@@ -70,9 +77,20 @@ const REPLAY_MINION: Shape = Shape::Object(&[
     ("position", Shape::Scalar),
     ("golden", Shape::Scalar),
     ("keywords", Shape::List(&Shape::Id)),
+    ("gifts", Shape::List(&Shape::Id)),
+    ("gift_unknown", Shape::Scalar),
 ]);
 
-/// Every key any replay event kind has: indexes and numbers, or ids.
+/// Where a damage came from (parser revision 13, T-575).
+const DAMAGE_SOURCE: Shape = Shape::Object(&[
+    ("how", Shape::Id),
+    ("minion", Shape::Scalar),
+    ("card_id", Shape::Id),
+    ("side", Shape::Id),
+]);
+
+/// Every key any replay event kind has: indexes and numbers, or ids. A
+/// trigger's source is a minion's index, a damage's is an object.
 const REPLAY_EVENT: Shape = Shape::Object(&[
     ("kind", Shape::Id),
     ("attacker", Shape::Scalar),
@@ -85,8 +103,9 @@ const REPLAY_EVENT: Shape = Shape::Object(&[
     ("trigger", Shape::Id),
     ("side", Shape::Id),
     ("card_id", Shape::Id),
-    ("source", Shape::Scalar),
+    ("source", Shape::ScalarOr(&DAMAGE_SOURCE)),
     ("hero", Shape::Id),
+    ("keyword", Shape::Id),
 ]);
 
 const REPLAY: Shape = Shape::Object(&[
@@ -94,6 +113,7 @@ const REPLAY: Shape = Shape::Object(&[
     ("start", Shape::Scalar),
     ("events", Shape::List(&REPLAY_EVENT)),
     ("complete", Shape::Scalar),
+    ("beats", Shape::List(&Shape::Scalar)),
 ]);
 
 const ROUND: Shape = Shape::Object(&[
@@ -349,6 +369,8 @@ fn check(value: &Value, shape: &Shape, path: &str) -> Result<(), Refusal> {
     }
     match shape {
         Shape::Scalar => check_scalar(value, path),
+        Shape::ScalarOr(inner) if value.is_object() => check(value, inner, path),
+        Shape::ScalarOr(_) => check_scalar(value, path),
         Shape::Id => match value.as_str() {
             Some(text) => check_id(text, path),
             None => Err(Refusal::WrongKind(path.to_string())),

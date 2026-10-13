@@ -4,6 +4,12 @@
 //! (start of combat, deathrattle, avenge, rally), a Duos teammate's board
 //! coming in and the hero damage at the end.
 //!
+//! Since parser revision 13 (T-575) the replay also says how the game groups
+//! its steps: each run of steps that one log block gives is one beat
+//! ([`CombatReplay::beats`]), so a board-wide buff or simultaneous deaths
+//! play at once. Each damage names its source (the attack, or the card whose
+//! effect dealt it), and keywords given or used mid-combat are steps too.
+//!
 //! Only the two sides of the combat on screen are read: the local player's
 //! and the opponent's (the game's "dummy" player). A combat the game does not
 //! play back has no attack in the log and gets no replay ("not shown"); the
@@ -18,7 +24,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::Serialize;
 
 use crate::gifts::gifts_on;
-use crate::report::{Minion, Side};
+use crate::report::{Minion, Side, KEYWORDS};
 use crate::state::{Board, Entity};
 
 /// Minions kept per combat: both boards and every summon, far more than a
@@ -76,6 +82,34 @@ pub enum TriggerKind {
     Rally,
 }
 
+/// How a damage came about (parser revision 13).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Cause {
+    Attack,
+    StartOfCombat,
+    Deathrattle,
+    Avenge,
+    Rally,
+    HeroPower,
+    Trinket,
+    /// Any other effect of a card after the first attack.
+    Effect,
+}
+
+/// Where a damage came from: a minion of the replay, or a card that is not
+/// one (a hero power, a trinket) with its side.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct DamageSource {
+    pub how: Cause,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub minion: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub side: Option<Side>,
+}
+
 /// One thing that happened in a combat. Minions are named by their index in
 /// [`CombatReplay::minions`].
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -86,11 +120,13 @@ pub enum CombatEvent {
         attacker: usize,
         defender: Option<usize>,
     },
-    /// Damage taken; `health` is what is left.
+    /// Damage taken; `health` is what is left. `source` is None when the
+    /// log does not say (written as null, never left out).
     Damage {
         minion: usize,
         amount: i64,
         health: i64,
+        source: Option<DamageSource>,
     },
     /// Divine Shield lost (`on` false) or given.
     Shield {
@@ -105,6 +141,14 @@ pub enum CombatEvent {
     },
     Death {
         minion: usize,
+    },
+    /// A keyword of [`crate::report::KEYWORDS`] other than Divine Shield
+    /// given (`on`) or lost: a Rally giving Venomous, Venomous used up, a
+    /// Reborn spent.
+    Keyword {
+        minion: usize,
+        keyword: &'static str,
+        on: bool,
     },
     /// The minion enters the board at its `position`.
     Summon {
@@ -138,6 +182,10 @@ pub struct CombatReplay {
     pub minions: Vec<ReplayMinion>,
     pub start: usize,
     pub events: Vec<CombatEvent>,
+    /// The steps grouped as the game plays them (revision 13): the length of
+    /// each run of events that one log block gives, in order (they add up to
+    /// the number of events). An event outside any block is a beat alone.
+    pub beats: Vec<usize>,
     /// False when the log stops before the combat ends, or the combat had
     /// more events than are kept.
     pub complete: bool,
@@ -165,6 +213,49 @@ impl Sides {
 
 const TRIGGER_CARD_TYPES: [&str; 3] = ["MINION", "HERO_POWER", "BATTLEGROUND_TRINKET"];
 
+/// Cards a damage can be put down to when their block deals it. Anything
+/// else (the game, a player, an enchantment) passes it to the block around.
+const SOURCE_CARD_TYPES: [&str; 8] = [
+    "MINION",
+    "HERO",
+    "HERO_POWER",
+    "BATTLEGROUND_TRINKET",
+    "SPELL",
+    "BATTLEGROUND_SPELL",
+    "BATTLEGROUND_QUEST_REWARD",
+    "BATTLEGROUND_ANOMALY",
+];
+
+/// Blocks kept open at once; a deeper one is not tracked (no real log nests
+/// this far).
+const MAX_BLOCK_DEPTH: usize = 64;
+
+/// What a block open in the log can be blamed for.
+#[derive(Clone, Debug)]
+enum Blame {
+    /// Nothing: ask the block around it.
+    None,
+    /// An attack: its event in the replay names attacker and defender.
+    Attack { event: usize },
+    /// A card's effect.
+    Effect {
+        entity: i64,
+        card_id: Option<String>,
+        side: Side,
+        how: Cause,
+    },
+}
+
+/// A block open in the log.
+#[derive(Clone, Debug)]
+struct Open {
+    /// Its line's indentation: a block end, or a block start at the same
+    /// depth or above, closes it even when a trimmed log lost its end.
+    depth: usize,
+    id: u32,
+    blame: Blame,
+}
+
 /// A combat being read.
 #[derive(Debug)]
 struct Run {
@@ -184,12 +275,18 @@ struct Run {
     /// Summons that entered with no slot (0): the game sets it in the tag
     /// change right after, before anything else happens.
     unplaced: BTreeSet<usize>,
+    /// The log block each event came from (0: none), with the events.
+    blocks: Vec<u32>,
+    /// The block open now.
+    block: u32,
 }
 
 /// The combat of the turn being read.
 #[derive(Debug)]
 struct Live {
     round: i64,
+    /// The log block open now (0: none), for a run started later.
+    block: u32,
     /// Entities created during this combat turn: a minion entering the board
     /// is a summon only if it is one of them (the shop's minions come back
     /// as the combat ends), or a Duos board is coming in on its side.
@@ -213,6 +310,10 @@ pub struct ReplayTracker {
     /// Round -> its replay, for every combat with at least one attack.
     done: BTreeMap<i64, CombatReplay>,
     live: Option<Live>,
+    /// The blocks open in the log, innermost last.
+    open: Vec<Open>,
+    /// The last block id given (ids start at 1; 0 is "no block").
+    last_id: u32,
 }
 
 impl ReplayTracker {
@@ -223,7 +324,7 @@ impl ReplayTracker {
         }
         let live = self.live.as_ref().filter(|l| l.round == round)?;
         let run = live.run.as_ref().filter(|r| r.attacked)?;
-        let mut replay = run.replay.clone();
+        let mut replay = run.sealed();
         replay.complete = false;
         Some(replay)
     }
@@ -232,8 +333,10 @@ impl ReplayTracker {
     pub fn on_turn(&mut self, turn: i64) {
         self.finish();
         if turn >= 2 && turn % 2 == 0 {
+            let block = self.open.last().map_or(0, |o| o.id);
             self.live = Some(Live {
                 round: turn / 2,
+                block,
                 created: BTreeSet::new(),
                 action: false,
                 steps: false,
@@ -254,7 +357,7 @@ impl ReplayTracker {
             return;
         };
         run.drop_heroes_put_back();
-        self.done.insert(live.round, run.replay);
+        self.done.insert(live.round, run.sealed());
     }
 
     /// An entity was created (`FULL_ENTITY`).
@@ -274,9 +377,133 @@ impl ReplayTracker {
         }
     }
 
-    /// A block starts: an attack, or a trigger the log may name. `top` is
-    /// a block nested in no other.
-    pub fn on_block(
+    /// A block starts at indentation `depth` (0: nested in no other): an
+    /// attack, a trigger the log may name, or any other block, which groups
+    /// the steps inside it into one beat. `entity` is None for a block of
+    /// the game or a player.
+    pub fn on_block_start(
+        &mut self,
+        kind: &str,
+        entity: Option<i64>,
+        keyword: Option<&str>,
+        depth: usize,
+        board: &Board,
+        sides: Sides,
+    ) {
+        self.close_to(depth);
+        // Opened first: the attack or trigger step is the block's own.
+        let tracked = self.open.len() < MAX_BLOCK_DEPTH;
+        if tracked {
+            self.last_id = self.last_id.wrapping_add(1).max(1);
+            self.open.push(Open {
+                depth,
+                id: self.last_id,
+                blame: Blame::None,
+            });
+        }
+        self.sync_block();
+        let attacked = self.live_run().is_some_and(|r| r.attacked);
+        let events = self.events_now();
+        self.on_block(kind, entity, keyword, depth == 0, board, sides);
+        let pushed = self.events_now() > events;
+        let blame = match (kind, entity.and_then(|id| board.get(id))) {
+            ("ATTACK", Some(_)) if pushed => Blame::Attack { event: events },
+            ("ATTACK", _) => Blame::None,
+            (_, Some(e)) => blame_of(e, keyword, attacked, sides),
+            (_, None) => Blame::None,
+        };
+        if let Some(open) = self.open.last_mut().filter(|_| tracked) {
+            open.blame = blame;
+        }
+    }
+
+    /// A block ends at indentation `depth`.
+    pub fn on_block_end(&mut self, depth: usize) {
+        self.close_to(depth);
+        self.sync_block();
+    }
+
+    /// Closes the blocks at `depth` or deeper.
+    fn close_to(&mut self, depth: usize) {
+        while self.open.last().is_some_and(|o| o.depth >= depth) {
+            self.open.pop();
+        }
+    }
+
+    /// Tells the run which block is open now.
+    fn sync_block(&mut self) {
+        let id = self.open.last().map_or(0, |o| o.id);
+        if let Some(live) = self.live.as_mut() {
+            live.block = id;
+            if let Some(run) = live.run.as_mut() {
+                run.block = id;
+            }
+        }
+    }
+
+    fn live_run(&self) -> Option<&Run> {
+        self.live.as_ref()?.run.as_ref()
+    }
+
+    fn events_now(&self) -> usize {
+        self.live_run().map_or(0, |r| r.replay.events.len())
+    }
+
+    /// Where damage to `minion` came from: the innermost open block that
+    /// can be blamed for it.
+    fn source_of(&self, minion: usize) -> Option<DamageSource> {
+        let run = self.live_run()?;
+        for open in self.open.iter().rev() {
+            match &open.blame {
+                Blame::None => continue,
+                Blame::Attack { event } => {
+                    let Some(CombatEvent::Attack { attacker, defender }) =
+                        run.replay.events.get(*event)
+                    else {
+                        return None;
+                    };
+                    // The attacker is hurt by its defender, anyone else by
+                    // the attacker (Cleave's neighbours too).
+                    let by = if *attacker == minion {
+                        (*defender)?
+                    } else {
+                        *attacker
+                    };
+                    return Some(DamageSource {
+                        how: Cause::Attack,
+                        minion: Some(by),
+                        card_id: None,
+                        side: None,
+                    });
+                }
+                Blame::Effect {
+                    entity,
+                    card_id,
+                    side,
+                    how,
+                } => {
+                    return Some(match run.refs.get(entity) {
+                        Some(&m) => DamageSource {
+                            how: *how,
+                            minion: Some(m),
+                            card_id: None,
+                            side: None,
+                        },
+                        None => DamageSource {
+                            how: *how,
+                            minion: None,
+                            card_id: card_id.clone(),
+                            side: Some(*side),
+                        },
+                    });
+                }
+            }
+        }
+        None
+    }
+
+    /// An attack, or a trigger the log may name, for the replay's steps.
+    fn on_block(
         &mut self,
         kind: &str,
         entity: Option<i64>,
@@ -312,6 +539,10 @@ impl ReplayTracker {
 
     /// A tag changed on entity `id` (already set on the board).
     pub fn on_tag(&mut self, id: i64, tag: &str, old: Option<i64>, board: &Board, sides: Sides) {
+        let source = match (tag, self.live_run().and_then(|r| r.refs.get(&id))) {
+            ("DAMAGE", Some(&minion)) => self.source_of(minion),
+            _ => None,
+        };
         let Some(live) = self.live.as_mut() else {
             return;
         };
@@ -343,6 +574,7 @@ impl ReplayTracker {
                         minion,
                         amount,
                         health,
+                        source,
                     });
                 } else {
                     run.stats(minion, e.int("ATK"), health);
@@ -364,7 +596,22 @@ impl ReplayTracker {
                     run.push(CombatEvent::Shield { minion, on });
                 }
             }
-            _ => {}
+            _ => {
+                let Some(&(_, keyword)) = KEYWORDS
+                    .iter()
+                    .find(|(name, _)| *name == tag && *name != "DIVINE_SHIELD")
+                else {
+                    return;
+                };
+                let on = e.int(tag) > 0;
+                if on != (old.unwrap_or(0) > 0) {
+                    run.push(CombatEvent::Keyword {
+                        minion,
+                        keyword,
+                        on,
+                    });
+                }
+            }
         }
     }
 
@@ -400,6 +647,7 @@ impl Live {
 
     /// The run, started now with both boards as they are.
     fn run(&mut self, board: &Board, sides: Sides) -> &mut Run {
+        let block = self.block;
         self.run.get_or_insert_with(|| {
             let mut minions = Vec::new();
             let mut refs = BTreeMap::new();
@@ -421,6 +669,7 @@ impl Live {
                     complete: minions.len() < MAX_REPLAY_MINIONS,
                     minions,
                     events: Vec::new(),
+                    beats: Vec::new(),
                 },
                 refs,
                 attacked: false,
@@ -428,6 +677,8 @@ impl Live {
                 incoming: None,
                 ended: false,
                 unplaced: BTreeSet::new(),
+                blocks: Vec::new(),
+                block,
             }
         })
     }
@@ -540,6 +791,24 @@ impl Live {
 }
 
 impl Run {
+    /// The replay with its beats: each run of events from one block (an
+    /// event outside any block alone).
+    fn sealed(&self) -> CombatReplay {
+        let mut beats: Vec<usize> = Vec::new();
+        let mut last = None;
+        for &block in &self.blocks {
+            match beats.last_mut() {
+                Some(n) if block != 0 && last == Some(block) => *n += 1,
+                _ => beats.push(1),
+            }
+            last = Some(block);
+        }
+        CombatReplay {
+            beats,
+            ..self.replay.clone()
+        }
+    }
+
     /// Drops what follows the last hero switch when no fight came after it:
     /// the game putting the heroes and the shop boards back as a Duos combat
     /// ends in a tie, not a board coming in.
@@ -571,6 +840,7 @@ impl Run {
             })
             .min();
         self.replay.events.truncate(last);
+        self.blocks.truncate(last);
         if let Some(first_new) = first_new {
             self.replay.minions.truncate(first_new);
         }
@@ -585,6 +855,7 @@ impl Run {
         }
         if self.replay.events.len() < MAX_REPLAY_EVENTS {
             self.replay.events.push(event);
+            self.blocks.push(self.block);
             true
         } else {
             self.replay.complete = false;
@@ -592,11 +863,13 @@ impl Run {
         }
     }
 
-    /// A buff or heal: one event per minion for a run of changes in a row.
+    /// A buff or heal: one event per minion for a run of changes in a row
+    /// in the same block.
     fn stats(&mut self, minion: usize, atk: i64, health: i64) {
         if let Some(CombatEvent::Stats { minion: m, .. }) = self.replay.events.last() {
-            if *m == minion {
+            if *m == minion && self.blocks.last() == Some(&self.block) {
                 self.replay.events.pop();
+                self.blocks.pop();
             }
         }
         self.push(CombatEvent::Stats {
@@ -625,6 +898,33 @@ impl Run {
             *defender = Some(target);
             self.open_attack = None;
         }
+    }
+}
+
+/// What a block of card `e` is blamed for: its effect, named by how it
+/// fired; a block of the game, a player or an enchantment passes the blame
+/// to the block around it.
+fn blame_of(e: &Entity, keyword: Option<&str>, attacked: bool, sides: Sides) -> Blame {
+    let Some(side) = sides.of(e) else {
+        return Blame::None;
+    };
+    if !SOURCE_CARD_TYPES.iter().any(|t| e.is("CARDTYPE", t)) {
+        return Blame::None;
+    }
+    let how = match keyword {
+        Some("DEATHRATTLE") => Cause::Deathrattle,
+        Some("AVENGE") => Cause::Avenge,
+        Some("BACON_RALLY") => Cause::Rally,
+        _ if e.is("CARDTYPE", "HERO_POWER") => Cause::HeroPower,
+        _ if e.is("CARDTYPE", "BATTLEGROUND_TRINKET") => Cause::Trinket,
+        _ if !attacked => Cause::StartOfCombat,
+        _ => Cause::Effect,
+    };
+    Blame::Effect {
+        entity: e.id,
+        card_id: e.card_id.clone(),
+        side,
+        how,
     }
 }
 

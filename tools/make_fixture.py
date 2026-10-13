@@ -4,8 +4,9 @@
         [--parser target/release/bg-parse]
 
 Allow-list first: only the GameState lines the parser reads are kept: the
-packets in KEEP_OPCODES, ATTACK blocks, every top-level block with its
-BLOCK_END (the player's actions, and the gold each block gives, D-055),
+packets in KEEP_OPCODES, every top-level block with its BLOCK_END (the
+player's actions, and the gold each block gives, D-055), nested ATTACK,
+TRIGGER and DEATHS blocks with theirs (a combat replay's beats, T-575),
 entities of the card types in KEEP_CARDTYPES, the tags in KEEP_TAGS, the
 numbers-only SendOption lines and SendChoices headers (the actions the client
 sent, T-205), and the player's choices: the hero choice (T-209) and every
@@ -85,9 +86,12 @@ KEEP_TAGS = frozenset({
     "STEP", "NEXT_STEP",
 })
 # Power packets kept (their tag= lines are filtered by KEEP_TAGS). Of the
-# blocks, ATTACK is kept at any depth (the parser takes the combat boards
-# there) and every block at the top level, with its end: the player's actions
-# are top-level blocks, and the parser counts the gold each one gives (D-055).
+# blocks, every block at the top level is kept with its end: the player's
+# actions are top-level blocks, and the parser counts the gold each one gives
+# (D-055). Nested, the blocks a combat replay reads are kept with their ends:
+# ATTACK (the parser takes the combat boards there), and TRIGGER and DEATHS,
+# which group a combat's steps into the game's beats (T-575).
+NESTED_BLOCKS = frozenset({"ATTACK", "TRIGGER", "DEATHS"})
 KEEP_OPCODES = frozenset({
     "CREATE_GAME", "GameEntity", "Player", "FULL_ENTITY", "SHOW_ENTITY",
     "CHANGE_ENTITY", "HIDE_ENTITY",
@@ -299,6 +303,7 @@ class _AllowList:
         self.hero_choice: str | None = None  # id of the MULLIGAN choice
         self.choices: set[str] = set()  # ids of the choices kept
         self.in_list = False  # source and entity lines of a kept choice follow
+        self.blocks: list[tuple[int, bool]] = []  # (depth, kept) of each open block
 
     def keep(self, prefix: str, body: str) -> bool:
         if prefix in (CHOICES, CHOSEN):
@@ -311,17 +316,12 @@ class _AllowList:
         if prefix == SEND_CHOICES:
             return bool(CHOICE_BODY.match(body))
         stripped = body.strip()
-        top = not body[:1].isspace()
         opcode = stripped.split(" ", 1)[0]
         if opcode.startswith("tag="):
             return not self.in_dropped_entity and opcode[len("tag="):] in KEEP_TAGS
         self.in_dropped_entity = False
-        if opcode == "BLOCK_START":
-            block = re.match(r"BLOCK_START BlockType=(\w+) ", stripped)
-            kind = block.group(1) if block else ""
-            return top or kind == "ATTACK"
-        if opcode == "BLOCK_END":
-            return top
+        if opcode in ("BLOCK_START", "BLOCK_END"):
+            return self._keep_block(opcode, stripped, (len(body) - len(body.lstrip(" "))) // 4)
         if opcode not in KEEP_OPCODES and opcode != "TAG_CHANGE":
             return False
         if _entity_id(stripped) in self.dropped:
@@ -331,6 +331,23 @@ class _AllowList:
             tag = re.search(r" tag=(\w+) value=", stripped)
             return bool(tag) and tag.group(1) in KEEP_TAGS
         return True
+
+    def _keep_block(self, opcode: str, stripped: str, depth: int) -> bool:
+        """A block start or end at `depth`: a block at the top level, or a
+        nested one of NESTED_BLOCKS, with its end. A block whose end the log
+        lost is closed by the next block at its depth or above."""
+        while self.blocks and self.blocks[-1][0] > depth:
+            self.blocks.pop()
+        if opcode == "BLOCK_END":
+            if self.blocks and self.blocks[-1][0] == depth:
+                return self.blocks.pop()[1]
+            return depth == 0
+        if self.blocks and self.blocks[-1][0] == depth:
+            self.blocks.pop()
+        block = re.match(r"BLOCK_START BlockType=(\w+) ", stripped)
+        kept = depth == 0 or (block is not None and block.group(1) in NESTED_BLOCKS)
+        self.blocks.append((depth, kept))
+        return kept
 
     def _keep_choice(self, prefix: str, body: str) -> bool:
         """A kept choice's header, source and entities, and what was chosen for
@@ -477,9 +494,11 @@ def _report(command: list[str], text: str, folder: Path) -> object:
 
 
 def _comparable(games: object) -> object:
-    """A report without what a fixture cannot keep: hero names (card text)
-    and the combat replays' events, which nested blocks the fixture drops
-    give (T-215); the replays' minions stay."""
+    """A report without what a fixture cannot keep: hero names (card text);
+    the combat replays' events and beats, which nested blocks the fixture
+    drops give (T-215, T-575; the replays' minions stay); and each board's
+    game-long values, read from player enchantments the fixture drops
+    (T-610)."""
     if not isinstance(games, list):
         return games
     out = []
@@ -496,9 +515,16 @@ def _comparable(games: object) -> object:
 
 
 def _without_replay_events(round_: object) -> object:
-    if not isinstance(round_, dict) or not isinstance(round_.get("replay"), dict):
+    if not isinstance(round_, dict):
         return round_
-    replay = {k: v for k, v in round_["replay"].items() if k not in ("events", "complete")}
+    entries = round_.get("entries")
+    if isinstance(entries, list):
+        round_ = {**round_, "entries": [
+            {k: v for k, v in e.items() if k != "values"} if isinstance(e, dict) else e
+            for e in entries]}
+    if not isinstance(round_.get("replay"), dict):
+        return round_
+    replay = {k: v for k, v in round_["replay"].items() if k not in ("events", "beats", "complete")}
     return {**round_, "replay": replay}
 
 

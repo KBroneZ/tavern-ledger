@@ -76,4 +76,10 @@ export function realRecord(report: Json): Json {
   };
 }
 
-export { broken, dataGames, duo, realDuos, realGifts, realSolo, roundTwoGames, shopGames, solo };
+// A Duos game with Rally triggers giving Venomous mid-combat (revision 13,
+// T-575): beats, damage sources and keyword events.
+import realRally from "../../../crates/bg-parser/tests/data/real/b253216_duos_rally.json" with {
+  type: "json",
+};
+
+export { broken, dataGames, duo, realDuos, realGifts, realRally, realSolo, roundTwoGames, shopGames, solo };
