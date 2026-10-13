@@ -286,8 +286,9 @@ test("fonts and styles are our own files: every url() is a local font or the bra
     for (const url of urls) {
       // The masthead draws the logo (public/mark.svg, D-094) as a background,
       // the tavern buttons and panels their painted art (T-530, D-105), the
-      // simulator its tall panel (T-526, D-112).
-      assert.match(url, /^\/(?:fonts\/[a-z0-9-]+\.woff2|mark\.svg|art\/home\/(?:btn-[a-z-]+(?:@2x)?|panel-(?:lead|card|strip))\.webp|art\/sim\/panel-tall\.webp)$/, url);
+      // simulator its tall panel (T-526, D-112), the replay and the
+      // simulator's cards their keyword marks (T-581).
+      assert.match(url, /^\/(?:fonts\/[a-z0-9-]+\.woff2|mark\.svg|art\/home\/(?:btn-[a-z-]+(?:@2x)?|panel-(?:lead|card|strip))\.webp|art\/sim\/panel-tall\.webp|art\/keywords\/[a-z-]+\.svg)$/, url);
       assert.ok(existsSync(join(DIST, url)), url);
     }
   }

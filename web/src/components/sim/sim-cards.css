@@ -107,85 +107,98 @@
     0 0 12px rgb(255 208 138 / 0.6);
 }
 
-/* Taunt: a grey stone shield behind the art, wider than it at the top and
-   coming to a point below it, with a raised rim, as the game draws it (the
-   combat replays' mark, our own shape). */
+/* The keyword marks are the combat replay's (replay.css, D-136): the same
+   drawings in /art/keywords/, placed on the art's oval. A card is 100cqi
+   wide and 140cqi tall; the oval is 84cqi wide from 8cqi in and 9.8cqi
+   down. */
+
+/* Taunt: the steel shield behind the art, gold on a golden minion, around
+   the oval as the replay's (a little wider than the card). */
 .sim-taunt {
   position: absolute;
-  inset: 1% 2% 6%;
+  top: 2.1cqi;
+  left: -7.1cqi;
   display: none;
-  clip-path: polygon(4% 6%, 18% 0, 50% 3%, 82% 0, 96% 6%, 100% 40%, 94% 62%, 78% 82%, 50% 100%, 22% 82%, 6% 62%, 0 40%);
-  background: linear-gradient(180deg, #d9d4ca, #8d877d 55%, #5d5850);
+  width: 114.2cqi;
+  height: 132.9cqi;
+  background: url("/art/keywords/taunt.svg") center / 100% 100% no-repeat;
+  filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.5));
 }
 
-.sim-taunt::before {
-  content: "";
-  position: absolute;
-  inset: 7% 8% 9%;
-  clip-path: inherit;
-  background:
-    radial-gradient(ellipse 60% 40% at 50% 20%, rgb(255 255 255 / 0.18), transparent),
-    linear-gradient(180deg, #8f897f, #6b665e 60%, #4a463f);
+.sim .sim-card.is-golden .sim-taunt {
+  background-image: url("/art/keywords/taunt-golden.svg");
 }
 
 .sim .sim-card.is-taunt .sim-taunt {
   display: block;
 }
 
-/* Reborn: the art glows a ghostly blue. */
-.sim .sim-card.has-reborn .sim-card-art {
+/* Reborn: cracks of cyan light over the art, a bright rim inside it. */
+.sim .sim-card.has-reborn .sim-card-art::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 50%;
+  background:
+    url("/art/keywords/reborn.svg") center / 100% 100% no-repeat,
+    radial-gradient(closest-side, rgb(70 220 255 / 0.28) 55%, rgb(60 210 255 / 0.55));
   box-shadow:
-    0 0 0 2px #1a110b,
-    0 0 0 3.5px rgb(150 215 255 / 0.9),
-    0 0 16px 4px rgb(110 190 255 / 0.65);
+    inset 0 0 0 2px #8ff3ff,
+    inset 0 0 8cqi rgb(70 225 255 / 0.9);
 }
 
-/* Stealth: a smoky veil over the art. */
+/* Stealth: a grey smoke over the art; it barely shows. */
 .sim-veil {
   position: absolute;
   inset: 0;
   display: none;
   border-radius: 50%;
   background:
-    radial-gradient(ellipse 50% 35% at 30% 30%, rgb(120 110 150 / 0.55), transparent),
-    radial-gradient(ellipse 45% 40% at 70% 65%, rgb(90 85 120 / 0.6), transparent),
-    radial-gradient(closest-side, rgb(40 36 60 / 0.25), rgb(30 26 46 / 0.55));
+    radial-gradient(ellipse 55% 30% at 35% 28%, rgb(190 198 208 / 0.6), transparent),
+    radial-gradient(ellipse 50% 35% at 66% 62%, rgb(175 184 196 / 0.6), transparent),
+    radial-gradient(ellipse 40% 22% at 38% 84%, rgb(185 192 202 / 0.5), transparent),
+    rgb(100 107 117 / 0.78);
 }
 
 .sim .sim-card.has-stealth .sim-veil {
   display: block;
 }
 
-/* Venomous (or Poisonous): a green drop at the art's top right. */
+/* Venomous: the green vial over the oval's bottom edge,
+   between Attack and Health. */
 .sim-venom {
   position: absolute;
-  top: 10%;
-  right: 4%;
+  top: 85.4cqi;
+  left: 50%;
   display: none;
-  width: 22cqi;
-  height: 22cqi;
-  border: 1px solid rgb(0 0 0 / 0.7);
-  border-radius: 0 50% 50% 50%;
-  background: radial-gradient(circle at 60% 60%, #b6ff8a, #3fae2a 55%, #1d6514);
-  box-shadow: 0 0 8px rgb(110 230 80 / 0.7);
-  rotate: 45deg;
+  width: 30cqi;
+  height: 30cqi;
+  translate: -50% 0;
+  background: url("/art/keywords/venomous.svg") center / contain no-repeat;
+  filter: drop-shadow(0 0 4px rgb(120 255 90 / 0.6)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.6));
 }
 
-.sim .sim-card.has-venomous .sim-venom {
+/* Poisonous (still in some card data): its own round flask, as the game
+   drew it before Venomous; the vial when a card has both. */
+.sim .sim-card.has-poisonous:not(.has-venomous) .sim-venom {
+  background-image: url("/art/keywords/poisonous.svg");
+}
+
+.sim .sim-card:is(.has-venomous, .has-poisonous) .sim-venom {
   display: block;
 }
 
-/* Windfury: a swirl of wind around the art's lower half. */
+/* Windfury: grey-white wind streaks around and across the art. */
 .sim-wind {
   position: absolute;
-  inset: 30% 0 14%;
+  top: 9.8cqi;
+  left: 1.3cqi;
   display: none;
-  border: 3px solid transparent;
-  border-bottom-color: rgb(200 240 255 / 0.9);
-  border-left-color: rgb(200 240 255 / 0.55);
-  border-radius: 50%;
-  filter: drop-shadow(0 0 3px rgb(140 220 255 / 0.9));
-  rotate: -18deg;
+  width: 97.4cqi;
+  height: 102.2cqi;
+  background: url("/art/keywords/windfury.svg") center / 100% 100% no-repeat;
+  filter: drop-shadow(0 0 2px rgb(255 255 255 / 0.6)) drop-shadow(0 1px 1px rgb(0 0 0 / 0.45));
   pointer-events: none;
 }
 
@@ -193,14 +206,31 @@
   display: block;
 }
 
-/* Divine Shield: a golden bubble over the art. */
-.sim .sim-card.has-shield .sim-card-art::after {
+/* Divine Shield: a golden bubble around the art, a little larger than it,
+   under the card's numbers and marks. */
+.sim-atk,
+.sim-hp,
+.sim-kw,
+.sim-venom,
+.sim-gifts,
+.sim-flag {
+  z-index: 1;
+}
+
+.sim .sim-card.has-shield::after {
   content: "";
   position: absolute;
-  inset: 0;
+  top: 1.4cqi;
+  left: -0.4cqi;
+  width: 100.8cqi;
+  height: 119cqi;
+  border: 1.5px solid rgb(255 246 190 / 0.8);
   border-radius: 50%;
-  background: radial-gradient(circle at 50% 35%, rgb(255 236 160 / 0.05) 55%, rgb(255 220 120 / 0.45));
-  box-shadow: inset 0 0 0 2px rgb(255 232 150 / 0.85);
+  background: radial-gradient(ellipse at 50% 45%, rgb(255 240 160 / 0.05) 50%, rgb(255 224 90 / 0.35) 82%, rgb(255 214 70 / 0.55));
+  box-shadow:
+    0 0 12cqi 3cqi rgb(255 205 60 / 0.7),
+    inset 0 0 10cqi 3cqi rgb(255 228 110 / 0.75);
+  pointer-events: none;
 }
 
 .sim .sim-card.is-selected {

@@ -228,3 +228,30 @@ test("every token has the same box: what it carries sits out of the layout (T-57
   assert.match(css, /\.rp-hurt,\n\.rp-gain \{\n  position: absolute;/);
   assert.match(rule(".rp-minion"), /width: var\(--rp-tile\)/);
 });
+
+// Sin'dorei Straight Shot's Rally takes Taunt (and Reborn) from what it
+// attacks: from the owner's game of 2026-10-11, turn 11 (synthetic copy).
+function untaunt(): Json {
+  return {
+    minions: [m("own", "BG25_016", 1), m("opponent", "BG26_149", 1, ["taunt", "divine_shield"]), m("opponent", "BG26_152", 2, ["taunt", "divine_shield"])],
+    start: 3,
+    events: [
+      { kind: "attack", attacker: 0, defender: 1 },
+      { kind: "trigger", trigger: "rally", side: "own", card_id: "BG25_016", source: 0 },
+      { kind: "keyword", minion: 1, keyword: "taunt", on: false },
+      { kind: "shield", minion: 1, on: false },
+    ],
+    beats: [1, 2, 1],
+    complete: true,
+  };
+}
+
+test("a Taunt taken mid-combat drops its shield on that step (T-581)", () => {
+  const f = playback(read(untaunt()), NO_HEROES).frames;
+  assert.match(tileClass(f[1].opponent[0]), /\bhas-taunt\b/, "before the Rally");
+  const after = tileClass(f[2].opponent[0]);
+  assert.doesNotMatch(after, /\bhas-taunt\b/);
+  assert.match(after, /\bloses-taunt\b/);
+  assert.match(tileClass(f[2].opponent[1]), /\bhas-taunt\b/, "the other keeps it");
+  assert.doesNotMatch(tileClass(f[3].opponent[0]), /\b(has|loses)-taunt\b/, "gone for good");
+});
