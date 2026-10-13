@@ -1,24 +1,34 @@
 // The built minion pages (T-578, D-134) and the sitemap, in every build
-// mode. Accounts open (card data from the synthetic files in CI): the index
-// and one page per type in both languages, each indexable with its own
-// title, description, canonical, alternates, Open Graph, breadcrumb and
-// structured data; the minions in the pool only, a minion of two types on
-// both pages, one of every type on all of them, golden stats. Accounts
-// closed: no card data, so no minion page and no link to one. Either way the
-// sitemap lists exactly the indexable pages.
+// mode and on any card data: CI builds from the synthetic files, the Pages
+// build (which runs these checks too, D-030) from HearthstoneJSON's real
+// data. Accounts open: the index and one page per type in both languages,
+// each indexable with its own title, description, canonical, alternates,
+// Open Graph, breadcrumb and structured data, and every pool minion listed
+// somewhere. On the synthetic files only (their exact minions are known):
+// pool minions only, a minion of two types on both pages, one of every type
+// on all of them, golden stats, a new type under "Other types". Accounts
+// closed: no minion page and no link to one. Either way the sitemap lists
+// exactly the indexable pages.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { loadEnv } from "vite";
 import { readConfig } from "../../src/lib/config.ts";
+import { readPool, tribePages } from "../../src/lib/minions/view.ts";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const DIST = join(ROOT, "dist");
 const OPEN = readConfig(loadEnv("production", ROOT, "PUBLIC_")) !== null;
 const SITE = "https://tavernledger.net";
-/** The fixture's types with a minion of their own (test/fixtures/sim-cards). */
-const SLUGS = ["elemental", "mech", "murloc", "pirate", "quilboar", "undead", "no-tribe"];
+/** The pool the build used (tools/prepare-sim.ts wrote it next to the pages' code). */
+const POOL_FILE = join(ROOT, "src", "lib", "minions", "generated", "pool.en.json");
+const POOL = existsSync(POOL_FILE) ? readPool(JSON.parse(readFileSync(POOL_FILE, "utf8"))) : null;
+/** Built from the synthetic files (test/fixtures/sim-cards), whose minions the checks below know by id. */
+const FIXTURE = POOL?.source === "fixture";
+/** The type pages this build should have. */
+const SLUGS = POOL ? tribePages(POOL).map((p) => p.slug) : [];
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const read = (page: string) => readFileSync(join(DIST, page), "utf8");
 const page = (lang: string, slug: string | null) => `${lang === "es" ? "es/" : ""}minions/${slug ? `${slug}/` : ""}index.html`;
 const entries = (html: string) => [...html.matchAll(/<li class="mn-entry" id="m-([A-Za-z0-9_]+)">/g)].map((m) => m[1]);
@@ -38,11 +48,23 @@ function jsonLd(html: string): { "@context": string; "@graph": Record<string, un
 }
 
 test("accounts open: the index and a page per type, in English and Spanish", { skip: !OPEN }, () => {
+  assert.ok(POOL && POOL.minions.length > 0, "run `npm run build` first");
   for (const lang of ["en", "es"]) {
     assert.ok(existsSync(join(DIST, page(lang, null))), `${lang} index: run \`npm run build\` first`);
     for (const slug of SLUGS) assert.ok(existsSync(join(DIST, page(lang, slug))), page(lang, slug));
-    assert.ok(!existsSync(join(DIST, page(lang, "beast"))), "a type with only an every-type minion has no page");
+    const built = readdirSync(join(DIST, ...(lang === "es" ? ["es"] : []), "minions")).filter((n) => n !== "index.html");
+    assert.deepEqual(built.sort(), [...SLUGS].sort(), `${lang}: no other type page`);
   }
+});
+
+test("accounts open: every pool minion is listed, on its types' pages or under other types", { skip: !OPEN }, () => {
+  const listed = new Set([null, ...SLUGS].flatMap((slug) => entries(read(page("en", slug)))));
+  assert.deepEqual(POOL!.minions.map((m) => m.id).filter((id) => !listed.has(id)), []);
+});
+
+test("synthetic data: the expected type pages; a type with only an every-type minion has none", { skip: !OPEN || !FIXTURE }, () => {
+  assert.deepEqual(SLUGS, ["elemental", "mech", "murloc", "pirate", "quilboar", "undead", "no-tribe"]);
+  for (const lang of ["en", "es"]) assert.ok(!existsSync(join(DIST, page(lang, "beast"))));
 });
 
 test("accounts open: each minion page has its own head for search engines and link previews", { skip: !OPEN }, () => {
@@ -67,7 +89,8 @@ test("accounts open: each minion page has its own head for search engines and li
       assert.match(html, /<html lang="(en|es)">/, file);
       assert.match(html, /Unofficial fan project\. Not affiliated with or endorsed by Blizzard Entertainment\./, file);
       assert.match(html, /<nav class="mn-crumbs" aria-label="[^"]+">/, file);
-      assert.match(html, /© Blizzard Entertainment, (?:from|desde) fixture\./, `${file}: the art and data credit`);
+      const source = escapeRegExp(POOL!.source.replaceAll("&", "&amp;"));
+      assert.match(html, new RegExp(`© Blizzard Entertainment, (?:from|desde) ${source}\\.`), `${file}: the art and data credit`);
     }
   }
 });
@@ -99,7 +122,7 @@ test("accounts open: the structured data is valid JSON: a breadcrumb and the pag
   }
 });
 
-test("accounts open: pool minions only, grouped by tier; two types on both pages, every type on all", { skip: !OPEN }, () => {
+test("synthetic data: pool minions only, grouped by tier; two types on both pages, every type on all", { skip: !OPEN || !FIXTURE }, () => {
   const murloc = read(page("en", "murloc"));
   const pirate = read(page("en", "pirate"));
   assert.ok(entries(murloc).includes("BG_SYN_MURPIR") && entries(pirate).includes("BG_SYN_MURPIR"));
@@ -119,7 +142,7 @@ test("accounts open: pool minions only, grouped by tier; two types on both pages
   assert.match(murloc, /Duos only/);
 });
 
-test("accounts open: a type new to the card data has no page; the index lists its minions under other types", { skip: !OPEN }, () => {
+test("synthetic data: a type new to the card data has no page; the index lists its minions under other types", { skip: !OPEN || !FIXTURE }, () => {
   for (const lang of ["en", "es"]) {
     assert.ok(!existsSync(join(DIST, page(lang, "synthetic_kin"))) && !existsSync(join(DIST, page(lang, "synthetic-kin"))));
     const index = read(page(lang, null));
@@ -134,7 +157,7 @@ test("accounts open: a type new to the card data has no page; the index lists it
   assert.doesNotMatch(xml, /synthetic/i, "no sitemap entry for a type without a page");
 });
 
-test("accounts open: stats, golden stats and card text, in the page's language", { skip: !OPEN }, () => {
+test("synthetic data: stats, golden stats and card text, in the page's language", { skip: !OPEN || !FIXTURE }, () => {
   const en = read(page("en", "murloc"));
   assert.match(en, /<h3>Synthetic Deckhand Fin<\/h3>/);
   assert.match(en, /3 Attack, 4 Health/);
