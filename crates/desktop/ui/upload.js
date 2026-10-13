@@ -49,6 +49,7 @@
       ? t("win.upload.notRunning")
       : !v.available ? t("win.upload.unavailable", { reason: backend(v.unavailable_reason) || t("win.upload.noServer") }) : "";
     show("upload-unavailable", unavailable);
+    show("upload-server-warning", v.running ? backend(v.server_warning || "") : "");
     const usable = v.running && v.available;
     $("upload-signed-out").hidden = !usable || v.signed_in;
     $("upload-signed-in").hidden = !usable || !v.signed_in;

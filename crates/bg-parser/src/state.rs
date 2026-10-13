@@ -6,11 +6,21 @@
 //! nothing, TAG_CHANGE sets one tag. An operation on an entity that was never
 //! created is an error, as in hslog.
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 use crate::power::{EntityRef, ParseError, Value};
 
 pub type Tags = HashMap<String, Value>;
+
+/// Entities in one game: several times the most a long real game creates
+/// (entity ids reach about 21,000 by turn 20), so a broken or hostile log
+/// cannot grow the board without end.
+pub const MAX_ENTITIES: usize = 200_000;
+/// Different tags on one entity: far more than the game gives any entity.
+pub const MAX_TAGS: usize = 1_000;
+/// Hero entities in one game (a 20-turn game has about 80, combat copies
+/// included). The lobby is looked up among these on every leaderboard change.
+pub const MAX_HEROES: usize = 5_000;
 
 #[derive(Clone, Debug, Default)]
 pub struct Entity {
@@ -48,6 +58,8 @@ impl Entity {
 pub struct Board {
     entities: Vec<Entity>,
     index: HashMap<i64, usize>,
+    /// Positions in `entities` of every entity that has been a hero.
+    heroes: BTreeSet<usize>,
     pub game_id: Option<i64>,
 }
 
@@ -64,15 +76,33 @@ impl Board {
         self.entities.iter()
     }
 
+    /// The entities that are heroes now, in creation order, without going
+    /// through every entity of the game.
+    pub fn heroes(&self) -> impl Iterator<Item = &Entity> {
+        self.heroes
+            .iter()
+            .map(|&i| &self.entities[i])
+            .filter(|e| e.is("CARDTYPE", "HERO"))
+    }
+
     /// FULL_ENTITY: an id seen again (GAME_RESET) keeps its place but is reset.
-    pub fn create(&mut self, entity: Entity) {
-        match self.index.get(&entity.id) {
-            Some(&i) => self.entities[i] = entity,
+    pub fn create(&mut self, entity: Entity) -> Result<(), ParseError> {
+        check_tags(&entity.tags)?;
+        let i = match self.index.get(&entity.id) {
+            Some(&i) => {
+                self.entities[i] = entity;
+                i
+            }
             None => {
+                if self.entities.len() >= MAX_ENTITIES {
+                    return Err(ParseError("TooManyEntities"));
+                }
                 self.index.insert(entity.id, self.entities.len());
                 self.entities.push(entity);
+                self.entities.len() - 1
             }
-        }
+        };
+        self.note_hero(i)
     }
 
     fn get_mut(&mut self, id: i64) -> Result<&mut Entity, ParseError> {
@@ -87,8 +117,8 @@ impl Board {
     pub fn show(&mut self, id: i64, card_id: String, tags: Tags) -> Result<(), ParseError> {
         let entity = self.get_mut(id)?;
         entity.card_id = Some(card_id);
-        entity.tags.extend(tags);
-        Ok(())
+        merge(entity, tags)?;
+        self.note_hero_id(id)
     }
 
     pub fn change(&mut self, id: i64, card_id: String, tags: Tags) -> Result<(), ParseError> {
@@ -97,14 +127,60 @@ impl Board {
             return Err(ParseError("ExporterError"));
         }
         entity.card_id = Some(card_id);
-        entity.tags.extend(tags);
-        Ok(())
+        merge(entity, tags)?;
+        self.note_hero_id(id)
     }
 
     pub fn set_tag(&mut self, id: i64, tag: String, value: Value) -> Result<(), ParseError> {
-        self.get_mut(id)?.tags.insert(tag, value);
+        let is_type = tag == "CARDTYPE";
+        let entity = self.get_mut(id)?;
+        if entity.tags.len() >= MAX_TAGS && !entity.tags.contains_key(&tag) {
+            return Err(ParseError("TooManyTags"));
+        }
+        entity.tags.insert(tag, value);
+        if is_type {
+            self.note_hero_id(id)?;
+        }
         Ok(())
     }
+
+    fn note_hero_id(&mut self, id: i64) -> Result<(), ParseError> {
+        match self.index.get(&id) {
+            Some(&i) => self.note_hero(i),
+            None => Ok(()),
+        }
+    }
+
+    fn note_hero(&mut self, i: usize) -> Result<(), ParseError> {
+        if !self.entities[i].is("CARDTYPE", "HERO") || self.heroes.contains(&i) {
+            return Ok(());
+        }
+        if self.heroes.len() >= MAX_HEROES {
+            return Err(ParseError("TooManyHeroes"));
+        }
+        self.heroes.insert(i);
+        Ok(())
+    }
+}
+
+/// A packet's tags fit on one entity.
+pub fn check_tags(tags: &Tags) -> Result<(), ParseError> {
+    if tags.len() > MAX_TAGS {
+        return Err(ParseError("TooManyTags"));
+    }
+    Ok(())
+}
+
+fn merge(entity: &mut Entity, tags: Tags) -> Result<(), ParseError> {
+    let new = tags
+        .keys()
+        .filter(|t| !entity.tags.contains_key(*t))
+        .count();
+    if entity.tags.len() + new > MAX_TAGS {
+        return Err(ParseError("TooManyTags"));
+    }
+    entity.tags.extend(tags);
+    Ok(())
 }
 
 const UNKNOWN_HUMAN_PLAYER: &str = "UNKNOWN HUMAN PLAYER";
@@ -269,12 +345,37 @@ mod tests {
     }
 
     #[test]
+    fn heroes_are_listed_in_creation_order_while_they_are_heroes() {
+        let mut b = Board::default();
+        let hero = |id| Entity {
+            id,
+            tags: Tags::from([("CARDTYPE".to_string(), Value::Name("HERO".into()))]),
+            ..Entity::default()
+        };
+        b.create(hero(7)).unwrap();
+        b.create(Entity {
+            id: 3,
+            ..Entity::default()
+        })
+        .unwrap();
+        b.create(hero(9)).unwrap();
+        b.set_tag(3, "CARDTYPE".into(), Value::Name("HERO".into()))
+            .unwrap();
+        let ids = |b: &Board| b.heroes().map(|e| e.id).collect::<Vec<_>>();
+        assert_eq!(ids(&b), [7, 3, 9]);
+        b.set_tag(9, "CARDTYPE".into(), Value::Name("MINION".into()))
+            .unwrap();
+        assert_eq!(ids(&b), [7, 3]);
+    }
+
+    #[test]
     fn change_entity_without_card_id_is_an_error() {
         let mut b = Board::default();
         b.create(Entity {
             id: 5,
             ..Entity::default()
-        });
+        })
+        .unwrap();
         assert_eq!(
             b.change(5, "X".into(), Tags::new()),
             Err(ParseError("ExporterError"))

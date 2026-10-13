@@ -2,12 +2,41 @@
 //! credential, this user and this PC only), never a plain file. The access
 //! token stays in memory. The credential's name includes a hash of the data
 //! folder, so a test copy of the app with `--data-dir` never reads or
-//! overwrites the real sign-in.
+//! overwrites the real sign-in. The token is stored with the URL of the
+//! server that issued it ([`bind`]) and is only ever given back for that
+//! server ([`token_for`]).
 
 use std::io;
 use std::path::Path;
 
+use serde::{Deserialize, Serialize};
+
+use crate::config;
 use crate::pkce::sha256_hex;
+
+/// What the credential holds.
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Bound {
+    url: String,
+    refresh_token: String,
+}
+
+/// The refresh token with the URL of the server that issued it.
+pub fn bind(url: &str, refresh_token: &str) -> String {
+    serde_json::json!({"url": url, "refresh_token": refresh_token}).to_string()
+}
+
+/// The refresh token in a stored credential, only when it was issued by the
+/// server at `url`. A credential saved before tokens were bound holds the
+/// bare token; the hosted project was the only server then.
+pub fn token_for(stored: &str, url: &str) -> Option<String> {
+    if !stored.starts_with('{') {
+        return (url == config::hosted().url).then(|| stored.to_string());
+    }
+    let bound: Bound = serde_json::from_str(stored).ok()?;
+    (bound.url == url).then_some(bound.refresh_token)
+}
 
 pub trait TokenStore: Send {
     fn load(&self) -> io::Result<Option<String>>;
@@ -184,6 +213,46 @@ pub mod memory {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_token_is_given_back_only_for_the_server_that_issued_it() {
+        let stored = bind("https://a.supabase.co", "RT");
+        assert_eq!(
+            token_for(&stored, "https://a.supabase.co").as_deref(),
+            Some("RT")
+        );
+        for other in [
+            "https://b.supabase.co",
+            "https://a.supabase.co.example",
+            "http://127.0.0.1:54321",
+            "",
+        ] {
+            assert_eq!(token_for(&stored, other), None, "{other}");
+        }
+    }
+
+    #[test]
+    fn a_token_saved_before_binding_belongs_to_the_hosted_project_only() {
+        let hosted = config::hosted().url;
+        assert_eq!(token_for("RT", &hosted).as_deref(), Some("RT"));
+        assert_eq!(token_for("RT", "https://b.supabase.co"), None);
+        assert_eq!(token_for("RT", "http://127.0.0.1:54321"), None);
+    }
+
+    #[test]
+    fn a_damaged_credential_gives_no_token() {
+        for stored in ["{", "{}", "{\"url\": \"https://a.supabase.co\"}"] {
+            assert_eq!(token_for(stored, "https://a.supabase.co"), None, "{stored}");
+        }
+        let extra = r#"{"url":"https://a.supabase.co","refresh_token":"RT","x":1}"#;
+        assert_eq!(token_for(extra, "https://a.supabase.co"), None);
+    }
+
+    #[test]
+    fn a_url_with_quotes_cannot_forge_another_field() {
+        let stored = bind("https://a\",\"url\":\"https://b", "RT");
+        assert_eq!(token_for(&stored, "https://b"), None);
+    }
 
     #[test]
     fn each_data_folder_has_its_own_credential() {

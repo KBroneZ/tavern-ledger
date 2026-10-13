@@ -261,6 +261,8 @@
         "Signed out: the sign-in on this PC is gone. Sign in again.": "Sesión cerrada: el inicio de sesión de este PC ya no está. Vuelve a iniciar sesión.",
         "Signed out: your sign-in expired or was ended. Sign in again.": "Sesión cerrada: tu sesión ha caducado o se ha cerrado. Vuelve a iniciar sesión.",
         "Upload paused: too many sign-in refreshes.": "Subida en pausa: demasiadas renovaciones de sesión.",
+        "Upload stopped: the sign-in on this PC was made with another server, and it is only ever sent to that one. Sign out and sign in again to use this server.": "Subida detenida: el inicio de sesión de este PC se hizo con otro servidor y solo se envía a ese. Cierra sesión y vuelve a iniciarla para usar este servidor.",
+        "server.json is not valid: it names a server other than Tavern Ledger's own or this PC's; only a development build, or the app started with --allow-other-server, uses one": "server.json no es válido: indica un servidor que no es el de Tavern Ledger ni el de este PC; solo lo usa una versión de desarrollo o la app iniciada con --allow-other-server",
         // desktop::game_memory and tracker::game_values (D-063)
         "The setting for reading from the game could not be read; it is off.": "No se ha podido leer el ajuste de lectura del juego; está desactivado.",
         "Reading from the game stopped after an internal error; it is off until the app restarts.": "La lectura del juego se ha detenido por un error interno; está desactivada hasta que reinicies la app.",
@@ -274,6 +276,8 @@
     // tracker::setup's lines (file, path, section, settings, reason).
     backendPatterns: {
       es: [
+        [String.raw`Uploads go to (\S+), not to Tavern Ledger's own server\.`,
+          "Las subidas van a $1, no al servidor de Tavern Ledger."],
         [String.raw`The setting for reading from the game could not be read \((\w+)\); it is off\.`,
           "No se ha podido leer el ajuste de lectura del juego ($1); está desactivado."],
         [String.raw`The setting could not be saved \((\w+)\); it will be lost after a restart\.`,

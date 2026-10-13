@@ -31,7 +31,7 @@ use crate::auth::{now_secs, Auth, AuthError, Session};
 use crate::config::{ConfigError, ServerConfig};
 use crate::http::{Http, Method, NetError, Request, Response};
 use crate::queue::{pending, Counts, Item, Mark, Marks, Outcome};
-use crate::secrets::TokenStore;
+use crate::secrets::{self, TokenStore};
 use crate::settings::{self, Settings};
 
 const BACKOFF_FIRST: Duration = Duration::from_secs(2);
@@ -50,6 +50,8 @@ const GAME_REFUSALS: [&str; 6] = [
 const MAX_VALIDATOR: u64 = 1_000_000;
 /// Refresh the access token when it has less than this left.
 const REFRESH_MARGIN_SECS: u64 = 60;
+/// Why upload stops when the saved sign-in belongs to another server.
+const OTHER_SERVER: &str = "Upload stopped: the sign-in on this PC was made with another server, and it is only ever sent to that one. Sign out and sign in again to use this server.";
 
 /// What the app shows. Plain words; no token, key or server text.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
@@ -57,6 +59,9 @@ pub struct Status {
     /// A server is set up (`server.json`); without one, upload cannot be used.
     pub available: bool,
     pub unavailable_reason: Option<String>,
+    /// Set when uploads go to a server other than the hosted project: the
+    /// panel always shows it.
+    pub server_warning: Option<String>,
     pub enabled: bool,
     pub signed_in: bool,
     pub email: Option<String>,
@@ -188,7 +193,7 @@ impl Engine {
     /// before anything else; upload stays as the user left it (off after a
     /// sign-out), so signing in never turns it on.
     pub fn signed_in_with(&mut self, session: Session) -> Result<(), String> {
-        self.tokens.save(&session.refresh_token).map_err(|e| {
+        self.save_refresh(&session.refresh_token).map_err(|e| {
             format!(
                 "Could not save the sign-in in Windows Credential Manager ({:?}).",
                 e.kind()
@@ -244,7 +249,12 @@ impl Engine {
             _ => {
                 let refresh = match &self.session {
                     Some(s) => Some(s.refresh_token.clone()),
-                    None => self.tokens.load().ok().flatten(),
+                    None => self
+                        .tokens
+                        .load()
+                        .ok()
+                        .flatten()
+                        .and_then(|stored| secrets::token_for(&stored, &server.url)),
                 };
                 match refresh.map(|r| auth.refresh(&r)) {
                     Some(Ok(session)) => session.access_token,
@@ -278,6 +288,15 @@ impl Engine {
         } else {
             Err(problems.join(" "))
         }
+    }
+
+    /// Saves the refresh token bound to the server that issued it.
+    fn save_refresh(&self, refresh: &str) -> io::Result<()> {
+        let server = self
+            .server
+            .as_ref()
+            .map_err(|_| io::Error::new(io::ErrorKind::NotFound, "no upload server"))?;
+        self.tokens.save(&secrets::bind(&server.url, refresh))
     }
 
     fn forget_and_stop(&mut self, why: &str) -> Wake {
@@ -336,6 +355,17 @@ impl Engine {
             }
         }
         self.status.available = self.server.is_ok();
+        self.status.server_warning =
+            self.server
+                .as_ref()
+                .ok()
+                .filter(|s| !s.is_hosted())
+                .map(|s| {
+                    format!(
+                        "Uploads go to {}, not to Tavern Ledger's own server.",
+                        s.url
+                    )
+                });
         self.status.unavailable_reason = self.server.as_ref().err().map(ToString::to_string);
         self.status.enabled = self.settings.enabled;
         self.status.signed_in = self.signed_in();
@@ -357,8 +387,8 @@ impl Engine {
     fn access_token(&mut self, now: Instant, force: bool) -> Result<String, Wake> {
         // A rotated token that could not be saved: save it before going on.
         if self.unsaved {
-            if let Some(s) = &self.session {
-                if let Err(e) = self.tokens.save(&s.refresh_token) {
+            if let Some(refresh) = self.session.as_ref().map(|s| s.refresh_token.clone()) {
+                if let Err(e) = self.save_refresh(&refresh) {
                     return Err(self.stop(Self::credential_problem(&e)));
                 }
             }
@@ -369,10 +399,15 @@ impl Engine {
                 return Ok(s.access_token.clone());
             }
         }
+        let server = self.server.clone().map_err(|e| self.stop(e.to_string()))?;
         let refresh = match self.session.as_ref().map(|s| s.refresh_token.clone()) {
             Some(r) => r,
             None => match self.tokens.load() {
-                Ok(Some(r)) => r,
+                Ok(Some(stored)) => match secrets::token_for(&stored, &server.url) {
+                    Some(r) => r,
+                    // Kept as it is: removing server.json makes it work again.
+                    None => return Err(self.stop(OTHER_SERVER.into())),
+                },
                 Ok(None) => {
                     return Err(self.forget_and_stop(
                         "Signed out: the sign-in on this PC is gone. Sign in again.",
@@ -386,7 +421,6 @@ impl Engine {
                 }
             },
         };
-        let server = self.server.clone().map_err(|e| self.stop(e.to_string()))?;
         let auth = Auth {
             server: &server,
             http: self.http.as_ref(),
@@ -395,7 +429,7 @@ impl Engine {
             Ok(session) => {
                 // The old refresh token stops working soon: keep the new one
                 // before using it, so a crash cannot lock the user out.
-                if let Err(e) = self.tokens.save(&session.refresh_token) {
+                if let Err(e) = self.save_refresh(&session.refresh_token) {
                     // The old token may already be spent: keep the new one in
                     // memory, upload nothing, and save it on the next run.
                     self.session = Some(session);

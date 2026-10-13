@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-preview-problem-report"
+description = "Enables the preview_problem_report command without any pre-configured scope."
+commands.allow = ["preview_problem_report"]
+
+[[permission]]
+identifier = "deny-preview-problem-report"
+description = "Denies the preview_problem_report command without any pre-configured scope."
+commands.deny = ["preview_problem_report"]

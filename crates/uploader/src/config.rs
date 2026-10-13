@@ -1,7 +1,10 @@
 //! Which server to upload to: the hosted project built in, unless the data
 //! folder has `server.json` (`{"url": "...", "anon_key": "..."}`, e.g. the
 //! local stack for development). Only the public (anon or publishable) key
-//! belongs in either; a service-role or secret key is refused.
+//! belongs in either; a service-role or secret key is refused. A
+//! `server.json` naming a server other than the hosted project or this PC
+//! (127.0.0.1) is only used by a development build or when the app is started
+//! with [`ALLOW_OTHER_SERVER`]; the app then says where uploads go.
 
 use std::fs;
 use std::io;
@@ -12,6 +15,8 @@ use base64::Engine;
 use serde::Deserialize;
 
 pub const FILE_NAME: &str = "server.json";
+/// The command-line flag that lets `server.json` name any HTTPS server.
+pub const ALLOW_OTHER_SERVER: &str = "--allow-other-server";
 
 /// The hosted Supabase project (design notes) and its
 /// publishable key, which is public by design: what it can reach is limited
@@ -25,6 +30,18 @@ pub struct ServerConfig {
     /// Project URL without a trailing slash, e.g. https://abc.supabase.co.
     pub url: String,
     pub anon_key: String,
+}
+
+impl ServerConfig {
+    /// The project built into the app.
+    pub fn is_hosted(&self) -> bool {
+        self.url == HOSTED_URL
+    }
+
+    /// A server on this PC (the local development stack).
+    pub fn is_loopback(&self) -> bool {
+        self.url.starts_with("http://127.0.0.1:")
+    }
 }
 
 impl std::fmt::Debug for ServerConfig {
@@ -69,12 +86,24 @@ pub fn hosted() -> ServerConfig {
 }
 
 /// `server.json` if the data folder has one, else the hosted project. A file
-/// that exists but cannot be read or is wrong stays an error.
-pub fn load_or_hosted(dir: &Path) -> Result<ServerConfig, ConfigError> {
+/// that exists but cannot be read or is wrong stays an error, and so does one
+/// naming a server other than the hosted project or this PC unless
+/// `allow_other` (a development build, or [`ALLOW_OTHER_SERVER`]).
+pub fn load_or_hosted(dir: &Path, allow_other: bool) -> Result<ServerConfig, ConfigError> {
     match load(dir) {
         Err(ConfigError::Missing) => Ok(hosted()),
+        Ok(server) if !allow_other && !server.is_hosted() && !server.is_loopback() => {
+            Err(ConfigError::Invalid(
+                "it names a server other than Tavern Ledger's own or this PC's; only a development build, or the app started with --allow-other-server, uses one",
+            ))
+        }
         other => other,
     }
+}
+
+/// Whether the app was started with [`ALLOW_OTHER_SERVER`].
+pub fn other_server_allowed(mut args: impl Iterator<Item = String>) -> bool {
+    args.any(|a| a == ALLOW_OTHER_SERVER)
 }
 
 pub fn load(dir: &Path) -> Result<ServerConfig, ConfigError> {
@@ -239,13 +268,53 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("tl-config-hosted-{}", std::process::id()));
         fs::create_dir_all(&dir).unwrap();
         let _ = fs::remove_file(dir.join(FILE_NAME));
-        assert_eq!(load_or_hosted(&dir), Ok(hosted()));
+        assert_eq!(load_or_hosted(&dir, false), Ok(hosted()));
         let body = serde_json::json!({"url": "http://127.0.0.1:54321", "anon_key": jwt("anon")});
         fs::write(dir.join(FILE_NAME), body.to_string()).unwrap();
-        assert_eq!(load_or_hosted(&dir).unwrap().url, "http://127.0.0.1:54321");
+        assert_eq!(
+            load_or_hosted(&dir, false).unwrap().url,
+            "http://127.0.0.1:54321"
+        );
         // A broken file is an error to show, never a silent switch to the hosted project.
         fs::write(dir.join(FILE_NAME), "{").unwrap();
-        assert!(matches!(load_or_hosted(&dir), Err(ConfigError::Invalid(_))));
+        assert!(matches!(
+            load_or_hosted(&dir, false),
+            Err(ConfigError::Invalid(_))
+        ));
         fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn another_https_server_is_used_only_when_allowed() {
+        let dir = std::env::temp_dir().join(format!("tl-config-other-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let body = serde_json::json!({"url": "https://other.example", "anon_key": jwt("anon")});
+        fs::write(dir.join(FILE_NAME), body.to_string()).unwrap();
+        let refused = load_or_hosted(&dir, false).unwrap_err();
+        assert!(
+            matches!(refused, ConfigError::Invalid(_)),
+            "an error to show, never a silent switch: {refused}"
+        );
+        assert!(refused.to_string().contains(ALLOW_OTHER_SERVER));
+        let allowed = load_or_hosted(&dir, true).unwrap();
+        assert_eq!(allowed.url, "https://other.example");
+        assert!(!allowed.is_hosted() && !allowed.is_loopback());
+        // The hosted project named in the file is the hosted project.
+        let body = serde_json::json!({"url": HOSTED_URL, "anon_key": jwt("anon")});
+        fs::write(dir.join(FILE_NAME), body.to_string()).unwrap();
+        assert!(load_or_hosted(&dir, false).unwrap().is_hosted());
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn the_flag_is_read_from_the_command_line() {
+        let args = |list: &[&str]| list.iter().map(|a| a.to_string()).collect::<Vec<_>>();
+        assert!(other_server_allowed(
+            args(&["app", "--allow-other-server"]).into_iter()
+        ));
+        assert!(!other_server_allowed(args(&["app"]).into_iter()));
+        assert!(!other_server_allowed(
+            args(&["app", "--allow-other-server=1"]).into_iter()
+        ));
     }
 }

@@ -197,6 +197,9 @@ fn a_hero_packet_with_a_count_set_keeps_it_and_strange_values_are_left_out() {
         "TAG_CHANGE Entity=GameEntity tag=TURN value=205 ",
     );
     let r = report(&far);
-    assert_eq!(seat(&r, 3).triples.len(), 1, "turn 103 is past the bound");
-    assert_eq!(r.discovers.len(), 2, "so is a choice on that turn");
+    assert_eq!(
+        r.problems,
+        ["parser error: UnsupportedTurn"],
+        "turn 103 is past any game's: the game is not read"
+    );
 }

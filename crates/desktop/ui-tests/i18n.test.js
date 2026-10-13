@@ -194,3 +194,11 @@ test("English dates follow the PC's own English, en-GB when it has none", () => 
   I18n.englishFrom(["en"]);
   assert.equal(I18n.date(d), "09/10/2026");
 });
+
+test("the warning about another upload server is translated with its address kept", () => {
+  I18n.setLang("es");
+  const warning = "Uploads go to https://other.example, not to Tavern Ledger's own server.";
+  assert.equal(I18n.backend(warning), "Las subidas van a https://other.example, no al servidor de Tavern Ledger.");
+  I18n.setLang("en");
+  assert.equal(I18n.backend(warning), warning);
+});

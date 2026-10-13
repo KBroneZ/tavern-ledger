@@ -199,9 +199,9 @@ mod tests {
 
     fn board() -> Board {
         let mut b = Board::default();
-        b.create(hero(101, "H_A", 5));
-        b.create(hero(102, "H_B_SKIN_C", 5));
-        b.create(hero(103, "H_OTHER", 9));
+        b.create(hero(101, "H_A", 5)).unwrap();
+        b.create(hero(102, "H_B_SKIN_C", 5)).unwrap();
+        b.create(hero(103, "H_OTHER", 9)).unwrap();
         b
     }
 
@@ -303,7 +303,7 @@ mod tests {
         let mut t = HeroSelectTracker::default();
         t.on_choices("id=1 ChoiceType=MULLIGAN", &b, Some(5));
         for id in 1..=MAX_OFFERED as i64 + 10 {
-            b.create(hero(id, "H_X", 5));
+            b.create(hero(id, "H_X", 5)).unwrap();
             t.on_choices(&format!("Entities[0]={id}"), &b, Some(5));
         }
         for _ in 0..10 {

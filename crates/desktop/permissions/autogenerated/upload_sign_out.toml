@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-upload-sign-out"
+description = "Enables the upload_sign_out command without any pre-configured scope."
+commands.allow = ["upload_sign_out"]
+
+[[permission]]
+identifier = "deny-upload-sign-out"
+description = "Denies the upload_sign_out command without any pre-configured scope."
+commands.deny = ["upload_sign_out"]

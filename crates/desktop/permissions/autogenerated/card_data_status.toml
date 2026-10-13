@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-card-data-status"
+description = "Enables the card_data_status command without any pre-configured scope."
+commands.allow = ["card_data_status"]
+
+[[permission]]
+identifier = "deny-card-data-status"
+description = "Denies the card_data_status command without any pre-configured scope."
+commands.deny = ["card_data_status"]

@@ -22,6 +22,10 @@ pub const LOADING_SCREEN_LOG: &str = "LoadingScreen.log";
 pub const LOADING_SCREEN_OLD_LOG: &str = "LoadingScreen_old.log";
 const READ_CHUNK: usize = 1 << 20;
 const HEAD_LEN: usize = 256;
+/// Bytes of the followed file read in one poll. A long real session takes a
+/// few polls to catch up; a file that grows faster than any game writes
+/// cannot keep one poll busy for long.
+const POLL_BUDGET: u64 = 64 << 20;
 
 /// What a poll found, in log order.
 #[derive(Debug, PartialEq, Eq)]
@@ -56,6 +60,7 @@ pub struct Follower {
     logs_dir: PathBuf,
     current: Option<Position>,
     files: Files,
+    budget: u64,
 }
 
 impl Follower {
@@ -75,7 +80,14 @@ impl Follower {
             logs_dir: logs_dir.into(),
             current: None,
             files: Files { current, old },
+            budget: POLL_BUDGET,
         }
+    }
+
+    #[cfg(test)]
+    fn with_budget(mut self, budget: u64) -> Self {
+        self.budget = budget;
+        self
     }
 
     pub fn poll(&mut self, on_event: &mut dyn FnMut(Event<'_>)) -> io::Result<()> {
@@ -84,7 +96,7 @@ impl Follower {
                 if let Some(mut old) = self.current.take() {
                     // The rest of the previous session; if it cannot be read
                     // now, the new session still starts.
-                    let result = read_new(&mut old, on_event);
+                    let result = read_new(&mut old, u64::MAX, on_event);
                     old.splitter.finish(&mut forward(on_event));
                     self.start(latest, on_event);
                     result?;
@@ -94,7 +106,7 @@ impl Follower {
             }
         }
         match self.current.as_mut() {
-            Some(pos) => read_new(pos, on_event),
+            Some(pos) => read_new(pos, self.budget, on_event),
             None => Ok(()),
         }
     }
@@ -136,7 +148,13 @@ fn forward<'f>(on_event: &'f mut dyn FnMut(Event<'_>)) -> impl FnMut(Chunk<'_>) 
     }
 }
 
-fn read_new(pos: &mut Position, on_event: &mut dyn FnMut(Event<'_>)) -> io::Result<()> {
+/// Reads at most `budget` bytes of the current file; the rest waits for the
+/// next poll.
+fn read_new(
+    pos: &mut Position,
+    budget: u64,
+    on_event: &mut dyn FnMut(Event<'_>),
+) -> io::Result<()> {
     let path = pos.dir.join(pos.files.current);
     let len = match fs::metadata(&path) {
         Ok(meta) => meta.len(),
@@ -148,7 +166,7 @@ fn read_new(pos: &mut Position, on_event: &mut dyn FnMut(Event<'_>)) -> io::Resu
         drain_rotated(pos, on_event)?;
     }
     pos.head = head;
-    read_from(&path, pos, on_event)
+    read_from(&path, pos, budget, on_event)
 }
 
 /// The file may have been shorter than HEAD_LEN when its head was stored.
@@ -167,7 +185,7 @@ fn drain_rotated(pos: &mut Position, on_event: &mut dyn FnMut(Event<'_>)) -> io:
     let is_ours = fs::metadata(&old).is_ok_and(|m| m.len() >= pos.offset)
         && read_head(&old).is_ok_and(|head| same_start(&head, &pos.head));
     if is_ours {
-        read_from(&old, pos, on_event)?;
+        read_from(&old, pos, u64::MAX, on_event)?;
     }
     pos.splitter.finish(&mut forward(on_event));
     pos.offset = 0;
@@ -183,22 +201,53 @@ fn read_head(path: &Path) -> io::Result<Vec<u8>> {
     Ok(head)
 }
 
-/// Reads from `pos.offset` to the end, advancing the offset chunk by chunk,
-/// so an error halfway never makes the same bytes be read twice.
+/// Reads from `pos.offset` to the end or for `budget` bytes, advancing the
+/// offset chunk by chunk, so an error halfway never makes the same bytes be
+/// read twice.
 fn read_from(
     path: &Path,
     pos: &mut Position,
+    budget: u64,
     on_event: &mut dyn FnMut(Event<'_>),
 ) -> io::Result<()> {
     let mut file = File::open(path)?;
     file.seek(SeekFrom::Start(pos.offset))?;
     let mut buf = vec![0u8; READ_CHUNK];
+    let mut left = budget;
     loop {
-        let n = file.read(&mut buf)?;
+        let want = buf.len().min(usize::try_from(left).unwrap_or(usize::MAX));
+        let n = file.read(&mut buf[..want])?;
         if n == 0 {
             return Ok(());
         }
+        left -= n as u64;
         pos.splitter.push(&buf[..n], &mut forward(on_event));
         pos.offset += n as u64;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_poll_reads_at_most_its_budget_and_the_next_polls_go_on() {
+        let dir = std::env::temp_dir().join(format!("tl-tail-budget-{}", std::process::id()));
+        let session = dir.join("Hearthstone_2026_01_01_00_00_00");
+        fs::create_dir_all(&session).unwrap();
+        let line = "D 12:00:00.0000000 GameState.DebugPrintPower() - x\n";
+        fs::write(session.join(POWER_LOG), line.repeat(1000)).unwrap();
+        let mut follower = Follower::new(&dir).with_budget(10 * line.len() as u64);
+        let mut poll = || {
+            let mut lines = 0;
+            follower
+                .poll(&mut |event| lines += usize::from(matches!(event, Event::Line(_))))
+                .unwrap();
+            lines
+        };
+        assert_eq!(poll(), 10);
+        let rest: usize = (0..200).map(|_| poll()).sum();
+        assert_eq!(rest, 990, "every line once, none twice");
+        fs::remove_dir_all(&dir).unwrap();
     }
 }

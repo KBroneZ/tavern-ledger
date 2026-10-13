@@ -10,10 +10,17 @@ rust-version = "1.89"
 license = "AGPL-3.0-only"
 publish = false
 
+# A number from a log or a local file that overflows stops with a panic
+# instead of wrapping into a wrong value, as in debug builds and tests.
+[profile.release]
+overflow-checks = true
+
 # The website's WebAssembly engine (crates/sim-wasm, T-606): small and
-# self-contained. Used only by web/tools/build-sim-wasm.ts.
+# self-contained. Used only by web/tools/build-sim-wasm.ts. It keeps the
+# release profile's arithmetic as it was, so its build does not change.
 [profile.sim-wasm]
 inherits = "release"
+overflow-checks = false
 opt-level = "s"
 lto = true
 codegen-units = 1

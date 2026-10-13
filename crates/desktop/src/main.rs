@@ -21,6 +21,8 @@ mod settings;
 #[cfg(test)]
 mod ui_checks;
 mod upload;
+#[cfg(test)]
+mod window_access;
 
 use std::collections::BTreeSet;
 use std::panic::{catch_unwind, AssertUnwindSafe};
