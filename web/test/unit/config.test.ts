@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { contentSecurityPolicy, readConfig, scriptsAllowed, signupsOpen, WASM_PAGES, WASM_WORKER } from "../../src/lib/config.ts";
+import * as config from "../../src/lib/config.ts";
+import { contentSecurityPolicy, readConfig, NO_STORE_PAGES, scriptsAllowed, signupsOpen, WASM_WORKER } from "../../src/lib/config.ts";
 
 // Made-up keys with the shape of Supabase's (a JWT whose payload names the role).
 function fakeJwt(role: string): string {
@@ -119,10 +120,15 @@ test("the simulator's policy adds only 'wasm-unsafe-eval' to script-src, and onl
   assert.doesNotMatch(wasm.replace(" 'wasm-unsafe-eval'", ""), /unsafe|\*|data:/);
   // Closed: no script at all, so nothing to compile either.
   assert.equal(contentSecurityPolicy(null, { wasm: true }), contentSecurityPolicy(null));
-  assert.deepEqual(WASM_PAGES, ["/simulator/", "/es/simulator/"]);
+  // The page never compiles WebAssembly (its worker does): no page is named here.
+  assert.equal("WASM_PAGES" in config, false);
   assert.match("simWorker-Cif63Ow6.js", WASM_WORKER);
   assert.doesNotMatch("main-Cif63Ow6.js", WASM_WORKER);
   assert.doesNotMatch("simWorker-x/../a.js", WASM_WORKER);
+});
+
+test("the pages that must not be stored are the account and dashboard pages in both languages", () => {
+  assert.deepEqual(NO_STORE_PAGES, ["/account/", "/es/account/", "/me/", "/es/me/"]);
 });
 
 const BACKEND = { PUBLIC_SUPABASE_URL: "https://abcd.supabase.co", PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_x" };

@@ -44,7 +44,7 @@ function cardText(id: string | null): VNode {
 
 function heroCell(hero: HeroRef, size: 24 | 32 = 24): VNode {
   const label = w.heroLabel(hero);
-  return h("span", { class: "gv-hero" }, picture("hero", hero.id, label, size, true), h("span", {}, label));
+  return h("span", { class: "gv-hero", title: w.heroTip(hero) }, picture("hero", hero.id, label, size, true), h("span", {}, label));
 }
 
 function tile(props: TileProps, adv = false): VNode {
@@ -68,7 +68,7 @@ function summaryBar(view: GameView, date: string | null): VNode {
       "div",
       { class: "gv-who" },
       picture("hero", s.hero.id, w.heroLabel(s.hero), 56, true),
-      h("div", {}, h("p", { class: "tile-label" }, g("summary.hero")), h("p", { class: "gv-hero-name" }, w.heroLabel(s.hero))),
+      h("div", {}, h("p", { class: "tile-label" }, g("summary.hero")), h("p", { class: "gv-hero-name", title: w.heroTip(s.hero) }, w.heroLabel(s.hero))),
       h("div", { class: "gv-place" }, h("p", { class: "tile-label" }, g("summary.place")), placeBadge(s.place, mode, "lg")),
     ),
     h(
@@ -112,7 +112,7 @@ function opponentFold(o: OpponentView, index: number): VNode {
     h(
       "summary",
       {},
-      h("span", { class: "gv-opp" }, o.heroes.map((hero) => picture("hero", hero.id, w.heroLabel(hero), 32, true)), h("span", {}, title)),
+      h("span", { class: "gv-opp", title: o.heroes.map(w.heroTip).filter(Boolean).join(", ") || undefined }, o.heroes.map((hero) => picture("hero", hero.id, w.heroLabel(hero), 32, true)), h("span", {}, title)),
       h("span", { class: "fold-hint" }, g("opponents.record", o.record)),
     ),
     h("div", { class: "fold-body" }, o.boards.map((b, j) => boardBlock(`gv-o${index}-${j}`, `${g("opponents.round", { turn: b.round })} · ${w.heroLabel(b.hero)}`, b.hero, b.board))),

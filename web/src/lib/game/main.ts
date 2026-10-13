@@ -18,7 +18,7 @@ import { readRecord } from "./report.ts";
 import { shapeGame } from "./shape.ts";
 import { g, type GameStringKey } from "./strings.ts";
 import { type GameRef, parseGameRef, playedOn } from "./url.ts";
-import { pageHeading } from "./words.ts";
+import { heroTip, pageHeading } from "./words.ts";
 import { toggleTurn } from "./turnsView.ts";
 import { href } from "../i18n.ts";
 
@@ -33,8 +33,11 @@ const heading = byId("game-title");
 const status = byId("game-status");
 const RETRY = "game-retry";
 
-function show(title: string, nodes: VNode[], announcement: string): void {
+function show(title: string, nodes: VNode[], announcement: string, tip?: string): void {
   heading.textContent = title;
+  // An unknown hero reads "Unknown hero"; its id is the tooltip.
+  if (tip) heading.title = tip;
+  else heading.removeAttribute("title");
   document.title = `${title} · Tavern Ledger`;
   mount(body, ...nodes);
   body.removeAttribute("aria-busy");
@@ -74,7 +77,7 @@ function showGame(result: Extract<LoadResult, { kind: "ok" }>, ref: GameRef): vo
     banners.push(h("p", { class: "state state-unknown gv-banner" }, text));
   }
   const title = pageHeading(view.summary);
-  show(title, [...banners, ...renderGame(view, dateText(playedOn(ref.session)))], g("page.loaded", { title }));
+  show(title, [...banners, ...renderGame(view, dateText(playedOn(ref.session)))], g("page.loaded", { title }), heroTip(view.summary.hero));
   const replays = document.getElementById("gv-replays");
   if (replays) startReplays(replays, view.replays);
   void explainCombats(result.report);

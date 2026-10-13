@@ -3,8 +3,7 @@
 // thread, so the page never freezes while 10,000 combats play. The engine's
 // bytes are inside this script (a base64 string tools/prepare-sim.ts writes
 // from the committed engine.wasm), so the worker fetches nothing: the CSP
-// needs no connection, only 'wasm-unsafe-eval' on this script and the
-// simulator page (D-090).
+// needs no connection, only 'wasm-unsafe-eval' on this script alone (D-090).
 //
 // Messages: { id, request } in; { id, answer } or { id, failed: true } out.
 import { ENGINE_BASE64 } from "./generated/engine.ts";

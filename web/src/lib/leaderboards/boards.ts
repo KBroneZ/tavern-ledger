@@ -79,6 +79,11 @@ const HERO = /^[A-Za-z0-9_]{1,64}$/;
 // The database's display name rule (profiles.display_name).
 const NAME = /^[\p{L}\p{N} _.-]{1,32}$/u;
 
+/** True when a display name passes the check above; a row without one is left off the board (api.ts). */
+export function nameFits(value: unknown): boolean {
+  return typeof value === "string" && NAME.test(value);
+}
+
 function positive(value: unknown, what: string): number {
   if (typeof value !== "number" || !Number.isInteger(value) || value < 1) throw new DataError(`bad ${what}`);
   return value;
@@ -98,7 +103,7 @@ export function boardRow(value: unknown, m: Mode): BoardRow {
   if (!(BOARD_KEYS as readonly unknown[]).includes(row.board)) throw new DataError("bad board");
   const board = row.board as BoardKey;
   if (typeof row.user_id !== "string" || !UUID.test(row.user_id)) throw new DataError("bad user id");
-  if (typeof row.display_name !== "string" || !NAME.test(row.display_name)) throw new DataError("bad name");
+  if (typeof row.display_name !== "string" || !nameFits(row.display_name)) throw new DataError("bad name");
   const hero = row.hero === null || row.hero === undefined ? null : row.hero;
   if (hero !== null && (typeof hero !== "string" || !HERO.test(hero))) throw new DataError("bad hero");
   if ((board === "hero_avg_place") !== (hero !== null)) throw new DataError("hero on the wrong board");

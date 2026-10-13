@@ -23,11 +23,67 @@ test("the scan finds the site's sources", () => {
   assert.ok(names.includes("src/scripts/account.ts"), names.join(", "));
 });
 
-test("no HTML is built from strings", () => {
-  const banned = /innerHTML|outerHTML|insertAdjacentHTML|document\.write|set:html|createContextualFragment|\beval\(|new Function\(/;
+/**
+ * Every way to turn a string into markup or code: the HTML sinks, `srcdoc`,
+ * the HTML parsers, `document.write`, `eval` and its cousins (`Function(`,
+ * a timer given a string). Data only reaches the page as text nodes.
+ */
+const SINKS: [name: string, pattern: RegExp][] = [
+  ["innerHTML", /innerHTML/],
+  ["outerHTML", /outerHTML/],
+  ["insertAdjacentHTML", /insertAdjacentHTML/],
+  ["set:html", /set:html/],
+  ["document.write", /document\s*\.\s*write(ln)?\b/],
+  ["createContextualFragment", /createContextualFragment/],
+  ["srcdoc", /srcdoc/i],
+  ["DOMParser", /DOMParser/],
+  ["setHTMLUnsafe", /setHTMLUnsafe|parseHTMLUnsafe/],
+  ["eval", /\beval\s*\(/],
+  ["Function constructor", /\bFunction\s*\(/],
+  ["timer with a string", /\bset(Timeout|Interval)\s*\(\s*["'`]/],
+];
+
+/**
+ * The files allowed one of the sinks above, each with the sinks it may use.
+ * Empty on purpose: a new entry is a decision, made in a review, not a fix
+ * to a failing test.
+ */
+const ALLOWED: ReadonlyMap<string, readonly string[]> = new Map();
+
+/** The sinks a text uses that its file is not allowed (a file name is relative to web/, with slashes). */
+function sinksIn(file: string, text: string): string[] {
+  const allowed = ALLOWED.get(file) ?? [];
+  return SINKS.filter(([name, pattern]) => pattern.test(text) && !allowed.includes(name)).map(([name]) => name);
+}
+
+test("no HTML is built from strings, outside the allow-list", () => {
   for (const file of SOURCES) {
-    assert.doesNotMatch(readFileSync(file, "utf8"), banned, relative(ROOT, file));
+    const name = relative(ROOT, file).replaceAll("\\", "/");
+    assert.deepEqual(sinksIn(name, readFileSync(file, "utf8")), [], name);
   }
+});
+
+test("the sink scan catches each sink and nothing else", () => {
+  const samples: Record<string, string> = {
+    innerHTML: "el.innerHTML = x",
+    outerHTML: "el.outerHTML = x",
+    insertAdjacentHTML: 'el.insertAdjacentHTML("beforeend", x)',
+    "set:html": "<div set:html={x} />",
+    "document.write": "document.write(x)",
+    createContextualFragment: "range.createContextualFragment(x)",
+    srcdoc: "frame.srcdoc = x",
+    DOMParser: "new DOMParser().parseFromString(x, 'text/html')",
+    setHTMLUnsafe: "el.setHTMLUnsafe(x)",
+    eval: "eval(x)",
+    "Function constructor": "const f = Function(x)",
+    "timer with a string": 'setTimeout("run()", 0)',
+  };
+  assert.deepEqual(Object.keys(samples).toSorted(), SINKS.map(([name]) => name).toSorted(), "a sample for every sink");
+  for (const [name, text] of Object.entries(samples)) assert.deepEqual(sinksIn("src/x.ts", text), [name], name);
+  assert.deepEqual(sinksIn("src/x.ts", "document . writeln(x)"), ["document.write"]);
+  assert.deepEqual(sinksIn("src/x.ts", "setTimeout(() => run(), 0); el.textContent = x"), []);
+  assert.deepEqual(sinksIn("src/ok.ts", "el.innerHTML = x"), ["innerHTML"], "not allow-listed here");
+  assert.equal(ALLOWED.size, 0, "no file is allowed a sink today");
 });
 
 test("no service key or secret in the site", () => {

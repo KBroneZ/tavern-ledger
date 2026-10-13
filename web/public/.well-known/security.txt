@@ -1,0 +1,5 @@
+Contact: mailto:contact@tavernledger.net
+Expires: 2027-10-13T00:00:00.000Z
+Preferred-Languages: en, es
+Canonical: https://tavernledger.net/.well-known/security.txt
+Policy: https://github.com/KBroneZ/tavern-ledger/blob/main/SECURITY.md

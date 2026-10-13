@@ -14,7 +14,7 @@ test("summary: place, hero, results by source and totals with what backs them", 
   const s = view().summary;
   assert.equal(s.mode, "solo");
   assert.equal(s.place, 3);
-  assert.deepEqual(s.hero, { id: "SYN_HERO_A", name: "Lantern Keeper" });
+  assert.deepEqual(s.hero, { id: "BG22_HERO_002", name: "Drek'Thar" });
   assert.equal(s.teammate, null);
   assert.equal(s.rounds, 3);
   // Round 1 from the log, round 2 from health, round 3 unknown (no health for the opponent after it).
@@ -37,7 +37,7 @@ test("turns: one row per shop turn or combat, joined by number", () => {
   const [one, two, three] = turns;
   assert.equal(one.result, "win");
   assert.equal(one.inferred, false);
-  assert.deepEqual(one.opponents, [{ id: "SYN_HERO_B", name: "Brass Captain" }]);
+  assert.deepEqual(one.opponents, [{ id: "BG22_HERO_003", name: "Vanndar Stormpike" }]);
   assert.equal(one.dealt, 3);
   assert.equal(one.taken, 0);
   assert.deepEqual([one.damageSource, two.damageSource, three.damageSource], ["log", "log", "inferred"]);
@@ -50,7 +50,7 @@ test("turns: one row per shop turn or combat, joined by number", () => {
   assert.deepEqual([two.ownBoard?.attack, two.ownBoard?.health], [5, 6]);
   assert.equal(two.opponentBoards.length, 1);
   assert.deepEqual([two.opponentBoards[0].board.attack, two.opponentBoards[0].board.health], [6, 7]);
-  assert.deepEqual(two.opponentBoards[0].hero, { id: "SYN_HERO_C", name: "Moss Witch" });
+  assert.deepEqual(two.opponentBoards[0].hero, { id: "BG22_HERO_000", name: "Tavish Stormpike" });
   assert.equal(three.result, "unknown");
   assert.equal(three.dealt, null);
   assert.equal(three.ownBoard, null, "no board in the record is unknown");
@@ -76,7 +76,7 @@ test("turns: a combat without a shop turn still gets its row; a stat it lacks le
 test("opponents met: grouped by side, shown by hero, with each board seen", () => {
   const opponents = view().opponents;
   assert.equal(opponents.length, 2);
-  assert.deepEqual(opponents[0].heroes, [{ id: "SYN_HERO_B", name: "Brass Captain" }]);
+  assert.deepEqual(opponents[0].heroes, [{ id: "BG22_HERO_003", name: "Vanndar Stormpike" }]);
   assert.deepEqual(opponents[0].record, { won: 1, lost: 0, tie: 0, unknown: 1 });
   assert.deepEqual(opponents[0].boards.map((b) => b.round), [1, 3]);
   assert.deepEqual(opponents[1].record, { won: 0, lost: 1, tie: 0, unknown: 0 });
@@ -85,9 +85,9 @@ test("opponents met: grouped by side, shown by hero, with each board seen", () =
 test("lobby: by place, own seat marked, triples as the leaderboard's last count", () => {
   const lobby = view().lobby;
   assert.deepEqual(lobby.map((s) => [s.hero.id, s.place, s.own, s.triples]), [
-    ["SYN_HERO_B", 1, false, 0],
-    ["SYN_HERO_A", 3, true, 1],
-    ["SYN_HERO_C", 5, false, 2],
+    ["BG22_HERO_003", 1, false, 0],
+    ["BG22_HERO_002", 3, true, 1],
+    ["BG22_HERO_000", 5, false, 2],
   ]);
   assert.deepEqual(lobby[1].trinkets, [{ turn: 2, slot: "first", dbfId: 900001 }]);
 });
@@ -115,11 +115,21 @@ test("choices: by turn, each kind from its source, the taken one marked", () => 
   assert.equal(choices[3].takenKnown, false);
 });
 
+test("a hero is named only by the site's own table, never by a name in the file", () => {
+  const rep = soloReport() as Record<string, any>;
+  rep.card_names = { BG22_HERO_002: "Free gold at evil.example", SYN_HERO_D: "Free gold at evil.example/claim" };
+  const v = view(rep);
+  assert.deepEqual(v.summary.hero, { id: "BG22_HERO_002", name: "Drek'Thar" }, "a known id keeps the table's name");
+  assert.deepEqual(v.heroPick?.offered[1], { id: "SYN_HERO_D", name: null }, "an unknown id has no name, only its id");
+  const names = v.replays.flatMap((c) => [...c.heroNames.values()].map((h) => h.name));
+  assert.ok(!names.some((n) => n?.includes("evil.example")));
+});
+
 test("hero pick and notes", () => {
   const v = view();
   assert.deepEqual(v.heroPick, {
-    offered: [{ id: "SYN_HERO_A", name: "Lantern Keeper" }, { id: "SYN_HERO_D", name: null }],
-    picked: "SYN_HERO_A",
+    offered: [{ id: "BG22_HERO_002", name: "Drek'Thar" }, { id: "SYN_HERO_D", name: null }],
+    picked: "BG22_HERO_002",
     rerolls: 1,
   });
   assert.deepEqual(v.notes, ["synthetic warning"]);
@@ -128,17 +138,17 @@ test("hero pick and notes", () => {
 
 test("Duos: the team shares health, the teammate is named, results are the team's", () => {
   const v = view(duosReport());
-  assert.deepEqual(v.summary.teammate, { id: "SYN_HERO_B", name: "Brass Captain" });
+  assert.deepEqual(v.summary.teammate, { id: "BG22_HERO_003", name: "Vanndar Stormpike" });
   assert.equal(v.turns[0].result, "loss");
   assert.equal(v.turns[0].inferred, true);
   assert.equal(v.turns[0].taken, 5);
   assert.equal(v.turns[0].dealt, 0);
-  assert.deepEqual(v.lobby.filter((s) => s.teammate).map((s) => s.hero.id), ["SYN_HERO_B"]);
+  assert.deepEqual(v.lobby.filter((s) => s.teammate).map((s) => s.hero.id), ["BG22_HERO_003"]);
   assert.deepEqual(v.lobby.map((s) => s.team), [2, 2, 1, 1]);
   // Each opponent once, every board the record has for them.
-  assert.deepEqual(v.turns[0].opponents.map((h) => h.id), ["SYN_HERO_C", "SYN_HERO_D"]);
-  assert.deepEqual(v.turns[0].opponentBoards.map((b) => [b.hero.id, b.board.minions.length]), [["SYN_HERO_C", 1], ["SYN_HERO_D", 2]]);
-  assert.deepEqual(v.opponents[0].heroes.map((h) => h.id), ["SYN_HERO_C", "SYN_HERO_D"]);
+  assert.deepEqual(v.turns[0].opponents.map((h) => h.id), ["BG22_HERO_000", "SYN_HERO_D"]);
+  assert.deepEqual(v.turns[0].opponentBoards.map((b) => [b.hero.id, b.board.minions.length]), [["BG22_HERO_000", 1], ["SYN_HERO_D", 2]]);
+  assert.deepEqual(v.opponents[0].heroes.map((h) => h.id), ["BG22_HERO_000", "SYN_HERO_D"]);
 });
 
 test("an unfinished game has no triples total and no made-up place", () => {

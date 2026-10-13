@@ -19,8 +19,7 @@ test("report reader: a whole synthetic Solo game, nothing dropped", () => {
   const r = rec.report;
   assert.equal(r.mode, "solo");
   assert.equal(r.status, "ok");
-  assert.equal(r.hero, "SYN_HERO_A");
-  assert.equal(r.heroNames.get("SYN_HERO_A"), "Lantern Keeper");
+  assert.equal(r.hero, "BG22_HERO_002");
   assert.equal(r.finalPlace, 3);
   assert.deepEqual(r.rounds.map((x) => x.number), [1, 2, 3]);
   assert.equal(r.rounds[0].result, "won");
@@ -40,7 +39,7 @@ test("report reader: a whole synthetic Solo game, nothing dropped", () => {
   assert.equal(r.shop?.turns.length, 3);
   assert.equal(r.shop?.turns[1].gold, null);
   assert.equal(r.shop?.actions, 2);
-  assert.deepEqual(r.heroSelect, { offered: ["SYN_HERO_A", "SYN_HERO_D"], rerolls: 1, picked: "SYN_HERO_A" });
+  assert.deepEqual(r.heroSelect, { offered: ["BG22_HERO_002", "SYN_HERO_D"], rerolls: 1, picked: "BG22_HERO_002" });
   assert.equal(r.choices?.length, 5);
   assert.deepEqual(r.lobby[2].triples, [{ turn: 2, count: 1 }, { turn: 3, count: 2 }]);
   assert.deepEqual(r.lobby[0].trinkets, [{ turn: 2, slot: "first", dbfId: 900001 }]);
@@ -51,7 +50,7 @@ test("report reader: a whole synthetic Solo game, nothing dropped", () => {
 test("report reader: a Duos game", () => {
   const r = read(record(duosReport())).report;
   assert.equal(r.mode, "duos");
-  assert.equal(r.teammateHero, "SYN_HERO_B");
+  assert.equal(r.teammateHero, "BG22_HERO_003");
   assert.equal(r.shop, null);
   assert.deepEqual(r.choices, []);
 });
@@ -127,20 +126,6 @@ test("report reader: lists past the server's bounds are cut and counted", () => 
   const rec = read(record(rep));
   assert.equal(rec.report.lobby.length, 16);
   assert.ok(rec.unreadable >= 4);
-});
-
-test("report reader: no BattleTag or markup gets through as a hero name", () => {
-  const rep = soloReport() as Record<string, any>;
-  rep.card_names = {
-    SYN_HERO_A: "Player#1234",
-    SYN_HERO_B: "Player＃12345",
-    SYN_HERO_C: "<img src=x>",
-    SYN_HERO_D: " padded ",
-    SYN_HERO_E: "Fine Name",
-    "bad id": "Name",
-  };
-  const r = read(record(rep)).report;
-  assert.deepEqual([...r.heroNames], [["SYN_HERO_E", "Fine Name"]]);
 });
 
 test("report reader: a newer parser revision is marked, an older one is not", () => {

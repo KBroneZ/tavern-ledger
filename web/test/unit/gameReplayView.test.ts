@@ -41,7 +41,7 @@ test("replay section: a chip per combat with a replay, the last one open at its 
   assert.equal(attr(chips[0], "aria-label"), "Turn 1: Won");
   const player = byClass(section, "rp-player")[0];
   assert.equal(attr(player, "data-round"), "2");
-  assert.match(text(byClass(player, "rp-title")[0]), /^Turn 2 against Moss Witch$/);
+  assert.match(text(byClass(player, "rp-title")[0]), /^Turn 2 against Tavish Stormpike$/);
   assert.equal(text(byClass(player, "rp-counter")[0]), "Step 0 of 24");
   const caption = byClass(player, "rp-caption")[0];
   assert.equal(attr(caption, "aria-live"), undefined, "the visible words are not a live region");

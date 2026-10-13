@@ -24,7 +24,7 @@ test("load: reads the game's own file once", async () => {
   const result = await loadGame(download, REF);
   assert.equal(result.kind, "ok");
   assert.deepEqual(paths, [`${USER}/${SESSION}-${INDEX}.json.gz`]);
-  if (result.kind === "ok") assert.equal(result.record.report.hero, "SYN_HERO_A");
+  if (result.kind === "ok") assert.equal(result.record.report.hero, "BG22_HERO_002");
 });
 
 test("load: a file a proxy already inflated still reads", async () => {

@@ -1,8 +1,9 @@
 ---
 // The combat simulator (T-606, D-089, D-090): /simulator/ and
-// /es/simulator/. Its policy alone also allows compiling WebAssembly
-// (Base.astro reads WASM_PAGES). Nothing on it is about one account until
-// the script runs, but what it loads is: kept out of search engines.
+// /es/simulator/. The page has the site's policy like any other; only its
+// worker's script may compile WebAssembly (astro.config.mjs). Nothing on it
+// is about one account until the script runs, but what it loads is: kept
+// out of search engines.
 import Base from "../../layouts/Base.astro";
 import AccountsClosed from "../../components/AccountsClosed.astro";
 import Simulator from "../../components/sim/Simulator.astro";

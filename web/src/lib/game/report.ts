@@ -19,9 +19,6 @@ export const KNOWN_REVISION = 11;
 const CARD_ID = /^[A-Za-z0-9_]{1,64}$/;
 const NOTE = /^[A-Za-z0-9 _:.()-]{1,160}$/;
 const PARSER_VERSION = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/;
-const NAME = /^[\p{L}\p{M}\p{N}\p{P}\p{S}\p{Zs}]{1,64}$/u;
-const NAME_FORBIDDEN = /[<>#＃﹟@＠\\"]/;
-const BATTLETAG = /[#＃﹟]\s*\d{3,6}/;
 const PLAYER_KEY = /^[1-9][0-9]?$/;
 const MAX_INT = 2 ** 31 - 1;
 const MAX_HEALTH = 100_000;
@@ -148,7 +145,6 @@ export interface Report {
   hero: string | null;
   teammatePlayerId: number | null;
   teammateHero: string | null;
-  heroNames: ReadonlyMap<string, string>;
   finalPlace: number | null;
   lobby: Seat[];
   rounds: Round[];
@@ -421,19 +417,6 @@ function choice(r: Reader, v: unknown): Choice | null {
   return { turn, source: r.card(c.source), offered, picked };
 }
 
-function heroNames(r: Reader, v: unknown): Map<string, string> {
-  const names = new Map<string, string>();
-  const o = r.obj(v);
-  if (!o) return names;
-  for (const [id, name] of Object.entries(o).slice(0, 64)) {
-    const ok = CARD_ID.test(id) && typeof name === "string" && NAME.test(name) && !NAME_FORBIDDEN.test(name) &&
-      !BATTLETAG.test(name) && name.trim() === name;
-    if (ok) names.set(id, name);
-    else r.bad(null);
-  }
-  return names;
-}
-
 function notes(r: Reader, v: unknown): string[] {
   return r.list(v, 16).flatMap((s) => (typeof s === "string" && NOTE.test(s) ? [s] : r.bad([])));
 }
@@ -448,7 +431,6 @@ function report(r: Reader, o: Obj): Report {
     hero: r.card(o.hero),
     teammatePlayerId: r.int(o.teammate_player_id, 1, 64),
     teammateHero: r.card(o.teammate_hero),
-    heroNames: heroNames(r, o.card_names),
     finalPlace: r.int(o.final_place, 1, mode === "duos" ? 4 : 8),
     lobby: r.list(o.lobby, 16).map((p) => seat(r, p)).filter((p): p is Seat => p !== null),
     rounds: rounds(r, o.rounds),
