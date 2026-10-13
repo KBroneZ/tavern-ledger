@@ -16,9 +16,49 @@ import { type Replay, type ReplayEvent, type Side, SIDES } from "./replayRead.ts
 import { g, type GameStringKey } from "./strings.ts";
 import { lang } from "../i18n.ts";
 
-/** Playback speeds; at 1× a step shows for STEP_MS (the app's). */
+/** Playback speeds; at 1× each step stays for its beat (BEAT_MS). */
 export const SPEEDS = [0.5, 1, 2, 4] as const;
-export const STEP_MS = 900;
+
+/**
+ * How long each kind of step stays at 1× before the next one plays (T-560,
+ * D-132), the app's too. Set from the game's own playback on the owner's 73
+ * combats: about 1.2 s from one attack to the next with no death, 1.3 s with
+ * one, 2.1 s with two or more. An attack's beat ends as it hits, so its
+ * damage draws on the impact; "start" is the boards before the first step.
+ */
+export const BEAT_MS: Readonly<Record<ReplayEvent["kind"] | "start", number>> = {
+  start: 900,
+  attack: 600,
+  damage: 260,
+  shield: 120,
+  stats: 220,
+  death: 300,
+  summon: 380,
+  trigger: 480,
+  hero_damage: 1200,
+  board_in: 800,
+  unknown: 0,
+};
+
+/** What the log writes between an attack and its first damage (a buff, a shield) plays at the impact. */
+const AT_IMPACT_MS = 60;
+
+/** How long step `e` (null: the start) stays at `speed` before the next; a speed not offered is 1×. */
+export function stepDelay(e: ReplayEvent | null, speed: number): number {
+  const s = Number.isFinite(speed) && speed > 0 ? speed : 1;
+  return BEAT_MS[e === null ? "start" : e.kind] / s;
+}
+
+/** Each step's beat at 1× (the steps' events, null for the start), with the attack's damage on its impact. */
+export function beats(events: (ReplayEvent | null)[]): number[] {
+  let landing = false;
+  return events.map((e) => {
+    if (e?.kind === "attack") landing = true;
+    else if (e?.kind === "damage" || e?.kind === "death" || e?.kind === "hero_damage") landing = false;
+    else if (landing) return AT_IMPACT_MS;
+    return stepDelay(e, 1);
+  });
+}
 
 /** What happened to a minion at this step. */
 export interface Marks {

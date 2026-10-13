@@ -187,3 +187,45 @@ test("frames keep each minion's Dark Gifts through the combat (T-528)", () => {
   assert.deepEqual(f[0].own[1].gifts, [], "no gifts: an empty list");
   assert.equal(f[0].own[1].gift_unknown, false);
 });
+
+// T-560, D-132: the replay plays at the game's pace, as the website's does.
+test("pace: one attack lasts about as long as in the game, and the site's beats are the app's", () => {
+  const sum = (events) => TLReplay.beats([null, ...events]).slice(1).reduce((a, b) => a + b, 0);
+  const attack = { kind: "attack", attacker: 0, defender: 2 };
+  const hurt = (minion) => ({ kind: "damage", minion, amount: 2, health: 1 });
+  const plain = sum([attack, hurt(2), hurt(0)]);
+  const oneDeath = sum([attack, hurt(2), hurt(0), { kind: "death", minion: 2 }]);
+  assert.ok(plain >= 1000 && plain <= 1300, `no death: ${plain}`);
+  assert.ok(oneDeath >= 1200 && oneDeath <= 1600, `one death: ${oneDeath}`);
+  // A buff the log puts between the attack and its damage rides the hit.
+  const b = TLReplay.beats([null, attack, { kind: "stats", minion: 0, atk: 9, health: 2 }, hurt(2)]);
+  assert.ok(b[2] <= 80);
+  // The same numbers as web/src/lib/game/replay.ts BEAT_MS.
+  const site = fs.readFileSync(path.join(__dirname, "..", "..", "..", "web", "src", "lib", "game", "replay.ts"), "utf8");
+  const table = /BEAT_MS[^{]*\{([^}]*)\}/.exec(site)[1];
+  const siteBeats = Object.fromEntries([...table.matchAll(/(\w+):\s*(\d+)/g)].map((x) => [x[1], Number(x[2])]));
+  assert.deepEqual(TLReplay.BEAT_MS, siteBeats);
+});
+
+test("motion: the attacker winds up, hits short of its target and comes back; a moved minion slides", () => {
+  const frames = TLReplay.lungeFrames({ x: 0, y: 100, width: 60, height: 72 }, { x: 140, y: 0, width: 60, height: 72 });
+  assert.equal(frames[0].transform, "translate(0px, 0px)");
+  assert.equal(frames.at(-1).transform, "translate(0px, 0px)");
+  const hit = frames.find((f) => f.offset === TLReplay.IMPACT_MS / TLReplay.ATTACK_MS);
+  const [dx, dy] = /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(hit.transform).slice(1).map(Number);
+  assert.ok(dx > 0 && dx < 140 && dy < 0 && dy > -100);
+  for (const f of frames) assert.deepEqual(Object.keys(f).filter((k) => k !== "offset" && k !== "easing"), ["transform"]);
+  assert.deepEqual(TLReplay.flipDelta({ x: 100, y: 0, width: 1, height: 1 }, { x: 70, y: 0, width: 1, height: 1 }), { dx: 30, dy: 0 });
+  assert.equal(TLReplay.flipDelta({ x: 70.4, y: 0, width: 1, height: 1 }, { x: 70, y: 0, width: 1, height: 1 }), null);
+});
+
+test("motion: the app moves with the website's numbers", () => {
+  const web = (file) => fs.readFileSync(path.join(__dirname, "..", "..", "..", "web", "src", "lib", "game", file), "utf8");
+  const site = web("replay.ts") + web("replayMotion.ts");
+  const app = fs.readFileSync(path.join(__dirname, "..", "ui", "replay.js"), "utf8");
+  const value = (src, name) => new RegExp(String.raw`const ${name}(?::[^=]+)? = ([^;]+);`).exec(src)?.[1];
+  for (const name of ["AT_IMPACT_MS", "ATTACK_MS", "HIT_MS", "SLIDE_MS", "REACH", "WIND_UP_PX", "EASE_OUT", "EASE_IN_OUT"]) {
+    assert.ok(value(site, name), `${name} on the website`);
+    assert.equal(value(app, name), value(site, name), name);
+  }
+});
