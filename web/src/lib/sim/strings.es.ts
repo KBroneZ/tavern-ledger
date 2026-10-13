@@ -19,6 +19,7 @@ export const ES: Record<SimStringKey, string> = {
   "load.error": "No se han podido cargar tus partidas. Comprueba la conexión y vuelve a intentarlo.",
   "load.retry": "Reintentar",
   "load.rounds": "Elige un combate",
+  "load.roundsWait": "Elige una partida primero.",
   "load.round": "Turno {n}",
   "load.noRounds": "Esta partida no tiene ningún combate con los dos tableros para cargar.",
   "load.gameError": "No se puede leer esta partida.",

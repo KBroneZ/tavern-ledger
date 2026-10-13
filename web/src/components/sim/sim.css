@@ -179,6 +179,13 @@
   min-width: 0;
 }
 
+/* The headings sit on parchment: the page-wide h2 colour and rim are for dark ground. */
+.sim .sim-load-title,
+.sim .sim-odds-title {
+  color: var(--ink);
+  text-shadow: none;
+}
+
 .sim-load-body > p {
   margin: 0;
 }
