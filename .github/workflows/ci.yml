@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, 130-ci-coverage]
+    branches: [main]
   pull_request:
 
 permissions:
