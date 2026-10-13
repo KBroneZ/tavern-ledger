@@ -820,8 +820,6 @@ fn a_summon_takes_the_slot_the_game_gives_it_right_after() {
     l.push(tag("GameEntity", "PROPOSED_DEFENDER", "40"));
     l.push(tag("40", "DAMAGE", "2"));
     l.push(end());
-    // A later shift of the token's slot is not where it came in.
-    l.push(tag("50", "ZONE_POSITION", "2"));
     let r = finished(l);
     let replay = replay(&r, 1);
     let token = &replay.minions[3];
@@ -830,8 +828,44 @@ fn a_summon_takes_the_slot_the_game_gives_it_right_after() {
 }
 
 #[test]
+fn a_slot_set_after_the_next_step_is_the_board_shifting_not_the_summon() {
+    let mut l = start();
+    l.extend(minion(30, "SYN_OWN_A", 2, 1, (2, 2), &[]));
+    l.extend(minion(31, "SYN_OWN_B", 2, 2, (2, 2), &[]));
+    l.extend(minion(40, "SYN_FOE", 10, 1, (1, 9), &[]));
+    l.push(block("TRIGGER", 31, "TAG_NOT_SET"));
+    // Revealed in play with no slot, and no slot comes before the next step.
+    let mut summon = shown_summon(50, "SYN_TOKEN", 2, 3);
+    summon.pop();
+    l.extend(summon);
+    l.push(tag("30", "ZONE", "GRAVEYARD"));
+    l.push(tag("50", "ZONE_POSITION", "2"));
+    l.push(end());
+    l.push(block("ATTACK", 31, ""));
+    l.push(tag("GameEntity", "PROPOSED_DEFENDER", "40"));
+    l.push(end());
+    let r = finished(l);
+    let replay = replay(&r, 1);
+    assert_eq!(replay.minions[3].card_id.as_deref(), Some("SYN_TOKEN"));
+    assert_eq!(
+        replay.minions[3].position, 0,
+        "a slot after a death is a shift: the summon keeps no slot"
+    );
+}
+
+#[test]
 fn duos_a_board_coming_in_keeps_each_minions_slot() {
     let mut l = start();
+    for (i, id) in [61, 62, 63].into_iter().enumerate() {
+        let tags = [
+            ("CARDTYPE", "MINION".to_string()),
+            ("CONTROLLER", "2".to_string()),
+            ("ZONE", "SETASIDE".to_string()),
+            ("ATK", "1".to_string()),
+            ("HEALTH", "1".to_string()),
+        ];
+        l.extend(entity(id, &format!("SYN_IN_{i}"), &tags));
+    }
     l.extend(minion(30, "SYN_MATE", 2, 1, (1, 1), &[]));
     l.extend(minion(40, "SYN_FOE_A", 10, 1, (5, 5), &[]));
     l.push(block("ATTACK", 30, ""));
@@ -841,10 +875,11 @@ fn duos_a_board_coming_in_keeps_each_minions_slot() {
     l.push(tag("30", "ZONE", "GRAVEYARD"));
     l.extend(hero(103, "SYN_HERO_OWN", 2, 0, "PLAY"));
     l.push(tag("2", "HERO_ENTITY", "103"));
-    // Each minion of the board coming in enters with no slot (0) and gets
-    // it one tag change later, left to right.
+    // The board coming in was made before the combat and waits set aside
+    // with no slot; each minion enters play and gets its slot one tag change
+    // later, left to right.
     for (i, id) in [61, 62, 63].into_iter().enumerate() {
-        l.extend(minion(id, &format!("SYN_IN_{i}"), 2, 0, (1, 1), &[]));
+        l.push(tag(&id.to_string(), "ZONE", "PLAY"));
         l.push(tag(&id.to_string(), "ZONE_POSITION", &(i + 1).to_string()));
     }
     l.push(block("ATTACK", 61, ""));
