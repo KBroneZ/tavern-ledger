@@ -469,6 +469,8 @@
     if (src === null || typeof src !== "object" || !CAUSES.includes(src.how)) {
       return t(lethal ? "replay.ev.damage_unknown_lethal" : "replay.ev.damage_unknown", base);
     }
+    const cardOk = typeof src.card_id === "string" && /^[A-Za-z0-9_]{1,64}$/.test(src.card_id);
+    if (!isInt(src.minion) && !cardOk) return t(lethal ? "replay.ev.damage_unknown_lethal" : "replay.ev.damage_unknown", base);
     const from = isInt(src.minion) ? m(src.minion) : t(`replay.ev.card_${src.side === "own" ? "own" : "opponent"}`, { name: heroText(src.card_id) });
     return t(lethal ? "replay.ev.damage_by_lethal" : "replay.ev.damage_by", { ...base, src: from, how: t(`replay.how.${src.how}`) });
   }

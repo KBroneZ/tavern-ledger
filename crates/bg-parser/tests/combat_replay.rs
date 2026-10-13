@@ -1240,3 +1240,55 @@ fn a_real_rally_gives_venomous_in_a_beat_of_its_own() {
     }
     assert!(found >= 2, "{found} Rally beats giving Venomous");
 }
+
+/// A log that lost a block's end, an end deeper than anything open, and
+/// blocks nested past the tracked depth still give beats that add up to the
+/// events, each later block its own.
+#[test]
+fn the_block_stack_survives_lost_ends_and_deep_nesting() {
+    let mut l = start();
+    l.extend(minion(30, "SYN_OWN", 2, 1, (2, 9), &[]));
+    l.extend(minion(40, "SYN_FOE", 10, 1, (1, 9), &[]));
+    // A trigger whose end the log lost: the attack after it, at the same
+    // depth, closes it.
+    l.push(block("TRIGGER", 30, "TAG_NOT_SET"));
+    l.push(tag("30", "ATK", "3"));
+    l.push(block("ATTACK", 30, ""));
+    l.push(tag("GameEntity", "PROPOSED_DEFENDER", "40"));
+    l.push(tag("40", "DAMAGE", "3"));
+    // An end deeper than anything open closes nothing.
+    l.push(line(3, "BLOCK_END"));
+    l.push(tag("30", "DAMAGE", "1"));
+    l.push(end());
+    // Seventy blocks nested in each other, then a hit at the deepest.
+    for depth in 0..70 {
+        l.push(nested_block(depth, "TRIGGER", 30, "TAG_NOT_SET"));
+    }
+    l.push(line(70, "TAG_CHANGE Entity=40 tag=DAMAGE value=4 "));
+    for depth in (0..70).rev() {
+        l.push(line(depth, "BLOCK_END"));
+    }
+    l.push(block("ATTACK", 40, ""));
+    l.push(tag("GameEntity", "PROPOSED_DEFENDER", "30"));
+    l.push(tag("30", "DAMAGE", "2"));
+    l.push(end());
+    let r = finished(l);
+    let replay = replay(&r, 1);
+    assert_eq!(replay.beats.iter().sum::<usize>(), replay.events.len());
+    let kinds: Vec<_> = replay
+        .events
+        .iter()
+        .map(|e| match e {
+            CombatEvent::Attack { .. } => "attack",
+            CombatEvent::Damage { .. } => "damage",
+            CombatEvent::Stats { .. } => "stats",
+            CombatEvent::Trigger { .. } => "trigger",
+            _ => "other",
+        })
+        .collect();
+    assert_eq!(
+        kinds,
+        ["trigger", "stats", "attack", "damage", "damage", "damage", "attack", "damage"]
+    );
+    assert_eq!(replay.beats, [2, 3, 1, 2]);
+}

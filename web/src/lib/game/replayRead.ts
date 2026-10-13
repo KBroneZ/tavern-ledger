@@ -213,15 +213,26 @@ function events(raw: unknown[], count: number, start: number): ReplayEvent[] {
   });
 }
 
-/** A damage's source: a minion named by its index, or a card on a side. */
-function source(v: unknown, known: (n: unknown) => number): DamageSource {
+/**
+ * A damage's source: a minion named by its index, or a card on a side; null
+ * for a cause a newer app names that this site does not know (an unknown
+ * source, as a step of an unknown kind is left out rather than breaking the
+ * replay).
+ */
+function source(v: unknown, known: (n: unknown) => number): DamageSource | null {
   const s = obj(v);
+  if (typeof s.how !== "string") throw new Malformed();
   const how = CAUSES.find((c) => c === s.how);
-  if (!how) throw new Malformed();
-  if (s.minion !== undefined) return { how, minion: known(s.minion) };
-  const cardId = card(s.card_id, false);
-  if (cardId === null) throw new Malformed();
-  return { how, cardId, side: side(s.side) };
+  let named: DamageSource | null;
+  if (s.minion !== undefined) {
+    named = how ? { how, minion: known(s.minion) } : (known(s.minion), null);
+  } else {
+    const cardId = card(s.card_id, false);
+    if (cardId === null) throw new Malformed();
+    const at = side(s.side);
+    named = how ? { how, cardId, side: at } : null;
+  }
+  return named;
 }
 
 /** The beats: each at least one event, adding up to the events; null when the record has none. */

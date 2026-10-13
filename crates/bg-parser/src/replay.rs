@@ -482,20 +482,21 @@ impl ReplayTracker {
                     side,
                     how,
                 } => {
-                    return Some(match run.refs.get(entity) {
-                        Some(&m) => DamageSource {
+                    return match run.refs.get(entity) {
+                        Some(&m) => Some(DamageSource {
                             how: *how,
                             minion: Some(m),
                             card_id: None,
                             side: None,
-                        },
-                        None => DamageSource {
+                        }),
+                        // A card with no id cannot be named: unknown.
+                        None => card_id.as_ref().map(|id| DamageSource {
                             how: *how,
                             minion: None,
-                            card_id: card_id.clone(),
+                            card_id: Some(id.clone()),
                             side: Some(*side),
-                        },
-                    });
+                        }),
+                    };
                 }
             }
         }

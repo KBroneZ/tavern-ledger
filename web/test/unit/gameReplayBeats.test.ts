@@ -158,7 +158,7 @@ test("revision 13 fields are read strictly", () => {
   };
   assert.ok(bad((r) => (r.beats = [3, 1])), "beats that do not add up to the events");
   assert.ok(bad((r) => (r.beats = [0, 13])), "an empty beat");
-  assert.ok(bad((r) => ((r.events as Json[])[7].source = { how: "magic", minion: 0 })), "an unknown cause");
+  assert.ok(bad((r) => ((r.events as Json[])[7].source = { how: 7, minion: 0 })), "a cause that is not a word");
   assert.ok(bad((r) => ((r.events as Json[])[7].source = { how: "attack", minion: 99 })), "a minion not in the replay");
   assert.ok(bad((r) => ((r.events as Json[])[11].source = { how: "trinket", card_id: "X" })), "a card with no side");
   assert.ok(bad((r) => ((r.events as Json[])[5].on = "yes")), "a keyword step that is neither on nor off");
@@ -197,4 +197,12 @@ test("before the first attack, start-of-combat buffs from the whole table play a
   assert.deepEqual(steps(r).map((s) => s.length), [5, 2, 1, 2, 2]);
   const f = playback(r, NO_HEROES).frames;
   assert.deepEqual([...f[1].own, ...f[1].opponent].map((t) => !!t.marks.buffed), [true, false, true, true]);
+});
+
+test("a cause a newer app names is an unknown source, not a broken replay", () => {
+  const r = rev13();
+  (r.events as Json[])[7].source = { how: "magic", minion: 0 };
+  const read = readReplay(r);
+  assert.ok(read && read.ok);
+  assert.deepEqual(read.replay.events[7], { kind: "damage", amount: 4, health: -1, minion: 2, source: null });
 });
