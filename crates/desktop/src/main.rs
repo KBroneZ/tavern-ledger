@@ -20,6 +20,8 @@ mod over_game_guard;
 mod overlay;
 mod overlay_layout;
 mod overlay_window;
+#[cfg(test)]
+mod process_checks;
 mod redact;
 mod saved_tribes;
 mod screen_fit;

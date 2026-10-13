@@ -12,14 +12,15 @@
 use std::collections::HashSet;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 pub const GAME_EXE: &str = "Hearthstone.exe";
 const LOGS_FOLDER: &str = "Logs";
 
+/// Under `HKEY_LOCAL_MACHINE`.
+#[cfg(windows)]
 const UNINSTALL_KEYS: [&str; 2] = [
-    r"HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Hearthstone",
-    r"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Hearthstone",
+    r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Hearthstone",
+    r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Hearthstone",
 ];
 const FALLBACK_INSTALL_DIRS: [&str; 2] = [
     r"C:\Program Files (x86)\Hearthstone",
@@ -283,15 +284,7 @@ pub fn same_folder_key(dir: &Path) -> String {
 /// ([`scan_drives`], which touches every drive and is done once).
 pub fn gather() -> Vec<Candidate> {
     let mut out = Vec::new();
-    out.extend(
-        UNINSTALL_KEYS
-            .iter()
-            .filter_map(|key| install_location(key))
-            .map(|dir| Candidate {
-                dir,
-                source: Source::Registry,
-            }),
-    );
+    out.extend(registry_candidates());
     out.extend(battle_net_candidates());
     out.extend(FALLBACK_INSTALL_DIRS.iter().map(|dir| Candidate {
         dir: PathBuf::from(dir),
@@ -411,28 +404,38 @@ fn cut_after_hearthstone(path: &str) -> Option<&str> {
         .map(|at| &path[..at + "hearthstone".len()])
 }
 
-fn install_location(key: &str) -> Option<PathBuf> {
-    // Full path: never a reg.exe found next to the app or on PATH.
-    let system_root = std::env::var_os("SystemRoot").unwrap_or_else(|| r"C:\Windows".into());
-    let reg = PathBuf::from(system_root).join("System32").join("reg.exe");
-    let output = Command::new(reg)
-        .args(["query", key, "/v", "InstallLocation"])
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    parse_reg_value(&String::from_utf8_lossy(&output.stdout), "InstallLocation")
+/// The `InstallLocation` of each Uninstall key, read with the registry API
+/// (no `reg.exe` to start, so no console window).
+#[cfg(windows)]
+fn registry_candidates() -> Vec<Candidate> {
+    use winreg::enums::HKEY_LOCAL_MACHINE;
+    let hklm = winreg::RegKey::predef(HKEY_LOCAL_MACHINE);
+    UNINSTALL_KEYS
+        .iter()
+        .filter_map(|key| {
+            let value: String = hklm
+                .open_subkey(key)
+                .ok()?
+                .get_value("InstallLocation")
+                .ok()?;
+            install_dir(&value)
+        })
+        .map(|dir| Candidate {
+            dir,
+            source: Source::Registry,
+        })
+        .collect()
 }
 
-/// Parses `    InstallLocation    REG_SZ    C:\Path` from `reg query` output.
-pub fn parse_reg_value(output: &str, name: &str) -> Option<PathBuf> {
-    output.lines().find_map(|line| {
-        let rest = line.trim_start().strip_prefix(name)?;
-        let (_, value) = rest.trim_start().split_once("REG_SZ")?;
-        let value = value.trim();
-        (!value.is_empty()).then(|| PathBuf::from(value))
-    })
+#[cfg(not(windows))]
+fn registry_candidates() -> Vec<Candidate> {
+    Vec::new()
+}
+
+/// The folder an `InstallLocation` value names; an empty value names none.
+pub fn install_dir(value: &str) -> Option<PathBuf> {
+    let value = value.trim();
+    (!value.is_empty()).then(|| PathBuf::from(value))
 }
 
 /// True for folder names like `Hearthstone_2026_10_09_15_26_25`.
@@ -503,13 +506,12 @@ mod tests {
     const NEW: &str = "Hearthstone_2026_10_12_00_05_51";
 
     #[test]
-    fn reads_install_location_from_reg_output() {
-        let out = "\r\nHKEY_LOCAL_MACHINE\\SOFTWARE\\X\r\n    InstallLocation    REG_SZ    C:\\Battle.net\\Hearthstone\r\n\r\n";
+    fn reads_install_location_from_a_registry_value() {
         assert_eq!(
-            parse_reg_value(out, "InstallLocation"),
+            install_dir(r" C:\Battle.net\Hearthstone "),
             Some(PathBuf::from(r"C:\Battle.net\Hearthstone"))
         );
-        assert_eq!(parse_reg_value("nothing here", "InstallLocation"), None);
+        assert_eq!(install_dir("  "), None);
     }
 
     #[test]

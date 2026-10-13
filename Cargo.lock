@@ -3888,6 +3888,7 @@ dependencies = [
  "combat-sim",
  "serde",
  "serde_json",
+ "winreg 0.10.1",
 ]
 
 [[package]]

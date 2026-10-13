@@ -165,12 +165,15 @@ impl Finder {
         };
         match receiver.try_recv() {
             Ok(found) => {
+                // The same places as before: nothing to rank again.
+                let mut changed = found.places != self.candidates;
                 self.candidates = found.places;
                 if let Some(drives) = found.drives {
+                    changed |= drives != self.drives;
                     self.drives = drives;
                 }
                 self.gathering = None;
-                true
+                changed
             }
             Err(TryRecvError::Empty) => false,
             Err(TryRecvError::Disconnected) => {
