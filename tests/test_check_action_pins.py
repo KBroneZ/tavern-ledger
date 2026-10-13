@@ -69,6 +69,23 @@ class FindUnpinnedTest(unittest.TestCase):
         text = "      - run: |\n          echo uses: actions/checkout@v4\n"
         self.assertEqual(problems(text), [])
 
+    def test_forms_the_check_cannot_read_are_reported_not_skipped(self):
+        for line in [
+            "      - {uses: a/b@v1}",
+            "      - { name: x, uses: a/b@v1 }",
+            '      - "uses": a/b@v1',
+            "      - 'uses': a/b@v1",
+            "      - uses: &x a/b@v1",
+            "      - uses: !!str a/b@v1",
+            "        uses:",
+            f"      - {{uses: a/b@{SHA}}}",
+        ]:
+            with self.subTest(line=line):
+                self.assertEqual(len(problems(line + "\n")), 1)
+
+    def test_comment_stuck_to_the_ref_is_not_a_pin(self):
+        self.assertEqual(len(problems(f"      - uses: a/b@{SHA}#v1\n")), 1)
+
     def test_reports_line_number_and_action(self):
         text = f"steps:\n  - uses: actions/checkout@{SHA} # v7.0.1\n  - uses: actions/cache@v4\n"
         (found,) = find_unpinned("ci.yml", text)
@@ -89,6 +106,16 @@ class MainTest(unittest.TestCase):
             for name, text in files.items():
                 (workflows / name).write_text(text, encoding="utf-8")
             return main(["--root", str(root)])
+
+    def test_local_action_files_are_scanned_too(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".github" / "workflows").mkdir(parents=True)
+            (root / ".github" / "workflows" / "ci.yml").write_text(f"- uses: a/b@{SHA} # v1\n")
+            action = root / ".github" / "actions" / "setup"
+            action.mkdir(parents=True)
+            (action / "action.yml").write_text("- uses: x/y@v1\n")
+            self.assertEqual(main(["--root", str(root)]), 1)
 
     def test_pinned_workflows_pass(self):
         self.assertEqual(self.run_in({"ci.yml": f"- uses: actions/checkout@{SHA} # v7.0.1\n"}), 0)

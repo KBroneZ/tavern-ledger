@@ -1,9 +1,11 @@
 """Check that every GitHub Action a workflow uses is pinned by full commit SHA.
 
 A tag or branch can be moved to other code after we reviewed it; a full
-40-character commit SHA cannot. Each `uses:` in `.github/workflows/*.yml` and
-`*.yaml` must be `owner/repo@<40 lowercase hex> # <version>` (the comment says
-which release the SHA is, so a human can review a bump). Local actions
+40-character commit SHA cannot. Each `uses:` in `.github/workflows/*.yml`,
+`*.yaml` and `.github/actions/**/action.yml` must be
+`owner/repo@<40 lowercase hex> # <version>` (the comment says which release
+the SHA is, so a human can review a bump). A `uses:` written in a form this
+check cannot read (flow mapping, anchor, value on the next line) is reported. Local actions
 (`./path`) are in this repo and need no pin; `docker://` images need a
 `@sha256:<digest>`. Standard library only; it changes nothing.
 
@@ -26,7 +28,11 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # `uses:` as a YAML key, alone or after the `- ` of a step. A line inside a
 # `run: |` block does not start this way, so shell text is not read as a key.
-USES_RE = re.compile(r"""^\s*(?:-\s+)?uses:\s*(?:"([^"]*)"|'([^']*)'|([^\s#]+))\s*(?:#\s*(.*?))?\s*$""")
+USES_RE = re.compile(r"""^\s*(?:-\s+)?uses:\s+(?:"([^"]*)"|'([^']*)'|(\S+))\s*(?:\s#\s*(.*?))?\s*$""")
+# Any other way to write the `uses` key (flow mapping, quoted key, a value
+# with an anchor or tag, a value on the next line). The strict pattern above
+# does not read these, so one seen here is reported instead of skipped.
+ANY_USES_RE = re.compile(r"""(?:^|[{,\[]|-\s)\s*["']?uses["']?\s*:""")
 ACTION_SHA_RE = re.compile(r"^[^@\s]+@[0-9a-f]{40}$")
 DOCKER_DIGEST_RE = re.compile(r"^docker://[^@\s]+@sha256:[0-9a-f]{64}$")
 VERSION_COMMENT_RE = re.compile(r"v?\d")
@@ -59,6 +65,9 @@ def find_unpinned(path: str, text: str) -> list[Problem]:
     for number, line in enumerate(text.splitlines(), start=1):
         match = USES_RE.match(line)
         if not match:
+            if ANY_USES_RE.search(line) and not line.lstrip().startswith("#"):
+                reason = "`uses:` in a form this check cannot read; write `- uses: owner/repo@<sha> # v1.2.3`"
+                found.append(Problem(path, number, line.strip(), reason))
             continue
         double, single, bare, comment = match.groups()
         action = next(value for value in (double, single, bare) if value is not None)
@@ -74,7 +83,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     workflows = args.root / ".github" / "workflows"
-    files = sorted([*workflows.glob("*.yml"), *workflows.glob("*.yaml")])
+    actions = args.root / ".github" / "actions"
+    files = sorted(
+        [*workflows.glob("*.yml"), *workflows.glob("*.yaml"), *actions.glob("**/action.yml"), *actions.glob("**/action.yaml")]
+    )
     if not files:
         print(f"no workflow files in {workflows}", file=sys.stderr)
         return 2
