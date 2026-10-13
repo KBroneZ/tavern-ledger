@@ -239,7 +239,7 @@
       "win.msg.title": "Parser warnings ({n})",
 
       "win.report.title": "Report a problem",
-      "win.report.note": "This is the file that will be saved; only its timestamp is set again when you save. It has no player names: the app won't create it if it finds one. Nothing is sent anywhere. Saving puts the file in your Downloads folder, and you can send it yourself.",
+      "win.report.note": "This is the file that will be saved; only its timestamp and the newest lines of the error log can change when you save. It includes the last lines of the app's error log (no player names, accounts, emails or keys). It has no player names: the app won't create it if it finds one. Nothing is sent anywhere. Saving puts the file in your Downloads folder, and you can send it yourself.",
       "win.report.save": "Save to Downloads",
       "win.report.saved": "Saved to {path}. Nothing was sent.",
 
@@ -488,7 +488,7 @@
       "win.msg.title": "Avisos del analizador ({n})",
 
       "win.report.title": "Informar de un problema",
-      "win.report.note": "Este es el archivo que se guardará; al guardar solo cambia su marca de hora. No contiene nombres de jugadores: la app no lo crea si encuentra alguno. No se envía nada a ninguna parte. Al guardar, el archivo queda en tu carpeta Descargas y puedes enviarlo tú.",
+      "win.report.note": "Este es el archivo que se guardará; al guardar solo pueden cambiar su marca de hora y las últimas líneas del registro de errores. Incluye las últimas líneas del registro de errores de la app (sin nombres de jugadores, cuentas, correos ni claves). No contiene nombres de jugadores: la app no lo crea si encuentra alguno. No se envía nada a ninguna parte. Al guardar, el archivo queda en tu carpeta Descargas y puedes enviarlo tú.",
       "win.report.save": "Guardar en Descargas",
       "win.report.saved": "Guardado en {path}. No se ha enviado nada.",
 

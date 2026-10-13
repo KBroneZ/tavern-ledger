@@ -3,6 +3,9 @@
 //! and the parser's warnings and problems. The user reads it and sends it by
 //! hand; nothing here touches the network.
 //!
+//! It also carries the last lines of the app's error log, which is written
+//! already redacted; the same check below covers them.
+//!
 //! Names stay out in two ways. The bundle is made only of fields in an
 //! allowed set (`BUNDLE`), and a check refuses it, whole, if a field is
 //! outside that set or a text looks like a BattleTag or an account id. A
@@ -285,6 +288,8 @@ const BUNDLE: Shape = Shape::Object(&[
     ),
     ("warnings", TEXTS),
     ("problems", TEXTS),
+    // The last lines of the app's own error log (T-580), already redacted.
+    ("app_log", TEXTS),
     ("report", REPORT),
 ]);
 
@@ -430,7 +435,25 @@ pub struct BundleInput<'a> {
     pub parser: Option<&'a ParserStamp>,
     pub app_version: &'a str,
     pub setup: &'a SetupReport,
+    /// The last lines of the app's error log (T-580), redacted when written.
+    /// A line that still looks like a name is left out, never the report.
+    pub app_log: &'a [String],
     pub created_unix: u64,
+}
+
+/// The newest this many log lines go in the bundle.
+pub const MAX_LOG_LINES: usize = 200;
+
+/// The log lines the bundle may hold: the newest ones that pass the same
+/// text check as everything else.
+fn log_lines(lines: &[String]) -> Vec<&str> {
+    let mut kept: Vec<&str> = lines
+        .iter()
+        .map(String::as_str)
+        .filter(|line| check_text(line, "app_log").is_ok())
+        .collect();
+    kept.drain(..kept.len().saturating_sub(MAX_LOG_LINES));
+    kept
 }
 
 fn config_check(check: &FileCheck) -> Value {
@@ -466,6 +489,7 @@ pub fn build(input: &BundleInput<'_>) -> Result<Value, Refusal> {
         },
         "warnings": input.report.get("warnings"),
         "problems": input.report.get("problems"),
+        "app_log": log_lines(input.app_log),
         "report": input.report,
     });
     validate(&bundle)?;
