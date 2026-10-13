@@ -228,7 +228,7 @@ test("motion: the app moves with the website's numbers", () => {
   const site = web("replay.ts") + web("replayMotion.ts");
   const app = fs.readFileSync(path.join(__dirname, "..", "ui", "replay.js"), "utf8");
   const value = (src, name) => new RegExp(String.raw`const ${name}(?::[^=]+)? = ([^;]+);`).exec(src)?.[1];
-  for (const name of ["AT_IMPACT_MS", "ATTACK_MS", "HIT_MS", "SLIDE_MS", "REACH", "WIND_UP_PX", "EASE_OUT", "EASE_IN_OUT"]) {
+  for (const name of ["AT_IMPACT_MS", "ATTACK_MS", "HIT_MS", "SLIDE_MS", "STOP", "WIND_UP_PX", "EASE_OUT", "EASE_IN_OUT"]) {
     assert.ok(value(site, name), `${name} on the website`);
     assert.equal(value(app, name), value(site, name), name);
   }

@@ -342,8 +342,8 @@
   const ATTACK_MS = IMPACT_MS + 300;
   const HIT_MS = 260;
   const SLIDE_MS = 260;
-  /** How far towards the target's centre the attacker flies: it stops at its edge. */
-  const REACH = 0.78;
+  /** Where the attacker stops: this share of the target's half-size along the attack short of its centre (on it, at any distance and angle). */
+  const STOP = 0.5;
   const WIND_UP_PX = 8;
   const EASE_OUT = "cubic-bezier(0.23, 1, 0.32, 1)";
   const EASE_IN_OUT = "cubic-bezier(0.77, 0, 0.175, 1)";
@@ -360,10 +360,12 @@
     const dy = b.y - a.y;
     const length = Math.hypot(dx, dy) || 1;
     const hit = IMPACT_MS / ATTACK_MS;
+    const stop = STOP * ((Math.abs(dx) / length) * (to.width / 2) + (Math.abs(dy) / length) * (to.height / 2));
+    const reach = Math.max(length - stop, length * 0.25) / length;
     return [
       { offset: 0, transform: translate(0, 0), easing: EASE_OUT },
       { offset: hit * 0.3, transform: `${translate((-dx / length) * WIND_UP_PX, (-dy / length) * WIND_UP_PX)} scale(1.08)`, easing: EASE_IN_OUT },
-      { offset: hit, transform: `${translate(dx * REACH, dy * REACH)} scale(1.08)`, easing: EASE_OUT },
+      { offset: hit, transform: `${translate(dx * reach, dy * reach)} scale(1.08)`, easing: EASE_OUT },
       { offset: 1, transform: translate(0, 0) },
     ];
   }
@@ -411,10 +413,23 @@
 
   // `attacker` flies to `target` and back, drawn above its neighbours and the
   // other board meanwhile (`data-lunging`).
+  // Where an element sits in the layout: its box less the translation a
+  // running motion adds (a board still sliding into place after a death or
+  // a summon), so an attack aims at where its target is (the website's layoutBox).
+  function placeOf(el) {
+    const b = boxOf(el);
+    const t = getComputedStyle(el).transform;
+    const m = t && t !== "none" ? new DOMMatrixReadOnly(t) : null;
+    return { x: b.x - (m ? m.m41 : 0), y: b.y - (m ? m.m42 : 0), width: b.width, height: b.height };
+  }
+
   function lunge(attacker, target, speed) {
+    const from = placeOf(attacker);
+    const to = placeOf(target);
     restart(attacker, "replay-lunge");
+    restart(attacker, "replay-slide");
     attacker.dataset.lunging = "";
-    const motion = attacker.animate(lungeFrames(boxOf(attacker), boxOf(target)), { duration: ATTACK_MS / speed, id: "replay-lunge" });
+    const motion = attacker.animate(lungeFrames(from, to), { duration: ATTACK_MS / speed, id: "replay-lunge" });
     lunging.set(attacker, motion);
     const done = () => {
       if (lunging.get(attacker) === motion) delete attacker.dataset.lunging;
