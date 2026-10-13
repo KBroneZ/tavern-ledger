@@ -188,3 +188,23 @@ test("in Spanish a turn's summary and shop facts follow the language", () => {
   }
   assert.equal(TLTurns.totalsWords({ count: 0, attack: 0, health: 0 }), "empty");
 });
+
+test("in Duos the teammate's board joins the turn beside yours, from a stripped turn", () => {
+  const duos = {
+    hero: "HERO_A",
+    local_player_id: 2,
+    rounds: [
+      { number: 1, entries: [{ side: "own", player_id: 2, hero: "HERO_A", board: [] }, { side: "own", player_id: 3, hero: "HERO_M", board: [minion("BG_M", 5, 6)] }] },
+      { number: 2, entries: [{ side: "own", player_id: 2, hero: "HERO_A", board: [minion("BG_A", 1, 1)] }, { side: "own", player_id: 3, hero: "HERO_M", board: null }] },
+      { number: 3, entries: [{ side: "own", player_id: 3, hero: "HERO_M", board: [minion("BG_M", 2, 2)] }] },
+    ],
+  };
+  const [one, two, three] = TLTurns.rows(recap(), duos);
+  assert.deepEqual(one.own.minions, [], "your empty board stays yours");
+  assert.equal(one.partner.hero, "HERO_M");
+  assert.deepEqual(one.partner.minions.map((m) => m.id), ["BG_M"]);
+  assert.equal(two.partner, null, "a teammate board not in the log is not drawn");
+  assert.equal(three.own.mine, false, "no entry of yours: the teammate's shows in the first slot");
+  assert.equal(three.partner, null, "and is not drawn twice");
+  assert.equal(TLTurns.rows(recap(), report)[0].partner, null, "Solo has no partner");
+});

@@ -36,15 +36,10 @@
     return cards && cards.gifts ? cards.gifts(m) : [];
   };
 
-  // Your board as the combat began, from the game's report. In Duos the
-  // board may be your teammate's: `mine` says whose it is.
-  function ownBoard(report, number) {
-    const round = list(report && report.rounds).find((r) => r && r.number === number);
-    const own = list(round && round.entries).filter((e) => e && e.side === "own");
-    if (!own.length) return null;
-    const entry = own.find((e) => e.player_id === report.local_player_id) || own[0];
-    // No board in the record is unknown; an empty list is a real empty board.
-    if (!Array.isArray(entry.board)) return null;
+  // A board from one report entry; null when the record has none (an empty
+  // list is a real empty board).
+  function boardOf(entry, report) {
+    if (!entry || !Array.isArray(entry.board)) return null;
     const minions = entry.board.map(minionOf);
     // One unknown stat makes the total unknown, never a smaller number.
     const sum = (key) => (minions.every((m) => known(m[key])) ? minions.reduce((n, m) => n + m[key], 0) : null);
@@ -54,6 +49,27 @@
       minions,
       totals: { count: minions.length, attack: sum("atk"), health: sum("health") },
     };
+  }
+
+  const ownEntries = (report, number) => {
+    const round = list(report && report.rounds).find((r) => r && r.number === number);
+    return list(round && round.entries).filter((e) => e && e.side === "own");
+  };
+  const mainEntry = (report, own) => own.find((e) => e.player_id === report.local_player_id) || own[0];
+
+  // Your board as the combat began, from the game's report. In Duos the
+  // board may be your teammate's: `mine` says whose it is.
+  function ownBoard(report, number) {
+    const own = ownEntries(report, number);
+    return own.length ? boardOf(mainEntry(report, own), report) : null;
+  }
+
+  // In Duos, the other own-side board of the turn (your teammate's), when the record has it.
+  function partnerBoard(report, number) {
+    const own = ownEntries(report, number);
+    if (own.length < 2) return null;
+    const main = mainEntry(report, own);
+    return boardOf(own.find((e) => e !== main && e.player_id !== main.player_id), report);
   }
 
   function combatAt(r, round) {
@@ -128,6 +144,7 @@
         health: healthAt(r, turn),
         damage: damageAt(r, turn),
         own: ownBoard(report, turn),
+        partner: partnerBoard(report, turn),
       };
     });
   }
@@ -332,6 +349,10 @@
     const own = row.own;
     const ownLabel = own && !own.mine && own.hero ? h.heroText({ id: own.hero }) : t("turns.your_board");
     body.push(boardRow(ui, ownLabel, own && own.minions, h.card, t("turns.board.not_in_round")));
+    if (row.partner) {
+      const mate = row.partner.hero ? h.heroText({ id: row.partner.hero }) : t("turns.teammate_board");
+      body.push(boardRow(ui, mate, row.partner.minions, h.card, t("turns.board.not_in_round")));
+    }
     if (row.combat) {
       const who = row.combat.opponents.map(h.heroText).join(" + ") || t("turns.their_board");
       body.push(boardRow(ui, who, row.combat.board, h.card, t("turns.board.theirs_not")));
