@@ -167,10 +167,11 @@
   scroll-margin-top: 16px;
 }
 
+/* The minion a link lands on: lit from inside (the list clips its edges). */
 .mn-entry:target {
   border-radius: var(--r-small);
-  background: rgb(255 178 74 / 0.08);
-  box-shadow: 0 0 0 6px rgb(255 178 74 / 0.08);
+  background: rgb(255 178 74 / 0.1);
+  box-shadow: inset 0 0 0 1.5px var(--bronze);
 }
 
 .mn-body {

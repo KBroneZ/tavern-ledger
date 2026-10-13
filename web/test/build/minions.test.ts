@@ -173,7 +173,14 @@ test("the sitemap lists exactly the indexable pages, each with its alternates; r
   assert.deepEqual(locs, indexable);
   assert.equal(locs.some((l) => l.includes("/minions/")), OPEN);
   for (const url of xml.split("<url>").slice(1)) {
-    assert.equal((url.match(/<xhtml:link rel="alternate" hreflang="(?:en|es|x-default)" href="https:\/\/tavernledger\.net\/[^"]*"\/>/g) ?? []).length, 3, url);
+    // Each page names its English and Spanish twins, English as the default, like the page's own head.
+    const loc = /<loc>([^<]+)<\/loc>/.exec(url)?.[1] ?? "";
+    const en = loc.replace(`${SITE}/es/`, `${SITE}/`);
+    const es = en.replace(`${SITE}/`, `${SITE}/es/`);
+    const links = [...url.matchAll(/<xhtml:link rel="alternate" hreflang="([a-z-]+)" href="([^"]+)"\/>/g)].map((m) => [m[1], m[2]]);
+    assert.deepEqual(links, [["en", en], ["es", es], ["x-default", en]], loc);
+    const html = readFileSync(join(DIST, loc.slice(SITE.length + 1), "index.html"), "utf8");
+    for (const [lang, href] of links) assert.ok(html.includes(`<link rel="alternate" hreflang="${lang}" href="${href}">`), `${loc}: ${lang}`);
   }
   assert.match(read("robots.txt"), /^Sitemap: https:\/\/tavernledger\.net\/sitemap\.xml$/m);
 });

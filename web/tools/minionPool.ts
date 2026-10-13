@@ -39,7 +39,9 @@ function keywordLine(line: string): boolean {
     else return false;
     if (depth < 0) return false;
   }
-  return depth === 0 && PUNCTUATION_ONLY.test(line.slice(at)) && bold.trim().length > 0;
+  const word = bold.trim();
+  // A label ("Battlecry:") reads on with its effect, so it is not a line of its own.
+  return depth === 0 && PUNCTUATION_ONLY.test(line.slice(at)) && word.length > 0 && !word.endsWith(":");
 }
 
 /**
@@ -53,6 +55,8 @@ export function cardText(raw: unknown): TextRun[] | null {
   if (typeof raw !== "string" || raw.length > MAX_TEXT_CHARS) return null;
   // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u0009\u000B-\u001F\u007F-\u009F]/.test(raw) || FORMAT_CHARS.test(raw)) return null;
+  // A value the game fills in ($ spell damage, @ and # counters, {0}) is unknown here: no text rather than a symbol.
+  if (/[@$#{}]/.test(raw)) return null;
   const lines = raw.replace(/^\[x\]/, "").split("\n");
   let lead = 0;
   while (lead < lines.length - 1 && keywordLine(lines[lead])) lead += 1;
@@ -98,8 +102,12 @@ export function cardText(raw: unknown): TextRun[] | null {
     if (n === runs.length - 1 || runs[n + 1].s === NEW_LINE) s = s.trimEnd();
     return { ...r, s };
   });
-  const kept = trimmed.filter((r) => r.s.length > 0);
-  return kept.length > 0 ? kept : null;
+  // Line breaks only between text: none at either end, never two in a row.
+  const kept = trimmed
+    .filter((r) => r.s.length > 0)
+    .filter((r, n, all) => r.s !== NEW_LINE || (n > 0 && n < all.length - 1 && all[n - 1].s !== NEW_LINE));
+  const tidy = kept.at(-1)?.s === NEW_LINE ? kept.slice(0, -1) : kept;
+  return tidy.length > 0 ? tidy : null;
 }
 
 /** Each card's name and text in one language, by card id. */

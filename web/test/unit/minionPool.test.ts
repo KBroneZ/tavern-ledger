@@ -70,6 +70,10 @@ test("names and text come in the page's language, else English", () => {
   assert.equal(spark?.name, "Chispa sintética");
   const unknown = pool.minions.find((m) => m.id === "BG_NOT_A_CARD");
   assert.equal(unknown?.name, "Desconocido sintético");
+  // Missing in Spanish: the English name and text, as the simulator names cards.
+  const bare = extractPool([minion()], [{ id: "BG_X_1" }], "t").minions[0];
+  assert.equal(bare.name, "Test Minion");
+  assert.deepEqual(bare.text, [{ s: "Hello." }]);
 });
 
 test("card text: bold and italic kept, layout marks and line breaks dropped", () => {
@@ -111,6 +115,10 @@ test("card text: a keyword alone on a first line keeps its own line", () => {
     { s: "." },
   ]);
   assert.deepEqual(cardText("<b>Taunt</b>"), [{ s: "Taunt", b: 1 }], "no break after the last line");
+  assert.deepEqual(cardText("<b>Taunt</b>\n"), [{ s: "Taunt", b: 1 }], "nor before an empty last line");
+  assert.deepEqual(cardText("<b>Taunt</b>\n\n<b>Reborn</b>"), [{ s: "Taunt", b: 1 }, { s: "\n" }, { s: "Reborn", b: 1 }], "one break at most");
+  // A label ("Battlecry:") reads on with its effect: not a line of its own.
+  assert.deepEqual(cardText("[x]<b>Battlecry:</b>\nGive a minion +1/+1."), [{ s: "Battlecry:", b: 1 }, { s: " Give a minion +1/+1." }]);
 });
 
 test("card text with other markup or hidden characters is not shown", () => {
@@ -120,6 +128,11 @@ test("card text with other markup or hidden characters is not shown", () => {
   assert.equal(cardText("bell\u0007"), null);
   assert.equal(cardText("x".repeat(2000)), null);
   assert.equal(cardText("<b>never closed"), null);
+  // A value the game fills in (spell damage, a counter) is unknown here: no text rather than a symbol.
+  assert.equal(cardText("Deal $3 damage."), null);
+  assert.equal(cardText("Gain +@ Attack."), null);
+  assert.equal(cardText("(#2 left)"), null);
+  assert.equal(cardText("Summon a {0}."), null);
   assert.equal(cardText("closed</b> never opened"), null);
 });
 
