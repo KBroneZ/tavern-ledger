@@ -15,12 +15,14 @@ import {
   jsonLd,
   marks,
   minionAnchor,
+  otherTypes,
   readPool,
   tierGroups,
   tierSpread,
   tribeMinions,
   tribeName,
   tribePages,
+  typeName,
 } from "../../src/lib/minions/view.ts";
 import { extractPool } from "../../tools/minionPool.ts";
 
@@ -69,6 +71,34 @@ test("a minion's marks: its other types as links, every type, Duos only", () => 
   const amalgam = pool.minions.find((m) => m.id === "BG_SYN_AMALGAM")!;
   assert.deepEqual(marks(amalgam, "MURLOC"), [{ text: "Every type" }, { text: "Duos only" }]);
   assert.deepEqual(marks(pool.minions.find((m) => m.id === "BG_NOT_A_CARD")!, null), []);
+});
+
+test("a type the pages do not know: no page, listed under other types, named from the card data", () => {
+  // The fixture's own new type (the build test's) is set aside here.
+  const known = pool.minions.filter((m) => !m.tribes.includes("SYNTHETIC_KIN"));
+  const withNew: PoolFile = {
+    ...pool,
+    minions: [
+      ...known,
+      { id: "BG_GN_1", name: "Gnoll Pup", tier: 2, attack: 2, health: 2, tribes: ["GNOLL"], text: null },
+      { id: "BG_GN_2", name: "Gnoll Fin", tier: 1, attack: 1, health: 1, tribes: ["GNOLL", "MURLOC"], text: null },
+      { id: "BG_BB_1", name: "Boss", tier: 3, attack: 1, health: 1, tribes: ["BIG_BOSS"], text: null },
+    ],
+  };
+  assert.ok(!tribePages(withNew).some((p) => p.key === "GNOLL"));
+  assert.ok(tribeMinions(withNew, "MURLOC").some((m) => m.id === "BG_GN_2"), "still on its known type's page");
+  const others = otherTypes(withNew);
+  assert.deepEqual(others.map((o) => [o.key, o.name, o.minions.map((m) => m.id)]), [
+    ["BIG_BOSS", "Big boss", ["BG_BB_1"]],
+    ["GNOLL", "Gnoll", ["BG_GN_2", "BG_GN_1"]],
+  ]);
+  assert.deepEqual(otherTypes({ ...pool, minions: known }), [], "none among known types");
+  assert.deepEqual(otherTypes(pool).map((o) => o.name), ["Synthetic kin"]);
+  const fin = withNew.minions.find((m) => m.id === "BG_GN_2")!;
+  assert.deepEqual(marks(fin, "MURLOC"), [{ text: "Gnoll" }], "named, not linked: it has no page");
+  assert.equal(typeName(""), "Other");
+  setLang("es");
+  assert.equal(typeName(""), "Otro");
 });
 
 test("every type and the no-type page have names in both languages", () => {

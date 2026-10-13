@@ -74,6 +74,9 @@ export const ES: Record<MinKey, string> = {
   "index.tribes": "Tipos",
   "index.tiers": "Esbirros por nivel de taberna",
   "index.tierCell": "Nivel {tier}: {count}",
+  "index.others": "Otros tipos",
+  "index.others.note": "Tipos nuevos en los datos de las cartas que aún no tienen página propia, con el nombre que les dan esos datos.",
+  "other.type": "Otro",
 
   "tribe.kicker": "Esbirros de Campos de batalla",
   "tribe.intro": "Todos los esbirros de tipo {inline} que ofrece ahora la taberna, por nivel de taberna.",

@@ -118,7 +118,9 @@ async function main(): Promise<void> {
   const source = (build: string) => (build === "fixture" ? build : `HearthstoneJSON (${build})`);
   for (const [lang, local] of [["en", en], ["es", es]] as const) {
     const from = source(local.build);
-    write(lang, extractCards(en.list, local.list, from), extractNames(en.list, local.list, from), extractPool(en.list, local.list, from));
+    // The pool's warnings (a new minion type, a minion with no tier) are the same in both languages: told once.
+    const warn = lang === "en" ? (message: string) => process.stderr.write(`prepare-sim: warning: ${message}\n`) : undefined;
+    write(lang, extractCards(en.list, local.list, from), extractNames(en.list, local.list, from), extractPool(en.list, local.list, from, warn));
   }
 }
 

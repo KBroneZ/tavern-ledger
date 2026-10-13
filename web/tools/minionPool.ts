@@ -122,12 +122,16 @@ function localCards(list: unknown[]): Map<string, { name: string | null; text: u
 /**
  * The pool from HearthstoneJSON's English list and, for names and text,
  * the list in the page's language (the same as English for English); a
- * name or text missing in that language falls back to English. A pool
- * minion with no tier or a type the pages do not know stops the build.
+ * name or text missing in that language falls back to English. Neither
+ * stops the build (a new type can arrive mid-season, and every deploy would
+ * wait on it): a pool minion with no tier is left out, and a type the pages
+ * do not know keeps its minions (the index lists them under "Other types");
+ * both are told to `warn`, which the build prints.
  */
-export function extractPool(english: unknown, local: unknown, source: string): PoolFile {
+export function extractPool(english: unknown, local: unknown, source: string, warn: (message: string) => void = () => {}): PoolFile {
   if (!Array.isArray(english) || !Array.isArray(local)) throw new Error("the card data is not a list");
   const lang = localCards(local);
+  const newTypes = new Map<string, number>();
   const statsByDbf = new Map<number, { attack: number; health: number }>();
   const pool: { minion: Omit<PoolMinion, "golden">; goldenDbf: number | null }[] = [];
   for (const c of english) {
@@ -137,9 +141,11 @@ export function extractPool(english: unknown, local: unknown, source: string): P
     const dbf = int(c.dbfId);
     if (dbf !== null && dbf > 0) statsByDbf.set(dbf, { attack: facts.a, health: facts.h });
     if (c.isBattlegroundsPoolMinion !== true) continue;
-    if (facts.t === null) throw new Error(`pool minion ${facts.i} has no tavern tier`);
-    const unknown = facts.r.find((r) => !KNOWN_TRIBES.has(r));
-    if (unknown) throw new Error(`unknown minion type ${unknown} (${facts.i}): name it in src/lib/minions/tribes.ts`);
+    if (facts.t === null) {
+      warn(`pool minion ${facts.i} has no tavern tier: left out of the minion pages`);
+      continue;
+    }
+    for (const r of facts.r) if (!KNOWN_TRIBES.has(r)) newTypes.set(r, (newTypes.get(r) ?? 0) + 1);
     const here = lang.get(facts.i);
     const name = here?.name ?? cleanName(c.name);
     if (!name) continue;
@@ -157,6 +163,9 @@ export function extractPool(english: unknown, local: unknown, source: string): P
       },
       goldenDbf: golden !== null && golden > 0 ? golden : null,
     });
+  }
+  for (const [type, count] of newTypes) {
+    warn(`new minion type ${type} (${count} minion${count === 1 ? "" : "s"}): listed under "Other types" on /minions/ until src/lib/minions/tribes.ts and its strings name it`);
   }
   if (pool.length === 0) throw new Error("no minion in the pool: not the real card data");
   if (pool.length > MAX_POOL) throw new Error(`${pool.length} pool minions: not the real card data`);

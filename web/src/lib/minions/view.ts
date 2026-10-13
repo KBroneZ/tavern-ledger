@@ -5,7 +5,7 @@
 import { href, locale } from "../i18n.ts";
 import type { PoolFile, PoolMinion } from "./poolFile.ts";
 import { type MinKey, mt } from "./strings.ts";
-import { ALL_TRIBES, NO_TRIBE_SLUG, TRIBES } from "./tribes.ts";
+import { ALL_TRIBES, KNOWN_TRIBES, NO_TRIBE_SLUG, TRIBES } from "./tribes.ts";
 
 export const MAX_TIER = 7;
 
@@ -38,6 +38,32 @@ export function tribePages(pool: PoolFile): TribePage[] {
   const pages: TribePage[] = TRIBES.filter((t) => pool.minions.some((m) => m.tribes.includes(t.key))).map((t) => ({ slug: t.slug, key: t.key }));
   if (pool.minions.some((m) => m.tribes.length === 0)) pages.push({ slug: NO_TRIBE_SLUG, key: null });
   return pages;
+}
+
+export interface OtherType {
+  key: string;
+  name: string;
+  /** By tier, then by name. */
+  minions: PoolMinion[];
+}
+
+/**
+ * Types the card data has but the pages do not know yet (a type added
+ * mid-season): no page of their own; the index lists their minions.
+ */
+export function otherTypes(pool: PoolFile): OtherType[] {
+  const keys = [...new Set(pool.minions.flatMap((m) => m.tribes))].filter((k) => !KNOWN_TRIBES.has(k)).sort();
+  return keys.map((key) => ({
+    key,
+    name: typeName(key),
+    minions: tierGroups(pool.minions.filter((m) => m.tribes.includes(key))).flatMap((g) => g.minions),
+  }));
+}
+
+/** A type the pages do not know, named from the card data's own key ("BIG_BOSS" → "Big boss"), else "Other". */
+export function typeName(key: string): string {
+  const words = key.toLowerCase().replaceAll("_", " ").trim();
+  return words ? words[0].toUpperCase() + words.slice(1) : mt("other.type");
 }
 
 export type TribeForm = "title" | "one" | "plural" | "inline";
@@ -87,7 +113,8 @@ export function marks(minion: PoolMinion, pageKey: string | null): Mark[] {
       continue;
     }
     const tribe = TRIBES.find((t) => t.key === key);
-    if (tribe) out.push({ text: tribeName(tribe.slug, "one"), href: href(tribePath(tribe.slug)) });
+    // A type the pages do not know yet has no page: named, not linked.
+    out.push(tribe ? { text: tribeName(tribe.slug, "one"), href: href(tribePath(tribe.slug)) } : { text: typeName(key) });
   }
   if (minion.duosOnly) out.push({ text: mt("mark.duos") });
   return out;

@@ -109,8 +109,15 @@
   border-bottom: 1px solid var(--line-soft);
 }
 
-.mn-tier-head h2 {
+.mn-tier-head :is(h2, h3) {
   scroll-margin-top: 24px;
+}
+
+/* A type new to the card data (the index's other types): set like a tier. */
+main:not(.layout-home) .mn-tier-head h3 {
+  color: var(--parchment);
+  font-size: 1.45rem;
+  text-shadow: 0 2px 0 rgb(0 0 0 / 0.55);
 }
 
 .mn-tier-head p {
@@ -180,7 +187,11 @@
   min-width: 0;
 }
 
-main:not(.layout-home) .mn-body h3 {
+main:not(.layout-home) .mn-body :is(h3, h4) {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-stretch: 88%;
   color: var(--parchment);
   font-size: 1.15rem;
   line-height: 1.2;

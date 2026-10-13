@@ -77,6 +77,9 @@ export const MIN_STRINGS = {
   "index.tribes": "Types",
   "index.tiers": "Minions per tavern tier",
   "index.tierCell": "Tier {tier}: {count}",
+  "index.others": "Other types",
+  "index.others.note": "Types new to the card data, without a page of their own yet, named as the card data names them.",
+  "other.type": "Other",
 
   "tribe.kicker": "Battlegrounds minions",
   "tribe.intro": "Every {inline} minion in the current tavern pool, by tavern tier.",

@@ -12,7 +12,19 @@ import { pictureFor } from "../../../lib/data/pictures.ts";
 import { href, langPaths, lang, listFormat, setLang } from "../../../lib/i18n.ts";
 import { hasMinionPages, poolFor } from "../../../lib/minions/load.ts";
 import { mt } from "../../../lib/minions/strings.ts";
-import { breadcrumbLd, countText, itemListLd, tierGroups, tierSpread, tribeMinions, tribeName, tribePages, tribePath } from "../../../lib/minions/view.ts";
+import MinionEntry from "../../../components/minions/MinionEntry.astro";
+import {
+  breadcrumbLd,
+  countText,
+  itemListLd,
+  otherTypes,
+  tierGroups,
+  tierSpread,
+  tribeMinions,
+  tribeName,
+  tribePages,
+  tribePath,
+} from "../../../lib/minions/view.ts";
 
 export function getStaticPaths() {
   return hasMinionPages() ? langPaths() : [];
@@ -39,6 +51,8 @@ const tiles = tribePages(pool).map((p) => {
     face: face ? pictureFor("card", face.id) : null,
   };
 });
+// Types new to the card data (no page yet, D-134): their minions are listed here.
+const others = otherTypes(pool);
 const absolute = (path: string) => new URL(path, Astro.site).href;
 const steps = [
   { name: mt("crumb.home"), href: href("/") },
@@ -97,6 +111,30 @@ const graph = [
         }
       </ul>
     </section>
+
+    {
+      others.length > 0 && (
+        <section class="mn-head" aria-labelledby="mn-other">
+          <h2 id="mn-other">{mt("index.others")}</h2>
+          <p class="mn-intro">{mt("index.others.note")}</p>
+        </section>
+      )
+    }
+    {
+      others.map((o) => (
+        <section class="mn-tier" aria-labelledby={`type-${o.key}`}>
+          <div class="mn-tier-head">
+            <h3 id={`type-${o.key}`}>{o.name}</h3>
+            <p>{countText(o.minions.length)}</p>
+          </div>
+          <ul class="mn-list">
+            {o.minions.map((m) => (
+              <MinionEntry minion={m} pageKey={o.key} level={4} />
+            ))}
+          </ul>
+        </section>
+      ))
+    }
 
     <p class="mn-source">{mt("source", { source: pool.source })}</p>
     <JsonLd graph={graph} />

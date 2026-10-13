@@ -67,6 +67,12 @@
   "name": "Múrloc retirado sintético"
  },
  {
+  "id": "BG_SYN_NEWTYPE",
+  "dbfId": 900014,
+  "name": "Recién llegado sintético",
+  "text": "Un tipo que las páginas aún no conocen."
+ },
+ {
   "id": "BG_SPELL_SYN",
   "dbfId": 910002,
   "name": "Un hechizo"

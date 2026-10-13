@@ -12,9 +12,12 @@ interface Props {
   minion: PoolMinion;
   /** The page's type, left out of the marks; null on the no-type page. */
   pageKey: string | null;
+  /** h3 under a tier's h2; h4 under a type's h3 (the index's other types). */
+  level?: 3 | 4;
 }
 
-const { minion, pageKey } = Astro.props;
+const { minion, pageKey, level = 3 } = Astro.props;
+const Name = level === 4 ? "h4" : "h3";
 const shown = marks(minion, pageKey);
 const golden = minion.golden;
 ---
@@ -22,7 +25,7 @@ const golden = minion.golden;
 <li class="mn-entry" id={minionAnchor(minion.id)}>
   <MinionToken id={minion.id} attack={minion.attack} health={minion.health} />
   <div class="mn-body">
-    <h3>{minion.name}</h3>
+    <Name>{minion.name}</Name>
     <p class="visually-hidden">{mt("stats.label", { attack: minion.attack, health: minion.health })}</p>
     {
       shown.length > 0 && (

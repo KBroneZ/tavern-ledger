@@ -136,9 +136,22 @@ test("card text with other markup or hidden characters is not shown", () => {
   assert.equal(cardText("closed</b> never opened"), null);
 });
 
-test("a pool minion with no tier or an unknown type stops the build", () => {
-  assert.throws(() => extractPool([minion({ techLevel: undefined })], [], "t"), /BG_X_1 has no tavern tier/);
-  assert.throws(() => extractPool([minion({ races: ["GNOLL"] })], [], "t"), /unknown minion type GNOLL/);
+test("a pool minion with no tier is left out, with a warning; the build goes on", () => {
+  const warnings: string[] = [];
+  const pool = extractPool([minion(), minion({ id: "BG_X_2", techLevel: undefined })], [], "t", (w) => warnings.push(w));
+  assert.deepEqual(pool.minions.map((m) => m.id), ["BG_X_1"]);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /BG_X_2 has no tavern tier: left out/);
+});
+
+test("a type the pages do not know keeps its minion, with a warning; the build goes on", () => {
+  const warnings: string[] = [];
+  const pool = extractPool([minion({ races: ["GNOLL"] }), minion({ id: "BG_X_2", races: ["GNOLL", "BEAST"] })], [], "t", (w) => warnings.push(w));
+  assert.deepEqual(pool.minions.map((m) => m.tribes), [["GNOLL"], ["GNOLL", "BEAST"]]);
+  assert.equal(warnings.length, 1, "one warning per new type");
+  assert.match(warnings[0], /new minion type GNOLL \(2 minions\).*src\/lib\/minions\/tribes\.ts/);
+  // No warning callback: the build still goes on.
+  assert.equal(extractPool([minion({ techLevel: undefined }), minion({ id: "BG_X_2" })], [], "t").minions.length, 1);
 });
 
 test("data with no pool minion is not the card data", () => {

@@ -119,6 +119,21 @@ test("accounts open: pool minions only, grouped by tier; two types on both pages
   assert.match(murloc, /Duos only/);
 });
 
+test("accounts open: a type new to the card data has no page; the index lists its minions under other types", { skip: !OPEN }, () => {
+  for (const lang of ["en", "es"]) {
+    assert.ok(!existsSync(join(DIST, page(lang, "synthetic_kin"))) && !existsSync(join(DIST, page(lang, "synthetic-kin"))));
+    const index = read(page(lang, null));
+    assert.deepEqual(entries(index), ["BG_SYN_NEWTYPE"], `${lang}: only the new type's minion is listed on the index`);
+    assert.match(index, /<h3 id="type-SYNTHETIC_KIN">Synthetic kin<\/h3>/);
+    assert.match(index, lang === "en" ? /<h2 id="mn-other">Other types<\/h2>/ : /<h2 id="mn-other">Otros tipos<\/h2>/);
+    assert.match(index, lang === "en" ? /<h4>Synthetic Newcomer<\/h4>/ : /<h4>Recién llegado sintético<\/h4>/);
+  }
+  // A pool minion with no tier is left out everywhere, and the build still ran.
+  for (const slug of [null, ...SLUGS]) assert.doesNotMatch(read(page("en", slug)), /BG_SYN_NOTIER/);
+  const xml = read("sitemap.xml");
+  assert.doesNotMatch(xml, /synthetic/i, "no sitemap entry for a type without a page");
+});
+
 test("accounts open: stats, golden stats and card text, in the page's language", { skip: !OPEN }, () => {
   const en = read(page("en", "murloc"));
   assert.match(en, /<h3>Synthetic Deckhand Fin<\/h3>/);

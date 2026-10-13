@@ -210,6 +210,34 @@
   "text": "Not in the pool."
  },
  {
+  "id": "BG_SYN_NEWTYPE",
+  "dbfId": 900014,
+  "name": "Synthetic Newcomer",
+  "type": "MINION",
+  "set": "BATTLEGROUNDS",
+  "techLevel": 2,
+  "attack": 2,
+  "health": 3,
+  "races": [
+   "SYNTHETIC_KIN"
+  ],
+  "text": "A type the pages do not know yet.",
+  "isBattlegroundsPoolMinion": true
+ },
+ {
+  "id": "BG_SYN_NOTIER",
+  "dbfId": 900015,
+  "name": "Synthetic Tierless",
+  "type": "MINION",
+  "set": "BATTLEGROUNDS",
+  "attack": 1,
+  "health": 1,
+  "races": [
+   "MURLOC"
+  ],
+  "isBattlegroundsPoolMinion": true
+ },
+ {
   "id": "CORE_SYN",
   "dbfId": 910001,
   "name": "Not battlegrounds",

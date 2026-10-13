@@ -1,6 +1,8 @@
 // The minion types the minion pages know (T-578, D-134): the key the card
 // data uses and the page's address. A type the card data adds that is not
-// here stops the build (tools/minionPool.ts), so it is named before it shows.
+// here does not stop the build: the build warns (tools/minionPool.ts) and
+// the index lists its minions under "Other types" until it is added here,
+// with its four names in lib/minions/strings.ts and strings.es.ts.
 
 export interface Tribe {
   /** As HearthstoneJSON names it. */
