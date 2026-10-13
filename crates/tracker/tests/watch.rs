@@ -362,3 +362,37 @@ fn the_client_build_is_known_from_net_log_before_any_game_then_from_the_games() 
         "two builds that differ are unknown"
     );
 }
+
+#[test]
+fn another_logs_folder_is_followed_with_the_same_history() {
+    // T-579: the player points the app at the right install; what was saved
+    // from the first folder stays, and the new folder's games are added.
+    let (first_logs, data) = setup();
+    let mut watcher = Watcher::new(&first_logs, Store::open(&data).unwrap());
+    append(
+        &first_logs.join(SESSION_A).join("Power.log"),
+        &fixture("solo_game"),
+    );
+    assert_eq!(statuses(&watcher.poll().unwrap()), vec![(1, "ok".into())]);
+
+    let second_logs = temp_dir().join("Logs");
+    fs::create_dir_all(second_logs.join(SESSION_B)).unwrap();
+    let mut watcher = Watcher::new(&second_logs, watcher.into_store());
+    assert!(
+        watcher.poll().unwrap().is_empty(),
+        "the old folder is let go"
+    );
+    append(
+        &second_logs.join(SESSION_B).join("Power.log"),
+        &fixture("solo_game"),
+    );
+    let saved = watcher.poll().unwrap();
+    assert_eq!(statuses(&saved), vec![(1, "ok".into())]);
+    assert_eq!(saved[0].key.session, SESSION_B);
+    let keys: Vec<_> = watcher
+        .store()
+        .games()
+        .map(|(key, _)| key.session.clone())
+        .collect();
+    assert!(keys.contains(&SESSION_A.to_string()) && keys.contains(&SESSION_B.to_string()));
+}

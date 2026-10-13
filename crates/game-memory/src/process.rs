@@ -138,7 +138,7 @@ mod win {
     }
 
     /// Lists processes without opening any of them.
-    fn find_pid(exe: &str) -> Option<u32> {
+    pub(crate) fn find_pid(exe: &str) -> Option<u32> {
         // SAFETY: plain call; the snapshot handle is closed below.
         let snap = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
         if snap == INVALID_HANDLE_VALUE {
@@ -173,6 +173,8 @@ mod win {
     }
 }
 
+#[cfg(windows)]
+pub(crate) use win::find_pid;
 #[cfg(windows)]
 pub use win::is_running;
 

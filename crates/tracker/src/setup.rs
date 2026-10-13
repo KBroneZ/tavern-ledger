@@ -9,6 +9,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use crate::discover::Resolution;
+
 pub const LOG_CONFIG_FILE: &str = "log.config";
 pub const CLIENT_CONFIG_FILE: &str = "client.config";
 
@@ -180,6 +182,24 @@ impl SetupReport {
             }
             _ => Vec::new(),
         }
+    }
+}
+
+/// What to tell the player when no game folder can be used: nothing found,
+/// or the folder they chose cannot be used now. Empty when a folder is in
+/// use (the file checks above then say what is wrong inside it).
+pub fn folder_messages(resolution: &Resolution) -> Vec<String> {
+    match resolution {
+        Resolution::Found(_) => Vec::new(),
+        Resolution::NotFound => vec![
+            "Tavern Ledger could not find Hearthstone on this PC. Choose the folder where the game is installed, or start the game once."
+                .to_string(),
+        ],
+        Resolution::ChosenUnusable { dir, problem } => vec![format!(
+            "The Hearthstone folder you chose ({}) cannot be used. {} Choose it again, or go back to finding it automatically.",
+            dir.display(),
+            problem.message()
+        )],
     }
 }
 
@@ -390,6 +410,29 @@ Verbose=False
         assert!(check_setup(Some(&dir.join("log.config")), None)
             .notes()
             .is_empty());
+    }
+
+    #[test]
+    fn no_game_folder_is_said_with_what_to_do() {
+        use crate::discover::{FolderProblem, GameFolder, How, Resolution, Source};
+        let found = Resolution::Found(GameFolder {
+            dir: PathBuf::from("game"),
+            how: How::Automatic(Source::Registry),
+        });
+        assert!(folder_messages(&found).is_empty());
+
+        let none = folder_messages(&Resolution::NotFound);
+        assert_eq!(none.len(), 1);
+        assert!(none[0].contains("Choose the folder"));
+
+        let gone = folder_messages(&Resolution::ChosenUnusable {
+            dir: PathBuf::from(r"E:\Hearthstone"),
+            problem: FolderProblem::Missing,
+        });
+        assert_eq!(gone.len(), 1);
+        assert!(gone[0].contains(r"(E:\Hearthstone)"));
+        assert!(gone[0].contains("That folder was not found."));
+        assert!(gone[0].contains("go back to finding it automatically"));
     }
 
     #[test]

@@ -10,9 +10,12 @@
 //! - **Fail safe.** Every value is checked; on any doubt the caller gets
 //!   "unsupported game version" and keeps its log-based values.
 //! - The app calls this only when the user turned the switch on (off by
-//!   default); with it off, nothing here runs and the game is never opened.
+//!   default); with it off, nothing here reads the game. The one thing asked of
+//!   the running game without the switch is where its `Hearthstone.exe` is
+//!   ([`location`], the limited query right only, no memory access).
 
 pub mod game;
+pub mod location;
 pub mod memory;
 pub mod mono;
 pub mod pe;

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-game-folder-reset"
+description = "Enables the game_folder_reset command without any pre-configured scope."
+commands.allow = ["game_folder_reset"]
+
+[[permission]]
+identifier = "deny-game-folder-reset"
+description = "Denies the game_folder_reset command without any pre-configured scope."
+commands.deny = ["game_folder_reset"]
