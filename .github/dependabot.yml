@@ -1,0 +1,70 @@
+version: 2
+
+# Weekly, one grouped pull request per ecosystem, so a week's bumps are
+# reviewed together instead of one by one. A new release waits a few days
+# before it is proposed (cooldown), which gives time for a bad one to be
+# pulled. Lockfiles change with the manifests; CI runs on every pull request,
+# including the license and pinned-action checks.
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "ci"
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "chore"
+    groups:
+      rust:
+        patterns: ["*"]
+
+  # Dev tooling at the root (Supabase CLI, Tauri CLI).
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "chore"
+    groups:
+      npm-root:
+        patterns: ["*"]
+
+  # The website.
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "chore"
+    groups:
+      npm-web:
+        patterns: ["*"]
+
+  # The prototype tools' hash-pinned requirements.txt.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "chore"
+    groups:
+      python:
+        patterns: ["*"]
