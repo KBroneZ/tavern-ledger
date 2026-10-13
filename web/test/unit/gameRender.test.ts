@@ -275,6 +275,6 @@ test("words: a damage total is marked inferred when any combat behind it was wor
 test("a game with replays links to them near the top of the page (T-575)", () => {
   const nodes = renderGame(view(), "2026-10-09");
   const jump = JSON.stringify(nodes[1]);
-  assert.match(jump, /["href","#gv-replays"]/);
+  assert.ok(jump.includes('["href","#gv-replays"]'), jump);
   assert.match(jump, /Watch the combat replays/);
 });
