@@ -9,10 +9,10 @@ description = "Checks a release file's updater signature against the app's publi
 
 [dependencies]
 # The verifier the app's updater uses, so the release is checked the same way.
-minisign-verify = "0.2"
-base64 = "0.22"
+minisign-verify = "0.3"
+base64 = "0.23"
 serde_json = "1"
 
 [dev-dependencies]
 # Throwaway keys made inside the tests; never a real key.
-minisign = "=0.9.1"
+minisign = "=0.10.0"
