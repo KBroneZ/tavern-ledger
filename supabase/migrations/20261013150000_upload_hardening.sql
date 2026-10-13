@@ -157,6 +157,7 @@ declare
   v_add jsonb;
 begin
   if p_files is null or p_files < 0
+     or coalesce(array_ndims(v_failed), 1) > 1
      or not v_failed <@ array['list files', 'delete files', 'housekeeping', 'list summaries']
      or cardinality(v_failed) <> (select count(distinct f) from unnest(v_failed) as f)
      or (p_run_id is null) <> ('housekeeping' = any(v_failed))

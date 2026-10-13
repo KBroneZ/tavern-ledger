@@ -218,6 +218,9 @@ async function commit(env: Env, fetchFn: Fetch, args: ReturnType<typeof commitAr
   }
 }
 
+/** A definite refusal: a client error other than a timeout. */
+const refused = (status: number) => status >= 400 && status < 500 && status !== 408;
+
 /** Deletes a stored file; a failure is logged (the daily sweep retries it). */
 async function removeFile(env: Env, fetchFn: Fetch, path: string) {
   try {
@@ -323,11 +326,15 @@ async function store(
       commitArgs(userId, key, checked.summary, stats, sha, file.length),
     );
   } catch (e) {
-    // The database refused the row, so no row names a new game's file: it
-    // goes now, not at the next sweep, as it would count against no quota
+    // The database refused the row (PostgREST answers 4xx for an error it
+    // raised, and rolls back), so no row names a new game's file: it goes
+    // now, not at the next sweep, as it would count against no quota
     // meanwhile. A replaced game's file is the only copy its row has, and
-    // after no answer at all the row may be there: both are kept.
-    if (result === "create" && e instanceof StepError && e.status > 0) {
+    // after no answer, a timeout or a 5xx the row may be there: all are kept
+    // (the sweep removes the file an hour later if no row names it). Two
+    // uploads of the same new game at once (the app sends one at a time)
+    // could still lose the other's file: the account's own data only.
+    if (result === "create" && e instanceof StepError && refused(e.status)) {
       await removeFile(env, fetchFn, path);
     }
     throw e;

@@ -4,7 +4,7 @@
 -- supabase/functions/sweep/.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(39);
+select plan(47);
 
 delete from private.upload_events;
 insert into auth.users (id, email) values
@@ -135,8 +135,18 @@ from (values
   ((select id from hk3), array['delete files', null], 'a null step is refused')
 ) as t(run_id, failed, why);
 select throws_ok(
+  format($$ select public.sweep_record_result(%s, %s, %L, null, %L) $$,
+    (select id from hk3), files, (select s from ok_stats), failed),
+  '22023', 'sweep_record_result: counts out of shape', why
+)
+from (values
+  (-1, array['delete files'], 'a negative file count is refused with a failed step'),
+  (0, '{{"list files"},{"delete files"}}'::text[], 'a nested list of steps is refused')
+) as t(files, failed, why);
+select throws_ok(
   format($$ select public.sweep_record_result(%s, 0, null) $$, (select id from hk3)),
-  '22023', null, 'no counts without a failed backfill list is refused'
+  '22023', 'sweep_record_result: counts out of shape',
+  'no counts without a failed backfill list is refused'
 );
 select is(
   (select result ? 'stats' from private.sweep_runs where id = (select id from hk3)),
@@ -152,6 +162,51 @@ select is(
   (select result ? 'failed_steps' from private.sweep_runs where id = (select id from hk3)),
   false,
   'and names none'
+);
+
+-- A sweep function deployed before this migration still records its runs.
+create temporary table hk4 as select (public.sweep_housekeeping() ->> 'run_id')::bigint as id;
+create temporary table hk5 as select (public.sweep_housekeeping() ->> 'run_id')::bigint as id;
+grant select on hk4, hk5 to service_role;
+set local role service_role;
+select lives_ok(
+  $$ select public.sweep_record_result(p_run_id => (select id from hk4), p_files => 0,
+       p_stats => (select s from ok_stats), p_retention => null) $$,
+  'four named arguments, as before, still end a run'
+);
+select lives_ok(
+  $$ select public.sweep_record_result(p_run_id => (select id from hk5), p_files => 0,
+       p_stats => (select s from ok_stats)) $$,
+  'and three'
+);
+reset role;
+select is(
+  (select count(*)::int from private.sweep_runs
+   where id in ((select id from hk4), (select id from hk5))
+     and result ? 'stats' and not result ? 'failed_steps'),
+  2, 'both runs are ended with no failed step'
+);
+
+-- A run that stopped (sweep_record_failure) stays as it is.
+create temporary table hk6 as select (public.sweep_housekeeping() ->> 'run_id')::bigint as id;
+select public.sweep_record_failure((select id from hk6), 'unexpected');
+select throws_ok(
+  format($$ select public.sweep_record_result(%s, 0, %L, null, '{delete files}') $$,
+    (select id from hk6), (select s from ok_stats)),
+  '22023', null, 'a run already marked as stopped cannot be ended with failed steps'
+);
+
+-- Housekeeping and the backfill list both failed: a row of its own, no counts.
+delete from private.sweep_runs;
+select lives_ok(
+  $$ select public.sweep_record_result(null, 0, null, null,
+       array['housekeeping', 'list summaries']) $$,
+  'housekeeping and the backfill list can fail in the same run'
+);
+select results_eq(
+  $$ select result -> 'stats', result -> 'failed_steps' from private.sweep_runs $$,
+  $$ values ('null'::jsonb, '["housekeeping", "list summaries"]'::jsonb) $$,
+  'the row says so, with no counts'
 );
 
 -- ------------------------------------------------------------ privileges

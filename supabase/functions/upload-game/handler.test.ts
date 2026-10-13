@@ -54,6 +54,8 @@ function fakeApi(opts: {
   user?: number;
   blocked?: boolean;
   fail?: string;
+  /** What `fail` answers; 503 unless given. */
+  failStatus?: number;
   /** A second path that answers 503. */
   alsoFail?: string;
   /** A path whose call gets no answer (network error or timeout). */
@@ -71,7 +73,8 @@ function fakeApi(opts: {
     if (init.body instanceof Uint8Array) raw = init.body as Bytes;
     else if (typeof init.body === "string") body = JSON.parse(init.body);
     calls.push({ method, path, body, raw, headers });
-    if (opts.fail === path || opts.alsoFail === path) return reply(503, {});
+    if (opts.fail === path) return reply(opts.failStatus ?? 503, {});
+    if (opts.alsoFail === path) return reply(503, {});
     if (opts.throwOn === path) throw new DOMException("timed out", "TimeoutError");
     switch (path) {
       case "/rest/v1/rpc/upload_ip_blocked":
@@ -179,17 +182,21 @@ Deno.test("any other failed row write is still a 500", async () => {
 
 const DELETE_FILES = "DELETE /storage/v1/object/games";
 
-Deno.test("a new game's file is deleted when its row write is refused", async () => {
-  const api = fakeApi({ fail: "/rest/v1/rpc/upload_commit" });
-  const res = await handle(await upload(), ENV, api.fetchFn);
-  assertEquals([res.status, (await res.json()).step], [500, "write row"]);
-  assertEquals(api.paths().slice(-2), ["POST /rest/v1/rpc/upload_commit", DELETE_FILES]);
-  assertEquals(api.calls.at(-1)!.body, { prefixes: [`${USER}/${SESSION}-1.json.gz`] });
+Deno.test("a new game's file is deleted when the database refuses its row", async () => {
+  // PostgREST answers 400 or 409 for an error the database raised: rolled back.
+  for (const status of [400, 409]) {
+    const api = fakeApi({ fail: "/rest/v1/rpc/upload_commit", failStatus: status });
+    const res = await handle(await upload(), ENV, api.fetchFn);
+    assertEquals([res.status, (await res.json()).step], [500, "write row"]);
+    assertEquals(api.paths().slice(-2), ["POST /rest/v1/rpc/upload_commit", DELETE_FILES]);
+    assertEquals(api.calls.at(-1)!.body, { prefixes: [`${USER}/${SESSION}-1.json.gz`] });
+  }
 });
 
 Deno.test("a failed delete after a refused row write still answers 500 with the row step", async () => {
   const api = fakeApi({
     fail: "/rest/v1/rpc/upload_commit",
+    failStatus: 400,
     alsoFail: "/storage/v1/object/games",
   });
   const res = await handle(await upload(), ENV, api.fetchFn);
@@ -204,8 +211,18 @@ Deno.test("the file is kept when the row write may have landed or a row names it
   const res = await handle(await upload(), ENV, timedOut.fetchFn);
   assertEquals([res.status, (await res.json()).step], [500, "write row"]);
   assertEquals(timedOut.paths().includes(DELETE_FILES), false, "after no answer");
+  // A server or gateway error, or a timeout answer: the row may be there too.
+  for (const status of [408, 500, 502, 503, 504]) {
+    const api = fakeApi({ fail: "/rest/v1/rpc/upload_commit", failStatus: status });
+    await handle(await upload(), ENV, api.fetchFn);
+    assertEquals(api.paths().includes(DELETE_FILES), false, `after HTTP ${status}`);
+  }
   // A replaced game: the file is the only copy its row has.
-  const replaced = fakeApi({ begin: { result: "replace" }, fail: "/rest/v1/rpc/upload_commit" });
+  const replaced = fakeApi({
+    begin: { result: "replace" },
+    fail: "/rest/v1/rpc/upload_commit",
+    failStatus: 400,
+  });
   await handle(await upload(), ENV, replaced.fetchFn);
   assertEquals(replaced.paths().includes(DELETE_FILES), false, "for a replaced game");
   // An unknown answer: the row may be there.
