@@ -26,6 +26,7 @@ If any job fails, nothing is published. Fix the cause and run the failed jobs ag
 
 ## 3. Review the draft
 
+- [ ] If the draft's notes start with "WARNING: this release changes the updater public key" and you did not plan a key rotation, delete the draft and do not publish.
 - [ ] Files: `TavernLedger_X.Y.Z_x64-setup.exe`, its `.sig`, `latest.json`, `SHA256SUMS`, `SHA256SUMS.minisig`, and nothing else.
 - [ ] The SHA-256 in the draft's notes equals the installer's line in `SHA256SUMS` and the build job's log.
 - [ ] `latest.json` names version X.Y.Z and points to this tag's installer.
