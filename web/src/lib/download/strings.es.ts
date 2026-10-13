@@ -62,8 +62,10 @@ export const ES: Record<DlKey, string> = {
     "Tus partidas se quedan en tu PC, en %APPDATA%\\TavernLedger. No se sube nada a menos que inicies sesión y actives la subida.",
   "reads.privacy": "Política de privacidad",
   "update.title": "Actualizar",
-  "update.short": "Aún no hay actualizaciones automáticas: descarga el instalador nuevo de esta página y ejecútalo.",
-  "update.body": "Sustituye la aplicación y conserva tus partidas y ajustes.",
+  "update.short":
+    "Desde la versión 0.2.0 la aplicación se actualiza sola: busca una versión nueva al iniciarse y cada pocas horas, y te pide reiniciar cuando hay una lista.",
+  "update.body":
+    "Si tienes la versión 0.1.0, instala una vez encima la versión nueva de esta página: sustituye la aplicación y conserva tus partidas y ajustes. Después, las actualizaciones llegan solas, firmadas por el proyecto, y solo se instalan cuando pulsas «Reiniciar ahora». Puedes desactivar la búsqueda en los Ajustes de la aplicación, en Actualizaciones.",
   "remove.title": "Desinstalar",
   "remove.short": "Quítala en Configuración de Windows, en Aplicaciones. Tus partidas se conservan.",
   "remove.body":

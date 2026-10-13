@@ -2,6 +2,8 @@
 
 Last updated: 13 October 2026
 
+**What changed on 13 October 2026 (later that day):** from version 0.2.0 the app updates itself: it asks GitHub for updates when it starts and every six hours, unless "Check for updates automatically" is off, which tells GitHub your PC's IP address and the app's updater user agent (sections 2 and 5). Section 2 now also describes the card data and pictures the app already downloaded from HearthstoneJSON. Nothing else changes.
+
 **What changed on 13 October 2026:** the public profile page now asks search engines not to index it, as the leaderboards already did (section 4, "Public profiles and leaderboards"). Nothing else changes.
 
 **What changed on 12 October 2026 (later that day):** a new switch on your account page, off by default, "Let my games be used to improve the simulator": if you turn it on, the boards and combat replays of your uploaded games can be used to measure and fix the combat simulator, only as totals over many games and never per player (section 4, "Improving the simulator"), for as long as the switch is on and the full records are kept (section 6); the switch is in the download and goes with your account (section 7). Nothing changes for an account that leaves it off.
@@ -26,9 +28,13 @@ The app reads the game's log files and saves a summary of each Battlegrounds gam
 
 **Reading from the game (optional, off by default).** If you turn on "Read the lobby's tribes and your rating from the game", the app also reads, read-only, two values the game shows you while it runs: the five tribes of the lobby you are in and your own Battlegrounds rating (Solo and Duos). It reads nothing else from the game: no other players' names, BattleTags, account ids or ratings. These values stay in the app's memory on your PC: they are not saved with your games, not put in the game record and never uploaded. Turning the switch off forgets them.
 
-Unless you turn on uploading, the app sends nothing over the internet and we never receive this file. To export it, copy it; to delete it, delete the `TavernLedger` folder.
+Unless you turn on uploading, we never receive this file, and the app sends nothing about you or your games over the internet: its only other requests are for card data and updates (below). To export it, copy it; to delete it, delete the `TavernLedger` folder.
 
 **Uploading to your account (optional, off by default).** You can sign in from the app with a one-time link sent to your email and opened in your browser; the app never asks for your password. It keeps the sign-in (a refresh token) in Windows Credential Manager on your PC, and a list of the games it uploaded next to the history (`uploads.jsonl`). Only when you turn "Upload games" on does it send each finished game's record (the summary above, without player names) to your account (section 4). Signing out ends the session on our server, removes the sign-in from your PC and turns uploading off.
+
+**Card names and pictures.** The app downloads card data (names and card text) and card pictures from HearthstoneJSON (`api.hearthstonejson.com` and `art.hearthstonejson.com`, run by HearthSim, section 5) and keeps them on your PC: it asks for the card data again when its copy is a week old or a game shows a card it does not know, and for a picture only when it is about to show a card it has no picture of. Each request tells HearthSim your PC's IP address, the app's user agent (`TavernLedger` and its version) and the file asked for, which for a picture names the card. Legal basis: our legitimate interest in showing your games in a readable way (Art. 6(1)(f) GDPR).
+
+**Updates.** From version 0.2.0, the app asks the project's releases on GitHub whether a new version is out, a minute after it starts and every six hours, unless you turn off "Check for updates automatically" in Settings > Updates; "Check now" there asks once. When there is a new version, it downloads the installer from the same place and keeps it only if it is signed by the project's key; it installs only when you press "Restart now". Each request tells GitHub your PC's IP address and the app's updater user agent (`tauri-plugin-updater` and its version), and nothing about you or your games. GitHub decides what it logs; see GitHub's privacy statement. Legal basis: our legitimate interest in keeping the app working and secure (Art. 6(1)(f) GDPR).
 
 ## 3. When you visit the website
 
@@ -114,7 +120,9 @@ We do **not** collect player names, BattleTags, Battle.net accounts, ratings or 
 
 You can ask us for a copy of the transfer safeguards at the contact address above.
 
-**HearthSim**, the independent service behind HearthstoneJSON, receives the requests for card pictures described in section 3.
+**HearthSim**, the independent service behind HearthstoneJSON, receives the requests for card pictures described in section 3 and the app's requests for card data and pictures (section 2).
+
+**GitHub** (GitHub, Inc., USA), where the app's releases are published, receives the app's update checks and downloads (section 2). It is not a provider of ours for your data: it decides what it logs, under its own privacy statement.
 
 **Everyone**, if you make your profile public: your public profile and, with a display name and enough games, the leaderboards (section 4). If you turn on community hero stats: totals per hero that include your games without naming you (section 4). If you turn on the simulator switch: published totals over all the games measured, never per player (section 4).
 

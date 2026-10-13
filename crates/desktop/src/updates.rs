@@ -550,10 +550,19 @@ mod tests {
     }
 
     #[test]
-    fn the_committed_build_has_no_release_key_so_updates_are_off() {
+    fn the_committed_build_carries_the_release_key_so_updates_are_on() {
         let conf = updater_conf();
-        assert!(conf["pubkey"].is_string(), "the key's place is there");
-        assert_eq!(release_key(Some(&conf)), None);
+        let key = release_key(Some(&conf)).expect("a real minisign public key");
+        let text = base64::engine::general_purpose::STANDARD
+            .decode(&key)
+            .unwrap();
+        let text = String::from_utf8(text).unwrap();
+        // Changing the release key is a deliberate change (see the release
+        // checklist): this test changes with it.
+        assert!(
+            text.starts_with("untrusted comment: minisign public key: CC9CE2C7E6CD31F8\n"),
+            "{text}"
+        );
         assert_eq!(release_key(None), None);
     }
 

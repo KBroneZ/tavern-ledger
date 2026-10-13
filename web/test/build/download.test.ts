@@ -116,3 +116,15 @@ test("the menu has a Download link on every page, current on the download page",
   assert.match(read("download/index.html"), /<a href="\/download\/" aria-current="page">Download<\/a>/);
   assert.match(read("es/download/index.html"), /<a href="\/es\/download\/" aria-current="page">Descargar<\/a>/);
 });
+
+test("Updating says the app updates itself from 0.2.0, and 0.1.0 is installed over once", () => {
+  for (const page of PAGES) {
+    const html = read(page.file);
+    const updating = html.slice(html.indexOf(page.lang === "en" ? ">Updating<" : ">Actualizar<"));
+    const block = updating.slice(0, updating.indexOf('<div class="dl-extra">'));
+    assert.match(block, page.lang === "en" ? /From version 0\.2\.0 the app updates itself/ : /Desde la versión 0\.2\.0 la aplicación se actualiza sola/, page.file);
+    assert.match(block, page.lang === "en" ? /version 0\.1\.0/ : /versión 0\.1\.0/, page.file);
+    assert.match(block, page.lang === "en" ? /keeps your games and settings/ : /conserva tus partidas y ajustes/, page.file);
+    assert.doesNotMatch(block, page.lang === "en" ? /no automatic updates/i : /no hay actualizaciones automáticas/i, page.file);
+  }
+});

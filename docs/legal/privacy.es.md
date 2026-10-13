@@ -4,6 +4,8 @@
 
 Última actualización: 13 de octubre de 2026
 
+**Qué cambió el 13 de octubre de 2026 (más tarde ese día):** desde la versión 0.2.0 la aplicación se actualiza sola: pregunta a GitHub si hay actualizaciones al iniciarse y cada seis horas, salvo que «Buscar actualizaciones automáticamente» esté desactivado, lo que da a GitHub la dirección IP de tu PC y el agente de usuario del actualizador de la aplicación (apartados 2 y 5). El apartado 2 ahora también describe los datos e imágenes de cartas que la aplicación ya descargaba de HearthstoneJSON. Nada más cambia.
+
 **Qué cambió el 13 de octubre de 2026:** la página del perfil público ahora pide a los buscadores que no la indexen, como ya hacían las clasificaciones (apartado 4, «Perfiles públicos y clasificaciones»). Nada más cambia.
 
 **Qué cambió el 12 de octubre de 2026 (más tarde ese día):** un interruptor nuevo en la página de tu cuenta, desactivado por defecto, «Permitir que se usen mis partidas para mejorar el simulador»: si lo activas, los tableros y las repeticiones de los combates de tus partidas subidas se pueden usar para medir y corregir el simulador de combates, solo como totales de muchas partidas y nunca por jugador (apartado 4, «Mejorar el simulador»), mientras el interruptor esté activado y se conserven los registros completos (apartado 6); el interruptor está en la descarga y se borra con tu cuenta (apartado 7). Nada cambia para una cuenta que lo deje desactivado.
@@ -28,9 +30,13 @@ La aplicación lee los archivos de registro del juego y guarda un resumen de cad
 
 **Lectura del juego (opcional, desactivada por defecto).** Si activas «Leer del juego las tribus de la partida y tu puntuación», la aplicación también lee, en modo solo lectura, dos valores que el juego te muestra mientras se ejecuta: las cinco tribus de la partida en la que estás y tu propia puntuación de Campos de Batalla (Solo y Dúos). No lee nada más del juego: ni nombres de otros jugadores, ni BattleTags, ni ids de cuenta, ni puntuaciones. Estos valores permanecen en la memoria de la aplicación en tu PC: no se guardan con tus partidas, no se incluyen en el registro de la partida y nunca se suben. Al desactivar el interruptor, los olvida.
 
-Mientras no actives la subida, la aplicación no envía nada por internet y nunca recibimos este archivo. Para exportarlo, cópialo; para borrarlo, borra la carpeta `TavernLedger`.
+Mientras no actives la subida, nunca recibimos este archivo y la aplicación no envía nada sobre ti ni sobre tus partidas por internet: sus únicas otras solicitudes son de datos de cartas y de actualizaciones (abajo). Para exportarlo, cópialo; para borrarlo, borra la carpeta `TavernLedger`.
 
 **Subida a tu cuenta (opcional, desactivada por defecto).** Puedes iniciar sesión desde la aplicación con un enlace de un solo uso enviado a tu correo electrónico y abierto en tu navegador; la aplicación nunca te pide la contraseña. Guarda el inicio de sesión (un token de renovación) en el Administrador de credenciales de Windows de tu PC, y una lista de las partidas que subió junto al historial (`uploads.jsonl`). Solo cuando activas «Subir partidas» envía el registro de cada partida terminada (el resumen anterior, sin nombres de jugadores) a tu cuenta (apartado 4). Al cerrar sesión se termina la sesión en nuestro servidor, se elimina el inicio de sesión de tu PC y se desactiva la subida.
+
+**Nombres e imágenes de cartas.** La aplicación descarga los datos de las cartas (nombres y texto de las cartas) y sus imágenes de HearthstoneJSON (`api.hearthstonejson.com` y `art.hearthstonejson.com`, gestionado por HearthSim, apartado 5) y los guarda en tu PC: vuelve a pedir los datos de las cartas cuando su copia tiene una semana o una partida muestra una carta que no conoce, y una imagen solo cuando va a mostrar una carta de la que no tiene imagen. Cada solicitud da a HearthSim la dirección IP de tu PC, el agente de usuario de la aplicación (`TavernLedger` y su versión) y el archivo pedido, que en el caso de una imagen nombra la carta. Base jurídica: nuestro interés legítimo en mostrar tus partidas de forma legible (art. 6.1.f del RGPD).
+
+**Actualizaciones.** Desde la versión 0.2.0, la aplicación pregunta a las versiones publicadas del proyecto en GitHub si hay una versión nueva, un minuto después de iniciarse y cada seis horas, salvo que desactives «Buscar actualizaciones automáticamente» en Ajustes > Actualizaciones; «Buscar ahora» pregunta una vez. Si hay una versión nueva, descarga el instalador del mismo sitio y solo lo guarda si está firmado con la clave del proyecto; solo lo instala cuando pulsas «Reiniciar ahora». Cada solicitud da a GitHub la dirección IP de tu PC y el agente de usuario del actualizador de la aplicación (`tauri-plugin-updater` y su versión), y nada sobre ti ni sobre tus partidas. GitHub decide qué registra; consulta su declaración de privacidad. Base jurídica: nuestro interés legítimo en mantener la aplicación funcionando y segura (art. 6.1.f del RGPD).
 
 ## 3. Cuando visitas el sitio web
 
@@ -122,7 +128,9 @@ Para tener una cuenta necesitamos tu correo electrónico y una contraseña; sin 
 
 Puedes pedirnos una copia de las garantías de transferencia en la dirección de contacto indicada arriba.
 
-**HearthSim**, el servicio independiente que está detrás de HearthstoneJSON, recibe las solicitudes de imágenes de cartas descritas en el apartado 3.
+**HearthSim**, el servicio independiente que está detrás de HearthstoneJSON, recibe las solicitudes de imágenes de cartas descritas en el apartado 3 y las solicitudes de datos e imágenes de cartas de la aplicación (apartado 2).
+
+**GitHub** (GitHub, Inc., EE. UU.), donde se publican las versiones de la aplicación, recibe las comprobaciones de actualizaciones y las descargas de la aplicación (apartado 2). No es un proveedor nuestro para tus datos: decide qué registra, según su propia declaración de privacidad.
 
 **Todo el mundo**, si haces público tu perfil: tu perfil público y, con un nombre visible y suficientes partidas, las clasificaciones (apartado 4). Si activas las estadísticas de héroes de la comunidad: totales por héroe que incluyen tus partidas sin nombrarte (apartado 4). Si activas el interruptor del simulador: totales publicados de todas las partidas medidas, nunca por jugador (apartado 4).
 

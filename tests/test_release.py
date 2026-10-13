@@ -67,12 +67,13 @@ class PrepareTest(unittest.TestCase):
             release.prepare("refs/tags/v0.2.0", False, placeholder, CRATE)
         self.assertEqual(release.prepare("refs/pull/1/merge", True, placeholder, CRATE)["version"], "0.2.0")
 
-    def test_the_committed_config_has_the_placeholder_and_agrees_with_the_crate(self):
+    def test_the_committed_config_has_the_release_key_and_agrees_with_the_crate(self):
         text = (ROOT / "crates/desktop/tauri.conf.json").read_text(encoding="utf-8")
         crate = (ROOT / "crates/desktop/Cargo.toml").read_text(encoding="utf-8")
         version = json.loads(text)["version"]
         self.assertEqual(release.crate_version(crate), version)
-        self.assertFalse(release.is_public_key(json.loads(text)["plugins"]["updater"]["pubkey"]))
+        self.assertTrue(release.is_public_key(json.loads(text)["plugins"]["updater"]["pubkey"]))
+        self.assertEqual(release.prepare(f"refs/tags/v{version}", False, text, crate)["version"], version)
 
     def test_only_a_minisign_shaped_key_counts(self):
         self.assertTrue(release.is_public_key(public_key()))

@@ -64,8 +64,10 @@ export const DL_STRINGS = {
     "Your games stay on your PC in %APPDATA%\\TavernLedger. Nothing is uploaded unless you sign in and turn uploading on.",
   "reads.privacy": "Privacy policy",
   "update.title": "Updating",
-  "update.short": "There are no automatic updates yet: download the new installer from this page and run it.",
-  "update.body": "It replaces the app and keeps your games and settings.",
+  "update.short":
+    "From version 0.2.0 the app updates itself: it checks for a new version when it starts and every few hours, and asks you to restart when one is ready.",
+  "update.body":
+    "If you have version 0.1.0, install the new version from this page over it once: it replaces the app and keeps your games and settings. After that, updates arrive by themselves, signed by the project, and are installed only when you press “Restart now”. You can turn the checks off in the app's Settings, under Updates.",
   "remove.title": "Uninstalling",
   "remove.short": "Remove it in Windows Settings, under Apps. Your games are kept.",
   "remove.body":
