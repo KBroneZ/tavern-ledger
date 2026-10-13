@@ -428,10 +428,36 @@ test("step model: a board coming in with no slots goes in left to right", () => 
   assert.equal(f.at(-1)?.own[0].marks.attacker, true, "the left-most attacks first, as in the log");
 });
 
-test("step model: a lone summon with no slot still goes to the left", () => {
-  const r = good(edited((x) => {
-    x.minions[4].position = 0;
-    x.events = [{ kind: "summon", minion: 4 }];
-  }));
-  assert.deepEqual(cards(playback(r, NO_HEROES).frames[1].opponent), ["SYN_M_09", "SYN_M_05", null]);
+test("step model: both boards coming in at once each fill from the left; after the first attack a summon with no slot goes left", () => {
+  const mm = (side: string, card_id: string, position: number) => ({ side, card_id, atk: 1, health: 1, position, golden: false, keywords: [] });
+  const r = good({
+    minions: [
+      mm("own", "OLD_OWN", 1),
+      mm("opponent", "OLD_FOE", 1),
+      mm("own", "IN_OWN_1", 0),
+      mm("opponent", "IN_FOE_1", 0),
+      mm("own", "IN_OWN_2", 0),
+      mm("opponent", "IN_FOE_2", 0),
+      mm("own", "TOKEN", 0),
+    ],
+    start: 2,
+    events: [
+      { kind: "board_in", side: "own", hero: null },
+      { kind: "board_in", side: "opponent", hero: null },
+      { kind: "summon", minion: 2 },
+      { kind: "summon", minion: 3 },
+      { kind: "summon", minion: 4 },
+      { kind: "summon", minion: 5 },
+      // A step naming a minion of a board that left is not played.
+      { kind: "stats", minion: 0, atk: 9, health: 9 },
+      { kind: "attack", attacker: 2, defender: 3 },
+      { kind: "summon", minion: 6 },
+    ],
+    complete: true,
+  });
+  const p = playback(r, NO_HEROES);
+  const last = p.frames.at(-1) as Frame;
+  assert.deepEqual(cards(last.opponent), ["IN_FOE_1", "IN_FOE_2"]);
+  assert.deepEqual(cards(last.own), ["TOKEN", "IN_OWN_1", "IN_OWN_2"], "after an attack, no slot is the far left again");
+  assert.equal(p.skipped, 1);
 });

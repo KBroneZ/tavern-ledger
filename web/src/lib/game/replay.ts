@@ -121,8 +121,8 @@ interface State {
   hero: Record<Side, number>;
   heroes: Record<Side, string | null>;
   dying: number[];
-  /** The side whose board is coming in (Duos), until the next attack. */
-  incoming: Side | null;
+  /** The sides whose board is coming in (Duos), until the next attack. */
+  incoming: Set<Side>;
 }
 
 function tileOf(replay: Replay, ref: number): Base {
@@ -141,7 +141,7 @@ function tileOf(replay: Replay, ref: number): Base {
 }
 
 function startState(replay: Replay, heroes: Record<Side, string | null>): State {
-  const st: State = { replay, tiles: new Map(), boards: { own: [], opponent: [] }, hero: { own: 0, opponent: 0 }, heroes: { ...heroes }, dying: [], incoming: null };
+  const st: State = { replay, tiles: new Map(), boards: { own: [], opponent: [] }, hero: { own: 0, opponent: 0 }, heroes: { ...heroes }, dying: [], incoming: new Set() };
   for (let ref = 0; ref < replay.start; ref++) {
     st.tiles.set(ref, tileOf(replay, ref));
     st.boards[replay.minions[ref].side].push(ref);
@@ -178,7 +178,7 @@ function apply(st: State, e: ReplayEvent): Map<number, Marks> {
   const set = (ref: number, what: Partial<Base>) => st.tiles.set(ref, { ...(st.tiles.get(ref) as Base), ...what });
   switch (e.kind) {
     case "attack":
-      st.incoming = null;
+      st.incoming.clear();
       mark(e.attacker, { attacker: true });
       if (e.defender !== null) mark(e.defender, { defender: true });
       break;
@@ -203,7 +203,7 @@ function apply(st: State, e: ReplayEvent): Map<number, Marks> {
       const board = st.boards[m.side];
       // The app's rule: slot 1 is the left-most; a slot of 0 (none in the log)
       // goes left too, but a board coming in fills from the left.
-      const at = m.position <= 0 && st.incoming === m.side ? board.length : Math.min(Math.max(m.position - 1, 0), board.length);
+      const at = m.position <= 0 && st.incoming.has(m.side) ? board.length : Math.min(Math.max(m.position - 1, 0), board.length);
       st.tiles.set(e.minion, tileOf(st.replay, e.minion));
       board.splice(at, 0, e.minion);
       mark(e.minion, { summoned: true });
@@ -217,7 +217,7 @@ function apply(st: State, e: ReplayEvent): Map<number, Marks> {
       break;
     case "board_in":
       st.heroes[e.side] = e.hero;
-      st.incoming = e.side;
+      st.incoming.add(e.side);
       for (const ref of st.boards[e.side]) st.tiles.delete(ref);
       st.boards[e.side] = [];
       break;
