@@ -293,8 +293,8 @@ impl GameReader {
         }
         let local = self.collector.local?;
         self.collector.board.get(local)?;
-        let values = self.collector.combat_values(report::Side::Own);
-        Some(counters::counters_from(&values, counters::ENABLED_KINDS))
+        let inputs = self.collector.counters.inputs();
+        Some(counters::counters_from(inputs, counters::ENABLED_KINDS))
     }
 
     /// True when the log says this is a Battlegrounds game (solo or Duos).
