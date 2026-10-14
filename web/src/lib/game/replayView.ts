@@ -6,6 +6,7 @@
 // script (replayPlayer.ts) moves through the steps; these trees are what it
 // draws, so the tests see the same markup.
 import { t } from "../data/strings.ts";
+import { exactStat, shortStat } from "../stat.ts";
 import { cls, h, type VNode } from "../view/node.ts";
 import { picture, sourceMark } from "../view/pieces.ts";
 import { giftList } from "./gifts.ts";
@@ -72,7 +73,7 @@ export function tileWords(tile: Tile): string {
   const keywords = KEYWORDS.filter((k) => (k === "divine_shield" ? tile.shield : tile.keywords.includes(k)));
   return [
     cardLabel(tile.cardId, g("minion.unknownCard")),
-    g("minion.stats", { attack: tile.atk, health: Math.max(tile.health, 0) }),
+    g("minion.stats", { attack: exactStat(tile.atk), health: exactStat(Math.max(tile.health, 0)) }),
     tile.golden ? g("minion.golden") : "",
     keywordWords(keywords),
   ].filter(Boolean).join(", ");
@@ -84,12 +85,12 @@ export function tileInfo(tile: Tile): VNode[] {
     h(
       "span",
       { class: "rp-stats", "aria-hidden": "true" },
-      h("span", { class: "rp-atk" }, String(tile.atk)),
-      h("span", { class: "rp-hp" }, String(Math.max(tile.health, 0))),
+      h("span", { class: "rp-atk" }, shortStat(tile.atk)),
+      h("span", { class: "rp-hp" }, shortStat(Math.max(tile.health, 0))),
     ),
-    tile.marks.hurt ? h("span", { class: "rp-hurt", "aria-hidden": "true" }, h("b", {}, `−${tile.marks.hurt}`)) : null,
+    tile.marks.hurt ? h("span", { class: "rp-hurt", "aria-hidden": "true" }, h("b", {}, `−${shortStat(tile.marks.hurt)}`)) : null,
     // A buff or a heal: a green burst with what it gave, as the game's.
-    !tile.marks.hurt && tile.marks.gain ? h("span", { class: "rp-gain", "aria-hidden": "true" }, h("b", {}, `+${tile.marks.gain.atk}/+${tile.marks.gain.health}`)) : null,
+    !tile.marks.hurt && tile.marks.gain ? h("span", { class: "rp-gain", "aria-hidden": "true" }, h("b", {}, `+${shortStat(tile.marks.gain.atk)}/+${shortStat(tile.marks.gain.health)}`)) : null,
     h("span", { class: "visually-hidden" }, tileWords(tile)),
   ].filter((n): n is VNode => n !== null);
 }

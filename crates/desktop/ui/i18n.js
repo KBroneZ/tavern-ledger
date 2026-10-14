@@ -87,6 +87,27 @@
     return new Intl.NumberFormat(LOCALES[lang], options).format(value);
   }
 
+  // A minion's Attack or Health the way the game writes a big one (T-611):
+  // from 1,000 up it is 1K, 1M, 1B with one decimal that is cut, not rounded
+  // (1,999 is 1.9K, 999,999 is 999.9K), and no ".0". The website has the same
+  // rule in lib/stat.ts and both run the same table of cases. An unknown
+  // value is "?". `exact` has every digit, for the tooltip.
+  const STAT_UNITS = [[1e9, "B"], [1e6, "M"], [1e3, "K"]];
+  const isKnown = (value) => typeof value === "number" && Number.isFinite(value);
+  function stat(value) {
+    if (!isKnown(value)) return "?";
+    const whole = Math.trunc(value);
+    const sign = whole < 0 ? "-" : "";
+    const size = Math.abs(whole);
+    const unit = STAT_UNITS.find(([from]) => size >= from);
+    if (!unit) return `${sign}${size}`;
+    const tenths = Math.floor(size / (unit[0] / 10));
+    const decimal = tenths % 10;
+    const point = lang === "es" ? "," : ".";
+    return `${sign}${Math.floor(tenths / 10)}${decimal === 0 ? "" : point + decimal}${unit[1]}`;
+  }
+  const exact = (value) => (isKnown(value) ? new Intl.NumberFormat(LOCALES[lang], { maximumFractionDigits: 0 }).format(Math.trunc(value)) : "?");
+
   // A share from 0 to 1 as a whole percentage: 50% / 50 %.
   const percent = (share) => new Intl.NumberFormat(LOCALES[lang], { style: "percent", maximumFractionDigits: 0 }).format(share);
 
@@ -158,7 +179,7 @@
   }
 
   const api = {
-    LANGS, define, pick, englishFrom, t, plural, num, percent, date, dateTime, list, backend, apply, setLang,
+    LANGS, define, pick, englishFrom, t, plural, num, stat, exact, percent, date, dateTime, list, backend, apply, setLang,
     lang: () => lang,
     locale: () => LOCALES[lang],
     ready: () => ready,

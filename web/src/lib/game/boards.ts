@@ -4,6 +4,7 @@
 // the replay (replay.css), and the card's name under it. The keywords are in
 // the minion's words (the tooltip and what a screen reader hears).
 import { cls, h, type VNode } from "../view/node.ts";
+import { shortStat } from "../stat.ts";
 import { picture } from "../view/pieces.ts";
 import { giftList } from "./gifts.ts";
 import { cardLabel } from "./names.ts";
@@ -14,7 +15,6 @@ import * as w from "./words.ts";
 
 function minionTile(m: Minion): VNode {
   const words = w.minionWords(m);
-  const stat = (v: number | null) => (v === null ? "?" : String(v));
   return h(
     "li",
     { class: cls("rp-minion", "gv-minion", { "is-golden": m.golden, "has-shield": m.keywords.includes("divine_shield") }), title: words },
@@ -22,7 +22,7 @@ function minionTile(m: Minion): VNode {
     h(
       "span",
       { class: "rp-info" },
-      h("span", { class: "rp-stats", "aria-hidden": "true" }, h("span", { class: "rp-atk" }, stat(m.atk)), h("span", { class: "rp-hp" }, stat(m.health))),
+      h("span", { class: "rp-stats", "aria-hidden": "true" }, h("span", { class: "rp-atk" }, shortStat(m.atk)), h("span", { class: "rp-hp" }, shortStat(m.health))),
       h("span", { class: "visually-hidden" }, words),
     ),
     h("span", { class: "gv-minion-name", "aria-hidden": "true" }, cardLabel(m.cardId, g("minion.unknownCard"))),

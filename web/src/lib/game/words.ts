@@ -2,6 +2,7 @@
 // page and its tests say the same. Unknown is a dash or "unknown", never 0.
 import { backing, compact, ordinal, perGameText } from "../data/format.ts";
 import { t } from "../data/strings.ts";
+import { exactStat } from "../stat.ts";
 import { cardLabel } from "./names.ts";
 import type { Keyword, Minion, ShopTurn } from "./report.ts";
 import type { BoardView, HeroRef, Known, Summary, TurnRow } from "./shape.ts";
@@ -103,7 +104,7 @@ export function keywordWords(keywords: readonly Keyword[]): string {
 
 /** "3/3", with "?" for a stat the record lacks. */
 export function statsText(m: Pick<Minion, "atk" | "health">): string {
-  return g("minion.stats", { attack: m.atk === null ? "?" : m.atk, health: m.health === null ? "?" : m.health });
+  return g("minion.stats", { attack: exactStat(m.atk), health: exactStat(m.health) });
 }
 
 /** "Lantern Moth, 3/3, Golden, Taunt, Divine Shield" (the id when the card data lacks it): a minion's alt and tooltip. */

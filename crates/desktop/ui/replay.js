@@ -602,10 +602,9 @@
       box.classList.toggle(`loses-${k}`, Boolean(tile.lost && tile.lost.includes(k)));
     });
     // Damage past 0 (overkill) shows as 0, as on the game's board.
-    const atk = tile.atk === null ? "?" : I18n.num(tile.atk);
-    const health = tile.health === null ? "?" : I18n.num(Math.max(tile.health, 0));
-    box.querySelector(".replay-atk").textContent = atk;
-    box.querySelector(".replay-hp").textContent = health;
+    const health = tile.health === null ? null : Math.max(tile.health, 0);
+    box.querySelector(".replay-atk").textContent = I18n.stat(tile.atk);
+    box.querySelector(".replay-hp").textContent = I18n.stat(health);
     box.querySelectorAll(".replay-hurt, .replay-gain").forEach((old) => old.remove());
     // The hit as the game's splat; a buff or a heal as a green one.
     const splat = (cls, text) => {
@@ -617,12 +616,12 @@
       s.append(b);
       box.append(s);
     };
-    if (tile.hurt) splat("replay-hurt", `−${I18n.num(tile.hurt)}`);
-    else if (tile.gain) splat("replay-gain", `+${I18n.num(tile.gain.atk)}/+${I18n.num(tile.gain.health)}`);
+    if (tile.hurt) splat("replay-hurt", `−${I18n.stat(tile.hurt)}`);
+    else if (tile.gain) splat("replay-gain", `+${I18n.stat(tile.gain.atk)}/+${I18n.stat(tile.gain.health)}`);
     const name = tile.id ? h.cardName(tile.id) || tile.id : t("shop.card.unknown");
     const gifts = Turns.giftMarks(tile).map((g) => g.title);
     const marks = [tile.golden && t("keyword.golden"), ...tile.keywords.map((k) => (`keyword.${k}` in I18n.tables().en ? t(`keyword.${k}`) : k)), ...gifts].filter(Boolean);
-    const words = [`${name} ${atk}/${health}`, marks.join(", ")].filter(Boolean).join(" · ");
+    const words = [`${name} ${I18n.exact(tile.atk)}/${I18n.exact(health)}`, marks.join(", ")].filter(Boolean).join(" · ");
     box.title = words;
     box.querySelector(".replay-words").textContent = words;
   }

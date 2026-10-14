@@ -6,7 +6,7 @@
 // on its half of the table, the opponent's across from the player's.
 // Text goes in as text nodes only (lib/view/node.ts).
 import giftTable from "../../data/gifts.json" with { type: "json" };
-import { compact } from "../data/format.ts";
+import { exactStat, shortStat } from "../stat.ts";
 import { lang } from "../i18n.ts";
 import { giftMarks, giftName } from "../game/gifts.ts";
 import { cls, h, type VNode } from "../view/node.ts";
@@ -66,7 +66,7 @@ export const keywordName = (k: SimKeyword): string => sm(`keyword.${k}`);
 const GIFT_IDS = Object.keys(giftTable.gifts);
 
 function minionLabel(m: SimMinion, cards: CardIndex, marks: Marks): string {
-  const parts = [`${cards.name(m.cardId)}, ${m.attack}/${m.health}`];
+  const parts = [`${cards.name(m.cardId)}, ${exactStat(m.attack)}/${exactStat(m.health)}`];
   if (m.golden) parts.push(sm("minion.golden"));
   parts.push(...m.keywords.map(keywordName));
   parts.push(...m.gifts.map((id) => sm("minion.gift", { name: giftName(id) })));
@@ -126,8 +126,8 @@ function card(m: SimMinion, side: Side, board: number, props: EditorProps): VNod
       m.keywords.length > 0 ? h("span", { class: "sim-kw", "aria-hidden": "true" }, m.keywords.map((k) => SHORT[k]).join(" ")) : null,
       giftStars(m),
       blocked ? h("span", { class: "sim-flag sim-flag-blocked", "aria-hidden": "true" }, "!") : approx ? h("span", { class: "sim-flag", "aria-hidden": "true" }, "≈") : null,
-      h("span", { class: "sim-atk", "aria-hidden": "true" }, compact(m.attack)),
-      h("span", { class: "sim-hp", "aria-hidden": "true" }, compact(m.health)),
+      h("span", { class: "sim-atk", "aria-hidden": "true" }, shortStat(m.attack)),
+      h("span", { class: "sim-hp", "aria-hidden": "true" }, shortStat(m.health)),
     ),
   );
 }

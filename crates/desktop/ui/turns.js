@@ -287,7 +287,7 @@
 
   function minionTile(ui, m, card) {
     const tile = card(ui, m.id, m.golden ? "golden" : "");
-    tile.append(ui.el("span", "minion-stats", `${num(m.atk)}/${num(m.health)}`));
+    tile.append(ui.el("span", "minion-stats", `${I18n.stat(m.atk)}/${I18n.stat(m.health)}`));
     const marks = [];
     if (m.golden) marks.push([t("keyword.golden"), t("keyword.golden")]);
     (m.keywords || []).forEach((k) => marks.push(keywordWords(k)));
