@@ -88,6 +88,18 @@ To see the overlay on a replayed game, follow the replayed folder with the app a
 cargo run -p desktop -- --data-dir "$env:TEMP\replay\data" --logs-dir "$env:TEMP\replay\Logs" --overlay-dev
 ```
 
+### Overlay gallery
+
+To look at every overlay panel and state without a game (also from a phone), build the gallery. It needs only Node.js, no extra package:
+
+```
+node tools/overlay-gallery/build.js
+```
+
+This writes one self-contained page, `.local/overlay-gallery/overlay-gallery.html` (about 0.6 MB, never committed). It runs the real `crates/desktop/ui/overlay.html` and its scripts in a browser, with a stand-in for the app's bridge (`tools/overlay-gallery/bridge.js`) that answers from invented example data (`tools/overlay-gallery/scenarios/`), one scenario per frame, each marked "Example" and captioned in English and Spanish. Open the file in a browser; add `?lang=es` for Spanish or `?scenario=<id>` (for example `?scenario=hover-duos`) for one frame. On a narrow screen the frames start zoomed in on the overlay.
+
+The build only reads the overlay page. When the page asks for a command or an event the stand-in does not answer, or the theme colours in `overlay_layout.rs` change, `node --test "ui-tests/*.test.js"` (from `crates/desktop`) fails until `bridge.js` or `theme-vars.js` follows. A new panel slot of the page needs a scenario that shows it; the counters scenario appears by itself once the page has a `data-panel="counters"` slot.
+
 ## Windows installer
 
 Needs the same Rust toolchain as the app, Node.js 22.12 or later and an internet connection. From a clean checkout:
