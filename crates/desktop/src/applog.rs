@@ -429,16 +429,41 @@ pub fn saved_game_line(saved: &Saved) -> (Level, String) {
         .ok()
         .and_then(|v| v.as_str().map(String::from))
         .unwrap_or_default();
-    let line = format!(
+    let mut line = format!(
         "game {} saved ({}): status {status}, {} warnings, {} problems",
         saved.key.index,
         saved.key.session,
         report.warnings.len(),
         report.problems.len()
     );
+    if let Some(reason) = read_failure_reason(&report.problems) {
+        line.push_str(&format!(", could not be read: {reason}"));
+    }
     let clean = report.status == ReportStatus::Ok && report.problems.is_empty();
     (if clean { Level::Info } else { Level::Warn }, line)
 }
+
+/// The technical cause of a game that could not be read, for the developer
+/// reading the log: one of the parser's own error names or the two reasons
+/// its lines give, and nothing else (the rest of its text can hold names).
+fn read_failure_reason(problems: &[String]) -> Option<String> {
+    problems.iter().find_map(|p| {
+        if p == bg_parser::PROBLEM_NO_TIMES {
+            return Some("no-times".to_string());
+        }
+        if p == bg_parser::PROBLEM_TOO_MANY_BAD_LINES {
+            return Some("too-many-bad-lines".to_string());
+        }
+        let name = p.strip_prefix("parser error: ")?;
+        let is_name = !name.is_empty()
+            && name.len() <= MAX_ERROR_NAME
+            && name.chars().all(|c| c.is_ascii_alphanumeric());
+        is_name.then(|| name.to_string())
+    })
+}
+
+/// The longest parser error name the log repeats (they are class-like names).
+const MAX_ERROR_NAME: usize = 40;
 
 pub fn saved_game(saved: &Saved) {
     let (level, line) = saved_game_line(saved);

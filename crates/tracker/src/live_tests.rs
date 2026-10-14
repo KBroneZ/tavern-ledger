@@ -316,6 +316,17 @@ fn phase_follows_what_the_parser_says() {
 }
 
 #[test]
+fn a_log_without_times_or_with_too_many_bad_lines_is_unreadable() {
+    for problem in [
+        bg_parser::PROBLEM_NO_TIMES,
+        bg_parser::PROBLEM_TOO_MANY_BAD_LINES,
+    ] {
+        let report = json!({"status": "unsupported", "game_type": SOLO, "problems": [problem]});
+        assert_eq!(live_game(&report).phase, Phase::Unreadable, "{problem}");
+    }
+}
+
+#[test]
 fn without_our_own_seat_nobody_is_called_an_opponent() {
     let mut report = solo(vec![], "incomplete");
     report.as_object_mut().unwrap().remove("local_player_id");

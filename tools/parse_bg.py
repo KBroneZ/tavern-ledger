@@ -322,6 +322,8 @@ class _GameReader:
                 self.build = int(m.group(1))
         if self.error:
             return
+        # Strict by design: hslog rejects a line without a time. The Rust
+        # parser skips a few such lines (crates/bg-parser MAX_SKIPPED_LINES).
         try:
             self.parser.read_line(line)
         except Exception as exc:  # never keep the message: it quotes the log line

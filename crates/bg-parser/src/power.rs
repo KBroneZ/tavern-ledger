@@ -151,9 +151,12 @@ pub fn classify(line: &str) -> Line<'_> {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ParseError(pub &'static str);
 
+/// The error for a line the grammar does not match (a cut or garbled line).
+pub const REGEX_PARSING_ERROR: &str = "RegexParsingError";
+
 pub fn parse_power(body: &str) -> Result<Packet, ParseError> {
     let opcode = body.split_whitespace().next().unwrap_or("");
-    let bad = ParseError("RegexParsingError");
+    let bad = ParseError(REGEX_PARSING_ERROR);
     Ok(match opcode {
         "CREATE_GAME" => Packet::CreateGame,
         "GameEntity" => Packet::GameEntity {
