@@ -132,7 +132,7 @@ function heroCell(report, source) {
 
 function note(report) {
   if (report.status === "incomplete") return tl("win.note.incomplete");
-  if (report.status === "unsupported") return tl("win.note.unsupported", { problems: list(report.problems).map(TLI18n.backend).join("; ") });
+  if (TLUnreadable.isUnreadable(report.status)) return TLUnreadable.words(tl).note;
   return list(report.warnings).map(TLI18n.backend).join("; ");
 }
 
@@ -948,6 +948,15 @@ function renderRecap(r, game) {
   TLFocus.keep(document, () => renderRecapNow(r, game));
 }
 
+// A game that could not be read has no record to show: one plain explanation
+// instead of sections that would each say "not recorded" (T-357).
+function unreadableSection() {
+  const words = TLUnreadable.words(tl);
+  const section = el("section", "recap-part");
+  section.append(el("h3", null, words.title), el("p", null, words.what), el("p", "note", words.todo));
+  return section;
+}
+
 // Most telling first: health and turns, then the record, then the details.
 function renderRecapNow(r, game) {
   const key = gameKey(game);
@@ -963,6 +972,10 @@ function renderRecapNow(r, game) {
   top.append(recapFacts(r), health);
   const turnTools = { card: TLShop.card, cardRow: TLShop.cardRow, fold: TLCompact.fold, art, heroText, game: key, cardName: (id) => TLCards.display(id) };
   const replayTools = { art, heroText, cardName: (id) => TLCards.display(id), fold: TLCompact.fold, game: key };
+  if (TLUnreadable.isUnreadable(r.status.value)) {
+    document.getElementById("recap-body").replaceChildren(top, unreadableSection());
+    return;
+  }
   // Simple (T-344) keeps the facts, health, shop summary, combat replays
   // (T-215), why each result differed (T-346), record and messages; the rest
   // waits for Advanced.

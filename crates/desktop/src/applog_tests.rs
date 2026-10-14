@@ -279,6 +279,17 @@ fn private_things(log: &str) -> Vec<String> {
 }
 
 #[test]
+fn the_parsers_error_names_reach_the_log_and_its_free_text_does_not() {
+    let problems = vec![
+        "parser error: NotImplementedError".to_string(),
+        "parser error: with a name Jane#1234".to_string(),
+        "Player Jane#1234 left".to_string(),
+    ];
+    assert_eq!(parser_errors(&problems), ["NotImplementedError"]);
+    assert!(parser_errors(&[]).is_empty());
+}
+
+#[test]
 fn a_full_fixture_run_leaves_no_names_or_secrets_in_the_log() {
     let scratch = Scratch::new();
     let log = scratch.log();

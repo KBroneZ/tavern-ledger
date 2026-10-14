@@ -83,7 +83,10 @@
 
       "win.row.unknownType": "Unknown type",
       "win.note.incomplete": "Game not finished in the log",
-      "win.note.unsupported": "Could not be read: {problems}",
+      "win.unreadable.note": "Could not be read; not counted in your stats.",
+      "win.unreadable.title": "This game could not be read",
+      "win.unreadable.what": "Tavern Ledger could not understand this game's log, so the game is left out of your stats. This usually means the game uses something this version of the app does not know yet.",
+      "win.unreadable.todo": "What you can do: update the app when a new version is out, or use \"Report a problem\" above and send the file it saves.",
       "win.dev.mark": "Dev reconnect",
       "win.dev.tip": "Played with the reconnect dev tool: not counted in the stats and never uploaded.",
       "win.prov.build": "build {build}",
@@ -332,7 +335,10 @@
 
       "win.row.unknownType": "Tipo desconocido",
       "win.note.incomplete": "Partida sin terminar en el registro",
-      "win.note.unsupported": "No se ha podido leer: {problems}",
+      "win.unreadable.note": "No se ha podido leer; no cuenta en tus estadísticas.",
+      "win.unreadable.title": "Esta partida no se ha podido leer",
+      "win.unreadable.what": "Tavern Ledger no ha podido entender el registro de esta partida, así que la deja fuera de tus estadísticas. Suele significar que la partida usa algo que esta versión de la app aún no conoce.",
+      "win.unreadable.todo": "Qué puedes hacer: actualiza la app cuando haya una versión nueva, o usa «Informar de un problema» arriba y envía el archivo que guarda.",
       "win.dev.mark": "Reconexión dev",
       "win.dev.tip": "Jugada con la herramienta de reconexión para desarrolladores: no cuenta en las estadísticas y nunca se sube.",
       "win.prov.build": "compilación {build}",

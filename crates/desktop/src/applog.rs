@@ -429,15 +429,32 @@ pub fn saved_game_line(saved: &Saved) -> (Level, String) {
         .ok()
         .and_then(|v| v.as_str().map(String::from))
         .unwrap_or_default();
-    let line = format!(
+    let mut line = format!(
         "game {} saved ({}): status {status}, {} warnings, {} problems",
         saved.key.index,
         saved.key.session,
         report.warnings.len(),
         report.problems.len()
     );
+    // The window says only that the game could not be read; the parser's
+    // reason is kept here for the problem report (T-357).
+    let errors = parser_errors(&report.problems);
+    if !errors.is_empty() {
+        line.push_str(&format!(" (parser error: {})", errors.join(", ")));
+    }
     let clean = report.status == ReportStatus::Ok && report.problems.is_empty();
     (if clean { Level::Info } else { Level::Warn }, line)
+}
+
+/// The parser's own error names ("parser error: NotImplementedError"): fixed
+/// words of the parser, safe to log. Its other problems are free text and can
+/// hold names, so they are not.
+pub fn parser_errors(problems: &[String]) -> Vec<&str> {
+    problems
+        .iter()
+        .filter_map(|p| p.strip_prefix("parser error: "))
+        .filter(|name| !name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric()))
+        .collect()
 }
 
 pub fn saved_game(saved: &Saved) {
