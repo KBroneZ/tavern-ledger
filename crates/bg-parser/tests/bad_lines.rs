@@ -5,7 +5,7 @@
 use bg_parser::report::{GameReport, Status};
 use bg_parser::{
     is_read_failure, parse_reader, LogReader, MAX_SKIPPED_LINES, PROBLEM_NO_TIMES,
-    PROBLEM_TOO_MANY_BAD_LINES,
+    PROBLEM_TOO_MANY_BAD_LINES, WARNING_LOG_CUT,
 };
 
 const SOLO: &str = include_str!("data/solo_game.log");
@@ -243,4 +243,57 @@ fn many_untimed_lines_at_the_start_do_not_hide_that_the_game_has_times() {
     let extra = vec!["stray"; MAX_SKIPPED_LINES + 1];
     let report = only(&with_inserted(1, &extra));
     assert_eq!(report.problems, [PROBLEM_TOO_MANY_BAD_LINES]);
+}
+
+fn until_the_end_of_the_game() -> Vec<String> {
+    let mut l = lines();
+    let end = l
+        .iter()
+        .position(|x| x.contains("tag=STATE value=COMPLETE"))
+        .expect("the end of the game");
+    l.truncate(end);
+    l
+}
+
+#[test]
+fn a_game_cut_in_the_middle_of_a_line_says_the_log_was_cut() {
+    let mut l = until_the_end_of_the_game();
+    l.push(format!("{TIMED}    TAG_CHANGE Entity=GameEntity tag=TU"));
+    let report = only(&l);
+    assert_eq!(report.status, Status::Incomplete);
+    assert_eq!(
+        report.warnings,
+        ["skipped 1 unreadable log line", WARNING_LOG_CUT]
+    );
+}
+
+#[test]
+fn a_cut_inside_the_time_says_the_log_was_cut_too() {
+    let mut l = until_the_end_of_the_game();
+    l.push("D 12:00:0".into());
+    assert!(only(&l).warnings.contains(&WARNING_LOG_CUT.to_string()));
+}
+
+#[test]
+fn a_game_that_ends_cleanly_without_its_end_does_not_blame_a_cut() {
+    let report = only(&until_the_end_of_the_game());
+    assert_eq!(report.status, Status::Incomplete);
+    assert!(report.warnings.is_empty());
+}
+
+#[test]
+fn a_finished_game_with_a_stray_last_line_does_not_blame_a_cut() {
+    let mut l = lines();
+    l.push("stray".into());
+    let report = only(&l);
+    assert_eq!(report.status, Status::Ok);
+    assert_eq!(report.warnings, ["skipped 1 unreadable log line"]);
+}
+
+#[test]
+fn the_cut_warning_is_a_short_note_the_server_accepts() {
+    assert!(WARNING_LOG_CUT.len() <= 160);
+    assert!(WARNING_LOG_CUT
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || " _:.()-".contains(c)));
 }

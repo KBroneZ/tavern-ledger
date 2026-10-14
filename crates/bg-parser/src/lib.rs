@@ -90,6 +90,8 @@ pub struct GameReader {
     /// That is a cut last line; a valid packet after it means a packet was
     /// lost in the middle (its tags would land on the wrong entity).
     malformed_last: bool,
+    /// The last line the reader met was skipped: the log may end in a cut.
+    last_line_skipped: bool,
 }
 
 impl GameReader {
@@ -100,6 +102,7 @@ impl GameReader {
             }
             if has_timestamp(line) {
                 self.timed_lines += 1;
+                self.last_line_skipped = false;
             } else {
                 // A stray or cut line: skip it, but a game line still says
                 // the game's type and build.
@@ -172,6 +175,7 @@ impl GameReader {
     /// game is unreadable, and says why.
     fn skip_line(&mut self) {
         self.skipped_lines += 1;
+        self.last_line_skipped = true;
         // With no timed line yet the reason is still open ([`Self::line_error`]
         // says "no times" at the end, unless times come).
         if self.timed_lines > 0 && self.skipped_lines > MAX_SKIPPED_LINES {
@@ -558,6 +562,9 @@ fn build_report(index: usize, r: &GameReader) -> GameReport {
             r.skipped_lines
         ));
     }
+    if r.last_line_skipped && !r.is_complete() {
+        base.warnings.push(WARNING_LOG_CUT.into());
+    }
     let c = &r.collector;
     let error = r.error.or_else(|| r.line_error());
     if error.is_some() || c.board.game().is_none() {
@@ -577,6 +584,12 @@ pub const PROBLEM_NO_TIMES: &str =
     "the game log has no times (restart Hearthstone and play a new game)";
 pub const PROBLEM_TOO_MANY_BAD_LINES: &str =
     "the game log has too many unreadable lines (restart Hearthstone and play a new game)";
+
+/// Said when a game that did not finish ends in a line cut in the middle:
+/// the game stops writing `Power.log` at about 10 MB unless `client.config`
+/// lifts the limit. Only letters, digits and `: . ( ) -` (the server checks).
+pub const WARNING_LOG_CUT: &str =
+    "the log was cut in the middle of a line (without client.config the game stops writing Power.log at 10 MB)";
 
 /// Whether a report's problem says the game could not be read (not just that
 /// the lobby is not there yet).

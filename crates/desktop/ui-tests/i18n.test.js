@@ -226,6 +226,10 @@ test("why a game's lines could not be read is translated with what to do", () =>
     I18n.backend("the game log has too many unreadable lines (restart Hearthstone and play a new game)"),
     "el registro del juego tiene demasiadas líneas ilegibles (reinicia Hearthstone y juega una partida nueva)"
   );
+  assert.equal(
+    I18n.backend("the log was cut in the middle of a line (without client.config the game stops writing Power.log at 10 MB)"),
+    "El registro se cortó a mitad de una línea (sin client.config el juego deja de escribir Power.log al llegar a 10 MB)"
+  );
   assert.equal(I18n.backend("skipped 1 unreadable log line"), "Se ha omitido 1 línea ilegible del registro");
   assert.equal(I18n.backend("skipped 7 unreadable log lines"), "Se han omitido 7 líneas ilegibles del registro");
   I18n.setLang("en");
