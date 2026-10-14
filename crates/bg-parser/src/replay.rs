@@ -23,6 +23,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::Serialize;
 
+use crate::buffs::{buffs_on, Buff};
 use crate::gifts::gifts_on;
 use crate::report::{Minion, Side, KEYWORDS};
 use crate::state::{Board, Entity};
@@ -53,6 +54,9 @@ pub struct ReplayMinion {
     pub gifts: Vec<&'static str>,
     #[serde(skip_serializing_if = "crate::report::is_false")]
     pub gift_unknown: bool,
+    /// Buffs, as on a board minion (T-611); left out when empty.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub buffs: Vec<Buff>,
 }
 
 impl ReplayMinion {
@@ -67,6 +71,7 @@ impl ReplayMinion {
             keywords: m.keywords,
             gifts: m.gifts,
             gift_unknown: m.gift_unknown,
+            buffs: m.buffs,
         }
     }
 }
@@ -367,6 +372,7 @@ impl ReplayTracker {
         };
         live.created.insert(id);
         live.summon(id, board, sides);
+        live.refresh_buffs(id, board);
     }
 
     /// A hidden entity was shown or changed (`SHOW_ENTITY`,
@@ -374,6 +380,7 @@ impl ReplayTracker {
     pub fn on_shown(&mut self, id: i64, board: &Board, sides: Sides) {
         if let Some(live) = self.live.as_mut() {
             live.summon(id, board, sides);
+            live.refresh_buffs(id, board);
         }
     }
 
@@ -551,6 +558,9 @@ impl ReplayTracker {
         if tag == "ZONE" || tag == "CONTROLLER" {
             live.summon(id, board, sides);
         }
+        if tag == "ZONE" || tag == "ATTACHED" {
+            live.refresh_buffs(id, board);
+        }
         let Some(run) = live.run.as_mut().filter(|r| !r.ended) else {
             return;
         };
@@ -653,13 +663,15 @@ impl Live {
             let mut minions = Vec::new();
             let mut refs = BTreeMap::new();
             let mut gifts = crate::gifts::gift_index(board);
+            let mut buffs = crate::buffs::buff_index(board);
             for (side, pid) in [(Side::Own, sides.own), (Side::Opponent, sides.opponent)] {
                 let Some(pid) = pid else { continue };
                 for e in board_entities(board, pid) {
                     if minions.len() < MAX_REPLAY_MINIONS {
                         refs.insert(e.id, minions.len());
                         let on = gifts.remove(&e.id).unwrap_or_default();
-                        minions.push(ReplayMinion::new(side, minion_of(e, on)));
+                        let kinds = buffs.remove(&e.id).unwrap_or_default();
+                        minions.push(ReplayMinion::new(side, minion_of(e, on, kinds)));
                     }
                 }
             }
@@ -757,6 +769,26 @@ impl Live {
         });
     }
 
+    /// An enchantment came to a minion summoned during this combat: its
+    /// buffs arrive after the minion's own lines, so they are read again
+    /// (a minion on the board as the combat began has them from the start).
+    fn refresh_buffs(&mut self, id: i64, board: &Board) {
+        let Some(run) = self.run.as_mut().filter(|r| !r.ended) else {
+            return;
+        };
+        let Some(on) = board
+            .get(id)
+            .filter(|e| e.is("CARDTYPE", "ENCHANTMENT"))
+            .and_then(|e| e.opt_int("ATTACHED"))
+        else {
+            return;
+        };
+        let Some(&minion) = run.refs.get(&on).filter(|&&m| m >= run.replay.start) else {
+            return;
+        };
+        run.replay.minions[minion].buffs = buffs_on(board, on);
+    }
+
     /// A minion made during this combat entering a board on screen.
     fn summon(&mut self, id: i64, board: &Board, sides: Sides) {
         let Some(run) = self.run.as_mut().filter(|r| !r.ended) else {
@@ -780,9 +812,10 @@ impl Live {
             return;
         }
         let minion = run.replay.minions.len();
-        run.replay
-            .minions
-            .push(ReplayMinion::new(side, minion_of(e, gifts_on(board, id))));
+        run.replay.minions.push(ReplayMinion::new(
+            side,
+            minion_of(e, gifts_on(board, id), buffs_on(board, id)),
+        ));
         run.refs.insert(id, minion);
         run.alive.insert(minion);
         if run.push(CombatEvent::Summon { minion }) && e.int("ZONE_POSITION") <= 0 {
@@ -958,8 +991,9 @@ pub(crate) fn board_entities(board: &Board, controller: i64) -> Vec<&Entity> {
 }
 
 /// A board minion as the report keeps it, with `gifts` its Dark Gifts
-/// (from [`crate::gifts::gift_index`] or [`crate::gifts::gifts_on`]).
-pub(crate) fn minion_of(e: &Entity, gifts: Vec<&'static str>) -> Minion {
+/// (from [`crate::gifts::gift_index`] or [`crate::gifts::gifts_on`]) and
+/// `buffs` its buffs ([`crate::buffs::buff_index`] or [`buffs_on`]).
+pub(crate) fn minion_of(e: &Entity, gifts: Vec<&'static str>, buffs: Vec<Buff>) -> Minion {
     use crate::collector::is_golden_minion;
     use crate::report::{KEYWORDS, SIM_KEYWORDS};
     let named = |tags: &[(&str, &'static str)]| -> Vec<&'static str> {
@@ -978,5 +1012,6 @@ pub(crate) fn minion_of(e: &Entity, gifts: Vec<&'static str>) -> Minion {
         sim_keywords: named(&SIM_KEYWORDS),
         gift_unknown: crate::gifts::gift_unknown(e, &gifts),
         gifts,
+        buffs,
     }
 }

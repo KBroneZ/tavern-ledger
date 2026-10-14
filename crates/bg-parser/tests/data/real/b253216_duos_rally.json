@@ -1216,6 +1216,12 @@
             "board": [
               {
                 "atk": 4,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  }
+                ],
                 "card_id": "BG20_100",
                 "golden": false,
                 "health": 3,
@@ -1454,6 +1460,12 @@
             },
             {
               "atk": 4,
+              "buffs": [
+                {
+                  "card_id": "BG20_GEM",
+                  "count": 2
+                }
+              ],
               "card_id": "BG20_100",
               "golden": false,
               "health": 3,
@@ -1503,6 +1515,12 @@
             "board": [
               {
                 "atk": 5,
+                "buffs": [
+                  {
+                    "card_id": "BG36_345",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_236",
                 "golden": true,
                 "health": 5,
@@ -1735,6 +1753,12 @@
           "minions": [
             {
               "atk": 5,
+              "buffs": [
+                {
+                  "card_id": "BG36_345",
+                  "count": 1
+                }
+              ],
               "card_id": "BG32_236",
               "golden": true,
               "health": 5,
@@ -1882,6 +1906,16 @@
             "board": [
               {
                 "atk": 8,
+                "buffs": [
+                  {
+                    "card_id": "BG36_345",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_503",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_236",
                 "golden": true,
                 "health": 11,
@@ -2380,6 +2414,16 @@
             },
             {
               "atk": 2,
+              "buffs": [
+                {
+                  "card_id": "BG36_345",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_503",
+                  "count": 1
+                }
+              ],
               "card_id": "BG32_236",
               "golden": true,
               "health": 2,
@@ -2409,6 +2453,16 @@
             "board": [
               {
                 "atk": 11,
+                "buffs": [
+                  {
+                    "card_id": "BG36_345",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_503",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_236",
                 "golden": true,
                 "health": 14,
@@ -2446,6 +2500,16 @@
               },
               {
                 "atk": 10,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG36_883",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG20_100",
                 "golden": false,
                 "health": 12,
@@ -2477,6 +2541,12 @@
             "board": [
               {
                 "atk": 3,
+                "buffs": [
+                  {
+                    "card_id": "BG35_951",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG31_149",
                 "golden": false,
                 "health": 5,
@@ -2495,6 +2565,16 @@
               },
               {
                 "atk": 4,
+                "buffs": [
+                  {
+                    "card_id": "BG35_951",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG32_235",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_342",
                 "golden": false,
                 "health": 5,
@@ -2503,6 +2583,12 @@
               },
               {
                 "atk": 2,
+                "buffs": [
+                  {
+                    "card_id": "BG35_951",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_235",
                 "golden": false,
                 "health": 4,
@@ -2511,6 +2597,16 @@
               },
               {
                 "atk": 4,
+                "buffs": [
+                  {
+                    "card_id": "BG35_951",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG32_235",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_342",
                 "golden": false,
                 "health": 5,
@@ -3016,6 +3112,16 @@
           "minions": [
             {
               "atk": 11,
+              "buffs": [
+                {
+                  "card_id": "BG36_345",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_503",
+                  "count": 1
+                }
+              ],
               "card_id": "BG32_236",
               "golden": true,
               "health": 14,
@@ -3049,6 +3155,16 @@
             },
             {
               "atk": 10,
+              "buffs": [
+                {
+                  "card_id": "BG20_GEM",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG36_883",
+                  "count": 1
+                }
+              ],
               "card_id": "BG20_100",
               "golden": false,
               "health": 12,
@@ -3096,6 +3212,16 @@
             },
             {
               "atk": 4,
+              "buffs": [
+                {
+                  "card_id": "BG35_951",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG32_235",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_342",
               "golden": false,
               "health": 5,
@@ -3105,6 +3231,12 @@
             },
             {
               "atk": 2,
+              "buffs": [
+                {
+                  "card_id": "BG35_951",
+                  "count": 1
+                }
+              ],
               "card_id": "BG32_235",
               "golden": false,
               "health": 4,
@@ -3179,6 +3311,16 @@
             "board": [
               {
                 "atk": 17,
+                "buffs": [
+                  {
+                    "card_id": "BG36_345",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_503",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_236",
                 "golden": true,
                 "health": 20,
@@ -3236,6 +3378,16 @@
             "board": [
               {
                 "atk": 12,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_897",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_763",
                 "golden": false,
                 "health": 11,
@@ -3244,6 +3396,12 @@
               },
               {
                 "atk": 5,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG31_149",
                 "golden": false,
                 "health": 3,
@@ -3254,6 +3412,12 @@
               },
               {
                 "atk": 6,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG35_150",
                 "golden": false,
                 "health": 4,
@@ -3262,6 +3426,12 @@
               },
               {
                 "atk": 6,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_237",
                 "golden": false,
                 "health": 4,
@@ -3270,6 +3440,12 @@
               },
               {
                 "atk": 6,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_346",
                 "golden": false,
                 "health": 6,
@@ -3278,6 +3454,12 @@
               },
               {
                 "atk": 22,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG27_005",
                 "gifts": [
                   "BG36_MidGameEffect_000t74"
@@ -3296,6 +3478,12 @@
             "board": [
               {
                 "atk": 3,
+                "buffs": [
+                  {
+                    "card_id": "BG35_951",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG31_149",
                 "golden": false,
                 "health": 5,
@@ -3315,6 +3503,16 @@
               },
               {
                 "atk": 5,
+                "buffs": [
+                  {
+                    "card_id": "BG35_951",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG32_235",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_342",
                 "golden": false,
                 "health": 5,
@@ -3323,6 +3521,12 @@
               },
               {
                 "atk": 2,
+                "buffs": [
+                  {
+                    "card_id": "BG35_951",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_235",
                 "golden": false,
                 "health": 4,
@@ -3331,6 +3535,16 @@
               },
               {
                 "atk": 5,
+                "buffs": [
+                  {
+                    "card_id": "BG35_951",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG32_235",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_342",
                 "golden": false,
                 "health": 5,
@@ -3844,6 +4058,16 @@
           "minions": [
             {
               "atk": 17,
+              "buffs": [
+                {
+                  "card_id": "BG36_345",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_503",
+                  "count": 1
+                }
+              ],
               "card_id": "BG32_236",
               "golden": true,
               "health": 20,
@@ -3985,6 +4209,12 @@
             },
             {
               "atk": 2,
+              "buffs": [
+                {
+                  "card_id": "BG35_951",
+                  "count": 1
+                }
+              ],
               "card_id": "BG32_235",
               "golden": false,
               "health": 4,
@@ -3994,6 +4224,16 @@
             },
             {
               "atk": 5,
+              "buffs": [
+                {
+                  "card_id": "BG35_951",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG32_235",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_342",
               "golden": false,
               "health": 5,
@@ -4021,6 +4261,16 @@
             "board": [
               {
                 "atk": 23,
+                "buffs": [
+                  {
+                    "card_id": "BG36_345",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_503",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_236",
                 "golden": true,
                 "health": 26,
@@ -4081,6 +4331,24 @@
             "board": [
               {
                 "atk": 12,
+                "buffs": [
+                  {
+                    "card_id": "BG28_966",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG34_170t3",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG31_177",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG31_177",
                 "golden": false,
                 "health": 9,
@@ -4097,6 +4365,12 @@
               },
               {
                 "atk": 3,
+                "buffs": [
+                  {
+                    "card_id": "BG28_966",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_236",
                 "golden": true,
                 "health": 4,
@@ -4528,6 +4802,16 @@
           "minions": [
             {
               "atk": 23,
+              "buffs": [
+                {
+                  "card_id": "BG36_345",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_503",
+                  "count": 1
+                }
+              ],
               "card_id": "BG32_236",
               "golden": true,
               "health": 26,
@@ -4586,6 +4870,24 @@
             },
             {
               "atk": 12,
+              "buffs": [
+                {
+                  "card_id": "BG28_966",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG20_GEM",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG34_170t3",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG31_177",
+                  "count": 1
+                }
+              ],
               "card_id": "BG31_177",
               "golden": false,
               "health": 9,
@@ -4604,6 +4906,12 @@
             },
             {
               "atk": 3,
+              "buffs": [
+                {
+                  "card_id": "BG28_966",
+                  "count": 1
+                }
+              ],
               "card_id": "BG32_236",
               "golden": true,
               "health": 4,
@@ -4677,6 +4985,12 @@
             "board": [
               {
                 "atk": 9,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BGDUO31_207",
                 "golden": false,
                 "health": 3,
@@ -4687,6 +5001,20 @@
               },
               {
                 "atk": 12,
+                "buffs": [
+                  {
+                    "card_id": "BG35_951",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_813",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG31_149",
                 "golden": false,
                 "health": 11,
@@ -4700,6 +5028,12 @@
               },
               {
                 "atk": 5,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_520",
                 "golden": false,
                 "health": 2,
@@ -4708,6 +5042,12 @@
               },
               {
                 "atk": 4,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG27_005",
                 "golden": false,
                 "health": 4,
@@ -4716,6 +5056,20 @@
               },
               {
                 "atk": 9,
+                "buffs": [
+                  {
+                    "card_id": "BG35_951",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG32_235",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_342",
                 "golden": false,
                 "health": 5,
@@ -4724,6 +5078,20 @@
               },
               {
                 "atk": 9,
+                "buffs": [
+                  {
+                    "card_id": "BG35_951",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG32_235",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_342",
                 "golden": false,
                 "health": 5,
@@ -4732,6 +5100,12 @@
               },
               {
                 "atk": 5,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG33_430",
                 "golden": false,
                 "health": 5,
@@ -4747,6 +5121,20 @@
             "board": [
               {
                 "atk": 15,
+                "buffs": [
+                  {
+                    "card_id": "BG34_170t3",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG31_177",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG26_147",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG31_177",
                 "golden": false,
                 "health": 9,
@@ -4771,6 +5159,12 @@
               },
               {
                 "atk": 7,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  }
+                ],
                 "card_id": "BG36_523",
                 "golden": false,
                 "health": 7,
@@ -4779,6 +5173,12 @@
               },
               {
                 "atk": 21,
+                "buffs": [
+                  {
+                    "card_id": "BG36_524",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_524",
                 "golden": false,
                 "health": 21,
@@ -4794,6 +5194,16 @@
             "board": [
               {
                 "atk": 23,
+                "buffs": [
+                  {
+                    "card_id": "BG36_345",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_503",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_236",
                 "golden": true,
                 "health": 26,
@@ -4854,6 +5264,12 @@
             "board": [
               {
                 "atk": 49,
+                "buffs": [
+                  {
+                    "card_id": "BG28_897",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG31_326",
                 "gifts": [
                   "BG36_MidGameEffect_000t74"
@@ -4865,6 +5281,16 @@
               },
               {
                 "atk": 10,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG36_883",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG20_100",
                 "golden": false,
                 "health": 12,
@@ -5650,6 +6076,12 @@
           "minions": [
             {
               "atk": 9,
+              "buffs": [
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                }
+              ],
               "card_id": "BGDUO31_207",
               "golden": false,
               "health": 3,
@@ -5661,6 +6093,20 @@
             },
             {
               "atk": 12,
+              "buffs": [
+                {
+                  "card_id": "BG35_951",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_813",
+                  "count": 1
+                }
+              ],
               "card_id": "BG31_149",
               "golden": false,
               "health": 11,
@@ -5675,6 +6121,12 @@
             },
             {
               "atk": 5,
+              "buffs": [
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_520",
               "golden": false,
               "health": 2,
@@ -5684,6 +6136,12 @@
             },
             {
               "atk": 4,
+              "buffs": [
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                }
+              ],
               "card_id": "BG27_005",
               "golden": false,
               "health": 4,
@@ -5693,6 +6151,20 @@
             },
             {
               "atk": 9,
+              "buffs": [
+                {
+                  "card_id": "BG35_951",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG32_235",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_342",
               "golden": false,
               "health": 5,
@@ -5702,6 +6174,20 @@
             },
             {
               "atk": 9,
+              "buffs": [
+                {
+                  "card_id": "BG35_951",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG32_235",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_342",
               "golden": false,
               "health": 5,
@@ -5711,6 +6197,12 @@
             },
             {
               "atk": 5,
+              "buffs": [
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                }
+              ],
               "card_id": "BG33_430",
               "golden": false,
               "health": 5,
@@ -5720,6 +6212,20 @@
             },
             {
               "atk": 15,
+              "buffs": [
+                {
+                  "card_id": "BG34_170t3",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG31_177",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG26_147",
+                  "count": 1
+                }
+              ],
               "card_id": "BG31_177",
               "golden": false,
               "health": 9,
@@ -5747,6 +6253,12 @@
             },
             {
               "atk": 7,
+              "buffs": [
+                {
+                  "card_id": "BG20_GEM",
+                  "count": 2
+                }
+              ],
               "card_id": "BG36_523",
               "golden": false,
               "health": 7,
@@ -5756,6 +6268,12 @@
             },
             {
               "atk": 21,
+              "buffs": [
+                {
+                  "card_id": "BG36_524",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_524",
               "golden": false,
               "health": 21,
@@ -5830,6 +6348,16 @@
             },
             {
               "atk": 2,
+              "buffs": [
+                {
+                  "card_id": "BG20_GEM",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG36_883",
+                  "count": 1
+                }
+              ],
               "card_id": "BG20_100",
               "golden": false,
               "health": 1,
@@ -5895,6 +6423,12 @@
             "board": [
               {
                 "atk": 7,
+                "buffs": [
+                  {
+                    "card_id": "BG28_888",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG34_140",
                 "golden": false,
                 "health": 9,
@@ -5905,6 +6439,20 @@
               },
               {
                 "atk": 17,
+                "buffs": [
+                  {
+                    "card_id": "BG35_951",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_813",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG31_149_G",
                 "golden": true,
                 "health": 14,
@@ -5936,6 +6484,24 @@
               },
               {
                 "atk": 16,
+                "buffs": [
+                  {
+                    "card_id": "BG35_951",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG32_235",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_888",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_342",
                 "golden": false,
                 "health": 9,
@@ -5944,6 +6510,20 @@
               },
               {
                 "atk": 12,
+                "buffs": [
+                  {
+                    "card_id": "BG35_951",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG32_235",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_342",
                 "golden": false,
                 "health": 5,
@@ -5967,6 +6547,16 @@
             "board": [
               {
                 "atk": 36,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_897",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG33_822_G",
                 "golden": true,
                 "health": 31,
@@ -5977,6 +6567,16 @@
               },
               {
                 "atk": 23,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_897",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG33_822_G",
                 "golden": true,
                 "health": 24,
@@ -5987,6 +6587,20 @@
               },
               {
                 "atk": 174,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG_Consumed",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_812",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_873",
                 "gifts": [
                   "BG36_MidGameEffect_000t74"
@@ -5998,6 +6612,16 @@
               },
               {
                 "atk": 41,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_812",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_346_G",
                 "golden": true,
                 "health": 14,
@@ -6006,6 +6630,16 @@
               },
               {
                 "atk": 16,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_812",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_821",
                 "gifts": [
                   "BG36_MidGameEffect_000t2"
@@ -6019,6 +6653,16 @@
               },
               {
                 "atk": 26,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_812",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BGDUO_120",
                 "golden": false,
                 "health": 8,
@@ -6027,6 +6671,20 @@
               },
               {
                 "atk": 191,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_503",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_897",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG27_005",
                 "gifts": [
                   "BG36_MidGameEffect_000t74"
@@ -6073,6 +6731,16 @@
               },
               {
                 "atk": 23,
+                "buffs": [
+                  {
+                    "card_id": "BG36_345",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_503",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_236",
                 "golden": true,
                 "health": 26,
@@ -6128,6 +6796,12 @@
             "board": [
               {
                 "atk": 6,
+                "buffs": [
+                  {
+                    "card_id": "BG28_520",
+                    "count": 2
+                  }
+                ],
                 "card_id": "BG36_362",
                 "golden": false,
                 "health": 5,
@@ -6139,6 +6813,12 @@
               },
               {
                 "atk": 6,
+                "buffs": [
+                  {
+                    "card_id": "BG28_503",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_521",
                 "golden": false,
                 "health": 6,
@@ -7010,6 +7690,12 @@
           "minions": [
             {
               "atk": 7,
+              "buffs": [
+                {
+                  "card_id": "BG28_888",
+                  "count": 1
+                }
+              ],
               "card_id": "BG34_140",
               "golden": false,
               "health": 9,
@@ -7021,6 +7707,20 @@
             },
             {
               "atk": 17,
+              "buffs": [
+                {
+                  "card_id": "BG35_951",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_813",
+                  "count": 1
+                }
+              ],
               "card_id": "BG31_149_G",
               "golden": true,
               "health": 14,
@@ -7055,6 +7755,24 @@
             },
             {
               "atk": 16,
+              "buffs": [
+                {
+                  "card_id": "BG35_951",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG32_235",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_888",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_342",
               "golden": false,
               "health": 9,
@@ -7064,6 +7782,20 @@
             },
             {
               "atk": 12,
+              "buffs": [
+                {
+                  "card_id": "BG35_951",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG32_235",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_342",
               "golden": false,
               "health": 5,
@@ -7082,6 +7814,16 @@
             },
             {
               "atk": 36,
+              "buffs": [
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_897",
+                  "count": 1
+                }
+              ],
               "card_id": "BG33_822_G",
               "golden": true,
               "health": 31,
@@ -7093,6 +7835,16 @@
             },
             {
               "atk": 23,
+              "buffs": [
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_897",
+                  "count": 1
+                }
+              ],
               "card_id": "BG33_822_G",
               "golden": true,
               "health": 24,
@@ -7104,6 +7856,20 @@
             },
             {
               "atk": 174,
+              "buffs": [
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG_Consumed",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_812",
+                  "count": 1
+                }
+              ],
               "card_id": "BG32_873",
               "gifts": [
                 "BG36_MidGameEffect_000t74"
@@ -7116,6 +7882,16 @@
             },
             {
               "atk": 41,
+              "buffs": [
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_812",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_346_G",
               "golden": true,
               "health": 14,
@@ -7125,6 +7901,16 @@
             },
             {
               "atk": 16,
+              "buffs": [
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_812",
+                  "count": 1
+                }
+              ],
               "card_id": "BG32_821",
               "gifts": [
                 "BG36_MidGameEffect_000t2"
@@ -7139,6 +7925,16 @@
             },
             {
               "atk": 26,
+              "buffs": [
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_812",
+                  "count": 1
+                }
+              ],
               "card_id": "BGDUO_120",
               "golden": false,
               "health": 8,
@@ -7148,6 +7944,20 @@
             },
             {
               "atk": 191,
+              "buffs": [
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_503",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_897",
+                  "count": 1
+                }
+              ],
               "card_id": "BG27_005",
               "gifts": [
                 "BG36_MidGameEffect_000t74"
@@ -7236,6 +8046,12 @@
             },
             {
               "atk": 5,
+              "buffs": [
+                {
+                  "card_id": "BG28_520",
+                  "count": 2
+                }
+              ],
               "card_id": "BG36_362",
               "golden": false,
               "health": 3,
@@ -7247,6 +8063,12 @@
             },
             {
               "atk": 6,
+              "buffs": [
+                {
+                  "card_id": "BG28_503",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_521",
               "golden": false,
               "health": 3,
@@ -7303,6 +8125,12 @@
             "board": [
               {
                 "atk": 14,
+                "buffs": [
+                  {
+                    "card_id": "BG36_344",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG26_814_G",
                 "golden": true,
                 "health": 16,
@@ -7311,6 +8139,20 @@
               },
               {
                 "atk": 40,
+                "buffs": [
+                  {
+                    "card_id": "BG36_345",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_503",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG36_344",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_236",
                 "golden": true,
                 "health": 43,
@@ -7322,6 +8164,20 @@
               },
               {
                 "atk": 23,
+                "buffs": [
+                  {
+                    "card_id": "BG36_344",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG26_814",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG35_MagicItem_711",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_523",
                 "golden": false,
                 "health": 231,
@@ -7332,6 +8188,16 @@
               },
               {
                 "atk": 23,
+                "buffs": [
+                  {
+                    "card_id": "BG36_344",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG35_MagicItem_711",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_523",
                 "golden": false,
                 "health": 23,
@@ -7342,6 +8208,16 @@
               },
               {
                 "atk": 8,
+                "buffs": [
+                  {
+                    "card_id": "BG36_344",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG35_MagicItem_711",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_344",
                 "golden": false,
                 "health": 8,
@@ -7352,6 +8228,16 @@
               },
               {
                 "atk": 8,
+                "buffs": [
+                  {
+                    "card_id": "BG36_344",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG35_MagicItem_711",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_344",
                 "golden": false,
                 "health": 8,
@@ -7377,6 +8263,12 @@
             "board": [
               {
                 "atk": 12,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  }
+                ],
                 "card_id": "BG20_101",
                 "golden": false,
                 "health": 18,
@@ -7397,6 +8289,12 @@
               },
               {
                 "atk": 10,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  }
+                ],
                 "card_id": "BG31_326",
                 "golden": false,
                 "health": 13,
@@ -7405,6 +8303,12 @@
               },
               {
                 "atk": 9,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  }
+                ],
                 "card_id": "BG28_582",
                 "golden": false,
                 "health": 11,
@@ -7444,6 +8348,16 @@
             "board": [
               {
                 "atk": 21,
+                "buffs": [
+                  {
+                    "card_id": "BG31_177",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG31_171t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_506",
                 "golden": false,
                 "health": 19,
@@ -7454,6 +8368,32 @@
               },
               {
                 "atk": 38,
+                "buffs": [
+                  {
+                    "card_id": "BG28_966",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG34_170t3",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG31_177",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG_BOT_911",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG26_146",
+                    "count": 2
+                  }
+                ],
                 "card_id": "BG31_177",
                 "golden": false,
                 "health": 36,
@@ -7465,6 +8405,20 @@
               },
               {
                 "atk": 52,
+                "buffs": [
+                  {
+                    "card_id": "BG31_177",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG26_147",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG34_170t2",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_851",
                 "golden": false,
                 "health": 59,
@@ -7473,6 +8427,16 @@
               },
               {
                 "atk": 16,
+                "buffs": [
+                  {
+                    "card_id": "BG31_177",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG31_171t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG29_611_G",
                 "golden": true,
                 "health": 16,
@@ -7500,6 +8464,16 @@
               },
               {
                 "atk": 13,
+                "buffs": [
+                  {
+                    "card_id": "BG31_177",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG31_171t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG34_405",
                 "golden": false,
                 "health": 9,
@@ -8475,6 +9449,12 @@
           "minions": [
             {
               "atk": 14,
+              "buffs": [
+                {
+                  "card_id": "BG36_344",
+                  "count": 1
+                }
+              ],
               "card_id": "BG26_814_G",
               "golden": true,
               "health": 16,
@@ -8484,6 +9464,20 @@
             },
             {
               "atk": 40,
+              "buffs": [
+                {
+                  "card_id": "BG36_345",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_503",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG36_344",
+                  "count": 1
+                }
+              ],
               "card_id": "BG32_236",
               "golden": true,
               "health": 43,
@@ -8496,6 +9490,16 @@
             },
             {
               "atk": 23,
+              "buffs": [
+                {
+                  "card_id": "BG36_344",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG26_814",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_523",
               "golden": false,
               "health": 231,
@@ -8505,6 +9509,12 @@
             },
             {
               "atk": 23,
+              "buffs": [
+                {
+                  "card_id": "BG36_344",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_523",
               "golden": false,
               "health": 23,
@@ -8514,6 +9524,12 @@
             },
             {
               "atk": 8,
+              "buffs": [
+                {
+                  "card_id": "BG36_344",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_344",
               "golden": false,
               "health": 8,
@@ -8523,6 +9539,12 @@
             },
             {
               "atk": 8,
+              "buffs": [
+                {
+                  "card_id": "BG36_344",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_344",
               "golden": false,
               "health": 8,
@@ -8541,6 +9563,12 @@
             },
             {
               "atk": 12,
+              "buffs": [
+                {
+                  "card_id": "BG20_GEM",
+                  "count": 2
+                }
+              ],
               "card_id": "BG20_101",
               "golden": false,
               "health": 18,
@@ -8563,6 +9591,12 @@
             },
             {
               "atk": 10,
+              "buffs": [
+                {
+                  "card_id": "BG20_GEM",
+                  "count": 2
+                }
+              ],
               "card_id": "BG31_326",
               "golden": false,
               "health": 13,
@@ -8572,6 +9606,12 @@
             },
             {
               "atk": 9,
+              "buffs": [
+                {
+                  "card_id": "BG20_GEM",
+                  "count": 2
+                }
+              ],
               "card_id": "BG28_582",
               "golden": false,
               "health": 11,
@@ -8703,6 +9743,32 @@
             "board": [
               {
                 "atk": 77,
+                "buffs": [
+                  {
+                    "card_id": "BG35_951",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_813",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_888",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG32_337",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG31_148",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG31_149_G",
                 "golden": true,
                 "health": 60,
@@ -8718,6 +9784,12 @@
               },
               {
                 "atk": 48,
+                "buffs": [
+                  {
+                    "card_id": "BG31_148",
+                    "count": 1
+                  }
+                ],
                 "card_id": "TB_BaconUps_089",
                 "golden": true,
                 "health": 32,
@@ -8726,6 +9798,16 @@
               },
               {
                 "atk": 535,
+                "buffs": [
+                  {
+                    "card_id": "BG31_148",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG26_354",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG26_354",
                 "golden": false,
                 "health": 530,
@@ -8734,6 +9816,16 @@
               },
               {
                 "atk": 1028,
+                "buffs": [
+                  {
+                    "card_id": "BG31_148",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG26_354",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG26_354_G",
                 "golden": true,
                 "health": 1032,
@@ -8742,6 +9834,16 @@
               },
               {
                 "atk": 60,
+                "buffs": [
+                  {
+                    "card_id": "BG28_888",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG31_148",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_701_G",
                 "golden": true,
                 "health": 46,
@@ -8750,6 +9852,16 @@
               },
               {
                 "atk": 92,
+                "buffs": [
+                  {
+                    "card_id": "BG36_356",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG31_148",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG_LOE_077",
                 "golden": false,
                 "health": 78,
@@ -8765,6 +9877,24 @@
             "board": [
               {
                 "atk": 34,
+                "buffs": [
+                  {
+                    "card_id": "BG36_624",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG26_814",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_811",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "EBG_Spell_014",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG26_817",
                 "golden": false,
                 "health": 85,
@@ -8773,6 +9903,12 @@
               },
               {
                 "atk": 9,
+                "buffs": [
+                  {
+                    "card_id": "BG33_811",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG26_817_G",
                 "golden": true,
                 "health": 11,
@@ -8792,6 +9928,12 @@
               },
               {
                 "atk": 13,
+                "buffs": [
+                  {
+                    "card_id": "BG28_888",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_821",
                 "golden": false,
                 "health": 12,
@@ -8800,6 +9942,12 @@
               },
               {
                 "atk": 9,
+                "buffs": [
+                  {
+                    "card_id": "BG33_811",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_523",
                 "golden": false,
                 "health": 13,
@@ -8808,6 +9956,16 @@
               },
               {
                 "atk": 10,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG33_811",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_523",
                 "golden": false,
                 "health": 14,
@@ -8816,6 +9974,12 @@
               },
               {
                 "atk": 18,
+                "buffs": [
+                  {
+                    "card_id": "BG28_520",
+                    "count": 2
+                  }
+                ],
                 "card_id": "BG36_521_G",
                 "golden": true,
                 "health": 13,
@@ -8834,6 +9998,16 @@
             "board": [
               {
                 "atk": 191,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG31_881t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG20_104",
                 "gifts": [
                   "BG36_MidGameEffect_000t13"
@@ -8859,6 +10033,16 @@
               },
               {
                 "atk": 230,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG31_881t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG33_885",
                 "gifts": [
                   "BG36_MidGameEffect_000t64"
@@ -8872,6 +10056,16 @@
               },
               {
                 "atk": 156,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG31_881t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG33_883",
                 "gifts": [
                   "BG36_MidGameEffect_000t3"
@@ -8885,6 +10079,16 @@
               },
               {
                 "atk": 122,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG31_881t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_333",
                 "gifts": [
                   "BG36_MidGameEffect_000t7"
@@ -8898,6 +10102,16 @@
               },
               {
                 "atk": 159,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG31_881t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_341",
                 "golden": false,
                 "health": 199,
@@ -8906,6 +10120,16 @@
               },
               {
                 "atk": 195,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG31_881t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG31_323",
                 "golden": false,
                 "health": 239,
@@ -9945,6 +11169,32 @@
           "minions": [
             {
               "atk": 77,
+              "buffs": [
+                {
+                  "card_id": "BG35_951",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_813",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_888",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG32_337",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG31_148",
+                  "count": 1
+                }
+              ],
               "card_id": "BG31_149_G",
               "golden": true,
               "health": 60,
@@ -9961,6 +11211,12 @@
             },
             {
               "atk": 48,
+              "buffs": [
+                {
+                  "card_id": "BG31_148",
+                  "count": 1
+                }
+              ],
               "card_id": "TB_BaconUps_089",
               "golden": true,
               "health": 32,
@@ -9970,6 +11226,12 @@
             },
             {
               "atk": 48,
+              "buffs": [
+                {
+                  "card_id": "BG31_148",
+                  "count": 1
+                }
+              ],
               "card_id": "BG26_354",
               "golden": false,
               "health": 34,
@@ -9979,6 +11241,12 @@
             },
             {
               "atk": 54,
+              "buffs": [
+                {
+                  "card_id": "BG31_148",
+                  "count": 1
+                }
+              ],
               "card_id": "BG26_354_G",
               "golden": true,
               "health": 40,
@@ -9988,6 +11256,16 @@
             },
             {
               "atk": 60,
+              "buffs": [
+                {
+                  "card_id": "BG28_888",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG31_148",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_701_G",
               "golden": true,
               "health": 46,
@@ -9997,6 +11275,16 @@
             },
             {
               "atk": 92,
+              "buffs": [
+                {
+                  "card_id": "BG36_356",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG31_148",
+                  "count": 1
+                }
+              ],
               "card_id": "BG_LOE_077",
               "golden": false,
               "health": 78,
@@ -10006,6 +11294,24 @@
             },
             {
               "atk": 34,
+              "buffs": [
+                {
+                  "card_id": "BG36_624",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG26_814",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_811",
+                  "count": 1
+                },
+                {
+                  "card_id": "EBG_Spell_014",
+                  "count": 1
+                }
+              ],
               "card_id": "BG26_817",
               "golden": false,
               "health": 85,
@@ -10015,6 +11321,12 @@
             },
             {
               "atk": 9,
+              "buffs": [
+                {
+                  "card_id": "BG33_811",
+                  "count": 1
+                }
+              ],
               "card_id": "BG26_817_G",
               "golden": true,
               "health": 11,
@@ -10036,6 +11348,12 @@
             },
             {
               "atk": 13,
+              "buffs": [
+                {
+                  "card_id": "BG28_888",
+                  "count": 1
+                }
+              ],
               "card_id": "BG32_821",
               "golden": false,
               "health": 12,
@@ -10045,6 +11363,12 @@
             },
             {
               "atk": 9,
+              "buffs": [
+                {
+                  "card_id": "BG33_811",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_523",
               "golden": false,
               "health": 13,
@@ -10054,6 +11378,16 @@
             },
             {
               "atk": 10,
+              "buffs": [
+                {
+                  "card_id": "BG20_GEM",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG33_811",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_523",
               "golden": false,
               "health": 14,
@@ -10063,6 +11397,12 @@
             },
             {
               "atk": 18,
+              "buffs": [
+                {
+                  "card_id": "BG28_520",
+                  "count": 2
+                }
+              ],
               "card_id": "BG36_521_G",
               "golden": true,
               "health": 13,
@@ -10167,6 +11507,28 @@
             },
             {
               "atk": 2,
+              "buffs": [
+                {
+                  "card_id": "BG36_345",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_503",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG36_344",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_811",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_888",
+                  "count": 1
+                }
+              ],
               "card_id": "BG32_236",
               "golden": true,
               "health": 2,
@@ -10178,6 +11540,20 @@
             },
             {
               "atk": 12,
+              "buffs": [
+                {
+                  "card_id": "BG36_344",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG26_814",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_811",
+                  "count": 2
+                }
+              ],
               "card_id": "BG36_523_G",
               "golden": true,
               "health": 12,
@@ -10187,6 +11563,12 @@
             },
             {
               "atk": 8,
+              "buffs": [
+                {
+                  "card_id": "BG36_344",
+                  "count": 1
+                }
+              ],
               "card_id": "BG33_822_G",
               "golden": true,
               "health": 12,
@@ -10198,6 +11580,12 @@
             },
             {
               "atk": 6,
+              "buffs": [
+                {
+                  "card_id": "BG28_888",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_503_G",
               "golden": true,
               "health": 10,
@@ -10207,6 +11595,12 @@
             },
             {
               "atk": 4,
+              "buffs": [
+                {
+                  "card_id": "BG36_344",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_344",
               "golden": false,
               "health": 4,
@@ -10216,6 +11610,16 @@
             },
             {
               "atk": 8,
+              "buffs": [
+                {
+                  "card_id": "BG36_344",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG33_811",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_344_G",
               "golden": true,
               "health": 8,
@@ -10234,6 +11638,28 @@
             "board": [
               {
                 "atk": 457,
+                "buffs": [
+                  {
+                    "card_id": "BG36_345",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_503",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG36_344",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_811",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_888",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_236",
                 "golden": true,
                 "health": 464,
@@ -10245,6 +11671,24 @@
               },
               {
                 "atk": 467,
+                "buffs": [
+                  {
+                    "card_id": "BG36_344",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG26_814",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_811",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG35_MagicItem_711",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_523_G",
                 "gifts": [
                   "BG36_MidGameEffect_000t7"
@@ -10258,6 +11702,16 @@
               },
               {
                 "atk": 200,
+                "buffs": [
+                  {
+                    "card_id": "BG36_344",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG35_MagicItem_711",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_344_G",
                 "golden": true,
                 "health": 200,
@@ -10276,6 +11730,20 @@
               },
               {
                 "atk": 209,
+                "buffs": [
+                  {
+                    "card_id": "BG36_344",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG33_811",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG35_MagicItem_711",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_344_G",
                 "golden": true,
                 "health": 213,
@@ -10325,6 +11793,28 @@
               },
               {
                 "atk": 106,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_897",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_811",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_813",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_812",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG33_822_G",
                 "golden": true,
                 "health": 85,
@@ -10335,6 +11825,24 @@
               },
               {
                 "atk": 64,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_897",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_812",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_811",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG33_822_G",
                 "golden": true,
                 "health": 41,
@@ -10345,6 +11853,20 @@
               },
               {
                 "atk": 65,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_812",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG_Consumed",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_821",
                 "gifts": [
                   "BG36_MidGameEffect_000t2"
@@ -10358,6 +11880,16 @@
               },
               {
                 "atk": 38,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_812",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_231",
                 "gifts": [
                   "BG36_MidGameEffect_000t10"
@@ -10369,6 +11901,24 @@
               },
               {
                 "atk": 345,
+                "buffs": [
+                  {
+                    "card_id": "BG27_005",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_503",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_897",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_812",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG27_005_G",
                 "gifts": [
                   "BG36_MidGameEffect_000t74"
@@ -10382,6 +11932,20 @@
               },
               {
                 "atk": 176,
+                "buffs": [
+                  {
+                    "card_id": "BG_ShopBuff_MultiRace",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG_ShopBuff",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  }
+                ],
                 "card_id": "BG32_330",
                 "golden": false,
                 "health": 176,
@@ -10397,6 +11961,16 @@
             "board": [
               {
                 "atk": 34,
+                "buffs": [
+                  {
+                    "card_id": "BG36_703",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG31_881t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG27_016_G",
                 "golden": true,
                 "health": 34,
@@ -10407,6 +11981,24 @@
               },
               {
                 "atk": 188,
+                "buffs": [
+                  {
+                    "card_id": "BG_ShopBuff_MultiRace",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG_ShopBuff",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG31_881t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_731",
                 "golden": false,
                 "health": 186,
@@ -10417,6 +12009,16 @@
               },
               {
                 "atk": 13,
+                "buffs": [
+                  {
+                    "card_id": "BG28_520",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG31_881t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_362_G",
                 "golden": true,
                 "health": 10,
@@ -10428,6 +12030,16 @@
               },
               {
                 "atk": 602,
+                "buffs": [
+                  {
+                    "card_id": "BG_Consumed",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG31_881t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG34_500_G",
                 "golden": true,
                 "health": 606,
@@ -10436,6 +12048,12 @@
               },
               {
                 "atk": 10,
+                "buffs": [
+                  {
+                    "card_id": "BG31_881t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG35_155",
                 "golden": false,
                 "health": 10,
@@ -10444,6 +12062,16 @@
               },
               {
                 "atk": 8,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG31_881t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG_LOE_077",
                 "golden": false,
                 "health": 10,
@@ -11300,6 +12928,28 @@
           "minions": [
             {
               "atk": 457,
+              "buffs": [
+                {
+                  "card_id": "BG36_345",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_503",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG36_344",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_811",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_888",
+                  "count": 1
+                }
+              ],
               "card_id": "BG32_236",
               "golden": true,
               "health": 464,
@@ -11312,6 +12962,20 @@
             },
             {
               "atk": 467,
+              "buffs": [
+                {
+                  "card_id": "BG36_344",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG26_814",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_811",
+                  "count": 2
+                }
+              ],
               "card_id": "BG36_523_G",
               "gifts": [
                 "BG36_MidGameEffect_000t7"
@@ -11324,6 +12988,12 @@
             },
             {
               "atk": 200,
+              "buffs": [
+                {
+                  "card_id": "BG36_344",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_344_G",
               "golden": true,
               "health": 200,
@@ -11342,6 +13012,16 @@
             },
             {
               "atk": 209,
+              "buffs": [
+                {
+                  "card_id": "BG36_344",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG33_811",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_344_G",
               "golden": true,
               "health": 213,
@@ -11386,6 +13066,28 @@
             },
             {
               "atk": 106,
+              "buffs": [
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_897",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_811",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_813",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_812",
+                  "count": 1
+                }
+              ],
               "card_id": "BG33_822_G",
               "golden": true,
               "health": 85,
@@ -11397,6 +13099,24 @@
             },
             {
               "atk": 64,
+              "buffs": [
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_897",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_812",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_811",
+                  "count": 1
+                }
+              ],
               "card_id": "BG33_822_G",
               "golden": true,
               "health": 41,
@@ -11408,6 +13128,20 @@
             },
             {
               "atk": 65,
+              "buffs": [
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_812",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG_Consumed",
+                  "count": 1
+                }
+              ],
               "card_id": "BG32_821",
               "gifts": [
                 "BG36_MidGameEffect_000t2"
@@ -11422,6 +13156,16 @@
             },
             {
               "atk": 38,
+              "buffs": [
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_812",
+                  "count": 1
+                }
+              ],
               "card_id": "BG32_231",
               "gifts": [
                 "BG36_MidGameEffect_000t10"
@@ -11434,6 +13178,24 @@
             },
             {
               "atk": 345,
+              "buffs": [
+                {
+                  "card_id": "BG27_005",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_503",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_897",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_812",
+                  "count": 1
+                }
+              ],
               "card_id": "BG27_005_G",
               "gifts": [
                 "BG36_MidGameEffect_000t74"
@@ -11457,6 +13219,24 @@
             },
             {
               "atk": 12,
+              "buffs": [
+                {
+                  "card_id": "BG36_344",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG26_814",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_811",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG35_MagicItem_711",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_523_G",
               "golden": true,
               "health": 12,
@@ -11555,6 +13335,12 @@
               },
               {
                 "atk": 60,
+                "buffs": [
+                  {
+                    "card_id": "BG31_148",
+                    "count": 1
+                  }
+                ],
                 "card_id": "TB_BaconUps_089",
                 "golden": true,
                 "health": 40,
@@ -11563,6 +13349,20 @@
               },
               {
                 "atk": 2082,
+                "buffs": [
+                  {
+                    "card_id": "BG31_148",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG36_356",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG26_354",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG26_354_G",
                 "golden": true,
                 "health": 2108,
@@ -11571,6 +13371,20 @@
               },
               {
                 "atk": 2042,
+                "buffs": [
+                  {
+                    "card_id": "BG31_148",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_888",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG26_354",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG26_354_G",
                 "golden": true,
                 "health": 2068,
@@ -11579,6 +13393,16 @@
               },
               {
                 "atk": 76,
+                "buffs": [
+                  {
+                    "card_id": "BG28_888",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG31_148",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_701_G",
                 "golden": true,
                 "health": 58,
@@ -11587,6 +13411,24 @@
               },
               {
                 "atk": 121,
+                "buffs": [
+                  {
+                    "card_id": "BG36_356",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG31_148",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_825",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_503",
+                    "count": 1
+                  }
+                ],
                 "card_id": "TB_BaconUps_045",
                 "golden": true,
                 "health": 111,
@@ -11604,6 +13446,16 @@
             "board": [
               {
                 "atk": 1040,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG31_881t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG20_104",
                 "gifts": [
                   "BG36_MidGameEffect_000t13"
@@ -11619,6 +13471,16 @@
               },
               {
                 "atk": 1056,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG31_881t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG33_885_G",
                 "gifts": [
                   "BG36_MidGameEffect_000t64"
@@ -11632,6 +13494,12 @@
               },
               {
                 "atk": 660,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  }
+                ],
                 "card_id": "BG33_885",
                 "gifts": [
                   "BG36_MidGameEffect_000t3"
@@ -11645,6 +13513,16 @@
               },
               {
                 "atk": 875,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG31_881t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_333",
                 "gifts": [
                   "BG36_MidGameEffect_000t7"
@@ -11658,6 +13536,12 @@
               },
               {
                 "atk": 116,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  }
+                ],
                 "card_id": "BG30_123",
                 "golden": false,
                 "health": 149,
@@ -11666,6 +13550,16 @@
               },
               {
                 "atk": 954,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG31_881t",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG31_323_G",
                 "golden": true,
                 "health": 1333,
@@ -11674,6 +13568,16 @@
               },
               {
                 "atk": 531,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG28_573",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG31_323",
                 "golden": false,
                 "health": 1,
@@ -11689,6 +13593,28 @@
             "board": [
               {
                 "atk": 765,
+                "buffs": [
+                  {
+                    "card_id": "BG36_345",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_503",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG36_344",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_811",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG28_888",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG32_236",
                 "golden": true,
                 "health": 772,
@@ -11700,6 +13626,24 @@
               },
               {
                 "atk": 775,
+                "buffs": [
+                  {
+                    "card_id": "BG36_344",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG26_814",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_811",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG35_MagicItem_711",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_523_G",
                 "gifts": [
                   "BG36_MidGameEffect_000t7"
@@ -11713,6 +13657,16 @@
               },
               {
                 "atk": 354,
+                "buffs": [
+                  {
+                    "card_id": "BG36_344",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG35_MagicItem_711",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_344_G",
                 "golden": true,
                 "health": 354,
@@ -11723,6 +13677,20 @@
               },
               {
                 "atk": 363,
+                "buffs": [
+                  {
+                    "card_id": "BG36_344",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG33_811",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG35_MagicItem_711",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_344_G",
                 "golden": true,
                 "health": 367,
@@ -11751,6 +13719,16 @@
               },
               {
                 "atk": 264,
+                "buffs": [
+                  {
+                    "card_id": "BG36_344",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG35_MagicItem_711",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG33_823",
                 "golden": false,
                 "health": 265,
@@ -11768,6 +13746,32 @@
             "board": [
               {
                 "atk": 74,
+                "buffs": [
+                  {
+                    "card_id": "BG36_624",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG26_814",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG33_811",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "EBG_Spell_014",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG36_344",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG36_883",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG26_817_G",
                 "golden": true,
                 "health": 125,
@@ -11776,6 +13780,16 @@
               },
               {
                 "atk": 37,
+                "buffs": [
+                  {
+                    "card_id": "BG33_811",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG36_344",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG26_817_G",
                 "golden": true,
                 "health": 39,
@@ -11784,6 +13798,16 @@
               },
               {
                 "atk": 224,
+                "buffs": [
+                  {
+                    "card_id": "BG36_524",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG36_344",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_524_G",
                 "golden": true,
                 "health": 224,
@@ -11792,6 +13816,16 @@
               },
               {
                 "atk": 37,
+                "buffs": [
+                  {
+                    "card_id": "BG33_811",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG36_344",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_523",
                 "golden": false,
                 "health": 41,
@@ -11800,6 +13834,16 @@
               },
               {
                 "atk": 34,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG36_344",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_342",
                 "golden": false,
                 "health": 36,
@@ -11808,6 +13852,20 @@
               },
               {
                 "atk": 38,
+                "buffs": [
+                  {
+                    "card_id": "BG20_GEM",
+                    "count": 2
+                  },
+                  {
+                    "card_id": "BG33_811",
+                    "count": 1
+                  },
+                  {
+                    "card_id": "BG36_344",
+                    "count": 1
+                  }
+                ],
                 "card_id": "BG36_523",
                 "golden": false,
                 "health": 42,
@@ -12964,6 +15022,12 @@
             },
             {
               "atk": 60,
+              "buffs": [
+                {
+                  "card_id": "BG31_148",
+                  "count": 1
+                }
+              ],
               "card_id": "TB_BaconUps_089",
               "golden": true,
               "health": 40,
@@ -12973,6 +15037,16 @@
             },
             {
               "atk": 110,
+              "buffs": [
+                {
+                  "card_id": "BG31_148",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG36_356",
+                  "count": 1
+                }
+              ],
               "card_id": "BG26_354_G",
               "golden": true,
               "health": 92,
@@ -12982,6 +15056,16 @@
             },
             {
               "atk": 70,
+              "buffs": [
+                {
+                  "card_id": "BG31_148",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_888",
+                  "count": 1
+                }
+              ],
               "card_id": "BG26_354_G",
               "golden": true,
               "health": 52,
@@ -12991,6 +15075,16 @@
             },
             {
               "atk": 76,
+              "buffs": [
+                {
+                  "card_id": "BG28_888",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG31_148",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_701_G",
               "golden": true,
               "health": 58,
@@ -13000,6 +15094,24 @@
             },
             {
               "atk": 121,
+              "buffs": [
+                {
+                  "card_id": "BG36_356",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG31_148",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_825",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG28_503",
+                  "count": 1
+                }
+              ],
               "card_id": "TB_BaconUps_045",
               "golden": true,
               "health": 111,
@@ -13011,6 +15123,16 @@
             },
             {
               "atk": 1040,
+              "buffs": [
+                {
+                  "card_id": "BG20_GEM",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG31_881t",
+                  "count": 1
+                }
+              ],
               "card_id": "BG20_104",
               "gifts": [
                 "BG36_MidGameEffect_000t13"
@@ -13027,6 +15149,16 @@
             },
             {
               "atk": 1056,
+              "buffs": [
+                {
+                  "card_id": "BG20_GEM",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG31_881t",
+                  "count": 1
+                }
+              ],
               "card_id": "BG33_885_G",
               "gifts": [
                 "BG36_MidGameEffect_000t64"
@@ -13041,6 +15173,12 @@
             },
             {
               "atk": 660,
+              "buffs": [
+                {
+                  "card_id": "BG20_GEM",
+                  "count": 2
+                }
+              ],
               "card_id": "BG33_885",
               "gifts": [
                 "BG36_MidGameEffect_000t3"
@@ -13055,6 +15193,16 @@
             },
             {
               "atk": 875,
+              "buffs": [
+                {
+                  "card_id": "BG20_GEM",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG31_881t",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_333",
               "gifts": [
                 "BG36_MidGameEffect_000t7"
@@ -13069,6 +15217,12 @@
             },
             {
               "atk": 116,
+              "buffs": [
+                {
+                  "card_id": "BG20_GEM",
+                  "count": 2
+                }
+              ],
               "card_id": "BG30_123",
               "golden": false,
               "health": 149,
@@ -13078,6 +15232,16 @@
             },
             {
               "atk": 954,
+              "buffs": [
+                {
+                  "card_id": "BG20_GEM",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG31_881t",
+                  "count": 1
+                }
+              ],
               "card_id": "BG31_323_G",
               "golden": true,
               "health": 1333,
@@ -13087,6 +15251,16 @@
             },
             {
               "atk": 531,
+              "buffs": [
+                {
+                  "card_id": "BG20_GEM",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG28_573",
+                  "count": 1
+                }
+              ],
               "card_id": "BG31_323",
               "golden": false,
               "health": 1,
@@ -13116,6 +15290,24 @@
             },
             {
               "atk": 12,
+              "buffs": [
+                {
+                  "card_id": "BG36_344",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG26_814",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_811",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG35_MagicItem_711",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_523_G",
               "golden": true,
               "health": 12,
@@ -13125,6 +15317,16 @@
             },
             {
               "atk": 8,
+              "buffs": [
+                {
+                  "card_id": "BG36_344",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG35_MagicItem_711",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_344_G",
               "golden": true,
               "health": 8,
@@ -13134,6 +15336,20 @@
             },
             {
               "atk": 8,
+              "buffs": [
+                {
+                  "card_id": "BG36_344",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG33_811",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG35_MagicItem_711",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_344_G",
               "golden": true,
               "health": 8,
@@ -13163,6 +15379,16 @@
             },
             {
               "atk": 4,
+              "buffs": [
+                {
+                  "card_id": "BG36_344",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG35_MagicItem_711",
+                  "count": 1
+                }
+              ],
               "card_id": "BG33_823",
               "golden": false,
               "health": 5,
@@ -13172,6 +15398,24 @@
             },
             {
               "atk": 12,
+              "buffs": [
+                {
+                  "card_id": "BG36_344",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG26_814",
+                  "count": 1
+                },
+                {
+                  "card_id": "BG33_811",
+                  "count": 2
+                },
+                {
+                  "card_id": "BG35_MagicItem_711",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_523_G",
               "golden": true,
               "health": 12,
@@ -13199,6 +15443,12 @@
             },
             {
               "atk": 14,
+              "buffs": [
+                {
+                  "card_id": "BG36_524",
+                  "count": 1
+                }
+              ],
               "card_id": "BG36_524_G",
               "golden": true,
               "health": 14,

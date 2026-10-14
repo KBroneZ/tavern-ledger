@@ -301,6 +301,7 @@ fn log_board(b: &Value) -> Vec<LogMinion> {
                     .map(|g| statics(g, &bg_parser::gifts::GIFT_IDS))
                     .unwrap_or_default(),
                 gift_unknown: false,
+                buffs: Vec::new(),
             }
         })
         .collect()

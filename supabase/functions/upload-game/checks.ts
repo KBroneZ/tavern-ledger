@@ -85,6 +85,29 @@ export function gifts(m: Obj, field: string): void {
   }
 }
 
+// Buffs on a minion (parser revision 14, T-616, D-141): the card that gave
+// them and how many of its enchantments the minion has, each card once.
+export const MAX_BUFF_KINDS = 12;
+export const MAX_BUFF_COUNT = 999;
+
+/** Optional `buffs` of a board or replay minion: [{card_id, count}], never empty. */
+export function buffs(m: Obj, field: string): void {
+  if (m.buffs === undefined) return;
+  const items = list(m.buffs, `${field}.buffs`, MAX_BUFF_KINDS);
+  if (items.length === 0) throw new Invalid(`${field}.buffs`);
+  const seen = new Set<string>();
+  items.forEach((b, i) => {
+    const at = `${field}.buffs[${i}]`;
+    const one = shape(b, at, ["card_id", "count"], ["card_id", "count"]);
+    if (typeof one.card_id !== "string" || !CARD_ID.test(one.card_id)) {
+      throw new Invalid(`${at}.card_id`);
+    }
+    int(one.count, `${at}.count`, 1, MAX_BUFF_COUNT);
+    if (seen.has(one.card_id)) throw new Invalid(`${field}.buffs`);
+    seen.add(one.card_id);
+  });
+}
+
 export function keywords(v: unknown, field: string): void {
   const words = list(v, field, KEYWORDS.size);
   if (

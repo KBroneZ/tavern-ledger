@@ -792,12 +792,19 @@ pub fn lobby_health_now(board: &Board) -> BTreeMap<i64, i64> {
 }
 
 /// The minions of `controller` on the board, left to right, with their
-/// Dark Gifts (T-528).
+/// Dark Gifts (T-528) and buffs (T-611).
 pub fn board_of(board: &Board, controller: i64) -> Vec<Minion> {
     let mut gifts = crate::gifts::gift_index(board);
+    let mut buffs = crate::buffs::buff_index(board);
     board_entities(board, controller)
         .into_iter()
-        .map(|e| minion_of(e, gifts.remove(&e.id).unwrap_or_default()))
+        .map(|e| {
+            minion_of(
+                e,
+                gifts.remove(&e.id).unwrap_or_default(),
+                buffs.remove(&e.id).unwrap_or_default(),
+            )
+        })
         .collect()
 }
 

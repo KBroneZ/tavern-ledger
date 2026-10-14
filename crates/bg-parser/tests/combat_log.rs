@@ -2,8 +2,8 @@
 //! each combat's attacks in order with both boards before each one, the
 //! lasting keywords the saved report leaves out, the own board in a shop
 //! turn and each side's game-long values. Synthetic log written out below;
-//! of all this, only the game-long values reach the saved report's JSON
-//! (parser revision 10).
+//! of all this, only the game-long values (parser revision 10) and the
+//! buffs on board minions (revision 14) reach the saved report's JSON.
 
 use bg_parser::report::{CombatValues, DefenderSource, GameReport, Side, MAX_GAME_VALUE};
 use bg_parser::LogReader;
@@ -320,6 +320,90 @@ fn each_sides_game_long_values_are_read_with_its_board() {
     assert_eq!(of(Side::Opponent).knights_dead, 2);
 }
 
+/// Enchantments on the combat's minions (T-616): the own 30 has two Blood
+/// Gems, the game's hidden holder of their numbers and a Dark Gift; the own
+/// 31 a buff that left; the opponent's 40 one buff in two forms.
+fn buff_lines() -> Vec<String> {
+    let mut lines = Vec::new();
+    for (id, card, on, zone, extra) in [
+        (70, "BG20_GEMe2", 30, "PLAY", None),
+        (71, "BG20_GEMe2", 30, "PLAY", None),
+        (72, "BG20_GEMe", 30, "PLAY", Some("ENCHANTMENT_INVISIBLE")),
+        (73, "BG36_MidGameEffect_000t9e2", 30, "PLAY", None),
+        (74, "BG28_309e", 31, "GRAVEYARD", None),
+        (75, "BG34_950e", 40, "PLAY", None),
+        (76, "BG34_950e2", 40, "PLAY", None),
+    ] {
+        lines.push(line(
+            1,
+            &format!("FULL_ENTITY - Creating ID={id} CardID={card}"),
+        ));
+        lines.push(line(2, "tag=CARDTYPE value=ENCHANTMENT"));
+        lines.push(line(2, &format!("tag=ATTACHED value={on}")));
+        lines.push(line(2, &format!("tag=ZONE value={zone}")));
+        if let Some(tag) = extra {
+            lines.push(line(2, &format!("tag={tag} value=1")));
+        }
+        lines.push(line(2, &format!("tag=ENTITY_ID value={id}")));
+    }
+    lines.push(tag("2", "RESOURCES", "1"));
+    lines
+}
+
+fn game_with_buffs() -> Vec<String> {
+    let mut l = game();
+    let at = l
+        .iter()
+        .position(|x| x.contains("BlockType=ATTACK"))
+        .expect("attack");
+    l.splice(at..at, buff_lines());
+    l
+}
+
+#[test]
+fn buffs_are_read_with_each_sides_minions() {
+    let r = report(&game_with_buffs());
+    let board = |side: Side| {
+        r.rounds[0]
+            .entries
+            .iter()
+            .find(|e| e.side == side)
+            .and_then(|e| e.board.clone())
+            .expect("board")
+    };
+    let own = board(Side::Own);
+    fn kinds(m: &bg_parser::report::Minion) -> Vec<(&str, u32)> {
+        m.buffs
+            .iter()
+            .map(|b| (b.card_id.as_str(), b.count))
+            .collect()
+    }
+    assert_eq!(kinds(&own[0]), vec![("BG20_GEM", 2)]);
+    assert!(own[1].buffs.is_empty(), "a buff that left is not one");
+    let foe = board(Side::Opponent);
+    assert_eq!(kinds(&foe[0]), vec![("BG34_950", 2)]);
+    assert!(foe[1].buffs.is_empty());
+}
+
+#[test]
+fn buffs_are_saved_with_the_minion_and_left_out_when_there_are_none() {
+    let json = serde_json::to_value(report(&game_with_buffs())).expect("serializable");
+    let boards: Vec<&serde_json::Value> = json["rounds"][0]["entries"]
+        .as_array()
+        .expect("entries")
+        .iter()
+        .flat_map(|e| e["board"].as_array().expect("board"))
+        .collect();
+    let with: Vec<_> = boards.iter().filter(|m| m.get("buffs").is_some()).collect();
+    assert_eq!(with.len(), 2);
+    assert_eq!(
+        with[0]["buffs"],
+        serde_json::json!([{"card_id": "BG20_GEM", "count": 2}])
+    );
+    let plain = serde_json::to_string(&report(&game())).expect("serializable");
+    assert!(!plain.contains("buffs"), "{plain}");
+}
+
 #[test]
 fn each_sides_game_long_values_are_saved_with_its_board_above_zero_only() {
     // Parser revision 10: the values above zero go with each board in the
@@ -397,6 +481,27 @@ fn the_own_game_long_values_now_are_given_in_a_shop_turn_only() {
         .iter()
         .for_each(|l| reader.feed(l));
     assert_eq!(reader.own_values_now(), None, "a combat turn");
+}
+
+/// The parser's report of the game with buffs (parser revision 14), saved for
+/// upload-game's Deno tests and the key contract.
+/// `BLESS=1 cargo test -p bg-parser --test combat_log` writes it again.
+#[test]
+fn the_saved_report_with_buffs_for_upload_game_is_current() {
+    let reports = vec![report(&game_with_buffs())];
+    let text = serde_json::to_string_pretty(&reports).unwrap() + "\n";
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/data/rust/game_buffs_games.json");
+    if std::env::var_os("BLESS").is_some() {
+        std::fs::write(&path, &text).unwrap();
+    }
+    let saved = std::fs::read_to_string(&path)
+        .unwrap_or_default()
+        .replace("\r\n", "\n");
+    assert_eq!(
+        saved, text,
+        "run BLESS=1 cargo test -p bg-parser --test combat_log"
+    );
 }
 
 /// The parser's report of the game with values, saved for upload-game's Deno

@@ -49,6 +49,9 @@ enum Shape {
     ScalarOr(&'static Shape),
 }
 
+/// A buff on a minion (parser revision 14): the card that gave it and a count.
+const BUFF: Shape = Shape::Object(&[("card_id", Shape::Id), ("count", Shape::Scalar)]);
+
 const MINION: Shape = Shape::Object(&[
     ("card_id", Shape::Id),
     ("atk", Shape::Scalar),
@@ -60,6 +63,8 @@ const MINION: Shape = Shape::Object(&[
     // Parser revision 9: Dark Gifts, by card id.
     ("gifts", Shape::List(&Shape::Id)),
     ("gift_unknown", Shape::Scalar),
+    // Parser revision 14: buffs, by card id and count.
+    ("buffs", Shape::List(&BUFF)),
 ]);
 
 const ENTRY: Shape = Shape::Object(&[
@@ -82,6 +87,7 @@ const REPLAY_MINION: Shape = Shape::Object(&[
     ("keywords", Shape::List(&Shape::Id)),
     ("gifts", Shape::List(&Shape::Id)),
     ("gift_unknown", Shape::Scalar),
+    ("buffs", Shape::List(&BUFF)),
 ]);
 
 /// Where a damage came from (parser revision 13, T-575).

@@ -45,12 +45,18 @@ fn every_real_game_gives_its_saved_report() {
     assert!(!names.is_empty());
     for name in names {
         let (_, reports) = read(&name);
-        let expected: Value = serde_json::from_str(
-            &fs::read_to_string(dir().join(format!("{name}.json"))).expect("expected report"),
-        )
-        .expect("valid json");
+        let path = dir().join(format!("{name}.json"));
         let actual = serde_json::to_value(&reports).expect("serializable");
-        assert_eq!(actual, expected, "{name}");
+        // After a parser change that is checked by hand: BLESS=1 writes the
+        // reports again (the diff then shows what changed).
+        if std::env::var_os("BLESS").is_some() {
+            let text = serde_json::to_string_pretty(&actual).expect("serializable") + "\n";
+            fs::write(&path, text).expect("write the saved report");
+        }
+        let expected: Value =
+            serde_json::from_str(&fs::read_to_string(&path).expect("expected report"))
+                .expect("valid json");
+        assert_eq!(actual, expected, "{name}: BLESS=1 writes them again");
     }
 }
 

@@ -7,6 +7,7 @@
 import {
   bool,
   cardId,
+  buffs,
   gifts,
   int,
   Invalid,
@@ -19,8 +20,9 @@ import {
 } from "./checks.ts";
 
 const MAX_REPLAY_MINIONS = 200;
-// Written only when the minion has a Dark Gift (parser revision 9).
-const OPTIONAL_MINION_KEYS = new Set(["gifts", "gift_unknown"]);
+// Written only when the minion has a Dark Gift (parser revision 9) or a buff
+// (revision 14).
+const OPTIONAL_MINION_KEYS = new Set(["gifts", "gift_unknown", "buffs"]);
 const MAX_REPLAY_EVENTS = 2000;
 const SIDES = new Set(["own", "opponent"]);
 const TRIGGERS = new Set(["start_of_combat", "deathrattle", "avenge", "rally"]);
@@ -86,6 +88,7 @@ export function replay(
     bool(one.golden, `${at}.golden`);
     keywords(one.keywords, `${at}.keywords`);
     gifts(one, at);
+    buffs(one, at);
   });
   const start = int(r.start, `${field}.start`, 0, minions.length);
   bool(r.complete, `${field}.complete`);
