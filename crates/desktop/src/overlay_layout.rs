@@ -23,6 +23,8 @@ pub enum Panel {
     Counters,
     Tribes,
     Opponents,
+    /// The combat odds bar at the top centre of the game window (T-367).
+    Odds,
     Legend,
     /// The short panel on the Battlegrounds lobby screen (T-338).
     Lobby,
@@ -37,6 +39,10 @@ impl Panel {
 pub const MIN_WIDTH: f64 = 160.0;
 pub const MAX_WIDTH: f64 = 800.0;
 pub const MIN_HEIGHT: f64 = 40.0;
+/// The odds bar's default width, as a share of the screen's height, and its
+/// distance from the top edge as a share of the same height.
+const ODDS_WIDTH: f64 = 0.5;
+const ODDS_TOP: f64 = 0.01;
 /// A panel's top edge keeps at least this much on screen, so it can always be
 /// grabbed again.
 const GRAB_HEIGHT: f64 = 32.0;
@@ -95,6 +101,20 @@ pub struct Layout {
 }
 
 impl Layout {
+    /// The odds bar goes to the top centre unless the user placed it; the
+    /// other panels stay in the default stack until they are placed.
+    fn with_default_odds(mut self, screen: (f64, f64)) -> Layout {
+        let (sw, sh) = sane_screen(screen);
+        let width = (ODDS_WIDTH * sh).clamp(MIN_WIDTH.min(sw), MAX_WIDTH.min(sw));
+        self.panels.entry(Panel::Odds).or_insert(Rect {
+            x: (sw - width) / 2.0,
+            y: ODDS_TOP * sh,
+            w: width,
+            h: None,
+        });
+        self
+    }
+
     fn clamped(&self, screen: (f64, f64)) -> Layout {
         Layout {
             panels: self
@@ -377,17 +397,19 @@ impl Settings {
     /// stack. Always fits the screen.
     pub fn layout_for(&self, screen: (f64, f64)) -> Layout {
         let key = resolution_key(screen);
-        if let Some(layout) = self.layouts.get(&key) {
-            return layout.clamped(screen);
-        }
-        let from = self
-            .last_resolution
-            .as_ref()
-            .and_then(|k| Some((self.layouts.get(k)?, parse_resolution(k)?)));
-        match from {
-            Some((layout, from)) => layout.scaled(from, screen).clamped(screen),
-            None => Layout::default(),
-        }
+        let saved = if let Some(layout) = self.layouts.get(&key) {
+            layout.clamped(screen)
+        } else {
+            let from = self
+                .last_resolution
+                .as_ref()
+                .and_then(|k| Some((self.layouts.get(k)?, parse_resolution(k)?)));
+            match from {
+                Some((layout, from)) => layout.scaled(from, screen).clamped(screen),
+                None => Layout::default(),
+            }
+        };
+        saved.with_default_odds(screen)
     }
 
     /// Saves the placed panels for this screen, made to fit it. Panels with
@@ -551,8 +573,60 @@ mod tests {
     }
 
     #[test]
-    fn with_nothing_saved_every_panel_is_in_the_default_stack() {
-        assert!(Settings::default().layout_for(FHD).panels.is_empty());
+    fn with_nothing_saved_every_panel_but_the_odds_bar_is_in_the_default_stack() {
+        assert!(only_odds(&Settings::default().layout_for(FHD)));
+    }
+
+    fn only_odds(layout: &Layout) -> bool {
+        layout.panels.keys().all(|p| *p == Panel::Odds)
+    }
+
+    #[test]
+    fn the_odds_bar_sits_at_the_top_centre_by_default_on_any_screen() {
+        for screen in [FHD, HD, (2560.0, 1440.0), (1024.0, 768.0)] {
+            let r = Settings::default().layout_for(screen).panels[&Panel::Odds];
+            assert!(
+                (r.x + r.w / 2.0 - screen.0 / 2.0).abs() < 1.0,
+                "centred on {screen:?}"
+            );
+            assert!(
+                r.y >= 0.0 && r.y <= screen.1 * 0.03,
+                "at the top on {screen:?}"
+            );
+            assert!(
+                r.w >= MIN_WIDTH && r.w <= screen.0 * 0.6,
+                "a bar, not a column"
+            );
+            assert_eq!(r.h, None, "as tall as its content");
+        }
+    }
+
+    #[test]
+    fn a_saved_layout_without_the_odds_bar_keeps_its_places_and_gets_the_default_bar() {
+        let mut s = Settings::default();
+        s.set_layout(FHD, &one(Panel::Status, rect(10.0, 20.0, 300.0, None)));
+        let panels = s.layout_for(FHD).panels;
+        assert_eq!(panels[&Panel::Status].x, 10.0);
+        let bar = panels[&Panel::Odds];
+        assert!((bar.x + bar.w / 2.0 - 960.0).abs() < 1.0);
+    }
+
+    #[test]
+    fn a_bar_the_user_placed_stays_where_they_put_it() {
+        let mut s = Settings::default();
+        s.set_layout(FHD, &one(Panel::Odds, rect(40.0, 500.0, 400.0, None)));
+        assert_eq!(
+            s.layout_for(FHD).panels[&Panel::Odds],
+            rect(40.0, 500.0, 400.0, None)
+        );
+    }
+
+    #[test]
+    fn the_odds_bar_can_be_hidden_and_the_file_names_it_odds() {
+        assert!(Panel::Odds.hideable());
+        assert_eq!(serde_json::to_string(&Panel::Odds).unwrap(), r#""odds""#);
+        let s = Settings::parse(r#"{"hidden":["odds"]}"#).unwrap();
+        assert_eq!(s.hidden, BTreeSet::from([Panel::Odds]));
     }
 
     #[test]
@@ -564,7 +638,7 @@ mod tests {
         s.set_layout(FHD, &one(Panel::Status, rect(10.0, 10.0, 200.0, None)));
         s.set_shown(Panel::Tribes, false);
         s.reset_layout();
-        assert!(s.layout_for(FHD).panels.is_empty());
+        assert!(only_odds(&s.layout_for(FHD)));
         assert!(s.hidden.is_empty());
         assert_eq!(s.theme, Theme::Contrast);
     }
@@ -615,7 +689,7 @@ mod tests {
         )
         .unwrap();
         let panels = s.layout_for(FHD).panels;
-        assert_eq!(panels.len(), 2);
+        assert_eq!(panels.len(), 3, "two saved and the odds bar's default");
         assert_eq!(panels[&Panel::Status].x, 10.0);
         // Not placed: it takes its default place in the stack.
         assert!(!panels.contains_key(&Panel::Counters));
@@ -631,7 +705,7 @@ mod tests {
         s.set_shown(Panel::Counters, false);
         assert!(s.layout_for(FHD).panels.contains_key(&Panel::Counters));
         s.reset_layout();
-        assert!(s.layout_for(FHD).panels.is_empty());
+        assert!(only_odds(&s.layout_for(FHD)));
         assert!(s.hidden.is_empty());
     }
 

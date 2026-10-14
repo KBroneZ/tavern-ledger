@@ -35,7 +35,8 @@ const EXAMPLE_GAME = {
   tribes_source: "inferred",
   entered_tribes: ["BEAST", "MURLOC", "UNDEAD", "DEMON", "DRAGON"],
   entered_tribes_source: "entered",
-  lobby_tribes: { tribes: ["BEAST", "DEMON", "DRAGON", "MURLOC", "UNDEAD"], source: "entered", basis: "entered", complete: true },
+  game_tribes: { tribes: ["BEAST", "DEMON", "DRAGON", "MURLOC", "UNDEAD"], status: "ok", checked_build: true, note: null },
+  lobby_tribes: { tribes: ["BEAST", "DEMON", "DRAGON", "MURLOC", "UNDEAD"], source: "game", basis: "game", complete: true },
   opponents: [
     {
       heroes: [{ id: "EXAMPLE_A", name: "Example Opponent A" }],

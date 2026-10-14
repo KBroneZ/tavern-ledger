@@ -123,6 +123,9 @@ const SOLO_ODDS = {
   approximate: [], missing: [], start_of_combat: false,
 };
 
+// The five tribes of the example lobby, as the game's memory gives them.
+const GAME_TRIBES = ["BEAST", "DEMON", "DRAGON", "MURLOC", "UNDEAD"];
+
 function soloGame() {
   return {
     phase: "playing",
@@ -144,9 +147,9 @@ function soloGame() {
     tribes_source: "inferred",
     entered_tribes: [],
     entered_tribes_source: "unknown",
-    game_tribes: { tribes: [], status: "off", checked_build: false, note: null },
-    build: null,
-    lobby_tribes: { tribes: ["BEAST", "DEMON", "DRAGON", "MURLOC", "UNDEAD"], source: "inferred", basis: "tavern_confirmed", complete: true },
+    game_tribes: { tribes: GAME_TRIBES, status: "ok", checked_build: true, note: null },
+    build: 253216,
+    lobby_tribes: { tribes: GAME_TRIBES, source: "game", basis: "game", complete: true },
     opponents: soloOpponents(),
     record_basis: "log",
     legend: LEGEND,

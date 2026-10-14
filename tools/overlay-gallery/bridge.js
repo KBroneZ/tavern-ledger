@@ -12,6 +12,10 @@
   // The game window the frames show: the overlay covers its picture.
   const SCREEN = [1920, 1080];
 
+  // Where the game's own leaderboard is in a 1920x1080 window (the app's
+  // measured default, leaderboard.rs): the opponent marks follow it.
+  const LEADERBOARD = { area: { x: 241.8, y: 172.8, w: 91.8, h: 734.4 }, custom: false };
+
   // The view the app's overlay_settings gives (overlay.rs `View`).
   function settingsView(scenario) {
     const s = (scenario.state && scenario.state.settings) || {};
@@ -25,9 +29,10 @@
       min_opacity: 0.8,
       max_opacity: 1,
       hidden: s.hidden || [],
-      layout: { panels: {} },
+      // The odds bar's default place (overlay_layout.rs): top centre.
+      layout: { panels: { odds: { x: 690, y: 10.8, w: 540, h: null } } },
       screen: SCREEN,
-      leaderboard: null,
+      leaderboard: LEADERBOARD,
       vars: themes.THEME_VARS[theme],
       warning: null,
       odds: true,

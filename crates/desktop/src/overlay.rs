@@ -613,7 +613,9 @@ mod tests {
         let err = overlay.load(&dir, false).unwrap_err();
         assert!(err.contains("could not be read"));
         assert!(!overlay.enabled());
-        assert!(overlay.view().layout.panels.is_empty());
+        // Only the odds bar has a default place (top centre); the rest stay in the stack.
+        let placed: Vec<_> = overlay.view().layout.panels.keys().copied().collect();
+        assert_eq!(placed, vec![Panel::Odds]);
     }
 
     #[test]
@@ -826,6 +828,7 @@ mod tests {
             Panel::Counters,
             Panel::Tribes,
             Panel::Opponents,
+            Panel::Odds,
             Panel::Legend,
             Panel::Lobby,
         ] {
