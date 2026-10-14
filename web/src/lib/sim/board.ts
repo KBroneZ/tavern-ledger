@@ -28,7 +28,8 @@ const TAG: Record<SimKeyword, string> = {
 const UNSAVED: SimKeyword[] = ["poisonous", "mega_windfury"];
 
 export const MAX_MINIONS = 7;
-export const MAX_STAT = 99_999;
+/** The most Attack or Health a minion takes: the 32-bit limit the engine saturates at (T-621). */
+export const MAX_STAT = 2 ** 31 - 1;
 export const MAX_TIER = 7;
 /** Dark Gifts on one minion (crates/sim-wasm takes at most 4). */
 export const MAX_GIFTS = 4;

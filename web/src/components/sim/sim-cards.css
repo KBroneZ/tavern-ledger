@@ -454,7 +454,7 @@
 }
 
 .sim input[type="number"] {
-  width: 6.5rem;
+  width: 9.5rem; /* ten digits: the 32-bit limit (T-621) */
   font-variant-numeric: tabular-nums;
 }
 

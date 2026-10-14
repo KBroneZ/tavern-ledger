@@ -20,17 +20,17 @@ impl Combat<'_> {
     pub(super) fn game_stats(&self, side: usize, card: u16) -> (i32, i32) {
         let info = &self.p.cards[card as usize];
         let v = self.sides[side].values;
-        let mut out = (0, 0);
+        let mut out: (i32, i32) = (0, 0);
         if info.tribes.is(Tribes::UNDEAD) {
-            out.0 += v.undead_attack;
+            out.0 = out.0.saturating_add(v.undead_attack);
         }
         if let Some((_, a, h)) = KNIGHTS.iter().find(|(id, ..)| *id == info.id) {
-            out.0 += a.saturating_mul(v.knights_dead);
-            out.1 += h.saturating_mul(v.knights_dead);
+            out.0 = out.0.saturating_add(a.saturating_mul(v.knights_dead));
+            out.1 = out.1.saturating_add(h.saturating_mul(v.knights_dead));
         }
         if BEETLES.contains(&info.id.as_str()) {
-            out.0 += v.beetle.0;
-            out.1 += v.beetle.1;
+            out.0 = out.0.saturating_add(v.beetle.0);
+            out.1 = out.1.saturating_add(v.beetle.1);
         }
         out
     }

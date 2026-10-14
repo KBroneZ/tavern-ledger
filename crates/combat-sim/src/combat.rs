@@ -520,3 +520,7 @@ mod golden_tests;
 #[cfg(test)]
 #[path = "combat_round8_tests.rs"]
 mod round8_tests;
+
+#[cfg(test)]
+#[path = "combat_stat_cap_tests.rs"]
+mod stat_cap_tests;

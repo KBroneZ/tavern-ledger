@@ -82,6 +82,33 @@ fn the_same_request_gives_the_same_answer() {
 }
 
 #[test]
+fn stats_up_to_the_32_bit_limit_are_played_and_one_more_is_refused() {
+    let max = i64::from(i32::MAX);
+    for stat in [99_999, 100_000, max] {
+        let req = request(
+            vec![board(vec![minion(PLAIN, stat, stat)], Some(1))],
+            vec![board(vec![minion(SKELETON, 1, 1)], Some(1))],
+        );
+        let a = run(&req);
+        assert_eq!(a["status"], "odds", "{stat}: {a}");
+        assert_eq!(a["won"], 10_000, "{stat}");
+    }
+    // Two minions at the limit trade, with no wrap in between.
+    let req = request(
+        vec![board(vec![minion(PLAIN, max, max)], Some(1))],
+        vec![board(vec![minion(PLAIN, max, max)], Some(1))],
+    );
+    assert_eq!(run(&req)["tied"], 10_000);
+    for (attack, health) in [(max + 1, 1), (1, max + 1)] {
+        let req = request(
+            vec![board(vec![minion(PLAIN, attack, health)], Some(1))],
+            vec![board(vec![minion(SKELETON, 1, 1)], Some(1))],
+        );
+        assert_eq!(run(&req)["status"], "bad_input", "{attack}/{health}");
+    }
+}
+
+#[test]
 fn a_card_the_engine_does_not_know_is_named_never_guessed() {
     let req = request(
         vec![board(vec![minion("BG_NOT_A_CARD", 2, 2)], Some(1))],

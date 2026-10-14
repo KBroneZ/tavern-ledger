@@ -93,8 +93,8 @@ impl Combat<'_> {
             let (more_attack, more_health) = self.game_stats(side, card);
             let unit = self.fresh(
                 card,
-                base.attack + more_attack,
-                base.health + more_health,
+                base.attack.saturating_add(more_attack),
+                base.health.saturating_add(more_health),
                 base.keywords,
             );
             let uid = unit.uid;

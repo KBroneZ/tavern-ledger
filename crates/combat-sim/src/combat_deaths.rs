@@ -187,7 +187,7 @@ impl Combat<'_> {
         // Attack (its Health stays 1).
         let info = &self.p.cards[card as usize];
         if info.base.is_some() && !info.triggers.contains(&Trigger::RebornWithStats) {
-            attack += self.game_stats(d.side, card).0;
+            attack = attack.saturating_add(self.game_stats(d.side, card).0);
         }
         let unit = self.fresh(card, attack, health, kw.without(Keywords::REBORN));
         let uid = unit.uid;
