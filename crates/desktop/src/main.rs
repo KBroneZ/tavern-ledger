@@ -1328,6 +1328,14 @@ fn main() {
     // Without a real release key the updater plugin is not even registered,
     // so nothing can ask GitHub for an update (D-135).
     let release_key = updates::release_key(context.config().plugins.0.get("updater"));
+    let may_check = updates::may_check(cfg!(debug_assertions), updates::OFFICIAL_BUILD);
+    if release_key.is_some() && !may_check {
+        applog::info(
+            "updates",
+            "Update checks are off: this build was not made by the release workflow.",
+        );
+    }
+    let release_key = release_key.filter(|_| may_check);
     let app_updates = Arc::new(updates::Updates::new(
         release_key.is_some(),
         &context.package_info().version.to_string(),

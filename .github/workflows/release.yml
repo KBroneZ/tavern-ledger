@@ -103,7 +103,11 @@ jobs:
         run: npm ci --ignore-scripts
 
       # `npm run installer` is `tauri build --bundles nsis --no-sign -- --locked`.
+      # The app checks for updates only when built with this variable (a
+      # build from source never does; see docs/development.md).
       - name: Build the installer
+        env:
+          TAVERN_LEDGER_OFFICIAL_BUILD: "1"
         run: npm run installer
 
       # By content: a file the build rewrites with other line ends is unchanged.

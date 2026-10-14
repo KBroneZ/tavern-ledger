@@ -74,6 +74,17 @@ jobs:
       - name: Job conditions
         run: python tools/check_workflow_needs.py
 
+      # Installed apps trust the updater public key in tauri.conf.json, so a
+      # change to it needs `updater-key-change: yes` in the PR description or
+      # a commit message. The description reaches the script as an
+      # environment variable only, never inside a shell command.
+      - name: Updater key change is announced
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: python tools/check_updater_key.py --base "$BASE_SHA"
+
       # Website (web/): unit tests, then two static builds, each followed by
       # the checks on the built files (CSP, nothing inlined, no key but the
       # public one): accounts open with placeholder settings (no Supabase in
