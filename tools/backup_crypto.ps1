@@ -112,8 +112,11 @@ function Invoke-EncryptedBackup {
     try {
         New-Item -ItemType Directory -Force $temp | Out-Null
         # Only the current user may read the temp folder while it holds plaintext.
-        & icacls $temp /inheritance:r /grant:r "$($env:USERNAME):(OI)(CI)F" | Out-Null
-        if ($LASTEXITCODE -ne 0) { throw 'Could not restrict access to the temp folder.' }
+        if ($IsWindows) {
+            & icacls $temp /inheritance:r /grant:r "$($env:USERNAME):(OI)(CI)F" | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Could not restrict access to the temp folder.' }
+        }
+        else { [IO.File]::SetUnixFileMode($temp, 'UserRead, UserWrite, UserExecute') }
         $dir = Join-Path $temp $FolderName
         New-Item -ItemType Directory -Force $dir | Out-Null
         & $Work $dir

@@ -25,7 +25,7 @@ def pwsh(code, env_extra=None, temp=None):
     env.pop("TAVERN_BACKUP_PASSPHRASE", None)
     env.update(env_extra or {})
     if temp:
-        env["TEMP"] = env["TMP"] = str(temp)
+        env["TEMP"] = env["TMP"] = env["TMPDIR"] = str(temp)
     return subprocess.run(
         [PWSH, "-NoProfile", "-NonInteractive", "-Command", code],
         capture_output=True, text=True, timeout=300, env=env, cwd=ROOT,
