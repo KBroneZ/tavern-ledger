@@ -150,8 +150,9 @@ const SCENARIOS = DEFINITIONS.map(([id, game, extra]) => ({
 }));
 
 // The counters panel is a slot of the overlay page (data-panel="counters");
-// its scenario is shown once the page has it.
-const COUNTERS_SLOT = /data-panel="counters"/;
+// its scenario is shown once the page has it switched on (the slot is not
+// `hidden`: the panel is off until the overlay rework).
+const COUNTERS_SLOT = /<div class="slot"(?![^>]*\bhidden\b)[^>]*data-panel="counters"/;
 
 function scenariosFor(overlayHtml) {
   const hasCounters = COUNTERS_SLOT.test(overlayHtml);

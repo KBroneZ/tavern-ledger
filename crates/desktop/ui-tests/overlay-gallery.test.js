@@ -241,6 +241,9 @@ test("the counters scenario is added only once the page has a counters slot", ()
   const withSlot = scenariosFor('<div class="slot" data-panel="counters" data-focus="slot:counters"></div>').map((s) => s.id);
   assert.ok(!without.includes("counters"));
   assert.ok(withSlot.includes("counters"));
+  // A slot the page keeps hidden (the panel is off until the rework) adds no scenario.
+  const off = scenariosFor('<div class="slot" hidden data-panel="counters" data-focus="slot:counters"></div>').map((s) => s.id);
+  assert.ok(!off.includes("counters"));
   assert.equal(withSlot.length, without.length + 1);
   const counters = SCENARIOS.find((s) => s.id === "counters");
   assert.ok(Array.isArray(counters.state.game.counters) && counters.state.game.counters.length >= 3);
@@ -329,10 +332,12 @@ test("the build does not touch the page's own files", () => {
   assert.deepEqual(pageScripts.map((f) => read(path.join(UI, f))), before);
 });
 
-test("the counters scenario shows in the build only when the page has the slot", () => {
+test("the counters scenario shows in the build only when the page has the slot switched on", () => {
   const { dir, text } = buildToTemp();
   try {
-    assert.equal(text.includes('"counters"'), html.includes('data-panel="counters"'));
+    // The slot is hidden while the panel is off until the overlay rework.
+    const on = /<div class="slot"(?![^>]*hidden)[^>]*data-panel="counters"/.test(html);
+    assert.equal(text.includes('"counters"'), on);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

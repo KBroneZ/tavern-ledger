@@ -55,7 +55,17 @@
 
   const hasRows = (counters) => rows(counters).length > 0;
 
-  const api = { rows, hasRows };
+  // The panel is off until the full overlay rework (D-139: the reading stays,
+  // shipping waits). The data (LiveGame.counters) and these words stay as they
+  // are. To turn the panel on: set ENABLED to true and remove `hidden` from the
+  // counters slot in overlay.html (a test checks that the two agree).
+  const ENABLED = false;
+
+  // The panel ids that exist while the panel is off: the counters panel is
+  // dropped from every list the page builds (stack, toolbar, layout editor).
+  const panelIds = (ids) => ids.filter((id) => id !== "counters" || ENABLED);
+
+  const api = { rows, hasRows, ENABLED, panelIds };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLCounters = api;
 })();

@@ -10,7 +10,8 @@
   const { listen: onEvent } = window.__TAURI__.event;
   const I18n = window.TLI18n;
 
-  const PANEL_IDS = ["status", "counters", "tribes", "opponents", "legend", "lobby"];
+  // The counters panel is off until the overlay rework (counters-words.js).
+  const PANEL_IDS = window.TLCounters.panelIds(["status", "counters", "tribes", "opponents", "legend", "lobby"]);
   // The panels' names are read when used, so they follow the language.
   const SLOT_NAMES = {
     status: () => I18n.t("ov.slot.status"),
@@ -20,7 +21,7 @@
     legend: () => I18n.t("ov.slot.legend"),
     lobby: () => I18n.t("ov.slot.lobby"),
   };
-  const TOGGLE_IDS = ["status", "counters", "tribes", "opponents", "lobby"];
+  const TOGGLE_IDS = window.TLCounters.panelIds(["status", "counters", "tribes", "opponents", "lobby"]);
   const slotName = (id) => SLOT_NAMES[id]();
   const panelTitle = (id) => I18n.t("ov.slot.panel", { name: slotName(id) });
   // Rough limits while dragging; the app enforces the real ones when it saves.
