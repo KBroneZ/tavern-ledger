@@ -26,10 +26,10 @@ test("the size is shown in megabytes with one decimal, the way Windows shows it"
   assert.ok(RELEASE.bytes > 1_000_000 && RELEASE.bytes < 50_000_000);
 });
 
-test("the facts are those of the published v0.2.1 release, with v0.1.0 kept below it", () => {
-  assert.equal(RELEASE.version, "0.2.1");
-  assert.equal(RELEASE.sha256, "1e69f959b7b593ec4703e7cedf050647df7794b208a9e48ff23aeaac53120b9c");
-  assert.deepEqual(releases.map((r) => r.version), ["0.2.1", "0.1.0"]);
+test("the facts are those of the published v0.2.2 release, with v0.2.1 and v0.1.0 kept below it", () => {
+  assert.equal(RELEASE.version, "0.2.2");
+  assert.equal(RELEASE.sha256, "03bfc1b0d0d44008b404f3ca2fa322144f94498016707719c3ec25d8d5045157");
+  assert.deepEqual(releases.map((r) => r.version), ["0.2.2", "0.2.1", "0.1.0"]);
 });
 
 test("the facts are the newest release recorded from GitHub, not typed by hand", () => {
@@ -42,9 +42,9 @@ test("the facts are the newest release recorded from GitHub, not typed by hand",
 });
 
 test("the signed list of hashes is linked only for a release that has one", () => {
-  assert.equal(RELEASE.sums, true, "v0.2.1 has a signed SHA256SUMS");
+  assert.equal(RELEASE.sums, true, "v0.2.2 has a signed SHA256SUMS");
   assert.deepEqual(sumsUrls(), {
-    list: "https://github.com/KBroneZ/tavern-ledger/releases/download/v0.2.1/SHA256SUMS",
-    signature: "https://github.com/KBroneZ/tavern-ledger/releases/download/v0.2.1/SHA256SUMS.minisig",
+    list: "https://github.com/KBroneZ/tavern-ledger/releases/download/v0.2.2/SHA256SUMS",
+    signature: "https://github.com/KBroneZ/tavern-ledger/releases/download/v0.2.2/SHA256SUMS.minisig",
   });
 });
