@@ -19,7 +19,6 @@ use tauri_plugin_autostart::ManagerExt;
 
 use crate::applog::Logged;
 use crate::overlay::lock;
-use crate::overlay_layout::Detail;
 use crate::AppState;
 
 pub const FILE: &str = "settings.json";
@@ -33,6 +32,16 @@ pub enum Language {
     #[default]
     En,
     Es,
+}
+
+/// Simple or Advanced for the main window (T-344, D-067). The overlay has
+/// one version and no such switch (D-146).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Detail {
+    #[default]
+    Simple,
+    Advanced,
 }
 
 /// What is saved. `language: None` follows the system language; a missing

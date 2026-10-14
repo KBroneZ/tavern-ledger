@@ -53,12 +53,11 @@
   }
 
   // A line under the ratings when there are none to show and the reason is
-  // worth saying. Advanced also says how to get them; a failure always shows.
-  function ratingNote(view, advanced) {
+  // worth saying; a failure always shows.
+  function ratingNote(view) {
     const status = view && view.rating ? view.rating.status : null;
     if (status === "unsupported_version") return I18n.t("lobby.rating.unsupported");
     if (status === "no_access") return I18n.t("lobby.rating.noAccess");
-    if (status === "off" && advanced) return I18n.t("lobby.rating.off");
     return null;
   }
 

@@ -204,12 +204,6 @@ const DUOS_BOARDS = (rounds) => [
   { role: "opponent_teammate", seat: 2, round: rounds[2] },
 ];
 
-const possibleFor = (seat, tier, reason, ids) => ({
-  seat, tier, min_tier: reason === "early_turn" ? 1 : tier - 1, reason,
-  tribes: ["BEAST", "DEMON", "DRAGON", "MURLOC", "UNDEAD"], tribes_source: "inferred", tribes_basis: "tavern_confirmed", tribes_complete: true,
-  cards: ids.map(([id, t]) => ({ id, tier: t })), source: "possible", missing: null,
-});
-
 module.exports = {
-  NAMES, sourced, hero, minion, board, opponent, record, trinket, soloGame, duosGame, SOLO_ODDS, DUOS_BOARDS, possibleFor, BOARDS,
+  NAMES, sourced, hero, minion, board, opponent, record, trinket, soloGame, duosGame, SOLO_ODDS, DUOS_BOARDS, BOARDS,
 };

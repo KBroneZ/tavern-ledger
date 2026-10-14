@@ -63,11 +63,13 @@ test("the stand-in knows every event the page's scripts listen to", () => {
 });
 
 test("the stand-in answers the overlay_set_ calls with the settings view and the data commands with data", async () => {
-  const scenario = SCENARIOS.find((s) => s.id === "solo-simple");
+  const scenario = SCENARIOS.find((s) => s.id === "solo");
   const tauri = bridge.createTauri(scenario, "en");
   const { invoke } = tauri.core;
-  const view = await invoke("overlay_set_detail", { detail: "advanced" });
-  assert.equal(view.detail, "simple", "a setter changes nothing: the frame stays as the scenario says");
+  const view = await invoke("overlay_set_theme", { theme: "contrast" });
+  assert.equal(view.theme, "glass", "a setter changes nothing: the frame stays as the scenario says");
+  assert.equal("detail" in view, false, "the overlay has no detail mode");
+  await assert.rejects(() => invoke("overlay_set_detail", { detail: "advanced" }), /overlay_set_detail/);
   assert.deepEqual(await invoke("overlay_settings"), view);
   assert.equal(await invoke("overlay_state"), scenario.state.game);
   assert.deepEqual(await invoke("app_settings"), { language: "en" });
@@ -76,7 +78,7 @@ test("the stand-in answers the overlay_set_ calls with the settings view and the
 });
 
 test("card_names answers each id from the scenario's names, in the language, and null for the rest", async () => {
-  const scenario = SCENARIOS.find((s) => s.id === "solo-advanced");
+  const scenario = SCENARIOS.find((s) => s.id === "solo");
   const [id, names] = Object.entries(scenario.state.names)[0];
   const en = await bridge.createTauri(scenario, "en").core.invoke("card_names", { ids: [id, "EX_NOT_A_CARD"], lang: "en" });
   const es = await bridge.createTauri(scenario, "es").core.invoke("card_names", { ids: [id], lang: "es" });
@@ -94,7 +96,7 @@ test("overlay-hover is sent to a listener once it listens, when the scenario has
   assert.equal(got.length, 1);
   assert.deepEqual(Object.keys(got[0]).sort(), ["card", "member", "place", "slot"]);
   assert.deepEqual(Object.keys(got[0].card).sort(), ["max_height", "width", "x", "y"]);
-  const quiet = bridge.createTauri(SCENARIOS.find((s) => s.id === "solo-simple"), "en");
+  const quiet = bridge.createTauri(SCENARIOS.find((s) => s.id === "solo"), "en");
   const none = [];
   await quiet.event.listen("overlay-hover", (event) => none.push(event));
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -151,7 +153,7 @@ test("scenario ids are unique and the list covers what the task asks for", () =>
   const ids = SCENARIOS.map((s) => s.id);
   assert.equal(new Set(ids).size, ids.length);
   for (const id of [
-    "waiting", "lobby", "solo-simple", "solo-advanced", "duos", "odds", "gap-no-board-seen", "gap-no-card-data",
+    "waiting", "lobby", "solo", "duos", "gap-no-board-seen", "gap-no-card-data",
     "gap-not-modelled", "gap-bad-board", "gap-order", "gap-missing-board", "hover-solo", "hover-duos", "damage-cap",
     "unreadable", "game-over", "high-contrast",
   ]) {
@@ -203,32 +205,31 @@ test("every card and hero id is an invented one the page accepts, and has a name
 });
 
 test("the odds scenarios give odds or the note the page says in words", () => {
-  const view = (id, advanced) => oddsView(SCENARIOS.find((s) => s.id === id).state.game.odds, advanced, () => null);
-  assert.equal(view("odds", false).kind, "odds");
-  assert.equal(view("odds", true).kind, "odds");
-  assert.ok(view("odds", true).lines.length > 0, "Advanced adds the damage lines");
+  const view = (id) => oddsView(SCENARIOS.find((s) => s.id === id).state.game.odds);
+  assert.equal(view("solo").kind, "odds");
   for (const gap of ["no-board-seen", "no-card-data", "not-modelled", "bad-board", "order", "missing-board"]) {
-    assert.equal(view(`gap-${gap}`, false).kind, "note", gap);
+    assert.equal(view(`gap-${gap}`).kind, "note", gap);
   }
 });
 
 test("a hover scenario hovers a place that is an opponent's and not the player's", () => {
-  for (const id of ["hover-solo", "hover-duos", "hover-advanced"]) {
+  for (const id of ["hover-solo", "hover-duos"]) {
     const s = SCENARIOS.find((x) => x.id === id);
     const g = s.state.game;
     const target = g.opponents.find((o) => o.place.value === s.state.hover.place);
     assert.ok(target, `${id}: nobody is at the hovered place`);
     assert.notEqual(g.own_place.value, s.state.hover.place);
-    if (id !== "hover-advanced") assert.ok(target.boards.length > 0);
+    assert.ok(target.boards.length > 0);
   }
   assert.equal(SCENARIOS.find((s) => s.id === "hover-duos").state.hover.member, 0);
   assert.equal(SCENARIOS.find((s) => s.id === "hover-solo").state.hover.member, null);
 });
 
 test("a frame is built per scenario and example data stays out of the live shapes", () => {
-  const solo = SCENARIOS.find((s) => s.id === "solo-simple").state;
-  assert.equal(solo.settings.detail, "simple");
-  assert.equal(SCENARIOS.find((s) => s.id === "solo-advanced").state.settings.detail, "advanced");
+  for (const s of SCENARIOS) assert.equal("detail" in s.state.settings, false, `${s.id} has no detail mode`);
+  for (const id of ["solo-simple", "solo-advanced", "hover-advanced", "odds"]) {
+    assert.equal(SCENARIOS.some((s) => s.id === id), false, `${id} is gone with the Advanced overlay`);
+  }
   assert.equal(SCENARIOS.find((s) => s.id === "high-contrast").state.settings.theme, "contrast");
   assert.equal(SCENARIOS.find((s) => s.id === "waiting").state.game, null);
   assert.equal(SCENARIOS.find((s) => s.id === "unreadable").state.game.phase, "unreadable");

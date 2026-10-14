@@ -38,32 +38,18 @@ const CAPTIONS = {
       rule: "Solo tu propia puntuación y tus propias partidas. No se lee ni se muestra la de nadie más.",
     },
   },
-  "solo-simple": {
+  solo: {
     en: {
-      title: "Solo shop turn, Simple",
+      title: "Solo shop turn",
       sees: "The default view during your shop turn: the lobby's tribes as short chips, then one row per opponent in the game's leaderboard order with their portrait, tavern tier, health and triples. The opponent the game marks as next is lit, with the combat odds under it.",
-      source: LOG.en + " Tribes marked \"inferred\" were worked out from what the tavern offered you.",
-      rule: "Every number is on your own screen already: the game's leaderboard shows tiers, health, triples and who is next. The \"inferred\" mark says when a value is a deduction and not something the game printed.",
+      source: LOG.en + " Tribes marked \"inferred\" were worked out from what the tavern offered you. The combat odds are worked out on your PC by simulating a few thousand fights between your board and their last seen board, only during your shop turn.",
+      rule: "Every number is on your own screen already: the game's leaderboard shows tiers, health, triples and who is next. The \"inferred\" mark says when a value is a deduction and not something the game printed. The odds come from boards you have already seen, not a peek at their current board.",
     },
     es: {
-      title: "Turno de tienda en Solo, Simple",
+      title: "Turno de tienda en Solo",
       sees: "La vista por defecto en tu turno de tienda: las tribus de la partida como etiquetas cortas y una fila por rival, en el orden de la clasificación del juego, con su retrato, nivel de taberna, vida y tripletes. El rival que el juego marca como siguiente aparece resaltado, con las probabilidades de combate debajo.",
-      source: LOG.es + " Las tribus marcadas «deducido» se calcularon a partir de lo que la taberna te ofreció.",
-      rule: "Todos los números ya están en tu pantalla: la clasificación del juego enseña niveles, vida, tripletes y quién es el siguiente. La marca «deducido» avisa cuando un valor es una deducción y no algo que el juego mostró.",
-    },
-  },
-  "solo-advanced": {
-    en: {
-      title: "The same turn, Advanced",
-      sees: "Everything Simple shows plus: your hero, the mode and your last combat, the tribes seen in the tavern, a block for the next opponent with the last board you saw of theirs, and a head line for every opponent with their name and your record against them. Small marks say where each value comes from.",
-      source: LOG.en + " Names and pictures come from the public card database (HearthstoneJSON), in the app's language.",
-      rule: "Boards are only ones that were on your screen in a past combat, shown as of the turn you saw them, never a live view of their shop. Source marks keep a guess from passing as something seen.",
-    },
-    es: {
-      title: "El mismo turno, Avanzado",
-      sees: "Todo lo de Simple y además: tu héroe, el modo y tu último combate, las tribus vistas en la taberna, un bloque del siguiente rival con el último tablero que viste de él, y una línea de cabecera por rival con su nombre y tu historial contra él. Pequeñas marcas dicen de dónde sale cada valor.",
-      source: LOG.es + " Los nombres y las imágenes salen de la base pública de cartas (HearthstoneJSON), en el idioma de la app.",
-      rule: "Los tableros son solo los que estuvieron en tu pantalla en un combate pasado, con el turno en que los viste; nunca una vista en directo de su tienda. Las marcas de origen evitan que una suposición pase por algo visto.",
+      source: LOG.es + " Las tribus marcadas «deducido» se calcularon a partir de lo que la taberna te ofreció. Las probabilidades de combate se calculan en tu PC simulando unos miles de combates entre tu tablero y el último tablero visto del rival, solo durante tu turno de tienda.",
+      rule: "Todos los números ya están en tu pantalla: la clasificación del juego enseña niveles, vida, tripletes y quién es el siguiente. La marca «deducido» avisa cuando un valor es una deducción y no algo que el juego mostró. Las probabilidades salen de tableros que ya has visto, no de un vistazo a su tablero actual.",
     },
   },
   duos: {
@@ -78,20 +64,6 @@ const CAPTIONS = {
       sees: "En Dúos cada fila es un equipo de dos: dos retratos con sus niveles, la vida y los tripletes del equipo. Tu propio equipo nunca aparece como rival.",
       source: LOG.es,
       rule: "Solo los valores de los equipos rivales que enseña la clasificación del juego. No se lee el tablero ni la mano de tu compañero.",
-    },
-  },
-  odds: {
-    en: {
-      title: "Combat odds",
-      sees: "Under the next opponent: your chances to win, tie or lose against the last board you saw of theirs, and how old that board is. Advanced adds the likely damage each way.",
-      source: "Worked out on your PC by simulating a few thousand fights between your board and their last seen board, only during your shop turn.",
-      rule: "A calculation from boards you have already seen, not a peek at their current board. It says when the board is old, and a \"≈\" marks a result that is approximate.",
-    },
-    es: {
-      title: "Probabilidades de combate",
-      sees: "Bajo el siguiente rival: tus posibilidades de ganar, empatar o perder contra el último tablero que viste de él, y qué antigüedad tiene. Avanzado añade el daño probable en cada caso.",
-      source: "Calculadas en tu PC simulando unos miles de combates entre tu tablero y el último tablero visto del rival, solo durante tu turno de tienda.",
-      rule: "Es un cálculo a partir de tableros que ya has visto, no un vistazo a su tablero actual. Avisa cuando el tablero es antiguo, y un «≈» marca un resultado aproximado.",
     },
   },
   "gap-no-board-seen": {
@@ -204,20 +176,6 @@ const CAPTIONS = {
       sees: "En Dúos la tarjeta muestra al héroe del equipo que está bajo el puntero, con la vida compartida del equipo.",
       source: LOG.es,
       rule: "Igual que en Solo: solo tableros que se te enseñaron, un héroe cada vez, asignado a su asiento.",
-    },
-  },
-  "hover-advanced": {
-    en: {
-      title: "Hover card, Advanced",
-      sees: "Advanced adds trinket names, your record against them and, for a hero you have not met yet, a clearly labelled list of minions they could have.",
-      source: LOG.en + " The possible minions come from the public card database and the lobby's tribes.",
-      rule: "The list of possible minions is marked \"possible\" and never looks like something seen: it is what the game's rules allow at their tavern tier, not what they have.",
-    },
-    es: {
-      title: "Tarjeta al pasar el ratón, Avanzado",
-      sees: "Avanzado añade los nombres de las baratijas, tu historial contra el rival y, para un héroe que aún no has enfrentado, una lista claramente marcada de esbirros que podría tener.",
-      source: LOG.es + " Los esbirros posibles salen de la base pública de cartas y de las tribus de la partida.",
-      rule: "La lista de esbirros posibles lleva la marca «posible» y nunca parece algo visto: es lo que permiten las reglas del juego en su nivel de taberna, no lo que tiene.",
     },
   },
   "damage-cap": {

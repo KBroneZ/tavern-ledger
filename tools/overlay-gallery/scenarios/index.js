@@ -6,7 +6,7 @@
 const data = require("./data.js");
 const { CAPTIONS } = require("./captions.js");
 
-const { sourced, soloGame, duosGame, SOLO_ODDS, DUOS_BOARDS, possibleFor } = data;
+const { sourced, soloGame, duosGame, SOLO_ODDS, DUOS_BOARDS } = data;
 
 const SCREEN_W = 1920;
 const SCREEN_H = 1080;
@@ -38,17 +38,6 @@ const soloWithOdds = withOdds(solo, SOLO_ODDS);
 const duos = duosGame();
 const duosOdds = {
   ...SOLO_ODDS, seat: 1, seen_round: 5, boards: DUOS_BOARDS([6, 5, 5]), won: 0.47, tied: 0.12, lost: 0.41,
-};
-
-// Only the Orrin opponent (place 5) has no board seen: the Advanced hover
-// card lists what they could have.
-const advancedHoverGame = {
-  ...soloWithOdds,
-  opponents: soloWithOdds.opponents.map((o) =>
-    o.seats[0] === 5
-      ? { ...o, possible: [possibleFor(5, 4, "not_met_yet", [["EX_M_HOUND", 3], ["EX_M_BRUTE", 3], ["EX_M_WARDEN", 4], ["EX_M_CRAWLER", 4]])] }
-      : o,
-  ),
 };
 
 // The game's own mark for the opponent being fought goes with the game.
@@ -90,19 +79,16 @@ const LOBBY_AREA = { x: 0, y: 0, w: 290, h: 180 };
 const FOCUS = {
   waiting: STATUS_BOX,
   lobby: LOBBY_AREA,
-  "solo-simple": STACK_SMALL,
-  "solo-advanced": STACK_TALL,
+  solo: STACK_SMALL,
   duos: STACK_DUOS,
-  odds: STACK_TALL,
   "gap-no-board-seen": STACK_SMALL,
   "gap-no-card-data": STACK_SMALL,
-  "gap-not-modelled": STACK_TALL,
+  "gap-not-modelled": STACK_SMALL,
   "gap-bad-board": STACK_SMALL,
   "gap-order": STACK_DUOS,
   "gap-missing-board": STACK_DUOS,
   "hover-solo": HOVER_CARD_AREA,
   "hover-duos": HOVER_CARD_AREA,
-  "hover-advanced": HOVER_CARD_AREA,
   "damage-cap": STACK_SMALL,
   unreadable: STATUS_BOX,
   "game-over": STACK_SMALL,
@@ -114,19 +100,16 @@ const FOCUS = {
 const DEFINITIONS = [
   ["waiting", null, {}],
   ["lobby", null, { lobby }],
-  ["solo-simple", soloWithOdds, {}],
-  ["solo-advanced", soloWithOdds, { settings: { detail: "advanced" } }],
+  ["solo", soloWithOdds, {}],
   ["duos", withOdds(duos, duosOdds), {}],
-  ["odds", soloWithOdds, { settings: { detail: "advanced" } }],
   ["gap-no-board-seen", withOdds(solo, gap("no_board_seen")), {}],
   ["gap-no-card-data", withOdds(solo, gap("no_card_data", { seen_round: 6 })), {}],
-  ["gap-not-modelled", withOdds(solo, gap("not_modelled", { seen_round: 6, missing: ["EX_M_WARDEN"] })), { settings: { detail: "advanced" } }],
+  ["gap-not-modelled", withOdds(solo, gap("not_modelled", { seen_round: 6, missing: ["EX_M_WARDEN"] })), {}],
   ["gap-bad-board", withOdds(solo, gap("bad_board", { seen_round: 6 })), {}],
   ["gap-order", withOdds(duos, gap("order")), {}],
   ["gap-missing-board", withOdds(duos, gap("missing_board", { boards: DUOS_BOARDS([6, null, null]) })), {}],
   ["hover-solo", soloWithOdds, { hover: hover(1, null) }],
   ["hover-duos", withOdds(duos, duosOdds), { hover: hover(1, 0) }],
-  ["hover-advanced", advancedHoverGame, { settings: { detail: "advanced" }, hover: hover(5, null) }],
   ["damage-cap", { ...solo, damage_cap: 15 }, {}],
   ["unreadable", unreadable, {}],
   ["game-over", gameOver, {}],
@@ -142,7 +125,7 @@ const SCENARIOS = DEFINITIONS.map(([id, game, extra]) => ({
     lobby: null,
     hover: null,
     ...extra,
-    settings: { theme: "glass", detail: "simple", ...extra.settings },
+    settings: { theme: "glass", ...extra.settings },
     names: data.NAMES,
   },
   focus: FOCUS[id],

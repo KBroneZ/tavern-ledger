@@ -25,12 +25,12 @@ test("every kind of the contract has a label, a value, a where line and a senten
   const rows = counters.rows(KINDS);
   assert.deepEqual(rows.map((r) => r.kind), KINDS.map((k) => k.kind));
   for (const r of rows) {
-    for (const part of ["label", "value", "where", "said"]) assert.ok(r[part].length > 0, `${r.kind} ${part}`);
+    for (const part of ["label", "value", "said"]) assert.ok(r[part].length > 0, `${r.kind} ${part}`);
     assert.ok(r.said.endsWith("."), r.kind);
   }
 });
 
-test("Simple shows a short label and value", () => {
+test("a row is a short label and value", () => {
   const [gem, spell, undead, knights, , , , , rolls, gold] = counters.rows(KINDS);
   assert.deepEqual([gem.label, gem.value], ["Blood Gem", "+3/+2"]);
   assert.deepEqual([spell.label, spell.value], ["Spells", "+2/+0"]);
@@ -40,9 +40,9 @@ test("Simple shows a short label and value", () => {
   assert.deepEqual([gold.label, gold.value], ["Next turn", "+3 gold"]);
 });
 
-test("Advanced says where the game shows it", () => {
+test("a row has no \"where the game shows it\" line", () => {
   const [gem] = counters.rows(KINDS);
-  assert.equal(gem.where, "from your Blood Gems");
+  assert.equal("where" in gem, false);
 });
 
 test("the screen-reader label is a full sentence with the numbers", () => {
@@ -58,7 +58,7 @@ test("Spanish has the same kinds, in words of its own", () => {
   const es = counters.rows(KINDS);
   assert.equal(es.length, en.length);
   es.forEach((r, i) => {
-    for (const part of ["label", "where", "said"]) assert.notEqual(r[part], en[i][part], `${r.kind} ${part}`);
+    for (const part of ["label", "said"]) assert.notEqual(r[part], en[i][part], `${r.kind} ${part}`);
   });
   assert.equal(es[0].value, "+3/+2");
   assert.equal(es[2].value, "+4 de ataque");
