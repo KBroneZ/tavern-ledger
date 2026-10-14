@@ -1,17 +1,25 @@
 <#
 .SYNOPSIS
 Weekly backup of the Supabase project until it moves to Pro (D-020, T-104a).
-Keep .localackups on an encrypted disk (BitLocker): data.sql holds every
-account's email and password hash.
+Writes one encrypted file; no plaintext is kept on disk.
 
 .DESCRIPTION
 Runs on the developer's own machine, never in CI (the repo is public).
-Writes to .local\backups\<UTC time>\ :
+Each run builds, in a temp folder outside the repo, a folder with
   roles.sql, schema.sql, data.sql   supabase db dump
   storage\games\<path>              every file of the private `games` bucket
   manifest.json                     file list with sizes and SHA-256
+zips it and encrypts the zip into <OutDir>\tl-backups-<UTC time>.tlenc
+(TLENC1: PBKDF2-SHA256 600 000 iterations + AES-256-GCM). Open one with
+decrypt-backups.ps1 from the same folder. The temp folder is deleted when the
+run ends, also when it fails; a failed run leaves no file in OutDir.
 Backups older than -KeepDays (default 35) are deleted, so a deleted account
 leaves the backups within that time; the privacy policy (T-104b) states it.
+
+Passphrase (at least 12 characters): read with Read-Host -AsSecureString and
+asked twice, or taken from the environment variable TAVERN_BACKUP_PASSPHRASE
+for scheduled runs. It is never written to disk, logged or put on a command
+line. Keep it somewhere safe: without it a backup cannot be opened.
 
 Hosted project (default): needs `npx supabase link` done once, and
 .local\supabase.env with SUPABASE_URL and SUPABASE_SECRET_KEY lines (the
@@ -19,23 +27,31 @@ project's secret key, sb_secret_...; legacy service_role keys are refused, D-053
 -Local backs up the local stack instead (for testing the script).
 Keys are only read into memory, never printed or written to the backup.
 
+.PARAMETER OutDir
+Where the .tlenc files go. Default: Documents\TavernLedger-backups.
+
+.PARAMETER KeepDays
+Encrypted backups in OutDir older than this are deleted (7 to 365, default 35).
+
 .EXAMPLE
 pwsh tools\backup_supabase.ps1
 pwsh tools\backup_supabase.ps1 -Local
+pwsh tools\backup_supabase.ps1 -OutDir D:\backups
 #>
 #Requires -Version 7
 [CmdletBinding()]
 param(
     [switch]$Local,
+    [string]$OutDir = (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'TavernLedger-backups'),
     [ValidateRange(7, 365)]
     [int]$KeepDays = 35
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'backup_crypto.ps1')
 
 $repo = Split-Path -Parent $PSScriptRoot
-$backupRoot = Join-Path $repo '.local\backups'
 $bucket = 'games'
 $timeoutSec = 30
 $pageSize = 1000
@@ -105,33 +121,19 @@ function Get-ObjectNames($conn, [string]$prefix) {
     return $names
 }
 
-function Remove-OldBackups {
-    $cutoff = (Get-Date).ToUniversalTime().AddDays(-$KeepDays)
-    Get-ChildItem $backupRoot -Directory -ErrorAction SilentlyContinue |
-        Where-Object {
-            $_.Name -match '^\d{8}-\d{6}$' -and
-            [datetime]::ParseExact($_.Name, 'yyyyMMdd-HHmmss', $null) -lt $cutoff
-        } |
-        ForEach-Object {
-            Write-Host "Deleting backup older than $KeepDays days: $($_.Name)"
-            Remove-Item -Recurse -Force -Confirm:$false $_.FullName
-        }
-}
-
 # Old backups go first, so a failing backup never keeps deleted users' data
 # past -KeepDays.
-Remove-OldBackups
+Remove-ExpiredBackups -OutDir $OutDir -LegacyDir (Join-Path $repo '.localackups') -KeepDays $KeepDays
 
+# Asked before anything is dumped, so a typo or a short passphrase costs nothing.
+$passphrase = Read-BackupPassphrase
 $conn = Get-Connection
 $stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss')
-$dir = Join-Path $backupRoot $stamp
-New-Item -ItemType Directory -Force $dir | Out-Null
-try {
-    # Only the current user may read the backup (it holds every account's data).
-    & icacls $dir /inheritance:r /grant:r "$($env:USERNAME):(OI)(CI)F" | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw 'Could not restrict access to the backup folder.' }
-    Write-Host "Backup to .local\backups\$stamp"
+$outFile = Join-Path $OutDir "tl-backups-$stamp.tlenc"
+Write-Host "Backup to $outFile"
 
+Invoke-EncryptedBackup -OutFile $outFile -FolderName $stamp -Passphrase $passphrase -Work {
+    param($dir)
     Write-Host 'Database...'
     Invoke-Dump (Join-Path $dir 'roles.sql') @('--role-only')
     Invoke-Dump (Join-Path $dir 'schema.sql') @()
@@ -166,9 +168,5 @@ try {
         files       = $manifest
     } | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 (Join-Path $dir 'manifest.json')
     Write-Host "  $($manifest.Count) files"
-} catch {
-    # A half-written backup is worse than none: it looks complete.
-    Remove-Item -Recurse -Force -Confirm:$false $dir -ErrorAction SilentlyContinue
-    throw
 }
 Write-Host 'Done.'
