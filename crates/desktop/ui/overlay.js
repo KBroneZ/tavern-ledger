@@ -435,6 +435,8 @@ function renderOdds(g, advanced) {
     }
     grid.setAttribute("aria-hidden", "true");
     box.append(grid);
+    // A game build the rules were not checked against warns here (D-145).
+    if (v.warning) box.append(el("p", "odds-warning", v.warning));
     // "≈" when a card is played with a gap; Advanced names them.
     if (v.age) box.append(el("p", "odds-age", v.approx ? `≈ ${v.age}` : v.age));
   }

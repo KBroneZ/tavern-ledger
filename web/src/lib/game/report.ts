@@ -26,6 +26,8 @@ const MAX_INT = 2 ** 31 - 1;
 const MAX_HEALTH = 100_000;
 const MAX_COUNT = 10_000;
 const MAX_DBF_ID = 10_000_000;
+/** Far above any Hearthstone build number (six digits today). */
+const MAX_BUILD = 99_999_999;
 // The parser keeps at most 4 Dark Gifts on a minion (crates/bg-parser/src/gifts.rs).
 const MAX_GIFTS = 4;
 const MAX_TURN = 100;
@@ -143,6 +145,8 @@ export interface Choice {
 }
 
 export interface Report {
+  /** The Hearthstone build the game was played on; null when the file does not say. */
+  build: number | null;
   status: "ok" | "incomplete" | "unsupported" | null;
   mode: "solo" | "duos" | null;
   localPlayerId: number | null;
@@ -446,6 +450,7 @@ function report(r: Reader, o: Obj): Report {
   const gameType = r.oneOf(o.game_type, ["GT_BATTLEGROUNDS", "GT_BATTLEGROUNDS_DUO"] as const);
   const mode = gameType === "GT_BATTLEGROUNDS" ? "solo" : gameType === "GT_BATTLEGROUNDS_DUO" ? "duos" : null;
   return {
+    build: r.int(o.build, 1, MAX_BUILD),
     status: r.oneOf(o.status, ["ok", "incomplete", "unsupported"] as const),
     mode,
     localPlayerId: r.int(o.local_player_id, 1, 64),

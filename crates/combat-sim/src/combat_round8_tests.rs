@@ -252,3 +252,31 @@ fn ghastcoiler_summons_only_what_fits_on_the_board() {
         assert_eq!(c.sides[0].units.len(), 7);
     });
 }
+
+/// Tentacle of C'Thun (build 254477): the odds come back, with the card named
+/// as approximate and its reason, in both forms.
+#[test]
+fn tentacle_of_cthun_plays_as_its_printed_minion_and_is_named_approximate() {
+    use crate::trials::{simulate, Options, Verdict};
+    for (id, attack) in [
+        ("TB_BaconShop_HERO_29_Buddy", 3),
+        ("TB_BaconShop_HERO_29_Buddy_G", 6),
+    ] {
+        let tentacle = Minion::new(id, attack, attack).tier(2);
+        let foe = plain(1, 1);
+        let Verdict::Odds(o) =
+            simulate(&band(vec![tentacle]), &band(vec![foe]), &Options::default())
+                .expect("a valid board")
+        else {
+            panic!("{id} is refused");
+        };
+        assert_eq!(o.won, o.trials, "{id}");
+        assert!(
+            o.coverage
+                .approximate
+                .iter()
+                .any(|(c, why)| c == id && why.contains("another friendly minion gains stats")),
+            "{id}"
+        );
+    }
+}

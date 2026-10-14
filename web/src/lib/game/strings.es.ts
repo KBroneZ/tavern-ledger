@@ -77,6 +77,7 @@ export const ES: Record<GameStringKey, string> = {
   "turns.inferred.note": "Deducido de la vida que perdió cada lado; el daño sin marca es el golpe del propio juego.",
   "turns.odds.loading": "Calculando las probabilidades",
   "turns.odds.note": "La probabilidad de ganar la da el simulador, con los tableros tal como combatieron. Una marca dice por qué cuando no pasó lo más probable. Abre un turno para ver sus tableros y su tienda.",
+  "turns.odds.newBuild": "Versión nueva del juego ({build}): las probabilidades aún no se han comprobado con ella.",
   "turns.odds.failed": "Tu navegador no pudo calcular las probabilidades. El resto de la partida se muestra como siempre.",
   "turns.replay": "Ver este combate",
 

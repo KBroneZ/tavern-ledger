@@ -78,6 +78,8 @@ export interface SimState {
   opponent: SimBoard[];
   /** The game's cap on damage to a hero; null is none. */
   cap: number | null;
+  /** The Hearthstone build of the loaded game; null for boards built by hand or a file that does not say. */
+  build: number | null;
 }
 
 export type Side = "player" | "opponent";
@@ -88,7 +90,7 @@ export const newKey = (): number => nextKey++;
 export const emptyBoard = (): SimBoard => ({ tier: null, minions: [] });
 
 export function emptyState(mode: Mode = "solo"): SimState {
-  return { mode, player: [emptyBoard()], opponent: [emptyBoard()], cap: null };
+  return { mode, player: [emptyBoard()], opponent: [emptyBoard()], cap: null, build: null };
 }
 
 /** A round that can be loaded: it has a board on each side. */
@@ -187,6 +189,7 @@ export function fromRound(record: GameRecord, roundNumber: number, cards: CardIn
       player: own.slice(0, keep).map((f) => board(f, isLocal(f) ? ownTier : null)),
       opponent: opp.slice(0, keep).map((f) => board(f, null)),
       cap: null,
+      build: report.build,
     },
     skipped,
     unknownGifts,
@@ -341,5 +344,5 @@ export function toRequest(state: SimState, cards: CardIndex): string {
     const kept = boards.filter((b, i) => i === 0 || b.minions.length > 0);
     return kept.map(board);
   };
-  return JSON.stringify({ player: team(state.player), opponent: team(state.opponent), damage_cap: state.cap });
+  return JSON.stringify({ player: team(state.player), opponent: team(state.opponent), damage_cap: state.cap, build: state.build });
 }

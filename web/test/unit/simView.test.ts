@@ -66,6 +66,24 @@ test("an answer is read whole or not at all", () => {
   assert.deepEqual(readAnswer(JSON.stringify({ engine: "0.4.0", status: "no_card_data", missing: ["BG_X"] })), { kind: "no_card_data", engine: "0.4.0", missing: ["BG_X"] });
 });
 
+test("a new game build warns beside the odds, and the odds stay; an engine without the field gives none", () => {
+  const warned = readAnswer(JSON.stringify({ ...ODDS, new_build: 999_999 }));
+  assert.equal(warned.kind === "odds" && warned.newBuild, 999_999);
+  const out = text(resultView({ result: { kind: "answer", answer: warned }, cards, cap: null }));
+  assert.match(out, /New game build \(999999\): odds not checked yet/);
+  assert.match(out, /62%/);
+  setLang("es");
+  const spanish = text(resultView({ result: { kind: "answer", answer: warned }, cards, cap: null }));
+  setLang("en");
+  assert.match(spanish, /Versión nueva del juego \(999999\): probabilidades sin comprobar aún/);
+  for (const none of [{ ...ODDS }, { ...ODDS, new_build: null }]) {
+    const a = readAnswer(JSON.stringify(none));
+    assert.equal(a.kind === "odds" && a.newBuild, null);
+    assert.doesNotMatch(text(resultView({ result: { kind: "answer", answer: a }, cards, cap: null })), /New game build/);
+  }
+  for (const bad of [0, -1, 1.5, "254477", 1e12]) assert.equal(readAnswer(JSON.stringify({ ...ODDS, new_build: bad })).kind, "unreadable", String(bad));
+});
+
 test("the odds show the three shares and the likely damage first; ranges, trials and engine in Advanced", () => {
   const nodes = resultView({ result: { kind: "answer", answer: readAnswer(JSON.stringify(ODDS)) }, cards, cap: 15 });
   const out = html(nodes);

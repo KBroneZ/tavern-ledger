@@ -475,6 +475,68 @@ fn a_saved_game_is_explained_combat_by_combat() {
 }
 
 #[test]
+fn a_game_build_the_rules_were_not_checked_against_warns_and_still_gives_odds() {
+    let mut req = request(
+        vec![board(vec![minion(PLAIN, 2, 2)], Some(3))],
+        vec![board(vec![minion(SKELETON, 1, 1)], Some(2))],
+    );
+    let plain = run(&req);
+    assert_eq!(plain["new_build"], Value::Null);
+
+    req["build"] = json!(999_999);
+    let new = run(&req);
+    assert_eq!(new["status"], "odds");
+    assert_eq!(new["new_build"], 999_999);
+    assert_eq!(new["won"], plain["won"]);
+    assert_eq!(new["dealt"], plain["dealt"]);
+
+    for checked in [253_216, 254_477] {
+        req["build"] = json!(checked);
+        assert_eq!(run(&req)["new_build"], Value::Null, "build {checked}");
+    }
+    req["build"] = Value::Null;
+    assert_eq!(run(&req)["new_build"], Value::Null);
+}
+
+#[test]
+fn a_bad_build_is_refused() {
+    for bad in [
+        json!(0),
+        json!(-5),
+        json!("254477"),
+        json!(1.5),
+        json!(1e12),
+        json!(100_000_000),
+    ] {
+        let mut req = request(
+            vec![board(vec![minion(PLAIN, 1, 1)], Some(1))],
+            vec![board(vec![minion(PLAIN, 1, 1)], Some(1))],
+        );
+        req["build"] = bad.clone();
+        assert_eq!(run(&req)["status"], "bad_input", "build {bad}");
+    }
+}
+
+#[test]
+fn a_saved_game_of_a_new_build_is_explained_with_a_warning() {
+    let mut req = explain_request(facts());
+    assert_eq!(run(&req)["new_build"], Value::Null);
+    req["explain"]["report"]["build"] = json!(999_999);
+    let a = run(&req);
+    assert_eq!(a["status"], "explained", "{a}");
+    assert_eq!(a["new_build"], 999_999);
+    assert_eq!(a["combats"].as_array().map(Vec::len), Some(2));
+    req["explain"]["report"]["build"] = json!(254_477);
+    assert_eq!(run(&req)["new_build"], Value::Null);
+    // A build out of range is not a build to warn about either.
+    req["explain"]["report"]["build"] = json!(100_000_000);
+    assert_eq!(run(&req)["new_build"], Value::Null);
+    // A build field that is not a number is not a build to warn about.
+    req["explain"]["report"]["build"] = json!("x");
+    assert_eq!(run(&req)["new_build"], Value::Null);
+}
+
+#[test]
 fn a_card_without_facts_gives_no_odds_by_name() {
     let a = run(&explain_request(Value::Null));
     assert_eq!(a["combats"][0]["no_odds"], "no_card_data");

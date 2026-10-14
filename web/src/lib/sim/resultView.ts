@@ -121,6 +121,7 @@ function odds(a: Extract<Answer, { kind: "odds" }>, props: ResultProps): VNode[]
         )
       : null,
     approxFold(a.approximate, cards),
+    a.newBuild !== null ? h("p", { class: "sim-note sim-warning", role: "note" }, sm("result.newBuild", { build: a.newBuild })) : null,
     a.startOfCombat ? h("p", { class: "sim-note" }, "≈ ", sm("result.soc")) : null,
     h(
       "p",

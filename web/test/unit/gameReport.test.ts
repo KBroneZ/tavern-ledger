@@ -48,6 +48,16 @@ test("report reader: a whole synthetic Solo game, nothing dropped", () => {
   assert.deepEqual(r.warnings, ["synthetic warning"]);
 });
 
+test("report reader: the game's build is read when it is a build number, else unknown", () => {
+  assert.equal(read(record({ ...soloReport(), build: 254_477 })).report.build, 254_477);
+  assert.equal(read(record(soloReport())).report.build, 250_000, "the fixture's own build");
+  const { build: _, ...noBuild } = soloReport();
+  assert.equal(read(record(noBuild)).report.build, null, "a file without one says nothing");
+  const odd = read(record({ ...soloReport(), build: "254477" }));
+  assert.equal(odd.report.build, null);
+  assert.equal(odd.unreadable, 1, "a value that is not a build is counted, never shown");
+});
+
 test("report reader: a Duos game", () => {
   const r = read(record(duosReport())).report;
   assert.equal(r.mode, "duos");

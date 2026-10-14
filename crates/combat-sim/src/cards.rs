@@ -305,6 +305,20 @@ pub fn rules(card_id: &str) -> Option<CardRules> {
     .then_some(PLAIN)
 }
 
+/// The game builds the card rules were checked against: every modelled card
+/// was compared with the card texts (HearthstoneJSON) of the newest one,
+/// 254477; 253216 was checked in its own time, and its cards the patch to
+/// 254477 changed now play with the new numbers. A board from another build
+/// is still played, with a warning (D-145). Every build here is also in the
+/// parser's `TESTED_BUILDS` (a test in the tracker keeps that).
+pub const CHECKED_BUILDS: &[i64] = &[253216, 254477];
+
+/// The build of a board when the rules were not checked against it; `None`
+/// when they were, or when the build is not known (nothing to warn about).
+pub fn unchecked_build(build: Option<i64>) -> Option<i64> {
+    build.filter(|b| !CHECKED_BUILDS.contains(b))
+}
+
 /// True when the card acts at the start of combat (played or not). A board
 /// taken in the shop has not had those effects yet. "Attack immediately" is
 /// left out: the engine plays it on every board.

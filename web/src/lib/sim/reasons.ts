@@ -61,6 +61,14 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
     "su bonificación mejora con los hechizos de la Taberna lanzados en la partida; se usa la impresa",
   "it picks from every Deathrattle minion, not only the minion types in this game":
     "elige entre todos los esbirros con Último aliento, no solo los de los tipos de esta partida",
+  "a trinket that acts at the start of combat; trinkets are not part of the boards the simulator is given":
+    "un abalorio que actúa al inicio del combate; los abalorios no forman parte de los tableros que recibe el simulador",
+  "a trinket that gives your Undead Attack; trinkets are not part of the boards the simulator is given":
+    "un abalorio que da Ataque a tus no muertos; los abalorios no forman parte de los tableros que recibe el simulador",
+  "a spell that awakens an Old God after Aberrations die in combat; it is not a minion on the board and is not played":
+    "un hechizo que despierta a un Dios Antiguo cuando mueren Aberraciones en combate; no es un esbirro del tablero y no se juega",
+  "it gains stats until next turn whenever another friendly minion gains stats in combat; that is not played":
+    "gana estadísticas hasta el próximo turno cuando otro esbirro aliado gana estadísticas en combate; eso no se juega",
 };
 
 /** The reason in the page's language, and whether it had to stay in English. */

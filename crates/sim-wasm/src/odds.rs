@@ -5,7 +5,7 @@
 
 use std::collections::BTreeMap;
 
-use combat_sim::cards::has_start_of_combat;
+use combat_sim::cards::{has_start_of_combat, unchecked_build};
 use combat_sim::{gifts, simulate_teams, Odds, Options, Verdict};
 use serde_json::{json, Value};
 
@@ -135,6 +135,7 @@ pub fn run(request: &Request) -> Value {
             "taken": spread(&odds.damage_taken, cap).filter(|_| known),
             "approximate": approximate,
             "start_of_combat": start_of_combat,
+            "new_build": unchecked_build(request.build),
         }),
     )
 }

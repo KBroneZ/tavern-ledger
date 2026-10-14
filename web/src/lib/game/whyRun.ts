@@ -8,7 +8,7 @@ import { mount } from "../view/node.ts";
 import { cardLabel, cardNames } from "./names.ts";
 import { g } from "./strings.ts";
 import { WHY_STATUS_ID } from "./turnsView.ts";
-import { explainRequest, readWhy, type WhyCombat } from "./why.ts";
+import { explainRequest, newBuildOf, readWhy, type WhyCombat } from "./why.ts";
 import { oddsCell, whyDetail } from "./whyView.ts";
 
 /**
@@ -45,7 +45,7 @@ function simWorker(): Worker {
 }
 
 /** Puts each combat's odds in its row and its cause in the row's detail; with no answer, dashes and a line saying why. */
-export function fillWhy(root: ParentNode, combats: WhyCombat[] | null): void {
+export function fillWhy(root: ParentNode, combats: WhyCombat[] | null, newBuild: number | null = null): void {
   const nameOf = (id: string) => cardLabel(id, id);
   const byRound = new Map((combats ?? []).map((c) => [c.round, c]));
   for (const cell of root.querySelectorAll<HTMLElement>("[data-odds]")) {
@@ -59,17 +59,22 @@ export function fillWhy(root: ParentNode, combats: WhyCombat[] | null): void {
   }
   const status = root.querySelector<HTMLElement>(`#${WHY_STATUS_ID}`);
   if (combats === null && status) status.textContent = g("turns.odds.failed");
+  // The odds come back for a build the rules were not checked against, with a warning.
+  else if (newBuild !== null && status) status.textContent = `${status.textContent} ${g("turns.odds.newBuild", { build: newBuild })}`;
 }
 
 /** Works out every combat of `report` (the stored report as read) and fills the table. */
 export async function explainCombats(report: unknown): Promise<void> {
   let combats: WhyCombat[] | null = null;
+  let newBuild: number | null = null;
   const cards = cardNames().cards;
   try {
     if (!cards) throw new Error("no card data");
-    combats = readWhy(await askEngine(explainRequest(report, (id) => cards.facts(id))));
+    const answer = await askEngine(explainRequest(report, (id) => cards.facts(id)));
+    combats = readWhy(answer);
+    newBuild = newBuildOf(answer);
   } catch {
     combats = null;
   }
-  fillWhy(document, combats);
+  fillWhy(document, combats, newBuild);
 }
