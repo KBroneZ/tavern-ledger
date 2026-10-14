@@ -31,7 +31,7 @@ test("the odds are the three shares and the board's age, no more", () => {
   assert.equal(v.age, "their board seen turn 6");
   assert.equal("lines" in v, false, "no extra lines: damage and card lists are gone with Advanced");
   assert.equal(v.approx, false);
-  assert.match(v.said, /^Combat odds\. Win 62%, Tie 8%, Lose 30%\. their board seen turn 6$/);
+  assert.match(v.said, /^Combat odds\. Win 62%, Tie 8%, Lose 30%\. Win: you take 4 to 9 health from them\. Lose: they deal you 3 to 7\. their board seen turn 6$/);
 });
 
 test("a build the rules were not checked against warns and keeps the odds", () => {
@@ -120,4 +120,46 @@ test("Duos names the boards never seen instead of a number", () => {
   );
   assert.equal(oddsView(odds({ seen_round: 4, boards: duosBoards(7, 6, 4) })).age, "tablero más antiguo visto en el turno 4");
   I18n.setLang("en");
+});
+
+test("the health the player can take on a win and the damage on a loss are ranges, left and right of the bar", () => {
+  I18n.setLang("en");
+  const v = oddsView(odds({ dealt: { low: 5, likely: 8, high: 12 }, taken: { low: 4, likely: 6, high: 11 } }));
+  assert.deepEqual(v.ranges.win, { text: "5–12", said: "Win: you take 5 to 12 health from them" });
+  assert.deepEqual(v.ranges.lose, { text: "4–11", said: "Lose: they deal you 4 to 11" });
+  assert.ok(v.said.includes("Win: you take 5 to 12 health from them"));
+  assert.ok(v.said.includes("Lose: they deal you 4 to 11"));
+  I18n.setLang("es");
+  const es = oddsView(odds({ dealt: { low: 5, likely: 8, high: 12 }, taken: { low: 4, likely: 6, high: 11 } }));
+  assert.equal(es.ranges.win.said, "Ganar: les quitas de 5 a 12 de vida");
+  assert.equal(es.ranges.lose.said, "Perder: te hacen de 4 a 11");
+  I18n.setLang("en");
+});
+
+test("a range with one value shows that value, and unknown ranges are left out, never guessed", () => {
+  I18n.setLang("en");
+  assert.equal(oddsView(odds({ dealt: { low: 7, likely: 7, high: 7 } })).ranges.win.text, "7");
+  assert.equal(oddsView(odds({ dealt: { low: 7, likely: 7, high: 7 } })).ranges.win.said, "Win: you take 7 health from them");
+  const none = oddsView(odds({ dealt: null, taken: undefined }));
+  assert.deepEqual(none.ranges, { win: null, lose: null });
+  assert.equal(none.said.includes("Win:"), false);
+  for (const bad of [{ low: 9, likely: 7, high: 5 }, { low: "1", likely: 2, high: 3 }, { low: -1, likely: 2, high: 3 }, {}, "5"]) {
+    assert.equal(oddsView(odds({ taken: bad })).ranges.lose, null, JSON.stringify(bad));
+  }
+});
+
+test("a note has no ranges", () => {
+  I18n.setLang("en");
+  const note = oddsView({ ...odds(), gap: "no_board_seen", won: 0, tied: 0, lost: 0, trials: 0 });
+  assert.equal(note.kind, "note");
+  assert.deepEqual(note.ranges, { win: null, lose: null });
+});
+
+test("the warning has a short form for the bar, in both languages", () => {
+  for (const [lang, text] of [["en", "New build (999999): odds unchecked"], ["es", "Versión nueva (999999): sin comprobar"]]) {
+    I18n.setLang(lang);
+    assert.equal(oddsView(odds({ new_build: 999999 })).warningShort, text);
+  }
+  I18n.setLang("en");
+  assert.equal(oddsView(odds()).warningShort, null);
 });

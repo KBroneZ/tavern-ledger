@@ -41,9 +41,9 @@ const CAPTIONS = {
   solo: {
     en: {
       title: "Solo shop turn",
-      sees: "The default view during your shop turn: the lobby's tribes as short chips, then one row per opponent in the game's leaderboard order with their portrait, tavern tier, health and triples. The opponent the game marks as next is lit, with the combat odds under it.",
-      source: LOG.en + " Tribes marked \"inferred\" were worked out from what the tavern offered you. The combat odds are worked out on your PC by simulating a few thousand fights between your board and their last seen board, only during your shop turn.",
-      rule: "Every number is on your own screen already: the game's leaderboard shows tiers, health, triples and who is next. The \"inferred\" mark says when a value is a deduction and not something the game printed. The odds come from boards you have already seen, not a peek at their current board.",
+      sees: "The default view during your shop turn: the lobby's tribes as short chips, then one row per opponent in the game's leaderboard order with their portrait, tavern tier, health and triples, with the next opponent lit. The combat odds are one bar at the top centre of the window, and each opponent's health and triples also sit beside their hero in the game's own leaderboard.",
+      source: LOG.en + " The tribes are the ones the game itself holds for this lobby, read from the running game only if you turn that on. The combat odds are worked out on your PC by simulating a few thousand fights between your board and their last seen board, only during your shop turn.",
+      rule: "Every number is on your own screen already: the game's leaderboard shows tiers, health, triples and who is next. The tribes appear only when the game gave them, never as a guess. The odds come from boards you have already seen, not a peek at their current board.",
     },
     es: {
       title: "Turno de tienda en Solo",
@@ -232,6 +232,90 @@ const CAPTIONS = {
       sees: "La misma vista de Solo en blanco y negro con colores intensos, para quien encuentra difícil de leer el tema por defecto.",
       source: "Una elección de tema en la app, sin relación con los datos del juego.",
       rule: "Solo cambian los colores. El significado nunca depende solo del color: cada marca lleva también una palabra o una letra.",
+    },
+  },
+  "odds-bar": {
+    en: {
+      title: "The combat odds bar",
+      sees: "One bar at the top centre of the game window: your chance to win in green, to tie in grey and to lose in red. To the left of the green, the range of health you would take from your opponent if you win; to the right of the red, the range of damage you would take if you lose. Under it, how old their board is.",
+      source: "Worked out on your PC by simulating a few thousand fights between your board now and the last board of theirs you saw. The two ranges are the damage of those fights after the game's damage cap.",
+      rule: "A range the app cannot work out is left out, never guessed. The odds come from boards you have already seen, not from a look at their current board.",
+    },
+    es: {
+      title: "La barra de probabilidades del combate",
+      sees: "Una barra arriba en el centro de la ventana del juego: tu probabilidad de ganar en verde, de empatar en gris y de perder en rojo. A la izquierda del verde, el margen de vida que le quitarías a tu rival si ganas; a la derecha del rojo, el margen de daño que recibirías si pierdes. Debajo, cuántos turnos tiene su tablero.",
+      source: "Se calcula en tu PC simulando unos miles de combates entre tu tablero de ahora y el último tablero suyo que viste. Los dos márgenes son el daño de esos combates tras el tope de daño del juego.",
+      rule: "Un margen que la app no puede calcular se omite, nunca se adivina. Las probabilidades salen de tableros que ya has visto, no de un vistazo a su tablero actual.",
+    },
+  },
+  "odds-bar-no-ranges": {
+    en: {
+      title: "Odds bar without damage ranges",
+      sees: "The same bar when the app cannot say how much damage a win or a loss would do: only the three shares, with nothing at either side.",
+      source: "The shares are simulated on your PC as before; the damage is not known for this fight.",
+      rule: "Empty is not zero: with no known damage the bar shows no range instead of an invented one.",
+    },
+    es: {
+      title: "Barra sin márgenes de daño",
+      sees: "La misma barra cuando la app no puede decir cuánto daño haría una victoria o una derrota: solo los tres porcentajes, sin nada a los lados.",
+      source: "Los porcentajes se simulan en tu PC como siempre; el daño de este combate no se conoce.",
+      rule: "Vacío no es cero: sin daño conocido la barra no muestra margen en lugar de inventarlo.",
+    },
+  },
+  "leaderboard-marks": {
+    en: {
+      title: "Health and triples beside the leaderboard",
+      sees: "To the left of each opponent's hero in the game's own leaderboard: their remaining health in big numbers and a star for each triple they have made.",
+      source: LOG.en,
+      rule: "The same health and triples the game's leaderboard already shows you; nothing is added that your screen does not have. Rows with unknown values show nothing.",
+    },
+    es: {
+      title: "Vida y tripletes junto a la clasificación",
+      sees: "A la izquierda del héroe de cada rival en la clasificación del propio juego: su vida restante en números grandes y una estrella por cada triplete que ha hecho.",
+      source: LOG.es,
+      rule: "La misma vida y los mismos tripletes que la clasificación del juego ya te enseña; no se añade nada que tu pantalla no tenga. Las filas con valores desconocidos no muestran nada.",
+    },
+  },
+  "tribes-game": {
+    en: {
+      title: "Tribes from the game",
+      sees: "The five tribes of this lobby as short chips, exactly as the game holds them.",
+      source: "Read from the running game (read-only), and only if you leave that option on. Nothing is uploaded.",
+      rule: "These are the tribes the game shows you at the start of the match.",
+    },
+    es: {
+      title: "Tribus leídas del juego",
+      sees: "Las cinco tribus de esta partida como etiquetas cortas, tal como las tiene el juego.",
+      source: "Se leen del juego en marcha (solo lectura), y solo si dejas esa opción activada. No se sube nada.",
+      rule: "Son las tribus que el juego te muestra al empezar la partida.",
+    },
+  },
+  "tribes-off": {
+    en: {
+      title: "Tribes with the game read off",
+      sees: "No tribes, only one short line saying the game read is off.",
+      source: "Nothing: the app does not look at the game while that option is off.",
+      rule: "The overlay never guesses the tribes. Without the game's own data the panel stays empty and says why.",
+    },
+    es: {
+      title: "Tribus con la lectura del juego desactivada",
+      sees: "Ninguna tribu, solo una línea corta que dice que la lectura del juego está desactivada.",
+      source: "Nada: la app no mira el juego mientras esa opción esté desactivada.",
+      rule: "La superposición nunca adivina las tribus. Sin los datos del propio juego el panel queda vacío y dice por qué.",
+    },
+  },
+  "tribes-unsupported": {
+    en: {
+      title: "Tribes on a game version not supported yet",
+      sees: "No tribes, and one short line saying this game version is not supported yet.",
+      source: "After a game update the app has to be checked against the new version before it reads anything from it.",
+      rule: "A wrong tribe would be worse than none, so the panel stays empty until the version is checked.",
+    },
+    es: {
+      title: "Tribus en una versión del juego aún no compatible",
+      sees: "Ninguna tribu, y una línea corta que dice que esta versión del juego aún no es compatible.",
+      source: "Tras una actualización del juego hay que comprobar la app con la versión nueva antes de que lea nada de ella.",
+      rule: "Una tribu equivocada sería peor que ninguna, así que el panel queda vacío hasta que se comprueba la versión.",
     },
   },
   counters: {

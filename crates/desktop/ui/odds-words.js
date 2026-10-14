@@ -21,6 +21,7 @@
     return list.filter((b) => b && ROLES.includes(b.role) && (b.round === null || Number.isInteger(b.round)));
   }
 
+  const NO_RANGES = { win: null, lose: null };
   const isShare = (x) => typeof x === "number" && Number.isFinite(x) && x >= 0 && x <= 1;
 
   // A whole percentage, except that a share that can happen is never "0%"
@@ -29,6 +30,22 @@
     if (x > 0 && x < 0.005) return `<${I18n.percent(0.01)}`;
     if (x < 1 && x > 0.995) return `>${I18n.percent(0.99)}`;
     return I18n.percent(x);
+  }
+
+  const isDamage = (x) => Number.isInteger(x) && x >= 0;
+
+  // A damage spread (after the damage cap) as the bar's range and its words:
+  // "5–12", or the one value when both ends are equal. Null when the app has
+  // none or it is not well formed: never a guess.
+  function rangeView(spread, key) {
+    if (!spread || typeof spread !== "object") return null;
+    const { low, high } = spread;
+    if (!isDamage(low) || !isDamage(high) || low > high) return null;
+    const one = low === high;
+    const said = one
+      ? I18n.t(`ov.odds.range${key}.single`, { value: I18n.num(low) })
+      : I18n.t(`ov.odds.range${key}.span`, { low: I18n.num(low), high: I18n.num(high) });
+    return { text: one ? I18n.num(low) : `${I18n.num(low)}–${I18n.num(high)}`, said };
   }
 
   // `odds` as the app sends it (LiveOdds). Returns null when there is
@@ -45,10 +62,10 @@
         if (!unseen.length) return null;
         const who = I18n.list(unseen.map((b) => I18n.t(`ov.odds.unseen.${b.role}`)));
         const text = I18n.t("ov.odds.gap.missing_board", { who });
-        return { kind: "note", text, shares: [], age: null, approx: false, about, said: text };
+        return { kind: "note", text, shares: [], ranges: NO_RANGES, age: null, approx: false, about, said: text };
       }
       const text = I18n.t(`ov.odds.gap.${odds.gap}`);
-      return { kind: "note", text, shares: [], age: null, approx: false, about, said: text };
+      return { kind: "note", text, shares: [], ranges: NO_RANGES, age: null, approx: false, about, said: text };
     }
     if (![odds.won, odds.tied, odds.lost].every(isShare)) return null;
     // Label and number apart, so a narrow column can stack them.
@@ -68,14 +85,18 @@
     const warning = Number.isInteger(odds.new_build) && odds.new_build > 0
       ? I18n.t("ov.odds.newBuild", { build: odds.new_build })
       : null;
+    const ranges = { win: rangeView(odds.dealt, "Win"), lose: rangeView(odds.taken, "Lose") };
+    const warningShort = warning ? I18n.t("ov.odds.warningShort", { build: odds.new_build }) : null;
     const said = [
       I18n.t("ov.odds.label"),
       shares.map((s) => s.text).join(", "),
+      ranges.win && ranges.win.said,
+      ranges.lose && ranges.lose.said,
       warning,
       age,
       approx ? I18n.t("ov.odds.approx") : null,
     ].filter(Boolean).join(". ");
-    return { kind: "odds", text: null, shares, age, approx, warning, about, said };
+    return { kind: "odds", text: null, shares, ranges, age, approx, warning, warningShort, about, said };
   }
 
   const api = { oddsView, SAID_GAPS };

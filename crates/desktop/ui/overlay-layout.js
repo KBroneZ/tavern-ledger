@@ -11,17 +11,18 @@
   const I18n = window.TLI18n;
 
   // The counters panel is off until the overlay rework (counters-words.js).
-  const PANEL_IDS = window.TLCounters.panelIds(["status", "counters", "tribes", "opponents", "legend", "lobby"]);
+  const PANEL_IDS = window.TLCounters.panelIds(["status", "counters", "tribes", "opponents", "odds", "legend", "lobby"]);
   // The panels' names are read when used, so they follow the language.
   const SLOT_NAMES = {
     status: () => I18n.t("ov.slot.status"),
     counters: () => I18n.t("ov.slot.counters"),
     tribes: () => I18n.t("ov.slot.tribes"),
     opponents: () => I18n.t("ov.slot.opponents"),
+    odds: () => I18n.t("ov.slot.odds"),
     legend: () => I18n.t("ov.slot.legend"),
     lobby: () => I18n.t("ov.slot.lobby"),
   };
-  const TOGGLE_IDS = window.TLCounters.panelIds(["status", "counters", "tribes", "opponents", "lobby"]);
+  const TOGGLE_IDS = window.TLCounters.panelIds(["status", "counters", "tribes", "opponents", "odds", "lobby"]);
   const slotName = (id) => SLOT_NAMES[id]();
   const panelTitle = (id) => I18n.t("ov.slot.panel", { name: slotName(id) });
   // Rough limits while dragging; the app enforces the real ones when it saves.

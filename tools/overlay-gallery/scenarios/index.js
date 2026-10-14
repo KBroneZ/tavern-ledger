@@ -59,6 +59,17 @@ const unreadable = {
   lobby_tribes: { tribes: [], source: "unknown", basis: "unknown", complete: false },
 };
 
+// The same odds with no damage ranges: the app does not know them.
+const noRanges = { ...SOLO_ODDS, dealt: null, taken: null };
+
+// The lobby's tribes when the game's memory does not give them (D-148): no
+// tribes at all on the overlay, never a guess.
+const noTribes = (status) => ({
+  ...solo,
+  game_tribes: { tribes: [], status, checked_build: false, note: null },
+  lobby_tribes: { tribes: [], source: "unknown", basis: "unknown", complete: false },
+});
+
 const countersList = [
   { kind: "blood_gem", atk: 3, health: 2 },
   { kind: "tavern_spell", atk: 2, health: 0 },
@@ -76,6 +87,9 @@ const STACK_DUOS = { x: 1700, y: 90, w: 220, h: 280 };
 const STATUS_BOX = { x: 1500, y: 90, w: 420, h: 150 };
 const HOVER_CARD_AREA = { x: 480, y: 0, w: 960, h: 300 };
 const LOBBY_AREA = { x: 0, y: 0, w: 290, h: 180 };
+const ODDS_BAR_AREA = { x: 660, y: 0, w: 600, h: 100 };
+const LEADERBOARD_AREA = { x: 60, y: 140, w: 300, h: 800 };
+const TRIBES_AREA = { x: 1700, y: 90, w: 220, h: 120 };
 const FOCUS = {
   waiting: STATUS_BOX,
   lobby: LOBBY_AREA,
@@ -94,6 +108,12 @@ const FOCUS = {
   "game-over": STACK_SMALL,
   "high-contrast": STACK_SMALL,
   counters: STACK_SMALL,
+  "odds-bar": ODDS_BAR_AREA,
+  "odds-bar-no-ranges": ODDS_BAR_AREA,
+  "leaderboard-marks": LEADERBOARD_AREA,
+  "tribes-game": TRIBES_AREA,
+  "tribes-off": TRIBES_AREA,
+  "tribes-unsupported": TRIBES_AREA,
 };
 
 // [id, game, extra state]
@@ -115,6 +135,12 @@ const DEFINITIONS = [
   ["game-over", gameOver, {}],
   ["high-contrast", soloWithOdds, { settings: { theme: "contrast" } }],
   ["counters", { ...soloWithOdds, counters: countersList }, {}],
+  ["odds-bar", soloWithOdds, {}],
+  ["odds-bar-no-ranges", withOdds(solo, noRanges), {}],
+  ["leaderboard-marks", soloWithOdds, {}],
+  ["tribes-game", solo, {}],
+  ["tribes-off", noTribes("off"), {}],
+  ["tribes-unsupported", noTribes("unsupported_version"), {}],
 ];
 
 const SCENARIOS = DEFINITIONS.map(([id, game, extra]) => ({
