@@ -132,7 +132,10 @@ function heroCell(report, source) {
 
 function note(report) {
   if (report.status === "incomplete") return tl("win.note.incomplete");
-  if (report.status === "unsupported") return tl("win.note.unsupported", { problems: list(report.problems).map(TLI18n.backend).join("; ") });
+  if (TLUnreadable.isUnreadable(report.status)) {
+    const why = TLUnreadable.userReasons(report.problems)[0];
+    return why ? `${TLUnreadable.words(tl).note} ${TLUnreadable.sentence(TLI18n.backend(why))}` : TLUnreadable.words(tl).note;
+  }
   return list(report.warnings).map(TLI18n.backend).join("; ");
 }
 
@@ -948,6 +951,18 @@ function renderRecap(r, game) {
   TLFocus.keep(document, () => renderRecapNow(r, game));
 }
 
+// A game that could not be read has no record to show: one plain explanation
+// instead of sections that would each say "not recorded" (T-357).
+function unreadableSection(r) {
+  const words = TLUnreadable.words(tl);
+  const section = el("section", "recap-part");
+  section.append(el("h3", null, words.title), el("p", null, words.what));
+  // The parser's own words for why (restart the game…) are for the player.
+  TLUnreadable.userReasons(r.problems).forEach((reason) => section.append(el("p", null, TLUnreadable.sentence(TLI18n.backend(reason)))));
+  section.append(el("p", "note", words.todo));
+  return section;
+}
+
 // Most telling first: health and turns, then the record, then the details.
 function renderRecapNow(r, game) {
   const key = gameKey(game);
@@ -961,6 +976,10 @@ function renderRecapNow(r, game) {
   health.append(withSource(el("h3", null, tl("win.recap.healthTitle")), r.health_source), healthChart(r.health));
   const top = el("div", "recap-top");
   top.append(recapFacts(r), health);
+  if (TLUnreadable.isUnreadable(r.status.value)) {
+    document.getElementById("recap-body").replaceChildren(top, unreadableSection(r));
+    return;
+  }
   const turnTools = { card: TLShop.card, cardRow: TLShop.cardRow, fold: TLCompact.fold, art, heroText, game: key, cardName: (id) => TLCards.display(id) };
   const replayTools = { art, heroText, cardName: (id) => TLCards.display(id), fold: TLCompact.fold, game: key };
   // Simple (T-344) keeps the facts, health, shop summary, combat replays
