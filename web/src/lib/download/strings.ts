@@ -20,6 +20,9 @@ export const DL_STRINGS = {
   "fact.date": "Published",
   "action.download": "Download",
   "action.download.file": "File: {file}",
+  "action.memory": "By default the app reads two values from the game's memory, on your PC only; you can turn that off. It goes against the letter of Blizzard's rules and the account at risk is yours.",
+  "action.memory.anchor": "9-the-game",
+  "action.memory.link": "Read the terms (section 9)",
   "action.github": "All releases on GitHub",
 
   "beta.line":
@@ -58,7 +61,7 @@ export const DL_STRINGS = {
   "reads.1": "The game's log files on your PC, to record your Battlegrounds games.",
   "reads.2": "For the overlay, where your pointer is over the game window.",
   "reads.3":
-    "Only if you turn it on in Settings (it is off until you do): two things the game already shows you, the lobby's tribes and your own rating, read-only from the game's memory. This goes against the letter of Blizzard's rules, and the app explains the risk before you choose.",
+    "On by default, and you can turn it off in Settings: two things the game already shows you, the lobby's tribes and your own rating, read-only from the game's memory. They stay on your PC and are never uploaded. This goes against the letter of Blizzard's rules, and the account at risk is yours.",
   "reads.4": "It never changes the game, its files or its memory, and it never plays for you.",
   "reads.data":
     "Your games stay on your PC in %APPDATA%\\TavernLedger. Nothing is uploaded unless you sign in and turn uploading on.",

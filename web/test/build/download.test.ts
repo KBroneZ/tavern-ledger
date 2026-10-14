@@ -132,3 +132,26 @@ test("Updating says the app updates itself from 0.2.1, and 0.1.0 is installed ov
     assert.doesNotMatch(block, page.lang === "en" ? /no automatic updates/i : /no hay actualizaciones automáticas/i, page.file);
   }
 });
+
+test("a line before the download button says the memory read is on by default and links to the terms section", () => {
+  for (const page of PAGES) {
+    const html = read(page.file);
+    const prefix = page.lang === "es" ? "/es" : "";
+    const section = page.lang === "es" ? "9-el-juego" : "9-the-game";
+    const line = new RegExp(`dl-note">[^<]*(?:By default|Por defecto)[^<]*memor[^<]*<a href="${prefix}/terms/#${section}">`);
+    const at = html.search(line);
+    assert.ok(at >= 0, `${page.file}: the memory line links to the terms section`);
+    assert.ok(at < html.indexOf('class="dl-actions"'), `${page.file}: it comes before the download button`);
+    assert.doesNotMatch(html, /approved by Blizzard|aprobado por Blizzard/i);
+  }
+});
+
+test("the terms and the privacy policy say the read is on by default, how to turn it off and who bears the risk", () => {
+  const terms = [read("terms/index.html"), read("es/terms/index.html")];
+  assert.match(terms[0], /id="9-the-game"/);
+  assert.match(terms[0], /By default \(you can turn it off at any time in Settings[\s\S]*The risk to your [\s\S]{0,60}account is yours/);
+  assert.match(terms[1], /id="9-el-juego"/);
+  assert.match(terms[1], /Por defecto \(puedes desactivarlo cuando quieras en Ajustes[\s\S]*El riesgo para tu cuenta de [\s\S]{0,60}es tuyo/);
+  assert.match(read("privacy/index.html"), /Reading from the game \(on by default; you can turn it off\)/);
+  assert.match(read("es/privacy/index.html"), /Lectura del juego \(activada por defecto; puedes desactivarla\)/);
+});

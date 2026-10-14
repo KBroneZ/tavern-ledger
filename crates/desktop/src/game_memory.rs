@@ -1,5 +1,6 @@
 //! The switch for reading two values from the game (D-063), and when the
-//! reader runs. Off by default: with it off, nothing here touches the game.
+//! reader runs. On by default (D-149; a saved choice always wins): with it
+//! off, nothing here touches the game.
 //!
 //! When on, the reader (`game-memory` crate, read-only rights) is asked for:
 //! - the lobby's five tribes while a Battlegrounds game is in progress (from
@@ -113,7 +114,12 @@ pub struct RatingChange {
 #[derive(Serialize, Deserialize)]
 struct FileFormat {
     version: u32,
+    #[serde(default = "default_enabled")]
     enabled: bool,
+}
+
+fn default_enabled() -> bool {
+    true
 }
 
 /// A game of the history, as saved with the rating.
@@ -251,8 +257,9 @@ fn overall(tribes: ReaderStatus, rating: ReaderStatus) -> ReaderStatus {
 }
 
 impl GameMemory {
-    /// Reads the saved choice. No file: off. A file that cannot be read:
-    /// off, and says so.
+    /// Reads the saved choice. No file, or a file without the key: on (the
+    /// default). A saved choice is kept. A file that cannot be read: off, and
+    /// says so; a guess never turns a saved off into on.
     pub fn load(&self, data_dir: &Path) -> Result<(), String> {
         let path = data_dir.join(FILE);
         *lock(&self.path) = Some(path.clone());
@@ -265,7 +272,7 @@ impl GameMemory {
                     return Err(msg.into());
                 }
             },
-            Err(e) if e.kind() == io::ErrorKind::NotFound => false,
+            Err(e) if e.kind() == io::ErrorKind::NotFound => true,
             Err(e) => {
                 let msg = format!(
                     "The setting for reading from the game could not be read ({:?}); it is off.",
@@ -829,17 +836,41 @@ mod tests {
     };
 
     #[test]
-    fn it_is_off_until_the_user_turns_it_on() {
+    fn it_is_on_when_no_choice_was_ever_saved() {
         let gm = GameMemory::default();
         gm.load(&temp_dir("default")).unwrap();
-        assert!(!gm.view().enabled);
-        assert_eq!(gm.view().status, ReaderStatus::Off);
+        assert!(gm.view().enabled);
+        assert_eq!(gm.view().status, ReaderStatus::Waiting);
+    }
+
+    #[test]
+    fn an_old_settings_file_without_the_key_means_on() {
+        let dir = temp_dir("nokey");
+        std::fs::write(dir.join(FILE), r#"{"version": 1}"#).unwrap();
+        let gm = GameMemory::default();
+        gm.load(&dir).unwrap();
+        assert!(gm.view().enabled);
+    }
+
+    #[test]
+    fn a_saved_off_stays_off_and_a_saved_on_stays_on() {
+        let dir = temp_dir("saved");
+        std::fs::write(dir.join(FILE), r#"{"version": 1, "enabled": false}"#).unwrap();
+        let off = GameMemory::default();
+        off.load(&dir).unwrap();
+        assert!(!off.view().enabled);
+        assert_eq!(off.view().status, ReaderStatus::Off);
+        std::fs::write(dir.join(FILE), r#"{"version": 1, "enabled": true}"#).unwrap();
+        let on = GameMemory::default();
+        on.load(&dir).unwrap();
+        assert!(on.view().enabled);
     }
 
     #[test]
     fn with_it_off_the_game_is_never_asked() {
         let gm = GameMemory::default();
         gm.load(&temp_dir("never")).unwrap();
+        gm.set_enabled(false).unwrap();
         let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(RATING)]);
         ticks(
             &gm,
@@ -851,7 +882,7 @@ mod tests {
         ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 50);
         assert_eq!(reader.calls.get(), 0);
         assert_eq!(gm.tribes_for(Some(&key(1))), (None, ReaderStatus::Off));
-        // Off by default even for a value of GameMemory never loaded.
+        // Off for a value of GameMemory never loaded: nothing is read before the choice is.
         let unloaded = GameMemory::default();
         unloaded.tick(
             &reader,

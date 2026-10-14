@@ -118,9 +118,9 @@ export const ES: Record<SiteKey, string> = {
   "home.keeps.boards.body": "El tablero de cada rival al empezar cada combate, tal como lo recoge el registro.",
   "home.keeps.recap.title": "Un resumen tras cada partida",
   "home.keeps.recap.body": "Tu vida a lo largo de las rondas y tu historial contra cada rival.",
-  "home.safe.title": "Seguro para tu cuenta",
+  "home.safe.title": "Qué hace con tu juego",
   "home.safe.body":
-    "Lee los archivos de registro que el juego ya escribe en tu PC y, para la superposición, dónde está tu puntero sobre la ventana del juego. Si lo activas, también lee de la memoria del juego, en modo solo lectura, dos cosas que el juego ya te muestra: las tribus de la partida y tu propia puntuación. Está desactivado salvo que lo elijas, y la aplicación te explica el riesgo.",
+    "Lee los archivos de registro que el juego ya escribe en tu PC y, para la superposición, dónde está tu puntero sobre la ventana del juego. Por defecto, también lee de la memoria del juego, en modo solo lectura y solo en tu PC, dos cosas que el juego ya te muestra: las tribus de la partida y tu propia puntuación. Puedes desactivarlo en Ajustes. Va contra la letra de las normas de Blizzard y la cuenta en riesgo es la tuya, como dicen los términos.",
   "home.safe.1": "Nunca modifica el juego, ni le añade código, ni cambia sus archivos.",
   "home.safe.2": "Nunca juega ni hace clic por ti.",
   "home.safe.3": "Nunca muestra lo que no podrías ver en tu propia pantalla.",
