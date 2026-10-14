@@ -279,22 +279,6 @@ fn private_things(log: &str) -> Vec<String> {
 }
 
 #[test]
-fn the_parsers_error_names_reach_the_log_and_its_free_text_does_not() {
-    let problems = vec![
-        "parser error: NotImplementedError".to_string(),
-        "parser error: with a name Jane#1234".to_string(),
-        "Player Jane#1234 left".to_string(),
-        "parser error: Jane Doe".to_string(),
-        "parser error: no game data".to_string(),
-    ];
-    assert_eq!(
-        parser_errors(&problems),
-        ["NotImplementedError", "no game data"]
-    );
-    assert!(parser_errors(&[]).is_empty());
-}
-
-#[test]
 fn a_full_fixture_run_leaves_no_names_or_secrets_in_the_log() {
     let scratch = Scratch::new();
     let log = scratch.log();
@@ -459,4 +443,30 @@ fn the_report_lines_are_redacted_again_when_they_are_read() {
     let lines = scratch.log().tail(10);
     assert_eq!(lines.len(), 1);
     assert!(!lines[0].contains("Jaina"), "{lines:?}");
+}
+
+#[test]
+fn a_game_that_could_not_be_read_logs_only_its_technical_cause() {
+    let problems = |p: &[&str]| -> Vec<String> { p.iter().map(|s| s.to_string()).collect() };
+    assert_eq!(
+        read_failure_reason(&problems(&[bg_parser::PROBLEM_NO_TIMES])),
+        Some("no-times".into())
+    );
+    assert_eq!(
+        read_failure_reason(&problems(&[bg_parser::PROBLEM_TOO_MANY_BAD_LINES])),
+        Some("too-many-bad-lines".into())
+    );
+    assert_eq!(
+        read_failure_reason(&problems(&["parser error: UnsupportedTurn"])),
+        Some("UnsupportedTurn".into())
+    );
+    // Anything else, or a name that is not a name, is not repeated.
+    assert_eq!(
+        read_failure_reason(&problems(&["unexpected lobby size: 0"])),
+        None
+    );
+    assert_eq!(
+        read_failure_reason(&problems(&["parser error: Name#1234 and more text"])),
+        None
+    );
 }

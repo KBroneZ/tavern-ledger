@@ -26,3 +26,19 @@ test("an unreadable game explains itself in plain words, in both languages", () 
   }
   I18n.setLang("en");
 });
+
+test("a cause the parser words for the user is kept, a parser error name is not", () => {
+  const problems = [
+    "parser error: NotImplementedError",
+    "the game log has too many unreadable lines (restart Hearthstone and play a new game)",
+    "the game log has no times (restart Hearthstone and play a new game)",
+    "Player Jane#1234 left",
+  ];
+  assert.deepEqual(U.userReasons(problems), problems.slice(1, 3));
+  assert.deepEqual(U.userReasons(["parser error: LineTooLong"]), []);
+  assert.deepEqual(U.userReasons(undefined), []);
+});
+
+test("a reason is written as a sentence", () => {
+  assert.equal(U.sentence("the game log has no times (restart Hearthstone)"), "The game log has no times (restart Hearthstone).");
+});

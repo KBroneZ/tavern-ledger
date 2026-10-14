@@ -27,7 +27,7 @@ use std::io::BufRead;
 
 use clock::Clock;
 use collector::{hero_health, leaderboard_heroes, Collector};
-use power::{card_names, classify, parse_power, Line, ParseError};
+use power::{card_names, classify, parse_power, Line, ParseError, REGEX_PARSING_ERROR};
 use report::{CombatEntry, GameReport, LobbyPlayer, LobbySlot, Round, Status};
 use state::Entity;
 
@@ -36,7 +36,7 @@ pub const PARSER_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Bump when a change makes the parser read the same log differently (new
 /// fields, fixed bugs). Saved with every game so `tavern-watch --reparse`
 /// and the server can tell which records an older parser wrote.
-pub const PARSER_REVISION: u32 = 14;
+pub const PARSER_REVISION: u32 = 15;
 
 /// Builds whose real logs this parser was checked against.
 pub const TESTED_BUILDS: &[i64] = &[253216, 254477];
@@ -49,6 +49,14 @@ pub const CREATE_GAME: &str = "GameState.DebugPrintPower() - CREATE_GAME";
 /// Bounds on the card names kept per game, so a strange log cannot grow them.
 const MAX_NAMES: usize = 1_000;
 const MAX_NAME_LEN: usize = 100;
+/// Lines a game may lose (a stray line, or the last line cut where the game
+/// stopped writing the file) and still be read; one more and the log is not
+/// trustworthy. A real game has tens of thousands of lines and a cut costs
+/// one or two.
+pub const MAX_SKIPPED_LINES: usize = 10;
+/// Reasons a game cannot be read because of its lines; shown to the player.
+const NO_TIMES: &str = "NoTimes";
+const TOO_MANY_BAD_LINES: &str = "TooManyBadLines";
 /// Hero names and skin links per report: far more than a lobby and a hero
 /// pick show, and what upload-game accepts.
 const MAX_HERO_MAPS: usize = 64;
@@ -74,13 +82,36 @@ pub struct GameReader {
     /// Card id -> name as printed in the log; the report keeps heroes only.
     names: HashMap<String, String>,
     clock: Clock,
+    /// Lines with a time, and lines skipped as unreadable (see
+    /// [`MAX_SKIPPED_LINES`]).
+    timed_lines: usize,
+    skipped_lines: usize,
+    /// A malformed packet was skipped and nothing valid has followed yet.
+    /// That is a cut last line; a valid packet after it means a packet was
+    /// lost in the middle (its tags would land on the wrong entity).
+    malformed_last: bool,
+    /// The last line the reader met was skipped: the log may end in a cut.
+    last_line_skipped: bool,
 }
 
 impl GameReader {
     pub fn feed(&mut self, line: &str) {
-        if self.error.is_none() && !has_timestamp(line) {
-            // hslog rejects such lines; a broken game must not look fine.
-            self.error = Some("RegexParsingError");
+        if self.error.is_none() {
+            if line.trim().is_empty() {
+                return;
+            }
+            if has_timestamp(line) {
+                self.timed_lines += 1;
+                self.last_line_skipped = false;
+            } else {
+                // A stray or cut line: skip it, but a game line still says
+                // the game's type and build.
+                if let Line::Game(data) = classify(line) {
+                    self.feed_game(data);
+                }
+                self.skip_line();
+                return;
+            }
         }
         if let Some(ms) = self.clock.at(line) {
             self.collector.now_ms = ms;
@@ -91,10 +122,18 @@ impl GameReader {
             Line::Power(data, indent) if self.error.is_none() => {
                 self.remember_names(data);
                 self.collector.indent = indent;
-                if let Err(ParseError(name)) =
-                    parse_power(data).and_then(|p| self.collector.feed(p))
-                {
-                    self.error = Some(name);
+                match parse_power(data) {
+                    Err(ParseError(REGEX_PARSING_ERROR)) => {
+                        self.malformed_last = true;
+                        self.skip_line();
+                    }
+                    Err(ParseError(name)) => self.error = Some(name),
+                    Ok(_) if self.malformed_last => self.error = Some(REGEX_PARSING_ERROR),
+                    Ok(packet) => {
+                        if let Err(ParseError(name)) = self.collector.feed(packet) {
+                            self.error = Some(name);
+                        }
+                    }
                 }
             }
             Line::SendOption if self.error.is_none() => {
@@ -132,6 +171,32 @@ impl GameReader {
         self.collector.discovers.on_other_line();
     }
 
+    /// One more line the reader cannot use; past [`MAX_SKIPPED_LINES`] the
+    /// game is unreadable, and says why.
+    fn skip_line(&mut self) {
+        self.skipped_lines += 1;
+        self.last_line_skipped = true;
+        // With no timed line yet the reason is still open ([`Self::line_error`]
+        // says "no times" at the end, unless times come).
+        if self.timed_lines > 0 && self.skipped_lines > MAX_SKIPPED_LINES {
+            self.error = Some(TOO_MANY_BAD_LINES);
+        }
+    }
+
+    /// Why the lines alone make the game unreadable: no line has a time, or
+    /// too many were skipped. `None` while the lines are good enough.
+    fn line_error(&self) -> Option<&'static str> {
+        if self.skipped_lines == 0 {
+            None
+        } else if self.timed_lines == 0 {
+            Some(NO_TIMES)
+        } else if self.skipped_lines > MAX_SKIPPED_LINES {
+            Some(TOO_MANY_BAD_LINES)
+        } else {
+            None
+        }
+    }
+
     /// Keeps hero names only (their card ids hold "HERO"): the report shows
     /// nothing else, and minions cannot fill the bounded map.
     fn remember_names(&mut self, data: &str) {
@@ -163,6 +228,7 @@ impl GameReader {
     }
 
     pub fn finish(mut self, index: usize) -> GameReport {
+        self.error = self.error.or_else(|| self.line_error());
         if self.error.is_none() {
             if let Err(ParseError(name)) = self.collector.finish() {
                 self.error = Some(name);
@@ -489,16 +555,58 @@ fn build_report(index: usize, r: &GameReader) -> GameReport {
         base.warnings
             .push(format!("{game_type} not tested with real logs"));
     }
+    if r.skipped_lines > 0 {
+        let s = if r.skipped_lines == 1 { "" } else { "s" };
+        base.warnings.push(format!(
+            "skipped {} unreadable log line{s}",
+            r.skipped_lines
+        ));
+    }
+    if r.last_line_skipped && !r.is_complete() {
+        base.warnings.push(WARNING_LOG_CUT.into());
+    }
     let c = &r.collector;
-    if r.error.is_some() || c.board.game().is_none() {
-        let error = r.error.unwrap_or("no game data");
-        base.problems.push(format!("parser error: {error}"));
+    let error = r.error.or_else(|| r.line_error());
+    if error.is_some() || c.board.game().is_none() {
+        base.problems
+            .push(problem_text(error.unwrap_or("no game data")));
         return base;
     }
     let mut report = summarize(base, c);
     report.card_names = hero_names(&report, &r.names);
     report.skin_parents = skin_parents(&report, c);
     report
+}
+
+/// What the player reads for a game whose lines make it unreadable: they say
+/// what to do. Only letters, digits and `: . ( ) -` (the server checks them).
+pub const PROBLEM_NO_TIMES: &str =
+    "the game log has no times (restart Hearthstone and play a new game)";
+pub const PROBLEM_TOO_MANY_BAD_LINES: &str =
+    "the game log has too many unreadable lines (restart Hearthstone and play a new game)";
+
+/// Said when a game that did not finish ends in a line cut in the middle:
+/// the game stops writing `Power.log` at about 10 MB unless `client.config`
+/// lifts the limit. Only letters, digits and `: . ( ) -` (the server checks).
+pub const WARNING_LOG_CUT: &str =
+    "the log was cut in the middle of a line (without client.config the game stops writing Power.log at 10 MB)";
+
+/// Whether a report's problem says the game could not be read (not just that
+/// the lobby is not there yet).
+pub fn is_read_failure(problem: &str) -> bool {
+    problem.contains("parser error")
+        || problem == PROBLEM_NO_TIMES
+        || problem == PROBLEM_TOO_MANY_BAD_LINES
+}
+
+/// The problem a game's error becomes; any cause other than the two found in
+/// the lines is the parser's own name.
+fn problem_text(error: &str) -> String {
+    match error {
+        NO_TIMES => PROBLEM_NO_TIMES.into(),
+        TOO_MANY_BAD_LINES => PROBLEM_TOO_MANY_BAD_LINES.into(),
+        other => format!("parser error: {other}"),
+    }
 }
 
 /// Every hero card id the report mentions.

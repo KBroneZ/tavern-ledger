@@ -311,10 +311,6 @@ fn leaderboard_slots(lobby: &[LobbySlot]) -> Option<i64> {
     (n > 0 && whole && even).then_some(n)
 }
 
-/// A parser problem that is a failure to read, not just "the lobby is not
-/// there yet".
-const PARSER_ERROR: &str = "parser error";
-
 /// The live state from the report of the game so far (or of a saved game).
 pub fn live_game(report: &Value) -> LiveGame {
     let view = View::new(report);
@@ -399,9 +395,10 @@ fn phase_of(report: &Value) -> Phase {
     match text(report, "status").as_deref() {
         Some("ok") => Phase::Over,
         Some("incomplete") => Phase::Playing,
+        // A failure to read, not just "the lobby is not there yet".
         _ if texts(report, "problems")
             .iter()
-            .any(|p| p.contains(PARSER_ERROR)) =>
+            .any(|p| bg_parser::is_read_failure(p)) =>
         {
             Phase::Unreadable
         }

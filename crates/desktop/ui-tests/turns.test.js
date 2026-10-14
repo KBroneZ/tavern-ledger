@@ -295,5 +295,6 @@ test("the buffs' bounds are the parser's, the server's and the website's", () =>
   assert.match(turns, new RegExp(`Math\\.min\\(b\\.count, ${count}\\)`), "the app: count");
   assert.match(read("crates", "desktop", "ui", "app.js"), /revision >= 14/, "the app: first revision with buffs");
   assert.match(read("web", "src", "lib", "game", "buffs.ts"), /BUFFS_REVISION = 14/, "the website: first revision with buffs");
-  assert.match(read("crates", "bg-parser", "src", "lib.rs"), /PARSER_REVISION: u32 = 14/, "the parser");
+  const revision = Number(/PARSER_REVISION: u32 = (\d+)/.exec(read("crates", "bg-parser", "src", "lib.rs"))[1]);
+  assert.ok(revision >= 14, "the parser is at or past the first revision with buffs");
 });

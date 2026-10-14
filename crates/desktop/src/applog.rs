@@ -436,32 +436,34 @@ pub fn saved_game_line(saved: &Saved) -> (Level, String) {
         report.warnings.len(),
         report.problems.len()
     );
-    // The window says only that the game could not be read; the parser's
-    // reason is kept here for the problem report (T-357).
-    let errors = parser_errors(&report.problems);
-    if !errors.is_empty() {
-        line.push_str(&format!(" (parser error: {})", errors.join(", ")));
+    if let Some(reason) = read_failure_reason(&report.problems) {
+        line.push_str(&format!(", could not be read: {reason}"));
     }
     let clean = report.status == ReportStatus::Ok && report.problems.is_empty();
     (if clean { Level::Info } else { Level::Warn }, line)
 }
 
-/// The one parser error that is a phrase, not a name.
-const NO_GAME_DATA: &str = "no game data";
-
-/// The parser's own error names ("parser error: NotImplementedError"): fixed
-/// words of the parser, safe to log. Its other problems are free text and can
-/// hold names, so they are not.
-pub fn parser_errors(problems: &[String]) -> Vec<&str> {
-    problems
-        .iter()
-        .filter_map(|p| p.strip_prefix("parser error: "))
-        .filter(|name| {
-            *name == NO_GAME_DATA
-                || (!name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric()))
-        })
-        .collect()
+/// The technical cause of a game that could not be read, for the developer
+/// reading the log: one of the parser's own error names or the two reasons
+/// its lines give, and nothing else (the rest of its text can hold names).
+fn read_failure_reason(problems: &[String]) -> Option<String> {
+    problems.iter().find_map(|p| {
+        if p == bg_parser::PROBLEM_NO_TIMES {
+            return Some("no-times".to_string());
+        }
+        if p == bg_parser::PROBLEM_TOO_MANY_BAD_LINES {
+            return Some("too-many-bad-lines".to_string());
+        }
+        let name = p.strip_prefix("parser error: ")?;
+        let is_name = !name.is_empty()
+            && name.len() <= MAX_ERROR_NAME
+            && name.chars().all(|c| c.is_ascii_alphanumeric());
+        is_name.then(|| name.to_string())
+    })
 }
+
+/// The longest parser error name the log repeats (they are class-like names).
+const MAX_ERROR_NAME: usize = 40;
 
 pub fn saved_game(saved: &Saved) {
     let (level, line) = saved_game_line(saved);

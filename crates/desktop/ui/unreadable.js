@@ -16,7 +16,15 @@
     };
   }
 
-  const api = { isUnreadable, words };
+  // The causes the parser words for the player ("the game log has no times
+  // (restart Hearthstone and play a new game)"); its error names stay out.
+  const USER_REASON = /^the game log has /;
+  const userReasons = (problems) => (Array.isArray(problems) ? problems.filter((p) => USER_REASON.test(p)) : []);
+
+  // "the game log has no times (…)" as a sentence of its own.
+  const sentence = (text) => `${text.charAt(0).toUpperCase()}${text.slice(1)}.`;
+
+  const api = { isUnreadable, words, userReasons, sentence };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLUnreadable = api;
 })();
