@@ -39,7 +39,7 @@ pub const PARSER_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const PARSER_REVISION: u32 = 14;
 
 /// Builds whose real logs this parser was checked against.
-pub const TESTED_BUILDS: &[i64] = &[253216];
+pub const TESTED_BUILDS: &[i64] = &[253216, 254477];
 pub const TESTED_GAME_TYPES: &[&str] = &["GT_BATTLEGROUNDS", "GT_BATTLEGROUNDS_DUO"];
 const MAX_LOBBY: usize = 8;
 /// The highest tavern tier; a value past it is not a tier the game has.
