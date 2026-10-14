@@ -2,8 +2,8 @@
 --
 -- * A name is normalised before the word filter: Unicode NFKC, lower case,
 --   marks stripped (NFD), look-alikes from Cyrillic and Greek (and a few Latin
---   letters that do not decompose) folded to Latin, and repeated letters
---   collapsed. "fúck", "fuuck" and a Cyrillic "с" inside "fuсk" now match.
+--   letters that do not decompose) folded to Latin, and a listed word may have
+--   repeated letters. "fúck", "fuuck" and a Cyrillic "с" inside "fuсk" now match.
 -- * The characters a new name may use are an explicit list: Latin letters
 --   with accents (U+00C0-U+017F without × and ÷), A-Z, digits, space and
 --   _ - . only. Other alphabets are refused; a name saved earlier is left
@@ -30,8 +30,8 @@ as $$
     translate(
       regexp_replace(normalize(lower(normalize(p_name, nfkc)), nfd), '[̀-ͯ]', '', 'g'),
       -- Cyrillic, Greek, then Latin letters without a decomposition.
-      'авекмнорстухіјѕһԁԛԝѵѡαβεικνορτυχγωμηøđłħıðþ',
-      'abekmhopctyxijshdqwvwabeikvoptuxywunodlhidp'),
+      'авекмнорстухіјѕһԁԛԝѵѡαβεικνορτυχγωμηøđłħıðþĸŧŋ',
+      'abekmhopctyxijshdqwvwabeikvoptuxywunodlhidpktn'),
     'ß', 'ss'), 'æ', 'ae'), 'œ', 'oe');
 $$;
 
@@ -53,7 +53,8 @@ language sql
 immutable
 set search_path = ''
 as $$
-  select p_name ~ '^[A-Za-z0-9À-ÖØ-öø-ſ _.-]+$';
+  -- At least one letter or digit, so a name of separators has no empty key.
+  select p_name ~ '^[A-Za-z0-9À-ÖØ-öø-ſ _.-]+$' and p_name ~ '[A-Za-z0-9À-ÖØ-öø-ſ]';
 $$;
 
 revoke all on function private.name_skeleton(text) from public, anon, authenticated, service_role;
@@ -63,21 +64,33 @@ grant execute on function private.display_name_key(text) to authenticated, servi
 revoke all on function private.display_name_chars_ok(text) from public, anon, authenticated, service_role;
 
 -- The spellings a name is checked in: its skeleton as it is and with digits
--- read as letters (0 o, 1 i or l, 3 e, 4 a, 5 s, 7 t, 8 b, 9 g).
+-- read as letters (0 o, 1 i or l, 3 e, 4 a, 5 s, 7 t, 8 b, 9 g) and with the
+-- digits removed.
 create or replace function private.name_spellings(p_name text)
 returns text[]
 language sql
 immutable
 set search_path = ''
 as $$
-  select array[n, translate(n, '01345789', 'oieastbg'), translate(n, '01345789', 'oleastbg')]
+  select array[n, translate(n, '01345789', 'oieastbg'), translate(n, '01345789', 'oleastbg'),
+    regexp_replace(n, '[0-9]', '', 'g')]
   from (select private.name_skeleton(p_name) as n) s;
 $$;
 
+-- A listed word as a pattern: a letter may be repeated ("fuuck"), but a letter
+-- the word doubles ("nigga") stays doubled, so "Zúñiga" is not "nigga".
+create function private.name_word_pattern(p_word text)
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select string_agg(left(m[1], 1) || '{' || length(m[1]) || ',}', '')
+  from regexp_matches(p_word, '((.)*)', 'g') as m;
+$$;
+
 -- True when no listed word is in the name; true for no name. Each spelling's
--- joined-up form and words are worked out once (also with repeated letters
--- collapsed, for words of 3 letters or more once collapsed), then matched
--- against the list.
+-- joined-up form and words are worked out once, then matched against the list.
 create function private.display_name_words_ok(p_name text)
 returns boolean
 language sql
@@ -86,27 +99,21 @@ security definer
 set search_path = ''
 as $$
   with forms as materialized (
-    select v.joined, v.words,
-      regexp_replace(v.joined, '(.)\1+', '\1', 'g') as joined_c,
-      array(select regexp_replace(w, '(.)\1+', '\1', 'g') from unnest(v.words) as w) as words_c
-    from (
-      select regexp_replace(n, '[ _.-]+', '', 'g') as joined,
-        regexp_split_to_array(n, '[ _.-]+') as words
-      from unnest(private.name_spellings(p_name)) as n
-    ) v
+    select regexp_replace(n, '[ _.-]+', '', 'g') as joined,
+      regexp_split_to_array(n, '[ _.-]+') as words
+    from unnest(private.name_spellings(p_name)) as n
   ),
   listed as materialized (
-    select b.word, b.match, regexp_replace(b.word, '(.)\1+', '\1', 'g') as word_c
+    select b.match, private.name_word_pattern(b.word) as pattern
     from private.name_blocklist b
   )
   select p_name is null or not exists (
     select 1
     from forms f
     join listed b on case b.match
-      when 'part' then strpos(f.joined, b.word) > 0
-        or (length(b.word_c) >= 3 and strpos(f.joined_c, b.word_c) > 0)
-      else b.word = any (f.words) or b.word = f.joined
-        or (length(b.word_c) >= 3 and (b.word_c = any (f.words_c) or b.word_c = f.joined_c))
+      when 'part' then f.joined ~ b.pattern
+      else f.joined ~ ('^' || b.pattern || '$')
+        or exists (select 1 from unnest(f.words) as w where w ~ ('^' || b.pattern || '$'))
     end
   );
 $$;
@@ -124,6 +131,7 @@ as $$
     or (private.display_name_chars_ok(p_name) and private.display_name_words_ok(p_name));
 $$;
 
+revoke all on function private.name_word_pattern(text) from public, anon, authenticated, service_role;
 revoke all on function private.name_spellings(text) from public, anon, authenticated, service_role;
 revoke all on function private.display_name_words_ok(text) from public, anon, authenticated, service_role;
 revoke all on function private.display_name_allowed(text) from public, anon, authenticated, service_role;

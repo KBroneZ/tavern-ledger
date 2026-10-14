@@ -33,25 +33,29 @@ select is(private.display_name_key('Á_l.i-ce'), 'alice', 'the key ignores case,
 -- ---------------------------------------------------------------- the word filter, bypasses
 select results_eq(
   $$ select n, pg_temp.try_name('a', n) from unnest(array[
-       'fuсk', 'Аdmin', 'fuuck', 'fúck', 'fuuuuck', 'ѕһіt', 'Ａｄｍｉｎ', 'sstaff', 'f ú c k']) as n $$,
+       'fuсk', 'Аdmin', 'fuuck', 'fúck', 'fuuuuck', 'ѕһіt', 'Ａｄｍｉｎ', 'sstaff', 'f ú c k',
+       'fucĸ', 'shiŧ', 'fu2ck', 'niggga', 'nigga']) as n $$,
   $$ select n, 'display_name_not_allowed' from unnest(array[
-       'fuсk', 'Аdmin', 'fuuck', 'fúck', 'fuuuuck', 'ѕһіt', 'Ａｄｍｉｎ', 'sstaff', 'f ú c k']) as n $$,
+       'fuсk', 'Аdmin', 'fuuck', 'fúck', 'fuuuuck', 'ѕһіt', 'Ａｄｍｉｎ', 'sstaff', 'f ú c k',
+       'fucĸ', 'shiŧ', 'fu2ck', 'niggga', 'nigga']) as n $$,
   'Cyrillic, accented, repeated and full-width spellings of listed words are refused');
 
 -- ---------------------------------------------------------------- the character list
 select results_eq(
   $$ select n, pg_temp.try_name('a', n) from unnest(array[
-       'Álvaro Ñ', 'José_2', 'Zoë Øster', 'Łukasz', 'Weiß-Ünal', 'Ana.Maria', 'As', 'Class Act']) as n $$,
+       'Álvaro Ñ', 'José_2', 'Zoë Øster', 'Łukasz', 'Weiß-Ünal', 'Ana.Maria', 'As', 'Class Act',
+       'Zúñiga', 'Zuniga', 'Nigeria', 'Fagotto']) as n $$,
   $$ select n, 'saved' from unnest(array[
-       'Álvaro Ñ', 'José_2', 'Zoë Øster', 'Łukasz', 'Weiß-Ünal', 'Ana.Maria', 'As', 'Class Act']) as n $$,
+       'Álvaro Ñ', 'José_2', 'Zoë Øster', 'Łukasz', 'Weiß-Ünal', 'Ana.Maria', 'As', 'Class Act',
+       'Zúñiga', 'Zuniga', 'Nigeria', 'Fagotto']) as n $$,
   'ordinary accented Latin names are kept');
 select results_eq(
   $$ select n, pg_temp.try_name('a', n) from unnest(array[
        'Иван', 'Αλέξης', '日本語', 'Name#1234', 'Bob ×', 'Bob😀', 'Cafe' || U&'\0301',
-       'a' || chr(8203) || 'b', 'Ａｂｃ']) as n $$,
+       'a' || chr(8203) || 'b', 'Ａｂｃ', '...', '- _']) as n $$,
   $$ select n, 'display_name_chars' from unnest(array[
        'Иван', 'Αλέξης', '日本語', 'Name#1234', 'Bob ×', 'Bob😀', 'Cafe' || U&'\0301',
-       'a' || chr(8203) || 'b', 'Ａｂｃ']) as n $$,
+       'a' || chr(8203) || 'b', 'Ａｂｃ', '...', '- _']) as n $$,
   'other alphabets, symbols, a decomposed accent and invisible characters are refused');
 select is(pg_temp.try_name('a', null), 'saved', 'clearing the name always works');
 select ok(private.display_name_allowed('Zoë') and not private.display_name_allowed('Зоя')

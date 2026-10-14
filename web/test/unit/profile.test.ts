@@ -20,7 +20,7 @@ test("display name: only Latin letters with accents; look-alike alphabets and ma
   assert.deepEqual(checkDisplayName("Zoë Øster Łukasz Weiß"), { ok: true, value: "Zoë Øster Łukasz Weiß" });
   // A letter plus a combining accent is saved composed.
   assert.deepEqual(checkDisplayName("Café"), { ok: true, value: "Café" });
-  for (const name of ["fuсk", "Аdmin", "Αlex", "日本語", "Ａｂｃ", "Bob×", "a​b", "Bob😀"]) {
+  for (const name of ["fuсk", "Аdmin", "Αlex", "日本語", "Ａｂｃ", "Bob×", "a​b", "Bob😀", "...", "- _"]) {
     assert.equal(checkDisplayName(name).ok, false, name);
   }
 });

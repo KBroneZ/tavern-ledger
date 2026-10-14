@@ -38,7 +38,7 @@ grant select (
 
 -- As in 20261013120000_damage_logged_counts.sql: owner's rights, the row rule
 -- in the view, and the expiry mark for the game's owner only.
-create or replace view public.game_summaries with (security_invoker = false) as
+create or replace view public.game_summaries with (security_invoker = false, security_barrier = true) as
 select
   g.user_id,
   g.session,
