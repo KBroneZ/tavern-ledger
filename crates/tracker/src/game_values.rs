@@ -19,7 +19,7 @@ use serde::Serialize;
 use crate::lobby_tribes::{LOBBY_TRIBES, TRIBES};
 
 /// Game builds the reader's paths were checked on, on the user's client.
-pub const CHECKED_BUILDS: &[i64] = &[253216];
+pub const CHECKED_BUILDS: &[i64] = &[253216, 254477];
 
 /// What the overlay shows when the game's value cannot be used.
 pub const UNSUPPORTED_TRIBES: &str = "Lobby tribes: unsupported game version";
@@ -142,6 +142,19 @@ mod tests {
         assert_eq!(g.status, ReaderStatus::Ok);
         assert!(g.checked_build);
         assert_eq!(g.note, None);
+    }
+
+    #[test]
+    fn the_checked_builds_are_exactly_the_ones_verified_on_real_games() {
+        // 254477 was verified at hero select and on the lobby screen.
+        assert_eq!(CHECKED_BUILDS, &[253216, 254477]);
+        let g = GameTribes::new(Some(&strings(&LOBBY)), ReaderStatus::Ok, Some(254477));
+        assert!(g.checked_build);
+        assert_eq!(g.status, ReaderStatus::Ok);
+        // 255026 is not verified yet.
+        let g = GameTribes::new(Some(&strings(&LOBBY)), ReaderStatus::Ok, Some(255026));
+        assert!(g.tribes.is_empty());
+        assert_eq!(g.status, ReaderStatus::UnsupportedVersion);
     }
 
     #[test]
