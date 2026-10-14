@@ -409,7 +409,7 @@ pub fn set_autostart(
 const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
 
 /// The start-up entry's command line with the exe path in quotes. auto-launch
-/// 0.5 writes the path unquoted, and Windows cuts an unquoted path at its
+/// 0.6 writes the path unquoted, and Windows cuts an unquoted path at its
 /// first space (the installer's folder `Tavern Ledger`, or a user name with a
 /// space), which runs the wrong program or none.
 fn startup_command(exe: &Path, args: &[&str]) -> String {
