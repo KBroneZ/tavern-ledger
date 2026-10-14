@@ -12,8 +12,10 @@
 //!
 //! Both kinds of line carry the same `TAG_CHANGE`s in the same order (98,716
 //! of each in one session, the same count at every game start and session
-//! end). So views of the live state are kept with the number of arrived
-//! `TAG_CHANGE`s they were built from, and the one shown is the newest whose
+//! end), and the same `FULL_ENTITY` and `SHOW_ENTITY` packets, which create
+//! what a `TAG_CHANGE` never touches (a player's enchantment, T-611). So
+//! views of the live state are kept with the number of arrived
+//! packets (`TAG_CHANGE`, `FULL_ENTITY`, `SHOW_ENTITY`) they were built from, and the one shown is the newest whose
 //! number the played lines have reached. Each game start (`CREATE_GAME`,
 //! written as both kinds) sets the played count back in step, so a game whose
 //! end was never played (a concede, a reconnect) does not hold the next one. A
@@ -37,6 +39,18 @@ const PLAYED: &str = "PowerTaskList.DebugPrintPower() -";
 fn packet(line: &str, kind: &str, word: &str) -> bool {
     line.split_once(kind)
         .is_some_and(|(_, body)| body.trim_start().starts_with(word))
+}
+
+/// A packet that sets or creates what the overlay reads: a `TAG_CHANGE`, or
+/// an entity the game creates or shows (`FULL_ENTITY`, `SHOW_ENTITY`; a
+/// player enchantment, which holds a counter, comes as the first). Both kinds
+/// of line carry the same ones in the same order: 11,364 `FULL_ENTITY` and
+/// `SHOW_ENTITY` of each kind in one of the user's sessions of 2026-10-11,
+/// like the `TAG_CHANGE`s (198,332 of each).
+fn packet_changes_board(line: &str, kind: &str) -> bool {
+    ["TAG_CHANGE", "FULL_ENTITY", "SHOW_ENTITY"]
+        .iter()
+        .any(|word| packet(line, kind, word))
 }
 
 struct Held<T> {
@@ -67,9 +81,9 @@ impl<T> Default for Playback<T> {
 impl<T> Playback<T> {
     /// Counts one line of `Power.log`.
     pub fn feed(&mut self, line: &str) {
-        if packet(line, ARRIVED, "TAG_CHANGE") {
+        if packet_changes_board(line, ARRIVED) {
             self.arrived += 1;
-        } else if packet(line, PLAYED, "TAG_CHANGE") {
+        } else if packet_changes_board(line, PLAYED) {
             self.played += 1;
         } else if packet(line, ARRIVED, "CREATE_GAME") {
             self.starts.push_back(self.arrived);
@@ -241,15 +255,45 @@ mod tests {
         assert_eq!(p.view(t), Some(&"caught up"));
     }
 
+    const GS_FULL: &str = "D 10:00:00.0000000 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=60 CardID=BG25_011pe";
+    const PT_FULL: &str = "D 10:00:00.0000000 PowerTaskList.DebugPrintPower() -     FULL_ENTITY - Creating ID=60 CardID=BG25_011pe";
+    const GS_SHOW: &str = "D 10:00:00.0000000 GameState.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=[entityName=x id=60] CardID=BG25_011pe";
+    const PT_SHOW: &str = "D 10:00:00.0000000 PowerTaskList.DebugPrintPower() -     SHOW_ENTITY - Updating Entity=[entityName=x id=60] CardID=BG25_011pe";
+
     #[test]
-    fn only_tag_changes_are_counted() {
+    fn only_packets_that_change_the_board_are_counted() {
         let mut p: Playback<()> = Playback::default();
         p.feed(OTHER);
         p.feed("D 10:00:00.0000000 PowerTaskList.DebugDump() - Block Start=(null)");
-        p.feed("D 10:00:00.0000000 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=5 CardID=");
+        p.feed("D 10:00:00.0000000 GameState.DebugPrintPower() -     tag=ZONE value=PLAY");
         assert_eq!((p.arrived, p.played), (0, 0));
         p.feed(GS);
         p.feed(PT);
         assert_eq!((p.arrived, p.played), (1, 1));
+        p.feed(GS_FULL);
+        p.feed(PT_FULL);
+        p.feed(GS_SHOW);
+        p.feed(PT_SHOW);
+        assert_eq!(
+            (p.arrived, p.played),
+            (3, 3),
+            "created and shown entities too"
+        );
+    }
+
+    #[test]
+    fn a_view_with_an_entity_created_by_full_entity_waits_for_it_to_be_played() {
+        // A player enchantment (a counter) is created by FULL_ENTITY, with no
+        // TAG_CHANGE: the view that holds it must still wait for the game.
+        let t = Instant::now();
+        let mut p = Playback::default();
+        feed(&mut p, GS, 10);
+        feed(&mut p, PT, 10);
+        p.record("before", t);
+        p.feed(GS_FULL);
+        p.record("with the enchantment", t);
+        assert_eq!(p.view(t), Some(&"before"), "not played yet");
+        p.feed(PT_FULL);
+        assert_eq!(p.view(t), Some(&"with the enchantment"));
     }
 }

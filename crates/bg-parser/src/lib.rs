@@ -9,6 +9,7 @@
 
 pub mod clock;
 pub mod collector;
+pub mod counters;
 pub mod discover;
 pub mod gifts;
 pub mod hero_select;
@@ -279,6 +280,22 @@ impl GameReader {
         Some(self.collector.combat_values(report::Side::Own))
     }
 
+    /// The local player's own game-long counters as they are now, in a shop
+    /// or a combat turn (T-611, D-139): the same values the simulator reads
+    /// ([`Self::own_values_now`]) but with no turn gate, only the kinds in
+    /// [`counters::ENABLED_KINDS`]. `None` before the player is known or when
+    /// the game could not be read; `Some(vec![])` when nothing applies. Live
+    /// only, never saved.
+    pub fn counters_now(&self) -> Option<Vec<counters::Counter>> {
+        if self.error.is_some() {
+            return None;
+        }
+        let local = self.collector.local?;
+        self.collector.board.get(local)?;
+        let values = self.collector.combat_values(report::Side::Own);
+        Some(counters::counters_from(&values, counters::ENABLED_KINDS))
+    }
+
     /// True when the log says this is a Battlegrounds game (solo or Duos).
     pub fn is_battlegrounds(&self) -> bool {
         self.game_type
@@ -415,6 +432,13 @@ impl LogReader {
     pub fn own_values_now(&self) -> Option<report::CombatValues> {
         self.in_progress_index()?;
         self.current.as_ref()?.own_values_now()
+    }
+
+    /// The player's counters in the Battlegrounds game in progress (see
+    /// [`GameReader::counters_now`]); `None` when no such game is on.
+    pub fn counters_now(&self) -> Option<Vec<counters::Counter>> {
+        self.in_progress_index()?;
+        self.current.as_ref()?.counters_now()
     }
 
     /// Number of the Battlegrounds game being played right now (the `index`

@@ -48,14 +48,24 @@ fn append(path: &Path, lines: &[String]) {
     }
 }
 
+/// An arrived packet the client plays back: a `TAG_CHANGE`, or an entity
+/// created or shown.
+fn is_played_back(line: &str) -> bool {
+    line.contains(ARRIVED)
+        && ["TAG_CHANGE", "FULL_ENTITY", "SHOW_ENTITY"]
+            .iter()
+            .any(|word| line.contains(word))
+}
+
 /// The lines as the game writes them while in step with the screen: each
-/// arrived `TAG_CHANGE` followed by its played copy.
+/// arrived `TAG_CHANGE`, `FULL_ENTITY` or `SHOW_ENTITY` followed by its
+/// played copy.
 fn played_along(lines: &[&str]) -> Vec<String> {
     lines
         .iter()
         .flat_map(|l| {
             let mut out = vec![l.to_string()];
-            if l.contains(ARRIVED) && l.contains("TAG_CHANGE") {
+            if is_played_back(l) {
                 out.push(l.replace(ARRIVED, PLAYED));
             }
             out
@@ -66,7 +76,7 @@ fn played_along(lines: &[&str]) -> Vec<String> {
 fn played_copies(lines: &[&str]) -> Vec<String> {
     lines
         .iter()
-        .filter(|l| l.contains(ARRIVED) && l.contains("TAG_CHANGE"))
+        .filter(|l| is_played_back(l))
         .map(|l| l.replace(ARRIVED, PLAYED))
         .collect()
 }
