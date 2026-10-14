@@ -5,7 +5,7 @@
         "approximate": [],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.8.0",
+        "engine": "0.9.0",
         "lost": 7508,
         "stalled": 0,
         "start_of_combat": false,
@@ -105,7 +105,7 @@
         "approximate": [],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.8.0",
+        "engine": "0.9.0",
         "lost": 10000,
         "stalled": 0,
         "start_of_combat": false,
@@ -258,7 +258,7 @@
           "likely": 6,
           "low": 6
         },
-        "engine": "0.8.0",
+        "engine": "0.9.0",
         "lost": 2593,
         "stalled": 0,
         "start_of_combat": true,
@@ -367,7 +367,7 @@
         ],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.8.0",
+        "engine": "0.9.0",
         "lost": 10000,
         "stalled": 0,
         "start_of_combat": false,
@@ -471,7 +471,7 @@
         "approximate": [],
         "damage_known": false,
         "dealt": null,
-        "engine": "0.8.0",
+        "engine": "0.9.0",
         "lost": 1275,
         "stalled": 0,
         "start_of_combat": false,
@@ -559,9 +559,15 @@
     {
       "answer": {
         "approximate": [],
-        "engine": "0.8.0",
+        "engine": "0.9.0",
         "not_modelled": [
           "BG_NOT_A_CARD"
+        ],
+        "reasons": [
+          {
+            "card_id": "BG_NOT_A_CARD",
+            "reason": "the simulator has not reviewed this card yet"
+          }
         ],
         "status": "not_modelled"
       },
@@ -614,7 +620,7 @@
     },
     {
       "answer": {
-        "engine": "0.8.0",
+        "engine": "0.9.0",
         "missing": [
           "BG_ICC_026t"
         ],
@@ -670,7 +676,7 @@
           "likely": 4,
           "low": 4
         },
-        "engine": "0.8.0",
+        "engine": "0.9.0",
         "lost": 5609,
         "stalled": 0,
         "start_of_combat": false,
@@ -812,7 +818,7 @@
         "approximate": [],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.8.0",
+        "engine": "0.9.0",
         "lost": 10000,
         "stalled": 0,
         "start_of_combat": false,
@@ -927,7 +933,7 @@
           "likely": 6,
           "low": 6
         },
-        "engine": "0.8.0",
+        "engine": "0.9.0",
         "lost": 0,
         "stalled": 0,
         "start_of_combat": false,

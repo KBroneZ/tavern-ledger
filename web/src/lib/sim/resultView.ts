@@ -131,13 +131,25 @@ function odds(a: Extract<Answer, { kind: "odds" }>, props: ResultProps): VNode[]
   ];
 }
 
-function blocked(title: string, ids: string[], cards: CardIndex, hint?: string): VNode[] {
+/** Each card with the reason the engine gave for refusing it (T-616). */
+function whyList(reasons: Approximate[], cards: CardIndex): VNode {
+  return h(
+    "ul",
+    { class: "sim-approx", role: "list" },
+    reasons.map((a) => {
+      const said = reasonText(a.reason);
+      return h("li", {}, h("strong", {}, cards.name(a.cardId)), ": ", h("span", { lang: said.english ? "en" : undefined }, said.text));
+    }),
+  );
+}
+
+function blocked(title: string, ids: string[], cards: CardIndex, hint?: string, reasons: Approximate[] = []): VNode[] {
   return [
     h(
       "div",
       { class: "state state-error sim-blocked" },
       h("p", { class: "state-title" }, title),
-      h("p", {}, names(ids, cards)),
+      reasons.length > 0 ? whyList(reasons, cards) : h("p", {}, names(ids, cards)),
       hint ? h("p", { class: "sim-dim" }, hint) : null,
     ),
   ];
@@ -148,7 +160,7 @@ function answerView(a: Answer, props: ResultProps): VNode[] {
     case "odds":
       return odds(a, props);
     case "not_modelled":
-      return [...blocked(sm("result.notModelled"), a.notModelled, props.cards, sm("result.notModelledHint")), approxFold(a.approximate, props.cards)].filter(
+      return [...blocked(sm("result.notModelled"), a.notModelled, props.cards, sm("result.notModelledHint"), a.reasons), approxFold(a.approximate, props.cards)].filter(
         (n): n is VNode => n !== null,
       );
     case "no_card_data":

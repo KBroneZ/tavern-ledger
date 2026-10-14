@@ -94,6 +94,26 @@ fn a_card_the_engine_does_not_know_is_named_never_guessed() {
 }
 
 #[test]
+fn a_refused_card_says_why() {
+    // Stitched Salvager copies a minion the logged board no longer shows.
+    let req = request(
+        vec![board(vec![minion("BG31_999", 16, 4)], Some(1))],
+        vec![board(vec![minion("BG_NOT_A_CARD", 1, 1)], Some(1))],
+    );
+    let a = run(&req);
+    let reasons = a["reasons"].as_array().unwrap();
+    let reason = |id: &str| {
+        reasons
+            .iter()
+            .find(|r| r["card_id"] == id)
+            .map(|r| r["reason"].as_str().unwrap().to_string())
+            .unwrap_or_default()
+    };
+    assert!(reason("BG31_999").contains("copies the minion it destroys"));
+    assert!(reason("BG_NOT_A_CARD").contains("not reviewed"));
+}
+
+#[test]
 fn a_card_without_facts_is_named_as_missing() {
     let mut req = request(
         vec![board(vec![minion(PLAIN, 2, 2)], Some(1))],

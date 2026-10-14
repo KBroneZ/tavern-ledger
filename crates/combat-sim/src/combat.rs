@@ -187,7 +187,12 @@ pub(crate) fn intern(
 pub(crate) fn summoned_tokens(triggers: &[Trigger]) -> Vec<&'static str> {
     let mut out = Vec::new();
     for t in triggers {
-        out.extend(t.actions().iter().filter_map(Action::token));
+        for a in t.actions() {
+            out.extend(a.token());
+            if matches!(a, Action::SummonRandomDeathrattle { .. }) {
+                out.extend(cards::DEATHRATTLE_POOL);
+            }
+        }
     }
     out
 }
@@ -212,6 +217,8 @@ pub(crate) struct Unit {
     gained: Vec<u16>,
     /// Hits its current Divine Shield has taken (a gift's shield takes 3).
     shield_taken: u8,
+    /// Times its "n times per combat" effect has happened.
+    uses: u8,
 }
 
 impl Unit {
@@ -228,6 +235,7 @@ impl Unit {
             max_health: health,
             gained: Vec::new(),
             shield_taken: 0,
+            uses: 0,
         }
     }
 
@@ -244,6 +252,9 @@ struct SideState {
     next: usize,
     /// The game-long values of the board fighting now (T-609).
     values: GameValues,
+    /// Friendly minions that died so far in this combat, both boards of a
+    /// Duos team counted (T-616).
+    deaths: u32,
 }
 
 impl SideState {
@@ -319,11 +330,13 @@ impl<'a> Combat<'a> {
                     units: p.start[0].clone(),
                     next: 0,
                     values: p.values[0],
+                    deaths: 0,
                 },
                 SideState {
                     units: p.start[1].clone(),
                     next: 0,
                     values: p.values[1],
+                    deaths: 0,
                 },
             ],
             next_uid,
@@ -471,6 +484,9 @@ mod round4;
 #[path = "combat_round5.rs"]
 mod round5;
 
+#[path = "combat_round8.rs"]
+mod round8;
+
 #[path = "combat_duos.rs"]
 mod duos;
 
@@ -500,3 +516,7 @@ mod t609_tests;
 #[cfg(test)]
 #[path = "combat_golden_tests.rs"]
 mod golden_tests;
+
+#[cfg(test)]
+#[path = "combat_round8_tests.rs"]
+mod round8_tests;

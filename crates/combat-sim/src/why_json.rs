@@ -107,12 +107,22 @@ fn combat_json(c: &CombatWhy) -> Value {
             Said::BadBoard => (Value::Null, json!("bad_board"), Vec::new(), Value::Null),
         },
     };
+    // Why each card blocks the odds, for a card the engine refuses.
+    let reasons: Vec<Value> = if no_odds == json!("not_modelled") {
+        cards
+            .iter()
+            .map(|id| json!({"card_id": id, "reason": crate::trials::refusal_reason(id)}))
+            .collect()
+    } else {
+        Vec::new()
+    };
     json!({
         "round": c.round,
         "result": result_word(c.result),
         "odds": odds,
         "no_odds": no_odds,
         "cards": cards,
+        "reasons": reasons,
         "cause": cause,
     })
 }
@@ -217,5 +227,21 @@ mod tests {
             (v["no_odds"].clone(), v["cards"].clone()),
             (json!("not_modelled"), json!(["ZZ_2"]))
         );
+        assert_eq!(v["reasons"][0]["card_id"], "ZZ_2");
+        assert!(v["reasons"][0]["reason"]
+            .as_str()
+            .unwrap()
+            .contains("not reviewed"));
+    }
+
+    #[test]
+    fn a_refused_card_gives_its_own_reason() {
+        let v = one(Why::Explained(Explained {
+            said: Said::NotModelled(vec!["BG31_999".into()]),
+            cause: None,
+        }));
+        let reason = v["reasons"][0]["reason"].as_str().unwrap();
+        assert!(reason.contains("copies the minion it destroys"), "{reason}");
+        assert_eq!(one(Why::NoBoards)["reasons"], json!([]));
     }
 }

@@ -61,7 +61,12 @@ impl Combat<'_> {
                     units: self.p.second[side].clone().unwrap_or_default(),
                     next: 0,
                     values: self.p.second_values[side],
+                    deaths: self.sides[side].deaths,
                 };
+                let entering: Vec<u32> = self.sides[side].units.iter().map(|u| u.uid).collect();
+                for uid in entering {
+                    self.catch_up_deaths(side, uid);
+                }
             }
             enters
         })

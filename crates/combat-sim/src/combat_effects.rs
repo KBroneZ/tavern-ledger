@@ -253,6 +253,12 @@ impl Combat<'_> {
                 *gem = (gem.0.saturating_add(attack), gem.1.saturating_add(health));
             }
             Action::Spell(actions) => self.cast_spell(side, src, target, attacker, actions),
+            Action::SummonRandomDeathrattle { count } => {
+                self.summon_random_deathrattle(side, src, count)
+            }
+            Action::GiveSummonedOwnStats { factor, times } => {
+                self.give_summoned_own_stats(side, me, attacker, factor, times)
+            }
         }
     }
 

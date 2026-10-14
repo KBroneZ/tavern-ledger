@@ -124,7 +124,33 @@ impl Coverage {
     pub fn is_exact(&self) -> bool {
         self.not_modelled.is_empty() && self.approximate.is_empty()
     }
+
+    /// Why each card of [`Coverage::not_modelled`] blocks the odds, in the
+    /// same order, for the page to show (T-616).
+    pub fn reasons(&self) -> Vec<(String, &'static str)> {
+        self.not_modelled
+            .iter()
+            .map(|id| (id.clone(), refusal_reason(id)))
+            .collect()
+    }
 }
+
+/// Why the engine refuses a card or Dark Gift: a start-of-combat effect it
+/// does not play on a board taken before it, or the reason written for the
+/// card (T-616).
+pub fn refusal_reason(id: &str) -> &'static str {
+    if gifts::gift(id).is_some() || cards::rules(id).is_some() {
+        return START_OF_COMBAT_GAP;
+    }
+    if id.starts_with("BG36_MidGameEffect") {
+        return GIFT_NOT_REVIEWED;
+    }
+    cards::refusal(id)
+}
+
+const START_OF_COMBAT_GAP: &str =
+    "its Start of Combat effect is not played, and this board was taken before it";
+const GIFT_NOT_REVIEWED: &str = "the simulator has not reviewed this Dark Gift yet";
 
 /// True when the card's only gap is a game-long value its board brings
 /// (T-610): Blood Gem or Tavern spell upgrades above zero. Zero is unknown
