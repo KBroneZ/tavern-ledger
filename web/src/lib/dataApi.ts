@@ -86,18 +86,14 @@ async function modeData(client: SupabaseClient, userId: string, m: Mode): Promis
       .select("counted_place", { count: "exact" })
       .eq("user_id", userId)
       .eq("mode", m)
-      .order("played_on", { ascending: false })
-      .order("session", { ascending: false })
-      .order("game_index", { ascending: false })
+      .order("play_order", { ascending: false })
       .limit(CHART_GAMES),
     client
       .from("game_summaries")
       .select(GAME_COLUMNS)
       .eq("user_id", userId)
       .eq("mode", m)
-      .order("played_on", { ascending: false })
-      .order("session", { ascending: false })
-      .order("game_index", { ascending: false })
+      .order("play_order", { ascending: false })
       .limit(LAST_GAMES),
   ]);
   const placeRows = rowsOf(places);
@@ -151,16 +147,19 @@ function filtered<Q extends Filterable<Q>>(query: Q, filters: GameFilters): Q {
 }
 
 /** One page of the games list with the number of games that match. */
-export async function loadGames(client: SupabaseClient, userId: string, filters: GameFilters): Promise<{ rows: GameRow[]; total: number }> {
+export async function loadGames(
+  client: SupabaseClient,
+  userId: string,
+  filters: GameFilters,
+  columns: string = GAME_COLUMNS,
+): Promise<{ rows: GameRow[]; total: number }> {
   const { from, to } = pageRange(filters.page);
-  const answer = await filtered(client.from("game_summaries").select(GAME_COLUMNS, { count: "exact" }).eq("user_id", userId), filters)
-    .order("played_on", { ascending: false })
-    .order("session", { ascending: false })
-    .order("game_index", { ascending: false })
+  const answer = await filtered(client.from("game_summaries").select(columns, { count: "exact" }).eq("user_id", userId), filters)
+    .order("play_order", { ascending: false })
     .range(from, to);
   if (answer.error && answer.status === 416) {
     // Past the last page: no rows, but the page still says how many games match.
-    const head = await filtered(client.from("game_summaries").select("session", { count: "exact", head: true }).eq("user_id", userId), filters);
+    const head = await filtered(client.from("game_summaries").select("public_id", { count: "exact", head: true }).eq("user_id", userId), filters);
     if (head.error) throw new DataError("the request failed");
     return { rows: [], total: totalOf(head.count, 0) };
   }

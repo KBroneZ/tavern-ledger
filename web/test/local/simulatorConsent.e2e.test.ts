@@ -82,8 +82,14 @@ describe("the simulator switch on the local stack", { skip: !ENABLED && "set TAV
       content_sha256: "0".repeat(64),
       size_bytes: 100,
     };
-    assert.equal((await service("/rest/v1/games", { method: "POST", body: JSON.stringify(game) })).status, 201);
-    const path = `${id}/${SESSION}-1.json.gz`;
+    const ins = await service("/rest/v1/games", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(game),
+    });
+    assert.equal(ins.status, 201);
+    // The file's name is made by the database from the game's public id (T-586).
+    const path = ((await ins.json()) as { storage_path: string }[])[0].storage_path;
     const put = await service(`/storage/v1/object/games/${path}`, {
       method: "POST",
       body: gzipSync(Buffer.from("{}")),

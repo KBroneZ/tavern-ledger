@@ -111,7 +111,7 @@ test("addresses in each language", () => {
   assert.equal(pathLang("/essay/"), "en");
   setLang("es");
   assert.equal(href("/me/"), "/es/me/");
-  assert.equal(gamePath("u", "s", 1), "/es/game/?u=u&s=s&g=1");
+  assert.equal(gamePath("u", "s"), "/es/game/?u=u&id=s");
   assert.equal(publicProfilePath("abc"), "/es/profile/?id=abc");
   assert.deepEqual(langPaths(), [
     { params: { lang: undefined }, props: { lang: "en" } },
@@ -187,7 +187,7 @@ function assertSpanish(nodes: VNode[], what: string): void {
 test("the game viewer draws in Spanish, Solo and Duos", () => {
   setLang("es");
   for (const report of [soloReport(), duosReport()]) {
-    const result = readRecord(record(report), SESSION, INDEX);
+    const result = readRecord(record(report));
     assert.ok(result.ok);
     const nodes = renderGame(shapeGame(result.record), "2026-10-09");
     assertSpanish(nodes, "game");

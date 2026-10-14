@@ -52,7 +52,8 @@ export function overviewRow(over: RawRow = {}): RawRow {
 
 export function gameRaw(over: RawRow = {}): RawRow {
   return {
-    session: "Hearthstone_2026_10_09_18_30_00",
+    public_id: "3f2b8c1e-5d4a-4b7e-9c6d-1a2b3c4d5e6f",
+    storage_path: "0f8fad5b-d9cb-469f-a165-70867728950e/3f2b8c1e-5d4a-4b7e-9c6d-1a2b3c4d5e6f.json.gz",
     game_index: 2,
     mode: "solo",
     status: "ok",

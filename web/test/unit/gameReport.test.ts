@@ -6,7 +6,7 @@ import { KNOWN_REVISION, readRecord } from "../../src/lib/game/report.ts";
 import { duosReport, INDEX, record, SESSION, soloReport } from "./gameFixtures.ts";
 
 const read = (value: unknown) => {
-  const result = readRecord(value, SESSION, INDEX);
+  const result = readRecord(value);
   assert.ok(result.ok, "the record is read");
   return result.record;
 };
@@ -55,7 +55,7 @@ test("report reader: a Duos game", () => {
   assert.deepEqual(r.choices, []);
 });
 
-test("report reader: a record that is not this game's is refused whole", () => {
+test("report reader: a record that does not agree with itself is refused whole", () => {
   for (const value of [
     null,
     "text",
@@ -63,7 +63,6 @@ test("report reader: a record that is not this game's is refused whole", () => {
     42,
     { session: SESSION, index: INDEX },
     { session: SESSION, index: INDEX, report: [] },
-    record(soloReport(), { session: "Hearthstone_2026_10_09_20_15_04" }),
     record(soloReport(), { index: INDEX + 1 }),
     record({ ...soloReport(), index: INDEX + 1 }),
   ]) {
@@ -111,7 +110,7 @@ test("report reader: wrong types at any level never throw", () => {
   for (const key of levels) {
     for (const shape of shapes) {
       const rep = { ...soloReport(), [key]: shape };
-      assert.doesNotThrow(() => readRecord(record(rep), SESSION, INDEX), `${key}=${JSON.stringify(shape)}`);
+      assert.doesNotThrow(() => readRecord(record(rep)), `${key}=${JSON.stringify(shape)}`);
     }
   }
   const deep = soloReport() as Record<string, any>;
@@ -157,7 +156,7 @@ test("report reader: every synthetic parser report in the repo reads without a d
     const games = JSON.parse(readFileSync(join(dir, file), "utf8")) as Record<string, unknown>[];
     for (const game of games) {
       const index = game.index as number;
-      const result = readRecord({ session: SESSION, index, saved_at: 1, report: game }, SESSION, index);
+      const result = readRecord({ session: SESSION, index, saved_at: 1, report: game });
       assert.ok(result.ok, file);
       assert.equal(result.record.unreadable, 0, `${file} game ${index}`);
     }
@@ -173,7 +172,7 @@ test("report reader: real games with combat replays (revision 8) read without a 
       assert.ok(game.rounds.some((r: Record<string, unknown>) => r.replay), `${file} has replays`);
       const index = game.index as number;
       const parser = { version: "0.1.0", revision: KNOWN_REVISION };
-      const result = readRecord({ session: SESSION, index, saved_at: 1, parser, report: game }, SESSION, index);
+      const result = readRecord({ session: SESSION, index, saved_at: 1, parser, report: game });
       assert.ok(result.ok, file);
       assert.equal(result.record.unreadable, 0, `${file} game ${index}`);
       assert.equal(result.record.newer, false);
@@ -212,7 +211,7 @@ test("report reader: the real game with Dark Gifts reads without a dropped value
   const dir = join(import.meta.dirname, "..", "..", "..", "crates", "bg-parser", "tests", "data", "real");
   const [game] = JSON.parse(readFileSync(join(dir, "b253216_duos_gifts.json"), "utf8")) as Record<string, any>[];
   const parser = { version: "0.1.0", revision: KNOWN_REVISION };
-  const result = readRecord({ session: SESSION, index: game.index, saved_at: 1, parser, report: game }, SESSION, game.index);
+  const result = readRecord({ session: SESSION, index: game.index, saved_at: 1, parser, report: game });
   assert.ok(result.ok);
   assert.equal(result.record.unreadable, 0);
   const gifted = result.record.report.rounds.flatMap((r) => r.entries.flatMap((e) => e.board ?? [])).filter((m) => m.gifts.length > 0);
@@ -230,4 +229,14 @@ test("report reader: each board's game-long values (revision 10), bad ones count
   assert.equal(opponent.values, null);
   assert.equal(rec.unreadable, 4, "zero, a string, too large and a list are counted");
   assert.equal(read(record()).report.rounds[1].entries[0].values, null, "none saved: the printed numbers");
+});
+
+test("report reader: the record keeps the day the game was played and never its time", () => {
+  const result = readRecord(record(soloReport()));
+  assert.ok(result.ok);
+  assert.equal(result.record.playedOn, "2026-10-09");
+  assert.doesNotMatch(JSON.stringify(result.record), /20_15_03|20:15/);
+  const noDate = readRecord(record(soloReport(), { session: "nope" }));
+  assert.ok(noDate.ok);
+  assert.equal(noDate.record.playedOn, null);
 });

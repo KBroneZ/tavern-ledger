@@ -79,10 +79,11 @@ export async function inflate(blob: Blob): Promise<string> {
   return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
 }
 
-export async function loadGame(download: Download, ref: GameRef): Promise<LoadResult> {
+/** `path`: the file's name when it is not the opaque one (a game the sweep has not renamed yet, read by its owner). */
+export async function loadGame(download: Download, ref: GameRef, path: string = storagePath(ref)): Promise<LoadResult> {
   let answer: Awaited<ReturnType<Download>>;
   try {
-    answer = await download(storagePath(ref));
+    answer = await download(path);
   } catch {
     return { kind: "error" };
   }
@@ -94,6 +95,6 @@ export async function loadGame(download: Download, ref: GameRef): Promise<LoadRe
     // Too large, not gzip, not UTF-8 or not JSON: the file is not one we can read.
     return { kind: "unreadable" };
   }
-  const result = readRecord(value, ref.session, ref.index);
+  const result = readRecord(value);
   return result.ok ? { kind: "ok", record: result.record, report: (value as { report: unknown }).report } : { kind: "unreadable" };
 }

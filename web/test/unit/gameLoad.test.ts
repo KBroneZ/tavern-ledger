@@ -2,9 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { gzipSync } from "node:zlib";
 import { type Download, loadGame, MAX_GZIPPED, MAX_INFLATED } from "../../src/lib/game/load.ts";
-import { INDEX, record, SESSION, USER } from "./gameFixtures.ts";
+import { PUBLIC_ID, record, USER } from "./gameFixtures.ts";
 
-const REF = { userId: USER, session: SESSION, index: INDEX };
+const REF = { userId: USER, publicId: PUBLIC_ID };
 const blob = (bytes: Uint8Array | string) => new Blob([bytes]);
 const gz = (value: unknown) => blob(gzipSync(JSON.stringify(value)));
 
@@ -23,7 +23,7 @@ test("load: reads the game's own file once", async () => {
   const { download, paths } = serve(gz(record()));
   const result = await loadGame(download, REF);
   assert.equal(result.kind, "ok");
-  assert.deepEqual(paths, [`${USER}/${SESSION}-${INDEX}.json.gz`]);
+  assert.deepEqual(paths, [`${USER}/${PUBLIC_ID}.json.gz`]);
   if (result.kind === "ok") assert.equal(result.record.report.hero, "BG22_HERO_002");
 });
 
@@ -57,7 +57,7 @@ test("load: broken files are unreadable, never a crash", async () => {
     ["truncated gzip", blob(gzipSync(JSON.stringify(record())).subarray(0, 20))],
     ["gzip of text", blob(gzipSync("not json"))],
     ["bad UTF-8", blob(gzipSync(new Uint8Array([0x7b, 0xff, 0xfe, 0x7d])))],
-    ["JSON of another game", gz(record(undefined, { index: INDEX + 1 }))],
+    ["JSON whose index is not its report's", gz(record(undefined, { index: 99 }))],
     ["JSON array", gz([1, 2, 3])],
     ["empty", blob("")],
   ];

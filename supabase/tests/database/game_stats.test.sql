@@ -204,7 +204,7 @@ select ok(
   and not has_function_privilege('authenticated',
     'public.game_stats_backfill_put(uuid, text, integer, text, integer, jsonb)', 'execute')
   and not has_function_privilege('authenticated',
-    'public.upload_commit(uuid, text, integer, text, text, text, integer, integer, date, jsonb, bigint, text, integer, text, jsonb, integer)',
+    'public.upload_commit(uuid, text, integer, text, text, text, integer, integer, date, jsonb, bigint, text, integer, text, jsonb, integer, uuid)',
     'execute'),
   'clients cannot call the write or backfill functions'
 );

@@ -11,11 +11,11 @@ import { h, type VNode } from "../view/node.ts";
 import { sourceMark, type Cell, type Column, type TileProps } from "../view/pieces.ts";
 
 /** The columns curiousRecord() reads, for the select. */
-export const CURIOUS_RECORD_COLUMNS = "mode,record,value,session,game_index,played_on,games,inferred";
+export const CURIOUS_RECORD_COLUMNS = "mode,record,value,public_id,game_index,played_on,games,inferred";
 
 export interface CuriousRecord extends RecordRow {
   /** The game it came from (the first that reached the value), for its link. */
-  session: string | null;
+  publicId: string | null;
   gameIndex: number | null;
 }
 
@@ -46,10 +46,10 @@ export const CURIOUS_RECORD_COLUMNS_VIEW: Column[] = [
 /** The game's date, linked to the game viewer when its key is known. */
 function gameCell(r: CuriousRecord, userId: string): Cell {
   const text = dateText(r.playedOn);
-  if (r.session === null || r.gameIndex === null) return text;
+  if (r.publicId === null) return text;
   // Every row links a date: the record names the link for screen readers.
   const which = h("span", { class: "visually-hidden" }, t("curious.link", { record: recordLabel(r) }));
-  return { node: h("a", { href: gamePath(userId, r.session, r.gameIndex) }, text, which) };
+  return { node: h("a", { href: gamePath(userId, r.publicId) }, text, which) };
 }
 
 export function recordCellsOf(r: CuriousRecord, userId: string, totalGames: number): Cell[] {

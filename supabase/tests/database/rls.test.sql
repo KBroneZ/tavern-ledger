@@ -2,7 +2,7 @@
 -- Users are made up; everything rolls back at the end.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(38);
+select plan(39);
 
 -- Two users. The trigger gives each a private profile.
 insert into auth.users (id, email) values
@@ -24,11 +24,14 @@ values
    '{"BEAST": 10, "NAGA": 7}', 1791000000, repeat('a', 64), 2500);
 insert into storage.objects (bucket_id, name, owner_id)
 values ('games', '00000000-0000-4000-8000-00000000000a/Hearthstone_2026_10_09_18_30_00-1.json.gz', null);
+-- The game's file under its opaque name (what a new upload writes).
+insert into storage.objects (bucket_id, name, owner_id)
+select 'games', storage_path, null from public.games;
 
-select is(
+select matches(
   (select storage_path from public.games),
-  '00000000-0000-4000-8000-00000000000a/Hearthstone_2026_10_09_18_30_00-1.json.gz',
-  'storage_path is derived from the key'
+  '^00000000-0000-4000-8000-00000000000a/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.json\.gz$',
+  'a new game''s file name is its random public_id, with no time in it'
 );
 
 -- No column for names, ratings or MMR in the public schema (D-012, D-017).
@@ -159,8 +162,8 @@ select throws_ok(
   'the owner can only change display_name and is_public'
 );
 select is(
-  (select count(*)::int from storage.objects where bucket_id = 'games'), 1,
-  'the owner reads their own file'
+  (select count(*)::int from storage.objects where bucket_id = 'games'), 2,
+  'the owner reads their own files, old name and new'
 );
 select is(
   (select jsonb_array_length(public.export_my_data() -> 'games')), 1,
@@ -181,6 +184,8 @@ select results_eq(
 select is((select count(*)::int from public.games), 1, 'a public profile''s games are readable');
 select is((select count(*)::int from storage.objects where bucket_id = 'games'), 1,
   'a public profile''s files are readable');
+select is_empty($$ select name from storage.objects where bucket_id = 'games' and name ~ 'Hearthstone_' $$,
+  'but not a file whose name still carries the session');
 
 reset role;
 select * from finish();

@@ -179,7 +179,7 @@ export function gameColumns(withMode: boolean): Column[] {
   ];
 }
 
-/** The game viewer's address (T-504): lib/game/url.ts owns it. */
+/** The game viewer's address (T-504, T-586): lib/game/url.ts owns it. */
 export const gameHref = gamePath;
 
 /**
@@ -188,10 +188,10 @@ export const gameHref = gamePath;
  * since the same hero can be played many times.
  */
 function gameHeroCell(g: GameRow, userId: string | null): Cell {
-  if (!userId || g.session === null || g.gameIndex === null) return heroCell(g.hero);
+  if (!userId || g.publicId === null) return heroCell(g.hero);
   // No date known: no words after the name, rather than a dash read aloud.
   const context = g.playedOn === null ? undefined : t("games.link", { date: dateText(g.playedOn) });
-  return heroCell(g.hero, gameHref(userId, g.session, g.gameIndex), context);
+  return heroCell(g.hero, gameHref(userId, g.publicId), context);
 }
 
 /** One game as a row: hero (linking to the game), place badge (or why it has none), date and the key numbers. */

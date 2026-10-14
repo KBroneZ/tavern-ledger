@@ -25,8 +25,7 @@ export interface PickedGame {
   loaded: number | null;
 }
 
-export const gameKey = (row: Pick<GameRow, "session" | "gameIndex">): string | null =>
-  row.session && row.gameIndex !== null ? `${row.session}#${row.gameIndex}` : null;
+export const gameKey = (row: Pick<GameRow, "publicId">): string | null => row.publicId;
 
 function gameButton(row: GameRow, picked: PickedGame | null): VNode | null {
   const key = gameKey(row);

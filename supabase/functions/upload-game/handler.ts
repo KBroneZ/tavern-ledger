@@ -181,6 +181,7 @@ function commitArgs(
   stats: GameStats,
   sha: string,
   size: number,
+  publicId: string | null,
 ) {
   return {
     target: userId,
@@ -199,6 +200,10 @@ function commitArgs(
     p_parser_version: s.parser_version,
     p_stats: stats,
     p_summary_version: SUMMARY_VERSION,
+    // The id upload_begin() gave the game: its file is written under it, and
+    // the row names that file. Left out (a database from before ids answers
+    // without one, and gets no unknown argument), the row keeps what it has.
+    ...(publicId === null ? {} : { p_public_id: publicId }),
   };
 }
 
@@ -243,6 +248,31 @@ function invalid(code: string, field: string): Response {
     code,
     field,
   });
+}
+
+/**
+ * Where upload_begin() says to write the game's file, and the id it made for a
+ * new game. The name is `<user>/<public_id>.json.gz` (opaque: nothing of the
+ * session in it) or, for a game stored before ids, the name its row has. A
+ * database from before ids answers without a name: the session's, as always.
+ * Anything else the database might say is refused, never written to.
+ */
+function fileTarget(
+  userId: string,
+  key: { session: string; index: number },
+  begin: { path?: unknown; public_id?: unknown },
+): { path: string; publicId: string | null } | null {
+  if (begin.path === undefined) {
+    return { path: `${userId}/${key.session}-${key.index}.json.gz`, publicId: null };
+  }
+  const path = begin.path;
+  if (typeof path !== "string") return null;
+  if (path === `${userId}/${key.session}-${key.index}.json.gz`) return { path, publicId: null };
+  const suffix = ".json.gz";
+  if (!path.startsWith(`${userId}/`) || !path.endsWith(suffix)) return null;
+  const id = path.slice(userId.length + 1, -suffix.length);
+  if (!UUID.test(id)) return null;
+  return { path, publicId: begin.public_id === id ? id : null };
 }
 
 const BEGIN_REFUSALS: Record<string, [number, string]> = {
@@ -310,7 +340,9 @@ async function store(
   if (result === "bad_session") return invalid("invalid_report", "session");
   if (result !== "create" && result !== "replace") throw new StepError("begin", 502);
 
-  const path = `${userId}/${key.session}-${key.index}.json.gz`;
+  const target = fileTarget(userId, key, begin);
+  if (target === null) throw new StepError("begin", 502);
+  const { path } = target;
   const write = await call(fetchFn, "write file", `${env.url}/storage/v1/object/games/${path}`, {
     method: "POST",
     headers: { ...serviceHeaders(env), "Content-Type": "application/gzip", "x-upsert": "true" },
@@ -323,7 +355,15 @@ async function store(
     committed = await commit(
       env,
       fetchFn,
-      commitArgs(userId, key, checked.summary, stats, sha, file.length),
+      commitArgs(
+        userId,
+        key,
+        checked.summary,
+        stats,
+        sha,
+        file.length,
+        target.publicId,
+      ),
     );
   } catch (e) {
     // The database refused the row (PostgREST answers 4xx for an error it

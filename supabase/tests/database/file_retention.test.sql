@@ -22,9 +22,9 @@ create temporary table today as select (now() at time zone 'utc')::date as d;
 -- ago (due), 6 already expired, 7 no summary 100 days old (still kept),
 -- 8 past but changed in the last hour (kept).
 insert into public.games (user_id, session, game_index, game_type, status, played_on,
-  saved_at, content_sha256, size_bytes, created_at, updated_at, file_expired_at)
+  saved_at, content_sha256, size_bytes, created_at, updated_at, file_expired_at, storage_path)
 select u::uuid, 'Hearthstone_2026_01_01_00_00_00', i, 'GT_BATTLEGROUNDS', 'ok', p, 1791000000,
-  repeat(s, 64), 2000, c, m, x
+  repeat(s, 64), 2000, c, m, x, u || '/Hearthstone_2026_01_01_00_00_00-' || i || '.json.gz'
 from (values
   ('00000000-0000-4000-8000-0000000000a1', 1, (select d from today) - 29, now(),
     now() - interval '2 hours', null::timestamptz, 'a'),

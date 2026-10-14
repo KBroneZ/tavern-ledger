@@ -5,6 +5,8 @@
 export const USER = "0f8fad5b-d9cb-469f-a165-70867728950e";
 export const SESSION = "Hearthstone_2026_10_09_20_15_03";
 export const INDEX = 2;
+/** The game's public id (T-586): random, says nothing about when it was played. */
+export const PUBLIC_ID = "3f2b8c1e-5d4a-4b7e-9c6d-1a2b3c4d5e6f";
 
 type Json = Record<string, unknown>;
 

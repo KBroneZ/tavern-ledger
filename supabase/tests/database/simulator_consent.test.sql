@@ -25,10 +25,12 @@ declare
   path text;
 begin
   insert into public.games (user_id, session, game_index, game_type, status, hero_card_id,
-    final_place, build, played_on, saved_at, content_sha256, size_bytes, file_expired_at)
+    final_place, build, played_on, saved_at, content_sha256, size_bytes, file_expired_at,
+    storage_path)
   values (pg_temp.pid(i), 'Hearthstone_2026_10_09_18_30_00', idx, 'GT_BATTLEGROUNDS_DUO', 'ok',
     'BG20_HERO_202', 2, 253216, current_date - idx, 1791000000, repeat('d', 64), 3000,
-    case when expired then now() end)
+    case when expired then now() end,
+    pg_temp.pid(i)::text || '/Hearthstone_2026_10_09_18_30_00-' || idx || '.json.gz')
   returning storage_path into path;
   if not expired then
     insert into storage.objects (bucket_id, name) values ('games', path);

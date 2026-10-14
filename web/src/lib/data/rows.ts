@@ -3,6 +3,7 @@
 // that is not Solo or Duos, refuses the whole answer: the page says it could
 // not read the data rather than show a wrong number. A value out of its range
 // is unknown (null), never 0.
+import { isPublicId } from "../game/url.ts";
 import { PLACES, type Mode } from "./format.ts";
 
 export class DataError extends Error {}
@@ -11,8 +12,8 @@ type Row = Record<string, unknown>;
 
 const CARD_ID = /^[A-Za-z0-9_]{1,64}$/;
 const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
-// The app's session name (Hearthstone_2026_10_09_18_30_00); checked before it goes in a link.
-const SESSION = /^[A-Za-z0-9_.-]{1,128}$/;
+// Where a game's file is: <user id>/<public id>.json.gz, or an older name the sweep has not renamed yet.
+const FILE_PATH = /^[0-9a-f-]{36}\/[A-Za-z0-9_.-]{1,128}$/;
 
 function asRow(value: unknown): Row {
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new DataError("not a row");
@@ -232,12 +233,12 @@ export function recordRow(value: unknown): RecordRow | null {
   return { mode: m, record: name, value: v, playedOn: day(r.played_on), games: count(r.games, "games"), inferred: r.inferred === true };
 }
 
-/** A game's key (session and index) for its link; each part null when not shaped as expected. */
-export function gameKey(value: unknown): { session: string | null; gameIndex: number | null } {
+/** A game's public id (T-586) for its link, and its index; each null when not shaped as expected. */
+export function gameKey(value: unknown): { publicId: string | null; gameIndex: number | null } {
   const r = asRow(value);
   const index = num(r.game_index);
   return {
-    session: typeof r.session === "string" && SESSION.test(r.session) ? r.session : null,
+    publicId: isPublicId(r.public_id) ? r.public_id : null,
     gameIndex: index !== null && Number.isInteger(index) && index >= 0 ? index : null,
   };
 }
@@ -245,9 +246,11 @@ export function gameKey(value: unknown): { session: string | null; gameIndex: nu
 export type GameStatus = "ok" | "incomplete" | "unsupported" | "unknown";
 
 export interface GameRow {
-  /** The game's key, for its link; null when not shaped as expected. */
-  session: string | null;
+  /** The game's public id, for its link; null when not shaped as expected. */
+  publicId: string | null;
   gameIndex: number | null;
+  /** Where its file is in the bucket (the viewer's own games may still have an older name); null when not shaped as expected. */
+  storagePath: string | null;
   mode: Mode;
   status: GameStatus;
   playedOn: string | null;
@@ -268,6 +271,7 @@ export function gameRow(value: unknown): GameRow {
   const status: GameStatus = r.status === "ok" || r.status === "incomplete" || r.status === "unsupported" ? r.status : "unknown";
   return {
     ...gameKey(r),
+    storagePath: typeof r.storage_path === "string" && FILE_PATH.test(r.storage_path) ? r.storage_path : null,
     mode: m,
     status,
     playedOn: day(r.played_on),
@@ -284,6 +288,9 @@ export function gameRow(value: unknown): GameRow {
   };
 }
 
-/** The columns gameRow() reads, for the select. */
+/** The columns gameRow() reads, for the select (the page's own: no file name). */
 export const GAME_COLUMNS =
-  "session,game_index,mode,status,played_on,hero,counted_place,rounds,combats_won,combats_lost,combats_inferred,triples,apm,gold_spent";
+  "public_id,game_index,mode,status,played_on,hero,counted_place,rounds,combats_won,combats_lost,combats_inferred,triples,apm,gold_spent";
+
+/** With the file's name, for the viewer and the simulator, which open the file (an older name until the sweep renames it). */
+export const GAME_FILE_COLUMNS = `${GAME_COLUMNS},storage_path`;

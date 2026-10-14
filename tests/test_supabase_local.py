@@ -128,12 +128,8 @@ class LocalStackTests(unittest.TestCase):
         """What the upload Edge Function will do (T-104d), with the service role."""
         record = json.dumps({"session": SESSION, "index": index, "report": {}}).encode()
         blob = gzip.compress(record)
-        path = f"{uid}/{SESSION}-{index}.json.gz"
-        status, _ = self.api.service(
-            "POST", f"/storage/v1/object/games/{path}", raw=blob,
-            content_type="application/gzip")
-        self.assertEqual(status, 200, "service uploads a file")
-        status, _ = self.api.service("POST", "/rest/v1/games", body={
+        status, rows = self.api.service("POST", "/rest/v1/games", headers={
+            "Prefer": "return=representation"}, body={
             "user_id": uid, "session": SESSION, "game_index": index,
             "game_type": "GT_BATTLEGROUNDS", "status": "ok",
             "hero_card_id": "BG20_HERO_202", "final_place": 3, "build": 253216,
@@ -141,6 +137,14 @@ class LocalStackTests(unittest.TestCase):
             "saved_at": 1791000000, "content_sha256": "0" * 64,
             "size_bytes": len(blob)})
         self.assertEqual(status, 201, "service writes a game row")
+        # T-586: the file's name is made by the database from the game's random id.
+        path = rows[0]["storage_path"]
+        self.assertEqual(path, f"{uid}/{rows[0]['public_id']}.json.gz")
+        self.assertNotIn("Hearthstone", path, "no start time in the file name")
+        status, _ = self.api.service(
+            "POST", f"/storage/v1/object/games/{path}", raw=blob,
+            content_type="application/gzip")
+        self.assertEqual(status, 200, "service uploads a file")
         return path
 
     def test_clients_cannot_write_games_or_files(self):
@@ -167,8 +171,8 @@ class LocalStackTests(unittest.TestCase):
         a, _, _ = self.make_user()
         path = self.add_game(a)
         _, _, token_b = self.make_user()
-        _, profiles = self.api.request("GET", f"/rest/v1/profiles?user_id=eq.{a}", token=token_b)
-        _, games = self.api.request("GET", f"/rest/v1/games?user_id=eq.{a}", token=token_b)
+        _, profiles = self.api.request("GET", f"/rest/v1/profiles?select=user_id&user_id=eq.{a}", token=token_b)
+        _, games = self.api.request("GET", f"/rest/v1/game_summaries?user_id=eq.{a}", token=token_b)
         status, _ = self.api.request(
             "GET", f"/storage/v1/object/authenticated/games/{path}", token=token_b)
         self.assertEqual(profiles, [])
@@ -260,7 +264,7 @@ class LocalStackTests(unittest.TestCase):
         status, body = self.upload(token, record)
         self.assertEqual((status, body["result"]), (200, "unchanged"), "same bytes again")
 
-        _, rows = self.api.request("GET", f"/rest/v1/games?user_id=eq.{uid}", token=token)
+        _, rows = self.api.request("GET", f"/rest/v1/game_summaries?user_id=eq.{uid}", token=token)
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["parser_version"], "0.1.0+r1")
         self.assertEqual(rows[0]["final_place"], record["report"]["final_place"])
@@ -288,7 +292,7 @@ class LocalStackTests(unittest.TestCase):
         forged["report"]["lobby"][0]["battle_tag"] = "Someone"
         status, body = self.upload(token, forged)
         self.assertEqual((status, body["code"]), (400, "invalid_report"))
-        _, rows = self.api.request("GET", f"/rest/v1/games?user_id=eq.{uid}", token=token)
+        _, rows = self.api.request("GET", f"/rest/v1/game_summaries?user_id=eq.{uid}", token=token)
         self.assertEqual([r["game_index"] for r in rows], [1], "nothing forged was stored")
 
     def test_upload_takes_real_games_from_the_current_parser(self):
@@ -299,7 +303,7 @@ class LocalStackTests(unittest.TestCase):
             status, body = self.upload(token, _real_record(name, index), index=index)
             self.assertEqual((status, body.get("result")), (201, "created"), body)
             self.assertGreaterEqual(body["validator"], 2, "the answer says the version")
-        _, rows = self.api.request("GET", f"/rest/v1/games?user_id=eq.{uid}", token=token)
+        _, rows = self.api.request("GET", f"/rest/v1/game_summaries?user_id=eq.{uid}", token=token)
         self.assertEqual(sorted(r["game_index"] for r in rows), [1, 2])
         self.assertEqual({r["parser_version"] for r in rows}, {"0.1.0+r2"})
 
@@ -321,7 +325,7 @@ class LocalStackTests(unittest.TestCase):
         for index, name in enumerate(["b253216_duos", "b253216_solo"], start=1):
             status, body = self.upload(token, _real_record(name, index), index=index)
             self.assertEqual((status, body.get("result")), (201, "created"), body)
-        query = f"/rest/v1/game_stats?user_id=eq.{uid}&order=game_index"
+        query = f"/rest/v1/game_stats?select=game_index,teammate_hero,rounds&user_id=eq.{uid}&order=game_index"
         _, stats = self.api.request("GET", query, token=token)
         self.assertEqual([s["game_index"] for s in stats], [1, 2])
         duos = _real_record("b253216_duos", 1)["report"]
@@ -334,9 +338,9 @@ class LocalStackTests(unittest.TestCase):
         self.assertEqual([(o["mode"], o["games"]) for o in overview], [("duos", 1), ("solo", 1)])
         for view in ("game_stats", "game_summaries", "user_overview", "user_heroes",
                      "user_records"):
-            _, rows = self.api.request("GET", f"/rest/v1/{view}?user_id=eq.{uid}")
+            _, rows = self.api.request("GET", f"/rest/v1/{view}?select=user_id&user_id=eq.{uid}")
             self.assertEqual(rows, [], f"anon reads no {view} of a private profile")
-            _, rows = self.api.request("GET", f"/rest/v1/{view}?user_id=eq.{uid}", token=other)
+            _, rows = self.api.request("GET", f"/rest/v1/{view}?select=user_id&user_id=eq.{uid}", token=other)
             self.assertEqual(rows, [], f"another user reads no {view} of a private profile")
 
         _psql(f"delete from public.game_stats where user_id = '{uid}'")

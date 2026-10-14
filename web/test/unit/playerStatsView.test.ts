@@ -87,7 +87,7 @@ test("heroes and curious: ids are unique across both panels", () => {
 function curious(over: Partial<Curious> = {}): Curious {
   return {
     overviews: [overview(overviewRow()), overview(overviewRow({ mode: "duos", games: 0, incomplete_games: 0, placed_games: 0, top_half: 0, wins: 0, summarized_games: 0, combat_games: 0, damage_dealt_games: 0, damage_taken_games: 0, gold_spent_games: 0, gold_beyond_games: 0, sell_gold_games: 0, shop_games: 0, apm_games: 0, triples_games: 0, damage_dealt_inferred_games: 0, damage_taken_inferred_games: 0 }))],
-    records: [recordRaw({ session: "Hearthstone_2026_10_02_20_00_00", game_index: 0 }), recordRaw({ record: "damage_dealt_max", value: 30, inferred: true })]
+    records: [recordRaw({ public_id: "3f2b8c1e-5d4a-4b7e-9c6d-1a2b3c4d5e6f", game_index: 0 }), recordRaw({ record: "damage_dealt_max", value: 30, inferred: true })]
       .map(curiousRecord)
       .filter((r): r is CuriousRecord => r !== null),
     ...over,
@@ -155,13 +155,13 @@ test("heroes read: one player's rows with the pick counts", async () => {
 test("curious read: the overview and the records with their games", async () => {
   const seen = stubFetch({
     "/rest/v1/user_overview": rows([overviewRow()]),
-    "/rest/v1/user_records": rows([recordRaw({ session: "Hearthstone_2026_10_02_20_00_00", game_index: 3 }), recordRaw({ record: "new_one" })]),
+    "/rest/v1/user_records": rows([recordRaw({ public_id: "3f2b8c1e-5d4a-4b7e-9c6d-1a2b3c4d5e6f", game_index: 3 }), recordRaw({ record: "new_one" })]),
   });
   const data = await loadCurious(client(), ID);
   assert.equal(data.overviews.length, 1);
   assert.deepEqual(data.records.map((r) => [r.record, r.gameIndex]), [["win_streak", 3]]);
   assert.ok(seen.every((s) => s.includes(`user_id=eq.${ID}`)));
-  assert.ok(seen.some((s) => /user_records\?select=.*session,game_index/.test(s)));
+  assert.ok(seen.some((s) => /user_records\?select=.*public_id,game_index/.test(s)));
 });
 
 test("reads: a server error or a broken answer throws instead of showing part of it", async () => {

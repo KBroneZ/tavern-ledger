@@ -16,7 +16,7 @@ export const GAME_STRINGS = {
   "page.noscript": "This page needs JavaScript to show the game.",
 
   "state.notFound.title": "Game not found",
-  "state.notFound.body": "This address does not name a game.",
+  "state.notFound.body": "This address does not name a game. Game links from before the change of address no longer work: open the game from its player's games list.",
   "state.unavailable.title": "This game is not available",
   "state.unavailable.body": "It is private or does not exist.",
   "state.unavailable.signIn": "If it is yours, sign in to see it.",

@@ -46,11 +46,14 @@
 // what is due. The counts are stored as "retention" on
 // the run's row and in the response; a failed step there is recorded and
 // never stops the sweep.
-// Safe to run any time and as often as wanted. No dependencies.
+// Last, the old-named files are renamed to their opaque names (T-586, rename.ts):
+// up to 200 per run, counted as "renames" in the response only. Safe to run
+// any time and as often as wanted. No dependencies.
 
 import { summarize, SUMMARY_VERSION } from "../_shared/game_summary.ts";
 import { inflateCapped, readCapped, TooLarge } from "../_shared/gzip.ts";
 import { validateRecord } from "../upload-game/validate.ts";
+import { renameFiles } from "./rename.ts";
 
 export interface Env {
   url: string;
@@ -67,8 +70,9 @@ const MAX_ROUNDS = 20;
 // No round of orphan deletion starts later than this after the run began;
 // the rest wait for the next run, and the other steps still get their time.
 const ORPHAN_BUDGET_MS = 30_000;
+// <user>/<public_id>.json.gz, or the older <user>/<session>-<index>.json.gz.
 const GAME_FILE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/Hearthstone_\d{4}(_\d{2}){5}-[1-9][0-9]{0,3}\.json\.gz$/;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|Hearthstone_\d{4}(?:_\d{2}){5}-[1-9][0-9]{0,3})\.json\.gz$/;
 // Summaries filled per run; a stored game is about 2.5 KB gzipped.
 const BACKFILL_LIMIT = 500;
 // No summary is started after this long, so a slow Storage cannot run the
@@ -224,8 +228,9 @@ function isMissing(v: unknown): v is Missing {
   return typeof m.user_id === "string" && typeof m.session === "string" &&
     Number.isInteger(m.game_index) && typeof m.storage_path === "string" &&
     typeof m.content_sha256 === "string" && SHA256.test(m.content_sha256) &&
-    GAME_FILE.test(m.storage_path) &&
-    m.storage_path === `${m.user_id}/${m.session}-${m.game_index}.json.gz`;
+    GAME_FILE.test(m.storage_path) && m.storage_path.startsWith(`${m.user_id}/`) &&
+    (m.storage_path === `${m.user_id}/${m.session}-${m.game_index}.json.gz` ||
+      !m.storage_path.includes("Hearthstone_"));
 }
 
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
@@ -727,6 +732,7 @@ async function sweep(env: Env, fetchFn: Fetch): Promise<Response> {
     const orphans = await deleteOrphans(env, fetchFn, started + ORPHAN_BUDGET_MS);
     const stats = await backfill(env, fetchFn);
     const retention = await expireFiles(env, fetchFn, started + RUN_BUDGET_MS);
+    const renames = await renameFiles(env, fetchFn, started + RUN_BUDGET_MS);
     const failed = [
       ...(house === null ? ["housekeeping"] : []),
       ...(orphans.failed === null ? [] : [orphans.failed]),
@@ -758,6 +764,8 @@ async function sweep(env: Env, fetchFn: Fetch): Promise<Response> {
       stats,
       capacity: house?.capacity ?? null,
       retention,
+      // Only when the step ran (not on a database from before it).
+      ...(renames === null ? {} : { renames }),
     };
     if (failed.length === 0) return json(200, body);
     return json(500, {

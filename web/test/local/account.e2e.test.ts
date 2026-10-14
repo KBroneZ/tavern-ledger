@@ -131,7 +131,8 @@ describe("website account flow on the local stack", { skip: !ENABLED && "set TAV
   let password = randomBytes(12).toString("base64url");
   const client: SupabaseClient = ENABLED ? makeClient(config, memoryStorage()) : ({} as SupabaseClient);
   let userId = "";
-  const fileName = () => `${userId}/${SESSION}-1.json.gz`;
+  let file = "";
+  const fileName = () => file || `${userId}/none.json.gz`;
   const gameJson = JSON.stringify({ synthetic: true, hero: "BG20_HERO_202", place: 2 });
   const gz = gzipSync(Buffer.from(gameJson));
 
@@ -255,8 +256,14 @@ describe("website account flow on the local stack", { skip: !ENABLED && "set TAV
       content_sha256: "0".repeat(64),
       size_bytes: gz.length,
     };
-    const ins = await service("/rest/v1/games", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(row) });
+    const ins = await service("/rest/v1/games", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Prefer: "return=representation" },
+      body: JSON.stringify(row),
+    });
     assert.equal(ins.status, 201);
+    // The file's name is made by the database from the game's public id (T-586).
+    file = ((await ins.json()) as { storage_path: string }[])[0].storage_path;
     const up = await service(`/storage/v1/object/games/${fileName()}`, {
       method: "POST",
       headers: { "Content-Type": "application/gzip" },

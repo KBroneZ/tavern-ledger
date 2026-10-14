@@ -94,6 +94,9 @@ function fakeApi(opts: {
       case FILE:
         return reply(200, { Key: `games/${USER}/${SESSION}-1.json.gz` });
     }
+    if (method === "POST" && path.startsWith("/storage/v1/object/games/")) {
+      return reply(200, { Key: path.slice("/storage/v1/object/".length) });
+    }
     await Promise.resolve();
     return reply(404, {});
   };
@@ -556,5 +559,74 @@ Deno.test("with a new-style secret key no service call carries a bearer token", 
     // Only the user lookup sends a bearer, and it is the user's own token.
     const bearer = c.path === "/auth/v1/user" ? `Bearer ${TOKEN}` : undefined;
     assertEquals(c.headers.Authorization, bearer, c.path);
+  }
+});
+
+// --- Opaque file names (T-586): the database makes the id, the file never has the session ---
+
+const ID = "3f2b8c1e-5d4a-4b7e-9c6d-1a2b3c4d5e6f";
+const OPAQUE = `${USER}/${ID}.json.gz`;
+const LEGACY = `${USER}/${SESSION}-1.json.gz`;
+const fileWrites = (api: ReturnType<typeof fakeApi>) =>
+  api.calls.filter((c) => c.method === "POST" && c.path.startsWith("/storage/v1/object/games/"));
+const commitBody = (api: ReturnType<typeof fakeApi>) =>
+  api.calls.find((c) => c.path === "/rest/v1/rpc/upload_commit")!.body as Record<string, unknown>;
+
+Deno.test("a new game is stored under the name the database gives, with no session in it", async () => {
+  const api = fakeApi({ begin: { result: "create", path: OPAQUE, public_id: ID } });
+  const res = await handle(await upload(), ENV, api.fetchFn);
+  assertEquals(res.status, 201);
+  assertEquals(fileWrites(api).map((c) => c.path), [`/storage/v1/object/games/${OPAQUE}`]);
+  assertEquals(commitBody(api).p_public_id, ID);
+});
+
+Deno.test("a replaced game is written under its opaque name and id, which the row then names", async () => {
+  const api = fakeApi({
+    begin: { result: "replace", path: OPAQUE, public_id: ID },
+    commit: "replaced",
+  });
+  const res = await handle(await upload(), ENV, api.fetchFn);
+  assertEquals(res.status, 200);
+  assertEquals(fileWrites(api).map((c) => c.path), [`/storage/v1/object/games/${OPAQUE}`]);
+  // Also for a game stored under its old name: the row moves to the opaque one.
+  assertEquals(commitBody(api).p_public_id, ID);
+});
+
+Deno.test("a database that still answers the old name for a replaced game is served as ever", async () => {
+  const api = fakeApi({
+    begin: { result: "replace", path: LEGACY, public_id: ID },
+    commit: "replaced",
+  });
+  const res = await handle(await upload(), ENV, api.fetchFn);
+  assertEquals(res.status, 200);
+  assertEquals(fileWrites(api).map((c) => c.path), [`/storage/v1/object/games/${LEGACY}`]);
+  assertEquals("p_public_id" in commitBody(api), false);
+});
+
+Deno.test("a database from before ids is served as ever: the session's name, no id", async () => {
+  const api = fakeApi({ begin: { result: "create" } });
+  const res = await handle(await upload(), ENV, api.fetchFn);
+  assertEquals(res.status, 201);
+  assertEquals(fileWrites(api).map((c) => c.path), [`/storage/v1/object/games/${LEGACY}`]);
+  assertEquals("p_public_id" in commitBody(api), false);
+});
+
+Deno.test("a file name that is not this user's, or not a game name, is never written", async () => {
+  const other = "00000000-0000-4000-8000-00000000000b";
+  for (
+    const path of [
+      `${other}/${ID}.json.gz`,
+      `${USER}/../${other}/${ID}.json.gz`,
+      `${USER}/${ID}.json.gz/extra`,
+      `${USER}/x.json.gz`,
+      `${USER}/Hearthstone_2020_01_01_00_00_00-9.json.gz`,
+      7,
+      null,
+    ]
+  ) {
+    const api = fakeApi({ begin: { result: "create", path, public_id: ID } });
+    const res = await handle(await upload(), ENV, api.fetchFn);
+    assertEquals(res.status, 500, String(path));
+    assertEquals(fileWrites(api).length, 0, String(path));
   }
 });

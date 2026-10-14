@@ -90,7 +90,7 @@ test("the picked minion's Dark Gifts: each named with a way to remove it, a list
 });
 
 test("the main flow is numbered: pick a game, then pick a fight", () => {
-  const row = { session: "Hearthstone_2026_10_09_20_15_03", gameIndex: 2, mode: "solo" as const, status: "ok" as const, playedOn: "2026-10-09", hero: "SYN_HERO_A", place: 3, rounds: 3, combatsWon: 1, combatsLost: 1, combatsInferred: 0, triples: 1, apm: 3, goldSpent: 9 };
+  const row = { publicId: "3f2b8c1e-5d4a-4b7e-9c6d-1a2b3c4d5e6f", storagePath: null, gameIndex: 2, mode: "solo" as const, status: "ok" as const, playedOn: "2026-10-09", hero: "SYN_HERO_A", place: 3, rounds: 3, combatsWon: 1, combatsLost: 1, combatsInferred: 0, triples: 1, apm: 3, goldSpent: 9 };
   const out = html(loadView({ kind: "ready", rows: [row], total: 1, more: false }, { key: "Hearthstone_2026_10_09_20_15_03#2", rounds: [{ number: 1, result: "won" }], failed: false, loaded: null }));
   assert.match(out, /<span class="sim-step" aria-hidden="true">2<\/span>/);
   assert.match(out, /Pick a fight/);

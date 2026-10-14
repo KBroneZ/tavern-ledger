@@ -195,6 +195,8 @@ Deno.test("housekeeping, then orphan files deleted through the Storage API", asy
     "POST /rest/v1/rpc/sweep_orphan_files",
     "POST /rest/v1/rpc/game_stats_backfill_list",
     "POST /rest/v1/rpc/file_retention_list",
+    // 404 in this fake: a database from before the rename step. Nothing to report.
+    "POST /rest/v1/rpc/game_files_to_move",
     "POST /rest/v1/rpc/sweep_record_result",
   ]);
   assertEquals(api.calls.at(-1)?.body, {

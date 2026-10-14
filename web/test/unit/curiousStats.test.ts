@@ -9,10 +9,10 @@ import { textOf, toHtml } from "../helpers/html.ts";
 import { overviewRow, recordRaw, type RawRow } from "../helpers/rows.ts";
 
 const ID = "0f8fad5b-d9cb-469f-a165-70867728950e";
-const SESSION = "Hearthstone_2026_10_02_20_00_00";
+const GAME = "3f2b8c1e-5d4a-4b7e-9c6d-1a2b3c4d5e6f";
 
 const rec = (over: RawRow = {}): CuriousRecord => {
-  const r = curiousRecord(recordRaw({ session: SESSION, game_index: 1, ...over }));
+  const r = curiousRecord(recordRaw({ public_id: GAME, game_index: 1, ...over }));
   assert.ok(r);
   return r;
 };
@@ -22,12 +22,12 @@ const cellHtml = (cell: unknown): string =>
 
 test("a record keeps its game's key; a record this page does not know is left out", () => {
   const r = rec();
-  assert.equal(r.session, SESSION);
+  assert.equal(r.publicId, GAME);
   assert.equal(r.gameIndex, 1);
   assert.equal(curiousRecord(recordRaw({ record: "brand_new" })), null);
   // A key not shaped as expected gives no link, never a broken address.
-  assert.equal(rec({ session: "../etc", game_index: -1 }).session, null);
-  assert.equal(rec({ session: "../etc", game_index: -1 }).gameIndex, null);
+  assert.equal(rec({ public_id: "../etc", game_index: -1 }).publicId, null);
+  assert.equal(rec({ public_id: "../etc", game_index: -1 }).gameIndex, null);
 });
 
 test("records of one mode, in the fixed order", () => {
@@ -41,7 +41,7 @@ test("a record's cells: label, value with its inferred mark, the game's link and
   assert.equal(label, "Most damage taken in one combat");
   assert.match(cellHtml(value), /21.*mark-inferred/);
   const link = cellHtml(game);
-  assert.match(link, new RegExp(`href="/game/\\?u=${ID}&amp;s=${SESSION}&amp;g=1"`));
+  assert.match(link, new RegExp(`href="/game/\\?u=${ID}&amp;id=${GAME}"`));
   assert.match(link, /Oct 2, 2026/);
   assert.match(link, /visually-hidden">: the game that set the record Most damage taken in one combat/);
   assert.equal(back, "in 12 of 31 games");
@@ -50,7 +50,7 @@ test("a record's cells: label, value with its inferred mark, the game's link and
 test("APM is whole from 10 up (one decimal below); a game with no key is a date only; the top streak names its mode", () => {
   assert.match(cellHtml(recordCellsOf(rec({ record: "apm", value: 51.5 }), ID, 31)[1]), /<span>52<\/span>/);
   assert.match(cellHtml(recordCellsOf(rec({ record: "apm", value: 8.25 }), ID, 31)[1]), /<span>8\.3<\/span>/);
-  assert.equal(recordCellsOf(rec({ session: null }), ID, 31)[2], "Oct 2, 2026");
+  assert.equal(recordCellsOf(rec({ public_id: null }), ID, 31)[2], "Oct 2, 2026");
   assert.equal(recordCellsOf(rec({ mode: "duos", record: "top_half_streak" }), ID, 31)[0], "Most top-2 finishes in a row");
   // A record backed by more games than the mode says it has stays honest.
   assert.equal(recordCellsOf(rec({ games: 40 }), ID, 31)[3], "in all 40 games");

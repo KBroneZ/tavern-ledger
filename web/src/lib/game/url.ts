@@ -1,40 +1,40 @@
 import { href } from "../i18n.ts";
-// The game viewer's address (T-504): /game/?u=<user id>&s=<session>&g=<index>.
-// The three values are the game's key in public.games, so the page needs no
-// other id; the games list (T-503) links each row here with gamePath().
+// The game viewer's address (T-504, T-586): /game/?u=<user id>&id=<public id>.
+// The public id is a random uuid (games.public_id) that says nothing about
+// when the game was played; the games list (T-503) links each row here with
+// gamePath(). The earlier address (?u&s=<session>&g=<index>) carried the
+// game's start time to the second and is no longer read: it is "not found".
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-// The same rule as the games.session check in the database.
-const SESSION = /^Hearthstone_\d{4}(?:_\d{2}){5}$/;
-const INDEX = /^[1-9]\d{0,3}$/;
-const MAX_INDEX = 1000;
 
 export interface GameRef {
   userId: string;
-  session: string;
-  index: number;
+  publicId: string;
 }
 
-/** The game named by a page's query string, or null when any part is not a valid key. */
+/** The game named by a page's query string, or null when any part is not a valid id. */
 export function parseGameRef(search: string): GameRef | null {
   const query = new URLSearchParams(search);
   const userId = query.get("u")?.toLowerCase() ?? "";
-  const session = query.get("s") ?? "";
-  const index = query.get("g") ?? "";
-  if (!UUID.test(userId) || !SESSION.test(session) || !INDEX.test(index)) return null;
-  const n = Number(index);
-  return n <= MAX_INDEX ? { userId, session, index: n } : null;
+  const publicId = query.get("id")?.toLowerCase() ?? "";
+  return UUID.test(userId) && UUID.test(publicId) ? { userId, publicId } : null;
 }
 
+/** Whether a value is a game's public id. */
+export const isPublicId = (value: unknown): value is string => typeof value === "string" && UUID.test(value);
+
 /** The viewer's address for one game. */
-export function gamePath(userId: string, session: string, index: number): string {
-  const query = new URLSearchParams({ u: userId, s: session, g: String(index) });
+export function gamePath(userId: string, publicId: string): string {
+  const query = new URLSearchParams({ u: userId, id: publicId });
   return href(`/game/?${query.toString()}`);
 }
 
-/** Where the game's report is in the `games` bucket (games.storage_path). */
+/**
+ * Where the game's report is in the `games` bucket: games.storage_path of a
+ * game whose file has its opaque name (the daily sweep renames the older files).
+ */
 export function storagePath(ref: GameRef): string {
-  return `${ref.userId}/${ref.session}-${ref.index}.json.gz`;
+  return `${ref.userId}/${ref.publicId}.json.gz`;
 }
 
 /** The game's date from its session name (YYYY-MM-DD, the client's local start). */

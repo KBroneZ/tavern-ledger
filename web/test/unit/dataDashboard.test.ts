@@ -130,16 +130,16 @@ test("a game's hero (portrait and name) links to the game viewer when its key is
   assert.deepEqual(cells[0], {
     hero: "BG20_HERO_202",
     name: "Master Nguyen",
-    href: `/game/?u=${id}&s=Hearthstone_2026_10_09_18_30_00&g=2`,
+    href: `/game/?u=${id}&id=3f2b8c1e-5d4a-4b7e-9c6d-1a2b3c4d5e6f`,
     context: ": game of Oct 9, 2026",
     unknownId: null,
   });
   assert.equal(cells[2], "Oct 9, 2026");
   const html = toHtml(topTable({ caption: "c", columns: gameColumns(false), rows: [cells] }));
-  assert.ok(html.includes(`<a class="cell-hero" href="/game/?u=${id}&amp;s=Hearthstone_2026_10_09_18_30_00&amp;g=2"><span class="pic pic-hero"`), "the portrait is inside the link");
+  assert.ok(html.includes(`<a class="cell-hero" href="/game/?u=${id}&amp;id=3f2b8c1e-5d4a-4b7e-9c6d-1a2b3c4d5e6f"><span class="pic pic-hero"`), "the portrait is inside the link");
   assert.ok(html.includes('<span class="hero-link">Master Nguyen<span class="visually-hidden">: game of Oct 9, 2026</span></span></span></a></th>'), "and so is the name");
   assert.ok(html.includes("<td>Oct 9, 2026</td>"), "the date is plain text");
-  assert.equal((gameCells(gameRow(gameRaw({ session: "a/b?c" })), false, id)[0] as { href?: string }).href, undefined, "an odd key gets no link");
+  assert.equal((gameCells(gameRow(gameRaw({ public_id: "a/b?c" })), false, id)[0] as { href?: string }).href, undefined, "an odd key gets no link");
   assert.equal((gameCells(gameRow(gameRaw()), false)[0] as { href?: string }).href, undefined);
 });
 
