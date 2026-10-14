@@ -203,6 +203,10 @@ function renderTribes(g) {
 // show: null (unknown) and [] (nothing applies) both leave no empty box.
 function renderCounters(g) {
   const panel = document.getElementById("counters");
+  if (!TLCounters.ENABLED) {
+    panel.hidden = true;
+    return;
+  }
   // While the layout is being edited the panel shows example rows, so it can be placed in a real game too.
   let rows = TLCounters.rows(g.counters);
   if (!rows.length && editing) rows = TLCounters.rows(EXAMPLE_GAME.counters);
