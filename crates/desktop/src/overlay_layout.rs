@@ -20,6 +20,8 @@ use crate::screen_fit::Area;
 #[serde(rename_all = "lowercase")]
 pub enum Panel {
     Status,
+    /// Running totals of the player's own game (T-612).
+    Counters,
     Tribes,
     Opponents,
     Legend,
@@ -602,6 +604,61 @@ mod tests {
         assert_eq!(s.opacity, MAX_OPACITY);
         s.set_opacity(f64::NAN);
         assert_eq!(s.opacity, DEFAULT_OPACITY);
+    }
+
+    #[test]
+    fn the_counters_panel_can_be_hidden_and_shown() {
+        assert!(Panel::Counters.hideable());
+        let mut s = Settings::default();
+        s.set_shown(Panel::Counters, false);
+        assert!(s.hidden.contains(&Panel::Counters));
+        s.set_shown(Panel::Counters, true);
+        assert!(s.hidden.is_empty());
+        let s = Settings::parse(r#"{"hidden":["counters"]}"#).unwrap();
+        assert_eq!(s.hidden, BTreeSet::from([Panel::Counters]));
+        assert_eq!(
+            serde_json::to_string(&Panel::Counters).unwrap(),
+            r#""counters""#
+        );
+    }
+
+    #[test]
+    fn a_layout_saved_before_the_counters_panel_keeps_its_places_and_shows_it() {
+        // A file as the app wrote it before T-612: no `counters` anywhere.
+        let s = Settings::parse(
+            r#"{"enabled":true,"theme":"contrast","hidden":["tribes"],"layouts":{"1920x1080":{"panels":{"status":{"x":10,"y":20,"w":300,"h":null},"opponents":{"x":400,"y":20,"w":260,"h":120}}}}}"#,
+        )
+        .unwrap();
+        let panels = s.layout_for(FHD).panels;
+        assert_eq!(panels.len(), 2);
+        assert_eq!(panels[&Panel::Status].x, 10.0);
+        // Not placed: it takes its default place in the stack.
+        assert!(!panels.contains_key(&Panel::Counters));
+        // Not hidden: a panel the file never heard of is shown.
+        assert!(!s.hidden.contains(&Panel::Counters));
+        assert_eq!(s.hidden, BTreeSet::from([Panel::Tribes]));
+    }
+
+    #[test]
+    fn resetting_the_layout_puts_the_counters_panel_in_the_default_stack_and_shows_it() {
+        let mut s = Settings::default();
+        s.set_layout(FHD, &one(Panel::Counters, rect(50.0, 60.0, 200.0, None)));
+        s.set_shown(Panel::Counters, false);
+        assert!(s.layout_for(FHD).panels.contains_key(&Panel::Counters));
+        s.reset_layout();
+        assert!(s.layout_for(FHD).panels.is_empty());
+        assert!(s.hidden.is_empty());
+    }
+
+    #[test]
+    fn the_counters_panel_can_be_placed_and_is_fitted_to_the_screen() {
+        let mut s = Settings::default();
+        s.set_layout(
+            FHD,
+            &one(Panel::Counters, rect(9000.0, 9000.0, 9000.0, None)),
+        );
+        let r = s.layout_for(FHD).panels[&Panel::Counters];
+        assert!(r.x + r.w <= 1920.0 && r.y < 1080.0 && r.w <= MAX_WIDTH);
     }
 
     #[test]

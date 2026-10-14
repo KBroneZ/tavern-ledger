@@ -10,16 +10,17 @@
   const { listen: onEvent } = window.__TAURI__.event;
   const I18n = window.TLI18n;
 
-  const PANEL_IDS = ["status", "tribes", "opponents", "legend", "lobby"];
+  const PANEL_IDS = ["status", "counters", "tribes", "opponents", "legend", "lobby"];
   // The panels' names are read when used, so they follow the language.
   const SLOT_NAMES = {
     status: () => I18n.t("ov.slot.status"),
+    counters: () => I18n.t("ov.slot.counters"),
     tribes: () => I18n.t("ov.slot.tribes"),
     opponents: () => I18n.t("ov.slot.opponents"),
     legend: () => I18n.t("ov.slot.legend"),
     lobby: () => I18n.t("ov.slot.lobby"),
   };
-  const TOGGLE_IDS = ["status", "tribes", "opponents", "lobby"];
+  const TOGGLE_IDS = ["status", "counters", "tribes", "opponents", "lobby"];
   const slotName = (id) => SLOT_NAMES[id]();
   const panelTitle = (id) => I18n.t("ov.slot.panel", { name: slotName(id) });
   // Rough limits while dragging; the app enforces the real ones when it saves.

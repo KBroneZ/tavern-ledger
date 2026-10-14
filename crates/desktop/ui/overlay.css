@@ -93,6 +93,15 @@ body {
 .status .notes { margin: 4px 0 0; color: var(--amber); font-size: 0.923rem; }
 .status.unreadable { border-color: var(--lost); color: var(--danger); }
 
+/* Counters (T-612): one line each; the figures are tabular so they do not
+   jitter as they grow, and the label always names them (never colour alone). */
+.counter-list { margin: 0; padding: 0; list-style: none; }
+.counter + .counter { margin-top: 3px; }
+.counter-main { display: flex; justify-content: space-between; align-items: baseline; gap: 0.6em; }
+.counter-label { color: var(--dim); }
+.counter-value { color: var(--accent); font: 700 1.077rem/1.25 var(--font-display); font-stretch: 88%; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.counter-where { display: block; color: var(--dim); font-size: 0.846rem; }
+
 .row { margin: 3px 0 0; }
 .row .what { color: var(--dim); }
 .tribe-list { margin: 1px 0 0; font-weight: 600; }

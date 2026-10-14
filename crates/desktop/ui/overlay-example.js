@@ -16,6 +16,13 @@ const EXAMPLE_GAME = {
   leaderboard_slots: 3,
   own_health: { value: 32, source: "log" },
   damage_cap: 15,
+  // A few counters (T-612) so the panel can be arranged with no game.
+  counters: [
+    { kind: "blood_gem", atk: 3, health: 2 },
+    { kind: "tavern_spell", atk: 2, health: 0 },
+    { kind: "eternal_knights", count: 5 },
+    { kind: "free_rolls", count: 2 },
+  ],
   odds: {
     seat: 1, gap: null, seen_round: 5, won: 0.58, tied: 0.09, lost: 0.33, trials: 10000,
     dealt: { low: 5, likely: 7, high: 10 }, taken: { low: 4, likely: 6, high: 9 },

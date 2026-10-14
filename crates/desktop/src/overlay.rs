@@ -830,6 +830,7 @@ mod tests {
     fn every_panel_has_a_slot_in_the_page() {
         for panel in [
             Panel::Status,
+            Panel::Counters,
             Panel::Tribes,
             Panel::Opponents,
             Panel::Legend,
@@ -849,7 +850,7 @@ mod tests {
             .skip(1)
             .filter_map(|rest| rest.split('"').next())
             .collect();
-        assert_eq!(scripts.len(), 17);
+        assert_eq!(scripts.len(), 18);
         for script in scripts {
             assert!(ui.join(script).is_file(), "{script} is missing");
         }
@@ -865,6 +866,7 @@ mod tests {
             include_str!("../ui/overlay-keys.js"),
             include_str!("../ui/overlay-place.js"),
             include_str!("../ui/overlay-words.js"),
+            include_str!("../ui/counters-words.js"),
             include_str!("../ui/lobby-words.js"),
             include_str!("../ui/odds-words.js"),
             include_str!("../ui/overlay-scale.js"),
