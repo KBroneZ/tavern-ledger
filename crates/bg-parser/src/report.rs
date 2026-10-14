@@ -68,7 +68,7 @@ pub struct Minion {
     /// which ("Dark Gift (unknown)"). Left out of the JSON when false.
     #[serde(skip_serializing_if = "is_false")]
     pub gift_unknown: bool,
-    /// Buffs on the minion, by the card that gave them and how many (T-616,
+    /// Buffs on the minion, by the card that gave them and how many (T-619,
     /// parser revision 14), at most [`crate::buffs::MAX_BUFF_KINDS`]. Left
     /// out of the JSON when empty: a revision 14 record without the key has
     /// none, an older one did not read them.

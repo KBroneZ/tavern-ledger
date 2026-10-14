@@ -52,7 +52,7 @@ pub struct LiveMinion {
     pub gifts: Vec<String>,
     /// The game marks a Dark Gift the log does not name.
     pub gift_unknown: bool,
-    /// Buffs by the card that gave them and how many (T-616, parser revision
+    /// Buffs by the card that gave them and how many (T-619, parser revision
     /// 14); empty when none or when the record is older. Left out of the
     /// JSON when empty, so the overlay's payload does not change.
     #[serde(skip_serializing_if = "Vec::is_empty")]

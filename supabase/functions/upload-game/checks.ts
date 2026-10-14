@@ -85,7 +85,7 @@ export function gifts(m: Obj, field: string): void {
   }
 }
 
-// Buffs on a minion (parser revision 14, T-616, D-141): the card that gave
+// Buffs on a minion (parser revision 14, T-619, D-142): the card that gave
 // them and how many of its enchantments the minion has, each card once.
 export const MAX_BUFF_KINDS = 12;
 export const MAX_BUFF_COUNT = 999;

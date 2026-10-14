@@ -210,7 +210,7 @@ test("in Duos the teammate's board joins the turn beside yours, from a stripped 
   assert.equal(TLTurns.rows(recap(), report)[0].partner, null, "Solo has no partner");
 });
 
-// T-616, D-141: buffs on a minion, for its tooltip.
+// T-619, D-142: buffs on a minion, for its tooltip.
 test("buffs: unknown unless the record read them, a card once, bad ones dropped", () => {
   const raw = [
     { card_id: "BG20_GEM", count: 2 },

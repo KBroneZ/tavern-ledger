@@ -61,7 +61,7 @@ export interface Minion {
   gifts: string[];
   /** The game marks a Dark Gift the log does not name. */
   giftUnknown: boolean;
-  /** Buffs the minion has, by card (revision 14, T-616); [] when none; null when the record is older and did not read them. */
+  /** Buffs the minion has, by card (revision 14, T-619); [] when none; null when the record is older and did not read them. */
   buffs: Buff[] | null;
 }
 

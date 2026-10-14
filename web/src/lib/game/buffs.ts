@@ -1,4 +1,4 @@
-// Buffs on a minion (parser revision 14, T-616, D-141): the card that gave
+// Buffs on a minion (parser revision 14, T-619, D-142): the card that gave
 // them and how many of its enchantments the minion has, as the game's log
 // shows them (crates/bg-parser/src/buffs.rs). The log does not say how much
 // attack and health each one gave, so only the count is known.

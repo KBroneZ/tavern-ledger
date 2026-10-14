@@ -262,7 +262,7 @@ test("a loaded round keeps each minion's Dark Gifts and sends them to the engine
   assert.deepEqual(sent.gifts, ["BG36_MidGameEffect_000t9", "BG36_MidGameEffect_000t13"]);
 });
 
-test("a loaded round keeps each minion's buffs for its tooltip, a new minion has none, the engine never sees them (T-616)", () => {
+test("a loaded round keeps each minion's buffs for its tooltip, a new minion has none, the engine never sees them (T-619)", () => {
   const report = soloReport() as Record<string, any>;
   report.rounds[1].entries[0].board[1].buffs = [{ card_id: "BG20_GEM", count: 2 }];
   const older = B.fromRound(game(report), 2, cards);

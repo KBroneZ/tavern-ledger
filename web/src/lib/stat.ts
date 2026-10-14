@@ -1,5 +1,5 @@
-// A minion's Attack or Health the way the game writes a big one (T-616,
-// D-141): from 1,000 up it is 1K, 1M, 1B with one decimal that is cut, not
+// A minion's Attack or Health the way the game writes a big one (T-619,
+// D-142): from 1,000 up it is 1K, 1M, 1B with one decimal that is cut, not
 // rounded (1,999 is 1.9K, 999,999 is 999.9K, so a value never jumps a
 // unit), and no ".0". The exact value is for the tooltip: `exactStat`.
 //

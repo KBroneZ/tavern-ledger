@@ -131,7 +131,7 @@ test("the editor: each minion a button with its words, the picked one's controls
   assert.equal(fullOut.match(/data-act="add-open"/g)?.length, 1, "only the opponent's");
 });
 
-test("a card shows short numbers and has a tooltip with the exact ones and its buffs (T-616)", () => {
+test("a card shows short numbers and has a tooltip with the exact ones and its buffs (T-619)", () => {
   let s = B.addMinion(B.emptyState(), "player", 0, "BGS_119", cards);
   const key = s.player[0].minions[0].key;
   s = B.setStats(s, "player", 0, key, 12_345, 2_000);

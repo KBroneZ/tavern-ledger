@@ -43,7 +43,7 @@
     ["replay.ev.shield_off", "{m} loses Divine Shield", "{m} pierde el Escudo divino"],
     ["replay.ev.shield_on", "{m} gets Divine Shield", "{m} obtiene Escudo divino"],
     ["replay.ev.stats", "{m} is now {atk}/{health}", "{m} pasa a {atk}/{health}"],
-    // The tooltip of a minion (T-616): exact numbers and its buffs.
+    // The tooltip of a minion (T-619): exact numbers and its buffs.
     ["replay.tip.attack", "Attack {value}", "Ataque {value}"],
     ["replay.tip.health", "Health {value}", "Vida {value}"],
     ["replay.tip.buffs", "Buffs when the combat began", "Mejoras al empezar el combate"],

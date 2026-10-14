@@ -1,4 +1,4 @@
-// The tooltip of a minion (T-616, D-141): its exact Attack and Health and the
+// The tooltip of a minion (T-619, D-142): its exact Attack and Health and the
 // buffs it has, each card with its picture, name and how many times. It is
 // real markup next to the minion (not a title), shown by the stylesheet on
 // hover and on keyboard focus or a tap (the minion takes focus); the minion

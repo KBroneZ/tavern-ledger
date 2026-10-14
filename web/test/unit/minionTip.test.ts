@@ -1,4 +1,4 @@
-// The tooltip of a minion (T-616, D-141): its exact Attack and Health and the
+// The tooltip of a minion (T-619, D-142): its exact Attack and Health and the
 // buffs it has, each card with its picture and how many times. Empty is not
 // unknown: a game saved before the buffs were read says so.
 import { test } from "node:test";

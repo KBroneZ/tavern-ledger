@@ -320,7 +320,7 @@ fn each_sides_game_long_values_are_read_with_its_board() {
     assert_eq!(of(Side::Opponent).knights_dead, 2);
 }
 
-/// Enchantments on the combat's minions (T-616): the own 30 has two Blood
+/// Enchantments on the combat's minions (T-619): the own 30 has two Blood
 /// Gems, the game's hidden holder of their numbers and a Dark Gift; the own
 /// 31 a buff that left; the opponent's 40 one buff in two forms.
 fn buff_lines() -> Vec<String> {

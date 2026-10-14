@@ -335,7 +335,7 @@ fn enchantment(id: i64, card: &str, on: i64) -> Vec<String> {
 
 #[test]
 fn a_replay_minion_keeps_its_buffs_from_the_start_and_when_summoned() {
-    // T-616, parser revision 14: the buffs a minion has as the combat starts,
+    // T-619, parser revision 14: the buffs a minion has as the combat starts,
     // and those a token has as it is summoned, as on a board minion.
     let mut l = won_combat();
     let at = l

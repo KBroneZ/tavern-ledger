@@ -87,7 +87,7 @@
     return new Intl.NumberFormat(LOCALES[lang], options).format(value);
   }
 
-  // A minion's Attack or Health the way the game writes a big one (T-616):
+  // A minion's Attack or Health the way the game writes a big one (T-619):
   // from 1,000 up it is 1K, 1M, 1B with one decimal that is cut, not rounded
   // (1,999 is 1.9K, 999,999 is 999.9K), and no ".0". The website has the same
   // rule in lib/stat.ts and both run the same table of cases. An unknown

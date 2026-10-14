@@ -413,7 +413,7 @@ test("a Taunt taken mid-combat drops its shield on that step (T-581)", () => {
   assert.ok(!f[3].opponent[0].keywords.includes("taunt"));
 });
 
-// T-616, D-141: a replay minion's buffs, as it entered the combat.
+// T-619, D-142: a replay minion's buffs, as it entered the combat.
 test("frames keep each minion's buffs when the record read them, and say unknown when it did not", () => {
   const r = replay();
   r.minions[0].buffs = [{ card_id: "BG20_GEM", count: 2 }];

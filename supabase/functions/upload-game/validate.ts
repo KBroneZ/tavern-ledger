@@ -37,7 +37,7 @@ import contract from "./report_keys.json" with { type: "json" };
  * 9, T-528, D-107; 9: each board's game-long values, parser revision 10,
  * T-610, D-122; 10: each replay's beats, damage sources and keyword events,
  * parser revision 13, T-575; 11: buffs on board and replay minions, parser
- * revision 14, T-616, D-141). Every answer carries it, and the desktop app
+ * revision 14, T-619, D-142). Every answer carries it, and the desktop app
  * retries a game this server refused once when it sees a higher number (D-047).
  */
 export const VALIDATOR_VERSION = 11;

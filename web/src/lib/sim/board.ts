@@ -49,7 +49,7 @@ export interface SimMinion {
    */
   gifts: string[];
   /**
-   * The buffs the game's log showed on the minion, for its tooltip only (T-616):
+   * The buffs the game's log showed on the minion, for its tooltip only (T-619):
    * the engine never reads them. [] for a minion added by hand; null when the
    * game was saved before they were read.
    */

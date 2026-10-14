@@ -84,7 +84,7 @@ KEEP_TAGS = frozenset({
     # Parser revision 11 (T-560): the game's steps; a combat replay starts
     # once the combat's action step is announced.
     "STEP", "NEXT_STEP",
-    # Parser revision 14 (T-616): buffs on board minions skip the enchantments
+    # Parser revision 14 (T-619): buffs on board minions skip the enchantments
     # the game hides (its own holders of the numbers).
     "ENCHANTMENT_INVISIBLE",
 })

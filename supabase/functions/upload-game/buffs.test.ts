@@ -1,5 +1,5 @@
 // Run: deno test supabase/functions/upload-game/
-// Buffs on board and replay minions (parser revision 14, T-616, D-141): the
+// Buffs on board and replay minions (parser revision 14, T-619, D-142): the
 // card that gave them and how many, as objects {card_id, count}.
 import { type Json, realGifts, realRecord, SESSION } from "./testdata.ts";
 // The parser's report of a synthetic game with buffs on both sides' minions,

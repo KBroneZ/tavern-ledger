@@ -19,7 +19,7 @@
   const list = (v) => (Array.isArray(v) ? v : []);
   const num = (v) => (known(v) ? I18n.num(v) : "—");
 
-  // Buffs on a minion (parser revision 14, T-616, D-141): the card that gave
+  // Buffs on a minion (parser revision 14, T-619, D-142): the card that gave
   // them and how many, a card once, at most 12 kinds and 999 of one (the
   // parser's bounds). null when the record did not read them (older than
   // revision 14): unknown is not "none". `recorded` is `report.buffs_recorded`.

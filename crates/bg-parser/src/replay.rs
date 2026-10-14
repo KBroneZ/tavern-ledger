@@ -54,7 +54,7 @@ pub struct ReplayMinion {
     pub gifts: Vec<&'static str>,
     #[serde(skip_serializing_if = "crate::report::is_false")]
     pub gift_unknown: bool,
-    /// Buffs, as on a board minion (T-616); left out when empty.
+    /// Buffs, as on a board minion (T-619); left out when empty.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub buffs: Vec<Buff>,
 }
