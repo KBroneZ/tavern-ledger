@@ -732,12 +732,14 @@ fn live_now(watcher: &mut Watcher) -> Option<LiveGame> {
     let lobby = watcher.live_lobby();
     let next = watcher.live_next_opponent();
     let cap = watcher.live_damage_cap();
+    let counters = watcher.live_counters();
     let report = serde_json::to_value(watcher.live_report()?).ok()?;
     Some(
         live_game(&report)
             .with_leaderboard(&lobby)
             .with_next_opponent(next)
-            .with_damage_cap(cap),
+            .with_damage_cap(cap)
+            .with_counters(counters),
     )
 }
 

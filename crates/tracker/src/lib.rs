@@ -70,6 +70,8 @@ struct LiveView {
     own_values: Option<bg_parser::report::CombatValues>,
     /// Duos: the player fights first next combat (T-608).
     fights_first: Option<bool>,
+    /// The player's own game-long counters, in shop and combat turns (T-611).
+    counters: Option<Vec<bg_parser::counters::Counter>>,
 }
 
 /// The session being read: its games and when each one was played.
@@ -108,6 +110,7 @@ impl SessionReader {
                 own_board: self.log.own_board_now(),
                 own_values: self.log.own_values_now(),
                 fights_first: self.log.fights_first_now(),
+                counters: self.log.counters_now(),
             },
             None => LiveView::default(),
         };
@@ -414,6 +417,12 @@ impl Watcher {
     /// game has set it (T-608); None when not set or no game is on.
     pub fn live_fights_first(&self) -> Option<bool> {
         self.shown_live()?.fights_first
+    }
+
+    /// The player's own counters as the game shows them now (T-611); `None`
+    /// when no Battlegrounds game is on or the reader has an error.
+    pub fn live_counters(&self) -> Option<Vec<bg_parser::counters::Counter>> {
+        self.shown_live()?.counters.clone()
     }
 
     fn shown_live(&self) -> Option<&LiveView> {

@@ -10,6 +10,7 @@
 
 use std::collections::BTreeSet;
 
+use bg_parser::counters::Counter;
 use bg_parser::report::LobbySlot;
 use serde::Serialize;
 use serde_json::Value;
@@ -160,6 +161,11 @@ pub struct LiveGame {
     /// The combat odds against the next opponent (T-605), added by the app
     /// from its own thread; None when switched off or not worked out yet.
     pub odds: Option<LiveOdds>,
+    /// The player's own game-long counters (T-611, D-139), added by the app
+    /// from the held live view: `None` when unknown (no game being played, or
+    /// the reader has an error), an empty list when known and nothing
+    /// applies. Live only: not in the saved report, not uploaded.
+    pub counters: Option<Vec<Counter>>,
 }
 
 impl LiveGame {
@@ -190,6 +196,25 @@ impl LiveGame {
     /// game is over.
     pub fn with_damage_cap(mut self, cap: Option<i64>) -> Self {
         self.damage_cap = cap.filter(|_| self.phase == Phase::Playing);
+        self
+    }
+
+    /// Adds the player's counters (T-611) while the game is on. A counter
+    /// with a field outside 0 to 99,999 is dropped, never clamped, and says
+    /// so once in `warnings` (not in the saved report).
+    pub fn with_counters(mut self, counters: Option<Vec<Counter>>) -> Self {
+        let Some(counters) = counters.filter(|_| self.phase == Phase::Playing) else {
+            self.counters = None;
+            return self;
+        };
+        let (kept, refused): (Vec<Counter>, Vec<Counter>) =
+            counters.into_iter().partition(Counter::in_range);
+        self.warnings.extend(
+            refused
+                .iter()
+                .map(|c| format!("counter out of range: {}", c.kind.name())),
+        );
+        self.counters = Some(kept);
         self
     }
 
@@ -330,6 +355,7 @@ pub fn live_game(report: &Value) -> LiveGame {
         problems: texts(report, "problems"),
         damage_cap: None,
         odds: None,
+        counters: None,
     }
 }
 
@@ -537,3 +563,7 @@ pub(crate) fn minions_of(board: &[Value]) -> Vec<LiveMinion> {
 #[cfg(test)]
 #[path = "live_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "live_counters_tests.rs"]
+mod counters_tests;
