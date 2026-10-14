@@ -1,7 +1,8 @@
-//! What the overlay's lobby panel shows (T-338): on the Battlegrounds lobby
-//! screen, before a game, the player's own rating (from the game, when the
-//! D-063 switch is on), the change the last game made and a one-line summary
-//! of the day's games per mode. The page renders it and decides nothing.
+//! What the overlay's lobby panel shows (T-338, T-366): on the Battlegrounds
+//! lobby screen, before a game, the player's own rating (from the game, when
+//! the D-063 switch is on), the day's last games with their hero, place and
+//! rating change, and a one-line summary of the day's games per mode. The page
+//! renders it and decides nothing.
 //!
 //! The app has no leaderboard rating of its own yet (the public leaderboard
 //! client is a prototype, `tools/leaderboard.py`): with the switch off, no
@@ -10,9 +11,8 @@
 use serde::Serialize;
 use tracker::game_clock::{session_start, LocalToUtc};
 use tracker::game_values::OwnRating;
+use tracker::lobby_recap::SessionRecap;
 use tracker::stats::ModeSummary;
-
-use crate::game_memory::RatingChange;
 
 /// A day is at most 25 hours long (a clock change); anything else is not a
 /// day the page asked for.
@@ -24,9 +24,11 @@ pub struct LobbyView {
     pub in_lobby: bool,
     /// From the game (D-063); status `off` when the switch is off.
     pub rating: OwnRating,
-    pub rating_change: Option<RatingChange>,
     /// The day's games, Solo and Duos apart; only modes played.
     pub today: Vec<ModeSummary>,
+    /// The day's last games with their hero, place and rating change, and the
+    /// rating the day started with (T-366); no rating while the read is off.
+    pub recap: SessionRecap,
 }
 
 /// Whether the page's day (`start`..`end`, UTC seconds of the viewer's local

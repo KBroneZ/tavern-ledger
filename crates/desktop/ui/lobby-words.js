@@ -1,5 +1,6 @@
-// Words for the overlay's lobby panel (T-338): the own rating (from the game,
-// D-063), the change the last game made and the day's summary per mode. Pure:
+// Words for the overlay's lobby panel (T-338, T-366): the own rating (from the
+// game, D-063) with the one the day started with, the day's last games as
+// tiles with the rating each won or lost, and the day's summary per mode. Pure:
 // plain data in, plain data out, so it is tested without a page
 // (ui-tests/lobby-words.test.js). The page draws them (overlay.js) with
 // textContent only. The app decides every value; this file only words them.
@@ -28,27 +29,57 @@
     return `${delta > 0 ? "+" : MINUS}${I18n.num(Math.abs(delta))}`;
   }
 
-  // The rating rows: one per mode the game shows a rating for, with the
-  // last game's change on its mode. Only a read that passed (status "ok")
-  // gives numbers; never a guess.
+  // The rating rows: one per mode the game shows a rating for: the rating
+  // now, the one the day started with and the difference (T-366). Only a read
+  // that passed (status "ok") gives numbers; the start only when the app knows
+  // it, never a guess.
   function ratingRows(view) {
     const rating = (view && view.rating) || {};
     if (rating.status !== "ok") return [];
-    const change = view.rating_change && typeof view.rating_change.duos === "boolean" ? view.rating_change : null;
+    const starting = (view.recap && view.recap.starting) || {};
     return [
-      ["solo", rating.solo, false],
-      ["duos", rating.duos, true],
+      ["solo", rating.solo, starting.solo, false],
+      ["duos", rating.duos, starting.duos, true],
     ]
       .filter(([, value]) => isRating(value))
-      .map(([mode, value, duos]) => {
-        const delta = change && change.duos === duos ? signed(change.delta) : null;
+      .map(([mode, value, start, duos]) => {
+        const label = I18n.t(duos ? "mode.GT_BATTLEGROUNDS_DUO" : "mode.GT_BATTLEGROUNDS");
+        const known = isRating(start);
+        const net = known ? signed(value - start) : null;
+        const said = [`${label}: ${I18n.num(value)}`];
+        if (known) said.push(I18n.t("lobby.startSaid", { value: I18n.num(start) }));
+        if (net) said.push(I18n.t("lobby.netSaid", { value: net }));
         return {
           mode,
-          label: I18n.t(duos ? "mode.GT_BATTLEGROUNDS_DUO" : "mode.GT_BATTLEGROUNDS"),
+          label,
           value: I18n.num(value),
-          change: delta,
-          up: delta ? change.delta > 0 : null,
+          start: known && net ? I18n.num(start) : null,
+          net,
+          up: net ? value > start : null,
+          said: said.join(", "),
         };
+      });
+  }
+
+  // The day's last games as tiles, the newest first: hero, mode, place and the
+  // rating won or lost (T-366). A place or a change the app does not give is
+  // left out, never zero. `nameOf(hero)` gives the hero's name.
+  function recapTiles(view, nameOf) {
+    const tiles = Array.isArray(view && view.recap && view.recap.tiles) ? view.recap.tiles : [];
+    return tiles
+      .filter((t) => t && typeof t.duos === "boolean")
+      .slice()
+      .reverse()
+      .map((t) => {
+        const mode = I18n.t(t.duos ? "mode.GT_BATTLEGROUNDS_DUO" : "mode.GT_BATTLEGROUNDS");
+        const place = Number.isInteger(t.place) && t.place > 0 ? t.place : null;
+        const change = signed(t.change);
+        const hero = t.hero && t.hero.id ? t.hero : null;
+        const said = [mode];
+        if (hero) said.push(nameOf(hero));
+        said.push(place ? I18n.t("lobby.tile.place", { n: place }) : I18n.t("lobby.tile.noPlace"));
+        if (change) said.push(I18n.t("lobby.tile.change", { value: change }));
+        return { hero, duos: t.duos, mode, place, change, up: change ? t.change > 0 : null, said: said.join(", ") };
       });
   }
 
@@ -86,7 +117,7 @@
     return lines.length ? lines : [I18n.t("lobby.today.none")];
   }
 
-  const api = { dayRange, signed, ratingRows, ratingNote, summaryLines };
+  const api = { dayRange, signed, ratingRows, recapTiles, ratingNote, summaryLines };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLLobby = api;
 })();

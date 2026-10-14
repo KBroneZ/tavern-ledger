@@ -527,7 +527,7 @@ body:not(.unlocked) .slot:has(> .panel.empty),
 .opp .opp-hp { font: 400 1.15rem/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
 .opp .opp-triples { color: var(--accent); font-weight: 700; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
 
-/* Lobby panel (T-338): small, on the Battlegrounds lobby screen only. */
+/* Lobby panel (T-338, T-366): small, on the Battlegrounds lobby screen only. */
 #lobby-dock {
   position: absolute;
   left: var(--lobby-left);
@@ -536,7 +536,9 @@ body:not(.unlocked) .slot:has(> .panel.empty),
   display: flex;
   flex-direction: column;
 }
-.lobby-rating { display: flex; align-items: baseline; gap: 6px; margin: 0; }
+.lobby-rating { margin: 0; }
+.lobby-seen { display: flex; align-items: baseline; gap: 6px; }
+.lobby-from { margin-left: auto; color: var(--dim); font-size: 0.85rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .lobby-rating + .lobby-rating { margin-top: 2px; }
 .lobby-mode { min-width: 4.6em; color: var(--dim); }
 .lobby-value { font: 400 1.231rem/1.25 var(--font-display); color: var(--accent); font-variant-numeric: tabular-nums; }
@@ -545,6 +547,22 @@ body:not(.unlocked) .slot:has(> .panel.empty),
 .lobby-change.down { color: var(--lost); }
 .lobby-change.up::before { content: "\25B2\00a0"; font-size: 0.7em; }
 .lobby-change.down::before { content: "\25BC\00a0"; font-size: 0.7em; }
+/* The day's last games (T-366): four to a row, the newest first. Each tile
+   has its hero's portrait behind it, the place at the top left and the rating
+   won or lost at the foot, with a mark as well as a colour. */
+.recap-tiles { list-style: none; margin: 5px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.recap-tile { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: var(--panel-solid); box-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 70%, transparent); }
+.recap-seen { position: absolute; inset: 0; display: block; }
+.recap-back { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
+.recap-seen::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to bottom, rgb(0 0 0 / 0.45), rgb(0 0 0 / 0) 45%, rgb(0 0 0 / 0.6)); }
+.recap-place, .recap-change, .recap-mode { position: absolute; z-index: 1; }
+.recap-place { top: 1px; left: 5px; color: #fff; font: 400 1.35rem/1.15 var(--font-display); font-variant-numeric: tabular-nums; }
+.recap-mode { top: 3px; right: 4px; color: var(--accent); font: 800 0.58rem/1.2 var(--font-body); text-transform: uppercase; letter-spacing: 0.04em; }
+.recap-change { right: 4px; bottom: 2px; font: 400 0.95rem/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.recap-change.up { color: var(--won); }
+.recap-change.down { color: var(--lost); }
+.recap-change.up::before { content: "\25B2"; font-size: 0.6em; margin-right: 1px; }
+.recap-change.down::before { content: "\25BC"; font-size: 0.6em; margin-right: 1px; }
 .lobby .notes { margin: 3px 0 0; color: var(--amber); font-size: 0.923rem; }
 .lobby-today .nowrap { white-space: nowrap; }
 .lobby-today { margin: 4px 0 0; color: var(--dim); font-size: 0.923rem; }
@@ -574,7 +592,7 @@ body:not(.unlocked) .slot:has(> .panel.empty),
 
 /* Numbers drawn with a dark edge like the game's own: the stroke is painted
    under the fill, so the glyphs keep their full weight. */
-.odds-value, .odds-range-value, .mark-hp, .mark-stars, .opp .opp-hp, .counter-value, .lobby-value, .status .hero, .hb-atk, .hb-hp, .face-tier, .fig-value {
+.odds-value, .odds-range-value, .mark-hp, .mark-stars, .opp .opp-hp, .counter-value, .lobby-value, .status .hero, .hb-atk, .hb-hp, .face-tier, .fig-value, .recap-place, .recap-change {
   paint-order: stroke fill;
   -webkit-text-stroke: 0.2em var(--outline);
 }
@@ -604,5 +622,5 @@ body:not(.unlocked) .slot:has(> .panel.empty),
 .hb-art .gift-mark { font-size: 0.75em; }
 @media (forced-colors: active) {
   .gift-mark { border-color: CanvasText; color: CanvasText; }
-  .odds-value, .odds-range-value, .mark-hp, .mark-stars, .opp .opp-hp, .counter-value, .lobby-value, .status .hero, .hb-atk, .hb-hp, .face-tier, .fig-value { -webkit-text-stroke: 0; }
+  .odds-value, .odds-range-value, .mark-hp, .mark-stars, .opp .opp-hp, .counter-value, .lobby-value, .status .hero, .hb-atk, .hb-hp, .face-tier, .fig-value, .recap-place, .recap-change { -webkit-text-stroke: 0; }
 }

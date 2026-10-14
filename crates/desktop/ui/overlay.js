@@ -385,24 +385,49 @@ function renderOpponents(g) {
   panel.hidden = false;
 }
 
-// The lobby panel (T-338): the own rating with the last game's change, and
-// the day's summary.
+// One game of the day as a tile (T-366): its hero's portrait as the
+// background, the place on it and the rating won or lost, green up or red
+// down (a mark as well as a colour). A value the app does not give is left
+// out. The sentence is read out instead of the pieces.
+function recapTile(t) {
+  const tile = el("li", `recap-tile${t.duos ? " duos" : ""}`);
+  const seen = el("span", "recap-seen");
+  seen.setAttribute("aria-hidden", "true");
+  const art = t.hero ? TLCards.art(t.hero.id, "portrait") : null;
+  const back = art || el("span", "portrait blank");
+  back.classList.add("recap-back");
+  seen.append(back);
+  if (t.duos) seen.append(el("span", "recap-mode", t.mode));
+  seen.append(el("b", "recap-place", t.place ? t.place : "–"));
+  if (t.change) seen.append(el("span", `recap-change ${t.up ? "up" : "down"}`, t.change));
+  tile.append(seen, el("span", "visually-hidden", t.said));
+  return tile;
+}
+
+// The lobby panel (T-338, T-366): the own rating per mode with the one the
+// day started with, the day's last games as tiles, and the day's summary.
 function renderLobby(v) {
   const panel = document.getElementById("lobby");
   panel.replaceChildren();
-  const rows = TLLobby.ratingRows(v);
-  for (const r of rows) {
+  for (const r of TLLobby.ratingRows(v)) {
     const row = el("p", "lobby-rating");
-    row.append(el("span", "lobby-mode", r.label), el("b", "lobby-value", r.value));
-    if (r.change) {
-      const change = el("span", `lobby-change ${r.up ? "up" : "down"}`, r.change);
-      change.title = TLI18n.t("lobby.change.label");
-      row.append(change, el("span", "visually-hidden", TLI18n.t("lobby.change.label")));
-    }
+    const seen = el("span", "lobby-seen");
+    seen.setAttribute("aria-hidden", "true");
+    seen.append(el("span", "lobby-mode", r.label), el("b", "lobby-value", r.value));
+    if (r.net) seen.append(el("span", `lobby-change ${r.up ? "up" : "down"}`, r.net));
+    if (r.start) seen.append(el("span", "lobby-from", TLI18n.t("lobby.from", { value: r.start })));
+    row.append(seen, el("span", "visually-hidden", r.said));
     panel.append(row);
   }
   const note = TLLobby.ratingNote(v);
   if (note) panel.append(el("p", "notes", note));
+  const tiles = TLLobby.recapTiles(v, heroName);
+  if (tiles.length) {
+    const list = el("ol", "recap-tiles");
+    list.setAttribute("aria-label", TLI18n.t("lobby.tiles.label"));
+    for (const t of tiles) list.append(recapTile(t));
+    panel.append(list);
+  }
   // Each part of a summary line stays whole; lines break only between parts.
   for (const line of TLLobby.summaryLines(v)) {
     const p = el("p", "lobby-today");

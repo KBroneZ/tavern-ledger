@@ -26,16 +26,58 @@ const CAPTIONS = {
   },
   lobby: {
     en: {
-      title: "The lobby panel",
-      sees: "On the Battlegrounds lobby screen, a small panel in the top left: your rating in each mode, how it changed after your last game, and a line per mode with today's games, average place and games in the top half.",
-      source: "The rating is the number the game shows on your own screen, read from the running game (read-only) only if you turn that on. Today's games come from your saved games on this PC.",
-      rule: "Only your own rating and your own games. Nobody else's rating is read or shown.",
+      title: "The lobby panel: the day at a glance",
+      sees: "On the Battlegrounds lobby screen, a small panel in the top left: your rating in each mode now and the rating you started the day with, with the difference. Under it the day's last eight games as tiles, the newest first: your hero's portrait behind the place you finished and the rating you won (green, up) or lost (red, down) in that game. A line per mode closes it with today's games, average place and games in the top half.",
+      source: "The ratings are the numbers the game shows on your own screen, read from the running game (read-only) while that option is on, and each game's rating is kept with it on this PC only. Heroes, places and the day's games come from your saved games on this PC.",
+      rule: "Only your own rating and your own games; nobody else's rating is read or shown, and a rating is never uploaded. A change appears only when the app read your rating right after this game and right after the one before it.",
     },
     es: {
-      title: "El panel del vestíbulo",
-      sees: "En la pantalla del vestíbulo de Campos de batalla, un panel pequeño arriba a la izquierda: tu puntuación en cada modo, cómo cambió tras tu última partida y una línea por modo con las partidas de hoy, la posición media y las partidas en la mitad superior.",
-      source: "La puntuación es el número que el juego muestra en tu pantalla, leído del juego en marcha (solo lectura) y solo si lo activas. Las partidas de hoy salen de tus partidas guardadas en este PC.",
-      rule: "Solo tu propia puntuación y tus propias partidas. No se lee ni se muestra la de nadie más.",
+      title: "El panel del vestíbulo: el día de un vistazo",
+      sees: "En la pantalla del vestíbulo de Campos de batalla, un panel pequeño arriba a la izquierda: tu puntuación en cada modo ahora y la puntuación con la que empezaste el día, con la diferencia. Debajo, las últimas ocho partidas del día como fichas, la más reciente primero: el retrato de tu héroe detrás del puesto en que acabaste y la puntuación que ganaste (verde, hacia arriba) o perdiste (rojo, hacia abajo) en esa partida. Una línea por modo lo cierra con las partidas de hoy, la posición media y las partidas en la mitad superior.",
+      source: "Las puntuaciones son los números que el juego muestra en tu pantalla, leídos del juego en marcha (solo lectura) mientras esa opción esté activada, y la puntuación de cada partida se guarda con ella solo en este PC. Los héroes, los puestos y las partidas del día salen de tus partidas guardadas en este PC.",
+      rule: "Solo tu propia puntuación y tus propias partidas; no se lee ni se muestra la de nadie más, y la puntuación nunca se sube a internet. Un cambio solo aparece cuando la app leyó tu puntuación justo después de esta partida y justo después de la anterior.",
+    },
+  },
+  "lobby-no-rating": {
+    en: {
+      title: "The lobby panel with the game read off",
+      sees: "The same last eight games with their heroes and places, and no rating anywhere: no rating lines, no changes on the tiles.",
+      source: "Without reading from the game there is no rating to show. Heroes, places and the day's games come from your saved games on this PC.",
+      rule: "A rating is never guessed. With the option off, nothing about your rating is read or kept.",
+    },
+    es: {
+      title: "El panel del vestíbulo con la lectura del juego desactivada",
+      sees: "Las mismas ocho últimas partidas con sus héroes y puestos, y ninguna puntuación: ni líneas de puntuación ni cambios en las fichas.",
+      source: "Sin leer del juego no hay puntuación que mostrar. Los héroes, los puestos y las partidas del día salen de tus partidas guardadas en este PC.",
+      rule: "Una puntuación nunca se inventa. Con la opción desactivada no se lee ni se guarda nada de tu puntuación.",
+    },
+  },
+  "lobby-few-games": {
+    en: {
+      title: "The lobby panel early in the day",
+      sees: "With fewer than eight games only those tiles show. A game that did not finish in the log has a dash instead of a place, and a game the app has no rating reading for has no change on it.",
+      source: "The same sources as the full panel. A missing number is left out rather than shown as zero.",
+      rule: "Unknown is not zero: no place and no change are shown when the app does not have them.",
+    },
+    es: {
+      title: "El panel del vestíbulo al empezar el día",
+      sees: "Con menos de ocho partidas solo salen esas fichas. Una partida que no terminó en el registro lleva un guion en vez del puesto, y una partida de la que la app no tiene lectura de puntuación no lleva cambio.",
+      source: "Las mismas fuentes que el panel completo. Un número que falta se omite en vez de mostrarse como cero.",
+      rule: "Desconocido no es cero: no se muestra puesto ni cambio cuando la app no los tiene.",
+    },
+  },
+  "lobby-duos": {
+    en: {
+      title: "The lobby panel with Duos games",
+      sees: "Solo and Duos games share the tiles; a Duos tile is marked with its mode and its change is in the Duos rating. Each mode has its own rating line and its own line of today's games.",
+      source: "The same sources as the full panel, with the Duos rating the game shows next to the Solo one.",
+      rule: "A change is always in the mode of the game it sits on; a Duos game never moves the Solo number shown.",
+    },
+    es: {
+      title: "El panel del vestíbulo con partidas de Dúos",
+      sees: "Las partidas de Solo y de Dúos comparten las fichas; una ficha de Dúos lleva su modo marcado y su cambio es en la puntuación de Dúos. Cada modo tiene su línea de puntuación y su línea de partidas de hoy.",
+      source: "Las mismas fuentes que el panel completo, con la puntuación de Dúos que el juego muestra junto a la de Solo.",
+      rule: "Un cambio es siempre en el modo de la partida en la que está; una partida de Dúos nunca mueve el número de Solo que se muestra.",
     },
   },
   solo: {

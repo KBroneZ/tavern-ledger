@@ -98,9 +98,31 @@ pub struct Poll<'a> {
     /// `finished` counts), to place a rating saved by an earlier run.
     pub newest: Option<&'a GameKey>,
     pub previous: Option<&'a GameKey>,
+    /// The newest game the app has seen and the one before it, the games
+    /// played with the reconnect dev tool included: they move the rating too,
+    /// so the rating saved with each game (T-366) follows these.
+    pub newest_any: Option<&'a GameKey>,
+    pub previous_any: Option<&'a GameKey>,
+    /// Whether `newest_any` was Duos (`None`: none, or another mode).
+    pub last_duos_any: Option<bool>,
     /// Whether the last finished game was Duos (`None`: no game, or another
     /// mode).
     pub last_duos: Option<bool>,
+}
+
+/// The rating the last agreed read took and what the app knew then, for saving
+/// it with the game it follows (T-366, D-147).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TakenReading {
+    /// The newest game the app had seen (`None`: before any game).
+    pub after: Option<GameKey>,
+    /// The game before it.
+    pub previous: Option<GameKey>,
+    pub game_duos: Option<bool>,
+    /// The first rating taken since the app started reading.
+    pub first_of_run: bool,
+    pub solo: Option<u32>,
+    pub duos: Option<u32>,
 }
 
 /// The rating change the last game made, in its mode.
@@ -192,6 +214,8 @@ struct State {
     /// `rating` was read in this run; one from the file is only a base for
     /// the change, never shown.
     rating_read: bool,
+    /// What the last agreed read knew, for saving it with its game (T-366).
+    rating_taken: Option<TakenReading>,
     /// The rating file's content, waiting for the first read on the lobby
     /// screen to be placed in the history.
     restored: Option<SavedRating>,
@@ -435,6 +459,17 @@ impl GameMemory {
         (s.tribes.clone(), s.tribes_status)
     }
 
+    /// The rating the last agreed read took, for saving with the game it
+    /// follows (T-366, D-147): the newest game of the history then (`None`:
+    /// before any game) and the two ratings. Only a rating read in this run
+    /// on a checked build; none while the switch is off.
+    pub fn taken_reading(&self) -> Option<TakenReading> {
+        let s = lock(&self.state);
+        s.rating_taken
+            .clone()
+            .filter(|_| s.enabled && s.rating_read)
+    }
+
     pub fn view(&self) -> View {
         let s = lock(&self.state);
         View {
@@ -664,6 +699,7 @@ fn forget_rating(s: &mut State) {
     s.rating_prior = None;
     s.rating_change = None;
     s.rating_after = None;
+    s.rating_taken = None;
     s.rating_read = false;
     if s.rating_status == ReaderStatus::Ok {
         s.rating_status = ReaderStatus::Waiting;
@@ -692,6 +728,14 @@ fn take_rating(s: &mut State, rating: Rating, poll: &Poll) {
     s.rating_at = Some(finished);
     s.rating_after = poll.newest.map(SavedGame::of);
     s.rating_read = true;
+    s.rating_taken = Some(TakenReading {
+        after: poll.newest_any.cloned(),
+        previous: poll.previous_any.cloned(),
+        game_duos: poll.last_duos_any,
+        first_of_run: s.rating_first == Some(finished),
+        solo: rating.solo,
+        duos: rating.duos,
+    });
     let pick = |r: Rating, duos: bool| if duos { r.duos } else { r.solo };
     let moved = |a: Rating, b: Rating| {
         poll.last_duos.is_some_and(|duos| {
@@ -827,6 +871,36 @@ mod tests {
         solo: Some(6543),
         duos: None,
     };
+
+    #[test]
+    fn the_reading_taken_belongs_to_the_newest_game_and_only_while_the_switch_is_on() {
+        let gm = on("taken");
+        assert_eq!(gm.taken_reading(), None, "nothing read yet");
+        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(RATING)]);
+        let (newest, before) = (key(3), key(2));
+        let poll = Poll {
+            newest: Some(&newest),
+            newest_any: Some(&newest),
+            previous_any: Some(&before),
+            last_duos_any: Some(false),
+            finished: 3,
+            ..poll(None, BUILD, Some(Scene::BattlegroundsLobby))
+        };
+        for _ in 0..6 {
+            gm.tick(&reader, &poll);
+        }
+        let read = gm.taken_reading().expect("a rating two reads agreed on");
+        assert_eq!(read.after, Some(newest));
+        assert_eq!(read.previous, Some(before));
+        assert_eq!(read.game_duos, Some(false));
+        assert_eq!((read.solo, read.duos), (Some(6543), None));
+        assert!(
+            read.first_of_run,
+            "the first rating taken since the read started"
+        );
+        gm.set_enabled(false).unwrap();
+        assert_eq!(gm.taken_reading(), None, "off keeps nothing");
+    }
 
     #[test]
     fn it_is_off_until_the_user_turns_it_on() {
