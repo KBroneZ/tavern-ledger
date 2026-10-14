@@ -5,6 +5,7 @@
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 
+use crate::counters::CounterMemory;
 use crate::discover::DiscoverTracker;
 use crate::hero_select::HeroSelectTracker;
 use crate::leaderboard::{is_leaderboard_tag, LeaderboardTracker};
@@ -117,6 +118,8 @@ pub struct Collector {
     pub now_ms: i64,
     /// Nesting of the line being read (0 is the log's top level).
     pub indent: usize,
+    /// The player's counters as last read well (T-611).
+    pub counters: CounterMemory,
 }
 
 impl Collector {
@@ -283,11 +286,17 @@ impl Collector {
                     self.local_pid = Some(player_id);
                 }
                 self.board.create(player)?;
+                // A game joined in a shop turn (a reconnect) already has the
+                // player's values; in a combat they are wiped.
+                if self.turn() % 2 == 1 {
+                    self.counters.on_shop_turn(&self.board, self.local);
+                }
             }
             Pending::Full { id, card_id } => {
                 let parent = skin_parent(&tags);
                 let shown = leaderboard_values(&tags);
                 self.board.create(Entity { id, card_id, tags })?;
+                self.counters.on_entity(&self.board, self.local, id);
                 self.note_skin(id, parent);
                 self.note_leaderboard_packet(id, shown);
                 self.track_shop(id);
@@ -299,6 +308,7 @@ impl Collector {
                 let parent = skin_parent(&tags);
                 let shown = leaderboard_values(&tags);
                 self.board.show(id, card_id, tags)?;
+                self.counters.on_entity(&self.board, self.local, id);
                 self.note_skin(id, parent);
                 self.note_leaderboard_packet(id, shown);
                 self.shop_sees(id);
@@ -427,6 +437,9 @@ impl Collector {
         )
         .then(|| tag.clone());
         self.board.set_tag(id, tag.clone(), value)?;
+        let shop_turn = self.turn() % 2 == 1;
+        self.counters
+            .on_tag(&self.board, self.local, id, &tag, shop_turn);
         self.note_defender(id, &tag, old, new_int);
         let sides = self.sides();
         self.replays.on_tag(id, &tag, old, &self.board, sides);
@@ -462,6 +475,9 @@ impl Collector {
     }
 
     fn on_turn(&mut self, turn: i64, old: Option<i64>) {
+        if turn % 2 == 1 {
+            self.counters.on_shop_turn(&self.board, self.local);
+        }
         self.open_attack = None;
         self.replays.on_turn(turn);
         // The previous turn's legs that never reached an attack were not visible.

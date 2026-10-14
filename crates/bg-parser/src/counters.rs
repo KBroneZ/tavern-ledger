@@ -118,23 +118,109 @@ pub struct CounterInputs {
     pub shop_elemental: (i64, i64),
 }
 
-/// The player enchantment `card` in play on `player`, with its two numbers
-/// (`TAG_SCRIPT_DATA_NUM_1`, `_2`): the same rule as the simulator's values
-/// (`Collector::combat_values`), `(0, 0)` when there is none.
-pub fn player_enchantment(board: &Board, player: i64, card: &str) -> (i64, i64) {
-    board
-        .iter()
-        .find(|e| {
-            e.card_id.as_deref() == Some(card)
-                && e.int("ATTACHED") == player
-                && e.is("ZONE", "PLAY")
-        })
-        .map_or((0, 0), |e| {
-            (
-                e.int("TAG_SCRIPT_DATA_NUM_1"),
-                e.int("TAG_SCRIPT_DATA_NUM_2"),
-            )
-        })
+/// The player's tags that carry counters. The game zeroes every tag on the
+/// player entity for the whole combat and restores them at its end.
+const VALUE_TAGS: [&str; 4] = [
+    "BACON_BLOODGEMBUFFATKVALUE",
+    "BACON_BLOODGEMBUFFHEALTHVALUE",
+    "TAVERN_SPELL_ATTACK_INCREASE",
+    "TAVERN_SPELL_HEALTH_INCREASE",
+];
+/// The tags of an enchantment that say it is in play with its numbers.
+const ENCHANT_TAGS: [&str; 3] = ["ZONE", "TAG_SCRIPT_DATA_NUM_1", "TAG_SCRIPT_DATA_NUM_2"];
+
+/// The counters' last good reading (T-611). On the user's logs the game
+/// zeroes the local player's tags during each combat, and the Undead, Eternal
+/// Knights and Beetle enchantments are only shown (in play) as copies for the
+/// fight, so reading the board at an instant makes the counters blink. This
+/// keeps each one's last good reading:
+///
+/// - the player's tags are taken only in shop turns (and when one starts, for
+///   what the restore set during the combat), never from the wiped player;
+/// - an enchantment is taken when the local player's one is in play with a
+///   number above zero (a copy still being filled in, or hidden again, never
+///   lowers a total); in a shop turn it is therefore the last combat's.
+///
+/// Only the local player's: an enchantment attached to anything else is
+/// never read.
+#[derive(Clone, Debug, Default)]
+pub struct CounterMemory {
+    inputs: CounterInputs,
+}
+
+impl CounterMemory {
+    pub fn inputs(&self) -> &CounterInputs {
+        &self.inputs
+    }
+
+    /// A tag was set on entity `id`; `shop_turn` is whether the game is in a
+    /// shop turn.
+    pub fn on_tag(
+        &mut self,
+        board: &Board,
+        local: Option<i64>,
+        id: i64,
+        tag: &str,
+        shop_turn: bool,
+    ) {
+        if Some(id) == local {
+            if shop_turn && VALUE_TAGS.contains(&tag) {
+                self.read_player(board, id);
+            }
+        } else if ENCHANT_TAGS.contains(&tag) {
+            self.read_enchantment(board, local, id);
+        }
+    }
+
+    /// An entity was created or shown.
+    pub fn on_entity(&mut self, board: &Board, local: Option<i64>, id: i64) {
+        self.read_enchantment(board, local, id);
+    }
+
+    /// A shop turn starts: the tags are back after the combat.
+    pub fn on_shop_turn(&mut self, board: &Board, local: Option<i64>) {
+        if let Some(player) = local {
+            self.read_player(board, player);
+        }
+    }
+
+    fn read_player(&mut self, board: &Board, player: i64) {
+        let Some(p) = board.get(player) else { return };
+        self.inputs.values.blood_gem = (
+            p.int("BACON_BLOODGEMBUFFATKVALUE"),
+            p.int("BACON_BLOODGEMBUFFHEALTHVALUE"),
+        );
+        self.inputs.values.spell = (
+            p.int("TAVERN_SPELL_ATTACK_INCREASE"),
+            p.int("TAVERN_SPELL_HEALTH_INCREASE"),
+        );
+    }
+
+    fn read_enchantment(&mut self, board: &Board, local: Option<i64>, id: i64) {
+        let Some(local) = local else { return };
+        let Some(e) = board.get(id) else { return };
+        if e.int("ATTACHED") != local || !e.is("ZONE", "PLAY") {
+            return;
+        }
+        let first = e.int("TAG_SCRIPT_DATA_NUM_1");
+        let second = e.int("TAG_SCRIPT_DATA_NUM_2");
+        // Each number on its own: a copy gets its two numbers on separate
+        // lines, and one still at zero must not lower the other's total.
+        let keep = |old: i64, new: i64| if new != 0 { new } else { old };
+        let values = &mut self.inputs.values;
+        match e.card_id.as_deref() {
+            Some("BG25_011pe") => values.undead_attack = keep(values.undead_attack, first),
+            Some("BG25_008pe") => values.knights_dead = keep(values.knights_dead, first),
+            Some("BG31_808pe") => {
+                values.beetle = (keep(values.beetle.0, first), keep(values.beetle.1, second));
+            }
+            Some("BG_ShopBuff_Elemental") => {
+                let old = self.inputs.shop_elemental;
+                self.inputs.shop_elemental = (keep(old.0, first), keep(old.1, second));
+            }
+            _ => {}
+        }
+    }
 }
 
 /// The counters of one player's values, only the `enabled` kinds, in the
