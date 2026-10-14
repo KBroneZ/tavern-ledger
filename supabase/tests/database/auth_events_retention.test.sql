@@ -17,7 +17,7 @@ insert into auth.audit_log_entries (id, payload, created_at, ip_address) values
   (gen_random_uuid(), '{"action": "login", "actor_id": "00000000-0000-4000-8000-0000000000c1",
      "log_type": "account", "traits": {"provider": "email"}}', now() - interval '91 days', '192.0.2.1'),
   (gen_random_uuid(), '{"action": "user_recovery_requested", "actor_id": "00000000-0000-4000-8000-0000000000c1",
-     "log_type": "user"}', now() - interval '89 days', '192.0.2.1'),
+     "log_type": "user"}', now() - interval '29 days', '192.0.2.1'),
   (gen_random_uuid(), '{"action": "login", "actor_id": "00000000-0000-4000-8000-0000000000c1",
      "log_type": "account", "traits": {"provider": "email"}}', now(), '192.0.2.1'),
   (gen_random_uuid(), '{"action": "user_invited", "actor_id": "00000000-0000-0000-0000-000000000000",
@@ -38,11 +38,11 @@ select is((select doc -> 'auth_events' -> 0 ->> 'ip_address' from export_c1), ''
 
 -- ---------------------------------------------------------------- sweep
 select is((public.sweep_housekeeping() ->> 'auth_events')::int, 3,
-  'the sweep removes entries older than 90 days, of any account or none');
+  'the sweep removes entries older than 90 days (and, with the 30-day purge, the rest), of any account or none');
 select is(
   (select array_agg(payload ->> 'action' order by created_at) from auth.audit_log_entries),
   array['user_recovery_requested', 'login'],
-  'entries from the last 90 days stay');
+  'entries from the last 30 days stay');
 select is((public.sweep_housekeeping() ->> 'auth_events')::int, 0,
   'a second sweep finds nothing more to remove');
 
