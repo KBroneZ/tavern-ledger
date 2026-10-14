@@ -5,6 +5,9 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select plan(62);
 
+-- New functions are closed to clients by default; the helpers below run under their roles.
+alter default privileges for role postgres grant execute on functions to public;
+
 -- Players P1..P11 (ids from pg_temp.pid). Opted in: P1..P8 and P10; P1..P3
 -- have public profiles, P4..P8 and P10 private ones. P9 has a public profile
 -- and never opted in. P11 loses its profile (a broken account).

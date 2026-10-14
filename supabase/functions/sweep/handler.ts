@@ -125,8 +125,10 @@ function isServiceRole(req: Request, env: Env): boolean {
     (sameSecret(token, env.serviceKey) || sameSecret(apikey, env.serviceKey));
 }
 
-// The token the migration puts in Vault: 32 random bytes as hex.
-const SWEEP_TOKEN = /^[0-9a-f]{64}$/;
+// What the scheduled job sends: '<unix seconds>.<64 hex>' (an HMAC the database
+// checks, migration 20261014180000), or for a short while the Vault secret
+// itself: 32 random bytes as hex.
+const SWEEP_TOKEN = /^(?:[0-9]{1,12}\.)?[0-9a-f]{64}$/;
 
 /** True if the request carries the scheduled job's sweep token. */
 async function hasSweepToken(req: Request, env: Env, fetchFn: Fetch): Promise<boolean> {

@@ -290,10 +290,19 @@ Deno.test("the scheduled job's sweep token is checked by the database, then runs
   assertEquals(api.calls.at(-1)?.path, "/rest/v1/rpc/sweep_record_result");
 });
 
+Deno.test("a signed, time-bound sweep token is checked by the database, then runs", async () => {
+  const signed = `1791000000.${TOKEN}`;
+  const api = fakeApi({ files: [orphan(1)], token: signed });
+  const res = await handle(tokenRequest(signed), ENV, api.fetchFn);
+  assertEquals(res.status, 200);
+  assertEquals(api.calls[0].body, { p_token: signed });
+});
+
 Deno.test("a wrong or malformed sweep token runs nothing", async () => {
   // Wrong token: asked once, refused. Malformed: refused without asking.
   for (
-    const [token, asked] of [["cd".repeat(32), 1], ["short", 0], [`${TOKEN}0`, 0], ["", 0]] as const
+    const [token, asked] of [["cd".repeat(32), 1], ["short", 0], [`${TOKEN}0`, 0], ["", 0],
+      [`.${TOKEN}`, 0], [`1.2.${TOKEN}`, 0], [`17910000000000.${TOKEN}`, 0]] as const
   ) {
     const api = fakeApi({ files: [orphan(1)] });
     const res = await handle(tokenRequest(token), ENV, api.fetchFn);
