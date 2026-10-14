@@ -39,6 +39,8 @@ insert into auth.users (id, email)
 select pg_temp.pid(i), 'ch' || i || '@example.test' from generate_series(1, 11) as i;
 update public.profiles set is_public = true
 where user_id in (pg_temp.pid(1), pg_temp.pid(2), pg_temp.pid(3), pg_temp.pid(9));
+-- Accounts count only from their eighth day (20261015120000_community_trust_scale.sql).
+update public.profiles set created_at = now() - interval '30 days';
 
 -- n finished games for one player, stored as the upload function stores
 -- them; place null cycles 1..8 from the first game.

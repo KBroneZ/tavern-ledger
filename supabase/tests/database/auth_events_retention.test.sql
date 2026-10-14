@@ -33,8 +33,8 @@ reset role;
 
 select is((select jsonb_array_length(doc -> 'auth_events') from export_c1), 4,
   'the export holds every security log entry of the account, by actor or by target');
-select is((select doc -> 'auth_events' -> 0 ->> 'ip_address' from export_c1), '',
-  'entries are in time order, with their IP address');
+select is((select doc -> 'auth_events' -> 1 ->> 'ip_address' from export_c1), '192.0.2.1',
+  'entries are in time order, with the IP address of the account''s own');
 
 -- ---------------------------------------------------------------- sweep
 select is((public.sweep_housekeeping() ->> 'auth_events')::int, 3,
