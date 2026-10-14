@@ -10,6 +10,9 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select plan(61);
 
+-- New functions are closed to clients by default; the helpers below run under their roles.
+alter default privileges for role postgres grant execute on functions to public;
+
 create or replace function private.leaderboard_min_games()
 returns integer language sql immutable set search_path = '' as $$ select 20 $$;
 create or replace function private.leaderboard_min_hero_games()

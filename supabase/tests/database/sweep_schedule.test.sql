@@ -2,7 +2,7 @@
 -- The sweep function's side is tested in supabase/functions/sweep/.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(31);
 
 -- ------------------------------------------------------------ extensions, job
 select has_extension('pg_cron', 'pg_cron is installed');
@@ -25,6 +25,40 @@ select is(
   'the right token is accepted'
 );
 select is(public.sweep_token_valid(repeat('0', 64)), false, 'a wrong token is refused');
+
+-- Time-bound token: '<unix seconds>.<HMAC-SHA256 of the seconds, keyed with the Vault token>'.
+create function pg_temp.signed(at_seconds bigint, key text default null) returns text language sql as $$
+  select at_seconds || '.' || encode(extensions.hmac(
+    at_seconds::text,
+    coalesce(key, (select decrypted_secret from vault.decrypted_secrets where name = 'sweep_token')),
+    'sha256'), 'hex');
+$$;
+create function pg_temp.now_s(shift int default 0) returns bigint language sql as $$
+  select floor(extract(epoch from now()))::bigint + shift;
+$$;
+select is(public.sweep_token_valid(pg_temp.signed(pg_temp.now_s())), true, 'a fresh signed token is accepted');
+select is(public.sweep_token_valid(pg_temp.signed(pg_temp.now_s(-240))), true, 'a token four minutes old is accepted');
+select is(public.sweep_token_valid(pg_temp.signed(pg_temp.now_s(-360))), false, 'a token six minutes old is refused');
+select is(public.sweep_token_valid(pg_temp.signed(pg_temp.now_s(30))), true, 'a little clock skew ahead is accepted');
+select is(public.sweep_token_valid(pg_temp.signed(pg_temp.now_s(300))), false, 'a token from the future is refused');
+select is(public.sweep_token_valid(pg_temp.signed(pg_temp.now_s(), repeat('0', 64))), false,
+  'a token signed with another key is refused');
+select is(
+  public.sweep_token_valid(
+    (pg_temp.now_s(-1000))::text || '.' || split_part(pg_temp.signed(pg_temp.now_s()), '.', 2)),
+  false, 'a signature cannot be moved to another time');
+select is(public.sweep_token_valid(pg_temp.now_s()::text || '.' || repeat('a', 63)), false,
+  'a malformed signed token is refused');
+-- The Vault secret itself is accepted only during the transition window.
+update private.sweep_token_transition set legacy_until = now() - interval '1 second';
+select is(
+  public.sweep_token_valid((select decrypted_secret from vault.decrypted_secrets where name = 'sweep_token')),
+  false,
+  'the bare Vault token is refused once the transition window is over'
+);
+select is(public.sweep_token_valid(pg_temp.signed(pg_temp.now_s())), true,
+  'a signed token still works after the window');
+update private.sweep_token_transition set legacy_until = now() + interval '1 day';
 select is(public.sweep_token_valid(''), false, 'an empty token is refused');
 select is(public.sweep_token_valid(null), false, 'no token is refused');
 
@@ -61,11 +95,27 @@ select lives_ok($$ select vault.create_secret('https://example.test/', 'project_
 create temporary table sent as select private.run_sweep() as id;
 select isnt((select id from sent), null, 'with project_url the job queues one request');
 select results_eq(
-  $$ select q.method::text, q.url, q.headers ->> 'X-Sweep-Token' = s.decrypted_secret, q.timeout_milliseconds
+  $$ select q.method::text, q.url, q.timeout_milliseconds
+     from net.http_request_queue q where q.id = (select id from sent) $$,
+  $$ values ('POST'::text, 'https://example.test/functions/v1/sweep'::text, 30000) $$,
+  'the request posts to the sweep function'
+);
+select results_eq(
+  $$ select q.headers ->> 'X-Sweep-Token' = s.decrypted_secret
      from net.http_request_queue q, vault.decrypted_secrets s
      where q.id = (select id from sent) and s.name = 'sweep_token' $$,
-  $$ values ('POST'::text, 'https://example.test/functions/v1/sweep'::text, true, 30000) $$,
-  'the request posts to the sweep function with the token'
+  $$ values (true) $$,
+  'during the cutover the job still sends the Vault token, which old and new functions accept'
+);
+update private.sweep_token_transition set signed_from = now() - interval '1 second';
+create temporary table sent_signed as select private.run_sweep() as id;
+select results_eq(
+  $$ select q.headers ->> 'X-Sweep-Token' <> s.decrypted_secret,
+            public.sweep_token_valid(q.headers ->> 'X-Sweep-Token')
+     from net.http_request_queue q, vault.decrypted_secrets s
+     where q.id = (select id from sent_signed) and s.name = 'sweep_token' $$,
+  $$ values (true, true) $$,
+  'the request carries a signed token that is valid now, not the Vault secret itself'
 );
 
 -- ------------------------------------------------------------ run record
