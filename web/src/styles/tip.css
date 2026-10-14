@@ -73,6 +73,11 @@
   transition-delay: 0s;
 }
 
+/* The stage clips what leaves it; while a minion shows its plaque the plaque may. */
+.rp-stage:has(.rp-minion:is(:hover, :focus-visible, :focus-within)) {
+  overflow: visible;
+}
+
 /* The board of the minion on show stands above the other one's. */
 .rp-side:has(.rp-minion:is(:hover, :focus-visible, :focus-within)) {
   z-index: 8;

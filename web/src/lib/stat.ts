@@ -3,7 +3,7 @@
 // rounded (1,999 is 1.9K, 999,999 is 999.9K, so a value never jumps a
 // unit), and no ".0". The exact value is for the tooltip: `exactStat`.
 //
-// The desktop app has the same rule in crates/desktop/ui/stat-format.js; both
+// The desktop app has the same rule in crates/desktop/ui/i18n.js (stat); both
 // run the same table of cases in their tests. An unknown value is "?".
 import { lang, numberFormat } from "./i18n.ts";
 

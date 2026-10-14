@@ -40,6 +40,8 @@
 /* The top board's plaque opens downwards, and its board stands above the other. */
 .replay-side[data-side="opponent"] .minion-tip { top: calc(100% + 8px); bottom: auto; }
 .replay-side:has(.replay-minion:is(:hover, :focus-visible, :focus-within)) { z-index: 8; }
+/* The stage clips what leaves it; while a minion shows its plaque the plaque may. */
+.replay-stage:has(.replay-minion:is(:hover, :focus-visible, :focus-within)) { overflow: visible; }
 /* A tile at the end of its row keeps the plaque on screen. */
 .replay-board > :first-child > .minion-tip, .shop-cards > :first-child > .minion-tip { left: 0; translate: 0 0; }
 .replay-board > :last-child:not(:first-child) > .minion-tip { right: 0; left: auto; translate: 0 0; }
