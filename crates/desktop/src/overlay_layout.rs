@@ -616,7 +616,10 @@ mod tests {
         assert!(s.hidden.is_empty());
         let s = Settings::parse(r#"{"hidden":["counters"]}"#).unwrap();
         assert_eq!(s.hidden, BTreeSet::from([Panel::Counters]));
-        assert_eq!(serde_json::to_string(&Panel::Counters).unwrap(), r#""counters""#);
+        assert_eq!(
+            serde_json::to_string(&Panel::Counters).unwrap(),
+            r#""counters""#
+        );
     }
 
     #[test]
@@ -650,7 +653,10 @@ mod tests {
     #[test]
     fn the_counters_panel_can_be_placed_and_is_fitted_to_the_screen() {
         let mut s = Settings::default();
-        s.set_layout(FHD, &one(Panel::Counters, rect(9000.0, 9000.0, 9000.0, None)));
+        s.set_layout(
+            FHD,
+            &one(Panel::Counters, rect(9000.0, 9000.0, 9000.0, None)),
+        );
         let r = s.layout_for(FHD).panels[&Panel::Counters];
         assert!(r.x + r.w <= 1920.0 && r.y < 1080.0 && r.w <= MAX_WIDTH);
     }
