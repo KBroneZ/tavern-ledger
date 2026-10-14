@@ -2,7 +2,7 @@
 -- Users and games are made up; everything rolls back at the end.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(24);
 
 -- A: public, B: private, C: another signed-in user.
 insert into auth.users (id, email) values
@@ -105,6 +105,37 @@ select results_eq(
   $$ select user_id::text, file_expired_at is null from public.game_summaries order by 1 $$,
   $$ values ('00000000-0000-4000-8000-00000000000a', true), ('00000000-0000-4000-8000-00000000000b', false) $$,
   'a private profile''s owner sees their own games and the public ones');
+
+-- ---------------------------------------------------------------- account functions
+-- Export (as the owner) and deletion (as the service role, like the Edge
+-- Function) still reach the columns clients cannot read.
+reset role;
+insert into storage.objects (bucket_id, name, owner_id)
+values ('games', '00000000-0000-4000-8000-00000000000a/Hearthstone_2026_10_09_18_30_00-1.json.gz', null);
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub": "00000000-0000-4000-8000-00000000000a", "role": "authenticated"}', true);
+select ok(
+  (select (public.export_my_data() -> 'games' -> 0) ?& array['content_sha256', 'saved_at', 'size_bytes']),
+  'the export still has the hash, the save time and the size of each game');
+select ok(
+  (select (public.export_my_data() -> 'game_stats' -> 0) ? 'computed_at'),
+  'and the time each summary was worked out');
+
+reset role;
+set local role service_role;
+select is((select count(*)::int from public.user_file_names('00000000-0000-4000-8000-00000000000a')), 1,
+  'the service role lists the user''s files');
+reset role;
+set local storage.allow_delete_query = 'true';
+delete from storage.objects where bucket_id = 'games';
+set local role service_role;
+select lives_ok($$ select public.delete_user_data('00000000-0000-4000-8000-00000000000a') $$,
+  'and deletes the user''s data');
+
+reset role;
+select is((select count(*)::int from public.games where user_id = '00000000-0000-4000-8000-00000000000a'), 0,
+  'nothing of the games remains');
 
 -- ---------------------------------------------------------------- the view
 reset role;
