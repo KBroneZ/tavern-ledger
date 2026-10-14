@@ -26,10 +26,14 @@
 -- address (the actor's).
 --
 -- Scale (DB-4). An index on games(storage_path) (the sweep and the file
--- retention join on it); a statement_timeout on each heavy sweep, retention
--- and rebuild function, so they do not inherit the API's short limit (a
--- function's own settings are applied by PostgREST for the call, and by
--- pg_cron's session for the scheduled ones); pg_cron's run log kept 14 days.
+-- retention join on it); a longer statement_timeout for the server's own
+-- role (service_role, which the sweep's RPCs use through the API) so the
+-- heavy steps do not hit the API's short limit; the same limit on each heavy
+-- function's own settings (a function's SET does not lengthen the timeout of
+-- the statement that calls it: Postgres arms that timer before the function
+-- runs, so the role setting is what counts for API calls; the function
+-- settings are kept for callers that apply them, and as a record);
+-- pg_cron's run log kept 14 days.
 -- CREATE OR REPLACE FUNCTION drops a function's settings: a later migration
 -- that redefines one of them must set the timeout again
 -- (supabase/tests/database/scale.test.sql checks).
@@ -377,6 +381,16 @@ alter function public.game_stats_backfill_list(integer, integer) set statement_t
 alter function private.refresh_community_heroes() set statement_timeout = '120s';
 alter function private.refresh_leaderboards() set statement_timeout = '120s';
 
+-- The role the sweep's RPCs run as. Only clients' roles keep the short API
+-- limits. If the migration role may not change it, the migration goes on.
+do $$
+begin
+  alter role service_role set statement_timeout = '120s';
+exception when insufficient_privilege then
+  raise warning 'could not set service_role statement_timeout; set it in the dashboard (120s)';
+end;
+$$;
+
 -- pg_cron keeps one row per run in cron.job_run_details and never deletes
 -- them. Returns how many rows went.
 create function private.purge_cron_log()
@@ -387,7 +401,7 @@ as $$
 declare
   n bigint;
 begin
-  delete from cron.job_run_details d where d.end_time < now() - interval '14 days';
+  delete from cron.job_run_details d where coalesce(d.end_time, d.start_time) < now() - interval '14 days';
   get diagnostics n = row_count;
   return n;
 end;

@@ -2,7 +2,7 @@
 -- each heavy function, pg_cron's run log purged. Run: npx supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(8);
+select plan(10);
 
 select ok(
   exists (
@@ -61,6 +61,14 @@ select ok(
   and not has_function_privilege('authenticated', 'private.purge_cron_log()', 'execute')
   and not has_function_privilege('service_role', 'private.purge_cron_log()', 'execute'),
   'only the database itself runs the purge');
+
+select ok(
+  exists (select 1 from pg_db_role_setting rs join pg_roles r on r.oid = rs.setrole
+          where r.rolname = 'service_role' and rs.setconfig @> array['statement_timeout=120s']),
+  'the server''s own role has a 120 s statement_timeout, which the sweep''s API calls run under');
+insert into cron.job_run_details (jobid, runid, job_pid, database, username, command, status, return_message, start_time, end_time)
+values (1, 9005, 1, 'postgres', 'postgres', 'select 1', 'running', '', now() - interval '20 days', null);
+select is(private.purge_cron_log(), 1::bigint, 'a run that never ended is purged by its start time');
 
 select * from finish();
 rollback;
