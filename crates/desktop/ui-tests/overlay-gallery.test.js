@@ -21,7 +21,7 @@ const { oddsView } = require("../ui/odds-words.js");
 const bridge = require(path.join(GALLERY, "bridge.js"));
 const { THEME_VARS } = require(path.join(GALLERY, "theme-vars.js"));
 const { SCENARIOS, scenariosFor } = require(path.join(GALLERY, "scenarios", "index.js"));
-const { build } = require(path.join(GALLERY, "build.js"));
+const { build, inScript, jsonForScript, checkSelfContained } = require(path.join(GALLERY, "build.js"));
 
 const read = (file) => fs.readFileSync(file, "utf8");
 const html = read(path.join(UI, "overlay.html"));
@@ -213,13 +213,13 @@ test("the odds scenarios give odds or the note the page says in words", () => {
 });
 
 test("a hover scenario hovers a place that is an opponent's and not the player's", () => {
-  for (const id of ["hover-solo", "hover-duos"]) {
+  for (const id of ["hover-solo", "hover-duos", "hover-advanced"]) {
     const s = SCENARIOS.find((x) => x.id === id);
     const g = s.state.game;
     const target = g.opponents.find((o) => o.place.value === s.state.hover.place);
     assert.ok(target, `${id}: nobody is at the hovered place`);
     assert.notEqual(g.own_place.value, s.state.hover.place);
-    assert.ok(target.boards.length > 0);
+    if (id !== "hover-advanced") assert.ok(target.boards.length > 0);
   }
   assert.equal(SCENARIOS.find((s) => s.id === "hover-duos").state.hover.member, 0);
   assert.equal(SCENARIOS.find((s) => s.id === "hover-solo").state.hover.member, null);
@@ -260,9 +260,15 @@ test("the build writes one self-contained file under 2 MB, to the place it is to
     assert.deepEqual(fs.readdirSync(dir), ["gallery.html"]);
     assert.equal(result.file, out);
     assert.ok(Buffer.byteLength(text) < 2 * 1024 * 1024, `${Buffer.byteLength(text)} bytes`);
-    assert.doesNotMatch(text, /<script[^>]*\ssrc=/, "no script is loaded from a file");
-    assert.doesNotMatch(text, /<link[^>]*rel="stylesheet"/, "no stylesheet is loaded from a file");
-    assert.doesNotMatch(text, /url\(["']?fonts\//, "the fonts are inside the file");
+    for (const [what, page] of [["the gallery page", text], ["the overlay page", decodeDoc(text)]]) {
+      assert.doesNotMatch(page, /<script[^>]*\ssrc=/, `${what}: no script is loaded from a file`);
+      assert.doesNotMatch(page, /<link[^>]*>/, `${what}: no stylesheet is loaded from a file`);
+      assert.doesNotMatch(page, /url\(["']?fonts\//, `${what}: the fonts are inside the file`);
+    }
+    const doc = decodeDoc(text);
+    assert.equal((doc.match(/<script>/g) || []).length, pageScripts.length + 1, "every script is inline, plus the stand-in");
+    assert.match(doc, /<style>/);
+    assert.match(doc, /url\("data:font\/woff2;base64,/);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -296,6 +302,24 @@ test("every frame says it is an example, in both languages, and the page takes ?
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("text that would end a script early is escaped, and an unrecognised tag stops the build", () => {
+  assert.equal(inScript("a</script>b</SCRIPT"), "a<\\/script>b<\\/script");
+  assert.ok(!jsonForScript({ t: "</script><!--" }).includes("<"));
+  assert.deepEqual(JSON.parse(jsonForScript({ t: "</script><!--" })), { t: "</script><!--" });
+  assert.throws(() => checkSelfContained('<script src="x.js" defer></script>'), /does not inline/);
+  assert.throws(() => checkSelfContained('<link rel="stylesheet" href="a.css" />'), /does not inline/);
+  assert.throws(() => checkSelfContained("a{src:url(fonts/a.woff2)}"), /does not inline/);
+  checkSelfContained('<script>x</script><style>a{src:url("data:font/woff2;base64,AA")}</style>');
+});
+
+test("every frame of the gallery page gets an Example badge, in both languages", () => {
+  const js = read(path.join(GALLERY, "gallery.js"));
+  const shot = js.slice(js.indexOf("function shot("), js.indexOf("document.documentElement.lang"));
+  assert.match(shot, /el\("span", "badge", words\.example\)/, "shot() adds the badge");
+  assert.match(js, /example: "Example"/);
+  assert.match(js, /example: "Ejemplo"/);
 });
 
 test("the build does not touch the page's own files", () => {

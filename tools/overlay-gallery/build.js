@@ -24,9 +24,9 @@ const MAX_BYTES = 2 * 1024 * 1024;
 
 const read = (file) => fs.readFileSync(file, "utf8");
 // Inside an inline script the text `</script` would end it.
-const inScript = (text) => text.replace(/<\/script/gi, "<\/script");
+const inScript = (text) => text.replace(/<\/script/gi, "<\\/script");
 // JSON that is safe inside a script element.
-const jsonForScript = (value) => JSON.stringify(value).replace(/</g, "\u003c");
+const jsonForScript = (value) => JSON.stringify(value).replace(/</g, "\\u003c");
 
 function inlineFonts(css, uiDir) {
   return css.replace(/url\("(fonts\/[^"]+)"\)/g, (_, file) => {
@@ -61,9 +61,17 @@ function overlayDocument(uiDir, scenarios) {
     });
 }
 
+// The page must have come out whole: a tag the inlining did not recognise
+// would make the frame ask for a file that is not there.
+function checkSelfContained(doc) {
+  const loose = doc.match(/<script[^>]*\ssrc=[^>]*>|<link[^>]*>|url\(\s*(?!["']?data:)[^)]*\)/i);
+  if (loose) throw new Error(`overlay.html has something the gallery does not inline: ${loose[0].slice(0, 80)}`);
+}
+
 function build({ uiDir = DEFAULT_UI, outFile = DEFAULT_OUT } = {}) {
   const scenarios = scenariosFor(read(path.join(uiDir, "overlay.html")));
   const doc = overlayDocument(uiDir, scenarios);
+  checkSelfContained(doc);
   const gallery = {
     html: read(path.join(__dirname, "gallery.html")),
     css: read(path.join(__dirname, "gallery.css")),
@@ -85,4 +93,4 @@ if (require.main === module) {
   console.log(`${result.file} (${(result.bytes / 1024).toFixed(0)} KB, ${result.scenarios.length} scenarios)`);
 }
 
-module.exports = { build };
+module.exports = { build, inScript, jsonForScript, checkSelfContained };
