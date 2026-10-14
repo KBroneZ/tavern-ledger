@@ -11,6 +11,8 @@
 //!
 //! Only the local player's choice is in the log; other players' offers never are.
 
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 use crate::power::{parse_entity, EntityRef};
@@ -31,6 +33,22 @@ pub struct HeroSelect {
     pub rerolls: u32,
     /// None when the log does not say (the game ended before the pick).
     pub picked: Option<String>,
+}
+
+/// One hero on offer now.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct OfferedHero {
+    pub card_id: String,
+    /// As the log printed it; None when it did not.
+    pub name: Option<String>,
+}
+
+/// The heroes the player can choose from right now, in the game's order.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct HeroOffer {
+    pub heroes: Vec<OfferedHero>,
+    /// Rerolls used so far.
+    pub rerolls: u32,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -122,6 +140,40 @@ impl HeroSelectTracker {
 
     pub fn record(&self) -> Option<HeroSelect> {
         self.record.clone()
+    }
+
+    /// The heroes on offer now (T-365): each offered entity as it looks on the
+    /// board (a reroll changes the card, not the entity), until the game says
+    /// what was chosen. None before the offer and after the pick.
+    ///
+    /// `pending` is a CHANGE_ENTITY the log has begun but not closed: the game
+    /// logs nothing else between a reroll and the pick, so waiting for the
+    /// next line would show the old hero until the pick.
+    pub fn offer_now(
+        &self,
+        board: &Board,
+        names: &HashMap<String, String>,
+        pending: Option<(i64, &str)>,
+    ) -> Option<HeroOffer> {
+        let record = self.record.as_ref().filter(|_| !self.closed)?;
+        let rerolled = pending.filter(|(id, card)| self.ids.contains(id) && valid_card(card));
+        let heroes: Vec<OfferedHero> = self
+            .ids
+            .iter()
+            .filter_map(|&id| match rerolled {
+                Some((changed, card)) if changed == id => Some(card.to_string()),
+                _ => board.get(id)?.card_id.clone(),
+            })
+            .filter(|card| valid_card(card))
+            .map(|card| OfferedHero {
+                name: names.get(&card).cloned(),
+                card_id: card,
+            })
+            .collect();
+        (!heroes.is_empty()).then_some(HeroOffer {
+            heroes,
+            rerolls: record.rerolls + u32::from(rerolled.is_some()),
+        })
     }
 
     fn offer(&mut self, entity: EntityRef, board: &Board, local_pid: Option<i64>) {

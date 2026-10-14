@@ -196,12 +196,15 @@ fn list_games(state: State<'_, Arc<AppState>>) -> Vec<GameRow> {
 /// the window renders them and computes nothing (T-102).
 #[tauri::command]
 fn game_stats(state: State<'_, Arc<AppState>>, cards: State<'_, card_data::Cards>) -> Stats {
-    let links = card_data::hero_links(&cards);
+    stats_now(&state, &card_data::hero_links(&cards))
+}
+
+fn stats_now(state: &AppState, links: &HeroLinks) -> Stats {
     let games = state.games.lock().unwrap_or_else(|e| e.into_inner());
     let entries = state.entries.lock().unwrap_or_else(|e| e.into_inner());
     state
         .saved_tribes
-        .with(|read| stats_of(&games, entries.as_ref(), read, &links))
+        .with(|read| stats_of(&games, entries.as_ref(), read, links))
 }
 
 /// Games played with the reconnect dev tool are not counted (D-043). Skins
@@ -346,6 +349,14 @@ fn overlay_state(
     let store = card_data::store_with_data(&cards);
     let card_of = |dbf: i64| store.and_then(|s| s.card_of_dbf(dbf));
     let shown = overlay_state_of(&state)?.with_possible(&pool);
+    // At hero select, each hero on offer with the player's own history of it
+    // (T-365); the stats are worked out only then.
+    let shown = if shown.offered_heroes.is_some() {
+        let stats = stats_now(&state, &card_data::hero_links(&cards));
+        shown.with_hero_offer(&stats)
+    } else {
+        shown
+    };
     // Tribes from the game that the tavern contradicted stay dropped for the
     // rest of the game (D-063).
     if shown.game_tribes.note.is_some() {
@@ -733,13 +744,15 @@ fn live_now(watcher: &mut Watcher) -> Option<LiveGame> {
     let next = watcher.live_next_opponent();
     let cap = watcher.live_damage_cap();
     let counters = watcher.live_counters();
+    let offer = watcher.live_hero_offer();
     let report = serde_json::to_value(watcher.live_report()?).ok()?;
     Some(
         live_game(&report)
             .with_leaderboard(&lobby)
             .with_next_opponent(next)
             .with_damage_cap(cap)
-            .with_counters(counters),
+            .with_counters(counters)
+            .with_offered_heroes(offer),
     )
 }
 

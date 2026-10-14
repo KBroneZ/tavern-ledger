@@ -17,6 +17,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 use crate::game_values::{GameTribes, ReaderStatus};
+use crate::live_heroes::LiveHeroOffer;
 use crate::live_seats::{seats_shown, LiveSeat};
 use crate::odds::LiveOdds;
 use crate::possible::{LobbyTribes, Possible};
@@ -172,6 +173,12 @@ pub struct LiveGame {
     /// the reader has an error), an empty list when known and nothing
     /// applies. Live only: not in the saved report, not uploaded.
     pub counters: Option<Vec<Counter>>,
+    /// The heroes on offer at hero select with the player's own numbers
+    /// (T-365), added by the app; `None` once the hero is picked.
+    pub hero_offer: Option<LiveHeroOffer>,
+    /// What the log says is on offer, before the player's numbers are added.
+    #[serde(skip)]
+    pub offered_heroes: Option<bg_parser::hero_select::HeroOffer>,
 }
 
 impl LiveGame {
@@ -358,6 +365,8 @@ pub fn live_game(report: &Value) -> LiveGame {
         damage_cap: None,
         odds: None,
         counters: None,
+        hero_offer: None,
+        offered_heroes: None,
     }
 }
 

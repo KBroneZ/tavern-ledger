@@ -13,6 +13,7 @@ pub mod game_tribes;
 pub mod game_values;
 pub mod hero_pick;
 pub mod live;
+pub mod live_heroes;
 pub mod live_seats;
 pub mod lobby_tribes;
 pub mod lock;
@@ -72,6 +73,8 @@ struct LiveView {
     fights_first: Option<bool>,
     /// The player's own game-long counters, in shop and combat turns (T-611).
     counters: Option<Vec<bg_parser::counters::Counter>>,
+    /// The heroes on offer at hero select (T-365).
+    hero_offer: Option<bg_parser::hero_select::HeroOffer>,
 }
 
 /// The session being read: its games and when each one was played.
@@ -111,6 +114,7 @@ impl SessionReader {
                 own_values: self.log.own_values_now(),
                 fights_first: self.log.fights_first_now(),
                 counters: self.log.counters_now(),
+                hero_offer: self.log.hero_offer_now(),
             },
             None => LiveView::default(),
         };
@@ -423,6 +427,13 @@ impl Watcher {
     /// when no Battlegrounds game is on or the reader has an error.
     pub fn live_counters(&self) -> Option<Vec<bg_parser::counters::Counter>> {
         self.shown_live()?.counters.clone()
+    }
+
+    /// The heroes on offer at hero select as the game shows them (T-365);
+    /// None when no Battlegrounds game is on, before the offer and after the
+    /// pick.
+    pub fn live_hero_offer(&self) -> Option<bg_parser::hero_select::HeroOffer> {
+        self.shown_live()?.hero_offer.clone()
     }
 
     fn shown_live(&self) -> Option<&LiveView> {
