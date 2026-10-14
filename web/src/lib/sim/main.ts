@@ -15,7 +15,7 @@ import { lang } from "../i18n.ts";
 import { h, mount, type VNode } from "../view/node.ts";
 import { loadGame } from "../game/load.ts";
 import type { GameRecord } from "../game/report.ts";
-import type { GameRow } from "../data/rows.ts";
+import { GAME_FILE_COLUMNS, type GameRow } from "../data/rows.ts";
 import { readAnswer, type Answer } from "./answer.ts";
 import * as B from "./board.ts";
 import { CardIndex, readCardFile } from "./cards.ts";
@@ -343,12 +343,12 @@ async function listGames(append: boolean): Promise<void> {
 async function pickGame(key: string): Promise<void> {
   if (!account || games.kind !== "ready") return;
   const row = games.rows.find((r) => gameKey(r) === key);
-  if (!row || !row.session || row.gameIndex === null) return;
+  if (!row || !row.publicId) return;
   picked = { key, rounds: null, failed: false, loaded: null };
   record = null;
   drawLoad();
-  const ref = { userId: account.userId, session: row.session, index: row.gameIndex };
-  const loaded = await loadGame(account.download, ref);
+  const ref = { userId: account.userId, publicId: row.publicId };
+  const loaded = await loadGame(account.download, ref, row.storagePath ?? undefined);
   if (picked?.key !== key) return; // another game was picked meanwhile
   if (loaded.kind !== "ok") {
     picked = { ...picked, failed: true };
@@ -415,7 +415,7 @@ async function signIn(): Promise<void> {
   account = {
     userId: user.id,
     download: (path) => supabase.storage.from("games").download(path),
-    list: (p) => loadGames(supabase, user.id, { ...DEFAULT_FILTERS, page: p }),
+    list: (p) => loadGames(supabase, user.id, { ...DEFAULT_FILTERS, page: p }, GAME_FILE_COLUMNS),
   };
   await listGames(false);
 }

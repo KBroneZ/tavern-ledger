@@ -5,14 +5,15 @@ import { join } from "node:path";
 import { EXPIRED_COLUMNS, expiredHeading, loadExpired, type ReadSummary, renderExpired } from "../../src/lib/game/expired.ts";
 import { GAME_STRINGS } from "../../src/lib/game/strings.ts";
 import type { VNode } from "../../src/lib/view/node.ts";
-import { INDEX, SESSION, USER } from "./gameFixtures.ts";
+import { PUBLIC_ID, USER } from "./gameFixtures.ts";
 
-const REF = { userId: USER, session: SESSION, index: INDEX };
+const REF = { userId: USER, publicId: PUBLIC_ID };
 const ROOT = join(import.meta.dirname, "..", "..", "..");
 
 const ROW = {
-  session: SESSION,
-  game_index: INDEX,
+  public_id: PUBLIC_ID,
+  storage_path: `${USER}/${PUBLIC_ID}.json.gz`,
+  game_index: 2,
   mode: "solo",
   status: "ok",
   played_on: "2026-08-01",
@@ -58,13 +59,12 @@ test("expired: a row whose file has expired gives its summary", async () => {
 
 test("expired: no row, or a row whose file is kept, is not expired", async () => {
   for (const data of [[], [{ ...ROW, file_expired_at: null }], [{ ...ROW, file_expired_at: "" }], [null], ["x"]]) {
-    assert.deepEqual(await loadExpired(serve(data).read, REF), { kind: "none" }, JSON.stringify(data));
+    assert.deepEqual(await loadExpired(serve(data).read, REF), { kind: "none", path: null }, JSON.stringify(data));
   }
 });
 
 test("expired: a row for another game is not this one", async () => {
-  assert.deepEqual(await loadExpired(serve([{ ...ROW, game_index: INDEX + 1 }]).read, REF), { kind: "none" });
-  assert.deepEqual(await loadExpired(serve([{ ...ROW, session: "Hearthstone_2026_01_01_00_00_00" }]).read, REF), { kind: "none" });
+  assert.deepEqual(await loadExpired(serve([{ ...ROW, public_id: "3f2b8c1e-5d4a-4b7e-9c6d-000000000000" }]).read, REF), { kind: "none", path: null });
 });
 
 test("expired: a failed request is an error (worth a retry), never 'not available'", async () => {
@@ -100,4 +100,14 @@ test("expired: reads the mark the database adds to game_summaries", () => {
     .map((f) => readFileSync(join(dir, f), "utf8"))
     .join("\n");
   assert.match(sql, /create or replace view public\.game_summaries[\s\S]*?g\.file_expired_at\s*\nfrom public\.games g/);
+});
+
+test("expired: the owner's game whose file has an older name gives that name, so the viewer can try it", async () => {
+  const older = `${USER}/Hearthstone_2026_08_01_09_00_00-2.json.gz`;
+  const kept = { ...ROW, file_expired_at: null, storage_path: older };
+  assert.deepEqual(await loadExpired(serve([kept]).read, REF), { kind: "none", path: older });
+  // The opaque name is what the viewer tried first: nothing new to offer.
+  assert.deepEqual(await loadExpired(serve([{ ...kept, storage_path: `${USER}/${PUBLIC_ID}.json.gz` }]).read, REF), { kind: "none", path: null });
+  // A name that is not shaped as a game file is never offered.
+  assert.deepEqual(await loadExpired(serve([{ ...kept, storage_path: "../other/x" }]).read, REF), { kind: "none", path: null });
 });

@@ -40,7 +40,7 @@ select is_empty(
 select ok(
   has_column_privilege('anon', 'public.profiles', 'display_name', 'select')
   and has_column_privilege('anon', 'public.profiles', 'is_public', 'select')
-  and has_column_privilege('anon', 'public.games', 'session', 'select')
+  and has_column_privilege('anon', 'public.games', 'played_on', 'select')
   and has_column_privilege('anon', 'public.games', 'played_on', 'select')
   and has_column_privilege('anon', 'public.game_stats', 'rounds', 'select')
   and has_table_privilege('anon', 'public.game_summaries', 'select'),

@@ -70,7 +70,7 @@ test("dashboard: both modes read for one user, places newest first and capped", 
   assert.equal(places.length, 2);
   for (const r of places) {
     assert.match(r, new RegExp(`limit=${CHART_GAMES}`));
-    assert.match(r, /order=played_on\.desc,session\.desc,game_index\.desc/);
+    assert.match(r, /order=play_order\.desc/);
   }
   assert.ok(seen.some((r) => r.includes("mode=eq.duos") && r.includes(`limit=${LAST_GAMES}`)));
   // Only what the page shows: no storage path, build, tribes or board.
@@ -104,7 +104,7 @@ test("games list: the filters reach the query, one page of 25 with the total", a
     "played_on=gte.2026-10-01",
     "played_on=lte.2026-10-31",
     "top_half=eq.false",
-    "order=played_on.desc,session.desc,game_index.desc",
+    "order=play_order.desc",
     "offset=25",
     "limit=25",
   ]) {

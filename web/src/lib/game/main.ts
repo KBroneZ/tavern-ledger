@@ -17,7 +17,7 @@ import { explainCombats } from "./whyRun.ts";
 import { readRecord } from "./report.ts";
 import { shapeGame } from "./shape.ts";
 import { g, type GameStringKey } from "./strings.ts";
-import { type GameRef, parseGameRef, playedOn } from "./url.ts";
+import { type GameRef, parseGameRef } from "./url.ts";
 import { heroTip, pageHeading } from "./words.ts";
 import { toggleTurn } from "./turnsView.ts";
 import { href } from "../i18n.ts";
@@ -67,7 +67,7 @@ function showError(kind: "unreadable" | "error", retry: () => void): void {
   byId(RETRY).addEventListener("click", retry);
 }
 
-function showGame(result: Extract<LoadResult, { kind: "ok" }>, ref: GameRef): void {
+function showGame(result: Extract<LoadResult, { kind: "ok" }>): void {
   const view = shapeGame(result.record);
   const banners: VNode[] = [];
   if (result.record.newer) banners.push(h("p", { class: "state state-unknown gv-banner" }, g("state.newer")));
@@ -77,7 +77,7 @@ function showGame(result: Extract<LoadResult, { kind: "ok" }>, ref: GameRef): vo
     banners.push(h("p", { class: "state state-unknown gv-banner" }, text));
   }
   const title = pageHeading(view.summary);
-  show(title, [...banners, ...renderGame(view, dateText(playedOn(ref.session)))], g("page.loaded", { title }), heroTip(view.summary.hero));
+  show(title, [...banners, ...renderGame(view, dateText(result.record.playedOn))], g("page.loaded", { title }), heroTip(view.summary.hero));
   const replays = document.getElementById("gv-replays");
   if (replays) startReplays(replays, view.replays);
   void explainCombats(result.report);
@@ -123,7 +123,7 @@ async function run(ref: GameRef, sources: Sources): Promise<void> {
   // The card names load beside the game (a script chunk from this site); without them, ids show.
   const [result, names] = await Promise.all([loadGame(download, ref), loadCardNames()]);
   useCardNames(names);
-  if (result.kind === "ok") return showGame(result, ref);
+  if (result.kind === "ok") return showGame(result);
   const retry = () => {
     // The button goes away with the block: focus moves to the page's heading first.
     heading.focus();
@@ -134,6 +134,12 @@ async function run(ref: GameRef, sources: Sources): Promise<void> {
     const expired = await loadExpired(readSummary, ref);
     if (expired.kind === "expired") return showExpired(expired.row);
     if (expired.kind === "error") return showError("error", retry);
+    if (expired.path !== null) {
+      // The owner's own game whose file the sweep has not renamed yet: the row knows where it is.
+      const own = await loadGame(download, ref, expired.path);
+      if (own.kind === "ok") return showGame(own);
+      if (own.kind !== "unavailable") return showError(own.kind, retry);
+    }
     return showUnavailable(await signedIn().catch(() => false));
   }
   showError(result.kind, retry);
@@ -146,9 +152,9 @@ async function start(): Promise<void> {
   // Dev only (removed from the built site): ?demo draws a synthetic game.
   if (import.meta.env.DEV && new URLSearchParams(location.search).has("demo")) {
     const { record } = await import("../../../test/unit/gameFixtures.ts");
-    const read = readRecord(record(), ref.session, ref.index);
+    const read = readRecord(record());
     useCardNames(await loadCardNames());
-    if (read.ok) return showGame({ kind: "ok", record: read.record, report: record().report }, ref);
+    if (read.ok) return showGame({ kind: "ok", record: read.record, report: record().report });
   }
   const { supabase } = await import("../../scripts/client.ts");
   const download: Download = (path) => supabase.storage.from("games").download(path);
@@ -157,8 +163,7 @@ async function start(): Promise<void> {
       .from("game_summaries")
       .select(EXPIRED_COLUMNS)
       .eq("user_id", r.userId)
-      .eq("session", r.session)
-      .eq("game_index", r.index)
+      .eq("public_id", r.publicId)
       .limit(1);
   const signedIn = async () => (await supabase.auth.getSession()).data.session !== null;
   await run(ref, { download, readSummary, signedIn });

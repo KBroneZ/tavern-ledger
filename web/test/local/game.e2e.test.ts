@@ -60,7 +60,8 @@ describe("game viewer read on the local stack", { skip: !ENABLED && "set TAVERN_
       ...init,
       headers: { apikey: s.service, Authorization: `Bearer ${s.service}`, ...(init.headers ?? {}) },
     });
-  const ref = () => ({ userId: users[0].id, session: SESSION, index: INDEX });
+  let publicId = "";
+  const ref = () => ({ userId: users[0].id, publicId });
 
   before(async () => {
     for (const name of ["owner", "other"]) {
@@ -92,8 +93,17 @@ describe("game viewer read on the local stack", { skip: !ENABLED && "set TAVERN_
       content_sha256: "0".repeat(64),
       size_bytes: gz.length,
     };
-    const ins = await service("/rest/v1/games", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(row) });
+    const ins = await service("/rest/v1/games", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Prefer: "return=representation" },
+      body: JSON.stringify(row),
+    });
     assert.equal(ins.status, 201);
+    // The database made the id, and the file's name is built from it (T-586): no time in it.
+    const stored = ((await ins.json()) as { public_id: string; storage_path: string }[])[0];
+    publicId = stored.public_id;
+    assert.equal(stored.storage_path, `${users[0].id}/${publicId}.json.gz`);
+    assert.doesNotMatch(stored.storage_path, /Hearthstone/);
     const up = await service(`/storage/v1/object/games/${storagePath(ref())}`, {
       method: "POST",
       headers: { "Content-Type": "application/gzip" },
@@ -128,7 +138,7 @@ describe("game viewer read on the local stack", { skip: !ENABLED && "set TAVERN_
     assert.deepEqual(missing, { kind: "unavailable" });
     assert.deepEqual(await loadGame(downloadWith(anon), ref()), missing);
     assert.deepEqual(await loadGame(downloadWith(users[1].client), ref()), missing);
-    assert.deepEqual(await loadGame(downloadWith(users[0].client), { ...ref(), index: INDEX + 1 }), missing);
+    assert.deepEqual(await loadGame(downloadWith(users[0].client), { ...ref(), publicId: randomUUID() }), missing);
   });
 
   test("public: anyone reads the game once the owner's profile is public, and not after it is private again", async () => {

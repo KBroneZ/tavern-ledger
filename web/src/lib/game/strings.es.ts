@@ -12,7 +12,7 @@ export const ES: Record<GameStringKey, string> = {
   "page.noscript": "Esta página necesita JavaScript para mostrar la partida.",
 
   "state.notFound.title": "Partida no encontrada",
-  "state.notFound.body": "Esta dirección no corresponde a ninguna partida.",
+  "state.notFound.body": "Esta dirección no corresponde a ninguna partida. Los enlaces a partidas anteriores al cambio de dirección ya no funcionan: abre la partida desde la lista de partidas del jugador.",
   "state.unavailable.title": "Esta partida no está disponible",
   "state.unavailable.body": "Es privada o no existe.",
   "state.unavailable.signIn": "Si es tuya, inicia sesión para verla.",

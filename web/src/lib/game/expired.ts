@@ -6,23 +6,27 @@
 // security answers as for the file, so a private game still gets no row.
 import { gameCells, gameColumns } from "../data/dashboard.ts";
 import { ordinal } from "../data/format.ts";
-import { GAME_COLUMNS, gameRow, type GameRow } from "../data/rows.ts";
+import { GAME_FILE_COLUMNS, gameRow, type GameRow } from "../data/rows.ts";
 import { heroLabel } from "../heroes/names.ts";
 import { h, type VNode } from "../view/node.ts";
 import { topTable } from "../view/pieces.ts";
 import { g } from "./strings.ts";
-import type { GameRef } from "./url.ts";
+import { type GameRef, storagePath } from "./url.ts";
 
-/** The columns read for an expired game: the games list's, plus the mark. */
-export const EXPIRED_COLUMNS = `${GAME_COLUMNS},file_expired_at`;
+/** The columns read for an expired game: the games list's, plus the file's name and the mark. */
+export const EXPIRED_COLUMNS = `${GAME_FILE_COLUMNS},file_expired_at`;
 
 /** The game's row from game_summaries (EXPIRED_COLUMNS), or a stand-in in tests. */
 export type ReadSummary = (ref: GameRef) => Promise<{ data: unknown; error: unknown }>;
 
 export type ExpiredResult =
   | { kind: "expired"; row: GameRow }
-  /** No row, or a row whose file has not expired: the page says "not available". */
-  | { kind: "none" }
+  /**
+   * No row, or a row whose file has not expired: the page says "not available".
+   * `path`: where the row says the file is, when that is not the opaque name (the
+   * owner's own game the sweep has not renamed yet), so the viewer can try it.
+   */
+  | { kind: "none"; path: string | null }
   /** The request failed: worth a retry. */
   | { kind: "error" };
 
@@ -36,12 +40,14 @@ export async function loadExpired(read: ReadSummary, ref: GameRef): Promise<Expi
   }
   if (answer.error || !Array.isArray(answer.data)) return { kind: "error" };
   const value: unknown = answer.data[0];
-  if (typeof value !== "object" || value === null) return { kind: "none" };
-  const r = value as Record<string, unknown>;
-  if (typeof r.file_expired_at !== "string" || r.file_expired_at === "") return { kind: "none" };
-  const row = gameRow(r);
+  if (typeof value !== "object" || value === null) return { kind: "none", path: null };
+  const row = gameRow(value);
   // Only the game the address names.
-  if (row.session !== ref.session || row.gameIndex !== ref.index) return { kind: "none" };
+  if (row.publicId !== ref.publicId) return { kind: "none", path: null };
+  const expired = (value as Record<string, unknown>).file_expired_at;
+  if (typeof expired !== "string" || expired === "") {
+    return { kind: "none", path: row.storagePath !== storagePath(ref) ? row.storagePath : null };
+  }
   return { kind: "expired", row };
 }
 

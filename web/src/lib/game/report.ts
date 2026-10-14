@@ -10,6 +10,7 @@
 
 import { KEYWORDS, type Keyword } from "./keywords.ts";
 import { readReplay, type ReplayRead } from "./replayRead.ts";
+import { playedOn } from "./url.ts";
 
 export { KEYWORDS, type Keyword };
 
@@ -166,6 +167,8 @@ export interface GameRecord {
   report: Report;
   /** Values that were there but could not be read (shown as unknown). */
   unreadable: number;
+  /** The day the game was played (YYYY-MM-DD); never the time of day. */
+  playedOn: string | null;
 }
 
 export type ReadResult = { ok: true; record: GameRecord } | { ok: false };
@@ -444,11 +447,14 @@ function report(r: Reader, o: Obj): Report {
   };
 }
 
-/** The record of the game at `session`/`index`, or not ok when it is not one. */
-export function readRecord(value: unknown, session: string, index: number): ReadResult {
+/**
+ * The game record in a file, or not ok when it is not one. The file is the one
+ * the address names (its name is the game's public id), so only its own parts
+ * must agree; the day comes from its session name and the time is dropped.
+ */
+export function readRecord(value: unknown): ReadResult {
   if (!isObject(value) || !isObject(value.report)) return { ok: false };
-  // A file that names another game is not this game's record.
-  if (value.session !== session || value.index !== index || value.report.index !== index) return { ok: false };
+  if (typeof value.index !== "number" || value.index !== value.report.index) return { ok: false };
   const r = new Reader();
   const parser = r.obj(value.parser);
   const version = parser && typeof parser.version === "string" && PARSER_VERSION.test(parser.version)
@@ -458,6 +464,6 @@ export function readRecord(value: unknown, session: string, index: number): Read
   const rep = report(r, value.report);
   return {
     ok: true,
-    record: { parserVersion: version, revision, newer: revision !== null && revision > KNOWN_REVISION, report: rep, unreadable: r.unreadable },
+    record: { parserVersion: version, revision, newer: revision !== null && revision > KNOWN_REVISION, report: rep, unreadable: r.unreadable, playedOn: typeof value.session === "string" ? playedOn(value.session) : null },
   };
 }

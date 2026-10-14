@@ -125,7 +125,8 @@ describe("heroes and curious stats on the local stack", { skip: !ENABLED && "set
     const data = await loadCurious(owner().client, owner().id);
     const dealt = data.records.find((r) => r.mode === "solo" && r.record === "damage_dealt_max");
     assert.ok(dealt);
-    assert.deepEqual([dealt.value, dealt.session, dealt.gameIndex, dealt.games, dealt.inferred], [14, SESSION, 3, 3, false]);
+    assert.deepEqual([dealt.value, dealt.gameIndex, dealt.games, dealt.inferred], [14, 3, 3, false]);
+    assert.match(dealt.publicId ?? "", /^[0-9a-f-]{36}$/, "the record names its game by its public id, not its session");
     const solo = data.overviews.find((o) => o.mode === "solo");
     assert.deepEqual([solo?.goldSpent, solo?.goldSpentGames, solo?.games], [300, 3, 3]);
   });
