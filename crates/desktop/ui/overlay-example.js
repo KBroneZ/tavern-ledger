@@ -107,6 +107,14 @@ const EXAMPLE_HERO_OFFER = {
 const EXAMPLE_LOBBY = {
   in_lobby: true,
   rating: { solo: 6400, duos: 5800, status: "ok" },
-  rating_change: { duos: false, delta: 45 },
   today: [{ mode: "GT_BATTLEGROUNDS", top_half: 4, tally: { games: 3, placed: 3, average_place: 3.7, top_half_share: 2 / 3 } }],
+  recap: {
+    games: 3,
+    starting: { solo: 6355, duos: null },
+    tiles: [
+      { hero: { id: "EXAMPLE_HERO_A", name: "Example Hero A" }, duos: false, place: 2, change: 38 },
+      { hero: { id: "EXAMPLE_HERO_B", name: "Example Hero B" }, duos: false, place: 6, change: -31 },
+      { hero: { id: "EXAMPLE_HERO_C", name: "Example Hero C" }, duos: false, place: 3, change: 38 },
+    ],
+  },
 };

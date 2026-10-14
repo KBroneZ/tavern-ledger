@@ -23,14 +23,47 @@ const gap = (name, extra = {}) => ({
   dealt: null, taken: null, approximate: [], missing: [], start_of_combat: false, ...extra,
 });
 
+const tile = (hero, place, change, duos = false) => ({ hero: { id: hero, name: data.NAMES[hero].en }, duos, place, change });
+const HEROES = ["EX_HERO_BRINDLE", "EX_HERO_QUILL", "EX_HERO_TARN", "EX_HERO_PELLAM", "EX_HERO_ORRIN", "EX_HERO_ROOK", "EX_HERO_FENWICK", "EX_HERO_MAUD"];
+// Eight Solo games, the oldest first, the app's own order.
+const EIGHT = [
+  tile(HEROES[0], 3, 22), tile(HEROES[1], 7, -41), tile(HEROES[2], 1, 74), tile(HEROES[3], 5, -9),
+  tile(HEROES[4], 2, 51), tile(HEROES[5], 4, 12), tile(HEROES[6], 8, -63), tile(HEROES[7], 3, 28),
+];
+const summary = (solo, duos) => [
+  { mode: "GT_BATTLEGROUNDS", top_half: 4, top_half_games: solo[0], tally: { games: solo[1], placed: solo[1], average_place: solo[2], top_half_share: solo[0] / solo[1] } },
+  ...(duos ? [{ mode: "GT_BATTLEGROUNDS_DUO", top_half: 2, top_half_games: duos[0], tally: { games: duos[1], placed: duos[1], average_place: duos[2], top_half_share: duos[0] / duos[1] } }] : []),
+];
 const lobby = {
   in_lobby: true,
   rating: { solo: 6420, duos: 5870, status: "ok" },
-  rating_change: { duos: false, delta: 38 },
-  today: [
-    { mode: "GT_BATTLEGROUNDS", top_half: 4, top_half_games: 2, tally: { games: 3, placed: 3, average_place: 3.7, top_half_share: 2 / 3 } },
-    { mode: "GT_BATTLEGROUNDS_DUO", top_half: 2, top_half_games: 1, tally: { games: 1, placed: 1, average_place: 2, top_half_share: 1 } },
-  ],
+  today: summary([5, 8, 4.1]),
+  recap: { games: 8, starting: { solo: 6366, duos: 5870 }, tiles: EIGHT },
+};
+// The same games with the read off: games and places, no rating anywhere.
+const lobbyNoRating = {
+  in_lobby: true,
+  rating: { solo: null, duos: null, status: "off" },
+  today: summary([5, 8, 4.1]),
+  recap: { games: 8, starting: { solo: null, duos: null }, tiles: EIGHT.map((t) => ({ ...t, change: null })) },
+};
+// A short session: fewer than eight games, one of them not finished in the log.
+const lobbyFew = {
+  in_lobby: true,
+  rating: { solo: 6481, duos: 5870, status: "ok" },
+  today: [{ mode: "GT_BATTLEGROUNDS", top_half: 4, top_half_games: 2, tally: { games: 3, placed: 2, average_place: 3.5, top_half_share: 1 } }],
+  recap: { games: 3, starting: { solo: 6433, duos: 5870 }, tiles: [tile(HEROES[0], 2, 30), tile(HEROES[1], null, null), tile(HEROES[2], 5, null)] },
+};
+// Duos games among Solo ones: each tile says its mode and its change is in it.
+const lobbyDuos = {
+  in_lobby: true,
+  rating: { solo: 6420, duos: 5911, status: "ok" },
+  today: summary([1, 2, 4.5], [2, 3, 2]),
+  recap: {
+    games: 5,
+    starting: { solo: 6395, duos: 5840 },
+    tiles: [tile(HEROES[0], 6, -25), tile("EX_HERO_MATE", 1, 52, true), tile(HEROES[2], 2, 31), tile("EX_HERO_VESPER", 2, 9, true), tile("EX_HERO_GRIST", 3, -20, true)],
+  },
 };
 
 const solo = soloGame();
@@ -116,7 +149,7 @@ const STACK_TALL = { x: 1530, y: 90, w: 390, h: 990 };
 const STACK_DUOS = { x: 1700, y: 90, w: 220, h: 280 };
 const STATUS_BOX = { x: 1500, y: 90, w: 420, h: 150 };
 const HOVER_CARD_AREA = { x: 480, y: 0, w: 960, h: 300 };
-const LOBBY_AREA = { x: 0, y: 0, w: 290, h: 180 };
+const LOBBY_AREA = { x: 0, y: 0, w: 290, h: 330 };
 const ODDS_BAR_AREA = { x: 660, y: 0, w: 600, h: 100 };
 const LEADERBOARD_AREA = { x: 60, y: 140, w: 300, h: 800 };
 const TRIBES_AREA = { x: 1700, y: 90, w: 220, h: 120 };
@@ -125,6 +158,9 @@ const HEROES_DUOS_AREA = { x: 1690, y: 90, w: 230, h: 290 };
 const FOCUS = {
   waiting: STATUS_BOX,
   lobby: LOBBY_AREA,
+  "lobby-no-rating": LOBBY_AREA,
+  "lobby-few-games": LOBBY_AREA,
+  "lobby-duos": LOBBY_AREA,
   solo: STACK_SMALL,
   duos: STACK_DUOS,
   "gap-no-board-seen": STACK_SMALL,
@@ -156,6 +192,9 @@ const FOCUS = {
 const DEFINITIONS = [
   ["waiting", null, {}],
   ["lobby", null, { lobby }],
+  ["lobby-no-rating", null, { lobby: lobbyNoRating }],
+  ["lobby-few-games", null, { lobby: lobbyFew }],
+  ["lobby-duos", null, { lobby: lobbyDuos }],
   ["solo", soloWithOdds, {}],
   ["duos", withOdds(duos, duosOdds), {}],
   ["gap-no-board-seen", withOdds(solo, gap("no_board_seen")), {}],
