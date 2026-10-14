@@ -24,11 +24,19 @@ pub const REFUSED: &[(&str, &str)] = &[
     ("BG34_Giant_590_G", UNDEAD_CREATIONS),
     ("BG25_HERO_100_Buddy", UNDEAD_CREATIONS),
     ("BG25_HERO_100_Buddy_G", UNDEAD_CREATIONS),
+    // Cards that act in combat but are no minion on a board (build 254477):
+    // the simulator is given minions only.
+    ("BG30_MagicItem_952", TRINKET_START_OF_COMBAT),
+    ("BG30_MagicItem_989t", TRINKET_AURA),
+    ("BG_OldGod", OLD_GOD),
 ];
 
 const SALVAGER: &str = "its Deathrattle copies the minion it destroys at the start of combat; the board is taken after that, so the copied minion is gone and not known";
 const UNDEAD_CREATIONS: &str =
     "its Deathrattle summons random Undead Creations and the list of them is not known";
+const TRINKET_START_OF_COMBAT: &str = "a trinket that acts at the start of combat; trinkets are not part of the boards the simulator is given";
+const TRINKET_AURA: &str = "a trinket that gives your Undead Attack; trinkets are not part of the boards the simulator is given";
+const OLD_GOD: &str = "a spell that awakens an Old God after Aberrations die in combat; it is not a minion on the board and is not played";
 /// What the page says about a card nobody has looked at yet.
 const NOT_REVIEWED: &str = "the simulator has not reviewed this card yet";
 
@@ -42,6 +50,7 @@ pub fn refusal(card_id: &str) -> &'static str {
 }
 
 const SPELL_FOLLOWERS: &str = "a spell it casts can trigger cards that follow spells (Torrential Ruiner, Fleeing Fugitive, Abyssal Bruiser): not played";
+const TENTACLE: &str = "it gains stats until next turn whenever another friendly minion gains stats in combat; that is not played";
 const MAXIMUM_STATS: &str =
     "what its maximum stats are is not checked: its Attack and full Health are used";
 const SPELL_COUNT: &str =
@@ -167,6 +176,11 @@ pub const EFFECTS_8: &[(&str, CardRules)] = &[
     // shows the copy.
     ("BGDUO_125", exact(&[Trigger::StartOfCombatUnmodelled])),
     ("BGDUO_125_G", exact(&[Trigger::StartOfCombatUnmodelled])),
+    // Tentacle of C'Thun (hero buddy; an Aberration since build 254477):
+    // after a different friendly minion gains stats, +1/+1 until next turn
+    // (golden +2/+2). Combat-time gains by the others are not tracked.
+    ("TB_BaconShop_HERO_29_Buddy", approx(TENTACLE, &[])),
+    ("TB_BaconShop_HERO_29_Buddy_G", approx(TENTACLE, &[])),
 ];
 
 /// Cards whose text works in the shop, the hand or the Tavern only, or whose
@@ -235,6 +249,19 @@ pub const NO_COMBAT_EFFECT_8: &[&str] = &[
     "BG_DEEP_015_G",
     "BG36_360",
     "BG36_360_G",
+    // Spells and trinkets of the patch of 2026-10-14 (build 254477) whose
+    // text works in the shop, the hand or on a turn's start only. None is a
+    // minion, so none has a golden form: Butchering, Gem Confiscation,
+    // Easterly Winds, Blood Gem Barrage; Lava Lamp, Shark Cannon, Maldraxxus
+    // Dagger, Sludge Portrait.
+    "BG28_604",
+    "BG28_698",
+    "BG34_444",
+    "BG34_689",
+    "BG30_MagicItem_951",
+    "BG32_MagicItem_232",
+    "BG36_MagicItem_370",
+    "BG36_MagicItem_430",
     // Sewer Lord's Turtles: keywords only.
     "BG19_010t",
     "BG19_010_Gt",

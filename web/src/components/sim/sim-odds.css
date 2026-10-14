@@ -198,3 +198,9 @@
     filter: none;
   }
 }
+
+.sim-odds .sim-warning {
+  padding-left: 8px;
+  border-left: 3px solid currentColor;
+  font-weight: 700;
+}

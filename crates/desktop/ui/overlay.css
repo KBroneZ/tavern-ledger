@@ -650,6 +650,7 @@ body[data-detail="simple"] .panel { padding: 5px 7px 6px; }
 .odds-share.win .odds-value { color: var(--accent); }
 .odds-share.lose .odds-value { color: var(--dim); }
 .odds-age, .odds-line, .odds-note { color: var(--dim); font-size: 0.76rem; }
+.odds-warning { color: var(--amber); font-size: 0.76rem; }
 .next-block .odds { margin: 2px 0 4px; }
 
 /* Dark Gifts (T-528, D-107): a violet star per gift, in Simple and

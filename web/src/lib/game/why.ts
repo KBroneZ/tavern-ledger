@@ -143,6 +143,16 @@ export function readWhy(text: string): WhyCombat[] | null {
   }
 }
 
+/** The build the engine warns about in an explain answer (JSON text), or null when it does not or the answer is not one. */
+export function newBuildOf(text: string): number | null {
+  try {
+    const v = obj(JSON.parse(text)).new_build;
+    return Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 99_999_999 ? (v as number) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Every card id on the report's boards and in its replays (what the engine needs facts for). */
 export function cardIdsOf(report: unknown): string[] {
   const ids = new Set<string>();

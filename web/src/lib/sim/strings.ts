@@ -113,6 +113,7 @@ export const SIM_STRINGS = {
   "result.approx": "≈ Approximate",
   "result.approx.one": "1 card is simulated with a known difference from the game.",
   "result.approx.other": "{count} cards are simulated with a known difference from the game.",
+  "result.newBuild": "New game build ({build}): odds not checked yet. They are worked out with the rules of the builds the simulator was checked against, so a card changed in this build may play differently.",
   "result.soc": "A card here acts at the start of combat, which the simulator does not play: boards loaded from a game already show its effect, boards you build do not.",
   "result.notModelled": "Cannot run: the simulator does not know these cards, and never guesses.",
   "result.notModelledHint": "Remove them to see the odds.",

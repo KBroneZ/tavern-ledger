@@ -121,9 +121,11 @@ fn a_normal_card_is_never_listed_without_its_golden_form() {
             && !number.is_empty()
             && number.chars().all(|c| c.is_ascii_digit())
     };
+    // Tavern spells (build 254477) are cards of the hand: no golden card.
+    const SPELLS: [&str; 4] = ["BG28_604", "BG28_698", "BG34_444", "BG34_689"];
     for id in no_combat_effect()
         .chain(all_effects().map(|(id, _)| id))
-        .filter(|id| minion_card(id) && !id.ends_with("_G"))
+        .filter(|id| minion_card(id) && !id.ends_with("_G") && !SPELLS.contains(id))
     {
         assert!(
             is_listed(&format!("{id}_G")),
@@ -201,6 +203,50 @@ fn every_card_reviewed_in_round_8_is_listed_or_refused_in_both_forms() {
     }
 }
 
+/// The 13 cards of the Battlegrounds patch of 2026-10-14 (build 254477) that
+/// the engine did not list: what each is, and what the engine does with it.
+#[test]
+fn every_card_the_patch_changed_and_the_engine_did_not_list_is_sorted() {
+    // Spells in the hand and trinkets with shop-only text: nothing to play
+    // in combat. A Tavern spell has no golden card.
+    for id in [
+        "BG28_604",
+        "BG28_698",
+        "BG34_444",
+        "BG34_689",
+        "BG30_MagicItem_951",
+        "BG32_MagicItem_232",
+        "BG36_MagicItem_370",
+        "BG36_MagicItem_430",
+    ] {
+        assert_eq!(rules(id), Some(PLAIN), "{id}");
+        assert!(!is_listed(&format!("{id}_G")), "{id} has no golden card");
+    }
+    // Effects that act in combat but belong to no minion on a board:
+    // refused, each with its own reason.
+    for id in ["BG30_MagicItem_952", "BG30_MagicItem_989t", "BG_OldGod"] {
+        assert_eq!(rules(id), None, "{id}");
+        assert!(
+            !refusal(id).contains("not reviewed"),
+            "{id}: {}",
+            refusal(id)
+        );
+    }
+    assert!(refusal("BG30_MagicItem_952").contains("trinket"));
+    assert!(refusal("BG30_MagicItem_989t").contains("trinket"));
+    assert!(refusal("BG_OldGod").contains("Old God"));
+    // Tentacle of C'Thun, both forms: a minion that gains stats in combat
+    // when another friendly minion does; played as the plain minion, said.
+    for id in ["TB_BaconShop_HERO_29_Buddy", "TB_BaconShop_HERO_29_Buddy_G"] {
+        let r = rules(id).unwrap_or_else(|| panic!("{id} is not modelled"));
+        assert!(r.triggers.is_empty(), "{id}");
+        let Fidelity::Approximate(why) = r.fidelity else {
+            panic!("{id} is exact");
+        };
+        assert!(why.contains("another friendly minion gains stats"), "{id}");
+    }
+}
+
 #[test]
 fn a_refused_card_says_why_and_a_card_nobody_looked_at_says_so() {
     assert!(refusal("BG31_999").contains("copies the minion it destroys"));
@@ -218,4 +264,96 @@ fn ghastcoilers_pool_has_every_minion_once() {
     }
     assert!(!DEATHRATTLE_POOL.contains(&"BGS_008"));
     assert!(DEATHRATTLE_POOL.len() >= 45);
+}
+
+#[test]
+fn only_a_build_the_rules_were_checked_against_passes_without_a_warning() {
+    assert_eq!(unchecked_build(Some(254_477)), None);
+    assert_eq!(unchecked_build(Some(253_216)), None);
+    assert_eq!(unchecked_build(Some(999_999)), Some(999_999));
+    // A build that was not read is not a build to warn about.
+    assert_eq!(unchecked_build(None), None);
+}
+
+/// The numbers of the cards that act in combat, as the card texts of game
+/// build 254477 give them (the patch of 2026-10-14 changed all of these).
+#[test]
+fn cards_that_act_in_combat_carry_the_numbers_of_build_254477() {
+    // The actions of a card's first trigger.
+    let first = |id: &str| -> Vec<Action> {
+        let rules = rules(id).unwrap_or_else(|| panic!("{id} is not modelled"));
+        rules.triggers[0].actions().to_vec()
+    };
+    let buff_all = |attack, health| Action::BuffAll {
+        attack,
+        health,
+        tribe: Tribes::NONE,
+        others: false,
+    };
+    // Ship Master Eudora: Deathrattle: give your minions +6/+6.
+    assert_eq!(first("BG33_828"), [buff_all(6, 6)]);
+    assert_eq!(first("BG33_828_G"), [buff_all(12, 12)]);
+    // Hopebringer: Start of Combat: give your minions +4/+3.
+    assert_eq!(first("BG36_364"), [buff_all(4, 3)]);
+    assert_eq!(first("BG36_364_G"), [buff_all(8, 6)]);
+    // Razorfen Vineweaver: Rally: 4 permanent Blood Gems on itself.
+    for (id, count) in [("BG33_883", 4), ("BG33_883_G", 8)] {
+        let gems = Action::Gems {
+            to: GemTo::Itself,
+            count,
+        };
+        assert_eq!(first(id), [gems], "{id}");
+    }
+    // Barrier Banshee: after a friendly Reborn, Divine Shield and +8/+8.
+    for (id, n) in [("BG36_514", 8), ("BG36_514_G", 16)] {
+        let gain = Action::GainStats {
+            attack: n,
+            health: n,
+        };
+        let shield = Action::GainKeyword(Keywords::DIVINE_SHIELD);
+        assert_eq!(first(id), [shield, gain], "{id}");
+    }
+    // Ravaging Scorpid: after a friendly attack, Beetles have +4/+4 (golden
+    // +8/+8).
+    for (id, n) in [("BG36_209", 4), ("BG36_209_G", 8)] {
+        let [Action::BuffCards { attack, health, .. }] = first(id)[..] else {
+            panic!("{id} changed shape");
+        };
+        assert_eq!((attack, health), (n, n), "{id}");
+    }
+}
+
+/// Cards whose text changed in build 254477 to something that happens in the
+/// shop, the hand or at the end of the turn only: nothing to play in combat.
+#[test]
+fn cards_the_patch_moved_out_of_combat_have_no_combat_effect() {
+    for id in [
+        "BG34_682",   // Razorfen Flapper: Battlecry and Deathrattle: get a card
+        "BG34_682_G", //
+        "BG36_115",   // Nightmare Corroder: at the end of your turn, get a card
+        "BG36_115_G", //
+        "BG22_403",   // Young Murk-Eye: end of turn, Battlecries of neighbours
+        "BG22_403_G", //
+        "BG36_848",   // Lichling Hoarder: Avenge: get a plain copy
+        "BG36_848_G", //
+        "BG36_367",   // Auto Reveille: after you buy 3 cards
+        "BG36_367_G", //
+        "BG36_851",   // Spark Snapper: whenever you play a Mech
+        "BG36_851_G", //
+        "BGDUO_700",  // Voidpriest Cloner: after you discard a card
+        "BGDUO_700_G",
+    ] {
+        assert_eq!(rules(id), Some(PLAIN), "{id}");
+    }
+    // Expert Aviator now summons a Murloc from the hand: the hand is not
+    // seen, so the summon is still left out, and the card says so.
+    for id in ["BG34_140", "BG34_140_G"] {
+        assert!(
+            matches!(
+                rules(id).map(|r| r.fidelity),
+                Some(Fidelity::Approximate(_))
+            ),
+            "{id}"
+        );
+    }
 }

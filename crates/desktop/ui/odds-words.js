@@ -99,14 +99,20 @@
       if (odds.start_of_combat) lines.push(I18n.t("ov.odds.soc"));
       if (Number.isInteger(odds.trials) && odds.trials > 0) lines.push(I18n.plural("ov.odds.trials", odds.trials));
     }
+    // The odds come back for a game build the rules were not checked against,
+    // with this warning in both views (D-145).
+    const warning = Number.isInteger(odds.new_build) && odds.new_build > 0
+      ? I18n.t("ov.odds.newBuild", { build: odds.new_build })
+      : null;
     const said = [
       I18n.t("ov.odds.label"),
       shares.map((s) => s.text).join(", "),
+      warning,
       age,
       approx ? I18n.t("ov.odds.approx") : null,
       ...lines,
     ].filter(Boolean).join(". ");
-    return { kind: "odds", text: null, shares, age, approx, lines, about, said };
+    return { kind: "odds", text: null, shares, age, approx, warning, lines, about, said };
   }
 
   const api = { oddsView, SAID_GAPS };

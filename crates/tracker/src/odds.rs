@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
 use bg_parser::report::{CombatValues, GameReport, LobbySlot, Minion as LogMinion, Side};
-use combat_sim::cards::has_start_of_combat;
+use combat_sim::cards::{has_start_of_combat, unchecked_build};
 use combat_sim::gifts;
 use combat_sim::{
     simulate_teams, BaseCard, CombatResult, GameValues, Keywords, Minion, Odds, Options, Team,
@@ -94,6 +94,8 @@ pub struct OddsInput {
     pub damage_cap: Option<i64>,
     /// Duos: the teammate's board, the opposing teammate's and the order.
     pub duos: Option<DuosInput>,
+    /// The game build the boards come from, when the log said (D-145).
+    pub build: Option<i64>,
 }
 
 /// Why there are no odds.
@@ -181,6 +183,9 @@ pub struct LiveOdds {
     pub missing: Vec<String>,
     /// A card acts at the start of combat, which a shop board has not had yet.
     pub start_of_combat: bool,
+    /// The game build when the simulator's rules were not checked against
+    /// it: the odds are still given, with a warning (D-145).
+    pub new_build: Option<i64>,
 }
 
 impl LiveOdds {
@@ -199,6 +204,7 @@ impl LiveOdds {
             approximate: Vec::new(),
             missing: Vec::new(),
             start_of_combat: false,
+            new_build: None,
         }
     }
 }
@@ -295,6 +301,7 @@ pub fn odds_input(report: &GameReport, live: LiveFacts) -> Result<OddsInput, NoO
         opponent_tier: tier(Some(seat)),
         damage_cap: live.damage_cap,
         duos,
+        build: report.build,
     })
 }
 
@@ -511,6 +518,7 @@ pub fn run_odds(
         ),
         missing: Vec::new(),
         start_of_combat,
+        new_build: unchecked_build(input.build),
     }
 }
 

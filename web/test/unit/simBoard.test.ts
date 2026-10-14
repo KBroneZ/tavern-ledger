@@ -243,6 +243,28 @@ test("a minion takes any Attack and Health up to the 32-bit limit, and the built
   assert.ok(answer.kind === "odds" && answer.won === answer.trials, JSON.stringify(answer));
 });
 
+test("a loaded round keeps its game's build, the request sends it and the built engine warns on a build it was not checked against", async () => {
+  const engine = await loadEngine(readFileSync(WASM_PATH));
+  const play = (build: number | null) => {
+    const loaded = B.fromRound(game({ ...soloReport(), build }), 2, cards);
+    assert.ok(loaded);
+    assert.equal(loaded.state.build, build);
+    const request = JSON.parse(B.toRequest(loaded.state, cards));
+    assert.equal(request.build, build);
+    return readAnswer(engine.run(B.toRequest(loaded.state, cards)));
+  };
+  const fresh = play(999_999);
+  assert.equal(fresh.kind, "odds", "the odds still come back");
+  assert.equal(fresh.kind === "odds" && fresh.newBuild, 999_999);
+  for (const checked of [253_216, 254_477]) assert.equal((play(checked) as { newBuild: number | null }).newBuild, null, `build ${checked}`);
+  assert.equal((play(null) as { newBuild: number | null }).newBuild, null, "a file that does not say its build gets no warning");
+  // Boards built by hand have no build; edits keep the loaded one.
+  assert.equal(B.emptyState().build, null);
+  const loaded = B.fromRound(game({ ...soloReport(), build: 254_477 }), 2, cards);
+  assert.ok(loaded);
+  assert.equal(B.setCap(loaded.state, 15).build, 254_477);
+});
+
 test("round trip: a stored game's round, played by the built engine, gives a readable answer", async () => {
   const engine = await loadEngine(readFileSync(WASM_PATH));
   const loaded = B.fromRound(game(soloReport()), 2, cards);

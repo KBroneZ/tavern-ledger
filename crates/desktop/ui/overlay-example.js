@@ -26,7 +26,7 @@ const EXAMPLE_GAME = {
   odds: {
     seat: 1, gap: null, seen_round: 5, won: 0.58, tied: 0.09, lost: 0.33, trials: 10000,
     dealt: { low: 5, likely: 7, high: 10 }, taken: { low: 4, likely: 6, high: 9 },
-    approximate: [], missing: [], start_of_combat: false,
+    approximate: [], missing: [], start_of_combat: false, new_build: null,
   },
   tribes: [
     { tribe: "BEAST", offers: 6 },

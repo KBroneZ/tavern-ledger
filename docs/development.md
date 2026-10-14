@@ -144,7 +144,7 @@ cargo build --release -p bg-parser
 python tools/make_fixture.py .local/fixtures-raw/Power_old.log --game 3 --session Hearthstone_<date> --out crates/bg-parser/tests/data/real/b<build>_duos.log --parser target/release/bg-parse
 ```
 
-Check the report it writes next to the fixture (`.json`) by hand, add the build to `TESTED_BUILDS` if it is new (then make the fixture again, so the report has no "not tested" warning), and get the user's OK before committing. Fixture times count from the game's first line (D-046), so durations and APM are tested too.
+Check the report it writes next to the fixture (`.json`) by hand, add the build to `TESTED_BUILDS` if it is new (then make the fixture again, so the report has no "not tested" warning), and get the user's OK before committing. Fixture times count from the game's first line (D-046), so durations and APM are tested too. The simulator keeps its own list, `combat_sim::cards::CHECKED_BUILDS`: a build is added there only after every modelled card was compared with that build's card texts; until then the odds of its games carry a "new game build" warning (a test keeps the list inside `TESTED_BUILDS`).
 
 ### Backend (local Supabase stack)
 

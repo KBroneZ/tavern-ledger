@@ -15,6 +15,8 @@ const MAX_MINIONS: usize = 16;
 const MAX_TIER: i64 = 7;
 const MAX_NAMES: usize = 16;
 const MAX_NAME: usize = 32;
+/// Far above any Hearthstone build number (six digits today).
+pub(crate) const MAX_BUILD: i64 = 99_999_999;
 /// The game's cap on the damage to a hero.
 const MAX_CAP: i64 = 1_000;
 /// Dark Gifts on one minion: one is usual; the user's logs show two at most.
@@ -37,6 +39,8 @@ pub struct Request {
     pub player: Team,
     pub opponent: Team,
     pub damage_cap: Option<i64>,
+    /// The game build the boards come from, when the page knows it.
+    pub build: Option<i64>,
     /// Card ids with no facts: the odds need them (as in the app).
     pub missing: Vec<String>,
 }
@@ -249,10 +253,15 @@ pub fn read(text: &str) -> Res<Request> {
         None | Some(Value::Null) => None,
         cap => Some(int(cap, "the damage cap", 1, MAX_CAP)?),
     };
+    let build = match o.get("build") {
+        None | Some(Value::Null) => None,
+        b => Some(int(b, "the game build", 1, MAX_BUILD)?),
+    };
     Ok(Request {
         player,
         opponent,
         damage_cap,
+        build,
         missing,
     })
 }

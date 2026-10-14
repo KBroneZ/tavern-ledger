@@ -5,18 +5,20 @@
 //!
 //! Request: `{"explain": {"report": {...}, "facts": {"<card id>": facts | null}}}`
 //! with the facts as [`crate::input`] reads them. Answer:
-//! `{"engine": "0.9.1", "status": "explained", "combats": [...]}`, or a
+//! `{"engine": "0.9.1", "status": "explained", "combats": [...],
+//! "new_build": null | n}`, or a
 //! refusal (`bad_input`) with a short reason. Untrusted input: the report is
 //! read defensively by the engine, the facts strictly here.
 
 use std::collections::HashMap;
 
+use combat_sim::cards::unchecked_build;
 use combat_sim::saved::{explain_game, CardFacts};
 use combat_sim::why_json::why_json;
 use combat_sim::Options;
 use serde_json::{json, Map, Value};
 
-use crate::input::{facts, valid_id};
+use crate::input::{facts, valid_id, MAX_BUILD};
 use crate::odds::{answer, refused};
 
 /// Far above a real request: upload-game's cap on an inflated record is
@@ -62,5 +64,14 @@ pub fn run(explain: &Value) -> Value {
         Err(reason) => return refused(&reason),
     };
     let whys = explain_game(report, &|id| known.get(id).copied(), &Options::default());
-    answer("explained", json!({ "combats": why_json(&whys) }))
+    // The report's own build, when it is a number: a build the rules were not
+    // checked against still gets its answer, with the warning (D-145).
+    let build = report
+        .get("build")
+        .and_then(Value::as_i64)
+        .filter(|b| (1..=MAX_BUILD).contains(b));
+    answer(
+        "explained",
+        json!({ "combats": why_json(&whys), "new_build": unchecked_build(build) }),
+    )
 }

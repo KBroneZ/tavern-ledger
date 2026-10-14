@@ -266,6 +266,15 @@ fn requests() -> Vec<(&'static str, Value)> {
                 "damage_cap": 15
             }),
         ),
+        (
+            "new game build",
+            json!({
+                "player": [board(Some(3), vec![m("BGS_119", 3, 4, &[], plain(1, 2))])],
+                "opponent": [board(Some(2), vec![m("BGS_119", 2, 2, &[], plain(1, 2))])],
+                "damage_cap": 15,
+                "build": 999_999
+            }),
+        ),
     ]
 }
 
@@ -383,6 +392,7 @@ fn app_input(req: &Value) -> OddsInput {
             teammate: seen(&p[1]),
             opponent_teammate: seen(&o[1]),
         }),
+        build: req["build"].as_i64(),
     }
 }
 
@@ -430,6 +440,7 @@ fn assert_same_as_app(name: &str, req: &Value, answer: &Value) {
                 Some(app.start_of_combat),
                 "{name}"
             );
+            assert_eq!(answer["new_build"].as_i64(), app.new_build, "{name}");
         }
         "not_modelled" => {
             assert_eq!(app.gap, Some(tracker::odds::Gap::NotModelled), "{name}");

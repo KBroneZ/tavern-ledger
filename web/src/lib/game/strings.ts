@@ -81,6 +81,7 @@ export const GAME_STRINGS = {
   "turns.inferred.note": "Worked out from the health each side lost; unmarked damage is the game's own hit.",
   "turns.odds.loading": "Working out the odds",
   "turns.odds.note": "Win odds come from the simulator, on the boards as they fought. A mark says why when the likelier result did not happen. Open a turn for its boards and shop.",
+  "turns.odds.newBuild": "New game build ({build}): the odds are not checked against it yet.",
   "turns.odds.failed": "The odds could not be worked out in your browser. The rest of the game is shown as usual.",
   "turns.replay": "Watch this combat",
 

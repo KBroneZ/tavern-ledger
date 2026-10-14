@@ -7,7 +7,7 @@ import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { loadEngine } from "../../src/lib/sim/engine.ts";
-import { cardIdsOf, explainRequest, readWhy, type WhyCombat } from "../../src/lib/game/why.ts";
+import { cardIdsOf, explainRequest, newBuildOf, readWhy, type WhyCombat } from "../../src/lib/game/why.ts";
 import { causeLine, causeMark, evidence, oddsCell, whyDetail } from "../../src/lib/game/whyView.ts";
 import { askEngine, fillWhy } from "../../src/lib/game/whyRun.ts";
 import { setLang } from "../../src/lib/i18n.ts";
@@ -241,6 +241,27 @@ function fakePage(rounds: number[]) {
   } as unknown as ParentNode;
   return { root, status, oddsText: () => odds.map((c) => c.kids.map(text).join("")), whyCount: () => why.map((c) => c.kids.length) };
 }
+
+test("a new game build is named under the table, the odds stay; checked or unsaid builds say nothing", () => {
+  const withBuild = (b: unknown) => JSON.stringify({ status: "explained", engine: "0.9.1", combats: [good], new_build: b });
+  assert.equal(newBuildOf(withBuild(999_999)), 999_999);
+  for (const none of [null, undefined, 0, -3, 1.5, "254477", 100_000_000]) assert.equal(newBuildOf(withBuild(none)), null, String(none));
+  assert.equal(newBuildOf("not json"), null);
+  assert.equal(newBuildOf(answer([good])), null, "an engine without the field says nothing");
+
+  const page = fakePage([1]);
+  fillWhy(page.root, readWhy(withBuild(999_999)), 999_999);
+  assert.match(page.status.textContent, /^the note New game build \(999999\): the odds are not checked against it yet\.$/);
+  assert.equal(page.oddsText().length, 1, "the odds are still filled");
+  const calm = fakePage([1]);
+  fillWhy(calm.root, readWhy(withBuild(null)), null);
+  assert.equal(calm.status.textContent, "the note");
+  // No odds at all: the failure line wins, with no build warning on top of it.
+  const failed = fakePage([1]);
+  fillWhy(failed.root, null, 999_999);
+  assert.match(failed.status.textContent, /could not be worked out/);
+  assert.doesNotMatch(failed.status.textContent, /New game build/);
+});
 
 test("the engine's answer fills each row; a combat it does not answer, or no answer at all, ends as a dash", () => {
   const page = fakePage([1, 3]);

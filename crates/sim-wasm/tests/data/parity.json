@@ -5,8 +5,9 @@
         "approximate": [],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.9.1",
+        "engine": "0.9.2",
         "lost": 7508,
+        "new_build": null,
         "stalled": 0,
         "start_of_combat": false,
         "status": "odds",
@@ -105,8 +106,9 @@
         "approximate": [],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.9.1",
+        "engine": "0.9.2",
         "lost": 10000,
+        "new_build": null,
         "stalled": 0,
         "start_of_combat": false,
         "status": "odds",
@@ -258,8 +260,9 @@
           "likely": 6,
           "low": 6
         },
-        "engine": "0.9.1",
+        "engine": "0.9.2",
         "lost": 2593,
+        "new_build": null,
         "stalled": 0,
         "start_of_combat": true,
         "status": "odds",
@@ -367,8 +370,9 @@
         ],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.9.1",
+        "engine": "0.9.2",
         "lost": 10000,
+        "new_build": null,
         "stalled": 0,
         "start_of_combat": false,
         "status": "odds",
@@ -471,8 +475,9 @@
         "approximate": [],
         "damage_known": false,
         "dealt": null,
-        "engine": "0.9.1",
+        "engine": "0.9.2",
         "lost": 1275,
+        "new_build": null,
         "stalled": 0,
         "start_of_combat": false,
         "status": "odds",
@@ -559,7 +564,7 @@
     {
       "answer": {
         "approximate": [],
-        "engine": "0.9.1",
+        "engine": "0.9.2",
         "not_modelled": [
           "BG_NOT_A_CARD"
         ],
@@ -620,7 +625,7 @@
     },
     {
       "answer": {
-        "engine": "0.9.1",
+        "engine": "0.9.2",
         "missing": [
           "BG_ICC_026t"
         ],
@@ -676,8 +681,9 @@
           "likely": 4,
           "low": 4
         },
-        "engine": "0.9.1",
+        "engine": "0.9.2",
         "lost": 5609,
+        "new_build": null,
         "stalled": 0,
         "start_of_combat": false,
         "status": "odds",
@@ -818,8 +824,9 @@
         "approximate": [],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.9.1",
+        "engine": "0.9.2",
         "lost": 10000,
+        "new_build": null,
         "stalled": 0,
         "start_of_combat": false,
         "status": "odds",
@@ -933,8 +940,9 @@
           "likely": 6,
           "low": 6
         },
-        "engine": "0.9.1",
+        "engine": "0.9.2",
         "lost": 0,
+        "new_build": null,
         "stalled": 0,
         "start_of_combat": false,
         "status": "odds",
@@ -1038,6 +1046,74 @@
             "values": {
               "undead_atk": 6
             }
+          }
+        ]
+      }
+    },
+    {
+      "answer": {
+        "approximate": [],
+        "damage_known": true,
+        "dealt": {
+          "high": 4,
+          "likely": 4,
+          "low": 4
+        },
+        "engine": "0.9.2",
+        "lost": 0,
+        "new_build": 999999,
+        "stalled": 0,
+        "start_of_combat": false,
+        "status": "odds",
+        "taken": null,
+        "tied": 0,
+        "trials": 10000,
+        "won": 10000
+      },
+      "name": "new game build",
+      "request": {
+        "build": 999999,
+        "damage_cap": 15,
+        "opponent": [
+          {
+            "minions": [
+              {
+                "attack": 2,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 2,
+                "keywords": []
+              }
+            ],
+            "tier": 2
+          }
+        ],
+        "player": [
+          {
+            "minions": [
+              {
+                "attack": 3,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 4,
+                "keywords": []
+              }
+            ],
+            "tier": 3
           }
         ]
       }

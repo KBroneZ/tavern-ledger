@@ -110,6 +110,7 @@ export const ES: Record<SimStringKey, string> = {
   "result.approx": "≈ Aproximado",
   "result.approx.one": "1 carta se simula con una diferencia conocida respecto al juego.",
   "result.approx.other": "{count} cartas se simulan con una diferencia conocida respecto al juego.",
+  "result.newBuild": "Versión nueva del juego ({build}): probabilidades sin comprobar aún. Se calculan con las reglas de las versiones con que se comprobó el simulador, así que una carta que cambió en esta versión puede jugar distinto.",
   "result.soc": "Una carta de aquí actúa al inicio del combate, que el simulador no juega: los tableros cargados de una partida ya muestran su efecto; los que montas tú, no.",
   "result.notModelled": "No se puede jugar: el simulador no conoce estas cartas y nunca adivina.",
   "result.notModelledHint": "Quítalas para ver las probabilidades.",

@@ -50,6 +50,25 @@ test("advanced adds the damage both ways, the cards with a gap and the trials", 
   assert.equal(v.approx, true);
 });
 
+test("a build the rules were not checked against warns in both views and keeps the odds", () => {
+  for (const [lang, text] of [
+    ["en", "New game build (999999): odds not checked yet"],
+    ["es", "Versión nueva del juego (999999): probabilidades sin comprobar aún"],
+  ]) {
+    I18n.setLang(lang);
+    for (const advanced of [false, true]) {
+      const v = oddsView(odds({ new_build: 999999 }), advanced, nameOf);
+      assert.equal(v.kind, "odds");
+      assert.equal(v.warning, text);
+      assert.equal(v.shares.length, 3);
+      assert.ok(v.said.includes(text));
+    }
+  }
+  I18n.setLang("en");
+  assert.equal(oddsView(odds({ new_build: null }), false, nameOf).warning, null);
+  assert.equal(oddsView(odds(), true, nameOf).warning, null);
+});
+
 test("damage is said only for a result that can happen, and unknown is not 0", () => {
   I18n.setLang("en");
   const sure = oddsView(odds({ won: 1, tied: 0, lost: 0, dealt: { low: 5, likely: 5, high: 5 }, taken: null }), true, nameOf);

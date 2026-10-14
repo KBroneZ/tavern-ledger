@@ -27,6 +27,8 @@ export type Answer =
       taken: Spread | null;
       approximate: Approximate[];
       startOfCombat: boolean;
+      /** The game build when the rules were not checked against it: the odds still come, with a warning. */
+      newBuild: number | null;
     }
   | { kind: "not_modelled"; engine: string; notModelled: string[]; reasons: Approximate[]; approximate: Approximate[] }
   | { kind: "no_card_data"; engine: string; missing: string[] }
@@ -38,6 +40,7 @@ type Obj = Record<string, unknown>;
 const CARD_ID = /^[A-Za-z0-9_]{1,64}$/;
 const VERSION = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/;
 const MAX_LIST = 64;
+const MAX_BUILD = 99_999_999;
 
 class Bad extends Error {}
 
@@ -73,6 +76,12 @@ const approximate = (v: unknown): Approximate[] => {
     return { cardId, reason: text(o.reason) };
   });
 };
+/** The build the engine warns about; an engine older than the warning sends none. */
+export const newBuild = (v: unknown): number | null => {
+  if (v === undefined || v === null) return null;
+  if (typeof v !== "number" || !Number.isInteger(v) || v < 1 || v > MAX_BUILD) throw new Bad();
+  return v;
+};
 const spread = (v: unknown): Spread | null => {
   if (v === null) return null;
   const o = obj(v);
@@ -104,6 +113,7 @@ function read(o: Obj): Answer {
         taken: spread(o.taken),
         approximate: approximate(o.approximate),
         startOfCombat: bool(o.start_of_combat),
+        newBuild: newBuild(o.new_build),
       };
     }
     case "not_modelled":

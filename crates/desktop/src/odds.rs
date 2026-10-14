@@ -235,6 +235,7 @@ mod tests {
             opponent_tier: None,
             damage_cap: None,
             duos: None,
+            build: None,
         }
     }
 

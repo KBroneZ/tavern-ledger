@@ -216,6 +216,50 @@ fn a_start_of_combat_card_is_flagged() {
     assert!(run_odds(&i, &facts, Duration::from_secs(5)).start_of_combat);
 }
 
+#[test]
+fn a_build_the_rules_were_not_checked_against_gets_odds_and_a_warning() {
+    let run = |build: Option<i64>| {
+        let mut i = input();
+        i.build = build;
+        run_odds(&i, &facts, Duration::from_secs(5))
+    };
+    let new = run(Some(999_999));
+    assert_eq!(new.new_build, Some(999_999));
+    // The odds still come back.
+    assert_eq!(new.gap, None);
+    assert!(new.trials > 0);
+    assert!((new.won + new.tied + new.lost - 1.0).abs() < 1e-9);
+
+    for checked in [253_216, 254_477] {
+        assert_eq!(run(Some(checked)).new_build, None, "build {checked}");
+    }
+    // A build the log did not give is not one to warn about.
+    assert_eq!(run(None).new_build, None);
+}
+
+#[test]
+fn every_build_the_rules_were_checked_against_is_one_the_parser_was_tested_on() {
+    for build in combat_sim::cards::CHECKED_BUILDS {
+        assert!(
+            bg_parser::TESTED_BUILDS.contains(build),
+            "build {build} is checked by the engine but not tested by the parser"
+        );
+    }
+}
+
+#[test]
+fn the_input_carries_the_reports_build() {
+    let mut r = report(GAME, vec![round(3, 5, Some(vec![minion(PLAIN, 1, 1, 1)]))]);
+    r.build = Some(254_477);
+    let own = [minion(PLAIN, 6, 6, 1)];
+    let live = LiveFacts {
+        own_now: Some(&own),
+        next: Some(5),
+        ..LiveFacts::default()
+    };
+    assert_eq!(odds_input(&r, live).expect("odds").build, Some(254_477));
+}
+
 /// Admiration: "Start of Combat: gain the Attack of the minion to the
 /// left" (T-528).
 const ADMIRATION: &str = "BG36_MidGameEffect_000t9";
