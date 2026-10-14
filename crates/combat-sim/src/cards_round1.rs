@@ -208,6 +208,17 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
             }])],
         ),
     ),
+    (
+        "TB_BaconUps_154",
+        approx(
+            RANDOM_PICK,
+            &[Trigger::Deathrattle(&[Action::GiveKeyword {
+                keyword: Keywords::DIVINE_SHIELD,
+                tribe: Tribes::DRAGON,
+                count: 6,
+            }])],
+        ),
+    ),
     // The Deity is not a board minion: these deathrattles change nothing on
     // the board, but the Deity's own part in combat is unknown.
     ("BG36_113", approx(DEITY, &[])),
@@ -282,6 +293,11 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
     (
         "BG27_017",
         exact(&[Trigger::Rally(&[Action::DamageTargetAndAdjacent])]),
+    ),
+    // Golden: both minions next to the target.
+    (
+        "BG27_017_G",
+        exact(&[Trigger::Rally(&[Action::DamageTargetAndNeighbours])]),
     ),
     (
         "BG34_604",
@@ -433,10 +449,23 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
         exact(&[Trigger::Deathrattle(&[Action::DestroyKiller])]),
     ),
     (
+        "BG23_318_G",
+        exact(&[Trigger::Deathrattle(&[Action::DestroyKiller])]),
+    ),
+    (
         "BGS_018",
         exact(&[Trigger::Deathrattle(&[Action::BuffAll {
             attack: 7,
             health: 7,
+            tribe: Tribes::BEAST,
+            others: false,
+        }])]),
+    ),
+    (
+        "TB_BaconUps_085",
+        exact(&[Trigger::Deathrattle(&[Action::BuffAll {
+            attack: 14,
+            health: 14,
             tribe: Tribes::BEAST,
             others: false,
         }])]),
@@ -537,4 +566,10 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
     ("BG34_142", exact(&[Trigger::StartOfCombatUnmodelled])),
     ("BG31_810", exact(&[Trigger::StartOfCombatUnmodelled])),
     ("BG36_620", exact(&[Trigger::StartOfCombatUnmodelled])),
+    // Golden forms of the cards above.
+    ("BG24_500_G", exact(&[Trigger::StartOfCombatUnmodelled])),
+    ("BG26_805_G", exact(&[Trigger::StartOfCombatUnmodelled])),
+    ("BG34_142_G", exact(&[Trigger::StartOfCombatUnmodelled])),
+    ("BG31_810_G", exact(&[Trigger::StartOfCombatUnmodelled])),
+    ("BG36_620_G", exact(&[Trigger::StartOfCombatUnmodelled])),
 ];

@@ -496,3 +496,7 @@ mod gifts_tests;
 #[cfg(test)]
 #[path = "combat_t609_tests.rs"]
 mod t609_tests;
+
+#[cfg(test)]
+#[path = "combat_golden_tests.rs"]
+mod golden_tests;
