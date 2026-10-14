@@ -5,7 +5,7 @@
 //!
 //! Request: `{"explain": {"report": {...}, "facts": {"<card id>": facts | null}}}`
 //! with the facts as [`crate::input`] reads them. Answer:
-//! `{"engine": "0.8.0", "status": "explained", "combats": [...]}`, or a
+//! `{"engine": "0.9.0", "status": "explained", "combats": [...]}`, or a
 //! refusal (`bad_input`) with a short reason. Untrusted input: the report is
 //! read defensively by the engine, the facts strictly here.
 

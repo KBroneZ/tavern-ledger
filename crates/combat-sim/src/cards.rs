@@ -132,6 +132,13 @@ pub enum Action {
     /// Cast a Tavern spell made of these buffs: each gives the side's spell
     /// upgrades on top ([`crate::model::GameValues::spell`]; T-609).
     Spell(&'static [Action]),
+    /// Summon `count` random Deathrattle minions, each picked from
+    /// [`DEATHRATTLE_POOL`] (Ghastcoiler; T-616).
+    SummonRandomDeathrattle { count: u8 },
+    /// Give the minion the trigger is about (the one just summoned) this
+    /// minion's Attack and full Health, `factor` times over, at most `times`
+    /// times per combat (Stalwart Kodo; T-616).
+    GiveSummonedOwnStats { factor: i32, times: u8 },
 }
 
 /// Where Blood Gems go.
@@ -244,6 +251,9 @@ pub enum Trigger {
     /// The Dragons next to this one gain twice the stats they gain in
     /// combat (golden Persistent Poet; T-609).
     DoublesAdjacentDragonGains,
+    /// Has this much more Attack for each friendly minion that died this
+    /// combat (Rot Hide Gnoll; T-616).
+    AttackPerFriendlyDeath(i32),
 }
 
 impl Trigger {
@@ -285,11 +295,14 @@ pub fn rules(card_id: &str) -> Option<CardRules> {
         .chain(crate::cards_round3::EFFECTS_3)
         .chain(crate::cards_round4::EFFECTS_4)
         .chain(crate::cards_round5::EFFECTS_5)
-        .chain(crate::cards_round7::EFFECTS_7);
+        .chain(crate::cards_round7::EFFECTS_7)
+        .chain(crate::cards_round8::EFFECTS_8);
     if let Some((_, rules)) = all.into_iter().find(|(id, _)| *id == card_id) {
         return Some(*rules);
     }
-    NO_COMBAT_EFFECT.contains(&card_id).then_some(PLAIN)
+    (NO_COMBAT_EFFECT.contains(&card_id)
+        || crate::cards_round8::NO_COMBAT_EFFECT_8.contains(&card_id))
+    .then_some(PLAIN)
 }
 
 /// True when the card acts at the start of combat (played or not). A board
@@ -321,10 +334,19 @@ pub struct Token {
 }
 
 pub fn token(id: &str) -> Option<&'static Token> {
-    TOKENS.iter().find(|t| t.id == id)
+    TOKENS
+        .iter()
+        .chain(crate::cards_round8::POOL_TOKENS)
+        .find(|t| t.id == id)
 }
 
-const fn tok(id: &'static str, attack: i32, health: i32, tribes: Tribes, tier: u8) -> Token {
+pub(crate) const fn tok(
+    id: &'static str,
+    attack: i32,
+    health: i32,
+    tribes: Tribes,
+    tier: u8,
+) -> Token {
     Token {
         id,
         attack,
@@ -336,11 +358,11 @@ const fn tok(id: &'static str, attack: i32, health: i32, tribes: Tribes, tier: u
     }
 }
 
-const fn kw(t: Token, keywords: Keywords) -> Token {
+pub(crate) const fn kw(t: Token, keywords: Keywords) -> Token {
     Token { keywords, ..t }
 }
 
-const fn gold(t: Token) -> Token {
+pub(crate) const fn gold(t: Token) -> Token {
     Token { golden: true, ..t }
 }
 
@@ -371,6 +393,14 @@ pub const TOKENS: &[Token] = &[
     // The Golemancy gift's Golem (the user's logs); its stats are set when
     // summoned.
     tok("BG29_864t", 5, 5, Tribes::NONE, 1),
+    // Round 8 (T-616): Sewer Lord's Sewer Rats and their Half-Shell Turtles.
+    tok("BG19_010", 3, 2, Tribes::BEAST, 2),
+    gold(tok("BG19_010_G", 6, 4, Tribes::BEAST, 2)),
+    kw(tok("BG19_010t", 2, 3, Tribes::BEAST, 1), Keywords::TAUNT),
+    gold(kw(
+        tok("BG19_010_Gt", 4, 6, Tribes::BEAST, 1),
+        Keywords::TAUNT,
+    )),
 ];
 
 pub(crate) const fn exact(triggers: &'static [Trigger]) -> CardRules {
@@ -390,6 +420,7 @@ pub(crate) const fn approx(reason: &'static str, triggers: &'static [Trigger]) -
 /// Round 1; later rounds are in `cards_round2` to `cards_round5`.
 pub use crate::cards_round1::EFFECTS;
 pub use crate::cards_round5::{AMALGAMS, HAND_SUMMONERS};
+pub use crate::cards_round8::{refusal, DEATHRATTLE_POOL};
 
 /// Cards whose text never changes a combat, checked one by one against the
 /// card data. Keywords they have are on the board already.

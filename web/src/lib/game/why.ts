@@ -33,6 +33,8 @@ export interface WhyCombat {
   odds: { won: number; tied: number; lost: number } | null;
   noOdds: NoOdds | null;
   cards: string[];
+  /** Why the simulator refused each card of `cards` (only when it did). */
+  reasons: { cardId: string; reason: string }[];
   cause: WhyCause | null;
 }
 
@@ -79,6 +81,12 @@ function cardId(v: unknown): string {
   return v;
 }
 
+function reasonOf(v: unknown): { cardId: string; reason: string } {
+  const r = obj(v);
+  if (typeof r.reason !== "string" || r.reason.length > 300) throw new Bad();
+  return { cardId: cardId(r.card_id), reason: r.reason };
+}
+
 function list<T>(v: unknown, read: (v: unknown) => T): T[] {
   if (v === undefined) return [];
   if (!Array.isArray(v) || v.length > MAX_LIST) throw new Bad();
@@ -119,6 +127,7 @@ function combat(v: unknown): WhyCombat {
     odds,
     noOdds,
     cards: list(c.cards, cardId),
+    reasons: list(c.reasons, reasonOf),
     cause: maybe(c.cause, cause),
   };
 }

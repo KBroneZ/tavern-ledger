@@ -83,7 +83,7 @@ test("the odds show the three shares and the likely damage first; ranges, trials
 });
 
 test("a card not modelled blocks the run and is named, never a number", () => {
-  const a: Answer = { kind: "not_modelled", engine: "0.4.0", notModelled: ["BG_NOT_A_CARD"], approximate: [] };
+  const a: Answer = { kind: "not_modelled", engine: "0.4.0", notModelled: ["BG_NOT_A_CARD"], reasons: [], approximate: [] };
   const out = text(resultView({ result: { kind: "answer", answer: a }, cards, cap: null }));
   assert.match(out, /does not know these cards/);
   assert.match(out, /Synthetic Unknown/);
@@ -95,6 +95,23 @@ test("a card not modelled blocks the run and is named, never a number", () => {
   const editor = html(editorView({ state: s, cards, selected: null, adding: null, marks }));
   assert.match(editor, /is-blocked/);
   assert.match(editor, /aria-label="Synthetic Unknown, 6\/6, Not modelled"/);
+});
+
+test("a refused card says why it blocks the odds, in English and Spanish (T-616)", () => {
+  const why = "its Deathrattle copies the minion it destroys at the start of combat; the board is taken after that, so the copied minion is gone and not known";
+  const json = { engine: "0.9.0", status: "not_modelled", not_modelled: ["BG_NOT_A_CARD"], reasons: [{ card_id: "BG_NOT_A_CARD", reason: why }], approximate: [] };
+  const a = readAnswer(JSON.stringify(json));
+  assert.equal(a.kind === "not_modelled" && a.reasons.length, 1);
+  const out = text(resultView({ result: { kind: "answer", answer: a }, cards, cap: null }));
+  assert.match(out, /Synthetic Unknown\s*:\s*its Deathrattle copies the minion it destroys/);
+  setLang("es");
+  const spanish = text(resultView({ result: { kind: "answer", answer: a }, cards, cap: null }));
+  assert.match(spanish, /su Último aliento copia al esbirro que destruye/);
+  // An engine without reasons still names the cards.
+  setLang("en");
+  const old = readAnswer(JSON.stringify({ engine: "0.8.0", status: "not_modelled", not_modelled: ["BG_NOT_A_CARD"], approximate: [] }));
+  assert.equal(old.kind === "not_modelled" && old.reasons.length, 0);
+  assert.match(text(resultView({ result: { kind: "answer", answer: old }, cards, cap: null })), /Synthetic Unknown/);
 });
 
 test("waiting, empty and failed states say so in words; a failure offers a retry", () => {

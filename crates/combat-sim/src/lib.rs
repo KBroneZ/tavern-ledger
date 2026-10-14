@@ -25,6 +25,8 @@ mod cards_round3;
 mod cards_round4;
 mod cards_round5;
 mod cards_round7;
+mod cards_round8;
+mod cards_round8_pool;
 pub mod combat;
 pub mod gifts;
 pub mod model;

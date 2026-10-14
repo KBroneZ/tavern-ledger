@@ -77,9 +77,18 @@ fn play(request: &Request) -> Result<Odds, Value> {
                     .iter()
                     .map(|(id, why)| json!({ "card_id": id, "reason": why }))
                     .collect();
+                let reasons: Vec<Value> = c
+                    .reasons()
+                    .iter()
+                    .map(|(id, why)| json!({ "card_id": id, "reason": why }))
+                    .collect();
                 return Err(answer(
                     "not_modelled",
-                    json!({ "not_modelled": c.not_modelled, "approximate": approximate }),
+                    json!({
+                        "not_modelled": c.not_modelled,
+                        "reasons": reasons,
+                        "approximate": approximate,
+                    }),
                 ));
             }
             Err(e) => return Err(answer("bad_board", json!({ "error": e.to_string() }))),

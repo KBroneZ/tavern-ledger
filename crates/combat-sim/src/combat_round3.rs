@@ -26,6 +26,7 @@ impl Combat<'_> {
 
     /// After a friendly minion is summoned (a token or a Reborn copy).
     pub(super) fn after_summon(&mut self, side: usize, summoned: u32) {
+        self.catch_up_deaths(side, summoned);
         let Some(tribes) = self.unit(side, summoned).map(|u| self.tribes(u)) else {
             return;
         };

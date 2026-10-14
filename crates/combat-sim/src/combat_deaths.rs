@@ -119,6 +119,7 @@ impl Combat<'_> {
                 return;
             }
             self.count_dead_knights(&dead);
+            self.count_friendly_deaths(&dead);
             self.gain_deathrattles(&dead);
             for d in &dead {
                 let times = 1 + usize::from(self.extra_deathrattles(d.side));

@@ -108,7 +108,22 @@ test("each cause gets one plain line and its evidence, in English and Spanish", 
   assert.deepEqual(evidence(readWhy(answer([good]))![0], nameOf), [], "nothing to fold when the favourite happened");
   const noData = readWhy(answer([{ ...good, odds: null, no_odds: "no_card_data", cards: [PLAIN], cause: null }]))![0];
   assert.equal(causeLine(noData, nameOf), "No odds: no card data for Plain Card.");
+  // A card the engine refuses says why, in the page's language (T-616).
+  const refused = readWhy(
+    answer([
+      {
+        ...good,
+        odds: null,
+        no_odds: "not_modelled",
+        cards: [PLAIN],
+        reasons: [{ card_id: PLAIN, reason: "the simulator has not reviewed this card yet" }],
+        cause: null,
+      },
+    ]),
+  )![0];
+  assert.equal(causeLine(refused, nameOf), "No odds: the simulator does not know Plain Card. Plain Card: the simulator has not reviewed this card yet.");
   setLang("es");
+  assert.match(causeLine(refused, nameOf), /Plain Card: el simulador aún no ha revisado esta carta\.$/);
   assert.equal(causeLine(lines.chance, nameOf), "Azar: la repetición coincidió hasta los dados.");
   assert.equal(causeLine(lines.missing, nameOf), "No visto: las mejoras de las Gemas de sangre.");
   assert.match(evidence(lines.missing, nameOf)[0], /ataque 4 \(Estadísticas y palabras clave\), en Plain Card/);

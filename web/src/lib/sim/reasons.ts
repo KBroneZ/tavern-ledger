@@ -45,6 +45,22 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
     "vuelve entero con sus palabras clave; no se ha comprobado con los registros qué conserva",
   "gilded, but its golden card is not modelled: it plays the plain card":
     "dorado, pero su carta dorada no está modelada: se juega como la carta normal",
+  "its Deathrattle copies the minion it destroys at the start of combat; the board is taken after that, so the copied minion is gone and not known":
+    "su Último aliento copia al esbirro que destruye al inicio del combate; el tablero se toma después, así que el esbirro copiado ya no está y no se conoce",
+  "its Deathrattle summons random Undead Creations and the list of them is not known":
+    "su Último aliento invoca Creaciones no muertas al azar y no se conoce la lista de ellas",
+  "the simulator has not reviewed this card yet": "el simulador aún no ha revisado esta carta",
+  "the simulator has not reviewed this Dark Gift yet": "el simulador aún no ha revisado este Don siniestro",
+  "its Start of Combat effect is not played, and this board was taken before it":
+    "su efecto de Inicio del combate no se juega, y este tablero se tomó antes de él",
+  "a spell it casts can trigger cards that follow spells (Torrential Ruiner, Fleeing Fugitive, Abyssal Bruiser): not played":
+    "un hechizo que lanza puede activar cartas que siguen a los hechizos (Torrential Ruiner, Fleeing Fugitive, Abyssal Bruiser): no se juega",
+  "what its maximum stats are is not checked: its Attack and full Health are used":
+    "no se ha comprobado cuáles son sus estadísticas máximas: se usan su Ataque y su Salud completa",
+  "its bonus improves with the Tavern spells cast this game; the printed one is used":
+    "su bonificación mejora con los hechizos de la Taberna lanzados en la partida; se usa la impresa",
+  "it picks from every Deathrattle minion, not only the minion types in this game":
+    "elige entre todos los esbirros con Último aliento, no solo los de los tipos de esta partida",
 };
 
 /** The reason in the page's language, and whether it had to stay in English. */

@@ -5,6 +5,7 @@
 // list on the accuracy page explains every cause. whyRun.ts fills the cells
 // once the engine answers.
 import { type AccKey, at } from "../accuracy/strings.ts";
+import { reasonText } from "../sim/reasons.ts";
 import { share } from "../data/format.ts";
 import { h, type VNode } from "../view/node.ts";
 import { g, type GameStringKey } from "./strings.ts";
@@ -30,7 +31,12 @@ function unseenText(cause: WhyCause, nameOf: NameOf): string {
 
 /** The one short line: the cause in plain words. */
 export function causeLine(c: WhyCombat, nameOf: NameOf): string {
-  if (c.noOdds) return g(`why.noOdds.${c.noOdds}` as GameStringKey, { cards: names(c.cards, nameOf) });
+  if (c.noOdds) {
+    const line = g(`why.noOdds.${c.noOdds}` as GameStringKey, { cards: names(c.cards, nameOf) });
+    // A refused card says why: "Name: reason".
+    const why = c.reasons.map((r) => `${nameOf(r.cardId)}: ${reasonText(r.reason).text}`);
+    return why.length > 0 ? `${line} ${why.join("; ")}.` : line;
+  }
   const cause = c.cause;
   if (!cause) return g("why.noOdds.bad_board");
   switch (cause.id) {

@@ -28,7 +28,7 @@ export type Answer =
       approximate: Approximate[];
       startOfCombat: boolean;
     }
-  | { kind: "not_modelled"; engine: string; notModelled: string[]; approximate: Approximate[] }
+  | { kind: "not_modelled"; engine: string; notModelled: string[]; reasons: Approximate[]; approximate: Approximate[] }
   | { kind: "no_card_data"; engine: string; missing: string[] }
   | { kind: "bad_board" | "bad_input"; engine: string; error: string }
   | { kind: "unreadable" };
@@ -107,7 +107,14 @@ function read(o: Obj): Answer {
       };
     }
     case "not_modelled":
-      return { kind: "not_modelled", engine, notModelled: ids(o.not_modelled), approximate: approximate(o.approximate) };
+      return {
+        kind: "not_modelled",
+        engine,
+        notModelled: ids(o.not_modelled),
+        // Why each card blocks the odds; an engine older than this has none.
+        reasons: o.reasons === undefined ? [] : approximate(o.reasons),
+        approximate: approximate(o.approximate),
+      };
     case "no_card_data":
       return { kind: "no_card_data", engine, missing: ids(o.missing) };
     case "bad_board":
