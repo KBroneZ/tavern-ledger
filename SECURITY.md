@@ -20,6 +20,6 @@ Out of scope: Hearthstone and Blizzard's services (report those to Blizzard), an
 
 ## Versions
 
-Version 0.2.1 (beta) is the current release; see the [releases page](https://github.com/KBroneZ/tavern-ledger/releases). Only the latest release gets fixes. A fix goes to `main` and to the live website first, and reaches the desktop app in the next release, which installed apps from v0.2.1 on download by themselves.
+Version 0.2.2 (beta) is the current release; see the [releases page](https://github.com/KBroneZ/tavern-ledger/releases). Only the latest release gets fixes. A fix goes to `main` and to the live website first, and reaches the desktop app in the next release, which installed apps from v0.2.1 on download by themselves.
 
 Releases are built and signed by GitHub Actions. The app only installs an update signed by the project's updater key, minisign key id `CC9CE2C7E6CD31F8` (the public key is `plugins.updater.pubkey` in [`crates/desktop/tauri.conf.json`](crates/desktop/tauri.conf.json)); each release's `SHA256SUMS` is signed with the same key. A release that changes this key says so at the top of its notes.
