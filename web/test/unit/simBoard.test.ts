@@ -21,10 +21,10 @@ const es = JSON.parse(readFileSync(join(FIXTURES, "esES.json"), "utf8")) as unkn
 const cards = new CardIndex(extractCards(en, en, "fixture"));
 
 /** A stored game with the engine's real card ids in place of the made-up ones. */
-function game(report: Record<string, unknown>) {
+function game(report: Record<string, unknown>, revision?: number) {
   const text = JSON.stringify(report).replaceAll("SYN_M_01", "BGS_119").replaceAll("SYN_M_02", "BG28_300").replaceAll("SYN_M_04", "BG_ICC_026t")
     .replaceAll("SYN_M_05", "BG29_611").replaceAll("SYN_M_06", "BG25_009");
-  const read = readRecord(record(JSON.parse(text)), SESSION, INDEX);
+  const read = readRecord(record(JSON.parse(text), revision === undefined ? {} : { parser: { version: "0.1.0", revision } }), SESSION, INDEX);
   assert.ok(read.ok);
   return read.record;
 }
@@ -260,6 +260,20 @@ test("a loaded round keeps each minion's Dark Gifts and sends them to the engine
   const request = JSON.parse(B.toRequest(loaded.state, cards));
   const sent = request.player[0].minions[1];
   assert.deepEqual(sent.gifts, ["BG36_MidGameEffect_000t9", "BG36_MidGameEffect_000t13"]);
+});
+
+test("a loaded round keeps each minion's buffs for its tooltip, a new minion has none, the engine never sees them (T-619)", () => {
+  const report = soloReport() as Record<string, any>;
+  report.rounds[1].entries[0].board[1].buffs = [{ card_id: "BG20_GEM", count: 2 }];
+  const older = B.fromRound(game(report), 2, cards);
+  assert.ok(older);
+  assert.equal(older.state.player[0].minions[1].buffs, null, "a record before revision 14 did not read them");
+  const loaded = B.fromRound(game(report, 14), 2, cards);
+  assert.ok(loaded);
+  assert.deepEqual(loaded.state.player[0].minions[1].buffs, [{ cardId: "BG20_GEM", count: 2 }]);
+  assert.deepEqual(loaded.state.player[0].minions[0].buffs, [], "recorded, none");
+  assert.deepEqual(B.addMinion(B.emptyState(), "player", 0, "BGS_119", cards).player[0].minions[0].buffs, [], "a minion added by hand has none");
+  assert.doesNotMatch(B.toRequest(loaded.state, cards), /buffs|BG20_GEM/);
 });
 
 test("a loaded round keeps each board's game-long values and sends them to the engine (T-610)", () => {

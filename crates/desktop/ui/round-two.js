@@ -76,7 +76,7 @@
         keywordsRecorded: list(b.minions).every((m) => Array.isArray(m.keywords)),
         minions: list(b.minions).map((m) => ({
           id: m.card_id,
-          stats: `${known(m.atk) ? I18n.num(m.atk) : "?"}/${known(m.health) ? I18n.num(m.health) : "?"}`,
+          stats: `${I18n.stat(known(m.atk) ? m.atk : null)}/${I18n.stat(known(m.health) ? m.health : null)}`,
           golden: m.golden === true,
           keywords: keywordMarks(m.keywords),
         })),

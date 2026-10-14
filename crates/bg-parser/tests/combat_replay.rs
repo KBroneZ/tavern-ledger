@@ -320,6 +320,98 @@ fn a_shown_combat_keeps_every_event_in_the_logs_order() {
     assert_eq!(r.rounds[0].result, None, "no result tags in this log");
 }
 
+/// An enchantment in play on `on`, as the log creates it.
+fn enchantment(id: i64, card: &str, on: i64) -> Vec<String> {
+    entity(
+        id,
+        card,
+        &[
+            ("CARDTYPE", "ENCHANTMENT".to_string()),
+            ("ATTACHED", on.to_string()),
+            ("ZONE", "PLAY".to_string()),
+        ],
+    )
+}
+
+#[test]
+fn a_replay_minion_keeps_its_buffs_from_the_start_and_when_summoned() {
+    // T-619, parser revision 14: the buffs a minion has as the combat starts,
+    // and those a token has as it is summoned, as on a board minion.
+    let mut l = won_combat();
+    let at = l
+        .iter()
+        .position(|x| x.contains("BlockType=TRIGGER"))
+        .expect("first block");
+    l.splice(
+        at..at,
+        [
+            enchantment(70, "BG20_GEMe2", 30),
+            enchantment(71, "BG20_GEMe2", 30),
+            enchantment(72, "BG31_816e", 41),
+        ]
+        .concat(),
+    );
+    let at = l
+        .iter()
+        .position(|x| x.contains("Creating ID=50"))
+        .expect("token");
+    // The token's own lines end at its ENTITY_ID; its buff follows them.
+    l.splice(at + 8..at + 8, enchantment(73, "BG28_309e", 50));
+    let r = replay(&finished(l), 1);
+    let buffs = |card: &str| -> Vec<(String, u32)> {
+        r.minions
+            .iter()
+            .find(|m| m.card_id.as_deref() == Some(card))
+            .expect(card)
+            .buffs
+            .iter()
+            .map(|b| (b.card_id.clone(), b.count))
+            .collect()
+    };
+    assert_eq!(buffs("SYN_SHIELD"), vec![("BG20_GEM".to_string(), 2)]);
+    assert_eq!(buffs("SYN_FOE_B_G"), vec![("BG31_816".to_string(), 1)]);
+    assert!(buffs("SYN_DR").is_empty());
+    assert_eq!(buffs("SYN_TOKEN"), vec![("BG28_309".to_string(), 1)]);
+}
+
+#[test]
+fn a_summoned_minion_keeps_its_buffs_when_it_dies_and_they_are_taken_away() {
+    // The log moves the minion to the graveyard, then each of its
+    // enchantments out of the game: the saved buffs are what it had alive.
+    let mut l = won_combat();
+    let at = l
+        .iter()
+        .position(|x| x.contains("Creating ID=50"))
+        .expect("token");
+    l.splice(at + 8..at + 8, enchantment(73, "BG28_309e", 50));
+    l.splice(at + 8 + 7..at + 8 + 7, enchantment(74, "BG28_309e", 50));
+    // In the combat: right after the token's attack, before the last enemy dies.
+    let end = l
+        .iter()
+        .position(|x| x.contains("Entity=41 tag=ZONE value=GRAVEYARD"))
+        .expect("the last enemy dies");
+    l.splice(
+        end..end,
+        [
+            tag("50", "ZONE", "GRAVEYARD"),
+            tag("73", "ZONE", "REMOVEDFROMGAME"),
+            tag("74", "ZONE", "REMOVEDFROMGAME"),
+        ],
+    );
+    let r = replay(&finished(l), 1);
+    let token = r
+        .minions
+        .iter()
+        .find(|m| m.card_id.as_deref() == Some("SYN_TOKEN"))
+        .expect("token");
+    let kinds: Vec<_> = token
+        .buffs
+        .iter()
+        .map(|b| (b.card_id.as_str(), b.count))
+        .collect();
+    assert_eq!(kinds, [("BG28_309", 2)]);
+}
+
 #[test]
 fn the_replay_is_saved_with_its_round() {
     let r = finished(won_combat());

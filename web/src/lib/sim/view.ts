@@ -6,9 +6,10 @@
 // on its half of the table, the opponent's across from the player's.
 // Text goes in as text nodes only (lib/view/node.ts).
 import giftTable from "../../data/gifts.json" with { type: "json" };
-import { compact } from "../data/format.ts";
+import { exactStat, shortStat } from "../stat.ts";
 import { lang } from "../i18n.ts";
 import { giftMarks, giftName } from "../game/gifts.ts";
+import { minionTip, tipHost } from "../game/minionTip.ts";
 import { cls, h, type VNode } from "../view/node.ts";
 import { picture } from "../view/pieces.ts";
 import { MAX_GIFTS, MAX_MINIONS, MAX_STAT, MAX_TIER, SIM_KEYWORDS, type Side, type SimBoard, type SimKeyword, type SimMinion, type SimState } from "./board.ts";
@@ -66,7 +67,7 @@ export const keywordName = (k: SimKeyword): string => sm(`keyword.${k}`);
 const GIFT_IDS = Object.keys(giftTable.gifts);
 
 function minionLabel(m: SimMinion, cards: CardIndex, marks: Marks): string {
-  const parts = [`${cards.name(m.cardId)}, ${m.attack}/${m.health}`];
+  const parts = [`${cards.name(m.cardId)}, ${exactStat(m.attack)}/${exactStat(m.health)}`];
   if (m.golden) parts.push(sm("minion.golden"));
   parts.push(...m.keywords.map(keywordName));
   parts.push(...m.gifts.map((id) => sm("minion.gift", { name: giftName(id) })));
@@ -89,6 +90,7 @@ function card(m: SimMinion, side: Side, board: number, props: EditorProps): VNod
   const blocked = marks.notModelled.has(m.cardId) || marks.missing.has(m.cardId);
   const approx = marks.approximate.has(m.cardId);
   const name = cards.name(m.cardId);
+  const tipId = `sim-tip-${side}-${board}-${m.key}`;
   return h(
     "li",
     { class: "sim-slot" },
@@ -117,7 +119,7 @@ function card(m: SimMinion, side: Side, board: number, props: EditorProps): VNod
         ...where(side, board),
         "aria-pressed": isSelected ? "true" : "false",
         "aria-label": minionLabel(m, cards, marks),
-        title: name,
+        "aria-describedby": tipHost(tipId)["aria-describedby"],
       },
       h("span", { class: "sim-taunt", "aria-hidden": "true" }),
       h("span", { class: "sim-card-art" }, picture("card", m.cardId, name, 56, true), h("span", { class: "sim-veil", "aria-hidden": "true" })),
@@ -126,9 +128,10 @@ function card(m: SimMinion, side: Side, board: number, props: EditorProps): VNod
       m.keywords.length > 0 ? h("span", { class: "sim-kw", "aria-hidden": "true" }, m.keywords.map((k) => SHORT[k]).join(" ")) : null,
       giftStars(m),
       blocked ? h("span", { class: "sim-flag sim-flag-blocked", "aria-hidden": "true" }, "!") : approx ? h("span", { class: "sim-flag", "aria-hidden": "true" }, "≈") : null,
-      h("span", { class: "sim-atk", "aria-hidden": "true" }, compact(m.attack)),
-      h("span", { class: "sim-hp", "aria-hidden": "true" }, compact(m.health)),
+      h("span", { class: "sim-atk", "aria-hidden": "true" }, shortStat(m.attack)),
+      h("span", { class: "sim-hp", "aria-hidden": "true" }, shortStat(m.health)),
     ),
+    minionTip(tipId, { cardId: m.cardId, atk: m.attack, health: m.health, buffs: m.buffs }, "loaded"),
   );
 }
 

@@ -14,6 +14,7 @@
 // Parser revision 13 (T-575) adds three things, each optional: the beats
 // (how many steps each log block gave, so the page plays them at once), each
 // damage's source, and keyword steps (a keyword given or used mid-combat).
+import { type Buff, MAX_BUFF_COUNT, MAX_BUFF_KINDS, oneEachCard } from "./buffs.ts";
 import { KEYWORDS, type Keyword } from "./keywords.ts";
 
 /** The parser's bounds (crates/bg-parser/src/replay.rs), as the server checks them. */
@@ -51,6 +52,8 @@ export interface ReplayMinion {
   keywords: Keyword[];
   gifts: string[];
   giftUnknown: boolean;
+  /** Buffs by card (revision 14); null when the record is older and did not read them. */
+  buffs: Buff[] | null;
 }
 
 export type ReplayEvent =
@@ -136,7 +139,17 @@ function gifts(m: Obj): string[] {
   return [...new Set(ids)];
 }
 
-function minion(v: unknown): ReplayMinion {
+function buffs(m: Obj, recorded: boolean): Buff[] | null {
+  if (!recorded) return null;
+  if (m.buffs === undefined || m.buffs === null) return [];
+  const items = list(m.buffs, MAX_BUFF_KINDS).map((item) => {
+    const o = obj(item);
+    return { cardId: card(o.card_id, false) as string, count: int(o.count, 1, MAX_BUFF_COUNT) };
+  });
+  return oneEachCard(items);
+}
+
+function minion(v: unknown, recorded: boolean): ReplayMinion {
   const m = obj(v);
   return {
     side: side(m.side),
@@ -148,6 +161,7 @@ function minion(v: unknown): ReplayMinion {
     keywords: keywords(m.keywords),
     gifts: gifts(m),
     giftUnknown: m.gift_unknown === undefined || m.gift_unknown === null ? false : bool(m.gift_unknown),
+    buffs: buffs(m, recorded),
   };
 }
 
@@ -244,11 +258,12 @@ function beats(v: unknown, events: number): number[] | null {
 }
 
 /** One round's replay: null when it has none, not ok when it cannot be read. */
-export function readReplay(v: unknown): ReplayRead | null {
+/** `buffsRecorded`: the record's parser read buffs (revision 14), so a minion without any has none. */
+export function readReplay(v: unknown, buffsRecorded = false): ReplayRead | null {
   if (v === undefined || v === null) return null;
   try {
     const r = obj(v);
-    const minions = list(r.minions, MAX_REPLAY_MINIONS).map(minion);
+    const minions = list(r.minions, MAX_REPLAY_MINIONS).map((m) => minion(m, buffsRecorded));
     const raw = list(r.events, MAX_REPLAY_EVENTS);
     const start = int(r.start, 0, minions.length);
     const complete = bool(r.complete);

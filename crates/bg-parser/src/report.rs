@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 
+use crate::buffs::Buff;
 use crate::discover::Discover;
 use crate::hero_select::HeroSelect;
 use crate::leaderboard::{TrinketSeen, TriplesSeen};
@@ -67,6 +68,12 @@ pub struct Minion {
     /// which ("Dark Gift (unknown)"). Left out of the JSON when false.
     #[serde(skip_serializing_if = "is_false")]
     pub gift_unknown: bool,
+    /// Buffs on the minion, by the card that gave them and how many (T-619,
+    /// parser revision 14), at most [`crate::buffs::MAX_BUFF_KINDS`]. Left
+    /// out of the JSON when empty: a revision 14 record without the key has
+    /// none, an older one did not read them.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub buffs: Vec<Buff>,
 }
 
 pub(crate) fn is_false(v: &bool) -> bool {

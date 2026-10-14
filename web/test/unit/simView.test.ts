@@ -131,6 +131,25 @@ test("the editor: each minion a button with its words, the picked one's controls
   assert.equal(fullOut.match(/data-act="add-open"/g)?.length, 1, "only the opponent's");
 });
 
+test("a card shows short numbers and has a tooltip with the exact ones and its buffs (T-619)", () => {
+  let s = B.addMinion(B.emptyState(), "player", 0, "BGS_119", cards);
+  const key = s.player[0].minions[0].key;
+  s = B.setStats(s, "player", 0, key, 12_345, 2_000);
+  const nodes = editorView({ state: s, cards, selected: null, adding: null, marks: NO_MARKS });
+  const out = html(nodes);
+  assert.match(out, /class="sim-atk" aria-hidden="true">12\.3K</);
+  assert.match(out, /class="sim-hp" aria-hidden="true">2K</);
+  assert.match(out, /aria-label="Synthetic Spark, 12,345\/2,000, /, "the words say every digit");
+  const tip = nodes.flatMap(elements).find((n) => n.attrs.some(([k, v]) => k === "role" && v === "tooltip"));
+  assert.ok(tip, "a tooltip");
+  const id = tip.attrs.find(([k]) => k === "id")?.[1];
+  assert.match(out, new RegExp(`aria-describedby="${id}"`));
+  assert.match(text([tip]), /Attack 12,345/);
+  assert.match(text([tip]), /Health 2,000/);
+  assert.match(text([tip]), /No buffs/);
+  assert.doesNotMatch(out, /title="Synthetic Spark"/, "no browser title over the plaque");
+});
+
 test("Duos shows each team's boards and offers a second one; Solo does not", () => {
   const solo = html(editorView({ state: B.emptyState(), cards, selected: null, adding: null, marks: NO_MARKS }));
   assert.doesNotMatch(solo, /board-add/);

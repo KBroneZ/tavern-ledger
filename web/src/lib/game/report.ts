@@ -8,6 +8,7 @@
 // No free text passes except hero names (the game's own, checked like the
 // server does, BattleTag shapes refused) and the parser's short notes.
 
+import { type Buff, buffsRecorded, MAX_BUFF_COUNT, MAX_BUFF_KINDS, oneEachCard } from "./buffs.ts";
 import { KEYWORDS, type Keyword } from "./keywords.ts";
 import { readReplay, type ReplayRead } from "./replayRead.ts";
 import { playedOn } from "./url.ts";
@@ -15,7 +16,7 @@ import { playedOn } from "./url.ts";
 export { KEYWORDS, type Keyword };
 
 /** The parser revision this site knows (crates/bg-parser PARSER_REVISION). */
-export const KNOWN_REVISION = 13;
+export const KNOWN_REVISION = 14;
 
 const CARD_ID = /^[A-Za-z0-9_]{1,64}$/;
 const NOTE = /^[A-Za-z0-9 _:.()-]{1,160}$/;
@@ -60,6 +61,8 @@ export interface Minion {
   gifts: string[];
   /** The game marks a Dark Gift the log does not name. */
   giftUnknown: boolean;
+  /** Buffs the minion has, by card (revision 14, T-619); [] when none; null when the record is older and did not read them. */
+  buffs: Buff[] | null;
 }
 
 export interface Entry {
@@ -181,6 +184,8 @@ const absent = (v: unknown) => v === null || v === undefined;
 /** Reading helpers that count every value they have to drop. */
 class Reader {
   unreadable = 0;
+  /** The record's parser read buffs (revision 14): a minion without them has none, not unknown. */
+  buffsRecorded = false;
 
   bad<T>(fallback: T): T {
     this.unreadable += 1;
@@ -262,7 +267,20 @@ function minion(r: Reader, v: unknown): Minion {
     keywords,
     gifts: absent(m.gifts) ? [] : [...new Set(r.list(m.gifts, MAX_GIFTS).map((v) => r.card(v)).filter((v): v is string => v !== null))],
     giftUnknown: absent(m.gift_unknown) ? false : r.bool(m.gift_unknown),
+    buffs: r.buffsRecorded ? buffs(r, m.buffs) : null,
   };
+}
+
+/** A minion's buffs: a card once, a count from 1 to 999; what is not that is counted and dropped. */
+function buffs(r: Reader, v: unknown): Buff[] {
+  const out: Buff[] = [];
+  for (const item of r.list(v, MAX_BUFF_KINDS)) {
+    const o = r.obj(item);
+    const cardId = o ? r.card(o.card_id) : null;
+    const count = o ? r.int(o.count, 1, MAX_BUFF_COUNT) : null;
+    if (cardId !== null && count !== null) out.push({ cardId, count });
+  }
+  return oneEachCard(out);
 }
 
 function gameValues(r: Reader, v: unknown): GameValues | null {
@@ -301,7 +319,7 @@ function round(r: Reader, v: unknown): Round | null {
 
 /** A replay that cannot be read is one unreadable value, shown as "not available". */
 function replayOf(r: Reader, v: unknown): ReplayRead | null {
-  const read = readReplay(v);
+  const read = readReplay(v, r.buffsRecorded);
   if (read && !read.ok) r.bad(null);
   return read;
 }
@@ -461,6 +479,7 @@ export function readRecord(value: unknown): ReadResult {
     ? parser.version
     : parser ? r.bad(null) : null;
   const revision = parser ? r.int(parser.revision, 0, 999_999) : null;
+  r.buffsRecorded = buffsRecorded(revision);
   const rep = report(r, value.report);
   return {
     ok: true,

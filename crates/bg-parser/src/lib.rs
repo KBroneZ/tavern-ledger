@@ -7,6 +7,7 @@
 //! not match what this parser expects (e.g. after a game patch), the game is
 //! "unsupported" instead of showing wrong data.
 
+pub mod buffs;
 pub mod clock;
 pub mod collector;
 pub mod counters;
@@ -35,7 +36,7 @@ pub const PARSER_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Bump when a change makes the parser read the same log differently (new
 /// fields, fixed bugs). Saved with every game so `tavern-watch --reparse`
 /// and the server can tell which records an older parser wrote.
-pub const PARSER_REVISION: u32 = 13;
+pub const PARSER_REVISION: u32 = 14;
 
 /// Builds whose real logs this parser was checked against.
 pub const TESTED_BUILDS: &[i64] = &[253216];

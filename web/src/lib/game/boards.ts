@@ -4,29 +4,31 @@
 // the replay (replay.css), and the card's name under it. The keywords are in
 // the minion's words (the tooltip and what a screen reader hears).
 import { cls, h, type VNode } from "../view/node.ts";
+import { shortStat } from "../stat.ts";
 import { picture } from "../view/pieces.ts";
 import { giftList } from "./gifts.ts";
+import { minionTip, tipHost } from "./minionTip.ts";
 import { cardLabel } from "./names.ts";
 import type { Minion } from "./report.ts";
 import type { BoardView, HeroRef } from "./shape.ts";
 import { g } from "./strings.ts";
 import * as w from "./words.ts";
 
-function minionTile(m: Minion): VNode {
+function minionTile(m: Minion, tipId: string): VNode {
   const words = w.minionWords(m);
-  const stat = (v: number | null) => (v === null ? "?" : String(v));
   return h(
     "li",
-    { class: cls("rp-minion", "gv-minion", { "is-golden": m.golden, "has-shield": m.keywords.includes("divine_shield") }), title: words },
+    { class: cls("rp-minion", "gv-minion", { "is-golden": m.golden, "has-shield": m.keywords.includes("divine_shield") }), ...tipHost(tipId) },
     h("span", { class: "rp-art" }, picture("card", m.cardId, words, 56, true)),
     h(
       "span",
       { class: "rp-info" },
-      h("span", { class: "rp-stats", "aria-hidden": "true" }, h("span", { class: "rp-atk" }, stat(m.atk)), h("span", { class: "rp-hp" }, stat(m.health))),
+      h("span", { class: "rp-stats", "aria-hidden": "true" }, h("span", { class: "rp-atk" }, shortStat(m.atk)), h("span", { class: "rp-hp" }, shortStat(m.health))),
       h("span", { class: "visually-hidden" }, words),
     ),
     h("span", { class: "gv-minion-name", "aria-hidden": "true" }, cardLabel(m.cardId, g("minion.unknownCard"))),
     giftList(m),
+    minionTip(tipId, { cardId: m.cardId, atk: m.atk, health: m.health, buffs: m.buffs }),
   );
 }
 
@@ -43,7 +45,7 @@ export function boardBlock(id: string, title: string, hero: HeroRef | null, view
       " ",
       h("span", { class: "gv-dim" }, view ? w.boardTotals(view) : g("boards.unknown")),
     ),
-    view && view.minions.length > 0 ? h("ul", { class: "rp-board gv-minions", role: "list", "aria-labelledby": id }, view.minions.map(minionTile)) : null,
+    view && view.minions.length > 0 ? h("ul", { class: "rp-board gv-minions", role: "list", "aria-labelledby": id }, view.minions.map((m, i) => minionTile(m, `${id}-tip-${i}`))) : null,
   );
 }
 

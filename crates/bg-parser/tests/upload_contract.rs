@@ -105,6 +105,16 @@ fn walk(level: &str, value: &Value, seen: &mut BTreeMap<String, BTreeSet<String>
             "report.rounds[].replay.minions[]",
         ),
         (
+            "report.rounds[].entries[].board[]",
+            "buffs",
+            "report.rounds[].entries[].board[].buffs[]",
+        ),
+        (
+            "report.rounds[].replay.minions[]",
+            "buffs",
+            "report.rounds[].replay.minions[].buffs[]",
+        ),
+        (
             "report.rounds[].replay",
             "events",
             "report.rounds[].replay.events[]",

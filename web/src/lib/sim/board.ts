@@ -6,6 +6,7 @@
 // the ones the player saw on screen. The saved report never holds the
 // combats the game does not play back (T-213 left them out), so no
 // SETASIDE board can come in this way.
+import type { Buff } from "../game/buffs.ts";
 import type { GameRecord, GameValues, Minion as ReportMinion, Round } from "../game/report.ts";
 import type { CardIndex } from "./cards.ts";
 
@@ -47,6 +48,12 @@ export interface SimMinion {
    * not hold them yet (T-528); the editor's controls come with T-526.
    */
   gifts: string[];
+  /**
+   * The buffs the game's log showed on the minion, for its tooltip only (T-619):
+   * the engine never reads them. [] for a minion added by hand; null when the
+   * game was saved before they were read.
+   */
+  buffs: Buff[] | null;
 }
 
 export interface SimBoard {
@@ -144,6 +151,7 @@ function minionFrom(m: ReportMinion, cards: CardIndex): SimMinion | null {
     health: Math.min(m.health, MAX_STAT),
     keywords,
     gifts: [...new Set(m.gifts.filter((g) => GIFT_ID.test(g)))].slice(0, MAX_GIFTS),
+    buffs: m.buffs,
   };
 }
 
@@ -236,6 +244,7 @@ export function addMinion(state: SimState, side: Side, index: number, cardId: st
     health: card.h,
     keywords: SIM_KEYWORDS.filter((k) => card.k.includes(TAG[k])),
     gifts: [],
+    buffs: [],
   };
   return mapBoard(state, side, index, (b) => ({ ...b, minions: [...b.minions, minion] }));
 }

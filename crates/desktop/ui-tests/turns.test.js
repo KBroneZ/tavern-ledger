@@ -5,6 +5,7 @@ const TLTurns = require("../ui/turns.js");
 const I18n = require("../ui/i18n.js");
 require("../ui/strings/common.js");
 require("../ui/strings/details.js");
+require("../ui/strings/replay.js");
 
 const minion = (card_id, atk, health, extra = {}) => ({ card_id, atk, health, golden: false, keywords: [], ...extra });
 const shopTurn = (turn, extra = {}) => ({
@@ -207,4 +208,92 @@ test("in Duos the teammate's board joins the turn beside yours, from a stripped 
   assert.equal(three.own.mine, false, "no entry of yours: the teammate's shows in the first slot");
   assert.equal(three.partner, null, "and is not drawn twice");
   assert.equal(TLTurns.rows(recap(), report)[0].partner, null, "Solo has no partner");
+});
+
+// T-619, D-142: buffs on a minion, for its tooltip.
+test("buffs: unknown unless the record read them, a card once, bad ones dropped", () => {
+  const raw = [
+    { card_id: "BG20_GEM", count: 2 },
+    { card_id: "BG20_GEM", count: 9 },
+    { card_id: "BG31_816", count: 0 },
+    { card_id: 7, count: 1 },
+    { card_id: "BG28_309", count: 1000 },
+    { card_id: "BG28_503" },
+  ];
+  assert.equal(TLTurns.buffsOf({ buffs: raw }, false), null);
+  assert.deepEqual(TLTurns.buffsOf({ buffs: raw }, true), [{ id: "BG20_GEM", count: 2 }, { id: "BG28_309", count: 999 }]);
+  assert.deepEqual(TLTurns.buffsOf({}, true), [], "recorded, none");
+  assert.deepEqual(TLTurns.buffsOf({ buffs: "BG20_GEM" }, true), []);
+});
+
+test("a turn's own board carries each minion's buffs when the record read them", () => {
+  const withBuffs = {
+    ...report,
+    buffs_recorded: true,
+    rounds: [{ number: 1, entries: [{ side: "own", player_id: 2, hero: "HERO_A", board: [minion("BG_A", 1, 2, { buffs: [{ card_id: "BG20_GEM", count: 3 }] }), minion("BG_B", 3, 4)] }] }],
+  };
+  const own = TLTurns.rows(recap(), withBuffs).find((x) => x.turn === 1).own;
+  assert.deepEqual(own.minions[0].buffs, [{ id: "BG20_GEM", count: 3 }]);
+  assert.deepEqual(own.minions[1].buffs, []);
+  const older = TLTurns.rows(recap(), { ...withBuffs, buffs_recorded: false }).find((x) => x.turn === 1).own;
+  assert.equal(older.minions[0].buffs, null);
+});
+
+test("the tooltip's facts: exact numbers, each buff with its name and count, and the unknown and empty cases", () => {
+  I18n.setLang("en");
+  const name = (id) => ({ BG20_GEM: "Blood Gem" })[id] || null;
+  const facts = TLTurns.tipFacts({ atk: 2336, health: 1263, buffs: [{ id: "BG20_GEM", count: 3 }, { id: "BG_X", count: 1 }] }, name);
+  assert.deepEqual(facts.stats, ["Attack 2,336", "Health 1,263"]);
+  assert.deepEqual(facts.buffs.map((b) => [b.id, b.text]), [["BG20_GEM", "Blood Gem ×3"], ["BG_X", "BG_X ×1"]]);
+  assert.equal(facts.note, null);
+  assert.equal(TLTurns.tipFacts({ atk: 1, health: 1, buffs: [] }, name).note, "No buffs");
+  assert.equal(TLTurns.tipFacts({ atk: 1, health: 1, buffs: null }, name).note, "Buffs are not recorded for this game.");
+  assert.deepEqual(TLTurns.tipFacts({ atk: null, health: 4, buffs: [] }, name).stats, ["Attack ?", "Health 4"]);
+  I18n.setLang("es");
+  const es = TLTurns.tipFacts({ id: "BG20_GEM", atk: 1234567, health: 8, buffs: [{ id: "BG20_GEM", count: 2 }] }, name);
+  assert.deepEqual(es.stats, ["Ataque 1.234.567", "Vida 8"]);
+  assert.equal(es.heading, "Mejoras al empezar el combate");
+  assert.equal(es.name, "Blood Gem", "the plaque names the minion");
+  assert.equal(TLTurns.tipFacts({ id: null, atk: 1, health: 1, buffs: [] }, name).name, I18n.t("shop.card.unknown"));
+  I18n.setLang("en");
+});
+
+test("Escape hides the plaques until the pointer or the focus moves again", () => {
+  const attrs = new Map();
+  const root = { setAttribute: (k, v) => attrs.set(k, v), removeAttribute: (k) => attrs.delete(k) };
+  const listeners = {};
+  TLTurns.watchTipEscape({ documentElement: root, addEventListener: (type, fn) => (listeners[type] = fn) });
+  listeners.keydown({ key: "a" });
+  assert.equal(attrs.has("data-tips-off"), false);
+  listeners.keydown({ key: "Escape" });
+  assert.equal(attrs.get("data-tips-off"), "");
+  listeners.pointermove({});
+  assert.equal(attrs.has("data-tips-off"), false);
+  listeners.keydown({ key: "Escape" });
+  listeners.focusin({});
+  assert.equal(attrs.has("data-tips-off"), false);
+});
+
+// The parser, the server, the website and the app each state the same
+// bounds for a minion's buffs; a change to one must reach the others.
+test("the buffs' bounds are the parser's, the server's and the website's", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const root = path.join(__dirname, "..", "..", "..");
+  const read = (...p) => fs.readFileSync(path.join(root, ...p), "utf8");
+  const rust = read("crates", "bg-parser", "src", "buffs.rs");
+  const kinds = Number(/MAX_BUFF_KINDS: usize = (\d+)/.exec(rust)[1]);
+  const count = Number(/MAX_BUFF_COUNT: u32 = (\d+)/.exec(rust)[1]);
+  const deno = read("supabase", "functions", "upload-game", "checks.ts");
+  assert.equal(Number(/MAX_BUFF_KINDS = (\d+)/.exec(deno)[1]), kinds, "the server");
+  assert.equal(Number(/MAX_BUFF_COUNT = (\d+)/.exec(deno)[1]), count, "the server");
+  const web = read("web", "src", "lib", "game", "buffs.ts");
+  assert.equal(Number(/MAX_BUFF_KINDS = (\d+)/.exec(web)[1]), kinds, "the website");
+  assert.equal(Number(/MAX_BUFF_COUNT = (\d+)/.exec(web)[1]), count, "the website");
+  const turns = read("crates", "desktop", "ui", "turns.js");
+  assert.match(turns, new RegExp(`slice\\(0, ${kinds}\\)`), "the app: kinds");
+  assert.match(turns, new RegExp(`Math\\.min\\(b\\.count, ${count}\\)`), "the app: count");
+  assert.match(read("crates", "desktop", "ui", "app.js"), /revision >= 14/, "the app: first revision with buffs");
+  assert.match(read("web", "src", "lib", "game", "buffs.ts"), /BUFFS_REVISION = 14/, "the website: first revision with buffs");
+  assert.match(read("crates", "bg-parser", "src", "lib.rs"), /PARSER_REVISION: u32 = 14/, "the parser");
 });

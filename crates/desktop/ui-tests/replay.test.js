@@ -412,3 +412,24 @@ test("a Taunt taken mid-combat drops its shield on that step (T-581)", () => {
   assert.ok(f[2].opponent[1].keywords.includes("taunt"), "the other keeps it");
   assert.ok(!f[3].opponent[0].keywords.includes("taunt"));
 });
+
+// T-619, D-142: a replay minion's buffs, as it entered the combat.
+test("frames keep each minion's buffs when the record read them, and say unknown when it did not", () => {
+  const r = replay();
+  r.minions[0].buffs = [{ card_id: "BG20_GEM", count: 2 }];
+  const unknown = TLReplay.frames(r);
+  assert.equal(unknown[0].own[0].buffs, null);
+  const known = TLReplay.frames(r, true);
+  assert.deepEqual(known[0].own[0].buffs, [{ id: "BG20_GEM", count: 2 }]);
+  assert.deepEqual(known[0].own[1].buffs, [], "recorded, none");
+  // The token that is summoned later brings its own.
+  r.minions[4].buffs = [{ card_id: "BG28_309", count: 1 }];
+  const last = TLReplay.frames(r, true).at(-1);
+  assert.deepEqual(last.own.find((x) => x.id === "TOKEN").buffs, [{ id: "BG28_309", count: 1 }]);
+});
+
+test("combats says whether the record read buffs, from the report", () => {
+  const rounds = [{ number: 1, replay: replay() }];
+  assert.equal(TLReplay.combats({ rounds, buffs_recorded: true }).shown[0].buffs_recorded, true);
+  assert.equal(TLReplay.combats({ rounds }).shown[0].buffs_recorded, false);
+});

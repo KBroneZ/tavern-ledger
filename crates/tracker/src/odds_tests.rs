@@ -21,6 +21,7 @@ fn minion(card: &str, atk: i64, health: i64, position: i64) -> LogMinion {
         sim_keywords: Vec::new(),
         gifts: Vec::new(),
         gift_unknown: false,
+        buffs: Vec::new(),
     }
 }
 

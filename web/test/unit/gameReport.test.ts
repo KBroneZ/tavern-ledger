@@ -32,6 +32,7 @@ test("report reader: a whole synthetic Solo game, nothing dropped", () => {
     keywords: ["taunt", "divine_shield"],
     gifts: [],
     giftUnknown: false,
+    buffs: null,
   });
   assert.equal(r.rounds[2].entries[0].board, null, "no board is unknown");
   assert.deepEqual(r.rounds[2].entries[1].board, [], "an empty board stays empty");
@@ -207,6 +208,28 @@ test("report reader: Dark Gifts on board minions (revision 9), bad ones counted"
   assert.equal(bad.unreadable, 2, "a gift_unknown that is not true or false is counted too");
 });
 
+test("report reader: buffs on board minions (revision 14): unknown before it, bad ones counted", () => {
+  const report = soloReport() as Record<string, any>;
+  const board = report.rounds[1].entries[0].board;
+  board[0].buffs = [
+    { card_id: "BG20_GEM", count: 2 },
+    { card_id: "BG20_GEM", count: 1 },
+    { card_id: "<b>", count: 1 },
+    { card_id: "BG31_816", count: 0 },
+    { card_id: "BG28_309", count: 3 },
+  ];
+  const old = read(record(report));
+  assert.equal(old.report.rounds[1].entries[0].board?.[0].buffs, null, "a record before revision 14 did not read buffs");
+  assert.equal(old.unreadable, 0, "and its buffs key is not read at all");
+  const rec = read(record(report, { parser: { version: "0.1.0", revision: 14 } }));
+  const [first, second] = rec.report.rounds[1].entries[0].board ?? [];
+  assert.deepEqual(first.buffs, [{ cardId: "BG20_GEM", count: 2 }, { cardId: "BG28_309", count: 3 }], "a card once; markup and zero dropped");
+  assert.equal(rec.unreadable, 2, "the bad id and the zero are counted");
+  assert.deepEqual(second.buffs, [], "revision 14 without the key: recorded, none");
+  board[1].buffs = "BG20_GEM";
+  assert.deepEqual(read(record(report, { parser: { version: "0.1.0", revision: 14 } })).report.rounds[1].entries[0].board?.[1].buffs, []);
+});
+
 test("report reader: the real game with Dark Gifts reads without a dropped value", () => {
   const dir = join(import.meta.dirname, "..", "..", "..", "crates", "bg-parser", "tests", "data", "real");
   const [game] = JSON.parse(readFileSync(join(dir, "b253216_duos_gifts.json"), "utf8")) as Record<string, any>[];
@@ -214,6 +237,8 @@ test("report reader: the real game with Dark Gifts reads without a dropped value
   const result = readRecord({ session: SESSION, index: game.index, saved_at: 1, parser, report: game });
   assert.ok(result.ok);
   assert.equal(result.record.unreadable, 0);
+  const buffed = result.record.report.rounds.flatMap((r) => r.entries.flatMap((e) => e.board ?? [])).filter((m) => (m.buffs ?? []).length > 0);
+  assert.ok(buffed.length > 0, "the fixture's enchantments are read as buffs");
   const gifted = result.record.report.rounds.flatMap((r) => r.entries.flatMap((e) => e.board ?? [])).filter((m) => m.gifts.length > 0);
   assert.equal(gifted.length, 23);
 });
