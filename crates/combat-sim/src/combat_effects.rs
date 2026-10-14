@@ -274,7 +274,10 @@ impl Combat<'_> {
         };
         let at = self.summon_pos(side, src);
         let (more_attack, more_health) = self.game_stats(side, card);
-        let (attack, health) = (base.attack + more_attack, base.health + more_health);
+        let (attack, health) = (
+            base.attack.saturating_add(more_attack),
+            base.health.saturating_add(more_health),
+        );
         for k in 0..usize::from(count) {
             let unit = self.fresh(card, attack, health, base.keywords);
             let uid = unit.uid;

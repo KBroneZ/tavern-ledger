@@ -146,7 +146,7 @@ test("edits return new states and keep the rules: seven minions, tiers 1 to 7, s
   assert.equal(B.moveMinion(s, "player", 0, b.key, -1).player[0].minions[0].key, b.key, "the left end stays");
   s = B.setStats(s, "player", 0, a.key, -5, 0);
   assert.deepEqual([s.player[0].minions[1].attack, s.player[0].minions[1].health], [0, 1]);
-  s = B.setStats(s, "player", 0, a.key, 1e9, NaN);
+  s = B.setStats(s, "player", 0, a.key, 1e12, NaN);
   assert.deepEqual([s.player[0].minions[1].attack, s.player[0].minions[1].health], [B.MAX_STAT, 1]);
   s = B.toggleKeyword(s, "player", 0, a.key, "taunt");
   assert.deepEqual(s.player[0].minions[1].keywords, ["taunt", "divine_shield", "windfury"], "in the engine's order");
@@ -214,6 +214,33 @@ test("Dark Gifts: added once each, at most four, removed, and sent with the mini
   s = B.removeGift(s, "player", 0, key, "G1");
   assert.deepEqual(s.player[0].minions[0].gifts, [golemancy, "G2", "G3"]);
   assert.equal(B.removeGift(s, "player", 0, key, "G1"), s, "removing a missing gift changes nothing");
+});
+
+test("a minion takes any Attack and Health up to the 32-bit limit, and the built engine plays it (T-621)", async () => {
+  const MAX = 2 ** 31 - 1;
+  assert.equal(B.MAX_STAT, MAX);
+  let s = B.addMinion(B.emptyState(), "player", 0, "BGS_119", cards);
+  s = B.addMinion(s, "opponent", 0, "BG_ICC_026t", cards);
+  const key = s.player[0].minions[0].key;
+  for (const [typed, kept] of [[99_999, 99_999], [100_000, 100_000], [MAX - 1, MAX - 1], [MAX, MAX], [MAX + 1, MAX], [1e12, MAX]]) {
+    const next = B.setStats(s, "player", 0, key, typed, typed);
+    assert.deepEqual([next.player[0].minions[0].attack, next.player[0].minions[0].health], [kept, kept], String(typed));
+  }
+  const odd = B.setStats(s, "player", 0, key, Infinity, NaN);
+  assert.deepEqual([odd.player[0].minions[0].attack, odd.player[0].minions[0].health], [0, 1], "not a number: the lowest value");
+  // A stored game's huge minion is loaded whole, not cut to 99,999.
+  const report = soloReport();
+  const board = (report.rounds as { entries: { side: string; board: { atk: number; health: number }[] }[] }[])[1].entries.find((e) => e.side === "own")!.board;
+  board[0].atk = MAX;
+  board[0].health = 123_456;
+  const loaded = B.fromRound(game(report), 2, cards);
+  assert.ok(loaded);
+  assert.deepEqual([loaded.state.player[0].minions[0].attack, loaded.state.player[0].minions[0].health], [MAX, 123_456]);
+  // The engine takes the request and gives the odds, with no wrap.
+  const engine = await loadEngine(readFileSync(WASM_PATH));
+  s = B.setStats(s, "player", 0, key, MAX, MAX);
+  const answer = readAnswer(engine.run(B.toRequest(s, cards)));
+  assert.ok(answer.kind === "odds" && answer.won === answer.trials, JSON.stringify(answer));
 });
 
 test("round trip: a stored game's round, played by the built engine, gives a readable answer", async () => {
