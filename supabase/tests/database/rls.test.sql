@@ -93,8 +93,8 @@ select throws_ok(
 set local role anon;
 select set_config('request.jwt.claims', '{"role": "anon"}', true);
 
-select is_empty($$ select * from public.profiles $$, 'anon sees no private profile');
-select is_empty($$ select * from public.games $$, 'anon sees no game of a private profile');
+select is_empty($$ select user_id, display_name, is_public from public.profiles $$, 'anon sees no private profile');
+select is_empty($$ select user_id from public.games $$, 'anon sees no game of a private profile');
 select is_empty($$ select * from storage.objects where bucket_id = 'games' $$,
   'anon sees no file of a private profile');
 select throws_ok($$ select public.export_my_data() $$, '42501', null,
@@ -111,7 +111,7 @@ select results_eq(
   $$ values ('00000000-0000-4000-8000-00000000000b'::uuid) $$,
   'another user sees only their own profile, not a private one'
 );
-select is_empty($$ select * from public.games $$, 'another user cannot read private games');
+select is_empty($$ select user_id from public.games $$, 'another user cannot read private games');
 select is_empty($$ select * from storage.objects where bucket_id = 'games' $$,
   'another user cannot read private files');
 select is_empty(

@@ -59,6 +59,7 @@ test("anything unexpected in a row throws instead of showing", () => {
     { hero: "<script>" , board: "hero_avg_place" },
     { user_id: "not-a-uuid" },
     { display_name: "Name#1234" },
+    { display_name: "Аdmin" },
     { display_name: "" },
     { display_name: null },
     { display_name: "x".repeat(33) },

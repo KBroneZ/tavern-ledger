@@ -168,9 +168,10 @@ export const ES: Record<AccountKey, string> = {
 
   // Display name and saves (lib/profile.ts).
   "profile.maxLength": "Hasta {max} caracteres.",
-  "profile.chars": "Usa solo letras, dígitos, espacios, _ . o -.",
+  "profile.chars": "Usa solo letras latinas (con tildes), dígitos, espacios, _ . o -.",
   "profile.notAllowed": "Este nombre no está permitido. Elige otro: los nombres se muestran en las páginas públicas y las clasificaciones.",
-  "profile.charsRange": "Usa solo de 1 a 32 letras, dígitos, espacios, _ . o -.",
+  "profile.charsRange": "Usa solo de 1 a 32 letras latinas (con tildes), dígitos, espacios, _ . o -.",
+  "profile.taken": "Otro perfil público ya usa este nombre. Elige otro.",
   "profile.sessionEnded": "Tu sesión ha terminado. Vuelve a iniciar sesión.",
   "profile.saveFailed": "No se ha podido guardar. Vuelve a intentarlo en un momento.",
 

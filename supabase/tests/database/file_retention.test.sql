@@ -111,9 +111,9 @@ select ok(
     select 1 from unnest(array['anon', 'authenticated']) as r(role)
     where has_column_privilege(r.role, 'public.games', 'file_expired_at', 'insert,update')
   )
-  and has_column_privilege('authenticated', 'public.games', 'file_expired_at', 'select')
+  and not has_column_privilege('authenticated', 'public.games', 'file_expired_at', 'select')
   and has_column_privilege('authenticated', 'public.game_summaries', 'file_expired_at', 'select'),
-  'clients read file_expired_at (games and game_summaries) and cannot write it'
+  'clients read file_expired_at only through game_summaries (the owner''s rows) and cannot write it'
 );
 
 set local role authenticated;

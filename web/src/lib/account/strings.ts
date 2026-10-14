@@ -167,9 +167,10 @@ export const ACCOUNT_STRINGS = {
 
   // Display name and saves (lib/profile.ts).
   "profile.maxLength": "Up to {max} characters.",
-  "profile.chars": "Use letters, digits, spaces, _ . or - only.",
+  "profile.chars": "Use Latin letters (accents are fine), digits, spaces, _ . or - only.",
   "profile.notAllowed": "This name is not allowed. Choose another one: names show on public pages and leaderboards.",
-  "profile.charsRange": "Use 1 to 32 letters, digits, spaces, _ . or - only.",
+  "profile.charsRange": "Use 1 to 32 Latin letters (accents are fine), digits, spaces, _ . or - only.",
+  "profile.taken": "Another public profile already uses this name. Choose another one.",
   "profile.sessionEnded": "Your session ended. Sign in again.",
   "profile.saveFailed": "Could not save. Try again in a moment.",
 
