@@ -7,6 +7,7 @@ import { type Json, realGifts, realRecord, SESSION } from "./testdata.ts";
 import buffGames from "../../../crates/bg-parser/tests/data/rust/game_buffs_games.json" with {
   type: "json",
 };
+import contract from "./report_keys.json" with { type: "json" };
 import { validateRecord, VALIDATOR_VERSION } from "./validate.ts";
 
 function assertEquals(actual: unknown, expected: unknown, msg = ""): void {
@@ -44,6 +45,13 @@ Deno.test("the parser's buffs have the shape the validator accepts (revision 14)
     { card_id: "BG20_GEM", count: 2 },
   ]);
   assertEquals(VALIDATOR_VERSION >= 11, true, "a version that accepts buffs");
+});
+
+Deno.test("the buff keys the validator checks are the ones the contract lists", () => {
+  // checks.ts names them itself, so a key added to the contract alone would be refused.
+  for (const level of ["report.rounds[].entries[].board[].buffs[]", "report.rounds[].replay.minions[].buffs[]"]) {
+    assertEquals((contract.keys as Record<string, string[]>)[level], ["card_id", "count"], level);
+  }
 });
 
 Deno.test("real games with buffs (blessed fixtures) are accepted", () => {
