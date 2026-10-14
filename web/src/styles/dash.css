@@ -115,6 +115,15 @@
   outline-offset: 2px;
 }
 
+/* A gate (signed out, private, error) keeps the filters' room: what is drawn below must not move. */
+.list-filters.is-off {
+  opacity: 0.4;
+}
+
+#list-back.is-off {
+  visibility: hidden;
+}
+
 .list-actions {
   display: flex;
   flex-wrap: wrap;
@@ -152,4 +161,15 @@
     grid-column: 1 / -1;
     grid-row: 1;
   }
+}
+
+/* The note on your own page (private or public) arrives with the data; its
+   two lines are kept from the start, so the panels below do not move down
+   when it is drawn. A page that shows a gate hides the note's room too. */
+.dash[data-kind="own"] #dash-note {
+  min-height: 2lh;
+}
+
+.dash[data-kind="own"] #dash-note:empty:has(~ #dash-gate:not([hidden])) {
+  display: none;
 }

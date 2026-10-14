@@ -197,7 +197,10 @@ test("_headers: the anti-robot pages alone get Turnstile's origin, replacing the
 test("_headers: the account and dashboard pages are never stored, in both languages", () => {
   const headers = readFileSync(join(DIST, "_headers"), "utf8");
   const rules = headers.split(/\n(?=\S)/).map((block) => block.trim().split("\n").map((l) => l.trim()));
-  assert.deepEqual(NO_STORE_PAGES, ["/account/", "/es/account/", "/me/", "/es/me/"]);
+  assert.deepEqual(
+    NO_STORE_PAGES.toSorted(),
+    ["account", "me", "games", "game", "player-heroes", "curious"].flatMap((p) => [`/${p}/`, `/es/${p}/`]).toSorted(),
+  );
   for (const path of NO_STORE_PAGES) {
     const rule = rules.find((r) => r[0] === path);
     assert.deepEqual(rule, [path, "Cache-Control: no-store"], path);
@@ -765,4 +768,18 @@ test("accounts open: the leaderboards are a static frame with reserved room, lin
     assert.match(page(file), /<a href="\/leaderboards\/"[^>]*>Leaderboards<\/a>/, file);
   }
   assert.match(html, /<a href="\/leaderboards\/" aria-current="page">/);
+});
+
+test("the games list and the dashboard keep their room while data loads (no layout shift)", { skip: !CONFIG }, () => {
+  const css = readdirSync(join(DIST, "_astro"))
+    .filter((f) => f.endsWith(".css"))
+    .map((f) => readFileSync(join(DIST, "_astro", f), "utf8"))
+    .join("\n");
+  // The note on your own dashboard has its two lines from the start.
+  assert.match(css, /\.dash\[data-kind=own\] #dash-note\{[^}]*min-height:2lh/);
+  // A gate on the games list greys the filters instead of removing them.
+  assert.match(css, /\.list-filters\.is-off\{[^}]*opacity:/);
+  assert.match(css, /#list-back\.is-off\{[^}]*visibility:hidden/);
+  const script = readFileSync(join(ROOT, "src", "scripts", "games.ts"), "utf8");
+  assert.doesNotMatch(script, /(form|back)\.hidden = true/);
 });
