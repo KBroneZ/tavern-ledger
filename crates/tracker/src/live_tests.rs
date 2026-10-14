@@ -146,6 +146,32 @@ fn dark_gifts_come_with_the_board() {
 }
 
 #[test]
+fn buffs_come_with_the_board_bounded_and_without_what_is_not_one() {
+    let mut buffed = minion("M_A", 2, 3, 1);
+    buffed["buffs"] = json!([
+        {"card_id": "BG20_GEM", "count": 3},
+        {"card_id": "BG31_816", "count": 5000},
+        {"card_id": 7, "count": 1},
+        {"card_id": "BG28_309"},
+    ]);
+    let board = json!([buffed, minion("M_B", 1, 1, 2)]);
+    let live = live_game(&solo(
+        vec![round(1, 2, board, json!({"1": 40, "2": 40}))],
+        "incomplete",
+    ));
+    let minions = &opponent(&live, 2).boards[0].minions;
+    let kinds: Vec<_> = minions[0]
+        .buffs
+        .iter()
+        .map(|b| (b.card_id.as_str(), b.count))
+        .collect();
+    assert_eq!(kinds, [("BG20_GEM", 3), ("BG31_816", 999)]);
+    assert!(minions[1].buffs.is_empty());
+    let json = serde_json::to_string(&minions[1]).unwrap();
+    assert!(!json.contains("buffs"), "{json}");
+}
+
+#[test]
 fn an_empty_board_that_did_play_is_a_board() {
     let live = live_game(&solo(
         vec![round(1, 2, json!([]), json!({"1": 40, "2": 40}))],

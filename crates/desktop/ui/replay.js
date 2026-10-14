@@ -62,16 +62,17 @@
     const rounds = list(report && report.rounds).filter((r) => r && isInt(r.number));
     const recorded = rounds.length > 0 && rounds.every((r) => Object.prototype.hasOwnProperty.call(r, "replay"));
     const shown = [];
+    const buffsRecorded = Boolean(report && report.buffs_recorded === true);
     const notShown = [];
     rounds.forEach((r) => {
-      if (usable(r.replay)) shown.push({ round: r.number, replay: r.replay });
+      if (usable(r.replay)) shown.push({ round: r.number, replay: r.replay, buffs_recorded: buffsRecorded });
       else if (recorded) notShown.push(r.number);
     });
     shown.sort((a, b) => a.round - b.round);
     return { recorded, shown, notShown: notShown.sort((a, b) => a - b) };
   }
 
-  function tileOf(m, ref) {
+  function tileOf(m, ref, recorded = false) {
     const keywords = list(m.keywords).filter((k) => typeof k === "string");
     return {
       ref,
@@ -83,6 +84,8 @@
       keywords,
       gifts: list(m.gifts).filter((g) => typeof g === "string"),
       gift_unknown: m.gift_unknown === true,
+      // Buffs as the combat began (revision 14); null when the record did not read them.
+      buffs: Turns.buffsOf(m, recorded),
     };
   }
 
@@ -118,14 +121,14 @@
   }
 
   // The boards as the combat starts: every minion before `start` on its side.
-  function startState(replay) {
+  function startState(replay, recorded = false) {
     const minions = list(replay && replay.minions).map((m) => (m && typeof m === "object" ? m : {}));
     const start = isInt(replay && replay.start) ? Math.min(Math.max(replay.start, 0), minions.length) : 0;
-    const st = { minions, tiles: new Map(), boards: { own: [], opponent: [] }, hero: { own: 0, opponent: 0 }, heroes: { own: null, opponent: null }, dying: [], incoming: new Set() };
+    const st = { recorded, minions, tiles: new Map(), boards: { own: [], opponent: [] }, hero: { own: 0, opponent: 0 }, heroes: { own: null, opponent: null }, dying: [], incoming: new Set() };
     for (let ref = 0; ref < start; ref++) {
       const side = minions[ref].side;
       if (!SIDES.includes(side)) continue;
-      st.tiles.set(ref, tileOf(minions[ref], ref));
+      st.tiles.set(ref, tileOf(minions[ref], ref, recorded));
       st.boards[side].push(ref);
     }
     return st;
@@ -169,7 +172,7 @@
         // too, but a board coming in fills from the left.
         const unplaced = !isInt(m.position) || (m.position <= 0 && st.incoming.has(m.side));
         const at = unplaced ? board.length : m.position - 1;
-        st.tiles.set(e.minion, tileOf(m, e.minion));
+        st.tiles.set(e.minion, tileOf(m, e.minion, st.recorded));
         board.splice(Math.min(Math.max(at, 0), board.length), 0, e.minion);
         mark(e.minion, { summoned: true });
         break;
@@ -217,8 +220,8 @@
   // event and its marks (attacker, defender, hurt, summoned, dying).
   // `skipped` counts the events this page could not play; a hand-edited
   // file is cut at the parser's own bound.
-  function frames(replay) {
-    const st = startState(replay);
+  function frames(replay, recorded = false) {
+    const st = startState(replay, recorded);
     const out = [snapshot(st, [], {})];
     let skipped = 0;
     const grouped = steps(replay);
@@ -590,6 +593,9 @@
       box.append(line);
     }
     box.append(stats, ui.el("span", "visually-hidden replay-words"));
+    // The buffs it began with do not change during a combat; the exact
+    // numbers do (updateTile).
+    Turns.tipNode(ui, box, tile, h);
     return box;
   }
 
@@ -605,6 +611,9 @@
     const health = tile.health === null ? null : Math.max(tile.health, 0);
     box.querySelector(".replay-atk").textContent = I18n.stat(tile.atk);
     box.querySelector(".replay-hp").textContent = I18n.stat(health);
+    const exact = Turns.tipFacts({ atk: tile.atk, health, buffs: [] }, () => null).stats;
+    box.querySelector(".tip-atk").textContent = exact[0];
+    box.querySelector(".tip-hp").textContent = exact[1];
     box.querySelectorAll(".replay-hurt, .replay-gain").forEach((old) => old.remove());
     // The hit as the game's splat; a buff or a heal as a green one.
     const splat = (cls, text) => {
@@ -786,7 +795,7 @@
 
   // The player of one combat.
   function player(ui, combat, outcome, heroes, h, state) {
-    const all = frames(combat.replay);
+    const all = frames(combat.replay, combat.buffs_recorded === true);
     const name = nameOf(combat.replay, h);
     const words = (f) => frameWords(f, name, (id) => h.heroText({ id }));
     const box = ui.el("div", "replay-player");

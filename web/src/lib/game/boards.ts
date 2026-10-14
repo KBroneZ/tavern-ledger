@@ -7,17 +7,18 @@ import { cls, h, type VNode } from "../view/node.ts";
 import { shortStat } from "../stat.ts";
 import { picture } from "../view/pieces.ts";
 import { giftList } from "./gifts.ts";
+import { minionTip, tipHost } from "./minionTip.ts";
 import { cardLabel } from "./names.ts";
 import type { Minion } from "./report.ts";
 import type { BoardView, HeroRef } from "./shape.ts";
 import { g } from "./strings.ts";
 import * as w from "./words.ts";
 
-function minionTile(m: Minion): VNode {
+function minionTile(m: Minion, tipId: string): VNode {
   const words = w.minionWords(m);
   return h(
     "li",
-    { class: cls("rp-minion", "gv-minion", { "is-golden": m.golden, "has-shield": m.keywords.includes("divine_shield") }), title: words },
+    { class: cls("rp-minion", "gv-minion", { "is-golden": m.golden, "has-shield": m.keywords.includes("divine_shield") }), ...tipHost(tipId) },
     h("span", { class: "rp-art" }, picture("card", m.cardId, words, 56, true)),
     h(
       "span",
@@ -27,6 +28,7 @@ function minionTile(m: Minion): VNode {
     ),
     h("span", { class: "gv-minion-name", "aria-hidden": "true" }, cardLabel(m.cardId, g("minion.unknownCard"))),
     giftList(m),
+    minionTip(tipId, m),
   );
 }
 
@@ -43,7 +45,7 @@ export function boardBlock(id: string, title: string, hero: HeroRef | null, view
       " ",
       h("span", { class: "gv-dim" }, view ? w.boardTotals(view) : g("boards.unknown")),
     ),
-    view && view.minions.length > 0 ? h("ul", { class: "rp-board gv-minions", role: "list", "aria-labelledby": id }, view.minions.map(minionTile)) : null,
+    view && view.minions.length > 0 ? h("ul", { class: "rp-board gv-minions", role: "list", "aria-labelledby": id }, view.minions.map((m, i) => minionTile(m, `${id}-tip-${i}`))) : null,
   );
 }
 

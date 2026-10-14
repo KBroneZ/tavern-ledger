@@ -1,4 +1,4 @@
-//! Buffs on board minions (T-611, D-139): the enchantments the game shows on
+//! Buffs on board minions (T-616, D-141): the enchantments the game shows on
 //! a minion, grouped by the card that gave them and counted. On the board an
 //! enchantment is an entity in `PLAY` attached to the minion (`ATTACHED` =
 //! the minion's id); combat copies carry them too, for the player's and the

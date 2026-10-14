@@ -10,6 +10,7 @@ import { exactStat, shortStat } from "../stat.ts";
 import { cls, h, type VNode } from "../view/node.ts";
 import { picture, sourceMark } from "../view/pieces.ts";
 import { giftList } from "./gifts.ts";
+import { minionTip, tipHost } from "./minionTip.ts";
 import { cardLabel } from "./names.ts";
 import { KEYWORDS, type Keyword } from "./keywords.ts";
 import { type Frame, frameWords, type Namer, type Playback, playback, SPEEDS, type Tile } from "./replay.ts";
@@ -79,6 +80,9 @@ export function tileWords(tile: Tile): string {
   ].filter(Boolean).join(", ");
 }
 
+/** The id of a tile's tooltip: one combat is on the page at a time, so its minion's index is enough. */
+const tipId = (tile: Tile): string => `rp-tip-${tile.ref}`;
+
 /** The parts of a tile that change from step to step. Damage past 0 (overkill) shows as 0, as on the game's board. */
 export function tileInfo(tile: Tile): VNode[] {
   return [
@@ -92,6 +96,7 @@ export function tileInfo(tile: Tile): VNode[] {
     // A buff or a heal: a green burst with what it gave, as the game's.
     !tile.marks.hurt && tile.marks.gain ? h("span", { class: "rp-gain", "aria-hidden": "true" }, h("b", {}, `+${shortStat(tile.marks.gain.atk)}/+${shortStat(tile.marks.gain.health)}`)) : null,
     h("span", { class: "visually-hidden" }, tileWords(tile)),
+    minionTip(tipId(tile), { atk: tile.atk, health: Math.max(tile.health, 0), buffs: tile.buffs }),
   ].filter((n): n is VNode => n !== null);
 }
 
@@ -107,9 +112,9 @@ function keywordMarks(): VNode {
 export function tileView(tile: Tile): VNode {
   return h(
     "li",
-    { class: tileClass(tile), "data-ref": tile.ref },
+    { class: tileClass(tile), "data-ref": tile.ref, ...tipHost(tipId(tile)) },
     keywordMarks(),
-    h("span", { class: "rp-art", title: tileWords(tile) }, picture("card", tile.cardId, cardLabel(tile.cardId, g("minion.unknownCard")), 56, true)),
+    h("span", { class: "rp-art" }, picture("card", tile.cardId, cardLabel(tile.cardId, g("minion.unknownCard")), 56, true)),
     h("span", { class: "rp-info" }, ...tileInfo(tile)),
     giftList(tile),
   );

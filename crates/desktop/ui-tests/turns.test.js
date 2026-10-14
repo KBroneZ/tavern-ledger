@@ -5,6 +5,7 @@ const TLTurns = require("../ui/turns.js");
 const I18n = require("../ui/i18n.js");
 require("../ui/strings/common.js");
 require("../ui/strings/details.js");
+require("../ui/strings/replay.js");
 
 const minion = (card_id, atk, health, extra = {}) => ({ card_id, atk, health, golden: false, keywords: [], ...extra });
 const shopTurn = (turn, extra = {}) => ({
@@ -207,4 +208,50 @@ test("in Duos the teammate's board joins the turn beside yours, from a stripped 
   assert.equal(three.own.mine, false, "no entry of yours: the teammate's shows in the first slot");
   assert.equal(three.partner, null, "and is not drawn twice");
   assert.equal(TLTurns.rows(recap(), report)[0].partner, null, "Solo has no partner");
+});
+
+// T-616, D-141: buffs on a minion, for its tooltip.
+test("buffs: unknown unless the record read them, a card once, bad ones dropped", () => {
+  const raw = [
+    { card_id: "BG20_GEM", count: 2 },
+    { card_id: "BG20_GEM", count: 9 },
+    { card_id: "BG31_816", count: 0 },
+    { card_id: 7, count: 1 },
+    { card_id: "BG28_309", count: 1000 },
+    { card_id: "BG28_503" },
+  ];
+  assert.equal(TLTurns.buffsOf({ buffs: raw }, false), null);
+  assert.deepEqual(TLTurns.buffsOf({ buffs: raw }, true), [{ id: "BG20_GEM", count: 2 }, { id: "BG28_309", count: 999 }]);
+  assert.deepEqual(TLTurns.buffsOf({}, true), [], "recorded, none");
+  assert.deepEqual(TLTurns.buffsOf({ buffs: "BG20_GEM" }, true), []);
+});
+
+test("a turn's own board carries each minion's buffs when the record read them", () => {
+  const withBuffs = {
+    ...report,
+    buffs_recorded: true,
+    rounds: [{ number: 1, entries: [{ side: "own", player_id: 2, hero: "HERO_A", board: [minion("BG_A", 1, 2, { buffs: [{ card_id: "BG20_GEM", count: 3 }] }), minion("BG_B", 3, 4)] }] }],
+  };
+  const own = TLTurns.rows(recap(), withBuffs).find((x) => x.turn === 1).own;
+  assert.deepEqual(own.minions[0].buffs, [{ id: "BG20_GEM", count: 3 }]);
+  assert.deepEqual(own.minions[1].buffs, []);
+  const older = TLTurns.rows(recap(), { ...withBuffs, buffs_recorded: false }).find((x) => x.turn === 1).own;
+  assert.equal(older.minions[0].buffs, null);
+});
+
+test("the tooltip's facts: exact numbers, each buff with its name and count, and the unknown and empty cases", () => {
+  I18n.setLang("en");
+  const name = (id) => ({ BG20_GEM: "Blood Gem" })[id] || null;
+  const facts = TLTurns.tipFacts({ atk: 2336, health: 1263, buffs: [{ id: "BG20_GEM", count: 3 }, { id: "BG_X", count: 1 }] }, name);
+  assert.deepEqual(facts.stats, ["Attack 2,336", "Health 1,263"]);
+  assert.deepEqual(facts.buffs.map((b) => [b.id, b.text]), [["BG20_GEM", "Blood Gem ×3"], ["BG_X", "BG_X ×1"]]);
+  assert.equal(facts.note, null);
+  assert.equal(TLTurns.tipFacts({ atk: 1, health: 1, buffs: [] }, name).note, "No buffs");
+  assert.equal(TLTurns.tipFacts({ atk: 1, health: 1, buffs: null }, name).note, "Buffs are not recorded for this game.");
+  assert.deepEqual(TLTurns.tipFacts({ atk: null, health: 4, buffs: [] }, name).stats, ["Attack ?", "Health 4"]);
+  I18n.setLang("es");
+  const es = TLTurns.tipFacts({ atk: 1234567, health: 8, buffs: [{ id: "BG20_GEM", count: 2 }] }, name);
+  assert.deepEqual(es.stats, ["Ataque 1.234.567", "Vida 8"]);
+  assert.equal(es.heading, "Mejoras");
+  I18n.setLang("en");
 });

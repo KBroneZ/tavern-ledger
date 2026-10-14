@@ -18,6 +18,7 @@ import type { GameRecord } from "../game/report.ts";
 import { GAME_FILE_COLUMNS, type GameRow } from "../data/rows.ts";
 import { readAnswer, type Answer } from "./answer.ts";
 import * as B from "./board.ts";
+import { loadCardNames, useCardNames } from "../game/names.ts";
 import { CardIndex, readCardFile } from "./cards.ts";
 import { gameKey, type GamesState, loadView, type PickedGame } from "./loadView.ts";
 import { resultView, type ResultState } from "./resultView.ts";
@@ -426,6 +427,8 @@ async function signIn(): Promise<void> {
 async function loadCards(): Promise<void> {
   const file = lang() === "es" ? await import("./generated/cards.es.json") : await import("./generated/cards.en.json");
   cards = new CardIndex(readCardFile(file.default));
+  // The names of the buff cards (spells and the like) for the cards' tooltips; without them the tooltip shows ids.
+  useCardNames(await loadCardNames());
 }
 
 /** The page's listeners, once: "Try again" runs start() again without adding them twice. */

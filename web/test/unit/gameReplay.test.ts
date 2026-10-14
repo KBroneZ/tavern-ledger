@@ -45,12 +45,30 @@ test("replay reader: a good replay is read as typed data", () => {
     keywords: ["taunt", "divine_shield"],
     gifts: ["SYN_GIFT_1"],
     giftUnknown: false,
+    buffs: null,
   });
   assert.equal(r.minions[3].cardId, null, "a minion the log does not name");
   assert.equal(r.minions[3].giftUnknown, true);
   assert.equal(r.events.length, 24);
   assert.deepEqual(r.events[0], { kind: "trigger", trigger: "start_of_combat", side: "opponent", cardId: "SYN_TRINKET_1", source: null });
   assert.deepEqual(r.events[2], { kind: "attack", attacker: 2, defender: 1 });
+});
+
+test("replay reader: buffs (revision 14): unknown unless the record says it read them, bad ones refuse the replay", () => {
+  const withBuffs = edited((r) => {
+    r.minions[1].buffs = [{ card_id: "BG20_GEM", count: 2 }];
+  });
+  const before = readReplay(withBuffs);
+  assert.ok(before && before.ok);
+  assert.equal(before.replay.minions[1].buffs, null);
+  const after = readReplay(withBuffs, true);
+  assert.ok(after && after.ok);
+  assert.deepEqual(after.replay.minions[1].buffs, [{ cardId: "BG20_GEM", count: 2 }]);
+  assert.deepEqual(after.replay.minions[0].buffs, [], "recorded, none");
+  const bad = edited((r) => {
+    r.minions[1].buffs = [{ card_id: "<b>", count: 2 }];
+  });
+  assert.deepEqual(readReplay(bad, true), { ok: false });
 });
 
 test("replay reader: no replay is null, never 'not available'", () => {

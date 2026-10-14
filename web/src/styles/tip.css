@@ -1,0 +1,166 @@
+/* The tooltip of a minion (T-616, D-141): a small wood plaque with a bronze
+   rim over the minion, with its exact Attack and Health and the buffs it has
+   (lib/game/minionTip.ts). The minion owns it: it shows while the minion is
+   hovered, focused by keyboard or tapped (a minion with a tooltip takes
+   focus), and the page keeps it out of the layout, so nothing moves.
+   Never only on hover: focus shows it the same way. */
+
+.minion-tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 30;
+  display: grid;
+  gap: var(--s-2);
+  width: max-content;
+  min-width: 11rem;
+  max-width: min(18rem, 78vw);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-small);
+  background: var(--panel-wood);
+  box-shadow: var(--panel-edge);
+  color: var(--text);
+  font: 500 var(--t-sm) / 1.3 var(--body);
+  text-align: left;
+  translate: -50% 0;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 120ms var(--ease-out, ease-out),
+    visibility 0s linear 120ms;
+}
+
+/* A tile at the left or right end of its row keeps the plaque on screen. */
+:where(.rp-board, .gv-minions) > :first-child > .minion-tip,
+:where(.rp-board, .gv-minions) > :first-child > .rp-info > .minion-tip {
+  left: 0;
+  translate: 0 0;
+}
+
+:where(.rp-board, .gv-minions) > :last-child:not(:first-child) > .minion-tip,
+:where(.rp-board, .gv-minions) > :last-child:not(:first-child) > .rp-info > .minion-tip {
+  right: 0;
+  left: auto;
+  translate: 0 0;
+}
+
+/* The top board's plaque opens downwards: the stage clips what leaves it. */
+.sim-slot {
+  position: relative;
+}
+
+/* The simulator's first cards keep the plaque on screen at the left, the last ones at the right. */
+.sim-row > :first-child > .minion-tip {
+  left: 0;
+  translate: 0 0;
+}
+
+.sim-row > :nth-child(n + 6) > .minion-tip {
+  right: 0;
+  left: auto;
+  translate: 0 0;
+}
+
+.rp-side.is-opponent .minion-tip {
+  top: calc(100% + 8px);
+  bottom: auto;
+}
+
+:is(.rp-minion, .sim-slot):is(:hover, :focus-visible, :focus-within) .minion-tip {
+  visibility: visible;
+  opacity: 1;
+  transition-delay: 0s;
+}
+
+/* The board of the minion on show stands above the other one's. */
+.rp-side:has(.rp-minion:is(:hover, :focus-visible, :focus-within)) {
+  z-index: 8;
+}
+
+.tip-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-3);
+  font: 800 var(--t-sm) / 1 var(--display);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Attack and Health keep the colours and shapes of the tile's badges. */
+.tip-atk::before,
+.tip-hp::before {
+  content: "";
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  margin-right: 0.4em;
+  border: 1px solid rgb(0 0 0 / 0.6);
+  vertical-align: -0.05em;
+}
+
+.tip-atk::before {
+  border-radius: 3px 1px;
+  background: var(--rp-atk, #ffcf5a);
+}
+
+.tip-hp::before {
+  border-radius: 50% 50% 50% 3px;
+  background: var(--rp-hp, #b3261e);
+}
+
+.tip-head {
+  margin: 0 0 var(--s-1);
+  color: var(--label);
+  font: 700 var(--t-xs, 0.75rem) / 1 var(--body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tip-note {
+  margin: 0;
+  color: var(--dim);
+}
+
+.tip-buffs ul {
+  display: grid;
+  gap: var(--s-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tip-buff {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-weight: 600;
+}
+
+.tip-buff .pic {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--bronze-lo);
+  overflow: hidden;
+}
+
+.tip-buff .pic img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .minion-tip {
+    transition: none;
+  }
+}
+
+/* The focused minion shows its ring (the plaque is not the only cue). */
+.rp-minion:focus-visible {
+  outline: 2px solid var(--bronze-hi);
+  outline-offset: 3px;
+  border-radius: var(--r-small);
+}

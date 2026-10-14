@@ -1,5 +1,5 @@
 "use strict";
-// A minion's Attack or Health the way the game writes a big one (T-611):
+// A minion's Attack or Health the way the game writes a big one (T-616):
 // 1,000 and up is 1K, 1M, 1B with one decimal that is cut, not rounded, and
 // no ".0". The exact value is for the tooltip. The website runs the same
 // table (web/test/unit/statFormat.test.ts).

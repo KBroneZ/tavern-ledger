@@ -951,14 +951,17 @@ function renderRecap(r, game) {
 // Most telling first: health and turns, then the record, then the details.
 function renderRecapNow(r, game) {
   const key = gameKey(game);
-  const report = (allGames.find((g) => gameKey(g) === key) || {}).report || null;
+  const saved = allGames.find((g) => gameKey(g) === key) || {};
+  // The report says whether its parser read buffs (revision 14): a minion without any is then "none", else unknown.
+  const revision = saved.parser && Number.isInteger(saved.parser.revision) ? saved.parser.revision : null;
+  const report = saved.report ? { ...saved.report, buffs_recorded: revision !== null && revision >= 14 } : null;
   renderRecapBar(r, game);
   updateTribesButton(game);
   const health = el("section", "recap-part");
   health.append(withSource(el("h3", null, tl("win.recap.healthTitle")), r.health_source), healthChart(r.health));
   const top = el("div", "recap-top");
   top.append(recapFacts(r), health);
-  const turnTools = { card: TLShop.card, cardRow: TLShop.cardRow, fold: TLCompact.fold, art, heroText, game: key };
+  const turnTools = { card: TLShop.card, cardRow: TLShop.cardRow, fold: TLCompact.fold, art, heroText, game: key, cardName: (id) => TLCards.display(id) };
   const replayTools = { art, heroText, cardName: (id) => TLCards.display(id), fold: TLCompact.fold, game: key };
   // Simple (T-344) keeps the facts, health, shop summary, combat replays
   // (T-215), why each result differed (T-346), record and messages; the rest

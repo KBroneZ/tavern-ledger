@@ -1,4 +1,4 @@
-// The short form of a minion's Attack or Health (T-611): 1,000 and up is
+// The short form of a minion's Attack or Health (T-616): 1,000 and up is
 // 1K, 1M, 1B like the game, one decimal cut (not rounded), no ".0". The
 // exact value goes in the tooltip.
 import { test } from "node:test";

@@ -1,0 +1,56 @@
+/* The tooltip of a minion (T-616, D-141): a small glass plaque over the
+   minion with its exact Attack and Health and the buffs it has (turns.js
+   tipNode). It shows while the minion is hovered or has focus (the minion
+   takes focus, so a keyboard or a tap shows it too), and sits out of the
+   layout, so nothing moves. */
+.shop-card, .replay-minion { outline-offset: 3px; }
+.shop-card { position: relative; }
+.shop-card:focus-visible, .replay-minion:focus-visible { outline: 2px solid var(--amber-hi); border-radius: var(--radius-s); }
+
+.minion-tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 30;
+  display: grid;
+  gap: 6px;
+  width: max-content;
+  min-width: 11rem;
+  max-width: min(18rem, 80vw);
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--panel-solid);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.55);
+  color: var(--text);
+  font: 500 13px / 1.3 var(--font-body);
+  text-align: left;
+  translate: -50% 0;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease-out, visibility 0s linear 120ms;
+}
+.shop-card:is(:hover, :focus-visible, :focus-within) > .minion-tip,
+.replay-minion:is(:hover, :focus-visible, :focus-within) > .minion-tip {
+  visibility: visible;
+  opacity: 1;
+  transition-delay: 0s;
+}
+/* The top board's plaque opens downwards, and its board stands above the other. */
+.replay-side[data-side="opponent"] .minion-tip { top: calc(100% + 8px); bottom: auto; }
+.replay-side:has(.replay-minion:is(:hover, :focus-visible, :focus-within)) { z-index: 8; }
+/* A tile at the end of its row keeps the plaque on screen. */
+.replay-board > :first-child > .minion-tip, .shop-cards > :first-child > .minion-tip { left: 0; translate: 0 0; }
+.replay-board > :last-child:not(:first-child) > .minion-tip { right: 0; left: auto; translate: 0 0; }
+
+.tip-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; font: 800 13px / 1 var(--font-display); font-variant-numeric: tabular-nums; }
+.tip-atk::before, .tip-hp::before { content: ""; display: inline-block; width: 0.7em; height: 0.7em; margin-right: 0.4em; border: 1px solid rgb(0 0 0 / 0.6); vertical-align: -0.05em; }
+.tip-atk::before { border-radius: 3px 1px; background: #ffcf5a; }
+.tip-hp::before { border-radius: 50% 50% 50% 3px; background: #b3261e; }
+.tip-head { margin: 0 0 4px; color: var(--amber-hi); font: 700 11px / 1 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; }
+.tip-note { margin: 0; color: var(--dim); }
+.tip-buffs ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.tip-buff { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.tip-buff .tip-art { flex: none; width: 24px; height: 24px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 1px var(--line); }
+@media (prefers-reduced-motion: reduce) { .minion-tip { transition: none; } }

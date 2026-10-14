@@ -19,7 +19,22 @@
   const list = (v) => (Array.isArray(v) ? v : []);
   const num = (v) => (known(v) ? I18n.num(v) : "—");
 
-  const minionOf = (m) => ({
+  // Buffs on a minion (parser revision 14, T-616, D-141): the card that gave
+  // them and how many, a card once, at most 12 kinds and 999 of one (the
+  // parser's bounds). null when the record did not read them (older than
+  // revision 14): unknown is not "none". `recorded` is `report.buffs_recorded`.
+  const CARD_ID = /^[A-Za-z0-9_]{1,64}$/;
+  function buffsOf(m, recorded) {
+    if (!recorded) return null;
+    const out = [];
+    list(m.buffs).slice(0, 12).forEach((b) => {
+      const ok = b && typeof b.card_id === "string" && CARD_ID.test(b.card_id) && Number.isInteger(b.count) && b.count > 0;
+      if (ok && !out.some((o) => o.id === b.card_id)) out.push({ id: b.card_id, count: Math.min(b.count, 999) });
+    });
+    return out;
+  }
+
+  const minionOf = (m, recorded = false) => ({
     id: typeof m.card_id === "string" ? m.card_id : null,
     atk: known(m.atk) ? m.atk : null,
     health: known(m.health) ? m.health : null,
@@ -27,7 +42,62 @@
     keywords: Array.isArray(m.keywords) ? m.keywords.filter((k) => typeof k === "string") : null,
     gifts: list(m.gifts).filter((g) => typeof g === "string"),
     gift_unknown: m.gift_unknown === true,
+    buffs: buffsOf(m, recorded),
   });
+
+  // What a minion's tooltip says: its exact numbers, then its buffs with the
+  // card's name and how many, or why there are none to show. `nameOf(id)` is
+  // the card's name in the app's language, or null.
+  function tipFacts(m, nameOf) {
+    const facts = {
+      stats: [t("replay.tip.attack", { value: I18n.exact(m.atk) }), t("replay.tip.health", { value: I18n.exact(m.health) })],
+      heading: null,
+      buffs: [],
+      note: null,
+    };
+    if (m.buffs === null || m.buffs === undefined) facts.note = t("replay.tip.unknown");
+    else if (m.buffs.length === 0) facts.note = t("replay.tip.none");
+    else {
+      facts.heading = t("replay.tip.buffs");
+      facts.buffs = m.buffs.map((b) => ({ id: b.id, text: t("replay.tip.buff", { name: nameOf(b.id) || b.id, count: I18n.exact(b.count) }) }));
+    }
+    return facts;
+  }
+
+  let tipSeq = 0;
+
+  // The tooltip as markup, next to its minion: shown by the stylesheet on
+  // hover and on focus (the minion takes focus, so a keyboard or a tap shows
+  // it too), and the minion points to it with aria-describedby. `tools` has
+  // `art(id, class)` and `cardName(id)`.
+  function tipNode(ui, host, m, tools) {
+    const facts = tipFacts(m, tools.cardName || (() => null));
+    const tip = ui.el("span", "minion-tip");
+    tip.id = `minion-tip-${++tipSeq}`;
+    tip.setAttribute("role", "tooltip");
+    const stats = ui.el("span", "tip-stats");
+    stats.append(ui.el("span", "tip-atk", facts.stats[0]), ui.el("span", "tip-hp", facts.stats[1]));
+    tip.append(stats);
+    if (facts.note) tip.append(ui.el("p", "tip-note", facts.note));
+    else {
+      const part = ui.el("div", "tip-buffs");
+      part.append(ui.el("p", "tip-head", facts.heading));
+      const ul = ui.el("ul");
+      facts.buffs.forEach((b) => {
+        const li = ui.el("li", "tip-buff");
+        const img = tools.art ? tools.art(b.id, "tip-art") : null;
+        if (img) li.append(img);
+        li.append(ui.el("span", null, b.text));
+        ul.append(li);
+      });
+      part.append(ul);
+      tip.append(part);
+    }
+    host.setAttribute("tabindex", "0");
+    host.setAttribute("aria-describedby", tip.id);
+    host.append(tip);
+    return tip;
+  }
 
   // Dark Gift marks of a minion (T-528): cards.js draws the words; none
   // where it is not loaded (the tests).
@@ -40,7 +110,8 @@
   // list is a real empty board).
   function boardOf(entry, report) {
     if (!entry || !Array.isArray(entry.board)) return null;
-    const minions = entry.board.map(minionOf);
+    const recorded = report && report.buffs_recorded === true;
+    const minions = entry.board.map((m) => minionOf(m, recorded));
     // One unknown stat makes the total unknown, never a smaller number.
     const sum = (key) => (minions.every((m) => known(m[key])) ? minions.reduce((n, m) => n + m[key], 0) : null);
     return {
@@ -72,7 +143,7 @@
     return boardOf(own.find((e) => e !== main && e.player_id !== main.player_id), report);
   }
 
-  function combatAt(r, round) {
+  function combatAt(r, round, recorded = false) {
     for (const o of list(r.record)) {
       const c = list(o.combats).find((x) => x.round === round);
       if (!c) continue;
@@ -82,7 +153,7 @@
         source: c.source,
         reason: c.reason || null,
         opponents: list(o.heroes),
-        board: seen ? list(seen.minions).map(minionOf) : null,
+        board: seen ? list(seen.minions).map((m) => minionOf(m, recorded)) : null,
       };
     }
     const lone = list(r.unattributed).find((x) => x.round === round);
@@ -140,7 +211,7 @@
         turn,
         shop,
         tier: shop && shop.in_log && known(shop.tier) ? { value: shop.tier, up: shop.tier_up === true } : null,
-        combat: combatAt(r, turn),
+        combat: combatAt(r, turn, Boolean(report && report.buffs_recorded === true)),
         health: healthAt(r, turn),
         damage: damageAt(r, turn),
         own: ownBoard(report, turn),
@@ -285,7 +356,7 @@
     return mark;
   }
 
-  function minionTile(ui, m, card) {
+  function minionTile(ui, m, card, tools) {
     const tile = card(ui, m.id, m.golden ? "golden" : "");
     tile.append(ui.el("span", "minion-stats", `${I18n.stat(m.atk)}/${I18n.stat(m.health)}`));
     const marks = [];
@@ -302,10 +373,11 @@
       gifts.forEach((g) => line.append(giftMark(ui, g)));
       tile.append(line);
     }
+    tipNode(ui, tile, m, tools);
     return tile;
   }
 
-  function boardRow(ui, label, minions, card, empty) {
+  function boardRow(ui, label, minions, card, empty, tools) {
     const row = ui.el("div", "shop-row");
     row.append(ui.el("span", "shop-row-label", label));
     if (!minions) {
@@ -313,7 +385,7 @@
       return row;
     }
     const cards = ui.el("div", "shop-cards");
-    cards.append(...minions.map((m) => minionTile(ui, m, card)));
+    cards.append(...minions.map((m) => minionTile(ui, m, card, tools)));
     if (!minions.length) cards.append(ui.el("span", "empty", t("turns.board.empty")));
     row.append(cards);
     if (minions.length && !keywordsRecorded(minions)) {
@@ -348,14 +420,14 @@
     const body = [];
     const own = row.own;
     const ownLabel = own && !own.mine && own.hero ? h.heroText({ id: own.hero }) : t("turns.your_board");
-    body.push(boardRow(ui, ownLabel, own && own.minions, h.card, t("turns.board.not_in_round")));
+    body.push(boardRow(ui, ownLabel, own && own.minions, h.card, t("turns.board.not_in_round"), h));
     if (row.partner) {
       const mate = row.partner.hero ? h.heroText({ id: row.partner.hero }) : t("turns.teammate_board");
-      body.push(boardRow(ui, mate, row.partner.minions, h.card, t("turns.board.not_in_round")));
+      body.push(boardRow(ui, mate, row.partner.minions, h.card, t("turns.board.not_in_round"), h));
     }
     if (row.combat) {
       const who = row.combat.opponents.map(h.heroText).join(" + ") || t("turns.their_board");
-      body.push(boardRow(ui, who, row.combat.board, h.card, t("turns.board.theirs_not")));
+      body.push(boardRow(ui, who, row.combat.board, h.card, t("turns.board.theirs_not"), h));
     }
     const shop = row.shop;
     if (!shop || !shop.in_log) {
@@ -432,7 +504,7 @@
     return part;
   }
 
-  const api = { giftMark, giftMarks, rows, combatAt, healthWords, damageWords, damageBadges, damageQuiet, totalsWords, keywordsRecorded, summaryWords, shopFacts, section };
+  const api = { buffsOf, tipFacts, tipNode, giftMark, giftMarks, rows, combatAt, healthWords, damageWords, damageBadges, damageQuiet, totalsWords, keywordsRecorded, summaryWords, shopFacts, section };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLTurns = api;
 })();

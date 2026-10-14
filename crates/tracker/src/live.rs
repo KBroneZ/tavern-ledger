@@ -10,6 +10,7 @@
 
 use std::collections::BTreeSet;
 
+use bg_parser::buffs::Buff;
 use bg_parser::counters::Counter;
 use bg_parser::report::LobbySlot;
 use serde::Serialize;
@@ -51,6 +52,11 @@ pub struct LiveMinion {
     pub gifts: Vec<String>,
     /// The game marks a Dark Gift the log does not name.
     pub gift_unknown: bool,
+    /// Buffs by the card that gave them and how many (T-616, parser revision
+    /// 14); empty when none or when the record is older. Left out of the
+    /// JSON when empty, so the overlay's payload does not change.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub buffs: Vec<Buff>,
 }
 
 /// A board that entered play in a combat, with the combat it was seen in.
@@ -521,6 +527,25 @@ fn last_board(view: &View, pid: i64) -> Option<LiveBoard> {
 /// The parser writes at most this many keywords per minion.
 const MAX_KEYWORDS: usize = 8;
 
+/// A minion's saved buffs: a card id and a count from 1 to the parser's
+/// bound; what is not that is left out.
+fn buffs_of(minion: &Value) -> Vec<Buff> {
+    let Some(list) = minion.get("buffs").and_then(Value::as_array) else {
+        return Vec::new();
+    };
+    list.iter()
+        .take(bg_parser::buffs::MAX_BUFF_KINDS)
+        .filter_map(|b| {
+            let card_id = b.get("card_id").and_then(Value::as_str)?;
+            let count = b.get("count").and_then(Value::as_u64)?;
+            (count > 0).then(|| Buff {
+                card_id: card_id.to_string(),
+                count: count.min(u64::from(bg_parser::buffs::MAX_BUFF_COUNT)) as u32,
+            })
+        })
+        .collect()
+}
+
 pub(crate) fn minions_of(board: &[Value]) -> Vec<LiveMinion> {
     let mut placed: Vec<(i64, LiveMinion)> = board
         .iter()
@@ -552,6 +577,7 @@ pub(crate) fn minions_of(board: &[Value]) -> Vec<LiveMinion> {
                         })
                         .unwrap_or_default(),
                     gift_unknown: m.get("gift_unknown").and_then(Value::as_bool) == Some(true),
+                    buffs: buffs_of(m),
                 },
             )
         })

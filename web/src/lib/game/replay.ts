@@ -20,6 +20,7 @@
 // of its own, so its hit lands as the next one. Older records play one event
 // per step, as before.
 // What the log says happened, never a simulation.
+import type { Buff } from "./buffs.ts";
 import { KEYWORDS, type Keyword } from "./keywords.ts";
 import { type DamageSource, type Replay, type ReplayEvent, type Side, SIDES } from "./replayRead.ts";
 import { g, type GameStringKey } from "./strings.ts";
@@ -123,6 +124,8 @@ export interface Tile {
   keywords: Keyword[];
   gifts: string[];
   giftUnknown: boolean;
+  /** Buffs by card as the combat began (revision 14); null: not recorded. */
+  buffs: Buff[] | null;
   marks: Marks;
 }
 
@@ -173,6 +176,7 @@ function tileOf(replay: Replay, ref: number): Base {
     keywords: m.keywords,
     gifts: m.gifts,
     giftUnknown: m.giftUnknown,
+    buffs: m.buffs,
   };
 }
 
