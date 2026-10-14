@@ -100,6 +100,24 @@ This writes one self-contained page, `.local/overlay-gallery/overlay-gallery.htm
 
 The build only reads the overlay page. When the page asks for a command or an event the stand-in does not answer, or the theme colours in `overlay_layout.rs` change, `node --test "ui-tests/*.test.js"` (from `crates/desktop`) fails until `bridge.js` or `theme-vars.js` follows. A new panel slot of the page needs a scenario that shows it; the counters scenario appears by itself once the page has a `data-panel="counters"` slot.
 
+### Overlay workbench
+
+To work on the overlay page and see each change as you save it, start the workbench. It needs only Node.js, no extra package:
+
+```powershell
+node tools/overlay-dev/serve.js
+```
+
+Open <http://127.0.0.1:5178/> (`--port <n>` picks another port). The server listens on 127.0.0.1 only and serves `crates/desktop/ui/` straight from disk, with the gallery's stand-in for the app's bridge and its example data in front of the page's scripts (no copy, no build, no network; card art is a placeholder). Only `crates/desktop/ui/`, `tools/overlay-dev/`, `tools/overlay-gallery/` and `.local/overlay-dev/backgrounds/` are served, and the server writes nothing to disk.
+
+- **Live reload.** Saving a stylesheet swaps it in place; saving anything else in `crates/desktop/ui/` or `tools/overlay-gallery/` reloads the overlay frame, keeping the scenario and the controls.
+- **Controls.** Scenario (every gallery scenario), language, theme (including High contrast), window size (1920×1080, 2560×1440, 1280×720 or custom), backdrop, view and scale, and one button per bridge event the page listens to (`live-changed`, `overlay-hover`, `lobby-tribes-changed`…) to watch state changes. The view starts close-up on the part of the window the scenario is about; "Whole window" shows the full game window, scaled by "Scale". Every choice is kept in the address (for example `?scenario=hover-duos&lang=es&view=window`), so a view can be shared and reloaded.
+- **Bare page.** `/bare?scenario=<id>&lang=<en|es>` shows only the overlay page at the size of the browser window.
+- **Backgrounds.** Put your own screenshots (`.png`, `.jpg`, `.webp`, `.gif`) in `.local/overlay-dev/backgrounds/` (create the folder; it is never committed) and pick one under "Backdrop". Do not commit game art.
+- **Limits.** Each open overlay page (the workbench, each `/bare` tab) holds one live-reload connection, and a browser allows about six per address: close old tabs if a page seems stuck. The workbench page's own files are not watched; refresh it by hand after editing them.
+
+Its tests run with the app's ui-tests (`node --test "ui-tests/*.test.js"` from `crates/desktop`).
+
 ## Windows installer
 
 Needs the same Rust toolchain as the app, Node.js 22.12 or later and an internet connection. From a clean checkout:

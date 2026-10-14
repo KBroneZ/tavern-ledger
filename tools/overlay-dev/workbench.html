@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overlay workbench</title>
+<link rel="stylesheet" href="/dev/workbench.css">
+</head>
+<body>
+  <header class="bar">
+    <h1>Overlay workbench</h1>
+    <label>Scenario <select id="scenario"></select></label>
+    <label>Language
+      <select id="lang"><option value="en">English</option><option value="es">Español</option></select>
+    </label>
+    <label>Theme
+      <select id="theme"><option value="">Scenario's own</option><option value="glass">Glass (dark)</option><option value="contrast">High contrast</option></select>
+    </label>
+    <label>Window
+      <select id="size">
+        <option value="1920x1080">1920×1080</option>
+        <option value="2560x1440">2560×1440</option>
+        <option value="1280x720">1280×720</option>
+        <option value="custom">Custom…</option>
+      </select>
+    </label>
+    <span id="custom-size" class="custom" hidden>
+      <input id="size-w" type="number" min="320" max="7680" step="1" aria-label="Width" value="1920"> ×
+      <input id="size-h" type="number" min="240" max="4320" step="1" aria-label="Height" value="1080">
+    </span>
+    <label>Backdrop <select id="backdrop"></select></label>
+    <label>View
+      <select id="view"><option value="close">Close-up</option><option value="window">Whole window</option></select>
+    </label>
+    <label>Scale
+      <select id="scale">
+        <option value="fit">Fit</option>
+        <option value="1">100%</option>
+        <option value="0.75">75%</option>
+        <option value="0.5">50%</option>
+        <option value="0.25">25%</option>
+      </select>
+    </label>
+    <a id="bare" class="link" target="_blank" rel="noopener">Bare page</a>
+  </header>
+  <section class="events" aria-label="Bridge events">
+    <span class="events-title">Fire an event</span>
+    <span id="event-buttons"></span>
+    <output id="event-log" aria-live="polite"></output>
+  </section>
+  <p id="caption" class="caption"></p>
+  <main id="stage" class="stage">
+    <div id="game" class="game">
+      <iframe id="frame" title="Overlay" scrolling="no" allowtransparency="true"></iframe>
+    </div>
+  </main>
+  <script src="/dev/workbench.js"></script>
+</body>
+</html>
