@@ -3,6 +3,7 @@
 // Pure, so the page script and the tests share it.
 import { average, compact, PLACES, type Mode } from "../data/format.ts";
 import { asRows, DataError } from "../data/rows.ts";
+import { NAME_CHARS } from "../displayName.ts";
 import { lt, type LbKey } from "./strings.ts";
 import { dateFormat, numberFormat } from "../i18n.ts";
 
@@ -76,12 +77,12 @@ export interface BoardRow {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const HERO = /^[A-Za-z0-9_]{1,64}$/;
-// The database's display name rule (profiles.display_name).
-const NAME = /^[\p{L}\p{N} _.-]{1,32}$/u;
+// The database's display name rule (profiles.display_name): its character list, 1 to 32 of them.
+const NAME_LENGTH = /^[\s\S]{1,32}$/u;
 
 /** True when a display name passes the check above; a row without one is left off the board (api.ts). */
 export function nameFits(value: unknown): boolean {
-  return typeof value === "string" && NAME.test(value);
+  return typeof value === "string" && NAME_LENGTH.test(value) && NAME_CHARS.test(value);
 }
 
 function positive(value: unknown, what: string): number {

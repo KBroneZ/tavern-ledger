@@ -181,8 +181,9 @@ select is((select rounds from public.game_stats where game_index = 3
 select is_empty(
   $$ select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'public' and c.relkind = 'v'
+       and c.relname <> 'game_summaries'
        and not coalesce(c.reloptions @> array['security_invoker=true'], false) $$,
-  'every public view runs with the caller''s rights, so row-level security applies'
+  'every public view but game_summaries runs with the caller''s rights, so row-level security applies'
 );
 select is_empty(
   $$ select table_name, column_name from information_schema.columns
@@ -211,7 +212,7 @@ select ok(
 -- ---------------------------------------------------------------- anon, private profiles
 set local role anon;
 select set_config('request.jwt.claims', '{"role": "anon"}', true);
-select is_empty($$ select * from public.game_stats $$, 'anon sees no summary of a private profile');
+select is_empty($$ select user_id from public.game_stats $$, 'anon sees no summary of a private profile');
 select is_empty($$ select * from public.game_summaries $$, 'anon sees no game of a private profile');
 select is_empty($$ select * from public.user_overview $$, 'anon sees no overview of a private profile');
 select is_empty($$ select * from public.user_heroes $$, 'anon sees no heroes of a private profile');

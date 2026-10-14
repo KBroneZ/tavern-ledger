@@ -16,6 +16,15 @@ test("display name: trimmed, 1-32 letters, digits, spaces, _ . -", () => {
   assert.equal(checkDisplayName("x".repeat(33)).ok, false);
 });
 
+test("display name: only Latin letters with accents; look-alike alphabets and marks are refused", () => {
+  assert.deepEqual(checkDisplayName("Zoë Øster Łukasz Weiß"), { ok: true, value: "Zoë Øster Łukasz Weiß" });
+  // A letter plus a combining accent is saved composed.
+  assert.deepEqual(checkDisplayName("Café"), { ok: true, value: "Café" });
+  for (const name of ["fuсk", "Аdmin", "Αlex", "日本語", "Ａｂｃ", "Bob×", "a​b", "Bob😀", "...", "- _"]) {
+    assert.equal(checkDisplayName(name).ok, false, name);
+  }
+});
+
 test("display name: empty clears it", () => {
   assert.deepEqual(checkDisplayName("   "), { ok: true, value: null });
 });
@@ -45,6 +54,11 @@ test("profile save errors: the database check reads as a name rule", () => {
   assert.match(profileErrorMessage({ code: "23514" }), /letters/i);
   assert.match(profileErrorMessage({ code: "PGRST301" }), /sign in/i);
   assert.doesNotMatch(profileErrorMessage({ code: "XX000", message: "secret detail" }), /secret/);
+});
+
+test("profile save errors: a name another public profile uses says so", () => {
+  assert.match(profileErrorMessage({ code: "23505" }), /already uses this name/i);
+  assert.match(profileErrorMessage({ code: "23514", message: "display_name_chars" }), /letters/i);
 });
 
 test("profile save errors: a name the word list refuses says so, without the list", () => {
