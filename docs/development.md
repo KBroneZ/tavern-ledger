@@ -135,6 +135,12 @@ cargo test --workspace
 
 CI runs the tests (the desktop app's on Windows, the Edge Functions' with Deno, the database's with pgTAP on the local stack), rebuilds the website's engine and compares it with the committed one, checks relative Markdown links and that every workflow action is pinned by commit SHA, and scans the history for secrets.
 
+### Game build watch
+
+A daily workflow (`.github/workflows/game-build-watch.yml`, also runnable by hand from the Actions tab) asks HearthstoneJSON, with one request, which game build it has card data for. If that build is newer than the newest one in `TESTED_BUILDS` (`crates/bg-parser/src/lib.rs`), it reads the card data of both builds and opens one issue, `New game build <N>`: the Battlegrounds cards added, changed and removed, the minions the simulator does not know and the ones it plays that changed, and a checklist (parser fixture and `TESTED_BUILDS`, simulator review, memory reader, card data). An issue with that title, open or closed, is never opened twice. The workflow can only read the repository and open issues. It does not read Blizzard's site; the issue links the official news page.
+
+To see what it would do without opening anything: `python tools/game_build_watch.py`. Add `--open-issue` (needs `gh` and a token) to open the issue. If the simulator has a `CHECKED_BUILDS` list in `crates/combat-sim/src`, the report says when it is behind. The listing can be ahead of the game's own patch day, so read the build number in the issue before acting on it.
+
 ### Real-game fixtures
 
 Copy the raw log into `.local/` (never commit it), build the parser and make one fixture per game; the script writes nothing if the log has a game played with the reconnect dev tool (D-043), if a name or id would be left, or if the fixture would read differently from the raw game:

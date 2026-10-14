@@ -1,0 +1,42 @@
+name: Game build watch
+
+# Every day, ask HearthstoneJSON which game build it has card data for. When
+# that build is newer than the newest one the log parser was tested on
+# (TESTED_BUILDS in crates/bg-parser/src/lib.rs), open one issue, "New game
+# build <N>", with the Battlegrounds cards that changed and a checklist. An
+# issue with that title, open or closed, is never opened twice. It only reads
+# the repository and opens that issue; it changes no file.
+
+on:
+  schedule:
+    - cron: "43 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: game-build-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.16"
+
+      - name: A newer game build opens an issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python tools/game_build_watch.py --open-issue
