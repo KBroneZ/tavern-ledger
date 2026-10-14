@@ -444,3 +444,29 @@ fn the_report_lines_are_redacted_again_when_they_are_read() {
     assert_eq!(lines.len(), 1);
     assert!(!lines[0].contains("Jaina"), "{lines:?}");
 }
+
+#[test]
+fn a_game_that_could_not_be_read_logs_only_its_technical_cause() {
+    let problems = |p: &[&str]| -> Vec<String> { p.iter().map(|s| s.to_string()).collect() };
+    assert_eq!(
+        read_failure_reason(&problems(&[bg_parser::PROBLEM_NO_TIMES])),
+        Some("no-times".into())
+    );
+    assert_eq!(
+        read_failure_reason(&problems(&[bg_parser::PROBLEM_TOO_MANY_BAD_LINES])),
+        Some("too-many-bad-lines".into())
+    );
+    assert_eq!(
+        read_failure_reason(&problems(&["parser error: UnsupportedTurn"])),
+        Some("UnsupportedTurn".into())
+    );
+    // Anything else, or a name that is not a name, is not repeated.
+    assert_eq!(
+        read_failure_reason(&problems(&["unexpected lobby size: 0"])),
+        None
+    );
+    assert_eq!(
+        read_failure_reason(&problems(&["parser error: Name#1234 and more text"])),
+        None
+    );
+}

@@ -273,7 +273,7 @@ fn a_game_whose_player_is_not_known_yet_is_unknown() {
 fn a_reader_error_is_unknown_never_an_empty_list() {
     let mut reader = reader_with(&[vec![tag("2", "TAVERN_SPELL_ATTACK_INCREASE", "2")]]);
     assert!(reader.counters_now().is_some());
-    reader.feed("this line has no timestamp");
+    reader.feed(&line(1, "SOMETHING_NEW foo"));
     assert_eq!(reader.counters_now(), None);
 }
 

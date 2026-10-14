@@ -287,6 +287,10 @@
         "The setting for reading from the game could not be read; it is off.": "No se ha podido leer el ajuste de lectura del juego; está desactivado.",
         "Reading from the game stopped after an internal error; it is off until the app restarts.": "La lectura del juego se ha detenido por un error interno; está desactivada hasta que reinicies la app.",
         "Lobby tribes: unsupported game version": "Tribus de la partida: versión del juego no compatible",
+        // bg_parser: why the lines of a game could not be read
+        "the game log has no times (restart Hearthstone and play a new game)": "el registro del juego no tiene horas (reinicia Hearthstone y juega una partida nueva)",
+        "the game log has too many unreadable lines (restart Hearthstone and play a new game)": "el registro del juego tiene demasiadas líneas ilegibles (reinicia Hearthstone y juega una partida nueva)",
+        "skipped 1 unreadable log line": "Se ha omitido 1 línea ilegible del registro",
         // tracker::setup, the reasons inside its lines
         "Without the Power log Tavern Ledger sees no games.": "Sin el registro Power, Tavern Ledger no ve ninguna partida.",
         "Without it the game stops writing Power.log at about 10 MB and later games are lost.": "Sin él, el juego deja de escribir Power.log al llegar a unos 10 MB y se pierden las partidas siguientes.",
@@ -296,6 +300,8 @@
     // tracker::setup's lines (file, path, section, settings, reason).
     backendPatterns: {
       es: [
+        [String.raw`skipped (\d+) unreadable log lines`,
+          "Se han omitido $1 líneas ilegibles del registro"],
         [String.raw`Could not open your browser \((\w+)\)\.`,
           "No se ha podido abrir tu navegador ($1)."],
         [String.raw`Uploads go to (\S+), not to Tavern Ledger's own server\.`,

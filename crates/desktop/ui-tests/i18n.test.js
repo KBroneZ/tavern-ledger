@@ -215,3 +215,19 @@ test("the warning about another upload server is translated with its address kep
   I18n.setLang("en");
   assert.equal(I18n.backend(warning), warning);
 });
+
+test("why a game's lines could not be read is translated with what to do", () => {
+  I18n.setLang("es");
+  assert.equal(
+    I18n.backend("the game log has no times (restart Hearthstone and play a new game)"),
+    "el registro del juego no tiene horas (reinicia Hearthstone y juega una partida nueva)"
+  );
+  assert.equal(
+    I18n.backend("the game log has too many unreadable lines (restart Hearthstone and play a new game)"),
+    "el registro del juego tiene demasiadas líneas ilegibles (reinicia Hearthstone y juega una partida nueva)"
+  );
+  assert.equal(I18n.backend("skipped 1 unreadable log line"), "Se ha omitido 1 línea ilegible del registro");
+  assert.equal(I18n.backend("skipped 7 unreadable log lines"), "Se han omitido 7 líneas ilegibles del registro");
+  I18n.setLang("en");
+  assert.equal(I18n.backend("skipped 7 unreadable log lines"), "skipped 7 unreadable log lines");
+});

@@ -105,8 +105,17 @@ fn a_finished_game_has_no_live_leaderboard() {
 fn a_broken_game_has_no_leaderboard() {
     let all = lines("solo_game");
     let mut part = up_to(&all, "tag=TURN value=1");
-    part.push("not a log line".into());
+    part.push("D 12:00:00.0000000 GameState.DebugPrintPower() -     SOMETHING_NEW foo".into());
     assert!(reader_with(&part).lobby_now().is_empty());
+}
+
+#[test]
+fn one_stray_line_keeps_the_live_leaderboard() {
+    let all = lines("solo_game");
+    let mut part = up_to(&all, "tag=TURN value=1");
+    let before = reader_with(&part).lobby_now();
+    part.push("not a log line".into());
+    assert_eq!(reader_with(&part).lobby_now(), before);
 }
 
 #[test]

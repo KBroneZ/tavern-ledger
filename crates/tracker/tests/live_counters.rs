@@ -156,7 +156,10 @@ fn a_value_set_by_a_tag_change_follows_the_same_hold() {
 fn a_reader_error_makes_the_counters_unknown() {
     let (mut watcher, power) = watcher_with_game();
     assert!(watcher.live_counters().is_some());
-    append(&power, &["this line has no timestamp".to_string()]);
+    append(
+        &power,
+        &["D 12:00:00.0000000 GameState.DebugPrintPower() -     SOMETHING_NEW foo".to_string()],
+    );
     watcher.poll().unwrap();
     assert_eq!(watcher.live_counters(), None);
 }
