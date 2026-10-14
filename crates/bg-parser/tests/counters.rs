@@ -3,7 +3,7 @@
 //! the local player is entity 2, the opponent's dummy player entity 3, and
 //! entity 5 stands for a Duos teammate's hero.
 
-use bg_parser::counters::{counters_from, Counter, CounterKind, ENABLED_KINDS};
+use bg_parser::counters::{counters_from, Counter, CounterInputs, CounterKind, ENABLED_KINDS};
 use bg_parser::report::CombatValues;
 use bg_parser::LogReader;
 
@@ -158,6 +158,86 @@ fn beetles_carry_the_enchantments_two_numbers() {
 }
 
 #[test]
+fn tavern_elementals_carry_the_player_enchantments_two_numbers() {
+    let values = one(enchantment(70, "BG_ShopBuff_Elemental", 2, "PLAY", (4, 4)));
+    assert_eq!(
+        counters(&values),
+        Some(vec![Counter::of_stats(CounterKind::ShopElemental, 4, 4)])
+    );
+}
+
+#[test]
+fn tavern_elementals_follow_the_enchantment_the_way_the_game_writes_it() {
+    // The user's logs: the enchantment is created empty, shown with its card
+    // id while set aside, moved to play, and then its numbers change in
+    // place (1, 2, 3, 4), never as a new entity.
+    let created = vec![
+        line(1, "FULL_ENTITY - Creating ID=437 CardID="),
+        line(2, "tag=ZONE value=SETASIDE"),
+        line(2, "tag=ENTITY_ID value=437"),
+        line(
+            1,
+            "SHOW_ENTITY - Updating Entity=437 CardID=BG_ShopBuff_Elemental",
+        ),
+        line(2, "tag=CONTROLLER value=2"),
+        line(2, "tag=CARDTYPE value=ENCHANTMENT"),
+        line(2, "tag=ATTACHED value=2"),
+        line(2, "tag=ZONE value=SETASIDE"),
+        line(2, "tag=ENTITY_ID value=437"),
+        tag("437", "ZONE", "PLAY"),
+        tag("437", "TAG_SCRIPT_DATA_NUM_1", "1"),
+        tag("437", "TAG_SCRIPT_DATA_NUM_2", "1"),
+    ];
+    let mut reader = reader_with(&[created]);
+    assert_eq!(
+        reader.counters_now(),
+        Some(vec![Counter::of_stats(CounterKind::ShopElemental, 1, 1)])
+    );
+    for total in ["2", "4"] {
+        reader.feed(&tag("437", "TAG_SCRIPT_DATA_NUM_1", total));
+        reader.feed(&tag("437", "TAG_SCRIPT_DATA_NUM_2", total));
+    }
+    assert_eq!(
+        reader.counters_now(),
+        Some(vec![Counter::of_stats(CounterKind::ShopElemental, 4, 4)])
+    );
+}
+
+#[test]
+fn tavern_elementals_that_are_not_in_play_or_empty_are_not_listed() {
+    let set_aside = one(enchantment(
+        70,
+        "BG_ShopBuff_Elemental",
+        2,
+        "SETASIDE",
+        (4, 4),
+    ));
+    assert_eq!(counters(&set_aside), Some(vec![]));
+    let zero = one(enchantment(70, "BG_ShopBuff_Elemental", 2, "PLAY", (0, 0)));
+    assert_eq!(counters(&zero), Some(vec![]));
+}
+
+#[test]
+fn the_tavern_enchantments_that_are_not_totals_are_never_read() {
+    // The log's other tavern buffs (per minion, or set again every event)
+    // are not the player's current total: not counters (see counters-log).
+    let mut parts = Vec::new();
+    for (id, card) in [
+        (80, "BG_ShopBuff"),
+        (81, "BG_ShopBuff_Ench"),
+        (82, "BG_ShopBuff_MultiRace_Ench"),
+        (83, "BG_ShopBuff_Elemental_Ench"),
+    ] {
+        parts.push(enchantment(id, card, 2, "PLAY", (6, 6)));
+    }
+    parts.push(vec![
+        tag("2", "BACON_PLAYER_EXTRA_GOLD_NEXT_TURN", "2"),
+        tag("2", "BACON_FREE_REFRESH_COUNT", "3"),
+    ]);
+    assert_eq!(counters(&parts), Some(vec![]));
+}
+
+#[test]
 fn an_enchantment_that_is_not_in_play_is_not_counted() {
     let values = one(enchantment(62, "BG25_008pe", 2, "SETASIDE", (9, 0)));
     assert_eq!(counters(&values), Some(vec![]));
@@ -172,6 +252,7 @@ fn entries_come_in_the_fixed_order_of_the_kinds() {
     parts.push(enchantment(61, "BG31_808pe", 2, "PLAY", (3, 3)));
     parts.push(enchantment(62, "BG25_008pe", 2, "PLAY", (2, 0)));
     parts.push(enchantment(60, "BG25_011pe", 2, "PLAY", (4, 0)));
+    parts.push(enchantment(70, "BG_ShopBuff_Elemental", 2, "PLAY", (2, 2)));
     let kinds: Vec<CounterKind> = counters(&parts)
         .expect("known")
         .iter()
@@ -185,6 +266,7 @@ fn entries_come_in_the_fixed_order_of_the_kinds() {
             CounterKind::UndeadAttack,
             CounterKind::EternalKnights,
             CounterKind::Beetle,
+            CounterKind::ShopElemental,
         ]
     );
 }
@@ -261,6 +343,8 @@ fn an_opponents_and_a_teammates_values_never_appear() {
         (63, "BG25_011pe", 5),
         (64, "BG31_808pe", 5),
         (65, "BG25_008pe", 5),
+        (66, "BG_ShopBuff_Elemental", 3),
+        (67, "BG_ShopBuff_Elemental", 5),
     ] {
         parts.push(enchantment(id, card, owner, "PLAY", (6, 6)));
     }
@@ -301,12 +385,15 @@ fn a_value_outside_the_range_is_passed_on_for_the_tracker_to_refuse() {
 
 #[test]
 fn a_kind_outside_the_enabled_list_never_appears() {
-    let values = CombatValues {
-        blood_gem: (3, 2),
-        spell: (1, 1),
-        knights_dead: 4,
-        undead_attack: 5,
-        beetle: (6, 6),
+    let values = CounterInputs {
+        values: CombatValues {
+            blood_gem: (3, 2),
+            spell: (1, 1),
+            knights_dead: 4,
+            undead_attack: 5,
+            beetle: (6, 6),
+        },
+        shop_elemental: (7, 7),
     };
     let all = counters_from(&values, ENABLED_KINDS);
     assert_eq!(
@@ -331,6 +418,7 @@ fn the_json_has_the_kind_and_only_that_kinds_fields() {
         Counter::of_stats(CounterKind::BloodGem, 4, 3),
         Counter::of_attack(CounterKind::UndeadAttack, 7),
         Counter::of_count(CounterKind::EternalKnights, 5),
+        Counter::of_stats(CounterKind::ShopElemental, 4, 4),
     ])
     .expect("serializable");
     assert_eq!(
@@ -339,6 +427,7 @@ fn the_json_has_the_kind_and_only_that_kinds_fields() {
             { "kind": "blood_gem", "atk": 4, "health": 3 },
             { "kind": "undead_attack", "atk": 7 },
             { "kind": "eternal_knights", "count": 5 },
+            { "kind": "shop_elemental", "atk": 4, "health": 4 },
         ])
     );
 }
