@@ -357,12 +357,6 @@
           "markdownDescription": "Enables the overlay_scene command without any pre-configured scope."
         },
         {
-          "description": "Enables the overlay_set_detail command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-overlay-set-detail",
-          "markdownDescription": "Enables the overlay_set_detail command without any pre-configured scope."
-        },
-        {
           "description": "Enables the overlay_set_enabled command without any pre-configured scope.",
           "type": "string",
           "const": "allow-overlay-set-enabled",
@@ -667,12 +661,6 @@
           "type": "string",
           "const": "deny-overlay-scene",
           "markdownDescription": "Denies the overlay_scene command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the overlay_set_detail command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-overlay-set-detail",
-          "markdownDescription": "Denies the overlay_set_detail command without any pre-configured scope."
         },
         {
           "description": "Denies the overlay_set_enabled command without any pre-configured scope.",

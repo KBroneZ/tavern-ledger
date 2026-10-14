@@ -28,7 +28,7 @@ use tauri::{AppHandle, Emitter, Manager, State, Wry};
 
 use crate::hover::OverlayFrame;
 use crate::overlay_layout::{
-    Detail, Layout, Panel, Rect, Settings, Theme, MAX_OPACITY, MIN_OPACITY, THEMES,
+    Layout, Panel, Rect, Settings, Theme, MAX_OPACITY, MIN_OPACITY, THEMES,
 };
 use crate::screen_fit::Area;
 use crate::AppState;
@@ -91,7 +91,6 @@ pub struct View {
     theme: &'static str,
     themes: Vec<ThemeInfo>,
     opacity: f64,
-    detail: Detail,
     min_opacity: f64,
     max_opacity: f64,
     hidden: Vec<Panel>,
@@ -332,7 +331,6 @@ impl Overlay {
                 })
                 .collect(),
             opacity: settings.opacity,
-            detail: settings.detail,
             min_opacity: MIN_OPACITY,
             max_opacity: MAX_OPACITY,
             hidden: settings.hidden.iter().copied().collect(),
@@ -478,11 +476,6 @@ pub fn overlay_save_layout(
 #[tauri::command]
 pub fn overlay_set_theme(app: AppHandle, state: State<'_, Arc<AppState>>, theme: Theme) -> View {
     change(&app, &state, |s, _| s.theme = theme)
-}
-
-#[tauri::command]
-pub fn overlay_set_detail(app: AppHandle, state: State<'_, Arc<AppState>>, detail: Detail) -> View {
-    change(&app, &state, |s, _| s.detail = detail)
 }
 
 #[tauri::command]

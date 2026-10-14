@@ -7,7 +7,7 @@
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 
-const SOURCES = ["log", "inferred", "entered", "leaderboard", "card_data", "possible", "game", "unknown"];
+const SOURCES = ["log", "inferred", "unknown"];
 
 let game = null;
 // Where the game client is (T-314, LoadingScreen.log): "battlegrounds_loading"
@@ -40,13 +40,6 @@ function el(tag, className, text) {
 // The word for a source, in the language (strings/common.js).
 function label(source) {
   return TLI18n.t(`source.${SOURCES.includes(source) ? source : "unknown"}.label`);
-}
-
-// The mode as the app names it; any other game type is just Battlegrounds.
-function modeName(type) {
-  if (type === "GT_BATTLEGROUNDS") return TLI18n.t("mode.GT_BATTLEGROUNDS");
-  if (type === "GT_BATTLEGROUNDS_DUO") return TLI18n.t("mode.GT_BATTLEGROUNDS_DUO");
-  return "Battlegrounds";
 }
 
 // The mark for a source; none for the log, whose values are the plain ones.
@@ -96,37 +89,22 @@ function renderStatus(g) {
     panel.append(TLI18n.t("ov.status.starting"));
     return;
   }
-  // Advanced: heroes, mode, last combat and health in words. Simple shows
-  // nothing of it during a game (T-339): the game shows all of it already.
-  const line = el("div", "adv");
-  const mode = g.game_type.value ? modeName(g.game_type.value) : null;
-  const names = [g.hero.value, g.is_duos ? g.teammate_hero.value : null]
-    .filter(Boolean)
-    .map(heroName)
-    .join(" + ");
-  const sep = () => el("span", "sep", "·");
-  line.append(el("span", "hero", names || TLI18n.t("ov.status.heroUnknown")), sep(), mode || TLI18n.t("ov.status.modeUnknown"), sep());
-  if (g.phase === "over") {
-    line.append(TLI18n.t("ov.status.over"));
-  } else {
-    line.append(g.last_combat.value === null ? TLI18n.t("ov.status.noCombat") : TLI18n.t("ov.status.combat", { value: g.last_combat.value }));
-  }
-  line.append(sep(), sourced(el("span"), g.own_health), ` ${TLI18n.t("ov.hp.unit")}`);
-  panel.append(line);
-  if (g.phase === "over") panel.append(el("div", "simple-only", TLI18n.t("ov.status.over")));
+  // Nothing of the heroes, mode, combat or health in words during a game
+  // (T-339): the game shows all of it already.
+  if (g.phase === "over") panel.append(el("div", null, TLI18n.t("ov.status.over")));
   if (g === EXAMPLE_GAME) panel.append(el("p", "notes", TLI18n.t("ov.status.example")));
   const notes = [...g.warnings, ...g.problems].slice(0, 2).map((w) => TLI18n.backend(w));
   if (notes.length) panel.append(el("p", "notes", notes.join(" · ")));
   // Warnings and problems always show: a failure is never silent.
-  panel.classList.toggle("simple-empty", g.phase !== "over" && g !== EXAMPLE_GAME && !notes.length);
+  panel.classList.toggle("empty", g.phase !== "over" && g !== EXAMPLE_GAME && !notes.length);
 }
 
-// The Simple tribe row (T-339): the lobby's tribes as short chips, one
+// The tribe row (T-339): the lobby's tribes as short chips, one
 // "inferred" mark when the tavern confirmed them, "2/5" when not all are known.
-function simpleTribeRow(g) {
-  const known = TLWords.simpleTribes(g);
+function tribeRow(g) {
+  const known = TLWords.lobbyTribes(g);
   if (!known) return null;
-  const row = el("div", "tribe-chips simple-only");
+  const row = el("div", "tribe-chips");
   row.setAttribute("aria-label", TLI18n.t("ov.slot.tribes"));
   for (const t of known.tribes) {
     // The short name is seen, the full one read out.
@@ -149,58 +127,14 @@ function tribeShort(id) {
 
 function renderTribes(g) {
   const panel = document.getElementById("tribes");
-  const simple = simpleTribeRow(g);
-  const full = el("div", "adv");
-  panel.replaceChildren(...[simple, full].filter(Boolean));
-  panel.classList.toggle("simple-empty", !simple);
-  full.append(el("h2", null, TLI18n.t("ov.slot.tribes")));
-  const seen = el("div", "row");
-  seen.append(el("span", "what", TLI18n.t("ov.tribes.seen")));
-  const seenMark = mark(g.tribes_source);
-  if (seenMark) seen.append(seenMark);
-  seen.append(
-    el(
-      "div",
-      "tribe-list",
-      g.tribes.length ? g.tribes.map((t) => `${tribeName(t.tribe)} ${t.offers}`).join(" · ") : TLI18n.t("ov.tribes.none"),
-    ),
-  );
-  full.append(seen);
-  // The lobby's tribes the tavern confirmed with the card data (D-050): the
-  // log has no list of them.
-  const lobby = g.lobby_tribes;
-  // Read from the game (D-063), when the user turned that on.
-  if (lobby && lobby.basis === "game") {
-    const row = el("div", "row");
-    row.append(el("span", "what", TLI18n.t("ov.tribes.lobbyGame")));
-    const gameMark = mark(lobby.source);
-    if (gameMark) row.append(gameMark);
-    row.append(el("div", "tribe-list", lobby.tribes.map(tribeName).join(" · ")));
-    full.append(row);
-  }
-  if (g.game_tribes && g.game_tribes.note) full.append(el("p", "notes", TLI18n.backend(g.game_tribes.note)));
-  if (lobby && lobby.basis === "tavern_confirmed") {
-    const row = el("div", "row");
-    row.append(el("span", "what", lobby.complete ? TLI18n.t("ov.tribes.lobbyAll") : TLI18n.t("ov.tribes.lobbyPart", { count: lobby.tribes.length })));
-    const lobbyMark = mark(lobby.source);
-    if (lobbyMark) row.append(lobbyMark);
-    row.append(el("div", "tribe-list", lobby.tribes.map(tribeName).join(" · ")));
-    full.append(row);
-  }
-  if (g.entered_tribes.length) {
-    const entered = el("div", "row");
-    entered.append(el("span", "what", TLI18n.t("ov.tribes.entered")));
-    const enteredMark = mark(g.entered_tribes_source);
-    if (enteredMark) entered.append(enteredMark);
-    entered.append(el("div", "tribe-list", g.entered_tribes.map(tribeName).join(" · ")));
-    full.append(entered);
-  }
+  const row = tribeRow(g);
+  panel.replaceChildren(...[row].filter(Boolean));
+  panel.classList.toggle("empty", !row);
   panel.hidden = false;
 }
 
 // The counters panel (T-612): the player's own running totals, one line each
-// (Advanced adds where the game shows it). Hidden when there is nothing to
-// show: null (unknown) and [] (nothing applies) both leave no empty box.
+// Hidden when there is nothing to show: null (unknown) and [] (nothing applies) both leave no empty box.
 function renderCounters(g) {
   const panel = document.getElementById("counters");
   if (!TLCounters.ENABLED) {
@@ -223,86 +157,14 @@ function renderCounters(g) {
     seen.setAttribute("aria-hidden", "true");
     const main = el("span", "counter-main");
     main.append(el("span", "counter-label", r.label), el("b", "counter-value", r.value));
-    seen.append(main, el("span", "counter-where adv", r.where));
+    seen.append(main);
     item.append(seen, el("span", "visually-hidden", r.said));
     list.append(item);
   }
   panel.replaceChildren(list);
 }
 
-function renderRecord(opponent) {
-  const record = el("span", "record");
-  if (!opponent.record) {
-    record.append(el("span", "none", TLI18n.t("ov.record.none")));
-    return record;
-  }
-  const r = opponent.record;
-  record.append(
-    el("span", "w", TLI18n.t("ov.record.won", { value: r.won })),
-    " ",
-    el("span", "l", TLI18n.t("ov.record.lost", { value: r.lost })),
-    ` ${TLI18n.t("ov.record.tie", { value: r.tie })}`,
-  );
-  if (r.unknown) record.append(" ", unknown(), ` ×${r.unknown}`);
-  const recordMark = mark(opponent.record_source);
-  if (recordMark) record.append(recordMark);
-  return record;
-}
-
-function renderBoards(opponent) {
-  const wrap = el("div", "board");
-  if (!opponent.boards.length) {
-    wrap.append(el("span", "none", TLI18n.t("ov.board.none")), mark(opponent.boards_source) || "");
-    return [wrap];
-  }
-  return opponent.boards.map((board) => {
-    const row = el("div", "board");
-    const who = opponent.boards.length > 1 && board.hero ? `${heroName(board.hero)} · ` : "";
-    row.append(el("span", "when", `${who}${TLWords.seenWords(board.round, current().turn.value)}`));
-    if (!board.minions.length) row.append(el("span", "none", TLI18n.t("ov.board.empty")));
-    // Names and art are looked up by the log's card id (T-304): the row says
-    // so in words, and a card the card data does not know shows its id, marked unknown.
-    let named = false;
-    let unnamed = false;
-    for (const m of board.minions) {
-      const chip = el("span", m.golden ? "minion golden" : "minion");
-      const stat = (n) => (n === null || n === undefined ? "?" : n);
-      const name = TLCards.name(m.card_id);
-      if (name) named = true;
-      if (name === null) unnamed = true;
-      const art = TLCards.art(m.card_id, "art");
-      if (art) chip.append(art);
-      const label = el("i", name === null ? "unnamed" : null, name || m.card_id || "?");
-      if (name && m.card_id) label.title = m.card_id;
-      chip.append(el("b", null, `${stat(m.atk)}/${stat(m.health)}`), label);
-      const marks = keywordMarks(m.keywords);
-      if (marks) chip.append(marks);
-      const gifts = giftMarks(m);
-      if (gifts) chip.append(gifts);
-      row.append(chip);
-    }
-    if (named) row.append(mark("card_data"));
-    if (unnamed) row.append(mark("unknown"));
-    return row;
-  });
-}
-
-// A minion's keywords (T-208): short letters, each read out by its full
-// name; the legend spells them out. Nothing when the record did not keep them.
-function keywordMarks(keywords) {
-  const marks = TLWords.keywordMarks(keywords);
-  if (!marks || !marks.length) return null;
-  const line = el("span", "kws adv");
-  for (const k of marks) {
-    const mark = el("span", `kw kw-${k.key}`, k.short);
-    mark.setAttribute("aria-hidden", "true");
-    line.append(mark);
-  }
-  line.append(el("span", "visually-hidden", marks.map((k) => k.full).join(", ")));
-  return line;
-}
-
-// A minion's Dark Gifts (T-528, D-107), in Simple and Advanced: a small mark
+// A minion's Dark Gifts (T-528, D-107): a small mark
 // per gift, its name and summary as the tooltip and read out in words.
 // Nothing when it has none.
 function giftMarks(m) {
@@ -319,70 +181,13 @@ function giftMarks(m) {
   return line;
 }
 
-// The leaderboard's triples and trinkets of each of the opponent's heroes
-// (T-312), as its tooltip shows them now.
-function renderShown(opponent) {
-  if (opponent.shown_source !== "log" || !Array.isArray(opponent.shown) || !opponent.shown.length) {
-    const none = el("div", "seat-line none", TLI18n.t("ov.shown.none"));
-    none.append(mark("unknown") || "");
-    return [none];
-  }
-  return opponent.shown.map((seat) => {
-    const w = TLWords.seatWords(seat, TLCards.name);
-    const i = opponent.seats.indexOf(seat.seat);
-    const hero = opponent.seats.length > 1 && opponent.heroes.length === opponent.seats.length ? opponent.heroes[i] : null;
-    const line = el("div", "seat-line", `${hero ? `${heroName(hero)} · ` : ""}${w.triples}`);
-    // Trinket names are Advanced (T-333); Simple says how many.
-    const names = el("span", "adv");
-    if (w.trinkets.length) {
-      line.append(el("span", "simple-only", ` · ${TLI18n.plural("ov.trinkets", w.trinkets.length)}`));
-      names.append(` · ${TLI18n.t("ov.shown.trinkets")} `);
-      w.trinkets.forEach((t, n) => {
-        if (n) names.append(", ");
-        names.append(el("span", t.known ? "trinket" : "trinket unnamed", t.hero_power ? TLI18n.t("ov.shown.heroPower", { text: t.text }) : t.text));
-      });
-    } else {
-      names.append(` · ${TLI18n.t("ov.shown.noTrinket")}`);
-    }
-    if (w.named) names.append(mark("card_data"));
-    if (w.unknown) names.append(mark("unknown"));
-    line.append(names);
-    return line;
-  });
-}
-
-// "T3", or "T3+4" for a Duos team; "T?" when the log has not said.
-function tiers(opponent) {
-  const known = (opponent.tiers || []).map((t) => (t.value === null ? "?" : t.value));
-  return TLI18n.t("ov.tier", { value: known.length ? known.join("+") : "?" });
-}
-
-// The head line of an opponent: portraits, hero names, tier, health, record.
-// Shared by the compact list and the hover card (overlay-hover.js).
-function opponentHead(opponent) {
-  const head = el("div", "head");
-  const hp = el("span", "hp");
-  hp.append(sourced(el("b"), opponent.health), ` ${TLI18n.t("ov.hp.unit")}`);
-  const portraits = opponent.heroes.map((h) => TLCards.art(h.id, "portrait")).filter(Boolean);
-  // The game's own mark on its leaderboard (T-313), in words.
-  if (opponent.next) head.append(el("span", "next-badge", TLWords.nextLabels(current()).badge));
-  head.append(
-    ...portraits,
-    el("span", "name", heroes(opponent.heroes) || TLI18n.t("ov.status.heroUnknown")),
-    el("span", "tier", tiers(opponent)),
-    hp,
-    renderRecord(opponent),
-  );
-  return head;
-}
-
-// Compact (T-306): one line per opponent, in the leaderboard's order. The
-// boards are on the hover card, over the game's own leaderboard.
-// One opponent in the Simple panel (T-339): the heroes' portraits with
+// One opponent in the side panel (T-339), one line each in the
+// leaderboard's order; the boards are on the hover card, over the game's own
+// leaderboard. The heroes' portraits with
 // their tier, the health and the triples when above 0; the game's next mark
 // as a lit row. No names (they are on the hover card) and no unknowns.
-function simpleOpponent(opponent) {
-  const r = TLWords.simpleRow(opponent);
+function opponentLine(opponent) {
+  const r = TLWords.opponentRow(opponent);
   const row = el("li", `opp${r.next ? " next" : ""}${r.out ? " out" : ""}`);
   const said = [];
   const faces = el("span", "faces");
@@ -401,7 +206,7 @@ function simpleOpponent(opponent) {
   row.append(faces);
   const nums = el("span", "nums");
   if (r.next) {
-    const word = TLWords.nextLabels(current()).badge;
+    const word = TLWords.nextLabel(current());
     nums.append(el("span", "opp-next", word));
   }
   if (r.health !== null) {
@@ -421,10 +226,9 @@ function simpleOpponent(opponent) {
 }
 
 // The combat odds against the next opponent (T-605), or why there are none.
-// Simple: the three shares and the board's age; Advanced adds the damage and
-// the cards played with a gap. Null when there is nothing to say.
-function renderOdds(g, advanced) {
-  const v = TLOdds.oddsView(g.odds, advanced, (id) => TLCards.name(id) || null);
+// The three shares and the board's age. Null when there is nothing to say.
+function renderOdds(g) {
+  const v = TLOdds.oddsView(g.odds);
   if (!v) return null;
   const box = el("div", `odds ${v.kind}`);
   box.title = v.about;
@@ -441,67 +245,38 @@ function renderOdds(g, advanced) {
     box.append(grid);
     // A game build the rules were not checked against warns here (D-145).
     if (v.warning) box.append(el("p", "odds-warning", v.warning));
-    // "≈" when a card is played with a gap; Advanced names them.
+    // "≈" when a card is played with a gap.
     if (v.age) box.append(el("p", "odds-age", v.approx ? `≈ ${v.age}` : v.age));
   }
-  for (const text of v.lines) box.append(el("p", "odds-line", text));
   box.append(el("span", "visually-hidden", v.said));
   return box;
 }
 
 function renderOpponents(g) {
   const panel = document.getElementById("opponents");
-  const list = el("ol", "opp-list simple-only");
+  const list = el("ol", "opp-list");
   list.setAttribute("aria-label", TLI18n.t("ov.slot.opponents"));
   for (const opponent of g.opponents) {
-    list.append(simpleOpponent(opponent));
+    list.append(opponentLine(opponent));
     // Under the next opponent's line (T-605).
-    const odds = opponent.next ? renderOdds(g, false) : null;
+    const odds = opponent.next ? renderOdds(g) : null;
     if (odds) {
       const item = el("li", "odds-row");
       item.append(odds);
       list.append(item);
     }
   }
-  const full = el("div", "adv");
-  // The damage cap the game shows (T-315), above the opponents in both modes.
+  // The damage cap the game shows (T-315), above the opponents.
   const cap = TLWords.damageCap(g);
   const capLine = cap ? el("p", "damage-cap", cap.text) : null;
   if (capLine) capLine.title = cap.about;
-  panel.replaceChildren(...[capLine, list, full].filter(Boolean));
-  panel.classList.toggle("simple-empty", !g.opponents.length && !cap);
-  full.append(el("h2", null, TLI18n.t("ov.slot.opponents")));
-  if (!g.opponents.length) {
-    full.append(el("div", "row", TLI18n.t("ov.opponents.noLobby")));
-  }
-  // The next opponent the game marks (T-313), with the last board met.
-  const next = TLWords.nextOpponent(g.opponents);
-  if (next) {
-    const block = el("div", "opponent next-block");
-    const head = opponentHead(next);
-    // The heading already says "next".
-    const badge = head.querySelector(".next-badge");
-    if (badge) badge.remove();
-    const odds = renderOdds(g, true);
-    block.append(el("h3", null, TLWords.nextLabels(g).heading), head, ...(odds ? [odds] : []), ...renderShown(next), ...renderBoards(next));
-    full.append(block);
-  }
-  for (const opponent of g.opponents) {
-    const item = el("div", "opponent compact");
-    item.append(opponentHead(opponent));
-    full.append(item);
-  }
-  // Boards are only on the hover card: say when the hover cannot work yet.
-  const hint =
-    g.leaderboard_slots === null || g.leaderboard_slots === undefined
-      ? TLI18n.t("ov.opponents.hintNoOrder")
-      : TLI18n.t("ov.opponents.hint");
-  full.append(el("p", "hint", hint));
+  panel.replaceChildren(...[capLine, list].filter(Boolean));
+  panel.classList.toggle("empty", !g.opponents.length && !cap);
   panel.hidden = false;
 }
 
 // The lobby panel (T-338): the own rating with the last game's change, and
-// the day's summary. Advanced also marks the rating "from the game".
+// the day's summary.
 function renderLobby(v) {
   const panel = document.getElementById("lobby");
   panel.replaceChildren();
@@ -516,14 +291,7 @@ function renderLobby(v) {
     }
     panel.append(row);
   }
-  if (rows.length) {
-    const source = mark("game");
-    if (source) {
-      source.classList.add("adv");
-      panel.append(source);
-    }
-  }
-  const note = TLLobby.ratingNote(v, document.body.dataset.detail === "advanced");
+  const note = TLLobby.ratingNote(v);
   if (note) panel.append(el("p", "notes", note));
   // Each part of a summary line stays whole; lines break only between parts.
   for (const line of TLLobby.summaryLines(v)) {
@@ -604,8 +372,6 @@ async function start() {
   window.addEventListener("resize", fitText);
   // Nothing is drawn before the language is known and the markup is in it.
   await TLI18n.ready();
-  // The key to the keyword marks, from the same words the marks use.
-  document.getElementById("legend").append(el("span", "legend-keys", ` ${TLI18n.t("ov.legend.keys", { list: TLWords.keywordLegend() })}`));
   TLCards.onChange(render);
   // Listen first, so a change between the first read and the listener is not lost.
   await listen("live-changed", () => refresh().catch(showError));

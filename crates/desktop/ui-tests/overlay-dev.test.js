@@ -162,7 +162,7 @@ test("other methods are refused and the server writes nothing", async () => {
 
 test("the overlay page gets the stand-in before its first script, and the scenario's state", async () => {
   await withServer({}, async ({ origin }) => {
-    const res = await get(origin, "/ui/overlay.html?scenario=solo-advanced&lang=es&theme=contrast");
+    const res = await get(origin, "/ui/overlay.html?scenario=solo&lang=es&theme=contrast");
     assert.equal(res.status, 200);
     const install = res.body.indexOf("TLGalleryBridge.install(");
     const themes = res.body.indexOf("TLGalleryThemes");
@@ -172,7 +172,7 @@ test("the overlay page gets the stand-in before its first script, and the scenar
     assert.ok(first > install, "the stand-in is installed before the page's first script");
     assert.ok(second > first, "the page's scripts keep their order");
     assert.match(res.body, /"theme":"contrast"/, "the chosen theme is in the state");
-    assert.match(res.body, /"detail":"advanced"/, "the scenario's own mode stays as it is");
+    assert.doesNotMatch(res.body, /"detail"/, "the overlay has no detail mode");
     assert.match(res.body, /, "es"\);/, "the language is passed");
     assert.match(res.body, /<link rel="stylesheet" href="overlay.css">/, "the page's own tags are kept");
   });
@@ -206,7 +206,7 @@ test("every gallery scenario answers, in both languages, and an unknown one is 4
     const list = JSON.parse((await get(origin, "/api/scenarios")).body);
     const ids = list.scenarios.map((s) => s.id);
     for (const s of SCENARIOS.filter((x) => x.id !== "counters")) assert.ok(ids.includes(s.id), `${s.id} is listed`);
-    assert.ok(ids.length >= 19);
+    assert.ok(ids.length >= 16);
     for (const id of ids) {
       for (const lang of ["en", "es"]) {
         const res = await get(origin, `/ui/overlay.html?scenario=${id}&lang=${lang}`);
@@ -217,7 +217,7 @@ test("every gallery scenario answers, in both languages, and an unknown one is 4
     assert.equal((await get(origin, "/ui/overlay.html?scenario=nope")).status, 404);
     const hover = list.scenarios.find((s) => s.id === "hover-solo");
     assert.ok(hover.hover && hover.hover.card, "a scenario with a hover lists its payload");
-    assert.equal(list.scenarios.find((s) => s.id === "solo-simple").hover, null);
+    assert.equal(list.scenarios.find((s) => s.id === "solo").hover, null);
     for (const s of list.scenarios) assert.ok(s.focus && s.focus.w > 0 && s.focus.h > 0, `${s.id} has a close-up region`);
   });
 });

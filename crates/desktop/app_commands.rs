@@ -20,7 +20,6 @@ pub const APP_COMMANDS: &[&str] = &[
     "overlay_settings",
     "overlay_save_layout",
     "overlay_set_theme",
-    "overlay_set_detail",
     "overlay_set_opacity",
     "overlay_set_shown",
     "overlay_set_odds",

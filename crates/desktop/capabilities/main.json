@@ -20,7 +20,6 @@
     "allow-edit-lobby-tribes",
     "allow-overlay-settings",
     "allow-overlay-set-theme",
-    "allow-overlay-set-detail",
     "allow-overlay-set-shown",
     "allow-overlay-set-odds",
     "allow-overlay-set-unlocked",

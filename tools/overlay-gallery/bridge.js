@@ -22,7 +22,6 @@
       theme,
       themes: themes.THEMES,
       opacity: 0.9,
-      detail: s.detail === "advanced" ? "advanced" : "simple",
       min_opacity: 0.8,
       max_opacity: 1,
       hidden: s.hidden || [],
@@ -39,7 +38,6 @@
   const SETTERS = [
     "overlay_save_layout",
     "overlay_set_theme",
-    "overlay_set_detail",
     "overlay_set_opacity",
     "overlay_set_shown",
     "overlay_set_odds",

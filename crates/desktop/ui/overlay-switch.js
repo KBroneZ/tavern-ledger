@@ -16,8 +16,6 @@
   const arrange = document.getElementById("overlay-arrange");
   const theme = document.getElementById("overlay-theme");
   const problem = document.getElementById("overlay-switch-problem");
-  // The overlay's Simple or Advanced (D-067), also in its own toolbar.
-  const detail = document.getElementById("overlay-detail");
 
   // The themes by `theme.<id>`; one the tables do not know keeps the app's own label.
   function themeText(item) {
@@ -50,10 +48,6 @@
     arrange.dataset.unlocked = String(Boolean(view.unlocked));
     arrange.textContent = view.unlocked ? t("win.overlay.lock") : t("win.overlay.arrange");
     showThemes(view);
-    if (detail) {
-      detail.value = view.detail === "advanced" ? "advanced" : "simple";
-      detail.disabled = false;
-    }
     problem.hidden = true;
   }
 
@@ -75,18 +69,6 @@
         refresh().catch(fail);
       });
   });
-
-  if (detail) {
-    detail.addEventListener("change", () => {
-      detail.disabled = true;
-      call("overlay_set_detail", { detail: detail.value })
-        .then(show)
-        .catch((error) => {
-          fail(error);
-          refresh().catch(fail);
-        });
-    });
-  }
 
   lobby.addEventListener("change", () => {
     lobby.disabled = true;

@@ -24,7 +24,7 @@
   --font-body: "Figtree", "Segoe UI", system-ui, sans-serif;
   --stack-right: 8px;
   --stack-top: 96px;
-  --stack-width: 26rem;
+  --stack-width: 13.5rem;
   /* The lobby panel's corner (T-338): top left, clear of the lobby screen's
      menu and friends buttons at the bottom corners. */
   --lobby-left: 16px;
@@ -72,7 +72,7 @@ body {
 .panel {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 8px 11px 9px;
+  padding: 5px 7px 6px;
   border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
   border-radius: 10px;
   background: var(--panel-bg);
@@ -81,16 +81,9 @@ body {
 .panel[hidden] { display: none; }
 .slot > .panel { overflow: hidden; }
 
-.panel h2 {
-  margin: 0 0 4px;
-  color: var(--accent);
-  font: 700 1rem/1.3 var(--font-body);
-}
-
 .status { font-size: 1.038rem; }
-.status .hero { font: 700 1.154rem/1.3 var(--font-display); font-stretch: 88%; color: var(--accent); }
-.status .sep { margin: 0 5px; color: var(--dim); }
 .status .notes { margin: 4px 0 0; color: var(--amber); font-size: 0.923rem; }
+.status .hero { font: 700 1.154rem/1.3 var(--font-display); font-stretch: 88%; color: var(--accent); }
 .status.unreadable { border-color: var(--lost); color: var(--danger); }
 
 /* Counters (T-612): one line each; the figures are tabular so they do not
@@ -100,11 +93,7 @@ body {
 .counter-main { display: flex; justify-content: space-between; align-items: baseline; gap: 0.6em; }
 .counter-label { color: var(--dim); }
 .counter-value { color: var(--accent); font: 700 1.077rem/1.25 var(--font-display); font-stretch: 88%; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.counter-where { display: block; color: var(--dim); font-size: 0.846rem; }
 
-.row { margin: 3px 0 0; }
-.row .what { color: var(--dim); }
-.tribe-list { margin: 1px 0 0; font-weight: 600; }
 
 /* Source marks: the word says it; the border style repeats it, so colour is never the only cue. */
 .src {
@@ -118,11 +107,7 @@ body {
   vertical-align: middle;
 }
 .src-inferred { border-style: dashed; color: var(--accent); }
-.src-entered { border-style: double; border-width: 3px; color: var(--info); }
-.src-leaderboard { border-style: solid; border-width: 2px; color: var(--info); }
 .src-unknown { border-style: dotted; color: var(--muted); }
-.src-card_data { border-style: solid; border-radius: 2px; color: var(--text); }
-.src-possible { border-style: dashed; border-width: 2px; border-radius: 2px; color: var(--amber); font-style: italic; }
 
 .unknown-value {
   padding: 0 4px;
@@ -131,61 +116,16 @@ body {
   color: var(--muted);
 }
 
-.opponent { padding: 5px 0 6px; border-top: 1px solid color-mix(in srgb, var(--border) 35%, transparent); }
-.opponent:first-of-type { border-top: 0; padding-top: 1px; }
-.opponent .head { display: flex; align-items: baseline; gap: 8px; }
-.opponent .hp { white-space: nowrap; }
-.opponent .name { flex: 1 1 auto; min-width: 0; font-weight: 700; }
-.opponent .hp { flex: none; color: var(--dim); }
-.opponent .hp b { color: var(--text); font-weight: 700; }
-.opponent .record { flex: none; font-variant-numeric: tabular-nums; }
-.record .w { color: var(--won); }
-.record .l { color: var(--lost); }
-.record .none { color: var(--dim); }
-
-.board { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; align-items: center; }
-.board .when { flex: 0 0 100%; color: var(--dim); font-size: 0.885rem; }
-.board .none { color: var(--dim); font-size: 0.885rem; }
-/* No frame around a minion (D-052): its picture, plain numbers, its name. */
-.minion {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  padding: 0 2px 1px;
-  line-height: 1.15;
-}
-.minion b { font-size: 1rem; font-variant-numeric: tabular-nums; }
-.minion i { font: 500 0.846rem/1.15 var(--font-body); color: var(--dim); font-style: normal; }
-.minion .art {
-  width: 2.75rem;
-  height: 2.75rem;
-  margin: 1px 0;
-  border-radius: 9px;
-}
 /* Card art (T-325, as T-320 in the window): HearthstoneJSON's 256x pictures
    pad a tall minion picture with white bars at both sides (and some hero
    skins at one side). object-view-box crops the source to the art first,
    cover then fills the shape, and the background under it is dark. */
-.minion .art, .portrait {
+.portrait {
   object-fit: cover;
   background: var(--panel-solid);
+  object-view-box: inset(0% 8%);
+  object-position: 50% 30%;
 }
-.portrait { object-view-box: inset(0% 8%); object-position: 50% 30%; }
-.minion .art { object-view-box: inset(1% 16% 2%); object-position: 50% 28%; }
-.minion i.unnamed { text-decoration: underline dotted; }
-.opponent .portrait {
-  flex: none;
-  align-self: center;
-  width: 1.7rem;
-  height: 1.7rem;
-  border-radius: 50%;
-}
-/* Compact opponents list (T-306): one line each, no boards. */
-.opponent.compact { padding: 3px 0; }
-.opponent .tier { flex: none; color: var(--accent); font-variant-numeric: tabular-nums; }
-.opponent.compact .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.panel .hint { margin: 4px 0 0; color: var(--dim); font-size: 0.846rem; }
 
 /* The hover board across the top of the game window (T-333), laid out like
    the game's own board: one row of up to seven minions, attack bottom left,
@@ -213,18 +153,14 @@ body {
 .hb-title { flex: 0 1 auto; min-width: 0; font: 700 1.3em/1.2 var(--font-display); font-stretch: 88%; color: var(--accent); }
 .hb-health { color: var(--dim); }
 .hb-health b { color: var(--text); font-size: 1.15em; }
-.hover-card .record { font-size: 1.05em; font-weight: 700; font-variant-numeric: tabular-nums; }
 .hover-card .portrait { flex: none; width: 2.2em; height: 2.2em; border-radius: 50%; }
 .hover-card .hb-head .portrait { width: 2.6em; height: 2.6em; }
 .hb-seat { margin-top: 0.5em; padding-top: 0.45em; border-top: 1px solid color-mix(in srgb, var(--border) 45%, transparent); }
 .hb-hero { font-weight: 700; }
 .hb-tier { padding: 0.05em 0.5em; border: 1.5px solid var(--accent); border-radius: 0.5em; color: var(--accent); font-weight: 700; }
 .hb-fact { color: var(--dim); }
-.hb-fact .trinket { color: var(--text); }
-.hb-fact .trinket.unnamed { text-decoration: underline dotted; }
 .hb-seen { margin-left: auto; color: var(--dim); font-weight: 600; }
 .hb-empty { margin-top: 0.4em; color: var(--dim); }
-.hb-marks { margin-top: 0.25em; }
 /* Seven equal slots; fewer minions sit in the middle, as in the game. */
 .hb-board {
   display: flex;
@@ -274,8 +210,6 @@ body {
 .hb-atk { left: -0.1em; color: var(--accent); }
 .hb-hp { right: -0.1em; color: var(--lost); }
 .hb-minion.golden .hb-atk::after { content: " \2605" / ""; font-size: 0.7em; }
-.hb-art .kws { position: absolute; top: 0.1em; left: 0; right: 0; }
-.hb-art .kw { background: var(--panel-solid); font-size: 0.75em; }
 .hb-name {
   max-width: 100%;
   margin-top: 0.35em;
@@ -287,24 +221,6 @@ body {
   white-space: nowrap;
 }
 .hb-name.unnamed { text-decoration: underline dotted; }
-.hover-card .possible { font-size: 0.9em; }
-
-/* Simple and Advanced (T-333): Simple leaves out keyword letters, trinket
-   names, the possible minions, the card-database word (the legend credits
-   the card data) and the keyword key. Every other mark stays in both. */
-body[data-detail="simple"] .adv,
-body[data-detail="simple"] .src-card_data,
-body[data-detail="simple"] .legend-keys { display: none; }
-body:not([data-detail="simple"]) .simple-only { display: none; }
-.possible { margin-top: 6px; padding-top: 4px; border-top: 1px dashed color-mix(in srgb, var(--amber) 55%, transparent); }
-.possible .when { color: var(--dim); font-size: 0.885rem; }
-.possible .none { color: var(--dim); font-size: 0.885rem; }
-.possible-list { display: flex; flex-wrap: wrap; gap: 2px 8px; margin-top: 2px; font-size: 0.885rem; }
-.possible-card { white-space: nowrap; font-style: italic; }
-.possible-card b { color: var(--amber); font-style: normal; font-weight: 500; }
-.possible-card.unnamed { text-decoration: underline dotted; }
-
-/* The leaderboard box, shown only while unlocked. */
 .board-box {
   position: fixed;
   z-index: 9;
@@ -327,17 +243,6 @@ body:not([data-detail="simple"]) .simple-only { display: none; }
   white-space: nowrap;
 }
 
-/* Golden: a star after the numbers, so it is never colour alone. */
-/* Keyword marks (T-208): letters on a thin edge, never colour alone; the
-   legend spells them out and each line is read out in full. */
-.kws { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; max-width: 100%; }
-.kw {
-  padding: 0 3px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text);
-  font: 700 0.846rem/1.3 var(--font-body);
-}
 /* The next opponent (T-313): the word "Next", on the game's own mark. */
 .next-badge {
   flex: none;
@@ -350,23 +255,6 @@ body:not([data-detail="simple"]) .simple-only { display: none; }
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
-.next-block { margin: 4px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
-/* The full head in a narrow panel: the names get their own line. */
-.next-block .head { flex-wrap: wrap; row-gap: 2px; }
-.next-block .head .name { flex: 1 0 100%; order: 1; }
-.next-block .head .portrait { order: 0; }
-.next-block .head .tier, .next-block .head .hp, .next-block .head .record { order: 2; }
-.next-block h3 { margin: 0 0 4px; font-size: 0.923rem; color: var(--dim); font-weight: 600; }
-/* The leaderboard's triples and trinkets (T-312). */
-.seat-line { margin: 3px 0; font-size: 0.923rem; color: var(--dim); }
-.seat-line .trinket { color: var(--text); }
-.seat-line .trinket.unnamed { text-decoration: underline dotted; }
-.legend-keys { display: block; margin-top: 2px; }
-
-.minion.golden b { color: var(--accent); }
-.minion.golden b::after { content: " \2605" / " golden"; }
-.minion.golden .art { box-shadow: 0 0 0 2px var(--accent); }
-
 .legend {
   margin: 0;
   color: var(--dim);
@@ -463,7 +351,7 @@ body.unlocked .slot:focus-visible .panel {
   z-index: 10;
 }
 .toolbar-title { color: var(--accent); }
-.toolbar-note, .toolbar-detail-note { flex: 1 1 100%; color: var(--dim); font-size: 0.846rem; }
+.toolbar-note { flex: 1 1 100%; color: var(--dim); font-size: 0.846rem; }
 .toolbar-row { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .toolbar-label { color: var(--dim); }
 .toolbar-warning { flex: 1 1 100%; color: var(--danger); font-weight: 600; }
@@ -523,22 +411,17 @@ body.unlocked .slot:focus-visible .panel {
 .pad-down::before { content: "\2193  " / ""; }
 .pad-right::before { content: "\2192  " / ""; }
 /* Inside the board every size follows the board's own text size. */
-.hover-card .possible .when,
-.hover-card .possible .none,
-.hover-card .possible-list { font-size: 1em; }
 .hover-card .src { font-size: 0.72em; }
 .hover-card .next-badge { font-size: 0.85em; }
 
-/* Simple side panel (T-339, D-068): narrow and short, so it fits the strip
+/* The side panel (T-339, D-068): narrow and short, so it fits the strip
    a 16:9 screen leaves beside the game's 4:3 play area (about 22% of the
    height on each side). Portraits first, no names (they are on the hover
    card), no words for unknown values, no headings, no hint, no legend. */
-body[data-detail="simple"] { --stack-width: 13.5rem; }
 /* While the layout is being edited every panel shows, so it can be placed. */
-body[data-detail="simple"]:not(.unlocked) .panel.simple-empty,
-body[data-detail="simple"]:not(.unlocked) .slot:has(> .panel.simple-empty),
-body[data-detail="simple"] .slot[data-panel="legend"] { display: none; }
-body[data-detail="simple"] .panel { padding: 5px 7px 6px; }
+body:not(.unlocked) .panel.empty,
+body:not(.unlocked) .slot:has(> .panel.empty),
+.slot[data-panel="legend"] { display: none; }
 
 .tribe-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
 .tribe-chips .chip {
@@ -649,12 +532,10 @@ body[data-detail="simple"] .panel { padding: 5px 7px 6px; }
 .odds-value { font: 800 1rem/1.15 var(--font-display); white-space: nowrap; }
 .odds-share.win .odds-value { color: var(--accent); }
 .odds-share.lose .odds-value { color: var(--dim); }
-.odds-age, .odds-line, .odds-note { color: var(--dim); font-size: 0.76rem; }
+.odds-age, .odds-note { color: var(--dim); font-size: 0.76rem; }
 .odds-warning { color: var(--amber); font-size: 0.76rem; }
-.next-block .odds { margin: 2px 0 4px; }
 
-/* Dark Gifts (T-528, D-107): a violet star per gift, in Simple and
-   Advanced; a dashed edge for a gift the log does not name. Shape first,
+/* Dark Gifts (T-528, D-107): a violet star per gift; a dashed edge for a gift the log does not name. Shape first,
    colour second. */
 .gifts { display: flex; justify-content: center; gap: 2px; }
 .gift-mark {

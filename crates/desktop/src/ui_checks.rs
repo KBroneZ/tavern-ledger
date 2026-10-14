@@ -336,18 +336,19 @@ fn long_lists_share_one_compact_helper() {
 
 #[test]
 fn overlay_pictures_are_cropped_to_the_art_with_no_white_edges() {
-    // T-325: the same crop as the window (T-320) for the overlay's minions
-    // and portraits, in the panels and the hover card.
+    // T-325: the same crop as the window (T-320) for the overlay's portraits
+    // in the panels and its minions in the hover card.
     let css = overlay_css();
-    let shared = rule(&css, ".minion .art, .portrait {");
-    assert!(shared.contains("object-fit: cover;"));
-    assert!(shared.contains("background: var(--panel-solid);"));
-    assert!(
-        css.contains("\n.portrait { object-view-box: inset(0% 8%); object-position: 50% 30%; }")
-    );
-    assert!(css.contains(
-        "\n.minion .art { object-view-box: inset(1% 16% 2%); object-position: 50% 28%; }"
-    ));
+    let portrait = rule(&css, ".portrait {");
+    assert!(portrait.contains("object-fit: cover;"));
+    assert!(portrait.contains("background: var(--panel-solid);"));
+    assert!(portrait.contains("object-view-box: inset(0% 8%);"));
+    assert!(portrait.contains("object-position: 50% 30%;"));
+    let art = rule(&css, ".hb-art .art, .hb-art .art-missing {");
+    assert!(art.contains("object-fit: cover;"));
+    assert!(art.contains("background: var(--panel-solid);"));
+    assert!(art.contains("object-view-box: inset(1% 16% 2%);"));
+    assert!(art.contains("object-position: 50% 28%;"));
     let css = css.to_lowercase();
     for banned in [
         "object-fit: contain",

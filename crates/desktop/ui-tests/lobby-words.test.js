@@ -53,14 +53,13 @@ test("the last game's change goes on its mode only, with a sign", () => {
   assert.equal(lobby.signed("12"), null);
 });
 
-test("a rating that cannot be read says why; off is only explained in Advanced", () => {
-  const note = (status, advanced) => lobby.ratingNote(view({ rating: { solo: null, duos: null, status } }), advanced);
-  assert.equal(note("unsupported_version", false), "Rating: unsupported game version");
-  assert.equal(note("no_access", false), "Rating: no read access to the game");
-  assert.equal(note("off", false), null);
-  assert.match(note("off", true), /reading from the game/);
-  assert.equal(note("waiting", true), null);
-  assert.equal(note("ok", true), null);
+test("a rating that cannot be read says why; off says nothing", () => {
+  const note = (status) => lobby.ratingNote(view({ rating: { solo: null, duos: null, status } }));
+  assert.equal(note("unsupported_version"), "Rating: unsupported game version");
+  assert.equal(note("no_access"), "Rating: no read access to the game");
+  assert.equal(note("off"), null);
+  assert.equal(note("waiting"), null);
+  assert.equal(note("ok"), null);
 });
 
 test("the day's summary is one line per mode played", () => {

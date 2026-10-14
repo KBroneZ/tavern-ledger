@@ -1,6 +1,6 @@
 // Words for the overlay's counters panel (T-612): each kind of
-// LiveGame.counters as a short label and value (Simple), a "where the game
-// shows it" line (Advanced) and a full sentence for screen readers. Pure:
+// LiveGame.counters as a short label and value and a full sentence for
+// screen readers. Pure:
 // plain data in, plain data out, so it is tested without a page
 // (ui-tests/counters-words.test.js). The page draws the words with
 // textContent only.
@@ -41,7 +41,6 @@
       kind: entry.kind,
       label: I18n.t(`${key}.label`),
       value: I18n.t(`ov.counters.value.${shape}`, params),
-      where: I18n.t(`${key}.where`),
       said: I18n.t(`${key}.said`, params),
     };
   }
