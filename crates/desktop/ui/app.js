@@ -970,12 +970,12 @@ function renderRecapNow(r, game) {
   health.append(withSource(el("h3", null, tl("win.recap.healthTitle")), r.health_source), healthChart(r.health));
   const top = el("div", "recap-top");
   top.append(recapFacts(r), health);
-  const turnTools = { card: TLShop.card, cardRow: TLShop.cardRow, fold: TLCompact.fold, art, heroText, game: key, cardName: (id) => TLCards.display(id) };
-  const replayTools = { art, heroText, cardName: (id) => TLCards.display(id), fold: TLCompact.fold, game: key };
   if (TLUnreadable.isUnreadable(r.status.value)) {
     document.getElementById("recap-body").replaceChildren(top, unreadableSection());
     return;
   }
+  const turnTools = { card: TLShop.card, cardRow: TLShop.cardRow, fold: TLCompact.fold, art, heroText, game: key, cardName: (id) => TLCards.display(id) };
+  const replayTools = { art, heroText, cardName: (id) => TLCards.display(id), fold: TLCompact.fold, game: key };
   // Simple (T-344) keeps the facts, health, shop summary, combat replays
   // (T-215), why each result differed (T-346), record and messages; the rest
   // waits for Advanced.

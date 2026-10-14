@@ -284,8 +284,13 @@ fn the_parsers_error_names_reach_the_log_and_its_free_text_does_not() {
         "parser error: NotImplementedError".to_string(),
         "parser error: with a name Jane#1234".to_string(),
         "Player Jane#1234 left".to_string(),
+        "parser error: Jane Doe".to_string(),
+        "parser error: no game data".to_string(),
     ];
-    assert_eq!(parser_errors(&problems), ["NotImplementedError"]);
+    assert_eq!(
+        parser_errors(&problems),
+        ["NotImplementedError", "no game data"]
+    );
     assert!(parser_errors(&[]).is_empty());
 }
 

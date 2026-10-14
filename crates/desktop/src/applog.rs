@@ -446,6 +446,9 @@ pub fn saved_game_line(saved: &Saved) -> (Level, String) {
     (if clean { Level::Info } else { Level::Warn }, line)
 }
 
+/// The one parser error that is a phrase, not a name.
+const NO_GAME_DATA: &str = "no game data";
+
 /// The parser's own error names ("parser error: NotImplementedError"): fixed
 /// words of the parser, safe to log. Its other problems are free text and can
 /// hold names, so they are not.
@@ -453,7 +456,10 @@ pub fn parser_errors(problems: &[String]) -> Vec<&str> {
     problems
         .iter()
         .filter_map(|p| p.strip_prefix("parser error: "))
-        .filter(|name| !name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric()))
+        .filter(|name| {
+            *name == NO_GAME_DATA
+                || (!name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric()))
+        })
         .collect()
 }
 
