@@ -1,8 +1,9 @@
 //! Self-update from the project's signed GitHub releases (T-105b, D-135).
 //!
 //! Off in a build whose `plugins.updater.pubkey` (tauri.conf.json) is not a
-//! real minisign public key: the updater plugin is then never registered and
-//! nothing here touches the network. On, the app checks a minute after it
+//! real minisign public key, in a debug build, and in a release build not made
+//! by the release workflow ([`may_check`]): the updater plugin is then never
+//! registered and nothing here touches the network. On, the app checks a minute after it
 //! starts and every six hours (unless the user turned automatic checks off),
 //! downloads a newer release in the background, and the plugin verifies its
 //! signature and the version it was signed for before anything is kept. The
@@ -54,6 +55,21 @@ pub fn release_key(updater: Option<&serde_json::Value>) -> Option<String> {
     let text = String::from_utf8(text).ok()?;
     minisign_verify::PublicKey::decode(&text).ok()?;
     Some(key.to_string())
+}
+
+/// Whether this binary came from the release workflow: that build sets
+/// `TAVERN_LEDGER_OFFICIAL_BUILD=1` when it compiles. A build from source,
+/// including the release build a developer makes on their own PC, does not.
+pub const OFFICIAL_BUILD: bool = match option_env!("TAVERN_LEDGER_OFFICIAL_BUILD") {
+    Some(value) => value.len() == 1 && value.as_bytes()[0] == b'1',
+    None => false,
+};
+
+/// Whether this build may check for updates at all. A debug build never does,
+/// and neither does a release build made from source: it would replace itself
+/// with the published installer.
+pub fn may_check(debug_build: bool, official_build: bool) -> bool {
+    !debug_build && official_build
 }
 
 /// The installer a release's `latest.json` must point to: the tag's own file.
@@ -673,6 +689,19 @@ mod tests {
             "0.2.0",
             Arc::new(AtomicUsize::new(0)),
         ))))
+    }
+
+    #[test]
+    fn only_the_workflows_release_build_may_check_for_updates() {
+        assert!(may_check(false, true), "the published installer");
+        assert!(!may_check(true, true), "a debug build never checks");
+        assert!(!may_check(true, false), "a debug build from source");
+        assert!(!may_check(false, false), "a release build from source");
+    }
+
+    #[test]
+    fn a_build_made_here_does_not_check_for_updates() {
+        assert!(!may_check(cfg!(debug_assertions), OFFICIAL_BUILD));
     }
 
     #[test]

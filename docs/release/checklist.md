@@ -17,12 +17,16 @@ How a new version of the Windows app goes out. The installer is built and signed
 ## 2. Tag and build
 
 - [ ] Tag the merged commit on `main` as `vX.Y.Z` (the same version) and push the tag. The workflow checks that the tag, the config and the crate agree, that the commit is on `main` and that the public key is set.
-- [ ] The **build** job makes the installer with `npm run installer` (`tauri build --no-sign -- --locked`) from a clean checkout and writes `SHA256SUMS`.
+- [ ] The **build** job makes the installer with `npm run installer` (`tauri build --no-sign -- --locked`) from a clean checkout, with `TAVERN_LEDGER_OFFICIAL_BUILD=1` set (only an installer built that way checks for updates; see [docs/development.md](../development.md)), and writes `SHA256SUMS`.
 - [ ] The **sign** job waits for approval in the `release` Environment. **Approve only a run you started**, for the tag you pushed. If a request comes that you did not expect, reject it. The job checks out nothing: it signs the built bytes with a Tauri CLI pinned in the workflow by SHA-512 (bumping that CLI is a reviewed change to the workflow, separate from `package-lock.json`).
 - [ ] The **verify** job checks both signatures and their version against the key installed apps trust (the previous release's; the tag's own for the first self-updating release), and writes `latest.json` and `SHA256SUMS.minisig`.
 - [ ] The **draft** job records where the installer was built (build provenance) and creates the release as a **draft**.
 
 If any job fails, nothing is published. Fix the cause and run the failed jobs again; if the tag itself was wrong, delete the draft (if any) and release a new patch version (tags under the ruleset cannot be moved or deleted).
+
+## Changing the updater public key
+
+A pull request that changes `plugins.updater.pubkey` fails the `repo` job of CI (so `check` fails) unless its description or one of its commit messages has a line `updater-key-change: yes` ([`tools/check_updater_key.py`](../../tools/check_updater_key.py)). The line only stops an accidental change: whoever writes the description can write it, so the real control is review of any change to `tauri.conf.json`. The check also fails if another Tauri config file next to it sets a `pubkey`, which it could not read. Add the line only for a planned rotation, as described under "If something goes wrong". CI reads the description when it starts, so after adding the line to the description, push a commit (or put the line in a commit message) to run it again. The check needs no secret, so it runs on pull requests from forks too.
 
 ## 3. Review the draft
 
