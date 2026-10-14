@@ -2,7 +2,7 @@
 -- entries after 30 days (T-564). Run: npx supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(22);
 
 delete from auth.audit_log_entries;
 delete from auth.sessions;
@@ -31,6 +31,17 @@ select ('00000000-0000-4000-8000-0000000003' || lpad(n::text, 2, '0'))::uuid,
        '00000000-0000-4000-8000-0000000000a3', now() - make_interval(days => n),
        now() - make_interval(days => n)
 from generate_series(1, 10) n;
+-- a4: 11 sessions; the oldest one (created 200 days ago) was refreshed an hour
+-- ago, as the app's session is every day, so a newer sign-in goes instead.
+insert into auth.users (id, email) values
+  ('00000000-0000-4000-8000-0000000000a4', 'a4@example.test');
+insert into auth.sessions (id, user_id, created_at, updated_at, refreshed_at)
+select ('00000000-0000-4000-8000-0000000004' || lpad(n::text, 2, '0'))::uuid,
+       '00000000-0000-4000-8000-0000000000a4',
+       case when n = 11 then now() - interval '200 days' else now() - make_interval(days => n) end,
+       case when n = 11 then now() - interval '200 days' else now() - make_interval(days => n) end,
+       case when n = 11 then (now() - interval '1 hour') at time zone 'UTC' end
+from generate_series(1, 11) n;
 -- Every session has a refresh token.
 insert into auth.refresh_tokens (token, user_id, session_id)
 select 'tok-' || s.id, s.user_id::text, s.id from auth.sessions s;
@@ -64,7 +75,7 @@ create temporary table hk as select public.sweep_housekeeping() as r;
 
 select is(
   (select r -> 'auth_cleanup' from hk),
-  '{"sessions": 2, "refresh_tokens": 2, "audit_entries": 2}'::jsonb,
+  '{"sessions": 3, "refresh_tokens": 3, "audit_entries": 2}'::jsonb,
   'the answer counts the sessions, their refresh tokens and the audit entries removed'
 );
 select is(
@@ -107,8 +118,19 @@ select is(
   'a user with exactly 10 keeps them'
 );
 select is(
-  (select count(*)::int from auth.refresh_tokens), 23,
+  (select count(*)::int from auth.refresh_tokens), 33,
   'no refresh token of a kept session is touched'
+);
+
+select is(
+  (select count(*)::int from auth.sessions where id = '00000000-0000-4000-8000-000000000411'),
+  1,
+  'a session refreshed an hour ago stays however old it is'
+);
+select is(
+  (select count(*)::int from auth.sessions where id = '00000000-0000-4000-8000-000000000410'),
+  0,
+  'and the oldest sign-in that was not refreshed is the one that goes'
 );
 
 -- ------------------------------------------------------------ audit

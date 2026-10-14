@@ -4,7 +4,8 @@
 -- sweep_housekeeping() now also runs private.sweep_auth_cleanup():
 --
 -- * sessions: for each user, auth.sessions beyond the 10 most recently used
---   (updated_at, else created_at) are deleted, with their refresh tokens
+--   (the latest of refreshed_at, updated_at and created_at: Auth
+--   bumps refreshed_at when a token is refreshed, so an app session in daily use stays) are deleted, with their refresh tokens
 --   (auth.refresh_tokens.session_id cascades). A user who signs in from the
 --   app and from a browser keeps both: only the oldest beyond 10 go.
 -- * audit: auth.audit_log_entries older than 30 days are deleted (the 90-day
@@ -40,7 +41,8 @@ begin
       select x.id,
              row_number() over (
                partition by x.user_id
-               order by coalesce(x.updated_at, x.created_at) desc, x.created_at desc, x.id desc
+               order by greatest(x.refreshed_at at time zone 'UTC', x.updated_at, x.created_at) desc,
+                        x.created_at desc, x.id desc
              ) as rank
       from auth.sessions x
     ) s
