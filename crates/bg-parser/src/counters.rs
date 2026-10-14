@@ -13,6 +13,7 @@
 use serde::Serialize;
 
 use crate::report::{CombatValues, MAX_GAME_VALUE};
+use crate::state::Board;
 
 /// One kind of counter, in the order the overlay lists them.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
@@ -23,16 +24,20 @@ pub enum CounterKind {
     UndeadAttack,
     EternalKnights,
     Beetle,
+    /// The Attack and Health the player's tavern Elementals get
+    /// (`BG_ShopBuff_Elemental` on the player).
+    ShopElemental,
 }
 
 impl CounterKind {
     /// Every kind this parser knows, in listing order.
-    pub const ALL: [CounterKind; 5] = [
+    pub const ALL: [CounterKind; 6] = [
         CounterKind::BloodGem,
         CounterKind::TavernSpell,
         CounterKind::UndeadAttack,
         CounterKind::EternalKnights,
         CounterKind::Beetle,
+        CounterKind::ShopElemental,
     ];
 
     /// The name the overlay's data gives it.
@@ -43,12 +48,15 @@ impl CounterKind {
             CounterKind::UndeadAttack => "undead_attack",
             CounterKind::EternalKnights => "eternal_knights",
             CounterKind::Beetle => "beetle",
+            CounterKind::ShopElemental => "shop_elemental",
         }
     }
 }
 
 /// The kinds the parser emits. A kind outside this list never appears, even
-/// when the log has a value for it.
+/// when the log has a value for it. The tavern's other buffs, the free rolls
+/// and the gold for next turn are mapped but not here: their log source is
+/// not a total that can be read for sure (see the research notes).
 pub const ENABLED_KINDS: &[CounterKind] = &CounterKind::ALL;
 
 /// One counter: its kind and only that kind's fields.
@@ -101,40 +109,68 @@ impl Counter {
     }
 }
 
+/// What the counters are built from: the player's game-long values (the
+/// ones the simulator reads) and the tavern Elementals' buff.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct CounterInputs {
+    pub values: CombatValues,
+    /// `BG_ShopBuff_Elemental`'s two numbers on the player (Attack, Health).
+    pub shop_elemental: (i64, i64),
+}
+
+/// The player enchantment `card` in play on `player`, with its two numbers
+/// (`TAG_SCRIPT_DATA_NUM_1`, `_2`): the same rule as the simulator's values
+/// (`Collector::combat_values`), `(0, 0)` when there is none.
+pub fn player_enchantment(board: &Board, player: i64, card: &str) -> (i64, i64) {
+    board
+        .iter()
+        .find(|e| {
+            e.card_id.as_deref() == Some(card)
+                && e.int("ATTACHED") == player
+                && e.is("ZONE", "PLAY")
+        })
+        .map_or((0, 0), |e| {
+            (
+                e.int("TAG_SCRIPT_DATA_NUM_1"),
+                e.int("TAG_SCRIPT_DATA_NUM_2"),
+            )
+        })
+}
+
 /// The counters of one player's values, only the `enabled` kinds, in the
 /// kinds' order. A kind is listed when one of its fields is not zero (the
 /// range is checked by the caller, which says so and drops it, never clamps);
 /// a +0/+5 buff is listed.
-pub fn counters_from(values: &CombatValues, enabled: &[CounterKind]) -> Vec<Counter> {
+pub fn counters_from(inputs: &CounterInputs, enabled: &[CounterKind]) -> Vec<Counter> {
     CounterKind::ALL
         .into_iter()
         .filter(|kind| enabled.contains(kind))
-        .filter_map(|kind| counter_of(kind, values))
+        .filter_map(|kind| counter_of(kind, inputs))
         .collect()
 }
 
-fn counter_of(kind: CounterKind, v: &CombatValues) -> Option<Counter> {
+fn counter_of(kind: CounterKind, inputs: &CounterInputs) -> Option<Counter> {
+    let v = &inputs.values;
     match kind {
         CounterKind::BloodGem => {
             let (atk, health) = v.blood_gem;
             (atk != 0 || health != 0)
                 .then(|| Counter::of_stats(kind, gem_total(atk), gem_total(health)))
         }
-        CounterKind::TavernSpell => {
-            let (atk, health) = v.spell;
-            (atk != 0 || health != 0).then(|| Counter::of_stats(kind, atk, health))
-        }
+        CounterKind::TavernSpell => stats_if_any(kind, v.spell),
         CounterKind::UndeadAttack => {
             (v.undead_attack != 0).then(|| Counter::of_attack(kind, v.undead_attack))
         }
         CounterKind::EternalKnights => {
             (v.knights_dead != 0).then(|| Counter::of_count(kind, v.knights_dead))
         }
-        CounterKind::Beetle => {
-            let (atk, health) = v.beetle;
-            (atk != 0 || health != 0).then(|| Counter::of_stats(kind, atk, health))
-        }
+        CounterKind::Beetle => stats_if_any(kind, v.beetle),
+        CounterKind::ShopElemental => stats_if_any(kind, inputs.shop_elemental),
     }
+}
+
+fn stats_if_any(kind: CounterKind, (atk, health): (i64, i64)) -> Option<Counter> {
+    (atk != 0 || health != 0).then(|| Counter::of_stats(kind, atk, health))
 }
 
 /// The Blood Gem's size: its base +1 plus what the player's extra adds. A
