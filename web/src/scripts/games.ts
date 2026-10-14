@@ -65,10 +65,16 @@ function fillHeroes(heroes: string[], selected: string | null): void {
   heroSelect.append(...options);
 }
 
+/** The filters stay in place but cannot be used, so the state drawn below them does not jump up when they go (CLS). */
+function shelveForm(): void {
+  form.inert = true;
+  form.classList.add("is-off");
+}
+
 function gate(title: string, text: string): void {
   mount(body, stateBlock({ kind: "unknown", title, body: text }));
-  form.hidden = true;
-  back.hidden = true;
+  shelveForm();
+  back.classList.add("is-off");
   document.title = `${title} · Tavern Ledger`;
   settle(title);
 }
@@ -79,7 +85,7 @@ async function whose(profileId: string | null): Promise<string | null> {
   if (profileId === null) {
     if (!viewer) {
       mount(body, stateBlock({ kind: "empty", title: t("dash.signedOut"), body: "" }, h("p", {}, h("a", { href: href("/signin/") }, t("dash.signedOut.link")))));
-      form.hidden = true;
+      shelveForm();
       settle(t("dash.signedOut"));
       return null;
     }
@@ -124,7 +130,7 @@ async function start(): Promise<void> {
 function failed(): void {
   const retry = h("button", { type: "button", class: "tb tb-small", id: "list-retry" }, t("dash.retry"));
   mount(body, stateBlock({ kind: "error", title: t("dash.error"), body: t("dash.error.body") }, retry));
-  form.hidden = true;
+  shelveForm();
   settle(t("dash.error"));
   byId("list-retry").addEventListener("click", () => location.reload());
 }

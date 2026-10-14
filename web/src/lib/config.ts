@@ -13,7 +13,14 @@ export const WASM_SOURCE = "'wasm-unsafe-eval'";
  */
 export const WASM_WORKER = /^simWorker-[A-Za-z0-9_-]+\.js$/;
 /** Pages about one account: the browser and the CDN must not keep a copy (Cache-Control: no-store). */
-export const NO_STORE_PAGES: readonly string[] = ["/account/", "/es/account/", "/me/", "/es/me/"];
+export const NO_STORE_PAGES: readonly string[] = [
+  "/account/", "/es/account/",
+  "/me/", "/es/me/",
+  "/games/", "/es/games/",
+  "/game/", "/es/game/",
+  "/player-heroes/", "/es/player-heroes/",
+  "/curious/", "/es/curious/",
+];
 
 /** Cloudflare Turnstile (T-562): its script and its frame come from here, and from nowhere else. */
 export const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";

@@ -142,8 +142,9 @@ test("the simulator's policy adds only 'wasm-unsafe-eval' to script-src, and onl
   assert.doesNotMatch("simWorker-x/../a.js", WASM_WORKER);
 });
 
-test("the pages that must not be stored are the account and dashboard pages in both languages", () => {
-  assert.deepEqual(NO_STORE_PAGES, ["/account/", "/es/account/", "/me/", "/es/me/"]);
+test("the pages that must not be stored are every page about the signed-in user's own data, in both languages", () => {
+  const pages = ["account", "me", "games", "game", "player-heroes", "curious"];
+  assert.deepEqual(NO_STORE_PAGES.toSorted(), pages.flatMap((p) => [`/${p}/`, `/es/${p}/`]).toSorted());
 });
 
 const BACKEND = { PUBLIC_SUPABASE_URL: "https://abcd.supabase.co", PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_x" };
