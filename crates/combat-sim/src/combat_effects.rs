@@ -137,6 +137,14 @@ impl Combat<'_> {
                     self.damage(foe, n, atk, Keywords::NONE, uid);
                 }
             }
+            Action::DamageTargetAndNeighbours => {
+                let (Some(uid), Some((foe, t))) = (me, target) else {
+                    return;
+                };
+                let atk = self.unit(side, uid).map_or(0, |u| u.attack);
+                self.damage(foe, t, atk, Keywords::NONE, uid);
+                self.damage_neighbours(foe, t, atk, uid);
+            }
             Action::GainTargetAttack { times } => {
                 let (Some(uid), Some((foe, t))) = (me, target) else {
                     return;
