@@ -36,7 +36,7 @@ from hslog.export import EntityTreeExporter
 from check_logs import BUILD_RE, GAME_TYPE_RE
 
 # Builds whose real logs this prototype was checked against.
-TESTED_BUILDS = frozenset({253216})
+TESTED_BUILDS = frozenset({253216, 254477})
 TESTED_GAME_TYPES = frozenset({"GT_BATTLEGROUNDS", "GT_BATTLEGROUNDS_DUO"})
 MAX_LOBBY = 8
 OWN, OPPONENT = "own", "opponent"
