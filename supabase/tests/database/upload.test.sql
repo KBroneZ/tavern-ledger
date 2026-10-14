@@ -186,7 +186,7 @@ insert into auth.audit_log_entries (id, payload, created_at) values
   (gen_random_uuid(), '{"action": "token_revoked"}', now() - interval '2 hours'),
   (gen_random_uuid(), '{"action": "login", "actor_id": "00000000-0000-4000-8000-0000000000ee"}',
    now());
-select is(public.sweep_housekeeping() - 'run_id' - 'capacity',
+select is(public.sweep_housekeeping() - 'run_id' - 'capacity' - 'auth_cleanup',
   '{"auth_events": 2, "upload_events": 1, "ip_failures": 0}'::jsonb,
   'housekeeping removes leftovers of deleted accounts and expired counters');
 select is(

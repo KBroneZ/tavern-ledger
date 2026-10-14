@@ -22,6 +22,10 @@
 // even when another one failed: the run's row names the failed steps
 // (failed_steps) next to the counts of the others, and the answer is a 500
 // naming them, with the same counts.
+// Housekeeping also keeps the newest 10 sessions per user (with their refresh
+// tokens) and drops audit entries older than 30 days (T-564); the counts are
+// "auth_cleanup" on the run's row and in the response, a failure is recorded
+// there as {failed, sqlstate} and never stops the sweep.
 // Housekeeping also measures how full the project is (T-543, D-109): the
 // database size and the games bucket's file bytes and count, each with the
 // Free plan's limit and the level reached ("none", "50%", "80%"). It is
