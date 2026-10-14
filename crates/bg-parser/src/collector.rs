@@ -255,6 +255,15 @@ impl Collector {
         }
     }
 
+    /// A CHANGE_ENTITY the log has begun and not closed yet: the entity and
+    /// the card it becomes.
+    pub fn pending_change(&self) -> Option<(i64, &str)> {
+        match self.pending.as_ref()? {
+            (Pending::Change { id, card_id }, _) => Some((*id, card_id.as_str())),
+            _ => None,
+        }
+    }
+
     fn commit(&mut self) -> Result<(), ParseError> {
         let Some((pending, tags)) = self.pending.take() else {
             return Ok(());

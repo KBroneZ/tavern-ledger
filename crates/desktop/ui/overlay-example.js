@@ -91,6 +91,18 @@ const EXAMPLE_GAME = {
   ],
 };
 
+// The hero select panel's example (T-365), shown while arranging with no game
+// on: four heroes, one of them never played.
+const EXAMPLE_HERO_OFFER = {
+  rerolls: 0,
+  heroes: [
+    { hero: { id: "EXAMPLE_HERO_A", name: "Example Hero A" }, own: { games: 6, placed: 6, average_place: 3.5, top_half_share: 4 / 6 } },
+    { hero: { id: "EXAMPLE_HERO_B", name: "Example Hero B" }, own: null },
+    { hero: { id: "EXAMPLE_HERO_C", name: "Example Hero C" }, own: { games: 2, placed: 2, average_place: 5.5, top_half_share: 0.5 } },
+    { hero: { id: "EXAMPLE_HERO_D", name: "Example Hero D" }, own: { games: 11, placed: 10, average_place: 2.9, top_half_share: 0.8 } },
+  ],
+};
+
 // The lobby panel's example (T-338), shown while arranging with no game on.
 const EXAMPLE_LOBBY = {
   in_lobby: true,

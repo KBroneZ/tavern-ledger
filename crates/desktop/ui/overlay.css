@@ -442,6 +442,29 @@ body:not(.unlocked) .slot:has(> .panel.empty),
 .tribe-chips .src { font-size: 0.72rem; padding: 0 4px; }
 .tribe-reason { margin: 0; color: var(--dim); font-size: 0.88rem; }
 
+/* Hero select (T-365): the lobby's tribes, then one card per hero on offer in
+   the game's order, each with the player's own numbers as figures under a
+   small label. The two slots at the right are kept for the community's tier
+   and the tribe affinity; they stay empty (and unseen) until there is data. */
+.heroes-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 3px; }
+.heroes-title { color: var(--accent); font: 400 1.08rem/1.25 var(--font-display); }
+.heroes-rerolls { color: var(--dim); font-size: 0.78rem; white-space: nowrap; }
+.heroes .tribe-chips, .heroes .tribe-reason { margin-bottom: 4px; }
+.hero-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.hero-card { display: flex; align-items: center; gap: 6px; padding: 2px 4px; border-radius: 8px; background: color-mix(in srgb, var(--text) 6%, transparent); }
+.hero-card .face { flex: none; width: 2.7rem; height: 2.7rem; }
+.hero-card .face .portrait { display: block; width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 80%, transparent); }
+.hero-card .portrait.blank { background: color-mix(in srgb, var(--dim) 25%, var(--panel-solid)); }
+.hero-main { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; gap: 1px; }
+.hero-name { font: 400 1rem/1.15 var(--font-display); color: var(--text); overflow-wrap: anywhere; }
+.hero-figures { display: flex; flex-wrap: nowrap; gap: 0 0.45rem; }
+.fig { display: inline-flex; flex-direction: column; align-items: flex-start; line-height: 1.05; }
+.fig-value { font: 400 0.98rem/1.1 var(--font-display); color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fig-label { color: var(--dim); font: 700 0.6rem/1.2 var(--font-body); text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; }
+.hero-none { color: var(--dim); font-size: 0.82rem; }
+.hero-slots { display: flex; flex: none; flex-direction: column; align-items: flex-end; gap: 2px; }
+.hero-slot[hidden] { display: none; }
+
 /* The game's damage cap (T-315): one short line above the opponents. */
 .damage-cap {
   margin: 0 0 4px;
@@ -551,7 +574,7 @@ body:not(.unlocked) .slot:has(> .panel.empty),
 
 /* Numbers drawn with a dark edge like the game's own: the stroke is painted
    under the fill, so the glyphs keep their full weight. */
-.odds-value, .odds-range-value, .mark-hp, .mark-stars, .opp .opp-hp, .counter-value, .lobby-value, .status .hero, .hb-atk, .hb-hp, .face-tier {
+.odds-value, .odds-range-value, .mark-hp, .mark-stars, .opp .opp-hp, .counter-value, .lobby-value, .status .hero, .hb-atk, .hb-hp, .face-tier, .fig-value {
   paint-order: stroke fill;
   -webkit-text-stroke: 0.2em var(--outline);
 }
@@ -581,5 +604,5 @@ body:not(.unlocked) .slot:has(> .panel.empty),
 .hb-art .gift-mark { font-size: 0.75em; }
 @media (forced-colors: active) {
   .gift-mark { border-color: CanvasText; color: CanvasText; }
-  .odds-value, .odds-range-value, .mark-hp, .mark-stars, .opp .opp-hp, .counter-value, .lobby-value, .status .hero, .hb-atk, .hb-hp, .face-tier { -webkit-text-stroke: 0; }
+  .odds-value, .odds-range-value, .mark-hp, .mark-stars, .opp .opp-hp, .counter-value, .lobby-value, .status .hero, .hb-atk, .hb-hp, .face-tier, .fig-value { -webkit-text-stroke: 0; }
 }

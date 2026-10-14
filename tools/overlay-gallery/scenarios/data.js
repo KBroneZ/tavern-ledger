@@ -201,6 +201,28 @@ function duosGame() {
   };
 }
 
+// A game at hero select: no lobby yet, the heroes on offer each with the
+// player's own numbers (null: no game with it yet). The lobby's tribes come
+// from the game's memory, as in a played game.
+const own = (games, placed, average_place, top_half_share) => ({ games, placed, average_place, top_half_share });
+function heroSelectGame({ duos = false, heroes, rerolls = 0 }) {
+  return {
+    ...soloGame(),
+    phase: "starting",
+    is_duos: duos,
+    game_type: sourced(duos ? "GT_BATTLEGROUNDS_DUO" : "GT_BATTLEGROUNDS"),
+    hero: sourced(null, "unknown"),
+    last_combat: sourced(null),
+    turn: sourced(null),
+    own_seats: [],
+    own_place: sourced(null),
+    leaderboard_slots: null,
+    own_health: sourced(null),
+    opponents: [],
+    hero_offer: { rerolls, heroes: heroes.map(([id, numbers]) => ({ hero: hero(id), own: numbers })) },
+  };
+}
+
 const DUOS_BOARDS = (rounds) => [
   { role: "teammate", seat: 6, round: rounds[0] },
   { role: "opponent", seat: 1, round: rounds[1] },
@@ -208,5 +230,5 @@ const DUOS_BOARDS = (rounds) => [
 ];
 
 module.exports = {
-  NAMES, sourced, hero, minion, board, opponent, record, trinket, soloGame, duosGame, SOLO_ODDS, DUOS_BOARDS, BOARDS,
+  NAMES, sourced, hero, minion, board, opponent, record, trinket, soloGame, duosGame, heroSelectGame, own, SOLO_ODDS, DUOS_BOARDS, BOARDS,
 };

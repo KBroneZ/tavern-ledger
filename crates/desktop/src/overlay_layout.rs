@@ -28,6 +28,8 @@ pub enum Panel {
     Legend,
     /// The short panel on the Battlegrounds lobby screen (T-338).
     Lobby,
+    /// The heroes on offer at hero select (T-365).
+    Heroes,
 }
 
 impl Panel {

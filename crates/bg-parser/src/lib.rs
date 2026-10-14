@@ -27,6 +27,7 @@ use std::io::BufRead;
 
 use clock::Clock;
 use collector::{hero_health, leaderboard_heroes, Collector};
+use hero_select::HeroOffer;
 use power::{card_names, classify, parse_power, Line, ParseError, REGEX_PARSING_ERROR};
 use report::{CombatEntry, GameReport, LobbyPlayer, LobbySlot, Round, Status};
 use state::Entity;
@@ -261,6 +262,20 @@ impl GameReader {
         slots
     }
 
+    /// The heroes on offer at hero select as the log has them now (T-365).
+    /// None before the offer, after the pick, or once the game could not be
+    /// read.
+    pub fn hero_offer_now(&self) -> Option<HeroOffer> {
+        if self.error.is_some() {
+            return None;
+        }
+        self.collector.hero_select.offer_now(
+            &self.collector.board,
+            &self.names,
+            self.collector.pending_change(),
+        )
+    }
+
     /// The seat the game marks as the next opponent on its leaderboard
     /// (T-313): the local leaderboard hero's `NEXT_OPPONENT_PLAYER_ID`, set
     /// once each shop turn (123 of 123 shop turns on the user's 11 games, and
@@ -464,6 +479,13 @@ impl LogReader {
             Some(reader) if self.in_progress_index().is_some() => reader.lobby_now(),
             _ => Vec::new(),
         }
+    }
+
+    /// The heroes on offer in the Battlegrounds game in progress (see
+    /// [`GameReader::hero_offer_now`]); `None` when no such game is on.
+    pub fn hero_offer_now(&self) -> Option<HeroOffer> {
+        self.in_progress_index()?;
+        self.current.as_ref()?.hero_offer_now()
     }
 
     /// The next opponent of the Battlegrounds game in progress (see

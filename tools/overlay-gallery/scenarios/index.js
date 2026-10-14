@@ -6,7 +6,7 @@
 const data = require("./data.js");
 const { CAPTIONS } = require("./captions.js");
 
-const { sourced, soloGame, duosGame, SOLO_ODDS, DUOS_BOARDS } = data;
+const { sourced, soloGame, duosGame, heroSelectGame, own, SOLO_ODDS, DUOS_BOARDS } = data;
 
 const SCREEN_W = 1920;
 const SCREEN_H = 1080;
@@ -50,6 +50,36 @@ const gameOver = {
   opponents: solo.opponents.map((o) => ({ ...o, next: false })),
 };
 
+// Hero select: four heroes on offer in Solo (one never played), the same offer
+// after a reroll (the new hero has no games yet), two in Duos, and a new player.
+const heroOffer = heroSelectGame({
+  heroes: [
+    ["EX_HERO_BRINDLE", own(9, 9, 3.1, 7 / 9)],
+    ["EX_HERO_QUILL", null],
+    ["EX_HERO_TARN", own(2, 2, 5.5, 0.5)],
+    ["EX_HERO_ROOK", own(14, 13, 2.8, 0.85)],
+  ],
+});
+const heroRerolled = heroSelectGame({
+  rerolls: 1,
+  heroes: [
+    ["EX_HERO_BRINDLE", own(9, 9, 3.1, 7 / 9)],
+    ["EX_HERO_FENWICK", null],
+    ["EX_HERO_TARN", own(2, 2, 5.5, 0.5)],
+    ["EX_HERO_ROOK", own(14, 13, 2.8, 0.85)],
+  ],
+});
+const heroOfferDuos = heroSelectGame({
+  duos: true,
+  heroes: [
+    ["EX_HERO_MATE", own(5, 5, 2.4, 0.8)],
+    ["EX_HERO_VESPER", null],
+  ],
+});
+const heroOfferNew = heroSelectGame({
+  heroes: [["EX_HERO_BRINDLE", null], ["EX_HERO_QUILL", null], ["EX_HERO_TARN", null], ["EX_HERO_ROOK", null]],
+});
+
 const unreadable = {
   ...solo,
   phase: "unreadable",
@@ -90,6 +120,8 @@ const LOBBY_AREA = { x: 0, y: 0, w: 290, h: 180 };
 const ODDS_BAR_AREA = { x: 660, y: 0, w: 600, h: 100 };
 const LEADERBOARD_AREA = { x: 60, y: 140, w: 300, h: 800 };
 const TRIBES_AREA = { x: 1700, y: 90, w: 220, h: 120 };
+const HEROES_AREA = { x: 1690, y: 90, w: 230, h: 520 };
+const HEROES_DUOS_AREA = { x: 1690, y: 90, w: 230, h: 290 };
 const FOCUS = {
   waiting: STATUS_BOX,
   lobby: LOBBY_AREA,
@@ -114,6 +146,10 @@ const FOCUS = {
   "tribes-game": TRIBES_AREA,
   "tribes-off": TRIBES_AREA,
   "tribes-unsupported": TRIBES_AREA,
+  "hero-select": HEROES_AREA,
+  "hero-select-reroll": HEROES_AREA,
+  "hero-select-duos": HEROES_DUOS_AREA,
+  "hero-select-new": HEROES_AREA,
 };
 
 // [id, game, extra state]
@@ -141,6 +177,10 @@ const DEFINITIONS = [
   ["tribes-game", solo, {}],
   ["tribes-off", noTribes("off"), {}],
   ["tribes-unsupported", noTribes("unsupported_version"), {}],
+  ["hero-select", heroOffer, {}],
+  ["hero-select-reroll", heroRerolled, {}],
+  ["hero-select-duos", heroOfferDuos, {}],
+  ["hero-select-new", heroOfferNew, {}],
 ];
 
 const SCENARIOS = DEFINITIONS.map(([id, game, extra]) => ({

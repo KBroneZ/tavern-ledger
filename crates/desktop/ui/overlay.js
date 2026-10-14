@@ -310,6 +310,65 @@ function renderMarks(g) {
   }
 }
 
+// One hero on offer (T-365): its portrait, name and the player's own numbers
+// from their history, as figures with small labels; "no games yet" when there
+// are none. The two empty slots at the right are for the community's tier and
+// the tribe affinity, which come later: nothing is drawn in them now.
+function heroCard(c) {
+  const item = el("li", "hero-card");
+  const face = el("span", "face");
+  face.setAttribute("aria-hidden", "true");
+  const art = TLCards.art(c.hero.id, "portrait");
+  face.append(art || el("span", "portrait blank"));
+  // The figures are seen; the sentence after them is read out instead.
+  const main = el("span", "hero-main");
+  main.setAttribute("aria-hidden", "true");
+  main.append(el("b", "hero-name", c.name));
+  if (c.own) {
+    const figures = el("span", "hero-figures");
+    for (const f of c.own.figures) {
+      const fig = el("span", `fig fig-${f.key}`);
+      fig.append(el("b", "fig-value", f.value), el("span", "fig-label", f.label));
+      figures.append(fig);
+    }
+    main.append(figures);
+  } else {
+    main.append(el("span", "hero-none", TLI18n.t("ov.heroes.none")));
+  }
+  const slots = el("span", "hero-slots");
+  for (const name of ["tier", "affinity"]) {
+    const slot = el("span", `hero-slot hero-${name}`);
+    slot.dataset.slot = name;
+    slot.hidden = true;
+    slots.append(slot);
+  }
+  item.append(face, main, slots, el("span", "visually-hidden", c.said));
+  return item;
+}
+
+// The hero select panel: the lobby's tribes from the game at its head, then
+// one card per hero on offer, updated on each reroll. Only while the game is
+// at hero select; while arranging, an example fills it. Returns whether it shows.
+function renderHeroes(g) {
+  const panel = document.getElementById("heroes");
+  let view = TLHeroes.heroCards(g, heroName);
+  const example = !view && editing;
+  if (example) view = TLHeroes.heroCards({ ...EXAMPLE_GAME, phase: "starting", hero_offer: EXAMPLE_HERO_OFFER }, heroName);
+  panel.hidden = !view;
+  if (!view) {
+    panel.replaceChildren();
+    return false;
+  }
+  const head = el("div", "heroes-head");
+  head.append(el("b", "heroes-title", view.title));
+  if (view.rerolls) head.append(el("span", "heroes-rerolls", view.rerolls));
+  const list = el("ol", "hero-list");
+  list.setAttribute("aria-label", view.title);
+  for (const c of view.cards) list.append(heroCard(c));
+  panel.replaceChildren(head, tribeRow(example ? EXAMPLE_GAME : g), list);
+  return true;
+}
+
 function renderOpponents(g) {
   const panel = document.getElementById("opponents");
   const list = el("ol", "opp-list");
@@ -365,7 +424,7 @@ function render() {
   if (lobbyShown) renderLobby(lobbyShown);
   else lobby.hidden = true;
   if (!g && lobbyShown) {
-    for (const id of ["status", "counters", "tribes", "opponents", "odds", "legend"]) document.getElementById(id).hidden = true;
+    for (const id of ["status", "heroes", "counters", "tribes", "opponents", "odds", "legend"]) document.getElementById(id).hidden = true;
     renderMarks(null);
     if (window.TLHover) window.TLHover.render();
     return;
@@ -375,6 +434,7 @@ function render() {
     const status = document.getElementById("status");
     status.className = "panel status";
     status.textContent = scene === "battlegrounds_loading" ? TLI18n.t("ov.status.loading") : TLI18n.t("ov.status.waiting");
+    document.getElementById("heroes").hidden = true;
     document.getElementById("counters").hidden = true;
     document.getElementById("tribes").hidden = true;
     document.getElementById("opponents").hidden = true;
@@ -385,6 +445,10 @@ function render() {
     return;
   }
   renderStatus(g);
+  // At hero select the heroes panel says where the game is; its line goes.
+  // Unless the user switched the heroes panel off: then the status line stays.
+  const heroesSlot = document.getElementById("heroes").closest(".slot");
+  if (renderHeroes(g) && g.phase === "starting" && !heroesSlot.hidden) document.getElementById("status").hidden = true;
   const showPanels = g.phase === "playing" || g.phase === "over";
   document.getElementById("counters").hidden = !showPanels;
   document.getElementById("tribes").hidden = !showPanels;
@@ -456,7 +520,7 @@ function showError(error) {
   const panel = document.getElementById("status");
   panel.className = "panel status unreadable";
   panel.textContent = TLI18n.t("ov.error.update", { error });
-  for (const id of ["counters", "tribes", "opponents", "odds", "legend", "lobby"]) document.getElementById(id).hidden = true;
+  for (const id of ["heroes", "counters", "tribes", "opponents", "odds", "legend", "lobby"]) document.getElementById(id).hidden = true;
   renderMarks(null);
   if (window.TLHover) window.TLHover.setFailed(true);
 }

@@ -318,6 +318,62 @@ const CAPTIONS = {
       rule: "Una tribu equivocada sería peor que ninguna, así que el panel queda vacío hasta que se comprueba la versión.",
     },
   },
+  "hero-select": {
+    en: {
+      title: "Hero select",
+      sees: "While you choose a hero, a card for each hero on offer: its portrait, its name and how you have done with it so far: games played, average place and the share of those games you finished in the top half. The lobby's tribes sit above the cards. A hero you have never played says there are no games yet.",
+      source: "The heroes on offer are the ones the game lists for you in its own log. The numbers come from your saved games on this PC. The tribes are the ones the game holds for this lobby, read from the running game only if you leave that on.",
+      rule: "Only the heroes the game put on your own screen, and only your own results with them. Nobody else's offer is known to the log, and an empty spot stays empty rather than showing a made-up number.",
+    },
+    es: {
+      title: "Elección de héroe",
+      sees: "Mientras eliges héroe, una tarjeta por cada héroe a elegir: su retrato, su nombre y cómo te ha ido con él hasta ahora: partidas jugadas, puesto medio y la parte de esas partidas que acabaste en la mitad superior. Las tribus de la partida van encima de las tarjetas. Un héroe que nunca has jugado dice que aún no hay partidas.",
+      source: "Los héroes a elegir son los que el juego te lista en su propio registro. Los números salen de tus partidas guardadas en este PC. Las tribus son las que el juego tiene para esta partida, leídas del juego en marcha solo si lo dejas activado.",
+      rule: "Solo los héroes que el juego puso en tu propia pantalla y solo tus resultados con ellos. El registro no conoce la oferta de nadie más, y un hueco vacío queda vacío en vez de mostrar un número inventado.",
+    },
+  },
+  "hero-select-reroll": {
+    en: {
+      title: "Hero select after a reroll",
+      sees: "The same cards after you swap one hero for another: the new hero takes the old one's place, and the small count of rerolls goes up. The new hero here has no games yet.",
+      source: "The new hero is read from the game's log the moment the game swaps it in. Numbers are from your saved games on this PC.",
+      rule: "It follows what the game shows you and nothing else: a hero you swapped away is gone from the panel.",
+    },
+    es: {
+      title: "Elección de héroe tras un cambio",
+      sees: "Las mismas tarjetas después de cambiar un héroe por otro: el héroe nuevo ocupa el lugar del anterior y sube el pequeño contador de cambios. El héroe nuevo de este ejemplo aún no tiene partidas.",
+      source: "El héroe nuevo se lee del registro del juego en cuanto el juego lo pone. Los números salen de tus partidas guardadas en este PC.",
+      rule: "Sigue solo lo que el juego te enseña: un héroe que cambiaste ya no está en el panel.",
+    },
+  },
+  "hero-select-duos": {
+    en: {
+      title: "Hero select in Duos",
+      sees: "In Duos the game offers two heroes, so there are two cards. The numbers are your own Duos history, and the top half means the top two teams.",
+      source: "The heroes come from the game's log; the numbers from your saved Duos games on this PC.",
+      rule: "Same rule as Solo: your own offer and your own results only, nothing about your teammate's choice.",
+    },
+    es: {
+      title: "Elección de héroe en Dúos",
+      sees: "En Dúos el juego ofrece dos héroes, así que hay dos tarjetas. Los números son tu propio historial de Dúos y la mitad superior son los dos primeros equipos.",
+      source: "Los héroes salen del registro del juego; los números, de tus partidas de Dúos guardadas en este PC.",
+      rule: "La misma regla que en Solo: solo tu oferta y tus resultados, nada de la elección de tu compañero.",
+    },
+  },
+  "hero-select-new": {
+    en: {
+      title: "Hero select with no history",
+      sees: "For a new player, or after clearing the history, every card says there are no games yet: no zeros, no placeholder numbers.",
+      source: "There is nothing saved on this PC for these heroes, so there is nothing to show.",
+      rule: "Unknown is not zero: the panel says so instead of inventing a record.",
+    },
+    es: {
+      title: "Elección de héroe sin historial",
+      sees: "Para un jugador nuevo, o tras borrar el historial, cada tarjeta dice que aún no hay partidas: sin ceros ni números de relleno.",
+      source: "No hay nada guardado en este PC sobre estos héroes, así que no hay nada que mostrar.",
+      rule: "Desconocido no es cero: el panel lo dice en vez de inventar un historial.",
+    },
+  },
   counters: {
     en: {
       title: "Counters",
