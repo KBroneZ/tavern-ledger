@@ -50,6 +50,7 @@
   // the card's name in the app's language, or null.
   function tipFacts(m, nameOf) {
     const facts = {
+      name: m.id ? nameOf(m.id) || m.id : t("shop.card.unknown"),
       stats: [t("replay.tip.attack", { value: I18n.exact(m.atk) }), t("replay.tip.health", { value: I18n.exact(m.health) })],
       heading: null,
       buffs: [],
@@ -66,6 +67,19 @@
 
   let tipSeq = 0;
 
+  // Escape hides the plaques (WCAG 1.4.13: dismissible) until the pointer or
+  // the focus moves again: one attribute on the page, which tip.css reads.
+  function watchTipEscape(doc) {
+    const root = doc.documentElement;
+    doc.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") root.setAttribute("data-tips-off", "");
+    });
+    const back = () => root.removeAttribute("data-tips-off");
+    doc.addEventListener("pointermove", back);
+    doc.addEventListener("focusin", back);
+  }
+  if (typeof window !== "undefined" && window.document) watchTipEscape(window.document);
+
   // The tooltip as markup, next to its minion: shown by the stylesheet on
   // hover and on focus (the minion takes focus, so a keyboard or a tap shows
   // it too), and the minion points to it with aria-describedby. `tools` has
@@ -75,6 +89,7 @@
     const tip = ui.el("span", "minion-tip");
     tip.id = `minion-tip-${++tipSeq}`;
     tip.setAttribute("role", "tooltip");
+    tip.append(ui.el("span", "tip-name", facts.name));
     const stats = ui.el("span", "tip-stats");
     stats.append(ui.el("span", "tip-atk", facts.stats[0]), ui.el("span", "tip-hp", facts.stats[1]));
     tip.append(stats);
@@ -374,6 +389,8 @@
       tile.append(line);
     }
     tipNode(ui, tile, m, tools);
+    // The plaque is its tooltip: it names the minion, so no native title over it.
+    tile.removeAttribute("title");
     return tile;
   }
 
@@ -504,7 +521,7 @@
     return part;
   }
 
-  const api = { buffsOf, tipFacts, tipNode, giftMark, giftMarks, rows, combatAt, healthWords, damageWords, damageBadges, damageQuiet, totalsWords, keywordsRecorded, summaryWords, shopFacts, section };
+  const api = { buffsOf, tipFacts, tipNode, watchTipEscape, giftMark, giftMarks, rows, combatAt, healthWords, damageWords, damageBadges, damageQuiet, totalsWords, keywordsRecorded, summaryWords, shopFacts, section };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLTurns = api;
 })();

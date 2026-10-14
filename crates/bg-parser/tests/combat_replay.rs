@@ -375,6 +375,44 @@ fn a_replay_minion_keeps_its_buffs_from_the_start_and_when_summoned() {
 }
 
 #[test]
+fn a_summoned_minion_keeps_its_buffs_when_it_dies_and_they_are_taken_away() {
+    // The log moves the minion to the graveyard, then each of its
+    // enchantments out of the game: the saved buffs are what it had alive.
+    let mut l = won_combat();
+    let at = l
+        .iter()
+        .position(|x| x.contains("Creating ID=50"))
+        .expect("token");
+    l.splice(at + 8..at + 8, enchantment(73, "BG28_309e", 50));
+    l.splice(at + 8 + 7..at + 8 + 7, enchantment(74, "BG28_309e", 50));
+    // In the combat: right after the token's attack, before the last enemy dies.
+    let end = l
+        .iter()
+        .position(|x| x.contains("Entity=41 tag=ZONE value=GRAVEYARD"))
+        .expect("the last enemy dies");
+    l.splice(
+        end..end,
+        [
+            tag("50", "ZONE", "GRAVEYARD"),
+            tag("73", "ZONE", "REMOVEDFROMGAME"),
+            tag("74", "ZONE", "REMOVEDFROMGAME"),
+        ],
+    );
+    let r = replay(&finished(l), 1);
+    let token = r
+        .minions
+        .iter()
+        .find(|m| m.card_id.as_deref() == Some("SYN_TOKEN"))
+        .expect("token");
+    let kinds: Vec<_> = token
+        .buffs
+        .iter()
+        .map(|b| (b.card_id.as_str(), b.count))
+        .collect();
+    assert_eq!(kinds, [("BG28_309", 2)]);
+}
+
+#[test]
 fn the_replay_is_saved_with_its_round() {
     let r = finished(won_combat());
     let json = serde_json::to_value(&r).expect("serializable");

@@ -12,6 +12,8 @@ import { cardLabel } from "./names.ts";
 import { g } from "./strings.ts";
 
 export interface TipMinion {
+  /** The card, for the plaque's heading (the minion's own title is gone: the plaque is its tooltip). */
+  cardId?: string | null;
   atk: number | null;
   health: number | null;
   /** null: the record is older and did not read them. */
@@ -33,22 +35,42 @@ function buffRow(b: Buff): VNode {
   );
 }
 
-function buffPart(buffs: readonly Buff[] | null): VNode {
+/** What the list of buffs is as of: a combat replay's start, or the game a board was loaded from. */
+export type TipWhen = "start" | "loaded";
+
+function buffPart(buffs: readonly Buff[] | null, when?: TipWhen): VNode {
   if (buffs === null) return h("p", { class: "tip-note" }, g("tip.buffs.unknown"));
   if (buffs.length === 0) return h("p", { class: "tip-note" }, g("tip.buffs.none"));
-  return h("div", { class: "tip-buffs" }, h("p", { class: "tip-head" }, g("tip.buffs")), h("ul", {}, buffs.map(buffRow)));
+  const head = when === "start" ? g("tip.buffs.start") : when === "loaded" ? g("tip.buffs.loaded") : g("tip.buffs");
+  return h("div", { class: "tip-buffs" }, h("p", { class: "tip-head" }, head), h("ul", {}, buffs.map(buffRow)));
 }
 
-export function minionTip(id: string, m: TipMinion): VNode {
+/**
+ * Escape hides the plaques (WCAG 1.4.13: dismissible) until the pointer or
+ * the focus moves again: one attribute on the page, which tip.css reads.
+ */
+export function watchTipEscape(doc: Pick<Document, "documentElement" | "addEventListener">): void {
+  const root = doc.documentElement;
+  const off = () => root.setAttribute("data-tips-off", "");
+  const back = () => root.removeAttribute("data-tips-off");
+  doc.addEventListener("keydown", (event) => {
+    if ((event as KeyboardEvent).key === "Escape") off();
+  });
+  doc.addEventListener("pointermove", back);
+  doc.addEventListener("focusin", back);
+}
+
+export function minionTip(id: string, m: TipMinion, when?: TipWhen): VNode {
   return h(
     "span",
     { class: "minion-tip", id, role: "tooltip" },
+    m.cardId === undefined ? null : h("span", { class: "tip-name" }, cardLabel(m.cardId, g("minion.unknownCard"))),
     h(
       "span",
       { class: "tip-stats" },
       h("span", { class: "tip-atk" }, g("tip.attack", { value: exactStat(m.atk) })),
       h("span", { class: "tip-hp" }, g("tip.health", { value: exactStat(m.health) })),
     ),
-    buffPart(m.buffs),
+    buffPart(m.buffs, when),
   );
 }

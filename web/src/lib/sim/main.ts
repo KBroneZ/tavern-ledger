@@ -18,6 +18,7 @@ import type { GameRecord } from "../game/report.ts";
 import { GAME_FILE_COLUMNS, type GameRow } from "../data/rows.ts";
 import { readAnswer, type Answer } from "./answer.ts";
 import * as B from "./board.ts";
+import { watchTipEscape } from "../game/minionTip.ts";
 import { loadCardNames, useCardNames } from "../game/names.ts";
 import { CardIndex, readCardFile } from "./cards.ts";
 import { gameKey, type GamesState, loadView, type PickedGame } from "./loadView.ts";
@@ -434,6 +435,7 @@ async function loadCards(): Promise<void> {
 /** The page's listeners, once: "Try again" runs start() again without adding them twice. */
 function listen(): void {
   watchPictureFallback(document);
+  watchTipEscape(document);
   els.table.addEventListener("click", onEditorClick);
   els.table.addEventListener("input", onEditorInput);
   els.table.addEventListener("change", onEditorChange);

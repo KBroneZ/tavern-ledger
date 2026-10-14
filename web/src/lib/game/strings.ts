@@ -120,6 +120,8 @@ export const GAME_STRINGS = {
   "tip.attack": "Attack {value}",
   "tip.health": "Health {value}",
   "tip.buffs": "Buffs",
+  "tip.buffs.start": "Buffs when the combat began",
+  "tip.buffs.loaded": "Buffs in the loaded game",
   "tip.buffs.none": "No buffs",
   "tip.buffs.unknown": "Buffs are not recorded for this game.",
   "tip.buff": "{name} ×{count}",

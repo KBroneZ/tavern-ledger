@@ -131,7 +131,7 @@ function card(m: SimMinion, side: Side, board: number, props: EditorProps): VNod
       h("span", { class: "sim-atk", "aria-hidden": "true" }, shortStat(m.attack)),
       h("span", { class: "sim-hp", "aria-hidden": "true" }, shortStat(m.health)),
     ),
-    minionTip(tipId, { atk: m.attack, health: m.health, buffs: m.buffs }),
+    minionTip(tipId, { cardId: m.cardId, atk: m.attack, health: m.health, buffs: m.buffs }, "loaded"),
   );
 }
 

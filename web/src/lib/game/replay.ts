@@ -25,6 +25,7 @@ import { KEYWORDS, type Keyword } from "./keywords.ts";
 import { type DamageSource, type Replay, type ReplayEvent, type Side, SIDES } from "./replayRead.ts";
 import { g, type GameStringKey } from "./strings.ts";
 import { lang } from "../i18n.ts";
+import { exactStat } from "../stat.ts";
 
 /** Playback speeds; at 1× each step stays for its beat (BEAT_MS). */
 export const SPEEDS = [0.5, 1, 2, 4] as const;
@@ -387,7 +388,7 @@ export function frameWords(frame: Frame, replay: Replay, namer: Namer): string {
 
 /** A damage in words: with its source since revision 13 ("from their Cleave Hound (attack)"), or "an unknown source". */
 function damageWords(e: Extract<ReplayEvent, { kind: "damage" }>, m: (ref: number) => string, whose: (side: Side, name: string) => string, namer: Namer): string {
-  const base = { m: m(e.minion), n: e.amount, left: e.health };
+  const base = { m: m(e.minion), n: exactStat(e.amount), left: exactStat(e.health) };
   const lethal = e.health <= 0;
   if (e.source === undefined) return g(lethal ? "replay.ev.damageLethal" : "replay.ev.damage", base);
   if (e.source === null) return g(lethal ? "replay.ev.damageUnknownLethal" : "replay.ev.damageUnknown", base);
@@ -411,7 +412,7 @@ export function stepWords(e: ReplayEvent | null, replay: Replay, namer: Namer): 
     case "shield":
       return capital(g(e.on ? "replay.ev.shieldOn" : "replay.ev.shieldOff", { m: m(e.minion) }));
     case "stats":
-      return capital(g("replay.ev.stats", { m: m(e.minion), atk: e.atk, health: e.health }));
+      return capital(g("replay.ev.stats", { m: m(e.minion), atk: exactStat(e.atk), health: exactStat(e.health) }));
     case "death":
       return capital(g("replay.ev.death", { m: m(e.minion) }));
     case "summon":

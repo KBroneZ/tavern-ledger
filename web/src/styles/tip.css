@@ -25,10 +25,38 @@
   translate: -50% 0;
   visibility: hidden;
   opacity: 0;
-  pointer-events: none;
+  /* A replay's info layer lets clicks through; the plaque itself does not (it is hidden when not shown). */
+  pointer-events: auto;
   transition:
     opacity 120ms var(--ease-out, ease-out),
     visibility 0s linear 120ms;
+}
+
+/* The pointer can move onto the plaque and stay (WCAG 1.4.13: hoverable): it
+   is inside its minion, and an invisible strip joins the two over the gap. */
+.minion-tip::before {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  height: 10px;
+}
+
+.rp-side.is-opponent .minion-tip::before {
+  top: auto;
+  bottom: 100%;
+}
+
+/* Escape hides every plaque until the pointer or the focus moves (watchTipEscape). */
+[data-tips-off] .minion-tip {
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+.tip-name {
+  font: 700 var(--t-sm) / 1.2 var(--display);
+  overflow-wrap: anywhere;
 }
 
 /* A tile at the left or right end of its row keeps the plaque on screen. */

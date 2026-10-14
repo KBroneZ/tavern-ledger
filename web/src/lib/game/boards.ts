@@ -28,7 +28,7 @@ function minionTile(m: Minion, tipId: string): VNode {
     ),
     h("span", { class: "gv-minion-name", "aria-hidden": "true" }, cardLabel(m.cardId, g("minion.unknownCard"))),
     giftList(m),
-    minionTip(tipId, m),
+    minionTip(tipId, { cardId: m.cardId, atk: m.atk, health: m.health, buffs: m.buffs }),
   );
 }
 

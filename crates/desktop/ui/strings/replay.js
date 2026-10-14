@@ -46,7 +46,7 @@
     // The tooltip of a minion (T-616): exact numbers and its buffs.
     ["replay.tip.attack", "Attack {value}", "Ataque {value}"],
     ["replay.tip.health", "Health {value}", "Vida {value}"],
-    ["replay.tip.buffs", "Buffs", "Mejoras"],
+    ["replay.tip.buffs", "Buffs when the combat began", "Mejoras al empezar el combate"],
     ["replay.tip.none", "No buffs", "Sin mejoras"],
     ["replay.tip.unknown", "Buffs are not recorded for this game.", "Las mejoras no se guardaron en esta partida."],
     ["replay.tip.buff", "{name} ×{count}", "{name} ×{count}"],

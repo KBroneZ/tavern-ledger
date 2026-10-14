@@ -771,7 +771,8 @@ impl Live {
 
     /// An enchantment came to a minion summoned during this combat: its
     /// buffs arrive after the minion's own lines, so they are read again
-    /// (a minion on the board as the combat began has them from the start).
+    /// while it lives (a minion on the board as the combat began has them
+    /// from the start).
     fn refresh_buffs(&mut self, id: i64, board: &Board) {
         let Some(run) = self.run.as_mut().filter(|r| !r.ended) else {
             return;
@@ -786,6 +787,11 @@ impl Live {
         let Some(&minion) = run.refs.get(&on).filter(|&&m| m >= run.replay.start) else {
             return;
         };
+        // A minion that died keeps what it had: the game then takes its
+        // enchantments out of play one by one.
+        if !run.alive.contains(&minion) {
+            return;
+        }
         run.replay.minions[minion].buffs = buffs_on(board, on);
     }
 

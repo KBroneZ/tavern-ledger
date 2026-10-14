@@ -28,9 +28,15 @@
   translate: -50% 0;
   visibility: hidden;
   opacity: 0;
-  pointer-events: none;
+  pointer-events: auto;
   transition: opacity 120ms ease-out, visibility 0s linear 120ms;
 }
+/* The pointer can move onto the plaque and stay (WCAG 1.4.13): it is inside its minion, and an invisible strip joins the two over the gap. */
+.minion-tip::before { content: ""; position: absolute; top: 100%; right: 0; left: 0; height: 10px; }
+.replay-side[data-side="opponent"] .minion-tip::before { top: auto; bottom: 100%; }
+/* Escape hides every plaque until the pointer or the focus moves (turns.js watchTipEscape). */
+[data-tips-off] .minion-tip { visibility: hidden !important; opacity: 0 !important; }
+.tip-name { font: 700 13px / 1.2 var(--font-display); overflow-wrap: anywhere; }
 .shop-card:is(:hover, :focus-visible, :focus-within) > .minion-tip,
 .replay-minion:is(:hover, :focus-visible, :focus-within) > .minion-tip {
   visibility: visible;

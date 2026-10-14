@@ -10,6 +10,7 @@ import { h, mount, type VNode } from "../view/node.ts";
 import { stateBlock } from "../view/pieces.ts";
 import { EXPIRED_COLUMNS, expiredHeading, loadExpired, type ReadSummary, renderExpired } from "./expired.ts";
 import { loadGame, type Download, type LoadResult } from "./load.ts";
+import { watchTipEscape } from "./minionTip.ts";
 import { loadCardNames, useCardNames } from "./names.ts";
 import { renderGame } from "./render.ts";
 import { startReplays } from "./replayPlayer.ts";
@@ -147,6 +148,7 @@ async function run(ref: GameRef, sources: Sources): Promise<void> {
 
 async function start(): Promise<void> {
   watchPictureFallback(document);
+  watchTipEscape(document);
   const ref = parseGameRef(location.search);
   if (ref === null) return showNotFound();
   // Dev only (removed from the built site): ?demo draws a synthetic game.

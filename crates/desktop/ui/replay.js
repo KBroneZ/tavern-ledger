@@ -521,7 +521,7 @@
       case "shield":
         return capital(t(e.on ? "replay.ev.shield_on" : "replay.ev.shield_off", { m: m(e.minion) }));
       case "stats":
-        return capital(t("replay.ev.stats", { m: m(e.minion), atk: I18n.num(e.atk), health: I18n.num(e.health) }));
+        return capital(t("replay.ev.stats", { m: m(e.minion), atk: I18n.exact(e.atk), health: I18n.exact(e.health) }));
       case "death":
         return capital(t("replay.ev.death", { m: m(e.minion) }));
       case "summon":
@@ -631,7 +631,6 @@
     const gifts = Turns.giftMarks(tile).map((g) => g.title);
     const marks = [tile.golden && t("keyword.golden"), ...tile.keywords.map((k) => (`keyword.${k}` in I18n.tables().en ? t(`keyword.${k}`) : k)), ...gifts].filter(Boolean);
     const words = [`${name} ${I18n.exact(tile.atk)}/${I18n.exact(health)}`, marks.join(", ")].filter(Boolean).join(" · ");
-    box.title = words;
     box.querySelector(".replay-words").textContent = words;
   }
 

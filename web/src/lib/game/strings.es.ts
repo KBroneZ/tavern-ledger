@@ -116,6 +116,8 @@ export const ES: Record<GameStringKey, string> = {
   "tip.attack": "Ataque {value}",
   "tip.health": "Vida {value}",
   "tip.buffs": "Mejoras",
+  "tip.buffs.start": "Mejoras al empezar el combate",
+  "tip.buffs.loaded": "Mejoras en la partida cargada",
   "tip.buffs.none": "Sin mejoras",
   "tip.buffs.unknown": "Las mejoras no se guardaron en esta partida.",
   "tip.buff": "{name} ×{count}",

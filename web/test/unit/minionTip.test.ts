@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { setLang } from "../../src/lib/i18n.ts";
-import { minionTip, tipHost } from "../../src/lib/game/minionTip.ts";
+import { minionTip, tipHost, watchTipEscape } from "../../src/lib/game/minionTip.ts";
 import { useCardNames } from "../../src/lib/game/names.ts";
 import { CardIndex } from "../../src/lib/sim/cards.ts";
 import type { VNode } from "../../src/lib/view/node.ts";
@@ -150,4 +150,46 @@ test("a replay tile shows short numbers and its tooltip the exact ones and the b
   assert.match(text(tip), /Fire Baller ×2/);
   const shown = [...walk(li)].filter((n) => ["rp-atk", "rp-hp"].includes(attr(n, "class") ?? "")).map(text);
   assert.deepEqual(shown, ["12.3K", "999"]);
+});
+
+// ---------- what the plaque says it is ----------
+
+test("the plaque names the minion, so no browser title is needed", () => {
+  setLang("en");
+  names();
+  const tip = minionTip("tip-n", { cardId: "BG31_816", ...BIG, buffs: [] });
+  const head = [...walk(tip)].find((n) => (attr(n, "class") ?? "") === "tip-name") as VNode;
+  assert.equal(text(head), "Fire Baller");
+  const unknown = minionTip("tip-m", { cardId: null, ...BIG, buffs: [] });
+  assert.equal(text([...walk(unknown)].find((n) => (attr(n, "class") ?? "") === "tip-name") as VNode), "Unknown card");
+});
+
+test("the buff list says when it was taken: at the start of a combat, or in the loaded game", () => {
+  setLang("en");
+  names();
+  const buffs = [{ cardId: "BG20_GEM", count: 1 }];
+  const head = (tip: VNode) => text([...walk(tip)].find((n) => (attr(n, "class") ?? "") === "tip-head") as VNode);
+  assert.equal(head(minionTip("a", { ...BIG, buffs })), "Buffs");
+  assert.equal(head(minionTip("b", { ...BIG, buffs }, "start")), "Buffs when the combat began");
+  assert.equal(head(minionTip("c", { ...BIG, buffs }, "loaded")), "Buffs in the loaded game");
+  setLang("es");
+  assert.equal(head(minionTip("d", { ...BIG, buffs }, "start")), "Mejoras al empezar el combate");
+  assert.equal(head(minionTip("e", { ...BIG, buffs }, "loaded")), "Mejoras en la partida cargada");
+  setLang("en");
+});
+
+test("Escape hides the plaques until the pointer or the focus moves again", () => {
+  const root = { attrs: new Map<string, string>(), setAttribute(k: string, v: string) { this.attrs.set(k, v); }, removeAttribute(k: string) { this.attrs.delete(k); } };
+  const listeners = new Map<string, (e: { key?: string }) => void>();
+  const doc = { documentElement: root, addEventListener: (type: string, fn: (e: { key?: string }) => void) => listeners.set(type, fn) };
+  watchTipEscape(doc as never);
+  listeners.get("keydown")?.({ key: "a" });
+  assert.equal(root.attrs.has("data-tips-off"), false, "another key does nothing");
+  listeners.get("keydown")?.({ key: "Escape" });
+  assert.equal(root.attrs.get("data-tips-off"), "");
+  listeners.get("pointermove")?.({});
+  assert.equal(root.attrs.has("data-tips-off"), false, "the pointer moving brings them back");
+  listeners.get("keydown")?.({ key: "Escape" });
+  listeners.get("focusin")?.({});
+  assert.equal(root.attrs.has("data-tips-off"), false, "so does the focus moving");
 });

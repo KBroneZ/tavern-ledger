@@ -250,8 +250,50 @@ test("the tooltip's facts: exact numbers, each buff with its name and count, and
   assert.equal(TLTurns.tipFacts({ atk: 1, health: 1, buffs: null }, name).note, "Buffs are not recorded for this game.");
   assert.deepEqual(TLTurns.tipFacts({ atk: null, health: 4, buffs: [] }, name).stats, ["Attack ?", "Health 4"]);
   I18n.setLang("es");
-  const es = TLTurns.tipFacts({ atk: 1234567, health: 8, buffs: [{ id: "BG20_GEM", count: 2 }] }, name);
+  const es = TLTurns.tipFacts({ id: "BG20_GEM", atk: 1234567, health: 8, buffs: [{ id: "BG20_GEM", count: 2 }] }, name);
   assert.deepEqual(es.stats, ["Ataque 1.234.567", "Vida 8"]);
-  assert.equal(es.heading, "Mejoras");
+  assert.equal(es.heading, "Mejoras al empezar el combate");
+  assert.equal(es.name, "Blood Gem", "the plaque names the minion");
+  assert.equal(TLTurns.tipFacts({ id: null, atk: 1, health: 1, buffs: [] }, name).name, I18n.t("shop.card.unknown"));
   I18n.setLang("en");
+});
+
+test("Escape hides the plaques until the pointer or the focus moves again", () => {
+  const attrs = new Map();
+  const root = { setAttribute: (k, v) => attrs.set(k, v), removeAttribute: (k) => attrs.delete(k) };
+  const listeners = {};
+  TLTurns.watchTipEscape({ documentElement: root, addEventListener: (type, fn) => (listeners[type] = fn) });
+  listeners.keydown({ key: "a" });
+  assert.equal(attrs.has("data-tips-off"), false);
+  listeners.keydown({ key: "Escape" });
+  assert.equal(attrs.get("data-tips-off"), "");
+  listeners.pointermove({});
+  assert.equal(attrs.has("data-tips-off"), false);
+  listeners.keydown({ key: "Escape" });
+  listeners.focusin({});
+  assert.equal(attrs.has("data-tips-off"), false);
+});
+
+// The parser, the server, the website and the app each state the same
+// bounds for a minion's buffs; a change to one must reach the others.
+test("the buffs' bounds are the parser's, the server's and the website's", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const root = path.join(__dirname, "..", "..", "..");
+  const read = (...p) => fs.readFileSync(path.join(root, ...p), "utf8");
+  const rust = read("crates", "bg-parser", "src", "buffs.rs");
+  const kinds = Number(/MAX_BUFF_KINDS: usize = (\d+)/.exec(rust)[1]);
+  const count = Number(/MAX_BUFF_COUNT: u32 = (\d+)/.exec(rust)[1]);
+  const deno = read("supabase", "functions", "upload-game", "checks.ts");
+  assert.equal(Number(/MAX_BUFF_KINDS = (\d+)/.exec(deno)[1]), kinds, "the server");
+  assert.equal(Number(/MAX_BUFF_COUNT = (\d+)/.exec(deno)[1]), count, "the server");
+  const web = read("web", "src", "lib", "game", "buffs.ts");
+  assert.equal(Number(/MAX_BUFF_KINDS = (\d+)/.exec(web)[1]), kinds, "the website");
+  assert.equal(Number(/MAX_BUFF_COUNT = (\d+)/.exec(web)[1]), count, "the website");
+  const turns = read("crates", "desktop", "ui", "turns.js");
+  assert.match(turns, new RegExp(`slice\\(0, ${kinds}\\)`), "the app: kinds");
+  assert.match(turns, new RegExp(`Math\\.min\\(b\\.count, ${count}\\)`), "the app: count");
+  assert.match(read("crates", "desktop", "ui", "app.js"), /revision >= 14/, "the app: first revision with buffs");
+  assert.match(read("web", "src", "lib", "game", "buffs.ts"), /BUFFS_REVISION = 14/, "the website: first revision with buffs");
+  assert.match(read("crates", "bg-parser", "src", "lib.rs"), /PARSER_REVISION: u32 = 14/, "the parser");
 });
