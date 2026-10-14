@@ -19,6 +19,10 @@ import { join } from "node:path";
 import type { SupabaseClient, SupportedStorage } from "@supabase/supabase-js";
 import { makeClient, saveProfile, signIn } from "../../src/lib/api.ts";
 import type { SiteConfig } from "../../src/lib/config.ts";
+import { loadGames } from "../../src/lib/dataApi.ts";
+import { DEFAULT_FILTERS } from "../../src/lib/data/filters.ts";
+import { GAME_FILE_COLUMNS } from "../../src/lib/data/rows.ts";
+import { EXPIRED_COLUMNS, loadExpired, type ReadSummary } from "../../src/lib/game/expired.ts";
 import { type Download, loadGame } from "../../src/lib/game/load.ts";
 import { storagePath } from "../../src/lib/game/url.ts";
 import { INDEX, record, SESSION } from "../unit/gameFixtures.ts";
@@ -148,5 +152,42 @@ describe("game viewer read on the local stack", { skip: !ENABLED && "set TAVERN_
     assert.equal((await loadGame(downloadWith(users[1].client), ref())).kind, "ok");
     assert.equal(await saveProfile(users[0].client, users[0].id, { displayName: "Game E2E", isPublic: false }), null);
     assert.deepEqual(await loadGame(downloadWith(anon), ref()), { kind: "unavailable" });
+  });
+
+  test("a game stored before ids (old file name): the owner's list, page and simulator read it", async () => {
+    const old = `${users[0].id}/${SESSION}-${INDEX}.json.gz`;
+    const mv = await service("/storage/v1/object/move", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bucketId: "games", sourceKey: storagePath(ref()), destinationKey: old }),
+    });
+    assert.equal(mv.status, 200);
+    const patch = await service(`/rest/v1/games?user_id=eq.${users[0].id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ storage_path: old }),
+    });
+    assert.equal(patch.status, 204);
+    const owner = users[0].client;
+    // The owner's games list (the simulator's columns) names the file.
+    const { rows } = await loadGames(owner, users[0].id, DEFAULT_FILTERS, GAME_FILE_COLUMNS);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].publicId, publicId);
+    assert.equal(rows[0].storagePath, old);
+    // The game page: the opaque name is not there, the row says where the file is.
+    assert.deepEqual(await loadGame(downloadWith(owner), ref()), { kind: "unavailable" });
+    const readSummary: ReadSummary = async (r) =>
+      await owner.from("game_summaries").select(EXPIRED_COLUMNS).eq("user_id", r.userId).eq("public_id", r.publicId).limit(1);
+    const found = await loadExpired(readSummary, ref());
+    assert.deepEqual(found, { kind: "none", path: old });
+    const own = await loadGame(downloadWith(owner), ref(), found.kind === "none" ? found.path ?? undefined : undefined);
+    assert.equal(own.kind, "ok");
+    // The simulator reads it by the row's file name.
+    assert.equal((await loadGame(downloadWith(owner), ref(), rows[0].storagePath ?? undefined)).kind, "ok");
+    // A visitor of a public profile gets "not available" until the sweep renames it.
+    assert.equal(await saveProfile(owner, users[0].id, { displayName: "Game E2E", isPublic: true }), null);
+    const anon = makeClient(config, memoryStorage());
+    assert.deepEqual(await loadGame(downloadWith(anon), ref()), { kind: "unavailable" });
+    assert.equal(await saveProfile(owner, users[0].id, { displayName: "Game E2E", isPublic: false }), null);
   });
 });
