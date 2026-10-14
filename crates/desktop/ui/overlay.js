@@ -198,6 +198,34 @@ function renderTribes(g) {
   panel.hidden = false;
 }
 
+// The counters panel (T-612): the player's own running totals, one line each
+// (Advanced adds where the game shows it). Hidden when there is nothing to
+// show: null (unknown) and [] (nothing applies) both leave no empty box.
+function renderCounters(g) {
+  const panel = document.getElementById("counters");
+  // While the layout is being edited the panel shows example rows, so it can be placed in a real game too.
+  let rows = TLCounters.rows(g.counters);
+  if (!rows.length && editing) rows = TLCounters.rows(EXAMPLE_GAME.counters);
+  panel.hidden = !rows.length;
+  if (!rows.length) {
+    panel.replaceChildren();
+    return;
+  }
+  const list = el("ul", "counter-list");
+  for (const r of rows) {
+    const item = el("li", "counter");
+    // The figures are seen; the sentence is read out instead of the pieces.
+    const seen = el("span", "counter-seen");
+    seen.setAttribute("aria-hidden", "true");
+    const main = el("span", "counter-main");
+    main.append(el("span", "counter-label", r.label), el("b", "counter-value", r.value));
+    seen.append(main, el("span", "counter-where adv", r.where));
+    item.append(seen, el("span", "visually-hidden", r.said));
+    list.append(item);
+  }
+  panel.replaceChildren(list);
+}
+
 function renderRecord(opponent) {
   const record = el("span", "record");
   if (!opponent.record) {
@@ -512,7 +540,7 @@ function render() {
   if (lobbyShown) renderLobby(lobbyShown);
   else lobby.hidden = true;
   if (!g && lobbyShown) {
-    for (const id of ["status", "tribes", "opponents", "legend"]) document.getElementById(id).hidden = true;
+    for (const id of ["status", "counters", "tribes", "opponents", "legend"]) document.getElementById(id).hidden = true;
     if (window.TLHover) window.TLHover.render();
     return;
   }
@@ -521,6 +549,7 @@ function render() {
     const status = document.getElementById("status");
     status.className = "panel status";
     status.textContent = scene === "battlegrounds_loading" ? TLI18n.t("ov.status.loading") : TLI18n.t("ov.status.waiting");
+    document.getElementById("counters").hidden = true;
     document.getElementById("tribes").hidden = true;
     document.getElementById("opponents").hidden = true;
     legend.hidden = true;
@@ -529,10 +558,12 @@ function render() {
   }
   renderStatus(g);
   const showPanels = g.phase === "playing" || g.phase === "over";
+  document.getElementById("counters").hidden = !showPanels;
   document.getElementById("tribes").hidden = !showPanels;
   document.getElementById("opponents").hidden = !showPanels;
   legend.hidden = !showPanels;
   if (showPanels) {
+    renderCounters(g);
     renderTribes(g);
     renderOpponents(g);
   }
@@ -589,7 +620,7 @@ function showError(error) {
   const panel = document.getElementById("status");
   panel.className = "panel status unreadable";
   panel.textContent = TLI18n.t("ov.error.update", { error });
-  for (const id of ["tribes", "opponents", "legend", "lobby"]) document.getElementById(id).hidden = true;
+  for (const id of ["counters", "tribes", "opponents", "legend", "lobby"]) document.getElementById(id).hidden = true;
   if (window.TLHover) window.TLHover.setFailed(true);
 }
 
