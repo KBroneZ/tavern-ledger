@@ -96,6 +96,16 @@ pub struct Settings {
 }
 
 impl Settings {
+    /// Settings with the saved file already read. `main` builds them before
+    /// the windows exist, so a window's first `app_settings` call sees the
+    /// saved language and not the system's (T-356). The error, if any, is
+    /// for the start-up notice; the settings are then the defaults.
+    pub fn loaded_from(data_dir: &Path) -> (Self, Result<(), String>) {
+        let settings = Self::default();
+        let loaded = settings.load(data_dir);
+        (settings, loaded)
+    }
+
     pub fn load(&self, data_dir: &Path) -> Result<(), String> {
         let path = data_dir.join(FILE);
         *lock(&self.path) = Some(path.clone());
@@ -480,6 +490,28 @@ mod tests {
         assert_eq!(settings.language(), Language::En);
         *lock(&settings.system) = Language::Es;
         assert_eq!(settings.language(), Language::Es);
+    }
+
+    #[test]
+    fn the_saved_language_is_known_before_any_window_asks() {
+        let dir = dir("early");
+        std::fs::write(dir.join(FILE), r#"{"language":"en"}"#).unwrap();
+        // What `main` builds before the windows exist: a window's first
+        // `app_settings` call must already see the saved choice (T-356).
+        let (settings, loaded) = Settings::loaded_from(&dir);
+        loaded.unwrap();
+        assert_eq!(settings.view().language, Some(Language::En));
+        *lock(&settings.system) = Language::Es;
+        assert_eq!(settings.language(), Language::En);
+    }
+
+    #[test]
+    fn a_broken_file_at_start_still_gives_settings_and_the_error() {
+        let dir = dir("early-broken");
+        std::fs::write(dir.join(FILE), "not json").unwrap();
+        let (settings, loaded) = Settings::loaded_from(&dir);
+        assert!(loaded.is_err());
+        assert_eq!(settings.view().language, None);
     }
 
     #[test]

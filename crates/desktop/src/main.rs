@@ -1325,7 +1325,10 @@ fn main() {
         ),
     );
     let state = Arc::new(AppState::default());
-    let app_settings = Arc::new(settings::Settings::default());
+    // Read before the windows exist: the page asks for the language as soon
+    // as it runs (T-356).
+    let (app_settings, settings_loaded) = settings::Settings::loaded_from(&startup_dir);
+    let app_settings = Arc::new(app_settings);
     let context = tauri::generate_context!();
     // Without a real release key the updater plugin is not even registered,
     // so nothing can ask GitHub for an update (D-135).
@@ -1423,7 +1426,6 @@ fn main() {
             let loaded = state.overlay.load(&data_dir, overlay_dev(std::env::args()));
             let game_memory_loaded = state.game_memory.load(&data_dir);
             state.saved_tribes.set_dir(&data_dir);
-            let settings_loaded = app_settings.load(&data_dir);
             app_updates.load(&data_dir);
             let releases = updates::GitHub {
                 app: app.handle().clone(),
