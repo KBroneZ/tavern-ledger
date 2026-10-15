@@ -173,6 +173,10 @@ export function createMinionArt(options) {
       else if (op.kind === "number") root.append(numberLayer(op));
       else if (op.kind === "fx" && WORDED_FX.includes(op.fx)) {
         const spec = layout[op.fx];
+        if (!spec) {
+          addMark(op.fx);
+          continue;
+        }
         const canvas = doc.createElement("canvas");
         canvas.width = spec.size[0];
         canvas.height = spec.size[1];

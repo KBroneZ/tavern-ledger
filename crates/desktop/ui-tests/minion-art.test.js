@@ -273,6 +273,21 @@ test("an effect whose own textures are missing shows its word instead of nothing
   assert.equal(el.children.filter((c) => c.tag === "canvas").length, 1, "Stealth still runs");
 });
 
+test("a layout without an effect's data gives that effect's word, not an error", async () => {
+  const { createMinionArt } = await load("minion-art.js");
+  const layout = structuredClone(LAYOUT);
+  delete layout.windfury;
+  layout.stealth.size = [0, 0];
+  const art = createMinionArt({
+    layout, imageUrl: URLS, artImage: () => new Node("img"), formatStat: String, markText: (k) => `word:${k}`,
+    log() {}, document: doc, fx: { supported: () => true, attach: () => true, setActive() {}, destroy() {} }, preload: false,
+  });
+  const el = art.render(m(["windfury", "stealth"]));
+  assert.equal(el.children.filter((c) => c.tag === "canvas").length, 0);
+  const marks = el.children.find((c) => c.className.includes("tlm-marks"));
+  assert.deepEqual(marks.children.map((c) => c.textContent), ["word:stealth", "word:windfury"]);
+});
+
 test("big and unknown numbers are written by the host's own rule", async () => {
   const { createMinionArt } = await load("minion-art.js");
   const art = createMinionArt({

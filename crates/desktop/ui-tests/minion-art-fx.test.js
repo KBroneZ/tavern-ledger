@@ -21,6 +21,7 @@ function fakeGl(counts) {
     get(target, name) {
       if (name === "getShaderParameter" || name === "getProgramParameter") return () => true;
       if (name === "getError") return () => 0;
+      if (name === "getExtension") return () => ({ loseContext: () => { counts.loseContext = (counts.loseContext || 0) + 1; } });
       if (typeof name !== "string" || name === "then") return undefined;
       if (name === "NO_ERROR") return 0;
       if (/^[A-Z0-9_]+$/.test(name)) return 1;
@@ -39,7 +40,11 @@ function fakeDoc({ webgl = true } = {}) {
     getContext: () => (webgl ? fakeGl(counts) : null),
     addEventListener(type, fn) { this.listeners[type] = fn; },
   };
-  const doc = { hidden: false, listeners: {}, createElement: () => glCanvas, addEventListener(type, fn) { this.listeners[type] = fn; } };
+  const doc = {
+    hidden: false, listeners: {}, createElement: () => glCanvas,
+    addEventListener(type, fn) { this.listeners[type] = fn; },
+    removeEventListener(type) { delete this.listeners[type]; },
+  };
   return { doc, counts, glCanvas };
 }
 
@@ -189,10 +194,25 @@ test("losing the WebGL context sends every effect back to words and a restored o
   assert.equal(fx.attach("windfury", fakeCanvas(), () => {}), true);
 });
 
-test("destroy clears the loop", async () => {
-  const { fx, c } = await make();
+test("destroy clears the loop, lets go of the page's listener and gives the GPU its memory back", async () => {
+  const { fx, env, c, logs } = await make();
   fx.attach("stealth", fakeCanvas(), () => {});
   await settle();
   fx.destroy();
   assert.equal(c.state.tasks.length, 0);
+  assert.equal(env.doc.listeners.visibilitychange, undefined);
+  assert.equal(env.counts.loseContext, 1);
+  assert.equal(fx.supported(), false);
+  assert.equal(fx.attach("stealth", fakeCanvas(), () => {}), false);
+  // The context the runtime itself let go of is not a loss to report.
+  env.glCanvas.listeners.webglcontextlost({ preventDefault() {} });
+  assert.deepEqual(logs, []);
+});
+
+test("effects in the page but hidden are looked at less often", async () => {
+  const { fx, c } = await make();
+  fx.attach("windfury", fakeCanvas({ shown: false }), () => {});
+  await settle();
+  c.run();
+  assert.equal(c.state.tasks[0].delay, 500);
 });

@@ -12,6 +12,8 @@ const WIND_CYCLE = 2.6; // seconds; both clips turn whole times in it
 // Minions with the same effect share one drawing per frame, in this many
 // phases (so they do not all move together); each minion copies its phase's.
 const PHASES = 3;
+// Nothing to draw but effects still in the page: look again this often (ms).
+const IDLE_CHECK_MS = 500;
 const STEALTH_TIME_SCALE = 0.05; // the game's scroll speeds are per 20 s
 const UNITS = { wfMap: [0, 1, 2, 3], wind: 4, dome: 5, mask: 6, shadow: 7, cover: 8 };
 
@@ -119,6 +121,7 @@ export function createFx(options) {
   let active = true;
   let timer = null;
   let nextPhase = 0;
+  let destroyed = false;
   const told = new Set();
 
   // One line per kind of trouble, however many minions meet it.
@@ -149,6 +152,7 @@ export function createFx(options) {
     if (!gl) throw new Error("WebGL is not available");
     glCanvas.addEventListener("webglcontextlost", (event) => {
       event.preventDefault();
+      if (destroyed) return;
       lost = true;
       tell("lost", "WebGL lost its context: Windfury and Stealth show as words until it comes back");
       for (const inst of [...instances]) drop(inst, true);
@@ -209,7 +213,7 @@ export function createFx(options) {
         kind,
         Promise.all(names.map((name) => loadImage(name)))
           .then((images) => {
-            if (lost || !gl) return;
+            if (lost || destroyed || !gl) return;
             const byName = Object.fromEntries(names.map((n, i) => [n, images[i]]));
             if (kind === "windfury") {
               ["wf_map_A0", "wf_map_A1", "wf_map_B0", "wf_map_B1"].forEach((n, i) => texture(gl, byName[n], UNITS.wfMap[i], { nearest: true }));
@@ -274,6 +278,7 @@ export function createFx(options) {
     inst.ctx.drawImage(glCanvas, 0, glCanvas.height - h, w, h, 0, 0, w, h);
   }
 
+  /** Draws every visible effect once; true when something was drawn. */
   function drawFrame(t) {
     const groups = new Map();
     for (const inst of instances) {
@@ -287,6 +292,7 @@ export function createFx(options) {
       drawPhase(first.kind, first.size, first.phase, t);
       for (const inst of group) copyTo(inst);
     }
+    return groups.size > 0;
   }
 
   function visible(inst) {
@@ -304,14 +310,16 @@ export function createFx(options) {
     }
     if (!instances.size || !active || lost) return;
     const started = now();
+    let drew = false;
     try {
-      drawFrame(started);
+      drew = drawFrame(started);
     } catch (error) {
       fail("windfury", `effects stopped (${error && error.message ? error.message : error})`);
       fail("stealth", "effects stopped");
     }
-    // Next frame one interval after this one started, less what drawing took.
-    timer = schedule(tick, interval - (now() - started) * 1000);
+    // Next frame one interval after this one started, less what drawing took;
+    // when nothing showed (a hidden board still in the page) look again less often.
+    timer = schedule(tick, drew ? interval - (now() - started) * 1000 : IDLE_CHECK_MS);
   }
 
   function wake() {
@@ -327,9 +335,9 @@ export function createFx(options) {
   }
 
   const api = {
-    supported: () => !initError && !lost,
+    supported: () => !initError && !lost && !destroyed,
     attach(kind, canvas, onLost) {
-      if (initError || lost || failed.has(kind) || !programs || !programs[kind] || !canvas.getContext) return false;
+      if (initError || lost || destroyed || failed.has(kind) || !programs || !programs[kind] || !canvas.getContext) return false;
       const size = layout[kind].size;
       const ctx = canvas.getContext("2d");
       if (!ctx) return false;
@@ -347,12 +355,21 @@ export function createFx(options) {
       if (active) wake();
     },
     destroy() {
+      destroyed = true;
       instances.clear();
       if (timer !== null) unschedule(timer);
       timer = null;
+      if (doc.removeEventListener) doc.removeEventListener("visibilitychange", onVisibility);
+      // Give the GPU its memory back now, not when the page is collected.
+      const lose = gl && gl.getExtension && gl.getExtension("WEBGL_lose_context");
+      if (lose) lose.loseContext();
+      programs = null;
     },
   };
   // Nothing draws while the window is hidden; it picks up when it shows.
-  if (doc.addEventListener) doc.addEventListener("visibilitychange", () => api.setActive(!doc.hidden));
+  function onVisibility() {
+    api.setActive(!doc.hidden);
+  }
+  if (doc.addEventListener) doc.addEventListener("visibilitychange", onVisibility);
   return api;
 }

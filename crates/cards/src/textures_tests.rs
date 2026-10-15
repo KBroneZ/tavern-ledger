@@ -424,3 +424,27 @@ fn a_content_type_comes_from_the_extension_only() {
     assert_eq!(content_type("a.svg"), None);
     assert_eq!(content_type("a"), None);
 }
+
+#[test]
+fn a_download_whose_layout_cannot_be_read_keeps_the_old_set() {
+    let (_, _, dir, _) = downloaded("keep-old");
+    fs::write(dir.join(VERSION).join("gem_attack.webp"), b"RIFF-tampered").unwrap();
+    let fake = Arc::new(FakeFetch::default());
+    let store = TextureStore::open(dir.clone(), Box::new(Shared(fake.clone())));
+    // The server's new set has a layout that is not JSON (its hash is right).
+    let mut set = Set::new();
+    let bad = b"{not json".to_vec();
+    set.files[3].1 = bad;
+    set.serve(&fake);
+    assert!(!store.refresh_if_due(NOW));
+    assert!(store.problem().is_some());
+    // What was usable stays usable and nothing is left beside it.
+    assert!(store.file("skull.webp").is_some());
+    assert!(!dir.join(format!("{VERSION}.tmp")).exists());
+    assert!(!dir.join(format!("{VERSION}.old")).exists());
+    let again = TextureStore::open(dir, Box::new(Shared(Arc::new(FakeFetch::default()))));
+    assert!(
+        again.file("skull.webp").is_some(),
+        "the folder on disk was kept"
+    );
+}

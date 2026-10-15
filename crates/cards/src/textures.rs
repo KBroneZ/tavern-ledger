@@ -21,7 +21,6 @@
 
 use std::collections::BTreeMap;
 use std::fs;
-use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, TryLockError};
 
@@ -332,15 +331,44 @@ impl TextureStore {
             let _ = fs::remove_dir_all(&side);
             return Err(problem);
         }
-        let live = set_dir(&self.dir);
-        let swapped = fs::remove_dir_all(&live)
-            .or_else(|e| (e.kind() == io::ErrorKind::NotFound).then_some(()).ok_or(e))
-            .and_then(|()| fs::rename(&side, &live));
-        if let Err(e) = swapped {
+        // The new set must be usable before it replaces anything.
+        let Some(loaded) = load(&side).filter(|l| l.complete) else {
             let _ = fs::remove_dir_all(&side);
-            return Err(format!("the textures could not be saved ({})", e.kind()));
+            return Err("the downloaded textures could not be read".into());
+        };
+        self.swap_in(&side)?;
+        Ok(loaded)
+    }
+
+    /// Puts the side folder in place of the live one, keeping the old one
+    /// until the new one is in (and putting it back if that fails).
+    fn swap_in(&self, side: &Path) -> Result<(), String> {
+        let live = set_dir(&self.dir);
+        let old = self.dir.join(format!("{VERSION}.old"));
+        let _ = fs::remove_dir_all(&old);
+        let had_live = live.exists();
+        let result = (if had_live {
+            fs::rename(&live, &old)
+        } else {
+            Ok(())
+        })
+        .and_then(|()| {
+            fs::rename(side, &live).inspect_err(|_| {
+                if had_live {
+                    let _ = fs::rename(&old, &live);
+                }
+            })
+        });
+        match result {
+            Ok(()) => {
+                let _ = fs::remove_dir_all(&old);
+                Ok(())
+            }
+            Err(e) => {
+                let _ = fs::remove_dir_all(side);
+                Err(format!("the textures could not be saved ({})", e.kind()))
+            }
         }
-        load(&live).ok_or_else(|| "the saved textures could not be read".to_string())
     }
 
     fn fetch_all(&self, entries: &[Entry], manifest: &[u8], side: &Path) -> Result<(), String> {
