@@ -3,29 +3,43 @@
 // texture set's layout.json, which is read as untrusted input: a part whose
 // box is not a box is left out, never guessed.
 
-const MAX_SIZE = 4096;
+// A canvas nobody drew is refused: the frame canvas is 400 wide, effects a few hundred.
+const MAX_SIZE = 1024;
+const MAX_EFFECT_SIZE = 512;
+// A part may reach past the frame (a shield, a bubble) but not across the screen.
+const REACH = 2;
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 
 /** [x0, y0, x1, y1] in canvas pixels, or null. */
-const readBox = (v) =>
-  Array.isArray(v) && v.length === 4 && v.every(isNum) && v[2] > v[0] && v[3] > v[1] ? v.slice() : null;
+const readBox = (v, canvas) =>
+  Array.isArray(v) &&
+  v.length === 4 &&
+  v.every(isNum) &&
+  v[2] > v[0] &&
+  v[3] > v[1] &&
+  v[0] >= -REACH * canvas.width &&
+  v[2] <= (1 + REACH) * canvas.width &&
+  v[1] >= -REACH * canvas.height &&
+  v[3] <= (1 + REACH) * canvas.height
+    ? v.slice()
+    : null;
 
 const readSize = (v) =>
-  Array.isArray(v) && v.length === 2 && v.every((n) => Number.isInteger(n) && n > 0 && n <= MAX_SIZE) ? v.slice() : null;
+  Array.isArray(v) && v.length === 2 && v.every((n) => Number.isInteger(n) && n > 0 && n <= MAX_EFFECT_SIZE) ? v.slice() : null;
 
 const readPair = (v) => (Array.isArray(v) && v.length === 2 && v.every(isNum) ? v.slice() : null);
 
-function readWindfury(raw) {
+function readWindfury(raw, canvas) {
   if (!raw || typeof raw !== "object") return null;
-  const box = readBox(raw.box_canvas_px);
+  const box = readBox(raw.box_canvas_px, canvas);
   const size = readSize(raw.size);
   if (!box || !size || !isNum(raw.umin) || !isNum(raw.umax) || raw.umax <= raw.umin) return null;
   return { box, size, umin: raw.umin, umax: raw.umax };
 }
 
-function readStealth(raw, pad) {
-  if (!raw || typeof raw !== "object") return null;
-  const box = readBox(raw.box_canvas_px);
+function readStealth(raw, pad, canvas) {
+  if (!raw || typeof raw !== "object" || !isNum(pad) || pad < 0 || pad > MAX_SIZE) return null;
+  const box = readBox(raw.box_canvas_px, canvas);
   const size = readSize(raw.size);
   const u = readPair(raw.u);
   const v = readPair(raw.v);
@@ -45,7 +59,7 @@ export function readLayout(raw) {
   if (canvas.width <= 0 || canvas.height <= 0 || canvas.width > MAX_SIZE || canvas.height > MAX_SIZE) return null;
   const boxes = {};
   const keep = (name, value) => {
-    const box = readBox(value);
+    const box = readBox(value, canvas);
     if (box) boxes[name] = box;
   };
   const parts = raw.parts && typeof raw.parts === "object" ? raw.parts : {};
@@ -58,8 +72,8 @@ export function readLayout(raw) {
     width: canvas.width,
     height: canvas.height,
     boxes,
-    windfury: readWindfury(raw.windfury),
-    stealth: readStealth(raw.stealth, raw.fx_canvas_pad_px),
+    windfury: readWindfury(raw.windfury, canvas),
+    stealth: readStealth(raw.stealth, raw.fx_canvas_pad_px, canvas),
   };
 }
 

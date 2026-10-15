@@ -167,6 +167,8 @@ fn a_manifest_with_an_unsafe_or_odd_name_is_refused_before_any_file_is_asked_for
         "lpt9.png",
         "aux.webp",
         "prn.webp",
+        "manifest.json",
+        "MANIFEST.JSON",
     ];
     for (i, file) in bad.iter().enumerate() {
         let (store, fake, dir) = fresh(&format!("badname{i}"));
@@ -447,4 +449,19 @@ fn a_download_whose_layout_cannot_be_read_keeps_the_old_set() {
         again.file("skull.webp").is_some(),
         "the folder on disk was kept"
     );
+}
+
+#[test]
+fn a_download_that_takes_too_long_is_given_up() {
+    let (mut store, fake, dir) = fresh("deadline");
+    store.set_deadline_for_test(std::time::Duration::ZERO);
+    Set::new().serve(&fake);
+    assert!(!store.refresh_if_due(NOW));
+    assert!(
+        store.problem().unwrap().contains("too long"),
+        "{:?}",
+        store.problem()
+    );
+    assert!(!dir.join(VERSION).exists());
+    assert!(!dir.join(format!("{VERSION}.tmp")).exists());
 }

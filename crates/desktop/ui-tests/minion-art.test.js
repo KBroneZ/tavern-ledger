@@ -58,6 +58,23 @@ test("the layout is read into boxes, and what is not a box is left out", async (
   assert.ok(B.stealth, "the other effect is kept");
 });
 
+test("sizes and boxes nobody drew are refused: a host cannot make a minion cover the screen or fill the GPU", async () => {
+  const { readLayout } = await load("layout.js");
+  const huge = structuredClone(LAYOUT);
+  huge.parts.skull.box = [-5000, 0, 5000, 5000];
+  huge.parts.rally.box = [0, 0, 1e9, 10];
+  huge.windfury.size = [4096, 4096];
+  huge.stealth.box_canvas_px = [0, 0, 40000, 500];
+  const L = readLayout(huge);
+  assert.equal(L.boxes.skull, undefined);
+  assert.equal(L.boxes.rally, undefined);
+  assert.ok(L.boxes.gem_attack, "ordinary parts stay");
+  assert.equal(L.windfury, null);
+  assert.equal(L.stealth, null);
+  // What the game really draws reaches past the frame (shield, bubble, glow) and is kept.
+  assert.ok(L.boxes.divine_shield && L.boxes.reborn_glow && L.boxes.taunt_normal);
+});
+
 test("a layout without a canvas, or a pile of nonsense, is no layout", async () => {
   const { readLayout } = await load("layout.js");
   for (const raw of [null, undefined, 5, "x", [], {}, { canvas: { width: 0, height: 5 } }, { canvas: { width: "4", height: 5 } }]) {

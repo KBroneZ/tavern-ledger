@@ -23,6 +23,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, TryLockError};
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -47,6 +48,9 @@ pub const MAX_FILE_BYTES: u64 = 512 * 1024;
 /// The whole of v1 is 640 KB.
 pub const MAX_TOTAL_BYTES: u64 = 2 * 1024 * 1024;
 pub const MAX_FILES: usize = 64;
+/// The whole download (the manifest and every file) gives up after this,
+/// so a slow host cannot hold the worker for the sum of every timeout.
+pub const DOWNLOAD_DEADLINE: Duration = Duration::from_secs(120);
 /// After a failed download, no new request for this long.
 pub const RETRY_AFTER_SECS: u64 = 900;
 const MAX_NAME_LEN: usize = 64;
@@ -118,6 +122,7 @@ fn is_device_name(file: &str) -> bool {
 /// No separator, drive letter, dot-prefix, space, `..` or device name.
 fn valid_file(file: &str) -> bool {
     !is_device_name(file)
+        && !file.eq_ignore_ascii_case(MANIFEST_FILE)
         && file.len() <= MAX_NAME_LEN
         && !file.starts_with('.')
         && file.matches('.').count() == 1
@@ -205,6 +210,7 @@ struct Inner {
 
 pub struct TextureStore {
     dir: PathBuf,
+    deadline: Duration,
     fetch: Box<dyn Fetch>,
     inner: Mutex<Inner>,
     download_lock: Mutex<()>,
@@ -231,6 +237,7 @@ impl TextureStore {
         let loaded = load(&set_dir(&dir)).map(Arc::new);
         TextureStore {
             dir,
+            deadline: DOWNLOAD_DEADLINE,
             fetch,
             inner: Mutex::new(Inner {
                 loaded,
@@ -373,7 +380,11 @@ impl TextureStore {
 
     fn fetch_all(&self, entries: &[Entry], manifest: &[u8], side: &Path) -> Result<(), String> {
         fs::create_dir_all(side).map_err(|e| format!("no room for the textures ({})", e.kind()))?;
+        let started = Instant::now();
         for entry in entries {
+            if started.elapsed() >= self.deadline {
+                return Err("the download took too long".into());
+            }
             let body = self.get(&entry.file, entry.bytes as usize)?;
             if body.len() as u64 != entry.bytes || sha256_hex(&body) != entry.sha256 {
                 return Err(format!("{} does not match the manifest", entry.file));
@@ -381,6 +392,11 @@ impl TextureStore {
             write_file(&side.join(&entry.file), &body)?;
         }
         write_file(&side.join(MANIFEST_FILE), manifest)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_deadline_for_test(&mut self, deadline: Duration) {
+        self.deadline = deadline;
     }
 
     #[cfg(test)]
