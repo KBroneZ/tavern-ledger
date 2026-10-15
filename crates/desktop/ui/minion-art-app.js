@@ -11,6 +11,8 @@ const { listen } = window.__TAURI__.event;
 const ART = `${location.protocol === "https:" ? "https" : "http"}://cardart.localhost/`;
 
 let current = null;
+// Each load takes a number; only the newest may publish (a slow older one is dropped).
+let generation = 0;
 
 function publish(art) {
   if (current) current.destroy();
@@ -25,12 +27,14 @@ function log(message) {
 }
 
 async function load() {
+  const mine = ++generation;
   let view = null;
   try {
     view = await invoke("texture_set");
   } catch (_) {
     view = null;
   }
+  if (mine !== generation) return;
   if (!view || typeof view !== "object" || !view.files || typeof view.files !== "object") return publish(null);
   const base = typeof view.base === "string" ? view.base : `${ART}tex/${view.version}/`;
   const art = createMinionArt({
@@ -46,6 +50,7 @@ async function load() {
     return publish(null);
   }
   await art.ready;
+  if (mine !== generation) return art.destroy();
   publish(art);
 }
 
