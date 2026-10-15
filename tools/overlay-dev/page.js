@@ -38,28 +38,20 @@ const inScript = (text) => text.replace(/<\/script/gi, "<\\/script");
 // JSON that is safe inside a script element.
 const jsonForScript = (value) => JSON.stringify(value).replace(/</g, "\\u003c");
 
-// The scenarios place the hover for a 1920-pixel-wide game window; for another
-// width its slot and card are scaled with the window, as the app places them.
-const BASE_WIDTH = 1920;
-function scaleHover(hover, factor) {
-  if (!hover || factor === 1) return hover;
-  const scaled = (box) => Object.fromEntries(Object.entries(box).map(([k, v]) => [k, Math.round(v * factor)]));
-  return { ...hover, slot: scaled(hover.slot), card: scaled(hover.card) };
-}
-
-// The scenario's state with the workbench's own choices on top.
-function stateFor(scenario, { theme, width }) {
-  const factor = Number.isFinite(width) && width > 0 ? width / BASE_WIDTH : 1;
+// The scenario's state with the workbench's own choices on top. The hover
+// card is placed by the stand-in for the frame's own size (default-layout.js).
+function stateFor(scenario, { theme }) {
   const settings = { ...scenario.state.settings };
   if (THEMES.includes(theme)) settings.theme = theme;
-  return { ...scenario.state, settings, hover: scaleHover(scenario.state.hover, factor) };
+  return { ...scenario.state, settings };
 }
 
-function overlayDocument({ html, galleryDir, scenario, lang, theme, width, bare }) {
+function overlayDocument({ html, galleryDir, scenario, lang, theme, bare }) {
   if (!FIRST_SCRIPT.test(html)) throw new Error("overlay.html has no script to put the stand-in before");
-  const state = stateFor(scenario, { theme, width });
+  const state = stateFor(scenario, { theme });
   const bootstrap = [
     read(path.join(galleryDir, "theme-vars.js")),
+    read(path.join(galleryDir, "default-layout.js")),
     read(path.join(galleryDir, "bridge.js")),
     `TLGalleryBridge.install(window, { state: ${jsonForScript(state)} }, ${JSON.stringify(lang === "es" ? "es" : "en")});`,
   ].join("\n");
@@ -67,4 +59,4 @@ function overlayDocument({ html, galleryDir, scenario, lang, theme, width, bare 
   return html.replace(FIRST_SCRIPT, (first) => `${backdrop}<script>\n${inScript(bootstrap)}\n</script>\n<script>\n${LIVE_RELOAD}\n</script>\n${first}`);
 }
 
-module.exports = { overlayDocument, stateFor, scaleHover, THEMES };
+module.exports = { overlayDocument, stateFor, THEMES };

@@ -28,15 +28,27 @@ window.TLHover = (() => {
   }
 
   // Where the app put it (screen_fit::place_card): across the top of the
-  // game window, inside the screen, cut at its bottom when taller. The text
-  // follows the board's width (T-334, overlay-scale.js).
+  // game's picture, centred, inside the screen, cut at its bottom when taller.
+  // When the combat odds bar is up in the card's way it goes just below the
+  // bar. The text follows the board's width (T-334, overlay-scale.js).
   function position() {
     const p = hover.card;
+    const top = window.TLPlace.clearOf(oddsBar(), { x: p.x, y: p.y, w: p.width }, rootFont() * window.TLPlace.BAR_GAP_REM);
     card.style.left = `${Math.round(p.x)}px`;
-    card.style.top = `${Math.round(p.y)}px`;
+    card.style.top = `${Math.round(top)}px`;
     card.style.width = `${Math.round(p.width)}px`;
-    card.style.maxHeight = `${Math.round(p.max_height)}px`;
+    card.style.maxHeight = `${Math.round(Math.max(0, p.max_height - (top - p.y)))}px`;
     card.style.setProperty("--card-font", `${TLScale.cardPx(p.width)}px`);
+  }
+
+  const rootFont = () => parseFloat(getComputedStyle(document.documentElement).fontSize) || 14;
+
+  // The odds bar's rectangle while it shows, else null.
+  function oddsBar() {
+    const slot = document.querySelector('.slot[data-panel="odds"]');
+    if (!slot || slot.hidden) return null;
+    const r = slot.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 ? { x: r.left, y: r.top, w: r.width, h: r.height } : null;
   }
 
   const stat = (n) => (n === null || n === undefined ? "?" : String(n));
@@ -179,6 +191,9 @@ window.TLHover = (() => {
   // The game's textures arrived (or went): the card is drawn again.
   window.addEventListener("tl-minions", () => render());
 
+  // A smaller or bigger window changes the text and so the odds bar's height.
+  window.addEventListener("resize", () => requestAnimationFrame(() => window.TLHover && window.TLHover.reposition()));
+
   onEvent("overlay-hover", (event) => {
     hover = event.payload || null;
     render();
@@ -186,6 +201,10 @@ window.TLHover = (() => {
 
   return {
     render,
+    // The panels moved (the layout was drawn): the card follows the odds bar.
+    reposition() {
+      if (hover && !card.hidden) position();
+    },
     // overlay.js says when an update failed, and when one worked again.
     setFailed(on) {
       failed = on;

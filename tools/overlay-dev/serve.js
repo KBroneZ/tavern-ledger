@@ -101,7 +101,6 @@ function createDevServer(options = {}) {
       scenario,
       lang: query.get("lang"),
       theme: query.get("theme"),
-      width: Number(query.get("width")),
       bare: query.get("bare") === "1",
     });
     send(res, 200, TYPES[".html"], body, head);

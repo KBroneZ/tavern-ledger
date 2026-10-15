@@ -61,6 +61,7 @@ function overlayDocument(uiDir, scenarios) {
   const bootstrap = [
     "/*__GALLERY_CONFIG__*/",
     read(path.join(__dirname, "theme-vars.js")),
+    read(path.join(__dirname, "default-layout.js")),
     read(path.join(__dirname, "bridge.js")),
     `(() => { const states = ${jsonForScript(states)}; const names = ${jsonForScript(names)};` +
       " const cfg = window.__GALLERY__ || { scenario: Object.keys(states)[0], lang: \"en\" };" +

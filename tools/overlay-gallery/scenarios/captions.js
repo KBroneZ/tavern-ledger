@@ -192,6 +192,20 @@ const CAPTIONS = {
       rule: "Es un recuerdo de lo que se te enseñó: el tablero es de un combate pasado y la tarjeta dice de qué turno. Queda arriba en la pantalla, lejos de tu tablero, tu mano y las ayudas del juego.",
     },
   },
+  "crowded": {
+    en: {
+      title: "Crowded screen",
+      sees: "Everything at once in a Solo game: the odds bar with its warning and its approximate note, the hover card under it, the lobby's tribes and the eight opponents in the list. Nothing covers anything else.",
+      source: LOG.en,
+      rule: "No overlaps: the default places keep the odds bar, the hover card, the side panels and the marks apart, whatever each holds.",
+    },
+    es: {
+      title: "Pantalla llena",
+      sees: "Todo a la vez en una partida Solo: la barra de probabilidades con su aviso y su nota de aproximado, la tarjeta bajo ella, las razas de la sala y los ocho rivales en la lista. Nada tapa a nada.",
+      source: LOG.es,
+      rule: "Sin solapes: los sitios por defecto mantienen separados la barra, la tarjeta, los paneles laterales y las marcas, lleve lo que lleve cada uno.",
+    },
+  },
   "hover-duos": {
     en: {
       title: "Hover card, Duos",

@@ -1,7 +1,7 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { rootPx, cardPx, turnsAgo, MIN_PX } = require("../ui/overlay-scale.js");
+const { rootPx, cardPx, turnsAgo, playHeight, MIN_PX } = require("../ui/overlay-scale.js");
 
 // The two screens the user asked about (T-334): the overlay window covers the
 // game's picture, here full screen, so the monitor's work area (taskbar left
@@ -48,4 +48,21 @@ test("turns ago: from the turn now and the combat the board was seen in", () => 
   assert.equal(turnsAgo(null, 6), null);
   assert.equal(turnsAgo(5, null), null);
   assert.equal(turnsAgo(5, 6), null, "never a negative number");
+});
+
+// The game's picture is 16:9; in a wider or taller window it is centred with bars.
+test("the play height is the window's own when it is 16:9 or wider than that", () => {
+  assert.equal(playHeight(1920, 1080), 1080);
+  assert.equal(playHeight(3440, 1440), 1440);
+});
+
+test("in a window taller than 16:9 the play height is the picture's, cut by its width", () => {
+  assert.equal(playHeight(1024, 768), 576);
+  assert.equal(playHeight(1440, 1080), 810);
+});
+
+test("a window with no usable size has no play height of its own", () => {
+  for (const bad of [[0, 0], [NaN, 1080], [1920, -1], [undefined, undefined], ["1920", "1080"]]) {
+    assert.equal(playHeight(...bad), null);
+  }
 });

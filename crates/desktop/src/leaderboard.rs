@@ -2,8 +2,9 @@
 //! portraits at the left of the game. Worked out from the game window's
 //! client rectangle only; nothing is read from the game (D-004, D-006).
 //!
-//! The game scales its layout with the window's height and centres it, so
-//! the leaderboard is a fixed share of the height, left of the centre. The
+//! The game scales its layout with its 16:9 picture (the window's height, or
+//! less in a taller window) and centres it, so the leaderboard is a fixed
+//! share of the picture's height, left of the centre. The
 //! numbers below were measured on the user's own screenshots at 3840x2160
 //! (D-045); a patch can move the leaderboard, so the user can drag a box over
 //! it instead (saved per window size in `overlay.json`).
@@ -11,7 +12,7 @@
 //! All rectangles here are relative to the client area's top-left corner,
 //! in physical pixels.
 
-use crate::screen_fit::Area;
+use crate::screen_fit::{play_area, Area};
 
 /// Left edge of the portraits, as a share of the height left of the centre.
 pub const LEFT_FROM_CENTER: f64 = 0.665;
@@ -29,13 +30,17 @@ pub const MIN_H: f64 = 48.0;
 /// The leaderboard of a client area of this size, by the measured shares.
 /// Kept inside the client area (a window narrower than 4:3 cuts it).
 pub fn default_area(client: (f64, f64)) -> Area {
-    let (w, h) = client;
-    let left = w / 2.0 - LEFT_FROM_CENTER * h;
+    let play = play_area(Area {
+        x: 0.0,
+        y: 0.0,
+        w: client.0,
+        h: client.1,
+    });
     let area = Area {
-        x: left,
-        y: TOP * h,
-        w: WIDTH * h,
-        h: HEIGHT * h,
+        x: play.x + play.w / 2.0 - LEFT_FROM_CENTER * play.h,
+        y: play.y + TOP * play.h,
+        w: WIDTH * play.h,
+        h: HEIGHT * play.h,
     };
     fit_area(area, client).unwrap_or_default()
 }
@@ -127,6 +132,15 @@ mod tests {
         let b = default_area(FHD);
         assert!(close(a.x - b.x, (2560.0 - 1920.0) / 2.0));
         assert!(close(a.y, b.y) && close(a.h, b.h));
+    }
+
+    #[test]
+    fn a_taller_window_keeps_the_leaderboard_on_the_games_16_by_9_picture() {
+        // 4:3: the picture is 1024x576 with 96 px bars above and below.
+        let a = default_area((1024.0, 768.0));
+        let picture = default_area((1024.0, 576.0));
+        assert!(close(a.x, picture.x) && close(a.w, picture.w) && close(a.h, picture.h));
+        assert!(close(a.y, picture.y + 96.0), "{a:?}");
     }
 
     #[test]

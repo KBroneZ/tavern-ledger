@@ -8,7 +8,13 @@
   // The gallery's focus regions are in pixels of a 1920x1080 window.
   const FOCUS_BASE = { w: 1920, h: 1080 };
   const MAX_CLOSE_UP = 3;
-  const PRESETS = ["1920x1080", "2560x1440", "1280x720"];
+  const PRESETS = ["1920x1080", "2560x1440", "1280x720", "3440x1440"];
+  // The sizes the overlap check goes through: the presets and a 4:3 window (the game's picture is centred in it).
+  const CHECK_SIZES = [...PRESETS, "1024x768"];
+  // Time the page gets to draw its panels and the hover card, and to load at all.
+  const LOAD_WAIT_MS = 800;
+  const LOAD_TIMEOUT_MS = 15000;
+  let checking = false;
   const MIN = { w: 320, h: 240 };
   const MAX = { w: 7680, h: 4320 };
   // The events the overlay page listens to; `payload` is looked up when sent.
@@ -29,12 +35,6 @@
 
   let scenarios = [];
   const frame = $("frame");
-
-  // The hover is placed for a 1920-wide window: scale its boxes to this one.
-  function scaleHover(hover, factor) {
-    const scaled = (box) => Object.fromEntries(Object.entries(box).map(([k, v]) => [k, Math.round(v * factor)]));
-    return { ...hover, slot: scaled(hover.slot), card: scaled(hover.card) };
-  }
 
   function parseSize(text) {
     const m = /^(\d{3,4})x(\d{3,4})$/.exec(text);
@@ -59,14 +59,12 @@
     q.set("scenario", choice.scenario);
     q.set("lang", choice.lang);
     if (choice.theme) q.set("theme", choice.theme);
-    q.set("width", String(parseSize(choice.size).w));
     return q;
   }
 
   function loadFrame() {
     const q = overlayQuery();
     frame.src = `/ui/overlay.html?${q}`;
-    q.delete("width");
     $("bare").href = `/bare?${q}`;
     const scenario = scenarios.find((s) => s.id === choice.scenario);
     const caption = scenario && scenario.caption[choice.lang];
@@ -80,6 +78,8 @@
 
   // The game window's size and the frame's scale: only styles, no reload.
   function layout() {
+    // The overlap check sets the frame's size itself.
+    if (checking) return;
     const { w, h } = parseSize(choice.size);
     const stage = $("stage");
     const room = { w: stage.clientWidth - 32, h: window.innerHeight - stage.getBoundingClientRect().top - 32 };
@@ -146,10 +146,63 @@
     if (event.payload === "hover") payload = scenario && scenario.hover;
     if (event.payload === "language") payload = { language: choice.lang };
     if (event.payload === "hover" && !payload) return logEvent("this scenario has no hover to show; pick hover-solo or hover-duos");
-    if (event.payload === "hover") payload = scaleHover(payload, parseSize(choice.size).w / FOCUS_BASE.w);
     win.__TAURI__.emit(event.name, payload);
     logEvent(`sent ${event.name}`);
   }
+
+  // Every scenario at every size: nothing the overlay shows may cover anything
+  // else (the rendered rectangles, overlaps.js). Resolves to the failures.
+  async function checkOverlaps() {
+    const report = $("overlap-report");
+    const button = $("check-overlaps");
+    const before = { size: choice.size, scenario: choice.scenario };
+    const failures = [];
+    button.disabled = true;
+    checking = true;
+    report.hidden = false;
+    try {
+      for (const size of CHECK_SIZES) {
+        const { w, h } = parseSize(size);
+        frame.style.width = `${w}px`;
+        frame.style.height = `${h}px`;
+        for (const s of scenarios) {
+          report.textContent = `Checking ${s.id} at ${size}…`;
+          const q = overlayQuery();
+          q.set("scenario", s.id);
+          const loaded = await new Promise((resolve) => {
+            const timer = setTimeout(() => resolve(false), LOAD_TIMEOUT_MS);
+            frame.onload = () => {
+              clearTimeout(timer);
+              resolve(true);
+            };
+            frame.src = `/ui/overlay.html?${q}`;
+          });
+          if (!loaded) {
+            failures.push(`${s.id} at ${size}: the page did not load`);
+            continue;
+          }
+          await new Promise((resolve) => setTimeout(resolve, LOAD_WAIT_MS));
+          const shown = window.TLOverlaps.collect(frame.contentDocument);
+          // A page that drew nothing (an error) must not pass for "no overlaps".
+          if (shown.length === 0) failures.push(`${s.id} at ${size}: nothing is shown`);
+          for (const f of window.TLOverlaps.findOverlaps(shown)) failures.push(`${s.id} at ${size}: ${f.a} and ${f.b} share ${f.w}×${f.h}`);
+        }
+      }
+    } finally {
+      frame.onload = null;
+      checking = false;
+      button.disabled = false;
+      choice.size = before.size;
+      choice.scenario = before.scenario;
+      loadFrame();
+      layout();
+    }
+    report.textContent = failures.length
+      ? `${failures.length} overlap(s): ${failures.join("; ")}`
+      : `No overlaps in ${scenarios.length} scenarios at ${CHECK_SIZES.length} sizes.`;
+    return failures;
+  }
+  window.checkOverlaps = checkOverlaps;
 
   function option(value, text) {
     const o = document.createElement("option");
@@ -191,6 +244,7 @@
     $("size-w").addEventListener("change", custom);
     $("size-h").addEventListener("change", custom);
     window.addEventListener("resize", layout);
+    $("check-overlaps").addEventListener("click", () => checkOverlaps().catch((error) => { $("overlap-report").textContent = `The check failed: ${error.message}`; }));
 
     const buttons = EVENTS.map((event) => {
       const b = document.createElement("button");

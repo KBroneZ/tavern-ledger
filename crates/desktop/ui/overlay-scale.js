@@ -30,6 +30,15 @@
     return usable(cardWidth) ? round(clamp(cardWidth * CARD_SHARE)) : MIN_PX;
   }
 
+  // The height of the game's 16:9 picture inside a window of this size: the
+  // window's own height, or less in a taller window (the game centres its
+  // picture with bars). Every default place and the text follow it.
+  // null when the size is not usable.
+  function playHeight(windowWidth, windowHeight) {
+    if (!usable(windowWidth) || !usable(windowHeight)) return null;
+    return Math.min(windowHeight, (windowWidth * 9) / 16);
+  }
+
   // How many turns ago a board was seen: combat N is in game turn N (D-049).
   // null when either is unknown, never a guess.
   function turnsAgo(turnNow, seenIn) {
@@ -37,7 +46,7 @@
     return turnNow - seenIn;
   }
 
-  const api = { ROOT_SHARE, CARD_SHARE, MIN_PX, rootPx, cardPx, turnsAgo };
+  const api = { ROOT_SHARE, CARD_SHARE, MIN_PX, rootPx, cardPx, turnsAgo, playHeight };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLScale = api;
 })();

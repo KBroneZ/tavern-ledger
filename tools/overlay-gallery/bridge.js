@@ -12,14 +12,15 @@
 "use strict";
 
 (() => {
-  const themes = typeof module !== "undefined" && module.exports ? require("./theme-vars.js") : window.TLGalleryThemes;
+  const node = typeof module !== "undefined" && module.exports;
+  const themes = node ? require("./theme-vars.js") : window.TLGalleryThemes;
+  const defaults = node ? require("./default-layout.js") : window.TLGalleryDefaults;
 
-  // The game window the frames show: the overlay covers its picture.
+  // The game window the frames show: the overlay covers its picture. In a
+  // browser it is the page's own window (the workbench sizes the frame); the
+  // tests and the gallery's pictures use this size.
   const SCREEN = [1920, 1080];
-
-  // Where the game's own leaderboard is in a 1920x1080 window (the app's
-  // measured default, leaderboard.rs): the opponent marks follow it.
-  const LEADERBOARD = { area: { x: 241.8, y: 172.8, w: 91.8, h: 734.4 }, custom: false };
+  const screenSize = () => (typeof window !== "undefined" && window.innerWidth > 0 && window.innerHeight > 0 ? [window.innerWidth, window.innerHeight] : SCREEN);
 
   // The view the app's overlay_settings gives (overlay.rs `View`).
   function settingsView(scenario) {
@@ -34,10 +35,11 @@
       min_opacity: 0.8,
       max_opacity: 1,
       hidden: s.hidden || [],
-      // The odds bar's default place (overlay_layout.rs): top centre.
-      layout: { panels: { odds: { x: 690, y: 10.8, w: 540, h: null } } },
-      screen: SCREEN,
-      leaderboard: LEADERBOARD,
+      // The odds bar's default place (overlay_layout.rs): top centre of the picture.
+      layout: { panels: { odds: defaults.oddsRect(...screenSize()) } },
+      screen: screenSize(),
+      // The app's measured default (leaderboard.rs) for the window's size.
+      leaderboard: { area: defaults.leaderboardArea(...screenSize()), custom: false },
       vars: themes.THEME_VARS[theme],
       warning: null,
       odds: true,
@@ -141,15 +143,18 @@
       }
       return table[command](args);
     };
+    // The card is where the app puts it for this window's size.
+    const sized = (hover) => (hover ? { ...hover, card: defaults.hoverCard(...screenSize()) } : hover);
     const emit = (name, payload) => {
-      for (const callback of listeners.get(name) || []) callback({ event: name, payload });
+      const sent = name === "overlay-hover" ? sized(payload) : payload;
+      for (const callback of listeners.get(name) || []) callback({ event: name, payload: sent });
     };
     const listen = async (name, callback) => {
       if (!EVENTS.includes(name)) throw new Error(`the gallery does not know the event ${name}`);
       listeners.set(name, [...(listeners.get(name) || []), callback]);
       // The pointer is on a hero from the start: say so once the page listens.
       if (name === "overlay-hover" && scenario.state.hover) {
-        setTimeout(() => callback({ event: name, payload: scenario.state.hover }), 0);
+        setTimeout(() => callback({ event: name, payload: sized(scenario.state.hover) }), 0);
       }
       return () => listeners.set(name, (listeners.get(name) || []).filter((f) => f !== callback));
     };

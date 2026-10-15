@@ -178,15 +178,14 @@ test("the overlay page gets the stand-in before its first script, and the scenar
   });
 });
 
-test("a hover placed for 1920 pixels is scaled to the window's width", async () => {
+test("the page gets the stand-in whichever way its path is spelled, with the default places before it", async () => {
   await withServer({ uiDir: REAL_UI }, async ({ origin }) => {
-    const res = await get(origin, "/ui/overlay.html?scenario=hover-solo&width=960");
+    const res = await get(origin, "/ui/overlay.html?scenario=hover-solo");
     for (const spelling of ["/ui/%6Fverlay.html", "/ui/Overlay.html"]) {
       assert.ok((await get(origin, spelling)).body.includes("TLGalleryBridge.install("), `${spelling} gets the stand-in`);
     }
-    const base = SCENARIOS.find((s) => s.id === "hover-solo").state.hover;
-    assert.ok(res.body.includes(`"width":${Math.round(base.card.width / 2)}`), "the card is half as wide at half the width");
-    assert.ok(res.body.includes(`"x":${Math.round(base.slot.x / 2)}`));
+    const defaults = res.body.indexOf("TLGalleryDefaults");
+    assert.ok(defaults > -1 && defaults < res.body.indexOf("TLGalleryBridge.install("), "the default places are known before the stand-in is installed");
   });
 });
 
