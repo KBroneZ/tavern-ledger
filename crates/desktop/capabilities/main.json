@@ -32,6 +32,7 @@
     "allow-upload-sign-out",
     "allow-card-names",
     "allow-card-data-status",
+    "allow-texture-set",
     "allow-game-memory-status",
     "allow-game-memory-set-enabled",
     "allow-app-settings",

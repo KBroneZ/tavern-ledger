@@ -433,3 +433,11 @@ test("combats says whether the record read buffs, from the report", () => {
   assert.equal(TLReplay.combats({ rounds, buffs_recorded: true }).shown[0].buffs_recorded, true);
   assert.equal(TLReplay.combats({ rounds }).shown[0].buffs_recorded, false);
 });
+
+test("a replay token is handed to the shared drawing with its Divine Shield as the replay tracks it, and no health below 0", () => {
+  const tile = { id: "C_1", atk: 4, health: -2, golden: true, shield: false, keywords: ["divine_shield", "taunt", "windfury"] };
+  assert.deepEqual(TLReplay.drawnTile(tile), { card_id: "C_1", atk: 4, health: 0, golden: true, keywords: ["taunt", "windfury"] });
+  const shielded = { ...tile, health: 5, shield: true, keywords: ["taunt"] };
+  assert.deepEqual(TLReplay.drawnTile(shielded).keywords, ["taunt", "divine_shield"]);
+  assert.equal(TLReplay.drawnTile({ ...tile, health: null }).health, null, "unknown stays unknown");
+});

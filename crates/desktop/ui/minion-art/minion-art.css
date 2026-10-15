@@ -19,7 +19,7 @@
 .tlm-art-plain .tlm-art-img { left: 0; top: 0; width: 100%; height: 100%; }
 /* HearthstoneJSON's 256x pictures pad a tall minion with white bars: the
    same crop as every other picture in the app (object-view-box). */
-.tlm-art-img {
+.tlm-art-img, .tlm-art .art-missing {
   position: absolute;
   left: 9.75%;
   top: 5.9%;

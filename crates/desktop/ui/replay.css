@@ -399,3 +399,16 @@
 .why-line { margin: 4px 0; }
 .why-turn, .why-odds { font-variant-numeric: tabular-nums; }
 .why-odds { color: var(--dim); }
+
+/* A token drawn like the game (T-372, minion-art/): the frame, gems and
+   keyword layers come from the shared drawing, so the page's own gems, marks
+   and Divine Shield bubble give way; the turn's states show as a glow. */
+.replay-minion.drawn .replay-frame { width: var(--tile); }
+.replay-minion.drawn :is(.replay-stats, .replay-keys) { display: none; }
+.replay-minion.drawn :is(.shield, .popped) .replay-frame::after,
+.replay-minion.drawn.shield .replay-frame::after,
+.replay-minion.drawn.popped .replay-frame::after { display: none; }
+.replay-minion.drawn.attacker .replay-frame { filter: drop-shadow(0 0 5px var(--amber-hi)); }
+.replay-minion.drawn.defender .replay-frame { filter: drop-shadow(0 0 5px var(--bad)); }
+.replay-minion.drawn.triggered .replay-frame { filter: drop-shadow(0 0 5px var(--info)); }
+.replay-minion.drawn.dying .replay-frame { filter: grayscale(1); }

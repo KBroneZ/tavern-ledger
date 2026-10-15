@@ -40,7 +40,8 @@ async function load() {
   const art = createMinionArt({
     layout: view.layout,
     imageUrl: (name) => (Object.prototype.hasOwnProperty.call(view.files, name) ? base + view.files[name] : null),
-    artImage: (id) => window.TLCards.art(id, "art"),
+    // Pictures load when they come into view and a missing one leaves a plain shape (the main window's rule).
+    artImage: (id) => window.TLCards.art(id, "art", { lazy: true, placeholder: true }),
     formatStat: (value) => window.TLI18n.stat(value),
     markText: (keyword) => window.TLI18n.t(`keyword.${keyword}`),
     log,
