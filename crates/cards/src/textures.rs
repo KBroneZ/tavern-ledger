@@ -102,10 +102,24 @@ pub fn content_type(file: &str) -> Option<&'static str> {
     }
 }
 
+/// Names Windows treats as devices whatever the extension (`CON.webp` opens
+/// the console, not a file).
+fn is_device_name(file: &str) -> bool {
+    let stem = file.split('.').next().unwrap_or("").to_ascii_uppercase();
+    matches!(
+        stem.as_str(),
+        "CON" | "PRN" | "AUX" | "NUL" | "CONIN$" | "CONOUT$"
+    ) || ["COM", "LPT"].iter().any(|prefix| {
+        stem.strip_prefix(prefix)
+            .is_some_and(|n| n.len() == 1 && n.as_bytes()[0].is_ascii_digit())
+    })
+}
+
 /// A bare file name: letters, digits, `_`, `-` and one extension we serve.
-/// No separator, drive letter, dot-prefix, space or `..`.
+/// No separator, drive letter, dot-prefix, space, `..` or device name.
 fn valid_file(file: &str) -> bool {
-    file.len() <= MAX_NAME_LEN
+    !is_device_name(file)
+        && file.len() <= MAX_NAME_LEN
         && !file.starts_with('.')
         && file.matches('.').count() == 1
         && file

@@ -161,6 +161,12 @@ fn a_manifest_with_an_unsafe_or_odd_name_is_refused_before_any_file_is_asked_for
         "a b.webp",
         "",
         "https:evil.webp",
+        "CON.webp",
+        "nul.json",
+        "Com1.webp",
+        "lpt9.png",
+        "aux.webp",
+        "prn.webp",
     ];
     for (i, file) in bad.iter().enumerate() {
         let (store, fake, dir) = fresh(&format!("badname{i}"));
