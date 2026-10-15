@@ -219,6 +219,12 @@ test("the art sits under the oval mask and the card art picture fills it", async
   assert.equal(box.children[0].src, "art://C_1");
 });
 
+test("the card art picture carries the art class once", async () => {
+  const { art } = await make();
+  const picture = art.render(m()).children.find((c) => c.className.includes("tlm-art")).children[0];
+  assert.equal(picture.className.split(" ").filter((c) => c === "tlm-art-img").length, 1);
+});
+
 test("without the oval mask the art falls back to a plain oval, never an unmasked square", async () => {
   const { createMinionArt } = await load("minion-art.js");
   const art = createMinionArt({

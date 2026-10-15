@@ -47,7 +47,7 @@ function bundleModule(file, seen = new Set(), parts = []) {
     if (!m[1].startsWith(".")) throw new Error(`${file} imports ${m[1]}: only the app's own files are inlined`);
     bundleModule(path.resolve(path.dirname(file), m[1]), seen, parts);
   }
-  parts.push(text.replace(IMPORT, "").replace(/^export\s+(?=(?:async\s+)?(?:function|const|let|class))/gm, ""));
+  parts.push(text.replace(IMPORT, "").replace(/^export\s+(?=(?:async\s+)?(?:function|const|let|class)\b)/gm, ""));
   return parts;
 }
 

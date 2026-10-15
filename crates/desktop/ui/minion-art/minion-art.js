@@ -131,7 +131,7 @@ export function createMinionArt(options) {
     }
     const picture = artImage ? artImage(minion.card_id) : null;
     if (picture) {
-      if (!/tlm-art-img/.test(picture.className)) picture.className = `${picture.className} tlm-art-img`.trim();
+      if (!/\btlm-art-img\b/.test(picture.className)) picture.className = `${picture.className} tlm-art-img`.trim();
       box.append(picture);
     }
     return box;
