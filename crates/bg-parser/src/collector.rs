@@ -808,6 +808,23 @@ pub fn hero_health(hero: &Entity) -> i64 {
         .max(0)
 }
 
+/// The most health or armor a hero can show (the same bound as a minion's).
+pub const MAX_HERO_POINTS: i64 = 99_999;
+
+/// The health the game shows on a hero: its health minus the damage taken,
+/// never below 0, with the armor apart (it has its own shield). `None` when
+/// the hero has no health or it is out of range.
+pub fn hero_shown_health(hero: &Entity) -> Option<i64> {
+    let health = hero
+        .opt_int("HEALTH")
+        .filter(|h| (0..=MAX_HERO_POINTS).contains(h))?;
+    let damage = hero
+        .opt_int("DAMAGE")
+        .unwrap_or(0)
+        .clamp(0, MAX_HERO_POINTS);
+    Some((health - damage).max(0))
+}
+
 /// Health of every leaderboard hero right now, by player id.
 pub fn lobby_health_now(board: &Board) -> BTreeMap<i64, i64> {
     leaderboard_heroes(board)

@@ -97,11 +97,15 @@ const LOBBY: [LobbySlot; 2] = [
         player_id: 2,
         place: None,
         tech_level: Some(3),
+        health: None,
+        armor: None,
     },
     LobbySlot {
         player_id: 5,
         place: None,
         tech_level: Some(4),
+        health: None,
+        armor: None,
     },
 ];
 

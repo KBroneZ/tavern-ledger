@@ -256,6 +256,10 @@ impl GameReader {
                 tech_level: hero
                     .opt_int("PLAYER_TECH_LEVEL")
                     .filter(|t| (1..=MAX_TECH_LEVEL).contains(t)),
+                health: collector::hero_shown_health(hero),
+                armor: hero
+                    .opt_int("ARMOR")
+                    .filter(|a| (0..=collector::MAX_HERO_POINTS).contains(a)),
             })
             .collect();
         slots.sort_by_key(|s| s.player_id);

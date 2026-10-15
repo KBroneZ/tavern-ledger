@@ -90,6 +90,8 @@
     const tiers = Array.isArray(o.tiers) ? o.tiers : [];
     const shown = o.shown_source === "log" && Array.isArray(o.shown) ? o.shown : [];
     const health = o.health && Number.isInteger(o.health.value) ? o.health.value : null;
+    // The armor shield is shown only when the game shows one: none is not 0.
+    const armor = o.armor && Number.isInteger(o.armor.value) && o.armor.value > 0 ? o.armor.value : null;
     const triples = shown.reduce((sum, s) => sum + (s && Number.isInteger(s.triples) && s.triples > 0 ? s.triples : 0), 0);
     return {
       faces: seats.map((_, i) => ({
@@ -97,6 +99,7 @@
         tier: tiers[i] && Number.isInteger(tiers[i].value) ? tiers[i].value : null,
       })),
       health,
+      armor,
       triples,
       next: o.next === true,
       out: health !== null && health <= 0,
@@ -144,7 +147,7 @@
       const place = o && o.place && o.place.value;
       if (!Number.isInteger(place) || place < 1 || place > slots) return [];
       const row = opponentRow(o);
-      return [{ place, slots, health: row.health, triples: row.triples, out: row.out }];
+      return [{ place, slots, health: row.health, armor: row.armor, triples: row.triples, out: row.out }];
     });
   }
 

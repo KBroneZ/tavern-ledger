@@ -131,6 +131,7 @@
       "ov.status.example": "Example data: no game is on.",
       "ov.error.update": "Couldn't update the overlay ({error}).",
       "ov.hp.unit": "hp",
+      "ov.armor.unit": "armor",
 
       // Tribes panel.
       // Simple panel (T-339): short tribe names for the chips, read out in full.
@@ -329,6 +330,7 @@
       "ov.status.example": "Datos de ejemplo: no hay partida.",
       "ov.error.update": "El overlay no ha podido actualizarse ({error}).",
       "ov.hp.unit": "vida",
+      "ov.armor.unit": "armadura",
 
       "ov.tribes.count": "{count}/5",
       "ov.tribes.reason.off": "Tribus: la lectura del juego está desactivada",

@@ -71,11 +71,12 @@ const BOARDS = {
   ],
 };
 
-function opponent({ heroes, seats, health, place, tiers, boards = [], record = null, shown, possible = [], next = false }) {
+function opponent({ heroes, seats, health, armor = null, place, tiers, boards = [], record = null, shown, possible = [], next = false }) {
   return {
     heroes: heroes.map(hero),
     seats,
     health: sourced(health, health === null ? "unknown" : "log"),
+    armor: sourced(armor, armor === null ? "unknown" : "log"),
     boards,
     boards_source: boards.length ? "log" : "unknown",
     record,
@@ -101,7 +102,7 @@ function soloOpponents() {
       shown: [{ seat: 1, triples: 2, trinkets: [trinket("EX_T_COMPASS", "first", 9001), trinket("EX_T_BELL", "second", 9003)] }],
     }),
     opponent({
-      heroes: ["EX_HERO_TARN"], seats: [2], health: 29, place: 2, tiers: [5],
+      heroes: ["EX_HERO_TARN"], seats: [2], health: 29, armor: 5, place: 2, tiers: [5],
       boards: [board(5, BOARDS.tarn, 2)], record: record(1, 1),
       shown: [{ seat: 2, triples: 1, trinkets: [trinket("EX_T_LOCKET", "first", 9002)] }],
     }),
@@ -165,7 +166,7 @@ function duosOpponents() {
   const pair = (a, b) => ({ heroes: [a, b] });
   return [
     opponent({
-      ...pair("EX_HERO_QUILL", "EX_HERO_GRIST"), seats: [1, 2], health: 31, place: 1, tiers: [5, 4], next: true,
+      ...pair("EX_HERO_QUILL", "EX_HERO_GRIST"), seats: [1, 2], health: 31, armor: 5, place: 1, tiers: [5, 4], next: true,
       boards: [board(6, BOARDS.quill, 1), board(6, BOARDS.tarn, 2)], record: record(2, 0),
       shown: [
         { seat: 1, triples: 2, trinkets: [trinket("EX_T_COMPASS", "first", 9001)] },

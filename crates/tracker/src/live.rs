@@ -86,8 +86,13 @@ pub struct LiveOpponent {
     /// One hero in Solo, the team's heroes in Duos.
     pub heroes: Vec<HeroRef>,
     pub seats: Vec<i64>,
-    /// Health after the last combat the log closed.
+    /// The health the game shows on the hero (armor apart), from the
+    /// leaderboard now; before it, health after the last combat the log
+    /// closed, armor included.
     pub health: Sourced<i64>,
+    /// The armor the game shows on the hero; unknown when the game shows
+    /// none (never 0).
+    pub armor: Sourced<i64>,
     /// The last board of each of them that entered play; empty until one did.
     pub boards: Vec<LiveBoard>,
     pub boards_source: Source,
@@ -278,7 +283,16 @@ impl LiveGame {
     pub fn with_leaderboard(mut self, lobby: &[LobbySlot]) -> Self {
         let slot = |pid: i64| lobby.iter().find(|s| s.player_id == pid);
         let place_of = |seats: &[i64]| seats.iter().find_map(|&pid| slot(pid)?.place);
+        // The team's heroes share their health and armor: the first one that has them.
+        let first = |seats: &[i64], of: fn(&LobbySlot) -> Option<i64>| {
+            seats.iter().find_map(|&pid| of(slot(pid)?))
+        };
         for opponent in &mut self.opponents {
+            if let Some(health) = first(&opponent.seats, |s| s.health) {
+                opponent.health = Sourced::log(Some(health));
+                opponent.armor =
+                    Sourced::log(first(&opponent.seats, |s| s.armor).filter(|a| *a > 0));
+            }
             opponent.place = Sourced::log(place_of(&opponent.seats));
             opponent.tiers = opponent
                 .seats
@@ -464,6 +478,7 @@ fn opponent_of(
     });
     LiveOpponent {
         health: Sourced::log(current_health(view, &seats)),
+        armor: Sourced::log(None),
         place: Sourced::log(None),
         tiers: seats.iter().map(|_| Sourced::log(None)).collect(),
         possible: Vec::new(),

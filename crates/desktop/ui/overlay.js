@@ -209,6 +209,12 @@ function opponentLine(opponent) {
     const word = TLWords.nextLabel(current());
     nums.append(el("span", "opp-next", word));
   }
+  if (r.armor !== null) {
+    const armor = el("b", "opp-armor", r.armor);
+    armor.setAttribute("aria-hidden", "true");
+    nums.append(armor);
+    said.push(`${r.armor} ${TLI18n.t("ov.armor.unit")}`);
+  }
   if (r.health !== null) {
     const hp = el("b", "opp-hp", r.health);
     hp.setAttribute("aria-hidden", "true");
@@ -279,7 +285,7 @@ function renderOdds(g) {
 let boardArea = null;
 
 // Over each opponent's hero in the game's leaderboard, on its left (T-368):
-// the remaining health and one star per triple. The right edge of the mark
+// the armor (when it has any), the remaining health and one star per triple. The right edge of the mark
 // is the leaderboard's left edge; the room to its left is kept for the quest
 // mark. No place or board size known: no mark.
 function renderMarks(g) {
@@ -297,6 +303,12 @@ function renderMarks(g) {
       stars.setAttribute("aria-hidden", "true");
       mark.append(stars);
       said.push(TLI18n.plural("ov.triples", m.triples));
+    }
+    if (m.armor !== null) {
+      const armor = el("b", "mark-armor", m.armor);
+      armor.setAttribute("aria-hidden", "true");
+      mark.append(armor);
+      said.push(`${m.armor} ${TLI18n.t("ov.armor.unit")}`);
     }
     if (m.health !== null) {
       const hp = el("b", "mark-hp", m.health);

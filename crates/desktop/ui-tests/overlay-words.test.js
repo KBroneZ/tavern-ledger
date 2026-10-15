@@ -198,10 +198,22 @@ const markGame = (extra) => ({
 
 test("opponent marks sit on the leaderboard row of each opponent's place, with health and triples", () => {
   assert.deepEqual(words.opponentMarks(markGame()), [
-    { place: 1, slots: 8, health: 34, triples: 2, out: false },
-    { place: 4, slots: 8, health: 0, triples: 0, out: true },
-    { place: 6, slots: 8, health: null, triples: 1, out: false },
+    { place: 1, slots: 8, health: 34, armor: null, triples: 2, out: false },
+    { place: 4, slots: 8, health: 0, armor: null, triples: 0, out: true },
+    { place: 6, slots: 8, health: null, armor: null, triples: 1, out: false },
   ]);
+});
+
+test("the armor is apart from the health, and only shown when the game shows some", () => {
+  const team = { ...duoTeam, health: { value: 14 }, armor: { value: 5 } };
+  const row = words.opponentRow(team);
+  assert.deepEqual([row.health, row.armor], [14, 5]);
+  for (const none of [{ value: null }, { value: 0 }, { value: -2 }, { value: "5" }, null, undefined]) {
+    assert.equal(words.opponentRow({ ...team, armor: none }).armor, null, JSON.stringify(none));
+  }
+  assert.equal(words.opponentRow({ ...duoTeam, health: { value: 0 } }).out, true, "no health left is out whatever the armor");
+  const game = markGame({ opponents: [{ place: { value: 2 }, health: { value: 14 }, armor: { value: 5 }, shown_source: "log", shown: [{ seat: 2, triples: 3 }] }] });
+  assert.deepEqual(words.opponentMarks(game), [{ place: 2, slots: 8, health: 14, armor: 5, triples: 3, out: false }]);
 });
 
 test("opponent marks leave out what is unknown: no slots, a place off the board, a triple count the log never gave", () => {
@@ -214,7 +226,7 @@ test("opponent marks leave out what is unknown: no slots, a place off the board,
       { place: { value: 2 }, health: { value: 12 }, shown_source: "unknown", shown: [{ seat: 2, triples: 3 }] },
     ],
   }));
-  assert.deepEqual(odd, [{ place: 2, slots: 8, health: 12, triples: 0, out: false }]);
+  assert.deepEqual(odd, [{ place: 2, slots: 8, health: 12, armor: null, triples: 0, out: false }]);
   assert.deepEqual(words.opponentMarks(null), []);
 });
 

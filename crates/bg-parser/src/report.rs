@@ -311,6 +311,11 @@ pub struct LobbySlot {
     pub player_id: i64,
     pub place: Option<i64>,
     pub tech_level: Option<i64>,
+    /// The health the game shows on the hero (its health minus the damage
+    /// taken, never below 0), armor not included.
+    pub health: Option<i64>,
+    /// The armor the game shows on the hero.
+    pub armor: Option<i64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]

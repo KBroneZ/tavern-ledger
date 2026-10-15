@@ -392,4 +392,5 @@ test("the marks scenario has opponents with health and triples on rows of the le
   assert.ok(marks.length >= 5);
   assert.ok(marks.some((m) => m.triples > 0) && marks.some((m) => m.triples === 0));
   assert.ok(marks.every((m) => m.health !== null));
+  assert.ok(marks.some((m) => m.armor > 0) && marks.some((m) => m.armor === null), "the shield shows only where the game has armor");
 });
