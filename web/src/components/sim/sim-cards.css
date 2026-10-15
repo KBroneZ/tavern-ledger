@@ -581,3 +581,55 @@
     transform: none;
   }
 }
+
+/* ---------- The game's own drawing of a minion (T-372, D-150) ----------
+   Once the textures are loaded (art/runtime.ts) a card holds the shared
+   drawing (.tlm: frame, gems with their numbers, every keyword layer) in its
+   slot, 400:524 as the game's frame canvas, and stands on the table without a
+   card of its own; the marks above give way to it. The Dark Gift stars, the
+   flags and the selection stay. Without the textures the slot stays empty and
+   nothing here applies. */
+.sim-card > .tlm-slot {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.sim-card > .tlm-slot:empty {
+  display: none;
+}
+
+.sim .sim-card:has(.tlm) {
+  aspect-ratio: 400 / 524;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.sim .sim-card:has(.tlm):hover > .tlm-slot {
+  filter: brightness(1.12);
+}
+
+.sim .sim-card.is-selected:has(.tlm) {
+  box-shadow: none;
+}
+
+.sim .sim-card.is-selected:has(.tlm) > .tlm-slot {
+  filter: drop-shadow(0 0 3px var(--amber)) drop-shadow(0 0 10px rgb(255 178 74 / 0.6));
+}
+
+.sim .sim-card.is-blocked:has(.tlm) > .tlm-slot {
+  filter: grayscale(0.8) drop-shadow(0 0 3px var(--bad));
+}
+
+.sim .sim-card:has(.tlm) > :is(.sim-taunt, .sim-card-art, .sim-venom, .sim-wind, .sim-kw, .sim-atk, .sim-hp) {
+  display: none;
+}
+
+.sim .sim-card.has-shield:has(.tlm)::after {
+  content: none;
+}
+
+.sim-row:has(.tlm) .sim-slot.is-empty {
+  aspect-ratio: 400 / 524;
+}

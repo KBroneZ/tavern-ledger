@@ -811,6 +811,64 @@ html:not([data-detail="advanced"]) .rp-stepper {
 
 /* ---------- Narrow screens ---------- */
 
+/* ---------- The game's own drawing of a minion (T-372, D-150) ----------
+   Once the textures are loaded (art/runtime.ts) a token holds the shared
+   drawing (.tlm: frame, gems with their numbers, every keyword layer) in its
+   slot, 400:524 as the game's frame canvas; this page's portrait, marks and
+   number plates give way to it. Without the textures the slot stays empty and
+   nothing here applies. The motion (the attack's flight, the sliding board, a
+   death's fade) is on the token and its art box, so it carries over; the
+   outlines that marked the attacker, the target and a buff move to the drawing. */
+.rp-art > .tlm-slot:empty {
+  display: none;
+}
+
+.rp-art > .tlm-slot {
+  display: block;
+  width: var(--rp-tile);
+}
+
+.rp-minion:has(.tlm) .rp-art > .pic,
+.rp-minion:has(.tlm) .rp-keys,
+.rp-minion:has(.tlm) .rp-stats {
+  display: none;
+}
+
+.rp-minion:has(.tlm) .rp-info,
+.rp-minion:has(.tlm) .rp-keys {
+  height: calc(var(--rp-tile) * 1.31);
+}
+
+.rp-minion:has(.tlm) .gv-gifts {
+  top: calc(var(--rp-tile) * 1.31 + 6px);
+}
+
+.rp-board:has(.tlm) {
+  min-height: calc(var(--rp-tile) * 1.31 + 14px);
+}
+
+/* The bubble and the pop's ring were drawn around the old portrait; the drawing has its own Divine Shield. */
+.rp-minion:has(.tlm).has-shield .rp-art::after,
+.rp-minion:has(.tlm).is-popped .rp-art::after {
+  content: none;
+}
+
+.rp-minion:has(.tlm).is-attacker .tlm {
+  filter: drop-shadow(0 0 5px var(--amber-hi));
+}
+
+.rp-minion:has(.tlm).is-defender .tlm {
+  filter: drop-shadow(0 0 5px var(--rp-hit));
+}
+
+.rp-minion:has(.tlm).is-buffed .tlm {
+  filter: drop-shadow(0 0 5px var(--rp-buff));
+}
+
+.rp-minion:has(.tlm).is-triggered .tlm {
+  filter: drop-shadow(0 0 5px var(--rp-trigger));
+}
+
 @media (max-width: 720px) {
   .rp-side {
     grid-template-columns: minmax(0, 1fr);

@@ -11,6 +11,8 @@
 // Each step stays for its own beat, close to the game's pace (replay.ts
 // beats), and moving one step on plays it (replayMotion.ts): the attacker
 // flies to its target, the board slides into place; a jump does not move.
+import { carryMinion } from "../art/paint.ts";
+import { paintMinions } from "../art/runtime.ts";
 import { mount, toDom } from "../view/node.ts";
 import { control, type Frame, frameBeats, frameWords, keyAction, type PlayAction, type Playback, SPEEDS, stepWords } from "./replay.ts";
 import { hit, lunge, measure, slide, still } from "./replayMotion.ts";
@@ -28,6 +30,7 @@ import {
   playerView,
   playText,
   tileClass,
+  tileDrawn,
   tileInfo,
   tileView,
 } from "./replayView.ts";
@@ -116,6 +119,7 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
         player.tiles.set(tile.ref, li);
       } else {
         li.className = tileClass(tile);
+        carryMinion(li, tileDrawn(tile));
         mount(one(li, ".rp-info"), ...tileInfo(tile));
       }
       return li;
@@ -192,6 +196,8 @@ export function startReplays(section: HTMLElement, combats: ReplayCombat[]): voi
     // Measured before the boards change and once after, never in between.
     const before = how === "move" ? measure(player.tiles.values()) : null;
     const nodes = SIDES.flatMap((side) => drawSide(frame, side));
+    // Each token's drawing follows the step: its numbers and keywords (art/runtime.ts).
+    paintMinions(box);
     if (before) move(frame, before, nodes);
     const words = combat.replay ? frameWords(frame, combat.replay, namerFor(combat)) : "";
     one<HTMLElement>(box, ".rp-caption").textContent = words;

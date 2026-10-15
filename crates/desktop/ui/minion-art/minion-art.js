@@ -39,6 +39,8 @@ const WORDED_FX = ["stealth", "windfury"];
  *   document   the page's document (default: the global one)
  *   fx         an effects runtime, null for none; default: WebGL effects
  *   fps        effect frame rate (default 20)
+ *   observe    (canvas, onChange(inView)) => stop, to pause an effect scrolled
+ *              out of view; default: the page's IntersectionObserver, null for none
  *   preload    false to skip loading the main images first (tests)
  * Returns { render(minion), ready, setActive(on), destroy() }, or null when
  * the layout cannot be used.
@@ -85,7 +87,7 @@ export function createMinionArt(options) {
   const fx =
     options.fx === undefined
       ? wantsFx
-        ? createFx({ document: doc, layout, loadImage, log, fps: options.fps })
+        ? createFx({ document: doc, layout, loadImage, log, fps: options.fps, observe: options.observe })
         : null
       : options.fx;
 

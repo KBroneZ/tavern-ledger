@@ -116,11 +116,13 @@ test("with accounts closed the CSP allows no script, form or connection", () => 
   assert.match(csp, /(^|; )font-src 'self'(;|$)/);
 });
 
-test("pictures: the open site adds exactly HearthstoneJSON's art host to img-src (D-074)", () => {
-  // The whole header, so any other change shows up here.
+test("pictures: the open site adds exactly HearthstoneJSON's art host (D-074) and the game textures' host (D-151) to img-src", () => {
+  // The whole header, so any other change shows up here. Textures load as
+  // images (WebGL reads those images, CSS masks them), so nothing but img-src
+  // changes: no connect-src, no script or style source.
   assert.equal(
     contentSecurityPolicy("https://abcd.supabase.co"),
-    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://art.hearthstonejson.com; " +
+    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://art.hearthstonejson.com https://assets.tavernledger.net; " +
       "font-src 'self'; connect-src https://abcd.supabase.co; base-uri 'none'; form-action 'self'",
   );
   // Accounts closed: no script draws a game, so no picture comes from outside.

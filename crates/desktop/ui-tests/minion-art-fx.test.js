@@ -76,7 +76,7 @@ async function make(options = {}) {
   const c = clock();
   const logs = [];
   const loadImage = options.loadImage || (async (name) => ({ name }));
-  const fx = createFx({ document: env.doc, layout: LAYOUT, loadImage, log: (m) => logs.push(m), schedule: c.schedule, unschedule: c.unschedule, now: c.now, fps: 20 });
+  const fx = createFx({ document: env.doc, layout: LAYOUT, loadImage, log: (m) => logs.push(m), schedule: c.schedule, unschedule: c.unschedule, now: c.now, fps: 20, observe: options.observe });
   return { fx, env, c, logs };
 }
 const settle = () => new Promise((r) => setImmediate(r));
@@ -215,4 +215,81 @@ test("effects in the page but hidden are looked at less often", async () => {
   await settle();
   c.run();
   assert.equal(c.state.tasks[0].delay, 500);
+});
+
+// A stand-in for the page's visibility observer: tells the test which canvases
+// are watched and lets it say when each comes into view or leaves it.
+function watcher() {
+  const watched = new Map();
+  return {
+    watched,
+    observe: (canvas, onChange) => {
+      watched.set(canvas, onChange);
+      return () => watched.delete(canvas);
+    },
+    say: (canvas, on) => watched.get(canvas)(on),
+  };
+}
+
+test("an effect scrolled out of view is not drawn, and the loop stops once nothing is in view", async () => {
+  const w = watcher();
+  const { fx, env, c } = await make({ observe: w.observe });
+  const away = fakeCanvas();
+  fx.attach("windfury", away, () => {});
+  assert.ok(w.watched.has(away), "the canvas is watched");
+  await settle();
+  w.say(away, false);
+  c.run();
+  assert.equal(env.counts.drawArrays || 0, 0, "nothing drawn while out of view");
+  assert.equal(away.drawn.length, 0);
+  assert.equal(c.state.tasks.length, 0, "no timer left: the loop waits to be woken");
+});
+
+test("an effect that comes into view is drawn again, and only it", async () => {
+  const w = watcher();
+  const { fx, c } = await make({ observe: w.observe });
+  const a = fakeCanvas();
+  const b = fakeCanvas();
+  fx.attach("windfury", a, () => {});
+  fx.attach("windfury", b, () => {});
+  await settle();
+  w.say(a, false);
+  w.say(b, false);
+  c.run();
+  assert.equal(c.state.tasks.length, 0);
+  w.say(b, true);
+  assert.equal(c.state.tasks.length, 1, "coming into view wakes the loop");
+  c.run();
+  assert.equal(a.drawn.length, 0);
+  assert.equal(b.drawn.length, 1);
+});
+
+test("a canvas is watched from the moment it attaches and let go when the effects end", async () => {
+  const w = watcher();
+  const { fx } = await make({ observe: w.observe });
+  const canvas = fakeCanvas();
+  fx.attach("stealth", canvas, () => {});
+  await settle();
+  fx.destroy();
+  assert.equal(w.watched.size, 0, "destroy stops every watch");
+});
+
+test("a canvas dropped by the loop is no longer watched", async () => {
+  const w = watcher();
+  const { fx, c } = await make({ observe: w.observe });
+  const canvas = fakeCanvas({ connected: false });
+  fx.attach("windfury", canvas, () => {});
+  await settle();
+  c.run();
+  c.state.time = 2;
+  c.run();
+  assert.equal(w.watched.size, 0);
+});
+
+test("without a visibility observer the effect is drawn whenever it is shown, as before", async () => {
+  const { fx, env, c } = await make({ observe: null });
+  fx.attach("windfury", fakeCanvas(), () => {});
+  await settle();
+  c.run();
+  assert.ok(env.counts.drawArrays > 0);
 });

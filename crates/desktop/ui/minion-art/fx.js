@@ -80,12 +80,36 @@ function texture(gl, image, unit, { repeat = false, nearest = false } = {}) {
   return tex;
 }
 
+/** One shared IntersectionObserver for every effect canvas, or null where the page has none. */
+function pageObserver(win) {
+  if (!win || typeof win.IntersectionObserver !== "function") return null;
+  const callbacks = new Map();
+  const io = new win.IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      const onChange = callbacks.get(entry.target);
+      if (onChange) onChange(entry.isIntersecting);
+    }
+  });
+  return (canvas, onChange) => {
+    callbacks.set(canvas, onChange);
+    io.observe(canvas);
+    return () => {
+      callbacks.delete(canvas);
+      io.unobserve(canvas);
+    };
+  };
+}
+
 /**
  * The effects runtime for one page.
  *
  * options: { document, layout (from readLayout), loadImage(name) -> Promise
  * of a CORS-clean image, log(message), fps, now() (seconds, for tests),
- * schedule(fn, delayMs) -> handle and unschedule(handle) (for tests) }.
+ * schedule(fn, delayMs) -> handle and unschedule(handle) (for tests),
+ * observe(canvas, onChange(inView)) -> stop (default: the page's
+ * IntersectionObserver when it has one, null for none) }.
+ * An effect whose canvas is out of view is not drawn, and the loop sleeps
+ * until one comes into view.
  * The loop waits out the frame interval in a timer and draws on the next
  * animation frame, so a page that draws 20 times a second is not woken 60.
  *
@@ -110,6 +134,7 @@ export function createFx(options) {
       if (handle.frame) cancelAnimationFrame(handle.frame);
     });
 
+  const observe = options.observe === undefined ? pageObserver(globalThis) : options.observe;
   const instances = new Set();
   const failed = new Set(); // kinds whose textures could not be sampled
   const loading = new Map(); // kind -> Promise
@@ -137,8 +162,15 @@ export function createFx(options) {
     for (const inst of [...instances]) if (inst.kind === kind) drop(inst, true);
   }
 
-  function drop(inst, lostIt) {
+  /** Takes an effect out of the loop and stops watching its canvas. */
+  function remove(inst) {
     instances.delete(inst);
+    if (inst.unwatch) inst.unwatch();
+    inst.unwatch = null;
+  }
+
+  function drop(inst, lostIt) {
+    remove(inst);
     if (lostIt && inst.onLost) inst.onLost();
   }
 
@@ -282,7 +314,7 @@ export function createFx(options) {
   function drawFrame(t) {
     const groups = new Map();
     for (const inst of instances) {
-      if (!ready.has(inst.kind) || !visible(inst)) continue;
+      if (!ready.has(inst.kind) || !inst.inView || !visible(inst)) continue;
       const key = `${inst.kind}:${inst.phase}`;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(inst);
@@ -306,7 +338,7 @@ export function createFx(options) {
     for (const inst of [...instances]) {
       if (inst.canvas.isConnected) inst.gone = null;
       else if (inst.gone === null || inst.gone === undefined) inst.gone = stamp;
-      else if (stamp - inst.gone > 1) instances.delete(inst);
+      else if (stamp - inst.gone > 1) remove(inst);
     }
     if (!instances.size || !active || lost) return;
     const started = now();
@@ -317,6 +349,9 @@ export function createFx(options) {
       fail("windfury", `effects stopped (${error && error.message ? error.message : error})`);
       fail("stealth", "effects stopped");
     }
+    // With a visibility observer and nothing in view, sleep: coming into view
+    // wakes the loop. A canvas that left the page is still swept out first.
+    if (observe && [...instances].every((inst) => !inst.inView && inst.canvas.isConnected)) return;
     // Next frame one interval after this one started, less what drawing took;
     // when nothing showed (a hidden board still in the page) look again less often.
     timer = schedule(tick, drew ? interval - (now() - started) * 1000 : IDLE_CHECK_MS);
@@ -341,7 +376,14 @@ export function createFx(options) {
       const size = layout[kind].size;
       const ctx = canvas.getContext("2d");
       if (!ctx) return false;
-      const inst = { kind, canvas, ctx, size, onLost, phase: nextPhase++ % PHASES };
+      // With an observer an effect waits to be told it is in view.
+      const inst = { kind, canvas, ctx, size, onLost, phase: nextPhase++ % PHASES, inView: !observe, unwatch: null };
+      if (observe) {
+        inst.unwatch = observe(canvas, (inView) => {
+          inst.inView = inView === true;
+          if (inst.inView) wake();
+        });
+      }
       instances.add(inst);
       prepare(kind).then(wake);
       return true;
@@ -356,7 +398,7 @@ export function createFx(options) {
     },
     destroy() {
       destroyed = true;
-      instances.clear();
+      for (const inst of [...instances]) remove(inst);
       if (timer !== null) unschedule(timer);
       timer = null;
       if (doc.removeEventListener) doc.removeEventListener("visibilitychange", onVisibility);

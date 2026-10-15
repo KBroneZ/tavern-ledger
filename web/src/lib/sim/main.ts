@@ -9,6 +9,7 @@
 import "../i18n/boot.ts";
 import { DEFAULT_FILTERS } from "../data/filters.ts";
 import { share } from "../data/format.ts";
+import { paintMinions } from "../art/runtime.ts";
 import { watchPictureFallback } from "../data/pictures.ts";
 import { t } from "../data/strings.ts";
 import { lang } from "../i18n.ts";
@@ -67,6 +68,8 @@ function draw(target: HTMLElement, nodes: VNode[]): void {
   const focus = active && target.contains(active) ? active.dataset.focus : undefined;
   const caret = active instanceof HTMLInputElement && active.type === "search" ? active.selectionStart : null;
   mount(target, ...nodes);
+  // The game's own drawing for the minions, once its textures are in (art/runtime.ts).
+  paintMinions(target);
   if (!focus) return;
   const again = target.querySelector<HTMLElement>(`[data-focus="${CSS.escape(focus)}"]`);
   again?.focus();
