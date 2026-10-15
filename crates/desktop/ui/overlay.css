@@ -28,13 +28,21 @@
   /* The dark edge on numbers, as the game's own. */
   --outline: #120a05;
   --font-body: "Figtree", "Segoe UI", system-ui, sans-serif;
-  --stack-right: 8px;
-  --stack-top: 96px;
+  /* The game's 16:9 picture inside the window (the game centres it with bars
+     in a wider or taller window): every default place is a share of it, so the
+     layout is the same at 1920x1080, 2560x1440, 1280x720 and on an ultrawide
+     (overlay_layout.rs and hover.rs use the same rule). */
+  --play-h: min(100vh, 56.25vw);
+  --play-w: min(100vw, 177.7778vh);
+  --play-x: calc((100vw - var(--play-w)) / 2);
+  --play-y: calc((100vh - var(--play-h)) / 2);
+  --stack-right: calc(var(--play-x) + var(--play-h) * 0.0074);
+  --stack-top: calc(var(--play-y) + var(--play-h) * 0.09);
   --stack-width: 13.5rem;
   /* The lobby panel's corner (T-338): top left, clear of the lobby screen's
      menu and friends buttons at the bottom corners. */
-  --lobby-left: 16px;
-  --lobby-top: 16px;
+  --lobby-left: calc(var(--play-x) + var(--play-h) * 0.015);
+  --lobby-top: calc(var(--play-y) + var(--play-h) * 0.015);
   --lobby-width: 17rem;
 }
 

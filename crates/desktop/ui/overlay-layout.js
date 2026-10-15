@@ -204,6 +204,8 @@
     if (!v.unlocked || (selected === "box" ? box.hidden : selected && slots.get(selected).hidden)) selected = null;
     if (v.unlocked) drawToolbar(v);
     placeControls();
+    // The hover card sits below the odds bar, wherever the layout put it.
+    if (window.TLHover) window.TLHover.reposition();
   }
 
   // A change that arrives while a panel is being dragged waits for the drop.

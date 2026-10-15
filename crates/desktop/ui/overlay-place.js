@@ -86,7 +86,19 @@
     };
   }
 
-  const api = { MARGIN, overlaps, spot, padSpot };
+  // Where a card that the app puts at `card.y` really starts, so a bar at the top
+  // of the screen does not lie under it: just below the bar (`gap` apart) when
+  // the bar is over the card's width and starts within the card's first band
+  // (its own height). A bar the user put lower, or beside the card, changes
+  // nothing; the card never goes higher than the app put it.
+  function clearOf(bar, card, gap) {
+    if (!bar) return card.y;
+    const beside = bar.x >= card.x + card.w || bar.x + bar.w <= card.x;
+    if (beside || bar.y >= card.y + bar.h) return card.y;
+    return Math.max(card.y, bar.y + bar.h + gap);
+  }
+
+  const api = { MARGIN, overlaps, spot, padSpot, clearOf };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLPlace = api;
 })();

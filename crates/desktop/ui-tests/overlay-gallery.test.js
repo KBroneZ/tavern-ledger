@@ -395,3 +395,35 @@ test("the marks scenario has opponents with health and triples on rows of the le
   assert.ok(marks.every((m) => m.health !== null));
   assert.ok(marks.some((m) => m.armor > 0) && marks.some((m) => m.armor === null), "the shield shows only where the game has armor");
 });
+
+// The default places: the workbench shows them at any window size, copied from
+// the app's Rust source (default-layout.js), which is the truth.
+const defaults = require(path.join(GALLERY, "default-layout.js"));
+const rustNumber = (file, name) => Number(read(path.join(SRC, file)).match(new RegExp(`const ${name}: f64 = ([0-9.]+);`))[1]);
+
+test("the copied default places have the app's numbers", () => {
+  assert.equal(defaults.ODDS_WIDTH, rustNumber("overlay_layout.rs", "ODDS_WIDTH"));
+  assert.equal(defaults.ODDS_TOP, rustNumber("overlay_layout.rs", "ODDS_TOP"));
+  assert.equal(defaults.CARD_SHARE, rustNumber("hover.rs", "CARD_SHARE"));
+  assert.equal(defaults.LEADERBOARD.leftFromCentre, rustNumber("leaderboard.rs", "LEFT_FROM_CENTER"));
+  assert.equal(defaults.LEADERBOARD.width, rustNumber("leaderboard.rs", "WIDTH"));
+  assert.equal(defaults.LEADERBOARD.top, rustNumber("leaderboard.rs", "TOP"));
+  assert.equal(defaults.LEADERBOARD.height, rustNumber("leaderboard.rs", "HEIGHT"));
+  assert.match(read(path.join(SRC, "screen_fit.rs")), /PLAY_SHAPE: \(f64, f64\) = \(16\.0, 9\.0\)/);
+});
+
+test("the copied default places match the app's tests: the odds bar and the card sit on the 16:9 picture", () => {
+  assert.deepEqual(defaults.playArea(1920, 1080), { x: 0, y: 0, w: 1920, h: 1080 });
+  assert.deepEqual(defaults.playArea(3440, 1440), { x: 440, y: 0, w: 2560, h: 1440 });
+  assert.deepEqual(defaults.playArea(1024, 768), { x: 0, y: 96, w: 1024, h: 576 });
+  const bar = defaults.oddsRect(3440, 1440);
+  assert.equal(bar.x + bar.w / 2, 1720);
+  assert.equal(bar.y, 14.4);
+  const card = defaults.hoverCard(3440, 1440);
+  assert.equal(card.width, 0.85 * 1440);
+  assert.equal(card.x + card.width / 2, 1720);
+  assert.equal(card.y, 8);
+  assert.equal(defaults.hoverCard(1024, 768).y, 96 + 8);
+  const board = defaults.leaderboardArea(1920, 1080);
+  assert.ok(Math.abs(board.x - 241.8) < 1e-9 && Math.abs(board.h - 734.4) < 1e-9);
+});

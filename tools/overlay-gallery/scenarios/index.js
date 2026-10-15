@@ -11,9 +11,8 @@ const { sourced, minion, soloGame, duosGame, heroSelectGame, own, SOLO_ODDS, DUO
 const SCREEN_W = 1920;
 const SCREEN_H = 1080;
 // Where the app puts the hover card (screen_fit::place_card): centred across
-// the top of the game window, as wide as the game's own board (85% of its height).
-const CARD_WIDTH = 0.85 * SCREEN_H;
-const HOVER_CARD = { x: (SCREEN_W - CARD_WIDTH) / 2, y: 8, width: CARD_WIDTH, max_height: SCREEN_H - 16 };
+// the top of the game's picture, as wide as the game's own board (85% of its height).
+const HOVER_CARD = require("../default-layout.js").hoverCard(SCREEN_W, SCREEN_H);
 // A slot of the game's leaderboard, at the left edge of the screen.
 const hover = (place, member) => ({ place, member, slot: { x: 24, y: 120 + place * 96, w: 150, h: 92 }, card: HOVER_CARD });
 
@@ -89,6 +88,9 @@ const lobbyDuos = {
 
 const solo = soloGame();
 const soloWithOdds = withOdds(solo, SOLO_ODDS);
+// The same odds as a new game build gives them (the warning line) and with a
+// board only approximated: the tallest the bar gets.
+const tallestOdds = { ...SOLO_ODDS, approximate: ["EX_M_WARDEN"], new_build: 255026 };
 const duos = duosGame();
 const duosOdds = {
   ...SOLO_ODDS, seat: 1, round: 6, boards: DUOS_BOARDS([6, 6, 6]), won: 0.47, tied: 0.12, lost: 0.41,
@@ -190,6 +192,7 @@ const FOCUS = {
   "gap-bad-board": STACK_SMALL,
   "gap-missing-board": STACK_DUOS,
   "hover-solo": HOVER_CARD_AREA,
+  crowded: HOVER_CARD_AREA,
   "hover-duos": HOVER_CARD_AREA,
   "hover-keywords": HOVER_CARD_AREA,
   "hover-golden": HOVER_CARD_AREA,
@@ -230,6 +233,7 @@ const DEFINITIONS = [
   ["gap-bad-board", withOdds(solo, gap("bad_board", { round: 6 })), {}],
   ["gap-missing-board", withOdds(duos, gap("missing_board", { round: 6, boards: DUOS_BOARDS([6, 6, null]) })), {}],
   ["hover-solo", soloWithOdds, { hover: hover(1, null) }],
+  ["crowded", withOdds(solo, tallestOdds), { hover: hover(1, null) }],
   ["hover-duos", withOdds(duos, duosOdds), { hover: hover(1, 0) }],
   ["hover-keywords", withBoard(soloWithOdds, KEYWORD_BOARD()), { hover: hover(1, null) }],
   ["hover-golden", withBoard(soloWithOdds, KEYWORD_BOARD(true)), { hover: hover(1, null) }],
