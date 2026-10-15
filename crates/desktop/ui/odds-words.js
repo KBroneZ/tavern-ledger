@@ -1,19 +1,19 @@
-// Words for the combat odds (T-605): the shares to win, tie or lose against
-// the next opponent and how old their board is. In Duos (T-608) the odds
-// use four boards: the oldest one's age, and the boards never seen when
-// there is no number. Pure: plain data in,
-// plain data out (ui-tests/odds-words.test.js). The app works the odds out
-// and says why when there are none; this file never makes up a number.
+// Words for the combat odds (T-605, D-152): the shares to win, tie or lose
+// in the combat the game is playing, from the boards that entered play in it.
+// In Duos (T-608) the odds use four boards, and the boards not in play yet
+// are named when there is no number. Pure: plain data in, plain data out
+// (ui-tests/odds-words.test.js). The app works the odds out and says why
+// when there are none; this file never makes up a number.
 "use strict";
 
 (() => {
   const I18n = typeof module !== "undefined" && module.exports ? require("./i18n.js") : window.TLI18n;
 
-  // Reasons the overlay says in words; the others show nothing (no next
-  // opponent yet, or a combat the shop's odds are not for).
-  const SAID_GAPS = ["order", "missing_board", "no_board_seen", "not_modelled", "no_card_data", "bad_board"];
+  // Reasons the overlay says in words; the others show nothing (not in a
+  // combat: there are no odds in a shop turn).
+  const SAID_GAPS = ["missing_board", "no_board_seen", "not_modelled", "no_card_data", "bad_board"];
   // Duos boards, in the order the app sends them.
-  const ROLES = ["teammate", "opponent", "opponent_teammate"];
+  const ROLES = ["own", "teammate", "opponent", "opponent_teammate"];
 
   // The Duos boards the app sent, kept only when well formed.
   function duosBoards(odds) {
@@ -49,7 +49,7 @@
   }
 
   // `odds` as the app sends it (LiveOdds). Returns null when there is
-  // nothing to say, else { kind: "odds" | "note", shares, age, approx, said }.
+  // nothing to say, else { kind: "odds" | "note", shares, ranges, approx, said }.
   function oddsView(odds) {
     if (!odds || typeof odds !== "object") return null;
     const boards = duosBoards(odds);
@@ -62,10 +62,10 @@
         if (!unseen.length) return null;
         const who = I18n.list(unseen.map((b) => I18n.t(`ov.odds.unseen.${b.role}`)));
         const text = I18n.t("ov.odds.gap.missing_board", { who });
-        return { kind: "note", text, shares: [], ranges: NO_RANGES, age: null, approx: false, about, said: text };
+        return { kind: "note", text, shares: [], ranges: NO_RANGES, approx: false, about, said: text };
       }
       const text = I18n.t(`ov.odds.gap.${odds.gap}`);
-      return { kind: "note", text, shares: [], ranges: NO_RANGES, age: null, approx: false, about, said: text };
+      return { kind: "note", text, shares: [], ranges: NO_RANGES, approx: false, about, said: text };
     }
     if (![odds.won, odds.tied, odds.lost].every(isShare)) return null;
     // Label and number apart, so a narrow column can stack them.
@@ -76,8 +76,6 @@
       text: I18n.t(`ov.odds.${key}`, { value: shareText(value) }),
     });
     const shares = [share("win", odds.won), share("tie", odds.tied), share("lose", odds.lost)];
-    const seenKey = duos ? "ov.odds.seenOldest" : "ov.odds.seen";
-    const age = Number.isInteger(odds.seen_round) ? I18n.t(seenKey, { turn: odds.seen_round }) : null;
     const approximate = Array.isArray(odds.approximate) ? odds.approximate : [];
     const approx = approximate.length > 0 || Boolean(odds.start_of_combat);
     // The odds come back for a game build the rules were not checked against,
@@ -93,10 +91,9 @@
       ranges.win && ranges.win.said,
       ranges.lose && ranges.lose.said,
       warning,
-      age,
       approx ? I18n.t("ov.odds.approx") : null,
     ].filter(Boolean).join(". ");
-    return { kind: "odds", text: null, shares, ranges, age, approx, warning, warningShort, about, said };
+    return { kind: "odds", text: null, shares, ranges, approx, warning, warningShort, about, said };
   }
 
   const api = { oddsView, SAID_GAPS };

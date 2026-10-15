@@ -378,7 +378,7 @@ fn app_input(req: &Value) -> OddsInput {
     );
     OddsInput {
         opponent_seat: 3,
-        seen_round: 1,
+        round: 1,
         seen_after_start_of_combat: false,
         own: log_board(&p[0]),
         opponent: log_board(&o[0]),

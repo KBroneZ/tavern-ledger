@@ -67,12 +67,8 @@ struct LiveView {
     lobby: Vec<LobbySlot>,
     next: Option<i64>,
     damage_cap: Option<i64>,
-    /// The player's own board in a shop turn (T-605).
-    own_board: Option<Vec<bg_parser::report::Minion>>,
-    /// The player's game-long values in a shop turn (T-610).
-    own_values: Option<bg_parser::report::CombatValues>,
-    /// Duos: the player fights first next combat (T-608).
-    fights_first: Option<bool>,
+    /// The combat the game is playing, for the odds (D-152).
+    combat_round: Option<i64>,
     /// The player's own game-long counters, in shop and combat turns (T-611).
     counters: Option<Vec<bg_parser::counters::Counter>>,
     /// The heroes on offer at hero select (T-365).
@@ -112,9 +108,7 @@ impl SessionReader {
                 lobby: self.log.lobby_now(),
                 next: self.log.next_opponent_now(),
                 damage_cap: self.log.damage_cap_now(),
-                own_board: self.log.own_board_now(),
-                own_values: self.log.own_values_now(),
-                fights_first: self.log.fights_first_now(),
+                combat_round: self.log.combat_round_now(),
                 counters: self.log.counters_now(),
                 hero_offer: self.log.hero_offer_now(),
             },
@@ -407,22 +401,10 @@ impl Watcher {
         self.shown_live()?.damage_cap
     }
 
-    /// The player's own board in a shop turn, as the game shows it (T-605);
-    /// None in a combat turn or when no Battlegrounds game is on.
-    pub fn live_own_board(&self) -> Option<&[bg_parser::report::Minion]> {
-        self.shown_live()?.own_board.as_deref()
-    }
-
-    /// The player's game-long values in a shop turn, as the log has them
-    /// (T-610); None in a combat turn or when no Battlegrounds game is on.
-    pub fn live_own_values(&self) -> Option<bg_parser::report::CombatValues> {
-        self.shown_live()?.own_values
-    }
-
-    /// Duos: whether the player's board fights first next combat, as the
-    /// game has set it (T-608); None when not set or no game is on.
-    pub fn live_fights_first(&self) -> Option<bool> {
-        self.shown_live()?.fights_first
+    /// The combat the game is playing now, for the odds (D-152); None in a
+    /// shop turn or when no Battlegrounds game is on.
+    pub fn live_combat_round(&self) -> Option<i64> {
+        self.shown_live()?.combat_round
     }
 
     /// The player's own counters as the game shows them now (T-611); `None`

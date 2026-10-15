@@ -1,31 +1,33 @@
-//! Duos odds for the overlay (T-608): the player's board now and their
-//! teammate's, in the order the game has set, against the next opposing
-//! team's two boards (the one the game marks as the next opponent first).
+//! The boards of one combat, for the overlay's odds (D-152): the boards the
+//! game has put into play in the combat it is playing now, read from the
+//! report's round for that combat. In Solo one board each side; in Duos each
+//! team brings two, and a team's second board enters play only when its
+//! first one is gone, so the odds come once all four have entered.
 //!
-//! Red line (D-004, D-054): every board but the player's own is the last one
-//! that entered play in a combat the game has shown. The teammate's board is
-//! not in the log during the shop, so it is the one it last fought with on
-//! screen; the copies the game makes of combats it does not play back are
-//! never read (the parser gives no board for them). When a board was never
-//! seen, the overlay names it instead of a number.
+//! Red line (D-004, D-054): only boards that entered play in a combat the
+//! game is showing; the copies the game makes of combats it does not play
+//! back are never read (the parser gives no board for them). When a board is
+//! not in yet, the overlay names it instead of a number.
 
-use bg_parser::report::{CombatValues, GameReport, LobbySlot, Minion as LogMinion, Side};
+use bg_parser::report::{CombatValues, GameReport, LobbySlot, Minion as LogMinion, Round, Side};
 use serde::Serialize;
 
-use crate::odds::{start_of_combat_in, Gap, NoOdds};
+use crate::odds::{Gap, NoOdds};
 
-/// Whose board, besides the player's own, Duos odds use.
+/// Whose board the odds use.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Role {
+    /// The player's own board.
+    Own,
     Teammate,
-    /// The board the game marks as the next opponent: it fights first.
+    /// The board that fights first on the other team.
     Opponent,
     OpponentTeammate,
 }
 
-/// A board the odds use and the combat it was seen in; `round` is `None`
-/// when no board of that seat has been seen yet.
+/// A board the odds use and the combat it entered play in; `round` is `None`
+/// when the board has not entered play yet.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub struct BoardSeen {
     pub role: Role,
@@ -33,7 +35,7 @@ pub struct BoardSeen {
     pub round: Option<i64>,
 }
 
-/// A board seen in an earlier combat, with what the odds need about it.
+/// A board of the combat, with what the odds need about it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Seen {
     pub seat: i64,
@@ -41,11 +43,11 @@ pub struct Seen {
     pub board: Vec<LogMinion>,
     /// The seat's tavern tier now (shown on the leaderboard).
     pub tier: Option<i64>,
-    /// The seat's game-long values as that board was seen (T-610).
+    /// The seat's game-long values as the board entered play (T-610).
     pub values: CombatValues,
 }
 
-/// The boards Duos odds add to the player's own and the next opponent's.
+/// The boards Duos odds add to the player's own and the first opponent's.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DuosInput {
     /// The player's board fights before their teammate's.
@@ -55,8 +57,8 @@ pub struct DuosInput {
 }
 
 impl DuosInput {
-    /// Every board but the player's, with the next opponent's.
-    pub fn boards(&self, opponent: i64, seen: i64) -> Vec<BoardSeen> {
+    /// Every board but the player's, with the first opponent's.
+    pub fn boards(&self, opponent: i64, round: i64) -> Vec<BoardSeen> {
         vec![
             BoardSeen {
                 role: Role::Teammate,
@@ -66,7 +68,7 @@ impl DuosInput {
             BoardSeen {
                 role: Role::Opponent,
                 seat: opponent,
-                round: Some(seen),
+                round: Some(round),
             },
             BoardSeen {
                 role: Role::OpponentTeammate,
@@ -77,21 +79,32 @@ impl DuosInput {
     }
 }
 
-/// A board, the combat it was seen in and the seat's game-long values then.
-pub(crate) type LastBoard<'a> = (&'a [LogMinion], i64, CombatValues);
+/// A board that entered play, whose it is and the seat's game-long values as
+/// it entered (zero when the log gave none).
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Leg<'a> {
+    pub seat: i64,
+    pub board: &'a [LogMinion],
+    pub values: CombatValues,
+}
 
-/// The newest board of `seat` on `side` that entered play in a combat the
-/// game has shown, with its combat number and the seat's values then (zero
-/// when the log gave none).
-pub(crate) fn last_board(report: &GameReport, seat: i64, side: Side) -> Option<LastBoard<'_>> {
-    report.rounds.iter().rev().find_map(|round| {
-        round
-            .entries
-            .iter()
-            .filter(|e| e.side == side && e.player_id == Some(seat))
-            .find_map(|e| Some((e.board.as_deref()?, e.values.unwrap_or_default())))
-            .map(|(b, values)| (b, round.number, values.bounded()))
-    })
+/// The boards of `side` that entered play in `round`, in the order they came
+/// in, one per seat.
+pub(crate) fn legs(round: &Round, side: Side) -> Vec<Leg<'_>> {
+    let mut out: Vec<Leg<'_>> = Vec::new();
+    for e in round.entries.iter().filter(|e| e.side == side) {
+        let (Some(seat), Some(board)) = (e.player_id, e.board.as_deref()) else {
+            continue;
+        };
+        if out.iter().all(|l| l.seat != seat) {
+            out.push(Leg {
+                seat,
+                board,
+                values: e.values.unwrap_or_default().bounded(),
+            });
+        }
+    }
+    out
 }
 
 /// The other seat of `seat`'s Duos team, from the lobby the game showed at
@@ -109,76 +122,61 @@ fn partner(report: &GameReport, seat: i64) -> Option<i64> {
         .map(|p| p.player_id)
 }
 
-/// The Duos boards for odds against the next opposing team, whose first
-/// board is `next`; or why there are none. `fights_first` is the game's flag
-/// on the player's own hero.
-pub fn duos_input<'a>(
-    report: &'a GameReport,
-    next: i64,
-    fights_first: Option<bool>,
+/// The boards of a Duos combat: the player's, the first opponent's and the
+/// Duos extras; or why there are none yet. The boards that have not entered
+/// play are named in the reason.
+pub(crate) fn duos_combat<'a>(
+    report: &GameReport,
+    round: &'a Round,
     lobby: &[LobbySlot],
-) -> Result<(DuosInput, Option<LastBoard<'a>>), NoOdds> {
-    let order = || NoOdds::new(Gap::Order, Some(next));
-    let local_first = fights_first.ok_or_else(order)?;
-    let mate = report.teammate_player_id.ok_or_else(order)?;
-    let foe_mate = partner(report, next).ok_or_else(order)?;
+) -> Result<(Leg<'a>, Leg<'a>, DuosInput), NoOdds> {
+    let bad = || NoOdds::new(Gap::BadBoard, None);
+    let local = report.local_player_id.ok_or_else(bad)?;
+    let mate = report.teammate_player_id.ok_or_else(bad)?;
+    let own_legs = legs(round, Side::Own);
+    let foe_legs = legs(round, Side::Opponent);
+    let Some(foe) = foe_legs.first().map(|l| l.seat) else {
+        return Err(NoOdds::new(Gap::NoBoardSeen, None));
+    };
+    let foe_mate = partner(report, foe).ok_or_else(|| NoOdds::new(Gap::BadBoard, Some(foe)))?;
+    let find = |legs: &[Leg<'a>], seat: i64| legs.iter().copied().find(|l| l.seat == seat);
+    let (own, teammate) = (find(&own_legs, local), find(&own_legs, mate));
+    let (first, second) = (find(&foe_legs, foe), find(&foe_legs, foe_mate));
+    let (Some(own), Some(teammate), Some(first), Some(second)) = (own, teammate, first, second)
+    else {
+        let seen = |role, seat, leg: Option<Leg<'_>>| BoardSeen {
+            role,
+            seat,
+            round: leg.map(|_| round.number),
+        };
+        let boards = vec![
+            seen(Role::Own, local, own),
+            seen(Role::Teammate, mate, teammate),
+            seen(Role::Opponent, foe, first),
+            seen(Role::OpponentTeammate, foe_mate, second),
+        ];
+        return Err(NoOdds {
+            boards,
+            ..NoOdds::new(Gap::MissingBoard, Some(foe))
+        });
+    };
     let tier = |seat: i64| {
         lobby
             .iter()
             .find(|s| s.player_id == seat)
             .and_then(|s| s.tech_level)
     };
-    let seen = |seat: i64, side: Side| {
-        last_board(report, seat, side).map(|(board, round, values)| Seen {
-            seat,
-            round,
-            board: board.to_vec(),
-            tier: tier(seat),
-            values,
-        })
+    let seen = |leg: Leg<'_>| Seen {
+        seat: leg.seat,
+        round: round.number,
+        board: leg.board.to_vec(),
+        tier: tier(leg.seat),
+        values: leg.values,
     };
-    let teammate = seen(mate, Side::Own);
-    let opponent = last_board(report, next, Side::Opponent);
-    let opponent_teammate = seen(foe_mate, Side::Opponent);
-    match (teammate, opponent_teammate) {
-        (Some(teammate), Some(opponent_teammate)) if opponent.is_some() => Ok((
-            DuosInput {
-                local_first,
-                teammate,
-                opponent_teammate,
-            },
-            opponent,
-        )),
-        (teammate, opponent_teammate) => {
-            let boards = vec![
-                BoardSeen {
-                    role: Role::Teammate,
-                    seat: mate,
-                    round: teammate.map(|s| s.round),
-                },
-                BoardSeen {
-                    role: Role::Opponent,
-                    seat: next,
-                    round: opponent.map(|(_, r, _)| r),
-                },
-                BoardSeen {
-                    role: Role::OpponentTeammate,
-                    seat: foe_mate,
-                    round: opponent_teammate.map(|s| s.round),
-                },
-            ];
-            Err(NoOdds {
-                boards,
-                ..NoOdds::new(Gap::MissingBoard, Some(next))
-            })
-        }
-    }
-}
-
-/// True when a card acted at the start of combat in the combat any of the
-/// Duos boards was seen in.
-pub(crate) fn seen_after_start_of_combat(report: &GameReport, duos: &DuosInput) -> bool {
-    [duos.teammate.round, duos.opponent_teammate.round]
-        .into_iter()
-        .any(|round| start_of_combat_in(report, round))
+    let duos = DuosInput {
+        local_first: own_legs.first().is_some_and(|l| l.seat == local),
+        teammate: seen(teammate),
+        opponent_teammate: seen(second),
+    };
+    Ok((own, first, duos))
 }

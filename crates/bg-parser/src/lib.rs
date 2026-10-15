@@ -256,6 +256,10 @@ impl GameReader {
                 tech_level: hero
                     .opt_int("PLAYER_TECH_LEVEL")
                     .filter(|t| (1..=MAX_TECH_LEVEL).contains(t)),
+                health: collector::hero_shown_health(hero),
+                armor: hero
+                    .opt_int("ARMOR")
+                    .filter(|a| (0..=collector::MAX_HERO_POINTS).contains(a)),
             })
             .collect();
         slots.sort_by_key(|s| s.player_id);
@@ -336,6 +340,18 @@ impl GameReader {
         }
         game.opt_int(DAMAGE_CAP)
             .filter(|cap| (1..=MAX_DAMAGE_CAP).contains(cap))
+    }
+
+    /// The number of the combat the game is playing now (D-152): the combat
+    /// turn's half, the same number the report gives that combat's round.
+    /// `None` in a shop turn, before the first combat, or when the game could
+    /// not be read.
+    pub fn combat_round_now(&self) -> Option<i64> {
+        if self.error.is_some() {
+            return None;
+        }
+        let turn = self.collector.turn();
+        (turn >= 2 && turn % 2 == 0).then_some(turn / 2)
     }
 
     /// The player's own board as it is now in a shop turn (T-605): what the
@@ -507,6 +523,13 @@ impl LogReader {
     pub fn damage_cap_now(&self) -> Option<i64> {
         self.in_progress_index()?;
         self.current.as_ref()?.damage_cap_now()
+    }
+
+    /// The combat the Battlegrounds game in progress is playing (see
+    /// [`GameReader::combat_round_now`]); `None` when no such game is on.
+    pub fn combat_round_now(&self) -> Option<i64> {
+        self.in_progress_index()?;
+        self.current.as_ref()?.combat_round_now()
     }
 
     /// The own board in a shop turn of the Battlegrounds game in progress

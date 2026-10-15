@@ -39,6 +39,36 @@ fn up_to(all: &[String], needle: &str) -> Vec<String> {
 }
 
 #[test]
+fn a_hero_shows_its_health_and_its_armor_apart() {
+    // The game's drop is the hero's health minus the damage; the shield is
+    // the armor, which takes the damage first (user's Duos game, 2026-10-15:
+    // 14 health and armor 5).
+    let all = lines("solo_game");
+    let mut part = up_to(&all, "tag=TURN value=1");
+    part.push(tag(21, "DAMAGE", 16));
+    part.push(tag(21, "ARMOR", 5));
+    let now = reader_with(&part).lobby_now();
+    assert_eq!((now[1].health, now[1].armor), (Some(14), Some(5)));
+
+    // The armor goes first, then the health: no armor left (the game sets
+    // the tag to 0, which the log reads as none) and less health.
+    part.push(tag(21, "ARMOR", 0));
+    part.push(tag(21, "DAMAGE", 26));
+    let now = reader_with(&part).lobby_now();
+    assert_eq!((now[1].health, now[1].armor), (Some(4), None));
+
+    // The killing blow can overshoot: never below 0.
+    part.push(tag(21, "DAMAGE", 50));
+    assert_eq!(reader_with(&part).lobby_now()[1].health, Some(0));
+
+    // Values no hero has are unknown, not shown.
+    part.push(tag(21, "DAMAGE", -3));
+    part.push(tag(21, "ARMOR", 1_000_000));
+    let now = reader_with(&part).lobby_now();
+    assert_eq!((now[1].health, now[1].armor), (Some(30), None));
+}
+
+#[test]
 fn no_game_no_leaderboard() {
     assert!(LogReader::default().lobby_now().is_empty());
 }
@@ -56,12 +86,16 @@ fn places_and_tiers_follow_the_log_as_they_change() {
             LobbySlot {
                 player_id: 2,
                 place: Some(1),
-                tech_level: Some(1)
+                tech_level: Some(1),
+                health: Some(30),
+                armor: Some(5)
             },
             LobbySlot {
                 player_id: 3,
                 place: Some(2),
-                tech_level: Some(2)
+                tech_level: Some(2),
+                health: Some(30),
+                armor: None
             },
         ]
     );

@@ -155,7 +155,7 @@ test("scenario ids are unique and the list covers what the task asks for", () =>
   assert.equal(new Set(ids).size, ids.length);
   for (const id of [
     "waiting", "lobby", "solo", "duos", "gap-no-board-seen", "gap-no-card-data",
-    "gap-not-modelled", "gap-bad-board", "gap-order", "gap-missing-board", "hover-solo", "hover-duos", "damage-cap",
+    "gap-not-modelled", "gap-bad-board", "gap-missing-board", "hover-solo", "hover-duos", "damage-cap",
     "unreadable", "game-over", "high-contrast",
     "odds-bar", "odds-bar-no-ranges", "leaderboard-marks", "tribes-game", "tribes-off", "tribes-unsupported",
   ]) {
@@ -209,7 +209,7 @@ test("every card and hero id is an invented one the page accepts, and has a name
 test("the odds scenarios give odds or the note the page says in words", () => {
   const view = (id) => oddsView(SCENARIOS.find((s) => s.id === id).state.game.odds);
   assert.equal(view("solo").kind, "odds");
-  for (const gap of ["no-board-seen", "no-card-data", "not-modelled", "bad-board", "order", "missing-board"]) {
+  for (const gap of ["no-board-seen", "no-card-data", "not-modelled", "bad-board", "missing-board"]) {
     assert.equal(view(`gap-${gap}`).kind, "note", gap);
   }
 });
@@ -392,4 +392,5 @@ test("the marks scenario has opponents with health and triples on rows of the le
   assert.ok(marks.length >= 5);
   assert.ok(marks.some((m) => m.triples > 0) && marks.some((m) => m.triples === 0));
   assert.ok(marks.every((m) => m.health !== null));
+  assert.ok(marks.some((m) => m.armor > 0) && marks.some((m) => m.armor === null), "the shield shows only where the game has armor");
 });

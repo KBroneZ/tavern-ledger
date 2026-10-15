@@ -525,6 +525,9 @@ body:not(.unlocked) .slot:has(> .panel.empty),
 }
 .opp .nums { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
 .opp .opp-hp { font: 400 1.15rem/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+/* The game's armor: a grey shield with its number, apart from the health. */
+.opp .opp-armor, .mark-armor { display: inline-block; min-width: 1.5em; padding: 0.1em 0.3em 0.3em; border-radius: 0.35em 0.35em 50% 50% / 0.35em 0.35em 65% 65%; background: var(--muted); color: var(--panel-solid); text-align: center; font-variant-numeric: tabular-nums; }
+.opp .opp-armor { font: 400 1rem/1.1 var(--font-display); }
 .opp .opp-triples { color: var(--accent); font-weight: 700; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
 
 /* Lobby panel (T-338, T-366): small, on the Battlegrounds lobby screen only. */
@@ -603,6 +606,7 @@ body:not(.unlocked) .slot:has(> .panel.empty),
 .marks { position: absolute; inset: 0; pointer-events: none; }
 .opp-mark { position: absolute; display: flex; align-items: center; gap: 0.35rem; padding-right: 0.3rem; transform: translateY(-50%); }
 .mark-hp { color: var(--text); font: 400 1.7rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.mark-armor { font: 400 1.25rem/1 var(--font-display); }
 .mark-stars { color: var(--accent); font: 400 1.05rem/1 var(--font-display); letter-spacing: 0.05em; }
 .opp-mark.out { opacity: 0.45; }
 

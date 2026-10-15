@@ -82,16 +82,16 @@ const CAPTIONS = {
   },
   solo: {
     en: {
-      title: "Solo shop turn",
-      sees: "The default view during your shop turn: the lobby's tribes as short chips, then one row per opponent in the game's leaderboard order with their portrait, tavern tier, health and triples, with the next opponent lit. The combat odds are one bar at the top centre of the window, and each opponent's health and triples also sit beside their hero in the game's own leaderboard.",
-      source: LOG.en + " The tribes are the ones the game itself holds for this lobby, read from the running game only if you turn that on. The combat odds are worked out on your PC by simulating a few thousand fights between your board and their last seen board, only during your shop turn.",
-      rule: "Every number is on your own screen already: the game's leaderboard shows tiers, health, triples and who is next. The tribes appear only when the game gave them, never as a guess. The odds come from boards you have already seen, not a peek at their current board.",
+      title: "Solo",
+      sees: "The default view during a Solo game: the lobby's tribes as short chips, then one row per opponent in the game's leaderboard order with their portrait, tavern tier, health and triples, with the next opponent lit. During a combat the combat odds are one bar at the top centre of the window, and each opponent's health and triples also sit beside their hero in the game's own leaderboard.",
+      source: LOG.en + " The tribes are the ones the game itself holds for this lobby, read from the running game only if you turn that on. The combat odds are worked out on your PC by simulating a few thousand fights between the two boards that entered play in that combat, only while it is on.",
+      rule: "Every number is on your own screen already: the game's leaderboard shows tiers, health, triples and who is next. The tribes appear only when the game gave them, never as a guess. The odds are for the combat you are watching, from the boards you are seeing, and are gone when it ends.",
     },
     es: {
-      title: "Turno de tienda en Solo",
-      sees: "La vista por defecto en tu turno de tienda: las tribus de la partida como etiquetas cortas y una fila por rival, en el orden de la clasificación del juego, con su retrato, nivel de taberna, vida y tripletes. El rival que el juego marca como siguiente aparece resaltado, con las probabilidades de combate debajo.",
-      source: LOG.es + " Las tribus marcadas «deducido» se calcularon a partir de lo que la taberna te ofreció. Las probabilidades de combate se calculan en tu PC simulando unos miles de combates entre tu tablero y el último tablero visto del rival, solo durante tu turno de tienda.",
-      rule: "Todos los números ya están en tu pantalla: la clasificación del juego enseña niveles, vida, tripletes y quién es el siguiente. La marca «deducido» avisa cuando un valor es una deducción y no algo que el juego mostró. Las probabilidades salen de tableros que ya has visto, no de un vistazo a su tablero actual.",
+      title: "Solo",
+      sees: "La vista por defecto en una partida de Solo: las tribus de la partida como etiquetas cortas y una fila por rival, en el orden de la clasificación del juego, con su retrato, nivel de taberna, vida y tripletes. El rival que el juego marca como siguiente aparece resaltado. Durante un combate, las probabilidades son una barra arriba en el centro de la ventana.",
+      source: LOG.es + " Las tribus marcadas «deducido» se calcularon a partir de lo que la taberna te ofreció. Las probabilidades de combate se calculan en tu PC simulando unos miles de combates entre los dos tableros que entraron en juego en ese combate, solo mientras dura.",
+      rule: "Todos los números ya están en tu pantalla: la clasificación del juego enseña niveles, vida, tripletes y quién es el siguiente. La marca «deducido» avisa cuando un valor es una deducción y no algo que el juego mostró. Las probabilidades son del combate que estás viendo, con los tableros que ves, y desaparecen cuando termina.",
     },
   },
   duos: {
@@ -110,15 +110,15 @@ const CAPTIONS = {
   },
   "gap-no-board-seen": {
     en: {
-      title: "Odds: no board seen yet",
-      sees: "Instead of numbers, one line says you have not seen a board of the next opponent yet.",
-      source: "There is nothing to simulate: the game has not shown you their board in a combat.",
+      title: "Odds: the boards are not in yet",
+      sees: "Instead of numbers, one line says the boards of this combat have not entered play yet.",
+      source: "There is nothing to simulate until the game puts both boards into play.",
       rule: "No number is made up. When the game has not shown you something, the overlay says so.",
     },
     es: {
-      title: "Probabilidades: aún sin tablero visto",
-      sees: "En lugar de números, una línea dice que todavía no has visto un tablero del siguiente rival.",
-      source: "No hay nada que simular: el juego aún no te ha enseñado su tablero en un combate.",
+      title: "Probabilidades: los tableros aún no han entrado",
+      sees: "En lugar de números, una línea dice que los tableros de este combate todavía no han entrado en juego.",
+      source: "No hay nada que simular hasta que el juego pone los dos tableros en juego.",
       rule: "No se inventa ningún número. Cuando el juego no te ha enseñado algo, la superposición lo dice.",
     },
   },
@@ -164,31 +164,17 @@ const CAPTIONS = {
       rule: "Cuando los datos son dudosos la superposición no muestra probabilidades, y lo dice.",
     },
   },
-  "gap-order": {
-    en: {
-      title: "Duos odds: order not known yet",
-      sees: "In Duos, one line says it is not known yet who fights first or who is on which team.",
-      source: "Duos odds need both teams' boards and the fight order, which the game shows a little later in the turn.",
-      rule: "Until the game has shown the order, no odds are shown.",
-    },
-    es: {
-      title: "Probabilidades en Dúos: orden aún desconocido",
-      sees: "En Dúos, una línea dice que todavía no se sabe quién lucha primero ni quién va con quién.",
-      source: "Las probabilidades de Dúos necesitan los tableros de ambos equipos y el orden de lucha, que el juego enseña algo más tarde en el turno.",
-      rule: "Hasta que el juego haya enseñado el orden, no se muestran probabilidades.",
-    },
-  },
   "gap-missing-board": {
     en: {
-      title: "Duos odds: a board not seen yet",
-      sees: "In Duos, one line says which board you have not seen yet: your teammate's, or one of the opposing team's two.",
-      source: "Duos odds use four boards. Any board the game has not shown you leaves a gap.",
+      title: "Duos odds: a board is not in play yet",
+      sees: "In Duos, one line says which board has not entered the combat yet: a team's second board comes in only when its first one is gone.",
+      source: "Duos odds use the four boards of the combat. Any board the game has not put into play leaves a gap, and the odds appear once the last one has entered.",
       rule: "The overlay never fills a board it has not seen. It names the missing one instead.",
     },
     es: {
-      title: "Probabilidades en Dúos: falta un tablero",
-      sees: "En Dúos, una línea dice qué tablero aún no has visto: el de tu compañero o uno de los dos del equipo rival.",
-      source: "Las probabilidades de Dúos usan cuatro tableros. Cualquier tablero que el juego no te haya enseñado deja un hueco.",
+      title: "Probabilidades en Dúos: un tablero aún no ha entrado",
+      sees: "En Dúos, una línea dice qué tablero todavía no ha entrado en el combate: el segundo tablero de un equipo entra solo cuando se acaba el primero.",
+      source: "Las probabilidades de Dúos usan los cuatro tableros del combate. Cualquier tablero que el juego no haya puesto en juego deja un hueco, y las probabilidades salen cuando entra el último.",
       rule: "La superposición nunca rellena un tablero que no ha visto. Nombra el que falta.",
     },
   },
@@ -279,15 +265,15 @@ const CAPTIONS = {
   "odds-bar": {
     en: {
       title: "The combat odds bar",
-      sees: "One bar at the top centre of the game window: your chance to win in green, to tie in grey and to lose in red. To the left of the green, the range of health you would take from your opponent if you win; to the right of the red, the range of damage you would take if you lose. Under it, how old their board is.",
-      source: "Worked out on your PC by simulating a few thousand fights between your board now and the last board of theirs you saw. The two ranges are the damage of those fights after the game's damage cap.",
-      rule: "A range the app cannot work out is left out, never guessed. The odds come from boards you have already seen, not from a look at their current board.",
+      sees: "One bar at the top centre of the game window: your chance to win in green, to tie in grey and to lose in red. To the left of the green, the range of health you would take from your opponent if you win; to the right of the red, the range of damage you would take if you lose. It shows only while a combat is on and goes when the combat ends.",
+      source: "Worked out on your PC by simulating a few thousand fights between the two boards that entered play in this combat. The two ranges are the damage of those fights after the game's damage cap.",
+      rule: "A range the app cannot work out is left out, never guessed. The odds are for the combat you are watching only: never from an older board, never in the shop.",
     },
     es: {
       title: "La barra de probabilidades del combate",
-      sees: "Una barra arriba en el centro de la ventana del juego: tu probabilidad de ganar en verde, de empatar en gris y de perder en rojo. A la izquierda del verde, el margen de vida que le quitarías a tu rival si ganas; a la derecha del rojo, el margen de daño que recibirías si pierdes. Debajo, cuántos turnos tiene su tablero.",
-      source: "Se calcula en tu PC simulando unos miles de combates entre tu tablero de ahora y el último tablero suyo que viste. Los dos márgenes son el daño de esos combates tras el tope de daño del juego.",
-      rule: "Un margen que la app no puede calcular se omite, nunca se adivina. Las probabilidades salen de tableros que ya has visto, no de un vistazo a su tablero actual.",
+      sees: "Una barra arriba en el centro de la ventana del juego: tu probabilidad de ganar en verde, de empatar en gris y de perder en rojo. A la izquierda del verde, el margen de vida que le quitarías a tu rival si ganas; a la derecha del rojo, el margen de daño que recibirías si pierdes. Solo aparece mientras hay un combate y desaparece cuando termina.",
+      source: "Se calcula en tu PC simulando unos miles de combates entre los dos tableros que entraron en juego en este combate. Los dos márgenes son el daño de esos combates tras el tope de daño del juego.",
+      rule: "Un margen que la app no puede calcular se omite, nunca se adivina. Las probabilidades son solo del combate que estás viendo: nunca de un tablero antiguo, nunca en la tienda.",
     },
   },
   "odds-bar-no-ranges": {
