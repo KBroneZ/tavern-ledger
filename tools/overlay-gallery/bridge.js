@@ -75,7 +75,7 @@
   // The game's texture set as the app's texture_set answers it, read from the
   // public host once per page. `files` maps a role to its file; `base` is
   // where they are (the app's own protocol is not there in a browser).
-  const TEXTURES_BASE = "https://assets.tavernledger.net/v1/";
+  const TEXTURES_BASE = "https://assets.tavernledger.net/v2/";
   let liveSet = null;
   const getJson = (url) => fetch(url).then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))));
   function fetchSet(fetchJson) {

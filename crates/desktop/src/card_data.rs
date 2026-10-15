@@ -15,10 +15,10 @@ use std::sync::{Arc, OnceLock};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use crate::applog;
 use cards::net::ReqwestFetch;
 use cards::textures::{TextureStore, TextureView};
 use cards::{valid_id, CardStatus, CardStore, Locale};
-use crate::applog;
 use tauri::http::{header, Method, Request, Response, StatusCode};
 use tauri::{AppHandle, Emitter, Manager, Runtime, State, UriSchemeContext, UriSchemeResponder};
 
@@ -419,34 +419,29 @@ mod tests {
 
     #[test]
     fn a_path_is_a_card_or_a_texture_of_the_current_set_and_nothing_else() {
+        let v = cards::textures::VERSION;
         assert_eq!(route("/BG_CFM_315"), Some(Route::Card("BG_CFM_315")));
-        assert_eq!(
-            route("/tex/v1/skull.webp"),
-            Some(Route::Texture("skull.webp"))
-        );
-        assert_eq!(
-            route("/tex/v1/layout.json"),
-            Some(Route::Texture("layout.json"))
-        );
+        let skull = format!("/tex/{v}/skull.webp");
+        assert_eq!(route(&skull), Some(Route::Texture("skull.webp")));
+        let layout = format!("/tex/{v}/layout.json");
+        assert_eq!(route(&layout), Some(Route::Texture("layout.json")));
         for path in [
-            "/tex/v2/skull.webp",
-            "/tex/skull.webp",
-            "/tex/",
-            "/tex/v1",
-            "/tex/v1/",
-            "tex/v1/skull.webp",
-            "//tex/v1/skull.webp",
-            "/",
-            "",
+            "/tex/v0/skull.webp".to_string(),
+            "/tex/skull.webp".to_string(),
+            "/tex/".to_string(),
+            format!("/tex/{v}"),
+            format!("/tex/{v}/"),
+            format!("tex/{v}/skull.webp"),
+            format!("//tex/{v}/skull.webp"),
+            "/".to_string(),
+            String::new(),
         ] {
-            assert_eq!(route(path), None, "{path}");
+            assert_eq!(route(&path), None, "{path}");
         }
         // Anything but a bare file name finds nothing in the set (the store
         // serves only names its manifest lists).
-        assert_eq!(
-            route("/tex/v1/../skull.webp"),
-            Some(Route::Texture("../skull.webp"))
-        );
+        let odd = format!("/tex/{v}/../skull.webp");
+        assert_eq!(route(&odd), Some(Route::Texture("../skull.webp")));
     }
 
     #[test]
@@ -469,7 +464,10 @@ mod tests {
                 APP_ORIGIN
             );
         }
-        let https = texture_response(Some((vec![1], "image/webp")), Some("https://tauri.localhost"));
+        let https = texture_response(
+            Some((vec![1], "image/webp")),
+            Some("https://tauri.localhost"),
+        );
         assert_eq!(
             https.headers()[header::ACCESS_CONTROL_ALLOW_ORIGIN],
             "https://tauri.localhost"

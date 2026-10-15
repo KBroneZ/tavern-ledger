@@ -1,7 +1,7 @@
 //! The game's minion textures (D-150, D-151, T-372): a small set of images
 //! hosted on our own Cloudflare Pages project, one folder per extraction
-//! (`v1`), listed by a manifest with a SHA-256 for every file. The app
-//! downloads the set once, keeps it under `card-cache/textures/v1/` and
+//! (`v2` now), listed by a manifest with a SHA-256 for every file. The app
+//! downloads the set once, keeps it under `card-cache/textures/<version>/` and
 //! serves it to its pages. Nothing is bundled in the installer or the repo.
 //!
 //! What this file guarantees:
@@ -30,10 +30,16 @@ use sha2::{Digest, Sha256};
 
 use crate::net::{Fetch, Get, NetError};
 
-/// The texture set this build of the app knows. A later set is a new
-/// constant here and a new folder on the host.
-pub const VERSION: &str = "v1";
-pub const BASE_URL: &str = "https://assets.tavernledger.net/v1/";
+/// The texture set this build of the app knows (`v2` is the one folder the
+/// app asks for, on the host and in the cache). A later set is this one
+/// line.
+macro_rules! set_version {
+    () => {
+        "v2"
+    };
+}
+pub const VERSION: &str = set_version!();
+pub const BASE_URL: &str = concat!("https://assets.tavernledger.net/", set_version!(), "/");
 const MANIFEST_FILE: &str = "manifest.json";
 const LAYOUT_NAME: &str = "layout";
 pub const MAX_MANIFEST_BYTES: usize = 64 * 1024;
@@ -125,7 +131,10 @@ fn parse_manifest(body: &[u8]) -> Result<Vec<Entry>, String> {
     let raw: RawManifest =
         serde_json::from_slice(body).map_err(|_| "the manifest is not readable".to_string())?;
     if raw.version != VERSION {
-        return Err(format!("the manifest is for {}, not {VERSION}", raw.version));
+        return Err(format!(
+            "the manifest is for {}, not {VERSION}",
+            raw.version
+        ));
     }
     if raw.files.is_empty() || raw.files.len() > MAX_FILES {
         return Err("the manifest lists too many or no files".into());
@@ -156,7 +165,10 @@ fn parse_manifest(body: &[u8]) -> Result<Vec<Entry>, String> {
     if total > MAX_TOTAL_BYTES {
         return Err("the set is bigger than allowed".into());
     }
-    if !entries.iter().any(|e| e.name == LAYOUT_NAME && e.file.ends_with(".json")) {
+    if !entries
+        .iter()
+        .any(|e| e.name == LAYOUT_NAME && e.file.ends_with(".json"))
+    {
         return Err("the manifest lists no layout".into());
     }
     Ok(entries)

@@ -9,6 +9,9 @@
 // `attach` says no (or calls `onLost`) and the host draws a word instead.
 
 const WIND_CYCLE = 2.6; // seconds; both clips turn whole times in it
+// Minions with the same effect share one drawing per frame, in this many
+// phases (so they do not all move together); each minion copies its phase's.
+const PHASES = 3;
 const STEALTH_TIME_SCALE = 0.05; // the game's scroll speeds are per 20 s
 const UNITS = { wfMap: [0, 1, 2, 3], wind: 4, dome: 5, mask: 6, shadow: 7, cover: 8 };
 
@@ -80,18 +83,30 @@ function texture(gl, image, unit, { repeat = false, nearest = false } = {}) {
  *
  * options: { document, layout (from readLayout), loadImage(name) -> Promise
  * of a CORS-clean image, log(message), fps, now() (seconds, for tests),
- * schedule(fn) (requestAnimationFrame, for tests) }.
+ * schedule(fn, delayMs) -> handle and unschedule(handle) (for tests) }.
+ * The loop waits out the frame interval in a timer and draws on the next
+ * animation frame, so a page that draws 20 times a second is not woken 60.
  *
  * Returns { supported(), attach(kind, canvas, onLost) -> boolean,
  * setActive(on), destroy() }.
  */
 export function createFx(options) {
   const { document: doc, layout, loadImage, log } = options;
-  const fps = options.fps > 0 ? options.fps : 30;
-  const interval = 1000 / fps - 2;
+  const fps = options.fps > 0 ? options.fps : 20;
+  const interval = 1000 / fps;
   const now = options.now || (() => performance.now() / 1000);
-  const schedule = options.schedule || ((fn) => requestAnimationFrame(fn));
-  const unschedule = options.unschedule || ((id) => cancelAnimationFrame(id));
+  const schedule =
+    options.schedule ||
+    ((fn, delay) => {
+      const handle = { frame: 0, wait: setTimeout(() => (handle.frame = requestAnimationFrame(fn)), Math.max(0, delay)) };
+      return handle;
+    });
+  const unschedule =
+    options.unschedule ||
+    ((handle) => {
+      clearTimeout(handle.wait);
+      if (handle.frame) cancelAnimationFrame(handle.frame);
+    });
 
   const instances = new Set();
   const failed = new Set(); // kinds whose textures could not be sampled
@@ -103,7 +118,7 @@ export function createFx(options) {
   let lost = false;
   let active = true;
   let timer = null;
-  let lastDraw = -1e9;
+  let nextPhase = 0;
   const told = new Set();
 
   // One line per kind of trouble, however many minions meet it.
@@ -214,11 +229,11 @@ export function createFx(options) {
     return loading.get(kind);
   }
 
-  function drawWindfury(inst, t) {
+  function drawWindfury(offset, t) {
     const p = programs.windfury;
     gl.useProgram(p.pr);
     gl.blendFunc(gl.ONE, gl.ONE);
-    const phase = (((t + inst.phase) % WIND_CYCLE) + WIND_CYCLE) % WIND_CYCLE / WIND_CYCLE;
+    const phase = (((t + offset) % WIND_CYCLE) + WIND_CYCLE) % WIND_CYCLE / WIND_CYCLE;
     const passes = [
       [0, -1.7 + 3 * phase, 0.7],
       [1, -1.7 + 3 * phase, 0.7],
@@ -233,49 +248,74 @@ export function createFx(options) {
     }
   }
 
-  function drawStealth(inst, t) {
+  function drawStealth(offset, t) {
     const p = programs.stealth;
     gl.useProgram(p.pr);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    gl.uniform1f(p.time, t + inst.phase);
+    gl.uniform1f(p.time, t + offset);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
-  function drawInstance(inst, t) {
-    const [w, h] = inst.size;
+  /** One drawing of an effect, in the GL canvas, for a phase of its cycle. */
+  function drawPhase(kind, size, phase, t) {
+    const [w, h] = size;
     gl.viewport(0, 0, w, h);
     gl.scissor(0, 0, w, h);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    if (inst.kind === "windfury") drawWindfury(inst, t);
-    else drawStealth(inst, t);
-    // The drawing buffer is read before the page is composed, in this task.
+    if (kind === "windfury") drawWindfury((phase * WIND_CYCLE) / PHASES, t);
+    else drawStealth(phase * 2.5, t);
+  }
+
+  /** Copies the GL canvas (read before the page is composed, in this task). */
+  function copyTo(inst) {
+    const [w, h] = inst.size;
     inst.ctx.clearRect(0, 0, w, h);
     inst.ctx.drawImage(glCanvas, 0, glCanvas.height - h, w, h, 0, 0, w, h);
+  }
+
+  function drawFrame(t) {
+    const groups = new Map();
+    for (const inst of instances) {
+      if (!ready.has(inst.kind) || !visible(inst)) continue;
+      const key = `${inst.kind}:${inst.phase}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(inst);
+    }
+    for (const group of groups.values()) {
+      const first = group[0];
+      drawPhase(first.kind, first.size, first.phase, t);
+      for (const inst of group) copyTo(inst);
+    }
   }
 
   function visible(inst) {
     return inst.canvas.isConnected && (!inst.canvas.getClientRects || inst.canvas.getClientRects().length > 0);
   }
 
-  function tick(stamp) {
+  function tick() {
     timer = null;
-    for (const inst of [...instances]) if (!inst.canvas.isConnected) instances.delete(inst);
+    // A canvas not in the page yet may be about to be put there: dropped after a second.
+    const stamp = now();
+    for (const inst of [...instances]) {
+      if (inst.canvas.isConnected) inst.gone = null;
+      else if (inst.gone === null || inst.gone === undefined) inst.gone = stamp;
+      else if (stamp - inst.gone > 1) instances.delete(inst);
+    }
     if (!instances.size || !active || lost) return;
-    timer = schedule(tick);
-    if (typeof stamp === "number" && stamp - lastDraw < interval) return;
-    lastDraw = typeof stamp === "number" ? stamp : lastDraw;
-    const t = now();
+    const started = now();
     try {
-      for (const inst of instances) if (ready.has(inst.kind) && visible(inst)) drawInstance(inst, t);
+      drawFrame(started);
     } catch (error) {
       fail("windfury", `effects stopped (${error && error.message ? error.message : error})`);
       fail("stealth", "effects stopped");
     }
+    // Next frame one interval after this one started, less what drawing took.
+    timer = schedule(tick, interval - (now() - started) * 1000);
   }
 
   function wake() {
-    if (timer === null && active && instances.size && !lost) timer = schedule(tick);
+    if (timer === null && active && instances.size && !lost) timer = schedule(tick, 0);
   }
 
   let initError = null;
@@ -293,7 +333,7 @@ export function createFx(options) {
       const size = layout[kind].size;
       const ctx = canvas.getContext("2d");
       if (!ctx) return false;
-      const inst = { kind, canvas, ctx, size, onLost, phase: Math.random() * (kind === "windfury" ? WIND_CYCLE : 6) };
+      const inst = { kind, canvas, ctx, size, onLost, phase: nextPhase++ % PHASES };
       instances.add(inst);
       prepare(kind).then(wake);
       return true;

@@ -50,7 +50,7 @@ impl Set {
 
     fn manifest(&self) -> Vec<u8> {
         let files: Vec<_> = self.files.iter().map(|(f, b)| self.entry(f, b)).collect();
-        json!({"version": "v1", "game_build": "1", "files": files})
+        json!({"version": VERSION, "game_build": "1", "files": files})
             .to_string()
             .into_bytes()
     }
@@ -83,7 +83,10 @@ fn downloaded(name: &str) -> (TextureStore, Arc<FakeFetch>, PathBuf, Set) {
     let (store, fake, dir) = fresh(name);
     let set = Set::new();
     set.serve(&fake);
-    assert!(store.refresh_if_due(NOW), "the first download changes the set");
+    assert!(
+        store.refresh_if_due(NOW),
+        "the first download changes the set"
+    );
     (store, fake, dir, set)
 }
 
@@ -91,17 +94,27 @@ fn downloaded(name: &str) -> (TextureStore, Arc<FakeFetch>, PathBuf, Set) {
 fn the_whole_set_is_downloaded_checked_and_served() {
     let (store, fake, dir, set) = downloaded("whole");
     let view = store.view().expect("a set is ready");
-    assert_eq!(view.version, "v1");
+    assert_eq!(view.version, VERSION);
     assert_eq!(view.layout["canvas"]["width"], 400);
     assert_eq!(view.files["frame_normal"], "frame_normal.webp");
     assert_eq!(view.files["skull"], "skull.webp");
     for (file, bytes) in &set.files {
         let (body, kind) = store.file(file).unwrap_or_else(|| panic!("{file} served"));
         assert_eq!(&body, bytes);
-        assert_eq!(kind, if file.ends_with(".json") { "application/json" } else { "image/webp" });
+        assert_eq!(
+            kind,
+            if file.ends_with(".json") {
+                "application/json"
+            } else {
+                "image/webp"
+            }
+        );
     }
-    assert!(dir.join("v1").join("frame_normal.webp").is_file());
-    assert!(!dir.join("v1.tmp").exists(), "the side folder is gone");
+    assert!(dir.join(VERSION).join("frame_normal.webp").is_file());
+    assert!(
+        !dir.join(format!("{VERSION}.tmp")).exists(),
+        "the side folder is gone"
+    );
     // Every request went to the textures host with the manifest first.
     let urls = fake.urls();
     assert_eq!(urls[0], manifest_url());
@@ -123,9 +136,16 @@ fn a_bad_hash_leaves_no_set_at_all() {
     assert!(!store.refresh_if_due(NOW));
     assert!(store.view().is_none());
     assert!(store.file("frame_normal.webp").is_none(), "no half set");
-    assert!(!dir.join("v1").exists());
-    assert!(!dir.join("v1.tmp").exists(), "the side folder is removed");
-    assert!(store.problem().unwrap().contains("skull.webp"), "{:?}", store.problem());
+    assert!(!dir.join(VERSION).exists());
+    assert!(
+        !dir.join(format!("{VERSION}.tmp")).exists(),
+        "the side folder is removed"
+    );
+    assert!(
+        store.problem().unwrap().contains("skull.webp"),
+        "{:?}",
+        store.problem()
+    );
 }
 
 #[test]
@@ -147,11 +167,18 @@ fn a_manifest_with_an_unsafe_or_odd_name_is_refused_before_any_file_is_asked_for
         let set = Set::new();
         let mut manifest: serde_json::Value = serde_json::from_slice(&set.manifest()).unwrap();
         manifest["files"][0]["file"] = json!(file);
-        fake.on(&manifest_url(), ok("application/json", manifest.to_string().into_bytes()));
+        fake.on(
+            &manifest_url(),
+            ok("application/json", manifest.to_string().into_bytes()),
+        );
         assert!(!store.refresh_if_due(NOW), "{file}");
-        assert_eq!(fake.urls(), [manifest_url()], "{file}: only the manifest was asked for");
+        assert_eq!(
+            fake.urls(),
+            [manifest_url()],
+            "{file}: only the manifest was asked for"
+        );
         assert!(store.view().is_none());
-        assert!(!dir.join("v1").exists());
+        assert!(!dir.join(VERSION).exists());
         assert!(store.problem().is_some(), "{file}");
     }
 }
@@ -162,7 +189,7 @@ fn a_manifest_must_be_the_expected_version_with_unique_files_and_a_layout() {
     let good: serde_json::Value = serde_json::from_slice(&set.manifest()).unwrap();
     let mut cases: Vec<(&str, serde_json::Value)> = Vec::new();
     let mut other_version = good.clone();
-    other_version["version"] = json!("v2");
+    other_version["version"] = json!("v0");
     cases.push(("version", other_version));
     let mut twice = good.clone();
     let first = twice["files"][0].clone();
@@ -179,7 +206,10 @@ fn a_manifest_must_be_the_expected_version_with_unique_files_and_a_layout() {
     cases.push(("hash chars", upper_hash));
     for (i, (what, manifest)) in cases.into_iter().enumerate() {
         let (store, fake, _) = fresh(&format!("manifest{i}"));
-        fake.on(&manifest_url(), ok("application/json", manifest.to_string().into_bytes()));
+        fake.on(
+            &manifest_url(),
+            ok("application/json", manifest.to_string().into_bytes()),
+        );
         assert!(!store.refresh_if_due(NOW), "{what}");
         assert_eq!(fake.urls().len(), 1, "{what}");
         assert!(store.problem().is_some(), "{what}");
@@ -207,12 +237,19 @@ fn sizes_are_capped_per_file_in_total_and_by_what_the_server_sends() {
             "sha256": "0".repeat(64), "bytes": 10
         }));
     }
-    for (i, (what, manifest)) in [("file", big_file), ("total", big_total), ("count", too_many)]
-        .into_iter()
-        .enumerate()
+    for (i, (what, manifest)) in [
+        ("file", big_file),
+        ("total", big_total),
+        ("count", too_many),
+    ]
+    .into_iter()
+    .enumerate()
     {
         let (store, fake, _) = fresh(&format!("caps{i}"));
-        fake.on(&manifest_url(), ok("application/json", manifest.to_string().into_bytes()));
+        fake.on(
+            &manifest_url(),
+            ok("application/json", manifest.to_string().into_bytes()),
+        );
         assert!(!store.refresh_if_due(NOW), "{what}");
         assert_eq!(fake.urls().len(), 1, "{what}: nothing else asked for");
     }
@@ -233,19 +270,26 @@ fn sizes_are_capped_per_file_in_total_and_by_what_the_server_sends() {
         fake.on(&file_url(file), ok("image/webp", bytes.clone()));
     }
     assert!(!store.refresh_if_due(NOW));
-    assert!(!dir.join("v1").exists());
+    assert!(!dir.join(VERSION).exists());
 }
 
 #[test]
 fn a_403_or_a_redirect_is_a_plain_miss_and_is_not_retried_at_once() {
-    for (i, reply) in [status(403), status(301), status(302), status(500)].into_iter().enumerate() {
+    for (i, reply) in [status(403), status(301), status(302), status(500)]
+        .into_iter()
+        .enumerate()
+    {
         let (store, fake, dir) = fresh(&format!("status{i}"));
         let code = reply.as_ref().unwrap().status;
         fake.on(&manifest_url(), reply);
         assert!(!store.refresh_if_due(NOW));
         assert!(store.view().is_none());
-        assert!(!dir.join("v1").exists());
-        assert!(store.problem().unwrap().contains(&code.to_string()), "{:?}", store.problem());
+        assert!(!dir.join(VERSION).exists());
+        assert!(
+            store.problem().unwrap().contains(&code.to_string()),
+            "{:?}",
+            store.problem()
+        );
         // Not again before the retry time, even though the set is missing.
         assert!(!store.refresh_if_due(NOW + RETRY_AFTER_SECS - 1));
         assert_eq!(fake.urls().len(), 1, "no second request yet");
@@ -279,14 +323,18 @@ fn a_complete_set_on_disk_is_used_without_the_network() {
 #[test]
 fn leftovers_of_an_interrupted_download_are_cleaned_on_start() {
     let dir = temp_dir("leftovers");
-    fs::create_dir_all(dir.join("v1.tmp")).unwrap();
-    fs::write(dir.join("v1.tmp").join("frame_normal.webp"), b"half").unwrap();
-    fs::create_dir_all(dir.join("v1.old")).unwrap();
+    fs::create_dir_all(dir.join(format!("{VERSION}.tmp"))).unwrap();
+    fs::write(
+        dir.join(format!("{VERSION}.tmp")).join("frame_normal.webp"),
+        b"half",
+    )
+    .unwrap();
+    fs::create_dir_all(dir.join(format!("{VERSION}.old"))).unwrap();
     fs::write(dir.join("stray.part"), b"half").unwrap();
     let fake = Arc::new(FakeFetch::default());
     let store = TextureStore::open(dir.clone(), Box::new(Shared(fake)));
-    assert!(!dir.join("v1.tmp").exists());
-    assert!(!dir.join("v1.old").exists());
+    assert!(!dir.join(format!("{VERSION}.tmp")).exists());
+    assert!(!dir.join(format!("{VERSION}.old")).exists());
     assert!(!dir.join("stray.part").exists());
     assert!(store.view().is_none());
 }
@@ -294,7 +342,7 @@ fn leftovers_of_an_interrupted_download_are_cleaned_on_start() {
 #[test]
 fn a_file_damaged_on_disk_is_left_out_and_the_set_is_fetched_again() {
     let (_, _, dir, set) = downloaded("damaged");
-    fs::write(dir.join("v1").join("gem_attack.webp"), b"RIFF-tampered").unwrap();
+    fs::write(dir.join(VERSION).join("gem_attack.webp"), b"RIFF-tampered").unwrap();
     let fake = Arc::new(FakeFetch::default());
     let store = TextureStore::open(dir.clone(), Box::new(Shared(fake.clone())));
     // The rest is drawn; the damaged layer is missing, never a wrong image.
@@ -313,7 +361,7 @@ fn a_file_damaged_on_disk_is_left_out_and_the_set_is_fetched_again() {
 #[test]
 fn a_set_without_a_readable_layout_is_no_set() {
     let (_, _, dir, _) = downloaded("nolayout");
-    fs::write(dir.join("v1").join("layout.json"), b"{not json").unwrap();
+    fs::write(dir.join(VERSION).join("layout.json"), b"{not json").unwrap();
     let store = TextureStore::open(dir, Box::new(Shared(Arc::new(FakeFetch::default()))));
     assert!(store.view().is_none(), "the layout drives every position");
 }
@@ -334,7 +382,7 @@ fn only_one_download_runs_at_a_time() {
 fn only_files_of_the_set_are_served() {
     let (store, _, _, _) = downloaded("serve");
     for file in [
-        "../v1/skull.webp",
+        "../v2/skull.webp",
         "..\\skull.webp",
         "skull",
         "SKULL.WEBP",

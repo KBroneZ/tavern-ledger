@@ -38,7 +38,7 @@ const WORDED_FX = ["stealth", "windfury"];
  *   log        (message) => void; optional
  *   document   the page's document (default: the global one)
  *   fx         an effects runtime, null for none; default: WebGL effects
- *   fps        effect frame rate (default 30)
+ *   fps        effect frame rate (default 20)
  *   preload    false to skip loading the main images first (tests)
  * Returns { render(minion), ready, setActive(on), destroy() }, or null when
  * the layout cannot be used.
