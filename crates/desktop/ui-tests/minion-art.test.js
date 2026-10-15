@@ -169,6 +169,7 @@ class Node {
   append(...nodes) { nodes.forEach((n) => { n.parent = this; this.children.push(n); }); }
   addEventListener(type, fn) { (this.listeners[type] = this.listeners[type] || []).push(fn); }
   fire(type) { (this.listeners[type] || []).forEach((fn) => fn({ type })); }
+  replaceChildren(...nodes) { this.children = []; this.append(...nodes); }
   remove() { if (this.parent) this.parent.children = this.parent.children.filter((c) => c !== this); this.removed = true; }
   getContext() { return {}; }
   find(cls) { return this.children.filter((c) => c.className.split(" ").includes(cls)); }
@@ -325,6 +326,37 @@ test("big and unknown numbers are written by the host's own rule", async () => {
 test("a layout that cannot be read gives no drawing at all", async () => {
   const { createMinionArt } = await load("minion-art.js");
   assert.equal(createMinionArt({ layout: { nope: true }, imageUrl: URLS, document: doc, preload: false }), null);
+});
+
+test("a drawn minion is updated in place: new numbers keep every layer, new keywords keep the picture", async () => {
+  const { art } = await make();
+  const el = art.render(m(["taunt"], { atk: 3, health: 4 }));
+  const before = [...el.children];
+  const picture = el.children.find((c) => c.className.includes("tlm-art"));
+  // Only the numbers changed: nothing is rebuilt.
+  art.update(el, m(["taunt"], { atk: 1999, health: 0 }));
+  assert.deepEqual(el.children, before);
+  assert.deepEqual(el.children.filter((c) => c.className.includes("tlm-num")).map((n) => n.textContent), ["1999", "0"]);
+  // A keyword came: the layers are made again, the art box stays.
+  art.update(el, m(["taunt", "divine_shield"], { atk: 5, health: 6 }));
+  assert.ok(el.children.some((c) => c.src === "tex://divine_shield.webp"));
+  assert.ok(el.children.find((c) => c.className.includes("tlm-art")) === picture, "same art box");
+  assert.deepEqual(el.children.filter((c) => c.className.includes("tlm-num")).map((n) => n.textContent), ["5", "6"]);
+  // Golden changes the frame.
+  art.update(el, m(["taunt", "divine_shield"], { golden: true }));
+  assert.match(el.className, /tlm-golden/);
+  assert.ok(el.children.some((c) => c.src === "tex://frame_golden.webp"));
+  assert.ok(!el.children.some((c) => c.src === "tex://frame_normal.webp"));
+  // A keyword left.
+  art.update(el, m([], { golden: true }));
+  assert.ok(!el.children.some((c) => c.src === "tex://divine_shield.webp" || c.src === "tex://taunt_golden.webp"));
+});
+
+test("an element this drawing did not make is left alone", async () => {
+  const { art } = await make();
+  const stranger = new Node("div");
+  art.update(stranger, m(["taunt"]));
+  assert.deepEqual(stranger.children, []);
 });
 
 test("the module has no page-specific API inside: it takes everything from its options", () => {
