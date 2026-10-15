@@ -10,20 +10,25 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { rootPx, playHeight } = require("../ui/overlay-scale.js");
-const { clearOf } = require("../ui/overlay-place.js");
+const { clearOf, BAR_GAP_REM } = require("../ui/overlay-place.js");
 const defaults = require("../../../tools/overlay-gallery/default-layout.js");
 
 const css = fs.readFileSync(path.join(__dirname, "..", "ui", "overlay.css"), "utf8");
-const share = (name) => Number(css.match(new RegExp(name + String.raw`: calc\([^;]*\* ([0-9.]+)\);`))[1]);
-const rem = (name) => Number(css.match(new RegExp(`${name}: ([0-9.]+)rem;`))[1]);
+function cssNumber(pattern, name) {
+  const found = css.match(pattern);
+  assert.ok(found, `overlay.css has no ${name} in the form this test reads`);
+  return Number(found[1]);
+}
+const share = (name) => cssNumber(new RegExp(name + String.raw`: calc\([^;]*\* ([0-9.]+)\);`), name);
+const rem = (name) => cssNumber(new RegExp(`${name}: ([0-9.]+)rem;`), name);
 const STACK = { right: share("--stack-right"), width: rem("--stack-width") };
 const LOBBY = { left: share("--lobby-left"), width: rem("--lobby-width") };
 
 // The overlay window sizes the task names, the game's 16:9 picture centred in
 // the wider ones, and a 4:3 window.
 const SIZES = [[1920, 1080], [2560, 1440], [1280, 720], [3440, 1440], [1024, 768]];
-// What the card keeps from the bar and from the edges, as the page does (0.55 rem).
-const gapOf = (px) => px * 0.55;
+// What the card keeps from the bar, as the page does.
+const gapOf = (px) => px * BAR_GAP_REM;
 
 function places(w, h) {
   const play = defaults.playArea(w, h);

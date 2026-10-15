@@ -7,6 +7,8 @@
 (() => {
   // Space kept from the screen's edges and between a panel and its buttons.
   const MARGIN = 8;
+  // The space between the odds bar and the hover card below it, in rem.
+  const BAR_GAP_REM = 0.55;
 
   const clamp = (n, lo, hi) => Math.min(Math.max(n, lo), Math.max(lo, hi));
 
@@ -90,7 +92,8 @@
   // of the screen does not lie under it: just below the bar (`gap` apart) when
   // the bar is over the card's width and starts within the card's first band
   // (its own height). A bar the user put lower, or beside the card, changes
-  // nothing; the card never goes higher than the app put it.
+  // nothing (the card's own height is not looked at: it only has to be cleared
+  // of a bar at its top); the card never goes higher than the app put it.
   function clearOf(bar, card, gap) {
     if (!bar) return card.y;
     const beside = bar.x >= card.x + card.w || bar.x + bar.w <= card.x;
@@ -98,7 +101,7 @@
     return Math.max(card.y, bar.y + bar.h + gap);
   }
 
-  const api = { MARGIN, overlaps, spot, padSpot, clearOf };
+  const api = { MARGIN, BAR_GAP_REM, overlaps, spot, padSpot, clearOf };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLPlace = api;
 })();

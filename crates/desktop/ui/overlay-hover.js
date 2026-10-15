@@ -33,7 +33,7 @@ window.TLHover = (() => {
   // bar. The text follows the board's width (T-334, overlay-scale.js).
   function position() {
     const p = hover.card;
-    const top = window.TLPlace.clearOf(oddsBar(), { x: p.x, y: p.y, w: p.width }, rootFont() * 0.55);
+    const top = window.TLPlace.clearOf(oddsBar(), { x: p.x, y: p.y, w: p.width }, rootFont() * window.TLPlace.BAR_GAP_REM);
     card.style.left = `${Math.round(p.x)}px`;
     card.style.top = `${Math.round(top)}px`;
     card.style.width = `${Math.round(p.width)}px`;
@@ -190,6 +190,9 @@ window.TLHover = (() => {
 
   // The game's textures arrived (or went): the card is drawn again.
   window.addEventListener("tl-minions", () => render());
+
+  // A smaller or bigger window changes the text and so the odds bar's height.
+  window.addEventListener("resize", () => requestAnimationFrame(() => window.TLHover && window.TLHover.reposition()));
 
   onEvent("overlay-hover", (event) => {
     hover = event.payload || null;

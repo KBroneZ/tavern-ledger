@@ -34,8 +34,9 @@
   // at its top.
   function hoverCard(w, h) {
     const play = playArea(w, h);
-    const room = Math.min(play.w - 2 * GAP, w - 2 * GAP);
-    const width = Math.min(Math.max(CARD_SHARE * play.h, MIN_CARD_WIDTH), Math.max(room, MIN_CARD_WIDTH));
+    const screenRoom = Math.max(w - 2 * GAP, Math.min(MIN_CARD_WIDTH, w));
+    const gameRoom = play.w - 2 * GAP;
+    const width = Math.min(Math.max(CARD_SHARE * play.h, MIN_CARD_WIDTH), Math.max(gameRoom, MIN_CARD_WIDTH), screenRoom);
     const x = Math.min(Math.max(w / 2 - width / 2, 0), Math.max(w - width, 0));
     const y = Math.min(Math.max(play.y + GAP, GAP), Math.max(h - GAP, GAP));
     return { x, y, width, max_height: Math.max(0, h - GAP - y) };
@@ -52,7 +53,7 @@
     };
   }
 
-  const api = { ODDS_WIDTH, ODDS_TOP, CARD_SHARE, LEADERBOARD, playArea, oddsRect, hoverCard, leaderboardArea };
+  const api = { ODDS_WIDTH, ODDS_TOP, MIN_WIDTH, MAX_WIDTH, CARD_SHARE, GAP, MIN_CARD_WIDTH, LEADERBOARD, playArea, oddsRect, hoverCard, leaderboardArea };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLGalleryDefaults = api;
 })();

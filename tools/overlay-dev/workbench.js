@@ -11,7 +11,10 @@
   const PRESETS = ["1920x1080", "2560x1440", "1280x720", "3440x1440"];
   // The sizes the overlap check goes through: the presets and a 4:3 window (the game's picture is centred in it).
   const CHECK_SIZES = [...PRESETS, "1024x768"];
-  const LOAD_WAIT_MS = 600;
+  // Time the page gets to draw its panels and the hover card, and to load at all.
+  const LOAD_WAIT_MS = 800;
+  const LOAD_TIMEOUT_MS = 15000;
+  let checking = false;
   const MIN = { w: 320, h: 240 };
   const MAX = { w: 7680, h: 4320 };
   // The events the overlay page listens to; `payload` is looked up when sent.
@@ -75,6 +78,8 @@
 
   // The game window's size and the frame's scale: only styles, no reload.
   function layout() {
+    // The overlap check sets the frame's size itself.
+    if (checking) return;
     const { w, h } = parseSize(choice.size);
     const stage = $("stage");
     const room = { w: stage.clientWidth - 32, h: window.innerHeight - stage.getBoundingClientRect().top - 32 };
@@ -149,34 +154,49 @@
   // else (the rendered rectangles, overlaps.js). Resolves to the failures.
   async function checkOverlaps() {
     const report = $("overlap-report");
+    const button = $("check-overlaps");
     const before = { size: choice.size, scenario: choice.scenario };
     const failures = [];
+    button.disabled = true;
+    checking = true;
     report.hidden = false;
-    for (const size of CHECK_SIZES) {
-      const { w, h } = parseSize(size);
-      frame.style.width = `${w}px`;
-      frame.style.height = `${h}px`;
-      for (const s of scenarios) {
-        report.textContent = `Checking ${s.id} at ${size}…`;
-        const q = overlayQuery();
-        q.set("scenario", s.id);
-        await new Promise((resolve) => {
-          frame.onload = resolve;
-          frame.src = `/ui/overlay.html?${q}`;
-        });
-        await new Promise((resolve) => setTimeout(resolve, LOAD_WAIT_MS));
-        const shown = window.TLOverlaps.collect(frame.contentDocument);
-        // A page that drew nothing (an error) must not pass for "no overlaps".
-        if (shown.length === 0) failures.push(`${s.id} at ${size}: nothing is shown`);
-        const found = window.TLOverlaps.findOverlaps(shown);
-        for (const f of found) failures.push(`${s.id} at ${size}: ${f.a} and ${f.b} share ${f.w}×${f.h}`);
+    try {
+      for (const size of CHECK_SIZES) {
+        const { w, h } = parseSize(size);
+        frame.style.width = `${w}px`;
+        frame.style.height = `${h}px`;
+        for (const s of scenarios) {
+          report.textContent = `Checking ${s.id} at ${size}…`;
+          const q = overlayQuery();
+          q.set("scenario", s.id);
+          const loaded = await new Promise((resolve) => {
+            const timer = setTimeout(() => resolve(false), LOAD_TIMEOUT_MS);
+            frame.onload = () => {
+              clearTimeout(timer);
+              resolve(true);
+            };
+            frame.src = `/ui/overlay.html?${q}`;
+          });
+          if (!loaded) {
+            failures.push(`${s.id} at ${size}: the page did not load`);
+            continue;
+          }
+          await new Promise((resolve) => setTimeout(resolve, LOAD_WAIT_MS));
+          const shown = window.TLOverlaps.collect(frame.contentDocument);
+          // A page that drew nothing (an error) must not pass for "no overlaps".
+          if (shown.length === 0) failures.push(`${s.id} at ${size}: nothing is shown`);
+          for (const f of window.TLOverlaps.findOverlaps(shown)) failures.push(`${s.id} at ${size}: ${f.a} and ${f.b} share ${f.w}×${f.h}`);
+        }
       }
+    } finally {
+      frame.onload = null;
+      checking = false;
+      button.disabled = false;
+      choice.size = before.size;
+      choice.scenario = before.scenario;
+      loadFrame();
+      layout();
     }
-    frame.onload = null;
-    choice.size = before.size;
-    choice.scenario = before.scenario;
-    loadFrame();
-    layout();
     report.textContent = failures.length
       ? `${failures.length} overlap(s): ${failures.join("; ")}`
       : `No overlaps in ${scenarios.length} scenarios at ${CHECK_SIZES.length} sizes.`;

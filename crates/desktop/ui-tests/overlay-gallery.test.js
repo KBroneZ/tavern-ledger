@@ -409,6 +409,10 @@ test("the copied default places have the app's numbers", () => {
   assert.equal(defaults.LEADERBOARD.width, rustNumber("leaderboard.rs", "WIDTH"));
   assert.equal(defaults.LEADERBOARD.top, rustNumber("leaderboard.rs", "TOP"));
   assert.equal(defaults.LEADERBOARD.height, rustNumber("leaderboard.rs", "HEIGHT"));
+  assert.equal(defaults.GAP, rustNumber("screen_fit.rs", "GAP"));
+  assert.equal(defaults.MIN_CARD_WIDTH, rustNumber("screen_fit.rs", "MIN_CARD_WIDTH"));
+  assert.equal(defaults.MIN_WIDTH, rustNumber("overlay_layout.rs", "MIN_WIDTH"));
+  assert.equal(defaults.MAX_WIDTH, rustNumber("overlay_layout.rs", "MAX_WIDTH"));
   assert.match(read(path.join(SRC, "screen_fit.rs")), /PLAY_SHAPE: \(f64, f64\) = \(16\.0, 9\.0\)/);
 });
 
