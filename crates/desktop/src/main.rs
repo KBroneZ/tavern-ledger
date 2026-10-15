@@ -1466,6 +1466,7 @@ fn main() {
             upload::upload_sign_out,
             card_data::card_names,
             card_data::card_data_status,
+            card_data::texture_set,
             game_memory_status,
             game_memory_set_enabled,
             settings::app_settings,

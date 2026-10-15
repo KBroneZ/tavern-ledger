@@ -6,7 +6,7 @@
 const data = require("./data.js");
 const { CAPTIONS } = require("./captions.js");
 
-const { sourced, soloGame, duosGame, heroSelectGame, own, SOLO_ODDS, DUOS_BOARDS } = data;
+const { sourced, minion, soloGame, duosGame, heroSelectGame, own, SOLO_ODDS, DUOS_BOARDS } = data;
 
 const SCREEN_W = 1920;
 const SCREEN_H = 1080;
@@ -18,6 +18,27 @@ const HOVER_CARD = { x: (SCREEN_W - CARD_WIDTH) / 2, y: 8, width: CARD_WIDTH, ma
 const hover = (place, member) => ({ place, member, slot: { x: 24, y: 120 + place * 96, w: 150, h: 92 }, card: HOVER_CARD });
 
 const withOdds = (game, odds) => ({ ...game, odds });
+
+// The first opponent's last board replaced by `minions` (the hover card at place 1).
+const withBoard = (game, minions) => ({
+  ...game,
+  opponents: game.opponents.map((o) => (o.place && o.place.value === 1 ? { ...o, boards: [{ ...o.boards[0], minions }] } : o)),
+});
+// Seven minions that between them wear every keyword the game shows (T-372).
+const KEYWORD_BOARD = (golden = false) => [
+  minion("EX_M_BRUTE", 6, 9, ["taunt", "divine_shield"], golden),
+  minion("EX_M_HOUND", 9, 4, ["windfury", "stealth"], golden),
+  minion("EX_M_WARDEN", 5, 7, ["deathrattle", "reborn"], golden),
+  minion("EX_M_MOTH", 7, 2, ["venomous", "poisonous"], golden),
+  minion("EX_M_WHELP", 5, 5, ["rally"], golden),
+  minion("EX_M_GOLEM", 1999, 12, ["taunt", "divine_shield", "reborn", "venomous"], golden),
+  minion("EX_M_IMP", 3, 3, [], golden),
+];
+// Seven minions all with Windfury and Stealth: the worst case for the effects.
+const EFFECTS_BOARD = ["EX_M_BRUTE", "EX_M_HOUND", "EX_M_WARDEN", "EX_M_MOTH", "EX_M_WHELP", "EX_M_GOLEM", "EX_M_IMP"].map((id, i) =>
+  minion(id, 3 + i, 4 + i, ["windfury", "stealth"]),
+);
+const PLAIN_BOARD = EFFECTS_BOARD.map((m) => ({ ...m, keywords: [] }));
 const gap = (name, extra = {}) => ({
   seat: 1, gap: name, round: null, boards: [], won: 0, tied: 0, lost: 0, trials: 0,
   dealt: null, taken: null, approximate: [], missing: [], start_of_combat: false, ...extra,
@@ -170,6 +191,13 @@ const FOCUS = {
   "gap-missing-board": STACK_DUOS,
   "hover-solo": HOVER_CARD_AREA,
   "hover-duos": HOVER_CARD_AREA,
+  "hover-keywords": HOVER_CARD_AREA,
+  "hover-golden": HOVER_CARD_AREA,
+  "hover-effects-seven": HOVER_CARD_AREA,
+  "hover-plain-seven": HOVER_CARD_AREA,
+  "hover-textures-none": HOVER_CARD_AREA,
+  "hover-texture-bad": HOVER_CARD_AREA,
+  "hover-no-webgl": HOVER_CARD_AREA,
   "damage-cap": STACK_SMALL,
   unreadable: STATUS_BOX,
   "game-over": STACK_SMALL,
@@ -203,6 +231,13 @@ const DEFINITIONS = [
   ["gap-missing-board", withOdds(duos, gap("missing_board", { round: 6, boards: DUOS_BOARDS([6, 6, null]) })), {}],
   ["hover-solo", soloWithOdds, { hover: hover(1, null) }],
   ["hover-duos", withOdds(duos, duosOdds), { hover: hover(1, 0) }],
+  ["hover-keywords", withBoard(soloWithOdds, KEYWORD_BOARD()), { hover: hover(1, null) }],
+  ["hover-golden", withBoard(soloWithOdds, KEYWORD_BOARD(true)), { hover: hover(1, null) }],
+  ["hover-effects-seven", withBoard(soloWithOdds, EFFECTS_BOARD), { hover: hover(1, null) }],
+  ["hover-plain-seven", withBoard(soloWithOdds, PLAIN_BOARD), { hover: hover(1, null) }],
+  ["hover-textures-none", withBoard(soloWithOdds, KEYWORD_BOARD()), { hover: hover(1, null), textures: "none" }],
+  ["hover-texture-bad", withBoard(soloWithOdds, KEYWORD_BOARD()), { hover: hover(1, null), textures: { bad: ["skull", "taunt_normal", "StealthDomeMask"] } }],
+  ["hover-no-webgl", withBoard(soloWithOdds, KEYWORD_BOARD()), { hover: hover(1, null), noWebgl: true }],
   ["damage-cap", { ...solo, damage_cap: 15 }, {}],
   ["unreadable", unreadable, {}],
   ["game-over", gameOver, {}],

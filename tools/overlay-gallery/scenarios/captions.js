@@ -206,6 +206,104 @@ const CAPTIONS = {
       rule: "Igual que en Solo: solo tableros que se te enseñaron, un héroe cada vez, asignado a su asiento.",
     },
   },
+  "hover-keywords": {
+    en: {
+      title: "Hover card, every keyword",
+      sees: "The board drawn like the game: its frame, the picture under it, attack and health on the gems, and a layer for each keyword the minion had when you saw it: Taunt, Divine Shield, Reborn, Venomous, Poisonous, Deathrattle, Rally, Windfury and Stealth.",
+      source: LOG.en,
+      rule: "Keywords are only those you were shown on that board; the images are the game's own, from the app's texture set.",
+    },
+    es: {
+      title: "Tarjeta con todas las palabras clave",
+      sees: "El tablero dibujado como en el juego: su marco, la imagen debajo, ataque y vida en las gemas, y una capa por cada palabra clave que el esbirro tenía cuando lo viste: Provocar, Escudo divino, Renacer, Ponzoña, Veneno, Último aliento, Alentar, Viento furioso y Sigilo.",
+      source: LOG.es,
+      rule: "Las palabras clave son solo las que se te mostraron en ese tablero; las imágenes son las del propio juego, del conjunto de texturas de la app.",
+    },
+  },
+  "hover-golden": {
+    en: {
+      title: "Hover card, golden minions",
+      sees: "The same board with golden minions: the golden frame and the golden Taunt shield.",
+      source: LOG.en,
+      rule: "Golden is what the log says; nothing is guessed.",
+    },
+    es: {
+      title: "Tarjeta con esbirros dorados",
+      sees: "El mismo tablero con esbirros dorados: el marco dorado y el escudo de Provocar dorado.",
+      source: LOG.es,
+      rule: "Dorado es lo que dice el registro; no se adivina nada.",
+    },
+  },
+  "hover-effects-seven": {
+    en: {
+      title: "Hover card, seven moving effects",
+      sees: "Seven minions that all have Windfury and Stealth: the worst case for the live effects.",
+      source: LOG.en,
+      rule: "The effects share one WebGL canvas and stop when the card is hidden.",
+    },
+    es: {
+      title: "Tarjeta con siete efectos en movimiento",
+      sees: "Siete esbirros con Viento furioso y Sigilo: el peor caso para los efectos en vivo.",
+      source: LOG.es,
+      rule: "Los efectos comparten un solo lienzo WebGL y se detienen cuando la tarjeta se oculta.",
+    },
+  },
+  "hover-plain-seven": {
+    en: {
+      title: "Hover card, seven plain minions",
+      sees: "The same seven minions without keywords: the baseline for the effects' cost.",
+      source: LOG.en,
+      rule: "Only used to measure what the effects cost.",
+    },
+    es: {
+      title: "Tarjeta con siete esbirros sin palabras clave",
+      sees: "Los mismos siete esbirros sin palabras clave: la base para medir lo que cuestan los efectos.",
+      source: LOG.es,
+      rule: "Solo sirve para medir lo que cuestan los efectos.",
+    },
+  },
+  "hover-textures-none": {
+    en: {
+      title: "Hover card, game images not downloaded",
+      sees: "When the game's images are not on this PC yet (first start, no network), the minions are plain card art with their numbers, as before.",
+      source: LOG.en,
+      rule: "Never a broken frame: no images means the plain look.",
+    },
+    es: {
+      title: "Tarjeta sin las imágenes del juego",
+      sees: "Si las imágenes del juego aún no están en este PC (primer inicio, sin red), los esbirros son solo la imagen de la carta con sus números, como antes.",
+      source: LOG.es,
+      rule: "Nunca un marco roto: sin imágenes, el aspecto sencillo.",
+    },
+  },
+  "hover-texture-bad": {
+    en: {
+      title: "Hover card, some images missing",
+      sees: "Three images do not load (Deathrattle skull, Taunt shield, Stealth mask): only those layers are left out and the rest is drawn.",
+      source: LOG.en,
+      rule: "One bad image never spoils the minion.",
+    },
+    es: {
+      title: "Tarjeta con algunas imágenes ausentes",
+      sees: "Tres imágenes no cargan (calavera de Último aliento, escudo de Provocar, máscara de Sigilo): solo esas capas faltan y el resto se dibuja.",
+      source: LOG.es,
+      rule: "Una imagen mala nunca estropea el esbirro.",
+    },
+  },
+  "hover-no-webgl": {
+    en: {
+      title: "Hover card, no WebGL",
+      sees: "Without WebGL the frame, gems and the other keywords are drawn, and Windfury and Stealth show as words instead of the moving effects.",
+      source: LOG.en,
+      rule: "The effects are a nicety: their word keeps the keyword visible.",
+    },
+    es: {
+      title: "Tarjeta sin WebGL",
+      sees: "Sin WebGL se dibujan el marco, las gemas y las demás palabras clave, y Viento furioso y Sigilo salen como palabras en vez de los efectos en movimiento.",
+      source: LOG.es,
+      rule: "Los efectos son un extra: la palabra mantiene visible la palabra clave.",
+    },
+  },
   "damage-cap": {
     en: {
       title: "Damage cap",

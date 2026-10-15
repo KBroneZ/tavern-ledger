@@ -22,6 +22,7 @@
     "allow-overlay-reset-leaderboard",
     "allow-card-names",
     "allow-card-data-status",
+    "allow-texture-set",
     "allow-app-settings",
     "allow-app-set-system-language",
     "allow-log-ui-error"

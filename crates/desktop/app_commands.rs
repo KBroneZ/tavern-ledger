@@ -36,6 +36,7 @@ pub const APP_COMMANDS: &[&str] = &[
     "upload_sign_out",
     "card_names",
     "card_data_status",
+    "texture_set",
     "game_memory_status",
     "game_memory_set_enabled",
     "app_settings",

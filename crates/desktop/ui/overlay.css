@@ -216,6 +216,13 @@ body {
 .hb-atk { left: -0.1em; color: var(--accent); }
 .hb-hp { right: -0.1em; color: var(--lost); }
 .hb-minion.golden .hb-atk::after { content: " \2605" / ""; font-size: 0.7em; }
+/* A minion drawn like the game (T-372, minion-art/): the frame fills the slot;
+   a Taunt shield, a bubble or a skull reaches past it, so the row gives them room. */
+.hb-board:has(.hb-drawn) { padding: 0.9em 0.5em 0; }
+.hb-drawn-box { position: relative; width: 100%; }
+.hb-drawn .hb-name { margin-top: 0.9em; }
+.hb-drawn .gifts { position: absolute; right: 4%; top: 6%; }
+.hb-drawn .gift-mark { font-size: 0.75em; }
 .hb-name {
   max-width: 100%;
   margin-top: 0.35em;

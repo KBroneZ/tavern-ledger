@@ -26,7 +26,7 @@ const { build, inScript, jsonForScript, checkSelfContained } = require(path.join
 
 const read = (file) => fs.readFileSync(file, "utf8");
 const html = read(path.join(UI, "overlay.html"));
-const pageScripts = [...html.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]);
+const pageScripts = [...html.matchAll(/<script (?:type="module" )?src="([^"]+)"/g)].map((m) => m[1]);
 
 // Every command and event name written as a literal in the page's scripts.
 function literalNames() {
@@ -272,7 +272,8 @@ test("the build writes one self-contained file under 2 MB, to the place it is to
       assert.doesNotMatch(page, /url\(["']?fonts\//, `${what}: the fonts are inside the file`);
     }
     const doc = decodeDoc(text);
-    assert.equal((doc.match(/<script>/g) || []).length, pageScripts.length + 1, "every script is inline, plus the stand-in");
+    assert.doesNotMatch(doc, /^(import|export)\s/m, "the module script is bundled into one scope");
+    assert.equal((doc.match(/<script(?: type="module")?>/g) || []).length, pageScripts.length + 1, "every script is inline, plus the stand-in");
     assert.match(doc, /<style>/);
     assert.match(doc, /url\("data:font\/woff2;base64,/);
   } finally {

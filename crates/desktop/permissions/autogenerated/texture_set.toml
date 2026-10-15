@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-texture-set"
+description = "Enables the texture_set command without any pre-configured scope."
+commands.allow = ["texture_set"]
+
+[[permission]]
+identifier = "deny-texture-set"
+description = "Denies the texture_set command without any pre-configured scope."
+commands.deny = ["texture_set"]
