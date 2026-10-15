@@ -116,13 +116,13 @@ test("Venomous sits above every effect but below Poisonous and Divine Shield", a
   assert.ok(at("poisonous") < at("divine_shield"));
 });
 
-test("one bottom icon at a time: the skull, else the trigger, else Rally", async () => {
+test("one bottom icon at a time: the skull, else the trigger; Rally is not drawn (its use is not decided)", async () => {
   const { readLayout, planLayers } = await load("layout.js");
   const L = readLayout(LAYOUT);
   const icon = (kws) => names(planLayers(m(kws), L, has(ALL))).filter((n) => ["skull", "trigger", "rally"].includes(n));
   assert.deepEqual(icon(["deathrattle", "rally", "trigger"]), ["skull"]);
   assert.deepEqual(icon(["rally", "trigger"]), ["trigger"]);
-  assert.deepEqual(icon(["rally"]), ["rally"]);
+  assert.deepEqual(icon(["rally"]), [], "the texture stays in the set, the layer is not drawn");
   assert.deepEqual(icon([]), []);
 });
 

@@ -209,13 +209,13 @@ const CAPTIONS = {
   "hover-keywords": {
     en: {
       title: "Hover card, every keyword",
-      sees: "The board drawn like the game: its frame, the picture under it, attack and health on the gems, and a layer for each keyword the minion had when you saw it: Taunt, Divine Shield, Reborn, Venomous, Poisonous, Deathrattle, Rally, Windfury and Stealth.",
+      sees: "The board drawn like the game: its frame, the picture under it, attack and health on the gems, and a layer for each keyword the minion had when you saw it: Taunt, Divine Shield, Reborn, Venomous, Poisonous, Deathrattle, Windfury and Stealth.",
       source: LOG.en,
       rule: "Keywords are only those you were shown on that board; the images are the game's own, from the app's texture set.",
     },
     es: {
       title: "Tarjeta con todas las palabras clave",
-      sees: "El tablero dibujado como en el juego: su marco, la imagen debajo, ataque y vida en las gemas, y una capa por cada palabra clave que el esbirro tenía cuando lo viste: Provocar, Escudo divino, Renacer, Ponzoña, Veneno, Último aliento, Alentar, Viento furioso y Sigilo.",
+      sees: "El tablero dibujado como en el juego: su marco, la imagen debajo, ataque y vida en las gemas, y una capa por cada palabra clave que el esbirro tenía cuando lo viste: Provocar, Escudo divino, Renacer, Ponzoña, Veneno, Último aliento, Viento furioso y Sigilo.",
       source: LOG.es,
       rule: "Las palabras clave son solo las que se te mostraron en ese tablero; las imágenes son las del propio juego, del conjunto de texturas de la app.",
     },

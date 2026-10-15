@@ -93,7 +93,7 @@ function keywordSet(minion) {
  * them (layout.json) with Venomous above the other effects (the user's
  * choice): Reborn glow, Taunt, the art under its mask, the frame, Stealth,
  * Windfury, the gems and their numbers, one bottom icon (skull, else
- * trigger, else Rally), Venomous, Poisonous, Divine Shield.
+ * trigger; Rally is not drawn until its use is decided), Venomous, Poisonous, Divine Shield.
  *
  * `has(name)` says whether a texture can be drawn (it exists and has not
  * failed). Each op is { kind: "img", name, box } | { kind: "art" } |
@@ -118,7 +118,7 @@ export function planLayers(minion, layout, has) {
   img("gem_health");
   ops.push({ kind: "number", which: "attack", value: minion.atk });
   ops.push({ kind: "number", which: "health", value: minion.health });
-  const icon = kws.has("deathrattle") ? "skull" : kws.has("trigger") ? "trigger" : kws.has("rally") ? "rally" : null;
+  const icon = kws.has("deathrattle") ? "skull" : kws.has("trigger") ? "trigger" : null;
   if (icon) img(icon);
   if (kws.has("venomous")) img("venomous");
   if (kws.has("poisonous")) img("poisonous");
