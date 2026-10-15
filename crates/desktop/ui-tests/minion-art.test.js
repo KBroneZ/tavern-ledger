@@ -352,6 +352,18 @@ test("a drawn minion is updated in place: new numbers keep every layer, new keyw
   assert.ok(!el.children.some((c) => c.src === "tex://divine_shield.webp" || c.src === "tex://taunt_golden.webp"));
 });
 
+test("an effect added by an update that later loses WebGL leaves its word on the shown minion", async () => {
+  let lost;
+  const { art } = await make({ fx: { supported: () => true, attach: (kind, canvas, onLost) => { lost = onLost; return true; }, setActive() {}, destroy() {} } });
+  const el = art.render(m([]));
+  art.update(el, m(["windfury"]));
+  assert.equal(el.children.filter((c) => c.tag === "canvas").length, 1);
+  lost();
+  const marks = el.children.find((c) => c.className.includes("tlm-marks"));
+  assert.ok(marks, "the word is on the element the page shows");
+  assert.deepEqual(marks.children.map((c) => c.textContent), ["word:windfury"]);
+});
+
 test("an element this drawing did not make is left alone", async () => {
   const { art } = await make();
   const stranger = new Node("div");

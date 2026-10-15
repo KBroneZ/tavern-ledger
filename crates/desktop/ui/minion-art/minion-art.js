@@ -160,8 +160,8 @@ export function createMinionArt(options) {
   const drawn = new WeakMap();
   const layerKey = (minion, ops) => `${minion.golden === true}|${ops.map((o) => (o.kind === "img" ? o.name : o.kind === "fx" ? `fx:${o.fx}` : o.kind)).join(",")}`;
 
-  function render(minion) {
-    const root = doc.createElement("div");
+  /** Makes `minion`'s layers inside `root` (empty); `keepArt` is a picture box to put back. */
+  function build(root, minion, keepArt) {
     root.className = minion.golden === true ? "tlm tlm-golden" : "tlm";
     root.setAttribute("aria-hidden", "true");
     let marks = null;
@@ -180,7 +180,7 @@ export function createMinionArt(options) {
     const numbers = {};
     for (const op of ops) {
       if (op.kind === "img") root.append(imageLayer(op));
-      else if (op.kind === "art") root.append(artLayer(minion));
+      else if (op.kind === "art") root.append(keepArt || artLayer(minion));
       else if (op.kind === "number") root.append((numbers[op.which] = numberLayer(op)));
       else if (op.kind === "fx" && WORDED_FX.includes(op.fx)) {
         const spec = layout[op.fx];
@@ -202,6 +202,11 @@ export function createMinionArt(options) {
       }
     }
     drawn.set(root, { key: layerKey(minion, ops), numbers });
+  }
+
+  function render(minion) {
+    const root = doc.createElement("div");
+    build(root, minion, null);
     return root;
   }
 
@@ -218,13 +223,11 @@ export function createMinionArt(options) {
       for (const op of ops) if (op.kind === "number") setNumber(made.numbers[op.which], op.which, op.value);
       return;
     }
-    const fresh = render(minion);
     const isArt = (c) => String(c.className).split(" ").includes("tlm-art");
     const old = Array.from(root.children).find(isArt);
-    const next = Array.from(fresh.children).map((c) => (old && isArt(c) ? old : c));
-    root.className = fresh.className;
-    root.replaceChildren(...next);
-    drawn.set(root, drawn.get(fresh));
+    // Built into this very element, so a word added later by an effect that fails lands on it.
+    root.replaceChildren();
+    build(root, minion, old || null);
   }
 
   return {
