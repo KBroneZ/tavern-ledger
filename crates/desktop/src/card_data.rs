@@ -16,7 +16,9 @@ use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use cards::net::ReqwestFetch;
+use cards::textures::{TextureStore, TextureView};
 use cards::{valid_id, CardStatus, CardStore, Locale};
+use crate::applog;
 use tauri::http::{header, Method, Request, Response, StatusCode};
 use tauri::{AppHandle, Emitter, Manager, Runtime, State, UriSchemeContext, UriSchemeResponder};
 
@@ -24,6 +26,15 @@ use tauri::{AppHandle, Emitter, Manager, Runtime, State, UriSchemeContext, UriSc
 pub const SCHEME: &str = "cardart";
 /// The names or the card data status changed: the pages ask again.
 const CARDS_CHANGED: &str = "cards-changed";
+/// The texture set became ready (or changed): the pages ask for it again.
+const TEXTURES_CHANGED: &str = "textures-changed";
+/// Pages load the game's minion textures from
+/// `http://cardart.localhost/tex/<version>/<file>` (T-372).
+const TEXTURE_PREFIX: &str = "/tex/";
+/// The page's own origin on Windows (Tauri's default); a texture answer
+/// names it so WebGL may sample the image (CORS).
+const APP_ORIGIN: &str = "http://tauri.localhost";
+const APP_ORIGINS: [&str; 2] = [APP_ORIGIN, "https://tauri.localhost"];
 /// How often the worker checks whether the card data is due a refresh
 /// (the store itself makes at most one request an hour).
 const CHECK_EVERY: Duration = Duration::from_secs(60);
@@ -41,6 +52,8 @@ pub struct Cards {
     spanish: OnceLock<Arc<CardStore>>,
     /// A page asked for Spanish names: the worker keeps that data current.
     wants_spanish: Arc<AtomicBool>,
+    /// The game's minion textures (D-150), kept beside the card art.
+    textures: OnceLock<Arc<TextureStore>>,
     /// Why there are no names or art at all (the HTTPS client did not start).
     off: OnceLock<String>,
 }
@@ -69,6 +82,11 @@ pub fn start(app: &AppHandle, data_dir: &Path) {
         Box::new(fetch.clone()),
     ));
     let _ = cards.store.set(store.clone());
+    let textures = Arc::new(TextureStore::open(
+        data_dir.join("card-cache").join("textures"),
+        Box::new(fetch.clone()),
+    ));
+    let _ = cards.textures.set(textures.clone());
     let spanish = Arc::new(CardStore::open_locale(
         data_dir.join("card-cache").join(Locale::EsEs.code()),
         Box::new(fetch),
@@ -92,6 +110,14 @@ pub fn start(app: &AppHandle, data_dir: &Path) {
             if changed || status != shown {
                 shown = status;
                 let _ = app.emit(CARDS_CHANGED, ());
+            }
+            if textures.refresh_if_due(now()) {
+                applog::info("textures", "the game's minion textures are ready");
+                let _ = app.emit(TEXTURES_CHANGED, ());
+            }
+            match textures.problem() {
+                Some(problem) => applog::warn_once("textures", "textures", &problem),
+                None => applog::recovered("textures"),
             }
             thread::sleep(CHECK_EVERY);
         }
@@ -221,6 +247,66 @@ pub fn id_from_path(path: &str) -> Option<&str> {
     path.strip_prefix('/').filter(|id| valid_id(id))
 }
 
+/// What a page asked the protocol for.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Route<'a> {
+    /// `/<card id>`: the card's art.
+    Card(&'a str),
+    /// `/tex/<version>/<file>`: a file of the texture set; the set itself
+    /// answers only for the names its manifest lists.
+    Texture(&'a str),
+}
+
+pub fn route(path: &str) -> Option<Route<'_>> {
+    let texture = path
+        .strip_prefix(TEXTURE_PREFIX)
+        .and_then(|rest| rest.strip_prefix(cards::textures::VERSION))
+        .and_then(|rest| rest.strip_prefix('/'));
+    match texture {
+        Some(file) if !file.is_empty() => Some(Route::Texture(file)),
+        Some(_) => None,
+        None => id_from_path(path).map(Route::Card),
+    }
+}
+
+/// The origin a texture answer names: the page's own when it is one of the
+/// app's, else the app's usual one. Always one of ours, never an echo of
+/// what a page sent, and the same on every answer so a cached copy works
+/// for the first request and the next.
+fn texture_origin(asked: Option<&str>) -> &'static str {
+    APP_ORIGINS
+        .into_iter()
+        .find(|o| Some(*o) == asked)
+        .unwrap_or(APP_ORIGIN)
+}
+
+/// 200 with the texture, or an empty 404 (the layer is then left out).
+/// WebGL and CSS masks need the image CORS-clean: the answer names the
+/// app's own origin.
+pub fn texture_response(
+    file: Option<(Vec<u8>, &'static str)>,
+    asked_origin: Option<&str>,
+) -> Response<Vec<u8>> {
+    let built = match file {
+        Some((bytes, kind)) => Response::builder()
+            .status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, kind)
+            .header(header::CACHE_CONTROL, "max-age=86400")
+            .header(header::X_CONTENT_TYPE_OPTIONS, "nosniff")
+            .header(
+                header::ACCESS_CONTROL_ALLOW_ORIGIN,
+                texture_origin(asked_origin),
+            )
+            .header(header::VARY, "Origin")
+            .body(bytes),
+        None => Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .header(header::CACHE_CONTROL, "no-store")
+            .body(Vec::new()),
+    };
+    built.unwrap_or_else(|_| Response::new(Vec::new()))
+}
+
 /// 200 with the JPEG, or an empty 404 (the page then shows no picture).
 pub fn response(image: Option<Vec<u8>>) -> Response<Vec<u8>> {
     let built = match image {
@@ -258,19 +344,30 @@ impl Drop for Slot {
     }
 }
 
-/// The `cardart` protocol. A fetch can take seconds, so it answers from
-/// its own thread and never blocks the window; at most `MAX_IN_FLIGHT`
-/// such threads at once.
+/// The `cardart` protocol. A card fetch can take seconds, so it answers
+/// from its own thread and never blocks the window; at most `MAX_IN_FLIGHT`
+/// such threads at once. A texture comes from memory: answered at once.
 pub fn protocol<R: Runtime>(
     ctx: UriSchemeContext<'_, R>,
     request: Request<Vec<u8>>,
     responder: UriSchemeResponder,
 ) {
-    let id = (request.method() == Method::GET)
-        .then(|| id_from_path(request.uri().path()))
-        .flatten()
-        .map(String::from);
-    let store = ctx.app_handle().state::<Cards>().store.get().cloned();
+    let get = request.method() == Method::GET;
+    let route = get.then(|| route(request.uri().path())).flatten();
+    let cards = ctx.app_handle().state::<Cards>();
+    let id = match route {
+        Some(Route::Texture(file)) => {
+            let origin = request
+                .headers()
+                .get(header::ORIGIN)
+                .and_then(|v| v.to_str().ok());
+            let found = cards.textures.get().and_then(|t| t.file(file));
+            return responder.respond(texture_response(found, origin));
+        }
+        Some(Route::Card(id)) => Some(String::from(id)),
+        None => None,
+    };
+    let store = cards.store.get().cloned();
     let (Some(id), Some(store), Some(slot)) = (id, store, Slot::take()) else {
         return responder.respond(response(None));
     };
@@ -279,6 +376,14 @@ pub fn protocol<R: Runtime>(
         drop(slot);
         responder.respond(response(image));
     });
+}
+
+/// The game's minion textures for a page (T-372): the layout of every layer
+/// and which textures exist; null while there is no usable set (not
+/// downloaded yet, offline, refused), when the page draws plain card art.
+#[tauri::command]
+pub fn texture_set(cards: State<'_, Cards>) -> Option<TextureView> {
+    cards.textures.get().and_then(|t| t.view())
 }
 
 #[cfg(test)]
@@ -308,6 +413,68 @@ mod tests {
         assert_eq!(hit.headers()[header::CONTENT_TYPE], "image/jpeg");
         assert_eq!(hit.headers()[header::X_CONTENT_TYPE_OPTIONS], "nosniff");
         let miss = response(None);
+        assert_eq!(miss.status(), StatusCode::NOT_FOUND);
+        assert!(miss.body().is_empty());
+    }
+
+    #[test]
+    fn a_path_is_a_card_or_a_texture_of_the_current_set_and_nothing_else() {
+        assert_eq!(route("/BG_CFM_315"), Some(Route::Card("BG_CFM_315")));
+        assert_eq!(
+            route("/tex/v1/skull.webp"),
+            Some(Route::Texture("skull.webp"))
+        );
+        assert_eq!(
+            route("/tex/v1/layout.json"),
+            Some(Route::Texture("layout.json"))
+        );
+        for path in [
+            "/tex/v2/skull.webp",
+            "/tex/skull.webp",
+            "/tex/",
+            "/tex/v1",
+            "/tex/v1/",
+            "tex/v1/skull.webp",
+            "//tex/v1/skull.webp",
+            "/",
+            "",
+        ] {
+            assert_eq!(route(path), None, "{path}");
+        }
+        // Anything but a bare file name finds nothing in the set (the store
+        // serves only names its manifest lists).
+        assert_eq!(
+            route("/tex/v1/../skull.webp"),
+            Some(Route::Texture("../skull.webp"))
+        );
+    }
+
+    #[test]
+    fn a_texture_is_served_with_its_type_and_the_apps_origin_only() {
+        let hit = texture_response(Some((vec![1, 2, 3], "image/webp")), Some(APP_ORIGIN));
+        assert_eq!(hit.status(), StatusCode::OK);
+        assert_eq!(hit.headers()[header::CONTENT_TYPE], "image/webp");
+        assert_eq!(hit.headers()[header::X_CONTENT_TYPE_OPTIONS], "nosniff");
+        assert_eq!(
+            hit.headers()[header::ACCESS_CONTROL_ALLOW_ORIGIN],
+            APP_ORIGIN
+        );
+        assert_eq!(hit.headers()[header::VARY], "Origin");
+        // Another page's origin never gets itself echoed back; the app's
+        // own is named, so the answer is the same whatever asked first.
+        for asked in [None, Some("https://evil.example"), Some("null")] {
+            let other = texture_response(Some((vec![1], "image/webp")), asked);
+            assert_eq!(
+                other.headers()[header::ACCESS_CONTROL_ALLOW_ORIGIN],
+                APP_ORIGIN
+            );
+        }
+        let https = texture_response(Some((vec![1], "image/webp")), Some("https://tauri.localhost"));
+        assert_eq!(
+            https.headers()[header::ACCESS_CONTROL_ALLOW_ORIGIN],
+            "https://tauri.localhost"
+        );
+        let miss = texture_response(None, Some(APP_ORIGIN));
         assert_eq!(miss.status(), StatusCode::NOT_FOUND);
         assert!(miss.body().is_empty());
     }

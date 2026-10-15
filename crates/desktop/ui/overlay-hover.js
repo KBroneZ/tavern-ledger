@@ -39,15 +39,38 @@ window.TLHover = (() => {
     card.style.setProperty("--card-font", `${TLScale.cardPx(p.width)}px`);
   }
 
-  // One minion as the game draws it (T-333): its picture, attack at the
-  // bottom left and health at the bottom right, golden as a ring and a star,
-  // its name under it.
-  function minionCard(m) {
+  const stat = (n) => (n === null || n === undefined ? "?" : String(n));
+
+  // The numbers and the star read out in words, in the language.
+  function spoken(m) {
+    const said = I18n.t("ov.board.stats", { atk: stat(m.atk), health: stat(m.health) });
+    return el("span", "visually-hidden", m.golden ? `${said}, ${I18n.t("keyword.golden")}` : said);
+  }
+
+  // One minion as the game draws it (T-372, minion-art/): the game's frame,
+  // the picture under it, the gems and a layer for each keyword, with its
+  // name under it.
+  function drawnMinion(m, art) {
+    const item = el("li", m.golden ? "hb-minion hb-drawn golden" : "hb-minion hb-drawn");
+    const frame = el("div", "hb-drawn-box");
+    frame.append(art.render(m));
+    // Dark Gifts (T-528): a mark per gift.
+    const gifts = giftMarks(m);
+    if (gifts) frame.append(gifts);
+    item.append(frame);
+    const name = TLCards.name(m.card_id);
+    item.append(el("i", name === null ? "hb-name unnamed" : "hb-name", name || m.card_id || "?"), spoken(m));
+    return item;
+  }
+
+  // The plain look, while the game's textures are not on this PC (T-333):
+  // its picture, attack at the bottom left and health at the bottom right,
+  // golden as a ring and a star, its name under it.
+  function plainMinion(m) {
     const item = el("li", m.golden ? "hb-minion golden" : "hb-minion");
     const frame = el("div", "hb-art");
     const art = TLCards.art(m.card_id, "art");
     if (art) frame.append(art);
-    const stat = (n) => (n === null || n === undefined ? "?" : String(n));
     const atk = el("b", "hb-atk", stat(m.atk));
     const hp = el("b", "hb-hp", stat(m.health));
     atk.setAttribute("aria-hidden", "true");
@@ -58,11 +81,13 @@ window.TLHover = (() => {
     if (gifts) frame.append(gifts);
     item.append(frame);
     const name = TLCards.name(m.card_id);
-    item.append(el("i", name === null ? "hb-name unnamed" : "hb-name", name || m.card_id || "?"));
-    // The numbers and the star read out in words, in the language.
-    const said = I18n.t("ov.board.stats", { atk: stat(m.atk), health: stat(m.health) });
-    item.append(el("span", "visually-hidden", m.golden ? `${said}, ${I18n.t("keyword.golden")}` : said));
+    item.append(el("i", name === null ? "hb-name unnamed" : "hb-name", name || m.card_id || "?"), spoken(m));
     return item;
+  }
+
+  function minionCard(m) {
+    const art = window.TLMinions;
+    return art ? drawnMinion(m, art) : plainMinion(m);
   }
 
   function boardStrip(view) {
@@ -150,6 +175,9 @@ window.TLHover = (() => {
     card.hidden = false;
     position();
   }
+
+  // The game's textures arrived (or went): the card is drawn again.
+  window.addEventListener("tl-minions", () => render());
 
   onEvent("overlay-hover", (event) => {
     hover = event.payload || null;

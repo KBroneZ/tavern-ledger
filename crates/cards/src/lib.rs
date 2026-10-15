@@ -9,9 +9,12 @@ pub mod catalog;
 pub mod combat_facts;
 pub mod net;
 pub mod store;
+pub mod textures;
 
 #[cfg(test)]
 mod store_tests;
+#[cfg(test)]
+mod textures_tests;
 
 pub use catalog::valid_id;
 pub use store::{CardStatus, CardStore, Locale};

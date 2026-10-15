@@ -17,4 +17,5 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # Already in Cargo.lock through Tauri and the uploader (PROVENANCE.md).
 flate2 = "1.1"
+sha2 = "0.11"
 reqwest = { version = "0.13", default-features = false, features = ["blocking", "native-tls"], optional = true }
