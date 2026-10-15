@@ -566,19 +566,37 @@
     };
   }
 
+  // What the shared drawing (minion-art/) needs for a token: Divine Shield
+  // is the one the replay tracks (it pops), the other keywords as they stand,
+  // and a health below 0 (overkill) is drawn as 0, as on the game's board.
+  const drawnTile = (tile) => ({
+    card_id: tile.id,
+    atk: tile.atk,
+    health: tile.health === null ? null : Math.max(tile.health, 0),
+    golden: tile.golden,
+    keywords: [...tile.keywords.filter((k) => k !== "divine_shield"), ...(tile.shield ? ["divine_shield"] : [])],
+  });
+
   // A minion as the game page draws it (D-131): an oval portrait, Attack in
   // a gold diamond and Health in a red drop, a gold ring when golden, a halo
   // while it has Divine Shield.
   function minionTile(ui, tile, h) {
-    const box = ui.el("span", "replay-minion");
-    // Each keyword's mark, shown by the stylesheet while the token has it.
-    const keys = ui.el("span", "replay-keys");
-    keys.setAttribute("aria-hidden", "true");
-    MARKED.forEach((k) => keys.append(ui.el("i", `replay-k replay-k-${k}`)));
-    box.append(keys);
+    // With the game's textures (T-372) the frame, gems and keyword layers
+    // come from the shared drawing; without them the page's own look.
+    const art = h.minionArt && h.minionArt();
+    const box = ui.el("span", art ? "replay-minion drawn" : "replay-minion");
     const frame = ui.el("span", "replay-frame");
-    const img = h.art(tile.id, "replay-art");
-    frame.append(img || ui.el("span", "replay-art art-missing"));
+    if (art) {
+      frame.append(art.render(drawnTile(tile)));
+    } else {
+      // Each keyword's mark, shown by the stylesheet while the token has it.
+      const keys = ui.el("span", "replay-keys");
+      keys.setAttribute("aria-hidden", "true");
+      MARKED.forEach((k) => keys.append(ui.el("i", `replay-k replay-k-${k}`)));
+      box.append(keys);
+      const img = h.art(tile.id, "replay-art");
+      frame.append(img || ui.el("span", "replay-art art-missing"));
+    }
     box.append(frame);
     const stats = ui.el("span", "replay-stats");
     stats.setAttribute("aria-hidden", "true");
@@ -609,6 +627,9 @@
     });
     // Damage past 0 (overkill) shows as 0, as on the game's board.
     const health = tile.health === null ? null : Math.max(tile.health, 0);
+    const art = h.minionArt && h.minionArt();
+    const drawn = art && box.classList.contains("drawn") ? box.querySelector(".tlm") : null;
+    if (drawn) art.update(drawn, drawnTile(tile));
     box.querySelector(".replay-atk").textContent = I18n.stat(tile.atk);
     box.querySelector(".replay-hp").textContent = I18n.stat(health);
     const exact = Turns.tipFacts({ atk: tile.atk, health, buffs: [] }, () => null).stats;
@@ -901,7 +922,7 @@
     return part;
   }
 
-  const api = { SPEEDS, BEAT_MS, IMPACT_MS, ATTACK_MS, combats, frames, steps, beats, groupBeat, frameBeats, lungeFrames, flipDelta, stepWords, frameWords, heroesOf, outcomeOf, section };
+  const api = { drawnTile, SPEEDS, BEAT_MS, IMPACT_MS, ATTACK_MS, combats, frames, steps, beats, groupBeat, frameBeats, lungeFrames, flipDelta, stepWords, frameWords, heroesOf, outcomeOf, section };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLReplay = api;
 })();

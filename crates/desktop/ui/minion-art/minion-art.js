@@ -137,12 +137,17 @@ export function createMinionArt(options) {
     return box;
   }
 
-  function numberLayer(op) {
-    const text = String(formatStat(op.value));
-    const el = doc.createElement("div");
+  /** Writes a number into its gem; longer numbers get a smaller face. */
+  function setNumber(el, which, value) {
+    const text = String(formatStat(value));
     const size = text.length > 5 ? " tlm-num-xlong" : text.length > 3 ? " tlm-num-long" : "";
-    el.className = `tlm-num tlm-num-${op.which}${size}`;
+    el.className = `tlm-num tlm-num-${which}${size}`;
     el.textContent = text;
+  }
+
+  function numberLayer(op) {
+    const el = doc.createElement("div");
+    setNumber(el, op.which, op.value);
     const [x, y] = NUMBER_AT[op.which];
     el.style.left = percent(x, layout.width);
     el.style.top = percent(y, layout.height);
@@ -151,8 +156,12 @@ export function createMinionArt(options) {
 
   const fxReady = (kind) => FX_TEXTURES[kind].every(has);
 
-  function render(minion) {
-    const root = doc.createElement("div");
+  // What each drawn minion is made of (its layers) and where its numbers are.
+  const drawn = new WeakMap();
+  const layerKey = (minion, ops) => `${minion.golden === true}|${ops.map((o) => (o.kind === "img" ? o.name : o.kind === "fx" ? `fx:${o.fx}` : o.kind)).join(",")}`;
+
+  /** Makes `minion`'s layers inside `root` (empty); `keepArt` is a picture box to put back. */
+  function build(root, minion, keepArt) {
     root.className = minion.golden === true ? "tlm tlm-golden" : "tlm";
     root.setAttribute("aria-hidden", "true");
     let marks = null;
@@ -167,10 +176,12 @@ export function createMinionArt(options) {
       word.textContent = markText(kind);
       marks.append(word);
     };
-    for (const op of planLayers(minion, layout, has)) {
+    const ops = planLayers(minion, layout, has);
+    const numbers = {};
+    for (const op of ops) {
       if (op.kind === "img") root.append(imageLayer(op));
-      else if (op.kind === "art") root.append(artLayer(minion));
-      else if (op.kind === "number") root.append(numberLayer(op));
+      else if (op.kind === "art") root.append(keepArt || artLayer(minion));
+      else if (op.kind === "number") root.append((numbers[op.which] = numberLayer(op)));
       else if (op.kind === "fx" && WORDED_FX.includes(op.fx)) {
         const spec = layout[op.fx];
         if (!spec) {
@@ -190,11 +201,38 @@ export function createMinionArt(options) {
         else addMark(op.fx);
       }
     }
+    drawn.set(root, { key: layerKey(minion, ops), numbers });
+  }
+
+  function render(minion) {
+    const root = doc.createElement("div");
+    build(root, minion, null);
     return root;
+  }
+
+  /**
+   * Shows `minion` in an element `render` made: new numbers only change the
+   * numbers; a golden change or a keyword that came or went makes the layers
+   * again, keeping the picture (it is not loaded twice). Anything else is left alone.
+   */
+  function update(root, minion) {
+    const made = drawn.get(root);
+    if (!made) return;
+    const ops = planLayers(minion, layout, has);
+    if (layerKey(minion, ops) === made.key) {
+      for (const op of ops) if (op.kind === "number") setNumber(made.numbers[op.which], op.which, op.value);
+      return;
+    }
+    const isArt = (c) => String(c.className).split(" ").includes("tlm-art");
+    const old = Array.from(root.children).find(isArt);
+    // Built into this very element, so a word added later by an effect that fails lands on it.
+    root.replaceChildren();
+    build(root, minion, old || null);
   }
 
   return {
     render,
+    update,
     ready,
     setActive: (on) => fx && fx.setActive(on),
     destroy: () => fx && fx.destroy(),
