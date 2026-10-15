@@ -105,7 +105,9 @@ pub struct Layout {
 impl Layout {
     /// The odds bar goes to the top centre of the game's picture unless the
     /// user placed it; the other panels stay in the default stack until they
-    /// are placed.
+    /// are placed. `screen` is the overlay window, which covers the game's
+    /// picture (T-349), so its 16:9 part is the picture; when the taskbar
+    /// cuts the window short the bar follows the part that shows.
     fn with_default_odds(mut self, screen: (f64, f64)) -> Layout {
         let (sw, sh) = sane_screen(screen);
         let play = play_area(Area {

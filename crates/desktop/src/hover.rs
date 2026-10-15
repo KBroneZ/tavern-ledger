@@ -40,8 +40,8 @@ pub fn card_width(game_height: f64) -> f64 {
 }
 
 /// What the page needs to show the card: the place hovered (1 is the top
-/// slot), the slot's rectangle and where the card goes (the top of the game
-/// window), both in the overlay window's own pixels.
+/// slot), the slot's rectangle and where the card goes (the top of the game's
+/// picture), both in the overlay window's own pixels.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Hover {
     pub place: i64,
@@ -289,6 +289,7 @@ mod tests {
                         .card;
                     let middle = card.x + card.width / 2.0;
                     assert!((middle - w / scale / 2.0).abs() < 0.01, "{card:?}");
+                    assert!(card.x >= 0.0 && card.x + card.width <= w / scale - GAP + 0.01);
                     // Still the size the game's board asks for (D-067).
                     assert!((card.width - 0.85 * h / scale).abs() < 0.01, "{card:?}");
                 }
@@ -310,6 +311,35 @@ mod tests {
             "{card:?}"
         );
         assert_eq!(card.y, GAP);
+    }
+
+    #[test]
+    fn a_taller_game_window_on_a_scaled_second_monitor_gets_its_card_on_the_picture() {
+        // A 1440x1080 (4:3) game at (2100, 150) on a 150% monitor whose work
+        // area starts at x 1920: the picture is 1440x810 with 135 px bars.
+        let game = client(2100.0, 150.0, 1440.0, 1080.0);
+        let board = default_area((1440.0, 1080.0));
+        let f = frame((1920.0, 0.0), 1.5, (2560.0, 1408.0));
+        let card = hover_at(game, board, 8, 1, middle_of(game, board, 8, 2), f)
+            .unwrap()
+            .card;
+        assert!((card.width * 1.5 - 0.85 * 810.0).abs() < 0.01, "{card:?}");
+        let middle = (card.x + card.width / 2.0) * 1.5 + 1920.0;
+        assert!((middle - (2100.0 + 720.0)).abs() < 0.01);
+        let top = card.y * 1.5;
+        assert!((top - (150.0 + 135.0 + 8.0 * 1.5)).abs() < 0.01, "{card:?}");
+    }
+
+    #[test]
+    fn a_game_window_smaller_than_the_card_keeps_a_card_inside_it() {
+        let game = client(0.0, 0.0, 300.0, 200.0);
+        let board = default_area((300.0, 200.0));
+        let f = frame((0.0, 0.0), 1.0, (300.0, 200.0));
+        let card = hover_at(game, board, 8, 1, middle_of(game, board, 8, 2), f)
+            .unwrap()
+            .card;
+        assert!(card.x >= 0.0 && card.x + card.width <= 300.0, "{card:?}");
+        assert!(card.width > 0.0);
     }
 
     #[test]

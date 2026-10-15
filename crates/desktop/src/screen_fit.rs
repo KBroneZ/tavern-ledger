@@ -189,8 +189,8 @@ pub struct CardPlace {
     pub max_height: f64,
 }
 
-/// Puts a card of `want_width` at the top of `game` (the game window's
-/// client area), centred on it, like the board strip the game itself shows
+/// Puts a card of `want_width` at the top of `game` (the game's 16:9 picture,
+/// `play_area` of its client area), centred on it, like the board strip the game itself shows
 /// (T-309, D-049). It stays inside `bounds` (the overlay window, which covers
 /// the game's picture on the monitor holding it): narrower than the game window or the
 /// screen when it must be, moved in when the game window reaches past the
