@@ -165,8 +165,9 @@ pub struct LiveGame {
     /// player ("Max damage: 15", T-315); None when no cap applies or the
     /// log has none. Live only, from the game entity.
     pub damage_cap: Option<i64>,
-    /// The combat odds against the next opponent (T-605), added by the app
-    /// from its own thread; None when switched off or not worked out yet.
+    /// The odds of the combat on screen (T-605, D-152), added by the app from
+    /// its own thread; None in a shop turn, when switched off or not worked
+    /// out yet.
     pub odds: Option<LiveOdds>,
     /// The player's own game-long counters (T-611, D-139), added by the app
     /// from the held live view: `None` when unknown (no game being played, or

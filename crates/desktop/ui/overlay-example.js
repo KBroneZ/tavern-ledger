@@ -24,7 +24,7 @@ const EXAMPLE_GAME = {
     { kind: "free_rolls", count: 2 },
   ],
   odds: {
-    seat: 1, gap: null, seen_round: 5, won: 0.58, tied: 0.09, lost: 0.33, trials: 10000,
+    seat: 1, gap: null, round: 5, won: 0.58, tied: 0.09, lost: 0.33, trials: 10000,
     dealt: { low: 5, likely: 7, high: 10 }, taken: { low: 4, likely: 6, high: 9 },
     approximate: [], missing: [], start_of_combat: false, new_build: null,
   },

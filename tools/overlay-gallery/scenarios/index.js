@@ -19,7 +19,7 @@ const hover = (place, member) => ({ place, member, slot: { x: 24, y: 120 + place
 
 const withOdds = (game, odds) => ({ ...game, odds });
 const gap = (name, extra = {}) => ({
-  seat: 1, gap: name, seen_round: null, boards: [], won: 0, tied: 0, lost: 0, trials: 0,
+  seat: 1, gap: name, round: null, boards: [], won: 0, tied: 0, lost: 0, trials: 0,
   dealt: null, taken: null, approximate: [], missing: [], start_of_combat: false, ...extra,
 });
 
@@ -70,7 +70,7 @@ const solo = soloGame();
 const soloWithOdds = withOdds(solo, SOLO_ODDS);
 const duos = duosGame();
 const duosOdds = {
-  ...SOLO_ODDS, seat: 1, seen_round: 5, boards: DUOS_BOARDS([6, 5, 5]), won: 0.47, tied: 0.12, lost: 0.41,
+  ...SOLO_ODDS, seat: 1, round: 6, boards: DUOS_BOARDS([6, 6, 6]), won: 0.47, tied: 0.12, lost: 0.41,
 };
 
 // The game's own mark for the opponent being fought goes with the game.
@@ -167,7 +167,6 @@ const FOCUS = {
   "gap-no-card-data": STACK_SMALL,
   "gap-not-modelled": STACK_SMALL,
   "gap-bad-board": STACK_SMALL,
-  "gap-order": STACK_DUOS,
   "gap-missing-board": STACK_DUOS,
   "hover-solo": HOVER_CARD_AREA,
   "hover-duos": HOVER_CARD_AREA,
@@ -198,11 +197,10 @@ const DEFINITIONS = [
   ["solo", soloWithOdds, {}],
   ["duos", withOdds(duos, duosOdds), {}],
   ["gap-no-board-seen", withOdds(solo, gap("no_board_seen")), {}],
-  ["gap-no-card-data", withOdds(solo, gap("no_card_data", { seen_round: 6 })), {}],
-  ["gap-not-modelled", withOdds(solo, gap("not_modelled", { seen_round: 6, missing: ["EX_M_WARDEN"] })), {}],
-  ["gap-bad-board", withOdds(solo, gap("bad_board", { seen_round: 6 })), {}],
-  ["gap-order", withOdds(duos, gap("order")), {}],
-  ["gap-missing-board", withOdds(duos, gap("missing_board", { boards: DUOS_BOARDS([6, null, null]) })), {}],
+  ["gap-no-card-data", withOdds(solo, gap("no_card_data", { round: 6 })), {}],
+  ["gap-not-modelled", withOdds(solo, gap("not_modelled", { round: 6, missing: ["EX_M_WARDEN"] })), {}],
+  ["gap-bad-board", withOdds(solo, gap("bad_board", { round: 6 })), {}],
+  ["gap-missing-board", withOdds(duos, gap("missing_board", { round: 6, boards: DUOS_BOARDS([6, 6, null]) })), {}],
   ["hover-solo", soloWithOdds, { hover: hover(1, null) }],
   ["hover-duos", withOdds(duos, duosOdds), { hover: hover(1, 0) }],
   ["damage-cap", { ...solo, damage_cap: 15 }, {}],

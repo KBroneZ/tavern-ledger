@@ -338,6 +338,18 @@ impl GameReader {
             .filter(|cap| (1..=MAX_DAMAGE_CAP).contains(cap))
     }
 
+    /// The number of the combat the game is playing now (D-152): the combat
+    /// turn's half, the same number the report gives that combat's round.
+    /// `None` in a shop turn, before the first combat, or when the game could
+    /// not be read.
+    pub fn combat_round_now(&self) -> Option<i64> {
+        if self.error.is_some() {
+            return None;
+        }
+        let turn = self.collector.turn();
+        (turn >= 2 && turn % 2 == 0).then_some(turn / 2)
+    }
+
     /// The player's own board as it is now in a shop turn (T-605): what the
     /// player sees on their side of the tavern, with the lasting keywords the
     /// simulator reads. `None` in a combat turn, before the first shop turn,
@@ -507,6 +519,13 @@ impl LogReader {
     pub fn damage_cap_now(&self) -> Option<i64> {
         self.in_progress_index()?;
         self.current.as_ref()?.damage_cap_now()
+    }
+
+    /// The combat the Battlegrounds game in progress is playing (see
+    /// [`GameReader::combat_round_now`]); `None` when no such game is on.
+    pub fn combat_round_now(&self) -> Option<i64> {
+        self.in_progress_index()?;
+        self.current.as_ref()?.combat_round_now()
     }
 
     /// The own board in a shop turn of the Battlegrounds game in progress

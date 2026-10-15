@@ -118,7 +118,7 @@ function soloOpponents() {
 }
 
 const SOLO_ODDS = {
-  seat: 1, gap: null, seen_round: 6, boards: [], won: 0.58, tied: 0.09, lost: 0.33, trials: 10000,
+  seat: 1, gap: null, round: 6, boards: [], won: 0.58, tied: 0.09, lost: 0.33, trials: 10000,
   dealt: { low: 5, likely: 8, high: 12 }, taken: { low: 4, likely: 6, high: 11 },
   approximate: [], missing: [], start_of_combat: false,
 };
@@ -223,6 +223,7 @@ function heroSelectGame({ duos = false, heroes, rerolls = 0 }) {
   };
 }
 
+// The Duos boards of the combat; null for one that has not entered play yet.
 const DUOS_BOARDS = (rounds) => [
   { role: "teammate", seat: 6, round: rounds[0] },
   { role: "opponent", seat: 1, round: rounds[1] },

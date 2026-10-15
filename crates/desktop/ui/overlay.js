@@ -268,7 +268,7 @@ function renderOdds(g) {
     box.append(bar);
     // A game build the rules were not checked against warns here (D-145); "≈" when a card is played with a gap.
     if (v.warningShort) box.append(el("p", "odds-warning", v.warningShort));
-    if (v.age) box.append(el("p", "odds-age", v.approx ? `≈ ${v.age}` : v.age));
+    if (v.approx) box.append(el("p", "odds-age", `≈ ${TLI18n.t("ov.odds.approx")}`));
   }
   box.append(el("span", "visually-hidden", v.said));
   panel.replaceChildren(box);
