@@ -242,7 +242,8 @@ test("an effect scrolled out of view is not drawn, and the loop stops once nothi
   c.run();
   assert.equal(env.counts.drawArrays || 0, 0, "nothing drawn while out of view");
   assert.equal(away.drawn.length, 0);
-  assert.equal(c.state.tasks.length, 0, "no timer left: the loop waits to be woken");
+  assert.equal(c.state.tasks.length, 1, "no drawing: only a slow look for canvases that left the page");
+  assert.equal(c.state.tasks[0].delay, 3000);
 });
 
 test("an effect that comes into view is drawn again, and only it", async () => {
@@ -256,9 +257,9 @@ test("an effect that comes into view is drawn again, and only it", async () => {
   w.say(a, false);
   w.say(b, false);
   c.run();
-  assert.equal(c.state.tasks.length, 0);
   w.say(b, true);
-  assert.equal(c.state.tasks.length, 1, "coming into view wakes the loop");
+  assert.equal(c.state.tasks.length, 1, "coming into view wakes the loop at once, in place of the slow look");
+  assert.equal(c.state.tasks[0].delay, 0);
   c.run();
   assert.equal(a.drawn.length, 0);
   assert.equal(b.drawn.length, 1);
@@ -292,4 +293,78 @@ test("without a visibility observer the effect is drawn whenever it is shown, as
   await settle();
   c.run();
   assert.ok(env.counts.drawArrays > 0);
+});
+
+test("attaching the same canvas again is a no-op while it runs, and starts it again once the loop dropped it", async () => {
+  const { fx, env, c } = await make();
+  const canvas = fakeCanvas();
+  assert.equal(fx.attach("windfury", canvas, () => {}), true);
+  assert.equal(fx.attach("windfury", canvas, () => {}), true);
+  await settle();
+  c.run();
+  const once = env.counts.drawArrays;
+  assert.equal(once, 4, "one instance: four passes, not eight");
+  // Off the page for more than a second: the loop drops it.
+  canvas.isConnected = false;
+  c.state.time = 0.1;
+  c.run();
+  c.state.time = 2;
+  c.run();
+  assert.equal(c.state.tasks.length, 0);
+  canvas.isConnected = true;
+  assert.equal(fx.attach("windfury", canvas, () => {}), true, "a new effect for the same canvas");
+  await settle();
+  c.run();
+  assert.equal(env.counts.drawArrays, once + 4);
+});
+
+test("by default the page's own IntersectionObserver watches the canvases, one for all, and lets go on destroy", async () => {
+  const seen = { made: 0, observed: [], unobserved: [] };
+  let notify;
+  globalThis.IntersectionObserver = class {
+    constructor(fn) { seen.made += 1; notify = fn; }
+    observe(el) { seen.observed.push(el); }
+    unobserve(el) { seen.unobserved.push(el); }
+  };
+  try {
+    const { createFx } = await load();
+    const env = fakeDoc();
+    const c = clock();
+    const fx = createFx({ document: env.doc, layout: LAYOUT, loadImage: async (name) => ({ name }), schedule: c.schedule, unschedule: c.unschedule, now: c.now });
+    const a = fakeCanvas();
+    const b = fakeCanvas();
+    fx.attach("windfury", a, () => {});
+    fx.attach("stealth", b, () => {});
+    assert.equal(seen.made, 1, "one observer");
+    assert.deepEqual(seen.observed, [a, b]);
+    await settle();
+    notify([{ target: a, isIntersecting: true }]);
+    c.run();
+    assert.equal(a.drawn.length, 1, "in view: drawn");
+    assert.equal(b.drawn.length, 0, "not reported in view yet: not drawn");
+    notify([{ target: a, isIntersecting: false }, { target: {}, isIntersecting: true }]);
+    fx.destroy();
+    assert.deepEqual(seen.unobserved, [a, b]);
+  } finally {
+    delete globalThis.IntersectionObserver;
+  }
+});
+
+test("effects out of view whose canvases are then removed are swept out and the loop ends", async () => {
+  const w = watcher();
+  const { fx, c } = await make({ observe: w.observe });
+  const canvas = fakeCanvas();
+  fx.attach("windfury", canvas, () => {});
+  await settle();
+  w.say(canvas, false);
+  c.run();
+  assert.equal(c.state.tasks.length, 1);
+  canvas.isConnected = false;
+  c.state.time = 5;
+  c.run();
+  assert.equal(c.state.tasks.length, 1, "first seen gone");
+  c.state.time = 10;
+  c.run();
+  assert.equal(c.state.tasks.length, 0, "dropped; nothing left to look at");
+  assert.equal(w.watched.size, 0);
 });

@@ -809,8 +809,6 @@ html:not([data-detail="advanced"]) .rp-stepper {
   font-weight: 700;
 }
 
-/* ---------- Narrow screens ---------- */
-
 /* ---------- The game's own drawing of a minion (T-372, D-150) ----------
    Once the textures are loaded (art/runtime.ts) a token holds the shared
    drawing (.tlm: frame, gems with their numbers, every keyword layer) in its
@@ -868,6 +866,8 @@ html:not([data-detail="advanced"]) .rp-stepper {
 .rp-minion:has(.tlm).is-triggered .tlm {
   filter: drop-shadow(0 0 5px var(--rp-trigger));
 }
+
+/* ---------- Narrow screens ---------- */
 
 @media (max-width: 720px) {
   .rp-side {
