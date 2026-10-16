@@ -102,15 +102,24 @@ impl<T> Playback<T> {
 
     /// Keeps `view`, the live state built from every line read so far.
     pub fn record(&mut self, view: T, now: Instant) {
-        if self.views.len() >= MAX_VIEWS {
-            // Keep the one on screen; drop the oldest one still waiting.
-            self.views.remove(1);
+        // Polls that repeat while the log only plays (no packet arrives) keep
+        // views of the same count: they are shown at the same moment, so the
+        // newest takes the place of the last, with the age of the first. A
+        // pile of them would push out the early view of a board entering
+        // play, which waits for the screen the longest.
+        if let Some(last) = self.views.back_mut().filter(|h| h.arrived == self.arrived) {
+            last.view = view;
+        } else {
+            if self.views.len() >= MAX_VIEWS {
+                // Keep the one on screen; drop the oldest one still waiting.
+                self.views.remove(1);
+            }
+            self.views.push_back(Held {
+                arrived: self.arrived,
+                at: now,
+                view,
+            });
         }
-        self.views.push_back(Held {
-            arrived: self.arrived,
-            at: now,
-            view,
-        });
         // Views older than the newest shown one are never shown again.
         while self.views.len() > 1 && self.shown(&self.views[1], now) {
             self.views.pop_front();
@@ -253,6 +262,49 @@ mod tests {
         p.record("caught up", t);
         assert_eq!(p.views.len(), 1);
         assert_eq!(p.view(t), Some(&"caught up"));
+    }
+
+    #[test]
+    fn a_view_kept_at_the_same_count_replaces_the_last_and_keeps_its_age() {
+        let t = Instant::now();
+        let mut p = Playback::default();
+        feed(&mut p, GS, 10);
+        feed(&mut p, PT, 10);
+        p.record("shown", t);
+        feed(&mut p, GS, 10);
+        p.record("first", t);
+        p.record("second", t + Duration::from_secs(100));
+        assert_eq!(p.views.len(), 2, "one view per count");
+        assert_eq!(p.view(t + Duration::from_secs(60)), Some(&"shown"));
+        // Held since the first record, not the second: the safeguard of
+        // MAX_HOLD cannot be pushed back by a poll that repeats.
+        assert_eq!(
+            p.view(t + MAX_HOLD + Duration::from_secs(1)),
+            Some(&"second")
+        );
+    }
+
+    #[test]
+    fn polls_that_repeat_do_not_push_out_the_view_of_a_board_entering_play() {
+        // A combat of a minute: the view kept when the boards entered play
+        // waits for the screen while a view per poll is kept at the count of
+        // the whole combat. Those must not evict the early one.
+        let t = Instant::now();
+        let mut p = Playback::default();
+        feed(&mut p, GS, 10);
+        feed(&mut p, PT, 10);
+        p.record("shop", t);
+        feed(&mut p, GS, 20);
+        p.record("boards in", t);
+        feed(&mut p, GS, 480);
+        for _ in 0..(2 * MAX_VIEWS) {
+            p.record("combat polled", t);
+        }
+        assert!(p.views.len() <= 3, "{} views", p.views.len());
+        feed(&mut p, PT, 20);
+        assert_eq!(p.view(t), Some(&"boards in"));
+        feed(&mut p, PT, 480);
+        assert_eq!(p.view(t), Some(&"combat polled"));
     }
 
     const GS_FULL: &str = "D 10:00:00.0000000 GameState.DebugPrintPower() -     FULL_ENTITY - Creating ID=60 CardID=BG25_011pe";

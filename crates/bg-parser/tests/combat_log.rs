@@ -544,3 +544,55 @@ fn the_combat_round_now_is_given_in_a_combat_turn_only() {
         .for_each(|l| reader.feed(l));
     assert_eq!(reader.combat_round_now(), None, "the game is over");
 }
+
+/// The boards that have entered play in the combat on now, line by line, in a
+/// real game: `(combat round, boards in)` each time it changes.
+fn boards_in_over(fixture: &str) -> Vec<(i64, usize)> {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join(format!("tests/data/real/{fixture}.log"));
+    let text = std::fs::read_to_string(path)
+        .expect("fixture")
+        .replace("\r\n", "\n");
+    let mut reader = LogReader::default();
+    let mut seen: Vec<(i64, usize)> = Vec::new();
+    for l in text.lines() {
+        reader.feed(l);
+        let Some(round) = reader.combat_round_now() else {
+            continue;
+        };
+        if let Some(boards) = reader.combat_boards_in_now() {
+            if seen.last() != Some(&(round, boards)) {
+                seen.push((round, boards));
+            }
+        }
+    }
+    seen
+}
+
+#[test]
+fn a_solo_combat_has_both_boards_in_at_its_first_attack() {
+    let seen = boards_in_over("b253216_solo");
+    assert!(seen.len() >= 3, "several combats: {seen:?}");
+    assert!(
+        seen.iter().all(|&(_, boards)| boards == 2),
+        "own and opponent board enter together: {seen:?}"
+    );
+    let rounds: Vec<i64> = seen.iter().map(|s| s.0).collect();
+    assert!(rounds.windows(2).all(|w| w[0] < w[1]), "once per combat");
+}
+
+#[test]
+fn a_duos_combat_gains_a_board_each_time_one_enters_play() {
+    let seen = boards_in_over("b253216_duos");
+    for round in seen.iter().map(|s| s.0) {
+        let counts: Vec<usize> = seen.iter().filter(|s| s.0 == round).map(|s| s.1).collect();
+        assert!(
+            counts.windows(2).all(|w| w[0] < w[1]),
+            "round {round}: never fewer boards than before: {counts:?}"
+        );
+    }
+    assert!(
+        seen.iter().any(|&(_, boards)| boards == 4),
+        "all four boards of a team fight enter play in some combat: {seen:?}"
+    );
+}

@@ -354,6 +354,18 @@ impl GameReader {
         (turn >= 2 && turn % 2 == 0).then_some(turn / 2)
     }
 
+    /// How many boards have entered play so far in the combat the game is
+    /// playing now (a board enters play when it first attacks); `None` in a
+    /// shop turn or when the game could not be read. It only grows within a
+    /// combat (both sides' boards in Solo enter together, a Duos team's
+    /// second board later), so a reader can tell the moment the odds' input
+    /// changes without building a report.
+    pub fn combat_boards_in_now(&self) -> Option<usize> {
+        let round = self.combat_round_now()?;
+        let seen = self.collector.entries.get(&round)?;
+        Some(seen.iter().filter(|e| e.3.is_some()).count())
+    }
+
     /// The player's own board as it is now in a shop turn (T-605): what the
     /// player sees on their side of the tavern, with the lasting keywords the
     /// simulator reads. `None` in a combat turn, before the first shop turn,
@@ -530,6 +542,14 @@ impl LogReader {
     pub fn combat_round_now(&self) -> Option<i64> {
         self.in_progress_index()?;
         self.current.as_ref()?.combat_round_now()
+    }
+
+    /// How many boards have entered play in the combat of the Battlegrounds
+    /// game in progress (see [`GameReader::combat_boards_in_now`]); `None`
+    /// when no such game is on or it is not a combat turn.
+    pub fn combat_boards_in_now(&self) -> Option<usize> {
+        self.in_progress_index()?;
+        self.current.as_ref()?.combat_boards_in_now()
     }
 
     /// The own board in a shop turn of the Battlegrounds game in progress
