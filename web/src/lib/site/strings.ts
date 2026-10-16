@@ -129,7 +129,8 @@ export const SITE_STRINGS = {
   "home.safe.title": "What it does to your game",
   "home.safe.body":
     "It reads the log files the game already writes on your PC and, for the overlay, where your pointer is over the game window. By default it also reads two things the game already shows you, the lobby's tribes and your own rating, from the game's memory, read-only, on your PC only. You can turn that off in Settings. It goes against the letter of Blizzard's rules and the account at risk is yours, as the terms say.",
-  "home.safe.1": "It never changes the game, adds code to it or changes its files.",
+  "home.safe.1":
+    "It never changes the game or adds code to it. The only files it can write are Hearthstone's two logging settings files, and only when you click Fix, with a backup.",
   "home.safe.2": "It never plays or clicks for you.",
   "home.safe.3": "It never shows what you could not see on your own screen.",
   "home.yours.title": "Your games stay yours",

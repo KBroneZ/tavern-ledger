@@ -2,6 +2,8 @@
 
 Last updated: 16 October 2026
 
+**What changed on 16 October 2026 (also that day, desktop app only):** section 9 now says that, only when you click Fix in the app's setup notice, the app can create or complete Hearthstone's two logging settings files (`log.config` and `client.config`), keeping a `.bak` copy of any file it changes. It still only reads the game's logs and writes nothing else in the game's folders.
+
 **What changed on 16 October 2026:** reading the lobby's tribes and your rating from the game is now on by default, and section 9 says what it reads, how to turn it off and the risk to your account.
 
 **What changed on 11 October 2026:** public leaderboards (section 4), community hero stats (section 4) and the server's check of display names (section 3).
@@ -59,7 +61,7 @@ As far as the law allows, we are not liable for indirect losses or for losses ca
 
 ## 9. The game
 
-Tavern Ledger reads the log files the game writes on your PC. By default (you can turn it off at any time in Settings, under "Read from the game", and the app keeps your choice; if you never chose, including on an install from before 16 October 2026, it is on), the app also reads two values the game shows you, the lobby's five tribes and your own Battlegrounds rating, from the game's memory while it runs, with read-only access. The values stay on your PC and are never uploaded. Reading the game's memory goes against the letter of Blizzard's End User License Agreement (section 1.C); Blizzard has tolerated such reads by other trackers for years, but it has not approved this one and could act against it at any time. The risk to your Battle.net account is yours, and it applies for as long as this is on: turn it off in Settings if you do not want to take it. Tavern Ledger never changes game files, injects code or acts in the game for you. Your use of Hearthstone stays subject to Blizzard's own terms.
+Tavern Ledger reads the log files the game writes on your PC. By default (you can turn it off at any time in Settings, under "Read from the game", and the app keeps your choice; if you never chose, including on an install from before 16 October 2026, it is on), the app also reads two values the game shows you, the lobby's five tribes and your own Battlegrounds rating, from the game's memory while it runs, with read-only access. The values stay on your PC and are never uploaded. Reading the game's memory goes against the letter of Blizzard's End User License Agreement (section 1.C); Blizzard has tolerated such reads by other trackers for years, but it has not approved this one and could act against it at any time. The risk to your Battle.net account is yours, and it applies for as long as this is on: turn it off in Settings if you do not want to take it. Tavern Ledger never injects code or acts in the game for you, and it changes no game file except one thing: only when you click Fix in the app's setup notice, it can create or complete Hearthstone's two logging settings files, `log.config` and `client.config`, keeping a `.bak` copy of any file it changes. Your use of Hearthstone stays subject to Blizzard's own terms.
 
 ## 10. Ending
 

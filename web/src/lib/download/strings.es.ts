@@ -55,12 +55,14 @@ export const ES: Record<DlKey, string> = {
   "check.sums.list": "la lista (SHA256SUMS)",
   "check.sums.signature": "su firma",
   "reads.title": "Qué lee la aplicación",
-  "reads.short": "Lee los archivos de registro del juego en tu PC, y nunca cambia el juego.",
+  "reads.short":
+    "Lee los archivos de registro del juego en tu PC y nunca cambia el juego. Solo si pulsas Arreglar puede crear o completar los dos archivos de ajustes de registro de Hearthstone.",
   "reads.1": "Los archivos de registro del juego en tu PC, para guardar tus partidas de Campos de Batalla.",
   "reads.2": "Para el overlay, dónde está tu puntero sobre la ventana del juego.",
   "reads.3":
     "Activada por defecto, y puedes desactivarla en Ajustes: dos cosas que el juego ya te muestra, las razas de la partida y tu propia puntuación, leídas de la memoria del juego sin escribir en ella. Se quedan en tu PC y nunca se suben. Esto va en contra de la letra de las normas de Blizzard, y la cuenta en riesgo es la tuya.",
-  "reads.4": "Nunca cambia el juego, sus archivos ni su memoria, y nunca juega por ti.",
+  "reads.4":
+    "Nunca cambia el juego, su memoria ni los archivos propios del juego, y nunca juega por ti. Los únicos archivos que escribe ahí son los dos archivos de ajustes de registro de Hearthstone, log.config y client.config, y solo cuando pulsas Arreglar (guarda una copia de seguridad).",
   "reads.data":
     "Tus partidas se quedan en tu PC, en %APPDATA%\\TavernLedger. No se sube nada a menos que inicies sesión y actives la subida.",
   "reads.privacy": "Política de privacidad",

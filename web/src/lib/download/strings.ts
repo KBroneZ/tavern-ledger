@@ -57,12 +57,14 @@ export const DL_STRINGS = {
   "check.sums.list": "the list (SHA256SUMS)",
   "check.sums.signature": "its signature",
   "reads.title": "What the app reads",
-  "reads.short": "It reads the game's log files on your PC, and it never changes the game.",
+  "reads.short":
+    "It reads the game's log files on your PC, and it never changes the game. Only if you click Fix can it create or complete Hearthstone's two logging settings files.",
   "reads.1": "The game's log files on your PC, to record your Battlegrounds games.",
   "reads.2": "For the overlay, where your pointer is over the game window.",
   "reads.3":
     "On by default, and you can turn it off in Settings: two things the game already shows you, the lobby's tribes and your own rating, read-only from the game's memory. They stay on your PC and are never uploaded. This goes against the letter of Blizzard's rules, and the account at risk is yours.",
-  "reads.4": "It never changes the game, its files or its memory, and it never plays for you.",
+  "reads.4":
+    "It never changes the game, its memory or the game's own files, and it never plays for you. The only files it writes there are Hearthstone's two logging settings files, log.config and client.config, and only when you click Fix (it keeps a backup).",
   "reads.data":
     "Your games stay on your PC in %APPDATA%\\TavernLedger. Nothing is uploaded unless you sign in and turn uploading on.",
   "reads.privacy": "Privacy policy",
