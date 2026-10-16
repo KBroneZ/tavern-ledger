@@ -10,6 +10,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use bg_parser::report::LobbySlot;
 use bg_parser::LogReader;
+use tracker::odds::{odds_input, LiveFacts};
 use tracker::store::Store;
 use tracker::Watcher;
 
@@ -186,4 +187,77 @@ fn a_log_without_played_lines_is_shown_as_it_is_read() {
         places(&lobby_after(&lines[..end]))
     );
     assert!(watcher.live_report().is_some());
+}
+
+/// The line numbers of a Solo fixture's first combat: its `TURN`, the first
+/// attack (where the boards enter play) and the next shop turn's `TURN`.
+fn first_combat(lines: &[&str]) -> (usize, usize, usize) {
+    let turn = |n: i64| {
+        lines
+            .iter()
+            .position(|l| l.contains(&format!("Entity=GameEntity tag=TURN value={n}")))
+            .expect("turn in the fixture")
+    };
+    let start = turn(2);
+    let attack = start
+        + lines[start..]
+            .iter()
+            .position(|l| l.contains("BlockType=ATTACK"))
+            .expect("an attack");
+    (start, attack, turn(3))
+}
+
+/// The combat arrives whole in one burst, with the next shop turn right
+/// behind it, and the game plays it for many seconds. The odds need the
+/// combat's boards as soon as the game has played them in (the first
+/// attack), not once it has played the whole combat (session 192).
+#[test]
+fn the_combat_boards_show_when_the_game_plays_them_in_not_at_the_end() {
+    let log = fixture("real/b253216_solo");
+    let lines: Vec<&str> = log.lines().collect();
+    let (start, attack, shop) = first_combat(&lines);
+    assert!(attack + 20 < shop, "a combat with attacks before its end");
+
+    let root = temp_dir();
+    let logs = root.join("Logs");
+    fs::create_dir_all(logs.join(SESSION)).unwrap();
+    let power = logs.join(SESSION).join("Power.log");
+    let mut watcher = Watcher::new(&logs, Store::open(&root.join("data")).unwrap());
+    let own = |lines: &[&str]| lines.iter().map(|l| l.to_string()).collect::<Vec<_>>();
+
+    append(&power, &played_along(&lines[..start]));
+    watcher.poll().unwrap();
+    assert_eq!(watcher.live_combat_round(), None, "a shop turn");
+
+    // The whole combat and the shop turn after it arrive in one poll.
+    let burst_end = (shop + 10).min(lines.len());
+    append(&power, &own(&lines[start..burst_end]));
+    watcher.poll().unwrap();
+    assert_eq!(
+        watcher.live_combat_round(),
+        None,
+        "the screen has not played the combat in yet"
+    );
+
+    // The screen plays the boards in and the first attack.
+    append(&power, &played_copies(&lines[start..=attack]));
+    watcher.poll().unwrap();
+    let round = watcher.live_combat_round();
+    assert_eq!(round, Some(1), "the combat on screen");
+    let report = watcher.live_report().expect("a game is on");
+    let lobby = watcher.live_lobby();
+    let live = LiveFacts {
+        combat_round: round,
+        lobby: &lobby,
+        damage_cap: watcher.live_damage_cap(),
+    };
+    assert!(
+        odds_input(report, live).is_ok(),
+        "both boards are in the view the screen shows"
+    );
+
+    // The screen plays the rest: the shop turn, no odds.
+    append(&power, &played_copies(&lines[attack + 1..burst_end]));
+    watcher.poll().unwrap();
+    assert_eq!(watcher.live_combat_round(), None);
 }

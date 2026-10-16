@@ -82,6 +82,9 @@ struct SessionReader {
     clock: GameClock,
     /// The live views, shown once the game has played their lines.
     playback: Playback<LiveView>,
+    /// The combat and the number of its boards in play at the last view
+    /// kept for them (see [`SessionReader::keep_view_when_a_board_enters_play`]).
+    boards_kept: Option<(i64, usize)>,
 }
 
 impl SessionReader {
@@ -91,6 +94,7 @@ impl SessionReader {
             log: LogReader::default(),
             clock: GameClock::new(name),
             playback: Playback::default(),
+            boards_kept: None,
         }
     }
 
@@ -98,6 +102,25 @@ impl SessionReader {
         self.log.feed(line);
         self.clock.feed(line);
         self.playback.feed(line);
+        self.keep_view_when_a_board_enters_play();
+    }
+
+    /// A combat arrives whole, in a second or two, and the game plays it for
+    /// many seconds; a view kept only at the end of a poll would hold the
+    /// whole combat and show once the game has nearly played it all. So a
+    /// view is also kept the moment a board enters play, which the game shows
+    /// a few seconds into the combat: that is when the odds can show.
+    fn keep_view_when_a_board_enters_play(&mut self) {
+        let now = self
+            .log
+            .combat_round_now()
+            .zip(self.log.combat_boards_in_now());
+        if now != self.boards_kept {
+            self.boards_kept = now;
+            if now.is_some_and(|(_, boards)| boards > 0) {
+                self.record_live();
+            }
+        }
     }
 
     /// Keeps a view of the game in progress as the log has it now.
