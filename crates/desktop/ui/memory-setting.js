@@ -1,5 +1,5 @@
 // The switch for reading two values from the game (T-327, D-063) on the
-// Settings page: off by default, with what it reads and its risk written
+// Settings page: on by default (D-149), with what it reads and its risk written
 // above it. The app's answer is always shown as it is (game_memory_status):
 // the switch, the reader's status and the own rating read, if any. Own scope.
 "use strict";

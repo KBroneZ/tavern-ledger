@@ -17,6 +17,9 @@ export const ES: Record<DlKey, string> = {
   "fact.date": "Publicada",
   "action.download": "Descargar",
   "action.download.file": "Archivo: {file}",
+  "action.memory": "Por defecto, la aplicación lee dos valores de la memoria del juego, solo en tu PC; puedes desactivarlo. Va contra la letra de las normas de Blizzard y la cuenta en riesgo es la tuya.",
+  "action.memory.anchor": "9-el-juego",
+  "action.memory.link": "Lee los términos (apartado 9)",
   "action.github": "Todas las versiones en GitHub",
 
   "beta.line":
@@ -56,7 +59,7 @@ export const ES: Record<DlKey, string> = {
   "reads.1": "Los archivos de registro del juego en tu PC, para guardar tus partidas de Campos de Batalla.",
   "reads.2": "Para el overlay, dónde está tu puntero sobre la ventana del juego.",
   "reads.3":
-    "Solo si lo activas en Ajustes (está desactivado hasta que lo hagas): dos cosas que el juego ya te muestra, las razas de la partida y tu propia puntuación, leídas de la memoria del juego sin escribir en ella. Esto va en contra de la letra de las normas de Blizzard, y la aplicación te explica el riesgo antes de que elijas.",
+    "Activada por defecto, y puedes desactivarla en Ajustes: dos cosas que el juego ya te muestra, las razas de la partida y tu propia puntuación, leídas de la memoria del juego sin escribir en ella. Se quedan en tu PC y nunca se suben. Esto va en contra de la letra de las normas de Blizzard, y la cuenta en riesgo es la tuya.",
   "reads.4": "Nunca cambia el juego, sus archivos ni su memoria, y nunca juega por ti.",
   "reads.data":
     "Tus partidas se quedan en tu PC, en %APPDATA%\\TavernLedger. No se sube nada a menos que inicies sesión y actives la subida.",

@@ -58,6 +58,7 @@ const reads = (["reads.1", "reads.2", "reads.3", "reads.4"] as const).map((key) 
           ))
         }
       </dl>
+      <p class="dl-note">{dl("action.memory")} <a href={href("/terms/#" + dl("action.memory.anchor"))}>{dl("action.memory.link")}</a>.</p>
       <div class="dl-actions">
         <Button kind="key" href={installerUrl()}>{dl("action.download")}</Button>
         <Button kind="common" href={releasesUrl()}>{dl("action.github")}</Button>

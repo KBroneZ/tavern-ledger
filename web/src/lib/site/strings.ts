@@ -126,9 +126,9 @@ export const SITE_STRINGS = {
   "home.keeps.boards.body": "Each opponent's board at the start of every combat, as the log records it.",
   "home.keeps.recap.title": "A recap after each game",
   "home.keeps.recap.body": "Your health over the rounds and your record against each opponent.",
-  "home.safe.title": "Safe for your account",
+  "home.safe.title": "What it does to your game",
   "home.safe.body":
-    "It reads the log files the game already writes on your PC and, for the overlay, where your pointer is over the game window. If you turn it on, it also reads two things the game already shows you, the lobby's tribes and your own rating, from the game's memory, read-only. That is off unless you choose it, and the app says what it risks.",
+    "It reads the log files the game already writes on your PC and, for the overlay, where your pointer is over the game window. By default it also reads two things the game already shows you, the lobby's tribes and your own rating, from the game's memory, read-only, on your PC only. You can turn that off in Settings. It goes against the letter of Blizzard's rules and the account at risk is yours, as the terms say.",
   "home.safe.1": "It never changes the game, adds code to it or changes its files.",
   "home.safe.2": "It never plays or clicks for you.",
   "home.safe.3": "It never shows what you could not see on your own screen.",
