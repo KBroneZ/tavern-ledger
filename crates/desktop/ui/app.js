@@ -1141,12 +1141,12 @@ function renderStatus(s) {
     .filter(Boolean).join("\n");
 }
 
-// What to change in log.config / client.config; hidden when the setup is fine.
+// What to change in log.config / client.config. setup-fix.js shows the box
+// while there is a line or a result to show, and hides it when the setup is fine.
 function renderSetup(s) {
   const lines = Array.isArray(s.setup) ? s.setup : [];
   const list = document.getElementById("setup-list");
   list.replaceChildren(...lines.map((line) => el("li", null, TLI18n.backend(String(line)))));
-  document.getElementById("setup").hidden = lines.length === 0;
 }
 
 // Where card pictures come from, and whether they are there (T-304).

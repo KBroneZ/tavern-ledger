@@ -29,6 +29,7 @@ pub mod recap;
 pub mod report_bundle;
 pub mod scene;
 pub mod setup;
+pub mod setup_fix;
 pub mod shop;
 pub mod stats;
 pub mod store;

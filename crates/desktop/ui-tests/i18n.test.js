@@ -180,6 +180,9 @@ test("the setup box's lines are translated with their paths and settings kept", 
   assert.match(I18n.backend(locked), /^No se puede leer log\.config \(PermissionDenied\): D:\/x\/log\.config\./);
   const optional = "Optional: log.config (D:/x/log.config) can have these lines under [LoadingScreen]: LogLevel=1, FilePrinting=true. Without them the app reads Power.log only and works as before; with them it shows when you are in the Battlegrounds lobby or a game is loading, and the overlay ends a game you leave before it is over. Restart the game afterwards.";
   assert.match(I18n.backend(optional), /^Opcional: log\.config \(D:\/x\/log\.config\) puede tener estas líneas en \[LoadingScreen\]: LogLevel=1, FilePrinting=true\. Sin ellas/);
+  // A file the app cannot find a place for is "cannot check", never "missing" (T-376).
+  assert.equal(I18n.backend("client.config could not be checked: no Hearthstone folder is in use."), "No se puede comprobar client.config: no se está usando ninguna carpeta de Hearthstone.");
+  assert.equal(I18n.backend("log.config could not be checked: this PC's local data folder is not known."), "No se puede comprobar log.config: no se conoce la carpeta de datos locales de este PC.");
   I18n.setLang("en");
   assert.equal(I18n.backend(missing), missing);
 });

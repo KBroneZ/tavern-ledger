@@ -22,6 +22,7 @@ const COMPACT_CSS: &str = include_str!("../ui/compact.css");
 const REPLAY_CSS: &str = include_str!("../ui/replay.css");
 const SETTINGS_JS: &str = include_str!("../ui/settings.js");
 const FOLDER_JS: &str = include_str!("../ui/game-folder.js");
+const SETUP_FIX_JS: &str = include_str!("../ui/setup-fix.js");
 const I18N: &str = include_str!("../ui/i18n.js");
 const COMMON_WORDS: &str = include_str!("../ui/strings/common.js");
 const WINDOW_WORDS: &str = include_str!("../ui/strings/window.js");
@@ -401,6 +402,43 @@ fn settings_are_a_tab_with_a_named_gear_and_labelled_controls() {
     assert!(INDEX.contains("href=\"settings.css\""));
     // A language change comes back to the language control.
     assert!(SETTINGS_JS.contains("$(\"setting-language\").focus();"));
+}
+
+#[test]
+fn the_setup_box_has_a_fix_button_that_sends_no_path() {
+    // T-376, D-154: the button and the result sit in the setup box; the page
+    // asks the app to fix, with only "optional or not", and the app works out
+    // which two files they are.
+    let index = lf(INDEX);
+    let setup = position(&index, "id=\"setup\"");
+    let setup_end = setup + index[setup..].find("</section>").unwrap();
+    for id in [
+        "id=\"setup-fix\"",
+        "id=\"setup-fix-optional\"",
+        "id=\"setup-fix-problem\"",
+        "id=\"setup-result\" class=\"setup-result\" role=\"status\" aria-live=\"polite\" hidden",
+        "id=\"setup-result-close\"",
+    ] {
+        let at = position(&index, id);
+        assert!(
+            setup < at && at < setup_end,
+            "{id} is outside the setup box"
+        );
+    }
+    assert!(position(&index, "setup-fix.js") > position(&index, "app.js"));
+    let calls: Vec<&str> = SETUP_FIX_JS
+        .match_indices("call(\"setup_")
+        .map(|(at, _)| &SETUP_FIX_JS[at..at + SETUP_FIX_JS[at..].find(')').unwrap()])
+        .collect();
+    assert!(calls.contains(&"call(\"setup_fix\", { optional }"));
+    assert!(calls.contains(&"call(\"setup_recheck\""));
+    assert_eq!(calls.len(), 2, "{calls:?}");
+    assert!(
+        !SETUP_FIX_JS.contains("path:") && !SETUP_FIX_JS.contains("{ path"),
+        "the page never names a file"
+    );
+    // app.js no longer hides the box; setup-fix.js decides when it shows.
+    assert!(!APP.contains("getElementById(\"setup\").hidden"));
 }
 
 #[test]

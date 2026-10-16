@@ -68,7 +68,7 @@ fn the_bundle_holds_the_report_versions_setup_and_warnings() {
     assert_eq!(bundle["warnings"], json!(["a warning"]));
     assert_eq!(bundle["problems"], json!([]));
     assert_eq!(bundle["report"], report);
-    assert_eq!(bundle["log_setup"]["log_config"]["state"], "file_missing");
+    assert_eq!(bundle["log_setup"]["log_config"]["state"], "cannot_check");
 }
 
 #[test]

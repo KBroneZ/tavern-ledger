@@ -10,6 +10,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::discover::Resolution;
+use crate::setup_fix::log_config_target;
 
 pub const LOG_CONFIG_FILE: &str = "log.config";
 pub const CLIENT_CONFIG_FILE: &str = "client.config";
@@ -33,6 +34,10 @@ pub enum FileCheck {
     Ok,
     /// The file (or the folder it lives in) does not exist.
     FileMissing,
+    /// The app does not know where the file is (no Hearthstone folder in use,
+    /// no local data folder), so it cannot say anything about it. Not "ok",
+    /// not "missing".
+    CannotCheck,
     /// The file exists but could not be read (the error kind).
     Unreadable(String),
     /// The file was read but lacks these `Key=value` lines, or has the keys
@@ -67,6 +72,16 @@ pub fn client_config_path(logs_dir: &Path) -> Option<PathBuf> {
     Some(logs_dir.parent()?.join(CLIENT_CONFIG_FILE))
 }
 
+/// The check for the folders the app uses: `local_app_data` is
+/// `%LOCALAPPDATA%` (where `log.config` goes) and `install_dir` the Hearthstone
+/// install in use (where `client.config` goes). A folder the app does not
+/// know makes that file "cannot check", never "missing" or "ok".
+pub fn check_install(local_app_data: Option<&Path>, install_dir: Option<&Path>) -> SetupReport {
+    let log_config = local_app_data.map(log_config_target);
+    let client_config = install_dir.map(|dir| dir.join(CLIENT_CONFIG_FILE));
+    check_setup(log_config.as_deref(), client_config.as_deref())
+}
+
 pub fn check_setup(log_config: Option<&Path>, client_config: Option<&Path>) -> SetupReport {
     SetupReport {
         log_config: check_file(log_config, POWER_SECTION, &REQUIRED_POWER),
@@ -79,7 +94,7 @@ pub fn check_setup(log_config: Option<&Path>, client_config: Option<&Path>) -> S
 
 fn check_file(path: Option<&Path>, section: &str, required: &[(&str, &str)]) -> FileCheck {
     let Some(path) = path else {
-        return FileCheck::FileMissing;
+        return FileCheck::CannotCheck;
     };
     match fs::read(path) {
         Ok(bytes) => check_text(&String::from_utf8_lossy(&bytes), section, required),
@@ -129,6 +144,231 @@ fn parse_ini(text: &str) -> Sections {
         }
     }
     sections
+}
+
+/// A section of a config file and the `Key=value` lines it must hold.
+#[derive(Clone, Copy, Debug)]
+pub struct Wanted {
+    pub section: &'static str,
+    pub lines: &'static [(&'static str, &'static str)],
+}
+
+/// `log.config`: the Power log (needed).
+pub const POWER: Wanted = Wanted {
+    section: POWER_SECTION,
+    lines: &REQUIRED_POWER,
+};
+/// `log.config`: the scene changes (optional, T-314).
+pub const LOADING_SCREEN: Wanted = Wanted {
+    section: LOADING_SCREEN_SECTION,
+    lines: &OPTIONAL_LOADING_SCREEN,
+};
+/// `client.config`: no size limit on the logs (needed).
+pub const LOG: Wanted = Wanted {
+    section: LOG_SECTION,
+    lines: &REQUIRED_LOG,
+};
+
+/// Why a file's text is left alone: the app only edits plain text it can read
+/// back exactly (UTF-8 with or without a byte order mark, or ASCII).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MergeRefusal {
+    NotPlainText,
+}
+
+const BOM: &str = "\u{feff}";
+const LF: &str = "\n";
+const CRLF: &str = "\r\n";
+
+struct Line {
+    text: String,
+    eol: &'static str,
+}
+
+/// What a line is, read the way [`parse_ini`] reads it.
+enum Kind {
+    Header(String),
+    Key {
+        section: String,
+        key: String,
+        value: String,
+    },
+    Other,
+}
+
+/// The text of a config file with the wanted sections and lines in it, or
+/// `None` when it already has them. Only missing lines are added (at the end
+/// of their section, or a new section at the end of the file) and a key with
+/// another value is changed in place (the last one, which the game reads);
+/// every other line, comment, space, line end and the byte order mark stay as
+/// they were, and so does a missing final newline. D-154.
+pub fn merge_config(bytes: &[u8], wanted: &[Wanted]) -> Result<Option<Vec<u8>>, MergeRefusal> {
+    let plain = !bytes.starts_with(&[0xFF, 0xFE])
+        && !bytes.starts_with(&[0xFE, 0xFF])
+        && !bytes.contains(&0);
+    let text = std::str::from_utf8(bytes)
+        .ok()
+        .filter(|_| plain)
+        .ok_or(MergeRefusal::NotPlainText)?;
+    let (bom, body) = match text.strip_prefix(BOM) {
+        Some(rest) => (BOM, rest),
+        None => ("", text),
+    };
+    let mut lines = split_lines(body);
+    let eol = majority_eol(&lines);
+    let had_final_eol = lines.last().is_none_or(|l| !l.eol.is_empty());
+    let mut changed = false;
+    for want in wanted {
+        for &(key, value) in want.lines {
+            changed |= ensure_line(&mut lines, want.section, key, value, eol);
+        }
+    }
+    if !changed {
+        return Ok(None);
+    }
+    if !had_final_eol {
+        if let Some(last) = lines.last_mut() {
+            last.eol = "";
+        }
+    }
+    let mut out = String::from(bom);
+    for line in &lines {
+        out.push_str(&line.text);
+        out.push_str(line.eol);
+    }
+    Ok(Some(out.into_bytes()))
+}
+
+fn split_lines(body: &str) -> Vec<Line> {
+    body.split_inclusive('\n')
+        .map(|piece| match piece.strip_suffix(LF) {
+            Some(rest) => match rest.strip_suffix('\r') {
+                Some(text) => Line {
+                    text: text.to_string(),
+                    eol: CRLF,
+                },
+                None => Line {
+                    text: rest.to_string(),
+                    eol: LF,
+                },
+            },
+            None => Line {
+                text: piece.to_string(),
+                eol: "",
+            },
+        })
+        .collect()
+}
+
+/// The file's usual line end; CRLF (Windows) when there is none or it is a tie.
+fn majority_eol(lines: &[Line]) -> &'static str {
+    let crlf = lines.iter().filter(|l| l.eol == CRLF).count();
+    let lf = lines.iter().filter(|l| l.eol == LF).count();
+    if lf > crlf {
+        LF
+    } else {
+        CRLF
+    }
+}
+
+fn classify(lines: &[Line]) -> Vec<Kind> {
+    let mut current: Option<String> = None;
+    lines
+        .iter()
+        .map(|line| {
+            let text = line.text.trim();
+            if text.is_empty() || text.starts_with([';', '#']) {
+                return Kind::Other;
+            }
+            if let Some(name) = text.strip_prefix('[').and_then(|t| t.strip_suffix(']')) {
+                let name = name.trim().to_lowercase();
+                current = Some(name.clone());
+                return Kind::Header(name);
+            }
+            match (&current, text.split_once('=')) {
+                (Some(section), Some((key, value))) => Kind::Key {
+                    section: section.clone(),
+                    key: key.trim().to_lowercase(),
+                    value: value.trim().to_string(),
+                },
+                _ => Kind::Other,
+            }
+        })
+        .collect()
+}
+
+/// Makes `section` hold `key=value`; whether the lines changed.
+fn ensure_line(
+    lines: &mut Vec<Line>,
+    section: &str,
+    key: &str,
+    value: &str,
+    eol: &'static str,
+) -> bool {
+    let (section_l, key_l) = (section.to_lowercase(), key.to_lowercase());
+    let kinds = classify(lines);
+    let last_setting = kinds.iter().rposition(
+        |k| matches!(k, Kind::Key { section: s, key: k, .. } if *s == section_l && *k == key_l),
+    );
+    if let Some(at) = last_setting {
+        let Kind::Key { value: found, .. } = &kinds[at] else {
+            return false;
+        };
+        if found.eq_ignore_ascii_case(value) {
+            return false;
+        }
+        lines[at].text = with_value(&lines[at].text, value);
+        return true;
+    }
+    let new_line = Line {
+        text: format!("{key}={value}"),
+        eol,
+    };
+    // The end of the section's last block: its header or its last setting.
+    let anchor = kinds.iter().rposition(|k| match k {
+        Kind::Header(name) => *name == section_l,
+        Kind::Key { section: s, .. } => *s == section_l,
+        Kind::Other => false,
+    });
+    match anchor {
+        Some(at) => {
+            if lines[at].eol.is_empty() {
+                lines[at].eol = eol;
+            }
+            lines.insert(at + 1, new_line);
+        }
+        None => {
+            if let Some(last) = lines.last_mut() {
+                if last.eol.is_empty() {
+                    last.eol = eol;
+                }
+                if !last.text.trim().is_empty() {
+                    lines.push(Line {
+                        text: String::new(),
+                        eol,
+                    });
+                }
+            }
+            lines.push(Line {
+                text: format!("[{section}]"),
+                eol,
+            });
+            lines.push(new_line);
+        }
+    }
+    true
+}
+
+/// The line with only its value replaced: the key, the spaces around the
+/// `=` and after the value stay.
+fn with_value(line: &str, value: &str) -> String {
+    let Some((head, after)) = line.split_once('=') else {
+        return line.to_string();
+    };
+    let rest = after.trim_start();
+    let lead = &after[..after.len() - rest.len()];
+    let tail = &rest[rest.trim_end().len()..];
+    format!("{head}={lead}{value}{tail}")
 }
 
 impl SetupReport {
@@ -216,6 +456,14 @@ fn describe(
     let all_lines: Vec<String> = required.iter().map(|(k, v)| format!("{k}={v}")).collect();
     match check {
         FileCheck::Ok => {}
+        FileCheck::CannotCheck => out.push(format!(
+            "{file} could not be checked: {}.",
+            if file == LOG_CONFIG_FILE {
+                "this PC's local data folder is not known"
+            } else {
+                "no Hearthstone folder is in use"
+            }
+        )),
         FileCheck::FileMissing => out.push(format!(
             "{file} not found ({place}). {why} Create it with [{section}] and these lines: {}. Then restart the game.",
             all_lines.join(", ")
@@ -229,6 +477,10 @@ fn describe(
         )),
     }
 }
+
+#[cfg(test)]
+#[path = "setup_merge_tests.rs"]
+mod merge_tests;
 
 #[cfg(test)]
 mod tests {
@@ -327,7 +579,8 @@ mod tests {
         ));
         let report = check_setup(Some(&unreadable), None);
         assert!(matches!(report.log_config, FileCheck::Unreadable(_)));
-        assert_eq!(report.client_config, FileCheck::FileMissing);
+        // No path at all is "cannot check", not "missing".
+        assert_eq!(report.client_config, FileCheck::CannotCheck);
     }
 
     #[test]
@@ -353,7 +606,11 @@ mod tests {
     #[test]
     fn a_missing_file_message_lists_the_whole_section_to_create() {
         let dir = temp_dir();
-        let messages = check_setup(Some(&dir.join("log.config")), None).messages();
+        let messages = check_setup(
+            Some(&dir.join("log.config")),
+            Some(&dir.join("client.config")),
+        )
+        .messages();
         assert_eq!(messages.len(), 2);
         assert!(messages[0].contains("LogLevel=1, FilePrinting=true, Verbose=true"));
         assert!(messages[1].contains("FileSizeLimit.Int=-1"));
@@ -433,6 +690,109 @@ Verbose=False
         assert!(gone[0].contains(r"(E:\Hearthstone)"));
         assert!(gone[0].contains("That folder was not found."));
         assert!(gone[0].contains("go back to finding it automatically"));
+    }
+
+    fn install(root: &Path, name: &str, client: Option<&str>) -> PathBuf {
+        let dir = root.join(name);
+        fs::create_dir_all(dir.join("Logs")).unwrap();
+        fs::write(dir.join("Hearthstone.exe"), b"").unwrap();
+        if let Some(text) = client {
+            fs::write(dir.join(CLIENT_CONFIG_FILE), text).unwrap();
+        }
+        dir
+    }
+
+    fn local_with_good_log(root: &Path) -> PathBuf {
+        let local = root.join("local");
+        let log = log_config_target(&local);
+        fs::create_dir_all(log.parent().unwrap()).unwrap();
+        fs::write(&log, POWER_OK).unwrap();
+        local
+    }
+
+    #[test]
+    fn the_check_follows_the_install_folder_in_use() {
+        let root = temp_dir();
+        let local = local_with_good_log(&root);
+        let automatic = install(&root, "E", None);
+        let chosen = install(
+            &root,
+            "D",
+            Some(
+                "[Log]
+FileSizeLimit.Int=-1
+",
+            ),
+        );
+
+        let before = check_install(Some(&local), Some(&automatic));
+        assert!(!before.is_ok());
+        assert_eq!(before.client_config, FileCheck::FileMissing);
+
+        // The player chooses the other install: the same check, its folder.
+        let after = check_install(Some(&local), Some(&chosen));
+        assert!(after.is_ok());
+        assert!(after.messages().is_empty());
+
+        // And back to automatic: the problem is there again, with its path.
+        let back = check_install(Some(&local), Some(&automatic));
+        assert_eq!(back.messages().len(), 1);
+        assert!(back.messages()[0].contains(&automatic.display().to_string()));
+    }
+
+    #[test]
+    fn a_player_who_fixes_the_file_by_hand_clears_the_next_check() {
+        let root = temp_dir();
+        let local = local_with_good_log(&root);
+        let game = install(
+            &root,
+            "D",
+            Some(
+                "[Log]
+FileSizeLimit.Int=10000
+",
+            ),
+        );
+        assert!(!check_install(Some(&local), Some(&game)).is_ok());
+        fs::write(
+            game.join(CLIENT_CONFIG_FILE),
+            "[Log]
+FileSizeLimit.Int=-1
+",
+        )
+        .unwrap();
+        assert!(check_install(Some(&local), Some(&game)).is_ok());
+    }
+
+    #[test]
+    fn a_folder_the_app_does_not_know_is_cannot_check_never_ok_or_missing() {
+        let root = temp_dir();
+        let local = local_with_good_log(&root);
+        let no_folder = check_install(Some(&local), None);
+        assert_eq!(no_folder.client_config, FileCheck::CannotCheck);
+        assert_eq!(no_folder.log_config, FileCheck::Ok);
+        assert!(!no_folder.is_ok());
+        let said = no_folder.messages();
+        assert_eq!(said.len(), 1);
+        assert!(said[0].starts_with("client.config could not be checked"));
+
+        let no_local = check_install(
+            None,
+            Some(&install(
+                &root,
+                "D",
+                Some(
+                    "[Log]
+FileSizeLimit.Int=-1
+",
+                ),
+            )),
+        );
+        assert_eq!(no_local.log_config, FileCheck::CannotCheck);
+        assert!(!no_local.is_ok());
+        assert!(no_local.messages()[0].starts_with("log.config could not be checked"));
+        // The optional note is never offered when log.config was not read.
+        assert!(no_local.notes().is_empty());
     }
 
     #[test]

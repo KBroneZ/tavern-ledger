@@ -48,6 +48,8 @@
     // Back to automatic is for a folder the player chose, also an unusable one.
     show("folder-reset", Boolean(folder && folder.chosen));
     set("setup-folder", checkedLine(folder, t));
+    // A folder the app can use needs no "Choose": the files inside it are what the box is about.
+    show("setup-choose", !(folder && folder.usable === true));
     const offer = typeof s.folder_offer === "string" && s.folder_offer ? s.folder_offer : "";
     set("folder-offer-text", offer ? t("folder.offer", { path: offer }) : "");
     show("folder-offer", Boolean(offer));

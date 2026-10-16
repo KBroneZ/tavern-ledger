@@ -27,6 +27,7 @@ mod saved_ratings;
 mod saved_tribes;
 mod screen_fit;
 mod settings;
+mod setup_notice;
 #[cfg(test)]
 mod ui_checks;
 #[cfg(test)]
@@ -60,7 +61,6 @@ use tracker::provenance::{row_sources, RowSources};
 use tracker::recap::{recap, Recap};
 use tracker::report_bundle::{self, BundleInput};
 use tracker::scene::Scene;
-use tracker::setup::{check_setup, client_config_path, default_log_config_path};
 use tracker::stats::curious::{CardNames, Curious};
 use tracker::stats::{HeroLinks, Lobby, Stats};
 use tracker::store::{GameKey, ParserStamp, Store};
@@ -97,6 +97,9 @@ const DATA_DIR_ARG: &str = "--data-dir";
 /// `--logs-dir <folder>`: follow the logs there instead of the game's own
 /// Logs folder, e.g. a replayed log (development only, T-D02).
 const LOGS_DIR_ARG: &str = "--logs-dir";
+/// `--local-app-data <folder>` (development builds only): the setup check and
+/// the Fix button use that folder in place of `%LOCALAPPDATA%`.
+const LOCAL_APP_DATA_ARG: &str = "--local-app-data";
 /// Development only: the overlay is on, shows whatever window is in front and
 /// does not save the on/off choice, so a replayed game can be checked without playing.
 const OVERLAY_DEV_ARG: &str = "--overlay-dev";
@@ -126,6 +129,9 @@ struct Status {
     /// What to change in `log.config` / `client.config` (T-106); empty when
     /// the game is set up to write a complete Power.log.
     setup: Vec<String>,
+    /// The setup notice's button state and the last Fix click's result
+    /// (T-376, D-154).
+    setup_view: setup_notice::SetupView,
     /// Set when the reconnect dev tool's file exists but could not be read
     /// whole (D-043); never set for a user who did not run the tool.
     dev_reconnects: Option<String>,
@@ -185,6 +191,8 @@ struct AppState {
     odds: odds::Odds,
     /// Which Hearthstone folder is followed (T-579).
     folder: game_folder::FolderState,
+    /// The folders the setup check looks at, and the Fix button (T-376).
+    setup: setup_notice::SetupState,
 }
 
 #[tauri::command]
@@ -739,19 +747,7 @@ fn problem_report_text(state: &AppState, session: &str, index: u64) -> Result<St
         .iter()
         .find(|g| g.session == session && g.index == index)
         .ok_or("That game is not in the history.")?;
-    let logs_dir = state
-        .status
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .logs_dir
-        .clone();
-    let client_config = logs_dir
-        .as_deref()
-        .and_then(|dir| client_config_path(Path::new(dir)));
-    let setup = check_setup(
-        default_log_config_path().as_deref(),
-        client_config.as_deref(),
-    );
+    let setup = state.setup.report();
     let app_log = applog::get().map_or_else(Vec::new, |log| log.tail(report_bundle::MAX_LOG_LINES));
     let input = BundleInput {
         session: &row.session,
@@ -917,24 +913,75 @@ fn show_read_only(app: &AppHandle, state: &AppState, data_dir: &std::path::Path)
     problem(app, state, msg.into());
 }
 
-/// Reads both config files (read-only) and puts what to fix in the status.
-/// While no Hearthstone folder can be used (`folder_lines`), that is what the
-/// banner says instead.
-fn refresh_setup(app: &AppHandle, state: &AppState, logs_dir: &Path, folder_lines: &[String]) {
-    let messages: Vec<String> = if folder_lines.is_empty() {
-        let log_config = default_log_config_path();
-        let client_config = client_config_path(logs_dir);
-        let report = check_setup(log_config.as_deref(), client_config.as_deref());
-        // What to fix first, then what is optional (T-314).
-        report
-            .messages()
-            .into_iter()
-            .chain(report.notes())
-            .collect()
-    } else {
-        folder_lines.to_vec()
+/// Reads both config files (read-only) for the Hearthstone folder in use and
+/// puts what to fix in the status. While no folder can be used, the banner
+/// says that instead. Called when the folder decision changes, after a click
+/// on Fix, when the window comes to the front and every few seconds.
+fn refresh_setup(app: &AppHandle, state: &AppState) {
+    let (lines, view) = state.setup.view();
+    set_status(app, state, |s| {
+        s.setup = lines;
+        s.setup_view = view;
+    });
+}
+
+/// The folder decision the setup check follows: the install in use, or why
+/// there is none.
+fn note_folder(state: &AppState, decision: &game_folder::Decision) {
+    state.setup.set_place(setup_notice::Place {
+        install_dir: decision.in_use.as_ref().map(|folder| folder.dir.clone()),
+        folder_lines: decision.lines.clone(),
+    });
+}
+
+/// Check the two config files again now (the window came to the front).
+#[tauri::command]
+fn setup_recheck(app: AppHandle, state: State<'_, Arc<AppState>>) {
+    refresh_setup(&app, &state);
+}
+
+/// The Fix button (D-154): creates or completes `log.config` and
+/// `client.config` on the player's click, then checks again. `optional` also
+/// adds the optional scene lines. No path comes from the window.
+#[tauri::command]
+async fn setup_fix(
+    app: AppHandle,
+    state: State<'_, Arc<AppState>>,
+    optional: bool,
+) -> Result<(), String> {
+    if !state.setup.begin_fix() {
+        return Err("A fix is already running.".into());
+    }
+    refresh_setup(&app, &state);
+    let place = state.setup.place();
+    let local = state.setup.local_app_data();
+    let files = tauri::async_runtime::spawn_blocking(move || {
+        setup_notice::fix_files(local.as_deref(), place.install_dir.as_deref(), optional)
+    })
+    .await;
+    let (files, outcome) = match files {
+        Ok(files) => {
+            for file in &files {
+                applog::info(
+                    "setup",
+                    &format!("fix of {}: {} {:?}", file.file, file.result, file.reason),
+                );
+            }
+            (files, Ok(()))
+        }
+        Err(_) => {
+            applog::error("setup", "the fix stopped after an internal error");
+            let msg = "The fix stopped after an internal error. Nothing half-written was left.";
+            (Vec::new(), Err(msg.to_string()))
+        }
     };
-    set_status(app, state, |s| s.setup = messages);
+    state.setup.end_fix(setup_notice::FixView {
+        id: state.setup.next_fix_id(),
+        files,
+        game_running: ::game_memory::process::is_running(),
+    });
+    refresh_setup(&app, &state);
+    outcome.logged("setup_fix")
 }
 
 /// The Logs folder to follow: the one on the command line, else the folder
@@ -948,15 +995,18 @@ fn wait_for_logs_dir(
 ) -> PathBuf {
     loop {
         if let Some(decision) = finder.look(app, state, settings) {
+            note_folder(state, &decision);
             if let Some(folder) = &decision.in_use {
-                set_status(app, state, |s| s.setup.clear());
+                refresh_setup(app, state);
                 return folder.logs_dir();
             }
             // One update, so the window never shows the problem without the banner.
             let msg = "Hearthstone's Logs folder was not found. Is the game installed?";
+            let (lines, view) = state.setup.view();
             set_status(app, state, |s| {
                 s.problem = Some(msg.into());
-                s.setup = decision.lines.clone();
+                s.setup = lines;
+                s.setup_view = view;
             });
         }
         thread::sleep(POLL_INTERVAL);
@@ -966,13 +1016,30 @@ fn wait_for_logs_dir(
 /// Opens the history and follows the log until the app quits.
 fn run_tracker(app: AppHandle, state: Arc<AppState>) {
     let fixed_logs_dir = path_from(std::env::args(), LOGS_DIR_ARG);
+    if let Some(dir) = &fixed_logs_dir {
+        // Development: the install is the folder above the Logs folder given.
+        let install = dir.parent().map(Path::to_path_buf);
+        state.setup.set_place(setup_notice::Place {
+            install_dir: install.clone(),
+            folder_lines: Vec::new(),
+        });
+        // As if the player had chosen that folder, so the window says which
+        // folder it checked.
+        set_status(&app, &state, |s| {
+            s.folder = game_folder::FolderStatus {
+                path: install.map(|dir| dir.display().to_string()),
+                how: Some("chosen"),
+                chosen: true,
+                usable: true,
+            };
+        });
+    }
     let mut finder = Finder::new(fixed_logs_dir.is_some());
     let app_settings = app.state::<Arc<Settings>>();
     let mut logs_dir = match fixed_logs_dir {
         Some(dir) => dir,
         None => wait_for_logs_dir(&app, &state, &mut finder, &app_settings),
     };
-    let mut folder_lines: Vec<String> = Vec::new();
     let data_dir = data_dir_from(std::env::args()).unwrap_or_else(tracker::store::default_dir);
     // Held while this thread runs: only one process writes the history.
     let _lock = match HistoryLock::acquire(&data_dir) {
@@ -1045,7 +1112,7 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
     let mut switch_to: Option<PathBuf> = None;
     loop {
         if let Some(decision) = finder.look(&app, &state, &app_settings) {
-            folder_lines = decision.lines.clone();
+            note_folder(&state, &decision);
             // Another folder: the player chose one, or the game now runs from
             // another install.
             switch_to = decision
@@ -1077,7 +1144,7 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
             }
         }
         if polls_until_setup_check == 0 {
-            refresh_setup(&app, &state, &logs_dir, &folder_lines);
+            refresh_setup(&app, &state);
             polls_until_setup_check = SETUP_CHECK_EVERY;
         }
         polls_until_setup_check -= 1;
@@ -1479,6 +1546,8 @@ fn main() {
             game_folder::game_folder_reset,
             game_folder::game_folder_use_running,
             game_folder::game_folder_decline_running,
+            setup_recheck,
+            setup_fix,
             log_commands::log_ui_error,
             log_commands::open_log_folder,
             updates::update_status,
@@ -1496,6 +1565,13 @@ fn main() {
         })
         .setup(move |app| {
             let data_dir = startup_dir.clone();
+            // Development builds only: a stand-in for %LOCALAPPDATA%, so a
+            // test never touches the player's own log.config.
+            if cfg!(debug_assertions) {
+                state
+                    .setup
+                    .use_local_app_data(path_from(std::env::args(), LOCAL_APP_DATA_ARG));
+            }
             let loaded = state.overlay.load(&data_dir, overlay_dev(std::env::args()));
             let game_memory_loaded = state.game_memory.load(&data_dir);
             state.saved_tribes.set_dir(&data_dir);

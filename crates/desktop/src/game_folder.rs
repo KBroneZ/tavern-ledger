@@ -44,6 +44,8 @@ pub struct FolderStatus {
     pub how: Option<&'static str>,
     /// The player chose a folder (it may be unusable now).
     pub chosen: bool,
+    /// The folder can be used now (the logs are followed from it).
+    pub usable: bool,
 }
 
 /// The outcome of looking again.
@@ -67,6 +69,7 @@ pub fn decide(resolution: &Resolution, running: Option<&Path>, declined: &[PathB
                 path: Some(found.dir.display().to_string()),
                 how: Some(found.how.id()),
                 chosen: found.how == How::Chosen,
+                usable: true,
             },
             Some(found.clone()),
         ),
@@ -75,6 +78,7 @@ pub fn decide(resolution: &Resolution, running: Option<&Path>, declined: &[PathB
                 path: Some(dir.display().to_string()),
                 how: Some(How::Chosen.id()),
                 chosen: true,
+                usable: false,
             },
             None,
         ),
@@ -143,6 +147,10 @@ pub struct Finder {
     running_read_at: Option<Instant>,
     running: Option<PathBuf>,
     seen_generation: u64,
+    /// The folder the player chose could not be used at the last look: it is
+    /// tried again with each gathering, so an unplugged drive that comes back
+    /// clears the notice without a restart.
+    chosen_unusable: bool,
     /// Not looking at all: the folder was set on the command line.
     fixed: bool,
 }
@@ -158,6 +166,7 @@ impl Finder {
             running_read_at: None,
             running: None,
             seen_generation: 0,
+            chosen_unusable: false,
             fixed,
         }
     }
@@ -210,6 +219,8 @@ impl Finder {
         if gather_due {
             self.gathering = Some(start_gathering(self.gathered_at.is_none()));
             self.gathered_at = Some(Instant::now());
+            // One file check on the chosen folder, once a minute.
+            moved |= self.chosen_unusable;
         }
         let running_due = self
             .running_read_at
@@ -231,6 +242,7 @@ impl Finder {
             source: Source::RunningGame,
         }));
         let resolution = resolve(settings.game_folder().as_deref(), candidates);
+        self.chosen_unusable = matches!(resolution, Resolution::ChosenUnusable { .. });
         let decision = decide(
             &resolution,
             self.running.as_deref(),

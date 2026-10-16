@@ -417,6 +417,18 @@
           "markdownDescription": "Enables the save_problem_report command without any pre-configured scope."
         },
         {
+          "description": "Enables the setup_fix command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-setup-fix",
+          "markdownDescription": "Enables the setup_fix command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the setup_recheck command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-setup-recheck",
+          "markdownDescription": "Enables the setup_recheck command without any pre-configured scope."
+        },
+        {
           "description": "Enables the status command without any pre-configured scope.",
           "type": "string",
           "const": "allow-status",
@@ -727,6 +739,18 @@
           "type": "string",
           "const": "deny-save-problem-report",
           "markdownDescription": "Denies the save_problem_report command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the setup_fix command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-setup-fix",
+          "markdownDescription": "Denies the setup_fix command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the setup_recheck command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-setup-recheck",
+          "markdownDescription": "Denies the setup_recheck command without any pre-configured scope."
         },
         {
           "description": "Denies the status command without any pre-configured scope.",
