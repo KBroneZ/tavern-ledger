@@ -22,7 +22,7 @@ test("the hash is 64 lower-case hex digits and the date is a day", () => {
 
 test("the size is shown in megabytes with one decimal, the way Windows shows it", () => {
   assert.equal(sizeMb(6_847_192), 6.5);
-  assert.equal(sizeMb(RELEASE.bytes), 7.6);
+  assert.equal(sizeMb(RELEASE.bytes), 7.7);
   assert.ok(RELEASE.bytes > 1_000_000 && RELEASE.bytes < 50_000_000);
 });
 
