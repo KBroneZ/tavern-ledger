@@ -39,6 +39,8 @@ const WORDED_FX = ["stealth", "windfury"];
  *   document   the page's document (default: the global one)
  *   fx         an effects runtime, null for none; default: WebGL effects
  *   fps        effect frame rate (default 20)
+ *   observe    (canvas, onChange(inView)) => stop, to pause an effect scrolled
+ *              out of view; default: the page's IntersectionObserver, null for none
  *   preload    false to skip loading the main images first (tests)
  * Returns { render(minion), ready, setActive(on), destroy() }, or null when
  * the layout cannot be used.
@@ -85,7 +87,7 @@ export function createMinionArt(options) {
   const fx =
     options.fx === undefined
       ? wantsFx
-        ? createFx({ document: doc, layout, loadImage, log, fps: options.fps })
+        ? createFx({ document: doc, layout, loadImage, log, fps: options.fps, observe: options.observe })
         : null
       : options.fx;
 
@@ -178,6 +180,7 @@ export function createMinionArt(options) {
     };
     const ops = planLayers(minion, layout, has);
     const numbers = {};
+    const effects = [];
     for (const op of ops) {
       if (op.kind === "img") root.append(imageLayer(op));
       else if (op.kind === "art") root.append(keepArt || artLayer(minion));
@@ -193,15 +196,19 @@ export function createMinionArt(options) {
         canvas.height = spec.size[1];
         canvas.className = `tlm-fx tlm-fx-${op.fx}`;
         place(canvas, spec.box);
-        const swap = () => {
+        const effect = { kind: op.fx, canvas, gone: false, swap: null };
+        effect.swap = () => {
+          effect.gone = true;
           canvas.remove();
           addMark(op.fx);
         };
-        if (fx && fxReady(op.fx) && fx.attach(op.fx, canvas, swap)) root.append(canvas);
-        else addMark(op.fx);
+        if (fx && fxReady(op.fx) && fx.attach(op.fx, canvas, effect.swap)) {
+          root.append(canvas);
+          effects.push(effect);
+        } else addMark(op.fx);
       }
     }
-    drawn.set(root, { key: layerKey(minion, ops), numbers });
+    drawn.set(root, { key: layerKey(minion, ops), numbers, effects });
   }
 
   function render(minion) {
@@ -221,6 +228,8 @@ export function createMinionArt(options) {
     const ops = planLayers(minion, layout, has);
     if (layerKey(minion, ops) === made.key) {
       for (const op of ops) if (op.kind === "number") setNumber(made.numbers[op.which], op.which, op.value);
+      // A token kept away from the page for a while (a replay stepping back) has its effects started again.
+      for (const e of made.effects) if (!e.gone && fx && !fx.attach(e.kind, e.canvas, e.swap)) e.swap();
       return;
     }
     const isArt = (c) => String(c.className).split(" ").includes("tlm-art");

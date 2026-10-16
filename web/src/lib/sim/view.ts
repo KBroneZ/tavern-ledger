@@ -11,6 +11,7 @@ import { lang } from "../i18n.ts";
 import { giftMarks, giftName } from "../game/gifts.ts";
 import { minionTip, tipHost } from "../game/minionTip.ts";
 import { cls, h, type VNode } from "../view/node.ts";
+import { drawnAttrs } from "../art/drawn.ts";
 import { picture } from "../view/pieces.ts";
 import { MAX_GIFTS, MAX_MINIONS, MAX_STAT, MAX_TIER, SIM_KEYWORDS, type Side, type SimBoard, type SimKeyword, type SimMinion, type SimState } from "./board.ts";
 import type { CardIndex, SimCard } from "./cards.ts";
@@ -113,6 +114,7 @@ function card(m: SimMinion, side: Side, board: number, props: EditorProps): VNod
           "has-windfury": m.keywords.includes("windfury") || m.keywords.includes("mega_windfury"),
           "has-stealth": m.keywords.includes("stealth"),
         }),
+        ...drawnAttrs({ cardId: m.cardId, atk: m.attack, health: m.health, golden: m.golden, keywords: m.keywords }),
         "data-act": "select",
         "data-key": m.key,
         "data-focus": `m${m.key}`,
@@ -121,6 +123,8 @@ function card(m: SimMinion, side: Side, board: number, props: EditorProps): VNod
         "aria-label": minionLabel(m, cards, marks),
         "aria-describedby": tipHost(tipId)["aria-describedby"],
       },
+      // The slot is where the game's drawing goes once its textures are loaded (art/runtime.ts); empty, it takes no room.
+      h("span", { class: "tlm-slot", "aria-hidden": "true" }),
       h("span", { class: "sim-taunt", "aria-hidden": "true" }),
       h("span", { class: "sim-card-art" }, picture("card", m.cardId, name, 56, true), h("span", { class: "sim-veil", "aria-hidden": "true" })),
       h("span", { class: "sim-venom", "aria-hidden": "true" }),

@@ -364,6 +364,23 @@ test("an effect added by an update that later loses WebGL leaves its word on the
   assert.deepEqual(marks.children.map((c) => c.textContent), ["word:windfury"]);
 });
 
+test("an update that changes nothing but numbers starts a token's effects again, and a word replaces one that cannot (a replay stepping back)", async () => {
+  const calls = [];
+  let ok = true;
+  const { art } = await make({ fx: { supported: () => true, attach: (kind) => { calls.push(kind); return ok; }, setActive() {}, destroy() {} } });
+  const el = art.render(m(["windfury"]));
+  assert.deepEqual(calls, ["windfury"]);
+  art.update(el, m(["windfury"], { atk: 9 }));
+  assert.deepEqual(calls, ["windfury", "windfury"], "asked again; the effects runtime ignores a canvas that is still running");
+  assert.equal(el.children.filter((c) => c.tag === "canvas").length, 1);
+  ok = false;
+  art.update(el, m(["windfury"], { atk: 10 }));
+  assert.equal(el.children.filter((c) => c.tag === "canvas").length, 0);
+  assert.deepEqual(el.children.find((c) => c.className.includes("tlm-marks")).children.map((c) => c.textContent), ["word:windfury"]);
+  art.update(el, m(["windfury"], { atk: 11 }));
+  assert.equal(calls.length, 3, "a canvas that went is not asked again");
+});
+
 test("an element this drawing did not make is left alone", async () => {
   const { art } = await make();
   const stranger = new Node("div");

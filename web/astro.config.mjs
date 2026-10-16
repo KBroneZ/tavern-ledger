@@ -105,6 +105,12 @@ export default defineConfig({
   // in (lib/i18n.ts, T-508), so pages must not render side by side.
   build: { inlineStylesheets: "never", concurrency: 1 },
   // The simulator's worker (lib/sim/simWorker.ts) is an ES module worker.
-  vite: { build: { assetsInlineLimit: 0 }, worker: { format: "es" } },
+  // The minions' drawing is the app's own module, one source for both (T-372):
+  // the dev server may serve it from outside web/.
+  vite: {
+    build: { assetsInlineLimit: 0 },
+    worker: { format: "es" },
+    server: { fs: { allow: [".", "../crates/desktop/ui/minion-art"] } },
+  },
   integrations: [securityHeaders()],
 });

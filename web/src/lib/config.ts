@@ -2,6 +2,7 @@
 // or publishable) key may reach the browser; anything else stops the build.
 // With neither setting the site builds with accounts closed: no backend, no
 // forms, no scripts (until the hosted Supabase project exists).
+import { TEXTURE_ORIGIN } from "./art/textureSet.ts";
 import { ART_ORIGIN } from "./data/pictures.ts";
 
 /** The one source the simulator's worker adds to script-src (D-090). */
@@ -157,7 +158,9 @@ export function signupsOpen(env: ConfigSource): boolean {
  * Content-Security-Policy for every page: scripts and styles come only from
  * the site's own files (the build inlines none), and the only connection is
  * to the Supabase project. Pictures may also come from HearthstoneJSON's art
- * host (D-074), which the game viewer draws in the browser. With accounts
+ * host (D-074), which the game viewer draws in the browser, and the game's
+ * minion textures from their own host (D-151): both only as images (the
+ * textures are read by WebGL and masks from those images, never fetched). With accounts
  * closed there is no script, form, connection or outside picture at all. frame-ancestors
  * only works as a header: the build writes it to dist/_headers (astro.config.mjs).
  *
@@ -183,7 +186,7 @@ export function contentSecurityPolicy(
     "default-src 'none'",
     `script-src ${scripts}`,
     "style-src 'self'",
-    `img-src ${open ? `'self' ${ART_ORIGIN}` : "'self'"}`,
+    `img-src ${open ? `'self' ${ART_ORIGIN} ${TEXTURE_ORIGIN}` : "'self'"}`,
     "font-src 'self'",
     `connect-src ${supabaseOrigin ?? "'none'"}`,
     ...(captcha ? [`frame-src ${TURNSTILE_ORIGIN}`] : []),

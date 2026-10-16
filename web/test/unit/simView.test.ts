@@ -253,6 +253,15 @@ test("a card wears its keywords as the combat replays' marks (T-575)", () => {
   for (const mark of ["sim-taunt", "sim-veil", "sim-venom", "sim-wind"]) assert.ok(out.includes(`class="${mark}" aria-hidden="true"`), mark);
 });
 
+test("a card carries its minion to the game's drawing: the attributes and an empty slot, the page's own marks stay as the fallback (T-372)", () => {
+  const s = B.addMinion(B.emptyState(), "player", 0, "BGS_119", cards);
+  const out = html(editorView({ state: s, cards, selected: null, adding: null, marks: NO_MARKS }));
+  assert.match(out, /<button[^>]* data-tlm-card="BGS_119"[^>]* data-tlm-kw="[a-z_ ]*divine_shield[a-z_ ]*"/);
+  assert.match(out, /<button[^>]*data-tlm-atk="\d+"[^>]*data-tlm-hp="\d+"/);
+  assert.match(out, /<span class="tlm-slot" aria-hidden="true"><\/span>/);
+  assert.ok(out.includes('class="sim-atk"') && out.includes('class="sim-hp"'), "without the textures the numbers are the page's own");
+});
+
 test("Poisonous wears its own flask, Venomous its vial, the vial when both (T-581)", () => {
   // BG29_611 has Venomous and Poisonous printed.
   let s = B.addMinion(B.emptyState(), "player", 0, "BG29_611", cards);

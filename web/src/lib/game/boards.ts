@@ -3,6 +3,7 @@
 // a gold ring when golden, the Divine Shield halo and the Dark Gift marks of
 // the replay (replay.css), and the card's name under it. The keywords are in
 // the minion's words (the tooltip and what a screen reader hears).
+import { drawnAttrs } from "../art/drawn.ts";
 import { cls, h, type VNode } from "../view/node.ts";
 import { shortStat } from "../stat.ts";
 import { picture } from "../view/pieces.ts";
@@ -18,8 +19,13 @@ function minionTile(m: Minion, tipId: string): VNode {
   const words = w.minionWords(m);
   return h(
     "li",
-    { class: cls("rp-minion", "gv-minion", { "is-golden": m.golden, "has-shield": m.keywords.includes("divine_shield") }), ...tipHost(tipId) },
-    h("span", { class: "rp-art" }, picture("card", m.cardId, words, 56, true)),
+    {
+      class: cls("rp-minion", "gv-minion", { "is-golden": m.golden, "has-shield": m.keywords.includes("divine_shield") }),
+      ...drawnAttrs(m.cardId ? { cardId: m.cardId, atk: m.atk, health: m.health, golden: m.golden, keywords: m.keywords } : null),
+      ...tipHost(tipId),
+    },
+    // The slot is where the game's drawing goes once its textures are loaded (art/runtime.ts); empty, it takes no room.
+    h("span", { class: "rp-art" }, picture("card", m.cardId, words, 56, true), h("span", { class: "tlm-slot" })),
     h(
       "span",
       { class: "rp-info" },
