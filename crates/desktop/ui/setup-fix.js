@@ -16,7 +16,7 @@
   };
   const REASONS = [
     "link", "not_a_file", "not_plain_text", "folder_missing", "no_game_exe", "no_path", "access_denied",
-    "read_only", "path_too_long", "locked", "changed", "disk_full", "other",
+    "read_only", "path_too_long", "locked", "changed", "disk_full", "too_large", "too_many_backups", "other",
   ];
   const RESULT_IDS = { "log.config": "setup-result-log", "client.config": "setup-result-client" };
 

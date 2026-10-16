@@ -41,6 +41,11 @@ pub struct SetupState {
     /// tests never touch the player's real `log.config`.
     local_app_data: Mutex<Option<PathBuf>>,
     fixing: AtomicBool,
+    /// The tracker stopped (or never started here): the folder decision is
+    /// no longer followed, so nothing is offered to write.
+    frozen: AtomicBool,
+    /// One refresh at a time, so an older view never lands after a newer one.
+    refresh: Mutex<()>,
     last_fix: Mutex<Option<FixView>>,
     fix_count: AtomicU64,
 }
@@ -51,7 +56,27 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 
 impl SetupState {
     pub fn set_place(&self, place: Place) {
-        *lock(&self.place) = place;
+        let mut current = lock(&self.place);
+        // What a click did in another folder says nothing about this one.
+        if current.install_dir != place.install_dir {
+            *lock(&self.last_fix) = None;
+        }
+        *current = place;
+    }
+
+    /// The folder decision is no longer followed (the tracker stopped): the
+    /// notice still says what it knew, but offers nothing to write.
+    pub fn freeze(&self) {
+        self.frozen.store(true, Ordering::SeqCst);
+    }
+
+    pub fn is_frozen(&self) -> bool {
+        self.frozen.load(Ordering::SeqCst)
+    }
+
+    /// Held while a view is worked out and published.
+    pub fn refreshing(&self) -> std::sync::MutexGuard<'_, ()> {
+        lock(&self.refresh)
     }
 
     pub fn place(&self) -> Place {
@@ -88,28 +113,45 @@ impl SetupState {
         let place = self.place();
         let report = place.folder_lines.is_empty().then(|| self.report());
         let last = lock(&self.last_fix).clone();
-        compose(
-            report.as_ref(),
-            &place.folder_lines,
-            self.fixing.load(Ordering::SeqCst),
-            last.as_ref(),
-        )
+        let fixing = self.fixing.load(Ordering::SeqCst);
+        let (lines, mut view) =
+            compose(report.as_ref(), &place.folder_lines, fixing, last.as_ref());
+        if self.is_frozen() && !fixing {
+            // Said as lines only: no sentence about fixing, no buttons.
+            view.state = "unknown";
+            view.can_fix = false;
+            view.can_fix_optional = false;
+        }
+        (lines, view)
     }
 
-    /// Claims the right to fix; `false` while another click is still working.
-    pub fn begin_fix(&self) -> bool {
+    /// Claims the right to fix; `None` while another click is still working.
+    /// The claim is given back when the ticket is dropped, whatever happens.
+    pub fn begin_fix(&self) -> Option<FixTicket<'_>> {
         self.fixing
             .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
-            .is_ok()
-    }
-
-    pub fn end_fix(&self, result: FixView) {
-        *lock(&self.last_fix) = Some(result);
-        self.fixing.store(false, Ordering::SeqCst);
+            .ok()
+            .map(|_| FixTicket(self))
     }
 
     pub fn next_fix_id(&self) -> u64 {
         self.fix_count.fetch_add(1, Ordering::SeqCst) + 1
+    }
+}
+
+/// The right to run a fix; only one exists at a time.
+pub struct FixTicket<'a>(&'a SetupState);
+
+impl FixTicket<'_> {
+    /// Keeps what the click did, for the notice, and gives the claim back.
+    pub fn finish(self, result: FixView) {
+        *lock(&self.0.last_fix) = Some(result);
+    }
+}
+
+impl Drop for FixTicket<'_> {
+    fn drop(&mut self) {
+        self.0.fixing.store(false, Ordering::SeqCst);
     }
 }
 
@@ -230,10 +272,12 @@ pub fn compose(
     } else {
         "ok"
     };
-    // A failure that no longer matters (the player fixed the file by hand)
-    // is not shown again; what worked still is, for the restart note.
+    // A failure that no longer matters (the player fixed the file by hand) is
+    // not shown again; what worked still is, for the restart note. While the
+    // optional lines are still missing, a failed click stays: it may have been
+    // the one that asked for them.
     let fix = last.cloned().and_then(|mut fix| {
-        if !problem {
+        if !problem && !can_fix_optional {
             fix.files.retain(FileFix::worked);
         }
         (!fix.files.is_empty()).then_some(fix)

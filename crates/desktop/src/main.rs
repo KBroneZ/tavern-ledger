@@ -896,7 +896,11 @@ struct GameFinished {
 }
 
 fn problem(app: &AppHandle, state: &AppState, message: String) {
+    // The tracker is over: the folder decision is not followed any more, so
+    // the setup notice must not offer to write into a folder that may be stale.
+    state.setup.freeze();
     set_status(app, state, |s| s.problem = Some(message));
+    refresh_setup(app, state);
 }
 
 /// Another Tavern Ledger (or tavern-watch) is already following the log: show
@@ -918,6 +922,7 @@ fn show_read_only(app: &AppHandle, state: &AppState, data_dir: &std::path::Path)
 /// says that instead. Called when the folder decision changes, after a click
 /// on Fix, when the window comes to the front and every few seconds.
 fn refresh_setup(app: &AppHandle, state: &AppState) {
+    let _one_at_a_time = state.setup.refreshing();
     let (lines, view) = state.setup.view();
     set_status(app, state, |s| {
         s.setup = lines;
@@ -934,8 +939,9 @@ fn note_folder(state: &AppState, decision: &game_folder::Decision) {
     });
 }
 
-/// Check the two config files again now (the window came to the front).
-#[tauri::command]
+/// Check the two config files again now (the window came to the front). On a
+/// worker thread: the files may be on a slow or sleeping disk.
+#[tauri::command(async)]
 fn setup_recheck(app: AppHandle, state: State<'_, Arc<AppState>>) {
     refresh_setup(&app, &state);
 }
@@ -949,9 +955,13 @@ async fn setup_fix(
     state: State<'_, Arc<AppState>>,
     optional: bool,
 ) -> Result<(), String> {
-    if !state.setup.begin_fix() {
-        return Err("A fix is already running.".into());
+    if state.setup.is_frozen() {
+        let msg = "This window only shows the history; use the other Tavern Ledger window to fix the setup.";
+        return Err::<(), String>(msg.into()).logged("setup_fix");
     }
+    let Some(ticket) = state.setup.begin_fix() else {
+        return Err("A fix is already running.".into());
+    };
     refresh_setup(&app, &state);
     let place = state.setup.place();
     let local = state.setup.local_app_data();
@@ -975,7 +985,7 @@ async fn setup_fix(
             (Vec::new(), Err(msg.to_string()))
         }
     };
-    state.setup.end_fix(setup_notice::FixView {
+    ticket.finish(setup_notice::FixView {
         id: state.setup.next_fix_id(),
         files,
         game_running: ::game_memory::process::is_running(),
@@ -1017,8 +1027,12 @@ fn wait_for_logs_dir(
 fn run_tracker(app: AppHandle, state: Arc<AppState>) {
     let fixed_logs_dir = path_from(std::env::args(), LOGS_DIR_ARG);
     if let Some(dir) = &fixed_logs_dir {
-        // Development: the install is the folder above the Logs folder given.
-        let install = dir.parent().map(Path::to_path_buf);
+        // Development: the install is the folder above the Logs folder given,
+        // when that is a whole path (the Fix button writes there).
+        let install = dir
+            .parent()
+            .filter(|parent| parent.is_absolute())
+            .map(Path::to_path_buf);
         state.setup.set_place(setup_notice::Place {
             install_dir: install.clone(),
             folder_lines: Vec::new(),

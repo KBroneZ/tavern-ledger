@@ -240,14 +240,36 @@ fn an_unknown_or_wrong_folder_is_refused_and_the_install_folder_is_never_made() 
 #[test]
 fn only_one_fix_runs_at_a_time() {
     let state = SetupState::default();
-    assert!(state.begin_fix());
-    assert!(!state.begin_fix());
-    state.end_fix(FixView {
+    let first = state.begin_fix().expect("nothing is running");
+    assert!(state.begin_fix().is_none());
+    first.finish(FixView {
         id: state.next_fix_id(),
         files: Vec::new(),
         game_running: false,
     });
-    assert!(state.begin_fix());
+    assert!(state.begin_fix().is_some());
+}
+
+#[test]
+fn the_claim_comes_back_even_when_the_click_never_finishes() {
+    let state = SetupState::default();
+    let ticket = state.begin_fix().expect("nothing is running");
+    // A panic or a dropped future drops the ticket without finishing.
+    drop(ticket);
+    assert!(state.begin_fix().is_some());
+}
+
+#[test]
+fn a_failed_click_for_the_optional_lines_stays_while_they_are_missing() {
+    let root = temp_dir();
+    let local = local_dir(&root, Some(POWER_ONLY));
+    let game = install(&root, "D", Some(GOOD_CLIENT));
+    let report = check_install(Some(&local), Some(&game));
+    let failed = fix_view(vec![done("log.config", "failed", Some(Reason::ReadOnly))]);
+    let (_, view) = compose(Some(&report), &[], false, Some(&failed));
+    assert_eq!(view.state, "ok");
+    assert!(view.can_fix_optional);
+    assert_eq!(view.fix, Some(failed));
 }
 
 fn fix_view(files: Vec<FileFix>) -> FixView {
@@ -314,4 +336,44 @@ fn the_dev_stand_in_for_local_app_data_wins_over_the_real_one() {
     let dir = temp_dir();
     state.use_local_app_data(Some(dir.clone()));
     assert_eq!(state.local_app_data(), Some(dir));
+}
+
+#[test]
+fn what_a_click_did_in_one_folder_is_not_shown_for_another() {
+    let root = temp_dir();
+    let local = local_dir(&root, Some(GOOD_POWER));
+    let first = install(&root, "E", None);
+    let second = install(&root, "D", None);
+    let state = state_for(&local, Some(&first));
+    let ticket = state.begin_fix().expect("nothing is running");
+    ticket.finish(fix_view(vec![done(
+        "client.config",
+        "failed",
+        Some(Reason::AccessDenied),
+    )]));
+    assert_eq!(state.view().1.state, "error");
+    // The player chooses another install: a fresh start there.
+    state.set_place(Place {
+        install_dir: Some(second),
+        folder_lines: Vec::new(),
+    });
+    let (_, view) = state.view();
+    assert_eq!(view.state, "needs_fix");
+    assert_eq!(view.fix, None);
+}
+
+#[test]
+fn once_the_tracker_has_stopped_the_notice_offers_nothing_to_write() {
+    let root = temp_dir();
+    let local = local_dir(&root, None);
+    let game = install(&root, "D", None);
+    let state = state_for(&local, Some(&game));
+    assert!(state.view().1.can_fix);
+    state.freeze();
+    let (lines, view) = state.view();
+    assert_eq!(lines.len(), 2, "it still says what is wrong");
+    assert_eq!(
+        (view.state, view.can_fix, view.can_fix_optional),
+        ("unknown", false, false)
+    );
 }

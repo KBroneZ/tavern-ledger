@@ -254,8 +254,12 @@ struct Spy {
     fail_temp: bool,
     fail_backup: bool,
     fail_rename: bool,
+    /// The file system has no second names for a file.
+    no_links: bool,
     /// Runs between the read and the replace, like another program writing.
     meanwhile: RefCell<Option<Box<dyn Fn()>>>,
+    /// Runs after the last check, just before the replace.
+    after: RefCell<Option<Box<dyn Fn()>>>,
     renames: Cell<u32>,
 }
 
@@ -274,6 +278,17 @@ impl Io for Spy {
             return Err(io::Error::from(io::ErrorKind::PermissionDenied));
         }
         RealIo.rename(from, to)
+    }
+    fn link_new(&self, from: &Path, to: &Path) -> io::Result<()> {
+        if self.no_links {
+            return Err(io::Error::from(io::ErrorKind::Unsupported));
+        }
+        RealIo.link_new(from, to)
+    }
+    fn after_check(&self, _target: &Path) {
+        if let Some(act) = self.after.borrow().as_ref() {
+            act();
+        }
     }
     fn before_replace(&self, _target: &Path) {
         if let Some(act) = self.meanwhile.borrow().as_ref() {
@@ -440,4 +455,128 @@ fn a_junction_where_the_file_should_be_is_refused_and_nothing_is_written_through
     assert_eq!(fix(&target(&path, &[LOG])), Outcome::Refused(Reason::Link));
     assert!(fs::read_dir(&real).unwrap().next().is_none());
     fs::remove_dir(&path).unwrap();
+}
+
+#[test]
+fn a_file_that_appears_after_the_last_check_is_never_replaced_when_there_was_none() {
+    let dir = temp_dir();
+    let path = dir.join("client.config");
+    let spy = Spy::default();
+    let elsewhere = path.clone();
+    *spy.after.borrow_mut() = Some(Box::new(move || {
+        fs::write(
+            &elsewhere,
+            "[Graphics]
+",
+        )
+        .unwrap();
+    }));
+    assert_eq!(
+        fix_with(&spy, &target(&path, &[LOG])),
+        Outcome::Failed(Reason::Changed)
+    );
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        "[Graphics]
+"
+    );
+    assert_eq!(names(&dir), ["client.config"], "the temp file is gone");
+}
+
+#[test]
+fn a_new_file_is_made_with_one_name_only() {
+    let dir = temp_dir();
+    let path = dir.join("client.config");
+    assert!(matches!(
+        fix(&target(&path, &[LOG])),
+        Outcome::Fixed { created: true, .. }
+    ));
+    // A stray second name would make the next run refuse it as hard-linked.
+    assert_eq!(fix(&target(&path, &[LOG])), Outcome::AlreadyOk);
+    assert_eq!(names(&dir), ["client.config"]);
+}
+
+#[test]
+fn without_second_names_a_new_file_is_still_made() {
+    let dir = temp_dir();
+    let path = dir.join("client.config");
+    let spy = Spy {
+        no_links: true,
+        ..Spy::default()
+    };
+    assert!(matches!(
+        fix_with(&spy, &target(&path, &[LOG])),
+        Outcome::Fixed { created: true, .. }
+    ));
+    assert_eq!(names(&dir), ["client.config"]);
+}
+
+#[test]
+fn a_file_far_bigger_than_a_config_file_is_refused_unread() {
+    let dir = temp_dir();
+    let path = dir.join("client.config");
+    fs::write(&path, vec![b'a'; 1024 * 1024 + 1]).unwrap();
+    assert_eq!(
+        fix(&target(&path, &[LOG])),
+        Outcome::Refused(Reason::TooLarge)
+    );
+    assert_eq!(names(&dir), ["client.config"]);
+}
+
+#[test]
+fn when_every_backup_name_is_taken_it_says_so_and_changes_nothing() {
+    let dir = temp_dir();
+    let path = dir.join("client.config");
+    fs::write(
+        &path,
+        "[Graphics]
+",
+    )
+    .unwrap();
+    fs::write(dir.join("client.config.bak"), "1").unwrap();
+    for number in 2..=99 {
+        fs::write(dir.join(format!("client.config.bak{number}")), "x").unwrap();
+    }
+    assert_eq!(
+        fix(&target(&path, &[LOG])),
+        Outcome::Failed(Reason::TooManyBackups)
+    );
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        "[Graphics]
+"
+    );
+    assert!(!names(&dir).iter().any(|n| n.ends_with(".tmp")));
+}
+
+#[cfg(windows)]
+#[test]
+fn a_junction_named_like_the_backup_is_skipped_not_followed() {
+    let dir = temp_dir();
+    let real = dir.join("real");
+    fs::create_dir(&real).unwrap();
+    let path = dir.join("client.config");
+    fs::write(
+        &path,
+        "[Graphics]
+",
+    )
+    .unwrap();
+    let junction = dir.join("client.config.bak");
+    let made = std::process::Command::new("cmd")
+        .args(["/C", "mklink", "/J"])
+        .arg(&junction)
+        .arg(&real)
+        .output();
+    if !made.is_ok_and(|out| out.status.success()) {
+        return;
+    }
+    let outcome = fix(&target(&path, &[LOG]));
+    assert!(
+        matches!(outcome, Outcome::Fixed { backup: true, .. }),
+        "{outcome:?}"
+    );
+    assert!(fs::read_dir(&real).unwrap().next().is_none());
+    assert!(dir.join("client.config.bak2").is_file());
+    fs::remove_dir(&junction).unwrap();
 }

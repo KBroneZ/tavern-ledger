@@ -25,6 +25,8 @@ use crate::setup::{merge_config, Wanted, CLIENT_CONFIG_FILE, LOG_CONFIG_FILE};
 const GAME_EXE: &str = "Hearthstone.exe";
 /// `.bak`, `.bak2` ... `.bak99`: more than this and something is wrong.
 const MAX_BACKUPS: u32 = 99;
+/// A logging config file is a few lines; a bigger one is not read or copied.
+const MAX_FILE_BYTES: u64 = 1024 * 1024;
 
 /// Why a file was not fixed. The window has the words for each.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -36,6 +38,10 @@ pub enum Reason {
     NotAFile,
     /// The text is not UTF-8 or ASCII (for example UTF-16).
     NotPlainText,
+    /// The file is far bigger than any config file (over 1 MiB).
+    TooLarge,
+    /// `.bak` to `.bak99` beside it are all taken.
+    TooManyBackups,
     /// The folder the file goes in is not there (and may not be made).
     FolderMissing,
     /// The install folder has no `Hearthstone.exe`.
@@ -131,9 +137,13 @@ pub(crate) trait Io {
     /// A new, empty file that must not exist yet.
     fn create_new(&self, role: Role, path: &Path) -> io::Result<fs::File>;
     fn rename(&self, from: &Path, to: &Path) -> io::Result<()>;
+    /// A second name for `from` at `to`, which fails when `to` exists.
+    fn link_new(&self, from: &Path, to: &Path) -> io::Result<()>;
     /// Called after the backup and temp file are ready, before the check that
     /// the target did not change and the replace.
     fn before_replace(&self, _target: &Path) {}
+    /// Called right after that check, just before the replace.
+    fn after_check(&self, _target: &Path) {}
 }
 
 pub(crate) struct RealIo;
@@ -149,6 +159,10 @@ impl Io for RealIo {
     fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
         fs::rename(from, to)
     }
+
+    fn link_new(&self, from: &Path, to: &Path) -> io::Result<()> {
+        fs::hard_link(from, to)
+    }
 }
 
 pub fn fix(target: &Target<'_>) -> Outcome {
@@ -158,8 +172,13 @@ pub fn fix(target: &Target<'_>) -> Outcome {
 pub(crate) fn fix_with(io: &dyn Io, target: &Target<'_>) -> Outcome {
     match run(io, target) {
         Ok(outcome) => outcome,
+        Err(error) if is_backups_exhausted(&error) => Outcome::Failed(Reason::TooManyBackups),
         Err(error) => Outcome::Failed(Reason::of_io(&error)),
     }
+}
+
+fn is_backups_exhausted(error: &io::Error) -> bool {
+    error.kind() == io::ErrorKind::AlreadyExists && error.get_ref().is_some()
 }
 
 /// What a path holds right now.
@@ -176,8 +195,9 @@ enum Snapshot {
 struct Made(Vec<PathBuf>);
 
 impl Made {
-    fn keep(mut self) {
-        self.0.clear();
+    /// This one stays: it is a result, not a leftover.
+    fn keep(&mut self, path: &Path) {
+        self.0.retain(|made| made != path);
     }
 }
 
@@ -218,20 +238,48 @@ fn run(io: &dyn Io, target: &Target<'_>) -> io::Result<Outcome> {
     let mut made = Made(Vec::new());
     let temp = temp_path(path);
     write_new(io, Role::Temp, &temp, &merged, &mut made)?;
-    if existing {
-        make_backup(io, path, original, &mut made)?;
-    }
+    let backup = if existing {
+        Some(make_backup(io, path, original, &mut made)?)
+    } else {
+        None
+    };
     io.before_replace(path);
     if snapshot(path)? != Ok(before) {
         return Ok(Outcome::Failed(Reason::Changed));
     }
-    io.rename(&temp, path)?;
-    // The temp file is the target now, and the backup stays.
-    made.keep();
+    io.after_check(path);
+    if existing {
+        io.rename(&temp, path)?;
+    } else if !publish_new(io, &temp, path)? {
+        return Ok(Outcome::Failed(Reason::Changed));
+    }
+    // The backup stays. The temp file is the target now (or is removed as a
+    // leftover when the target is a second name of it), so a stray extra name
+    // never makes the next run refuse the file as hard-linked.
+    if let Some(backup) = &backup {
+        made.keep(backup);
+    }
+    drop(made);
     Ok(Outcome::Fixed {
         created: !existing,
         backup: existing,
     })
+}
+
+/// Puts the finished temp file at `path`, a name nobody had a moment ago,
+/// without ever replacing a file that has appeared since: `false` when one
+/// did. Where the file system has no second names (links) it falls back to a
+/// plain rename, which the check just before covers.
+fn publish_new(io: &dyn Io, temp: &Path, path: &Path) -> io::Result<bool> {
+    match io.link_new(temp, path) {
+        Ok(()) => {
+            // The temp name is not needed any more; the target keeps the file.
+            let _ = fs::remove_file(temp);
+            Ok(true)
+        }
+        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => Ok(false),
+        Err(_) => io.rename(temp, path).map(|()| true),
+    }
 }
 
 /// Writes a new file with these bytes and puts it to disk.
@@ -249,7 +297,7 @@ fn write_new(
 }
 
 /// `<name>.bak`, or the first of `.bak2`, `.bak3`... that is free.
-fn make_backup(io: &dyn Io, path: &Path, bytes: &[u8], made: &mut Made) -> io::Result<()> {
+fn make_backup(io: &dyn Io, path: &Path, bytes: &[u8], made: &mut Made) -> io::Result<PathBuf> {
     for number in 1..=MAX_BACKUPS {
         let suffix = if number == 1 {
             ".bak".to_string()
@@ -260,11 +308,19 @@ fn make_backup(io: &dyn Io, path: &Path, bytes: &[u8], made: &mut Made) -> io::R
         name.push(suffix);
         let backup = PathBuf::from(name);
         match write_new(io, Role::Backup, &backup, bytes, made) {
-            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
-            other => return other,
+            // Windows says "access denied", not "exists", for a folder or a
+            // junction with that name: anything already there is taken.
+            Err(error)
+                if error.kind() == io::ErrorKind::AlreadyExists
+                    || fs::symlink_metadata(&backup).is_ok() => {}
+            Ok(()) => return Ok(backup),
+            Err(error) => return Err(error),
         }
     }
-    Err(io::Error::from(io::ErrorKind::AlreadyExists))
+    Err(io::Error::new(
+        io::ErrorKind::AlreadyExists,
+        "all the backup names are taken",
+    ))
 }
 
 fn temp_path(path: &Path) -> PathBuf {
@@ -296,6 +352,9 @@ fn snapshot(path: &Path) -> io::Result<Result<Snapshot, Reason>> {
     }
     if link_count(path)? > 1 {
         return Ok(Err(Reason::Link));
+    }
+    if meta.len() > MAX_FILE_BYTES {
+        return Ok(Err(Reason::TooLarge));
     }
     Ok(Ok(Snapshot::File {
         bytes: fs::read(path)?,

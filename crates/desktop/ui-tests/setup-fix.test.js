@@ -111,7 +111,7 @@ test("one file can work while the other does not, each said in its own line", ()
 test("every reason has its words in both languages", () => {
   for (const lang of ["en", "es"]) {
     I18n.setLang(lang);
-    for (const reason of ["link", "not_a_file", "not_plain_text", "folder_missing", "no_game_exe", "no_path", "access_denied", "read_only", "path_too_long", "locked", "changed", "disk_full", "other"]) {
+    for (const reason of ["link", "not_a_file", "not_plain_text", "folder_missing", "no_game_exe", "no_path", "access_denied", "read_only", "path_too_long", "locked", "changed", "disk_full", "too_large", "too_many_backups", "other"]) {
       const line = TLSetupFix.resultLine({ file: "client.config", result: "failed", reason }, t);
       assert.ok(!line.includes("setup.fix"), `${lang} ${reason}: ${line}`);
     }

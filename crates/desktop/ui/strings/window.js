@@ -184,6 +184,8 @@
       "setup.fix.reason.locked": "another program has the file open.",
       "setup.fix.reason.changed": "it changed while Tavern Ledger was working on it, so nothing was written. Click Fix again.",
       "setup.fix.reason.disk_full": "the disk is full.",
+      "setup.fix.reason.too_large": "it is far bigger than a config file, so Tavern Ledger left it alone.",
+      "setup.fix.reason.too_many_backups": "there are already 99 .bak copies beside it. Delete some and click Fix again.",
       "setup.fix.reason.unknown": "Windows reported an error.",
 
       "win.upload.title": "Upload to the website",
@@ -464,6 +466,8 @@
       "setup.fix.reason.locked": "otro programa tiene el archivo abierto.",
       "setup.fix.reason.changed": "cambió mientras Tavern Ledger trabajaba en él, así que no se ha escrito nada. Pulsa Arreglar otra vez.",
       "setup.fix.reason.disk_full": "el disco está lleno.",
+      "setup.fix.reason.too_large": "es mucho más grande que un archivo de configuración, así que Tavern Ledger no lo ha tocado.",
+      "setup.fix.reason.too_many_backups": "ya hay 99 copias .bak a su lado. Borra algunas y pulsa Arreglar otra vez.",
       "setup.fix.reason.unknown": "Windows ha indicado un error.",
 
       "win.upload.title": "Subir a la web",

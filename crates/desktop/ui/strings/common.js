@@ -290,6 +290,8 @@
         "the game log has too many unreadable lines (restart Hearthstone and play a new game)": "el registro del juego tiene demasiadas líneas ilegibles (reinicia Hearthstone y juega una partida nueva)",
         "the log was cut in the middle of a line (without client.config the game stops writing Power.log at 10 MB)": "El registro se cortó a mitad de una línea (sin client.config el juego deja de escribir Power.log al llegar a 10 MB)",
         "skipped 1 unreadable log line": "Se ha omitido 1 línea ilegible del registro",
+        "This window only shows the history; use the other Tavern Ledger window to fix the setup.": "Esta ventana solo muestra el historial; usa la otra ventana de Tavern Ledger para arreglar la configuración.",
+        "A fix is already running.": "Ya hay un arreglo en curso.",
         // tracker::setup, the reasons inside its lines
         "Without the Power log Tavern Ledger sees no games.": "Sin el registro Power, Tavern Ledger no ve ninguna partida.",
         "Without it the game stops writing Power.log at about 10 MB and later games are lost.": "Sin él, el juego deja de escribir Power.log al llegar a unos 10 MB y se pierden las partidas siguientes.",
