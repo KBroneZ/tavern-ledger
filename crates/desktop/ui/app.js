@@ -113,6 +113,10 @@ function art(id, className) {
   return img;
 }
 
+// The shared minion drawing (T-372) once the game's textures are on this PC;
+// null before, and the boards keep their own look.
+const minionArt = () => window.TLMinions || null;
+
 // The hero's portrait, looked up by the log's card id in the card data
 // (T-304); none when there is no id.
 const portrait = (id) => art(id, "portrait");
@@ -980,8 +984,8 @@ function renderRecapNow(r, game) {
     document.getElementById("recap-body").replaceChildren(top, unreadableSection(r));
     return;
   }
-  const turnTools = { card: TLShop.card, cardRow: TLShop.cardRow, fold: TLCompact.fold, art, heroText, game: key, cardName: (id) => TLCards.display(id) };
-  const replayTools = { art, heroText, cardName: (id) => TLCards.display(id), fold: TLCompact.fold, game: key };
+  const turnTools = { card: TLShop.card, cardRow: TLShop.cardRow, fold: TLCompact.fold, art, minionArt, heroText, game: key, cardName: (id) => TLCards.display(id) };
+  const replayTools = { art, minionArt, heroText, cardName: (id) => TLCards.display(id), fold: TLCompact.fold, game: key };
   // Simple (T-344) keeps the facts, health, shop summary, combat replays
   // (T-215), why each result differed (T-346), record and messages; the rest
   // waits for Advanced.
@@ -1163,6 +1167,10 @@ async function main() {
     renderCardStatus();
     render();
     // Names in an open recap follow too (the card data answered or changed).
+    if (recapShown && recapGame === recapShown.target && recapView.isOpen()) renderRecap(recapShown.recap, recapShown.target);
+  });
+  // The game's textures arrived (or went): an open recap is drawn again.
+  window.addEventListener("tl-minions", () => {
     if (recapShown && recapGame === recapShown.target && recapView.isOpen()) renderRecap(recapShown.recap, recapShown.target);
   });
   await listen("games-changed", () => refreshGames().catch(showError));

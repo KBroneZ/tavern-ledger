@@ -298,3 +298,9 @@ test("the buffs' bounds are the parser's, the server's and the website's", () =>
   const revision = Number(/PARSER_REVISION: u32 = (\d+)/.exec(read("crates", "bg-parser", "src", "lib.rs"))[1]);
   assert.ok(revision >= 14, "the parser is at or past the first revision with buffs");
 });
+
+test("a minion of a turn board is handed to the shared drawing; a record without keywords draws none", () => {
+  const m = { id: "C_1", atk: 3, health: 4, golden: false, keywords: ["taunt", "divine_shield"] };
+  assert.deepEqual(TLTurns.drawnMinion(m), { card_id: "C_1", atk: 3, health: 4, golden: false, keywords: ["taunt", "divine_shield"] });
+  assert.deepEqual(TLTurns.drawnMinion({ ...m, keywords: null, golden: true }), { card_id: "C_1", atk: 3, health: 4, golden: true, keywords: [] });
+});

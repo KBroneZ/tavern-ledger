@@ -35,7 +35,7 @@
 - **Combat replays**, attack by attack, from the log: what the game played on your screen, never a simulation.
 - **Stats** for Solo and Duos apart: totals, every hero you played, tribes, trinkets and Dark Gifts with their pick rates, plus a Records tab.
 - **An in-game overlay**, if you want one: hover a hero on the game's leaderboard to see the last board you met from them, with tier, health, triples and your record; the next opponent is marked.
-- **Combat odds** in the overlay, from the project's own simulator: the chance to win, tie or lose against your next opponent, in Solo and Duos. A hint, not a promise; the website shows [how often it is right](https://tavernledger.net/accuracy/).
+- **Combat odds** in the overlay, from the project's own simulator: during each combat, the chance to win, tie or lose from the two boards that entered play, in Solo and Duos. A hint, not a promise; the website shows [how often it is right](https://tavernledger.net/accuracy/).
 - **Every value says where it comes from**: from the log, inferred, entered by you or unknown. When the app cannot tell, it says so instead of guessing.
 - English and Spanish.
 

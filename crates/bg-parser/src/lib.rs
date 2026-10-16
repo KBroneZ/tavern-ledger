@@ -27,6 +27,7 @@ use std::io::BufRead;
 
 use clock::Clock;
 use collector::{hero_health, leaderboard_heroes, Collector};
+use hero_select::HeroOffer;
 use power::{card_names, classify, parse_power, Line, ParseError, REGEX_PARSING_ERROR};
 use report::{CombatEntry, GameReport, LobbyPlayer, LobbySlot, Round, Status};
 use state::Entity;
@@ -255,10 +256,28 @@ impl GameReader {
                 tech_level: hero
                     .opt_int("PLAYER_TECH_LEVEL")
                     .filter(|t| (1..=MAX_TECH_LEVEL).contains(t)),
+                health: collector::hero_shown_health(hero),
+                armor: hero
+                    .opt_int("ARMOR")
+                    .filter(|a| (0..=collector::MAX_HERO_POINTS).contains(a)),
             })
             .collect();
         slots.sort_by_key(|s| s.player_id);
         slots
+    }
+
+    /// The heroes on offer at hero select as the log has them now (T-365).
+    /// None before the offer, after the pick, or once the game could not be
+    /// read.
+    pub fn hero_offer_now(&self) -> Option<HeroOffer> {
+        if self.error.is_some() {
+            return None;
+        }
+        self.collector.hero_select.offer_now(
+            &self.collector.board,
+            &self.names,
+            self.collector.pending_change(),
+        )
     }
 
     /// The seat the game marks as the next opponent on its leaderboard
@@ -321,6 +340,18 @@ impl GameReader {
         }
         game.opt_int(DAMAGE_CAP)
             .filter(|cap| (1..=MAX_DAMAGE_CAP).contains(cap))
+    }
+
+    /// The number of the combat the game is playing now (D-152): the combat
+    /// turn's half, the same number the report gives that combat's round.
+    /// `None` in a shop turn, before the first combat, or when the game could
+    /// not be read.
+    pub fn combat_round_now(&self) -> Option<i64> {
+        if self.error.is_some() {
+            return None;
+        }
+        let turn = self.collector.turn();
+        (turn >= 2 && turn % 2 == 0).then_some(turn / 2)
     }
 
     /// The player's own board as it is now in a shop turn (T-605): what the
@@ -466,6 +497,13 @@ impl LogReader {
         }
     }
 
+    /// The heroes on offer in the Battlegrounds game in progress (see
+    /// [`GameReader::hero_offer_now`]); `None` when no such game is on.
+    pub fn hero_offer_now(&self) -> Option<HeroOffer> {
+        self.in_progress_index()?;
+        self.current.as_ref()?.hero_offer_now()
+    }
+
     /// The next opponent of the Battlegrounds game in progress (see
     /// [`GameReader::next_opponent_now`]); `None` when no such game is on.
     pub fn next_opponent_now(&self) -> Option<i64> {
@@ -485,6 +523,13 @@ impl LogReader {
     pub fn damage_cap_now(&self) -> Option<i64> {
         self.in_progress_index()?;
         self.current.as_ref()?.damage_cap_now()
+    }
+
+    /// The combat the Battlegrounds game in progress is playing (see
+    /// [`GameReader::combat_round_now`]); `None` when no such game is on.
+    pub fn combat_round_now(&self) -> Option<i64> {
+        self.in_progress_index()?;
+        self.current.as_ref()?.combat_round_now()
     }
 
     /// The own board in a shop turn of the Battlegrounds game in progress

@@ -35,6 +35,22 @@ function inlineFonts(css, uiDir) {
   });
 }
 
+// A module script and what it imports as one script: every file in the
+// graph, the dependencies first, with the import lines and the `export`
+// keywords taken out (the files' names are unique, so they share one scope).
+function bundleModule(file, seen = new Set(), parts = []) {
+  if (seen.has(file)) return parts;
+  seen.add(file);
+  const text = read(file);
+  const IMPORT = /^import\s[^;]*?from\s+"([^"]+)";?[ \t]*$/gm;
+  for (const m of text.matchAll(IMPORT)) {
+    if (!m[1].startsWith(".")) throw new Error(`${file} imports ${m[1]}: only the app's own files are inlined`);
+    bundleModule(path.resolve(path.dirname(file), m[1]), seen, parts);
+  }
+  parts.push(text.replace(IMPORT, "").replace(/^export\s+(?=(?:async\s+)?(?:function|const|let|class)\b)/gm, ""));
+  return parts;
+}
+
 // The overlay page as one document: stylesheet inline, scripts inline, the
 // stand-in and the scenarios' states before the first script.
 function overlayDocument(uiDir, scenarios) {
@@ -45,6 +61,7 @@ function overlayDocument(uiDir, scenarios) {
   const bootstrap = [
     "/*__GALLERY_CONFIG__*/",
     read(path.join(__dirname, "theme-vars.js")),
+    read(path.join(__dirname, "default-layout.js")),
     read(path.join(__dirname, "bridge.js")),
     `(() => { const states = ${jsonForScript(states)}; const names = ${jsonForScript(names)};` +
       " const cfg = window.__GALLERY__ || { scenario: Object.keys(states)[0], lang: \"en\" };" +
@@ -53,6 +70,10 @@ function overlayDocument(uiDir, scenarios) {
   let first = true;
   return html
     .replace(/<link rel="stylesheet" href="([^"]+)">/g, (_, href) => `<style>\n${inlineFonts(read(path.join(uiDir, href)), uiDir)}\n</style>`)
+    .replace(/<script type="module" src="([^"]+)"><\/script>/g, (_, src) => {
+      const code = bundleModule(path.join(uiDir, src)).join("\n");
+      return `<script type="module">\n${inScript(code)}\n</script>`;
+    })
     .replace(/<script src="([^"]+)"><\/script>/g, (_, src) => {
       const own = `<script>\n${inScript(read(path.join(uiDir, src)))}\n</script>`;
       if (!first) return own;
@@ -64,7 +85,9 @@ function overlayDocument(uiDir, scenarios) {
 // The page must have come out whole: a tag the inlining did not recognise
 // would make the frame ask for a file that is not there.
 function checkSelfContained(doc) {
-  const loose = doc.match(/<script[^>]*\ssrc=[^>]*>|<link[^>]*>|url\(\s*(?!["']?data:)[^)]*\)/i);
+  // A CSS url() matters in the styles and the markup, not in a script's own text.
+  const withoutScripts = doc.replace(/<script(?![^>]*\ssrc=)[^>]*>[\s\S]*?<\/script>/gi, "");
+  const loose = withoutScripts.match(/<script[^>]*\ssrc=[^>]*>|<link[^>]*>|url\(\s*(?!["']?data:)[^)]*\)/i);
   if (loose) throw new Error(`overlay.html has something the gallery does not inline: ${loose[0].slice(0, 80)}`);
 }
 
@@ -93,4 +116,4 @@ if (require.main === module) {
   console.log(`${result.file} (${(result.bytes / 1024).toFixed(0)} KB, ${result.scenarios.length} scenarios)`);
 }
 
-module.exports = { build, inScript, jsonForScript, checkSelfContained };
+module.exports = { build, inScript, jsonForScript, checkSelfContained, bundleModule };

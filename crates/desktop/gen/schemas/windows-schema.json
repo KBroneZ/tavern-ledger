@@ -423,6 +423,12 @@
           "markdownDescription": "Enables the status command without any pre-configured scope."
         },
         {
+          "description": "Enables the texture_set command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-texture-set",
+          "markdownDescription": "Enables the texture_set command without any pre-configured scope."
+        },
+        {
           "description": "Enables the update_check_now command without any pre-configured scope.",
           "type": "string",
           "const": "allow-update-check-now",
@@ -727,6 +733,12 @@
           "type": "string",
           "const": "deny-status",
           "markdownDescription": "Denies the status command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the texture_set command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-texture-set",
+          "markdownDescription": "Denies the texture_set command without any pre-configured scope."
         },
         {
           "description": "Denies the update_check_now command without any pre-configured scope.",

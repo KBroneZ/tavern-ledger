@@ -90,6 +90,8 @@
     const tiers = Array.isArray(o.tiers) ? o.tiers : [];
     const shown = o.shown_source === "log" && Array.isArray(o.shown) ? o.shown : [];
     const health = o.health && Number.isInteger(o.health.value) ? o.health.value : null;
+    // The armor shield is shown only when the game shows one: none is not 0.
+    const armor = o.armor && Number.isInteger(o.armor.value) && o.armor.value > 0 ? o.armor.value : null;
     const triples = shown.reduce((sum, s) => sum + (s && Number.isInteger(s.triples) && s.triples > 0 ? s.triples : 0), 0);
     return {
       faces: seats.map((_, i) => ({
@@ -97,23 +99,56 @@
         tier: tiers[i] && Number.isInteger(tiers[i].value) ? tiers[i].value : null,
       })),
       health,
+      armor,
       triples,
       next: o.next === true,
       out: health !== null && health <= 0,
     };
   }
 
-  // The lobby's tribes: read from the game (D-063) or entered by the user,
-  // else the ones the tavern confirmed, marked inferred with how many of the
-  // five when not all. Offers seen in the tavern alone are not the lobby.
+  // The lobby's tribes the overlay shows (D-148): only the ones read from
+  // the game (D-063). Entered tribes and the tavern's deductions stay in the
+  // main window and the saved games; never here.
   function lobbyTribes(game) {
     const lobby = game && game.lobby_tribes;
-    if (!lobby || !Array.isArray(lobby.tribes) || !lobby.tribes.length) return null;
-    if (lobby.basis === "game" || lobby.basis === "entered") return { tribes: lobby.tribes, inferred: false, count: null };
-    if (lobby.basis === "tavern_confirmed") {
-      return { tribes: lobby.tribes, inferred: true, count: lobby.complete ? null : lobby.tribes.length };
-    }
-    return null;
+    if (!lobby || lobby.basis !== "game" || !Array.isArray(lobby.tribes) || !lobby.tribes.length) return null;
+    return { tribes: lobby.tribes };
+  }
+
+  // Why the tribes are not shown, from the reader's status (D-148).
+  const REASONS = {
+    off: "off",
+    unsupported_version: "unsupported",
+    waiting: "waiting",
+    not_running: "failed",
+    no_access: "failed",
+  };
+
+  // The tribes panel: the tribes read from the game, or none and one line
+  // that says why. A status that reads "ok" with no tribes (the tavern
+  // contradicted them, or they did not pass a check) is a failed read.
+  function tribesPanel(game) {
+    const known = lobbyTribes(game);
+    if (known) return { tribes: known.tribes, reason: null };
+    const status = game && game.game_tribes && game.game_tribes.status;
+    const key = Object.prototype.hasOwnProperty.call(REASONS, status) ? REASONS[status] : "failed";
+    return { tribes: [], reason: I18n.t(`ov.tribes.reason.${key}`) };
+  }
+
+  // The marks over the game's leaderboard (T-368): one per opponent whose
+  // place is a row of the board, with its health and the triples the log
+  // gave. A place the board does not have, or a board size not known, gives
+  // no mark: the position is never a guess.
+  function opponentMarks(game) {
+    const slots = game && game.leaderboard_slots;
+    if (!Number.isInteger(slots) || slots < 1) return [];
+    const list = Array.isArray(game.opponents) ? game.opponents : [];
+    return list.flatMap((o) => {
+      const place = o && o.place && o.place.value;
+      if (!Number.isInteger(place) || place < 1 || place > slots) return [];
+      const row = opponentRow(o);
+      return [{ place, slots, health: row.health, armor: row.armor, triples: row.triples, out: row.out }];
+    });
   }
 
   // The combat damage cap the game shows (T-315): "Max damage 15", the
@@ -133,6 +168,8 @@
     hoveredViews,
     opponentRow,
     lobbyTribes,
+    tribesPanel,
+    opponentMarks,
     damageCap,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;

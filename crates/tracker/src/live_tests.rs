@@ -387,6 +387,8 @@ fn slot(player_id: i64, place: Option<i64>, tech_level: Option<i64>) -> LobbySlo
         player_id,
         place,
         tech_level,
+        health: None,
+        armor: None,
     }
 }
 
@@ -458,6 +460,48 @@ fn in_duos_a_team_has_one_place_and_a_tier_per_hero() {
     assert_eq!(first.place.value, Some(1));
     let tiers: Vec<_> = first.tiers.iter().map(|t| t.value).collect();
     assert_eq!(tiers, [Some(1), Some(2)]);
+}
+
+fn slot_with(player_id: i64, health: Option<i64>, armor: Option<i64>) -> LobbySlot {
+    LobbySlot {
+        health,
+        armor,
+        ..slot(player_id, Some(player_id), Some(1))
+    }
+}
+
+#[test]
+fn health_and_armor_are_the_games_own_and_apart() {
+    // The game's drop and shield, from the leaderboard hero as it is now: the
+    // armor gained in the shop shows at once, not after the next combat.
+    let lobby = [
+        slot_with(1, Some(30), None),
+        slot_with(2, Some(14), Some(5)),
+        slot_with(3, Some(0), None),
+        slot_with(4, None, None),
+    ];
+    let live = live_game(&solo(vec![], "incomplete")).with_leaderboard(&lobby);
+    let two = opponent(&live, 2);
+    assert_eq!((two.health.value, two.armor.value), (Some(14), Some(5)));
+    assert_eq!(two.armor.source, Source::Log);
+    let three = opponent(&live, 3);
+    assert_eq!((three.health.value, three.armor.value), (Some(0), None));
+    assert_eq!(three.armor.source, Source::Unknown, "no armor is not 0");
+    // A hero the leaderboard has no health for keeps what the log's closed
+    // combats say, and shows no armor.
+    let four = opponent(&live, 4);
+    assert_eq!(four.armor.value, None);
+}
+
+#[test]
+fn in_duos_a_team_shows_its_shared_health_and_armor_once() {
+    let lobby = [
+        slot_with(3, Some(14), Some(5)),
+        slot_with(4, Some(14), Some(5)),
+    ];
+    let live = live_game(&duos(vec![])).with_leaderboard(&lobby);
+    let team = live.opponents.iter().find(|o| o.seats == [3, 4]).unwrap();
+    assert_eq!((team.health.value, team.armor.value), (Some(14), Some(5)));
 }
 
 /// A shop record whose newest turn is `turn` (none for 0).

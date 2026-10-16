@@ -21,6 +21,7 @@
         <option value="1920x1080">1920×1080</option>
         <option value="2560x1440">2560×1440</option>
         <option value="1280x720">1280×720</option>
+        <option value="3440x1440">3440×1440 ultrawide</option>
         <option value="custom">Custom…</option>
       </select>
     </label>
@@ -42,18 +43,21 @@
       </select>
     </label>
     <a id="bare" class="link" target="_blank" rel="noopener">Bare page</a>
+    <button type="button" id="check-overlaps">Check overlaps</button>
   </header>
   <section class="events" aria-label="Bridge events">
     <span class="events-title">Fire an event</span>
     <span id="event-buttons"></span>
     <output id="event-log" aria-live="polite"></output>
   </section>
+  <output id="overlap-report" class="events" aria-live="polite" hidden></output>
   <p id="caption" class="caption"></p>
   <main id="stage" class="stage">
     <div id="game" class="game">
       <iframe id="frame" title="Overlay" scrolling="no" allowtransparency="true"></iframe>
     </div>
   </main>
+  <script src="/dev/overlaps.js"></script>
   <script src="/dev/workbench.js"></script>
 </body>
 </html>

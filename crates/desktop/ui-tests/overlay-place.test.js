@@ -1,7 +1,7 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { overlaps, spot, padSpot, MARGIN } = require("../ui/overlay-place.js");
+const { overlaps, spot, padSpot, clearOf, MARGIN } = require("../ui/overlay-place.js");
 
 const screen = { w: 1920, h: 1080 };
 const toolbar = { w: 960, h: 150 };
@@ -95,4 +95,28 @@ test("with no free side the pad still keeps off its own panel", () => {
   const walls = [{ x: 0, y: 0, w: 1920, h: 400 }, { x: 0, y: 600, w: 1920, h: 480 }, { x: 0, y: 400, w: 600, h: 200 }, { x: 900, y: 400, w: 1020, h: 200 }];
   const p = at(padSpot(pad, target, screen, walls), pad);
   assert.ok(!overlaps(p, target) && inside(p));
+});
+
+// The hover card starts just below the combat odds bar when the bar is at the top, in its way.
+test("a bar at the top over the card's width moves the card to just below it", () => {
+  const bar = { x: 690, y: 11, w: 540, h: 52 };
+  const card = { x: 501, y: 8, w: 918 };
+  assert.equal(clearOf(bar, card, 8), 71);
+});
+
+test("no bar, or a bar beside the card, leaves the card where the app put it", () => {
+  const card = { x: 501, y: 8, w: 918 };
+  assert.equal(clearOf(null, card, 8), 8);
+  assert.equal(clearOf({ x: 0, y: 11, w: 400, h: 52 }, card, 8), 8, "left of the card");
+  assert.equal(clearOf({ x: 1500, y: 11, w: 400, h: 52 }, card, 8), 8, "right of the card");
+});
+
+test("a bar the user put lower than the card's first band is left alone", () => {
+  const card = { x: 501, y: 8, w: 918 };
+  assert.equal(clearOf({ x: 690, y: 500, w: 540, h: 52 }, card, 8), 8);
+});
+
+test("a bar higher than the card's top never pulls the card up", () => {
+  assert.equal(clearOf({ x: 690, y: 0, w: 540, h: 4 }, { x: 501, y: 8, w: 918 }, 8), 12);
+  assert.equal(clearOf({ x: 690, y: -50, w: 540, h: 4 }, { x: 501, y: 8, w: 918 }, 8), 8);
 });

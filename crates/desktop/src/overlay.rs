@@ -613,7 +613,9 @@ mod tests {
         let err = overlay.load(&dir, false).unwrap_err();
         assert!(err.contains("could not be read"));
         assert!(!overlay.enabled());
-        assert!(overlay.view().layout.panels.is_empty());
+        // Only the odds bar has a default place (top centre); the rest stay in the stack.
+        let placed: Vec<_> = overlay.view().layout.panels.keys().copied().collect();
+        assert_eq!(placed, vec![Panel::Odds]);
     }
 
     #[test]
@@ -826,8 +828,10 @@ mod tests {
             Panel::Counters,
             Panel::Tribes,
             Panel::Opponents,
+            Panel::Odds,
             Panel::Legend,
             Panel::Lobby,
+            Panel::Heroes,
         ] {
             let id = serde_json::to_string(&panel).unwrap();
             let slot = format!("data-panel={id}");
@@ -843,7 +847,7 @@ mod tests {
             .skip(1)
             .filter_map(|rest| rest.split('"').next())
             .collect();
-        assert_eq!(scripts.len(), 18);
+        assert_eq!(scripts.len(), 19);
         for script in scripts {
             assert!(ui.join(script).is_file(), "{script} is missing");
         }
@@ -861,6 +865,7 @@ mod tests {
             include_str!("../ui/overlay-words.js"),
             include_str!("../ui/counters-words.js"),
             include_str!("../ui/lobby-words.js"),
+            include_str!("../ui/hero-words.js"),
             include_str!("../ui/odds-words.js"),
             include_str!("../ui/overlay-scale.js"),
             include_str!("../ui/focus-keeper.js"),

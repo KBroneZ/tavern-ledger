@@ -28,26 +28,61 @@ window.TLHover = (() => {
   }
 
   // Where the app put it (screen_fit::place_card): across the top of the
-  // game window, inside the screen, cut at its bottom when taller. The text
-  // follows the board's width (T-334, overlay-scale.js).
+  // game's picture, centred, inside the screen, cut at its bottom when taller.
+  // When the combat odds bar is up in the card's way it goes just below the
+  // bar. The text follows the board's width (T-334, overlay-scale.js).
   function position() {
     const p = hover.card;
+    const top = window.TLPlace.clearOf(oddsBar(), { x: p.x, y: p.y, w: p.width }, rootFont() * window.TLPlace.BAR_GAP_REM);
     card.style.left = `${Math.round(p.x)}px`;
-    card.style.top = `${Math.round(p.y)}px`;
+    card.style.top = `${Math.round(top)}px`;
     card.style.width = `${Math.round(p.width)}px`;
-    card.style.maxHeight = `${Math.round(p.max_height)}px`;
+    card.style.maxHeight = `${Math.round(Math.max(0, p.max_height - (top - p.y)))}px`;
     card.style.setProperty("--card-font", `${TLScale.cardPx(p.width)}px`);
   }
 
-  // One minion as the game draws it (T-333): its picture, attack at the
-  // bottom left and health at the bottom right, golden as a ring and a star,
-  // its name under it.
-  function minionCard(m) {
+  const rootFont = () => parseFloat(getComputedStyle(document.documentElement).fontSize) || 14;
+
+  // The odds bar's rectangle while it shows, else null.
+  function oddsBar() {
+    const slot = document.querySelector('.slot[data-panel="odds"]');
+    if (!slot || slot.hidden) return null;
+    const r = slot.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 ? { x: r.left, y: r.top, w: r.width, h: r.height } : null;
+  }
+
+  const stat = (n) => (n === null || n === undefined ? "?" : String(n));
+
+  // The numbers and the star read out in words, in the language.
+  function spoken(m) {
+    const said = I18n.t("ov.board.stats", { atk: stat(m.atk), health: stat(m.health) });
+    return el("span", "visually-hidden", m.golden ? `${said}, ${I18n.t("keyword.golden")}` : said);
+  }
+
+  // One minion as the game draws it (T-372, minion-art/): the game's frame,
+  // the picture under it, the gems and a layer for each keyword, with its
+  // name under it.
+  function drawnMinion(m, art) {
+    const item = el("li", m.golden ? "hb-minion hb-drawn golden" : "hb-minion hb-drawn");
+    const frame = el("div", "hb-drawn-box");
+    frame.append(art.render(m));
+    // Dark Gifts (T-528): a mark per gift.
+    const gifts = giftMarks(m);
+    if (gifts) frame.append(gifts);
+    item.append(frame);
+    const name = TLCards.name(m.card_id);
+    item.append(el("i", name === null ? "hb-name unnamed" : "hb-name", name || m.card_id || "?"), spoken(m));
+    return item;
+  }
+
+  // The plain look, while the game's textures are not on this PC (T-333):
+  // its picture, attack at the bottom left and health at the bottom right,
+  // golden as a ring and a star, its name under it.
+  function plainMinion(m) {
     const item = el("li", m.golden ? "hb-minion golden" : "hb-minion");
     const frame = el("div", "hb-art");
     const art = TLCards.art(m.card_id, "art");
     if (art) frame.append(art);
-    const stat = (n) => (n === null || n === undefined ? "?" : String(n));
     const atk = el("b", "hb-atk", stat(m.atk));
     const hp = el("b", "hb-hp", stat(m.health));
     atk.setAttribute("aria-hidden", "true");
@@ -58,11 +93,13 @@ window.TLHover = (() => {
     if (gifts) frame.append(gifts);
     item.append(frame);
     const name = TLCards.name(m.card_id);
-    item.append(el("i", name === null ? "hb-name unnamed" : "hb-name", name || m.card_id || "?"));
-    // The numbers and the star read out in words, in the language.
-    const said = I18n.t("ov.board.stats", { atk: stat(m.atk), health: stat(m.health) });
-    item.append(el("span", "visually-hidden", m.golden ? `${said}, ${I18n.t("keyword.golden")}` : said));
+    item.append(el("i", name === null ? "hb-name unnamed" : "hb-name", name || m.card_id || "?"), spoken(m));
     return item;
+  }
+
+  function minionCard(m) {
+    const art = window.TLMinions;
+    return art ? drawnMinion(m, art) : plainMinion(m);
   }
 
   function boardStrip(view) {
@@ -151,6 +188,12 @@ window.TLHover = (() => {
     position();
   }
 
+  // The game's textures arrived (or went): the card is drawn again.
+  window.addEventListener("tl-minions", () => render());
+
+  // A smaller or bigger window changes the text and so the odds bar's height.
+  window.addEventListener("resize", () => requestAnimationFrame(() => window.TLHover && window.TLHover.reposition()));
+
   onEvent("overlay-hover", (event) => {
     hover = event.payload || null;
     render();
@@ -158,6 +201,10 @@ window.TLHover = (() => {
 
   return {
     render,
+    // The panels moved (the layout was drawn): the card follows the odds bar.
+    reposition() {
+      if (hover && !card.hidden) position();
+    },
     // overlay.js says when an update failed, and when one worked again.
     setFailed(on) {
       failed = on;

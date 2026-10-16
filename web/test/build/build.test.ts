@@ -73,8 +73,8 @@ test("every page has the CSP as its first meta after the charset", () => {
     assert.match(csp, CONFIG ? /form-action 'self'(;|$)/ : /form-action 'none'(;|$)/, name(page));
     assert.match(csp, /style-src 'self'(;|$)/, name(page));
     assert.match(csp, /font-src 'self'(;|$)/, name(page));
-    // D-074: the open site adds exactly HearthstoneJSON's art host for pictures.
-    assert.match(csp, CONFIG ? /img-src 'self' https:\/\/art\.hearthstonejson\.com(;|$)/ : /img-src 'self'(;|$)/, name(page));
+    // D-074 and D-151: the open site adds exactly HearthstoneJSON's art host and the game textures' host for pictures.
+    assert.match(csp, CONFIG ? /img-src 'self' https:\/\/art\.hearthstonejson\.com https:\/\/assets\.tavernledger\.net(;|$)/ : /img-src 'self'(;|$)/, name(page));
     if (CONFIG) assert.match(csp, /connect-src https?:\/\/[^\s;*]+(;|$)/, name(page));
     else assert.match(csp, /connect-src 'none'(;|$)/, name(page));
     assert.doesNotMatch(csp, /unsafe|\*/, name(page));

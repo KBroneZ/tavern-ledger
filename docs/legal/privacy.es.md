@@ -2,7 +2,9 @@
 
 *Traducción del original en inglés. Si esta versión y la [versión en inglés](https://tavernledger.net/privacy/) dicen cosas distintas, prevalece la inglesa.*
 
-Última actualización: 14 de octubre de 2026
+Última actualización: 16 de octubre de 2026
+
+**Qué cambió el 16 de octubre de 2026:** las páginas que dibujan esbirros (el simulador, una partida y sus repeticiones de combate) cargan ahora también los marcos, gemas e imágenes de palabras clave de los esbirros del juego desde nuestro propio servidor de imágenes, `assets.tavernledger.net` (apartado 3, «Imágenes de esbirros»). Nada más cambia.
 
 **Qué cambió el 14 de octubre de 2026 (último cambio de ese día, solo la aplicación de escritorio):** la lectura de las tribus de la partida y de tu propia puntuación del juego ahora viene activada por defecto, y puedes desactivarla en Ajustes (apartado 2, «Lectura del juego»). Lee los mismos dos valores de antes, en modo solo lectura, y se quedan en tu PC y nunca se suben; no se recoge ni se envía ningún dato nuevo. Si ya elegiste en Ajustes, tu elección se conserva; si nunca elegiste, también en una instalación anterior a este cambio, ahora está activada.
 
@@ -55,6 +57,8 @@ Cuando cargas una página, nuestro proveedor de alojamiento (Cloudflare) y, para
 Base jurídica: nuestro interés legítimo en mantener un sitio web que funcione y esté protegido contra ataques (art. 6.1.f del RGPD).
 
 **Imágenes de cartas.** Las páginas que muestran partidas (una partida, tus partidas, un perfil público, la lista de partidas y las clasificaciones) cargan imágenes de cartas y héroes directamente del servidor de imágenes de HearthstoneJSON (`art.hearthstonejson.com`), un servicio independiente gestionado por HearthSim, no un proveedor nuestro. Tu navegador le envía tu dirección IP, el agente de usuario de tu navegador y la dirección de cada imagen, que nombra solo la carta: nuestras páginas no envían la cabecera Referer, así que no sabe qué página, cuenta o partida estás viendo. HearthSim decide qué registra; consulta hearthstonejson.com. Base jurídica: nuestro interés legítimo en mostrar las partidas de forma legible (art. 6.1.f del RGPD). Para evitarlo, bloquea esa dirección en tu navegador: las páginas mostrarán entonces un marcador sencillo en su lugar.
+
+**Imágenes de esbirros.** Esas mismas páginas cargan además las imágenes que dibujan un esbirro como en el juego (su marco, las gemas de ataque y vida y las marcas de palabras clave) desde un sitio de imágenes aparte nuestro, `assets.tavernledger.net`, que gestionamos nosotros en Cloudflare (apartado 5), sin cookies. Tu navegador le envía tu dirección IP, el agente de usuario de tu navegador y la dirección de cada imagen, que es la misma para todos los visitantes; nuestras páginas no envían la cabecera Referer, así que no sabe qué página, cuenta o partida estás viendo. Cloudflare guarda los registros de las solicitudes como se explica en el apartado 3. Base jurídica: nuestro interés legítimo en mostrar las partidas de forma legible (art. 6.1.f del RGPD). Para evitarlo, bloquea esa dirección en tu navegador: las páginas dibujarán entonces los esbirros con su estilo sencillo.
 
 No hay anuncios, ni analítica, ni rastreo.
 

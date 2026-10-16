@@ -524,3 +524,23 @@ fn the_saved_report_with_values_for_upload_game_is_current() {
         "run BLESS=1 cargo test -p bg-parser --test combat_log"
     );
 }
+
+#[test]
+fn the_combat_round_now_is_given_in_a_combat_turn_only() {
+    let all = game();
+    let at = |needle: &str| all.iter().position(|l| l.contains(needle)).unwrap();
+    let mut reader = LogReader::default();
+    assert_eq!(reader.combat_round_now(), None, "no game");
+    all[..at("tag=TURN value=2")]
+        .iter()
+        .for_each(|l| reader.feed(l));
+    assert_eq!(reader.combat_round_now(), None, "shop turn 1");
+    all[at("tag=TURN value=2")..at("tag=TURN value=3")]
+        .iter()
+        .for_each(|l| reader.feed(l));
+    assert_eq!(reader.combat_round_now(), Some(1), "the first combat");
+    all[at("tag=TURN value=3")..]
+        .iter()
+        .for_each(|l| reader.feed(l));
+    assert_eq!(reader.combat_round_now(), None, "the game is over");
+}

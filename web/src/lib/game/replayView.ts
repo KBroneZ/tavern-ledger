@@ -5,6 +5,7 @@
 // show in Simple too (replay.css). Theirs on top, yours below, as in the game. The page's
 // script (replayPlayer.ts) moves through the steps; these trees are what it
 // draws, so the tests see the same markup.
+import { type DrawnMinion, drawnAttrs } from "../art/drawn.ts";
 import { t } from "../data/strings.ts";
 import { exactStat, shortStat } from "../stat.ts";
 import { cls, h, type VNode } from "../view/node.ts";
@@ -109,12 +110,35 @@ function keywordMarks(): VNode {
   return h("span", { class: "rp-keys", "aria-hidden": "true" }, MARKED.map((k) => h("i", { class: `rp-k rp-k-${k}` })));
 }
 
+/**
+ * What the shared drawing needs for a token (T-372): Divine Shield is the one
+ * keyword the replay tracks (it pops), the rest as they stand, and a health
+ * below 0 (overkill) is drawn as 0, as on the game's board. A minion with no
+ * card id has nothing to draw.
+ */
+export function tileDrawn(tile: Tile): DrawnMinion | null {
+  if (!tile.cardId) return null;
+  return {
+    cardId: tile.cardId,
+    atk: tile.atk,
+    health: Math.max(tile.health, 0),
+    golden: tile.golden,
+    keywords: [...tile.keywords.filter((k) => k !== "divine_shield"), ...(tile.shield ? ["divine_shield"] : [])],
+  };
+}
+
 export function tileView(tile: Tile): VNode {
   return h(
     "li",
-    { class: tileClass(tile), "data-ref": tile.ref, ...tipHost(tipId(tile)) },
+    { class: tileClass(tile), "data-ref": tile.ref, ...drawnAttrs(tileDrawn(tile)), ...tipHost(tipId(tile)) },
     keywordMarks(),
-    h("span", { class: "rp-art" }, picture("card", tile.cardId, cardLabel(tile.cardId, g("minion.unknownCard")), 56, true)),
+    // The slot is where the game's drawing goes once its textures are loaded (art/runtime.ts); empty, it takes no room.
+    h(
+      "span",
+      { class: "rp-art" },
+      picture("card", tile.cardId, cardLabel(tile.cardId, g("minion.unknownCard")), 56, true),
+      h("span", { class: "tlm-slot" }),
+    ),
     h("span", { class: "rp-info" }, ...tileInfo(tile)),
     giftList(tile),
   );

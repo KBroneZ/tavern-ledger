@@ -147,6 +147,32 @@ pub fn overlay_area(screen: &Screen, game: Option<Area>) -> (Area, f64) {
     (area, scale)
 }
 
+/// The game's picture is 16:9. In a window of another shape it is centred with
+/// bars, and every default place of the overlay is a share of this area.
+pub const PLAY_SHAPE: (f64, f64) = (16.0, 9.0);
+
+/// The part of a window the game's 16:9 picture takes: the whole window when
+/// it is 16:9, centred with bars on a wider (ultrawide) or taller one. A
+/// window with no usable size is returned as it is.
+pub fn play_area(window: Area) -> Area {
+    if !window.usable() {
+        return window;
+    }
+    // Products, not a ratio, so a window that is exactly 16:9 stays exact.
+    let w = if window.w * PLAY_SHAPE.1 <= window.h * PLAY_SHAPE.0 {
+        window.w
+    } else {
+        window.h * PLAY_SHAPE.0 / PLAY_SHAPE.1
+    };
+    let h = w * PLAY_SHAPE.1 / PLAY_SHAPE.0;
+    Area {
+        x: window.x + (window.w - w) / 2.0,
+        y: window.y + (window.h - h) / 2.0,
+        w,
+        h,
+    }
+}
+
 /// Space kept between the card and the game window's or the screen's edges.
 pub const GAP: f64 = 8.0;
 /// The card is never narrower than this, even on a tiny screen.
@@ -163,8 +189,8 @@ pub struct CardPlace {
     pub max_height: f64,
 }
 
-/// Puts a card of `want_width` at the top of `game` (the game window's
-/// client area), centred on it, like the board strip the game itself shows
+/// Puts a card of `want_width` at the top of `game` (the game's 16:9 picture,
+/// `play_area` of its client area), centred on it, like the board strip the game itself shows
 /// (T-309, D-049). It stays inside `bounds` (the overlay window, which covers
 /// the game's picture on the monitor holding it): narrower than the game window or the
 /// screen when it must be, moved in when the game window reaches past the
@@ -225,6 +251,37 @@ mod tests {
         w: 1920.0,
         h: 1080.0,
     };
+
+    #[test]
+    fn the_play_area_is_the_whole_window_when_it_is_16_by_9() {
+        for (w, h) in [(1920.0, 1080.0), (1280.0, 720.0), (2560.0, 1440.0)] {
+            assert_eq!(play_area(area(0.0, 0.0, w, h)), area(0.0, 0.0, w, h));
+        }
+    }
+
+    #[test]
+    fn on_an_ultrawide_window_the_play_area_is_centred_with_bars_at_the_sides() {
+        let p = play_area(area(0.0, 0.0, 3440.0, 1440.0));
+        assert_eq!(p, area(440.0, 0.0, 2560.0, 1440.0));
+    }
+
+    #[test]
+    fn on_a_taller_window_the_play_area_is_centred_with_bars_above_and_below() {
+        let p = play_area(area(0.0, 0.0, 1024.0, 768.0));
+        assert_eq!(p, area(0.0, 96.0, 1024.0, 576.0));
+    }
+
+    #[test]
+    fn the_play_area_follows_a_window_away_from_the_origin() {
+        let p = play_area(area(1920.0, 100.0, 3440.0, 1440.0));
+        assert_eq!(p, area(2360.0, 100.0, 2560.0, 1440.0));
+    }
+
+    #[test]
+    fn a_window_with_no_size_has_no_play_area_of_its_own() {
+        let none = area(0.0, 0.0, 0.0, 0.0);
+        assert_eq!(play_area(none), none);
+    }
 
     #[test]
     fn the_overlay_goes_on_the_monitor_that_holds_most_of_the_game() {

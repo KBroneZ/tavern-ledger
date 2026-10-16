@@ -4,6 +4,7 @@
 // a missing one get the same words. Loaded only where scripts may run.
 // First: the page's language, before any module draws text (T-508).
 import "../i18n/boot.ts";
+import { paintMinions } from "../art/runtime.ts";
 import { dateText } from "../data/dashboard.ts";
 import { watchPictureFallback } from "../data/pictures.ts";
 import { h, mount, type VNode } from "../view/node.ts";
@@ -41,6 +42,8 @@ function show(title: string, nodes: VNode[], announcement: string, tip?: string)
   else heading.removeAttribute("title");
   document.title = `${title} · Tavern Ledger`;
   mount(body, ...nodes);
+  // The game's own drawing for the minions of the boards, once its textures are in (art/runtime.ts).
+  paintMinions(body);
   body.removeAttribute("aria-busy");
   status.textContent = announcement;
 }

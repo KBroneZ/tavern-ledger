@@ -255,6 +255,15 @@ impl Collector {
         }
     }
 
+    /// A CHANGE_ENTITY the log has begun and not closed yet: the entity and
+    /// the card it becomes.
+    pub fn pending_change(&self) -> Option<(i64, &str)> {
+        match self.pending.as_ref()? {
+            (Pending::Change { id, card_id }, _) => Some((*id, card_id.as_str())),
+            _ => None,
+        }
+    }
+
     fn commit(&mut self) -> Result<(), ParseError> {
         let Some((pending, tags)) = self.pending.take() else {
             return Ok(());
@@ -797,6 +806,23 @@ pub fn hero_health(hero: &Entity) -> i64 {
         .saturating_add(hero.int("ARMOR"))
         .saturating_sub(hero.int("DAMAGE"))
         .max(0)
+}
+
+/// The most health or armor a hero can show (the same bound as a minion's).
+pub const MAX_HERO_POINTS: i64 = 99_999;
+
+/// The health the game shows on a hero: its health minus the damage taken,
+/// never below 0, with the armor apart (it has its own shield). `None` when
+/// the hero has no health or it is out of range.
+pub fn hero_shown_health(hero: &Entity) -> Option<i64> {
+    let health = hero
+        .opt_int("HEALTH")
+        .filter(|h| (0..=MAX_HERO_POINTS).contains(h))?;
+    let damage = hero
+        .opt_int("DAMAGE")
+        .unwrap_or(0)
+        .clamp(0, MAX_HERO_POINTS);
+    Some((health - damage).max(0))
 }
 
 /// Health of every leaderboard hero right now, by player id.

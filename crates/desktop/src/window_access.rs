@@ -39,12 +39,16 @@ fn names(list: &[&str]) -> BTreeSet<String> {
     list.iter().map(|s| s.to_string()).collect()
 }
 
-/// The scripts a page loads, in order.
+/// The scripts a page loads, in order: plain ones and `type="module"` ones.
 fn scripts(page: &str) -> Vec<String> {
     let html = read(&dir().join("ui").join(page));
-    html.split("<script src=\"")
+    html.split("<script ")
         .skip(1)
-        .map(|rest| rest[..rest.find('"').unwrap()].to_string())
+        .filter_map(|tag| {
+            let tag = &tag[..tag.find('>')?];
+            let src = &tag[tag.find("src=\"")? + "src=\"".len()..];
+            Some(src[..src.find('"')?].to_string())
+        })
         .collect()
 }
 

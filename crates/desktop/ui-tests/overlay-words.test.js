@@ -125,26 +125,109 @@ test("an opponent row counts triples only from the log and marks a team that is 
   assert.deepEqual(words.opponentRow(null).faces, []);
 });
 
-test("Lobby tribes: from the game or entered with no mark, confirmed by the tavern marked inferred", () => {
+test("Lobby tribes: only the ones read from the game (D-148), never entered or inferred", () => {
   assert.deepEqual(words.lobbyTribes({ lobby_tribes: { basis: "game", tribes: ["BEAST", "NAGA"], complete: true, source: "game" } }), {
     tribes: ["BEAST", "NAGA"],
-    inferred: false,
-    count: null,
   });
-  assert.deepEqual(words.lobbyTribes({ lobby_tribes: { basis: "entered", tribes: ["BEAST"], complete: true, source: "entered" } }).inferred, false);
-  assert.deepEqual(words.lobbyTribes({ lobby_tribes: { basis: "tavern_confirmed", tribes: ["MECHANICAL", "UNDEAD"], complete: false, source: "inferred" } }), {
-    tribes: ["MECHANICAL", "UNDEAD"],
-    inferred: true,
-    count: 2,
-  });
-  assert.equal(words.lobbyTribes({ lobby_tribes: { basis: "tavern_confirmed", tribes: ["A", "B", "C", "D", "E"], complete: true, source: "inferred" } }).count, null);
-});
-
-test("Lobby tribes: nothing when only the tavern's offers or nothing is known", () => {
+  assert.equal(words.lobbyTribes({ lobby_tribes: { basis: "entered", tribes: ["BEAST"], complete: true, source: "entered" } }), null);
+  assert.equal(words.lobbyTribes({ lobby_tribes: { basis: "tavern_confirmed", tribes: ["MECHANICAL", "UNDEAD"], complete: false, source: "inferred" } }), null);
   assert.equal(words.lobbyTribes({ lobby_tribes: { basis: "tavern_seen", tribes: ["BEAST"], source: "inferred" } }), null);
   assert.equal(words.lobbyTribes({ lobby_tribes: { basis: "unknown", tribes: [], source: "unknown" } }), null);
   assert.equal(words.lobbyTribes({ lobby_tribes: { basis: "game", tribes: [], source: "game" } }), null);
   assert.equal(words.lobbyTribes(null), null);
+});
+
+const read = (status, tribes = []) => ({ game_tribes: { tribes, status, checked_build: status === "ok", note: null } });
+const FIVE = ["BEAST", "DEMON", "DRAGON", "MURLOC", "UNDEAD"];
+
+test("the tribes panel shows the five tribes the game gave and no reason line", () => {
+  const panel = words.tribesPanel({
+    ...read("ok", FIVE),
+    lobby_tribes: { basis: "game", tribes: FIVE, complete: true, source: "game" },
+  });
+  assert.deepEqual(panel, { tribes: FIVE, reason: null });
+});
+
+test("with the read off, unsupported or failing the tribes panel is empty with one reason, in both languages", () => {
+  const cases = [
+    ["off", "Tribes: the game read is off", "Tribus: la lectura del juego está desactivada"],
+    ["unsupported_version", "Tribes: this game version is not supported yet", "Tribus: esta versión del juego aún no es compatible"],
+    ["not_running", "Tribes: could not read the game", "Tribus: no se pudo leer el juego"],
+    ["no_access", "Tribes: could not read the game", "Tribus: no se pudo leer el juego"],
+    ["waiting", "Tribes: waiting for the game to show them", "Tribus: esperando a que el juego las muestre"],
+  ];
+  try {
+    for (const [status, en, es] of cases) {
+      I18n.setLang("en");
+      assert.deepEqual(words.tribesPanel(read(status)), { tribes: [], reason: en }, status);
+      I18n.setLang("es");
+      assert.deepEqual(words.tribesPanel(read(status)), { tribes: [], reason: es }, status);
+    }
+  } finally {
+    I18n.setLang("en");
+  }
+});
+
+test("inferred or hand-entered tribes never reach the overlay, even beside a reason", () => {
+  const panel = words.tribesPanel({
+    ...read("off"),
+    entered_tribes: FIVE,
+    lobby_tribes: { basis: "entered", tribes: FIVE, complete: true, source: "entered" },
+  });
+  assert.deepEqual(panel.tribes, []);
+  assert.equal(panel.reason, "Tribes: the game read is off");
+  const confirmed = words.tribesPanel({ ...read("ok"), lobby_tribes: { basis: "tavern_confirmed", tribes: FIVE, complete: true, source: "inferred" } });
+  assert.deepEqual(confirmed.tribes, []);
+  assert.equal(confirmed.reason, "Tribes: could not read the game", "a read the tavern contradicted is a failed read");
+});
+
+test("a game with no read information never shows tribes and never claims the read is off", () => {
+  assert.deepEqual(words.tribesPanel({}), { tribes: [], reason: "Tribes: could not read the game" });
+  assert.deepEqual(words.tribesPanel(null), { tribes: [], reason: "Tribes: could not read the game" });
+});
+
+const markGame = (extra) => ({
+  leaderboard_slots: 8,
+  opponents: [
+    { place: { value: 1 }, health: { value: 34 }, shown_source: "log", shown: [{ seat: 1, triples: 2 }] },
+    { place: { value: 4 }, health: { value: 0 }, shown_source: "log", shown: [{ seat: 4, triples: 0 }] },
+    { place: { value: 6 }, health: { value: null }, shown_source: "log", shown: [{ seat: 6, triples: 1 }] },
+  ],
+  ...extra,
+});
+
+test("opponent marks sit on the leaderboard row of each opponent's place, with health and triples", () => {
+  assert.deepEqual(words.opponentMarks(markGame()), [
+    { place: 1, slots: 8, health: 34, armor: null, triples: 2, out: false },
+    { place: 4, slots: 8, health: 0, armor: null, triples: 0, out: true },
+    { place: 6, slots: 8, health: null, armor: null, triples: 1, out: false },
+  ]);
+});
+
+test("the armor is apart from the health, and only shown when the game shows some", () => {
+  const team = { ...duoTeam, health: { value: 14 }, armor: { value: 5 } };
+  const row = words.opponentRow(team);
+  assert.deepEqual([row.health, row.armor], [14, 5]);
+  for (const none of [{ value: null }, { value: 0 }, { value: -2 }, { value: "5" }, null, undefined]) {
+    assert.equal(words.opponentRow({ ...team, armor: none }).armor, null, JSON.stringify(none));
+  }
+  assert.equal(words.opponentRow({ ...duoTeam, health: { value: 0 } }).out, true, "no health left is out whatever the armor");
+  const game = markGame({ opponents: [{ place: { value: 2 }, health: { value: 14 }, armor: { value: 5 }, shown_source: "log", shown: [{ seat: 2, triples: 3 }] }] });
+  assert.deepEqual(words.opponentMarks(game), [{ place: 2, slots: 8, health: 14, armor: 5, triples: 3, out: false }]);
+});
+
+test("opponent marks leave out what is unknown: no slots, a place off the board, a triple count the log never gave", () => {
+  assert.deepEqual(words.opponentMarks(markGame({ leaderboard_slots: null })), []);
+  assert.deepEqual(words.opponentMarks(markGame({ leaderboard_slots: 0 })), []);
+  const odd = words.opponentMarks(markGame({
+    opponents: [
+      { place: { value: 9 }, health: { value: 10 }, shown_source: "log", shown: [] },
+      { place: { value: null }, health: { value: 10 }, shown_source: "unknown", shown: [] },
+      { place: { value: 2 }, health: { value: 12 }, shown_source: "unknown", shown: [{ seat: 2, triples: 3 }] },
+    ],
+  }));
+  assert.deepEqual(odd, [{ place: 2, slots: 8, health: 12, armor: null, triples: 0, out: false }]);
+  assert.deepEqual(words.opponentMarks(null), []);
 });
 
 test("a Duos hover shows only the hovered hero's view, the higher player id on top", () => {

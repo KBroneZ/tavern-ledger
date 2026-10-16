@@ -109,3 +109,9 @@
 @media (forced-colors: active) {
   .face.gifted { outline: 2px solid CanvasText; }
 }
+
+/* A board minion drawn like the game (T-372, minion-art/): the frame fills the
+   box and a Taunt shield, a bubble or a skull reaches past it, so the tile
+   gives it room. */
+.shop-card.drawn { width: 84px; }
+.shop-card.drawn .drawn-box { display: block; width: 62px; margin: 8px 0 12px; }

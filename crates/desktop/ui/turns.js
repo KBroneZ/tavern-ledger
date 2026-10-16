@@ -371,7 +371,38 @@
     return mark;
   }
 
+  // What the shared drawing (minion-art/) needs for a minion of a turn's
+  // board; a record from before keywords were kept draws none.
+  const drawnMinion = (m) => ({
+    card_id: m.id,
+    atk: m.atk,
+    health: m.health,
+    golden: m.golden === true,
+    keywords: Array.isArray(m.keywords) ? m.keywords : [],
+  });
+
+  // The minion as the game draws it (T-372): frame, gems and a layer for
+  // each keyword, with its name under it and the same tooltip as the plain tile.
+  function drawnTile(ui, m, art, tools) {
+    const tile = ui.el("span", m.golden ? "shop-card drawn golden" : "shop-card drawn");
+    const picture = ui.el("span", "drawn-box");
+    picture.append(art.render(drawnMinion(m)));
+    tile.append(picture);
+    const name = window.TLCards.display(m.id);
+    tile.append(ui.el("span", "shop-card-id", name || m.id || "?"));
+    const gifts = giftMarks(m);
+    if (gifts.length) {
+      const line = ui.el("span", "tile-marks");
+      gifts.forEach((g) => line.append(giftMark(ui, g)));
+      tile.append(line);
+    }
+    tipNode(ui, tile, m, tools);
+    return tile;
+  }
+
   function minionTile(ui, m, card, tools) {
+    const art = tools.minionArt && tools.minionArt();
+    if (art) return drawnTile(ui, m, art, tools);
     const tile = card(ui, m.id, m.golden ? "golden" : "");
     tile.append(ui.el("span", "minion-stats", `${I18n.stat(m.atk)}/${I18n.stat(m.health)}`));
     const marks = [];
@@ -521,7 +552,7 @@
     return part;
   }
 
-  const api = { buffsOf, tipFacts, tipNode, watchTipEscape, giftMark, giftMarks, rows, combatAt, healthWords, damageWords, damageBadges, damageQuiet, totalsWords, keywordsRecorded, summaryWords, shopFacts, section };
+  const api = { drawnMinion, buffsOf, tipFacts, tipNode, watchTipEscape, giftMark, giftMarks, rows, combatAt, healthWords, damageWords, damageBadges, damageQuiet, totalsWords, keywordsRecorded, summaryWords, shopFacts, section };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLTurns = api;
 })();

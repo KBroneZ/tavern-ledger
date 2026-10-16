@@ -1,16 +1,26 @@
 // Stand-in for the app's bridge (window.__TAURI__) so the real overlay page
 // runs in a plain browser: every command and event the page uses is answered
 // from one scenario of example data. Settings changes are no-ops (the frame
-// stays as the scenario says); card art becomes a plain placeholder, so
-// nothing is fetched. ui-tests/overlay-gallery.test.js checks that every
-// name the page's scripts use is listed here.
+// stays as the scenario says); card art becomes a plain placeholder. The
+// game's minion textures are the one thing fetched: from the public host the
+// app uses (the set's manifest, layout and images), so a minion looks as it
+// does in the app; with no network the page draws plain card art, as the app
+// does. A scenario's `textures` says "none" (no set), or { bad: [names] }
+// (those textures do not load), and `noWebgl` turns WebGL off.
+// ui-tests/overlay-gallery.test.js checks that every name the page's scripts
+// use is listed here.
 "use strict";
 
 (() => {
-  const themes = typeof module !== "undefined" && module.exports ? require("./theme-vars.js") : window.TLGalleryThemes;
+  const node = typeof module !== "undefined" && module.exports;
+  const themes = node ? require("./theme-vars.js") : window.TLGalleryThemes;
+  const defaults = node ? require("./default-layout.js") : window.TLGalleryDefaults;
 
-  // The game window the frames show: the overlay covers its picture.
+  // The game window the frames show: the overlay covers its picture. In a
+  // browser it is the page's own window (the workbench sizes the frame); the
+  // tests and the gallery's pictures use this size.
   const SCREEN = [1920, 1080];
+  const screenSize = () => (typeof window !== "undefined" && window.innerWidth > 0 && window.innerHeight > 0 ? [window.innerWidth, window.innerHeight] : SCREEN);
 
   // The view the app's overlay_settings gives (overlay.rs `View`).
   function settingsView(scenario) {
@@ -25,9 +35,11 @@
       min_opacity: 0.8,
       max_opacity: 1,
       hidden: s.hidden || [],
-      layout: { panels: {} },
-      screen: SCREEN,
-      leaderboard: null,
+      // The odds bar's default place (overlay_layout.rs): top centre of the picture.
+      layout: { panels: { odds: defaults.oddsRect(...screenSize()) } },
+      screen: screenSize(),
+      // The app's measured default (leaderboard.rs) for the window's size.
+      leaderboard: { area: defaults.leaderboardArea(...screenSize()), custom: false },
       vars: themes.THEME_VARS[theme],
       warning: null,
       odds: true,
@@ -49,20 +61,48 @@
   ];
 
   const READS = ["overlay_state", "overlay_scene", "overlay_lobby", "overlay_settings"];
-  const CARDS = ["card_names", "card_data_status"];
+  const CARDS = ["card_names", "card_data_status", "texture_set"];
   const APP = ["app_settings", "app_set_system_language", "log_ui_error"];
   const COMMANDS = [...READS, ...SETTERS, ...CARDS, ...APP];
   const EVENTS = [
     "live-changed",
     "lobby-tribes-changed",
     "cards-changed",
+    "textures-changed",
     "overlay-settings-changed",
     "overlay-hover",
     "app-settings-changed",
   ];
 
+  // The game's texture set as the app's texture_set answers it, read from the
+  // public host once per page. `files` maps a role to its file; `base` is
+  // where they are (the app's own protocol is not there in a browser).
+  const TEXTURES_BASE = "https://assets.tavernledger.net/v2/";
+  let liveSet = null;
+  const getJson = (url) => fetch(url).then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))));
+  function fetchSet(fetchJson) {
+    if (!liveSet) {
+      liveSet = Promise.all([fetchJson(`${TEXTURES_BASE}manifest.json`), fetchJson(`${TEXTURES_BASE}layout.json`)])
+        .then(([manifest, layout]) => ({
+          version: manifest.version,
+          layout,
+          base: TEXTURES_BASE,
+          files: Object.fromEntries(manifest.files.filter((f) => f.name !== "layout").map((f) => [f.name, f.file])),
+        }))
+        .catch(() => null);
+    }
+    return liveSet;
+  }
+  async function textureSet(spec, fetchJson) {
+    if (spec === "none") return null;
+    const set = await fetchSet(fetchJson);
+    const bad = spec && Array.isArray(spec.bad) ? spec.bad : [];
+    if (!set || !bad.length) return set;
+    return { ...set, files: { ...set.files, ...Object.fromEntries(bad.map((name) => [name, `missing-${name}.webp`])) } };
+  }
+
   // The commands, each as a function of (scenario, language, args).
-  function handlers(scenario, lang) {
+  function handlers(scenario, lang, fetchJson = getJson) {
     const state = scenario.state;
     const view = () => settingsView(scenario);
     const table = {
@@ -80,6 +120,7 @@
         return out;
       },
       card_data_status: () => ({ ready: true }),
+      texture_set: () => textureSet(state.textures, fetchJson),
       app_settings: () => ({ language: lang }),
       app_set_system_language: () => null,
       log_ui_error: () => null,
@@ -92,8 +133,8 @@
   // `gate` holds every answer back until it resolves: in the app an answer
   // takes a moment, so the page's scripts are all loaded before the first one
   // comes; in a single page of inline scripts it would come in between.
-  function createTauri(scenario, lang, gate = Promise.resolve()) {
-    const table = handlers(scenario, lang);
+  function createTauri(scenario, lang, gate = Promise.resolve(), fetchJson = getJson) {
+    const table = handlers(scenario, lang, fetchJson);
     const listeners = new Map();
     const invoke = async (command, args) => {
       await gate;
@@ -102,15 +143,18 @@
       }
       return table[command](args);
     };
+    // The card is where the app puts it for this window's size.
+    const sized = (hover) => (hover ? { ...hover, card: defaults.hoverCard(...screenSize()) } : hover);
     const emit = (name, payload) => {
-      for (const callback of listeners.get(name) || []) callback({ event: name, payload });
+      const sent = name === "overlay-hover" ? sized(payload) : payload;
+      for (const callback of listeners.get(name) || []) callback({ event: name, payload: sent });
     };
     const listen = async (name, callback) => {
       if (!EVENTS.includes(name)) throw new Error(`the gallery does not know the event ${name}`);
       listeners.set(name, [...(listeners.get(name) || []), callback]);
       // The pointer is on a hero from the start: say so once the page listens.
       if (name === "overlay-hover" && scenario.state.hover) {
-        setTimeout(() => callback({ event: name, payload: scenario.state.hover }), 0);
+        setTimeout(() => callback({ event: name, payload: sized(scenario.state.hover) }), 0);
       }
       return () => listeners.set(name, (listeners.get(name) || []).filter((f) => f !== callback));
     };
@@ -134,6 +178,13 @@
       else win.document.addEventListener("DOMContentLoaded", () => resolve());
     });
     win.__TAURI__ = createTauri(scenario, lang, loaded);
+    if (scenario.state.noWebgl) {
+      const proto = win.HTMLCanvasElement.prototype;
+      const getContext = proto.getContext;
+      proto.getContext = function (kind, ...rest) {
+        return /webgl/i.test(String(kind)) ? null : getContext.call(this, kind, ...rest);
+      };
+    }
     const proto = win.HTMLImageElement.prototype;
     const original = Object.getOwnPropertyDescriptor(proto, "src");
     const CARD_ART = /^https?:\/\/cardart\.localhost\/(.*)$/;

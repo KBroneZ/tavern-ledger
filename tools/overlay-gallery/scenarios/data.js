@@ -71,11 +71,12 @@ const BOARDS = {
   ],
 };
 
-function opponent({ heroes, seats, health, place, tiers, boards = [], record = null, shown, possible = [], next = false }) {
+function opponent({ heroes, seats, health, armor = null, place, tiers, boards = [], record = null, shown, possible = [], next = false }) {
   return {
     heroes: heroes.map(hero),
     seats,
     health: sourced(health, health === null ? "unknown" : "log"),
+    armor: sourced(armor, armor === null ? "unknown" : "log"),
     boards,
     boards_source: boards.length ? "log" : "unknown",
     record,
@@ -101,7 +102,7 @@ function soloOpponents() {
       shown: [{ seat: 1, triples: 2, trinkets: [trinket("EX_T_COMPASS", "first", 9001), trinket("EX_T_BELL", "second", 9003)] }],
     }),
     opponent({
-      heroes: ["EX_HERO_TARN"], seats: [2], health: 29, place: 2, tiers: [5],
+      heroes: ["EX_HERO_TARN"], seats: [2], health: 29, armor: 5, place: 2, tiers: [5],
       boards: [board(5, BOARDS.tarn, 2)], record: record(1, 1),
       shown: [{ seat: 2, triples: 1, trinkets: [trinket("EX_T_LOCKET", "first", 9002)] }],
     }),
@@ -118,10 +119,13 @@ function soloOpponents() {
 }
 
 const SOLO_ODDS = {
-  seat: 1, gap: null, seen_round: 6, boards: [], won: 0.58, tied: 0.09, lost: 0.33, trials: 10000,
+  seat: 1, gap: null, round: 6, boards: [], won: 0.58, tied: 0.09, lost: 0.33, trials: 10000,
   dealt: { low: 5, likely: 8, high: 12 }, taken: { low: 4, likely: 6, high: 11 },
   approximate: [], missing: [], start_of_combat: false,
 };
+
+// The five tribes of the example lobby, as the game's memory gives them.
+const GAME_TRIBES = ["BEAST", "DEMON", "DRAGON", "MURLOC", "UNDEAD"];
 
 function soloGame() {
   return {
@@ -144,9 +148,9 @@ function soloGame() {
     tribes_source: "inferred",
     entered_tribes: [],
     entered_tribes_source: "unknown",
-    game_tribes: { tribes: [], status: "off", checked_build: false, note: null },
-    build: null,
-    lobby_tribes: { tribes: ["BEAST", "DEMON", "DRAGON", "MURLOC", "UNDEAD"], source: "inferred", basis: "tavern_confirmed", complete: true },
+    game_tribes: { tribes: GAME_TRIBES, status: "ok", checked_build: true, note: null },
+    build: 253216,
+    lobby_tribes: { tribes: GAME_TRIBES, source: "game", basis: "game", complete: true },
     opponents: soloOpponents(),
     record_basis: "log",
     legend: LEGEND,
@@ -162,7 +166,7 @@ function duosOpponents() {
   const pair = (a, b) => ({ heroes: [a, b] });
   return [
     opponent({
-      ...pair("EX_HERO_QUILL", "EX_HERO_GRIST"), seats: [1, 2], health: 31, place: 1, tiers: [5, 4], next: true,
+      ...pair("EX_HERO_QUILL", "EX_HERO_GRIST"), seats: [1, 2], health: 31, armor: 5, place: 1, tiers: [5, 4], next: true,
       boards: [board(6, BOARDS.quill, 1), board(6, BOARDS.tarn, 2)], record: record(2, 0),
       shown: [
         { seat: 1, triples: 2, trinkets: [trinket("EX_T_COMPASS", "first", 9001)] },
@@ -198,6 +202,29 @@ function duosGame() {
   };
 }
 
+// A game at hero select: no lobby yet, the heroes on offer each with the
+// player's own numbers (null: no game with it yet). The lobby's tribes come
+// from the game's memory, as in a played game.
+const own = (games, placed, average_place, top_half_share) => ({ games, placed, average_place, top_half_share });
+function heroSelectGame({ duos = false, heroes, rerolls = 0 }) {
+  return {
+    ...soloGame(),
+    phase: "starting",
+    is_duos: duos,
+    game_type: sourced(duos ? "GT_BATTLEGROUNDS_DUO" : "GT_BATTLEGROUNDS"),
+    hero: sourced(null, "unknown"),
+    last_combat: sourced(null),
+    turn: sourced(null),
+    own_seats: [],
+    own_place: sourced(null),
+    leaderboard_slots: null,
+    own_health: sourced(null),
+    opponents: [],
+    hero_offer: { rerolls, heroes: heroes.map(([id, numbers]) => ({ hero: hero(id), own: numbers })) },
+  };
+}
+
+// The Duos boards of the combat; null for one that has not entered play yet.
 const DUOS_BOARDS = (rounds) => [
   { role: "teammate", seat: 6, round: rounds[0] },
   { role: "opponent", seat: 1, round: rounds[1] },
@@ -205,5 +232,5 @@ const DUOS_BOARDS = (rounds) => [
 ];
 
 module.exports = {
-  NAMES, sourced, hero, minion, board, opponent, record, trinket, soloGame, duosGame, SOLO_ODDS, DUOS_BOARDS, BOARDS,
+  NAMES, sourced, hero, minion, board, opponent, record, trinket, soloGame, duosGame, heroSelectGame, own, SOLO_ODDS, DUOS_BOARDS, BOARDS,
 };

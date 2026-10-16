@@ -18,6 +18,7 @@ require("../ui/i18n.js");
 require("../ui/strings/common.js");
 require("../ui/strings/overlay.js");
 const { oddsView } = require("../ui/odds-words.js");
+const words = require("../ui/overlay-words.js");
 const bridge = require(path.join(GALLERY, "bridge.js"));
 const { THEME_VARS } = require(path.join(GALLERY, "theme-vars.js"));
 const { SCENARIOS, scenariosFor } = require(path.join(GALLERY, "scenarios", "index.js"));
@@ -25,7 +26,7 @@ const { build, inScript, jsonForScript, checkSelfContained } = require(path.join
 
 const read = (file) => fs.readFileSync(file, "utf8");
 const html = read(path.join(UI, "overlay.html"));
-const pageScripts = [...html.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]);
+const pageScripts = [...html.matchAll(/<script (?:type="module" )?src="([^"]+)"/g)].map((m) => m[1]);
 
 // Every command and event name written as a literal in the page's scripts.
 function literalNames() {
@@ -154,8 +155,9 @@ test("scenario ids are unique and the list covers what the task asks for", () =>
   assert.equal(new Set(ids).size, ids.length);
   for (const id of [
     "waiting", "lobby", "solo", "duos", "gap-no-board-seen", "gap-no-card-data",
-    "gap-not-modelled", "gap-bad-board", "gap-order", "gap-missing-board", "hover-solo", "hover-duos", "damage-cap",
+    "gap-not-modelled", "gap-bad-board", "gap-missing-board", "hover-solo", "hover-duos", "damage-cap",
     "unreadable", "game-over", "high-contrast",
+    "odds-bar", "odds-bar-no-ranges", "leaderboard-marks", "tribes-game", "tribes-off", "tribes-unsupported",
   ]) {
     assert.ok(ids.includes(id), `missing scenario ${id}`);
   }
@@ -207,7 +209,7 @@ test("every card and hero id is an invented one the page accepts, and has a name
 test("the odds scenarios give odds or the note the page says in words", () => {
   const view = (id) => oddsView(SCENARIOS.find((s) => s.id === id).state.game.odds);
   assert.equal(view("solo").kind, "odds");
-  for (const gap of ["no-board-seen", "no-card-data", "not-modelled", "bad-board", "order", "missing-board"]) {
+  for (const gap of ["no-board-seen", "no-card-data", "not-modelled", "bad-board", "missing-board"]) {
     assert.equal(view(`gap-${gap}`).kind, "note", gap);
   }
 });
@@ -270,7 +272,8 @@ test("the build writes one self-contained file under 2 MB, to the place it is to
       assert.doesNotMatch(page, /url\(["']?fonts\//, `${what}: the fonts are inside the file`);
     }
     const doc = decodeDoc(text);
-    assert.equal((doc.match(/<script>/g) || []).length, pageScripts.length + 1, "every script is inline, plus the stand-in");
+    assert.doesNotMatch(doc, /^(import|export)\s/m, "the module script is bundled into one scope");
+    assert.equal((doc.match(/<script(?: type="module")?>/g) || []).length, pageScripts.length + 1, "every script is inline, plus the stand-in");
     assert.match(doc, /<style>/);
     assert.match(doc, /url\("data:font\/woff2;base64,/);
   } finally {
@@ -351,3 +354,80 @@ function decodeDoc(text) {
   assert.ok(m, "the encoded page is in the file");
   return Buffer.from(m[1].trim(), "base64").toString("utf8");
 }
+
+test("the stand-in tells the page where the leaderboard is and puts the odds bar at the top centre, as the app does", async () => {
+  const { invoke } = bridge.createTauri(SCENARIOS.find((s) => s.id === "solo"), "en").core;
+  const view = await invoke("overlay_settings");
+  const { area } = view.leaderboard;
+  assert.ok(area.x > 0 && area.w > 0 && area.y + area.h <= 1080, "the board is inside the window");
+  const bar = view.layout.panels.odds;
+  assert.ok(Math.abs(bar.x + bar.w / 2 - 960) < 1, "centred");
+  assert.ok(bar.y >= 0 && bar.y < 30, "at the top");
+});
+
+test("the odds bar scenarios: with both ranges, and with none because the app does not know them", () => {
+  const view = (id) => oddsView(SCENARIOS.find((s) => s.id === id).state.game.odds);
+  const full = view("odds-bar");
+  assert.equal(full.kind, "odds");
+  assert.ok(full.ranges.win && full.ranges.lose);
+  const bare = view("odds-bar-no-ranges");
+  assert.equal(bare.kind, "odds");
+  assert.deepEqual(bare.ranges, { win: null, lose: null });
+  assert.ok(view("solo").ranges.win, "the ordinary Solo frame has them too");
+});
+
+test("the tribes scenarios: tribes from the game, the read off, and a build not supported yet", () => {
+  const panel = (id) => words.tribesPanel(SCENARIOS.find((s) => s.id === id).state.game);
+  assert.equal(panel("tribes-game").tribes.length, 5);
+  assert.equal(panel("tribes-game").reason, null);
+  assert.equal(panel("solo").tribes.length, 5);
+  for (const [id, reason] of [["tribes-off", /read is off/], ["tribes-unsupported", /not supported yet/]]) {
+    assert.deepEqual(panel(id).tribes, [], id);
+    assert.match(panel(id).reason, reason, id);
+  }
+});
+
+test("the marks scenario has opponents with health and triples on rows of the leaderboard", () => {
+  const g = SCENARIOS.find((s) => s.id === "leaderboard-marks").state.game;
+  const marks = words.opponentMarks(g);
+  assert.ok(marks.length >= 5);
+  assert.ok(marks.some((m) => m.triples > 0) && marks.some((m) => m.triples === 0));
+  assert.ok(marks.every((m) => m.health !== null));
+  assert.ok(marks.some((m) => m.armor > 0) && marks.some((m) => m.armor === null), "the shield shows only where the game has armor");
+});
+
+// The default places: the workbench shows them at any window size, copied from
+// the app's Rust source (default-layout.js), which is the truth.
+const defaults = require(path.join(GALLERY, "default-layout.js"));
+const rustNumber = (file, name) => Number(read(path.join(SRC, file)).match(new RegExp(`const ${name}: f64 = ([0-9.]+);`))[1]);
+
+test("the copied default places have the app's numbers", () => {
+  assert.equal(defaults.ODDS_WIDTH, rustNumber("overlay_layout.rs", "ODDS_WIDTH"));
+  assert.equal(defaults.ODDS_TOP, rustNumber("overlay_layout.rs", "ODDS_TOP"));
+  assert.equal(defaults.CARD_SHARE, rustNumber("hover.rs", "CARD_SHARE"));
+  assert.equal(defaults.LEADERBOARD.leftFromCentre, rustNumber("leaderboard.rs", "LEFT_FROM_CENTER"));
+  assert.equal(defaults.LEADERBOARD.width, rustNumber("leaderboard.rs", "WIDTH"));
+  assert.equal(defaults.LEADERBOARD.top, rustNumber("leaderboard.rs", "TOP"));
+  assert.equal(defaults.LEADERBOARD.height, rustNumber("leaderboard.rs", "HEIGHT"));
+  assert.equal(defaults.GAP, rustNumber("screen_fit.rs", "GAP"));
+  assert.equal(defaults.MIN_CARD_WIDTH, rustNumber("screen_fit.rs", "MIN_CARD_WIDTH"));
+  assert.equal(defaults.MIN_WIDTH, rustNumber("overlay_layout.rs", "MIN_WIDTH"));
+  assert.equal(defaults.MAX_WIDTH, rustNumber("overlay_layout.rs", "MAX_WIDTH"));
+  assert.match(read(path.join(SRC, "screen_fit.rs")), /PLAY_SHAPE: \(f64, f64\) = \(16\.0, 9\.0\)/);
+});
+
+test("the copied default places match the app's tests: the odds bar and the card sit on the 16:9 picture", () => {
+  assert.deepEqual(defaults.playArea(1920, 1080), { x: 0, y: 0, w: 1920, h: 1080 });
+  assert.deepEqual(defaults.playArea(3440, 1440), { x: 440, y: 0, w: 2560, h: 1440 });
+  assert.deepEqual(defaults.playArea(1024, 768), { x: 0, y: 96, w: 1024, h: 576 });
+  const bar = defaults.oddsRect(3440, 1440);
+  assert.equal(bar.x + bar.w / 2, 1720);
+  assert.equal(bar.y, 14.4);
+  const card = defaults.hoverCard(3440, 1440);
+  assert.equal(card.width, 0.85 * 1440);
+  assert.equal(card.x + card.width / 2, 1720);
+  assert.equal(card.y, 8);
+  assert.equal(defaults.hoverCard(1024, 768).y, 96 + 8);
+  const board = defaults.leaderboardArea(1920, 1080);
+  assert.ok(Math.abs(board.x - 241.8) < 1e-9 && Math.abs(board.h - 734.4) < 1e-9);
+});

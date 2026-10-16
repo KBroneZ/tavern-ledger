@@ -1,13 +1,13 @@
-//! Combat odds for the overlay (T-605, D-084): the player's board now, in
-//! the shop, against the board of the next opponent the player last saw in a
-//! combat, played many times by the simulator (D-081). In Duos (T-608) each
-//! team brings two boards: see [`crate::odds_duos`].
+//! Combat odds for the overlay (T-605, D-152): the two boards the game
+//! puts into play in the combat it is playing now, played many times by the
+//! simulator (D-081). Only that combat's odds, only during that combat: no
+//! odds in the shop from a board of an opponent seen turns ago. In Duos
+//! (T-608) each team brings two boards: see [`crate::odds_duos`].
 //!
-//! Red line (D-004, D-054): only boards the player saw. The opponent's board
-//! is the one that entered play in a combat the game has shown, never a
-//! later one; the overlay says how old it is. When the odds cannot be
-//! trusted (no board seen yet, a card the simulator does not know, no card
-//! data) the overlay gets the reason, never a number.
+//! Red line (D-004, D-054): only boards the player saw: the ones that
+//! entered play in the combat on screen. When the odds cannot be trusted (a
+//! board not in yet, a card the simulator does not know, no card data) the
+//! overlay gets the reason, never a number.
 
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
@@ -21,7 +21,7 @@ use combat_sim::{
 };
 use serde::Serialize;
 
-use crate::odds_duos::{duos_input, last_board, seen_after_start_of_combat};
+use crate::odds_duos::{duos_combat, legs};
 pub use crate::odds_duos::{BoardSeen, DuosInput, Role, Seen};
 
 /// Trials for a full answer: the share's standard error is at most 0.5 point.
@@ -75,18 +75,20 @@ impl Facts {
 /// app runs the simulator only when this changes.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OddsInput {
+    /// The opponent whose board fights first.
     pub opponent_seat: i64,
-    /// The combat (turn) the opponent's board was seen in.
-    pub seen_round: i64,
-    /// A card on either board of that combat acted at the start of combat,
-    /// so the board seen may already carry its effects (a minion killed or
-    /// buffed before the first attack).
+    /// The combat (round) the boards entered play in.
+    pub round: i64,
+    /// A card on a board of that combat acts at the start of combat, so the
+    /// boards may already carry its effects (a minion killed or buffed
+    /// before the first attack).
     pub seen_after_start_of_combat: bool,
     pub own: Vec<LogMinion>,
     pub opponent: Vec<LogMinion>,
-    /// The player's game-long values now (T-610); zero when unknown.
+    /// The player's game-long values as their board entered play (T-610);
+    /// zero when the log gave none.
     pub own_values: CombatValues,
-    /// The opponent's game-long values as their board was seen.
+    /// The opponent's game-long values as their board entered play.
     pub opponent_values: CombatValues,
     pub own_tier: Option<i64>,
     /// The opponent's tavern tier now (it is shown on the leaderboard).
@@ -102,15 +104,11 @@ pub struct OddsInput {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Gap {
-    /// Duos: who fights first, or who is on which team, is not known yet.
-    Order,
-    /// Duos: a board the odds need was never seen (`boards` says which).
+    /// Duos: a board of the combat is not in play yet (`boards` says which).
     MissingBoard,
-    /// The game has not marked the next opponent.
-    NoNextOpponent,
-    /// Not a shop turn: the player's board is in a combat.
-    NotInShop,
-    /// The player has not seen a board of the next opponent yet.
+    /// The game is not playing a combat: a shop turn, where there are no odds.
+    NotInCombat,
+    /// The combat's boards have not entered play yet.
     NoBoardSeen,
     /// The card data is not on the PC yet, or lacks a card on the boards.
     NoCardData,
@@ -159,15 +157,16 @@ pub struct Spread {
 /// The odds as the overlay shows them.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct LiveOdds {
-    /// The opponent these odds are against; None without a next opponent.
+    /// The opponent whose board fights first in the combat; None when the
+    /// combat's boards are not in yet.
     pub seat: Option<i64>,
     /// Set when there are no odds; the shares are then 0 and say nothing.
     pub gap: Option<Gap>,
-    /// The combat the opponent's board was seen in; in Duos the oldest of
-    /// the boards the odds use.
-    pub seen_round: Option<i64>,
-    /// Duos: every board but the player's own and when it was seen (with a
-    /// `MissingBoard` gap, the ones never seen have no round). Empty in Solo.
+    /// The combat these odds are for.
+    pub round: Option<i64>,
+    /// Duos: every board but the player's own and the combat it entered play
+    /// in (with a `MissingBoard` gap, the ones not in yet have no round, and
+    /// the player's own is listed too). Empty in Solo.
     pub boards: Vec<BoardSeen>,
     pub won: f64,
     pub tied: f64,
@@ -189,11 +188,11 @@ pub struct LiveOdds {
 }
 
 impl LiveOdds {
-    pub fn gap(gap: Gap, seat: Option<i64>, seen_round: Option<i64>) -> Self {
+    pub fn gap(gap: Gap, seat: Option<i64>, round: Option<i64>) -> Self {
         LiveOdds {
             seat,
             gap: Some(gap),
-            seen_round,
+            round,
             boards: Vec::new(),
             won: 0.0,
             tied: 0.0,
@@ -249,56 +248,50 @@ fn unknown_gifts(input: &OddsInput) -> Vec<String> {
 /// What the game shows now, beside the saved report, that the odds read.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct LiveFacts<'a> {
-    /// The player's board in the shop; `None` outside a shop turn.
-    pub own_now: Option<&'a [LogMinion]>,
-    /// The player's game-long values now (T-610); `None` when not read.
-    pub own_values: Option<CombatValues>,
-    /// The seat the game marks as the next opponent.
-    pub next: Option<i64>,
+    /// The combat the game is playing now; `None` in a shop turn.
+    pub combat_round: Option<i64>,
     pub lobby: &'a [LobbySlot],
     pub damage_cap: Option<i64>,
-    /// Duos: the player's board fights before their teammate's.
-    pub fights_first: Option<bool>,
 }
 
-/// The input for the odds now, or why there are none (with the seat when
-/// known).
+/// The input for the odds of the combat the game is playing now, from the
+/// boards that entered play in it, or why there are none (with the seat when
+/// known). Never a board of an earlier combat.
 pub fn odds_input(report: &GameReport, live: LiveFacts) -> Result<OddsInput, NoOdds> {
-    let Some(seat) = live.next else {
-        return Err(NoOdds::new(Gap::NoNextOpponent, None));
+    let Some(number) = live.combat_round else {
+        return Err(NoOdds::new(Gap::NotInCombat, None));
     };
-    let Some(own) = live.own_now else {
-        return Err(NoOdds::new(Gap::NotInShop, Some(seat)));
+    let Some(round) = report.rounds.iter().find(|r| r.number == number) else {
+        return Err(NoOdds::new(Gap::NoBoardSeen, None));
     };
-    let (duos, opponent) = if report.game_type.as_deref() == Some("GT_BATTLEGROUNDS_DUO") {
-        let (duos, opponent) = duos_input(report, seat, live.fights_first, live.lobby)?;
-        (Some(duos), opponent)
+    let (own, opponent, duos) = if report.game_type.as_deref() == Some("GT_BATTLEGROUNDS_DUO") {
+        let (own, opponent, duos) = duos_combat(report, round, live.lobby)?;
+        (own, opponent, Some(duos))
     } else {
-        (None, last_board(report, seat, Side::Opponent))
+        let own = legs(round, Side::Own).into_iter().next();
+        let opponent = legs(round, Side::Opponent).into_iter().next();
+        let seat = opponent.map(|l| l.seat);
+        let (Some(own), Some(opponent)) = (own, opponent) else {
+            return Err(NoOdds::new(Gap::NoBoardSeen, seat));
+        };
+        (own, opponent, None)
     };
-    let Some((opponent, seen_round, opponent_values)) = opponent else {
-        return Err(NoOdds::new(Gap::NoBoardSeen, Some(seat)));
-    };
-    let seen_after_start_of_combat = start_of_combat_in(report, seen_round)
-        || duos
-            .as_ref()
-            .is_some_and(|d| seen_after_start_of_combat(report, d));
-    let tier = |pid: Option<i64>| {
+    let tier = |seat: i64| {
         live.lobby
             .iter()
-            .find(|s| Some(s.player_id) == pid)
+            .find(|s| s.player_id == seat)
             .and_then(|s| s.tech_level)
     };
     Ok(OddsInput {
-        opponent_seat: seat,
-        seen_round,
-        seen_after_start_of_combat,
-        own: own.to_vec(),
-        opponent: opponent.to_vec(),
-        own_values: live.own_values.unwrap_or_default().bounded(),
-        opponent_values,
-        own_tier: tier(report.local_player_id),
-        opponent_tier: tier(Some(seat)),
+        opponent_seat: opponent.seat,
+        round: number,
+        seen_after_start_of_combat: start_of_combat_in(report, number),
+        own: own.board.to_vec(),
+        opponent: opponent.board.to_vec(),
+        own_values: own.values,
+        opponent_values: opponent.values,
+        own_tier: tier(own.seat),
+        opponent_tier: tier(opponent.seat),
         damage_cap: live.damage_cap,
         duos,
         build: report.build,
@@ -435,17 +428,12 @@ pub fn run_odds(
     let boards = input
         .duos
         .as_ref()
-        .map(|d| d.boards(input.opponent_seat, input.seen_round))
+        .map(|d| d.boards(input.opponent_seat, input.round))
         .unwrap_or_default();
-    // In Duos, the oldest board the odds use.
-    let seen = boards
-        .iter()
-        .filter_map(|b| b.round)
-        .min()
-        .or(Some(input.seen_round));
+    let round = Some(input.round);
     let gap = |gap: Gap| LiveOdds {
         boards: boards.clone(),
-        ..LiveOdds::gap(gap, seat, seen)
+        ..LiveOdds::gap(gap, seat, round)
     };
     let mut missing = Vec::new();
     let (player, opponent) = teams(input, facts, &mut missing);
@@ -500,7 +488,7 @@ pub fn run_odds(
     LiveOdds {
         seat,
         gap: None,
-        seen_round: seen,
+        round,
         boards,
         won: o.share(CombatResult::Won),
         tied: o.share(CombatResult::Tie),

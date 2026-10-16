@@ -8,6 +8,8 @@ const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 
 const SOURCES = ["log", "inferred", "unknown"];
+// Up to this many triples are drawn as stars; more as a star and the number.
+const MAX_STARS = 3;
 
 let game = null;
 // Where the game client is (T-314, LoadingScreen.log): "battlegrounds_loading"
@@ -99,14 +101,14 @@ function renderStatus(g) {
   panel.classList.toggle("empty", g.phase !== "over" && g !== EXAMPLE_GAME && !notes.length);
 }
 
-// The tribe row (T-339): the lobby's tribes as short chips, one
-// "inferred" mark when the tavern confirmed them, "2/5" when not all are known.
+// The tribe row (T-339, D-148): the lobby's tribes as short chips, only the
+// ones read from the game. With none, one short line says why.
 function tribeRow(g) {
-  const known = TLWords.lobbyTribes(g);
-  if (!known) return null;
+  const panel = TLWords.tribesPanel(g);
+  if (!panel.tribes.length) return el("p", "tribe-reason", panel.reason);
   const row = el("div", "tribe-chips");
   row.setAttribute("aria-label", TLI18n.t("ov.slot.tribes"));
-  for (const t of known.tribes) {
+  for (const t of panel.tribes) {
     // The short name is seen, the full one read out.
     const chip = el("span", "chip");
     const short = el("span", null, tribeShort(t));
@@ -114,8 +116,6 @@ function tribeRow(g) {
     chip.append(short, el("span", "visually-hidden", tribeName(t)));
     row.append(chip);
   }
-  if (known.count !== null) row.append(el("span", "chip-count", TLI18n.t("ov.tribes.count", { count: known.count })));
-  if (known.inferred) row.append(mark("inferred"));
   return row;
 }
 
@@ -128,8 +128,8 @@ function tribeShort(id) {
 function renderTribes(g) {
   const panel = document.getElementById("tribes");
   const row = tribeRow(g);
-  panel.replaceChildren(...[row].filter(Boolean));
-  panel.classList.toggle("empty", !row);
+  panel.replaceChildren(row);
+  panel.classList.remove("empty");
   panel.hidden = false;
 }
 
@@ -209,6 +209,12 @@ function opponentLine(opponent) {
     const word = TLWords.nextLabel(current());
     nums.append(el("span", "opp-next", word));
   }
+  if (r.armor !== null) {
+    const armor = el("b", "opp-armor", r.armor);
+    armor.setAttribute("aria-hidden", "true");
+    nums.append(armor);
+    said.push(`${r.armor} ${TLI18n.t("ov.armor.unit")}`);
+  }
   if (r.health !== null) {
     const hp = el("b", "opp-hp", r.health);
     hp.setAttribute("aria-hidden", "true");
@@ -225,31 +231,154 @@ function opponentLine(opponent) {
   return row;
 }
 
-// The combat odds against the next opponent (T-605), or why there are none.
-// The three shares and the board's age. Null when there is nothing to say.
+// One side of the odds bar: the range of health taken on a win (left) or
+// of damage taken on a loss (right), with its small word.
+function oddsRange(side, range) {
+  const node = el("span", `odds-range ${side}`);
+  node.append(el("span", "odds-range-label", TLI18n.t(`ov.odds.range${side === "win" ? "Win" : "Lose"}Label`)), el("b", "odds-range-value", range.text));
+  node.setAttribute("aria-hidden", "true");
+  return node;
+}
+
+// The combat odds bar at the top centre (T-367, T-605): win, tie and lose
+// shares as one bar, the health range of a win to its left and the damage
+// range of a loss to its right (only when the app knows them), or the reason
+// there are no odds. While arranging, example odds fill an empty bar.
 function renderOdds(g) {
-  const v = TLOdds.oddsView(g.odds);
-  if (!v) return null;
+  const panel = document.getElementById("odds");
+  let v = TLOdds.oddsView(g.odds);
+  if (!v && editing) v = TLOdds.oddsView(EXAMPLE_GAME.odds);
+  panel.classList.toggle("empty", !v);
+  panel.hidden = false;
+  if (!v) {
+    panel.replaceChildren();
+    return;
+  }
   const box = el("div", `odds ${v.kind}`);
   box.title = v.about;
   if (v.kind === "note") {
     box.append(el("p", "odds-note", v.text));
   } else {
-    const grid = el("div", "odds-shares");
+    const bar = el("div", "odds-bar-row");
+    bar.setAttribute("aria-hidden", "true");
+    if (v.ranges.win) bar.append(oddsRange("win", v.ranges.win));
+    const track = el("div", "odds-shares");
     for (const s of v.shares) {
       const cell = el("span", `odds-share ${s.key}`);
+      cell.style.flexGrow = String(Math.max(Number.parseFloat(s.value) || 0, 1));
       cell.append(el("span", "odds-label", s.label), el("b", "odds-value", s.value));
-      grid.append(cell);
+      track.append(cell);
     }
-    grid.setAttribute("aria-hidden", "true");
-    box.append(grid);
-    // A game build the rules were not checked against warns here (D-145).
-    if (v.warning) box.append(el("p", "odds-warning", v.warning));
-    // "≈" when a card is played with a gap.
-    if (v.age) box.append(el("p", "odds-age", v.approx ? `≈ ${v.age}` : v.age));
+    bar.append(track);
+    if (v.ranges.lose) bar.append(oddsRange("lose", v.ranges.lose));
+    box.append(bar);
+    // A game build the rules were not checked against warns here (D-145); "≈" when a card is played with a gap.
+    if (v.warningShort) box.append(el("p", "odds-warning", v.warningShort));
+    if (v.approx) box.append(el("p", "odds-age", `≈ ${TLI18n.t("ov.odds.approx")}`));
   }
   box.append(el("span", "visually-hidden", v.said));
-  return box;
+  panel.replaceChildren(box);
+}
+
+// Where the game's leaderboard is, in the window's own pixels (the app's
+// overlay_settings); null until known. The marks follow it (T-368).
+let boardArea = null;
+
+// Over each opponent's hero in the game's leaderboard, on its left (T-368):
+// the armor (when it has any), the remaining health and one star per triple. The right edge of the mark
+// is the leaderboard's left edge; the room to its left is kept for the quest
+// mark. No place or board size known: no mark.
+function renderMarks(g) {
+  const root = document.getElementById("marks");
+  root.replaceChildren();
+  if (!g || !boardArea) return;
+  for (const m of TLWords.opponentMarks(g)) {
+    const each = boardArea.h / m.slots;
+    const mark = el("div", `opp-mark${m.out ? " out" : ""}`);
+    mark.style.top = `${boardArea.y + each * (m.place - 1) + each / 2}px`;
+    mark.style.right = `calc(100% - ${boardArea.x}px)`;
+    const said = [];
+    if (m.triples > 0) {
+      const stars = el("span", "mark-stars", m.triples <= MAX_STARS ? "★".repeat(m.triples) : `★${m.triples}`);
+      stars.setAttribute("aria-hidden", "true");
+      mark.append(stars);
+      said.push(TLI18n.plural("ov.triples", m.triples));
+    }
+    if (m.armor !== null) {
+      const armor = el("b", "mark-armor", m.armor);
+      armor.setAttribute("aria-hidden", "true");
+      mark.append(armor);
+      said.push(`${m.armor} ${TLI18n.t("ov.armor.unit")}`);
+    }
+    if (m.health !== null) {
+      const hp = el("b", "mark-hp", m.health);
+      hp.setAttribute("aria-hidden", "true");
+      mark.append(hp);
+      said.push(`${m.health} ${TLI18n.t("ov.hp.unit")}`);
+    }
+    if (!said.length) continue;
+    mark.append(el("span", "visually-hidden", said.join(", ")));
+    root.append(mark);
+  }
+}
+
+// One hero on offer (T-365): its portrait, name and the player's own numbers
+// from their history, as figures with small labels; "no games yet" when there
+// are none. The two empty slots at the right are for the community's tier and
+// the tribe affinity, which come later: nothing is drawn in them now.
+function heroCard(c) {
+  const item = el("li", "hero-card");
+  const face = el("span", "face");
+  face.setAttribute("aria-hidden", "true");
+  const art = TLCards.art(c.hero.id, "portrait");
+  face.append(art || el("span", "portrait blank"));
+  // The figures are seen; the sentence after them is read out instead.
+  const main = el("span", "hero-main");
+  main.setAttribute("aria-hidden", "true");
+  main.append(el("b", "hero-name", c.name));
+  if (c.own) {
+    const figures = el("span", "hero-figures");
+    for (const f of c.own.figures) {
+      const fig = el("span", `fig fig-${f.key}`);
+      fig.append(el("b", "fig-value", f.value), el("span", "fig-label", f.label));
+      figures.append(fig);
+    }
+    main.append(figures);
+  } else {
+    main.append(el("span", "hero-none", TLI18n.t("ov.heroes.none")));
+  }
+  const slots = el("span", "hero-slots");
+  for (const name of ["tier", "affinity"]) {
+    const slot = el("span", `hero-slot hero-${name}`);
+    slot.dataset.slot = name;
+    slot.hidden = true;
+    slots.append(slot);
+  }
+  item.append(face, main, slots, el("span", "visually-hidden", c.said));
+  return item;
+}
+
+// The hero select panel: the lobby's tribes from the game at its head, then
+// one card per hero on offer, updated on each reroll. Only while the game is
+// at hero select; while arranging, an example fills it. Returns whether it shows.
+function renderHeroes(g) {
+  const panel = document.getElementById("heroes");
+  let view = TLHeroes.heroCards(g, heroName);
+  const example = !view && editing;
+  if (example) view = TLHeroes.heroCards({ ...EXAMPLE_GAME, phase: "starting", hero_offer: EXAMPLE_HERO_OFFER }, heroName);
+  panel.hidden = !view;
+  if (!view) {
+    panel.replaceChildren();
+    return false;
+  }
+  const head = el("div", "heroes-head");
+  head.append(el("b", "heroes-title", view.title));
+  if (view.rerolls) head.append(el("span", "heroes-rerolls", view.rerolls));
+  const list = el("ol", "hero-list");
+  list.setAttribute("aria-label", view.title);
+  for (const c of view.cards) list.append(heroCard(c));
+  panel.replaceChildren(head, tribeRow(example ? EXAMPLE_GAME : g), list);
+  return true;
 }
 
 function renderOpponents(g) {
@@ -258,13 +387,6 @@ function renderOpponents(g) {
   list.setAttribute("aria-label", TLI18n.t("ov.slot.opponents"));
   for (const opponent of g.opponents) {
     list.append(opponentLine(opponent));
-    // Under the next opponent's line (T-605).
-    const odds = opponent.next ? renderOdds(g) : null;
-    if (odds) {
-      const item = el("li", "odds-row");
-      item.append(odds);
-      list.append(item);
-    }
   }
   // The damage cap the game shows (T-315), above the opponents.
   const cap = TLWords.damageCap(g);
@@ -275,24 +397,49 @@ function renderOpponents(g) {
   panel.hidden = false;
 }
 
-// The lobby panel (T-338): the own rating with the last game's change, and
-// the day's summary.
+// One game of the day as a tile (T-366): its hero's portrait as the
+// background, the place on it and the rating won or lost, green up or red
+// down (a mark as well as a colour). A value the app does not give is left
+// out. The sentence is read out instead of the pieces.
+function recapTile(t) {
+  const tile = el("li", `recap-tile${t.duos ? " duos" : ""}`);
+  const seen = el("span", "recap-seen");
+  seen.setAttribute("aria-hidden", "true");
+  const art = t.hero ? TLCards.art(t.hero.id, "portrait") : null;
+  const back = art || el("span", "portrait blank");
+  back.classList.add("recap-back");
+  seen.append(back);
+  if (t.duos) seen.append(el("span", "recap-mode", t.mode));
+  seen.append(el("b", "recap-place", t.place ? t.place : "–"));
+  if (t.change) seen.append(el("span", `recap-change ${t.up ? "up" : "down"}`, t.change));
+  tile.append(seen, el("span", "visually-hidden", t.said));
+  return tile;
+}
+
+// The lobby panel (T-338, T-366): the own rating per mode with the one the
+// day started with, the day's last games as tiles, and the day's summary.
 function renderLobby(v) {
   const panel = document.getElementById("lobby");
   panel.replaceChildren();
-  const rows = TLLobby.ratingRows(v);
-  for (const r of rows) {
+  for (const r of TLLobby.ratingRows(v)) {
     const row = el("p", "lobby-rating");
-    row.append(el("span", "lobby-mode", r.label), el("b", "lobby-value", r.value));
-    if (r.change) {
-      const change = el("span", `lobby-change ${r.up ? "up" : "down"}`, r.change);
-      change.title = TLI18n.t("lobby.change.label");
-      row.append(change, el("span", "visually-hidden", TLI18n.t("lobby.change.label")));
-    }
+    const seen = el("span", "lobby-seen");
+    seen.setAttribute("aria-hidden", "true");
+    seen.append(el("span", "lobby-mode", r.label), el("b", "lobby-value", r.value));
+    if (r.net) seen.append(el("span", `lobby-change ${r.up ? "up" : "down"}`, r.net));
+    if (r.start) seen.append(el("span", "lobby-from", TLI18n.t("lobby.from", { value: r.start })));
+    row.append(seen, el("span", "visually-hidden", r.said));
     panel.append(row);
   }
   const note = TLLobby.ratingNote(v);
   if (note) panel.append(el("p", "notes", note));
+  const tiles = TLLobby.recapTiles(v, heroName);
+  if (tiles.length) {
+    const list = el("ol", "recap-tiles");
+    list.setAttribute("aria-label", TLI18n.t("lobby.tiles.label"));
+    for (const t of tiles) list.append(recapTile(t));
+    panel.append(list);
+  }
   // Each part of a summary line stays whole; lines break only between parts.
   for (const line of TLLobby.summaryLines(v)) {
     const p = el("p", "lobby-today");
@@ -314,7 +461,8 @@ function render() {
   if (lobbyShown) renderLobby(lobbyShown);
   else lobby.hidden = true;
   if (!g && lobbyShown) {
-    for (const id of ["status", "counters", "tribes", "opponents", "legend"]) document.getElementById(id).hidden = true;
+    for (const id of ["status", "heroes", "counters", "tribes", "opponents", "odds", "legend"]) document.getElementById(id).hidden = true;
+    renderMarks(null);
     if (window.TLHover) window.TLHover.render();
     return;
   }
@@ -323,23 +471,33 @@ function render() {
     const status = document.getElementById("status");
     status.className = "panel status";
     status.textContent = scene === "battlegrounds_loading" ? TLI18n.t("ov.status.loading") : TLI18n.t("ov.status.waiting");
+    document.getElementById("heroes").hidden = true;
     document.getElementById("counters").hidden = true;
     document.getElementById("tribes").hidden = true;
     document.getElementById("opponents").hidden = true;
+    document.getElementById("odds").hidden = true;
     legend.hidden = true;
+    renderMarks(null);
     if (window.TLHover) window.TLHover.render();
     return;
   }
   renderStatus(g);
+  // At hero select the heroes panel says where the game is; its line goes.
+  // Unless the user switched the heroes panel off: then the status line stays.
+  const heroesSlot = document.getElementById("heroes").closest(".slot");
+  if (renderHeroes(g) && g.phase === "starting" && !heroesSlot.hidden) document.getElementById("status").hidden = true;
   const showPanels = g.phase === "playing" || g.phase === "over";
   document.getElementById("counters").hidden = !showPanels;
   document.getElementById("tribes").hidden = !showPanels;
   document.getElementById("opponents").hidden = !showPanels;
+  document.getElementById("odds").hidden = !showPanels;
   legend.hidden = !showPanels;
+  renderMarks(showPanels ? g : null);
   if (showPanels) {
     renderCounters(g);
     renderTribes(g);
     renderOpponents(g);
+    renderOdds(g);
   }
   if (window.TLHover) window.TLHover.render();
 }
@@ -349,13 +507,19 @@ let latest = 0;
 
 async function refresh() {
   const mine = ++latest;
-  const [fresh, where] = await Promise.all([invoke("overlay_state"), invoke("overlay_scene")]);
+  const [fresh, where, settings] = await Promise.all([
+    invoke("overlay_state"),
+    invoke("overlay_scene"),
+    // Only for where the game's leaderboard is: a failure leaves the marks off.
+    invoke("overlay_settings").catch(() => null),
+  ]);
   // The lobby panel only matters with no game on, and a problem with it
   // must not hide a game: it is asked apart and its failure leaves it off.
   const lobbyNow = fresh ? null : await invoke("overlay_lobby", TLLobby.dayRange(new Date())).catch(() => null);
   if (mine !== latest) return;
   game = fresh;
   scene = typeof where === "string" ? where : null;
+  boardArea = settings && settings.leaderboard ? settings.leaderboard.area : null;
   lobbyView = lobbyNow;
   if (window.TLHover) window.TLHover.setFailed(false);
   render();
@@ -364,7 +528,7 @@ async function refresh() {
 // Text follows the screen (T-334): the base size is a share of the window's
 // height, which covers the game's picture (overlay-scale.js).
 function fitText() {
-  document.documentElement.style.fontSize = `${TLScale.rootPx(window.innerHeight)}px`;
+  document.documentElement.style.fontSize = `${TLScale.rootPx(TLScale.playHeight(window.innerWidth, window.innerHeight))}px`;
 }
 
 async function start() {
@@ -378,6 +542,7 @@ async function start() {
   await listen("lobby-tribes-changed", () => refresh().catch(showError));
   // New card data can change the possible minions (T-307).
   await listen("cards-changed", () => refresh().catch(showError));
+  await listen("overlay-settings-changed", () => refresh().catch(showError));
   await refresh();
   // The rating is read on the lobby screen without an event: asked again
   // while the lobby panel is up.
@@ -392,7 +557,8 @@ function showError(error) {
   const panel = document.getElementById("status");
   panel.className = "panel status unreadable";
   panel.textContent = TLI18n.t("ov.error.update", { error });
-  for (const id of ["counters", "tribes", "opponents", "legend", "lobby"]) document.getElementById(id).hidden = true;
+  for (const id of ["heroes", "counters", "tribes", "opponents", "odds", "legend", "lobby"]) document.getElementById(id).hidden = true;
+  renderMarks(null);
   if (window.TLHover) window.TLHover.setFailed(true);
 }
 

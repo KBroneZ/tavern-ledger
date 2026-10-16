@@ -3,7 +3,8 @@
    Every source is a word on the page, never a tooltip. The colours below are
    the Glass theme (D-052), used until the app sends the chosen theme (the same
    values live in overlay_layout.rs, where a test checks their contrast). */
-@font-face { font-family: "Bricolage Grotesque"; font-weight: 200 800; font-stretch: 75% 100%; font-display: swap; src: url("fonts/bricolage-grotesque-latin-wdth-normal.woff2") format("woff2"); }
+@font-face { font-family: "Lilita One"; font-weight: 400; font-display: swap; src: url("fonts/lilita-one-latin-400-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Lilita One"; font-weight: 400; font-display: swap; src: url("fonts/lilita-one-latin-ext-400-normal.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
 @font-face { font-family: "Figtree"; font-weight: 300 900; font-display: swap; src: url("fonts/figtree-latin-wght-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 @font-face { font-family: "Figtree"; font-weight: 300 900; font-display: swap; src: url("fonts/figtree-latin-ext-wght-normal.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
 
@@ -20,15 +21,28 @@
   --muted: #c4b6a8;
   --danger: #ffd0c6;
   --border: #9a6a30;
-  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Lilita One", "Segoe UI", system-ui, sans-serif;
+  --odds-win: #2f9e55;
+  --odds-tie: #7a7770;
+  --odds-lose: #c4402f;
+  /* The dark edge on numbers, as the game's own. */
+  --outline: #120a05;
   --font-body: "Figtree", "Segoe UI", system-ui, sans-serif;
-  --stack-right: 8px;
-  --stack-top: 96px;
+  /* The game's 16:9 picture inside the window (the game centres it with bars
+     in a wider or taller window): every default place is a share of it, so the
+     layout is the same at 1920x1080, 2560x1440, 1280x720 and on an ultrawide
+     (overlay_layout.rs and hover.rs use the same rule). */
+  --play-h: min(100vh, 56.25vw);
+  --play-w: min(100vw, 177.7778vh);
+  --play-x: calc((100vw - var(--play-w)) / 2);
+  --play-y: calc((100vh - var(--play-h)) / 2);
+  --stack-right: calc(var(--play-x) + var(--play-h) * 0.0074);
+  --stack-top: calc(var(--play-y) + var(--play-h) * 0.09);
   --stack-width: 13.5rem;
   /* The lobby panel's corner (T-338): top left, clear of the lobby screen's
      menu and friends buttons at the bottom corners. */
-  --lobby-left: 16px;
-  --lobby-top: 16px;
+  --lobby-left: calc(var(--play-x) + var(--play-h) * 0.015);
+  --lobby-top: calc(var(--play-y) + var(--play-h) * 0.015);
   --lobby-width: 17rem;
 }
 
@@ -83,7 +97,7 @@ body {
 
 .status { font-size: 1.038rem; }
 .status .notes { margin: 4px 0 0; color: var(--amber); font-size: 0.923rem; }
-.status .hero { font: 700 1.154rem/1.3 var(--font-display); font-stretch: 88%; color: var(--accent); }
+.status .hero { font: 400 1.154rem/1.3 var(--font-display); color: var(--accent); }
 .status.unreadable { border-color: var(--lost); color: var(--danger); }
 
 /* Counters (T-612): one line each; the figures are tabular so they do not
@@ -92,7 +106,7 @@ body {
 .counter + .counter { margin-top: 3px; }
 .counter-main { display: flex; justify-content: space-between; align-items: baseline; gap: 0.6em; }
 .counter-label { color: var(--dim); }
-.counter-value { color: var(--accent); font: 700 1.077rem/1.25 var(--font-display); font-stretch: 88%; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.counter-value { color: var(--accent); font: 400 1.077rem/1.25 var(--font-display); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 
 /* Source marks: the word says it; the border style repeats it, so colour is never the only cue. */
@@ -150,7 +164,7 @@ body {
   align-items: center;
   gap: 0.3em 0.9em;
 }
-.hb-title { flex: 0 1 auto; min-width: 0; font: 700 1.3em/1.2 var(--font-display); font-stretch: 88%; color: var(--accent); }
+.hb-title { flex: 0 1 auto; min-width: 0; font: 400 1.3em/1.2 var(--font-display); color: var(--accent); }
 .hb-health { color: var(--dim); }
 .hb-health b { color: var(--text); font-size: 1.15em; }
 .hover-card .portrait { flex: none; width: 2.2em; height: 2.2em; border-radius: 50%; }
@@ -203,13 +217,20 @@ body {
   border: 2px solid rgba(0, 0, 0, 0.75);
   border-radius: 999px;
   background: var(--panel-solid);
-  font: 800 1.25em/1.2 var(--font-display);
+  font: 400 1.25em/1.2 var(--font-display);
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
 .hb-atk { left: -0.1em; color: var(--accent); }
 .hb-hp { right: -0.1em; color: var(--lost); }
 .hb-minion.golden .hb-atk::after { content: " \2605" / ""; font-size: 0.7em; }
+/* A minion drawn like the game (T-372, minion-art/): the frame fills the slot;
+   a Taunt shield, a bubble or a skull reaches past it, so the row gives them room. */
+.hb-board:has(.hb-drawn) { padding: 0.9em 0.5em 0; }
+.hb-drawn-box { position: relative; width: 100%; }
+.hb-drawn .hb-name { margin-top: 0.9em; }
+.hb-drawn .gifts { position: absolute; right: 4%; top: 6%; }
+.hb-drawn .gift-mark { font-size: 0.75em; }
 .hb-name {
   max-width: 100%;
   margin-top: 0.35em;
@@ -434,6 +455,30 @@ body:not(.unlocked) .slot:has(> .panel.empty),
 }
 .tribe-chips .chip-count { color: var(--dim); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
 .tribe-chips .src { font-size: 0.72rem; padding: 0 4px; }
+.tribe-reason { margin: 0; color: var(--dim); font-size: 0.88rem; }
+
+/* Hero select (T-365): the lobby's tribes, then one card per hero on offer in
+   the game's order, each with the player's own numbers as figures under a
+   small label. The two slots at the right are kept for the community's tier
+   and the tribe affinity; they stay empty (and unseen) until there is data. */
+.heroes-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 3px; }
+.heroes-title { color: var(--accent); font: 400 1.08rem/1.25 var(--font-display); }
+.heroes-rerolls { color: var(--dim); font-size: 0.78rem; white-space: nowrap; }
+.heroes .tribe-chips, .heroes .tribe-reason { margin-bottom: 4px; }
+.hero-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.hero-card { display: flex; align-items: center; gap: 6px; padding: 2px 4px; border-radius: 8px; background: color-mix(in srgb, var(--text) 6%, transparent); }
+.hero-card .face { flex: none; width: 2.7rem; height: 2.7rem; }
+.hero-card .face .portrait { display: block; width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 80%, transparent); }
+.hero-card .portrait.blank { background: color-mix(in srgb, var(--dim) 25%, var(--panel-solid)); }
+.hero-main { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; gap: 1px; }
+.hero-name { font: 400 1rem/1.15 var(--font-display); color: var(--text); overflow-wrap: anywhere; }
+.hero-figures { display: flex; flex-wrap: nowrap; gap: 0 0.45rem; }
+.fig { display: inline-flex; flex-direction: column; align-items: flex-start; line-height: 1.05; }
+.fig-value { font: 400 0.98rem/1.1 var(--font-display); color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fig-label { color: var(--dim); font: 700 0.6rem/1.2 var(--font-body); text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; }
+.hero-none { color: var(--dim); font-size: 0.82rem; }
+.hero-slots { display: flex; flex: none; flex-direction: column; align-items: flex-end; gap: 2px; }
+.hero-slot[hidden] { display: none; }
 
 /* The game's damage cap (T-315): one short line above the opponents. */
 .damage-cap {
@@ -494,10 +539,13 @@ body:not(.unlocked) .slot:has(> .panel.empty),
   font-variant-numeric: tabular-nums;
 }
 .opp .nums { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
-.opp .opp-hp { font: 800 1.15rem/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.opp .opp-hp { font: 400 1.15rem/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+/* The game's armor: a grey shield with its number, apart from the health. */
+.opp .opp-armor, .mark-armor { display: inline-block; min-width: 1.5em; padding: 0.1em 0.3em 0.3em; border-radius: 0.35em 0.35em 50% 50% / 0.35em 0.35em 65% 65%; background: var(--muted); color: var(--panel-solid); text-align: center; font-variant-numeric: tabular-nums; }
+.opp .opp-armor { font: 400 1rem/1.1 var(--font-display); }
 .opp .opp-triples { color: var(--accent); font-weight: 700; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
 
-/* Lobby panel (T-338): small, on the Battlegrounds lobby screen only. */
+/* Lobby panel (T-338, T-366): small, on the Battlegrounds lobby screen only. */
 #lobby-dock {
   position: absolute;
   left: var(--lobby-left);
@@ -506,34 +554,76 @@ body:not(.unlocked) .slot:has(> .panel.empty),
   display: flex;
   flex-direction: column;
 }
-.lobby-rating { display: flex; align-items: baseline; gap: 6px; margin: 0; }
+.lobby-rating { margin: 0; }
+.lobby-seen { display: flex; align-items: baseline; gap: 6px; }
+.lobby-from { margin-left: auto; color: var(--dim); font-size: 0.85rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .lobby-rating + .lobby-rating { margin-top: 2px; }
 .lobby-mode { min-width: 4.6em; color: var(--dim); }
-.lobby-value { font: 700 1.231rem/1.25 var(--font-display); font-stretch: 88%; color: var(--accent); font-variant-numeric: tabular-nums; }
+.lobby-value { font: 400 1.231rem/1.25 var(--font-display); color: var(--accent); font-variant-numeric: tabular-nums; }
 .lobby-change { font-weight: 700; font-variant-numeric: tabular-nums; }
 .lobby-change.up { color: var(--won); }
 .lobby-change.down { color: var(--lost); }
 .lobby-change.up::before { content: "\25B2\00a0"; font-size: 0.7em; }
 .lobby-change.down::before { content: "\25BC\00a0"; font-size: 0.7em; }
+/* The day's last games (T-366): four to a row, the newest first. Each tile
+   has its hero's portrait behind it, the place at the top left and the rating
+   won or lost at the foot, with a mark as well as a colour. */
+.recap-tiles { list-style: none; margin: 5px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.recap-tile { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: var(--panel-solid); box-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 70%, transparent); }
+.recap-seen { position: absolute; inset: 0; display: block; }
+.recap-back { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
+.recap-seen::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to bottom, rgb(0 0 0 / 0.45), rgb(0 0 0 / 0) 45%, rgb(0 0 0 / 0.6)); }
+.recap-place, .recap-change, .recap-mode { position: absolute; z-index: 1; }
+.recap-place { top: 1px; left: 5px; color: #fff; font: 400 1.35rem/1.15 var(--font-display); font-variant-numeric: tabular-nums; }
+.recap-mode { top: 3px; right: 4px; color: var(--accent); font: 800 0.58rem/1.2 var(--font-body); text-transform: uppercase; letter-spacing: 0.04em; }
+.recap-change { right: 4px; bottom: 2px; font: 400 0.95rem/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.recap-change.up { color: var(--won); }
+.recap-change.down { color: var(--lost); }
+.recap-change.up::before { content: "\25B2"; font-size: 0.6em; margin-right: 1px; }
+.recap-change.down::before { content: "\25BC"; font-size: 0.6em; margin-right: 1px; }
 .lobby .notes { margin: 3px 0 0; color: var(--amber); font-size: 0.923rem; }
 .lobby-today .nowrap { white-space: nowrap; }
 .lobby-today { margin: 4px 0 0; color: var(--dim); font-size: 0.923rem; }
 .lobby-rating + .lobby-today, .lobby .src + .lobby-today { padding-top: 4px; border-top: 1px solid color-mix(in srgb, var(--border) 45%, transparent); }
 
-/* Combat odds (T-605): under the next opponent's line, small. Each share is
-   a word and a number, never colour alone. */
-.odds-row { list-style: none; padding: 0 4px 2px; }
-.odds { font: 600 0.78rem/1.3 var(--font-body); font-variant-numeric: tabular-nums; }
-.odds p { margin: 0; }
-/* Three equal columns, label over number: fits the slim column in both languages. */
-.odds-shares { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 4px; max-width: 16rem; }
-.odds-share { display: flex; flex-direction: column; min-width: 0; }
-.odds-label { color: var(--dim); font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.odds-value { font: 800 1rem/1.15 var(--font-display); white-space: nowrap; }
-.odds-share.win .odds-value { color: var(--accent); }
-.odds-share.lose .odds-value { color: var(--dim); }
-.odds-age, .odds-note { color: var(--dim); font-size: 0.76rem; }
-.odds-warning { color: var(--amber); font-size: 0.76rem; }
+/* Combat odds bar (T-367): one bar at the top centre. Each share is a word
+   and a number on its colour, never colour alone; the health range of a win
+   sits left of it and the damage range of a loss right of it. */
+.odds { font: 600 0.82rem/1.3 var(--font-body); font-variant-numeric: tabular-nums; }
+.odds p { margin: 0; text-align: center; }
+.odds-bar-row { display: flex; align-items: stretch; gap: 0.5rem; }
+.odds-shares { display: flex; flex: 1 1 auto; min-width: 0; overflow: hidden; border-radius: 0.5rem; border: 2px solid var(--outline); background: var(--outline); gap: 2px; }
+.odds-share { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 2.4em; padding: 0.1em 0.3em 0.2em; }
+.odds-share.win { background: var(--odds-win); }
+.odds-share.tie { background: var(--odds-tie); }
+.odds-share.lose { background: var(--odds-lose); }
+.odds-label { max-width: 100%; overflow: hidden; color: #fff; text-shadow: 0 0 2px var(--outline), 0 1px 1px var(--outline); font: 700 0.62rem/1.2 var(--font-body); text-overflow: ellipsis; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+.odds-value { color: #fff; font: 400 1.35rem/1.1 var(--font-display); white-space: nowrap; }
+.odds-range { display: flex; flex: none; flex-direction: column; align-items: center; justify-content: center; min-width: 2.8em; }
+.odds-range-label { color: var(--dim); font: 700 0.62rem/1.2 var(--font-body); text-transform: uppercase; letter-spacing: 0.04em; }
+.odds-range-value { font: 400 1.25rem/1.1 var(--font-display); white-space: nowrap; }
+.odds-range.win .odds-range-value { color: var(--won); }
+.odds-range.lose .odds-range-value { color: var(--lost); }
+.odds-age, .odds-note { margin-top: 2px; color: var(--dim); font-size: 0.76rem; }
+.odds-note { margin-top: 0; font-size: 0.88rem; }
+.odds-warning { margin-top: 2px; color: var(--amber); font-size: 0.76rem; }
+
+/* Numbers drawn with a dark edge like the game's own: the stroke is painted
+   under the fill, so the glyphs keep their full weight. */
+.odds-value, .odds-range-value, .mark-hp, .mark-stars, .opp .opp-hp, .counter-value, .lobby-value, .status .hero, .hb-atk, .hb-hp, .face-tier, .fig-value, .recap-place, .recap-change {
+  paint-order: stroke fill;
+  -webkit-text-stroke: 0.2em var(--outline);
+}
+
+/* Health and triples over the game's leaderboard heroes (T-368): the mark's
+   right edge is the leaderboard's left edge. What sits further left is free
+   for the quest mark. */
+.marks { position: absolute; inset: 0; pointer-events: none; }
+.opp-mark { position: absolute; display: flex; align-items: center; gap: 0.35rem; padding-right: 0.3rem; transform: translateY(-50%); }
+.mark-hp { color: var(--text); font: 400 1.7rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.mark-armor { font: 400 1.25rem/1 var(--font-display); }
+.mark-stars { color: var(--accent); font: 400 1.05rem/1 var(--font-display); letter-spacing: 0.05em; }
+.opp-mark.out { opacity: 0.45; }
 
 /* Dark Gifts (T-528, D-107): a violet star per gift; a dashed edge for a gift the log does not name. Shape first,
    colour second. */
@@ -551,4 +641,5 @@ body:not(.unlocked) .slot:has(> .panel.empty),
 .hb-art .gift-mark { font-size: 0.75em; }
 @media (forced-colors: active) {
   .gift-mark { border-color: CanvasText; color: CanvasText; }
+  .odds-value, .odds-range-value, .mark-hp, .mark-stars, .opp .opp-hp, .counter-value, .lobby-value, .status .hero, .hb-atk, .hb-hp, .face-tier, .fig-value, .recap-place, .recap-change { -webkit-text-stroke: 0; }
 }

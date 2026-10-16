@@ -23,6 +23,7 @@ mod overlay_window;
 #[cfg(test)]
 mod process_checks;
 mod redact;
+mod saved_ratings;
 mod saved_tribes;
 mod screen_fit;
 mod settings;
@@ -52,6 +53,7 @@ use tracker::dev_reconnect::Reconnects;
 use tracker::discover::same_folder_key;
 use tracker::game_values::ReaderStatus;
 use tracker::live::{live_game, LiveGame};
+use tracker::lobby_recap::{session_recap, HistoryGame, SessionRecap};
 use tracker::lobby_tribes::{self, Action, Entries, GameStarts, LobbyView};
 use tracker::lock::{HistoryLock, LockError};
 use tracker::provenance::{row_sources, RowSources};
@@ -177,6 +179,8 @@ struct AppState {
     game_memory: game_memory::GameMemory,
     /// The lobby tribes read from the game, saved with each game (T-540).
     saved_tribes: saved_tribes::Kept,
+    /// The own rating read after each game, kept on this PC only (T-366).
+    saved_ratings: saved_ratings::Kept,
     /// The combat odds for the overlay (T-605).
     odds: odds::Odds,
     /// Which Hearthstone folder is followed (T-579).
@@ -196,12 +200,15 @@ fn list_games(state: State<'_, Arc<AppState>>) -> Vec<GameRow> {
 /// the window renders them and computes nothing (T-102).
 #[tauri::command]
 fn game_stats(state: State<'_, Arc<AppState>>, cards: State<'_, card_data::Cards>) -> Stats {
-    let links = card_data::hero_links(&cards);
+    stats_now(&state, &card_data::hero_links(&cards))
+}
+
+fn stats_now(state: &AppState, links: &HeroLinks) -> Stats {
     let games = state.games.lock().unwrap_or_else(|e| e.into_inner());
     let entries = state.entries.lock().unwrap_or_else(|e| e.into_inner());
     state
         .saved_tribes
-        .with(|read| stats_of(&games, entries.as_ref(), read, &links))
+        .with(|read| stats_of(&games, entries.as_ref(), read, links))
 }
 
 /// Games played with the reconnect dev tool are not counted (D-043). Skins
@@ -346,6 +353,14 @@ fn overlay_state(
     let store = card_data::store_with_data(&cards);
     let card_of = |dbf: i64| store.and_then(|s| s.card_of_dbf(dbf));
     let shown = overlay_state_of(&state)?.with_possible(&pool);
+    // At hero select, each hero on offer with the player's own history of it
+    // (T-365); the stats are worked out only then.
+    let shown = if shown.offered_heroes.is_some() {
+        let stats = stats_now(&state, &card_data::hero_links(&cards));
+        shown.with_hero_offer(&stats)
+    } else {
+        shown
+    };
     // Tribes from the game that the tavern contradicted stay dropped for the
     // rest of the game (D-063).
     if shown.game_tribes.note.is_some() {
@@ -420,22 +435,42 @@ fn lobby_of(
         .unwrap_or_else(|e| e.into_inner())
         .is_some();
     let memory = state.game_memory.view();
-    let today = if lobby_panel::sane_day(day.0, day.1) {
+    let (today, recap) = if lobby_panel::sane_day(day.0, day.1) {
         let rows = state.games.lock().unwrap_or_else(|e| e.into_inner());
-        tracker::stats::summary(
+        let in_day = |r: &GameRow| lobby_panel::played_in(r.ended, &r.session, day, to_utc);
+        let today = tracker::stats::summary(
             rows.iter()
-                .filter(|r| !r.dev_reconnect)
-                .filter(|r| lobby_panel::played_in(r.ended, &r.session, day, to_utc))
+                .filter(|r| !r.dev_reconnect && in_day(r))
                 .map(|r| &r.report),
-        )
+        );
+        // Every game the app has seen: the dev tool's moved the rating too, so
+        // the change of the game after it is measured from it; only the
+        // counted ones are tiles.
+        let history: Vec<HistoryGame> = rows
+            .iter()
+            .map(|r| HistoryGame {
+                key: GameKey {
+                    session: r.session.clone(),
+                    index: r.index,
+                },
+                report: &r.report,
+                in_day: in_day(r),
+                counted: !r.dev_reconnect,
+            })
+            .collect();
+        // Ratings only while the read is on: with it off there are none.
+        let recap = state
+            .saved_ratings
+            .with(|saved| session_recap(&history, saved.filter(|_| memory.enabled)));
+        (today, recap)
     } else {
-        Vec::new()
+        (Vec::new(), SessionRecap::default())
     };
     lobby_panel::LobbyView {
         in_lobby: scene == Some(Scene::BattlegroundsLobby) && !game_on,
         rating: memory.rating,
-        rating_change: memory.rating_change,
         today,
+        recap,
     }
 }
 
@@ -452,9 +487,14 @@ fn game_memory_set_enabled(state: State<'_, Arc<AppState>>, enabled: bool) -> ga
     let _ = state.game_memory.set_enabled(enabled);
     // Off forgets every value read, the tribes saved with games too (T-540).
     if !enabled {
-        if let Err(msg) = state.saved_tribes.forget_all() {
-            let mut status = state.status.lock().unwrap_or_else(|e| e.into_inner());
-            status.notice = Some(msg);
+        for forgotten in [
+            state.saved_tribes.forget_all(),
+            state.saved_ratings.forget_all(),
+        ] {
+            if let Err(msg) = forgotten {
+                let mut status = state.status.lock().unwrap_or_else(|e| e.into_inner());
+                status.notice = Some(msg);
+            }
         }
     }
     state.game_memory.view()
@@ -485,6 +525,9 @@ fn read_from_game(app: &AppHandle, state: &AppState, client_build: Option<i64>) 
         last_duos: last.duos,
         newest: last.newest.as_ref(),
         previous: last.previous.as_ref(),
+        newest_any: last.newest_any.as_ref(),
+        previous_any: last.previous_any.as_ref(),
+        last_duos_any: last.duos_any,
     };
     let tick = || state.game_memory.tick(&game_memory::GameReader, &poll);
     if catch_unwind(AssertUnwindSafe(tick)).is_err() {
@@ -498,6 +541,23 @@ fn read_from_game(app: &AppHandle, state: &AppState, client_build: Option<i64>) 
         return;
     }
     keep_read_tribes(app, state, game.as_ref());
+    keep_read_rating(app, state);
+}
+
+/// Saves the rating the read took with the game it follows (T-366, D-147).
+fn keep_read_rating(app: &AppHandle, state: &AppState) {
+    let outcome = state
+        .saved_ratings
+        .after_read(state.game_memory.taken_reading(), || {
+            state.game_memory.view().enabled
+        });
+    match outcome {
+        saved_ratings::Outcome::Unchanged => {}
+        saved_ratings::Outcome::Changed => {
+            let _ = app.emit(LIVE_CHANGED, ());
+        }
+        saved_ratings::Outcome::Failed(msg) => set_status(app, state, |s| s.notice = Some(msg)),
+    }
 }
 
 /// Saves the game in progress's tribes from the game once they pass the
@@ -540,6 +600,11 @@ struct LastGames {
     duos: Option<bool>,
     newest: Option<GameKey>,
     previous: Option<GameKey>,
+    /// The same for every game the app has seen, the dev tool's included:
+    /// they move the rating too (T-366).
+    newest_any: Option<GameKey>,
+    previous_any: Option<GameKey>,
+    duos_any: Option<bool>,
 }
 
 /// How many games the history has, whether the newest was Duos, and the
@@ -552,18 +617,20 @@ fn last_game(rows: &[GameRow]) -> LastGames {
         session: r.session.clone(),
         index: r.index,
     };
-    let duos = counted
-        .last()
-        .and_then(|r| match r.report.get("game_type")?.as_str()? {
-            "GT_BATTLEGROUNDS" => Some(false),
-            "GT_BATTLEGROUNDS_DUO" => Some(true),
-            _ => None,
-        });
+    let is_duos = |r: &&GameRow| match r.report.get("game_type")?.as_str()? {
+        "GT_BATTLEGROUNDS" => Some(false),
+        "GT_BATTLEGROUNDS_DUO" => Some(true),
+        _ => None,
+    };
+    let all: Vec<&GameRow> = rows.iter().collect();
     LastGames {
         finished: counted.len(),
-        duos,
+        duos: counted.last().and_then(is_duos),
         newest: counted.last().map(key),
         previous: counted.len().checked_sub(2).map(|i| key(&counted[i])),
+        newest_any: all.last().map(key),
+        previous_any: all.len().checked_sub(2).map(|i| key(&all[i])),
+        duos_any: all.last().and_then(is_duos),
     }
 }
 
@@ -733,13 +800,15 @@ fn live_now(watcher: &mut Watcher) -> Option<LiveGame> {
     let next = watcher.live_next_opponent();
     let cap = watcher.live_damage_cap();
     let counters = watcher.live_counters();
+    let offer = watcher.live_hero_offer();
     let report = serde_json::to_value(watcher.live_report()?).ok()?;
     Some(
         live_game(&report)
             .with_leaderboard(&lobby)
             .with_next_opponent(next)
             .with_damage_cap(cap)
-            .with_counters(counters),
+            .with_counters(counters)
+            .with_offered_heroes(offer),
     )
 }
 
@@ -917,6 +986,10 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
     applog::history_held();
     if let Err(msg) = state.saved_tribes.open(&data_dir) {
         applog::warn("io", &format!("saved tribes: {msg}"));
+        set_status(&app, &state, |s| s.notice = Some(msg));
+    }
+    if let Err(msg) = state.saved_ratings.open(&data_dir) {
+        applog::warn("io", &format!("saved ratings: {msg}"));
         set_status(&app, &state, |s| s.notice = Some(msg));
     }
     match Entries::open(&data_dir) {
@@ -1393,6 +1466,7 @@ fn main() {
             upload::upload_sign_out,
             card_data::card_names,
             card_data::card_data_status,
+            card_data::texture_set,
             game_memory_status,
             game_memory_set_enabled,
             settings::app_settings,
@@ -1425,6 +1499,7 @@ fn main() {
             let loaded = state.overlay.load(&data_dir, overlay_dev(std::env::args()));
             let game_memory_loaded = state.game_memory.load(&data_dir);
             state.saved_tribes.set_dir(&data_dir);
+            state.saved_ratings.set_dir(&data_dir);
             app_updates.load(&data_dir);
             let releases = updates::GitHub {
                 app: app.handle().clone(),
@@ -1938,7 +2013,13 @@ mod tests {
         let view = lobby_of(&state, day, utc_is_local);
         assert!(!view.in_lobby, "scene unknown");
         assert_eq!(view.rating.status, tracker::game_values::ReaderStatus::Off);
-        assert_eq!(view.rating_change, None);
+        // With the read off the recap has games and places and no rating.
+        assert_eq!(view.recap.games, 2);
+        assert!(view.recap.tiles.iter().all(|t| t.change.is_none()));
+        assert_eq!(
+            view.recap.starting,
+            tracker::lobby_recap::Starting::default()
+        );
         assert_eq!(view.today.len(), 1, "the dev tool game is not counted");
         assert_eq!(view.today[0].tally.games, 2);
         assert_eq!(view.today[0].tally.average_place, Some(4.0));
@@ -1956,6 +2037,11 @@ mod tests {
         assert_eq!((last.finished, last.duos), (3, Some(false)));
         assert_eq!(last.newest, Some(at(1)), "the dev tool game is left out");
         assert_eq!(last.previous, Some(at(1)));
+        // The rating saved with each game follows every game seen, the dev
+        // tool's included: it moved the rating too.
+        assert_eq!(last.newest_any, Some(at(1)));
+        assert_eq!(last.previous_any, Some(at(1)));
+        assert_eq!(last.duos_any, Some(true));
     }
 
     #[test]

@@ -1,6 +1,8 @@
 # Privacy policy
 
-Last updated: 14 October 2026
+Last updated: 16 October 2026
+
+**What changed on 16 October 2026:** pages that draw minions (the simulator, a game and its combat replays) now also load the game's minion frames, gems and keyword images from our own image host, `assets.tavernledger.net` (section 3, "Minion pictures"). Nothing else changes.
 
 **What changed on 14 October 2026 (last change that day, desktop app only):** reading the lobby's tribes and your own rating from the game is now on by default, and it can be turned off in Settings (section 2, "Reading from the game"). It reads the same two values as before, read-only, and they stay on your PC and are never uploaded; no new data is collected or sent. If you already chose in Settings, your choice stays; if you never chose, including on an install from before this change, it is now on.
 
@@ -53,6 +55,8 @@ When you load a page, our hosting provider (Cloudflare) and, for pages that talk
 Legal basis: our legitimate interest in running a website that works and is protected from attacks (Art. 6(1)(f) GDPR).
 
 **Card pictures.** Pages that show games (a game, your games, a public profile, the games list and the leaderboards) load card and hero pictures straight from HearthstoneJSON's image server (`art.hearthstonejson.com`), an independent service run by HearthSim, not a provider of ours. Your browser sends it your IP address, browser user agent and the address of each picture, which names only the card: our pages send no referrer, so it does not learn which page, account or game you are looking at. HearthSim decides what it logs; see hearthstonejson.com. Legal basis: our legitimate interest in showing games in a readable way (Art. 6(1)(f) GDPR). To avoid it, block that address in your browser: the pages then show a plain placeholder instead.
+
+**Minion pictures.** The same pages also load the images that draw a minion like the game (its frame, attack and health gems and keyword marks) from a separate image site of ours, `assets.tavernledger.net`, run by us on Cloudflare (section 5), with no cookies. Your browser sends it your IP address and browser user agent and the address of each image, which is the same for every visitor; our pages send no referrer, so it does not learn which page, account or game you are looking at. Cloudflare keeps the request logs as in section 3. Legal basis: our legitimate interest in showing games in a readable way (Art. 6(1)(f) GDPR). To avoid it, block that address in your browser: the pages then draw minions in their plain style.
 
 There are no ads, no analytics and no tracking.
 
