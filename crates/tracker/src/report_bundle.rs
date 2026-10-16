@@ -466,6 +466,7 @@ fn config_check(check: &FileCheck) -> Value {
     match check {
         FileCheck::Ok => json!({"state": "ok"}),
         FileCheck::FileMissing => json!({"state": "file_missing"}),
+        FileCheck::CannotCheck => json!({"state": "cannot_check"}),
         FileCheck::Unreadable(kind) => json!({"state": "unreadable", "error_kind": kind}),
         FileCheck::SettingsMissing(lines) => {
             json!({"state": "settings_missing", "missing": lines})

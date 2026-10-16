@@ -45,12 +45,22 @@
     <section id="setup" class="setup" role="status" aria-live="polite" hidden>
       <h2 data-i18n="win.setup.title">Game log setup</h2>
       <ul id="setup-list"></ul>
+      <p id="setup-state" class="setup-state" hidden></p>
       <p id="setup-folder" class="setup-folder"></p>
       <p class="setup-actions">
+        <button type="button" id="setup-fix" class="report-btn setup-choose" data-i18n="setup.fix" hidden>Fix</button>
+        <button type="button" id="setup-fix-optional" class="report-btn setup-choose" data-i18n="setup.fixOptional" hidden>Add the optional lines</button>
         <button type="button" id="setup-choose" class="report-btn setup-choose" data-i18n="folder.chooseBig">Choose the Hearthstone folder</button>
         <button type="button" id="setup-settings" class="link-btn" data-i18n="folder.banner.settings">Folder settings</button>
       </p>
+      <p id="setup-fix-problem" class="problem" role="status"></p>
       <p id="setup-folder-problem" class="problem" role="status"></p>
+      <div id="setup-result" class="setup-result" role="status" aria-live="polite" hidden>
+        <p id="setup-result-log" hidden></p>
+        <p id="setup-result-client" hidden></p>
+        <p id="setup-result-restart" hidden></p>
+        <button type="button" id="setup-result-close" class="link-btn" data-i18n="setup.fix.close">Close</button>
+      </div>
     </section>
 
     <div class="view-bar">
@@ -210,7 +220,7 @@
           <button type="button" id="folder-choose" class="report-btn" data-i18n="folder.choose">Choose…</button>
           <button type="button" id="folder-reset" class="report-btn" hidden data-i18n="folder.reset">Back to automatic</button>
         </p>
-        <p class="note" data-i18n="folder.note">Tavern Ledger finds the game by itself: the running game first, then Windows' install record, Battle.net and the usual folders, taking the install whose logs are newest. If it picked the wrong one, choose the folder where Hearthstone is installed (the one with Hearthstone.exe). The app only reads from it and checks client.config there; it never changes the game's files.</p>
+        <p class="note" data-i18n="folder.note">Tavern Ledger finds the game by itself: the running game first, then Windows' install record, Battle.net and the usual folders, taking the install whose logs are newest. If it picked the wrong one, choose the folder where Hearthstone is installed (the one with Hearthstone.exe). The app reads from it and checks client.config there. It writes to the game's folders only when you click Fix in the setup box, and then only log.config and client.config.</p>
         <p id="folder-problem" class="problem" role="status"></p>
       </section>
       <section id="autostart-setting" class="settings-group" aria-labelledby="autostart-title">
@@ -385,6 +395,7 @@
   <script src="update-words.js"></script>
   <script src="updates.js"></script>
   <script src="game-folder.js"></script>
+  <script src="setup-fix.js"></script>
   <script src="log-setting.js"></script>
   <script src="first-start.js"></script>
 </body>

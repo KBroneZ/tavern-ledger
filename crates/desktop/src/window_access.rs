@@ -173,6 +173,8 @@ fn the_overlay_cannot_reach_the_main_window_s_commands() {
         "game_folder_reset",
         "game_folder_use_running",
         "game_folder_decline_running",
+        "setup_fix",
+        "setup_recheck",
         "open_log_folder",
     ] {
         assert!(!overlay.contains(command), "{command}");

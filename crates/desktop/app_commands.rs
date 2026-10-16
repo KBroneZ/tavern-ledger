@@ -49,6 +49,8 @@ pub const APP_COMMANDS: &[&str] = &[
     "game_folder_reset",
     "game_folder_use_running",
     "game_folder_decline_running",
+    "setup_recheck",
+    "setup_fix",
     "log_ui_error",
     "open_log_folder",
     "update_status",

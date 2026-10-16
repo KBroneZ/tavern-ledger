@@ -85,6 +85,14 @@
 }
 .setup .link-btn:hover { color: var(--amber); }
 .setup .problem { margin: 8px 0 0; }
+/* The Fix button (T-376): the line under the problems, the buttons (the same
+   size as the folder button) and the result of the last click. */
+.setup .setup-state { margin: 10px 0 0; color: var(--text); font-size: 13.5px; }
+.setup .setup-state[hidden], .setup .setup-result[hidden], .setup .setup-result p[hidden] { display: none; }
+.setup .setup-actions .report-btn[hidden] { display: none; }
+.setup .setup-result { margin: 10px 0 0; padding: 8px 12px; border-radius: var(--radius); background: rgb(255 255 255 / 0.05); color: var(--text); font-size: 13.5px; }
+.setup .setup-result p { margin: 0 0 6px; overflow-wrap: anywhere; }
+.setup .report-btn:disabled { opacity: 0.6; cursor: default; }
 .folder-offer {
   display: flex;
   flex-wrap: wrap;
