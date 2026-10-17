@@ -65,17 +65,17 @@
   }
 
   // The hovered hero of a Duos team (T-340): the app says which of the
-  // team's two portraits the mouse is on (hover.rs, 0 the top one). The
-  // game puts the higher player id on top (T-343, D-080): the user saw the
-  // lower id's board under an opposing team's top portrait, and their own
-  // hero is the top one of their own team, where they hold the higher id in
-  // 33 of their 39 Duos games. The log does not say it; hero entity ids
-  // agree with the lower-id order in 13 of 21 teams, so they do not fit.
-  // With no portrait known (an older app or Solo), the whole team stays.
+  // team's two portraits the mouse is on (hover.rs, 0 the top one). On an
+  // opposing team the game puts the lower player id on top: in two
+  // screenshots of the game's leaderboard, read against the Power.log of the
+  // same game, the upper portrait was the lower id both times (3 over 4, 6
+  // over 7); the opposite rule showed the other hero's board. The log does
+  // not say the order itself. With no portrait known (an older app or Solo),
+  // the whole team stays.
   function hoveredViews(views, member) {
     const list = Array.isArray(views) ? views : [];
     if (list.length < 2 || !Number.isInteger(member) || member < 0 || member >= list.length) return list;
-    const topFirst = [...list].sort((a, b) => b.seat - a.seat);
+    const topFirst = [...list].sort((a, b) => a.seat - b.seat);
     return [topFirst[member]];
   }
 
