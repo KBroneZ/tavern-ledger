@@ -1,8 +1,8 @@
 # Terms of use
 
-Last updated: 16 October 2026
+Last updated: 17 October 2026
 
-**What changed on 16 October 2026 (also that day, desktop app only):** section 9 now says that, only when you click Fix in the app's setup notice, the app can create or complete Hearthstone's two logging settings files (`log.config` and `client.config`), keeping a `.bak` copy of any file it changes. It still only reads the game's logs and writes nothing else in the game's folders.
+**What changed on 17 October 2026 (desktop app only):** section 9 now says that, only when you click Fix in the app's setup notice, the app can create or complete Hearthstone's two logging settings files (`log.config` and `client.config`), keeping a `.bak` copy of any file it changes. It still only reads the game's logs and writes nothing else in the game's folders.
 
 **What changed on 16 October 2026:** reading the lobby's tribes and your rating from the game is now on by default, and section 9 says what it reads, how to turn it off and the risk to your account.
 

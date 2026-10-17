@@ -2,9 +2,9 @@
 
 *Traducción del original en inglés. Si esta versión y la [versión en inglés](https://tavernledger.net/terms/) dicen cosas distintas, prevalece la inglesa.*
 
-Última actualización: 16 de octubre de 2026
+Última actualización: 17 de octubre de 2026
 
-**Qué cambió el 16 de octubre de 2026 (también ese día, solo la aplicación de escritorio):** el apartado 9 ahora dice que, solo cuando pulsas Arreglar en el aviso de configuración de la aplicación, esta puede crear o completar los dos archivos de ajustes de registro de Hearthstone (`log.config` y `client.config`), guardando una copia `.bak` de cada archivo que cambia. Sigue leyendo solo los registros del juego y no escribe nada más en las carpetas del juego.
+**Qué cambió el 17 de octubre de 2026 (solo la aplicación de escritorio):** el apartado 9 ahora dice que, solo cuando pulsas Arreglar en el aviso de configuración de la aplicación, esta puede crear o completar los dos archivos de ajustes de registro de Hearthstone (`log.config` y `client.config`), guardando una copia `.bak` de cada archivo que cambia. Sigue leyendo solo los registros del juego y no escribe nada más en las carpetas del juego.
 
 **Qué cambió el 16 de octubre de 2026:** la lectura del juego de las tribus de la partida y tu puntuación ahora viene activada por defecto, y el apartado 9 explica qué lee, cómo desactivarla y el riesgo para tu cuenta.
 
