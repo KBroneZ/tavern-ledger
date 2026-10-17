@@ -230,13 +230,13 @@ test("opponent marks leave out what is unknown: no slots, a place off the board,
   assert.deepEqual(words.opponentMarks(null), []);
 });
 
-test("a Duos hover shows only the hovered hero's view, the higher player id on top", () => {
+test("a Duos hover shows only the hovered hero's view, the lower player id on top", () => {
   const views = words.seatViews({ ...duoTeam, boards: [] });
-  assert.deepEqual(words.hoveredViews(views, 0).map((v) => v.seat), [4]);
-  assert.deepEqual(words.hoveredViews(views, 1).map((v) => v.seat), [3]);
+  assert.deepEqual(words.hoveredViews(views, 0).map((v) => v.seat), [3]);
+  assert.deepEqual(words.hoveredViews(views, 1).map((v) => v.seat), [4]);
 });
 
-test("the top portrait is the higher player id whatever order the seats come in", () => {
+test("the top portrait is the lower player id whatever order the seats come in", () => {
   // Synthetic Duos team with each hero's own board, seats listed both ways.
   const boards = [
     { seat: 5, round: 4, minions: [{ id: "MINION_LOW" }] },
@@ -248,11 +248,24 @@ test("the top portrait is the higher player id whatever order the seats come in"
     const views = words.seatViews(team);
     const [top] = words.hoveredViews(views, 0);
     const [bottom] = words.hoveredViews(views, 1);
-    assert.equal(top.hero.id, "HERO_HIGH");
-    assert.equal(top.board.minions[0].id, "MINION_HIGH");
-    assert.equal(bottom.hero.id, "HERO_LOW");
-    assert.equal(bottom.board.minions[0].id, "MINION_LOW");
+    assert.equal(top.hero.id, "HERO_LOW");
+    assert.equal(top.board.minions[0].id, "MINION_LOW");
+    assert.equal(bottom.hero.id, "HERO_HIGH");
+    assert.equal(bottom.board.minions[0].id, "MINION_HIGH");
   }
+});
+
+test("the order holds for ids that are not next to each other and for a team with one hero left", () => {
+  // Synthetic teams: ids 2 and 7, then ids 6 and 7 (a seat can be any 1 to 8).
+  for (const [low, high] of [[2, 7], [6, 7]]) {
+    const team = { heroes: [{ id: "H_HIGH" }, { id: "H_LOW" }], seats: [high, low], tiers: [], boards: [] };
+    const views = words.seatViews(team);
+    assert.equal(words.hoveredViews(views, 0)[0].seat, low);
+    assert.equal(words.hoveredViews(views, 1)[0].seat, high);
+  }
+  // One hero left in the team: whichever portrait is hovered, that hero.
+  const lone = words.seatViews({ heroes: [{ id: "H_LAST" }], seats: [7], tiers: [], boards: [] });
+  for (const member of [0, 1]) assert.deepEqual(words.hoveredViews(lone, member).map((v) => v.seat), [7]);
 });
 
 test("the top portrait rule leaves the views it was given unchanged", () => {
