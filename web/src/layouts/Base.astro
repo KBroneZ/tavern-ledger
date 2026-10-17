@@ -150,6 +150,7 @@ const socialCard = new URL("/social-card.png", Astro.site).href;
       <p>{st(config ? "layout.openSource" : "layout.openSource.closed")}</p>
       <p><a href={href("/privacy/")}>{st("layout.privacy")}</a></p>
       <p><a href={href("/terms/")}>{st("layout.terms")}</a></p>
+      <p><a href={href("/code-signing/")}>{st("layout.signing")}</a></p>
       <p><a href={href("/accuracy/")}>{st("layout.accuracy")}</a></p>
       {hasMinionPages() && <p><a href={href("/minions/")}>{mt("layout.minions")}</a></p>}
     </footer>

@@ -65,6 +65,7 @@ const reads = (["reads.1", "reads.2", "reads.3", "reads.4"] as const).map((key) 
       </div>
       <p class="meta mono dl-file">{dl("action.download.file", { file: RELEASE.file })}</p>
       <p class="dl-note">{dl("beta.line")}</p>
+      <p class="dl-note">{dl("signing.line")} <a href={href("/code-signing/")}>{dl("signing.link")}</a>.</p>
     </section>
 
     <section class="panel" aria-labelledby="dl-steps-title">
