@@ -155,3 +155,8 @@ test("the terms and the privacy policy say the read is on by default, how to tur
   assert.match(read("privacy/index.html"), /Reading from the game \(on by default; you can turn it off\)/);
   assert.match(read("es/privacy/index.html"), /Lectura del juego \(activada por defecto; puedes desactivarla\)/);
 });
+
+test("the privacy policy says the desktop app downloads the minion pictures from our image host", () => {
+  assert.match(read("privacy/index.html"), /<strong>Minion pictures\.<\/strong> When it has no complete set[\s\S]{0,700}assets\.tavernledger\.net[\s\S]{0,400}IP address and the app.s user agent/);
+  assert.match(read("es/privacy/index.html"), /<strong>Imágenes de esbirros\.<\/strong> Cuando no tiene un conjunto completo[\s\S]{0,700}assets\.tavernledger\.net[\s\S]{0,400}dirección IP de tu PC y el agente de usuario/);
+});
