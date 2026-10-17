@@ -19,7 +19,8 @@ test("the policy page names SignPath as the terms ask, in both languages", () =>
       /Free code signing provided by <a href="https:\/\/signpath\.io">SignPath\.io<\/a>, certificate by <a href="https:\/\/signpath\.org">SignPath Foundation<\/a>/,
       file,
     );
-    assert.match(html, /href="https:\/\/github\.com\/KBroneZ"/, `${file}: team members`);
+    const roles = file.startsWith("es/") ? [/Autores y revisores:<\/strong> <a href="https:\/\/github\.com\/KBroneZ"/, /Aprobadores:<\/strong> <a href="https:\/\/github\.com\/KBroneZ"/] : [/Committers and reviewers:<\/strong> <a href="https:\/\/github\.com\/KBroneZ"/, /Approvers:<\/strong> <a href="https:\/\/github\.com\/KBroneZ"/];
+    for (const role of roles) assert.match(html, role, `${file}: team roles`);
     assert.ok(html.includes(`href="${privacy}"`), `${file}: privacy link in the page's language`);
     assert.doesNotMatch(html, /<meta name="robots" content="noindex">/, file);
   }
@@ -33,5 +34,12 @@ test("the home and download pages link the policy with the words 'Code signing p
     ["es/download/index.html", "/es/code-signing/", "Política de firma de código"],
   ] as const) {
     assert.match(read(file), new RegExp(`<a href="${href}">${words}</a>`), file);
+  }
+});
+
+test("the policy page is in the sitemap in both languages", () => {
+  const sitemap = read("sitemap.xml");
+  for (const loc of ["https://tavernledger.net/code-signing/", "https://tavernledger.net/es/code-signing/"]) {
+    assert.ok(sitemap.includes(`<loc>${loc}</loc>`), loc);
   }
 });
