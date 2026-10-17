@@ -49,7 +49,7 @@ test("the page shows the release's own facts: version, file, size, day and SHA-2
     assert.ok(html.includes(RELEASE.file), `${page.file}: file name`);
     assert.ok(html.includes(RELEASE.sha256), `${page.file}: hash`);
     assert.match(html, page.lang === "en" ? /7\.7 MB/ : /7,7 MB/, `${page.file}: size`);
-    assert.match(html, page.lang === "en" ? /16 Oct 2026/ : /16 oct 2026/, `${page.file}: day`);
+    assert.match(html, page.lang === "en" ? /17 Oct 2026/ : /17 oct 2026/, `${page.file}: day`);
     assert.match(html, /Windows 10 (and|y) 11/, `${page.file}: Windows`);
     // The hash and the command are text, never a link or a script.
     assert.ok(html.includes(`Get-FileHash &quot;${RELEASE.file}&quot;`), `${page.file}: command`);
