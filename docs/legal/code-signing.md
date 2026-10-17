@@ -23,7 +23,7 @@ Everyone with these roles uses multi-factor authentication on GitHub and on Sign
 
 ## Privacy policy
 
-This policy covers what the program and the website do with your data, including every address the program contacts: [Privacy policy](/privacy/).
+This policy covers what the program and the website do with your data, including every address the program contacts: [Privacy policy](https://tavernledger.net/privacy/).
 
 ## Contact
 

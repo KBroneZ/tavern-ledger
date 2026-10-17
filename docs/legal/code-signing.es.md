@@ -25,7 +25,7 @@ Todas las personas con estos roles usan autenticación de varios factores en Git
 
 ## Política de privacidad
 
-Esa política explica qué hacen el programa y la web con tus datos, incluidas todas las direcciones a las que el programa se conecta: [Política de privacidad](/es/privacy/).
+Esa política explica qué hacen el programa y la web con tus datos, incluidas todas las direcciones a las que el programa se conecta: [Política de privacidad](https://tavernledger.net/es/privacy/).
 
 ## Contacto
 

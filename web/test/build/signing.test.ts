@@ -11,7 +11,7 @@ const DIST = join(import.meta.dirname, "..", "..", "dist");
 const read = (file: string) => readFileSync(join(DIST, file), "utf8");
 
 test("the policy page names SignPath as the terms ask, in both languages", () => {
-  for (const [file, privacy] of [["code-signing/index.html", "/privacy/"], ["es/code-signing/index.html", "/es/privacy/"]] as const) {
+  for (const [file, privacy] of [["code-signing/index.html", "https://tavernledger.net/privacy/"], ["es/code-signing/index.html", "https://tavernledger.net/es/privacy/"]] as const) {
     assert.ok(existsSync(join(DIST, file)), "run `npm run build` first");
     const html = read(file);
     assert.match(
