@@ -23,7 +23,7 @@
 
 ## Status
 
-- **Desktop app: in beta for Windows.** The current release, [v0.2.3](https://github.com/KBroneZ/tavern-ledger/releases/tag/v0.2.3), is an unsigned installer for beta testers (Windows warns before it runs; the steps are on the [download page](https://tavernledger.net/download/)). From v0.2.1 on, the app updates itself from the project's signed GitHub releases, and only when you press "Restart now"; if you have v0.1.0, install v0.2.3 over it once (your games and settings stay). To build the app or its installer yourself, see [docs/development.md](docs/development.md).
+- **Desktop app: in beta for Windows.** The current release, [v0.2.4](https://github.com/KBroneZ/tavern-ledger/releases/tag/v0.2.4), is an unsigned installer for beta testers (Windows warns before it runs; the steps are on the [download page](https://tavernledger.net/download/)). From v0.2.1 on, the app updates itself from the project's signed GitHub releases, and only when you press "Restart now"; if you have v0.1.0, install v0.2.4 over it once (your games and settings stay). To build the app or its installer yourself, see [docs/development.md](docs/development.md).
 - **Website: online at [tavernledger.net](https://tavernledger.net), and you can create an account.** Uploading games needs the desktop app; the combat simulator and its accuracy page work without one.
 
 ## Features
