@@ -2,7 +2,9 @@
 
 *Traducción del original en inglés. Si esta versión y la [versión en inglés](https://tavernledger.net/terms/) dicen cosas distintas, prevalece la inglesa.*
 
-Última actualización: 16 de octubre de 2026
+Última actualización: 17 de octubre de 2026
+
+**Qué cambió el 17 de octubre de 2026 (solo la aplicación de escritorio):** el apartado 9 ahora dice que, solo cuando pulsas Arreglar en el aviso de configuración de la aplicación, esta puede crear o completar los dos archivos de ajustes de registro de Hearthstone (`log.config` y `client.config`), guardando una copia `.bak` de cada archivo que cambia. Sigue leyendo solo los registros del juego y no escribe nada más en las carpetas del juego.
 
 **Qué cambió el 16 de octubre de 2026:** la lectura del juego de las tribus de la partida y tu puntuación ahora viene activada por defecto, y el apartado 9 explica qué lee, cómo desactivarla y el riesgo para tu cuenta.
 
@@ -61,7 +63,7 @@ En la medida en que la ley lo permita, no somos responsables de las pérdidas in
 
 ## 9. El juego
 
-Tavern Ledger lee los archivos de registro que el juego escribe en tu PC. Por defecto (puedes desactivarlo cuando quieras en Ajustes, en «Lectura del juego», y la aplicación conserva tu elección; si nunca elegiste, también en una instalación anterior al 16 de octubre de 2026, está activada), la aplicación también lee dos valores que el juego te muestra, las cinco tribus de la partida y tu propia puntuación de Campos de Batalla, desde la memoria del juego mientras se ejecuta, con acceso de solo lectura. Los valores se quedan en tu PC y nunca se suben. Leer la memoria del juego va contra la letra del Contrato de Licencia de Usuario Final de Blizzard (apartado 1.C); Blizzard lleva años tolerando lecturas así por parte de otros rastreadores, pero no ha aprobado esta y podría actuar contra ella en cualquier momento. El riesgo para tu cuenta de Battle.net es tuyo y se aplica mientras esté activada: desactívala en Ajustes si no quieres asumirlo. Tavern Ledger nunca cambia archivos del juego, inyecta código ni actúa en el juego por ti. Tu uso de Hearthstone sigue sujeto a las propias condiciones de Blizzard.
+Tavern Ledger lee los archivos de registro que el juego escribe en tu PC. Por defecto (puedes desactivarlo cuando quieras en Ajustes, en «Lectura del juego», y la aplicación conserva tu elección; si nunca elegiste, también en una instalación anterior al 16 de octubre de 2026, está activada), la aplicación también lee dos valores que el juego te muestra, las cinco tribus de la partida y tu propia puntuación de Campos de Batalla, desde la memoria del juego mientras se ejecuta, con acceso de solo lectura. Los valores se quedan en tu PC y nunca se suben. Leer la memoria del juego va contra la letra del Contrato de Licencia de Usuario Final de Blizzard (apartado 1.C); Blizzard lleva años tolerando lecturas así por parte de otros rastreadores, pero no ha aprobado esta y podría actuar contra ella en cualquier momento. El riesgo para tu cuenta de Battle.net es tuyo y se aplica mientras esté activada: desactívala en Ajustes si no quieres asumirlo. Tavern Ledger nunca inyecta código ni actúa en el juego por ti, y no cambia ningún archivo del juego salvo una cosa: solo cuando pulsas Arreglar en el aviso de configuración de la aplicación, puede crear o completar los dos archivos de ajustes de registro de Hearthstone, `log.config` y `client.config`, y guarda una copia `.bak` de cada archivo que cambia. Tu uso de Hearthstone sigue sujeto a las propias condiciones de Blizzard.
 
 ## 10. Finalización
 
