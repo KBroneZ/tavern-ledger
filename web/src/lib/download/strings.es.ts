@@ -25,6 +25,9 @@ export const ES: Record<DlKey, string> = {
   "beta.line":
     "Versión temprana y sin firmar: Windows te avisará (paso 2). ¿Algún fallo? Usa «Informar de un problema» en la aplicación.",
 
+  "signing.line": "Cómo se firma el instalador:",
+  "signing.link": "Política de firma de código",
+
   "steps.title": "Instálala en cuatro pasos",
   "step1.title": "Descarga el instalador",
   "step1.line": "Pulsa Descargar y conserva el archivo.",

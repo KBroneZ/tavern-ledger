@@ -28,6 +28,9 @@ export const DL_STRINGS = {
   "beta.line":
     "Early build, not signed yet: Windows will warn you (step 2). Problems? Use the app's “Report a problem” button.",
 
+  "signing.line": "How the installer is signed:",
+  "signing.link": "Code signing policy",
+
   "steps.title": "Install it in four steps",
   "step1.title": "Download the installer",
   "step1.line": "Press Download and keep the file.",
