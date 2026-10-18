@@ -25,7 +25,11 @@ fn card(id: &str, counters: [i32; 5]) -> KitCard {
 
 fn band(minions: Vec<Minion>, powers: Vec<KitCard>, trinkets: Vec<KitCard>) -> Warband {
     Warband {
-        kit: Some(Kit { powers, trinkets }),
+        kit: Some(Kit {
+            powers,
+            trinkets,
+            round: Some(7),
+        }),
         tavern_tier: Some(1),
         ..Warband::new(minions)
     }

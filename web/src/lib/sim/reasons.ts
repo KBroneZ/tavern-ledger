@@ -45,8 +45,8 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
     "vuelve entero con sus palabras clave; no se ha comprobado con los registros qué conserva",
   "gilded, but its golden card is not modelled: it plays the plain card":
     "dorado, pero su carta dorada no está modelada: se juega como la carta normal",
-  "its Deathrattle copies the minion it destroys at the start of combat; the board is taken after that, so the copied minion is gone and not known":
-    "su Último aliento copia al esbirro que destruye al inicio del combate; el tablero se toma después, así que el esbirro copiado ya no está y no se conoce",
+  "its Deathrattle copies the minion it destroys at the start of combat; this board was taken after that, so the copied minion is gone and not known":
+    "su Último aliento copia al esbirro que destruye al inicio del combate; este tablero se tomó después, así que el esbirro copiado ya no está y no se conoce",
   "its Deathrattle summons random Undead Creations and the list of them is not known":
     "su Último aliento invoca Creaciones no muertas al azar y no se conoce la lista de ellas",
   "the simulator has not reviewed this card yet": "el simulador aún no ha revisado esta carta",
@@ -83,6 +83,17 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
     "no se ha comprobado si se salta a los piratas que ya tienen Escudo divino",
   "which minion it picks among equal Attack is not checked": "no se ha comprobado qué esbirro elige entre los de igual Ataque",
   "the order of the Deathrattles it triggers is not checked": "no se ha comprobado el orden de los Últimos alientos que activa",
+  "whether its copy of a damaged minion keeps the damage is not checked":
+    "no se ha comprobado si su copia de un esbirro dañado conserva el daño",
+  "where the minion it fires goes on the board is checked on one combat only":
+    "dónde queda en el tablero el esbirro que dispara solo se ha comprobado en un combate",
+  "which minion it copies among equal Tier is not checked": "no se ha comprobado qué esbirro copia entre los de igual nivel",
+  "the minion it names is not shown": "el esbirro que elige no se muestra",
+  "the minion it holds is not shown": "el esbirro que guarda no se muestra",
+  "the round, which unlocks it, is not given": "no se indica la ronda, que es la que lo desbloquea",
+  "its teammate's board is not given": "no se indica el tablero de su compañero",
+  "its copy had fewer stats than the teammate's minion in 2 of the 12 combats checked":
+    "su copia tuvo menos estadísticas que el esbirro del compañero en 2 de los 12 combates comprobados",
 };
 
 /** The reason in the page's language, and whether it had to stay in English. */

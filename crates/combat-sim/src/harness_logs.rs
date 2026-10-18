@@ -71,7 +71,7 @@ pub struct LogHistory {
 
 /// A board minion in the engine's form, with the card facts and the
 /// lasting keywords the log has (Poisonous, Mega-Windfury).
-fn engine_minion(m: &LogMinion, db: &CardDb) -> Option<Minion> {
+pub(crate) fn engine_minion(m: &LogMinion, db: &CardDb) -> Option<Minion> {
     let card_id = m.card_id.clone()?;
     let keywords = m
         .keywords

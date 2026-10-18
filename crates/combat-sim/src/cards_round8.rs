@@ -6,8 +6,9 @@
 //! Most of the 35 cards are Naga, Spellcraft and Tavern-spell minions whose
 //! text works in the shop or the hand only: they are in
 //! [`NO_COMBAT_EFFECT_8`]. The ones that act in combat are in [`EFFECTS_8`].
-//! `BG31_999` and the Undead Creation cards stay refused, with the reason
-//! [`refusal`] gives.
+//! The Undead Creation cards stay refused, with the reason [`refusal`]
+//! gives; `BG31_999` is played only from a board taken before start of
+//! combat ([`BEFORE_START_ONLY`], T-628 round 3).
 
 use crate::cards::{approx, exact, Action, CardRules, Trigger};
 use crate::model::Tribes;
@@ -18,8 +19,6 @@ pub(crate) use crate::cards_round8_pool::POOL_TOKENS;
 /// Why the simulator refuses a card it has reviewed and cannot play yet, for
 /// the page to show (the card's id, then the reason). Both forms of a card.
 pub const REFUSED: &[(&str, &str)] = &[
-    ("BG31_999", SALVAGER),
-    ("BG31_999_G", SALVAGER),
     ("BG34_Giant_590", UNDEAD_CREATIONS),
     ("BG34_Giant_590_G", UNDEAD_CREATIONS),
     ("BG25_HERO_100_Buddy", UNDEAD_CREATIONS),
@@ -31,7 +30,15 @@ pub const REFUSED: &[(&str, &str)] = &[
     ("BG_OldGod", OLD_GOD),
 ];
 
-const SALVAGER: &str = "its Deathrattle copies the minion it destroys at the start of combat; the board is taken after that, so the copied minion is gone and not known";
+/// Cards played only from a board taken before start of combat, with why
+/// (T-628 round 3): what their start of combat does is needed later and a
+/// board taken after it no longer shows it. Both forms of a card.
+pub const BEFORE_START_ONLY: &[(&str, &str)] = &[("BG31_999", SALVAGER), ("BG31_999_G", SALVAGER)];
+
+const SALVAGER: &str = "its Deathrattle copies the minion it destroys at the start of combat; this board was taken after that, so the copied minion is gone and not known";
+/// Sandy's gap (T-628 round 3).
+pub const SANDY_COPY: &str =
+    "its copy had fewer stats than the teammate's minion in 2 of the 12 combats checked";
 const UNDEAD_CREATIONS: &str =
     "its Deathrattle summons random Undead Creations and the list of them is not known";
 const TRINKET_START_OF_COMBAT: &str = "a trinket that acts at the start of combat; trinkets are not part of the boards the simulator is given";
@@ -39,6 +46,15 @@ const TRINKET_AURA: &str = "a trinket that gives your Undead Attack; trinkets ar
 const OLD_GOD: &str = "a spell that awakens an Old God after Aberrations die in combat; it is not a minion on the board and is not played";
 /// What the page says about a card nobody has looked at yet.
 const NOT_REVIEWED: &str = "the simulator has not reviewed this card yet";
+
+/// Why `card_id` is refused on a board taken after start of combat, when it
+/// is one of [`BEFORE_START_ONLY`].
+pub fn after_start_refusal(card_id: &str) -> Option<&'static str> {
+    BEFORE_START_ONLY
+        .iter()
+        .find(|(id, _)| *id == card_id)
+        .map(|(_, why)| *why)
+}
 
 /// The reason a card is refused: the one written for it in [`REFUSED`], else
 /// that the card has not been reviewed.
@@ -172,10 +188,47 @@ pub const EFFECTS_8: &[(&str, CardRules)] = &[
     ("BG34_925", approx(SPELL_FOLLOWERS, &[])),
     ("BG34_925_G", approx(SPELL_FOLLOWERS, &[])),
     // Sandy (Duos): Start of Combat: transform into a copy of the teammate's
-    // highest-Health minion. A board taken after start of combat already
-    // shows the copy.
-    ("BGDUO_125", exact(&[Trigger::StartOfCombatUnmodelled])),
+    // highest-Health minion (the user's logs, T-628 round 3: an exact copy
+    // of the teammate's board as it came in, in 10 of 12 combats; in the
+    // other 2 the copy had fewer stats). The golden form, a Golden copy, is
+    // not in the logs. A board taken after start of combat already shows
+    // the copy.
+    (
+        "BGDUO_125",
+        approx(
+            SANDY_COPY,
+            &[Trigger::StartOfCombat(&[Action::BecomeTeammateCopy])],
+        ),
+    ),
     ("BGDUO_125_G", exact(&[Trigger::StartOfCombatUnmodelled])),
+    // Stitched Salvager (T-628 round 3; the user's logs: the destroyed
+    // minion's Deathrattles and Reborn resolve, and the Salvager's
+    // Deathrattle summons the exact copy it kept, once per Deathrattle).
+    (
+        "BG31_999",
+        exact(&[
+            Trigger::StartOfCombat(&[Action::DestroyNeighboursKeepCopies { both: false }]),
+            Trigger::Deathrattle(&[Action::SummonKept]),
+        ]),
+    ),
+    (
+        "BG31_999_G",
+        exact(&[
+            Trigger::StartOfCombat(&[Action::DestroyNeighboursKeepCopies { both: true }]),
+            Trigger::Deathrattle(&[Action::SummonKept]),
+        ]),
+    ),
+    // Timewarped Chameleon (T-628 round 3; the user's logs, 3 of 3: an exact
+    // copy of the minion to its left). The golden form, a Golden copy, is
+    // not in the logs.
+    (
+        "BG34_Giant_042",
+        exact(&[Trigger::StartOfCombat(&[Action::BecomeLeftCopy])]),
+    ),
+    (
+        "BG34_Giant_042_G",
+        exact(&[Trigger::StartOfCombatUnmodelled]),
+    ),
     // Tentacle of C'Thun (hero buddy; an Aberration since build 254477):
     // after a different friendly minion gains stats, +1/+1 until next turn
     // (golden +2/+2). Combat-time gains by the others are not tracked.

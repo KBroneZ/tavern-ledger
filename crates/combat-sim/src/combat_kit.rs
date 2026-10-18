@@ -1,21 +1,46 @@
-//! Hero powers and trinkets at the start of combat (T-628 round 2): the
-//! actions of [`crate::kit_effects`], played before the minions' (the user's
-//! logs: trinkets, then hero powers, then minions).
+//! Hero powers and trinkets in combat (T-628 rounds 2 and 3): the actions of
+//! [`crate::kit_effects`] at the start of combat, played before the minions'
+//! (the user's logs: trinkets, then hero powers, then minions), and what the
+//! played hero powers do once their side has space.
 
-use super::Combat;
-use crate::kit_effects::{self, KitAction, KitPlay, Pick};
-use crate::model::{Keywords, Kit, Tribes};
+use super::{CardInfo, Combat, Unit};
+use crate::kit_effects::{self, KitAction, KitPlay, Pick, SpaceAction};
+use crate::model::{Keywords, Kit, Minion, Tribes, MAX_BOARD};
 
 /// A hero power or trinket the engine plays, as one board brings it.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct KitUse {
     pub power: bool,
     pub counters: [i32; 5],
     pub play: &'static KitPlay,
+    /// The uid of the friendly minion it names, from its index on the board
+    /// as it was taken.
+    pub target: Option<u32>,
+    /// The minion it holds, in the engine's form (its uid is not used).
+    pub held: Option<Unit>,
+    /// It acts this combat ([`kit_effects::acts`]; false when unknown).
+    pub acts: bool,
+}
+
+/// What a hero power does once its side has space, waiting for it.
+#[derive(Clone, Debug)]
+pub(super) enum Pending {
+    /// Copy the highest-Attack (or Health) friendly minion.
+    Copy { health: bool },
+    /// Summon this held minion at the right end; it attacks at once.
+    Fire(Unit),
+    /// Summon this exact copy back at board index `at`.
+    Resummon { unit: Unit, at: usize },
 }
 
 /// A board's played powers and trinkets: trinkets first, then hero powers.
-pub(crate) fn kit_uses(kit: Option<&Kit>) -> Vec<KitUse> {
+/// `held` turns a held minion into the engine's form.
+pub(crate) fn kit_uses(
+    kit: Option<&Kit>,
+    board: &[Unit],
+    cards: &mut Vec<CardInfo>,
+    held: impl Fn(&Minion, &mut Vec<CardInfo>) -> Unit,
+) -> Vec<KitUse> {
     let Some(kit) = kit else {
         return Vec::new();
     };
@@ -24,15 +49,21 @@ pub(crate) fn kit_uses(kit: Option<&Kit>) -> Vec<KitUse> {
         .iter()
         .map(|c| (false, c))
         .chain(kit.powers.iter().map(|c| (true, c)));
-    tagged
-        .filter_map(|(power, c)| {
-            kit_effects::played(&c.card_id).map(|play| KitUse {
-                power,
-                counters: c.counters,
-                play,
-            })
-        })
-        .collect()
+    let mut out = Vec::new();
+    for (power, c) in tagged {
+        let Some(play) = kit_effects::played(&c.card_id) else {
+            continue;
+        };
+        out.push(KitUse {
+            power,
+            counters: c.counters,
+            play,
+            target: c.target.and_then(|ix| board.get(ix)).map(|u| u.uid),
+            held: c.held.as_ref().map(|m| held(m, cards)),
+            acts: kit_effects::acts(play, &c.counters, kit.round).unwrap_or(false),
+        });
+    }
+    out
 }
 
 impl Combat<'_> {
@@ -46,23 +77,36 @@ impl Combat<'_> {
         }
     }
 
-    /// Plays `side`'s trinkets (`powers` false) or hero powers.
-    pub(super) fn play_kit(&mut self, side: usize, powers: bool) {
+    /// Plays `side`'s trinkets (`powers` false) or hero powers, the deaths
+    /// each causes resolved before the next (`first` attacks first); a hero
+    /// power that acts when there is space acts then if there is.
+    pub(super) fn play_kit(&mut self, side: usize, powers: bool, first: usize) {
         let uses: Vec<KitUse> = self
             .kit_now(side)
             .iter()
-            .filter(|k| k.power == powers)
-            .copied()
+            .filter(|k| k.power == powers && k.acts)
+            .cloned()
             .collect();
         for k in uses {
             for action in k.play.start {
-                self.kit_act(side, &k.counters, action);
+                self.kit_act(side, &k, action);
             }
+            let pending = match (k.play.space, k.held) {
+                (Some(SpaceAction::CopyHighest { health, .. }), _) => {
+                    Some(Pending::Copy { health })
+                }
+                (Some(SpaceAction::FireHeld), Some(h)) => Some(Pending::Fire(h)),
+                _ => None,
+            };
+            if let Some(p) = pending {
+                self.pending[side].push(p);
+            }
+            self.process_deaths(first);
         }
     }
 
-    fn kit_act(&mut self, side: usize, counters: &[i32; 5], action: &KitAction) {
-        let value = |a| kit_effects::value(a, counters);
+    fn kit_act(&mut self, side: usize, k: &KitUse, action: &KitAction) {
+        let value = |a| kit_effects::value(a, &k.counters);
         match *action {
             KitAction::Buff { to, attack, health } => {
                 for uid in self.picked(side, to) {
@@ -122,6 +166,98 @@ impl Combat<'_> {
                     self.swing(side, uid);
                 }
             }
+            KitAction::DestroyTarget => self.destroy_target(side, k.target),
+            KitAction::TransformTargetIntoTeammates => {
+                let Some(uid) = self.target_uid(side, k.target) else {
+                    return;
+                };
+                if let Some(model) = self.teammates_highest_tier(side) {
+                    self.become_copy(side, uid, &model);
+                }
+            }
+        }
+    }
+
+    /// The named minion, when it is still on the board and alive.
+    fn target_uid(&self, side: usize, target: Option<u32>) -> Option<u32> {
+        self.unit(side, target?)
+            .filter(|u| u.alive())
+            .map(|u| u.uid)
+    }
+
+    /// Destroys the named minion and keeps its exact copy, summoned back at
+    /// its place once there is space (after its death is resolved).
+    fn destroy_target(&mut self, side: usize, target: Option<u32>) {
+        let Some(uid) = self.target_uid(side, target) else {
+            return;
+        };
+        let at = self.sides[side].pos(uid).unwrap_or(0);
+        let Some(u) = self.unit_mut(side, uid) else {
+            return;
+        };
+        let unit = u.clone();
+        u.health = u.health.min(0);
+        self.pending[side].push(Pending::Resummon { unit, at });
+    }
+
+    /// Plays what waits for space on `side`, oldest first, while it has
+    /// space and the combat goes on.
+    pub(super) fn fill_space(&mut self, side: usize) {
+        while self.sides[side].units.len() < MAX_BOARD
+            && !self.pending[side].is_empty()
+            && !self.finished()
+        {
+            match self.pending[side].remove(0) {
+                Pending::Copy { health } => self.copy_highest(side, health),
+                Pending::Fire(held) => {
+                    let unit = self.copy_of(&held);
+                    let uid = unit.uid;
+                    let end = self.sides[side].units.len();
+                    if self.sides[side].insert(end, unit) {
+                        self.after_summon(side, uid);
+                        if !self.finished() && self.unit(side, uid).is_some_and(|u| u.attack > 0) {
+                            self.swing(side, uid);
+                        }
+                    }
+                }
+                Pending::Resummon { unit, at } => {
+                    let unit = self.copy_of(&unit);
+                    let uid = unit.uid;
+                    if self.sides[side].insert(at, unit) {
+                        self.after_summon(side, uid);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Both sides' waiting powers, the first attacker's side first.
+    pub(super) fn fill_both(&mut self, first: usize) {
+        for side in [first, 1 - first] {
+            if !self.pending[side].is_empty() {
+                self.fill_space(side);
+            }
+        }
+    }
+
+    /// Summons an exact copy of the friendly minion with the highest Attack
+    /// (or Health), the left-most on ties, to its right.
+    fn copy_highest(&mut self, side: usize, health: bool) {
+        let mut best: Option<(i32, usize)> = None;
+        for (ix, u) in self.sides[side].units.iter().enumerate() {
+            let v = if health { u.health } else { u.attack };
+            if u.alive() && best.is_none_or(|(b, _)| v > b) {
+                best = Some((v, ix));
+            }
+        }
+        let Some((_, ix)) = best else {
+            return;
+        };
+        let model = self.sides[side].units[ix].clone();
+        let copy = self.copy_of(&model);
+        let uid = copy.uid;
+        if self.sides[side].insert(ix + 1, copy) {
+            self.after_summon(side, uid);
         }
     }
 
@@ -169,19 +305,23 @@ impl Combat<'_> {
     }
 
     /// True when the board `side` fights with now has a power or trinket
-    /// whose minions attack at the start of combat (Wingmen).
+    /// whose minions attack at the start of combat (Wingmen; Lock and Load
+    /// when its side has space for the minion it fires).
     pub(super) fn kit_swings(&self, side: usize) -> bool {
-        self.kit_now(side).iter().any(|k| {
-            k.play
-                .start
-                .iter()
-                .any(|a| matches!(a, KitAction::AttackImmediately(_)))
+        let space = self.sides[side].units.len() < MAX_BOARD;
+        self.kit_now(side).iter().filter(|k| k.acts).any(|k| {
+            let fires = space && k.held.is_some() && k.play.space == Some(SpaceAction::FireHeld);
+            fires
+                || k.play
+                    .start
+                    .iter()
+                    .any(|a| matches!(a, KitAction::AttackImmediately(_)))
         })
     }
 
     /// True when the board `side` fights with now plays a power or trinket
     /// at the start of combat.
     pub(super) fn has_kit_start(&self, side: usize) -> bool {
-        !self.kit_now(side).is_empty()
+        self.kit_now(side).iter().any(|k| k.acts)
     }
 }

@@ -21,6 +21,7 @@ fn with_kit(minions: Vec<Minion>, powers: &[&str], trinkets: &[&str]) -> Warband
         kit: Some(Kit {
             powers: powers.iter().map(|id| KitCard::new(*id)).collect(),
             trinkets: trinkets.iter().map(|id| KitCard::new(*id)).collect(),
+            round: Some(7),
         }),
         tavern_tier: Some(1),
         ..Warband::new(minions)
@@ -106,7 +107,6 @@ fn a_power_that_acts_later_in_the_combat_is_approximate() {
         odds.coverage.approximate,
         [("BG22_HERO_002p".to_string(), IN_COMBAT_NOT_PLAYED)]
     );
-    assert!(matches!(verdict(&frostwolf, true), Verdict::NotModelled(_)));
 }
 
 #[test]
@@ -221,6 +221,7 @@ fn a_played_start_of_combat_power_needs_no_board_after_it() {
         kit: Some(Kit {
             powers: vec![wax],
             trinkets: Vec::new(),
+            round: Some(7),
         }),
         tavern_tier: Some(1),
         ..Warband::new(vec![plain(2, 2)])
@@ -273,6 +274,7 @@ fn with_start_of_combat_off_kits_and_numbers_change_no_odds() {
         kit: Some(Kit {
             powers: vec![wax],
             trinkets: vec![KitCard::new("BG30_MagicItem_902")],
+            round: Some(7),
         }),
         tavern_tier: Some(1),
         ..Warband::new(vec![hope, plain(2, 2)])
@@ -312,4 +314,199 @@ fn runic_arcanists_spell_gap_matters_only_when_its_start_of_combat_is_played() {
         panic!()
     };
     assert!(odds.coverage.is_exact(), "{:?}", odds.coverage);
+}
+
+/// A board of plain minions with one hero power, in `round`.
+fn with_power(minions: Vec<Minion>, card: KitCard, round: Option<u32>) -> Warband {
+    Warband {
+        kit: Some(Kit {
+            powers: vec![card],
+            trinkets: Vec::new(),
+            round,
+        }),
+        tavern_tier: Some(1),
+        ..Warband::new(minions)
+    }
+}
+
+fn ready(id: &str) -> KitCard {
+    let mut card = KitCard::new(id);
+    card.counters[0] = 1;
+    card
+}
+
+fn blocked_for(player: &Warband) -> Vec<(String, &'static str)> {
+    match verdict(player, true) {
+        Verdict::NotModelled(cov) => cov.reasons(),
+        Verdict::Odds(o) => panic!("not blocked: {:?}", o.coverage),
+    }
+}
+
+fn gaps(player: &Warband, start_of_combat: bool) -> Vec<(String, &'static str)> {
+    match verdict(player, start_of_combat) {
+        Verdict::Odds(o) => o.coverage.approximate,
+        Verdict::NotModelled(cov) => panic!("blocked: {:?}", cov.reasons()),
+    }
+}
+
+#[test]
+fn frostwolf_fervor_is_played_from_round_seven_and_needs_the_round() {
+    use combat_sim::kit::{COPY_OF_DAMAGED, ROUND_NOT_GIVEN};
+    let at = |round| with_power(vec![plain(2, 2)], ready("BG22_HERO_002p"), round);
+    assert_eq!(
+        gaps(&at(Some(7)), true),
+        [("BG22_HERO_002p".to_string(), COPY_OF_DAMAGED)]
+    );
+    // Locked before round 7: nothing to play, nothing to name.
+    assert!(gaps(&at(Some(6)), true).is_empty());
+    assert_eq!(
+        blocked_for(&at(None)),
+        [("BG22_HERO_002p".to_string(), ROUND_NOT_GIVEN)]
+    );
+    // A board taken after start of combat: its later copies are not played.
+    assert_eq!(
+        gaps(&at(None), false),
+        [("BG22_HERO_002p".to_string(), IN_COMBAT_NOT_PLAYED)]
+    );
+}
+
+#[test]
+fn targeted_and_holding_powers_need_what_they_name() {
+    use combat_sim::kit::{HELD_NOT_GIVEN, TARGET_NOT_GIVEN, TEAMMATE_NOT_GIVEN};
+    let rr = with_power(vec![plain(2, 2)], KitCard::new("BG25_HERO_103p"), Some(7));
+    assert_eq!(
+        blocked_for(&rr),
+        [("BG25_HERO_103p".to_string(), TARGET_NOT_GIVEN)]
+    );
+    let mut named = KitCard::new("BG25_HERO_103p");
+    named.target = Some(0);
+    assert!(gaps(&with_power(vec![plain(2, 2)], named, Some(7)), true).is_empty());
+    let lnl = with_power(vec![plain(2, 2)], ready("BG22_HERO_000p_Alt"), Some(7));
+    assert_eq!(
+        blocked_for(&lnl),
+        [("BG22_HERO_000p_Alt".to_string(), HELD_NOT_GIVEN)]
+    );
+    // Holding nothing (its first number at 0): nothing to fire.
+    let empty = with_power(
+        vec![plain(2, 2)],
+        KitCard::new("BG22_HERO_000p_Alt"),
+        Some(7),
+    );
+    assert!(gaps(&empty, true).is_empty());
+    // Glorious Gloop in Solo: no teammate to copy from.
+    let mut gloop = KitCard::new("BGDUO_HERO_101p");
+    gloop.target = Some(0);
+    let gloop = with_power(vec![plain(2, 2)], gloop, Some(7));
+    assert_eq!(
+        blocked_for(&gloop),
+        [("BGDUO_HERO_101p".to_string(), TEAMMATE_NOT_GIVEN)]
+    );
+}
+
+#[test]
+fn sandy_needs_its_teammates_board_and_is_approximate_with_it() {
+    use combat_sim::cards::SANDY_COPY;
+    use combat_sim::kit::TEAMMATE_NOT_GIVEN;
+    use combat_sim::{simulate_teams, Team};
+    let sandy = with_kit(vec![Minion::new("BGDUO_125", 1, 1).tier(7)], &[], &[]);
+    assert_eq!(
+        blocked_for(&sandy),
+        [("BGDUO_125".to_string(), TEAMMATE_NOT_GIVEN)]
+    );
+    let mate = with_kit(vec![plain(3, 9)], &[], &[]);
+    let opponent = Team::solo(with_kit(vec![plain(1, 1)], &[], &[]));
+    let team = Team::duo(sandy.clone(), mate);
+    let Ok(Verdict::Odds(odds)) = simulate_teams(&team, &opponent, &options(true)) else {
+        panic!("played with the teammate's board");
+    };
+    assert_eq!(
+        odds.coverage.approximate,
+        [("BGDUO_125".to_string(), SANDY_COPY)]
+    );
+    // A board taken after start of combat: nothing of it is played.
+    let Verdict::Odds(odds) = verdict(&sandy, false) else {
+        panic!()
+    };
+    assert!(odds.coverage.is_exact(), "{:?}", odds.coverage);
+}
+
+#[test]
+fn stitched_salvager_and_timewarped_chameleon_are_played_before_start_of_combat() {
+    let salvager = with_kit(
+        vec![plain(2, 2), Minion::new("BG31_999", 16, 4).tier(7)],
+        &[],
+        &[],
+    );
+    let Verdict::Odds(odds) = verdict(&salvager, true) else {
+        panic!("played from a board taken before start of combat");
+    };
+    assert!(odds.coverage.is_exact(), "{:?}", odds.coverage);
+    let Verdict::NotModelled(cov) = verdict(&salvager, false) else {
+        panic!("a board taken after it no longer has the destroyed minion");
+    };
+    assert!(cov.reasons()[0].1.contains("copies the minion it destroys"));
+    let chameleon = with_kit(
+        vec![plain(2, 2), Minion::new("BG34_Giant_042", 6, 15).tier(5)],
+        &[],
+        &[],
+    );
+    for soc in [false, true] {
+        let Verdict::Odds(odds) = verdict(&chameleon, soc) else {
+            panic!("Timewarped Chameleon is known");
+        };
+        assert!(odds.coverage.is_exact(), "{:?}", odds.coverage);
+    }
+}
+
+#[test]
+fn the_minion_lock_and_load_holds_is_checked_like_a_board_minion() {
+    use combat_sim::kit::FIRED_AT_RIGHT_END;
+    let mut lnl = ready("BG22_HERO_000p_Alt");
+    lnl.held = Some(plain(4, 3));
+    let known = with_power(vec![plain(2, 2)], lnl.clone(), Some(7));
+    assert_eq!(
+        gaps(&known, true),
+        [("BG22_HERO_000p_Alt".to_string(), FIRED_AT_RIGHT_END)]
+    );
+    lnl.held = Some(Minion::new("ZZ_NOBODY_KNOWS", 4, 3));
+    let unknown = with_power(vec![plain(2, 2)], lnl, Some(7));
+    let Verdict::NotModelled(cov) = verdict(&unknown, true) else {
+        panic!("a held card nobody reviewed blocks");
+    };
+    assert_eq!(cov.not_modelled, ["ZZ_NOBODY_KNOWS"]);
+    // On a board taken after start of combat it is not fired: not checked.
+    assert!(matches!(verdict(&unknown, false), Verdict::Odds(_)));
+}
+
+#[test]
+fn whirl_o_tron_stays_approximate_on_a_board_taken_after_start_of_combat() {
+    let whirl = with_kit(vec![Minion::new("BG34_Giant_599", 7, 5).tier(5)], &[], &[]);
+    let Verdict::Odds(odds) = verdict(&whirl, false) else {
+        panic!()
+    };
+    assert!(
+        odds.coverage
+            .approximate
+            .iter()
+            .any(|(id, _)| id == "BG34_Giant_599"),
+        "{:?}",
+        odds.coverage
+    );
+}
+
+#[test]
+fn a_held_minions_dark_gift_is_checked_too() {
+    let mut lnl = ready("BG22_HERO_000p_Alt");
+    lnl.held = Some(plain(4, 3).gift("BG36_MidGameEffect_ZZ_UNKNOWN"));
+    let player = with_power(vec![plain(2, 2)], lnl, Some(7));
+    let Verdict::NotModelled(cov) = verdict(&player, true) else {
+        panic!("an unknown gift blocks");
+    };
+    assert_eq!(cov.not_modelled, ["BG36_MidGameEffect_ZZ_UNKNOWN"]);
+    // Another power's minion named off the board is no held minion.
+    let mut rr = KitCard::new("BG25_HERO_103p");
+    rr.target = Some(0);
+    rr.held = Some(Minion::new("ZZ_NOBODY_KNOWS", 1, 1));
+    let player = with_power(vec![plain(2, 2)], rr, Some(7));
+    assert!(matches!(verdict(&player, true), Verdict::Odds(_)));
 }

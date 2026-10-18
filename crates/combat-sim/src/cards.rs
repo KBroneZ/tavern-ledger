@@ -159,6 +159,19 @@ pub enum Action {
         tribe: Tribes,
         others: bool,
     },
+    /// Destroy the minion to the left (both neighbours with `both`) and keep
+    /// an exact copy of each, not of a Stitched Salvager, for
+    /// [`Action::SummonKept`] (Stitched Salvager; T-628 round 3).
+    DestroyNeighboursKeepCopies { both: bool },
+    /// Summon the copies [`Action::DestroyNeighboursKeepCopies`] kept.
+    SummonKept,
+    /// Transform into an exact copy of the minion to the left (Timewarped
+    /// Chameleon; T-628 round 3).
+    BecomeLeftCopy,
+    /// Transform into an exact copy of the teammate's highest-Health minion,
+    /// the left-most on ties, from the teammate's board as it was taken
+    /// (Sandy; T-628 round 3).
+    BecomeTeammateCopy,
 }
 
 /// Where Blood Gems go.
@@ -466,7 +479,7 @@ pub(crate) const fn approx(reason: &'static str, triggers: &'static [Trigger]) -
 /// Round 1; later rounds are in `cards_round2` to `cards_round5`.
 pub use crate::cards_round1::EFFECTS;
 pub use crate::cards_round5::{AMALGAMS, HAND_SUMMONERS};
-pub use crate::cards_round8::{refusal, DEATHRATTLE_POOL};
+pub use crate::cards_round8::{after_start_refusal, refusal, DEATHRATTLE_POOL, SANDY_COPY};
 
 /// Cards whose text never changes a combat, checked one by one against the
 /// card data. Keywords they have are on the board already.

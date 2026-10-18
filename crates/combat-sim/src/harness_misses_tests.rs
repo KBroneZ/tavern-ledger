@@ -43,11 +43,13 @@ fn a_miss_without_a_replay_is_told_by_its_cards() {
         kit: Vec::new(),
         not_modelled: vec!["ZZ_UNKNOWN".into()],
         approximate: Vec::new(),
+        why: Vec::new(),
     };
     let rough = Coverage {
         kit: Vec::new(),
         not_modelled: Vec::new(),
         approximate: vec![("ZZ_ROUGH".into(), "a gap")],
+        why: Vec::new(),
     };
     assert_eq!(cause_id(&miss(false, none), &[]), "no_replay_exact");
     assert_eq!(
@@ -113,6 +115,7 @@ fn a_replay_that_parts_names_what_was_not_seen_then_the_cards_then_the_rule() {
         kit: Vec::new(),
         not_modelled: Vec::new(),
         approximate: vec![("ZZ_ROUGH".into(), "a gap")],
+        why: Vec::new(),
     };
     let parts = [replayed(false, Some(Rule::Stats))];
     let mut m = miss(false, rough);

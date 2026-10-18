@@ -59,6 +59,8 @@ impl Combat<'_> {
             let enters = self.sides[side].units.is_empty() && self.legs.waiting[side];
             if enters {
                 self.legs.waiting[side] = false;
+                // The hero whose board is gone takes its waiting powers along.
+                self.pending[side].clear();
                 self.legs.tier[side] = self.p.second_tier[side];
                 self.sides[side] = SideState {
                     units: self.p.second[side].clone().unwrap_or_default(),

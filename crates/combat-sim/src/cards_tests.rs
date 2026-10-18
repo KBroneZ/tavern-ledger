@@ -249,10 +249,19 @@ fn every_card_the_patch_changed_and_the_engine_did_not_list_is_sorted() {
 
 #[test]
 fn a_refused_card_says_why_and_a_card_nobody_looked_at_says_so() {
-    assert!(refusal("BG31_999").contains("copies the minion it destroys"));
-    assert_eq!(refusal("BG31_999"), refusal("BG31_999_G"));
+    assert!(refusal("BG34_Giant_590").contains("Undead Creations"));
+    assert_eq!(refusal("BG34_Giant_590"), refusal("BG34_Giant_590_G"));
     assert!(refusal("NOT_A_CARD").contains("not reviewed"));
-    assert_eq!(rules("BG31_999"), None);
+    assert_eq!(rules("BG34_Giant_590"), None);
+}
+
+#[test]
+fn stitched_salvager_is_played_only_from_a_board_taken_before_start_of_combat() {
+    let why = crate::cards::after_start_refusal("BG31_999").expect("a reason");
+    assert!(why.contains("copies the minion it destroys"));
+    assert_eq!(crate::cards::after_start_refusal("BG31_999_G"), Some(why));
+    assert!(rules("BG31_999").is_some() && rules("BG31_999_G").is_some());
+    assert_eq!(crate::cards::after_start_refusal("BG34_Giant_590"), None);
 }
 
 #[test]
