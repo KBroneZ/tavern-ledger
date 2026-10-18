@@ -46,7 +46,9 @@ pub struct SocCombat {
 }
 
 /// A hero's kit as the engine takes it, in round `round`; a target is a
-/// board index. A held minion only on the player's side (`own`, D-163).
+/// board index. A held minion only on the player's own board (`own`, D-163;
+/// the teammate's waits for the user's check that the screen shows it), as
+/// the overlay.
 pub(crate) fn engine_kit(kit: &HeroKit, round: i64, own: bool, db: &CardDb) -> Kit {
     let card = |c: &bg_parser::report::KitCard| KitCard {
         held: c
@@ -71,8 +73,14 @@ pub(crate) fn engine_kit(kit: &HeroKit, round: i64, own: bool, db: &CardDb) -> K
 
 /// An entry's two boards with its kit: (at the first attack, before start of
 /// combat). `None` when the entry has no board or a card id is missing.
-fn entry_bands(e: &CombatEntry, round: i64, db: &CardDb) -> Option<(Warband, Option<Warband>)> {
-    let own = e.side == Side::Own;
+/// `local` is the player's seat.
+fn entry_bands(
+    e: &CombatEntry,
+    round: i64,
+    local: Option<i64>,
+    db: &CardDb,
+) -> Option<(Warband, Option<Warband>)> {
+    let own = e.side == Side::Own && e.player_id.is_some() && e.player_id == local;
     let kit = e.kit.as_ref().map(|k| engine_kit(k, round, own, db));
     let band = |minions| Warband {
         values: game_values(e.values),
@@ -89,7 +97,12 @@ fn entry_bands(e: &CombatEntry, round: i64, db: &CardDb) -> Option<(Warband, Opt
 
 /// The boards of `side` in the order they fought, at most one per seat (as
 /// `harness_duos::legs`).
-fn legs(round: &Round, side: Side, db: &CardDb) -> Option<Vec<(Warband, Option<Warband>)>> {
+fn legs(
+    round: &Round,
+    side: Side,
+    local: Option<i64>,
+    db: &CardDb,
+) -> Option<Vec<(Warband, Option<Warband>)>> {
     let mut seats: Vec<Option<i64>> = Vec::new();
     let mut out = Vec::new();
     for e in round
@@ -101,7 +114,7 @@ fn legs(round: &Round, side: Side, db: &CardDb) -> Option<Vec<(Warband, Option<W
             continue;
         }
         seats.push(e.player_id);
-        out.push(entry_bands(e, round.number, db)?);
+        out.push(entry_bands(e, round.number, local, db)?);
     }
     (!out.is_empty()).then_some(out)
 }
@@ -129,8 +142,11 @@ pub fn soc_combats(report: &GameReport, game: usize, db: &CardDb) -> Vec<SocComb
         let Some(result) = round.result.map(result_of) else {
             continue;
         };
-        let (Some(own), Some(opp)) = (legs(round, Side::Own, db), legs(round, Side::Opponent, db))
-        else {
+        let local = report.local_player_id;
+        let (Some(own), Some(opp)) = (
+            legs(round, Side::Own, local, db),
+            legs(round, Side::Opponent, local, db),
+        ) else {
             continue;
         };
         if !duos && (own.len() > 1 || opp.len() > 1) {
