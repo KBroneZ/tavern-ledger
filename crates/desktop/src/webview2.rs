@@ -81,9 +81,6 @@ Es gratuito, de Microsoft, y ya viene con Windows 11 y con la mayoría de los PC
 
 #[cfg(all(windows, feature = "store"))]
 mod win {
-    use std::os::windows::process::CommandExt;
-    use std::process::Command;
-
     use windows::core::{w, HSTRING};
     use windows::Win32::UI::WindowsAndMessaging::{
         MessageBoxW, IDYES, MB_ICONERROR, MB_SETFOREGROUND, MB_YESNO,
@@ -92,8 +89,6 @@ mod win {
 
     use super::{installed_with, is_fixed_runtime, message, Hive, DOWNLOAD_URL};
     use crate::applog;
-
-    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
     fn read_pv(hive: Hive, key: &str) -> Option<String> {
         let root = match hive {
@@ -134,9 +129,8 @@ mod win {
             let rundll = std::path::Path::new(&system)
                 .join("System32")
                 .join("rundll32.exe");
-            if let Err(error) = Command::new(rundll)
+            if let Err(error) = tracker::quiet::command(rundll)
                 .args(["url.dll,FileProtocolHandler", DOWNLOAD_URL])
-                .creation_flags(CREATE_NO_WINDOW)
                 .spawn()
             {
                 applog::warn(
