@@ -65,5 +65,10 @@
       await onEvent("update-changed", (e) => render(e.payload));
       render(await call("update_status"));
     })
-    .catch(failed);
+    .catch((error) => {
+      // The section starts hidden (so the Store edition never flashes it);
+      // when the app cannot say which edition this is, show it with the error.
+      $("update-setting").hidden = false;
+      failed(error);
+    });
 })();
