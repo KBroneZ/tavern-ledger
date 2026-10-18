@@ -257,31 +257,28 @@ fn duos_estimate_waits_for_every_boards_start_and_reads_the_boards_before_it() {
 }
 
 #[test]
-fn duos_never_brings_in_the_teammates_held_minion_until_the_user_checks_it() {
+fn duos_brings_in_the_teammates_held_minion_like_the_players() {
+    // D-167: the screen shows what the teammate's Lock and Load holds.
     // Combat 5: the teammate's board (seat 3) fought first, with Lock and
-    // Load; the player's, with Lock and Load too, and seat 6's have begun.
+    // Load; the player's and seat 6's have begun.
     let mut c5 = duos_round(5, &[(Side::Own, 3, 7), (Side::Opponent, 5, 3)]);
     c5.entries[0].before = Some(plain(1));
     c5.entries[1].before = Some(plain(2));
     c5.entries[0].kit = Some(lock_and_load());
     let mut r = duos_report(vec![c5]);
     r.opening = vec![
-        opening(5, Side::Own, 2, plain(4), lock_and_load()),
-        opening(5, Side::Opponent, 6, plain(6), HeroKit::default()),
+        opening(5, Side::Own, 2, plain(4), HeroKit::default()),
+        opening(5, Side::Opponent, 6, plain(6), lock_and_load()),
     ];
     let i = odds_input(&r, live(5)).expect("an estimate");
     let mut missing = Vec::new();
-    let (player, _) = teams(&i, &facts, &mut missing);
+    let (player, foe) = teams(&i, &facts, &mut missing);
     let held = |b: &Warband| b.kit.as_ref().and_then(|k| k.powers[0].held.clone());
     assert_eq!(
-        held(&player.first),
-        None,
+        held(&player.first).map(|m| m.attack),
+        Some(5),
         "the teammate's (it fights first)"
     );
-    let own = player.second.as_ref().expect("two boards");
-    assert_eq!(held(own).map(|m| m.attack), Some(5), "the player's own");
-    // Without it the teammate's Lock and Load cannot be played: no early
-    // number until the first attack.
-    let o = run_odds(&i, &facts, Duration::from_secs(5));
-    assert_eq!(o.gap, Some(Gap::NoBoardSeen));
+    let foe_mate = foe.second.as_ref().expect("two boards");
+    assert_eq!(held(foe_mate), None, "never an opponent's");
 }

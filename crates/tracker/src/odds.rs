@@ -383,9 +383,9 @@ fn note_missing(missing: &mut Vec<String>, id: String) {
 /// A hero's powers and trinkets in the engine's form in combat `round`, as
 /// the harness gives them: a named minion's board position becomes its
 /// index. A minion a power holds is read only when `hold`: on the player's
-/// own board (D-163; the teammate's waits for the user's check that the
-/// screen shows it) with start of combat played, the only time it comes in;
-/// it goes to `missing` when the card data lacks it.
+/// team (D-163; the teammate's is on screen too, D-167) with start of combat
+/// played, the only time it comes in; it goes to `missing` when the card
+/// data lacks it.
 fn engine_kit(
     kit: &HeroKit,
     round: i64,
@@ -446,9 +446,8 @@ fn teams(
     facts: &dyn Fn(&str) -> Option<Facts>,
     missing: &mut Vec<String>,
 ) -> (Team, Team) {
-    // `local`: the player's own board, the only one whose held minion is read.
-    let kit = |kit: &Option<HeroKit>, local: bool, missing: &mut Vec<String>| {
-        let hold = local && input.estimate;
+    let kit = |kit: &Option<HeroKit>, own: bool, missing: &mut Vec<String>| {
+        let hold = own && input.estimate;
         kit.as_ref()
             .map(|k| engine_kit(k, input.round, hold, facts, missing))
     };
@@ -473,17 +472,17 @@ fn teams(
     let Some(duos) = &input.duos else {
         return (Team::solo(own), Team::solo(opponent));
     };
-    let seen = |s: &Seen, missing: &mut Vec<String>| {
-        let k = kit(&s.kit, false, missing);
+    let seen = |s: &Seen, own: bool, missing: &mut Vec<String>| {
+        let k = kit(&s.kit, own, missing);
         warband(&s.board, s.tier, &s.values, k, facts, missing)
     };
-    let mate = seen(&duos.teammate, missing);
+    let mate = seen(&duos.teammate, true, missing);
     let player = if duos.local_first {
         Team::duo(own, mate)
     } else {
         Team::duo(mate, own)
     };
-    let foe_mate = seen(&duos.opponent_teammate, missing);
+    let foe_mate = seen(&duos.opponent_teammate, false, missing);
     (player, Team::duo(opponent, foe_mate))
 }
 
