@@ -124,6 +124,7 @@ fn bad_kits_are_refused_with_a_reason() {
             "counter",
         ),
         (json!([{ "card_id": FIRE, "target": 8 }]), "target"),
+        (json!([{ "card_id": FIRE, "target": 2 }]), "past the board"),
         (
             json!([{ "card_id": FIRE }, { "card_id": FIRE }, { "card_id": FIRE }, { "card_id": FIRE }, { "card_id": FIRE }]),
             "short list",
@@ -197,4 +198,12 @@ fn the_pages_table_of_what_hero_powers_need_matches_the_engine() {
         }
     }
     assert_eq!(page, engine, "web/src/lib/sim/kitNeeds.json");
+    // The turn those powers unlock at is the page's UNLOCK_TURN (web/src/lib/sim/kit.ts).
+    for id in played_ids() {
+        if let Some(combat_sim::kit_effects::SpaceAction::CopyHighest { unlock, .. }) =
+            played(id).and_then(|p| p.space)
+        {
+            assert_eq!(unlock, 7, "{id}: web/src/lib/sim/kit.ts UNLOCK_TURN");
+        }
+    }
 }

@@ -51,6 +51,8 @@ export interface Marks {
   missing: ReadonlySet<string>;
   /** Card id → the engine's reason. */
   approximate: ReadonlyMap<string, string>;
+  /** Blocked card id → why (a hero power's missing input, a card not reviewed). */
+  reasons?: ReadonlyMap<string, string>;
 }
 
 export const NO_MARKS: Marks = { notModelled: new Set(), missing: new Set(), approximate: new Map() };

@@ -48,6 +48,12 @@ test("the name file is read like any data: bad ids, names and trinkets are dropp
   const kit = readNameFile({ names: { P1: "Power", T1: "Trinket" }, kit: { power: ["P1", "P1", "NOPE", 3], lesser: "T1", greater: ["T1"] } }).kit;
   assert.deepEqual(kit, { power: ["P1"], lesser: [], greater: ["T1"] });
   assert.deepEqual(readNameFile({ names: {} }).kit, { power: [], lesser: [], greater: [] });
+  // A trinket's odd spell school is no kind (and never an object's own property).
+  const lesser = { id: "BG_T0", name: "L", type: "BATTLEGROUND_TRINKET", set: "BATTLEGROUNDS", spellSchool: "LESSER_TRINKET" };
+  const odd = [lesser, { ...lesser, id: "BG_T1", spellSchool: "constructor" }];
+  assert.deepEqual(extractNames(odd, odd, "x").kit, { power: [], lesser: ["BG_T0"], greater: [] });
+  // No trinket with a kind at all: the card data changed, and the build stops.
+  assert.throws(() => extractNames([odd[1]], [odd[1]], "x"), /card data changed/);
 });
 
 test("a card is named from the minions, then the other cards, then the Dark Gifts, else by its id", () => {

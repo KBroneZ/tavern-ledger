@@ -130,6 +130,7 @@ export function extractNames(english: unknown, local: unknown, source: string): 
   const trinkets: Record<string, string> = {};
   const kit: KitLists = { power: [], lesser: [], greater: [] };
   let count = 0;
+  let trinketCount = 0;
   for (const c of english) {
     if (!isObj(c) || c.set !== "BATTLEGROUNDS" || typeof c.type !== "string" || !NAMED_TYPES.includes(c.type) || !validId(c.id)) continue;
     const name = localNames.get(c.id) ?? cleanName(c.name);
@@ -139,10 +140,14 @@ export function extractNames(english: unknown, local: unknown, source: string): 
     const dbf = int(c.dbfId);
     if (c.type === TRINKET && dbf !== null && dbf > 0) trinkets[String(dbf)] = c.id;
     if (c.type === HERO_POWER) kit.power.push(c.id);
-    const kind = c.type === TRINKET && typeof c.spellSchool === "string" ? TRINKET_KIND[c.spellSchool] : undefined;
+    if (c.type === TRINKET) trinketCount += 1;
+    const school = c.spellSchool;
+    const kind = c.type === TRINKET && typeof school === "string" && Object.hasOwn(TRINKET_KIND, school) ? TRINKET_KIND[school] : undefined;
     if (kind) kit[kind].push(c.id);
   }
   if (count > MAX_CARDS) throw new Error(`${count} named cards: not the real card data`);
+  // The kinds come from the spell school: none at all means the card data's shape changed.
+  if (trinketCount > 0 && kit.lesser.length + kit.greater.length === 0) throw new Error("no trinket has a lesser or greater kind: the card data changed");
   for (const list of Object.values(kit)) list.sort();
   return { version: 1, source, names, trinkets, kit };
 }

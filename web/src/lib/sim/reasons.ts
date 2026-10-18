@@ -90,7 +90,7 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
   "which minion it copies among equal Tier is not checked": "no se ha comprobado qué esbirro copia entre los de igual nivel",
   "the minion it names is not shown": "el esbirro que elige no se muestra",
   "the minion it holds is not shown": "el esbirro que guarda no se muestra",
-  "the round, which unlocks it, is not given": "no se indica la ronda, que es la que lo desbloquea",
+  "the round, which unlocks it, is not given": "no se indica el turno, que es el que lo desbloquea",
   "its teammate's board is not given": "no se indica el tablero de su compañero",
   "its copy had fewer stats than the teammate's minion in 2 of the 12 combats checked":
     "su copia tuvo menos estadísticas que el esbirro del compañero en 2 de los 12 combates comprobados",

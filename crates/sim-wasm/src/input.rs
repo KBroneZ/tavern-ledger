@@ -63,7 +63,8 @@ struct KitContext {
     /// The combat's turn, which unlocks some hero powers.
     round: Option<u32>,
     /// A held minion comes in only when start of combat is played; else it
-    /// is checked but not used (as the app).
+    /// is checked but not used (the app also never reads one at the first
+    /// attack, and only on the player's team, where the page may set any).
     hold: bool,
 }
 
@@ -236,7 +237,13 @@ fn game_values(v: Option<&Value>) -> Res<GameValues> {
 /// One hero power or trinket, as the saved report writes it: a target is a
 /// board position (1 to 7) and becomes an index; only a hero power names or
 /// holds a minion.
-fn kit_card(v: &Value, power: bool, ctx: &KitContext, missing: &mut Vec<String>) -> Res<KitCard> {
+fn kit_card(
+    v: &Value,
+    power: bool,
+    board_len: usize,
+    ctx: &KitContext,
+    missing: &mut Vec<String>,
+) -> Res<KitCard> {
     let o = object(v, "a hero power or trinket")?;
     let card_id = o
         .get("card_id")
@@ -259,7 +266,13 @@ fn kit_card(v: &Value, power: bool, ctx: &KitContext, missing: &mut Vec<String>)
     }
     let target = match o.get("target") {
         None | Some(Value::Null) => None,
-        t if power => Some(int(t, "a target", 1, MAX_BOARD as i64)? as usize - 1),
+        t if power => {
+            let at = int(t, "a target", 1, MAX_BOARD as i64)? as usize - 1;
+            if at >= board_len {
+                return Err("a target is past the board".into());
+            }
+            Some(at)
+        }
         _ => return Err("only a hero power names a minion".into()),
     };
     let held = match o.get("held") {
@@ -293,6 +306,7 @@ fn kit_cards(
     o: &Map<String, Value>,
     key: &str,
     power: bool,
+    board_len: usize,
     ctx: &KitContext,
     missing: &mut Vec<String>,
 ) -> Res<Vec<KitCard>> {
@@ -304,20 +318,26 @@ fn kit_cards(
         .filter(|l| l.len() <= MAX_KIT_CARDS)
         .ok_or_else(|| format!("{key} is not a short list"))?;
     list.iter()
-        .map(|c| kit_card(c, power, ctx, missing))
+        .map(|c| kit_card(c, power, board_len, ctx, missing))
         .collect()
 }
 
 /// The board's hero powers and trinkets (T-628); none given is unknown
-/// (`None`), as in the app, never an empty kit.
-fn kit(v: Option<&Value>, ctx: &KitContext, missing: &mut Vec<String>) -> Res<Option<Kit>> {
+/// (`None`), as in the app, never an empty kit. A named minion must be on
+/// the board (`board_len` minions as sent).
+fn kit(
+    v: Option<&Value>,
+    board_len: usize,
+    ctx: &KitContext,
+    missing: &mut Vec<String>,
+) -> Res<Option<Kit>> {
     let Some(v) = v.filter(|v| !v.is_null()) else {
         return Ok(None);
     };
     let o = object(v, "kit")?;
     Ok(Some(Kit {
-        powers: kit_cards(o, "powers", true, ctx, missing)?,
-        trinkets: kit_cards(o, "trinkets", false, ctx, missing)?,
+        powers: kit_cards(o, "powers", true, board_len, ctx, missing)?,
+        trinkets: kit_cards(o, "trinkets", false, board_len, ctx, missing)?,
         round: ctx.round,
     }))
 }
@@ -334,7 +354,7 @@ fn board(v: &Value, ctx: &KitContext, missing: &mut Vec<String>) -> Res<Warband>
         minions.extend(minion(m, missing)?);
     }
     Ok(Warband {
-        kit: kit(b.get("kit"), ctx, missing)?,
+        kit: kit(b.get("kit"), list.len(), ctx, missing)?,
         minions,
         tavern_tier: tier(b.get("tier"), "tavern tier")?,
         values: game_values(b.get("values"))?,

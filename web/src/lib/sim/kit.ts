@@ -15,7 +15,8 @@ import type { SimMinion } from "./board.ts";
 export type KitNeed = "target" | "held" | "round" | "teammate" | "first";
 const NEEDS = needsTable as Readonly<Record<string, readonly KitNeed[]>>;
 
-export const needs = (cardId: string): readonly KitNeed[] => NEEDS[cardId] ?? [];
+/** Own keys only: a card id such as "constructor" from a saved record needs nothing. */
+export const needs = (cardId: string): readonly KitNeed[] => (Object.hasOwn(NEEDS, cardId) ? NEEDS[cardId] : []);
 
 export interface SimKitCard {
   cardId: string;
@@ -74,22 +75,37 @@ export function withCard(kit: SimKit | null, kind: KitKind, slot: number, cardId
   return { ...base, [key]: list };
 }
 
+/** The kit with the power in `slot` changed; the same kit when there is none or `change` keeps it. */
 function withPower(kit: SimKit, slot: number, change: (c: SimKitCard) => SimKitCard): SimKit {
-  return { ...kit, powers: kit.powers.map((c) => (c.slot === slot ? change(c) : c)) };
+  const card = kit.powers.find((c) => c.slot === slot);
+  const next = card && change(card);
+  if (!card || next === card) return kit;
+  return { ...kit, powers: kit.powers.map((c) => (c === card ? (next as SimKitCard) : c)) };
 }
 
 /** The minion a hero power names, by its key (null: none). */
 export function withTarget(kit: SimKit, slot: number, key: number | null): SimKit {
-  return withPower(kit, slot, (c) => ({ ...c, target: key }));
+  return withPower(kit, slot, (c) => (c.target === key ? c : { ...c, target: key }));
 }
 
 /** The minion a hero power holds; its first number follows (1 while it holds one not fired yet). */
 export function withHeld(kit: SimKit, slot: number, held: SimMinion | null): SimKit {
-  return withPower(kit, slot, (c) => ({
-    ...c,
-    held,
-    counters: needs(c.cardId).includes("first") ? [held ? 1 : 0, ...c.counters.slice(1)] : c.counters,
-  }));
+  return withPower(kit, slot, (c) =>
+    c.held === held
+      ? c
+      : {
+          ...c,
+          held,
+          counters: needs(c.cardId).includes("first") ? [held ? 1 : 0, ...c.counters.slice(1)] : c.counters,
+        },
+  );
+}
+
+/** A held minion's Attack and Health (already clamped); its power's numbers are kept. */
+export function withHeldStats(kit: SimKit, slot: number, attack: number, health: number): SimKit {
+  return withPower(kit, slot, (c) =>
+    !c.held || (c.held.attack === attack && c.held.health === health) ? c : { ...c, held: { ...c.held, attack, health } },
+  );
 }
 
 /** A minion left the board: a hero power that named it names none. */
@@ -124,6 +140,23 @@ export function kitRequest(kit: SimKit, minions: readonly SimMinion[], minion: (
 // ---------- A saved round (parser revision 16) ----------
 
 /**
+ * Each card in a slot the editor offers: its own when free, else the first
+ * free one (a log that gave no slot says 0); a card with no free slot is
+ * left out, never sent unseen.
+ */
+function fitSlots(cards: SimKitCard[], slots: readonly number[]): SimKitCard[] {
+  const out: SimKitCard[] = [];
+  const free = (s: number) => slots.includes(s) && !out.some((c) => c.slot === s);
+  // First the cards in a slot of their own, then the rest where there is room.
+  const placed = cards.filter((c) => (free(c.slot) ? out.push(c) > 0 : false));
+  for (const c of cards.filter((c) => !placed.includes(c))) {
+    const slot = slots.find(free);
+    if (slot !== undefined) out.push({ ...c, slot });
+  }
+  return out.sort((a, b) => a.slot - b.slot);
+}
+
+/**
  * A board's kit from the record; `held` makes a held minion the editor's.
  * A named minion is not kept: its position is on the board before start of
  * combat, and the board loaded is the one at the first attack (it may be
@@ -137,5 +170,5 @@ export function kitFromRecord(kit: ReportKit, held: (m: ReportMinion) => SimMini
     target: null,
     held: c.held ? held(c.held) : null,
   });
-  return { powers: kit.powers.map(card), trinkets: kit.trinkets.map(card) };
+  return { powers: fitSlots(kit.powers.map(card), POWER_SLOTS), trinkets: fitSlots(kit.trinkets.map(card), TRINKET_SLOTS) };
 }

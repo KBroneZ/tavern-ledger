@@ -4,7 +4,7 @@
 // minion it holds, or the turn. Plain data in, markup out (main.ts reads
 // the data-act and data-field attributes). Names come from the card data's
 // names table (game/names.ts), as text nodes only.
-import { cardName } from "../game/names.ts";
+import { cardName, cardNames, type CardNames } from "../game/names.ts";
 import { exactStat } from "../stat.ts";
 import { lang } from "../i18n.ts";
 import type { KitLists } from "./cardFile.ts";
@@ -29,6 +29,7 @@ export interface KitMarks {
   notModelled: ReadonlySet<string>;
   missing: ReadonlySet<string>;
   approximate: ReadonlyMap<string, string>;
+  reasons?: ReadonlyMap<string, string>;
 }
 
 export interface KitProps {
@@ -47,31 +48,63 @@ interface Slot {
   choices: (lists: KitLists) => string[];
 }
 
+/** Both trinket lists, once per lists table (the third slot offers both). */
+const bothTrinkets = new WeakMap<KitLists, string[]>();
+const allTrinkets = (l: KitLists): string[] => {
+  const known = bothTrinkets.get(l);
+  if (known) return known;
+  const both = [...l.lesser, ...l.greater];
+  bothTrinkets.set(l, both);
+  return both;
+};
+
 const SLOTS: Slot[] = [
   { kind: "power", slot: 0, label: "kit.power", choices: (l) => l.power },
   { kind: "power", slot: 1, label: "kit.power2", choices: (l) => l.power },
   { kind: "trinket", slot: 1, label: "kit.lesser", choices: (l) => l.lesser },
   { kind: "trinket", slot: 2, label: "kit.greater", choices: (l) => l.greater },
-  { kind: "trinket", slot: 3, label: "kit.third", choices: (l) => [...l.lesser, ...l.greater] },
+  { kind: "trinket", slot: 3, label: "kit.third", choices: allTrinkets },
 ];
 
 const where = (side: Side, board: number) => ({ "data-side": side, "data-board": board });
 const nameOf = (id: string): string => cardName(id) ?? id;
 
-/** The choices by name; a name two cards share also shows the id, so each reads apart. */
-function options(ids: readonly string[], chosen: string | undefined): VNode[] {
-  const list = [...new Set(chosen && !ids.includes(chosen) ? [...ids, chosen] : ids)];
-  const named = list.map((id) => ({ id, name: nameOf(id) }));
-  const count = new Map<string, number>();
-  for (const n of named) count.set(n.name, (count.get(n.name) ?? 0) + 1);
-  return named
-    .sort((a, b) => a.name.localeCompare(b.name, lang()) || a.id.localeCompare(b.id))
-    .map((n) => h("option", { value: n.id, selected: n.id === chosen }, (count.get(n.name) ?? 0) > 1 ? `${n.name} (${n.id})` : n.name));
+interface Choice {
+  id: string;
+  label: string;
 }
 
-/** "!" when the card blocks the odds, "≈" when it plays with a known gap, with the reason. */
+/** A list's choices by name, sorted once per list, language and names table; a name two cards share also shows the id. */
+const sorted = new WeakMap<readonly string[], { lang: string; table: CardNames; choices: Choice[] }>();
+function choicesOf(ids: readonly string[]): Choice[] {
+  const known = sorted.get(ids);
+  if (known && known.lang === lang() && known.table === cardNames()) return known.choices;
+  const named = [...new Set(ids)].map((id) => ({ id, name: nameOf(id) }));
+  const count = new Map<string, number>();
+  for (const n of named) count.set(n.name, (count.get(n.name) ?? 0) + 1);
+  const collator = new Intl.Collator(lang());
+  const choices = named
+    .sort((a, b) => collator.compare(a.name, b.name) || (a.id < b.id ? -1 : 1))
+    .map((n) => ({ id: n.id, label: (count.get(n.name) ?? 0) > 1 ? `${n.name} (${n.id})` : n.name }));
+  sorted.set(ids, { lang: lang(), table: cardNames(), choices });
+  return choices;
+}
+
+/** The choices as options, the chosen card first among them when the list lacks it (a loaded one). */
+function options(ids: readonly string[], chosen: string | undefined): VNode[] {
+  const choices = choicesOf(ids);
+  const extra = chosen && !choices.some((c) => c.id === chosen) ? [{ id: chosen, label: nameOf(chosen) }] : [];
+  return [...extra, ...choices].map((c) => h("option", { value: c.id, selected: c.id === chosen }, c.label));
+}
+
+/** Why the card blocks the odds (the engine's reason when it gave one), or "≈" when it plays with a known gap. */
 function markOf(id: string, marks: KitMarks): VNode[] {
   if (marks.notModelled.has(id) || marks.missing.has(id)) {
+    const why = marks.reasons?.get(id);
+    if (why && !marks.missing.has(id)) {
+      const said = reasonText(why);
+      return [h("p", { class: "sim-reason sim-reason-blocked" }, "! ", h("span", { lang: said.english ? "en" : undefined }, said.text))];
+    }
     return [h("span", { class: "sim-badge sim-badge-blocked" }, sm(marks.missing.has(id) ? "minion.noData" : "minion.notModelled"))];
   }
   const reason = marks.approximate.get(id);
@@ -95,7 +128,7 @@ function targetPicker(c: SimKitCard, b: SimBoard, side: Side, board: number): VN
   );
 }
 
-function turnPicker(state: SimState): VNode {
+function turnPicker(state: SimState, side: Side, board: number, slot: number): VNode {
   const at = state.round;
   return h(
     "div",
@@ -107,10 +140,10 @@ function turnPicker(state: SimState): VNode {
           type: "button",
           "data-act": "kit-turn",
           "data-late": late ? "1" : "0",
-          "data-focus": `kit-turn-${late ? 1 : 0}`,
+          "data-focus": `kit-turn-${side}-${board}-${slot}-${late ? 1 : 0}`,
           "aria-pressed": at !== null && at >= UNLOCK_TURN === late ? "true" : "false",
         },
-        sm(late ? "kit.after" : "kit.before"),
+        sm(late ? "kit.after" : "kit.before", { turn: UNLOCK_TURN }),
       ),
     ),
   );
@@ -139,14 +172,14 @@ function heldPicker(c: SimKitCard, side: Side, board: number, props: KitProps): 
         "label",
         { class: `sim-stat sim-stat-${field}` },
         h("span", {}, sm(field === "attack" ? "minion.attack" : "minion.health")),
-        h("input", { type: "number", inputmode: "numeric", min: field === "attack" ? 0 : 1, step: 1, value: held[field], "data-field": `held-${field}`, "data-focus": `held-${field}-${side}-${board}`, ...at }),
+        h("input", { type: "number", inputmode: "numeric", min: field === "attack" ? 0 : 1, step: 1, value: held[field], "data-field": `held-${field}`, "data-focus": `held-${field}-${side}-${board}-${c.slot}`, ...at }),
       );
     return h(
       "div",
       { class: "sim-kit-need sim-kit-held", role: "group", "aria-label": sm("kit.held") },
       h("span", { class: "sim-kit-held-name" }, picture("card", held.cardId, name, 32, true), `${sm("kit.held")}: ${name}, ${exactStat(held.attack)}/${exactStat(held.health)}`),
       h("div", { class: "sim-stats" }, stat("attack"), stat("health")),
-      h("button", { type: "button", class: "sim-btn", "data-act": "held-remove", "data-focus": `held-x-${side}-${board}`, ...at }, sm("kit.heldRemove", { name })),
+      h("button", { type: "button", class: "sim-btn", "data-act": "held-remove", "data-focus": `held-x-${side}-${board}-${c.slot}`, ...at }, sm("kit.heldRemove", { name })),
     );
   }
   const open = props.holding?.side === side && props.holding.board === board && props.holding.slot === c.slot;
@@ -164,14 +197,16 @@ function heldPicker(c: SimKitCard, side: Side, board: number, props: KitProps): 
   );
 }
 
-/** What a played hero power needs beside the board, as controls. */
+/** What a played hero power needs beside the board, as controls; with start of combat off they wait. */
 function needsOf(c: SimKitCard, b: SimBoard, side: Side, board: number, props: KitProps): VNode[] {
   const n = needs(c.cardId);
-  return [
+  const controls = [
     n.includes("target") ? targetPicker(c, b, side, board) : null,
     n.includes("held") ? heldPicker(c, side, board, props) : null,
-    n.includes("round") ? turnPicker(props.state) : null,
+    n.includes("round") ? turnPicker(props.state, side, board, c.slot) : null,
   ].filter((v): v is VNode => v !== null);
+  if (controls.length === 0 || props.state.startOfCombat) return controls;
+  return [...controls, h("p", { class: "sim-dim" }, sm("kit.needsSoc"))];
 }
 
 function slotView(s: Slot, kit: SimKit | null, b: SimBoard, side: Side, board: number, props: KitProps): VNode | null {
@@ -198,7 +233,7 @@ function slotView(s: Slot, kit: SimKit | null, b: SimBoard, side: Side, board: n
 export function kitView(side: Side, board: number, props: KitProps): VNode {
   const b = props.state[side][board];
   const kit = b.kit ?? null;
-  const known = props.lists.power.length > 0 || props.lists.lesser.length > 0;
+  const known = props.lists.power.length > 0 || props.lists.lesser.length > 0 || props.lists.greater.length > 0;
   return h(
     "div",
     { class: "sim-kit", role: "group", "aria-label": sm("kit.label") },

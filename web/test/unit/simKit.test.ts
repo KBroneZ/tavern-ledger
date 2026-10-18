@@ -11,6 +11,7 @@ import { extractCards, extractNames } from "../../tools/simCards.ts";
 import { CardIndex } from "../../src/lib/sim/cards.ts";
 import * as B from "../../src/lib/sim/board.ts";
 import { needs } from "../../src/lib/sim/kit.ts";
+import { resultView } from "../../src/lib/sim/resultView.ts";
 import { kitView, socSwitch } from "../../src/lib/sim/kitView.ts";
 import { editorView, NO_MARKS } from "../../src/lib/sim/view.ts";
 import { readRecord } from "../../src/lib/game/report.ts";
@@ -68,6 +69,8 @@ test("a hero power or trinket goes in its slot, replaces the one there, and leav
   s = B.setKitCard(s, "player", 0, "trinket", 1, "BG_TRINKET_SYN");
   assert.deepEqual(s.player[0].kit?.trinkets.map((c) => [c.slot, c.cardId]), [[1, "BG_TRINKET_SYN"], [2, "BG_TRINKET2_SYN"]], "in slot order");
   assert.equal(B.setKitCard(s, "player", 0, "power", 0, FIRE), s, "the same card again changes nothing");
+  assert.equal(B.setKitCard(s, "player", 0, "power", 4, FIRE), s, "a slot the editor does not offer");
+  assert.equal(B.setKitCard(s, "player", 0, "trinket", 0, "BG_TRINKET_SYN"), s, "trinkets start at slot 1");
   s = B.setKitCard(s, "player", 0, "power", 0, RAPID);
   assert.deepEqual(s.player[0].kit?.powers.map((c) => c.cardId), [RAPID]);
   s = B.setKitCard(s, "player", 0, "trinket", 1, null);
@@ -90,6 +93,12 @@ test("a chosen minion is sent by its board position and forgotten when it leaves
   s = B.removeMinion(s, "player", 0, second);
   assert.equal(s.player[0].kit?.powers[0].target, null);
   assert.equal("target" in JSON.parse(B.toRequest(s, cards)).player[0].kit.powers[0], false);
+});
+
+test("a card id that names an object's own property needs nothing and loads", () => {
+  for (const id of ["constructor", "toString", "__proto__", "hasOwnProperty"]) assert.deepEqual(needs(id), [], id);
+  const s = B.setKitCard(duel(), "player", 0, "power", 0, "constructor");
+  assert.ok(html([kitView("player", 0, { state: s, cards, lists, marks: NO_MARKS, holding: null })]).includes("constructor"));
 });
 
 test("a held minion sets the power's first number, and its stats are clamped", () => {
@@ -118,6 +127,21 @@ test("a power the turn unlocks starts on, and the turn is chosen for the table",
   assert.equal(B.setUnlocked(s, false), s);
   const loaded = { ...s, round: 11 };
   assert.equal(B.setUnlocked(loaded, true), loaded, "turn 11 is already past 7");
+});
+
+test("an edit that changes nothing on a kit gives the same state (no new run)", () => {
+  let s = B.addMinion(duel(), "player", 0, "BG28_300", cards);
+  s = B.setKitCard(s, "player", 0, "power", 0, LOCK);
+  const key = s.player[0].minions[0].key;
+  assert.equal(B.setKitTarget(s, "player", 0, 0, null), s, "already none");
+  assert.equal(B.setHeld(s, "player", 0, 0, null, cards), s, "holding nothing already");
+  assert.equal(B.setKitTarget(s, "player", 0, 1, key), s, "no power in slot 1");
+  s = B.setHeld(s, "player", 0, 0, "BGS_119", cards);
+  const held = s.player[0].kit?.powers[0].held;
+  assert.equal(B.setHeldStats(s, "player", 0, 0, held?.attack ?? 0, held?.health ?? 1), s, "the same stats");
+  // A loaded Lock and Load that fired its minion keeps its first number when the minion's stats change.
+  const fired = { ...s, player: [{ ...s.player[0], kit: { ...s.player[0].kit!, powers: [{ ...s.player[0].kit!.powers[0], counters: [0, 0, 0, 0, 0] }] } }] };
+  assert.deepEqual(B.setHeldStats(fired, "player", 0, 0, 9, 9).player[0].kit?.powers[0].counters, [0, 0, 0, 0, 0]);
 });
 
 test("start of combat can be turned off, and is sent only when on", () => {
@@ -158,6 +182,18 @@ test("a saved round brings each board's hero powers and trinkets, at the first a
   assert.equal(req.round, 2);
   assert.equal("start_of_combat" in req, false);
   assert.deepEqual(req.opponent[0].kit, { powers: [{ card_id: FIRE, slot: 0 }], trinkets: [] });
+});
+
+test("a loaded kit fits the slots the editor offers, so nothing is sent unseen", () => {
+  const rec = kitGame(16);
+  const entry = rec.report.rounds.find((r) => r.number === 2)!.entries[0];
+  const card = (cardId: string, slot: number) => ({ cardId, slot, counters: [0, 0, 0, 0, 0], target: null, held: null });
+  entry.kit = { powers: [card(FIRE, 0), card(RAPID, 0), card(LOCK, 0)], trinkets: [card("BG_TRINKET_SYN", 0), card("BG_TRINKET2_SYN", 1), card("BG_X1", 2), card("BG_X2", 3)] };
+  const loaded = B.fromRound(rec, 2, cards);
+  assert.ok(loaded);
+  const kit = loaded.state.player[0].kit;
+  assert.deepEqual(kit?.powers.map((c) => [c.slot, c.cardId]), [[0, FIRE], [1, RAPID]], "two powers; a third has no slot");
+  assert.deepEqual(kit?.trinkets.map((c) => [c.slot, c.cardId]), [[1, "BG_TRINKET2_SYN"], [2, "BG_X1"], [3, "BG_X2"]], "a slot 0 trinket waits for a free slot");
 });
 
 test("a game saved before revision 16 says its kits were not recorded", () => {
@@ -206,7 +242,7 @@ test("the editor lists hero powers and trinkets by name, per slot, with what a p
   const holding = B.setHeld(s, "player", 0, 0, "BGS_119", cards);
   const held = html([kitView("player", 0, { state: holding, cards, lists, marks: NO_MARKS, holding: null })]);
   assert.match(held, /data-field="held-attack"/);
-  assert.match(held, /data-act="held-remove"/);
+  assert.match(held, /data-act="held-remove"[^>]*data-focus="held-x-player-0-0"/);
 });
 
 test("a chosen minion and the turn have their own controls; a blocked power says so", () => {
@@ -217,7 +253,8 @@ test("a chosen minion and the turn have their own controls; a blocked power says
   assert.match(target, /1\. Synthetic Spark/);
   s = B.setUnlocked(B.setKitCard(s, "opponent", 0, "power", 0, FROSTWOLF), true);
   const turn = kitView("opponent", 0, { state: s, cards, lists, marks: NO_MARKS, holding: null });
-  assert.match(html([turn]), /data-act="kit-turn" data-late="1"[^>]*aria-pressed="true"/);
+  assert.match(html([turn]), /data-act="kit-turn" data-late="1" data-focus="kit-turn-opponent-0-0-1" aria-pressed="true"/);
+  assert.ok(textOf(turn).includes("Turn 7 or later"));
   const marks = { notModelled: new Set([FROSTWOLF]), missing: new Set<string>(), approximate: new Map<string, string>() };
   assert.ok(textOf(kitView("opponent", 0, { state: s, cards, lists, marks, holding: null })).includes("Not modelled"));
 });
@@ -235,6 +272,26 @@ test("the editor shows the kits on every board, and Spanish names its slots", ()
   useCardNames(null);
   const none = textOf(kitView("player", 0, { state: duel(), cards, lists: { power: [], lesser: [], greater: [] }, marks: NO_MARKS, holding: null }));
   assert.ok(none.includes("No se han cargado"));
+});
+
+test("a blocked hero power is named in the result, with its reason and a hint that fits", () => {
+  useCardNames({ cards, ...names });
+  const answer = readAnswer(JSON.stringify({ engine: "0.13.0", status: "not_modelled", not_modelled: [LOCK], reasons: [{ card_id: LOCK, reason: "the minion it holds is not shown" }], approximate: [] }));
+  const out = textOf(resultView({ result: { kind: "answer", answer }, cards, cap: null, kitIds: new Set([LOCK]) }).map((n) => n as never)[0]);
+  assert.ok(out.includes("Lock and Load"), out);
+  assert.ok(out.includes("Choose what a hero power needs"), out);
+  // In the slot: the reason, not "Not modelled".
+  const s = B.setKitCard(duel(), "player", 0, "power", 0, LOCK);
+  const marks = { notModelled: new Set([LOCK]), missing: new Set<string>(), approximate: new Map<string, string>(), reasons: new Map([[LOCK, "the minion it holds is not shown"]]) };
+  const slot = textOf(kitView("player", 0, { state: s, cards, lists, marks, holding: null }));
+  assert.ok(slot.includes("the minion it holds is not shown") && !slot.includes("Not modelled"), slot);
+});
+
+test("a power's needs say they wait for start of combat when it is off", () => {
+  useCardNames({ cards, ...names });
+  const s = B.setStartOfCombat(B.setKitCard(duel(), "player", 0, "power", 0, RAPID), false);
+  assert.ok(textOf(kitView("player", 0, { state: s, cards, lists, marks: NO_MARKS, holding: null })).includes("Used only when start of combat is played"));
+  assert.ok(!textOf(kitView("player", 0, { state: B.setStartOfCombat(s, true), cards, lists, marks: NO_MARKS, holding: null })).includes("Used only when"));
 });
 
 test("the start-of-combat switch says whether it is on", () => {

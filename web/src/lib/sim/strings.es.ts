@@ -137,7 +137,9 @@ export const ES: Record<SimStringKey, string> = {
   "kit.heldFind": "Busca el esbirro que guarda",
   "kit.heldRemove": "Quitar {name}",
   "kit.turn": "Turno",
-  "kit.before": "Antes del turno 7",
-  "kit.after": "Turno 7 o después",
+  "kit.before": "Antes del turno {turn}",
+  "kit.after": "Turno {turn} o después",
+  "kit.needsSoc": "Solo cuenta si se juega el inicio del combate.",
+  "result.notModelledKitHint": "Elige lo que necesita el poder de héroe (el esbirro que elige o guarda, el turno) o quita la carta. Para tableros tomados en el primer ataque, desactiva «Jugar el inicio del combate».",
   "kit.noNames": "No se han cargado los nombres de los poderes de héroe y los abalorios.",
 };

@@ -10,7 +10,7 @@
 import type { Buff } from "../game/buffs.ts";
 import type { GameRecord, GameValues, Kit as ReportKit, Minion as ReportMinion, Round } from "../game/report.ts";
 import type { CardIndex } from "./cards.ts";
-import { emptyKit, type KitKind, kitCards, kitFromRecord, kitRequest, type SimKit, UNLOCK_TURN, withCard, withHeld, withoutTarget, withTarget } from "./kit.ts";
+import { emptyKit, type KitKind, kitCards, kitFromRecord, kitRequest, POWER_SLOTS, type SimKit, TRINKET_SLOTS, UNLOCK_TURN, withCard, withHeld, withHeldStats, withoutTarget, withTarget } from "./kit.ts";
 
 /** The keywords the engine tracks, by the names the request uses. */
 export const SIM_KEYWORDS = ["taunt", "divine_shield", "reborn", "venomous", "poisonous", "windfury", "mega_windfury", "stealth"] as const;
@@ -205,7 +205,8 @@ export function fromRound(record: GameRecord, roundNumber: number, cards: CardIn
   const player = own.slice(0, keep).map((f) => board(f, isLocal(f) ? ownTier : null));
   const opponent = opp.slice(0, keep).map((f) => board(f, null));
   return {
-    state: { mode, player, opponent, cap: null, build: report.build, round: roundNumber, startOfCombat: false },
+    // A turn the engine takes (1 on); a record's 0 is not one.
+    state: { mode, player, opponent, cap: null, build: report.build, round: roundNumber >= 1 ? roundNumber : null, startOfCombat: false },
     skipped,
     unknownGifts,
     giftsNotRecorded: record.revision === null || record.revision < GIFTS_REVISION,
@@ -342,8 +343,10 @@ function mapKit(state: SimState, side: Side, index: number, change: (k: SimKit |
   return next === now ? state : mapBoard(state, side, index, (b) => ({ ...b, kit: next }));
 }
 
-/** A hero power or trinket in a slot, or the slot emptied (null). */
+/** A hero power or trinket in a slot, or the slot emptied (null); a slot the editor does not offer changes nothing. */
 export function setKitCard(state: SimState, side: Side, index: number, kind: KitKind, slot: number, cardId: string | null): SimState {
+  const slots: readonly number[] = kind === "power" ? POWER_SLOTS : TRINKET_SLOTS;
+  if (!slots.includes(slot)) return state;
   return mapKit(state, side, index, (k) => withCard(k, kind, slot, cardId));
 }
 
@@ -362,11 +365,7 @@ export function setHeld(state: SimState, side: Side, index: number, slot: number
 
 /** The Attack and Health of a held minion, clamped like a board minion's. */
 export function setHeldStats(state: SimState, side: Side, index: number, slot: number, attack: number, health: number): SimState {
-  return mapKit(state, side, index, (k) => {
-    const held = k?.powers.find((c) => c.slot === slot)?.held;
-    if (!k || !held) return k;
-    return withHeld(k, slot, { ...held, attack: clampStat(attack, 0), health: clampStat(health, 1) });
-  });
+  return mapKit(state, side, index, (k) => k && withHeldStats(k, slot, clampStat(attack, 0), clampStat(health, 1)));
 }
 
 /** The combat's turn: before or from the turn some hero powers unlock at. */

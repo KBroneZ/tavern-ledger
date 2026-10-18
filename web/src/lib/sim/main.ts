@@ -92,7 +92,7 @@ function focusOn(selector: string): void {
 }
 
 function drawResult(): void {
-  draw(els.result, resultView({ result, cards, cap: sim.cap }));
+  draw(els.result, resultView({ result, cards, cap: sim.cap, kitIds: new Set(B.allKitCards(sim)) }));
 }
 
 function drawLoad(): void {
@@ -133,7 +133,9 @@ function showFailed(): void {
 }
 
 function marksOf(a: Answer): Marks {
-  if (a.kind === "not_modelled") return { notModelled: new Set(a.notModelled), missing: new Set(), approximate: new Map(a.approximate.map((x) => [x.cardId, x.reason])) };
+  if (a.kind === "not_modelled") {
+    return { notModelled: new Set(a.notModelled), missing: new Set(), approximate: new Map(a.approximate.map((x) => [x.cardId, x.reason])), reasons: new Map(a.reasons.map((x) => [x.cardId, x.reason])) };
+  }
   if (a.kind === "no_card_data") return { notModelled: new Set(), missing: new Set(a.missing), approximate: new Map() };
   if (a.kind === "odds") return { notModelled: new Set(), missing: new Set(), approximate: new Map(a.approximate.map((x) => [x.cardId, x.reason])) };
   return NO_MARKS;
@@ -197,6 +199,7 @@ function onEditorClick(event: Event): void {
     const mode = el.dataset.mode === "duos" ? "duos" : "solo";
     selected = null;
     adding = null;
+    holding = null;
     return update(B.setMode(sim, mode));
   }
   if (act === "retry") {
@@ -272,13 +275,15 @@ function onEditorClick(event: Event): void {
       return update(B.removeBoard(sim, side, board));
     case "held-pick": {
       const slot = Number(el.dataset.slot);
+      if (!Number.isInteger(slot)) return;
       holding = null;
       update(B.setHeld(sim, side, board, slot, el.dataset.card ?? "", cards));
-      focusOn(`[data-focus="held-x-${side}-${board}"]`);
+      focusOn(`[data-focus="held-x-${side}-${board}-${slot}"]`);
       return;
     }
     case "held-remove": {
       const slot = Number(el.dataset.slot);
+      if (!Number.isInteger(slot)) return;
       update(B.setHeld(sim, side, board, slot, null, cards));
       focusOn(`[data-focus="sim-held-${side}-${board}-${slot}"]`);
       return;
@@ -290,7 +295,7 @@ function onEditorInput(event: Event): void {
   const el = event.target as HTMLInputElement;
   if (el.dataset.field === "held-query") {
     const at = sideOf(el);
-    if (!at) return;
+    if (!at || !Number.isInteger(Number(el.dataset.slot))) return;
     holding = { ...at, slot: Number(el.dataset.slot), query: el.value.slice(0, 40) };
     return drawEditor();
   }
@@ -307,6 +312,8 @@ function onKitChange(el: HTMLInputElement | HTMLSelectElement): boolean {
   if (!at || !Number.isInteger(slot)) return false;
   if (field === "kit") {
     const kind: KitKind = el.dataset.kind === "power" ? "power" : "trinket";
+    // A search for the slot's old card is not one for its new card.
+    holding = null;
     update(B.setKitCard(sim, at.side, at.board, kind, slot, el.value === "" ? null : el.value));
     return true;
   }
