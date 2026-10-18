@@ -37,10 +37,12 @@ import contract from "./report_keys.json" with { type: "json" };
  * 9, T-528, D-107; 9: each board's game-long values, parser revision 10,
  * T-610, D-122; 10: each replay's beats, damage sources and keyword events,
  * parser revision 13, T-575; 11: buffs on board and replay minions, parser
- * revision 14, T-619, D-142). Every answer carries it, and the desktop app
- * retries a game this server refused once when it sees a higher number (D-047).
+ * revision 14, T-619, D-142; 12: each board's hero powers and trinkets and
+ * replay minions' two numbers, parser revision 16, T-628, D-157). Every
+ * answer carries it, and the desktop app retries a game this server refused
+ * once when it sees a higher number (D-047).
  */
-export const VALIDATOR_VERSION = 11;
+export const VALIDATOR_VERSION = 12;
 
 export const SESSION_PATTERN = /^Hearthstone_(\d{4})_(\d{2})_(\d{2})_\d{2}_\d{2}_\d{2}$/;
 const PATH_PATTERN = /\/v1\/games\/(Hearthstone_\d{4}(?:_\d{2}){5})\/([1-9][0-9]{0,3})$/;
@@ -97,6 +99,13 @@ const TURN_KEYS_SINCE_R4 = [
 // Older records have none of them, so none is required. Bounds are the
 // parser's (leaderboard.rs, discover.rs).
 const TRINKET_SLOTS = new Set(["first", "second", "hero_power"]);
+// Parser revision 16 (T-628, D-157): each board's hero powers and trinkets
+// as the combat started, the parser's bounds (crates/bg-parser/src/kit.rs).
+const MAX_KIT_CARDS = 4;
+const MAX_KIT_SLOT = 3;
+const KIT_NUMBERS = 5;
+// The board position of the minion a hero power names.
+const MAX_BOARD_POSITION = 7;
 const MAX_CHANGES = 64;
 const MAX_TRIPLES = 1000;
 const MAX_DISCOVERS = 200;
@@ -181,6 +190,7 @@ const KEYS: Record<string, string[]> = {
     "gifts",
     "gift_unknown",
     "buffs",
+    "counters",
   ],
   "report.rounds[].replay.minions[].buffs[]": ["card_id", "count"],
   "report.rounds[].replay.events[]": [
@@ -199,7 +209,18 @@ const KEYS: Record<string, string[]> = {
     "hero",
     "keyword",
   ],
-  "report.rounds[].entries[]": ["side", "player_id", "hero", "board", "values"],
+  "report.rounds[].entries[]": ["side", "player_id", "hero", "board", "values", "kit"],
+  "report.rounds[].entries[].kit": ["powers", "trinkets"],
+  "report.rounds[].entries[].kit.powers[]": ["card_id", "slot", "counters", "target", "held"],
+  "report.rounds[].entries[].kit.powers[].held": [
+    "card_id",
+    "atk",
+    "health",
+    "golden",
+    "keywords",
+    "gifts",
+  ],
+  "report.rounds[].entries[].kit.trinkets[]": ["card_id", "slot", "counters"],
   "report.rounds[].entries[].values": [
     "blood_gem_atk",
     "blood_gem_health",
@@ -346,6 +367,62 @@ function entry(v: unknown, field: string, seen: Seen): void {
     if (!hasBoard) throw new Invalid(`${field}.values`);
     gameValues(e.values, `${field}.values`);
   }
+  if (e.kit !== undefined) {
+    if (!hasBoard) throw new Invalid(`${field}.kit`);
+    kit(e.kit, `${field}.kit`, e.side === "opponent");
+  }
+}
+
+/**
+ * A board's hero powers and trinkets as the combat started (parser revision
+ * 16, T-628, D-157, D-164): each by card id and slot, the numbers its text
+ * shows (five, left out when all are 0), and for a hero power the board
+ * position of the minion it names and, on the player's own side only, the
+ * minion it holds.
+ */
+function kit(v: unknown, field: string, opponent: boolean): void {
+  const k = shape(v, field, KEYS["report.rounds[].entries[].kit"], ["powers", "trinkets"]);
+  const powers = list(k.powers, `${field}.powers`, MAX_KIT_CARDS);
+  powers.forEach((c, i) => kitCard(c, `${field}.powers[${i}]`, true, opponent));
+  const trinkets = list(k.trinkets, `${field}.trinkets`, MAX_KIT_CARDS);
+  trinkets.forEach((c, i) => kitCard(c, `${field}.trinkets[${i}]`, false, opponent));
+}
+
+function kitCard(v: unknown, field: string, power: boolean, opponent: boolean): void {
+  const level = power
+    ? "report.rounds[].entries[].kit.powers[]"
+    : "report.rounds[].entries[].kit.trinkets[]";
+  const c = shape(v, field, KEYS[level], ["card_id", "slot"]);
+  if (cardId(c.card_id, `${field}.card_id`) === null) throw new Invalid(`${field}.card_id`);
+  int(c.slot, `${field}.slot`, 0, MAX_KIT_SLOT);
+  if (c.counters !== undefined) {
+    const n = list(c.counters, `${field}.counters`, KIT_NUMBERS);
+    if (n.length !== KIT_NUMBERS) throw new Invalid(`${field}.counters`);
+    n.forEach((x, i) => int(x, `${field}.counters[${i}]`, 0, MAX_INT));
+    if (n.every((x) => x === 0)) throw new Invalid(`${field}.counters`);
+  }
+  if (c.target !== undefined) int(c.target, `${field}.target`, 1, MAX_BOARD_POSITION);
+  if (c.held !== undefined) {
+    if (opponent) throw new Invalid(`${field}.held`);
+    held(c.held, `${field}.held`);
+  }
+}
+
+/** A minion a hero power holds off the board (Lock and Load). */
+function held(v: unknown, field: string): void {
+  const m = shape(v, field, KEYS["report.rounds[].entries[].kit.powers[].held"], [
+    "card_id",
+    "atk",
+    "health",
+    "golden",
+    "keywords",
+  ]);
+  if (cardId(m.card_id, `${field}.card_id`) === null) throw new Invalid(`${field}.card_id`);
+  int(m.atk, `${field}.atk`, -MAX_INT, MAX_INT);
+  int(m.health, `${field}.health`, -MAX_INT, MAX_INT);
+  if (typeof m.golden !== "boolean") throw new Invalid(`${field}.golden`);
+  keywords(m.keywords, `${field}.keywords`);
+  gifts(m, field);
 }
 
 /**

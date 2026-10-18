@@ -1,0 +1,607 @@
+[
+  {
+    "index": 1,
+    "status": "ok",
+    "game_type": "GT_BATTLEGROUNDS",
+    "build": 254477,
+    "local_player_id": 2,
+    "hero": "SYN_HERO_A",
+    "teammate_player_id": null,
+    "teammate_hero": null,
+    "card_names": {},
+    "final_place": 2,
+    "final_health": 30,
+    "lobby": [
+      {
+        "player_id": 2,
+        "hero": "SYN_HERO_A",
+        "duo_team": null,
+        "final_place": 2,
+        "final_health": 30,
+        "triples": [],
+        "trinkets": []
+      },
+      {
+        "player_id": 3,
+        "hero": "SYN_HERO_B",
+        "duo_team": null,
+        "final_place": 3,
+        "final_health": 30,
+        "triples": [],
+        "trinkets": []
+      }
+    ],
+    "shop_tribes": {},
+    "rounds": [
+      {
+        "number": 1,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "SYN_HERO_A",
+            "board": [
+              {
+                "card_id": "SYN_OWN_A",
+                "atk": 2,
+                "health": 3,
+                "position": 1,
+                "golden": false,
+                "keywords": []
+              },
+              {
+                "card_id": "SYN_OWN_B",
+                "atk": 1,
+                "health": 1,
+                "position": 2,
+                "golden": false,
+                "keywords": []
+              }
+            ],
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "SYN_POWER",
+                  "slot": 0,
+                  "counters": [
+                    5,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "held": {
+                    "card_id": "SYN_HELD",
+                    "atk": 6,
+                    "health": 10,
+                    "golden": false,
+                    "keywords": [],
+                    "gifts": [
+                      "BG36_MidGameEffect_000t9"
+                    ]
+                  }
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "SYN_LESSER",
+                  "slot": 1,
+                  "counters": [
+                    0,
+                    3,
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 2,
+                  "counters": [
+                    4,
+                    0,
+                    0,
+                    0,
+                    0
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "SYN_HERO_B",
+            "board": [
+              {
+                "card_id": "SYN_FOE_A",
+                "atk": 6,
+                "health": 6,
+                "position": 1,
+                "golden": false,
+                "keywords": []
+              },
+              {
+                "card_id": "SYN_FOE_B",
+                "atk": 1,
+                "health": 2,
+                "position": 2,
+                "golden": false,
+                "keywords": []
+              }
+            ],
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "SYN_FOE_POWER",
+                  "slot": 0,
+                  "counters": [
+                    2,
+                    0,
+                    0,
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "SYN_GREATER",
+                  "slot": 2
+                }
+              ]
+            }
+          }
+        ],
+        "own_health_after": 30,
+        "opponents": [
+          3
+        ],
+        "health_after": {
+          "2": 30,
+          "3": 30
+        },
+        "result": null,
+        "replay": {
+          "minions": [
+            {
+              "side": "own",
+              "card_id": "SYN_OWN_A",
+              "atk": 2,
+              "health": 3,
+              "position": 1,
+              "golden": false,
+              "keywords": []
+            },
+            {
+              "side": "own",
+              "card_id": "SYN_OWN_B",
+              "atk": 1,
+              "health": 1,
+              "position": 2,
+              "golden": false,
+              "keywords": []
+            },
+            {
+              "side": "opponent",
+              "card_id": "SYN_FOE_A",
+              "atk": 6,
+              "health": 6,
+              "position": 1,
+              "golden": false,
+              "keywords": [],
+              "counters": [
+                56,
+                42
+              ]
+            },
+            {
+              "side": "opponent",
+              "card_id": "SYN_FOE_B",
+              "atk": 1,
+              "health": 2,
+              "position": 2,
+              "golden": false,
+              "keywords": []
+            }
+          ],
+          "start": 4,
+          "events": [
+            {
+              "kind": "attack",
+              "attacker": 0,
+              "defender": 3
+            },
+            {
+              "kind": "damage",
+              "minion": 3,
+              "amount": 2,
+              "health": 0,
+              "source": {
+                "how": "attack",
+                "minion": 0
+              }
+            },
+            {
+              "kind": "damage",
+              "minion": 0,
+              "amount": 1,
+              "health": 2,
+              "source": {
+                "how": "attack",
+                "minion": 3
+              }
+            }
+          ],
+          "beats": [
+            3
+          ],
+          "complete": true
+        }
+      }
+    ],
+    "start_health": {
+      "2": 30,
+      "3": 30
+    },
+    "shop": {
+      "turns": [
+        {
+          "turn": 1,
+          "start_ms": 0,
+          "end_ms": 0,
+          "tier": null,
+          "gold": 1,
+          "gold_spent": 0,
+          "rolls": 0,
+          "free_rolls": 0,
+          "buys": [],
+          "spell_buys": 0,
+          "sells": [],
+          "freezes": 0,
+          "offers": [],
+          "actions": 0,
+          "extra_gold": 1,
+          "sell_gold": 0,
+          "buy_gold": 0,
+          "spell_gold": 0,
+          "free_refreshes": null,
+          "passes": []
+        },
+        {
+          "turn": 2,
+          "start_ms": 0,
+          "end_ms": 0,
+          "tier": null,
+          "gold": 1,
+          "gold_spent": 0,
+          "rolls": 0,
+          "free_rolls": 0,
+          "buys": [],
+          "spell_buys": 0,
+          "sells": [],
+          "freezes": 0,
+          "offers": [],
+          "actions": 0,
+          "extra_gold": 0,
+          "sell_gold": 0,
+          "buy_gold": 0,
+          "spell_gold": 0,
+          "free_refreshes": null,
+          "passes": []
+        }
+      ],
+      "tier_ups": [],
+      "actions": [],
+      "start_ms": 0,
+      "end_ms": 0,
+      "ended": true
+    },
+    "hero_select": null,
+    "skin_parents": {},
+    "discovers": [],
+    "old_god": null,
+    "warnings": [],
+    "problems": [],
+    "not_in_log": [
+      "MMR",
+      "available tribes (exact list)"
+    ]
+  },
+  {
+    "index": 1,
+    "status": "ok",
+    "game_type": "GT_BATTLEGROUNDS",
+    "build": 254477,
+    "local_player_id": 2,
+    "hero": "SYN_HERO_A",
+    "teammate_player_id": null,
+    "teammate_hero": null,
+    "card_names": {},
+    "final_place": 2,
+    "final_health": 30,
+    "lobby": [
+      {
+        "player_id": 2,
+        "hero": "SYN_HERO_A",
+        "duo_team": null,
+        "final_place": 2,
+        "final_health": 30,
+        "triples": [],
+        "trinkets": []
+      },
+      {
+        "player_id": 3,
+        "hero": "SYN_HERO_B",
+        "duo_team": null,
+        "final_place": 3,
+        "final_health": 30,
+        "triples": [],
+        "trinkets": []
+      }
+    ],
+    "shop_tribes": {},
+    "rounds": [
+      {
+        "number": 1,
+        "entries": [
+          {
+            "side": "own",
+            "player_id": 2,
+            "hero": "SYN_HERO_A",
+            "board": [
+              {
+                "card_id": "SYN_OWN_A",
+                "atk": 2,
+                "health": 3,
+                "position": 1,
+                "golden": false,
+                "keywords": []
+              },
+              {
+                "card_id": "SYN_OWN_B",
+                "atk": 1,
+                "health": 1,
+                "position": 2,
+                "golden": false,
+                "keywords": []
+              }
+            ],
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "SYN_POWER",
+                  "slot": 0,
+                  "counters": [
+                    5,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "target": 2
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "SYN_LESSER",
+                  "slot": 1,
+                  "counters": [
+                    0,
+                    3,
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 2,
+                  "counters": [
+                    4,
+                    0,
+                    0,
+                    0,
+                    0
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "side": "opponent",
+            "player_id": 3,
+            "hero": "SYN_HERO_B",
+            "board": [
+              {
+                "card_id": "SYN_FOE_A",
+                "atk": 6,
+                "health": 6,
+                "position": 1,
+                "golden": false,
+                "keywords": []
+              },
+              {
+                "card_id": "SYN_FOE_B",
+                "atk": 1,
+                "health": 2,
+                "position": 2,
+                "golden": false,
+                "keywords": []
+              }
+            ],
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "SYN_FOE_POWER",
+                  "slot": 0,
+                  "counters": [
+                    2,
+                    0,
+                    0,
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "SYN_GREATER",
+                  "slot": 2
+                }
+              ]
+            }
+          }
+        ],
+        "own_health_after": 30,
+        "opponents": [
+          3
+        ],
+        "health_after": {
+          "2": 30,
+          "3": 30
+        },
+        "result": null,
+        "replay": {
+          "minions": [
+            {
+              "side": "own",
+              "card_id": "SYN_OWN_A",
+              "atk": 2,
+              "health": 3,
+              "position": 1,
+              "golden": false,
+              "keywords": []
+            },
+            {
+              "side": "own",
+              "card_id": "SYN_OWN_B",
+              "atk": 1,
+              "health": 1,
+              "position": 2,
+              "golden": false,
+              "keywords": []
+            },
+            {
+              "side": "opponent",
+              "card_id": "SYN_FOE_A",
+              "atk": 6,
+              "health": 6,
+              "position": 1,
+              "golden": false,
+              "keywords": []
+            },
+            {
+              "side": "opponent",
+              "card_id": "SYN_FOE_B",
+              "atk": 1,
+              "health": 2,
+              "position": 2,
+              "golden": false,
+              "keywords": []
+            }
+          ],
+          "start": 4,
+          "events": [
+            {
+              "kind": "attack",
+              "attacker": 0,
+              "defender": 3
+            },
+            {
+              "kind": "damage",
+              "minion": 3,
+              "amount": 2,
+              "health": 0,
+              "source": {
+                "how": "attack",
+                "minion": 0
+              }
+            },
+            {
+              "kind": "damage",
+              "minion": 0,
+              "amount": 1,
+              "health": 2,
+              "source": {
+                "how": "attack",
+                "minion": 3
+              }
+            }
+          ],
+          "beats": [
+            3
+          ],
+          "complete": true
+        }
+      }
+    ],
+    "start_health": {
+      "2": 30,
+      "3": 30
+    },
+    "shop": {
+      "turns": [
+        {
+          "turn": 1,
+          "start_ms": 0,
+          "end_ms": 0,
+          "tier": null,
+          "gold": 1,
+          "gold_spent": 0,
+          "rolls": 0,
+          "free_rolls": 0,
+          "buys": [],
+          "spell_buys": 0,
+          "sells": [],
+          "freezes": 0,
+          "offers": [],
+          "actions": 0,
+          "extra_gold": 1,
+          "sell_gold": 0,
+          "buy_gold": 0,
+          "spell_gold": 0,
+          "free_refreshes": null,
+          "passes": []
+        },
+        {
+          "turn": 2,
+          "start_ms": 0,
+          "end_ms": 0,
+          "tier": null,
+          "gold": 1,
+          "gold_spent": 0,
+          "rolls": 0,
+          "free_rolls": 0,
+          "buys": [],
+          "spell_buys": 0,
+          "sells": [],
+          "freezes": 0,
+          "offers": [],
+          "actions": 0,
+          "extra_gold": 0,
+          "sell_gold": 0,
+          "buy_gold": 0,
+          "spell_gold": 0,
+          "free_refreshes": null,
+          "passes": []
+        }
+      ],
+      "tier_ups": [],
+      "actions": [],
+      "start_ms": 0,
+      "end_ms": 0,
+      "ended": true
+    },
+    "hero_select": null,
+    "skin_parents": {},
+    "discovers": [],
+    "old_god": null,
+    "warnings": [],
+    "problems": [],
+    "not_in_log": [
+      "MMR",
+      "available tribes (exact list)"
+    ]
+  }
+]

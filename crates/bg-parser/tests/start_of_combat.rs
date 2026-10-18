@@ -370,16 +370,136 @@ fn a_minion_the_power_holds_off_the_board_is_kept_with_its_stats() {
     assert_eq!(power.target, None);
     // A minion on the board is a target, not held.
     assert_eq!(own_power(&report(&solo())).held, None);
-    let json = serde_json::to_string(&r).expect("serializable");
-    assert!(!json.contains("SYN_HELD"));
+    // Saved with the player's own kit (parser revision 16): its card id,
+    // stats, golden flag and keywords.
+    let json = serde_json::to_value(&r).expect("serializable");
+    let held = &json["rounds"][0]["entries"][0]["kit"]["powers"][0]["held"];
+    assert_eq!(
+        held,
+        &serde_json::json!({
+            "card_id": "SYN_HELD", "atk": 6, "health": 10, "golden": false, "keywords": ["taunt"]
+        })
+    );
+}
+
+/// `solo_naming(71, ...)` with the held minion carrying a Dark Gift, for
+/// the saved report below.
+fn solo_holding_a_gifted_minion() -> Vec<String> {
+    let mut extra = entity(
+        1,
+        71,
+        "SYN_HELD",
+        &[
+            ("CARDTYPE", "MINION".into()),
+            ("CONTROLLER", "2".into()),
+            ("ZONE", "SETASIDE".into()),
+            ("ATK", "6".into()),
+            ("HEALTH", "10".into()),
+        ],
+    );
+    extra.extend(entity(
+        1,
+        72,
+        "BG36_MidGameEffect_000t9e2",
+        &[
+            ("CARDTYPE", "ENCHANTMENT".into()),
+            ("CONTROLLER", "2".into()),
+            ("ZONE", "PLAY".into()),
+            ("ATTACHED", "71".into()),
+        ],
+    ));
+    let mut l = solo_naming(71, extra);
+    // The opponent's minion shows its two numbers (as Hopebringer does).
+    let at = l
+        .iter()
+        .position(|x| x.contains("Entity=40 EffectCardId"))
+        .expect("the opponent's start of combat");
+    l.splice(
+        at..at,
+        [
+            tag("40", "TAG_SCRIPT_DATA_NUM_1", "56"),
+            tag("40", "TAG_SCRIPT_DATA_NUM_2", "42"),
+        ],
+    );
+    l
+}
+
+/// The parser's report of a game with each side's kit and a held minion,
+/// saved for upload-game's Deno tests and the key contract (parser revision
+/// 16). `BLESS=1 cargo test -p bg-parser --test start_of_combat` writes it
+/// again.
+#[test]
+fn the_saved_report_with_kits_for_upload_game_is_current() {
+    let reports = vec![report(&solo_holding_a_gifted_minion()), report(&solo())];
+    let text = serde_json::to_string_pretty(&reports).unwrap() + "\n";
+    let path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/rust/kit_games.json");
+    if std::env::var_os("BLESS").is_some() {
+        std::fs::write(&path, &text).unwrap();
+    }
+    let saved = std::fs::read_to_string(&path)
+        .unwrap_or_default()
+        .replace("\r\n", "\n");
+    assert_eq!(
+        saved, text,
+        "run BLESS=1 cargo test -p bg-parser --test start_of_combat"
+    );
+    assert!(
+        text.contains("\"held\"") && text.contains("\"target\"") && text.contains("\"counters\"")
+    );
 }
 
 #[test]
-fn none_of_it_is_saved() {
+fn each_sides_kit_is_saved_with_its_board() {
     let r = report(&solo());
-    let json = serde_json::to_string(&r).expect("serializable");
-    assert!(!json.contains("before") && !json.contains("SYN_POWER"));
-    assert!(!json.contains("SYN_LESSER") && !json.contains("kit"));
+    let json = serde_json::to_value(&r).expect("serializable");
+    let entries = &json["rounds"][0]["entries"];
+    assert_eq!(entries[0]["side"], "own");
+    assert_eq!(
+        entries[0]["kit"],
+        serde_json::json!({
+            "powers": [{"card_id": "SYN_POWER", "slot": 0, "counters": [5, 0, 0, 0, 0], "target": 2}],
+            "trinkets": [
+                {"card_id": "SYN_LESSER", "slot": 1, "counters": [0, 3, 0, 0, 0]},
+                {"card_id": "BG30_Trinket_2nd", "slot": 2, "counters": [4, 0, 0, 0, 0]}
+            ]
+        })
+    );
+    // The opponent's too (D-164), as the game shows them at combat setup.
+    const { assert!(bg_parser::report::SAVE_OPPONENT_KIT) };
+    assert_eq!(
+        entries[1]["kit"],
+        serde_json::json!({
+            "powers": [{"card_id": "SYN_FOE_POWER", "slot": 0, "counters": [2, 0, 0, 0, 0]}],
+            "trinkets": [{"card_id": "SYN_GREATER", "slot": 2}]
+        })
+    );
+    assert!(!json.to_string().contains("before"));
+}
+
+#[test]
+fn the_opponents_kit_is_saved_without_a_held_minion() {
+    let mut r = report(&solo());
+    let held = report(&solo_holding_a_gifted_minion()).rounds[0].entries[0]
+        .kit
+        .clone()
+        .expect("kit")
+        .powers[0]
+        .held
+        .clone();
+    assert!(held.is_some());
+    let opp = r.rounds[0]
+        .entries
+        .iter_mut()
+        .find(|e| e.side == Side::Opponent)
+        .unwrap();
+    opp.kit.as_mut().unwrap().powers[0].held = held;
+    let json = serde_json::to_value(&r).expect("serializable");
+    assert_eq!(
+        json["rounds"][0]["entries"][1]["kit"]["powers"][0].get("held"),
+        None
+    );
+    assert!(!json.to_string().contains("SYN_HELD"));
 }
 
 #[test]
@@ -574,7 +694,7 @@ fn a_real_combat_keeps_the_board_before_a_hand_summon() {
 }
 
 #[test]
-fn a_minion_keeps_the_numbers_its_text_shows_but_does_not_save_them() {
+fn a_minion_keeps_the_numbers_its_text_shows_and_saves_them_on_the_replay_only() {
     // Like Hopebringer's growing buff: TAG_SCRIPT_DATA_NUM_1 and _2.
     let extra = vec![
         tag("40", "TAG_SCRIPT_DATA_NUM_1", "56"),
@@ -588,6 +708,69 @@ fn a_minion_keeps_the_numbers_its_text_shows_but_does_not_save_them() {
         .unwrap();
     assert_eq!(opp.before.as_ref().unwrap()[0].counters, [56, 42]);
     assert_eq!(opp.before.as_ref().unwrap()[1].counters, [0, 0]);
-    let json = serde_json::to_string(&r).expect("serializable");
-    assert!(!json.contains("counters"));
+    // The replay starts with the boards before start of combat: the
+    // minion's numbers are saved there (parser revision 16), not on the
+    // board at the first attack.
+    let json = serde_json::to_value(&r).expect("serializable");
+    let round = &json["rounds"][0];
+    let minions = round["replay"]["minions"].as_array().expect("replay");
+    let foe = minions
+        .iter()
+        .find(|m| m["card_id"] == "SYN_FOE_A")
+        .expect("in the replay");
+    assert_eq!(foe["counters"], serde_json::json!([56, 42]));
+    assert!(minions
+        .iter()
+        .filter(|m| m["card_id"] != "SYN_FOE_A")
+        .all(|m| m.get("counters").is_none()));
+    let boards = round["entries"].to_string();
+    assert!(!boards.contains("\"counters\":[56"));
+}
+
+/// `solo()` with `extra` lines added before the combat turn.
+fn solo_plus(extra: Vec<String>) -> Vec<String> {
+    let mut l = solo();
+    let turn = l
+        .iter()
+        .position(|x| x.contains("tag=TURN value=2"))
+        .expect("combat turn");
+    l.splice(turn..turn, extra);
+    l
+}
+
+#[test]
+fn slots_and_targets_are_kept_only_within_what_a_board_has() {
+    // A slot no trinket has, and a named minion past the seventh place.
+    let r = report(&solo_plus(vec![
+        tag("51", "TAG_SCRIPT_DATA_NUM_6", "9"),
+        tag("22", "ZONE_POSITION", "9"),
+    ]));
+    let kit = r.rounds[0].entries[0].kit.clone().expect("kit");
+    assert_eq!(kit.trinkets[0].card_id, "SYN_LESSER");
+    assert_eq!(kit.trinkets[0].slot, 0);
+    assert_eq!(kit.powers[0].target, None);
+}
+
+#[test]
+fn a_trinket_never_names_or_holds_a_minion() {
+    let held = entity(
+        1,
+        71,
+        "SYN_HELD",
+        &[
+            ("CARDTYPE", "MINION".into()),
+            ("CONTROLLER", "2".into()),
+            ("ZONE", "SETASIDE".into()),
+            ("ATK", "6".into()),
+            ("HEALTH", "10".into()),
+        ],
+    );
+    for named in ["22", "71"] {
+        let mut extra = held.clone();
+        extra.push(tag("51", "TAG_SCRIPT_DATA_ENT_1", named));
+        let r = report(&solo_plus(extra));
+        let trinket = r.rounds[0].entries[0].kit.clone().expect("kit").trinkets[0].clone();
+        assert_eq!(trinket.card_id, "SYN_LESSER");
+        assert_eq!((trinket.target, trinket.held), (None, None), "{named}");
+    }
 }

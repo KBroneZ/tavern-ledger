@@ -1384,3 +1384,59 @@ fn the_block_stack_survives_lost_ends_and_deep_nesting() {
     );
     assert_eq!(replay.beats, [2, 3, 1, 2]);
 }
+
+/// A combat whose first effect is a spell of the player's in `zone` firing
+/// a top-level trigger with `keyword` (a Tavern spell cast for the combat:
+/// Upper Hand sets an enemy minion's Health to 1), then an attack.
+fn spell_first(card: &str, zone: &str, keyword: &str) -> CombatReplay {
+    let mut l = start();
+    l.extend(entity(
+        80,
+        card,
+        &[
+            ("CARDTYPE", "SPELL".into()),
+            ("CONTROLLER", "2".into()),
+            ("ZONE", zone.into()),
+        ],
+    ));
+    l.extend(minion(30, "SYN_OWN", 2, 1, (2, 3), &[]));
+    l.extend(minion(40, "SYN_FOE_A", 10, 1, (3, 9), &[]));
+    l.push(block("TRIGGER", 80, keyword));
+    l.push(tag("40", "HEALTH", "1"));
+    l.push(end());
+    l.push(block("ATTACK", 30, ""));
+    l.push(tag("GameEntity", "PROPOSED_DEFENDER", "40"));
+    l.push(tag("40", "DAMAGE", "2"));
+    l.push(end());
+    replay(&finished(l), 1)
+}
+
+#[test]
+fn a_tavern_spell_cast_for_the_combat_starts_the_replay_before_its_effect() {
+    let r = spell_first("SYN_SPELL", "SECRET", "OBJECTIVE");
+    assert!(
+        matches!(&r.events[0], CombatEvent::Trigger { card_id, .. } if card_id == "SYN_SPELL"),
+        "{:?}",
+        r.events[0]
+    );
+    let foe = r
+        .minions
+        .iter()
+        .find(|m| m.card_id.as_deref() == Some("SYN_FOE_A"))
+        .unwrap();
+    assert_eq!(foe.health, 9, "the board before the spell");
+    // Not the Old God, a quest, a card in the hand, or another kind of block.
+    for (card, zone, keyword) in [
+        ("BG_OldGod", "SECRET", "OBJECTIVE"),
+        ("SYN_Quest_A", "SECRET", "OBJECTIVE"),
+        ("SYN_SPELL", "HAND", "OBJECTIVE"),
+        ("SYN_SPELL", "SECRET", "TAG_NOT_SET"),
+    ] {
+        let r = spell_first(card, zone, keyword);
+        assert!(
+            matches!(r.events[0], CombatEvent::Attack { .. }),
+            "{card} {zone} {keyword}: {:?}",
+            r.events[0]
+        );
+    }
+}

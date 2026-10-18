@@ -59,7 +59,11 @@
                   "taunt"
                 ]
               }
-            ]
+            ],
+            "kit": {
+              "powers": [],
+              "trinkets": []
+            }
           },
           {
             "side": "opponent",
@@ -90,7 +94,11 @@
                 "golden": false,
                 "keywords": []
               }
-            ]
+            ],
+            "kit": {
+              "powers": [],
+              "trinkets": []
+            }
           }
         ],
         "own_health_after": 30,

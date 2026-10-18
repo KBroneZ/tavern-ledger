@@ -66,7 +66,16 @@
             "side": "own",
             "player_id": 2,
             "hero": "BG20_HERO_202",
-            "board": []
+            "board": [],
+            "kit": {
+              "powers": [],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                }
+              ]
+            }
           },
           {
             "side": "opponent",
@@ -93,7 +102,11 @@
                 "golden": false,
                 "keywords": []
               }
-            ]
+            ],
+            "kit": {
+              "powers": [],
+              "trinkets": []
+            }
           }
         ],
         "own_health_after": 30,
@@ -399,7 +412,11 @@
                   "deathrattle"
                 ]
               }
-            ]
+            ],
+            "kit": {
+              "powers": [],
+              "trinkets": []
+            }
           },
           {
             "side": "opponent",
@@ -414,7 +431,11 @@
                 "golden": false,
                 "keywords": []
               }
-            ]
+            ],
+            "kit": {
+              "powers": [],
+              "trinkets": []
+            }
           },
           {
             "side": "own",

@@ -120,6 +120,17 @@ fn a_real_parser_report_passes_the_check() {
     // And a full shop record (T-204, T-205), and the revision 4 fields:
     // results, hero pick, skin links, shop extras (T-206 to T-214).
     let data = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../bg-parser/tests/data");
+    // The parser's kits (revision 16): powers, trinkets, a held minion, numbers.
+    let kits: Vec<Value> =
+        serde_json::from_str(&std::fs::read_to_string(data.join("rust/kit_games.json")).unwrap())
+            .unwrap();
+    for report in &kits {
+        assert!(
+            built(report).is_ok(),
+            "kit_games: {:?}",
+            built(report).err()
+        );
+    }
     for name in [
         "solo_shop_game.log",
         "solo_data_game.log",

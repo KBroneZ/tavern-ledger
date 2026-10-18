@@ -67,6 +67,30 @@ const MINION: Shape = Shape::Object(&[
     ("buffs", Shape::List(&BUFF)),
 ]);
 
+/// A minion a hero power holds off the board (parser revision 16).
+const HELD: Shape = Shape::Object(&[
+    ("card_id", Shape::Id),
+    ("atk", Shape::Scalar),
+    ("health", Shape::Scalar),
+    ("golden", Shape::Scalar),
+    ("keywords", Shape::List(&Shape::Id)),
+    ("gifts", Shape::List(&Shape::Id)),
+]);
+
+/// A hero power or trinket of a board (parser revision 16, T-628).
+const KIT_CARD: Shape = Shape::Object(&[
+    ("card_id", Shape::Id),
+    ("slot", Shape::Scalar),
+    ("counters", Shape::List(&Shape::Scalar)),
+    ("target", Shape::Scalar),
+    ("held", HELD),
+]);
+
+const KIT: Shape = Shape::Object(&[
+    ("powers", Shape::List(&KIT_CARD)),
+    ("trinkets", Shape::List(&KIT_CARD)),
+]);
+
 const ENTRY: Shape = Shape::Object(&[
     ("side", Shape::Id),
     ("player_id", Shape::Scalar),
@@ -74,6 +98,8 @@ const ENTRY: Shape = Shape::Object(&[
     ("board", Shape::List(&MINION)),
     // Parser revision 10: the side's game-long values (numbers only).
     ("values", Shape::Map),
+    // Parser revision 16: the hero's powers and trinkets.
+    ("kit", KIT),
 ]);
 
 // Parser revision 8 (T-215, D-099): each shown combat's replay.
@@ -88,6 +114,8 @@ const REPLAY_MINION: Shape = Shape::Object(&[
     ("gifts", Shape::List(&Shape::Id)),
     ("gift_unknown", Shape::Scalar),
     ("buffs", Shape::List(&BUFF)),
+    // Parser revision 16: the two numbers its text shows.
+    ("counters", Shape::List(&Shape::Scalar)),
 ]);
 
 /// Where a damage came from (parser revision 13, T-575).

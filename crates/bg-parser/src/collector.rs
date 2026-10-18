@@ -978,7 +978,7 @@ fn is_game_card(e: &Entity) -> bool {
 /// A Secret or a Tavern spell kept for the next combat (T-628): in the
 /// `SECRET` zone, but not the game's Old God or a quest, which the screen
 /// shows.
-fn is_hidden_secret(e: &Entity) -> bool {
+pub(crate) fn is_hidden_secret(e: &Entity) -> bool {
     let card = e.card_id.as_deref().unwrap_or("");
     e.is("ZONE", "SECRET") && card != "BG_OldGod" && !card.contains("_Quest_")
 }

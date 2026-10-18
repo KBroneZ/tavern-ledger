@@ -55,6 +55,10 @@
               "blood_gem_atk": 3,
               "blood_gem_health": 2,
               "undead_atk": 7
+            },
+            "kit": {
+              "powers": [],
+              "trinkets": []
             }
           },
           {
@@ -87,6 +91,10 @@
               "knights_dead": 2,
               "beetle_atk": 12,
               "beetle_health": 11
+            },
+            "kit": {
+              "powers": [],
+              "trinkets": []
             }
           }
         ],
