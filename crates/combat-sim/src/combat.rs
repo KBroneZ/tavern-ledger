@@ -63,6 +63,10 @@ pub(crate) struct Prepared {
     /// Each side's game-long values, and its teammate's (T-609).
     pub values: [GameValues; 2],
     pub second_values: [GameValues; 2],
+    /// Each side's played hero powers and trinkets, and its teammate's
+    /// (T-628).
+    pub kits: [Vec<KitUse>; 2],
+    pub second_kits: [Vec<KitUse>; 2],
     pub start_of_combat: bool,
     /// Some card here gains what the Amalgam gains (round 5): checked once,
     /// not on every buff.
@@ -104,6 +108,8 @@ impl Prepared {
         let mut start = [units(first[0], &mut cards), units(first[1], &mut cards)];
         let second_tier = second.map(|b| b.and_then(|b| b.tavern_tier));
         let second_values = second.map(|b| b.map_or(GameValues::default(), |b| b.values));
+        let kits = first.map(|b| kit_uses(b.kit.as_ref()));
+        let second_kits = second.map(|b| kit_uses(b.and_then(|b| b.kit.as_ref())));
         let mut second = [
             second[0].map(|b| units(b, &mut cards)),
             second[1].map(|b| units(b, &mut cards)),
@@ -166,6 +172,8 @@ impl Prepared {
             second_tier,
             values: [first[0].values, first[1].values],
             second_values,
+            kits,
+            second_kits,
             start_of_combat,
         }
     }
@@ -521,7 +529,11 @@ mod gifts;
 
 #[path = "combat_values.rs"]
 mod values;
+
+#[path = "combat_kit.rs"]
+mod kit;
 use duos::Legs;
+use kit::{kit_uses, KitUse};
 
 #[cfg(test)]
 #[path = "combat_tests.rs"]
@@ -550,3 +562,7 @@ mod round8_tests;
 #[cfg(test)]
 #[path = "combat_stat_cap_tests.rs"]
 mod stat_cap_tests;
+
+#[cfg(test)]
+#[path = "combat_kit_tests.rs"]
+mod kit_tests;

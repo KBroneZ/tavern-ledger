@@ -7,6 +7,7 @@ use crate::cards::{self, Action, Fidelity, Trigger};
 use crate::combat::{play, CombatResult, Prepared};
 use crate::gifts;
 use crate::kit::{self, KitEffect};
+use crate::kit_effects;
 use crate::model::{BoardError, GameValues, Keywords, Kit, Minion, Team, Tribes, Warband};
 use crate::rng::Rng;
 
@@ -141,19 +142,37 @@ impl Coverage {
         }
     }
 
-    /// A board's hero powers and trinkets (T-628), none of whose effects is
-    /// played yet: one not reviewed blocks; one that acts at the start of
-    /// combat blocks when start of combat is played (with it off, the board
-    /// was taken after it); one that acts later in the combat is
-    /// approximate.
+    /// A board's hero powers and trinkets (T-628): one not reviewed blocks;
+    /// one that acts at the start of combat blocks when start of combat is
+    /// played unless the engine plays it ([`kit_effects`]; with start of
+    /// combat off the board was taken after it); one that acts later in the
+    /// combat is approximate.
     fn add_kit(&mut self, kit: &Kit, start_of_combat: bool) {
         let power_in_combat = kit.powers.iter().any(|p| kit::acts_in_combat(&p.card_id));
         for card in kit.cards() {
             let id = &card.card_id;
             let effect = kit::effect(id);
+            let play = kit_effects::played(id).filter(|_| start_of_combat);
+            if let Some(play) = play {
+                let why = match play.fidelity {
+                    Fidelity::Approximate(why) => Some(why),
+                    Fidelity::Exact => None,
+                };
+                let why = why.or_else(|| {
+                    kit_effects::counter_missing(play, &card.counters)
+                        .then_some(kit::COUNTER_NOT_GIVEN)
+                });
+                if let Some(why) = why {
+                    if !self.approximate.iter().any(|(c, _)| c == id) {
+                        self.approximate.push((id.clone(), why));
+                    }
+                }
+            }
             let refuse = match effect {
                 None => true,
-                Some(KitEffect::StartOfCombat | KitEffect::StartAndInCombat) => start_of_combat,
+                Some(KitEffect::StartOfCombat | KitEffect::StartAndInCombat) => {
+                    start_of_combat && play.is_none()
+                }
                 Some(_) => false,
             };
             if refuse {
@@ -233,6 +252,11 @@ fn start_of_combat_ids(band: &Warband) -> Vec<String> {
         }
         for g in m.gifts.iter().filter(|g| gifts::has_start_of_combat(g)) {
             push_unique(&mut out, g.clone());
+        }
+    }
+    for card in band.kit.iter().flat_map(Kit::cards) {
+        if kit_effects::played(&card.card_id).is_some() {
+            push_unique(&mut out, card.card_id.clone());
         }
     }
     out

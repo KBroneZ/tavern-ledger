@@ -4,9 +4,10 @@
 //! name; one whose text never changes a combat is listed as such; one that
 //! acts in combat is listed with when it acts.
 //!
-//! None of the effects is played yet: a board whose kit acts at the start of
-//! combat must be taken after it (start of combat off, its effect already on
-//! the board), and one that acts during combat makes the odds approximate.
+//! The start-of-combat effects in [`crate::kit_effects`] are played; for any
+//! other power or trinket that acts at the start of combat the board must be
+//! taken after it (start of combat off, its effect already on the board), and
+//! one that acts during combat makes the odds approximate.
 //!
 //! Written from the card texts in HearthstoneJSON (D-038) and the user's
 //! logs; no simulator code was read (clean room).
@@ -37,6 +38,15 @@ pub const NOT_REVIEWED: &str = "the simulator has not reviewed this hero power o
 pub const START_OF_COMBAT_NOT_PLAYED: &str = crate::trials::START_OF_COMBAT_GAP;
 pub const IN_COMBAT_NOT_PLAYED: &str = "its effect during combat is not played yet";
 pub const TWICE_NOT_PLAYED: &str = "it makes a hero power that acts in combat trigger twice";
+pub const COUNTER_NOT_GIVEN: &str = "its numbers are not in the log; the printed ones are used";
+pub const WINGMEN_ORDER: &str =
+    "when its attacks come against the other start-of-combat effects is not checked";
+pub const LIGHTNING_REPEATS: &str = "whether it can hit the same minion twice is not checked";
+pub const TIMEPIECE_ROUNDING: &str = "how it rounds half an odd Attack is not checked";
+pub const PIRATES_WITH_SHIELD: &str =
+    "whether it skips Pirates that already have Divine Shield is not checked";
+pub const LOWEST_TIES: &str = "which minion it picks among equal Attack is not checked";
+pub const HERALD_ORDER: &str = "the order of the Deathrattles it triggers is not checked";
 
 /// What the engine knows of `card_id`; `None`: not reviewed.
 pub fn effect(card_id: &str) -> Option<KitEffect> {

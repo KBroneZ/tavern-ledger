@@ -57,9 +57,9 @@ fn a_hero_power_nobody_reviewed_blocks_by_name() {
 }
 
 #[test]
-fn a_start_of_combat_trinket_blocks_only_when_start_of_combat_is_played() {
-    // Holy Mallet: Start of Combat only.
-    let player = with_kit(vec![plain(2, 2)], &[], &["BG30_MagicItem_902"]);
+fn a_start_of_combat_power_not_played_yet_blocks_only_when_start_of_combat_is_played() {
+    // Earth Invocation: Start of Combat only, not played yet.
+    let player = with_kit(vec![plain(2, 2)], &["BG22_HERO_001p_t1"], &[]);
     let Verdict::Odds(odds) = verdict(&player, false) else {
         panic!("a board taken after start of combat already has it");
     };
@@ -69,7 +69,7 @@ fn a_start_of_combat_trinket_blocks_only_when_start_of_combat_is_played() {
     };
     assert_eq!(
         cov.reasons(),
-        [("BG30_MagicItem_902".to_string(), START_OF_COMBAT_NOT_PLAYED)]
+        [("BG22_HERO_001p_t1".to_string(), START_OF_COMBAT_NOT_PLAYED)]
     );
 }
 
@@ -207,4 +207,42 @@ fn a_duos_teammate_brings_its_own_kit() {
         panic!("the teammate's unknown hero power blocks");
     };
     assert_eq!(cov.kit, ["BG99_HERO_999p"]);
+}
+
+#[test]
+fn a_played_start_of_combat_power_needs_no_board_after_it() {
+    use combat_sim::kit::{COUNTER_NOT_GIVEN, LIGHTNING_REPEATS};
+    // Wax Warband with its buff given (its third number): played, exact.
+    let mut wax = KitCard::new("TB_BaconShop_HP_037a");
+    wax.counters[2] = 3;
+    let player = Warband {
+        kit: Some(Kit {
+            powers: vec![wax],
+            trinkets: Vec::new(),
+        }),
+        tavern_tier: Some(1),
+        ..Warband::new(vec![plain(2, 2)])
+    };
+    let Verdict::Odds(odds) = verdict(&player, true) else {
+        panic!("Wax Warband is played");
+    };
+    assert!(odds.coverage.is_exact(), "{:?}", odds.coverage);
+    // Without its number the printed +1/+1 is used, named.
+    let bare = with_kit(vec![plain(2, 2)], &["TB_BaconShop_HP_037a"], &[]);
+    let Verdict::Odds(odds) = verdict(&bare, true) else {
+        panic!()
+    };
+    assert_eq!(
+        odds.coverage.approximate,
+        [("TB_BaconShop_HP_037a".to_string(), COUNTER_NOT_GIVEN)]
+    );
+    // Lightning Invocation is played, approximate.
+    let lightning = with_kit(vec![plain(2, 2)], &["BG22_HERO_001p_t4"], &[]);
+    let Verdict::Odds(odds) = verdict(&lightning, true) else {
+        panic!()
+    };
+    assert_eq!(
+        odds.coverage.approximate,
+        [("BG22_HERO_001p_t4".to_string(), LIGHTNING_REPEATS)]
+    );
 }

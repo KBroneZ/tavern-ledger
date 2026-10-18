@@ -478,10 +478,10 @@ mod tests {
         let plain = Team::solo(band(vec![Minion::new("BGS_119", 2, 2)], &[]));
         let quiet = [plain.clone(), plain.clone()];
         assert_eq!(leg_rule(&combat(Some(quiet.clone()), &[])), Some(&quiet));
-        // Wax Warband acts at the start of combat and is not played yet.
+        // Rapid Reanimation acts at the start of combat and is not played yet.
         let wax = Team::solo(band(
             vec![Minion::new("BGS_119", 2, 2)],
-            &["TB_BaconShop_HP_037a"],
+            &["BG25_HERO_103p"],
         ));
         assert_eq!(leg_rule(&combat(Some([wax, plain.clone()]), &[])), None);
         // No boards before start of combat: today's.

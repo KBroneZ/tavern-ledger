@@ -557,19 +557,62 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
             others: true,
         }])]),
     ),
-    ("BG24_500", exact(&[Trigger::StartOfCombatUnmodelled])),
-    ("BG36_245", exact(&[Trigger::StartOfCombatUnmodelled])),
-    ("BG36_245_G", exact(&[Trigger::StartOfCombatUnmodelled])),
+    // Amber Guardian: another friendly Dragon +2/+2 and Divine Shield
+    // (golden: two), T-628.
+    ("BG24_500", exact(&[Trigger::StartOfCombat(&[amber(1)])])),
+    // Runic Arcanist: casts Shiny Ring ("give your minions +1/+1") twice
+    // (golden: four times), with the side's spell upgrades from the board's
+    // game-long values (T-628); a board taken after start of combat already
+    // has the casts.
+    (
+        "BG36_245",
+        exact(&[Trigger::StartOfCombat(&[SHINY_RING, SHINY_RING])]),
+    ),
+    (
+        "BG36_245_G",
+        exact(&[Trigger::StartOfCombat(&[
+            SHINY_RING, SHINY_RING, SHINY_RING, SHINY_RING,
+        ])]),
+    ),
     ("BG26_805", exact(&[Trigger::StartOfCombatUnmodelled])),
     ("BG26_354", exact(&[Trigger::StartOfCombatUnmodelled])),
     ("BG27_556", exact(&[Trigger::StartOfCombatUnmodelled])),
     ("BG34_142", exact(&[Trigger::StartOfCombatUnmodelled])),
     ("BG31_810", exact(&[Trigger::StartOfCombatUnmodelled])),
-    ("BG36_620", exact(&[Trigger::StartOfCombatUnmodelled])),
+    // Boom-in-a-Box: 3 damage to every other minion (golden: twice), T-628.
+    (
+        "BG36_620",
+        exact(&[Trigger::StartOfCombat(&[Action::DamageAllOthers(3)])]),
+    ),
     // Golden forms of the cards above.
-    ("BG24_500_G", exact(&[Trigger::StartOfCombatUnmodelled])),
+    ("BG24_500_G", exact(&[Trigger::StartOfCombat(&[amber(2)])])),
     ("BG26_805_G", exact(&[Trigger::StartOfCombatUnmodelled])),
     ("BG34_142_G", exact(&[Trigger::StartOfCombatUnmodelled])),
     ("BG31_810_G", exact(&[Trigger::StartOfCombatUnmodelled])),
-    ("BG36_620_G", exact(&[Trigger::StartOfCombatUnmodelled])),
+    (
+        "BG36_620_G",
+        exact(&[Trigger::StartOfCombat(&[
+            Action::DamageAllOthers(3),
+            Action::DamageAllOthers(3),
+        ])]),
+    ),
 ];
+
+/// Amber Guardian's start of combat on `count` other Dragons.
+const fn amber(count: u8) -> Action {
+    Action::BuffRandomWithKeyword {
+        attack: 2,
+        health: 2,
+        keyword: Keywords::DIVINE_SHIELD,
+        tribe: Tribes::DRAGON,
+        count,
+    }
+}
+
+/// Shiny Ring, the Tavern spell Runic Arcanist casts.
+const SHINY_RING: Action = Action::Spell(&[Action::BuffAll {
+    attack: 1,
+    health: 1,
+    tribe: ANY,
+    others: false,
+}]);

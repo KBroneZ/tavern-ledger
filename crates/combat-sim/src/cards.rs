@@ -139,6 +139,17 @@ pub enum Action {
     /// minion's Attack and full Health, `factor` times over, at most `times`
     /// times per combat (Stalwart Kodo; T-616).
     GiveSummonedOwnStats { factor: i32, times: u8 },
+    /// Give `count` different random friendly minions of `tribe` (not the
+    /// card) stats and a keyword (Amber Guardian; T-628).
+    BuffRandomWithKeyword {
+        attack: i32,
+        health: i32,
+        keyword: Keywords,
+        tribe: Tribes,
+        count: u8,
+    },
+    /// Deal damage to every other minion, both sides (Boom-in-a-Box; T-628).
+    DamageAllOthers(i32),
 }
 
 /// Where Blood Gems go.

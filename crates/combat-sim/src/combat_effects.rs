@@ -259,6 +259,29 @@ impl Combat<'_> {
             Action::GiveSummonedOwnStats { factor, times } => {
                 self.give_summoned_own_stats(side, me, attacker, factor, times)
             }
+            Action::BuffRandomWithKeyword {
+                attack,
+                health,
+                keyword,
+                tribe,
+                count,
+            } => {
+                let pool = self.friends(side, tribe, me);
+                for uid in self.pick(pool, count) {
+                    self.buff(side, uid, attack, health);
+                    if let Some(u) = self.unit_mut(side, uid) {
+                        u.kw = u.kw.union(keyword);
+                    }
+                }
+            }
+            Action::DamageAllOthers(amount) => {
+                let Some(uid) = me else { return };
+                for s in [side, 1 - side] {
+                    for t in self.friends(s, Tribes::NONE, Some(uid)) {
+                        self.damage(s, t, amount, Keywords::NONE, uid);
+                    }
+                }
+            }
         }
     }
 
