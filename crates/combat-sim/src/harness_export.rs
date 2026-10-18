@@ -86,9 +86,11 @@ fn item<'a>(result: CombatResult, boards: impl IntoIterator<Item = &'a Warband>)
         .flat_map(|b| &b.minions)
         .map(|m| m.card_id.as_str())
         .collect();
+    // Start of combat is off here: a card played only from a board taken
+    // before it blocks too.
     let mut blocking: Vec<String> = ids
         .iter()
-        .filter(|id| cards::rules(id).is_none())
+        .filter(|id| cards::rules(id).is_none() || cards::after_start_refusal(id).is_some())
         .map(|id| id.to_string())
         .collect();
     blocking.sort();

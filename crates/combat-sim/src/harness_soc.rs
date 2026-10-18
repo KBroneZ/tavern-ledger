@@ -21,7 +21,7 @@ use bg_parser::report::{CombatEntry, GameReport, HeroKit, Round, Side};
 
 use crate::combat::CombatResult;
 use crate::harness::CardDb;
-use crate::harness_logs::{engine_board, game_values};
+use crate::harness_logs::{engine_board, engine_minion, game_values};
 use crate::model::{Kit, KitCard, Team, Warband};
 use crate::score::{score, Prediction, Report};
 use crate::trials::{simulate_teams, Coverage, Options, Verdict};
@@ -44,9 +44,11 @@ pub struct SocCombat {
     pub hidden: Vec<String>,
 }
 
-/// A hero's kit as the engine takes it; a target is a board index.
-pub(crate) fn engine_kit(kit: &HeroKit) -> Kit {
+/// A hero's kit as the engine takes it, in round `round`; a target is a
+/// board index.
+pub(crate) fn engine_kit(kit: &HeroKit, round: i64, db: &CardDb) -> Kit {
     let card = |c: &bg_parser::report::KitCard| KitCard {
+        held: c.held.as_ref().and_then(|m| engine_minion(m, db)),
         card_id: c.card_id.clone(),
         slot: u8::try_from(c.slot).unwrap_or(0),
         counters: c.counters.map(|n| i32::try_from(n).unwrap_or(0)),
@@ -58,13 +60,14 @@ pub(crate) fn engine_kit(kit: &HeroKit) -> Kit {
     Kit {
         powers: kit.powers.iter().map(card).collect(),
         trinkets: kit.trinkets.iter().map(card).collect(),
+        round: u32::try_from(round).ok(),
     }
 }
 
 /// An entry's two boards with its kit: (at the first attack, before start of
 /// combat). `None` when the entry has no board or a card id is missing.
-fn entry_bands(e: &CombatEntry, db: &CardDb) -> Option<(Warband, Option<Warband>)> {
-    let kit = e.kit.as_ref().map(engine_kit);
+fn entry_bands(e: &CombatEntry, round: i64, db: &CardDb) -> Option<(Warband, Option<Warband>)> {
+    let kit = e.kit.as_ref().map(|k| engine_kit(k, round, db));
     let band = |minions| Warband {
         values: game_values(e.values),
         kit: kit.clone(),
@@ -92,7 +95,7 @@ fn legs(round: &Round, side: Side, db: &CardDb) -> Option<Vec<(Warband, Option<W
             continue;
         }
         seats.push(e.player_id);
-        out.push(entry_bands(e, db)?);
+        out.push(entry_bands(e, round.number, db)?);
     }
     (!out.is_empty()).then_some(out)
 }
@@ -427,6 +430,7 @@ mod tests {
             slot: 1,
             counters: [3, 0, 0, 0, 0],
             target,
+            held: None,
         }
     }
 
@@ -442,7 +446,7 @@ mod tests {
             ],
             trinkets: vec![kit_card("BG30_Trinket_1st", None)],
         };
-        let kit = engine_kit(&kit);
+        let kit = engine_kit(&kit, 7, &CardDb::default());
         let targets: Vec<_> = kit.powers.iter().map(|p| p.target).collect();
         assert_eq!(targets, [Some(0), Some(2), None, None, None]);
         assert_eq!(kit.powers[0].counters, [3, 0, 0, 0, 0]);
@@ -454,6 +458,7 @@ mod tests {
             kit: Some(Kit {
                 powers: powers.iter().map(|id| KitCard::new(*id)).collect(),
                 trinkets: Vec::new(),
+                round: Some(7),
             }),
             tavern_tier: Some(1),
             ..Warband::new(minions)

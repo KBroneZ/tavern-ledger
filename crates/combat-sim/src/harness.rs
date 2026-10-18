@@ -514,7 +514,10 @@ fn render_coverage(out: &mut String, history: &History) {
     let mut by_class: BTreeMap<&str, (u32, u32)> = BTreeMap::new();
     let mut missing: Vec<(&String, u32)> = Vec::new();
     for (id, n) in &history.card_counts {
-        let class = match cards::rules(id) {
+        // The logged boards are taken after start of combat: a card played
+        // only from a board taken before it is not modelled here.
+        let rules = cards::rules(id).filter(|_| cards::after_start_refusal(id).is_none());
+        let class = match rules {
             None => {
                 missing.push((id, *n));
                 "not modelled"

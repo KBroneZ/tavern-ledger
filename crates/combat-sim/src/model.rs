@@ -220,6 +220,9 @@ pub struct KitCard {
     /// The friendly minion it names, by its index on the board (0 is the
     /// left-most).
     pub target: Option<usize>,
+    /// The minion it holds off the board (Lock and Load); `None` when it
+    /// holds none or it is not shown.
+    pub held: Option<Minion>,
 }
 
 impl KitCard {
@@ -237,6 +240,9 @@ impl KitCard {
 pub struct Kit {
     pub powers: Vec<KitCard>,
     pub trinkets: Vec<KitCard>,
+    /// The game's round as the combat starts, for the hero powers that
+    /// unlock on a turn ("Unlocks on Turn 7"); `None` when not given.
+    pub round: Option<u32>,
 }
 
 impl Kit {

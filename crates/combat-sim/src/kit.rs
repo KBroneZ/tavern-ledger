@@ -4,10 +4,11 @@
 //! name; one whose text never changes a combat is listed as such; one that
 //! acts in combat is listed with when it acts.
 //!
-//! The start-of-combat effects in [`crate::kit_effects`] are played; for any
-//! other power or trinket that acts at the start of combat the board must be
-//! taken after it (start of combat off, its effect already on the board), and
-//! one that acts during combat makes the odds approximate.
+//! The start-of-combat effects in [`crate::kit_effects`] are played, with
+//! what the played hero powers do "when you have space" later in the combat;
+//! for any other power or trinket that acts at the start of combat the board
+//! must be taken after it (start of combat off, its effect already on the
+//! board), and one that acts during combat makes the odds approximate.
 //!
 //! Written from the card texts in HearthstoneJSON (D-038) and the user's
 //! logs; no simulator code was read (clean room).
@@ -47,6 +48,17 @@ pub const PIRATES_WITH_SHIELD: &str =
     "whether it skips Pirates that already have Divine Shield is not checked";
 pub const LOWEST_TIES: &str = "which minion it picks among equal Attack is not checked";
 pub const HERALD_ORDER: &str = "the order of the Deathrattles it triggers is not checked";
+pub const COPY_OF_DAMAGED: &str =
+    "whether its copy of a damaged minion keeps the damage is not checked";
+pub const FIRED_AT_RIGHT_END: &str =
+    "where the minion it fires goes on the board is checked on one combat only";
+pub const HIGHEST_TIER_TIES: &str = "which minion it copies among equal Tier is not checked";
+/// Why a played power blocks the odds of a board taken before start of
+/// combat: something it needs beside the board is not given.
+pub const TARGET_NOT_GIVEN: &str = "the minion it names is not shown";
+pub const HELD_NOT_GIVEN: &str = "the minion it holds is not shown";
+pub const ROUND_NOT_GIVEN: &str = "the round, which unlocks it, is not given";
+pub const TEAMMATE_NOT_GIVEN: &str = "its teammate's board is not given";
 
 /// What the engine knows of `card_id`; `None`: not reviewed.
 pub fn effect(card_id: &str) -> Option<KitEffect> {

@@ -292,6 +292,22 @@ impl Combat<'_> {
                     self.buff(side, f, attack, health);
                 }
             }
+            Action::DestroyNeighboursKeepCopies { both } => {
+                if let Some(uid) = me {
+                    self.destroy_neighbours_keep(side, uid, both);
+                }
+            }
+            Action::SummonKept => self.summon_kept(side, src),
+            Action::BecomeLeftCopy => {
+                if let Some(uid) = me {
+                    self.become_left_copy(side, uid);
+                }
+            }
+            Action::BecomeTeammateCopy => {
+                if let Some(uid) = me {
+                    self.become_teammate_copy(side, uid);
+                }
+            }
             Action::DamageAllOthers(amount) => {
                 let Some(uid) = me else { return };
                 for s in [side, 1 - side] {

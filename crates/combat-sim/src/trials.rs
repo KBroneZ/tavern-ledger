@@ -8,7 +8,7 @@ use crate::combat::{play, CombatResult, Prepared};
 use crate::gifts;
 use crate::kit::{self, KitEffect};
 use crate::kit_effects;
-use crate::model::{BoardError, GameValues, Keywords, Kit, Minion, Team, Tribes, Warband};
+use crate::model::{BoardError, GameValues, Keywords, Kit, KitCard, Minion, Team, Tribes, Warband};
 use crate::rng::Rng;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -46,11 +46,27 @@ pub struct Coverage {
     /// The ids of [`Coverage::not_modelled`] that are hero powers or
     /// trinkets (T-628), for their reasons.
     pub kit: Vec<String>,
+    /// Why an id of [`Coverage::not_modelled`] blocks when it is not what
+    /// [`Coverage::reasons`] would say from the id alone: something the card
+    /// or power needs beside the board is not given (T-628 round 3).
+    pub why: Vec<(String, &'static str)>,
+}
+
+/// A board and its teammate's board (`None` in Solo or when not given).
+type WithMate<'a> = (&'a Warband, Option<&'a Warband>);
+
+/// Each board of a team with its teammate's.
+fn with_mates(team: &Team) -> Vec<WithMate<'_>> {
+    let mut out = vec![(&team.first, team.second.as_ref())];
+    if let Some(second) = &team.second {
+        out.push((second, Some(&team.first)));
+    }
+    out
 }
 
 impl Coverage {
     pub fn of(player: &Warband, opponent: &Warband, start_of_combat: bool) -> Coverage {
-        let mut cov = Coverage::of_boards(&[player, opponent], start_of_combat);
+        let mut cov = Coverage::of_boards(&[(player, None), (opponent, None)], start_of_combat);
         if start_of_combat {
             cov.add_side_order(player, opponent);
         }
@@ -63,7 +79,8 @@ impl Coverage {
     /// teammates' boards come in at once it is one for them too, and is not
     /// marked).
     pub fn of_teams(player: &Team, opponent: &Team, start_of_combat: bool) -> Coverage {
-        let boards: Vec<&Warband> = player.boards().chain(opponent.boards()).collect();
+        let mut boards = with_mates(player);
+        boards.extend(with_mates(opponent));
         let mut cov = Coverage::of_boards(&boards, start_of_combat);
         if start_of_combat {
             cov.add_side_order(&player.first, &opponent.first);
@@ -71,16 +88,29 @@ impl Coverage {
         cov
     }
 
-    fn of_boards(boards: &[&Warband], start_of_combat: bool) -> Coverage {
+    fn of_boards(boards: &[WithMate<'_>], start_of_combat: bool) -> Coverage {
         let mut cov = Coverage::default();
-        let minions = boards
-            .iter()
-            .flat_map(|b| b.minions.iter().map(|m| (m, &b.values)));
-        for (m, values) in minions {
+        // A minion a played hero power will bring in (Lock and Load) is
+        // checked like the board's own.
+        let minions = boards.iter().flat_map(|(b, mate)| {
+            b.minions
+                .iter()
+                .chain(held_minions(b, start_of_combat))
+                .map(move |m| (m, &b.values, *mate))
+        });
+        for (m, values, mate) in minions {
             let id = &m.card_id;
             match cards::rules(id) {
                 None => push_unique(&mut cov.not_modelled, id.clone()),
                 Some(rules) => {
+                    // What its start of combat did is needed later and a board
+                    // taken after it no longer shows it (Stitched Salvager).
+                    if let Some(why) = cards::after_start_refusal(id).filter(|_| !start_of_combat) {
+                        cov.refuse(id, why);
+                    }
+                    if start_of_combat && mate.is_none() && copies_teammate(&rules) {
+                        cov.refuse(id, kit::TEAMMATE_NOT_GIVEN);
+                    }
                     // A buff that grows during the game needs the minion's
                     // own numbers (T-628).
                     let numbers_missing = cards::start_of_combat_scales(id) && m.counters == [0, 0];
@@ -91,7 +121,7 @@ impl Coverage {
                         push_unique(&mut cov.not_modelled, id.clone());
                     }
                     if let Fidelity::Approximate(why) = rules.fidelity {
-                        let unplayed = !start_of_combat && spell_at_start_only(why, &rules);
+                        let unplayed = !start_of_combat && acts_at_start_only(&rules);
                         if !played_with(why, values)
                             && !unplayed
                             && !cov.approximate.iter().any(|(c, _)| c == id)
@@ -102,13 +132,15 @@ impl Coverage {
                 }
             }
         }
-        for m in boards.iter().flat_map(|b| &b.minions) {
+        for m in boards.iter().flat_map(|(b, _)| &b.minions) {
             cov.add_gifts(m, start_of_combat);
         }
-        for kit in boards.iter().filter_map(|b| b.kit.as_ref()) {
-            cov.add_kit(kit, start_of_combat);
+        for (band, mate) in boards {
+            if let Some(kit) = &band.kit {
+                cov.add_kit(kit, start_of_combat, *mate);
+            }
         }
-        for band in boards {
+        for (band, _) in boards {
             let grants = reborn_grants(band);
             for m in &band.minions {
                 let may_reborn = m.keywords.contains(Keywords::REBORN)
@@ -147,18 +179,35 @@ impl Coverage {
         }
     }
 
+    /// `id` blocks the odds for `why`.
+    fn refuse(&mut self, id: &str, why: &'static str) {
+        push_unique(&mut self.not_modelled, id.to_string());
+        if !self.why.iter().any(|(c, _)| c == id) {
+            self.why.push((id.to_string(), why));
+        }
+    }
+
     /// A board's hero powers and trinkets (T-628): one not reviewed blocks;
     /// one that acts at the start of combat blocks when start of combat is
     /// played unless the engine plays it ([`kit_effects`]; with start of
-    /// combat off the board was taken after it); one that acts later in the
-    /// combat is approximate.
-    fn add_kit(&mut self, kit: &Kit, start_of_combat: bool) {
+    /// combat off the board was taken after it), or when something it needs
+    /// beside the board is not given; one that acts later in the combat is
+    /// approximate unless the engine plays it (start of combat on).
+    fn add_kit(&mut self, kit: &Kit, start_of_combat: bool, mate: Option<&Warband>) {
         let power_in_combat = kit.powers.iter().any(|p| kit::acts_in_combat(&p.card_id));
         for card in kit.cards() {
             let id = &card.card_id;
             let effect = kit::effect(id);
             let play = kit_effects::played(id).filter(|_| start_of_combat);
             if let Some(play) = play {
+                if let Some(why) = unmet(play, card, kit.round, mate) {
+                    self.refuse(id, why);
+                    push_unique(&mut self.kit, id.clone());
+                    continue;
+                }
+                if kit_effects::acts(play, &card.counters, kit.round) == Some(false) {
+                    continue;
+                }
                 let why = match play.fidelity {
                     Fidelity::Approximate(why) => Some(why),
                     Fidelity::Exact => None,
@@ -172,6 +221,7 @@ impl Coverage {
                         self.approximate.push((id.clone(), why));
                     }
                 }
+                continue;
             }
             let refuse = match effect {
                 None => true,
@@ -225,6 +275,9 @@ impl Coverage {
         self.not_modelled
             .iter()
             .map(|id| {
+                if let Some((_, why)) = self.why.iter().find(|(c, _)| c == id) {
+                    return (id.clone(), *why);
+                }
                 let why = if !self.kit.contains(id) {
                     refusal_reason(id)
                 } else if kit::effect(id).is_some() {
@@ -259,18 +312,74 @@ fn start_of_combat_ids(band: &Warband) -> Vec<String> {
             push_unique(&mut out, g.clone());
         }
     }
+    let round = band.kit.as_ref().and_then(|k| k.round);
     for card in band.kit.iter().flat_map(Kit::cards) {
-        if kit_effects::played(&card.card_id).is_some() {
+        let acts = kit_effects::played(&card.card_id)
+            .is_some_and(|p| kit_effects::acts(p, &card.counters, round) != Some(false));
+        if acts {
             push_unique(&mut out, card.card_id.clone());
         }
     }
     out
 }
 
+/// The minions the board's played hero powers hold and will bring in this
+/// combat (Lock and Load), when start of combat is played.
+fn held_minions(band: &Warband, start_of_combat: bool) -> Vec<&Minion> {
+    let Some(kit) = band.kit.as_ref().filter(|_| start_of_combat) else {
+        return Vec::new();
+    };
+    kit.cards()
+        .filter(|c| {
+            kit_effects::played(&c.card_id)
+                .is_some_and(|p| kit_effects::acts(p, &c.counters, kit.round) == Some(true))
+        })
+        .filter_map(|c| c.held.as_ref())
+        .collect()
+}
+
+/// What a played power needs beside the board and is not given, if any
+/// (nothing when it is known not to act this combat).
+fn unmet(
+    play: &kit_effects::KitPlay,
+    card: &KitCard,
+    round: Option<u32>,
+    mate: Option<&Warband>,
+) -> Option<&'static str> {
+    let needs = kit_effects::needs(play);
+    match kit_effects::acts(play, &card.counters, round) {
+        None => return Some(kit::ROUND_NOT_GIVEN),
+        Some(false) => return None,
+        Some(true) => {}
+    }
+    if needs.target && card.target.is_none() {
+        Some(kit::TARGET_NOT_GIVEN)
+    } else if needs.held && card.held.is_none() {
+        Some(kit::HELD_NOT_GIVEN)
+    } else if needs.teammate && mate.is_none() {
+        Some(kit::TEAMMATE_NOT_GIVEN)
+    } else {
+        None
+    }
+}
+
+/// True when the card copies a minion of its teammate's board (Sandy).
+fn copies_teammate(rules: &cards::CardRules) -> bool {
+    rules
+        .triggers
+        .iter()
+        .any(|t| t.actions().contains(&Action::BecomeTeammateCopy))
+}
+
 /// Why the engine refuses a card or Dark Gift: a start-of-combat effect it
 /// does not play on a board taken before it, or the reason written for the
 /// card (T-616).
 pub fn refusal_reason(id: &str) -> &'static str {
+    // Played whenever start of combat is: refused only on a board taken
+    // after it (T-628 round 3).
+    if let Some(why) = cards::after_start_refusal(id) {
+        return why;
+    }
     if gifts::gift(id).is_some() || cards::rules(id).is_some() {
         return START_OF_COMBAT_GAP;
     }
@@ -295,11 +404,11 @@ fn played_with(why: &str, values: &GameValues) -> bool {
     }
 }
 
-/// True when the card's gap is a Tavern spell's values and its only effect is
-/// at the start of combat (Runic Arcanist, T-628): on a board taken after
-/// start of combat its casts are already there.
-fn spell_at_start_only(why: &str, rules: &cards::CardRules) -> bool {
-    why == crate::cards_round2::SPELL
+/// True when the card's only effect is at the start of combat (Runic
+/// Arcanist, Sandy; T-628): on a board taken after start of combat it has
+/// acted already, so its gap does not matter.
+fn acts_at_start_only(rules: &cards::CardRules) -> bool {
+    !rules.triggers.is_empty()
         && rules
             .triggers
             .iter()

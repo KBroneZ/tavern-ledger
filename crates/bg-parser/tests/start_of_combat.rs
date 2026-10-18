@@ -282,6 +282,98 @@ fn each_side_keeps_its_hero_powers_and_trinkets_with_their_numbers() {
     );
 }
 
+/// `solo()` with the player's hero power naming entity `named` instead of
+/// its board minion, and `extra` lines added before the combat turn.
+fn solo_naming(named: i64, extra: Vec<String>) -> Vec<String> {
+    let mut l = solo();
+    let at = l
+        .iter()
+        .position(|x| x.contains("tag=TAG_SCRIPT_DATA_ENT_1 value=22"))
+        .expect("the power names a minion");
+    l[at] = l[at].replace("value=22", &format!("value={named}"));
+    let turn = l
+        .iter()
+        .position(|x| x.contains("tag=TURN value=2"))
+        .expect("combat turn");
+    l.splice(turn..turn, extra);
+    l
+}
+
+fn own_power(r: &GameReport) -> bg_parser::report::KitCard {
+    r.rounds[0]
+        .entries
+        .iter()
+        .find(|e| e.side == Side::Own)
+        .and_then(|e| e.kit.clone())
+        .expect("kit")
+        .powers
+        .remove(0)
+}
+
+#[test]
+fn a_minion_the_power_marks_is_its_target_when_the_named_one_is_not_shown() {
+    // A Duos teammate's board is made of copies: the power names the
+    // original (never shown) and marks the copy with its enchantment.
+    let mark = entity(
+        1,
+        70,
+        "SYN_POWERe",
+        &[
+            ("CARDTYPE", "ENCHANTMENT".into()),
+            ("CONTROLLER", "2".into()),
+            ("ZONE", "PLAY".into()),
+            ("ATTACHED", "20".into()),
+        ],
+    );
+    let r = report(&solo_naming(999, mark));
+    let power = own_power(&r);
+    assert_eq!(power.target, Some(1));
+    assert_eq!(power.held, None);
+    // Another card's enchantment is no mark.
+    let other = entity(
+        1,
+        70,
+        "SYN_OTHERe",
+        &[
+            ("CARDTYPE", "ENCHANTMENT".into()),
+            ("CONTROLLER", "2".into()),
+            ("ZONE", "PLAY".into()),
+            ("ATTACHED", "20".into()),
+        ],
+    );
+    assert_eq!(own_power(&report(&solo_naming(999, other))).target, None);
+}
+
+#[test]
+fn a_minion_the_power_holds_off_the_board_is_kept_with_its_stats() {
+    let held = entity(
+        1,
+        71,
+        "SYN_HELD",
+        &[
+            ("CARDTYPE", "MINION".into()),
+            ("CONTROLLER", "2".into()),
+            ("ZONE", "SETASIDE".into()),
+            ("ATK", "6".into()),
+            ("HEALTH", "10".into()),
+            ("TAUNT", "1".into()),
+        ],
+    );
+    let r = report(&solo_naming(71, held));
+    let power = own_power(&r);
+    let held = power.held.expect("held minion");
+    assert_eq!(
+        (held.card_id.as_deref(), held.atk, held.health),
+        (Some("SYN_HELD"), 6, 10)
+    );
+    assert!(held.keywords.contains(&"taunt"));
+    assert_eq!(power.target, None);
+    // A minion on the board is a target, not held.
+    assert_eq!(own_power(&report(&solo())).held, None);
+    let json = serde_json::to_string(&r).expect("serializable");
+    assert!(!json.contains("SYN_HELD"));
+}
+
 #[test]
 fn none_of_it_is_saved() {
     let r = report(&solo());

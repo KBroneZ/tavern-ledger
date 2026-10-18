@@ -185,14 +185,11 @@ fn hand_summoners_play_as_approximate_with_the_summon_left_out() {
 }
 
 #[test]
-fn salvager_and_festergut_stay_not_modelled_and_say_why() {
-    // Ghastcoiler was left out in round 5 and is played since round 8.
-    for id in [
-        "BG31_999",
-        "BG31_999_G",
-        "BG34_Giant_590",
-        "BG34_Giant_590_G",
-    ] {
+fn festergut_stays_not_modelled_and_says_why() {
+    // Ghastcoiler was left out in round 5 and is played since round 8;
+    // Stitched Salvager is played from boards taken before start of combat
+    // since T-628 round 3.
+    for id in ["BG34_Giant_590", "BG34_Giant_590_G"] {
         assert_eq!(cards::rules(id), None, "{id}");
         assert!(!cards::refusal(id).contains("not reviewed"), "{id}");
     }

@@ -116,7 +116,7 @@ test("a card not modelled blocks the run and is named, never a number", () => {
 });
 
 test("a refused card says why it blocks the odds, in English and Spanish (T-616)", () => {
-  const why = "its Deathrattle copies the minion it destroys at the start of combat; the board is taken after that, so the copied minion is gone and not known";
+  const why = "its Deathrattle copies the minion it destroys at the start of combat; this board was taken after that, so the copied minion is gone and not known";
   const json = { engine: "0.9.0", status: "not_modelled", not_modelled: ["BG_NOT_A_CARD"], reasons: [{ card_id: "BG_NOT_A_CARD", reason: why }], approximate: [] };
   const a = readAnswer(JSON.stringify(json));
   assert.equal(a.kind === "not_modelled" && a.reasons.length, 1);

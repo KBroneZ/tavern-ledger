@@ -3,7 +3,7 @@
 //! the logs are marked there.
 
 use crate::cards::{self, Action, Trigger};
-use crate::model::{BaseCard, GameValues, Keywords, Team, Tribes, Warband, MAX_BOARD};
+use crate::model::{BaseCard, GameValues, Keywords, Minion, Team, Tribes, Warband, MAX_BOARD};
 use crate::rng::Rng;
 
 /// Attack turns before a combat is called a tie. A real combat ends in far
@@ -99,20 +99,19 @@ impl Prepared {
             band.minions
                 .iter()
                 .map(|m| {
-                    let (card, keywords) = gifts::card_of(cards, m);
                     uid += 1;
-                    let mut unit =
-                        Unit::new(uid, card, m.attack, m.health, m.keywords.union(keywords));
-                    unit.counters = m.counters;
-                    unit
+                    unit_of(uid, m, cards)
                 })
                 .collect()
         };
         let mut start = [units(first[0], &mut cards), units(first[1], &mut cards)];
         let second_tier = second.map(|b| b.and_then(|b| b.tavern_tier));
         let second_values = second.map(|b| b.map_or(GameValues::default(), |b| b.values));
-        let kits = first.map(|b| kit_uses(b.kit.as_ref()));
-        let second_kits = second.map(|b| kit_uses(b.and_then(|b| b.kit.as_ref())));
+        // A held minion's uid is never used: it comes in as a fresh copy.
+        let held = |m: &Minion, cards: &mut Vec<CardInfo>| unit_of(0, m, cards);
+        let kits = first.map(|b| kit_uses(b.kit.as_ref(), &mut cards, held));
+        let second_kits =
+            second.map(|b| kit_uses(b.and_then(|b| b.kit.as_ref()), &mut cards, held));
         let mut second = [
             second[0].map(|b| units(b, &mut cards)),
             second[1].map(|b| units(b, &mut cards)),
@@ -180,6 +179,14 @@ impl Prepared {
             start_of_combat,
         }
     }
+}
+
+/// A board minion in the engine's form, with uid `uid`.
+fn unit_of(uid: u32, m: &Minion, cards: &mut Vec<CardInfo>) -> Unit {
+    let (card, keywords) = gifts::card_of(cards, m);
+    let mut unit = Unit::new(uid, card, m.attack, m.health, m.keywords.union(keywords));
+    unit.counters = m.counters;
+    unit
 }
 
 pub(crate) fn intern(
@@ -302,6 +309,7 @@ impl SideState {
 enum Source {
     Unit(u32),
     Dead {
+        uid: u32,
         anchor: Option<u32>,
         killer: Option<u32>,
         /// Its Attack and full Health when it died.
@@ -324,6 +332,12 @@ struct Combat<'a> {
     /// (the replay of a logged combat, `replay`).
     forced_target: Option<u32>,
     legs: Legs,
+    /// What each side's hero powers do once it has space, waiting for it
+    /// (T-628 round 3).
+    pending: [Vec<Pending>; 2],
+    /// The exact copies a minion kept of the minions it destroyed, by its
+    /// uid, for its Deathrattle (Stitched Salvager).
+    kept: Vec<(u32, Vec<Unit>)>,
 }
 
 /// Plays one combat with `rng`.
@@ -356,6 +370,8 @@ impl<'a> Combat<'a> {
             next_uid,
             forced_target: None,
             legs: Legs::of(p),
+            pending: [Vec::new(), Vec::new()],
+            kept: Vec::new(),
         }
     }
 }
@@ -539,8 +555,11 @@ mod values;
 
 #[path = "combat_kit.rs"]
 mod kit;
+
+#[path = "combat_copies.rs"]
+mod copies;
 use duos::Legs;
-use kit::{kit_uses, KitUse};
+use kit::{kit_uses, KitUse, Pending};
 
 #[cfg(test)]
 #[path = "combat_tests.rs"]
@@ -573,3 +592,7 @@ mod stat_cap_tests;
 #[cfg(test)]
 #[path = "combat_kit_tests.rs"]
 mod kit_tests;
+
+#[cfg(test)]
+#[path = "combat_space_tests.rs"]
+mod space_tests;

@@ -1,13 +1,13 @@
 //! What the engine plays of the hero powers and trinkets it knows (T-628
-//! round 2): their start-of-combat effects, from their texts in
-//! HearthstoneJSON (D-038) and the user's logs. Names only, as comments.
-//! Every other power or trinket that acts in combat is still "not played"
-//! ([`crate::kit`]).
+//! rounds 2 and 3): their start-of-combat effects and the hero powers that
+//! act once "when you have space", from their texts in HearthstoneJSON
+//! (D-038) and the user's logs. Names only, as comments. Every other power
+//! or trinket that acts in combat is still "not played" ([`crate::kit`]).
 
 use crate::cards::Fidelity;
 use crate::kit::{
-    HERALD_ORDER, LIGHTNING_REPEATS, LOWEST_TIES, PIRATES_WITH_SHIELD, TIMEPIECE_ROUNDING,
-    WINGMEN_ORDER,
+    COPY_OF_DAMAGED, FIRED_AT_RIGHT_END, HERALD_ORDER, HIGHEST_TIER_TIES, LIGHTNING_REPEATS,
+    LOWEST_TIES, PIRATES_WITH_SHIELD, TIMEPIECE_ROUNDING, WINGMEN_ORDER,
 };
 use crate::model::{Keywords, Tribes};
 
@@ -67,18 +67,43 @@ pub enum KitAction {
     TriggerDeathrattles,
     /// The minions attack at once, not as one of the side's turns.
     AttackImmediately(Pick),
+    /// Destroy the friendly minion the card names
+    /// ([`crate::model::KitCard::target`]) and keep an exact copy of it,
+    /// summoned back at its place once the side has space.
+    DestroyTarget,
+    /// Transform the friendly minion the card names into an exact copy of
+    /// the teammate's highest-Tier minion (the left-most on ties).
+    TransformTargetIntoTeammates,
 }
 
-/// A played power or trinket: its start-of-combat actions, in order.
+/// Something a hero power does once per combat, the first time its side has
+/// space (fewer than seven minions): at its turn in the start of combat,
+/// else once the deaths that made the space are resolved.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SpaceAction {
+    /// Summon an exact copy of the friendly minion with the highest Attack
+    /// (or Health), the left-most on ties, to its right. Only from round
+    /// `unlock` on, and while the card's first number is not 0 (the game
+    /// sets it to 0 once it has acted this combat).
+    CopyHighest { health: bool, unlock: u32 },
+    /// Summon the minion the card holds ([`crate::model::KitCard::held`])
+    /// at the right end; it attacks at once.
+    FireHeld,
+}
+
+/// A played power or trinket: its start-of-combat actions, in order, and
+/// what it does when its side has space.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct KitPlay {
     pub start: &'static [KitAction],
+    pub space: Option<SpaceAction>,
     pub fidelity: Fidelity,
 }
 
 const fn exact(start: &'static [KitAction]) -> KitPlay {
     KitPlay {
         start,
+        space: None,
         fidelity: Fidelity::Exact,
     }
 }
@@ -86,6 +111,15 @@ const fn exact(start: &'static [KitAction]) -> KitPlay {
 const fn approx(why: &'static str, start: &'static [KitAction]) -> KitPlay {
     KitPlay {
         start,
+        space: None,
+        fidelity: Fidelity::Approximate(why),
+    }
+}
+
+const fn on_space(why: &'static str, space: SpaceAction) -> KitPlay {
+    KitPlay {
+        start: &[],
+        space: Some(space),
         fidelity: Fidelity::Approximate(why),
     }
 }
@@ -132,6 +166,51 @@ pub const PLAYED: &[(&str, KitPlay)] = &[
                 },
                 KitAction::AttackImmediately(ENDS),
             ],
+        ),
+    ),
+    // Frostwolf Fervor and Stormpike Strength (the user's logs, 10 copies:
+    // the highest Attack or Health, the left-most of two equal, summoned to
+    // its right with its stats, keywords and buffs; at the start of combat
+    // when there is space, else once a death makes some, once per combat;
+    // never before round 7 although the first number is 1 then too).
+    (
+        "BG22_HERO_002p",
+        on_space(
+            COPY_OF_DAMAGED,
+            SpaceAction::CopyHighest {
+                health: false,
+                unlock: 7,
+            },
+        ),
+    ),
+    (
+        "BG22_HERO_003p",
+        on_space(
+            COPY_OF_DAMAGED,
+            SpaceAction::CopyHighest {
+                health: true,
+                unlock: 7,
+            },
+        ),
+    ),
+    // Lock and Load (the user's logs: the held minion comes in with its
+    // stats and buffs and attacks at once, Taunt first; at the start of
+    // combat when there is space, else later).
+    (
+        "BG22_HERO_000p_Alt",
+        on_space(FIRED_AT_RIGHT_END, SpaceAction::FireHeld),
+    ),
+    // Rapid Reanimation (the user's logs: the marked minion dies, its
+    // Deathrattles and Reborn resolve, and its exact copy, damage included,
+    // comes back at its old place once there is space).
+    ("BG25_HERO_103p", exact(&[KitAction::DestroyTarget])),
+    // Glorious Gloop (the user's logs: the marked minion becomes the
+    // teammate's highest-Tier minion with its buffs).
+    (
+        "BGDUO_HERO_101p",
+        approx(
+            HIGHEST_TIER_TIES,
+            &[KitAction::TransformTargetIntoTeammates],
         ),
     ),
     // Fire Invocation.
@@ -227,6 +306,56 @@ pub fn value(amount: Amount, counters: &[i32; 5]) -> i32 {
             Some(&n) if n != 0 => n,
             _ => printed,
         },
+    }
+}
+
+/// What a played power needs beside the board, to be played.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Needs {
+    /// The friendly minion it names.
+    pub target: bool,
+    /// The minion it holds.
+    pub held: bool,
+    /// The game's round.
+    pub round: bool,
+    /// The teammate's board.
+    pub teammate: bool,
+}
+
+/// What `play` needs beside the board.
+pub fn needs(play: &KitPlay) -> Needs {
+    let mut n = Needs::default();
+    for action in play.start {
+        match action {
+            KitAction::DestroyTarget => n.target = true,
+            KitAction::TransformTargetIntoTeammates => {
+                n.target = true;
+                n.teammate = true;
+            }
+            _ => {}
+        }
+    }
+    match play.space {
+        Some(SpaceAction::CopyHighest { .. }) => n.round = true,
+        Some(SpaceAction::FireHeld) => n.held = true,
+        None => {}
+    }
+    n
+}
+
+/// True when a played power acts this combat: a "copy the highest" power
+/// only from its round on and while its first number is not 0, a power that
+/// fires a held minion while its first number is not 0. `None` when it
+/// depends on the round and the round is not given.
+pub fn acts(play: &KitPlay, counters: &[i32; 5], round: Option<u32>) -> Option<bool> {
+    match play.space {
+        Some(SpaceAction::CopyHighest { unlock, .. }) => {
+            round.map(|r| r >= unlock && counters[0] != 0)
+        }
+        // Lock and Load's first number is 1 while it holds a minion not
+        // fired yet (the user's logs, 6 of 6 combats), 0 otherwise.
+        Some(SpaceAction::FireHeld) => Some(counters[0] != 0),
+        None => Some(true),
     }
 }
 

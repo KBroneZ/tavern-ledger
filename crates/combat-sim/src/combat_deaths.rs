@@ -129,6 +129,9 @@ impl Combat<'_> {
                 dead[start..].reverse();
             }
             if dead.is_empty() {
+                // Hero powers that wait for space act once the deaths are
+                // resolved (T-628 round 3).
+                self.fill_both(first);
                 return;
             }
             self.count_dead_knights(&dead);
@@ -137,6 +140,7 @@ impl Combat<'_> {
             for d in &dead {
                 let times = 1 + usize::from(self.extra_deathrattles(d.side));
                 let src = Source::Dead {
+                    uid: d.unit.uid,
                     anchor: d.anchor,
                     killer: d.unit.hit_by,
                     stats: (d.unit.attack, d.unit.max_health),
