@@ -13,8 +13,24 @@ use std::path::{Path, PathBuf};
 /// `private_root` is the store's `LocalCache\Local` folder, which stands in
 /// for `%LOCALAPPDATA%`. `None` when `target` is not under `local_app_data`.
 pub fn private_copy(private_root: &Path, local_app_data: &Path, target: &Path) -> Option<PathBuf> {
-    let relative = target.strip_prefix(local_app_data).ok()?;
+    let relative = relative_to(target, local_app_data)?;
     Some(private_root.join(relative))
+}
+
+/// `path` below `base`, comparing the parts the way Windows does (ignoring
+/// case). `Path::strip_prefix` is exact, so a differently cased spelling of
+/// the same folder would read as "not under it".
+fn relative_to(path: &Path, base: &Path) -> Option<PathBuf> {
+    let mut parts = path.components();
+    for want in base.components() {
+        let got = parts.next()?;
+        let same = got.as_os_str().to_string_lossy().to_lowercase()
+            == want.as_os_str().to_string_lossy().to_lowercase();
+        if !same {
+            return None;
+        }
+    }
+    Some(parts.as_path().to_path_buf())
 }
 
 /// The package's private `LocalCache\Local` folder, when this process runs
@@ -112,6 +128,22 @@ mod tests {
             .join("log.config");
         assert_eq!(
             private_copy(private, local, &target),
+            Some(
+                private
+                    .join("Blizzard")
+                    .join("Hearthstone")
+                    .join("log.config")
+            )
+        );
+    }
+
+    #[test]
+    fn the_folders_are_compared_the_way_windows_does_ignoring_case() {
+        let local = Path::new(r"C:\Users\A\AppData\Local");
+        let private = Path::new(r"C:\x\Local");
+        let target = Path::new(r"c:\users\a\APPDATA\local\Blizzard\Hearthstone\log.config");
+        assert_eq!(
+            private_copy(private, local, target),
             Some(
                 private
                     .join("Blizzard")

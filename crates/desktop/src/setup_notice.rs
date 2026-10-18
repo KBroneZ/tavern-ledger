@@ -47,6 +47,9 @@ pub struct SetupState {
     /// manifest's excluded folder cannot be relied on): the box lists the
     /// lines to write by hand and offers no Fix.
     manual_only: AtomicBool,
+    /// The package's private `LocalCache\Local` folder, when the app runs from
+    /// a package: where a redirected write would be found.
+    private_root: Mutex<Option<PathBuf>>,
     /// The tracker stopped (or never started here): the folder decision is
     /// no longer followed, so nothing is offered to write.
     frozen: AtomicBool,
@@ -74,6 +77,25 @@ impl SetupState {
     /// notice still says what it knew, but offers nothing to write.
     pub fn freeze(&self) {
         self.frozen.store(true, Ordering::SeqCst);
+    }
+
+    /// Where this package's redirected writes land (a packaged app only).
+    pub fn set_private_root(&self, root: Option<PathBuf>) {
+        *lock(&self.private_root) = root;
+    }
+
+    pub fn private_root(&self) -> Option<PathBuf> {
+        lock(&self.private_root).clone()
+    }
+
+    /// The copy of `log.config` in the package's private store, when there is
+    /// one: Windows redirected a write there, and the package's own view of the
+    /// real path then shows that copy, so no check from inside can be trusted.
+    fn redirected_log_config(&self) -> Option<PathBuf> {
+        let root = self.private_root()?;
+        let local = self.local_app_data()?;
+        let copy = package::private_copy(&root, &local, &log_config_target(&local))?;
+        copy.exists().then_some(copy)
     }
 
     pub fn set_manual_only(&self, manual: bool) {
@@ -129,7 +151,7 @@ impl SetupState {
         let report = place.folder_lines.is_empty().then(|| self.report());
         let last = lock(&self.last_fix).clone();
         let fixing = self.fixing.load(Ordering::SeqCst);
-        let (lines, mut view) =
+        let (mut lines, mut view) =
             compose(report.as_ref(), &place.folder_lines, fixing, last.as_ref());
         if self.is_frozen() && !fixing {
             // Said as lines only: no sentence about fixing, no buttons.
@@ -141,6 +163,13 @@ impl SetupState {
             if matches!(view.state, "needs_fix" | "error") {
                 view.state = "manual";
             }
+            view.can_fix = false;
+            view.can_fix_optional = false;
+        }
+        if !fixing && !self.is_frozen() && self.redirected_log_config().is_some() {
+            // The file looks fine from here, but only from here.
+            lines.push(REDIRECTED_LINE.to_string());
+            view.state = "manual";
             view.can_fix = false;
             view.can_fix_optional = false;
         }
@@ -176,6 +205,9 @@ impl Drop for FixTicket<'_> {
         self.0.fixing.store(false, Ordering::SeqCst);
     }
 }
+
+/// Said while a copy of `log.config` sits in the package's private store.
+const REDIRECTED_LINE: &str = "log.config seems to be in place, but Windows is keeping it in this app's private storage, where Hearthstone cannot see it. Write the lines listed above into the real log.config by hand.";
 
 /// The button's state, as the window needs it.
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -315,6 +347,7 @@ pub fn compose(
 
 /// Fixes the two files, each on its own: one can work while the other does
 /// not. The paths come from the folders the app uses, never from the window.
+///
 /// For an app that is not in a package (the tests).
 #[cfg(test)]
 pub fn fix_files(
@@ -350,12 +383,25 @@ pub fn fix_files_in(
                 wanted,
                 create_parent: true,
             });
+            // A copy in the private store means the write was redirected, and
+            // the package's view of the real path shows that copy, so even
+            // "already fine" cannot be believed. The copy is removed so the
+            // next try starts clean and is judged on the real file.
             let redirected = private_root
                 .and_then(|private| package::private_copy(private, local, &path))
-                .is_some_and(|copy| copy.exists());
-            match outcome {
-                Outcome::Fixed { .. } if redirected => Outcome::Failed(Reason::Virtualized),
-                other => other,
+                .filter(|copy| copy.exists());
+            match (outcome, redirected) {
+                (Outcome::Fixed { .. } | Outcome::AlreadyOk, Some(copy)) => {
+                    let removed = std::fs::remove_file(&copy).is_ok();
+                    crate::applog::warn(
+                        "setup",
+                        &format!(
+                            "log.config was kept in the app's private storage (copy removed: {removed})"
+                        ),
+                    );
+                    Outcome::Failed(Reason::Virtualized)
+                }
+                (other, _) => other,
             }
         }
     };

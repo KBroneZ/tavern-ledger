@@ -974,7 +974,7 @@ async fn setup_fix(
     let place = state.setup.place();
     let local = state.setup.local_app_data();
     // Where a packaged app's redirected writes would land, to check for them.
-    let private = local.as_deref().and_then(package::private_local_root);
+    let private = state.setup.private_root();
     let files = tauri::async_runtime::spawn_blocking(move || {
         setup_notice::fix_files_in(
             local.as_deref(),
@@ -1628,6 +1628,13 @@ fn main() {
             // manifest's excluded folder works (src/edition.rs).
             let fix_allowed = edition::fix_allowed_here();
             state.setup.set_manual_only(!fix_allowed);
+            state.setup.set_private_root(
+                state
+                    .setup
+                    .local_app_data()
+                    .as_deref()
+                    .and_then(package::private_local_root),
+            );
             if !fix_allowed {
                 applog::info(
                     "setup",

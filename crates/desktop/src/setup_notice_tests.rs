@@ -417,7 +417,9 @@ fn a_write_with_no_copy_in_the_private_store_is_reported_as_it_is() {
 }
 
 #[test]
-fn a_file_that_needed_no_write_is_not_judged_by_an_old_private_copy() {
+fn a_private_copy_is_never_believed_even_when_the_file_looks_fine_from_inside() {
+    // The package's view of the real path shows its own redirected copy, so
+    // the file reads as correct. The app must not say "already fine".
     let root = temp_dir();
     let local = local_dir(&root, Some(GOOD_POWER));
     let game = install(&root, "D", Some(GOOD_CLIENT));
@@ -427,9 +429,43 @@ fn a_file_that_needed_no_write_is_not_judged_by_an_old_private_copy() {
         .join("Hearthstone")
         .join("log.config");
     fs::create_dir_all(copy.parent().unwrap()).unwrap();
-    fs::write(&copy, "stale").unwrap();
+    fs::write(&copy, GOOD_POWER).unwrap();
     let files = fix_files_in(Some(&local), Some(&game), false, Some(&private));
-    assert_eq!(files[0].result, "already_ok");
+    assert_eq!(
+        (files[0].result, files[0].reason),
+        ("failed", Some(Reason::Virtualized))
+    );
+    assert!(
+        !copy.exists(),
+        "the copy is removed so the next try starts clean"
+    );
+    // Next click: no copy, the real file is judged.
+    let again = fix_files_in(Some(&local), Some(&game), false, Some(&private));
+    assert_eq!(again[0].result, "already_ok");
+}
+
+#[test]
+fn the_notice_does_not_say_ok_while_a_copy_sits_in_the_private_store() {
+    let root = temp_dir();
+    let local = local_dir(&root, Some(GOOD_POWER));
+    let game = install(&root, "D", Some(GOOD_CLIENT));
+    let state = state_for(&local, Some(&game));
+    assert_eq!(state.view().1.state, "ok");
+    let private = root.join("private-local");
+    let copy = private
+        .join("Blizzard")
+        .join("Hearthstone")
+        .join("log.config");
+    fs::create_dir_all(copy.parent().unwrap()).unwrap();
+    fs::write(&copy, GOOD_POWER).unwrap();
+    state.set_private_root(Some(private));
+    let (lines, view) = state.view();
+    assert_eq!(view.state, "manual");
+    assert!(!view.can_fix && !view.can_fix_optional);
+    assert!(lines.iter().any(|line| line.contains("private storage")));
+    // Without a package there is no private store to look in.
+    state.set_private_root(None);
+    assert_eq!(state.view().1.state, "ok");
 }
 
 #[test]
