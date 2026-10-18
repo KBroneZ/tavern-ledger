@@ -9,7 +9,11 @@ Usage:
     python tools/store_package.py stage --exe EXE --out DIR [--variant full|manual]
         [--name NAME --publisher CN=... --publisher-display TEXT]
         [--version A.B.C.D] [--for-submission] [--test-alias NAME.exe]
-        Writes DIR (emptied first): the exe, Assets/ and AppxManifest.xml.
+        Writes DIR (emptied first; refused if it holds something else): the exe, Assets/ and
+        AppxManifest.xml. The exe is checked as `check-exe` does.
+    python tools/store_package.py check-identity [the same identity options as stage]
+        Exit 1 if the identity, version or variant cannot make a package as asked
+        (so a refusal comes before a long build, not after it).
     python tools/store_package.py check-exe EXE
         Exit 1 unless EXE is the Store edition, with no updater in it.
 
@@ -41,7 +45,7 @@ import re
 import shutil
 import sys
 from pathlib import Path
-from xml.sax.saxutils import escape, quoteattr
+from xml.sax.saxutils import escape
 
 import store_version
 
@@ -87,8 +91,8 @@ class Refused(ValueError):
 
 def is_fake(name: str, publisher: str, publisher_display: str) -> bool:
     """Whether any of the three is one of the local-test values."""
-    fakes = (FAKE_NAME, FAKE_PUBLISHER, FAKE_PUBLISHER_DISPLAY)
-    return any(value in fakes for value in (name, publisher, publisher_display))
+    fakes = {FAKE_NAME.lower(), FAKE_PUBLISHER.lower(), FAKE_PUBLISHER_DISPLAY.lower()}
+    return any(value.strip().lower() in fakes for value in (name, publisher, publisher_display))
 
 
 def validate(name: str, publisher: str, publisher_display: str, version: str) -> None:
@@ -175,7 +179,7 @@ def render_manifest(
         value = values[key]
         if key in attribute_fields:
             # Inside an attribute's quotes already: escape the quote-significant text only.
-            return quoteattr(value)[1:-1]
+            return escape(value, {'"': "&quot;", "'": "&apos;"})
         return escape(value) if key == "PUBLISHER_DISPLAY_NAME" else value
 
     text = FIELD_RE.sub(fill, template)
@@ -203,6 +207,9 @@ def stage(
     if not exe.is_file():
         raise Refused(f"the exe {exe} is not there")
     if out.exists():
+        # Only a folder this tool made (or an empty one) is emptied.
+        if any(out.iterdir()) and not (out / "AppxManifest.xml").is_file():
+            raise Refused(f"{out} is not empty and is not a package folder: not deleting it")
         shutil.rmtree(out)
     (out / "Assets").mkdir(parents=True)
     shutil.copyfile(exe, out / EXE_NAME)
@@ -249,6 +256,14 @@ def main(argv: list[str]) -> int:
     stage_cmd.add_argument("--for-submission", action="store_true")
     stage_cmd.add_argument("--test-alias")
 
+    identity_cmd = commands.add_parser("check-identity")
+    identity_cmd.add_argument("--variant", choices=VARIANTS, default="full")
+    identity_cmd.add_argument("--name", default=FAKE_NAME)
+    identity_cmd.add_argument("--publisher", default=FAKE_PUBLISHER)
+    identity_cmd.add_argument("--publisher-display", default=FAKE_PUBLISHER_DISPLAY)
+    identity_cmd.add_argument("--for-submission", action="store_true")
+    identity_cmd.add_argument("--test-alias")
+
     check_cmd = commands.add_parser("check-exe")
     check_cmd.add_argument("exe", type=Path)
 
@@ -259,7 +274,7 @@ def main(argv: list[str]) -> int:
             for problem in problems:
                 print(f"error: {problem}", file=sys.stderr)
             return 1 if problems else 0
-        version = args.version or store_version.store_version(store_version.app_version())
+        version = getattr(args, "version", None) or store_version.store_version(store_version.app_version())
         manifest = render_manifest(
             TEMPLATE.read_text(encoding="utf-8"),
             name=args.name,
@@ -272,6 +287,11 @@ def main(argv: list[str]) -> int:
         )
         if f'TaskId="{startup_task_id()}"' not in manifest:
             raise Refused("the manifest's start-up task is not the one the app asks for")
+        if args.command == "check-identity":
+            return 0
+        problems = check_exe(args.exe.read_bytes(), key=updater_key()) if args.exe.is_file() else []
+        if problems:
+            raise Refused("; ".join(problems))
         for path in stage(args.exe, args.out, manifest=manifest):
             print(path)
     except (Refused, store_version.BadVersion) as error:

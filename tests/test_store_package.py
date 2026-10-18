@@ -1,7 +1,10 @@
 """Tests for tools/store_package.py: the Store package manifest, folder and exe checks."""
 
 import json
+import os
+import shutil
 import struct
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -172,6 +175,7 @@ class SubmissionTest(unittest.TestCase):
 
     def test_the_local_test_identity_is_clearly_fake(self) -> None:
         self.assertTrue(sp.is_fake(**FAKE))
+        self.assertTrue(sp.is_fake(**dict(REAL, name=sp.FAKE_NAME.upper())), "case does not matter")
         self.assertFalse(sp.is_fake(**REAL))
         self.assertIn("LocalTest", sp.FAKE_NAME)
         self.assertIn("LocalTest", sp.FAKE_PUBLISHER)
@@ -186,12 +190,24 @@ class SubmissionTest(unittest.TestCase):
 
 
 class StageTest(unittest.TestCase):
+    def test_a_folder_that_is_not_a_package_folder_is_never_deleted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            exe = Path(tmp) / "build.exe"
+            exe.write_bytes(b"MZ")
+            precious = Path(tmp) / "documents"
+            precious.mkdir()
+            (precious / "keep.txt").write_text("mine")
+            with self.assertRaises(sp.Refused):
+                sp.stage(exe, precious, manifest=render("full"))
+            self.assertTrue((precious / "keep.txt").is_file())
+
     def test_the_package_folder_has_the_exe_the_images_and_the_manifest_and_nothing_else(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             exe = Path(tmp) / "build.exe"
             exe.write_bytes(b"MZ" + sp.STORE_MARK)
             out = Path(tmp) / "pkg"
             out.mkdir()
+            (out / "AppxManifest.xml").write_text("an older package folder")
             (out / "stale.txt").write_text("left over")
             files = sp.stage(exe, out, manifest=render("full"))
             self.assertIn("TavernLedger.exe", files)
@@ -261,9 +277,37 @@ class PackagingScriptTest(unittest.TestCase):
     def test_the_script_builds_the_store_edition_into_its_own_target_folder(self) -> None:
         self.assertIn("tauri.store.conf.json", self.SCRIPT)
         self.assertIn("'store,store-manual-setup'", self.SCRIPT)
-        self.assertIn("$TargetDir = 'target\store'", self.SCRIPT)
+        self.assertIn(r"$TargetDir = 'target\store'", self.SCRIPT)
         # The exe is checked before anything is packed.
-        self.assertLess(self.SCRIPT.index("check-exe"), self.SCRIPT.index("makeappx.exe"))
+        self.assertLess(
+            self.SCRIPT.index("Invoke-Native 'the exe check'"),
+            self.SCRIPT.index("Invoke-Native 'makeappx pack'"),
+        )
+
+    def test_the_workflow_passes_the_submission_switch_in_a_way_that_reaches_the_script(self) -> None:
+        # Splatting an ARRAY passes '-ForSubmission' as a plain string and the switch is
+        # silently off; only a hashtable binds it by name.
+        workflow = (ROOT / ".github" / "workflows" / "store-package.yml").read_text(encoding="utf-8")
+        self.assertNotIn("$extra = @()", workflow)
+        self.assertIn("$extra = @{}", workflow)
+        self.assertIn("$extra.ForSubmission = $true", workflow)
+
+    @unittest.skipUnless(shutil.which("pwsh"), "PowerShell 7 is not installed")
+    def test_for_submission_with_the_local_test_identity_stops_before_anything_is_packed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "out"
+            # No -Exe: if the refusal did not come first, this would start a real build.
+            run = subprocess.run(
+                ["pwsh", "-NoProfile", "-File", str(ROOT / "tools" / "make-msix.ps1"),
+                 "-ForSubmission", "-OutDir", str(out), "-IdentityName", ""],
+                capture_output=True, text=True, check=False, env={k: v for k, v in os.environ.items() if not k.startswith("STORE_")},
+            )
+            self.assertNotEqual(run.returncode, 0)
+            self.assertIn("real identity", run.stdout + run.stderr)
+            self.assertEqual(list(out.glob("*.msix")), [])
+
+    def test_a_package_without_the_real_identity_says_so_in_its_file_name(self) -> None:
+        self.assertIn("_fake-identity", self.SCRIPT)
 
     def test_a_local_test_package_cannot_be_a_submission(self) -> None:
         self.assertIn("-LocalTest and -ForSubmission cannot be combined", self.SCRIPT)

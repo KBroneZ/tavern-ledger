@@ -359,6 +359,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--check", action="store_true", help="only check that the copied SVGs are up to date")
     parser.add_argument("--store", action="store_true", help="only write the Microsoft Store package's logos")
     args = parser.parse_args(argv)
+    if args.store and args.check:
+        parser.error("--store and --check cannot be combined")
     if args.store:
         build_store()
         return 0

@@ -45,7 +45,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = Split-Path -Parent $PSScriptRoot
-Set-Location $root
+$tools = Join-Path $root 'tools'
 
 function Invoke-Native([string]$What, [scriptblock]$Run) {
   & $Run
@@ -66,8 +66,14 @@ if ($PublisherDisplayName) { $identityArgs += @('--publisher-display', $Publishe
 if ($ForSubmission) { $identityArgs += '--for-submission' }
 if ($LocalTest) { $identityArgs += @('--test-alias', $TestAlias) }
 
-$version = (& $python tools/store_version.py).Trim()
+# Fail fast: a refused identity should not cost a long build first.
+Invoke-Native 'the identity check' {
+  & $python (Join-Path $tools 'store_package.py') check-identity --variant $Variant @identityArgs
+}
+
+$versionOut = & $python (Join-Path $tools 'store_version.py')
 if ($LASTEXITCODE -ne 0) { throw 'no valid Store version for this app version' }
+$version = "$versionOut".Trim()
 Write-Host "Store package version $version, variant $Variant"
 
 # 1. Build (the installer edition's target folder is never used).
@@ -87,12 +93,12 @@ if (-not $Exe) {
 if (-not (Test-Path $Exe)) { throw "The exe is not there: $Exe" }
 
 # 2. It must be the Store edition, with no updater in it.
-Invoke-Native 'the exe check' { & $python tools/store_package.py check-exe $Exe }
+Invoke-Native 'the exe check' { & $python (Join-Path $tools 'store_package.py') check-exe $Exe }
 
 # 3. The package folder, then the .msix.
 $stage = Join-Path $outAbs 'folder'
 Invoke-Native 'staging the package folder' {
-  & $python tools/store_package.py stage --exe $Exe --out $stage --variant $Variant @identityArgs
+  & $python (Join-Path $tools 'store_package.py') stage --exe $Exe --out $stage --variant $Variant @identityArgs
 }
 
 $sdk = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\makeappx.exe" -ErrorAction SilentlyContinue |
@@ -102,6 +108,8 @@ if (-not $sdk) { throw 'makeappx.exe not found: install the Windows 10/11 SDK.' 
 $suffix = ''
 if ($Variant -eq 'manual') { $suffix += '_manual' }
 if ($LocalTest) { $suffix += '_localtest' }
+# A package made without the Partner Center identity says so in its name.
+if (-not ($IdentityName -and $Publisher -and $PublisherDisplayName)) { $suffix += '_fake-identity' }
 $msix = Join-Path $outAbs "TavernLedger_${version}_x64$suffix.msix"
 if (Test-Path $msix) { Remove-Item -Force $msix }
 Invoke-Native 'makeappx pack' { & $sdk.FullName pack /v /d $stage /p $msix /o }
