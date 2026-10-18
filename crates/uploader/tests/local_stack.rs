@@ -27,6 +27,7 @@ use tracker::store::{GameKey, Store};
 use uploader::auth::Auth;
 use uploader::config::{self, ServerConfig};
 use uploader::http::{Http, Method, Request, ReqwestHttp};
+use uploader::pages::Lang;
 use uploader::queue::{pending, Mark, Marks, Outcome};
 use uploader::secrets::{self, credential_name, CredentialManager, TokenStore};
 use uploader::signin::SignIn;
@@ -373,7 +374,7 @@ fn sign_in_upload_quota_and_sign_out_against_the_local_stack() {
 
     // ---- sign in: the website's page asks for the link -> email -> browser
     // -> loopback -> code exchange
-    let flow = SignIn::start(&server, &email).unwrap();
+    let flow = SignIn::start(&server, &email, Lang::En).unwrap();
     ask_for_the_link_as_the_website_does(http.as_ref(), &st.url, &st.anon, flow.page_url());
     let finisher = {
         let (server, http) = (server.clone(), http.clone());

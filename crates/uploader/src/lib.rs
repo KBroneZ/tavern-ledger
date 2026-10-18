@@ -9,6 +9,7 @@ pub mod config;
 pub mod engine;
 pub mod http;
 pub mod loopback;
+pub mod pages;
 pub mod pkce;
 pub mod queue;
 pub mod secrets;

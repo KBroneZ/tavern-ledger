@@ -13,6 +13,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use crate::pages::{self, Lang, Page};
 use crate::pkce::{random_token, same_secret};
 
 pub const CALLBACK_PATH: &str = "/desktop-callback/";
@@ -60,10 +61,12 @@ pub struct Loopback {
     listener: TcpListener,
     state: String,
     port: u16,
+    lang: Lang,
 }
 
 impl Loopback {
-    pub fn bind() -> io::Result<Loopback> {
+    /// `lang`: the language of the pages the browser is shown.
+    pub fn bind(lang: Lang) -> io::Result<Loopback> {
         let listener = TcpListener::bind(SocketAddr::from((Ipv4Addr::LOCALHOST, 0)))?;
         listener.set_nonblocking(true)?;
         let port = listener.local_addr()?.port();
@@ -71,6 +74,7 @@ impl Loopback {
             listener,
             state: random_token(32)?,
             port,
+            lang,
         })
     }
 
@@ -107,7 +111,7 @@ impl Loopback {
         let target = match read_request_target(&mut stream) {
             Ok(Some(t)) => t,
             Ok(None) => {
-                respond(&mut stream, 405, PAGE_NOT_FOUND);
+                respond(&mut stream, 405, Page::NotFound, self.lang);
                 return None;
             }
             Err(_) => return None,
@@ -117,16 +121,11 @@ impl Loopback {
             .strip_prefix(CALLBACK_PATH)
             .is_some_and(|s| same_secret(s, &self.state));
         if !state_ok {
-            let page = if path.starts_with(CALLBACK_PATH) {
-                PAGE_OLD_LINK
+            if path.starts_with(CALLBACK_PATH) {
+                respond(&mut stream, 400, Page::OldLink, self.lang);
             } else {
-                PAGE_NOT_FOUND
-            };
-            respond(
-                &mut stream,
-                if page == PAGE_OLD_LINK { 400 } else { 404 },
-                page,
-            );
+                respond(&mut stream, 404, Page::NotFound, self.lang);
+            }
             return None;
         }
         let param = |name: &str| {
@@ -135,24 +134,20 @@ impl Loopback {
                 .find_map(|kv| kv.strip_prefix(name).and_then(|v| v.strip_prefix('=')))
         };
         if let Some(code) = param("code").filter(|c| is_code(c)) {
-            respond(&mut stream, 200, PAGE_DONE);
+            respond(&mut stream, 200, Page::SignedIn, self.lang);
             return Some(Ok(code.to_string()));
         }
         let error = param("error_code")
             .or_else(|| param("error"))
-            .filter(|e| {
-                !e.is_empty()
-                    && e.len() <= 64
-                    && e.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_')
-            })
+            .filter(|e| pages::is_error_code(e))
             .unwrap_or("no_code")
             .to_string();
         let page = if error == EXPIRED {
-            PAGE_EXPIRED
+            Page::Expired
         } else {
-            PAGE_FAILED
+            Page::LinkFailed(&error)
         };
-        respond(&mut stream, 400, page);
+        respond(&mut stream, 400, page, self.lang);
         Some(Err(WaitError::LinkFailed(error)))
     }
 }
@@ -193,32 +188,23 @@ fn read_request_target(stream: &mut TcpStream) -> io::Result<Option<String>> {
     }
 }
 
-const PAGE_DONE: &str = "You are signed in to Tavern Ledger. You can close this tab.";
-const PAGE_FAILED: &str =
-    "This sign-in link did not work (it may have expired or been used). Ask for a new one in Tavern Ledger.";
-const PAGE_EXPIRED: &str = "This sign-in link is from an earlier attempt or has expired. \
-     Open the newest email from Tavern Ledger, or ask for a new link in the app.";
-const PAGE_OLD_LINK: &str =
-    "This sign-in link is from an earlier attempt. Open the newest email from Tavern Ledger.";
-const PAGE_NOT_FOUND: &str = "Not found.";
-
-/// A fixed page: nothing from the request is echoed back.
-fn respond(stream: &mut TcpStream, status: u16, message: &str) {
+/// A fixed page: nothing from the request is echoed back except a plain
+/// error code (see `pages`).
+fn respond(stream: &mut TcpStream, status: u16, page: Page, lang: Lang) {
     let reason = match status {
         200 => "OK",
         400 => "Bad Request",
         404 => "Not Found",
         _ => "Method Not Allowed",
     };
-    let body = format!(
-        "<!doctype html><meta charset=\"utf-8\"><title>Tavern Ledger</title><p>{message}</p>"
-    );
+    let body = pages::render(page, lang);
     let head = format!(
         "HTTP/1.1 {status} {reason}\r\nContent-Type: text/html; charset=utf-8\r\n\
          Content-Length: {}\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\n\
-         Content-Security-Policy: default-src 'none'\r\nX-Content-Type-Options: nosniff\r\n\
+         Content-Security-Policy: {}\r\nX-Content-Type-Options: nosniff\r\n\
          Connection: close\r\n\r\n",
-        body.len()
+        body.len(),
+        pages::content_security_policy()
     );
     let _ = stream.write_all(head.as_bytes());
     let _ = stream.write_all(body.as_bytes());
@@ -245,7 +231,7 @@ mod tests {
         thread::JoinHandle<Result<String, WaitError>>,
         Arc<AtomicBool>,
     ) {
-        let lb = Arc::new(Loopback::bind().unwrap());
+        let lb = Arc::new(Loopback::bind(Lang::En).unwrap());
         let cancel = Arc::new(AtomicBool::new(false));
         let (l, c) = (lb.clone(), cancel.clone());
         let handle = thread::spawn(move || l.wait(Instant::now() + Duration::from_secs(10), &c));
@@ -261,8 +247,8 @@ mod tests {
 
     #[test]
     fn listens_on_loopback_only_with_a_random_state() {
-        let a = Loopback::bind().unwrap();
-        let b = Loopback::bind().unwrap();
+        let a = Loopback::bind(Lang::En).unwrap();
+        let b = Loopback::bind(Lang::En).unwrap();
         assert!(a.redirect_uri().starts_with("http://127.0.0.1:"));
         assert_ne!(a.state, b.state);
         assert_eq!(a.state.len(), 43);
@@ -274,8 +260,16 @@ mod tests {
         let (lb, handle, _) = start();
         let (status, page) = browse(lb.port, &format!("{}?code={CODE}", path_of(&lb)));
         assert_eq!(status, 200);
-        assert!(page.contains("signed in"));
+        assert!(page.contains("You are signed in"));
         assert!(page.contains("Cache-Control: no-store"));
+        assert!(page.contains("Referrer-Policy: no-referrer"));
+        assert!(page.contains("X-Content-Type-Options: nosniff"));
+        assert!(page.contains(&format!(
+            "Content-Security-Policy: {}\r\n",
+            pages::content_security_policy()
+        )));
+        assert!(page.contains("default-src 'none'; style-src 'sha256-"));
+        assert!(!page.contains("<script"));
         assert_eq!(handle.join().unwrap(), Ok(CODE.to_string()));
     }
 
@@ -356,13 +350,42 @@ mod tests {
         );
         let (status, page) = browse(lb.port, &target);
         assert_eq!(status, 400);
-        assert!(page.contains(PAGE_EXPIRED), "{page}");
+        assert!(page.contains("This link has expired"), "{page}");
         let error = handle.join().unwrap().unwrap_err();
         assert_eq!(
             error.to_string(),
             "that link is from an earlier attempt or expired: use the newest email, \
              or ask for a new link"
         );
+    }
+
+    #[test]
+    fn the_pages_follow_the_apps_language() {
+        let lb = Arc::new(Loopback::bind(Lang::Es).unwrap());
+        let cancel = Arc::new(AtomicBool::new(false));
+        let (l, c) = (lb.clone(), cancel.clone());
+        let handle = thread::spawn(move || l.wait(Instant::now() + Duration::from_secs(10), &c));
+        let (status, page) = browse(lb.port, "/nothing");
+        assert_eq!(status, 404);
+        assert!(page.contains("<html lang=\"es\">") && page.contains("Página no encontrada"));
+        let (_, page) = browse(lb.port, &format!("{}?code={CODE}", path_of(&lb)));
+        assert!(page.contains("Sesión iniciada"), "{page}");
+        handle.join().unwrap().unwrap();
+    }
+
+    #[test]
+    fn a_failed_link_shows_only_its_plain_error_code() {
+        let (lb, handle, _) = start();
+        let target = format!("{}?error_code=flow_state_not_found", path_of(&lb));
+        let (status, page) = browse(lb.port, &target);
+        assert_eq!(status, 400);
+        assert!(page.contains("<code>flow_state_not_found</code>"), "{page}");
+        handle.join().unwrap().unwrap_err();
+        let (lb, handle, _) = start();
+        let (_, page) = browse(lb.port, &format!("{}?error_code=%3Cb%3E", path_of(&lb)));
+        assert!(page.contains("<code>no_code</code>"), "{page}");
+        assert!(!page.contains("%3C") && !page.contains("<b>"), "{page}");
+        handle.join().unwrap().unwrap_err();
     }
 
     #[test]
@@ -386,7 +409,7 @@ mod tests {
 
     #[test]
     fn the_wait_ends_at_the_deadline() {
-        let lb = Loopback::bind().unwrap();
+        let lb = Loopback::bind(Lang::En).unwrap();
         let cancel = AtomicBool::new(false);
         let started = Instant::now();
         let result = lb.wait(Instant::now() + Duration::from_millis(250), &cancel);
