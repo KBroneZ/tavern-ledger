@@ -1,0 +1,106 @@
+name: Store package
+
+# Builds the Microsoft Store edition as an UNSIGNED .msix and keeps it as a
+# workflow artifact for a few days (T-379, D-158). By hand only: nothing here
+# signs the package, attaches it to a release or submits it. The Store signs
+# what a person uploads in Partner Center (docs/development.md, "Microsoft
+# Store package").
+#
+# The identity comes from the repository variables STORE_IDENTITY_NAME,
+# STORE_PUBLISHER and STORE_PUBLISHER_DISPLAY_NAME once the Partner Center
+# account exists (they are public values, not secrets). Without them the
+# package carries the clearly fake local-test identity, and ticking
+# "for_submission" fails the job instead of making a package that could be
+# mistaken for a real one.
+
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: "full = excluded folders + unvirtualizedResources; manual = no restricted capability, no Fix button"
+        type: choice
+        options: [full, manual]
+        default: full
+      for_submission:
+        description: "Refuse the local-test identity (fail if the STORE_* variables are not set)"
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: store-package-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # Keep equal to ci.yml's.
+  RUST_VERSION: 1.96.0
+
+jobs:
+  package:
+    runs-on: windows-2025
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.16"
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: web/.node-version
+
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal
+          rustup default "$RUST_VERSION"
+
+      # The Tauri CLI pinned in package-lock.json; no install scripts run.
+      - name: Tauri CLI
+        run: npm ci --ignore-scripts
+
+      - name: Tests of the packaging tools
+        run: python -m unittest tests.test_store_version tests.test_store_package -v
+
+      # The release workflow's variable is set on purpose: the Store edition
+      # must stay off the updater even then, and the exe check below fails the
+      # job if it does not. The installer edition's target folder is not used.
+      - name: Build the unsigned package
+        shell: pwsh
+        env:
+          TAVERN_LEDGER_OFFICIAL_BUILD: "1"
+          VARIANT: ${{ inputs.variant }}
+          FOR_SUBMISSION: ${{ inputs.for_submission }}
+          STORE_IDENTITY_NAME: ${{ vars.STORE_IDENTITY_NAME }}
+          STORE_PUBLISHER: ${{ vars.STORE_PUBLISHER }}
+          STORE_PUBLISHER_DISPLAY_NAME: ${{ vars.STORE_PUBLISHER_DISPLAY_NAME }}
+        run: |
+          # A hashtable splats named parameters; an array would pass the switch
+          # as a plain string and silently ignore it.
+          $extra = @{}
+          if ($env:FOR_SUBMISSION -eq 'true') { $extra.ForSubmission = $true }
+          ./tools/make-msix.ps1 -Variant $env:VARIANT @extra
+
+      # By content: a file the build rewrites with other line ends is unchanged.
+      - name: The build changed no file of the checkout
+        run: |
+          git diff --exit-code --stat
+          untracked="$(git ls-files --others --exclude-standard)"
+          echo "$untracked"
+          test -z "$untracked"
+
+      # Only the .msix: no test certificate, no test alias, no build folder.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: store-package
+          path: target/store-package/*.msix
+          if-no-files-found: error
+          retention-days: 7

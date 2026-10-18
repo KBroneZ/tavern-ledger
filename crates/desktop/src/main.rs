@@ -1498,6 +1498,14 @@ fn main() {
             redact::place(&startup_dir)
         ),
     );
+    applog::info(
+        "app",
+        &format!(
+            "Edition: {}; package identity: {}.",
+            edition::NAME,
+            if package::has_identity() { "yes" } else { "no" }
+        ),
+    );
     // The Store edition cannot install WebView2 itself: say so before any
     // window is made, instead of failing inside the window library.
     webview2::require_runtime();
