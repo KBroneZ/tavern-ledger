@@ -1,7 +1,8 @@
 // Words for the combat odds (T-605, D-152): the shares to win, tie or lose
 // in the combat the game is playing, from the boards that entered play in it.
 // In Duos (T-608) the odds use four boards, and the boards not in play yet
-// are named when there is no number. Pure: plain data in, plain data out
+// are named when there is no number. Until the first attack they are an
+// early estimate from the boards before start of combat (D-165), marked so. Pure: plain data in, plain data out
 // (ui-tests/odds-words.test.js). The app works the odds out and says why
 // when there are none; this file never makes up a number.
 "use strict";
@@ -49,7 +50,8 @@
   }
 
   // `odds` as the app sends it (LiveOdds). Returns null when there is
-  // nothing to say, else { kind: "odds" | "note", shares, ranges, approx, said }.
+  // nothing to say, else { kind: "odds" | "note", shares, ranges, approx,
+  // estimate, said }.
   function oddsView(odds) {
     if (!odds || typeof odds !== "object") return null;
     const boards = duosBoards(odds);
@@ -62,10 +64,10 @@
         if (!unseen.length) return null;
         const who = I18n.list(unseen.map((b) => I18n.t(`ov.odds.unseen.${b.role}`)));
         const text = I18n.t("ov.odds.gap.missing_board", { who });
-        return { kind: "note", text, shares: [], ranges: NO_RANGES, approx: false, about, said: text };
+        return { kind: "note", text, shares: [], ranges: NO_RANGES, approx: false, estimate: false, about, said: text };
       }
       const text = I18n.t(`ov.odds.gap.${odds.gap}`);
-      return { kind: "note", text, shares: [], ranges: NO_RANGES, approx: false, about, said: text };
+      return { kind: "note", text, shares: [], ranges: NO_RANGES, approx: false, estimate: false, about, said: text };
     }
     if (![odds.won, odds.tied, odds.lost].every(isShare)) return null;
     // Label and number apart, so a narrow column can stack them.
@@ -78,6 +80,9 @@
     const shares = [share("win", odds.won), share("tie", odds.tied), share("lose", odds.lost)];
     const approximate = Array.isArray(odds.approximate) ? odds.approximate : [];
     const approx = approximate.length > 0 || Boolean(odds.start_of_combat);
+    // From the boards before start of combat, until the first attack's odds
+    // replace it (D-165).
+    const estimate = odds.estimate === true;
     // The odds come back for a game build the rules were not checked against,
     // with this warning (D-145).
     const warning = Number.isInteger(odds.new_build) && odds.new_build > 0
@@ -91,9 +96,10 @@
       ranges.win && ranges.win.said,
       ranges.lose && ranges.lose.said,
       warning,
+      estimate ? I18n.t("ov.odds.estimate") : null,
       approx ? I18n.t("ov.odds.approx") : null,
     ].filter(Boolean).join(". ");
-    return { kind: "odds", text: null, shares, ranges, approx, warning, warningShort, about, said };
+    return { kind: "odds", text: null, shares, ranges, approx, estimate, warning, warningShort, about, said };
   }
 
   const api = { oddsView, SAID_GAPS };

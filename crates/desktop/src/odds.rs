@@ -222,6 +222,9 @@ mod tests {
             opponent: Vec::new(),
             own_values: Default::default(),
             opponent_values: Default::default(),
+            own_kit: None,
+            opponent_kit: None,
+            estimate: false,
             own_tier: None,
             opponent_tier: None,
             damage_cap: None,
@@ -268,6 +271,31 @@ mod tests {
             "the next combat, even the same opponent"
         );
         assert!(!clears(input(3, 2)), "the same combat: it only refines");
+    }
+
+    #[test]
+    fn the_estimate_stays_until_the_first_attacks_odds_replace_it() {
+        let odds = Odds::default();
+        let early = OddsInput {
+            estimate: true,
+            ..input(3, 2)
+        };
+        let (_, job) = odds.apply(Some(Ok(early)));
+        let early = job.expect("the estimate's run");
+        let estimate = LiveOdds {
+            estimate: true,
+            ..done(&early)
+        };
+        assert!(odds.land(&early, estimate));
+
+        // The first attack: the same combat, so the estimate stays meanwhile.
+        let (changed, job) = odds.apply(Some(Ok(input(3, 2))));
+        let last = job.expect("the first attack's run");
+        assert!(!changed);
+        assert_eq!(odds.shown().map(|o| o.estimate), Some(true));
+        assert!(!odds.land(&early, done(&early)), "a late estimate");
+        assert!(odds.land(&last, done(&last)));
+        assert_eq!(odds.shown().map(|o| o.estimate), Some(false));
     }
 
     #[test]

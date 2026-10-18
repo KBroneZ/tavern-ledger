@@ -8,8 +8,12 @@
 //! game is showing; the copies the game makes of combats it does not play
 //! back are never read (the parser gives no board for them). When a board is
 //! not in yet, the overlay names it instead of a number.
+//!
+//! Each board is read at one of two moments (T-628, D-165): at its first
+//! attack (the odds), or as its leg began, before its start of combat (the
+//! early estimate), with its hero's powers and trinkets then.
 
-use bg_parser::report::{CombatValues, GameReport, LobbySlot, Minion as LogMinion, Round, Side};
+use bg_parser::report::{CombatValues, GameReport, HeroKit, LobbySlot, Minion as LogMinion, Side};
 use serde::Serialize;
 
 use crate::odds::{Gap, NoOdds};
@@ -45,6 +49,9 @@ pub struct Seen {
     pub tier: Option<i64>,
     /// The seat's game-long values as the board entered play (T-610).
     pub values: CombatValues,
+    /// The seat's hero powers and trinkets as the leg began (T-628); None
+    /// when the log gave none.
+    pub kit: Option<HeroKit>,
 }
 
 /// The boards Duos odds add to the player's own and the first opponent's.
@@ -79,21 +86,45 @@ impl DuosInput {
     }
 }
 
-/// A board that entered play, whose it is and the seat's game-long values as
-/// it entered (zero when the log gave none).
+/// Which board of each leg the odds read (D-165).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Moment {
+    /// At the leg's first attack, its start of combat played: the odds.
+    FirstAttack,
+    /// As the leg began, before its start of combat: the early estimate.
+    BeforeStart,
+}
+
+/// A board that entered play, whose it is, the seat's game-long values as
+/// it entered (zero when the log gave none) and its hero's powers and
+/// trinkets as the leg began.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Leg<'a> {
     pub seat: i64,
     pub board: &'a [LogMinion],
     pub values: CombatValues,
+    pub kit: Option<&'a HeroKit>,
 }
 
-/// The boards of `side` that entered play in `round`, in the order they came
-/// in, one per seat.
-pub(crate) fn legs(round: &Round, side: Side) -> Vec<Leg<'_>> {
+/// The boards of `side` in combat `number` at `moment`, in the order they
+/// came in, one per seat. Before start of combat: the legs that reached
+/// their first attack, then the ones between their start of combat and it
+/// (the report's `opening`).
+pub(crate) fn legs(report: &GameReport, number: i64, side: Side, moment: Moment) -> Vec<Leg<'_>> {
     let mut out: Vec<Leg<'_>> = Vec::new();
-    for e in round.entries.iter().filter(|e| e.side == side) {
-        let (Some(seat), Some(board)) = (e.player_id, e.board.as_deref()) else {
+    let entries = report
+        .rounds
+        .iter()
+        .find(|r| r.number == number)
+        .into_iter()
+        .flat_map(|r| r.entries.iter())
+        .filter(|e| e.side == side);
+    for e in entries {
+        let board = match moment {
+            Moment::FirstAttack => e.board.as_deref(),
+            Moment::BeforeStart => e.board.as_ref().and(e.before.as_deref()),
+        };
+        let (Some(seat), Some(board)) = (e.player_id, board) else {
             continue;
         };
         if out.iter().all(|l| l.seat != seat) {
@@ -101,7 +132,25 @@ pub(crate) fn legs(round: &Round, side: Side) -> Vec<Leg<'_>> {
                 seat,
                 board,
                 values: e.values.unwrap_or_default().bounded(),
+                kit: e.kit.as_ref(),
             });
+        }
+    }
+    if moment == Moment::BeforeStart {
+        let opening = report
+            .opening
+            .iter()
+            .filter(|o| o.round == number && o.side == side);
+        for o in opening {
+            let Some(seat) = o.player_id else { continue };
+            if out.iter().all(|l| l.seat != seat) {
+                out.push(Leg {
+                    seat,
+                    board: &o.board,
+                    values: o.values.bounded(),
+                    kit: Some(&o.kit),
+                });
+            }
         }
     }
     out
@@ -122,19 +171,20 @@ fn partner(report: &GameReport, seat: i64) -> Option<i64> {
         .map(|p| p.player_id)
 }
 
-/// The boards of a Duos combat: the player's, the first opponent's and the
-/// Duos extras; or why there are none yet. The boards that have not entered
-/// play are named in the reason.
+/// The boards of Duos combat `number` at `moment`: the player's, the first
+/// opponent's and the Duos extras; or why there are none yet. The boards
+/// that have not entered play are named in the reason.
 pub(crate) fn duos_combat<'a>(
-    report: &GameReport,
-    round: &'a Round,
+    report: &'a GameReport,
+    number: i64,
     lobby: &[LobbySlot],
+    moment: Moment,
 ) -> Result<(Leg<'a>, Leg<'a>, DuosInput), NoOdds> {
     let bad = || NoOdds::new(Gap::BadBoard, None);
     let local = report.local_player_id.ok_or_else(bad)?;
     let mate = report.teammate_player_id.ok_or_else(bad)?;
-    let own_legs = legs(round, Side::Own);
-    let foe_legs = legs(round, Side::Opponent);
+    let own_legs = legs(report, number, Side::Own, moment);
+    let foe_legs = legs(report, number, Side::Opponent, moment);
     let Some(foe) = foe_legs.first().map(|l| l.seat) else {
         return Err(NoOdds::new(Gap::NoBoardSeen, None));
     };
@@ -147,7 +197,7 @@ pub(crate) fn duos_combat<'a>(
         let seen = |role, seat, leg: Option<Leg<'_>>| BoardSeen {
             role,
             seat,
-            round: leg.map(|_| round.number),
+            round: leg.map(|_| number),
         };
         let boards = vec![
             seen(Role::Own, local, own),
@@ -168,10 +218,11 @@ pub(crate) fn duos_combat<'a>(
     };
     let seen = |leg: Leg<'_>| Seen {
         seat: leg.seat,
-        round: round.number,
+        round: number,
         board: leg.board.to_vec(),
         tier: tier(leg.seat),
         values: leg.values,
+        kit: leg.kit.cloned(),
     };
     let duos = DuosInput {
         local_first: own_legs.first().is_some_and(|l| l.seat == local),

@@ -272,9 +272,11 @@ function renderOdds(g) {
     bar.append(track);
     if (v.ranges.lose) bar.append(oddsRange("lose", v.ranges.lose));
     box.append(bar);
-    // A game build the rules were not checked against warns here (D-145); "≈" when a card is played with a gap.
+    // A game build the rules were not checked against warns here (D-145); "≈" for an early estimate
+    // (D-165) or when a card is played with a gap.
     if (v.warningShort) box.append(el("p", "odds-warning", v.warningShort));
-    if (v.approx) box.append(el("p", "odds-age", `≈ ${TLI18n.t("ov.odds.approx")}`));
+    const marks = [v.estimate && TLI18n.t("ov.odds.estimate"), v.approx && TLI18n.t("ov.odds.approx")].filter(Boolean);
+    if (marks.length) box.append(el("p", "odds-age", `≈ ${marks.join(" · ")}`));
   }
   box.append(el("span", "visually-hidden", v.said));
   panel.replaceChildren(box);

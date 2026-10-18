@@ -4,24 +4,32 @@
 //! odds in the shop from a board of an opponent seen turns ago. In Duos
 //! (T-608) each team brings two boards: see [`crate::odds_duos`].
 //!
-//! Red line (D-004, D-054): only boards the player saw: the ones that
-//! entered play in the combat on screen. When the odds cannot be trusted (a
+//! With each board, its hero's powers and trinkets (T-628). As a combat
+//! starts on screen the odds are first an estimate from the boards before
+//! start of combat, with start of combat played, when every start-of-combat
+//! source on them is (else no number yet); from the first attack on, the
+//! boards then (D-165).
+//!
+//! Red line (D-004, D-054): only boards the player saw: the ones of the
+//! combat on screen, as the screen shows them (D-165). When the odds cannot be trusted (a
 //! board not in yet, a card the simulator does not know, no card data) the
 //! overlay gets the reason, never a number.
 
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
-use bg_parser::report::{CombatValues, GameReport, LobbySlot, Minion as LogMinion, Side};
+use bg_parser::report::{
+    CombatValues, GameReport, HeroKit, KitCard as LogKitCard, LobbySlot, Minion as LogMinion, Side,
+};
 use combat_sim::cards::{has_start_of_combat, unchecked_build};
 use combat_sim::gifts;
 use combat_sim::{
-    simulate_teams, BaseCard, CombatResult, GameValues, Keywords, Minion, Odds, Options, Team,
-    Tribes, Verdict, Warband,
+    simulate_teams, BaseCard, CombatResult, GameValues, Keywords, Kit, KitCard, Minion, Odds,
+    Options, Team, Tribes, Verdict, Warband,
 };
 use serde::Serialize;
 
-use crate::odds_duos::{duos_combat, legs};
+use crate::odds_duos::{duos_combat, legs, Moment};
 pub use crate::odds_duos::{BoardSeen, DuosInput, Role, Seen};
 
 /// Trials for a full answer: the share's standard error is at most 0.5 point.
@@ -90,6 +98,13 @@ pub struct OddsInput {
     pub own_values: CombatValues,
     /// The opponent's game-long values as their board entered play.
     pub opponent_values: CombatValues,
+    /// The player's hero powers and trinkets as their leg began (T-628);
+    /// None when the log gave none.
+    pub own_kit: Option<HeroKit>,
+    pub opponent_kit: Option<HeroKit>,
+    /// The boards are from before start of combat: an early estimate, with
+    /// start of combat played, until the first attack (D-165).
+    pub estimate: bool,
     pub own_tier: Option<i64>,
     /// The opponent's tavern tier now (it is shown on the leaderboard).
     pub opponent_tier: Option<i64>,
@@ -185,6 +200,9 @@ pub struct LiveOdds {
     /// The game build when the simulator's rules were not checked against
     /// it: the odds are still given, with a warning (D-145).
     pub new_build: Option<i64>,
+    /// An early estimate from the boards before start of combat (D-165),
+    /// until the odds from the first attack replace it.
+    pub estimate: bool,
 }
 
 impl LiveOdds {
@@ -204,6 +222,7 @@ impl LiveOdds {
             missing: Vec::new(),
             start_of_combat: false,
             new_build: None,
+            estimate: false,
         }
     }
 }
@@ -256,20 +275,36 @@ pub struct LiveFacts<'a> {
 
 /// The input for the odds of the combat the game is playing now, from the
 /// boards that entered play in it, or why there are none (with the seat when
-/// known). Never a board of an earlier combat.
+/// known). Never a board of an earlier combat. Until the boards' first
+/// attack, the early estimate's input from the boards before start of
+/// combat, once every leg's has been read (D-165).
 pub fn odds_input(report: &GameReport, live: LiveFacts) -> Result<OddsInput, NoOdds> {
     let Some(number) = live.combat_round else {
         return Err(NoOdds::new(Gap::NotInCombat, None));
     };
-    let Some(round) = report.rounds.iter().find(|r| r.number == number) else {
+    let begun = report.rounds.iter().any(|r| r.number == number)
+        || report.opening.iter().any(|o| o.round == number);
+    if !begun {
         return Err(NoOdds::new(Gap::NoBoardSeen, None));
-    };
+    }
+    combat_input(report, &live, number, Moment::FirstAttack)
+        .or_else(|no| combat_input(report, &live, number, Moment::BeforeStart).map_err(|_| no))
+}
+
+fn combat_input(
+    report: &GameReport,
+    live: &LiveFacts,
+    number: i64,
+    moment: Moment,
+) -> Result<OddsInput, NoOdds> {
     let (own, opponent, duos) = if report.game_type.as_deref() == Some("GT_BATTLEGROUNDS_DUO") {
-        let (own, opponent, duos) = duos_combat(report, round, live.lobby)?;
+        let (own, opponent, duos) = duos_combat(report, number, live.lobby, moment)?;
         (own, opponent, Some(duos))
     } else {
-        let own = legs(round, Side::Own).into_iter().next();
-        let opponent = legs(round, Side::Opponent).into_iter().next();
+        let own = legs(report, number, Side::Own, moment).into_iter().next();
+        let opponent = legs(report, number, Side::Opponent, moment)
+            .into_iter()
+            .next();
         let seat = opponent.map(|l| l.seat);
         let (Some(own), Some(opponent)) = (own, opponent) else {
             return Err(NoOdds::new(Gap::NoBoardSeen, seat));
@@ -285,11 +320,15 @@ pub fn odds_input(report: &GameReport, live: LiveFacts) -> Result<OddsInput, NoO
     Ok(OddsInput {
         opponent_seat: opponent.seat,
         round: number,
-        seen_after_start_of_combat: start_of_combat_in(report, number),
+        seen_after_start_of_combat: moment == Moment::FirstAttack
+            && start_of_combat_in(report, number),
         own: own.board.to_vec(),
         opponent: opponent.board.to_vec(),
         own_values: own.values,
         opponent_values: opponent.values,
+        own_kit: own.kit.cloned(),
+        opponent_kit: opponent.kit.cloned(),
+        estimate: moment == Moment::BeforeStart,
         own_tier: tier(own.seat),
         opponent_tier: tier(opponent.seat),
         damage_cap: live.damage_cap,
@@ -334,10 +373,52 @@ fn engine_values(v: &CombatValues) -> GameValues {
     }
 }
 
+/// Adds a card id to `missing` once.
+fn note_missing(missing: &mut Vec<String>, id: String) {
+    if !missing.contains(&id) {
+        missing.push(id);
+    }
+}
+
+/// A hero's powers and trinkets in the engine's form in combat `round`, as
+/// the harness gives them: a named minion's board position becomes its
+/// index. A minion a power holds is read only when `hold`: on the player's
+/// team (D-163; the teammate's is on screen too, D-167) with start of combat
+/// played, the only time it comes in; it goes to `missing` when the card
+/// data lacks it.
+fn engine_kit(
+    kit: &HeroKit,
+    round: i64,
+    hold: bool,
+    facts: &dyn Fn(&str) -> Option<Facts>,
+    missing: &mut Vec<String>,
+) -> Kit {
+    let mut card = |c: &LogKitCard| KitCard {
+        held: c.held.as_ref().filter(|_| hold).and_then(|m| {
+            engine_minion(m, facts)
+                .map_err(|id| note_missing(missing, id))
+                .ok()
+        }),
+        card_id: c.card_id.clone(),
+        slot: u8::try_from(c.slot).unwrap_or(0),
+        counters: c.counters.map(|n| i32::try_from(n).unwrap_or(0)),
+        target: c
+            .target
+            .and_then(|p| p.checked_sub(1))
+            .and_then(|i| usize::try_from(i).ok()),
+    };
+    Kit {
+        powers: kit.powers.iter().map(&mut card).collect(),
+        trinkets: kit.trinkets.iter().map(&mut card).collect(),
+        round: u32::try_from(round).ok(),
+    }
+}
+
 fn warband(
     board: &[LogMinion],
     tier: Option<i64>,
     values: &CombatValues,
+    kit: Option<Kit>,
     facts: &dyn Fn(&str) -> Option<Facts>,
     missing: &mut Vec<String>,
 ) -> Warband {
@@ -345,12 +426,11 @@ fn warband(
     for m in board {
         match engine_minion(m, facts) {
             Ok(minion) => minions.push(minion),
-            Err(id) if !missing.contains(&id) => missing.push(id),
-            Err(_) => {}
+            Err(id) => note_missing(missing, id),
         }
     }
     Warband {
-        kit: None,
+        kit,
         minions,
         tavern_tier: tier.and_then(|t| u8::try_from(t).ok()),
         values: engine_values(values),
@@ -359,38 +439,50 @@ fn warband(
 
 /// Both teams in the engine's form: in Solo one board each; in Duos the
 /// player's and the teammate's in the game's order, and the next opponent's
-/// board before their teammate's. Cards without data go to `missing`.
+/// board before their teammate's. Each board with its hero's powers and
+/// trinkets. Cards without data go to `missing`.
 fn teams(
     input: &OddsInput,
     facts: &dyn Fn(&str) -> Option<Facts>,
     missing: &mut Vec<String>,
 ) -> (Team, Team) {
+    let kit = |kit: &Option<HeroKit>, own: bool, missing: &mut Vec<String>| {
+        let hold = own && input.estimate;
+        kit.as_ref()
+            .map(|k| engine_kit(k, input.round, hold, facts, missing))
+    };
+    let own_kit = kit(&input.own_kit, true, missing);
     let own = warband(
         &input.own,
         input.own_tier,
         &input.own_values,
+        own_kit,
         facts,
         missing,
     );
+    let opponent_kit = kit(&input.opponent_kit, false, missing);
     let opponent = warband(
         &input.opponent,
         input.opponent_tier,
         &input.opponent_values,
+        opponent_kit,
         facts,
         missing,
     );
     let Some(duos) = &input.duos else {
         return (Team::solo(own), Team::solo(opponent));
     };
-    let seen =
-        |s: &Seen, missing: &mut Vec<String>| warband(&s.board, s.tier, &s.values, facts, missing);
-    let mate = seen(&duos.teammate, missing);
+    let seen = |s: &Seen, own: bool, missing: &mut Vec<String>| {
+        let k = kit(&s.kit, own, missing);
+        warband(&s.board, s.tier, &s.values, k, facts, missing)
+    };
+    let mate = seen(&duos.teammate, true, missing);
     let player = if duos.local_first {
         Team::duo(own, mate)
     } else {
         Team::duo(mate, own)
     };
-    let foe_mate = seen(&duos.opponent_teammate, missing);
+    let foe_mate = seen(&duos.opponent_teammate, false, missing);
     (player, Team::duo(opponent, foe_mate))
 }
 
@@ -420,7 +512,9 @@ fn spread(counts: &BTreeMap<i32, u32>, cap: Option<i64>) -> Option<Spread> {
 }
 
 /// Runs the simulator on `input` in batches until [`TRIALS`] or `budget`
-/// (at least one batch). `facts` gives the card data for a card id.
+/// (at least one batch). `facts` gives the card data for a card id. An
+/// early estimate plays start of combat; when a start-of-combat source on
+/// its boards or kits is not played (the leg rule), it gives no number yet.
 pub fn run_odds(
     input: &OddsInput,
     facts: &dyn Fn(&str) -> Option<Facts>,
@@ -452,7 +546,7 @@ pub fn run_odds(
         let options = Options {
             trials: BATCH,
             seed: SEED ^ batch,
-            start_of_combat: false,
+            start_of_combat: input.estimate,
             allow_unmodelled: false,
         };
         match simulate_teams(&player, &opponent, &options) {
@@ -460,6 +554,7 @@ pub fn run_odds(
                 Some(t) => t.merge(&o),
                 None => total = Some(o),
             },
+            Ok(Verdict::NotModelled(_)) if input.estimate => return gap(Gap::NoBoardSeen),
             Ok(Verdict::NotModelled(c)) => {
                 return LiveOdds {
                     missing: c.not_modelled,
@@ -477,15 +572,17 @@ pub fn run_odds(
     let Some(o) = total else {
         return gap(Gap::BadBoard);
     };
-    let start_of_combat = input.seen_after_start_of_combat
-        || player
-            .boards()
-            .chain(opponent.boards())
-            .flat_map(|b| &b.minions)
-            .any(|m| {
-                has_start_of_combat(&m.card_id)
-                    || m.gifts.iter().any(|g| gifts::has_start_of_combat(g))
-            });
+    // An estimate plays start of combat itself.
+    let start_of_combat = !input.estimate
+        && (input.seen_after_start_of_combat
+            || player
+                .boards()
+                .chain(opponent.boards())
+                .flat_map(|b| &b.minions)
+                .any(|m| {
+                    has_start_of_combat(&m.card_id)
+                        || m.gifts.iter().any(|g| gifts::has_start_of_combat(g))
+                }));
     let known = o.damage_unknown == 0;
     LiveOdds {
         seat,
@@ -509,6 +606,7 @@ pub fn run_odds(
         missing: Vec::new(),
         start_of_combat,
         new_build: unchecked_build(input.build),
+        estimate: input.estimate,
     }
 }
 

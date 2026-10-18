@@ -13,7 +13,7 @@ use crate::leaderboard::{is_leaderboard_tag, LeaderboardTracker};
 use crate::power::{EntityRef, Packet, ParseError, Value};
 use crate::replay::{board_entities, minion_of, ReplayTracker, Sides};
 use crate::report::{
-    AttackSlot, CombatResult, CombatValues, DefenderSource, LoggedAttack, Minion, Side,
+    AttackSlot, CombatResult, CombatValues, DefenderSource, LoggedAttack, Minion, OpeningLeg, Side,
 };
 use crate::shop::{Seats, ShopTracker};
 use crate::state::{Board, Entity, Players, Tags, MAX_TAGS};
@@ -48,6 +48,8 @@ struct OpenLeg {
     /// The side's board and kit just before the leg's first start-of-combat
     /// effect or attack (T-628).
     before: Option<(Vec<Minion>, HeroKit)>,
+    /// The side's game-long values then (D-165).
+    before_values: Option<CombatValues>,
 }
 
 /// (side, hero card id, combat player id hint, board or None if not visible)
@@ -526,6 +528,7 @@ impl Collector {
                 hero: None,
                 hint: None,
                 before: None,
+                before_values: None,
             });
             self.open_opp = None;
         } else {
@@ -559,6 +562,7 @@ impl Collector {
             hero,
             hint,
             before: None,
+            before_values: None,
         });
     }
 
@@ -669,6 +673,42 @@ impl Collector {
         self.open_opp = None;
     }
 
+    /// The legs open now whose start of combat has begun (their board, kit
+    /// and game-long values taken then), before their first attack (T-628,
+    /// D-165). `player_id` is the combat player id hint; the report sets
+    /// the seat.
+    pub(crate) fn opening(&self) -> Vec<OpeningLeg> {
+        let round = self.turn() / 2;
+        [
+            (Side::Own, &self.open_own),
+            (Side::Opponent, &self.open_opp),
+        ]
+        .into_iter()
+        .filter_map(|(side, leg)| {
+            let leg = leg.as_ref()?;
+            let (board, kit) = leg.before.clone()?;
+            let (hero, hint) = self.current(side);
+            Some(OpeningLeg {
+                round,
+                side,
+                player_id: hint,
+                hero,
+                board,
+                kit,
+                values: leg.before_values.unwrap_or_default(),
+            })
+        })
+        .collect()
+    }
+
+    /// How many legs [`Collector::opening`] gives now, without copying them.
+    pub(crate) fn opening_count(&self) -> usize {
+        [&self.open_own, &self.open_opp]
+            .into_iter()
+            .filter(|leg| leg.as_ref().is_some_and(|l| l.before.is_some()))
+            .count()
+    }
+
     /// The board and kit of the combat side `pid` now.
     fn before_of(&self, pid: i64) -> (Vec<Minion>, HeroKit) {
         (board_of(&self.board, pid), kit_of(&self.board, pid))
@@ -715,8 +755,10 @@ impl Collector {
                 .is_some_and(|l| l.before.is_none());
             if waiting {
                 let before = self.before_of(pid);
+                let values = self.combat_values(side);
                 if let Some(leg) = self.open_mut(side).as_mut() {
                     leg.before = Some(before);
+                    leg.before_values = Some(values);
                 }
             }
         }
