@@ -7,6 +7,7 @@ use crate::cards::{self, Action, Fidelity, Trigger};
 use crate::combat::{play, CombatResult, Prepared};
 use crate::gifts;
 use crate::kit::{self, KitEffect};
+use crate::kit_effects;
 use crate::model::{BoardError, GameValues, Keywords, Kit, Minion, Team, Tribes, Warband};
 use crate::rng::Rng;
 
@@ -80,14 +81,19 @@ impl Coverage {
             match cards::rules(id) {
                 None => push_unique(&mut cov.not_modelled, id.clone()),
                 Some(rules) => {
+                    // A buff that grows during the game needs the minion's
+                    // own numbers (T-628).
+                    let numbers_missing = cards::start_of_combat_scales(id) && m.counters == [0, 0];
                     let soc_gap = start_of_combat
                         && (rules.triggers.contains(&Trigger::StartOfCombatUnmodelled)
-                            || cards::start_of_combat_scales(id));
+                            || numbers_missing);
                     if soc_gap {
                         push_unique(&mut cov.not_modelled, id.clone());
                     }
                     if let Fidelity::Approximate(why) = rules.fidelity {
+                        let unplayed = !start_of_combat && spell_at_start_only(why, &rules);
                         if !played_with(why, values)
+                            && !unplayed
                             && !cov.approximate.iter().any(|(c, _)| c == id)
                         {
                             cov.approximate.push((id.clone(), why));
@@ -141,19 +147,37 @@ impl Coverage {
         }
     }
 
-    /// A board's hero powers and trinkets (T-628), none of whose effects is
-    /// played yet: one not reviewed blocks; one that acts at the start of
-    /// combat blocks when start of combat is played (with it off, the board
-    /// was taken after it); one that acts later in the combat is
-    /// approximate.
+    /// A board's hero powers and trinkets (T-628): one not reviewed blocks;
+    /// one that acts at the start of combat blocks when start of combat is
+    /// played unless the engine plays it ([`kit_effects`]; with start of
+    /// combat off the board was taken after it); one that acts later in the
+    /// combat is approximate.
     fn add_kit(&mut self, kit: &Kit, start_of_combat: bool) {
         let power_in_combat = kit.powers.iter().any(|p| kit::acts_in_combat(&p.card_id));
         for card in kit.cards() {
             let id = &card.card_id;
             let effect = kit::effect(id);
+            let play = kit_effects::played(id).filter(|_| start_of_combat);
+            if let Some(play) = play {
+                let why = match play.fidelity {
+                    Fidelity::Approximate(why) => Some(why),
+                    Fidelity::Exact => None,
+                };
+                let why = why.or_else(|| {
+                    kit_effects::counter_missing(play, &card.counters)
+                        .then_some(kit::COUNTER_NOT_GIVEN)
+                });
+                if let Some(why) = why {
+                    if !self.approximate.iter().any(|(c, _)| c == id) {
+                        self.approximate.push((id.clone(), why));
+                    }
+                }
+            }
             let refuse = match effect {
                 None => true,
-                Some(KitEffect::StartOfCombat | KitEffect::StartAndInCombat) => start_of_combat,
+                Some(KitEffect::StartOfCombat | KitEffect::StartAndInCombat) => {
+                    start_of_combat && play.is_none()
+                }
                 Some(_) => false,
             };
             if refuse {
@@ -235,6 +259,11 @@ fn start_of_combat_ids(band: &Warband) -> Vec<String> {
             push_unique(&mut out, g.clone());
         }
     }
+    for card in band.kit.iter().flat_map(Kit::cards) {
+        if kit_effects::played(&card.card_id).is_some() {
+            push_unique(&mut out, card.card_id.clone());
+        }
+    }
     out
 }
 
@@ -264,6 +293,17 @@ fn played_with(why: &str, values: &GameValues) -> bool {
         w if w == crate::cards_round2::SPELL => values.spell != (0, 0),
         _ => false,
     }
+}
+
+/// True when the card's gap is a Tavern spell's values and its only effect is
+/// at the start of combat (Runic Arcanist, T-628): on a board taken after
+/// start of combat its casts are already there.
+fn spell_at_start_only(why: &str, rules: &cards::CardRules) -> bool {
+    why == crate::cards_round2::SPELL
+        && rules
+            .triggers
+            .iter()
+            .all(|t| matches!(t, Trigger::StartOfCombat(_)))
 }
 
 /// Tribes a card on this warband can give Reborn to in combat.

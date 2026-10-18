@@ -63,6 +63,10 @@ pub(crate) struct Prepared {
     /// Each side's game-long values, and its teammate's (T-609).
     pub values: [GameValues; 2],
     pub second_values: [GameValues; 2],
+    /// Each side's played hero powers and trinkets, and its teammate's
+    /// (T-628).
+    pub kits: [Vec<KitUse>; 2],
+    pub second_kits: [Vec<KitUse>; 2],
     pub start_of_combat: bool,
     /// Some card here gains what the Amalgam gains (round 5): checked once,
     /// not on every buff.
@@ -97,13 +101,18 @@ impl Prepared {
                 .map(|m| {
                     let (card, keywords) = gifts::card_of(cards, m);
                     uid += 1;
-                    Unit::new(uid, card, m.attack, m.health, m.keywords.union(keywords))
+                    let mut unit =
+                        Unit::new(uid, card, m.attack, m.health, m.keywords.union(keywords));
+                    unit.counters = m.counters;
+                    unit
                 })
                 .collect()
         };
         let mut start = [units(first[0], &mut cards), units(first[1], &mut cards)];
         let second_tier = second.map(|b| b.and_then(|b| b.tavern_tier));
         let second_values = second.map(|b| b.map_or(GameValues::default(), |b| b.values));
+        let kits = first.map(|b| kit_uses(b.kit.as_ref()));
+        let second_kits = second.map(|b| kit_uses(b.and_then(|b| b.kit.as_ref())));
         let mut second = [
             second[0].map(|b| units(b, &mut cards)),
             second[1].map(|b| units(b, &mut cards)),
@@ -166,6 +175,8 @@ impl Prepared {
             second_tier,
             values: [first[0].values, first[1].values],
             second_values,
+            kits,
+            second_kits,
             start_of_combat,
         }
     }
@@ -219,6 +230,8 @@ pub(crate) struct Unit {
     shield_taken: u8,
     /// Times its "n times per combat" effect has happened.
     uses: u8,
+    /// The two numbers its text shows (T-628); 0 when not given.
+    counters: [i32; 2],
 }
 
 impl Unit {
@@ -236,6 +249,7 @@ impl Unit {
             gained: Vec::new(),
             shield_taken: 0,
             uses: 0,
+            counters: [0, 0],
         }
     }
 
@@ -403,9 +417,10 @@ impl<'a> Combat<'a> {
         self.first_by_count().unwrap_or(before)
     }
 
-    /// Some board of `sides` has a minion that attacks at the start of combat.
+    /// Some board of `sides` has a minion, hero power or trinket that
+    /// attacks at the start of combat.
     pub(crate) fn has_immediate_attackers(&self, sides: [bool; 2]) -> bool {
-        (0..2).any(|s| sides[s] && !self.immediate_attackers(s).is_empty())
+        (0..2).any(|s| sides[s] && (!self.immediate_attackers(s).is_empty() || self.kit_swings(s)))
     }
 
     /// The side with more minions attacks first; `None` on equal counts (a
@@ -521,7 +536,11 @@ mod gifts;
 
 #[path = "combat_values.rs"]
 mod values;
+
+#[path = "combat_kit.rs"]
+mod kit;
 use duos::Legs;
+use kit::{kit_uses, KitUse};
 
 #[cfg(test)]
 #[path = "combat_tests.rs"]
@@ -550,3 +569,7 @@ mod round8_tests;
 #[cfg(test)]
 #[path = "combat_stat_cap_tests.rs"]
 mod stat_cap_tests;
+
+#[cfg(test)]
+#[path = "combat_kit_tests.rs"]
+mod kit_tests;

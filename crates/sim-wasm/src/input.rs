@@ -160,6 +160,8 @@ fn minion(v: &Value, missing: &mut Vec<String>) -> Res<Option<Minion>> {
         tier: f.tier,
         base: Some(f.base),
         gifts,
+        // The request does not carry a minion's numbers yet (T-628).
+        counters: [0, 0],
     }))
 }
 

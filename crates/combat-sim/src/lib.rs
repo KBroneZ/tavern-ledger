@@ -30,6 +30,7 @@ mod cards_round8_pool;
 pub mod combat;
 pub mod gifts;
 pub mod kit;
+pub mod kit_effects;
 mod kit_lists;
 pub mod model;
 pub mod rng;

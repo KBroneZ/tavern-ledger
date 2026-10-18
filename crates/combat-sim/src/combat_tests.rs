@@ -571,8 +571,9 @@ fn unknown_cards_give_no_number_unless_asked() {
 
 #[test]
 fn start_of_combat_effects_count_only_when_played() {
-    // Amber Guardian has a start-of-combat effect the engine does not play.
-    let player = band(vec![Minion::new("BG24_500", 3, 2)]);
+    // Ultraviolet Ascendant's buff grows during the game: without its own
+    // numbers the engine cannot play it before start of combat.
+    let player = band(vec![Minion::new("BG31_810", 3, 2)]);
     let after = Options::default();
     assert!(matches!(
         simulate(&player, &band(vec![]), &after).unwrap(),

@@ -293,9 +293,16 @@ fn cards_that_act_in_combat_carry_the_numbers_of_build_254477() {
     // Ship Master Eudora: Deathrattle: give your minions +6/+6.
     assert_eq!(first("BG33_828"), [buff_all(6, 6)]);
     assert_eq!(first("BG33_828_G"), [buff_all(12, 12)]);
-    // Hopebringer: Start of Combat: give your minions +4/+3.
-    assert_eq!(first("BG36_364"), [buff_all(4, 3)]);
-    assert_eq!(first("BG36_364_G"), [buff_all(8, 6)]);
+    // Hopebringer: Start of Combat: give your minions +4/+3 (printed; the
+    // minion's own numbers when the board gives them, T-628).
+    let hope = |attack, health| Action::BuffAllByCounters {
+        attack,
+        health,
+        tribe: Tribes::NONE,
+        others: false,
+    };
+    assert_eq!(first("BG36_364"), [hope(4, 3)]);
+    assert_eq!(first("BG36_364_G"), [hope(8, 6)]);
     // Razorfen Vineweaver: Rally: 4 permanent Blood Gems on itself.
     for (id, count) in [("BG33_883", 4), ("BG33_883_G", 8)] {
         let gems = Action::Gems {

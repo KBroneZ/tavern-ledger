@@ -12,6 +12,7 @@ const DUOS: &str = "GT_BATTLEGROUNDS_DUO";
 
 fn minion(card: &str, atk: i64, health: i64, position: i64) -> LogMinion {
     LogMinion {
+        counters: [0, 0],
         card_id: Some(card.into()),
         atk,
         health,

@@ -311,6 +311,7 @@ fn log_board(b: &Value) -> Vec<LogMinion> {
                     .unwrap_or_default(),
                 gift_unknown: false,
                 buffs: Vec::new(),
+                counters: [0, 0],
             }
         })
         .collect()

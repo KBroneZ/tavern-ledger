@@ -7,10 +7,23 @@ use crate::model::{Keywords, Tribes};
 
 impl Combat<'_> {
     /// Start-of-combat effects of the boards that are coming in (`sides`),
-    /// the first attacker's side first; each side's "attack immediately"
+    /// the first attacker's side first: every trinket, then every hero power
+    /// (T-628), then each side's minions; each side's "attack immediately"
     /// comes after its other effects, before the other side's.
     pub(super) fn start_of_combat(&mut self, first: usize, sides: [bool; 2]) {
-        for side in [first, 1 - first].into_iter().filter(|s| sides[*s]) {
+        let order: Vec<usize> = [first, 1 - first]
+            .into_iter()
+            .filter(|s| sides[*s])
+            .collect();
+        if order.iter().any(|s| self.has_kit_start(*s)) {
+            for powers in [false, true] {
+                for &side in &order {
+                    self.play_kit(side, powers);
+                }
+            }
+            self.process_deaths(first);
+        }
+        for side in order {
             let uids: Vec<u32> = self.sides[side].units.iter().map(|u| u.uid).collect();
             for uid in uids {
                 let Some(unit) = self.unit(side, uid) else {

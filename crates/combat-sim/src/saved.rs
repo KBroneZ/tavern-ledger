@@ -87,6 +87,8 @@ pub fn minion(v: &Value, facts: &FactsOf) -> Option<Minion> {
                     .collect()
             })
             .unwrap_or_default(),
+        // Not in the saved report (T-628).
+        counters: [0, 0],
         card_id,
     })
 }

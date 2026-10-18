@@ -139,6 +139,26 @@ pub enum Action {
     /// minion's Attack and full Health, `factor` times over, at most `times`
     /// times per combat (Stalwart Kodo; T-616).
     GiveSummonedOwnStats { factor: i32, times: u8 },
+    /// Give `count` different random friendly minions of `tribe` (not the
+    /// card) stats and a keyword (Amber Guardian; T-628).
+    BuffRandomWithKeyword {
+        attack: i32,
+        health: i32,
+        keyword: Keywords,
+        tribe: Tribes,
+        count: u8,
+    },
+    /// Deal damage to every other minion, both sides (Boom-in-a-Box; T-628).
+    DamageAllOthers(i32),
+    /// Give friendly minions of `tribe` (`others` leaves the card out) the
+    /// stats the card's own two numbers say, the printed ones when the board
+    /// gives none (Hopebringer, Ultraviolet Ascendant; T-628).
+    BuffAllByCounters {
+        attack: i32,
+        health: i32,
+        tribe: Tribes,
+        others: bool,
+    },
 }
 
 /// Where Blood Gems go.
@@ -334,15 +354,14 @@ pub fn has_start_of_combat(card_id: &str) -> bool {
 }
 
 /// True when the card's start-of-combat effect uses numbers that grow during
-/// the game, which the board does not give yet (Hopebringer, T-628): on a
-/// board taken before start of combat it cannot be played, so the board must
-/// be taken after it.
+/// the game (Hopebringer, T-628): played from a board taken before start of
+/// combat only with the minion's own numbers ([`crate::Minion::counters`]).
 pub fn start_of_combat_scales(card_id: &str) -> bool {
     rules(card_id).is_some_and(|r| {
-        r.fidelity == Fidelity::Approximate(crate::cards_round1::SCALES)
-            && r.triggers
-                .iter()
-                .any(|t| matches!(t, Trigger::StartOfCombat(_)))
+        r.triggers.iter().any(|t| {
+            matches!(t, Trigger::StartOfCombat(actions)
+                if actions.iter().any(|a| matches!(a, Action::BuffAllByCounters { .. })))
+        })
     })
 }
 

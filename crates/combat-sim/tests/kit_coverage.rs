@@ -57,9 +57,9 @@ fn a_hero_power_nobody_reviewed_blocks_by_name() {
 }
 
 #[test]
-fn a_start_of_combat_trinket_blocks_only_when_start_of_combat_is_played() {
-    // Holy Mallet: Start of Combat only.
-    let player = with_kit(vec![plain(2, 2)], &[], &["BG30_MagicItem_902"]);
+fn a_start_of_combat_power_not_played_yet_blocks_only_when_start_of_combat_is_played() {
+    // Earth Invocation: Start of Combat only, not played yet.
+    let player = with_kit(vec![plain(2, 2)], &["BG22_HERO_001p_t1"], &[]);
     let Verdict::Odds(odds) = verdict(&player, false) else {
         panic!("a board taken after start of combat already has it");
     };
@@ -69,7 +69,7 @@ fn a_start_of_combat_trinket_blocks_only_when_start_of_combat_is_played() {
     };
     assert_eq!(
         cov.reasons(),
-        [("BG30_MagicItem_902".to_string(), START_OF_COMBAT_NOT_PLAYED)]
+        [("BG22_HERO_001p_t1".to_string(), START_OF_COMBAT_NOT_PLAYED)]
     );
 }
 
@@ -186,14 +186,16 @@ fn start_of_combat_on_both_sides_names_the_order_as_unproven() {
 }
 
 #[test]
-fn hopebringer_needs_a_board_taken_after_start_of_combat() {
-    // Its buff grows during the game and the board does not give it.
+fn hopebringer_without_its_numbers_needs_a_board_taken_after_start_of_combat() {
+    // Its buff grows during the game; without its numbers it is refused
+    // before start of combat.
     let player = with_kit(vec![Minion::new("BG36_364", 3, 3).tier(3)], &[], &[]);
     assert!(matches!(verdict(&player, true), Verdict::NotModelled(_)));
+    // A board taken after it already has the real buff: exact.
     let Verdict::Odds(odds) = verdict(&player, false) else {
-        panic!("a board taken after it has the real buff");
+        panic!("a board taken after start of combat");
     };
-    assert!(!odds.coverage.approximate.is_empty());
+    assert!(odds.coverage.is_exact(), "{:?}", odds.coverage);
 }
 
 #[test]
@@ -207,4 +209,107 @@ fn a_duos_teammate_brings_its_own_kit() {
         panic!("the teammate's unknown hero power blocks");
     };
     assert_eq!(cov.kit, ["BG99_HERO_999p"]);
+}
+
+#[test]
+fn a_played_start_of_combat_power_needs_no_board_after_it() {
+    use combat_sim::kit::{COUNTER_NOT_GIVEN, LIGHTNING_REPEATS};
+    // Wax Warband with its buff given (its third number): played, exact.
+    let mut wax = KitCard::new("TB_BaconShop_HP_037a");
+    wax.counters[2] = 3;
+    let player = Warband {
+        kit: Some(Kit {
+            powers: vec![wax],
+            trinkets: Vec::new(),
+        }),
+        tavern_tier: Some(1),
+        ..Warband::new(vec![plain(2, 2)])
+    };
+    let Verdict::Odds(odds) = verdict(&player, true) else {
+        panic!("Wax Warband is played");
+    };
+    assert!(odds.coverage.is_exact(), "{:?}", odds.coverage);
+    // Without its number the printed +1/+1 is used, named.
+    let bare = with_kit(vec![plain(2, 2)], &["TB_BaconShop_HP_037a"], &[]);
+    let Verdict::Odds(odds) = verdict(&bare, true) else {
+        panic!()
+    };
+    assert_eq!(
+        odds.coverage.approximate,
+        [("TB_BaconShop_HP_037a".to_string(), COUNTER_NOT_GIVEN)]
+    );
+    // Lightning Invocation is played, approximate.
+    let lightning = with_kit(vec![plain(2, 2)], &["BG22_HERO_001p_t4"], &[]);
+    let Verdict::Odds(odds) = verdict(&lightning, true) else {
+        panic!()
+    };
+    assert_eq!(
+        odds.coverage.approximate,
+        [("BG22_HERO_001p_t4".to_string(), LIGHTNING_REPEATS)]
+    );
+}
+
+#[test]
+fn hopebringer_is_played_before_start_of_combat_with_its_numbers() {
+    let mut hope = Minion::new("BG36_364", 3, 3).tier(3);
+    hope.counters = [12, 9];
+    let player = with_kit(vec![hope], &[], &[]);
+    let Verdict::Odds(odds) = verdict(&player, true) else {
+        panic!("its own numbers are on the board");
+    };
+    assert!(odds.coverage.is_exact(), "{:?}", odds.coverage);
+}
+
+#[test]
+fn with_start_of_combat_off_kits_and_numbers_change_no_odds() {
+    // Boards taken after start of combat: every played power, trinket and
+    // minion number is already on them.
+    let mut hope = Minion::new("BG36_364", 3, 3).tier(3);
+    hope.counters = [40, 30];
+    let plain_hope = Minion::new("BG36_364", 3, 3).tier(3);
+    let mut wax = KitCard::new("TB_BaconShop_HP_037a");
+    wax.counters[2] = 9;
+    let kitted = Warband {
+        kit: Some(Kit {
+            powers: vec![wax],
+            trinkets: vec![KitCard::new("BG30_MagicItem_902")],
+        }),
+        tavern_tier: Some(1),
+        ..Warband::new(vec![hope, plain(2, 2)])
+    };
+    let bare = Warband {
+        tavern_tier: Some(1),
+        ..Warband::new(vec![plain_hope, plain(2, 2)])
+    };
+    let odds = |w: &Warband| match verdict(w, false) {
+        Verdict::Odds(o) => (o.won, o.tied, o.lost, o.damage_dealt, o.damage_taken),
+        Verdict::NotModelled(c) => panic!("{c:?}"),
+    };
+    assert_eq!(odds(&kitted), odds(&bare));
+}
+
+#[test]
+fn runic_arcanists_spell_gap_matters_only_when_its_start_of_combat_is_played() {
+    let arcanist = || Minion::new("BG36_245", 2, 4).tier(4);
+    let player = with_kit(vec![arcanist()], &[], &[]);
+    let Verdict::Odds(odds) = verdict(&player, false) else {
+        panic!()
+    };
+    assert!(odds.coverage.is_exact(), "{:?}", odds.coverage);
+    let Verdict::Odds(odds) = verdict(&player, true) else {
+        panic!()
+    };
+    assert_eq!(odds.coverage.approximate.len(), 1, "{:?}", odds.coverage);
+    // With the board's spell upgrades known it is exact again.
+    let upgraded = Warband {
+        values: combat_sim::GameValues {
+            spell: (1, 2),
+            ..Default::default()
+        },
+        ..with_kit(vec![arcanist()], &[], &[])
+    };
+    let Verdict::Odds(odds) = verdict(&upgraded, true) else {
+        panic!()
+    };
+    assert!(odds.coverage.is_exact(), "{:?}", odds.coverage);
 }
