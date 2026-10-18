@@ -186,14 +186,16 @@ fn start_of_combat_on_both_sides_names_the_order_as_unproven() {
 }
 
 #[test]
-fn hopebringer_needs_a_board_taken_after_start_of_combat() {
-    // Its buff grows during the game and the board does not give it.
+fn hopebringer_without_its_numbers_needs_a_board_taken_after_start_of_combat() {
+    // Its buff grows during the game; without its numbers it is refused
+    // before start of combat.
     let player = with_kit(vec![Minion::new("BG36_364", 3, 3).tier(3)], &[], &[]);
     assert!(matches!(verdict(&player, true), Verdict::NotModelled(_)));
+    // A board taken after it already has the real buff: exact.
     let Verdict::Odds(odds) = verdict(&player, false) else {
-        panic!("a board taken after it has the real buff");
+        panic!("a board taken after start of combat");
     };
-    assert!(!odds.coverage.approximate.is_empty());
+    assert!(odds.coverage.is_exact(), "{:?}", odds.coverage);
 }
 
 #[test]
@@ -245,4 +247,15 @@ fn a_played_start_of_combat_power_needs_no_board_after_it() {
         odds.coverage.approximate,
         [("BG22_HERO_001p_t4".to_string(), LIGHTNING_REPEATS)]
     );
+}
+
+#[test]
+fn hopebringer_is_played_before_start_of_combat_with_its_numbers() {
+    let mut hope = Minion::new("BG36_364", 3, 3).tier(3);
+    hope.counters = [12, 9];
+    let player = with_kit(vec![hope], &[], &[]);
+    let Verdict::Odds(odds) = verdict(&player, true) else {
+        panic!("its own numbers are on the board");
+    };
+    assert!(odds.coverage.is_exact(), "{:?}", odds.coverage);
 }

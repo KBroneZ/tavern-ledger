@@ -81,9 +81,12 @@ impl Coverage {
             match cards::rules(id) {
                 None => push_unique(&mut cov.not_modelled, id.clone()),
                 Some(rules) => {
+                    // A buff that grows during the game needs the minion's
+                    // own numbers (T-628).
+                    let numbers_missing = cards::start_of_combat_scales(id) && m.counters == [0, 0];
                     let soc_gap = start_of_combat
                         && (rules.triggers.contains(&Trigger::StartOfCombatUnmodelled)
-                            || cards::start_of_combat_scales(id));
+                            || numbers_missing);
                     if soc_gap {
                         push_unique(&mut cov.not_modelled, id.clone());
                     }

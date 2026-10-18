@@ -480,3 +480,22 @@ fn a_real_combat_keeps_the_board_before_a_hand_summon() {
         .contains(&(Side::Opponent, "BG32_330".to_string())));
     assert!(opp.kit.is_some());
 }
+
+#[test]
+fn a_minion_keeps_the_numbers_its_text_shows_but_does_not_save_them() {
+    // Like Hopebringer's growing buff: TAG_SCRIPT_DATA_NUM_1 and _2.
+    let extra = vec![
+        tag("40", "TAG_SCRIPT_DATA_NUM_1", "56"),
+        tag("40", "TAG_SCRIPT_DATA_NUM_2", "42"),
+    ];
+    let r = report(&solo_with("Entity=40 EffectCardId", extra));
+    let opp = r.rounds[0]
+        .entries
+        .iter()
+        .find(|e| e.side == Side::Opponent)
+        .unwrap();
+    assert_eq!(opp.before.as_ref().unwrap()[0].counters, [56, 42]);
+    assert_eq!(opp.before.as_ref().unwrap()[1].counters, [0, 0]);
+    let json = serde_json::to_string(&r).expect("serializable");
+    assert!(!json.contains("counters"));
+}

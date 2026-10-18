@@ -526,27 +526,11 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
     // Start of combat (only played when the board is taken before it).
     (
         "BG36_364",
-        approx(
-            SCALES,
-            &[Trigger::StartOfCombat(&[Action::BuffAll {
-                attack: 4,
-                health: 3,
-                tribe: ANY,
-                others: false,
-            }])],
-        ),
+        exact(&[Trigger::StartOfCombat(&[hopebringer(4, 3)])]),
     ),
     (
         "BG36_364_G",
-        approx(
-            SCALES,
-            &[Trigger::StartOfCombat(&[Action::BuffAll {
-                attack: 8,
-                health: 6,
-                tribe: ANY,
-                others: false,
-            }])],
-        ),
+        exact(&[Trigger::StartOfCombat(&[hopebringer(8, 6)])]),
     ),
     (
         "BG26_963",
@@ -578,7 +562,11 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
     ("BG26_354", exact(&[Trigger::StartOfCombatUnmodelled])),
     ("BG27_556", exact(&[Trigger::StartOfCombatUnmodelled])),
     ("BG34_142", exact(&[Trigger::StartOfCombatUnmodelled])),
-    ("BG31_810", exact(&[Trigger::StartOfCombatUnmodelled])),
+    // Ultraviolet Ascendant: your other Elementals gain its numbers (T-628).
+    (
+        "BG31_810",
+        exact(&[Trigger::StartOfCombat(&[ultraviolet(3)])]),
+    ),
     // Boom-in-a-Box: 3 damage to every other minion (golden: twice), T-628.
     (
         "BG36_620",
@@ -588,7 +576,10 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
     ("BG24_500_G", exact(&[Trigger::StartOfCombat(&[amber(2)])])),
     ("BG26_805_G", exact(&[Trigger::StartOfCombatUnmodelled])),
     ("BG34_142_G", exact(&[Trigger::StartOfCombatUnmodelled])),
-    ("BG31_810_G", exact(&[Trigger::StartOfCombatUnmodelled])),
+    (
+        "BG31_810_G",
+        exact(&[Trigger::StartOfCombat(&[ultraviolet(6)])]),
+    ),
     (
         "BG36_620_G",
         exact(&[Trigger::StartOfCombat(&[
@@ -597,6 +588,28 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
         ])]),
     ),
 ];
+
+/// Hopebringer: your minions gain its numbers, which grow during the game
+/// (the user's logs: its TAG_SCRIPT_DATA_NUM_1 and _2 are the buff it gives);
+/// a board taken after start of combat already has the buff (T-628).
+const fn hopebringer(attack: i32, health: i32) -> Action {
+    Action::BuffAllByCounters {
+        attack,
+        health,
+        tribe: ANY,
+        others: false,
+    }
+}
+
+/// Ultraviolet Ascendant: the other Elementals gain its numbers.
+const fn ultraviolet(n: i32) -> Action {
+    Action::BuffAllByCounters {
+        attack: n,
+        health: n,
+        tribe: Tribes::ELEMENTAL,
+        others: true,
+    }
+}
 
 /// Amber Guardian's start of combat on `count` other Dragons.
 const fn amber(count: u8) -> Action {

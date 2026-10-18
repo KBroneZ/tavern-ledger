@@ -274,6 +274,24 @@ impl Combat<'_> {
                     }
                 }
             }
+            Action::BuffAllByCounters {
+                attack,
+                health,
+                tribe,
+                others,
+            } => {
+                let Some(uid) = me else { return };
+                let own = self.unit(side, uid).map_or([0, 0], |u| u.counters);
+                let (attack, health) = if own == [0, 0] {
+                    (attack, health)
+                } else {
+                    (own[0], own[1])
+                };
+                let skip = if others { Some(uid) } else { None };
+                for f in self.friends(side, tribe, skip) {
+                    self.buff(side, f, attack, health);
+                }
+            }
             Action::DamageAllOthers(amount) => {
                 let Some(uid) = me else { return };
                 for s in [side, 1 - side] {

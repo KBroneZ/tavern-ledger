@@ -145,6 +145,9 @@ pub struct Minion {
     /// (`BG36_MidGameEffect_000t16`), as the offer names it (D-058); see
     /// [`crate::gifts`]. Empty for most minions.
     pub gifts: Vec<String>,
+    /// The two numbers its text shows, for a card whose start-of-combat buff
+    /// grows during the game (Hopebringer, T-628); 0 where not given.
+    pub counters: [i32; 2],
 }
 
 impl Minion {
@@ -161,6 +164,7 @@ impl Minion {
             tier: None,
             base: None,
             gifts: Vec::new(),
+            counters: [0, 0],
         }
     }
 

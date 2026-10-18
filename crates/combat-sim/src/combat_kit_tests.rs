@@ -245,3 +245,31 @@ fn boom_in_a_box_hits_every_other_minion() {
         },
     );
 }
+
+#[test]
+fn hopebringer_gives_its_own_numbers_when_the_board_has_them() {
+    // The user's log: a golden Hopebringer printed +8/+6 carried 56/42 and
+    // gave exactly that.
+    let mut hope = Minion::new("BG36_364_G", 8, 6).tier(4);
+    hope.counters = [56, 42];
+    both_start(vec![hope, plain(1, 1)], vec![plain(0, 9)], |c| {
+        assert_eq!(stats(c, 0), [(64, 48), (57, 43)]);
+    });
+    // Without them, the printed buff.
+    let printed = Minion::new("BG36_364_G", 8, 6).tier(4);
+    both_start(vec![printed, plain(1, 1)], vec![plain(0, 9)], |c| {
+        assert_eq!(stats(c, 0), [(16, 12), (9, 7)]);
+    });
+}
+
+#[test]
+fn ultraviolet_ascendant_buffs_the_other_elementals_by_its_numbers() {
+    let mut uv = Minion::new("BG31_810", 3, 3)
+        .tribe(Tribes::ELEMENTAL)
+        .tier(3);
+    uv.counters = [5, 5];
+    let elemental = of_type("BG32_236", Tribes::ELEMENTAL, 1, 1);
+    both_start(vec![uv, elemental, plain(1, 1)], vec![plain(0, 9)], |c| {
+        assert_eq!(stats(c, 0), [(3, 3), (6, 6), (1, 1)]);
+    });
+}

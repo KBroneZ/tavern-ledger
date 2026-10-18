@@ -1016,6 +1016,10 @@ pub(crate) fn minion_of(e: &Entity, gifts: Vec<&'static str>, buffs: Vec<Buff>) 
         golden: is_golden_minion(e),
         keywords: named(&KEYWORDS),
         sim_keywords: named(&SIM_KEYWORDS),
+        counters: [
+            e.int("TAG_SCRIPT_DATA_NUM_1"),
+            e.int("TAG_SCRIPT_DATA_NUM_2"),
+        ],
         gift_unknown: crate::gifts::gift_unknown(e, &gifts),
         gifts,
         buffs,

@@ -59,6 +59,11 @@ pub struct Minion {
     /// neither the history nor the upload changes.
     #[serde(skip)]
     pub sim_keywords: Vec<&'static str>,
+    /// The two numbers its text shows (`TAG_SCRIPT_DATA_NUM_1` and `_2`),
+    /// for a card whose start-of-combat buff grows during the game
+    /// (Hopebringer, T-628); 0 where the game gives none. Never serialized.
+    #[serde(skip)]
+    pub counters: [i64; 2],
     /// Dark Gifts on the minion as gift spell ids (`BG36_MidGameEffect_000tNN`,
     /// T-528, parser revision 9), at most [`crate::gifts::MAX_GIFTS`]. Left
     /// out of the JSON when empty: a revision 9 record without the key has

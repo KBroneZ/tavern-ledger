@@ -101,7 +101,10 @@ impl Prepared {
                 .map(|m| {
                     let (card, keywords) = gifts::card_of(cards, m);
                     uid += 1;
-                    Unit::new(uid, card, m.attack, m.health, m.keywords.union(keywords))
+                    let mut unit =
+                        Unit::new(uid, card, m.attack, m.health, m.keywords.union(keywords));
+                    unit.counters = m.counters;
+                    unit
                 })
                 .collect()
         };
@@ -227,6 +230,8 @@ pub(crate) struct Unit {
     shield_taken: u8,
     /// Times its "n times per combat" effect has happened.
     uses: u8,
+    /// The two numbers its text shows (T-628); 0 when not given.
+    counters: [i32; 2],
 }
 
 impl Unit {
@@ -244,6 +249,7 @@ impl Unit {
             gained: Vec::new(),
             shield_taken: 0,
             uses: 0,
+            counters: [0, 0],
         }
     }
 
