@@ -2,8 +2,9 @@
 
 The Store refuses a package whose first part is 0 and reserves the fourth part
 for itself (it must be 0), so the app's `0.2.4` cannot be `0.2.4.0`. The
-mapping is `X.Y.Z` -> `(X+1).Y.Z.0`: the first part is never 0, the last is
-always 0, a newer app version is always a newer package version, and two
+mapping is `X.Y.Z` -> `(X+1).Y.Z.0` (the Store's major is the app's major
+plus one, so it stays monotonic when the app reaches 1.0.0: `2.0.0.0`): the
+first part is never 0, the last is always 0, a newer app version is always a newer package version, and two
 versions never share one. Each part fits the package format (0 to 65535).
 The installer edition keeps its own version.
 
