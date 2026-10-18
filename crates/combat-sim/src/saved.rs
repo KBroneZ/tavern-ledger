@@ -22,7 +22,7 @@ use serde_json::Value;
 
 use crate::combat::replay::LoggedStep;
 use crate::combat::CombatResult;
-use crate::model::{BaseCard, GameValues, Keywords, Minion, Team, Tribes, Warband};
+use crate::model::{BaseCard, GameValues, Keywords, Kit, KitCard, Minion, Team, Tribes, Warband};
 use crate::trials::Options;
 use crate::why::{explain, CombatFacts, Explained, Replayable};
 
@@ -106,6 +106,72 @@ pub fn board(entry: &Value, facts: &FactsOf) -> Option<Warband> {
         minions: minions?,
         tavern_tier: None,
         values: saved_values(entry.get("values")),
+    })
+}
+
+/// The most hero powers or trinkets a saved board keeps of each kind
+/// (bg-parser's `MAX_KIT_CARDS`).
+const MAX_KIT_CARDS: usize = 4;
+
+/// A combat entry's hero powers and trinkets as the combat began (parser
+/// revision 16, T-628), in round `round`: `None` when the record has none
+/// (an older parser, an entry without a board, or a side the parser does
+/// not save) or anything in it is not what the parser writes (unknown, never
+/// guessed). A named minion's board position becomes its index. Not part of
+/// [`board`]: the boards it reads are taken at the first attack.
+pub fn kit(entry: &Value, round: Option<u32>, facts: &FactsOf) -> Option<Kit> {
+    let k = entry.get("kit")?;
+    entry.get("board")?.as_array()?;
+    // The parser never saves a minion the opponent holds (D-164).
+    let own = entry.get("side").and_then(Value::as_str) == Some("own");
+    let cards = |key: &str, power: bool| -> Option<Vec<KitCard>> {
+        let list = k.get(key)?.as_array()?;
+        if list.len() > MAX_KIT_CARDS {
+            return None;
+        }
+        list.iter()
+            .map(|c| kit_card(c, power, own, facts))
+            .collect()
+    };
+    Some(Kit {
+        powers: cards("powers", true)?,
+        trinkets: cards("trinkets", false)?,
+        round,
+    })
+}
+
+fn kit_card(v: &Value, power: bool, own: bool, facts: &FactsOf) -> Option<KitCard> {
+    let card_id = v.get("card_id")?.as_str()?.to_string();
+    let slot = u8::try_from(v.get("slot")?.as_i64()?)
+        .ok()
+        .filter(|s| *s <= 3)?;
+    let mut counters = [0i32; 5];
+    if let Some(n) = v.get("counters") {
+        let n = n.as_array().filter(|a| a.len() == counters.len())?;
+        for (out, x) in counters.iter_mut().zip(n) {
+            *out = x.as_i64().filter(|x| *x >= 0).and_then(to_i32)?;
+        }
+    }
+    let target = match v.get("target") {
+        None => None,
+        Some(t) if power => Some(
+            t.as_i64()
+                .filter(|p| (1..=7).contains(p))
+                .and_then(|p| usize::try_from(p - 1).ok())?,
+        ),
+        Some(_) => return None,
+    };
+    let held = match v.get("held") {
+        None => None,
+        Some(m) if power && own => Some(minion(m, facts)?),
+        Some(_) => return None,
+    };
+    Some(KitCard {
+        card_id,
+        slot,
+        counters,
+        target,
+        held,
     })
 }
 

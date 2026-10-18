@@ -136,6 +136,24 @@ fn walk(level: &str, value: &Value, seen: &mut BTreeMap<String, BTreeSet<String>
         if let Some(values) = obj.get("values") {
             walk("report.rounds[].entries[].values", values, seen);
         }
+        if let Some(kit) = obj.get("kit") {
+            walk("report.rounds[].entries[].kit", kit, seen);
+        }
+    }
+    if level == "report.rounds[].entries[].kit" {
+        for (key, child) in [
+            ("powers", "report.rounds[].entries[].kit.powers[]"),
+            ("trinkets", "report.rounds[].entries[].kit.trinkets[]"),
+        ] {
+            for item in obj.get(key).and_then(Value::as_array).into_iter().flatten() {
+                walk(child, item, seen);
+            }
+        }
+    }
+    if level == "report.rounds[].entries[].kit.powers[]" {
+        if let Some(held) = obj.get("held") {
+            walk("report.rounds[].entries[].kit.powers[].held", held, seen);
+        }
     }
     if level == "report.rounds[]" {
         if let Some(replay) = obj.get("replay") {

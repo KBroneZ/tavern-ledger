@@ -42,13 +42,26 @@
             "side": "own",
             "player_id": 2,
             "hero": "TB_BaconShop_HERO_37",
-            "board": []
+            "board": [],
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_101",
+                  "slot": 0
+                }
+              ],
+              "trinkets": []
+            }
           },
           {
             "side": "opponent",
             "player_id": 3,
             "hero": "TB_BaconShop_HERO_60",
-            "board": []
+            "board": [],
+            "kit": {
+              "powers": [],
+              "trinkets": []
+            }
           }
         ],
         "own_health_after": 26,
@@ -75,7 +88,16 @@
             "side": "own",
             "player_id": 2,
             "hero": "TB_BaconShop_HERO_37",
-            "board": []
+            "board": [],
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_101",
+                  "slot": 0
+                }
+              ],
+              "trinkets": []
+            }
           },
           {
             "side": "opponent",
@@ -106,7 +128,11 @@
                 "golden": false,
                 "keywords": []
               }
-            ]
+            ],
+            "kit": {
+              "powers": [],
+              "trinkets": []
+            }
           }
         ],
         "own_health_after": 26,
@@ -383,13 +409,26 @@
             "side": "own",
             "player_id": 2,
             "hero": "TB_BaconShop_HERO_37",
-            "board": []
+            "board": [],
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_101",
+                  "slot": 0
+                }
+              ],
+              "trinkets": []
+            }
           },
           {
             "side": "opponent",
             "player_id": 3,
             "hero": "TB_BaconShop_HERO_60",
-            "board": []
+            "board": [],
+            "kit": {
+              "powers": [],
+              "trinkets": []
+            }
           }
         ],
         "own_health_after": 26,
@@ -416,7 +455,16 @@
             "side": "own",
             "player_id": 2,
             "hero": "TB_BaconShop_HERO_37",
-            "board": []
+            "board": [],
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_101",
+                  "slot": 0
+                }
+              ],
+              "trinkets": []
+            }
           },
           {
             "side": "opponent",
@@ -447,7 +495,11 @@
                 "golden": false,
                 "keywords": []
               }
-            ]
+            ],
+            "kit": {
+              "powers": [],
+              "trinkets": []
+            }
           }
         ],
         "own_health_after": null,

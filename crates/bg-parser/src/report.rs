@@ -227,9 +227,14 @@ fn no_values(v: &Option<CombatValues>) -> bool {
     v.as_ref().is_none_or(CombatValues::is_empty)
 }
 
+/// Whether the opponent's hero powers and trinkets are saved with its boards
+/// (parser revision 16; the user's choice, D-164). The player's own always
+/// are. The opponent's are saved without a held minion.
+pub const SAVE_OPPONENT_KIT: bool = true;
+
 /// One side stepping into a combat. `board` is None when the fight never
 /// plays out in the local log: unknown, not empty.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CombatEntry {
     pub side: Side,
     pub player_id: Option<i64>,
@@ -238,16 +243,46 @@ pub struct CombatEntry {
     /// The side's game-long values as its board was taken (T-609); None
     /// without a board. Saved since parser revision 10 (T-610) when one is
     /// above zero: a record without the key read none, or is older.
-    #[serde(skip_serializing_if = "no_values")]
     pub values: Option<CombatValues>,
     /// The board as the leg started, before any start-of-combat effect
     /// (T-628): read just before the leg's first effect or attack. None
-    /// without a board. Rust-only and not serialized.
-    #[serde(skip)]
+    /// without a board. Rust-only and not serialized (the replay's start is
+    /// that board).
     pub before: Option<Vec<Minion>>,
-    /// The side's hero powers and trinkets then (T-628). Rust-only.
-    #[serde(skip)]
+    /// The side's hero powers and trinkets then (T-628). Saved since parser
+    /// revision 16 as `kit` with a board, for both sides (the opponent's
+    /// while [`SAVE_OPPONENT_KIT`], without a held minion); a record without
+    /// the key did not read them.
     pub kit: Option<HeroKit>,
+}
+
+impl Serialize for CombatEntry {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        let mut map = s.serialize_map(None)?;
+        map.serialize_entry("side", &self.side)?;
+        map.serialize_entry("player_id", &self.player_id)?;
+        map.serialize_entry("hero", &self.hero)?;
+        map.serialize_entry("board", &self.board)?;
+        if !no_values(&self.values) {
+            map.serialize_entry("values", &self.values)?;
+        }
+        let own = self.side == Side::Own;
+        if let Some(kit) = self
+            .kit
+            .as_ref()
+            .filter(|_| (own || SAVE_OPPONENT_KIT) && self.board.is_some())
+        {
+            if own {
+                map.serialize_entry("kit", kit)?;
+            } else {
+                // Never a minion the opponent holds (D-164).
+                let mut kit = kit.clone();
+                kit.powers.iter_mut().for_each(|p| p.held = None);
+                map.serialize_entry("kit", &kit)?;
+            }
+        }
+        map.end()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

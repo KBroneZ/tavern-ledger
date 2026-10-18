@@ -163,7 +163,7 @@ test("report reader: older records say not recorded (null), never empty", () => 
 
 test("report reader: every synthetic parser report in the repo reads without a dropped value", () => {
   const dir = join(import.meta.dirname, "..", "..", "..", "crates", "bg-parser", "tests", "data", "rust");
-  for (const file of ["round_two_games.json", "data_round_games.json", "solo_shop_games.json", "game_values_games.json"]) {
+  for (const file of ["round_two_games.json", "data_round_games.json", "solo_shop_games.json", "game_values_games.json", "kit_games.json"]) {
     const games = JSON.parse(readFileSync(join(dir, file), "utf8")) as Record<string, unknown>[];
     for (const game of games) {
       const index = game.index as number;
@@ -274,4 +274,37 @@ test("report reader: the record keeps the day the game was played and never its 
   const noDate = readRecord(record(soloReport(), { session: "nope" }));
   assert.ok(noDate.ok);
   assert.equal(noDate.record.playedOn, null);
+});
+
+test("report reader: each board's hero powers and trinkets (revision 16), not recorded before it", () => {
+  const dir = join(import.meta.dirname, "..", "..", "..", "crates", "bg-parser", "tests", "data", "rust");
+  const games = JSON.parse(readFileSync(join(dir, "kit_games.json"), "utf8")) as Record<string, any>[];
+  const parser = { version: "0.1.0", revision: KNOWN_REVISION };
+  const result = readRecord({ session: SESSION, index: games[0].index, saved_at: 1, parser, report: games[0] });
+  assert.ok(result.ok);
+  assert.equal(result.record.unreadable, 0);
+  const [own, opponent] = result.record.report.rounds[0].entries;
+  const power = own.kit?.powers[0];
+  assert.equal(power?.cardId, "SYN_POWER");
+  assert.deepEqual(power?.counters, [5, 0, 0, 0, 0]);
+  assert.equal(power?.held?.cardId, "SYN_HELD");
+  assert.deepEqual(power?.held?.gifts, ["BG36_MidGameEffect_000t9"]);
+  assert.deepEqual(own.kit?.trinkets.map((t) => [t.cardId, t.slot, t.target, t.held]), [
+    ["SYN_LESSER", 1, null, null],
+    ["BG30_Trinket_2nd", 2, null, null],
+  ]);
+  assert.deepEqual(opponent.kit?.powers.map((p) => [p.cardId, p.held]), [["SYN_FOE_POWER", null]], "the opponent's, never a held minion");
+  assert.equal(read(record()).report.rounds[1].entries[0].kit, null, "an older record: not recorded");
+});
+
+test("report reader: a hero power or trinket that cannot be read is counted, the kit not recorded", () => {
+  const report = soloReport() as Record<string, any>;
+  const entries = report.rounds[1].entries;
+  entries[0].kit = { powers: [{ card_id: "X", slot: 9 }], trinkets: [] };
+  entries[1].kit = { powers: [], trinkets: [{ card_id: "Y", slot: 1, counters: [1, 2] }] };
+  const rec = read(record(report));
+  const [own, opponent] = rec.report.rounds[1].entries;
+  assert.equal(own.kit, null);
+  assert.equal(opponent.kit, null);
+  assert.equal(rec.unreadable, 3, "the slot, then each card that could not be read");
 });

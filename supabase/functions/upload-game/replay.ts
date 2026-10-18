@@ -20,9 +20,9 @@ import {
 } from "./checks.ts";
 
 const MAX_REPLAY_MINIONS = 200;
-// Written only when the minion has a Dark Gift (parser revision 9) or a buff
-// (revision 14).
-const OPTIONAL_MINION_KEYS = new Set(["gifts", "gift_unknown", "buffs"]);
+// Written only when the minion has a Dark Gift (parser revision 9), a buff
+// (revision 14) or a number its text shows (revision 16).
+const OPTIONAL_MINION_KEYS = new Set(["gifts", "gift_unknown", "buffs", "counters"]);
 const MAX_REPLAY_EVENTS = 2000;
 const SIDES = new Set(["own", "opponent"]);
 const TRIGGERS = new Set(["start_of_combat", "deathrattle", "avenge", "rally"]);
@@ -57,6 +57,18 @@ const OPTIONAL_EVENT_KEYS = new Set(["damage.source"]);
 const OPTIONAL_REPLAY_KEYS = new Set(["beats"]);
 const MAX_HEALTH = 100000;
 
+/**
+ * A replay minion's two numbers its text shows (parser revision 16, T-628):
+ * whole numbers from 0, left out when both are 0.
+ */
+function counters(v: unknown, field: string): void {
+  if (v === undefined) return;
+  const n = list(v, field, 2);
+  if (n.length !== 2) throw new Invalid(field);
+  n.forEach((x, i) => int(x, `${field}[${i}]`, 0, MAX_INT));
+  if (n.every((x) => x === 0)) throw new Invalid(field);
+}
+
 function side(v: unknown, field: string): void {
   if (typeof v !== "string" || !SIDES.has(v)) throw new Invalid(field);
 }
@@ -89,6 +101,7 @@ export function replay(
     keywords(one.keywords, `${at}.keywords`);
     gifts(one, at);
     buffs(one, at);
+    counters(one.counters, `${at}.counters`);
   });
   const start = int(r.start, `${field}.start`, 0, minions.length);
   bool(r.complete, `${field}.complete`);

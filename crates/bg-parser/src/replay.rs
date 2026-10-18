@@ -57,6 +57,16 @@ pub struct ReplayMinion {
     /// Buffs, as on a board minion (T-619); left out when empty.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub buffs: Vec<Buff>,
+    /// The two numbers its text shows (`TAG_SCRIPT_DATA_NUM_1` and `_2`;
+    /// parser revision 16, T-628), for a start-of-combat buff that grows
+    /// during the game; left out when both are 0. Numbers below 0 or above
+    /// [`crate::kit::MAX_KIT_NUMBER`] are kept as 0.
+    #[serde(skip_serializing_if = "no_counters")]
+    pub counters: [i64; 2],
+}
+
+fn no_counters(n: &[i64; 2]) -> bool {
+    *n == [0, 0]
 }
 
 impl ReplayMinion {
@@ -72,6 +82,13 @@ impl ReplayMinion {
             gifts: m.gifts,
             gift_unknown: m.gift_unknown,
             buffs: m.buffs,
+            counters: m.counters.map(|n| {
+                if (0..=crate::kit::MAX_KIT_NUMBER).contains(&n) {
+                    n
+                } else {
+                    0
+                }
+            }),
         }
     }
 }
@@ -217,6 +234,20 @@ impl Sides {
 }
 
 const TRIGGER_CARD_TYPES: [&str; 3] = ["MINION", "HERO_POWER", "BATTLEGROUND_TRINKET"];
+
+/// A Tavern spell cast for the next combat (Upper Hand, Brood of Nozdormu)
+/// firing at its start (parser revision 16, T-628): the game keeps it in the
+/// Secret zone and its block is an `OBJECTIVE` trigger. The Old God, kept
+/// there too, fires its objective in the same way after attacks and with no
+/// keyword before them; it never starts or joins the replay.
+fn is_prepared_spell(e: &Entity, keyword: Option<&str>) -> bool {
+    e.is("CARDTYPE", "SPELL")
+        && e.is("ZONE", "SECRET")
+        && keyword == Some("OBJECTIVE")
+        && e.card_id.as_deref() != Some(OLD_GOD)
+}
+
+const OLD_GOD: &str = "BG_OldGod";
 
 /// Cards a damage can be put down to when their block deals it. Anything
 /// else (the game, a player, an enchantment) passes it to the block around.
@@ -745,7 +776,8 @@ impl Live {
         let Some(card_id) = e.card_id.clone() else {
             return;
         };
-        if !TRIGGER_CARD_TYPES.iter().any(|t| e.is("CARDTYPE", t)) {
+        if !TRIGGER_CARD_TYPES.iter().any(|t| e.is("CARDTYPE", t)) && !is_prepared_spell(e, keyword)
+        {
             return;
         }
         let attacked = self.run.as_ref().is_some_and(|r| r.attacked);

@@ -16,7 +16,7 @@ import { playedOn } from "./url.ts";
 export { KEYWORDS, type Keyword };
 
 /** The parser revision this site knows (crates/bg-parser PARSER_REVISION). */
-export const KNOWN_REVISION = 15;
+export const KNOWN_REVISION = 16;
 
 const CARD_ID = /^[A-Za-z0-9_]{1,64}$/;
 const NOTE = /^[A-Za-z0-9 _:.()-]{1,160}$/;
@@ -75,6 +75,26 @@ export interface Entry {
   board: Minion[] | null;
   /** The board's game-long values (revision 10); null when the record holds none. */
   values: GameValues | null;
+  /** The hero's powers and trinkets as the combat began (revision 16, T-628); null when not recorded. */
+  kit: Kit | null;
+}
+
+/** A hero power or trinket of a board (revision 16, T-628). */
+export interface KitCard {
+  cardId: string;
+  /** Hero powers: 0 the hero's own, 1 a second. Trinkets: 1 lesser, 2 greater, 3 a hero power become a trinket. */
+  slot: number;
+  /** The five numbers its text shows; 0 where none. */
+  counters: number[];
+  /** Hero powers: the board position (1 is the left-most) of the minion it names. */
+  target: number | null;
+  /** Hero powers of the player's own side: the minion it holds off the board (Lock and Load). */
+  held: Minion | null;
+}
+
+export interface Kit {
+  powers: KitCard[];
+  trinkets: KitCard[];
 }
 
 export interface Round {
@@ -304,7 +324,45 @@ function entry(r: Reader, v: unknown): Entry | null {
   if (!e || !side) return r.bad(null);
   const board = absent(e.board) ? null : r.list(e.board, 16).map((m) => minion(r, m));
   const values = board === null ? null : gameValues(r, e.values);
-  return { side, playerId: r.int(e.player_id, 1, 64), hero: r.card(e.hero), board, values };
+  const kitRead = board === null ? null : kit(r, e.kit, side === "own");
+  return { side, playerId: r.int(e.player_id, 1, 64), hero: r.card(e.hero), board, values, kit: kitRead };
+}
+
+const MAX_KIT_CARDS = 4;
+const KIT_NUMBERS = 5;
+
+/** A board's hero powers and trinkets; one that cannot be read is one unreadable value, not recorded. */
+function kit(r: Reader, v: unknown, own: boolean): Kit | null {
+  if (absent(v)) return null;
+  const o = r.obj(v);
+  if (!o || !Array.isArray(o.powers) || !Array.isArray(o.trinkets)) return r.bad(null);
+  const read = (list: unknown, power: boolean) => r.list(list, MAX_KIT_CARDS).map((c) => kitCard(r, c, power, own));
+  const powers = read(o.powers, true);
+  const trinkets = read(o.trinkets, false);
+  if (powers.some((c) => c === null) || trinkets.some((c) => c === null)) return null;
+  return { powers: powers as KitCard[], trinkets: trinkets as KitCard[] };
+}
+
+function kitCard(r: Reader, v: unknown, power: boolean, own: boolean): KitCard | null {
+  const o = r.obj(v);
+  const cardId = o ? r.card(o.card_id) : null;
+  const slot = o ? r.int(o.slot, 0, 3) : null;
+  if (!o || cardId === null || slot === null) return r.bad(null);
+  let counters = new Array<number>(KIT_NUMBERS).fill(0);
+  if (!absent(o.counters)) {
+    const n = Array.isArray(o.counters) && o.counters.length === KIT_NUMBERS ? o.counters : null;
+    const ints = n?.map((x) => r.int(x, 0, MAX_INT)) ?? null;
+    if (ints === null || ints.some((x) => x === null)) return r.bad(null);
+    counters = ints as number[];
+  }
+  return {
+    cardId,
+    slot,
+    counters,
+    target: power ? r.int(o.target, 1, 7) : null,
+    // Never a minion the opponent holds (D-164): one there is dropped.
+    held: power && own && !absent(o.held) ? minion(r, o.held) : null,
+  };
 }
 
 function round(r: Reader, v: unknown): Round | null {

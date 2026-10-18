@@ -909,6 +909,25 @@
               }
             ],
             "hero": "BG25_HERO_103_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG25_HERO_103p",
+                  "slot": 0,
+                  "target": 1
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 6,
             "side": "own"
           },
@@ -924,6 +943,24 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_74_SKIN_D",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_082",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 7,
             "side": "opponent"
           },
@@ -947,6 +984,24 @@
               }
             ],
             "hero": "BG20_HERO_202_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_085t",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 5,
             "side": "own"
           },
@@ -968,6 +1023,24 @@
               }
             ],
             "hero": "BG24_HERO_100_SKIN_E",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG24_HERO_100p",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 8,
             "side": "opponent"
           }
@@ -1270,6 +1343,25 @@
               }
             ],
             "hero": "BG20_HERO_202_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_042",
+                  "slot": 0,
+                  "target": 2
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 5,
             "side": "own"
           },
@@ -1320,6 +1412,24 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_12",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_041i",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 3,
             "side": "opponent"
           },
@@ -1335,6 +1445,25 @@
               }
             ],
             "hero": "BG25_HERO_103_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG25_HERO_103p",
+                  "slot": 0,
+                  "target": 1
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 6,
             "side": "own"
           },
@@ -1695,6 +1824,25 @@
               }
             ],
             "hero": "BG25_HERO_103_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG25_HERO_103p",
+                  "slot": 0,
+                  "target": 2
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 6,
             "side": "own"
           },
@@ -1744,6 +1892,24 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_10",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_008",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 2,
             "side": "opponent"
           },
@@ -1785,6 +1951,24 @@
               }
             ],
             "hero": "BG20_HERO_202_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG31_HERO_003p",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 5,
             "side": "own"
           },
@@ -1818,6 +2002,24 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_16_SKIN_J",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_044",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 1,
             "side": "opponent"
           }
@@ -2319,6 +2521,25 @@
               }
             ],
             "hero": "BG25_HERO_103_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG25_HERO_103p",
+                  "slot": 0,
+                  "target": 1
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 6,
             "side": "own"
           },
@@ -2366,6 +2587,24 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_74_SKIN_D",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_082",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 7,
             "side": "opponent"
           },
@@ -2428,6 +2667,24 @@
               }
             ],
             "hero": "BG24_HERO_100_SKIN_E",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG24_HERO_100p",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 8,
             "side": "opponent"
           },
@@ -2485,6 +2742,25 @@
               }
             ],
             "hero": "BG20_HERO_202_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG20_HERO_101p",
+                  "slot": 0,
+                  "target": 3
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 5,
             "side": "own"
           }
@@ -3562,6 +3838,24 @@
               }
             ],
             "hero": "BG20_HERO_202_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG36_HERO_000p",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 5,
             "side": "own"
           },
@@ -3614,6 +3908,24 @@
               }
             ],
             "hero": "BG36_HERO_101",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG36_HERO_101p",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 4,
             "side": "opponent"
           },
@@ -3690,6 +4002,25 @@
               }
             ],
             "hero": "BG25_HERO_103_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG25_HERO_103p",
+                  "slot": 0,
+                  "target": 1
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 6,
             "side": "own"
           },
@@ -3792,6 +4123,24 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_12",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_041l",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_1st",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 3,
             "side": "opponent"
           },
@@ -5236,6 +5585,24 @@
               }
             ],
             "hero": "BG20_HERO_202_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG34_HERO_001p",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG35_MagicItem_823",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 5,
             "side": "own"
           },
@@ -5342,6 +5709,24 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_10",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_008",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG36_MagicItem_206",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 2,
             "side": "opponent"
           },
@@ -5415,6 +5800,25 @@
               }
             ],
             "hero": "BG25_HERO_103_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG25_HERO_103p",
+                  "slot": 0,
+                  "target": 2
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_MagicItem_423",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 6,
             "side": "own"
           },
@@ -5493,6 +5897,24 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_16_SKIN_J",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_044",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG35_MagicItem_872",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 1,
             "side": "opponent"
           },
@@ -7290,6 +7712,25 @@
               }
             ],
             "hero": "BG25_HERO_103_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG25_HERO_103p",
+                  "slot": 0,
+                  "target": 3
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_MagicItem_423",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 6,
             "side": "own"
           },
@@ -7416,6 +7857,24 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_74_SKIN_D",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_082",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG32_MagicItem_817",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 7,
             "side": "opponent"
           },
@@ -7554,6 +8013,19 @@
               }
             ],
             "hero": "BG24_HERO_100_SKIN_E",
+            "kit": {
+              "powers": [],
+              "trinkets": [
+                {
+                  "card_id": "BG36_MagicItem_206",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 8,
             "side": "opponent"
           },
@@ -7662,6 +8134,24 @@
               }
             ],
             "hero": "BG20_HERO_202_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_039t",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG35_MagicItem_823",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 5,
             "side": "own"
           }
@@ -9579,6 +10069,24 @@
               }
             ],
             "hero": "BG20_HERO_202_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG28_HERO_400p2",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG35_MagicItem_823",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 5,
             "side": "own"
           },
@@ -9720,6 +10228,24 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_12",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_041f",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_MagicItem_847",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 3,
             "side": "opponent"
           },
@@ -9853,6 +10379,24 @@
               }
             ],
             "hero": "BG36_HERO_101",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG36_HERO_101p",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG35_MagicItem_434",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 4,
             "side": "opponent"
           },
@@ -10037,6 +10581,24 @@
               }
             ],
             "hero": "BG25_HERO_103_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG25_HERO_103p",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_MagicItem_423",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 6,
             "side": "own"
           },
@@ -12175,6 +12737,25 @@
               }
             ],
             "hero": "BG25_HERO_103_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG25_HERO_103p",
+                  "slot": 0,
+                  "target": 3
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_MagicItem_423",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG35_MagicItem_931t",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 6,
             "side": "own"
           },
@@ -12343,6 +12924,24 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_10",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_008",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG36_MagicItem_206",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG32_MagicItem_364",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 2,
             "side": "opponent"
           },
@@ -12483,6 +13082,25 @@
               }
             ],
             "hero": "BG20_HERO_202_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG24_HERO_204p",
+                  "slot": 0,
+                  "target": 5
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG35_MagicItem_823",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG35_MagicItem_823t",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 5,
             "side": "own"
           },
@@ -12617,6 +13235,24 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_16_SKIN_J",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_044",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG35_MagicItem_872",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG35_MagicItem_812",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 1,
             "side": "opponent"
           }
@@ -15394,6 +16030,24 @@
               }
             ],
             "hero": "BG20_HERO_202_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_008",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG35_MagicItem_823",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG35_MagicItem_823t",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 5,
             "side": "own"
           },
@@ -15573,6 +16227,19 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_KelThuzad",
+            "kit": {
+              "powers": [],
+              "trinkets": [
+                {
+                  "card_id": "BG32_MagicItem_817",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 7,
             "side": "opponent"
           },
@@ -15722,6 +16389,19 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_Deathwhisper",
+            "kit": {
+              "powers": [],
+              "trinkets": [
+                {
+                  "card_id": "BG36_MagicItem_206",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 8,
             "side": "opponent"
           }
@@ -17433,6 +18113,25 @@
               }
             ],
             "hero": "BG25_HERO_103_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG25_HERO_103p",
+                  "slot": 0,
+                  "target": 2
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_MagicItem_423",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG35_MagicItem_931t",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 6,
             "side": "own"
           },
@@ -17668,6 +18367,24 @@
               }
             ],
             "hero": "BG36_HERO_101",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG36_HERO_101p",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG35_MagicItem_434",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG36_MagicItem_308",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 4,
             "side": "opponent"
           },
@@ -17791,6 +18508,25 @@
               }
             ],
             "hero": "BG20_HERO_202_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG20_HERO_301p",
+                  "slot": 0,
+                  "target": 7
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG35_MagicItem_823",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG35_MagicItem_823t",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 5,
             "side": "own"
           },
@@ -17947,6 +18683,24 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_12",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_041l",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_MagicItem_847",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG36_MagicItem_830",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 3,
             "side": "opponent"
           }
@@ -20310,6 +21064,24 @@
               }
             ],
             "hero": "BG20_HERO_202_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG20_HERO_103p",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG35_MagicItem_823",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG35_MagicItem_823t",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 5,
             "side": "own"
           },
@@ -20489,6 +21261,24 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_10",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_008",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG36_MagicItem_206",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG32_MagicItem_364",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 2,
             "side": "opponent"
           },
@@ -20683,6 +21473,24 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_16_SKIN_J",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG22_HERO_002p",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG35_MagicItem_872",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG35_MagicItem_812",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 1,
             "side": "opponent"
           }
@@ -23251,6 +24059,25 @@
               }
             ],
             "hero": "BG25_HERO_103_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG25_HERO_103p",
+                  "slot": 0,
+                  "target": 1
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_MagicItem_423",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG35_MagicItem_931t",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 6,
             "side": "own"
           },
@@ -23445,6 +24272,24 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_16_SKIN_J",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG22_HERO_002p",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG35_MagicItem_872",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG35_MagicItem_812",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 1,
             "side": "opponent"
           },
@@ -23600,6 +24445,24 @@
               }
             ],
             "hero": "BG20_HERO_202_SKIN_C",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_085t",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG35_MagicItem_823",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG35_MagicItem_823t",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 5,
             "side": "own"
           },
@@ -23760,6 +24623,24 @@
               }
             ],
             "hero": "TB_BaconShop_HERO_10",
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_008",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG36_MagicItem_206",
+                  "slot": 0
+                },
+                {
+                  "card_id": "BG32_MagicItem_364",
+                  "slot": 0
+                }
+              ]
+            },
             "player_id": 2,
             "side": "opponent"
           }

@@ -259,3 +259,56 @@ fn a_game_that_is_not_battlegrounds_gives_nothing() {
 fn the_kept_values_match_the_parsers_bound() {
     assert_eq!(MAX_GAME_VALUE, bg_parser::report::MAX_GAME_VALUE);
 }
+
+#[test]
+fn a_saved_kit_is_read_with_its_numbers_target_and_held_minion() {
+    let entry = json!({
+        "side": "own", "board": [m("own", "BGS_119", 2, 4, 1)],
+        "kit": {
+            "powers": [{"card_id": "BG22_HERO_000p_Alt", "slot": 0, "counters": [1, 0, 0, 0, 0],
+                        "held": {"card_id": "BGS_119", "atk": 6, "health": 10, "golden": false,
+                                 "keywords": ["taunt"]}},
+                       {"card_id": "BG25_HERO_103p", "slot": 1, "target": 1}],
+            "trinkets": [{"card_id": "BG30_MagicItem_902", "slot": 1}]
+        }
+    });
+    let kit = kit(&entry, Some(9), &facts).expect("a kit");
+    assert_eq!(kit.round, Some(9));
+    assert_eq!(kit.powers[0].counters, [1, 0, 0, 0, 0]);
+    let held = kit.powers[0].held.as_ref().expect("held");
+    assert_eq!((held.attack, held.health), (6, 10));
+    assert!(held.keywords.contains(Keywords::TAUNT));
+    assert_eq!(kit.powers[1].target, Some(0));
+    assert_eq!(kit.trinkets[0].slot, 1);
+    // No kit saved (older parser, or a side not saved): not recorded.
+    assert_eq!(
+        super::kit(&json!({"side": "opponent", "board": []}), None, &facts),
+        None
+    );
+}
+
+#[test]
+fn a_saved_kit_unlike_what_the_parser_writes_is_unknown() {
+    let with = |k: Value| json!({"side": "own", "board": [], "kit": k});
+    for bad in [
+        json!({"powers": []}),
+        json!({"powers": [{"slot": 0}], "trinkets": []}),
+        json!({"powers": [{"card_id": "X", "slot": 9}], "trinkets": []}),
+        json!({"powers": [{"card_id": "X", "slot": 0, "counters": [1]}], "trinkets": []}),
+        json!({"powers": [{"card_id": "X", "slot": 0, "counters": [-1, 0, 0, 0, 0]}], "trinkets": []}),
+        json!({"powers": [{"card_id": "X", "slot": 0, "target": 8}], "trinkets": []}),
+        json!({"powers": [], "trinkets": [{"card_id": "X", "slot": 1, "target": 1}]}),
+        json!({"powers": vec![json!({"card_id": "X", "slot": 0}); 5], "trinkets": []}),
+    ] {
+        assert_eq!(kit(&with(bad.clone()), None, &facts), None, "{bad}");
+    }
+    // The parser never saves a minion the opponent holds (D-164).
+    let held =
+        json!({"card_id": "BGS_119", "atk": 1, "health": 1, "golden": false, "keywords": []});
+    let opponent = json!({"side": "opponent", "board": [],
+        "kit": {"powers": [{"card_id": "X", "slot": 0, "held": held}], "trinkets": []}});
+    assert_eq!(kit(&opponent, None, &facts), None);
+    // A kit with no board is not one the parser writes.
+    let no_board = json!({"side": "own", "board": null, "kit": {"powers": [], "trinkets": []}});
+    assert_eq!(kit(&no_board, None, &facts), None);
+}
