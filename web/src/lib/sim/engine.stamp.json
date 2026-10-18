@@ -1,6 +1,6 @@
 {
-  "wasm": "881992d7530f201962292d7806b280ffc72e1ac580621ae1dbbd5f4d8a896c0e",
-  "sources": "e040ce166c498fa4dc46e1df6c3340b01438fa8bb4f2a1242ff50dab6550387f",
+  "wasm": "7b04a8d08c3bcf71446f4f4bb502a90ece0afcff70fc3374998e912d49e0e5b9",
+  "sources": "f51e2d803d1f47de1278bfca4d3f7ade429a527dd91dd5072681136249f2f769",
   "crates": [
     "itoa",
     "memchr",

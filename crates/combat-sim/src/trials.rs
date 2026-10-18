@@ -141,7 +141,7 @@ impl Coverage {
         }
         for (band, mate) in boards {
             if let Some(kit) = &band.kit {
-                cov.add_kit(kit, start_of_combat, *mate);
+                cov.add_kit(kit, start_of_combat, *mate, &band.values);
             }
         }
         for (band, _) in boards {
@@ -196,8 +196,16 @@ impl Coverage {
     /// played unless the engine plays it ([`kit_effects`]; with start of
     /// combat off the board was taken after it), or when something it needs
     /// beside the board is not given; one that acts later in the combat is
-    /// approximate unless the engine plays it (start of combat on).
-    fn add_kit(&mut self, kit: &Kit, start_of_combat: bool, mate: Option<&Warband>) {
+    /// approximate unless the engine plays it ([`kit_passive`], with its own
+    /// gap if any; one played only before start of combat stays approximate
+    /// on a board taken after it).
+    fn add_kit(
+        &mut self,
+        kit: &Kit,
+        start_of_combat: bool,
+        mate: Option<&Warband>,
+        values: &GameValues,
+    ) {
         let power_in_combat = kit.powers.iter().any(|p| kit::acts_in_combat(&p.card_id));
         for card in kit.cards() {
             let id = &card.card_id;
@@ -244,7 +252,7 @@ impl Coverage {
                 kit_passive::passive(id).filter(|p| start_of_combat || !p.before_start_only);
             if let Some(p) = passive {
                 if let Fidelity::Approximate(why) = p.fidelity {
-                    if !self.approximate.iter().any(|(c, _)| c == id) {
+                    if !played_with(why, values) && !self.approximate.iter().any(|(c, _)| c == id) {
                         self.approximate.push((id.clone(), why));
                     }
                 }

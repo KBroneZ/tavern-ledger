@@ -152,8 +152,11 @@ impl Combat<'_> {
             }
             self.gain_deathrattles(&dead);
             for d in &dead {
-                let first = self.kit_first_deathrattle(d.side, &d.unit);
-                let times = 1 + usize::from(self.extra_deathrattles(d.side)) + usize::from(first);
+                // Deathly Phylactery: all of the first dying minion's
+                // Deathrattles trigger once more (one with a gained one too:
+                // rare, not checked).
+                let twice = self.kit_first_deathrattle(d.side, &d.unit);
+                let times = 1 + usize::from(self.extra_deathrattles(d.side)) + usize::from(twice);
                 let src = Source::Dead {
                     uid: d.unit.uid,
                     anchor: d.anchor,

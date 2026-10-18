@@ -8,7 +8,8 @@
 //! what the played hero powers do "when you have space" later in the combat;
 //! for any other power or trinket that acts at the start of combat the board
 //! must be taken after it (start of combat off, its effect already on the
-//! board), and one that acts during combat makes the odds approximate.
+//! board), and one that acts during combat makes the odds approximate
+//! unless [`crate::kit_passive`] plays it.
 //!
 //! Written from the card texts in HearthstoneJSON (D-038) and the user's
 //! logs; no simulator code was read (clean room).
@@ -58,7 +59,8 @@ pub const SPROUT_REBORN: &str =
 pub const SCALE_ON_SHIELDED: &str =
     "whether a Dragon that already has Divine Shield uses one of its 3 times is not checked";
 pub const STAFF_PICK: &str = "that it picks among the Undead without Reborn is not checked";
-pub const BEETLES_PLACE: &str = "where its Beetles go on the board is not checked";
+pub const BEETLES_PLACE: &str =
+    "where its Beetles go on the board, and their game-long buffs, are not checked";
 /// Why a played power blocks the odds of a board taken before start of
 /// combat: something it needs beside the board is not given.
 pub const TARGET_NOT_GIVEN: &str = "the minion it names is not shown";

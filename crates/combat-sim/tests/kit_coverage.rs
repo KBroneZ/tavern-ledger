@@ -514,16 +514,23 @@ fn a_held_minions_dark_gift_is_checked_too() {
 #[test]
 fn powers_and_trinkets_played_during_combat_name_only_their_own_gaps() {
     use combat_sim::kit::{SCALE_ON_SHIELDED, SPROUT_REBORN};
-    // Glory of Combat, Jar o' Gems and Lionfish Portrait: played, exact, on
-    // either board.
-    let exact = with_kit(
+    // Glory of Combat, Jar o' Gems (with the side's Blood Gem upgrades) and
+    // Lionfish Portrait: played, exact, on either board.
+    let mut exact = with_kit(
         vec![plain(2, 2)],
         &["BG20_HERO_100p"],
         &["BG30_MagicItem_546", "BG36_MagicItem_201"],
     );
+    exact.values.blood_gem = (1, 1);
     for soc in [false, true] {
         assert!(gaps(&exact, soc).is_empty(), "start of combat {soc}");
     }
+    // Without the upgrades, Jar o' Gems is approximate like a Blood Gem card.
+    exact.values.blood_gem = (0, 0);
+    let jar = gaps(&exact, true);
+    assert_eq!(jar.len(), 1);
+    assert_eq!(jar[0].0, "BG30_MagicItem_546");
+    assert!(jar[0].1.contains("Blood Gems"));
     let rough = with_kit(
         vec![plain(2, 2)],
         &["TB_BaconShop_HP_107"],

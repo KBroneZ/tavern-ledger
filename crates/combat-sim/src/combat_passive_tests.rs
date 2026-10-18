@@ -192,3 +192,56 @@ fn zergs_baneling_and_lurker() {
         assert_eq!(stats(c, 0), [(3, 3)], "Avenge (1): +1/+1");
     });
 }
+
+#[test]
+fn golden_baneling_hits_twice_and_golden_lurker_gains_double() {
+    let baneling = Minion::new("BG31_HERO_811t5_G", 3, 1).tier(2);
+    let lurker = Minion::new("BG31_HERO_811t7_G", 4, 4).tier(2);
+    let player = kitted(vec![baneling, lurker], &[], &[]);
+    with(player, vec![plain(0, 9)], false, |c| {
+        c.sides[0].units[0].health = 0;
+        c.process_deaths(0);
+        assert_eq!(stats(c, 1), [(0, 3)], "3 Attack twice");
+        assert_eq!(stats(c, 0), [(6, 6)], "Avenge (1): +2/+2");
+    });
+}
+
+/// A Duos combat: the player's two boards against one board.
+fn duos(first: Warband, second: Warband, opponent: Vec<Minion>, f: impl FnOnce(&mut Combat)) {
+    let opponent = kitted(opponent, &[], &[]);
+    let p = Prepared::teams(&Team::duo(first, second), &Team::solo(opponent), false);
+    let mut rng = Rng::new(3);
+    let mut c = Combat::new(&p, &mut rng);
+    f(&mut c);
+}
+
+#[test]
+fn a_duos_board_that_comes_in_counts_again_with_its_own_kit() {
+    let boar = || Minion::new("ZZ_BOAR", 1, 9).tribe(Tribes::QUILBOAR);
+    // The first board attacks once with Jar o' Gems, then is gone.
+    let first = kitted(vec![boar()], &[], &["BG30_MagicItem_546"]);
+    let second = kitted(vec![boar(), plain(1, 9)], &[], &["BG30_MagicItem_546"]);
+    duos(first, second, vec![plain(0, 50)], |c| {
+        let a = uid(c, 0, 0);
+        c.swing(0, a);
+        c.sides[0].units.clear();
+        c.bring_in_teammates();
+        // One attack of the second board: its count starts at 0, no gems.
+        let a = uid(c, 0, 1);
+        c.swing(0, a);
+        assert_eq!(stats(c, 0)[0], (1, 9));
+        c.swing(0, a);
+        assert_eq!(stats(c, 0)[0], (2, 10));
+    });
+    // Glory of Combat on the first board does nothing for the second.
+    let first = kitted(vec![plain(1, 1)], &["BG20_HERO_100p"], &[]);
+    let second = kitted(vec![plain(5, 9)], &[], &[]);
+    duos(first, second, vec![plain(1, 3), plain(0, 9)], |c| {
+        c.sides[0].units.clear();
+        c.bring_in_teammates();
+        let (a, t) = (uid(c, 0, 0), uid(c, 1, 0));
+        c.forced_target = Some(t);
+        c.swing(0, a);
+        assert_eq!(stats(c, 0), [(5, 8)]);
+    });
+}

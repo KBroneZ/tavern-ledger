@@ -4,6 +4,7 @@
 //! during combat is still approximate ([`crate::kit`]).
 
 use crate::cards::Fidelity;
+use crate::cards_round1::BLOOD_GEM;
 use crate::kit::{BEETLES_PLACE, SCALE_ON_SHIELDED, SPROUT_REBORN, STAFF_PICK};
 use crate::model::{Keywords, Tribes};
 
@@ -96,8 +97,13 @@ pub const PASSIVE: &[(&str, KitPassive)] = &[
     ),
     // Trinkets.
     // Jar o' Gems (the user's logs, 37 combats' counts: its number goes 2,
-    // 1, then the gems and back to 2, every second friendly attack).
-    ("BG30_MagicItem_546", exact(KitTrigger::GemsEveryAttacks(2))),
+    // 1, then the gems and back to 2, every second friendly attack); like
+    // the Blood Gem cards, approximate while the side's gem upgrades are not
+    // given.
+    (
+        "BG30_MagicItem_546",
+        approx(BLOOD_GEM, KitTrigger::GemsEveryAttacks(2)),
+    ),
     // Deathly Phylactery (the user's logs: once per combat).
     (
         "BG30_MagicItem_700",
