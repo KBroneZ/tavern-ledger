@@ -5,11 +5,18 @@ use super::{Combat, Dead, Source};
 use crate::cards::Trigger;
 use crate::model::{Keywords, Tribes};
 
+/// Rounds of deaths resolved at most at once. A real combat needs a few;
+/// this only stops a loop the rules do not end.
+const MAX_DEATH_ROUNDS: u32 = 1_000;
+
 impl Combat<'_> {
     /// Start-of-combat effects of the boards that are coming in (`sides`),
     /// the first attacker's side first: every trinket, then every hero power
     /// (T-628), then each side's minions; each side's "attack immediately"
-    /// comes after its other effects, before the other side's.
+    /// comes after its other effects, before the other side's. The deaths an
+    /// effect causes are resolved before the next one (the user's logs: a
+    /// destroyed minion's death and Deathrattles come inside the block of the
+    /// card that destroyed it), and a minion that died does not act.
     pub(super) fn start_of_combat(&mut self, first: usize, sides: [bool; 2]) {
         let order: Vec<usize> = [first, 1 - first]
             .into_iter()
@@ -18,23 +25,27 @@ impl Combat<'_> {
         if order.iter().any(|s| self.has_kit_start(*s)) {
             for powers in [false, true] {
                 for &side in &order {
-                    self.play_kit(side, powers);
+                    self.play_kit(side, powers, first);
                 }
             }
-            self.process_deaths(first);
         }
         for side in order {
             let uids: Vec<u32> = self.sides[side].units.iter().map(|u| u.uid).collect();
             for uid in uids {
-                let Some(unit) = self.unit(side, uid) else {
+                let Some(unit) = self.unit(side, uid).filter(|u| u.alive()) else {
                     continue;
                 };
+                let mut acted = false;
                 for t in self.triggers(unit) {
                     if let Trigger::StartOfCombat(actions) = t {
                         for a in *actions {
                             self.act(side, Source::Unit(uid), None, None, a);
                         }
+                        acted = true;
                     }
+                }
+                if acted {
+                    self.process_deaths(first);
                 }
             }
             if !self.immediate_attackers(side).is_empty() {
@@ -109,7 +120,7 @@ impl Combat<'_> {
     /// else dies: deathrattles (the attacking side first, each side left to
     /// right), then Avenge, then Reborn.
     pub(super) fn process_deaths(&mut self, first: usize) {
-        loop {
+        for _ in 0..MAX_DEATH_ROUNDS {
             let mut dead: Vec<Dead> = Vec::new();
             for side in [first, 1 - first] {
                 let units = &self.sides[side].units;

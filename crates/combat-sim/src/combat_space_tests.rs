@@ -327,3 +327,115 @@ fn a_board_taken_after_start_of_combat_waits_for_no_space() {
     kill(&mut c, 0, 1);
     assert_eq!(c.sides[0].units.len(), MAX_BOARD - 1);
 }
+
+#[test]
+fn a_salvager_never_keeps_a_minion_another_one_destroyed() {
+    // Both Salvagers reach the Warghoul; only the first keeps its copy, and
+    // the Warghoul's Deathrattle (it triggers a Salvager's) ends.
+    let player = band(
+        vec![
+            Minion::new("BG31_999_G", 32, 8),
+            Minion::new("BG34_Giant_331", 9, 3),
+            Minion::new("BG31_999", 16, 4),
+        ],
+        Vec::new(),
+        8,
+    );
+    solo(player, vec![plain(0, 9)], |c| {
+        assert!(c.sides[0].units.iter().all(|u| u.alive()));
+        assert!(c.sides[0].units.len() <= MAX_BOARD);
+    });
+}
+
+#[test]
+fn a_minion_destroyed_at_the_start_of_combat_does_not_act() {
+    // The golden Salvager destroys both neighbours; the destroyed Salvager
+    // does not destroy it back.
+    let player = band(
+        vec![
+            Minion::new("ZZ_LEFT", 3, 3),
+            Minion::new("BG31_999_G", 32, 8),
+            Minion::new("BG31_999", 16, 4),
+        ],
+        Vec::new(),
+        8,
+    );
+    solo(player, vec![plain(0, 9)], |c| {
+        assert_eq!(ids(c, 0), ["BG31_999_G"])
+    });
+    // The Chameleon copies the minion to its left once the destroyed one is
+    // gone.
+    let player = band(
+        vec![
+            Minion::new("BG31_999_G", 32, 8),
+            Minion::new("ZZ_GONE", 3, 3),
+            Minion::new("BG34_Giant_042", 9, 18),
+        ],
+        Vec::new(),
+        8,
+    );
+    solo(player, vec![plain(0, 9)], |c| {
+        assert_eq!(ids(c, 0), ["BG31_999_G", "BG31_999_G"]);
+        assert_eq!(stats(c, 0), [(32, 8), (32, 8)]);
+    });
+}
+
+#[test]
+fn the_named_minion_stays_the_same_when_a_trinket_summons_before_it() {
+    // Herald Sticker triggers the Sewer Rat's Deathrattle first: a Turtle
+    // comes in to its right, and Rapid Reanimation still takes ZZ_B.
+    let mut rr = power("BG25_HERO_103p", false);
+    rr.target = Some(2);
+    let player = Warband {
+        kit: Some(Kit {
+            powers: vec![rr],
+            trinkets: vec![KitCard::new("BG32_MagicItem_306")],
+            round: Some(5),
+        }),
+        tavern_tier: Some(1),
+        ..Warband::new(vec![
+            Minion::new("BG19_010", 3, 2),
+            Minion::new("ZZ_A", 1, 1),
+            Minion::new("ZZ_B", 5, 5),
+        ])
+    };
+    let p = Prepared::new(&player, &band(vec![plain(0, 9)], Vec::new(), 5), true);
+    let (a, b) = (p.start[0][1].uid, p.start[0][2].uid);
+    let mut rng = Rng::new(5);
+    let mut c = Combat::new(&p, &mut rng);
+    c.start_of_combat(0, [true, true]);
+    let uids: Vec<u32> = c.sides[0].units.iter().map(|u| u.uid).collect();
+    assert!(uids.contains(&a), "ZZ_A is untouched");
+    assert!(!uids.contains(&b), "ZZ_B was destroyed");
+    assert_eq!(ids(&c, 0).iter().filter(|id| *id == "ZZ_B").count(), 1);
+}
+
+#[test]
+fn lock_and_load_on_a_full_board_fires_once_a_death_makes_space() {
+    let mut lnl = power("BG22_HERO_000p_Alt", true);
+    lnl.held = Some(plain(4, 3));
+    let player = band(vec![plain(1, 1); MAX_BOARD], vec![lnl], 7);
+    solo(player, vec![plain(0, 9)], |c| {
+        assert_eq!(stats(c, 1), [(0, 9)]);
+        kill(c, 0, 0);
+        assert_eq!(stats(c, 1), [(0, 5)]);
+        assert_eq!(stats(c, 0).last(), Some(&(4, 3)));
+    });
+}
+
+#[test]
+fn a_board_that_comes_in_does_not_take_the_first_heros_waiting_power() {
+    let mut lnl = power("BG22_HERO_000p_Alt", true);
+    lnl.held = Some(plain(4, 3));
+    let first = band(vec![plain(1, 1); MAX_BOARD], vec![lnl], 7);
+    let mate = band(vec![plain(2, 2)], Vec::new(), 7);
+    let opponent = Team::solo(band(vec![plain(0, 9)], Vec::new(), 7));
+    after_start(Team::duo(first, mate), opponent, |c| {
+        assert_eq!(c.pending[0].len(), 1, "waiting for space");
+        c.sides[0].units.clear();
+        c.bring_in_teammates();
+        assert!(c.pending[0].is_empty());
+        assert_eq!(stats(c, 0), [(2, 2)]);
+        assert_eq!(stats(c, 1), [(0, 9)]);
+    });
+}

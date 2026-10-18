@@ -477,3 +477,36 @@ fn the_minion_lock_and_load_holds_is_checked_like_a_board_minion() {
     // On a board taken after start of combat it is not fired: not checked.
     assert!(matches!(verdict(&unknown, false), Verdict::Odds(_)));
 }
+
+#[test]
+fn whirl_o_tron_stays_approximate_on_a_board_taken_after_start_of_combat() {
+    let whirl = with_kit(vec![Minion::new("BG34_Giant_599", 7, 5).tier(5)], &[], &[]);
+    let Verdict::Odds(odds) = verdict(&whirl, false) else {
+        panic!()
+    };
+    assert!(
+        odds.coverage
+            .approximate
+            .iter()
+            .any(|(id, _)| id == "BG34_Giant_599"),
+        "{:?}",
+        odds.coverage
+    );
+}
+
+#[test]
+fn a_held_minions_dark_gift_is_checked_too() {
+    let mut lnl = ready("BG22_HERO_000p_Alt");
+    lnl.held = Some(plain(4, 3).gift("BG36_MidGameEffect_ZZ_UNKNOWN"));
+    let player = with_power(vec![plain(2, 2)], lnl, Some(7));
+    let Verdict::NotModelled(cov) = verdict(&player, true) else {
+        panic!("an unknown gift blocks");
+    };
+    assert_eq!(cov.not_modelled, ["BG36_MidGameEffect_ZZ_UNKNOWN"]);
+    // Another power's minion named off the board is no held minion.
+    let mut rr = KitCard::new("BG25_HERO_103p");
+    rr.target = Some(0);
+    rr.held = Some(Minion::new("ZZ_NOBODY_KNOWS", 1, 1));
+    let player = with_power(vec![plain(2, 2)], rr, Some(7));
+    assert!(matches!(verdict(&player, true), Verdict::Odds(_)));
+}

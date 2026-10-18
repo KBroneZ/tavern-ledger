@@ -121,7 +121,7 @@ impl Coverage {
                         push_unique(&mut cov.not_modelled, id.clone());
                     }
                     if let Fidelity::Approximate(why) = rules.fidelity {
-                        let unplayed = !start_of_combat && acts_at_start_only(&rules);
+                        let unplayed = !start_of_combat && gap_at_start_only(why, &rules);
                         if !played_with(why, values)
                             && !unplayed
                             && !cov.approximate.iter().any(|(c, _)| c == id)
@@ -132,7 +132,10 @@ impl Coverage {
                 }
             }
         }
-        for m in boards.iter().flat_map(|(b, _)| &b.minions) {
+        let all = boards
+            .iter()
+            .flat_map(|(b, _)| b.minions.iter().chain(held_minions(b, start_of_combat)));
+        for m in all {
             cov.add_gifts(m, start_of_combat);
         }
         for (band, mate) in boards {
@@ -331,8 +334,10 @@ fn held_minions(band: &Warband, start_of_combat: bool) -> Vec<&Minion> {
     };
     kit.cards()
         .filter(|c| {
-            kit_effects::played(&c.card_id)
-                .is_some_and(|p| kit_effects::acts(p, &c.counters, kit.round) == Some(true))
+            kit_effects::played(&c.card_id).is_some_and(|p| {
+                p.space == Some(kit_effects::SpaceAction::FireHeld)
+                    && kit_effects::acts(p, &c.counters, kit.round) == Some(true)
+            })
         })
         .filter_map(|c| c.held.as_ref())
         .collect()
@@ -404,11 +409,12 @@ fn played_with(why: &str, values: &GameValues) -> bool {
     }
 }
 
-/// True when the card's only effect is at the start of combat (Runic
-/// Arcanist, Sandy; T-628): on a board taken after start of combat it has
-/// acted already, so its gap does not matter.
-fn acts_at_start_only(rules: &cards::CardRules) -> bool {
-    !rules.triggers.is_empty()
+/// True when the card's gap is about how it plays its start of combat and
+/// that is its only effect (Runic Arcanist's spell values, Sandy's copy;
+/// T-628): on a board taken after start of combat it has acted already.
+fn gap_at_start_only(why: &str, rules: &cards::CardRules) -> bool {
+    (why == crate::cards_round2::SPELL || why == cards::SANDY_COPY)
+        && !rules.triggers.is_empty()
         && rules
             .triggers
             .iter()

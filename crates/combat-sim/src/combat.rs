@@ -107,15 +107,18 @@ impl Prepared {
         let mut start = [units(first[0], &mut cards), units(first[1], &mut cards)];
         let second_tier = second.map(|b| b.and_then(|b| b.tavern_tier));
         let second_values = second.map(|b| b.map_or(GameValues::default(), |b| b.values));
-        // A held minion's uid is never used: it comes in as a fresh copy.
-        let held = |m: &Minion, cards: &mut Vec<CardInfo>| unit_of(0, m, cards);
-        let kits = first.map(|b| kit_uses(b.kit.as_ref(), &mut cards, held));
-        let second_kits =
-            second.map(|b| kit_uses(b.and_then(|b| b.kit.as_ref()), &mut cards, held));
+        let second_bands = second;
         let mut second = [
             second[0].map(|b| units(b, &mut cards)),
             second[1].map(|b| units(b, &mut cards)),
         ];
+        // A held minion's uid is never used: it comes in as a fresh copy.
+        let held = |m: &Minion, cards: &mut Vec<CardInfo>| unit_of(0, m, cards);
+        let kits = [0, 1].map(|s| kit_uses(first[s].kit.as_ref(), &start[s], &mut cards, held));
+        let second_kits = [0, 1].map(|s| {
+            let kit = second_bands[s].and_then(|b| b.kit.as_ref());
+            kit_uses(kit, second[s].as_deref().unwrap_or(&[]), &mut cards, held)
+        });
         // Tokens any of these cards can summon, and what those summon.
         let mut tokens: Vec<(&'static str, u16)> = Vec::new();
         let mut i = 0;

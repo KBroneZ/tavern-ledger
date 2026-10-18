@@ -13,8 +13,9 @@ pub(crate) struct KitUse {
     pub power: bool,
     pub counters: [i32; 5],
     pub play: &'static KitPlay,
-    /// The board index of the friendly minion it names.
-    pub target: Option<usize>,
+    /// The uid of the friendly minion it names, from its index on the board
+    /// as it was taken.
+    pub target: Option<u32>,
     /// The minion it holds, in the engine's form (its uid is not used).
     pub held: Option<Unit>,
     /// It acts this combat ([`kit_effects::acts`]; false when unknown).
@@ -36,6 +37,7 @@ pub(super) enum Pending {
 /// `held` turns a held minion into the engine's form.
 pub(crate) fn kit_uses(
     kit: Option<&Kit>,
+    board: &[Unit],
     cards: &mut Vec<CardInfo>,
     held: impl Fn(&Minion, &mut Vec<CardInfo>) -> Unit,
 ) -> Vec<KitUse> {
@@ -56,7 +58,7 @@ pub(crate) fn kit_uses(
             power,
             counters: c.counters,
             play,
-            target: c.target,
+            target: c.target.and_then(|ix| board.get(ix)).map(|u| u.uid),
             held: c.held.as_ref().map(|m| held(m, cards)),
             acts: kit_effects::acts(play, &c.counters, kit.round).unwrap_or(false),
         });
@@ -75,9 +77,10 @@ impl Combat<'_> {
         }
     }
 
-    /// Plays `side`'s trinkets (`powers` false) or hero powers; a hero power
-    /// that acts when there is space acts now if there is.
-    pub(super) fn play_kit(&mut self, side: usize, powers: bool) {
+    /// Plays `side`'s trinkets (`powers` false) or hero powers, the deaths
+    /// each causes resolved before the next (`first` attacks first); a hero
+    /// power that acts when there is space acts then if there is.
+    pub(super) fn play_kit(&mut self, side: usize, powers: bool, first: usize) {
         let uses: Vec<KitUse> = self
             .kit_now(side)
             .iter()
@@ -97,8 +100,8 @@ impl Combat<'_> {
             };
             if let Some(p) = pending {
                 self.pending[side].push(p);
-                self.fill_space(side);
             }
+            self.process_deaths(first);
         }
     }
 
@@ -175,15 +178,16 @@ impl Combat<'_> {
         }
     }
 
-    /// The living minion at board index `target`, as the board was taken.
-    fn target_uid(&self, side: usize, target: Option<usize>) -> Option<u32> {
-        let u = self.sides[side].units.get(target?)?;
-        u.alive().then_some(u.uid)
+    /// The named minion, when it is still on the board and alive.
+    fn target_uid(&self, side: usize, target: Option<u32>) -> Option<u32> {
+        self.unit(side, target?)
+            .filter(|u| u.alive())
+            .map(|u| u.uid)
     }
 
     /// Destroys the named minion and keeps its exact copy, summoned back at
     /// its place once there is space (after its death is resolved).
-    fn destroy_target(&mut self, side: usize, target: Option<usize>) {
+    fn destroy_target(&mut self, side: usize, target: Option<u32>) {
         let Some(uid) = self.target_uid(side, target) else {
             return;
         };

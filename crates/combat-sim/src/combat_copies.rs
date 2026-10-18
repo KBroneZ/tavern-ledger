@@ -87,7 +87,7 @@ impl Combat<'_> {
         let around = ix.checked_sub(1).into_iter().chain(right);
         let mut kept = Vec::new();
         for i in around {
-            let Some(u) = self.sides[side].units.get_mut(i) else {
+            let Some(u) = self.sides[side].units.get_mut(i).filter(|u| u.alive()) else {
                 continue;
             };
             let copy = u.clone();
@@ -113,7 +113,7 @@ impl Combat<'_> {
         };
         let kept = kept.clone();
         let at = self.summon_pos(side, src);
-        for (k, model) in kept.iter().enumerate() {
+        for (k, model) in kept.iter().filter(|m| m.alive()).enumerate() {
             let unit = self.copy_of(model);
             let new = unit.uid;
             if !self.sides[side].insert(at + k, unit) {
