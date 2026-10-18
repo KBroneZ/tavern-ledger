@@ -6,6 +6,7 @@
 
 mod applog;
 mod card_data;
+mod edition;
 #[cfg(test)]
 mod fake_secrets;
 mod foreground;
@@ -30,7 +31,7 @@ mod settings;
 mod setup_notice;
 #[cfg(test)]
 mod ui_checks;
-#[cfg(test)]
+#[cfg(all(test, not(feature = "store")))]
 mod update_checks;
 mod updates;
 mod upload;
@@ -1487,22 +1488,35 @@ fn main() {
     // Without a real release key the updater plugin is not even registered,
     // so nothing can ask GitHub for an update (D-135).
     let release_key = updates::release_key(context.config().plugins.0.get("updater"));
-    let may_check = updates::may_check(cfg!(debug_assertions), updates::OFFICIAL_BUILD);
-    if release_key.is_some() && !may_check {
+    let may_check = updates::may_check(
+        cfg!(debug_assertions),
+        updates::OFFICIAL_BUILD,
+        edition::STORE,
+    );
+    if edition::STORE {
+        applog::info(
+            "updates",
+            "Update checks are off: the Microsoft Store delivers this edition's updates.",
+        );
+    } else if release_key.is_some() && !may_check {
         applog::info(
             "updates",
             "Update checks are off: this build was not made by the release workflow.",
         );
     }
     let release_key = release_key.filter(|_| may_check);
-    let app_updates = Arc::new(updates::Updates::new(
-        release_key.is_some(),
-        &context.package_info().version.to_string(),
-    ));
+    let version = context.package_info().version.to_string();
+    let app_updates = Arc::new(if edition::STORE {
+        updates::Updates::store(&version)
+    } else {
+        updates::Updates::new(release_key.is_some(), &version)
+    });
+    #[cfg_attr(feature = "store", allow(unused_mut))]
     let mut builder = tauri::Builder::default().plugin(tauri_plugin_autostart::init(
         MacosLauncher::LaunchAgent,
         Some(vec![MINIMIZED_ARG]),
     ));
+    #[cfg(not(feature = "store"))]
     if release_key.is_some() {
         builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
     }
@@ -1591,12 +1605,15 @@ fn main() {
             state.saved_tribes.set_dir(&data_dir);
             state.saved_ratings.set_dir(&data_dir);
             app_updates.load(&data_dir);
-            let releases = updates::GitHub {
-                app: app.handle().clone(),
-                releases: updates::RELEASES.into(),
-                no_proxy: false,
-            };
-            updates::start(app.handle(), Arc::new(releases));
+            #[cfg(not(feature = "store"))]
+            {
+                let releases = updates::GitHub {
+                    app: app.handle().clone(),
+                    releases: updates::RELEASES.into(),
+                    no_proxy: false,
+                };
+                updates::start(app.handle(), Arc::new(releases));
+            }
             card_data::start(app.handle(), &data_dir);
             setup_tray(app)?;
             // A test build never shows its overlay over the user's game (T-336).

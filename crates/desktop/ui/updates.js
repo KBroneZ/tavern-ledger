@@ -23,6 +23,11 @@
   const failed = (error) => problem(t("updates.problem", { error: I18n.backend(String(error)) }));
 
   function render(view) {
+    $("update-setting").hidden = !Words.shown(view);
+    if (!Words.shown(view)) {
+      $("update-notice").hidden = true;
+      return;
+    }
     const off = view.state === "off";
     $("update-current").textContent = t("updates.current", { version: view.current });
     const auto = $("update-auto");

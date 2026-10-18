@@ -50,3 +50,9 @@ test("the words are in Spanish too, and the app's refusals are translated", () =
   assert.equal(words.line(view("ready", { version: "0.2.0" })), "La versión 0.2.0 está lista. Reinicia para actualizar.");
   assert.equal(I18n.backend("Finish your game first: updating restarts the app."), "Termina la partida primero: actualizar reinicia la app.");
 });
+
+test("the Store edition shows no updates setting and no notice", () => {
+  assert.equal(words.shown(view("store")), false);
+  assert.equal(words.notice(view("store")), null);
+  for (const state of ["off", "idle", "ready", "failed"]) assert.equal(words.shown(view(state)), true, state);
+});

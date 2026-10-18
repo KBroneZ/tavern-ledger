@@ -12,6 +12,11 @@
 //! The choice to check automatically is kept in `updates.json` in the data
 //! folder; a missing file means on.
 
+// The Store edition keeps this engine (the window's types and the tests) but
+// never runs it: nothing starts or asks it, and the plugin it drives is not
+// even compiled in.
+#![cfg_attr(feature = "store", allow(dead_code))]
+
 use std::io;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::{Path, PathBuf};
@@ -23,9 +28,12 @@ use std::time::Duration;
 use base64::Engine as _;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
+#[cfg(not(feature = "store"))]
 use tauri_plugin_updater::{Error as PluginError, Update, UpdaterExt};
 
-use crate::applog::{self, Logged};
+#[cfg(not(feature = "store"))]
+use crate::applog;
+use crate::applog::Logged;
 use crate::overlay::lock;
 use crate::AppState;
 
@@ -44,6 +52,7 @@ const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(10 * 60);
 /// Redirects followed on the way to a file (GitHub sends one or two).
 const MAX_REDIRECTS: usize = 5;
 const SAVE_FAILED: &str = "The update setting could not be saved; it will be lost after a restart.";
+const STORE_UPDATES: &str = "Updates come from the Microsoft Store.";
 const READ_FAILED: &str = "The update setting could not be read; automatic checks are on.";
 
 /// The release public key, when the config's updater key is a real minisign
@@ -68,8 +77,10 @@ pub const OFFICIAL_BUILD: bool = match option_env!("TAVERN_LEDGER_OFFICIAL_BUILD
 /// Whether this build may check for updates at all. A debug build never does,
 /// and neither does a release build made from source: it would replace itself
 /// with the published installer.
-pub fn may_check(debug_build: bool, official_build: bool) -> bool {
-    !debug_build && official_build
+/// The Microsoft Store edition (`store` feature) never does either: the Store
+/// delivers its updates, and a self-update would break the package.
+pub fn may_check(debug_build: bool, official_build: bool, store_edition: bool) -> bool {
+    !debug_build && official_build && !store_edition
 }
 
 /// The installer a release's `latest.json` must point to: the tag's own file.
@@ -100,6 +111,9 @@ pub enum Reason {
 pub enum Phase {
     /// This build has no release key: no check is ever made.
     Off,
+    /// The Microsoft Store edition: the Store delivers updates, so the app
+    /// shows nothing about them.
+    Store,
     /// No check yet in this run.
     Idle,
     Checking,
@@ -202,6 +216,14 @@ impl Updates {
         }
     }
 
+    /// The Microsoft Store edition: never checks, and the window hides every
+    /// word about updates.
+    pub fn store(current: &str) -> Self {
+        let updates = Self::new(false, current);
+        lock(&updates.inner).phase = Phase::Store;
+        updates
+    }
+
     pub fn load(&self, data_dir: &Path) {
         let path = data_dir.join(FILE);
         let mut inner = lock(&self.inner);
@@ -233,7 +255,7 @@ impl Updates {
     }
 
     fn is_on(&self) -> bool {
-        lock(&self.inner).phase != Phase::Off
+        !matches!(lock(&self.inner).phase, Phase::Off | Phase::Store)
     }
 
     fn auto_check(&self) -> bool {
@@ -244,6 +266,11 @@ impl Updates {
     pub fn set_auto_check(&self, enabled: bool) -> Result<(), String> {
         let (path, text) = {
             let mut inner = lock(&self.inner);
+            if inner.phase == Phase::Store {
+                // `updates.json` is shared with the installer edition: the
+                // Store edition leaves it as it is.
+                return Err(STORE_UPDATES.into());
+            }
             inner.saved.auto_check = enabled;
             inner.warning = None;
             (
@@ -274,6 +301,7 @@ impl Updates {
             let mut inner = lock(&self.inner);
             match inner.phase {
                 Phase::Off
+                | Phase::Store
                 | Phase::Checking
                 | Phase::Downloading { .. }
                 | Phase::Ready { .. }
@@ -408,6 +436,7 @@ pub fn start<R: Runtime>(app: &AppHandle<R>, source: Arc<dyn Source>) {
 }
 
 /// The project's GitHub releases, through the updater plugin.
+#[cfg(not(feature = "store"))]
 pub struct GitHub<R: Runtime> {
     pub app: AppHandle<R>,
     /// [`RELEASES`]; a test points it at its own server.
@@ -416,11 +445,13 @@ pub struct GitHub<R: Runtime> {
     pub no_proxy: bool,
 }
 
+#[cfg(not(feature = "store"))]
 struct Download {
     update: Update,
     bytes: Vec<u8>,
 }
 
+#[cfg(not(feature = "store"))]
 impl Downloaded for Download {
     fn version(&self) -> &str {
         &self.update.version
@@ -433,6 +464,7 @@ impl Downloaded for Download {
     }
 }
 
+#[cfg(not(feature = "store"))]
 impl<R: Runtime> Source for GitHub<R> {
     fn fetch(&self, found: &mut dyn FnMut(&str)) -> Fetched {
         tauri::async_runtime::block_on(async {
@@ -466,6 +498,7 @@ impl<R: Runtime> Source for GitHub<R> {
 }
 
 /// Redirects are followed only to `https` addresses, a few at most.
+#[cfg(not(feature = "store"))]
 fn https_redirects_only() -> reqwest::redirect::Policy {
     reqwest::redirect::Policy::custom(|attempt| {
         if attempt.url().scheme() != "https" {
@@ -479,6 +512,7 @@ fn https_redirects_only() -> reqwest::redirect::Policy {
 }
 
 /// The window's code for a failure; the plugin's own words go to the log.
+#[cfg(not(feature = "store"))]
 fn reason(error: &PluginError) -> Reason {
     applog::warn("updates", &format!("update check failed: {error}"));
     match error {
@@ -693,15 +727,49 @@ mod tests {
 
     #[test]
     fn only_the_workflows_release_build_may_check_for_updates() {
-        assert!(may_check(false, true), "the published installer");
-        assert!(!may_check(true, true), "a debug build never checks");
-        assert!(!may_check(true, false), "a debug build from source");
-        assert!(!may_check(false, false), "a release build from source");
+        assert!(may_check(false, true, false), "the published installer");
+        assert!(!may_check(true, true, false), "a debug build never checks");
+        assert!(!may_check(true, false, false), "a debug build from source");
+        assert!(
+            !may_check(false, false, false),
+            "a release build from source"
+        );
+    }
+
+    #[test]
+    fn the_store_edition_never_checks_even_when_made_by_the_release_workflow() {
+        assert!(!may_check(false, true, true));
+        assert!(!may_check(true, true, true));
+    }
+
+    #[test]
+    fn the_store_edition_has_no_update_to_show_and_never_asks() {
+        let updates = Updates::store("0.1.0");
+        let source = fake(ready);
+        let seen = Mutex::new(Vec::new());
+        updates.check(&source, &|v| lock(&seen).push(v));
+        assert_eq!(source.calls.load(Ordering::SeqCst), 0, "no network");
+        assert!(lock(&seen).is_empty());
+        assert_eq!(updates.view().phase, Phase::Store);
+        assert_eq!(updates.view().notice, None);
+        assert!(!updates.wake(), "no checking thread either");
+        assert!(updates.install(&|| false, &|_| {}).is_err());
+    }
+
+    #[test]
+    fn the_store_edition_does_not_write_the_installer_editions_update_setting() {
+        let dir = std::env::temp_dir().join(format!("tl-store-updates-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let updates = Updates::store("0.1.0");
+        updates.load(&dir);
+        assert!(updates.set_auto_check(false).is_err());
+        assert!(!dir.join(FILE).exists());
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
     fn a_build_made_here_does_not_check_for_updates() {
-        assert!(!may_check(cfg!(debug_assertions), OFFICIAL_BUILD));
+        assert!(!may_check(cfg!(debug_assertions), OFFICIAL_BUILD, false));
     }
 
     #[test]
