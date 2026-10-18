@@ -28,8 +28,8 @@ pub enum Hive {
 
 const CLIENT: &str = r"Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}";
 
-/// The three places Microsoft lists (per-machine 64-bit view, per-machine
-/// 32-bit view, per-user).
+/// The three places Microsoft lists: per-machine in the 32-bit view
+/// (`WOW6432Node`), per-machine in the native view, and per-user.
 pub fn locations() -> [(Hive, String); 3] {
     [
         (
@@ -58,6 +58,13 @@ pub fn installed_with(read: impl Fn(Hive, &str) -> Option<String>) -> bool {
         .any(|(hive, key)| read(*hive, key).is_some_and(|pv| is_version(&pv)))
 }
 
+/// Whether a fixed-version runtime was named through the environment
+/// (`WEBVIEW2_BROWSER_EXECUTABLE_FOLDER`, which the window library honours):
+/// it has no `pv` value, and it must not be taken for a missing runtime.
+pub fn is_fixed_runtime(folder: Option<&str>) -> bool {
+    folder.is_some_and(|folder| !folder.trim().is_empty())
+}
+
 /// What the player is told when the runtime is missing, in both languages
 /// (nothing is loaded yet that could tell which one they use).
 pub fn message() -> String {
@@ -83,7 +90,7 @@ mod win {
     };
     use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ};
 
-    use super::{installed_with, message, Hive, DOWNLOAD_URL};
+    use super::{installed_with, is_fixed_runtime, message, Hive, DOWNLOAD_URL};
     use crate::applog;
 
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
@@ -102,7 +109,8 @@ mod win {
 
     /// Stops the app with a plain message when the runtime is missing.
     pub fn require_runtime() {
-        if installed_with(read_pv) {
+        let fixed = std::env::var("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER").ok();
+        if installed_with(read_pv) || is_fixed_runtime(fixed.as_deref()) {
             return;
         }
         applog::error(
@@ -126,12 +134,31 @@ mod win {
             let rundll = std::path::Path::new(&system)
                 .join("System32")
                 .join("rundll32.exe");
-            let _ = Command::new(rundll)
+            if let Err(error) = Command::new(rundll)
                 .args(["url.dll,FileProtocolHandler", DOWNLOAD_URL])
                 .creation_flags(CREATE_NO_WINDOW)
-                .spawn();
+                .spawn()
+            {
+                applog::warn(
+                    "app",
+                    &format!("could not open the WebView2 download page: {error}"),
+                );
+            }
         }
         std::process::exit(1);
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn a_key_that_is_not_there_reads_as_no_value() {
+            assert_eq!(
+                read_pv(Hive::CurrentUser, r"Software\TavernLedgerNoSuchKey\x"),
+                None
+            );
+        }
     }
 }
 
@@ -218,9 +245,16 @@ mod tests {
     }
 
     #[test]
-    fn a_test_run_never_stops_the_app() {
-        // The installer edition (and any non-Windows build) has nothing to check.
-        #[cfg(not(feature = "store"))]
+    fn a_fixed_runtime_named_in_the_environment_is_not_a_missing_one() {
+        assert!(is_fixed_runtime(Some(r"C:\WebView2\Fixed")));
+        assert!(!is_fixed_runtime(None));
+        assert!(!is_fixed_runtime(Some("  ")));
+        assert!(!is_fixed_runtime(Some("")));
+    }
+
+    #[cfg(not(feature = "store"))]
+    #[test]
+    fn the_installer_edition_has_nothing_to_check_and_never_stops() {
         require_runtime();
     }
 }
