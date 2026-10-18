@@ -14,6 +14,7 @@ fn plain(attack: i32, health: i32) -> Minion {
 
 fn band(tier: u8, minions: Vec<Minion>) -> Warband {
     Warband {
+        kit: None,
         minions,
         tavern_tier: Some(tier),
         values: Default::default(),

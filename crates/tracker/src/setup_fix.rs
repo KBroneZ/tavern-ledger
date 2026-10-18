@@ -56,6 +56,9 @@ pub enum Reason {
     /// The file changed between reading and writing it.
     Changed,
     DiskFull,
+    /// The Microsoft Store edition wrote the file, but Windows kept it in the
+    /// package's private store, where the game does not look.
+    Virtualized,
     Other,
 }
 

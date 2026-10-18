@@ -32,6 +32,8 @@ fn entry(side: Side, seat: i64, board: Option<Vec<LogMinion>>) -> CombatEntry {
         hero: None,
         board,
         values: None,
+        before: None,
+        kit: None,
     }
 }
 
@@ -44,6 +46,7 @@ fn round_of(number: i64, entries: Vec<CombatEntry>) -> Round {
         result: None,
         attacks: Vec::new(),
         own_shop_board: None,
+        hidden_triggers: Vec::new(),
         replay: None,
     }
 }

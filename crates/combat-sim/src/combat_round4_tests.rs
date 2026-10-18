@@ -6,6 +6,7 @@ use crate::rng::Rng;
 
 fn band(minions: Vec<Minion>) -> Warband {
     Warband {
+        kit: None,
         minions,
         tavern_tier: Some(1),
         values: Default::default(),

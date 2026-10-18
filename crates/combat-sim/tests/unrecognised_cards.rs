@@ -26,6 +26,7 @@ fn warband(rows: &[Row], values: GameValues) -> Warband {
         })
         .collect();
     Warband {
+        kit: None,
         minions,
         tavern_tier: Some(6),
         values,

@@ -348,12 +348,7 @@ impl<'a> Combat<'a> {
 
 impl<'a> Combat<'a> {
     fn run(&mut self) -> Outcome {
-        let mut turn = self.first_attacker();
-        if self.p.start_of_combat {
-            self.start_of_combat(turn, [true, true]);
-        } else {
-            self.attack_immediately(turn, [true, true]);
-        }
+        let mut turn = self.open();
         let mut turns = 0;
         loop {
             if let Some(first) = self.bring_in_teammates() {
@@ -374,12 +369,43 @@ impl<'a> Combat<'a> {
         }
     }
 
+    /// The combat's opening: start of combat (or, on boards taken after it,
+    /// only its "attack immediately" swings), then who attacks first.
+    pub(crate) fn open(&mut self) -> usize {
+        let turn = self.first_attacker();
+        if self.p.start_of_combat {
+            let swings = self.has_immediate_attackers([true, true]);
+            self.start_of_combat(turn, [true, true]);
+            self.first_after_start(turn, swings)
+        } else {
+            self.attack_immediately(turn, [true, true]);
+            turn
+        }
+    }
+
     /// The side with more minions, else a coin flip.
     fn first_attacker(&mut self) -> usize {
         match self.first_by_count() {
             Some(side) => side,
             None => usize::from(self.rng.coin()),
         }
+    }
+
+    /// Who attacks first once start of combat is played: the side with more
+    /// minions after its effects (T-628: the user's logs, 187 of 187 combat
+    /// legs where the counts differ), else `before` (the coin already
+    /// flipped). With "attack immediately" on a board the count before them
+    /// is kept (D-115, one combat seen).
+    pub(crate) fn first_after_start(&self, before: usize, swings: bool) -> usize {
+        if swings {
+            return before;
+        }
+        self.first_by_count().unwrap_or(before)
+    }
+
+    /// Some board of `sides` has a minion that attacks at the start of combat.
+    pub(crate) fn has_immediate_attackers(&self, sides: [bool; 2]) -> bool {
+        (0..2).any(|s| sides[s] && !self.immediate_attackers(s).is_empty())
     }
 
     /// The side with more minions attacks first; `None` on equal counts (a

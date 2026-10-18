@@ -203,14 +203,55 @@ pub struct GameValues {
     pub beetle: (i32, i32),
 }
 
+/// A hero power or trinket of a board's hero (T-628), by its card id.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct KitCard {
+    pub card_id: String,
+    /// Hero powers: 0 the hero's own, 1 a second one. Trinkets: 1 lesser,
+    /// 2 greater, 3 a hero power that became a trinket.
+    pub slot: u8,
+    /// The numbers its text shows, in order; 0 where the game gives none.
+    pub counters: [i32; 5],
+    /// The friendly minion it names, by its index on the board (0 is the
+    /// left-most).
+    pub target: Option<usize>,
+}
+
+impl KitCard {
+    pub fn new(card_id: impl Into<String>) -> Self {
+        KitCard {
+            card_id: card_id.into(),
+            ..KitCard::default()
+        }
+    }
+}
+
+/// A board's hero powers and trinkets (T-628). See [`crate::kit`] for what
+/// the engine knows of them.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Kit {
+    pub powers: Vec<KitCard>,
+    pub trinkets: Vec<KitCard>,
+}
+
+impl Kit {
+    /// Every hero power, then every trinket.
+    pub fn cards(&self) -> impl Iterator<Item = &KitCard> {
+        self.powers.iter().chain(&self.trinkets)
+    }
+}
+
 /// One side of a combat: its minions left to right, its hero's tavern
-/// tier (part of the damage when it wins; `None` when unknown) and its
-/// game-long values.
+/// tier (part of the damage when it wins; `None` when unknown), its
+/// game-long values and its hero's powers and trinkets (`None` when the
+/// caller does not know them: then they are not checked, as before T-628;
+/// an empty [`Kit`] is a hero with none).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Warband {
     pub minions: Vec<Minion>,
     pub tavern_tier: Option<u8>,
     pub values: GameValues,
+    pub kit: Option<Kit>,
 }
 
 impl Warband {
@@ -219,6 +260,7 @@ impl Warband {
             minions,
             tavern_tier: None,
             values: GameValues::default(),
+            kit: None,
         }
     }
 

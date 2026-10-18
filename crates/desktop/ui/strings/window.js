@@ -165,6 +165,7 @@
       "setup.state.cannotCheck": "Tavern Ledger cannot check this right now, so it does not know whether the game is set up.",
       "setup.state.fixing": "Fixing…",
       "setup.state.error": "The fix did not work. The steps above show how to do it by hand.",
+      "setup.state.manual": "In this version Tavern Ledger cannot change these files itself. Make the changes above by hand, then restart Hearthstone.",
       "setup.fix.fixed": "{file} fixed.",
       "setup.fix.created": "{file} created.",
       "setup.fix.backup": "The old file was copied to a .bak file beside it first.",
@@ -186,6 +187,7 @@
       "setup.fix.reason.disk_full": "the disk is full.",
       "setup.fix.reason.too_large": "it is far bigger than a config file, so Tavern Ledger left it alone.",
       "setup.fix.reason.too_many_backups": "there are already 99 .bak copies beside it. Delete some and click Fix again.",
+      "setup.fix.reason.virtualized": "Windows kept the file in this app's private storage, where Hearthstone cannot see it.",
       "setup.fix.reason.unknown": "Windows reported an error.",
 
       "win.upload.title": "Upload to the website",
@@ -447,6 +449,7 @@
       "setup.state.cannotCheck": "Tavern Ledger no puede comprobarlo ahora, así que no sabe si el juego está configurado.",
       "setup.state.fixing": "Arreglando…",
       "setup.state.error": "El arreglo no ha funcionado. Los pasos de arriba explican cómo hacerlo a mano.",
+      "setup.state.manual": "En esta versión Tavern Ledger no puede cambiar estos archivos por sí misma. Haz los cambios de arriba a mano y reinicia Hearthstone.",
       "setup.fix.fixed": "{file} arreglado.",
       "setup.fix.created": "{file} creado.",
       "setup.fix.backup": "Antes se copió el archivo antiguo a un archivo .bak a su lado.",
@@ -468,6 +471,7 @@
       "setup.fix.reason.disk_full": "el disco está lleno.",
       "setup.fix.reason.too_large": "es mucho más grande que un archivo de configuración, así que Tavern Ledger no lo ha tocado.",
       "setup.fix.reason.too_many_backups": "ya hay 99 copias .bak a su lado. Borra algunas y pulsa Arreglar otra vez.",
+      "setup.fix.reason.virtualized": "Windows guardó el archivo en el almacenamiento privado de esta app, donde Hearthstone no puede verlo.",
       "setup.fix.reason.unknown": "Windows ha indicado un error.",
 
       "win.upload.title": "Subir a la web",

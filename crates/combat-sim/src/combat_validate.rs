@@ -24,6 +24,7 @@ use combat_sim::harness_logs::{
     load_logs, power_logs, render_overlay_path, render_replays, replay_all,
 };
 use combat_sim::harness_misses::{duos_misses, render_misses, solo_misses};
+use combat_sim::harness_soc::{render_start_of_combat, SocCombat};
 use combat_sim::harness_summary::{render_summary, Summary};
 use combat_sim::harness_why::tally;
 use combat_sim::Options;
@@ -116,17 +117,22 @@ fn real_main() -> Result<(), String> {
             (load_history(&jsonl, &db), files, None)
         }
         Input::Logs(path) => {
-            let (history, files, rows, unreadable) = from_logs(path, &db, &options)?;
-            (history, files, Some((rows, unreadable)))
+            let logs = from_logs(path, &db, &options)?;
+            (
+                logs.history,
+                logs.files,
+                Some((logs.rows, logs.unreadable, logs.soc)),
+            )
         }
     };
     let run = run(&history, &options);
-    let (rows, unreadable) = match from_logs {
+    let (rows, unreadable, soc) = match from_logs {
         Some(r) => r,
         // The replays the app saved with the games (T-609).
         None => (
             replay_all(&history.saved, options.seed),
             history.saved_unreadable,
+            Vec::new(),
         ),
     };
     let mut misses = solo_misses(&run.scored);
@@ -158,6 +164,9 @@ fn real_main() -> Result<(), String> {
         print!("{}", render_duos(&history.duos, &options, source));
         print!("{}", render_misses(&misses, Some(&rows)));
         print!("{}", render_accuracy(&acc));
+        if !soc.is_empty() {
+            print!("{}", render_start_of_combat(&soc, &options));
+        }
     }
     if let Some(path) = args.export {
         let checked = Checked {
@@ -172,21 +181,23 @@ fn real_main() -> Result<(), String> {
     Ok(())
 }
 
+/// What the game's own logs give the report.
+struct FromLogs {
+    /// The Solo combats and the Duos combats as a history.
+    history: History,
+    /// `Power.log` files read.
+    files: usize,
+    /// The attack-by-attack replays, and the rounds that could not be read.
+    rows: Vec<combat_sim::harness_logs::Replayed>,
+    unreadable: usize,
+    /// Every combat with its boards before start of combat (T-628).
+    soc: Vec<SocCombat>,
+}
+
 /// The game's own logs: the Solo combats and the Duos combats as a history,
-/// the number of `Power.log` files, and the attack-by-attack replays.
-fn from_logs(
-    path: &str,
-    db: &CardDb,
-    options: &Options,
-) -> Result<
-    (
-        History,
-        usize,
-        Vec<combat_sim::harness_logs::Replayed>,
-        usize,
-    ),
-    String,
-> {
+/// the number of `Power.log` files, the attack-by-attack replays and each
+/// combat's boards before start of combat.
+fn from_logs(path: &str, db: &CardDb, options: &Options) -> Result<FromLogs, String> {
     let files = power_logs(Path::new(path))?;
     if files.is_empty() {
         return Err(format!("{path}: no Power.log found"));
@@ -197,7 +208,13 @@ fn from_logs(
         duos: read.duos,
         ..read.history
     };
-    Ok((history, files.len(), rows, read.unreadable))
+    Ok(FromLogs {
+        history,
+        files: files.len(),
+        rows,
+        unreadable: read.unreadable,
+        soc: read.soc,
+    })
 }
 
 /// Days since 1970-01-01, UTC, from the system clock.

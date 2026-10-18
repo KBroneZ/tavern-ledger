@@ -10,6 +10,7 @@ fn m(attack: i32, health: i32) -> Minion {
 
 fn band(minions: &[Minion]) -> Warband {
     Warband {
+        kit: None,
         minions: minions.to_vec(),
         tavern_tier: Some(1),
         values: Default::default(),

@@ -333,6 +333,19 @@ pub fn has_start_of_combat(card_id: &str) -> bool {
     })
 }
 
+/// True when the card's start-of-combat effect uses numbers that grow during
+/// the game, which the board does not give yet (Hopebringer, T-628): on a
+/// board taken before start of combat it cannot be played, so the board must
+/// be taken after it.
+pub fn start_of_combat_scales(card_id: &str) -> bool {
+    rules(card_id).is_some_and(|r| {
+        r.fidelity == Fidelity::Approximate(crate::cards_round1::SCALES)
+            && r.triggers
+                .iter()
+                .any(|t| matches!(t, Trigger::StartOfCombat(_)))
+    })
+}
+
 /// A minion summoned in combat. Its stats are the card's own: buffs the game
 /// keeps for the whole game ("your Beetles have +2/+1") are not in the log,
 /// which is why the cards that summon those are marked approximate.

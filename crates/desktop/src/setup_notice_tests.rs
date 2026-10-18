@@ -377,3 +377,130 @@ fn once_the_tracker_has_stopped_the_notice_offers_nothing_to_write() {
         ("unknown", false, false)
     );
 }
+
+#[test]
+fn a_write_windows_kept_in_the_packages_private_store_is_not_reported_as_created() {
+    let root = temp_dir();
+    let local = local_dir(&root, None);
+    let game = install(&root, "D", Some(GOOD_CLIENT));
+    let private = root.join("private-local");
+    // What Windows leaves behind when it redirects the write: a copy at the
+    // same place in the package's private store.
+    let copy = private
+        .join("Blizzard")
+        .join("Hearthstone")
+        .join("log.config");
+    fs::create_dir_all(copy.parent().unwrap()).unwrap();
+    fs::write(&copy, POWER_ONLY).unwrap();
+
+    let files = fix_files_in(Some(&local), Some(&game), false, Some(&private));
+    assert_eq!(
+        (files[0].result, files[0].reason),
+        ("failed", Some(Reason::Virtualized)),
+        "never 'created' for a file the game cannot see"
+    );
+    assert_eq!(files[1].result, "already_ok");
+}
+
+#[test]
+fn a_write_with_no_copy_in_the_private_store_is_reported_as_it_is() {
+    let root = temp_dir();
+    let local = local_dir(&root, None);
+    let game = install(&root, "D", Some(GOOD_CLIENT));
+    let private = root.join("private-local");
+    fs::create_dir_all(&private).unwrap();
+    let files = fix_files_in(Some(&local), Some(&game), false, Some(&private));
+    assert_eq!(files[0].result, "created");
+    // And an app that is not packaged has no private store to look in.
+    let again = fix_files_in(Some(&local), Some(&game), false, None);
+    assert_eq!(again[0].result, "already_ok");
+}
+
+#[test]
+fn a_private_copy_is_never_believed_even_when_the_file_looks_fine_from_inside() {
+    // The package's view of the real path shows its own redirected copy, so
+    // the file reads as correct. The app must not say "already fine".
+    let root = temp_dir();
+    let local = local_dir(&root, Some(GOOD_POWER));
+    let game = install(&root, "D", Some(GOOD_CLIENT));
+    let private = root.join("private-local");
+    let copy = private
+        .join("Blizzard")
+        .join("Hearthstone")
+        .join("log.config");
+    fs::create_dir_all(copy.parent().unwrap()).unwrap();
+    fs::write(&copy, GOOD_POWER).unwrap();
+    let files = fix_files_in(Some(&local), Some(&game), false, Some(&private));
+    assert_eq!(
+        (files[0].result, files[0].reason),
+        ("failed", Some(Reason::Virtualized))
+    );
+    assert!(
+        !copy.exists(),
+        "the copy is removed so the next try starts clean"
+    );
+    // Next click: no copy, the real file is judged.
+    let again = fix_files_in(Some(&local), Some(&game), false, Some(&private));
+    assert_eq!(again[0].result, "already_ok");
+}
+
+#[test]
+fn the_notice_does_not_say_ok_while_a_copy_sits_in_the_private_store() {
+    let root = temp_dir();
+    let local = local_dir(&root, Some(GOOD_POWER));
+    let game = install(&root, "D", Some(GOOD_CLIENT));
+    let state = state_for(&local, Some(&game));
+    assert_eq!(state.view().1.state, "ok");
+    let private = root.join("private-local");
+    let copy = private
+        .join("Blizzard")
+        .join("Hearthstone")
+        .join("log.config");
+    fs::create_dir_all(copy.parent().unwrap()).unwrap();
+    fs::write(&copy, GOOD_POWER).unwrap();
+    state.set_private_root(Some(private));
+    let (lines, view) = state.view();
+    assert_eq!(view.state, "manual");
+    assert!(!view.can_fix && !view.can_fix_optional);
+    assert!(lines.iter().any(|line| line.contains("private storage")));
+    // Without a package there is no private store to look in.
+    state.set_private_root(None);
+    assert_eq!(state.view().1.state, "ok");
+}
+
+#[test]
+fn where_the_app_may_not_write_the_box_lists_the_lines_and_offers_no_button() {
+    let root = temp_dir();
+    let local = local_dir(&root, None);
+    let game = install(&root, "D", None);
+    let state = state_for(&local, Some(&game));
+    let (lines, view) = state.view();
+    assert_eq!(view.state, "needs_fix");
+    assert!(view.can_fix);
+    state.set_manual_only(true);
+    let (manual_lines, manual) = state.view();
+    assert_eq!(manual_lines, lines, "the same lines say what to write");
+    assert_eq!(manual.state, "manual");
+    assert!(!manual.can_fix && !manual.can_fix_optional);
+    assert!(!state.fix_allowed());
+}
+
+#[test]
+fn manual_setup_also_covers_the_optional_lines_and_leaves_a_good_setup_alone() {
+    let root = temp_dir();
+    let local = local_dir(&root, Some(POWER_ONLY));
+    let game = install(&root, "D", Some(GOOD_CLIENT));
+    let state = state_for(&local, Some(&game));
+    state.set_manual_only(true);
+    let (lines, view) = state.view();
+    assert!(!lines.is_empty(), "the optional lines are still told");
+    assert!(!view.can_fix_optional);
+    assert_eq!(view.state, "ok", "nothing needed is missing");
+
+    let good = local_dir(&temp_dir(), Some(GOOD_POWER));
+    let state = state_for(&good, Some(&game));
+    state.set_manual_only(true);
+    let (lines, view) = state.view();
+    assert!(lines.is_empty());
+    assert_eq!(view.state, "ok");
+}

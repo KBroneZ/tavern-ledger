@@ -20,6 +20,7 @@ use crate::combat::replay::{replay_teams, LoggedStep, Replay, Rule, Span};
 use crate::combat::CombatResult;
 use crate::harness::{CardDb, History, LoggedCombat, Scored};
 use crate::harness_duos::{duos_combats, team_of, DuosCombat};
+use crate::harness_soc::{soc_combats, SocCombat};
 use crate::model::{GameValues, Keywords, Minion, Team, Warband};
 use crate::score::{score, Prediction};
 use crate::trials::{simulate, Options, Verdict};
@@ -64,6 +65,8 @@ pub struct LogHistory {
     /// Rounds with attacks that could not be turned into steps (a card id
     /// missing, an attacker or defender not on the board before).
     pub unreadable: usize,
+    /// Every combat with its boards before start of combat (T-628).
+    pub soc: Vec<SocCombat>,
 }
 
 /// A board minion in the engine's form, with the card facts and the
@@ -253,6 +256,7 @@ fn add_game(out: &mut LogHistory, game: usize, report: &GameReport, db: &CardDb)
         });
     }
     out.duos.extend(duos);
+    out.soc.extend(soc_combats(report, game, db));
 }
 
 /// Reads every game of `logs`.

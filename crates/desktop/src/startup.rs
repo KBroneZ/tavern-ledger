@@ -15,7 +15,7 @@
 use serde::Serialize;
 use tauri::AppHandle;
 
-use crate::edition;
+use crate::{edition, package};
 
 /// The task's name in the manifest (`windows.startupTask`).
 #[cfg_attr(not(feature = "store"), allow(dead_code))]
@@ -128,7 +128,7 @@ impl View {
 /// started from a build folder has no start-up task).
 pub fn available() -> bool {
     if edition::STORE {
-        return store::has_package_identity();
+        return package::has_identity();
     }
     std::env::current_exe().is_ok()
 }
@@ -257,10 +257,6 @@ mod run_key {
 
 #[cfg(not(feature = "store"))]
 mod store {
-    pub fn has_package_identity() -> bool {
-        false
-    }
-
     pub fn started_by_startup_task() -> bool {
         false
     }
@@ -276,12 +272,10 @@ mod store {
     use windows::core::HSTRING;
     use windows::ApplicationModel::Activation::ActivationKind;
     use windows::ApplicationModel::{AppInstance, StartupTask};
-    use windows::Win32::Foundation::ERROR_INSUFFICIENT_BUFFER;
-    use windows::Win32::Storage::Packaging::Appx::GetCurrentPackageFullName;
     use windows::Win32::System::WinRT::{RoInitialize, RoUninitialize, RO_INIT_MULTITHREADED};
 
     use super::{Backend, StartupState, FAILED, TASK_ID};
-    use crate::applog;
+    use crate::{applog, package};
 
     pub struct Task;
 
@@ -347,19 +341,9 @@ mod store {
         }
     }
 
-    /// Whether this process runs from an installed package: the call only
-    /// asks for the name's length, which a process without identity cannot get
-    /// (`APPMODEL_ERROR_NO_PACKAGE`).
-    pub fn has_package_identity() -> bool {
-        let mut length = 0u32;
-        // SAFETY: `length` is a valid, writable u32 and no buffer is passed.
-        let code = unsafe { GetCurrentPackageFullName(&mut length, None) };
-        code == ERROR_INSUFFICIENT_BUFFER
-    }
-
     /// Whether Windows activated this process for the start-up task.
     pub fn started_by_startup_task() -> bool {
-        if !has_package_identity() {
+        if !package::has_identity() {
             return false;
         }
         in_apartment(|| {

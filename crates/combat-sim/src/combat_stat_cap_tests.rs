@@ -13,6 +13,7 @@ const MAX: i32 = i32::MAX;
 
 fn band(minions: Vec<Minion>) -> Warband {
     Warband {
+        kit: None,
         minions,
         tavern_tier: Some(1),
         values: Default::default(),

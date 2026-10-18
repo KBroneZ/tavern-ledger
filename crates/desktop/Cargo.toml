@@ -14,6 +14,9 @@ tauri-build = { version = "2", features = [] }
 # The Microsoft Store edition (D-158, T-379): no self-update, the Store's
 # start-up task in place of the Run key. Read in src/edition.rs only.
 store = ["dep:windows"]
+# The Store edition without the `unvirtualizedResources` capability: no Fix
+# button, the setup box lists the lines to write by hand (src/edition.rs).
+store-manual-setup = ["store"]
 
 [dependencies]
 tauri = { version = "2.12", features = ["tray-icon"] }
