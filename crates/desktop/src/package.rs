@@ -46,6 +46,28 @@ pub fn private_local_root(local_app_data: &Path) -> Option<PathBuf> {
     )
 }
 
+/// Where the private store keeps what the app writes under `local_app_data`,
+/// given the store's `LocalCache\Local` folder (`private_root`, which stands in
+/// for the REAL `%LOCALAPPDATA%`, `real_local`). Normally `local_app_data` is
+/// the real folder and this is `private_root` itself. A development build can
+/// point the app at another folder (`--local-app-data`): the redirect is still
+/// relative to the real one, so the copy sits at the same relative place. A
+/// folder outside the real `%LOCALAPPDATA%` is not virtualized: `None`.
+pub fn private_base(
+    private_root: &Path,
+    real_local: &Path,
+    local_app_data: &Path,
+) -> Option<PathBuf> {
+    Some(private_root.join(relative_to(local_app_data, real_local)?))
+}
+
+/// [`private_base`] for this process: from the real `%LOCALAPPDATA%` and the
+/// package's family name; `None` outside a package.
+pub fn private_base_here(local_app_data: &Path) -> Option<PathBuf> {
+    let real = std::env::var_os("LOCALAPPDATA").map(PathBuf::from)?;
+    private_base(&private_local_root(&real)?, &real, local_app_data)
+}
+
 /// The Windows build number (`CurrentBuildNumber`), when it can be read.
 #[cfg(windows)]
 pub fn windows_build() -> Option<u32> {
@@ -151,6 +173,34 @@ mod tests {
                     .join("log.config")
             )
         );
+    }
+
+    #[test]
+    fn a_test_folder_under_the_real_local_app_data_is_redirected_relative_to_the_real_one() {
+        let real = Path::new(r"C:\Users\A\AppData\Local");
+        let private = Path::new(r"C:\Users\A\AppData\Local\Packages\TL_x\LocalCache\Local");
+        // The real folder: the store root itself.
+        assert_eq!(
+            private_base(private, real, real),
+            Some(private.to_path_buf())
+        );
+        // A development stand-in inside it: the same relative place in the store.
+        let stand_in = real.join("TavernLedgerStoreTest").join("fake-local");
+        let base = private_base(private, real, &stand_in).unwrap();
+        assert_eq!(
+            base,
+            private.join("TavernLedgerStoreTest").join("fake-local")
+        );
+        let target = stand_in
+            .join("Blizzard")
+            .join("Hearthstone")
+            .join("log.config");
+        assert_eq!(
+            private_copy(&base, &stand_in, &target),
+            Some(base.join("Blizzard").join("Hearthstone").join("log.config"))
+        );
+        // Outside the real folder nothing is virtualized.
+        assert_eq!(private_base(private, real, Path::new(r"D:\x")), None);
     }
 
     #[test]
