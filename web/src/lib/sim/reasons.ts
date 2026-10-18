@@ -1,5 +1,5 @@
 // Why a card is "approximate" (T-606): the engine gives each reason in
-// English (crates/combat-sim, its card lists, gifts.rs and trials.rs). Spanish pages
+// English (crates/combat-sim, its card lists, gifts.rs, kit.rs and trials.rs). Spanish pages
 // show them in Spanish from this table; a test fails when the engine has a
 // reason the table lacks. A reason the table does not know (a newer engine)
 // is shown as the engine wrote it, marked as English.
@@ -69,6 +69,11 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
     "un hechizo que despierta a un Dios Antiguo cuando mueren Aberraciones en combate; no es un esbirro del tablero y no se juega",
   "it gains stats until next turn whenever another friendly minion gains stats in combat; that is not played":
     "gana estadísticas hasta el próximo turno cuando otro esbirro aliado gana estadísticas en combate; eso no se juega",
+  "the order of start-of-combat effects between the two sides is not proven":
+    "no está comprobado el orden de los efectos de Inicio del combate entre los dos lados",
+  "the simulator has not reviewed this hero power or trinket yet": "el simulador aún no ha revisado este poder de héroe o abalorio",
+  "its effect during combat is not played yet": "su efecto durante el combate aún no se juega",
+  "it makes a hero power that acts in combat trigger twice": "hace que un poder de héroe que actúa en combate se active dos veces",
 };
 
 /** The reason in the page's language, and whether it had to stay in English. */

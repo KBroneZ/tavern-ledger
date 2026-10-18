@@ -8,6 +8,7 @@ use crate::trials::{simulate, Options, Verdict};
 
 fn band(minions: Vec<Minion>) -> Warband {
     Warband {
+        kit: None,
         minions,
         tavern_tier: Some(1),
         values: Default::default(),

@@ -349,6 +349,7 @@ fn warband(
         }
     }
     Warband {
+        kit: None,
         minions,
         tavern_tier: tier.and_then(|t| u8::try_from(t).ok()),
         values: engine_values(values),

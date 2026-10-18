@@ -39,6 +39,7 @@ fn warband(rows: &[Row]) -> Warband {
         })
         .collect();
     Warband {
+        kit: None,
         minions,
         tavern_tier: Some(5),
         values: GameValues::default(),

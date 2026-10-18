@@ -29,6 +29,8 @@ mod cards_round8;
 mod cards_round8_pool;
 pub mod combat;
 pub mod gifts;
+pub mod kit;
+mod kit_lists;
 pub mod model;
 pub mod rng;
 pub mod trials;
@@ -48,6 +50,8 @@ pub mod harness_misses;
 #[cfg(feature = "harness")]
 pub mod harness_saved;
 #[cfg(feature = "harness")]
+pub mod harness_soc;
+#[cfg(feature = "harness")]
 pub mod harness_summary;
 #[cfg(feature = "harness")]
 pub mod harness_why;
@@ -60,7 +64,8 @@ pub mod why_json;
 
 pub use combat::{CombatResult, Outcome};
 pub use model::{
-    BaseCard, BoardError, GameValues, Keywords, Minion, Team, Tribes, Warband, MAX_BOARD,
+    BaseCard, BoardError, GameValues, Keywords, Kit, KitCard, Minion, Team, Tribes, Warband,
+    MAX_BOARD,
 };
 pub use trials::{simulate, simulate_teams, Coverage, Odds, Options, Verdict};
 

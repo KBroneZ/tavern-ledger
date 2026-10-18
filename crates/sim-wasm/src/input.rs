@@ -221,6 +221,7 @@ fn board(v: &Value, missing: &mut Vec<String>) -> Res<Warband> {
         minions.extend(minion(m, missing)?);
     }
     Ok(Warband {
+        kit: None,
         minions,
         tavern_tier: tier(b.get("tier"), "tavern tier")?,
         values: game_values(b.get("values"))?,

@@ -40,10 +40,12 @@ fn replayed(duos: bool, difference: Option<Rule>) -> Replayed {
 fn a_miss_without_a_replay_is_told_by_its_cards() {
     let none = Coverage::default();
     let unknown = Coverage {
+        kit: Vec::new(),
         not_modelled: vec!["ZZ_UNKNOWN".into()],
         approximate: Vec::new(),
     };
     let rough = Coverage {
+        kit: Vec::new(),
         not_modelled: Vec::new(),
         approximate: vec![("ZZ_ROUGH".into(), "a gap")],
     };
@@ -108,6 +110,7 @@ fn causes_by_id_count_per_mode_most_first_then_by_id() {
 #[test]
 fn a_replay_that_parts_names_what_was_not_seen_then_the_cards_then_the_rule() {
     let rough = Coverage {
+        kit: Vec::new(),
         not_modelled: Vec::new(),
         approximate: vec![("ZZ_ROUGH".into(), "a gap")],
     };

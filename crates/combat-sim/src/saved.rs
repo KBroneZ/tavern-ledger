@@ -100,6 +100,7 @@ pub fn board(entry: &Value, facts: &FactsOf) -> Option<Warband> {
         .map(|m| minion(m, facts))
         .collect();
     Some(Warband {
+        kit: None,
         minions: minions?,
         tavern_tier: None,
         values: saved_values(entry.get("values")),
