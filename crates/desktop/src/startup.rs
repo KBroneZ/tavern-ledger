@@ -168,7 +168,15 @@ mod run_key {
     use tauri::AppHandle;
     use tauri_plugin_autostart::ManagerExt;
 
-    use super::{Backend, StartupState};
+    use super::{Backend, StartupState, FAILED};
+    use crate::applog;
+
+    /// Logs the plugin's or Windows' own words and gives the window the fixed
+    /// sentence, which is translated and never carries a path.
+    fn failed(what: &str, error: impl std::fmt::Display) -> String {
+        applog::warn("startup", &format!("{what} failed: {error}"));
+        FAILED.to_string()
+    }
 
     /// Windows' list of programs to run at sign-in, where auto-launch writes
     /// the start-up entry.
@@ -180,32 +188,37 @@ mod run_key {
 
     impl Backend for RunKey<'_> {
         fn state(&self) -> Result<StartupState, String> {
-            self.0
-                .autolaunch()
-                .is_enabled()
-                .map(|on| {
-                    if on {
-                        StartupState::On
-                    } else {
-                        StartupState::Off
-                    }
-                })
-                .map_err(|e| e.to_string())
+            // A start-up entry that cannot be read is no entry (as before).
+            let on = self.0.autolaunch().is_enabled().unwrap_or_else(|e| {
+                applog::warn(
+                    "startup",
+                    &format!("reading the start-up entry failed: {e}"),
+                );
+                false
+            });
+            Ok(if on {
+                StartupState::On
+            } else {
+                StartupState::Off
+            })
         }
 
         fn enable(&self) -> Result<(), String> {
             let launcher = self.0.autolaunch();
-            launcher.enable().map_err(|e| e.to_string())?;
+            launcher.enable().map_err(|e| failed("turning on", e))?;
             // An unquoted entry could start the wrong program: take it back.
             // The rewrite's error is the one reported.
             quote_startup_entry(self.0).map_err(|e| {
                 let _ = launcher.disable();
-                e.to_string()
+                failed("quoting the entry", e)
             })
         }
 
         fn disable(&self) -> Result<(), String> {
-            self.0.autolaunch().disable().map_err(|e| e.to_string())
+            self.0
+                .autolaunch()
+                .disable()
+                .map_err(|e| failed("turning off", e))
         }
     }
 
@@ -265,21 +278,41 @@ mod store {
     use windows::ApplicationModel::{AppInstance, StartupTask};
     use windows::Win32::Foundation::ERROR_INSUFFICIENT_BUFFER;
     use windows::Win32::Storage::Packaging::Appx::GetCurrentPackageFullName;
-    use windows::Win32::System::WinRT::{RoInitialize, RO_INIT_MULTITHREADED};
+    use windows::Win32::System::WinRT::{RoInitialize, RoUninitialize, RO_INIT_MULTITHREADED};
 
     use super::{Backend, StartupState, FAILED, TASK_ID};
     use crate::applog;
 
     pub struct Task;
 
+    /// Balances a successful `RoInitialize` when the worker thread is done,
+    /// after every WinRT object it made has been dropped.
+    struct Apartment;
+
+    impl Apartment {
+        fn enter() -> windows::core::Result<Self> {
+            // SAFETY: a plain call on this thread with no pointers; S_FALSE
+            // (already initialized) is a success that also needs balancing.
+            unsafe { RoInitialize(RO_INIT_MULTITHREADED) }?;
+            Ok(Self)
+        }
+    }
+
+    impl Drop for Apartment {
+        fn drop(&mut self) {
+            // SAFETY: only built by `enter`, after a successful RoInitialize
+            // on this thread.
+            unsafe { RoUninitialize() };
+        }
+    }
+
     /// Runs `work` on a thread of its own, in the multithreaded apartment.
     fn in_apartment<T: Send + 'static>(
         work: impl FnOnce() -> windows::core::Result<T> + Send + 'static,
     ) -> Result<T, String> {
         thread::spawn(move || {
-            // Already initialized is fine (S_FALSE); a thread that cannot
-            // join the apartment cannot call WinRT at all.
-            unsafe { RoInitialize(RO_INIT_MULTITHREADED) }?;
+            // A thread that cannot join the apartment cannot call WinRT at all.
+            let _apartment = Apartment::enter()?;
             work()
         })
         .join()
@@ -319,6 +352,7 @@ mod store {
     /// (`APPMODEL_ERROR_NO_PACKAGE`).
     pub fn has_package_identity() -> bool {
         let mut length = 0u32;
+        // SAFETY: `length` is a valid, writable u32 and no buffer is passed.
         let code = unsafe { GetCurrentPackageFullName(&mut length, None) };
         code == ERROR_INSUFFICIENT_BUFFER
     }
@@ -483,6 +517,25 @@ mod tests {
     }
 
     #[test]
+    fn a_failing_turn_off_is_passed_on_and_leaves_the_state_as_it_was() {
+        let mut fake = Fake::new(StartupState::On);
+        fake.fail = Some("boom");
+        assert_eq!(apply(&fake, false), Err("boom".to_string()));
+        assert_eq!(*fake.state.borrow(), StartupState::On);
+    }
+
+    #[test]
+    fn every_sentence_the_window_may_show_has_its_spanish_words() {
+        let words = include_str!("../ui/strings/common.js");
+        for sentence in [FAILED, BLOCKED_BY_USER, BLOCKED_BY_POLICY] {
+            assert!(
+                words.contains(&format!("\"{sentence}\":")),
+                "no translation for {sentence:?} in ui/strings/common.js"
+            );
+        }
+    }
+
+    #[test]
     fn the_view_tells_the_page_what_to_show() {
         let view = View::of(true, StartupState::OffByUser);
         assert!(view.available && !view.enabled);
@@ -515,7 +568,7 @@ mod tests {
     }
 
     #[test]
-    fn only_the_store_edition_starts_through_the_task() {
+    fn a_test_run_is_not_a_sign_in() {
         assert!(!started_at_sign_in(), "a test run is not a sign-in");
     }
 }

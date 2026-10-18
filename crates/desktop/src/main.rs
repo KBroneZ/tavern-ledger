@@ -1319,13 +1319,18 @@ fn show_window(app: &AppHandle) {
 /// Turns the Windows start-up entry on or off; the menu and the Settings
 /// page show the real state.
 fn toggle_autostart(app: &AppHandle) {
-    let settings = app.state::<Arc<settings::Settings>>();
-    let state = app.state::<Arc<AppState>>();
-    let on = !startup::state(app).enabled();
-    if settings::set_autostart(app, &settings, &state, on).is_err() {
-        // The window is usually hidden in the tray: show it so the message is seen.
-        show_window(app);
-    }
+    // Off the menu's thread: the Store edition asks Windows, which can take a
+    // moment, and the tray must keep answering meanwhile.
+    let app = app.clone();
+    thread::spawn(move || {
+        let settings = app.state::<Arc<settings::Settings>>();
+        let state = app.state::<Arc<AppState>>();
+        let on = !startup::state(&app).enabled();
+        if settings::set_autostart(&app, &settings, &state, on).is_err() {
+            // The window is usually hidden in the tray: show it so the message is seen.
+            show_window(&app);
+        }
+    });
 }
 
 /// Turns the overlay on or off; the menu and the window show the real state.

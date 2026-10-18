@@ -354,14 +354,15 @@ pub fn app_set_system_language(settings: State<'_, Arc<Settings>>, language: Lan
     settings.relabel_tray();
 }
 
-#[tauri::command]
+// On the command pool: the Store edition asks Windows, which can take a moment.
+#[tauri::command(async)]
 pub fn app_autostart(app: AppHandle, settings: State<'_, Arc<Settings>>) -> startup::View {
     startup::View::of(settings.autostart_available(), startup::state(&app))
 }
 
 /// Turns the Windows start-up entry on or off, as the tray item does; both
 /// show the real state afterwards.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn app_set_autostart(
     app: AppHandle,
     settings: State<'_, Arc<Settings>>,
