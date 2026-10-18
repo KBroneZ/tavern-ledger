@@ -34,10 +34,13 @@ impl Combat<'_> {
             return None;
         }
         loop {
-            // Counted before start of combat, as at the start (section 3).
-            let first = self.first_attacker();
+            let mut first = self.first_attacker();
             if self.p.start_of_combat {
+                // Only the board that came in plays its start of combat; then
+                // who attacks next is decided again (T-628: 115 of 115 legs).
+                let swings = self.has_immediate_attackers(entered);
                 self.start_of_combat(first, entered);
+                first = self.first_after_start(first, swings);
             } else {
                 self.attack_immediately(first, entered);
             }

@@ -11,6 +11,7 @@ use serde::{Serialize, Serializer};
 use crate::buffs::Buff;
 use crate::discover::Discover;
 use crate::hero_select::HeroSelect;
+pub use crate::kit::{HeroKit, KitCard};
 use crate::leaderboard::{TrinketSeen, TriplesSeen};
 use crate::replay::CombatReplay;
 use crate::shop::ShopRecord;
@@ -233,6 +234,14 @@ pub struct CombatEntry {
     /// above zero: a record without the key read none, or is older.
     #[serde(skip_serializing_if = "no_values")]
     pub values: Option<CombatValues>,
+    /// The board as the leg started, before any start-of-combat effect
+    /// (T-628): read just before the leg's first effect or attack. None
+    /// without a board. Rust-only and not serialized.
+    #[serde(skip)]
+    pub before: Option<Vec<Minion>>,
+    /// The side's hero powers and trinkets then (T-628). Rust-only.
+    #[serde(skip)]
+    pub kit: Option<HeroKit>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -260,6 +269,11 @@ pub struct Round {
     /// shown"); a record from an older parser has no `replay` key at all
     /// ("not recorded").
     pub replay: Option<CombatReplay>,
+    /// Effects of the combat from a card the screen does not show: one in a
+    /// hand or a Secret (T-628), by side and card id, in the log's order.
+    /// The simulator never plays them; the harness counts them. Rust-only
+    /// and not serialized.
+    pub hidden_triggers: Vec<(Side, String)>,
 }
 
 impl Round {

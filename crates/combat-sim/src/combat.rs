@@ -350,7 +350,9 @@ impl<'a> Combat<'a> {
     fn run(&mut self) -> Outcome {
         let mut turn = self.first_attacker();
         if self.p.start_of_combat {
+            let swings = self.has_immediate_attackers([true, true]);
             self.start_of_combat(turn, [true, true]);
+            turn = self.first_after_start(turn, swings);
         } else {
             self.attack_immediately(turn, [true, true]);
         }
@@ -380,6 +382,23 @@ impl<'a> Combat<'a> {
             Some(side) => side,
             None => usize::from(self.rng.coin()),
         }
+    }
+
+    /// Who attacks first once start of combat is played: the side with more
+    /// minions after its effects (T-628: the user's logs, 187 of 187 combat
+    /// legs where the counts differ), else `before` (the coin already
+    /// flipped). With "attack immediately" on a board the count before them
+    /// is kept (D-115, one combat seen).
+    pub(crate) fn first_after_start(&self, before: usize, swings: bool) -> usize {
+        if swings {
+            return before;
+        }
+        self.first_by_count().unwrap_or(before)
+    }
+
+    /// Some board of `sides` has a minion that attacks at the start of combat.
+    pub(crate) fn has_immediate_attackers(&self, sides: [bool; 2]) -> bool {
+        (0..2).any(|s| sides[s] && !self.immediate_attackers(s).is_empty())
     }
 
     /// The side with more minions attacks first; `None` on equal counts (a

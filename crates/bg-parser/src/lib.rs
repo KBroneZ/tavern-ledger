@@ -14,6 +14,7 @@ pub mod counters;
 pub mod discover;
 pub mod gifts;
 pub mod hero_select;
+pub mod kit;
 pub mod leaderboard;
 pub mod lines;
 pub mod power;
@@ -854,6 +855,8 @@ fn rounds_of(c: &Collector, heroes: &[(i64, &Entity)], last_health: Option<i64>)
                     hero: card.clone(),
                     board: board.clone(),
                     values: c.entry_values.get(&(n, i)).copied(),
+                    before: c.entry_before.get(&(n, i)).map(|b| b.0.clone()),
+                    kit: c.entry_before.get(&(n, i)).map(|b| b.1.clone()),
                 })
                 .collect(),
             own_health_after: health.get(&n).copied().flatten(),
@@ -866,6 +869,7 @@ fn rounds_of(c: &Collector, heroes: &[(i64, &Entity)], last_health: Option<i64>)
                 .filter(|_| c.result_tags_seen),
             attacks: c.attacks.get(&n).cloned().unwrap_or_default(),
             own_shop_board: c.shop_boards.get(&n).cloned(),
+            hidden_triggers: c.hidden_triggers.get(&n).cloned().unwrap_or_default(),
             replay: c.replays.replay(n),
         })
         .collect()

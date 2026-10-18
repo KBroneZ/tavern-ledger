@@ -227,7 +227,7 @@ test("the Spanish page is Spanish: views, keywords and approximation reasons", (
 
 test("every reason the engine can give has its Spanish", () => {
   const src = join(REPO, "crates", "combat-sim", "src");
-  const files = readdirSync(src).filter((f) => /^(cards|cards_round\d+|gifts|trials)\.rs$/.test(f));
+  const files = readdirSync(src).filter((f) => /^(cards|cards_round\d+|gifts|kit|trials)\.rs$/.test(f));
   const reasons = new Set<string>();
   for (const f of files) {
     const code = readFileSync(join(src, f), "utf8");

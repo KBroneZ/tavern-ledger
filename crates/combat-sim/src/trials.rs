@@ -6,7 +6,8 @@ use std::collections::BTreeMap;
 use crate::cards::{self, Action, Fidelity, Trigger};
 use crate::combat::{play, CombatResult, Prepared};
 use crate::gifts;
-use crate::model::{BoardError, GameValues, Keywords, Minion, Team, Tribes, Warband};
+use crate::kit::{self, KitEffect};
+use crate::model::{BoardError, GameValues, Keywords, Kit, Minion, Team, Tribes, Warband};
 use crate::rng::Rng;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -41,17 +42,30 @@ pub struct Coverage {
     pub not_modelled: Vec<String>,
     /// Card ids (and Dark Gift ids) played with a known gap, and the gap.
     pub approximate: Vec<(String, &'static str)>,
+    /// The ids of [`Coverage::not_modelled`] that are hero powers or
+    /// trinkets (T-628), for their reasons.
+    pub kit: Vec<String>,
 }
 
 impl Coverage {
     pub fn of(player: &Warband, opponent: &Warband, start_of_combat: bool) -> Coverage {
-        Coverage::of_boards(&[player, opponent], start_of_combat)
+        let mut cov = Coverage::of_boards(&[player, opponent], start_of_combat);
+        if start_of_combat {
+            cov.add_side_order(player, opponent);
+        }
+        cov
     }
 
-    /// Every board of both teams (Duos).
+    /// Every board of both teams (Duos). A board that comes in later plays
+    /// only its own start of combat, so the order between the two sides is
+    /// a question for the first boards only.
     pub fn of_teams(player: &Team, opponent: &Team, start_of_combat: bool) -> Coverage {
         let boards: Vec<&Warband> = player.boards().chain(opponent.boards()).collect();
-        Coverage::of_boards(&boards, start_of_combat)
+        let mut cov = Coverage::of_boards(&boards, start_of_combat);
+        if start_of_combat {
+            cov.add_side_order(&player.first, &opponent.first);
+        }
+        cov
     }
 
     fn of_boards(boards: &[&Warband], start_of_combat: bool) -> Coverage {
@@ -65,7 +79,8 @@ impl Coverage {
                 None => push_unique(&mut cov.not_modelled, id.clone()),
                 Some(rules) => {
                     let soc_gap = start_of_combat
-                        && rules.triggers.contains(&Trigger::StartOfCombatUnmodelled);
+                        && (rules.triggers.contains(&Trigger::StartOfCombatUnmodelled)
+                            || cards::start_of_combat_scales(id));
                     if soc_gap {
                         push_unique(&mut cov.not_modelled, id.clone());
                     }
@@ -81,6 +96,9 @@ impl Coverage {
         }
         for m in boards.iter().flat_map(|b| &b.minions) {
             cov.add_gifts(m, start_of_combat);
+        }
+        for kit in boards.iter().filter_map(|b| b.kit.as_ref()) {
+            cov.add_kit(kit, start_of_combat);
         }
         for band in boards {
             let grants = reborn_grants(band);
@@ -121,6 +139,56 @@ impl Coverage {
         }
     }
 
+    /// A board's hero powers and trinkets (T-628), none of whose effects is
+    /// played yet: one not reviewed blocks; one that acts at the start of
+    /// combat blocks when start of combat is played (with it off, the board
+    /// was taken after it); one that acts later in the combat is
+    /// approximate.
+    fn add_kit(&mut self, kit: &Kit, start_of_combat: bool) {
+        let power_in_combat = kit.powers.iter().any(|p| kit::acts_in_combat(&p.card_id));
+        for card in kit.cards() {
+            let id = &card.card_id;
+            let effect = kit::effect(id);
+            let refuse = match effect {
+                None => true,
+                Some(KitEffect::StartOfCombat | KitEffect::StartAndInCombat) => start_of_combat,
+                Some(_) => false,
+            };
+            if refuse {
+                push_unique(&mut self.not_modelled, id.clone());
+                push_unique(&mut self.kit, id.clone());
+                continue;
+            }
+            let gap = match effect {
+                Some(KitEffect::InCombat | KitEffect::StartAndInCombat) => {
+                    Some(kit::IN_COMBAT_NOT_PLAYED)
+                }
+                Some(KitEffect::TwiceHeroPower) if power_in_combat => Some(kit::TWICE_NOT_PLAYED),
+                _ => None,
+            };
+            if let Some(why) = gap {
+                if !self.approximate.iter().any(|(c, _)| c == id) {
+                    self.approximate.push((id.clone(), why));
+                }
+            }
+        }
+    }
+
+    /// Both sides act at the start of combat: the order between them is not
+    /// proven on the user's logs (T-628), so each side's start-of-combat
+    /// cards are named approximate.
+    fn add_side_order(&mut self, player: &Warband, opponent: &Warband) {
+        let (mine, theirs) = (start_of_combat_ids(player), start_of_combat_ids(opponent));
+        if mine.is_empty() || theirs.is_empty() {
+            return;
+        }
+        for id in mine.into_iter().chain(theirs) {
+            if !self.approximate.iter().any(|(c, _)| *c == id) {
+                self.approximate.push((id, SIDE_ORDER));
+            }
+        }
+    }
+
     pub fn is_exact(&self) -> bool {
         self.not_modelled.is_empty() && self.approximate.is_empty()
     }
@@ -130,9 +198,42 @@ impl Coverage {
     pub fn reasons(&self) -> Vec<(String, &'static str)> {
         self.not_modelled
             .iter()
-            .map(|id| (id.clone(), refusal_reason(id)))
+            .map(|id| {
+                let why = if !self.kit.contains(id) {
+                    refusal_reason(id)
+                } else if kit::effect(id).is_some() {
+                    kit::START_OF_COMBAT_NOT_PLAYED
+                } else {
+                    kit::NOT_REVIEWED
+                };
+                (id.clone(), why)
+            })
             .collect()
     }
+}
+
+/// Why start-of-combat cards are approximate when both sides have some.
+pub const SIDE_ORDER: &str =
+    "the order of start-of-combat effects between the two sides is not proven";
+
+/// The cards and Dark Gifts of a board that act at the start of combat and
+/// that the engine plays.
+fn start_of_combat_ids(band: &Warband) -> Vec<String> {
+    let mut out = Vec::new();
+    for m in &band.minions {
+        let acts = cards::rules(&m.card_id).is_some_and(|r| {
+            r.triggers
+                .iter()
+                .any(|t| matches!(t, Trigger::StartOfCombat(_) | Trigger::AttackImmediately(_)))
+        });
+        if acts {
+            push_unique(&mut out, m.card_id.clone());
+        }
+        for g in m.gifts.iter().filter(|g| gifts::has_start_of_combat(g)) {
+            push_unique(&mut out, g.clone());
+        }
+    }
+    out
 }
 
 /// Why the engine refuses a card or Dark Gift: a start-of-combat effect it

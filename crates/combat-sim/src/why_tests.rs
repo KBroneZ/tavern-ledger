@@ -18,6 +18,7 @@ fn plain(attack: i32, health: i32) -> Minion {
 
 fn team(minions: Vec<Minion>, values: GameValues) -> Team {
     Team::solo(Warband {
+        kit: None,
         minions,
         tavern_tier: Some(1),
         values,

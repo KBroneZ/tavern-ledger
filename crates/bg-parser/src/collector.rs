@@ -8,6 +8,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use crate::counters::CounterMemory;
 use crate::discover::DiscoverTracker;
 use crate::hero_select::HeroSelectTracker;
+use crate::kit::{kit_of, HeroKit};
 use crate::leaderboard::{is_leaderboard_tag, LeaderboardTracker};
 use crate::power::{EntityRef, Packet, ParseError, Value};
 use crate::replay::{board_entities, minion_of, ReplayTracker, Sides};
@@ -44,6 +45,9 @@ struct OpenLeg {
     explicit: bool, // false: the local hero by default, until a hero switch
     hero: Option<String>,
     hint: Option<i64>,
+    /// The side's board and kit just before the leg's first start-of-combat
+    /// effect or attack (T-628).
+    before: Option<(Vec<Minion>, HeroKit)>,
 }
 
 /// (side, hero card id, combat player id hint, board or None if not visible)
@@ -81,12 +85,19 @@ pub struct Collector {
     /// (round, index in `entries`) -> the side's game-long values as its
     /// board was taken (T-609).
     pub entry_values: BTreeMap<(i64, usize), CombatValues>,
+    /// (round, index in `entries`) -> the side's board and hero powers and
+    /// trinkets before the leg's start of combat (T-628).
+    pub entry_before: BTreeMap<(i64, usize), (Vec<Minion>, HeroKit)>,
+    /// Round -> its effects from a card in a hand or a Secret (T-628).
+    pub hidden_triggers: BTreeMap<i64, Vec<(Side, String)>>,
     pub health: BTreeMap<i64, Option<i64>>,
     /// Round -> health of every lobby hero by player id when its combat
     /// closed. Round 0 is the health before the first combat.
     pub lobby_health: BTreeMap<i64, BTreeMap<i64, i64>>,
     open_own: Option<OpenLeg>,
     open_opp: Option<OpenLeg>,
+    /// The opponent's hero is set for the combat being read (T-628).
+    opp_hero_set: bool,
     /// The player's own shop and actions (T-204, T-205).
     pub shop: ShopTracker,
     /// The player's own hero pick (T-209).
@@ -170,6 +181,9 @@ impl Collector {
                 trigger,
             } => {
                 self.mention(&entity);
+                if self.indent == 0 && self.in_combat() {
+                    self.note_before(&block_type, &entity);
+                }
                 if block_type == "ATTACK" && self.in_combat() {
                     self.snapshot_open_legs();
                     self.on_attack(&entity);
@@ -488,6 +502,7 @@ impl Collector {
             self.counters.on_shop_turn(&self.board, self.local);
         }
         self.open_attack = None;
+        self.opp_hero_set = false;
         self.replays.on_turn(turn);
         // The previous turn's legs that never reached an attack were not visible.
         let previous = turn.saturating_sub(1).div_euclid(2);
@@ -510,6 +525,7 @@ impl Collector {
                 explicit: false,
                 hero: None,
                 hint: None,
+                before: None,
             });
             self.open_opp = None;
         } else {
@@ -535,12 +551,14 @@ impl Collector {
             return;
         };
         self.close_unseen(side, self.turn() / 2);
+        self.opp_hero_set |= side == Side::Opponent;
         let (hero, hint) = self.current(side);
         self.replays.on_hero_switch(side, hero.clone());
         *self.open_mut(side) = Some(OpenLeg {
             explicit: true,
             hero,
             hint,
+            before: None,
         });
     }
 
@@ -634,15 +652,74 @@ impl Collector {
                 let (hero, hint) = self.current(side);
                 let board = pid.map(|pid| board_of(&self.board, pid));
                 let values = self.combat_values(side);
+                let before = self.open_mut(side).as_mut().and_then(|l| l.before.take());
+                let before = before.or_else(|| pid.map(|pid| self.before_of(pid)));
                 let list = self.entries.entry(round).or_default();
                 if board.is_some() {
-                    self.entry_values.insert((round, list.len()), values);
+                    let at = (round, list.len());
+                    self.entry_values.insert(at, values);
+                    if let Some(before) = before {
+                        self.entry_before.insert(at, before);
+                    }
                 }
                 list.push((side, hero, hint, board));
             }
         }
         self.open_own = None;
         self.open_opp = None;
+    }
+
+    /// The board and kit of the combat side `pid` now.
+    fn before_of(&self, pid: i64) -> (Vec<Minion>, HeroKit) {
+        (board_of(&self.board, pid), kit_of(&self.board, pid))
+    }
+
+    /// A top-level block in a combat (T-628): the first that is an attack
+    /// or comes from a card that is not the game's own, once the opponent's
+    /// hero is set for the combat, is where each open leg's start-of-combat
+    /// effects begin; their boards and kits are read just before it. A
+    /// Duos board that comes in mid-combat is read at the first such block
+    /// after its hero switch.
+    fn note_before(&mut self, block_type: &str, entity: &EntityRef) {
+        if !self.opp_hero_set {
+            return;
+        }
+        let EntityRef::Id(id) = entity else { return };
+        let Some(e) = self.board.get(*id) else { return };
+        let hidden = block_type == "TRIGGER" && (e.is("ZONE", "HAND") || is_hidden_secret(e));
+        if hidden {
+            if let (Some(side), Some(card)) = (self.combat_side(e.int("CONTROLLER")), &e.card_id) {
+                let list = self.hidden_triggers.entry(self.turn() / 2).or_default();
+                if list.len() < MAX_ATTACKS {
+                    list.push((side, card.clone()));
+                }
+            }
+        }
+        let starts = if block_type == "ATTACK" {
+            e.is("CARDTYPE", "MINION")
+        } else {
+            !is_game_card(e)
+        };
+        if !starts {
+            return;
+        }
+        for side in [Side::Own, Side::Opponent] {
+            let pid = match side {
+                Side::Own => self.local_pid,
+                Side::Opponent => self.dummy_pid,
+            };
+            let Some(pid) = pid else { continue };
+            let waiting = self
+                .open_mut(side)
+                .as_ref()
+                .is_some_and(|l| l.before.is_none());
+            if waiting {
+                let before = self.before_of(pid);
+                if let Some(leg) = self.open_mut(side).as_mut() {
+                    leg.before = Some(before);
+                }
+            }
+        }
     }
 
     /// Which side of the combat a minion's controller is on.
@@ -882,4 +959,26 @@ pub fn leaderboard_heroes(board: &Board) -> Vec<(i64, &Entity)> {
         }
     }
     heroes
+}
+
+/// Card types of the game's own entities, which never start a combat's
+/// effects: the rules entity is an enchantment with this card id.
+const GAME_CARD_TYPES: [&str; 4] = ["GAME", "PLAYER", "PET", "GAME_MODE_BUTTON"];
+const GAME_RULES_CARD: &str = "TB_BaconShop_8P_PlayerE";
+
+/// True for the game's own entities (T-628): the game, a player, its rules
+/// enchantment, a cosmetic pet or a shop button, or an entity without a card
+/// type.
+fn is_game_card(e: &Entity) -> bool {
+    e.card_id.as_deref() == Some(GAME_RULES_CARD)
+        || !e.has("CARDTYPE")
+        || GAME_CARD_TYPES.iter().any(|t| e.is("CARDTYPE", t))
+}
+
+/// A Secret or a Tavern spell kept for the next combat (T-628): in the
+/// `SECRET` zone, but not the game's Old God or a quest, which the screen
+/// shows.
+fn is_hidden_secret(e: &Entity) -> bool {
+    let card = e.card_id.as_deref().unwrap_or("");
+    e.is("ZONE", "SECRET") && card != "BG_OldGod" && !card.contains("_Quest_")
 }

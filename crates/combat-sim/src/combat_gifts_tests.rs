@@ -26,6 +26,7 @@ const DOPPELGANGER: &str = "BG36_MidGameEffect_000t90";
 
 fn band(minions: Vec<Minion>) -> Warband {
     Warband {
+        kit: None,
         minions,
         tavern_tier: Some(1),
         values: Default::default(),
@@ -381,5 +382,26 @@ fn torets_blessing_holds_through_real_attacks() {
         assert!(!c.sides[0].units[0].kw.contains(Keywords::DIVINE_SHIELD));
         c.swing(1, foe);
         assert!(c.sides[0].units.is_empty());
+    });
+}
+
+#[test]
+fn who_attacks_first_is_counted_after_the_start_of_combat() {
+    // T-628: three against three, then the player's Doppelganger makes four.
+    let player = vec![plain(1, 1).gift(DOPPELGANGER), plain(1, 1), plain(1, 1)];
+    let opponent = vec![plain(1, 1), plain(1, 1), plain(1, 1)];
+    with_soc(player, opponent, true, |c| {
+        c.start_of_combat(1, [true, true]);
+        assert_eq!(c.sides[0].units.len(), 4);
+        assert_eq!(c.first_after_start(1, false), 0);
+        // With a minion that attacks at the start of combat the count from
+        // before it stays (D-115).
+        assert_eq!(c.first_after_start(1, true), 1);
+    });
+    // Equal counts after it: the coin already flipped decides.
+    with_soc(vec![plain(1, 1)], vec![plain(1, 1)], true, |c| {
+        c.start_of_combat(1, [true, true]);
+        assert_eq!(c.first_after_start(1, false), 1);
+        assert_eq!(c.first_after_start(0, false), 0);
     });
 }
