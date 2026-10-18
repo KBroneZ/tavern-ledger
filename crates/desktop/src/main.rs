@@ -1645,7 +1645,7 @@ fn main() {
                     .setup
                     .local_app_data()
                     .as_deref()
-                    .and_then(package::private_local_root),
+                    .and_then(package::private_base_here),
             );
             if !fix_allowed {
                 applog::info(
