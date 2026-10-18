@@ -13,7 +13,7 @@ tauri-build = { version = "2", features = [] }
 [features]
 # The Microsoft Store edition (D-158, T-379): no self-update, the Store's
 # start-up task in place of the Run key. Read in src/edition.rs only.
-store = []
+store = ["dep:windows"]
 
 [dependencies]
 tauri = { version = "2.12", features = ["tray-icon"] }
@@ -49,3 +49,13 @@ minisign = "=0.10.0"
 [target.'cfg(windows)'.dependencies]
 # Already in the build through auto-launch; quotes the start-up entry.
 winreg = "0.56"
+# The Store edition's start-up task (WinRT `StartupTask`) and its check for
+# package identity. Already in the lock through Tauri's WebView2 binding.
+windows = { version = "0.62", optional = true, default-features = false, features = [
+  "ApplicationModel",
+  "ApplicationModel_Activation",
+  "Foundation",
+  "Win32_Foundation",
+  "Win32_Storage_Packaging_Appx",
+  "Win32_System_WinRT",
+] }

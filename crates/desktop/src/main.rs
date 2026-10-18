@@ -29,6 +29,7 @@ mod saved_tribes;
 mod screen_fit;
 mod settings;
 mod setup_notice;
+mod startup;
 #[cfg(test)]
 mod ui_checks;
 #[cfg(all(test, not(feature = "store")))]
@@ -50,7 +51,8 @@ use tauri::image::Image;
 use tauri::menu::{CheckMenuItem, Menu, MenuEvent, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{include_image, App, AppHandle, Emitter, Manager, State, WindowEvent};
-use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
+#[cfg(not(feature = "store"))]
+use tauri_plugin_autostart::MacosLauncher;
 use tracker::dev_reconnect::Reconnects;
 use tracker::discover::same_folder_key;
 use tracker::game_values::ReaderStatus;
@@ -1317,13 +1319,18 @@ fn show_window(app: &AppHandle) {
 /// Turns the Windows start-up entry on or off; the menu and the Settings
 /// page show the real state.
 fn toggle_autostart(app: &AppHandle) {
-    let settings = app.state::<Arc<settings::Settings>>();
-    let state = app.state::<Arc<AppState>>();
-    let on = !app.autolaunch().is_enabled().unwrap_or(false);
-    if settings::set_autostart(app, &settings, &state, on).is_err() {
-        // The window is usually hidden in the tray: show it so the message is seen.
-        show_window(app);
-    }
+    // Off the menu's thread: the Store edition asks Windows, which can take a
+    // moment, and the tray must keep answering meanwhile.
+    let app = app.clone();
+    thread::spawn(move || {
+        let settings = app.state::<Arc<settings::Settings>>();
+        let state = app.state::<Arc<AppState>>();
+        let on = !startup::state(&app).enabled();
+        if settings::set_autostart(&app, &settings, &state, on).is_err() {
+            // The window is usually hidden in the tray: show it so the message is seen.
+            show_window(&app);
+        }
+    });
 }
 
 /// Turns the overlay on or off; the menu and the window show the real state.
@@ -1369,9 +1376,8 @@ fn tray_image(px: u32) -> Image<'static> {
 /// Tray icon: the app keeps following the log while its window is closed.
 fn setup_tray(app: &App) -> tauri::Result<()> {
     // Off by default: only the user turns it on, from this menu.
-    let enabled = app.autolaunch().is_enabled().unwrap_or(false);
-    // The start-up entry quotes the exe path (settings::set_autostart).
-    let available = std::env::current_exe().is_ok();
+    let enabled = startup::state(app.handle()).enabled();
+    let available = startup::available();
     // Built with the English words; `keep_tray` puts them in the app's language.
     let words = settings::tray_words(settings::Language::En);
     let label = if available {
@@ -1512,10 +1518,16 @@ fn main() {
         updates::Updates::new(release_key.is_some(), &version)
     });
     #[cfg_attr(feature = "store", allow(unused_mut))]
-    let mut builder = tauri::Builder::default().plugin(tauri_plugin_autostart::init(
-        MacosLauncher::LaunchAgent,
-        Some(vec![MINIMIZED_ARG]),
-    ));
+    let mut builder = tauri::Builder::default();
+    // The Store edition starts through the package's start-up task instead
+    // (src/startup.rs); its registry writes would be virtualized.
+    #[cfg(not(feature = "store"))]
+    {
+        builder = builder.plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            Some(vec![MINIMIZED_ARG]),
+        ));
+    }
     #[cfg(not(feature = "store"))]
     if release_key.is_some() {
         builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
@@ -1639,7 +1651,7 @@ fn main() {
             }
             // The window starts hidden (tauri.conf.json), so a start-up
             // launch never flashes it on screen.
-            if !starts_hidden(std::env::args()) {
+            if !(starts_hidden(std::env::args()) || startup::started_at_sign_in()) {
                 show_window(app.handle());
             }
             odds::start(app.handle().clone(), state.clone());

@@ -15,10 +15,10 @@ use serde::{Deserialize, Serialize};
 use tauri::menu::{CheckMenuItem, MenuItem};
 use tauri::tray::TrayIcon;
 use tauri::{AppHandle, Emitter, Manager, State, Wry};
-use tauri_plugin_autostart::ManagerExt;
 
 use crate::applog::Logged;
 use crate::overlay::lock;
+use crate::startup;
 use crate::AppState;
 
 pub const FILE: &str = "settings.json";
@@ -290,8 +290,7 @@ pub fn tray_words(language: Language) -> TrayWords {
             unlock: "Unlock overlay to move and resize panels",
             reset_layout: "Reset overlay layout",
             autostart: "Start with Windows",
-            autostart_unavailable:
-                "Start with Windows (not available: the app's folder has spaces)",
+            autostart_unavailable: "Start with Windows (not available in this copy of the app)",
             quit: "Quit",
             tooltip: "Tavern Ledger: following your Battlegrounds games",
         },
@@ -301,8 +300,7 @@ pub fn tray_words(language: Language) -> TrayWords {
             unlock: "Desbloquear el overlay para mover y redimensionar paneles",
             reset_layout: "Restablecer la disposición del overlay",
             autostart: "Iniciar con Windows",
-            autostart_unavailable:
-                "Iniciar con Windows (no disponible: la carpeta de la app tiene espacios)",
+            autostart_unavailable: "Iniciar con Windows (no disponible en esta copia de la app)",
             quit: "Salir",
             tooltip: "Tavern Ledger: sigue tus partidas de Campos de Batalla",
         },
@@ -356,29 +354,21 @@ pub fn app_set_system_language(settings: State<'_, Arc<Settings>>, language: Lan
     settings.relabel_tray();
 }
 
-#[derive(Serialize)]
-pub struct Autostart {
-    available: bool,
-    enabled: bool,
-}
-
-#[tauri::command]
-pub fn app_autostart(app: AppHandle, settings: State<'_, Arc<Settings>>) -> Autostart {
-    Autostart {
-        available: settings.autostart_available(),
-        enabled: app.autolaunch().is_enabled().unwrap_or(false),
-    }
+// On the command pool: the Store edition asks Windows, which can take a moment.
+#[tauri::command(async)]
+pub fn app_autostart(app: AppHandle, settings: State<'_, Arc<Settings>>) -> startup::View {
+    startup::View::of(settings.autostart_available(), startup::state(&app))
 }
 
 /// Turns the Windows start-up entry on or off, as the tray item does; both
 /// show the real state afterwards.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn app_set_autostart(
     app: AppHandle,
     settings: State<'_, Arc<Settings>>,
     state: State<'_, Arc<AppState>>,
     enabled: bool,
-) -> Result<Autostart, String> {
+) -> Result<startup::View, String> {
     if !settings.autostart_available() {
         return Err(AUTOSTART_FAILED.to_string()).logged("app_set_autostart");
     }
@@ -387,96 +377,31 @@ pub fn app_set_autostart(
     result.map(|()| now).logged("app_set_autostart")
 }
 
-pub const AUTOSTART_FAILED: &str = "Could not change the Windows start-up setting.";
+pub use crate::startup::FAILED as AUTOSTART_FAILED;
 /// Sent when the start-up entry changed from the tray, so the Settings page follows.
 pub const AUTOSTART_CHANGED: &str = "autostart-changed";
 
+/// Turns start with Windows on or off for this edition (src/startup.rs). On
+/// failure the main window's notice and the error both say why: a start-up
+/// task the player turned off in Task Manager is told as that, not as a
+/// generic failure.
 pub fn set_autostart(
     app: &AppHandle,
     settings: &Settings,
     state: &AppState,
     on: bool,
 ) -> Result<(), String> {
-    let launcher = app.autolaunch();
-    let result = if on {
-        launcher.enable().map_err(|e| e.to_string()).and_then(|()| {
-            // An unquoted entry could start the wrong program: take it back.
-            // The rewrite's error is the one reported.
-            quote_startup_entry(app).map_err(|e| {
-                let _ = launcher.disable();
-                e.to_string()
-            })
-        })
-    } else {
-        launcher.disable().map_err(|e| e.to_string())
-    };
-    settings.tick_autostart(launcher.is_enabled().unwrap_or(false));
-    let notice = result.is_err().then(|| AUTOSTART_FAILED.to_string());
-    let failed = notice.is_some();
-    crate::set_status(app, state, |s| s.notice = notice);
+    let result = startup::set(app, on);
+    settings.tick_autostart(startup::state(app).enabled());
+    let error = result.as_ref().err().cloned();
+    crate::set_status(app, state, |s| s.notice = error.clone());
     let _ = app.emit(AUTOSTART_CHANGED, ());
-    if failed {
-        Err(AUTOSTART_FAILED.into())
-    } else {
-        Ok(())
-    }
-}
-
-/// Windows' list of programs to run at sign-in, where auto-launch writes the
-/// start-up entry.
-#[cfg(windows)]
-const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
-
-/// The start-up entry's command line with the exe path in quotes. auto-launch
-/// 0.6 writes the path unquoted, and Windows cuts an unquoted path at its
-/// first space (the installer's folder `Tavern Ledger`, or a user name with a
-/// space), which runs the wrong program or none.
-fn startup_command(exe: &Path, args: &[&str]) -> String {
-    let mut command = format!("\"{}\"", exe.display());
-    for arg in args {
-        command.push(' ');
-        command.push_str(arg);
-    }
-    command
-}
-
-/// Writes the entry auto-launch just made again, under the same name, with
-/// the path quoted.
-#[cfg(windows)]
-fn quote_startup_entry(app: &AppHandle) -> io::Result<()> {
-    use winreg::enums::{HKEY_CURRENT_USER, KEY_SET_VALUE};
-    let exe = std::env::current_exe()?;
-    winreg::RegKey::predef(HKEY_CURRENT_USER)
-        .open_subkey_with_flags(RUN_KEY, KEY_SET_VALUE)?
-        .set_value(
-            &app.package_info().name,
-            &startup_command(&exe, &[crate::MINIMIZED_ARG]),
-        )
-}
-
-#[cfg(not(windows))]
-fn quote_startup_entry(_app: &AppHandle) -> io::Result<()> {
-    Ok(())
+    result.map(|_| ())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn startup_command_quotes_the_path() {
-        let exe = Path::new(r"C:\Users\A B\AppData\Local\Tavern Ledger\TavernLedger.exe");
-        assert_eq!(
-            startup_command(exe, &["--minimized"]),
-            r#""C:\Users\A B\AppData\Local\Tavern Ledger\TavernLedger.exe" --minimized"#
-        );
-    }
-
-    #[test]
-    fn startup_command_quotes_a_path_without_spaces_too() {
-        let exe = Path::new(r"C:\Apps\desktop.exe");
-        assert_eq!(startup_command(exe, &[]), r#""C:\Apps\desktop.exe""#);
-    }
 
     fn dir(name: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!("tl-settings-{name}-{}", std::process::id()));

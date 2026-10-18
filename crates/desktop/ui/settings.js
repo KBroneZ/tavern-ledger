@@ -65,12 +65,13 @@
   });
 
   function showAutostart(v) {
+    const shown = window.TLAutostartWords.show(v);
     const box = $("setting-autostart");
-    box.checked = Boolean(v.enabled);
-    box.disabled = !v.available;
+    box.checked = shown.checked;
+    box.disabled = shown.disabled;
     const note = $("autostart-note");
-    note.textContent = v.available ? "" : t("settings.autostart.unavailable");
-    note.hidden = v.available;
+    note.textContent = shown.note;
+    note.hidden = !shown.note;
     problem("autostart-problem", "");
   }
 
