@@ -8,3 +8,12 @@
 /// Store. It checks for no updates itself and starts with Windows through the
 /// package's start-up task.
 pub const STORE: bool = cfg!(feature = "store");
+
+/// Written to the app log at start-up, and the string the package script looks
+/// for in the exe: a Store package is refused unless it holds the Store name
+/// and not the installer's, so CI cannot pack the other edition's binary.
+pub const NAME: &str = if STORE {
+    "microsoft-store-edition"
+} else {
+    "installer-edition"
+};

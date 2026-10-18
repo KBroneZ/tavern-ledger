@@ -144,6 +144,30 @@ What the installer does:
 - **Your data:** install, upgrade and uninstall never touch `%APPDATA%\TavernLedger` (history, settings, upload settings). The uninstaller's "Delete the application data" box removes only the folders named after the app's identifier, `%APPDATA%\dev.tavernledger.app` (unused) and `%LOCALAPPDATA%\dev.tavernledger.app` (the window's WebView2 cache, shared with builds run from source), and the installer's own registry keys. Uninstalling also removes the "Start with Windows" entry, which a build run from source writes under the same name.
 - **Not signed:** Windows SmartScreen warns before it runs, so a published build should list its SHA-256 next to the download (`Get-FileHash "<setup file>"` to compare). Updates are signed separately, for the app's updater (above).
 
+## Microsoft Store package
+
+The same app can be built as an MSIX package for the Microsoft Store. It is a separate edition, made by the `store` cargo feature and nothing else (`crates/desktop/src/edition.rs`; the app never guesses it at run time). Differences from the installer edition:
+
+- **No self-update:** the updater plugin is not compiled in or registered, and Settings shows nothing about updates. The Store delivers updates.
+- **Start with Windows** uses the package's start-up task (`windows.startupTask`), not a `Run` entry, which a package's registry virtualization would hide from Windows. A task the player turned off in Task Manager, or a policy, cannot be turned on from the app, and Settings says so.
+- **Fix button:** a package's new files under `%LOCALAPPDATA%` can be redirected to the package's private store, where the game never looks. The `full` variant's manifest excludes `%LOCALAPPDATA%\Blizzard` and `%APPDATA%\TavernLedger` from that (and asks for the `unvirtualizedResources` capability, which Microsoft decides at certification), so Fix writes where the game reads and the history is the installer edition's folder. Fix is hidden before Windows 11. After a write the app looks for a copy in the private store and reports it as not done if there is one. The `manual` variant (`store-manual-setup` feature on top of `store`) asks for no restricted capability and has no Fix button: the setup box lists the lines to write by hand, and without an existing `%APPDATA%\TavernLedger` the history stays in the package's private store, which uninstalling the Store app deletes. Excluded folders stay after uninstall.
+
+To build an unsigned package (needs the Windows SDK for `makeappx.exe`, and `npm ci --ignore-scripts` once):
+
+```
+pwsh tools/make-msix.ps1 [-Variant full|manual]
+```
+
+It builds into `target\store` (the installer edition's `target\release` is never packed), checks that the exe is the Store edition and holds no updater endpoint or key (`tools/store_package.py check-exe`), lays out the package folder (exe, logos from `crates/desktop/store/Assets`, `AppxManifest.xml` made from `crates/desktop/store/AppxManifest.xml.template`) and packs `target\store-package\TavernLedger_<version>_x64.msix`. Nothing is signed, uploaded or submitted: the Store signs what is uploaded in Partner Center.
+
+- **Version:** the Store refuses a first part of 0 and reserves the fourth, so the package version is `(major+1).minor.patch.0` (`0.2.4` is `1.2.4.0`; `tools/store_version.py`). The installer edition's version is unchanged.
+- **Identity:** name, publisher and publisher display name come from Partner Center (`-IdentityName`, `-Publisher`, `-PublisherDisplayName`, or the `STORE_IDENTITY_NAME`, `STORE_PUBLISHER` and `STORE_PUBLISHER_DISPLAY_NAME` variables). Without them the package carries a clearly fake local-test identity, and `-ForSubmission` refuses it.
+- **Logos:** `python tools/build_icons.py --store` redraws them from `docs/brand/logo/`.
+- **WebView2:** the package holds no runtime; the Evergreen runtime is on Windows 11 and nearly all Windows 10 PCs.
+- **CI:** the `Store package` workflow (by hand, from the Actions tab) builds the same package on a runner and keeps only the `.msix` as a workflow artifact for 7 days.
+
+To try a package on a PC, a person must install it signed with a certificate the PC trusts (or in Developer Mode); do that only in a throwaway setup such as Windows Sandbox or with a test certificate removed afterwards, never next to the installed app's data. `-LocalTest` builds a debug package with a launch alias so a test can pass `--data-dir` and `--local-app-data`; it is never for submission.
+
 ## Development
 
 ```

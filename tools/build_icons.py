@@ -23,6 +23,10 @@ Writes:
 - docs/brand/logo/avatar-500.png     500 px GitHub avatar (uploaded by hand)
 - docs/brand/logo/renders/tray-preview.png    the tray sizes on a light and a dark taskbar, for review
 
+`--store` writes only the Microsoft Store package's logos, crates/desktop/store/Assets/ (T-379): the Store
+logo (50 px), the 44 px and 150 px tiles, and the 44 px tile's target sizes for the taskbar and Start list
+(plain and `_altform-unplated`, so Windows draws no backplate behind them).
+
 Rendering uses a headless Chrome or Edge already on the PC (no new dependency):
 set CHROME to its path if it is not in the usual place. Text other than the lockup's outlines is set
 in the site's own fonts (web/public/fonts), embedded into the page so nothing is fetched. Python
@@ -63,6 +67,16 @@ APP_MARK = ROOT / "crates" / "desktop" / "ui" / "mark.svg"
 # Windows draws the tray icon at 16 px at 100 % scaling, 20 at 125 %, 24 at 150 % and 32 at 200 %.
 TRAY_SOURCES = {16: "app-tile-small.svg", 20: "tray-20.svg", 24: "tray-24.svg", 32: "app-tile-small.svg"}
 TRAY_SIZES = tuple(TRAY_SOURCES)
+STORE_ASSETS = ROOT / "crates" / "desktop" / "store" / "Assets"
+STORE_TARGET_SIZES = (16, 24, 32, 48, 256)
+# File name -> pixel size. The manifest names the three plain files; the target sizes are found by Windows.
+STORE_LOGOS = {
+    "StoreLogo.png": 50,
+    "Square44x44Logo.png": 44,
+    "Square150x150Logo.png": 150,
+    **{f"Square44x44Logo.targetsize-{n}.png": n for n in STORE_TARGET_SIZES},
+    **{f"Square44x44Logo.targetsize-{n}_altform-unplated.png": n for n in STORE_TARGET_SIZES},
+}
 SOCIAL_SIZE = (1200, 630)
 PREVIEW_SIZE = (900, 380)
 AVATAR_SIZE = 500
@@ -333,10 +347,21 @@ def build() -> None:
     write(RENDERS / "tray-preview.png", tray_preview(chrome))
 
 
+def build_store() -> None:
+    chrome = find_chrome()
+    svgs = {name: (LOGO / name).read_text(encoding="utf-8") for name in ("app-tile.svg", "app-tile-small.svg")}
+    for name, size in STORE_LOGOS.items():
+        write(STORE_ASSETS / name, render(chrome, svgs[tile_for(size)], size))
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--check", action="store_true", help="only check that the copied SVGs are up to date")
+    parser.add_argument("--store", action="store_true", help="only write the Microsoft Store package's logos")
     args = parser.parse_args(argv)
+    if args.store:
+        build_store()
+        return 0
     if args.check:
         stale = stale_copies()
         for name in stale:
