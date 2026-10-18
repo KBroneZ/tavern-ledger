@@ -14,6 +14,7 @@ use crate::auth::{encode_component, is_plausible_email, Auth, Session};
 use crate::config::ServerConfig;
 use crate::http::Http;
 use crate::loopback::Loopback;
+use crate::pages::Lang;
 use crate::pkce::Pkce;
 
 pub struct SignIn {
@@ -23,7 +24,8 @@ pub struct SignIn {
 }
 
 impl SignIn {
-    pub fn start(server: &ServerConfig, email: &str) -> Result<SignIn, String> {
+    /// `lang`: the language of the pages the browser shows after the link.
+    pub fn start(server: &ServerConfig, email: &str, lang: Lang) -> Result<SignIn, String> {
         let email = email.trim();
         if !is_plausible_email(email) {
             return Err("Type the email of your Tavern Ledger account.".into());
@@ -31,8 +33,8 @@ impl SignIn {
         let page = server.sign_in_page().ok_or_else(|| {
             "This upload server has no sign-in page: the app signs in only with Tavern Ledger's own server or this PC's.".to_string()
         })?;
-        let loopback =
-            Loopback::bind().map_err(|e| format!("Cannot start the sign-in ({:?}).", e.kind()))?;
+        let loopback = Loopback::bind(lang)
+            .map_err(|e| format!("Cannot start the sign-in ({:?}).", e.kind()))?;
         let pkce =
             Pkce::new().map_err(|e| format!("Cannot start the sign-in ({:?}).", e.kind()))?;
         // In the fragment: the browser never sends it to the website's server.
@@ -135,7 +137,7 @@ mod tests {
 
     #[test]
     fn the_page_gets_the_challenge_the_loopback_address_and_the_email_in_its_fragment() {
-        let flow = SignIn::start(&hosted(), " player@example.test ").unwrap();
+        let flow = SignIn::start(&hosted(), " player@example.test ", Lang::En).unwrap();
         let url = flow.page_url();
         assert!(
             url.starts_with("https://tavernledger.net/desktop-sign-in/#"),
@@ -152,7 +154,7 @@ mod tests {
             "the verifier stays in the app"
         );
         assert_eq!(challenge_for(&flow.pkce.verifier), values[0].1);
-        let local = SignIn::start(&local(), "player@example.test").unwrap();
+        let local = SignIn::start(&local(), "player@example.test", Lang::En).unwrap();
         assert!(local
             .page_url()
             .starts_with("http://127.0.0.1:3000/desktop-sign-in/#"));
@@ -164,7 +166,7 @@ mod tests {
         http.on("Post /auth/v1/token", reply(200, session_json("AT", "RT")));
         let server = local();
 
-        let flow = SignIn::start(&server, "player@example.test").unwrap();
+        let flow = SignIn::start(&server, "player@example.test", Lang::En).unwrap();
         assert!(
             http.routes().is_empty(),
             "the app itself asks for no link: the website page does"
@@ -201,7 +203,7 @@ mod tests {
 
     #[test]
     fn a_bad_email_starts_nothing() {
-        assert!(SignIn::start(&local(), "not an email").is_err());
+        assert!(SignIn::start(&local(), "not an email", Lang::En).is_err());
     }
 
     #[test]
@@ -210,14 +212,16 @@ mod tests {
             url: "https://other.example".into(),
             anon_key: "sb_publishable_test".into(),
         };
-        let err = SignIn::start(&other, "player@example.test").err().unwrap();
+        let err = SignIn::start(&other, "player@example.test", Lang::En)
+            .err()
+            .unwrap();
         assert!(err.contains("no sign-in page"), "{err}");
     }
 
     #[test]
     fn a_cancelled_sign_in_makes_no_exchange() {
         let http = FakeHttp::default();
-        let flow = SignIn::start(&local(), "player@example.test").unwrap();
+        let flow = SignIn::start(&local(), "player@example.test", Lang::En).unwrap();
         let cancel = AtomicBool::new(true);
         let err = flow
             .finish(

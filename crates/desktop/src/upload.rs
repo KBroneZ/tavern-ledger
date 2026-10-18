@@ -16,8 +16,10 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::applog::{self, Logged};
+use crate::settings::{Language, Settings};
 use uploader::config::{self, ConfigError};
 use uploader::http::{Http, NetError, Request, Response};
+use uploader::pages::Lang;
 use uploader::secrets::{credential_name, CredentialManager};
 use uploader::signin::SignIn;
 use uploader::{Engine, Status, Wake};
@@ -168,7 +170,13 @@ fn publish(app: &AppHandle, update: impl FnOnce(&mut View)) {
 /// page in the browser (the link is asked for there, behind the anti-robot
 /// check), then waits up to 15 minutes for the link; the worker must stay
 /// free meanwhile.
-fn sign_in_thread(engine: &Engine, email: String, tx: Sender<Msg>, cancel: Arc<AtomicBool>) {
+fn sign_in_thread(
+    engine: &Engine,
+    email: String,
+    lang: Lang,
+    tx: Sender<Msg>,
+    cancel: Arc<AtomicBool>,
+) {
     let Some(server) = engine.server().cloned() else {
         let _ = tx.send(Msg::SignedIn(Err("No upload server is set up yet.".into())));
         return;
@@ -177,7 +185,7 @@ fn sign_in_thread(engine: &Engine, email: String, tx: Sender<Msg>, cancel: Arc<A
     thread::spawn(move || {
         // A bug here must not leave the panel on "signing in" for ever.
         let attempt = catch_unwind(AssertUnwindSafe(|| {
-            SignIn::start(&server, &email).and_then(|flow| {
+            SignIn::start(&server, &email, lang).and_then(|flow| {
                 uploader::browser::open(flow.page_url())
                     .map_err(|e| format!("Could not open your browser ({:?}).", e.kind()))?;
                 let _ = tx.send(Msg::LinkSent);
@@ -257,7 +265,12 @@ fn run(app: AppHandle, data_dir: PathBuf, tx: Sender<Msg>, rx: Receiver<Msg>) {
                 signing_in = Some(Some(email.trim().to_string()));
                 link_sent = Some(false);
                 notice = Some(None);
-                sign_in_thread(&engine, email, tx.clone(), flag);
+                // The browser pages follow the app's language, as of this attempt.
+                let lang = match app.state::<Arc<Settings>>().language() {
+                    Language::En => Lang::En,
+                    Language::Es => Lang::Es,
+                };
+                sign_in_thread(&engine, email, lang, tx.clone(), flag);
             }
             Msg::CancelSignIn => {
                 if let Some(old) = cancel.take() {
