@@ -267,7 +267,8 @@
   "dbfId": 910004,
   "name": "A trinket",
   "type": "BATTLEGROUND_TRINKET",
-  "set": "BATTLEGROUNDS"
+  "set": "BATTLEGROUNDS",
+  "spellSchool": "LESSER_TRINKET"
  },
  {
   "id": "BG_ENCH_SYN",
@@ -280,6 +281,28 @@
   "id": "BG_HP_SYN",
   "dbfId": 910006,
   "name": "A hero power",
+  "type": "HERO_POWER",
+  "set": "BATTLEGROUNDS"
+ },
+ {
+  "id": "BG_TRINKET2_SYN",
+  "dbfId": 910007,
+  "name": "A greater trinket",
+  "type": "BATTLEGROUND_TRINKET",
+  "set": "BATTLEGROUNDS",
+  "spellSchool": "GREATER_TRINKET"
+ },
+ {
+  "id": "BG22_HERO_001p_t2",
+  "dbfId": 910008,
+  "name": "Fire Invocation",
+  "type": "HERO_POWER",
+  "set": "BATTLEGROUNDS"
+ },
+ {
+  "id": "BG22_HERO_000p_Alt",
+  "dbfId": 910009,
+  "name": "Lock and Load",
   "type": "HERO_POWER",
   "set": "BATTLEGROUNDS"
  }

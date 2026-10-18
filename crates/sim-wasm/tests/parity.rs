@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use bg_parser::report::{CombatValues, Minion as LogMinion};
+use bg_parser::report::{CombatValues, HeroKit, KitCard as LogKitCard, Minion as LogMinion};
 use combat_sim::{BaseCard, Keywords, Tribes};
 use serde_json::{json, Value};
 use tracker::odds::{run_odds, DuosInput, Facts, OddsInput, Seen};
@@ -46,7 +46,8 @@ fn board(tier: Option<i64>, minions: Vec<Value>) -> Value {
 
 /// The requests: Solo and Duos, Deathrattles, keywords, an approximate card,
 /// a start-of-combat card, an unknown tier, a card not modelled and one
-/// without facts. Card ids are real (the engine keys its rules on them); the
+/// without facts; hero powers and trinkets with start of combat played or
+/// not (T-628). Card ids are real (the engine keys its rules on them); the
 /// facts are made up.
 fn requests() -> Vec<(&'static str, Value)> {
     let plain = |a, h| facts(1, &[], a, h, &[]);
@@ -275,7 +276,66 @@ fn requests() -> Vec<(&'static str, Value)> {
                 "build": 999_999
             }),
         ),
+        (
+            "kits at the first attack",
+            json!({
+                "player": [with_kit(board(Some(3), vec![m("BGS_119", 2, 3, &[], plain(1, 2))]), json!([{ "card_id": FIRE, "slot": 0 }]), json!([{ "card_id": "BG30_Trinket_2nd", "slot": 2 }]))],
+                "opponent": [with_kit(board(Some(2), vec![m("BGS_119", 3, 3, &[], plain(1, 2))]), json!([{ "card_id": "TB_BaconShop_HP_103", "slot": 0 }]), json!([]))],
+                "damage_cap": 15,
+                "round": 5
+            }),
+        ),
+        (
+            "kits with start of combat played",
+            json!({
+                "player": [with_kit(board(Some(3), vec![m("BGS_119", 2, 3, &[], plain(1, 2))]), json!([{ "card_id": FIRE, "slot": 0 }]), json!([]))],
+                "opponent": [with_kit(board(Some(2), vec![m("BGS_119", 3, 3, &[], plain(1, 2))]), json!([]), json!([]))],
+                "damage_cap": 15,
+                "round": 5,
+                "start_of_combat": true
+            }),
+        ),
+        (
+            "duos held minion with start of combat played",
+            json!({
+                "player": [
+                    with_kit(
+                        board(Some(4), vec![m("BGS_119", 2, 2, &[], plain(1, 2))]),
+                        json!([{ "card_id": LOCK, "slot": 0, "counters": [1, 0, 0, 0, 0], "held": m("BGS_119", 4, 4, &[], plain(1, 2)) }]),
+                        json!([]),
+                    ),
+                    board(Some(3), vec![m("BGS_119", 1, 3, &[], plain(1, 2))]),
+                ],
+                "opponent": [
+                    board(Some(5), vec![m("BGS_119", 3, 5, &[], plain(1, 2))]),
+                    board(Some(2), vec![m("BGS_119", 2, 2, &[], plain(1, 2))]),
+                ],
+                "damage_cap": 15,
+                "round": 8,
+                "start_of_combat": true
+            }),
+        ),
+        (
+            "start of combat not played gives no early number",
+            json!({
+                "player": [with_kit(board(Some(3), vec![m("BGS_119", 2, 3, &[], plain(1, 2))]), json!([]), json!([]))],
+                "opponent": [with_kit(board(Some(2), vec![m("BGS_119", 3, 3, &[], plain(1, 2))]), json!([{ "card_id": "TB_BaconShop_HP_103", "slot": 0 }]), json!([]))],
+                "damage_cap": 15,
+                "round": 5,
+                "start_of_combat": true
+            }),
+        ),
     ]
+}
+
+/// Fire Invocation (start of combat: the left-most minion's Attack doubles)
+/// and Lock and Load (fires the minion it holds).
+const FIRE: &str = "BG22_HERO_001p_t2";
+const LOCK: &str = "BG22_HERO_000p_Alt";
+
+fn with_kit(mut board: Value, powers: Value, trinkets: Value) -> Value {
+    board["kit"] = json!({ "powers": powers, "trinkets": trinkets });
+    board
 }
 
 fn with_values(mut board: Value, values: Value) -> Value {
@@ -290,41 +350,83 @@ fn statics(names: &[Value], list: &[&'static str]) -> Vec<&'static str> {
         .collect()
 }
 
+fn log_minion(m: &Value, position: i64) -> LogMinion {
+    let words = m["keywords"].as_array().unwrap();
+    LogMinion {
+        card_id: Some(m["card_id"].as_str().unwrap().to_string()),
+        atk: m["attack"].as_i64().unwrap(),
+        health: m["health"].as_i64().unwrap(),
+        position,
+        golden: m["golden"].as_bool().unwrap(),
+        keywords: statics(words, &SAVED),
+        sim_keywords: statics(words, &SIM_ONLY),
+        gifts: m["gifts"]
+            .as_array()
+            .map(|g| statics(g, &bg_parser::gifts::GIFT_IDS))
+            .unwrap_or_default(),
+        gift_unknown: false,
+        buffs: Vec::new(),
+        counters: [0, 0],
+    }
+}
+
 fn log_board(b: &Value) -> Vec<LogMinion> {
     let minions = b["minions"].as_array().unwrap();
     minions
         .iter()
         .enumerate()
-        .map(|(i, m)| {
-            let words = m["keywords"].as_array().unwrap();
-            LogMinion {
-                card_id: Some(m["card_id"].as_str().unwrap().to_string()),
-                atk: m["attack"].as_i64().unwrap(),
-                health: m["health"].as_i64().unwrap(),
-                position: i as i64 + 1,
-                golden: m["golden"].as_bool().unwrap(),
-                keywords: statics(words, &SAVED),
-                sim_keywords: statics(words, &SIM_ONLY),
-                gifts: m["gifts"]
+        .map(|(i, m)| log_minion(m, i as i64 + 1))
+        .collect()
+}
+
+/// A board's kit as the parser keeps it; None when the request gives none.
+fn log_kit(b: &Value) -> Option<HeroKit> {
+    let k = b.get("kit")?;
+    let cards = |key: &str| -> Vec<LogKitCard> {
+        k[key]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| LogKitCard {
+                card_id: c["card_id"].as_str().unwrap().to_string(),
+                slot: c["slot"].as_i64().unwrap_or(0),
+                counters: c["counters"]
                     .as_array()
-                    .map(|g| statics(g, &bg_parser::gifts::GIFT_IDS))
-                    .unwrap_or_default(),
-                gift_unknown: false,
-                buffs: Vec::new(),
-                counters: [0, 0],
-            }
-        })
+                    .map_or([0; 5], |n| std::array::from_fn(|i| n[i].as_i64().unwrap())),
+                target: c["target"].as_i64(),
+                held: c.get("held").map(|m| log_minion(m, 0)),
+            })
+            .collect()
+    };
+    Some(HeroKit {
+        powers: cards("powers"),
+        trinkets: cards("trinkets"),
+    })
+}
+
+/// Every minion of the request with facts: the boards' and the held ones.
+fn all_minions(req: &Value) -> Vec<&Value> {
+    let boards: Vec<&Value> = req["player"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .chain(req["opponent"].as_array().unwrap())
+        .collect();
+    let held = boards
+        .iter()
+        .filter_map(|b| b.get("kit"))
+        .flat_map(|k| k["powers"].as_array().unwrap())
+        .filter_map(|p| p.get("held"));
+    boards
+        .iter()
+        .flat_map(|b| b["minions"].as_array().unwrap())
+        .chain(held)
         .collect()
 }
 
 fn fact_table(req: &Value) -> BTreeMap<String, Facts> {
     let mut out = BTreeMap::new();
-    let boards = req["player"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .chain(req["opponent"].as_array().unwrap());
-    for m in boards.flat_map(|b| b["minions"].as_array().unwrap()) {
+    for m in all_minions(req) {
         let f = &m["facts"];
         if f.is_null() {
             continue;
@@ -367,7 +469,7 @@ fn seen(b: &Value) -> Seen {
         board: log_board(b),
         tier: b["tier"].as_i64(),
         values: values(b),
-        kit: None,
+        kit: log_kit(b),
     }
 }
 
@@ -380,15 +482,15 @@ fn app_input(req: &Value) -> OddsInput {
     );
     OddsInput {
         opponent_seat: 3,
-        round: 1,
+        round: req["round"].as_i64().unwrap_or(1),
         seen_after_start_of_combat: false,
         own: log_board(&p[0]),
         opponent: log_board(&o[0]),
         own_values: values(&p[0]),
         opponent_values: values(&o[0]),
-        own_kit: None,
-        opponent_kit: None,
-        estimate: false,
+        own_kit: log_kit(&p[0]),
+        opponent_kit: log_kit(&o[0]),
+        estimate: req["start_of_combat"].as_bool().unwrap_or(false),
         own_tier: p[0]["tier"].as_i64(),
         opponent_tier: o[0]["tier"].as_i64(),
         damage_cap: req["damage_cap"].as_i64(),
@@ -446,6 +548,11 @@ fn assert_same_as_app(name: &str, req: &Value, answer: &Value) {
                 "{name}"
             );
             assert_eq!(answer["new_build"].as_i64(), app.new_build, "{name}");
+        }
+        // The overlay's early estimate gives no number when start of combat
+        // is not fully played (D-165); the website names the cards.
+        "not_modelled" if req["start_of_combat"] == true => {
+            assert_eq!(app.gap, Some(tracker::odds::Gap::NoBoardSeen), "{name}");
         }
         "not_modelled" => {
             assert_eq!(app.gap, Some(tracker::odds::Gap::NotModelled), "{name}");

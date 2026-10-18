@@ -1,0 +1,85 @@
+/* Each board's hero power and trinkets (T-628) and the table's
+   start-of-combat switch: a strip of labelled lists under the board's
+   title, a power's needs (the minion it chooses, the minion it holds, the
+   turn) right under its list. Form controls take sim-cards.css's look. */
+
+.sim-kit {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 8px 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgb(0 0 0 / 0.18);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.sim-kit > p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.sim-kit-slot {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sim-kit-slot > label {
+  color: #d9c7ad;
+  font-size: var(--t-sm);
+  font-weight: 700;
+}
+
+/* A slot with a card stands out from the empty ones. */
+.sim-kit-slot.is-set > label {
+  color: var(--amber-hi);
+}
+
+.sim .sim-kit-slot select {
+  width: 100%;
+  min-width: 0;
+}
+
+.sim-kit-slot .sim-reason,
+.sim-kit-slot .sim-badge {
+  margin: 0;
+  justify-self: start;
+}
+
+.sim-kit-need {
+  display: grid;
+  gap: 4px;
+  margin-top: 2px;
+  padding-left: 8px;
+  border-left: 2px solid var(--amber);
+}
+
+.sim-kit-need > label {
+  font-size: var(--t-sm);
+}
+
+.sim-kit-need.seg {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.sim-kit-held-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--t-sm);
+}
+
+.sim-soc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.sim-soc > p {
+  flex: 1 1 18rem;
+  max-width: 44rem;
+  margin: 0;
+}

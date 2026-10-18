@@ -22,8 +22,17 @@ afterEach(() => {
 
 test("the build keeps the names of spells, trinkets and hero powers, not minions or enchantments", () => {
   const file = extractNames(en, en, "fixture");
-  assert.deepEqual(file.names, { BG_SPELL_SYN: "A spell", BG_TRINKET_SYN: "A trinket", BG_HP_SYN: "A hero power" });
-  assert.deepEqual(file.trinkets, { "910004": "BG_TRINKET_SYN" }, "a trinket by its database id, for the lobby");
+  assert.deepEqual(file.names, {
+    BG_SPELL_SYN: "A spell",
+    BG_TRINKET_SYN: "A trinket",
+    BG_HP_SYN: "A hero power",
+    BG_TRINKET2_SYN: "A greater trinket",
+    BG22_HERO_001p_t2: "Fire Invocation",
+    BG22_HERO_000p_Alt: "Lock and Load",
+  });
+  assert.deepEqual(file.trinkets, { "910004": "BG_TRINKET_SYN", "910007": "BG_TRINKET2_SYN" }, "a trinket by its database id, for the lobby");
+  // The simulator's choices (T-628): every hero power, the trinkets by kind.
+  assert.deepEqual(file.kit, { power: ["BG22_HERO_000p_Alt", "BG22_HERO_001p_t2", "BG_HP_SYN"], lesser: ["BG_TRINKET_SYN"], greater: ["BG_TRINKET2_SYN"] });
   const spanish = extractNames(en, es, "fixture");
   assert.equal(spanish.names.BG_SPELL_SYN, "Un hechizo");
   assert.equal(spanish.names.BG_HP_SYN, "A hero power", "a name missing in Spanish falls back to English");
@@ -35,6 +44,16 @@ test("the name file is read like any data: bad ids, names and trinkets are dropp
   assert.deepEqual([...read.names], [["GOOD_1", "Good"]]);
   assert.deepEqual([...read.trinkets], [[12, "GOOD_1"]]);
   assert.deepEqual([...readNameFile(null).names], []);
+  // The simulator's lists keep named ids only, once; a file without them has none.
+  const kit = readNameFile({ names: { P1: "Power", T1: "Trinket" }, kit: { power: ["P1", "P1", "NOPE", 3], lesser: "T1", greater: ["T1"] } }).kit;
+  assert.deepEqual(kit, { power: ["P1"], lesser: [], greater: ["T1"] });
+  assert.deepEqual(readNameFile({ names: {} }).kit, { power: [], lesser: [], greater: [] });
+  // A trinket's odd spell school is no kind (and never an object's own property).
+  const lesser = { id: "BG_T0", name: "L", type: "BATTLEGROUND_TRINKET", set: "BATTLEGROUNDS", spellSchool: "LESSER_TRINKET" };
+  const odd = [lesser, { ...lesser, id: "BG_T1", spellSchool: "constructor" }];
+  assert.deepEqual(extractNames(odd, odd, "x").kit, { power: [], lesser: ["BG_T0"], greater: [] });
+  // No trinket with a kind at all: the card data changed, and the build stops.
+  assert.throws(() => extractNames([odd[1]], [odd[1]], "x"), /card data changed/);
 });
 
 test("a card is named from the minions, then the other cards, then the Dark Gifts, else by its id", () => {

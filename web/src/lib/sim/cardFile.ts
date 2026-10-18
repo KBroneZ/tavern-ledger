@@ -40,4 +40,16 @@ export interface CardNameFile {
   names: Record<string, string>;
   /** A trinket's card database id to its card id (the lobby names trinkets by database id). */
   trinkets: Record<string, string>;
+  /**
+   * The simulator's choices of hero powers and trinkets (T-628), by card id:
+   * every Battlegrounds hero power, and the trinkets by kind. Absent in a
+   * file written before them.
+   */
+  kit?: KitLists;
+}
+
+export interface KitLists {
+  power: string[];
+  lesser: string[];
+  greater: string[];
 }

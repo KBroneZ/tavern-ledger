@@ -81,4 +81,6 @@ pub extern "C" fn sim_answer() -> *const u8 {
 }
 
 #[cfg(test)]
+mod kit_tests;
+#[cfg(test)]
 mod tests;

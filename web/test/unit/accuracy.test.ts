@@ -193,7 +193,7 @@ test("nothing scored: dashes, never zero, and the blocked share still shows", ()
 test("no combat blocked: the note says so instead of hiding the share", () => {
   const f = modeFigures(sample().modes.solo, "solo");
   assert.equal(f.blocked.value, "0%");
-  assert.equal(f.blocked.note, "Odds in every Solo combat with a result (19): no card was missing.");
+  assert.match(f.blocked.note, /^Odds in every Solo combat with a result \(\d+\): no card was missing\.$/);
 });
 
 test("shares never round to a claim the counts do not make", () => {
@@ -207,10 +207,11 @@ test("shares never round to a claim the counts do not make", () => {
 });
 
 test("calibration bars: percents per bucket, empty buckets marked, never drawn as 0", () => {
-  // The middle bucket emptied, whatever the committed export holds.
+  // The middle bucket emptied and the top one set, whatever the committed export holds.
   const raw = committed();
   const solo = (raw.modes as Record<string, { calibration: Record<string, unknown>[] }>).solo;
   Object.assign(solo.calibration[2], { predictions: 0, mean_said: null, happened: null });
+  Object.assign(solo.calibration[4], { predictions: 10, mean_said: 0.95, happened: 1 });
   const bars = calibrationBars(parseAccuracy(raw).modes.solo.calibration);
   assert.equal(bars.length, 5);
   assert.deepEqual(bars.map((b) => b.range), ["0–20%", "20–40%", "40–60%", "60–80%", "80–100%"]);

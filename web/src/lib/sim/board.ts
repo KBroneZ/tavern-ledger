@@ -1,14 +1,16 @@
 // The simulator's boards (T-606): what the editor holds, how a round of one
 // of the player's games becomes boards, the edits, and the engine's request.
-// Plain data in, new data out: nothing here touches the page.
+// Each board brings its hero's powers and trinkets (T-628, kit.ts). Plain
+// data in, new data out: nothing here touches the page.
 //
 // Red line (D-004, D-054): a round gives only the boards that fought in it,
 // the ones the player saw on screen. The saved report never holds the
 // combats the game does not play back (T-213 left them out), so no
 // SETASIDE board can come in this way.
 import type { Buff } from "../game/buffs.ts";
-import type { GameRecord, GameValues, Minion as ReportMinion, Round } from "../game/report.ts";
+import type { GameRecord, GameValues, Kit as ReportKit, Minion as ReportMinion, Round } from "../game/report.ts";
 import type { CardIndex } from "./cards.ts";
+import { emptyKit, type KitKind, kitCards, kitFromRecord, kitRequest, POWER_SLOTS, type SimKit, TRINKET_SLOTS, UNLOCK_TURN, withCard, withHeld, withHeldStats, withoutTarget, withTarget } from "./kit.ts";
 
 /** The keywords the engine tracks, by the names the request uses. */
 export const SIM_KEYWORDS = ["taunt", "divine_shield", "reborn", "venomous", "poisonous", "windfury", "mega_windfury", "stealth"] as const;
@@ -67,6 +69,11 @@ export interface SimBoard {
    * Beetles. Absent when the record holds none: the printed numbers.
    */
   values?: GameValues;
+  /**
+   * The hero's powers and trinkets (T-628); null when a loaded game did not
+   * record them (saved before parser revision 16), absent on an older state.
+   */
+  kit?: SimKit | null;
 }
 
 export type Mode = "solo" | "duos";
@@ -80,6 +87,14 @@ export interface SimState {
   cap: number | null;
   /** The Hearthstone build of the loaded game; null for boards built by hand or a file that does not say. */
   build: number | null;
+  /** The combat's turn (it unlocks some hero powers); null when not known. */
+  round: number | null;
+  /**
+   * The engine plays start of combat: on for boards built by hand (as before
+   * a combat), off for a loaded game's boards (taken at the first attack,
+   * with its effects already on them).
+   */
+  startOfCombat: boolean;
 }
 
 export type Side = "player" | "opponent";
@@ -87,10 +102,10 @@ export type Side = "player" | "opponent";
 let nextKey = 1;
 export const newKey = (): number => nextKey++;
 
-export const emptyBoard = (): SimBoard => ({ tier: null, minions: [] });
+export const emptyBoard = (): SimBoard => ({ tier: null, minions: [], kit: emptyKit() });
 
 export function emptyState(mode: Mode = "solo"): SimState {
-  return { mode, player: [emptyBoard()], opponent: [emptyBoard()], cap: null, build: null };
+  return { mode, player: [emptyBoard()], opponent: [emptyBoard()], cap: null, build: null, round: null, startOfCombat: true };
 }
 
 /** A round that can be loaded: it has a board on each side. */
@@ -103,6 +118,7 @@ interface Fought {
   playerId: number | null;
   board: ReportMinion[];
   values: GameValues | null;
+  kit: ReportKit | null;
 }
 
 /** The boards that fought on one side, in the order they came in, one per player. */
@@ -113,7 +129,7 @@ function sideBoards(round: Round, side: "own" | "opponent"): Fought[] {
     if (e.side !== side || e.board === null) continue;
     if (e.playerId !== null && seen.has(e.playerId)) continue;
     if (e.playerId !== null) seen.add(e.playerId);
-    out.push({ playerId: e.playerId, board: e.board, values: e.values });
+    out.push({ playerId: e.playerId, board: e.board, values: e.values, kit: e.kit });
   }
   return out;
 }
@@ -135,6 +151,8 @@ export interface Loaded {
   unknownGifts: number;
   /** Saved before the parser recorded Dark Gifts (revision 9): any gift is missing. */
   giftsNotRecorded: boolean;
+  /** A board without its hero's powers and trinkets: saved before the parser recorded them (revision 16). */
+  kitsNotRecorded: boolean;
 }
 
 /** The parser revision that records Dark Gifts on board minions (D-107). */
@@ -178,22 +196,21 @@ export function fromRound(record: GameRecord, roundNumber: number, cards: CardIn
     const kept = f.board.map((m) => [m, minionFrom(m, cards)] as const).filter((p): p is readonly [ReportMinion, SimMinion] => p[1] !== null).slice(0, MAX_MINIONS);
     skipped += f.board.length - kept.length;
     unknownGifts += kept.filter(([m]) => m.giftUnknown).length;
-    const out: SimBoard = { tier, minions: kept.map(([, s]) => s) };
+    const kit = f.kit ? kitFromRecord(f.kit, (m) => minionFrom(m, cards)) : null;
+    const out: SimBoard = { tier, minions: kept.map(([, s]) => s), kit };
     return f.values ? { ...out, values: f.values } : out;
   };
   const ownTier = report.shop?.turns.find((t) => t.turn === roundNumber)?.tier ?? null;
   const isLocal = (f: Fought) => f.playerId !== null && f.playerId === report.localPlayerId;
+  const player = own.slice(0, keep).map((f) => board(f, isLocal(f) ? ownTier : null));
+  const opponent = opp.slice(0, keep).map((f) => board(f, null));
   return {
-    state: {
-      mode,
-      player: own.slice(0, keep).map((f) => board(f, isLocal(f) ? ownTier : null)),
-      opponent: opp.slice(0, keep).map((f) => board(f, null)),
-      cap: null,
-      build: report.build,
-    },
+    // A turn the engine takes (1 on); a record's 0 is not one.
+    state: { mode, player, opponent, cap: null, build: report.build, round: roundNumber >= 1 ? roundNumber : null, startOfCombat: false },
     skipped,
     unknownGifts,
     giftsNotRecorded: record.revision === null || record.revision < GIFTS_REVISION,
+    kitsNotRecorded: [...player, ...opponent].some((b) => b.kit === null),
   };
 }
 
@@ -236,11 +253,11 @@ export function setCap(state: SimState, cap: number | null): SimState {
   return value === state.cap ? state : { ...state, cap: value };
 }
 
-/** A new minion with the card's own stats and keywords, at the right end; none past seven. */
-export function addMinion(state: SimState, side: Side, index: number, cardId: string, cards: CardIndex): SimState {
+/** A minion of a card with its own stats and keywords; null when the card data lacks it. */
+function cardMinion(cardId: string, cards: CardIndex): SimMinion | null {
   const card = cards.get(cardId);
-  if (!card || state[side][index]?.minions.length >= MAX_MINIONS) return state;
-  const minion: SimMinion = {
+  if (!card) return null;
+  return {
     key: newKey(),
     cardId,
     golden: cards.isGolden(cardId),
@@ -250,11 +267,18 @@ export function addMinion(state: SimState, side: Side, index: number, cardId: st
     gifts: [],
     buffs: [],
   };
+}
+
+/** A new minion with the card's own stats and keywords, at the right end; none past seven. */
+export function addMinion(state: SimState, side: Side, index: number, cardId: string, cards: CardIndex): SimState {
+  const minion = cardMinion(cardId, cards);
+  if (!minion || state[side][index]?.minions.length >= MAX_MINIONS) return state;
   return mapBoard(state, side, index, (b) => ({ ...b, minions: [...b.minions, minion] }));
 }
 
+/** Removes a minion; a hero power that named it names none. */
 export function removeMinion(state: SimState, side: Side, index: number, key: number): SimState {
-  return mapBoard(state, side, index, (b) => ({ ...b, minions: b.minions.filter((m) => m.key !== key) }));
+  return mapBoard(state, side, index, (b) => ({ ...b, minions: b.minions.filter((m) => m.key !== key), kit: withoutTarget(b.kit ?? null, key) }));
 }
 
 /** Moves a minion one place left (-1) or right (+1). */
@@ -311,6 +335,54 @@ export function toggleGolden(state: SimState, side: Side, index: number, key: nu
   });
 }
 
+// ---------- Hero powers and trinkets (T-628) ----------
+
+function mapKit(state: SimState, side: Side, index: number, change: (k: SimKit | null) => SimKit | null): SimState {
+  const now = state[side][index]?.kit ?? null;
+  const next = change(now);
+  return next === now ? state : mapBoard(state, side, index, (b) => ({ ...b, kit: next }));
+}
+
+/** A hero power or trinket in a slot, or the slot emptied (null); a slot the editor does not offer changes nothing. */
+export function setKitCard(state: SimState, side: Side, index: number, kind: KitKind, slot: number, cardId: string | null): SimState {
+  const slots: readonly number[] = kind === "power" ? POWER_SLOTS : TRINKET_SLOTS;
+  if (!slots.includes(slot)) return state;
+  return mapKit(state, side, index, (k) => withCard(k, kind, slot, cardId));
+}
+
+/** The minion a hero power names, by its key on the same board (null: none). */
+export function setKitTarget(state: SimState, side: Side, index: number, slot: number, key: number | null): SimState {
+  const valid = key === null || state[side][index]?.minions.some((m) => m.key === key);
+  return valid ? mapKit(state, side, index, (k) => k && withTarget(k, slot, key)) : state;
+}
+
+/** The minion a hero power holds: a card at its own stats (null: none). */
+export function setHeld(state: SimState, side: Side, index: number, slot: number, cardId: string | null, cards: CardIndex): SimState {
+  const held = cardId === null ? null : cardMinion(cardId, cards);
+  if (cardId !== null && !held) return state;
+  return mapKit(state, side, index, (k) => k && withHeld(k, slot, held));
+}
+
+/** The Attack and Health of a held minion, clamped like a board minion's. */
+export function setHeldStats(state: SimState, side: Side, index: number, slot: number, attack: number, health: number): SimState {
+  return mapKit(state, side, index, (k) => k && withHeldStats(k, slot, clampStat(attack, 0), clampStat(health, 1)));
+}
+
+/** The combat's turn: before or from the turn some hero powers unlock at. */
+export function setUnlocked(state: SimState, unlocked: boolean): SimState {
+  const round = unlocked ? Math.max(state.round ?? UNLOCK_TURN, UNLOCK_TURN) : Math.min(state.round ?? UNLOCK_TURN - 1, UNLOCK_TURN - 1);
+  return round === state.round ? state : { ...state, round };
+}
+
+export function setStartOfCombat(state: SimState, on: boolean): SimState {
+  return state.startOfCombat === on ? state : { ...state, startOfCombat: on };
+}
+
+/** The hero powers and trinkets of both teams, for marks and names. */
+export function allKitCards(state: SimState): string[] {
+  return [...state.player, ...state.opponent].flatMap((b) => kitCards(b.kit ?? null).map((c) => c.cardId));
+}
+
 // ---------- The engine's request ----------
 
 /** Every minion in both teams, for coverage checks and names. */
@@ -324,25 +396,38 @@ export function notReady(state: SimState): "empty" | null {
   return empty(state.player) || empty(state.opponent) ? "empty" : null;
 }
 
-/** The request for crates/sim-wasm (its input.rs): both teams with the card facts. */
+/**
+ * The request for crates/sim-wasm (its input.rs): both teams with the card
+ * facts, each board's hero powers and trinkets when it has any, the turn
+ * when known, and whether start of combat is played.
+ */
 export function toRequest(state: SimState, cards: CardIndex): string {
+  const minion = (m: SimMinion) => ({
+    card_id: m.cardId,
+    golden: m.golden,
+    attack: m.attack,
+    health: m.health,
+    keywords: m.keywords,
+    gifts: m.gifts,
+    facts: cards.facts(m.cardId),
+  });
   const board = (b: SimBoard) => ({
     tier: b.tier,
     ...(b.values ? { values: b.values } : {}),
-    minions: b.minions.map((m) => ({
-      card_id: m.cardId,
-      golden: m.golden,
-      attack: m.attack,
-      health: m.health,
-      keywords: m.keywords,
-      gifts: m.gifts,
-      facts: cards.facts(m.cardId),
-    })),
+    minions: b.minions.map(minion),
+    ...(b.kit && kitCards(b.kit).length > 0 ? { kit: kitRequest(b.kit, b.minions, minion) } : {}),
   });
   // An empty board in Duos stands for "no teammate": it is left out.
   const team = (boards: SimBoard[]) => {
     const kept = boards.filter((b, i) => i === 0 || b.minions.length > 0);
     return kept.map(board);
   };
-  return JSON.stringify({ player: team(state.player), opponent: team(state.opponent), damage_cap: state.cap, build: state.build });
+  return JSON.stringify({
+    player: team(state.player),
+    opponent: team(state.opponent),
+    damage_cap: state.cap,
+    build: state.build,
+    ...(state.round !== null ? { round: state.round } : {}),
+    ...(state.startOfCombat ? { start_of_combat: true } : {}),
+  });
 }

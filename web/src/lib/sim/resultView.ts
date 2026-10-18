@@ -7,6 +7,7 @@ import { cls, h, s, type VNode } from "../view/node.ts";
 import { fold } from "../view/pieces.ts";
 import type { Answer, Approximate, Spread } from "./answer.ts";
 import type { CardIndex } from "./cards.ts";
+import { cardName } from "../game/names.ts";
 import { reasonText } from "./reasons.ts";
 import { sm } from "./strings.ts";
 
@@ -20,12 +21,16 @@ export interface ResultProps {
   result: ResultState;
   cards: CardIndex;
   cap: number | null;
+  /** The hero powers and trinkets on the boards (T-628): a blocked one gets its own hint. */
+  kitIds?: ReadonlySet<string>;
 }
 
 /** A count in full ("10,000"), not compact ("10K"). */
 const whole = (n: number) => numberFormat({ maximumFractionDigits: 0 }).format(n);
 
-const names = (ids: string[], cards: CardIndex) => listFormat(ids.map((id) => cards.name(id)));
+/** A minion's name from the card data, a hero power's or trinket's from the names table, else the id. */
+const nameOf = (id: string, cards: CardIndex): string => (cards.get(id) ? cards.name(id) : (cardName(id) ?? id));
+const names = (ids: string[], cards: CardIndex) => listFormat(ids.map((id) => nameOf(id, cards)));
 
 function bar(won: number, tied: number, lost: number, trials: number): VNode {
   const pct = (n: number) => (100 * n) / trials;
@@ -75,7 +80,7 @@ function approxFold(list: Approximate[], cards: CardIndex): VNode | null {
       { class: "sim-approx", role: "list" },
       list.map((a) => {
         const said = reasonText(a.reason);
-        return h("li", {}, h("strong", {}, cards.name(a.cardId)), ": ", h("span", { lang: said.english ? "en" : undefined }, said.text));
+        return h("li", {}, h("strong", {}, nameOf(a.cardId, cards)), ": ", h("span", { lang: said.english ? "en" : undefined }, said.text));
       }),
     ),
   );
@@ -139,7 +144,7 @@ function whyList(reasons: Approximate[], cards: CardIndex): VNode {
     { class: "sim-approx", role: "list" },
     reasons.map((a) => {
       const said = reasonText(a.reason);
-      return h("li", {}, h("strong", {}, cards.name(a.cardId)), ": ", h("span", { lang: said.english ? "en" : undefined }, said.text));
+      return h("li", {}, h("strong", {}, nameOf(a.cardId, cards)), ": ", h("span", { lang: said.english ? "en" : undefined }, said.text));
     }),
   );
 }
@@ -156,12 +161,17 @@ function blocked(title: string, ids: string[], cards: CardIndex, hint?: string, 
   ];
 }
 
+/** A blocked hero power or trinket may only lack what it needs: the hint says so. */
+function blockedHint(ids: string[], kitIds: ReadonlySet<string> | undefined): string {
+  return ids.some((id) => kitIds?.has(id)) ? sm("result.notModelledKitHint") : sm("result.notModelledHint");
+}
+
 function answerView(a: Answer, props: ResultProps): VNode[] {
   switch (a.kind) {
     case "odds":
       return odds(a, props);
     case "not_modelled":
-      return [...blocked(sm("result.notModelled"), a.notModelled, props.cards, sm("result.notModelledHint"), a.reasons), approxFold(a.approximate, props.cards)].filter(
+      return [...blocked(sm("result.notModelled"), a.notModelled, props.cards, blockedHint(a.notModelled, props.kitIds), a.reasons), approxFold(a.approximate, props.cards)].filter(
         (n): n is VNode => n !== null,
       );
     case "no_card_data":

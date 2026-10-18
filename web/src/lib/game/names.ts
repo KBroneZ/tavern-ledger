@@ -5,7 +5,7 @@
 // the table once before it draws the game (loadCardNames); a card the data
 // does not know, or a page drawn before the table arrived, shows its id.
 import { lang } from "../i18n.ts";
-import type { CardNameFile } from "../sim/cardFile.ts";
+import type { CardNameFile, KitLists } from "../sim/cardFile.ts";
 import { CardIndex, readCardFile } from "../sim/cards.ts";
 import { giftName } from "./gifts.ts";
 
@@ -18,7 +18,12 @@ export interface CardNames {
   names: ReadonlyMap<string, string>;
   /** A trinket's card database id to its card id. */
   trinkets: ReadonlyMap<number, string>;
+  /** The simulator's choices of hero powers and trinkets (T-628); absent before the file had them. */
+  kit?: KitLists;
 }
+
+/** No hero power or trinket to choose from. */
+export const NO_KIT_LISTS: KitLists = { power: [], lesser: [], greater: [] };
 
 const NONE: CardNames = { cards: null, names: new Map(), trinkets: new Map() };
 let table: CardNames = NONE;
@@ -59,7 +64,7 @@ export function trinketName(dbfId: number): string | null {
  * The name file as read: an entry that is not an id and a short name is
  * dropped (the file is the site's own, but it is read like any data).
  */
-export function readNameFile(value: unknown): Pick<CardNames, "names" | "trinkets"> {
+export function readNameFile(value: unknown): Pick<CardNames, "names" | "trinkets" | "kit"> {
   const file = (typeof value === "object" && value !== null ? value : {}) as Partial<CardNameFile>;
   const names = new Map<string, string>();
   for (const [id, name] of Object.entries(file.names ?? {})) {
@@ -70,7 +75,10 @@ export function readNameFile(value: unknown): Pick<CardNames, "names" | "trinket
     const n = Number(dbf);
     if (Number.isInteger(n) && n > 0 && typeof id === "string" && names.has(id)) trinkets.set(n, id);
   }
-  return { names, trinkets };
+  // Only named card ids, each once, in each list.
+  const list = (v: unknown): string[] => (Array.isArray(v) ? [...new Set(v.filter((id): id is string => typeof id === "string" && names.has(id)))] : []);
+  const kit = file.kit;
+  return { names, trinkets, kit: { power: list(kit?.power), lesser: list(kit?.lesser), greater: list(kit?.greater) } };
 }
 
 /** Past this the page draws the game without names (ids show) rather than wait. */
