@@ -236,18 +236,15 @@ impl Sides {
 const TRIGGER_CARD_TYPES: [&str; 3] = ["MINION", "HERO_POWER", "BATTLEGROUND_TRINKET"];
 
 /// A Tavern spell cast for the next combat (Upper Hand, Brood of Nozdormu)
-/// firing at its start (parser revision 16, T-628): the game keeps it in the
-/// Secret zone and its block is an `OBJECTIVE` trigger. The Old God, kept
-/// there too, fires its objective in the same way after attacks and with no
-/// keyword before them; it never starts or joins the replay.
+/// firing at its start (parser revision 16, T-628): a spell the game keeps
+/// in the Secret zone ([`crate::collector::is_hidden_secret`]: not the Old
+/// God or a quest, which fire their objectives the same way) whose block is
+/// an `OBJECTIVE` trigger.
 fn is_prepared_spell(e: &Entity, keyword: Option<&str>) -> bool {
     e.is("CARDTYPE", "SPELL")
-        && e.is("ZONE", "SECRET")
         && keyword == Some("OBJECTIVE")
-        && e.card_id.as_deref() != Some(OLD_GOD)
+        && crate::collector::is_hidden_secret(e)
 }
-
-const OLD_GOD: &str = "BG_OldGod";
 
 /// Cards a damage can be put down to when their block deals it. Anything
 /// else (the game, a player, an enchantment) passes it to the block around.

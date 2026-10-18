@@ -35,6 +35,12 @@ use crate::state::{Board, Entity};
 pub const MAX_KIT_CARDS: usize = 4;
 /// A number a card's text shows above this, or below 0, is not kept (0).
 pub const MAX_KIT_NUMBER: i64 = i32::MAX as i64;
+/// The highest slot a hero power or trinket has (a trinket's hero-power
+/// slot); a slot outside 0 to this is kept as 0 ("none given").
+pub const MAX_KIT_SLOT: i64 = 3;
+/// The board positions a named minion can have; outside them it is not
+/// kept (no target).
+const BOARD_POSITIONS: std::ops::RangeInclusive<i64> = 1..=7;
 
 const COUNTER_TAGS: [&str; 5] = [
     "TAG_SCRIPT_DATA_NUM_1",
@@ -103,6 +109,7 @@ pub fn kit_of(board: &Board, controller: i64) -> HeroKit {
             .iter()
             .find(|m| m.id == id)
             .map(|m| m.int("ZONE_POSITION"))
+            .filter(|p| BOARD_POSITIONS.contains(p))
     };
     // Only a hero power names or holds a minion (Rapid Reanimation, Glorious
     // Gloop, Lock and Load); a trinket keeps its card, slot and numbers.
@@ -117,7 +124,9 @@ pub fn kit_of(board: &Board, controller: i64) -> HeroKit {
         Some(KitCard {
             held: named.and_then(|id| held(board, id)),
             card_id,
-            slot: e.int(slot_tag),
+            slot: Some(e.int(slot_tag))
+                .filter(|s| (0..=MAX_KIT_SLOT).contains(s))
+                .unwrap_or(0),
             counters: COUNTER_TAGS.map(|t| e.int(t)).map(|n| {
                 if (0..=MAX_KIT_NUMBER).contains(&n) {
                     n

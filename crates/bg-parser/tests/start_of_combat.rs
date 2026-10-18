@@ -726,3 +726,51 @@ fn a_minion_keeps_the_numbers_its_text_shows_and_saves_them_on_the_replay_only()
     let boards = round["entries"].to_string();
     assert!(!boards.contains("\"counters\":[56"));
 }
+
+/// `solo()` with `extra` lines added before the combat turn.
+fn solo_plus(extra: Vec<String>) -> Vec<String> {
+    let mut l = solo();
+    let turn = l
+        .iter()
+        .position(|x| x.contains("tag=TURN value=2"))
+        .expect("combat turn");
+    l.splice(turn..turn, extra);
+    l
+}
+
+#[test]
+fn slots_and_targets_are_kept_only_within_what_a_board_has() {
+    // A slot no trinket has, and a named minion past the seventh place.
+    let r = report(&solo_plus(vec![
+        tag("51", "TAG_SCRIPT_DATA_NUM_6", "9"),
+        tag("22", "ZONE_POSITION", "9"),
+    ]));
+    let kit = r.rounds[0].entries[0].kit.clone().expect("kit");
+    assert_eq!(kit.trinkets[0].card_id, "SYN_LESSER");
+    assert_eq!(kit.trinkets[0].slot, 0);
+    assert_eq!(kit.powers[0].target, None);
+}
+
+#[test]
+fn a_trinket_never_names_or_holds_a_minion() {
+    let held = entity(
+        1,
+        71,
+        "SYN_HELD",
+        &[
+            ("CARDTYPE", "MINION".into()),
+            ("CONTROLLER", "2".into()),
+            ("ZONE", "SETASIDE".into()),
+            ("ATK", "6".into()),
+            ("HEALTH", "10".into()),
+        ],
+    );
+    for named in ["22", "71"] {
+        let mut extra = held.clone();
+        extra.push(tag("51", "TAG_SCRIPT_DATA_ENT_1", named));
+        let r = report(&solo_plus(extra));
+        let trinket = r.rounds[0].entries[0].kit.clone().expect("kit").trinkets[0].clone();
+        assert_eq!(trinket.card_id, "SYN_LESSER");
+        assert_eq!((trinket.target, trinket.held), (None, None), "{named}");
+    }
+}

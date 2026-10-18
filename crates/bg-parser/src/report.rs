@@ -233,7 +233,8 @@ fn no_values(v: &Option<CombatValues>) -> bool {
 pub const SAVE_OPPONENT_KIT: bool = true;
 
 /// One side stepping into a combat. `board` is None when the fight never
-/// plays out in the local log: unknown, not empty.
+/// plays out in the local log: unknown, not empty. Serialized by hand
+/// (below): a field added here is saved only once written there.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CombatEntry {
     pub side: Side,

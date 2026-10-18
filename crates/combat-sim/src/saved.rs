@@ -87,7 +87,8 @@ pub fn minion(v: &Value, facts: &FactsOf) -> Option<Minion> {
                     .collect()
             })
             .unwrap_or_default(),
-        // Not in the saved report (T-628).
+        // Saved on replay minions since parser revision 16 (T-628), not read
+        // here yet: the boards read here are taken at the first attack.
         counters: [0, 0],
         card_id,
     })
@@ -117,8 +118,9 @@ const MAX_KIT_CARDS: usize = 4;
 /// revision 16, T-628), in round `round`: `None` when the record has none
 /// (an older parser, an entry without a board, or a side the parser does
 /// not save) or anything in it is not what the parser writes (unknown, never
-/// guessed). A named minion's board position becomes its index. Not part of
-/// [`board`]: the boards it reads are taken at the first attack.
+/// guessed). A named minion's board position becomes its index on the board
+/// before start of combat (the replay's start; positions run 1 to n). Not
+/// part of [`board`]: the boards it reads are taken at the first attack.
 pub fn kit(entry: &Value, round: Option<u32>, facts: &FactsOf) -> Option<Kit> {
     let k = entry.get("kit")?;
     entry.get("board")?.as_array()?;

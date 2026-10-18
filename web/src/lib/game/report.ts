@@ -361,7 +361,7 @@ function kitCard(r: Reader, v: unknown, power: boolean, own: boolean): KitCard |
     counters,
     target: power ? r.int(o.target, 1, 7) : null,
     // Never a minion the opponent holds (D-164): one there is dropped.
-    held: power && own && !absent(o.held) ? minion(r, o.held) : null,
+    held: power && own && !absent(o.held) ? { ...minion(r, o.held), buffs: null } : null,
   };
 }
 
