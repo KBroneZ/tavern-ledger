@@ -259,3 +259,57 @@ fn hopebringer_is_played_before_start_of_combat_with_its_numbers() {
     };
     assert!(odds.coverage.is_exact(), "{:?}", odds.coverage);
 }
+
+#[test]
+fn with_start_of_combat_off_kits_and_numbers_change_no_odds() {
+    // Boards taken after start of combat: every played power, trinket and
+    // minion number is already on them.
+    let mut hope = Minion::new("BG36_364", 3, 3).tier(3);
+    hope.counters = [40, 30];
+    let plain_hope = Minion::new("BG36_364", 3, 3).tier(3);
+    let mut wax = KitCard::new("TB_BaconShop_HP_037a");
+    wax.counters[2] = 9;
+    let kitted = Warband {
+        kit: Some(Kit {
+            powers: vec![wax],
+            trinkets: vec![KitCard::new("BG30_MagicItem_902")],
+        }),
+        tavern_tier: Some(1),
+        ..Warband::new(vec![hope, plain(2, 2)])
+    };
+    let bare = Warband {
+        tavern_tier: Some(1),
+        ..Warband::new(vec![plain_hope, plain(2, 2)])
+    };
+    let odds = |w: &Warband| match verdict(w, false) {
+        Verdict::Odds(o) => (o.won, o.tied, o.lost, o.damage_dealt, o.damage_taken),
+        Verdict::NotModelled(c) => panic!("{c:?}"),
+    };
+    assert_eq!(odds(&kitted), odds(&bare));
+}
+
+#[test]
+fn runic_arcanists_spell_gap_matters_only_when_its_start_of_combat_is_played() {
+    let arcanist = || Minion::new("BG36_245", 2, 4).tier(4);
+    let player = with_kit(vec![arcanist()], &[], &[]);
+    let Verdict::Odds(odds) = verdict(&player, false) else {
+        panic!()
+    };
+    assert!(odds.coverage.is_exact(), "{:?}", odds.coverage);
+    let Verdict::Odds(odds) = verdict(&player, true) else {
+        panic!()
+    };
+    assert_eq!(odds.coverage.approximate.len(), 1, "{:?}", odds.coverage);
+    // With the board's spell upgrades known it is exact again.
+    let upgraded = Warband {
+        values: combat_sim::GameValues {
+            spell: (1, 2),
+            ..Default::default()
+        },
+        ..with_kit(vec![arcanist()], &[], &[])
+    };
+    let Verdict::Odds(odds) = verdict(&upgraded, true) else {
+        panic!()
+    };
+    assert!(odds.coverage.is_exact(), "{:?}", odds.coverage);
+}

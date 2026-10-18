@@ -146,7 +146,8 @@ pub struct Minion {
     /// [`crate::gifts`]. Empty for most minions.
     pub gifts: Vec<String>,
     /// The two numbers its text shows, for a card whose start-of-combat buff
-    /// grows during the game (Hopebringer, T-628); 0 where not given.
+    /// grows during the game (Hopebringer, Ultraviolet Ascendant; T-628);
+    /// 0 where not given.
     pub counters: [i32; 2],
 }
 

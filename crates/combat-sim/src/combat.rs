@@ -417,9 +417,10 @@ impl<'a> Combat<'a> {
         self.first_by_count().unwrap_or(before)
     }
 
-    /// Some board of `sides` has a minion that attacks at the start of combat.
+    /// Some board of `sides` has a minion, hero power or trinket that
+    /// attacks at the start of combat.
     pub(crate) fn has_immediate_attackers(&self, sides: [bool; 2]) -> bool {
-        (0..2).any(|s| sides[s] && !self.immediate_attackers(s).is_empty())
+        (0..2).any(|s| sides[s] && (!self.immediate_attackers(s).is_empty() || self.kit_swings(s)))
     }
 
     /// The side with more minions attacks first; `None` on equal counts (a

@@ -91,7 +91,9 @@ impl Coverage {
                         push_unique(&mut cov.not_modelled, id.clone());
                     }
                     if let Fidelity::Approximate(why) = rules.fidelity {
+                        let unplayed = !start_of_combat && spell_at_start_only(why, &rules);
                         if !played_with(why, values)
+                            && !unplayed
                             && !cov.approximate.iter().any(|(c, _)| c == id)
                         {
                             cov.approximate.push((id.clone(), why));
@@ -291,6 +293,17 @@ fn played_with(why: &str, values: &GameValues) -> bool {
         w if w == crate::cards_round2::SPELL => values.spell != (0, 0),
         _ => false,
     }
+}
+
+/// True when the card's gap is a Tavern spell's values and its only effect is
+/// at the start of combat (Runic Arcanist, T-628): on a board taken after
+/// start of combat its casts are already there.
+fn spell_at_start_only(why: &str, rules: &cards::CardRules) -> bool {
+    why == crate::cards_round2::SPELL
+        && rules
+            .triggers
+            .iter()
+            .all(|t| matches!(t, Trigger::StartOfCombat(_)))
 }
 
 /// Tribes a card on this warband can give Reborn to in combat.

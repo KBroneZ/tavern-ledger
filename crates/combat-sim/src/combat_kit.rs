@@ -168,6 +168,17 @@ impl Combat<'_> {
         }
     }
 
+    /// True when the board `side` fights with now has a power or trinket
+    /// whose minions attack at the start of combat (Wingmen).
+    pub(super) fn kit_swings(&self, side: usize) -> bool {
+        self.kit_now(side).iter().any(|k| {
+            k.play
+                .start
+                .iter()
+                .any(|a| matches!(a, KitAction::AttackImmediately(_)))
+        })
+    }
+
     /// True when the board `side` fights with now plays a power or trinket
     /// at the start of combat.
     pub(super) fn has_kit_start(&self, side: usize) -> bool {

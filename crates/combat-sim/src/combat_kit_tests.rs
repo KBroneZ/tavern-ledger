@@ -273,3 +273,117 @@ fn ultraviolet_ascendant_buffs_the_other_elementals_by_its_numbers() {
         assert_eq!(stats(c, 0), [(3, 3), (6, 6), (1, 1)]);
     });
 }
+
+#[test]
+fn wingmen_buffs_both_ends_and_they_attack() {
+    // +2/+1 to both ends, then each attacks the lone 0/5: 3 + 3 damage.
+    let wingmen = card("TB_BaconShop_HP_069", NONE);
+    let player = band(
+        vec![plain(1, 2), plain(0, 3), plain(1, 2)],
+        vec![wingmen],
+        Vec::new(),
+    );
+    after_start(player, vec![plain(0, 7)], |c| {
+        assert_eq!(stats(c, 0), [(3, 3), (0, 3), (3, 3)]);
+        assert_eq!(stats(c, 1), [(0, 1)]);
+    });
+    // One minion: buffed once, attacks once; a board with none of the enemy
+    // left does not swing again.
+    let wingmen = card("TB_BaconShop_HP_069", NONE);
+    let player = band(vec![plain(3, 1)], vec![wingmen], Vec::new());
+    after_start(player, vec![plain(0, 5)], |c| {
+        assert_eq!(stats(c, 0), [(5, 2)]);
+        assert!(c.sides[1].units.is_empty());
+    });
+}
+
+#[test]
+fn wingmens_swings_keep_the_count_from_before_them() {
+    // As for a minion that attacks immediately: who attacks first is the
+    // count before the swings (here the coin, 1), not after them.
+    let wingmen = card("TB_BaconShop_HP_069", NONE);
+    let player = band(vec![plain(3, 3), plain(3, 3)], vec![wingmen], Vec::new());
+    let opponent = band(vec![plain(1, 1), plain(1, 1)], Vec::new(), Vec::new());
+    let p = Prepared::new(&player, &opponent, true);
+    let mut rng = Rng::new(11);
+    let mut c = Combat::new(&p, &mut rng);
+    assert!(c.has_immediate_attackers([true, false]));
+    c.start_of_combat(1, [true, true]);
+    assert_eq!(
+        c.first_after_start(1, c.has_immediate_attackers([true, true])),
+        1
+    );
+}
+
+#[test]
+fn golden_forms_carry_their_own_numbers() {
+    // Golden Amber Guardian: two other Dragons.
+    let dragon = || of_type("BG25_001", Tribes::DRAGON, 1, 1);
+    let amber = Minion::new("BG24_500_G", 4, 10)
+        .tribe(Tribes::DRAGON)
+        .tier(3);
+    both_start(
+        vec![amber, dragon(), dragon(), dragon()],
+        vec![plain(0, 9)],
+        |c| {
+            let shields = keywords(c, 0).iter().filter(|k| k.contains(SHIELD)).count();
+            assert_eq!(shields, 2);
+        },
+    );
+    // Golden Runic Arcanist: Shiny Ring four times.
+    let arcanist = Minion::new("BG36_245_G", 4, 8).tier(4);
+    both_start(vec![arcanist], vec![plain(0, 9)], |c| {
+        assert_eq!(stats(c, 0), [(8, 12)]);
+    });
+    // Golden Boom-in-a-Box: 3 damage twice.
+    let boom = Minion::new("BG36_620_G", 4, 12).tier(5);
+    both_start(vec![boom], vec![plain(1, 9)], |c| {
+        assert_eq!(stats(c, 1), [(1, 3)]);
+    });
+    // Golden Ultraviolet Ascendant without its numbers: the printed +6/+6.
+    let uv = Minion::new("BG31_810_G", 6, 6)
+        .tribe(Tribes::ELEMENTAL)
+        .tier(3);
+    let elemental = of_type("BG32_236", Tribes::ELEMENTAL, 1, 1);
+    both_start(vec![uv, elemental], vec![plain(0, 9)], |c| {
+        assert_eq!(stats(c, 0), [(6, 6), (7, 7)]);
+    });
+}
+
+#[test]
+fn protective_ring_shields_at_most_four_pirates() {
+    let ring = card("BG35_MagicItem_711", NONE);
+    let pirates = vec![of_type("BG26_361", Tribes::PIRATE, 1, 1); 6];
+    let player = band(pirates, Vec::new(), vec![ring]);
+    after_start(player, vec![plain(0, 9)], |c| {
+        let shields = keywords(c, 0).iter().filter(|k| k.contains(SHIELD)).count();
+        assert_eq!(shields, 4);
+    });
+}
+
+#[test]
+fn a_duos_board_that_comes_in_plays_its_own_kit_only() {
+    // The teammate's Fire Invocation doubles the left-most of the board that
+    // comes in; the first board's Holy Mallet is not played again.
+    let first = band(
+        vec![plain(1, 1)],
+        Vec::new(),
+        vec![card("BG30_MagicItem_902", NONE)],
+    );
+    let second = band(
+        vec![plain(3, 9)],
+        vec![card("BG22_HERO_001p_t2", NONE)],
+        Vec::new(),
+    );
+    let player = crate::model::Team::duo(first, second);
+    let opponent = crate::model::Team::solo(band(vec![plain(0, 9)], Vec::new(), Vec::new()));
+    let p = Prepared::teams(&player, &opponent, true);
+    let mut rng = Rng::new(11);
+    let mut c = Combat::new(&p, &mut rng);
+    c.start_of_combat(0, [true, true]);
+    assert_eq!(keywords(&c, 0), [SHIELD]);
+    c.sides[0].units.clear();
+    c.bring_in_teammates();
+    assert_eq!(stats(&c, 0), [(6, 9)]);
+    assert_eq!(keywords(&c, 0), [Keywords::NONE]);
+}

@@ -545,18 +545,24 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
     // (golden: two), T-628.
     ("BG24_500", exact(&[Trigger::StartOfCombat(&[amber(1)])])),
     // Runic Arcanist: casts Shiny Ring ("give your minions +1/+1") twice
-    // (golden: four times), with the side's spell upgrades from the board's
-    // game-long values (T-628); a board taken after start of combat already
-    // has the casts.
+    // (golden: four times), with the side's spell upgrades (T-628). Its gap
+    // matters only when its start of combat is played: a board taken after
+    // it already has the casts.
     (
         "BG36_245",
-        exact(&[Trigger::StartOfCombat(&[SHINY_RING, SHINY_RING])]),
+        approx(
+            crate::cards_round2::SPELL,
+            &[Trigger::StartOfCombat(&[SHINY_RING, SHINY_RING])],
+        ),
     ),
     (
         "BG36_245_G",
-        exact(&[Trigger::StartOfCombat(&[
-            SHINY_RING, SHINY_RING, SHINY_RING, SHINY_RING,
-        ])]),
+        approx(
+            crate::cards_round2::SPELL,
+            &[Trigger::StartOfCombat(&[
+                SHINY_RING, SHINY_RING, SHINY_RING, SHINY_RING,
+            ])],
+        ),
     ),
     ("BG26_805", exact(&[Trigger::StartOfCombatUnmodelled])),
     ("BG26_354", exact(&[Trigger::StartOfCombatUnmodelled])),

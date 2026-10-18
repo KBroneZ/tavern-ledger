@@ -112,6 +112,15 @@ mod tests {
     }
 
     #[test]
+    fn every_played_power_or_trinket_is_listed_as_acting_at_the_start_of_combat() {
+        let mut seen = std::collections::BTreeSet::new();
+        for (id, _) in crate::kit_effects::PLAYED {
+            assert!(seen.insert(*id), "{id} is played twice");
+            assert!(has_start_of_combat(id), "{id} is played but not listed");
+        }
+    }
+
+    #[test]
     fn a_power_or_trinket_nobody_reviewed_is_unknown() {
         assert_eq!(effect("BG99_HERO_999p"), None);
         assert_eq!(
