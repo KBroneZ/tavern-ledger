@@ -196,6 +196,11 @@ jobs:
       - name: Desktop tests
         run: cargo test --locked -p desktop -p game-memory
 
+      # The Microsoft Store edition (T-379): same code with the `store`
+      # feature (no self-update, the Store's start-up task).
+      - name: Desktop tests, Store edition
+        run: cargo test --locked -p desktop --features store
+
   # The website's combat engine is committed as a binary (the Pages build has
   # no Rust). A fresh build must give the same bytes, or the committed file
   # is not what the sources say. The build embeds Windows path separators

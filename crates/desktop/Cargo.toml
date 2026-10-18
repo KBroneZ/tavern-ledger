@@ -10,6 +10,11 @@ description = "Tavern Ledger desktop app (Tauri)"
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
+[features]
+# The Microsoft Store edition (D-158, T-379): no self-update, the Store's
+# start-up task in place of the Run key. Read in src/edition.rs only.
+store = []
+
 [dependencies]
 tauri = { version = "2.12", features = ["tray-icon"] }
 tauri-plugin-autostart = "=2.7.0"

@@ -23,6 +23,11 @@
   const failed = (error) => problem(t("updates.problem", { error: I18n.backend(String(error)) }));
 
   function render(view) {
+    $("update-setting").hidden = !Words.shown(view);
+    if (!Words.shown(view)) {
+      $("update-notice").hidden = true;
+      return;
+    }
     const off = view.state === "off";
     $("update-current").textContent = t("updates.current", { version: view.current });
     const auto = $("update-auto");
@@ -60,5 +65,10 @@
       await onEvent("update-changed", (e) => render(e.payload));
       render(await call("update_status"));
     })
-    .catch(failed);
+    .catch((error) => {
+      // The section starts hidden (so the Store edition never flashes it);
+      // when the app cannot say which edition this is, show it with the error.
+      $("update-setting").hidden = false;
+      failed(error);
+    });
 })();

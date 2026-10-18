@@ -37,7 +37,11 @@
   // Whether "Check now" can do anything right now.
   const canCheck = (view) => ["idle", "latest", "failed"].includes(view.state);
 
-  const api = { line, notice, canCheck };
+  // Whether the Updates setting and the notice exist at all: the Microsoft
+  // Store edition says nothing about updates, the Store delivers them.
+  const shown = (view) => view.state !== "store";
+
+  const api = { line, notice, canCheck, shown };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLUpdateWords = api;
 })();
