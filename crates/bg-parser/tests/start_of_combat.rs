@@ -774,3 +774,75 @@ fn a_trinket_never_names_or_holds_a_minion() {
         assert_eq!((trinket.target, trinket.held), (None, None), "{named}");
     }
 }
+
+#[test]
+fn the_legs_between_their_start_of_combat_and_first_attack_are_given_live() {
+    // D-165: the overlay's early estimate reads the boards as each leg began
+    // while the game plays its start of combat.
+    let lines = solo();
+    let at = |wanted: &str| lines.iter().position(|l| l == wanted).expect(wanted);
+    let (trigger, attack) = (
+        at(&block("TRIGGER", "40", 0)),
+        at(&block("ATTACK", "20", 0)),
+    );
+    let mut reader = LogReader::default();
+    lines[..trigger].iter().for_each(|l| reader.feed(l));
+    assert_eq!(
+        reader.combat_legs_opening_now(),
+        Some(0),
+        "the game's setup and a pet are not its start"
+    );
+    reader.feed(&lines[trigger]);
+    assert_eq!(reader.combat_legs_opening_now(), Some(2));
+    let begun = reader.snapshot_current().expect("the game is on");
+    let leg = |side: Side| {
+        begun
+            .opening
+            .iter()
+            .find(|l| l.side == side)
+            .expect("a leg begun")
+    };
+    let opp = leg(Side::Opponent);
+    assert_eq!(opp.round, 1);
+    assert_eq!(
+        stats(&opp.board),
+        [("SYN_FOE_A", 4, 4), ("SYN_FOE_B", 1, 2)]
+    );
+    assert_eq!(opp.kit.powers[0].card_id, "SYN_FOE_POWER");
+    assert_eq!(
+        stats(&leg(Side::Own).board),
+        [("SYN_OWN_A", 2, 3), ("SYN_OWN_B", 1, 1)]
+    );
+    assert!(
+        begun.rounds.iter().all(|r| r.number != 1),
+        "no board of the combat has reached its first attack"
+    );
+
+    // At the first attack the legs become the round's entries, with the
+    // same boards before start of combat and kits.
+    lines[trigger + 1..=attack]
+        .iter()
+        .for_each(|l| reader.feed(l));
+    assert_eq!(reader.combat_legs_opening_now(), Some(0));
+    let fought = reader.snapshot_current().expect("the game is on");
+    assert!(fought.opening.is_empty());
+    let round = fought
+        .rounds
+        .iter()
+        .find(|r| r.number == 1)
+        .expect("combat 1");
+    for side in [Side::Own, Side::Opponent] {
+        let e = round
+            .entries
+            .iter()
+            .find(|e| e.side == side)
+            .expect("entry");
+        let o = leg(side);
+        assert_eq!(e.before.as_ref(), Some(&o.board), "{side:?}");
+        assert_eq!(e.kit.as_ref(), Some(&o.kit), "{side:?}");
+        assert_eq!(e.player_id, o.player_id, "{side:?}");
+    }
+    // Nothing of it is saved.
+    let json = serde_json::to_string(&fought).expect("json");
+    assert!(!json.contains("opening"));
+}

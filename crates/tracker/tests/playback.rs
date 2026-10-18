@@ -261,3 +261,80 @@ fn the_combat_boards_show_when_the_game_plays_them_in_not_at_the_end() {
     watcher.poll().unwrap();
     assert_eq!(watcher.live_combat_round(), None);
 }
+
+/// The first combat of a fixture whose legs begin a start of combat before
+/// their first attack, by line number: (its `TURN`, the line where the legs
+/// begin, its first attack, the next shop turn's `TURN`).
+fn first_combat_with_a_start(lines: &[&str]) -> Option<(usize, usize, usize, usize)> {
+    let mut reader = LogReader::default();
+    let mut begun: Option<(i64, usize)> = None;
+    for (i, l) in lines.iter().enumerate() {
+        reader.feed(l);
+        let opening = reader.combat_legs_opening_now().unwrap_or(0);
+        if begun.is_none() && opening == 2 && reader.combat_boards_in_now().unwrap_or(0) == 0 {
+            begun = Some((reader.combat_round_now()?, i));
+        }
+        if let Some((round, at)) = begun {
+            if reader.combat_boards_in_now().unwrap_or(0) > 0 {
+                let turn = |n: i64| {
+                    lines
+                        .iter()
+                        .position(|l| l.contains(&format!("Entity=GameEntity tag=TURN value={n}")))
+                };
+                return Some((turn(round * 2)?, at, i, turn(round * 2 + 1)?));
+            }
+        }
+    }
+    None
+}
+
+/// D-165: while the screen plays a combat's start of combat, the odds' input
+/// is the early estimate from the boards before it; from the first attack on,
+/// the boards then.
+#[test]
+fn the_estimate_shows_when_the_game_plays_the_start_of_combat() {
+    let log = fixture("real/b253216_solo");
+    let lines: Vec<&str> = log.lines().collect();
+    let (start, begun, attack, shop) =
+        first_combat_with_a_start(&lines).expect("a combat with a start of combat");
+
+    let root = temp_dir();
+    let logs = root.join("Logs");
+    fs::create_dir_all(logs.join(SESSION)).unwrap();
+    let power = logs.join(SESSION).join("Power.log");
+    let mut watcher = Watcher::new(&logs, Store::open(&root.join("data")).unwrap());
+    let own = |lines: &[&str]| lines.iter().map(|l| l.to_string()).collect::<Vec<_>>();
+    let input = |watcher: &Watcher| {
+        let lobby = watcher.live_lobby();
+        let live = LiveFacts {
+            combat_round: watcher.live_combat_round(),
+            lobby: &lobby,
+            damage_cap: watcher.live_damage_cap(),
+        };
+        odds_input(watcher.live_report().expect("a game is on"), live)
+    };
+
+    append(&power, &played_along(&lines[..start]));
+    watcher.poll().unwrap();
+    // The whole combat and the shop turn after it arrive in one poll.
+    let burst_end = (shop + 10).min(lines.len());
+    append(&power, &own(&lines[start..burst_end]));
+    watcher.poll().unwrap();
+    assert_eq!(watcher.live_combat_round(), None, "nothing played yet");
+
+    // The screen plays the combat in, up to its start of combat.
+    append(&power, &played_copies(&lines[start..=begun]));
+    watcher.poll().unwrap();
+    let early = input(&watcher).expect("the estimate's input");
+    assert!(early.estimate, "the boards before start of combat");
+
+    // The screen plays the start of combat and the first attack.
+    append(&power, &played_copies(&lines[begun + 1..=attack]));
+    watcher.poll().unwrap();
+    let odds = input(&watcher).expect("the odds' input");
+    assert!(!odds.estimate, "the boards at the first attack");
+    assert_eq!(
+        (odds.round, odds.opponent_seat),
+        (early.round, early.opponent_seat)
+    );
+}

@@ -613,3 +613,6 @@ fn duos_boards_play_with_their_own_game_long_values() {
     assert_eq!(foe.first.values.blood_gem, (4, 4), "seat 5");
     assert_eq!(foe.second.expect("two").values.undead_attack, 5);
 }
+
+#[path = "odds_estimate_tests.rs"]
+mod estimate;

@@ -53,6 +53,17 @@ struct OpenLeg {
 /// (side, hero card id, combat player id hint, board or None if not visible)
 pub type RawEntry = (Side, Option<String>, Option<i64>, Option<Vec<Minion>>);
 
+/// A leg begun and not at its first attack yet: see [`Collector::opening`].
+pub type OpenedLeg = (
+    i64,
+    Side,
+    Option<String>,
+    Option<i64>,
+    Vec<Minion>,
+    HeroKit,
+    CombatValues,
+);
+
 /// Hero card ids whose skin link is kept per game: far more than a lobby shows.
 pub const MAX_SKIN_LINKS: usize = 256;
 /// Database ids are positive and far below this.
@@ -667,6 +678,41 @@ impl Collector {
         }
         self.open_own = None;
         self.open_opp = None;
+    }
+
+    /// The legs open now whose start of combat has begun (their board and
+    /// kit taken), before their first attack (T-628, D-165): (round, side,
+    /// hero, combat player id hint, board, kit, the side's game-long values).
+    pub(crate) fn opening(&self) -> Vec<OpenedLeg> {
+        let round = self.turn() / 2;
+        [
+            (Side::Own, &self.open_own),
+            (Side::Opponent, &self.open_opp),
+        ]
+        .into_iter()
+        .filter_map(|(side, leg)| {
+            let leg = leg.as_ref()?;
+            let (board, kit) = leg.before.clone()?;
+            let (hero, hint) = self.current(side);
+            Some((
+                round,
+                side,
+                hero,
+                hint,
+                board,
+                kit,
+                self.combat_values(side),
+            ))
+        })
+        .collect()
+    }
+
+    /// How many legs [`Collector::opening`] gives now, without copying them.
+    pub(crate) fn opening_count(&self) -> usize {
+        [&self.open_own, &self.open_opp]
+            .into_iter()
+            .filter(|leg| leg.as_ref().is_some_and(|l| l.before.is_some()))
+            .count()
     }
 
     /// The board and kit of the combat side `pid` now.

@@ -30,7 +30,7 @@ use clock::Clock;
 use collector::{hero_health, leaderboard_heroes, Collector};
 use hero_select::HeroOffer;
 use power::{card_names, classify, parse_power, Line, ParseError, REGEX_PARSING_ERROR};
-use report::{CombatEntry, GameReport, LobbyPlayer, LobbySlot, Round, Status};
+use report::{CombatEntry, GameReport, LobbyPlayer, LobbySlot, OpeningLeg, Round, Status};
 use state::Entity;
 
 /// The parser's crate version, saved with every game (T-107).
@@ -367,6 +367,15 @@ impl GameReader {
         Some(seen.iter().filter(|e| e.3.is_some()).count())
     }
 
+    /// How many legs of the combat the game is playing now have begun their
+    /// start of combat and not reached their first attack (the report's
+    /// `opening`, T-628, D-165); `None` in a shop turn or when the game could
+    /// not be read. Cheap, like [`GameReader::combat_boards_in_now`].
+    pub fn combat_legs_opening_now(&self) -> Option<usize> {
+        self.combat_round_now()?;
+        Some(self.collector.opening_count())
+    }
+
     /// The player's own board as it is now in a shop turn (T-605): what the
     /// player sees on their side of the tavern, with the lasting keywords the
     /// simulator reads. `None` in a combat turn, before the first shop turn,
@@ -551,6 +560,15 @@ impl LogReader {
     pub fn combat_boards_in_now(&self) -> Option<usize> {
         self.in_progress_index()?;
         self.current.as_ref()?.combat_boards_in_now()
+    }
+
+    /// How many legs of the combat of the Battlegrounds game in progress are
+    /// between their start of combat and their first attack (see
+    /// [`GameReader::combat_legs_opening_now`]); `None` when no such game is
+    /// on or it is not a combat turn.
+    pub fn combat_legs_opening_now(&self) -> Option<usize> {
+        self.in_progress_index()?;
+        self.current.as_ref()?.combat_legs_opening_now()
     }
 
     /// The own board in a shop turn of the Battlegrounds game in progress
@@ -789,6 +807,7 @@ fn summarize(mut base: GameReport, c: &Collector) -> GameReport {
         .collect();
     base.shop_tribes = count_tribes(c);
     base.rounds = rounds_of(c, &heroes, complete.then(|| hero_health(own)));
+    base.opening = opening_of(c, &heroes);
     base.start_health = c.lobby_health.get(&0).cloned().unwrap_or_default();
     base.shop = Some(c.shop.record(&c.board, c.seats()));
     base.hero_select = c.hero_select.record();
@@ -816,6 +835,31 @@ fn lobby_health_from(heroes: &[(i64, &Entity)]) -> BTreeMap<i64, i64> {
     heroes
         .iter()
         .map(|(pid, hero)| (*pid, hero_health(hero)))
+        .collect()
+}
+
+/// The legs whose start of combat is under way now (T-628, D-165), with
+/// their seat as the round's entries get it.
+fn opening_of(c: &Collector, heroes: &[(i64, &Entity)]) -> Vec<OpeningLeg> {
+    let by_card = |card: &Option<String>| -> Option<i64> {
+        let card = card.as_ref()?;
+        heroes
+            .iter()
+            .rev()
+            .find(|(_, h)| h.card_id.as_ref() == Some(card))
+            .map(|(pid, _)| *pid)
+    };
+    c.opening()
+        .into_iter()
+        .map(|(round, side, hero, hint, board, kit, values)| OpeningLeg {
+            round,
+            side,
+            player_id: by_card(&hero).or(hint),
+            hero,
+            board,
+            kit,
+            values,
+        })
         .collect()
 }
 

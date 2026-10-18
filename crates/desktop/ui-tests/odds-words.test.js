@@ -19,6 +19,7 @@ const odds = (extra) => ({
   approximate: [],
   missing: [],
   start_of_combat: false,
+  estimate: false,
   ...extra,
 });
 
@@ -104,6 +105,25 @@ test("odds with a card played with a gap say so", () => {
   assert.equal(oddsView(odds({ approximate: ["SYN_A"] })).approx, true);
   assert.equal(oddsView(odds({ start_of_combat: true })).approx, true);
   assert.match(oddsView(odds({ approximate: ["SYN_A"] })).said, /approximate$/);
+});
+
+test("an early estimate says so until the first attack's odds come", () => {
+  for (const [lang, word] of [["en", "early estimate"], ["es", "estimación inicial"]]) {
+    I18n.setLang(lang);
+    const v = oddsView(odds({ estimate: true }));
+    assert.equal(v.kind, "odds");
+    assert.equal(v.estimate, true);
+    assert.equal(v.approx, false);
+    assert.ok(v.said.endsWith(word), v.said);
+    assert.match(v.about, lang === "en" ? /early estimate/ : /estimación inicial/);
+  }
+  I18n.setLang("en");
+  const both = oddsView(odds({ estimate: true, approximate: ["SYN_A"] }));
+  assert.match(both.said, /early estimate\. approximate$/);
+  assert.equal(oddsView(odds()).estimate, false);
+  // Only a plain true counts.
+  assert.equal(oddsView(odds({ estimate: "yes" })).estimate, false);
+  assert.equal(oddsView({ ...odds({ estimate: true }), gap: "no_board_seen" }).estimate, false);
 });
 
 test("Duos names the boards not in play yet instead of a number", () => {

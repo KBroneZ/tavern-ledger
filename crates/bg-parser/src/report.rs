@@ -417,6 +417,27 @@ pub struct GameReport {
     pub warnings: Vec<String>,
     pub problems: Vec<String>,
     pub not_in_log: Vec<String>,
+    /// The combat legs whose start of combat is under way now: begun, not at
+    /// their first attack yet (T-628, D-165), for the overlay's early
+    /// estimate. Empty in a shop turn and once a leg's first attack comes
+    /// (its entry then has the board). Rust-only and not serialized.
+    #[serde(skip)]
+    pub opening: Vec<OpeningLeg>,
+}
+
+/// A combat leg as it began, before its first attack (T-628, D-165).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OpeningLeg {
+    pub round: i64,
+    pub side: Side,
+    pub player_id: Option<i64>,
+    pub hero: Option<String>,
+    /// The board just before the leg's first start-of-combat effect.
+    pub board: Vec<Minion>,
+    /// The side's hero powers and trinkets then.
+    pub kit: HeroKit,
+    /// The side's game-long values now.
+    pub values: CombatValues,
 }
 
 impl GameReport {
@@ -450,6 +471,7 @@ impl GameReport {
             warnings: Vec::new(),
             problems: Vec::new(),
             not_in_log: NOT_IN_POWER_LOG.iter().map(|s| s.to_string()).collect(),
+            opening: Vec::new(),
         }
     }
 }

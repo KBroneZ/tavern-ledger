@@ -16,6 +16,7 @@
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
+use std::time::Instant;
 
 use bg_parser::report::{CombatEntry, GameReport, HeroKit, Round, Side};
 
@@ -265,6 +266,18 @@ struct ModeRun {
     /// line per combat moved whose boards differ.
     kept: BTreeMap<String, u32>,
     moved: Vec<String>,
+    /// How long each run took (microseconds), as the overlay's two moments
+    /// (D-165): with kits at the first attack, and the leg rule's from
+    /// before start of combat with it played.
+    micros_kits: Vec<u128>,
+    micros_before: Vec<u128>,
+}
+
+/// `play`, and how long it took in microseconds.
+fn timed(teams: &[Team; 2], start_of_combat: bool, options: &Options) -> (Played, u128) {
+    let start = Instant::now();
+    let played = play(teams, start_of_combat, options);
+    (played, start.elapsed().as_micros())
 }
 
 fn run_mode(combats: &[SocCombat], duos: bool, options: &Options) -> ModeRun {
@@ -272,7 +285,9 @@ fn run_mode(combats: &[SocCombat], duos: bool, options: &Options) -> ModeRun {
     for c in combats.iter().filter(|c| c.duos == duos) {
         let bare = [without_kits(&c.after[0]), without_kits(&c.after[1])];
         m.today.add(play(&bare, false, options), c.result);
-        m.kits.add(play(&c.after, false, options), c.result);
+        let (played, micros) = timed(&c.after, false, options);
+        m.micros_kits.push(micros);
+        m.kits.add(played, c.result);
         if let Some(before) = &c.before {
             m.with_before += 1;
             for id in Coverage::of_teams(&before[0], &before[1], true).not_modelled {
@@ -285,7 +300,8 @@ fn run_mode(combats: &[SocCombat], duos: bool, options: &Options) -> ModeRun {
         };
         m.from_before += 1;
         m.hidden += u32::from(!c.hidden.is_empty());
-        let played = play(before, true, options);
+        let (played, micros) = timed(before, true, options);
+        m.micros_before.push(micros);
         if *before != c.after {
             m.differs += 1;
             m.moved.push(moved_line(c, before, &played, options));
@@ -314,6 +330,24 @@ fn write_mode(out: &mut String, mode: &str, m: &ModeRun) {
             );
         }
     }
+}
+
+/// One mode's speed per combat, as the overlay's two moments (D-165).
+fn speed_line(mode: &str, m: &ModeRun) -> String {
+    let speed = |micros: &[u128]| {
+        let max = micros.iter().max().copied().unwrap_or(0) as f64 / 1000.0;
+        let mean = micros.iter().sum::<u128>() as f64 / 1000.0 / micros.len().max(1) as f64;
+        format!(
+            "{mean:.1} ms mean, {max:.1} ms at most ({} combats)",
+            micros.len()
+        )
+    };
+    format!(
+        "{mode}, speed per combat: with kits at the first attack {}; from before start of \
+         combat with it played {}.",
+        speed(&m.micros_kits),
+        speed(&m.micros_before)
+    )
 }
 
 /// `card id` n, most first.
@@ -356,13 +390,19 @@ pub fn render_start_of_combat(combats: &[SocCombat], options: &Options) -> Strin
     let _ = writeln!(out, "|---|---|---|---|---|---|---|---|");
     let mut kept: BTreeMap<String, u32> = BTreeMap::new();
     let mut moved: Vec<String> = Vec::new();
+    let mut speeds: Vec<String> = Vec::new();
     for (duos, mode) in [(false, "Solo"), (true, "Duos")] {
         let m = run_mode(combats, duos, options);
         write_mode(&mut out, mode, &m);
+        speeds.push(speed_line(mode, &m));
         for (id, n) in &m.kept {
             *kept.entry(id.clone()).or_insert(0) += n;
         }
         moved.extend(m.moved);
+    }
+    let _ = writeln!(out);
+    for line in &speeds {
+        let _ = writeln!(out, "{line}");
     }
     if !moved.is_empty() {
         let _ = writeln!(

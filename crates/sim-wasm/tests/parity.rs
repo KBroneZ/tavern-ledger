@@ -367,6 +367,7 @@ fn seen(b: &Value) -> Seen {
         board: log_board(b),
         tier: b["tier"].as_i64(),
         values: values(b),
+        kit: None,
     }
 }
 
@@ -385,6 +386,9 @@ fn app_input(req: &Value) -> OddsInput {
         opponent: log_board(&o[0]),
         own_values: values(&p[0]),
         opponent_values: values(&o[0]),
+        own_kit: None,
+        opponent_kit: None,
+        estimate: false,
         own_tier: p[0]["tier"].as_i64(),
         opponent_tier: o[0]["tier"].as_i64(),
         damage_cap: req["damage_cap"].as_i64(),
