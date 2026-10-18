@@ -218,7 +218,7 @@ test("a buff or a heal marks what it gave; a loss marks nothing", () => {
 });
 
 test("every token has the same box: what it carries sits out of the layout (T-575)", () => {
-  const css = readFileSync(join(import.meta.dirname, "..", "..", "src", "components", "game", "replay.css"), "utf8");
+  const css = readFileSync(join(import.meta.dirname, "..", "..", "src", "components", "game", "replay.css"), "utf8").replace(/\r\n/g, "\n");
   const rule = (selector: string) => {
     const at = css.indexOf(`\n${selector} {`);
     assert.ok(at >= 0, selector);
