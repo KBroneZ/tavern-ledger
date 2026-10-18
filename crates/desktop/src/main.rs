@@ -1497,6 +1497,14 @@ fn main() {
             redact::place(&startup_dir)
         ),
     );
+    applog::info(
+        "app",
+        &format!(
+            "Edition: {}; package identity: {}.",
+            edition::NAME,
+            if package::has_identity() { "yes" } else { "no" }
+        ),
+    );
     let state = Arc::new(AppState::default());
     // Read before the windows exist: the page asks for the language as soon
     // as it runs (T-356).

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Microsoft Store package manifest (T-379, D-158). tools/store_package.py
+  fills the double-brace fields: the identity from Partner Center (or the clearly
+  fake local-test values), the 4-part version, the blocks that differ between
+  the two variants, and the local-test-only alias (see that file). Nothing else is computed here.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
+  xmlns:virtualization="http://schemas.microsoft.com/appx/manifest/virtualization/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap5 virtualization rescap">
+  <Identity Name="{{IDENTITY_NAME}}" Publisher="{{PUBLISHER}}" Version="{{VERSION}}" ProcessorArchitecture="x64" />
+  <Properties>
+    <DisplayName>Tavern Ledger</DisplayName>
+    <PublisherDisplayName>{{PUBLISHER_DISPLAY_NAME}}</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>{{VIRTUALIZATION}}
+  </Properties>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+  <Resources>
+    <Resource Language="en-us" />
+    <Resource Language="es" />
+  </Resources>
+  <Applications>
+    <Application Id="App" Executable="TavernLedger.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Tavern Ledger"
+        Description="Hearthstone Battlegrounds tracker. Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment."
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png" />
+      <Extensions>
+        <uap5:Extension Category="windows.startupTask" Executable="TavernLedger.exe" EntryPoint="Windows.FullTrustApplication">
+          <uap5:StartupTask TaskId="TavernLedgerStartup" Enabled="false" DisplayName="Tavern Ledger" />
+        </uap5:Extension>
+{{EXTRA_EXTENSIONS}}      </Extensions>
+    </Application>
+  </Applications>
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />{{CAPABILITIES}}
+  </Capabilities>
+</Package>
