@@ -5,7 +5,11 @@
 //! trinkets (an unknown one blocks, one that acts later in the combat is
 //! approximate). **Leg rule:** the boards as each leg started, before any
 //! start-of-combat effect, with start of combat played, when every
-//! start-of-combat source on them is played; otherwise as "with kits".
+//! start-of-combat source on those boards and kits is played; otherwise as
+//! "with kits". It knows only what the boards and kits show, as odds at the
+//! combat's start would: an effect from a card in a hand or a Secret is not
+//! on them, so such a combat is still played from before start of combat,
+//! and counted apart.
 //!
 //! Local only, like the rest of the harness: counts, shares and card ids,
 //! never a name.
@@ -46,7 +50,10 @@ pub(crate) fn engine_kit(kit: &HeroKit) -> Kit {
         card_id: c.card_id.clone(),
         slot: u8::try_from(c.slot).unwrap_or(0),
         counters: c.counters.map(|n| i32::try_from(n).unwrap_or(0)),
-        target: c.target.and_then(|p| usize::try_from(p - 1).ok()),
+        target: c
+            .target
+            .and_then(|p| p.checked_sub(1))
+            .and_then(|i| usize::try_from(i).ok()),
     };
     Kit {
         powers: kit.powers.iter().map(card).collect(),
@@ -238,8 +245,92 @@ impl Tally {
     }
 }
 
-/// The report: the three ways, per mode, and what kept combats on today's
-/// boards.
+/// One mode's combats played the three ways.
+#[derive(Default)]
+struct ModeRun {
+    today: Tally,
+    kits: Tally,
+    rule: Tally,
+    /// Combats the leg rule played from before start of combat; of them,
+    /// those whose boards differ from today's and those with an effect from
+    /// a hand or a Secret; combats with every leg's boards before.
+    from_before: u32,
+    differs: u32,
+    hidden: u32,
+    with_before: u32,
+    /// What kept combats on today's boards (card id -> combats), and one
+    /// line per combat moved whose boards differ.
+    kept: BTreeMap<String, u32>,
+    moved: Vec<String>,
+}
+
+fn run_mode(combats: &[SocCombat], duos: bool, options: &Options) -> ModeRun {
+    let mut m = ModeRun::default();
+    for c in combats.iter().filter(|c| c.duos == duos) {
+        let bare = [without_kits(&c.after[0]), without_kits(&c.after[1])];
+        m.today.add(play(&bare, false, options), c.result);
+        m.kits.add(play(&c.after, false, options), c.result);
+        if let Some(before) = &c.before {
+            m.with_before += 1;
+            for id in Coverage::of_teams(&before[0], &before[1], true).not_modelled {
+                *m.kept.entry(id).or_insert(0) += 1;
+            }
+        }
+        let Some(before) = leg_rule(c) else {
+            m.rule.add(play(&c.after, false, options), c.result);
+            continue;
+        };
+        m.from_before += 1;
+        m.hidden += u32::from(!c.hidden.is_empty());
+        let played = play(before, true, options);
+        if *before != c.after {
+            m.differs += 1;
+            m.moved.push(moved_line(c, before, &played, options));
+        }
+        m.rule.add(played, c.result);
+    }
+    m
+}
+
+fn write_mode(out: &mut String, mode: &str, m: &ModeRun) {
+    m.today.line(out, mode, "today");
+    m.kits.line(out, mode, "with kits");
+    m.rule.line(out, mode, "leg rule");
+    let _ = writeln!(
+        out,
+        "| {mode} | played from before start of combat | {} (boards differ: {}; with an effect \
+         from a hand or a Secret: {}; combats with every leg's boards before: {}) | | | | | |",
+        m.from_before, m.differs, m.hidden, m.with_before
+    );
+    for (label, t) in [("with kits", &m.kits), ("leg rule", &m.rule)] {
+        if !t.blockers.is_empty() {
+            let _ = writeln!(
+                out,
+                "\n{mode}, {label}, blocked by: {}",
+                counts(&t.blockers, 30)
+            );
+        }
+    }
+}
+
+/// `card id` n, most first.
+fn counts(map: &BTreeMap<String, u32>, at_most: usize) -> String {
+    let mut rows: Vec<(&String, &u32)> = map.iter().collect();
+    rows.sort_by(|a, b| b.1.cmp(a.1).then(a.0.cmp(b.0)));
+    let ids: Vec<String> = rows
+        .iter()
+        .take(at_most)
+        .map(|(id, n)| format!("`{id}` {n}"))
+        .collect();
+    if ids.is_empty() {
+        "none".into()
+    } else {
+        ids.join(", ")
+    }
+}
+
+/// The report: the three ways, per mode, the combats moved and what kept
+/// combats on today's boards.
 pub fn render_start_of_combat(combats: &[SocCombat], options: &Options) -> String {
     let mut out = String::new();
     let _ = writeln!(
@@ -251,8 +342,8 @@ pub fn render_start_of_combat(combats: &[SocCombat], options: &Options) -> Strin
         "Each combat with a result played three ways, {} trials, seed {}: today's boards at \
          the first attack (start of combat off, no hero powers or trinkets); the same with each \
          hero's powers and trinkets; the leg rule (the boards before start of combat with it \
-         played, when every start-of-combat source on them is played, else the second way). \
-         A card, power or trinket not modelled blocks, as in the app.\n",
+         played, when every start-of-combat source on those boards and kits is played, else the \
+         second way). A card, power or trinket not modelled blocks, as in the app.\n",
         options.trials, options.seed
     );
     let _ = writeln!(
@@ -263,53 +354,12 @@ pub fn render_start_of_combat(combats: &[SocCombat], options: &Options) -> Strin
     let mut kept: BTreeMap<String, u32> = BTreeMap::new();
     let mut moved: Vec<String> = Vec::new();
     for (duos, mode) in [(false, "Solo"), (true, "Duos")] {
-        let (mut today, mut kits, mut rule) =
-            (Tally::default(), Tally::default(), Tally::default());
-        let (mut from_before, mut differs, mut with_before, mut hidden) = (0, 0, 0, 0);
-        for c in combats.iter().filter(|c| c.duos == duos) {
-            let bare = [without_kits(&c.after[0]), without_kits(&c.after[1])];
-            today.add(play(&bare, false, options), c.result);
-            kits.add(play(&c.after, false, options), c.result);
-            if let Some(before) = &c.before {
-                with_before += 1;
-                let cov = Coverage::of_teams(&before[0], &before[1], true);
-                for id in &cov.not_modelled {
-                    *kept.entry(id.clone()).or_insert(0) += 1;
-                }
-            }
-            match leg_rule(c) {
-                Some(before) => {
-                    from_before += 1;
-                    hidden += usize::from(!c.hidden.is_empty());
-                    let played = play(before, true, options);
-                    if *before != c.after {
-                        differs += 1;
-                        moved.push(moved_line(c, before, &played, options));
-                    }
-                    rule.add(played, c.result);
-                }
-                None => rule.add(play(&c.after, false, options), c.result),
-            }
+        let m = run_mode(combats, duos, options);
+        write_mode(&mut out, mode, &m);
+        for (id, n) in &m.kept {
+            *kept.entry(id.clone()).or_insert(0) += n;
         }
-        today.line(&mut out, mode, "today");
-        kits.line(&mut out, mode, "with kits");
-        rule.line(&mut out, mode, "leg rule");
-        let _ = writeln!(
-            out,
-            "| {mode} | played from before start of combat | {from_before} (boards differ: \
-             {differs}; with an effect from a hand or a Secret: {hidden}; combats with every \
-             leg's boards before: {with_before}) | | | | | |"
-        );
-        for (label, t) in [("with kits", &kits), ("leg rule", &rule)] {
-            if !t.blockers.is_empty() {
-                let ids: Vec<String> = t
-                    .blockers
-                    .iter()
-                    .map(|(id, n)| format!("`{id}` {n}"))
-                    .collect();
-                let _ = writeln!(out, "\n{mode}, {label}, blocked by: {}", ids.join(", "));
-            }
-        }
+        moved.extend(m.moved);
     }
     if !moved.is_empty() {
         let _ = writeln!(
@@ -321,22 +371,11 @@ pub fn render_start_of_combat(combats: &[SocCombat], options: &Options) -> Strin
             let _ = writeln!(out, "- {line}");
         }
     }
-    let mut kept: Vec<(String, u32)> = kept.into_iter().collect();
-    kept.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
-    let ids: Vec<String> = kept
-        .iter()
-        .take(30)
-        .map(|(id, n)| format!("`{id}` {n}"))
-        .collect();
     let _ = writeln!(
         out,
         "\nWhat keeps combats on today's boards (a start-of-combat source not played yet, or \
          not reviewed; card id: combats): {}",
-        if ids.is_empty() {
-            "none".into()
-        } else {
-            ids.join(", ")
-        }
+        counts(&kept, 30)
     );
     out
 }
@@ -375,4 +414,82 @@ fn moved_line(c: &SocCombat, before: &[Team; 2], played: &Played, options: &Opti
         p_real(&today),
         p_real(played)
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::Minion;
+
+    fn kit_card(id: &str, target: Option<i64>) -> bg_parser::report::KitCard {
+        bg_parser::report::KitCard {
+            card_id: id.into(),
+            slot: 1,
+            counters: [3, 0, 0, 0, 0],
+            target,
+        }
+    }
+
+    #[test]
+    fn a_named_minion_becomes_a_board_index() {
+        let kit = HeroKit {
+            powers: vec![
+                kit_card("A", Some(1)),
+                kit_card("B", Some(3)),
+                kit_card("C", Some(0)),
+                kit_card("D", Some(i64::MIN)),
+                kit_card("E", None),
+            ],
+            trinkets: vec![kit_card("BG30_Trinket_1st", None)],
+        };
+        let kit = engine_kit(&kit);
+        let targets: Vec<_> = kit.powers.iter().map(|p| p.target).collect();
+        assert_eq!(targets, [Some(0), Some(2), None, None, None]);
+        assert_eq!(kit.powers[0].counters, [3, 0, 0, 0, 0]);
+        assert_eq!(kit.trinkets[0].slot, 1);
+    }
+
+    fn band(minions: Vec<Minion>, powers: &[&str]) -> Warband {
+        Warband {
+            kit: Some(Kit {
+                powers: powers.iter().map(|id| KitCard::new(*id)).collect(),
+                trinkets: Vec::new(),
+            }),
+            tavern_tier: Some(1),
+            ..Warband::new(minions)
+        }
+    }
+
+    fn combat(before: Option<[Team; 2]>, hidden: &[&str]) -> SocCombat {
+        let quiet = Team::solo(band(vec![Minion::new("BGS_119", 1, 1)], &[]));
+        SocCombat {
+            game: 1,
+            round: 1,
+            duos: false,
+            after: [quiet.clone(), quiet],
+            before,
+            result: CombatResult::Won,
+            hidden: hidden.iter().map(|s| s.to_string()).collect(),
+        }
+    }
+
+    #[test]
+    fn the_leg_rule_takes_the_boards_before_only_when_every_source_is_played() {
+        let plain = Team::solo(band(vec![Minion::new("BGS_119", 2, 2)], &[]));
+        let quiet = [plain.clone(), plain.clone()];
+        assert_eq!(leg_rule(&combat(Some(quiet.clone()), &[])), Some(&quiet));
+        // Wax Warband acts at the start of combat and is not played yet.
+        let wax = Team::solo(band(
+            vec![Minion::new("BGS_119", 2, 2)],
+            &["TB_BaconShop_HP_037a"],
+        ));
+        assert_eq!(leg_rule(&combat(Some([wax, plain.clone()]), &[])), None);
+        // No boards before start of combat: today's.
+        assert_eq!(leg_rule(&combat(None, &[])), None);
+        // A hand's effect is on no board: the boards before are still taken.
+        assert_eq!(
+            leg_rule(&combat(Some(quiet.clone()), &["BG32_330"])),
+            Some(&quiet)
+        );
+    }
 }

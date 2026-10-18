@@ -34,8 +34,7 @@ pub enum KitEffect {
 
 /// Why a hero power or trinket blocks the odds or makes them approximate.
 pub const NOT_REVIEWED: &str = "the simulator has not reviewed this hero power or trinket yet";
-pub const START_OF_COMBAT_NOT_PLAYED: &str =
-    "its Start of Combat effect is not played, and this board was taken before it";
+pub const START_OF_COMBAT_NOT_PLAYED: &str = crate::trials::START_OF_COMBAT_GAP;
 pub const IN_COMBAT_NOT_PLAYED: &str = "its effect during combat is not played yet";
 pub const TWICE_NOT_PLAYED: &str = "it makes a hero power that acts in combat trigger twice";
 

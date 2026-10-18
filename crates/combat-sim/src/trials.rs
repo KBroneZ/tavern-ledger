@@ -58,7 +58,9 @@ impl Coverage {
 
     /// Every board of both teams (Duos). A board that comes in later plays
     /// only its own start of combat, so the order between the two sides is
-    /// a question for the first boards only.
+    /// a question for the first boards only (in the rare combat where both
+    /// teammates' boards come in at once it is one for them too, and is not
+    /// marked).
     pub fn of_teams(player: &Team, opponent: &Team, start_of_combat: bool) -> Coverage {
         let boards: Vec<&Warband> = player.boards().chain(opponent.boards()).collect();
         let mut cov = Coverage::of_boards(&boards, start_of_combat);
@@ -249,7 +251,7 @@ pub fn refusal_reason(id: &str) -> &'static str {
     cards::refusal(id)
 }
 
-const START_OF_COMBAT_GAP: &str =
+pub(crate) const START_OF_COMBAT_GAP: &str =
     "its Start of Combat effect is not played, and this board was taken before it";
 const GIFT_NOT_REVIEWED: &str = "the simulator has not reviewed this Dark Gift yet";
 

@@ -370,3 +370,113 @@ fn a_duos_board_that_comes_in_is_kept_as_it_came_in() {
     // The first board had no start-of-combat effect.
     assert_eq!(own[0].before, own[0].board);
 }
+
+/// [`solo`] with `extra` just before the line that holds `needle`.
+fn solo_with(needle: &str, extra: Vec<String>) -> Vec<String> {
+    let mut l = solo();
+    let at = l.iter().position(|x| x.contains(needle)).expect("needle");
+    l.splice(at..at, extra);
+    l
+}
+
+#[test]
+fn an_effect_from_a_hand_or_a_secret_is_counted_but_never_on_a_board() {
+    // The opponent's hand card and Secret fire at the start of combat; the
+    // Old God in the Secret zone is on screen and not counted.
+    let mut extra = entity(
+        1,
+        70,
+        "SYN_HAND",
+        &[
+            ("CARDTYPE", "MINION".into()),
+            ("CONTROLLER", "10".into()),
+            ("ZONE", "HAND".into()),
+        ],
+    );
+    for (id, card) in [(71, "SYN_SECRET"), (72, "BG_OldGod")] {
+        extra.extend(entity(
+            1,
+            id,
+            card,
+            &[
+                ("CARDTYPE", "SPELL".into()),
+                ("CONTROLLER", "10".into()),
+                ("ZONE", "SECRET".into()),
+            ],
+        ));
+    }
+    for id in [70, 71, 72] {
+        extra.push(block("TRIGGER", &id.to_string(), 0));
+        extra.push(end(0));
+    }
+    let r = report(&solo_with("Entity=40 EffectCardId", extra));
+    assert_eq!(
+        r.rounds[0].hidden_triggers,
+        [
+            (Side::Opponent, "SYN_HAND".to_string()),
+            (Side::Opponent, "SYN_SECRET".to_string())
+        ]
+    );
+    let opp = r.rounds[0]
+        .entries
+        .iter()
+        .find(|e| e.side == Side::Opponent)
+        .unwrap();
+    let before: Vec<_> = opp
+        .before
+        .iter()
+        .flatten()
+        .filter_map(|m| m.card_id.as_deref())
+        .collect();
+    assert_eq!(before, ["SYN_FOE_A", "SYN_FOE_B"]);
+    let json = serde_json::to_string(&r).expect("serializable");
+    assert!(!json.contains("SYN_HAND") && !json.contains("hidden"));
+}
+
+#[test]
+fn a_card_that_fires_before_the_opponent_is_set_up_does_not_take_the_boards() {
+    // The player's minion fires before the game sets the opponent up: the
+    // boards are taken later, at the opponent's own start of combat.
+    let extra = vec![tag("20", "ATK", "9"), block("TRIGGER", "20", 0), end(0)];
+    let r = report(&solo_with("BlockType=TRIGGER Entity=60", extra));
+    let opp = r.rounds[0]
+        .entries
+        .iter()
+        .find(|e| e.side == Side::Opponent)
+        .unwrap();
+    assert_eq!(
+        stats(opp.before.as_deref().expect("taken")),
+        [("SYN_FOE_A", 4, 4), ("SYN_FOE_B", 1, 2)]
+    );
+}
+
+/// The owner's own Solo game (build 253216), round 4: the opponent's Flighty
+/// Scout fired from the hand at the start of combat. The board before it has
+/// three minions, the one at the first attack four.
+#[test]
+fn a_real_combat_keeps_the_board_before_a_hand_summon() {
+    let dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/real");
+    let text = std::fs::read_to_string(dir.join("b253216_solo.log")).expect("fixture");
+    let reports = bg_parser::parse_reader(text.as_bytes()).expect("read");
+    let round = reports[0]
+        .rounds
+        .iter()
+        .find(|r| r.number == 4)
+        .expect("round 4");
+    let opp = round
+        .entries
+        .iter()
+        .find(|e| e.side == Side::Opponent && e.board.is_some())
+        .unwrap();
+    let ids = |b: &[bg_parser::report::Minion]| -> Vec<String> {
+        b.iter().filter_map(|m| m.card_id.clone()).collect()
+    };
+    let after = ids(opp.board.as_deref().unwrap());
+    let before = ids(opp.before.as_deref().unwrap());
+    assert_eq!((before.len(), after.len()), (3, 4), "{before:?} {after:?}");
+    assert!(after.iter().any(|c| c == "BG32_330") && !before.iter().any(|c| c == "BG32_330"));
+    assert!(round
+        .hidden_triggers
+        .contains(&(Side::Opponent, "BG32_330".to_string())));
+    assert!(opp.kit.is_some());
+}

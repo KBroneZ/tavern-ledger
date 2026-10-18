@@ -68,7 +68,8 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
   "a spell that awakens an Old God after Aberrations die in combat; it is not a minion on the board and is not played":
     "un hechizo que despierta a un Dios Antiguo cuando mueren Aberraciones en combate; no es un esbirro del tablero y no se juega",
   "it gains stats until next turn whenever another friendly minion gains stats in combat; that is not played":
-    "gana estadísticas hasta el próximo turno cuando otro esbirro aliado gana estadísticas en combate; eso no se juega",  "the order of start-of-combat effects between the two sides is not proven":
+    "gana estadísticas hasta el próximo turno cuando otro esbirro aliado gana estadísticas en combate; eso no se juega",
+  "the order of start-of-combat effects between the two sides is not proven":
     "no está comprobado el orden de los efectos de Inicio del combate entre los dos lados",
   "the simulator has not reviewed this hero power or trinket yet": "el simulador aún no ha revisado este poder de héroe o abalorio",
   "its effect during combat is not played yet": "su efecto durante el combate aún no se juega",

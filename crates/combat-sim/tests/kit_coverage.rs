@@ -195,3 +195,16 @@ fn hopebringer_needs_a_board_taken_after_start_of_combat() {
     };
     assert!(!odds.coverage.approximate.is_empty());
 }
+
+#[test]
+fn a_duos_teammate_brings_its_own_kit() {
+    use combat_sim::{simulate_teams, Team};
+    let first = with_kit(vec![plain(2, 2)], &["TB_BaconShop_HP_046"], &[]);
+    let second = with_kit(vec![plain(2, 2)], &["BG99_HERO_999p"], &[]);
+    let opponent = Team::solo(with_kit(vec![plain(1, 1)], &[], &[]));
+    let verdict = simulate_teams(&Team::duo(first, second), &opponent, &options(false)).unwrap();
+    let Verdict::NotModelled(cov) = verdict else {
+        panic!("the teammate's unknown hero power blocks");
+    };
+    assert_eq!(cov.kit, ["BG99_HERO_999p"]);
+}

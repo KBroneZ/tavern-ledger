@@ -348,14 +348,7 @@ impl<'a> Combat<'a> {
 
 impl<'a> Combat<'a> {
     fn run(&mut self) -> Outcome {
-        let mut turn = self.first_attacker();
-        if self.p.start_of_combat {
-            let swings = self.has_immediate_attackers([true, true]);
-            self.start_of_combat(turn, [true, true]);
-            turn = self.first_after_start(turn, swings);
-        } else {
-            self.attack_immediately(turn, [true, true]);
-        }
+        let mut turn = self.open();
         let mut turns = 0;
         loop {
             if let Some(first) = self.bring_in_teammates() {
@@ -373,6 +366,20 @@ impl<'a> Combat<'a> {
             if turns > MAX_ATTACK_TURNS {
                 return self.outcome(true);
             }
+        }
+    }
+
+    /// The combat's opening: start of combat (or, on boards taken after it,
+    /// only its "attack immediately" swings), then who attacks first.
+    pub(crate) fn open(&mut self) -> usize {
+        let turn = self.first_attacker();
+        if self.p.start_of_combat {
+            let swings = self.has_immediate_attackers([true, true]);
+            self.start_of_combat(turn, [true, true]);
+            self.first_after_start(turn, swings)
+        } else {
+            self.attack_immediately(turn, [true, true]);
+            turn
         }
     }
 

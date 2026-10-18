@@ -405,3 +405,42 @@ fn who_attacks_first_is_counted_after_the_start_of_combat() {
         assert_eq!(c.first_after_start(0, false), 0);
     });
 }
+
+#[test]
+fn the_combat_opens_with_the_count_after_start_of_combat() {
+    // T-628: two against three; two Doppelgangers make it four against
+    // three. Counted before, the opponent would always go first.
+    let player = || {
+        vec![
+            plain(1, 1).gift(DOPPELGANGER),
+            plain(1, 1).gift(DOPPELGANGER),
+        ]
+    };
+    let opponent = || vec![plain(1, 1), plain(1, 1), plain(1, 1)];
+    assert_eq!(with_soc(player(), opponent(), true, |c| c.open()), 0);
+    // On boards taken after start of combat nothing is played: three first.
+    assert_eq!(with_soc(player(), opponent(), false, |c| c.open()), 1);
+}
+
+#[test]
+fn a_duos_board_that_comes_in_opens_with_the_count_after_its_start_of_combat() {
+    let teams = |soc: bool| {
+        let player = crate::model::Team::duo(
+            band(vec![plain(1, 1)]),
+            band(vec![
+                plain(1, 1).gift(DOPPELGANGER),
+                plain(1, 1).gift(DOPPELGANGER),
+            ]),
+        );
+        let opponent = crate::model::Team::solo(band(vec![plain(1, 1), plain(1, 1), plain(1, 1)]));
+        Prepared::teams(&player, &opponent, soc)
+    };
+    for (soc, first) in [(true, 0), (false, 1)] {
+        let p = teams(soc);
+        let mut rng = Rng::new(7);
+        let mut c = Combat::new(&p, &mut rng);
+        c.sides[0].units.clear();
+        assert_eq!(c.bring_in_teammates(), Some(first), "start of combat {soc}");
+        assert_eq!(c.sides[0].units.len(), if soc { 4 } else { 2 });
+    }
+}
