@@ -6,9 +6,9 @@
 // © Blizzard Entertainment (D-038): it is never committed; the build writes
 // it next to the page's code and the site serves it from its own origin.
 
-import type { CardNameFile, SimCard, SimCardFile } from "../src/lib/sim/cardFile.ts";
+import type { CardNameFile, KitLists, SimCard, SimCardFile } from "../src/lib/sim/cardFile.ts";
 
-export type { CardNameFile, SimCard, SimCardFile };
+export type { CardNameFile, KitLists, SimCard, SimCardFile };
 
 /** The keywords the engine tracks, as HearthstoneJSON spells them. */
 export const COMBAT_KEYWORDS = ["TAUNT", "DIVINE_SHIELD", "REBORN", "VENOMOUS", "POISONOUS", "WINDFURY", "MEGA_WINDFURY", "STEALTH"];
@@ -109,6 +109,9 @@ export function extractCards(english: unknown, local: unknown, source: string): 
 /** The Battlegrounds card types the game page names besides minions (T-559). */
 export const NAMED_TYPES = ["BATTLEGROUND_SPELL", "SPELL", "BATTLEGROUND_TRINKET", "BATTLEGROUND_QUEST_REWARD", "BATTLEGROUND_ANOMALY", "HERO_POWER"];
 const TRINKET = "BATTLEGROUND_TRINKET";
+const HERO_POWER = "HERO_POWER";
+/** A trinket's kind, as the card data's spell school says it. */
+const TRINKET_KIND: Record<string, "lesser" | "greater"> = { LESSER_TRINKET: "lesser", GREATER_TRINKET: "greater" };
 
 /**
  * The names of the Battlegrounds cards that are not minions, from the same
@@ -125,6 +128,7 @@ export function extractNames(english: unknown, local: unknown, source: string): 
   }
   const names: Record<string, string> = {};
   const trinkets: Record<string, string> = {};
+  const kit: KitLists = { power: [], lesser: [], greater: [] };
   let count = 0;
   for (const c of english) {
     if (!isObj(c) || c.set !== "BATTLEGROUNDS" || typeof c.type !== "string" || !NAMED_TYPES.includes(c.type) || !validId(c.id)) continue;
@@ -134,7 +138,11 @@ export function extractNames(english: unknown, local: unknown, source: string): 
     count += 1;
     const dbf = int(c.dbfId);
     if (c.type === TRINKET && dbf !== null && dbf > 0) trinkets[String(dbf)] = c.id;
+    if (c.type === HERO_POWER) kit.power.push(c.id);
+    const kind = c.type === TRINKET && typeof c.spellSchool === "string" ? TRINKET_KIND[c.spellSchool] : undefined;
+    if (kind) kit[kind].push(c.id);
   }
   if (count > MAX_CARDS) throw new Error(`${count} named cards: not the real card data`);
-  return { version: 1, source, names, trinkets };
+  for (const list of Object.values(kit)) list.sort();
+  return { version: 1, source, names, trinkets, kit };
 }

@@ -1117,6 +1117,394 @@
           }
         ]
       }
+    },
+    {
+      "answer": {
+        "approximate": [],
+        "damage_known": true,
+        "dealt": null,
+        "engine": "0.13.0",
+        "lost": 10000,
+        "new_build": null,
+        "stalled": 0,
+        "start_of_combat": false,
+        "status": "odds",
+        "taken": {
+          "high": 3,
+          "likely": 3,
+          "low": 3
+        },
+        "tied": 0,
+        "trials": 10000,
+        "won": 0
+      },
+      "name": "kits at the first attack",
+      "request": {
+        "damage_cap": 15,
+        "opponent": [
+          {
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_103",
+                  "slot": 0
+                }
+              ],
+              "trinkets": []
+            },
+            "minions": [
+              {
+                "attack": 3,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 3,
+                "keywords": []
+              }
+            ],
+            "tier": 2
+          }
+        ],
+        "player": [
+          {
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG22_HERO_001p_t2",
+                  "slot": 0
+                }
+              ],
+              "trinkets": [
+                {
+                  "card_id": "BG30_Trinket_2nd",
+                  "slot": 2
+                }
+              ]
+            },
+            "minions": [
+              {
+                "attack": 2,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 3,
+                "keywords": []
+              }
+            ],
+            "tier": 3
+          }
+        ],
+        "round": 5
+      }
+    },
+    {
+      "answer": {
+        "approximate": [],
+        "damage_known": true,
+        "dealt": null,
+        "engine": "0.13.0",
+        "lost": 0,
+        "new_build": null,
+        "stalled": 0,
+        "start_of_combat": false,
+        "status": "odds",
+        "taken": null,
+        "tied": 10000,
+        "trials": 10000,
+        "won": 0
+      },
+      "name": "kits with start of combat played",
+      "request": {
+        "damage_cap": 15,
+        "opponent": [
+          {
+            "kit": {
+              "powers": [],
+              "trinkets": []
+            },
+            "minions": [
+              {
+                "attack": 3,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 3,
+                "keywords": []
+              }
+            ],
+            "tier": 2
+          }
+        ],
+        "player": [
+          {
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG22_HERO_001p_t2",
+                  "slot": 0
+                }
+              ],
+              "trinkets": []
+            },
+            "minions": [
+              {
+                "attack": 2,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 3,
+                "keywords": []
+              }
+            ],
+            "tier": 3
+          }
+        ],
+        "round": 5,
+        "start_of_combat": true
+      }
+    },
+    {
+      "answer": {
+        "approximate": [
+          {
+            "card_id": "BG22_HERO_000p_Alt",
+            "reason": "where the minion it fires goes on the board is checked on one combat only"
+          }
+        ],
+        "damage_known": true,
+        "dealt": {
+          "high": 4,
+          "likely": 4,
+          "low": 4
+        },
+        "engine": "0.13.0",
+        "lost": 0,
+        "new_build": null,
+        "stalled": 0,
+        "start_of_combat": false,
+        "status": "odds",
+        "taken": null,
+        "tied": 0,
+        "trials": 10000,
+        "won": 10000
+      },
+      "name": "duos held minion with start of combat played",
+      "request": {
+        "damage_cap": 15,
+        "opponent": [
+          {
+            "minions": [
+              {
+                "attack": 3,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 5,
+                "keywords": []
+              }
+            ],
+            "tier": 5
+          },
+          {
+            "minions": [
+              {
+                "attack": 2,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 2,
+                "keywords": []
+              }
+            ],
+            "tier": 2
+          }
+        ],
+        "player": [
+          {
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "BG22_HERO_000p_Alt",
+                  "counters": [
+                    1,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "held": {
+                    "attack": 4,
+                    "card_id": "BGS_119",
+                    "facts": {
+                      "attack": 1,
+                      "health": 2,
+                      "keywords": [],
+                      "tier": 1,
+                      "tribes": []
+                    },
+                    "golden": false,
+                    "health": 4,
+                    "keywords": []
+                  },
+                  "slot": 0
+                }
+              ],
+              "trinkets": []
+            },
+            "minions": [
+              {
+                "attack": 2,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 2,
+                "keywords": []
+              }
+            ],
+            "tier": 4
+          },
+          {
+            "minions": [
+              {
+                "attack": 1,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 3,
+                "keywords": []
+              }
+            ],
+            "tier": 3
+          }
+        ],
+        "round": 8,
+        "start_of_combat": true
+      }
+    },
+    {
+      "answer": {
+        "approximate": [],
+        "engine": "0.13.0",
+        "not_modelled": [
+          "TB_BaconShop_HP_103"
+        ],
+        "reasons": [
+          {
+            "card_id": "TB_BaconShop_HP_103",
+            "reason": "its Start of Combat effect is not played, and this board was taken before it"
+          }
+        ],
+        "status": "not_modelled"
+      },
+      "name": "start of combat not played gives no early number",
+      "request": {
+        "damage_cap": 15,
+        "opponent": [
+          {
+            "kit": {
+              "powers": [
+                {
+                  "card_id": "TB_BaconShop_HP_103",
+                  "slot": 0
+                }
+              ],
+              "trinkets": []
+            },
+            "minions": [
+              {
+                "attack": 3,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 3,
+                "keywords": []
+              }
+            ],
+            "tier": 2
+          }
+        ],
+        "player": [
+          {
+            "kit": {
+              "powers": [],
+              "trinkets": []
+            },
+            "minions": [
+              {
+                "attack": 2,
+                "card_id": "BGS_119",
+                "facts": {
+                  "attack": 1,
+                  "health": 2,
+                  "keywords": [],
+                  "tier": 1,
+                  "tribes": []
+                },
+                "golden": false,
+                "health": 3,
+                "keywords": []
+              }
+            ],
+            "tier": 3
+          }
+        ],
+        "round": 5,
+        "start_of_combat": true
+      }
     }
   ]
 }

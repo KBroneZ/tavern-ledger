@@ -1,9 +1,12 @@
 //! Reads the page's request: both teams' boards with the card facts the
-//! page took from its card data. The request is untrusted input: every
-//! field is checked, a wrong one refuses the whole request with a short
-//! reason, and nothing here panics.
+//! page took from its card data, each board's hero powers and trinkets
+//! (T-628), the combat's turn and whether start of combat is played. The
+//! request is untrusted input: every field is checked, a wrong one refuses
+//! the whole request with a short reason, and nothing here panics.
 
-use combat_sim::{BaseCard, GameValues, Keywords, Minion, Team, Tribes, Warband};
+use combat_sim::{
+    BaseCard, GameValues, Keywords, Kit, KitCard, Minion, Team, Tribes, Warband, MAX_BOARD,
+};
 use serde_json::{Map, Value};
 
 /// Far above any real request (four boards of seven minions).
@@ -23,6 +26,13 @@ const MAX_CAP: i64 = 1_000;
 const MAX_GIFTS: usize = 4;
 /// A game-long value as the saved report keeps it (bg-parser's MAX_GAME_VALUE).
 const MAX_GAME_VALUE: i64 = 99_999;
+/// Hero powers, or trinkets, one board brings: as the saved report keeps
+/// them (bg-parser's MAX_KIT_CARDS).
+const MAX_KIT_CARDS: usize = 4;
+/// A hero power's or trinket's slot (bg-parser's MAX_KIT_SLOT).
+const MAX_KIT_SLOT: i64 = 3;
+/// A turn far past any real game.
+const MAX_ROUND: i64 = 1_000;
 
 /// Card facts a board does not show, as the page sends them (the same
 /// words as `crates/cards` keeps: types `BEAST`, keywords `DIVINE_SHIELD`).
@@ -43,6 +53,18 @@ pub struct Request {
     pub build: Option<i64>,
     /// Card ids with no facts: the odds need them (as in the app).
     pub missing: Vec<String>,
+    /// The boards are from before start of combat, which the engine plays
+    /// (boards built by hand); off for boards taken at the first attack.
+    pub start_of_combat: bool,
+}
+
+/// What every board of a request shares when its kit is read.
+struct KitContext {
+    /// The combat's turn, which unlocks some hero powers.
+    round: Option<u32>,
+    /// A held minion comes in only when start of combat is played; else it
+    /// is checked but not used (as the app).
+    hold: bool,
 }
 
 type Res<T> = Result<T, String>;
@@ -211,7 +233,96 @@ fn game_values(v: Option<&Value>) -> Res<GameValues> {
     Ok(out)
 }
 
-fn board(v: &Value, missing: &mut Vec<String>) -> Res<Warband> {
+/// One hero power or trinket, as the saved report writes it: a target is a
+/// board position (1 to 7) and becomes an index; only a hero power names or
+/// holds a minion.
+fn kit_card(v: &Value, power: bool, ctx: &KitContext, missing: &mut Vec<String>) -> Res<KitCard> {
+    let o = object(v, "a hero power or trinket")?;
+    let card_id = o
+        .get("card_id")
+        .and_then(Value::as_str)
+        .filter(|id| valid_id(id))
+        .ok_or("a hero power or trinket has no valid card id")?;
+    let slot = match o.get("slot") {
+        None | Some(Value::Null) => 0,
+        s => int(s, "a slot", 0, MAX_KIT_SLOT)?,
+    };
+    let mut counters = [0i32; 5];
+    if let Some(list) = o.get("counters").filter(|v| !v.is_null()) {
+        let list = list
+            .as_array()
+            .filter(|l| l.len() == counters.len())
+            .ok_or("counters is not a list of five numbers")?;
+        for (out, n) in counters.iter_mut().zip(list) {
+            *out = int(Some(n), "a counter", 0, i64::from(i32::MAX))? as i32;
+        }
+    }
+    let target = match o.get("target") {
+        None | Some(Value::Null) => None,
+        t if power => Some(int(t, "a target", 1, MAX_BOARD as i64)? as usize - 1),
+        _ => return Err("only a hero power names a minion".into()),
+    };
+    let held = match o.get("held") {
+        None | Some(Value::Null) => None,
+        Some(m) if power => {
+            let mut lacking = Vec::new();
+            let held = minion(m, &mut lacking)?;
+            if ctx.hold {
+                for id in lacking {
+                    if !missing.contains(&id) {
+                        missing.push(id);
+                    }
+                }
+                held
+            } else {
+                None
+            }
+        }
+        _ => return Err("only a hero power holds a minion".into()),
+    };
+    Ok(KitCard {
+        card_id: card_id.to_string(),
+        slot: slot as u8,
+        counters,
+        target,
+        held,
+    })
+}
+
+fn kit_cards(
+    o: &Map<String, Value>,
+    key: &str,
+    power: bool,
+    ctx: &KitContext,
+    missing: &mut Vec<String>,
+) -> Res<Vec<KitCard>> {
+    let Some(list) = o.get(key).filter(|v| !v.is_null()) else {
+        return Ok(Vec::new());
+    };
+    let list = list
+        .as_array()
+        .filter(|l| l.len() <= MAX_KIT_CARDS)
+        .ok_or_else(|| format!("{key} is not a short list"))?;
+    list.iter()
+        .map(|c| kit_card(c, power, ctx, missing))
+        .collect()
+}
+
+/// The board's hero powers and trinkets (T-628); none given is unknown
+/// (`None`), as in the app, never an empty kit.
+fn kit(v: Option<&Value>, ctx: &KitContext, missing: &mut Vec<String>) -> Res<Option<Kit>> {
+    let Some(v) = v.filter(|v| !v.is_null()) else {
+        return Ok(None);
+    };
+    let o = object(v, "kit")?;
+    Ok(Some(Kit {
+        powers: kit_cards(o, "powers", true, ctx, missing)?,
+        trinkets: kit_cards(o, "trinkets", false, ctx, missing)?,
+        round: ctx.round,
+    }))
+}
+
+fn board(v: &Value, ctx: &KitContext, missing: &mut Vec<String>) -> Res<Warband> {
     let b = object(v, "board")?;
     let list = b
         .get("minions")
@@ -223,21 +334,21 @@ fn board(v: &Value, missing: &mut Vec<String>) -> Res<Warband> {
         minions.extend(minion(m, missing)?);
     }
     Ok(Warband {
-        kit: None,
+        kit: kit(b.get("kit"), ctx, missing)?,
         minions,
         tavern_tier: tier(b.get("tier"), "tavern tier")?,
         values: game_values(b.get("values"))?,
     })
 }
 
-fn team(v: Option<&Value>, who: &str, missing: &mut Vec<String>) -> Res<Team> {
+fn team(v: Option<&Value>, who: &str, ctx: &KitContext, missing: &mut Vec<String>) -> Res<Team> {
     let boards = v
         .and_then(Value::as_array)
         .filter(|l| (1..=MAX_BOARDS).contains(&l.len()))
         .ok_or_else(|| format!("{who} needs one or two boards"))?;
-    let first = board(&boards[0], missing)?;
+    let first = board(&boards[0], ctx, missing)?;
     Ok(match boards.get(1) {
-        Some(second) => Team::duo(first, board(second, missing)?),
+        Some(second) => Team::duo(first, board(second, ctx, missing)?),
         None => Team::solo(first),
     })
 }
@@ -249,9 +360,21 @@ pub fn read(text: &str) -> Res<Request> {
     }
     let v: Value = serde_json::from_str(text).map_err(|_| "the request is not JSON")?;
     let o = object(&v, "the request")?;
+    let start_of_combat = match o.get("start_of_combat") {
+        None | Some(Value::Null) => false,
+        Some(b) => b.as_bool().ok_or("start_of_combat is not true or false")?,
+    };
+    let round = match o.get("round") {
+        None | Some(Value::Null) => None,
+        r => Some(int(r, "the turn", 1, MAX_ROUND)? as u32),
+    };
+    let ctx = KitContext {
+        round,
+        hold: start_of_combat,
+    };
     let mut missing = Vec::new();
-    let player = team(o.get("player"), "the player", &mut missing)?;
-    let opponent = team(o.get("opponent"), "the opponent", &mut missing)?;
+    let player = team(o.get("player"), "the player", &ctx, &mut missing)?;
+    let opponent = team(o.get("opponent"), "the opponent", &ctx, &mut missing)?;
     let damage_cap = match o.get("damage_cap") {
         None | Some(Value::Null) => None,
         cap => Some(int(cap, "the damage cap", 1, MAX_CAP)?),
@@ -266,5 +389,6 @@ pub fn read(text: &str) -> Res<Request> {
         damage_cap,
         build,
         missing,
+        start_of_combat,
     })
 }

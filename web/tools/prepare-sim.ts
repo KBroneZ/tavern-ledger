@@ -106,7 +106,7 @@ async function main(): Promise<void> {
   if (!config) {
     const none = "none (accounts closed)";
     for (const lang of ["en", "es"]) {
-      write(lang, { version: 1, source: none, cards: [] }, { version: 1, source: none, names: {}, trinkets: {} }, { version: 1, source: none, minions: [] });
+      write(lang, { version: 1, source: none, cards: [] }, { version: 1, source: none, names: {}, trinkets: {}, kit: { power: [], lesser: [], greater: [] } }, { version: 1, source: none, minions: [] });
     }
     return;
   }

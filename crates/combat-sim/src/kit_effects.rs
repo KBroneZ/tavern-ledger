@@ -297,6 +297,12 @@ pub fn played(card_id: &str) -> Option<&'static KitPlay> {
     PLAYED.iter().find(|(id, _)| *id == card_id).map(|(_, p)| p)
 }
 
+/// Every hero power and trinket the engine plays, by card id (the website's
+/// table of what each needs is checked against them).
+pub fn played_ids() -> impl Iterator<Item = &'static str> {
+    PLAYED.iter().map(|(id, _)| *id)
+}
+
 /// The value of `amount` for a card with these numbers: the printed one when
 /// the log gave none (0).
 pub fn value(amount: Amount, counters: &[i32; 5]) -> i32 {

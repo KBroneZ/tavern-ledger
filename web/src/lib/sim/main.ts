@@ -20,8 +20,10 @@ import { GAME_FILE_COLUMNS, type GameRow } from "../data/rows.ts";
 import { readAnswer, type Answer } from "./answer.ts";
 import * as B from "./board.ts";
 import { watchTipEscape } from "../game/minionTip.ts";
-import { loadCardNames, useCardNames } from "../game/names.ts";
+import { cardNames, loadCardNames, NO_KIT_LISTS, useCardNames } from "../game/names.ts";
 import { CardIndex, readCardFile } from "./cards.ts";
+import { type Holding, socSwitch } from "./kitView.ts";
+import type { KitKind } from "./kit.ts";
 import { gameKey, type GamesState, loadView, type PickedGame } from "./loadView.ts";
 import { resultView, type ResultState } from "./resultView.ts";
 import { sm } from "./strings.ts";
@@ -54,6 +56,7 @@ let cards = new CardIndex({ version: 1, source: "none", cards: [] });
 let sim: B.SimState = B.emptyState();
 let selected: Selection | null = null;
 let adding: Adding | null = null;
+let holding: Holding | null = null;
 let marks: Marks = NO_MARKS;
 let result: ResultState = { kind: "empty" };
 let games: GamesState = { kind: "loading" };
@@ -77,8 +80,8 @@ function draw(target: HTMLElement, nodes: VNode[]): void {
 }
 
 function drawEditor(): void {
-  const props = { state: sim, cards, selected, adding, marks };
-  draw(els.mode, [modeSwitch(sim, t("mode.solo"), t("mode.duos"))]);
+  const props = { state: sim, cards, selected, adding, marks, lists: cardNames().kit ?? NO_KIT_LISTS, holding };
+  draw(els.mode, [modeSwitch(sim, t("mode.solo"), t("mode.duos")), socSwitch(sim)]);
   draw(els.opponent, sideView("opponent", props));
   draw(els.player, sideView("player", props));
 }
@@ -207,6 +210,8 @@ function onEditorClick(event: Event): void {
     if (el.dataset.side === "player" || el.dataset.side === "opponent") update(B.addBoard(sim, el.dataset.side));
     return;
   }
+  if (act === "soc") return update(B.setStartOfCombat(sim, !sim.startOfCombat));
+  if (act === "kit-turn") return update(B.setUnlocked(sim, el.dataset.late === "1"));
   const at = sideOf(el);
   if (!at) return;
   const { side, board } = at;
@@ -263,19 +268,70 @@ function onEditorClick(event: Event): void {
     case "board-remove":
       selected = null;
       adding = null;
+      holding = null;
       return update(B.removeBoard(sim, side, board));
+    case "held-pick": {
+      const slot = Number(el.dataset.slot);
+      holding = null;
+      update(B.setHeld(sim, side, board, slot, el.dataset.card ?? "", cards));
+      focusOn(`[data-focus="held-x-${side}-${board}"]`);
+      return;
+    }
+    case "held-remove": {
+      const slot = Number(el.dataset.slot);
+      update(B.setHeld(sim, side, board, slot, null, cards));
+      focusOn(`[data-focus="sim-held-${side}-${board}-${slot}"]`);
+      return;
+    }
   }
 }
 
 function onEditorInput(event: Event): void {
   const el = event.target as HTMLInputElement;
+  if (el.dataset.field === "held-query") {
+    const at = sideOf(el);
+    if (!at) return;
+    holding = { ...at, slot: Number(el.dataset.slot), query: el.value.slice(0, 40) };
+    return drawEditor();
+  }
   if (el.dataset.field !== "query" || !adding) return;
   adding = { ...adding, query: el.value.slice(0, 40) };
   drawEditor();
 }
 
+/** A hero power, trinket, chosen minion or held minion's stats changed (T-628). */
+function onKitChange(el: HTMLInputElement | HTMLSelectElement): boolean {
+  const field = el.dataset.field;
+  const at = sideOf(el);
+  const slot = Number(el.dataset.slot);
+  if (!at || !Number.isInteger(slot)) return false;
+  if (field === "kit") {
+    const kind: KitKind = el.dataset.kind === "power" ? "power" : "trinket";
+    update(B.setKitCard(sim, at.side, at.board, kind, slot, el.value === "" ? null : el.value));
+    return true;
+  }
+  if (field === "kit-target") {
+    update(B.setKitTarget(sim, at.side, at.board, slot, el.value === "" ? null : Number(el.value)));
+    return true;
+  }
+  if (field === "held-attack" || field === "held-health") {
+    const held = sim[at.side][at.board].kit?.powers.find((c) => c.slot === slot)?.held;
+    if (!held || el.value.trim() === "" || !Number.isFinite(Number(el.value))) {
+      drawEditor();
+      return true;
+    }
+    const value = Number(el.value);
+    const next = B.setHeldStats(sim, at.side, at.board, slot, field === "held-attack" ? value : held.attack, field === "held-health" ? value : held.health);
+    if (next === sim) drawEditor();
+    else update(next);
+    return true;
+  }
+  return false;
+}
+
 function onEditorChange(event: Event): void {
   const el = event.target as HTMLInputElement;
+  if (onKitChange(el)) return;
   const field = el.dataset.field;
   if (field !== "attack" && field !== "health") return;
   const at = sideOf(el);
@@ -382,6 +438,8 @@ function loadRound(n: number): void {
   if (boards.some((b) => b.tier === null)) notes.push(sm("load.unknownTiers"));
   if (loaded.giftsNotRecorded) notes.push(sm("load.giftsNotRecorded"));
   if (loaded.unknownGifts > 0) notes.push(loaded.unknownGifts === 1 ? sm("load.unknownGifts.one") : sm("load.unknownGifts.other", { count: loaded.unknownGifts }));
+  if (loaded.kitsNotRecorded) notes.push(sm("load.kitsNotRecorded"));
+  holding = null;
   drawLoad();
   drawNotes();
   update({ ...loaded.state, cap: sim.cap });

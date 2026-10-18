@@ -3,153 +3,171 @@
     {
       "card_id": "BG31_999",
       "combats": 7
-    },
-    {
-      "card_id": "BGS_008",
-      "combats": 1
     }
   ],
   "builds": {
     "checked": [
       {
+        "build": 254477,
+        "count": 14
+      },
+      {
         "build": 253216,
         "count": 41
       }
     ],
-    "newest": 253216
+    "newest": 254477
   },
-  "date": "2026-10-12",
-  "engine_version": "0.8.0",
+  "date": "2026-10-18",
+  "engine_version": "0.13.0",
   "format": 3,
   "misses": {
     "causes": [
       {
         "cause": "no_replay_approximate",
-        "duos": 19,
-        "share": 0.4418604651162791,
+        "duos": 22,
+        "share": 0.3188405797101449,
         "solo": 0
+      },
+      {
+        "cause": "missing_inputs",
+        "duos": 16,
+        "share": 0.2463768115942029,
+        "solo": 1
       },
       {
         "cause": "no_replay_exact",
         "duos": 10,
-        "share": 0.2558139534883721,
+        "share": 0.15942028985507245,
         "solo": 1
       },
       {
-        "cause": "missing_inputs",
+        "cause": "chance",
         "duos": 7,
-        "share": 0.16279069767441862,
-        "solo": 0
+        "share": 0.11594202898550725,
+        "solo": 1
       },
       {
-        "cause": "chance",
-        "duos": 5,
-        "share": 0.11627906976744186,
+        "cause": "approximate_card",
+        "duos": 4,
+        "share": 0.10144927536231885,
+        "solo": 3
+      },
+      {
+        "cause": "replay_minions",
+        "duos": 2,
+        "share": 0.028985507246376812,
         "solo": 0
       },
       {
         "cause": "no_replay_not_modelled",
         "duos": 1,
-        "share": 0.023255813953488372,
+        "share": 0.014492753623188406,
+        "solo": 0
+      },
+      {
+        "cause": "replay_stats",
+        "duos": 1,
+        "share": 0.014492753623188406,
         "solo": 0
       }
     ],
-    "total": 43
+    "total": 69
   },
   "modes": {
     "duos": {
-      "blocked": 8,
-      "blocked_share": 0.034482758620689655,
-      "brier": 0.2740555996428573,
+      "blocked": 7,
+      "blocked_share": 0.018970189701897018,
+      "brier": 0.2635071155801105,
       "calibration": [
         {
           "from": 0.0,
-          "happened": 0.06009615384615385,
-          "mean_said": 0.015899759615384614,
-          "predictions": 416,
+          "happened": 0.05623100303951368,
+          "mean_said": 0.01642705167173252,
+          "predictions": 658,
           "to": 0.2
         },
         {
           "from": 0.2,
-          "happened": 0.5,
-          "mean_said": 0.30767333333333335,
-          "predictions": 30,
+          "happened": 0.36363636363636365,
+          "mean_said": 0.3058590909090909,
+          "predictions": 66,
           "to": 0.4
         },
         {
           "from": 0.4,
-          "happened": 0.3,
-          "mean_said": 0.511615,
-          "predictions": 20,
+          "happened": 0.42424242424242425,
+          "mean_said": 0.5075242424242424,
+          "predictions": 33,
           "to": 0.6000000000000001
         },
         {
           "from": 0.6000000000000001,
-          "happened": 0.5294117647058824,
-          "mean_said": 0.6987235294117647,
-          "predictions": 17,
+          "happened": 0.6666666666666666,
+          "mean_said": 0.7017833333333334,
+          "predictions": 36,
           "to": 0.8
         },
         {
           "from": 0.8,
-          "happened": 0.8941798941798942,
-          "mean_said": 0.98436455026455,
-          "predictions": 189,
+          "happened": 0.8976109215017065,
+          "mean_said": 0.9863201365187712,
+          "predictions": 293,
           "to": 1.0
         }
       ],
-      "combats_with_result": 232,
-      "mean_p_real": 0.8114071428571428,
-      "most_likely_right": 184,
+      "combats_with_result": 369,
+      "mean_p_real": 0.8097560773480666,
+      "most_likely_right": 301,
       "refused": 0,
-      "scored": 224
+      "scored": 362
     },
     "solo": {
       "blocked": 0,
       "blocked_share": 0.0,
-      "brier": 0.07764225263157894,
+      "brier": 0.18699560037735846,
       "calibration": [
         {
           "from": 0.0,
-          "happened": 0.0,
-          "mean_said": 0.0019,
-          "predictions": 36,
+          "happened": 0.039603960396039604,
+          "mean_said": 0.007826732673267328,
+          "predictions": 101,
           "to": 0.2
         },
         {
           "from": 0.2,
-          "happened": 0.5,
-          "mean_said": 0.328,
-          "predictions": 2,
+          "happened": 0.4,
+          "mean_said": 0.29854,
+          "predictions": 5,
           "to": 0.4
         },
         {
           "from": 0.4,
-          "happened": 1.0,
-          "mean_said": 0.5435,
-          "predictions": 1,
+          "happened": 0.5,
+          "mean_said": 0.47465,
+          "predictions": 2,
           "to": 0.6000000000000001
         },
         {
           "from": 0.6000000000000001,
-          "happened": 0.0,
-          "mean_said": 0.743,
-          "predictions": 1,
+          "happened": 0.5,
+          "mean_said": 0.723975,
+          "predictions": 4,
           "to": 0.8
         },
         {
           "from": 0.8,
-          "happened": 1.0,
-          "mean_said": 0.9993588235294117,
-          "predictions": 17,
+          "happened": 0.9361702127659575,
+          "mean_said": 0.997268085106383,
+          "predictions": 47,
           "to": 1.0
         }
       ],
-      "combats_with_result": 19,
-      "mean_p_real": 0.9362947368421053,
-      "most_likely_right": 18,
+      "combats_with_result": 53,
+      "mean_p_real": 0.8770716981132077,
+      "most_likely_right": 47,
       "refused": 0,
-      "scored": 19
+      "scored": 53
     }
   },
   "trials": 10000

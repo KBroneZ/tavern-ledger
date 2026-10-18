@@ -80,6 +80,29 @@
  {
   "id": "BG_TRINKET_SYN",
   "dbfId": 910004,
-  "name": "Una baratija"
+  "name": "Una baratija",
+  "spellSchool": "LESSER_TRINKET"
+ },
+ {
+  "id": "BG_TRINKET2_SYN",
+  "dbfId": 910007,
+  "name": "Un abalorio mayor",
+  "type": "BATTLEGROUND_TRINKET",
+  "set": "BATTLEGROUNDS",
+  "spellSchool": "GREATER_TRINKET"
+ },
+ {
+  "id": "BG22_HERO_001p_t2",
+  "dbfId": 910008,
+  "name": "Invocación de fuego",
+  "type": "HERO_POWER",
+  "set": "BATTLEGROUNDS"
+ },
+ {
+  "id": "BG22_HERO_000p_Alt",
+  "dbfId": 910009,
+  "name": "Carga y dispara",
+  "type": "HERO_POWER",
+  "set": "BATTLEGROUNDS"
  }
 ]

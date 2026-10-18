@@ -33,8 +33,11 @@ export const SIM_STRINGS = {
   "load.unknownGifts.one": "1 minion has a Dark Gift the game's log does not name: it plays as the plain card, so the odds are approximate.",
   "load.unknownGifts.other": "{count} minions have a Dark Gift the game's log does not name: they play as the plain card, so the odds are approximate.",
   "load.unknownTiers": "Only your own tavern tier is in the record. Set the others to see the damage.",
+  "load.kitsNotRecorded": "This game was saved before hero powers and trinkets were recorded: choose them by hand.",
 
   "mode.label": "Combat",
+  "soc.label": "Play start of combat",
+  "soc.hint": "On: the boards are as before the combat, their start-of-combat effects still to come (boards you build). Off: boards taken at the first attack, which already show them (a loaded game's).",
   "table.label": "Combat table",
 
   "side.player": "You",
@@ -71,6 +74,23 @@ export const SIM_STRINGS = {
   "gift.addButton": "Add",
   "gift.remove": "Remove {name}",
   "gift.full": "A minion holds 4 Dark Gifts.",
+
+  "kit.label": "Hero power and trinkets",
+  "kit.power": "Hero power",
+  "kit.power2": "Second hero power",
+  "kit.lesser": "Lesser trinket",
+  "kit.greater": "Greater trinket",
+  "kit.third": "Third trinket",
+  "kit.none": "None",
+  "kit.target": "Minion it chooses",
+  "kit.targetNone": "Not chosen",
+  "kit.held": "Minion it holds",
+  "kit.heldFind": "Find the minion it holds",
+  "kit.heldRemove": "Remove {name}",
+  "kit.turn": "Turn",
+  "kit.before": "Before turn 7",
+  "kit.after": "Turn 7 or later",
+  "kit.noNames": "The names of hero powers and trinkets did not load.",
 
   "keyword.taunt": "Taunt",
   "keyword.divine_shield": "Divine Shield",
@@ -114,7 +134,7 @@ export const SIM_STRINGS = {
   "result.approx.one": "1 card is simulated with a known difference from the game.",
   "result.approx.other": "{count} cards are simulated with a known difference from the game.",
   "result.newBuild": "New game build ({build}): odds not checked yet. They are worked out with the rules of the builds the simulator was checked against, so a card changed in this build may play differently.",
-  "result.soc": "A card here acts at the start of combat, which the simulator does not play: boards loaded from a game already show its effect, boards you build do not.",
+  "result.soc": "A card here acts at the start of combat, and start of combat is off: boards loaded from a game already show its effect; for boards you build, turn on \"Play start of combat\".",
   "result.notModelled": "Cannot run: the simulator does not know these cards, and never guesses.",
   "result.notModelledHint": "Remove them to see the odds.",
   "result.noCardData": "Cannot run: the card data lacks these cards.",
@@ -122,7 +142,7 @@ export const SIM_STRINGS = {
   "result.failed": "The simulator stopped unexpectedly.",
   "result.retry": "Try again",
 
-  "credit": "Card data and card art © Blizzard Entertainment, from HearthstoneJSON. The odds come from the same engine as the app: only what is on the boards, no hero powers, trinkets or spells.",
+  "credit": "Card data and card art © Blizzard Entertainment, from HearthstoneJSON. The odds come from the same engine as the app: the boards with each hero's powers and trinkets, no spells.",
 } as const;
 
 export type SimStringKey = keyof typeof SIM_STRINGS;

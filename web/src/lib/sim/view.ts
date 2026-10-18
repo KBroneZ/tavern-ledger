@@ -14,7 +14,10 @@ import { cls, h, type VNode } from "../view/node.ts";
 import { drawnAttrs } from "../art/drawn.ts";
 import { picture } from "../view/pieces.ts";
 import { MAX_GIFTS, MAX_MINIONS, MAX_STAT, MAX_TIER, SIM_KEYWORDS, type Side, type SimBoard, type SimKeyword, type SimMinion, type SimState } from "./board.ts";
+import type { KitLists } from "./cardFile.ts";
 import type { CardIndex, SimCard } from "./cards.ts";
+import { NO_KIT_LISTS } from "../game/names.ts";
+import { type Holding, kitView } from "./kitView.ts";
 import { reasonText } from "./reasons.ts";
 import { sm } from "./strings.ts";
 
@@ -58,6 +61,10 @@ export interface EditorProps {
   selected: Selection | null;
   adding: Adding | null;
   marks: Marks;
+  /** The hero powers and trinkets to choose from (T-628); none when the names did not load. */
+  lists?: KitLists;
+  /** The held-minion search open on a hero power, if any. */
+  holding?: Holding | null;
 }
 
 const where = (side: Side, board: number) => ({ "data-side": side, "data-board": board });
@@ -349,6 +356,7 @@ function boardView(side: Side, index: number, props: EditorProps): VNode {
       tierPicker(b, side, index, `${id}-tier`),
       duos && index === 1 ? h("button", { type: "button", class: "sim-btn sim-btn-quiet", "data-act": "board-remove", ...where(side, index) }, sm("board.remove")) : null,
     ),
+    kitView(side, index, { state, cards: props.cards, lists: props.lists ?? NO_KIT_LISTS, marks: props.marks, holding: props.holding ?? null }),
     h(
       "ul",
       { class: "sim-row", role: "list", "aria-label": title },

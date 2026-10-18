@@ -1,0 +1,7 @@
+{
+  "BG22_HERO_000p_Alt": ["held", "first"],
+  "BG22_HERO_002p": ["round", "first"],
+  "BG22_HERO_003p": ["round", "first"],
+  "BG25_HERO_103p": ["target"],
+  "BGDUO_HERO_101p": ["target", "teammate"]
+}

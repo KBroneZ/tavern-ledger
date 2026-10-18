@@ -63,7 +63,7 @@ fn play(request: &Request) -> Result<Odds, Value> {
         let options = Options {
             trials: BATCH,
             seed: SEED ^ batch,
-            start_of_combat: false,
+            start_of_combat: request.start_of_combat,
             allow_unmodelled: false,
         };
         match simulate_teams(&request.player, &request.opponent, &options) {
@@ -106,14 +106,17 @@ pub fn run(request: &Request) -> Value {
         Ok(o) => o,
         Err(verdict) => return verdict,
     };
-    let start_of_combat = request
-        .player
-        .boards()
-        .chain(request.opponent.boards())
-        .flat_map(|b| &b.minions)
-        .any(|m| {
-            has_start_of_combat(&m.card_id) || m.gifts.iter().any(|g| gifts::has_start_of_combat(g))
-        });
+    // Played start of combat is not missed (as the app's estimate).
+    let start_of_combat = !request.start_of_combat
+        && request
+            .player
+            .boards()
+            .chain(request.opponent.boards())
+            .flat_map(|b| &b.minions)
+            .any(|m| {
+                has_start_of_combat(&m.card_id)
+                    || m.gifts.iter().any(|g| gifts::has_start_of_combat(g))
+            });
     let known = odds.damage_unknown == 0;
     let cap = request.damage_cap;
     let approximate: Vec<Value> = odds
