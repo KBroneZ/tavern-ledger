@@ -111,7 +111,7 @@ test("one file can work while the other does not, each said in its own line", ()
 test("every reason has its words in both languages", () => {
   for (const lang of ["en", "es"]) {
     I18n.setLang(lang);
-    for (const reason of ["link", "not_a_file", "not_plain_text", "folder_missing", "no_game_exe", "no_path", "access_denied", "read_only", "path_too_long", "locked", "changed", "disk_full", "too_large", "too_many_backups", "other"]) {
+    for (const reason of ["link", "not_a_file", "not_plain_text", "folder_missing", "no_game_exe", "no_path", "access_denied", "read_only", "path_too_long", "locked", "changed", "disk_full", "too_large", "too_many_backups", "virtualized", "other"]) {
       const line = TLSetupFix.resultLine({ file: "client.config", result: "failed", reason }, t);
       assert.ok(!line.includes("setup.fix"), `${lang} ${reason}: ${line}`);
     }
@@ -221,4 +221,26 @@ test("coming back to the window checks the files again", async () => {
   listeners.focus();
   await settle();
   assert.equal(backend.calls.some(([name]) => name === "setup_recheck"), true);
+});
+
+test("where the app may not write the files the box lists the lines, offers no button and says to do it by hand", () => {
+  for (const [lang, pattern] of [["en", /cannot change these files itself/], ["es", /no puede cambiar estos archivos/]]) {
+    I18n.setLang(lang);
+    const doc = page();
+    const manual = { state: "manual", can_fix: false, can_fix_optional: false, fix: null };
+    TLSetupFix.render(doc, { setup: [LINE], setup_view: manual }, t);
+    assert.equal(hidden(doc, "setup"), false);
+    assert.equal(hidden(doc, "setup-fix"), true);
+    assert.equal(hidden(doc, "setup-fix-optional"), true);
+    assert.match(text(doc, "setup-state"), pattern);
+    assert.equal(hidden(doc, "setup-state"), false);
+  }
+  I18n.setLang("en");
+});
+
+test("a write Windows kept in the app's private storage is told as not changed", () => {
+  I18n.setLang("en");
+  const line = TLSetupFix.resultLine({ file: "log.config", result: "failed", reason: "virtualized" }, t);
+  assert.match(line, /log\.config was not changed/);
+  assert.match(line, /private storage/);
 });

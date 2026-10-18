@@ -19,6 +19,8 @@ use tracker::setup::{
 };
 use tracker::setup_fix::{client_config_target, fix, log_config_target, Outcome, Reason, Target};
 
+use crate::package;
+
 /// `log.config` with only what the app needs.
 const REQUIRED_LOG_CONFIG: [Wanted; 1] = [POWER];
 /// `log.config` with the optional scene lines too.
@@ -41,6 +43,10 @@ pub struct SetupState {
     /// tests never touch the player's real `log.config`.
     local_app_data: Mutex<Option<PathBuf>>,
     fixing: AtomicBool,
+    /// This edition may not write the two files (the Store edition where the
+    /// manifest's excluded folder cannot be relied on): the box lists the
+    /// lines to write by hand and offers no Fix.
+    manual_only: AtomicBool,
     /// The tracker stopped (or never started here): the folder decision is
     /// no longer followed, so nothing is offered to write.
     frozen: AtomicBool,
@@ -68,6 +74,15 @@ impl SetupState {
     /// notice still says what it knew, but offers nothing to write.
     pub fn freeze(&self) {
         self.frozen.store(true, Ordering::SeqCst);
+    }
+
+    pub fn set_manual_only(&self, manual: bool) {
+        self.manual_only.store(manual, Ordering::SeqCst);
+    }
+
+    /// Whether the Fix button may write the two files at all.
+    pub fn fix_allowed(&self) -> bool {
+        !self.manual_only.load(Ordering::SeqCst)
     }
 
     pub fn is_frozen(&self) -> bool {
@@ -119,6 +134,13 @@ impl SetupState {
         if self.is_frozen() && !fixing {
             // Said as lines only: no sentence about fixing, no buttons.
             view.state = "unknown";
+            view.can_fix = false;
+            view.can_fix_optional = false;
+        } else if !self.fix_allowed() {
+            // The lines say what to write; there is nothing to click.
+            if matches!(view.state, "needs_fix" | "error") {
+                view.state = "manual";
+            }
             view.can_fix = false;
             view.can_fix_optional = false;
         }
@@ -293,10 +315,26 @@ pub fn compose(
 
 /// Fixes the two files, each on its own: one can work while the other does
 /// not. The paths come from the folders the app uses, never from the window.
+/// For an app that is not in a package (the tests).
+#[cfg(test)]
 pub fn fix_files(
     local_app_data: Option<&Path>,
     install_dir: Option<&Path>,
     optional: bool,
+) -> Vec<FileFix> {
+    fix_files_in(local_app_data, install_dir, optional, None)
+}
+
+/// [`fix_files`] for an app that may run from a package. `private_root` is the
+/// package's private `LocalCache\Local` folder: a package's new files under
+/// `%LOCALAPPDATA%` can end up there instead of where the game reads them,
+/// and the app cannot tell from inside. A file written by this fix that has a
+/// copy there is reported as failed, never as created or fixed.
+pub fn fix_files_in(
+    local_app_data: Option<&Path>,
+    install_dir: Option<&Path>,
+    optional: bool,
+    private_root: Option<&Path>,
 ) -> Vec<FileFix> {
     let log_config = match local_app_data {
         None => Outcome::Refused(Reason::NoPath),
@@ -307,11 +345,18 @@ pub fn fix_files(
                 &REQUIRED_LOG_CONFIG
             };
             let path = log_config_target(local);
-            fix(&Target {
+            let outcome = fix(&Target {
                 path: &path,
                 wanted,
                 create_parent: true,
-            })
+            });
+            let redirected = private_root
+                .and_then(|private| package::private_copy(private, local, &path))
+                .is_some_and(|copy| copy.exists());
+            match outcome {
+                Outcome::Fixed { .. } if redirected => Outcome::Failed(Reason::Virtualized),
+                other => other,
+            }
         }
     };
     let client_config = match install_dir.map(client_config_target) {
