@@ -1,8 +1,15 @@
 Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.
 
-Tavern Ledger reads the Hearthstone log files on this PC and, only if you
-turn it on, two values the game shows you (read-only). It never changes the
-game or its files. Privacy policy: https://tavernledger.net/privacy/
+Tavern Ledger reads the Hearthstone log files on this PC. By default, and
+until you turn it off in Settings, it also reads two values the game shows
+you, the lobby's tribes and your rating, from the game's memory (read-only).
+This goes against the letter of Blizzard's End User License Agreement and the
+risk to your Battle.net account is yours: see section 9 of the terms.
+It never injects code or acts in the game for you, and changes no game file
+except when you click Fix in the app's setup notice, which can create or
+complete the game's two logging settings files.
+Privacy policy: https://tavernledger.net/privacy/
+Terms: https://tavernledger.net/terms/
 
 ----------------------------------------------------------------------
 
