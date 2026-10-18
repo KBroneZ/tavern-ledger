@@ -10,8 +10,8 @@
 //! source on them is (else no number yet); from the first attack on, the
 //! boards then (D-165).
 //!
-//! Red line (D-004, D-054): only boards the player saw: the ones that
-//! entered play in the combat on screen. When the odds cannot be trusted (a
+//! Red line (D-004, D-054): only boards the player saw: the ones of the
+//! combat on screen, as the screen shows them (D-165). When the odds cannot be trusted (a
 //! board not in yet, a card the simulator does not know, no card data) the
 //! overlay gets the reason, never a number.
 
@@ -282,6 +282,11 @@ pub fn odds_input(report: &GameReport, live: LiveFacts) -> Result<OddsInput, NoO
     let Some(number) = live.combat_round else {
         return Err(NoOdds::new(Gap::NotInCombat, None));
     };
+    let begun = report.rounds.iter().any(|r| r.number == number)
+        || report.opening.iter().any(|o| o.round == number);
+    if !begun {
+        return Err(NoOdds::new(Gap::NoBoardSeen, None));
+    }
     combat_input(report, &live, number, Moment::FirstAttack)
         .or_else(|no| combat_input(report, &live, number, Moment::BeforeStart).map_err(|_| no))
 }
@@ -377,17 +382,18 @@ fn note_missing(missing: &mut Vec<String>, id: String) {
 
 /// A hero's powers and trinkets in the engine's form in combat `round`, as
 /// the harness gives them: a named minion's board position becomes its
-/// index. A minion a power holds is read on the player's team only (D-163)
-/// and goes to `missing` when the card data lacks it.
+/// index. A minion a power holds is read only when `hold`: on the player's
+/// team (D-163) with start of combat played, the only time it comes in; it
+/// goes to `missing` when the card data lacks it.
 fn engine_kit(
     kit: &HeroKit,
     round: i64,
-    own: bool,
+    hold: bool,
     facts: &dyn Fn(&str) -> Option<Facts>,
     missing: &mut Vec<String>,
 ) -> Kit {
     let mut card = |c: &LogKitCard| KitCard {
-        held: c.held.as_ref().filter(|_| own).and_then(|m| {
+        held: c.held.as_ref().filter(|_| hold).and_then(|m| {
             engine_minion(m, facts)
                 .map_err(|id| note_missing(missing, id))
                 .ok()
@@ -440,8 +446,9 @@ fn teams(
     missing: &mut Vec<String>,
 ) -> (Team, Team) {
     let kit = |kit: &Option<HeroKit>, own: bool, missing: &mut Vec<String>| {
+        let hold = own && input.estimate;
         kit.as_ref()
-            .map(|k| engine_kit(k, input.round, own, facts, missing))
+            .map(|k| engine_kit(k, input.round, hold, facts, missing))
     };
     let own_kit = kit(&input.own_kit, true, missing);
     let own = warband(

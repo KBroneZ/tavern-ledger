@@ -322,8 +322,19 @@ fn the_estimate_shows_when_the_game_plays_the_start_of_combat() {
     watcher.poll().unwrap();
     assert_eq!(watcher.live_combat_round(), None, "nothing played yet");
 
-    // The screen plays the combat in, up to its start of combat.
-    append(&power, &played_copies(&lines[start..=begun]));
+    // The screen plays the combat in, up to just before its start of combat:
+    // no estimate yet.
+    let copies = played_copies(&lines[start..=begun]);
+    let (last, before) = copies.split_last().expect("packets before the start");
+    append(&power, before);
+    watcher.poll().unwrap();
+    assert!(
+        input(&watcher).map_or(true, |i| !i.estimate),
+        "the screen has not reached the start of combat"
+    );
+
+    // Up to its start of combat.
+    append(&power, std::slice::from_ref(last));
     watcher.poll().unwrap();
     let early = input(&watcher).expect("the estimate's input");
     assert!(early.estimate, "the boards before start of combat");

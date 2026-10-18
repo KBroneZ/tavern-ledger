@@ -119,14 +119,18 @@ fn an_estimate_needs_both_legs_of_the_combat_on_screen() {
     );
 }
 
-#[test]
-fn each_board_plays_with_its_heros_powers_and_trinkets() {
-    let lock = HeroKit {
+/// A minion with no combat effect, held by a hero power.
+const HELD: &str = "BG26_361";
+
+/// Lock and Load holding a 5/6 [`HELD`], and the greater trinket slot's
+/// placeholder.
+fn lock_and_load() -> HeroKit {
+    HeroKit {
         powers: vec![LogKitCard {
             card_id: "BG22_HERO_000p_Alt".into(),
             counters: [1, 0, 0, 0, 0],
             target: Some(2),
-            held: Some(minion("HELD", 5, 6, 0)),
+            held: Some(minion(HELD, 5, 6, 0)),
             ..Default::default()
         }],
         trinkets: vec![LogKitCard {
@@ -134,10 +138,23 @@ fn each_board_plays_with_its_heros_powers_and_trinkets() {
             slot: 2,
             ..Default::default()
         }],
-    };
+    }
+}
+
+/// Card data that lacks [`HELD`].
+fn lacking(id: &str) -> Option<Facts> {
+    if id == HELD {
+        None
+    } else {
+        facts(id)
+    }
+}
+
+#[test]
+fn each_board_plays_with_its_heros_powers_and_trinkets() {
     let mut r = solo_report();
-    r.rounds[1].entries[0].kit = Some(lock.clone());
-    r.rounds[1].entries[1].kit = Some(lock);
+    r.rounds[1].entries[0].kit = Some(lock_and_load());
+    r.rounds[1].entries[1].kit = Some(lock_and_load());
     let i = odds_input(&r, live(4)).expect("odds");
     let mut missing = Vec::new();
     let (player, foe) = teams(&i, &facts, &mut missing);
@@ -150,17 +167,66 @@ fn each_board_plays_with_its_heros_powers_and_trinkets() {
         Some(1),
         "board position 2 is index 1"
     );
-    let held = mine.powers[0].held.as_ref().expect("the held minion");
-    assert_eq!((held.attack, held.health), (5, 6));
     assert_eq!(mine.trinkets[0].slot, 2);
-    let theirs = foe.first.kit.expect("the opponent's kit");
-    assert_eq!(theirs.powers[0].held, None, "never one the opponent holds");
+    assert!(foe.first.kit.is_some(), "the opponent's kit");
+    // At the first attack a held minion never comes in (it does only with
+    // start of combat played), so the card data it lacks does not matter.
+    assert_eq!(mine.powers[0].held, None);
+    assert_eq!(run_odds(&i, &lacking, Duration::from_secs(5)).gap, None);
+}
 
-    // A held minion the card data lacks is named like a board's.
-    let lacking = |id: &str| if id == "HELD" { None } else { facts(id) };
+#[test]
+fn an_estimate_brings_in_the_players_held_minion_never_the_opponents() {
+    let mut r = begun_report();
+    r.opening[0].kit = lock_and_load();
+    r.opening[1].kit = lock_and_load();
+    let i = odds_input(&r, live(4)).expect("an estimate");
+    let mut missing = Vec::new();
+    let (player, foe) = teams(&i, &facts, &mut missing);
+    let held = player.first.kit.expect("the player's kit").powers[0]
+        .held
+        .clone()
+        .expect("the held minion");
+    assert_eq!((held.attack, held.health), (5, 6));
+    let theirs = foe.first.kit.expect("the opponent's kit");
+    assert_eq!(
+        theirs.powers[0].held, None,
+        "never one the opponent holds (D-163)"
+    );
+    // Without it the opponent's Lock and Load cannot be played: no number.
+    let o = run_odds(&i, &facts, Duration::from_secs(5));
+    assert_eq!(o.gap, Some(Gap::NoBoardSeen));
+
+    // The player's alone is played; a held minion the card data lacks is
+    // named like a board's.
+    r.opening[1].kit = HeroKit::default();
+    let i = odds_input(&r, live(4)).expect("an estimate");
+    let o = run_odds(&i, &facts, Duration::from_secs(5));
+    assert_eq!((o.gap, o.estimate), (None, true));
     let o = run_odds(&i, &lacking, Duration::from_secs(5));
     assert_eq!(o.gap, Some(Gap::NoCardData));
-    assert_eq!(o.missing, ["HELD"]);
+    assert_eq!(o.missing, [HELD]);
+}
+
+#[test]
+fn an_estimate_with_a_start_of_combat_power_not_played_gives_no_number_yet() {
+    // Embrace Your Rage acts at the start of combat and is not played.
+    const RAGE: &str = "TB_BaconShop_HP_103";
+    assert!(combat_sim::kit::has_start_of_combat(RAGE));
+    assert!(combat_sim::kit_effects::played(RAGE).is_none());
+    let mut r = begun_report();
+    r.opening[1].kit = kit(RAGE);
+    let i = odds_input(&r, live(4)).expect("an estimate's input");
+    let o = run_odds(&i, &facts, Duration::from_secs(5));
+    assert_eq!(o.gap, Some(Gap::NoBoardSeen));
+
+    // At the first attack its effect is on the boards: odds.
+    r.opening.clear();
+    let mut fought = round(4, Some(plain(2)), 5, Some(plain(3)));
+    fought.entries[1].kit = Some(kit(RAGE));
+    r.rounds.push(fought);
+    let i = odds_input(&r, live(4)).expect("odds");
+    assert_eq!(run_odds(&i, &facts, Duration::from_secs(5)).gap, None);
 }
 
 #[test]

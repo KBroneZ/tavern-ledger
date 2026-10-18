@@ -428,15 +428,17 @@ pub struct GameReport {
 /// A combat leg as it began, before its first attack (T-628, D-165).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OpeningLeg {
+    /// The combat (round) number, as the round's entries have it.
     pub round: i64,
     pub side: Side,
+    /// The seat, as the leg's entry will have it once it attacks.
     pub player_id: Option<i64>,
     pub hero: Option<String>,
     /// The board just before the leg's first start-of-combat effect.
     pub board: Vec<Minion>,
     /// The side's hero powers and trinkets then.
     pub kit: HeroKit,
-    /// The side's game-long values now.
+    /// The side's game-long values then.
     pub values: CombatValues,
 }
 

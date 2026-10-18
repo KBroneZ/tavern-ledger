@@ -838,27 +838,24 @@ fn lobby_health_from(heroes: &[(i64, &Entity)]) -> BTreeMap<i64, i64> {
         .collect()
 }
 
+/// The lobby seat whose hero has this card id (the latest one).
+fn seat_by_hero(heroes: &[(i64, &Entity)], card: &Option<String>) -> Option<i64> {
+    let card = card.as_ref()?;
+    heroes
+        .iter()
+        .rev()
+        .find(|(_, h)| h.card_id.as_ref() == Some(card))
+        .map(|(pid, _)| *pid)
+}
+
 /// The legs whose start of combat is under way now (T-628, D-165), with
 /// their seat as the round's entries get it.
 fn opening_of(c: &Collector, heroes: &[(i64, &Entity)]) -> Vec<OpeningLeg> {
-    let by_card = |card: &Option<String>| -> Option<i64> {
-        let card = card.as_ref()?;
-        heroes
-            .iter()
-            .rev()
-            .find(|(_, h)| h.card_id.as_ref() == Some(card))
-            .map(|(pid, _)| *pid)
-    };
     c.opening()
         .into_iter()
-        .map(|(round, side, hero, hint, board, kit, values)| OpeningLeg {
-            round,
-            side,
-            player_id: by_card(&hero).or(hint),
-            hero,
-            board,
-            kit,
-            values,
+        .map(|leg| OpeningLeg {
+            player_id: seat_by_hero(heroes, &leg.hero).or(leg.player_id),
+            ..leg
         })
         .collect()
 }
@@ -878,14 +875,7 @@ fn rounds_of(c: &Collector, heroes: &[(i64, &Entity)], last_health: Option<i64>)
     }
     // Combat hero copies share the card id of the lobby hero. Ghosts of
     // eliminated players do not, so their id comes from the combat tag.
-    let by_card = |card: &Option<String>| -> Option<i64> {
-        let card = card.as_ref()?;
-        heroes
-            .iter()
-            .rev()
-            .find(|(_, h)| h.card_id.as_ref() == Some(card))
-            .map(|(pid, _)| *pid)
-    };
+    let by_card = |card: &Option<String>| seat_by_hero(heroes, card);
     c.entries
         .iter()
         .map(|(&n, entries)| Round {

@@ -779,12 +779,13 @@ fn a_trinket_never_names_or_holds_a_minion() {
 fn the_legs_between_their_start_of_combat_and_first_attack_are_given_live() {
     // D-165: the overlay's early estimate reads the boards as each leg began
     // while the game plays its start of combat.
-    let lines = solo();
-    let at = |wanted: &str| lines.iter().position(|l| l == wanted).expect(wanted);
-    let (trigger, attack) = (
-        at(&block("TRIGGER", "40", 0)),
-        at(&block("ATTACK", "20", 0)),
-    );
+    let mut lines = solo();
+    let at = |lines: &[String], wanted: &str| lines.iter().position(|l| l == wanted).expect(wanted);
+    let trigger = at(&lines, &block("TRIGGER", "40", 0));
+    // The player's Blood Gems grow during the start of combat: the leg keeps
+    // its values from before it.
+    lines.insert(trigger + 1, tag("2", "BACON_BLOODGEMBUFFATKVALUE", "3"));
+    let attack = at(&lines, &block("ATTACK", "20", 0));
     let mut reader = LogReader::default();
     lines[..trigger].iter().for_each(|l| reader.feed(l));
     assert_eq!(
@@ -792,9 +793,12 @@ fn the_legs_between_their_start_of_combat_and_first_attack_are_given_live() {
         Some(0),
         "the game's setup and a pet are not its start"
     );
-    reader.feed(&lines[trigger]);
+    lines[trigger..=trigger + 1]
+        .iter()
+        .for_each(|l| reader.feed(l));
     assert_eq!(reader.combat_legs_opening_now(), Some(2));
     let begun = reader.snapshot_current().expect("the game is on");
+    assert_eq!(begun.opening.len(), 2);
     let leg = |side: Side| {
         begun
             .opening
@@ -813,6 +817,7 @@ fn the_legs_between_their_start_of_combat_and_first_attack_are_given_live() {
         stats(&leg(Side::Own).board),
         [("SYN_OWN_A", 2, 3), ("SYN_OWN_B", 1, 1)]
     );
+    assert_eq!(leg(Side::Own).values.blood_gem, (0, 0), "as the leg began");
     assert!(
         begun.rounds.iter().all(|r| r.number != 1),
         "no board of the combat has reached its first attack"
@@ -820,7 +825,7 @@ fn the_legs_between_their_start_of_combat_and_first_attack_are_given_live() {
 
     // At the first attack the legs become the round's entries, with the
     // same boards before start of combat and kits.
-    lines[trigger + 1..=attack]
+    lines[trigger + 2..=attack]
         .iter()
         .for_each(|l| reader.feed(l));
     assert_eq!(reader.combat_legs_opening_now(), Some(0));
@@ -843,6 +848,6 @@ fn the_legs_between_their_start_of_combat_and_first_attack_are_given_live() {
         assert_eq!(e.player_id, o.player_id, "{side:?}");
     }
     // Nothing of it is saved.
-    let json = serde_json::to_string(&fought).expect("json");
-    assert!(!json.contains("opening"));
+    let json = serde_json::to_value(&fought).expect("json");
+    assert!(json.get("opening").is_none());
 }

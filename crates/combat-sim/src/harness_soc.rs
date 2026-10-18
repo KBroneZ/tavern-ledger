@@ -46,10 +46,14 @@ pub struct SocCombat {
 }
 
 /// A hero's kit as the engine takes it, in round `round`; a target is a
-/// board index.
-pub(crate) fn engine_kit(kit: &HeroKit, round: i64, db: &CardDb) -> Kit {
+/// board index. A held minion only on the player's side (`own`, D-163).
+pub(crate) fn engine_kit(kit: &HeroKit, round: i64, own: bool, db: &CardDb) -> Kit {
     let card = |c: &bg_parser::report::KitCard| KitCard {
-        held: c.held.as_ref().and_then(|m| engine_minion(m, db)),
+        held: c
+            .held
+            .as_ref()
+            .filter(|_| own)
+            .and_then(|m| engine_minion(m, db)),
         card_id: c.card_id.clone(),
         slot: u8::try_from(c.slot).unwrap_or(0),
         counters: c.counters.map(|n| i32::try_from(n).unwrap_or(0)),
@@ -68,7 +72,8 @@ pub(crate) fn engine_kit(kit: &HeroKit, round: i64, db: &CardDb) -> Kit {
 /// An entry's two boards with its kit: (at the first attack, before start of
 /// combat). `None` when the entry has no board or a card id is missing.
 fn entry_bands(e: &CombatEntry, round: i64, db: &CardDb) -> Option<(Warband, Option<Warband>)> {
-    let kit = e.kit.as_ref().map(|k| engine_kit(k, round, db));
+    let own = e.side == Side::Own;
+    let kit = e.kit.as_ref().map(|k| engine_kit(k, round, own, db));
     let band = |minions| Warband {
         values: game_values(e.values),
         kit: kit.clone(),
@@ -266,9 +271,9 @@ struct ModeRun {
     /// line per combat moved whose boards differ.
     kept: BTreeMap<String, u32>,
     moved: Vec<String>,
-    /// How long each run took (microseconds), as the overlay's two moments
-    /// (D-165): with kits at the first attack, and the leg rule's from
-    /// before start of combat with it played.
+    /// How long each run that gave odds took (microseconds), as the
+    /// overlay's two moments (D-165): with kits at the first attack, and the
+    /// leg rule's from before start of combat with it played.
     micros_kits: Vec<u128>,
     micros_before: Vec<u128>,
 }
@@ -286,7 +291,9 @@ fn run_mode(combats: &[SocCombat], duos: bool, options: &Options) -> ModeRun {
         let bare = [without_kits(&c.after[0]), without_kits(&c.after[1])];
         m.today.add(play(&bare, false, options), c.result);
         let (played, micros) = timed(&c.after, false, options);
-        m.micros_kits.push(micros);
+        if matches!(played, Played::Odds(_)) {
+            m.micros_kits.push(micros);
+        }
         m.kits.add(played, c.result);
         if let Some(before) = &c.before {
             m.with_before += 1;
@@ -301,7 +308,9 @@ fn run_mode(combats: &[SocCombat], duos: bool, options: &Options) -> ModeRun {
         m.from_before += 1;
         m.hidden += u32::from(!c.hidden.is_empty());
         let (played, micros) = timed(before, true, options);
-        m.micros_before.push(micros);
+        if matches!(played, Played::Odds(_)) {
+            m.micros_before.push(micros);
+        }
         if *before != c.after {
             m.differs += 1;
             m.moved.push(moved_line(c, before, &played, options));
@@ -486,7 +495,7 @@ mod tests {
             ],
             trinkets: vec![kit_card("BG30_Trinket_1st", None)],
         };
-        let kit = engine_kit(&kit, 7, &CardDb::default());
+        let kit = engine_kit(&kit, 7, true, &CardDb::default());
         let targets: Vec<_> = kit.powers.iter().map(|p| p.target).collect();
         assert_eq!(targets, [Some(0), Some(2), None, None, None]);
         assert_eq!(kit.powers[0].counters, [3, 0, 0, 0, 0]);
