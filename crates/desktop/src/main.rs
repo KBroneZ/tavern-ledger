@@ -21,6 +21,7 @@ mod over_game_guard;
 mod overlay;
 mod overlay_layout;
 mod overlay_window;
+mod package;
 #[cfg(test)]
 mod process_checks;
 mod redact;
@@ -962,14 +963,25 @@ async fn setup_fix(
         let msg = "This window only shows the history; use the other Tavern Ledger window to fix the setup.";
         return Err::<(), String>(msg.into()).logged("setup_fix");
     }
+    if !state.setup.fix_allowed() {
+        let msg = "Tavern Ledger cannot write these files in this version; use the steps above to do it by hand.";
+        return Err::<(), String>(msg.into()).logged("setup_fix");
+    }
     let Some(ticket) = state.setup.begin_fix() else {
         return Err("A fix is already running.".into());
     };
     refresh_setup(&app, &state);
     let place = state.setup.place();
     let local = state.setup.local_app_data();
+    // Where a packaged app's redirected writes would land, to check for them.
+    let private = state.setup.private_root();
     let files = tauri::async_runtime::spawn_blocking(move || {
-        setup_notice::fix_files(local.as_deref(), place.install_dir.as_deref(), optional)
+        setup_notice::fix_files_in(
+            local.as_deref(),
+            place.install_dir.as_deref(),
+            optional,
+            private.as_deref(),
+        )
     })
     .await;
     let (files, outcome) = match files {
@@ -1611,6 +1623,23 @@ fn main() {
                 state
                     .setup
                     .use_local_app_data(path_from(std::env::args(), LOCAL_APP_DATA_ARG));
+            }
+            // The Store edition writes the game's logging files only where its
+            // manifest's excluded folder works (src/edition.rs).
+            let fix_allowed = edition::fix_allowed_here();
+            state.setup.set_manual_only(!fix_allowed);
+            state.setup.set_private_root(
+                state
+                    .setup
+                    .local_app_data()
+                    .as_deref()
+                    .and_then(package::private_local_root),
+            );
+            if !fix_allowed {
+                applog::info(
+                    "setup",
+                    "The Fix button is off in this edition here: the setup box lists the lines to write by hand.",
+                );
             }
             let loaded = state.overlay.load(&data_dir, overlay_dev(std::env::args()));
             let game_memory_loaded = state.game_memory.load(&data_dir);
