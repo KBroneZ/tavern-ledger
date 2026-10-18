@@ -3,6 +3,7 @@
 //! the logs are marked there.
 
 use crate::cards::{self, Action, Trigger};
+use crate::kit_passive::{self, KitTrigger};
 use crate::model::{BaseCard, GameValues, Keywords, Minion, Team, Tribes, Warband, MAX_BOARD};
 use crate::rng::Rng;
 
@@ -67,6 +68,10 @@ pub(crate) struct Prepared {
     /// (T-628).
     pub kits: [Vec<KitUse>; 2],
     pub second_kits: [Vec<KitUse>; 2],
+    /// Each side's played powers and trinkets that act during combat, and
+    /// its teammate's (T-628 round 4).
+    pub passives: [Vec<KitTrigger>; 2],
+    pub second_passives: [Vec<KitTrigger>; 2],
     pub start_of_combat: bool,
     /// Some card here gains what the Amalgam gains (round 5): checked once,
     /// not on every buff.
@@ -119,31 +124,21 @@ impl Prepared {
             let kit = second_bands[s].and_then(|b| b.kit.as_ref());
             kit_uses(kit, second[s].as_deref().unwrap_or(&[]), &mut cards, held)
         });
-        // Tokens any of these cards can summon, and what those summon.
+        let passives = first.map(|b| kit_passives(b.kit.as_ref(), start_of_combat));
+        let second_passives =
+            second_bands.map(|b| kit_passives(b.and_then(|b| b.kit.as_ref()), start_of_combat));
+        // Tokens the powers and trinkets or any of these cards can summon,
+        // and what those summon.
         let mut tokens: Vec<(&'static str, u16)> = Vec::new();
+        for t in passives.iter().chain(&second_passives).flatten() {
+            if let KitTrigger::AvengeSummon { token, .. } = t {
+                prepare_token(&mut cards, &mut tokens, token);
+            }
+        }
         let mut i = 0;
         while i < cards.len() {
             for t in summoned_tokens(&cards[i].triggers) {
-                let Some(token) = cards::token(t) else {
-                    continue;
-                };
-                if tokens.iter().any(|(id, _)| *id == token.id) {
-                    continue;
-                }
-                cards.push(CardInfo {
-                    id: token.id.to_string(),
-                    gifts: Vec::new(),
-                    plain: cards.len() as u16,
-                    triggers: cards::rules(token.id).map_or(Vec::new(), |r| r.triggers.to_vec()),
-                    tier: Some(token.tier),
-                    tribes: token.tribes,
-                    base: Some(BaseCard {
-                        attack: token.attack,
-                        health: token.health,
-                        keywords: token.keywords,
-                    }),
-                });
-                tokens.push((token.id, (cards.len() - 1) as u16));
+                prepare_token(&mut cards, &mut tokens, t);
             }
             i += 1;
         }
@@ -179,9 +174,46 @@ impl Prepared {
             second_values,
             kits,
             second_kits,
+            passives,
+            second_passives,
             start_of_combat,
         }
     }
+}
+
+/// Enters token `id` with its printed facts, once.
+fn prepare_token(cards: &mut Vec<CardInfo>, tokens: &mut Vec<(&'static str, u16)>, id: &str) {
+    let Some(token) = cards::token(id) else {
+        return;
+    };
+    if tokens.iter().any(|(t, _)| *t == token.id) {
+        return;
+    }
+    cards.push(CardInfo {
+        id: token.id.to_string(),
+        gifts: Vec::new(),
+        plain: cards.len() as u16,
+        triggers: cards::rules(token.id).map_or(Vec::new(), |r| r.triggers.to_vec()),
+        tier: Some(token.tier),
+        tribes: token.tribes,
+        base: Some(BaseCard {
+            attack: token.attack,
+            health: token.health,
+            keywords: token.keywords,
+        }),
+    });
+    tokens.push((token.id, (cards.len() - 1) as u16));
+}
+
+/// A board's played powers and trinkets that act during combat; one played
+/// only before start of combat is left out on a board taken after it.
+fn kit_passives(kit: Option<&crate::model::Kit>, start_of_combat: bool) -> Vec<KitTrigger> {
+    kit.into_iter()
+        .flat_map(|k| k.cards())
+        .filter_map(|c| kit_passive::passive(&c.card_id))
+        .filter(|p| start_of_combat || !p.before_start_only)
+        .map(|p| p.trigger)
+        .collect()
 }
 
 /// A board minion in the engine's form, with uid `uid`.
@@ -341,6 +373,9 @@ struct Combat<'a> {
     /// The exact copies a minion kept of the minions it destroyed, by its
     /// uid, for its Deathrattle (Stitched Salvager).
     kept: Vec<(u32, Vec<Unit>)>,
+    /// What each side's powers and trinkets that act during combat counted
+    /// (T-628 round 4).
+    kit_counts: [KitCounts; 2],
 }
 
 /// Plays one combat with `rng`.
@@ -375,6 +410,7 @@ impl<'a> Combat<'a> {
             legs: Legs::of(p),
             pending: [Vec::new(), Vec::new()],
             kept: Vec::new(),
+            kit_counts: Default::default(),
         }
     }
 }
@@ -561,8 +597,12 @@ mod kit;
 
 #[path = "combat_copies.rs"]
 mod copies;
+
+#[path = "combat_passive.rs"]
+mod passive;
 use duos::Legs;
 use kit::{kit_uses, KitUse, Pending};
+use passive::KitCounts;
 
 #[cfg(test)]
 #[path = "combat_tests.rs"]
@@ -599,3 +639,7 @@ mod kit_tests;
 #[cfg(test)]
 #[path = "combat_space_tests.rs"]
 mod space_tests;
+
+#[cfg(test)]
+#[path = "combat_passive_tests.rs"]
+mod passive_tests;

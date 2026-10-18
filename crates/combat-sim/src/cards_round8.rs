@@ -229,6 +229,41 @@ pub const EFFECTS_8: &[(&str, CardRules)] = &[
         "BG34_Giant_042_G",
         exact(&[Trigger::StartOfCombatUnmodelled]),
     ),
+    // Zerg's morphing minions (T-628 round 4): Lurker, Avenge (1): +1/+1
+    // (golden +2/+2); Baneling, Deathrattle: its Attack to a random enemy
+    // minion (golden twice).
+    (
+        "BG31_HERO_811t7",
+        exact(&[Trigger::Avenge(
+            1,
+            &[Action::GainStats {
+                attack: 1,
+                health: 1,
+            }],
+        )]),
+    ),
+    (
+        "BG31_HERO_811t7_G",
+        exact(&[Trigger::Avenge(
+            1,
+            &[Action::GainStats {
+                attack: 2,
+                health: 2,
+            }],
+        )]),
+    ),
+    (
+        "BG31_HERO_811t5",
+        exact(&[Trigger::Deathrattle(&[Action::DamageRandomEnemyByAttack {
+            times: 1,
+        }])]),
+    ),
+    (
+        "BG31_HERO_811t5_G",
+        exact(&[Trigger::Deathrattle(&[Action::DamageRandomEnemyByAttack {
+            times: 2,
+        }])]),
+    ),
     // Tentacle of C'Thun (hero buddy; an Aberration since build 254477):
     // after a different friendly minion gains stats, +1/+1 until next turn
     // (golden +2/+2). Combat-time gains by the others are not tracked.
@@ -240,6 +275,13 @@ pub const EFFECTS_8: &[(&str, CardRules)] = &[
 /// bonus the board already shows (golden form of each beside it). Checked
 /// one by one against the card texts (T-616).
 pub const NO_COMBAT_EFFECT_8: &[&str] = &[
+    // T-628 round 4: Timewarped Shivarra gains stats when a minion is
+    // consumed, which happens in the Tavern; Zerg's Roach grows at the end of
+    // a turn (its Taunt is on the board).
+    "BG34_Giant_311",
+    "BG34_Giant_311_G",
+    "BG31_HERO_811t3",
+    "BG31_HERO_811t3_G",
     // Spellcraft spells (cast from the hand in the shop; what they give
     // lasts "until next turn" and is on the board), Battlecries and
     // end-of-turn effects.

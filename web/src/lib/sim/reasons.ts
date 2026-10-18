@@ -94,6 +94,14 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
   "its teammate's board is not given": "no se indica el tablero de su compañero",
   "its copy had fewer stats than the teammate's minion in 2 of the 12 combats checked":
     "su copia tuvo menos estadísticas que el esbirro del compañero en 2 de los 12 combates comprobados",
+  "whether a minion that comes back with Reborn gets it is not checked":
+    "no se ha comprobado si lo recibe un esbirro que vuelve con Renacer",
+  "whether a Dragon that already has Divine Shield uses one of its 3 times is not checked":
+    "no se ha comprobado si un dragón que ya tiene Escudo divino gasta una de sus 3 veces",
+  "that it picks among the Undead without Reborn is not checked":
+    "no se ha comprobado que elija entre los no muertos sin Renacer",
+  "where its Beetles go on the board, and their game-long buffs, are not checked":
+    "no se ha comprobado dónde quedan sus escarabajos en el tablero ni sus mejoras de toda la partida",
 };
 
 /** The reason in the page's language, and whether it had to stay in English. */

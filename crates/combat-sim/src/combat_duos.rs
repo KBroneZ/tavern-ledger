@@ -2,7 +2,7 @@
 //! is gone. The rules and how they were found are in
 //! design notes
 
-use super::{Combat, Prepared, SideState};
+use super::{Combat, KitCounts, Prepared, SideState};
 
 /// Duos: whether each side's second board is still to come in, and the
 /// tavern tier of the hero whose board fights now (part of the damage).
@@ -59,8 +59,10 @@ impl Combat<'_> {
             let enters = self.sides[side].units.is_empty() && self.legs.waiting[side];
             if enters {
                 self.legs.waiting[side] = false;
-                // The hero whose board is gone takes its waiting powers along.
+                // The hero whose board is gone takes its waiting powers and
+                // what its powers and trinkets counted along.
                 self.pending[side].clear();
+                self.kit_counts[side] = KitCounts::default();
                 self.legs.tier[side] = self.p.second_tier[side];
                 self.sides[side] = SideState {
                     units: self.p.second[side].clone().unwrap_or_default(),

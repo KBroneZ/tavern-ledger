@@ -171,6 +171,7 @@ impl Combat<'_> {
             self.after_rally_attack(side);
         }
         self.after_friendly_attack(side);
+        self.kit_after_attack(side);
         self.process_deaths(side);
     }
 
@@ -206,6 +207,7 @@ impl Combat<'_> {
                 }
             }
         }
+        self.kit_before_attack(side, uid);
     }
 
     pub(super) fn neighbours(&self, side: usize, ix: usize) -> Vec<u32> {

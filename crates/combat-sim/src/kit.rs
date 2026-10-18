@@ -8,7 +8,8 @@
 //! what the played hero powers do "when you have space" later in the combat;
 //! for any other power or trinket that acts at the start of combat the board
 //! must be taken after it (start of combat off, its effect already on the
-//! board), and one that acts during combat makes the odds approximate.
+//! board), and one that acts during combat makes the odds approximate
+//! unless [`crate::kit_passive`] plays it.
 //!
 //! Written from the card texts in HearthstoneJSON (D-038) and the user's
 //! logs; no simulator code was read (clean room).
@@ -53,6 +54,13 @@ pub const COPY_OF_DAMAGED: &str =
 pub const FIRED_AT_RIGHT_END: &str =
     "where the minion it fires goes on the board is checked on one combat only";
 pub const HIGHEST_TIER_TIES: &str = "which minion it copies among equal Tier is not checked";
+pub const SPROUT_REBORN: &str =
+    "whether a minion that comes back with Reborn gets it is not checked";
+pub const SCALE_ON_SHIELDED: &str =
+    "whether a Dragon that already has Divine Shield uses one of its 3 times is not checked";
+pub const STAFF_PICK: &str = "that it picks among the Undead without Reborn is not checked";
+pub const BEETLES_PLACE: &str =
+    "where its Beetles go on the board, and their game-long buffs, are not checked";
 /// Why a played power blocks the odds of a board taken before start of
 /// combat: something it needs beside the board is not given.
 pub const TARGET_NOT_GIVEN: &str = "the minion it names is not shown";
@@ -129,6 +137,18 @@ mod tests {
         for (id, _) in crate::kit_effects::PLAYED {
             assert!(seen.insert(*id), "{id} is played twice");
             assert!(has_start_of_combat(id), "{id} is played but not listed");
+        }
+    }
+
+    #[test]
+    fn every_power_or_trinket_played_during_combat_is_listed_as_acting_then() {
+        let mut seen = std::collections::BTreeSet::new();
+        for (id, _) in crate::kit_passive::PASSIVE {
+            assert!(seen.insert(*id), "{id} is played twice");
+            assert_eq!(effect(id), Some(KitEffect::InCombat), "{id}");
+        }
+        for token in crate::kit_passive::tokens() {
+            assert!(crate::cards::token(token).is_some(), "{token} is no token");
         }
     }
 

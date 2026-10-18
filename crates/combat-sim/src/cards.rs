@@ -172,6 +172,9 @@ pub enum Action {
     /// the left-most on ties, from the teammate's board as it was taken
     /// (Sandy; T-628 round 3).
     BecomeTeammateCopy,
+    /// Deal damage equal to the card's Attack (as it died, for a
+    /// Deathrattle) to a random enemy minion, `times` over (Baneling).
+    DamageRandomEnemyByAttack { times: u8 },
 }
 
 /// Where Blood Gems go.
