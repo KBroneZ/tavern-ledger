@@ -154,6 +154,7 @@ fn with_combat<R>(
         legs: Legs::of(&p),
         pending: [Vec::new(), Vec::new()],
         kept: Vec::new(),
+        kit_counts: Default::default(),
     };
     f(&mut c)
 }
@@ -350,6 +351,7 @@ fn summons_stop_at_seven_minions() {
         legs: Legs::of(&p),
         pending: [Vec::new(), Vec::new()],
         kept: Vec::new(),
+        kit_counts: Default::default(),
     };
     c.sides[0].units[0].health = 0;
     c.process_deaths(0);
@@ -386,6 +388,7 @@ fn titus_makes_deathrattles_trigger_again() {
         legs: Legs::of(&p),
         pending: [Vec::new(), Vec::new()],
         kept: Vec::new(),
+        kit_counts: Default::default(),
     };
     c.sides[0].units[0].health = 0;
     c.process_deaths(0);
@@ -430,6 +433,7 @@ fn avenge_regains_divine_shield_and_with_it_taunt() {
         legs: Legs::of(&p),
         pending: [Vec::new(), Vec::new()],
         kept: Vec::new(),
+        kit_counts: Default::default(),
     };
     // Only the Deflector can be targeted while it has the shield.
     for _ in 0..20 {
@@ -476,6 +480,7 @@ fn scarlet_survivor_gains_shield_once_at_six_attack() {
         legs: Legs::of(&p),
         pending: [Vec::new(), Vec::new()],
         kept: Vec::new(),
+        kit_counts: Default::default(),
     };
     c.swing(0, 1);
     let s = &c.sides[0].units[1];
@@ -510,6 +515,7 @@ fn attack_order_goes_left_to_right_and_wraps() {
         legs: Legs::of(&p),
         pending: [Vec::new(), Vec::new()],
         kept: Vec::new(),
+        kit_counts: Default::default(),
     };
     let order: Vec<usize> = (0..5)
         .map(|_| {
@@ -550,6 +556,7 @@ fn a_summon_in_the_attackers_place_attacks_next() {
         legs: Legs::of(&p),
         pending: [Vec::new(), Vec::new()],
         kept: Vec::new(),
+        kit_counts: Default::default(),
     };
     c.attack_turn(0);
     let next = c.attacker_index(0).unwrap();
@@ -655,6 +662,7 @@ fn leeroy_destroys_the_minion_that_killed_it_even_through_a_shield() {
         legs: Legs::of(&p),
         pending: [Vec::new(), Vec::new()],
         kept: Vec::new(),
+        kit_counts: Default::default(),
     };
     // The 2/9 attacks Leeroy (uids: Leeroy 1, 2/9 is 2).
     c.swing(1, 2);
@@ -699,6 +707,7 @@ fn rally_strips_taunt_and_reborn_from_the_target() {
         legs: Legs::of(&p),
         pending: [Vec::new(), Vec::new()],
         kept: Vec::new(),
+        kit_counts: Default::default(),
     };
     c.swing(0, 1);
     assert!(c.sides[1].units.is_empty(), "no Reborn copy");
@@ -727,6 +736,7 @@ fn rally_strips_taunt_and_reborn_from_the_target() {
         legs: Legs::of(&p),
         pending: [Vec::new(), Vec::new()],
         kept: Vec::new(),
+        kit_counts: Default::default(),
     };
     c.swing(0, 1);
     assert_eq!(c.sides[1].units.len(), 1);
@@ -764,6 +774,7 @@ fn stealth_hides_taunt() {
         legs: Legs::of(&p),
         pending: [Vec::new(), Vec::new()],
         kept: Vec::new(),
+        kit_counts: Default::default(),
     };
     for _ in 0..20 {
         assert_eq!(c.choose_target(1), Some(3));

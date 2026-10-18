@@ -8,6 +8,7 @@ use crate::combat::{play, CombatResult, Prepared};
 use crate::gifts;
 use crate::kit::{self, KitEffect};
 use crate::kit_effects;
+use crate::kit_passive;
 use crate::model::{BoardError, GameValues, Keywords, Kit, KitCard, Minion, Team, Tribes, Warband};
 use crate::rng::Rng;
 
@@ -236,6 +237,17 @@ impl Coverage {
             if refuse {
                 push_unique(&mut self.not_modelled, id.clone());
                 push_unique(&mut self.kit, id.clone());
+                continue;
+            }
+            // Played during combat (T-628 round 4): only its own gap, if any.
+            let passive =
+                kit_passive::passive(id).filter(|p| start_of_combat || !p.before_start_only);
+            if let Some(p) = passive {
+                if let Fidelity::Approximate(why) = p.fidelity {
+                    if !self.approximate.iter().any(|(c, _)| c == id) {
+                        self.approximate.push((id.clone(), why));
+                    }
+                }
                 continue;
             }
             let gap = match effect {

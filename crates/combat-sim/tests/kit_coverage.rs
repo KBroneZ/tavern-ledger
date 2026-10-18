@@ -76,12 +76,12 @@ fn a_start_of_combat_power_not_played_yet_blocks_only_when_start_of_combat_is_pl
 
 #[test]
 fn a_power_that_acts_later_in_the_combat_is_approximate() {
-    // Glory of Combat and Deathly Phylactery act during the combat; Frostwolf
-    // Fervor also when there is space later.
+    // Broodmother and Blood Golem Sticker act during the combat (not played
+    // yet); Frostwolf Fervor also when there is space later.
     let player = with_kit(
         vec![plain(2, 2)],
-        &["BG20_HERO_100p"],
-        &["BG30_MagicItem_700"],
+        &["BG22_HERO_305p"],
+        &["BG30_MagicItem_442"],
     );
     let Verdict::Odds(odds) = verdict(&player, false) else {
         panic!("approximate, not blocked");
@@ -95,8 +95,8 @@ fn a_power_that_acts_later_in_the_combat_is_approximate() {
     assert_eq!(
         gaps,
         [
-            ("BG20_HERO_100p", IN_COMBAT_NOT_PLAYED),
-            ("BG30_MagicItem_700", IN_COMBAT_NOT_PLAYED)
+            ("BG22_HERO_305p", IN_COMBAT_NOT_PLAYED),
+            ("BG30_MagicItem_442", IN_COMBAT_NOT_PLAYED)
         ]
     );
     let frostwolf = with_kit(vec![plain(2, 2)], &["BG22_HERO_002p"], &[]);
@@ -509,4 +509,39 @@ fn a_held_minions_dark_gift_is_checked_too() {
     rr.held = Some(Minion::new("ZZ_NOBODY_KNOWS", 1, 1));
     let player = with_power(vec![plain(2, 2)], rr, Some(7));
     assert!(matches!(verdict(&player, true), Verdict::Odds(_)));
+}
+
+#[test]
+fn powers_and_trinkets_played_during_combat_name_only_their_own_gaps() {
+    use combat_sim::kit::{SCALE_ON_SHIELDED, SPROUT_REBORN};
+    // Glory of Combat, Jar o' Gems and Lionfish Portrait: played, exact, on
+    // either board.
+    let exact = with_kit(
+        vec![plain(2, 2)],
+        &["BG20_HERO_100p"],
+        &["BG30_MagicItem_546", "BG36_MagicItem_201"],
+    );
+    for soc in [false, true] {
+        assert!(gaps(&exact, soc).is_empty(), "start of combat {soc}");
+    }
+    let rough = with_kit(
+        vec![plain(2, 2)],
+        &["TB_BaconShop_HP_107"],
+        &["BG32_MagicItem_363"],
+    );
+    assert_eq!(
+        gaps(&rough, false),
+        [
+            ("TB_BaconShop_HP_107".to_string(), SPROUT_REBORN),
+            ("BG32_MagicItem_363".to_string(), SCALE_ON_SHIELDED)
+        ]
+    );
+    // Deathly Phylactery: a start of combat may have used it before a board
+    // taken at the first attack, so only played before start of combat.
+    let phylactery = with_kit(vec![plain(2, 2)], &[], &["BG30_MagicItem_700"]);
+    assert!(gaps(&phylactery, true).is_empty());
+    assert_eq!(
+        gaps(&phylactery, false),
+        [("BG30_MagicItem_700".to_string(), IN_COMBAT_NOT_PLAYED)]
+    );
 }

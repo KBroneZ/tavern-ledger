@@ -147,9 +147,13 @@ impl Combat<'_> {
             }
             self.count_dead_knights(&dead);
             self.count_friendly_deaths(&dead);
+            for d in &dead {
+                self.kit_kill(d.side, d.unit.hit_by);
+            }
             self.gain_deathrattles(&dead);
             for d in &dead {
-                let times = 1 + usize::from(self.extra_deathrattles(d.side));
+                let first = self.kit_first_deathrattle(d.side, &d.unit);
+                let times = 1 + usize::from(self.extra_deathrattles(d.side)) + usize::from(first);
                 let src = Source::Dead {
                     uid: d.unit.uid,
                     anchor: d.anchor,
@@ -173,6 +177,7 @@ impl Combat<'_> {
             }
             for d in &dead {
                 self.avenge(d.side);
+                self.kit_avenge(d.side);
             }
             for d in &dead {
                 if d.unit.kw.contains(Keywords::REBORN) {

@@ -303,6 +303,19 @@ impl Combat<'_> {
                     self.become_left_copy(side, uid);
                 }
             }
+            Action::DamageRandomEnemyByAttack { times } => {
+                let (attack, by) = match src {
+                    Source::Unit(uid) => (self.unit(side, uid).map_or(0, |u| u.attack), uid),
+                    Source::Dead { uid, stats, .. } => (stats.0, uid),
+                };
+                let foe = 1 - side;
+                for _ in 0..times {
+                    let pool = self.friends(foe, Tribes::NONE, None);
+                    if let Some(&t) = self.pick(pool, 1).first() {
+                        self.damage(foe, t, attack, Keywords::NONE, by);
+                    }
+                }
+            }
             Action::BecomeTeammateCopy => {
                 if let Some(uid) = me {
                     self.become_teammate_copy(side, uid);

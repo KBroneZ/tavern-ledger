@@ -32,6 +32,7 @@ pub mod gifts;
 pub mod kit;
 pub mod kit_effects;
 mod kit_lists;
+pub mod kit_passive;
 pub mod model;
 pub mod rng;
 pub mod trials;
