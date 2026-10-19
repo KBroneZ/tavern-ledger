@@ -203,3 +203,44 @@ fn a_hero_packet_with_a_count_set_keeps_it_and_strange_values_are_left_out() {
         "turn 103 is past any game's: the game is not read"
     );
 }
+
+#[test]
+fn a_hero_packet_with_trinkets_gives_the_same_order_on_every_parse() {
+    let text = read("solo_round_two_game");
+    // The opponent's leaderboard hero arrives with all three trinket slots set.
+    let created = "tag=PLAYER_LEADERBOARD_PLACE value=2\n";
+    let at = text.find(created).expect("the opponent's hero packet") + created.len();
+    let line = text[..at].lines().last().unwrap();
+    let prefix = &line[..line.find("tag=").unwrap()];
+    let tags = [
+        ("BACON_HEROPOWER_TRINKET_DATABASE_ID", 30),
+        ("BACON_SECOND_TRINKET_DATABASE_ID", 20),
+        ("BACON_FIRST_TRINKET_DATABASE_ID", 10),
+    ];
+    let added: String = tags
+        .iter()
+        .map(|(tag, value)| format!("{prefix}tag={tag} value={value}\n"))
+        .collect();
+    let text = format!("{}{added}{}", &text[..at], &text[at..]);
+
+    let first = report(&text);
+    let slots: Vec<_> = seat(&first, 3)
+        .trinkets
+        .iter()
+        .filter(|t| t.turn == 0)
+        .map(|t| (t.turn, t.slot, t.dbf_id))
+        .collect();
+    assert_eq!(
+        slots,
+        [
+            (0, TrinketSlot::First, 10),
+            (0, TrinketSlot::Second, 20),
+            (0, TrinketSlot::HeroPower, 30)
+        ],
+        "slot order within a turn"
+    );
+    // Each parse hashes the tags with a new seed.
+    for _ in 0..50 {
+        assert_eq!(report(&text).lobby, first.lobby);
+    }
+}

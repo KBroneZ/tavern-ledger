@@ -86,6 +86,16 @@ pub fn is_leaderboard_tag(tag: &str) -> bool {
     tag == TRIPLES || TRINKET_TAGS.iter().any(|(t, _)| *t == tag)
 }
 
+/// Where a tag goes among the tags of one packet: triples, then the trinket
+/// slots in slot order. A packet's tags come from a hash map, so this is what
+/// keeps the order of one turn's changes the same on every parse.
+pub fn tag_order(tag: &str) -> usize {
+    TRINKET_TAGS
+        .iter()
+        .position(|(t, _)| *t == tag)
+        .map_or(0, |i| i + 1)
+}
+
 impl LeaderboardTracker {
     /// `tag` changed to `value` on the leaderboard hero of `player_id`
     /// during game `TURN` `game_turn`.
