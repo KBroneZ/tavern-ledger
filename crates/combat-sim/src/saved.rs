@@ -77,8 +77,6 @@ pub fn minion(v: &Value, facts: &FactsOf) -> Option<Minion> {
         tier: facts.and_then(|f| f.tier),
         base: facts.and_then(|f| f.base),
         // Dark Gifts (parser revision 9, T-528); older records have none.
-        // Then the marks a hero power left, as the buffs the record keeps
-        // (revision 14, T-631).
         gifts: v
             .get("gifts")
             .and_then(Value::as_array)
@@ -86,12 +84,9 @@ pub fn minion(v: &Value, facts: &FactsOf) -> Option<Minion> {
                 a.iter()
                     .filter_map(Value::as_str)
                     .map(String::from)
-                    .collect::<Vec<_>>()
+                    .collect()
             })
-            .unwrap_or_default()
-            .into_iter()
-            .chain(saved_marks(v).map(String::from))
-            .collect(),
+            .unwrap_or_default(),
         // Saved on replay minions since parser revision 16 (T-628), not read
         // here yet: the boards read here are taken at the first attack.
         counters: [0, 0],
@@ -99,24 +94,48 @@ pub fn minion(v: &Value, facts: &FactsOf) -> Option<Minion> {
     })
 }
 
-/// The marks on a saved minion: the record keeps a mark as a buff from the
-/// card that gave it ([`crate::gifts::MARK_BUFFS`]).
-fn saved_marks(v: &Value) -> impl Iterator<Item = &'static str> + '_ {
-    v.get("buffs")
+/// The marks on a saved minion of a board whose hero has `powers`: the
+/// record keeps a mark as a buff from the card that gave it, read only when
+/// the board's own kit has the power that gives it
+/// ([`crate::gifts::MARK_BUFFS`], T-631).
+fn saved_marks<'a>(v: &'a Value, powers: &'a [&str]) -> impl Iterator<Item = &'static str> + 'a {
+    let sources: Vec<&str> = v
+        .get("buffs")
         .and_then(Value::as_array)
         .into_iter()
         .flatten()
         .filter_map(|b| b.get("card_id").and_then(Value::as_str))
-        .filter_map(crate::gifts::mark_of_buff)
+        .collect();
+    crate::gifts::MARK_BUFFS
+        .iter()
+        .filter(move |(power, source, _)| powers.contains(power) && sources.contains(source))
+        .map(|(_, _, mark)| *mark)
+}
+
+/// The hero power ids in a combat entry's saved kit (none without one).
+fn kit_powers(entry: &Value) -> Vec<&str> {
+    entry
+        .get("kit")
+        .and_then(|k| k.get("powers"))
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|p| p.get("card_id").and_then(Value::as_str))
+        .collect()
 }
 
 /// A combat entry's board with its game-long values; `None` without one.
 pub fn board(entry: &Value, facts: &FactsOf) -> Option<Warband> {
+    let powers = kit_powers(entry);
     let minions: Option<Vec<Minion>> = entry
         .get("board")?
         .as_array()?
         .iter()
-        .map(|m| minion(m, facts))
+        .map(|m| {
+            let mut out = minion(m, facts)?;
+            out.gifts.extend(saved_marks(m, &powers).map(String::from));
+            Some(out)
+        })
         .collect();
     Some(Warband {
         kit: None,

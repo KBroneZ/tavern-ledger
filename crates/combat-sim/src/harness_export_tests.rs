@@ -445,3 +445,33 @@ fn the_kit_comparison_counts_only_combats_with_a_kit_and_scores_both_ways() {
     assert_eq!(json["kits"]["scored"], 1);
     assert!(render_accuracy(&a).contains("1 combats with a result have them"));
 }
+
+#[test]
+fn a_phylactery_without_its_mark_is_a_blocker_and_with_it_is_scored() {
+    let unmarked = with_kit(
+        solo(&["BGS_119"], &["BGS_119"], CombatResult::Tie),
+        &["BG20_HERO_282p"],
+    );
+    let mut marked = unmarked.clone();
+    marked.player.minions[0]
+        .gifts
+        .push(crate::gifts::PHYLACTERY_MARK.to_string());
+    let a = accuracy(&[unmarked, marked], &[], &options());
+    assert_eq!(a.blockers, [("BG20_HERO_282p".to_string(), 1)]);
+    assert_eq!((a.solo.blocked, a.solo.report.combats), (1, 1));
+}
+
+#[test]
+fn a_duos_combat_with_a_kit_on_its_second_board_is_compared() {
+    let mut c = duos(&["BGS_119"], &["BGS_119"], Some(CombatResult::Tie));
+    let mut second = c.own[0].clone();
+    second.board.kit = Some(crate::model::Kit {
+        powers: vec![crate::model::KitCard::new("TB_BaconShop_HP_001")],
+        trinkets: Vec::new(),
+        round: Some(5),
+    });
+    c.own.push(second);
+    let plain = duos(&["BGS_119"], &["BGS_119"], Some(CombatResult::Tie));
+    let a = accuracy(&[], &[c, plain], &options());
+    assert_eq!((a.kits.combats, a.kits.with.combats), (1, 1));
+}

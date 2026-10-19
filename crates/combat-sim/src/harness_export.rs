@@ -469,10 +469,6 @@ fn builds_json(builds: &BTreeMap<i64, u32>) -> Value {
     })
 }
 
-/// The export (T-607, T-553): counts and shares per mode, the date
-/// (`YYYY-MM-DD`), the engine version, the card ids that block most, the
-/// misses by cause and the game builds checked (newest first). Pretty-printed,
-/// ending in a new line.
 /// The kit comparison: counts and scores only.
 fn kits_json(k: &KitComparison) -> Value {
     let way = |r: &Report| {
@@ -491,6 +487,10 @@ fn kits_json(k: &KitComparison) -> Value {
     })
 }
 
+/// The export (T-607, T-553): counts and shares per mode, the date
+/// (`YYYY-MM-DD`), the engine version, the card ids that block most, the
+/// misses by cause and the game builds checked (newest first) and the kit
+/// comparison. Pretty-printed, ending in a new line.
 pub fn export_json(a: &Accuracy, options: &Options, date: &str, checked: &Checked) -> String {
     let blockers: Vec<Value> = a
         .blockers
