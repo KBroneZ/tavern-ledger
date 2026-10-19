@@ -1506,8 +1506,9 @@ fn main() {
             if package::has_identity() { "yes" } else { "no" }
         ),
     );
-    // The Store edition cannot install WebView2 itself: say so before any
-    // window is made, instead of failing inside the window library.
+    // No usable WebView2 runtime (missing, or registered with its files gone):
+    // say so before any window is made, instead of failing inside the window
+    // library.
     webview2::require_runtime();
     let state = Arc::new(AppState::default());
     // Read before the windows exist: the page asks for the language as soon

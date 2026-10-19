@@ -124,6 +124,31 @@ pub fn is_fixed_runtime(folder: Option<&str>) -> bool {
     folder.is_some_and(|folder| !folder.trim().is_empty())
 }
 
+/// The environment variables that send the window library to a runtime of the
+/// player's own choosing (a fixed runtime, a preview channel). None of them is
+/// an Evergreen registration, and the loader honours all of them.
+pub const RUNTIME_ENV: [&str; 3] = [
+    "WEBVIEW2_BROWSER_EXECUTABLE_FOLDER",
+    "WEBVIEW2_RELEASE_CHANNEL_PREFERENCE",
+    "WEBVIEW2_CHANNEL_SEARCH_KIND",
+];
+
+/// The policy key (`HKLM` or `HKCU`) an administrator uses to steer the window
+/// library: a fixed runtime folder (`BrowserExecutableFolder`), the channels
+/// to look in (`ReleaseChannels`, `ChannelSearchKind`, `ReleaseChannelPreference`).
+/// Anything under it is the same choice, so the check steps aside.
+pub const POLICY_KEY: &str = r"Software\Policies\Microsoft\Edge\WebView2";
+
+/// Whether the player or an administrator chose the runtime, so there is no
+/// Evergreen registration to check: any of the variables above is set to
+/// something, or the policy key holds a value or a sub-key.
+pub fn is_chosen_runtime(env: impl Fn(&str) -> Option<String>, policy_has_value: bool) -> bool {
+    policy_has_value
+        || RUNTIME_ENV
+            .iter()
+            .any(|name| is_fixed_runtime(env(name).as_deref()))
+}
+
 /// What the player is told when the runtime is missing, in both languages
 /// (nothing is loaded yet that could tell which one they use).
 pub fn message() -> String {
@@ -139,15 +164,17 @@ Es gratuito, de Microsoft, y ya viene con Windows 11 y con la mayoría de los PC
 }
 
 /// What the player is told for a runtime that is registered but not there:
-/// the version, why the window cannot open, and the installer that puts the
-/// runtime back (the bootstrapper only updates a runtime it thinks is current).
+/// the version, why the window cannot open, and what to try. The standalone
+/// installer is the first thing to try, not a promise: on the Windows Sandbox
+/// image (registered .45, files .62) it refuses with 0x80040902 because a
+/// newer version is already there, so the text says to update Windows next.
 fn stale_message(version: &str) -> String {
     format!(
         "Tavern Ledger needs the Microsoft Edge WebView2 Runtime to show its window. This PC lists version {version}, but its files are missing or do not match, so the window cannot open.\n\n\
-Installing Microsoft's \"Evergreen Standalone Installer\" (on the same page) puts the runtime back. Then start Tavern Ledger again.\n\n\
+Microsoft's \"Evergreen Standalone Installer\" (on the same page) is the first thing to try; then start Tavern Ledger again. If it still does not open, update Windows and try once more.\n\n\
 Open the download page now?\n\n\
 Tavern Ledger necesita el runtime Microsoft Edge WebView2 para mostrar su ventana. Este PC indica la versión {version}, pero faltan sus archivos o no coinciden, así que la ventana no se puede abrir.\n\n\
-Instalar el \"Evergreen Standalone Installer\" de Microsoft (en la misma página) devuelve el runtime. Después vuelve a abrir Tavern Ledger.\n\n\
+El \"Evergreen Standalone Installer\" de Microsoft (en la misma página) es lo primero que probar; después vuelve a abrir Tavern Ledger. Si sigue sin abrirse, actualiza Windows y prueba otra vez.\n\n\
 ¿Abrir ahora la página de descarga?\n\n\
 {DOWNLOAD_URL}"
     )
@@ -165,13 +192,15 @@ pub fn message_for(runtime: &Runtime) -> String {
 #[cfg(windows)]
 mod win {
     use windows::core::{w, HSTRING};
+    use windows::Win32::Storage::FileSystem::GetDriveTypeW;
     use windows::Win32::UI::WindowsAndMessaging::{
         MessageBoxW, IDYES, MB_ICONERROR, MB_SETFOREGROUND, MB_YESNO,
     };
     use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ};
 
     use super::{
-        check_with, is_fixed_runtime, message_for, Hive, Runtime, DOWNLOAD_URL, RUNTIME_EXE,
+        check_with, is_chosen_runtime, message_for, Hive, Runtime, DOWNLOAD_URL, POLICY_KEY,
+        RUNTIME_EXE,
     };
     use crate::applog;
 
@@ -187,14 +216,34 @@ mod win {
             .ok()
     }
 
+    /// `GetDriveTypeW`'s answer for a network drive.
+    const DRIVE_REMOTE: u32 = 4;
+
+    /// Whether `folder` is on a network drive (a mapped letter): looking for a
+    /// file there could wait on a server before any window or message shows.
+    fn on_network_drive(folder: &str) -> bool {
+        let root = HSTRING::from(format!("{}\\", &folder[..2]));
+        // SAFETY: the string outlives the call.
+        unsafe { GetDriveTypeW(&root) == DRIVE_REMOTE }
+    }
+
     fn holds_runtime(folder: &str) -> bool {
-        std::path::Path::new(folder).join(RUNTIME_EXE).is_file()
+        // `is_local_folder` already vouched for the `X:\` shape.
+        !on_network_drive(folder) && std::path::Path::new(folder).join(RUNTIME_EXE).is_file()
     }
 
     /// Stops the app with a plain message when the runtime is missing or stale.
     pub fn require_runtime() {
-        let fixed = std::env::var("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER").ok();
-        if is_fixed_runtime(fixed.as_deref()) {
+        let policy_has_value = [HKEY_LOCAL_MACHINE, HKEY_CURRENT_USER]
+            .into_iter()
+            .any(|root| {
+                winreg::RegKey::predef(root)
+                    .open_subkey_with_flags(POLICY_KEY, KEY_READ)
+                    .is_ok_and(|key| {
+                        key.enum_values().next().is_some() || key.enum_keys().next().is_some()
+                    })
+            });
+        if is_chosen_runtime(|name| std::env::var(name).ok(), policy_has_value) {
             return;
         }
         let runtime = check_with(read_value, holds_runtime);
@@ -246,6 +295,13 @@ mod win {
     #[cfg(test)]
     mod tests {
         use super::*;
+
+        #[test]
+        fn the_system_drive_is_not_a_network_drive_and_a_missing_folder_holds_no_runtime() {
+            let system = std::env::var("SystemDrive").unwrap_or_else(|_| "C:".into());
+            assert!(!on_network_drive(&format!(r"{system}\Windows")));
+            assert!(!holds_runtime(&format!(r"{system}\no\such\runtime\folder")));
+        }
 
         #[test]
         fn a_key_that_is_not_there_reads_as_no_value() {
@@ -505,5 +561,22 @@ mod tests {
                 version: "155.0.4283.62".to_string()
             }
         );
+    }
+
+    #[test]
+    fn a_runtime_the_player_or_an_administrator_chose_is_not_checked() {
+        let none = |_: &str| None;
+        assert!(!is_chosen_runtime(none, false));
+        assert!(
+            is_chosen_runtime(none, true),
+            "the policy key holds a value"
+        );
+        for name in RUNTIME_ENV {
+            let set = |asked: &str| (asked == name).then(|| "x".to_string());
+            assert!(is_chosen_runtime(set, false), "{name}");
+            let blank = |asked: &str| (asked == name).then(|| "  ".to_string());
+            assert!(!is_chosen_runtime(blank, false), "{name} blank");
+        }
+        assert!(POLICY_KEY.ends_with(r"Edge\WebView2"));
     }
 }

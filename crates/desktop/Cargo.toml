@@ -60,6 +60,7 @@ windows = { version = "0.62", default-features = false, features = [
   "ApplicationModel_Activation",
   "Foundation",
   "Win32_Foundation",
+  "Win32_Storage_FileSystem",
   "Win32_Storage_Packaging_Appx",
   "Win32_System_WinRT",
   "Win32_UI_WindowsAndMessaging",
