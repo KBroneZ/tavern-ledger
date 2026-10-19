@@ -20,6 +20,7 @@ use combat_sim::harness::{load_cards, load_history, render, run, CardDb, History
 use combat_sim::harness_duos::{render_duos, Source};
 use combat_sim::harness_export::{accuracy, date_of_day, export_json, render_accuracy, Checked};
 use combat_sim::harness_games::read_games;
+use combat_sim::harness_kits::render_kit_inventory;
 use combat_sim::harness_logs::{
     load_logs, power_logs, render_overlay_path, render_replays, replay_all,
 };
@@ -166,6 +167,7 @@ fn real_main() -> Result<(), String> {
         print!("{}", render_accuracy(&acc));
         if !soc.is_empty() {
             print!("{}", render_start_of_combat(&soc, &options));
+            print!("{}", render_kit_inventory(&soc));
         }
     }
     if let Some(path) = args.export {

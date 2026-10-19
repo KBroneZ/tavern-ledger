@@ -88,7 +88,13 @@ pub(crate) fn engine_minion(m: &LogMinion, db: &CardDb) -> Option<Minion> {
         tribes: facts.map_or(Default::default(), |f| f.tribes),
         tier: facts.and_then(|f| f.tier),
         base: facts.and_then(|f| f.base),
-        gifts: m.gifts.iter().map(|g| g.to_string()).collect(),
+        // Dark Gifts, then the marks a hero power left on it (T-631).
+        gifts: m
+            .gifts
+            .iter()
+            .chain(&m.sim_marks)
+            .map(|g| g.to_string())
+            .collect(),
         counters: m.counters.map(|n| i32::try_from(n).unwrap_or(0)),
         card_id,
     })

@@ -92,6 +92,9 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
   "the minion it holds is not shown": "el esbirro que guarda no se muestra",
   "the round, which unlocks it, is not given": "no se indica el turno, que es el que lo desbloquea",
   "its teammate's board is not given": "no se indica el tablero de su compañero",
+  "the minion it marked is not shown": "el esbirro que marcó no se muestra",
+  "Eternal Knights summoned during combat miss what it gave them in earlier combats":
+    "los Caballeros eternos invocados durante el combate no tienen lo que les dio en combates anteriores",
   "its copy had fewer stats than the teammate's minion in 2 of the 12 combats checked":
     "su copia tuvo menos estadísticas que el esbirro del compañero en 2 de los 12 combates comprobados",
   "whether a minion that comes back with Reborn gets it is not checked":

@@ -198,9 +198,26 @@ pub const GIFTS: &[Gift] = &[
     plain("BG36_MidGameEffect_000t88"),
 ];
 
-/// The rules for a gift id. `None`: not modelled.
+/// Marks a hero power leaves on a minion that act like a gift for the rest
+/// of the combat (T-631), keyed by the enchantment's card id: the parser
+/// reads them on boards taken at the first attack
+/// (`bg_parser::sim_marks`), and the engine gives them at the start of
+/// combat ([`crate::kit_effects`]).
+pub const MARKS: &[Gift] = &[
+    // Fragrant Phylactery: "Deathrattle: give your other minions this
+    // minion's stats."
+    acts(
+        PHYLACTERY_MARK,
+        &[Trigger::Deathrattle(&[Action::GiveOthersOwnStats])],
+    ),
+];
+
+/// Fragrant Phylactery's enchantment on the minion it chose.
+pub const PHYLACTERY_MARK: &str = "BG20_HERO_282e2";
+
+/// The rules for a gift or mark id. `None`: not modelled.
 pub fn gift(id: &str) -> Option<&'static Gift> {
-    GIFTS.iter().find(|g| g.id == id)
+    GIFTS.iter().chain(MARKS).find(|g| g.id == id)
 }
 
 /// True when the gift acts at the start of combat (played or not).

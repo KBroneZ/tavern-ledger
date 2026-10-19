@@ -141,7 +141,7 @@ impl Coverage {
         }
         for (band, mate) in boards {
             if let Some(kit) = &band.kit {
-                cov.add_kit(kit, start_of_combat, *mate, &band.values);
+                cov.add_kit(kit, start_of_combat, *mate, band);
             }
         }
         for (band, _) in boards {
@@ -204,12 +204,27 @@ impl Coverage {
         kit: &Kit,
         start_of_combat: bool,
         mate: Option<&Warband>,
-        values: &GameValues,
+        band: &Warband,
     ) {
+        let values = &band.values;
         let power_in_combat = kit.powers.iter().any(|p| kit::acts_in_combat(&p.card_id));
         for card in kit.cards() {
             let id = &card.card_id;
             let effect = kit::effect(id);
+            // A board taken after start of combat shows the mark the card
+            // gave a minion (T-631); without it the card's effect is unknown.
+            let mark = kit_effects::played(id).and_then(kit_effects::mark);
+            if let Some(mark) = mark.filter(|_| !start_of_combat) {
+                let shown = band
+                    .minions
+                    .iter()
+                    .any(|m| m.gifts.iter().any(|g| g == mark));
+                if !shown {
+                    self.refuse(id, kit::MARK_NOT_GIVEN);
+                    push_unique(&mut self.kit, id.clone());
+                }
+                continue;
+            }
             let play = kit_effects::played(id).filter(|_| start_of_combat);
             if let Some(play) = play {
                 if let Some(why) = unmet(play, card, kit.round, mate) {

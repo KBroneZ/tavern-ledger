@@ -643,3 +643,7 @@ mod space_tests;
 #[cfg(test)]
 #[path = "combat_passive_tests.rs"]
 mod passive_tests;
+
+#[cfg(test)]
+#[path = "combat_t631_tests.rs"]
+mod t631_tests;

@@ -67,6 +67,11 @@ pub const TARGET_NOT_GIVEN: &str = "the minion it names is not shown";
 pub const HELD_NOT_GIVEN: &str = "the minion it holds is not shown";
 pub const ROUND_NOT_GIVEN: &str = "the round, which unlocks it, is not given";
 pub const TEAMMATE_NOT_GIVEN: &str = "its teammate's board is not given";
+/// Why a power that marked a minion at the start of combat blocks the odds
+/// of a board taken after it: no minion shows its mark.
+pub const MARK_NOT_GIVEN: &str = "the minion it marked is not shown";
+pub const KNIGHTS_SUMMONED: &str =
+    "Eternal Knights summoned during combat miss what it gave them in earlier combats";
 
 /// What the engine knows of `card_id`; `None`: not reviewed.
 pub fn effect(card_id: &str) -> Option<KitEffect> {

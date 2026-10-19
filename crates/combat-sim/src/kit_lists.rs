@@ -76,6 +76,17 @@ pub const NO_COMBAT_EFFECT: &[&str] = &[
     "TB_BaconShop_HP_039t", // Puzzle Box
     "TB_BaconShop_HP_040",  // Brick by Brick
     "TB_BaconShop_HP_041",  // A Tale of Kings
+    "TB_BaconShop_HP_041a", // King of Beasts
+    "TB_BaconShop_HP_041b", // King of Mechs
+    "TB_BaconShop_HP_041c", // King of Murlocs
+    "TB_BaconShop_HP_041d", // King of Demons
+    "TB_BaconShop_HP_041f", // King of Dragons
+    "TB_BaconShop_HP_041g", // King of Pirates
+    "TB_BaconShop_HP_041h", // King of Elementals
+    "TB_BaconShop_HP_041i", // King of Quilboar
+    "TB_BaconShop_HP_041j", // King of Naga
+    "TB_BaconShop_HP_041k", // King of Undead
+    "TB_BaconShop_HP_041l", // King of Aberrations
     "TB_BaconShop_HP_042",  // Hat Trick
     "TB_BaconShop_HP_044",  // Procrastinate
     "TB_BaconShop_HP_046",  // Gonna Be Rich!
@@ -121,10 +132,13 @@ pub const NO_COMBAT_EFFECT: &[&str] = &[
     "BG30_MagicItem_541",   // Nether Pendant
     "BG30_MagicItem_544t",  // Nomi Sticker
     "BG30_MagicItem_547",   // Comfy Coffin
+    "BG30_MagicItem_547t",  // Comfy Coffin
+    "BG30_MagicItem_555",   // Surprise Portrait
     "BG30_MagicItem_703",   // Mystery Cube
     "BG30_MagicItem_705",   // Bartend-o-Tron's Oilcan
     "BG30_MagicItem_706",   // Reflective Pendant
     "BG30_MagicItem_707",   // Tickatus Sticker
+    "BG30_MagicItem_713",   // Bleeding Heart
     "BG30_MagicItem_821",   // Fish Portrait
     "BG30_MagicItem_841",   // Glowing Gauntlet
     "BG30_MagicItem_847",   // Goblin Wallet
@@ -207,6 +221,7 @@ pub const NO_COMBAT_EFFECT: &[&str] = &[
     "BG35_MagicItem_840t",  // Chromatic Tear
     "BG35_MagicItem_850",   // Pocket Cyclone
     "BG35_MagicItem_850t",  // Pocket Cyclone
+    "BG35_MagicItem_862",   // Upstart Embers
     "BG35_MagicItem_872",   // Ophidian Staff
     "BG35_MagicItem_890",   // Sunken Anchor
     "BG35_MagicItem_930",   // Warband Whistle
@@ -224,6 +239,7 @@ pub const NO_COMBAT_EFFECT: &[&str] = &[
     "BG36_MagicItem_217",   // Funeral Wreath
     "BG36_MagicItem_300",   // Frigid Blossom
     "BG36_MagicItem_301",   // Lockbox Portrait
+    "BG36_MagicItem_302",   // Gold Mallet
     "BG36_MagicItem_302t",  // Gold Mallet
     "BG36_MagicItem_303",   // Glass of Perspective
     "BG36_MagicItem_303t",  // Glass of Perspective
@@ -271,6 +287,7 @@ pub const NO_COMBAT_EFFECT: &[&str] = &[
 /// They act at the start of combat only.
 pub const START_OF_COMBAT: &[&str] = &[
     // Hero powers.
+    "BG20_HERO_282p",       // Fragrant Phylactery
     "BG22_HERO_001p",       // Embrace the Elements
     "BG22_HERO_001p_t1",    // Earth Invocation
     "BG22_HERO_001p_t2",    // Fire Invocation
@@ -321,6 +338,7 @@ pub const IN_COMBAT: &[&str] = &[
     "BG32_MagicItem_363",  // Faerie Dragon Scale
     "BG32_MagicItem_860t", // Beetle Band
     "BG36_MagicItem_201",  // Lionfish Portrait
+    "BG36_MagicItem_216",  // Eternal Portrait
     "BG36_MagicItem_416",  // Evil Experiment
     "BG36_MagicItem_450",  // Snarky Portrait
 ];

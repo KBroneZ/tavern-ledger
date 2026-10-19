@@ -1052,5 +1052,6 @@ pub(crate) fn minion_of(e: &Entity, gifts: Vec<&'static str>, buffs: Vec<Buff>) 
         gift_unknown: crate::gifts::gift_unknown(e, &gifts),
         gifts,
         buffs,
+        sim_marks: Vec::new(),
     }
 }

@@ -25,8 +25,10 @@ impl Combat<'_> {
             out.0 = out.0.saturating_add(v.undead_attack);
         }
         if let Some((_, a, h)) = KNIGHTS.iter().find(|(id, ..)| *id == info.id) {
+            let (ka, kh) = self.kit_counts[side].knight_gain;
             out.0 = out.0.saturating_add(a.saturating_mul(v.knights_dead));
             out.1 = out.1.saturating_add(h.saturating_mul(v.knights_dead));
+            out = (out.0.saturating_add(ka), out.1.saturating_add(kh));
         }
         if BEETLES.contains(&info.id.as_str()) {
             out.0 = out.0.saturating_add(v.beetle.0);
@@ -84,6 +86,20 @@ impl Combat<'_> {
                 self.buff(d.side, uid, a, h);
             }
         }
+    }
+
+    /// The uids of the side's living Eternal Knights.
+    pub(super) fn knights(&self, side: usize) -> Vec<u32> {
+        self.sides[side]
+            .units
+            .iter()
+            .filter(|u| u.alive())
+            .filter(|u| {
+                let id = self.p.cards[u.card as usize].id.as_str();
+                KNIGHTS.iter().any(|(k, ..)| *k == id)
+            })
+            .map(|u| u.uid)
+            .collect()
     }
 
     /// What `count` Blood Gems give on `side`: +1/+1 each plus its upgrades.

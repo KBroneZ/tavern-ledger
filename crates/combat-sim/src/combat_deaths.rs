@@ -146,6 +146,7 @@ impl Combat<'_> {
                 return;
             }
             self.count_dead_knights(&dead);
+            self.kit_undead_died(&dead);
             self.count_friendly_deaths(&dead);
             for d in &dead {
                 self.kit_kill(d.side, d.unit.hit_by);

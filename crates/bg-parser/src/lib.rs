@@ -21,6 +21,7 @@ pub mod power;
 pub mod replay;
 pub mod report;
 pub mod shop;
+pub mod sim_marks;
 pub mod state;
 
 use std::collections::{BTreeMap, HashMap};
