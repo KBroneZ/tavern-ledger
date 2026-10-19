@@ -201,6 +201,60 @@ fn poisonous_and_mega_windfury_are_read_but_not_saved() {
 }
 
 #[test]
+fn a_mark_given_at_the_start_of_combat_is_on_the_first_attack_board_only() {
+    // Fragrant Phylactery fires before the first attack and marks the own
+    // Poisonous minion (T-631).
+    let mut all = game();
+    let first_attack = all
+        .iter()
+        .position(|l| l.contains("BlockType=ATTACK"))
+        .unwrap();
+    let mut power = vec![line(
+        1,
+        "FULL_ENTITY - Creating ID=50 CardID=BG20_HERO_282p",
+    )];
+    for (t, v) in [
+        ("CARDTYPE", "HERO_POWER"),
+        ("CONTROLLER", "2"),
+        ("ZONE", "PLAY"),
+    ] {
+        power.push(line(2, &format!("tag={t} value={v}")));
+    }
+    power.push(line(2, "tag=ENTITY_ID value=50"));
+    power.push(line(
+        0,
+        "BLOCK_START BlockType=TRIGGER Entity=50 EffectCardId=System.Collections.Generic.List`1[System.String] EffectIndex=4 Target=0 SubOption=-1 TriggerKeyword=TRIGGER_VISUAL",
+    ));
+    power.push(line(
+        1,
+        "FULL_ENTITY - Creating ID=60 CardID=BG20_HERO_282e2",
+    ));
+    for (t, v) in [
+        ("CARDTYPE", "ENCHANTMENT"),
+        ("CONTROLLER", "2"),
+        ("ZONE", "PLAY"),
+        ("ATTACHED", "30"),
+    ] {
+        power.push(line(2, &format!("tag={t} value={v}")));
+    }
+    power.push(line(2, "tag=ENTITY_ID value=60"));
+    power.push(line(0, "BLOCK_END"));
+    all.splice(first_attack..first_attack, power);
+    let r = report(&all);
+    let entry = &r.rounds[0].entries[0];
+    let at_attack = entry.board.clone().expect("own board");
+    assert_eq!(at_attack[0].sim_marks, ["BG20_HERO_282e2"]);
+    assert!(at_attack[1].sim_marks.is_empty());
+    let before = entry
+        .before
+        .clone()
+        .expect("the board before start of combat");
+    assert!(before.iter().all(|m| m.sim_marks.is_empty()), "{before:?}");
+    let json = serde_json::to_string(&r).expect("serializable");
+    assert!(!json.contains("282e2") && !json.contains("sim_marks"));
+}
+
+#[test]
 fn the_own_board_now_is_given_in_a_shop_turn_only() {
     let all = game();
     let at = |needle: &str| all.iter().position(|l| l.contains(needle)).unwrap();

@@ -132,13 +132,13 @@ pub const NO_COMBAT_EFFECT: &[&str] = &[
     "BG30_MagicItem_541",   // Nether Pendant
     "BG30_MagicItem_544t",  // Nomi Sticker
     "BG30_MagicItem_547",   // Comfy Coffin
-    "BG30_MagicItem_547t",  // Comfy Coffin
-    "BG30_MagicItem_555",   // Surprise Portrait
+    "BG30_MagicItem_547t",  // Comfy Coffin (after a Tavern spell, in the shop)
+    "BG30_MagicItem_555",   // Surprise Portrait (gives a minion; never fired in combat)
     "BG30_MagicItem_703",   // Mystery Cube
     "BG30_MagicItem_705",   // Bartend-o-Tron's Oilcan
     "BG30_MagicItem_706",   // Reflective Pendant
     "BG30_MagicItem_707",   // Tickatus Sticker
-    "BG30_MagicItem_713",   // Bleeding Heart
+    "BG30_MagicItem_713",   // Bleeding Heart (Undead to the hand; 21 fires counted deaths)
     "BG30_MagicItem_821",   // Fish Portrait
     "BG30_MagicItem_841",   // Glowing Gauntlet
     "BG30_MagicItem_847",   // Goblin Wallet
@@ -221,7 +221,7 @@ pub const NO_COMBAT_EFFECT: &[&str] = &[
     "BG35_MagicItem_840t",  // Chromatic Tear
     "BG35_MagicItem_850",   // Pocket Cyclone
     "BG35_MagicItem_850t",  // Pocket Cyclone
-    "BG35_MagicItem_862",   // Upstart Embers
+    "BG35_MagicItem_862",   // Upstart Embers (after a Refresh; 16 fires, all in the shop)
     "BG35_MagicItem_872",   // Ophidian Staff
     "BG35_MagicItem_890",   // Sunken Anchor
     "BG35_MagicItem_930",   // Warband Whistle
@@ -239,7 +239,7 @@ pub const NO_COMBAT_EFFECT: &[&str] = &[
     "BG36_MagicItem_217",   // Funeral Wreath
     "BG36_MagicItem_300",   // Frigid Blossom
     "BG36_MagicItem_301",   // Lockbox Portrait
-    "BG36_MagicItem_302",   // Gold Mallet
+    "BG36_MagicItem_302",   // Gold Mallet (end of turn)
     "BG36_MagicItem_302t",  // Gold Mallet
     "BG36_MagicItem_303",   // Glass of Perspective
     "BG36_MagicItem_303t",  // Glass of Perspective

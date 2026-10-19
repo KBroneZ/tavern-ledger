@@ -70,6 +70,7 @@ pub const TEAMMATE_NOT_GIVEN: &str = "its teammate's board is not given";
 /// Why a power that marked a minion at the start of combat blocks the odds
 /// of a board taken after it: no minion shows its mark.
 pub const MARK_NOT_GIVEN: &str = "the minion it marked is not shown";
+/// Why Eternal Portrait is approximate.
 pub const KNIGHTS_SUMMONED: &str =
     "Eternal Knights summoned during combat miss what it gave them in earlier combats";
 

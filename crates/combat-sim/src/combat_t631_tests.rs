@@ -156,3 +156,16 @@ fn a_knight_summoned_later_in_the_combat_comes_with_the_portraits_gains() {
         assert_eq!(c.game_stats(0, c.sides[0].units[0].card), (4, 2));
     });
 }
+
+#[test]
+fn a_board_that_already_shows_the_mark_is_not_marked_again() {
+    let marked = plain(4, 2).gift(PHYLACTERY_MARK);
+    let player = band(vec![plain(1, 1), marked, plain(5, 5)], &[PHYLACTERY], &[]);
+    with(player, true, |c| {
+        // The 1/1 has the lowest Attack but gets no second mark.
+        kill(c, 0);
+        assert_eq!(stats(c, 0), [(4, 2), (5, 5)]);
+        kill(c, 0);
+        assert_eq!(stats(c, 0), [(9, 7)]);
+    });
+}

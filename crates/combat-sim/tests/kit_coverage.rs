@@ -587,7 +587,8 @@ fn fragrant_phylactery_is_played_before_start_of_combat_and_read_from_its_mark_a
     use combat_sim::gifts::PHYLACTERY_MARK;
     use combat_sim::kit::{LOWEST_TIES, MARK_NOT_GIVEN};
     let power = "BG20_HERO_282p";
-    // Before start of combat: played, approximate on equal Attack.
+    // Before start of combat: played, approximate (its rule on equal Attack
+    // is not checked).
     let before = with_kit(vec![plain(2, 2), plain(3, 3)], &[power], &[]);
     let Verdict::Odds(odds) = verdict(&before, true) else {
         panic!("played from before start of combat");
@@ -636,5 +637,21 @@ fn eternal_portrait_is_played_and_approximate_and_another_block_stays() {
             panic!("the unknown power still blocks");
         };
         assert!(cov.not_modelled.contains(&"BG99_HERO_999p".to_string()));
+        // Without start of combat the Phylactery keeps its own block too.
+        let phylactery = cov.reasons().contains(&(
+            "BG20_HERO_282p".to_string(),
+            combat_sim::kit::MARK_NOT_GIVEN,
+        ));
+        assert_eq!(phylactery, !soc, "{:?}", cov.reasons());
+    }
+}
+
+#[test]
+fn every_mark_a_played_card_gives_is_a_known_gift() {
+    for id in combat_sim::kit_effects::played_ids() {
+        let play = combat_sim::kit_effects::played(id).expect("played");
+        if let Some(mark) = combat_sim::kit_effects::mark(play) {
+            assert!(combat_sim::gifts::gift(mark).is_some(), "{id}: {mark}");
+        }
     }
 }

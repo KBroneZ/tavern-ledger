@@ -185,10 +185,15 @@ impl Combat<'_> {
                     self.swing(side, uid);
                 }
             }
-            KitAction::Mark { to, .. } => {
+            KitAction::Mark { to, mark } => {
                 let Some(card) = k.mark else {
                     return;
                 };
+                // A board that already shows the mark had this start of
+                // combat: it is not given twice.
+                if self.shows_mark(side, mark) {
+                    return;
+                }
                 for uid in self.picked(side, to) {
                     if let Some(u) = self.unit_mut(side, uid) {
                         u.gained.push(card);
@@ -205,6 +210,14 @@ impl Combat<'_> {
                 }
             }
         }
+    }
+
+    /// True when a minion of `side` carries `mark` as one of its gifts.
+    fn shows_mark(&self, side: usize, mark: &str) -> bool {
+        self.sides[side]
+            .units
+            .iter()
+            .any(|u| self.p.cards[u.card as usize].gifts.contains(&mark))
     }
 
     /// The named minion, when it is still on the board and alive.

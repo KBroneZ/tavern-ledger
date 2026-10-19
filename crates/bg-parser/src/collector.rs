@@ -709,9 +709,18 @@ impl Collector {
             .count()
     }
 
-    /// The board and kit of the combat side `pid` now.
+    /// The board and kit of the combat side `pid` now, before its start of
+    /// combat: a mark a start-of-combat effect left is never read here
+    /// (the engine gives it when it plays start of combat).
     fn before_of(&self, pid: i64) -> (Vec<Minion>, HeroKit) {
-        (board_of(&self.board, pid), kit_of(&self.board, pid))
+        let board = board_of(&self.board, pid)
+            .into_iter()
+            .map(|m| Minion {
+                sim_marks: Vec::new(),
+                ..m
+            })
+            .collect();
+        (board, kit_of(&self.board, pid))
     }
 
     /// A top-level block in a combat (T-628): the first that is an attack
