@@ -655,3 +655,48 @@ fn every_mark_a_played_card_gives_is_a_known_gift() {
         }
     }
 }
+
+#[test]
+fn the_rest_of_the_pool_reviewed_by_text_falls_into_its_four_kinds() {
+    use combat_sim::kit::IN_COMBAT_BLOCKED;
+    // A shop-only trinket (Kodo Leather Pouch): exact either way.
+    let shop = with_kit(vec![plain(2, 2)], &[], &["BG30_MagicItem_414"]);
+    for soc in [false, true] {
+        let Verdict::Odds(odds) = verdict(&shop, soc) else {
+            panic!("no combat effect")
+        };
+        assert!(odds.coverage.is_exact(), "{:?}", odds.coverage);
+    }
+    // Start of combat only (Valorous Medallion): already on a board taken
+    // after it; not played before it.
+    let soc_only = with_kit(vec![plain(2, 2)], &[], &["BG30_MagicItem_970"]);
+    assert!(matches!(verdict(&soc_only, false), Verdict::Odds(o) if o.coverage.is_exact()));
+    let Verdict::NotModelled(cov) = verdict(&soc_only, true) else {
+        panic!("its start of combat is not played")
+    };
+    assert_eq!(
+        cov.reasons(),
+        [("BG30_MagicItem_970".to_string(), START_OF_COMBAT_NOT_PLAYED)]
+    );
+    // Small during combat (Feral Talisman, lesser): approximate.
+    let small = with_kit(vec![plain(2, 2)], &[], &["BG30_MagicItem_880"]);
+    let Verdict::Odds(odds) = verdict(&small, false) else {
+        panic!("approximate")
+    };
+    assert_eq!(
+        odds.coverage.approximate,
+        [("BG30_MagicItem_880".to_string(), IN_COMBAT_NOT_PLAYED)]
+    );
+    // Not small during combat (Tiger Carving): blocked, whenever the board
+    // was taken.
+    let big = with_kit(vec![plain(2, 2)], &[], &["BG30_MagicItem_427"]);
+    for soc in [false, true] {
+        let Verdict::NotModelled(cov) = verdict(&big, soc) else {
+            panic!("blocked")
+        };
+        assert_eq!(
+            cov.reasons(),
+            [("BG30_MagicItem_427".to_string(), IN_COMBAT_BLOCKED)]
+        );
+    }
+}

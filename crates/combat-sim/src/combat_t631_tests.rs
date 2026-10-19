@@ -169,3 +169,33 @@ fn a_board_that_already_shows_the_mark_is_not_marked_again() {
         assert_eq!(stats(c, 0), [(9, 7)]);
     });
 }
+
+#[test]
+fn bird_feeder_buffs_every_friendly_minion_after_two_deaths() {
+    let player = band(
+        vec![plain(1, 1), plain(1, 1), plain(2, 2)],
+        &[],
+        &["BG32_MagicItem_864t"],
+    );
+    with(player, false, |c| {
+        kill(c, 0);
+        assert_eq!(stats(c, 0), [(1, 1), (2, 2)]);
+        kill(c, 0);
+        assert_eq!(stats(c, 0), [(6, 6)]);
+    });
+}
+
+#[test]
+fn the_lesser_beetle_band_summons_one_beetle_with_taunt_after_five_deaths() {
+    let minions = (0..6).map(|_| plain(1, 1)).collect();
+    let player = band(minions, &[], &["BG32_MagicItem_860"]);
+    with(player, false, |c| {
+        for _ in 0..5 {
+            kill(c, 0);
+        }
+        assert_eq!(c.sides[0].units.len(), 2);
+        let beetle = &c.sides[0].units[1];
+        assert_eq!(c.p.cards[beetle.card as usize].id, "BG28_603t");
+        assert!(beetle.kw.contains(crate::model::Keywords::TAUNT));
+    });
+}

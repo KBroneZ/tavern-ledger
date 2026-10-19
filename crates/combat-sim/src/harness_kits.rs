@@ -146,6 +146,7 @@ fn when(id: &str) -> &'static str {
         Some(KitEffect::StartAndInCombat) => "start and during",
         Some(KitEffect::InCombat) => "during combat",
         Some(KitEffect::TwiceHeroPower) => "hero power twice",
+        Some(KitEffect::InCombatBlocks) => "during combat, blocks",
         Some(KitEffect::None) => "no combat effect",
     }
 }

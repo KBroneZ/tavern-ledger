@@ -45,6 +45,8 @@ pub enum KitTrigger {
     /// `attack`/`health` more this game: those on the board gain it, and
     /// those summoned later in the combat come with it.
     UndeadDeathBuffsKnights { attack: i32, health: i32 },
+    /// Avenge (`n`): every friendly minion gains `attack`/`health`.
+    AvengeBuffAll { n: u32, attack: i32, health: i32 },
     /// Avenge (`n`): summon `count` tokens at the right end, with
     /// `keywords`.
     AvengeSummon {
@@ -166,6 +168,36 @@ pub const PASSIVE: &[(&str, KitPassive)] = &[
                 health: 2,
             },
         ),
+    ),
+    // Beetle Band (lesser).
+    (
+        "BG32_MagicItem_860",
+        approx(
+            BEETLES_PLACE,
+            KitTrigger::AvengeSummon {
+                n: 5,
+                token: "BG28_603t",
+                count: 1,
+                keywords: Keywords::TAUNT,
+            },
+        ),
+    ),
+    // Bird Feeder (lesser and greater).
+    (
+        "BG32_MagicItem_864",
+        exact(KitTrigger::AvengeBuffAll {
+            n: 2,
+            attack: 1,
+            health: 1,
+        }),
+    ),
+    (
+        "BG32_MagicItem_864t",
+        exact(KitTrigger::AvengeBuffAll {
+            n: 2,
+            attack: 4,
+            health: 4,
+        }),
     ),
     // Beetle Band.
     (

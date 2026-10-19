@@ -190,6 +190,13 @@ impl Combat<'_> {
                         }
                     }
                 }
+                KitTrigger::AvengeBuffAll { n, attack, health }
+                    if n > 0 && deaths.is_multiple_of(n) =>
+                {
+                    for uid in self.friends(side, Tribes::NONE, None) {
+                        self.buff(side, uid, attack, health);
+                    }
+                }
                 KitTrigger::AvengeSummon {
                     n,
                     token,
