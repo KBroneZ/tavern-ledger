@@ -79,7 +79,9 @@
         "compression": "zlib",
         "headerImage": "icons/installer-header.bmp",
         "sidebarImage": "icons/installer-sidebar.bmp",
-        "installerIcon": "icons/icon.ico"
+        "installerIcon": "icons/icon.ico",
+        "installerHooks": "installer/hooks.nsh",
+        "customLanguageFiles": { "English": "installer/English.nsh" }
       }
     }
   }
