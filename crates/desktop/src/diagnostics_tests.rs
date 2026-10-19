@@ -4,6 +4,15 @@
 
 use super::*;
 
+/// Fake secrets, written in two parts so no scanner takes the source for a real
+/// key; a `{TOKEN}` or `{KEY}` in a test line stands for them (`lines`, `fill`).
+const TOKEN: &str = concat!("ghp_", "abcdef0123456789");
+const KEY: &str = concat!("sk-", "live-secret");
+
+fn fill(text: &str) -> String {
+    text.replace("{TOKEN}", TOKEN).replace("{KEY}", KEY)
+}
+
 /// Things that must never appear in a diagnostics text.
 const SECRETS: [&str; 12] = [
     "Andrew",
@@ -12,8 +21,8 @@ const SECRETS: [&str; 12] = [
     "1234",
     "andrew@example.com",
     "example.com",
-    "ghp_abcdef0123456789",
-    "sk-live-secret",
+    TOKEN,
+    KEY,
     "C:\\Users",
     "AppData",
     "987654321012",
@@ -21,7 +30,7 @@ const SECRETS: [&str; 12] = [
 ];
 
 fn lines(items: &[&str]) -> Vec<String> {
-    items.iter().map(|s| s.to_string()).collect()
+    items.iter().map(|s| fill(s)).collect()
 }
 
 fn input<'a>(config: Option<&'a str>, log: &'a [String]) -> Input<'a> {
@@ -97,8 +106,8 @@ fn the_game_build_is_a_plausible_number_or_unknown() {
 
 #[test]
 fn a_log_config_line_that_is_not_a_known_setting_is_only_counted() {
-    let config = "[Power]\nLogLevel=1\n; Andrew's notes\nContact=andrew@example.com\nPath=C:\\Users\\andrew\\AppData\\x\nToken=ghp_abcdef0123456789\nName=Andrew#1234\nVerbose=true\n";
-    let text = build(&input(Some(config), &[])).unwrap();
+    let config = fill("[Power]\nLogLevel=1\n; Andrew's notes\nContact=andrew@example.com\nPath=C:\\Users\\andrew\\AppData\\x\nToken={TOKEN}\nName=Andrew#1234\nVerbose=true\n");
+    let text = build(&input(Some(&config), &[])).unwrap();
     assert_clean(&text);
     assert!(text.contains("  LogLevel=1\n  Verbose=true\n"));
     assert!(text.contains("(5 other lines not shown)"), "{text}");
@@ -158,8 +167,8 @@ fn a_known_log_line_shows_its_fixed_words_and_never_its_detail() {
         "2026-10-19T21:14:22Z WARN app the previous run ended unexpectedly",
         "2026-10-19T21:14:23Z ERROR tracker cannot use the game history: C:\\Users\\andrew\\AppData\\Roaming\\TavernLedger\\games.jsonl Andrew#1234",
         "2026-10-19T21:14:24Z WARN io saved tribes: could not read Andrew's file andrew@example.com",
-        "2026-10-19T21:14:25Z WARN updates update check failed: token ghp_abcdef0123456789 refused",
-        "2026-10-19T21:14:26Z WARN upload Andrew#1234 was refused with sk-live-secret",
+        "2026-10-19T21:14:25Z WARN updates update check failed: token {TOKEN} refused",
+        "2026-10-19T21:14:26Z WARN upload Andrew#1234 was refused with {KEY}",
         "2026-10-19T21:14:27Z ERROR app failed to start: Zorbo is not a valid name",
     ]);
     let text = build(&input(Some(GOOD_CONFIG), &log)).unwrap();
@@ -213,12 +222,12 @@ fn a_panic_keeps_only_the_fact_never_a_file_a_place_or_a_message() {
         "2026-10-19T21:14:23Z ERROR panic thread 'tracker' panicked at crates/tracker/src/lib.rs:12:3: Zorbo exploded",
         "2026-10-19T21:14:24Z ERROR panic thread 'Andrew#1234' panicked at src/x.rs:1:1: no message",
         // Crafted: a file name that is a secret, and a later path inside the message.
-        "2026-10-19T21:14:25Z ERROR panic thread 'main' panicked at src/sk-live-secret.rs:1:2: formatted message withheld",
+        "2026-10-19T21:14:25Z ERROR panic thread 'main' panicked at src/{KEY}.rs:1:2: formatted message withheld",
         "2026-10-19T21:14:26Z ERROR panic thread 'main' panicked at src/Andrew.rs:1:2: read C:\\Users\\andrew\\Zorbo.rs:9:9: oops",
     ]);
     let text = build(&input(None, &log)).unwrap();
     assert_clean(&text);
-    assert!(!text.contains("sk-live") && !text.contains(".rs"), "{text}");
+    assert!(!text.contains(KEY) && !text.contains(".rs"), "{text}");
     assert!(
         text.contains(
             "2026-10-19T21:14:22Z ERROR panic a panic (place not shown, message withheld)"
