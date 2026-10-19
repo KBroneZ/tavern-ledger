@@ -245,6 +245,9 @@
         <p class="setting-row"><button type="button" id="log-open" class="report-btn" data-i18n="settings.log.open">Open log folder</button></p>
         <p class="note" data-i18n="settings.log.note">When something goes wrong, the app writes a line about it to a small log file on this PC (up to 3 MB). It holds no player names, accounts, emails or keys, and it is never uploaded. A problem report includes its last lines, and you choose whether to send that report.</p>
         <p id="log-problem" class="problem" role="status"></p>
+        <p class="setting-row"><button type="button" id="diag-open" class="report-btn" data-i18n="settings.diag.open">Copy diagnostics</button></p>
+        <p class="note" data-i18n="settings.diag.note">If something fails, copy a short summary to send to the project: the app and game versions, the Power lines of your log.config and the app's known error messages. You see exactly what is copied first. It has no names, accounts or paths, and nothing is sent anywhere.</p>
+        <p id="diag-problem" class="problem" role="status"></p>
       </section>
       <section id="upload" class="upload settings-group" aria-labelledby="upload-title">
         <h3 id="upload-title" class="upload-head"><span data-i18n="win.upload.title">Upload to the website</span><span id="upload-summary">…</span></h3>
@@ -346,6 +349,17 @@
     </div>
   </dialog>
 
+  <dialog id="diag-dialog" aria-labelledby="diag-title">
+    <h2 id="diag-title" data-i18n="settings.diag.title">Copy diagnostics</h2>
+    <p class="note" data-i18n="settings.diag.preview">This is exactly what will be copied to the clipboard. Nothing is sent anywhere; you can paste it into a message yourself.</p>
+    <pre id="diag-text" tabindex="0"></pre>
+    <p id="diag-status" class="note" role="status"></p>
+    <div class="dialog-actions">
+      <button type="button" id="diag-copy" disabled data-i18n="settings.diag.copy">Copy</button>
+      <button type="button" id="diag-close" class="quiet" data-i18n="win.close">Close</button>
+    </div>
+  </dialog>
+
   <dialog id="first-start" class="first-start" aria-labelledby="first-start-title" aria-describedby="first-start-later">
     <h2 id="first-start-title" data-i18n="win.first.title">Do you want the in-game overlay, or only stats?</h2>
     <div class="first-choices">
@@ -400,6 +414,7 @@
   <script src="game-folder.js"></script>
   <script src="setup-fix.js"></script>
   <script src="log-setting.js"></script>
+  <script src="diagnostics-setting.js"></script>
   <script src="first-start.js"></script>
 </body>
 </html>
