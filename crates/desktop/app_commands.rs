@@ -12,6 +12,7 @@ pub const APP_COMMANDS: &[&str] = &[
     "game_why",
     "preview_problem_report",
     "save_problem_report",
+    "diagnostics_preview",
     "lobby_tribes_view",
     "edit_lobby_tribes",
     "overlay_state",

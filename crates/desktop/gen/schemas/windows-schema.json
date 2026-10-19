@@ -231,6 +231,12 @@
           "markdownDescription": "Enables the curious_stats command without any pre-configured scope."
         },
         {
+          "description": "Enables the diagnostics_preview command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-diagnostics-preview",
+          "markdownDescription": "Enables the diagnostics_preview command without any pre-configured scope."
+        },
+        {
           "description": "Enables the edit_lobby_tribes command without any pre-configured scope.",
           "type": "string",
           "const": "allow-edit-lobby-tribes",
@@ -559,6 +565,12 @@
           "type": "string",
           "const": "deny-curious-stats",
           "markdownDescription": "Denies the curious_stats command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the diagnostics_preview command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-diagnostics-preview",
+          "markdownDescription": "Denies the diagnostics_preview command without any pre-configured scope."
         },
         {
           "description": "Denies the edit_lobby_tribes command without any pre-configured scope.",

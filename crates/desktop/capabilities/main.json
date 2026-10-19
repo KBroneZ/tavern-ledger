@@ -16,6 +16,7 @@
     "allow-game-why",
     "allow-preview-problem-report",
     "allow-save-problem-report",
+    "allow-diagnostics-preview",
     "allow-lobby-tribes-view",
     "allow-edit-lobby-tribes",
     "allow-overlay-settings",
