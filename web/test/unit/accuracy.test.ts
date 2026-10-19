@@ -410,12 +410,17 @@ test("the kits part is read strictly and its line says both scores, or that no g
   const way = (brier: number | null, right: number) => ({ mean_p_real: brier === null ? null : 0.8, brier, most_likely_right: right });
   raw.kits = { combats: 12, scored: 10, with: way(0.25, 8), without: way(0.271, 7) };
   const data = parseAccuracy(raw);
-  assert.equal(kitsNote(data.kits), "Games saved or re-read by app 0.2.5 or later also keep each hero's powers and trinkets, and their combats are played with them: 12 combats here. On the 10 with odds both ways, the Brier score is 0.250 with them and 0.271 without.");
+  const note = kitsNote(data.kits);
+  assert.equal(note.text, "Games saved or re-read by app 0.2.5 or later also keep each hero's powers and trinkets, and their combats are played with them: 12 combats here.");
+  assert.equal(note.scores, "On the 10 of them with odds both ways: Brier 0.250 with the powers and trinkets, 0.271 without.");
   setLang("es");
-  assert.match(kitsNote(data.kits), /12 combates aquí\. En los 10 .* 0,250 con ellos y 0,271 sin ellos\.$/);
+  assert.match(kitsNote(data.kits).text, /12 combates aquí\.$/);
+  assert.match(kitsNote(data.kits).scores ?? "", /^En los 10 .* 0,250 con los poderes y abalorios, 0,271 sin ellos\.$/);
   setLang("en");
   raw.kits = { combats: 0, scored: 0, with: way(null, 0), without: way(null, 0) };
-  assert.match(kitsNote(parseAccuracy(raw).kits), /^No game here was saved/);
+  const none = kitsNote(parseAccuracy(raw).kits);
+  assert.match(none.text, /^No game here was saved/);
+  assert.equal(none.scores, null);
   for (const bad of [
     { combats: 1, scored: 2, with: way(0.2, 1), without: way(0.2, 1) },
     { combats: 2, scored: 2, with: way(null, 0), without: way(0.2, 1) },

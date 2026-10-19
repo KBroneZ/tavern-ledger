@@ -173,16 +173,18 @@ export function causeRows(causes: readonly MissCause[]): CauseRow[] {
   }));
 }
 
-/** The line on the combats played with the heroes' powers and trinkets. */
-export function kitsNote(k: Kits): string {
-  if (k.combats === 0) return at("about.kits.none");
+/**
+ * The lines on the combats played with the heroes' powers and trinkets: how
+ * many, and (Advanced only, like every Brier score) their scores with and
+ * without them; `scores` is null when there is none to give.
+ */
+export function kitsNote(k: Kits): { text: string; scores: string | null } {
+  if (k.combats === 0) return { text: at("about.kits.none"), scores: null };
   const brier = (v: number | null) => (v === null ? DASH : numberFormat({ minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(v));
-  return at("about.kits", {
-    combats: plain(k.combats),
-    scored: plain(k.scored),
-    with: brier(k.with.brier),
-    without: brier(k.without.brier),
-  });
+  const text = at("about.kits", { combats: plain(k.combats) });
+  if (k.scored === 0) return { text, scores: null };
+  const scores = at("about.kits.scores", { scored: plain(k.scored), with: brier(k.with.brier), without: brier(k.without.brier) });
+  return { text, scores };
 }
 
 export interface BuildsView {

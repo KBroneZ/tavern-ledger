@@ -35,6 +35,7 @@ const modes = MODES.map((mode) => ({
 }));
 const cards = blockingRows(data.blocking_cards, names);
 const causes = causeRows(data.misses.causes);
+const kits = kitsNote(data.kits);
 const builds = buildsView(data.builds, data.date);
 const version = at("page.version", {
   version: data.engine_version,
@@ -181,7 +182,8 @@ const version = at("page.version", {
       <p>{at("about.body")}</p>
       <More context={at("about.title")}>
         <p>{at("about.more")}</p>
-        <p>{kitsNote(data.kits)}</p>
+        <p>{kits.text}</p>
+        {kits.scores && <p class="adv">{kits.scores}</p>}
         <p>{at("about.refresh")}</p>
       </More>
     </section>
