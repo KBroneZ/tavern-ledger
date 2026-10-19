@@ -145,4 +145,8 @@ export const ES: Record<SiteKey, string> = {
   "news.heroes.link": "Estadísticas de héroes",
   "news.simulator": "Un simulador de combates en la web: carga un tablero de una de tus partidas, cámbialo y simula el combate.",
   "news.simulator.link": "Simulador",
+  "news.app025": "Versión 0.2.5 de la app: las probabilidades de combate juegan el inicio del combate, los poderes de héroe y los abalorios, y el overlay muestra una estimación inicial al empezar cada combate.",
+  "news.app025.link": "Descargar",
+  "news.simkits": "El simulador de la web acepta el poder de héroe y los abalorios de cada tablero, y juega el inicio del combate en los tableros que montas.",
+  "news.simkits.link": "Simulador",
 };
