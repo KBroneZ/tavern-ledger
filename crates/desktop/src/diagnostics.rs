@@ -15,8 +15,8 @@
 //!   level, an area) *and* its message starts with one of the messages the app
 //!   writes (`KNOWN`); then only that fixed message is shown, never the rest of
 //!   the line (an error's detail can hold a name or a path), plus the one
-//!   number or version a message is allowed to carry. A panic keeps only its
-//!   file name and place. Every other line is only counted.
+//!   number or version a message is allowed to carry. A panic keeps only the
+//!   fact that it happened. Every other line is only counted.
 //!
 //! A last check refuses the whole text, naming nothing, if it still holds
 //! something shaped like a BattleTag, an email, a drive path, a profile folder
@@ -61,38 +61,40 @@ impl fmt::Display for Refusal {
 }
 
 static VERSION: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^\d{1,3}\.\d{1,3}\.\d{1,3}(-[A-Za-z0-9.]{1,16})?$").expect("version regex")
+    Regex::new(r"^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(-[A-Za-z0-9.]{1,16})?$")
+        .expect("version regex")
 });
 
 /// "2026-10-19T21:14:22Z WARN app message".
 static LOG_LINE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z) (WARN|ERROR) ([a-z][a-z0-9_-]{0,19}) (.*)$",
+        r"^([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z) (WARN|ERROR) ([a-z][a-z0-9_-]{0,19}) (.*)$",
     )
     .expect("log line regex")
 });
 
-/// "thread 'name' panicked at path/file.rs:1:2: message".
-static PANIC: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^thread '[^']{1,40}' panicked at (?:.*[\\/])?([A-Za-z0-9_.-]{1,40}\.rs):(\d{1,6}):(\d{1,6}): (.*)$")
-        .expect("panic regex")
-});
+/// "thread 'name' panicked at path/file.rs:1:2: message". Only the fact is
+/// kept: a file name or a place read from a log the player can edit is text
+/// nobody vouches for, and the whole line is in the app log for whoever asks.
+static PANIC: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^thread '[^']{1,40}' panicked at ").expect("panic regex"));
 
 /// "... registered as 155.0.4283.45 but its files are not there ...".
 static WEBVIEW2_STALE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^The WebView2 runtime is registered as (\d{1,6}(?:\.\d{1,6}){0,3}) but its files are not there")
+    Regex::new(r"^The WebView2 runtime is registered as ([0-9]{1,6}(?:\.[0-9]{1,6}){0,3}) but its files are not there")
         .expect("webview2 regex")
 });
 
 /// "the game history has 3 lines that could not be read".
 static HISTORY_LINES: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^the game history has (\d{1,6}) lines that could not be read")
+    Regex::new(r"^the game history has ([0-9]{1,6}) lines that could not be read")
         .expect("history regex")
 });
 
 /// "unknown start-up task state 7".
-static TASK_STATE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^unknown start-up task state (\d{1,4})").expect("task regex"));
+static TASK_STATE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^unknown start-up task state ([0-9]{1,4})\b").expect("task regex")
+});
 
 /// The messages the app writes at WARN and ERROR, by area: the start of the
 /// message and the fixed words that stand for it. Whatever follows the start
@@ -243,7 +245,14 @@ fn power_lines(config: &str) -> Option<(Vec<String>, usize)> {
             continue;
         }
         match power_setting(line) {
-            Some(setting) if !shown.contains(&setting) => shown.push(setting),
+            // The first value of a key; a repeated key is not another line.
+            Some(setting)
+                if !shown
+                    .iter()
+                    .any(|s: &String| s.split('=').next() == setting.split('=').next()) =>
+            {
+                shown.push(setting)
+            }
             Some(_) => {}
             None => other += 1,
         }
@@ -275,18 +284,11 @@ fn power_setting(line: &str) -> Option<String> {
 fn known_log_line(line: &str) -> Option<String> {
     let parts = LOG_LINE.captures(line.trim_end())?;
     let (time, level, area, message) = (&parts[1], &parts[2], &parts[3], &parts[4]);
-    let words = if let Some(panic) = PANIC.captures(message).filter(|_| area == "app") {
-        let withheld = &panic[4] == "formatted message withheld";
+    let words = if area == "panic" && PANIC.is_match(message) {
+        let withheld = message.ends_with("formatted message withheld");
         format!(
-            "a panic at {}:{}:{}{}",
-            &panic[1],
-            &panic[2],
-            &panic[3],
-            if withheld {
-                " (message withheld)"
-            } else {
-                " (message not shown)"
-            }
+            "a panic (place not shown, message {})",
+            if withheld { "withheld" } else { "not shown" }
         )
     } else if let Some(stale) = WEBVIEW2_STALE.captures(message).filter(|_| area == "app") {
         format!(

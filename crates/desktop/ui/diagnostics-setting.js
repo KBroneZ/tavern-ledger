@@ -21,70 +21,94 @@
 
     // The text the app made, as it came: what is on screen and what is copied.
     let shown = null;
+    // Bumped whenever the text changes or goes away, so a copy that finishes
+    // late cannot say "Copied" about a text that is no longer the one shown.
+    let generation = 0;
+    let asking = false;
 
     const reset = () => {
+      generation += 1;
       shown = null;
       pre.textContent = "";
       status.textContent = "";
-      copy.disabled = true;
+      copy.setAttribute("aria-disabled", "true");
     };
+    reset();
 
     open.addEventListener("click", async () => {
-      open.disabled = true;
+      if (asking) return;
+      asking = true;
       problem.textContent = "";
       try {
         const text = await call("diagnostics_preview");
-        if (typeof text !== "string" || !text) throw new Error("empty");
+        if (typeof text !== "string" || !text) throw new Error(t("settings.diag.empty"));
+        reset();
         shown = text;
         pre.textContent = text;
-        status.textContent = "";
-        copy.disabled = false;
+        copy.removeAttribute("aria-disabled");
         dialog.showModal();
       } catch (error) {
         reset();
-        problem.textContent = t("settings.diag.failed", { error: backend(String(error)) });
+        const said = error instanceof Error ? error.message : backend(String(error));
+        problem.textContent = t("settings.diag.failed", { error: said });
       } finally {
-        open.disabled = false;
+        asking = false;
       }
     });
 
+    // The button stays enabled (it keeps the keyboard focus); with no text it does nothing.
     copy.addEventListener("click", async () => {
       if (shown === null) return;
-      copy.disabled = true;
+      const text = shown;
+      const mine = generation;
+      let said;
       try {
-        await writeText(shown);
-        status.textContent = t("settings.diag.copied");
+        await writeText(text);
+        said = t("settings.diag.copied");
       } catch (_) {
-        status.textContent = t("settings.diag.copyFailed");
-      } finally {
-        copy.disabled = shown === null;
+        said = t("settings.diag.copyFailed");
       }
+      if (mine === generation) status.textContent = said;
     });
 
-    close.addEventListener("click", () => {
-      dialog.close();
+    close.addEventListener("click", () => dialog.close());
+    // Closing, by the button or Escape: forget the text and give the focus back.
+    dialog.addEventListener("close", () => {
       reset();
+      open.focus();
     });
-    // Escape closes the dialog without the button.
-    dialog.addEventListener("close", reset);
   }
 
-  // The page's clipboard: the async API, else a hidden textarea and the old
-  // command (a window where the async one is not allowed).
-  function pageClipboard(doc, nav) {
+  // The page's clipboard: the async API, and when it refuses (a window where
+  // it is not allowed) a hidden textarea and the old command. The textarea goes
+  // inside `into` (the open dialog: the rest of the page is inert while it is
+  // modal) and the focus goes back where it was.
+  function pageClipboard(doc, nav, into) {
     return async (text) => {
-      if (nav.clipboard && nav.clipboard.writeText) return nav.clipboard.writeText(text);
+      if (nav.clipboard && nav.clipboard.writeText) {
+        try {
+          await nav.clipboard.writeText(text);
+          return;
+        } catch (_) {
+          // fall through to the old command
+        }
+      }
+      const before = doc.activeElement;
       const box = doc.createElement("textarea");
       box.value = text;
       box.setAttribute("readonly", "");
       box.style.position = "fixed";
       box.style.opacity = "0";
-      doc.body.append(box);
+      (into || doc.body).append(box);
       box.select();
-      const done = doc.execCommand("copy");
-      box.remove();
+      let done = false;
+      try {
+        done = doc.execCommand("copy");
+      } finally {
+        box.remove();
+        if (before && before.focus) before.focus();
+      }
       if (!done) throw new Error("copy refused");
-      return undefined;
     };
   }
 
@@ -93,7 +117,7 @@
   else {
     window.TLDiagnostics = api;
     window.TLI18n.ready().then(() => {
-      start(document, window.__TAURI__.core.invoke, pageClipboard(document, navigator), window.TLI18n.t, window.TLI18n.backend);
+      start(document, window.__TAURI__.core.invoke, pageClipboard(document, navigator, document.getElementById("diag-dialog")), window.TLI18n.t, window.TLI18n.backend);
     });
   }
 })();

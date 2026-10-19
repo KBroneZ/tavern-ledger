@@ -349,13 +349,13 @@
     </div>
   </dialog>
 
-  <dialog id="diag-dialog" aria-labelledby="diag-title">
+  <dialog id="diag-dialog" aria-labelledby="diag-title" aria-describedby="diag-preview-note">
     <h2 id="diag-title" data-i18n="settings.diag.title">Copy diagnostics</h2>
-    <p class="note" data-i18n="settings.diag.preview">This is exactly what will be copied to the clipboard. Nothing is sent anywhere; you can paste it into a message yourself.</p>
-    <pre id="diag-text" tabindex="0"></pre>
+    <p id="diag-preview-note" class="note" data-i18n="settings.diag.preview">This is exactly what will be copied to the clipboard. Nothing is sent anywhere; you can paste it into a message yourself.</p>
+    <pre id="diag-text" tabindex="0" aria-labelledby="diag-title"></pre>
     <p id="diag-status" class="note" role="status"></p>
     <div class="dialog-actions">
-      <button type="button" id="diag-copy" disabled data-i18n="settings.diag.copy">Copy</button>
+      <button type="button" id="diag-copy" aria-disabled="true" autofocus data-i18n="settings.diag.copy">Copy</button>
       <button type="button" id="diag-close" class="quiet" data-i18n="win.close">Close</button>
     </div>
   </dialog>

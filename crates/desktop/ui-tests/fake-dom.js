@@ -22,6 +22,10 @@ class FakeNode {
     if (name === "id") this.id = String(value);
   }
 
+  removeAttribute(name) {
+    delete this.attrs[name];
+  }
+
   addEventListener(type, fn) {
     (this.listeners[type] = this.listeners[type] || []).push(fn);
   }

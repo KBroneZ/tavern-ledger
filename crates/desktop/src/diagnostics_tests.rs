@@ -207,24 +207,41 @@ fn a_line_must_come_from_the_area_its_message_belongs_to() {
 }
 
 #[test]
-fn a_panic_keeps_its_file_name_and_place_and_never_a_path_or_a_message() {
+fn a_panic_keeps_only_the_fact_never_a_file_a_place_or_a_message() {
     let log = lines(&[
-        "2026-10-19T21:14:22Z ERROR app thread 'main' panicked at C:\\Users\\andrew\\.cargo\\registry\\src\\x\\tauri-2.12.2\\src\\app.rs:1444:11: formatted message withheld",
-        "2026-10-19T21:14:23Z ERROR app thread 'tracker' panicked at crates/tracker/src/lib.rs:12:3: Zorbo exploded",
-        "2026-10-19T21:14:24Z ERROR app thread 'Andrew#1234' panicked at src/x.rs:1:1: no message",
+        "2026-10-19T21:14:22Z ERROR panic thread 'main' panicked at C:\\Users\\andrew\\.cargo\\registry\\src\\x\\tauri-2.12.2\\src\\app.rs:1444:11: formatted message withheld",
+        "2026-10-19T21:14:23Z ERROR panic thread 'tracker' panicked at crates/tracker/src/lib.rs:12:3: Zorbo exploded",
+        "2026-10-19T21:14:24Z ERROR panic thread 'Andrew#1234' panicked at src/x.rs:1:1: no message",
+        // Crafted: a file name that is a secret, and a later path inside the message.
+        "2026-10-19T21:14:25Z ERROR panic thread 'main' panicked at src/sk-live-secret.rs:1:2: formatted message withheld",
+        "2026-10-19T21:14:26Z ERROR panic thread 'main' panicked at src/Andrew.rs:1:2: read C:\\Users\\andrew\\Zorbo.rs:9:9: oops",
     ]);
     let text = build(&input(None, &log)).unwrap();
     assert_clean(&text);
+    assert!(!text.contains("sk-live") && !text.contains(".rs"), "{text}");
     assert!(
         text.contains(
-            "2026-10-19T21:14:22Z ERROR app a panic at app.rs:1444:11 (message withheld)"
+            "2026-10-19T21:14:22Z ERROR panic a panic (place not shown, message withheld)"
         ),
         "{text}"
     );
     assert!(
-        text.contains("2026-10-19T21:14:23Z ERROR app a panic at lib.rs:12:3 (message not shown)"),
+        text.contains(
+            "2026-10-19T21:14:23Z ERROR panic a panic (place not shown, message not shown)"
+        ),
         "{text}"
     );
+    assert_eq!(text.matches("a panic (place not shown").count(), 5);
+}
+
+#[test]
+fn a_panic_must_come_from_the_panic_area() {
+    // The app's panic hook writes under the area "panic"; the same text under another area is not one.
+    let log =
+        lines(&["2026-10-19T21:14:22Z ERROR app thread 'main' panicked at src/x.rs:1:1: Zorbo"]);
+    let text = build(&input(None, &log)).unwrap();
+    assert!(text.contains("none among the known messages"));
+    assert!(!text.contains("a panic"));
 }
 
 #[test]
@@ -323,4 +340,40 @@ fn the_config_is_read_up_to_a_cap_and_a_missing_file_is_none() {
     assert_eq!(read_log_config(&big).map(|t| t.len()), Some(64 * 1024));
     assert_eq!(read_log_config(&dir.join("nope.config")), None);
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn a_repeated_setting_shows_only_its_first_value() {
+    let config = "[Power]\nLogLevel=1\nLogLevel=2\nLogLevel=99\nVerbose=true\nVerbose=false\n";
+    let text = build(&input(Some(config), &[])).unwrap();
+    assert!(text.contains("  LogLevel=1\n  Verbose=true\n"), "{text}");
+    assert!(!text.contains("LogLevel=2") && !text.contains("Verbose=false"));
+}
+
+#[test]
+fn only_ascii_digits_count_in_a_log_line() {
+    // Arabic-Indic digits in a hand-edited log are not a time or a number.
+    let log = lines(&[
+        "\u{0662}\u{0660}26-10-19T21:14:22Z WARN app the previous run ended unexpectedly",
+        "2026-10-19T21:14:23Z WARN io the game history has \u{0663} lines that could not be read",
+    ]);
+    let text = build(&input(None, &log)).unwrap();
+    assert!(
+        !text.contains('\u{0662}') && !text.contains('\u{0663}'),
+        "{text}"
+    );
+}
+
+#[test]
+fn a_number_is_taken_whole_never_a_prefix_of_a_longer_one() {
+    let log = lines(&[
+        "2026-10-19T21:14:22Z WARN startup unknown start-up task state 987654321012",
+        "2026-10-19T21:14:23Z WARN startup unknown start-up task state 12345",
+        "2026-10-19T21:14:24Z WARN startup unknown start-up task state 7x",
+        "2026-10-19T21:14:25Z WARN io the game history has 1234567 lines that could not be read",
+        "2026-10-19T21:14:26Z ERROR app The WebView2 runtime is registered as 1234567.1 but its files are not there",
+    ]);
+    let text = build(&input(None, &log)).unwrap();
+    assert!(!text.contains("9876") && !text.contains("1234"), "{text}");
+    assert!(text.contains("(5 more not shown"), "{text}");
 }
