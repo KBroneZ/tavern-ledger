@@ -49,14 +49,32 @@ class UninstallerTest(unittest.TestCase):
         self.assertIn("!macro NSIS_HOOK_POSTUNINSTALL", hook)
         self.assertIn("$DeleteAppDataCheckboxState = 1", hook)
         self.assertIn("$UpdateMode <> 1", hook)
+        # One recursive delete, of the app's own folder under the user's AppData.
         self.assertEqual(re.findall(r'RmDir /r "([^"]+)"', hook), [r"$APPDATA\TavernLedger"])
 
-    def test_the_hook_never_runs_without_the_checkbox(self):
-        # The only RmDir sits inside the checked branch.
+    def test_the_only_recursive_delete_sits_inside_the_checked_not_updating_branch(self):
         hook = HOOKS.read_text(encoding="utf-8")
-        branch = hook.split("${If} $DeleteAppDataCheckboxState = 1", 1)[1].split("${EndIf}", 1)[0]
-        self.assertIn("RmDir", branch)
-        self.assertNotIn("RmDir", hook.split("${If}", 1)[0].split("!macro", 1)[1])
+        code = "\n".join(line for line in hook.splitlines() if not line.lstrip().startswith(";"))
+        body = code.split("!macro NSIS_HOOK_POSTUNINSTALL", 1)[1].split("!macroend", 1)[0]
+        self.assertEqual(body.count("RmDir"), 2, "the plain one for a link, the recursive one")
+        # Nothing before the branch's opening If, and nothing after the matching EndIf.
+        opening = body.index("${If} $DeleteAppDataCheckboxState = 1")
+        self.assertNotIn("RmDir", body[:opening])
+        depth, closing = 0, None
+        for match in re.finditer(r"\$\{(If|EndIf)\}", body):
+            depth += 1 if match.group(1) == "If" else -1
+            if match.start() >= opening and depth == 0:
+                closing = match.end()
+                break
+        self.assertIsNotNone(closing)
+        self.assertNotIn("RmDir", body[closing:])
+
+    def test_a_junction_or_link_is_removed_without_following_it(self):
+        hook = HOOKS.read_text(encoding="utf-8")
+        self.assertIn("GetFileAttributesW", hook)
+        self.assertIn("0x400", hook)  # FILE_ATTRIBUTE_REPARSE_POINT
+        self.assertRegex(hook, r'RmDir "\$APPDATA\\TavernLedger"')  # the link only
+        self.assertIn('$APPDATA != ""', hook)  # never a path from the drive's root
 
     def test_the_config_uses_both_files(self):
         nsis = json.loads((DESKTOP / "tauri.conf.json").read_text(encoding="utf-8"))["bundle"]["windows"]["nsis"]
