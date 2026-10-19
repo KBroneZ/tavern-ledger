@@ -7,9 +7,11 @@
 ; Unticked, nothing of it is touched. An update (the in-app updater runs the
 ; old uninstaller in update mode) never deletes it.
 ;
-; `RmDir /r` follows a junction or a symbolic link into its target. If the
-; player made %APPDATA%\TavernLedger a link (to keep the history on another
-; drive), only the link is removed: what it points at is theirs.
+; NSIS's own `RmDir /r` follows a junction or a symbolic link into its target.
+; If the player made %APPDATA%\TavernLedger a link (to keep the history on
+; another drive), or a folder inside it, only the link may go: what it points
+; at is theirs. So the folder itself is checked, and the deletion is done by
+; `rd /s /q`, which removes a link inside the tree without following it.
 !macro NSIS_HOOK_POSTUNINSTALL
   ${If} $DeleteAppDataCheckboxState = 1
   ${AndIf} $UpdateMode <> 1
@@ -23,7 +25,8 @@
       ${If} $1 <> 0
         RmDir "$APPDATA\TavernLedger"
       ${Else}
-        RmDir /r "$APPDATA\TavernLedger"
+        nsExec::Exec '"$SYSDIR\cmd.exe" /d /c rd /s /q "$APPDATA\TavernLedger"'
+        Pop $1
       ${EndIf}
       Pop $1
       Pop $0

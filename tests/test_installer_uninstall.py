@@ -44,37 +44,54 @@ class UninstallerTest(unittest.TestCase):
         self.assertEqual(label, "Also delete my games and settings (cannot be undone)")
         self.assertLessEqual(len(label), MAX_LABEL)
 
-    def test_the_box_deletes_the_data_folder_unless_the_app_is_updating(self):
+    def code(self):
+        """The hook without its comments, and the body of the macro."""
         hook = HOOKS.read_text(encoding="utf-8")
-        self.assertIn("!macro NSIS_HOOK_POSTUNINSTALL", hook)
-        self.assertIn("$DeleteAppDataCheckboxState = 1", hook)
-        self.assertIn("$UpdateMode <> 1", hook)
-        # One recursive delete, of the app's own folder under the user's AppData.
-        self.assertEqual(re.findall(r'RmDir /r "([^"]+)"', hook), [r"$APPDATA\TavernLedger"])
+        lines = [line for line in hook.splitlines() if not line.lstrip().startswith(";")]
+        return "\n".join(lines).split("!macro NSIS_HOOK_POSTUNINSTALL", 1)[1].split("!macroend", 1)[0]
 
-    def test_the_only_recursive_delete_sits_inside_the_checked_not_updating_branch(self):
-        hook = HOOKS.read_text(encoding="utf-8")
-        code = "\n".join(line for line in hook.splitlines() if not line.lstrip().startswith(";"))
-        body = code.split("!macro NSIS_HOOK_POSTUNINSTALL", 1)[1].split("!macroend", 1)[0]
-        self.assertEqual(body.count("RmDir"), 2, "the plain one for a link, the recursive one")
-        # Nothing before the branch's opening If, and nothing after the matching EndIf.
+    def test_the_box_deletes_the_data_folder_only_when_ticked_and_not_updating(self):
+        body = self.code()
+        # The exact conjunction, on adjacent lines: an `OrIf` or a dropped line would fail here.
+        self.assertRegex(
+            body,
+            r"\$\{If\} \$DeleteAppDataCheckboxState = 1\n\s*\$\{AndIf\} \$UpdateMode <> 1\n",
+        )
+        self.assertNotIn("OrIf", body)
+        self.assertEqual(body.count("${If} $DeleteAppDataCheckboxState"), 1)
+
+    def test_the_deletion_is_scoped_to_the_apps_own_folder_and_never_nsis_recursive(self):
+        body = self.code()
+        self.assertNotIn("RmDir /r", body, "NSIS's recursive delete follows junctions")
+        self.assertEqual(
+            re.findall(r'rd /s /q "([^"]+)"', body), [r"$APPDATA\TavernLedger"], "one deletion, in the user's AppData"
+        )
+        self.assertRegex(body, r'RmDir "\$APPDATA\\TavernLedger"')  # a link at the root: only the link
+        self.assertIn("GetFileAttributesW", body)
+        self.assertIn("0x400", body)  # FILE_ATTRIBUTE_REPARSE_POINT
+        self.assertIn('$APPDATA != ""', body)  # never a path from the drive's root
+
+    def test_every_deletion_sits_inside_the_checked_not_updating_branch(self):
+        body = self.code()
+        deletions = [m.start() for m in re.finditer(r"RmDir|nsExec::Exec", body)]
+        self.assertEqual(len(deletions), 2, "the link-only RmDir and the rd command")
         opening = body.index("${If} $DeleteAppDataCheckboxState = 1")
-        self.assertNotIn("RmDir", body[:opening])
         depth, closing = 0, None
         for match in re.finditer(r"\$\{(If|EndIf)\}", body):
             depth += 1 if match.group(1) == "If" else -1
             if match.start() >= opening and depth == 0:
-                closing = match.end()
+                closing = match.start()
                 break
         self.assertIsNotNone(closing)
-        self.assertNotIn("RmDir", body[closing:])
+        for at in deletions:
+            self.assertTrue(opening < at < closing, "a deletion outside the branch")
 
-    def test_a_junction_or_link_is_removed_without_following_it(self):
-        hook = HOOKS.read_text(encoding="utf-8")
-        self.assertIn("GetFileAttributesW", hook)
-        self.assertIn("0x400", hook)  # FILE_ATTRIBUTE_REPARSE_POINT
-        self.assertRegex(hook, r'RmDir "\$APPDATA\\TavernLedger"')  # the link only
-        self.assertIn('$APPDATA != ""', hook)  # never a path from the drive's root
+    def test_the_custom_strings_follow_the_pinned_cli(self):
+        # The fixture above is the string table of this exact CLI: a new CLI may
+        # add strings, and the custom file replaces the table whole.
+        package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
+        pinned = package["devDependencies"]["@tauri-apps/cli"]
+        self.assertEqual(pinned, "2.12.1", "refresh English.nsh and TAURI_KEYS from the new CLI")
 
     def test_the_config_uses_both_files(self):
         nsis = json.loads((DESKTOP / "tauri.conf.json").read_text(encoding="utf-8"))["bundle"]["windows"]["nsis"]
