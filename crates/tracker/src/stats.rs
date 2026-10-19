@@ -245,9 +245,11 @@ fn group_without_report(card: &str, links: &HeroLinks) -> (String, Grouped) {
     (base.to_string(), how)
 }
 
-/// The hero a card id belongs to as the stats group it (T-359): the recap
-/// names a hero by this id, so one hero has one name in the recap and in the
-/// stats, whatever skin it played in.
+/// The hero a card id belongs to as the stats group it, from the card data
+/// and the D-019 rule (T-359): the recap names a hero by this id, so one hero
+/// has one name in the recap and in the stats, whatever skin it played in. The
+/// stats also use the link the game saved in each report; it can only differ
+/// when the card data copy on this PC lacks the skin's parent.
 pub fn hero_group(card: &str, links: &HeroLinks) -> String {
     group_without_report(card, links).0
 }

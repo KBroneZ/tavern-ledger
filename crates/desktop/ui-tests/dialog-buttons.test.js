@@ -30,6 +30,6 @@ test("Close and Cancel buttons in a dialog are quiet; no other button is", () =>
   }
 });
 
-test("the quiet button has its own look and keeps it when disabled", () => {
+test("the quiet button has its own look", () => {
   assert.match(css, /\.dialog-actions button\.quiet\s*\{/);
 });

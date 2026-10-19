@@ -30,9 +30,13 @@ const asked = [];
 const askedGroups = [];
 // The app's answer to hero_groups: a skin belongs to its base hero.
 const GROUPS = { HERO_SKIN_A: "HERO_BASE", HERO_SKIN_B: "HERO_BASE", HERO_ODD_SKIN_C: "HERO_NAMELESS" };
+let groupsFail = false;
+let groupsDelay = 0;
 const answer = async (cmd, args) => {
   if (cmd === "hero_groups") {
     askedGroups.push(args.ids);
+    if (groupsDelay) await new Promise((resolve) => setTimeout(resolve, groupsDelay));
+    if (groupsFail) throw new Error("no card data");
     return Object.fromEntries(args.ids.map((id) => [id, GROUPS[id] || id]));
   }
   if (cmd !== "card_names") return {};
@@ -43,7 +47,8 @@ const answer = async (cmd, args) => {
       : { BG_KNOWN: "English name", HERO_BASE: "Base hero", HERO_SKIN_A: "Skin A hero", HERO_ODD_SKIN_C: "Odd skin" };
   return Object.fromEntries(args.ids.map((id) => [id, names[id] || null]));
 };
-global.window = { __TAURI__: { core: { invoke: answer }, event: { listen: () => {} } }, TLI18n: I18n };
+const listeners = {};
+global.window = { __TAURI__: { core: { invoke: answer }, event: { listen: (name, fn) => { listeners[name] = fn; } } }, TLI18n: I18n };
 global.location = { protocol: "http:" };
 global.document = { createElement: (tag) => new Node(tag) };
 require(path.join(__dirname, "..", "ui", "cards.js"));
@@ -172,4 +177,84 @@ test("the groups are asked once per hero, in one batch, and only for card ids", 
   TLCards.heroName("HERO_NEW_1", null);
   await settle();
   assert.deepEqual(askedGroups, [["HERO_NEW_1", "HERO_NEW_2"]]);
+});
+
+test("a card-data update asks the groups again and keeps the old name on screen meanwhile", async () => {
+  I18n.setLang("es");
+  try {
+    TLCards.heroName("HERO_SKIN_A", null);
+    await settle();
+    assert.equal(TLCards.heroName("HERO_SKIN_A", null), "Héroe base");
+    askedGroups.length = 0;
+    groupsDelay = 20;
+    let redraws = 0;
+    TLCards.onChange(() => { redraws += 1; });
+    listeners["cards-changed"]();
+    assert.equal(TLCards.heroName("HERO_SKIN_A", null), "Héroe base", "no skin name while the answer is on its way");
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    assert.ok(askedGroups.some((ids) => ids.includes("HERO_SKIN_A")), "asked again");
+    assert.equal(TLCards.heroName("HERO_SKIN_A", null), "Héroe base");
+    assert.equal(redraws <= 2, true, "an unchanged answer does not redraw for the groups");
+  } finally {
+    groupsDelay = 0;
+    I18n.setLang("en");
+  }
+});
+
+test("a card-data update that lands while a question is in flight is asked again afterwards", async () => {
+  I18n.setLang("es");
+  try {
+    GROUPS.HERO_SKIN_R = "HERO_BASE_OLD";
+    groupsDelay = 20;
+    TLCards.heroName("HERO_SKIN_R", null);
+    await new Promise((resolve) => setTimeout(resolve, 5)); // the question is out
+    GROUPS.HERO_SKIN_R = "HERO_BASE"; // the update links the skin to its real hero
+    listeners["cards-changed"]();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    assert.equal(TLCards.heroName("HERO_SKIN_R", null), "Héroe base");
+  } finally {
+    groupsDelay = 0;
+    delete GROUPS.HERO_SKIN_R;
+    I18n.setLang("en");
+  }
+});
+
+test("when the app cannot answer, the skin's own name shows and the question is asked again later", async () => {
+  I18n.setLang("es");
+  try {
+    groupsFail = true;
+    assert.equal(TLCards.heroName("HERO_FAILS", "Del registro"), "Del registro");
+    await settle();
+    assert.equal(TLCards.heroName("HERO_FAILS", "Del registro"), "Del registro");
+    await settle(); // the second question failed too
+    groupsFail = false;
+    askedGroups.length = 0;
+    TLCards.heroName("HERO_FAILS", "Del registro");
+    await settle();
+    assert.deepEqual(askedGroups.flat().filter((id) => id === "HERO_FAILS"), ["HERO_FAILS"]);
+  } finally {
+    groupsFail = false;
+    I18n.setLang("en");
+  }
+});
+
+test("more heroes than the app answers at once are asked in several batches", async () => {
+  await settle();
+  askedGroups.length = 0;
+  for (let i = 0; i < 450; i += 1) TLCards.heroName(`HERO_MANY_${i}`, null);
+  await settle();
+  assert.deepEqual(askedGroups.map((ids) => ids.length), [200, 200, 50]);
+});
+
+test("a hero's name counts as from the card data when its base has the name, not only the skin", async () => {
+  I18n.setLang("es");
+  try {
+    TLCards.heroName("HERO_SKIN_B", null);
+    await settle();
+    assert.equal(TLCards.heroFromCardData("HERO_SKIN_B"), true, "the base hero's name");
+    assert.equal(TLCards.heroFromCardData("HERO_NOBODY_2"), false);
+    assert.equal(TLCards.heroFromCardData(null), false);
+  } finally {
+    I18n.setLang("en");
+  }
 });

@@ -67,17 +67,11 @@ fn key(index: u64) -> GameKey {
 /// 2026-10-09 00:00:00 UTC.
 const OCT_9_UTC: i64 = 1_791_504_000;
 
-fn spans(zone_hours: i64) -> ((i64, i64), (i64, i64)) {
+fn spans(to_utc: fn(i64) -> Option<i64>) -> ((i64, i64), (i64, i64)) {
     let root = temp_dir();
     let (logs, data) = (root.join("Logs"), root.join("data"));
     crossing_log(&logs);
-    // `with_local_time` wants a plain function: the zone is fixed per test below.
-    let mut watcher =
-        Watcher::new(&logs, Store::open(&data).unwrap()).with_local_time(match zone_hours {
-            2 => plus_2,
-            -7 => minus_7,
-            _ => utc,
-        });
+    let mut watcher = Watcher::new(&logs, Store::open(&data).unwrap()).with_local_time(to_utc);
     watcher.poll().unwrap();
     let (_, store) = watcher.finish().unwrap();
     let one = store.played(&key(1)).copied().expect("game 1 has a span");
@@ -103,32 +97,42 @@ fn utc(local: i64) -> Option<i64> {
 fn a_game_across_midnight_starts_on_the_day_of_its_first_line() {
     // PC at UTC+2: 23:58:30 local on 9 Oct is 21:58:30 UTC on 9 Oct; the game ends at
     // 00:03:10 local on 10 Oct, which is 22:03:10 UTC on 9 Oct.
-    let ((from, to), _) = spans(2);
+    let ((from, to), _) = spans(plus_2);
     assert_eq!(from, OCT_9_UTC + 21 * 3600 + 58 * 60 + 30);
     assert_eq!(to, OCT_9_UTC + 22 * 3600 + 3 * 60 + 10);
     assert!(to > from);
 }
 
 #[test]
-fn a_game_written_after_midnight_is_dated_the_next_day() {
+fn a_game_written_after_midnight_is_placed_on_the_next_local_day() {
     // The session began on 9 Oct at 23:50; a game at 00:20 is on 10 Oct, local.
-    let (_, (from, _)) = spans(2);
-    assert_eq!(from, OCT_9_UTC + 22 * 3600 + 20 * 60);
+    let (_, (from, _)) = spans(plus_2);
+    let local = from + 2 * 3600;
+    assert_eq!(
+        local / 86_400,
+        OCT_9_UTC / 86_400 + 1,
+        "10 October, on the PC's clock"
+    );
+    assert_eq!(local % 86_400, 20 * 60, "at 00:20");
 }
 
 #[test]
 fn the_same_log_in_other_time_zones_keeps_the_same_span_lengths_and_order() {
-    for zone in [-7, 0, 2] {
-        let ((from1, to1), (from2, _)) = spans(zone);
+    for (zone, to_utc) in [
+        ("UTC-7", minus_7 as fn(i64) -> Option<i64>),
+        ("UTC", utc),
+        ("UTC+2", plus_2),
+    ] {
+        let ((from1, to1), (from2, _)) = spans(to_utc);
         assert_eq!(
             to1 - from1,
             4 * 60 + 40,
-            "zone {zone}: the game's length does not depend on the zone"
+            "{zone}: the game's length does not depend on the zone"
         );
         assert_eq!(
             from2 - from1,
             21 * 60 + 30,
-            "zone {zone}: game 2 starts 21 min 30 s after game 1 (23:58:30 -> 00:20:00)"
+            "{zone}: game 2 starts 21 min 30 s after game 1 (23:58:30 -> 00:20:00)"
         );
     }
 }
