@@ -17,6 +17,9 @@
 use crate::kit_lists::{
     IN_COMBAT, NO_COMBAT_EFFECT, START_AND_IN_COMBAT, START_OF_COMBAT, TWICE_HERO_POWER,
 };
+use crate::kit_pool::{
+    IN_COMBAT_BLOCKS, IN_COMBAT_SMALL, NO_COMBAT_EFFECT_POOL, START_OF_COMBAT_POOL,
+};
 
 /// When a hero power or trinket acts in a combat.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -33,12 +36,17 @@ pub enum KitEffect {
     /// Makes the hero's power trigger twice: it matters only with a power
     /// that acts in combat.
     TwiceHeroPower,
+    /// During the combat, in a way the engine does not play and that is not
+    /// small: it blocks the odds whenever the board was taken (T-631).
+    InCombatBlocks,
 }
 
 /// Why a hero power or trinket blocks the odds or makes them approximate.
 pub const NOT_REVIEWED: &str = "the simulator has not reviewed this hero power or trinket yet";
 pub const START_OF_COMBAT_NOT_PLAYED: &str = crate::trials::START_OF_COMBAT_GAP;
 pub const IN_COMBAT_NOT_PLAYED: &str = "its effect during combat is not played yet";
+pub const IN_COMBAT_BLOCKED: &str =
+    "it acts during combat in a way the simulator does not play yet";
 pub const TWICE_NOT_PLAYED: &str = "it makes a hero power that acts in combat trigger twice";
 pub const COUNTER_NOT_GIVEN: &str = "its numbers are not in the log; the printed ones are used";
 pub const WINGMEN_ORDER: &str =
@@ -77,16 +85,18 @@ pub const KNIGHTS_SUMMONED: &str =
 /// What the engine knows of `card_id`; `None`: not reviewed.
 pub fn effect(card_id: &str) -> Option<KitEffect> {
     let listed = |list: &[&str]| list.contains(&card_id);
-    if listed(NO_COMBAT_EFFECT) {
+    if listed(NO_COMBAT_EFFECT) || listed(NO_COMBAT_EFFECT_POOL) {
         Some(KitEffect::None)
-    } else if listed(START_OF_COMBAT) {
+    } else if listed(START_OF_COMBAT) || listed(START_OF_COMBAT_POOL) {
         Some(KitEffect::StartOfCombat)
     } else if listed(START_AND_IN_COMBAT) {
         Some(KitEffect::StartAndInCombat)
-    } else if listed(IN_COMBAT) {
+    } else if listed(IN_COMBAT) || listed(IN_COMBAT_SMALL) {
         Some(KitEffect::InCombat)
     } else if listed(TWICE_HERO_POWER) {
         Some(KitEffect::TwiceHeroPower)
+    } else if listed(IN_COMBAT_BLOCKS) {
+        Some(KitEffect::InCombatBlocks)
     } else {
         None
     }
@@ -104,7 +114,7 @@ pub fn has_start_of_combat(card_id: &str) -> bool {
 pub fn acts_after_start(card_id: &str) -> bool {
     matches!(
         effect(card_id),
-        Some(KitEffect::InCombat | KitEffect::StartAndInCombat)
+        Some(KitEffect::InCombat | KitEffect::StartAndInCombat | KitEffect::InCombatBlocks)
     )
 }
 
@@ -112,7 +122,12 @@ pub fn acts_after_start(card_id: &str) -> bool {
 pub fn acts_in_combat(card_id: &str) -> bool {
     matches!(
         effect(card_id),
-        Some(KitEffect::StartOfCombat | KitEffect::StartAndInCombat | KitEffect::InCombat)
+        Some(
+            KitEffect::StartOfCombat
+                | KitEffect::StartAndInCombat
+                | KitEffect::InCombat
+                | KitEffect::InCombatBlocks
+        )
     )
 }
 
@@ -122,12 +137,16 @@ mod tests {
 
     #[test]
     fn every_listed_id_is_in_one_list_only() {
-        let lists: [&[&str]; 5] = [
+        let lists: [&[&str]; 9] = [
             NO_COMBAT_EFFECT,
             START_OF_COMBAT,
             START_AND_IN_COMBAT,
             IN_COMBAT,
             TWICE_HERO_POWER,
+            NO_COMBAT_EFFECT_POOL,
+            START_OF_COMBAT_POOL,
+            IN_COMBAT_SMALL,
+            IN_COMBAT_BLOCKS,
         ];
         let mut seen = std::collections::BTreeSet::new();
         for list in lists {

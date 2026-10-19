@@ -222,6 +222,11 @@ impl Coverage {
                 self.add_played_at_start(play, card, kit.round, mate);
                 continue;
             }
+            if effect == Some(KitEffect::InCombatBlocks) {
+                self.refuse(id, kit::IN_COMBAT_BLOCKED);
+                push_unique(&mut self.kit, id.clone());
+                continue;
+            }
             let refuse = match effect {
                 None => true,
                 Some(KitEffect::StartOfCombat | KitEffect::StartAndInCombat) => {

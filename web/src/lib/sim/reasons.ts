@@ -73,6 +73,8 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
     "no está comprobado el orden de los efectos de Inicio del combate entre los dos lados",
   "the simulator has not reviewed this hero power or trinket yet": "el simulador aún no ha revisado este poder de héroe o abalorio",
   "its effect during combat is not played yet": "su efecto durante el combate aún no se juega",
+  "it acts during combat in a way the simulator does not play yet":
+    "actúa durante el combate de una forma que el simulador aún no juega",
   "it makes a hero power that acts in combat trigger twice": "hace que un poder de héroe que actúa en combate se active dos veces",
   "its numbers are not in the log; the printed ones are used": "sus números no están en el registro; se usan los impresos",
   "when its attacks come against the other start-of-combat effects is not checked":

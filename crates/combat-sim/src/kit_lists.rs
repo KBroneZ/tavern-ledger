@@ -336,6 +336,9 @@ pub const IN_COMBAT: &[&str] = &[
     "BG30_MagicItem_988t", // Great Boar Sticker
     "BG32_MagicItem_200",  // All-Purpose Kibble
     "BG32_MagicItem_363",  // Faerie Dragon Scale
+    "BG32_MagicItem_860",  // Beetle Band
+    "BG32_MagicItem_864",  // Bird Feeder
+    "BG32_MagicItem_864t", // Bird Feeder
     "BG32_MagicItem_860t", // Beetle Band
     "BG36_MagicItem_201",  // Lionfish Portrait
     "BG36_MagicItem_216",  // Eternal Portrait
