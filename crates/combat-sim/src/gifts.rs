@@ -215,6 +215,20 @@ pub const MARKS: &[Gift] = &[
 /// Fragrant Phylactery's enchantment on the minion it chose.
 pub const PHYLACTERY_MARK: &str = "BG20_HERO_282e2";
 
+/// Each mark as the saved report keeps it: a buff from the card that gave
+/// it (`bg_parser::buffs`, revision 14). On a board taken at the first
+/// attack the Phylactery's buff is its mark (the user's saved games: on one
+/// minion of each of the 4 boards with the power, on no other board).
+pub const MARK_BUFFS: &[(&str, &str)] = &[("BG20_HERO_282", PHYLACTERY_MARK)];
+
+/// The mark a saved buff from `source` stands for, if any.
+pub fn mark_of_buff(source: &str) -> Option<&'static str> {
+    MARK_BUFFS
+        .iter()
+        .find(|(s, _)| *s == source)
+        .map(|(_, mark)| *mark)
+}
+
 /// The rules for a gift or mark id. `None`: not modelled.
 pub fn gift(id: &str) -> Option<&'static Gift> {
     GIFTS.iter().chain(MARKS).find(|g| g.id == id)

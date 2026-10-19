@@ -21,8 +21,8 @@ export const ES: Record<AccKey, string> = {
   "tile.refused": "Rechazados por la comprobación del tablero",
 
   "right.backing": "{right} de {scored} combates",
-  "blocked.some": "Sin probabilidades en el {share} de los combates de {mode} ({blocked} de {total}): una carta no está modelada.",
-  "blocked.none": "Probabilidades en todos los combates de {mode} con resultado ({total}): no faltaba ninguna carta.",
+  "blocked.some": "Sin probabilidades en el {share} de los combates de {mode} ({blocked} de {total}): una carta, un poder de héroe o un abalorio no está modelado.",
+  "blocked.none": "Probabilidades en todos los combates de {mode} con resultado ({total}): no faltaba nada.",
   "blocked.empty": "Aún no hay combates de {mode} con resultado.",
 
   "cal.title": "Previsto y real",
@@ -31,7 +31,8 @@ export const ES: Record<AccKey, string> = {
   "cal.key.said": "Previsto",
   "cal.key.happened": "Lo que pasó",
   "cal.none": "sin predicciones",
-  "cal.mark": "Previsto {range}: {predictions} predicciones, {said} de media; pasó {happened}",
+  "cal.mark.one": "Previsto {range}: {predictions} predicción, {said} de media; pasó {happened}",
+  "cal.mark.other": "Previsto {range}: {predictions} predicciones, {said} de media; pasó {happened}",
   "cal.table": "Ver como tabla",
   "cal.col.range": "Previsto",
   "cal.col.predictions": "Predicciones",
@@ -96,6 +97,9 @@ export const ES: Record<AccKey, string> = {
 
   "about.title": "Qué se mide y sus límites",
   "about.body": "Solo los combates de quien hace Tavern Ledger, de sus propias partidas, con los tableros tal como entraron en cada combate (el primer ataque). Pocas cifras y un solo jugador: una orientación, no una promesa.",
-  "about.more": "Los efectos de inicio de combate están desactivados, como en el overlay. Un combate cuenta como puntuado cuando el simulador pudo jugarlo, y al lado siempre se muestra el porcentaje de combates sin probabilidades.",
+  "about.more": "Los efectos de inicio de combate no se repiten: los tableros son los del primer ataque, como en las probabilidades finales del overlay. Un combate cuenta como puntuado cuando el simulador pudo jugarlo, y al lado siempre se muestra el porcentaje de combates sin probabilidades.",
+  "about.kits":
+    "Las partidas guardadas o releídas por la app 0.2.5 o posterior también guardan los poderes de héroe y abalorios de cada héroe, y sus combates se juegan con ellos: {combats} combates aquí. En los {scored} con probabilidades de las dos formas, la puntuación de Brier es {with} con ellos y {without} sin ellos.",
+  "about.kits.none": "Aún no hay aquí ninguna partida guardada o releída con los poderes de héroe y abalorios (app 0.2.5 o posterior), así que las probabilidades los dejan fuera.",
   "about.refresh": "Estas cifras se actualizan después de cada ronda de cartas nuevas.",
 };

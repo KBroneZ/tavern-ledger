@@ -3,7 +3,7 @@
 // comes with the blocked share beside it (D-089): modeFigures returns both,
 // and the page draws them in one row. Unknown is a dash, never 0.
 import { dateFormat, lang, numberFormat, pluralForm } from "../i18n.ts";
-import type { AccuracyMode, BlockingCard, Bucket, Builds, CardNames, MissCause, ModeAccuracy } from "./data.ts";
+import type { AccuracyMode, BlockingCard, Bucket, Builds, CardNames, Kits, MissCause, ModeAccuracy } from "./data.ts";
 import { at } from "./strings.ts";
 
 const DASH = "—";
@@ -105,6 +105,17 @@ export function calibrationBars(buckets: readonly Bucket[]): CalibrationBar[] {
   }));
 }
 
+/** A bar's label: its group, how many predictions (one or more) and the two values. */
+export function calibrationMark(b: CalibrationBar): string {
+  if (b.predictions === 0) return `${b.range}: ${at("cal.none")}`;
+  return at(`cal.mark.${pluralForm(b.predictions)}`, {
+    range: b.range,
+    predictions: plain(b.predictions),
+    said: b.saidText,
+    happened: b.happenedText,
+  });
+}
+
 export interface BlockingRow {
   name: string;
   id: string;
@@ -160,6 +171,18 @@ export function causeRows(causes: readonly MissCause[]): CauseRow[] {
     combats: plain(c.solo + c.duos),
     share: shareText(c.share),
   }));
+}
+
+/** The line on the combats played with the heroes' powers and trinkets. */
+export function kitsNote(k: Kits): string {
+  if (k.combats === 0) return at("about.kits.none");
+  const brier = (v: number | null) => (v === null ? DASH : numberFormat({ minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(v));
+  return at("about.kits", {
+    combats: plain(k.combats),
+    scored: plain(k.scored),
+    with: brier(k.with.brier),
+    without: brier(k.without.brier),
+  });
 }
 
 export interface BuildsView {

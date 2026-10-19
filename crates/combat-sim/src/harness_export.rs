@@ -18,12 +18,12 @@ use crate::harness::LoggedCombat;
 use crate::harness_duos::{team_of, DuosCombat};
 use crate::harness_logs::Replayed;
 use crate::harness_misses::{causes_by_id, Miss};
-use crate::model::{BoardError, Warband};
+use crate::model::{BoardError, Team, Warband};
 use crate::score::{score, Prediction, Report};
-use crate::trials::{simulate, simulate_teams, Odds, Options, Verdict};
+use crate::trials::{simulate, simulate_teams, Coverage, Odds, Options, Verdict};
 
 /// Version of the JSON's shape; a reader checks it before reading.
-pub const FORMAT: u32 = 3;
+pub const FORMAT: u32 = 4;
 
 /// The cards that summon a minion from the hand: approximate since round 5
 /// (D-097), counted apart.
@@ -70,6 +70,20 @@ pub struct Accuracy {
     pub duos: ModeAccuracy,
     /// Card id -> combats it blocks (both modes), most first, then by id.
     pub blockers: Vec<(String, u32)>,
+    /// The combats played with the heroes' powers and trinkets, scored with
+    /// and without them (T-630).
+    pub kits: KitComparison,
+}
+
+/// The combats with a result where a board brings its hero's powers and
+/// trinkets (games saved with parser revision 16 or later), both modes,
+/// scored the two ways on the same combats: those odds both ways give.
+#[derive(Clone, Debug, PartialEq)]
+pub struct KitComparison {
+    /// Combats with a result and a kit on a board.
+    pub combats: u32,
+    pub with: Report,
+    pub without: Report,
 }
 
 /// One combat with a result: the card ids on its boards the engine does not
@@ -81,8 +95,9 @@ struct Item {
 }
 
 fn item<'a>(result: CombatResult, boards: impl IntoIterator<Item = &'a Warband>) -> Item {
+    let boards: Vec<&Warband> = boards.into_iter().collect();
     let ids: Vec<&str> = boards
-        .into_iter()
+        .iter()
         .flat_map(|b| &b.minions)
         .map(|m| m.card_id.as_str())
         .collect();
@@ -93,6 +108,8 @@ fn item<'a>(result: CombatResult, boards: impl IntoIterator<Item = &'a Warband>)
         .filter(|id| cards::rules(id).is_none() || cards::after_start_refusal(id).is_some())
         .map(|id| id.to_string())
         .collect();
+    // A hero power or trinket the engine refuses blocks too (T-630).
+    blocking.extend(boards.iter().flat_map(|b| kit_blockers(b)));
     blocking.sort();
     blocking.dedup();
     Item {
@@ -100,6 +117,27 @@ fn item<'a>(result: CombatResult, boards: impl IntoIterator<Item = &'a Warband>)
         blocking,
         hand: ids.iter().any(|id| HAND_SUMMONERS.contains(id)),
     }
+}
+
+/// The hero powers and trinkets of a board that block its odds with start
+/// of combat off.
+fn kit_blockers(band: &Warband) -> Vec<String> {
+    if band.kit.is_none() {
+        return Vec::new();
+    }
+    let alone = Team {
+        first: band.clone(),
+        second: None,
+    };
+    let empty = Team {
+        first: Warband::new(Vec::new()),
+        second: None,
+    };
+    let cov = Coverage::of_teams(&alone, &empty, false);
+    cov.not_modelled
+        .into_iter()
+        .filter(|id| cov.kit.contains(id))
+        .collect()
 }
 
 fn prediction(o: &Odds) -> Prediction {
@@ -212,6 +250,51 @@ pub fn accuracy(solo: &[LoggedCombat], duos: &[DuosCombat], options: &Options) -
         solo: solo_acc,
         duos: duos_acc,
         blockers,
+        kits: kit_comparison(solo, &duos, &opts),
+    }
+}
+
+/// The combats with a kit on a board, scored with and without the kits on
+/// the same combats (those both ways give odds for).
+fn kit_comparison(solo: &[LoggedCombat], duos: &[&DuosCombat], opts: &Options) -> KitComparison {
+    let strip = |b: &Warband| Warband {
+        kit: None,
+        ..b.clone()
+    };
+    let strip_team = |t: &Team| Team {
+        first: strip(&t.first),
+        second: t.second.as_ref().map(strip),
+    };
+    let has_kit =
+        |t: &Team| t.first.kit.is_some() || t.second.as_ref().is_some_and(|b| b.kit.is_some());
+    let mut teams: Vec<(Team, Team, CombatResult)> = solo
+        .iter()
+        .map(|c| {
+            (
+                Team::solo(c.player.clone()),
+                Team::solo(c.opponent.clone()),
+                c.result,
+            )
+        })
+        .collect();
+    teams.extend(
+        duos.iter()
+            .filter_map(|c| Some((team_of(&c.own), team_of(&c.opponent), c.result?))),
+    );
+    let (mut combats, mut with, mut without) = (0, Vec::new(), Vec::new());
+    for (own, opp, result) in teams.iter().filter(|(o, p, _)| has_kit(o) || has_kit(p)) {
+        combats += 1;
+        let kits = odds(simulate_teams(own, opp, opts));
+        let bare = odds(simulate_teams(&strip_team(own), &strip_team(opp), opts));
+        if let (Some(k), Some(b)) = (kits, bare) {
+            with.push((prediction(&k), *result));
+            without.push((prediction(&b), *result));
+        }
+    }
+    KitComparison {
+        combats,
+        with: score(&with, BUCKETS),
+        without: score(&without, BUCKETS),
     }
 }
 
@@ -262,7 +345,23 @@ pub fn render_accuracy(a: &Accuracy) -> String {
         let _ = writeln!(out, "{}", list.join(", "));
     }
     render_anyway(&mut out, a);
+    render_kits(&mut out, &a.kits);
     out
+}
+
+/// The combats played with the heroes' powers and trinkets, with and
+/// without them.
+fn render_kits(out: &mut String, k: &KitComparison) {
+    let _ = writeln!(
+        out,
+        "\nWith the heroes' powers and trinkets (T-630): {} combats with a result have them on a \
+         board (games saved with parser revision 16 or later); on the {} both ways give odds \
+         for:\n\n| Way | n | Mean p(real result) | Brier | Most likely = real |\n|---|---|---|---|---|",
+        k.combats, k.with.combats
+    );
+    for (label, r) in [("with them", &k.with), ("without them", &k.without)] {
+        let _ = writeln!(out, "| {label} | {} | {} |", r.combats, scores(r));
+    }
 }
 
 /// Two parts of the combats, scored apart: the scored ones with a hand
@@ -374,6 +473,24 @@ fn builds_json(builds: &BTreeMap<i64, u32>) -> Value {
 /// (`YYYY-MM-DD`), the engine version, the card ids that block most, the
 /// misses by cause and the game builds checked (newest first). Pretty-printed,
 /// ending in a new line.
+/// The kit comparison: counts and scores only.
+fn kits_json(k: &KitComparison) -> Value {
+    let way = |r: &Report| {
+        let some = |x: f64| if r.combats > 0 { json!(x) } else { Value::Null };
+        json!({
+            "mean_p_real": some(r.mean_p_actual),
+            "brier": some(r.brier),
+            "most_likely_right": r.top_pick_hits,
+        })
+    };
+    json!({
+        "combats": k.combats,
+        "scored": k.with.combats,
+        "with": way(&k.with),
+        "without": way(&k.without),
+    })
+}
+
 pub fn export_json(a: &Accuracy, options: &Options, date: &str, checked: &Checked) -> String {
     let blockers: Vec<Value> = a
         .blockers
@@ -391,6 +508,7 @@ pub fn export_json(a: &Accuracy, options: &Options, date: &str, checked: &Checke
             "duos": mode_json(&a.duos),
         },
         "blocking_cards": blockers,
+        "kits": kits_json(&a.kits),
         "misses": misses_json(checked),
         "builds": builds_json(checked.builds),
     });

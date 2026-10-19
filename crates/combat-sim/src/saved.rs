@@ -77,6 +77,8 @@ pub fn minion(v: &Value, facts: &FactsOf) -> Option<Minion> {
         tier: facts.and_then(|f| f.tier),
         base: facts.and_then(|f| f.base),
         // Dark Gifts (parser revision 9, T-528); older records have none.
+        // Then the marks a hero power left, as the buffs the record keeps
+        // (revision 14, T-631).
         gifts: v
             .get("gifts")
             .and_then(Value::as_array)
@@ -84,14 +86,28 @@ pub fn minion(v: &Value, facts: &FactsOf) -> Option<Minion> {
                 a.iter()
                     .filter_map(Value::as_str)
                     .map(String::from)
-                    .collect()
+                    .collect::<Vec<_>>()
             })
-            .unwrap_or_default(),
+            .unwrap_or_default()
+            .into_iter()
+            .chain(saved_marks(v).map(String::from))
+            .collect(),
         // Saved on replay minions since parser revision 16 (T-628), not read
         // here yet: the boards read here are taken at the first attack.
         counters: [0, 0],
         card_id,
     })
+}
+
+/// The marks on a saved minion: the record keeps a mark as a buff from the
+/// card that gave it ([`crate::gifts::MARK_BUFFS`]).
+fn saved_marks(v: &Value) -> impl Iterator<Item = &'static str> + '_ {
+    v.get("buffs")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|b| b.get("card_id").and_then(Value::as_str))
+        .filter_map(crate::gifts::mark_of_buff)
 }
 
 /// A combat entry's board with its game-long values; `None` without one.

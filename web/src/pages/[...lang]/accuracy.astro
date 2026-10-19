@@ -18,7 +18,7 @@ import rawAccuracy from "../../data/accuracy.json";
 import rawNames from "../../data/accuracy-cards.json";
 import { MODES, parseAccuracy, parseCardNames } from "../../lib/accuracy/data.ts";
 import { at } from "../../lib/accuracy/strings.ts";
-import { blockingRows, buildsView, calibrationBars, causeRows, dayText, modeFigures } from "../../lib/accuracy/view.ts";
+import { blockingRows, buildsView, calibrationBars, causeRows, dayText, kitsNote, modeFigures } from "../../lib/accuracy/view.ts";
 import { langPaths, numberFormat, setLang } from "../../lib/i18n.ts";
 import { st } from "../../lib/site/strings.ts";
 
@@ -181,6 +181,7 @@ const version = at("page.version", {
       <p>{at("about.body")}</p>
       <More context={at("about.title")}>
         <p>{at("about.more")}</p>
+        <p>{kitsNote(data.kits)}</p>
         <p>{at("about.refresh")}</p>
       </More>
     </section>

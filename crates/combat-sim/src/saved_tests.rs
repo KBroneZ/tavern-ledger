@@ -312,3 +312,16 @@ fn a_saved_kit_unlike_what_the_parser_writes_is_unknown() {
     let no_board = json!({"side": "own", "board": null, "kit": {"powers": [], "trinkets": []}});
     assert_eq!(kit(&no_board, None, &facts), None);
 }
+
+#[test]
+fn a_saved_phylactery_buff_is_read_as_its_mark_and_other_buffs_are_not() {
+    let marked = json!({"card_id": "BGS_119", "golden": false, "atk": 2, "health": 2,
+        "position": 1, "keywords": [], "buffs": [{"card_id": "BG20_HERO_282", "count": 1}]});
+    let other = json!({"card_id": "BGS_119", "golden": false, "atk": 2, "health": 2,
+        "position": 2, "keywords": [], "buffs": [{"card_id": "BG20_GEM", "count": 3}]});
+    assert_eq!(
+        minion(&marked, &facts).unwrap().gifts,
+        [crate::gifts::PHYLACTERY_MARK]
+    );
+    assert!(minion(&other, &facts).unwrap().gifts.is_empty());
+}

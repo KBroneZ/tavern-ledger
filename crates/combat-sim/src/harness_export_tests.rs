@@ -246,6 +246,8 @@ fn the_synthetic_example_in_the_docs_has_the_export_shape() {
     );
     assert_eq!(keys(&v["misses"]), keys(&ours["misses"]));
     assert_eq!(keys(&v["builds"]), keys(&ours["builds"]));
+    assert_eq!(keys(&v["kits"]), keys(&ours["kits"]));
+    assert_eq!(keys(&v["kits"]["with"]), keys(&ours["kits"]["with"]));
     assert_eq!(
         keys(&v["misses"]["causes"][0]),
         keys(&ours["misses"]["causes"][0])
@@ -398,4 +400,48 @@ fn the_history_counts_games_by_build() {
 
     assert_eq!(h.builds, BTreeMap::from([(253_216, 2), (260_001, 1)]));
     assert_eq!(h.games, 4);
+}
+
+fn with_kit(mut c: LoggedCombat, powers: &[&str]) -> LoggedCombat {
+    c.player.kit = Some(crate::model::Kit {
+        powers: powers
+            .iter()
+            .map(|id| crate::model::KitCard::new(*id))
+            .collect(),
+        trinkets: Vec::new(),
+        round: Some(5),
+    });
+    c
+}
+
+#[test]
+fn a_hero_power_the_engine_refuses_blocks_by_name_not_as_a_refused_board() {
+    let c = with_kit(
+        solo(&["BGS_119"], &["BGS_119"], CombatResult::Tie),
+        &["BG99_HERO_999p"],
+    );
+    let a = accuracy(&[c], &[], &options());
+    assert_eq!((a.solo.blocked, a.solo.refused), (1, 0));
+    assert_eq!(a.blockers, [("BG99_HERO_999p".to_string(), 1)]);
+    assert_eq!((a.kits.combats, a.kits.with.combats), (1, 0));
+}
+
+#[test]
+fn the_kit_comparison_counts_only_combats_with_a_kit_and_scores_both_ways() {
+    // Sharpen Blades acts only in the shop: the same odds with and without.
+    let kit = with_kit(
+        solo(&["BGS_119"], &["BGS_119"], CombatResult::Tie),
+        &["TB_BaconShop_HP_001"],
+    );
+    let old = solo(&["BGS_119"], &["BGS_119"], CombatResult::Tie);
+    let a = accuracy(&[kit, old], &[], &options());
+    assert_eq!(a.solo.report.combats, 2);
+    let k = &a.kits;
+    assert_eq!((k.combats, k.with.combats, k.without.combats), (1, 1, 1));
+    assert_eq!(k.with.brier, k.without.brier);
+    let json: Value =
+        serde_json::from_str(&export_json(&a, &options(), "2026-01-01", &none())).unwrap();
+    assert_eq!(json["kits"]["combats"], 1);
+    assert_eq!(json["kits"]["scored"], 1);
+    assert!(render_accuracy(&a).contains("1 combats with a result have them"));
 }

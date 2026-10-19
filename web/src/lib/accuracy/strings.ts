@@ -24,8 +24,8 @@ export const ACC_STRINGS = {
   "tile.refused": "Refused by the board check",
 
   "right.backing": "{right} of {scored} combats",
-  "blocked.some": "No odds in {share} of {mode} combats ({blocked} of {total}): a card is not modelled.",
-  "blocked.none": "Odds in every {mode} combat with a result ({total}): no card was missing.",
+  "blocked.some": "No odds in {share} of {mode} combats ({blocked} of {total}): a card, hero power or trinket is not modelled.",
+  "blocked.none": "Odds in every {mode} combat with a result ({total}): nothing was missing.",
   "blocked.empty": "No {mode} combats with a result yet.",
 
   "cal.title": "Predicted and real",
@@ -34,7 +34,8 @@ export const ACC_STRINGS = {
   "cal.key.said": "Predicted",
   "cal.key.happened": "Real",
   "cal.none": "no predictions",
-  "cal.mark": "Predicted {range}: {predictions} predictions, {said} on average, real {happened}",
+  "cal.mark.one": "Predicted {range}: {predictions} prediction, {said} on average, real {happened}",
+  "cal.mark.other": "Predicted {range}: {predictions} predictions, {said} on average, real {happened}",
   "cal.table": "Show as a table",
   "cal.col.range": "Predicted",
   "cal.col.predictions": "Predictions",
@@ -99,7 +100,10 @@ export const ACC_STRINGS = {
 
   "about.title": "What is measured, and its limits",
   "about.body": "Only the combats of the person who builds Tavern Ledger, from their own games, with the boards as they entered each combat (the first attack). Small numbers, one player: a guide, not a promise.",
-  "about.more": "Start of combat effects are off, as in the overlay. A combat counts as scored when the simulator could play it; the share of combats with no odds is always shown beside it.",
+  "about.more": "Start of combat effects are not replayed: the boards are the ones at the first attack, as in the overlay's final odds. A combat counts as scored when the simulator could play it; the share of combats with no odds is always shown beside it.",
+  "about.kits":
+    "Games saved or re-read by app 0.2.5 or later also keep each hero's powers and trinkets, and their combats are played with them: {combats} combats here. On the {scored} with odds both ways, the Brier score is {with} with them and {without} without.",
+  "about.kits.none": "No game here was saved or re-read with the heroes' powers and trinkets yet (app 0.2.5 or later), so the odds leave them out.",
   "about.refresh": "These numbers are refreshed after each round of new cards.",
 } as const;
 
