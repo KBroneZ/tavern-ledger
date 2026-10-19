@@ -6,6 +6,7 @@
 
 mod applog;
 mod card_data;
+mod diagnostics;
 mod edition;
 #[cfg(test)]
 mod fake_secrets;
@@ -744,6 +745,40 @@ fn save_report_of(state: &AppState, session: &str, index: u64) -> Result<String,
     report_bundle::save_in(&dir, &name, &text)
         .map(|path| path.display().to_string())
         .map_err(|e| format!("Could not save the report ({:?}).", e.kind()))
+}
+
+/// The text "Copy diagnostics" shows and then copies (T-626). Built here from
+/// the app's own state, never from anything the window sends; the window
+/// copies exactly this text, after the player has seen it.
+#[tauri::command]
+fn diagnostics_preview(state: State<'_, Arc<AppState>>) -> Result<String, String> {
+    diagnostics_text(&state).logged("diagnostics_preview")
+}
+
+fn diagnostics_text(state: &AppState) -> Result<String, String> {
+    let game_build = state
+        .games
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .iter()
+        .rev()
+        .find_map(|row| row.report.get("build").and_then(serde_json::Value::as_i64));
+    let log_config = state
+        .setup
+        .local_app_data()
+        .and_then(|dir| diagnostics::read_log_config(&tracker::setup_fix::log_config_target(&dir)));
+    let app_log =
+        applog::get().map_or_else(Vec::new, |log| log.tail(diagnostics::LOG_LINES_TO_SCAN));
+    diagnostics::build(&diagnostics::Input {
+        app_version: env!("CARGO_PKG_VERSION"),
+        game_build,
+        parser_revision: bg_parser::PARSER_REVISION,
+        log_config: log_config.as_deref(),
+        app_log: &app_log,
+    })
+    .map_err(|refusal| {
+        format!("No diagnostics were made: the text held something that must not leave the app ({refusal}).")
+    })
 }
 
 fn problem_report_text(state: &AppState, session: &str, index: u64) -> Result<String, String> {
@@ -1574,6 +1609,7 @@ fn main() {
             game_why,
             preview_problem_report,
             save_problem_report,
+            diagnostics_preview,
             lobby_tribes_view,
             edit_lobby_tribes,
             overlay_state,
