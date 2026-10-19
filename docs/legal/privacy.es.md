@@ -4,6 +4,8 @@
 
 Última actualización: 19 de octubre de 2026
 
+**Qué cambió el 19 de octubre de 2026 (más tarde ese día):** el apartado 2 describe ahora la edición de Microsoft Store de la aplicación: dónde guarda tu historial y que las actualizaciones las gestiona la Store, no la aplicación. Nada más cambia.
+
 **Qué cambió el 19 de octubre de 2026:** el registro de cada partida guarda ahora también, en cada combate, los poderes de héroe y abalorios de ambos lados como ids de carta, con los números que muestra su texto (apartado 2), para que el simulador los juegue en partidas pasadas. Nada más cambia.
 
 **Qué cambió el 17 de octubre de 2026:** la descripción de la aplicación de escritorio (apartado 2, «Imágenes de esbirros») dice ahora que descarga una vez las imágenes de esbirros al estilo del juego (marcos, gemas y marcas de palabras clave) de nuestro servidor de imágenes, `assets.tavernledger.net`, que ve la dirección IP de tu PC y el agente de usuario de la aplicación. La aplicación lo hace desde el cambio del 16 de octubre que aparece abajo; la política no lo decía. Nada más cambia.
@@ -53,6 +55,8 @@ Mientras no actives la subida, nunca recibimos este archivo y la aplicación no 
 **Imágenes de esbirros.** Cuando no tiene un conjunto completo (la primera vez que se ejecuta, o tras una actualización que trae un conjunto nuevo), la aplicación descarga las imágenes que dibujan un esbirro como el juego (su marco, las gemas de ataque y salud y las marcas de palabras clave; unos pocos archivos pequeños, 2 MB como máximo) de nuestro servidor de imágenes, `assets.tavernledger.net`, gestionado por nosotros en Cloudflare (apartado 5), y las guarda en tu PC. Si una descarga falla, vuelve a intentarlo como máximo cada 15 minutos. Cada solicitud le dice a ese servidor la dirección IP de tu PC y el agente de usuario de la aplicación (`TavernLedger` y su versión), como cualquier solicitud web, y la dirección del archivo pedido, que es la misma para todos los usuarios; no se envía nada más. Cloudflare conserva los registros de solicitudes como en el apartado 3. Base jurídica: nuestro interés legítimo en mostrar tus partidas de forma legible (art. 6.1.f RGPD).
 
 **Actualizaciones.** Desde la versión 0.2.0, la aplicación pregunta a las versiones publicadas del proyecto en GitHub si hay una versión nueva, un minuto después de iniciarse y cada seis horas, salvo que desactives «Buscar actualizaciones automáticamente» en Ajustes > Actualizaciones; «Buscar ahora» pregunta una vez. Si hay una versión nueva, descarga el instalador del mismo sitio y solo lo guarda si está firmado con la clave del proyecto; solo lo instala cuando pulsas «Reiniciar ahora». Cada solicitud da a GitHub la dirección IP de tu PC y el agente de usuario del actualizador de la aplicación (`tauri-plugin-updater` y su versión), y nada sobre ti ni sobre tus partidas. GitHub decide qué registra; consulta su declaración de privacidad. Base jurídica: nuestro interés legítimo en mantener la aplicación funcionando y segura (art. 6.1.f del RGPD).
+
+**Edición de Microsoft Store.** Si instalas Tavern Ledger desde Microsoft Store, tu historial y tus ajustes se guardan en la misma carpeta que la edición con instalador (`%APPDATA%\TavernLedger`), y desinstalar la app no los borra. Las actualizaciones llegan por la Store; la app no hace peticiones de actualización por su cuenta. Lo que la Store recoge al instalar o actualizar una app lo cubre la declaración de privacidad de Microsoft.
 
 ## 3. Cuando visitas el sitio web
 

@@ -25,6 +25,9 @@ export const ES: Record<DlKey, string> = {
   "beta.line":
     "Versión temprana y sin firmar: Windows te avisará (paso 2). ¿Algún fallo? Usa «Informar de un problema» en la aplicación.",
 
+  "store.line": "¿Prefieres que Windows no te avise? Consíguela en Microsoft Store, que la instala y la actualiza por ti.",
+  "store.link": "Tavern Ledger en Microsoft Store",
+
   "steps.title": "Instálala en cuatro pasos",
   "step1.title": "Descarga el instalador",
   "step1.line": "Pulsa Descargar y conserva el archivo.",
