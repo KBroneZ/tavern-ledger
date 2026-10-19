@@ -32,7 +32,10 @@
   const cards = () => (typeof window !== "undefined" && window.TLCards) || null;
   const shown = (id, logName) => (cards() ? cards().display(id, logName) : logName || id);
   const fromCardData = (id) => Boolean(cards()) && typeof cards().name(id) === "string";
-  const heroWords = (h) => (h && shown(h.id, h.name)) || t("extras.hero.unknown");
+  const heroFromCardData = (id) => (cards() && cards().heroFromCardData ? cards().heroFromCardData(id) : fromCardData(id));
+  // A hero is named as in the stats, whatever skin it wears (cards.js heroName).
+  const heroShown = (id, logName) => (cards() && cards().heroName ? cards().heroName(id, logName) : shown(id, logName));
+  const heroWords = (h) => (h && heroShown(h.id, h.name)) || t("extras.hero.unknown");
 
   // The hero pick of one game, worded; `empty` is set when there is none to show.
   function heroPick(pick) {
@@ -43,7 +46,7 @@
     const pickedId = pick.picked && pick.picked.id;
     return {
       empty: null,
-      offered: pick.offered.map((h) => ({ id: h.id, text: heroWords(h), named: fromCardData(h.id), picked: h.id === pickedId })),
+      offered: pick.offered.map((h) => ({ id: h.id, text: heroWords(h), named: heroFromCardData(h.id), picked: h.id === pickedId })),
       rerolls: pick.rerolls === 0 ? t("extras.pick.no_reroll") : I18n.plural("extras.pick.rerolls", pick.rerolls),
       picked: pick.picked ? heroWords(pick.picked) : t("extras.pick.unsaid"),
       pickedSource: pick.picked ? "log" : "unknown",

@@ -41,7 +41,15 @@
   // Store edition says nothing about updates, the Store delivers them.
   const shown = (view) => view.state !== "store";
 
-  const api = { line, notice, canCheck, shown };
+  // The automatic-checks switch: a build with no key never checks, so the
+  // switch shows off (the saved choice is kept for a build that does) and its
+  // label says it is not active, instead of a ticked box that does nothing.
+  function auto(view) {
+    if (view.state === "off") return { checked: false, key: "updates.autoOff" };
+    return { checked: Boolean(view.auto_check), key: "updates.auto" };
+  }
+
+  const api = { line, notice, canCheck, shown, auto };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLUpdateWords = api;
 })();

@@ -31,6 +31,7 @@
     "allow-upload-cancel-sign-in",
     "allow-upload-sign-out",
     "allow-card-names",
+    "allow-hero-groups",
     "allow-card-data-status",
     "allow-texture-set",
     "allow-game-memory-status",

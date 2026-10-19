@@ -56,3 +56,15 @@ test("the Store edition shows no updates setting and no notice", () => {
   assert.equal(words.notice(view("store")), null);
   for (const state of ["off", "idle", "ready", "failed"]) assert.equal(words.shown(view(state)), true, state);
 });
+
+test("a build without a key shows the automatic switch off and says it is not active", () => {
+  assert.deepEqual(words.auto(view("off", { auto_check: true })), { checked: false, key: "updates.autoOff" });
+  assert.equal(I18n.t("updates.autoOff"), "Check for updates automatically (not active in this version)");
+  I18n.setLang("es");
+  assert.equal(I18n.t("updates.autoOff"), "Buscar actualizaciones automáticamente (no activo en esta versión)");
+});
+
+test("in a build that updates, the switch shows the saved choice", () => {
+  assert.deepEqual(words.auto(view("idle", { auto_check: true })), { checked: true, key: "updates.auto" });
+  assert.deepEqual(words.auto(view("latest", { auto_check: false })), { checked: false, key: "updates.auto" });
+});

@@ -89,6 +89,7 @@
       <div class="stat"><span class="label" data-i18n="win.stat.wins">Wins</span><span id="stat-wins" class="value">—</span><span id="stat-wins-src" class="src-slot"></span></div>
     </section>
     <p id="not-counted" class="tally-note" hidden></p>
+    <p id="marks-hint" class="note" hidden data-i18n="win.hint.marks">Each number carries a small mark that says where it comes from. A number with no mark comes straight from the game's log.</p>
 
     <section class="ledger lobby adv-only" aria-labelledby="lobby-title">
       <div class="lobby-line">
@@ -232,7 +233,7 @@
       <section id="update-setting" class="update-setting settings-group" aria-labelledby="update-title" hidden>
         <h3 id="update-title" data-i18n="updates.title">Updates</h3>
         <p id="update-current" class="update-current"></p>
-        <label class="switch"><input id="update-auto" type="checkbox"> <span data-i18n="updates.auto">Check for updates automatically</span></label>
+        <label class="switch"><input id="update-auto" type="checkbox"> <span id="update-auto-label" data-i18n="updates.auto">Check for updates automatically</span></label>
         <button type="button" id="update-check" data-i18n="updates.checkNow">Check now</button>
         <p id="update-line" class="note" role="status"></p>
         <p class="note" data-i18n="updates.note">Updates come from the project's GitHub releases.</p>
@@ -328,7 +329,7 @@
       <div class="dialog-actions">
         <button type="button" id="tribes-save" data-i18n="win.save">Save</button>
         <button type="button" id="tribes-clear" data-focus-next="tribes-save tribes-close" hidden data-i18n="win.remove">Remove tribes</button>
-        <button type="button" id="tribes-close" data-i18n="win.close">Close</button>
+        <button type="button" id="tribes-close" class="quiet" data-i18n="win.close">Close</button>
       </div>
     </form>
   </dialog>
@@ -341,7 +342,7 @@
     <p id="report-saved" class="note" role="status" hidden></p>
     <div class="dialog-actions">
       <button type="button" id="report-save" data-i18n="win.report.save">Save to Downloads</button>
-      <button type="button" id="report-close" data-i18n="win.close">Close</button>
+      <button type="button" id="report-close" class="quiet" data-i18n="win.close">Close</button>
     </div>
   </dialog>
 
@@ -385,6 +386,7 @@
   <script src="tabs.js"></script>
   <script src="detail-switch.js"></script>
   <script src="game-time.js"></script>
+  <script src="tally-words.js"></script>
   <script src="unreadable.js"></script>
   <script src="app.js"></script>
   <script type="module" src="minion-art-app.js"></script>

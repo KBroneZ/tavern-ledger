@@ -1596,6 +1596,7 @@ fn main() {
             upload::upload_cancel_sign_in,
             upload::upload_sign_out,
             card_data::card_names,
+            card_data::hero_groups,
             card_data::card_data_status,
             card_data::texture_set,
             game_memory_status,

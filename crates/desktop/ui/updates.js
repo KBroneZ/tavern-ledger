@@ -31,8 +31,13 @@
     const off = view.state === "off";
     $("update-current").textContent = t("updates.current", { version: view.current });
     const auto = $("update-auto");
-    auto.checked = Boolean(view.auto_check);
+    const switchView = Words.auto(view);
+    auto.checked = switchView.checked;
     auto.disabled = off;
+    // The label follows the language through its key, like every other text.
+    const label = $("update-auto-label");
+    label.dataset.i18n = switchView.key;
+    label.textContent = t(switchView.key);
     $("update-check").disabled = off || !Words.canCheck(view);
     $("update-line").textContent = Words.line(view);
     $("update-warning").textContent = view.warning ? I18n.backend(view.warning) : "";

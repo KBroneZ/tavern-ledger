@@ -83,6 +83,85 @@ window.TLCards = (() => {
     return logName || id || null;
   }
 
+  // A hero's group (T-359): the base hero its skins belong to, as the stats
+  // group them. Asked of the app once per hero, in batches; asked again when
+  // the card data changes (it may then link a skin to its hero), keeping the
+  // answer that shows until the new one arrives.
+  const groups = new Map(); // id -> base hero id
+  const askedGroups = new Set(); // asked, not answered yet
+  const askAgain = new Set(); // changed while its question was out
+  let queuedGroups = new Set();
+  let groupTimer = null;
+
+  async function flushGroups() {
+    groupTimer = null;
+    const ids = [...queuedGroups];
+    queuedGroups = new Set();
+    let news = false;
+    for (let i = 0; i < ids.length; i += BATCH) {
+      const part = ids.slice(i, i + BATCH);
+      let got = {};
+      try {
+        got = (await invoke("hero_groups", { ids: part })) || {};
+      } catch (_) {
+        got = {}; // the skin's own name shows; asked again on the next redraw
+      }
+      for (const id of part) {
+        askedGroups.delete(id);
+        const base = typeof got[id] === "string" && ID.test(got[id]) ? got[id] : null;
+        if (!base) continue;
+        news = news || groups.get(id) !== base;
+        groups.set(id, base);
+        want(base);
+      }
+    }
+    // A card-data update that came in while a question was out: ask those again.
+    [...askAgain].forEach((id) => {
+      askAgain.delete(id);
+      refreshGroup(id);
+    });
+    if (news) changed();
+  }
+
+  function queueGroup(id) {
+    askedGroups.add(id);
+    queuedGroups.add(id);
+    if (!groupTimer) groupTimer = setTimeout(flushGroups, 0);
+  }
+
+  function wantGroup(id) {
+    if (groups.has(id) || askedGroups.has(id)) return;
+    queueGroup(id);
+  }
+
+  // Asks again for a hero already known (the card data changed).
+  function refreshGroup(id) {
+    if (askedGroups.has(id)) askAgain.add(id);
+    else queueGroup(id);
+  }
+
+  // A hero's name: the same in the recap and in the stats whatever skin was
+  // played. The base hero's name from the card data in the app's language,
+  // else the skin's own (the card data, then the game's log, then the id).
+  function heroName(id, logName) {
+    if (typeof id !== "string" || !ID.test(id)) return logName || id || null;
+    wantGroup(id);
+    const base = groups.get(id);
+    if (base && base !== id) {
+      const known = name(base);
+      if (typeof known === "string" && known) return known;
+    }
+    return display(id, logName);
+  }
+
+  // Whether the name `heroName` gives is the card data's: its base hero's or
+  // the card's own (for the source mark on a hero's name).
+  function heroFromCardData(id) {
+    if (typeof id !== "string" || !ID.test(id)) return false;
+    const base = groups.get(id);
+    return [base, id].some((card) => typeof card === "string" && typeof names.get(card) === "string");
+  }
+
   // An <img> for the card's art, or null for an id that is not a card id.
   // Options (the main window, T-320): `lazy` fetches it only when it comes
   // into view (long lists and closed folds then cost no picture), and
@@ -148,6 +227,8 @@ window.TLCards = (() => {
   listen("cards-changed", () => {
     for (const id of [...names.keys(), ...waiting]) want(id);
     waiting.clear();
+    // The card data may now link a skin to its hero: ask again, keeping what shows.
+    [...groups.keys()].forEach(refreshGroup);
     refreshStatus();
   });
   refreshStatus();
@@ -155,6 +236,8 @@ window.TLCards = (() => {
   return {
     name,
     display,
+    heroName,
+    heroFromCardData,
     art,
     gifts,
     status: () => status,
