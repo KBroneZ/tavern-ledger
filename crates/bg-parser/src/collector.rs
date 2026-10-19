@@ -9,7 +9,7 @@ use crate::counters::CounterMemory;
 use crate::discover::DiscoverTracker;
 use crate::hero_select::HeroSelectTracker;
 use crate::kit::{kit_of, HeroKit};
-use crate::leaderboard::{is_leaderboard_tag, LeaderboardTracker};
+use crate::leaderboard::{is_leaderboard_tag, tag_order, LeaderboardTracker};
 use crate::power::{EntityRef, Packet, ParseError, Value};
 use crate::replay::{board_entities, minion_of, ReplayTracker, Sides};
 use crate::report::{
@@ -878,13 +878,17 @@ fn check_turn(value: &Value) -> Result<(), ParseError> {
 /// The leaderboard tags a packet carries with numbers, so a hero created
 /// or shown with a count already set keeps it.
 fn leaderboard_values(tags: &Tags) -> Vec<(String, i64)> {
-    tags.iter()
+    let mut values: Vec<(String, i64)> = tags
+        .iter()
         .filter(|(tag, _)| is_leaderboard_tag(tag))
         .filter_map(|(tag, value)| match value {
             Value::Int(v) => Some((tag.clone(), *v)),
             _ => None,
         })
-        .collect()
+        .collect();
+    // The tags are in hash order; slot order keeps the report the same.
+    values.sort_by_key(|(tag, _)| tag_order(tag));
+    values
 }
 
 /// A base hero link in a packet's tags: a database id, or None (0 is none).
@@ -1023,4 +1027,40 @@ fn is_game_card(e: &Entity) -> bool {
 pub(crate) fn is_hidden_secret(e: &Entity) -> bool {
     let card = e.card_id.as_deref().unwrap_or("");
     e.is("ZONE", "SECRET") && card != "BG_OldGod" && !card.contains("_Quest_")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn leaderboard_values_keep_slot_order_whatever_the_map_order() {
+        let tag_names = [
+            "BACON_HEROPOWER_TRINKET_DATABASE_ID",
+            "BACON_SECOND_TRINKET_DATABASE_ID",
+            "BACON_FIRST_TRINKET_DATABASE_ID",
+            "PLAYER_TRIPLES",
+        ];
+        // Each map has its own random hash seed, so many maps cover many
+        // iteration orders.
+        for _ in 0..200 {
+            let tags: Tags = tag_names
+                .iter()
+                .map(|t| (t.to_string(), Value::Int(7)))
+                .collect();
+            let order: Vec<String> = leaderboard_values(&tags)
+                .into_iter()
+                .map(|(t, _)| t)
+                .collect();
+            assert_eq!(
+                order,
+                [
+                    "PLAYER_TRIPLES",
+                    "BACON_FIRST_TRINKET_DATABASE_ID",
+                    "BACON_SECOND_TRINKET_DATABASE_ID",
+                    "BACON_HEROPOWER_TRINKET_DATABASE_ID",
+                ]
+            );
+        }
+    }
 }
