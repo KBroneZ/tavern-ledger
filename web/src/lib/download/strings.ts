@@ -28,6 +28,9 @@ export const DL_STRINGS = {
   "beta.line":
     "Early build, not signed yet: Windows will warn you (step 2). Problems? Use the app's “Report a problem” button.",
 
+  "store.line": "Prefer no SmartScreen warning? Get it from the Microsoft Store, which installs and updates it for you.",
+  "store.link": "Tavern Ledger on the Microsoft Store",
+
   "steps.title": "Install it in four steps",
   "step1.title": "Download the installer",
   "step1.line": "Press Download and keep the file.",

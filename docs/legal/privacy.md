@@ -2,6 +2,8 @@
 
 Last updated: 19 October 2026
 
+**What changed on 19 October 2026 (later that day):** section 2 now describes the Microsoft Store edition of the app: where it keeps your history and that the Store, not the app, handles updates. Nothing else changes.
+
 **What changed on 19 October 2026:** the game record now also holds, for each combat, both sides' hero powers and trinkets as card ids, with the numbers their text shows (section 2), so the simulator can play them on past games. Nothing else changes.
 
 **What changed on 17 October 2026:** the desktop app's description (section 2, "Minion pictures") now says that it downloads the game-style minion pictures (frames, gems and keyword marks) once from our image host, `assets.tavernledger.net`, which sees your PC's IP address and the app's user agent. The app has done this since the 16 October change below; the policy did not say so. Nothing else changes.
@@ -51,6 +53,8 @@ Unless you turn on uploading, we never receive this file, and the app sends noth
 **Minion pictures.** When it has no complete set of them (the first time it runs, or after an update that brings a newer set), the app downloads the images that draw a minion like the game (its frame, attack and health gems and keyword marks; a few small files, 2 MB at most) from our image host, `assets.tavernledger.net`, run by us on Cloudflare (section 5), and keeps them on your PC. If a download fails it tries again at most every 15 minutes. Each request tells that host your PC's IP address and the app's user agent (`TavernLedger` and its version), like any web request, and the address of the file asked for, which is the same for every user; nothing else is sent. Cloudflare keeps the request logs as in section 3. Legal basis: our legitimate interest in showing your games in a readable way (Art. 6(1)(f) GDPR).
 
 **Updates.** From version 0.2.0, the app asks the project's releases on GitHub whether a new version is out, a minute after it starts and every six hours, unless you turn off "Check for updates automatically" in Settings > Updates; "Check now" there asks once. When there is a new version, it downloads the installer from the same place and keeps it only if it is signed by the project's key; it installs only when you press "Restart now". Each request tells GitHub your PC's IP address and the app's updater user agent (`tauri-plugin-updater` and its version), and nothing about you or your games. GitHub decides what it logs; see GitHub's privacy statement. Legal basis: our legitimate interest in keeping the app working and secure (Art. 6(1)(f) GDPR).
+
+**Microsoft Store edition.** If you install Tavern Ledger from the Microsoft Store, your history and settings are kept in the same folder as the installer edition (`%APPDATA%\TavernLedger`), and uninstalling the app does not delete them. The Store delivers updates; the app itself makes no update requests. What the Store collects when you install or update an app is covered by Microsoft's privacy statement.
 
 ## 3. When you visit the website
 
