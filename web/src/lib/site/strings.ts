@@ -154,6 +154,10 @@ export const SITE_STRINGS = {
   "news.heroes.link": "Hero stats",
   "news.simulator": "A combat simulator on the website: load a board from one of your games, change it and run it.",
   "news.simulator.link": "Simulator",
+  "news.app025": "App version 0.2.5: the combat odds play start of combat, hero powers and trinkets, and the overlay shows an early estimate as each combat starts.",
+  "news.app025.link": "Download",
+  "news.simkits": "The website simulator takes each board's hero power and trinkets, and plays start of combat on boards you build.",
+  "news.simkits.link": "Simulator",
 } as const;
 
 export type SiteKey = keyof typeof SITE_STRINGS;
