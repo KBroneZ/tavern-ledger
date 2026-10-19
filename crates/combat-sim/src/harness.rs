@@ -140,6 +140,22 @@ pub(crate) fn board(entry: &Value, db: &CardDb) -> Option<Warband> {
     crate::saved::board(entry, &|id| db.get(id).copied())
 }
 
+/// A saved combat entry's board with its hero's powers and trinkets in
+/// round `round` (T-630); the kit is `None` on a record from before parser
+/// revision 16 ("not recorded"), so those boards play as before.
+pub(crate) fn board_with_kit(entry: &Value, round: &Value, db: &CardDb) -> Option<Warband> {
+    let facts = |id: &str| db.get(id).copied();
+    let band = crate::saved::board(entry, &facts)?;
+    let number = round
+        .get("number")
+        .and_then(Value::as_u64)
+        .and_then(|n| u32::try_from(n).ok());
+    Some(Warband {
+        kit: crate::saved::kit(entry, number, &facts),
+        ..band
+    })
+}
+
 pub(crate) use crate::saved::result;
 
 /// Reads the history: the last record of each game wins, as in the app.
@@ -231,7 +247,9 @@ pub fn load_history(jsonl: &str, db: &CardDb) -> History {
             };
             let (own, opp) = (side("own"), side("opponent"));
             let combat = match (own.as_slice(), opp.as_slice(), result(round)) {
-                ([o], [p], Some(r)) => board(o, db).zip(board(p, db)).map(|(a, b)| (a, b, r)),
+                ([o], [p], Some(r)) => board_with_kit(o, round, db)
+                    .zip(board_with_kit(p, round, db))
+                    .map(|(a, b)| (a, b, r)),
                 _ => None,
             };
             match combat {
@@ -263,7 +281,10 @@ fn solo_teams(round: &Value, db: &CardDb) -> Option<(Team, Team)> {
             .collect()
     };
     match (side("own").as_slice(), side("opponent").as_slice()) {
-        ([o], [p]) => Some((Team::solo(board(o, db)?), Team::solo(board(p, db)?))),
+        ([o], [p]) => Some((
+            Team::solo(board_with_kit(o, round, db)?),
+            Team::solo(board_with_kit(p, round, db)?),
+        )),
         _ => None,
     }
 }

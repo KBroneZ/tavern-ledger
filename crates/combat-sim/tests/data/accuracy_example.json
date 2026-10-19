@@ -18,7 +18,13 @@
   ],
   "date": "2026-01-01",
   "engine_version": "0.4.0",
-  "format": 3,
+  "format": 4,
+  "kits": {
+    "combats": 40,
+    "scored": 38,
+    "with": { "mean_p_real": 0.81, "brier": 0.25, "most_likely_right": 32 },
+    "without": { "mean_p_real": 0.79, "brier": 0.27, "most_likely_right": 31 }
+  },
   "misses": {
     "causes": [
       { "cause": "chance", "duos": 4, "share": 0.5, "solo": 0 },

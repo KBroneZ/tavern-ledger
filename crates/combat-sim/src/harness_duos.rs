@@ -15,7 +15,7 @@ use bg_parser::report::{GameReport, Round, Side};
 use serde_json::Value;
 
 use crate::combat::CombatResult;
-use crate::harness::{board, result, CardDb};
+use crate::harness::{board_with_kit, result, CardDb};
 use crate::harness_logs::{engine_board, entry_band};
 use crate::model::{Team, Warband};
 use crate::score::{score, Prediction};
@@ -226,7 +226,7 @@ pub fn duos_from_saved(report: &Value, game: usize, db: &CardDb) -> Vec<DuosComb
             };
             let board = match e.get("board") {
                 Some(Value::Array(_)) => {
-                    let b = board(e, db);
+                    let b = board_with_kit(e, round, db);
                     readable &= b.is_some();
                     b
                 }

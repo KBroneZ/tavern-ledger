@@ -215,6 +215,15 @@ pub const MARKS: &[Gift] = &[
 /// Fragrant Phylactery's enchantment on the minion it chose.
 pub const PHYLACTERY_MARK: &str = "BG20_HERO_282e2";
 
+/// Each mark as the saved report keeps it: (the hero power that gives it,
+/// the source of the buff the record keeps, `bg_parser::buffs` revision 14,
+/// the mark). The record keeps only the source card of an enchantment, so a
+/// buff counts as the mark only on a board whose own kit has the power (the
+/// user's saved games: on one minion of each of the 4 boards with the power,
+/// on no other board).
+pub const MARK_BUFFS: &[(&str, &str, &str)] =
+    &[("BG20_HERO_282p", "BG20_HERO_282", PHYLACTERY_MARK)];
+
 /// The rules for a gift or mark id. `None`: not modelled.
 pub fn gift(id: &str) -> Option<&'static Gift> {
     GIFTS.iter().chain(MARKS).find(|g| g.id == id)

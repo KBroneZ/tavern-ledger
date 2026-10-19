@@ -4,6 +4,16 @@
       "en": "Stitched Salvager",
       "es": "Recuperador cosido",
       "golden": false
+    },
+    "TB_BaconShop_HERO_64_Buddy": {
+      "en": "Dagwik Stickytoe",
+      "es": "Dagwik Dedo Pringoso",
+      "golden": false
+    },
+    "TB_BaconShop_HERO_64_Buddy_G": {
+      "en": "Dagwik Stickytoe",
+      "es": "Dagwik Dedo Pringoso",
+      "golden": true
     }
   },
   "format": 1

@@ -18,7 +18,7 @@ import rawAccuracy from "../../data/accuracy.json";
 import rawNames from "../../data/accuracy-cards.json";
 import { MODES, parseAccuracy, parseCardNames } from "../../lib/accuracy/data.ts";
 import { at } from "../../lib/accuracy/strings.ts";
-import { blockingRows, buildsView, calibrationBars, causeRows, dayText, modeFigures } from "../../lib/accuracy/view.ts";
+import { blockingRows, buildsView, calibrationBars, causeRows, dayText, kitsNote, modeFigures } from "../../lib/accuracy/view.ts";
 import { langPaths, numberFormat, setLang } from "../../lib/i18n.ts";
 import { st } from "../../lib/site/strings.ts";
 
@@ -35,6 +35,7 @@ const modes = MODES.map((mode) => ({
 }));
 const cards = blockingRows(data.blocking_cards, names);
 const causes = causeRows(data.misses.causes);
+const kits = kitsNote(data.kits);
 const builds = buildsView(data.builds, data.date);
 const version = at("page.version", {
   version: data.engine_version,
@@ -181,6 +182,8 @@ const version = at("page.version", {
       <p>{at("about.body")}</p>
       <More context={at("about.title")}>
         <p>{at("about.more")}</p>
+        <p>{kits.text}</p>
+        {kits.scores && <p class="adv">{kits.scores}</p>}
         <p>{at("about.refresh")}</p>
       </More>
     </section>

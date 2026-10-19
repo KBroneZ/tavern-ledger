@@ -312,3 +312,27 @@ fn a_saved_kit_unlike_what_the_parser_writes_is_unknown() {
     let no_board = json!({"side": "own", "board": null, "kit": {"powers": [], "trinkets": []}});
     assert_eq!(kit(&no_board, None, &facts), None);
 }
+
+#[test]
+fn a_saved_phylactery_buff_is_its_mark_only_on_a_board_whose_kit_has_the_power() {
+    let marked = json!({"card_id": "BGS_119", "golden": false, "atk": 2, "health": 2,
+        "position": 1, "keywords": [], "buffs": [{"card_id": "BG20_HERO_282", "count": 1}]});
+    let other = json!({"card_id": "BGS_119", "golden": false, "atk": 2, "health": 2,
+        "position": 2, "keywords": [], "buffs": [{"card_id": "BG20_GEM", "count": 3}]});
+    let entry = |powers: Value| {
+        json!({"side": "own", "board": [marked, other],
+        "kit": {"powers": powers, "trinkets": []}})
+    };
+    let with_power = entry(json!([{"card_id": "BG20_HERO_282p", "slot": 0}]));
+    let b = board(&with_power, &facts).unwrap();
+    assert_eq!(b.minions[0].gifts, [crate::gifts::PHYLACTERY_MARK]);
+    assert!(b.minions[1].gifts.is_empty());
+    // The same buff on a board whose hero has another power, or no saved
+    // kit: not the mark.
+    for e in [
+        entry(json!([{"card_id": "TB_BaconShop_HP_001", "slot": 0}])),
+        json!({"side": "own", "board": [marked]}),
+    ] {
+        assert!(board(&e, &facts).unwrap().minions[0].gifts.is_empty());
+    }
+}

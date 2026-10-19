@@ -5,7 +5,7 @@
 // group under the pair, so colour is never the only cue; an empty group has
 // no columns, a dash and a count of 0. Every value is also in the table under it.
 import { columnPath } from "../../lib/data/format.ts";
-import type { CalibrationBar } from "../../lib/accuracy/view.ts";
+import { calibrationMark, type CalibrationBar } from "../../lib/accuracy/view.ts";
 import { at } from "../../lib/accuracy/strings.ts";
 import Fold from "./Fold.astro";
 import More from "../ui/More.astro";
@@ -54,11 +54,7 @@ const pairX = (i: number) => i * SLOT + (SLOT - 2 * BAR - GAP) / 2;
         const mid = i * SLOT + SLOT / 2;
         return (
           <g class="mark">
-            <title>
-              {b.predictions === 0
-                ? `${b.range}: ${at("cal.none")}`
-                : at("cal.mark", { range: b.range, predictions: b.predictions, said: b.saidText, happened: b.happenedText })}
-            </title>
+            <title>{calibrationMark(b)}</title>
             <rect class="hit" x={i * SLOT} y="0" width={SLOT} height={HEIGHT} />
             {b.predictions === 0 ? (
               <text x={mid} y={BASE - 6} text-anchor="middle">

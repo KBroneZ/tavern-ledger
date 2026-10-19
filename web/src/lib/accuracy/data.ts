@@ -5,7 +5,7 @@
 // export's keys with their types, so a key the export does not have (a name,
 // a seat, a game) or one it lost fails the build instead of reaching the page.
 
-export const ACCURACY_FORMAT = 3;
+export const ACCURACY_FORMAT = 4;
 export const MODES = ["solo", "duos"] as const;
 export type AccuracyMode = (typeof MODES)[number];
 
@@ -90,6 +90,25 @@ export interface Builds {
   checked: CheckedBuild[];
 }
 
+/** One way of playing the combats with a kit: null scores when none was scored. */
+export interface KitWay {
+  mean_p_real: number | null;
+  brier: number | null;
+  most_likely_right: number;
+}
+
+/**
+ * The combats played with the heroes' powers and trinkets (games saved with
+ * parser revision 16 or later, T-630), scored with and without them on the
+ * same combats.
+ */
+export interface Kits {
+  combats: number;
+  scored: number;
+  with: KitWay;
+  without: KitWay;
+}
+
 export interface Accuracy {
   format: number;
   date: string;
@@ -97,6 +116,7 @@ export interface Accuracy {
   trials: number;
   modes: Record<AccuracyMode, ModeAccuracy>;
   blocking_cards: BlockingCard[];
+  kits: Kits;
   misses: Misses;
   builds: Builds;
 }
@@ -273,12 +293,41 @@ function builds(value: unknown): Builds {
   return { newest, checked };
 }
 
+function kitWay(value: unknown, scored: number, where: string): KitWay {
+  const raw = object(value, where);
+  keys(raw, ["mean_p_real", "brier", "most_likely_right"], where);
+  const w: KitWay = {
+    mean_p_real: maybe(raw.mean_p_real, 1, `${where}.mean_p_real`),
+    brier: maybe(raw.brier, BRIER_MAX, `${where}.brier`),
+    most_likely_right: count(raw.most_likely_right, `${where}.most_likely_right`),
+  };
+  if ((scored === 0) !== (w.mean_p_real === null) || (scored === 0) !== (w.brier === null)) {
+    throw new Error(`${where}: scores are null exactly when nothing was scored`);
+  }
+  if (w.most_likely_right > scored) throw new Error(`${where}.most_likely_right: more than scored`);
+  return w;
+}
+
+function kits(value: unknown): Kits {
+  const raw = object(value, "accuracy.kits");
+  keys(raw, ["combats", "scored", "with", "without"], "accuracy.kits");
+  const combats = count(raw.combats, "accuracy.kits.combats");
+  const scored = count(raw.scored, "accuracy.kits.scored");
+  if (scored > combats) throw new Error("accuracy.kits.scored: more than combats");
+  return {
+    combats,
+    scored,
+    with: kitWay(raw.with, scored, "accuracy.kits.with"),
+    without: kitWay(raw.without, scored, "accuracy.kits.without"),
+  };
+}
+
 /** Reads the export (untrusted until checked); throws, naming the key, on anything else. */
 export function parseAccuracy(value: unknown): Accuracy {
   const raw = object(value, "accuracy");
   // The format first: another shape is not read at all.
   if (raw.format !== ACCURACY_FORMAT) throw new Error(`accuracy: format is not ${ACCURACY_FORMAT}`);
-  keys(raw, ["format", "date", "engine_version", "trials", "modes", "blocking_cards", "misses", "builds"], "accuracy");
+  keys(raw, ["format", "date", "engine_version", "trials", "modes", "blocking_cards", "kits", "misses", "builds"], "accuracy");
   if (typeof raw.date !== "string" || !isDay(raw.date)) throw new Error("accuracy.date: not a YYYY-MM-DD day");
   if (typeof raw.engine_version !== "string" || !VERSION.test(raw.engine_version)) throw new Error("accuracy.engine_version: not a version");
   const modes = object(raw.modes, "accuracy.modes");
@@ -293,6 +342,7 @@ export function parseAccuracy(value: unknown): Accuracy {
     trials,
     modes: { solo: modeAccuracy(modes.solo, "accuracy.modes.solo"), duos: modeAccuracy(modes.duos, "accuracy.modes.duos") },
     blocking_cards: raw.blocking_cards.map((c, i) => blockingCard(c, `accuracy.blocking_cards[${i}]`)),
+    kits: kits(raw.kits),
     misses: misses(raw.misses),
     builds: builds(raw.builds),
   };
