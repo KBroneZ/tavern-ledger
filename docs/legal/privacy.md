@@ -1,6 +1,8 @@
 # Privacy policy
 
-Last updated: 17 October 2026
+Last updated: 19 October 2026
+
+**What changed on 19 October 2026:** the game record now also holds, for each combat, both sides' hero powers and trinkets as card ids, with the numbers their text shows (section 2), so the simulator can play them on past games. Nothing else changes.
 
 **What changed on 17 October 2026:** the desktop app's description (section 2, "Minion pictures") now says that it downloads the game-style minion pictures (frames, gems and keyword marks) once from our image host, `assets.tavernledger.net`, which sees your PC's IP address and the app's user agent. The app has done this since the 16 October change below; the policy did not say so. Nothing else changes.
 
@@ -36,7 +38,7 @@ Contact for anything about your data: privacy@tavernledger.net.
 
 ## 2. The desktop app keeps your data on your PC
 
-The app reads the game's log files and saves a summary of each Battlegrounds game in `%APPDATA%\TavernLedger\games.jsonl`: the session's start time, mode, game build, your hero and your Duos teammate's hero, the lobby's heroes by player number, places and health, boards (as card ids), card names in your game's language, tribes offered in the tavern, your own shop each turn (the cards offered, bought and sold, rolls, freezes, gold and tavern tier) and the actions the game recorded you making, each with the time since the game started (to work out your actions per minute; together with the game's start time, this shows roughly when each action happened), and which parser version read the game. The logs contain the names (BattleTags) of the players in your lobby; the app does not save them.
+The app reads the game's log files and saves a summary of each Battlegrounds game in `%APPDATA%\TavernLedger\games.jsonl`: the session's start time, mode, game build, your hero and your Duos teammate's hero, the lobby's heroes by player number, places and health, boards (as card ids) with each side's hero powers and trinkets (card ids and the numbers their text shows), card names in your game's language, tribes offered in the tavern, your own shop each turn (the cards offered, bought and sold, rolls, freezes, gold and tavern tier) and the actions the game recorded you making, each with the time since the game started (to work out your actions per minute; together with the game's start time, this shows roughly when each action happened), and which parser version read the game. The logs contain the names (BattleTags) of the players in your lobby; the app does not save them.
 
 **Reading from the game (on by default; you can turn it off).** Unless you turn off "Read the lobby's tribes and your rating from the game" in Settings, the app also reads, read-only, two values the game shows you while it runs: the five tribes of the lobby you are in and your own Battlegrounds rating (Solo and Duos). It reads nothing else from the game: no other players' names, BattleTags, account ids or ratings. These values stay on your PC: the app keeps them in its own files in its data folder, never puts them in the game record or a problem report, and never uploads them. Turning the switch off forgets them and deletes those files. If you chose before, your choice stays; if you never chose (a new install, or an older one that never touched the switch), it is on. Turning the switch off keeps only the setting itself (`game_memory.json`). Reading the game's memory goes against the letter of Blizzard's End User License Agreement (section 1.C), and the account at risk is yours: the terms (section 9) say so in full.
 
