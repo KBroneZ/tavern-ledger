@@ -18,7 +18,7 @@
     ["why.noOddsShort", "no odds", "sin probabilidades"],
     ["why.more", "Details", "Detalles"],
     ["why.matched", "As expected.", "Lo esperado."],
-    ["why.chance", "Chance: the replay matched until the dice.", "Azar: la repetición coincidió hasta los dados."],
+    ["why.chance", "Dice luck: the replay matched the game until the dice rolled.", "Azar: la repetición coincidió hasta los dados."],
     ["why.missing", "Not seen: {what}.", "No visto: {what}."],
     ["why.approximate", "Approximate: {cards}.", "Aproximado: {cards}."],
     ["why.rule", "Rule differs at attack {attack}: {card}.", "Una regla cambia en el ataque {attack}: {card}."],
