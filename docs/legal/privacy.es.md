@@ -4,6 +4,12 @@
 
 Última actualización: 19 de octubre de 2026
 
+Tavern Ledger es un rastreador gratuito y de código abierto de Campos de Batalla de Hearthstone: una aplicación para Windows que lee los archivos de registro del juego en tu PC y un sitio web donde puedes guardar tus partidas y, si quieres, compartirlas. Esta política explica qué datos personales tratamos, para qué, adónde van y qué puedes hacer al respecto.
+
+Proyecto no oficial de fans. Sin afiliación con Blizzard Entertainment ni respaldo de esta.
+
+## Qué ha cambiado
+
 **Qué cambió el 19 de octubre de 2026:** el registro de cada partida guarda ahora también, en cada combate, los poderes de héroe y abalorios de ambos lados como ids de carta, con los números que muestra su texto (apartado 2), para que el simulador los juegue en partidas pasadas. Nada más cambia.
 
 **Qué cambió el 17 de octubre de 2026:** la descripción de la aplicación de escritorio (apartado 2, «Imágenes de esbirros») dice ahora que descarga una vez las imágenes de esbirros al estilo del juego (marcos, gemas y marcas de palabras clave) de nuestro servidor de imágenes, `assets.tavernledger.net`, que ve la dirección IP de tu PC y el agente de usuario de la aplicación. La aplicación lo hace desde el cambio del 16 de octubre que aparece abajo; la política no lo decía. Nada más cambia.
@@ -27,10 +33,6 @@
 **Qué cambió el 12 de octubre de 2026:** con tu perfil público, ahora apareces en una clasificación desde tu primera partida terminada en ese modo y periodo, no a partir de 20 (apartado 4, «Perfiles públicos y clasificaciones»); un número de pocas partidas lleva la marca «pocas partidas». También desde ese día: el registro completo de cada partida (tableros turno a turno, tiendas, repeticiones de combates) se guarda en nuestro servidor 28 días desde que se jugó la partida y luego se borra (el borrado empieza en los días siguientes a esta fecha); su resumen se queda mientras tengas cuenta, la aplicación guarda todas las partidas completas en tu PC y las cuentas con historial ilimitado conservan los registros completos (apartados 4, 6 y 7).
 
 **Qué cambió el 11 de octubre de 2026:** clasificaciones públicas (apartado 4, «Perfiles públicos y clasificaciones»): qué muestran, quién aparece en ellas, cómo salir de ellas y durante cuánto tiempo se conservan los números; la comprobación de los nombres visibles con una lista corta de palabras; los números de las clasificaciones en la descarga (apartado 7). También nuevo ese día: imágenes de cartas y héroes cargadas desde HearthstoneJSON (apartados 3 y 5); estadísticas de héroes de la comunidad (apartado 4, «Estadísticas de héroes de la comunidad»), que cuentan tus partidas solo si las activas, con el interruptor en la descarga (apartado 7) y su conservación (apartado 6).
-
-Tavern Ledger es un rastreador gratuito y de código abierto de Campos de Batalla de Hearthstone: una aplicación para Windows que lee los archivos de registro del juego en tu PC y un sitio web donde puedes guardar tus partidas y, si quieres, compartirlas. Esta política explica qué datos personales tratamos, para qué, adónde van y qué puedes hacer al respecto.
-
-Proyecto no oficial de fans. Sin afiliación con Blizzard Entertainment ni respaldo de esta.
 
 ## 1. Quién es el responsable
 

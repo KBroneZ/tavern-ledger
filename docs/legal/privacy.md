@@ -2,6 +2,12 @@
 
 Last updated: 19 October 2026
 
+Tavern Ledger is a free, open-source Hearthstone Battlegrounds tracker: a Windows app that reads the game's log files on your PC, and a website where you can keep and, if you want, share your games. This policy says what personal data we handle, why, where it goes and what you can do about it.
+
+Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.
+
+## What changed
+
 **What changed on 19 October 2026:** the game record now also holds, for each combat, both sides' hero powers and trinkets as card ids, with the numbers their text shows (section 2), so the simulator can play them on past games. Nothing else changes.
 
 **What changed on 17 October 2026:** the desktop app's description (section 2, "Minion pictures") now says that it downloads the game-style minion pictures (frames, gems and keyword marks) once from our image host, `assets.tavernledger.net`, which sees your PC's IP address and the app's user agent. The app has done this since the 16 October change below; the policy did not say so. Nothing else changes.
@@ -25,10 +31,6 @@ Last updated: 19 October 2026
 **What changed on 12 October 2026:** with your profile public, you now appear on a leaderboard from your first finished game in that mode and period, not after 20 (section 4, "Public profiles and leaderboards"); a number from few games is marked "few games". Also new that day: each game's full record (turn-by-turn boards, shops, combat replays) is kept on our server for 28 days after the game was played, then deleted (deletion starts in the days after this date); its summary stays while you have an account, the app keeps every game in full on your PC, and accounts with unlimited history keep the full records (sections 4, 6 and 7).
 
 **What changed on 11 October 2026:** public leaderboards (section 4, "Public profiles and leaderboards"): what they show, who appears on them, how to leave them and how long the numbers are kept; the check of display names against a short word list; the leaderboard numbers in the download (section 7). Also new that day: card and hero pictures loaded from HearthstoneJSON (sections 3 and 5); community hero stats (section 4, "Community hero stats"), which count your games only if you turn them on, with the switch in the download (section 7) and its retention (section 6).
-
-Tavern Ledger is a free, open-source Hearthstone Battlegrounds tracker: a Windows app that reads the game's log files on your PC, and a website where you can keep and, if you want, share your games. This policy says what personal data we handle, why, where it goes and what you can do about it.
-
-Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.
 
 ## 1. Who is responsible
 
