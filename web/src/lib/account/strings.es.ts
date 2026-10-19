@@ -53,7 +53,7 @@ export const ES: Record<AccountKey, string> = {
   "account.public.hint":
     "Desactivado por defecto. Si lo activas, cualquiera puede encontrar tu perfil y ver tu nombre visible y todas las partidas que has subido, con todo detalle, y puedes aparecer en las clasificaciones públicas. Si lo desactivas, dejas de aparecer en todas partes en cuanto guardes.",
   "account.public.more.before":
-    "Es decir, de cada partida: héroe, puesto, modo, fecha, tribus ofrecidas y los tableros que viste. Con un nombre visible y una partida terminada, también apareces en las",
+    "Es decir, de cada partida: héroe, puesto, modo, fecha, tipos de esbirro ofrecidos y los tableros que viste. Con un nombre visible y una partida terminada, también apareces en las",
   "account.public.more.link": "clasificaciones públicas",
   "account.public.more.after": ". Nunca tu puntuación ni los nombres de otros jugadores. Las clasificaciones se recalculan cada 10 minutos: un perfil, nombre o partida nuevos pueden tardar hasta 10 minutos en aparecer allí, mientras que al desactivar el perfil dejas de aparecer al instante.",
   "account.save": "Guardar",
