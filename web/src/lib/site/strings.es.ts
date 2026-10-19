@@ -120,7 +120,7 @@ export const ES: Record<SiteKey, string> = {
   "home.keeps.recap.body": "Tu vida a lo largo de las rondas y tu historial contra cada rival.",
   "home.safe.title": "Qué hace con tu juego",
   "home.safe.body":
-    "Lee los archivos de registro que el juego ya escribe en tu PC y, para la superposición, dónde está tu puntero sobre la ventana del juego. Por defecto, también lee de la memoria del juego, en modo solo lectura y solo en tu PC, dos cosas que el juego ya te muestra: las tribus de la partida y tu propia puntuación. Puedes desactivarlo en Ajustes. Va contra la letra de las normas de Blizzard y la cuenta en riesgo es la tuya, como dicen los términos.",
+    "Lee los archivos de registro que el juego ya escribe en tu PC y, para la superposición, dónde está tu puntero sobre la ventana del juego. Por defecto, también lee de la memoria del juego, en modo solo lectura y solo en tu PC, dos cosas que el juego ya te muestra: los tipos de esbirro de la partida y tu propia puntuación. Puedes desactivarlo en Ajustes. Va contra la letra de las normas de Blizzard y la cuenta en riesgo es la tuya, como dicen los términos.",
   "home.safe.1":
     "Nunca modifica el juego ni le añade código. Los únicos archivos que puede escribir son los dos archivos de ajustes de registro de Hearthstone, y solo cuando pulsas Arreglar, con copia de seguridad.",
   "home.safe.2": "Nunca juega ni hace clic por ti.",
