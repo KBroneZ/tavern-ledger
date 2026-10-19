@@ -291,6 +291,12 @@
           "markdownDescription": "Enables the game_why command without any pre-configured scope."
         },
         {
+          "description": "Enables the hero_groups command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-hero-groups",
+          "markdownDescription": "Enables the hero_groups command without any pre-configured scope."
+        },
+        {
           "description": "Enables the list_games command without any pre-configured scope.",
           "type": "string",
           "const": "allow-list-games",
@@ -613,6 +619,12 @@
           "type": "string",
           "const": "deny-game-why",
           "markdownDescription": "Denies the game_why command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the hero_groups command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-hero-groups",
+          "markdownDescription": "Denies the hero_groups command without any pre-configured scope."
         },
         {
           "description": "Denies the list_games command without any pre-configured scope.",

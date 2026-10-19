@@ -35,6 +35,7 @@ pub const APP_COMMANDS: &[&str] = &[
     "upload_cancel_sign_in",
     "upload_sign_out",
     "card_names",
+    "hero_groups",
     "card_data_status",
     "texture_set",
     "game_memory_status",

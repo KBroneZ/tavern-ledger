@@ -36,7 +36,8 @@ function el(tag, className, text) {
 
 // Where a value comes from (T-109). The app decides the source (tracker::provenance)
 // and this file only shows it: a mark for every source but the log, and a tooltip on every value.
-const SOURCES = ["log", "inferred", "entered", "leaderboard", "card_data", "possible", "game", "unknown"];
+// "nogames" is not the log's word: the window says it for a mode with no game (tally-words.js).
+const SOURCES = ["log", "inferred", "entered", "leaderboard", "card_data", "possible", "game", "unknown", "nogames"];
 const sourceOf = (source) => (SOURCES.includes(source) ? source : "unknown");
 
 // The words are the interface's own (source.<key>.label and .description),
@@ -121,14 +122,20 @@ const minionArt = () => window.TLMinions || null;
 // (T-304); none when there is no id.
 const portrait = (id) => art(id, "portrait");
 
-// Hero name in the app's language from the card data, else as the game's log
-// printed it (in the game's language), else the card id. Never a guessed name.
+// Hero name in the app's language from the card data, the same one the stats
+// use for the hero whatever skin was played (TLCards.heroName); else as the
+// game's log printed it (in the game's language), else the card id. Never a
+// guessed name. The skin played is in the tooltip.
 function heroCell(report, source) {
   const id = typeof report.hero === "string" ? report.hero : null;
   const names = report.card_names && typeof report.card_names === "object" ? report.card_names : {};
-  const name = id ? TLCards.display(id, typeof names[id] === "string" ? names[id] : null) : null;
+  const logName = id && typeof names[id] === "string" ? names[id] : null;
+  const name = id ? TLCards.heroName(id, logName) : null;
   const cell = el("td", "hero", name || "—");
-  if (name && name !== id) cell.title = id;
+  if (name && name !== id) {
+    const skin = TLCards.display(id, logName);
+    cell.title = skin && skin !== name && skin !== id ? `${skin} · ${id}` : id;
+  }
   const img = portrait(id);
   if (img) cell.prepend(img);
   return withSource(cell, source);
@@ -210,19 +217,23 @@ function topLabel(top) {
 function renderTally(m, devGames) {
   const t = m.totals;
   const src = m.totals_sources || {};
+  const marks = TLTallyWords.marks(t, src);
   const set = (id, value, source) => {
     const node = document.getElementById(id);
     node.textContent = value;
     node.title = "";
-    addTip(node, source);
-    const mark = sourceMark(source);
+    // "none": under a mode with no game only the games count carries the words.
+    if (source !== "none") addTip(node, source);
+    const mark = source === "none" ? null : sourceMark(source);
     document.getElementById(`${id}-src`).replaceChildren(...(mark ? [mark] : []));
   };
   document.getElementById("stat-top-label").textContent = topLabel(m.top_half);
-  set("stat-games", t.games || "—", src.games);
-  set("stat-avg", avgText(t.average_place), src.average_place);
-  set("stat-top", shareText(t.top_half_share), src.top_half_share);
-  set("stat-wins", dash(t.wins, String), src.wins);
+  set("stat-games", t.games || "—", marks.games);
+  set("stat-avg", avgText(t.average_place), marks.average_place);
+  set("stat-top", shareText(t.top_half_share), marks.top_half_share);
+  set("stat-wins", dash(t.wins, String), marks.wins);
+  // Not before the app has answered: an empty list then is not "no game yet".
+  document.getElementById("marks-hint").hidden = !(stats.modes.length > 0 && TLTallyWords.hintShown(allGames.length));
   const notCounted = (t.games || 0) - (t.placed || 0);
   const note = document.getElementById("not-counted");
   note.hidden = notCounted === 0 && devGames === 0;
@@ -238,12 +249,14 @@ function renderTally(m, devGames) {
 
 function heroRow(h, top) {
   const tr = el("tr");
-  const shown = h.hero ? TLCards.display(h.hero, h.name) : h.name;
+  const shown = h.hero ? TLCards.heroName(h.hero, h.name) : h.name;
   const cell = el("td", shown && shown !== h.hero ? "hero-name" : "hero", shown || tl("win.hero.unknown"));
   if (h.variants.length) cell.title = h.variants.join("\n");
   const img = portrait(h.hero);
   if (img) cell.prepend(img);
-  withSource(cell, h.name_source);
+  const fromData = Boolean(h.hero) && typeof TLCards.name(h.hero) === "string";
+  const nameMark = TLTallyWords.heroNameMark(h.name_source, fromData);
+  if (nameMark) withSource(cell, nameMark);
   withSource(cell, h.grouping);
   const t = h.tally;
   const src = h.tally_sources || {};
@@ -485,7 +498,7 @@ document.getElementById("tribes-form").addEventListener("submit", (e) => e.preve
 // The stats' long tables (T-323): top rows by games, ties broken by the better
 // average place and then the name, "Show all" for the rest (compact.js).
 function heroesTable(m) {
-  const name = (h) => (h.hero ? TLCards.display(h.hero, h.name) : h.name) || "";
+  const name = (h) => (h.hero ? TLCards.heroName(h.hero, h.name) : h.name) || "";
   const rows = TLCompact.rank(m.heroes, { games: (h) => h.tally.games, place: (h) => h.tally.average_place, name });
   const columns = [
     { label: tl("win.col.hero"), sort: name, text: true },
@@ -680,7 +693,7 @@ function recapButton(game) {
   return button;
 }
 
-const heroText = (hero) => (hero && TLCards.display(hero.id, hero.name)) || "—";
+const heroText = (hero) => (hero && TLCards.heroName(hero.id, hero.name)) || "—";
 
 // The hero's name with its portrait in front, when there is one.
 function heroWithPortrait(hero) {
@@ -1014,7 +1027,7 @@ const recapView = TLRecapView.create({
 
 // Loads (or reloads) the recap of `game`; opens the view if it is not open.
 async function openRecap(game) {
-  const target = { session: game.session, index: game.index };
+  const target = TLGameTime.target(game);
   const reload = recapView.isOpen() && recapGame && gameKey(recapGame) === gameKey(target);
   recapGame = target;
   if (!reload) {
@@ -1027,7 +1040,7 @@ async function openRecap(game) {
   showReportMessage("recap-error", "");
   recapView.open(`recap:${target.session}:${target.index}`);
   try {
-    const recap = await invoke("game_recap", target);
+    const recap = await invoke("game_recap", { session: target.session, index: target.index });
     if (recapGame === target) {
       recapShown = { recap, target };
       renderRecap(recap, target);

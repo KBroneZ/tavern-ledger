@@ -83,6 +83,56 @@ window.TLCards = (() => {
     return logName || id || null;
   }
 
+  // A hero's group (T-359): the base hero its skins belong to, as the stats
+  // group them. Asked of the app once per hero, in a batch.
+  const groups = new Map(); // id -> base hero id
+  const askedGroups = new Set(); // asked, not answered yet
+  let queuedGroups = new Set();
+  let groupTimer = null;
+
+  async function flushGroups() {
+    groupTimer = null;
+    const ids = [...queuedGroups];
+    queuedGroups = new Set();
+    let got = {};
+    try {
+      got = (await invoke("hero_groups", { ids })) || {};
+    } catch (_) {
+      got = {}; // the skin's own name shows
+    }
+    let news = false;
+    for (const id of ids) {
+      askedGroups.delete(id);
+      const base = typeof got[id] === "string" && ID.test(got[id]) ? got[id] : null;
+      if (!base) continue;
+      news = news || groups.get(id) !== base;
+      groups.set(id, base);
+      want(base);
+    }
+    if (news) changed();
+  }
+
+  function wantGroup(id) {
+    if (groups.has(id) || askedGroups.has(id)) return;
+    askedGroups.add(id);
+    queuedGroups.add(id);
+    if (!groupTimer) groupTimer = setTimeout(flushGroups, 0);
+  }
+
+  // A hero's name: the same in the recap and in the stats whatever skin was
+  // played. The base hero's name from the card data in the app's language,
+  // else the skin's own (the card data, then the game's log, then the id).
+  function heroName(id, logName) {
+    if (typeof id !== "string" || !ID.test(id)) return logName || id || null;
+    wantGroup(id);
+    const base = groups.get(id);
+    if (base && base !== id) {
+      const known = name(base);
+      if (typeof known === "string" && known) return known;
+    }
+    return display(id, logName);
+  }
+
   // An <img> for the card's art, or null for an id that is not a card id.
   // Options (the main window, T-320): `lazy` fetches it only when it comes
   // into view (long lists and closed folds then cost no picture), and
@@ -148,6 +198,11 @@ window.TLCards = (() => {
   listen("cards-changed", () => {
     for (const id of [...names.keys(), ...waiting]) want(id);
     waiting.clear();
+    // The card data may now link a skin to its hero: ask again, keeping what shows.
+    for (const id of groups.keys()) {
+      groups.delete(id);
+      wantGroup(id);
+    }
     refreshStatus();
   });
   refreshStatus();
@@ -155,6 +210,7 @@ window.TLCards = (() => {
   return {
     name,
     display,
+    heroName,
     art,
     gifts,
     status: () => status,

@@ -27,10 +27,20 @@ require("../ui/strings/gifts.js");
 
 // The app's answer to card_names: Spanish names when asked in Spanish.
 const asked = [];
+const askedGroups = [];
+// The app's answer to hero_groups: a skin belongs to its base hero.
+const GROUPS = { HERO_SKIN_A: "HERO_BASE", HERO_SKIN_B: "HERO_BASE", HERO_ODD_SKIN_C: "HERO_NAMELESS" };
 const answer = async (cmd, args) => {
+  if (cmd === "hero_groups") {
+    askedGroups.push(args.ids);
+    return Object.fromEntries(args.ids.map((id) => [id, GROUPS[id] || id]));
+  }
   if (cmd !== "card_names") return {};
   asked.push(args.lang);
-  const names = args.lang === "es" ? { BG_KNOWN: "Nombre español" } : { BG_KNOWN: "English name" };
+  const names =
+    args.lang === "es"
+      ? { BG_KNOWN: "Nombre español", HERO_BASE: "Héroe base", HERO_SKIN_A: "Héroe con aspecto A", HERO_ODD_SKIN_C: "Aspecto sin base" }
+      : { BG_KNOWN: "English name", HERO_BASE: "Base hero", HERO_SKIN_A: "Skin A hero", HERO_ODD_SKIN_C: "Odd skin" };
   return Object.fromEntries(args.ids.map((id) => [id, names[id] || null]));
 };
 global.window = { __TAURI__: { core: { invoke: answer }, event: { listen: () => {} } }, TLI18n: I18n };
@@ -119,4 +129,47 @@ test("a minion with no gift has no mark, and an unknown gift says so", () => {
   // A gift the table does not know: its id, no summary; ids that are not card ids are dropped.
   const other = TLCards.gifts({ gifts: ["BG99_New_000t1", "<b>", 7] });
   assert.deepEqual(other.map((m) => [m.id, m.title]), [["BG99_New_000t1", "Dark Gift: BG99_New_000t1"]]);
+});
+
+const settle = () => new Promise((resolve) => setTimeout(resolve, 10));
+
+test("a hero skin is named by its base hero, in the app's language, once the app has answered", async () => {
+  I18n.setLang("es");
+  try {
+    // Not answered yet: the skin's own name meanwhile, never a blank.
+    assert.equal(TLCards.heroName("HERO_SKIN_A", "Del registro"), "Del registro");
+    TLCards.heroName("HERO_SKIN_B", null);
+    TLCards.heroName("HERO_BASE", null);
+    await settle();
+    assert.equal(TLCards.heroName("HERO_SKIN_A", "Del registro"), "Héroe base");
+    assert.equal(TLCards.heroName("HERO_SKIN_B", null), "Héroe base", "two skins, one name");
+    assert.equal(TLCards.heroName("HERO_BASE", null), "Héroe base", "the base hero itself");
+  } finally {
+    I18n.setLang("en");
+  }
+});
+
+test("a hero whose base has no name keeps the name it has, then the log's, then the id", async () => {
+  I18n.setLang("es");
+  assert.equal(TLCards.heroName("HERO_ODD_SKIN_C", "Del registro"), "Del registro");
+  await settle();
+  assert.equal(TLCards.heroName("HERO_ODD_SKIN_C", "Del registro"), "Aspecto sin base", "the skin's own card name");
+  assert.equal(TLCards.heroName("HERO_NOBODY", "Del registro"), "Del registro");
+  assert.equal(TLCards.heroName("HERO_NOBODY", null), "HERO_NOBODY");
+  assert.equal(TLCards.heroName(null, "x"), "x");
+  assert.equal(TLCards.heroName(null, null), null);
+  I18n.setLang("en");
+});
+
+test("the groups are asked once per hero, in one batch, and only for card ids", async () => {
+  await settle(); // what the earlier tests asked
+  askedGroups.length = 0;
+  TLCards.heroName("HERO_NEW_1", null);
+  TLCards.heroName("HERO_NEW_2", null);
+  TLCards.heroName("HERO_NEW_1", null);
+  TLCards.heroName("<b>", null);
+  await settle();
+  TLCards.heroName("HERO_NEW_1", null);
+  await settle();
+  assert.deepEqual(askedGroups, [["HERO_NEW_1", "HERO_NEW_2"]]);
 });

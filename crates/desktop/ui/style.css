@@ -84,7 +84,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 700; font-stretch: 8
   position: sticky;
   top: 0;
   z-index: 2;
-  background: rgb(18 13 11 / 0.94);
+  background: var(--bg);
   transition: box-shadow 200ms ease-out;
 }
 .brand { display: flex; align-items: center; gap: 12px; }
@@ -279,6 +279,7 @@ footer { padding: 12px var(--space) 14px; border-top: 1px solid var(--line); col
 .src-entered { border-style: double; border-width: 3px; color: var(--info); }
 .src-leaderboard { border-style: solid; border-width: 2px; color: var(--info); }
 .src-unknown { border-style: dotted; color: var(--dim); }
+.src-nogames { border-color: transparent; background: var(--panel-hi); color: var(--dim); }
 .src-card_data { border-style: solid; border-radius: 3px; color: var(--dim); }
 .src-possible { border-style: dashed; border-width: 2px; border-radius: 3px; color: var(--amber-hi); font-style: italic; }
 /* Card art (T-320). HearthstoneJSON's 256x pictures pad a tall minion picture
@@ -377,6 +378,9 @@ dialog pre {
   cursor: pointer;
   transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
 }
+/* The way out is quiet: an outline, so the action beside it is the one that stands out. */
+.dialog-actions button.quiet { background: transparent; color: var(--text); box-shadow: inset 0 0 0 1.5px var(--line); }
+.dialog-actions button.quiet:hover { box-shadow: inset 0 0 0 1.5px var(--amber); }
 .dialog-actions button:active { transform: scale(0.97); }
 .dialog-actions button:disabled { opacity: 0.5; cursor: default; }
 @media (prefers-reduced-motion: no-preference) {
@@ -503,7 +507,7 @@ td.played { white-space: nowrap; color: var(--dim); font-variant-numeric: tabula
   margin: 0 calc(var(--space) * -1);
   padding: 12px var(--space);
   border-bottom: 1px solid var(--line);
-  background: rgb(18 13 11 / 0.96);
+  background: var(--bg);
   transition: box-shadow 200ms ease-out;
 }
 .recap-who { display: flex; align-items: center; gap: 14px; min-width: 0; }

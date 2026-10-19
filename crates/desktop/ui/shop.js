@@ -33,8 +33,9 @@ window.TLShop = (() => {
     });
   });
 
-  // A hero row's name: the card data's in the app's language, else the log's.
-  const heroName = (h) => (h.hero ? window.TLCards.display(h.hero, h.name) : h.name);
+  // A hero row's name: the card data's in the app's language (the hero's own,
+  // as in the stats), else the log's.
+  const heroName = (h) => (h.hero ? window.TLCards.heroName(h.hero, h.name) : h.name);
 
   const one = (v, digits = 1) => (v === null || v === undefined ? "—" : I18n.num(v, digits));
   const num = (v) => (v === null || v === undefined ? "—" : I18n.num(v));

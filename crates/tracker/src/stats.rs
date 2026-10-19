@@ -222,6 +222,13 @@ pub(crate) fn hero_for(card: &str, report: &Value, links: &HeroLinks) -> (String
     if let Some(base) = logged {
         return (base.clone(), Grouped::Log);
     }
+    group_without_report(card, links)
+}
+
+/// The group of a hero card from the card data alone: its parent hero there,
+/// else the D-019 rule. What `hero_for` does once the game's own link is
+/// missing.
+fn group_without_report(card: &str, links: &HeroLinks) -> (String, Grouped) {
     let parent = links
         .skin_parents
         .get(card)
@@ -236,6 +243,13 @@ pub(crate) fn hero_for(card: &str, report: &Value, links: &HeroLinks) -> (String
         Grouped::Rule
     };
     (base.to_string(), how)
+}
+
+/// The hero a card id belongs to as the stats group it (T-359): the recap
+/// names a hero by this id, so one hero has one name in the recap and in the
+/// stats, whatever skin it played in.
+pub fn hero_group(card: &str, links: &HeroLinks) -> String {
+    group_without_report(card, links).0
 }
 
 /// Place rules of a mode: the top half, and the worst possible place.
@@ -1014,6 +1028,36 @@ mod tests {
         assert!(h.variants_by_rule.is_empty());
         assert_eq!(h.grouping, Source::Log, "the game's own link, not a guess");
         assert_eq!(h.tally.games, 2);
+    }
+
+    #[test]
+    fn a_hero_card_belongs_to_the_group_the_stats_would_put_it_in() {
+        // The recap names a hero by its group (T-359): one name in the recap
+        // and in the stats. The card data's link first, then the D-019 rule.
+        let mut links = HeroLinks::of_heroes([(59_999, "BG20_HERO_102".to_string())]);
+        links
+            .skin_parents
+            .insert("TB_BaconShop_HERO_102_SKIN_G".to_string(), 59_999);
+        assert_eq!(
+            hero_group("TB_BaconShop_HERO_102_SKIN_G", &links),
+            "BG20_HERO_102",
+            "the card data's parent, though the ids only share a number"
+        );
+        assert_eq!(
+            hero_group("BG20_HERO_202_SKIN_C", &links),
+            "BG20_HERO_202",
+            "no link: the D-019 rule"
+        );
+        assert_eq!(hero_group("BG20_HERO_102", &links), "BG20_HERO_102");
+        assert_eq!(
+            hero_group("BG20_HERO_202", &HeroLinks::new()),
+            "BG20_HERO_202"
+        );
+        // A link to the card itself, or to a hero the card data lacks, changes nothing.
+        links
+            .skin_parents
+            .insert("BG21_HERO_000_SKIN_D".to_string(), 1234);
+        assert_eq!(hero_group("BG21_HERO_000_SKIN_D", &links), "BG21_HERO_000");
     }
 
     #[test]

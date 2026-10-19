@@ -32,7 +32,9 @@
   const cards = () => (typeof window !== "undefined" && window.TLCards) || null;
   const shown = (id, logName) => (cards() ? cards().display(id, logName) : logName || id);
   const fromCardData = (id) => Boolean(cards()) && typeof cards().name(id) === "string";
-  const heroWords = (h) => (h && shown(h.id, h.name)) || t("extras.hero.unknown");
+  // A hero is named as in the stats, whatever skin it wears (cards.js heroName).
+  const heroShown = (id, logName) => (cards() && cards().heroName ? cards().heroName(id, logName) : shown(id, logName));
+  const heroWords = (h) => (h && heroShown(h.id, h.name)) || t("extras.hero.unknown");
 
   // The hero pick of one game, worded; `empty` is set when there is none to show.
   function heroPick(pick) {

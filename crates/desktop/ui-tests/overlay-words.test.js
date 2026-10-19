@@ -150,11 +150,11 @@ test("the tribes panel shows the five tribes the game gave and no reason line", 
 
 test("with the read off, unsupported or failing the tribes panel is empty with one reason, in both languages", () => {
   const cases = [
-    ["off", "Tribes: the game read is off", "Tribus: la lectura del juego está desactivada"],
-    ["unsupported_version", "Tribes: this game version is not supported yet", "Tribus: esta versión del juego aún no es compatible"],
-    ["not_running", "Tribes: could not read the game", "Tribus: no se pudo leer el juego"],
-    ["no_access", "Tribes: could not read the game", "Tribus: no se pudo leer el juego"],
-    ["waiting", "Tribes: waiting for the game to show them", "Tribus: esperando a que el juego las muestre"],
+    ["off", "Tribes: the game read is off", "Tipos: la lectura del juego está desactivada"],
+    ["unsupported_version", "Tribes: this game version is not supported yet", "Tipos: esta versión del juego aún no es compatible"],
+    ["not_running", "Tribes: could not read the game", "Tipos: no se pudo leer el juego"],
+    ["no_access", "Tribes: could not read the game", "Tipos: no se pudo leer el juego"],
+    ["waiting", "Tribes: waiting for the game to show them", "Tipos: esperando a que el juego los muestre"],
   ];
   try {
     for (const [status, en, es] of cases) {

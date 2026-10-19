@@ -61,7 +61,7 @@
   ];
 
   const READS = ["overlay_state", "overlay_scene", "overlay_lobby", "overlay_settings"];
-  const CARDS = ["card_names", "card_data_status", "texture_set"];
+  const CARDS = ["card_names", "hero_groups", "card_data_status", "texture_set"];
   const APP = ["app_settings", "app_set_system_language", "log_ui_error"];
   const COMMANDS = [...READS, ...SETTERS, ...CARDS, ...APP];
   const EVENTS = [
@@ -119,6 +119,8 @@
         }
         return out;
       },
+      // The overlay names heroes as the game shows them: every id is its own group.
+      hero_groups: (args) => Object.fromEntries(((args && args.ids) || []).map((id) => [id, id])),
       card_data_status: () => ({ ready: true }),
       texture_set: () => textureSet(state.textures, fetchJson),
       app_settings: () => ({ language: lang }),
