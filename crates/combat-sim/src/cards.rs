@@ -115,6 +115,9 @@ pub enum Action {
     /// Give this minion's Attack, its full Health or both to another random
     /// friendly minion (Dark Gifts, `crate::gifts`).
     GiveOwnStats { attack: bool, health: bool },
+    /// Give this minion's Attack and full Health to every other friendly
+    /// minion (Fragrant Phylactery's mark, `crate::gifts::MARKS`).
+    GiveOthersOwnStats,
     /// Multiply this minion's Attack and Health (Dark Gifts).
     MultiplyStats { attack: i32, health: i32 },
     /// Gain the Attack of the minion to the left (Dark Gifts).

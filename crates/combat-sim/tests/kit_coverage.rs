@@ -552,3 +552,106 @@ fn powers_and_trinkets_played_during_combat_name_only_their_own_gaps() {
         [("BG30_MagicItem_700".to_string(), IN_COMBAT_NOT_PLAYED)]
     );
 }
+
+#[test]
+fn the_powers_and_trinkets_reviewed_in_t631_with_no_combat_effect_change_nothing() {
+    // A Tale of Kings' forms; Comfy Coffin, Surprise Portrait, Bleeding Heart
+    // (its Undead goes to the hand), Upstart Embers (the shop), Gold Mallet
+    // (end of turn).
+    let powers = [
+        "TB_BaconShop_HP_041a",
+        "TB_BaconShop_HP_041f",
+        "TB_BaconShop_HP_041i",
+        "TB_BaconShop_HP_041l",
+    ];
+    let trinkets = [
+        "BG30_MagicItem_547t",
+        "BG30_MagicItem_555",
+        "BG30_MagicItem_713",
+        "BG35_MagicItem_862",
+        "BG36_MagicItem_302",
+    ];
+    for power in powers {
+        for soc in [false, true] {
+            let player = with_kit(vec![plain(2, 2)], &[power], &trinkets);
+            let Verdict::Odds(odds) = verdict(&player, soc) else {
+                panic!("{power}: reviewed, no combat effect");
+            };
+            assert!(odds.coverage.is_exact(), "{:?}", odds.coverage);
+        }
+    }
+}
+
+#[test]
+fn fragrant_phylactery_is_played_before_start_of_combat_and_read_from_its_mark_after() {
+    use combat_sim::gifts::PHYLACTERY_MARK;
+    use combat_sim::kit::{LOWEST_TIES, MARK_NOT_GIVEN};
+    let power = "BG20_HERO_282p";
+    // Before start of combat: played, approximate (its rule on equal Attack
+    // is not checked).
+    let before = with_kit(vec![plain(2, 2), plain(3, 3)], &[power], &[]);
+    let Verdict::Odds(odds) = verdict(&before, true) else {
+        panic!("played from before start of combat");
+    };
+    assert_eq!(
+        odds.coverage.approximate,
+        [(power.to_string(), LOWEST_TIES)]
+    );
+    // After it, without the mark on any minion: the minion it chose is not
+    // known, so the odds are blocked by name.
+    let Verdict::NotModelled(cov) = verdict(&before, false) else {
+        panic!("its mark is not shown");
+    };
+    assert_eq!(cov.reasons(), [(power.to_string(), MARK_NOT_GIVEN)]);
+    // With the mark shown: exact.
+    let after = with_kit(
+        vec![plain(2, 2).gift(PHYLACTERY_MARK), plain(3, 3)],
+        &[power],
+        &[],
+    );
+    let Verdict::Odds(odds) = verdict(&after, false) else {
+        panic!("the mark is shown");
+    };
+    assert!(odds.coverage.is_exact(), "{:?}", odds.coverage);
+}
+
+#[test]
+fn eternal_portrait_is_played_and_approximate_and_another_block_stays() {
+    use combat_sim::kit::KNIGHTS_SUMMONED;
+    let portrait = with_kit(vec![plain(2, 2)], &[], &["BG36_MagicItem_216"]);
+    let Verdict::Odds(odds) = verdict(&portrait, false) else {
+        panic!("played");
+    };
+    assert_eq!(
+        odds.coverage.approximate,
+        [("BG36_MagicItem_216".to_string(), KNIGHTS_SUMMONED)]
+    );
+    // Playing one card never lifts another one's block.
+    let both = with_kit(
+        vec![plain(2, 2)],
+        &["BG99_HERO_999p", "BG20_HERO_282p"],
+        &["BG36_MagicItem_216"],
+    );
+    for soc in [false, true] {
+        let Verdict::NotModelled(cov) = verdict(&both, soc) else {
+            panic!("the unknown power still blocks");
+        };
+        assert!(cov.not_modelled.contains(&"BG99_HERO_999p".to_string()));
+        // Without start of combat the Phylactery keeps its own block too.
+        let phylactery = cov.reasons().contains(&(
+            "BG20_HERO_282p".to_string(),
+            combat_sim::kit::MARK_NOT_GIVEN,
+        ));
+        assert_eq!(phylactery, !soc, "{:?}", cov.reasons());
+    }
+}
+
+#[test]
+fn every_mark_a_played_card_gives_is_a_known_gift() {
+    for id in combat_sim::kit_effects::played_ids() {
+        let play = combat_sim::kit_effects::played(id).expect("played");
+        if let Some(mark) = combat_sim::kit_effects::mark(play) {
+            assert!(combat_sim::gifts::gift(mark).is_some(), "{id}: {mark}");
+        }
+    }
+}

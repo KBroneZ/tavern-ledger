@@ -219,6 +219,7 @@ impl Combat<'_> {
             Action::GiveOwnStats { attack, health } => {
                 self.give_own_stats(side, src, attack, health)
             }
+            Action::GiveOthersOwnStats => self.give_others_own_stats(side, src),
             Action::MultiplyStats { attack, health } => {
                 if let Some(uid) = me {
                     self.multiply_stats(side, uid, attack, health);

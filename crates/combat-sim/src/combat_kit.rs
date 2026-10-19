@@ -3,7 +3,8 @@
 //! (the user's logs: trinkets, then hero powers, then minions), and what the
 //! played hero powers do once their side has space.
 
-use super::{CardInfo, Combat, Unit};
+use super::{intern, CardInfo, Combat, Unit};
+use crate::gifts;
 use crate::kit_effects::{self, KitAction, KitPlay, Pick, SpaceAction};
 use crate::model::{Keywords, Kit, Minion, Tribes, MAX_BOARD};
 
@@ -20,6 +21,8 @@ pub(crate) struct KitUse {
     pub held: Option<Unit>,
     /// It acts this combat ([`kit_effects::acts`]; false when unknown).
     pub acts: bool,
+    /// The card entry of the mark it gives a minion ([`kit_effects::mark`]).
+    pub mark: Option<u16>,
 }
 
 /// What a hero power does once its side has space, waiting for it.
@@ -61,9 +64,25 @@ pub(crate) fn kit_uses(
             target: c.target.and_then(|ix| board.get(ix)).map(|u| u.uid),
             held: c.held.as_ref().map(|m| held(m, cards)),
             acts: kit_effects::acts(play, &c.counters, kit.round).unwrap_or(false),
+            mark: kit_effects::mark(play).and_then(|m| mark_card(cards, m)),
         });
     }
     out
+}
+
+/// The card entry of a mark: its triggers only, which a minion gains with it.
+fn mark_card(cards: &mut Vec<CardInfo>, mark: &str) -> Option<u16> {
+    let gift = gifts::gift(mark)?;
+    let next = cards.len() as u16;
+    Some(intern(cards, gift.id, &[], || CardInfo {
+        id: gift.id.to_string(),
+        gifts: Vec::new(),
+        plain: next,
+        triggers: gift.triggers.to_vec(),
+        tier: None,
+        tribes: Tribes::NONE,
+        base: None,
+    }))
 }
 
 impl Combat<'_> {
@@ -166,6 +185,21 @@ impl Combat<'_> {
                     self.swing(side, uid);
                 }
             }
+            KitAction::Mark { to, mark } => {
+                let Some(card) = k.mark else {
+                    return;
+                };
+                // A board that already shows the mark had this start of
+                // combat: it is not given twice.
+                if self.shows_mark(side, mark) {
+                    return;
+                }
+                for uid in self.picked(side, to) {
+                    if let Some(u) = self.unit_mut(side, uid) {
+                        u.gained.push(card);
+                    }
+                }
+            }
             KitAction::DestroyTarget => self.destroy_target(side, k.target),
             KitAction::TransformTargetIntoTeammates => {
                 let Some(uid) = self.target_uid(side, k.target) else {
@@ -176,6 +210,14 @@ impl Combat<'_> {
                 }
             }
         }
+    }
+
+    /// True when a minion of `side` carries `mark` as one of its gifts.
+    fn shows_mark(&self, side: usize, mark: &str) -> bool {
+        self.sides[side]
+            .units
+            .iter()
+            .any(|u| self.p.cards[u.card as usize].gifts.contains(&mark))
     }
 
     /// The named minion, when it is still on the board and alive.

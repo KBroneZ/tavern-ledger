@@ -365,6 +365,7 @@ fn log_minion(m: &Value, position: i64) -> LogMinion {
             .map(|g| statics(g, &bg_parser::gifts::GIFT_IDS))
             .unwrap_or_default(),
         gift_unknown: false,
+        sim_marks: Vec::new(),
         buffs: Vec::new(),
         counters: [0, 0],
     }

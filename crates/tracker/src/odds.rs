@@ -354,7 +354,7 @@ fn engine_minion(m: &LogMinion, facts: &dyn Fn(&str) -> Option<Facts>) -> Result
         tribes: f.tribes,
         tier: f.tier,
         base: Some(f.base),
-        gifts: m.gifts.iter().map(|g| g.to_string()).collect(),
+        gifts: m.sim_gifts().map(String::from).collect(),
         counters: m.counters.map(|n| i32::try_from(n).unwrap_or(0)),
         card_id: id,
     })

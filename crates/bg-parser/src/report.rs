@@ -65,6 +65,12 @@ pub struct Minion {
     /// none. Never serialized.
     #[serde(skip)]
     pub counters: [i64; 2],
+    /// The marks a hero power left on it that the combat simulator reads
+    /// (T-631): see [`crate::sim_marks::SIM_MARKS`]. Read on the boards of
+    /// [`crate::collector::board_of`], never on a board before start of
+    /// combat; never serialized.
+    #[serde(skip)]
+    pub sim_marks: Vec<&'static str>,
     /// Dark Gifts on the minion as gift spell ids (`BG36_MidGameEffect_000tNN`,
     /// T-528, parser revision 9), at most [`crate::gifts::MAX_GIFTS`]. Left
     /// out of the JSON when empty: a revision 9 record without the key has
@@ -81,6 +87,14 @@ pub struct Minion {
     /// none, an older one did not read them.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub buffs: Vec<Buff>,
+}
+
+impl Minion {
+    /// What the combat simulator takes as the minion's gifts: its Dark
+    /// Gifts, then the marks a hero power left on it.
+    pub fn sim_gifts(&self) -> impl Iterator<Item = &'static str> + '_ {
+        self.gifts.iter().chain(&self.sim_marks).copied()
+    }
 }
 
 pub(crate) fn is_false(v: &bool) -> bool {

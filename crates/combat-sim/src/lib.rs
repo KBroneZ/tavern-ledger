@@ -46,6 +46,8 @@ pub mod harness_export;
 #[cfg(feature = "harness")]
 pub mod harness_games;
 #[cfg(feature = "harness")]
+pub mod harness_kits;
+#[cfg(feature = "harness")]
 pub mod harness_logs;
 #[cfg(feature = "harness")]
 pub mod harness_misses;

@@ -5,6 +5,7 @@
 //! or trinket that acts in combat is still "not played" ([`crate::kit`]).
 
 use crate::cards::Fidelity;
+use crate::gifts::PHYLACTERY_MARK;
 use crate::kit::{
     COPY_OF_DAMAGED, FIRED_AT_RIGHT_END, HERALD_ORDER, HIGHEST_TIER_TIES, LIGHTNING_REPEATS,
     LOWEST_TIES, PIRATES_WITH_SHIELD, TIMEPIECE_ROUNDING, WINGMEN_ORDER,
@@ -74,6 +75,12 @@ pub enum KitAction {
     /// Transform the friendly minion the card names into an exact copy of
     /// the teammate's highest-Tier minion (the left-most on ties).
     TransformTargetIntoTeammates,
+    /// Give the minions the card's mark (an enchantment that acts for the
+    /// rest of the combat, [`crate::gifts::MARKS`]).
+    Mark {
+        to: Pick,
+        mark: &'static str,
+    },
 }
 
 /// Something a hero power does once per combat, the first time its side has
@@ -213,6 +220,19 @@ pub const PLAYED: &[(&str, KitPlay)] = &[
             &[KitAction::TransformTargetIntoTeammates],
         ),
     ),
+    // Fragrant Phylactery (the user's logs, 4 combats: the lowest-Attack
+    // minion gets the mark `BG20_HERO_282e2`, whose Deathrattle gave each
+    // other friendly minion the dead minion's Attack and Health).
+    (
+        "BG20_HERO_282p",
+        approx(
+            LOWEST_TIES,
+            &[KitAction::Mark {
+                to: Pick::LowestAttack(1),
+                mark: PHYLACTERY_MARK,
+            }],
+        ),
+    ),
     // Fire Invocation.
     (
         "BG22_HERO_001p_t2",
@@ -301,6 +321,15 @@ pub fn played(card_id: &str) -> Option<&'static KitPlay> {
 /// table of what each needs is checked against them).
 pub fn played_ids() -> impl Iterator<Item = &'static str> {
     PLAYED.iter().map(|(id, _)| *id)
+}
+
+/// The mark a played power or trinket gives a minion at the start of
+/// combat, if any: a board taken after it shows the mark instead.
+pub fn mark(play: &KitPlay) -> Option<&'static str> {
+    play.start.iter().find_map(|a| match *a {
+        KitAction::Mark { mark, .. } => Some(mark),
+        _ => None,
+    })
 }
 
 /// The value of `amount` for a card with these numbers: the printed one when
