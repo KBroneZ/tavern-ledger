@@ -1,12 +1,14 @@
 # Privacy policy
 
-Last updated: 19 October 2026
+Last updated: 20 October 2026
 
 Tavern Ledger is a free, open-source Hearthstone Battlegrounds tracker: a Windows app that reads the game's log files on your PC, and a website where you can keep and, if you want, share your games. This policy says what personal data we handle, why, where it goes and what you can do about it.
 
 Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.
 
 ## What changed
+
+**What changed on 20 October 2026 (desktop app only):** section 2 now describes "Copy diagnostics", a short text the app shows you and copies to your clipboard only when you ask, and never sends; and that ticking "Also delete my games and settings" when you uninstall the app deletes the `TavernLedger` folder. Nothing is collected or sent that was not before.
 
 **What changed on 19 October 2026:** the game record now also holds, for each combat, both sides' hero powers and trinkets as card ids, with the numbers their text shows (section 2), so the simulator can play them on past games. Nothing else changes.
 
@@ -44,7 +46,9 @@ The app reads the game's log files and saves a summary of each Battlegrounds gam
 
 **Reading from the game (on by default; you can turn it off).** Unless you turn off "Read the lobby's tribes and your rating from the game" in Settings, the app also reads, read-only, two values the game shows you while it runs: the five tribes of the lobby you are in and your own Battlegrounds rating (Solo and Duos). It reads nothing else from the game: no other players' names, BattleTags, account ids or ratings. These values stay on your PC: the app keeps them in its own files in its data folder, never puts them in the game record or a problem report, and never uploads them. Turning the switch off forgets them and deletes those files. If you chose before, your choice stays; if you never chose (a new install, or an older one that never touched the switch), it is on. Turning the switch off keeps only the setting itself (`game_memory.json`). Reading the game's memory goes against the letter of Blizzard's End User License Agreement (section 1.C), and the account at risk is yours: the terms (section 9) say so in full.
 
-Unless you turn on uploading, we never receive this file, and the app sends nothing about you or your games over the internet: its only other requests are for card data, minion pictures and updates (below). To export it, copy it; to delete it, delete the `TavernLedger` folder.
+Unless you turn on uploading, we never receive this file, and the app sends nothing about you or your games over the internet: its only other requests are for card data, minion pictures and updates (below). To export it, copy it; to delete it, delete the `TavernLedger` folder, or tick "Also delete my games and settings" when you uninstall the app.
+
+**Diagnostics you copy.** In Settings, "Copy diagnostics" shows you, then copies to your clipboard, a short text: the app version, the game build, the parser version, the Power settings of your `log.config` and a few known error messages of the app. It has no names, accounts, paths or keys. The app never sends it; if you paste it into a message, you chose to.
 
 **Uploading to your account (optional, off by default).** You can sign in from the app with a one-time link sent to your email: the app opens our website's sign-in page in your browser, where you ask for the link (with the check in section 3), and you open the link on the same PC; the app never asks for your password. It keeps the sign-in (a refresh token) in Windows Credential Manager on your PC, and a list of the games it uploaded next to the history (`uploads.jsonl`). Only when you turn "Upload games" on does it send each finished game's record (the summary above, without player names) to your account (section 4). Signing out ends the session on our server, removes the sign-in from your PC and turns uploading off.
 
