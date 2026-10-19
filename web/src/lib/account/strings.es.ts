@@ -55,7 +55,7 @@ export const ES: Record<AccountKey, string> = {
   "account.public.more.before":
     "Es decir, de cada partida: héroe, puesto, modo, fecha, tribus ofrecidas y los tableros que viste. Con un nombre visible y una partida terminada, también apareces en las",
   "account.public.more.link": "clasificaciones públicas",
-  "account.public.more.after": ". Nunca tu puntuación ni los nombres de otros jugadores.",
+  "account.public.more.after": ". Nunca tu puntuación ni los nombres de otros jugadores. Las clasificaciones se recalculan cada 10 minutos: un perfil, nombre o partida nuevos pueden tardar hasta 10 minutos en aparecer allí, mientras que al desactivar el perfil dejas de aparecer al instante.",
   "account.save": "Guardar",
   "account.publicPage": "Tu página pública:",
   "account.data": "Tus datos",
@@ -162,7 +162,7 @@ export const ES: Record<AccountKey, string> = {
   "link.expired":
     "Este enlace ha caducado o ya se ha usado (cada correo nuevo sustituye al enlace anterior). Si estabas confirmando tu correo electrónico, prueba a iniciar sesión: puede que ya esté confirmado. Si no, pide un enlace nuevo.",
   "link.otherBrowser":
-    "Has abierto este enlace en un navegador distinto del que usaste para pedirlo. Si estabas confirmando tu correo electrónico, ya está confirmado: inicia sesión. Si estabas cambiando tu contraseña, abre el enlace en el navegador donde lo pediste o pide uno nuevo.",
+    "Este enlace no se puede completar aquí: lo has abierto en un navegador distinto del que usaste para pedirlo, o antes abriste un enlace de un correo anterior, que lo ha gastado. Si estabas confirmando tu correo electrónico, ya está confirmado: inicia sesión. Si estabas cambiando tu contraseña, abre el enlace del correo más reciente en el navegador donde lo pediste o pide uno nuevo.",
   "link.unreachable": "No se ha podido conectar con el servidor. Comprueba tu conexión y recarga la página.",
   "link.failed": "Este enlace no ha funcionado. Inicia sesión o pide un enlace nuevo.",
 

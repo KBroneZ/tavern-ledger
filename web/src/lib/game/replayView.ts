@@ -224,7 +224,7 @@ function resultChip(combat: ReplayCombat): VNode {
 }
 
 export function counterText(step: number, last: number): string {
-  return g("replay.stepOf", { n: step, total: last });
+  return step === 0 ? g("replay.beforeCombat", { total: last }) : g("replay.stepOf", { n: step, total: last });
 }
 
 function stepList(combat: ReplayCombat, pb: Playback, step: number): VNode {

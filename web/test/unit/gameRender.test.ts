@@ -57,7 +57,7 @@ test("render: Simple has the key numbers, the turns and the replays; the rest is
   assert.equal(attr(nodes[0], "class"), "gv-summary");
   const tiles = [...walk(nodes[0])].filter((n) => attr(n, "class")?.split(" ").includes("tile"));
   const label = (n: VNode) => text(n.children[0]);
-  assert.deepEqual(tiles.filter((n) => attr(n, "class") === "tile").map(label), ["Combats won–lost", "Damage dealt", "Damage taken", "Final tavern tier"]);
+  assert.deepEqual(tiles.filter((n) => attr(n, "class") === "tile").map(label), ["Combats won–lost", "Hero damage dealt", "Hero damage taken", "Final tavern tier"]);
   assert.deepEqual(tiles.filter((n) => attr(n, "class") === "tile adv").map(label), ["Gold spent", "Triples", "Rolls", "Buys", "Sells", "Actions per minute"]);
   // The combats in one short figure; how many back each number only in Advanced,
   // unless the number is partial: one combat's result is unknown, so that line stays in view.
