@@ -46,8 +46,8 @@ export const GAME_STRINGS = {
   "summary.results.wl": "Combats won–lost",
   "summary.results.wlt": "Combats won–lost–tied",
   "summary.results.inferred": "{count} worked out from health",
-  "summary.dealt": "Damage dealt",
-  "summary.taken": "Damage taken",
+  "summary.dealt": "Hero damage dealt",
+  "summary.taken": "Hero damage taken",
   "summary.gold": "Gold spent",
   "summary.tier": "Final tavern tier",
   "summary.rolls": "Rolls",
@@ -65,19 +65,22 @@ export const GAME_STRINGS = {
   "turns.chart": "Turns chart",
   "turns.chartTitle": "Result and damage by turn",
   "turns.chartDesc": "Bars going up are the damage you dealt in a won combat, bars going down the damage you took in a lost one. The table below has the same numbers.",
+  "turns.chartDesc.visitor": "Bars going up are the damage the player dealt in a won combat, bars going down the damage they took in a lost one. The table below has the same numbers.",
   "turns.caption": "Turn-by-turn results",
   "turns.col.turn": "Turn",
   "turns.col.tier": "Tier",
   "turns.col.result": "Result",
   "turns.col.opponent": "Opponent",
-  "turns.col.damage": "Damage",
+  "turns.col.damage": "Hero damage",
   "turns.col.gold": "Gold spent",
   "turns.col.odds": "Win odds",
   "turns.noCombat": "No combat",
   "turns.toggle": "Turn {turn}: boards, shop and odds",
   "turns.tierUp": "tier up",
   "turns.dealt": "you dealt {n} damage",
+  "turns.dealt.visitor": "dealt {n} damage",
   "turns.taken": "you took {n} damage",
+  "turns.taken.visitor": "took {n} damage",
   "turns.inferred.note": "Worked out from the health each side lost; unmarked damage is the game's own hit.",
   "turns.odds.loading": "Working out the odds",
   "turns.odds.note": "Win odds come from the simulator, on the boards as they fought. A mark says why when the likelier result did not happen. Open a turn for its boards and shop.",
@@ -87,7 +90,9 @@ export const GAME_STRINGS = {
 
   "boards.turn": "Turn {turn}",
   "boards.yours": "Your board",
+  "boards.yours.visitor": "The player's board",
   "boards.teammates": "{hero}'s board (your teammate)",
+  "boards.teammates.visitor": "{hero}'s board (the player's teammate)",
   "boards.theirs": "{hero}'s board",
   "boards.unknown": "Not in the record",
   "boards.empty": "Empty board",
@@ -143,14 +148,14 @@ export const GAME_STRINGS = {
   "why.odds": "{won} win · {tied} tie · {lost} loss",
   "why.noOddsShort": "no odds",
   "why.link": "What each cause means, on the accuracy page",
-  "why.mark.chance": "Chance",
+  "why.mark.chance": "Dice luck",
   "why.mark.missing_inputs": "Not seen",
   "why.mark.approximate_card": "Approximate",
   "why.mark.rule": "Rule",
   "why.mark.none": "no cause given",
   "why.oddsTitle": "Odds",
   "why.matched": "As expected.",
-  "why.chance": "Chance: the replay matched until the dice.",
+  "why.chance": "Dice luck: the replay matched the game until the dice rolled.",
   "why.missing": "Not seen: {what}.",
   "why.approximate": "Approximate: {cards}.",
   "why.rule": "Rule differs at attack {attack}: {card}.",
@@ -173,14 +178,17 @@ export const GAME_STRINGS = {
   "why.ev.parts": "The replay parts from the game at attack {attack} ({rule}){where}.",
   "why.ev.partsAtCard": ", on {card}",
   "why.ev.notSaved": "The game did not play this combat back on your screen, or the game was saved before replays were kept.",
+  "why.ev.notSaved.visitor": "The game did not play this combat back on the player's screen, or the game was saved before replays were kept.",
 
   "replay.title": "Combat replays",
   "replay.about": "From the game's log: each combat as the game played it on your screen, step by step. Never a simulation. Combats the game did not show you have no replay.",
+  "replay.about.visitor": "From the game's log: each combat as the game played it on the player's screen, step by step. Never a simulation. Combats the game did not show the player have no replay.",
   "replay.pick": "Combat to replay",
   "replay.chip": "Turn {turn}",
   "replay.chipLabel": "Turn {turn}: {result}",
   "replay.combatOf": "Turn {turn} against {who}",
   "replay.stepOf": "Step {n} of {total}",
+  "replay.beforeCombat": "Before combat · {total} steps",
   "replay.controls": "Replay controls",
   "replay.play": "Play",
   "replay.pause": "Pause",
@@ -191,12 +199,14 @@ export const GAME_STRINGS = {
   "replay.speedX": "{n}×",
   "replay.steps": "Every step ({n})",
   "replay.boardOwn": "Your board",
+  "replay.boardOwn.visitor": "The player's board",
   "replay.boardTheirs": "Their board",
   "replay.heroHit": "Hero damage: {n}",
   "replay.reduced": "Your device asks for less motion, so the replay plays without movement: each step just changes the boards.",
   "replay.jump": "Watch the combat replays",
   "replay.start": "Both boards as the combat starts.",
   "replay.your": "your {name}",
+  "replay.your.visitor": "the player's {name}",
   "replay.their": "their {name}",
   "replay.ev.attack": "{a} attacks {b}",
   "replay.ev.attackAlone": "{a} attacks",
@@ -226,8 +236,10 @@ export const GAME_STRINGS = {
   "replay.ev.trigger.avenge": "Avenge: {m}",
   "replay.ev.trigger.rally": "Rally: {m}",
   "replay.ev.heroOwn": "Your hero takes {n} damage",
+  "replay.ev.heroOwn.visitor": "The player's hero takes {n} damage",
   "replay.ev.heroOpponent": "Their hero takes {n} damage",
   "replay.ev.boardInOwn": "Your team's next board comes in: {hero}",
+  "replay.ev.boardInOwn.visitor": "The player's team's next board comes in: {hero}",
   "replay.ev.boardInOpponent": "Their team's next board comes in: {hero}",
   "replay.ev.unknown": "A step this site cannot read",
   "replay.cut": "This replay stops before the combat ends: the log was cut short, or the combat was longer than the app keeps.",
@@ -238,6 +250,7 @@ export const GAME_STRINGS = {
 
   "opponents.title": "Opponents' boards",
   "opponents.desc": "Each opponent by hero, never by name, with your record against them and every board of theirs as the combat began.",
+  "opponents.desc.visitor": "Each opponent by hero, never by name, with the player's record against them and every board of theirs as the combat began.",
   "opponents.empty": "No opponent in this record.",
   "opponents.record": "{won} won · {lost} lost · {tie} tied · {unknown} unknown",
   "opponents.round": "Turn {turn}",
@@ -267,6 +280,7 @@ export const GAME_STRINGS = {
   "lobby.col.triples": "Triples",
   "lobby.col.trinkets": "Trinkets",
   "lobby.you": "you",
+  "lobby.you.visitor": "this player",
   "lobby.teammate": "teammate",
   "lobby.notRecorded": "not recorded",
   "lobby.trinket": "#{id} ({slot}, turn {turn})",
@@ -285,5 +299,26 @@ export const GAME_STRINGS = {
 
 export type GameStringKey = keyof typeof GAME_STRINGS;
 
+const say = makeT<GameStringKey>({ name: "game", en: GAME_STRINGS, es: ES });
+
+let seenByVisitor = false;
+
+/** Whether a viewer is anyone but the game's own player: signed out, or another account. */
+export function isVisitor(sessionUserId: string | null | undefined, ownerId: string): boolean {
+  return sessionUserId == null || sessionUserId.toLowerCase() !== ownerId.toLowerCase();
+}
+
+/**
+ * Whether the page is read by someone other than the game's player (anonymous,
+ * or another account): strings with a ".visitor" twin then talk about "the
+ * player" instead of "you" (D-102, neutral words on views a visitor can see).
+ */
+export function setSeenByVisitor(visitor: boolean): void {
+  seenByVisitor = visitor;
+}
+
 /** The string for a key in the page's language, with its placeholders filled. */
-export const g = makeT<GameStringKey>({ name: "game", en: GAME_STRINGS, es: ES });
+export function g(key: GameStringKey, vars?: Record<string, string | number>): string {
+  const twin = `${key}.visitor` as GameStringKey;
+  return say(seenByVisitor && twin in GAME_STRINGS ? twin : key, vars);
+}

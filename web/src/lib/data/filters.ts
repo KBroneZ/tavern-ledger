@@ -24,6 +24,11 @@ export const DEFAULT_FILTERS: GameFilters = { mode: "all", hero: null, from: nul
 const MODES: readonly ModeFilter[] = ["all", "solo", "duos"];
 export const PLACE_FILTERS: readonly PlaceFilter[] = ["any", "first", "top", "bottom", "none"];
 
+/** Whether any filter narrows the list (the page number does not). */
+export function hasFilters(f: GameFilters): boolean {
+  return f.mode !== "all" || f.hero !== null || f.from !== null || f.to !== null || f.place !== "any";
+}
+
 /** The filters in the address, and the names of the ones left out as not valid. */
 export function parseFilters(search: string): { filters: GameFilters; invalid: string[] } {
   const q = new URLSearchParams(search);

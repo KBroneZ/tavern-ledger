@@ -59,7 +59,7 @@ export const ACCOUNT_STRINGS = {
   "account.public.more.before":
     "That is, for each game: hero, place, mode, date, tribes offered and the boards you saw. With a display name and a finished game, you also appear on the",
   "account.public.more.link": "public leaderboards",
-  "account.public.more.after": ". Never your rating or other players' names.",
+  "account.public.more.after": ". Never your rating or other players' names. The boards are rebuilt every 10 minutes: a new profile, name or game can take up to 10 minutes to show there, while turning the profile off hides you at once.",
   "account.save": "Save",
   "account.publicPage": "Your public page:",
   "account.data": "Your data",
@@ -161,7 +161,7 @@ export const ACCOUNT_STRINGS = {
   "link.expired":
     "This link has expired or was already used (each new email replaces the previous link). If you were confirming your email, try signing in: it may already be confirmed. Otherwise ask for a new link.",
   "link.otherBrowser":
-    "This link was opened in a different browser from the one where you asked for it. If you were confirming your email, it is confirmed: sign in. If you were resetting your password, open the link in the browser where you asked for it, or ask for a new one.",
+    "This link cannot be finished here: it was opened in a different browser from the one where you asked for it, or an older link from an earlier email was opened first and used it up. If you were confirming your email, it is confirmed: sign in. If you were resetting your password, open the newest email's link in the browser where you asked for it, or ask for a new one.",
   "link.unreachable": "Could not reach the server. Check your connection and reload the page.",
   "link.failed": "This link did not work. Sign in, or ask for a new link.",
 

@@ -136,6 +136,12 @@ test("the Spanish legal pages are marked as translations and dated as the Englis
   }
 });
 
+test("/favicon.ico is served: an icon file holding the 32 px favicon, so browsers that ask for it find it", () => {
+  const ico = readFileSync(join(DIST, "favicon.ico"));
+  assert.deepEqual([...ico.subarray(0, 6)], [0, 0, 1, 0, 1, 0], "an icon file with one image");
+  assert.ok(ico.includes(readFileSync(join(DIST, "favicon-32.png"))), "the image is the existing favicon-32.png");
+});
+
 test("every page has the social card for link previews, its alt text in the page's language (T-523)", () => {
   assert.ok(existsSync(join(DIST, "social-card.png")), "public/social-card.png is copied into the build");
   const alt = { en: "Tavern Ledger logo, a tankard drawn from the letters TL, over the line Hearthstone Battlegrounds tracker", es: "Logotipo de Tavern Ledger, una jarra dibujada con las letras TL, sobre la frase Hearthstone Battlegrounds tracker" };
@@ -149,6 +155,8 @@ test("every page has the social card for link previews, its alt text in the page
     assert.deepEqual(meta("twitter:card"), ["summary_large_image"], page);
     assert.deepEqual(meta("twitter:image"), [`${SITE}/social-card.png`], page);
     assert.deepEqual(meta("og:site_name"), ["Tavern Ledger"], page);
+    assert.deepEqual(meta("og:type"), ["website"], page);
+    assert.deepEqual(meta("og:locale"), [page.startsWith("es/") ? "es_ES" : "en_US"], page);
     assert.equal(meta("og:title").length, 1, page);
     assert.equal(meta("og:description").length, 1, page);
     const canonical = /<link rel="canonical" href="([^"]+)">/.exec(html)?.[1];

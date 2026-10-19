@@ -18,7 +18,7 @@ import { startReplays } from "./replayPlayer.ts";
 import { explainCombats } from "./whyRun.ts";
 import { readRecord } from "./report.ts";
 import { shapeGame } from "./shape.ts";
-import { g, type GameStringKey } from "./strings.ts";
+import { g, isVisitor, setSeenByVisitor, type GameStringKey } from "./strings.ts";
 import { type GameRef, parseGameRef } from "./url.ts";
 import { heroTip, pageHeading } from "./words.ts";
 import { toggleTurn } from "./turnsView.ts";
@@ -170,7 +170,10 @@ async function start(): Promise<void> {
       .eq("user_id", r.userId)
       .eq("public_id", r.publicId)
       .limit(1);
-  const signedIn = async () => (await supabase.auth.getSession()).data.session !== null;
+  const session = (await supabase.auth.getSession()).data.session;
+  // Only the game's own player is told "you"; anyone else, signed in or not, reads "the player" (D-102).
+  setSeenByVisitor(isVisitor(session?.user.id, ref.userId));
+  const signedIn = async () => session !== null;
   await run(ref, { download, readSummary, signedIn });
 }
 

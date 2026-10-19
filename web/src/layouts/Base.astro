@@ -70,6 +70,8 @@ const socialCard = new URL("/social-card.png", Astro.site).href;
     <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta property="og:site_name" content="Tavern Ledger" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content={pageLang === "es" ? "es_ES" : "en_US"} />
     {canonical && <meta property="og:url" content={canonical} />}
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
