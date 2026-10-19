@@ -99,7 +99,6 @@ pub const NO_COMBAT_EFFECT_POOL: &[&str] = &[
     "BG32_MagicItem_231",   // Gilded Anchor
     "BG32_MagicItem_231t",  // Gilded Anchor
     "BG32_MagicItem_270",   // Wicked Tome
-    "BG32_MagicItem_276",   // Enigmatic Headstone
     "BG32_MagicItem_278",   // Reusable Batteries
     "BG32_MagicItem_279",   // Tough Tusk Sticker
     "BG32_MagicItem_281",   // Wizard's Pipe
@@ -114,8 +113,6 @@ pub const NO_COMBAT_EFFECT_POOL: &[&str] = &[
     "BG32_MagicItem_417",   // Tarecgosa Sticker
     "BG32_MagicItem_700",   // Marvelous Mushroom
     "BG32_MagicItem_801",   // Heart of the Forest
-    "BG32_MagicItem_802",   // Fountain Pen
-    "BG32_MagicItem_802t",  // Fountain Pen
     "BG32_MagicItem_804",   // Selfless Portrait
     "BG32_MagicItem_806",   // Battlecruiser Portrait
     "BG32_MagicItem_809",   // Gem Donation
@@ -180,7 +177,6 @@ pub const NO_COMBAT_EFFECT_POOL: &[&str] = &[
     "BG36_MagicItem_307",   // Wand of Divination
     "BG36_MagicItem_362",   // Cyclist Portrait
     "BG36_MagicItem_371",   // Honeycomb Ring
-    "BG36_MagicItem_380",   // Amplifying Essence
     "BG36_MagicItem_412",   // Kiri's Double Eclipse
     "BG36_MagicItem_412t2", // Kiri's Double Eclipse
     "BG36_MagicItem_417",   // Makeshift Master
@@ -247,14 +243,15 @@ pub const IN_COMBAT_SMALL: &[&str] = &[
     "BG30_MagicItem_411",   // Hoggy Bank
     "BG30_MagicItem_422",   // Lorewalker Scroll
     "BG30_MagicItem_422t",  // Lorewalker Scroll
-    "BG30_MagicItem_880",   // Feral Talisman
     "BG30_MagicItem_917",   // Rusty Trident
     "BG30_MagicItem_921",   // Flagbearer Portrait
     "BG30_MagicItem_988",   // Great Boar Sticker
-    "BG30_MagicItem_989",   // Artisanal Urn
+    "BG32_MagicItem_802",   // Fountain Pen
+    "BG32_MagicItem_802t",  // Fountain Pen
     "BG35_MagicItem_431t",  // Thornspike Pauldron
     "BG35_MagicItem_433",   // Vinespeaker Portrait
     "BG35_MagicItem_923",   // Bewitched Ribbon
+    "BG36_MagicItem_380",   // Amplifying Essence
 ];
 
 /// They act during combat in a way the engine does not play and that is not
@@ -282,6 +279,7 @@ pub const IN_COMBAT_BLOCKS: &[&str] = &[
     "BG30_MagicItem_825",   // Smuggler Portrait
     "BG30_MagicItem_843t",  // Horde Keychain
     "BG30_MagicItem_864",   // Gilnean Thorned Rose
+    "BG30_MagicItem_880",   // Feral Talisman
     "BG30_MagicItem_880t",  // Feral Talisman
     "BG30_MagicItem_886",   // Reinforced Shield
     "BG30_MagicItem_910",   // Mechagon Adapter
@@ -289,9 +287,11 @@ pub const IN_COMBAT_BLOCKS: &[&str] = &[
     "BG30_MagicItem_952",   // Jarred Frostling
     "BG30_MagicItem_971",   // Enforcer Portrait
     "BG30_MagicItem_978",   // Blingtron's Sunglasses
+    "BG30_MagicItem_989",   // Artisanal Urn
     "BG30_MagicItem_989t",  // Artisanal Urn
     "BG32_MagicItem_179",   // Drakkari Portrait
     "BG32_MagicItem_274",   // Bristlebach Portrait
+    "BG32_MagicItem_276",   // Enigmatic Headstone
     "BG32_MagicItem_301",   // Bassgill Portrait
     "BG32_MagicItem_415",   // Battle Horn
     "BG32_MagicItem_803",   // Macaw Portrait

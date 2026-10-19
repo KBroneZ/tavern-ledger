@@ -678,14 +678,14 @@ fn the_rest_of_the_pool_reviewed_by_text_falls_into_its_four_kinds() {
         cov.reasons(),
         [("BG30_MagicItem_970".to_string(), START_OF_COMBAT_NOT_PLAYED)]
     );
-    // Small during combat (Feral Talisman, lesser): approximate.
-    let small = with_kit(vec![plain(2, 2)], &[], &["BG30_MagicItem_880"]);
+    // Small during combat (Flagbearer Portrait: its Sky Pirates have +6 Attack): approximate.
+    let small = with_kit(vec![plain(2, 2)], &[], &["BG30_MagicItem_921"]);
     let Verdict::Odds(odds) = verdict(&small, false) else {
         panic!("approximate")
     };
     assert_eq!(
         odds.coverage.approximate,
-        [("BG30_MagicItem_880".to_string(), IN_COMBAT_NOT_PLAYED)]
+        [("BG30_MagicItem_921".to_string(), IN_COMBAT_NOT_PLAYED)]
     );
     // Not small during combat (Tiger Carving): blocked, whenever the board
     // was taken.
