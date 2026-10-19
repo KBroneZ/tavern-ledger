@@ -1017,10 +1017,38 @@ html[data-detail="advanced"] .simple-only {
   min-width: 0;
 }
 
+/* A date stays on one line, whatever the width (T-589). */
+.dtable td.nowrap {
+  white-space: nowrap;
+}
+
+/* A table wider than its well scrolls inside it, and says so: a soft edge
+   shows on each side that has more to scroll to (the shadows ride the
+   scrolling content, the covers hide them at the ends; T-589). */
+.scroll-x:has(> .dtable) {
+  background:
+    linear-gradient(to right, var(--surface-chart) 30%, transparent) left center / 28px 100% no-repeat local,
+    linear-gradient(to left, var(--surface-chart) 30%, transparent) right center / 28px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgb(255 178 74 / 0.5), transparent) left center / 14px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgb(255 178 74 / 0.5), transparent) right center / 14px 100% no-repeat scroll,
+    var(--surface-chart);
+}
+
 @media (max-width: 480px) {
   .dtable th,
   .dtable td,
   .dtable tbody th {
+    padding-inline: var(--s-2);
+  }
+
+  /* Headers may wrap on a phone, so "Combats won-lost" is read whole (only
+     in the scrolling tables: the accuracy page's keep their one line). */
+  .scroll-x > .dtable th,
+  .scroll-x > .dtable th.num {
+    white-space: normal;
+  }
+
+  .scroll-x:has(> .dtable) {
     padding-inline: var(--s-2);
   }
 }
@@ -1097,13 +1125,13 @@ a.cell-hero:focus-visible {
 @media (max-width: 480px) {
   .dtable .cell-hero {
     gap: var(--s-2);
-    min-width: 8.5rem;
+    min-width: 7rem;
   }
 
   .cell-hero > .pic-hero[data-size="56"] {
-    width: 44px;
-    height: 44px;
-    margin: 3px;
+    width: 40px;
+    height: 40px;
+    margin: 2px;
   }
 }
 

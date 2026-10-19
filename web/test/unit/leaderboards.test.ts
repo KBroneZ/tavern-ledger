@@ -244,6 +244,15 @@ test("a row: standing, the name linked to the public profile, value, games", () 
   assert.match(textOf((hero[2] as { node: never }).node), /^\s*Master Nguyen$/);
 });
 
+test("the games board has one count column: its value is the games, so no second \"Games\" repeats it", () => {
+  const html = toHtml(boardSection(def("games"), [boardRow(raw({ board: "games", value: 24, games: 24 }), "solo")], "solo", "7d"));
+  assert.equal((html.match(/<th scope="col"/g) ?? []).length, 3, "#, Player, Games");
+  assert.equal((html.match(/>Games</g) ?? []).length, 1);
+  assert.equal(rowCells(def("games"), boardRow(raw({ board: "games", value: 24, games: 24 }), "solo")).length, 3);
+  const avg = toHtml(boardSection(def("avg_place"), [boardRow(raw(), "solo")], "solo", "7d"));
+  assert.equal((avg.match(/<th scope="col"/g) ?? []).length, 4, "other boards keep the games behind each value");
+});
+
 test("a name is text, never markup", () => {
   const html = toHtml(boardSection(def("games"), [boardRow(raw({ board: "games", display_name: "a_b.c-d" }), "solo")], "solo", "7d"));
   assert.match(html, />a_b\.c-d</);

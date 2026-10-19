@@ -240,6 +240,8 @@ export interface Column {
   advanced?: boolean;
   /** Text cells of this column are the row's header (th scope="row"). */
   rowHeader?: boolean;
+  /** Cells of this column stay on one line (dates), whatever the width. */
+  nowrap?: boolean;
 }
 
 function tableCell(cell: Cell, column: Column | undefined): VNode {
@@ -253,7 +255,7 @@ function tableCell(cell: Cell, column: Column | undefined): VNode {
       : h("span", { class: "cell-hero" }, pic, h("span", { class: "hero-name" }, h("span", {}, cell.name), id));
     return h("th", { scope: "row", class: cls({ adv: !!column?.advanced }) || undefined }, body);
   }
-  const klass = cls({ num: !!column?.numeric, adv: !!column?.advanced }) || undefined;
+  const klass = cls({ num: !!column?.numeric, adv: !!column?.advanced, nowrap: !!column?.nowrap }) || undefined;
   if (typeof cell === "object" && "place" in cell) return h("td", { class: klass }, placeBadge(cell.place, cell.mode));
   if (typeof cell === "object") return h("td", { class: klass }, cell.node);
   if (column?.rowHeader) return h("th", { scope: "row", class: klass }, String(cell));

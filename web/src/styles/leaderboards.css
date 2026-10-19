@@ -71,6 +71,29 @@
   font-weight: 700;
 }
 
+/* The player is the second column: a name keeps room to read (words wrap,
+   a long single word breaks at the edge) instead of one letter a line. */
+.lb-board .dtable td:nth-child(2) {
+  min-width: 6rem;
+}
+
+@media (max-width: 480px) {
+  .lb-board {
+    padding: var(--s-3);
+  }
+
+  .lb-board .dtable .cell-hero {
+    min-width: 7rem;
+  }
+
+  /* The "few games" mark goes under its value, so the Games column fits. */
+  .lb-board .dtable td .mark-few {
+    display: block;
+    width: fit-content;
+    margin: 2px 0 0 auto;
+  }
+}
+
 .lb-skeleton .state {
   min-height: 420px;
 }
