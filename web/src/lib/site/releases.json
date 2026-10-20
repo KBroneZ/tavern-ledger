@@ -1,5 +1,36 @@
 [
   {
+    "version": "0.2.6",
+    "tag": "v0.2.6",
+    "file": "TavernLedger_0.2.6_x64-setup.exe",
+    "bytes": 8276678,
+    "sha256": "1f9f02aa18eb2e0370e8200ec88abe4dbf62302cd989ee75f0deb6e3720fceca",
+    "date": "2026-10-19",
+    "sums": true,
+    "assets": {
+      "SHA256SUMS": {
+        "bytes": 99,
+        "sha256": "440e655dcbb0ac920baf0fbea1f21d68a4aa458ec171550f3b840810913ce2f8"
+      },
+      "SHA256SUMS.minisig": {
+        "bytes": 309,
+        "sha256": "6f6a32dd3b6e0defc628dc9542eb1f24a6874a7a76ac0d19e07bc0262323994f"
+      },
+      "TavernLedger_0.2.6_x64-setup.exe": {
+        "bytes": 8276678,
+        "sha256": "1f9f02aa18eb2e0370e8200ec88abe4dbf62302cd989ee75f0deb6e3720fceca"
+      },
+      "TavernLedger_0.2.6_x64-setup.exe.sig": {
+        "bytes": 444,
+        "sha256": "b1d04fd0c0b7e33eefb501358f9cba98e5643d4825d6536888e1055c26c8b632"
+      },
+      "latest.json": {
+        "bytes": 1423,
+        "sha256": "57380316f3447f6579215c7b28ae5cf8f82461936efd204b8a0432f5afb70c5b"
+      }
+    }
+  },
+  {
     "version": "0.2.5",
     "tag": "v0.2.5",
     "file": "TavernLedger_0.2.5_x64-setup.exe",
