@@ -8,6 +8,8 @@ Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainmen
 
 ## What changed
 
+**What changed on 20 October 2026 (later that day):** section 5 now says what GitHub Sponsors shows us when you support the project there, what we use it for and how long we keep it. Nothing else changes.
+
 **What changed on 20 October 2026 (desktop app only):** section 2 now describes "Copy diagnostics", a short text the app shows you and copies to your clipboard only when you ask, and never sends; and that ticking "Also delete my games and settings" when you uninstall the app deletes the `TavernLedger` folder. Nothing is collected or sent that was not before.
 
 **What changed on 19 October 2026:** the game record now also holds, for each combat, both sides' hero powers and trinkets as card ids, with the numbers their text shows (section 2), so the simulator can play them on past games. Nothing else changes.
@@ -149,6 +151,8 @@ You can ask us for a copy of the transfer safeguards at the contact address abov
 **HearthSim**, the independent service behind HearthstoneJSON, receives the requests for card pictures described in section 3 and the app's requests for card data and pictures (section 2).
 
 **GitHub** (GitHub, Inc., USA), where the app's releases are published, receives the app's update checks and downloads (section 2). It is not a provider of ours for your data: it decides what it logs, under its own privacy statement.
+
+**GitHub Sponsors.** If you support the project through GitHub Sponsors, GitHub handles the payment under its own terms and privacy statement; we never see your card or bank details. GitHub shows us your GitHub username, the amount and its dates, and your email address only if you choose to share it. We use them to thank you and to keep the project's accounts, and keep them for as long as tax and accounting law requires (otherwise until you ask us to delete them). Support unlocks nothing in the app or on the website and is not linked to any Tavern Ledger account.
 
 **Everyone**, if you make your profile public: your public profile and, with a display name and enough games, the leaderboards (section 4). If you turn on community hero stats: totals per hero that include your games without naming you (section 4). If you turn on the simulator switch: published totals over all the games measured, never per player (section 4).
 

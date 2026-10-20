@@ -10,6 +10,8 @@ Proyecto no oficial de fans. Sin afiliación con Blizzard Entertainment ni respa
 
 ## Qué ha cambiado
 
+**Qué cambió el 20 de octubre de 2026 (más tarde ese día):** el apartado 5 ahora dice qué nos muestra GitHub Sponsors cuando apoyas el proyecto allí, para qué lo usamos y cuánto tiempo lo conservamos. Nada más cambia.
+
 **Qué cambió el 20 de octubre de 2026 (solo la aplicación de escritorio):** el apartado 2 ahora describe «Copiar diagnóstico», un texto corto que la aplicación te muestra y copia al portapapeles solo cuando lo pides, y que nunca envía; y que marcar la casilla `Also delete my games and settings` al desinstalar la aplicación borra la carpeta `TavernLedger`. También dice «tipos» donde decía «tribus», como la aplicación. No se recoge ni se envía nada que no se recogiera antes.
 
 **Qué cambió el 19 de octubre de 2026:** el registro de cada partida guarda ahora también, en cada combate, los poderes de héroe y abalorios de ambos lados como ids de carta, con los números que muestra su texto (apartado 2), para que el simulador los juegue en partidas pasadas. Nada más cambia.
@@ -157,6 +159,8 @@ Puedes pedirnos una copia de las garantías de transferencia en la dirección de
 **HearthSim**, el servicio independiente que está detrás de HearthstoneJSON, recibe las solicitudes de imágenes de cartas descritas en el apartado 3 y las solicitudes de datos e imágenes de cartas de la aplicación (apartado 2).
 
 **GitHub** (GitHub, Inc., EE. UU.), donde se publican las versiones de la aplicación, recibe las comprobaciones de actualizaciones y las descargas de la aplicación (apartado 2). No es un proveedor nuestro para tus datos: decide qué registra, según su propia declaración de privacidad.
+
+**GitHub Sponsors.** Si apoyas el proyecto con GitHub Sponsors, GitHub gestiona el pago con sus propias condiciones y su declaración de privacidad; nunca vemos los datos de tu tarjeta ni de tu banco. GitHub nos muestra tu nombre de usuario de GitHub, el importe y sus fechas, y tu correo solo si eliges compartirlo. Los usamos para darte las gracias y llevar las cuentas del proyecto, y los conservamos el tiempo que exige la ley fiscal y contable (si no, hasta que nos pidas borrarlos). El apoyo no desbloquea nada en la aplicación ni en la web y no se vincula a ninguna cuenta de Tavern Ledger.
 
 **Todo el mundo**, si haces público tu perfil: tu perfil público y, con un nombre visible y suficientes partidas, las clasificaciones (apartado 4). Si activas las estadísticas de héroes de la comunidad: totales por héroe que incluyen tus partidas sin nombrarte (apartado 4). Si activas el interruptor del simulador: totales publicados de todas las partidas medidas, nunca por jugador (apartado 4).
 
