@@ -77,6 +77,10 @@ More reading: [development guide](docs/development.md).
 
 Contributions are welcome under the project's license: read [CONTRIBUTING.md](CONTRIBUTING.md) first. To report a security problem privately, see [SECURITY.md](SECURITY.md).
 
+## Support
+
+Tavern Ledger is free and every feature stays free for everyone. If it is useful to you, you can help with its running costs through [GitHub Sponsors](https://github.com/sponsors/KBroneZ). It is optional and unlocks nothing: no features, early access or priority, the same releases for everyone.
+
 ## License
 
 GNU Affero General Public License, version 3 only (`AGPL-3.0-only`). See [LICENSE](LICENSE). You can use, study, change and share the code; if you share a changed version, or run it for others over a network, you share its source under the same license.
