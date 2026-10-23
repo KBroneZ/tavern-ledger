@@ -58,6 +58,7 @@ LOCKFILE_RE = re.compile(
     r"|composer\.lock)$"
 )
 SCANNER_CONFIG_RE = re.compile(r"(?:^|/)\.?osv-scanner\.toml$")
+DENO_CONFIG_RE = re.compile(r"(?:^|/)(?:deno\.jsonc?|import_map\.json)$")
 IGNORES = ROOT / "tools" / "advisory_ignores.toml"
 FUNCTIONS = ROOT / "supabase" / "functions"
 SUPABASE_CONFIG = ROOT / "supabase" / "config.toml"
@@ -185,12 +186,15 @@ def blocks(advisory: Advisory) -> bool:
 
 
 def check_tracked(tracked: list[str]) -> list[str]:
-    """Problems in the list of tracked files: a lockfile nobody scans, or a
-    scanner config that could hide advisories."""
+    """Problems in the list of tracked files: a lockfile nobody scans, a
+    scanner config that could hide advisories, or a Deno config anywhere
+    (Deno also reads one from a parent folder of the functions)."""
     problems = []
     for path in tracked:
         if SCANNER_CONFIG_RE.search(path):
             problems.append(f"{path}: osv-scanner config in the repo; ignores go in tools/advisory_ignores.toml")
+        elif DENO_CONFIG_RE.search(path):
+            problems.append(f"{path}: Deno config in the repo; the scan does not cover what it maps")
         elif LOCKFILE_RE.search(path) and path not in LOCKFILES and path not in UNSCANNED:
             problems.append(f"{path}: lockfile not scanned; add it to LOCKFILES (or UNSCANNED, with why)")
     return problems

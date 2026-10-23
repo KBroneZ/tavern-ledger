@@ -380,6 +380,11 @@ class TrackedFilesTest(unittest.TestCase):
         self.assertEqual(len(problems), 3)
         self.assertTrue(all("lockfile not scanned" in p for p in problems))
 
+    def test_a_deno_config_anywhere_fails(self):
+        problems = tool.check_tracked(["deno.json", "supabase/deno.jsonc", "x/import_map.json", "supabase/deno.lock"])
+        self.assertEqual(len(problems), 4)
+        self.assertEqual(sum("Deno config in the repo" in p for p in problems), 3)
+
     def test_any_osv_scanner_config_fails(self):
         problems = tool.check_tracked(["osv-scanner.toml", "web/.osv-scanner.toml"])
         self.assertEqual(len(problems), 2)
