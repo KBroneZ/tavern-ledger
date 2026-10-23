@@ -303,10 +303,11 @@ class FunctionsTest(unittest.TestCase):
                 "c/index.ts": 'const m = await import("./local.ts");\nconst n = await import( "../x.ts", {});\n',
                 "d/index.ts": 'await import("https:" + "//esm.sh/zod@3");\nawait import("./a" + x);\n',
                 "e/index.ts": 'const a = "/*"; await import(url); const b = "*/";\n',
+                "f/index.ts": "await import /* reason */ (url);\n",
             }
         )
         problems = [p for p in tool.check_functions(root) if "third-party import" in p]
-        expected = ["a/index.ts:2", "b/index.ts:1", "d/index.ts:1", "d/index.ts:2", "e/index.ts:1"]
+        expected = ["a/index.ts:2", "b/index.ts:1", "d/index.ts:1", "d/index.ts:2", "e/index.ts:1", "f/index.ts:1"]
         self.assertEqual(problems, [f"{where}: third-party import" for where in expected])
 
     def test_package_names_compare_like_pypi(self):
