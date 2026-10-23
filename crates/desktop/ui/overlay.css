@@ -276,11 +276,14 @@ body {
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
+/* The legend, shown from the toolbar's "?" (T-614). */
 .legend {
+  flex: 1 1 100%;
   margin: 0;
   color: var(--dim);
   font-size: 0.846rem;
 }
+.legend[hidden] { display: none; }
 
 /* Layout editing (unlocked). The scrim says the whole screen is taking clicks. */
 #scrim {
@@ -403,6 +406,8 @@ body.unlocked .slot:focus-visible .panel {
 .toolbar button[aria-pressed="true"]::before,
 .arrange-pad button[aria-pressed="true"]::before { content: "\2713  " / ""; }
 .toolbar button.primary { border-color: var(--accent); color: var(--accent); }
+/* The "?" while its legend is open: a thicker accent border, as a pressed button. */
+.toolbar button[aria-expanded="true"] { border-color: var(--accent); border-width: 2px; color: var(--accent); }
 
 /* The move-and-size buttons (T-319, WCAG 2.5.7): one click does what one
    arrow key does, for the selected panel or the leaderboard box. Placed next
@@ -441,8 +446,7 @@ body.unlocked .slot:focus-visible .panel {
    card), no words for unknown values, no headings, no hint, no legend. */
 /* While the layout is being edited every panel shows, so it can be placed. */
 body:not(.unlocked) .panel.empty,
-body:not(.unlocked) .slot:has(> .panel.empty),
-.slot[data-panel="legend"] { display: none; }
+body:not(.unlocked) .slot:has(> .panel.empty) { display: none; }
 
 .tribe-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
 .tribe-chips .chip {

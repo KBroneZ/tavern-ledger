@@ -11,6 +11,9 @@
   <div id="scrim" hidden></div>
   <div id="toolbar" class="toolbar" role="group" aria-label="Overlay layout" data-i18n-attr="aria-label:ov.toolbar.label" hidden>
     <strong class="toolbar-title" data-i18n="ov.toolbar.title">Layout editing</strong>
+    <!-- The legend is not in the default overlay (T-614): this "?" shows it. -->
+    <button type="button" id="legend-toggle" aria-expanded="false" aria-controls="legend" aria-label="What the marks mean" data-i18n-attr="aria-label:ov.toolbar.legend">?</button>
+    <p id="legend" class="legend" data-i18n="ov.legend" hidden>No mark: from the log. Card names and pictures: HearthstoneJSON, &copy; Blizzard Entertainment.</p>
     <span id="toolbar-note" class="toolbar-note" data-i18n="ov.toolbar.note">While the overlay is unlocked, clicks don't reach the game. Drag a panel to move it, or its corner to resize it. You can also click a panel and use the buttons next to it, or Tab to a panel and use the arrow keys (Shift for bigger steps, Alt to resize). Example data shows when no game is on. Drag the dashed "Leaderboard" box over the game's column of heroes if it isn't there already; it's saved for this game window size.</span>
     <span class="toolbar-row" id="theme-buttons" role="group" aria-label="Theme" data-i18n-attr="aria-label:ov.toolbar.theme"></span>
     <span class="toolbar-row" role="group" aria-label="Opacity" data-i18n-attr="aria-label:ov.opacity">
@@ -40,7 +43,6 @@
     <div class="slot" data-panel="opponents" data-focus="slot:opponents"><section id="opponents" class="panel" aria-label="Opponents" data-i18n-attr="aria-label:ov.slot.opponents" hidden></section><span class="grip" hidden></span></div>
     <div class="slot" data-panel="counters" data-focus="slot:counters"><section id="counters" class="panel counters" aria-label="Counters" data-i18n-attr="aria-label:ov.slot.counters" hidden></section><span class="grip" hidden></span></div>
     <div class="slot" data-panel="odds" data-focus="slot:odds"><section id="odds" class="panel odds-bar" aria-label="Combat odds" data-i18n-attr="aria-label:ov.slot.odds" hidden></section><span class="grip" hidden></span></div>
-    <div class="slot" data-panel="legend" data-focus="slot:legend"><p id="legend" class="panel legend" data-i18n="ov.legend" hidden>No mark: from the log. Card names and pictures: HearthstoneJSON, &copy; Blizzard Entertainment.</p><span class="grip" hidden></span></div>
   </div>
   <script src="i18n.js"></script>
   <script src="error-forward.js"></script>
@@ -71,6 +73,7 @@
   <script src="overlay-hover.js"></script>
   <script src="overlay-keys.js"></script>
   <script src="overlay-place.js"></script>
+  <script src="legend-toggle.js"></script>
   <script src="overlay-layout.js"></script>
 </body>
 </html>

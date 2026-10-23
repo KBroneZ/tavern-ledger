@@ -453,7 +453,6 @@ function renderLobby(v) {
 }
 
 function render() {
-  const legend = document.getElementById("legend");
   const g = current();
   const lobby = document.getElementById("lobby");
   // Only on the lobby screen with no game on; while arranging, the example.
@@ -461,7 +460,7 @@ function render() {
   if (lobbyShown) renderLobby(lobbyShown);
   else lobby.hidden = true;
   if (!g && lobbyShown) {
-    for (const id of ["status", "heroes", "opponents", "counters", "odds", "legend"]) document.getElementById(id).hidden = true;
+    for (const id of ["status", "heroes", "opponents", "counters", "odds"]) document.getElementById(id).hidden = true;
     renderMarks(null);
     if (window.TLHover) window.TLHover.render();
     return;
@@ -475,7 +474,6 @@ function render() {
     document.getElementById("opponents").hidden = true;
     document.getElementById("counters").hidden = true;
     document.getElementById("odds").hidden = true;
-    legend.hidden = true;
     renderMarks(null);
     if (window.TLHover) window.TLHover.render();
     return;
@@ -489,7 +487,6 @@ function render() {
   document.getElementById("opponents").hidden = !showPanels;
   document.getElementById("counters").hidden = !showPanels;
   document.getElementById("odds").hidden = !showPanels;
-  legend.hidden = !showPanels;
   renderMarks(showPanels ? g : null);
   if (showPanels) {
     renderOpponents(g);
@@ -554,7 +551,7 @@ function showError(error) {
   const panel = document.getElementById("status");
   panel.className = "panel status unreadable";
   panel.textContent = TLI18n.t("ov.error.update", { error });
-  for (const id of ["heroes", "opponents", "counters", "odds", "legend", "lobby"]) document.getElementById(id).hidden = true;
+  for (const id of ["heroes", "opponents", "counters", "odds", "lobby"]) document.getElementById(id).hidden = true;
   renderMarks(null);
   if (window.TLHover) window.TLHover.setFailed(true);
 }
