@@ -1,0 +1,23 @@
+---
+// The page the worker shows when there is no connection and the page asked
+// for was not kept (T-637). Kept at install in both languages. Its "Try again"
+// button needs public/pwa.js, which only the accounts-open build ships; so does
+// the worker, so the closed build never shows this page.
+import Base from "../../layouts/Base.astro";
+import { readConfig } from "../../lib/config.ts";
+import { href, langPaths, setLang } from "../../lib/i18n.ts";
+import { st } from "../../lib/site/strings.ts";
+
+export const getStaticPaths = langPaths;
+setLang(Astro.props.lang);
+const scripts = readConfig(import.meta.env) !== null;
+---
+
+<Base title={st("offline.title")} description={st("offline.description")} noindex>
+  <h1>{st("offline.title")}</h1>
+  <p class="lead">{st("offline.lead")}</p>
+  <p>
+    {scripts && <button class="tb tb-common" type="button" data-reload>{st("offline.retry")}</button>}
+    <a class="tb tb-common" href={href("/")}>{st("offline.back")}</a>
+  </p>
+</Base>

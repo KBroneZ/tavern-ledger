@@ -86,8 +86,8 @@ test("no inline script, style or event handler in any page", () => {
     const raw = readFileSync(page, "utf8");
     const html = isMinionPage(page) ? raw.replace(JSON_LD, "") : raw;
     for (const tag of html.matchAll(/<script\b[^>]*>/g)) {
-      // Our bundles, or the language script (public/lang.js, T-508).
-      assert.match(tag[0], /\ssrc="(?:\/_astro\/[^"]+\.js|\/lang\.js)"/, `${name(page)}: ${tag[0]}`);
+      // Our bundles, or the language script (public/lang.js, T-508) or the web app's (public/pwa.js, T-637).
+      assert.match(tag[0], /\ssrc="(?:\/_astro\/[^"]+\.js|\/lang\.js|\/pwa\.js)"/, `${name(page)}: ${tag[0]}`);
     }
     assert.doesNotMatch(html, /<script\b[^>]*>[^<\s]/, name(page));
     assert.doesNotMatch(html, /<style\b/, name(page));

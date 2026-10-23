@@ -33,6 +33,16 @@ export const SITE_STRINGS = {
   // Alt text of the link preview image (public/social-card.png, T-523).
   "layout.socialAlt": "Tavern Ledger logo, a tankard drawn from the letters TL, over the line Hearthstone Battlegrounds tracker",
 
+  // Installable web app (T-637): the home-screen hint in the footer, the manifest's description, the offline page.
+  "layout.install": "Add to home screen",
+  "layout.installIos": "To add this site to your home screen, tap Share, then “Add to Home Screen”.",
+  "pwa.description": "Your Hearthstone Battlegrounds games: stats, replays and a combat simulator.",
+  "offline.title": "You are offline",
+  "offline.description": "There is no connection, and this page is not saved on your device.",
+  "offline.lead": "There is no connection, and this page is not saved on your device. Pages you opened before still work; your games need a connection.",
+  "offline.retry": "Try again",
+  "offline.back": "Go to the home page",
+
   // Page titles and descriptions.
   "meta.index.title": "Your Battlegrounds games, kept for you",
   "meta.index.description":

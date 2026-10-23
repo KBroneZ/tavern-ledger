@@ -98,7 +98,7 @@ test("the page needs no script of its own, and says plainly that the installer i
     const html = read(page.file);
     const named = [...html.matchAll(/<script\b[^>]*\ssrc="\/_astro\/([^"]+)"/g)].map((m) => m[1]);
     assert.deepEqual(named, [], `${page.file}: no bundle`);
-    assert.doesNotMatch(html, /<script\b(?![^>]*\ssrc="\/lang\.js")/, `${page.file}: no other script`);
+    assert.doesNotMatch(html, /<script\b(?![^>]*\ssrc="\/(?:lang|pwa)\.js")/, `${page.file}: no other script`);
     assert.match(html, page.lang === "en" ? /not signed yet/ : /sin firmar/, page.file);
     assert.match(html, page.lang === "en" ? /More info/ : /Más información/, page.file);
   }
