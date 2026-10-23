@@ -7,8 +7,9 @@
 // The default file is .local/overlay-gallery/overlay-gallery.html (never
 // committed, never in the installer). --layouts builds the layout round
 // instead (layouts/): the same example games under each layout variant, in
-// .local/overlay-gallery/overlay-layouts.html. The overlay page is read, never edited:
-// the stand-in for the app's bridge is put in before its scripts, its
+// .local/overlay-gallery/overlay-layouts.html.
+//
+// The overlay page is read, never edited: the stand-in for the app's bridge is put in before its scripts, its
 // stylesheet and fonts are inlined, and it is stored once, as one encoded
 // block, that the gallery page opens in a frame per scenario. Scenarios are
 // chosen by the page's address: ?scenario=<id> and ?lang=es.

@@ -1,4 +1,4 @@
-// Layout variants for the overlay's phase B round: the real overlay page with
+// Layout variants for the overlay's layout round: the real overlay page with
 // the counters panel switched on, the lobby's tribes drawn as the header of
 // the opponents list, and the counters above, below or beside that list. It
 // all happens in the gallery's frame, before the page's scripts run: the
@@ -69,8 +69,10 @@
         api = { ...value, ENABLED: true, panelIds: (ids) => ordered(ids, order) };
       },
     });
+    // Without the slot every variant would show no counters under a caption that says they are there.
     const slot = doc.querySelector('.slot[data-panel="counters"]');
-    if (slot) slot.removeAttribute("hidden");
+    if (!slot) throw new Error("the overlay page has no counters slot");
+    slot.removeAttribute("hidden");
     const style = doc.createElement("style");
     style.textContent = css(layout);
     doc.head.append(style);

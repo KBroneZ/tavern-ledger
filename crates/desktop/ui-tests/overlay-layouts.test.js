@@ -69,7 +69,12 @@ test("every frame is captioned in English and Spanish with what changes and why,
     }
     assert.notEqual(s.caption.en.change, s.caption.es.change, `${s.id} is not translated`);
   }
-  for (const lang of ["en", "es"]) for (const key of ["title", "intro", "foot"]) assert.ok(PAGE[lang][key].length > 10, `${lang} ${key}`);
+  for (const lang of ["en", "es"]) {
+    for (const key of ["title", "intro", "foot"]) {
+      assert.ok(PAGE[lang][key].length > 10, `${lang} ${key}`);
+      for (const pattern of FORBIDDEN) assert.doesNotMatch(PAGE[lang][key], pattern, `page ${lang} ${key}`);
+    }
+  }
 });
 
 test("every frame's zoomed region is inside its window", () => {
@@ -130,6 +135,33 @@ test("the hide-all frame says the key in the frame's language; no layout changes
   assert.equal(none.win.TLCounters, undefined);
   assert.equal(none.slot.hidden, true);
   assert.throws(() => layouts.apply(fakeWindow().win, { place: "left" }, "en"), /unknown counters place/);
+  const noSlot = fakeWindow();
+  noSlot.win.document.querySelector = () => null;
+  assert.throws(() => layouts.apply(noSlot.win, { place: "above" }, "en"), /no counters slot/);
+});
+
+test("the overlay page has the counters slot the variants show", () => {
+  assert.match(read(path.join(UI, "overlay.html")), /<div class="slot"[^>]*data-panel="counters"/);
+});
+
+// The page's own counters-words.js, run in a window after a variant: the
+// panel's switch and list are the ones the page's scripts then read.
+test("with a variant, the page's own counters script turns the panel on and lists it in the variant's order", () => {
+  const vm = require("node:vm");
+  const { win } = fakeWindow();
+  layouts.apply(win, { place: "below" }, "en");
+  win.TLI18n = require("../ui/i18n.js");
+  vm.runInNewContext(read(path.join(UI, "counters-words.js")), { window: win });
+  assert.equal(win.TLCounters.ENABLED, true);
+  assert.equal(typeof win.TLCounters.rows, "function");
+  // The list overlay-layout.js asks for (PANEL_IDS), as the page writes it.
+  const asked = read(path.join(UI, "overlay-layout.js")).match(/const PANEL_IDS = window\.TLCounters\.panelIds\((\[[^\]]*\])\)/);
+  assert.ok(asked, "overlay-layout.js builds its panel list through TLCounters.panelIds");
+  const ids = JSON.parse(asked[1]);
+  const stack = win.TLCounters.panelIds(ids).filter((id) => ["counters", "tribes", "opponents"].includes(id));
+  assert.deepEqual(stack, ["tribes", "opponents", "counters"]);
+  // The stack is laid out in that list's order.
+  assert.match(read(path.join(UI, "overlay-layout.js")), /for \(const id of PANEL_IDS\)[\s\S]*?stack\.append\(\.\.\.inStack\)/);
 });
 
 test("the backdrop draws the leaderboard where the app measures it, in pairs in Duos", () => {
@@ -156,12 +188,11 @@ test("the layout round builds to one self-contained file and leaves the page's o
     assert.ok(Buffer.byteLength(text) < 2 * 1024 * 1024);
     const doc = Buffer.from(text.match(/<script type="text\/plain" id="overlay-doc">([^<]*)<\/script>/)[1].trim(), "base64").toString("utf8");
     assert.doesNotMatch(doc, /<script[^>]*\ssrc=|<link[^>]*>/);
-    assert.ok(doc.indexOf("TLGalleryLayouts.apply") < doc.indexOf("function renderOpponents"), "the variant comes before the page's scripts");
+    assert.ok(doc.indexOf("TLGalleryLayouts.apply") < doc.indexOf("window.TLCounters = api"), "the variant comes before the counters script");
     assert.match(text, /Overlay layouts: pick one/);
     assert.match(text, /"screen":\[2560,1440\]/);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
   assert.deepEqual([html, ...scripts.map((f) => read(path.join(UI, f)))], before);
-  assert.match(read(path.join(UI, "counters-words.js")), /const ENABLED = false;/, "the shipped panel stays off");
 });
