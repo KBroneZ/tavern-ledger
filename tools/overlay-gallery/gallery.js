@@ -1,11 +1,12 @@
 // The gallery page: a frame per scenario, each frame the real overlay page
-// (stored once, as one encoded block) at a fixed game-window size, with its
-// caption under it. ?scenario=<id> shows one; ?lang=es the Spanish text.
+// (stored once, as one encoded block) at its game-window size (1920x1080
+// unless the scenario says), with its caption under it. ?scenario=<id> shows
+// one; ?lang=es the Spanish text. A page of its own (the layout round) brings
+// its title, intro, foot and caption fields in the data.
 "use strict";
 
 (() => {
-  const FRAME_W = 1920;
-  const FRAME_H = 1080;
+  const SCREEN = [1920, 1080];
   // Phones start zoomed in on the part of the frame that matters.
   const PHONE_MAX = 820;
   const MAX_ZOOM = 2.4;
@@ -45,8 +46,12 @@
   const params = new URLSearchParams(window.location.search);
   const lang = params.get("lang") === "es" ? "es" : "en";
   const wanted = params.get("scenario");
-  const words = UI[lang];
   const data = JSON.parse(document.getElementById("gallery-data").textContent);
+  const page = data.page || {};
+  const words = { ...UI[lang], ...(page[lang] || {}) };
+  const fields = page.fields
+    ? page.fields.map((f) => ({ key: f.key, label: f.label[lang] }))
+    : ["sees", "source", "rule"].map((key) => ({ key, label: words[key] }));
   const scenarios = data.scenarios;
   const shown = wanted && scenarios.some((s) => s.id === wanted) ? scenarios.filter((s) => s.id === wanted) : scenarios;
 
@@ -78,11 +83,12 @@
   function fit(wrap) {
     const frame = wrap.querySelector("iframe");
     const focus = JSON.parse(wrap.dataset.focus);
+    const [frameW, frameH] = JSON.parse(wrap.dataset.screen);
     const zoomed = wrap.dataset.zoomed === "true";
-    wrap.style.aspectRatio = zoomed ? `${focus.w} / ${focus.h}` : `${FRAME_W} / ${FRAME_H}`;
+    wrap.style.aspectRatio = zoomed ? `${focus.w} / ${focus.h}` : `${frameW} / ${frameH}`;
     wrap.style.maxWidth = zoomed ? `${Math.round(focus.w * MAX_ZOOM)}px` : "none";
     if (!frame) return;
-    const region = zoomed ? focus : { x: 0, y: 0, w: FRAME_W };
+    const region = zoomed ? focus : { x: 0, y: 0, w: frameW };
     frame.style.transform = `scale(${wrap.clientWidth / region.w}) translate(${-region.x}px, ${-region.y}px)`;
   }
 
@@ -93,6 +99,9 @@
     const frame = document.createElement("iframe");
     frame.title = id;
     frame.setAttribute("scrolling", "no");
+    const [frameW, frameH] = JSON.parse(wrap.dataset.screen);
+    frame.style.width = `${frameW}px`;
+    frame.style.height = `${frameH}px`;
     frame.srcdoc = docText().replace("/*__GALLERY_CONFIG__*/", () => config);
     wrap.append(frame);
     wrap.dataset.loaded = "true";
@@ -110,6 +119,7 @@
     wrap.dataset.backdrop = words.backdrop;
     wrap.dataset.scenario = scenario.id;
     wrap.dataset.focus = JSON.stringify(scenario.focus);
+    wrap.dataset.screen = JSON.stringify(scenario.screen || SCREEN);
     wrap.dataset.zoomed = String(window.innerWidth < PHONE_MAX);
     const zoom = el("button", "zoom");
     zoom.type = "button";
@@ -122,9 +132,9 @@
     });
     section.append(wrap, zoom);
     const list = el("dl", "caption");
-    for (const key of ["sees", "source", "rule"]) {
+    for (const { key, label: name } of fields) {
       const group = el("div");
-      group.append(el("dt", null, words[key]), el("dd", null, caption[key]));
+      group.append(el("dt", null, name), el("dd", null, caption[key]));
       list.append(group);
     }
     section.append(list);

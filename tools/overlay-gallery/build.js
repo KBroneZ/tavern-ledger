@@ -2,10 +2,12 @@
 // real overlay page (crates/desktop/ui/overlay.html and the files it loads)
 // in every state, with example data and a short explanation of each.
 //
-//   node tools/overlay-gallery/build.js [--out <file>]
+//   node tools/overlay-gallery/build.js [--layouts] [--out <file>]
 //
 // The default file is .local/overlay-gallery/overlay-gallery.html (never
-// committed, never in the installer). The overlay page is read, never edited:
+// committed, never in the installer). --layouts builds the layout round
+// instead (layouts/): the same example games under each layout variant, in
+// .local/overlay-gallery/overlay-layouts.html. The overlay page is read, never edited:
 // the stand-in for the app's bridge is put in before its scripts, its
 // stylesheet and fonts are inlined, and it is stored once, as one encoded
 // block, that the gallery page opens in a frame per scenario. Scenarios are
@@ -20,6 +22,13 @@ const { scenariosFor } = require("./scenarios/index.js");
 const REPO = path.join(__dirname, "..", "..");
 const DEFAULT_UI = path.join(REPO, "crates", "desktop", "ui");
 const DEFAULT_OUT = path.join(REPO, ".local", "overlay-gallery", "overlay-gallery.html");
+const LAYOUTS_OUT = path.join(REPO, ".local", "overlay-gallery", "overlay-layouts.html");
+// The layout round's frames also draw a plain game window and apply their
+// variant, both before the page's scripts.
+const LAYOUTS_BOOT = {
+  files: [path.join(__dirname, "layouts", "backdrop.js"), path.join(__dirname, "layouts", "variants.js")],
+  call: "TLGalleryBackdrop.draw(window, states[cfg.scenario].backdrop); TLGalleryLayouts.apply(window, states[cfg.scenario].layout, cfg.lang);",
+};
 const MAX_BYTES = 2 * 1024 * 1024;
 
 const read = (file) => fs.readFileSync(file, "utf8");
@@ -53,7 +62,7 @@ function bundleModule(file, seen = new Set(), parts = []) {
 
 // The overlay page as one document: stylesheet inline, scripts inline, the
 // stand-in and the scenarios' states before the first script.
-function overlayDocument(uiDir, scenarios) {
+function overlayDocument(uiDir, scenarios, boot = { files: [], call: "" }) {
   const html = read(path.join(uiDir, "overlay.html"));
   const states = {};
   for (const s of scenarios) states[s.id] = { ...s.state, names: undefined };
@@ -63,9 +72,10 @@ function overlayDocument(uiDir, scenarios) {
     read(path.join(__dirname, "theme-vars.js")),
     read(path.join(__dirname, "default-layout.js")),
     read(path.join(__dirname, "bridge.js")),
+    ...boot.files.map(read),
     `(() => { const states = ${jsonForScript(states)}; const names = ${jsonForScript(names)};` +
       " const cfg = window.__GALLERY__ || { scenario: Object.keys(states)[0], lang: \"en\" };" +
-      " TLGalleryBridge.install(window, { state: { ...states[cfg.scenario], names } }, cfg.lang); })();",
+      ` TLGalleryBridge.install(window, { state: { ...states[cfg.scenario], names } }, cfg.lang); ${boot.call} })();`,
   ].join("\n");
   let first = true;
   return html
@@ -91,28 +101,33 @@ function checkSelfContained(doc) {
   if (loose) throw new Error(`overlay.html has something the gallery does not inline: ${loose[0].slice(0, 80)}`);
 }
 
-function build({ uiDir = DEFAULT_UI, outFile = DEFAULT_OUT } = {}) {
-  const scenarios = scenariosFor(read(path.join(uiDir, "overlay.html")));
-  const doc = overlayDocument(uiDir, scenarios);
+function build({ uiDir = DEFAULT_UI, outFile, layouts = false } = {}) {
+  const round = layouts ? require("./layouts/scenarios.js") : null;
+  const scenarios = round ? round.SCENARIOS : scenariosFor(read(path.join(uiDir, "overlay.html")));
+  const doc = overlayDocument(uiDir, scenarios, round ? LAYOUTS_BOOT : undefined);
+  const out = outFile || (layouts ? LAYOUTS_OUT : DEFAULT_OUT);
   checkSelfContained(doc);
   const gallery = {
     html: read(path.join(__dirname, "gallery.html")),
     css: read(path.join(__dirname, "gallery.css")),
     js: read(path.join(__dirname, "gallery.js")),
   };
-  const data = { scenarios: scenarios.map((s) => ({ id: s.id, focus: s.focus, caption: s.caption })) };
+  const data = {
+    scenarios: scenarios.map((s) => ({ id: s.id, focus: s.focus, caption: s.caption, ...(s.screen ? { screen: s.screen } : {}) })),
+    ...(round ? { page: round.PAGE } : {}),
+  };
   const fill = { "{{CSS}}": gallery.css, "{{DATA}}": jsonForScript(data), "{{JS}}": inScript(gallery.js), "{{DOC}}": Buffer.from(doc, "utf8").toString("base64") };
   const text = gallery.html.replace(/\{\{(CSS|DATA|JS|DOC)\}\}/g, (token) => fill[token]);
   const bytes = Buffer.byteLength(text);
   if (bytes > MAX_BYTES) throw new Error(`the gallery is ${bytes} bytes, over the ${MAX_BYTES} limit`);
-  fs.mkdirSync(path.dirname(outFile), { recursive: true });
-  fs.writeFileSync(outFile, text);
-  return { file: outFile, bytes, scenarios: scenarios.map((s) => s.id) };
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  fs.writeFileSync(out, text);
+  return { file: out, bytes, scenarios: scenarios.map((s) => s.id) };
 }
 
 if (require.main === module) {
   const at = process.argv.indexOf("--out");
-  const result = build(at > 0 ? { outFile: path.resolve(process.argv[at + 1]) } : {});
+  const result = build({ layouts: process.argv.includes("--layouts"), ...(at > 0 ? { outFile: path.resolve(process.argv[at + 1]) } : {}) });
   console.log(`${result.file} (${(result.bytes / 1024).toFixed(0)} KB, ${result.scenarios.length} scenarios)`);
 }
 
