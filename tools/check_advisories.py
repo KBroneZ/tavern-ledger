@@ -333,7 +333,7 @@ def _specifier_problem(path: Path, folder: Path, specifier: str) -> str | None:
 
 
 def _file_problems(path: Path, folder: Path) -> list[str]:
-    text = path.read_text(encoding="utf-8", errors="replace")
+    text = path.read_text(encoding="utf-8-sig", errors="replace")
     # Both the text as it is and without comments: a comment can sit inside
     # an import, and a "/*" inside a string must not hide one either.
     versions = (text, _without_comments(text))

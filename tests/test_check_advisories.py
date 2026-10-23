@@ -308,6 +308,12 @@ class FunctionsTest(unittest.TestCase):
             ],
         )
 
+    def test_a_byte_order_mark_does_not_hide_the_first_import(self):
+        root = self.folder({"functions/a/index.ts": ""})
+        (root / "functions" / "a" / "index.ts").write_bytes(b'\xef\xbb\xbfimport "../../shared.ts";\n')
+        problems = tool.check_functions(root / "functions", NO_CONFIG)
+        self.assertEqual(problems[:-1], ["a/index.ts:1: import from outside the functions folder"])
+
     def test_a_statement_after_another_on_the_same_line_is_read(self):
         root = self.folder(
             {
