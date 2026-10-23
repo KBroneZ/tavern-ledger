@@ -1,12 +1,14 @@
 # Privacy policy
 
-Last updated: 20 October 2026
+Last updated: 24 October 2026
 
 Tavern Ledger is a free, open-source Hearthstone Battlegrounds tracker: a Windows app that reads the game's log files on your PC, and a website where you can keep and, if you want, share your games. This policy says what personal data we handle, why, where it goes and what you can do about it.
 
 Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.
 
 ## What changed
+
+**What changed on 24 October 2026:** the website can now be installed as an app, and it keeps copies of its public pages, styles, scripts and icons in your browser's cache storage, on your device, so they open without a connection (section 8). It never keeps copies of account, sign-in or dashboard pages, and nothing is sent to us. Nothing else changes.
 
 **What changed on 20 October 2026 (later that day):** section 5 now says what GitHub Sponsors shows us when you support the project there, what we use it for and how long we keep it. Nothing else changes.
 
@@ -192,6 +194,8 @@ You can also complain to a data protection authority, in particular in the EU co
 ## 8. Cookies and browser storage
 
 The website sets no cookies of its own and uses no tracking. When you sign in, the Supabase library stores your sign-in session in your browser's local storage (key `sb-<project>-auth-token`: access and refresh tokens and your account's basic details) and, while you sign up or reset your password, a one-time code verifier (`…-code-verifier`) that proves the email link came back to the browser that asked for it. These are strictly necessary: the session is removed when you sign out, and a code verifier when its link is used or a newer one replaces it. Our hosting provider, Cloudflare, sets a cookie only if its protection against attacks shows you a challenge: `cf_clearance`, which records that you passed it so you are not asked again for a while. It lasts 30 minutes (our zone's setting), is strictly necessary and is not used to track you. Cloudflare's bot cookie `__cf_bm` is not used on this site (its bot features are off), and Cloudflare's Network Error Logging (browser reports of failed connections) is turned off. The check that you are not a robot (section 3) runs in Cloudflare's own frame and sets no cookie on our site.
+
+When accounts are open, the website also installs a small program in your browser (a service worker) so the site can be added to your home screen or app list and its public pages open without a connection. It keeps copies of the site's public pages, styles, scripts, fonts and icons in your browser's cache storage (names starting `tl-v-`). These copies are the same for every visitor, stay on your device and are never sent to us. The program never keeps account, sign-in or dashboard pages, anything with a query in its address, or anything from our account service. Clearing the site's data in your browser removes the copies and the program.
 
 ## 9. Children
 
