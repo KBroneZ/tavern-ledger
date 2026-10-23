@@ -7,6 +7,7 @@ pub const APP_COMMANDS: &[&str] = &[
     "list_games",
     "game_stats",
     "curious_stats",
+    "period_overview",
     "status",
     "game_recap",
     "game_why",

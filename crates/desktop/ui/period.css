@@ -1,0 +1,37 @@
+/* "Today and this week" in the Your games tab (T-361), in Lamplight glass
+   (D-052): two columns, one block per mode played. */
+.period { margin-top: var(--space); }
+.period .period-note { margin: 0 0 12px; }
+.period-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px var(--space); }
+.period-col h3 { margin: 0 0 6px; color: var(--amber-hi); font: 700 16px/1.2 var(--font-display); font-stretch: 85%; }
+.period-mode { padding: 8px 0 10px; border-top: 1px solid var(--line-soft); }
+.period-mode:first-of-type { border-top: 0; padding-top: 0; }
+.period-mode h4 { margin: 0 0 2px; font-size: 15px; color: var(--text); }
+.period-mode p { margin: 0; color: var(--text); font-size: 14px; font-variant-numeric: tabular-nums; }
+.period-mode .period-net { color: var(--dim); }
+.period-mode .period-net.up { color: var(--good); }
+.period-mode .period-net.down { color: var(--bad); }
+.period-revisit { margin: 6px 0 0; padding: 0; list-style: none; }
+.period-revisit li { margin: 0; }
+.period-revisit button {
+  min-height: 30px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--info);
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.period-revisit button:hover { color: var(--amber); }
+.period-revisit button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.period-revisit .period-reason { color: var(--dim); }
+.period-revisit .period-change.up { color: var(--good); }
+.period-revisit .period-change.down { color: var(--bad); }
+.period .empty { margin: 4px 0; }
+@media (max-width: 760px) {
+  .period-grid { grid-template-columns: minmax(0, 1fr); }
+}

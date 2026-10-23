@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="upload.css">
 <link rel="stylesheet" href="shop.css">
 <link rel="stylesheet" href="curious.css">
+<link rel="stylesheet" href="period.css">
 <link rel="stylesheet" href="round-two.css">
 <link rel="stylesheet" href="compact.css">
 <link rel="stylesheet" href="turns.css">
@@ -90,6 +91,25 @@
     </section>
     <p id="not-counted" class="tally-note" hidden></p>
     <p id="marks-hint" class="note" hidden data-i18n="win.hint.marks">Each number carries a small mark that says where it comes from. A number with no mark comes straight from the game's log.</p>
+
+    <section class="ledger period" id="period" aria-labelledby="period-title">
+      <h2 id="period-title" data-i18n="period.title">Today and this week</h2>
+      <p id="period-note" class="note period-note"></p>
+      <div class="period-grid">
+        <section class="period-col" id="period-today" aria-labelledby="period-today-title">
+          <h3 id="period-today-title" data-i18n="period.today">Today</h3>
+          <div id="period-today-body"></div>
+        </section>
+        <section class="period-col" id="period-week" aria-labelledby="period-week-title">
+          <h3 id="period-week-title" data-i18n="period.week">This week</h3>
+          <div id="period-week-body"></div>
+        </section>
+      </div>
+      <details class="fold about">
+        <summary data-focus="fold:about:period" data-i18n="win.about">About this</summary>
+        <p class="note" data-i18n="period.about">About the summary.</p>
+      </details>
+    </section>
 
     <section class="ledger lobby adv-only" aria-labelledby="lobby-title">
       <div class="lobby-line">
@@ -397,6 +417,7 @@
   <script src="replay.js"></script>
   <script src="why.js"></script>
   <script src="curious.js"></script>
+  <script src="period-words.js"></script>
   <script src="tabs.js"></script>
   <script src="detail-switch.js"></script>
   <script src="game-time.js"></script>
