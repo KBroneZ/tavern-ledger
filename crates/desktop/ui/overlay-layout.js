@@ -60,7 +60,8 @@
   let padFor = null;
   let bigSteps = false;
   // The legend behind the toolbar's "?" (legend-toggle.js).
-  const legendToggle = window.TLLegend.bind(document, document.getElementById("legend-toggle"), document.getElementById("legend"));
+  // Opening or closing it changes the toolbar's height: it is placed again so it covers no panel.
+  const legendToggle = window.TLLegend.bind(document, document.getElementById("legend-toggle"), document.getElementById("legend"), () => placeControls());
 
   function px(n) {
     return `${Math.round(n)}px`;

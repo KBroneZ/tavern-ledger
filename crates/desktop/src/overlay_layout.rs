@@ -689,7 +689,7 @@ mod tests {
     }
 
     #[test]
-    fn panels_can_be_hidden_but_not_the_legend() {
+    fn panels_can_be_hidden_but_not_a_retired_one() {
         let mut s = Settings::default();
         s.set_shown(Panel::Opponents, false);
         s.set_shown(Panel::Legend, false);

@@ -5,20 +5,32 @@
 "use strict";
 
 (() => {
-  function bind(doc, button, legend) {
+  // `onChange` runs after the legend opens or closes: the toolbar changed
+  // height, so the page places it again.
+  function bind(doc, button, legend, onChange = () => {}) {
     const isOpen = () => !legend.hidden;
     const set = (open) => {
       legend.hidden = !open;
       button.setAttribute("aria-expanded", String(open));
+      onChange();
     };
     button.addEventListener("click", () => set(!isOpen()));
     doc.addEventListener("keydown", (event) => {
       if (event.key !== "Escape" || !isOpen()) return;
+      // Focus goes back to the "?" only from the toolbar: a panel being
+      // arranged by keyboard keeps it.
+      const from = doc.activeElement;
+      const inToolbar = !from || from === doc.body || from === button || from.closest("#toolbar");
       set(false);
-      button.focus();
+      if (inToolbar) button.focus();
       event.preventDefault();
     });
-    return { isOpen, close: () => set(false) };
+    return {
+      isOpen,
+      close: () => {
+        if (isOpen()) set(false);
+      },
+    };
   }
 
   const api = { bind };

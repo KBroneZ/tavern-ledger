@@ -16,8 +16,9 @@ function page() {
   const button = doc.make("button", { id: "legend-toggle", "aria-expanded": "false", "aria-controls": "legend" });
   const legend = doc.make("p", { id: "legend" });
   legend.hidden = true;
-  const toggle = TLLegend.bind(doc, button, legend);
-  return { doc, button, legend, toggle };
+  const changes = [];
+  const toggle = TLLegend.bind(doc, button, legend, () => changes.push(legend.hidden ? "closed" : "open"));
+  return { doc, button, legend, toggle, changes };
 }
 
 const esc = (doc) => {
@@ -60,6 +61,27 @@ test("Esc with the legend hidden does nothing", () => {
   assert.equal(event.defaultPrevented, false);
 });
 
+test("the page is told each time it opens or closes, so the toolbar is placed again", () => {
+  const { doc, button, toggle, changes } = page();
+  button.dispatch("click");
+  button.dispatch("click");
+  button.dispatch("click");
+  esc(doc);
+  assert.deepEqual(changes, ["open", "closed", "open", "closed"]);
+  toggle.close();
+  assert.deepEqual(changes, ["open", "closed", "open", "closed"], "closing a closed legend changes nothing");
+});
+
+test("Esc while a panel is being arranged by keyboard closes the legend but leaves focus on the panel", () => {
+  const { doc, button, legend } = page();
+  const panel = doc.make("div", { class: "slot", tabindex: "0" });
+  button.dispatch("click");
+  panel.focus();
+  esc(doc);
+  assert.equal(legend.hidden, true);
+  assert.equal(doc.activeElement, panel);
+});
+
 test("close() hides it, as when the overlay is locked", () => {
   const { button, legend, toggle } = page();
   button.dispatch("click");
@@ -82,7 +104,7 @@ test("the overlay scripts no longer treat the legend as a panel", () => {
   const layout = read("overlay-layout.js");
   assert.doesNotMatch(layout.match(/const PANEL_IDS = [^\n]*/)[0], /"legend"/);
   assert.doesNotMatch(layout, /^\s*legend: \(\) =>/m);
-  assert.match(read("overlay-layout.js"), /TLLegend\.bind\(/);
+  assert.match(read("overlay-layout.js"), /TLLegend\.bind\([^\n]*\(\) => placeControls\(\)\);/);
   // Locked, the toolbar goes and the legend with it: it is never kept open.
   assert.match(read("overlay-layout.js"), /if \(!v\.unlocked\) legendToggle\.close\(\);/);
 });
