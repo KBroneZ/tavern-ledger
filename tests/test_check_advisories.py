@@ -259,8 +259,14 @@ class FunctionsTest(unittest.TestCase):
         self.assertEqual(tool.check_functions(root), [])
 
     def test_other_source_suffixes_are_read(self):
-        root = self.folder({"a/x.mjs": 'import a from "npm:a";\n', "a/y.tsx": 'import b from "jsr:@b/b";\n'})
-        self.assertEqual(len([p for p in tool.check_functions(root) if "third-party import" in p]), 2)
+        root = self.folder({
+            "a/x.mjs": 'import a from "npm:a";\n',
+            "a/y.tsx": 'import b from "jsr:@b/b";\n',
+            "a/z.cjs": 'import("npm:c");\n',
+            "a/w.cts": 'import d from "npm:d";\n',
+            "a/v.TS": 'import e from "npm:e";\n',
+        })
+        self.assertEqual(len([p for p in tool.check_functions(root) if "third-party import" in p]), 5)
 
     def test_an_upper_case_scheme_and_odd_bytes_are_still_read(self):
         root = self.folder({"a/index.ts": 'import x from "HTTPS://deno.land/x.ts";\n'})

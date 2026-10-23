@@ -87,7 +87,7 @@ NAME_SEPARATORS_RE = re.compile(r"[-_.]+")
 PACKAGE_SPECIFIER_RE = re.compile(r"""["'`](?:npm|jsr):""", re.I)
 # Block comments, and line comments not right after a ":" (so "https://" stays).
 COMMENT_RE = re.compile(r"/\*[\s\S]*?\*/|(?<!:)//[^\n]*")
-SOURCE_SUFFIXES = (".ts", ".mts", ".tsx", ".js", ".mjs", ".jsx")
+SOURCE_SUFFIXES = (".ts", ".mts", ".cts", ".tsx", ".js", ".mjs", ".cjs", ".jsx")
 DENO_CONFIGS = ("deno.json", "deno.jsonc", "deno.lock", "import_map.json")
 
 
@@ -315,7 +315,7 @@ def check_functions(folder: Path = FUNCTIONS, config: Path = SUPABASE_CONFIG) ->
     configs = [path for name in DENO_CONFIGS for path in folder.rglob(name)]
     problems = [f"{path.relative_to(folder).as_posix()}: Deno config or lockfile" for path in configs]
     problems += _import_maps(config)
-    for path in sorted(p for p in folder.rglob("*") if p.suffix in SOURCE_SUFFIXES):
+    for path in sorted(p for p in folder.rglob("*") if p.suffix.lower() in SOURCE_SUFFIXES):
         text = path.read_text(encoding="utf-8", errors="replace")
         # Both the text as it is and without comments: a comment can sit inside
         # an import, and a "/*" inside a string must not hide one either.
