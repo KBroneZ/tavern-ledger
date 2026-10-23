@@ -15,6 +15,8 @@ let game = null;
 // Where the game client is (T-314, LoadingScreen.log): "battlegrounds_loading"
 // shows the overlay with the loading screen, before the log has the game.
 let scene = null;
+// Another program holds the hide key (T-614): said in the status box during a game.
+let keyTaken = false;
 // While the layout is being edited and no game is on, the panels show the
 // example game so there is something to arrange (overlay-example.js).
 let editing = false;
@@ -96,6 +98,7 @@ function renderStatus(g) {
   if (g.phase === "over") panel.append(el("div", null, TLI18n.t("ov.status.over")));
   if (g === EXAMPLE_GAME) panel.append(el("p", "notes", TLI18n.t("ov.status.example")));
   const notes = [...g.warnings, ...g.problems].slice(0, 2).map((w) => TLI18n.backend(w));
+  if (keyTaken && g !== EXAMPLE_GAME) notes.push(TLI18n.t("ov.status.keyTaken"));
   if (notes.length) panel.append(el("p", "notes", notes.join(" · ")));
   // Warnings and problems always show: a failure is never silent.
   panel.classList.toggle("empty", g.phase !== "over" && g !== EXAMPLE_GAME && !notes.length);
@@ -514,6 +517,7 @@ async function refresh() {
   game = fresh;
   scene = typeof where === "string" ? where : null;
   boardArea = settings && settings.leaderboard ? settings.leaderboard.area : null;
+  keyTaken = Boolean(settings && settings.hide_key_taken);
   lobbyView = lobbyNow;
   if (window.TLHover) window.TLHover.setFailed(false);
   render();

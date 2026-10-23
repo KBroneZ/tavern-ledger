@@ -67,6 +67,8 @@
     <span id="pad-sizes" class="pad-row" role="group" aria-label="Size" data-i18n-attr="aria-label:ov.pad.size"></span>
     <button type="button" id="pad-big" aria-pressed="false" data-i18n="ov.pad.big">Big steps</button>
   </div>
+  <!-- Shown for a few seconds after the hide-all key (T-614); the only thing drawn while hidden. -->
+  <p id="hidden-note" class="hidden-note" role="status" hidden></p>
   <aside id="hover-card" class="hover-card" aria-label="Opponent" data-i18n-attr="aria-label:ov.hover.label" hidden></aside>
   <script src="overlay.js"></script>
   <script type="module" src="minion-art-app.js"></script>
@@ -74,6 +76,7 @@
   <script src="overlay-keys.js"></script>
   <script src="overlay-place.js"></script>
   <script src="legend-toggle.js"></script>
+  <script src="hide-all.js"></script>
   <script src="overlay-layout.js"></script>
 </body>
 </html>

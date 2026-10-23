@@ -13,6 +13,7 @@ use tauri::{
 };
 
 use crate::foreground::{self, Foreground};
+use crate::hide_all;
 use crate::hover::{self, OverlayFrame};
 use crate::over_game_guard::GameWatch;
 use crate::overlay::{lock, set_unlocked, SETTINGS_CHANGED, WINDOW};
@@ -165,7 +166,14 @@ pub fn follow(app: AppHandle, state: Arc<AppState>, guarded: bool) {
         let mut game_was_on = false;
         let mut failures: u32 = 0;
         let mut loading_since: Option<Instant> = None;
+        let mut game_check = hide_all::GameCheck::default();
         loop {
+            // The hide key is taken only while the game runs (T-614).
+            let running = game_check.running(Instant::now(), game_memory::process::is_running);
+            hide_all::follow_game(
+                &app,
+                hide_all::wants_key(running, state.overlay.ignores_foreground()),
+            );
             // A Battlegrounds game loading counts as on: the overlay starts
             // with the loading screen (T-314), before the log has the game.
             let loading = *lock(&state.scene) == Some(Scene::BattlegroundsLoading);
@@ -221,6 +229,7 @@ pub fn follow(app: AppHandle, state: Arc<AppState>, guarded: bool) {
                 };
                 if done.is_ok() {
                     shown = want;
+                    state.overlay.set_window_shown(shown);
                     failures = 0;
                 } else {
                     failures += 1;

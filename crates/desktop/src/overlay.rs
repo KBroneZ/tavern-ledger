@@ -81,6 +81,15 @@ pub struct Overlay {
     /// `load` has finished. The main window can ask before the start-up
     /// code has read the settings, and must not take that for "no choice".
     loaded: AtomicBool,
+    /// Everything the overlay draws is hidden (T-614, `hide_all.rs`). Never
+    /// saved: every start begins shown.
+    all_hidden: AtomicBool,
+    /// The hide key could not be taken (another program holds it).
+    hide_key_taken: AtomicBool,
+    /// The window is on screen now (the follow loop's last decision): the
+    /// hide key acts only on what can be seen.
+    window_shown: AtomicBool,
+    hide_item: Mutex<Option<CheckMenuItem<Wry>>>,
 }
 
 /// What the overlay page needs to draw itself.
@@ -103,6 +112,10 @@ pub struct View {
     warning: Option<String>,
     /// The combat odds are on (T-605).
     odds: bool,
+    /// Everything the overlay draws is hidden (T-614).
+    all_hidden: bool,
+    /// The hide key is not available: the page's note points at the tray.
+    hide_key_taken: bool,
 }
 
 #[derive(Serialize)]
@@ -192,6 +205,48 @@ impl Overlay {
 
     pub fn unlocked(&self) -> bool {
         self.unlocked.load(Ordering::SeqCst) && !self.broken.load(Ordering::SeqCst)
+    }
+
+    /// Unlocking shows everything again: layout editing hidden would take
+    /// clicks the user cannot see. The flag goes first and the hiding is
+    /// cleared after, so a hide racing with it (`hide_all`) always loses.
+    fn store_unlocked(&self, on: bool) {
+        self.unlocked.store(on, Ordering::SeqCst);
+        if on {
+            self.all_hidden.store(false, Ordering::SeqCst);
+        }
+    }
+
+    pub fn all_hidden(&self) -> bool {
+        self.all_hidden.load(Ordering::SeqCst)
+    }
+
+    /// Hides or shows everything; returns whether it is hidden now. Hiding
+    /// never holds while the layout is unlocked: checked again after the
+    /// store, so an unlock that lands in between wins (`store_unlocked`
+    /// clears it too, whichever comes last).
+    pub fn hide_all(&self, on: bool) -> bool {
+        self.all_hidden.store(on, Ordering::SeqCst);
+        if on && self.unlocked() {
+            self.all_hidden.store(false, Ordering::SeqCst);
+        }
+        self.all_hidden()
+    }
+
+    pub fn hide_key_taken(&self) -> bool {
+        self.hide_key_taken.load(Ordering::SeqCst)
+    }
+
+    pub fn set_hide_key_taken(&self, taken: bool) {
+        self.hide_key_taken.store(taken, Ordering::SeqCst);
+    }
+
+    pub fn window_shown(&self) -> bool {
+        self.window_shown.load(Ordering::SeqCst)
+    }
+
+    pub fn set_window_shown(&self, shown: bool) {
+        self.window_shown.store(shown, Ordering::SeqCst);
     }
 
     pub fn ignores_foreground(&self) -> bool {
@@ -340,6 +395,8 @@ impl Overlay {
             vars: settings.theme.css_vars(settings.opacity),
             warning: lock(&self.warning).clone(),
             odds: !settings.odds_off,
+            all_hidden: self.all_hidden(),
+            hide_key_taken: self.hide_key_taken(),
         }
     }
 }
@@ -366,7 +423,7 @@ pub fn set_unlocked(app: &AppHandle, state: &AppState, on: bool) {
     // is read again: if another caller changed it meanwhile, the window is
     // set once more, so the two always end up the same. No lock is held over
     // the window calls (they wait for the main thread).
-    state.overlay.unlocked.store(on, Ordering::SeqCst);
+    state.overlay.store_unlocked(on);
     let done = loop {
         let want = state.overlay.unlocked.load(Ordering::SeqCst);
         let result = app
@@ -386,6 +443,7 @@ pub fn set_unlocked(app: &AppHandle, state: &AppState, on: bool) {
         crate::set_status(app, state, |s| s.notice = Some(msg.into()));
     }
     refresh_unlock_item(state);
+    refresh_hide_item(state);
     let _ = app.emit(SETTINGS_CHANGED, ());
 }
 
@@ -420,6 +478,18 @@ fn refresh_unlock_item(state: &AppState) {
     if let Some(item) = item {
         let _ = item.set_checked(state.overlay.unlocked());
     }
+}
+
+/// The tray's "hide overlay" entry shows the real state (T-614).
+pub(crate) fn refresh_hide_item(state: &AppState) {
+    let item = lock(&state.overlay.hide_item).clone();
+    if let Some(item) = item {
+        let _ = item.set_checked(state.overlay.all_hidden());
+    }
+}
+
+pub fn keep_hide_item(state: &AppState, item: CheckMenuItem<Wry>) {
+    *lock(&state.overlay.hide_item) = Some(item);
 }
 
 /// The tray's "show overlay" entry, so it follows the switch in the window.
@@ -685,6 +755,70 @@ mod tests {
     }
 
     #[test]
+    fn hiding_everything_is_never_saved_and_every_start_begins_shown() {
+        let dir = temp_dir("hide-all");
+        let first = Overlay::default();
+        first.load(&dir, false).unwrap();
+        assert!(!first.all_hidden() && !first.view().all_hidden);
+        first.hide_all(true);
+        assert!(first.view().all_hidden);
+        first.change(|s, _| s.theme = Theme::Contrast).unwrap();
+        let second = Overlay::default();
+        second.load(&dir, false).unwrap();
+        assert!(!second.all_hidden());
+        let text = std::fs::read_to_string(dir.join(PREFS_FILE)).unwrap();
+        assert!(!text.contains("all_hidden"), "not in the saved settings");
+    }
+
+    #[test]
+    fn hiding_never_holds_while_the_layout_is_unlocked() {
+        let overlay = Overlay::default();
+        overlay.store_unlocked(true);
+        // The key read "locked", then the tray unlocked before the hide was stored.
+        assert!(!overlay.hide_all(true));
+        assert!(!overlay.all_hidden() && overlay.unlocked());
+        overlay.store_unlocked(false);
+        assert!(overlay.hide_all(true));
+        assert!(!overlay.hide_all(false));
+    }
+
+    #[test]
+    fn a_hide_and_an_unlock_at_the_same_time_never_end_hidden_and_unlocked() {
+        for _ in 0..2000 {
+            let overlay = Arc::new(Overlay::default());
+            let hide = {
+                let o = overlay.clone();
+                std::thread::spawn(move || o.hide_all(true))
+            };
+            let unlock = {
+                let o = overlay.clone();
+                std::thread::spawn(move || o.store_unlocked(true))
+            };
+            hide.join().unwrap();
+            unlock.join().unwrap();
+            assert!(overlay.unlocked() && !overlay.all_hidden());
+        }
+    }
+
+    #[test]
+    fn unlocking_shows_everything_again_and_locking_does_not() {
+        let overlay = Overlay::default();
+        overlay.hide_all(true);
+        overlay.store_unlocked(false);
+        assert!(overlay.all_hidden(), "locking keeps it hidden");
+        overlay.store_unlocked(true);
+        assert!(!overlay.all_hidden() && overlay.unlocked());
+    }
+
+    #[test]
+    fn the_page_is_told_when_the_hide_key_is_taken() {
+        let overlay = Overlay::default();
+        assert!(!overlay.view().hide_key_taken);
+        overlay.set_hide_key_taken(true);
+        assert!(overlay.view().hide_key_taken);
+    }
+
+    #[test]
     fn a_file_with_the_old_tribes_panel_loads_without_it() {
         // The lobby's tribes had their own panel until T-614.
         let dir = temp_dir("old-tribes");
@@ -870,7 +1004,7 @@ mod tests {
             .skip(1)
             .filter_map(|rest| rest.split('"').next())
             .collect();
-        assert_eq!(scripts.len(), 20);
+        assert_eq!(scripts.len(), 21);
         for script in scripts {
             assert!(ui.join(script).is_file(), "{script} is missing");
         }
@@ -886,6 +1020,7 @@ mod tests {
             include_str!("../ui/overlay-keys.js"),
             include_str!("../ui/overlay-place.js"),
             include_str!("../ui/legend-toggle.js"),
+            include_str!("../ui/hide-all.js"),
             include_str!("../ui/overlay-words.js"),
             include_str!("../ui/counters-words.js"),
             include_str!("../ui/lobby-words.js"),

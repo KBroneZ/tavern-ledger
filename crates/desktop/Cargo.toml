@@ -21,6 +21,9 @@ store-manual-setup = ["store"]
 [dependencies]
 tauri = { version = "2.12", features = ["tray-icon"] }
 tauri-plugin-autostart = "=2.7.0"
+# The one key that hides and shows the whole overlay (T-614): registered from
+# Rust only while the app runs; no JavaScript access. Pinned.
+tauri-plugin-global-shortcut = "=2.4.1"
 # Self-update from the project's signed GitHub releases (T-105b). Windows'
 # own TLS like the uploader; no zip (only for Tauri v1 update bundles).
 tauri-plugin-updater = { version = "=2.13.3", default-features = false, features = ["native-tls", "system-proxy"] }

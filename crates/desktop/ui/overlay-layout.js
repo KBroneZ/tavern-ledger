@@ -62,6 +62,9 @@
   // The legend behind the toolbar's "?" (legend-toggle.js).
   // Opening or closing it changes the toolbar's height: it is placed again so it covers no panel.
   const legendToggle = window.TLLegend.bind(document, document.getElementById("legend-toggle"), document.getElementById("legend"), () => placeControls());
+  // Everything the overlay draws, hidden and shown by the app (hide-all.js).
+  const hideAll = window.TLHideAll.create(document, document.getElementById("hidden-note"), window);
+  let firstDraw = true;
 
   function px(n) {
     return `${Math.round(n)}px`;
@@ -188,6 +191,8 @@
     document.getElementById("scrim").hidden = !v.unlocked;
     document.getElementById("toolbar").hidden = !v.unlocked;
     if (!v.unlocked) legendToggle.close();
+    hideAll.apply(v, { first: firstDraw });
+    firstDraw = false;
     setEditing(v.unlocked);
     rects = { ...v.layout.panels };
     const inStack = [];
