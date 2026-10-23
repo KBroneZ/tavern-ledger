@@ -4,6 +4,7 @@ import datetime
 import io
 import sys
 import tempfile
+import time
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
@@ -316,6 +317,42 @@ class FunctionsTest(unittest.TestCase):
         text = "a = \"/*\"; b = '//'; c = `/* ${d} */`; /* gone\n */ e // gone too\nf = 'it\\'s /*';\n"
         expected = "a = \"/*\"; b = '//'; c = `/* ${d} */`; \n e  \nf = 'it\\'s /*';\n"
         self.assertEqual(tool._without_comments(text), expected)
+
+    def test_prose_and_method_calls_are_not_imports(self):
+        root = self.folder(
+            {
+                "a/index.ts": 'export const a = "from" + "x"\n',
+                "b/index.ts": "export const A = 1\nthrow new Error(`removed from 'queue'`)\n// removed from \"db\"\n",
+                "c/index.ts": "// Both fields require (and validate) a value.\n/** Rows import (see D-042) */\ndb.import(rows);\n",
+            }
+        )
+        self.assertEqual(tool.check_functions(root, NO_CONFIG), [])
+
+    def test_a_long_file_without_semicolons_is_quick(self):
+        root = self.folder({"a/index.ts": "export const a = 1\n" * 8000})
+        started = time.monotonic()
+        self.assertEqual(tool.check_functions(root, NO_CONFIG), [])
+        self.assertLess(time.monotonic() - started, 5)
+
+    def test_odd_but_valid_imports_still_fail(self):
+        root = self.folder(
+            {
+                "a/index.ts": 'import { "a;b" as c } from "lodash";\n',
+                "b/index.ts": 'a import x from "lodash";\n',
+                "functions/c/index.ts": 'import x from "../../../evil.ts?.json";\n',
+            }
+        )
+        problems = [p for p in tool.check_functions(root, NO_CONFIG) if "import" in p.split(": ", 1)[-1]]
+        self.assertEqual(len(problems), 3, problems)
+
+    def test_an_unresolvable_specifier_is_a_problem_not_a_crash(self):
+        root = self.folder({"a/index.ts": 'import x from "./a.ts";\n'})
+        with mock.patch.object(Path, "resolve", side_effect=ValueError("embedded null byte")):
+            self.assertIn("a/index.ts:1: unresolvable import", tool.check_functions(root, NO_CONFIG))
+
+    def test_functions_that_is_not_a_table_is_a_problem(self):
+        root = self.folder({"a/index.ts": "", "config.toml": "functions = 5\n"})
+        self.assertIn("config.toml: [functions] is not a table", tool.check_functions(root / "a", root / "config.toml"))
 
     def test_a_byte_order_mark_does_not_hide_the_first_import(self):
         root = self.folder({"functions/a/index.ts": ""})

@@ -78,22 +78,29 @@ BUILD_KEYS = frozenset({"target", "exclude"})
 REMOTE_IMPORT_RE = re.compile(r"""\b(?:from|import)\s*\(?\s*["'`](npm:|jsr:|https?://)""", re.I)
 # Any dynamic import except of one relative path written out whole: a computed
 # or concatenated name could be a URL. Strict on purpose; the functions use
-# none today. Like the rules above it is read on the file as it is and without
-# comments. These are a tripwire for an honest new dependency, not a parser:
-# code built to hide one (eval, new Function) is for review to catch.
-DYNAMIC_IMPORT_RE = re.compile(r"""\b(?:import|require)\s*\((?!\s*(["'])\.{1,2}/[^"'`\n]*\1\s*[,)])""")
+# none today. It and the specifier rules below are read on the file without
+# comments, so prose such as "require (and validate)" is not one, and neither
+# is a method such as db.import(). These are a tripwire for an honest new
+# dependency, not a parser: code built to hide one (eval, new Function,
+# importScripts) is for review to catch.
+DYNAMIC_IMPORT_RE = re.compile(r"""(?<![.\w$])(?:import|require)\s*\((?!\s*(["'])\.{1,2}/[^"'`\n]*\1\s*[,)])""")
 # The specifier of an import or export statement (one that starts a line or
-# follows a ";" or "}", so a "from" in prose or a comment is not one), and of
-# import() and require().
+# follows a ";" or "}"), and of import() and require().
 # Each must be a relative path inside the functions folder (a JSON file may be
 # outside: data imports nothing) or a node: built-in; a bare name could resolve
 # through a package.json, so it fails like npm:.
-STATEMENT_SPECIFIER_RE = re.compile(r"""(?:^|[;}])[ \t]*(?:import|export)\b(?:[^;]*?\bfrom)?\s*(["'`])([^"'`\n]*)\1""", re.M)
-CALL_SPECIFIER_RE = re.compile(r"""\b(?:import|require)\s*\(\s*(["'`])([^"'`\n]*)\1""")
+# Between "import"/"export" and "from", strings and comments count as whole
+# units (a "from" or ";" inside one does not count), and at most 1000 units are
+# read, so a file without semicolons stays quick.
+STATEMENT_GAP = r"""(?:"[^"\n]*"|'[^'\n]*'|`[^`]*`|//[^\n]*|/\*[\s\S]*?\*/|/(?![/*])|[^;"'`/]){0,1000}?"""
+STATEMENT_SPECIFIER_RE = re.compile(
+    r"""(?:^|[;}  ])[ \t]*(?:import|export)\b(?:""" + STATEMENT_GAP + r"""\bfrom)?\s*(["'`])([^"'`\n]*)\1""",
+    re.M,
+)
+CALL_SPECIFIER_RE = re.compile(r"""(?<![.\w$])(?:import|require)\s*\(\s*(["'`])([^"'`\n]*)\1""")
 NAME_SEPARATORS_RE = re.compile(r"[-_.]+")
 # A package specifier has no other use in this code, so one anywhere counts.
 PACKAGE_SPECIFIER_RE = re.compile(r"""["'`](?:npm|jsr):""", re.I)
-# Block comments, and line comments not right after a ":" (so "https://" stays).
 # A string or a comment, whichever starts first, so a "/*" or "//" inside a
 # string is not taken for a comment. Only comments are blanked out.
 STRING_OR_COMMENT_RE = re.compile(
@@ -314,9 +321,11 @@ def _function_configs(config: Path, folder: Path) -> list[str]:
     if not config.is_file():
         return []
     try:
-        functions = tomllib.loads(config.read_text(encoding="utf-8")).get("functions") or {}
+        functions = tomllib.loads(config.read_text(encoding="utf-8")).get("functions", {})
     except tomllib.TOMLDecodeError as error:
         return [f"{config.name}: unreadable ({error})"]
+    if not isinstance(functions, dict):
+        return [f"{config.name}: [functions] is not a table"]
     problems = []
     for name, settings in functions.items():
         if not isinstance(settings, dict):
@@ -333,8 +342,13 @@ def _function_configs(config: Path, folder: Path) -> list[str]:
 
 def _specifier_problem(path: Path, folder: Path, specifier: str) -> str | None:
     if specifier.startswith(("./", "../")):
-        target = (path.parent / specifier).resolve()
-        if target.is_relative_to(folder.resolve()) or target.suffix.lower() == ".json":
+        file = re.split(r"[?#]", specifier, maxsplit=1)[0]
+        try:
+            target = (path.parent / file).resolve()
+            inside = target.is_relative_to(folder.resolve())
+        except (OSError, ValueError):
+            return "unresolvable import"
+        if inside or target.suffix.lower() == ".json":
             return None
         return "import from outside the functions folder"
     return None if specifier.startswith("node:") else "third-party import"
@@ -342,18 +356,18 @@ def _specifier_problem(path: Path, folder: Path, specifier: str) -> str | None:
 
 def _file_problems(path: Path, folder: Path) -> list[str]:
     text = path.read_text(encoding="utf-8-sig", errors="replace")
-    # Both the text as it is and without comments: a comment can sit inside
-    # an import, and a "/*" inside a string must not hide one either.
-    versions = (text, _without_comments(text))
-    third_party = {_line(t, m.start(1)) for t in versions for m in REMOTE_IMPORT_RE.finditer(t)}
+    # Remote imports are read both as written and without comments (a comment
+    # can sit inside an import); the other rules only without comments, so
+    # prose in a comment is not taken for code.
+    code = _without_comments(text)
+    third_party = {_line(t, m.start(1)) for t in (text, code) for m in REMOTE_IMPORT_RE.finditer(t)}
     third_party |= {_line(text, m.start()) for m in PACKAGE_SPECIFIER_RE.finditer(text)}
-    third_party |= {_line(t, m.start()) for t in versions for m in DYNAMIC_IMPORT_RE.finditer(t)}
+    third_party |= {_line(code, m.start()) for m in DYNAMIC_IMPORT_RE.finditer(code)}
     found = dict.fromkeys(third_party, "third-party import")
-    for t in versions:
-        for m in (*STATEMENT_SPECIFIER_RE.finditer(t), *CALL_SPECIFIER_RE.finditer(t)):
-            problem = _specifier_problem(path, folder, m.group(2))
-            if problem:
-                found.setdefault(_line(t, m.start(2)), problem)
+    for m in (*STATEMENT_SPECIFIER_RE.finditer(code), *CALL_SPECIFIER_RE.finditer(code)):
+        problem = _specifier_problem(path, folder, m.group(2))
+        if problem:
+            found.setdefault(_line(code, m.start(2)), problem)
     where = path.relative_to(folder).as_posix()
     return [f"{where}:{n}: {found[n]}" for n in sorted(found)]
 
