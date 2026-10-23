@@ -377,7 +377,7 @@
       "period.reason.big_swing": "Gran vaivén",
       "period.revisit.place": "puesto {n}",
       "period.revisit.open": "Abrir el resumen y los replays de esta partida",
-      "period.about": "Mejor puesto: tu mejor resultado del periodo. Derrota ajustada: un resultado justo fuera de la mitad superior. Gran vaivén: un puesto a dos o más del tuyo medio. El cambio de rating solo aparece si la opción de rating está activada y se conoce el rating en los dos extremos.",
+      "period.about": "Mejor puesto: tu mejor resultado del periodo. Derrota ajustada: un resultado justo fuera de la mitad superior. Gran vaivén: un puesto a dos o más de tu puesto medio. El cambio de rating solo aparece si la opción de rating está activada y se conoce el rating en los dos extremos.",
 
       "win.lobby.title": "Tipos de la partida",
       "win.lobby.about": "El registro del juego no dice cuáles son los cinco tipos de la partida. Si quieres que cuenten en tus estadísticas, elígelos aquí de la lista; se guardan en este PC y siempre se marcan como introducidos por ti. Nunca se mezclan con los tipos vistos en la taberna.",
