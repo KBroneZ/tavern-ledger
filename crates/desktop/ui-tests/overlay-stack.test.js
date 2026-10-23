@@ -25,7 +25,7 @@ function body(name) {
 test("the stack's slots, top to bottom: status, heroes, opponents, counters, then the rest", () => {
   const stack = HTML.slice(HTML.indexOf('<div id="stack">'), HTML.indexOf("</div>\n  <script"));
   const order = [...stack.matchAll(/data-panel="([a-z]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(order, ["status", "heroes", "opponents", "counters", "odds", "legend"]);
+  assert.deepEqual(order, ["status", "heroes", "opponents", "counters", "odds"]);
 });
 
 test("the tribes have no panel of their own any more", () => {

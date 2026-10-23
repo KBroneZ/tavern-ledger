@@ -13,8 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::leaderboard;
 use crate::screen_fit::{play_area, Area};
 
-/// The panels of the overlay. `Legend` explains the source marks, so it can
-/// move and resize but never be hidden.
+/// The panels of the overlay.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Panel {
@@ -28,6 +27,9 @@ pub enum Panel {
     Opponents,
     /// The combat odds bar at the top centre of the game window (T-367).
     Odds,
+    /// Retired (T-614): the legend is behind the "?" in the layout editor's
+    /// toolbar now, never a panel. Kept so a file saved before still reads;
+    /// its places are dropped.
     Legend,
     /// The short panel on the Battlegrounds lobby screen (T-338).
     Lobby,
@@ -38,11 +40,11 @@ pub enum Panel {
 impl Panel {
     /// A panel the page no longer has: never placed, never hidden.
     pub fn retired(self) -> bool {
-        self == Panel::Tribes
+        matches!(self, Panel::Tribes | Panel::Legend)
     }
 
     pub fn hideable(self) -> bool {
-        self != Panel::Legend && !self.retired()
+        !self.retired()
     }
 }
 
@@ -485,8 +487,7 @@ impl Settings {
         self.opacity = clamp_opacity(value);
     }
 
-    /// Shows or hides a panel. The legend cannot be hidden: it explains the
-    /// marks on every value.
+    /// Shows or hides a panel. A retired panel is never hidden: the page has none.
     pub fn set_shown(&mut self, panel: Panel, shown: bool) {
         if shown || !panel.hideable() {
             self.hidden.remove(&panel);
@@ -802,18 +803,31 @@ mod tests {
     }
 
     #[test]
-    fn only_the_old_tribes_panel_is_retired() {
+    fn only_the_old_tribes_and_legend_panels_are_retired() {
         for panel in [
             Panel::Status,
             Panel::Counters,
             Panel::Opponents,
             Panel::Odds,
-            Panel::Legend,
             Panel::Lobby,
             Panel::Heroes,
         ] {
             assert!(!panel.retired(), "{panel:?}");
         }
+        assert!(Panel::Tribes.retired() && Panel::Legend.retired());
+    }
+
+    #[test]
+    fn a_file_with_a_placed_legend_drops_its_place_and_keeps_the_rest() {
+        // As the app wrote it before the legend moved behind the toolbar's "?" (T-614).
+        let s = Settings::parse(
+            r#"{"layouts":{"1920x1080":{"panels":{"legend":{"x":20,"y":900,"w":400,"h":null},"status":{"x":10,"y":20,"w":300,"h":null}}}},"last_resolution":"1920x1080"}"#,
+        )
+        .unwrap();
+        let panels = s.layout_for(FHD).panels;
+        assert!(!panels.contains_key(&Panel::Legend));
+        assert_eq!(panels[&Panel::Status], rect(10.0, 20.0, 300.0, None));
+        assert!(!s.to_text().unwrap().contains("legend"), "not written back");
     }
 
     #[test]

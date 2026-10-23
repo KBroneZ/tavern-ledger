@@ -704,8 +704,9 @@ mod tests {
     }
 
     #[test]
-    fn the_page_has_no_slot_for_the_old_tribes_panel() {
+    fn the_page_has_no_slot_for_the_retired_panels() {
         assert!(!OVERLAY_HTML.contains(r#"data-panel="tribes""#));
+        assert!(!OVERLAY_HTML.contains(r#"data-panel="legend""#));
     }
 
     #[test]
@@ -852,7 +853,6 @@ mod tests {
             Panel::Counters,
             Panel::Opponents,
             Panel::Odds,
-            Panel::Legend,
             Panel::Lobby,
             Panel::Heroes,
         ] {
@@ -870,7 +870,7 @@ mod tests {
             .skip(1)
             .filter_map(|rest| rest.split('"').next())
             .collect();
-        assert_eq!(scripts.len(), 19);
+        assert_eq!(scripts.len(), 20);
         for script in scripts {
             assert!(ui.join(script).is_file(), "{script} is missing");
         }
@@ -885,6 +885,7 @@ mod tests {
             include_str!("../ui/overlay-hover.js"),
             include_str!("../ui/overlay-keys.js"),
             include_str!("../ui/overlay-place.js"),
+            include_str!("../ui/legend-toggle.js"),
             include_str!("../ui/overlay-words.js"),
             include_str!("../ui/counters-words.js"),
             include_str!("../ui/lobby-words.js"),
