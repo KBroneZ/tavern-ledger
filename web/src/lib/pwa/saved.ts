@@ -50,22 +50,29 @@ export function browserDevice(): Device | null {
   }
 }
 
-/** Whether the player turned saving on. A browser that refuses to answer means off. */
-export function isOn(device: Device): boolean {
+/**
+ * Whether the player turned saving on: the choice holds the id of the player who
+ * made it, so it is on for that player only (pass `userId`), and anyone else
+ * who signs in on this browser starts with it off. Without `userId`, whether it
+ * is on for anybody. A browser that refuses to answer means off.
+ */
+export function isOn(device: Device, userId?: string): boolean {
   try {
-    return device.flags.getItem(FLAG_KEY) === "1";
+    const owner = device.flags.getItem(FLAG_KEY);
+    return owner !== null && owner !== "" && (userId === undefined || owner === userId);
   } catch {
     return false;
   }
 }
 
-/** Removes every saved game and the shells. The choice stays as it is. */
+/** Removes every saved game and the shells, in turn with any save in another tab. The choice stays as it is. */
 export async function eraseSaved(device: Device): Promise<void> {
-  await device.caches.delete(SAVED_CACHE);
+  const erase = () => device.caches.delete(SAVED_CACHE).then(() => {});
+  await (device.lock ? device.lock(erase) : erase());
 }
 
-export async function turnOn(device: Device): Promise<void> {
-  device.flags.setItem(FLAG_KEY, "1");
+export async function turnOn(device: Device, userId: string): Promise<void> {
+  device.flags.setItem(FLAG_KEY, userId);
 }
 
 /** Off: the choice and every saved game go. The games first: if the browser refuses one step, the other still happens. */
@@ -120,13 +127,14 @@ export async function readSaved(device: Device, userId: string, publicId: string
 }
 
 /**
- * A signed-in player who is not the one whose games are saved here: everything
- * saved goes and the choice is off. Called when a session starts (a sign-in
+ * A signed-in player who is not the one who made the choice or whose games are
+ * saved here: everything saved goes and the choice is off. Called when a session starts (a sign-in
  * without a sign-out in between, such as a session that ended in another
  * browser), never offline, where there is no session to compare.
  */
 export async function forgetOthers(device: Device, userId: string): Promise<void> {
-  if ((await listSaved(device)).some((e) => e.userId !== userId)) await turnOff(device);
+  const choiceIsSomeoneElses = device.flags.getItem(FLAG_KEY) !== null && !isOn(device, userId);
+  if (choiceIsSomeoneElses || (await listSaved(device)).some((e) => e.userId !== userId)) await turnOff(device);
 }
 
 /**
@@ -134,14 +142,23 @@ export async function forgetOthers(device: Device, userId: string): Promise<void
  * Past SAVED_LIMIT the oldest saves are deleted. Saving the same game
  * again only moves it to the top. Two tabs saving at once take turns (the list
  * is read, changed and written back as one step), and the list is written
- * before any file is deleted, so it never names a file that is gone.
+ * before any file is deleted, so it never names a file that is gone. Nothing is
+ * saved unless saving is on for this player at the moment of the step: a sign-out
+ * or a switch-off in another tab, which took the same turn, wins.
  */
 export async function saveGame(device: Device, game: SavedGame, file: Blob): Promise<void> {
   const step = async () => {
+    if (!isOn(device, game.userId)) return;
     const cache = await device.caches.open(SAVED_CACHE);
     await cache.put(savedGameKey(game.publicId), new Response(file, { headers: { "Content-Type": "application/octet-stream" } }));
     const all = [game, ...(await readIndex(cache)).filter((e) => e.publicId !== game.publicId)];
-    await cache.put(SAVED_INDEX_KEY, new Response(JSON.stringify(all.slice(0, SAVED_LIMIT)), { headers: { "Content-Type": "application/json" } }));
+    try {
+      await cache.put(SAVED_INDEX_KEY, new Response(JSON.stringify(all.slice(0, SAVED_LIMIT)), { headers: { "Content-Type": "application/json" } }));
+    } catch (error) {
+      // No room for the list: the file would have no entry and nothing to remove it.
+      await cache.delete(savedGameKey(game.publicId));
+      throw error;
+    }
     for (const dropped of all.slice(SAVED_LIMIT)) await cache.delete(savedGameKey(dropped.publicId));
   };
   await (device.lock ? device.lock(step) : step());

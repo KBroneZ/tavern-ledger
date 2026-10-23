@@ -23,9 +23,10 @@ import { SAVED_CACHE, SAVED_INDEX_KEY, savedGameKey } from "../../src/lib/pwa/ru
 const USER = "11111111-1111-4111-8111-111111111111";
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
-function device(): Device & { stores: Map<string, Map<string, Response>>; flags: Map<string, string> } {
+function device(on = true): Device & { stores: Map<string, Map<string, Response>>; flags: Map<string, string> } {
   const stores = new Map<string, Map<string, Response>>();
   const flags = new Map<string, string>();
+  if (on) flags.set(FLAG_KEY, USER);
   return {
     stores,
     flags: Object.assign(flags, {
@@ -53,11 +54,13 @@ const game = (n: number, extra: Partial<SavedGame> = {}): SavedGame => ({ userId
 const file = (n: number) => new Blob([`report ${n}`]);
 
 test("saving is off until the player turns it on, and off again after turning it off", async () => {
-  const d = device();
+  const d = device(false);
   assert.equal(isOn(d), false);
-  await turnOn(d);
+  await turnOn(d, USER);
   assert.equal(isOn(d), true);
-  assert.equal(d.flags.get(FLAG_KEY), "1");
+  assert.equal(isOn(d, USER), true);
+  assert.equal(isOn(d, "22222222-2222-4222-8222-222222222222"), false, "saving is on for the player who chose it only");
+  assert.equal(d.flags.get(FLAG_KEY), USER);
   await turnOff(d);
   assert.equal(isOn(d), false);
 });
@@ -101,7 +104,6 @@ test("opening a saved game again moves it to the top and keeps one copy", async 
 test("delete, turning off and signing out remove every saved game", async () => {
   for (const remove of [eraseSaved, turnOff, forget]) {
     const d = device();
-    await turnOn(d);
     await saveGame(d, game(1), file(1));
     await remove(d);
     assert.equal(d.stores.has(SAVED_CACHE), false);
@@ -112,7 +114,6 @@ test("delete, turning off and signing out remove every saved game", async () => 
 test("the delete button leaves the choice on; turning off and signing out turn it off", async () => {
   const on = async () => {
     const d = device();
-    await turnOn(d);
     return d;
   };
   const erased = await on();
@@ -153,7 +154,6 @@ test("reading saved games never makes the cache for a player who saved nothing",
 
 test("a session for another player removes the saved games and turns saving off; the same player's session keeps them", async () => {
   const d = device();
-  await turnOn(d);
   await saveGame(d, game(1), file(1));
   await forgetOthers(d, USER);
   assert.equal((await listSaved(d)).length, 1);
@@ -166,7 +166,6 @@ test("a session for another player removes the saved games and turns saving off;
 
 test("turning off still turns the choice off when the browser refuses to delete the games", async () => {
   const d = device();
-  await turnOn(d);
   d.caches.delete = async () => {
     throw new Error("blocked");
   };
@@ -176,7 +175,6 @@ test("turning off still turns the choice off when the browser refuses to delete 
 
 test("saves take turns when the browser has locks, and the list is written before a file is deleted", async () => {
   const d = device();
-  const events: string[] = [];
   let busy = false;
   let tail: Promise<unknown> = Promise.resolve();
   d.lock = (step) => {
@@ -187,7 +185,6 @@ test("saves take turns when the browser has locks, and the list is written befor
         return await step();
       } finally {
         busy = false;
-        events.push("unlocked");
       }
     });
     tail = run.catch(() => {});
@@ -205,5 +202,31 @@ test("saves take turns when the browser has locks, and the list is written befor
   order.length = 0;
   await saveGame(spy, game(SAVED_LIMIT + 2), file(SAVED_LIMIT + 2));
   assert.ok(order.indexOf("put " + SAVED_INDEX_KEY) < order.findIndex((e) => e.startsWith("delete ")), order.join(", "));
+});
+
+test("a choice made by another player is turned off when a different player's session starts, even with nothing saved", async () => {
+  const d = device();
+  await forgetOthers(d, USER);
+  assert.equal(isOn(d), true, "the same player keeps it");
+  await forgetOthers(d, "22222222-2222-4222-8222-222222222222");
+  assert.equal(isOn(d), false);
+  // No choice at all: nothing to turn off, and no cache is made.
+  await forgetOthers(d, USER);
+  assert.equal(d.stores.has(SAVED_CACHE), false);
+});
+
+test("nothing is saved when saving is off for this player at the moment of the save, and a refused list leaves no file behind", async () => {
+  const off = device(false);
+  await saveGame(off, game(1), file(1));
+  assert.equal(off.stores.has(SAVED_CACHE), false);
+  const other = device();
+  await saveGame(other, game(1, { userId: "22222222-2222-4222-8222-222222222222" }), file(1));
+  assert.equal(other.stores.has(SAVED_CACHE), false, "the choice is another player's");
+  const d = device();
+  const cache = await d.caches.open(SAVED_CACHE);
+  const put = cache.put.bind(cache);
+  const full = { ...d, caches: { ...d.caches, open: async () => ({ ...cache, put: async (k: string, r: Response) => (k === SAVED_INDEX_KEY ? Promise.reject(new Error("quota")) : put(k, r)) }) } };
+  await assert.rejects(saveGame(full, game(1), file(1)), /quota/);
+  assert.deepEqual([...d.stores.get(SAVED_CACHE)!.keys()], []);
 });
 

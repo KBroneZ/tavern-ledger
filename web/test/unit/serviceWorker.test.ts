@@ -416,7 +416,7 @@ test("a game page the worker cannot get as a plain answer is not kept, and other
   assert.deepEqual(worker.fetched, []);
 });
 
-test("a new build takes the saved game pages again when it activates, so they do not name scripts it dropped, and does nothing for a player who saved nothing", async () => {
+test("a new build takes the saved game pages again when it activates, drops them if it cannot, and does nothing for a player who saved nothing", async () => {
   const none = new Worker();
   none.network = (req) => page(`live ${new URL(req.url).pathname}`);
   await none.lifecycle("activate");
@@ -428,11 +428,11 @@ test("a new build takes the saved game pages again when it activates, so they do
   await saved.lifecycle("activate");
   assert.equal(await saved.stores.get(SAVED_CACHE)!.get(asUrl(savedShellKey("en")))!.text(), "live /game/");
   assert.ok(saved.claimed);
-  // Offline at activation: the old pages stay, and the worker still takes over.
+  // Offline at activation: the old pages go (they name scripts this build dropped), the saved file stays, and the worker still takes over.
   const offline = new Worker();
-  offline.stores.set(SAVED_CACHE, new Map([[asUrl(savedShellKey("en")), page("old page")]]));
+  offline.stores.set(SAVED_CACHE, new Map([[asUrl(savedShellKey("en")), page("old page")], [asUrl(savedGameKey(GAME)), page("file")]]));
   await offline.lifecycle("activate");
-  assert.equal(await offline.stores.get(SAVED_CACHE)!.get(asUrl(savedShellKey("en")))!.text(), "old page");
+  assert.deepEqual([...offline.stores.get(SAVED_CACHE)!.keys()], [asUrl(savedGameKey(GAME))]);
   assert.ok(offline.claimed);
 });
 

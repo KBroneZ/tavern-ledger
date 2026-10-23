@@ -100,7 +100,7 @@ async function keepCopy(ref: GameRef, file: Blob | null, title: string, played: 
   const device = browserDevice();
   if (!device || !file || !isOn(device)) return;
   // Asked again now, not when the page opened: the player may have signed out, or another account in, while the game loaded.
-  if (isVisitor(await currentPlayer(), ref.userId)) return;
+  if (isVisitor(await currentPlayer(), ref.userId) || !isOn(device, ref.userId)) return;
   await saveGame(device, { userId: ref.userId, publicId: ref.publicId, savedAt: Date.now(), played, title }, file);
   await askForShells();
 }

@@ -20,7 +20,7 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   // A new build has new script names: the saved game pages are fetched again, so they do not point at files this build no longer keeps.
-  event.waitUntil(dropOldCaches().then(() => keepGameShells().catch(() => {})).then(() => self.clients.claim()));
+  event.waitUntil(dropOldCaches().then(refreshGameShells).then(() => self.clients.claim()));
 });
 
 // A game page asks for the game page itself to be kept with the saved games (lib/pwa/saved.ts askForShells).
@@ -102,17 +102,33 @@ async function savedGamePage(request) {
  * Only for a player who has saved a game (the cache exists), and only a plain
  * 200 from our own address. The pages carry `no-store`, which is why isStorable
  * is not the test here: the page is the same static shell for everyone and holds
- * no account data, and it is useless offline unless it is kept.
+ * no account data, and it is useless offline unless it is kept. Answers whether
+ * they were kept; a slow network is not waited for beyond NETWORK_WAIT_MS.
  */
 async function keepGameShells() {
-  if (!(await caches.has(SAVED_CACHE))) return;
+  if (!(await caches.has(SAVED_CACHE))) return false;
   const langs = Object.keys(GAME_PAGES);
-  const answers = await Promise.all(langs.map((lang) => fetch(new Request(new URL(GAME_PAGES[lang], SCOPE.origin), { cache: "reload", credentials: "omit" }))));
-  if (!answers.every((r) => r.status === 200 && r.type === "basic" && !r.redirected)) return;
+  const answers = await withinWait(Promise.all(langs.map((lang) => fetch(new Request(new URL(GAME_PAGES[lang], SCOPE.origin), { cache: "reload", credentials: "omit" })))));
+  if (!answers.every((r) => r.status === 200 && r.type === "basic" && !r.redirected)) return false;
   // Signed out while the pages were coming: the cache is gone, and it stays gone.
-  if (!(await caches.has(SAVED_CACHE))) return;
+  if (!(await caches.has(SAVED_CACHE))) return false;
   const cache = await caches.open(SAVED_CACHE);
   for (const [i, lang] of langs.entries()) await cache.put(savedShellKey(lang), answers[i]);
+  return true;
+}
+
+/**
+ * A new build has new script names, so the saved game pages are taken again. If
+ * that fails, the old ones go: they name scripts this build no longer keeps, and
+ * a saved game then shows the offline page instead of a blank one, until a game
+ * is opened online (which asks for the pages again).
+ */
+async function refreshGameShells() {
+  if (!(await caches.has(SAVED_CACHE))) return;
+  if (await keepGameShells().catch(() => false)) return;
+  if (!(await caches.has(SAVED_CACHE))) return;
+  const cache = await caches.open(SAVED_CACHE);
+  for (const lang of Object.keys(GAME_PAGES)) await cache.delete(savedShellKey(lang));
 }
 
 async function offlineResponse(request) {

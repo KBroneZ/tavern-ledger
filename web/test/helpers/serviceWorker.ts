@@ -78,6 +78,7 @@ export class Worker {
     this.stores.set(name, store);
     return {
       put: async (req: Request | string, res: Response) => void store.set(typeof req === "string" ? new URL(req, ORIGIN).href : req.url, res),
+      delete: async (req: Request | string) => store.delete(typeof req === "string" ? new URL(req, ORIGIN).href : req.url),
       match: async (req: Request | string) => store.get(typeof req === "string" ? new URL(req, ORIGIN).href : req.url)?.clone(),
       addAll: async (reqs: (Request | string)[]) => {
         const got: [string, Response][] = [];

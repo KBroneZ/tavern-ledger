@@ -14,6 +14,8 @@ const panel = byId("saved");
 const toggle = byId<HTMLInputElement>("saved-on");
 const count = byId("saved-count");
 const erase = byId<HTMLButtonElement>("saved-erase");
+/** The signed-in player: the choice is theirs alone. */
+let player = "";
 
 async function showCount(device: Device): Promise<void> {
   const saved = (await listSaved(device)).length;
@@ -30,7 +32,7 @@ async function change(device: Device, action: () => Promise<void>): Promise<void
     // Saving cannot work in this browser: the choice does not stay on with nothing being saved.
     if (toggle.checked) await turnOff(device).catch(() => {});
   }
-  toggle.checked = isOn(device);
+  toggle.checked = isOn(device, player);
 }
 
 async function start(): Promise<void> {
@@ -42,8 +44,9 @@ async function start(): Promise<void> {
     () => null,
   );
   if (!session) return;
-  toggle.checked = isOn(device);
-  toggle.addEventListener("change", () => void change(device, () => (toggle.checked ? turnOn(device) : turnOff(device))));
+  player = session.user.id;
+  toggle.checked = isOn(device, player);
+  toggle.addEventListener("change", () => void change(device, () => (toggle.checked ? turnOn(device, player) : turnOff(device))));
   erase.addEventListener("click", () => void change(device, () => eraseSaved(device)));
   await showCount(device);
   show(panel, true);

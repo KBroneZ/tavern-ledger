@@ -6,7 +6,8 @@
 //
 // The line it draws: the site's own pages and files, as the build names them
 // and visited without a query in the address, may be kept to read again offline. Nothing else is ever
-// stored: no other origin (Supabase, the card art host, the anti-robot
+// stored (but for the player's own saved games and the game page shells, at the
+// end of this file, which the player turns on): no other origin (Supabase, the card art host, the anti-robot
 // check), no page about one account, no sign-in page, no address with a query
 // (an email link's code, a game's id), no response that says `no-store`.
 
