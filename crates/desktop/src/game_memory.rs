@@ -10,7 +10,10 @@
 //!   build the reader was checked on (any other build: not read at all); a
 //!   failed check, or the tavern contradicting the tribes, stops it for that
 //!   game ("unsupported game version") and the app keeps its log-based
-//!   tribes;
+//!   tribes; a game the client opened without the lobby before it (it
+//!   restarted inside the game: a reconnect) has no hero select to read, so
+//!   it is not read at all and says "no lobby" (`no_lobby`), never
+//!   "unsupported game version";
 //! - the player's own rating while the Battlegrounds lobby screen is open
 //!   (T-337): every few seconds for about a minute per visit, only when the
 //!   running client's build is one the reader was checked on (from the
@@ -42,6 +45,7 @@ use tracker::provenance::Source;
 use tracker::scene::Scene;
 use tracker::store::GameKey;
 
+use crate::applog::Level;
 use crate::overlay::lock;
 
 const FILE: &str = "game_memory.json";
@@ -93,6 +97,9 @@ pub struct Poll<'a> {
     pub scene: Option<Scene>,
     /// The running client's build, also before its first game (T-337).
     pub client_build: Option<i64>,
+    /// The game in progress opened without the lobby before it (the client
+    /// restarted inside it), so there was no hero select to read.
+    pub reconnected: bool,
     /// Games finished so far in the history.
     pub finished: usize,
     /// The newest game in the history and the one before it (the same games
@@ -240,8 +247,8 @@ pub struct GameMemory {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct View {
     pub enabled: bool,
-    /// `off`, `ok`, `waiting`, `unsupported_version`, `not_running`,
-    /// `no_access`.
+    /// `off`, `ok`, `waiting`, `unsupported_version`, `no_lobby`,
+    /// `not_running`, `no_access`.
     pub status: ReaderStatus,
     pub tribes_status: ReaderStatus,
     pub rating: OwnRating,
@@ -253,6 +260,23 @@ pub struct View {
     pub checked_builds: &'static [i64],
     /// Set when the choice could not be saved or read.
     pub warning: Option<String>,
+}
+
+/// What the app log says about the tribes read of the game in progress:
+/// a warning when the reader refuses the game version, a plain note when the
+/// game had no lobby to read. Nothing for the other statuses.
+pub fn tribes_log_note(status: ReaderStatus) -> Option<(Level, &'static str)> {
+    match status {
+        ReaderStatus::UnsupportedVersion => Some((
+            Level::Warn,
+            "unsupported game version: the lobby's tribes are not read",
+        )),
+        ReaderStatus::NoLobby => Some((
+            Level::Info,
+            "no lobby screen seen for this game (reconnected): the lobby's tribes are not read",
+        )),
+        _ => None,
+    }
 }
 
 fn status_of(e: &ReadFailure) -> ReaderStatus {
@@ -371,7 +395,7 @@ impl GameMemory {
             return;
         }
         s.ticks = s.ticks.wrapping_add(1);
-        tick_tribes(&mut s, reader, poll.game, poll.build);
+        tick_tribes(&mut s, reader, poll.game, poll.build, poll.reconnected);
         tick_rating(&mut s, reader, poll);
         self.save_rating(&mut s);
     }
@@ -496,7 +520,13 @@ impl GameMemory {
     }
 }
 
-fn tick_tribes(s: &mut State, reader: &dyn Reader, game: Option<&GameKey>, build: Option<i64>) {
+fn tick_tribes(
+    s: &mut State,
+    reader: &dyn Reader,
+    game: Option<&GameKey>,
+    build: Option<i64>,
+    reconnected: bool,
+) {
     let Some(game) = game else {
         return;
     };
@@ -510,6 +540,12 @@ fn tick_tribes(s: &mut State, reader: &dyn Reader, game: Option<&GameKey>, build
         s.tribes_tries = 0;
         s.tribes_done = false;
         s.ticks = 0;
+    }
+    // A game that opened without the lobby has no hero select to read, and
+    // what the reader finds then may be the last game's: it is not read.
+    if reconnected && !s.tribes_done {
+        s.tribes_status = ReaderStatus::NoLobby;
+        return;
     }
     if s.tribes_done || !s.ticks.is_multiple_of(TRIBES_EVERY) {
         return;
@@ -1158,6 +1194,111 @@ mod tests {
         ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 60);
         assert_eq!(reader.calls.get(), 1);
         assert_eq!(gm.tribes_for(Some(&key(1))).1, ReaderStatus::NoAccess);
+    }
+
+    #[test]
+    fn only_a_refused_version_is_a_warning_and_no_lobby_never_says_unsupported() {
+        use crate::applog::Level;
+        let (level, text) = tribes_log_note(ReaderStatus::UnsupportedVersion).unwrap();
+        assert_eq!(level, Level::Warn);
+        assert!(text.contains("unsupported game version"));
+        let (level, text) = tribes_log_note(ReaderStatus::NoLobby).unwrap();
+        assert_eq!(level, Level::Info);
+        assert!(!text.contains("unsupported"), "{text}");
+        assert!(text.contains("no lobby"), "{text}");
+        for quiet in [ReaderStatus::Ok, ReaderStatus::Waiting, ReaderStatus::Off] {
+            assert_eq!(tribes_log_note(quiet), None);
+        }
+    }
+
+    fn reconnected<'a>(game: &'a GameKey) -> Poll<'a> {
+        Poll {
+            reconnected: true,
+            ..poll(Some(game), BUILD, Some(Scene::Game))
+        }
+    }
+
+    #[test]
+    fn a_game_opened_without_the_lobby_is_not_read_and_says_so() {
+        let gm = on("no-lobby");
+        // A read that would succeed: nothing may be taken from the game here.
+        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(RATING)]);
+        for _ in 0..200 {
+            gm.tick(&reader, &reconnected(&key(1)));
+        }
+        assert_eq!(reader.calls.get(), 0, "the game is not even opened");
+        assert_eq!(gm.tribes_for(Some(&key(1))), (None, ReaderStatus::NoLobby));
+        assert_eq!(gm.view().tribes_status, ReaderStatus::NoLobby);
+    }
+
+    #[test]
+    fn the_next_game_through_the_lobby_is_read_as_usual() {
+        let gm = on("after-no-lobby");
+        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(RATING)]);
+        for _ in 0..30 {
+            gm.tick(&reader, &reconnected(&key(1)));
+        }
+        assert_eq!(gm.tribes_for(Some(&key(1))).1, ReaderStatus::NoLobby);
+        ticks(&gm, &reader, Some(&key(2)), Some(Scene::Game), 30);
+        assert_eq!(
+            gm.tribes_for(Some(&key(2))),
+            (Some(lobby()), ReaderStatus::Ok)
+        );
+    }
+
+    #[test]
+    fn a_game_already_read_keeps_its_tribes_if_it_is_later_flagged_as_reconnected() {
+        let gm = on("read-then-flag");
+        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(RATING)]);
+        ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 30);
+        assert_eq!(gm.tribes_for(Some(&key(1))).1, ReaderStatus::Ok);
+        for _ in 0..30 {
+            gm.tick(&reader, &reconnected(&key(1)));
+        }
+        assert_eq!(
+            gm.tribes_for(Some(&key(1))),
+            (Some(lobby()), ReaderStatus::Ok)
+        );
+    }
+
+    #[test]
+    fn no_lobby_comes_before_a_build_the_reader_was_not_checked_on() {
+        let gm = on("no-lobby-unchecked");
+        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(RATING)]);
+        let game = key(1);
+        let poll = Poll {
+            build: Some(1_000_001),
+            ..reconnected(&game)
+        };
+        for _ in 0..30 {
+            gm.tick(&reader, &poll);
+        }
+        assert_eq!(reader.calls.get(), 0);
+        assert_eq!(gm.tribes_for(Some(&key(1))).1, ReaderStatus::NoLobby);
+    }
+
+    #[test]
+    fn the_settings_line_follows_a_game_with_no_lobby_whatever_the_rating_says() {
+        use ReaderStatus::*;
+        assert_eq!(overall(NoLobby, Waiting), NoLobby);
+        assert_eq!(overall(NoLobby, NotRunning), NoLobby);
+        assert_eq!(overall(NoLobby, Ok), NoLobby);
+        assert_eq!(overall(NoLobby, NoAccess), NoAccess);
+    }
+
+    #[test]
+    fn a_scene_that_catches_up_later_lets_the_game_be_read() {
+        let gm = on("catches-up");
+        let reader = FakeReader::new(vec![Ok(lobby())], vec![Ok(RATING)]);
+        for _ in 0..6 {
+            gm.tick(&reader, &reconnected(&key(1)));
+        }
+        assert_eq!(reader.calls.get(), 0);
+        ticks(&gm, &reader, Some(&key(1)), Some(Scene::Game), 30);
+        assert_eq!(
+            gm.tribes_for(Some(&key(1))),
+            (Some(lobby()), ReaderStatus::Ok)
+        );
     }
 
     #[test]

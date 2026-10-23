@@ -233,6 +233,40 @@ fn leaving_the_game_screen_ends_the_live_game_of_a_cut_off_log() {
     assert!(watcher.in_progress().is_some());
 }
 
+/// The client restarted inside a game: the game screen loads from the login
+/// screen, with no lobby before it (2026-10-19). The watcher says so; any
+/// other case, and no scene file, is not a reconnect.
+#[test]
+fn a_game_screen_opened_from_the_login_screen_is_a_game_without_the_lobby() {
+    let root = temp_dir();
+    let logs = root.join("Logs");
+    let session = logs.join(SESSION);
+    fs::create_dir_all(&session).unwrap();
+    let mut watcher = Watcher::new(&logs, Store::open(&root.join("data")).unwrap());
+    append(&session.join("Power.log"), &fixture("duo_game_incomplete"));
+    watcher.poll().unwrap();
+    assert!(
+        !watcher.game_without_lobby(),
+        "no LoadingScreen.log: unknown"
+    );
+
+    let scenes = session.join("LoadingScreen.log");
+    append(&scenes, &scene_line("STARTUP", "LOGIN"));
+    append(&scenes, &scene_line("LOGIN", "GAMEPLAY"));
+    watcher.poll().unwrap();
+    assert_eq!(watcher.scene(), Some(Scene::Game));
+    assert!(watcher.game_without_lobby());
+
+    append(&scenes, &scene_line("GAMEPLAY", "BACON"));
+    append(&scenes, LOADING_FROM_LOBBY);
+    append(&scenes, &scene_line("BACON", "GAMEPLAY"));
+    watcher.poll().unwrap();
+    assert!(
+        !watcher.game_without_lobby(),
+        "the next game came through the lobby"
+    );
+}
+
 #[test]
 fn the_watcher_gives_the_next_opponent_of_the_game_on() {
     let root = temp_dir();

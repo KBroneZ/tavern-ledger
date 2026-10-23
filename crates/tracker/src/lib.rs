@@ -341,6 +341,13 @@ impl Watcher {
             .flatten()
     }
 
+    /// The game screen was opened without the Battlegrounds lobby before it,
+    /// as when the client restarts inside a game (a reconnect). False when
+    /// the scene is unknown (`LoadingScreen.log` off or unreadable).
+    pub fn game_without_lobby(&self) -> bool {
+        self.scene_error.is_none() && self.scene.game_from_lobby() == Some(false)
+    }
+
     /// The player left the game screen: a game the log still has open was
     /// cut off, so it is not "on" any more for the overlay and the window,
     /// also once the next game starts loading.
