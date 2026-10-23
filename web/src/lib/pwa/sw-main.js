@@ -30,10 +30,21 @@ self.addEventListener("fetch", (event) => {
   else event.respondWith(networkFirst(event));
 });
 
-/** All or nothing: one file missing fails the install, and the old worker keeps working. */
+/**
+ * All or nothing: one file missing, redirected or marked private fails the
+ * install, and the old worker keeps working. Every answer goes through the same
+ * rule as a later copy (isStorable) before any of them is put in the cache.
+ */
 async function precache() {
+  const answers = await Promise.all(
+    BUILD.precache.map(async (path) => {
+      const response = await fetch(new Request(new URL(path, SCOPE.origin), { cache: "reload" }));
+      if (!isStorable(response)) throw new Error(`${path} is not a plain answer, so it is not kept`);
+      return [path, response];
+    }),
+  );
   const cache = await caches.open(cacheName(BUILD.version));
-  await cache.addAll(BUILD.precache.map((path) => new Request(new URL(path, SCOPE.origin), { cache: "reload" })));
+  for (const [path, response] of answers) await cache.put(new URL(path, SCOPE.origin).href, response);
 }
 
 async function dropOldCaches() {
@@ -76,11 +87,11 @@ async function cacheFirst(event) {
   return response;
 }
 
-/** Waits for the network, but not for ever: on a bad connection the copy of the page shows instead. */
-function networkWithTimeout(request) {
+/** Waits for an answer, but not for ever: on a bad connection the copy of the page shows instead. */
+function withinWait(answer) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("the network is too slow")), NETWORK_WAIT_MS);
-    fetch(request).then(
+    answer.then(
       (response) => {
         clearTimeout(timer);
         resolve(response);
@@ -93,14 +104,24 @@ function networkWithTimeout(request) {
   });
 }
 
+/** Puts a copy of a storable answer in this build's cache; the copy is made before anything reads the answer. */
+async function keepNow(request, response) {
+  if (!isStorable(response)) return;
+  const copy = response.clone();
+  const cache = await caches.open(cacheName(BUILD.version));
+  await cache.put(request, copy);
+}
+
 async function networkFirst(event) {
   const request = event.request;
+  // The fetch starts at once and its answer is kept whenever it arrives, even after a slow page gave way to its
+  // copy: the next visit then has the new page. The event is asked to wait for it before the first await.
+  const fetched = fetch(request);
+  event.waitUntil(fetched.then((response) => keepNow(request, response)).catch(() => {}));
   // A page gives up on a slow network only when it has a copy to show instead; without one it waits for the network.
   const copy = request.mode === "navigate" ? await lookup(request) : undefined;
   try {
-    const response = await (copy ? networkWithTimeout(request) : fetch(request));
-    keep(event, request, response);
-    return response;
+    return await (copy ? withinWait(fetched) : fetched);
   } catch {
     const cached = copy ?? (await lookup(request));
     if (cached) return cached;

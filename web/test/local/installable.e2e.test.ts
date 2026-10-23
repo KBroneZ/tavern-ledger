@@ -23,7 +23,7 @@ import { ANDROID_CHROME, Browser, IPHONE_SAFARI, serveDist, type Site } from "..
 
 const EXECUTABLE = process.env.TAVERN_BROWSER ?? "";
 const DIST = join(import.meta.dirname, "..", "..", "dist");
-const RUN = EXECUTABLE !== "" && existsSync(EXECUTABLE) && existsSync(join(DIST, "sw.js"));
+const RUN = EXECUTABLE !== "" && existsSync(EXECUTABLE) && existsSync(join(DIST, "pwa.js"));
 
 describe("installable web app", { skip: RUN ? false : "set TAVERN_BROWSER and build the accounts-open site" }, () => {
   let site: Site;

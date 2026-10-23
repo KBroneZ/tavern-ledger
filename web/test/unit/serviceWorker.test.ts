@@ -214,11 +214,10 @@ test("a slow network gives way to the kept copy of a page", async () => {
   const worker = new Worker();
   worker.network = () => page("copy");
   await worker.fetch(request(`${ORIGIN}/download/`, "navigate"));
-  worker.network = () => new Promise<Response>(() => {});
-  const started = Date.now();
+  // The network answers after 300 ms; the test clock's wait is 20 ms.
+  worker.network = () => new Promise<Response>((done) => setTimeout(() => done(page("later")), 300));
   const response = await worker.fetch(request(`${ORIGIN}/download/`, "navigate"));
   assert.equal(await response!.text(), "copy");
-  assert.ok(Date.now() - started < 1000, "the test clock is short");
 });
 
 test("knownAddresses: pages by folder, files by path, never the account pages, the 404s, the worker or the host's rules", () => {
@@ -261,4 +260,35 @@ test("a slow network is waited for when there is no copy of the page to show ins
   const response = await worker.fetch(request(`${ORIGIN}/download/`, "navigate"));
   assert.equal(await response!.text(), "late but real", "the test clock gives up after 20 ms, so a wait of 100 ms shows the page was waited for");
   assert.deepEqual(worker.kept(), [`${ORIGIN}/download/`]);
+});
+
+test("install fails, and keeps nothing, when a shell file is redirected or marked no-store", async () => {
+  for (const make of [
+    () => {
+      const redirected = page("sign in");
+      Object.defineProperty(redirected, "redirected", { value: true });
+      return redirected;
+    },
+    () => page("private", { "Content-Type": "text/html", "Cache-Control": "no-store" }),
+    () => page("private", { "Content-Type": "text/html", "Cache-Control": "private, max-age=60" }),
+  ]) {
+    const worker = new Worker();
+    worker.network = (req) => (req.url.endsWith(".css") ? make() : page("ok"));
+    await assert.rejects(worker.lifecycle("install"), /not a plain answer/);
+    assert.deepEqual(worker.kept(), []);
+    assert.ok(!worker.skipped);
+  }
+});
+
+test("a page that answers after the wait is still kept, so the next visit has the new one", async () => {
+  const worker = new Worker();
+  worker.network = () => page("old");
+  await worker.fetch(request(`${ORIGIN}/privacy/`, "navigate"));
+  worker.network = () => new Promise<Response>((done) => setTimeout(() => done(page("new")), 100));
+  // The wait is 20 ms on the test clock: the old copy shows, and the new answer replaces it once it arrives.
+  assert.equal(await (await worker.fetch(request(`${ORIGIN}/privacy/`, "navigate")))!.text(), "old");
+  worker.network = () => {
+    throw new TypeError("offline");
+  };
+  assert.equal(await (await worker.fetch(request(`${ORIGIN}/privacy/`, "navigate")))!.text(), "new");
 });
