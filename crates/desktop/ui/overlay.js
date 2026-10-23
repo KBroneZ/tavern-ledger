@@ -20,13 +20,23 @@ let keyTaken = false;
 // While the layout is being edited and no game is on, the panels show the
 // example game so there is something to arrange (overlay-example.js).
 let editing = false;
+// The preview from the tray (T-614): the example game over the desktop, with
+// no game on. The app closes it when a game starts.
+let previewing = false;
 // The lobby panel's values (T-338, overlay_lobby): shown on the
 // Battlegrounds lobby screen with no game on.
 let lobbyView = null;
 const LOBBY_REFRESH_MS = 5000;
 
+// The example game fills the panels while arranging and in the preview. The
+// hero select and lobby examples are for arranging only: the preview shows the
+// overlay as it looks during a game.
+function showsExample() {
+  return editing || previewing;
+}
+
 function current() {
-  return game || (editing ? EXAMPLE_GAME : null);
+  return game || (showsExample() ? EXAMPLE_GAME : null);
 }
 
 function setEditing(on) {
@@ -96,7 +106,7 @@ function renderStatus(g) {
   // Nothing of the heroes, mode, combat or health in words during a game
   // (T-339): the game shows all of it already.
   if (g.phase === "over") panel.append(el("div", null, TLI18n.t("ov.status.over")));
-  if (g === EXAMPLE_GAME) panel.append(el("p", "notes", TLI18n.t("ov.status.example")));
+  if (g === EXAMPLE_GAME) panel.append(el("p", "notes", TLI18n.t(previewing && !editing ? "ov.status.preview" : "ov.status.example")));
   const notes = [...g.warnings, ...g.problems].slice(0, 2).map((w) => TLI18n.backend(w));
   if (keyTaken && g !== EXAMPLE_GAME) notes.push(TLI18n.t("ov.status.keyTaken"));
   if (notes.length) panel.append(el("p", "notes", notes.join(" · ")));
@@ -140,7 +150,7 @@ function renderCounters(g) {
   }
   // While the layout is being edited the panel shows example rows, so it can be placed in a real game too.
   let rows = TLCounters.rows(g.counters);
-  if (!rows.length && editing) rows = TLCounters.rows(EXAMPLE_GAME.counters);
+  if (!rows.length && showsExample()) rows = TLCounters.rows(EXAMPLE_GAME.counters);
   panel.hidden = !rows.length;
   if (!rows.length) {
     panel.replaceChildren();
@@ -244,7 +254,7 @@ function oddsRange(side, range) {
 function renderOdds(g) {
   const panel = document.getElementById("odds");
   let v = TLOdds.oddsView(g.odds);
-  if (!v && editing) v = TLOdds.oddsView(EXAMPLE_GAME.odds);
+  if (!v && showsExample()) v = TLOdds.oddsView(EXAMPLE_GAME.odds);
   panel.classList.toggle("empty", !v);
   panel.hidden = false;
   if (!v) {
@@ -459,7 +469,7 @@ function render() {
   const g = current();
   const lobby = document.getElementById("lobby");
   // Only on the lobby screen with no game on; while arranging, the example.
-  const lobbyShown = !game && (editing ? EXAMPLE_LOBBY : lobbyView && lobbyView.in_lobby ? lobbyView : null);
+  const lobbyShown = !game && (editing ? EXAMPLE_LOBBY : previewing ? null : lobbyView && lobbyView.in_lobby ? lobbyView : null);
   if (lobbyShown) renderLobby(lobbyShown);
   else lobby.hidden = true;
   if (!g && lobbyShown) {
@@ -518,6 +528,7 @@ async function refresh() {
   scene = typeof where === "string" ? where : null;
   boardArea = settings && settings.leaderboard ? settings.leaderboard.area : null;
   keyTaken = Boolean(settings && settings.hide_key_taken);
+  previewing = Boolean(settings && settings.preview);
   lobbyView = lobbyNow;
   if (window.TLHover) window.TLHover.setFailed(false);
   render();

@@ -25,6 +25,7 @@ mod overlay_layout;
 mod overlay_window;
 mod package;
 mod period_view;
+mod preview;
 #[cfg(test)]
 mod process_checks;
 mod redact;
@@ -115,11 +116,15 @@ const OVERLAY_DEV_ARG: &str = "--overlay-dev";
 /// Development only: starts with the layout unlocked, so a test can drive the
 /// mouse without opening the tray menu. A normal start is always locked.
 const OVERLAY_UNLOCK_ARG: &str = "--overlay-unlock";
+/// Development only, with `--overlay-dev`: starts with the preview open
+/// (T-614), as the tray item would, so a test needs no click on the tray.
+const OVERLAY_PREVIEW_ARG: &str = "--overlay-preview";
 const MENU_SHOW: &str = "show";
 const MENU_OVERLAY: &str = "overlay";
 const MENU_UNLOCK: &str = "overlay-unlock";
 const MENU_RESET_LAYOUT: &str = "overlay-reset-layout";
 const MENU_HIDE_ALL: &str = "overlay-hide-all";
+const MENU_PREVIEW: &str = "overlay-preview";
 const MENU_AUTOSTART: &str = "autostart";
 const MENU_QUIT: &str = "quit";
 
@@ -1525,6 +1530,10 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
     overlay::keep_hide_item(&state, hide_all.clone());
     // The key may have been pressed while the menu was being built.
     overlay::refresh_hide_item(&state);
+    // The overlay with example data over the desktop (T-614); closes when a game starts.
+    let preview =
+        CheckMenuItem::with_id(app, MENU_PREVIEW, words.preview, true, false, None::<&str>)?;
+    overlay::keep_preview_item(&state, preview.clone());
     let show = MenuItem::with_id(app, MENU_SHOW, words.show, true, None::<&str>)?;
     let quit = MenuItem::with_id(app, MENU_QUIT, words.quit, true, None::<&str>)?;
     let menu = Menu::with_items(
@@ -1533,6 +1542,7 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
             &show,
             &overlay,
             &hide_all,
+            &preview,
             &unlock,
             &reset_layout,
             &autostart,
@@ -1545,6 +1555,7 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
         unlock.clone(),
         reset_layout.clone(),
         hide_all.clone(),
+        preview.clone(),
     );
     let kept_autostart = autostart.clone();
     let quit_item = quit.clone();
@@ -1557,6 +1568,7 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
             MENU_AUTOSTART => toggle_autostart(app),
             MENU_OVERLAY => toggle_overlay(app),
             MENU_HIDE_ALL => hide_all::toggle(app),
+            MENU_PREVIEW => preview::toggle(app),
             MENU_UNLOCK => {
                 let state = app.state::<Arc<AppState>>();
                 overlay::set_unlocked(app, &state, !state.overlay.unlocked());
@@ -1587,7 +1599,7 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
         .map_or(1.0, |monitor| monitor.scale_factor());
     tray = tray.icon(tray_image(tray_icon_px(scale)));
     let icon = tray.build(app)?;
-    let (show, overlay, unlock, reset_layout, hide_all) = items;
+    let (show, overlay, unlock, reset_layout, hide_all, preview) = items;
     app.state::<Arc<settings::Settings>>()
         .keep_tray(settings::TrayItems {
             show,
@@ -1595,6 +1607,7 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
             unlock,
             reset_layout,
             hide_all,
+            preview,
             autostart: kept_autostart,
             autostart_available: available,
             quit: quit_item,
@@ -1802,6 +1815,9 @@ fn main() {
             let unlock_asked = std::env::args().any(|a| a == OVERLAY_UNLOCK_ARG);
             if overlay_dev(std::env::args()) && unlock_asked {
                 overlay::set_unlocked(app.handle(), &state, true);
+            }
+            if overlay_dev(std::env::args()) && std::env::args().any(|a| a == OVERLAY_PREVIEW_ARG) {
+                preview::set(app.handle(), &state, true);
             }
             if let Some(message) = loaded
                 .err()
