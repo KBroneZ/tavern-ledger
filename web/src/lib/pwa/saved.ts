@@ -155,12 +155,13 @@ export async function saveGame(device: Device, game: SavedGame, file: Blob): Pro
     if (!isOn(device, game.userId)) return;
     const cache = await device.caches.open(SAVED_CACHE);
     await cache.put(savedGameKey(game.publicId), new Response(file, { headers: { "Content-Type": "application/octet-stream" } }));
-    const all = [game, ...(await readIndex(cache)).filter((e) => e.publicId !== game.publicId)];
+    const before = await readIndex(cache);
+    const all = [game, ...before.filter((e) => e.publicId !== game.publicId)];
     try {
       await cache.put(SAVED_INDEX_KEY, new Response(JSON.stringify(all.slice(0, SAVED_LIMIT)), { headers: { "Content-Type": "application/json" } }));
     } catch (error) {
-      // No room for the list: the file would have no entry and nothing to remove it.
-      await cache.delete(savedGameKey(game.publicId));
+      // No room for the list: a new game's file would have no entry and nothing to remove it. A game already listed keeps its file.
+      if (!before.some((e) => e.publicId === game.publicId)) await cache.delete(savedGameKey(game.publicId));
       throw error;
     }
     for (const dropped of all.slice(SAVED_LIMIT)) await cache.delete(savedGameKey(dropped.publicId));

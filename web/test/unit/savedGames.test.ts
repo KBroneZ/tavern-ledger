@@ -229,3 +229,14 @@ test("nothing is saved when saving is off for this player at the moment of the s
   await assert.rejects(saveGame(full, game(1), file(1)), /quota/);
   assert.deepEqual([...d.stores.get(SAVED_CACHE)!.keys()], []);
 });
+
+test("a refused list update keeps the file of a game that was already listed", async () => {
+  const d = device();
+  await saveGame(d, game(1), file(1));
+  const cache = await d.caches.open(SAVED_CACHE);
+  const put = cache.put.bind(cache);
+  const full = { ...d, caches: { ...d.caches, open: async () => ({ ...cache, put: async (k: string, r: Response) => (k === SAVED_INDEX_KEY ? Promise.reject(new Error("quota")) : put(k, r)) }) } };
+  await assert.rejects(saveGame(full, game(1, { savedAt: 9 }), file(1)), /quota/);
+  assert.equal(await (await readSaved(d, USER, id(1)))!.text(), "report 1");
+});
+

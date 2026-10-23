@@ -89,7 +89,7 @@
         items.forEach(function (game) {
           var item = doc.createElement("li");
           var link = doc.createElement("a");
-          link.href = saved.getAttribute("data-game-path") + "?u=" + game.userId + "&id=" + game.publicId;
+          link.href = saved.getAttribute("data-game-path") + "?u=" + encodeURIComponent(game.userId) + "&id=" + encodeURIComponent(game.publicId);
           var label = typeof game.title === "string" && game.title ? game.title : saved.getAttribute("data-fallback");
           link.textContent = typeof game.played === "string" ? label + " \u00b7 " + game.played : label;
           item.appendChild(link);
