@@ -18,8 +18,10 @@
 import { after, before, describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
+import { gzipSync } from "node:zlib";
 import { join } from "node:path";
 import { ANDROID_CHROME, Browser, IPHONE_SAFARI, serveDist, type Site } from "../helpers/browser.ts";
+import { record } from "../unit/gameFixtures.ts";
 
 const EXECUTABLE = process.env.TAVERN_BROWSER ?? "";
 const DIST = join(import.meta.dirname, "..", "..", "dist");
@@ -93,6 +95,42 @@ describe("installable web app", { skip: RUN ? false : "set TAVERN_BROWSER and bu
       assert.equal(await heading(), "Sin conexión");
     } finally {
       await site.start();
+    }
+  });
+
+  test("saved games: a saved game opens offline with the game page, the offline page lists it, and an unsaved one shows the offline page", async () => {
+    const user = "11111111-1111-4111-8111-111111111111";
+    const game = "22222222-2222-4222-8222-222222222222";
+    const other = "33333333-3333-4333-8333-333333333333";
+    const report = gzipSync(JSON.stringify(record())).toString("base64");
+    await browser.evaluate("localStorage.setItem('tl-lang', 'en')");
+    // A page the worker controls (a game page, as in use).
+    await browser.go(`${site.origin}/game/?u=${user}&id=${other}`, 1500);
+    // What the game page saves (lib/pwa/saved.ts): the file and the list, written here the same way, then the message to the worker that keeps the game page.
+    await browser.evaluate(`(async () => {
+      const cache = await caches.open("tl-replays");
+      await cache.put("/__saved__/game/${game}", new Response(Uint8Array.from(atob("${report}"), (c) => c.charCodeAt(0))));
+      await cache.put("/__saved__/index", new Response(JSON.stringify([{ userId: "${user}", publicId: "${game}", savedAt: 1, played: "2026-10-24", title: "Pyramad · 3rd" }])));
+      (await navigator.serviceWorker.getRegistration()).active.postMessage({ type: "keep-game-shell" });
+      for (let i = 0; i < 50 && !(await cache.match("/__saved__/shell/es")); i++) await new Promise((done) => setTimeout(done, 100));
+    })()`);
+    const saved = await browser.evaluate<string[]>(`caches.open("tl-replays").then((c) => c.keys()).then((ks) => ks.map((r) => new URL(r.url).pathname).sort())`);
+    assert.deepEqual(saved, [`/__saved__/game/${game}`, "/__saved__/index", "/__saved__/shell/en", "/__saved__/shell/es"]);
+    await site.stop();
+    try {
+      await browser.go(`${site.origin}/game/?u=${user}&id=${game}`, 2000);
+      assert.equal(await browser.evaluate("!!document.getElementById('game-body')"), true, "the game page opens from the device");
+      assert.match(await browser.evaluate<string>("document.getElementById('game-body').innerText"), /You are reading the copy saved on this device/, "and draws the saved game");
+      await browser.go(`${site.origin}/game/?u=${user}&id=${other}`, 1500);
+      assert.equal(await heading(), "You are offline", "a game that was not saved");
+      assert.deepEqual(
+        await browser.evaluate(`[...document.querySelectorAll("[data-saved-list] a")].map((a) => a.textContent + " | " + a.getAttribute("href"))`),
+        [`Pyramad · 3rd · 2026-10-24 | /game/?u=${user}&id=${game}`],
+      );
+      assert.equal(await browser.evaluate("document.querySelector('[data-saved]').hidden"), false);
+    } finally {
+      await site.start();
+      await browser.evaluate(`caches.delete("tl-replays")`);
     }
   });
 

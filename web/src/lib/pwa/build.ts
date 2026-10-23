@@ -5,7 +5,7 @@
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { NO_STORE_PAGES, TURNSTILE_PAGES, WASM_WORKER } from "../config.ts";
-import { CACHE_PREFIX } from "./rules.js";
+import { CACHE_PREFIX, SAVED_CACHE } from "./rules.js";
 
 /** What the install keeps ready, besides the hashed files of /_astro/ (see precacheList). */
 export const SHELL_FILES: readonly string[] = [
@@ -114,7 +114,7 @@ export function killSwitchSource(): string {
     "self.addEventListener(\"activate\", (event) => {",
     "  event.waitUntil(",
     "    (async () => {",
-    `      for (const name of await caches.keys()) if (name.startsWith(${JSON.stringify(CACHE_PREFIX)})) await caches.delete(name);`,
+    `      for (const name of await caches.keys()) if (name.startsWith(${JSON.stringify(CACHE_PREFIX)}) || name === ${JSON.stringify(SAVED_CACHE)}) await caches.delete(name);`,
     "      await self.registration.unregister();",
     "    })(),",
     "  );",

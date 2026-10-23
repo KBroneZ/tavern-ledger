@@ -1,0 +1,143 @@
+// Saved games (T-637, second part): the choice, what is kept, the limit, and
+// that signing out, turning it off and the delete button remove everything.
+// A stand-in Cache Storage and local storage take the browser's place.
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import {
+  type Device,
+  eraseSaved,
+  FLAG_KEY,
+  forget,
+  isOn,
+  listSaved,
+  readSaved,
+  SAVED_LIMIT,
+  saveGame,
+  type SavedGame,
+  turnOff,
+  turnOn,
+} from "../../src/lib/pwa/saved.ts";
+import { SAVED_CACHE, SAVED_INDEX_KEY, savedGameKey } from "../../src/lib/pwa/rules.js";
+
+const USER = "11111111-1111-4111-8111-111111111111";
+const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+
+function device(): Device & { stores: Map<string, Map<string, Response>>; flags: Map<string, string> } {
+  const stores = new Map<string, Map<string, Response>>();
+  const flags = new Map<string, string>();
+  return {
+    stores,
+    flags: Object.assign(flags, {
+      getItem: (key: string) => flags.get(key) ?? null,
+      setItem: (key: string, value: string) => void flags.set(key, value),
+      removeItem: (key: string) => void flags.delete(key),
+    }) as never,
+    caches: {
+      delete: async (name: string) => stores.delete(name),
+      open: async (name: string) => {
+        const store = stores.get(name) ?? new Map<string, Response>();
+        stores.set(name, store);
+        return {
+          match: async (key: string) => store.get(key)?.clone(),
+          put: async (key: string, response: Response) => void store.set(key, response),
+          delete: async (key: string) => store.delete(key),
+        };
+      },
+    },
+  };
+}
+
+const game = (n: number, extra: Partial<SavedGame> = {}): SavedGame => ({ userId: USER, publicId: id(n), savedAt: n, played: "2026-10-2" + (n % 10), title: `Game ${n}`, ...extra });
+const file = (n: number) => new Blob([`report ${n}`]);
+
+test("saving is off until the player turns it on, and off again after turning it off", async () => {
+  const d = device();
+  assert.equal(isOn(d), false);
+  await turnOn(d);
+  assert.equal(isOn(d), true);
+  assert.equal(d.flags.get(FLAG_KEY), "1");
+  await turnOff(d);
+  assert.equal(isOn(d), false);
+});
+
+test("a browser that refuses to answer means off", () => {
+  const d = device();
+  d.flags.getItem = () => {
+    throw new Error("blocked");
+  };
+  assert.equal(isOn(d), false);
+});
+
+test("a saved game is listed and read back, for its own player only", async () => {
+  const d = device();
+  await saveGame(d, game(1), file(1));
+  assert.deepEqual(await listSaved(d), [game(1)]);
+  assert.equal(await (await readSaved(d, USER, id(1)))!.text(), "report 1");
+  assert.equal(await readSaved(d, "22222222-2222-4222-8222-222222222222", id(1)), null, "another player's id");
+  assert.equal(await readSaved(d, USER, id(2)), null, "a game that was not saved");
+  assert.deepEqual([...d.stores.get(SAVED_CACHE)!.keys()].toSorted(), [SAVED_INDEX_KEY, savedGameKey(id(1))].toSorted());
+});
+
+test("only the last SAVED_LIMIT games are kept, newest first, and the oldest files are deleted", async () => {
+  const d = device();
+  for (let n = 1; n <= SAVED_LIMIT + 3; n++) await saveGame(d, game(n), file(n));
+  const listed = await listSaved(d);
+  assert.equal(listed.length, SAVED_LIMIT);
+  assert.deepEqual(listed.map((g) => g.publicId), Array.from({ length: SAVED_LIMIT }, (_, i) => id(SAVED_LIMIT + 3 - i)));
+  const keys = [...d.stores.get(SAVED_CACHE)!.keys()];
+  for (const n of [1, 2, 3]) assert.ok(!keys.includes(savedGameKey(id(n))), `game ${n} is gone`);
+  assert.equal(keys.filter((k) => k.startsWith("/__saved__/game/")).length, SAVED_LIMIT);
+});
+
+test("opening a saved game again moves it to the top and keeps one copy", async () => {
+  const d = device();
+  for (const n of [1, 2, 3]) await saveGame(d, game(n), file(n));
+  await saveGame(d, game(1, { savedAt: 9 }), file(1));
+  assert.deepEqual((await listSaved(d)).map((g) => g.publicId), [id(1), id(3), id(2)]);
+});
+
+test("delete, turning off and signing out remove every saved game", async () => {
+  for (const remove of [eraseSaved, turnOff, forget]) {
+    const d = device();
+    await turnOn(d);
+    await saveGame(d, game(1), file(1));
+    await remove(d);
+    assert.equal(d.stores.has(SAVED_CACHE), false);
+    assert.deepEqual(await listSaved(d), []);
+  }
+});
+
+test("the delete button leaves the choice on; turning off and signing out turn it off", async () => {
+  const on = async () => {
+    const d = device();
+    await turnOn(d);
+    return d;
+  };
+  const erased = await on();
+  await eraseSaved(erased);
+  assert.equal(isOn(erased), true);
+  for (const remove of [turnOff, forget]) {
+    const d = await on();
+    await remove(d);
+    assert.equal(isOn(d), false);
+  }
+});
+
+test("an index entry that is not a game is ignored, and an unreadable index is an empty list", async () => {
+  const d = device();
+  const cache = await d.caches.open(SAVED_CACHE);
+  const bad = [game(1), { userId: "x", publicId: id(2), savedAt: 1, played: null, title: "" }, { ...game(3), savedAt: "now" }, { ...game(4), title: 5 }, null, "text", { ...game(5), played: null }];
+  await cache.put(SAVED_INDEX_KEY, new Response(JSON.stringify(bad)));
+  assert.deepEqual((await listSaved(d)).map((g) => g.publicId), [id(1), id(5)]);
+  await cache.put(SAVED_INDEX_KEY, new Response("not json"));
+  assert.deepEqual(await listSaved(d), []);
+  await cache.put(SAVED_INDEX_KEY, new Response(JSON.stringify({ not: "a list" })));
+  assert.deepEqual(await listSaved(d), []);
+});
+
+test("a game's file is only read if the index lists it", async () => {
+  const d = device();
+  const cache = await d.caches.open(SAVED_CACHE);
+  await cache.put(savedGameKey(id(1)), new Response("orphan"));
+  assert.equal(await readSaved(d, USER, id(1)), null);
+});

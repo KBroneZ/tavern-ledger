@@ -39,7 +39,10 @@ export const SITE_STRINGS = {
   "pwa.description": "Your Hearthstone Battlegrounds games: stats, replays and a combat simulator.",
   "offline.title": "You are offline",
   "offline.description": "There is no connection, and this page is not saved on your device.",
-  "offline.lead": "There is no connection, and this page is not saved on your device. Pages you opened before still work; your games need a connection.",
+  "offline.lead": "There is no connection, and this page is not saved on your device. Pages you opened before still work; your games need a connection unless you saved them on this device.",
+  "offline.saved.title": "Saved on this device",
+  "offline.saved.lead": "These games open without a connection.",
+  "offline.saved.fallback": "Saved game",
   "offline.retry": "Try again",
   "offline.back": "Go to the home page",
 

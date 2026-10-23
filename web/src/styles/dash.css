@@ -217,3 +217,19 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* "Keep my last games on this device" (T-637): a quiet section under the games list. */
+.saved {
+  margin-top: var(--s-4);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--line-soft);
+}
+.saved-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 44px;
+}
+.saved-hint {
+  color: var(--dim);
+}

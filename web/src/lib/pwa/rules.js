@@ -90,3 +90,46 @@ export function isStorable(response) {
  * @param {string} pathname
  */
 export const offlinePage = (pathname) => (pathname === "/es" || pathname.startsWith("/es/") ? OFFLINE_PAGES.es : OFFLINE_PAGES.en);
+
+// Saved games (T-637, second part). A player who turns on "Keep my last games
+// on this device" has the game page store, in a cache of its own, the report
+// file of each of their own games they open and a copy of the game page
+// (a static shell, the same for everyone). The worker never writes there; it
+// only reads it, to open a saved game's address when there is no connection.
+
+/** The cache of saved games. Its name does not start with CACHE_PREFIX, so a new build never deletes it. */
+export const SAVED_CACHE = "tl-replays";
+
+/** Where, inside that cache, the page puts its entries. These addresses are only keys: nothing is ever fetched from them. */
+export const SAVED_PREFIX = "/__saved__/";
+export const SAVED_INDEX_KEY = `${SAVED_PREFIX}index`;
+/** @param {string} publicId */
+export const savedGameKey = (publicId) => `${SAVED_PREFIX}game/${publicId}`;
+/** @param {"en" | "es"} lang */
+export const savedShellKey = (lang) => `${SAVED_PREFIX}shell/${lang}`;
+
+/** The message a game page sends the worker after saving a game: "fetch the game page again and keep it with the saved games". */
+export const KEEP_SHELL_MESSAGE = "keep-game-shell";
+
+/** The game pages, one per language: the only pages a saved game may open offline. */
+export const GAME_PAGES = { en: "/game/", es: "/es/game/" };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/**
+ * The cache keys a game page's address needs to open offline (the page shell
+ * and the game's file), or null when the address is not a game page with a
+ * valid player and game id.
+ * @param {string} pathname
+ * @param {string} search
+ * @returns {{ shell: string, game: string } | null}
+ */
+export function savedGame(pathname, search) {
+  const lang = Object.keys(GAME_PAGES).find((l) => bare(GAME_PAGES[l]) === bare(pathname));
+  if (!lang) return null;
+  const query = new URLSearchParams(search);
+  const userId = (query.get("u") ?? "").toLowerCase();
+  const publicId = (query.get("id") ?? "").toLowerCase();
+  if (!UUID.test(userId) || !UUID.test(publicId)) return null;
+  return { shell: savedShellKey(/** @type {"en" | "es"} */ (lang)), game: savedGameKey(publicId) };
+}

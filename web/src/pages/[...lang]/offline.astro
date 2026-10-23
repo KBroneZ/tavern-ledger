@@ -20,4 +20,13 @@ const scripts = readConfig(import.meta.env) !== null;
     {scripts && <button class="tb tb-common" type="button" data-reload>{st("offline.retry")}</button>}
     <a class="tb tb-common" href={href("/")}>{st("offline.back")}</a>
   </p>
+  {
+    scripts && (
+      <section data-saved hidden data-fallback={st("offline.saved.fallback")} data-game-path={href("/game/")}>
+        <h2>{st("offline.saved.title")}</h2>
+        <p>{st("offline.saved.lead")}</p>
+        <ul data-saved-list />
+      </section>
+    )
+  }
 </Base>

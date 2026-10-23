@@ -11,6 +11,7 @@ import { loadEnv } from "vite";
 import { contentSecurityPolicy, readConfig, WASM_WORKER } from "../../src/lib/config.ts";
 import { builtFile, killSwitchSource, NEVER_CACHED } from "../../src/lib/pwa/build.ts";
 import { THEME_COLOR } from "../../src/lib/pwa/manifest.ts";
+import { SAVED_CACHE, SAVED_INDEX_KEY } from "../../src/lib/pwa/rules.js";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const DIST = join(ROOT, "dist");
@@ -121,6 +122,10 @@ if (CONFIG === null) {
     assert.equal(read("sw.js"), killSwitchSource());
     assert.match(read("sw.js"), /unregister\(\)/);
     assert.ok(!/fetch|precache/.test(read("sw.js")), "it answers no request");
+    // Games a player saved on this device while accounts were open have no page to read them now: they go too.
+    assert.ok(read("sw.js").includes(JSON.stringify(SAVED_CACHE)));
+    for (const page of ["games/index.html", "es/games/index.html"]) assert.ok(!read(page).includes('id="saved"'), `${page} has no saved-games choice`);
+    for (const page of ["offline/index.html", "es/offline/index.html"]) assert.ok(!read(page).includes("data-saved"), `${page} lists no saved games`);
     // It is never cached, so a browser with an older worker sees it on its next visit.
     const rules = read("_headers")
       .split(/\n(?=\S)/)
@@ -149,6 +154,28 @@ if (CONFIG === null) {
     }
     assert.ok(read("es/index.html").includes("Añadir a la pantalla de inicio"));
     assert.ok(read("index.html").includes("Add to home screen"));
+  });
+
+  test("saved games: the choice is on the games list and off by default, and the offline page lists them in its own language", () => {
+    for (const [page, on, erase] of [
+      ["games/index.html", "Keep my last 10 games on this device", "Delete saved games"],
+      ["es/games/index.html", "Guardar mis últimas 10 partidas en este dispositivo", "Borrar partidas guardadas"],
+    ] as const) {
+      const html = read(page);
+      assert.match(html, /<section class="saved" id="saved"[^>]* hidden>/, `${page}: hidden until the script shows it`);
+      assert.match(html, /<input type="checkbox" id="saved-on"(?![^>]*checked)[^>]*>/, `${page}: not checked`);
+      assert.ok(html.includes(on) && html.includes(erase), page);
+    }
+    for (const [page, path] of [
+      ["offline/index.html", "/game/"],
+      ["es/offline/index.html", "/es/game/"],
+    ] as const) {
+      assert.match(read(page), new RegExp(`<section data-saved hidden data-fallback="[^"]+" data-game-path="${path}"`), page);
+    }
+    // public/pwa.js is a classic script and cannot import the names the worker and the pages share.
+    const script = read("pwa.js");
+    assert.ok(script.includes(JSON.stringify(SAVED_CACHE)) && script.includes(JSON.stringify(SAVED_INDEX_KEY)));
+    assert.ok(/[^\x00-\x7F]/.test(script) === false, "pwa.js is plain ASCII");
   });
 
   test("the service worker is plain script that compiles, with a version and the shell it keeps", () => {

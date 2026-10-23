@@ -31,7 +31,10 @@ export const ES: Record<SiteKey, string> = {
   "pwa.description": "Tus partidas de Campos de Batalla de Hearthstone: estadísticas, repeticiones y un simulador de combate.",
   "offline.title": "Sin conexión",
   "offline.description": "No hay conexión y esta página no está guardada en tu dispositivo.",
-  "offline.lead": "No hay conexión y esta página no está guardada en tu dispositivo. Las páginas que abriste antes siguen funcionando; tus partidas necesitan conexión.",
+  "offline.lead": "No hay conexión y esta página no está guardada en tu dispositivo. Las páginas que abriste antes siguen funcionando; tus partidas necesitan conexión, salvo las que guardaste en este dispositivo.",
+  "offline.saved.title": "Guardadas en este dispositivo",
+  "offline.saved.lead": "Estas partidas se abren sin conexión.",
+  "offline.saved.fallback": "Partida guardada",
   "offline.retry": "Volver a intentarlo",
   "offline.back": "Ir al inicio",
 
