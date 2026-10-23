@@ -19,6 +19,7 @@ const modeName = (id) => (MODES[id] ? tl(`mode.${id}`) : null);
 let allGames = [];
 let stats = { modes: [], legend: [] };
 let curious = null; // the "Curious stats" tab (T-216), all modes together
+let period = null; // "Today and this week" (T-361): the app's answer and the ranges it was asked for
 let mode = null; // chosen game type; defaults to the mode with most games
 let userPicked = false;
 const OTHER = "OTHER"; // any other Battlegrounds type, so no game is hidden
@@ -1095,6 +1096,69 @@ function renderNow() {
   if (recapGame) updateTribesButton(recapGame);
 }
 
+// "Today and this week" (T-361): the app sums the games of the viewer's local
+// day and week (from Monday); this only words them. A game worth revisiting
+// opens its recap, which has the replays.
+const periodSignedClass = (up) => (up === true ? "up" : up === false ? "down" : "");
+
+function periodRevisit(r) {
+  const button = el("button");
+  button.type = "button";
+  button.title = tl("period.revisit.open");
+  button.setAttribute("aria-label", `${r.said}. ${tl("period.revisit.open")}`);
+  button.append(el("span", "period-reason", r.label), document.createTextNode(` · ${heroText(r.hero)} · ${r.placeText}`));
+  if (r.change) button.append(document.createTextNode(" · "), el("span", `period-change ${periodSignedClass(r.up)}`.trim(), r.change));
+  button.addEventListener("click", () => {
+    const game = allGames.find((g) => g.session === r.session && g.index === r.index);
+    if (game) openRecap(game).catch(showError);
+  });
+  const item = el("li");
+  item.append(button);
+  return item;
+}
+
+function periodMode(row) {
+  const block = el("div", "period-mode");
+  block.append(el("h4", null, row.label), el("p", null, row.games), el("p", null, row.average), el("p", null, row.record));
+  block.append(el("p", `period-net ${row.net.state} ${periodSignedClass(row.net.up)}`.trim(), row.net.text));
+  if (row.revisit.length) {
+    const list = el("ul", "period-revisit");
+    list.setAttribute("aria-label", tl("period.revisit.title"));
+    list.append(...row.revisit.map(periodRevisit));
+    block.append(list);
+  }
+  return block;
+}
+
+function renderPeriod() {
+  if (!period) return;
+  const fill = (id, list, emptyKey) => {
+    const words = TLPeriod.period(list, heroText);
+    document.getElementById(id).replaceChildren(...(words.empty ? [el("p", "empty", tl(emptyKey))] : words.modes.map(periodMode)));
+  };
+  fill("period-today-body", period.view.today, "period.empty.today");
+  fill("period-week-body", period.view.week, "period.empty.week");
+  document.getElementById("period-note").textContent = TLPeriod.weekNote(period.range);
+}
+
+let periodSeq = 0;
+let periodTimer = null;
+
+// Asked again on every refresh and at the next local midnight, so a window left
+// open overnight changes its day (and its week on Monday).
+async function refreshPeriod() {
+  const seq = ++periodSeq;
+  const range = TLPeriod.ranges(new Date());
+  const view = await invoke("period_overview", {
+    todayStart: range.todayStart, todayEnd: range.todayEnd, weekStart: range.weekStart, weekEnd: range.weekEnd,
+  });
+  if (seq !== periodSeq) return;
+  period = { view, range };
+  TLFocus.keep(document, renderPeriod);
+  clearTimeout(periodTimer);
+  periodTimer = setTimeout(() => refreshPeriod().catch(showError), Math.max(1000, range.todayEnd * 1000 - Date.now() + 1000));
+}
+
 // Refreshes can overlap; only the latest one may paint, so an older answer
 // never replaces a newer one.
 let refreshSeq = 0;
@@ -1115,6 +1179,7 @@ async function refreshGames() {
   if (!userPicked) mode = pickDefaultMode();
   render();
   renderLobby();
+  refreshPeriod().catch(showError);
 }
 
 // "Your games", "Stats", "Curious stats" and Settings (T-216, T-323, T-324); all are

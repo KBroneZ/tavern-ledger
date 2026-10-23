@@ -417,6 +417,12 @@
           "markdownDescription": "Enables the overlay_state command without any pre-configured scope."
         },
         {
+          "description": "Enables the period_overview command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-period-overview",
+          "markdownDescription": "Enables the period_overview command without any pre-configured scope."
+        },
+        {
           "description": "Enables the preview_problem_report command without any pre-configured scope.",
           "type": "string",
           "const": "allow-preview-problem-report",
@@ -751,6 +757,12 @@
           "type": "string",
           "const": "deny-overlay-state",
           "markdownDescription": "Denies the overlay_state command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the period_overview command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-period-overview",
+          "markdownDescription": "Denies the period_overview command without any pre-configured scope."
         },
         {
           "description": "Denies the preview_problem_report command without any pre-configured scope.",

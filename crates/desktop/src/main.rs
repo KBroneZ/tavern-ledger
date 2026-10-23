@@ -23,6 +23,7 @@ mod overlay;
 mod overlay_layout;
 mod overlay_window;
 mod package;
+mod period_view;
 #[cfg(test)]
 mod process_checks;
 mod redact;
@@ -63,6 +64,7 @@ use tracker::live::{live_game, LiveGame};
 use tracker::lobby_recap::{session_recap, HistoryGame, SessionRecap};
 use tracker::lobby_tribes::{self, Action, Entries, GameStarts, LobbyView};
 use tracker::lock::{HistoryLock, LockError};
+use tracker::period_summary::period_summary;
 use tracker::provenance::{row_sources, RowSources};
 use tracker::recap::{recap, Recap};
 use tracker::report_bundle::{self, BundleInput};
@@ -460,18 +462,7 @@ fn lobby_of(
         // Every game the app has seen: the dev tool's moved the rating too, so
         // the change of the game after it is measured from it; only the
         // counted ones are tiles.
-        let history: Vec<HistoryGame> = rows
-            .iter()
-            .map(|r| HistoryGame {
-                key: GameKey {
-                    session: r.session.clone(),
-                    index: r.index,
-                },
-                report: &r.report,
-                in_day: in_day(r),
-                counted: !r.dev_reconnect,
-            })
-            .collect();
+        let history = history_of(&rows, in_day);
         // Ratings only while the read is on: with it off there are none.
         let recap = state
             .saved_ratings
@@ -486,6 +477,68 @@ fn lobby_of(
         today,
         recap,
     }
+}
+
+/// Every game the app has seen, oldest first, with whether `in_period` holds
+/// for it; the reconnect dev tool's games are in it (they moved the rating)
+/// but are not counted.
+fn history_of(rows: &[GameRow], in_period: impl Fn(&GameRow) -> bool) -> Vec<HistoryGame<'_>> {
+    rows.iter()
+        .map(|r| HistoryGame {
+            key: GameKey {
+                session: r.session.clone(),
+                index: r.index,
+            },
+            report: &r.report,
+            in_day: in_period(r),
+            counted: !r.dev_reconnect,
+        })
+        .collect()
+}
+
+/// The "Today / this week" summary of the main window (T-361). `today_*` and
+/// `week_*` are the page's local midnights in UTC seconds (the week runs from
+/// Monday); a span that is not a day or a week gives nothing for it.
+#[tauri::command]
+fn period_overview(
+    state: State<'_, Arc<AppState>>,
+    today_start: i64,
+    today_end: i64,
+    week_start: i64,
+    week_end: i64,
+) -> period_view::PeriodView {
+    period_of(
+        &state,
+        (today_start, today_end),
+        (week_start, week_end),
+        tracker::game_clock::system_local_to_utc,
+    )
+}
+
+fn period_of(
+    state: &AppState,
+    today: (i64, i64),
+    week: (i64, i64),
+    to_utc: tracker::game_clock::LocalToUtc,
+) -> period_view::PeriodView {
+    let rating_on = state.game_memory.view().enabled;
+    let rows = state.games.lock().unwrap_or_else(|e| e.into_inner());
+    state.saved_ratings.with(|saved| {
+        let saved = saved.filter(|_| rating_on);
+        let of = |span: (i64, i64), sane: bool| {
+            if !sane {
+                return Vec::new();
+            }
+            let history = history_of(&rows, |r| {
+                lobby_panel::played_in(r.ended, &r.session, span, to_utc)
+            });
+            period_summary(&history, saved)
+        };
+        period_view::PeriodView {
+            today: of(today, lobby_panel::sane_day(today.0, today.1)),
+            week: of(week, period_view::sane_week(week.0, week.1)),
+        }
+    })
 }
 
 /// The switch for reading from the game (D-063), its status and the own
@@ -1615,6 +1668,7 @@ fn main() {
             overlay_state,
             overlay_scene,
             overlay_lobby,
+            period_overview,
             overlay::overlay_settings,
             overlay::overlay_save_layout,
             overlay::overlay_set_theme,
@@ -2240,6 +2294,76 @@ mod tests {
         assert_eq!(last.newest_any, Some(at(1)));
         assert_eq!(last.previous_any, Some(at(1)));
         assert_eq!(last.duos_any, Some(true));
+    }
+
+    #[test]
+    fn the_period_summary_follows_the_local_day_and_week_and_says_rating_off() {
+        use tracker::game_clock::days_from_civil;
+        use tracker::period_summary::NetRating;
+        // UTC+3 all year, named local times.
+        let plus_3 = |local: i64| Some(local - 3 * 3600);
+        let at = |d: i64, h: i64, m: i64, s: i64| {
+            days_from_civil(2026, 10, d) * 86_400 + h * 3600 + m * 60 + s - 3 * 3600
+        };
+        let row = |index: u64, game_type: &str, place: i64, ended: i64| GameRow {
+            session: "Hearthstone_2026_10_18_20_00_00".into(),
+            index,
+            parser: None,
+            sources: row_sources("", &serde_json::Value::Null),
+            dev_reconnect: false,
+            started: None,
+            ended: Some(ended),
+            report: serde_json::json!({"status": "ok", "game_type": game_type, "final_place": place}),
+        };
+        let state = AppState::default();
+        *state.games.lock().unwrap() = vec![
+            // Sunday 23:59:59: last week's.
+            row(1, "GT_BATTLEGROUNDS", 8, at(18, 23, 59, 59)),
+            // Monday 00:00:00 and Wednesday: this week's; the Wednesday one is today.
+            row(2, "GT_BATTLEGROUNDS", 2, at(19, 0, 0, 0)),
+            row(3, "GT_BATTLEGROUNDS", 4, at(21, 12, 0, 0)),
+            row(4, "GT_BATTLEGROUNDS_DUO", 1, at(21, 13, 0, 0)),
+            // Next Monday 00:00:00: next week's.
+            row(5, "GT_BATTLEGROUNDS", 1, at(26, 0, 0, 0)),
+        ];
+        let today = (at(21, 0, 0, 0), at(22, 0, 0, 0));
+        let week = (at(19, 0, 0, 0), at(26, 0, 0, 0));
+        let view = period_of(&state, today, week, plus_3);
+        let games = |modes: &[tracker::period_summary::ModePeriod]| {
+            modes
+                .iter()
+                .map(|m| (m.summary.mode.clone(), m.summary.tally.games))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            games(&view.week),
+            [
+                ("GT_BATTLEGROUNDS".into(), 2),
+                ("GT_BATTLEGROUNDS_DUO".into(), 1)
+            ]
+        );
+        assert_eq!(
+            games(&view.today),
+            [
+                ("GT_BATTLEGROUNDS".into(), 1),
+                ("GT_BATTLEGROUNDS_DUO".into(), 1)
+            ]
+        );
+        assert_eq!(view.week[0].summary.tally.average_place, Some(3.0));
+        // The read from the game is off here: off, never zero.
+        assert!(view.week.iter().all(|m| m.net_rating == NetRating::Off));
+        // A span that is not a day, or not a week, gives nothing for it.
+        let bad = period_of(
+            &state,
+            (today.1, today.0),
+            (week.0, week.0 + 86_400),
+            plus_3,
+        );
+        assert!(bad.today.is_empty() && bad.week.is_empty());
+        // Nothing played: nothing shown.
+        assert!(period_of(&AppState::default(), today, week, plus_3)
+            .week
+            .is_empty());
     }
 
     #[test]

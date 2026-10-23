@@ -21,6 +21,7 @@ pub mod lobby_tribes;
 pub mod lock;
 pub mod odds;
 pub mod odds_duos;
+pub mod period_summary;
 pub mod playback;
 pub mod possible;
 pub mod provenance;
