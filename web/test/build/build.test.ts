@@ -134,7 +134,8 @@ test("_headers carries the same policy plus frame-ancestors and the other securi
   assert.match(headers, /Cross-Origin-Opener-Policy: same-origin/);
   assert.match(headers, /\/_astro\/\*\n  Cache-Control: public, max-age=31536000, immutable/);
   assert.match(headers, /Permissions-Policy: camera=\(\)/);
-  assert.match(headers, /Strict-Transport-Security: max-age=\d+; includeSubDomains/);
+  // One year, without preload: preload is a separate, hard-to-undo step.
+  assert.match(headers, /Strict-Transport-Security: max-age=31536000; includeSubDomains\n/);
 });
 
 test("_headers: the simulator's worker alone gets 'wasm-unsafe-eval', replacing the site-wide policy", () => {
