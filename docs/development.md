@@ -121,7 +121,7 @@ Its tests run with the app's ui-tests (`node --test "ui-tests/*.test.js"` from `
 
 ## Windows installer
 
-Needs the same Rust toolchain as the app, Node.js 22.12 or later and an internet connection. From a clean checkout:
+Needs the same Rust toolchain as the app, Node.js (the version in `web/.node-version`) and an internet connection. From a clean checkout:
 
 ```
 npm ci
@@ -216,7 +216,7 @@ Hosted project: migrations and the three functions will reach it through the Sup
 
 ### Website (`web/`)
 
-Needs Node.js 22.12 or later. Copy `web/.env.example` to `web/.env` and fill in the local stack's API URL and anon key from `npx supabase status` (only the public key: the build refuses any other). `PUBLIC_SIGNUPS_OPEN=true` shows the sign-up form; unset, as on the live site, `/signin/` offers sign-in only. `PUBLIC_TURNSTILE_SITE_KEY` is the anti-robot widget's site key on the forms that sign in, sign up or send an email: with the two Supabase settings set, the build stops without it; locally and in CI it is Cloudflare's published test key (`1x00000000000000000000AA`, always passes), on the live site the `tavernledger.net` widget's key. The local stack has CAPTCHA off, so it ignores the token (`[auth.captcha]` in `supabase/config.toml` says how to turn it on with Cloudflare's test secret).
+Needs Node.js: the version in `web/.node-version` (24.22.1), or 22.23.4 or later on the 22.x line (`engines` in `web/package.json`). Copy `web/.env.example` to `web/.env` and fill in the local stack's API URL and anon key from `npx supabase status` (only the public key: the build refuses any other). `PUBLIC_SIGNUPS_OPEN=true` shows the sign-up form; unset, as on the live site, `/signin/` offers sign-in only. `PUBLIC_TURNSTILE_SITE_KEY` is the anti-robot widget's site key on the forms that sign in, sign up or send an email: with the two Supabase settings set, the build stops without it; locally and in CI it is Cloudflare's published test key (`1x00000000000000000000AA`, always passes), on the live site the `tavernledger.net` widget's key. The local stack has CAPTCHA off, so it ignores the token (`[auth.captcha]` in `supabase/config.toml` says how to turn it on with Cloudflare's test secret).
 
 ```
 cd web
