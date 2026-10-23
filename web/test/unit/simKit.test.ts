@@ -283,15 +283,15 @@ test("the editor shows the kits on every board, and Spanish names its slots", ()
 
 test("a blocked hero power is named in the result, with its reason and a hint that fits", () => {
   useCardNames({ cards, ...names });
-  const answer = readAnswer(JSON.stringify({ engine: "0.13.0", status: "not_modelled", not_modelled: [LOCK], reasons: [{ card_id: LOCK, reason: "the minion it holds is not shown" }], approximate: [] }));
+  const answer = readAnswer(JSON.stringify({ engine: "0.13.0", status: "not_modelled", not_modelled: [LOCK], reasons: [{ card_id: LOCK, reason: "the minion it holds is not given" }], approximate: [] }));
   const out = textOf(resultView({ result: { kind: "answer", answer }, cards, cap: null, kitIds: new Set([LOCK]) }).map((n) => n as never)[0]);
   assert.ok(out.includes("Lock and Load"), out);
   assert.ok(out.includes("Choose what a hero power needs"), out);
   // In the slot: the reason, not "Not modelled".
   const s = B.setKitCard(duel(), "player", 0, "power", 0, LOCK);
-  const marks = { notModelled: new Set([LOCK]), missing: new Set<string>(), approximate: new Map<string, string>(), reasons: new Map([[LOCK, "the minion it holds is not shown"]]) };
+  const marks = { notModelled: new Set([LOCK]), missing: new Set<string>(), approximate: new Map<string, string>(), reasons: new Map([[LOCK, "the minion it holds is not given"]]) };
   const slot = textOf(kitView("player", 0, { state: s, cards, lists, marks, holding: null }));
-  assert.ok(slot.includes("the minion it holds is not shown") && !slot.includes("Not modelled"), slot);
+  assert.ok(slot.includes("the minion it holds is not given") && !slot.includes("Not modelled"), slot);
 });
 
 test("a power's needs say they wait for start of combat when it is off", () => {
@@ -304,4 +304,27 @@ test("a power's needs say they wait for start of combat when it is off", () => {
 test("the start-of-combat switch says whether it is on", () => {
   assert.match(toHtml(socSwitch(B.emptyState())), /data-act="soc"[^>]*aria-pressed="true"/);
   assert.match(toHtml(socSwitch(B.setStartOfCombat(B.emptyState(), false))), /aria-pressed="false"/);
+});
+
+test("an empty second board in Duos with a hero power or trinket says it is left out (T-633)", () => {
+  const note = (state: B.SimState) => html(editorView({ state, cards, selected: null, adding: null, marks: NO_MARKS, lists, holding: null }));
+  const duos = B.addBoard(B.setMode(duel(), "duos"), "player");
+  assert.ok(!note(duos).includes("sim-board-left-out"), "nothing set: nothing to say");
+  const withPower = B.setKitCard(duos, "player", 1, "power", 0, FIRE);
+  assert.ok(note(withPower).includes("sim-board-left-out"), "a power on an empty board");
+  assert.equal(note(withPower).split("sim-board-left-out").length - 1, 1, "once, under that board only");
+  const withTrinket = B.setKitCard(duos, "player", 1, "trinket", 1, "BG_TRINKET_SYN");
+  assert.ok(note(withTrinket).includes("sim-board-left-out"), "a trinket on an empty board");
+  const withMinion = B.addMinion(withPower, "player", 1, "BGS_119", cards);
+  assert.ok(!note(withMinion).includes("sim-board-left-out"), "a minion on the board brings it in");
+  const request = JSON.parse(B.toRequest(withPower, cards));
+  assert.equal(request.player.length, 1, "and the request still leaves the empty board out");
+});
+
+test("the left-out note is in English and Spanish", () => {
+  const state = B.setKitCard(B.addBoard(B.setMode(duel(), "duos"), "player"), "player", 1, "power", 0, FIRE);
+  const draw = () => textOf({ tag: "div", svg: false, attrs: [], children: editorView({ state, cards, selected: null, adding: null, marks: NO_MARKS, lists, holding: null }) });
+  assert.match(draw(), /left out/);
+  setLang("es");
+  assert.match(draw(), /se deja fuera/);
 });

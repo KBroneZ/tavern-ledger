@@ -43,6 +43,7 @@ export const ES: Record<SimStringKey, string> = {
   "board.addSecond": "Añadir un segundo tablero",
   "board.remove": "Quitar este tablero",
   "board.full": "Un tablero admite 7 esbirros.",
+  "board.leftOut": "Este tablero no tiene esbirros, así que se deja fuera: su poder de héroe y sus abalorios no se juegan. Añade un esbirro para usarlos.",
 
   "tier.label": "Nivel de taberna",
   "tier.unknown": "?",

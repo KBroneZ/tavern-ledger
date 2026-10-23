@@ -48,7 +48,7 @@ pub const IN_COMBAT_NOT_PLAYED: &str = "its effect during combat is not played y
 pub const IN_COMBAT_BLOCKED: &str =
     "it acts during combat in a way the simulator does not play yet";
 pub const TWICE_NOT_PLAYED: &str = "it makes a hero power that acts in combat trigger twice";
-pub const COUNTER_NOT_GIVEN: &str = "its numbers are not in the log; the printed ones are used";
+pub const COUNTER_NOT_GIVEN: &str = "its numbers are not known; the printed ones are used";
 pub const WINGMEN_ORDER: &str =
     "when its attacks come against the other start-of-combat effects is not checked";
 pub const LIGHTNING_REPEATS: &str = "whether it can hit the same minion twice is not checked";
@@ -71,13 +71,13 @@ pub const BEETLES_PLACE: &str =
     "where its Beetles go on the board, and their game-long buffs, are not checked";
 /// Why a played power blocks the odds of a board taken before start of
 /// combat: something it needs beside the board is not given.
-pub const TARGET_NOT_GIVEN: &str = "the minion it names is not shown";
-pub const HELD_NOT_GIVEN: &str = "the minion it holds is not shown";
+pub const TARGET_NOT_GIVEN: &str = "the minion it names is not given";
+pub const HELD_NOT_GIVEN: &str = "the minion it holds is not given";
 pub const ROUND_NOT_GIVEN: &str = "the round, which unlocks it, is not given";
 pub const TEAMMATE_NOT_GIVEN: &str = "its teammate's board is not given";
 /// Why a power that marked a minion at the start of combat blocks the odds
 /// of a board taken after it: no minion shows its mark.
-pub const MARK_NOT_GIVEN: &str = "the minion it marked is not shown";
+pub const MARK_NOT_GIVEN: &str = "the minion it marked is not given";
 /// Why Eternal Portrait is approximate.
 pub const KNIGHTS_SUMMONED: &str =
     "Eternal Knights summoned during combat miss what it gave them in earlier combats";

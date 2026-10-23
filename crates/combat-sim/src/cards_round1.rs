@@ -12,11 +12,11 @@ const fn summon(token: &'static str, count: u8) -> Action {
 }
 
 pub(crate) const GAME_BUFFS: &str =
-    "summons tokens that may have game-long buffs the log does not show";
+    "summons tokens that may have game-long buffs that are not known";
 pub(crate) const SCALES: &str = "its numbers grow during the game; the base values are used";
 const DEITY: &str = "buffs the Deity, which is not on the board";
 /// Played with the board's upgrades when it brings them (T-610).
-pub(crate) const BLOOD_GEM: &str = "Blood Gems are played as +1/+1; upgrades are not in the log";
+pub(crate) const BLOOD_GEM: &str = "Blood Gems are played as +1/+1; their upgrades are not known";
 const RANDOM_PICK: &str = "which minions it picks is not checked against the game yet";
 
 /// Cards with a combat effect the engine plays, by exact card id.

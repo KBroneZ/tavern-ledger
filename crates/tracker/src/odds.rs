@@ -87,9 +87,9 @@ pub struct OddsInput {
     pub opponent_seat: i64,
     /// The combat (round) the boards entered play in.
     pub round: i64,
-    /// A card on a board of that combat acts at the start of combat, so the
-    /// boards may already carry its effects (a minion killed or buffed
-    /// before the first attack).
+    /// A minion, Dark Gift, hero power or trinket on a board of that combat
+    /// acts at the start of combat, so the boards may already carry its
+    /// effects (a minion killed or buffed before the first attack).
     pub seen_after_start_of_combat: bool,
     pub own: Vec<LogMinion>,
     pub opponent: Vec<LogMinion>,
