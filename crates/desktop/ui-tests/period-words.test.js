@@ -69,7 +69,7 @@ test("with no zone given it is the viewer's own: local midnights", () => {
   assert.equal(r.todayEnd, new Date(2026, 9, 22).getTime() / 1000);
   assert.equal(r.weekStart, new Date(2026, 9, 19).getTime() / 1000);
   assert.equal(r.weekEnd, new Date(2026, 9, 26).getTime() / 1000);
-  assert.equal(r.weekFrom.getDay(), 1, "a Monday");
+  assert.deepEqual(r.weekFrom, { y: 2026, m: 9, d: 19 }, "Monday 2026-10-19");
 });
 
 const nameOf = (hero) => hero.name || hero.id;
@@ -184,7 +184,9 @@ test("no streaks are worded anywhere in the summary", () => {
 
 test("the week note says the week starts on Monday and which Monday", () => {
   const r = period.ranges(at(2026, 10, 21, 12), zone);
-  assert.match(period.weekNote(r), /^Weeks start on Monday \(this one on .*19.*\)\./);
+  assert.deepEqual(r.weekFrom, { y: 2026, m: 9, d: 19 });
+  // The app writes English dates day first (en-GB): the same Monday whatever zone runs the test.
+  assert.equal(period.weekNote(r), "Weeks start on Monday (this one on 19/10/2026). Times are your local time.");
 });
 
 test("it is worded in Spanish too, with the same states", () => {

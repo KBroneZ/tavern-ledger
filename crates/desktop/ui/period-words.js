@@ -31,13 +31,15 @@
     const { y, m, d, weekday } = zone.parts(now);
     const sinceMonday = (weekday + 6) % 7;
     const secs = (date) => Math.floor(date.getTime() / 1000);
-    const monday = zone.midnight(y, m, d - sinceMonday);
+    // The Monday as a calendar day, so saying it does not depend on the zone
+    // the page happens to format dates in.
+    const monday = new Date(Date.UTC(y, m, d - sinceMonday));
     return {
       todayStart: secs(zone.midnight(y, m, d)),
       todayEnd: secs(zone.midnight(y, m, d + 1)),
-      weekStart: secs(monday),
+      weekStart: secs(zone.midnight(y, m, d - sinceMonday)),
       weekEnd: secs(zone.midnight(y, m, d - sinceMonday + 7)),
-      weekFrom: monday,
+      weekFrom: { y: monday.getUTCFullYear(), m: monday.getUTCMonth(), d: monday.getUTCDate() },
     };
   }
 
@@ -116,7 +118,9 @@
   // "The week starts on Monday (19/10/2026)": which day the week starts on,
   // said in the window.
   function weekNote(range) {
-    return I18n.t("period.weekNote", { date: I18n.date(range.weekFrom) });
+    // Noon of that calendar day on the page's clock: the same day in any zone.
+    const { y, m, d } = range.weekFrom;
+    return I18n.t("period.weekNote", { date: I18n.date(new Date(y, m, d, 12)) });
   }
 
   const api = { ranges, signed, net, period, weekNote };
