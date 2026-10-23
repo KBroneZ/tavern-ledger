@@ -235,8 +235,18 @@ pub(crate) fn start_of_combat_in(report: &GameReport, round: i64) -> bool {
         .iter()
         .filter(|r| r.number == round)
         .flat_map(|r| r.entries.iter())
-        .flat_map(|e| e.board.iter().flatten())
-        .any(acts_at_start_of_combat)
+        .any(|e| {
+            e.board.iter().flatten().any(acts_at_start_of_combat)
+                || e.kit.as_ref().is_some_and(kit_acts_at_start_of_combat)
+        })
+}
+
+/// True when a hero power or trinket acts at the start of combat (T-632).
+fn kit_acts_at_start_of_combat(kit: &HeroKit) -> bool {
+    kit.powers
+        .iter()
+        .chain(&kit.trinkets)
+        .any(|c| combat_sim::kit::has_start_of_combat(&c.card_id))
 }
 
 /// True when the minion's card or one of its Dark Gifts acts at the start
@@ -578,11 +588,7 @@ pub fn run_odds(
             || player
                 .boards()
                 .chain(opponent.boards())
-                .flat_map(|b| &b.minions)
-                .any(|m| {
-                    has_start_of_combat(&m.card_id)
-                        || m.gifts.iter().any(|g| gifts::has_start_of_combat(g))
-                }));
+                .any(Warband::acts_at_start_of_combat));
     let known = o.damage_unknown == 0;
     LiveOdds {
         seat,

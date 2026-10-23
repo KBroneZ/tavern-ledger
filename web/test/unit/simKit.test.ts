@@ -216,6 +216,13 @@ test("the built engine plays a hero power with start of combat, and not without"
   const off = readAnswer(engine.run(B.toRequest(B.setStartOfCombat(fire, false), cards)));
   assert.ok(off.kind === "odds");
   assert.equal(off.lost, off.trials);
+  // The same rule as for a minion (T-632): with start of combat off its effect is
+  // already on the board, so the odds are marked; played, nothing is missed.
+  assert.equal(off.startOfCombat, true);
+  assert.equal(on.startOfCombat, false);
+  const plain = readAnswer(engine.run(B.toRequest(B.setStartOfCombat(duel(), false), cards)));
+  assert.ok(plain.kind === "odds");
+  assert.equal(plain.startOfCombat, false, "no source, no mark");
   // A power the engine has not reviewed is named, never guessed.
   const unknown = readAnswer(engine.run(B.toRequest(B.setKitCard(duel(), "player", 0, "power", 0, "BG_HP_SYN"), cards)));
   assert.ok(unknown.kind === "not_modelled");

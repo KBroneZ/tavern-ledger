@@ -1127,7 +1127,7 @@
         "lost": 10000,
         "new_build": null,
         "stalled": 0,
-        "start_of_combat": false,
+        "start_of_combat": true,
         "status": "odds",
         "taken": {
           "high": 3,

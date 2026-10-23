@@ -85,10 +85,72 @@ fn the_first_attacks_boards_replace_the_estimate_and_keep_the_kits() {
     let o = run_odds(&i, &facts, Duration::from_secs(5));
     assert!(!o.estimate);
     assert_eq!(o.lost, 1.0, "Fire Invocation is not played again");
+    assert!(
+        o.start_of_combat,
+        "its start of combat is already on the boards, so the odds are marked (T-632)"
+    );
 
     // Once in, they win over a leg still listed as begun.
     r.opening = begun_report().opening;
     assert!(!odds_input(&r, live(4)).expect("odds").estimate);
+}
+
+/// Holy Mallet, a trinket that acts at the start of combat.
+const MALLET: &str = "BG30_MagicItem_902";
+/// Bleeding Heart: no effect in combat. Bronzebeard Portrait: acts later in it.
+const NO_EFFECT: &str = "BG30_MagicItem_713";
+const LATER: &str = "BG30_MagicItem_418";
+
+fn with_trinket(id: &str) -> HeroKit {
+    HeroKit {
+        powers: Vec::new(),
+        trinkets: vec![LogKitCard {
+            card_id: id.into(),
+            slot: 1,
+            ..Default::default()
+        }],
+    }
+}
+
+/// Combat 4 at the first attack, the player with `kit`.
+fn first_attack_with(kit: HeroKit) -> GameReport {
+    let mut r = report(GAME, vec![round(3, Some(plain(1)), 5, Some(plain(9)))]);
+    let mut fought = round(
+        4,
+        Some(vec![minion(PLAIN, 2, 3, 1)]),
+        5,
+        Some(vec![minion(PLAIN, 3, 3, 1)]),
+    );
+    fought.entries[0].kit = Some(kit);
+    r.rounds.push(fought);
+    r
+}
+
+#[test]
+fn a_hero_power_or_trinket_with_start_of_combat_marks_the_first_attacks_odds() {
+    // The mark is one rule for every source: a minion, a Dark Gift, a hero
+    // power or a trinket that acts at the start of combat (T-632).
+    for (kit, marked) in [
+        (kit(FIRE), true),
+        (with_trinket(MALLET), true),
+        (with_trinket(NO_EFFECT), false),
+        (with_trinket(LATER), false),
+        (HeroKit::default(), false),
+    ] {
+        let r = first_attack_with(kit.clone());
+        let i = odds_input(&r, live(4)).expect("odds");
+        assert_eq!(i.seen_after_start_of_combat, marked, "log side: {kit:?}");
+        let mut by_boards = i.clone();
+        by_boards.seen_after_start_of_combat = false;
+        let o = run_odds(&by_boards, &facts, Duration::from_secs(5));
+        assert_eq!(o.start_of_combat, marked, "boards side: {kit:?}");
+    }
+}
+
+#[test]
+fn the_estimate_is_never_marked_for_a_source_it_plays() {
+    let i = odds_input(&begun_report(), live(4)).expect("an estimate");
+    assert!(!run_odds(&i, &facts, Duration::from_secs(5)).start_of_combat);
 }
 
 #[test]
