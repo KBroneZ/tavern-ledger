@@ -170,10 +170,11 @@ function Import-SupabaseSecret([hashtable]$Connection, [string]$Path) {
     return 'stored'
 }
 
-# A link or junction, which a delete must not follow.
+# A link, junction or hard link: deleting it would not delete what it points
+# to, or another name for the same bytes would remain.
 function Test-IsLink([string]$Path) {
     $item = Get-Item -LiteralPath $Path -Force
-    return [bool]($item.Attributes -band [IO.FileAttributes]::ReparsePoint)
+    return [bool]($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $item.LinkType -eq 'HardLink'
 }
 
 # What the owner's scripts use: the local stack's keys with -Local, otherwise
@@ -200,6 +201,10 @@ function Test-SupabaseSecretWorks([hashtable]$Connection) {
             -MaximumRedirection 0 -SkipHttpErrorCheck
     }
     catch {
+        # The original error records hold the request, apikey header included.
+        $failed = $_.Exception
+        @($Error | Where-Object { $_ -is [Management.Automation.ErrorRecord] -and $_.Exception -eq $failed }) |
+            ForEach-Object { $Error.Remove($_) }
         throw "The check request failed: $($_.Exception.Message.Replace($Connection.Key, '<key>'))"
     }
     if ($res.StatusCode -ne 200) {

@@ -101,7 +101,8 @@ if (-not (Test-Path -LiteralPath $EnvFile -PathType Leaf)) {
     return
 }
 
-$result = Import-SupabaseSecret (Read-SupabaseEnvFile $EnvFile) $StorePath
+$fromFile = Read-SupabaseEnvFile $EnvFile
+$result = Import-SupabaseSecret $fromFile $StorePath
 Write-Host "Key $result in $StorePath (DPAPI, user $($env:USERNAME))."
 Invoke-Check
 
@@ -111,6 +112,10 @@ if (-not $DeletePlaintext) {
 }
 if (Test-IsLink $EnvFile) { throw "$EnvFile is a link; not deleting it. Remove it by hand." }
 if ($PSCmdlet.ShouldProcess($EnvFile, 'Delete the plaintext Supabase key file')) {
+    # The file may have changed while the check ran or the prompt waited.
+    if ((Test-IsLink $EnvFile) -or -not (Test-SameConnection (Read-SupabaseEnvFile $EnvFile) $fromFile)) {
+        throw "$EnvFile changed since it was moved; not deleting it. Run the command again."
+    }
     Remove-Item -LiteralPath $EnvFile -Force -Confirm:$false
     Write-Host "Deleted $EnvFile. Copies may remain on the disk and in older PC backups."
 }

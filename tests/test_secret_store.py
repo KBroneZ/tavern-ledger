@@ -250,6 +250,14 @@ class StoreTest(unittest.TestCase):
         self.assertNotEqual(res.returncode, 0)
         self.assertIn("connection reset", res.stderr)
         self.assert_no_secret(res)
+        # Nor does the session's error list afterwards.
+        code = (f"{FAKE_WEB}; try {{ & {q(COMMAND)} -EnvFile {q(self.env_file)} "
+                f"-StorePath {q(self.store)} }} catch {{ }}; "
+                "$Error | ForEach-Object { $_ | Format-List * -Force | Out-String; "
+                "$_.Exception | Format-List * -Force | Out-String }")
+        res = pwsh(code, {"FAKE_CALLS": str(self.calls), "FAKE_EXPECT": KEY, "FAKE_THROW": "1"})
+        self.assertIn("connection reset", res.stdout)
+        self.assert_no_secret(res)
 
     def test_without_confirmation_nothing_is_deleted_or_replaced(self):
         # -NonInteractive cannot answer the prompt, so ShouldProcess must refuse.
@@ -278,10 +286,18 @@ class StoreTest(unittest.TestCase):
         made = subprocess.run(["cmd", "/c", "mklink", "/J", str(junction), str(target)],
                               capture_output=True, text=True)
         self.assertEqual(made.returncode, 0, made.stderr)
+        hard = self.tmp / "hard.env"
+        made = subprocess.run(["cmd", "/c", "mklink", "/H", str(hard), str(self.env_file)],
+                              capture_output=True, text=True)
+        self.assertEqual(made.returncode, 0, made.stderr)
         res = self.run_store(f"Test-IsLink {q(junction)}; Test-IsLink {q(target)}; "
-                             f"Test-IsLink {q(self.env_file)}")
+                             f"Test-IsLink {q(self.env_file)}; Test-IsLink {q(self.tmp)}")
         self.assertEqual(res.returncode, 0, res.stderr)
-        self.assertEqual(res.stdout.split(), ["True", "False", "False"])
+        self.assertEqual(res.stdout.split(), ["True", "False", "True", "False"])
+        res = self.run_command("-DeletePlaintext -Confirm:$false")
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("link", res.stderr)
+        self.assertTrue(self.env_file.exists())
 
     def test_check_only(self):
         self.assertEqual(self.run_command("").returncode, 0)
