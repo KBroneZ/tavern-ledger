@@ -261,6 +261,27 @@ html[data-auth="out"] .site-nav a.nav-account {
   }
 }
 
+/* A phone, or any touch screen: the links are targets of 44px (T-551). The
+   folded menu's links and its buttons already are; this covers the brand,
+   the wrapped links where the menu does not fold, and the footer's. */
+@media (max-width: 720px), (pointer: coarse) {
+  .brand {
+    min-height: 44px;
+  }
+
+  .site-nav a {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .colophon a {
+    display: inline-flex;
+    align-items: center;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
 /* ---------- Preferences ---------- */
 
 @media (prefers-reduced-transparency: reduce) {
