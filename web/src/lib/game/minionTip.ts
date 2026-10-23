@@ -8,6 +8,7 @@ import { exactStat } from "../stat.ts";
 import { h, type VNode } from "../view/node.ts";
 import { picture } from "../view/pieces.ts";
 import type { Buff } from "./buffs.ts";
+import type { GiftMark } from "./gifts.ts";
 import { cardLabel } from "./names.ts";
 import { g } from "./strings.ts";
 
@@ -18,6 +19,8 @@ export interface TipMinion {
   health: number | null;
   /** null: the record is older and did not read them. */
   buffs: readonly Buff[] | null;
+  /** The minion's Dark Gifts, as words: a screen that cannot hover reads them here (the star's tooltip is a title). */
+  gifts?: readonly GiftMark[];
 }
 
 /** The attributes a minion needs to own a tooltip: focusable, and described by it. */
@@ -60,6 +63,43 @@ export function watchTipEscape(doc: Pick<Document, "documentElement" | "addEvent
   doc.addEventListener("focusin", back);
 }
 
+/** The room a plaque keeps from the screen's edge, in pixels. */
+const TIP_MARGIN = 8;
+
+/**
+ * How far to move a plaque sideways to be inside the viewport: 0 when it is,
+ * else enough to put the edge it crossed at the margin. A plaque wider than
+ * the viewport lines up with the left margin.
+ */
+export function tipShift(rect: { left: number; right: number }, viewport: number): number {
+  if (rect.right - rect.left > viewport - 2 * TIP_MARGIN) return TIP_MARGIN - rect.left;
+  if (rect.left < TIP_MARGIN) return TIP_MARGIN - rect.left;
+  if (rect.right > viewport - TIP_MARGIN) return viewport - TIP_MARGIN - rect.right;
+  return 0;
+}
+
+/**
+ * On a narrow screen a plaque centred on a minion near an end runs off the
+ * page: when the pointer or the focus (a tap focuses the minion) reaches a
+ * minion, its plaque is moved back in (--tip-dx, read by tip.css).
+ */
+export function watchTipFit(doc: Pick<Document, "documentElement" | "addEventListener">): void {
+  const fit = (event: Event) => {
+    const target = event.target as Element | null;
+    const host = target?.closest?.("[aria-describedby]");
+    const tip = host?.querySelector<HTMLElement>(".minion-tip");
+    if (!tip) return;
+    // Measured where the stylesheet puts it, then moved.
+    tip.style.setProperty("--tip-dx", "0px");
+    const rect = tip.getBoundingClientRect();
+    // Not laid out (display: none until the hover or focus lands): the next event measures it.
+    if (rect.width === 0) return;
+    tip.style.setProperty("--tip-dx", `${Math.round(tipShift(rect, doc.documentElement.clientWidth))}px`);
+  };
+  doc.addEventListener("pointerover", fit);
+  doc.addEventListener("focusin", fit);
+}
+
 export function minionTip(id: string, m: TipMinion, when?: TipWhen): VNode {
   return h(
     "span",
@@ -72,5 +112,6 @@ export function minionTip(id: string, m: TipMinion, when?: TipWhen): VNode {
       h("span", { class: "tip-hp" }, g("tip.health", { value: exactStat(m.health) })),
     ),
     buffPart(m.buffs, when),
+    ...(m.gifts ?? []).map((k) => h("p", { class: "tip-gift" }, k.title)),
   );
 }

@@ -10,7 +10,7 @@ import { t } from "../data/strings.ts";
 import { exactStat, shortStat } from "../stat.ts";
 import { cls, h, type VNode } from "../view/node.ts";
 import { picture, sourceMark } from "../view/pieces.ts";
-import { giftList } from "./gifts.ts";
+import { giftList, giftMarks } from "./gifts.ts";
 import { minionTip, tipHost } from "./minionTip.ts";
 import { cardLabel } from "./names.ts";
 import { KEYWORDS, type Keyword } from "./keywords.ts";
@@ -97,7 +97,7 @@ export function tileInfo(tile: Tile): VNode[] {
     // A buff or a heal: a green burst with what it gave, as the game's.
     !tile.marks.hurt && tile.marks.gain ? h("span", { class: "rp-gain", "aria-hidden": "true" }, h("b", {}, `+${shortStat(tile.marks.gain.atk)}/+${shortStat(tile.marks.gain.health)}`)) : null,
     h("span", { class: "visually-hidden" }, tileWords(tile)),
-    minionTip(tipId(tile), { cardId: tile.cardId, atk: tile.atk, health: Math.max(tile.health, 0), buffs: tile.buffs }, "start"),
+    minionTip(tipId(tile), { cardId: tile.cardId, atk: tile.atk, health: Math.max(tile.health, 0), buffs: tile.buffs, gifts: giftMarks(tile) }, "start"),
   ].filter((n): n is VNode => n !== null);
 }
 

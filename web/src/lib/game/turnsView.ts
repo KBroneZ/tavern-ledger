@@ -190,7 +190,7 @@ function notes(view: GameView): VNode[] {
     more(
       { context: g("turns.col.odds") },
       h("p", {}, g("why.desc")),
-      h("p", {}, h("a", { href: `${href("/accuracy/")}#acc-causes` }, g("why.link"))),
+      h("p", { class: "gv-link" }, h("a", { href: `${href("/accuracy/")}#acc-causes` }, g("why.link"))),
     ),
   ].filter((n): n is VNode => n !== null);
 }
