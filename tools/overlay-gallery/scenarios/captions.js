@@ -458,6 +458,20 @@ const CAPTIONS = {
       rule: "Una tribu equivocada sería peor que ninguna, así que el panel queda vacío hasta que se comprueba la versión.",
     },
   },
+  "tribes-no-lobby": {
+    en: {
+      title: "Tribes in a game the client reopened",
+      sees: "No tribes, and one short line saying no lobby was seen for this game.",
+      source: "When the game restarts inside a game, the app never saw the lobby that holds the tribes, so it does not read them.",
+      rule: "A tribe the app did not see being dealt would be a guess, so the panel stays empty and says why.",
+    },
+    es: {
+      title: "Tribus en una partida que el cliente reabrió",
+      sees: "Ninguna tribu, y una línea corta que dice que no se vio el lobby de esta partida.",
+      source: "Cuando el juego se reinicia dentro de una partida, la app nunca vio el lobby que guarda las tribus, así que no las lee.",
+      rule: "Una tribu que la app no vio repartir sería una suposición, así que el panel queda vacío y dice por qué.",
+    },
+  },
   "hero-select": {
     en: {
       title: "Hero select",

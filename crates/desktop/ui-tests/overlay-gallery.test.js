@@ -157,7 +157,7 @@ test("scenario ids are unique and the list covers what the task asks for", () =>
     "waiting", "lobby", "solo", "duos", "gap-no-board-seen", "gap-no-card-data",
     "gap-not-modelled", "gap-bad-board", "gap-missing-board", "hover-solo", "hover-duos", "damage-cap",
     "unreadable", "game-over", "high-contrast",
-    "odds-bar", "odds-bar-no-ranges", "leaderboard-marks", "tribes-game", "tribes-off", "tribes-unsupported",
+    "odds-bar", "odds-bar-no-ranges", "leaderboard-marks", "tribes-game", "tribes-off", "tribes-unsupported", "tribes-no-lobby",
   ]) {
     assert.ok(ids.includes(id), `missing scenario ${id}`);
   }
@@ -376,12 +376,12 @@ test("the odds bar scenarios: with both ranges, and with none because the app do
   assert.ok(view("solo").ranges.win, "the ordinary Solo frame has them too");
 });
 
-test("the tribes scenarios: tribes from the game, the read off, and a build not supported yet", () => {
+test("the tribes scenarios: tribes from the game, the read off, a build not supported yet, and a reconnected game", () => {
   const panel = (id) => words.tribesPanel(SCENARIOS.find((s) => s.id === id).state.game);
   assert.equal(panel("tribes-game").tribes.length, 5);
   assert.equal(panel("tribes-game").reason, null);
   assert.equal(panel("solo").tribes.length, 5);
-  for (const [id, reason] of [["tribes-off", /read is off/], ["tribes-unsupported", /not supported yet/]]) {
+  for (const [id, reason] of [["tribes-off", /read is off/], ["tribes-unsupported", /not supported yet/], ["tribes-no-lobby", /no lobby seen/]]) {
     assert.deepEqual(panel(id).tribes, [], id);
     assert.match(panel(id).reason, reason, id);
   }
