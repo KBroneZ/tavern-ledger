@@ -4,7 +4,7 @@
 import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { makeClient } from "../../src/lib/api.ts";
-import { CHART_GAMES, LAST_GAMES, loadDashboard, loadGames, loadHeroes, profileAccess } from "../../src/lib/dataApi.ts";
+import { CHART_GAMES, LAST_GAMES, loadDashboard, loadGames, loadHeroes, loadPeriodGames, PERIOD_GAMES, profileAccess } from "../../src/lib/dataApi.ts";
 import { DEFAULT_FILTERS, parseFilters } from "../../src/lib/data/filters.ts";
 import { DataError } from "../../src/lib/data/rows.ts";
 import { json, memoryStorage, rows, stubFetch, type Route } from "../helpers/fetchStub.ts";
@@ -152,4 +152,32 @@ test("a request that hangs ends in an error after the timeout, without retries",
   await assert.rejects(profileAccess(makeClient(CONFIG, memoryStorage(), 50), USER, null), DataError);
   assert.equal(calls, 1, "a timed-out read is not tried again");
   assert.ok(Date.now() - started < 1000);
+});
+
+test("period games: one week of one user's games, both modes, no more columns than the dashboard reads", async () => {
+  const seen = stubFetch({
+    "/rest/v1/game_summaries": (url, init) =>
+      rows([gameRaw({ mode: url.searchParams.get("mode")?.replace("eq.", "") ?? "solo" })])(url, init),
+  });
+  const games = await loadPeriodGames(client(), USER, "2026-10-19", "2026-10-25");
+  assert.deepEqual(games.map((g) => g.mode).toSorted(), ["duos", "solo"]);
+  assert.equal(seen.length, 2);
+  for (const r of seen) {
+    assert.match(r, new RegExp(`user_id=eq\.${USER}`));
+    assert.match(r, /played_on=gte\.2026-10-19/);
+    assert.match(r, /played_on=lte\.2026-10-25/);
+    assert.match(r, /order=play_order\.desc/);
+    assert.match(r, new RegExp(`limit=${PERIOD_GAMES}`));
+    assert.doesNotMatch(r, /storage_path|tribes|final_board|build|\*/);
+  }
+});
+
+test("period games: a week with more games than the read takes fails instead of summarising part of it", async () => {
+  stubFetch({ "/rest/v1/game_summaries": rows([gameRaw()], PERIOD_GAMES + 1) });
+  await assert.rejects(loadPeriodGames(client(), USER, "2026-10-19", "2026-10-25"), DataError);
+});
+
+test("period games: a failed request throws", async () => {
+  stubFetch({ "/rest/v1/game_summaries": () => json({ message: "boom" }, 500) });
+  await assert.rejects(loadPeriodGames(client(), USER, "2026-10-19", "2026-10-25"), DataError);
 });

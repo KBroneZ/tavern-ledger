@@ -5,7 +5,7 @@
 
 // First: the page's language, before any module draws text (T-508).
 import "../lib/i18n/boot.ts";
-import { loadDashboard, profileAccess, type ProfileAccess } from "../lib/dataApi.ts";
+import { loadDashboard, loadPeriodGames, profileAccess, type ProfileAccess } from "../lib/dataApi.ts";
 import type { Mode } from "../lib/data/format.ts";
 import { filtersQuery, DEFAULT_FILTERS } from "../lib/data/filters.ts";
 import { busierMode, MODE_DEFAULT_EVENT } from "../lib/data/prefs.ts";
@@ -13,6 +13,8 @@ import { statsPagePath } from "../lib/heroes/heroes.ts";
 import { t } from "../lib/data/strings.ts";
 import { parseProfileId, publicProfilePath } from "../lib/profile.ts";
 import { aboutFold, dashboardPanels, isEmpty } from "../lib/view/dashboardView.ts";
+import { localDay, periodBounds, summarizePeriod } from "../lib/data/period.ts";
+import { periodFailure, periodSection } from "../lib/view/periodView.ts";
 import { h, mount, type VNode } from "../lib/view/node.ts";
 import { stateBlock } from "../lib/view/pieces.ts";
 import { supabase } from "./client.ts";
@@ -116,10 +118,33 @@ async function start(): Promise<void> {
   switches.querySelector("[data-switch=mode]")?.dispatchEvent(new CustomEvent(MODE_DEFAULT_EVENT, { detail: busierMode(games) }));
   mount(panels, ...dashboardPanels(dash, { gamesHref, owner: own, userId, heroesHref, curiousHref }));
   mount(about, aboutFold());
+  if (own) void showPeriod(userId);
   gate.hidden = true;
   panels.hidden = false;
   switches.classList.remove("is-off");
   settle(t("dash.loaded"));
+}
+
+/**
+ * Today and this week (T-361), the player's own dashboard only: read apart
+ * from the rest, so a failure here is said in its own place and the panels
+ * stand. The frame was reserved in the page, so nothing around it moves.
+ */
+async function showPeriod(userId: string): Promise<void> {
+  const frame = byId("dash-period");
+  frame.hidden = false;
+  const bounds = periodBounds(localDay(new Date()));
+  try {
+    const rows = await loadPeriodGames(supabase, userId, bounds.weekStart, bounds.weekEnd);
+    mount(frame, ...periodSection(summarizePeriod(rows, bounds), userId));
+  } catch {
+    const retry = h("button", { type: "button", class: "tb tb-small", id: "dash-period-retry" }, t("dash.retry"));
+    mount(frame, ...periodFailure(retry));
+    byId("dash-period-retry").addEventListener("click", () => {
+      mount(frame, h("h2", { id: "dash-period-title" }, t("period.title")), stateBlock({ kind: "loading", lines: 6 }));
+      void showPeriod(userId);
+    });
+  }
 }
 
 function failed(): void {

@@ -31,6 +31,9 @@ export const LAST_GAMES = 10;
 
 const MODES: Mode[] = ["solo", "duos"];
 
+/** The most games of one mode in a week that the Today / this week summary reads. */
+export const PERIOD_GAMES = 500;
+
 export interface Answer {
   data: unknown;
   error: unknown;
@@ -165,4 +168,28 @@ export async function loadGames(
   }
   const rows = rowsOf(answer).map(gameRow);
   return { rows, total: totalOf(answer.count, rows.length) };
+}
+
+/**
+ * The player's games of one week, both modes, newest first inside each mode
+ * (T-361): `from` to `to` are calendar days, inclusive. A week with more games
+ * than the read takes fails instead of summarising part of it.
+ */
+export async function loadPeriodGames(client: SupabaseClient, userId: string, from: string, to: string): Promise<GameRow[]> {
+  const read = (m: Mode) =>
+    client
+      .from("game_summaries")
+      .select(GAME_COLUMNS, { count: "exact" })
+      .eq("user_id", userId)
+      .eq("mode", m)
+      .gte("played_on", from)
+      .lte("played_on", to)
+      .order("play_order", { ascending: false })
+      .limit(PERIOD_GAMES);
+  const answers = await Promise.all(MODES.map(read));
+  return answers.flatMap((answer) => {
+    const rows = rowsOf(answer);
+    if (totalOf(answer.count, rows.length) > rows.length) throw new DataError("too many games this week");
+    return rows.map(gameRow);
+  });
 }
