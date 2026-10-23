@@ -456,6 +456,9 @@ body:not(.unlocked) .slot:has(> .panel.empty),
 .tribe-chips .chip-count { color: var(--dim); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
 .tribe-chips .src { font-size: 0.72rem; padding: 0 4px; }
 .tribe-reason { margin: 0; color: var(--dim); font-size: 0.88rem; }
+/* The lobby's tribes head the opponents panel (T-614): one box, the chips on
+   top, a thin rule, then the damage cap and the rows. */
+.opp-tribes { margin: 0 0 4px; padding-bottom: 4px; border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent); }
 
 /* Hero select (T-365): the lobby's tribes, then one card per hero on offer in
    the game's order, each with the player's own numbers as figures under a

@@ -107,6 +107,8 @@ function tribeRow(g) {
   const panel = TLWords.tribesPanel(g);
   if (!panel.tribes.length) return el("p", "tribe-reason", panel.reason);
   const row = el("div", "tribe-chips");
+  // A named group, so screen readers say "Tribes" before the chips.
+  row.setAttribute("role", "group");
   row.setAttribute("aria-label", TLI18n.t("ov.slot.tribes"));
   for (const t of panel.tribes) {
     // The short name is seen, the full one read out.
@@ -123,14 +125,6 @@ function tribeRow(g) {
 function tribeShort(id) {
   const key = `ov.tribeShort.${String(id).toUpperCase()}`;
   return key in TLI18n.tables().en ? TLI18n.t(key) : tribeName(id);
-}
-
-function renderTribes(g) {
-  const panel = document.getElementById("tribes");
-  const row = tribeRow(g);
-  panel.replaceChildren(row);
-  panel.classList.remove("empty");
-  panel.hidden = false;
 }
 
 // The counters panel (T-612): the player's own running totals, one line each
@@ -383,8 +377,13 @@ function renderHeroes(g) {
   return true;
 }
 
+// The opponents panel (T-614): the lobby's tribes as its header, a thin rule,
+// then the damage cap and one row per opponent. Hiding the panel hides its
+// tribes too. The header always has a chip or a reason, so the box is never empty.
 function renderOpponents(g) {
   const panel = document.getElementById("opponents");
+  const head = el("div", "opp-tribes");
+  head.append(tribeRow(g));
   const list = el("ol", "opp-list");
   list.setAttribute("aria-label", TLI18n.t("ov.slot.opponents"));
   for (const opponent of g.opponents) {
@@ -394,8 +393,7 @@ function renderOpponents(g) {
   const cap = TLWords.damageCap(g);
   const capLine = cap ? el("p", "damage-cap", cap.text) : null;
   if (capLine) capLine.title = cap.about;
-  panel.replaceChildren(...[capLine, list].filter(Boolean));
-  panel.classList.toggle("empty", !g.opponents.length && !cap);
+  panel.replaceChildren(...[head, capLine, list].filter(Boolean));
   panel.hidden = false;
 }
 
@@ -463,7 +461,7 @@ function render() {
   if (lobbyShown) renderLobby(lobbyShown);
   else lobby.hidden = true;
   if (!g && lobbyShown) {
-    for (const id of ["status", "heroes", "counters", "tribes", "opponents", "odds", "legend"]) document.getElementById(id).hidden = true;
+    for (const id of ["status", "heroes", "opponents", "counters", "odds", "legend"]) document.getElementById(id).hidden = true;
     renderMarks(null);
     if (window.TLHover) window.TLHover.render();
     return;
@@ -474,9 +472,8 @@ function render() {
     status.className = "panel status";
     status.textContent = scene === "battlegrounds_loading" ? TLI18n.t("ov.status.loading") : TLI18n.t("ov.status.waiting");
     document.getElementById("heroes").hidden = true;
-    document.getElementById("counters").hidden = true;
-    document.getElementById("tribes").hidden = true;
     document.getElementById("opponents").hidden = true;
+    document.getElementById("counters").hidden = true;
     document.getElementById("odds").hidden = true;
     legend.hidden = true;
     renderMarks(null);
@@ -489,16 +486,14 @@ function render() {
   const heroesSlot = document.getElementById("heroes").closest(".slot");
   if (renderHeroes(g) && g.phase === "starting" && !heroesSlot.hidden) document.getElementById("status").hidden = true;
   const showPanels = g.phase === "playing" || g.phase === "over";
-  document.getElementById("counters").hidden = !showPanels;
-  document.getElementById("tribes").hidden = !showPanels;
   document.getElementById("opponents").hidden = !showPanels;
+  document.getElementById("counters").hidden = !showPanels;
   document.getElementById("odds").hidden = !showPanels;
   legend.hidden = !showPanels;
   renderMarks(showPanels ? g : null);
   if (showPanels) {
-    renderCounters(g);
-    renderTribes(g);
     renderOpponents(g);
+    renderCounters(g);
     renderOdds(g);
   }
   if (window.TLHover) window.TLHover.render();
@@ -559,7 +554,7 @@ function showError(error) {
   const panel = document.getElementById("status");
   panel.className = "panel status unreadable";
   panel.textContent = TLI18n.t("ov.error.update", { error });
-  for (const id of ["heroes", "counters", "tribes", "opponents", "odds", "legend", "lobby"]) document.getElementById(id).hidden = true;
+  for (const id of ["heroes", "opponents", "counters", "odds", "legend", "lobby"]) document.getElementById(id).hidden = true;
   renderMarks(null);
   if (window.TLHover) window.TLHover.setFailed(true);
 }

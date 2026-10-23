@@ -670,7 +670,7 @@ mod tests {
                 );
                 s.theme = Theme::Contrast;
                 s.set_opacity(0.8);
-                s.set_shown(Panel::Tribes, false);
+                s.set_shown(Panel::Heroes, false);
             })
             .unwrap();
         let second = Overlay::default();
@@ -679,9 +679,33 @@ mod tests {
         let view = second.view();
         assert_eq!(view.theme, "contrast");
         assert_eq!(view.opacity, 0.8);
-        assert_eq!(view.hidden, vec![Panel::Tribes]);
+        assert_eq!(view.hidden, vec![Panel::Heroes]);
         assert_eq!(view.layout.panels[&Panel::Opponents], rect(500.0, 120.0));
         assert!(!view.unlocked, "unlocking is never saved");
+    }
+
+    #[test]
+    fn a_file_with_the_old_tribes_panel_loads_without_it() {
+        // The lobby's tribes had their own panel until T-614.
+        let dir = temp_dir("old-tribes");
+        std::fs::write(
+            dir.join(PREFS_FILE),
+            r#"{"enabled":true,"hidden":["tribes","lobby"],"layouts":{"1920x1080":{"panels":{"tribes":{"x":1700,"y":90,"w":220,"h":null},"status":{"x":10,"y":20,"w":300,"h":null}}}},"last_resolution":"1920x1080"}"#,
+        )
+        .unwrap();
+        let overlay = Overlay::default();
+        overlay.load(&dir, false).unwrap();
+        *overlay.screen.lock().unwrap() = (1920.0, 1080.0);
+        let view = overlay.view();
+        assert!(overlay.enabled());
+        assert_eq!(view.hidden, vec![Panel::Lobby]);
+        assert!(!view.layout.panels.contains_key(&Panel::Tribes));
+        assert_eq!(view.layout.panels[&Panel::Status], rect(10.0, 20.0));
+    }
+
+    #[test]
+    fn the_page_has_no_slot_for_the_old_tribes_panel() {
+        assert!(!OVERLAY_HTML.contains(r#"data-panel="tribes""#));
     }
 
     #[test]
@@ -826,7 +850,6 @@ mod tests {
         for panel in [
             Panel::Status,
             Panel::Counters,
-            Panel::Tribes,
             Panel::Opponents,
             Panel::Odds,
             Panel::Legend,

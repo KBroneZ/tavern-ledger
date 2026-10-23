@@ -159,7 +159,8 @@ test("with a variant, the page's own counters script turns the panel on and list
   assert.ok(asked, "overlay-layout.js builds its panel list through TLCounters.panelIds");
   const ids = JSON.parse(asked[1]);
   const stack = win.TLCounters.panelIds(ids).filter((id) => ["counters", "tribes", "opponents"].includes(id));
-  assert.deepEqual(stack, ["tribes", "opponents", "counters"]);
+  // The page has no tribes panel since layout B was built: they head the opponents panel.
+  assert.deepEqual(stack, ["opponents", "counters"]);
   // The stack is laid out in that list's order.
   assert.match(read(path.join(UI, "overlay-layout.js")), /for \(const id of PANEL_IDS\)[\s\S]*?stack\.append\(\.\.\.inStack\)/);
 });
