@@ -107,6 +107,8 @@ function tribeRow(g) {
   const panel = TLWords.tribesPanel(g);
   if (!panel.tribes.length) return el("p", "tribe-reason", panel.reason);
   const row = el("div", "tribe-chips");
+  // A named group, so screen readers say "Tribes" before the chips.
+  row.setAttribute("role", "group");
   row.setAttribute("aria-label", TLI18n.t("ov.slot.tribes"));
   for (const t of panel.tribes) {
     // The short name is seen, the full one read out.

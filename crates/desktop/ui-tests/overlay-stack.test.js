@@ -46,6 +46,10 @@ test("the tribes header ends with a thin rule above the rows", () => {
   assert.match(CSS, /\.opp-tribes \{[^}]*border-bottom: 1px solid/);
 });
 
+test("the tribe chips are a named group for screen readers", () => {
+  assert.match(body("tribeRow"), /row\.setAttribute\("role", "group"\);\s*row\.setAttribute\("aria-label", TLI18n\.t\("ov\.slot\.tribes"\)\);/);
+});
+
 test("the hero select panel keeps its own tribes row", () => {
   assert.match(body("renderHeroes"), /tribeRow\(example \? EXAMPLE_GAME : g\)/);
 });
