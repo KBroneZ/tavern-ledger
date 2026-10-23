@@ -40,8 +40,9 @@ env:
   RUST_VERSION: 1.96.0
   REAL: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
   # The Tauri CLI that signs, fetched from npm and checked against these
-  # SHA-512s (the same as package-lock.json's for 2.12.1). Bumping it means
-  # changing all three lines here, in a reviewed pull request.
+  # SHA-512s (npm's for 2.12.1). It may lag the CLI in package-lock.json,
+  # which only builds. Bumping it means changing all three lines here, in a
+  # reviewed pull request.
   SIGNER_VERSION: 2.12.1
   SIGNER_CLI_SHA512: 9040c4886cc6fb201ce4578bc6d5e9112fd537e1760bc1f4af880356d7d12cac53f67a7dd74d5df51106fca828da5af484a8b42290ec3838879d4dfe9da3a62e
   SIGNER_LINUX_SHA512: 6754063ebe3d1c964c92dbbe4a9bba4356ff7fd00d69d5efa99659b76eb8e6e6b5c757afea9ace829f397a21afda3473a2114430ba3a689c9a2e32d45f9288bc
