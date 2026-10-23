@@ -173,3 +173,47 @@
 .dash[data-kind="own"] #dash-note:empty:has(~ #dash-gate:not([hidden])) {
   display: none;
 }
+
+/* Today and this week (T-361): two columns, one block per mode played. The
+   frame stays hidden until the summary is read, and then shows with the
+   panels in one go, inside the body's reserved screen, so nothing moves. */
+.period-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-4);
+}
+
+.period-col h3 {
+  margin: 0 0 var(--s-2);
+}
+
+.period-mode {
+  display: grid;
+  gap: var(--s-1);
+  padding-block: var(--s-3);
+  border-top: 1px solid currentColor;
+}
+
+.period-mode:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.period-mode h4,
+.period-mode p {
+  margin: 0;
+}
+
+.period-revisit {
+  margin: var(--s-2) 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--s-1);
+}
+
+@media (max-width: 40rem) {
+  .period-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

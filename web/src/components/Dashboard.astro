@@ -43,6 +43,12 @@ const { kind } = Astro.props;
   <div class="dash-body" id="dash-body">
     <div id="dash-note"></div>
     <div id="dash-gate" hidden></div>
+    {kind === "own" && (
+      <section class="data-section dash-period" id="dash-period" aria-labelledby="dash-period-title" hidden>
+        <h2 id="dash-period-title">{t("period.title")}</h2>
+        <StateBlock kind="loading" lines={6} />
+      </section>
+    )}
     <div class="mode-panels" id="dash-modes">
       <div class="dash-skeleton">
         <div class="tiles">
