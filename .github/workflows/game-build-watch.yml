@@ -2,7 +2,8 @@ name: Game build watch
 
 # Every day, ask HearthstoneJSON which game build it has card data for. When
 # that build is newer than the newest one the log parser was tested on
-# (TESTED_BUILDS in crates/bg-parser/src/lib.rs), open one issue, "New game
+# (TESTED_BUILDS in crates/bg-parser/src/lib.rs) and is not a client build
+# mapped to a tested one (CLIENT_BUILDS there), open one issue, "New game
 # build <N>", with the Battlegrounds cards that changed and a checklist. An
 # issue with that title, open or closed, is never opened twice. It only reads
 # the repository and opens that issue; it changes no file.

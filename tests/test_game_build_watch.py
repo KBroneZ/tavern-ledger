@@ -55,6 +55,44 @@ class RepoLists(unittest.TestCase):
         with self.assertRaises(gbw.DataError):
             gbw.parser_builds(root)
 
+    def test_client_builds_map_a_client_build_to_the_build_its_games_write(self):
+        root = self.make_repo(
+            "pub const TESTED_BUILDS: &[i64] = &[253216, 254477];\n"
+            "pub const CLIENT_BUILDS: &[(i64, i64)] = &[(255_130, 254_477)];\n", {})
+        self.assertEqual(gbw.client_builds(root), {255130: 254477})
+
+    def test_client_builds_list_is_optional(self):
+        root = self.make_repo("pub const TESTED_BUILDS: &[i64] = &[253216];\n", {})
+        self.assertEqual(gbw.client_builds(root), {})
+
+    def test_a_client_build_of_an_untested_game_build_is_an_error(self):
+        root = self.make_repo(
+            "pub const TESTED_BUILDS: &[i64] = &[253216, 254477];\n"
+            "pub const CLIENT_BUILDS: &[(i64, i64)] = &[(255130, 254999)];\n", {})
+        with self.assertRaises(gbw.DataError):
+            gbw.client_builds(root)
+
+    def test_a_client_builds_list_that_does_not_parse_is_an_error(self):
+        for body in ("&[(255130_i64, 254477_i64)]", "&[(255130, 254477), /* a; b */]", "&[(255130, 254477), (1,)]"):
+            root = self.make_repo(
+                "pub const TESTED_BUILDS: &[i64] = &[253216, 254477];\n"
+                f"pub const CLIENT_BUILDS: &[(i64, i64)] = {body};\n", {})
+            with self.subTest(body=body), self.assertRaises(gbw.DataError):
+                gbw.client_builds(root)
+
+    def test_client_builds_may_be_empty_or_span_lines(self):
+        head = "pub const TESTED_BUILDS: &[i64] = &[253216, 254477];\n"
+        empty = self.make_repo(head + "pub const CLIENT_BUILDS: &[(i64, i64)] = &[];\n", {})
+        self.assertEqual(gbw.client_builds(empty), {})
+        spread = self.make_repo(
+            head + "pub const CLIENT_BUILDS: &[(i64, i64)] = &[\n    (255130, 254477),\n    (255999, 253216),\n];\n", {})
+        self.assertEqual(gbw.client_builds(spread), {255130: 254477, 255999: 253216})
+
+    def test_the_repository_lists_parse(self):
+        repo = Path(__file__).resolve().parent.parent
+        self.assertEqual(gbw.client_builds(repo)[255130], 254477)
+        self.assertIn(254477, gbw.parser_builds(repo))
+
     def test_simulator_builds_list_is_optional(self):
         root = self.make_repo("", {"cards.rs": "pub const X: i32 = 1;\n"})
         self.assertEqual(gbw.simulator_builds(root), [])
@@ -195,6 +233,36 @@ class Run(unittest.TestCase):
         fake = Fake(listing(*self.builds), {})
         self.assertEqual(gbw.run(self.root, fake.get, fake.gh), 0)
         self.assertEqual(fake.urls, [gbw.LISTING_URL])
+        self.assertEqual(fake.created, [])
+
+    def write_parser(self, extra: str) -> None:
+        (self.root / "crates/bg-parser/src/lib.rs").write_text(
+            "pub const TESTED_BUILDS: &[i64] = &[253216, 254477];\n" + extra, encoding="utf-8")
+
+    def test_a_client_build_whose_games_write_a_tested_build_does_nothing(self):
+        self.write_parser("pub const CLIENT_BUILDS: &[(i64, i64)] = &[(255130, 254477)];\n")
+        fake = Fake(listing(*self.builds, 255130), {})
+        self.assertEqual(gbw.run(self.root, fake.get, fake.gh), 0)
+        self.assertEqual(fake.urls, [gbw.LISTING_URL])
+        self.assertEqual(fake.created, [])
+
+    def test_the_same_client_build_without_the_mapping_opens_an_issue(self):
+        cards = {254477: [minion("BG1_003")], 255130: [minion("BG1_003")]}
+        fake = Fake(listing(*self.builds, 255130), cards)
+        self.assertEqual(gbw.run(self.root, fake.get, fake.gh), 0)
+        self.assertEqual([title for title, _ in fake.created], ["New game build 255130"])
+
+    def test_a_build_newer_than_every_mapped_client_build_opens_an_issue(self):
+        self.write_parser("pub const CLIENT_BUILDS: &[(i64, i64)] = &[(255130, 254477)];\n")
+        cards = {254477: [minion("BG1_003")], 255200: [minion("BG1_003"), minion("BG1_004")]}
+        fake = Fake(listing(*self.builds, 255130, 255200), cards)
+        self.assertEqual(gbw.run(self.root, fake.get, fake.gh), 0)
+        self.assertEqual([title for title, _ in fake.created], ["New game build 255200"])
+
+    def test_a_mapping_to_an_untested_game_build_is_bad_data(self):
+        self.write_parser("pub const CLIENT_BUILDS: &[(i64, i64)] = &[(255130, 254999)];\n")
+        fake = Fake(listing(*self.builds, 255130), {})
+        self.assertEqual(gbw.run(self.root, fake.get, fake.gh), 1)
         self.assertEqual(fake.created, [])
 
     def test_older_build_does_nothing(self):
