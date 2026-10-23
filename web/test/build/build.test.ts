@@ -86,8 +86,8 @@ test("no inline script, style or event handler in any page", () => {
     const raw = readFileSync(page, "utf8");
     const html = isMinionPage(page) ? raw.replace(JSON_LD, "") : raw;
     for (const tag of html.matchAll(/<script\b[^>]*>/g)) {
-      // Our bundles, or the language script (public/lang.js, T-508).
-      assert.match(tag[0], /\ssrc="(?:\/_astro\/[^"]+\.js|\/lang\.js)"/, `${name(page)}: ${tag[0]}`);
+      // Our bundles, or the language script (public/lang.js, T-508) or the web app's (public/pwa.js, T-637).
+      assert.match(tag[0], /\ssrc="(?:\/_astro\/[^"]+\.js|\/lang\.js|\/pwa\.js)"/, `${name(page)}: ${tag[0]}`);
     }
     assert.doesNotMatch(html, /<script\b[^>]*>[^<\s]/, name(page));
     assert.doesNotMatch(html, /<style\b/, name(page));
@@ -315,7 +315,8 @@ test("accounts closed: no form, no script and no backend anywhere", { skip: !!CO
     const html = readFileSync(page, "utf8").replace(/<a\b[^>]*data-lang-switch[^>]*>/g, "");
     assert.doesNotMatch(html, /<script\b|<form\b|<input\b|href="(?:\/es)?\/(signin|account|forgot-password)\/"/, name(page));
   }
-  assert.deepEqual(ALL.filter((f) => f.endsWith(".js")).map(name), []);
+  // The one script is /sw.js, which only removes an older offline worker (T-637; pwa.test.ts checks it makes no request).
+  assert.deepEqual(ALL.filter((f) => f.endsWith(".js")).map(name), ["sw.js"]);
   for (const file of ALL) {
     const text = readFileSync(file, "utf8");
     // No project URL (the policy links to supabase.com, which is fine) and no key of any kind.

@@ -4,6 +4,7 @@ import { existsSync, readdirSync, renameSync, rmSync, writeFileSync } from "node
 import { defineConfig } from "astro/config";
 import { loadEnv } from "vite";
 import { contentSecurityPolicy, NO_STORE_PAGES, readConfig, TURNSTILE_PAGES, WASM_WORKER } from "./src/lib/config.ts";
+import { builtFiles, killSwitchSource, writeServiceWorker } from "./src/lib/pwa/build.ts";
 
 /**
  * The simulator's worker alone gets the same policy plus 'wasm-unsafe-eval'
@@ -40,6 +41,20 @@ function turnstileHeaders(config) {
   return TURNSTILE_PAGES.flatMap((path) => [path, "  ! Content-Security-Policy", `  Content-Security-Policy: ${policy}`, ""]);
 }
 
+/**
+ * The service worker's script (T-637) is checked for an update on every visit,
+ * so no cache keeps it (a stale worker would keep a stale site), and it gets
+ * its own policy, which lets it fetch the site's own files (the way the
+ * simulator's worker gets its own: drop the site-wide policy, set this one).
+ * Accounts closed: the script is only the one that removes an older worker
+ * (killSwitchSource), so it is still never cached, and has no policy of its own.
+ */
+function workerHeaders(config) {
+  if (!config) return ["/sw.js", "  Cache-Control: no-cache", ""];
+  const policy = `${contentSecurityPolicy(config.url, { serviceWorker: true })}; frame-ancestors 'none'`;
+  return ["/sw.js", "  ! Content-Security-Policy", `  Content-Security-Policy: ${policy}`, "  Cache-Control: no-cache", ""];
+}
+
 /** Writes dist/_headers (Cloudflare Pages) with the same policy as the pages. */
 function securityHeaders() {
   return {
@@ -68,6 +83,7 @@ function securityHeaders() {
           ...NO_STORE_PAGES.flatMap((path) => [path, "  Cache-Control: no-store", ""]),
           ...simulatorHeaders(config, dir),
           ...turnstileHeaders(config),
+          ...workerHeaders(config),
         ].join("\n");
         writeFileSync(new URL("_headers", dir), headers);
         // Cloudflare Pages serves the nearest 404.html: the Spanish one must
@@ -85,9 +101,13 @@ function securityHeaders() {
           for (const name of readdirSync(assets)) {
             if (name.endsWith(".js")) rmSync(new URL(name, assets));
           }
-          // The language script (public/lang.js) too: no page loads it here.
+          // The language script (public/lang.js) and the web app's (public/pwa.js) too: no page loads them here.
           rmSync(new URL("lang.js", dir), { force: true });
+          rmSync(new URL("pwa.js", dir), { force: true });
         }
+        // The worker lists the build's own files, so it is written last, once they are all where they will be served.
+        if (config) writeServiceWorker(dir, builtFiles(dir));
+        else writeFileSync(new URL("sw.js", dir), killSwitchSource());
       },
     },
   };

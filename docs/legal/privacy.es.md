@@ -2,13 +2,15 @@
 
 *Traducción del original en inglés. Si esta versión y la [versión en inglés](https://tavernledger.net/privacy/) dicen cosas distintas, prevalece la inglesa.*
 
-Última actualización: 20 de octubre de 2026
+Última actualización: 24 de octubre de 2026
 
 Tavern Ledger es un rastreador gratuito y de código abierto de Campos de Batalla de Hearthstone: una aplicación para Windows que lee los archivos de registro del juego en tu PC y un sitio web donde puedes guardar tus partidas y, si quieres, compartirlas. Esta política explica qué datos personales tratamos, para qué, adónde van y qué puedes hacer al respecto.
 
 Proyecto no oficial de fans. Sin afiliación con Blizzard Entertainment ni respaldo de esta.
 
 ## Qué ha cambiado
+
+**Qué cambió el 24 de octubre de 2026:** el sitio web ahora se puede instalar como aplicación y guarda copias de sus páginas públicas, estilos, scripts e iconos en el almacenamiento de caché de tu navegador, en tu dispositivo, para que se abran sin conexión (apartado 8). Nunca guarda copias de las páginas de cuenta, de inicio de sesión ni del panel, y no se nos envía nada. Nada más cambia.
 
 **Qué cambió el 20 de octubre de 2026 (más tarde ese día):** el apartado 5 ahora dice qué nos muestra GitHub Sponsors cuando apoyas el proyecto allí, para qué lo usamos y cuánto tiempo lo conservamos. Nada más cambia.
 
@@ -200,6 +202,8 @@ También puedes presentar una reclamación ante una autoridad de protección de 
 ## 8. Cookies y almacenamiento del navegador
 
 El sitio web no instala cookies propias y no usa rastreo. Cuando inicias sesión, la biblioteca de Supabase almacena tu sesión de inicio de sesión en el almacenamiento local de tu navegador (clave `sb-<project>-auth-token`: tokens de acceso y de renovación y los datos básicos de tu cuenta) y, mientras te registras o restableces tu contraseña, un verificador de código de un solo uso (`…-code-verifier`) que demuestra que el enlace del correo volvió al navegador que lo solicitó. Son estrictamente necesarios: la sesión se elimina cuando cierras sesión, y un verificador de código cuando se usa su enlace o lo sustituye uno más reciente. Nuestro proveedor de alojamiento, Cloudflare, instala una cookie solo si su protección contra ataques te muestra una comprobación: `cf_clearance`, que registra que la superaste para que no se te vuelva a pedir durante un tiempo. Dura 30 minutos (ajuste de nuestra zona), es estrictamente necesaria y no se usa para rastrearte. La cookie de bots de Cloudflare `__cf_bm` no se usa en este sitio (sus funciones de bots están desactivadas), y el Network Error Logging de Cloudflare (informes del navegador sobre conexiones fallidas) está desactivado. La comprobación de que no eres un robot (apartado 3) funciona en un marco propio de Cloudflare y no pone ninguna cookie en nuestro sitio.
+
+Cuando las cuentas están abiertas, el sitio web también instala un pequeño programa en tu navegador (un service worker) para que puedas añadirlo a tu pantalla de inicio o a tu lista de aplicaciones y para que sus páginas públicas se abran sin conexión. Guarda copias de las páginas públicas, estilos, scripts, fuentes e iconos del sitio en el almacenamiento de caché de tu navegador (nombres que empiezan por `tl-v-`). Esas copias son iguales para todos los visitantes, se quedan en tu dispositivo y nunca se nos envían. El programa nunca guarda páginas de cuenta, de inicio de sesión ni del panel, ni nada con parámetros en la dirección, ni nada de nuestro servicio de cuentas. Borrar los datos del sitio en tu navegador elimina las copias y el programa.
 
 ## 9. Menores
 
