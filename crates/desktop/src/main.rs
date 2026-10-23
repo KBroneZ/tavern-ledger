@@ -569,7 +569,7 @@ fn game_memory_set_enabled(state: State<'_, Arc<AppState>>, enabled: bool) -> ga
 
 /// Asks the game for its values when the switch is on (D-063). A bug in the
 /// reader turns it off for this run instead of stopping the tracker.
-fn read_from_game(app: &AppHandle, state: &AppState, client_build: Option<i64>) {
+fn read_from_game(app: &AppHandle, state: &AppState, client_build: Option<i64>, reconnected: bool) {
     let game = state
         .in_progress
         .lock()
@@ -588,6 +588,7 @@ fn read_from_game(app: &AppHandle, state: &AppState, client_build: Option<i64>) 
         build,
         scene,
         client_build,
+        reconnected,
         finished: last.finished,
         last_duos: last.duos,
         newest: last.newest.as_ref(),
@@ -631,14 +632,12 @@ fn keep_read_rating(app: &AppHandle, state: &AppState) {
 /// overlay's checks, or drops them when the tavern contradicts them (T-540).
 fn keep_read_tribes(app: &AppHandle, state: &AppState, game: Option<&GameKey>) {
     let read = state.game_memory.tribes_for(game);
-    if read.1 == ReaderStatus::UnsupportedVersion {
-        applog::warn_once(
-            LOG_UNSUPPORTED,
-            "game-memory",
-            "unsupported game version: the lobby's tribes are not read",
-        );
-    } else {
-        applog::recovered(LOG_UNSUPPORTED);
+    match game_memory::tribes_log_note(read.1) {
+        Some((applog::Level::Warn, note)) => {
+            applog::warn_once(LOG_UNSUPPORTED, "game-memory", note)
+        }
+        Some((_, note)) => applog::info_once(LOG_UNSUPPORTED, "game-memory", note),
+        None => applog::recovered(LOG_UNSUPPORTED),
     }
     // Nothing read and nothing refused: nothing to save or drop.
     if read.0.is_none() && read.1 != ReaderStatus::UnsupportedVersion {
@@ -1292,7 +1291,12 @@ fn run_tracker(app: AppHandle, state: Arc<AppState>) {
         }
         publish_scene(&app, &state, watcher.scene(), watcher.scene_error());
         track_game_in_progress(&app, &state, &mut starts, watcher.in_progress());
-        read_from_game(&app, &state, watcher.client_build());
+        read_from_game(
+            &app,
+            &state,
+            watcher.client_build(),
+            watcher.game_without_lobby(),
+        );
         let session = watcher.session().map(String::from);
         let power_log = watcher.has_power_log();
         let behind = watcher.catching_up();

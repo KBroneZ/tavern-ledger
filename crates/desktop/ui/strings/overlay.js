@@ -140,6 +140,7 @@
       // D-148: only tribes read from the game; otherwise one reason line.
       "ov.tribes.reason.off": "Tribes: the game read is off",
       "ov.tribes.reason.unsupported": "Tribes: this game version is not supported yet",
+      "ov.tribes.reason.no_lobby": "Tribes: no lobby seen (reconnected game)",
       "ov.tribes.reason.failed": "Tribes: could not read the game",
       "ov.tribes.reason.waiting": "Tribes: waiting for the game to show them",
       "ov.slot.odds": "Combat odds",
@@ -338,6 +339,7 @@
       "ov.tribes.count": "{count}/5",
       "ov.tribes.reason.off": "Tipos: la lectura del juego está desactivada",
       "ov.tribes.reason.unsupported": "Tipos: esta versión del juego aún no es compatible",
+      "ov.tribes.reason.no_lobby": "Tipos: no se vio el lobby (partida reconectada)",
       "ov.tribes.reason.failed": "Tipos: no se pudo leer el juego",
       "ov.tribes.reason.waiting": "Tipos: esperando a que el juego los muestre",
       "ov.slot.odds": "Probabilidades",

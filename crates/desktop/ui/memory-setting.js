@@ -10,7 +10,7 @@
   const { t } = I18n;
   const $ = (id) => document.getElementById(id);
   const box = $("memory-enabled");
-  const STATUSES = ["off", "ok", "waiting", "unsupported_version", "not_running", "no_access"];
+  const STATUSES = ["off", "ok", "waiting", "unsupported_version", "no_lobby", "not_running", "no_access"];
   // The status is asked again while the page is open, so it follows the game.
   const REFRESH_MS = 5000;
 

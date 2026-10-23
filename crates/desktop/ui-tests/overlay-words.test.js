@@ -152,6 +152,7 @@ test("with the read off, unsupported or failing the tribes panel is empty with o
   const cases = [
     ["off", "Tribes: the game read is off", "Tipos: la lectura del juego está desactivada"],
     ["unsupported_version", "Tribes: this game version is not supported yet", "Tipos: esta versión del juego aún no es compatible"],
+    ["no_lobby", "Tribes: no lobby seen (reconnected game)", "Tipos: no se vio el lobby (partida reconectada)"],
     ["not_running", "Tribes: could not read the game", "Tipos: no se pudo leer el juego"],
     ["no_access", "Tribes: could not read the game", "Tipos: no se pudo leer el juego"],
     ["waiting", "Tribes: waiting for the game to show them", "Tipos: esperando a que el juego los muestre"],

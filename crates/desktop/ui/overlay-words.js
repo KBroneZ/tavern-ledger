@@ -119,6 +119,7 @@
   const REASONS = {
     off: "off",
     unsupported_version: "unsupported",
+    no_lobby: "no_lobby",
     waiting: "waiting",
     not_running: "failed",
     no_access: "failed",

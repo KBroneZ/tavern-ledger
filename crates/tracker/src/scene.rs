@@ -67,6 +67,9 @@ impl Scene {
 #[derive(Clone, Debug, Default)]
 pub struct SceneTracker {
     now: Option<Scene>,
+    /// Whether the game screen last loaded came from the Battlegrounds
+    /// lobby; None before any game screen.
+    from_lobby: Option<bool>,
 }
 
 impl SceneTracker {
@@ -74,6 +77,11 @@ impl SceneTracker {
         if let Some(rest) = after(line, LOADED) {
             if let Some(curr) = mode(rest, "currMode=") {
                 self.now = Some(scene_of(&curr));
+                // Not a reconnect on a guess: an unreadable previous mode
+                // leaves what the load said before.
+                if let (GAMEPLAY, Some(prev)) = (curr.as_str(), mode(rest, "prevMode=")) {
+                    self.from_lobby = Some(prev == BATTLEGROUNDS);
+                }
             }
         } else if let Some(rest) = after(line, PRE_UNLOAD) {
             let (Some(prev), Some(next)) = (mode(rest, "prevMode="), mode(rest, "nextMode="))
@@ -82,6 +90,7 @@ impl SceneTracker {
             };
             if prev == BATTLEGROUNDS && next == GAMEPLAY {
                 self.now = Some(Scene::BattlegroundsLoading);
+                self.from_lobby = Some(true);
             } else if prev == GAMEPLAY && next != GAMEPLAY {
                 // The game screen is closing: the game is over for the player.
                 self.now = Some(scene_of(&next));
@@ -92,6 +101,14 @@ impl SceneTracker {
     /// The scene now; None before the file said anything.
     pub fn now(&self) -> Option<Scene> {
         self.now
+    }
+
+    /// Whether the game screen last loaded came from the Battlegrounds
+    /// lobby. `Some(false)` is a game the client opened without the lobby,
+    /// as when it restarts inside a game (a reconnect); None while no game
+    /// screen was loaded.
+    pub fn game_from_lobby(&self) -> Option<bool> {
+        self.from_lobby
     }
 }
 
@@ -187,6 +204,72 @@ mod tests {
         );
         let lines = vec![loaded("DRAFT", "GAMEPLAY")];
         assert_eq!(after_lines(&lines), Some(Scene::Game));
+    }
+
+    fn from_lobby(lines: &[String]) -> Option<bool> {
+        let mut t = SceneTracker::default();
+        lines.iter().for_each(|l| t.feed(l));
+        t.game_from_lobby()
+    }
+
+    #[test]
+    fn a_game_loaded_from_the_lobby_came_through_it() {
+        let lines = vec![
+            loaded("HUB", "BACON"),
+            pre_unload("BACON", "GAMEPLAY"),
+            loaded("BACON", "GAMEPLAY"),
+        ];
+        assert_eq!(from_lobby(&lines), Some(true));
+    }
+
+    #[test]
+    fn a_game_loaded_from_the_login_screen_is_a_reconnect_with_no_lobby() {
+        // The client restarted inside a game and the game came back at once
+        // (2026-10-19: `LOGIN` to `GAMEPLAY`, no `BACON`).
+        let lines = vec![
+            loaded("STARTUP", "LOGIN"),
+            pre_unload("LOGIN", "GAMEPLAY"),
+            loaded("LOGIN", "GAMEPLAY"),
+        ];
+        assert_eq!(from_lobby(&lines), Some(false));
+    }
+
+    #[test]
+    fn the_next_game_is_judged_on_its_own_load() {
+        let mut lines = vec![loaded("LOGIN", "GAMEPLAY")];
+        assert_eq!(from_lobby(&lines), Some(false));
+        lines.extend([
+            pre_unload("GAMEPLAY", "BACON"),
+            loaded("GAMEPLAY", "BACON"),
+            pre_unload("BACON", "GAMEPLAY"),
+            loaded("BACON", "GAMEPLAY"),
+        ]);
+        assert_eq!(from_lobby(&lines), Some(true));
+    }
+
+    #[test]
+    fn a_load_line_without_a_readable_previous_mode_keeps_what_the_load_said() {
+        let odd =
+            "D 19:15:48.8947131 LoadingScreen.OnSceneLoaded() - prevMode=bacon currMode=GAMEPLAY"
+                .to_string();
+        let lines = vec![pre_unload("BACON", "GAMEPLAY"), odd.clone()];
+        assert_eq!(
+            from_lobby(&lines),
+            Some(true),
+            "never a reconnect on a guess"
+        );
+        assert_eq!(from_lobby(&[odd]), None, "nothing known, nothing claimed");
+    }
+
+    #[test]
+    fn no_game_screen_yet_is_unknown_not_a_reconnect() {
+        assert_eq!(from_lobby(&[]), None);
+        assert_eq!(from_lobby(&[loaded("LOGIN", "HUB")]), None);
+        assert_eq!(
+            from_lobby(&[loaded("HUB", "BACON"), pre_unload("BACON", "GAMEPLAY")]),
+            Some(true),
+            "the load has started from the lobby"
+        );
     }
 
     #[test]

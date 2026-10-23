@@ -386,6 +386,13 @@ pub fn warn_once(key: &'static str, area: &str, message: &str) {
     }
 }
 
+/// Like [`warn_once`], for a plain note.
+pub fn info_once(key: &'static str, area: &str, message: &str) {
+    if is_new(key, message) {
+        info(area, message);
+    }
+}
+
 /// The problem of `key` is gone: it is logged again if it comes back.
 pub fn recovered(key: &'static str) {
     LAST.lock().unwrap_or_else(|e| e.into_inner()).remove(key);
