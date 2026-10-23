@@ -49,6 +49,7 @@ export const SIM_STRINGS = {
   "board.addSecond": "Add a second board",
   "board.remove": "Remove this board",
   "board.full": "A board holds 7 minions.",
+  "board.leftOut": "This board has no minions, so it is left out: its hero power and trinkets are not played. Add a minion to use them.",
 
   "tier.label": "Tavern tier",
   "tier.unknown": "?",
