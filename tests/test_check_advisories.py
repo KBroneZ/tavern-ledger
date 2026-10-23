@@ -250,7 +250,9 @@ class FunctionsTest(unittest.TestCase):
             }
         )
         problems = [p for p in tool.check_functions(root) if "third-party import" in p]
-        self.assertEqual(problems, ["a/index.ts:2: third-party import", "b/index.ts:4: third-party import"])
+        # a: the dynamic import (line 1) and its specifier (line 2) both count.
+        expected = ["a/index.ts:1", "a/index.ts:2", "b/index.ts:4"]
+        self.assertEqual(problems, [f"{where}: third-party import" for where in expected])
 
     def test_a_url_that_is_not_an_import_is_fine(self):
         root = self.folder({"a/index.ts": 'const note = "see https://example.test";\nfetch("https://example.test");\n'})
@@ -298,11 +300,14 @@ class FunctionsTest(unittest.TestCase):
             {
                 "a/index.ts": 'const url = "https://esm.sh/zod@3";\nawait import(url);\n',
                 "b/index.ts": "await import(`https://${host}/x.ts`);\n",
-                "c/index.ts": 'const m = await import("./local.ts");\nconst n = await import( /* c */ "../x.ts");\n',
+                "c/index.ts": 'const m = await import("./local.ts");\nconst n = await import( "../x.ts", {});\n',
+                "d/index.ts": 'await import("https:" + "//esm.sh/zod@3");\nawait import("./a" + x);\n',
+                "e/index.ts": 'const a = "/*"; await import(url); const b = "*/";\n',
             }
         )
         problems = [p for p in tool.check_functions(root) if "third-party import" in p]
-        self.assertEqual(problems, ["a/index.ts:2: third-party import", "b/index.ts:1: third-party import"])
+        expected = ["a/index.ts:2", "b/index.ts:1", "d/index.ts:1", "d/index.ts:2", "e/index.ts:1"]
+        self.assertEqual(problems, [f"{where}: third-party import" for where in expected])
 
     def test_package_names_compare_like_pypi(self):
         vulns = [vuln("P-1", "Foo_Bar", fixed=True)]

@@ -75,9 +75,10 @@ IGNORE_KEYS = frozenset({*IGNORE_FIELDS, "absent_from"})
 BUILD_KEYS = frozenset({"target", "exclude"})
 # Matched over the whole file, so an import split across lines is caught too.
 REMOTE_IMPORT_RE = re.compile(r"""\b(?:from|import)\s*\(?\s*["'`](npm:|jsr:|https?://)""", re.I)
-# A dynamic import of anything but a plain quoted string (the rules above read
-# those): a computed module name or a template could be a URL.
-DYNAMIC_IMPORT_RE = re.compile(r"""\bimport\s*\((?!\s*["'])""")
+# Any dynamic import except of one relative path written out whole, read on the
+# file as it is: a computed or concatenated name could be a URL. Strict on
+# purpose; the functions use none today.
+DYNAMIC_IMPORT_RE = re.compile(r"""\bimport\s*\((?!\s*(["'])\.{1,2}/[^"'`\n]*\1\s*[,)])""")
 NAME_SEPARATORS_RE = re.compile(r"[-_.]+")
 # A package specifier has no other use in this code, so one anywhere counts.
 PACKAGE_SPECIFIER_RE = re.compile(r"""["'`](?:npm|jsr):""", re.I)
@@ -315,7 +316,7 @@ def check_functions(folder: Path = FUNCTIONS, config: Path = SUPABASE_CONFIG) ->
         versions = (text, _without_comments(text))
         lines = {_line(t, m.start(1)) for t in versions for m in REMOTE_IMPORT_RE.finditer(t)}
         lines |= {_line(text, m.start()) for m in PACKAGE_SPECIFIER_RE.finditer(text)}
-        lines |= {_line(versions[1], m.start()) for m in DYNAMIC_IMPORT_RE.finditer(versions[1])}
+        lines |= {_line(text, m.start()) for m in DYNAMIC_IMPORT_RE.finditer(text)}
         problems += [f"{path.relative_to(folder).as_posix()}:{n}: third-party import" for n in sorted(lines)]
     if problems:
         problems.append("supabase/functions: the scan does not cover third-party Edge Function code; cover it first")
