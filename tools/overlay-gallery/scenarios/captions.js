@@ -537,7 +537,7 @@ const CAPTIONS = {
     },
     es: {
       title: "Contadores",
-      sees: "Una cajita de totales acumulados de tu propia partida, debajo de la lista de rivales: por ejemplo el tamaño de las Gemas de sangre, el poder extra de los hechizos de taberna, las mejoras de los esbirros de taberna y los refrescares gratis. Una línea solo aparece mientras su número es mayor que cero, y la caja solo mientras tiene alguna línea, así que la lista de rivales no se mueve nunca.",
+      sees: "Una cajita de totales acumulados de tu propia partida, debajo de la lista de rivales: por ejemplo el tamaño de las Gemas de sangre, el poder extra de los hechizos de taberna, las mejoras de los esbirros de taberna y los refrescos gratis. Una línea solo aparece mientras su número es mayor que cero, y la caja solo mientras tiene alguna línea, así que la lista de rivales no se mueve nunca.",
       source: LOG.es,
       rule: "Solo tus propios totales, hechos con cosas que pasaron en tu propia pantalla. Son una ayuda de memoria: nada de rivales, de tu compañero ni de lo que el juego no te enseñó.",
     },
