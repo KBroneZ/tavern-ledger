@@ -162,6 +162,10 @@ class IgnoreEntriesTest(unittest.TestCase):
         problems = tool.check_ignores([entry(absent_from=[{}, {"target": "linux", "exlude": ["x"]}])], TODAY)
         self.assertEqual(len(problems), 2)
 
+    def test_exclude_is_a_list_of_names(self):
+        (problem,) = tool.check_ignores([entry(absent_from=[{"target": "linux", "exclude": "desktop"}])], TODAY)
+        self.assertIn("absent_from item", problem)
+
     def test_the_committed_file_reads_and_is_complete(self):
         entries = tool.load_ignores()
         self.assertTrue(entries)
@@ -256,6 +260,12 @@ class FunctionsTest(unittest.TestCase):
         root = self.folder({"a/x.mjs": 'import a from "npm:a";\n', "a/y.tsx": 'import b from "jsr:@b/b";\n'})
         self.assertEqual(len([p for p in tool.check_functions(root) if "third-party import" in p]), 2)
 
+    def test_an_upper_case_scheme_and_odd_bytes_are_still_read(self):
+        root = self.folder({"a/index.ts": 'import x from "HTTPS://deno.land/x.ts";\n'})
+        (root / "a" / "b.ts").write_bytes(b'// \xff\nimport y from "npm:y";\n')
+        problems = [p for p in tool.check_functions(root) if "third-party import" in p]
+        self.assertEqual(problems, ["a/b.ts:2: third-party import", "a/index.ts:1: third-party import"])
+
     def test_an_import_map_in_the_supabase_config_fails(self):
         root = self.folder({"a/index.ts": "", "config.toml": '[functions.a]\nimport_map = "./a/map.json"\n'})
         problems = tool.check_functions(root / "a", root / "config.toml")
@@ -324,6 +334,11 @@ class TrackedFilesTest(unittest.TestCase):
     def test_any_osv_scanner_config_fails(self):
         problems = tool.check_tracked(["osv-scanner.toml", "web/.osv-scanner.toml"])
         self.assertEqual(len(problems), 2)
+
+    def test_names_come_from_git_unquoted(self):
+        with mock.patch.object(tool, "_run", return_value="cré/package-lock.json\0Cargo.lock\0"):
+            self.assertEqual(tool.tracked_files(), ["cré/package-lock.json", "Cargo.lock"])
+        self.assertEqual(len(tool.check_tracked(["cré/package-lock.json"])), 1)
 
     def test_every_unscanned_lockfile_says_why(self):
         self.assertTrue(all(reason.strip() for reason in tool.UNSCANNED.values()))

@@ -74,7 +74,7 @@ IGNORE_FIELDS = ("id", "package", "reason", "evidence", "review_by")
 IGNORE_KEYS = frozenset({*IGNORE_FIELDS, "absent_from"})
 BUILD_KEYS = frozenset({"target", "exclude"})
 # Matched over the whole file, so an import split across lines is caught too.
-REMOTE_IMPORT_RE = re.compile(r"""\b(?:from|import)\s*\(?\s*["'`](npm:|jsr:|https?://)""")
+REMOTE_IMPORT_RE = re.compile(r"""\b(?:from|import)\s*\(?\s*["'`](npm:|jsr:|https?://)""", re.I)
 SOURCE_SUFFIXES = (".ts", ".mts", ".tsx", ".js", ".mjs", ".jsx")
 DENO_CONFIGS = ("deno.json", "deno.jsonc", "deno.lock", "import_map.json")
 IMPORT_MAP_RE = re.compile(r"^\s*import_map\s*=", re.M)
@@ -181,7 +181,8 @@ def check_tracked(tracked: list[str]) -> list[str]:
 
 
 def tracked_files() -> list[str]:
-    return _run(["git", "ls-files"], "git ls-files", GIT_TIMEOUT_SECONDS).splitlines()
+    # -z: names as they are, not quoted (git quotes non-ASCII names otherwise).
+    return [name for name in _run(["git", "ls-files", "-z"], "git ls-files", GIT_TIMEOUT_SECONDS).split("\0") if name]
 
 
 def check_ignores(entries: list[dict], today: datetime.date) -> list[str]:
@@ -206,7 +207,15 @@ def check_ignores(entries: list[dict], today: datetime.date) -> list[str]:
         elif review_by > latest:
             problems.append(f"{label}: review date {review_by} is more than {MAX_REVIEW_DAYS} days away")
         for build in entry.get("absent_from") or []:
-            if not isinstance(build, dict) or set(build) - BUILD_KEYS or not build.get("target"):
+            exclude = build.get("exclude", []) if isinstance(build, dict) else None
+            if (
+                not isinstance(build, dict)
+                or set(build) - BUILD_KEYS
+                or not isinstance(build.get("target"), str)
+                or not build["target"]
+                or not isinstance(exclude, list)
+                or not all(isinstance(name, str) for name in exclude)
+            ):
                 problems.append(f"{label}: each absent_from item is {{ target = \"…\", exclude = [\"…\"] }}")
     return problems
 
@@ -237,7 +246,7 @@ def check_absent(entry: dict, metadata_for=_cargo_metadata) -> list[str]:
     """Problems when a crate an entry says is not built is built after all."""
     problems = []
     for build in entry.get("absent_from") or []:
-        if not isinstance(build, dict) or not build.get("target"):
+        if not isinstance(build, dict) or not build.get("target") or not isinstance(build.get("exclude", []), list):
             continue  # reported by check_ignores
         target, exclude = build["target"], set(build.get("exclude") or [])
         metadata = metadata_for(target)
@@ -264,7 +273,7 @@ def check_functions(folder: Path = FUNCTIONS, config: Path = SUPABASE_CONFIG) ->
     if config.is_file() and IMPORT_MAP_RE.search(config.read_text(encoding="utf-8")):
         problems.append(f"{config.name}: a function has an import_map")
     for path in sorted(p for p in folder.rglob("*") if p.suffix in SOURCE_SUFFIXES):
-        text = path.read_text(encoding="utf-8")
+        text = path.read_text(encoding="utf-8", errors="replace")
         for match in REMOTE_IMPORT_RE.finditer(text):
             number = text.count("\n", 0, match.start()) + 1
             problems.append(f"{path.relative_to(folder).as_posix()}:{number}: third-party import")
