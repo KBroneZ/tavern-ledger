@@ -13,18 +13,23 @@ use serde::{Deserialize, Serialize};
 use crate::leaderboard;
 use crate::screen_fit::{play_area, Area};
 
-/// The panels of the overlay. `Legend` explains the source marks, so it can
-/// move and resize but never be hidden.
+/// The panels of the overlay.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Panel {
     Status,
     /// Running totals of the player's own game (T-612).
     Counters,
+    /// Retired (T-614): the lobby's tribes are the opponents panel's header
+    /// now. Kept so a file saved before still reads; its places and its
+    /// hidden mark are dropped.
     Tribes,
     Opponents,
     /// The combat odds bar at the top centre of the game window (T-367).
     Odds,
+    /// Retired (T-614): the legend is behind the "?" in the layout editor's
+    /// toolbar now, never a panel. Kept so a file saved before still reads;
+    /// its places are dropped.
     Legend,
     /// The short panel on the Battlegrounds lobby screen (T-338).
     Lobby,
@@ -33,8 +38,13 @@ pub enum Panel {
 }
 
 impl Panel {
+    /// A panel the page no longer has: never placed, never hidden.
+    pub fn retired(self) -> bool {
+        matches!(self, Panel::Tribes | Panel::Legend)
+    }
+
     pub fn hideable(self) -> bool {
-        self != Panel::Legend
+        !self.retired()
     }
 }
 
@@ -131,6 +141,7 @@ impl Layout {
             panels: self
                 .panels
                 .iter()
+                .filter(|(p, _)| !p.retired())
                 .filter_map(|(p, r)| r.clamped(screen).map(|r| (*p, r)))
                 .collect(),
         }
@@ -389,6 +400,9 @@ impl Settings {
         settings
             .layouts
             .retain(|key, _| parse_resolution(key).is_some());
+        for layout in settings.layouts.values_mut() {
+            layout.panels.retain(|p, _| !p.retired());
+        }
         settings.leaderboards = std::mem::take(&mut settings.leaderboards)
             .into_iter()
             .filter_map(|(key, area)| {
@@ -473,8 +487,7 @@ impl Settings {
         self.opacity = clamp_opacity(value);
     }
 
-    /// Shows or hides a panel. The legend cannot be hidden: it explains the
-    /// marks on every value.
+    /// Shows or hides a panel. A retired panel is never hidden: the page has none.
     pub fn set_shown(&mut self, panel: Panel, shown: bool) {
         if shown || !panel.hideable() {
             self.hidden.remove(&panel);
@@ -562,8 +575,11 @@ mod tests {
     #[test]
     fn saving_makes_the_layout_fit_the_screen() {
         let mut s = Settings::default();
-        s.set_layout(FHD, &one(Panel::Tribes, rect(9000.0, 9000.0, 9000.0, None)));
-        let r = s.layout_for(FHD).panels[&Panel::Tribes];
+        s.set_layout(
+            FHD,
+            &one(Panel::Opponents, rect(9000.0, 9000.0, 9000.0, None)),
+        );
+        let r = s.layout_for(FHD).panels[&Panel::Opponents];
         assert!(r.x + r.w <= 1920.0 && r.y < 1080.0 && r.w <= MAX_WIDTH);
     }
 
@@ -665,7 +681,7 @@ mod tests {
             ..Settings::default()
         };
         s.set_layout(FHD, &one(Panel::Status, rect(10.0, 10.0, 200.0, None)));
-        s.set_shown(Panel::Tribes, false);
+        s.set_shown(Panel::Opponents, false);
         s.reset_layout();
         assert!(only_odds(&s.layout_for(FHD)));
         assert!(s.hidden.is_empty());
@@ -673,7 +689,7 @@ mod tests {
     }
 
     #[test]
-    fn panels_can_be_hidden_but_not_the_legend() {
+    fn panels_can_be_hidden_but_not_a_retired_one() {
         let mut s = Settings::default();
         s.set_shown(Panel::Opponents, false);
         s.set_shown(Panel::Legend, false);
@@ -714,7 +730,7 @@ mod tests {
     fn a_layout_saved_before_the_counters_panel_keeps_its_places_and_shows_it() {
         // A file as the app wrote it before T-612: no `counters` anywhere.
         let s = Settings::parse(
-            r#"{"enabled":true,"theme":"contrast","hidden":["tribes"],"layouts":{"1920x1080":{"panels":{"status":{"x":10,"y":20,"w":300,"h":null},"opponents":{"x":400,"y":20,"w":260,"h":120}}}}}"#,
+            r#"{"enabled":true,"theme":"contrast","hidden":["heroes"],"layouts":{"1920x1080":{"panels":{"status":{"x":10,"y":20,"w":300,"h":null},"opponents":{"x":400,"y":20,"w":260,"h":120}}}}}"#,
         )
         .unwrap();
         let panels = s.layout_for(FHD).panels;
@@ -724,7 +740,7 @@ mod tests {
         assert!(!panels.contains_key(&Panel::Counters));
         // Not hidden: a panel the file never heard of is shown.
         assert!(!s.hidden.contains(&Panel::Counters));
-        assert_eq!(s.hidden, BTreeSet::from([Panel::Tribes]));
+        assert_eq!(s.hidden, BTreeSet::from([Panel::Heroes]));
     }
 
     #[test]
@@ -747,6 +763,71 @@ mod tests {
         );
         let r = s.layout_for(FHD).panels[&Panel::Counters];
         assert!(r.x + r.w <= 1920.0 && r.y < 1080.0 && r.w <= MAX_WIDTH);
+    }
+
+    #[test]
+    fn a_file_saved_with_the_old_tribes_panel_drops_its_places_and_hidden_mark_and_keeps_the_rest()
+    {
+        // As the app wrote it before T-614: the tribes panel placed on two
+        // screens and hidden, next to other panels and settings.
+        let s = Settings::parse(
+            r#"{"enabled":true,"theme":"contrast","opacity":0.85,"hidden":["tribes","odds"],"layouts":{"1920x1080":{"panels":{"tribes":{"x":1700,"y":90,"w":220,"h":null},"opponents":{"x":400,"y":20,"w":260,"h":120}}},"2560x1440":{"panels":{"tribes":{"x":5,"y":5,"w":200,"h":null}}}},"last_resolution":"2560x1440"}"#,
+        )
+        .unwrap();
+        assert_eq!(s.hidden, BTreeSet::from([Panel::Odds]));
+        assert!(s
+            .layouts
+            .values()
+            .all(|l| !l.panels.contains_key(&Panel::Tribes)));
+        assert_eq!(
+            s.layout_for(FHD).panels[&Panel::Opponents],
+            rect(400.0, 20.0, 260.0, Some(120.0))
+        );
+        // A new screen starts from the last layout saved: no tribes there either.
+        assert!(only_odds(&s.layout_for(HD)));
+        assert!(s.enabled);
+        assert_eq!((s.theme, s.opacity), (Theme::Contrast, 0.85));
+        assert!(!s.to_text().unwrap().contains("tribes"), "not written back");
+    }
+
+    #[test]
+    fn the_old_tribes_panel_can_be_neither_hidden_nor_placed() {
+        assert!(Panel::Tribes.retired());
+        assert!(!Panel::Tribes.hideable());
+        let mut s = Settings::default();
+        s.set_shown(Panel::Tribes, false);
+        assert!(s.hidden.is_empty());
+        s.set_layout(FHD, &one(Panel::Tribes, rect(10.0, 10.0, 200.0, None)));
+        assert!(only_odds(&s.layout_for(FHD)));
+        assert!(!s.to_text().unwrap().contains("tribes"));
+    }
+
+    #[test]
+    fn only_the_old_tribes_and_legend_panels_are_retired() {
+        for panel in [
+            Panel::Status,
+            Panel::Counters,
+            Panel::Opponents,
+            Panel::Odds,
+            Panel::Lobby,
+            Panel::Heroes,
+        ] {
+            assert!(!panel.retired(), "{panel:?}");
+        }
+        assert!(Panel::Tribes.retired() && Panel::Legend.retired());
+    }
+
+    #[test]
+    fn a_file_with_a_placed_legend_drops_its_place_and_keeps_the_rest() {
+        // As the app wrote it before the legend moved behind the toolbar's "?" (T-614).
+        let s = Settings::parse(
+            r#"{"layouts":{"1920x1080":{"panels":{"legend":{"x":20,"y":900,"w":400,"h":null},"status":{"x":10,"y":20,"w":300,"h":null}}}},"last_resolution":"1920x1080"}"#,
+        )
+        .unwrap();
+        let panels = s.layout_for(FHD).panels;
+        assert!(!panels.contains_key(&Panel::Legend));
+        assert_eq!(panels[&Panel::Status], rect(10.0, 20.0, 300.0, None));
+        assert!(!s.to_text().unwrap().contains("legend"), "not written back");
     }
 
     #[test]
@@ -791,11 +872,11 @@ mod tests {
     #[test]
     fn values_that_load_but_are_unsafe_are_made_safe() {
         let s = Settings::parse(
-            r#"{"opacity":9,"hidden":["legend","tribes"],"layouts":{"nonsense":{"panels":{}}}}"#,
+            r#"{"opacity":9,"hidden":["legend","heroes"],"layouts":{"nonsense":{"panels":{}}}}"#,
         )
         .unwrap();
         assert_eq!(s.opacity, MAX_OPACITY);
-        assert_eq!(s.hidden, BTreeSet::from([Panel::Tribes]));
+        assert_eq!(s.hidden, BTreeSet::from([Panel::Heroes]));
         assert!(s.layouts.is_empty());
     }
 

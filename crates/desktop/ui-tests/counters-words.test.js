@@ -99,3 +99,10 @@ test("the out-of-range warning has its Spanish words", () => {
   I18n.setLang("en");
   assert.equal(I18n.backend("counter out of range: blood_gem"), "counter out of range: blood_gem");
 });
+
+test("the free rolls counter uses the app's Spanish word for a roll", () => {
+  I18n.setLang("es");
+  const [row] = counters.rows([{ kind: "free_rolls", count: 2 }]);
+  assert.equal(row.label, "Refrescos gratis");
+  assert.equal(row.said, "Tienes 2 refrescos gratis.");
+});

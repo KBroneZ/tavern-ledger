@@ -43,6 +43,11 @@ pub const PARSER_REVISION: u32 = 16;
 
 /// Builds whose real logs this parser was checked against.
 pub const TESTED_BUILDS: &[i64] = &[253216, 254477];
+/// Client builds (`.product.db`, HearthstoneJSON) whose games still write an
+/// older, tested `BuildNumber`: `(client build, build its games write)`. Only
+/// added after real games on that client were read clean. `tools/game_build_watch.py`
+/// reads this list.
+pub const CLIENT_BUILDS: &[(i64, i64)] = &[(255130, 254477)];
 pub const TESTED_GAME_TYPES: &[&str] = &["GT_BATTLEGROUNDS", "GT_BATTLEGROUNDS_DUO"];
 const MAX_LOBBY: usize = 8;
 /// The highest tavern tier; a value past it is not a tier the game has.

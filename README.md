@@ -35,8 +35,9 @@
 - **Combat replays**, attack by attack, from the log: what the game played on your screen, never a simulation.
 - **Stats** for Solo and Duos apart: totals, every hero you played, tribes, trinkets and Dark Gifts with their pick rates, plus a Records tab.
 - **An in-game overlay**, if you want one: hover a hero on the game's leaderboard to see the last board you met from them, with tier, health, triples and your record; the next opponent is marked.
-- **Combat odds** in the overlay, from the project's own simulator: during each combat, the chance to win, tie or lose from the two boards that entered play, in Solo and Duos. A hint, not a promise; the website shows [how often it is right](https://tavernledger.net/accuracy/).
+- **Combat odds** in the overlay, from the project's own simulator, in Solo and Duos: an early estimate from the boards before start of combat, with start of combat, hero powers and trinkets played, then the chance to win, tie or lose from the first attack. A hint, not a promise; the website shows [how often it is right](https://tavernledger.net/accuracy/).
 - **Every value says where it comes from**: from the log, inferred, entered by you or unknown. When the app cannot tell, it says so instead of guessing.
+- **When something fails, it says so plainly:** "Copy diagnostics" (Settings, Error log) shows a short summary with no names, accounts or paths, and copies it only when you press Copy; the app never sends it. If the Microsoft Edge WebView2 Runtime is missing, the app says that, with Microsoft's download page.
 - English and Spanish.
 
 ![A game's recap in the app: the hero, the place, the health over twelve rounds and the shop numbers](docs/screenshots/app-recap.webp)
@@ -48,7 +49,8 @@
 - **Upload your games** from the app, only once you sign in and turn it on.
 - **Your dashboard** with your numbers per mode, a filterable games list and a full view of each game, combat replays included.
 - **Public profile, leaderboards and community hero stats**, each one opt-in and off until you turn it on. Leaderboards show display names and numbers from uploaded games, never ratings or BattleTags.
-- **[Combat simulator](https://tavernledger.net/simulator/)** in your browser: load a fight from one of your games (signed in) or set up both boards yourself and see the odds.
+- **[Combat simulator](https://tavernledger.net/simulator/)** in your browser: load a fight from one of your games (signed in) or set up both boards yourself, with each hero's powers and trinkets, and see the odds. It can play start of combat.
+- **[Accuracy page](https://tavernledger.net/accuracy/)**: how often the simulator's most likely result matched the real one, on the developer's own combats, with the share of combats it could not play.
 - English and Spanish.
 
 ![The website's home page: a painted tavern with "Pull up a stool. We kept your games." and a Download button marked "Beta for Windows"](docs/screenshots/web-home.webp)
@@ -60,6 +62,7 @@ Screenshots are from the app and the live website, on the developer's own games.
 ## Privacy and your account
 
 - **Your games stay on your PC.** Nothing is uploaded unless you sign in and turn uploading on.
+- **Uninstalling keeps your games** unless you tick the box "Also delete my games and settings (cannot be undone)" in the uninstaller.
 - **No other players' names.** The app keeps opponents by hero, never by name or BattleTag.
 - **What the app does with the game:** it reads the game's log files and, for the overlay, where your pointer is over the game window. By default (you can turn it off in Settings) it also reads two values the game already shows you, the lobby's five tribes and your own Battlegrounds rating, read-only from the game's memory; they stay on your PC and are never uploaded. Reading the game's memory goes against the letter of Blizzard's EULA (section 1.C) and is not approved by Blizzard, so the account at risk is yours; the [terms](https://tavernledger.net/terms/) and the app's Settings explain it.
 - **What it never does:** no injection, no changes to the game itself, nothing played or clicked for you. The one thing it writes in the game's folders is Hearthstone's two logging settings files (`log.config` and `client.config`), and only when you click Fix in its setup notice; it keeps a `.bak` copy of any file it changes.

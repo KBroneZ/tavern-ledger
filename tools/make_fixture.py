@@ -499,9 +499,10 @@ def _report(command: list[str], text: str, folder: Path) -> object:
 def _comparable(games: object) -> object:
     """A report without what a fixture cannot keep: hero names (card text);
     the combat replays' events and beats, which nested blocks the fixture
-    drops give (T-215, T-575; the replays' minions stay); and each board's
+    drops give (T-215, T-575; the replays' minions stay); each board's
     game-long values, read from player enchantments the fixture drops
-    (T-610)."""
+    (T-610); and the counters of replay minions and the counters and slots of
+    kit powers and trinkets, read from entities and tags the fixture drops."""
     if not isinstance(games, list):
         return games
     out = []
@@ -517,17 +518,34 @@ def _comparable(games: object) -> object:
     return out
 
 
+def _without(items: object, keys: tuple[str, ...]) -> object:
+    if not isinstance(items, list):
+        return items
+    return [{k: v for k, v in i.items() if k not in keys} if isinstance(i, dict) else i for i in items]
+
+
+def _without_kit_values(kit: object) -> object:
+    """A kit's powers and trinkets without their counters and slots, which the
+    game keeps on entities the fixture drops (the fixture reads slot 0)."""
+    if not isinstance(kit, dict):
+        return kit
+    return {k: _without(v, ("counters", "slot")) if k in ("powers", "trinkets") else v for k, v in kit.items()}
+
+
 def _without_replay_events(round_: object) -> object:
     if not isinstance(round_, dict):
         return round_
     entries = round_.get("entries")
     if isinstance(entries, list):
         round_ = {**round_, "entries": [
-            {k: v for k, v in e.items() if k != "values"} if isinstance(e, dict) else e
+            {k: _without_kit_values(v) if k == "kit" else v for k, v in e.items() if k != "values"}
+            if isinstance(e, dict) else e
             for e in entries]}
     if not isinstance(round_.get("replay"), dict):
         return round_
     replay = {k: v for k, v in round_["replay"].items() if k not in ("events", "beats", "complete")}
+    if "minions" in replay:
+        replay["minions"] = _without(replay["minions"], ("counters",))
     return {**round_, "replay": replay}
 
 

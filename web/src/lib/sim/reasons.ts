@@ -6,11 +6,11 @@
 import { lang } from "../i18n.ts";
 
 export const REASONS_ES: Readonly<Record<string, string>> = {
-  "summons tokens that may have game-long buffs the log does not show":
-    "invoca fichas que pueden tener mejoras de toda la partida que el registro no muestra",
+  "summons tokens that may have game-long buffs that are not known":
+    "invoca fichas que pueden tener mejoras de toda la partida que no se conocen",
   "its numbers grow during the game; the base values are used": "sus números crecen durante la partida; se usan los de base",
   "buffs the Deity, which is not on the board": "mejora a la Deidad, que no está en el tablero",
-  "Blood Gems are played as +1/+1; upgrades are not in the log": "las Gemas de sangre se juegan como +1/+1; sus mejoras no están en el registro",
+  "Blood Gems are played as +1/+1; their upgrades are not known": "las Gemas de sangre se juegan como +1/+1; sus mejoras no se conocen",
   "which minions it picks is not checked against the game yet": "aún no se ha comprobado con la partida a qué esbirros elige",
   "grows when another Eternal Knight dies; not played": "crece cuando muere otro Caballero eterno; no se juega",
   "the spell's values can grow during the game; the printed ones are used": "los valores del hechizo pueden crecer durante la partida; se usan los impresos",
@@ -18,18 +18,18 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
   "which Deathrattle it triggers and when is not checked against the game yet":
     "aún no se ha comprobado con la partida qué Último aliento activa ni cuándo",
   "Blood Gems played on it in combat are not passed on": "las Gemas de sangre que recibe en combate no se transmiten",
-  "Eternal Knights grow with the Knights that died this game, which the log does not show":
-    "los Caballeros eternos crecen con los Caballeros muertos en la partida, que el registro no muestra",
+  "Eternal Knights grow with the Knights that died this game, which is not known":
+    "los Caballeros eternos crecen con los Caballeros muertos en la partida, dato que no se conoce",
   "Undead summoned after it died do not get the Attack": "los no muertos invocados después de su muerte no reciben el Ataque",
   "its bonus grows during the game; the printed one is used": "su bonificación crece durante la partida; se usa la impresa",
   "its order with other summon effects is not checked yet": "aún no se ha comprobado su orden con otros efectos de invocación",
-  "its Golem's card id is the one the log shows for Jailbird Juggernaut":
-    "el id de carta de su Gólem es el que el registro muestra para Jailbird Juggernaut",
-  "its Golem's card id is from the log; what the card does when its Golem kills the target is not checked":
-    "el id de carta de su Gólem sale del registro; no se ha comprobado qué hace la carta cuando su Gólem mata al objetivo",
+  "its Golem's card id is the one seen in real games for Jailbird Juggernaut":
+    "el id de carta de su Gólem es el que se ha visto en partidas reales para Jailbird Juggernaut",
+  "its Golem's card id is from real games; what the card does when its Golem kills the target is not checked":
+    "el id de carta de su Gólem sale de partidas reales; no se ha comprobado qué hace la carta cuando su Gólem mata al objetivo",
   "Deathrattles it gained in earlier combats are not on the board": "los Últimos alientos que ganó en combates anteriores no están en el tablero",
-  "Beetles' game-long buffs are not in the log, and Beetles summoned later miss this combat's":
-    "las mejoras de toda la partida de los Escarabajos no están en el registro, y los invocados después no reciben las de este combate",
+  "Beetles' game-long buffs are not known, and Beetles summoned later miss this combat's":
+    "las mejoras de toda la partida de los Escarabajos no se conocen, y los invocados después no reciben las de este combate",
   "which neighbour it picks, and neighbours that die with it, are not checked":
     "no se ha comprobado qué vecino elige ni los vecinos que mueren a la vez",
   "neighbours that die with it are not checked": "no se han comprobado los vecinos que mueren a la vez",
@@ -76,7 +76,7 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
   "it acts during combat in a way the simulator does not play yet":
     "actúa durante el combate de una forma que el simulador aún no juega",
   "it makes a hero power that acts in combat trigger twice": "hace que un poder de héroe que actúa en combate se active dos veces",
-  "its numbers are not in the log; the printed ones are used": "sus números no están en el registro; se usan los impresos",
+  "its numbers are not known; the printed ones are used": "sus números no se conocen; se usan los impresos",
   "when its attacks come against the other start-of-combat effects is not checked":
     "no se ha comprobado cuándo llegan sus ataques respecto a los demás efectos de Inicio del combate",
   "whether it can hit the same minion twice is not checked": "no se ha comprobado si puede golpear dos veces al mismo esbirro",
@@ -90,11 +90,11 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
   "where the minion it fires goes on the board is checked on one combat only":
     "dónde queda en el tablero el esbirro que dispara solo se ha comprobado en un combate",
   "which minion it copies among equal Tier is not checked": "no se ha comprobado qué esbirro copia entre los de igual nivel",
-  "the minion it names is not shown": "el esbirro que elige no se muestra",
-  "the minion it holds is not shown": "el esbirro que guarda no se muestra",
+  "the minion it names is not given": "no se indica el esbirro que elige",
+  "the minion it holds is not given": "no se indica el esbirro que guarda",
   "the round, which unlocks it, is not given": "no se indica el turno, que es el que lo desbloquea",
   "its teammate's board is not given": "no se indica el tablero de su compañero",
-  "the minion it marked is not shown": "el esbirro que marcó no se muestra",
+  "the minion it marked is not given": "no se indica el esbirro que marcó",
   "Eternal Knights summoned during combat miss what it gave them in earlier combats":
     "los Caballeros eternos invocados durante el combate no tienen lo que les dio en combates anteriores",
   "its copy had fewer stats than the teammate's minion in 2 of the 12 combats checked":

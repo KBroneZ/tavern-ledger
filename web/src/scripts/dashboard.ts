@@ -5,7 +5,7 @@
 
 // First: the page's language, before any module draws text (T-508).
 import "../lib/i18n/boot.ts";
-import { loadDashboard, profileAccess, type ProfileAccess } from "../lib/dataApi.ts";
+import { loadDashboard, loadPeriodGames, profileAccess, type ProfileAccess } from "../lib/dataApi.ts";
 import type { Mode } from "../lib/data/format.ts";
 import { filtersQuery, DEFAULT_FILTERS } from "../lib/data/filters.ts";
 import { busierMode, MODE_DEFAULT_EVENT } from "../lib/data/prefs.ts";
@@ -13,6 +13,8 @@ import { statsPagePath } from "../lib/heroes/heroes.ts";
 import { t } from "../lib/data/strings.ts";
 import { parseProfileId, publicProfilePath } from "../lib/profile.ts";
 import { aboutFold, dashboardPanels, isEmpty } from "../lib/view/dashboardView.ts";
+import { localDay, periodBounds, summarizePeriod } from "../lib/data/period.ts";
+import { periodFailure, periodSection } from "../lib/view/periodView.ts";
 import { h, mount, type VNode } from "../lib/view/node.ts";
 import { stateBlock } from "../lib/view/pieces.ts";
 import { supabase } from "./client.ts";
@@ -94,6 +96,8 @@ async function start(): Promise<void> {
   const who = await subject();
   if (!who) return;
   const { userId, access } = who;
+  // The summary is read with the rest and shown with it (own dashboard only).
+  const period = own ? readPeriod(userId) : null;
   const dash = await loadDashboard(supabase, userId);
   const gamesHref = (m: Mode) => href(`/games/${filtersQuery({ ...DEFAULT_FILTERS, mode: m }, own ? null : userId)}`);
   const profileId = own ? null : userId;
@@ -116,10 +120,38 @@ async function start(): Promise<void> {
   switches.querySelector("[data-switch=mode]")?.dispatchEvent(new CustomEvent(MODE_DEFAULT_EVENT, { detail: busierMode(games) }));
   mount(panels, ...dashboardPanels(dash, { gamesHref, owner: own, userId, heroesHref, curiousHref }));
   mount(about, aboutFold());
+  if (period) await showPeriod(userId, period);
   gate.hidden = true;
   panels.hidden = false;
   switches.classList.remove("is-off");
   settle(t("dash.loaded"));
+}
+
+/**
+ * Today and this week (T-361), the player's own dashboard only: read at the
+ * same time as the rest, so the page can show it all in one go and nothing
+ * already on screen moves (D-073). Never throws: a failure here is the
+ * section's own error with a retry, and the panels stand.
+ */
+async function readPeriod(userId: string): Promise<VNode[]> {
+  const bounds = periodBounds(localDay(new Date()));
+  try {
+    const rows = await loadPeriodGames(supabase, userId, bounds.weekStart, bounds.weekEnd);
+    return periodSection(summarizePeriod(rows, bounds), userId);
+  } catch {
+    return periodFailure(h("button", { type: "button", class: "tb tb-small", id: "dash-period-retry" }, t("dash.retry")));
+  }
+}
+
+/** Draws the summary in its frame, and wires its retry when the read failed. */
+async function showPeriod(userId: string, read: Promise<VNode[]>): Promise<void> {
+  const frame = byId("dash-period");
+  mount(frame, ...(await read));
+  frame.hidden = false;
+  document.getElementById("dash-period-retry")?.addEventListener("click", () => {
+    mount(frame, h("h2", { id: "dash-period-title" }, t("period.title")), stateBlock({ kind: "loading", lines: 6 }));
+    void showPeriod(userId, readPeriod(userId)).then(() => moveFocus(byId("dash-period-title")));
+  });
 }
 
 function failed(): void {

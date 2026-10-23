@@ -11,7 +11,7 @@ import { h, mount, type VNode } from "../view/node.ts";
 import { stateBlock } from "../view/pieces.ts";
 import { EXPIRED_COLUMNS, expiredHeading, loadExpired, type ReadSummary, renderExpired } from "./expired.ts";
 import { loadGame, type Download, type LoadResult } from "./load.ts";
-import { watchTipEscape } from "./minionTip.ts";
+import { watchTipEscape, watchTipFit } from "./minionTip.ts";
 import { loadCardNames, useCardNames } from "./names.ts";
 import { renderGame } from "./render.ts";
 import { startReplays } from "./replayPlayer.ts";
@@ -152,14 +152,18 @@ async function run(ref: GameRef, sources: Sources): Promise<void> {
 async function start(): Promise<void> {
   watchPictureFallback(document);
   watchTipEscape(document);
+  watchTipFit(document);
   const ref = parseGameRef(location.search);
   if (ref === null) return showNotFound();
   // Dev only (removed from the built site): ?demo draws a synthetic game.
   if (import.meta.env.DEV && new URLSearchParams(location.search).has("demo")) {
-    const { record } = await import("../../../test/unit/gameFixtures.ts");
-    const read = readRecord(record());
+    const fixtures = await import("../../../test/unit/gameFixtures.ts");
+    const demo = new URLSearchParams(location.search).get("demo");
+    // ?demo=full: a full table in the first combat; ?demo=duos: a Duos game with its second boards.
+    const made = fixtures.record(demo === "duos" ? fixtures.duosReplayReport() : demo === "full" ? fixtures.fullReport() : undefined);
+    const read = readRecord(made);
     useCardNames(await loadCardNames());
-    if (read.ok) return showGame({ kind: "ok", record: read.record, report: record().report });
+    if (read.ok) return showGame({ kind: "ok", record: read.record, report: made.report });
   }
   const { supabase } = await import("../../scripts/client.ts");
   const download: Download = (path) => supabase.storage.from("games").download(path);

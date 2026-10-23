@@ -361,11 +361,11 @@
         "approximate": [
           {
             "card_id": "BG33_430",
-            "reason": "Blood Gems are played as +1/+1; upgrades are not in the log"
+            "reason": "Blood Gems are played as +1/+1; their upgrades are not known"
           },
           {
             "card_id": "BG33_886",
-            "reason": "Blood Gems are played as +1/+1; upgrades are not in the log"
+            "reason": "Blood Gems are played as +1/+1; their upgrades are not known"
           }
         ],
         "damage_known": true,
@@ -1127,7 +1127,7 @@
         "lost": 10000,
         "new_build": null,
         "stalled": 0,
-        "start_of_combat": false,
+        "start_of_combat": true,
         "status": "odds",
         "taken": {
           "high": 3,

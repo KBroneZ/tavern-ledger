@@ -3,7 +3,11 @@
 HearthstoneJSON lists every game build it has card data for. Once a day this
 reads that listing (one request) and compares the newest build with the
 builds the log parser was tested on (`TESTED_BUILDS` in
-`crates/bg-parser/src/lib.rs`). When the newest build is newer, it reads the
+`crates/bg-parser/src/lib.rs`). `TESTED_BUILDS` holds the number a game writes
+to `Power.log`; HearthstoneJSON and Battle.net number the client, and a client
+build can still write an older game number (`CLIENT_BUILDS`, next to
+`TESTED_BUILDS`, maps one to the other once games on it were checked). When the
+newest build is newer than both, it reads the
 card data of both builds, lists the Battlegrounds cards added, changed and
 removed, marks the minions the simulator does not know or has to review
 again, and opens one issue, `New game build <N>`, with a checklist. An issue
@@ -57,6 +61,9 @@ SHOWN_FIELDS = ("name", "text", "type", "cost", "attack", "health", "armor", "te
 
 BUILD_LINK = re.compile(r'href="/v1/(\d+)/"')
 TESTED_LIST = re.compile(r"TESTED_BUILDS\s*:\s*&\[i64\]\s*=\s*&\[([^\]]*)\]")
+CLIENT_LIST = re.compile(r"CLIENT_BUILDS\s*:\s*&\[\(i64,\s*i64\)\]\s*=\s*&\[([^;]*)\]\s*;")
+CLIENT_DECLARED = re.compile(r"\bCLIENT_BUILDS\s*:")
+CLIENT_PAIR = re.compile(r"\(\s*(\d[\d_]*)\s*,\s*(\d[\d_]*)\s*\)")
 CHECKED_LIST = re.compile(r"CHECKED_BUILDS\s*:\s*&\[i64\]\s*=\s*&\[([^\]]*)\]")
 CARD_ID_LITERAL = re.compile(r'"((?:BG|TB)[A-Za-z0-9_]+)"')
 CARD_ID = re.compile(r"[A-Za-z0-9_]{1,64}")
@@ -111,6 +118,26 @@ def parser_builds(root: Path) -> list[int]:
     if not builds:
         raise DataError("TESTED_BUILDS is empty")
     return sorted(builds)
+
+
+def client_builds(root: Path) -> dict[int, int]:
+    """Client builds whose games write an older, tested build: {client: game}. Empty when none."""
+    text = (root / "crates" / "bg-parser" / "src" / "lib.rs").read_text(encoding="utf-8")
+    if not CLIENT_DECLARED.search(text):
+        return {}
+    match = CLIENT_LIST.search(text)
+    if not match:
+        raise DataError("CLIENT_BUILDS is in crates/bg-parser/src/lib.rs but its list could not be read")
+    body = match.group(1)
+    pairs = CLIENT_PAIR.findall(body)
+    if len(pairs) != body.count("("):
+        raise DataError("CLIENT_BUILDS has an entry that is not a (client build, game build) pair of plain numbers")
+    tested = set(parser_builds(root))
+    mapped = {int(c.replace("_", "")): int(g.replace("_", "")) for c, g in pairs}
+    for client, game in mapped.items():
+        if game not in tested or client <= game:
+            raise DataError(f"CLIENT_BUILDS maps {client} to {game}: not a newer client of a tested build")
+    return mapped
 
 
 def _sim_sources(root: Path) -> list[Path]:
@@ -204,7 +231,8 @@ def render_report(build: int, previous: int, diff: Diff, sim_ids: set[str], pars
     lines += [
         "## Checklist",
         "",
-        f"- [ ] Log parser: play a game on build {build}, make a fixture, add {build} to `TESTED_BUILDS`",
+        f"- [ ] Log parser: play a game on build {build}, make a fixture, add {build} to `TESTED_BUILDS` "
+        "(a client build whose games write an older `BuildNumber` goes in `CLIENT_BUILDS` instead)",
         "- [ ] Simulator: review the minions listed above and the checked builds list",
         f"- [ ] Memory reader: check that it still reads build {build}",
         "- [ ] Card data: refresh the committed card data and run the data checks",
@@ -238,6 +266,11 @@ def run(root: Path, get: Get, gh: Gh | None) -> int:
         previous = max(tested)
         if newest <= previous:
             print(f"Build {newest}: nothing new (parser tested on {previous}).")
+            return 0
+        written = client_builds(root).get(newest)
+        if written is not None:
+            print(f"Build {newest}: nothing new (a client build whose games write build {written}, "
+                  f"which the parser was tested on).")
             return 0
         title = issue_title(newest)
         if gh is not None and issue_exists(title, gh):
