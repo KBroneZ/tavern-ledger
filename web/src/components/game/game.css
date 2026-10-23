@@ -303,6 +303,38 @@
   }
 }
 
+/* A phone, or any touch screen: targets of 44px (T-551). A fold's hint (the
+   rivals' record is long in Spanish) drops under its title rather than
+   widening the page. */
+@media (max-width: 720px), (pointer: coarse) {
+  .gv-toggle {
+    min-height: 44px;
+  }
+
+  .gv-head .seg button {
+    min-height: 44px;
+  }
+
+  /* The page's own links (jump to the replays, the causes) stand on a line of their own. */
+  .gv-jump a,
+  .gv-link a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .gv .fold > summary {
+    flex-wrap: wrap;
+    min-height: 44px;
+  }
+
+  /* Under the title, past the chevron (8px and the gap). */
+  .gv .fold-hint {
+    flex-basis: 100%;
+    margin-inline-start: calc(8px + var(--s-3));
+  }
+}
+
 /* ---------- Boards: as in the game (the replay's minions, replay.css) ---------- */
 
 .gv-boards {

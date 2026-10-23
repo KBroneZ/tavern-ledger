@@ -120,6 +120,61 @@ export function longReplay(): Json {
   };
 }
 
+/** A combat with a full table: seven a side, keywords on most, a golden one and a long Dark Gift name (phone widths, T-551). */
+export function fullReplay(): Json {
+  const own = [1, 2, 3, 4, 5, 6, 7].map((n) =>
+    rm("own", `SYN_M_0${n}`, n + 1, n + 2, n, {
+      golden: n === 3,
+      keywords: n % 2 ? ["taunt", "divine_shield"] : ["deathrattle", "venomous"],
+      gifts: n === 4 ? ["SYN_GIFT_1"] : [],
+    }),
+  );
+  const foes = [1, 2, 3, 4, 5, 6, 7].map((n) => rm("opponent", `SYN_M_0${(n % 9) + 1}`, 8 - n, 9 - n, n, { keywords: n % 3 ? ["windfury"] : ["reborn"] }));
+  return {
+    minions: [...own, ...foes],
+    start: 14,
+    events: [
+      { kind: "attack", attacker: 0, defender: 7 },
+      { kind: "damage", minion: 7, amount: 2, health: 5 },
+      { kind: "damage", minion: 0, amount: 7, health: -4 },
+      { kind: "death", minion: 0 },
+      { kind: "attack", attacker: 8, defender: 1 },
+      { kind: "damage", minion: 1, amount: 6, health: -1 },
+      { kind: "death", minion: 1 },
+      { kind: "hero_damage", side: "own", amount: 4 },
+    ],
+    complete: true,
+  };
+}
+
+/** A Duos combat: the teammate's board comes in after the first attack, and the second opposing board after that. */
+export function duosReplay(): Json {
+  const board = (side: "own" | "opponent", base: number) =>
+    [1, 2, 3, 4, 5, 6, 7].map((n) => rm(side, `SYN_M_0${(n % 9) + 1}`, n + base, n + 1, 0, { keywords: n % 2 ? ["taunt"] : [] }));
+  return {
+    minions: [
+      ...[1, 2, 3, 4, 5].map((n) => rm("own", `SYN_M_0${n}`, n, n + 1, n)),
+      ...[1, 2, 3, 4].map((n) => rm("opponent", `SYN_M_0${n + 4}`, n + 1, n + 2, n)),
+      ...board("own", 1),
+      ...board("opponent", 2),
+    ],
+    start: 9,
+    events: [
+      { kind: "attack", attacker: 0, defender: 5 },
+      { kind: "damage", minion: 5, amount: 1, health: 1 },
+      { kind: "damage", minion: 0, amount: 2, health: -1 },
+      { kind: "death", minion: 0 },
+      { kind: "board_in", side: "own", hero: "BG22_HERO_003" },
+      ...[9, 10, 11, 12, 13, 14, 15].map((n) => ({ kind: "summon", minion: n })),
+      { kind: "board_in", side: "opponent", hero: "SYN_HERO_D" },
+      ...[16, 17, 18, 19, 20, 21, 22].map((n) => ({ kind: "summon", minion: n })),
+      { kind: "attack", attacker: 9, defender: 16 },
+      { kind: "hero_damage", side: "opponent", amount: 3 },
+    ],
+    complete: true,
+  };
+}
+
 /** A finished Solo game: 3 shop turns, 3 combats (log, inferred, unknown); turns 1 and 2 have replays. */
 export function soloReport(): Json {
   return {
@@ -250,6 +305,23 @@ export function duosReport(): Json {
     problems: [],
     not_in_log: [],
   };
+}
+
+/** The Solo game with a full table in turn 1's combat (phone widths, T-551). */
+export function fullReport(): Json {
+  const report = soloReport();
+  const rounds = report.rounds as Json[];
+  rounds[0] = { ...rounds[0], replay: fullReplay() };
+  return report;
+}
+
+/** The Duos game with its combats played back, the second boards included (phone widths, T-551). */
+export function duosReplayReport(): Json {
+  const report = duosReport();
+  const rounds = report.rounds as Json[];
+  rounds[0] = { ...rounds[0], replay: duosReplay() };
+  rounds.push({ ...rounds[0], number: 2, replay: duosReplay() });
+  return report;
 }
 
 export function record(report: Json = soloReport(), extra: Json = {}): Json {

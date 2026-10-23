@@ -7,7 +7,7 @@ import { drawnAttrs } from "../art/drawn.ts";
 import { cls, h, type VNode } from "../view/node.ts";
 import { shortStat } from "../stat.ts";
 import { picture } from "../view/pieces.ts";
-import { giftList } from "./gifts.ts";
+import { giftList, giftMarks } from "./gifts.ts";
 import { minionTip, tipHost } from "./minionTip.ts";
 import { cardLabel } from "./names.ts";
 import type { Minion } from "./report.ts";
@@ -34,7 +34,7 @@ function minionTile(m: Minion, tipId: string): VNode {
     ),
     h("span", { class: "gv-minion-name", "aria-hidden": "true" }, cardLabel(m.cardId, g("minion.unknownCard"))),
     giftList(m),
-    minionTip(tipId, { cardId: m.cardId, atk: m.atk, health: m.health, buffs: m.buffs }),
+    minionTip(tipId, { cardId: m.cardId, atk: m.atk, health: m.health, buffs: m.buffs, gifts: giftMarks(m) }),
   );
 }
 
