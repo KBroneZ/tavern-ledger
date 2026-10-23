@@ -94,7 +94,11 @@ NAME_SEPARATORS_RE = re.compile(r"[-_.]+")
 # A package specifier has no other use in this code, so one anywhere counts.
 PACKAGE_SPECIFIER_RE = re.compile(r"""["'`](?:npm|jsr):""", re.I)
 # Block comments, and line comments not right after a ":" (so "https://" stays).
-COMMENT_RE = re.compile(r"/\*[\s\S]*?\*/|(?<!:)//[^\n]*")
+# A string or a comment, whichever starts first, so a "/*" or "//" inside a
+# string is not taken for a comment. Only comments are blanked out.
+STRING_OR_COMMENT_RE = re.compile(
+    r"""'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"|`(?:\\.|[^`\\])*`|/\*[\s\S]*?(?:\*/|\Z)|//[^\n]*"""
+)
 SOURCE_SUFFIXES = (".ts", ".mts", ".cts", ".tsx", ".js", ".mjs", ".cjs", ".jsx")
 DEPENDENCY_CONFIGS = ("deno.json", "deno.jsonc", "deno.lock", "import_map.json", "package.json", "package-lock.json")
 
@@ -298,7 +302,11 @@ def _line(text: str, at: int) -> int:
 
 def _without_comments(text: str) -> str:
     """The text with comments blanked out, line breaks kept so line numbers hold."""
-    return COMMENT_RE.sub(lambda m: "\n" * m.group(0).count("\n") or " ", text)
+    def blank(m: re.Match) -> str:
+        found = m.group(0)
+        return found if found[0] in "'\"`" else "\n" * found.count("\n") or " "
+
+    return STRING_OR_COMMENT_RE.sub(blank, text)
 
 
 def _function_configs(config: Path, folder: Path) -> list[str]:

@@ -308,6 +308,15 @@ class FunctionsTest(unittest.TestCase):
             ],
         )
 
+    def test_a_comment_marker_in_a_string_and_a_comment_in_an_import_together(self):
+        root = self.folder({"a/index.ts": 'const glob = "**/*"; import z from /* schema */ "https://esm.sh/zod";\n'})
+        self.assertIn("a/index.ts:1: third-party import", tool.check_functions(root, NO_CONFIG))
+
+    def test_comments_go_and_strings_stay(self):
+        text = "a = \"/*\"; b = '//'; c = `/* ${d} */`; /* gone\n */ e // gone too\nf = 'it\\'s /*';\n"
+        expected = "a = \"/*\"; b = '//'; c = `/* ${d} */`; \n e  \nf = 'it\\'s /*';\n"
+        self.assertEqual(tool._without_comments(text), expected)
+
     def test_a_byte_order_mark_does_not_hide_the_first_import(self):
         root = self.folder({"functions/a/index.ts": ""})
         (root / "functions" / "a" / "index.ts").write_bytes(b'\xef\xbb\xbfimport "../../shared.ts";\n')
