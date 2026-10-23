@@ -9,7 +9,7 @@ import { join, relative } from "node:path";
 import { Script } from "node:vm";
 import { loadEnv } from "vite";
 import { contentSecurityPolicy, readConfig, WASM_WORKER } from "../../src/lib/config.ts";
-import { builtFile, NEVER_CACHED } from "../../src/lib/pwa/build.ts";
+import { builtFile, killSwitchSource, NEVER_CACHED } from "../../src/lib/pwa/build.ts";
 import { THEME_COLOR } from "../../src/lib/pwa/manifest.ts";
 
 const ROOT = join(import.meta.dirname, "..", "..");
@@ -116,9 +116,16 @@ test("the CSP lets pages link the manifest, and register the worker only when th
 });
 
 if (CONFIG === null) {
-  test("accounts closed: no worker, no web app script, no install line, and no rule for them", () => {
-    assert.ok(!BUILT.includes("sw.js") && !BUILT.includes("pwa.js"));
-    assert.ok(!read("_headers").includes("/sw.js"));
+  test("accounts closed: no offline worker, only the script that removes an older one; no web app script, no install line", () => {
+    assert.ok(!BUILT.includes("pwa.js"));
+    assert.equal(read("sw.js"), killSwitchSource());
+    assert.match(read("sw.js"), /unregister\(\)/);
+    assert.ok(!/fetch|precache/.test(read("sw.js")), "it answers no request");
+    // It is never cached, so a browser with an older worker sees it on its next visit.
+    const rules = read("_headers")
+      .split(/\n(?=\S)/)
+      .map((block) => block.trim().split("\n").map((l) => l.trim()));
+    assert.deepEqual(rules.find((r) => r[0] === "/sw.js"), ["/sw.js", "Cache-Control: no-cache"]);
     for (const page of PAGES) {
       const html = read(page);
       assert.ok(!html.includes("pwa.js") && !html.includes("data-install"), page);
@@ -126,7 +133,9 @@ if (CONFIG === null) {
   });
 } else {
   const sw = () => read("sw.js");
-  const buildOf = () => JSON.parse(/const BUILD = (\{[\s\S]*?\n\});/.exec(sw())![1].replace(/;$/, "")) as { version: string; precache: string[]; never: string[] };
+  
+  const buildOf = () =>
+    JSON.parse(/const BUILD = (\{[\s\S]*?\n\});/.exec(sw())![1].replace(/;$/, "")) as { version: string; precache: string[]; never: string[]; known: string[] };
 
   test("every page loads the web app's script after the page, and has the install line, hidden", () => {
     for (const page of PAGES) {
@@ -158,6 +167,15 @@ if (CONFIG === null) {
     assert.ok(!precache.some((p) => WASM_WORKER.test(p.replace("/_astro/", ""))), "the simulator's worker is kept when first used");
     assert.ok(!precache.some((p) => p.endsWith(".wasm")));
     assert.deepEqual(precache.filter((p) => p.endsWith("/")), ["/offline/", "/es/offline/"]);
+  });
+
+  test("the worker only keeps addresses the build made: every one is a built page or file, none is an account page, and the install's files are among them", () => {
+    const { known, precache, never } = buildOf();
+    for (const address of known) assert.ok(BUILT.includes(builtFile(address)), `${address} is built`);
+    for (const address of never) assert.ok(!known.includes(address), `${address} is not kept`);
+    for (const address of ["/404.html", "/es/404.html", "/sw.js", "/_headers"]) assert.ok(!known.includes(address), address);
+    for (const path of precache) assert.ok(known.includes(path), `${path} is kept at install`);
+    assert.ok(known.includes("/privacy/") && known.includes("/es/privacy/") && known.includes("/"));
   });
 
   test("the worker's never list is the account, dashboard and sign-in pages, each a built page", () => {

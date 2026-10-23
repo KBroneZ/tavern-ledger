@@ -3,8 +3,9 @@
 // astro.config.mjs after the pages are built; the unit tests run the same
 // functions on a small made-up folder.
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { NO_STORE_PAGES, TURNSTILE_PAGES, WASM_WORKER } from "../config.ts";
+import { CACHE_PREFIX } from "./rules.js";
 
 /** What the install keeps ready, besides the hashed files of /_astro/ (see precacheList). */
 export const SHELL_FILES: readonly string[] = [
@@ -40,6 +41,26 @@ export function precacheList(built: readonly string[]): string[] {
   return [...SHELL_FILES, ...hashed.toSorted()];
 }
 
+/**
+ * Every address the worker may ever keep a copy of, as the browser asks for
+ * it: a page is its folder ("/privacy/"), a file is its path. Not the account
+ * and sign-in pages (NEVER_CACHED), the 404 pages, the worker itself or the
+ * host's header rules. `built` is as in precacheList.
+ */
+export function knownAddresses(built: readonly string[]): string[] {
+  const addresses = built
+    .filter((path) => !["_headers", "sw.js", "404.html", "es/404.html"].includes(path))
+    .map((path) => (path === "index.html" ? "/" : path.endsWith("/index.html") ? `/${path.slice(0, -"index.html".length)}` : `/${path}`));
+  return addresses.filter((address) => !NEVER_CACHED.includes(address)).toSorted();
+}
+
+/** Every file (not folder) of the built site `dir`, as a path from its root with forward slashes. */
+export function builtFiles(dir: URL): string[] {
+  return readdirSync(dir, { recursive: true })
+    .map((path) => String(path).replaceAll("\\", "/"))
+    .filter((path) => statSync(new URL(path, dir)).isFile());
+}
+
 /** Where a kept address is in the build: a page is its folder's index.html. */
 export const builtFile = (path: string): string => (path.endsWith("/") ? `${path.slice(1)}index.html` : path.slice(1));
 
@@ -55,6 +76,7 @@ export interface WorkerBuild {
   version: string;
   precache: readonly string[];
   never: readonly string[];
+  known: readonly string[];
 }
 
 const here = new URL(".", import.meta.url);
@@ -79,6 +101,29 @@ export function serviceWorkerSource(build: WorkerBuild, parts = workerParts()): 
 }
 
 /**
+ * The /sw.js of a build with no offline worker (accounts closed). A browser
+ * that still has a worker from an earlier build asks for /sw.js on its next
+ * visit, gets this, and the worker removes every copy it kept and itself, so
+ * closing accounts again never leaves old pages behind on a phone.
+ */
+export function killSwitchSource(): string {
+  return [
+    "// Tavern Ledger (T-637): this build has no offline worker. A worker left by an earlier build removes its copies and itself.",
+    '"use strict";',
+    "self.addEventListener(\"install\", () => self.skipWaiting());",
+    "self.addEventListener(\"activate\", (event) => {",
+    "  event.waitUntil(",
+    "    (async () => {",
+    `      for (const name of await caches.keys()) if (name.startsWith(${JSON.stringify(CACHE_PREFIX)})) await caches.delete(name);`,
+    "      await self.registration.unregister();",
+    "    })(),",
+    "  );",
+    "});",
+    "",
+  ].join("\n");
+}
+
+/**
  * Writes /sw.js into the built site `dir` (a file URL ending in "/"), after
  * checking that everything it will keep is there: a missing file would fail the
  * install in every browser. `built` lists the build's files from its root.
@@ -88,7 +133,10 @@ export function writeServiceWorker(dir: URL, built: readonly string[]): { versio
   const missing = precache.filter((path) => !built.includes(builtFile(path)));
   if (missing.length > 0) throw new Error(`the service worker would keep files the build does not have: ${missing.join(", ")}`);
   const parts = workerParts();
-  const version = buildVersion(precache, (path) => readFileSync(new URL(builtFile(path), dir)), [parts.rules, parts.main]);
-  writeFileSync(new URL("sw.js", dir), serviceWorkerSource({ version, precache, never: NEVER_CACHED }, parts));
+  const known = knownAddresses(built);
+  // The never and known lists are in the version too: a page added to either must not keep an old copy in the same cache.
+  const code = [parts.rules, parts.main, JSON.stringify(NEVER_CACHED), JSON.stringify(known)];
+  const version = buildVersion(precache, (path) => readFileSync(new URL(builtFile(path), dir)), code);
+  writeFileSync(new URL("sw.js", dir), serviceWorkerSource({ version, precache, never: NEVER_CACHED, known }, parts));
   return { version, precache };
 }

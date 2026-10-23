@@ -3,11 +3,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { cacheName, classify, isNeverCached, isStorable, offlinePage, staleCaches } from "../../src/lib/pwa/rules.js";
-import { NEVER_CACHED } from "../../src/lib/pwa/build.ts";
+import { NEVER_CACHED, killSwitchSource, knownAddresses, precacheList } from "../../src/lib/pwa/build.ts";
+import { runInNewContext } from "node:vm";
 import { NO_STORE_PAGES, TURNSTILE_PAGES } from "../../src/lib/config.ts";
 import { BUILD, ORIGIN, SUPABASE, Worker, page, request } from "../helpers/serviceWorker.ts";
 
-const SCOPE = { origin: ORIGIN, never: NEVER_CACHED };
+const SCOPE = { origin: ORIGIN, never: NEVER_CACHED, known: new Set(BUILD.known) };
 const get = (path: string, mode: "navigate" | "same-origin" = "same-origin") => classify({ method: "GET", url: `${ORIGIN}${path}`, mode }, SCOPE);
 
 test("the never list is every account, dashboard and sign-in page in both languages", () => {
@@ -22,7 +23,7 @@ test("classify: our own pages and files are kept, hashed files are cache-first",
   assert.equal(get("/es/privacy/", "navigate"), "network-first");
   assert.equal(get("/fonts/figtree-latin-wght-normal.woff2"), "network-first");
   assert.equal(get("/lang.js"), "network-first");
-  assert.equal(get("/_astro/Base.Ct_HdqWd.css"), "immutable");
+  assert.equal(get("/_astro/Base.abc.css"), "immutable");
 });
 
 test("classify: account, dashboard and sign-in pages are never kept, with or without the closing slash", () => {
@@ -38,6 +39,19 @@ test("classify: an address with a query is never kept (an email link's code, a g
   assert.equal(get("/game/?id=1", "navigate"), "private-page");
   assert.equal(get("/privacy/?x=1", "navigate"), "private-page");
   assert.equal(get("/lang.js?v=2"), "bypass");
+});
+
+test("classify: only an address the build made is kept, spelled as the build spells it", () => {
+  // Another spelling of a page the host may serve, or a page that is not there: the network only, nothing kept.
+  for (const path of ["/me//", "/%6De/", "/%6de/", "/ME/", "/me/index.html", "/me.html", "/account/index.html", "/privacy", "/privacy/index.html", "/privacy//", "/./privacy/", "/missing/", "/es/me/index.html"]) {
+    const url = new URL(path, ORIGIN).pathname;
+    const expected = BUILD.known.includes(url) ? "network-first" : "private-page";
+    assert.equal(get(path, "navigate"), expected, path);
+    assert.equal(get(path), BUILD.known.includes(url) ? "network-first" : "bypass", `${path} as a sub-resource`);
+  }
+  assert.equal(get("/privacy/", "navigate"), "network-first", "the exact address is kept");
+  // A hashed file the build does not have is not trusted as immutable either.
+  assert.equal(get("/_astro/Other.zzz.css"), "bypass");
 });
 
 test("classify: other origins and anything but GET are left to the browser", () => {
@@ -205,4 +219,46 @@ test("a slow network gives way to the kept copy of a page", async () => {
   const response = await worker.fetch(request(`${ORIGIN}/download/`, "navigate"));
   assert.equal(await response!.text(), "copy");
   assert.ok(Date.now() - started < 1000, "the test clock is short");
+});
+
+test("knownAddresses: pages by folder, files by path, never the account pages, the 404s, the worker or the host's rules", () => {
+  const built = ["index.html", "es/index.html", "privacy/index.html", "me/index.html", "es/me/index.html", "signin/index.html", "404.html", "es/404.html", "_headers", "sw.js", "lang.js", "_astro/Base.abc.css", "fonts/a.woff2", "manifest.webmanifest"];
+  assert.deepEqual(knownAddresses(built), ["/", "/_astro/Base.abc.css", "/es/", "/fonts/a.woff2", "/lang.js", "/manifest.webmanifest", "/privacy/"]);
+});
+
+test("everything the install keeps is an address the worker may keep", () => {
+  const built = ["offline/index.html", "es/offline/index.html", "lang.js", "pwa.js", "mark.svg", "favicon.svg", "icons/icon-192.png", "fonts/bricolage-grotesque-latin-wdth-normal.woff2", "fonts/figtree-latin-wght-normal.woff2", "_astro/a.css", "_astro/b.js", "_astro/simWorker-AbCd.js"];
+  const known = knownAddresses(built);
+  const precache = precacheList(built);
+  assert.ok(precache.includes("/_astro/a.css") && !precache.includes("/_astro/simWorker-AbCd.js"));
+  for (const path of precache) assert.ok(known.includes(path), path);
+});
+
+test("the kill switch of a build with no worker removes our caches and the old worker, and nothing else", async () => {
+  const handlers = new Map<string, (event: { waitUntil(p: Promise<unknown>): void }) => void>();
+  const deleted: string[] = [];
+  let unregistered = false;
+  let skipped = false;
+  runInNewContext(killSwitchSource(), {
+    self: {
+      addEventListener: (type: string, handler: never) => handlers.set(type, handler),
+      skipWaiting: () => void (skipped = true),
+      registration: { unregister: async () => void (unregistered = true) },
+    },
+    caches: { keys: async () => [cacheName("a"), "tl-replays", "other"], delete: async (name: string) => void deleted.push(name) },
+  });
+  handlers.get("install")!({ waitUntil: () => {} });
+  const waits: Promise<unknown>[] = [];
+  handlers.get("activate")!({ waitUntil: (p) => void waits.push(p) });
+  await Promise.all(waits);
+  assert.ok(skipped && unregistered);
+  assert.deepEqual(deleted, [cacheName("a")]);
+});
+
+test("a slow network is waited for when there is no copy of the page to show instead", async () => {
+  const worker = new Worker();
+  worker.network = () => new Promise<Response>((done) => setTimeout(() => done(page("late but real")), 100));
+  const response = await worker.fetch(request(`${ORIGIN}/download/`, "navigate"));
+  assert.equal(await response!.text(), "late but real", "the test clock gives up after 20 ms, so a wait of 100 ms shows the page was waited for");
+  assert.deepEqual(worker.kept(), [`${ORIGIN}/download/`]);
 });

@@ -1,5 +1,5 @@
 // The service worker's events (T-637). The build puts, in this order, a
-// header comment, `const BUILD = { version, precache, never }`, the
+// header comment, `const BUILD = { version, precache, never, known }`, the
 // rules (rules.js) and this file into /sw.js (lib/pwa/build.ts). What may be
 // kept and what never is decided in rules.js; this file only fetches, stores
 // and answers.
@@ -12,7 +12,7 @@
 
 const NETWORK_WAIT_MS = 5000;
 // The site answers on more than one address (the public one, Cloudflare's, the local preview): the worker's own is the one that counts.
-const SCOPE = { origin: self.location.origin, never: BUILD.never };
+const SCOPE = { origin: self.location.origin, never: BUILD.never, known: new Set(BUILD.known) };
 
 self.addEventListener("install", (event) => {
   event.waitUntil(precache().then(() => self.skipWaiting()));
@@ -76,9 +76,8 @@ async function cacheFirst(event) {
   return response;
 }
 
-/** Waits for the network, but for a page not for ever: on a bad connection the copy shows instead. */
+/** Waits for the network, but not for ever: on a bad connection the copy of the page shows instead. */
 function networkWithTimeout(request) {
-  if (request.mode !== "navigate") return fetch(request);
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("the network is too slow")), NETWORK_WAIT_MS);
     fetch(request).then(
@@ -96,12 +95,14 @@ function networkWithTimeout(request) {
 
 async function networkFirst(event) {
   const request = event.request;
+  // A page gives up on a slow network only when it has a copy to show instead; without one it waits for the network.
+  const copy = request.mode === "navigate" ? await lookup(request) : undefined;
   try {
-    const response = await networkWithTimeout(request);
+    const response = await (copy ? networkWithTimeout(request) : fetch(request));
     keep(event, request, response);
     return response;
   } catch {
-    const cached = await lookup(request);
+    const cached = copy ?? (await lookup(request));
     if (cached) return cached;
     return request.mode === "navigate" ? offlineResponse(request) : Response.error();
   }

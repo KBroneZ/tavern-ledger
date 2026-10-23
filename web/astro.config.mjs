@@ -4,7 +4,7 @@ import { existsSync, readdirSync, renameSync, rmSync, writeFileSync } from "node
 import { defineConfig } from "astro/config";
 import { loadEnv } from "vite";
 import { contentSecurityPolicy, NO_STORE_PAGES, readConfig, TURNSTILE_PAGES, WASM_WORKER } from "./src/lib/config.ts";
-import { writeServiceWorker } from "./src/lib/pwa/build.ts";
+import { builtFiles, killSwitchSource, writeServiceWorker } from "./src/lib/pwa/build.ts";
 
 /**
  * The simulator's worker alone gets the same policy plus 'wasm-unsafe-eval'
@@ -46,10 +46,11 @@ function turnstileHeaders(config) {
  * so no cache keeps it (a stale worker would keep a stale site), and it gets
  * its own policy, which lets it fetch the site's own files (the way the
  * simulator's worker gets its own: drop the site-wide policy, set this one).
- * Accounts closed: no script, no worker, no rule.
+ * Accounts closed: the script is only the one that removes an older worker
+ * (killSwitchSource), so it is still never cached, and has no policy of its own.
  */
 function workerHeaders(config) {
-  if (!config) return [];
+  if (!config) return ["/sw.js", "  Cache-Control: no-cache", ""];
   const policy = `${contentSecurityPolicy(config.url, { serviceWorker: true })}; frame-ancestors 'none'`;
   return ["/sw.js", "  ! Content-Security-Policy", `  Content-Security-Policy: ${policy}`, "  Cache-Control: no-cache", ""];
 }
@@ -85,8 +86,6 @@ function securityHeaders() {
           ...workerHeaders(config),
         ].join("\n");
         writeFileSync(new URL("_headers", dir), headers);
-        // The worker lists the build's own files, so it is written last, once they are all there.
-        if (config) writeServiceWorker(dir, readdirSync(dir, { recursive: true }).map((path) => String(path).replaceAll("\\", "/")));
         // Cloudflare Pages serves the nearest 404.html: the Spanish one must
         // be es/404.html, not es/404/index.html (T-508).
         const es404 = new URL("es/404/index.html", dir);
@@ -106,6 +105,9 @@ function securityHeaders() {
           rmSync(new URL("lang.js", dir), { force: true });
           rmSync(new URL("pwa.js", dir), { force: true });
         }
+        // The worker lists the build's own files, so it is written last, once they are all where they will be served.
+        if (config) writeServiceWorker(dir, builtFiles(dir));
+        else writeFileSync(new URL("sw.js", dir), killSwitchSource());
       },
     },
   };

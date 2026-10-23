@@ -4,8 +4,8 @@
 // import it as it is. The rules only look at the request and the response;
 // the worker (sw-main.js) does the fetching and the storing.
 //
-// The line it draws: the site's own pages and files, visited without a query
-// in the address, may be kept to read again offline. Nothing else is ever
+// The line it draws: the site's own pages and files, as the build names them
+// and visited without a query in the address, may be kept to read again offline. Nothing else is ever
 // stored: no other origin (Supabase, the card art host, the anti-robot
 // check), no page about one account, no sign-in page, no address with a query
 // (an email link's code, a game's id), no response that says `no-store`.
@@ -44,13 +44,15 @@ export const isNeverCached = (pathname, never) => never.some((path) => bare(path
  * What the worker does with a request:
  *  - "bypass": it does not answer; the browser goes to the network as if there were no worker.
  *    Everything that is not a plain GET of our own files with no query.
- *  - "private-page": a page about one account or a sign-in page, or any page with a query. The
- *    network answers and nothing is stored; offline, the offline page shows instead.
+ *  - "private-page": a page about one account or a sign-in page, any page with a query, and any
+ *    page address the build does not list (another spelling of a page, such as /me/index.html or
+ *    /%6De/, or a page that does not exist). The network answers and nothing is stored; offline,
+ *    the offline page shows instead.
  *  - "immutable": a hashed file; the cache answers first.
  *  - "network-first": the rest of our files; the network answers, a copy is kept, and offline the
  *    copy answers.
  * @param {{ method: string, url: string, mode: string }} request
- * @param {{ origin: string, never: readonly string[] }} build
+ * @param {{ origin: string, never: readonly string[], known: ReadonlySet<string> }} build
  * @returns {"bypass" | "private-page" | "immutable" | "network-first"}
  */
 export function classify(request, build) {
@@ -61,6 +63,9 @@ export function classify(request, build) {
   if (url.pathname === "/sw.js") return "bypass";
   const navigation = request.mode === "navigate";
   if (isNeverCached(url.pathname, build.never) || url.search !== "") return navigation ? "private-page" : "bypass";
+  // Only an address the build made is ever kept, spelled exactly as the build spells it: a host may serve
+  // one page under several spellings, and a copy of one the never list does not name must not slip in.
+  if (!build.known.has(url.pathname)) return navigation ? "private-page" : "bypass";
   if (url.pathname.startsWith(IMMUTABLE_PREFIX)) return "immutable";
   return "network-first";
 }

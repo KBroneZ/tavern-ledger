@@ -28,7 +28,7 @@ export const ES: Record<SiteKey, string> = {
   // Aplicación web instalable (T-637): el aviso del pie, la descripción del manifiesto, la página sin conexión.
   "layout.install": "Añadir a la pantalla de inicio",
   "layout.installIos": "Para añadir esta web a tu pantalla de inicio, toca Compartir y luego «Añadir a pantalla de inicio».",
-  "pwa.description": "Tus partidas de Hearthstone Battlegrounds: estadísticas, repeticiones y un simulador de combate.",
+  "pwa.description": "Tus partidas de Campos de Batalla de Hearthstone: estadísticas, repeticiones y un simulador de combate.",
   "offline.title": "Sin conexión",
   "offline.description": "No hay conexión y esta página no está guardada en tu dispositivo.",
   "offline.lead": "No hay conexión y esta página no está guardada en tu dispositivo. Las páginas que abriste antes siguen funcionando; tus partidas necesitan conexión.",

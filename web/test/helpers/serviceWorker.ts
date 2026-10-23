@@ -11,6 +11,7 @@ export const BUILD: WorkerBuild = {
   version: "v1",
   precache: ["/offline/", "/es/offline/", "/_astro/Base.abc.css"],
   never: NEVER_CACHED,
+  known: ["/", "/privacy/", "/es/privacy/", "/terms/", "/download/", "/es/download/", "/offline/", "/es/offline/", "/leaderboards/", "/simulator/", "/lang.js", "/fonts/figtree-latin-wght-normal.woff2", "/art/x.webp", "/_astro/Base.abc.css", "/_astro/game.BxMRQOT6.css", ...NEVER_CACHED],
 };
 
 type Handler = (event: FakeEvent) => void;

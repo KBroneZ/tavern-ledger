@@ -315,7 +315,8 @@ test("accounts closed: no form, no script and no backend anywhere", { skip: !!CO
     const html = readFileSync(page, "utf8").replace(/<a\b[^>]*data-lang-switch[^>]*>/g, "");
     assert.doesNotMatch(html, /<script\b|<form\b|<input\b|href="(?:\/es)?\/(signin|account|forgot-password)\/"/, name(page));
   }
-  assert.deepEqual(ALL.filter((f) => f.endsWith(".js")).map(name), []);
+  // The one script is /sw.js, which only removes an older offline worker (T-637; pwa.test.ts checks it makes no request).
+  assert.deepEqual(ALL.filter((f) => f.endsWith(".js")).map(name), ["sw.js"]);
   for (const file of ALL) {
     const text = readFileSync(file, "utf8");
     // No project URL (the policy links to supabase.com, which is fine) and no key of any kind.

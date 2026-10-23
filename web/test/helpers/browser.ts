@@ -7,7 +7,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import http from "node:http";
 import { tmpdir } from "node:os";
-import { extname, join } from "node:path";
+import { extname, join, resolve, sep } from "node:path";
 
 const TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".svg": "image/svg+xml",
@@ -49,7 +49,15 @@ export async function serveDist(dist: string): Promise<Site> {
   const server = http.createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://site");
     requests.push(`${req.method} ${url.pathname}${url.search}`);
-    let file = join(dist, decodeURIComponent(url.pathname));
+    let path: string;
+    try {
+      path = decodeURIComponent(url.pathname);
+    } catch {
+      return void res.writeHead(400).end();
+    }
+    let file = resolve(dist, `.${path}`);
+    // Never a file outside the built site, however the address is spelled.
+    if (file !== resolve(dist) && !file.startsWith(resolve(dist) + sep)) return void res.writeHead(403).end();
     if (url.pathname.endsWith("/")) file = join(file, "index.html");
     else if (existsSync(file) && statSync(file).isDirectory()) return void res.writeHead(308, { Location: `${url.pathname}/` }).end();
     let status = 200;

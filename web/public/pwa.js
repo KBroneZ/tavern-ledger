@@ -54,7 +54,9 @@
       var event = offered;
       offered = null;
       hide();
-      event.prompt();
+      Promise.resolve(event.prompt()).catch(function (error) {
+        win.console.warn("Tavern Ledger: the install prompt did not open.", error && error.message);
+      });
     });
     win.addEventListener("appinstalled", hide);
     if (iosSafari()) {
