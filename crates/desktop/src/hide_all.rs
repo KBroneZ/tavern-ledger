@@ -54,6 +54,12 @@ pub fn key_acts(hide: bool, window_shown: bool) -> bool {
     !hide || window_shown
 }
 
+/// Hiding lasts one game: when a game ends, the overlay shows again, so the
+/// next one never starts blank with no word on why.
+pub fn shows_again(hidden: bool, game_was_on: bool, game_is_on: bool) -> bool {
+    hidden && game_was_on && !game_is_on
+}
+
 /// Whether Hearthstone runs, asking the system at most every [`RECHECK_EVERY`].
 #[derive(Default)]
 pub struct GameCheck {
@@ -133,7 +139,13 @@ pub fn follow_game(app: &AppHandle, want: bool) {
                         "overlay",
                         &format!("hide key: Ctrl+Shift+H not registered: {e}"),
                     );
-                    crate::set_status(&handle, &state, |s| s.notice = Some(KEY_TAKEN.into()));
+                    // Said only where no other notice is: the tray and the
+                    // overlay's status line say it too.
+                    crate::set_status(&handle, &state, |s| {
+                        if s.notice.is_none() {
+                            s.notice = Some(KEY_TAKEN.into());
+                        }
+                    });
                 }
             }
         }
@@ -220,6 +232,20 @@ mod tests {
         );
         assert!(key_acts(false, false), "showing again always works");
         assert!(key_acts(false, true));
+    }
+
+    #[test]
+    fn hiding_lasts_until_the_game_ends() {
+        assert!(shows_again(true, true, false), "the game ended");
+        assert!(!shows_again(true, true, true), "still in the game");
+        assert!(
+            !shows_again(true, false, false),
+            "no game was on: hidden from the tray stays"
+        );
+        assert!(!shows_again(false, true, false), "already shown");
+        let follow = include_str!("overlay_window.rs");
+        assert!(follow
+            .contains("hide_all::shows_again(state.overlay.all_hidden(), game_was_on, game_on)"));
     }
 
     #[test]
