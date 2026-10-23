@@ -148,7 +148,7 @@ export const ES: Record<StringKey, string> = {
   "period.revisit.place": "puesto {n}",
   "period.revisit.open": "Abrir la partida y sus replays",
   "period.about": "Sobre hoy y esta semana",
-  "period.about.body": "Mejor puesto: tu mejor resultado del periodo. Derrota ajustada: un resultado justo fuera de la mitad superior. Gran vaivén: un puesto a dos o más del tuyo medio. Las partidas sin fecha no cuentan en ninguno.",
+  "period.about.body": "Mejor puesto: tu mejor resultado del periodo. Derrota ajustada: un resultado justo fuera de la mitad superior. Gran vaivén: un puesto a dos o más de tu puesto medio. Las partidas sin fecha no cuentan en ninguno.",
   "period.error": "No se pudo cargar el resumen",
   "period.error.body": "El resto del panel está bien.",
 
