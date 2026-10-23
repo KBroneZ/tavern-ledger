@@ -85,11 +85,12 @@ test("every frame's zoomed region is inside its window", () => {
   }
 });
 
-test("the stack order puts the counters above, below or beside the opponents, the tribes always just before them", () => {
-  const ids = ["status", "counters", "tribes", "opponents", "odds", "legend", "lobby", "heroes"];
-  const stack = (place) => layouts.ordered(ids, layouts.ORDERS[place]).filter((id) => ["counters", "tribes", "opponents"].includes(id));
-  assert.deepEqual(stack("above"), ["counters", "tribes", "opponents"]);
-  assert.deepEqual(stack("below"), ["tribes", "opponents", "counters"]);
+test("the stack order puts the counters above, below or beside the opponents", () => {
+  const ids = ["status", "opponents", "counters", "odds", "lobby", "heroes"];
+  const stack = (place) => layouts.ordered(ids, layouts.ORDERS[place]).filter((id) => ["counters", "opponents"].includes(id));
+  assert.deepEqual(stack("above"), ["counters", "opponents"]);
+  assert.deepEqual(stack("below"), ["opponents", "counters"]);
+  for (const place of layouts.PLACES) assert.ok(!layouts.ORDERS[place].includes("tribes"), place);
   for (const place of layouts.PLACES) assert.deepEqual([...layouts.ordered(ids, layouts.ORDERS[place])].sort(), [...ids].sort(), place);
   assert.match(layouts.css({ place: "beside" }), /grid-template-columns/);
   assert.doesNotMatch(layouts.css({ place: "above" }), /grid-template-columns/);
@@ -117,7 +118,7 @@ test("a variant turns the counters panel on as the page defines it, in its order
   win.TLCounters = pageApi;
   assert.equal(win.TLCounters.ENABLED, true);
   assert.equal(win.TLCounters.rows, pageApi.rows);
-  assert.deepEqual(win.TLCounters.panelIds(["status", "counters", "tribes", "opponents"]), ["status", "tribes", "opponents", "counters"]);
+  assert.deepEqual(win.TLCounters.panelIds(["status", "counters", "opponents"]), ["status", "opponents", "counters"]);
   assert.equal(slot.hidden, false);
   assert.equal(added.head.length, 1);
   assert.equal(added.body.length, 0);

@@ -6,7 +6,11 @@
 // app uses (the set's manifest, layout and images), so a minion looks as it
 // does in the app; with no network the page draws plain card art, as the app
 // does. A scenario's `textures` says "none" (no set), or { bad: [names] }
-// (those textures do not load), and `noWebgl` turns WebGL off.
+// (those textures do not load), and `noWebgl` turns WebGL off. Settings may
+// say `unlocked` (the layout editor), `preview` (the tray's preview) or
+// `all_hidden`; a scenario's `hideCycle` hides and shows the overlay over and
+// over, as the hide key does, and `click` names a button pressed once the page
+// is up (the legend's "?").
 // ui-tests/overlay-gallery.test.js checks that every name the page's scripts
 // use is listed here.
 "use strict";
@@ -28,7 +32,7 @@
     const theme = s.theme === "contrast" ? "contrast" : "glass";
     return {
       enabled: true,
-      unlocked: false,
+      unlocked: Boolean(s.unlocked),
       theme,
       themes: themes.THEMES,
       opacity: 0.9,
@@ -43,6 +47,9 @@
       vars: themes.THEME_VARS[theme],
       warning: null,
       odds: true,
+      all_hidden: Boolean(s.all_hidden),
+      hide_key_taken: false,
+      preview: Boolean(s.preview),
     };
   }
 
@@ -136,8 +143,12 @@
   // takes a moment, so the page's scripts are all loaded before the first one
   // comes; in a single page of inline scripts it would come in between.
   function createTauri(scenario, lang, gate = Promise.resolve(), fetchJson = getJson) {
-    const table = handlers(scenario, lang, fetchJson);
+    // Its own copy of the settings, so a scenario that changes them over time
+    // (`hideCycle`) leaves the shared example data as it is.
+    const live = { ...scenario, state: { ...scenario.state, settings: { ...(scenario.state.settings || {}) } } };
+    const table = handlers(live, lang, fetchJson);
     const listeners = new Map();
+    let cycling = false;
     const invoke = async (command, args) => {
       await gate;
       if (!Object.prototype.hasOwnProperty.call(table, command)) {
@@ -158,10 +169,31 @@
       if (name === "overlay-hover" && scenario.state.hover) {
         setTimeout(() => callback({ event: name, payload: sized(scenario.state.hover) }), 0);
       }
+      // Shown, then hidden with its note for a few seconds, then shown again, over and over.
+      if (name === "overlay-settings-changed" && scenario.state.hideCycle && !cycling) {
+        cycling = true;
+        const step = (i) => {
+          const timer = setTimeout(() => {
+            live.state.settings.all_hidden = !live.state.settings.all_hidden;
+            emit("overlay-settings-changed", null);
+            step(i + 1);
+          }, i % 2 ? HIDDEN_MS : SHOWN_MS);
+          // In node (tests) the cycle never keeps the process alive.
+          if (timer && typeof timer.unref === "function") timer.unref();
+        };
+        step(0);
+      }
       return () => listeners.set(name, (listeners.get(name) || []).filter((f) => f !== callback));
     };
     return { core: { invoke }, event: { listen }, emit };
   }
+
+  // The hide-all frame's rhythm: shown this long, then hidden (the note shows
+  // for its own 3 seconds) this long.
+  const SHOWN_MS = 2500;
+  const HIDDEN_MS = 5000;
+  // Long enough for the layout editor's first draw.
+  const CLICK_AFTER_MS = 400;
 
   // A plain shape for a card's picture, a colour from its id: no network.
   function placeholder(id) {
@@ -180,6 +212,15 @@
       else win.document.addEventListener("DOMContentLoaded", () => resolve());
     });
     win.__TAURI__ = createTauri(scenario, lang, loaded);
+    // A button pressed once the page is drawn (the legend's "?" in the toolbar).
+    if (scenario.state.click) {
+      loaded.then(() =>
+        setTimeout(() => {
+          const button = win.document.getElementById(scenario.state.click);
+          if (button) button.click();
+        }, CLICK_AFTER_MS),
+      );
+    }
     if (scenario.state.noWebgl) {
       const proto = win.HTMLCanvasElement.prototype;
       const getContext = proto.getContext;
