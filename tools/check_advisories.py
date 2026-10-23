@@ -75,6 +75,10 @@ IGNORE_KEYS = frozenset({*IGNORE_FIELDS, "absent_from"})
 BUILD_KEYS = frozenset({"target", "exclude"})
 # Matched over the whole file, so an import split across lines is caught too.
 REMOTE_IMPORT_RE = re.compile(r"""\b(?:from|import)\s*\(?\s*["'`](npm:|jsr:|https?://)""", re.I)
+# A dynamic import of anything but a plain quoted string (the rules above read
+# those): a computed module name or a template could be a URL.
+DYNAMIC_IMPORT_RE = re.compile(r"""\bimport\s*\((?!\s*["'])""")
+NAME_SEPARATORS_RE = re.compile(r"[-_.]+")
 # A package specifier has no other use in this code, so one anywhere counts.
 PACKAGE_SPECIFIER_RE = re.compile(r"""["'`](?:npm|jsr):""", re.I)
 # Block comments, and line comments not right after a ":" (so "https://" stays).
@@ -113,12 +117,18 @@ def _json(text: str, what: str) -> dict:
         raise ScanError(f"{what}: unreadable output") from error
 
 
+def _same_name(a: str, b: str) -> bool:
+    """Package names equal the way PyPI (and crates.io) compare them: case,
+    "-", "_" and "." do not matter. Stricter ecosystems lose nothing by it."""
+    return NAME_SEPARATORS_RE.sub("-", a.lower()) == NAME_SEPARATORS_RE.sub("-", b.lower())
+
+
 def _has_fix(vulns: list[dict], ids: set[str], package: str) -> bool:
     for vuln in vulns:
         if vuln.get("id") not in ids:
             continue
         for affected in vuln.get("affected") or []:
-            if (affected.get("package") or {}).get("name") != package:
+            if not _same_name((affected.get("package") or {}).get("name") or "", package):
                 continue
             for rng in affected.get("ranges") or []:
                 if any("fixed" in event for event in rng.get("events") or []):
@@ -305,6 +315,7 @@ def check_functions(folder: Path = FUNCTIONS, config: Path = SUPABASE_CONFIG) ->
         versions = (text, _without_comments(text))
         lines = {_line(t, m.start(1)) for t in versions for m in REMOTE_IMPORT_RE.finditer(t)}
         lines |= {_line(text, m.start()) for m in PACKAGE_SPECIFIER_RE.finditer(text)}
+        lines |= {_line(versions[1], m.start()) for m in DYNAMIC_IMPORT_RE.finditer(versions[1])}
         problems += [f"{path.relative_to(folder).as_posix()}:{n}: third-party import" for n in sorted(lines)]
     if problems:
         problems.append("supabase/functions: the scan does not cover third-party Edge Function code; cover it first")

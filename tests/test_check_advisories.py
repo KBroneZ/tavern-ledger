@@ -293,6 +293,23 @@ class FunctionsTest(unittest.TestCase):
         root = self.folder({"a/index.ts": 'const g = "x/*";\nimport y from "https://evil.test/y.ts";\n// */\n'})
         self.assertIn("a/index.ts:2: third-party import", tool.check_functions(root))
 
+    def test_a_computed_dynamic_import_fails(self):
+        root = self.folder(
+            {
+                "a/index.ts": 'const url = "https://esm.sh/zod@3";\nawait import(url);\n',
+                "b/index.ts": "await import(`https://${host}/x.ts`);\n",
+                "c/index.ts": 'const m = await import("./local.ts");\nconst n = await import( /* c */ "../x.ts");\n',
+            }
+        )
+        problems = [p for p in tool.check_functions(root) if "third-party import" in p]
+        self.assertEqual(problems, ["a/index.ts:2: third-party import", "b/index.ts:1: third-party import"])
+
+    def test_package_names_compare_like_pypi(self):
+        vulns = [vuln("P-1", "Foo_Bar", fixed=True)]
+        self.assertTrue(tool._has_fix(vulns, {"P-1"}, "foo-bar"))
+        self.assertTrue(tool._has_fix(vulns, {"P-1"}, "foo.bar"))
+        self.assertFalse(tool._has_fix(vulns, {"P-1"}, "foobar"))
+
     def test_a_package_specifier_anywhere_fails(self):
         root = self.folder({"a/index.ts": 'const name = "npm:zod@3";\nawait import(name);\n'})
         self.assertIn("a/index.ts:1: third-party import", tool.check_functions(root))
