@@ -285,6 +285,36 @@ body {
 }
 .legend[hidden] { display: none; }
 
+/* Hide-all (T-614): everything the overlay draws goes; only the short note
+   after hiding shows, where the stack starts. The window is locked
+   (click-through) whenever it is hidden, and the note takes no clicks. */
+body.all-hidden #stack,
+body.all-hidden #marks,
+body.all-hidden #lobby-dock,
+body.all-hidden > .slot,
+body.all-hidden #hover-card,
+body.all-hidden #board-box,
+body.all-hidden #toolbar,
+body.all-hidden #scrim,
+body.all-hidden #arrange-pad,
+body.all-hidden #key-hint { display: none !important; }
+.hidden-note {
+  position: absolute;
+  right: var(--stack-right);
+  top: var(--stack-top);
+  max-width: var(--stack-width);
+  margin: 0;
+  padding: 5px 9px 6px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  color: var(--text);
+  font: 600 0.9rem/1.35 var(--font-body);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+.hidden-note[hidden] { display: none; }
+
 /* Layout editing (unlocked). The scrim says the whole screen is taking clicks. */
 #scrim {
   position: fixed;

@@ -13,6 +13,7 @@ mod fake_secrets;
 mod foreground;
 mod game_folder;
 mod game_memory;
+mod hide_all;
 mod hover;
 mod leaderboard;
 mod lobby_panel;
@@ -118,6 +119,7 @@ const MENU_SHOW: &str = "show";
 const MENU_OVERLAY: &str = "overlay";
 const MENU_UNLOCK: &str = "overlay-unlock";
 const MENU_RESET_LAYOUT: &str = "overlay-reset-layout";
+const MENU_HIDE_ALL: &str = "overlay-hide-all";
 const MENU_AUTOSTART: &str = "autostart";
 const MENU_QUIT: &str = "quit";
 
@@ -1511,17 +1513,38 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
         true,
         None::<&str>,
     )?;
+    // Hides and shows everything the overlay draws (T-614); not ticked at start.
+    let hide_all = CheckMenuItem::with_id(
+        app,
+        MENU_HIDE_ALL,
+        words.hide_all,
+        true,
+        state.overlay.all_hidden(),
+        None::<&str>,
+    )?;
+    overlay::keep_hide_item(&state, hide_all.clone());
+    // The key may have been pressed while the menu was being built.
+    overlay::refresh_hide_item(&state);
     let show = MenuItem::with_id(app, MENU_SHOW, words.show, true, None::<&str>)?;
     let quit = MenuItem::with_id(app, MENU_QUIT, words.quit, true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
-        &[&show, &overlay, &unlock, &reset_layout, &autostart, &quit],
+        &[
+            &show,
+            &overlay,
+            &hide_all,
+            &unlock,
+            &reset_layout,
+            &autostart,
+            &quit,
+        ],
     )?;
     let items = (
         show.clone(),
         overlay.clone(),
         unlock.clone(),
         reset_layout.clone(),
+        hide_all.clone(),
     );
     let kept_autostart = autostart.clone();
     let quit_item = quit.clone();
@@ -1533,6 +1556,7 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
             MENU_SHOW => show_window(app),
             MENU_AUTOSTART => toggle_autostart(app),
             MENU_OVERLAY => toggle_overlay(app),
+            MENU_HIDE_ALL => hide_all::toggle(app),
             MENU_UNLOCK => {
                 let state = app.state::<Arc<AppState>>();
                 overlay::set_unlocked(app, &state, !state.overlay.unlocked());
@@ -1563,13 +1587,14 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
         .map_or(1.0, |monitor| monitor.scale_factor());
     tray = tray.icon(tray_image(tray_icon_px(scale)));
     let icon = tray.build(app)?;
-    let (show, overlay, unlock, reset_layout) = items;
+    let (show, overlay, unlock, reset_layout, hide_all) = items;
     app.state::<Arc<settings::Settings>>()
         .keep_tray(settings::TrayItems {
             show,
             overlay,
             unlock,
             reset_layout,
+            hide_all,
             autostart: kept_autostart,
             autostart_available: available,
             quit: quit_item,
@@ -1764,6 +1789,7 @@ fn main() {
                 updates::start(app.handle(), Arc::new(releases));
             }
             card_data::start(app.handle(), &data_dir);
+            hide_all::start(app.handle(), &state);
             setup_tray(app)?;
             // A test build never shows its overlay over the user's game (T-336).
             let guarded = over_game_guard::guarded(cfg!(debug_assertions), std::env::args());
@@ -1801,10 +1827,12 @@ fn main() {
             applog::error("app", &format!("failed to start: {e}"));
             panic!("failed to start Tavern Ledger: {e}");
         });
-    app.run(|_app, event| {
+    app.run(|app, event| {
         // Every way out that goes through Tauri (the tray's Quit, an update,
-        // the system closing the app) ends here: a clean stop (T-580).
+        // the system closing the app) ends here: a clean stop (T-580), and the
+        // hide key goes back to the system (T-614).
         if let tauri::RunEvent::Exit = event {
+            hide_all::stop(app);
             applog::stopped();
         }
     });

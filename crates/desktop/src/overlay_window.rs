@@ -13,6 +13,7 @@ use tauri::{
 };
 
 use crate::foreground::{self, Foreground};
+use crate::hide_all;
 use crate::hover::{self, OverlayFrame};
 use crate::over_game_guard::GameWatch;
 use crate::overlay::{lock, set_unlocked, SETTINGS_CHANGED, WINDOW};
@@ -165,7 +166,17 @@ pub fn follow(app: AppHandle, state: Arc<AppState>, guarded: bool) {
         let mut game_was_on = false;
         let mut failures: u32 = 0;
         let mut loading_since: Option<Instant> = None;
+        let mut game_check = hide_all::GameCheck::default();
+        let mut key_wanted = false;
         loop {
+            // The hide key is taken only while the game runs (T-614); asked of
+            // the main thread when that changes, or while another program holds it.
+            let running = game_check.running(Instant::now(), game_memory::process::is_running);
+            let want_key = hide_all::wants_key(running, state.overlay.ignores_foreground());
+            if want_key != key_wanted || (want_key && state.overlay.hide_key_taken()) {
+                hide_all::follow_game(&app, want_key);
+                key_wanted = want_key;
+            }
             // A Battlegrounds game loading counts as on: the overlay starts
             // with the loading screen (T-314), before the log has the game.
             let loading = *lock(&state.scene) == Some(Scene::BattlegroundsLoading);
@@ -174,6 +185,10 @@ pub fn follow(app: AppHandle, state: Arc<AppState>, guarded: bool) {
             let lobby = lobby_on(*lock(&state.scene), game_on, state.overlay.lobby_shown());
             if should_relock(state.overlay.unlocked(), game_was_on, game_on) {
                 set_unlocked(&app, &state, false);
+            }
+            if hide_all::shows_again(state.overlay.all_hidden(), game_was_on, game_on) {
+                // Hidden for one game only: the next one starts shown (T-614).
+                hide_all::set(&app, &state, false);
             }
             game_was_on = game_on;
             let seen = hover::game_client(state.overlay.ignores_foreground());
@@ -221,6 +236,7 @@ pub fn follow(app: AppHandle, state: Arc<AppState>, guarded: bool) {
                 };
                 if done.is_ok() {
                     shown = want;
+                    state.overlay.set_window_shown(shown);
                     failures = 0;
                 } else {
                     failures += 1;

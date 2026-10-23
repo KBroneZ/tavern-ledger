@@ -286,6 +286,8 @@
         "The overlay stopped after an internal error. Restart the app; your history is safe.": "El overlay se ha detenido por un error interno. Reinicia la app; tu historial está a salvo.",
         "The overlay could not change between locked and unlocked; it is off until you restart the app.": "El overlay no ha podido bloquearse o desbloquearse; está desactivado hasta que reinicies la app.",
         "The leaderboard box was not kept: bring Hearthstone to the front once, then try again.": "No se ha guardado el recuadro de la clasificación: pon Hearthstone en primer plano una vez y vuelve a intentarlo.",
+        "Another program already uses Ctrl+Shift+H, so that key can't hide the overlay. Use \"Hide overlay\" in the tray menu instead.": "Otro programa ya usa Ctrl+Mayús+H, así que esa tecla no puede ocultar el overlay. Usa «Ocultar overlay» en el menú de la bandeja.",
+        "The key that hides the overlay could not be set up. Use \"Hide overlay\" in the tray menu instead.": "No se ha podido preparar la tecla que oculta el overlay. Usa «Ocultar overlay» en el menú de la bandeja.",
         "The overlay settings have no folder to be saved in; they will be lost after a restart.": "Los ajustes del overlay no tienen carpeta donde guardarse; se perderán al reiniciar.",
         "Could not change the Windows start-up setting.": "No se ha podido cambiar el inicio con Windows.",
         "Windows has Tavern Ledger's start-up turned off. Turn it on in Task Manager > Startup apps; the app cannot do it for you.": "Windows tiene desactivado el inicio de Tavern Ledger. Actívalo en el Administrador de tareas > Aplicaciones de inicio; la app no puede hacerlo por ti.",
