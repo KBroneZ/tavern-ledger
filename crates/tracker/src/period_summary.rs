@@ -398,6 +398,70 @@ mod tests {
     }
 
     #[test]
+    fn a_stretch_that_starts_later_is_measured_from_the_game_before_it() {
+        let reports = solo_games(&[2, 3, 4, 5]);
+        let mut ratings = SavedRatings::open(&dir("later")).unwrap();
+        take(&mut ratings, None, false, 6000, 5800);
+        take(&mut ratings, Some(1), false, 6100, 5800);
+        take(&mut ratings, Some(2), false, 6200, 5800);
+        take(&mut ratings, Some(3), false, 6180, 5800);
+        take(&mut ratings, Some(4), false, 6230, 5800);
+        // Today is games 3 and 4: from the rating after game 2, not the first.
+        let modes = period_summary(&history(&reports, 2), Some(&ratings));
+        assert_eq!(modes[0].net_rating, NetRating::Known(30));
+        // The whole stretch from game 1 is measured from before it.
+        let all = period_summary(&history(&reports, 0), Some(&ratings));
+        assert_eq!(all[0].net_rating, NetRating::Known(230));
+    }
+
+    #[test]
+    fn a_stretch_that_starts_after_a_reading_that_may_be_stale_is_unknown() {
+        let reports = solo_games(&[2, 3, 4]);
+        let mut ratings = SavedRatings::open(&dir("later-stale")).unwrap();
+        take(&mut ratings, None, false, 6000, 5800);
+        take(&mut ratings, Some(1), false, 6100, 5800);
+        // Game 2 was Solo and the Solo rating did not move: it may be stale.
+        take(&mut ratings, Some(2), false, 6100, 5800);
+        take(&mut ratings, Some(3), false, 6150, 5800);
+        let modes = period_summary(&history(&reports, 2), Some(&ratings));
+        assert_eq!(modes[0].net_rating, NetRating::Unknown);
+    }
+
+    #[test]
+    fn a_mode_with_no_reading_of_its_own_is_unknown_while_the_other_is_known() {
+        let reports = [report(SOLO, "H_A", 2, "ok"), report(DUOS, "H_B", 1, "ok")];
+        let mut ratings = SavedRatings::open(&dir("one-mode")).unwrap();
+        let first = key(1);
+        let second = key(2);
+        let take = |ratings: &mut SavedRatings, after: Option<&GameKey>, prev, duos, solo| {
+            ratings
+                .record(Taken {
+                    after,
+                    previous: prev,
+                    game_duos: Some(duos),
+                    first_of_run: after.is_none(),
+                    solo,
+                    duos: None,
+                })
+                .unwrap();
+        };
+        take(&mut ratings, None, None, false, Some(6400));
+        take(&mut ratings, Some(&first), None, false, Some(6440));
+        take(&mut ratings, Some(&second), Some(&first), true, Some(6440));
+        let modes = period_summary(&history(&reports, 0), Some(&ratings));
+        assert_eq!(
+            modes[0].net_rating,
+            NetRating::Known(40),
+            "Solo: moved in game 1 and did not move in the Duos game after it"
+        );
+        assert_eq!(
+            modes[1].net_rating,
+            NetRating::Unknown,
+            "Duos: the game never gave a rating"
+        );
+    }
+
+    #[test]
     fn a_dev_tool_game_moves_the_rating_but_is_not_counted() {
         let reports = [report(SOLO, "H_DEV", 1, "ok"), report(SOLO, "H_A", 3, "ok")];
         let mut ratings = SavedRatings::open(&dir("dev")).unwrap();

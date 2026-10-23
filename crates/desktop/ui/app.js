@@ -1149,14 +1149,32 @@ let periodTimer = null;
 async function refreshPeriod() {
   const seq = ++periodSeq;
   const range = TLPeriod.ranges(new Date());
-  const view = await invoke("period_overview", {
-    todayStart: range.todayStart, todayEnd: range.todayEnd, weekStart: range.weekStart, weekEnd: range.weekEnd,
-  });
-  if (seq !== periodSeq) return;
-  period = { view, range };
-  TLFocus.keep(document, renderPeriod);
-  clearTimeout(periodTimer);
-  periodTimer = setTimeout(() => refreshPeriod().catch(showError), Math.max(1000, range.todayEnd * 1000 - Date.now() + 1000));
+  try {
+    const view = await invoke("period_overview", {
+      todayStart: range.todayStart, todayEnd: range.todayEnd, weekStart: range.weekStart, weekEnd: range.weekEnd,
+    });
+    if (seq !== periodSeq) return;
+    period = { view, range };
+    TLFocus.keep(document, renderPeriod);
+  } finally {
+    // Also after a failure, so the window still changes its day at midnight.
+    if (seq === periodSeq) {
+      clearTimeout(periodTimer);
+      periodTimer = setTimeout(() => refreshPeriod().catch(showError), Math.max(1000, range.todayEnd * 1000 - Date.now() + 1000));
+    }
+  }
+}
+
+// The rating a game moved is saved a little after the game ends (the app
+// reads it from the game), so the summary is asked again when the saved
+// rating changes. One ask at a time, a couple of seconds apart.
+let periodSoon = null;
+function refreshPeriodSoon() {
+  if (periodSoon) return;
+  periodSoon = setTimeout(() => {
+    periodSoon = null;
+    refreshPeriod().catch(showError);
+  }, 2000);
 }
 
 // Refreshes can overlap; only the latest one may paint, so an older answer
@@ -1260,6 +1278,7 @@ async function main() {
     if (recapGame) openRecap(recapGame).catch(showError);
   });
   await listen("game-finished", (e) => onGameFinished(e.payload).catch(showError));
+  await listen("live-changed", refreshPeriodSoon);
   await listen("status-changed", (e) => showStatus(e.payload));
   showStatus(await invoke("status"));
   await refreshGames();
