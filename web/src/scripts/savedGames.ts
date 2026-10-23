@@ -18,7 +18,8 @@ const erase = byId<HTMLButtonElement>("saved-erase");
 let player = "";
 
 async function showCount(device: Device): Promise<void> {
-  const saved = (await listSaved(device)).length;
+  // Only this player's games: a session for someone else clears the rest (forgetOthers) a moment later.
+  const saved = (await listSaved(device)).filter((e) => e.userId === player).length;
   say(count, saved === 0 ? t("saved.count.none") : saved === 1 ? t("saved.count.one") : t("saved.count.other", { count: saved }));
   erase.disabled = saved === 0;
 }

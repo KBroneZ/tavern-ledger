@@ -75,12 +75,16 @@ export async function turnOn(device: Device, userId: string): Promise<void> {
   device.flags.setItem(FLAG_KEY, userId);
 }
 
-/** Off: the choice and every saved game go. The games first: if the browser refuses one step, the other still happens. */
+/**
+ * Off: the choice and every saved game go. The choice first, so a save that gets
+ * its turn after this sees it off and saves nothing; if the browser refuses one
+ * step, the other still happens.
+ */
 export async function turnOff(device: Device): Promise<void> {
   try {
-    await eraseSaved(device);
-  } finally {
     device.flags.removeItem(FLAG_KEY);
+  } finally {
+    await eraseSaved(device);
   }
 }
 
