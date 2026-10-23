@@ -16,7 +16,7 @@ This repo's own code is licensed AGPL-3.0-only since 12 October 2026 (D-101); ve
 | `aniso8601` 10.0.1 | [PyPI](https://pypi.org/project/aniso8601/) | BSD-3-Clause | Dependency of `hslog` | 2026-10-08 |
 | `requests` 2.34.2 | [PyPI](https://pypi.org/project/requests/) | Apache-2.0 | Dependency of `hearthstone`; the prototype makes no network requests | 2026-10-08 |
 | `urllib3` 2.8.0 | [PyPI](https://pypi.org/project/urllib3/) | MIT | Dependency of `requests` | 2026-10-08 |
-| `certifi` 2026.7.22 | [PyPI](https://pypi.org/project/certifi/) | MPL-2.0 | Dependency of `requests`; used unmodified | 2026-10-08 |
+| `certifi` 2026.10.19 | [PyPI](https://pypi.org/project/certifi/) | MPL-2.0 | Dependency of `requests`; used unmodified. 2026.10.19 no longer trusts the `emSign ECC Root CA - G3` root (GHSA-6q48-6c7w-9gw2) | 2026-10-23 |
 | `idna` 3.20 | [PyPI](https://pypi.org/project/idna/) | BSD-3-Clause | Dependency of `requests` | 2026-10-08 |
 | `charset-normalizer` 3.5.2 | [PyPI](https://pypi.org/project/charset-normalizer/) | MIT | Dependency of `requests` | 2026-10-08 |
 | Synthetic test logs (`tests/bg_log_builder.py`) | Hand-written imitating the `Power.log` format | AGPL-3.0-only (this repo) | Tests of `tools/parse_bg.py`; no real game data | 2026-10-08 |
