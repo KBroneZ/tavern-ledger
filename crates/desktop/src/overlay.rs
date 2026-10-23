@@ -419,6 +419,16 @@ pub fn set_unlocked(app: &AppHandle, state: &AppState, on: bool) {
         refresh_unlock_item(state);
         return;
     }
+    if unlock_shows_first(on, state.overlay.all_hidden()) {
+        // Unlocking a hidden overlay only shows it, still click-through: the
+        // window never takes clicks before the page has drawn what it shows.
+        // The next unlock, with everything on screen, unlocks.
+        state.overlay.hide_all(false);
+        refresh_hide_item(state);
+        refresh_unlock_item(state);
+        let _ = app.emit(SETTINGS_CHANGED, ());
+        return;
+    }
     // The flag is set first and the window is made to match it, then the flag
     // is read again: if another caller changed it meanwhile, the window is
     // set once more, so the two always end up the same. No lock is held over
@@ -445,6 +455,11 @@ pub fn set_unlocked(app: &AppHandle, state: &AppState, on: bool) {
     refresh_unlock_item(state);
     refresh_hide_item(state);
     let _ = app.emit(SETTINGS_CHANGED, ());
+}
+
+/// Whether an unlock only shows a hidden overlay first (T-614).
+fn unlock_shows_first(unlock: bool, hidden: bool) -> bool {
+    unlock && hidden
 }
 
 /// Unlocked, the window takes clicks and keyboard focus (arranging works by
@@ -798,6 +813,16 @@ mod tests {
             unlock.join().unwrap();
             assert!(overlay.unlocked() && !overlay.all_hidden());
         }
+    }
+
+    #[test]
+    fn unlocking_a_hidden_overlay_only_shows_it_first() {
+        assert!(unlock_shows_first(true, true));
+        assert!(!unlock_shows_first(true, false), "shown: it unlocks");
+        assert!(
+            !unlock_shows_first(false, true),
+            "locking a hidden overlay just locks"
+        );
     }
 
     #[test]
