@@ -49,7 +49,8 @@ CARGO_TIMEOUT_SECONDS = 300
 # osv-scanner exits 0 with no advisory and 1 with some; anything else is an error.
 SCANNER_OK = (0, 1)
 IGNORE_FIELDS = ("id", "package", "reason", "evidence", "review_by")
-REMOTE_IMPORT_RE = re.compile(r"""(?:from|import)\s*\(?\s*["'](npm:|jsr:|https?://)""")
+# Matched over the whole file, so an import split across lines is caught too.
+REMOTE_IMPORT_RE = re.compile(r"""\b(?:from|import)\s*\(?\s*["'`](npm:|jsr:|https?://)""")
 DENO_CONFIGS = ("deno.json", "deno.jsonc", "deno.lock", "import_map.json")
 
 
@@ -196,9 +197,10 @@ def check_functions(folder: Path = FUNCTIONS) -> list[str]:
     configs = [path for name in DENO_CONFIGS for path in folder.rglob(name)]
     problems = [f"{path.relative_to(folder).as_posix()}: Deno config or lockfile" for path in configs]
     for path in sorted([*folder.rglob("*.ts"), *folder.rglob("*.js")]):
-        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-            if REMOTE_IMPORT_RE.search(line):
-                problems.append(f"{path.relative_to(folder).as_posix()}:{number}: third-party import")
+        text = path.read_text(encoding="utf-8")
+        for match in REMOTE_IMPORT_RE.finditer(text):
+            number = text.count("\n", 0, match.start()) + 1
+            problems.append(f"{path.relative_to(folder).as_posix()}:{number}: third-party import")
     if problems:
         problems.append("supabase/functions: the scan does not cover third-party Edge Function code; cover it first")
     return problems

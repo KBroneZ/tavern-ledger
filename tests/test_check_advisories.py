@@ -201,6 +201,20 @@ class FunctionsTest(unittest.TestCase):
         problems = tool.check_functions(root)
         self.assertEqual(len([p for p in problems if "third-party import" in p]), 3)
 
+    def test_an_import_split_across_lines_fails(self):
+        root = self.folder(
+            {
+                "a/index.ts": 'const m = await import(\n  "npm:left-pad@1"\n);\n',
+                "b/index.ts": "import {\n  x,\n} from\n  'jsr:@std/x';\n",
+            }
+        )
+        problems = [p for p in tool.check_functions(root) if "third-party import" in p]
+        self.assertEqual(problems, ["a/index.ts:1: third-party import", "b/index.ts:3: third-party import"])
+
+    def test_a_url_that_is_not_an_import_is_fine(self):
+        root = self.folder({"a/index.ts": 'const note = "see https://example.test";\nfetch("https://example.test");\n'})
+        self.assertEqual(tool.check_functions(root), [])
+
     def test_a_deno_lockfile_fails(self):
         root = self.folder({"deno.lock": "{}", "a/index.ts": ""})
         self.assertTrue(any("Deno config or lockfile" in p for p in tool.check_functions(root)))
