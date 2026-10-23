@@ -90,6 +90,10 @@ pub struct Overlay {
     /// hide key acts only on what can be seen.
     window_shown: AtomicBool,
     hide_item: Mutex<Option<CheckMenuItem<Wry>>>,
+    /// The preview from the tray (T-614, `preview.rs`): example data over the
+    /// desktop. Never saved.
+    preview: AtomicBool,
+    preview_item: Mutex<Option<CheckMenuItem<Wry>>>,
 }
 
 /// What the overlay page needs to draw itself.
@@ -116,6 +120,8 @@ pub struct View {
     all_hidden: bool,
     /// The hide key is not available: the page's note points at the tray.
     hide_key_taken: bool,
+    /// The preview is open: the page shows its example data.
+    preview: bool,
 }
 
 #[derive(Serialize)]
@@ -247,6 +253,20 @@ impl Overlay {
 
     pub fn set_window_shown(&self, shown: bool) {
         self.window_shown.store(shown, Ordering::SeqCst);
+    }
+
+    /// The preview is open, and never for an overlay that is off for this run.
+    pub fn preview(&self) -> bool {
+        self.preview.load(Ordering::SeqCst) && self.preview_allowed()
+    }
+
+    /// An overlay that could not be made click-through stays hidden.
+    pub fn preview_allowed(&self) -> bool {
+        !self.broken.load(Ordering::SeqCst)
+    }
+
+    pub fn set_preview(&self, on: bool) {
+        self.preview.store(on, Ordering::SeqCst);
     }
 
     pub fn ignores_foreground(&self) -> bool {
@@ -397,6 +417,7 @@ impl Overlay {
             odds: !settings.odds_off,
             all_hidden: self.all_hidden(),
             hide_key_taken: self.hide_key_taken(),
+            preview: self.preview(),
         }
     }
 }
@@ -505,6 +526,18 @@ pub(crate) fn refresh_hide_item(state: &AppState) {
 
 pub fn keep_hide_item(state: &AppState, item: CheckMenuItem<Wry>) {
     *lock(&state.overlay.hide_item) = Some(item);
+}
+
+/// The tray's "preview" entry shows the real state (T-614).
+pub(crate) fn refresh_preview_item(state: &AppState) {
+    let item = lock(&state.overlay.preview_item).clone();
+    if let Some(item) = item {
+        let _ = item.set_checked(state.overlay.preview());
+    }
+}
+
+pub fn keep_preview_item(state: &AppState, item: CheckMenuItem<Wry>) {
+    *lock(&state.overlay.preview_item) = Some(item);
 }
 
 /// The tray's "show overlay" entry, so it follows the switch in the window.
@@ -833,6 +866,31 @@ mod tests {
         assert!(overlay.all_hidden(), "locking keeps it hidden");
         overlay.store_unlocked(true);
         assert!(!overlay.all_hidden() && overlay.unlocked());
+    }
+
+    #[test]
+    fn the_preview_is_never_saved_and_the_page_is_told() {
+        let dir = temp_dir("preview");
+        let first = Overlay::default();
+        first.load(&dir, false).unwrap();
+        assert!(!first.preview() && !first.view().preview);
+        first.set_preview(true);
+        assert!(first.view().preview);
+        first.change(|s, _| s.theme = Theme::Contrast).unwrap();
+        let text = std::fs::read_to_string(dir.join(PREFS_FILE)).unwrap();
+        assert!(!text.contains("preview"));
+        let second = Overlay::default();
+        second.load(&dir, false).unwrap();
+        assert!(!second.preview());
+    }
+
+    #[test]
+    fn a_broken_overlay_never_shows_the_preview() {
+        let overlay = Overlay::default();
+        overlay.set_preview(true);
+        assert!(overlay.preview());
+        overlay.disable();
+        assert!(!overlay.preview_allowed() && !overlay.preview() && !overlay.view().preview);
     }
 
     #[test]

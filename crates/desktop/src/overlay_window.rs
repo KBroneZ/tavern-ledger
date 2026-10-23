@@ -17,6 +17,7 @@ use crate::hide_all;
 use crate::hover::{self, OverlayFrame};
 use crate::over_game_guard::GameWatch;
 use crate::overlay::{lock, set_unlocked, SETTINGS_CHANGED, WINDOW};
+use crate::preview;
 use crate::screen_fit::{overlay_area, pick_screen, Area, Screen};
 use crate::AppState;
 use tracker::scene::Scene;
@@ -29,15 +30,18 @@ const CHECK_EVERY: Duration = Duration::from_millis(500);
 /// cannot say what is in front: then it shows (the overlay only ever draws
 /// while a game is on, or its lobby panel on the Battlegrounds lobby screen).
 /// While the layout is being edited it shows whatever else is true, so there
-/// is something to arrange.
+/// is something to arrange; so does the preview (T-614, `preview.rs`), which
+/// is closed before a game can be under it.
 pub fn wants_visible(
     enabled: bool,
     game_on: bool,
     ignore_foreground: bool,
     front: Option<Foreground>,
     unlocked: bool,
+    preview: bool,
 ) -> bool {
     unlocked
+        || preview
         || (enabled && game_on && (ignore_foreground || !matches!(front, Some(Foreground::Other))))
 }
 
@@ -182,6 +186,10 @@ pub fn follow(app: AppHandle, state: Arc<AppState>, guarded: bool) {
             let loading = *lock(&state.scene) == Some(Scene::BattlegroundsLoading);
             let loading = still_loading(loading, &mut loading_since, Instant::now());
             let game_on = lock(&state.live).is_some() || loading;
+            let front = foreground::current();
+            if preview::should_close(state.overlay.preview(), running, game_on, front) {
+                preview::set(&app, &state, false);
+            }
             let lobby = lobby_on(*lock(&state.scene), game_on, state.overlay.lobby_shown());
             if should_relock(state.overlay.unlocked(), game_was_on, game_on) {
                 set_unlocked(&app, &state, false);
@@ -209,8 +217,9 @@ pub fn follow(app: AppHandle, state: Arc<AppState>, guarded: bool) {
                 state.overlay.enabled(),
                 game_on || lobby,
                 state.overlay.ignores_foreground(),
-                foreground::current(),
+                front,
                 state.overlay.unlocked(),
+                state.overlay.preview(),
             );
             let blocked = want && watch.blocks();
             if blocked != said_guarded {
@@ -259,25 +268,25 @@ mod tests {
     fn it_shows_only_while_on_in_a_game_with_the_game_in_front() {
         let game = Some(Foreground::Hearthstone);
         let other = Some(Foreground::Other);
-        assert!(wants_visible(true, true, false, game, false));
+        assert!(wants_visible(true, true, false, game, false, false));
         assert!(
-            !wants_visible(false, true, false, game, false),
+            !wants_visible(false, true, false, game, false, false),
             "switched off"
         );
         assert!(
-            !wants_visible(true, false, false, game, false),
+            !wants_visible(true, false, false, game, false, false),
             "no game on"
         );
         assert!(
-            !wants_visible(true, true, false, other, false),
+            !wants_visible(true, true, false, other, false, false),
             "another window in front"
         );
     }
 
     #[test]
     fn when_the_window_in_front_cannot_be_read_it_still_shows() {
-        assert!(wants_visible(true, true, false, None, false));
-        assert!(!wants_visible(true, false, false, None, false));
+        assert!(wants_visible(true, true, false, None, false, false));
+        assert!(!wants_visible(true, false, false, None, false, false));
     }
 
     #[test]
@@ -287,6 +296,7 @@ mod tests {
             true,
             true,
             Some(Foreground::Other),
+            false,
             false
         ));
         assert!(!wants_visible(
@@ -294,6 +304,7 @@ mod tests {
             false,
             true,
             Some(Foreground::Other),
+            false,
             false
         ));
     }
@@ -301,8 +312,15 @@ mod tests {
     #[test]
     fn while_unlocked_it_shows_with_no_game_and_even_when_switched_off() {
         let other = Some(Foreground::Other);
-        assert!(wants_visible(false, false, false, other, true));
-        assert!(wants_visible(true, true, false, other, true));
+        assert!(wants_visible(false, false, false, other, true, false));
+        assert!(wants_visible(true, true, false, other, true, false));
+    }
+
+    #[test]
+    fn the_preview_shows_over_the_desktop_with_no_game_and_the_overlay_off() {
+        let other = Some(Foreground::Other);
+        assert!(wants_visible(false, false, false, other, false, true));
+        assert!(!wants_visible(false, false, false, other, false, false));
     }
 
     #[test]
