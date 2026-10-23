@@ -44,7 +44,7 @@ test("footer: each link stands on a line of at least 44px on a phone or a touch 
   assert.match(rule, /min-width: 44px/);
 });
 
-test("a desktop screen keeps its sizes: no 44px minimum outside the touch block", () => {
+test("the base rules, outside the touch block, set no 44px minimum (a desktop screen keeps its sizes)", () => {
   for (const selector of [".brand {", ".site-nav a {", ".colophon a {"]) {
     assert.doesNotMatch(block(desktop, selector), /min-(height|width): 44px/, selector);
   }
