@@ -155,6 +155,8 @@ export const ES: Record<SiteKey, string> = {
   "news.heroes.link": "Estadísticas de héroes",
   "news.simulator": "Un simulador de combates en la web: carga un tablero de una de tus partidas, cámbialo y simula el combate.",
   "news.simulator.link": "Simulador",
+  "news.app027": "Versión 0.2.7 de la app: un overlay más sencillo (los tipos encima de los rivales, los contadores debajo, Ctrl+Mayús+H para ocultarlo, una vista previa desde la bandeja) y un resumen de hoy y esta semana en la ventana principal.",
+  "news.app027.link": "Descargar",
   "news.app026": "Versión 0.2.6 de la app: menos combates sin probabilidades (el simulador conoce todos los poderes de héroe y abalorios), un botón para copiar el diagnóstico y una casilla al desinstalar que borra tus partidas solo si la marcas.",
   "news.app026.link": "Descargar",
   "news.accuracykits": "La página de precisión ahora juega cada tablero guardado con sus poderes de héroe y abalorios.",
