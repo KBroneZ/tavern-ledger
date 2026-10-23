@@ -142,20 +142,13 @@ function Test-StampOlderThan([string]$stamp, [int]$keepDays) {
     return $ok -and $parsed -lt (Get-Date).ToUniversalTime().AddDays(-$keepDays)
 }
 
-# Deletes tl-backups-<stamp>.tlenc files older than $KeepDays in $OutDir, and
-# the plaintext <stamp> folders that older script versions left in $LegacyDir
-# (they keep expiring until the owner removes them). Nothing else is touched.
-function Remove-ExpiredBackups([string]$OutDir, [string]$LegacyDir, [int]$KeepDays) {
+# Deletes tl-backups-<stamp>.tlenc files older than $KeepDays in $OutDir.
+# Nothing else is touched.
+function Remove-ExpiredBackups([string]$OutDir, [int]$KeepDays) {
     Get-ChildItem $OutDir -File -Filter 'tl-backups-*.tlenc' -ErrorAction SilentlyContinue |
         Where-Object { $_.Name -match '^tl-backups-(\d{8}-\d{6})\.tlenc$' -and (Test-StampOlderThan $Matches[1] $KeepDays) } |
         ForEach-Object {
             Write-Host "Deleting backup older than $KeepDays days: $($_.Name)"
             Remove-Item -Force -Confirm:$false $_.FullName
-        }
-    Get-ChildItem $LegacyDir -Directory -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -match '^\d{8}-\d{6}$' -and (Test-StampOlderThan $_.Name $KeepDays) } |
-        ForEach-Object {
-            Write-Host "Deleting old plaintext backup folder: $($_.Name)"
-            Remove-Item -Recurse -Force -Confirm:$false $_.FullName
         }
 }
