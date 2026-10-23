@@ -22,6 +22,8 @@ interface Call {
 }
 
 const TOKEN = "ab".repeat(32);
+// What the scheduled job sends: '<unix seconds>.<HMAC hex>'; the database checks it.
+const SIGNED = `1791000000.${TOKEN}`;
 const RUN = 7;
 
 const NO_SKIPS = {
@@ -121,7 +123,7 @@ function fakeApi(
     if (opts.fail === path) return reply(503, {});
     if (path === "/rest/v1/rpc/sweep_orphan_files") return reply(200, files.slice(0, 1000));
     if (path === "/rest/v1/rpc/sweep_token_valid") {
-      return reply(200, body.p_token === (opts.token ?? TOKEN));
+      return reply(200, body.p_token === (opts.token ?? SIGNED));
     }
     if (path === "/storage/v1/object/games" && method === "DELETE") {
       if (opts.deleteFails?.(body.prefixes[0])) return reply(503, {});
@@ -283,49 +285,64 @@ const tokenRequest = (token: string, extra: Record<string, string> = {}) =>
     headers: { "X-Sweep-Token": token, ...extra },
   });
 
-Deno.test("the scheduled job's sweep token is checked by the database, then runs", async () => {
-  const api = fakeApi({ files: [orphan(1)] });
-  const res = await handle(tokenRequest(TOKEN), ENV, api.fetchFn);
+Deno.test("the scheduled job's signed sweep token is checked by the database, then runs", async () => {
+  const api = fakeApi({ files: [orphan(1)], token: SIGNED });
+  const res = await handle(tokenRequest(SIGNED), ENV, api.fetchFn);
   assertEquals(res.status, 200);
   assertEquals(api.calls[0].path, "/rest/v1/rpc/sweep_token_valid");
-  assertEquals(api.calls[0].body, { p_token: TOKEN });
+  assertEquals(api.calls[0].body, { p_token: SIGNED });
   assertEquals(api.calls.at(-1)?.path, "/rest/v1/rpc/sweep_record_result");
 });
 
-Deno.test("a signed, time-bound sweep token is checked by the database, then runs", async () => {
-  const signed = `1791000000.${TOKEN}`;
-  const api = fakeApi({ files: [orphan(1)], token: signed });
-  const res = await handle(tokenRequest(signed), ENV, api.fetchFn);
-  assertEquals(res.status, 200);
-  assertEquals(api.calls[0].body, { p_token: signed });
+Deno.test("the bare Vault secret is refused without asking the database", async () => {
+  // The transition is over: the database would not accept it either, and the
+  // function no longer sends it there.
+  const api = fakeApi({ files: [orphan(1)], token: TOKEN });
+  const res = await handle(tokenRequest(TOKEN), ENV, api.fetchFn);
+  assertEquals(res.status, 401);
+  assertEquals(api.calls.length, 0);
 });
 
-Deno.test("a wrong or malformed sweep token runs nothing", async () => {
-  // Wrong token: asked once, refused. Malformed: refused without asking.
+Deno.test("a signed token the database does not recognise runs nothing", async () => {
+  // The fake database knows one valid token; any other signed token is one
+  // the real database would refuse: another key, a time outside the window.
   for (
-    const [token, asked] of [["cd".repeat(32), 1], ["short", 0], [`${TOKEN}0`, 0], ["", 0],
-      [`.${TOKEN}`, 0], [`1.2.${TOKEN}`, 0], [`17910000000000.${TOKEN}`, 0]] as const
+    const token of [`1791000000.${"cd".repeat(32)}`, `1700000000.${TOKEN}`, `1791000001.${TOKEN}`]
+  ) {
+    const api = fakeApi({ files: [orphan(1)], token: SIGNED });
+    const res = await handle(tokenRequest(token), ENV, api.fetchFn);
+    assertEquals(res.status, 401, token);
+    assertEquals(api.calls.map((c) => c.path), ["/rest/v1/rpc/sweep_token_valid"], token);
+    assertEquals(failures(api), [], token);
+  }
+});
+
+Deno.test("a malformed sweep token runs nothing and is refused without asking", async () => {
+  for (
+    const token of ["cd".repeat(32), "short", `${TOKEN}0`, "", `.${TOKEN}`, `1.2.${TOKEN}`,
+      `17910000000000.${TOKEN}`, `1791000000.${TOKEN}0`, `1791000000.${"AB".repeat(32)}`,
+      `-1.${TOKEN}`]
   ) {
     const api = fakeApi({ files: [orphan(1)] });
     const res = await handle(tokenRequest(token), ENV, api.fetchFn);
     assertEquals(res.status, 401, token);
-    assertEquals(api.calls.length, asked, token);
+    assertEquals(api.calls.length, 0, token);
   }
 });
 
 Deno.test("a sweep token that cannot be checked is a plain 503, not a run", async () => {
   const api = fakeApi({ files: [orphan(1)], fail: "/rest/v1/rpc/sweep_token_valid" });
-  const res = await handle(tokenRequest(TOKEN), ENV, api.fetchFn);
+  const res = await handle(tokenRequest(SIGNED), ENV, api.fetchFn);
   assertEquals(res.status, 503);
   assertEquals(await res.json(), { error: "try again later" });
   assertEquals(api.calls.length, 1);
 });
 
 Deno.test("a sweep token with the wrong method is refused after the check", async () => {
-  const api = fakeApi();
+  const api = fakeApi({ token: SIGNED });
   const req = new Request("http://fn.test/sweep", {
     method: "GET",
-    headers: { "X-Sweep-Token": TOKEN },
+    headers: { "X-Sweep-Token": SIGNED },
   });
   assertEquals((await handle(req, ENV, api.fetchFn)).status, 405);
 });
@@ -600,8 +617,8 @@ Deno.test("callers that are refused or cannot be checked record nothing", async 
   for (
     const [req, fail] of [
       [request("anon-key"), undefined],
-      [tokenRequest("cd".repeat(32)), undefined],
-      [tokenRequest(TOKEN), "/rest/v1/rpc/sweep_token_valid"],
+      [tokenRequest(`1791000000.${"cd".repeat(32)}`), undefined],
+      [tokenRequest(SIGNED), "/rest/v1/rpc/sweep_token_valid"],
     ] as const
   ) {
     const api = fakeApi({ fail });

@@ -432,8 +432,8 @@ SITE_ORIGINS = "https://tavernledger.net,http://127.0.0.1:3000"
 # push to main (design notes). Each function checks
 # its caller itself before doing anything. upload-game and delete-account keep
 # the platform's JWT check in front as well (it accepts the users' tokens);
-# sweep is called by the database's own scheduled job with the sweep token
-# from Vault and no key, so the platform check would refuse it.
+# sweep is called by the database's own scheduled job with a signed sweep
+# token made from its Vault secret and no key, so the platform check would refuse it.
 [functions.upload-game]
 enabled = true
 verify_jwt = true
