@@ -52,7 +52,6 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'backup_crypto.ps1')
 . (Join-Path $PSScriptRoot 'secret_store.ps1')
 
-$repo = Split-Path -Parent $PSScriptRoot
 $bucket = 'games'
 $timeoutSec = 30
 $pageSize = 1000

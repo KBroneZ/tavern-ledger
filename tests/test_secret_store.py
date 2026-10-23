@@ -29,9 +29,10 @@ OTHER_KEY = "sb_secret_another-fake-key"
 # Storage API does for the private games bucket, or with $env:FAKE_STATUS.
 FAKE_WEB = r"""
 function Invoke-WebRequest {
-    param($Method, $Uri, $Headers, $TimeoutSec, [switch]$SkipHttpErrorCheck)
+    param($Method, $Uri, $Headers, $TimeoutSec, $MaximumRedirection, [switch]$SkipHttpErrorCheck)
     $names = ($Headers.Keys | Sort-Object) -join ','
-    Add-Content -LiteralPath $env:FAKE_CALLS -Value "$Method $Uri headers=$names timeout=$TimeoutSec key=$($Headers.apikey -ceq $env:FAKE_EXPECT)"
+    Add-Content -LiteralPath $env:FAKE_CALLS -Value "$Method $Uri headers=$names timeout=$TimeoutSec redirects=$MaximumRedirection key=$($Headers.apikey -ceq $env:FAKE_EXPECT)"
+    if ($env:FAKE_THROW) { throw "connection reset while sending apikey $($Headers.apikey)" }
     $status = if ($env:FAKE_STATUS) { [int]$env:FAKE_STATUS } else { 200 }
     $body = if ($env:FAKE_BODY) { $env:FAKE_BODY } else { '{"id":"games","name":"games","public":false}' }
     [pscustomobject]@{ StatusCode = $status; Content = $body }
@@ -156,7 +157,7 @@ class StoreTest(unittest.TestCase):
         self.assertIn(URL.encode(), raw)
         self.assertTrue(self.env_file.exists(), "the plaintext file is kept until -DeletePlaintext")
         self.assertEqual(self.calls_made(), [
-            f"Get {URL}/storage/v1/bucket/games headers=apikey timeout=15 key=True"])
+            f"Get {URL}/storage/v1/bucket/games headers=apikey timeout=15 redirects=0 key=True"])
         self.assertIn("Check passed", res.stdout)
         self.assertEqual([p.name for p in self.store.parent.iterdir()], [self.store.name])
 
@@ -243,6 +244,44 @@ class StoreTest(unittest.TestCase):
         self.assertNotEqual(res.returncode, 0)
         self.assertIn("link", res.stderr)
         self.assertTrue(real.exists())
+
+    def test_a_failed_request_never_shows_the_key(self):
+        res = self.run_command("", {"FAKE_THROW": "1"})
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("connection reset", res.stderr)
+        self.assert_no_secret(res)
+
+    def test_without_confirmation_nothing_is_deleted_or_replaced(self):
+        # -NonInteractive cannot answer the prompt, so ShouldProcess must refuse.
+        res = self.run_command("-DeletePlaintext")
+        self.assertNotEqual(res.returncode, 0)
+        self.assertTrue(self.env_file.exists())
+        before = self.store.read_bytes()
+        fake_prompt = ("function Read-Host { param($Prompt, [switch]$AsSecureString) "
+                       "ConvertTo-SecureString $env:FAKE_NEW_KEY -AsPlainText -Force }")
+        res = self.run_command("-SetKey", {"FAKE_NEW_KEY": OTHER_KEY, "FAKE_EXPECT": OTHER_KEY},
+                               fake_prompt)
+        self.assertNotEqual(res.returncode, 0)
+        self.assertEqual(self.store.read_bytes(), before)
+
+    def test_what_if_is_refused_before_anything_is_written(self):
+        res = self.run_command("-WhatIf")
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("-WhatIf is not supported", res.stderr)
+        self.assertFalse(self.store.parent.exists())
+        self.assertEqual(self.calls_made(), [])
+
+    def test_links_and_junctions_are_recognised(self):
+        target = self.tmp / "target"
+        target.mkdir()
+        junction = self.tmp / "junction"
+        made = subprocess.run(["cmd", "/c", "mklink", "/J", str(junction), str(target)],
+                              capture_output=True, text=True)
+        self.assertEqual(made.returncode, 0, made.stderr)
+        res = self.run_store(f"Test-IsLink {q(junction)}; Test-IsLink {q(target)}; "
+                             f"Test-IsLink {q(self.env_file)}")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(res.stdout.split(), ["True", "False", "False"])
 
     def test_check_only(self):
         self.assertEqual(self.run_command("").returncode, 0)

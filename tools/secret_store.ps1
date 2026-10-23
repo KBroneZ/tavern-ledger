@@ -28,7 +28,7 @@ function Get-DefaultSecretStorePath {
 }
 
 function Assert-SupabaseUrl([string]$Url) {
-    if ($Url -notmatch '^https://[a-z0-9]+\.supabase\.co$') {
+    if ($Url -notmatch '^https://[a-z0-9]+\.supabase\.co\z') {
         throw 'SUPABASE_URL must be https://<project>.supabase.co'
     }
 }
@@ -38,7 +38,7 @@ function Assert-SupabaseSecretKey([string]$Key) {
     if ([string]::IsNullOrEmpty($Key) -or -not $Key.StartsWith('sb_secret_')) {
         throw 'SUPABASE_SECRET_KEY must be a secret key (sb_secret_...), not a legacy service_role key.'
     }
-    if ($Key -cnotmatch '^sb_secret_[A-Za-z0-9_-]+$') {
+    if ($Key -cnotmatch '^sb_secret_[A-Za-z0-9_-]+\z') {
         throw 'SUPABASE_SECRET_KEY has unexpected characters.'
     }
 }
@@ -128,9 +128,12 @@ function Write-SecretStore([hashtable]$Connection, [string]$Path, [switch]$Repla
     Assert-SupabaseSecretKey $Connection.Key
     $dir = Split-Path -Parent $Path
     $leaf = [IO.Path]::GetFileNameWithoutExtension($Path)
-    New-Item -ItemType Directory -Force $dir | Out-Null
-    & icacls $dir /inheritance:r /grant:r "$($env:USERNAME):(OI)(CI)F" | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "Could not restrict access to $dir." }
+    # Only a folder made here gets the owner-only ACL; an existing one is left as is.
+    if (-not (Test-Path -LiteralPath $dir -PathType Container)) {
+        New-Item -ItemType Directory -Force $dir | Out-Null
+        & icacls $dir /inheritance:r /grant:r "$($env:USERNAME):(OI)(CI)F" | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "Could not restrict access to $dir." }
+    }
     # Left by a run that was cut off; they hold only encrypted bytes.
     Get-ChildItem -LiteralPath $dir -File -Filter "$leaf.*.partial" |
         ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force -Confirm:$false }
@@ -158,11 +161,19 @@ function Import-SupabaseSecret([hashtable]$Connection, [string]$Path) {
         throw "A different Supabase URL or key is already stored at $Path; not overwriting it. After a key rotation use -SetKey."
     }
     Write-SecretStore $Connection $Path
-    if (-not (Test-SameConnection (Read-SecretStore $Path) $Connection)) {
+    try { $same = Test-SameConnection (Read-SecretStore $Path) $Connection }
+    catch { $same = $false }
+    if (-not $same) {
         Remove-Item -LiteralPath $Path -Force -Confirm:$false
         throw 'The stored key did not read back the same; the store was removed.'
     }
     return 'stored'
+}
+
+# A link or junction, which a delete must not follow.
+function Test-IsLink([string]$Path) {
+    $item = Get-Item -LiteralPath $Path -Force
+    return [bool]($item.Attributes -band [IO.FileAttributes]::ReparsePoint)
 }
 
 # What the owner's scripts use: the local stack's keys with -Local, otherwise
@@ -179,13 +190,14 @@ function Get-SupabaseConnection([switch]$Local, [string]$StorePath = (Get-Defaul
 }
 
 # A harmless authenticated read: GET <url>/storage/v1/bucket/games with the
-# key in apikey only (never as a bearer token). Only a secret key may read a
+# key in apikey only (never as a bearer token), no redirects followed. Only a secret key may read a
 # private bucket's settings; the reply has its name and settings, no user data,
 # and nothing is written. Expected: HTTP 200, the private `games` bucket.
 function Test-SupabaseSecretWorks([hashtable]$Connection) {
     try {
         $res = Invoke-WebRequest -Method Get -Uri "$($Connection.Url)/storage/v1/bucket/games" `
-            -Headers @{ apikey = $Connection.Key } -TimeoutSec $script:SecretCheckTimeoutSec -SkipHttpErrorCheck
+            -Headers @{ apikey = $Connection.Key } -TimeoutSec $script:SecretCheckTimeoutSec `
+            -MaximumRedirection 0 -SkipHttpErrorCheck
     }
     catch {
         throw "The check request failed: $($_.Exception.Message.Replace($Connection.Key, '<key>'))"

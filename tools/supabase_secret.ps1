@@ -58,7 +58,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'secret_store.ps1')
+if ($WhatIfPreference) { throw '-WhatIf is not supported: the move writes the store.' }
 if (-not $StorePath) { $StorePath = Get-DefaultSecretStorePath }
+# .NET calls resolve relative paths against the process folder, not PowerShell's.
+$StorePath = $PSCmdlet.GetUnresolvedProviderPathFromPSPath($StorePath)
+$EnvFile = $PSCmdlet.GetUnresolvedProviderPathFromPSPath($EnvFile)
 
 # Through the readers' own path, so a pass means they work.
 function Invoke-Check {
@@ -105,10 +109,7 @@ if (-not $DeletePlaintext) {
     Write-Host "Plaintext file kept: $EnvFile. Delete it with -DeletePlaintext."
     return
 }
-$item = Get-Item -LiteralPath $EnvFile -Force
-if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
-    throw "$EnvFile is a link; not deleting it. Remove it by hand."
-}
+if (Test-IsLink $EnvFile) { throw "$EnvFile is a link; not deleting it. Remove it by hand." }
 if ($PSCmdlet.ShouldProcess($EnvFile, 'Delete the plaintext Supabase key file')) {
     Remove-Item -LiteralPath $EnvFile -Force -Confirm:$false
     Write-Host "Deleted $EnvFile. Copies may remain on the disk and in older PC backups."
