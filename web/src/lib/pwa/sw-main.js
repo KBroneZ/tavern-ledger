@@ -19,7 +19,8 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(dropOldCaches().then(() => self.clients.claim()));
+  // A new build has new script names: the saved game pages are fetched again, so they do not point at files this build no longer keeps.
+  event.waitUntil(dropOldCaches().then(() => keepGameShells().catch(() => {})).then(() => self.clients.claim()));
 });
 
 // A game page asks for the game page itself to be kept with the saved games (lib/pwa/saved.ts askForShells).
@@ -80,16 +81,20 @@ async function fetchOrOffline(request) {
 
 /**
  * The game page shell, for the address of a game the player saved on this
- * device (rules.js savedGame). Only when both the shell and the game's file
- * are saved, and only read: the worker never writes to that cache. `caches.match`
- * with a cache name does not create the cache when nobody saved anything.
+ * device (rules.js savedGame). Only when the shell, the game's file and the
+ * list's entry for this player and game are all there. Read only here.
+ * `caches.match` with a cache name does not create the cache when nobody saved
+ * anything.
  */
 async function savedGamePage(request) {
   const url = new URL(request.url);
   const saved = savedGame(url.pathname, url.search);
   if (!saved) return null;
-  const [shell, game] = await Promise.all([saved.shell, saved.game].map((key) => caches.match(key, { cacheName: SAVED_CACHE })));
-  return shell && game ? shell : null;
+  const [shell, game, index] = await Promise.all([saved.shell, saved.game, SAVED_INDEX_KEY].map((key) => caches.match(key, { cacheName: SAVED_CACHE })));
+  if (!shell || !game || !index) return null;
+  const list = await index.json().catch(() => null);
+  const listed = Array.isArray(list) && list.some((e) => e && e.userId === saved.userId && e.publicId === saved.publicId);
+  return listed ? shell : null;
 }
 
 /**
@@ -104,6 +109,8 @@ async function keepGameShells() {
   const langs = Object.keys(GAME_PAGES);
   const answers = await Promise.all(langs.map((lang) => fetch(new Request(new URL(GAME_PAGES[lang], SCOPE.origin), { cache: "reload", credentials: "omit" }))));
   if (!answers.every((r) => r.status === 200 && r.type === "basic" && !r.redirected)) return;
+  // Signed out while the pages were coming: the cache is gone, and it stays gone.
+  if (!(await caches.has(SAVED_CACHE))) return;
   const cache = await caches.open(SAVED_CACHE);
   for (const [i, lang] of langs.entries()) await cache.put(savedShellKey(lang), answers[i]);
 }

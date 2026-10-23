@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {
   type Device,
   eraseSaved,
+  forgetOthers,
   FLAG_KEY,
   forget,
   isOn,
@@ -33,6 +34,7 @@ function device(): Device & { stores: Map<string, Map<string, Response>>; flags:
       removeItem: (key: string) => void flags.delete(key),
     }) as never,
     caches: {
+      has: async (name: string) => stores.has(name),
       delete: async (name: string) => stores.delete(name),
       open: async (name: string) => {
         const store = stores.get(name) ?? new Map<string, Response>();
@@ -141,3 +143,67 @@ test("a game's file is only read if the index lists it", async () => {
   await cache.put(savedGameKey(id(1)), new Response("orphan"));
   assert.equal(await readSaved(d, USER, id(1)), null);
 });
+
+test("reading saved games never makes the cache for a player who saved nothing", async () => {
+  const d = device();
+  assert.deepEqual(await listSaved(d), []);
+  assert.equal(await readSaved(d, USER, id(1)), null);
+  assert.equal(d.stores.has(SAVED_CACHE), false);
+});
+
+test("a session for another player removes the saved games and turns saving off; the same player's session keeps them", async () => {
+  const d = device();
+  await turnOn(d);
+  await saveGame(d, game(1), file(1));
+  await forgetOthers(d, USER);
+  assert.equal((await listSaved(d)).length, 1);
+  assert.equal(isOn(d), true);
+  await forgetOthers(d, "22222222-2222-4222-8222-222222222222");
+  assert.deepEqual(await listSaved(d), []);
+  assert.equal(isOn(d), false);
+  assert.equal(d.stores.has(SAVED_CACHE), false);
+});
+
+test("turning off still turns the choice off when the browser refuses to delete the games", async () => {
+  const d = device();
+  await turnOn(d);
+  d.caches.delete = async () => {
+    throw new Error("blocked");
+  };
+  await assert.rejects(turnOff(d));
+  assert.equal(isOn(d), false);
+});
+
+test("saves take turns when the browser has locks, and the list is written before a file is deleted", async () => {
+  const d = device();
+  const events: string[] = [];
+  let busy = false;
+  let tail: Promise<unknown> = Promise.resolve();
+  d.lock = (step) => {
+    const run = tail.then(async () => {
+      assert.equal(busy, false, "no two saves inside the lock at once");
+      busy = true;
+      try {
+        return await step();
+      } finally {
+        busy = false;
+        events.push("unlocked");
+      }
+    });
+    tail = run.catch(() => {});
+    return run as never;
+  };
+  await Promise.all([1, 2].map((n) => saveGame(d, game(n), file(n))));
+  assert.deepEqual((await listSaved(d)).map((g) => g.publicId).toSorted(), [id(1), id(2)]);
+  // Past the limit: the index put comes before the delete of the oldest file.
+  const cache = await d.caches.open(SAVED_CACHE);
+  const order: string[] = [];
+  const put = cache.put.bind(cache);
+  const del = cache.delete.bind(cache);
+  const spy = { ...d, caches: { ...d.caches, open: async () => ({ ...cache, match: cache.match, put: async (k: string, r: Response) => (order.push("put " + k), put(k, r)), delete: async (k: string) => (order.push("delete " + k), del(k)) }) } };
+  for (let n = 3; n <= SAVED_LIMIT + 1; n++) await saveGame(d, game(n), file(n));
+  order.length = 0;
+  await saveGame(spy, game(SAVED_LIMIT + 2), file(SAVED_LIMIT + 2));
+  assert.ok(order.indexOf("put " + SAVED_INDEX_KEY) < order.findIndex((e) => e.startsWith("delete ")), order.join(", "));
+});
+

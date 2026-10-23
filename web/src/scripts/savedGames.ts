@@ -27,6 +27,8 @@ async function change(device: Device, action: () => Promise<void>): Promise<void
     await showCount(device);
   } catch {
     say(count, t("saved.error"), "error");
+    // Saving cannot work in this browser: the choice does not stay on with nothing being saved.
+    if (toggle.checked) await turnOff(device).catch(() => {});
   }
   toggle.checked = isOn(device);
 }

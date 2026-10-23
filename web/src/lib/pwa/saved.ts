@@ -33,15 +33,18 @@ interface CacheLike {
 
 /** The parts of the browser this needs, so the tests can stand in for them. */
 export interface Device {
-  caches: { open(name: string): Promise<CacheLike>; delete(name: string): Promise<boolean> };
+  caches: { open(name: string): Promise<CacheLike>; delete(name: string): Promise<boolean>; has(name: string): Promise<boolean> };
   flags: Pick<Storage, "getItem" | "setItem" | "removeItem">;
+  /** Runs a step with no other tab of this site in the same step (Web Locks); absent where the browser has none. */
+  lock?: <T>(step: () => Promise<T>) => Promise<T>;
 }
 
 /** This browser's cache storage and local storage, or null where either is missing (an insecure page, a locked-down browser). */
 export function browserDevice(): Device | null {
   try {
     if (typeof caches === "undefined" || typeof localStorage === "undefined") return null;
-    return { caches, flags: localStorage };
+    const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
+    return { caches, flags: localStorage, lock: locks ? (step) => locks.request("tl-saved-games", step) : undefined };
   } catch {
     return null;
   }
@@ -65,10 +68,13 @@ export async function turnOn(device: Device): Promise<void> {
   device.flags.setItem(FLAG_KEY, "1");
 }
 
-/** Off: the choice and every saved game go. */
+/** Off: the choice and every saved game go. The games first: if the browser refuses one step, the other still happens. */
 export async function turnOff(device: Device): Promise<void> {
-  device.flags.removeItem(FLAG_KEY);
-  await eraseSaved(device);
+  try {
+    await eraseSaved(device);
+  } finally {
+    device.flags.removeItem(FLAG_KEY);
+  }
 }
 
 /** Sign-out: the same as turning off, so the next person to sign in on this browser starts with nothing saved and saving off. */
@@ -98,13 +104,15 @@ async function readIndex(cache: CacheLike): Promise<SavedGame[]> {
   }
 }
 
-/** The saved games, newest first (opening the cache makes an empty one if there was none). */
+/** The saved games, newest first. Reading never makes the cache: nobody who did not turn saving on gets one. */
 export async function listSaved(device: Device): Promise<SavedGame[]> {
+  if (!(await device.caches.has(SAVED_CACHE))) return [];
   return readIndex(await device.caches.open(SAVED_CACHE));
 }
 
 /** The stored report file of one of your saved games, or null. */
 export async function readSaved(device: Device, userId: string, publicId: string): Promise<Blob | null> {
+  if (!(await device.caches.has(SAVED_CACHE))) return null;
   const cache = await device.caches.open(SAVED_CACHE);
   if (!(await readIndex(cache)).some((e) => e.userId === userId && e.publicId === publicId)) return null;
   const answer = await cache.match(savedGameKey(publicId));
@@ -112,17 +120,31 @@ export async function readSaved(device: Device, userId: string, publicId: string
 }
 
 /**
+ * A signed-in player who is not the one whose games are saved here: everything
+ * saved goes and the choice is off. Called when a session starts (a sign-in
+ * without a sign-out in between, such as a session that ended in another
+ * browser), never offline, where there is no session to compare.
+ */
+export async function forgetOthers(device: Device, userId: string): Promise<void> {
+  if ((await listSaved(device)).some((e) => e.userId !== userId)) await turnOff(device);
+}
+
+/**
  * Saves one game: its report file and its place at the top of the list.
  * Past SAVED_LIMIT the oldest saves are deleted. Saving the same game
- * again only moves it to the top.
+ * again only moves it to the top. Two tabs saving at once take turns (the list
+ * is read, changed and written back as one step), and the list is written
+ * before any file is deleted, so it never names a file that is gone.
  */
 export async function saveGame(device: Device, game: SavedGame, file: Blob): Promise<void> {
-  const cache = await device.caches.open(SAVED_CACHE);
-  await cache.put(savedGameKey(game.publicId), new Response(file, { headers: { "Content-Type": "application/octet-stream" } }));
-  const all = [game, ...(await readIndex(cache)).filter((e) => e.publicId !== game.publicId)];
-  const kept = all.slice(0, SAVED_LIMIT);
-  for (const dropped of all.slice(SAVED_LIMIT)) await cache.delete(savedGameKey(dropped.publicId));
-  await cache.put(SAVED_INDEX_KEY, new Response(JSON.stringify(kept), { headers: { "Content-Type": "application/json" } }));
+  const step = async () => {
+    const cache = await device.caches.open(SAVED_CACHE);
+    await cache.put(savedGameKey(game.publicId), new Response(file, { headers: { "Content-Type": "application/octet-stream" } }));
+    const all = [game, ...(await readIndex(cache)).filter((e) => e.publicId !== game.publicId)];
+    await cache.put(SAVED_INDEX_KEY, new Response(JSON.stringify(all.slice(0, SAVED_LIMIT)), { headers: { "Content-Type": "application/json" } }));
+    for (const dropped of all.slice(SAVED_LIMIT)) await cache.delete(savedGameKey(dropped.publicId));
+  };
+  await (device.lock ? device.lock(step) : step());
 }
 
 /**

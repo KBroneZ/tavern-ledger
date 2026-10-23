@@ -94,8 +94,10 @@ export const offlinePage = (pathname) => (pathname === "/es" || pathname.startsW
 // Saved games (T-637, second part). A player who turns on "Keep my last games
 // on this device" has the game page store, in a cache of its own, the report
 // file of each of their own games they open and a copy of the game page
-// (a static shell, the same for everyone). The worker never writes there; it
-// only reads it, to open a saved game's address when there is no connection.
+// (a static shell, the same for everyone). The page writes the files and the
+// list; the worker only reads them, to open a saved game's address when there is
+// no connection, and writes one thing itself, the game page shells, when a page
+// asks it to (sw-main.js keepGameShells), because the page may not fetch its own site.
 
 /** The cache of saved games. Its name does not start with CACHE_PREFIX, so a new build never deletes it. */
 export const SAVED_CACHE = "tl-replays";
@@ -117,12 +119,12 @@ export const GAME_PAGES = { en: "/game/", es: "/es/game/" };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /**
- * The cache keys a game page's address needs to open offline (the page shell
- * and the game's file), or null when the address is not a game page with a
- * valid player and game id.
+ * What a game page's address needs to open offline: the cache keys of the page
+ * shell and of the game's file, and the player and game it names; or null when
+ * the address is not a game page with a valid player and game id.
  * @param {string} pathname
  * @param {string} search
- * @returns {{ shell: string, game: string } | null}
+ * @returns {{ shell: string, game: string, userId: string, publicId: string } | null}
  */
 export function savedGame(pathname, search) {
   const lang = Object.keys(GAME_PAGES).find((l) => bare(GAME_PAGES[l]) === bare(pathname));
@@ -131,5 +133,5 @@ export function savedGame(pathname, search) {
   const userId = (query.get("u") ?? "").toLowerCase();
   const publicId = (query.get("id") ?? "").toLowerCase();
   if (!UUID.test(userId) || !UUID.test(publicId)) return null;
-  return { shell: savedShellKey(/** @type {"en" | "es"} */ (lang)), game: savedGameKey(publicId) };
+  return { shell: savedShellKey(/** @type {"en" | "es"} */ (lang)), game: savedGameKey(publicId), userId, publicId };
 }
