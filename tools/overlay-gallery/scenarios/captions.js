@@ -419,13 +419,13 @@ const CAPTIONS = {
   "tribes-game": {
     en: {
       title: "Tribes from the game",
-      sees: "The five tribes of this lobby as short chips, exactly as the game holds them.",
+      sees: "The five tribes of this lobby as short chips at the top of the opponents panel, above a thin line, exactly as the game holds them.",
       source: "Read from the running game (read-only), and only if you leave that option on. Nothing is uploaded.",
       rule: "These are the tribes the game shows you at the start of the match.",
     },
     es: {
       title: "Tribus leídas del juego",
-      sees: "Las cinco tribus de esta partida como etiquetas cortas, tal como las tiene el juego.",
+      sees: "Las cinco tribus de esta partida como etiquetas cortas arriba del panel de rivales, sobre una línea fina, tal como las tiene el juego.",
       source: "Se leen del juego en marcha (solo lectura), y solo si dejas esa opción activada. No se sube nada.",
       rule: "Son las tribus que el juego te muestra al empezar la partida.",
     },
@@ -433,13 +433,13 @@ const CAPTIONS = {
   "tribes-off": {
     en: {
       title: "Tribes with the game read off",
-      sees: "No tribes, only one short line saying the game read is off.",
+      sees: "No tribes: the opponents panel starts with one short line saying the game read is off.",
       source: "Nothing: the app does not look at the game while that option is off.",
       rule: "The overlay never guesses the tribes. Without the game's own data the panel stays empty and says why.",
     },
     es: {
       title: "Tribus con la lectura del juego desactivada",
-      sees: "Ninguna tribu, solo una línea corta que dice que la lectura del juego está desactivada.",
+      sees: "Ninguna tribu: el panel de rivales empieza con una línea corta que dice que la lectura del juego está desactivada.",
       source: "Nada: la app no mira el juego mientras esa opción esté desactivada.",
       rule: "La superposición nunca adivina las tribus. Sin los datos del propio juego el panel queda vacío y dice por qué.",
     },
@@ -447,13 +447,13 @@ const CAPTIONS = {
   "tribes-unsupported": {
     en: {
       title: "Tribes on a game version not supported yet",
-      sees: "No tribes, and one short line saying this game version is not supported yet.",
+      sees: "No tribes: the opponents panel starts with one short line saying this game version is not supported yet.",
       source: "After a game update the app has to be checked against the new version before it reads anything from it.",
       rule: "A wrong tribe would be worse than none, so the panel stays empty until the version is checked.",
     },
     es: {
       title: "Tribus en una versión del juego aún no compatible",
-      sees: "Ninguna tribu, y una línea corta que dice que esta versión del juego aún no es compatible.",
+      sees: "Ninguna tribu: el panel de rivales empieza con una línea corta que dice que esta versión del juego aún no es compatible.",
       source: "Tras una actualización del juego hay que comprobar la app con la versión nueva antes de que lea nada de ella.",
       rule: "Una tribu equivocada sería peor que ninguna, así que el panel queda vacío hasta que se comprueba la versión.",
     },
@@ -461,13 +461,13 @@ const CAPTIONS = {
   "tribes-no-lobby": {
     en: {
       title: "Tribes in a game the client reopened",
-      sees: "No tribes, and one short line saying no lobby was seen for this game.",
+      sees: "No tribes: the opponents panel starts with one short line saying no lobby was seen for this game.",
       source: "When the game restarts inside a game, the app never saw the lobby that holds the tribes, so it does not read them.",
       rule: "A tribe the app did not see being dealt would be a guess, so the panel stays empty and says why.",
     },
     es: {
       title: "Tribus en una partida que el cliente reabrió",
-      sees: "Ninguna tribu, y una línea corta que dice que no se vio el lobby de esta partida.",
+      sees: "Ninguna tribu: el panel de rivales empieza con una línea corta que dice que no se vio el lobby de esta partida.",
       source: "Cuando el juego se reinicia dentro de una partida, la app nunca vio el lobby que guarda las tribus, así que no las lee.",
       rule: "Una tribu que la app no vio repartir sería una suposición, así que el panel queda vacío y dice por qué.",
     },
@@ -531,15 +531,57 @@ const CAPTIONS = {
   counters: {
     en: {
       title: "Counters",
-      sees: "A small box of running totals for your own game: for example Blood Gem size, extra Tavern spell power, Tavern minion bonuses and free rolls. A line shows only while its number is above zero.",
+      sees: "A small box of running totals for your own game, under the opponents list: for example Blood Gem size, extra Tavern spell power, Tavern minion bonuses and free rolls. A line shows only while its number is above zero, and the box only while it has a line, so the opponents list never moves.",
       source: LOG.en,
       rule: "Only your own totals, built from things that happened on your own screen. They are a memory aid: nothing about opponents, your teammate or anything the game did not show you.",
     },
     es: {
       title: "Contadores",
-      sees: "Una cajita de totales acumulados de tu propia partida: por ejemplo el tamaño de las Gemas de sangre, el poder extra de los hechizos de taberna, las mejoras de los esbirros de taberna y las tiradas gratis. Una línea solo aparece mientras su número es mayor que cero.",
+      sees: "Una cajita de totales acumulados de tu propia partida, debajo de la lista de rivales: por ejemplo el tamaño de las Gemas de sangre, el poder extra de los hechizos de taberna, las mejoras de los esbirros de taberna y los refrescares gratis. Una línea solo aparece mientras su número es mayor que cero, y la caja solo mientras tiene alguna línea, así que la lista de rivales no se mueve nunca.",
       source: LOG.es,
       rule: "Solo tus propios totales, hechos con cosas que pasaron en tu propia pantalla. Son una ayuda de memoria: nada de rivales, de tu compañero ni de lo que el juego no te enseñó.",
+    },
+  },
+  "legend-open": {
+    en: {
+      title: "The legend, from the layout editor",
+      sees: "While you arrange the overlay, a \"?\" next to the editor's title shows what the marks mean and where card names and pictures come from. A second click or Esc hides it again; it is never shown during a game.",
+      source: "Fixed text in the app; nothing is read.",
+      rule: "It explains the overlay itself and shows nothing about the game.",
+    },
+    es: {
+      title: "La leyenda, desde el editor del diseño",
+      sees: "Mientras colocas el overlay, un «?» junto al título del editor muestra qué significan las marcas y de dónde salen los nombres e imágenes de las cartas. Otro clic o Esc la vuelve a ocultar; nunca aparece durante la partida.",
+      source: "Texto fijo de la app; no se lee nada.",
+      rule: "Explica el propio overlay y no muestra nada de la partida.",
+    },
+  },
+  "hide-all": {
+    en: {
+      title: "Hide everything with one key",
+      sees: "Ctrl+Shift+H hides everything the overlay draws; a short note says which key brings it back and goes after about 3 seconds. The same key, or \"Hide overlay\" in the tray menu, shows it again as it was; the next game starts shown. This frame hides and shows it over and over.",
+      source: "Your own key press, taken by the app only while Hearthstone runs. Every start begins with the overlay shown.",
+      rule: "Nothing is sent to the game and nothing is read from it: while Hearthstone runs, only that one key combination goes to the app instead.",
+    },
+    es: {
+      title: "Ocultarlo todo con una tecla",
+      sees: "Ctrl+Mayús+H oculta todo lo que dibuja el overlay; una nota breve dice qué tecla lo vuelve a mostrar y se va a los 3 segundos más o menos. La misma tecla, o «Ocultar overlay» en el menú de la bandeja, lo vuelve a mostrar como estaba; la siguiente partida empieza con él a la vista. Este cuadro lo oculta y lo muestra una y otra vez.",
+      source: "Tu propia pulsación, que la app toma solo mientras Hearthstone está abierto. Cada inicio empieza con el overlay a la vista.",
+      rule: "No se envía nada al juego ni se lee nada de él: mientras Hearthstone está abierto, solo esa combinación de teclas va a la app.",
+    },
+  },
+  preview: {
+    en: {
+      title: "Preview from the tray",
+      sees: "\"Preview overlay with example data\" in the tray menu shows the overlay over your desktop with made-up numbers, so you can see it without a game. Clicks go through it. It closes from the same item, and by itself when Hearthstone starts, a game begins or the game's window comes to the front.",
+      source: "Example data built into the app; nothing is read.",
+      rule: "It never sits over the game and shows nothing from it.",
+    },
+    es: {
+      title: "Vista previa desde la bandeja",
+      sees: "«Vista previa del overlay con datos de ejemplo» en el menú de la bandeja muestra el overlay sobre tu escritorio con números inventados, para verlo sin partida. Los clics pasan a través. Se cierra desde la misma opción, y sola cuando se abre Hearthstone, empieza una partida o la ventana del juego pasa al frente.",
+      source: "Datos de ejemplo incluidos en la app; no se lee nada.",
+      rule: "Nunca queda encima del juego y no muestra nada de él.",
     },
   },
 };

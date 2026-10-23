@@ -91,14 +91,14 @@ const TODAY = {
   layout: null,
   caption: {
     en: {
-      title: "Today, for comparison",
-      change: "The overlay as it ships now: the tribes in a box of their own and no counters.",
-      why: "The starting point every variant is measured against.",
+      title: "The overlay as it ships now",
+      change: "Variant B, chosen in this round: the opponents list with the tribes as its header, the counters under it.",
+      why: "What the round led to, next to the variants it was chosen from.",
     },
     es: {
-      title: "Hoy, para comparar",
-      change: "La superposición tal como sale ahora: las tribus en su propia caja y sin contadores.",
-      why: "El punto de partida con el que se compara cada variante.",
+      title: "La superposición tal como sale ahora",
+      change: "La variante B, elegida en esta ronda: la lista de rivales con las tribus como cabecera y los contadores debajo.",
+      why: "A lo que llevó la ronda, junto a las variantes entre las que se eligió.",
     },
   },
 };
@@ -110,12 +110,12 @@ const HIDE_ALL = {
     en: {
       title: "Hide-all key (every variant)",
       change: "One key hides everything the overlay draws, and the same key brings it back; a short note says which key.",
-      why: "A clean screen for a tense turn or a stream without opening the app. The key, Ctrl+Shift+H, is a proposal.",
+      why: "A clean screen for a tense turn or a stream without opening the app. The key is Ctrl+Shift+H.",
     },
     es: {
       title: "Tecla para ocultarlo todo (todas las variantes)",
       change: "Una tecla oculta todo lo que dibuja la superposición y la misma tecla lo vuelve a mostrar; una nota breve dice cuál es.",
-      why: "Pantalla limpia en un turno tenso o en un directo sin abrir la aplicación. La tecla, Ctrl+Mayús+H, es una propuesta.",
+      why: "Pantalla limpia en un turno tenso o en un directo sin abrir la aplicación. La tecla es Ctrl+Mayús+H.",
     },
   },
 };

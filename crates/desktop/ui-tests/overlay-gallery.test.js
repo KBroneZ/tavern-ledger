@@ -150,6 +150,13 @@ test("the copied theme colours have the app's names and values", () => {
 // The scenarios.
 const FORBIDDEN = [/\b[DT]-\d+\b/, /\bsession\b/i, /\bBACON_/, /\bBG\d+/, /\bTAG_/, /\bhub\b/i, /\bclaude\b/i];
 
+test("a frame that presses a button names one the overlay page has", () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "ui", "overlay.html"), "utf8");
+  const pressing = SCENARIOS.filter((s) => s.state.click);
+  assert.ok(pressing.length > 0);
+  for (const s of pressing) assert.match(html, new RegExp(`id="${s.state.click}"`), s.id);
+});
+
 test("scenario ids are unique and the list covers what the task asks for", () => {
   const ids = SCENARIOS.map((s) => s.id);
   assert.equal(new Set(ids).size, ids.length);

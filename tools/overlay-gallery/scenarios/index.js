@@ -169,6 +169,9 @@ const countersList = [
 // phones start with: { x, y, w, h } in game-window pixels.
 const STACK_SMALL = { x: 1700, y: 90, w: 220, h: 490 };
 const STACK_TALL = { x: 1530, y: 90, w: 390, h: 990 };
+// The counters sit under the opponents list.
+const STACK_COUNTERS = { x: 1700, y: 90, w: 220, h: 680 };
+const TOOLBAR_AREA = { x: 0, y: 0, w: 1100, h: 330 };
 const STACK_DUOS = { x: 1700, y: 90, w: 220, h: 280 };
 const STATUS_BOX = { x: 1500, y: 90, w: 420, h: 150 };
 const HOVER_CARD_AREA = { x: 480, y: 0, w: 960, h: 300 };
@@ -205,7 +208,10 @@ const FOCUS = {
   unreadable: STATUS_BOX,
   "game-over": STACK_SMALL,
   "high-contrast": STACK_SMALL,
-  counters: STACK_SMALL,
+  counters: STACK_COUNTERS,
+  "legend-open": TOOLBAR_AREA,
+  "hide-all": STACK_SMALL,
+  preview: STACK_COUNTERS,
   "odds-bar": ODDS_BAR_AREA,
   "odds-bar-no-ranges": ODDS_BAR_AREA,
   "leaderboard-marks": LEADERBOARD_AREA,
@@ -248,6 +254,9 @@ const DEFINITIONS = [
   ["game-over", gameOver, {}],
   ["high-contrast", soloWithOdds, { settings: { theme: "contrast" } }],
   ["counters", { ...soloWithOdds, counters: countersList }, {}],
+  ["legend-open", { ...soloWithOdds, counters: countersList }, { settings: { unlocked: true }, click: "legend-toggle" }],
+  ["hide-all", { ...soloWithOdds, counters: countersList }, { hideCycle: true }],
+  ["preview", null, { settings: { preview: true } }],
   ["odds-bar", soloWithOdds, {}],
   ["odds-bar-no-ranges", withOdds(solo, noRanges), {}],
   ["leaderboard-marks", soloWithOdds, {}],
@@ -277,8 +286,8 @@ const SCENARIOS = DEFINITIONS.map(([id, game, extra]) => ({
 }));
 
 // The counters panel is a slot of the overlay page (data-panel="counters");
-// its scenario is shown once the page has it switched on (the slot is not
-// `hidden`: the panel is off until the overlay rework).
+// its scenario is shown while the page has it switched on (the slot is not
+// `hidden`).
 const COUNTERS_SLOT = /<div class="slot"(?![^>]*\bhidden\b)[^>]*data-panel="counters"/;
 
 function scenariosFor(overlayHtml) {
