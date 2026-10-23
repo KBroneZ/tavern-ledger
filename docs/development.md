@@ -178,6 +178,14 @@ cargo test --workspace
 
 CI runs the tests (the desktop app's on Windows, the Edge Functions' with Deno, the database's with pgTAP on the local stack), rebuilds the website's engine and compares it with the committed one, checks relative Markdown links and that every workflow action is pinned by commit SHA, and scans the history for secrets.
 
+### Known advisories
+
+`.github/workflows/advisories.yml` runs in CI (part of `check`) and every day on `main`. It asks [osv.dev](https://osv.dev) about every package pinned in `Cargo.lock`, `package-lock.json`, `web/package-lock.json` and `requirements.txt`, through osv-scanner (a pinned release, checked against its SHA-256), and `tools/check_advisories.py` decides: an advisory with a fixed version, of medium severity or higher, or of unknown severity fails; a low one with no fix is listed and passes. A scanner or network error, or a lockfile it could not read or found empty, fails too. The Edge Functions have no lockfile because they import nothing from outside the repo; the check fails if one gets an `npm:`, `jsr:` or URL import or a Deno config, so that cannot slip by unscanned.
+
+An advisory that does not apply goes in `tools/advisory_ignores.toml` with its id, package, reason, evidence and a review date; the check fails once the date passes, or when no advisory matches the entry any more. For a crate, `absent_from` names the builds it must stay out of (a target, minus some workspace crates), and the check reads `cargo metadata` for each, so the ignore stops holding the day the crate gets into one of them. To run it locally, download osv-scanner and pass it: `python tools/check_advisories.py --scanner <path>`.
+
+Not covered: the toolchains themselves (Node.js in `web/.node-version`, Rust, Python, Deno), the GitHub Actions (Dependabot proposes their bumps) and the Supabase Docker images.
+
 ### Game build watch
 
 A daily workflow (`.github/workflows/game-build-watch.yml`, also runnable by hand from the Actions tab) asks HearthstoneJSON, with one request, which game build it has card data for. If that build is newer than the newest one in `TESTED_BUILDS` (`crates/bg-parser/src/lib.rs`), it reads the card data of both builds and opens one issue, `New game build <N>`: the Battlegrounds cards added, changed and removed, the minions the simulator does not know and the ones it plays that changed, and a checklist (parser fixture and `TESTED_BUILDS`, simulator review, memory reader, card data). An issue with that title, open or closed, is never opened twice. The workflow can only read the repository and open issues. It does not read Blizzard's site; the issue links the official news page.
