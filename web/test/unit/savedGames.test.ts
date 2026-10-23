@@ -229,4 +229,3 @@ test("nothing is saved when saving is off for this player at the moment of the s
   await assert.rejects(saveGame(full, game(1), file(1)), /quota/);
   assert.deepEqual([...d.stores.get(SAVED_CACHE)!.keys()], []);
 });
-
