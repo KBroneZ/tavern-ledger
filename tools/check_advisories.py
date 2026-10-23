@@ -82,12 +82,13 @@ REMOTE_IMPORT_RE = re.compile(r"""\b(?:from|import)\s*\(?\s*["'`](npm:|jsr:|http
 # comments. These are a tripwire for an honest new dependency, not a parser:
 # code built to hide one (eval, new Function) is for review to catch.
 DYNAMIC_IMPORT_RE = re.compile(r"""\b(?:import|require)\s*\((?!\s*(["'])\.{1,2}/[^"'`\n]*\1\s*[,)])""")
-# The specifier of an import or export statement (one that starts a line, so a
-# "from" in prose or a comment is not one), and of import() and require().
+# The specifier of an import or export statement (one that starts a line or
+# follows a ";" or "}", so a "from" in prose or a comment is not one), and of
+# import() and require().
 # Each must be a relative path inside the functions folder (a JSON file may be
 # outside: data imports nothing) or a node: built-in; a bare name could resolve
 # through a package.json, so it fails like npm:.
-STATEMENT_SPECIFIER_RE = re.compile(r"""^[ \t]*(?:import|export)\b(?:[^;]*?\bfrom)?\s*(["'`])([^"'`\n]*)\1""", re.M)
+STATEMENT_SPECIFIER_RE = re.compile(r"""(?:^|[;}])[ \t]*(?:import|export)\b(?:[^;]*?\bfrom)?\s*(["'`])([^"'`\n]*)\1""", re.M)
 CALL_SPECIFIER_RE = re.compile(r"""\b(?:import|require)\s*\(\s*(["'`])([^"'`\n]*)\1""")
 NAME_SEPARATORS_RE = re.compile(r"[-_.]+")
 # A package specifier has no other use in this code, so one anywhere counts.
@@ -300,19 +301,26 @@ def _without_comments(text: str) -> str:
     return COMMENT_RE.sub(lambda m: "\n" * m.group(0).count("\n") or " ", text)
 
 
-def _import_maps(config: Path) -> list[str]:
-    """An `import_map` on any function in supabase/config.toml."""
+def _function_configs(config: Path, folder: Path) -> list[str]:
+    """An `import_map`, or an `entrypoint` outside the folder, on any function in supabase/config.toml."""
     if not config.is_file():
         return []
     try:
         functions = tomllib.loads(config.read_text(encoding="utf-8")).get("functions") or {}
     except tomllib.TOMLDecodeError as error:
         return [f"{config.name}: unreadable ({error})"]
-    return [
-        f"{config.name}: function {name} has an import_map"
-        for name, settings in functions.items()
-        if isinstance(settings, dict) and "import_map" in settings
-    ]
+    problems = []
+    for name, settings in functions.items():
+        if not isinstance(settings, dict):
+            continue
+        if "import_map" in settings:
+            problems.append(f"{config.name}: function {name} has an import_map")
+        entrypoint = settings.get("entrypoint")
+        if entrypoint is not None and not (
+            isinstance(entrypoint, str) and (config.parent / entrypoint).resolve().is_relative_to(folder.resolve())
+        ):
+            problems.append(f"{config.name}: function {name} has an entrypoint outside the functions folder")
+    return problems
 
 
 def _specifier_problem(path: Path, folder: Path, specifier: str) -> str | None:
@@ -348,7 +356,7 @@ def check_functions(folder: Path = FUNCTIONS, config: Path = SUPABASE_CONFIG) ->
         return [f"{folder}: not found"]
     configs = sorted(path for name in DEPENDENCY_CONFIGS for path in folder.rglob(name))
     problems = [f"{path.relative_to(folder).as_posix()}: dependency config or lockfile" for path in configs]
-    problems += _import_maps(config)
+    problems += _function_configs(config, folder)
     for path in sorted(p for p in folder.rglob("*") if p.suffix.lower() in SOURCE_SUFFIXES):
         problems += _file_problems(path, folder)
     if problems:

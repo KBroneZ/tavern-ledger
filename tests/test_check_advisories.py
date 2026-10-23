@@ -217,6 +217,10 @@ class ReachableTest(unittest.TestCase):
         self.assertIn("leaves no workspace crate", problem)
 
 
+# A config that does not exist: the repo's names entrypoints in the real folder.
+NO_CONFIG = Path("no-such-config.toml")
+
+
 class FunctionsTest(unittest.TestCase):
     def folder(self, files):
         tmp = tempfile.TemporaryDirectory()
@@ -229,7 +233,7 @@ class FunctionsTest(unittest.TestCase):
 
     def test_local_imports_only_is_fine(self):
         root = self.folder({"a/index.ts": 'import { h } from "./handler.ts";\nimport x from "../_shared/x.ts";\n'})
-        self.assertEqual(tool.check_functions(root), [])
+        self.assertEqual(tool.check_functions(root, NO_CONFIG), [])
 
     def test_npm_jsr_and_url_imports_fail(self):
         root = self.folder(
@@ -239,7 +243,7 @@ class FunctionsTest(unittest.TestCase):
                 "c/index.ts": 'const m = await import("https://deno.land/x/m.ts");\n',
             }
         )
-        problems = tool.check_functions(root)
+        problems = tool.check_functions(root, NO_CONFIG)
         self.assertEqual(len([p for p in problems if "third-party import" in p]), 3)
 
     def test_an_import_split_across_lines_fails(self):
@@ -249,14 +253,14 @@ class FunctionsTest(unittest.TestCase):
                 "b/index.ts": "import {\n  x,\n} from\n  'jsr:@std/x';\n",
             }
         )
-        problems = [p for p in tool.check_functions(root) if "third-party import" in p]
+        problems = [p for p in tool.check_functions(root, NO_CONFIG) if "third-party import" in p]
         # a: the dynamic import (line 1) and its specifier (line 2) both count.
         expected = ["a/index.ts:1", "a/index.ts:2", "b/index.ts:4"]
         self.assertEqual(problems, [f"{where}: third-party import" for where in expected])
 
     def test_a_url_that_is_not_an_import_is_fine(self):
         root = self.folder({"a/index.ts": 'const note = "see https://example.test";\nfetch("https://example.test");\n'})
-        self.assertEqual(tool.check_functions(root), [])
+        self.assertEqual(tool.check_functions(root, NO_CONFIG), [])
 
     def test_other_source_suffixes_are_read(self):
         root = self.folder({
@@ -266,12 +270,12 @@ class FunctionsTest(unittest.TestCase):
             "a/w.cts": 'import d from "npm:d";\n',
             "a/v.TS": 'import e from "npm:e";\n',
         })
-        self.assertEqual(len([p for p in tool.check_functions(root) if "third-party import" in p]), 5)
+        self.assertEqual(len([p for p in tool.check_functions(root, NO_CONFIG) if "third-party import" in p]), 5)
 
     def test_an_upper_case_scheme_and_odd_bytes_are_still_read(self):
         root = self.folder({"a/index.ts": 'import x from "HTTPS://deno.land/x.ts";\n'})
         (root / "a" / "b.ts").write_bytes(b'// \xff\nimport y from "npm:y";\n')
-        problems = [p for p in tool.check_functions(root) if "third-party import" in p]
+        problems = [p for p in tool.check_functions(root, NO_CONFIG) if "third-party import" in p]
         self.assertEqual(problems, ["a/b.ts:2: third-party import", "a/index.ts:1: third-party import"])
 
     def test_an_import_map_in_the_supabase_config_fails(self):
@@ -284,8 +288,41 @@ class FunctionsTest(unittest.TestCase):
         problems = tool.check_functions(root / "a", root / "config.toml")
         self.assertIn("config.toml: function b has an import_map", problems)
 
-    def test_the_repo_config_has_no_import_map(self):
-        self.assertEqual(tool._import_maps(tool.SUPABASE_CONFIG), [])
+    def test_an_entrypoint_outside_the_functions_folder_fails(self):
+        root = self.folder(
+            {
+                "functions/a/index.ts": "",
+                "config.toml": (
+                    '[functions.a]\nentrypoint = "./functions/a/index.ts"\n'
+                    '[functions.b]\nentrypoint = "./handlers/b.ts"\n'
+                    "[functions.c]\nentrypoint = 3\n"
+                ),
+            }
+        )
+        problems = tool.check_functions(root / "functions", root / "config.toml")
+        self.assertEqual(
+            problems[:-1],
+            [
+                "config.toml: function b has an entrypoint outside the functions folder",
+                "config.toml: function c has an entrypoint outside the functions folder",
+            ],
+        )
+
+    def test_a_statement_after_another_on_the_same_line_is_read(self):
+        root = self.folder(
+            {
+                "functions/a/index.ts": 'import "./local.ts"; export { x } from "../../shared.ts";\n',
+                "functions/b/index.ts": 'function f() {} export * from "zod";\n',
+            }
+        )
+        problems = tool.check_functions(root / "functions", NO_CONFIG)
+        self.assertEqual(
+            problems[:-1],
+            ["a/index.ts:1: import from outside the functions folder", "b/index.ts:1: third-party import"],
+        )
+
+    def test_the_repo_config_has_no_import_map_or_outside_entrypoint(self):
+        self.assertEqual(tool._function_configs(tool.SUPABASE_CONFIG, tool.FUNCTIONS), [])
 
     def test_a_comment_inside_an_import_does_not_hide_it(self):
         root = self.folder(
@@ -294,12 +331,12 @@ class FunctionsTest(unittest.TestCase):
                 "b/index.ts": 'import x from // why\n  "https://deno.land/x.ts";\n',
             }
         )
-        problems = [p for p in tool.check_functions(root) if "third-party import" in p]
+        problems = [p for p in tool.check_functions(root, NO_CONFIG) if "third-party import" in p]
         self.assertEqual(problems, ["a/index.ts:1: third-party import", "b/index.ts:2: third-party import"])
 
     def test_a_comment_marker_in_a_string_does_not_hide_an_import(self):
         root = self.folder({"a/index.ts": 'const g = "x/*";\nimport y from "https://evil.test/y.ts";\n// */\n'})
-        self.assertIn("a/index.ts:2: third-party import", tool.check_functions(root))
+        self.assertIn("a/index.ts:2: third-party import", tool.check_functions(root, NO_CONFIG))
 
     def test_a_computed_dynamic_import_fails(self):
         root = self.folder(
@@ -312,7 +349,7 @@ class FunctionsTest(unittest.TestCase):
                 "f/index.ts": "await import /* reason */ (url);\n",
             }
         )
-        problems = [p for p in tool.check_functions(root) if "third-party import" in p]
+        problems = [p for p in tool.check_functions(root, NO_CONFIG) if "third-party import" in p]
         expected = ["a/index.ts:2", "b/index.ts:1", "d/index.ts:1", "d/index.ts:2", "e/index.ts:1", "f/index.ts:1"]
         self.assertEqual(problems, [f"{where}: third-party import" for where in expected])
 
@@ -324,15 +361,15 @@ class FunctionsTest(unittest.TestCase):
 
     def test_a_package_specifier_anywhere_fails(self):
         root = self.folder({"a/index.ts": 'const name = "npm:zod@3";\nawait import(name);\n'})
-        self.assertIn("a/index.ts:1: third-party import", tool.check_functions(root))
+        self.assertIn("a/index.ts:1: third-party import", tool.check_functions(root, NO_CONFIG))
 
     def test_a_deno_lockfile_fails(self):
         root = self.folder({"deno.lock": "{}", "a/index.ts": ""})
-        self.assertIn("deno.lock: dependency config or lockfile", tool.check_functions(root))
+        self.assertIn("deno.lock: dependency config or lockfile", tool.check_functions(root, NO_CONFIG))
 
     def test_a_package_json_fails(self):
         root = self.folder({"a/package.json": "{}", "a/index.ts": ""})
-        self.assertIn("a/package.json: dependency config or lockfile", tool.check_functions(root))
+        self.assertIn("a/package.json: dependency config or lockfile", tool.check_functions(root, NO_CONFIG))
 
     def test_a_bare_or_unknown_specifier_fails(self):
         root = self.folder(
@@ -344,7 +381,7 @@ class FunctionsTest(unittest.TestCase):
                 "e/index.ts": 'import {\n  "x-y" as y,\n} from "zod";\n',
             }
         )
-        problems = [p for p in tool.check_functions(root) if "third-party import" in p]
+        problems = [p for p in tool.check_functions(root, NO_CONFIG) if "third-party import" in p]
         expected = ["a/index.ts:1", "b/index.ts:1", "c/index.ts:1", "d/index.cjs:1", "e/index.ts:3"]
         self.assertEqual(problems, [f"{where}: third-party import" for where in expected])
 
@@ -356,7 +393,7 @@ class FunctionsTest(unittest.TestCase):
                 "c/index.ts": 'const r = Array.from("abc");\nconst n = "data from server";\n',
             }
         )
-        self.assertEqual(tool.check_functions(root), [])
+        self.assertEqual(tool.check_functions(root, NO_CONFIG), [])
 
     def test_a_relative_import_leaving_the_folder_fails_unless_json(self):
         root = self.folder(
@@ -370,7 +407,7 @@ class FunctionsTest(unittest.TestCase):
                 "shared.ts": 'import z from "npm:zod";\n',
             }
         )
-        problems = tool.check_functions(root / "functions")
+        problems = tool.check_functions(root / "functions", NO_CONFIG)
         outside = "import from outside the functions folder"
         self.assertEqual(problems[:-1], [f"a/index.ts:1: {outside}", f"a/index.ts:3: {outside}"])
 
