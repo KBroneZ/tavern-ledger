@@ -56,9 +56,9 @@ function securityHeaders() {
           "  Referrer-Policy: no-referrer",
           "  Cross-Origin-Opener-Policy: same-origin",
           "  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()",
-          // One day while the site is new; raised to a year once it has run
-          // cleanly (design notes).
-          "  Strict-Transport-Security: max-age=86400; includeSubDomains",
+          // One year: the site ran cleanly on one day first (design notes).
+          // No preload: that is a separate, hard-to-undo step.
+          "  Strict-Transport-Security: max-age=31536000; includeSubDomains",
           "",
           // File names under /_astro/ carry a content hash, so they never change.
           "/_astro/*",
