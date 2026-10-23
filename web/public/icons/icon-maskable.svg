@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Tavern Ledger">
+  <!-- Tavern Ledger mark for the web app's maskable icon (T-637): the favicon's glyph (public/favicon.svg, T-522, D-094) on a full-bleed square, scaled to sit inside the 80% safe circle so any mask the phone applies leaves it whole. -->
+  <rect width="32" height="32" fill="#ffb24a"/>
+  <path transform="translate(16 15.2) scale(0.64) translate(-16 -15)" fill="#120d0b" d="M2 2H18V6H12V22H8V6H2ZM4 8H6V24H24V28H2V24H4ZM14 8H16V18H22V22H14ZM20 2H22V16H20ZM24 6H28Q30 6 30 8V16Q30 18 28 18H24V16H28V8H24Z"/>
+</svg>

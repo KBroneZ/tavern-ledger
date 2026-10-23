@@ -188,8 +188,25 @@ html[data-auth="out"] .site-nav a.nav-account {
   color: var(--dim);
 }
 
-.colophon a:hover {
+.colophon a:hover,
+.colophon .install-button:hover {
   color: var(--gold);
+}
+
+/* "Add to home screen" (public/pwa.js shows it): a quiet footer line, not a banner. */
+.colophon .install-button {
+  padding: 0;
+  font: inherit;
+  color: var(--dim);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.colophon .install[hidden],
+.colophon .install [hidden] {
+  display: none;
 }
 
 /* ---------- Small or short screens ---------- */
@@ -274,6 +291,7 @@ html[data-auth="out"] .site-nav a.nav-account {
     min-height: 44px;
   }
 
+  .colophon .install-button,
   .colophon a {
     display: inline-flex;
     align-items: center;

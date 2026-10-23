@@ -6,6 +6,7 @@ import "../styles/buttons.css";
 import { contentSecurityPolicy, readConfig, turnstileSiteKey } from "../lib/config.ts";
 import { basePath, href, lang, LANGS, pathIn, type Lang } from "../lib/i18n.ts";
 import { st } from "../lib/site/strings.ts";
+import { manifestPath, THEME_COLOR } from "../lib/pwa/manifest.ts";
 import { hasMinionPages } from "../lib/minions/load.ts";
 import { mt } from "../lib/minions/strings.ts";
 import PageBackdrop, { type Scene } from "../components/PageBackdrop.astro";
@@ -69,6 +70,14 @@ const socialCard = new URL("/social-card.png", Astro.site).href;
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    {/* The installable web app (T-637): the manifest in the page's language, the bars' colour, and what iOS reads. */}
+    <link rel="manifest" href={manifestPath(pageLang)} />
+    <meta name="theme-color" content={THEME_COLOR} />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Tavern Ledger" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    {config && <script is:inline defer src="/pwa.js"></script>}
     <meta property="og:site_name" content="Tavern Ledger" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content={pageLang === "es" ? "es_ES" : "en_US"} />
@@ -153,6 +162,15 @@ const socialCard = new URL("/social-card.png", Astro.site).href;
       <p><a href={href("/privacy/")}>{st("layout.privacy")}</a></p>
       <p><a href={href("/terms/")}>{st("layout.terms")}</a></p>
       <p><a href={href("/accuracy/")}>{st("layout.accuracy")}</a></p>
+      {/* Shown by public/pwa.js only where the browser can install the site and it is not installed yet. */}
+      {
+        config && (
+          <p class="install" data-install hidden>
+            <button class="install-button" type="button" data-install-button hidden>{st("layout.install")}</button>
+            <span data-install-ios hidden>{st("layout.installIos")}</span>
+          </p>
+        )
+      }
       {hasMinionPages() && <p><a href={href("/minions/")}>{mt("layout.minions")}</a></p>}
     </footer>
   </body>
