@@ -81,14 +81,21 @@ REMOTE_IMPORT_RE = re.compile(r"""\b(?:from|import)\s*\(?\s*["'`](npm:|jsr:|http
 # none today. Like the rules above it is read on the file as it is and without
 # comments. These are a tripwire for an honest new dependency, not a parser:
 # code built to hide one (eval, new Function) is for review to catch.
-DYNAMIC_IMPORT_RE = re.compile(r"""\bimport\s*\((?!\s*(["'])\.{1,2}/[^"'`\n]*\1\s*[,)])""")
+DYNAMIC_IMPORT_RE = re.compile(r"""\b(?:import|require)\s*\((?!\s*(["'])\.{1,2}/[^"'`\n]*\1\s*[,)])""")
+# The specifier of an import or export statement (one that starts a line, so a
+# "from" in prose or a comment is not one), and of import() and require().
+# Each must be a relative path inside the functions folder (a JSON file may be
+# outside: data imports nothing) or a node: built-in; a bare name could resolve
+# through a package.json, so it fails like npm:.
+STATEMENT_SPECIFIER_RE = re.compile(r"""^[ \t]*(?:import|export)\b(?:[^;]*?\bfrom)?\s*(["'`])([^"'`\n]*)\1""", re.M)
+CALL_SPECIFIER_RE = re.compile(r"""\b(?:import|require)\s*\(\s*(["'`])([^"'`\n]*)\1""")
 NAME_SEPARATORS_RE = re.compile(r"[-_.]+")
 # A package specifier has no other use in this code, so one anywhere counts.
 PACKAGE_SPECIFIER_RE = re.compile(r"""["'`](?:npm|jsr):""", re.I)
 # Block comments, and line comments not right after a ":" (so "https://" stays).
 COMMENT_RE = re.compile(r"/\*[\s\S]*?\*/|(?<!:)//[^\n]*")
 SOURCE_SUFFIXES = (".ts", ".mts", ".cts", ".tsx", ".js", ".mjs", ".cjs", ".jsx")
-DENO_CONFIGS = ("deno.json", "deno.jsonc", "deno.lock", "import_map.json")
+DEPENDENCY_CONFIGS = ("deno.json", "deno.jsonc", "deno.lock", "import_map.json", "package.json", "package-lock.json")
 
 
 class Advisory(NamedTuple):
@@ -308,22 +315,42 @@ def _import_maps(config: Path) -> list[str]:
     ]
 
 
+def _specifier_problem(path: Path, folder: Path, specifier: str) -> str | None:
+    if specifier.startswith(("./", "../")):
+        target = (path.parent / specifier).resolve()
+        if target.is_relative_to(folder.resolve()) or target.suffix.lower() == ".json":
+            return None
+        return "import from outside the functions folder"
+    return None if specifier.startswith("node:") else "third-party import"
+
+
+def _file_problems(path: Path, folder: Path) -> list[str]:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    # Both the text as it is and without comments: a comment can sit inside
+    # an import, and a "/*" inside a string must not hide one either.
+    versions = (text, _without_comments(text))
+    third_party = {_line(t, m.start(1)) for t in versions for m in REMOTE_IMPORT_RE.finditer(t)}
+    third_party |= {_line(text, m.start()) for m in PACKAGE_SPECIFIER_RE.finditer(text)}
+    third_party |= {_line(t, m.start()) for t in versions for m in DYNAMIC_IMPORT_RE.finditer(t)}
+    found = dict.fromkeys(third_party, "third-party import")
+    for t in versions:
+        for m in (*STATEMENT_SPECIFIER_RE.finditer(t), *CALL_SPECIFIER_RE.finditer(t)):
+            problem = _specifier_problem(path, folder, m.group(2))
+            if problem:
+                found.setdefault(_line(t, m.start(2)), problem)
+    where = path.relative_to(folder).as_posix()
+    return [f"{where}:{n}: {found[n]}" for n in sorted(found)]
+
+
 def check_functions(folder: Path = FUNCTIONS, config: Path = SUPABASE_CONFIG) -> list[str]:
     """Problems when the Edge Functions start using third-party code."""
     if not folder.is_dir():
         return [f"{folder}: not found"]
-    configs = [path for name in DENO_CONFIGS for path in folder.rglob(name)]
-    problems = [f"{path.relative_to(folder).as_posix()}: Deno config or lockfile" for path in configs]
+    configs = sorted(path for name in DEPENDENCY_CONFIGS for path in folder.rglob(name))
+    problems = [f"{path.relative_to(folder).as_posix()}: dependency config or lockfile" for path in configs]
     problems += _import_maps(config)
     for path in sorted(p for p in folder.rglob("*") if p.suffix.lower() in SOURCE_SUFFIXES):
-        text = path.read_text(encoding="utf-8", errors="replace")
-        # Both the text as it is and without comments: a comment can sit inside
-        # an import, and a "/*" inside a string must not hide one either.
-        versions = (text, _without_comments(text))
-        lines = {_line(t, m.start(1)) for t in versions for m in REMOTE_IMPORT_RE.finditer(t)}
-        lines |= {_line(text, m.start()) for m in PACKAGE_SPECIFIER_RE.finditer(text)}
-        lines |= {_line(t, m.start()) for t in versions for m in DYNAMIC_IMPORT_RE.finditer(t)}
-        problems += [f"{path.relative_to(folder).as_posix()}:{n}: third-party import" for n in sorted(lines)]
+        problems += _file_problems(path, folder)
     if problems:
         problems.append("supabase/functions: the scan does not cover third-party Edge Function code; cover it first")
     return problems

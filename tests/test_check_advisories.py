@@ -328,7 +328,51 @@ class FunctionsTest(unittest.TestCase):
 
     def test_a_deno_lockfile_fails(self):
         root = self.folder({"deno.lock": "{}", "a/index.ts": ""})
-        self.assertTrue(any("Deno config or lockfile" in p for p in tool.check_functions(root)))
+        self.assertIn("deno.lock: dependency config or lockfile", tool.check_functions(root))
+
+    def test_a_package_json_fails(self):
+        root = self.folder({"a/package.json": "{}", "a/index.ts": ""})
+        self.assertIn("a/package.json: dependency config or lockfile", tool.check_functions(root))
+
+    def test_a_bare_or_unknown_specifier_fails(self):
+        root = self.folder(
+            {
+                "a/index.ts": 'import { z } from "zod";\n',
+                "b/index.ts": 'export * from "/abs/x.ts";\n',
+                "c/index.ts": 'import "side-effect";\n',
+                "d/index.cjs": 'const z = require("zod");\n',
+                "e/index.ts": 'import {\n  "x-y" as y,\n} from "zod";\n',
+            }
+        )
+        problems = [p for p in tool.check_functions(root) if "third-party import" in p]
+        expected = ["a/index.ts:1", "b/index.ts:1", "c/index.ts:1", "d/index.cjs:1", "e/index.ts:3"]
+        self.assertEqual(problems, [f"{where}: third-party import" for where in expected])
+
+    def test_node_builtins_and_prose_are_fine(self):
+        root = self.folder(
+            {
+                "a/index.ts": 'import { createHash } from "node:crypto";\nimport "./setup.ts";\n',
+                "b/index.ts": "/** `{a}` from `.../v1/games/<s>`, or null. */\n * import x from 'zod'\nconst s = 1;\n",
+                "c/index.ts": 'const r = Array.from("abc");\nconst n = "data from server";\n',
+            }
+        )
+        self.assertEqual(tool.check_functions(root), [])
+
+    def test_a_relative_import_leaving_the_folder_fails_unless_json(self):
+        root = self.folder(
+            {
+                "functions/a/index.ts": (
+                    'import s from "../../shared.ts";\n'
+                    'import d from "../../data/x.json" with { type: "json" };\n'
+                    'const m = await import("../../other.ts");\n'
+                    'import t from "../b/t.ts";\n'
+                ),
+                "shared.ts": 'import z from "npm:zod";\n',
+            }
+        )
+        problems = tool.check_functions(root / "functions")
+        outside = "import from outside the functions folder"
+        self.assertEqual(problems[:-1], [f"a/index.ts:1: {outside}", f"a/index.ts:3: {outside}"])
 
     def test_the_repo_functions_import_nothing_third_party(self):
         self.assertEqual(tool.check_functions(), [])
