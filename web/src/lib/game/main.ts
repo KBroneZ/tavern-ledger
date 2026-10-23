@@ -96,9 +96,11 @@ function showGame(result: Extract<LoadResult, { kind: "ok" }>, fromDevice = fals
  * their own game, saves its file, and has the worker keep the game page, for
  * offline reading (lib/pwa/saved.ts). A failure (no room, a private window) only means no copy.
  */
-async function keepCopy(ref: GameRef, file: Blob | null, title: string, played: string | null, playerId: string | null): Promise<void> {
+async function keepCopy(ref: GameRef, file: Blob | null, title: string, played: string | null, currentPlayer: () => Promise<string | null>): Promise<void> {
   const device = browserDevice();
-  if (!device || !file || !isOn(device) || isVisitor(playerId, ref.userId)) return;
+  if (!device || !file || !isOn(device)) return;
+  // Asked again now, not when the page opened: the player may have signed out, or another account in, while the game loaded.
+  if (isVisitor(await currentPlayer(), ref.userId)) return;
   await saveGame(device, { userId: ref.userId, publicId: ref.publicId, savedAt: Date.now(), played, title }, file);
   await askForShells();
 }
@@ -145,12 +147,12 @@ interface Sources {
   download: Download;
   readSummary: ReadSummary;
   signedIn: () => Promise<boolean>;
-  /** The signed-in player's id, or null (none, or no way to tell without a connection). */
-  playerId: string | null;
+  /** The signed-in player's id as of now, or null (none, or no way to tell without a connection). */
+  currentPlayer: () => Promise<string | null>;
 }
 
 async function run(ref: GameRef, sources: Sources): Promise<void> {
-  const { download, readSummary, signedIn, playerId } = sources;
+  const { download, readSummary, signedIn, currentPlayer } = sources;
   // The loading block replaces whatever was there (an error and its button), so a retry runs once.
   mount(body, stateBlock({ kind: "loading", title: g("page.loading"), lines: 10 }));
   body.setAttribute("aria-busy", "true");
@@ -164,7 +166,7 @@ async function run(ref: GameRef, sources: Sources): Promise<void> {
   };
   const shown = (result: Extract<LoadResult, { kind: "ok" }>): void => {
     const title = showGame(result);
-    keepCopy(ref, got.file, title, result.record.playedOn, playerId).catch((error) => console.warn("Tavern Ledger: this game was not saved on the device.", error));
+    keepCopy(ref, got.file, title, result.record.playedOn, currentPlayer).catch((error) => console.warn("Tavern Ledger: this game was not saved on the device.", error));
   };
   // The card names load beside the game (a script chunk from this site); without them, ids show.
   const [result, names] = await Promise.all([loadGame(grab, ref), loadCardNames()]);
@@ -233,7 +235,12 @@ async function start(): Promise<void> {
   // Only the game's own player is told "you"; anyone else, signed in or not, reads "the player" (D-102).
   setSeenByVisitor(isVisitor(session?.user.id, ref.userId));
   const signedIn = async () => session !== null;
-  await run(ref, { download, readSummary, signedIn, playerId: session?.user.id ?? null });
+  const currentPlayer = async () =>
+    (await supabase.auth.getSession().then(
+      (answer) => answer.data.session,
+      () => null,
+    ))?.user.id ?? null;
+  await run(ref, { download, readSummary, signedIn, currentPlayer });
 }
 
 start().catch(() => showError("error", () => location.reload()));
