@@ -163,7 +163,7 @@ test("period games: one week of one user's games, both modes, no more columns th
   assert.deepEqual(games.map((g) => g.mode).toSorted(), ["duos", "solo"]);
   assert.equal(seen.length, 2);
   for (const r of seen) {
-    assert.match(r, new RegExp(`user_id=eq\.${USER}`));
+    assert.match(r, new RegExp(`user_id=eq\\.${USER}`));
     assert.match(r, /played_on=gte\.2026-10-19/);
     assert.match(r, /played_on=lte\.2026-10-25/);
     assert.match(r, /order=play_order\.desc/);
