@@ -96,6 +96,8 @@ async function start(): Promise<void> {
   const who = await subject();
   if (!who) return;
   const { userId, access } = who;
+  // The summary is read with the rest and shown with it (own dashboard only).
+  const period = own ? readPeriod(userId) : null;
   const dash = await loadDashboard(supabase, userId);
   const gamesHref = (m: Mode) => href(`/games/${filtersQuery({ ...DEFAULT_FILTERS, mode: m }, own ? null : userId)}`);
   const profileId = own ? null : userId;
@@ -118,7 +120,7 @@ async function start(): Promise<void> {
   switches.querySelector("[data-switch=mode]")?.dispatchEvent(new CustomEvent(MODE_DEFAULT_EVENT, { detail: busierMode(games) }));
   mount(panels, ...dashboardPanels(dash, { gamesHref, owner: own, userId, heroesHref, curiousHref }));
   mount(about, aboutFold());
-  if (own) void showPeriod(userId);
+  if (period) await showPeriod(userId, period);
   gate.hidden = true;
   panels.hidden = false;
   switches.classList.remove("is-off");
@@ -126,25 +128,30 @@ async function start(): Promise<void> {
 }
 
 /**
- * Today and this week (T-361), the player's own dashboard only: read apart
- * from the rest, so a failure here is said in its own place and the panels
- * stand. The frame was reserved in the page, so nothing around it moves.
+ * Today and this week (T-361), the player's own dashboard only: read at the
+ * same time as the rest, so the page can show it all in one go and nothing
+ * already on screen moves (D-073). Never throws: a failure here is the
+ * section's own error with a retry, and the panels stand.
  */
-async function showPeriod(userId: string): Promise<void> {
-  const frame = byId("dash-period");
-  frame.hidden = false;
+async function readPeriod(userId: string): Promise<VNode[]> {
   const bounds = periodBounds(localDay(new Date()));
   try {
     const rows = await loadPeriodGames(supabase, userId, bounds.weekStart, bounds.weekEnd);
-    mount(frame, ...periodSection(summarizePeriod(rows, bounds), userId));
+    return periodSection(summarizePeriod(rows, bounds), userId);
   } catch {
-    const retry = h("button", { type: "button", class: "tb tb-small", id: "dash-period-retry" }, t("dash.retry"));
-    mount(frame, ...periodFailure(retry));
-    byId("dash-period-retry").addEventListener("click", () => {
-      mount(frame, h("h2", { id: "dash-period-title" }, t("period.title")), stateBlock({ kind: "loading", lines: 6 }));
-      void showPeriod(userId);
-    });
+    return periodFailure(h("button", { type: "button", class: "tb tb-small", id: "dash-period-retry" }, t("dash.retry")));
   }
+}
+
+/** Draws the summary in its frame, and wires its retry when the read failed. */
+async function showPeriod(userId: string, read: Promise<VNode[]>): Promise<void> {
+  const frame = byId("dash-period");
+  mount(frame, ...(await read));
+  frame.hidden = false;
+  document.getElementById("dash-period-retry")?.addEventListener("click", () => {
+    mount(frame, h("h2", { id: "dash-period-title" }, t("period.title")), stateBlock({ kind: "loading", lines: 6 }));
+    void showPeriod(userId, readPeriod(userId)).then(() => moveFocus(byId("dash-period-title")));
+  });
 }
 
 function failed(): void {

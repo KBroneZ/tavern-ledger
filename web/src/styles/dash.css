@@ -175,12 +175,8 @@
 }
 
 /* Today and this week (T-361): two columns, one block per mode played. The
-   frame is in the page from the first paint with room for the loading state;
-   the summary lands inside it. */
-.dash-period {
-  min-height: 22rem;
-}
-
+   frame stays hidden until the summary is read, and then shows with the
+   panels in one go, inside the body's reserved screen, so nothing moves. */
 .period-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
