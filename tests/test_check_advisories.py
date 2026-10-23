@@ -250,7 +250,7 @@ class FunctionsTest(unittest.TestCase):
             }
         )
         problems = [p for p in tool.check_functions(root) if "third-party import" in p]
-        self.assertEqual(problems, ["a/index.ts:1: third-party import", "b/index.ts:3: third-party import"])
+        self.assertEqual(problems, ["a/index.ts:2: third-party import", "b/index.ts:4: third-party import"])
 
     def test_a_url_that_is_not_an_import_is_fine(self):
         root = self.folder({"a/index.ts": 'const note = "see https://example.test";\nfetch("https://example.test");\n'})
@@ -269,7 +269,33 @@ class FunctionsTest(unittest.TestCase):
     def test_an_import_map_in_the_supabase_config_fails(self):
         root = self.folder({"a/index.ts": "", "config.toml": '[functions.a]\nimport_map = "./a/map.json"\n'})
         problems = tool.check_functions(root / "a", root / "config.toml")
-        self.assertIn("config.toml: a function has an import_map", problems)
+        self.assertIn("config.toml: function a has an import_map", problems)
+
+    def test_a_quoted_import_map_key_is_read_as_toml(self):
+        root = self.folder({"a/index.ts": "", "config.toml": '[functions.b]\n"import_map" = "./deps.json"\n'})
+        problems = tool.check_functions(root / "a", root / "config.toml")
+        self.assertIn("config.toml: function b has an import_map", problems)
+
+    def test_the_repo_config_has_no_import_map(self):
+        self.assertEqual(tool._import_maps(tool.SUPABASE_CONFIG), [])
+
+    def test_a_comment_inside_an_import_does_not_hide_it(self):
+        root = self.folder(
+            {
+                "a/index.ts": 'import { z } from /* schema */ "https://esm.sh/zod";\n',
+                "b/index.ts": 'import x from // why\n  "https://deno.land/x.ts";\n',
+            }
+        )
+        problems = [p for p in tool.check_functions(root) if "third-party import" in p]
+        self.assertEqual(problems, ["a/index.ts:1: third-party import", "b/index.ts:2: third-party import"])
+
+    def test_a_comment_marker_in_a_string_does_not_hide_an_import(self):
+        root = self.folder({"a/index.ts": 'const g = "x/*";\nimport y from "https://evil.test/y.ts";\n// */\n'})
+        self.assertIn("a/index.ts:2: third-party import", tool.check_functions(root))
+
+    def test_a_package_specifier_anywhere_fails(self):
+        root = self.folder({"a/index.ts": 'const name = "npm:zod@3";\nawait import(name);\n'})
+        self.assertIn("a/index.ts:1: third-party import", tool.check_functions(root))
 
     def test_a_deno_lockfile_fails(self):
         root = self.folder({"deno.lock": "{}", "a/index.ts": ""})

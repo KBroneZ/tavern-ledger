@@ -75,9 +75,12 @@ IGNORE_KEYS = frozenset({*IGNORE_FIELDS, "absent_from"})
 BUILD_KEYS = frozenset({"target", "exclude"})
 # Matched over the whole file, so an import split across lines is caught too.
 REMOTE_IMPORT_RE = re.compile(r"""\b(?:from|import)\s*\(?\s*["'`](npm:|jsr:|https?://)""", re.I)
+# A package specifier has no other use in this code, so one anywhere counts.
+PACKAGE_SPECIFIER_RE = re.compile(r"""["'`](?:npm|jsr):""", re.I)
+# Block comments, and line comments not right after a ":" (so "https://" stays).
+COMMENT_RE = re.compile(r"/\*[\s\S]*?\*/|(?<!:)//[^\n]*")
 SOURCE_SUFFIXES = (".ts", ".mts", ".tsx", ".js", ".mjs", ".jsx")
 DENO_CONFIGS = ("deno.json", "deno.jsonc", "deno.lock", "import_map.json")
-IMPORT_MAP_RE = re.compile(r"^\s*import_map\s*=", re.M)
 
 
 class Advisory(NamedTuple):
@@ -264,19 +267,45 @@ def check_absent(entry: dict, metadata_for=_cargo_metadata) -> list[str]:
     return problems
 
 
+def _line(text: str, at: int) -> int:
+    return text.count("\n", 0, at) + 1
+
+
+def _without_comments(text: str) -> str:
+    """The text with comments blanked out, line breaks kept so line numbers hold."""
+    return COMMENT_RE.sub(lambda m: "\n" * m.group(0).count("\n") or " ", text)
+
+
+def _import_maps(config: Path) -> list[str]:
+    """An `import_map` on any function in supabase/config.toml."""
+    if not config.is_file():
+        return []
+    try:
+        functions = tomllib.loads(config.read_text(encoding="utf-8")).get("functions") or {}
+    except tomllib.TOMLDecodeError as error:
+        return [f"{config.name}: unreadable ({error})"]
+    return [
+        f"{config.name}: function {name} has an import_map"
+        for name, settings in functions.items()
+        if isinstance(settings, dict) and "import_map" in settings
+    ]
+
+
 def check_functions(folder: Path = FUNCTIONS, config: Path = SUPABASE_CONFIG) -> list[str]:
     """Problems when the Edge Functions start using third-party code."""
     if not folder.is_dir():
         return [f"{folder}: not found"]
     configs = [path for name in DENO_CONFIGS for path in folder.rglob(name)]
     problems = [f"{path.relative_to(folder).as_posix()}: Deno config or lockfile" for path in configs]
-    if config.is_file() and IMPORT_MAP_RE.search(config.read_text(encoding="utf-8")):
-        problems.append(f"{config.name}: a function has an import_map")
+    problems += _import_maps(config)
     for path in sorted(p for p in folder.rglob("*") if p.suffix in SOURCE_SUFFIXES):
         text = path.read_text(encoding="utf-8", errors="replace")
-        for match in REMOTE_IMPORT_RE.finditer(text):
-            number = text.count("\n", 0, match.start()) + 1
-            problems.append(f"{path.relative_to(folder).as_posix()}:{number}: third-party import")
+        # Both the text as it is and without comments: a comment can sit inside
+        # an import, and a "/*" inside a string must not hide one either.
+        versions = (text, _without_comments(text))
+        lines = {_line(t, m.start(1)) for t in versions for m in REMOTE_IMPORT_RE.finditer(t)}
+        lines |= {_line(text, m.start()) for m in PACKAGE_SPECIFIER_RE.finditer(text)}
+        problems += [f"{path.relative_to(folder).as_posix()}:{n}: third-party import" for n in sorted(lines)]
     if problems:
         problems.append("supabase/functions: the scan does not cover third-party Edge Function code; cover it first")
     return problems
