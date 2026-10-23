@@ -275,6 +275,22 @@ impl Warband {
         }
     }
 
+    /// True when something on this board acts at the start of combat: a
+    /// minion, one of its Dark Gifts, a hero power or a trinket. A board
+    /// taken after the start of combat may already carry its effects, so the
+    /// odds for it are marked (T-632): one rule for every source, used by
+    /// the overlay and the website.
+    pub fn acts_at_start_of_combat(&self) -> bool {
+        self.minions.iter().any(|m| {
+            crate::cards::has_start_of_combat(&m.card_id)
+                || m.gifts.iter().any(|g| crate::gifts::has_start_of_combat(g))
+        }) || self
+            .kit
+            .iter()
+            .flat_map(Kit::cards)
+            .any(|c| crate::kit::has_start_of_combat(&c.card_id))
+    }
+
     pub fn validate(&self) -> Result<(), BoardError> {
         if self.minions.len() > MAX_BOARD {
             return Err(BoardError::TooManyMinions(self.minions.len()));
