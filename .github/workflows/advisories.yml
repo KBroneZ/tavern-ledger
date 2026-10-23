@@ -5,13 +5,11 @@ name: Advisories
 # tools/check_advisories.py: an advisory with a fix, medium or higher, or of
 # unknown severity fails, unless tools/advisory_ignores.toml says why it does
 # not apply. CI calls this workflow on every pull request and push (its
-# `advisories` job is part of the required `check`), and it also runs every
-# day on main, so a new advisory shows up without a code change.
+# `advisories` job is part of the required `check`), and advisories-daily.yml
+# calls it every day on main, so a new advisory shows up without a code change.
 
 on:
   workflow_call:
-  schedule:
-    - cron: "17 4 * * *"
   workflow_dispatch:
 
 permissions:
@@ -46,7 +44,7 @@ jobs:
       - name: Install osv-scanner (pinned, checksum verified)
         run: |
           bin="$RUNNER_TEMP/osv-scanner"
-          curl -sSfL --max-time 120 -o "$bin" \
+          curl -sSfL --proto '=https' --retry 3 --retry-all-errors --max-time 120 -o "$bin" \
             "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
           echo "${OSV_SCANNER_SHA256}  $bin" | sha256sum -c -
           chmod +x "$bin"

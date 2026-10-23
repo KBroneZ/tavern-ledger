@@ -101,17 +101,31 @@ class PolicyTest(unittest.TestCase):
 
     def test_an_ignore_needs_the_same_package(self):
         adv = Advisory("Cargo.lock", "glib", "0.18.5", ("RUSTSEC-1",), 9.0, True)
-        blocking, _, used = tool.evaluate([adv], [entry(package="gtk")])
+        crate = entry(absent_from=[{"target": "linux"}])
+        blocking, _, used, _ = tool.evaluate([adv], [{**crate, "package": "gtk"}])
         self.assertEqual(len(blocking), 1)
         self.assertEqual(used, [])
-        blocking, passed, used = tool.evaluate([adv], [entry()])
-        self.assertEqual(blocking, [])
-        self.assertEqual(len(used), 1)
+        blocking, passed, used, problems = tool.evaluate([adv], [crate])
+        self.assertEqual((blocking, problems), ([], []))
+        self.assertEqual(used, [crate])
         self.assertIn("ignored until 2027-01-01", passed[0])
+
+    def test_one_entry_for_two_advisories_is_used_once(self):
+        first = Advisory("Cargo.lock", "glib", "0.18.5", ("RUSTSEC-1",), 9.0, True)
+        crate = entry(absent_from=[{"target": "linux"}])
+        _, _, used, _ = tool.evaluate([first, first._replace(version="0.18.6")], [crate])
+        self.assertEqual(used, [crate])
+
+    def test_a_crate_ignore_without_absent_from_is_a_problem(self):
+        adv = Advisory("Cargo.lock", "glib", "0.18.5", ("RUSTSEC-1",), 9.0, True)
+        _, _, _, (problem,) = tool.evaluate([adv], [entry()])
+        self.assertIn("needs absent_from", problem)
+        npm = adv._replace(lockfile="package-lock.json")
+        self.assertEqual(tool.evaluate([npm], [entry()])[3], [])
 
     def test_an_alias_matches_the_ignore(self):
         adv = Advisory("Cargo.lock", "glib", "0.18.5", ("GHSA-1", "RUSTSEC-1"), 9.0, True)
-        blocking, _, _ = tool.evaluate([adv], [entry(id="GHSA-1")])
+        blocking, _, _, _ = tool.evaluate([adv], [entry(id="GHSA-1")])
         self.assertEqual(blocking, [])
 
 
@@ -131,11 +145,25 @@ class IgnoreEntriesTest(unittest.TestCase):
     def test_the_review_date_must_be_a_date(self):
         (problem,) = tool.check_ignores([entry(review_by="soon")], TODAY)
         self.assertIn("must be a date", problem)
+        (problem,) = tool.check_ignores([entry(review_by=datetime.datetime(2027, 1, 1, 12, 0))], TODAY)
+        self.assertIn("must be a date", problem)
+
+    def test_the_review_date_is_at_most_six_months_away(self):
+        latest = TODAY + datetime.timedelta(days=tool.MAX_REVIEW_DAYS)
+        self.assertEqual(tool.check_ignores([entry(review_by=latest)], TODAY), [])
+        (problem,) = tool.check_ignores([entry(review_by=latest + datetime.timedelta(days=1))], TODAY)
+        self.assertIn("days away", problem)
+
+    def test_an_unknown_key_is_a_problem(self):
+        (problem,) = tool.check_ignores([entry(absent_form=[{"target": "linux"}])], TODAY)
+        self.assertIn("unknown key absent_form", problem)
+
+    def test_each_absent_from_item_needs_a_target_and_known_keys(self):
+        problems = tool.check_ignores([entry(absent_from=[{}, {"target": "linux", "exlude": ["x"]}])], TODAY)
+        self.assertEqual(len(problems), 2)
 
     def test_the_committed_file_reads_and_is_complete(self):
-        import tomllib
-
-        entries = tomllib.loads(tool.IGNORES.read_text(encoding="utf-8"))["ignore"]
+        entries = tool.load_ignores()
         self.assertTrue(entries)
         self.assertEqual(tool.check_ignores(entries, datetime.date(2026, 10, 23)), [])
         for item in entries:
@@ -171,9 +199,18 @@ class ReachableTest(unittest.TestCase):
         item = entry(absent_from=[{"target": "linux", "exclude": ["desktop"]}])
         self.assertEqual(tool.check_absent(item, metadata_for=lambda target: self.META), [])
 
-    def test_an_absent_from_without_target_is_a_problem(self):
-        (problem,) = tool.check_absent(entry(absent_from=[{}]), metadata_for=lambda target: self.META)
-        self.assertIn("no target", problem)
+    def test_an_absent_from_without_target_is_left_to_check_ignores(self):
+        self.assertEqual(tool.check_absent(entry(absent_from=[{}]), metadata_for=lambda target: self.META), [])
+
+    def test_exclude_must_name_workspace_crates(self):
+        item = entry(absent_from=[{"target": "linux", "exclude": ["dekstop"]}])
+        (problem,) = tool.check_absent(item, metadata_for=lambda target: self.META)
+        self.assertIn("names no workspace crate: dekstop", problem)
+
+    def test_exclude_cannot_leave_no_crate(self):
+        item = entry(absent_from=[{"target": "linux", "exclude": ["desktop", "cards"]}])
+        (problem,) = tool.check_absent(item, metadata_for=lambda target: self.META)
+        self.assertIn("leaves no workspace crate", problem)
 
 
 class FunctionsTest(unittest.TestCase):
@@ -215,6 +252,15 @@ class FunctionsTest(unittest.TestCase):
         root = self.folder({"a/index.ts": 'const note = "see https://example.test";\nfetch("https://example.test");\n'})
         self.assertEqual(tool.check_functions(root), [])
 
+    def test_other_source_suffixes_are_read(self):
+        root = self.folder({"a/x.mjs": 'import a from "npm:a";\n', "a/y.tsx": 'import b from "jsr:@b/b";\n'})
+        self.assertEqual(len([p for p in tool.check_functions(root) if "third-party import" in p]), 2)
+
+    def test_an_import_map_in_the_supabase_config_fails(self):
+        root = self.folder({"a/index.ts": "", "config.toml": '[functions.a]\nimport_map = "./a/map.json"\n'})
+        problems = tool.check_functions(root / "a", root / "config.toml")
+        self.assertIn("config.toml: a function has an import_map", problems)
+
     def test_a_deno_lockfile_fails(self):
         root = self.folder({"deno.lock": "{}", "a/index.ts": ""})
         self.assertTrue(any("Deno config or lockfile" in p for p in tool.check_functions(root)))
@@ -224,13 +270,13 @@ class FunctionsTest(unittest.TestCase):
 
 
 class MainTest(unittest.TestCase):
-    def run_main(self, scan=None, error=None, entries=()):
+    def run_main(self, scan=None, error=None, entries=(), tracked=tool.LOCKFILES):
         out, err = io.StringIO(), io.StringIO()
         runner = mock.Mock(side_effect=error) if error else mock.Mock(return_value=scan)
-        ignores = mock.Mock(return_value={"ignore": list(entries)})
         with (
             mock.patch.object(tool, "run_scanner", runner),
-            mock.patch.object(tool.tomllib, "loads", ignores),
+            mock.patch.object(tool, "load_ignores", lambda: list(entries)),
+            mock.patch.object(tool, "tracked_files", lambda: list(tracked)),
             mock.patch.object(tool, "check_absent", lambda e: []),
             mock.patch.object(tool, "check_functions", lambda: []),
             redirect_stdout(out),
@@ -260,8 +306,49 @@ class MainTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("no advisory matches it; remove it", text)
 
+    def test_a_tracked_scanner_config_fails(self):
+        code, text = self.run_main(report(), tracked=[*tool.LOCKFILES, "web/osv-scanner.toml"])
+        self.assertEqual(code, 1)
+        self.assertIn("web/osv-scanner.toml: osv-scanner config in the repo", text)
+
+
+class TrackedFilesTest(unittest.TestCase):
+    def test_scanned_and_listed_lockfiles_are_fine(self):
+        self.assertEqual(tool.check_tracked([*tool.LOCKFILES, *tool.UNSCANNED, "src/lib.rs", "docs/Cargo.lock.md"]), [])
+
+    def test_a_new_lockfile_must_be_scanned_or_listed(self):
+        problems = tool.check_tracked(["tools/x/package-lock.json", "a/requirements-dev.txt", "b/deno.lock"])
+        self.assertEqual(len(problems), 3)
+        self.assertTrue(all("lockfile not scanned" in p for p in problems))
+
+    def test_any_osv_scanner_config_fails(self):
+        problems = tool.check_tracked(["osv-scanner.toml", "web/.osv-scanner.toml"])
+        self.assertEqual(len(problems), 2)
+
+    def test_every_unscanned_lockfile_says_why(self):
+        self.assertTrue(all(reason.strip() for reason in tool.UNSCANNED.values()))
+
 
 class ScannerRunTest(unittest.TestCase):
+    def test_the_command_scans_every_lockfile_with_our_own_empty_config(self):
+        command = tool.scanner_command("osv-scanner", Path("/tmp/empty.toml"))
+        self.assertEqual(command[:2], ["osv-scanner", "scan"])
+        self.assertIn("--all-packages", command)
+        self.assertEqual(command[command.index("--config") + 1], str(Path("/tmp/empty.toml")))
+        locks = [command[i + 1] for i, arg in enumerate(command) if arg == "-L"]
+        self.assertEqual(locks, [str(tool.ROOT / lock) for lock in tool.LOCKFILES])
+
+    def test_the_config_passed_is_empty(self):
+        seen = {}
+
+        def fake_run(command, **kwargs):
+            seen["config"] = Path(command[command.index("--config") + 1]).read_text(encoding="utf-8")
+            return mock.Mock(returncode=0, stdout='{"results": []}', stderr="")
+
+        with mock.patch.object(tool.subprocess, "run", side_effect=fake_run):
+            tool.run_scanner("osv-scanner")
+        self.assertEqual(seen["config"], "")
+
     def test_an_error_exit_code_raises(self):
         result = mock.Mock(returncode=127, stdout="", stderr="api unreachable")
         with mock.patch.object(tool.subprocess, "run", return_value=result):
