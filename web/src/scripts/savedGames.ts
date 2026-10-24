@@ -52,7 +52,10 @@ async function start(): Promise<void> {
   await showCount(device);
   show(panel, true);
   // A game saved or removed in another tab while this list stayed open.
-  addEventListener("focus", () => void showCount(device).catch(() => {}));
+  addEventListener("focus", () => {
+    toggle.checked = isOn(device, player);
+    showCount(device).catch(() => {});
+  });
 }
 
 start().catch(() => {});

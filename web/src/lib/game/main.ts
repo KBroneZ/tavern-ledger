@@ -186,20 +186,19 @@ async function run(ref: GameRef, sources: Sources): Promise<void> {
       // The owner's own game whose file the sweep has not renamed yet: the row knows where it is.
       const own = await loadGame(grab, ref, expired.path);
       if (own.kind === "ok") return shown(own);
-      if (own.kind !== "unavailable") return showError(own.kind, retry);
+      if (own.kind !== "unavailable") return showSavedOrError(ref, own.kind, retry);
     }
     return showUnavailable(await signedIn().catch(() => false));
   }
-  if (result.kind === "error") {
-    // No connection or the server is down: the copy saved on this device, if the player kept one, is theirs.
-    const copy = await savedCopy(ref);
-    if (copy) {
-      setSeenByVisitor(false);
-      showGame(copy, true);
-      return;
-    }
-  }
-  showError(result.kind, retry);
+  await showSavedOrError(ref, result.kind, retry);
+}
+
+/** The error for a game that could not be read; for a network error, the copy saved on this device first, if the player kept one (it is theirs). */
+async function showSavedOrError(ref: GameRef, kind: "unreadable" | "error", retry: () => void): Promise<void> {
+  const copy = kind === "error" ? await savedCopy(ref) : null;
+  if (!copy) return showError(kind, retry);
+  setSeenByVisitor(false);
+  showGame(copy, true);
 }
 
 async function start(): Promise<void> {
