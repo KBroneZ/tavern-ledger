@@ -51,6 +51,8 @@ async function start(): Promise<void> {
   erase.addEventListener("click", () => void change(device, () => eraseSaved(device)));
   await showCount(device);
   show(panel, true);
+  // A game saved or removed in another tab while this list stayed open.
+  addEventListener("focus", () => void showCount(device).catch(() => {}));
 }
 
 start().catch(() => {});

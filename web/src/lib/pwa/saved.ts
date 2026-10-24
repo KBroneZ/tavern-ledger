@@ -39,12 +39,18 @@ export interface Device {
   lock?: <T>(step: () => Promise<T>) => Promise<T>;
 }
 
-/** This browser's cache storage and local storage, or null where either is missing (an insecure page, a locked-down browser). */
+/**
+ * This browser's cache storage, local storage and Web Locks, or null where any is
+ * missing (an insecure page, a locked-down browser, a browser too old for locks):
+ * two tabs saving at once need the lock to keep the list true, so without it
+ * nothing is offered or saved.
+ */
 export function browserDevice(): Device | null {
   try {
     if (typeof caches === "undefined" || typeof localStorage === "undefined") return null;
     const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
-    return { caches, flags: localStorage, lock: locks ? (step) => locks.request("tl-saved-games", step) : undefined };
+    if (!locks) return null;
+    return { caches, flags: localStorage, lock: (step) => locks.request("tl-saved-games", step) };
   } catch {
     return null;
   }
