@@ -446,3 +446,12 @@ test("signed out while the pages come, the saved games' cache is not made again"
   await worker.message({ type: KEEP_SHELL_MESSAGE });
   assert.deepEqual([...worker.stores.keys()], []);
 });
+
+test("a saved game's address gives up on a slow network and opens from the device; another page waits for the network", async () => {
+  const worker = await offlineWithSaved({ shell: "en", game: GAME });
+  worker.network = () => new Promise<Response>(() => {});
+  assert.equal(await (await worker.fetch(request(gameAddress(), "navigate")))!.text(), "game page shell (en)");
+  const late = await offlineWithSaved({ shell: "en", game: GAME });
+  late.network = () => new Promise<Response>((done) => setTimeout(() => done(page("slow but live /me/")), 60));
+  assert.equal(await (await late.fetch(request(`${ORIGIN}/me/`, "navigate")))!.text(), "slow but live /me/");
+});

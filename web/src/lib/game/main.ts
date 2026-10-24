@@ -25,6 +25,9 @@ import { toggleTurn } from "./turnsView.ts";
 import { href } from "../i18n.ts";
 import { askForShells, browserDevice, isOn, readSaved, saveGame } from "../pwa/saved.ts";
 
+/** How long the page waits to read the stored sign-in before it goes on without it. */
+const SESSION_WAIT_MS = 4000;
+
 function byId(id: string): HTMLElement {
   const node = document.getElementById(id);
   if (!node) throw new Error(`#${id} is missing`);
@@ -226,19 +229,21 @@ async function start(): Promise<void> {
       .eq("user_id", r.userId)
       .eq("public_id", r.publicId)
       .limit(1);
-  // Without a connection the stored sign-in cannot always be read or renewed; the page then goes on as a visitor, and a saved copy still opens.
-  const session = await supabase.auth.getSession().then(
-    (answer) => answer.data.session,
-    () => null,
-  );
+  // Without a connection the stored sign-in cannot always be read or renewed (an expired one is renewed over the network, with retries):
+  // the page does not wait longer than SESSION_WAIT_MS, goes on as a visitor, and a saved copy still opens.
+  const readSession = () =>
+    Promise.race([
+      supabase.auth.getSession().then(
+        (answer) => answer.data.session,
+        () => null,
+      ),
+      new Promise<null>((done) => setTimeout(() => done(null), SESSION_WAIT_MS)),
+    ]);
+  const session = await readSession();
   // Only the game's own player is told "you"; anyone else, signed in or not, reads "the player" (D-102).
   setSeenByVisitor(isVisitor(session?.user.id, ref.userId));
   const signedIn = async () => session !== null;
-  const currentPlayer = async () =>
-    (await supabase.auth.getSession().then(
-      (answer) => answer.data.session,
-      () => null,
-    ))?.user.id ?? null;
+  const currentPlayer = async () => (await readSession())?.user.id ?? null;
   await run(ref, { download, readSummary, signedIn, currentPlayer });
 }
 

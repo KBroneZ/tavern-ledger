@@ -70,12 +70,17 @@ function keep(event, request, response) {
   event.waitUntil(caches.open(cacheName(BUILD.version)).then((cache) => cache.put(request, copy)));
 }
 
-/** The network, and the offline page when there is none; nothing is stored. */
+/**
+ * The network, and the offline page when there is none; nothing is stored. A saved
+ * game's address gives up on a slow network after NETWORK_WAIT_MS and opens from the
+ * device, like a visited page; any other waits for the network as it always did.
+ */
 async function fetchOrOffline(request) {
+  const saved = await savedGamePage(request);
   try {
-    return await fetch(request);
+    return await (saved ? withinWait(fetch(request)) : fetch(request));
   } catch {
-    return (await savedGamePage(request)) ?? offlineResponse(request);
+    return saved ?? offlineResponse(request);
   }
 }
 
