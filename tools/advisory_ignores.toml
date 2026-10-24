@@ -1,0 +1,34 @@
+# Advisories tools/check_advisories.py lets pass, each with why it does not
+# apply here. Every field is required. `review_by` is when the entry fails
+# the check until someone looks again and moves the date (or removes the
+# entry). For a crate, `absent_from` lists the builds the crate must not be
+# in: the check reads `cargo metadata` for each target (minus the `exclude`
+# workspace crates) and fails the moment the crate gets into one of them.
+#
+# Builds today: the desktop app ships for Windows only (x86_64-pc-windows-msvc,
+# also its CI tests); CI builds and tests the rest of the workspace on Linux
+# without `desktop`; the website's engine is wasm32-unknown-unknown.
+
+[[ignore]]
+id = "RUSTSEC-2024-0429"
+package = "glib"
+reason = "Unsound VariantStrIter (glib::VariantStrIter::next and friends); glib is only a Linux dependency of Tauri's GTK webview, and no build of ours compiles it."
+evidence = "cargo tree -i glib: nothing for x86_64-pc-windows-msvc or wasm32-unknown-unknown; on x86_64-unknown-linux-gnu only through tauri -> desktop, and the Linux CI build excludes desktop (2026-10-23)."
+review_by = 2027-01-23
+absent_from = [
+  { target = "x86_64-pc-windows-msvc" },
+  { target = "wasm32-unknown-unknown" },
+  { target = "x86_64-unknown-linux-gnu", exclude = ["desktop"] },
+]
+
+[[ignore]]
+id = "RUSTSEC-2024-0370"
+package = "proc-macro-error"
+reason = "Informational: the crate is unmaintained, no vulnerability. It is a build-time macro of glib-macros, which only the Linux GTK stack uses."
+evidence = "cargo tree -i proc-macro-error: only through glib-macros -> glib on x86_64-unknown-linux-gnu, which comes from tauri -> desktop; not in the Windows, wasm or Linux CI builds (2026-10-23)."
+review_by = 2027-01-23
+absent_from = [
+  { target = "x86_64-pc-windows-msvc" },
+  { target = "wasm32-unknown-unknown" },
+  { target = "x86_64-unknown-linux-gnu", exclude = ["desktop"] },
+]

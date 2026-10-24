@@ -27,7 +27,7 @@ jobs:
   # protection that asks for `check` covers all of them without a settings
   # change. `if: always()` matters: a skipped job would otherwise count as green.
   check:
-    needs: [repo, desktop, engine, functions, database]
+    needs: [repo, desktop, engine, functions, database, advisories]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 2
@@ -38,6 +38,13 @@ jobs:
         run: |
           echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
           echo "$NEEDS" | jq -e 'all(.[]; .result == "success")' > /dev/null
+
+  # Known security advisories in the lockfiles (advisories.yml, which also
+  # runs every day on main).
+  advisories:
+    uses: ./.github/workflows/advisories.yml
+    permissions:
+      contents: read
 
   # Python, website, Rust workspace without the desktop app, licenses,
   # links and secrets: everything that runs on Linux. One job on purpose:
