@@ -12,6 +12,7 @@ export interface NewsItem {
 }
 
 export const NEWS: readonly NewsItem[] = [
+  { date: "2026-10-24", text: "news.app027", link: "news.app027.link", href: "/download/" },
   { date: "2026-10-19", text: "news.app026", link: "news.app026.link", href: "/download/" },
   { date: "2026-10-19", text: "news.accuracykits", link: "news.accuracykits.link", href: "/accuracy/" },
   { date: "2026-10-19", text: "news.app025", link: "news.app025.link", href: "/download/" },

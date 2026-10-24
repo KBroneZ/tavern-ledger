@@ -164,6 +164,8 @@ export const SITE_STRINGS = {
   "news.heroes.link": "Hero stats",
   "news.simulator": "A combat simulator on the website: load a board from one of your games, change it and run it.",
   "news.simulator.link": "Simulator",
+  "news.app027": "App version 0.2.7: a simpler overlay (tribes on top of the opponents, counters under them, Ctrl+Shift+H to hide it, a preview from the tray) and a Today and this week summary in the main window.",
+  "news.app027.link": "Download",
   "news.app026": "App version 0.2.6: fewer combats without odds (the simulator knows every hero power and trinket), a Copy diagnostics button, and an uninstall box that deletes your games only if you tick it.",
   "news.app026.link": "Download",
   "news.accuracykits": "The accuracy page now plays each saved board with its hero powers and trinkets.",

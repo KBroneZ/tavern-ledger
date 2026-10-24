@@ -22,14 +22,14 @@ test("the hash is 64 lower-case hex digits and the date is a day", () => {
 
 test("the size is shown in megabytes with one decimal, the way Windows shows it", () => {
   assert.equal(sizeMb(6_847_192), 6.5);
-  assert.equal(sizeMb(RELEASE.bytes), 7.9);
+  assert.equal(sizeMb(RELEASE.bytes), 8.0);
   assert.ok(RELEASE.bytes > 1_000_000 && RELEASE.bytes < 50_000_000);
 });
 
-test("the facts are those of the published v0.2.6 release, with v0.2.5, v0.2.4, v0.2.3, v0.2.2, v0.2.1 and v0.1.0 kept below it", () => {
-  assert.equal(RELEASE.version, "0.2.6");
-  assert.equal(RELEASE.sha256, "1f9f02aa18eb2e0370e8200ec88abe4dbf62302cd989ee75f0deb6e3720fceca");
-  assert.deepEqual(releases.map((r) => r.version), ["0.2.6", "0.2.5", "0.2.4", "0.2.3", "0.2.2", "0.2.1", "0.1.0"]);
+test("the facts are those of the published v0.2.7 release, with v0.2.6, v0.2.5, v0.2.4, v0.2.3, v0.2.2, v0.2.1 and v0.1.0 kept below it", () => {
+  assert.equal(RELEASE.version, "0.2.7");
+  assert.equal(RELEASE.sha256, "104b2d4abf6e164d1509bf6cb8acb8a48119453e512a8c319491fceb47b771ce");
+  assert.deepEqual(releases.map((r) => r.version), ["0.2.7", "0.2.6", "0.2.5", "0.2.4", "0.2.3", "0.2.2", "0.2.1", "0.1.0"]);
 });
 
 test("the facts are the newest release recorded from GitHub, not typed by hand", () => {
@@ -42,9 +42,9 @@ test("the facts are the newest release recorded from GitHub, not typed by hand",
 });
 
 test("the signed list of hashes is linked only for a release that has one", () => {
-  assert.equal(RELEASE.sums, true, "v0.2.6 has a signed SHA256SUMS");
+  assert.equal(RELEASE.sums, true, "v0.2.7 has a signed SHA256SUMS");
   assert.deepEqual(sumsUrls(), {
-    list: "https://github.com/KBroneZ/tavern-ledger/releases/download/v0.2.6/SHA256SUMS",
-    signature: "https://github.com/KBroneZ/tavern-ledger/releases/download/v0.2.6/SHA256SUMS.minisig",
+    list: "https://github.com/KBroneZ/tavern-ledger/releases/download/v0.2.7/SHA256SUMS",
+    signature: "https://github.com/KBroneZ/tavern-ledger/releases/download/v0.2.7/SHA256SUMS.minisig",
   });
 });
