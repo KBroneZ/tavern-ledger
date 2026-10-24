@@ -9,7 +9,8 @@
 //      words in Safari on iPhone and iPad, which have no install prompt. It
 //      never opens a prompt on its own and is hidden once the site is
 //      installed;
-//   3. makes the offline page's "Try again" button reload the page.
+//   3. makes the offline page's "Try again" button reload the page, and lists there the games the
+//      player chose to keep on this device.
 // Nothing leaves the browser.
 (function (win, doc) {
   "use strict";
@@ -63,6 +64,44 @@
       words.hidden = false;
       hint.hidden = false;
     }
+  }
+
+  // The offline page lists the games the player chose to keep on this device (lib/pwa/saved.ts writes them;
+  // these two names must match SAVED_CACHE and SAVED_INDEX_KEY in lib/pwa/rules.js, which a build test checks).
+  var saved = doc.querySelector("[data-saved]");
+  if (saved && win.caches) {
+    var UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+    // The offline page is shown at the address that failed, so the language is the address's (rules.js offlinePage).
+    var lang = win.location.pathname === "/es" || win.location.pathname.indexOf("/es/") === 0 ? "es" : "en";
+    var gamePath = lang === "es" ? "/es/game/" : "/game/";
+    // A game is listed only if the game page it opens is saved too (the worker keeps it; lib/pwa/saved.ts askForShells).
+    win.caches
+      .match("/__saved__/shell/" + lang, { cacheName: "tl-replays" })
+      .then(function (shell) {
+        return shell ? win.caches.match("/__saved__/index", { cacheName: "tl-replays" }) : null;
+      })
+      .then(function (answer) {
+        return answer ? answer.json() : [];
+      })
+      .then(function (list) {
+        var items = (Array.isArray(list) ? list : []).filter(function (game) {
+          return game && UUID.test(game.userId) && UUID.test(game.publicId);
+        });
+        var out = saved.querySelector("[data-saved-list]");
+        items.forEach(function (game) {
+          var item = doc.createElement("li");
+          var link = doc.createElement("a");
+          link.href = gamePath + "?u=" + encodeURIComponent(game.userId) + "&id=" + encodeURIComponent(game.publicId);
+          var label = typeof game.title === "string" && game.title ? game.title : saved.getAttribute("data-fallback");
+          link.textContent = typeof game.played === "string" ? label + " \u00b7 " + game.played : label;
+          item.appendChild(link);
+          out.appendChild(item);
+        });
+        saved.hidden = items.length === 0;
+      })
+      .catch(function () {
+        // No saved games to list: the section stays hidden.
+      });
   }
 
   var reload = doc.querySelector("[data-reload]");

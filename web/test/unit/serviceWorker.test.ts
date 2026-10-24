@@ -2,7 +2,7 @@
 // keeps. The generated /sw.js runs in a VM against a stand-in Cache Storage.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cacheName, classify, isNeverCached, isStorable, offlinePage, staleCaches } from "../../src/lib/pwa/rules.js";
+import { cacheName, classify, isNeverCached, isStorable, KEEP_SHELL_MESSAGE, offlinePage, SAVED_CACHE, SAVED_INDEX_KEY, savedGame, savedGameKey, savedShellKey, staleCaches } from "../../src/lib/pwa/rules.js";
 import { NEVER_CACHED, killSwitchSource, knownAddresses, precacheList } from "../../src/lib/pwa/build.ts";
 import { runInNewContext } from "node:vm";
 import { NO_STORE_PAGES, TURNSTILE_PAGES } from "../../src/lib/config.ts";
@@ -233,7 +233,7 @@ test("everything the install keeps is an address the worker may keep", () => {
   for (const path of precache) assert.ok(known.includes(path), path);
 });
 
-test("the kill switch of a build with no worker removes our caches and the old worker, and nothing else", async () => {
+test("the kill switch of a build with no worker removes our caches, the saved games and the old worker, and nothing else", async () => {
   const handlers = new Map<string, (event: { waitUntil(p: Promise<unknown>): void }) => void>();
   const deleted: string[] = [];
   let unregistered = false;
@@ -244,14 +244,14 @@ test("the kill switch of a build with no worker removes our caches and the old w
       skipWaiting: () => void (skipped = true),
       registration: { unregister: async () => void (unregistered = true) },
     },
-    caches: { keys: async () => [cacheName("a"), "tl-replays", "other"], delete: async (name: string) => void deleted.push(name) },
+    caches: { keys: async () => [cacheName("a"), SAVED_CACHE, "other"], delete: async (name: string) => void deleted.push(name) },
   });
   handlers.get("install")!({ waitUntil: () => {} });
   const waits: Promise<unknown>[] = [];
   handlers.get("activate")!({ waitUntil: (p) => void waits.push(p) });
   await Promise.all(waits);
   assert.ok(skipped && unregistered);
-  assert.deepEqual(deleted, [cacheName("a")]);
+  assert.deepEqual(deleted, [cacheName("a"), SAVED_CACHE]);
 });
 
 test("a slow network is waited for when there is no copy of the page to show instead", async () => {
@@ -291,4 +291,167 @@ test("a page that answers after the wait is still kept, so the next visit has th
     throw new TypeError("offline");
   };
   assert.equal(await (await worker.fetch(request(`${ORIGIN}/privacy/`, "navigate")))!.text(), "new");
+});
+
+// ---- saved games (T-637, second part) ----
+
+const USER = "11111111-1111-4111-8111-111111111111";
+const GAME = "22222222-2222-4222-8222-222222222222";
+const OTHER_GAME = "33333333-3333-4333-8333-333333333333";
+const OTHER_USER = "44444444-4444-4444-8444-444444444444";
+const asUrl = (key: string) => new URL(key, ORIGIN).href;
+
+/** A worker with the offline page installed, then offline, and a saved-games cache holding what the options say. */
+async function offlineWithSaved(saved: { shell?: "en" | "es" | null; game?: string | null; listed?: boolean }): Promise<Worker> {
+  const worker = new Worker();
+  worker.network = (req) => page(`copy of ${new URL(req.url).pathname}`);
+  await worker.lifecycle("install");
+  const store = new Map<string, Response>();
+  worker.stores.set(SAVED_CACHE, store);
+  if (saved.shell) store.set(asUrl(savedShellKey(saved.shell)), page(`game page shell (${saved.shell})`));
+  if (saved.game) store.set(asUrl(savedGameKey(saved.game)), page("the saved report"));
+  if (saved.game && saved.listed !== false) store.set(asUrl(SAVED_INDEX_KEY), page(JSON.stringify([{ userId: USER, publicId: saved.game, savedAt: 1, played: null, title: "" }])));
+  worker.network = () => {
+    throw new TypeError("offline");
+  };
+  return worker;
+}
+
+const gameAddress = (path = "/game/", user = USER, id = GAME) => `${ORIGIN}${path}?u=${user}&id=${id}`;
+
+test("savedGame: a game page with a valid player and game id, in either language, and nothing else", () => {
+  assert.deepEqual(savedGame("/game/", `?u=${USER}&id=${GAME}`), { shell: savedShellKey("en"), game: savedGameKey(GAME), userId: USER, publicId: GAME });
+  assert.deepEqual(savedGame("/es/game/", `?id=${GAME.toUpperCase()}&u=${USER}`), { shell: savedShellKey("es"), game: savedGameKey(GAME), userId: USER, publicId: GAME });
+  assert.deepEqual(savedGame("/game", `?u=${USER}&id=${GAME}`)?.game, savedGameKey(GAME), "the closing slash is optional, as for any page");
+  for (const [path, search] of [
+    ["/games/", `?u=${USER}&id=${GAME}`],
+    ["/me/", `?u=${USER}&id=${GAME}`],
+    ["/game/index.html", `?u=${USER}&id=${GAME}`],
+    ["/game/", ""],
+    ["/game/", `?id=${GAME}`],
+    ["/game/", `?u=${USER}`],
+    ["/game/", `?u=${USER}&id=../../x`],
+    ["/game/", `?u=not-a-uuid&id=${GAME}`],
+  ] as const) {
+    assert.equal(savedGame(path, search), null, `${path}${search}`);
+  }
+});
+
+test("the saved games' cache is not one the worker deletes when a new build takes over", () => {
+  assert.ok(!SAVED_CACHE.startsWith("tl-v-"));
+  assert.deepEqual(staleCaches([cacheName("v0"), SAVED_CACHE], "v1"), [cacheName("v0")]);
+});
+
+test("offline, a saved game opens with the game page shell in the address's language", async () => {
+  const worker = await offlineWithSaved({ shell: "en", game: GAME });
+  assert.equal(await (await worker.fetch(request(gameAddress(), "navigate")))!.text(), "game page shell (en)");
+  const spanish = await offlineWithSaved({ shell: "es", game: GAME });
+  assert.equal(await (await spanish.fetch(request(gameAddress("/es/game/"), "navigate")))!.text(), "game page shell (es)");
+});
+
+test("offline, a game that was not saved, or whose shell is missing, shows the offline page", async () => {
+  const cases: [string, Parameters<typeof offlineWithSaved>[0], string][] = [
+    ["another game", { shell: "en", game: OTHER_GAME }, gameAddress()],
+    ["no file", { shell: "en", game: null }, gameAddress()],
+    ["no shell", { shell: null, game: GAME }, gameAddress()],
+    ["a file the list does not name", { shell: "en", game: GAME, listed: false }, gameAddress()],
+    ["a game of another player", { shell: "en", game: GAME }, gameAddress("/game/", OTHER_USER)],
+    ["the other language's shell", { shell: "es", game: GAME }, gameAddress()],
+    ["nothing saved", {}, gameAddress()],
+    ["a bad id", { shell: "en", game: GAME }, `${ORIGIN}/game/?u=${USER}&id=nope`],
+  ];
+  for (const [name, saved, address] of cases) {
+    const worker = await offlineWithSaved(saved);
+    assert.equal(await (await worker.fetch(request(address, "navigate")))!.text(), "copy of /offline/", name);
+  }
+});
+
+test("online, a game page comes from the network and nothing about it is kept, in any cache", async () => {
+  const worker = await offlineWithSaved({ shell: "en", game: GAME });
+  worker.network = (req) => page(`live ${new URL(req.url).pathname}`);
+  const before = worker.kept().toSorted();
+  assert.equal(await (await worker.fetch(request(gameAddress(), "navigate")))!.text(), "live /game/");
+  assert.deepEqual(worker.kept().toSorted(), before);
+});
+
+test("a saved game's file is never served for any other address, or to a sub-resource", async () => {
+  const worker = await offlineWithSaved({ shell: "en", game: GAME });
+  for (const key of [savedGameKey(GAME), savedShellKey("en")]) {
+    const response = await worker.fetch(request(`${ORIGIN}${key}`));
+    assert.equal(response, null, "left to the browser");
+    const navigation = await worker.fetch(request(`${ORIGIN}${key}`, "navigate"));
+    assert.equal(await navigation!.text(), "copy of /offline/");
+  }
+});
+
+test("asked by a game page, the worker keeps the game page in both languages with the saved games, and only if a game was saved", async () => {
+  const worker = new Worker();
+  worker.network = (req) => page(`live ${new URL(req.url).pathname}`, { "Content-Type": "text/html", "Cache-Control": "no-store" });
+  await worker.message({ type: KEEP_SHELL_MESSAGE });
+  assert.deepEqual(worker.fetched, [], "nothing saved, so nothing is fetched or kept");
+  assert.deepEqual([...worker.stores.keys()], []);
+  worker.stores.set(SAVED_CACHE, new Map());
+  await worker.message({ type: KEEP_SHELL_MESSAGE });
+  assert.deepEqual(worker.fetched.toSorted(), [`GET ${ORIGIN}/es/game/`, `GET ${ORIGIN}/game/`]);
+  const store = worker.stores.get(SAVED_CACHE)!;
+  assert.equal(await store.get(asUrl(savedShellKey("en")))!.text(), "live /game/");
+  assert.equal(await store.get(asUrl(savedShellKey("es")))!.text(), "live /es/game/");
+  assert.deepEqual([...worker.stores.keys()], [SAVED_CACHE], "no other cache was touched");
+});
+
+test("a game page the worker cannot get as a plain answer is not kept, and other messages are ignored", async () => {
+  const redirected = page("sign in");
+  Object.defineProperty(redirected, "redirected", { value: true });
+  for (const network of [() => redirected, () => page("missing", {}, 404), () => { throw new TypeError("offline"); }]) {
+    const worker = new Worker();
+    worker.stores.set(SAVED_CACHE, new Map());
+    worker.network = network;
+    await worker.message({ type: KEEP_SHELL_MESSAGE });
+    assert.deepEqual(worker.stores.get(SAVED_CACHE)!.size, 0);
+  }
+  const worker = new Worker();
+  worker.stores.set(SAVED_CACHE, new Map());
+  await worker.message({ type: "something-else" });
+  await worker.message(null);
+  assert.deepEqual(worker.fetched, []);
+});
+
+test("a new build takes the saved game pages again when it activates, drops them if it cannot, and does nothing for a player who saved nothing", async () => {
+  const none = new Worker();
+  none.network = (req) => page(`live ${new URL(req.url).pathname}`);
+  await none.lifecycle("activate");
+  assert.deepEqual(none.fetched, []);
+  assert.ok(none.claimed);
+  const saved = new Worker();
+  saved.network = (req) => page(`live ${new URL(req.url).pathname}`);
+  saved.stores.set(SAVED_CACHE, new Map([[asUrl(savedShellKey("en")), page("old page")]]));
+  await saved.lifecycle("activate");
+  assert.equal(await saved.stores.get(SAVED_CACHE)!.get(asUrl(savedShellKey("en")))!.text(), "live /game/");
+  assert.ok(saved.claimed);
+  // Offline at activation: the old pages go (they name scripts this build dropped), the saved file stays, and the worker still takes over.
+  const offline = new Worker();
+  offline.stores.set(SAVED_CACHE, new Map([[asUrl(savedShellKey("en")), page("old page")], [asUrl(savedGameKey(GAME)), page("file")]]));
+  await offline.lifecycle("activate");
+  assert.deepEqual([...offline.stores.get(SAVED_CACHE)!.keys()], [asUrl(savedGameKey(GAME))]);
+  assert.ok(offline.claimed);
+});
+
+test("signed out while the pages come, the saved games' cache is not made again", async () => {
+  const worker = new Worker();
+  worker.stores.set(SAVED_CACHE, new Map());
+  worker.network = async (req) => {
+    worker.stores.delete(SAVED_CACHE);
+    return page(`live ${new URL(req.url).pathname}`);
+  };
+  await worker.message({ type: KEEP_SHELL_MESSAGE });
+  assert.deepEqual([...worker.stores.keys()], []);
+});
+
+test("a saved game's address gives up on a slow network and opens from the device; another page waits for the network", async () => {
+  const worker = await offlineWithSaved({ shell: "en", game: GAME });
+  worker.network = () => new Promise<Response>(() => {});
+  assert.equal(await (await worker.fetch(request(gameAddress(), "navigate")))!.text(), "game page shell (en)");
+  const late = await offlineWithSaved({ shell: "en", game: GAME });
+  late.network = () => new Promise<Response>((done) => setTimeout(() => done(page("slow but live /me/")), 60));
+  assert.equal(await (await late.fetch(request(`${ORIGIN}/me/`, "navigate")))!.text(), "slow but live /me/");
 });

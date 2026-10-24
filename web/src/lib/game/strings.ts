@@ -25,6 +25,7 @@ export const GAME_STRINGS = {
   "state.error.title": "Could not load this game",
   "state.error.body": "Check your connection and try again. Nothing was changed.",
   "state.retry": "Try again",
+  "state.fromDevice": "You are reading the copy saved on this device, because the game could not be loaded. It may be older than the one online.",
   "state.newer": "Saved by a newer version of the app than this site knows. The site shows what it can read.",
   "state.unreadableValues.one": "1 value in this record could not be read and shows as unknown.",
   "state.unreadableValues.other": "{count} values in this record could not be read and show as unknown.",

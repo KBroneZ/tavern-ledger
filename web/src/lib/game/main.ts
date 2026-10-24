@@ -23,6 +23,12 @@ import { type GameRef, parseGameRef } from "./url.ts";
 import { heroTip, pageHeading } from "./words.ts";
 import { toggleTurn } from "./turnsView.ts";
 import { href } from "../i18n.ts";
+import { askForShells, browserDevice, isOn, readSaved, saveGame } from "../pwa/saved.ts";
+
+/** How long the page waits to read the stored sign-in before it goes on without it. */
+const SESSION_WAIT_MS = 4000;
+/** How long a game that is saved on the device waits for the network before it opens from the saved copy. */
+const SAVED_WAIT_MS = 6000;
 
 function byId(id: string): HTMLElement {
   const node = document.getElementById(id);
@@ -71,9 +77,11 @@ function showError(kind: "unreadable" | "error", retry: () => void): void {
   byId(RETRY).addEventListener("click", retry);
 }
 
-function showGame(result: Extract<LoadResult, { kind: "ok" }>): void {
+/** Draws a game and returns the heading it was given (the offline page lists saved games by it). */
+function showGame(result: Extract<LoadResult, { kind: "ok" }>, fromDevice = false): string {
   const view = shapeGame(result.record);
   const banners: VNode[] = [];
+  if (fromDevice) banners.push(h("p", { class: "state state-unknown gv-banner" }, g("state.fromDevice")));
   if (result.record.newer) banners.push(h("p", { class: "state state-unknown gv-banner" }, g("state.newer")));
   const unreadable = result.record.unreadable;
   if (unreadable > 0) {
@@ -85,6 +93,34 @@ function showGame(result: Extract<LoadResult, { kind: "ok" }>): void {
   const replays = document.getElementById("gv-replays");
   if (replays) startReplays(replays, view.replays);
   void explainCombats(result.report);
+  return title;
+}
+
+/**
+ * When the player turned on "Keep my last games on this device" and this is
+ * their own game, saves its file, and has the worker keep the game page, for
+ * offline reading (lib/pwa/saved.ts). A failure (no room, a private window) only means no copy.
+ */
+async function keepCopy(ref: GameRef, file: Blob | null, title: string, played: string | null, currentPlayer: () => Promise<string | null>): Promise<void> {
+  const device = browserDevice();
+  if (!device || !file || !isOn(device)) return;
+  // Asked again now, not when the page opened: the player may have signed out, or another account in, while the game loaded.
+  if (isVisitor(await currentPlayer(), ref.userId) || !isOn(device, ref.userId)) return;
+  await saveGame(device, { userId: ref.userId, publicId: ref.publicId, savedAt: Date.now(), played, title }, file);
+  await askForShells();
+}
+
+/** The copy of this game saved on the device, read as if it had just come from the server; null when there is none or it cannot be read. */
+async function savedCopy(ref: GameRef): Promise<Extract<LoadResult, { kind: "ok" }> | null> {
+  try {
+    const device = browserDevice();
+    const file = device ? await readSaved(device, ref.userId, ref.publicId) : null;
+    if (!file) return null;
+    const result = await loadGame(async () => ({ data: file, error: null }), ref);
+    return result.kind === "ok" ? result : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Opens the replay of a turn from its row: picks it in the player and moves there. */
@@ -116,18 +152,36 @@ interface Sources {
   download: Download;
   readSummary: ReadSummary;
   signedIn: () => Promise<boolean>;
+  /** The signed-in player's id as of now, or null (none, or no way to tell without a connection). */
+  currentPlayer: () => Promise<string | null>;
 }
 
 async function run(ref: GameRef, sources: Sources): Promise<void> {
-  const { download, readSummary, signedIn } = sources;
+  const { download, readSummary, signedIn, currentPlayer } = sources;
   // The loading block replaces whatever was there (an error and its button), so a retry runs once.
   mount(body, stateBlock({ kind: "loading", title: g("page.loading"), lines: 10 }));
   body.setAttribute("aria-busy", "true");
   status.textContent = g("page.loading");
+  // The file as the server sent it, for the copy kept on the device (lib/pwa/saved.ts).
+  const got: { file: Blob | null } = { file: null };
+  const grab: Download = async (path) => {
+    const answer = await download(path);
+    if (answer.data) got.file = answer.data;
+    return answer;
+  };
+  const shown = (result: Extract<LoadResult, { kind: "ok" }>): void => {
+    const title = showGame(result);
+    keepCopy(ref, got.file, title, result.record.playedOn, currentPlayer).catch((error) => console.warn("Tavern Ledger: this game was not saved on the device.", error));
+  };
   // The card names load beside the game (a script chunk from this site); without them, ids show.
-  const [result, names] = await Promise.all([loadGame(download, ref), loadCardNames()]);
+  // A game the player saved on this device does not wait for a stalled connection (or a sign-in that cannot be renewed): after
+  // SAVED_WAIT_MS it opens from the copy. Any other game waits for the network, however slow.
+  const hasCopy = (await savedCopy(ref)) !== null;
+  const bounded = <T>(work: Promise<T>, onTimeout: T): Promise<T> =>
+    hasCopy ? Promise.race([work, new Promise<T>((done) => setTimeout(() => done(onTimeout), SAVED_WAIT_MS))]) : work;
+  const [result, names] = await Promise.all([bounded<LoadResult>(loadGame(grab, ref), { kind: "error" }), loadCardNames()]);
   useCardNames(names);
-  if (result.kind === "ok") return showGame(result);
+  if (result.kind === "ok") return shown(result);
   const retry = () => {
     // The button goes away with the block: focus moves to the page's heading first.
     heading.focus();
@@ -135,18 +189,26 @@ async function run(ref: GameRef, sources: Sources): Promise<void> {
   };
   if (result.kind === "unavailable") {
     // Refused by Storage: private, missing, or a file the retention deleted.
-    const expired = await loadExpired(readSummary, ref);
+    const expired = await bounded(loadExpired(readSummary, ref), { kind: "error" as const });
     if (expired.kind === "expired") return showExpired(expired.row);
-    if (expired.kind === "error") return showError("error", retry);
+    if (expired.kind === "error") return showSavedOrError(ref, "error", retry);
     if (expired.path !== null) {
       // The owner's own game whose file the sweep has not renamed yet: the row knows where it is.
-      const own = await loadGame(download, ref, expired.path);
-      if (own.kind === "ok") return showGame(own);
-      if (own.kind !== "unavailable") return showError(own.kind, retry);
+      const own = await bounded<LoadResult>(loadGame(grab, ref, expired.path), { kind: "error" });
+      if (own.kind === "ok") return shown(own);
+      if (own.kind !== "unavailable") return showSavedOrError(ref, own.kind, retry);
     }
     return showUnavailable(await signedIn().catch(() => false));
   }
-  showError(result.kind, retry);
+  await showSavedOrError(ref, result.kind, retry);
+}
+
+/** The error for a game that could not be read; for a network error, the copy saved on this device first, if the player kept one (it is theirs). */
+async function showSavedOrError(ref: GameRef, kind: "unreadable" | "error", retry: () => void): Promise<void> {
+  const copy = kind === "error" ? await savedCopy(ref) : null;
+  if (!copy) return showError(kind, retry);
+  setSeenByVisitor(false);
+  showGame(copy, true);
 }
 
 async function start(): Promise<void> {
@@ -174,11 +236,22 @@ async function start(): Promise<void> {
       .eq("user_id", r.userId)
       .eq("public_id", r.publicId)
       .limit(1);
-  const session = (await supabase.auth.getSession()).data.session;
+  // Without a connection the stored sign-in cannot always be read or renewed (an expired one is renewed over the network, with retries):
+  // the page does not wait longer than SESSION_WAIT_MS, goes on as a visitor, and a saved copy still opens.
+  const readSession = () =>
+    Promise.race([
+      supabase.auth.getSession().then(
+        (answer) => answer.data.session,
+        () => null,
+      ),
+      new Promise<null>((done) => setTimeout(() => done(null), SESSION_WAIT_MS)),
+    ]);
+  const session = await readSession();
   // Only the game's own player is told "you"; anyone else, signed in or not, reads "the player" (D-102).
   setSeenByVisitor(isVisitor(session?.user.id, ref.userId));
   const signedIn = async () => session !== null;
-  await run(ref, { download, readSummary, signedIn });
+  const currentPlayer = async () => (await readSession())?.user.id ?? null;
+  await run(ref, { download, readSummary, signedIn, currentPlayer });
 }
 
 start().catch(() => showError("error", () => location.reload()));

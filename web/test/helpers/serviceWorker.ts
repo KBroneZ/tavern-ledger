@@ -58,20 +58,27 @@ export class Worker {
       keys: async () => [...this.stores.keys()],
       delete: async (name: string) => this.stores.delete(name),
       open: async (name: string) => this.cache(name),
+      has: async (name: string) => this.stores.has(name),
+      // Like the real one: with a cache name it looks in that cache only, and does not make it.
+      match: async (key: string, options?: { cacheName?: string }) => {
+        const store = options?.cacheName ? this.stores.get(options.cacheName) : undefined;
+        return store?.get(new URL(key, ORIGIN).href)?.clone();
+      },
     };
     const fetch = async (input: Request | string) => {
       const req = typeof input === "string" ? new Request(input) : input;
       this.fetched.push(`${req.method} ${req.url}`);
       return this.network(req);
     };
-    runInNewContext(serviceWorkerSource(build), { self, caches, fetch, Request, Response, URL, Error, TypeError, Promise, setTimeout: (fn: () => void) => setTimeout(fn, 20), clearTimeout });
+    runInNewContext(serviceWorkerSource(build), { self, caches, fetch, Request, Response, URL, URLSearchParams, Error, TypeError, Promise, setTimeout: (fn: () => void) => setTimeout(fn, 20), clearTimeout });
   }
 
   private cache(name: string) {
     const store = this.stores.get(name) ?? new Map<string, Response>();
     this.stores.set(name, store);
     return {
-      put: async (req: Request | string, res: Response) => void store.set(typeof req === "string" ? req : req.url, res),
+      put: async (req: Request | string, res: Response) => void store.set(typeof req === "string" ? new URL(req, ORIGIN).href : req.url, res),
+      delete: async (req: Request | string) => store.delete(typeof req === "string" ? new URL(req, ORIGIN).href : req.url),
       match: async (req: Request | string) => store.get(typeof req === "string" ? new URL(req, ORIGIN).href : req.url)?.clone(),
       addAll: async (reqs: (Request | string)[]) => {
         const got: [string, Response][] = [];
@@ -96,6 +103,13 @@ export class Worker {
   async lifecycle(type: "install" | "activate"): Promise<void> {
     const waits: Promise<unknown>[] = [];
     this.handlers.get(type)!({ waitUntil: (p) => void waits.push(p), respondWith: () => {} });
+    await Promise.all(waits);
+  }
+
+  /** Sends a message event, as a page of the site does, and waits for what it asked to wait for. */
+  async message(data: unknown): Promise<void> {
+    const waits: Promise<unknown>[] = [];
+    this.handlers.get("message")!({ data, waitUntil: (p: Promise<unknown>) => void waits.push(p), respondWith: () => {} } as never);
     await Promise.all(waits);
   }
 
