@@ -71,7 +71,9 @@
   var saved = doc.querySelector("[data-saved]");
   if (saved && win.caches) {
     var UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-    var lang = saved.getAttribute("data-game-path").indexOf("/es/") === 0 ? "es" : "en";
+    // The offline page is shown at the address that failed, so the language is the address's (rules.js offlinePage).
+    var lang = win.location.pathname.indexOf("/es/") === 0 ? "es" : "en";
+    var gamePath = lang === "es" ? "/es/game/" : "/game/";
     // A game is listed only if the game page it opens is saved too (the worker keeps it; lib/pwa/saved.ts askForShells).
     win.caches
       .match("/__saved__/shell/" + lang, { cacheName: "tl-replays" })
@@ -89,7 +91,7 @@
         items.forEach(function (game) {
           var item = doc.createElement("li");
           var link = doc.createElement("a");
-          link.href = saved.getAttribute("data-game-path") + "?u=" + encodeURIComponent(game.userId) + "&id=" + encodeURIComponent(game.publicId);
+          link.href = gamePath + "?u=" + encodeURIComponent(game.userId) + "&id=" + encodeURIComponent(game.publicId);
           var label = typeof game.title === "string" && game.title ? game.title : saved.getAttribute("data-fallback");
           link.textContent = typeof game.played === "string" ? label + " \u00b7 " + game.played : label;
           item.appendChild(link);

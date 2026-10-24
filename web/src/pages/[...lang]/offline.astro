@@ -22,7 +22,7 @@ const scripts = readConfig(import.meta.env) !== null;
   </p>
   {
     scripts && (
-      <section data-saved hidden data-fallback={st("offline.saved.fallback")} data-game-path={href("/game/")}>
+      <section data-saved hidden data-fallback={st("offline.saved.fallback")}>
         <h2>{st("offline.saved.title")}</h2>
         <p>{st("offline.saved.lead")}</p>
         <ul data-saved-list />

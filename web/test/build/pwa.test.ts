@@ -166,11 +166,8 @@ if (CONFIG === null) {
       assert.match(html, /<input type="checkbox" id="saved-on"(?![^>]*checked)[^>]*>/, `${page}: not checked`);
       assert.ok(html.includes(on) && html.includes(erase), page);
     }
-    for (const [page, path] of [
-      ["offline/index.html", "/game/"],
-      ["es/offline/index.html", "/es/game/"],
-    ] as const) {
-      assert.match(read(page), new RegExp(`<section data-saved hidden data-fallback="[^"]+" data-game-path="${path}"`), page);
+    for (const page of ["offline/index.html", "es/offline/index.html"]) {
+      assert.match(read(page), /<section data-saved hidden data-fallback="[^"]+">/, page);
     }
     // public/pwa.js is a classic script and cannot import the names the worker and the pages share.
     const script = read("pwa.js");
