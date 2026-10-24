@@ -117,6 +117,8 @@ describe("installable web app", { skip: RUN ? false : "set TAVERN_BROWSER and bu
     const saved = await browser.evaluate<string[]>(`caches.open("tl-replays").then((c) => c.keys()).then((ks) => ks.map((r) => new URL(r.url).pathname).sort())`);
     assert.deepEqual(saved, [`/__saved__/game/${game}`, "/__saved__/index", "/__saved__/shell/en", "/__saved__/shell/es"]);
     await site.stop();
+    // Offline for the account service too, whatever the build points at: its requests are refused, as they would be with no connection.
+    await browser.page("Network.setBlockedURLs", { urls: ["*://*.supabase.co/*", "*://127.0.0.1:54321/*", "*://localhost:54321/*"] });
     try {
       await browser.go(`${site.origin}/game/?u=${user}&id=${game}`, 2000);
       assert.equal(await browser.evaluate("!!document.getElementById('game-body')"), true, "the game page opens from the device");
@@ -129,6 +131,7 @@ describe("installable web app", { skip: RUN ? false : "set TAVERN_BROWSER and bu
       );
       assert.equal(await browser.evaluate("document.querySelector('[data-saved]').hidden"), false);
     } finally {
+      await browser.page("Network.setBlockedURLs", { urls: [] });
       await site.start();
       await browser.evaluate(`caches.delete("tl-replays")`);
     }
