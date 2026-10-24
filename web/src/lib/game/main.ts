@@ -177,11 +177,9 @@ async function run(ref: GameRef, sources: Sources): Promise<void> {
   // A game the player saved on this device does not wait for a stalled connection (or a sign-in that cannot be renewed): after
   // SAVED_WAIT_MS it opens from the copy. Any other game waits for the network, however slow.
   const hasCopy = (await savedCopy(ref)) !== null;
-  const loading = loadGame(grab, ref);
-  const loaded = hasCopy
-    ? Promise.race([loading, new Promise<LoadResult>((done) => setTimeout(() => done({ kind: "error" }), SAVED_WAIT_MS))])
-    : loading;
-  const [result, names] = await Promise.all([loaded, loadCardNames()]);
+  const bounded = <T>(work: Promise<T>, onTimeout: T): Promise<T> =>
+    hasCopy ? Promise.race([work, new Promise<T>((done) => setTimeout(() => done(onTimeout), SAVED_WAIT_MS))]) : work;
+  const [result, names] = await Promise.all([bounded<LoadResult>(loadGame(grab, ref), { kind: "error" }), loadCardNames()]);
   useCardNames(names);
   if (result.kind === "ok") return shown(result);
   const retry = () => {
@@ -191,12 +189,12 @@ async function run(ref: GameRef, sources: Sources): Promise<void> {
   };
   if (result.kind === "unavailable") {
     // Refused by Storage: private, missing, or a file the retention deleted.
-    const expired = await loadExpired(readSummary, ref);
+    const expired = await bounded(loadExpired(readSummary, ref), { kind: "error" as const });
     if (expired.kind === "expired") return showExpired(expired.row);
     if (expired.kind === "error") return showSavedOrError(ref, "error", retry);
     if (expired.path !== null) {
       // The owner's own game whose file the sweep has not renamed yet: the row knows where it is.
-      const own = await loadGame(grab, ref, expired.path);
+      const own = await bounded<LoadResult>(loadGame(grab, ref, expired.path), { kind: "error" });
       if (own.kind === "ok") return shown(own);
       if (own.kind !== "unavailable") return showSavedOrError(ref, own.kind, retry);
     }

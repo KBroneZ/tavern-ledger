@@ -72,7 +72,7 @@
   if (saved && win.caches) {
     var UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
     // The offline page is shown at the address that failed, so the language is the address's (rules.js offlinePage).
-    var lang = win.location.pathname.indexOf("/es/") === 0 ? "es" : "en";
+    var lang = win.location.pathname === "/es" || win.location.pathname.indexOf("/es/") === 0 ? "es" : "en";
     var gamePath = lang === "es" ? "/es/game/" : "/game/";
     // A game is listed only if the game page it opens is saved too (the worker keeps it; lib/pwa/saved.ts askForShells).
     win.caches
