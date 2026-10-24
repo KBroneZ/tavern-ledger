@@ -27,6 +27,8 @@ import { askForShells, browserDevice, isOn, readSaved, saveGame } from "../pwa/s
 
 /** How long the page waits to read the stored sign-in before it goes on without it. */
 const SESSION_WAIT_MS = 4000;
+/** How long a game that is saved on the device waits for the network before it opens from the saved copy. */
+const SAVED_WAIT_MS = 6000;
 
 function byId(id: string): HTMLElement {
   const node = document.getElementById(id);
@@ -172,7 +174,14 @@ async function run(ref: GameRef, sources: Sources): Promise<void> {
     keepCopy(ref, got.file, title, result.record.playedOn, currentPlayer).catch((error) => console.warn("Tavern Ledger: this game was not saved on the device.", error));
   };
   // The card names load beside the game (a script chunk from this site); without them, ids show.
-  const [result, names] = await Promise.all([loadGame(grab, ref), loadCardNames()]);
+  // A game the player saved on this device does not wait for a stalled connection (or a sign-in that cannot be renewed): after
+  // SAVED_WAIT_MS it opens from the copy. Any other game waits for the network, however slow.
+  const hasCopy = (await savedCopy(ref)) !== null;
+  const loading = loadGame(grab, ref);
+  const loaded = hasCopy
+    ? Promise.race([loading, new Promise<LoadResult>((done) => setTimeout(() => done({ kind: "error" }), SAVED_WAIT_MS))])
+    : loading;
+  const [result, names] = await Promise.all([loaded, loadCardNames()]);
   useCardNames(names);
   if (result.kind === "ok") return shown(result);
   const retry = () => {
@@ -184,7 +193,7 @@ async function run(ref: GameRef, sources: Sources): Promise<void> {
     // Refused by Storage: private, missing, or a file the retention deleted.
     const expired = await loadExpired(readSummary, ref);
     if (expired.kind === "expired") return showExpired(expired.row);
-    if (expired.kind === "error") return showError("error", retry);
+    if (expired.kind === "error") return showSavedOrError(ref, "error", retry);
     if (expired.path !== null) {
       // The owner's own game whose file the sweep has not renamed yet: the row knows where it is.
       const own = await loadGame(grab, ref, expired.path);
