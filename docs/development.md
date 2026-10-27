@@ -196,6 +196,16 @@ A daily workflow (`.github/workflows/game-build-watch.yml`, also runnable by han
 
 To see what it would do without opening anything: `python tools/game_build_watch.py`. Add `--open-issue` (needs `gh` and a token) to open the issue. If the simulator has a `CHECKED_BUILDS` list in `crates/combat-sim/src`, the report says when it is behind. The listing can be ahead of the game's own patch day, so read the build number in the issue before acting on it. The listing numbers the client, but a game writes its own number to `Power.log` (`BuildNumber=`), and a client build can write an older one: the 255130 client writes 254477. `TESTED_BUILDS` and the simulator's `CHECKED_BUILDS` hold the number the logs write; `CLIENT_BUILDS` pairs a client build with the log build its games write, and a pair is added only after real games on that client were read clean (a test keeps its log build inside `TESTED_BUILDS`). To find a client's build: `.product.db` in the game folder, or `Hearthstone/<version>` in `Net.log`.
 
+### Simulator conformance corpus
+
+Every logged combat can become a frozen test case for the combat simulator. `combat-corpus` reads your own saved games and writes one JSON line per combat that has a result: the build, Solo or Duos, both sides' boards, kits and game-long values, the result and the saved combat replay. Names, the lobby, the session string, when the game was played and the shop are left out; a key outside a fixed list, or a string that is not a card id or a game word, stops the export instead of being written. No card data goes in the file: whoever reads it gives each combat the `cards.json` of its own build.
+
+```
+cargo run --release -p combat-sim --bin combat-corpus -- --history "%APPDATA%\TavernLedger\games.jsonl" --out .local/corpus.jsonl.gz
+```
+
+The file is gzip-compressed when its name ends in `.gz`. Keep it under `.local/` (never commit a corpus made from real games without the project owner's OK, as with real-game fixtures).
+
 ### Real-game fixtures
 
 Copy the raw log into `.local/` (never commit it), build the parser and make one fixture per game; the script writes nothing if the log has a game played with the reconnect dev tool (D-043), if a name or id would be left, or if the fixture would read differently from the raw game:
