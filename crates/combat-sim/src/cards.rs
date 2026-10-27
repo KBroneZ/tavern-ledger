@@ -455,7 +455,6 @@ pub struct Token {
     pub golden: bool,
 }
 
-/// The Deities by database id (T-671): C'Thun and Y'Shaarj.
 /// Tasty Lobster and its golden card, with how many times over each shows
 /// and gives the side's Lobster buff (T-645).
 pub const LOBSTERS: [(&str, i32); 2] = [("BG36_202", 1), ("BG36_202_G", 2)];
@@ -468,9 +467,11 @@ pub const LOBSTER_STEP: (i32, i32) = (2, 1);
 /// golden Lobster; `None` for another card or a Lobster without numbers.
 pub fn lobster_shown(card_id: &str, counters: [i32; 2]) -> Option<(i32, i32)> {
     let (_, times) = LOBSTERS.iter().find(|(id, _)| *id == card_id)?;
-    (counters[0] > 0 && counters[1] > 0).then(|| (counters[0] / times, counters[1] / times))
+    let shown = (counters[0] / times, counters[1] / times);
+    (shown.0 > 0 && shown.1 > 0).then_some(shown)
 }
 
+/// The Deities by database id (T-671): C'Thun and Y'Shaarj.
 pub const DEITIES: [(i32, &str); 2] = [(130_610, "BGFYM_000"), (132_532, "BGFYM_011")];
 
 /// The Deity card a database id names, if it is one.

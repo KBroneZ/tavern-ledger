@@ -375,7 +375,8 @@ fn board_minions_take_the_numbers_the_replay_start_shows() {
         panic!("boards");
     };
     let numbers = |b: &Warband| b.minions.iter().map(|m| m.counters).collect::<Vec<_>>();
-    assert_eq!(numbers(&teams.0.first), [[0, 0], [5, 5], [18, 9]]);
+    // Only Lobsters take them.
+    assert_eq!(numbers(&teams.0.first), [[0, 0], [0, 0], [18, 9]]);
     assert_eq!(numbers(&teams.1.first), [[4, 2]]);
 }
 

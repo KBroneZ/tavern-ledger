@@ -9,6 +9,8 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
   "summons tokens that may have game-long buffs that are not known":
     "invoca fichas que pueden tener mejoras de toda la partida que no se conocen",
   "its numbers grow during the game; the base values are used": "sus números crecen durante la partida; se usan los de base",
+  "its buff grows during the game; the text's +2/+1 is used when no Lobster on the board shows it":
+    "su mejora crece durante la partida; se usa el +2/+1 del texto si ninguna Langosta del tablero la muestra",
   "buffs the Deity, whose stats this board does not show": "mejora a la Deidad, cuyas estadísticas este tablero no muestra",
   "buffs the Deity by more for each Tavern spell cast this game":
     "mejora a la Deidad más por cada hechizo de taberna lanzado en la partida",

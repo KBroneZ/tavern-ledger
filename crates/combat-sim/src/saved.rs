@@ -463,9 +463,9 @@ fn side_boards(entries: &[Value], side: &str, solo: bool, facts: &FactsOf) -> Op
     fits.then_some(out)
 }
 
-/// Gives each side's first board the two numbers its minions show at the
-/// start of the saved replay (parser revision 16, T-628), which the boards
-/// read at the first attack lack (the Lobster buff, T-645). A minion takes
+/// Gives the Tasty Lobsters on each side's first board the two numbers they
+/// show at the start of the saved replay (parser revision 16, T-628), which
+/// the boards read at the first attack lack (the Lobster buff, T-645). A minion takes
 /// the numbers of the replay minion of its card at the same rank among
 /// that card's copies on its side; nothing without a replay.
 fn shown_counters(round: &Value, teams: &mut (Team, Team)) {
@@ -490,6 +490,12 @@ fn shown_counters(round: &Value, teams: &mut (Team, Team)) {
             .collect();
         for i in 0..band.minions.len() {
             let id = band.minions[i].card_id.as_str();
+            // Only the Lobster buff is read from them for now: every copy of
+            // a Lobster shows it, so a copy summoned at start of combat
+            // cannot shift it onto the wrong card.
+            if !crate::cards::LOBSTERS.iter().any(|(l, _)| *l == id) {
+                continue;
+            }
             let rank = band.minions[..i].iter().filter(|m| m.card_id == id).count();
             let numbers = shown
                 .iter()

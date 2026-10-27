@@ -183,3 +183,13 @@ fn a_lobster_is_exact_only_when_a_lobster_on_the_board_shows_the_buff() {
     assert_eq!(approximate(vec![hyena.clone()]), ["BG36_210"]);
     assert!(approximate(vec![hyena, lobster(false, [6, 3])]).is_empty());
 }
+
+#[test]
+fn a_golden_lobster_too_small_to_halve_shows_nothing() {
+    assert_eq!(crate::cards::lobster_shown("BG36_202_G", [1, 1]), None);
+    assert_eq!(
+        crate::cards::lobster_shown("BG36_202_G", [4, 2]),
+        Some((2, 1))
+    );
+    assert_eq!(crate::cards::lobster_shown("BGS_119", [4, 2]), None);
+}
