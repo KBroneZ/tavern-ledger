@@ -28,7 +28,11 @@ impl Combat<'_> {
     }
 
     /// The side's Deity awakens when it is known, not awake yet, enough
-    /// Aberrations died and the board has space; at the right end.
+    /// Aberrations died and the board has space; at the right end. It can
+    /// enter a board its last minion just left (its awakening comes with the
+    /// deaths). Not checked against logged combats yet: whether a Duos
+    /// teammate's board counts the deaths of the first board; here each
+    /// board counts its own, from the deaths the game counted for its Deity.
     pub(super) fn awaken(&mut self, side: usize) {
         let deity = self.sides[side].values.deity;
         if self.sides[side].deity.is_some() || !deity.known() || deity.progress < deity.needed {
@@ -44,7 +48,7 @@ impl Combat<'_> {
         let kw = self.p.cards[card as usize]
             .base
             .map_or(crate::model::Keywords::NONE, |b| b.keywords);
-        let unit = self.fresh(card, deity.attack.max(1), deity.health.max(1), kw);
+        let unit = self.fresh(card, deity.attack, deity.health, kw);
         let uid = unit.uid;
         let at = self.sides[side].units.len();
         if !self.sides[side].insert(at, unit) {
@@ -78,10 +82,8 @@ impl Combat<'_> {
 
     /// "Give your Deity +A/+H": the awakened one, else the hidden one.
     pub(super) fn buff_deity(&mut self, side: usize, attack: i32, health: i32) {
-        match self.sides[side]
-            .deity
-            .filter(|u| self.unit(side, *u).is_some())
-        {
+        // Once it awakened, the buff goes to it; after it died, nowhere.
+        match self.sides[side].deity {
             Some(uid) => self.buff(side, uid, attack, health),
             None => {
                 let d = &mut self.sides[side].values.deity;
