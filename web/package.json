@@ -16,9 +16,9 @@
     "test:local": "node --test --test-concurrency=1 \"test/local/*.test.ts\""
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.117.3"
+    "@supabase/supabase-js": "2.118.0"
   },
   "devDependencies": {
-    "astro": "7.3.8"
+    "astro": "7.4.1"
   }
 }
