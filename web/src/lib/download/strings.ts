@@ -37,6 +37,8 @@ export const DL_STRINGS = {
   "step2.line": "Windows will warn you: click “More info”, then “Run anyway”.",
   "step2.more":
     "Windows may say “Windows protected your PC”. It shows this because the installer has no code-signing certificate yet and few people have downloaded it. Check that the file name matches, and do this only with the file from this page or from the project's GitHub releases.",
+  "step2.sac":
+    "On Windows 11, Smart App Control may block it instead, with no “Run anyway”: Windows has no way to let one unsigned app past it. Until the installer is signed, this beta cannot be installed on a PC where Smart App Control is on.",
   "step3.title": "Install it",
   "step3.line": "Follow the installer; it needs no administrator rights.",
   "step3.more":

@@ -1,0 +1,16 @@
+[package]
+name = "expected-place"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Expected place per turn: the state encoder and, later, the model (moonshot phase 3, T-652)"
+
+[dependencies]
+# Already in Cargo.lock through the other crates (PROVENANCE.md); no new crates.
+serde_json = "1"
+
+[[bin]]
+name = "place-features"
+path = "src/main.rs"
