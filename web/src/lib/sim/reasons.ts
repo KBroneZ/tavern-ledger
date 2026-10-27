@@ -8,56 +8,38 @@ import { lang } from "../i18n.ts";
 export const REASONS_ES: Readonly<Record<string, string>> = {
   "summons tokens that may have game-long buffs that are not known":
     "invoca fichas que pueden tener mejoras de toda la partida que no se conocen",
-  "its numbers grow during the game; the base values are used":
-    "sus números crecen durante la partida; se usan los de base",
-  "buffs the Deity, whose stats this board does not show":
-    "mejora a la Deidad, cuyas estadísticas este tablero no muestra",
+  "its numbers grow during the game; the base values are used": "sus números crecen durante la partida; se usan los de base",
+  "buffs the Deity, whose stats this board does not show": "mejora a la Deidad, cuyas estadísticas este tablero no muestra",
   "buffs the Deity by more for each Tavern spell cast this game":
     "mejora a la Deidad más por cada hechizo de taberna lanzado en la partida",
-  "buffs the team's Deities; the teammate's is not known":
-    "mejora a las Deidades del equipo; la del compañero no se conoce",
-  "Blood Gems are played as +1/+1; their upgrades are not known":
-    "las Gemas de sangre se juegan como +1/+1; sus mejoras no se conocen",
-  "which minions it picks is not checked against the game yet":
-    "aún no se ha comprobado con la partida a qué esbirros elige",
-  "grows when another Eternal Knight dies; not played":
-    "crece cuando muere otro Caballero eterno; no se juega",
-  "the spell's values can grow during the game; the printed ones are used":
-    "los valores del hechizo pueden crecer durante la partida; se usan los impresos",
-  "counts damage from attacks only, not from effects":
-    "solo cuenta el daño de los ataques, no el de los efectos",
+  "buffs the team's Deities; the teammate's is not known": "mejora a las Deidades del equipo; la del compañero no se conoce",
+  "Blood Gems are played as +1/+1; their upgrades are not known": "las Gemas de sangre se juegan como +1/+1; sus mejoras no se conocen",
+  "which minions it picks is not checked against the game yet": "aún no se ha comprobado con la partida a qué esbirros elige",
+  "grows when another Eternal Knight dies; not played": "crece cuando muere otro Caballero eterno; no se juega",
+  "the spell's values can grow during the game; the printed ones are used": "los valores del hechizo pueden crecer durante la partida; se usan los impresos",
+  "counts damage from attacks only, not from effects": "solo cuenta el daño de los ataques, no el de los efectos",
   "which Deathrattle it triggers and when is not checked against the game yet":
     "aún no se ha comprobado con la partida qué Último aliento activa ni cuándo",
-  "Blood Gems played on it in combat are not passed on":
-    "las Gemas de sangre que recibe en combate no se transmiten",
+  "Blood Gems played on it in combat are not passed on": "las Gemas de sangre que recibe en combate no se transmiten",
   "Eternal Knights grow with the Knights that died this game, which is not known":
     "los Caballeros eternos crecen con los Caballeros muertos en la partida, dato que no se conoce",
-  "Undead summoned after it died do not get the Attack":
-    "los no muertos invocados después de su muerte no reciben el Ataque",
-  "its bonus grows during the game; the printed one is used":
-    "su bonificación crece durante la partida; se usa la impresa",
-  "its order with other summon effects is not checked yet":
-    "aún no se ha comprobado su orden con otros efectos de invocación",
+  "Undead summoned after it died do not get the Attack": "los no muertos invocados después de su muerte no reciben el Ataque",
+  "its bonus grows during the game; the printed one is used": "su bonificación crece durante la partida; se usa la impresa",
+  "its order with other summon effects is not checked yet": "aún no se ha comprobado su orden con otros efectos de invocación",
   "its Golem's card id is the one seen in real games for Jailbird Juggernaut":
     "el id de carta de su Gólem es el que se ha visto en partidas reales para Jailbird Juggernaut",
   "its Golem's card id is from real games; what the card does when its Golem kills the target is not checked":
     "el id de carta de su Gólem sale de partidas reales; no se ha comprobado qué hace la carta cuando su Gólem mata al objetivo",
-  "Deathrattles it gained in earlier combats are not on the board":
-    "los Últimos alientos que ganó en combates anteriores no están en el tablero",
+  "Deathrattles it gained in earlier combats are not on the board": "los Últimos alientos que ganó en combates anteriores no están en el tablero",
   "Beetles' game-long buffs are not known, and Beetles summoned later miss this combat's":
     "las mejoras de toda la partida de los Escarabajos no se conocen, y los invocados después no reciben las de este combate",
   "which neighbour it picks, and neighbours that die with it, are not checked":
     "no se ha comprobado qué vecino elige ni los vecinos que mueren a la vez",
-  "neighbours that die with it are not checked":
-    "no se han comprobado los vecinos que mueren a la vez",
-  "Scribes that die in this combat do not buff it yet":
-    "los Escribas que mueren en este combate aún no lo mejoran",
-  "it improves during the game; the card's printed numbers are used":
-    "mejora durante la partida; se usan los números impresos de la carta",
-  "picks only minions that miss one of the keywords":
-    "solo elige esbirros a los que les falta alguna de las palabras clave",
-  "may come back with Reborn; card stats unknown":
-    "puede volver con Renacer; no se conocen las estadísticas de la carta",
+  "neighbours that die with it are not checked": "no se han comprobado los vecinos que mueren a la vez",
+  "Scribes that die in this combat do not buff it yet": "los Escribas que mueren en este combate aún no lo mejoran",
+  "it improves during the game; the card's printed numbers are used": "mejora durante la partida; se usan los números impresos de la carta",
+  "picks only minions that miss one of the keywords": "solo elige esbirros a los que les falta alguna de las palabras clave",
+  "may come back with Reborn; card stats unknown": "puede volver con Renacer; no se conocen las estadísticas de la carta",
   "summons a minion from the hand, which is not seen: the summon is left out":
     "invoca un esbirro de la mano, que no se ve: la invocación se deja fuera",
   "on a board taken after the start of combat, the Deathrattles it copied are not on the board":
@@ -70,10 +52,8 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
     "su Último aliento copia al esbirro que destruye al inicio del combate; este tablero se tomó después, así que el esbirro copiado ya no está y no se conoce",
   "its Deathrattle summons random Undead Creations and the list of them is not known":
     "su Último aliento invoca Creaciones no muertas al azar y no se conoce la lista de ellas",
-  "the simulator has not reviewed this card yet":
-    "el simulador aún no ha revisado esta carta",
-  "the simulator has not reviewed this Dark Gift yet":
-    "el simulador aún no ha revisado este Don siniestro",
+  "the simulator has not reviewed this card yet": "el simulador aún no ha revisado esta carta",
+  "the simulator has not reviewed this Dark Gift yet": "el simulador aún no ha revisado este Don siniestro",
   "its Start of Combat effect is not played, and this board was taken before it":
     "su efecto de Inicio del combate no se juega, y este tablero se tomó antes de él",
   "a spell it casts can trigger cards that follow spells (Torrential Ruiner, Fleeing Fugitive, Abyssal Bruiser): not played":
@@ -94,40 +74,29 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
     "gana estadísticas hasta el próximo turno cuando otro esbirro aliado gana estadísticas en combate; eso no se juega",
   "the order of start-of-combat effects between the two sides is not proven":
     "no está comprobado el orden de los efectos de Inicio del combate entre los dos lados",
-  "the simulator has not reviewed this hero power or trinket yet":
-    "el simulador aún no ha revisado este poder de héroe o abalorio",
-  "its effect during combat is not played yet":
-    "su efecto durante el combate aún no se juega",
+  "the simulator has not reviewed this hero power or trinket yet": "el simulador aún no ha revisado este poder de héroe o abalorio",
+  "its effect during combat is not played yet": "su efecto durante el combate aún no se juega",
   "it acts during combat in a way the simulator does not play yet":
     "actúa durante el combate de una forma que el simulador aún no juega",
-  "it makes a hero power that acts in combat trigger twice":
-    "hace que un poder de héroe que actúa en combate se active dos veces",
-  "its numbers are not known; the printed ones are used":
-    "sus números no se conocen; se usan los impresos",
+  "it makes a hero power that acts in combat trigger twice": "hace que un poder de héroe que actúa en combate se active dos veces",
+  "its numbers are not known; the printed ones are used": "sus números no se conocen; se usan los impresos",
   "when its attacks come against the other start-of-combat effects is not checked":
     "no se ha comprobado cuándo llegan sus ataques respecto a los demás efectos de Inicio del combate",
-  "whether it can hit the same minion twice is not checked":
-    "no se ha comprobado si puede golpear dos veces al mismo esbirro",
-  "how it rounds half an odd Attack is not checked":
-    "no se ha comprobado cómo redondea la mitad de un Ataque impar",
+  "whether it can hit the same minion twice is not checked": "no se ha comprobado si puede golpear dos veces al mismo esbirro",
+  "how it rounds half an odd Attack is not checked": "no se ha comprobado cómo redondea la mitad de un Ataque impar",
   "whether it skips Pirates that already have Divine Shield is not checked":
     "no se ha comprobado si se salta a los piratas que ya tienen Escudo divino",
-  "which minion it picks among equal Attack is not checked":
-    "no se ha comprobado qué esbirro elige entre los de igual Ataque",
-  "the order of the Deathrattles it triggers is not checked":
-    "no se ha comprobado el orden de los Últimos alientos que activa",
+  "which minion it picks among equal Attack is not checked": "no se ha comprobado qué esbirro elige entre los de igual Ataque",
+  "the order of the Deathrattles it triggers is not checked": "no se ha comprobado el orden de los Últimos alientos que activa",
   "whether its copy of a damaged minion keeps the damage is not checked":
     "no se ha comprobado si su copia de un esbirro dañado conserva el daño",
   "where the minion it fires goes on the board is checked on one combat only":
     "dónde queda en el tablero el esbirro que dispara solo se ha comprobado en un combate",
-  "which minion it copies among equal Tier is not checked":
-    "no se ha comprobado qué esbirro copia entre los de igual nivel",
+  "which minion it copies among equal Tier is not checked": "no se ha comprobado qué esbirro copia entre los de igual nivel",
   "the minion it names is not given": "no se indica el esbirro que elige",
   "the minion it holds is not given": "no se indica el esbirro que guarda",
-  "the round, which unlocks it, is not given":
-    "no se indica el turno, que es el que lo desbloquea",
-  "its teammate's board is not given":
-    "no se indica el tablero de su compañero",
+  "the round, which unlocks it, is not given": "no se indica el turno, que es el que lo desbloquea",
+  "its teammate's board is not given": "no se indica el tablero de su compañero",
   "the minion it marked is not given": "no se indica el esbirro que marcó",
   "Eternal Knights summoned during combat miss what it gave them in earlier combats":
     "los Caballeros eternos invocados durante el combate no tienen lo que les dio en combates anteriores",
