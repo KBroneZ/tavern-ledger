@@ -27,6 +27,13 @@ test("the app's answer is read defensively; one out of shape is a failure, not a
   assert.equal(W.read(done([{ decision: decision(3, "buy", "BG_A", ["BG_A"]), rebuilt: { Ok: { round: 3, actual: { won: 2 }, alternatives: [] } } }])), null, "a share above 1");
   assert.deepEqual(W.read({ state: "game_on" }), { state: "game_on" });
   assert.deepEqual(W.read({ state: "busy" }), { state: "busy" });
+  assert.deepEqual(W.read({ state: "idle" }), { state: "idle" });
+  assert.deepEqual(W.read({ state: "reviewing", done: 2, total: 5 }), { state: "reviewing", progress: { done: 2, total: 5 } }, "this game, already being reviewed");
+  const odd = W.read(done([{ decision: decision(3, "buy", "BG_A", ["BG_A", "x<y"]), rebuilt: rebuilt(3, 0.4, [alt("<img src=x onerror=alert(1)>", 0.6, 0.4)]) }]));
+  assert.ok(odd, "an alternative's odd card id does not fail the whole review");
+  assert.equal(odd.decisions[0].rebuilt.alternatives[0].card, null, "it is unnamed, as a decision's");
+  I18n.setLang("en");
+  assert.match(W.altLine(odd.decisions[0], odd.decisions[0].rebuilt.alternatives[0], nameOf), /^a card the log does not name: clearly better/);
   assert.deepEqual(W.read({ state: "no_review", why: { no_shop: "missing" } }), { state: "no_review", why: "no_shop" });
   assert.deepEqual(W.read({ state: "no_review", why: "not_solo" }), { state: "no_review", why: "not_solo" });
 
@@ -170,7 +177,9 @@ test("the summary is honest about a review that stopped partway or found nothing
   const roll = { decision: decision(3, "roll", null, []), rebuilt: { Err: "needs_shop_playout" } };
   I18n.setLang("en");
   const s = W.summary(W.read(done([costly, even, roll])));
-  assert.equal(s.count, "2 of 3 choices simulated again.");
+  assert.equal(s.count, "2 of 2 choices simulated again.", "a roll is never simulated, so it is not counted, as in the progress");
+  const skipped = { decision: decision(4, "buy", "BG_A", ["BG_A"]), rebuilt: { Err: "no_alternative" } };
+  assert.equal(W.summary(W.read(done([costly, skipped, roll]))).count, "1 of 2 choices simulated again.");
   assert.equal(s.empty, null);
   assert.equal(s.banner, null);
   assert.equal(W.summary(W.read(done([even, roll]))).empty, "No choice clearly cost you the next fight.");

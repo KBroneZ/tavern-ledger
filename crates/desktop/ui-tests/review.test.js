@@ -8,8 +8,13 @@ const W = require("../ui/review-words.js");
 const TLReview = require("../ui/review.js");
 
 // Just enough of an element for the section: tag, class, text, children.
+// Markup is refused: any use of innerHTML, outerHTML or insertAdjacentHTML
+// fails the test.
+const MARKUP = ["innerHTML", "outerHTML"];
 function el(tag, cls, text) {
   const node = { tag, className: cls || "", textContent: text === undefined ? "" : String(text), children: [], listeners: {}, attrs: {}, hidden: false, disabled: false };
+  MARKUP.forEach((prop) => Object.defineProperty(node, prop, { get() { throw new Error(`${prop} read`); }, set() { throw new Error(`${prop} set`); } }));
+  node.insertAdjacentHTML = () => { throw new Error("insertAdjacentHTML"); };
   node.append = (...kids) => kids.forEach((k) => node.children.push(typeof k === "string" ? { tag: "#text", textContent: k, children: [] } : k));
   node.addEventListener = (type, fn) => { node.listeners[type] = fn; };
   node.setAttribute = (k, v) => { node.attrs[k] = String(v); };
@@ -58,7 +63,7 @@ test("done: the costly choices with their reason and boards, every turn behind a
   const report = { local_player_id: 1, rounds: [{ number: 2, entries: [{ side: "own", player_id: 1, board: [{ card_id: "BG_A", atk: 1, health: 1 }] }] }] };
   const part = TLReview.section(ui, answer([costly, roll]), tools({ report }));
   const all = text(part);
-  assert.match(all, /1 of 2 choices simulated again/);
+  assert.match(all, /1 of 1 choices simulated again/, "the roll is not counted");
   assert.match(all, /Turn 2: you bought BG_A\. Had you bought BG_B instead/);
   assert.match(all, /BG_B is simulated at its base stats/);
   assert.ok(find(part, "review-boards"), "before and after boards");
@@ -66,7 +71,20 @@ test("done: the costly choices with their reason and boards, every turn behind a
   assert.match(text(fold), /Show every turn/);
   assert.match(text(fold), /Turn 3: you rolled\./);
   assert.match(text(fold), /Not simulated: it would need shops and gold/);
-  assert.doesNotMatch(all, /final place is|places? lost/i, "never the cost in final place");
+  assert.match(all, /your final place are not measured/, "what is not measured is said");
+  assert.doesNotMatch(text(find(part, "review-top")), /place/i, "the costly choices never speak of place without a model");
+  I18n.setLang("es");
+  assert.doesNotMatch(text(find(TLReview.section(ui, answer([costly, roll]), tools({ report })), "review-top")), /posición/i);
+  I18n.setLang("en");
+});
+
+test("a card name with markup is drawn as text, never as markup", () => {
+  I18n.setLang("en");
+  const hostile = "<img src=x onerror=alert(1)>";
+  const report = { local_player_id: 1, rounds: [{ number: 2, entries: [{ side: "own", player_id: 1, board: [{ card_id: "BG_A", atk: 1, health: 1 }] }] }] };
+  const part = TLReview.section(ui, answer([costly, roll]), tools({ report, cardName: () => hostile }));
+  const all = text(part);
+  assert.ok(all.includes(`you bought ${hostile}. Had you bought ${hostile} instead`), "the name as it is, as text");
 });
 
 test("done with nothing costly, or stopped partway, says so", () => {

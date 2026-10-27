@@ -682,16 +682,47 @@ async function loadWhy(game, key) {
   if (shown && recapGame && gameKey(recapGame) === key) TLFocus.keep(document, () => shown.replaceWith(whySection(game)));
 }
 // The game review (T-658): started with its button, never by itself, as it
-// takes up to a minute; the app refuses while a game is on. Answers are kept
-// for the last games opened, like the odds.
+// takes up to a minute; the app refuses while a game is on. The app keeps the
+// last answers and the review running, so a recap opened again (or a window
+// reloaded) asks it once and resumes; the answers seen here are kept too.
 const REVIEW_KEPT = 8;
 const reviewKept = new Map();
 const reviewRunning = new Set();
+const reviewAsked = new Set();
 // How far a running review is, from the app's "review-progress" events.
 const reviewProgress = new Map();
 
+function keepReview(key, answer) {
+  reviewKept.delete(key);
+  reviewKept.set(key, answer);
+  if (reviewKept.size > REVIEW_KEPT) reviewKept.delete(reviewKept.keys().next().value);
+}
+
+// The app's state for `key`: running (resume), an answer, or nothing yet.
+function takeReviewState(key, read) {
+  if (read && read.state === "reviewing") {
+    reviewRunning.add(key);
+    reviewProgress.set(key, read.progress);
+    return;
+  }
+  reviewRunning.delete(key);
+  reviewProgress.delete(key);
+  if (read && read.state !== "idle") keepReview(key, read);
+}
+
+async function loadReviewStatus(game, key) {
+  reviewAsked.add(key);
+  try {
+    takeReviewState(key, TLReviewWords.read(await invoke("game_review_status", { session: game.session, index: game.index })));
+  } catch {
+    return; // nothing to resume; the button is there
+  }
+  redrawReview(game, key);
+}
+
 function reviewSection(game) {
   const key = gameKey(game);
+  if (!reviewAsked.has(key) && !reviewRunning.has(key) && !reviewKept.has(key)) loadReviewStatus(game, key);
   const state = reviewRunning.has(key) ? "reviewing" : reviewKept.get(key) || "idle";
   const saved = allGames.find((g) => gameKey(g) === key) || {};
   const tools = { fold: TLCompact.fold, game: key, cardName: (id) => TLCards.display(id) || id, card: TLShop.card, report: saved.report || null, progress: reviewProgress.get(key) || null, onStart: () => startReview(game, key) };
@@ -716,21 +747,34 @@ function onReviewProgress(p) {
   if (line && text && recapGame && gameKey(recapGame) === key) line.textContent = text;
 }
 
+// A review that ended, also one this window did not start (a reload):
+// its answer comes from the app.
+async function onReviewDone(p) {
+  if (!p || typeof p.session !== "string" || !Number.isInteger(p.index)) return;
+  const game = { session: p.session, index: p.index };
+  const key = gameKey(game);
+  if (!reviewRunning.has(key)) return;
+  try {
+    takeReviewState(key, TLReviewWords.read(await invoke("game_review_status", game)) || "failed");
+  } catch {
+    takeReviewState(key, "failed");
+  }
+  redrawReview(recapGame && gameKey(recapGame) === key ? recapGame : game, key);
+}
+
 async function startReview(game, key) {
   if (reviewRunning.has(key)) return;
   reviewRunning.add(key);
   reviewKept.delete(key);
   redrawReview(game, key);
-  let answer;
+  let read;
   try {
-    answer = TLReviewWords.read(await invoke("game_review", { session: game.session, index: game.index })) || "failed";
+    read = TLReviewWords.read(await invoke("game_review", { session: game.session, index: game.index })) || "failed";
   } catch {
-    answer = "failed";
+    read = "failed";
   }
-  reviewRunning.delete(key);
-  reviewProgress.delete(key);
-  reviewKept.set(key, answer);
-  if (reviewKept.size > REVIEW_KEPT) reviewKept.delete(reviewKept.keys().next().value);
+  // "reviewing": this game was already being reviewed; "review-done" ends it.
+  takeReviewState(key, read);
   redrawReview(game, key);
 }
 
@@ -1332,6 +1376,7 @@ async function main() {
   });
   await listen("game-finished", (e) => onGameFinished(e.payload).catch(showError));
   await listen("review-progress", (e) => onReviewProgress(e.payload));
+  await listen("review-done", (e) => onReviewDone(e.payload).catch(showError));
   await listen("live-changed", refreshPeriodSoon);
   await listen("status-changed", (e) => showStatus(e.payload));
   showStatus(await invoke("status"));

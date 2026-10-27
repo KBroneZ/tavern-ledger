@@ -14,7 +14,9 @@
   const t = I18n.t;
   const CARD_ID = /^[A-Za-z0-9_]{1,64}$/;
   const CODE = /^[a-z_]{1,64}$/;
-  const STATES = ["game_on", "busy"];
+  const STATES = ["game_on", "busy", "idle"];
+  // The choices the engine can play again, as the app counts its progress.
+  const SIMULATED = ["buy", "choose", "sell"];
   const KINDS = ["roll", "buy", "buy_spell", "sell", "freeze", "unfreeze", "tier_up", "choose"];
   const TOP = 3;
   // Ties below this share are not worth a line.
@@ -50,8 +52,9 @@
     };
   }
 
+  // A card id out of shape is unnamed, as a decision's; it does not fail the review.
   function readAlternative(a) {
-    need(isObject(a) && card(a.card));
+    need(isObject(a));
     const fight = result(a.fight);
     need(fight);
     const d = a.delta;
@@ -59,7 +62,7 @@
       ? { score: d.score, clear: d.clear, place: finite(d.place) ? d.place : null }
       : null;
     return {
-      card: a.card,
+      card: card(a.card),
       approx: (Array.isArray(a.approx) ? a.approx : []).map(variant).filter(Boolean),
       fight: "ok" in fight ? readFight(fight.ok) : null,
       gap: "err" in fight ? variant(fight.err) || "fallback" : null,
@@ -116,6 +119,7 @@
   function read(answer) {
     if (!isObject(answer)) return null;
     if (STATES.includes(answer.state)) return { state: answer.state };
+    if (answer.state === "reviewing") return { state: "reviewing", progress: { done: answer.done, total: answer.total } };
     if (answer.state === "no_review") return { state: "no_review", why: variant(answer.why) || "fallback" };
     if (answer.state !== "done" || !isObject(answer.review) || !Array.isArray(answer.review.decisions)) return null;
     try {
@@ -179,6 +183,7 @@
     const saved = ownBoard(report, d.rebuilt.round);
     if (!saved) return null;
     const before = saved.map(minionOf);
+    if (!alt.card) return null;
     if (d.kind === "sell") {
       const earlier = boardBefore(report, d.rebuilt.round);
       const at = earlier.findIndex((m) => m && m.card_id === alt.card);
@@ -285,7 +290,8 @@
   // The lines above the costly choices: how many were simulated, a banner
   // when the review stopped partway, and what to say when none cost a fight.
   function summary(view) {
-    const total = view.decisions.length;
+    // Rolls, freezes and the like are never simulated: not counted, as in the progress.
+    const total = view.decisions.filter((d) => SIMULATED.includes(d.kind)).length;
     const rebuilt = view.decisions.filter((d) => d.rebuilt).length;
     const partial = view.outOfTime || view.stoppedForGame;
     const banner = view.stoppedForGame ? t("review.stoppedForGame") : view.outOfTime ? t("review.outOfTime") : null;
