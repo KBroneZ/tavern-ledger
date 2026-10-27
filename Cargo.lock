@@ -391,6 +391,7 @@ name = "combat-sim"
 version = "0.16.0"
 dependencies = [
  "bg-parser",
+ "flate2",
  "serde_json",
 ]
 
