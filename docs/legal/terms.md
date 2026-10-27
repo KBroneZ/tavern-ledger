@@ -2,7 +2,7 @@
 
 Last updated: 27 October 2026
 
-**What changed on 27 October 2026:** section 5 now says that the games you upload can also be used to train the expected-place model, unless you turn "Use my uploaded games to train the expected-place model" off on your account page; only the model and totals over all the games used are kept. It applies to games other than the project owner's only 30 days after we email signed-up users about it.
+**What changed on 27 October 2026:** section 5 now says that the games you upload can also be used to train the expected-place model, unless you turn "Use my uploaded games to train the expected-place model" off on your account page; only the model and totals over all the games used are kept. It applies from 27 October 2026.
 
 **What changed on 17 October 2026 (desktop app only):** section 9 now says that, only when you click Fix in the app's setup notice, the app can create or complete Hearthstone's two logging settings files (`log.config` and `client.config`), keeping a `.bak` copy of any file it changes. It still only reads the game's logs and writes nothing else in the game's folders.
 
