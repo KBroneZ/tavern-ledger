@@ -1,7 +1,7 @@
 //! Round 3 cards on small boards whose outcome is certain.
 
 use super::super::{Combat, Prepared};
-use crate::model::{BaseCard, Keywords, Minion, Tribes, Warband};
+use crate::model::{BaseCard, GameValues, Keywords, Minion, Tribes, Warband};
 use crate::rng::Rng;
 
 fn band(minions: Vec<Minion>) -> Warband {
@@ -91,6 +91,49 @@ fn undead_summoned_after_plaguerunner_died_get_its_attack_too() {
             );
         });
     }
+}
+
+#[test]
+fn plaguerunner_gives_the_opponents_undead_nothing() {
+    let r = Minion::new("BG34_690", 4, 2).tribe(Tribes::UNDEAD).tier(4);
+    let wall = plain(5, 50).with(Keywords::TAUNT);
+    let undead = Minion::new("TEST_UNDEAD", 2, 9)
+        .tribe(Tribes::UNDEAD)
+        .tier(1);
+    with(vec![r, wall.clone()], vec![wall, bonehead(), undead], |c| {
+        let first = c.sides[0].units[0].uid;
+        c.swing(0, first);
+        let b = c.sides[1].units[1].uid;
+        c.swing(1, b);
+        // The opponent's Undead and the Skeletons it summons after the
+        // Plaguerunner died stay as they were.
+        assert_eq!(stats(c, 1), [(5, 46), (1, 1), (1, 1), (2, 9)]);
+    });
+}
+
+#[test]
+fn plaguerunner_adds_to_the_undead_attack_the_board_brings() {
+    // The board's game-long Undead Attack (+3) is already in the Bonehead's
+    // stats; Skeletons come with it and with the Plaguerunner's +2.
+    let player = Warband {
+        values: GameValues {
+            undead_attack: 3,
+            ..GameValues::default()
+        },
+        ..band(vec![
+            Minion::new("BG34_690", 7, 2).tribe(Tribes::UNDEAD).tier(4),
+            Minion::new("BG28_300", 4, 1).tribe(Tribes::UNDEAD).tier(1),
+        ])
+    };
+    let p = Prepared::new(&player, &band(vec![plain(5, 50)]), false);
+    let mut rng = Rng::new(5);
+    let mut c = Combat::new(&p, &mut rng);
+    let first = c.sides[0].units[0].uid;
+    c.swing(0, first);
+    assert_eq!(stats(&c, 0), [(6, 1)], "the Bonehead");
+    let b = c.sides[0].units[0].uid;
+    c.swing(0, b);
+    assert_eq!(stats(&c, 0), [(6, 1), (6, 1)], "its Skeletons: 1 + 3 + 2");
 }
 
 #[test]

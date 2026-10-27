@@ -24,7 +24,7 @@ use crate::combat::replay::{replay_teams, LoggedStep, Replay, Span};
 use crate::combat::CombatResult;
 use crate::model::{BaseCard, GameValues, Keywords, Kit, KitCard, Minion, Team, Tribes, Warband};
 use crate::trials::Options;
-use crate::why::{explain, CombatFacts, Explained, Replayable};
+use crate::why::{explain, CombatFacts, Explained, Replayable, Said};
 
 /// The largest card database id a saved report keeps (bg-parser's
 /// `MAX_DBF`): the Deity's.
@@ -437,13 +437,30 @@ pub struct CombatWhy {
 
 /// A combat entry's board with its hero's powers and trinkets in round
 /// `number` (T-630); the kit is `None` on a record from before parser
-/// revision 16 ("not recorded"), so those boards play as before.
+/// revision 16 ("not recorded"), so those boards play as before. `None`
+/// when the board cannot be read, or when the entry has a kit that is not
+/// what the parser writes ([`saved_kit`]): never played without it.
 pub fn board_with_kit(entry: &Value, number: Option<u32>, facts: &FactsOf) -> Option<Warband> {
     let band = board(entry, facts)?;
     Some(Warband {
-        kit: kit(entry, number, facts),
+        kit: saved_kit(entry, number, facts).ok()?,
         ..band
     })
+}
+
+/// A combat entry's kit as saved: `Ok(None)` when the record has none (an
+/// older parser, "not recorded"), `Err` when it has one that is not what
+/// the parser writes (T-645: such a board is refused, not played without
+/// its powers and trinkets).
+pub(crate) fn saved_kit(
+    entry: &Value,
+    number: Option<u32>,
+    facts: &FactsOf,
+) -> Result<Option<Kit>, ()> {
+    match entry.get("kit") {
+        None | Some(Value::Null) => Ok(None),
+        Some(_) => kit(entry, number, facts).map(Some).ok_or(()),
+    }
 }
 
 /// A saved round's number, as the kits read it; `None` when not saved.
@@ -618,6 +635,21 @@ fn prepare(round: &Value, solo: bool, facts: &FactsOf) -> Result<Prepared, Box<W
     let lacking = lacking.into_inner();
     if !lacking.is_empty() {
         return Err(Box::new(Why::NoCardData(lacking)));
+    }
+    // A saved kit that is not what the parser writes: the boards are
+    // refused, as the engine refuses a board it does not accept (T-645).
+    let bad_kit = entries.iter().any(|e| {
+        matches!(
+            e.get("side").and_then(Value::as_str),
+            Some("own" | "opponent")
+        ) && matches!(e.get("board"), Some(Value::Array(_)))
+            && saved_kit(e, number, facts).is_err()
+    });
+    if bad_kit {
+        return Err(Box::new(Why::Explained(Explained {
+            said: Said::BadBoard,
+            cause: None,
+        })));
     }
     let Some((own, opponent)) = sides else {
         return Err(Box::new(Why::NoBoards));

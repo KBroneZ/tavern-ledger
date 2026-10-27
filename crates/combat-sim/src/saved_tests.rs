@@ -411,3 +411,41 @@ fn a_saved_rounds_boards_bring_their_kits() {
     }
     assert_eq!(teams.1.first.kit, None);
 }
+
+/// One Solo round won by the player's 3/3, its board with `kit`.
+fn round_with_kit(kit: Value) -> Value {
+    game(
+        "GT_BATTLEGROUNDS",
+        json!([{"number": 2, "result": "won", "entries": [
+            {"side": "own", "player_id": 1, "board": [bm(PLAIN, 3, 3, 1)], "kit": kit},
+            {"side": "opponent", "player_id": 2, "board": [bm(PLAIN, 1, 1, 1)]},
+        ]}]),
+    )
+}
+
+#[test]
+fn a_saved_kit_that_cannot_be_read_refuses_the_boards() {
+    // T-645: never played as if the board had no powers or trinkets.
+    let bad = json!({"powers": [{"card_id": "TB_BaconShop_HP_107", "slot": 9}],
+                     "trinkets": []});
+    let w = whys(&round_with_kit(bad));
+    let Why::Explained(e) = &w[0].why else {
+        panic!("{:?}", w[0])
+    };
+    assert_eq!(e.said, Said::BadBoard);
+    assert_eq!(e.cause, None);
+    // A record without a kit ("not recorded") plays as before.
+    let w = whys(&round_with_kit(Value::Null));
+    assert_eq!(cause(&w[0]), &Cause::Matched);
+}
+
+#[test]
+fn an_unmodelled_trinket_on_a_saved_board_blocks_the_odds() {
+    let trinket = json!({"powers": [],
+                         "trinkets": [{"card_id": "BG99_MagicItem_1", "slot": 1}]});
+    let w = whys(&round_with_kit(trinket));
+    let Why::Explained(e) = &w[0].why else {
+        panic!("{:?}", w[0])
+    };
+    assert_eq!(e.said, Said::NotModelled(vec!["BG99_MagicItem_1".into()]));
+}
