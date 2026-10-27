@@ -326,6 +326,13 @@ impl Combat<'_> {
                     self.become_teammate_copy(side, uid);
                 }
             }
+            Action::BeastAttackThisCombat(attack) => {
+                for f in self.friends(side, Tribes::BEAST, None) {
+                    self.buff(side, f, attack, 0);
+                }
+                let s = &mut self.sides[side];
+                s.beast_attack = s.beast_attack.saturating_add(attack);
+            }
             Action::DamageAllOthers(amount) => {
                 let Some(uid) = me else { return };
                 for s in [side, 1 - side] {

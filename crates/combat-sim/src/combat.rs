@@ -325,6 +325,9 @@ struct SideState {
     aberrations: Vec<(u16, i32, i32)>,
     /// The awakened Deity on the board.
     deity: Option<u32>,
+    /// What the side's Beasts have on top for the rest of this combat,
+    /// summoned ones too (Humming Bird; T-645).
+    beast_attack: i32,
 }
 
 impl SideState {
@@ -402,7 +405,7 @@ impl<'a> Combat<'a> {
         let waiting: usize = p.second.iter().flatten().map(Vec::len).sum();
         let next_uid = p.start.iter().map(Vec::len).sum::<usize>() + waiting + 1;
         let next_uid = next_uid as u32;
-        Combat {
+        let mut c = Combat {
             p,
             rng,
             sides: [
@@ -427,6 +430,19 @@ impl<'a> Combat<'a> {
             pending: [Vec::new(), Vec::new()],
             kept: Vec::new(),
             kit_counts: Default::default(),
+        };
+        c.after_start_values([true, true]);
+        c
+    }
+
+    /// What a board taken after its start of combat no longer shows but
+    /// still acts on: the Beasts' Attack from its Humming Birds (T-645).
+    fn after_start_values(&mut self, sides: [bool; 2]) {
+        if self.p.start_of_combat {
+            return;
+        }
+        for side in [0, 1].into_iter().filter(|s| sides[*s]) {
+            self.sides[side].beast_attack = self.beast_attack_on_board(side);
         }
     }
 }
@@ -668,3 +684,7 @@ mod passive_tests;
 #[cfg(test)]
 #[path = "combat_t631_tests.rs"]
 mod t631_tests;
+
+#[cfg(test)]
+#[path = "combat_t645_tests.rs"]
+mod t645_tests;

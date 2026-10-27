@@ -34,7 +34,30 @@ impl Combat<'_> {
             out.0 = out.0.saturating_add(v.beetle.0);
             out.1 = out.1.saturating_add(v.beetle.1);
         }
+        if info.tribes.is(Tribes::BEAST) {
+            out.0 = out.0.saturating_add(self.sides[side].beast_attack);
+        }
         out
+    }
+
+    /// On a board taken after the start of combat the Beasts there already
+    /// show what each Humming Bird gave; the Beasts summoned later still get
+    /// it (T-645).
+    pub(super) fn beast_attack_on_board(&self, side: usize) -> i32 {
+        self.sides[side]
+            .units
+            .iter()
+            .flat_map(|u| self.triggers(u))
+            .filter_map(|t| match t {
+                Trigger::StartOfCombat(actions) => Some(*actions),
+                _ => None,
+            })
+            .flatten()
+            .map(|a| match a {
+                Action::BeastAttackThisCombat(n) => *n,
+                _ => 0,
+            })
+            .fold(0, i32::saturating_add)
     }
 
     /// How many times over a Dragon gains stats: twice for each neighbour

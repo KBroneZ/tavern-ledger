@@ -643,7 +643,12 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
             ])],
         ),
     ),
-    ("BG26_805", exact(&[Trigger::StartOfCombatUnmodelled])),
+    // Humming Bird: for the rest of this combat your Beasts have +1 Attack
+    // (golden +2), the ones summoned later too (T-645).
+    (
+        "BG26_805",
+        exact(&[Trigger::StartOfCombat(&[Action::BeastAttackThisCombat(1)])]),
+    ),
     ("BG26_354", exact(&[Trigger::StartOfCombatUnmodelled])),
     ("BG27_556", exact(&[Trigger::StartOfCombatUnmodelled])),
     ("BG34_142", exact(&[Trigger::StartOfCombatUnmodelled])),
@@ -659,7 +664,10 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
     ),
     // Golden forms of the cards above.
     ("BG24_500_G", exact(&[Trigger::StartOfCombat(&[amber(2)])])),
-    ("BG26_805_G", exact(&[Trigger::StartOfCombatUnmodelled])),
+    (
+        "BG26_805_G",
+        exact(&[Trigger::StartOfCombat(&[Action::BeastAttackThisCombat(2)])]),
+    ),
     ("BG34_142_G", exact(&[Trigger::StartOfCombatUnmodelled])),
     (
         "BG31_810_G",
