@@ -1,0 +1,6714 @@
+{
+  "combats": {
+    "000c5ce836495888": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 21,
+        "diverge": {
+          "attack": 8,
+          "card": "BGFYM_011",
+          "rule": "replay_minions"
+        },
+        "matched": 7,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "00abf1323e08e1b3": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "00c12e7bfaded03e": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "020f0eec7fa8a822": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "022ddecf7e6e898a": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 16,
+        "diverge": {
+          "attack": 6,
+          "card": "BG32_330",
+          "rule": "replay_minions"
+        },
+        "matched": 5,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "022fec30a4438478": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 6,
+        "diverge": null,
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "02c72e7aba0c6780": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "02fac69b754eaf96": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "03183cc3daba5863": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 24,
+        "diverge": null,
+        "matched": 24,
+        "rerolled": 1
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "03764ecdda5f91e9": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "tie",
+      "said": "odds"
+    },
+    "03df2409fb02d0d1": {
+      "build": 253216,
+      "close": false,
+      "likely": null,
+      "mode": "duos",
+      "replay": {
+        "attacks": 30,
+        "diverge": {
+          "attack": 2,
+          "card": "BG28_309",
+          "rule": "replay_minions"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "not_modelled"
+    },
+    "03e1fc5483c74233": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "040328f3b8baca3a": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "0467e0f2009f040e": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 5,
+        "diverge": null,
+        "matched": 5,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "0479bc0435f7ffd5": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 3,
+        "diverge": null,
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "056c2678c3386869": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "05b2c587d85183ce": {
+      "build": 254477,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": {
+        "attacks": 15,
+        "diverge": {
+          "attack": 6,
+          "card": "BG36_098",
+          "rule": "replay_attack_order"
+        },
+        "matched": 5,
+        "rerolled": 0
+      },
+      "result": "tie",
+      "said": "odds"
+    },
+    "05c3eaaaead68060": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": {
+        "attacks": 6,
+        "diverge": null,
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "05c5d33c856d9130": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "0605e10226f7bbf6": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "0621117dd5e4d70f": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 16,
+        "diverge": {
+          "attack": 11,
+          "card": "BG32_330",
+          "rule": "replay_minions"
+        },
+        "matched": 10,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "0667310cc558b288": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 26,
+        "diverge": {
+          "attack": 21,
+          "card": "BG29_864t",
+          "rule": "replay_minions"
+        },
+        "matched": 20,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "06bcedfce8a478e2": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "071355352d5aa6b4": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "tie",
+      "said": "odds"
+    },
+    "075cf57d5627b508": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "07c91587da0ce593": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 6,
+        "diverge": null,
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "080732c9824d7483": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 5,
+        "diverge": null,
+        "matched": 5,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "09ff9e806eaed41a": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "0a1e51a0569628af": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 20,
+        "diverge": null,
+        "matched": 20,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "0aa10070ed0c02c7": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 18,
+        "diverge": {
+          "attack": 10,
+          "card": "BGFYM_000",
+          "rule": "replay_minions"
+        },
+        "matched": 9,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "0bffa96143eaf7d2": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 3,
+        "diverge": null,
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "0c7e7073cfdac5fa": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 3,
+        "diverge": null,
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "0dd35be127195396": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "0de0e08ee01551df": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 26,
+        "diverge": {
+          "attack": 2,
+          "card": "BG31_809",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "0ef8a359d55c0a2d": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 22,
+        "diverge": null,
+        "matched": 22,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "0efed25bc5ca9728": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "0f379d68c416ffd4": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 9,
+        "diverge": {
+          "attack": 8,
+          "card": "BG28_300_G",
+          "rule": "replay_minions"
+        },
+        "matched": 7,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "0f56f2b7552bd65a": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 19,
+        "diverge": {
+          "attack": 2,
+          "card": "BG35_342",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "0f6af920cd43f2c3": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 41,
+        "diverge": {
+          "attack": 4,
+          "card": "BG32_880_G",
+          "rule": "replay_stats"
+        },
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "10415328fde49ee6": {
+      "build": 254477,
+      "close": true,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 23,
+        "diverge": {
+          "attack": 2,
+          "card": "BG36_241",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "104f22fd28422ea6": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 27,
+        "diverge": {
+          "attack": 7,
+          "card": "BG28_603t",
+          "rule": "replay_stats"
+        },
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "111bad8f7d7fc467": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "116cefeae921d556": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "117951f1400afdd6": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "12c5cdd4c5bcd3db": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "12ce51b40525accb": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 17,
+        "diverge": null,
+        "matched": 17,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "131b341331748eb7": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "133703a1035494cc": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 3,
+        "diverge": null,
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "1394d984bdcadb12": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "1574ad55bd20fee5": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "161387648d4e669f": {
+      "build": 253216,
+      "close": false,
+      "likely": null,
+      "mode": "duos",
+      "replay": {
+        "attacks": 37,
+        "diverge": {
+          "attack": 2,
+          "card": "BG36_210",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "not_modelled"
+    },
+    "1614392af8d70e5e": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 27,
+        "diverge": {
+          "attack": 2,
+          "card": "BGDUO_110",
+          "rule": "replay_minions"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "164d81bbeeabe7f4": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "16818a815de4bb20": {
+      "build": 253216,
+      "close": true,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "16c5da80fa07cc78": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 6,
+        "diverge": null,
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "1800222b2afc42ac": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 7,
+        "diverge": null,
+        "matched": 7,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "183891af37f1ea91": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "1886a28da63c6331": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 17,
+        "diverge": {
+          "attack": 1,
+          "card": "BG31_815",
+          "rule": "replay_first_attacker"
+        },
+        "matched": 0,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "19f89a0ebe2856a3": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "1a73d8b9eb7f7ab8": {
+      "build": 253216,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": {
+        "attacks": 9,
+        "diverge": null,
+        "matched": 9,
+        "rerolled": 0
+      },
+      "result": "tie",
+      "said": "odds"
+    },
+    "1afbec0be37ce14d": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 14,
+        "diverge": {
+          "attack": 4,
+          "card": "BGFYM_000",
+          "rule": "replay_minions"
+        },
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "1b5e3d8d4de93b5e": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "1baf5acf70beb1af": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 23,
+        "diverge": null,
+        "matched": 23,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "1ce0ecf934ba9f1b": {
+      "build": 253216,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": null,
+      "result": "tie",
+      "said": "odds"
+    },
+    "1d4056909240eb6a": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "1e5bf65e0233822e": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 19,
+        "diverge": {
+          "attack": 3,
+          "card": "BG36_523_G",
+          "rule": "replay_minions"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "1e9b18e8a39ccba7": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 10,
+        "diverge": null,
+        "matched": 10,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "1ec6b07a98929b20": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "1fcc71553633d591": {
+      "build": 254477,
+      "close": false,
+      "likely": null,
+      "mode": "solo",
+      "replay": null,
+      "result": "won",
+      "said": "no_boards"
+    },
+    "1fd011fa6d7174ce": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "1ff9a249434fceaf": {
+      "build": 254477,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": {
+        "attacks": 3,
+        "diverge": null,
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "tie",
+      "said": "odds"
+    },
+    "2084b44b1cfbd696": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 18,
+        "diverge": {
+          "attack": 6,
+          "card": "BG36_243",
+          "rule": "replay_stats"
+        },
+        "matched": 5,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "2099ed6005b06cc6": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "216562067e4c4865": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 19,
+        "diverge": null,
+        "matched": 19,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "229e467b13e8baf0": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 50,
+        "diverge": {
+          "attack": 2,
+          "card": "BG25_001",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "22c0befdb678d39b": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "22f91e64c5970f33": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "24243066fc9366eb": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 1,
+        "diverge": null,
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "250cf2ba47c9c564": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "2578f41e444850ca": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 20,
+        "diverge": null,
+        "matched": 20,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "259f9ff7009446c7": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 9,
+        "diverge": {
+          "attack": 6,
+          "card": "BG36_098",
+          "rule": "replay_attack_order"
+        },
+        "matched": 5,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "2679ff9ce350cc5e": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "26fe0491d7bca601": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 10,
+        "diverge": {
+          "attack": 2,
+          "card": "BG27_084",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "2746e65f6f24a55a": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 4,
+        "diverge": null,
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "286c52680258d7b7": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 21,
+        "diverge": {
+          "attack": 10,
+          "card": "BGFYM_000",
+          "rule": "replay_minions"
+        },
+        "matched": 9,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "2946f415eeeefd8c": {
+      "build": 254477,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": {
+        "attacks": 12,
+        "diverge": null,
+        "matched": 12,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "2948df2b62a57e31": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "29c49a732b3356d4": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 5,
+        "diverge": null,
+        "matched": 5,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "2b99d9dad76806ba": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 24,
+        "diverge": {
+          "attack": 21,
+          "card": "BGFYM_000",
+          "rule": "replay_minions"
+        },
+        "matched": 20,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "2c69d59e57335ecb": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "2cdcf84d3f57ca80": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 12,
+        "diverge": {
+          "attack": 7,
+          "card": "BGDUO_700",
+          "rule": "replay_stats"
+        },
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "2dc8c6a50a6929e2": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "2e26304e06b5cb2f": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "2e8134462bddfa96": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 19,
+        "diverge": null,
+        "matched": 19,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "2e88c449d0412356": {
+      "build": 253216,
+      "close": true,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "2ed8fa8d3c997233": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 3,
+        "diverge": {
+          "attack": 3,
+          "card": "BG29_888",
+          "rule": "replay_minions"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "2f35bbd04651ec55": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "2f5bb10d1f566b9a": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 17,
+        "diverge": {
+          "attack": 5,
+          "card": "BGFYM_000",
+          "rule": "replay_minions"
+        },
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "2fa9c327c8209c45": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 28,
+        "diverge": {
+          "attack": 20,
+          "card": "BG28_603t",
+          "rule": "replay_stats"
+        },
+        "matched": 19,
+        "rerolled": 1
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "3053ad28a9d9ec5d": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "310636dbd566b552": {
+      "build": 253216,
+      "close": true,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "3106f5478ad664fd": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 24,
+        "diverge": {
+          "attack": 8,
+          "card": "BG34_405",
+          "rule": "replay_minions"
+        },
+        "matched": 7,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "31b41d23d83c2c31": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "31e373a444e5e4b6": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 4,
+        "diverge": null,
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "32687ffe2006d2a0": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "330158d3c5bd938a": {
+      "build": 253216,
+      "close": false,
+      "likely": null,
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "not_modelled"
+    },
+    "335c243b33b1f952": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 27,
+        "diverge": null,
+        "matched": 27,
+        "rerolled": 0
+      },
+      "result": "tie",
+      "said": "odds"
+    },
+    "33826fed32a2dbb5": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "tie",
+      "said": "odds"
+    },
+    "35b9a284f1380e73": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "35f9d86622924795": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "3695ecc97e8a239e": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 16,
+        "diverge": null,
+        "matched": 16,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "36f834414cd1ad7e": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 21,
+        "diverge": {
+          "attack": 16,
+          "card": "BG31_149_G",
+          "rule": "replay_minions"
+        },
+        "matched": 15,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "373a012f1433d0bd": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 16,
+        "diverge": {
+          "attack": 15,
+          "card": "BGDUO_104",
+          "rule": "replay_attack_order"
+        },
+        "matched": 14,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "37771c8e15cbad84": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "37f98d01d185a4cc": {
+      "build": 253216,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": null,
+      "result": "tie",
+      "said": "odds"
+    },
+    "380f16a75e8e0aa0": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 36,
+        "diverge": {
+          "attack": 15,
+          "card": "BG33_885",
+          "rule": "replay_stats"
+        },
+        "matched": 14,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "383eb330877c23d6": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 13,
+        "diverge": {
+          "attack": 6,
+          "card": "BG36_311",
+          "rule": "replay_attack_order"
+        },
+        "matched": 5,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "386dddba9faf16b6": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "387c55709b3ba943": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "390ba345207d3c18": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 11,
+        "diverge": null,
+        "matched": 11,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "398e58d8844dd90d": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 25,
+        "diverge": {
+          "attack": 6,
+          "card": "BGFYM_000",
+          "rule": "replay_minions"
+        },
+        "matched": 5,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "3a51d40264cd7584": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 21,
+        "diverge": {
+          "attack": 3,
+          "card": "BGFYM_000",
+          "rule": "replay_minions"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "3a68dcb019aa90dc": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 24,
+        "diverge": {
+          "attack": 13,
+          "card": "BG36_849",
+          "rule": "replay_stats"
+        },
+        "matched": 12,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "3adb5a81373ac483": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "3db5098252e78ab1": {
+      "build": 253216,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": null,
+      "result": "tie",
+      "said": "odds"
+    },
+    "3e8f9ce1e1c01438": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "3e9c062b9ff34fdc": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 11,
+        "diverge": null,
+        "matched": 11,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "3f3aeb45d9862561": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 10,
+        "diverge": null,
+        "matched": 10,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "3f5433e4b505efda": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": {
+        "attacks": 20,
+        "diverge": {
+          "attack": 7,
+          "card": "BGFYM_011",
+          "rule": "replay_minions"
+        },
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "3f74428268445d8c": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "3f8fce3a0a7f9165": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 24,
+        "diverge": {
+          "attack": 5,
+          "card": "BG36_524",
+          "rule": "replay_minions"
+        },
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "40c6bd56afe00753": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "419fae40bf0ece92": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 18,
+        "diverge": {
+          "attack": 15,
+          "card": "BGFYM_011",
+          "rule": "replay_minions"
+        },
+        "matched": 14,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "41e17f86ef2813d0": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": {
+        "attacks": 5,
+        "diverge": null,
+        "matched": 5,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "42279b95ec5c4149": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 26,
+        "diverge": {
+          "attack": 11,
+          "card": "BGFYM_011",
+          "rule": "replay_minions"
+        },
+        "matched": 10,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "43d76ac5aeb62435": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "44390cbda3dee2eb": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 21,
+        "diverge": {
+          "attack": 8,
+          "card": "BGDUO_108",
+          "rule": "replay_minions"
+        },
+        "matched": 7,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "4484bad0bcd2c744": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "46435a8e37bb0652": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "476d0591e0ad1fbe": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 17,
+        "diverge": {
+          "attack": 11,
+          "card": "BGFYM_011",
+          "rule": "replay_minions"
+        },
+        "matched": 10,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "48c0b2a99637c880": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "4a45ebb11c53734f": {
+      "build": 254477,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": {
+        "attacks": 4,
+        "diverge": {
+          "attack": 4,
+          "card": null,
+          "rule": "replay_end"
+        },
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "4abafc28ec4582b4": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 11,
+        "diverge": null,
+        "matched": 11,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "4acbe88c531acc96": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "4b2e8de926d39855": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 24,
+        "diverge": {
+          "attack": 12,
+          "card": "BG36_241",
+          "rule": "replay_minions"
+        },
+        "matched": 11,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "4d345a467535d7c8": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 15,
+        "diverge": null,
+        "matched": 15,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "4dab1c645ce4b4a8": {
+      "build": 254477,
+      "close": false,
+      "likely": null,
+      "mode": "duos",
+      "replay": {
+        "attacks": 13,
+        "diverge": {
+          "attack": 8,
+          "card": "BG28_603t",
+          "rule": "replay_stats"
+        },
+        "matched": 7,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "not_modelled"
+    },
+    "4dd3a12018382e33": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 1,
+        "diverge": null,
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "4e10a0a04af9a7e7": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 28,
+        "diverge": {
+          "attack": 2,
+          "card": "BG36_204",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "4ebf950ec17b53bb": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 22,
+        "diverge": {
+          "attack": 8,
+          "card": "BG36_523",
+          "rule": "replay_stats"
+        },
+        "matched": 7,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "4f135f44fa0bd3f6": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 20,
+        "diverge": {
+          "attack": 2,
+          "card": "BG34_684",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "4f51c21e58f22652": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 21,
+        "diverge": {
+          "attack": 6,
+          "card": "BGFYM_011",
+          "rule": "replay_minions"
+        },
+        "matched": 5,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "4f5204725cdd274b": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 18,
+        "diverge": {
+          "attack": 11,
+          "card": "BG36_201",
+          "rule": "replay_stats"
+        },
+        "matched": 10,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "4f91abd3dbce95f2": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 15,
+        "diverge": null,
+        "matched": 15,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "4fa74af7bf46e942": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 23,
+        "diverge": {
+          "attack": 8,
+          "card": "BG36_116",
+          "rule": "replay_minions"
+        },
+        "matched": 7,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "50369a01202f88a4": {
+      "build": 254477,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": {
+        "attacks": 3,
+        "diverge": null,
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "tie",
+      "said": "odds"
+    },
+    "511afcd06d9b465a": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 7,
+        "diverge": null,
+        "matched": 7,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "515151d101feb505": {
+      "build": 253216,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": null,
+      "result": "tie",
+      "said": "odds"
+    },
+    "521b6e9e721a443a": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 24,
+        "diverge": {
+          "attack": 20,
+          "card": "BG32_330_G",
+          "rule": "replay_stats"
+        },
+        "matched": 19,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "524bd41dc65535fa": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "52dbcbea7c01ba1e": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "5385995890d2da89": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 3,
+        "diverge": null,
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "53cb2c6fc52b146c": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 27,
+        "diverge": null,
+        "matched": 27,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "53cddf6ce2910475": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "53ff8e92cabbc472": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "547fb6704481f35c": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "54d19116805cc8aa": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "54f7e12eb2f73970": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "551569d367af1077": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 17,
+        "diverge": {
+          "attack": 13,
+          "card": "BGFYM_011",
+          "rule": "replay_minions"
+        },
+        "matched": 12,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "554141f4afea30ae": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 11,
+        "diverge": null,
+        "matched": 11,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "55599940722151bf": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 18,
+        "diverge": {
+          "attack": 2,
+          "card": "BG32_330_G",
+          "rule": "replay_minions"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "56ad4e1e5c99343b": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "580bda62d995bd44": {
+      "build": 253216,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "58292daded99f8d2": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "587df751e2e79619": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 17,
+        "diverge": null,
+        "matched": 17,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "58fa657e2becf4ae": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "593f59b1c1aca62c": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "5973ea50e77ca2a1": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 19,
+        "diverge": {
+          "attack": 11,
+          "card": "BG33_885",
+          "rule": "replay_stats"
+        },
+        "matched": 10,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "598c78a645748ece": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 14,
+        "diverge": {
+          "attack": 10,
+          "card": "BGFYM_000",
+          "rule": "replay_minions"
+        },
+        "matched": 9,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "5b5483d8a71a6cb1": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 18,
+        "diverge": null,
+        "matched": 18,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "5bb12289466fef44": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 15,
+        "diverge": {
+          "attack": 3,
+          "card": "BG_EX1_170",
+          "rule": "replay_minions"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "5bbcecddf3aa6b58": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 5,
+        "diverge": {
+          "attack": 1,
+          "card": "BGS_119",
+          "rule": "replay_attack_order"
+        },
+        "matched": 0,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "5c12a927e526449c": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "5c1604e41badeabf": {
+      "build": 253216,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": {
+        "attacks": 4,
+        "diverge": null,
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "tie",
+      "said": "odds"
+    },
+    "5c70beca2c9931da": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 38,
+        "diverge": {
+          "attack": 3,
+          "card": "BG36_113",
+          "rule": "replay_minions"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "5c71ba043f1b7542": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "5d02b94497549248": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 3,
+        "diverge": null,
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "5d9144668c715d54": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 18,
+        "diverge": {
+          "attack": 2,
+          "card": "BG36_849",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "5defd034f1293480": {
+      "build": 253216,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": {
+        "attacks": 5,
+        "diverge": null,
+        "matched": 5,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "607a33e009d22a3e": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 15,
+        "diverge": {
+          "attack": 9,
+          "card": "BG28_603t",
+          "rule": "replay_stats"
+        },
+        "matched": 8,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "61b729cef782efee": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 22,
+        "diverge": {
+          "attack": 9,
+          "card": "BG26_354_G",
+          "rule": "replay_minions"
+        },
+        "matched": 8,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "61d4af4aadcd6568": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "6364ad40ed4c99ed": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "64006aff6c47b86f": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 20,
+        "diverge": {
+          "attack": 4,
+          "card": "TB_BaconUps_109",
+          "rule": "replay_minions"
+        },
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "64f2751240056c9e": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "661601070cade644": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 25,
+        "diverge": {
+          "attack": 2,
+          "card": "BG30_MagicItem_442t",
+          "rule": "replay_minions"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "66441d4da12481b4": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 27,
+        "diverge": {
+          "attack": 2,
+          "card": "BG25_008_G",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "6692308a84596b22": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "669769e429100f1e": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "671ce6af5cb3e69a": {
+      "build": 253216,
+      "close": false,
+      "likely": null,
+      "mode": "duos",
+      "replay": {
+        "attacks": 45,
+        "diverge": {
+          "attack": 1,
+          "card": "BG36_360t5",
+          "rule": "replay_attack_order"
+        },
+        "matched": 0,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "not_modelled"
+    },
+    "67385e6afb837fff": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "674a0f3549bc0746": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 28,
+        "diverge": {
+          "attack": 9,
+          "card": "BG25_010t",
+          "rule": "replay_stats"
+        },
+        "matched": 8,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "67542a72d96af54e": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "6776144b59928358": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "6789d044162b232f": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "6862a12fc3e57c70": {
+      "build": 254477,
+      "close": false,
+      "likely": null,
+      "mode": "duos",
+      "replay": {
+        "attacks": 20,
+        "diverge": {
+          "attack": 3,
+          "card": "BG36_204",
+          "rule": "replay_stats"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "not_modelled"
+    },
+    "697872e5323cb190": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 15,
+        "diverge": {
+          "attack": 2,
+          "card": "BG36_370",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "6a0b5b86c55185cb": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "6a5afd179d692b8c": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "6a6ebacf90739138": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 21,
+        "diverge": {
+          "attack": 6,
+          "card": "BGDUO_111_G",
+          "rule": "replay_minions"
+        },
+        "matched": 5,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "6a90ceb10d1c3a1e": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "6c23105badf63f39": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 10,
+        "diverge": null,
+        "matched": 10,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "6c8c93ccfcb5e08a": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 4,
+        "diverge": null,
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "6dec39619b7ed70e": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 28,
+        "diverge": {
+          "attack": 3,
+          "card": "BG32_330",
+          "rule": "replay_minions"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "6e9f251baa7a8cef": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 8,
+        "diverge": null,
+        "matched": 8,
+        "rerolled": 0
+      },
+      "result": "tie",
+      "said": "odds"
+    },
+    "6f67189a80aad806": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 16,
+        "diverge": {
+          "attack": 2,
+          "card": "BG_ICC_026t",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "6fd441da591658c1": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "7042d21f81ef5a80": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 51,
+        "diverge": {
+          "attack": 3,
+          "card": "BG36_202_G",
+          "rule": "replay_stats"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "708587dc389ddb14": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 21,
+        "diverge": {
+          "attack": 4,
+          "card": "BG34_140",
+          "rule": "replay_minions"
+        },
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "7109ec88ed721df2": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "711a0842c9cdbd64": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 19,
+        "diverge": {
+          "attack": 14,
+          "card": "BG35_342",
+          "rule": "replay_stats"
+        },
+        "matched": 13,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "721768170f102516": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "729f99f7b9617393": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 30,
+        "diverge": {
+          "attack": 2,
+          "card": "BG28_603t",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "744495f6295f494a": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "748b17d9aa1b05bd": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 4,
+        "diverge": null,
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "74910dcde11520ea": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 24,
+        "diverge": {
+          "attack": 16,
+          "card": "BG29_813_G",
+          "rule": "replay_stats"
+        },
+        "matched": 15,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "74dc3c2ec1ae3aa1": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 10,
+        "diverge": null,
+        "matched": 10,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "7513b696234d0bc8": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "76636610425be051": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 11,
+        "diverge": null,
+        "matched": 11,
+        "rerolled": 1
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "769cb38ed84eebc7": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 22,
+        "diverge": {
+          "attack": 5,
+          "card": "BGFYM_011",
+          "rule": "replay_minions"
+        },
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "773427c8129afefc": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "77854003ccf4dcb9": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 14,
+        "diverge": {
+          "attack": 8,
+          "card": "BGFYM_000",
+          "rule": "replay_minions"
+        },
+        "matched": 7,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "77bff14664fe7cf4": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 7,
+        "diverge": null,
+        "matched": 7,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "78c2a99ee0a01e58": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 15,
+        "diverge": {
+          "attack": 5,
+          "card": "BG36_202",
+          "rule": "replay_stats"
+        },
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "79961b68792c2a57": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "7b1d6265301ad618": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": {
+        "attacks": 10,
+        "diverge": {
+          "attack": 2,
+          "card": "BG26_147",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "7b2f58e723f4e6e8": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "7b5bbdcfe185c9a5": {
+      "build": 254477,
+      "close": false,
+      "likely": "tie",
+      "mode": "solo",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "tie",
+      "said": "odds"
+    },
+    "7b81d9a5eea05450": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "7bf4bf5f073030ce": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 3,
+        "diverge": null,
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "7c0162f24e5bd213": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "7ce8a22418f10bf2": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": null,
+      "result": "tie",
+      "said": "odds"
+    },
+    "7cf7ba8f0705a454": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "7d619f6ae63b186b": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "7d7a43567fcf80b7": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "7da218ad136e52c8": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 19,
+        "diverge": {
+          "attack": 2,
+          "card": "BG_ICC_026t",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "7e6d081c0970847e": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 11,
+        "diverge": {
+          "attack": 3,
+          "card": "BG32_330",
+          "rule": "replay_minions"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "7ef156f423733774": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 10,
+        "diverge": null,
+        "matched": 10,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "7f2c87f57e74c2fd": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 3,
+        "diverge": null,
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "7fd4bfba94ce9715": {
+      "build": 253216,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": null,
+      "result": "tie",
+      "said": "odds"
+    },
+    "80df16a56487e05f": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 11,
+        "diverge": {
+          "attack": 4,
+          "card": "BG29_864t",
+          "rule": "replay_stats"
+        },
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "80e8ed0751c33e65": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 8,
+        "diverge": {
+          "attack": 2,
+          "card": "BG32_330",
+          "rule": "replay_minions"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "81e5645d46a015ad": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 16,
+        "diverge": {
+          "attack": 3,
+          "card": "BG36_506",
+          "rule": "replay_minions"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "81f310e407314674": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "822bc7366c8cc39f": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "839b475be72bb5ab": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 11,
+        "diverge": {
+          "attack": 2,
+          "card": "BG32_330",
+          "rule": "replay_minions"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "83bed9f8c8488819": {
+      "build": 254477,
+      "close": true,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 12,
+        "diverge": {
+          "attack": 8,
+          "card": "BG32_330",
+          "rule": "replay_minions"
+        },
+        "matched": 7,
+        "rerolled": 0
+      },
+      "result": "tie",
+      "said": "odds"
+    },
+    "84049526ae0d04e8": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 59,
+        "diverge": {
+          "attack": 14,
+          "card": "BG25_009",
+          "rule": "replay_minions"
+        },
+        "matched": 13,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "84b7db69f7eb51e6": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "84bd07de606f0fa9": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "84d03e2c47f3bdca": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 17,
+        "diverge": null,
+        "matched": 17,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "84ebeac253b82211": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "8636e4670a7a5c3b": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "86f93d27c4c1a33c": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 4,
+        "diverge": null,
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "870a0333aa697333": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 20,
+        "diverge": null,
+        "matched": 20,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "8ab6e6e8363b55f3": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 14,
+        "diverge": {
+          "attack": 3,
+          "card": "BG36_506",
+          "rule": "replay_minions"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "8b1cc5f056878d16": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "8b23ec3feaadd037": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "8b5209e49f11a284": {
+      "build": 253216,
+      "close": false,
+      "likely": "tie",
+      "mode": "solo",
+      "replay": null,
+      "result": "tie",
+      "said": "odds"
+    },
+    "8bee182434e1149a": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 25,
+        "diverge": {
+          "attack": 16,
+          "card": "BG29_300",
+          "rule": "replay_minions"
+        },
+        "matched": 15,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "8c1268c0cf824f06": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 18,
+        "diverge": null,
+        "matched": 18,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "8d0ddc07277370d5": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 16,
+        "diverge": {
+          "attack": 2,
+          "card": "BG25_009",
+          "rule": "replay_minions"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "8d18547718f4c32e": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "8d673096ce343bef": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 32,
+        "diverge": {
+          "attack": 7,
+          "card": "BG34_170t3",
+          "rule": "replay_minions"
+        },
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "8e65406a4bd61af0": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "8f029def1b13862c": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "8fbc885414b3413c": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 20,
+        "diverge": {
+          "attack": 3,
+          "card": "BG36_204",
+          "rule": "replay_stats"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "8fbe6b319203bd31": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 24,
+        "diverge": {
+          "attack": 6,
+          "card": "BG28_603t",
+          "rule": "replay_stats"
+        },
+        "matched": 5,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "8ffce32ec683ed32": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 12,
+        "diverge": {
+          "attack": 7,
+          "card": "BGDUO_104",
+          "rule": "replay_minions"
+        },
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "9065b89d6d18b1eb": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "9123bd71bf259f3a": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "91634e2862b86c0a": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 18,
+        "diverge": {
+          "attack": 3,
+          "card": "BG26_RLK_833",
+          "rule": "replay_stats"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "922299996e7fd6a1": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 1,
+        "diverge": null,
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "92db63250c9f2764": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 17,
+        "diverge": null,
+        "matched": 17,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "930ea69de6312b90": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 13,
+        "diverge": null,
+        "matched": 13,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "935c1810419b9fba": {
+      "build": 254477,
+      "close": true,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": {
+        "attacks": 8,
+        "diverge": {
+          "attack": 2,
+          "card": "BG25_001",
+          "rule": "replay_minions"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "94914c7b7dc0e859": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "94a0d87145f4b0b5": {
+      "build": 254477,
+      "close": false,
+      "likely": "tie",
+      "mode": "solo",
+      "replay": {
+        "attacks": 15,
+        "diverge": {
+          "attack": 2,
+          "card": "BG32_330_G",
+          "rule": "replay_minions"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "9535e484dbf97119": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 4,
+        "diverge": null,
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "954390edcf85ad47": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "95a8a83e9d211411": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "9694dad04897de6c": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "96eb3de05c43b20a": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "97473ec597cedc8e": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "97bdfc528fe2156f": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "993635ac076c6fd5": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 18,
+        "diverge": null,
+        "matched": 18,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "9ac914674ae53d3a": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 23,
+        "diverge": {
+          "attack": 2,
+          "card": "BG36_113",
+          "rule": "replay_minions"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "9b896bdb55da9108": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "9c38b1993797ce5f": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 17,
+        "diverge": {
+          "attack": 2,
+          "card": "BG36_849",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "9c737063f4b44350": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "9cec2d2db759f3e0": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 8,
+        "diverge": null,
+        "matched": 8,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "9d913fe52f98fcb5": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": {
+        "attacks": 9,
+        "diverge": {
+          "attack": 5,
+          "card": "BG36_202",
+          "rule": "replay_stats"
+        },
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "9dc3ec9fdbe84d8d": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 25,
+        "diverge": {
+          "attack": 3,
+          "card": "BG36_506",
+          "rule": "replay_minions"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "9dd6ddd0c502a4af": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 2,
+        "diverge": {
+          "attack": 2,
+          "card": "BG31_815",
+          "rule": "replay_minions"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "9dfbe9b8c43c3d74": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 22,
+        "diverge": {
+          "attack": 5,
+          "card": "BG32_330",
+          "rule": "replay_minions"
+        },
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "9e16ea605326d75f": {
+      "build": 253216,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": null,
+      "result": "tie",
+      "said": "odds"
+    },
+    "9eccd1d8baf2235e": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "9f18009e3fbf2831": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 30,
+        "diverge": {
+          "attack": 6,
+          "card": "BG36_202",
+          "rule": "replay_stats"
+        },
+        "matched": 5,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "9f8f1b6f3b63ed29": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "9fdb6b4fee086ef0": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 6,
+        "diverge": null,
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "9fed6254eb68480b": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "a0c5651a78c819eb": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 16,
+        "diverge": {
+          "attack": 7,
+          "card": "BG36_344_G",
+          "rule": "replay_stats"
+        },
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "a1ae576bacbbfebf": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "a1dbe0cec5e2473e": {
+      "build": 254477,
+      "close": true,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": {
+        "attacks": 12,
+        "diverge": null,
+        "matched": 12,
+        "rerolled": 0
+      },
+      "result": "tie",
+      "said": "odds"
+    },
+    "a2c9724661fc2546": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 19,
+        "diverge": {
+          "attack": 11,
+          "card": "TB_BaconUps_079",
+          "rule": "replay_minions"
+        },
+        "matched": 10,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "a2f4f7b79564b6f8": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 14,
+        "diverge": {
+          "attack": 2,
+          "card": "BG36_241",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "a5cb178f1bac54a8": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "a5e1390bd8c73ffd": {
+      "build": 253216,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": null,
+      "result": "tie",
+      "said": "odds"
+    },
+    "a6849178f8051511": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 9,
+        "diverge": null,
+        "matched": 9,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "a6b8f6143a354169": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 9,
+        "diverge": null,
+        "matched": 9,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "a6bd710d7271a9d6": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 17,
+        "diverge": {
+          "attack": 13,
+          "card": "BGFYM_011",
+          "rule": "replay_minions"
+        },
+        "matched": 12,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "a6e42d1cdc8dcd35": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 8,
+        "diverge": null,
+        "matched": 8,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "a72207ae7640db0c": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "a795329683ed2e2d": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 16,
+        "diverge": null,
+        "matched": 16,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "a806a82783448fc3": {
+      "build": 254477,
+      "close": false,
+      "likely": "tie",
+      "mode": "solo",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "tie",
+      "said": "odds"
+    },
+    "a81114c3b0e7c355": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "aa6cfbd9b3a5ed21": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 13,
+        "diverge": {
+          "attack": 2,
+          "card": "BG34_320",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "aab8662908591ea1": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "aaca77cf4a763061": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "abe143eac4852ae3": {
+      "build": 253216,
+      "close": true,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "ac9f006e6b584674": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "ad133c73b5254534": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "ad1451bcee2d598f": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "ad9ea983e0a21f09": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 33,
+        "diverge": {
+          "attack": 2,
+          "card": "BGS_040",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "addbc9f74c77f2b1": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "ae1a036571fb3f36": {
+      "build": 254477,
+      "close": false,
+      "likely": null,
+      "mode": "duos",
+      "replay": {
+        "attacks": 22,
+        "diverge": {
+          "attack": 2,
+          "card": "BG36_204",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "not_modelled"
+    },
+    "ae8bc795b9729ade": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 3,
+        "diverge": null,
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "af528757604959c6": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 10,
+        "diverge": {
+          "attack": 2,
+          "card": "BG26_137_G",
+          "rule": "replay_minions"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "afca3427d01aed63": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 5,
+        "diverge": null,
+        "matched": 5,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "afe94cdabf4e48a8": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "b00ee7d66d3a23dd": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "tie",
+      "said": "odds"
+    },
+    "b0a4c2718226bbdb": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 20,
+        "diverge": null,
+        "matched": 20,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "b1c1efc9377570ed": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 15,
+        "diverge": {
+          "attack": 9,
+          "card": "BGFYM_011",
+          "rule": "replay_minions"
+        },
+        "matched": 8,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "b209020b57156c24": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 19,
+        "diverge": null,
+        "matched": 19,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "b37205ba7c3e8ccb": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 8,
+        "diverge": null,
+        "matched": 8,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "b44e2303d27b48be": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "b472ec9a97cff17b": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 8,
+        "diverge": null,
+        "matched": 8,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "b50088574ee3bd32": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "b58f3907de82315b": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 17,
+        "diverge": null,
+        "matched": 17,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "b6b22da9d45aa091": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": {
+        "attacks": 5,
+        "diverge": {
+          "attack": 3,
+          "card": "BG32_330",
+          "rule": "replay_minions"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "b6baf8dbe460d7f7": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 10,
+        "diverge": null,
+        "matched": 10,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "b7533972f881b98e": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "b7accb2dd3f7e7ad": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 35,
+        "diverge": {
+          "attack": 4,
+          "card": "BG36_511",
+          "rule": "replay_minions"
+        },
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "b845f374b320b638": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 24,
+        "diverge": {
+          "attack": 3,
+          "card": "BG36_114",
+          "rule": "replay_stats"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "b9374b64c373f568": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 8,
+        "diverge": null,
+        "matched": 8,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "b97fe6a8829451c6": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "b9f11058db2bc703": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "ba56fcfa6e30b6c7": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 7,
+        "diverge": null,
+        "matched": 7,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "bac590a02bf91484": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 24,
+        "diverge": {
+          "attack": 4,
+          "card": "BG36_762",
+          "rule": "replay_minions"
+        },
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "bad1e5dda86fc358": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 17,
+        "diverge": {
+          "attack": 5,
+          "card": "BGFYM_011",
+          "rule": "replay_minions"
+        },
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "bb7e10a15abc933f": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 10,
+        "diverge": null,
+        "matched": 10,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "bc643033b11bde24": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 21,
+        "diverge": {
+          "attack": 21,
+          "card": "BGFYM_000",
+          "rule": "replay_minions"
+        },
+        "matched": 20,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "bca5e0b04727800d": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 21,
+        "diverge": null,
+        "matched": 21,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "bcac3a065209b4f5": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 27,
+        "diverge": {
+          "attack": 11,
+          "card": "BGFYM_011",
+          "rule": "replay_minions"
+        },
+        "matched": 10,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "bce21cea9fd2b754": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 26,
+        "diverge": {
+          "attack": 2,
+          "card": "BG28_582",
+          "rule": "replay_minions"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "bd3368ea48d36210": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "bda8d2675de97b53": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 1,
+        "diverge": null,
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "be7ff51b3dc0103a": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 23,
+        "diverge": {
+          "attack": 15,
+          "card": "BG34_170t",
+          "rule": "replay_stats"
+        },
+        "matched": 14,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "bf1ee419c7dd58ce": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "bf4816ba2fef54a5": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 9,
+        "diverge": null,
+        "matched": 9,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "c0025e6932f27b13": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "c06d987699c4a130": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 38,
+        "diverge": {
+          "attack": 3,
+          "card": "BG33_883",
+          "rule": "replay_stats"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "c1399e5cc6150887": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 23,
+        "diverge": {
+          "attack": 11,
+          "card": "BG36_113",
+          "rule": "replay_minions"
+        },
+        "matched": 10,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "c176e43cea7ca61f": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "c17968d5f463518c": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 46,
+        "diverge": {
+          "attack": 3,
+          "card": "BG25_008",
+          "rule": "replay_stats"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "c3a2e5c0edb0feda": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 8,
+        "diverge": {
+          "attack": 3,
+          "card": "BG35_814",
+          "rule": "replay_minions"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "c419665809af18c0": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "c4dce1623e2d5e00": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 1,
+        "diverge": null,
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "c4e2818ad717f763": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "c56b06aa409dfa37": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 24,
+        "diverge": {
+          "attack": 13,
+          "card": "BGDUO_108",
+          "rule": "replay_minions"
+        },
+        "matched": 12,
+        "rerolled": 1
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "c573488599bdca08": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "tie",
+      "said": "odds"
+    },
+    "c59bb275c8fda271": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 10,
+        "diverge": {
+          "attack": 2,
+          "card": "BG29_300",
+          "rule": "replay_minions"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "c5ac8eb15b631fff": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "c5fc0b07631d7566": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 31,
+        "diverge": {
+          "attack": 20,
+          "card": "BG_ICC_026t",
+          "rule": "replay_stats"
+        },
+        "matched": 19,
+        "rerolled": 2
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "c7b77e140a4edc6e": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 30,
+        "diverge": {
+          "attack": 18,
+          "card": "BG36_201",
+          "rule": "replay_stats"
+        },
+        "matched": 17,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "c7d6b905c99fcc8d": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "c7dc7826367de8ee": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 43,
+        "diverge": {
+          "attack": 9,
+          "card": "BGFYM_000",
+          "rule": "replay_minions"
+        },
+        "matched": 8,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "c808d2f85b697c61": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 16,
+        "diverge": {
+          "attack": 1,
+          "card": "BG31_818",
+          "rule": "replay_first_attacker"
+        },
+        "matched": 0,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "c8f1bba19d2db5d0": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": {
+        "attacks": 7,
+        "diverge": {
+          "attack": 2,
+          "card": "BG36_116_G",
+          "rule": "replay_minions"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "c9e8b17a37730533": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 9,
+        "diverge": null,
+        "matched": 9,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "cbbb4886fd444207": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "cc92c6bd2091160d": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 28,
+        "diverge": {
+          "attack": 24,
+          "card": "BGFYM_000",
+          "rule": "replay_minions"
+        },
+        "matched": 23,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "ccffa5821bdf75f2": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "cd0836fd3d77b3af": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "cd2d731c4973c6f9": {
+      "build": 254477,
+      "close": true,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 23,
+        "diverge": {
+          "attack": 5,
+          "card": "BG36_362",
+          "rule": "replay_stats"
+        },
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "cd3fd8901ccf928e": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 24,
+        "diverge": null,
+        "matched": 24,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "cd4fee71134b19d0": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 22,
+        "diverge": null,
+        "matched": 22,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "cdb004826a50fba1": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "ce2cd15b1c04ba30": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 21,
+        "diverge": null,
+        "matched": 21,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "ce72924ece17c894": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "ce9a803f54cf46cc": {
+      "build": 253216,
+      "close": true,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 30,
+        "diverge": {
+          "attack": 2,
+          "card": "BG36_210",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "cfe49c3dd2fd0e2c": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 12,
+        "diverge": null,
+        "matched": 12,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "d0176ef42b3bd97d": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "d0dada0da61ed915": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 18,
+        "diverge": null,
+        "matched": 18,
+        "rerolled": 1
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "d16d901fc1b0412c": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "d2dec907f2b4196c": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "tie",
+      "said": "odds"
+    },
+    "d337b5565ac3a657": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 25,
+        "diverge": {
+          "attack": 9,
+          "card": "BG36_523",
+          "rule": "replay_minions"
+        },
+        "matched": 8,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "d3e0c54a3e62dbe2": {
+      "build": 254477,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": {
+        "attacks": 3,
+        "diverge": null,
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "tie",
+      "said": "odds"
+    },
+    "d3f469cfde0239a8": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "d4bcd3ba038ce886": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 21,
+        "diverge": {
+          "attack": 3,
+          "card": "BG36_108",
+          "rule": "replay_stats"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "d56b7a126598b1d2": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 25,
+        "diverge": {
+          "attack": 7,
+          "card": "BGFYM_000",
+          "rule": "replay_minions"
+        },
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "d5d8bc98a0e0b1ae": {
+      "build": 253216,
+      "close": true,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "d5f80490e7824f01": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 36,
+        "diverge": {
+          "attack": 3,
+          "card": "BG25_010t",
+          "rule": "replay_stats"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "d647f6a6752aa4ae": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 26,
+        "diverge": {
+          "attack": 10,
+          "card": "BG36_701",
+          "rule": "replay_attack_order"
+        },
+        "matched": 9,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "d650728ffca764a1": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 6,
+        "diverge": null,
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "d658b2282e4761cb": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 11,
+        "diverge": null,
+        "matched": 11,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "d67af13036851b8e": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "d7b19dfb035d93b8": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 19,
+        "diverge": null,
+        "matched": 19,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "d7c92c19ce3da462": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "d7f603f3fb36424c": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 3,
+        "diverge": null,
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "d80b534b3e691a0f": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "d81107334079cef8": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 25,
+        "diverge": {
+          "attack": 14,
+          "card": "BG_ICC_026t",
+          "rule": "replay_stats"
+        },
+        "matched": 13,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "d84a158f4fd9dde1": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "d8ddc5f3bbe1a03e": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 3,
+        "diverge": null,
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "d8fa80b6bcaf726e": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 19,
+        "diverge": {
+          "attack": 14,
+          "card": "BGDUO_125",
+          "rule": "replay_minions"
+        },
+        "matched": 13,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "d956b15f579ee752": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "daa81df40e528921": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "db1036daa8960042": {
+      "build": 253216,
+      "close": false,
+      "likely": null,
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "not_modelled"
+    },
+    "db823b9637c054b1": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "db8b136528ae9872": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "dbf458345dbc4f8f": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "dc3a4351da5f599a": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "dc79563cbf3eb9fa": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 17,
+        "diverge": {
+          "attack": 10,
+          "card": "BG34_170t3",
+          "rule": "replay_stats"
+        },
+        "matched": 9,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "dc81456ac01fcc3c": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 30,
+        "diverge": null,
+        "matched": 30,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "ddd217e89d0a609a": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "de3cb5e86ed40614": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 6,
+        "diverge": null,
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "dfccc907022444cb": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "dfda8d7745cfc90e": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "e00ae66b8f5de39f": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 23,
+        "diverge": {
+          "attack": 5,
+          "card": "BG25_001",
+          "rule": "replay_stats"
+        },
+        "matched": 4,
+        "rerolled": 1
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "e01fbc83b49aae0f": {
+      "build": 253216,
+      "close": true,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "e0ac84ba394e31d4": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "e0f678f5aaccfd36": {
+      "build": 253216,
+      "close": false,
+      "likely": null,
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "not_modelled"
+    },
+    "e14332c070e1ab73": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "e1ca50ad81eeddc6": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 28,
+        "diverge": {
+          "attack": 5,
+          "card": "BGFYM_011",
+          "rule": "replay_minions"
+        },
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "e1f5da678708ab46": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 20,
+        "diverge": {
+          "attack": 7,
+          "card": "BG36_207",
+          "rule": "replay_stats"
+        },
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "e37daf3bce25f97c": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 31,
+        "diverge": null,
+        "matched": 31,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "e471de3278e0ffa7": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 17,
+        "diverge": {
+          "attack": 9,
+          "card": "BG36_108",
+          "rule": "replay_stats"
+        },
+        "matched": 8,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "e5ab33c97e95d531": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "e60fe2872d629005": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 9,
+        "diverge": null,
+        "matched": 9,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "e71549cb39da548a": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "e7b25434cb387683": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "e7d0ff0ef477ddf8": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "e85d7c9d12896f88": {
+      "build": 254477,
+      "close": true,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 20,
+        "diverge": {
+          "attack": 2,
+          "card": "BG36_851",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "e94df1896c5e53dc": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 25,
+        "diverge": {
+          "attack": 3,
+          "card": "BG25_008_G",
+          "rule": "replay_stats"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "e98e98f0f7984206": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 6,
+        "diverge": null,
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "e9b537e5c1417996": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "eb2211f3a6ab74b7": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 4,
+        "diverge": null,
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "eb5d921ac45817fa": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 3,
+        "diverge": null,
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "ebc794bf9948c9ce": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 14,
+        "diverge": {
+          "attack": 2,
+          "card": "BG27_084_G",
+          "rule": "replay_stats"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "ecc76a02549a6e0e": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "ee71812e514ff515": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 20,
+        "diverge": {
+          "attack": 9,
+          "card": "BG33_823",
+          "rule": "replay_stats"
+        },
+        "matched": 8,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "efbeb8df64636ac1": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 6,
+        "diverge": null,
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "f000914eb8ea4945": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "f06396c0ec9de965": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 46,
+        "diverge": {
+          "attack": 27,
+          "card": "BG25_008",
+          "rule": "replay_stats"
+        },
+        "matched": 26,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "f0886c0735aad788": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 49,
+        "diverge": {
+          "attack": 9,
+          "card": "BGFYM_000",
+          "rule": "replay_minions"
+        },
+        "matched": 8,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "f0b726cb95cb5d18": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 21,
+        "diverge": {
+          "attack": 11,
+          "card": "BG20_101",
+          "rule": "replay_stats"
+        },
+        "matched": 10,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "f152ee822ddfb15f": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "f25768ff293e607d": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 10,
+        "diverge": null,
+        "matched": 10,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "f327981e21e17bd5": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "f446dc4df003fbaf": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 17,
+        "diverge": null,
+        "matched": 17,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "f473eb09f4761c66": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 22,
+        "diverge": {
+          "attack": 11,
+          "card": "BG28_603t",
+          "rule": "replay_stats"
+        },
+        "matched": 10,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "f4b8a4be85e78613": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 14,
+        "diverge": {
+          "attack": 3,
+          "card": "BG32_330",
+          "rule": "replay_minions"
+        },
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "f50ee604e97e9100": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "f5ccaceb33ca82aa": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 6,
+        "diverge": null,
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "f606fd11341c5002": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "f61fd18e8b9554fc": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "f69eeca3c46c22b2": {
+      "build": 254477,
+      "close": true,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": {
+        "attacks": 15,
+        "diverge": {
+          "attack": 7,
+          "card": "BGFYM_000",
+          "rule": "replay_minions"
+        },
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "f76f1fdfe0450623": {
+      "build": 254477,
+      "close": false,
+      "likely": null,
+      "mode": "solo",
+      "replay": null,
+      "result": "lost",
+      "said": "no_boards"
+    },
+    "f7a279d25761e499": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "f7ad34305013456a": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 23,
+        "diverge": {
+          "attack": 7,
+          "card": "BG36_851",
+          "rule": "replay_stats"
+        },
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "f815e6dc77bd4a2b": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "f835cc3e721bf714": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "f8bd798be214c02d": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 3,
+        "diverge": {
+          "attack": 2,
+          "card": "BG29_888",
+          "rule": "replay_minions"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "f8f6f90534672f5f": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 26,
+        "diverge": {
+          "attack": 15,
+          "card": "BG29_864t",
+          "rule": "replay_minions"
+        },
+        "matched": 14,
+        "rerolled": 1
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "f9a6a087ea9eb135": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 19,
+        "diverge": {
+          "attack": 6,
+          "card": "BGFYM_011",
+          "rule": "replay_minions"
+        },
+        "matched": 5,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "f9b03619407d530c": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 26,
+        "diverge": {
+          "attack": 2,
+          "card": "BG36_243",
+          "rule": "replay_minions"
+        },
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "fa09ffd1f1a68e08": {
+      "build": 253216,
+      "close": false,
+      "likely": null,
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "not_modelled"
+    },
+    "fa377a11ce2343e0": {
+      "build": 253216,
+      "close": true,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "fa5fb4c6fe6c95c0": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 3,
+        "diverge": null,
+        "matched": 3,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "fae2f58316876548": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "solo",
+      "replay": {
+        "attacks": 1,
+        "diverge": null,
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "fbb8feeee1b1171c": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "fbdf5c2a5c011832": {
+      "build": 253216,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "fcb44d5668e54442": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 20,
+        "diverge": null,
+        "matched": 20,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "fd77cfb7385b7cd4": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 4,
+        "diverge": null,
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "fdb911935efd3f14": {
+      "build": 254477,
+      "close": false,
+      "likely": "tie",
+      "mode": "duos",
+      "replay": {
+        "attacks": 2,
+        "diverge": null,
+        "matched": 2,
+        "rerolled": 0
+      },
+      "result": "tie",
+      "said": "odds"
+    },
+    "fdc14af6f6676a3c": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": {
+        "attacks": 6,
+        "diverge": null,
+        "matched": 6,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "fdf4eb219f654dc5": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": {
+        "attacks": 5,
+        "diverge": null,
+        "matched": 5,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "fe50142ae251460f": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "febfeb046341919f": {
+      "build": 254477,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": {
+        "attacks": 14,
+        "diverge": null,
+        "matched": 14,
+        "rerolled": 0
+      },
+      "result": "lost",
+      "said": "odds"
+    },
+    "ff205a205af03fa3": {
+      "build": 254477,
+      "close": false,
+      "likely": null,
+      "mode": "solo",
+      "replay": null,
+      "result": "won",
+      "said": "no_boards"
+    },
+    "ff8339f1f31920f6": {
+      "build": 253216,
+      "close": false,
+      "likely": "lost",
+      "mode": "duos",
+      "replay": null,
+      "result": "lost",
+      "said": "odds"
+    },
+    "ff9924d519c0a809": {
+      "build": 254477,
+      "close": false,
+      "likely": null,
+      "mode": "solo",
+      "replay": null,
+      "result": "lost",
+      "said": "no_boards"
+    },
+    "fff279b801741031": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 13,
+        "diverge": {
+          "attack": 5,
+          "card": "BG22_HERO_305t",
+          "rule": "replay_minions"
+        },
+        "matched": 4,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    }
+  },
+  "engine": "0.18.0",
+  "format": 1,
+  "seed": 24301,
+  "trials": 2000
+}
