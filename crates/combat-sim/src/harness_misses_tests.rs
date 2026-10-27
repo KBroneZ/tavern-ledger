@@ -26,6 +26,7 @@ fn replayed(duos: bool, difference: Option<Rule>) -> Replayed {
             attacks: 4,
             matched: 2,
             boards_in: 0,
+            rerolled: 0,
             difference: difference.map(|rule| Difference {
                 attack: 3,
                 rule,

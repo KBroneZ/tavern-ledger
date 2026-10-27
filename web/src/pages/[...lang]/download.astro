@@ -76,6 +76,7 @@ const reads = (["reads.1", "reads.2", "reads.3", "reads.4"] as const).map((key) 
               <p class="dl-step-line">{step.line}</p>
               <More context={step.title}>
                 <p>{step.more}</p>
+                {i === 1 && <p>{dl("step2.sac")}</p>}
                 {i === 3 && <p>{accountsOpen ? dl("step4.account") : dl("step4.closed")}</p>}
               </More>
             </li>

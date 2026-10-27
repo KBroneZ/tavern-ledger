@@ -391,6 +391,7 @@ name = "combat-sim"
 version = "0.16.0"
 dependencies = [
  "bg-parser",
+ "flate2",
  "serde_json",
 ]
 
@@ -892,6 +893,13 @@ checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "expected-place"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
 ]
 
 [[package]]
