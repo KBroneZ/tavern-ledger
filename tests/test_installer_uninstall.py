@@ -10,7 +10,7 @@ DESKTOP = ROOT / "crates" / "desktop"
 HOOKS = DESKTOP / "installer" / "hooks.nsh"
 ENGLISH = DESKTOP / "installer" / "English.nsh"
 
-# Tauri CLI 2.12.2's English.nsh (package.json pins it): the custom file replaces
+# Tauri CLI 2.12.3's English.nsh (package.json pins it): the custom file replaces
 # it whole, so every string must be there. A CLI upgrade that adds one fails
 # this test, and the file is refreshed from the CLI's own English.nsh.
 TAURI_KEYS = {
@@ -91,7 +91,7 @@ class UninstallerTest(unittest.TestCase):
         # add strings, and the custom file replaces the table whole.
         package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
         pinned = package["devDependencies"]["@tauri-apps/cli"]
-        self.assertEqual(pinned, "2.12.2", "refresh English.nsh and TAURI_KEYS from the new CLI")
+        self.assertEqual(pinned, "2.12.3", "refresh English.nsh and TAURI_KEYS from the new CLI")
 
     def test_the_config_uses_both_files(self):
         nsis = json.loads((DESKTOP / "tauri.conf.json").read_text(encoding="utf-8"))["bundle"]["windows"]["nsis"]
