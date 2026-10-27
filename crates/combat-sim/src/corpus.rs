@@ -13,9 +13,10 @@
 //! entries (side, seat, hero card id, kit, board, game-long values) and the
 //! saved replay. Everything else a saved game holds (names, the lobby, the
 //! session string, when it was played, the shop) is left out by a list of
-//! the keys kept, and [`check_private`] refuses a line with any key outside
-//! one list or any string that is not a card id or a game word, so a name,
-//! a BattleTag or a time cannot pass.
+//! the keys kept, and [`check_private`] refuses a line with a key outside
+//! its level's list, a string that is not a card id or a lower-case game
+//! word, or a number outside its key's range, so a name, a BattleTag, an
+//! account id or a time cannot pass.
 //!
 //! The card data is not in the corpus (HearthstoneJSON's data stays out of
 //! the repository): a reader gives each combat the facts of its own build's
@@ -38,15 +39,16 @@ pub const FORMAT: u64 = 1;
 const ROUND_KEYS: [&str; 4] = ["number", "result", "entries", "replay"];
 /// The keys a corpus entry (one board in a round) keeps.
 const ENTRY_KEYS: [&str; 6] = ["side", "player_id", "hero", "kit", "board", "values"];
-/// Every key a corpus line may hold, at any depth: the line's own, the
-/// report's, a round's, a board's, a minion's, a kit's, the game-long
-/// values' and the replay's. A key outside the list (a new field in a saved
-/// game) fails the export until someone adds it here on purpose, so nothing
-/// new is published by accident.
+/// The keys of a corpus line itself.
+const LINE_KEYS: [&str; 5] = ["format", "id", "build", "mode", "report"];
+/// The keys of its report.
+const REPORT_KEYS: [&str; 3] = ["game_type", "build", "rounds"];
+/// Every key a round may hold, at any depth: a round's, a board's, a
+/// minion's, a kit's, the game-long values' and the replay's. A key outside
+/// the list (a new field in a saved game) fails the export until someone
+/// adds it here on purpose, so nothing new is published by accident.
 #[rustfmt::skip]
-const KEYS: &[&str] = &[
-    // line and report
-    "format", "id", "build", "mode", "report", "game_type", "rounds",
+const ROUND_TREE_KEYS: &[&str] = &[
     // round and entry
     "number", "result", "entries", "replay", "side", "player_id", "hero", "kit", "board", "values",
     // minion
@@ -61,6 +63,14 @@ const KEYS: &[&str] = &[
     "complete", "events", "minions", "start", "beats", "kind", "source", "trigger", "minion", "on",
     "amount", "attacker", "defender", "keyword", "how",
 ];
+/// Keys whose strings are card ids.
+const CARD_ID_KEYS: [&str; 3] = ["card_id", "hero", "gifts"];
+/// Keys whose numbers can be as big as a minion's stats (up to the 32-bit
+/// limit, D-144); every other number is at most [`MAX_SMALL`].
+const STAT_KEYS: [&str; 4] = ["atk", "health", "amount", "counters"];
+/// The largest number a key outside [`STAT_KEYS`] holds (the saved game's
+/// largest game-long value, `saved::MAX_GAME_VALUE`).
+const MAX_SMALL: i64 = 99_999;
 /// The longest string a corpus line holds (card ids are about 30).
 const MAX_STRING: usize = 64;
 
@@ -139,27 +149,87 @@ fn write_canonical(v: &Value, out: &mut String) {
     }
 }
 
-/// Refuses a value that holds a key outside [`KEYS`] or a string that is
-/// not an identifier (letters, digits and `_`, at most [`MAX_STRING`]): a
-/// name, a BattleTag, a time or free text cannot pass.
+/// Refuses a value that is not a corpus line's shape: a key outside the
+/// lists of its level ([`LINE_KEYS`], [`REPORT_KEYS`], [`ROUND_TREE_KEYS`]),
+/// a string under a card id key that is not a card id (letters and digits
+/// with at least one `_`), any other string that is not a lower-case game
+/// word (`divine_shield`), a number that is not a whole number in its
+/// key's range. A name, a BattleTag, an account id or a time cannot pass.
+/// The error names where, never the value.
 pub fn check_private(v: &Value) -> Result<(), String> {
+    check_level(v, "", &LINE_KEYS)
+}
+
+fn check_level(v: &Value, path: &str, keys: &[&str]) -> Result<(), String> {
+    let map = v
+        .as_object()
+        .ok_or_else(|| format!("{path}: not an object"))?;
+    map.iter().try_for_each(|(k, v)| {
+        if !keys.contains(&k.as_str()) {
+            return Err(format!("{path}/{k}: a key that is not one a corpus line keeps"));
+        }
+        let here = format!("{path}/{k}");
+        match k.as_str() {
+            "report" => check_level(v, &here, &REPORT_KEYS),
+            "rounds" => v
+                .as_array()
+                .ok_or_else(|| format!("{here}: not a list"))?
+                .iter()
+                .try_for_each(|r| check_tree(r, &here, "rounds")),
+            _ => check_tree(v, &here, k),
+        }
+    })
+}
+
+/// A value under `key`, inside a round or as a scalar of the line.
+fn check_tree(v: &Value, path: &str, key: &str) -> Result<(), String> {
     match v {
-        Value::Array(items) => items.iter().try_for_each(check_private),
+        Value::Array(items) => items.iter().try_for_each(|i| check_tree(i, path, key)),
         Value::Object(map) => map.iter().try_for_each(|(k, v)| {
-            if !KEYS.contains(&k.as_str()) {
-                return Err(format!("key \"{k}\" is not one a corpus line keeps"));
+            if !ROUND_TREE_KEYS.contains(&k.as_str()) {
+                return Err(format!("{path}/{k}: a key that is not one a corpus line keeps"));
             }
-            check_private(v)
+            check_tree(v, &format!("{path}/{k}"), k)
         }),
         Value::String(s) => {
-            let plain = s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_');
-            if s.is_empty() || s.len() > MAX_STRING || !plain {
-                return Err(format!("\"{s}\" is not a card id or a game word"));
-            }
-            Ok(())
+            let ok = s.len() <= MAX_STRING
+                && match key {
+                    k if CARD_ID_KEYS.contains(&k) => is_card_id(s),
+                    "game_type" => s == "GT_BATTLEGROUNDS" || s == "GT_BATTLEGROUNDS_DUO",
+                    "id" => s.len() == 16 && s.bytes().all(|b| b.is_ascii_hexdigit()),
+                    _ => is_word(s),
+                };
+            ok.then_some(())
+                .ok_or_else(|| format!("{path}: a string that is not a card id or a game word"))
         }
-        _ => Ok(()),
+        Value::Number(n) => {
+            let max = match key {
+                k if STAT_KEYS.contains(&k) => i64::from(i32::MAX),
+                "build" => 999_999_999,
+                _ => MAX_SMALL,
+            };
+            n.as_i64()
+                .filter(|n| n.abs() <= max)
+                .map(|_| ())
+                .ok_or_else(|| format!("{path}: a number out of range or not whole"))
+        }
+        Value::Bool(_) | Value::Null => Ok(()),
     }
+}
+
+/// A card id: starts with a letter, letters, digits and `_`, at least one
+/// `_` (`BG20_GEM`, `TB_BaconShop_HERO_35_SKIN_E`).
+fn is_card_id(s: &str) -> bool {
+    s.starts_with(|c: char| c.is_ascii_alphabetic())
+        && s.contains('_')
+        && s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_')
+}
+
+/// A game word: lower-case letters and `_` (`own`, `start_of_combat`).
+fn is_word(s: &str) -> bool {
+    s.starts_with(|c: char| c.is_ascii_lowercase())
+        && s.len() <= 32
+        && s.bytes().all(|b| b.is_ascii_lowercase() || b == b'_')
 }
 
 fn keep(v: &Value, keys: &[&str]) -> Option<Value> {
@@ -257,13 +327,16 @@ pub fn export(history: &str) -> Result<Export, String> {
         let rounds = report.get("rounds").and_then(Value::as_array);
         for round in rounds.into_iter().flatten() {
             match line_of(round, game_type, build) {
-                Ok((id, line)) => {
-                    if lines.insert(id, line).is_none() {
+                Ok((id, line)) => match lines.get(&id) {
+                    None => {
+                        lines.insert(id, line);
                         *out.written.entry((build, mode_of(game_type))).or_default() += 1;
-                    } else {
+                    }
+                    Some(same) if *same == line => {
                         *out.skipped.entry("same combat twice").or_default() += 1;
                     }
-                }
+                    Some(_) => return Err(format!("two different combats share the id {id}")),
+                },
                 Err(Skip::Out(why)) => *out.skipped.entry(why).or_default() += 1,
                 Err(Skip::Refused(why)) => {
                     return Err(format!("a combat of build {build} was refused: {why}"))
@@ -299,6 +372,19 @@ pub fn read_line(line: &str) -> Result<CorpusCombat, String> {
         _ => return Err("mode is not solo or duos".into()),
     };
     let report = v.get("report").cloned().ok_or("no report")?;
+    let game_type = report.get("game_type").and_then(Value::as_str);
+    if game_type
+        != Some(if duos {
+            "GT_BATTLEGROUNDS_DUO"
+        } else {
+            "GT_BATTLEGROUNDS"
+        })
+    {
+        return Err("the report's game type is not the line's mode".into());
+    }
+    if report.get("build").and_then(Value::as_u64) != Some(build) {
+        return Err("the report's build is not the line's".into());
+    }
     let rounds = report.get("rounds").and_then(Value::as_array).map(Vec::len);
     if rounds != Some(1) {
         return Err("the report does not hold exactly one round".into());
@@ -329,13 +415,19 @@ pub fn read_corpus(text: &str) -> Result<Vec<CorpusCombat>, String> {
     Ok(out)
 }
 
-/// A corpus file, gzip-compressed when its name ends in `.gz`.
+/// The most a compressed corpus may unpack to (the maintainer's 503
+/// combats are about 4 MB).
+const MAX_CORPUS_BYTES: u64 = 256 * 1024 * 1024;
+
+/// A corpus file, gzip-compressed when its name ends in `.gz`; one that
+/// unpacks past [`MAX_CORPUS_BYTES`] is cut there and fails to read.
 pub fn read_corpus_file(path: &Path) -> Result<Vec<CorpusCombat>, String> {
     use std::io::Read as _;
     let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
     let text = if path.extension().is_some_and(|x| x == "gz") {
         let mut text = String::new();
         flate2::read::GzDecoder::new(&bytes[..])
+            .take(MAX_CORPUS_BYTES)
             .read_to_string(&mut text)
             .map_err(|e| format!("{}: {e}", path.display()))?;
         text

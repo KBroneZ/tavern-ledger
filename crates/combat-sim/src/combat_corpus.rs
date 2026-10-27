@@ -43,8 +43,14 @@ fn real_main() -> Result<(), String> {
     let (Some(history_path), Some(out)) = (history, out) else {
         return Err(USAGE.into());
     };
+    if same_file(&history_path, &out) {
+        return Err("--out names the history itself; it would be overwritten".into());
+    }
     let history = fs::read_to_string(&history_path).map_err(|e| format!("{history_path}: {e}"))?;
     let e = export(&history)?;
+    if e.lines.is_empty() {
+        return Err("no combat with a result in the history; nothing written".into());
+    }
     let mut text = e.lines.join("\n");
     text.push('\n');
     let bytes = if out.ends_with(".gz") {
@@ -61,4 +67,13 @@ fn real_main() -> Result<(), String> {
     fs::write(&out, bytes).map_err(|e| format!("{}: {e}", out))?;
     print!("{}", render_export(&e));
     Ok(())
+}
+
+/// Both paths name one file (an `--out` that does not exist yet is not the
+/// history).
+fn same_file(a: &str, b: &str) -> bool {
+    match (fs::canonicalize(a), fs::canonicalize(b)) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => false,
+    }
 }

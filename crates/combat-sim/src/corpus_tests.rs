@@ -171,18 +171,139 @@ fn a_new_field_in_a_saved_game_stops_the_export() {
     assert!(err.contains("owner"), "{err}");
 }
 
+/// A valid corpus line as a value, without its id.
+fn line_value() -> Value {
+    let history = record("S1", 1, 1, json!([round(1, "won")]));
+    let mut v: Value = serde_json::from_str(&export(&history).unwrap().lines[0]).unwrap();
+    v.as_object_mut().unwrap().remove("id");
+    v
+}
+
+/// The line with its id worked out again, as a forger would.
+fn with_id(mut v: Value) -> String {
+    v.as_object_mut().unwrap().remove("id");
+    let id = format!("{:016x}", fnv64(&canonical(&v)));
+    v["id"] = json!(id);
+    v.to_string()
+}
+
 #[test]
-fn private_keys_and_strings_are_refused() {
-    assert!(check_private(&json!({"board": [{"card_id": "BG28_603t"}]})).is_ok());
-    for bad in [
-        json!({"name": "x"}),
-        json!({"board": [{"card_id": "Someone#1234"}]}),
-        json!({"hero": "Two words"}),
-        json!({"hero": ""}),
-        json!({"hero": "x".repeat(65)}),
+fn private_keys_strings_and_numbers_are_refused() {
+    assert!(check_private(&line_value()).is_ok());
+    let at_minion = |key: &str, value: Value| {
+        let mut v = line_value();
+        v["report"]["rounds"][0]["entries"][0]["board"][0][key] = value;
+        v
+    };
+    let mut big = line_value();
+    big["report"]["rounds"][0]["entries"][0]["board"][0]["health"] = json!(i64::from(i32::MAX));
+    assert!(
+        check_private(&big).is_ok(),
+        "the 32-bit stat limit is a stat"
+    );
+    for (what, bad) in [
+        (
+            "a one-word name as a card id",
+            at_minion("card_id", json!("Bob")),
+        ),
+        (
+            "digits as a card id",
+            at_minion("card_id", json!("12345678")),
+        ),
+        ("a BattleTag", at_minion("card_id", json!("Someone#1234"))),
+        (
+            "a capitalised word",
+            at_minion("keywords", json!(["Someone"])),
+        ),
+        ("two words", at_minion("keywords", json!(["two words"]))),
+        ("an empty string", at_minion("keywords", json!([""]))),
+        (
+            "a long card id",
+            at_minion("card_id", json!(format!("BG_{}", "x".repeat(64)))),
+        ),
+        (
+            "a time as a position",
+            at_minion("position", json!(1_792_462_422_i64)),
+        ),
+        ("a float", at_minion("atk", json!(1.5))),
+        (
+            "a stat past the 32-bit limit",
+            at_minion("atk", json!(i64::from(i32::MAX) + 1)),
+        ),
+        (
+            "a line key inside a minion",
+            at_minion("id", json!("BG28_603t")),
+        ),
+        ("an unknown key", at_minion("name", json!("x"))),
     ] {
-        assert!(check_private(&bad).is_err(), "{bad}");
+        let err = check_private(&bad).expect_err(what);
+        for value in ["Bob", "Someone", "1792462422", "two words"] {
+            assert!(
+                !err.contains(value),
+                "{what}: the error must not echo the value: {err}"
+            );
+        }
     }
+    let mut v = line_value();
+    v["report"]["session"] = json!("x");
+    assert!(check_private(&v).is_err(), "an unknown report key");
+    let mut v = line_value();
+    v["report"]["rounds"][0]["build"] = json!(1);
+    assert!(check_private(&v).is_err(), "a line key inside a round");
+}
+
+#[test]
+fn a_forged_line_must_agree_with_its_report() {
+    let mut v = line_value();
+    v["mode"] = json!("duos");
+    assert!(read_line(&with_id(v)).unwrap_err().contains("game type"));
+    let mut v = line_value();
+    v["build"] = json!(253_216);
+    assert!(read_line(&with_id(v)).unwrap_err().contains("build"));
+    assert!(read_line(&with_id(line_value())).is_ok());
+}
+
+#[test]
+fn a_gzip_corpus_file_reads_back() {
+    use std::io::Write as _;
+    let line = with_id(line_value());
+    let mut gz = flate2::GzBuilder::new()
+        .mtime(0)
+        .write(Vec::new(), flate2::Compression::best());
+    gz.write_all(format!("{line}\n").as_bytes()).unwrap();
+    let bytes = gz.finish().unwrap();
+    let dir = std::env::temp_dir().join(format!("combat-sim-corpus-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("corpus.jsonl.gz");
+    std::fs::write(&path, &bytes).unwrap();
+    let read = read_corpus_file(&path);
+    std::fs::remove_dir_all(&dir).ok();
+    assert_eq!(read.unwrap().len(), 1);
+}
+
+#[test]
+fn the_engine_reads_a_duos_corpus_combat_with_kits_as_the_saved_game() {
+    let mut r = round(1, "won");
+    r.as_object_mut().unwrap().remove("replay");
+    let kit = json!({"powers": [{"card_id": "BG20_HERO_100p", "slot": 0, "counters": [1, 0, 0, 0, 0]}],
+                     "trinkets": [{"card_id": "BG30_Trinket_1st", "slot": 1}]});
+    let teammate = json!({"side": "own", "player_id": 3, "hero": "BG21_HERO_030",
+                          "kit": kit, "board": [bm(PLAIN, 2, 2, 1)], "values": {"knights_dead": 1}});
+    let other = json!({"side": "opponent", "player_id": 4, "hero": "BG21_HERO_030",
+                       "board": [bm(PLAIN, 4, 1, 1)]});
+    r["entries"]
+        .as_array_mut()
+        .unwrap()
+        .extend([teammate, other]);
+    r["entries"][0]["kit"] = kit;
+    let history =
+        record("S1", 1, 1, json!([r])).replace("\"GT_BATTLEGROUNDS\"", "\"GT_BATTLEGROUNDS_DUO\"");
+    let saved: Value = serde_json::from_str(&history).unwrap();
+    let from_saved = explain_game(&saved["report"], &facts, &options());
+    let c = read_line(&export(&history).unwrap().lines[0]).unwrap();
+    assert!(c.duos);
+    assert_eq!(explain_game(&c.report, &facts, &options()), from_saved);
+    assert_eq!(from_saved.len(), 1);
 }
 
 #[test]
