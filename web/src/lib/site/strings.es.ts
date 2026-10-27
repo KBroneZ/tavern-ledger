@@ -69,6 +69,9 @@ export const ES: Record<SiteKey, string> = {
   "meta.accuracy.title": "Precisión del simulador",
   "meta.accuracy.description":
     "Cuántas veces aciertan las probabilidades de combate de Tavern Ledger, medido con combates reales de Campos de Batalla, por modo y con el porcentaje de combates sin probabilidades al lado de cada cifra.",
+  "meta.calibration.title": "Calibración del puesto esperado",
+  "meta.calibration.description":
+    "Cuánto se acerca el puesto esperado de Tavern Ledger, comprobado con partidas de Campos de Batalla que el modelo nunca vio, por modo y versión del juego, con las partidas que hay detrás de cada cifra. Aún no hay ningún modelo publicado.",
   "meta.signin.title": "Iniciar sesión",
   "meta.signin.description": "Inicia sesión o crea una cuenta de Tavern Ledger.",
   "meta.account.title": "Tu cuenta",

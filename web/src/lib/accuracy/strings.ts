@@ -10,6 +10,8 @@ export const ACC_STRINGS = {
   "page.intro":
     "The simulator behind the overlay's odds, checked on real combats: for each combat it gives the chance of a win, a tie and a loss, and the game's log says what really happened.",
   "page.version": "Engine {version} · measured {date} · {trials} trials per combat",
+  "page.calibration": "The expected place has its own check:",
+  "page.calibration.link": "Expected place calibration",
 
   "mode.solo": "Solo",
   "mode.duos": "Duos",

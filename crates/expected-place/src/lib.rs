@@ -15,6 +15,7 @@
 
 use serde_json::Value;
 
+pub mod calibration;
 pub mod eval;
 pub mod model;
 

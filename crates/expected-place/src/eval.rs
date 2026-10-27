@@ -4,7 +4,7 @@
 //! games, and that share per turn. Every number is per game (each game
 //! weighs the same), as the model is trained.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::model::{expected, places, Model, Train};
 use crate::Game;
@@ -21,14 +21,56 @@ pub struct Score {
     pub rps: f64,
 }
 
-/// One calibration bucket: games whose expected place fell in
-/// `from..from+1`, and the mean place they really got.
+/// One calibration bucket: the held-out combats whose expected place fell
+/// in `from..from+1` (a sure last place in the last bucket), the games
+/// they come from, and the mean place said and really got (each combat
+/// once).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Bucket {
     pub from: u32,
     pub rows: usize,
+    pub games: usize,
     pub said: f64,
     pub real: f64,
+}
+
+/// One held-out prediction: the game it is from (its index among the
+/// mode's games, in the order given; never an id from the record), the
+/// game's build, the expected place said and the place really got.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Said {
+    pub game: usize,
+    pub build: Option<i64>,
+    pub said: f64,
+    pub place: i64,
+}
+
+/// The bucket an expected place falls in among the `places - 1` buckets
+/// `1..2` to `places-1..places`.
+pub fn bucket_of(said: f64, places: usize) -> u32 {
+    let last = places.saturating_sub(1).max(1) as f64;
+    said.floor().clamp(1.0, last) as u32
+}
+
+/// The non-empty buckets of `predictions`, lowest first.
+pub fn buckets<'a>(predictions: impl IntoIterator<Item = &'a Said>, places: usize) -> Vec<Bucket> {
+    let mut sums: BTreeMap<u32, (usize, BTreeSet<usize>, f64, f64)> = BTreeMap::new();
+    for p in predictions {
+        let b = sums.entry(bucket_of(p.said, places)).or_default();
+        b.0 += 1;
+        b.1.insert(p.game);
+        b.2 += p.said;
+        b.3 += p.place as f64;
+    }
+    sums.into_iter()
+        .map(|(from, (rows, games, said, real))| Bucket {
+            from,
+            rows,
+            games: games.len(),
+            said: said / rows as f64,
+            real: real / rows as f64,
+        })
+        .collect()
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -43,6 +85,10 @@ pub struct Report {
     /// The share of each place among training rows of the same turn.
     pub per_turn: Score,
     pub calibration: Vec<Bucket>,
+    /// Every held-out prediction, in fold order. Kept in memory only: the
+    /// calibration file publishes totals of at least
+    /// [`crate::calibration::THIN_GAMES`] games.
+    pub predictions: Vec<Said>,
 }
 
 /// A place distribution from weighted counts, smoothed so no place is 0.
@@ -122,7 +168,7 @@ pub fn cross_validate(games: &[Game], solo: bool, folds: usize, opts: &Train) ->
     }
     let k = places(solo);
     let (mut model, mut overall, mut per_turn) = (Sum::default(), Sum::default(), Sum::default());
-    let mut buckets: BTreeMap<u32, (usize, f64, f64)> = BTreeMap::new();
+    let mut predictions = Vec::new();
     for f in 0..folds {
         let train: Vec<Game> = mode
             .iter()
@@ -130,39 +176,32 @@ pub fn cross_validate(games: &[Game], solo: bool, folds: usize, opts: &Train) ->
             .filter(|(i, _)| i % folds != f)
             .map(|(_, g)| (*g).clone())
             .collect();
-        let test: Vec<&Game> = mode
+        let test: Vec<(usize, &Game)> = mode
             .iter()
             .enumerate()
             .filter(|(i, _)| i % folds == f)
-            .map(|(_, g)| *g)
+            .map(|(i, g)| (i, *g))
             .collect();
         let m = Model::train(&train, solo, opts)?;
         let train_refs: Vec<&Game> = train.iter().collect();
         let (all, by_turn) = baselines(&train_refs, k);
-        for g in test {
+        for (i, g) in test {
             let w = 1.0 / g.turns.len() as f64;
             for t in &g.turns {
                 let p = m.predict(t);
                 model.add(&p, g.final_place, w);
                 overall.add(&all, g.final_place, w);
                 per_turn.add(by_turn.get(&t.turn).unwrap_or(&all), g.final_place, w);
-                let said = expected(&p);
-                let b = buckets.entry(said.floor() as u32).or_default();
-                b.0 += 1;
-                b.1 += said;
-                b.2 += g.final_place as f64;
+                predictions.push(Said {
+                    game: i,
+                    build: g.build,
+                    said: expected(&p),
+                    place: g.final_place,
+                });
             }
         }
     }
-    let calibration = buckets
-        .into_iter()
-        .map(|(from, (rows, said, real))| Bucket {
-            from,
-            rows,
-            said: said / rows as f64,
-            real: real / rows as f64,
-        })
-        .collect();
+    let calibration = buckets(&predictions, k);
     Some(Report {
         solo,
         games: mode.len(),
@@ -172,6 +211,7 @@ pub fn cross_validate(games: &[Game], solo: bool, folds: usize, opts: &Train) ->
         overall: overall.score(),
         per_turn: per_turn.score(),
         calibration,
+        predictions,
     })
 }
 
