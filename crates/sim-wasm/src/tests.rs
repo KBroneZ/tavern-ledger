@@ -274,6 +274,17 @@ fn a_boards_game_long_values_play() {
 }
 
 #[test]
+fn a_boards_deity_is_read() {
+    // T-671: the board's Deity, as a saved round has it, is accepted.
+    let mut b = board(vec![minion(PLAIN, 1, 1)], Some(1));
+    b["values"] = json!({
+        "deity_dbf": 130_610, "deity_atk": 5, "deity_health": 5, "deity_needed": 4, "deity_progress": 1
+    });
+    let req = request(vec![b], vec![board(vec![minion(PLAIN, 1, 1)], Some(1))]);
+    assert_eq!(run(&req)["status"], "odds");
+}
+
+#[test]
 fn bad_game_long_values_are_refused() {
     for values in [
         json!([5]),
@@ -282,6 +293,8 @@ fn bad_game_long_values_are_refused() {
         json!({ "undead_atk": 100_000 }),
         json!({ "undead_atk": "5" }),
         json!({ "tasty_lobster": 1 }),
+        json!({ "deity_dbf": 10_000_001 }),
+        json!({ "deity_atk": 100_000 }),
     ] {
         let mut b = board(vec![minion(PLAIN, 1, 1)], Some(1));
         b["values"] = values.clone();

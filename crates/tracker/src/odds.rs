@@ -380,6 +380,8 @@ fn engine_values(v: &CombatValues) -> GameValues {
         knights_dead: n(v.knights_dead),
         undead_attack: n(v.undead_attack),
         beetle: (n(v.beetle.0), n(v.beetle.1)),
+        // The Deity comes with parser revision 17 (T-671).
+        ..GameValues::default()
     }
 }
 

@@ -14,7 +14,9 @@ const fn summon(token: &'static str, count: u8) -> Action {
 pub(crate) const GAME_BUFFS: &str =
     "summons tokens that may have game-long buffs that are not known";
 pub(crate) const SCALES: &str = "its numbers grow during the game; the base values are used";
-const DEITY: &str = "buffs the Deity, which is not on the board";
+pub(crate) const DEITY: &str = "buffs the Deity, whose stats this board does not show";
+const DEITY_GROWS: &str = "buffs the Deity by more for each Tavern spell cast this game";
+const DEITY_TEAM: &str = "buffs the team's Deities; the teammate's is not known";
 /// Played with the board's upgrades when it brings them (T-610).
 pub(crate) const BLOOD_GEM: &str = "Blood Gems are played as +1/+1; their upgrades are not known";
 const RANDOM_PICK: &str = "which minions it picks is not checked against the game yet";
@@ -219,14 +221,91 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
             }])],
         ),
     ),
-    // The Deity is not a board minion: these deathrattles change nothing on
-    // the board, but the Deity's own part in combat is unknown.
-    ("BG36_113", approx(DEITY, &[])),
-    ("BG36_113_G", approx(DEITY, &[])),
-    ("BG36_318", approx(DEITY, &[])),
-    ("BG36_318_G", approx(DEITY, &[])),
-    ("BGDUO_701", approx(DEITY, &[])),
-    ("BGDUO_701_G", approx(DEITY, &[])),
+    // Cards that buff the Deity (T-671): the awakened one on the board,
+    // else the hidden one. Played exactly when the board brings its Deity;
+    // Faceless Converter's growth with spells and C'Thrax Wrecker's buff to
+    // the teammate's Deity are not known.
+    (
+        "BG36_113",
+        approx(
+            DEITY,
+            &[Trigger::Deathrattle(&[Action::BuffDeity {
+                attack: 2,
+                health: 1,
+            }])],
+        ),
+    ),
+    (
+        "BG36_113_G",
+        approx(
+            DEITY,
+            &[Trigger::Deathrattle(&[Action::BuffDeity {
+                attack: 4,
+                health: 2,
+            }])],
+        ),
+    ),
+    (
+        "BG36_318",
+        approx(
+            DEITY_GROWS,
+            &[Trigger::Deathrattle(&[Action::BuffDeity {
+                attack: 2,
+                health: 1,
+            }])],
+        ),
+    ),
+    (
+        "BG36_318_G",
+        approx(
+            DEITY_GROWS,
+            &[Trigger::Deathrattle(&[Action::BuffDeity {
+                attack: 4,
+                health: 2,
+            }])],
+        ),
+    ),
+    (
+        "BGDUO_701",
+        approx(
+            DEITY_TEAM,
+            &[
+                Trigger::Deathrattle(&[Action::BuffDeity {
+                    attack: 4,
+                    health: 4,
+                }]),
+                Trigger::Rally(&[Action::BuffDeity {
+                    attack: 4,
+                    health: 4,
+                }]),
+            ],
+        ),
+    ),
+    (
+        "BGDUO_701_G",
+        approx(
+            DEITY_TEAM,
+            &[
+                Trigger::Deathrattle(&[Action::BuffDeity {
+                    attack: 8,
+                    health: 8,
+                }]),
+                Trigger::Rally(&[Action::BuffDeity {
+                    attack: 8,
+                    health: 8,
+                }]),
+            ],
+        ),
+    ),
+    // The Deities: C'Thun splits its stats when it awakens (in the engine's
+    // awakening), Y'Shaarj brings back the first Aberrations that died.
+    ("BGFYM_000", exact(&[])),
+    (
+        "BGFYM_011",
+        exact(&[Trigger::Deathrattle(&[Action::SummonDeadAberrations {
+            count: 2,
+        }])]),
+    ),
     // Rally.
     (
         "BG29_888",

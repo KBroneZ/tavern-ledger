@@ -32,6 +32,12 @@ pub enum Action {
     /// Summon `count` copies of a token, to the right of the card (or in
     /// its place when it died).
     Summon { token: &'static str, count: u8 },
+    /// Give the side's Deity stats (T-671): the awakened Deity on the
+    /// board, else the hidden one it will awaken as.
+    BuffDeity { attack: i32, health: i32 },
+    /// Summon the side's first `count` Aberrations that died this combat
+    /// (not Deities) with the stats they had when they died (Y'Shaarj).
+    SummonDeadAberrations { count: u8 },
     /// Give friendly minions stats; `others` leaves the card itself out.
     BuffAll {
         attack: i32,
@@ -398,6 +404,23 @@ pub struct Token {
     pub golden: bool,
 }
 
+/// The Deities by database id (T-671): C'Thun and Y'Shaarj.
+pub const DEITIES: [(i32, &str); 2] = [(130_610, "BGFYM_000"), (132_532, "BGFYM_011")];
+
+/// The Deity card a database id names, if it is one.
+pub fn deity_card(dbf: i32) -> Option<&'static str> {
+    DEITIES.iter().find(|(d, _)| *d == dbf).map(|(_, id)| *id)
+}
+
+/// Whether a card is a Deity (never counted among the Aberrations that
+/// awaken one).
+pub fn is_deity(id: &str) -> bool {
+    matches!(
+        id,
+        "BGFYM_000" | "BGFYM_000_G" | "BGFYM_011" | "BGFYM_011_G"
+    )
+}
+
 pub fn token(id: &str) -> Option<&'static Token> {
     TOKENS
         .iter()
@@ -432,6 +455,9 @@ pub(crate) const fn gold(t: Token) -> Token {
 }
 
 pub const TOKENS: &[Token] = &[
+    // The Deities, awakened in combat with their own stats (T-671).
+    tok("BGFYM_000", 1, 1, Tribes::ABERRATION, 1),
+    tok("BGFYM_011", 1, 1, Tribes::ABERRATION, 1),
     tok("BG_BOT_312t", 1, 1, Tribes::MECH, 1),
     gold(tok("TB_BaconUps_032t", 2, 2, Tribes::MECH, 1)),
     tok("BG_ICC_026t", 1, 1, Tribes::UNDEAD, 1),
