@@ -1,26 +1,27 @@
+use super::game::shift_targets;
 use super::*;
-use combat_sim::{BaseCard, Tribes};
+use combat_sim::{BaseCard, Keywords, Tribes};
 use expected_place::model::MIN_GAMES;
 use serde_json::json;
 
 // Cards with no combat text in the engine (`combat_sim::cards::NO_COMBAT_EFFECT`).
-const WEAK: &str = "BG28_603t";
-const STRONG: &str = "BG26_361";
-const OTHER: &str = "BG_BOT_911";
-const FOE: &str = "BGS_119";
-const FILLER: &str = "BGS_034";
+pub(super) const WEAK: &str = "BG28_603t";
+pub(super) const STRONG: &str = "BG26_361";
+pub(super) const OTHER: &str = "BG_BOT_911";
+pub(super) const FOE: &str = "BGS_119";
+pub(super) const FILLER: &str = "BGS_034";
 /// A card the card data lacks.
-const UNKNOWN: &str = "BG_NOT_A_CARD";
+pub(super) const UNKNOWN: &str = "BG_NOT_A_CARD";
 /// A spell: no health.
-const SPELL: &str = "BG28_500";
+pub(super) const SPELL: &str = "BG28_500";
 /// Acts at the start of combat (`cards_round1`).
-const STARTS: &str = "BG26_963_G";
+pub(super) const STARTS: &str = "BG26_963_G";
 /// Trinkets: no combat effect, and one acting at the start of combat.
-const TRINKET_A: &str = "BG30_MagicItem_406";
-const TRINKET_B: &str = "BG30_MagicItem_416";
-const TRINKET_SOC: &str = "BG30_MagicItem_902";
+pub(super) const TRINKET_A: &str = "BG30_MagicItem_406";
+pub(super) const TRINKET_B: &str = "BG30_MagicItem_416";
+pub(super) const TRINKET_SOC: &str = "BG30_MagicItem_902";
 
-fn stats(attack: i32, health: i32) -> Option<Facts> {
+pub(super) fn stats(attack: i32, health: i32) -> Option<Facts> {
     Some(Facts {
         tier: Some(1),
         tribes: Tribes::NONE,
@@ -32,7 +33,7 @@ fn stats(attack: i32, health: i32) -> Option<Facts> {
     })
 }
 
-fn facts(id: &str) -> Option<Facts> {
+pub(super) fn facts(id: &str) -> Option<Facts> {
     match id {
         WEAK => stats(1, 1),
         STRONG => stats(20, 20),
@@ -45,15 +46,15 @@ fn facts(id: &str) -> Option<Facts> {
     }
 }
 
-fn minion(card: &str, atk: i64, health: i64) -> Value {
+pub(super) fn minion(card: &str, atk: i64, health: i64) -> Value {
     json!({"card_id": card, "atk": atk, "health": health, "golden": false, "keywords": []})
 }
 
-fn offer(card: &str) -> Value {
+pub(super) fn offer(card: &str) -> Value {
     json!({"card_id": card, "roll": 0, "frozen": false})
 }
 
-fn shop_turn(n: i64, buys: &[&str], sells: &[&str], offers: &[&str]) -> Value {
+pub(super) fn shop_turn(n: i64, buys: &[&str], sells: &[&str], offers: &[&str]) -> Value {
     let offers: Vec<Value> = offers.iter().map(|c| offer(c)).collect();
     json!({
         "turn": n, "start_ms": n * 1000, "end_ms": n * 1000 + 999, "tier": 1, "gold": 3,
@@ -62,18 +63,18 @@ fn shop_turn(n: i64, buys: &[&str], sells: &[&str], offers: &[&str]) -> Value {
     })
 }
 
-fn act(turn: i64, k: usize, kind: &str) -> Value {
+pub(super) fn act(turn: i64, k: usize, kind: &str) -> Value {
     json!({"ms": turn * 1000 + 100 + k as i64, "turn": turn, "kind": kind})
 }
 
-fn round(n: i64, own: Vec<Value>, opponent: Vec<Value>) -> Value {
+pub(super) fn round(n: i64, own: Vec<Value>, opponent: Vec<Value>) -> Value {
     json!({"number": n, "result": "won", "entries": [
         {"side": "own", "player_id": 1, "board": own},
         {"side": "opponent", "player_id": 2, "board": opponent},
     ], "health_after": {"1": 30, "2": 25}})
 }
 
-fn report(turns: Vec<Value>, actions: Vec<Value>, rounds: Vec<Value>) -> Value {
+pub(super) fn report(turns: Vec<Value>, actions: Vec<Value>, rounds: Vec<Value>) -> Value {
     json!({
         "status": "ok", "game_type": "GT_BATTLEGROUNDS", "local_player_id": 1,
         "final_place": 4, "start_health": {"1": 30, "2": 30},
@@ -85,7 +86,7 @@ fn report(turns: Vec<Value>, actions: Vec<Value>, rounds: Vec<Value>) -> Value {
 
 /// Turn 1: the shop shows WEAK and STRONG; the player buys WEAK and loses
 /// the combat with it to a 3/3.
-fn bought_weak() -> Value {
+pub(super) fn bought_weak() -> Value {
     report(
         vec![shop_turn(1, &[WEAK], &[], &[WEAK, STRONG])],
         vec![act(1, 0, "buy")],
@@ -93,15 +94,15 @@ fn bought_weak() -> Value {
     )
 }
 
-fn run(report: &Value) -> GameReview {
+pub(super) fn run(report: &Value) -> GameReview {
     review(report, &facts, None, &Budget::default()).unwrap()
 }
 
-fn rebuilt(r: &GameReview, i: usize) -> &Rebuilt {
+pub(super) fn rebuilt(r: &GameReview, i: usize) -> &Rebuilt {
     r.decisions[i].rebuilt.as_ref().unwrap()
 }
 
-fn reason(r: &GameReview, i: usize) -> NotRebuilt {
+pub(super) fn reason(r: &GameReview, i: usize) -> NotRebuilt {
     r.decisions[i].rebuilt.clone().unwrap_err()
 }
 
@@ -115,7 +116,14 @@ fn a_buy_is_played_again_with_each_other_card_on_offer() {
     assert_eq!(b.alternatives.len(), 1);
     let alt = &b.alternatives[0];
     assert_eq!(alt.card, STRONG);
-    assert_eq!(alt.approx, [Approx::BaseStats]);
+    assert_eq!(
+        alt.approx,
+        [
+            Approx::BaseStats,
+            Approx::BattlecryNotPlayed,
+            Approx::GoldIgnored
+        ]
+    );
     let fight = alt.fight.as_ref().unwrap();
     assert_eq!(fight.won, 1.0);
     let delta = alt.delta.as_ref().unwrap();
@@ -126,6 +134,7 @@ fn a_buy_is_played_again_with_each_other_card_on_offer() {
     assert_eq!(fight.trials, Budget::default().batch);
     // The 20/20 stands: its tier is the damage; the 3/3 dealt its tier.
     assert_eq!(fight.minion_damage_dealt, Some(1.0));
+    assert_eq!(fight.stalled, 0);
     assert_eq!(b.actual.minion_damage_taken, Some(1.0));
     assert_eq!(delta.minion_damage_taken, Some(-1.0));
     // Without a model: a marker, never a number.
@@ -400,7 +409,12 @@ fn a_start_of_combat_card_elsewhere_on_the_boards_is_noted() {
     let alt = &rebuilt(&r, 0).alternatives[0];
     assert_eq!(
         alt.approx,
-        [Approx::BaseStats, Approx::StartOfCombatOnBoard]
+        [
+            Approx::BaseStats,
+            Approx::BattlecryNotPlayed,
+            Approx::GoldIgnored,
+            Approx::StartOfCombatOnBoard
+        ]
     );
 }
 
@@ -496,79 +510,78 @@ fn a_model_players_may_not_see_gives_a_marker_not_a_number() {
     assert_eq!(place(&other), Place::OtherFormat);
 }
 
-/// A long synthetic game: every turn a buy with five other cards on offer,
-/// on full boards. The card bought alternates, so each is
-/// new on its turn's board.
-fn long_game(turns: i64) -> Value {
-    let offers = [WEAK, STRONG, OTHER, FILLER, FOE, STRONG];
-    let bought = |t: i64| if t % 2 == 1 { WEAK } else { OTHER };
-    let shop: Vec<Value> = (1..=turns)
-        .map(|t| shop_turn(t, &[bought(t)], &[], &offers))
-        .collect();
-    let actions: Vec<Value> = (1..=turns).map(|t| act(t, 0, "buy")).collect();
-    let rounds: Vec<Value> = (1..=turns)
-        .map(|t| {
-            let mut own: Vec<Value> = (0..6).map(|i| minion(FILLER, 2 + i, 3)).collect();
-            own.push(minion(bought(t), 2, 2));
-            // Another opponent each turn: no board is played twice.
-            let theirs: Vec<Value> = (0..7).map(|i| minion(FOE, 3 + i % 3, 2 + t)).collect();
-            round(t, own, theirs)
-        })
-        .collect();
-    report(shop, actions, rounds)
-}
-
 #[test]
-fn the_time_budget_is_respected_and_what_it_did_not_reach_says_so() {
-    let g = long_game(12);
-    let budget = Budget {
-        time: Duration::from_millis(10),
-        max_trials: 2_000,
-        batch: 100,
-    };
-    // A clock that moves one millisecond each time it is read.
-    let mut now = 0u64;
-    let mut clock = || {
-        now += 1;
-        Duration::from_millis(now)
-    };
-
-    let r = review_with_clock(&g, &facts, None, &budget, &mut clock).unwrap();
-
-    assert!(r.out_of_time);
-    // Every decision is there, rebuilt or with its reason.
-    assert_eq!(r.decisions.len(), 12);
-    // The clock is read before each batch, and never after the time is up:
-    // at most 9 batches ran.
-    assert!(r.trials <= 9 * u64::from(budget.batch), "{}", r.trials);
-    let last = r.decisions.last().unwrap();
-    assert_eq!(last.rebuilt, Err(NotRebuilt::Actual(Gap::OutOfTime)));
-    let out_of_time = r
-        .decisions
-        .iter()
-        .filter(|d| d.rebuilt == Err(NotRebuilt::Actual(Gap::OutOfTime)))
-        .count();
-    assert!(out_of_time > 0);
-}
-
-#[test]
-fn a_real_clock_budget_stops_the_review_in_time() {
-    let g = long_game(16);
-    let budget = Budget {
-        time: Duration::from_millis(50),
-        max_trials: 1_000_000,
-        batch: 200,
-    };
-    let started = Instant::now();
-
-    let r = review(&g, &facts, None, &budget).unwrap();
-
-    assert!(r.out_of_time);
-    assert_eq!(r.decisions.len(), 16);
-    // One batch may run past the budget; a batch is far below a second.
-    assert!(
-        started.elapsed() < Duration::from_secs(2),
-        "{:?}",
-        started.elapsed()
+fn a_minion_already_on_the_board_before_is_ambiguous() {
+    let g = report(
+        vec![
+            shop_turn(1, &[], &[], &[]),
+            shop_turn(2, &[WEAK], &[], &[WEAK, STRONG]),
+        ],
+        vec![act(2, 0, "buy")],
+        vec![
+            round(1, vec![minion(WEAK, 1, 1)], vec![minion(FOE, 3, 3)]),
+            // One copy now, one before: the one bought may be in the hand.
+            round(2, vec![minion(WEAK, 1, 1)], vec![minion(FOE, 3, 3)]),
+        ],
     );
+
+    assert_eq!(reason(&run(&g), 0), NotRebuilt::Ambiguous);
+}
+
+#[test]
+fn a_decision_after_a_combat_not_in_the_record_is_not_guessed() {
+    let mut g = bought_weak();
+    g["shop"]["turns"][0]["turn"] = json!(3);
+    g["shop"]["actions"][0]["turn"] = json!(3);
+    g["rounds"] = json!([
+        round(1, vec![minion(OTHER, 2, 2)], vec![minion(FOE, 3, 3)]),
+        round(3, vec![minion(WEAK, 1, 1)], vec![minion(FOE, 3, 3)]),
+    ]);
+
+    assert_eq!(reason(&run(&g), 0), NotRebuilt::NoBoardBefore);
+}
+
+#[test]
+fn a_minion_put_back_moves_the_hero_powers_targets_with_the_board() {
+    let mut entry = json!({"board": [], "kit": {"powers": [
+        {"card_id": "P1", "slot": 0, "target": 1},
+        {"card_id": "P2", "slot": 1, "target": 3},
+        {"card_id": "P3", "slot": 1},
+    ], "trinkets": []}});
+
+    shift_targets(&mut entry, 1);
+
+    let targets: Vec<Option<i64>> = entry["kit"]["powers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|p| p.get("target").and_then(Value::as_i64))
+        .collect();
+    // Position 1 is before the minion put in at index 1; position 3 is after.
+    assert_eq!(targets, [Some(1), Some(4), None]);
+}
+
+#[test]
+fn malformed_records_say_why_instead_of_guessing() {
+    // A board that is not a list is no board.
+    let mut g = bought_weak();
+    g["rounds"][0]["entries"][0]["board"] = json!({"0": minion(WEAK, 1, 1)});
+    assert_eq!(reason(&run(&g), 0), NotRebuilt::NoNextCombat);
+
+    // A minion without stats is a bad board.
+    let mut g = bought_weak();
+    g["rounds"][0]["entries"][0]["board"] = json!([{"card_id": WEAK}]);
+    assert_eq!(reason(&run(&g), 0), NotRebuilt::Actual(Gap::BadBoard));
+
+    // A kit the parser never writes (a trinket in slot 9) is not read as
+    // a hero without one: the trinket swap would show no difference.
+    let mut g = bought_weak();
+    g["shop"]["actions"] = json!([act(1, 0, "choose")]);
+    g["shop"]["turns"][0]["buys"] = json!([]);
+    g["discovers"] = json!([{"turn": 1, "source": null, "picked": [0], "offered": [
+        {"card_id": TRINKET_A, "gift": null}, {"card_id": TRINKET_B, "gift": null},
+    ]}]);
+    g["rounds"][0]["entries"][0]["kit"] =
+        json!({"powers": [], "trinkets": [{"card_id": TRINKET_A, "slot": 9}]});
+    assert_eq!(reason(&run(&g), 0), NotRebuilt::Actual(Gap::BadBoard));
 }
