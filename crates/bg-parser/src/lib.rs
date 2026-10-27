@@ -813,6 +813,15 @@ fn summarize(mut base: GameReport, c: &Collector) -> GameReport {
         .collect();
     base.shop_tribes = count_tribes(c);
     base.rounds = rounds_of(c, &heroes, complete.then(|| hero_health(own)));
+    // The Deity is the local player's (T-671): a Duos teammate's board,
+    // read through the same player, does not have it.
+    for e in base.rounds.iter_mut().flat_map(|r| r.entries.iter_mut()) {
+        if e.side == report::Side::Own && e.player_id != Some(local_pid) {
+            if let Some(v) = e.values.as_mut() {
+                v.deity = report::Deity::default();
+            }
+        }
+    }
     base.opening = opening_of(c, &heroes);
     base.start_health = c.lobby_health.get(&0).cloned().unwrap_or_default();
     base.shop = Some(c.shop.record(&c.board, c.seats()));
