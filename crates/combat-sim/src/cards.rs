@@ -168,6 +168,10 @@ pub enum Action {
         tribe: Tribes,
         others: bool,
     },
+    /// For the rest of the combat the side's Beasts have this much more
+    /// Attack: those on the board now and those summoned later, even after
+    /// the card is gone (Humming Bird; T-645).
+    BeastAttackThisCombat(i32),
     /// Destroy the minion to the left (both neighbours with `both`) and keep
     /// an exact copy of each, not of a Stitched Salvager, for
     /// [`Action::SummonKept`] (Stitched Salvager; T-628 round 3).
