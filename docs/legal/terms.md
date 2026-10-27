@@ -1,6 +1,8 @@
 # Terms of use
 
-Last updated: 17 October 2026
+Last updated: 27 October 2026
+
+**What changed on 27 October 2026:** section 5 now says that the games you upload can also be used to train the expected-place model, unless you turn "Use my uploaded games to train the expected-place model" off on your account page; only the model and totals over all the games used are kept. It applies to games other than the project owner's only 30 days after we email signed-up users about it.
 
 **What changed on 17 October 2026 (desktop app only):** section 9 now says that, only when you click Fix in the app's setup notice, the app can create or complete Hearthstone's two logging settings files (`log.config` and `client.config`), keeping a `.bak` copy of any file it changes. It still only reads the game's logs and writes nothing else in the game's folders.
 
@@ -44,7 +46,7 @@ If you turn on "Include my games in community hero stats" on your account page (
 
 ## 5. Your data and leaving
 
-You keep your rights in your data. You allow us to store and process it only to run the service for you (and to show it to others if your profile is public, or as rounded community totals if you turn on community hero stats). You can download your data and delete your account at any time from your account page; the privacy policy explains what that covers.
+You keep your rights in your data. You allow us to store and process it only to run the service for you (and to show it to others if your profile is public, or as rounded community totals if you turn on community hero stats). Unless you turn "Use my uploaded games to train the expected-place model" off on your account page, we may also use the full records of the games you upload to train the expected-place model, as the privacy policy describes; only the model and totals over all the games used are kept, never anything about you or one of your games. You can download your data and delete your account at any time from your account page; the privacy policy explains what that covers.
 
 ## 6. Code, game content and trademarks
 
