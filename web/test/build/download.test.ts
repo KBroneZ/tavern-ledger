@@ -184,7 +184,7 @@ test("other ways to install: shown only for a live listing, never before (T-707)
     const html = read(page.file);
     const title = page.lang === "en" ? "Other ways to install" : "Otras formas de instalarla";
     assert.equal(html.includes(`<h3>${title}</h3>`), CHANNELS.length > 0, page.file);
-    assert.equal(html.includes("apps.microsoft.com"), CHANNELS.some((c) => c.kind === "store"), page.file);
+    assert.equal(/<a href="https:\/\/apps\.microsoft\.com\/detail\/[0-9A-Z]{12}">/.test(html), CHANNELS.some((c) => c.kind === "store"), page.file);
     assert.equal(html.includes("winget install"), CHANNELS.some((c) => c.kind === "winget"), page.file);
   }
 });
