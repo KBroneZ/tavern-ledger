@@ -104,6 +104,16 @@ test("the page needs no script of its own, and says plainly that the installer i
   }
 });
 
+test("step 2 says that Smart App Control blocks the unsigned installer, with no way past it", () => {
+  for (const page of PAGES) {
+    const html = read(page.file);
+    const steps = /<ol class="dl-steps"[^>]*>([\s\S]*?)<\/ol>/.exec(html)?.[1] ?? "";
+    const step2 = steps.split("<li>")[2] ?? "";
+    assert.match(step2, page.lang === "en" ? /Smart App Control/ : /Control inteligente de aplicaciones/, page.file);
+    assert.match(step2, page.lang === "en" ? /no “Run anyway”/ : /sin «Ejecutar de todas formas»/, page.file);
+  }
+});
+
 test("the menu has a Download link on every page, current on the download page", () => {
   for (const [file, text, target] of [
     ["index.html", "Download", "/download/"],
