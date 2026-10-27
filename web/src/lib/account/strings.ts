@@ -80,6 +80,17 @@ export const ACCOUNT_STRINGS = {
   "account.simulator.more":
     "Results are only ever totals over many games: never published per player, never with your name. If you turn it off, from then on your games are not used again, and totals already worked out from them cannot be traced back to you.",
   "account.simulator.how": "How this works",
+  "account.training": "Expected-place model",
+  "account.training.label": "Use my uploaded games to train the expected-place model",
+  "account.training.hint":
+    "On unless you turn it off. The full records of your uploaded games (while their files are kept) can be used to train the model that shows, on each turn of your games, the place it was heading for. You can turn it off at any time, with no reason needed.",
+  "account.training.more":
+    "The model is trained on the project owner's computer, and the copies used are deleted the same day. Only the model and totals over all the games used are kept, never anything about you or one game. Turning it off keeps your games out of every later run, and you still see the expected place on your games.",
+  "account.training.how": "How this works",
+  "account.training.notice":
+    "New: the games you upload can now be used to train the expected-place model. This is on for every account, and only the model and totals over all the games are kept. If you do not want your games used, turn it off at any time:",
+  "account.training.notice.link": "the training switch",
+  "account.training.notice.dismiss": "Got it",
   "account.delete": "Delete account",
   "account.delete.body":
     "This deletes your account, your profile, every uploaded game and file, and your sign-in history. It cannot be undone. Download your data first if you want to keep it.",
@@ -100,6 +111,9 @@ export const ACCOUNT_STRINGS = {
   "account.simulator.savedOn": "Saved. Your games can now be used to improve the simulator.",
   "account.simulator.savedOff": "Saved. Your games are no longer used for the simulator.",
   "account.simulator.unchanged": "{error} Your setting is unchanged.",
+  "account.training.savedOn": "Saved. Your games can be used in the next training runs.",
+  "account.training.savedOff": "Saved. Your games are left out of every later training run.",
+  "account.training.unchanged": "{error} Your setting is unchanged.",
   "account.export.preparing": "Preparing your file…",
   "account.export.done": "Downloaded.",
   "account.export.failed": "The export failed. Try again in a moment.",

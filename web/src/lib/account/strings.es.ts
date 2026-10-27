@@ -77,6 +77,17 @@ export const ES: Record<AccountKey, string> = {
   "account.simulator.more":
     "Los resultados son siempre totales de muchas partidas: nunca se publican por jugador ni con tu nombre. Si lo desactivas, desde ese momento tus partidas no se vuelven a usar, y los totales ya calculados con ellas no permiten llegar hasta ti.",
   "account.simulator.how": "Cómo funciona",
+  "account.training": "Modelo de puesto esperado",
+  "account.training.label": "Usar mis partidas subidas para entrenar el modelo de puesto esperado",
+  "account.training.hint":
+    "Activado salvo que lo desactives. Los registros completos de tus partidas subidas (mientras se conserven sus archivos) se pueden usar para entrenar el modelo que muestra, en cada turno de tus partidas, el puesto hacia el que iba. Puedes desactivarlo cuando quieras, sin dar motivos.",
+  "account.training.more":
+    "El modelo se entrena en el ordenador del responsable del proyecto, y las copias usadas se borran el mismo día. Solo se conservan el modelo y totales de todas las partidas usadas, nunca nada sobre ti ni sobre una partida concreta. Si lo desactivas, tus partidas quedan fuera de todos los entrenamientos posteriores, y seguirás viendo el puesto esperado en tus partidas.",
+  "account.training.how": "Cómo funciona",
+  "account.training.notice":
+    "Novedad: las partidas que subes ahora se pueden usar para entrenar el modelo de puesto esperado. Está activado en todas las cuentas, y solo se conservan el modelo y totales de todas las partidas. Si no quieres que se usen tus partidas, desactívalo cuando quieras:",
+  "account.training.notice.link": "el interruptor del entrenamiento",
+  "account.training.notice.dismiss": "Entendido",
   "account.delete": "Borrar cuenta",
   "account.delete.body":
     "Esto borra tu cuenta, tu perfil, todas las partidas y archivos subidos y tu historial de inicios de sesión. No se puede deshacer. Descarga antes tus datos si quieres conservarlos.",
@@ -97,6 +108,9 @@ export const ES: Record<AccountKey, string> = {
   "account.simulator.savedOn": "Guardado. Tus partidas ya se pueden usar para mejorar el simulador.",
   "account.simulator.savedOff": "Guardado. Tus partidas ya no se usan para el simulador.",
   "account.simulator.unchanged": "{error} Tu ajuste no ha cambiado.",
+  "account.training.savedOn": "Guardado. Tus partidas se pueden usar en los próximos entrenamientos.",
+  "account.training.savedOff": "Guardado. Tus partidas quedan fuera de todos los entrenamientos posteriores.",
+  "account.training.unchanged": "{error} Tu ajuste no ha cambiado.",
   "account.export.preparing": "Preparando tu archivo…",
   "account.export.done": "Descargado.",
   "account.export.failed": "La exportación ha fallado. Vuelve a intentarlo en un momento.",
