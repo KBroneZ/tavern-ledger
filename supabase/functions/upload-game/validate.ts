@@ -67,8 +67,6 @@ const MAX_HEALTH = 100000;
 const MAX_HEALTH_ENTRIES = 16;
 // A board's game-long values (crates/bg-parser/src/report.rs MAX_GAME_VALUE).
 const MAX_GAME_VALUE = 99_999;
-// A card database id among them (report.rs MAX_DBF): the Deity's.
-const MAX_DBF = 9_999_999;
 // The shop record (parser revision 3, T-204, T-205, D-046): the parser's own
 // bounds (crates/bg-parser/src/shop.rs). Times are ms from the game's first
 // log line, never a clock time; a day is far longer than any game.
@@ -436,7 +434,7 @@ function held(v: unknown, field: string): void {
 /**
  * A board's game-long values (parser revision 10, T-610, D-122; the Deity
  * since revision 17, T-671): whole numbers from 1 to MAX_GAME_VALUE by the
- * parser's names (the Deity's database id up to MAX_DBF); zero is left out,
+ * parser's names (the Deity's database id up to MAX_DBF_ID); zero is left out,
  * so an empty object is never written.
  */
 function gameValues(v: unknown, field: string): void {
@@ -445,7 +443,7 @@ function gameValues(v: unknown, field: string): void {
   const keys = Object.keys(o);
   if (keys.length === 0) throw new Invalid(field);
   for (const key of keys) {
-    int(o[key], `${field}.${key}`, 1, key === "deity_dbf" ? MAX_DBF : MAX_GAME_VALUE);
+    int(o[key], `${field}.${key}`, 1, key === "deity_dbf" ? MAX_DBF_ID : MAX_GAME_VALUE);
   }
 }
 

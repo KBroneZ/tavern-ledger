@@ -339,14 +339,19 @@ fn value_lines() -> Vec<String> {
         values.push(line(2, &format!("tag=ENTITY_ID value={id}")));
     }
     // The player's hidden Deities (T-671): an older one still set aside and
-    // this combat's, the newest; the opponent's is not in the log.
-    for (id, (atk, health, progress)) in [(64, (1, 1, 0)), (65, (77, 64, 1))] {
+    // this combat's, the newest; one under the dummy player (an opponent's)
+    // is never read.
+    for (id, controller, (atk, health, progress)) in [
+        (64, 2, (1, 1, 0)),
+        (65, 2, (77, 64, 1)),
+        (66, 10, (50, 50, 0)),
+    ] {
         values.push(line(
             1,
             &format!("FULL_ENTITY - Creating ID={id} CardID=BG_OldGod"),
         ));
         for (name, value) in [
-            ("CONTROLLER", 2),
+            ("CONTROLLER", controller),
             ("TAG_SCRIPT_DATA_NUM_1", 4),
             ("TAG_SCRIPT_DATA_NUM_2", atk),
             ("TAG_SCRIPT_DATA_NUM_3", health),

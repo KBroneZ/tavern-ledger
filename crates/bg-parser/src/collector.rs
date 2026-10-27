@@ -636,12 +636,16 @@ impl Collector {
         }
     }
 
-    /// The side's hidden Deity for this combat (T-671): the newest "Secret
-    /// Deity" entity (`BG_OldGod`) set aside under the side's player.
+    /// The player's hidden Deity for this combat (T-671): the newest
+    /// "Secret Deity" entity (`BG_OldGod`) set aside under the player. The
+    /// game takes each combat's out of play when the combat ends, so an older
+    /// one is never set aside. The opponent's is not read: the log does not
+    /// show its numbers, and the one dummy player stands for every opponent,
+    /// so an entity under it could be another opponent's.
     fn deity(&self, side: Side) -> Deity {
         let pid = match side {
             Side::Own => self.local_pid,
-            Side::Opponent => self.dummy_pid,
+            Side::Opponent => None,
         };
         let Some(pid) = pid else {
             return Deity::default();

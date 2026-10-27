@@ -103,13 +103,13 @@ Deno.test("game-long values come only with a board", () => {
   );
 });
 
-Deno.test("a board's Deity is accepted, its id up to 9 999 999 (validator 13)", () => {
+Deno.test("a board's Deity is accepted, its id up to 10 000 000 (validator 13)", () => {
   assertEquals(VALIDATOR_VERSION >= 13, true, "a version that accepts the Deity");
   const deity = { deity_dbf: 130_610, deity_atk: 77, deity_health: 64, deity_needed: 4, deity_progress: 1 };
   const { rec } = withValues(deity);
   const v = validateRecord(rec, SESSION, 1);
   if (!v.ok) throw new Error(`refused ${v.code} ${v.field}`);
-  refused({ deity_dbf: 10_000_000 }, (at) => `${at}.deity_dbf`, "an id past the bound");
+  refused({ deity_dbf: 10_000_001 }, (at) => `${at}.deity_dbf`, "an id past the bound");
   refused({ deity_atk: 100_000 }, (at) => `${at}.deity_atk`, "the Deity's stats keep the game-long bound");
   refused({ deity_needed: 0 }, (at) => `${at}.deity_needed`, "zero is left out, never saved");
 });

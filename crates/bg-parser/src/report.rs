@@ -198,8 +198,8 @@ pub struct Deity {
 }
 
 /// The largest card database id a saved report keeps (ids are about
-/// 140 000 today).
-pub const MAX_DBF: i64 = 9_999_999;
+/// 140 000 today; upload-game's `MAX_DBF_ID`).
+pub const MAX_DBF: i64 = 10_000_000;
 
 /// The largest value a saved report keeps under `name`.
 fn max_of(name: &str) -> i64 {
