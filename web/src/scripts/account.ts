@@ -169,6 +169,11 @@ async function setUpSwitch(user: User, sw: ConsentSwitch): Promise<void> {
   const form = byId<HTMLFormElement>(sw.form);
   const message = byId(sw.message);
   const box = field(form, sw.box);
+  const controls = [...form.querySelectorAll<HTMLInputElement | HTMLButtonElement>("input, button")];
+  // Until the server's choice is known the switch would show a guess (off,
+  // even for a switch that is on by default): nothing can be changed or sent.
+  form.addEventListener("submit", (event) => event.preventDefault());
+  for (const el of controls) el.disabled = true;
   // The choice as the server last confirmed it.
   let saved: boolean;
   try {
@@ -176,12 +181,10 @@ async function setUpSwitch(user: User, sw: ConsentSwitch): Promise<void> {
     box.checked = saved;
   } catch {
     // Saving an unknown state could turn the switch off, or on, by mistake.
-    for (const el of form.querySelectorAll<HTMLInputElement | HTMLButtonElement>("input, button")) {
-      el.disabled = true;
-    }
     say(message, at("account.setting.loadFailed"), "error");
     return;
   }
+  for (const el of controls) el.disabled = false;
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     const on = box.checked;
