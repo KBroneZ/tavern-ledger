@@ -5,7 +5,7 @@
 import { LANGS, pathIn } from "../i18n.ts";
 
 /** The indexable pages besides the minion pages, as English paths. */
-export const INDEXED_PAGES: readonly string[] = ["/", "/download/", "/privacy/", "/terms/", "/accuracy/"];
+export const INDEXED_PAGES: readonly string[] = ["/", "/download/", "/privacy/", "/terms/", "/accuracy/", "/press/"];
 
 const escape = (text: string): string => text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 

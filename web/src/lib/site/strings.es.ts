@@ -12,6 +12,7 @@ export const ES: Record<SiteKey, string> = {
   "layout.privacy": "Privacidad",
   "layout.terms": "Términos",
   "layout.accuracy": "Precisión del simulador",
+  "layout.press": "Kit de prensa",
   "layout.leaderboards": "Clasificaciones",
   "layout.heroes": "Héroes",
   "layout.games": "Tus partidas",

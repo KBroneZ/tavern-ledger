@@ -17,6 +17,7 @@ export const SITE_STRINGS = {
   "layout.privacy": "Privacy",
   "layout.terms": "Terms",
   "layout.accuracy": "Simulator accuracy",
+  "layout.press": "Press kit",
   "layout.leaderboards": "Leaderboards",
   "layout.heroes": "Hero stats",
   "layout.games": "Your games",

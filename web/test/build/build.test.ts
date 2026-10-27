@@ -419,10 +419,11 @@ test("pictures are our own files, with their size and a text alternative", () =>
       // Built pages show made-up data only, so their pictures are our own
       // placeholders, plus the home page's painting (T-530) and every other
       // page's (T-546); card art (D-074) is drawn in the browser, but on the
-      // minion pages (D-134), which are built from the card data.
+      // minion pages (D-134), which are built from the card data. The press
+      // page shows the logo (T-704).
       if (isMinionPage(page) && CARD_ART.test(img)) continue;
       const src = /\ssrc="([^"]*)"/.exec(img)?.[1] ?? "";
-      assert.match(src, /^\/(?:placeholders\/(?:hero|card)-\d\.svg|art\/home\/tavern-\d+\.webp|art\/pages\/[a-z]+-\d+\.webp)$/, `${name(page)}: ${img}`);
+      assert.match(src, /^\/(?:placeholders\/(?:hero|card)-\d\.svg|art\/home\/tavern-\d+\.webp|art\/pages\/[a-z]+-\d+\.webp|press\/lockup\.svg)$/, `${name(page)}: ${img}`);
       assert.ok(existsSync(join(DIST, src)), src);
       // Width and height keep the room (no layout shift); alt is there, empty when decorative.
       assert.match(img, /\swidth="\d+"/, img);
