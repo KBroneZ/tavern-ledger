@@ -231,9 +231,11 @@ class Report(unittest.TestCase):
         self.assertEqual(gbw.engine_status(root), {"BG1_003": "exact"})
         self.assertEqual(gbw.proven_cards(root, 254477), {"BG1_003"})
         self.assertEqual(gbw.proven_cards(root, 253216), set())
-        (data / "card_status.json").write_text(json.dumps({"format": 1, "cards": {"BG1_003": "maybe"}}), encoding="utf-8")
-        with self.assertRaises(gbw.DataError):
-            gbw.engine_status(root)
+        for bad in ({"format": 1, "cards": {"BG1_003": "maybe"}}, {"format": 1, "cards": {"BG1_003": []}},
+                    {"format": True, "cards": {}}):
+            (data / "card_status.json").write_text(json.dumps(bad), encoding="utf-8")
+            with self.assertRaises(gbw.DataError):
+                gbw.engine_status(root)
         (data / "proven_cards.json").write_text(json.dumps({"format": 2, "builds": {}}), encoding="utf-8")
         with self.assertRaises(gbw.DataError):
             gbw.proven_cards(root, 254477)

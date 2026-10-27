@@ -345,10 +345,13 @@ pub fn rules(card_id: &str) -> Option<CardRules> {
 }
 
 /// How the engine plays a card (T-647): `None` when it does not know it,
-/// else "refused" (known, but a board taken after the start of combat no
-/// longer shows what it needs), "approximate" or "exact".
+/// else "refused" (it does not play it, for a reason written down; or a
+/// board taken after the start of combat no longer shows what it needs),
+/// "approximate" or "exact".
 pub fn status(card_id: &str) -> Option<&'static str> {
-    let rules = rules(card_id)?;
+    let Some(rules) = rules(card_id) else {
+        return refused_ids().contains(&card_id).then_some("refused");
+    };
     Some(if after_start_refusal(card_id).is_some() {
         "refused"
     } else if matches!(rules.fidelity, Fidelity::Approximate(_)) {
@@ -356,6 +359,15 @@ pub fn status(card_id: &str) -> Option<&'static str> {
     } else {
         "exact"
     })
+}
+
+/// The cards the engine knows and refuses to play, each with its reason
+/// written down (T-647).
+pub fn refused_ids() -> Vec<&'static str> {
+    crate::cards_round8::REFUSED
+        .iter()
+        .map(|(id, _)| *id)
+        .collect()
 }
 
 /// Every card id the engine models, once each, sorted (T-646).

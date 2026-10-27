@@ -170,7 +170,7 @@ def _sim_data(root: Path, name: str) -> dict | None:
     if not path.is_file():
         return None
     data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict) or data.get("format") != 1:
+    if not isinstance(data, dict) or type(data.get("format")) is not int or data["format"] != 1:
         raise DataError(f"{name}: not format 1")
     return data
 
@@ -182,7 +182,8 @@ def engine_status(root: Path) -> dict[str, str]:
         return {}
     cards = data.get("cards")
     if not isinstance(cards, dict) or not all(
-            isinstance(k, str) and CARD_ID.fullmatch(k) and v in STATUSES for k, v in cards.items()):
+            isinstance(k, str) and CARD_ID.fullmatch(k) and isinstance(v, str) and v in STATUSES
+            for k, v in cards.items()):
         raise DataError("card_status.json: cards is not card id -> exact, approximate or refused")
     return dict(cards)
 

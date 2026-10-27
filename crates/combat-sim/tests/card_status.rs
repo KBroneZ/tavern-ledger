@@ -6,7 +6,7 @@
 
 use std::path::Path;
 
-use combat_sim::cards::{modelled_ids, status};
+use combat_sim::cards::{modelled_ids, refused_ids, status};
 use serde_json::{json, Map, Value};
 
 const PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/data/card_status.json");
@@ -14,6 +14,7 @@ const PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/data/card_status.json")
 fn now() -> String {
     let cards: Map<String, Value> = modelled_ids()
         .into_iter()
+        .chain(refused_ids())
         .map(|id| (id.to_string(), json!(status(id).unwrap_or("unknown"))))
         .collect();
     let mut text = serde_json::to_string_pretty(&json!({ "format": 1, "cards": cards })).unwrap();
@@ -49,4 +50,7 @@ fn every_status_is_one_of_three() {
     assert_eq!(status("ZZ_NOT_A_CARD"), None);
     assert_eq!(status("BGS_119"), Some("exact"));
     assert_eq!(status("BG31_999"), Some("refused"));
+    for id in refused_ids() {
+        assert_eq!(status(id), Some("refused"), "{id}");
+    }
 }
