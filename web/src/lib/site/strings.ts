@@ -157,11 +157,13 @@ export const SITE_STRINGS = {
   "home.status.label": "Project status",
   "home.top": "Back up to the door",
   "home.status.title": "The doors are not open yet.",
+  "home.status.title.open": "The doors are open; the paint is still wet.",
   "home.status.body": "The desktop app is an early beta for Windows and the website is being built.",
   "home.status.testing": "Accounts are open.",
   "home.status.closed": "Accounts are not open yet.",
   // What's new (lib/site/news.ts): one short dated line each, newest first.
   "news.title": "What's new",
+  "news.earlier": "Earlier news",
   "news.accuracy": "How often the overlay's combat odds are right, measured on real combats.",
   "news.accuracy.link": "Simulator accuracy",
   "news.heroes": "Community hero stats. Your games only count if you turn on the switch on your account page; it is off until you do.",

@@ -291,12 +291,27 @@ body {
   font-size: 1.125rem;
 }
 
-/* What it keeps: three glass cards, the first one wider. */
+/* What it keeps: the first card, with the big number, holds the left
+   column; the other two stack beside it, so the row is not three equal
+   cards. */
 .trio {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
   gap: 16px;
   margin-top: 22px;
+}
+
+.trio > .glass:first-child {
+  grid-row: span 2;
+  align-content: center;
+}
+
+.trio > .glass:first-child h3 {
+  font-size: clamp(1.6rem, 2.6vw, 2.1rem);
+}
+
+.trio > .glass:first-child .big {
+  font-size: clamp(3.4rem, 7vw, 5.5rem);
 }
 
 .trio > .glass {
@@ -370,21 +385,26 @@ body {
   line-height: 1;
 }
 
-/* Your games stay yours: three wooden boards (tavern.css). */
+/* Your games stay yours: one board (tavern.css) holding three promises,
+   ruled apart, not another row of cards. */
 .yours ul {
   margin: 20px 0 0;
   padding: 0;
   list-style: none;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: 0;
 }
 
 .yours li {
-  padding: 0;
+  padding: 4px 20px;
   display: grid;
   gap: 6px;
   align-content: start;
+}
+
+.yours li + li {
+  border-left: 1px solid var(--ink-line, var(--line));
 }
 
 .yours li b {
@@ -397,8 +417,12 @@ body {
 }
 
 /* What's new: dated lines, newest first (D-089). */
+.news-card {
+  margin-top: 20px;
+}
+
 .news ul {
-  margin: 20px 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
   display: grid;
@@ -422,6 +446,10 @@ body {
 .news li span {
   color: var(--dim);
   max-width: 68ch;
+}
+
+.news .more ul {
+  margin-top: 8px;
 }
 
 @media (max-width: 520px) {
@@ -454,8 +482,21 @@ body {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .trio > .glass:first-child {
+    grid-row: auto;
+  }
+
   .yours ul {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .yours li {
+    padding: 12px 4px;
+  }
+
+  .yours li + li {
+    border-left: 0;
+    border-top: 1px solid var(--ink-line, var(--line));
   }
 
 }
