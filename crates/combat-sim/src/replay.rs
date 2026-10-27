@@ -4,13 +4,21 @@
 //! one. The first step where they part names the rule that differs.
 //!
 //! Random effects inside an attack (a random buff, a random neighbour) are
-//! still rolled by the engine, so a "stats differ" step can be chance rather
-//! than a wrong rule; the detail says what differs.
+//! rolled by the engine. When the boards after an attack part from the
+//! log's (with a Duos teammate's board come in), the attack is played again
+//! with other rolls (T-643, up to [`REROLLS`]); if one gives the log's
+//! boards, the dice were all that differed: the replay keeps that roll and
+//! goes on, and counts it. So the first difference a replay names is one
+//! no roll of the engine explains. The last attack is not rerolled: the end
+//! of the combat is checked as the first roll left it.
 
-use super::{Combat, Prepared, Unit};
+use super::{Combat, KitCounts, Legs, Pending, Prepared, SideState, Unit};
 use crate::combat::CombatResult;
 use crate::model::{Keywords, Minion, Team, Warband};
 use crate::rng::Rng;
+
+/// Other rolls tried for an attack whose boards part from the log's.
+pub const REROLLS: u64 = 512;
 
 /// One logged attack: who attacked (side 0 is the player, 1 the opponent;
 /// index from the left), whom (an index on the other side; `None` when the
@@ -86,6 +94,9 @@ pub struct Replay {
     pub difference: Option<Difference>,
     /// Duos: teammates' boards that came in before the first difference.
     pub boards_in: usize,
+    /// Attacks whose boards matched the log's only with another roll of the
+    /// engine's dice (T-643): chance, not a rule.
+    pub rerolled: usize,
 }
 
 /// Keywords compared between the engine and the log: the ones both track.
@@ -157,6 +168,7 @@ fn replay_prepared(prepared: &Prepared, steps: &[LoggedStep], span: Span, seed: 
         matched: 0,
         difference: None,
         boards_in: 0,
+        rerolled: 0,
     };
     let mut turn = Turn::default();
     if let Some(step) = steps.first() {
@@ -165,6 +177,7 @@ fn replay_prepared(prepared: &Prepared, steps: &[LoggedStep], span: Span, seed: 
         turn.pending = c.pending_immediate(turn.first.unwrap_or(step.attacker.0), [true, true]);
     }
     for (k, step) in steps.iter().enumerate() {
+        let before = (c.snapshot(), turn.clone());
         if let Err(d) = c.check_step(k, step, &mut turn) {
             out.difference = Some(d);
             return out;
@@ -173,31 +186,124 @@ fn replay_prepared(prepared: &Prepared, steps: &[LoggedStep], span: Span, seed: 
         if span == Span::FirstLeg && c.finished() {
             return out;
         }
-        let entered = if c.finished() {
-            c.enter_waiting()
-        } else {
-            [false; 2]
-        };
-        if entered != [false, false] {
-            out.boards_in += entered.iter().filter(|e| **e).count();
-            // Who attacks next is decided again, as at the start.
-            let first = c.first_by_count();
-            let side = first
-                .or(steps.get(k + 1).map(|s| s.attacker.0))
-                .unwrap_or(0);
-            turn = Turn {
-                first,
-                pending: c.pending_immediate(side, entered),
-                after_teammate: true,
-                ..Turn::default()
-            };
+        let mut entered = c.after_attack(k, steps, &mut turn);
+        if let Some(next) = steps.get(k + 1) {
+            if c.compare_boards(k + 2, &next.before, next.all_keywords)
+                .is_err()
+            {
+                if let Some((t, e)) = c.reroll(k, steps, &before, seed) {
+                    turn = t;
+                    entered = e;
+                    out.rerolled += 1;
+                }
+            }
         }
+        out.boards_in += entered;
     }
     out.difference = match span {
         Span::Whole(result) => c.check_end(steps.len(), result),
         Span::FirstLeg => None,
     };
     out
+}
+
+/// What an attack can change in a combat: everything but its cards and
+/// its dice.
+#[derive(Clone)]
+struct Snapshot {
+    sides: [SideState; 2],
+    next_uid: u32,
+    legs: Legs,
+    pending: [Vec<Pending>; 2],
+    kept: Vec<(u32, Vec<Unit>)>,
+    kit_counts: [KitCounts; 2],
+    rng: Rng,
+}
+
+impl Combat<'_> {
+    fn snapshot(&self) -> Snapshot {
+        Snapshot {
+            sides: self.sides.clone(),
+            next_uid: self.next_uid,
+            legs: self.legs,
+            pending: self.pending.clone(),
+            kept: self.kept.clone(),
+            kit_counts: self.kit_counts.clone(),
+            rng: self.rng.clone(),
+        }
+    }
+
+    fn restore(&mut self, s: &Snapshot) {
+        self.sides = s.sides.clone();
+        self.next_uid = s.next_uid;
+        self.legs = s.legs;
+        self.pending = s.pending.clone();
+        self.kept = s.kept.clone();
+        self.kit_counts = s.kit_counts.clone();
+        *self.rng = s.rng.clone();
+    }
+
+    /// After attack `k`: a Duos teammate's board comes in when a board is
+    /// gone, and who attacks next is decided again, as at the start.
+    /// Returns how many boards came in.
+    fn after_attack(&mut self, k: usize, steps: &[LoggedStep], turn: &mut Turn) -> usize {
+        if !self.finished() {
+            return 0;
+        }
+        let entered = self.enter_waiting();
+        if entered == [false, false] {
+            return 0;
+        }
+        let first = self.first_by_count();
+        let side = first
+            .or(steps.get(k + 1).map(|s| s.attacker.0))
+            .unwrap_or(0);
+        *turn = Turn {
+            first,
+            pending: self.pending_immediate(side, entered),
+            after_teammate: true,
+            ..Turn::default()
+        };
+        entered.iter().filter(|e| **e).count()
+    }
+
+    /// Plays attack `k` again from `before` with other rolls until the
+    /// boards match the next logged step's; returns the turn to go on with
+    /// and the boards that came in. Without a match the combat is left
+    /// exactly as the first roll left it (same dice), so the difference is
+    /// then named as before.
+    fn reroll(
+        &mut self,
+        k: usize,
+        steps: &[LoggedStep],
+        before: &(Snapshot, Turn),
+        seed: u64,
+    ) -> Option<(Turn, usize)> {
+        let (snap, turn) = before;
+        let (step, next) = (&steps[k], &steps[k + 1]);
+        for i in 1..=REROLLS {
+            self.restore(snap);
+            // A different roll per attack and try, the same on every run.
+            *self.rng = Rng::new(seed ^ ((k as u64 + 1) << 32) ^ i);
+            let mut t = turn.clone();
+            if self.check_step(k, step, &mut t).is_err() {
+                continue;
+            }
+            let entered = self.after_attack(k, steps, &mut t);
+            let same = self.compare_boards(k + 2, &next.before, next.all_keywords);
+            if same.is_ok() {
+                return Some((t, entered));
+            }
+        }
+        self.restore(snap);
+        let mut t = turn.clone();
+        // The same step played with the same dice as the first time: it
+        // succeeded then, so it succeeds now and leaves the same state.
+        let again = self.check_step(k, step, &mut t);
+        debug_assert!(again.is_ok());
+        self.after_attack(k, steps, &mut t);
+        None
+    }
 }
 
 /// Whose turn it is during a replay.

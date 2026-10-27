@@ -17,7 +17,8 @@
       "replay": {
         "attacks": 1,
         "diverge": null,
-        "matched": 1
+        "matched": 1,
+        "rerolled": 0
       },
       "result": "won",
       "said": "odds"
@@ -34,7 +35,8 @@
           "card": "BG28_603t",
           "rule": "replay_first_attacker"
         },
-        "matched": 0
+        "matched": 0,
+        "rerolled": 0
       },
       "result": "won",
       "said": "odds"
@@ -47,7 +49,8 @@
       "replay": {
         "attacks": 1,
         "diverge": null,
-        "matched": 1
+        "matched": 1,
+        "rerolled": 0
       },
       "result": "won",
       "said": "odds"

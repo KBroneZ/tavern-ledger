@@ -141,6 +141,7 @@ fn base() -> Outcome {
         replay: Some(ReplayCheck {
             attacks: 6,
             matched: 2,
+            rerolled: 0,
             diverge: Some(Diverge {
                 attack: 3,
                 rule: "replay_stats".into(),
@@ -162,6 +163,7 @@ fn at(attack: Option<usize>, rule: &str) -> Outcome {
     o.replay = Some(ReplayCheck {
         attacks: 6,
         matched: attack.map_or(6, |a| a - 1),
+        rerolled: 0,
         diverge: attack.map(|attack| Diverge {
             attack,
             rule: rule.into(),

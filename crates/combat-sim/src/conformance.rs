@@ -70,6 +70,8 @@ pub struct ReplayCheck {
     pub attacks: usize,
     /// Attacks played as the game did before the first difference.
     pub matched: usize,
+    /// Attacks that matched the log only with another roll of the dice.
+    pub rerolled: usize,
     pub diverge: Option<Diverge>,
 }
 
@@ -106,6 +108,7 @@ fn replay_check(r: Replay) -> ReplayCheck {
     ReplayCheck {
         attacks: r.attacks,
         matched: r.matched,
+        rerolled: r.rerolled,
         diverge: r.difference.map(|d| Diverge {
             attack: d.attack,
             rule: rule_id(d.rule).to_string(),
@@ -165,7 +168,7 @@ fn outcome_json(o: &Outcome) -> Value {
             .diverge
             .as_ref()
             .map(|d| json!({"attack": d.attack, "rule": d.rule, "card": d.card}));
-        json!({"attacks": r.attacks, "matched": r.matched, "diverge": diverge})
+        json!({"attacks": r.attacks, "matched": r.matched, "rerolled": r.rerolled, "diverge": diverge})
     });
     json!({
         "build": o.build,
@@ -221,6 +224,7 @@ fn outcome_from(v: &Value) -> Result<Outcome, String> {
         Some(r) => Some(ReplayCheck {
             attacks: size(r, "attacks")?,
             matched: size(r, "matched")?,
+            rerolled: size(r, "rerolled")?,
             diverge: match r.get("diverge") {
                 None | Some(Value::Null) => None,
                 Some(d) => Some(Diverge {
