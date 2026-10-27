@@ -75,6 +75,13 @@ export const DL_STRINGS = {
     "From version 0.2.1 the app updates itself: it checks for a new version when it starts and every few hours, and asks you to restart when one is ready.",
   "update.body":
     "If you have version 0.1.0, install the new version from this page over it once: it replaces the app and keeps your games and settings. After that, updates arrive by themselves, signed by the project, and are installed only when you press “Restart now”. You can turn the checks off in the app's Settings, under Updates.",
+  "other.title": "Other ways to install",
+  "other.short.both": "The same app from the Microsoft Store, or with winget.",
+  "other.short.store": "The same app from the Microsoft Store.",
+  "other.short.winget": "The same app with winget.",
+  "other.store": "The Microsoft Store edition installs with no Windows warning, and the Store brings its updates.",
+  "other.store.link": "Get it from the Microsoft Store",
+  "other.winget": "With winget, in a terminal (the app then updates itself, as from this page):",
   "remove.title": "Uninstalling",
   "remove.short": "Remove it in Windows Settings, under Apps. Your games are kept.",
   "remove.body":

@@ -12,6 +12,7 @@ import JsonLd from "../../components/minions/JsonLd.astro";
 import "../../styles/download.css";
 import { readConfig } from "../../lib/config.ts";
 import { dl } from "../../lib/download/strings.ts";
+import { liveChannels } from "../../lib/site/channels.ts";
 import { dateFormat, href, langPaths, numberFormat, setLang } from "../../lib/i18n.ts";
 import { installerUrl, RELEASE, releasesUrl, repoUrl, sizeMb, sumsUrls } from "../../lib/site/release.ts";
 import { st } from "../../lib/site/strings.ts";
@@ -39,6 +40,9 @@ const steps = ([1, 2, 3, 4] as const).map((n) => ({ title: dl(`step${n}.title`),
 const sums = sumsUrls();
 const pageUrl = new URL(href("/download/"), Astro.site).href;
 const reads = (["reads.1", "reads.2", "reads.3", "reads.4"] as const).map((key) => dl(key));
+// Other ways to install (T-707): shown only for listings that are live.
+const channels = liveChannels();
+const otherShort = channels.length > 1 ? dl("other.short.both") : channels[0]?.kind === "store" ? dl("other.short.store") : dl("other.short.winget");
 ---
 
 <Base backdrop="hall" title={st("meta.download.title")} description={st("meta.download.description")}>
@@ -124,6 +128,28 @@ const reads = (["reads.1", "reads.2", "reads.3", "reads.4"] as const).map((key) 
           <p>{dl("update.body")}</p>
         </More>
       </div>
+      {
+        channels.length > 0 && (
+          <div class="dl-extra">
+            <h3>{dl("other.title")}</h3>
+            <p class="dl-short">{otherShort}</p>
+            <More context={dl("other.title")}>
+              {channels.map((channel) =>
+                channel.kind === "store" ? (
+                  <p>
+                    {dl("other.store")} <a href={channel.url}>{dl("other.store.link")}</a>.
+                  </p>
+                ) : (
+                  <>
+                    <p>{dl("other.winget")}</p>
+                    <p class="mono dl-code">{channel.command}</p>
+                  </>
+                ),
+              )}
+            </More>
+          </div>
+        )
+      }
       <div class="dl-extra">
         <h3>{dl("remove.title")}</h3>
         <p class="dl-short">{dl("remove.short")}</p>
