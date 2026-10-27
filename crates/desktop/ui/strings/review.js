@@ -46,7 +46,7 @@
     ["review.did.unfreeze", "you unfroze the tavern", "descongelaste la taberna"],
     ["review.did.tier_up", "you upgraded the tavern to tier {tier}", "mejoraste la taberna a nivel {tier}"],
     ["review.did.tier_upNoTier", "you upgraded the tavern", "mejoraste la taberna"],
-    ["review.did.other", "a choice", "una decisión"],
+    ["review.did.fallback", "a choice", "una decisión"],
     ["review.line", "{turn}: {did}.", "{turn}: {did}."],
 
     // The plain reason of a costly choice. {won}: the share of next fights won.
@@ -71,7 +71,7 @@
       "{taken} se queda con sus estadísticas del combate anterior a la venta."],
     ["review.approx.start_of_combat_on_board", "A card on the boards acts at the start of combat, which is not simulated; it might have changed this.",
       "Una carta de los tableros actúa al inicio del combate, que no se simula; podría haber cambiado esto."],
-    ["review.approx.other", "Simulated with a simplification this version of the app does not describe.",
+    ["review.approx.fallback", "Simulated with a simplification this version of the app does not describe.",
       "Simulado con una simplificación que esta versión de la aplicación no describe."],
     ["review.approximate", "Simulated with a known gap: {cards}.", "Simulado con un fallo conocido: {cards}."],
     ["review.unknownOffers.one", "{n} card on offer is not named in the log and was not simulated.", "{n} carta ofrecida no aparece en el registro y no se simuló."],
@@ -94,7 +94,7 @@
     ["review.gap.not_modelled", "a card on the boards is not in the simulator", "una carta de los tableros no está en el simulador"],
     ["review.gap.bad_board", "the simulator refused the boards", "el simulador rechazó los tableros"],
     ["review.gap.out_of_time", "not reached in time", "no se llegó a tiempo"],
-    ["review.gap.other", "for a reason this version of the app does not describe", "por un motivo que esta versión de la aplicación no describe"],
+    ["review.gap.fallback", "for a reason this version of the app does not describe", "por un motivo que esta versión de la aplicación no describe"],
 
     // Why a choice was not simulated again (NotRebuilt).
     ["review.not.needs_shop_playout", "Not simulated: it would need shops and gold the log never showed.", "No simulada: harían falta tiendas y oro que el registro nunca mostró."],
@@ -112,7 +112,7 @@
       "No simulada: la carta actúa al inicio del combate, que no se simula."],
     ["review.not.actual", "Not simulated: your own board could not be simulated ({why}).", "No simulada: no se pudo simular tu propio tablero ({why})."],
     ["review.not.out_of_time", "Not reached in time.", "No se llegó a tiempo."],
-    ["review.not.other", "Not simulated.", "No simulada."],
+    ["review.not.fallback", "Not simulated.", "No simulada."],
   ];
 
   const table = { en: {}, es: {} };

@@ -61,7 +61,7 @@
       card: a.card,
       approx: (Array.isArray(a.approx) ? a.approx : []).map(variant).filter(Boolean),
       fight: "ok" in fight ? readFight(fight.ok) : null,
-      gap: "err" in fight ? variant(fight.err) || "other" : null,
+      gap: "err" in fight ? variant(fight.err) || "fallback" : null,
       delta: "ok" in fight ? delta : null,
       stop: code(a.stop),
     };
@@ -69,8 +69,8 @@
 
   // "actual.<gap>" for the actual board's gap, else the reason's code.
   function notRebuilt(err) {
-    if (isObject(err) && "actual" in err) return `actual.${variant(err.actual) || "other"}`;
-    return variant(err) || "other";
+    if (isObject(err) && "actual" in err) return `actual.${variant(err.actual) || "fallback"}`;
+    return variant(err) || "fallback";
   }
 
   function readDecision(r) {
@@ -92,7 +92,7 @@
     }
     return {
       turn: d.turn,
-      kind: KINDS.includes(d.kind) ? d.kind : "other",
+      kind: KINDS.includes(d.kind) ? d.kind : "fallback",
       taken: card(d.taken),
       tier: Number.isInteger(d.tier) ? d.tier : null,
       rebuilt: built,
@@ -115,7 +115,7 @@
   function read(answer) {
     if (!isObject(answer)) return null;
     if (STATES.includes(answer.state)) return { state: answer.state };
-    if (answer.state === "no_review") return { state: "no_review", why: variant(answer.why) || "other" };
+    if (answer.state === "no_review") return { state: "no_review", why: variant(answer.why) || "fallback" };
     if (answer.state !== "done" || !isObject(answer.review) || !Array.isArray(answer.review.decisions)) return null;
     try {
       return {
@@ -246,7 +246,7 @@
   // What an alternative takes as given, each once.
   function notes(d, alt, nameOf) {
     const values = { alt: named(alt.card, nameOf), taken: named(d.taken, nameOf) };
-    const lines = alt.approx.map((a) => words(`review.approx.${a}`, values) || t("review.approx.other"));
+    const lines = alt.approx.map((a) => words(`review.approx.${a}`, values) || t("review.approx.fallback"));
     return [...new Set(lines.concat(altNotes(alt, nameOf)))];
   }
 
@@ -264,7 +264,7 @@
   function altLine(d, alt, nameOf) {
     const name = named(alt.card, nameOf);
     const label = d.kind === "sell" ? t("review.keep", { card: name }) : name;
-    if (!alt.fight) return t("review.alt.gap", { card: label, why: words(`review.gap.${alt.gap}`) || t("review.gap.other") });
+    if (!alt.fight) return t("review.alt.gap", { card: label, why: words(`review.gap.${alt.gap}`) || t("review.gap.fallback") });
     const values = { card: label, altWon: I18n.percent(alt.fight.won), won: I18n.percent(d.rebuilt.actual.won), trials: I18n.num(alt.fight.trials) };
     const delta = alt.delta;
     if (delta && delta.clear) return t(delta.score > 0 ? "review.alt.better" : "review.alt.worse", values);
@@ -277,8 +277,8 @@
     const why = d.notRebuilt;
     if (!why) return null;
     if (why === "actual.out_of_time") return t("review.not.out_of_time");
-    if (why.startsWith("actual.")) return t("review.not.actual", { why: words(`review.gap.${why.slice(7)}`) || t("review.gap.other") });
-    return words(`review.not.${why}`) || t("review.not.other");
+    if (why.startsWith("actual.")) return t("review.not.actual", { why: words(`review.gap.${why.slice(7)}`) || t("review.gap.fallback") });
+    return words(`review.not.${why}`) || t("review.not.fallback");
   }
 
   // The lines above the costly choices: how many were simulated, a banner

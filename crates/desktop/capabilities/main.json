@@ -15,6 +15,7 @@
     "allow-status",
     "allow-game-recap",
     "allow-game-why",
+    "allow-game-review",
     "allow-preview-problem-report",
     "allow-save-problem-report",
     "allow-diagnostics-preview",

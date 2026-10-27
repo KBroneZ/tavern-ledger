@@ -681,6 +681,45 @@ async function loadWhy(game, key) {
   const shown = document.getElementById("recap-why");
   if (shown && recapGame && gameKey(recapGame) === key) TLFocus.keep(document, () => shown.replaceWith(whySection(game)));
 }
+// The game review (T-658): started with its button, never by itself, as it
+// takes up to a minute; the app refuses while a game is on. Answers are kept
+// for the last games opened, like the odds.
+const REVIEW_KEPT = 8;
+const reviewKept = new Map();
+const reviewRunning = new Set();
+
+function reviewSection(game) {
+  const key = gameKey(game);
+  const state = reviewRunning.has(key) ? "reviewing" : reviewKept.get(key) || "idle";
+  const saved = allGames.find((g) => gameKey(g) === key) || {};
+  const tools = { fold: TLCompact.fold, game: key, cardName: (id) => TLCards.display(id) || id, card: TLShop.card, report: saved.report || null, onStart: () => startReview(game, key) };
+  const section = TLReview.section(SHOP_UI, state, tools);
+  section.id = "recap-review";
+  return section;
+}
+
+function redrawReview(game, key) {
+  const shown = document.getElementById("recap-review");
+  if (shown && recapGame && gameKey(recapGame) === key) TLFocus.keep(document, () => shown.replaceWith(reviewSection(game)));
+}
+
+async function startReview(game, key) {
+  if (reviewRunning.has(key)) return;
+  reviewRunning.add(key);
+  reviewKept.delete(key);
+  redrawReview(game, key);
+  let answer;
+  try {
+    answer = TLReviewWords.read(await invoke("game_review", { session: game.session, index: game.index })) || "failed";
+  } catch {
+    answer = "failed";
+  }
+  reviewRunning.delete(key);
+  reviewKept.set(key, answer);
+  if (reviewKept.size > REVIEW_KEPT) reviewKept.delete(reviewKept.keys().next().value);
+  redrawReview(game, key);
+}
+
 const OUTCOMES = ["won", "lost", "tie", "unknown"];
 const outcomeWord = (outcome) => tl(`outcome.${OUTCOMES.includes(outcome) ? outcome : "unknown"}`);
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -1004,7 +1043,7 @@ function renderRecapNow(r, game) {
   // (T-215), why each result differed (T-346), record and messages; the rest
   // waits for Advanced.
   document.getElementById("recap-body").replaceChildren(
-    top, TLShop.recapSummary(r.shop, SHOP_UI, r.is_duos, key), TLReplay.section(SHOP_UI, r, report, replayTools), whySection(game),
+    top, TLShop.recapSummary(r.shop, SHOP_UI, r.is_duos, key), TLReplay.section(SHOP_UI, r, report, replayTools), whySection(game), reviewSection(game),
     advancedOnly(TLTurns.section(SHOP_UI, r, report, turnTools)),
     recordSection(r), advancedOnly(TLExtras.heroPickSection(r.hero_pick, SHOP_UI, portrait)),
     advancedOnly(TLRoundTwo.choicesSection(SHOP_UI, r.choices, key)),

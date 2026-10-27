@@ -285,6 +285,12 @@
           "markdownDescription": "Enables the game_recap command without any pre-configured scope."
         },
         {
+          "description": "Enables the game_review command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-game-review",
+          "markdownDescription": "Enables the game_review command without any pre-configured scope."
+        },
+        {
           "description": "Enables the game_stats command without any pre-configured scope.",
           "type": "string",
           "const": "allow-game-stats",
@@ -625,6 +631,12 @@
           "type": "string",
           "const": "deny-game-recap",
           "markdownDescription": "Denies the game_recap command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the game_review command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-game-review",
+          "markdownDescription": "Denies the game_review command without any pre-configured scope."
         },
         {
           "description": "Denies the game_stats command without any pre-configured scope.",

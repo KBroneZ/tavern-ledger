@@ -29,6 +29,7 @@ mod preview;
 #[cfg(test)]
 mod process_checks;
 mod redact;
+mod review;
 mod saved_ratings;
 mod saved_tribes;
 mod screen_fit;
@@ -335,6 +336,67 @@ async fn game_why_of(
         let facts = |id: &str| card_data::combat_facts(&cards, id);
         catch_unwind(AssertUnwindSafe(|| {
             tracker::why::combat_whys(&report, &facts)
+        }))
+    })
+    .await
+    .map_err(|_| failed())?
+    .map_err(|_| failed())
+}
+
+/// The game review (T-658, D-176): each choice of a game in the history
+/// played again in the next fight. Post-game only: it answers "game on"
+/// while a Battlegrounds game is being played, and stops early when one
+/// starts. Up to the engine's budget (40 s) on a blocking thread, one review
+/// at a time; the window starts it with a button.
+#[tauri::command]
+async fn game_review(
+    app: AppHandle,
+    session: String,
+    index: u64,
+) -> Result<review::ReviewAnswer, String> {
+    game_review_of(app, session, index)
+        .await
+        .logged("game_review")
+}
+
+async fn game_review_of(
+    app: AppHandle,
+    session: String,
+    index: u64,
+) -> Result<review::ReviewAnswer, String> {
+    let report = {
+        let state = app.state::<Arc<AppState>>();
+        let games = state.games.lock().unwrap_or_else(|e| e.into_inner());
+        games
+            .iter()
+            .find(|g| g.session == session && g.index == index)
+            .map(|row| row.report.clone())
+            .ok_or_else(|| "That game is not in the history.".to_string())?
+    };
+    let Some(running) = review::Running::start() else {
+        return Ok(review::ReviewAnswer::Busy);
+    };
+    let failed = || "This game could not be reviewed.".to_string();
+    tauri::async_runtime::spawn_blocking(move || {
+        let _running = running;
+        let cards = app.state::<card_data::Cards>();
+        let state = app.state::<Arc<AppState>>();
+        let facts = |id: &str| card_data::combat_facts(&cards, id);
+        let game_on = || {
+            state
+                .in_progress
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .is_some()
+                || state
+                    .live
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .is_some()
+        };
+        let budget = tracker::counterfactual::Budget::default();
+        catch_unwind(AssertUnwindSafe(|| {
+            review::answer(&report, &facts, &game_on, &budget)
         }))
     })
     .await
@@ -1702,6 +1764,7 @@ fn main() {
             status,
             game_recap,
             game_why,
+            game_review,
             preview_problem_report,
             save_problem_report,
             diagnostics_preview,
