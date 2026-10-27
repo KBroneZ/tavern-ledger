@@ -2,7 +2,7 @@
 //! damage, summons) and the helpers they share.
 
 use super::{Combat, Source, Unit};
-use crate::cards::{Action, Trigger};
+use crate::cards::{Action, Trigger, LOBSTER_STEP};
 use crate::model::{Keywords, Tribes};
 
 impl Combat<'_> {
@@ -325,6 +325,23 @@ impl Combat<'_> {
                 if let Some(uid) = me {
                     self.become_teammate_copy(side, uid);
                 }
+            }
+            Action::LobsterBuff { times } => {
+                let (attack, health) = self.sides[side].lobster;
+                let pool = self.friends(side, Tribes::BEAST, me);
+                for uid in self.pick(pool, 1) {
+                    self.buff(
+                        side,
+                        uid,
+                        attack.saturating_mul(times),
+                        health.saturating_mul(times),
+                    );
+                }
+                let s = &mut self.sides[side];
+                s.lobster = (
+                    s.lobster.0.saturating_add(LOBSTER_STEP.0),
+                    s.lobster.1.saturating_add(LOBSTER_STEP.1),
+                );
             }
             Action::BeastAttackThisCombat(attack) => {
                 for f in self.friends(side, Tribes::BEAST, None) {

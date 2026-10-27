@@ -74,6 +74,7 @@ impl Combat<'_> {
                 let mut only = [false, false];
                 only[side] = true;
                 self.after_start_values(only);
+                self.lobster_values(only);
                 let entering: Vec<u32> = self.sides[side].units.iter().map(|u| u.uid).collect();
                 for uid in entering {
                     self.catch_up_deaths(side, uid);

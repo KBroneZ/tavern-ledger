@@ -254,8 +254,15 @@ fn every_cause_has_an_id_from_the_shared_list() {
 
 #[test]
 fn a_game_long_value_is_not_seen_only_while_its_board_has_none() {
-    let none = GameValues::default();
-    let all = GameValues {
+    // A Tasty Lobster shows the side's Lobster buff with its numbers (T-645).
+    let lobster = |counters: [i32; 2]| {
+        let mut m = crate::model::Minion::new("BG36_202", 2, 1);
+        m.counters = counters;
+        m
+    };
+    let none = crate::model::Warband::new(vec![lobster([0, 0])]);
+    let mut all = crate::model::Warband::new(vec![lobster([4, 2])]);
+    all.values = GameValues {
         blood_gem: (1, 1),
         spell: (1, 1),
         knights_dead: 2,
@@ -275,6 +282,7 @@ fn a_game_long_value_is_not_seen_only_while_its_board_has_none() {
         (r2::SPELL, Unseen::Spells),
         (r2::KNIGHTS, Unseen::Knights),
         (r4::BEETLE_BUFFS, Unseen::Beetles),
+        (r1::LOBSTER, Unseen::Earlier),
     ];
     for (why, what) in cases {
         assert_eq!(unseen_of(why, &none), Some(what), "{why}");

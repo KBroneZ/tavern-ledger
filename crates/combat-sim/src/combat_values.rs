@@ -2,7 +2,7 @@
 //! and Tavern spells with the side's spell upgrades.
 
 use super::{Combat, Dead, Source};
-use crate::cards::{Action, GemTo, Trigger};
+use crate::cards::{lobster_shown, Action, GemTo, Trigger, LOBSTER_STEP};
 use crate::model::Tribes;
 
 /// Eternal Knight and its golden card, with what each Knight that died this
@@ -58,6 +58,18 @@ impl Combat<'_> {
                 _ => 0,
             })
             .fold(0, i32::saturating_add)
+    }
+
+    /// Each side's Lobster buff from the first Lobster on its board that
+    /// shows it, else the text's (T-645).
+    pub(super) fn lobster_values(&mut self, sides: [bool; 2]) {
+        for side in [0, 1].into_iter().filter(|s| sides[*s]) {
+            let shown = self.sides[side]
+                .units
+                .iter()
+                .find_map(|u| lobster_shown(&self.p.cards[u.card as usize].id, u.counters));
+            self.sides[side].lobster = shown.unwrap_or(LOBSTER_STEP);
+        }
     }
 
     /// How many times over a Dragon gains stats: twice for each neighbour

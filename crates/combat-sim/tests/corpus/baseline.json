@@ -2706,12 +2706,12 @@
       "replay": {
         "attacks": 20,
         "diverge": {
-          "attack": 3,
-          "card": "BG36_204",
+          "attack": 8,
+          "card": "BG36_202_G",
           "rule": "replay_stats"
         },
-        "matched": 2,
-        "rerolled": 0
+        "matched": 7,
+        "rerolled": 2
       },
       "result": "won",
       "said": "not_modelled"
@@ -3101,17 +3101,13 @@
     "78c2a99ee0a01e58": {
       "build": 254477,
       "close": false,
-      "likely": "lost",
+      "likely": "won",
       "mode": "solo",
       "replay": {
         "attacks": 15,
-        "diverge": {
-          "attack": 5,
-          "card": "BG36_202",
-          "rule": "replay_stats"
-        },
-        "matched": 4,
-        "rerolled": 0
+        "diverge": null,
+        "matched": 15,
+        "rerolled": 3
       },
       "result": "won",
       "said": "odds"
@@ -4015,13 +4011,9 @@
       "mode": "solo",
       "replay": {
         "attacks": 9,
-        "diverge": {
-          "attack": 5,
-          "card": "BG36_202",
-          "rule": "replay_stats"
-        },
-        "matched": 4,
-        "rerolled": 0
+        "diverge": null,
+        "matched": 9,
+        "rerolled": 1
       },
       "result": "won",
       "said": "odds"
@@ -4466,12 +4458,12 @@
       "replay": {
         "attacks": 22,
         "diverge": {
-          "attack": 2,
-          "card": "BG36_204",
+          "attack": 4,
+          "card": "BG36_200t",
           "rule": "replay_stats"
         },
-        "matched": 1,
-        "rerolled": 0
+        "matched": 3,
+        "rerolled": 1
       },
       "result": "won",
       "said": "not_modelled"
@@ -5375,8 +5367,8 @@
     },
     "ce9a803f54cf46cc": {
       "build": 253216,
-      "close": true,
-      "likely": "lost",
+      "close": false,
+      "likely": "won",
       "mode": "duos",
       "replay": {
         "attacks": 30,
@@ -6119,7 +6111,7 @@
         "attacks": 14,
         "diverge": {
           "attack": 2,
-          "card": "BG27_084_G",
+          "card": "BG36_202",
           "rule": "replay_stats"
         },
         "matched": 1,
@@ -6707,7 +6699,7 @@
       "said": "odds"
     }
   },
-  "engine": "0.18.0",
+  "engine": "0.19.0",
   "format": 1,
   "seed": 24301,
   "trials": 2000

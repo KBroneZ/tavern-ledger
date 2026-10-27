@@ -172,6 +172,10 @@ pub enum Action {
     /// Attack: those on the board now and those summoned later, even after
     /// the card is gone (Humming Bird; T-645).
     BeastAttackThisCombat(i32),
+    /// Give a random other friendly Beast the side's Lobster buff, `times`
+    /// over (2 for a golden Lobster), then improve the buff by +2/+1 (Tasty
+    /// Lobster; T-645).
+    LobsterBuff { times: i32 },
     /// Destroy the minion to the left (both neighbours with `both`) and keep
     /// an exact copy of each, not of a Stitched Salvager, for
     /// [`Action::SummonKept`] (Stitched Salvager; T-628 round 3).
@@ -452,6 +456,21 @@ pub struct Token {
 }
 
 /// The Deities by database id (T-671): C'Thun and Y'Shaarj.
+/// Tasty Lobster and its golden card, with how many times over each shows
+/// and gives the side's Lobster buff (T-645).
+pub const LOBSTERS: [(&str, i32); 2] = [("BG36_202", 1), ("BG36_202_G", 2)];
+
+/// The Lobster buff as the card's text gives it, and what each Lobster
+/// Deathrattle improves it by (T-645).
+pub const LOBSTER_STEP: (i32, i32) = (2, 1);
+
+/// The side's Lobster buff a minion shows: its two numbers, halved for a
+/// golden Lobster; `None` for another card or a Lobster without numbers.
+pub fn lobster_shown(card_id: &str, counters: [i32; 2]) -> Option<(i32, i32)> {
+    let (_, times) = LOBSTERS.iter().find(|(id, _)| *id == card_id)?;
+    (counters[0] > 0 && counters[1] > 0).then(|| (counters[0] / times, counters[1] / times))
+}
+
 pub const DEITIES: [(i32, &str); 2] = [(130_610, "BGFYM_000"), (132_532, "BGFYM_011")];
 
 /// The Deity card a database id names, if it is one.

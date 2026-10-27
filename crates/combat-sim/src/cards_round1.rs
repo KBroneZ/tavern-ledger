@@ -14,6 +14,10 @@ const fn summon(token: &'static str, count: u8) -> Action {
 pub(crate) const GAME_BUFFS: &str =
     "summons tokens that may have game-long buffs that are not known";
 pub(crate) const SCALES: &str = "its numbers grow during the game; the base values are used";
+/// Tasty Lobster (T-645): played exactly when a Lobster on the board shows
+/// the side's buff.
+pub(crate) const LOBSTER: &str =
+    "its buff grows during the game; the text's +2/+1 is used when no Lobster on the board shows it";
 pub(crate) const DEITY: &str = "buffs the Deity, whose stats this board does not show";
 const DEITY_GROWS: &str = "buffs the Deity by more for each Tavern spell cast this game";
 const DEITY_TEAM: &str = "buffs the team's Deities; the teammate's is not known";
@@ -120,25 +124,15 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
     (
         "BG36_202",
         approx(
-            SCALES,
-            &[Trigger::Deathrattle(&[Action::BuffRandom {
-                attack: 2,
-                health: 1,
-                tribe: Tribes::BEAST,
-                count: 1,
-            }])],
+            LOBSTER,
+            &[Trigger::Deathrattle(&[Action::LobsterBuff { times: 1 }])],
         ),
     ),
     (
         "BG36_202_G",
         approx(
-            SCALES,
-            &[Trigger::Deathrattle(&[Action::BuffRandom {
-                attack: 4,
-                health: 2,
-                tribe: Tribes::BEAST,
-                count: 1,
-            }])],
+            LOBSTER,
+            &[Trigger::Deathrattle(&[Action::LobsterBuff { times: 2 }])],
         ),
     ),
     (
@@ -349,11 +343,11 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
     ),
     (
         "BG36_210",
-        approx(SCALES, &[Trigger::Rally(&[summon("BG36_202", 1)])]),
+        approx(LOBSTER, &[Trigger::Rally(&[summon("BG36_202", 1)])]),
     ),
     (
         "BG36_210_G",
-        approx(SCALES, &[Trigger::Rally(&[summon("BG36_202_G", 1)])]),
+        approx(LOBSTER, &[Trigger::Rally(&[summon("BG36_202_G", 1)])]),
     ),
     (
         "BG36_849",

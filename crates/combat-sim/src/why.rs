@@ -25,9 +25,9 @@
 use crate::cards::{self, Fidelity};
 use crate::combat::replay::{replay_teams, Difference, LoggedStep, Rule, Span};
 use crate::combat::CombatResult;
-use crate::model::Team;
+use crate::model::{Team, Warband};
 use crate::score::Prediction;
-use crate::trials::{simulate_teams, Coverage, Options, Verdict};
+use crate::trials::{lobster_known, simulate_teams, Coverage, Options, Verdict};
 use crate::{cards_round1 as r1, cards_round2 as r2, cards_round3 as r3};
 use crate::{cards_round4 as r4, cards_round5 as r5};
 
@@ -300,7 +300,8 @@ pub fn parted(d: Difference, inputs: Vec<NotSeen>, coverage: &Coverage) -> Cause
 
 /// Which approximation reasons are something the log does not show. A
 /// game-long value the board brings (above zero) is seen.
-fn unseen_of(why: &str, values: &crate::model::GameValues) -> Option<Unseen> {
+fn unseen_of(why: &str, band: &Warband) -> Option<Unseen> {
+    let values = &band.values;
     // `unseen(known)`: the value counts as not seen while the board has none.
     let unseen = |known: bool| (!known).then_some(());
     match why {
@@ -311,6 +312,8 @@ fn unseen_of(why: &str, values: &crate::model::GameValues) -> Option<Unseen> {
         // The Deity's stats are gains from earlier in the game (T-671).
         w if w == r1::DEITY => unseen(values.deity.known()).map(|_| Unseen::Earlier),
         w if w == r5::FROM_HAND => Some(Unseen::Hand),
+        // The Lobster buff is a gain from earlier in the game (T-645).
+        w if w == r1::LOBSTER => unseen(lobster_known(band)).map(|_| Unseen::Earlier),
         w if [
             r1::GAME_BUFFS,
             r1::SCALES,
@@ -344,7 +347,7 @@ pub fn not_seen(player: &Team, opponent: &Team, unknown_gifts: &[String]) -> Vec
         for m in &band.minions {
             let rules = cards::rules(&m.card_id);
             if let Some(Fidelity::Approximate(why)) = rules.map(|r| r.fidelity) {
-                if let Some(what) = unseen_of(why, &band.values) {
+                if let Some(what) = unseen_of(why, band) {
                     add(what, &m.card_id);
                 }
             }
