@@ -395,8 +395,18 @@ async fn game_review_of(
                     .is_some()
         };
         let budget = tracker::counterfactual::Budget::default();
+        // The window's "Reviewing… 12 of 40", for this game only.
+        let mut progress = |done: usize, total: usize| {
+            let payload = review::Progress {
+                session: &session,
+                index,
+                done,
+                total,
+            };
+            let _ = app.emit_to("main", review::PROGRESS, payload);
+        };
         catch_unwind(AssertUnwindSafe(|| {
-            review::answer(&report, &facts, &game_on, &budget)
+            review::answer(&report, &facts, &game_on, &budget, &mut progress)
         }))
     })
     .await

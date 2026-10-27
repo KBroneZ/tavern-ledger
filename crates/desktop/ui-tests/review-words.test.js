@@ -84,7 +84,7 @@ test("before and after boards: the card taken swapped for the alternative, or th
 test("the plain reasons say what was measured: the next fight, in the simulation (English and Spanish)", () => {
   const read = W.read(done([
     { decision: decision(5, "buy", "BG_A", ["BG_A", "BG_B"]), rebuilt: rebuilt(5, 0.44, [alt("BG_B", 0.62, 0.44)]) },
-    { decision: decision(6, "sell", "BG_C", []), rebuilt: rebuilt(6, 0.3, [alt("BG_C", 0.5, 0.3, { approx: ["earlier_stats", "start_of_combat_on_board", "battlecry_not_played"] })]) },
+    { decision: decision(6, "sell", "BG_C", []), rebuilt: rebuilt(6, 0.3, [alt("BG_C", 0.5, 0.3, { approx: ["earlier_stats", "start_of_combat_on_board", "something_new"] })]) },
   ]));
   const [buy, sell] = read.decisions;
   I18n.setLang("en");
@@ -98,6 +98,10 @@ test("the plain reasons say what was measured: the next fight, in the simulation
     "A card on the boards acts at the start of combat, which is not simulated; it might have changed this.",
     "Simulated with a simplification this version of the app does not describe.",
   ], "a marker this build does not know still says something");
+  assert.deepEqual(W.notes(buy, { ...best.alt, approx: ["battlecry_not_played", "gold_ignored"] }, nameOf), [
+    "Neither card's Battlecry, nor anything else done as it was played, is simulated again.",
+    "The gold each card cost, and what was left for the rest of the turn, is not counted.",
+  ]);
   I18n.setLang("es");
   assert.equal(W.reasonLine(buy, best.alt, nameOf), "Turno 5: compraste Alpha. Si hubieras comprado Beta, en la simulación ganas el siguiente combate el 62 % de las veces en vez del 44 %.");
   I18n.setLang("en");
@@ -149,6 +153,9 @@ test("every choice in the full list says what happened to it in plain words", ()
   assert.equal(W.notLine(late), "Not reached in time.");
   assert.equal(W.notLine(refused), "Not simulated: your own board could not be simulated (a card on the boards is not in the simulator).");
   assert.equal(W.notLine(unknown), "Not simulated.", "a reason this build does not know");
+  assert.equal(W.notLine({ notRebuilt: "no_board_before" }), "Not simulated: your board in the fight before was not seen, so what was new on it is not known.");
+  const stalled = W.read(done([{ decision: decision(2, "buy", "BG_A", ["BG_A", "BG_B"]), rebuilt: rebuilt(2, 0.4, [alt("BG_B", 0.5, 0.4, { fight: { Ok: fight(0.5, { stalled: 3 }) } })]) }])).decisions[0];
+  assert.deepEqual(W.altNotes(stalled.rebuilt.alternatives[0], nameOf), ["3 simulated fights hit the turn limit and count as ties."]);
   const kept = W.read(done([{ decision: decision(6, "sell", "BG_C", []), rebuilt: rebuilt(6, 0.3, [alt("BG_C", 0.5, 0.3)]) }])).decisions[0];
   assert.match(W.altLine(kept, kept.rebuilt.alternatives[0], nameOf), /^Keeping Gamma: clearly better/);
   I18n.setLang("es");
@@ -174,4 +181,6 @@ test("the summary is honest about a review that stopped partway or found nothing
   assert.match(stopped.banner, /^A game started, so the review stopped/);
   assert.equal(stopped.empty, "No choice reviewed in time clearly cost you the next fight.");
   assert.match(W.summary(W.read(done([roll]))).empty, /could be simulated again/);
+  assert.equal(W.progressLine({ done: 12, total: 40 }), "Reviewing… 12 of 40 choices simulated so far.");
+  assert.equal(W.progressLine(null), null);
 });

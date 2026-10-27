@@ -44,6 +44,7 @@ test("reviewing, game on, busy, failed and no review each say so plainly", () =>
   I18n.setLang("en");
   assert.match(text(TLReview.section(ui, "reviewing", tools())), /Reviewing… simulating/);
   assert.equal(find(TLReview.section(ui, "reviewing", tools()), "review-start"), undefined, "no second start while reviewing");
+  assert.match(text(TLReview.section(ui, "reviewing", tools({ progress: { done: 3, total: 9 } }))), /3 of 9 choices simulated so far/);
   assert.match(text(TLReview.section(ui, { state: "game_on" }, tools())), /only between games/);
   assert.match(text(TLReview.section(ui, { state: "busy" }, tools())), /Another game is being reviewed/);
   const failed = TLReview.section(ui, "failed", tools());

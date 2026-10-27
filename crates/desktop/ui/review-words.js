@@ -44,6 +44,7 @@
       tied: f.tied,
       lost: f.lost,
       trials: f.trials,
+      stalled: Number.isInteger(f.stalled) && f.stalled > 0 ? f.stalled : 0,
       place: expected,
       approximate: (Array.isArray(f.approximate) ? f.approximate : []).map(card).filter(Boolean),
     };
@@ -166,18 +167,8 @@
     return mine ? mine.board : null;
   }
 
-  // The board of the last combat before `round` that has one.
-  function boardBefore(report, round) {
-    const numbers = (report && Array.isArray(report.rounds) ? report.rounds : [])
-      .map((r) => r && r.number)
-      .filter((n) => Number.isInteger(n) && n < round)
-      .sort((a, b) => b - a);
-    for (const n of numbers) {
-      const b = ownBoard(report, n);
-      if (b) return b;
-    }
-    return [];
-  }
+  // The board of the combat just before, as the engine reads it (t - 1 only).
+  const boardBefore = (report, round) => ownBoard(report, round - 1) || [];
 
   // The board as it fought and the board with the alternative: the card
   // taken swapped for the alternative at its card data's stats, or the
@@ -250,10 +241,20 @@
     return [...new Set(lines.concat(altNotes(alt, nameOf)))];
   }
 
-  // The cards the simulator plays with a known gap in an alternative's fight.
+  // The cards the simulator plays with a known gap in an alternative's
+  // fight, and its fights that hit the turn limit.
   function altNotes(alt, nameOf) {
-    if (!alt.fight || !alt.fight.approximate.length) return [];
-    return [t("review.approximate", { cards: I18n.list(alt.fight.approximate.map((id) => named(id, nameOf))) })];
+    if (!alt.fight) return [];
+    const out = [];
+    if (alt.fight.approximate.length) out.push(t("review.approximate", { cards: I18n.list(alt.fight.approximate.map((id) => named(id, nameOf))) }));
+    if (alt.fight.stalled) out.push(I18n.plural("review.stalled", alt.fight.stalled));
+    return out;
+  }
+
+  // "Reviewing… 12 of 40", from the app's progress; null before the first.
+  function progressLine(p) {
+    if (!p || !Number.isInteger(p.done) || !Number.isInteger(p.total) || p.total <= 0) return null;
+    return t("review.progress", { done: I18n.num(Math.min(p.done, p.total)), total: I18n.num(p.total) });
   }
 
   function unknownLine(rebuilt) {
@@ -296,7 +297,7 @@
     return { count: t("review.count", { rebuilt: I18n.num(rebuilt), total: I18n.num(total) }), banner, empty };
   }
 
-  const api = { read, costOf, top, boards, minionOf, decisionLine, reasonLine, tieLine, placeLine, notes, altNotes, unknownLine, altLine, notLine, summary };
+  const api = { read, costOf, top, boards, minionOf, decisionLine, reasonLine, tieLine, placeLine, notes, altNotes, progressLine, unknownLine, altLine, notLine, summary };
   if (node) module.exports = api;
   else window.TLReviewWords = api;
 })();

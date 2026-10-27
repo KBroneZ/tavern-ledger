@@ -1,17 +1,15 @@
 //! The game review (T-658, D-176): the counterfactual engine plays each
 //! choice of a saved game again in the next fight. Post-game only: it does
 //! not start while a Battlegrounds game is being played, and a game that
-//! starts while it runs stops it at the engine's next batch. One review at
+//! starts while it runs cancels the choices not reviewed yet. One review at
 //! a time; it runs on a blocking thread, never the window's.
 
-use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::{Duration, Instant};
 
 use serde::Serialize;
 use serde_json::Value;
-use tracker::counterfactual::{review_with_clock, Budget, GameReview, NoReview};
+use tracker::counterfactual::{review_with_progress, Budget, GameReview, NoReview};
 use tracker::odds::Facts;
 
 /// What the window gets back.
@@ -33,6 +31,18 @@ pub enum ReviewAnswer {
         /// "after" board.
         stats: BTreeMap<String, [i32; 2]>,
     },
+}
+
+/// The event the main window gets before each choice is reviewed.
+pub const PROGRESS: &str = "review-progress";
+
+/// How far the review of one game is.
+#[derive(Clone, Serialize)]
+pub struct Progress<'a> {
+    pub session: &'a str,
+    pub index: u64,
+    pub done: usize,
+    pub total: usize,
 }
 
 /// True while a review runs: one at a time, as each takes up to the budget.
@@ -58,32 +68,32 @@ impl Drop for Running {
     }
 }
 
-/// The review of `report`, stopped when `game_on` turns true.
+/// The review of `report`, cancelled when `game_on` turns true; `progress`
+/// gets (choices done, choices in all) before each choice and at the end.
 pub fn answer(
     report: &Value,
     facts: &dyn Fn(&str) -> Option<Facts>,
     game_on: &dyn Fn() -> bool,
     budget: &Budget,
+    progress: &mut dyn FnMut(usize, usize),
 ) -> ReviewAnswer {
     if game_on() {
         return ReviewAnswer::GameOn;
     }
-    let started = Instant::now();
-    let stopped = Cell::new(false);
-    // Once a game is on, the budget reads as spent: the engine stops at its
-    // next batch and marks what it did not reach.
-    let mut elapsed = || -> Duration {
-        if stopped.get() || game_on() {
-            stopped.set(true);
-            return budget.time;
+    let cancel = AtomicBool::new(false);
+    // Checked before each choice: a game that starts cancels the rest, which
+    // the engine then marks as not reached.
+    let mut step = |done: usize, total: usize| {
+        if !cancel.load(Ordering::Relaxed) && game_on() {
+            cancel.store(true, Ordering::Relaxed);
         }
-        started.elapsed()
+        progress(done, total);
     };
-    match review_with_clock(report, facts, None, budget, &mut elapsed) {
+    match review_with_progress(report, facts, None, budget, &cancel, &mut step) {
         Err(why) => ReviewAnswer::NoReview { why },
         Ok(review) => ReviewAnswer::Done {
             stats: stats_put_in(&review, facts),
-            stopped_for_game: stopped.get(),
+            stopped_for_game: review.cancelled,
             review,
         },
     }
@@ -110,6 +120,7 @@ fn stats_put_in(
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::cell::Cell;
 
     // Cards with no combat text in the engine.
     const WEAK: &str = "BG28_603t";
@@ -158,18 +169,22 @@ mod tests {
             &facts,
             &|| true,
             &Budget::default(),
+            &mut |_, _| {},
         );
         assert!(matches!(a, ReviewAnswer::GameOn));
     }
 
     #[test]
     fn a_saved_game_is_reviewed_with_the_stats_of_each_card_put_in() {
+        let mut seen = Vec::new();
         let a = answer(
             &bought_weak("GT_BATTLEGROUNDS"),
             &facts,
             &|| false,
             &Budget::default(),
+            &mut |done, total| seen.push((done, total)),
         );
+        assert_eq!(seen.last(), Some(&(1, 1)), "progress reaches the end");
         let ReviewAnswer::Done {
             review,
             stopped_for_game,
@@ -207,6 +222,7 @@ mod tests {
             &facts,
             &game_on,
             &Budget::default(),
+            &mut |_, _| {},
         );
         let ReviewAnswer::Done {
             review,
@@ -217,7 +233,7 @@ mod tests {
             panic!("not reviewed");
         };
         assert!(stopped_for_game);
-        assert!(review.out_of_time);
+        assert!(review.cancelled && review.out_of_time);
     }
 
     #[test]
@@ -235,6 +251,7 @@ mod tests {
             &facts,
             &|| false,
             &Budget::default(),
+            &mut |_, _| {},
         );
         assert!(matches!(
             a,

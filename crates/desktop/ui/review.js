@@ -100,7 +100,7 @@
     const part = ui.el("section", "recap-part review");
     part.append(ui.el("h3", null, t("review.title")), note(ui, t("review.measures")));
     if (state === "idle") part.append(note(ui, t("review.startNote")), startButton(ui, h, t("review.start")));
-    else if (state === "reviewing") part.append(ui.el("p", "note review-busy", t("review.reviewing")));
+    else if (state === "reviewing") part.append(ui.el("p", "note review-busy", W.progressLine(h.progress) || t("review.reviewing")));
     else if (state && state.state === "done") done(ui, h, part, state);
     else if (state && state.state === "game_on") part.append(note(ui, t("review.gameOn")), startButton(ui, h, t("review.again")));
     else if (state && state.state === "busy") part.append(note(ui, t("review.busy")), startButton(ui, h, t("review.again")));

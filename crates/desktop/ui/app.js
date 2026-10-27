@@ -687,12 +687,14 @@ async function loadWhy(game, key) {
 const REVIEW_KEPT = 8;
 const reviewKept = new Map();
 const reviewRunning = new Set();
+// How far a running review is, from the app's "review-progress" events.
+const reviewProgress = new Map();
 
 function reviewSection(game) {
   const key = gameKey(game);
   const state = reviewRunning.has(key) ? "reviewing" : reviewKept.get(key) || "idle";
   const saved = allGames.find((g) => gameKey(g) === key) || {};
-  const tools = { fold: TLCompact.fold, game: key, cardName: (id) => TLCards.display(id) || id, card: TLShop.card, report: saved.report || null, onStart: () => startReview(game, key) };
+  const tools = { fold: TLCompact.fold, game: key, cardName: (id) => TLCards.display(id) || id, card: TLShop.card, report: saved.report || null, progress: reviewProgress.get(key) || null, onStart: () => startReview(game, key) };
   const section = TLReview.section(SHOP_UI, state, tools);
   section.id = "recap-review";
   return section;
@@ -701,6 +703,17 @@ function reviewSection(game) {
 function redrawReview(game, key) {
   const shown = document.getElementById("recap-review");
   if (shown && recapGame && gameKey(recapGame) === key) TLFocus.keep(document, () => shown.replaceWith(reviewSection(game)));
+}
+
+// Only the "Reviewing…" line changes, so focus and folds are left alone.
+function onReviewProgress(p) {
+  if (!p || typeof p.session !== "string" || !Number.isInteger(p.index)) return;
+  const key = gameKey({ session: p.session, index: p.index });
+  if (!reviewRunning.has(key)) return;
+  reviewProgress.set(key, { done: p.done, total: p.total });
+  const line = document.querySelector("#recap-review .review-busy");
+  const text = TLReviewWords.progressLine(reviewProgress.get(key));
+  if (line && text && recapGame && gameKey(recapGame) === key) line.textContent = text;
 }
 
 async function startReview(game, key) {
@@ -715,6 +728,7 @@ async function startReview(game, key) {
     answer = "failed";
   }
   reviewRunning.delete(key);
+  reviewProgress.delete(key);
   reviewKept.set(key, answer);
   if (reviewKept.size > REVIEW_KEPT) reviewKept.delete(reviewKept.keys().next().value);
   redrawReview(game, key);
@@ -1317,6 +1331,7 @@ async function main() {
     if (recapGame) openRecap(recapGame).catch(showError);
   });
   await listen("game-finished", (e) => onGameFinished(e.payload).catch(showError));
+  await listen("review-progress", (e) => onReviewProgress(e.payload));
   await listen("live-changed", refreshPeriodSoon);
   await listen("status-changed", (e) => showStatus(e.payload));
   showStatus(await invoke("status"));
