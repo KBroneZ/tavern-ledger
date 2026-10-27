@@ -2,7 +2,9 @@
 
 *Traducción del original en inglés. Si esta versión y la [versión en inglés](https://tavernledger.net/terms/) dicen cosas distintas, prevalece la inglesa.*
 
-Última actualización: 17 de octubre de 2026
+Última actualización: 27 de octubre de 2026
+
+**Qué cambió el 27 de octubre de 2026:** el apartado 5 ahora dice que las partidas que subes también pueden usarse para entrenar el modelo de puesto esperado, salvo que desactives «Usar mis partidas subidas para entrenar el modelo de puesto esperado» en la página de tu cuenta; solo se conservan el modelo y totales de todas las partidas usadas. Se aplica a partidas que no sean del responsable del proyecto solo 30 días después de que enviemos un correo a los usuarios registrados para avisarles.
 
 **Qué cambió el 17 de octubre de 2026 (solo la aplicación de escritorio):** el apartado 9 ahora dice que, solo cuando pulsas Arreglar en el aviso de configuración de la aplicación, esta puede crear o completar los dos archivos de ajustes de registro de Hearthstone (`log.config` y `client.config`), guardando una copia `.bak` de cada archivo que cambia. Sigue leyendo solo los registros del juego y no escribe nada más en las carpetas del juego.
 
@@ -46,7 +48,7 @@ Si activas «Incluir mis partidas en las estadísticas de héroes de la comunida
 
 ## 5. Tus datos y cómo irte
 
-Conservas tus derechos sobre tus datos. Nos permites almacenarlos y tratarlos solo para prestarte el servicio (y para mostrarlos a otros si tu perfil es público, o como totales redondeados de la comunidad si activas las estadísticas de héroes de la comunidad). Puedes descargar tus datos y borrar tu cuenta en cualquier momento desde la página de tu cuenta; la política de privacidad explica qué abarca eso.
+Conservas tus derechos sobre tus datos. Nos permites almacenarlos y tratarlos solo para prestarte el servicio (y para mostrarlos a otros si tu perfil es público, o como totales redondeados de la comunidad si activas las estadísticas de héroes de la comunidad). Salvo que desactives «Usar mis partidas subidas para entrenar el modelo de puesto esperado» en la página de tu cuenta, también podemos usar los registros completos de las partidas que subes para entrenar el modelo de puesto esperado, como explica la política de privacidad; solo se conservan el modelo y totales de todas las partidas usadas, nunca nada sobre ti ni sobre una de tus partidas. Puedes descargar tus datos y borrar tu cuenta en cualquier momento desde la página de tu cuenta; la política de privacidad explica qué abarca eso.
 
 ## 6. Código, contenido del juego y marcas comerciales
 

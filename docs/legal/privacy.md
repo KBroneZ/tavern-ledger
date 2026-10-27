@@ -1,12 +1,14 @@
 # Privacy policy
 
-Last updated: 24 October 2026
+Last updated: 27 October 2026
 
 Tavern Ledger is a free, open-source Hearthstone Battlegrounds tracker: a Windows app that reads the game's log files on your PC, and a website where you can keep and, if you want, share your games. This policy says what personal data we handle, why, where it goes and what you can do about it.
 
 Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.
 
 ## What changed
+
+**What changed on 27 October 2026:** a new use of uploaded games and a switch to object to it. The full records of the games you upload can be used to train the expected-place model: a small model that estimates, for each turn of a game, the place it was heading for, shown on your own games. It is trained on the project owner's computer and only the model and totals over all the games used are kept, never anything about you or one game (section 4, "Training the expected-place model"). The legal basis is our legitimate interest, so the use is on for every account, including accounts made before this change, and you can object at any time with one click: turn off "Use my uploaded games to train the expected-place model" on your account page. Nothing changes for you if you do not upload games. It does not apply to any game but the project owner's until 30 days after we email signed-up users about it. The simulator switch and the community hero stats are unchanged.
 
 **What changed on 24 October 2026 (later that day):** a new setting on your games list, "Keep my last games on this device", off by default, saves your own games you open, up to the last 10, in your browser on your device so you can watch them without a connection (section 8). Nothing is sent to us, and signing out deletes them. Nothing else changes.
 
@@ -91,6 +93,8 @@ There are no ads, no analytics and no tracking.
 | Community hero stats: from the games of accounts that turned the switch on, totals per hero, mode and period, rebuilt daily, with no account id | To show the community hero stats | Consent, as above |
 | Simulator choice: whether you turned on "Let my games be used to improve the simulator" (off by default), when you last changed it and the policy version then in force | To use your games for the simulator only if you asked | Consent (Art. 6(1)(a)): you can withdraw it at any time by turning the switch off |
 | Simulator measurements: from the full game records still kept of accounts that turned the switch on, totals over all the games measured (how often the simulator was right, the combats it got wrong by cause, the cards involved), with no account id or name | To measure and improve the combat simulator | Consent, as above |
+| Training choice: whether you turned off "Use my uploaded games to train the expected-place model" (on unless you turn it off), when you last changed it and the policy version then in force | To leave your games out of the training if you object | Legitimate interest (Art. 6(1)(f)), as below; the record of your choice is kept to honour your objection |
+| Expected-place model: from the full game records still kept of accounts that have not turned the switch off, the model's weights and totals over all the games used (how many games and accounts, rounded, which game builds, how well the model's numbers matched real places), with no account id or name | To give every player an expected place per turn on their own games | Legitimate interest in offering that free feature (Art. 6(1)(f)); you can object at any time with the switch |
 | Leaderboard numbers: for a public profile with a display name, the numbers each board ranks (worked out from your uploaded games) per mode and period, with how many games back each | To show the public leaderboards | Contract, as for the public profile |
 | Your games: a summary row per game (date, mode, hero, place, build, tribes offered, parser version, the numbers on your games and stats pages) and, for 28 days, the game's full record from the app (no player names), if you upload them; when a full record was deleted | To show your history and stats | Contract |
 | Unlimited history: whether your account keeps full game records without the 28-day limit, and since when. We set it by hand for the project's owner and beta testers (later also the paid plan); you cannot set it yourself | To keep those accounts' full records | Contract |
@@ -98,7 +102,7 @@ There are no ads, no analytics and no tracking.
 | Refused requests: a salted hash of the IP address that sent an upload with an invalid sign-in (the address itself is not stored, and the secret salt is replaced every day), and a count, kept one hour at most | To block abusive requests | Legitimate interest in protecting the service |
 | Backups of all of the above, without live sign-in sessions | To recover from failures | Legitimate interest in not losing your data |
 
-Your email and a password are required to have an account; without them we cannot create one. Everything else is optional: a display name, uploading games, a public profile, the community hero stats and the simulator switch.
+Your email and a password are required to have an account; without them we cannot create one. Everything else is optional: a display name, uploading games, a public profile, the community hero stats, the simulator switch and the training switch (on unless you turn it off).
 
 We do **not** collect player names, BattleTags, Battle.net accounts, ratings or MMR. We do not take any automated decision about you that has legal or similarly significant effects.
 
@@ -140,6 +144,18 @@ We do **not** collect player names, BattleTags, Battle.net accounts, ratings or 
 
 **Stopping.** Turn the switch off on your account page. From that moment your games are no longer listed, so no later measurement uses them. A run already under way when you turn it off finishes with the copies it has, and they are deleted the same day. Totals already worked out and rules already fixed stay, because they cannot be traced back to you or to your games. Deleting your account works the same way. Withdrawing your consent does not change what was measured before.
 
+### Training the expected-place model
+
+**What it is.** The expected place is a number for each turn of a game: the place, from 1 to 8 in Solo or 1 to 4 in Duos, that a game in that position usually ends in, with how sure the number is. The app's recap and the website's game page show it beside your health, on your own games. It comes from a small model trained on real games: it learns how games in a given position ended.
+
+**Whose games.** The uploaded games of every account that has not turned "Use my uploaded games to train the expected-place model" off on its account page. The switch is on for every account, including accounts made before it existed, because the legal basis is our legitimate interest, not consent; turning it off is your right to object, and you never need to say why. Uploading itself stays off until you turn it on, so no game leaves your PC for this unless you upload it. The switch is separate from the simulator switch, the community hero stats and your public profile: none of them changes another. Until 30 days after we email signed-up users about this use, only the project owner's own games are used.
+
+**What is used.** The full records of your uploaded games that our server still keeps (section 6): for each turn, your hero, health, tavern tier, gold, board and the tribes in the lobby when known, the boards of the opponents you met, and your final place, with the game's mode and build. The records hold no player names, BattleTags or ratings (section 2). Game summaries, your profile and your account details are not used.
+
+**How.** From time to time the project's owner lists the full records of the accounts whose switch is on at that moment, downloads them to their own computer, removes the account id from each file name and runs the project's own open-source training tool on them. The model never takes an account id as input. The downloaded copies are deleted from that computer when the run ends, the same day. What is kept: the model's weights and totals over all the games used. The weights are published under the project's licence with a description of what they were trained on (how many games and accounts, rounded, which builds, how well calibrated); they are published only once enough games from enough accounts were used that no single account shapes them. Nothing is kept or published per player, with a display name, account id, BattleTag or date, or for a single game. The model then runs on each player's own PC and on the website for their own games; it takes no decision about you.
+
+**Objecting.** Turn the switch off on your account page. From that moment your games are no longer listed, so no later training run uses them. A run already under way when you turn it off finishes with the copies it has, and they are deleted the same day. A model already trained and totals already worked out stay, because they cannot be traced back to you or to your games. Deleting your account works the same way. Turning the switch off never removes a feature: you still see the expected place on your games.
+
 ## 5. Who receives your data
 
 **Our providers**, as processors acting on our instructions, each under a data processing agreement (DPA) that is part of its terms:
@@ -171,6 +187,7 @@ We do not sell or rent your data.
 - **Leaderboard numbers:** rebuilt every 10 minutes while your profile is public; deleted when you make it private or delete your account.
 - **Community stats choice:** until you delete your account. **Community hero stats:** rebuilt once a day; your games leave them at the first rebuild after you turn the switch off or delete your account, and the page shows nothing once the last rebuild is over 26 hours old.
 - **Simulator choice:** until you delete your account. **Use of your games for the simulator:** only while the switch is on, and only the full records still kept (28 days for accounts without unlimited history, as above); the owner's downloaded copies are deleted the same day as each run. The totals keep no account id and are kept as long as they are useful for the simulator.
+- **Training choice:** until you delete your account. **Use of your games for training:** only while the switch is on, and only the full records still kept (28 days for accounts without unlimited history, as above); the owner's downloaded copies are deleted the same day as each run. The model's weights and the totals keep no account id and are kept as long as the model is in use.
 - **Security log:** 30 days, then deleted every day by our clean-up job; all of it goes earlier if you delete your account.
 - **Backups:** made weekly on the controller's own computer, readable only by their user account, and deleted after 35 days. After you delete your account, your data can remain in backups for up to 35 days. If we ever restore a backup, we delete again the accounts deleted since it was made.
 - **Upload times:** two days. **Refused-request counters:** one hour.
@@ -180,11 +197,11 @@ We do not sell or rent your data.
 
 You can, at any time:
 
-- **Download your data:** "Download my data" on your account page gives one JSON file with your account details (not your password hash or sign-in tokens), sign-in sessions, security log, profile, your community stats choice, your simulator choice, game rows (each says when its full record was deleted, if it was), your leaderboard numbers, the full game records still kept (section 6) and whether your account has unlimited history. It is machine-readable, so you can take it elsewhere (data portability).
+- **Download your data:** "Download my data" on your account page gives one JSON file with your account details (not your password hash or sign-in tokens), sign-in sessions, security log, profile, your community stats choice, your simulator choice, your training choice, game rows (each says when its full record was deleted, if it was), your leaderboard numbers, the full game records still kept (section 6) and whether your account has unlimited history. It is machine-readable, so you can take it elsewhere (data portability).
 - **Ask for access** to anything else we hold about you, such as what may be in provider logs or backups, by writing to us.
 - **Correct** your display name on the account page; for anything else, write to us.
-- **Delete** your account: "Delete account" on your account page removes your files, game rows, leaderboard numbers, community stats choice, simulator choice, unlimited history mark, profile, sessions, security log and the account itself. Backups and provider logs expire as in section 6.
-- **Object** to processing based on legitimate interest, or ask us to **restrict** processing.
+- **Delete** your account: "Delete account" on your account page removes your files, game rows, leaderboard numbers, community stats choice, simulator choice, training choice, unlimited history mark, profile, sessions, security log and the account itself. Backups and provider logs expire as in section 6.
+- **Object** to processing based on legitimate interest, or ask us to **restrict** processing. To object to the training of the expected-place model, turn "Use my uploaded games to train the expected-place model" off on your account page; your games are not used again from that moment.
 - **Stop publishing** your profile and leave the leaderboards by turning the switch off.
 - **Withdraw your consent** to the community hero stats by turning "Include my games in community hero stats" off; your games leave the totals at the next daily rebuild.
 - **Withdraw your consent** to the use of your games for the simulator by turning "Let my games be used to improve the simulator" off; your games are not used again from that moment.
