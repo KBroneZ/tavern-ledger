@@ -27,7 +27,7 @@ jobs:
   # protection that asks for `check` covers all of them without a settings
   # change. `if: always()` matters: a skipped job would otherwise count as green.
   check:
-    needs: [repo, desktop, engine, functions, database, advisories]
+    needs: [repo, desktop, engine, functions, database, advisories, conformance]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 2
@@ -243,6 +243,40 @@ jobs:
             echo "::error::web/src/lib/sim/engine.wasm is not what its sources build to. Run 'node tools/build-sim-wasm.ts' in web/ and commit the result."
             exit 1
           }
+
+  # The simulator against the maintainer's own logged combats (T-641, T-642):
+  # every combat of the committed corpus is played with the card data of its
+  # own game build and compared with the committed baseline; any combat that
+  # moved fails. The card data is HearthstoneJSON's, never committed: it is
+  # fetched here and checked against the SHA-256 pinned next to the corpus,
+  # so a change upstream cannot move the baseline unseen.
+  conformance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal
+          rustup default "$RUST_VERSION"
+
+      - name: Card data of each build
+        run: |
+          mkdir -p "$RUNNER_TEMP/cards"
+          while read -r hash build; do
+            [[ "$build" =~ ^[0-9]+$ ]] || { echo "::error::cards.sha256: $build is not a build number"; exit 1; }
+            curl -sSfL --max-filesize 67108864 -A "TavernLedger-ci (+https://tavernledger.net)" -o "$RUNNER_TEMP/cards/$build.json" "https://api.hearthstonejson.com/v1/$build/enUS/cards.json"
+            echo "$hash  $RUNNER_TEMP/cards/$build.json" | sha256sum --check --strict
+          done < crates/combat-sim/tests/corpus/cards.sha256
+
+      - name: Every combat as in the baseline
+        run: |
+          set -- --corpus crates/combat-sim/tests/corpus/corpus.jsonl.gz --baseline crates/combat-sim/tests/corpus/baseline.json
+          while read -r hash build; do set -- "$@" --cards "$build=$RUNNER_TEMP/cards/$build.json"; done < crates/combat-sim/tests/corpus/cards.sha256
+          cargo run --locked --release -p combat-sim --bin combat-conformance -- "$@"
 
   # The Edge Functions' tests. Deno is not a third-party action: the release
   # file is downloaded from the project's releases and checked against its
