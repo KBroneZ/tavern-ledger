@@ -224,9 +224,13 @@ pub struct Deity {
 }
 
 impl Deity {
-    /// Whether the board brings a Deity the engine can awaken.
+    /// Whether the board brings a Deity the engine can awaken: a Deity's
+    /// id, the deaths it needs and its stats.
     pub fn known(&self) -> bool {
-        crate::cards::deity_card(self.dbf).is_some() && self.needed > 0
+        crate::cards::deity_card(self.dbf).is_some()
+            && self.needed > 0
+            && self.attack > 0
+            && self.health > 0
     }
 }
 

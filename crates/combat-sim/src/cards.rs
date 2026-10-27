@@ -415,7 +415,10 @@ pub fn deity_card(dbf: i32) -> Option<&'static str> {
 /// Whether a card is a Deity (never counted among the Aberrations that
 /// awaken one).
 pub fn is_deity(id: &str) -> bool {
-    id.starts_with("BGFYM_000") || id.starts_with("BGFYM_011")
+    matches!(
+        id,
+        "BGFYM_000" | "BGFYM_000_G" | "BGFYM_011" | "BGFYM_011_G"
+    )
 }
 
 pub fn token(id: &str) -> Option<&'static Token> {
