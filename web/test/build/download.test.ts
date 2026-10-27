@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { loadEnv } from "vite";
 import { readConfig } from "../../src/lib/config.ts";
 import { RELEASE, installerUrl, releasesUrl } from "../../src/lib/site/release.ts";
+import { liveChannels } from "../../src/lib/site/channels.ts";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const DIST = join(ROOT, "dist");
@@ -18,6 +19,9 @@ const PAGES = [
   { file: "es/download/index.html", lang: "es", download: "Descargar", all: "Todas las versiones en GitHub", steps: "Instálala en cuatro pasos" },
 ] as const;
 const read = (file: string) => readFileSync(join(DIST, file), "utf8");
+// "Other ways to install" (T-707) is a fifth extra once a listing is live.
+const CHANNELS = liveChannels();
+const EXTRAS = CHANNELS.length > 0 ? 5 : 4;
 
 test("the download page exists in English and Spanish, indexable, with its own canonical address", () => {
   for (const page of PAGES) {
@@ -65,12 +69,12 @@ test("four one-line steps and four extras, each with its Read more folded shut",
     assert.equal([...steps.matchAll(/<details class="more"/g)].length, 4, `${page.file}: each step has its Read more`);
     assert.ok(html.includes(page.steps), page.file);
     const folds = [...html.matchAll(/<details\b[^>]*>/g)].map((m) => m[0]);
-    assert.equal(folds.length, 8, `${page.file}: four steps and four extras`);
+    assert.equal(folds.length, 4 + EXTRAS, `${page.file}: four steps and the extras`);
     for (const fold of folds) assert.doesNotMatch(fold, /\sopen\b/, `${page.file}: closed at first`);
-    assert.equal([...html.matchAll(/<summary>/g)].length, 8, page.file);
+    assert.equal([...html.matchAll(/<summary>/g)].length, 4 + EXTRAS, page.file);
     // The shared "Read more" fold (D-130) after a short line that stays in view.
-    assert.equal([...html.matchAll(/<details class="more"/g)].length, 8, `${page.file}: Read more`);
-    assert.equal([...html.matchAll(/<p class="dl-short">/g)].length, 4, `${page.file}: a short line each`);
+    assert.equal([...html.matchAll(/<details class="more"/g)].length, 4 + EXTRAS, `${page.file}: Read more`);
+    assert.equal([...html.matchAll(/<p class="dl-short">/g)].length, EXTRAS, `${page.file}: a short line each`);
   }
 });
 
@@ -88,7 +92,11 @@ test("the only outside links are to the project's GitHub, and the privacy link s
   for (const page of PAGES) {
     const html = read(page.file);
     const outside = [...html.matchAll(/<a\b[^>]*\shref="(https?:\/\/[^"]+)"/g)].map((m) => m[1]);
-    for (const url of outside) assert.match(url, /^https:\/\/github\.com\/KBroneZ\/tavern-ledger(\/|$)/, `${page.file}: ${url}`);
+    const store = CHANNELS.flatMap((c) => (c.kind === "store" ? [c.url] : []));
+    for (const url of outside) {
+      if (store.includes(url)) continue;
+      assert.match(url, /^https:\/\/github\.com\/KBroneZ\/tavern-ledger(\/|$)/, `${page.file}: ${url}`);
+    }
     assert.match(html, new RegExp(`href="${page.lang === "en" ? "" : "/es"}/privacy/"`), page.file);
   }
 });
@@ -169,4 +177,14 @@ test("the terms and the privacy policy say the read is on by default, how to tur
 test("the privacy policy says the desktop app downloads the minion pictures from our image host", () => {
   assert.match(read("privacy/index.html"), /<strong>Minion pictures\.<\/strong> When it has no complete set[\s\S]{0,700}assets\.tavernledger\.net[\s\S]{0,400}IP address and the app.s user agent/);
   assert.match(read("es/privacy/index.html"), /<strong>Imágenes de esbirros\.<\/strong> Cuando no tiene un conjunto completo[\s\S]{0,700}assets\.tavernledger\.net[\s\S]{0,400}dirección IP de tu PC y el agente de usuario/);
+});
+
+test("other ways to install: shown only for a live listing, never before (T-707)", () => {
+  for (const page of PAGES) {
+    const html = read(page.file);
+    const title = page.lang === "en" ? "Other ways to install" : "Otras formas de instalarla";
+    assert.equal(html.includes(`<h3>${title}</h3>`), CHANNELS.length > 0, page.file);
+    assert.equal(html.includes("apps.microsoft.com"), CHANNELS.some((c) => c.kind === "store"), page.file);
+    assert.equal(html.includes("winget install"), CHANNELS.some((c) => c.kind === "winget"), page.file);
+  }
 });

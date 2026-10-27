@@ -73,6 +73,13 @@ export const ES: Record<DlKey, string> = {
     "Desde la versión 0.2.1 la aplicación se actualiza sola: busca una versión nueva al iniciarse y cada pocas horas, y te pide reiniciar cuando hay una lista.",
   "update.body":
     "Si tienes la versión 0.1.0, instala una vez encima la versión nueva de esta página: sustituye la aplicación y conserva tus partidas y ajustes. Después, las actualizaciones llegan solas, firmadas por el proyecto, y solo se instalan cuando pulsas «Reiniciar ahora». Puedes desactivar la búsqueda en los Ajustes de la aplicación, en Actualizaciones.",
+  "other.title": "Otras formas de instalarla",
+  "other.short.both": "La misma aplicación desde Microsoft Store o con winget.",
+  "other.short.store": "La misma aplicación desde Microsoft Store.",
+  "other.short.winget": "La misma aplicación con winget.",
+  "other.store": "La edición de Microsoft Store se instala sin aviso de Windows, y la Store trae sus actualizaciones.",
+  "other.store.link": "Consíguela en Microsoft Store",
+  "other.winget": "Con winget, en una terminal (después la aplicación se actualiza sola, como desde esta página):",
   "remove.title": "Desinstalar",
   "remove.short": "Quítala en Configuración de Windows, en Aplicaciones. Tus partidas se conservan.",
   "remove.body":
