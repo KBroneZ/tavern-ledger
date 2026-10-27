@@ -211,7 +211,11 @@ impl<'c> Sims<'c> {
 
     /// A board's odds so far, or why it has none.
     pub(super) fn odds(&self, teams: &(Team, Team)) -> Result<Odds, Gap> {
-        match self.cache.get(&key(teams)) {
+        self.odds_at(&key(teams))
+    }
+
+    fn odds_at(&self, k: &str) -> Result<Odds, Gap> {
+        match self.cache.get(k) {
             Some(Ok(r)) => Ok(r.odds.clone()),
             Some(Err(g)) => Err(*g),
             None => Err(Gap::OutOfTime),
@@ -225,7 +229,7 @@ impl<'c> Sims<'c> {
         if self.trials_of(&k) == Some(0) && !self.over_time() {
             self.batch(&k, actual);
         }
-        self.odds(actual)
+        self.odds_at(&k)
     }
 
     /// Plays the actual board and an alternative in step, the one with
@@ -239,8 +243,8 @@ impl<'c> Sims<'c> {
                 break Stop::Gap;
             };
             if na > 0 && nb > 0 {
-                if let (Ok(a), Ok(b)) = (self.odds(actual), self.odds(alt)) {
-                    if let Some(s) = settled(&a, &b) {
+                if let (Some(Ok(a)), Some(Ok(b))) = (self.cache.get(&ka), self.cache.get(&kb)) {
+                    if let Some(s) = settled(&a.odds, &b.odds) {
                         break s;
                     }
                 }
@@ -258,7 +262,7 @@ impl<'c> Sims<'c> {
             }
         };
         Compared {
-            alternative: self.odds(alt),
+            alternative: self.odds_at(&kb),
             stop,
         }
     }
