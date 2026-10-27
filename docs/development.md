@@ -206,6 +206,12 @@ cargo run --release -p expected-place -- --history "%APPDATA%\TavernLedger\games
 
 The rows' format is `expected_place::VERSION`; it goes up whenever a feature is added, removed or changes meaning.
 
+`place-train` trains the first model on a history (T-653): for Solo and Duos, a multinomial logistic regression over the places, each game weighing the same, cross-validated by game in 5 folds against two baselines (the place shares over all games, and per turn), with the L2 penalty chosen among a few by the lowest cross-validated log-loss. It writes `model-solo.json`, `model-duos.json` and a card for each (data, builds, log-loss, ranked probability score, mean distance to the real place, calibration). A model trained on fewer than `expected_place::model::MIN_GAMES` games of its mode is not shown to players:
+
+```
+cargo run --release -p expected-place --bin place-train -- --history "%APPDATA%\TavernLedger\games.jsonl" --out .local/model
+```
+
 ### Real-game fixtures
 
 Copy the raw log into `.local/` (never commit it), build the parser and make one fixture per game; the script writes nothing if the log has a game played with the reconnect dev tool (D-043), if a name or id would be left, or if the fixture would read differently from the raw game:

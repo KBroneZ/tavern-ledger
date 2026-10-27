@@ -15,6 +15,9 @@
 
 use serde_json::Value;
 
+pub mod eval;
+pub mod model;
+
 /// The rows' format; raised whenever a feature is added, removed or changes
 /// meaning, so a model is never fed rows it was not trained on.
 pub const VERSION: u32 = 1;
@@ -255,6 +258,34 @@ pub fn encode(report: &Value) -> Result<Game, Skip> {
         final_place,
         turns,
     })
+}
+
+/// The report of each game in a history (the app's `games.jsonl`, one line
+/// per save, keyed by session and index), the last record of a game
+/// winning as in the app; and the number of lines that are not a game.
+pub fn latest_reports(text: &str) -> (Vec<Value>, usize) {
+    let mut latest: Vec<((String, u64), Value)> = Vec::new();
+    let mut bad = 0;
+    for line in text.lines().filter(|l| !l.trim().is_empty()) {
+        let Ok(v) = serde_json::from_str::<Value>(line) else {
+            bad += 1;
+            continue;
+        };
+        let key = v
+            .get("session")
+            .and_then(Value::as_str)
+            .zip(v.get("index").and_then(Value::as_u64));
+        let (Some((session, index)), Some(report)) = (key, v.get("report")) else {
+            bad += 1;
+            continue;
+        };
+        let key = (session.to_string(), index);
+        match latest.iter_mut().find(|(k, _)| *k == key) {
+            Some(slot) => slot.1 = report.clone(),
+            None => latest.push((key, report.clone())),
+        }
+    }
+    (latest.into_iter().map(|(_, r)| r).collect(), bad)
 }
 
 /// The CSV header: an opaque game number, the game's build and hero,
