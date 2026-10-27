@@ -18,6 +18,8 @@ export interface RowView {
   real: string;
   games: string;
   rows: string;
+  /** For said, real, games and rows in that order: whether the value is withheld (drawn with `why` for screen readers). */
+  withheld: [boolean, boolean, boolean, boolean];
   /** Why the averages are a dash, in words; null when they are shown. */
   why: string | null;
 }
@@ -73,8 +75,10 @@ function rowView(b: CalibrationBucket, thin: number): RowView {
     range: ct("build.range", { from: plain(b.from), to: plain(b.to) }),
     said: b.said === null ? DASH : twoDecimals(b.said),
     real: b.real === null ? DASH : twoDecimals(b.real),
-    games: plain(b.games),
-    rows: plain(b.rows),
+    // A thin bucket's counts are not published: only that there are fewer than thin.
+    games: b.games === null ? `<${plain(thin)}` : plain(b.games),
+    rows: b.rows === null ? DASH : plain(b.rows),
+    withheld: [b.said === null, b.real === null, b.games === null, b.rows === null],
     why,
   };
 }

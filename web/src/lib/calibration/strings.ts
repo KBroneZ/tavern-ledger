@@ -35,7 +35,7 @@ export const CAL_STRINGS = {
   "distance.label": "Average distance from the real place",
   "distance.back": "In places; lower is better. Guessing from the turn alone: {perTurn}. Guessing from how often each place happens: {overall}.",
   "distance.more":
-    "Both guesses are worked out from the games each model was trained on, like the model itself, and checked on the same unseen games.",
+    "Both guesses are worked out from the games each model was trained on, like the model itself, and checked on the same unseen games. The model's settings were chosen on these same parts, so its own figure is a little optimistic.",
 
   "build.caption": "Build {build}",
   "build.summary": "{games} games, {rows} combats",
@@ -57,9 +57,9 @@ export const CAL_STRINGS = {
 
   "about.title": "How it is checked, and its limits",
   "about.body":
-    "Cross-validation by game: the games are split into parts, and each part is predicted by a model trained on the others, so a game's turns are never both learned from and checked. The numbers say how the training does on games it has not seen; the published model is then trained on all of them.",
+    "Cross-validation by game: the games are split into parts, and each part is predicted by a model trained on the others, so a game's turns are never both learned from and checked. The numbers say how the training does on games it has not seen; the published model is then trained on all of them. The model's settings were picked by how well they did on these same parts, so the numbers are a little optimistic.",
   "about.private":
-    "Only totals are published, never a game, a player or a hero. An average needs at least {thin} games behind it, and each game version is counted on its own, with no total across versions beside it.",
+    "Only totals are published, never a game, a player or a hero. An average needs at least {thin} games behind it; a group with fewer shows neither its averages nor its exact counts, only that it has fewer than {thin} games. Each game version is counted on its own, with no total across versions beside it.",
 } as const;
 
 export type CalKey = keyof typeof CAL_STRINGS;

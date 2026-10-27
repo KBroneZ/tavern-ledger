@@ -91,8 +91,8 @@ const view = calibrationView(parseCalibration(rawCalibration));
                         {b.rows.map((r) => (
                           <tr>
                             <th scope="row">{r.range}</th>
-                            {[r.said, r.real].map((value) =>
-                              r.why === null ? (
+                            {[r.said, r.real, r.games, r.rows].map((value, i) =>
+                              !r.withheld[i] ? (
                                 <td class="num">{value}</td>
                               ) : (
                                 <td class="num is-unknown">
@@ -101,8 +101,6 @@ const view = calibrationView(parseCalibration(rawCalibration));
                                 </td>
                               ),
                             )}
-                            <td class="num">{r.games}</td>
-                            <td class="num">{r.rows}</td>
                           </tr>
                         ))}
                       </tbody>

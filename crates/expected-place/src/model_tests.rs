@@ -133,10 +133,10 @@ fn a_bucket_counts_its_games_once_and_a_sure_last_place_is_in_the_last_bucket() 
         said,
         place,
     };
-    assert_eq!(bucket_of(1.0, 4), 1);
-    assert_eq!(bucket_of(2.99, 4), 2);
-    assert_eq!(bucket_of(4.0, 4), 3);
-    assert_eq!(bucket_of(8.0, 8), 7);
+    assert_eq!(bucket_of(1.0, 4), Some(1));
+    assert_eq!(bucket_of(2.99, 4), Some(2));
+    assert_eq!(bucket_of(4.0, 4), Some(3));
+    assert_eq!(bucket_of(8.0, 8), Some(7));
     let preds = [
         said(0, 2.2, 2),
         said(0, 2.6, 2),
@@ -148,6 +148,25 @@ fn a_bucket_counts_its_games_once_and_a_sure_last_place_is_in_the_last_bucket() 
     assert_eq!((b[0].from, b[0].rows, b[0].games), (2, 3, 2));
     assert!((b[0].said - 2.4).abs() < 1e-9 && (b[0].real - 8.0 / 3.0).abs() < 1e-9);
     assert_eq!((b[1].from, b[1].rows, b[1].games), (3, 1, 1));
+}
+
+#[test]
+fn an_expected_place_that_is_not_a_number_is_in_no_bucket() {
+    use crate::eval::{bucket_of, buckets, Said};
+    for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        assert_eq!(bucket_of(bad, 8), None);
+        let p = Said {
+            game: 0,
+            build: Some(1),
+            said: bad,
+            place: 3,
+        };
+        assert!(!p.is_finite());
+        let good = Said { said: 2.5, ..p };
+        let b = buckets([&p, &good], 8);
+        assert_eq!(b.len(), 1);
+        assert_eq!((b[0].from, b[0].rows, b[0].games), (2, 1, 1));
+    }
 }
 
 #[test]

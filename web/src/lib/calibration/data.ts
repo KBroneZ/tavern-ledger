@@ -24,11 +24,11 @@ export interface CalibrationBucket {
   /** Expected places from `from` up to `to` (the last bucket includes `to`). */
   from: number;
   to: number;
-  /** Combats whose expected place fell here. */
-  rows: number;
-  /** The games they come from. */
-  games: number;
-  /** null exactly when fewer than thin_games games are behind the bucket (0 for an empty one). */
+  /** Combats whose expected place fell here; null for a thin bucket (1 to thin_games - 1 games), whose counts are not published. */
+  rows: number | null;
+  /** The games they come from; null for a thin bucket, 0 for an empty one. */
+  games: number | null;
+  /** null exactly when fewer than thin_games games are behind the bucket (thin or empty). */
   said: number | null;
   real: number | null;
 }
@@ -111,10 +111,15 @@ function bucket(value: unknown, index: number, places: number, thin: number, whe
   const from = count(raw.from, `${where}.from`);
   const to = count(raw.to, `${where}.to`);
   if (from !== index + 1 || to !== from + 1) throw new Error(`${where}.from: not the bucket ${index + 1} to ${index + 2}`);
-  const rows = count(raw.rows, `${where}.rows`);
-  const games = count(raw.games, `${where}.games`);
-  if ((rows === 0) !== (games === 0) || games > rows) throw new Error(`${where}: games and rows are 0 together, and games are at most rows`);
-  const shown = games >= thin;
+  // A thin bucket publishes no count at all: rows and games are both null.
+  if ((raw.rows === null) !== (raw.games === null)) throw new Error(`${where}: rows and games are null together`);
+  const rows = raw.rows === null ? null : count(raw.rows, `${where}.rows`);
+  const games = raw.games === null ? null : count(raw.games, `${where}.games`);
+  if (rows !== null && games !== null) {
+    if ((rows === 0) !== (games === 0) || games > rows) throw new Error(`${where}: games and rows are 0 together, and games are at most rows`);
+    if (games > 0 && games < thin) throw new Error(`${where}.games: a count under ${thin} games is published`);
+  }
+  const shown = games !== null && games >= thin;
   if ((raw.said === null) === shown || (raw.real === null) === shown) {
     throw new Error(`${where}: said and real are null exactly with fewer than ${thin} games`);
   }
@@ -139,8 +144,11 @@ function build(value: unknown, places: number, thin: number, where: string): Cal
   const rows = count(raw.rows, `${where}.rows`);
   if (!Array.isArray(raw.buckets) || raw.buckets.length !== places - 1) throw new Error(`${where}.buckets: not ${places - 1} buckets`);
   const buckets = raw.buckets.map((b, i) => bucket(b, i, places, thin, `${where}.buckets[${i}]`));
-  for (const b of buckets) if (b.games > games) throw new Error(`${where}: a bucket has more games than the build`);
-  if (buckets.reduce((sum, b) => sum + b.rows, 0) !== rows) throw new Error(`${where}.rows: not the sum of the buckets' rows`);
+  for (const b of buckets) if ((b.games ?? 0) > games) throw new Error(`${where}: a bucket has more games than the build`);
+  // A thin bucket's rows are not published but are at least 1 each.
+  const known = buckets.reduce((sum, b) => sum + (b.rows ?? 0), 0);
+  const thinBuckets = buckets.filter((b) => b.rows === null).length;
+  if (thinBuckets === 0 ? known !== rows : known + thinBuckets > rows) throw new Error(`${where}.rows: not the sum of the buckets' rows`);
   return { build: number, games, rows, buckets };
 }
 
@@ -172,7 +180,7 @@ function calibratedMode(value: unknown, mode: CalibrationMode): CalibratedMode {
   const folds = count(raw.folds, `${where}.folds`);
   if (folds < 2 || folds > games) throw new Error(`${where}.folds: not between 2 and the games`);
   const minGames = count(raw.min_games, `${where}.min_games`);
-  if (minGames === 0) throw new Error(`${where}.min_games: not a count above 0`);
+  if (minGames < MIN_GAMES) throw new Error(`${where}.min_games: below ${MIN_GAMES}`);
   if (raw.ready !== (games >= minGames)) throw new Error(`${where}.ready: not games >= min_games`);
   if (!Array.isArray(raw.builds) || raw.builds.length > MAX_BUILDS) throw new Error(`${where}.builds: not a list of up to ${MAX_BUILDS}`);
   const builds = raw.builds.map((b, i) => build(b, places, thin, `${where}.builds[${i}]`));

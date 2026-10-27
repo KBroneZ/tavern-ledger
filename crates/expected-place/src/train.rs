@@ -226,6 +226,15 @@ fn run() -> Result<(), String> {
     if written == 0 {
         return Err("no game with a final place and a combat; nothing written".into());
     }
+    for r in reports.iter().flatten() {
+        let bad = r.predictions.iter().filter(|p| !p.is_finite()).count();
+        if bad > 0 {
+            let name = if r.solo { "solo" } else { "duos" };
+            return Err(format!(
+                "{name}: {bad} held-out predictions are not a number; calibration.json not written"
+            ));
+        }
+    }
     let file = calibration_file(
         &day_text(today()?),
         reports[0].as_ref(),

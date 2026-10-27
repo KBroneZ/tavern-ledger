@@ -15,7 +15,7 @@ export const ES: Record<CalKey, string> = {
     "El puesto esperado necesita un modelo entrenado con al menos {min} partidas por modo, y todavía no se ha publicado ninguno. Mientras tanto, ni la app ni la web muestran el puesto esperado, y esta página no tiene cifras que enseñar: mejor ninguna que unas inventadas.",
   "empty.next.title": "Qué mostrará esta página",
   "empty.next.groups":
-    "Para cada modo y versión del juego, los turnos agrupados según el puesto esperado que se dio (de 1 a 2, de 2 a 3, etc.), con el puesto previsto medio, el puesto final medio de esas partidas y cuántas partidas y combates hay detrás de cada grupo. Si las dos medias se parecen, el puesto esperado es fiable.",
+    "Para cada modo y versión del juego, los turnos agrupados según el puesto esperado indicado (de 1 a 2, de 2 a 3, etc.), con el puesto esperado medio, el puesto final medio de esas partidas y cuántas partidas y combates hay detrás de cada grupo. Si las dos medias se parecen, el puesto esperado es fiable.",
   "empty.next.thin":
     "Un grupo con menos de {thin} partidas muestra un guion en lugar de sus medias: son muy pocas para sacar conclusiones, y muy pocas para que no se pueda deducir el puesto de una partida concreta.",
   "empty.next.distance":
@@ -30,14 +30,14 @@ export const ES: Record<CalKey, string> = {
   "mode.ready": "Los jugadores ya pueden verlo: se entrenó con al menos {min} partidas de este modo.",
 
   "distance.label": "Distancia media al puesto real",
-  "distance.back": "En puestos; cuanto menos, mejor. Estimando solo por el turno: {perTurn}. Estimando por la frecuencia de cada puesto: {overall}.",
+  "distance.back": "En puestos; cuanto menos, mejor. Estimando solo con el turno: {perTurn}. Estimando por la frecuencia de cada puesto: {overall}.",
   "distance.more":
-    "Las dos estimaciones salen de las partidas con las que se entrenó cada modelo, igual que el propio modelo, y se comprueban con las mismas partidas que no vio.",
+    "Las dos estimaciones salen de las partidas con las que se entrenó cada modelo, igual que el propio modelo, y se comprueban con las mismas partidas que no vio. Los ajustes del modelo se eligieron con estas mismas partes, así que su propia cifra es algo optimista.",
 
   "build.caption": "Versión {build}",
   "build.summary": "{games} partidas, {rows} combates",
-  "build.col.range": "Puesto esperado dado",
-  "build.col.said": "Puesto previsto medio",
+  "build.col.range": "Puesto esperado indicado",
+  "build.col.said": "Puesto esperado medio",
   "build.col.real": "Puesto final medio",
   "build.col.games": "Partidas",
   "build.col.rows": "Combates",
@@ -54,7 +54,7 @@ export const ES: Record<CalKey, string> = {
 
   "about.title": "Cómo se comprueba y sus límites",
   "about.body":
-    "Validación cruzada por partida: las partidas se reparten en partes, y cada parte la predice un modelo entrenado con las demás, así que los turnos de una partida nunca sirven a la vez para aprender y para comprobar. Las cifras dicen cómo funciona el entrenamiento con partidas que no ha visto; después, el modelo publicado se entrena con todas.",
+    "Validación cruzada por partida: las partidas se reparten en partes, y cada parte la predice un modelo entrenado con las demás, así que los turnos de una partida nunca sirven a la vez para aprender y para comprobar. Las cifras dicen cómo funciona el entrenamiento con partidas que no ha visto; después, el modelo publicado se entrena con todas. Los ajustes del modelo se eligieron según cómo funcionaban en estas mismas partes, así que las cifras son algo optimistas.",
   "about.private":
-    "Solo se publican totales, nunca una partida, un jugador ni un héroe. Una media necesita al menos {thin} partidas detrás, y cada versión del juego se cuenta por separado, sin un total de todas las versiones al lado.",
+    "Solo se publican totales, nunca una partida, un jugador ni un héroe. Una media necesita al menos {thin} partidas detrás; un grupo con menos no muestra ni sus medias ni sus cifras exactas, solo que tiene menos de {thin} partidas. Cada versión del juego se cuenta por separado, sin un total de todas las versiones al lado.",
 };

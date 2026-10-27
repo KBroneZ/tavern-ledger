@@ -25,8 +25,13 @@ use crate::VERSION;
 pub const FORMAT: u32 = 1;
 
 /// The fewest games a build, or a group within it, needs before its means
-/// are published. Below it the group shows a dash.
+/// and counts are published. Below it a group shows a dash and its counts
+/// are left out too (null), so only "fewer than this" is told.
 pub const THIN_GAMES: usize = 20;
+
+/// The highest game build number taken as real; a build of 0, below 0 or
+/// above it is counted with the games of no build.
+pub const MAX_BUILD: i64 = 1_000_000_000;
 
 /// The most builds listed per mode, newest first; the others are counted.
 pub const MAX_BUILDS: usize = 20;
@@ -44,20 +49,24 @@ fn distinct_games(predictions: &[&Said]) -> usize {
         .len()
 }
 
-/// One build's every bucket, `1-2` to `places-1 - places`; an empty or thin
-/// one has no means.
+/// One build's every bucket, `1-2` to `places-1 - places`; an empty one
+/// has no means and a thin one has neither means nor counts.
 fn build_json(build: i64, predictions: &[&Said], k: usize) -> Value {
     let found = buckets(predictions.iter().copied(), k);
     let rows: Vec<Value> = (1..k as u32)
         .map(|from| {
             let b = found.iter().find(|b| b.from == from);
-            let (rows, games) = b.map_or((0, 0), |b| (b.rows, b.games));
             let shown = b.filter(|b| b.games >= THIN_GAMES);
+            let count = |n: usize| match b {
+                None => json!(0),
+                Some(_) if shown.is_none() => Value::Null,
+                Some(_) => json!(n),
+            };
             json!({
                 "from": from,
                 "to": from + 1,
-                "rows": rows,
-                "games": games,
+                "rows": count(b.map_or(0, |b| b.rows)),
+                "games": count(b.map_or(0, |b| b.games)),
                 "said": shown.map(|b| round2(b.said)),
                 "real": shown.map(|b| round2(b.real)),
             })
@@ -74,8 +83,10 @@ fn build_json(build: i64, predictions: &[&Said], k: usize) -> Value {
 fn mode_json(r: &Report) -> Value {
     let k = places(r.solo);
     let mut by_build: BTreeMap<i64, Vec<&Said>> = BTreeMap::new();
-    for p in &r.predictions {
-        if let Some(b) = p.build {
+    // A prediction that is not a number is in no bucket, and so in no
+    // build's rows; a build number out of range counts as no build.
+    for p in r.predictions.iter().filter(|p| p.is_finite()) {
+        if let Some(b) = p.build.filter(|b| (1..=MAX_BUILD).contains(b)) {
             by_build.entry(b).or_default().push(p);
         }
     }

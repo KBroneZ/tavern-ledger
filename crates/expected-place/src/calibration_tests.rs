@@ -95,6 +95,50 @@ fn the_website_reads_the_format_this_crate_writes() {
     assert_eq!(v["format"], json!(FORMAT));
 }
 
+/// The file this crate writes for the made-up Duos games, saved for the
+/// website's tests (web/test/unit/calibration.test.ts parses it), so a
+/// change of shape on either side fails a test.
+/// `BLESS=1 cargo test -p expected-place calibration` writes it again.
+#[test]
+fn the_saved_published_file_for_the_website_is_current() {
+    let v = calibration_file("2026-11-02", None, Some(&duos()));
+    let text = serde_json::to_string_pretty(&v).unwrap() + "\n";
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/data/calibration_published.json");
+    if std::env::var_os("BLESS").is_some() {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, &text).unwrap();
+    }
+    let saved = std::fs::read_to_string(&path)
+        .unwrap_or_default()
+        .replace("\r\n", "\n");
+    assert_eq!(
+        saved, text,
+        "run BLESS=1 cargo test -p expected-place calibration"
+    );
+}
+
+#[test]
+fn predictions_that_are_not_numbers_and_impossible_builds_are_left_out() {
+    let mut games = Vec::new();
+    for _ in 0..THIN_GAMES {
+        games.push((Some(300), vec![(2.5, 2), (f64::NAN, 2)]));
+    }
+    for build in [0, -4, MAX_BUILD + 1] {
+        for _ in 0..THIN_GAMES {
+            games.push((Some(build), vec![(2.5, 2)]));
+        }
+    }
+    let v = calibration_file("2026-11-02", None, Some(&report(false, &games)));
+    let m = &v["modes"]["duos"];
+    let builds = m["builds"].as_array().unwrap();
+    assert_eq!(builds.len(), 1);
+    assert_eq!(builds[0]["build"], json!(300));
+    assert_eq!(builds[0]["rows"], json!(THIN_GAMES));
+    assert_eq!(builds[0]["buckets"][1]["rows"], json!(THIN_GAMES));
+    assert_eq!(m["other_games"], json!(3 * THIN_GAMES));
+}
+
 #[test]
 fn a_mode_lists_its_builds_newest_first_with_every_bucket() {
     let v = calibration_file("2026-11-02", None, Some(&duos()));
@@ -129,7 +173,7 @@ fn a_mode_lists_its_builds_newest_first_with_every_bucket() {
     assert_eq!(
         builds[1],
         json!({"build": 100, "games": 25, "rows": 35, "buckets": [
-            {"from": 1, "to": 2, "rows": 10, "games": 10, "said": null, "real": null},
+            {"from": 1, "to": 2, "rows": null, "games": null, "said": null, "real": null},
             {"from": 2, "to": 3, "rows": 0, "games": 0, "said": null, "real": null},
             {"from": 3, "to": 4, "rows": 25, "games": 25, "said": 3.3, "real": 4.0},
         ]})
@@ -178,9 +222,13 @@ fn no_published_mean_has_fewer_games_than_the_floor_and_no_game_is_named() {
     for b in v["modes"]["duos"]["builds"].as_array().unwrap() {
         assert!(b["games"].as_u64().unwrap() >= THIN_GAMES as u64);
         for bucket in b["buckets"].as_array().unwrap() {
-            let thin = bucket["games"].as_u64().unwrap() < THIN_GAMES as u64;
-            assert_eq!(bucket["said"].is_null(), thin, "{bucket}");
-            assert_eq!(bucket["real"].is_null(), thin, "{bucket}");
+            // Shown: at least THIN_GAMES games; empty: 0; thin: no count at all.
+            let games = bucket["games"].as_u64();
+            let shown = games.is_some_and(|g| g >= THIN_GAMES as u64);
+            assert!(shown || games == Some(0) || games.is_none(), "{bucket}");
+            assert_eq!(games.is_none(), bucket["rows"].is_null(), "{bucket}");
+            assert_eq!(bucket["said"].is_null(), !shown, "{bucket}");
+            assert_eq!(bucket["real"].is_null(), !shown, "{bucket}");
         }
     }
 }

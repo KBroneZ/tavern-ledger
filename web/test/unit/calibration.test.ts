@@ -1,6 +1,6 @@
 // The expected-place calibration page (T-655): the committed file is the
 // empty state (no model published) and reads strictly; a published file
-// (made up here, never real data) reads only when its totals agree and no
+// (made up by the crate's test, never real data) reads only when its totals agree and no
 // mean has fewer games than the floor behind it; and the page's words say
 // empty, thin and unknown apart, in English and Spanish.
 import { afterEach, test } from "node:test";
@@ -19,44 +19,14 @@ afterEach(() => setLang("en"));
 
 type Raw = Record<string, any>;
 
-/** A made-up Duos mode as `place-train` writes it: build 200 with 30 games, build 100 with 25, 8 more games counted. */
-function duos(): Raw {
-  return {
-    encoder: 1,
-    games: 63,
-    rows: 103,
-    folds: 5,
-    min_games: 150,
-    ready: false,
-    thin_games: 20,
-    mean_distance: { model: 0.81, per_turn: 1.1, overall: 1.25 },
-    builds: [
-      {
-        build: 200,
-        games: 30,
-        rows: 60,
-        buckets: [
-          { from: 1, to: 2, rows: 30, games: 30, said: 1.5, real: 1.0 },
-          { from: 2, to: 3, rows: 30, games: 30, said: 2.5, real: 3.0 },
-          { from: 3, to: 4, rows: 0, games: 0, said: null, real: null },
-        ],
-      },
-      {
-        build: 100,
-        games: 25,
-        rows: 35,
-        buckets: [
-          { from: 1, to: 2, rows: 10, games: 10, said: null, real: null },
-          { from: 2, to: 3, rows: 0, games: 0, said: null, real: null },
-          { from: 3, to: 4, rows: 25, games: 25, said: 3.3, real: 4.0 },
-        ],
-      },
-    ],
-    other_games: 8,
-  };
-}
-
-const published = (): Raw => ({ format: 1, date: "2026-11-02", modes: { solo: null, duos: duos() } });
+/**
+ * The file `place-train` writes for made-up Duos games, saved by the crate's
+ * own test (crates/expected-place/src/calibration_tests.rs, BLESS=1): build
+ * 200 with 30 games, build 100 with 25 (one thin bucket), 8 more games
+ * counted. Parsing it here makes a change of shape on either side fail.
+ */
+const published = (): Raw => JSON.parse(readFileSync(join(ROOT, "..", "crates", "expected-place", "tests", "data", "calibration_published.json"), "utf8"));
+const duos = (): Raw => published().modes.duos;
 
 // ---------- The committed file and the crate ----------
 
@@ -117,6 +87,9 @@ test("totals that do not agree, or a mean with too few games behind it, fail", (
     ["a missing bucket", /buckets/, (r) => r.modes.duos.builds[0].buckets.pop()],
     ["buckets out of place", /from/, (r) => (r.modes.duos.builds[0].buckets[0].from = 2)],
     ["a thin mean published", /null exactly/, (r) => Object.assign(r.modes.duos.builds[1].buckets[0], { said: 1.4, real: 2 })],
+    ["a thin count published", /games/, (r) => Object.assign(r.modes.duos.builds[1].buckets[0], { rows: 10, games: 10 })],
+    ["one thin count without the other", /null together/, (r) => (r.modes.duos.builds[1].buckets[0].rows = 10)],
+    ["a minimum below the crate's", /min_games/, (r) => (r.modes.duos.min_games = 50)],
     ["a mean withheld with enough games", /null exactly/, (r) => Object.assign(r.modes.duos.builds[0].buckets[0], { said: null, real: null })],
     ["games without combats", /rows/, (r) => (r.modes.duos.builds[0].buckets[2].games = 1)],
     ["more games in a bucket than the build", /games/, (r) => Object.assign(r.modes.duos.builds[0].buckets[0], { games: 31, rows: 31 })],
@@ -180,6 +153,9 @@ test("a published mode: its totals, the distance beside two guesses, and each bu
     ],
   );
   assert.deepEqual([older.rows[0].said, older.rows[0].why], ["—", "fewer than 20 games"]);
+  // A thin group's counts are withheld too: only "fewer than 20".
+  assert.deepEqual([older.rows[0].games, older.rows[0].rows, older.rows[0].withheld], ["<20", "—", [true, true, true, true]]);
+  assert.deepEqual(newest.rows[2].withheld, [true, true, false, false]);
   assert.match(duosView.other ?? "", /8 more games/);
 });
 

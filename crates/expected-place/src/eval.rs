@@ -46,17 +46,34 @@ pub struct Said {
 }
 
 /// The bucket an expected place falls in among the `places - 1` buckets
-/// `1..2` to `places-1..places`.
-pub fn bucket_of(said: f64, places: usize) -> u32 {
+/// `1..2` to `places-1..places`; `None` for a value that is not a number
+/// (never put in a bucket, see [`Said::is_finite`]).
+pub fn bucket_of(said: f64, places: usize) -> Option<u32> {
+    if !said.is_finite() {
+        return None;
+    }
     let last = places.saturating_sub(1).max(1) as f64;
-    said.floor().clamp(1.0, last) as u32
+    Some(said.floor().clamp(1.0, last) as u32)
 }
 
-/// The non-empty buckets of `predictions`, lowest first.
+impl Said {
+    /// Whether the expected place is a number. A model always gives one;
+    /// `place-train` stops with an error if one is not, and the buckets and
+    /// the calibration file leave such a prediction out entirely.
+    pub fn is_finite(&self) -> bool {
+        self.said.is_finite()
+    }
+}
+
+/// The non-empty buckets of `predictions`, lowest first; a prediction that
+/// is not a number is left out (neither a row nor a game).
 pub fn buckets<'a>(predictions: impl IntoIterator<Item = &'a Said>, places: usize) -> Vec<Bucket> {
     let mut sums: BTreeMap<u32, (usize, BTreeSet<usize>, f64, f64)> = BTreeMap::new();
     for p in predictions {
-        let b = sums.entry(bucket_of(p.said, places)).or_default();
+        let Some(from) = bucket_of(p.said, places) else {
+            continue;
+        };
+        let b = sums.entry(from).or_default();
         b.0 += 1;
         b.1.insert(p.game);
         b.2 += p.said;
