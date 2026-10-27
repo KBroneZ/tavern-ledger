@@ -466,6 +466,7 @@ fn played_with(why: &str, values: &GameValues) -> bool {
     match why {
         w if w == crate::cards_round1::BLOOD_GEM => values.blood_gem != (0, 0),
         w if w == crate::cards_round2::SPELL => values.spell != (0, 0),
+        w if w == crate::cards_round1::DEITY => values.deity.known(),
         _ => false,
     }
 }

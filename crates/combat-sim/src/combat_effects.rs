@@ -93,6 +93,10 @@ impl Combat<'_> {
                     self.buff(side, uid, attack, health);
                 }
             }
+            Action::BuffDeity { attack, health } => self.buff_deity(side, attack, health),
+            Action::SummonDeadAberrations { count } => {
+                self.summon_dead_aberrations(side, src, count)
+            }
             Action::GainStats { attack, health } => {
                 if let Some(uid) = me {
                     self.buff(side, uid, attack, health);
@@ -321,6 +325,13 @@ impl Combat<'_> {
                 if let Some(uid) = me {
                     self.become_teammate_copy(side, uid);
                 }
+            }
+            Action::BeastAttackThisCombat(attack) => {
+                for f in self.friends(side, Tribes::BEAST, None) {
+                    self.buff(side, f, attack, 0);
+                }
+                let s = &mut self.sides[side];
+                s.beast_attack = s.beast_attack.saturating_add(attack);
             }
             Action::DamageAllOthers(amount) => {
                 let Some(uid) = me else { return };

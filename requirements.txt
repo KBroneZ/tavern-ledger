@@ -3,8 +3,8 @@
 # Origin and license of each package: PROVENANCE.md
 hslog==1.20.0 \
     --hash=sha256:30e52ce7c69dab13369443c70efd2bd99a7c7a3c12b71c81f300cfb29567b6bc  # hslog-1.20.0-py3-none-any.whl
-hearthstone==9.21.1 \
-    --hash=sha256:4bc6e9c38925d6b9a88e5d0535f36640f63455bfa5702e911db1f54f2d432161  # hearthstone-9.21.1-py3-none-any.whl
+hearthstone==9.22.0 \
+    --hash=sha256:005acf683beebb479fc706fccd3a1d0c51268e504abdf570329387656fafda0f  # hearthstone-9.22.0-py3-none-any.whl
 aniso8601==10.0.1 \
     --hash=sha256:eb19717fd4e0db6de1aab06f12450ab92144246b257423fe020af5748c0cb89e  # aniso8601-10.0.1-py2.py3-none-any.whl
 requests==2.34.2 \

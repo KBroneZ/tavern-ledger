@@ -5,7 +5,7 @@
 // export's keys with their types, so a key the export does not have (a name,
 // a seat, a game) or one it lost fails the build instead of reaching the page.
 
-export const ACCURACY_FORMAT = 4;
+export const ACCURACY_FORMAT = 5;
 export const MODES = ["solo", "duos"] as const;
 export type AccuracyMode = (typeof MODES)[number];
 
@@ -81,6 +81,10 @@ export interface CheckedBuild {
   build: number;
   /** Games read on this build. */
   count: number;
+  /** Modelled cards proven on this build's combats: replayed as the game played them, to the end (T-646). */
+  proven: number;
+  /** The other modelled cards: they play from their card text only. */
+  text_only: number;
 }
 
 export interface Builds {
@@ -278,12 +282,14 @@ function builds(value: unknown): Builds {
   const checked = raw.checked.map((b, i): CheckedBuild => {
     const where = `accuracy.builds.checked[${i}]`;
     const row = object(b, where);
-    keys(row, ["build", "count"], where);
+    keys(row, ["build", "count", "proven", "text_only"], where);
     const build = count(row.build, `${where}.build`);
     if (build === 0 || build > MAX_BUILD) throw new Error(`${where}.build: not a build number`);
     const games = count(row.count, `${where}.count`);
     if (games === 0) throw new Error(`${where}.count: not a count above 0`);
-    return { build, count: games };
+    const proven = count(row.proven, `${where}.proven`);
+    const textOnly = count(row.text_only, `${where}.text_only`);
+    return { build, count: games, proven, text_only: textOnly };
   });
   checked.forEach((b, i) => {
     if (i > 0 && b.build >= checked[i - 1].build) throw new Error("accuracy.builds.checked: builds twice or not newest first");
