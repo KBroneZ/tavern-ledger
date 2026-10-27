@@ -205,11 +205,29 @@ class UsedOnlyByTest(unittest.TestCase):
         self.assertEqual(tool.check_used_only_by(item, metadata_for=lambda target: self.META), [])
 
     def test_a_new_user_in_any_build_breaks_the_ignore(self):
-        meta = metadata({"desktop": ["md5", "sha2"], "md5": ["digest"], "sha2": ["digest"]}, ["desktop"])
+        meta = metadata(
+            {
+                "desktop": ["md5", "sha2", "hmac"],
+                "md5": ["digest"],
+                "sha2": ["digest"],
+                "hmac": ["digest"],
+                "digest": ["block-buffer"],
+            },
+            ["desktop"],
+        )
         item = entry(package="block-buffer", used_only_by=self.ITEMS)
         problems = tool.check_used_only_by(item, metadata_for=lambda target: meta)
         self.assertEqual(len(problems), len(tool.BUILD_TARGETS))
         self.assertIn("digest is now used by md5", problems[0])
+
+    def test_a_name_that_is_not_built_fails_instead_of_passing(self):
+        items = [{"package": "block-buffer", "dependents": ["digest"]}, {"package": "digst", "dependents": ["sha2"]}]
+        item = entry(package="block-buffer", used_only_by=items)
+        problems = tool.check_used_only_by(item, metadata_for=lambda target: self.META)
+        self.assertEqual(len(problems), len(tool.BUILD_TARGETS))
+        self.assertIn("names digst, not built", problems[0])
+        empty = {"packages": [], "workspace_members": [], "resolve": {"nodes": []}}
+        self.assertTrue(tool.check_used_only_by(item, metadata_for=lambda target: empty))
 
     def test_dependents_reads_every_version_of_a_package(self):
         meta = {

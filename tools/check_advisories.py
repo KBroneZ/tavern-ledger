@@ -445,9 +445,19 @@ def check_used_only_by(entry: dict, metadata_for=_cargo_metadata) -> list[str]:
         return problems  # reported by check_ignores
     for target in BUILD_TARGETS:
         metadata = metadata_for(target)
+        built = {pkg["name"] for pkg in metadata.get("packages") or []}
         for item in items:
             if not isinstance(item, dict) or not isinstance(item.get("dependents"), list):
                 continue  # reported by check_ignores
+            # A name that is not built (a typo, or a crate that left) would
+            # make the check below pass without checking anything.
+            missing = sorted({item.get("package", ""), *item["dependents"]} - built)
+            if missing:
+                problems.append(
+                    f"{entry['id']}: used_only_by names {', '.join(missing)}, not built for {target}; "
+                    "fix or remove the name"
+                )
+                continue
             others = dependents(metadata, item.get("package", "")) - set(item["dependents"])
             if others:
                 problems.append(
