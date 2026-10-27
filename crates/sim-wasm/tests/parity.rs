@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use bg_parser::report::{CombatValues, HeroKit, KitCard as LogKitCard, Minion as LogMinion};
+use bg_parser::report::{CombatValues, Deity, HeroKit, KitCard as LogKitCard, Minion as LogMinion};
 use combat_sim::{BaseCard, Keywords, Tribes};
 use serde_json::{json, Value};
 use tracker::odds::{run_odds, DuosInput, Facts, OddsInput, Seen};
@@ -460,6 +460,13 @@ fn values(b: &Value) -> CombatValues {
         knights_dead: n("knights_dead"),
         undead_attack: n("undead_atk"),
         beetle: (n("beetle_atk"), n("beetle_health")),
+        deity: Deity {
+            dbf: n("deity_dbf"),
+            attack: n("deity_atk"),
+            health: n("deity_health"),
+            needed: n("deity_needed"),
+            progress: n("deity_progress"),
+        },
     }
 }
 
