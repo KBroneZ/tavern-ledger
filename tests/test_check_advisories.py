@@ -121,6 +121,7 @@ class PolicyTest(unittest.TestCase):
         adv = Advisory("Cargo.lock", "glib", "0.18.5", ("RUSTSEC-1",), 9.0, True)
         _, _, _, (problem,) = tool.evaluate([adv], [entry()])
         self.assertIn("needs absent_from", problem)
+        self.assertIn("or used_only_by", problem)
         npm = adv._replace(lockfile="package-lock.json")
         self.assertEqual(tool.evaluate([npm], [entry()])[3], [])
 
@@ -172,7 +173,10 @@ class IgnoreEntriesTest(unittest.TestCase):
         self.assertTrue(entries)
         self.assertEqual(tool.check_ignores(entries, datetime.date(2026, 10, 23)), [])
         for item in entries:
-            self.assertTrue(item.get("absent_from"), f"{item['id']}: a crate entry names the builds it is not in")
+            self.assertTrue(
+                item.get("absent_from") or item.get("used_only_by"),
+                f"{item['id']}: a crate entry names the builds it is not in or the only crates that use it",
+            )
 
 
 def metadata(edges, members, names=None):
@@ -180,10 +184,96 @@ def metadata(edges, members, names=None):
     names = names or {}
     ids = set(edges) | {d for deps in edges.values() for d in deps} | set(members)
     return {
-        "packages": [{"id": i, "name": names.get(i, i)} for i in sorted(ids)],
+        "packages": [{"id": i, "name": names.get(i, i), "source": tool.CRATES_IO} for i in sorted(ids)],
         "workspace_members": list(members),
         "resolve": {"nodes": [{"id": i, "deps": [{"pkg": d} for d in edges.get(i, [])]} for i in sorted(ids)]},
     }
+
+
+class UsedOnlyByTest(unittest.TestCase):
+    META = metadata(
+        {"desktop": ["wry"], "wry": ["sha2"], "sha2": ["digest"], "hmac": ["digest"], "digest": ["block-buffer"]},
+        ["desktop"],
+    )
+    ITEMS = [
+        {"package": "block-buffer", "dependents": ["digest"]},
+        {"package": "digest", "dependents": ["sha2", "hmac"]},
+    ]
+
+    def test_only_the_listed_users_keep_the_ignore(self):
+        item = entry(package="block-buffer", used_only_by=self.ITEMS)
+        self.assertEqual(tool.check_used_only_by(item, metadata_for=lambda target: self.META), [])
+
+    def test_a_new_user_in_any_build_breaks_the_ignore(self):
+        meta = metadata(
+            {
+                "desktop": ["md5", "sha2", "hmac"],
+                "md5": ["digest"],
+                "sha2": ["digest"],
+                "hmac": ["digest"],
+                "digest": ["block-buffer"],
+            },
+            ["desktop"],
+        )
+        item = entry(package="block-buffer", used_only_by=self.ITEMS)
+        problems = tool.check_used_only_by(item, metadata_for=lambda target: meta)
+        self.assertEqual(len(problems), len(tool.BUILD_TARGETS))
+        self.assertIn("digest is now used by md5", problems[0])
+
+    def test_a_name_that_is_not_built_fails_instead_of_passing(self):
+        items = [{"package": "block-buffer", "dependents": ["digest"]}, {"package": "digst", "dependents": ["sha2"]}]
+        item = entry(package="block-buffer", used_only_by=items)
+        problems = tool.check_used_only_by(item, metadata_for=lambda target: self.META)
+        self.assertEqual(len(problems), len(tool.BUILD_TARGETS))
+        self.assertIn("names digst, not built", problems[0])
+        empty = {"packages": [], "workspace_members": [], "resolve": {"nodes": []}}
+        self.assertTrue(tool.check_used_only_by(item, metadata_for=lambda target: empty))
+
+    def test_a_same_name_crate_not_from_crates_io_does_not_match(self):
+        meta = {
+            "packages": [
+                {"id": "d", "name": "digest", "source": tool.CRATES_IO},
+                {"id": "s", "name": "sha2", "source": None},
+            ],
+            "workspace_members": [],
+            "resolve": {"nodes": [{"id": "s", "deps": [{"pkg": "d"}]}]},
+        }
+        self.assertEqual(tool.dependents(meta, "digest"), {"sha2 (not from crates.io)"})
+
+    def test_dependents_reads_every_version_of_a_package(self):
+        meta = {
+            "packages": [
+                {"id": "d1", "name": "digest", "source": tool.CRATES_IO},
+                {"id": "d2", "name": "digest", "source": tool.CRATES_IO},
+                {"id": "s", "name": "sha2", "source": tool.CRATES_IO},
+                {"id": "x", "name": "other", "source": tool.CRATES_IO},
+            ],
+            "workspace_members": [],
+            "resolve": {"nodes": [{"id": "s", "deps": [{"pkg": "d1"}]}, {"id": "x", "deps": [{"pkg": "d2"}]}]},
+        }
+        self.assertEqual(tool.dependents(meta, "digest"), {"sha2", "other"})
+
+    def test_a_crate_ignore_with_used_only_by_needs_no_absent_from(self):
+        adv = Advisory("Cargo.lock", "block-buffer", "0.10.4", ("GHSA-1",), 6.3, True)
+        item = entry(id="GHSA-1", package="block-buffer", used_only_by=self.ITEMS)
+        blocking, _passed, used, problems = tool.evaluate([adv], [item])
+        self.assertEqual((blocking, problems), ([], []))
+        self.assertEqual(used, [item])
+
+    def test_used_only_by_items_are_checked(self):
+        for bad in (
+            [],
+            [{"package": "block-buffer"}],
+            [{"package": "block-buffer", "dependents": []}],
+            [{"package": "block-buffer", "dependents": ["digest"], "why": "x"}],
+            [{"package": "", "dependents": ["digest"]}],
+        ):
+            (problem,) = tool.check_ignores([entry(package="block-buffer", used_only_by=bad)], TODAY)
+            self.assertIn("used_only_by item", problem)
+        (problem,) = tool.check_ignores(
+            [entry(package="block-buffer", used_only_by=[{"package": "digest", "dependents": ["sha2"]}])], TODAY
+        )
+        self.assertIn("must name the ignored package", problem)
 
 
 class ReachableTest(unittest.TestCase):
