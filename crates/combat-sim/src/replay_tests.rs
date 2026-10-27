@@ -1,6 +1,7 @@
 //! Hand-made logs: one that follows the rules, and one per rule it breaks.
 
 use super::*;
+use crate::model::Tribes;
 
 const PLAIN: &str = "TEST_PLAIN";
 
@@ -291,4 +292,67 @@ fn a_difference_names_the_card_it_is_about() {
         .difference
         .expect("the log stops early");
     assert_eq!((d.rule, d.card), (Rule::End, None));
+}
+
+/// A card whose Deathrattle gives a random friendly Undead +1/+2
+/// (`BG25_022`, played exactly).
+const RANDOM_BUFF: &str = "BG25_022";
+
+/// The player's random-buff 1/1 and two Undead 1/5s against a 5/10: the
+/// 1/1 attacks, dies and buffs one of the two; the log says which.
+fn random_buff_log(buffed: usize) -> [LoggedStep; 2] {
+    let undead = |a, h| m(a, h).tribe(Tribes::UNDEAD);
+    let p0 = [
+        Minion::new(RANDOM_BUFF, 1, 1).tier(2),
+        undead(1, 5),
+        undead(1, 5),
+    ];
+    let o0 = [m(5, 10)];
+    let mut p1 = vec![undead(1, 5), undead(1, 5)];
+    p1[buffed] = undead(2, 7);
+    let o1 = [m(5, 9)];
+    // The opponent's 5/9 then hits the first Undead.
+    [step((0, 0), 0, &p0, &o0), step((1, 0), 0, &p1, &o1)]
+}
+
+#[test]
+fn a_random_buff_the_log_gave_elsewhere_is_rerolled_not_a_rule() {
+    for buffed in [0, 1] {
+        let steps = random_buff_log(buffed);
+        let [p, o] = &steps[0].before;
+        let r = replay(&band(p), &band(o), &steps, Span::FirstLeg, 1);
+        assert_eq!(r.difference, None, "buffed {buffed}: {r:?}");
+        assert_eq!(r.matched, 2);
+        assert!(r.rerolled <= 1);
+    }
+    // One of the two logs takes another roll than the first one.
+    let rolled: usize = [0, 1]
+        .map(|b| {
+            let steps = random_buff_log(b);
+            let [p, o] = &steps[0].before;
+            replay(&band(p), &band(o), &steps, Span::FirstLeg, 1).rerolled
+        })
+        .iter()
+        .sum();
+    assert_eq!(rolled, 1);
+}
+
+#[test]
+fn a_difference_no_roll_explains_is_still_a_rule() {
+    let mut steps = random_buff_log(0);
+    // Neither Undead could end at 3/7: no roll gives that.
+    steps[1].before[0][0] = m(3, 7).tribe(Tribes::UNDEAD);
+    let [p, o] = &steps[0].before;
+    let r = replay(&band(p), &band(o), &steps, Span::FirstLeg, 1);
+    let d = r.difference.expect("differs");
+    assert_eq!((d.attack, d.rule, r.rerolled), (2, Rule::Stats, 0));
+}
+
+#[test]
+fn rerolls_give_the_same_replay_on_every_run() {
+    let steps = random_buff_log(1);
+    let [p, o] = &steps[0].before;
+    let a = replay(&band(p), &band(o), &steps, Span::FirstLeg, 7);
+    let b = replay(&band(p), &band(o), &steps, Span::FirstLeg, 7);
+    assert_eq!(a, b);
 }
