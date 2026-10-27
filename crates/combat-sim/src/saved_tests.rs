@@ -388,3 +388,26 @@ fn without_a_replay_board_minions_have_no_numbers() {
     };
     assert!(teams.0.first.minions.iter().all(|m| m.counters == [0, 0]));
 }
+
+#[test]
+fn a_saved_rounds_boards_bring_their_kits() {
+    // T-645: the powers and trinkets act in the saved combats as in the
+    // overlay (Sprout It Out on the minions a Greybough summons); a board
+    // without a saved kit plays as before.
+    let sprout = json!({"powers": [{"card_id": "TB_BaconShop_HP_107", "slot": 0}],
+                        "trinkets": []});
+    let round = json!({"number": 6, "result": "won", "entries": [
+        {"side": "own", "player_id": 1, "board": [bm(PLAIN, 3, 3, 1)], "kit": sprout},
+        {"side": "opponent", "player_id": 2, "board": [bm(PLAIN, 1, 1, 1)]},
+        {"side": "own", "player_id": 3, "board": [bm(PLAIN, 2, 2, 1)], "kit": sprout},
+    ]});
+    let Ok(Prepared { teams, .. }) = prepare(&round, false, &facts) else {
+        panic!("boards");
+    };
+    for band in [&teams.0.first, teams.0.second.as_ref().expect("teammate")] {
+        let kit = band.kit.as_ref().expect("a kit");
+        assert_eq!(kit.round, Some(6));
+        assert_eq!(kit.powers[0].card_id, "TB_BaconShop_HP_107");
+    }
+    assert_eq!(teams.1.first.kit, None);
+}

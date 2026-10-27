@@ -435,10 +435,37 @@ pub struct CombatWhy {
     pub why: Why,
 }
 
+/// A combat entry's board with its hero's powers and trinkets in round
+/// `number` (T-630); the kit is `None` on a record from before parser
+/// revision 16 ("not recorded"), so those boards play as before.
+pub fn board_with_kit(entry: &Value, number: Option<u32>, facts: &FactsOf) -> Option<Warband> {
+    let band = board(entry, facts)?;
+    Some(Warband {
+        kit: kit(entry, number, facts),
+        ..band
+    })
+}
+
+/// A saved round's number, as the kits read it; `None` when not saved.
+pub(crate) fn round_number(round: &Value) -> Option<u32> {
+    round
+        .get("number")
+        .and_then(Value::as_u64)
+        .and_then(|n| u32::try_from(n).ok())
+}
+
 /// One side's boards in a round in the order they came in, one per seat
-/// (two in Duos); `None` without a board, with a board that cannot be read,
-/// or, in Solo, with more than one.
-fn side_boards(entries: &[Value], side: &str, solo: bool, facts: &FactsOf) -> Option<Vec<Warband>> {
+/// (two in Duos), each with its hero's powers and trinkets in round
+/// `number` (T-645: the powers that act during combat, as Sprout It Out on
+/// the minions it summons); `None` without a board, with a board that
+/// cannot be read, or, in Solo, with more than one.
+fn side_boards(
+    entries: &[Value],
+    side: &str,
+    solo: bool,
+    number: Option<u32>,
+    facts: &FactsOf,
+) -> Option<Vec<Warband>> {
     let mut seats: Vec<Option<i64>> = Vec::new();
     let mut out = Vec::new();
     for e in entries {
@@ -453,7 +480,7 @@ fn side_boards(entries: &[Value], side: &str, solo: bool, facts: &FactsOf) -> Op
             continue;
         }
         seats.push(seat);
-        out.push(board(e, facts)?);
+        out.push(board_with_kit(e, number, facts)?);
     }
     let fits = if solo {
         out.len() == 1
@@ -585,8 +612,9 @@ fn prepare(round: &Value, solo: bool, facts: &FactsOf) -> Result<Prepared, Box<W
         }
         f
     };
-    let sides = side_boards(entries, "own", solo, &checked)
-        .zip(side_boards(entries, "opponent", solo, &checked));
+    let number = round_number(round);
+    let sides = side_boards(entries, "own", solo, number, &checked)
+        .zip(side_boards(entries, "opponent", solo, number, &checked));
     let lacking = lacking.into_inner();
     if !lacking.is_empty() {
         return Err(Box::new(Why::NoCardData(lacking)));
