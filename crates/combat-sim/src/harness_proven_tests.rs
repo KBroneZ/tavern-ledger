@@ -123,3 +123,22 @@ fn text_only_is_every_modelled_card_not_proven() {
     assert!(modelled > 100);
     assert_eq!(text_only(&proven), modelled - 1);
 }
+
+#[test]
+fn the_proven_list_has_each_builds_card_ids_and_nothing_else() {
+    let proven = BTreeMap::from([(
+        254_477,
+        BTreeSet::from(["BG_ICC_026t".to_string(), "BGS_119".to_string()]),
+    )]);
+
+    let text = proven_json(&proven);
+    let v: serde_json::Value = serde_json::from_str(&text).unwrap();
+
+    assert!(text.ends_with('\n'));
+    assert_eq!(v["format"], 1);
+    assert_eq!(
+        v["builds"]["254477"],
+        serde_json::json!(["BGS_119", "BG_ICC_026t"])
+    );
+    assert_eq!(v.as_object().unwrap().len(), 2);
+}
