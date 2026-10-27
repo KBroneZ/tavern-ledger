@@ -190,7 +190,7 @@ export function kitsNote(k: Kits): { text: string; scores: string | null } {
 export interface BuildsView {
   /** The newest build and the day, or that none was read. */
   summary: string;
-  rows: { build: string; games: string }[];
+  rows: { build: string; games: string; proven: string; textOnly: string }[];
 }
 
 /** The game builds checked, newest first; a build number is not a count, so it is never grouped. */
@@ -201,6 +201,8 @@ export function buildsView(builds: Builds, date: string): BuildsView {
     rows: builds.checked.map((b) => ({
       build: String(b.build),
       games: at(`builds.row.${pluralForm(b.count)}`, { count: plain(b.count) }),
+      proven: plain(b.proven),
+      textOnly: plain(b.text_only),
     })),
   };
 }

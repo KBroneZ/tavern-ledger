@@ -261,8 +261,16 @@ fn a_game_long_value_is_not_seen_only_while_its_board_has_none() {
         knights_dead: 2,
         undead_attack: 1,
         beetle: (1, 1),
+        deity: crate::model::Deity {
+            dbf: 130_610,
+            attack: 5,
+            health: 5,
+            needed: 4,
+            progress: 0,
+        },
     };
     let cases = [
+        (r1::DEITY, Unseen::Earlier),
         (r1::BLOOD_GEM, Unseen::BloodGems),
         (r2::SPELL, Unseen::Spells),
         (r2::KNIGHTS, Unseen::Knights),

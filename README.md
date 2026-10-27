@@ -14,7 +14,8 @@
   <a href="#status">Status</a> ·
   <a href="#features">Features</a> ·
   <a href="#privacy-and-your-account">Privacy</a> ·
-  <a href="CONTRIBUTING.md">Contributing</a>
+  <a href="CONTRIBUTING.md">Contributing</a> ·
+  <a href="https://tavernledger.net/press/">Press kit</a>
 </p>
 
 > Unofficial fan project. Not affiliated with or endorsed by Blizzard Entertainment.
@@ -23,7 +24,7 @@
 
 ## Status
 
-- **Desktop app: in beta for Windows.** The current release, [v0.2.7](https://github.com/KBroneZ/tavern-ledger/releases/tag/v0.2.7), is an unsigned installer for beta testers (Windows warns before it runs; the steps are on the [download page](https://tavernledger.net/download/)). From v0.2.1 on, the app updates itself from the project's signed GitHub releases, and only when you press "Restart now"; if you have v0.1.0, install v0.2.7 over it once (your games and settings stay). To build the app or its installer yourself, see [docs/development.md](docs/development.md).
+- **Desktop app: in beta for Windows.** The current release, [v0.2.7](https://github.com/KBroneZ/tavern-ledger/releases/tag/v0.2.7), is an unsigned installer for beta testers (Windows warns before it runs, and on Windows 11 with Smart App Control on it cannot be installed yet; the steps are on the [download page](https://tavernledger.net/download/)). From v0.2.1 on, the app updates itself from the project's signed GitHub releases, and only when you press "Restart now"; if you have v0.1.0, install v0.2.7 over it once (your games and settings stay). To build the app or its installer yourself, see [docs/development.md](docs/development.md).
 - **Website: online at [tavernledger.net](https://tavernledger.net), and you can create an account.** Uploading games needs the desktop app; the combat simulator and its accuracy page work without one.
 
 ## Features
@@ -50,7 +51,7 @@
 - **Your dashboard** with your numbers per mode, a filterable games list and a full view of each game, combat replays included.
 - **Public profile, leaderboards and community hero stats**, each one opt-in and off until you turn it on. Leaderboards show display names and numbers from uploaded games, never ratings or BattleTags.
 - **[Combat simulator](https://tavernledger.net/simulator/)** in your browser: load a fight from one of your games (signed in) or set up both boards yourself, with each hero's powers and trinkets, and see the odds. It can play start of combat.
-- **[Accuracy page](https://tavernledger.net/accuracy/)**: how often the simulator's most likely result matched the real one, on the developer's own combats, with the share of combats it could not play.
+- **[Accuracy page](https://tavernledger.net/accuracy/)**: how often the simulator's most likely result matched the real one, on the developer's own combats, with the share of combats it could not play and, per game version, how many cards were proven on real combats.
 - English and Spanish.
 
 ![The website's home page: a painted tavern with "Pull up a stool. We kept your games." and a Download button marked "Beta for Windows"](docs/screenshots/web-home.webp)

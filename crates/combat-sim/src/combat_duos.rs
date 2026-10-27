@@ -69,7 +69,11 @@ impl Combat<'_> {
                     next: 0,
                     values: self.p.second_values[side],
                     deaths: self.sides[side].deaths,
+                    ..SideState::default()
                 };
+                let mut only = [false, false];
+                only[side] = true;
+                self.after_start_values(only);
                 let entering: Vec<u32> = self.sides[side].units.iter().map(|u| u.uid).collect();
                 for uid in entering {
                     self.catch_up_deaths(side, uid);

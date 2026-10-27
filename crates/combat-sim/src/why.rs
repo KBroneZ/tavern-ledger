@@ -308,6 +308,8 @@ fn unseen_of(why: &str, values: &crate::model::GameValues) -> Option<Unseen> {
         w if w == r2::SPELL => unseen(values.spell != (0, 0)).map(|_| Unseen::Spells),
         w if w == r2::KNIGHTS => unseen(values.knights_dead > 0).map(|_| Unseen::Knights),
         w if w == r4::BEETLE_BUFFS => unseen(values.beetle != (0, 0)).map(|_| Unseen::Beetles),
+        // The Deity's stats are gains from earlier in the game (T-671).
+        w if w == r1::DEITY => unseen(values.deity.known()).map(|_| Unseen::Earlier),
         w if w == r5::FROM_HAND => Some(Unseen::Hand),
         w if [
             r1::GAME_BUFFS,

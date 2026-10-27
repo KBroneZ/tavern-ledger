@@ -8,12 +8,15 @@
 import Base from "../../layouts/Base.astro";
 import Button from "../../components/ui/Button.astro";
 import More from "../../components/ui/More.astro";
+import JsonLd from "../../components/minions/JsonLd.astro";
 import "../../styles/download.css";
 import { readConfig } from "../../lib/config.ts";
 import { dl } from "../../lib/download/strings.ts";
+import { liveChannels } from "../../lib/site/channels.ts";
 import { dateFormat, href, langPaths, numberFormat, setLang } from "../../lib/i18n.ts";
 import { installerUrl, RELEASE, releasesUrl, repoUrl, sizeMb, sumsUrls } from "../../lib/site/release.ts";
 import { st } from "../../lib/site/strings.ts";
+import { appLd } from "../../lib/site/structured.ts";
 
 export const getStaticPaths = langPaths;
 // Every string below is drawn in the page's language (T-508).
@@ -35,10 +38,15 @@ const facts = [
 const steps = ([1, 2, 3, 4] as const).map((n) => ({ title: dl(`step${n}.title`), line: dl(`step${n}.line`), more: dl(`step${n}.more`) }));
 // Releases from v0.2.0 on carry a signed list of their files' hashes.
 const sums = sumsUrls();
+const pageUrl = new URL(href("/download/"), Astro.site).href;
 const reads = (["reads.1", "reads.2", "reads.3", "reads.4"] as const).map((key) => dl(key));
+// Other ways to install (T-707): shown only for listings that are live.
+const channels = liveChannels();
+const otherShort = channels.length > 1 ? dl("other.short.both") : channels[0]?.kind === "store" ? dl("other.short.store") : dl("other.short.winget");
 ---
 
 <Base backdrop="hall" title={st("meta.download.title")} description={st("meta.download.description")}>
+  <JsonLd graph={[appLd(pageUrl, st("meta.download.description"))]} />
   <div class="dl">
     <header class="dl-head">
       <p class="kicker">{dl("page.kicker")}</p>
@@ -76,6 +84,7 @@ const reads = (["reads.1", "reads.2", "reads.3", "reads.4"] as const).map((key) 
               <p class="dl-step-line">{step.line}</p>
               <More context={step.title}>
                 <p>{step.more}</p>
+                {i === 1 && <p>{dl("step2.sac")}</p>}
                 {i === 3 && <p>{accountsOpen ? dl("step4.account") : dl("step4.closed")}</p>}
               </More>
             </li>
@@ -119,6 +128,28 @@ const reads = (["reads.1", "reads.2", "reads.3", "reads.4"] as const).map((key) 
           <p>{dl("update.body")}</p>
         </More>
       </div>
+      {
+        channels.length > 0 && (
+          <div class="dl-extra">
+            <h3>{dl("other.title")}</h3>
+            <p class="dl-short">{otherShort}</p>
+            <More context={dl("other.title")}>
+              {channels.map((channel) =>
+                channel.kind === "store" ? (
+                  <p>
+                    {dl("other.store")} <a href={channel.url}>{dl("other.store.link")}</a>.
+                  </p>
+                ) : (
+                  <>
+                    <p>{dl("other.winget")}</p>
+                    <p class="mono dl-code">{channel.command}</p>
+                  </>
+                ),
+              )}
+            </More>
+          </div>
+        )
+      }
       <div class="dl-extra">
         <h3>{dl("remove.title")}</h3>
         <p class="dl-short">{dl("remove.short")}</p>
