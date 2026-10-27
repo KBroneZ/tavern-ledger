@@ -336,3 +336,55 @@ fn a_saved_phylactery_buff_is_its_mark_only_on_a_board_whose_kit_has_the_power()
         assert!(board(&e, &facts).unwrap().minions[0].gifts.is_empty());
     }
 }
+
+#[test]
+fn board_minions_take_the_numbers_the_replay_start_shows() {
+    let with = |mut m: Value, side: Option<&str>, counters: Option<[i64; 2]>| {
+        if let Some(s) = side {
+            m["side"] = json!(s);
+        }
+        if let Some(c) = counters {
+            m["counters"] = json!(c);
+        }
+        m
+    };
+    let lobster = "BG36_202";
+    let round = json!({
+        "number": 1,
+        "result": "won",
+        "entries": [
+            {"side": "own", "player_id": 1,
+             "board": [bm(lobster, 2, 1, 1), bm(PLAIN, 3, 3, 2), bm(lobster, 2, 1, 3)]},
+            {"side": "opponent", "player_id": 2, "board": [bm(lobster, 2, 1, 1)]},
+        ],
+        "replay": {
+            "complete": true,
+            "start": 4,
+            "minions": [
+                with(bm(lobster, 2, 1, 1), Some("own"), None),
+                with(bm(PLAIN, 3, 3, 2), Some("own"), Some([5, 5])),
+                with(bm(lobster, 2, 1, 3), Some("own"), Some([18, 9])),
+                with(bm(lobster, 2, 1, 1), Some("opponent"), Some([4, 2])),
+                // Summoned later: not the start's.
+                with(bm(lobster, 2, 1, 2), Some("opponent"), Some([2, 1])),
+            ],
+            "events": [],
+        },
+    });
+    let Ok(Prepared { teams, .. }) = prepare(&round, true, &facts) else {
+        panic!("boards");
+    };
+    let numbers = |b: &Warband| b.minions.iter().map(|m| m.counters).collect::<Vec<_>>();
+    // Only Lobsters take them.
+    assert_eq!(numbers(&teams.0.first), [[0, 0], [0, 0], [18, 9]]);
+    assert_eq!(numbers(&teams.1.first), [[4, 2]]);
+}
+
+#[test]
+fn without_a_replay_board_minions_have_no_numbers() {
+    let round = json!({"number": 1, "result": "won", "entries": entries(bm("BG36_202", 2, 1, 2))});
+    let Ok(Prepared { teams, .. }) = prepare(&round, true, &facts) else {
+        panic!("boards");
+    };
+    assert!(teams.0.first.minions.iter().all(|m| m.counters == [0, 0]));
+}

@@ -328,6 +328,9 @@ struct SideState {
     /// What the side's Beasts have on top for the rest of this combat,
     /// summoned ones too (Humming Bird; T-645).
     beast_attack: i32,
+    /// What the side's next Tasty Lobster Deathrattle gives (a golden one
+    /// twice it); each one improves it (T-645).
+    lobster: (i32, i32),
 }
 
 impl SideState {
@@ -432,6 +435,7 @@ impl<'a> Combat<'a> {
             kit_counts: Default::default(),
         };
         c.after_start_values([true, true]);
+        c.lobster_values([true, true]);
         c
     }
 
@@ -688,3 +692,7 @@ mod t631_tests;
 #[cfg(test)]
 #[path = "combat_t645_tests.rs"]
 mod t645_tests;
+
+#[cfg(test)]
+#[path = "combat_lobster_tests.rs"]
+mod lobster_tests;

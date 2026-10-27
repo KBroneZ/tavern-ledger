@@ -91,8 +91,9 @@ pub fn minion(v: &Value, facts: &FactsOf) -> Option<Minion> {
                     .collect()
             })
             .unwrap_or_default(),
-        // Saved on replay minions since parser revision 16 (T-628), not read
-        // here yet: the boards read here are taken at the first attack.
+        // Saved on replay minions since parser revision 16 (T-628); the boards
+        // read here are taken at the first attack and get them from the
+        // replay's start ([`shown_counters`]).
         counters: [0, 0],
         card_id,
     })
@@ -462,6 +463,60 @@ fn side_boards(entries: &[Value], side: &str, solo: bool, facts: &FactsOf) -> Op
     fits.then_some(out)
 }
 
+/// Gives the Tasty Lobsters on each side's first board the two numbers they
+/// show at the start of the saved replay (parser revision 16, T-628), which
+/// the boards read at the first attack lack (the Lobster buff, T-645). A minion takes
+/// the numbers of the replay minion of its card at the same rank among
+/// that card's copies on its side; nothing without a replay.
+fn shown_counters(round: &Value, teams: &mut (Team, Team)) {
+    let replay = round.get("replay");
+    let minions = replay
+        .and_then(|r| r.get("minions"))
+        .and_then(Value::as_array)
+        .map_or(&[][..], Vec::as_slice);
+    let start = replay
+        .and_then(|r| r.get("start"))
+        .and_then(Value::as_u64)
+        .and_then(|s| usize::try_from(s).ok())
+        .map_or(0, |s| s.min(minions.len()));
+    for (side, band) in [
+        ("own", &mut teams.0.first),
+        ("opponent", &mut teams.1.first),
+    ] {
+        let shown: Vec<(&str, Option<[i32; 2]>)> = minions[..start]
+            .iter()
+            .filter(|m| m.get("side").and_then(Value::as_str) == Some(side))
+            .filter_map(|m| Some((m.get("card_id")?.as_str()?, counters_of(m))))
+            .collect();
+        for i in 0..band.minions.len() {
+            let id = band.minions[i].card_id.as_str();
+            // Only the Lobster buff is read from them for now: every copy of
+            // a Lobster shows it, so a copy summoned at start of combat
+            // cannot shift it onto the wrong card.
+            if !crate::cards::LOBSTERS.iter().any(|(l, _)| *l == id) {
+                continue;
+            }
+            let rank = band.minions[..i].iter().filter(|m| m.card_id == id).count();
+            let numbers = shown
+                .iter()
+                .filter(|(card, _)| *card == id)
+                .nth(rank)
+                .and_then(|(_, n)| *n);
+            if let Some(n) = numbers {
+                band.minions[i].counters = n;
+            }
+        }
+    }
+}
+
+/// A replay minion's two numbers; `None` when not saved or not two whole
+/// numbers from 0.
+fn counters_of(m: &Value) -> Option<[i32; 2]> {
+    let n = m.get("counters")?.as_array().filter(|a| a.len() == 2)?;
+    let at = |i: usize| n[i].as_i64().filter(|x| *x >= 0).and_then(to_i32);
+    Some([at(0)?, at(1)?])
+}
+
 fn team(mut boards: Vec<Warband>) -> Team {
     let second = (boards.len() > 1).then(|| boards.remove(1));
     Team {
@@ -539,7 +594,8 @@ fn prepare(round: &Value, solo: bool, facts: &FactsOf) -> Result<Prepared, Box<W
     let Some((own, opponent)) = sides else {
         return Err(Box::new(Why::NoBoards));
     };
-    let teams = (team(own), team(opponent));
+    let mut teams = (team(own), team(opponent));
+    shown_counters(round, &mut teams);
     let steps = replay_steps(round, &teams, facts);
     Ok(Prepared { teams, steps })
 }
