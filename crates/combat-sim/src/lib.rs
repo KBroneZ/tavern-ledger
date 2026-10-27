@@ -57,6 +57,8 @@ pub mod harness_logs;
 #[cfg(feature = "harness")]
 pub mod harness_misses;
 #[cfg(feature = "harness")]
+pub mod harness_proven;
+#[cfg(feature = "harness")]
 pub mod harness_saved;
 #[cfg(feature = "harness")]
 pub mod harness_soc;

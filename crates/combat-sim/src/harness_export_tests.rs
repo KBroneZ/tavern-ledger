@@ -2,6 +2,7 @@ use super::*;
 use crate::harness_duos::Leg;
 use crate::harness_misses::Miss;
 use crate::model::Minion;
+use std::collections::BTreeSet;
 
 fn band(ids: &[&str]) -> Warband {
     Warband::new(ids.iter().map(|id| Minion::new(*id, 2, 2)).collect())
@@ -46,12 +47,15 @@ fn options() -> Options {
     }
 }
 
+static NOTHING_PROVEN: BTreeMap<i64, BTreeSet<String>> = BTreeMap::new();
+
 fn none() -> Checked<'static> {
     static NO_BUILDS: BTreeMap<i64, u32> = BTreeMap::new();
     Checked {
         misses: &[],
         replays: &[],
         builds: &NO_BUILDS,
+        proven: &NOTHING_PROVEN,
     }
 }
 
@@ -224,6 +228,7 @@ fn the_synthetic_example_in_the_docs_has_the_export_shape() {
         misses: &misses,
         replays: &[],
         builds: &builds,
+        proven: &NOTHING_PROVEN,
     };
     let ours: Value = serde_json::from_str(&export_json(
         &accuracy(&[], &[], &options()),
@@ -287,6 +292,7 @@ fn the_export_has_the_misses_by_cause_with_counts_and_shares() {
         misses: &misses,
         replays: &[],
         builds: &builds,
+        proven: &NOTHING_PROVEN,
     };
     let a = accuracy(&[], &[], &options());
 
@@ -320,6 +326,7 @@ fn the_export_has_the_game_builds_newest_first() {
         misses: &[],
         replays: &[],
         builds: &builds,
+        proven: &NOTHING_PROVEN,
     };
     let a = accuracy(&[], &[], &options());
 
@@ -342,6 +349,7 @@ fn only_the_newest_builds_are_exported() {
         misses: &[],
         replays: &[],
         builds: &builds,
+        proven: &NOTHING_PROVEN,
     };
     let a = accuracy(&[], &[], &options());
 
@@ -474,4 +482,56 @@ fn a_duos_combat_with_a_kit_on_its_second_board_is_compared() {
     let plain = duos(&["BGS_119"], &["BGS_119"], Some(CombatResult::Tie));
     let a = accuracy(&[], &[c, plain], &options());
     assert_eq!((a.kits.combats, a.kits.with.combats), (1, 1));
+}
+
+#[test]
+fn each_build_says_how_many_cards_are_proven_and_how_many_play_from_text_only() {
+    let builds = BTreeMap::from([(253_216, 4), (254_477, 2)]);
+    let proven = BTreeMap::from([(
+        254_477,
+        BTreeSet::from(["BGS_119".to_string(), "BG_ICC_026t".to_string()]),
+    )]);
+    let checked = Checked {
+        misses: &[],
+        replays: &[],
+        builds: &builds,
+        proven: &proven,
+    };
+    let a = accuracy(&[], &[], &options());
+    let modelled = crate::cards::modelled_ids().len();
+
+    let v: Value =
+        serde_json::from_str(&export_json(&a, &options(), "2026-10-27", &checked)).unwrap();
+
+    assert_eq!(v["format"], 5);
+    let newest = &v["builds"]["checked"][0];
+    assert_eq!(newest["build"], 254_477);
+    assert_eq!(newest["proven"], 2);
+    assert_eq!(newest["text_only"], modelled - 2);
+    let older = &v["builds"]["checked"][1];
+    assert_eq!(older["proven"], 0);
+    assert_eq!(older["text_only"], modelled);
+}
+
+#[test]
+fn the_history_keeps_each_games_build() {
+    let db = crate::harness::load_cards(include_str!("../tests/data/cards.json")).unwrap();
+    let line = |session: &str, build: &str| {
+        format!(
+            r#"{{"session": "{session}", "index": 1, "saved_at": 1, "report": {{"game_type": "GT_BATTLEGROUNDS", {build}"rounds": []}}}}"#
+        )
+    };
+    let jsonl = [
+        line("a", r#""build": 253216, "#),
+        line("b", ""),
+        line("c", r#""build": -1, "#),
+    ]
+    .join(
+        "
+",
+    );
+
+    let h = crate::harness::load_history(&jsonl, &db);
+
+    assert_eq!(h.game_builds, [Some(253_216), None, None]);
 }

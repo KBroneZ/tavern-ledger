@@ -1,8 +1,23 @@
 {
   "cards": {
+    "BG30_MagicItem_886": {
+      "en": "Reinforced Shield",
+      "es": "Escudo reforzado",
+      "golden": false
+    },
     "BG31_999": {
       "en": "Stitched Salvager",
       "es": "Recuperador cosido",
+      "golden": false
+    },
+    "BG32_MagicItem_276": {
+      "en": "Enigmatic Headstone",
+      "es": "Lápida enigmática",
+      "golden": false
+    },
+    "BG35_MagicItem_740": {
+      "en": "Sky Golem Portrait",
+      "es": "Retrato de Gólem celeste",
       "golden": false
     },
     "TB_BaconShop_HERO_64_Buddy": {
