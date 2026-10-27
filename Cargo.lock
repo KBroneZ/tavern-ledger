@@ -4301,6 +4301,7 @@ version = "0.1.0"
 dependencies = [
  "bg-parser",
  "combat-sim",
+ "expected-place",
  "serde",
  "serde_json",
  "windows-sys 0.61.2",
