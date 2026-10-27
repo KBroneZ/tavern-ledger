@@ -58,7 +58,8 @@ const ROUND_TREE_KEYS: &[&str] = &[
     "powers", "trinkets", "slot", "target", "held",
     // game-long values
     "blood_gem_atk", "blood_gem_health", "spell_atk", "spell_health", "knights_dead",
-    "undead_atk", "beetle_atk", "beetle_health",
+    "undead_atk", "beetle_atk", "beetle_health", "deity_dbf", "deity_atk", "deity_health",
+    "deity_needed", "deity_progress",
     // replay
     "complete", "events", "minions", "start", "beats", "kind", "source", "trigger", "minion", "on",
     "amount", "attacker", "defender", "keyword", "how",
@@ -66,8 +67,9 @@ const ROUND_TREE_KEYS: &[&str] = &[
 /// Keys whose strings are card ids.
 const CARD_ID_KEYS: [&str; 3] = ["card_id", "hero", "gifts"];
 /// Keys whose numbers can be as big as a minion's stats (up to the 32-bit
-/// limit, D-144); every other number is at most [`MAX_SMALL`].
-const STAT_KEYS: [&str; 4] = ["atk", "health", "amount", "counters"];
+/// limit, D-144) or a card's database id (the Deity's, parser revision 17);
+/// every other number is at most [`MAX_SMALL`].
+const STAT_KEYS: [&str; 5] = ["atk", "health", "amount", "counters", "deity_dbf"];
 /// The largest number a key outside [`STAT_KEYS`] holds (the saved game's
 /// largest game-long value, `saved::MAX_GAME_VALUE`).
 const MAX_SMALL: i64 = 99_999;
@@ -166,7 +168,9 @@ fn check_level(v: &Value, path: &str, keys: &[&str]) -> Result<(), String> {
         .ok_or_else(|| format!("{path}: not an object"))?;
     map.iter().try_for_each(|(k, v)| {
         if !keys.contains(&k.as_str()) {
-            return Err(format!("{path}/{k}: a key that is not one a corpus line keeps"));
+            return Err(format!(
+                "{path}/{k}: a key that is not one a corpus line keeps"
+            ));
         }
         let here = format!("{path}/{k}");
         match k.as_str() {
@@ -187,7 +191,9 @@ fn check_tree(v: &Value, path: &str, key: &str) -> Result<(), String> {
         Value::Array(items) => items.iter().try_for_each(|i| check_tree(i, path, key)),
         Value::Object(map) => map.iter().try_for_each(|(k, v)| {
             if !ROUND_TREE_KEYS.contains(&k.as_str()) {
-                return Err(format!("{path}/{k}: a key that is not one a corpus line keeps"));
+                return Err(format!(
+                    "{path}/{k}: a key that is not one a corpus line keeps"
+                ));
             }
             check_tree(v, &format!("{path}/{k}"), k)
         }),
