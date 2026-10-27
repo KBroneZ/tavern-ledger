@@ -184,7 +184,7 @@ def metadata(edges, members, names=None):
     names = names or {}
     ids = set(edges) | {d for deps in edges.values() for d in deps} | set(members)
     return {
-        "packages": [{"id": i, "name": names.get(i, i)} for i in sorted(ids)],
+        "packages": [{"id": i, "name": names.get(i, i), "source": tool.CRATES_IO} for i in sorted(ids)],
         "workspace_members": list(members),
         "resolve": {"nodes": [{"id": i, "deps": [{"pkg": d} for d in edges.get(i, [])]} for i in sorted(ids)]},
     }
@@ -229,13 +229,24 @@ class UsedOnlyByTest(unittest.TestCase):
         empty = {"packages": [], "workspace_members": [], "resolve": {"nodes": []}}
         self.assertTrue(tool.check_used_only_by(item, metadata_for=lambda target: empty))
 
+    def test_a_same_name_crate_not_from_crates_io_does_not_match(self):
+        meta = {
+            "packages": [
+                {"id": "d", "name": "digest", "source": tool.CRATES_IO},
+                {"id": "s", "name": "sha2", "source": None},
+            ],
+            "workspace_members": [],
+            "resolve": {"nodes": [{"id": "s", "deps": [{"pkg": "d"}]}]},
+        }
+        self.assertEqual(tool.dependents(meta, "digest"), {"sha2 (not from crates.io)"})
+
     def test_dependents_reads_every_version_of_a_package(self):
         meta = {
             "packages": [
-                {"id": "d1", "name": "digest"},
-                {"id": "d2", "name": "digest"},
-                {"id": "s", "name": "sha2"},
-                {"id": "x", "name": "other"},
+                {"id": "d1", "name": "digest", "source": tool.CRATES_IO},
+                {"id": "d2", "name": "digest", "source": tool.CRATES_IO},
+                {"id": "s", "name": "sha2", "source": tool.CRATES_IO},
+                {"id": "x", "name": "other", "source": tool.CRATES_IO},
             ],
             "workspace_members": [],
             "resolve": {"nodes": [{"id": "s", "deps": [{"pkg": "d1"}]}, {"id": "x", "deps": [{"pkg": "d2"}]}]},

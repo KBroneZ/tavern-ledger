@@ -422,13 +422,25 @@ def run_scanner(scanner: str) -> dict:
     return _json(output, "osv-scanner")
 
 
+CRATES_IO = "registry+https://github.com/rust-lang/crates.io-index"
+
+
 def dependents(metadata: dict, package: str) -> set[str]:
     """Names of the packages that depend directly on any version of
-    `package`, from `cargo metadata --filter-platform` output."""
-    names = {pkg["id"]: pkg["name"] for pkg in metadata.get("packages") or []}
+    `package`, from `cargo metadata --filter-platform` output. A dependent
+    that is not from crates.io (a path, git or other registry package that
+    could take a listed name) gets a mark, so it never matches a list."""
+    packages = metadata.get("packages") or []
+    names = {pkg["id"]: pkg["name"] for pkg in packages}
+    sources = {pkg["id"]: pkg.get("source") for pkg in packages}
     nodes = (metadata.get("resolve") or {}).get("nodes") or []
+
+    def label(pkg_id: str) -> str:
+        name = names.get(pkg_id, pkg_id)
+        return name if sources.get(pkg_id) == CRATES_IO else f"{name} (not from crates.io)"
+
     return {
-        names.get(node["id"], node["id"])
+        label(node["id"])
         for node in nodes
         for dep in node.get("deps") or []
         if names.get(dep["pkg"]) == package
