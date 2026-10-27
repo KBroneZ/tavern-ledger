@@ -196,6 +196,16 @@ A daily workflow (`.github/workflows/game-build-watch.yml`, also runnable by han
 
 To see what it would do without opening anything: `python tools/game_build_watch.py`. Add `--open-issue` (needs `gh` and a token) to open the issue. If the simulator has a `CHECKED_BUILDS` list in `crates/combat-sim/src`, the report says when it is behind. The listing can be ahead of the game's own patch day, so read the build number in the issue before acting on it. The listing numbers the client, but a game writes its own number to `Power.log` (`BuildNumber=`), and a client build can write an older one: the 255130 client writes 254477. `TESTED_BUILDS` and the simulator's `CHECKED_BUILDS` hold the number the logs write; `CLIENT_BUILDS` pairs a client build with the log build its games write, and a pair is added only after real games on that client were read clean (a test keeps its log build inside `TESTED_BUILDS`). To find a client's build: `.product.db` in the game folder, or `Hearthstone/<version>` in `Net.log`.
 
+### Expected-place features
+
+`crates/expected-place` turns a saved game into one row of numbers per combat: the state the player could see as that combat began (turn, health and how many players are left, the shop turn's tier, gold, rolls and buys, both boards' sizes, stats and keywords, the opponent's health), for the expected-place model. A value the record does not have is left empty (unknown), never 0. `place-features` writes the rows of a history as CSV for training, with a running game number, the build and the hero's card id, never a name, account or time:
+
+```
+cargo run --release -p expected-place -- --history "%APPDATA%\TavernLedger\games.jsonl" --out .local/features.csv
+```
+
+The rows' format is `expected_place::VERSION`; it goes up whenever a feature is added, removed or changes meaning.
+
 ### Simulator conformance corpus
 
 Every logged combat can become a frozen test case for the combat simulator. `combat-corpus` reads your own saved games and writes one JSON line per combat that has a result: the build, Solo or Duos, both sides' boards, kits and game-long values, the result and the saved combat replay. Names, the lobby, the session string, when the game was played and the shop are left out; a key outside a fixed list, or a string that is not a card id or a game word, stops the export instead of being written. No card data goes in the file: whoever reads it gives each combat the `cards.json` of its own build.
