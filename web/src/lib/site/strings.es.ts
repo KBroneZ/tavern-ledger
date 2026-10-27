@@ -40,10 +40,10 @@ export const ES: Record<SiteKey, string> = {
   "offline.back": "Ir al inicio",
 
   // Page titles and descriptions.
-  "meta.index.title": "Tus partidas de Campos de Batalla, guardadas para ti",
+  "meta.index.title": "Tracker gratuito de Campos de Batalla de Hearthstone para Windows",
   "meta.index.description":
     "Registro gratuito y de código abierto para Campos de Batalla en Windows. Lee los archivos de registro del juego y tiene una web para seguir tu progreso.",
-  "meta.download.title": "Descargar para Windows",
+  "meta.download.title": "Descarga el tracker gratuito de Campos de Batalla para Windows",
   "meta.download.description":
     "Descarga la beta de Tavern Ledger para Windows 10 y 11: una aplicación gratuita que guarda tus partidas de Campos de Batalla de Hearthstone. Cuatro pasos sencillos para instalarla.",
   "meta.privacy.title": "Privacidad",
