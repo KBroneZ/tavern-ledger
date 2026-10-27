@@ -51,8 +51,9 @@ fn falling_game() -> Game {
     }
 }
 
-fn dashes(c: &Curve) -> bool {
-    c.points.iter().all(|p| p.shown.is_none()) && c.worst.is_none()
+fn dashes(c: &Curve) -> Option<Dash> {
+    assert!(c.points.iter().all(|p| p.shown.is_none()) && c.worst.is_none());
+    c.dash
 }
 
 #[test]
@@ -62,14 +63,17 @@ fn without_a_model_every_turn_is_a_dash() {
         c.points.iter().map(|p| p.turn).collect::<Vec<_>>(),
         [1, 2, 3, 4]
     );
-    assert!(dashes(&c), "{c:?}");
+    assert_eq!(dashes(&c), Some(Dash::NoModel));
 }
 
 #[test]
 fn a_model_on_too_few_games_shows_dashes() {
     let mut m = ready_model();
     m.games = MIN_GAMES - 1;
-    assert!(dashes(&curve(Some(&m), &falling_game())));
+    assert_eq!(
+        dashes(&curve(Some(&m), &falling_game())),
+        Some(Dash::TooFewGames)
+    );
 }
 
 #[test]
@@ -79,14 +83,17 @@ fn a_model_of_the_other_mode_shows_dashes() {
         solo: true,
         ..falling_game()
     };
-    assert!(dashes(&curve(Some(&m), &solo)));
+    assert_eq!(dashes(&curve(Some(&m), &solo)), Some(Dash::OtherMode));
 }
 
 #[test]
 fn a_model_of_another_feature_version_shows_dashes() {
     let mut m = ready_model();
     m.encoder = VERSION + 1;
-    assert!(dashes(&curve(Some(&m), &falling_game())));
+    assert_eq!(
+        dashes(&curve(Some(&m), &falling_game())),
+        Some(Dash::OtherFormat)
+    );
 }
 
 #[test]
@@ -112,8 +119,8 @@ fn the_turn_the_place_fell_most_is_marked_with_its_reason() {
     let m = ready_model();
     let c = curve(Some(&m), &falling_game());
     let worst = c.worst.expect("health fell hard on turn 3");
-    assert_eq!(worst.index, 2);
-    assert_eq!(c.points[worst.index].turn, 3);
+    assert_eq!((worst.index, worst.turn), (2, 3));
+    assert_eq!(c.dash, None);
     assert_eq!(worst.reason, Some("health"));
 }
 
@@ -152,4 +159,95 @@ fn the_band_is_the_middle_half_of_the_places() {
     assert_eq!(band(&[0.25, 0.25, 0.25, 0.25]), (1, 3));
     assert_eq!(band(&[0.1, 0.1, 0.1, 0.7]), (3, 4));
     assert_eq!(band(&[0.0, 0.5, 0.5, 0.0]), (2, 3));
+}
+
+#[test]
+fn a_model_of_the_wrong_shape_shows_dashes_instead_of_panicking() {
+    let shapes: [fn(&mut Model); 4] = [
+        |m| m.mean.pop().map(drop).unwrap(),
+        |m| m.spread.push(1.0),
+        |m| m.intercepts.pop().map(drop).unwrap(),
+        |m| m.weights[1].pop().map(drop).unwrap(),
+    ];
+    for change in shapes {
+        let mut m = ready_model();
+        change(&mut m);
+        assert_eq!(
+            dashes(&curve(Some(&m), &falling_game())),
+            Some(Dash::OtherFormat)
+        );
+    }
+}
+
+#[test]
+fn a_turn_that_is_not_a_number_is_a_dash_and_breaks_the_rise() {
+    let m = ready_model();
+    let mut g = falling_game();
+    g.turns[1].values[index("health")] = Some(f64::NAN);
+    g.turns[2].values[index("health")] = Some(f64::INFINITY);
+    let c = curve(Some(&m), &g);
+    assert!(c.points[0].shown.is_some() && c.points[3].shown.is_some());
+    assert!(c.points[1].shown.is_none() && c.points[2].shown.is_none());
+    assert_eq!(c.worst, None, "no rise across the gap");
+}
+
+#[test]
+fn no_reason_when_no_feature_takes_back_half_of_the_rise() {
+    let m = ready_model();
+    let g = falling_game();
+    let now = curve(Some(&m), &g).points[2].shown.clone().unwrap().mean;
+    let (before, after) = (&g.turns[1], &g.turns[2]);
+    let rise = now - curve(Some(&m), &g).points[1].shown.clone().unwrap().mean;
+    assert_eq!(reason(&m, before, after, now, rise), Some("health"));
+    // Health takes back the whole rise, so not half of three times it.
+    assert_eq!(reason(&m, before, after, now, 3.0 * rise), None);
+}
+
+#[test]
+fn the_features_never_given_as_a_reason_exist() {
+    for name in NOT_A_REASON {
+        assert!(NAMES.contains(&name), "{name}");
+    }
+}
+
+#[test]
+fn a_solo_model_shows_eight_places_on_a_solo_game() {
+    let solo = |place: i64, turns: i64| {
+        let mut g = game(place, turns);
+        g.solo = true;
+        for t in &mut g.turns {
+            t.values[index("solo")] = Some(1.0);
+            t.values[index("health")] = Some(45.0 - 5.0 * place as f64 - t.turn as f64);
+        }
+        g
+    };
+    let games: Vec<Game> = (0..MIN_GAMES as i64)
+        .map(|i| solo(1 + i % 8, 3 + i % 5))
+        .collect();
+    let m = Model::train(&games, true, &Train::default()).unwrap();
+    let c = curve(Some(&m), &solo(8, 4));
+    assert_eq!(c.dash, None);
+    for p in &c.points {
+        let s = p.shown.as_ref().unwrap();
+        assert!(1 <= s.low && s.low <= s.high && s.high <= 8, "{s:?}");
+    }
+    assert!(c.points[0].shown.as_ref().unwrap().mean > 5.0, "{c:?}");
+}
+
+#[test]
+fn the_json_has_dashes_points_and_the_worst_turn() {
+    let m = ready_model();
+    let v = to_json(&curve(Some(&m), &falling_game()));
+    assert_eq!(v["dash"], serde_json::Value::Null);
+    assert_eq!(v["points"].as_array().unwrap().len(), 4);
+    assert!(v["points"][0]["mean"].as_f64().is_some());
+    assert_eq!(v["worst"]["turn"], 3);
+    assert_eq!(v["worst"]["reason"], "health");
+    let none = to_json(&curve(None, &falling_game()));
+    assert_eq!(none["dash"], "no_model");
+    assert_eq!(
+        none["points"][1],
+        serde_json::json!({"turn": 2, "mean": null})
+    );
+    assert_eq!(none["worst"], serde_json::Value::Null);
 }
