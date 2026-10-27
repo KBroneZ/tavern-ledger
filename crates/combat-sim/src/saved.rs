@@ -22,7 +22,9 @@ use serde_json::Value;
 
 use crate::combat::replay::{replay_teams, LoggedStep, Replay, Span};
 use crate::combat::CombatResult;
-use crate::model::{BaseCard, GameValues, Keywords, Kit, KitCard, Minion, Team, Tribes, Warband};
+use crate::model::{
+    BaseCard, GameValues, Keywords, Kit, KitCard, Minion, Team, Tribes, Warband, MAX_BOARD,
+};
 use crate::trials::Options;
 use crate::why::{explain, CombatFacts, Explained, Replayable, Said};
 
@@ -570,12 +572,21 @@ const RAPID_REANIMATION: &str = "BG25_HERO_103p";
 /// start of combat, so a copy waiting for space is on none of them. The
 /// named minion is the replay start's minion at the kit's target; its copy
 /// waits when it died after the power acted and before the first attack,
-/// and no minion of its card was summoned on its side by then. Nothing
-/// without a replay or a kit.
+/// no minion of its card was summoned on its side after its death (its own
+/// Reborn aside), and its board is full at the first attack (with space,
+/// the copy would be back). Nothing without a complete replay or a kit.
+///
+/// The opponent's kit takes the copy too: it is a minion the replay shows
+/// on the board before start of combat, never one held in the hand, which
+/// stays unsaved and unread (D-164).
 fn waiting_copies(round: &Value, teams: &mut (Team, Team), facts: &FactsOf) {
     let Some(replay) = round.get("replay") else {
         return;
     };
+    // An incomplete replay may lack the copy's summon: no copy is made up.
+    if replay.get("complete").and_then(Value::as_bool) != Some(true) {
+        return;
+    }
     let minions = replay
         .get("minions")
         .and_then(Value::as_array)
@@ -602,6 +613,9 @@ fn waiting_copies(round: &Value, teams: &mut (Team, Team), facts: &FactsOf) {
         ("own", &mut teams.0.first),
         ("opponent", &mut teams.1.first),
     ] {
+        if band.minions.len() < MAX_BOARD {
+            continue;
+        }
         let Some(kit) = band.kit.as_mut() else {
             continue;
         };
@@ -628,6 +642,12 @@ impl Opening<'_> {
     /// The copy of `side`'s minion at board index `at` before start of
     /// combat, with the stats it had when it died, if it died after the
     /// power acted on that side and its card did not come back there.
+    ///
+    /// Approximations: a minion of the same card summoned on that side
+    /// after the death by another effect is taken for the copy (no copy
+    /// waits then); the copy has the Attack and Health of the last stats
+    /// event before the death, and the keywords and Dark Gifts the replay
+    /// start shows (a Divine Shield lost before the death is not followed).
     fn waiting_copy(&self, side: &str, at: usize, facts: &FactsOf) -> Option<Minion> {
         let position = i64::try_from(at + 1).ok()?;
         let side_of = |m: &Value| m.get("side").and_then(Value::as_str) == Some(side);
@@ -648,14 +668,20 @@ impl Opening<'_> {
             .iter()
             .position(|e| of(e, "death") == Some(named))
             .filter(|d| *d > acted)?;
-        let back = self.events.iter().any(|e| {
+        // Summons of its card on its side after its death; the first is its
+        // own Reborn when it had Reborn, not the copy.
+        let mut summoned = self.events[died + 1..].iter().filter(|e| {
             of(e, "summon")
                 .and_then(|i| self.minions.get(i))
                 .is_some_and(|m| {
                     side_of(m) && m.get("card_id").and_then(Value::as_str) == Some(card)
                 })
         });
-        if back {
+        let reborn = self.minions[named]
+            .get("keywords")
+            .and_then(Value::as_array)
+            .is_some_and(|k| k.iter().any(|w| w.as_str() == Some("reborn")));
+        if summoned.nth(usize::from(reborn)).is_some() {
             return None;
         }
         let mut record = self.minions[named].clone();

@@ -517,6 +517,130 @@ fn rapid_reanimations_copy_waiting_for_space_is_read_from_the_replay_start() {
     assert_eq!(teams.0.first.kit, None);
 }
 
+fn events(round: &mut Value) -> &mut Vec<Value> {
+    round["replay"]["events"].as_array_mut().expect("events")
+}
+
+fn replay_minions(round: &mut Value) -> &mut Vec<Value> {
+    round["replay"]["minions"].as_array_mut().expect("minions")
+}
+
+/// The copy waiting on the player's first board's kit (`side` 0) or the
+/// opponent's.
+fn held_on(round: &Value, side: usize) -> Option<Minion> {
+    let Ok(Prepared { teams, .. }) = prepare(round, true, &facts) else {
+        panic!("boards");
+    };
+    let band = if side == 0 {
+        teams.0.first
+    } else {
+        teams.1.first
+    };
+    band.kit.expect("a kit").powers[0].held.clone()
+}
+
+fn stats_of(m: Option<Minion>) -> Option<(i32, i32)> {
+    m.map(|m| (m.attack, m.health))
+}
+
+#[test]
+fn rapid_reanimation_waits_only_for_a_minion_it_destroyed_on_its_side() {
+    // The named minion died before the power acted (to a trinket).
+    let mut early = teron_round(rapid_reanimation(2), &[]);
+    let trigger = events(&mut early).remove(0);
+    events(&mut early).insert(2, trigger);
+    assert_eq!(held_copy(&early), None);
+    // The power that acted is the opponent's.
+    let mut theirs = teron_round(rapid_reanimation(2), &[]);
+    events(&mut theirs)[0]["side"] = json!("opponent");
+    assert_eq!(held_copy(&theirs), None);
+    // No minion before start of combat at the named place.
+    let mut nowhere = teron_round(rapid_reanimation(2), &[]);
+    replay_minions(&mut nowhere)[1]["position"] = Value::Null;
+    assert_eq!(held_copy(&nowhere), None);
+}
+
+#[test]
+fn an_opponents_rapid_reanimation_waits_too() {
+    let mut round = teron_round(rapid_reanimation(2), &[]);
+    let swap = |v: &mut Value| {
+        let side = match v["side"].as_str() {
+            Some("own") => "opponent",
+            Some("opponent") => "own",
+            _ => return,
+        };
+        v["side"] = json!(side);
+    };
+    round["entries"]
+        .as_array_mut()
+        .expect("entries")
+        .iter_mut()
+        .for_each(swap);
+    replay_minions(&mut round).iter_mut().for_each(swap);
+    events(&mut round).iter_mut().for_each(swap);
+    assert_eq!(stats_of(held_on(&round, 1)), Some((42, 2)));
+}
+
+#[test]
+fn only_summons_of_its_card_after_its_death_bring_the_copy_back() {
+    let summon = |i: usize| json!({"kind": "summon", "minion": i});
+    // A Summoner summoned before it died is another one: the copy waits.
+    let mut earlier = teron_round(rapid_reanimation(2), &[]);
+    events(&mut earlier).insert(0, summon(9));
+    assert_eq!(stats_of(held_copy(&earlier)), Some((42, 2)));
+    // With Reborn, its first summon after the death is its Reborn.
+    let mut reborn = teron_round(rapid_reanimation(2), &[summon(9)]);
+    replay_minions(&mut reborn)[1]["keywords"] = json!(["reborn"]);
+    assert_eq!(stats_of(held_copy(&reborn)), Some((42, 2)));
+    // A second summon of its card is the copy.
+    replay_minions(&mut reborn).push(json!({"side": "own", "card_id": "BG25_009",
+        "golden": false, "atk": 42, "health": 2, "position": 3, "keywords": []}));
+    events(&mut reborn).insert(5, summon(10));
+    assert_eq!(held_copy(&reborn), None);
+}
+
+#[test]
+fn the_waiting_copy_keeps_its_card_and_falls_back_on_the_start_stats() {
+    // Golden stays golden.
+    let mut golden = teron_round(rapid_reanimation(2), &[]);
+    replay_minions(&mut golden)[1]["golden"] = json!(true);
+    assert!(held_copy(&golden).expect("waiting").golden);
+    // No stats event before its death: as the replay start shows it.
+    let mut plain = teron_round(rapid_reanimation(2), &[]);
+    events(&mut plain).remove(1);
+    assert_eq!(stats_of(held_copy(&plain)), Some((41, 1)));
+    // The named minion found by side and place, wherever it is listed.
+    let mut shifted = teron_round(rapid_reanimation(2), &[]);
+    replay_minions(&mut shifted).insert(
+        0,
+        json!({"side": "opponent", "card_id": PLAIN, "golden": false, "atk": 1,
+               "health": 1, "position": 2, "keywords": []}),
+    );
+    shifted["replay"]["start"] = json!(9);
+    for e in events(&mut shifted).iter_mut() {
+        for key in ["minion", "attacker", "defender"] {
+            if let Some(i) = e[key].as_u64() {
+                e[key] = json!(i + 1);
+            }
+        }
+    }
+    assert_eq!(stats_of(held_copy(&shifted)), Some((42, 2)));
+}
+
+#[test]
+fn no_copy_waits_without_a_complete_replay_or_a_full_board() {
+    let mut incomplete = teron_round(rapid_reanimation(2), &[]);
+    incomplete["replay"]["complete"] = json!(false);
+    assert_eq!(held_copy(&incomplete), None);
+    // With space at the first attack the copy would be back already.
+    let mut space = teron_round(rapid_reanimation(2), &[]);
+    space["entries"][0]["board"]
+        .as_array_mut()
+        .expect("board")
+        .pop();
+    assert_eq!(held_copy(&space), None);
+}
+
 #[test]
 fn an_unmodelled_trinket_on_a_saved_board_blocks_the_odds() {
     let trinket = json!({"powers": [],

@@ -247,7 +247,8 @@ impl Combat<'_> {
 
     /// On boards taken after start of combat (T-645): the copy a Rapid
     /// Reanimation destroyed at the start of combat and still holds, waiting
-    /// for space, comes back at the named minion's place once there is.
+    /// for space, comes back at the named minion's place once there is: at
+    /// once on a board with space.
     pub(super) fn waiting_copies(&mut self) {
         if self.p.start_of_combat {
             return;
@@ -263,7 +264,10 @@ impl Combat<'_> {
                     })
                 })
                 .collect();
-            self.pending[side].extend(waiting);
+            if !waiting.is_empty() {
+                self.pending[side].extend(waiting);
+                self.fill_space(side);
+            }
         }
     }
 

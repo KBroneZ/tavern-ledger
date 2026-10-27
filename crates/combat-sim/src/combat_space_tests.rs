@@ -468,6 +468,32 @@ fn rapid_reanimations_waiting_copy_comes_back_on_a_board_taken_after_start_of_co
 }
 
 #[test]
+fn a_waiting_copy_on_a_board_with_space_comes_back_at_once() {
+    let mut rr = power("BG25_HERO_103p", false);
+    rr.target = Some(1);
+    rr.held = Some(plain(7, 7));
+    let player = band(vec![plain(1, 1), plain(2, 2)], vec![rr], 3);
+    taken_after_start(player, vec![plain(0, 9)], |c| {
+        assert!(c.pending[0].is_empty());
+        assert_eq!(stats(c, 0), [(1, 1), (7, 7), (2, 2)]);
+    });
+}
+
+#[test]
+fn a_held_copy_waits_for_nothing_on_a_board_taken_before_start_of_combat() {
+    // There the power plays its start of combat itself.
+    let mut rr = power("BG25_HERO_103p", false);
+    rr.target = Some(2);
+    rr.held = Some(plain(7, 7));
+    let player = band(vec![plain(1, 1); MAX_BOARD], vec![rr], 3);
+    let p = Prepared::new(&player, &band(vec![plain(0, 9)], Vec::new(), 3), true);
+    let mut rng = Rng::new(5);
+    let c = Combat::new(&p, &mut rng);
+    assert!(c.pending[0].is_empty());
+    assert_eq!(stats(&c, 0), vec![(1, 1); MAX_BOARD]);
+}
+
+#[test]
 fn without_a_waiting_copy_rapid_reanimation_does_nothing_after_start_of_combat() {
     let mut rr = power("BG25_HERO_103p", false);
     rr.target = Some(0);
