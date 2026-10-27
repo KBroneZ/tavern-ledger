@@ -268,8 +268,8 @@ const MISSES = {
 const BUILDS = {
   newest: 260001,
   checked: [
-    { build: 260001, count: 3 },
-    { build: 253216, count: 150 },
+    { build: 260001, count: 3, proven: 0, text_only: 640 },
+    { build: 253216, count: 150, proven: 212, text_only: 428 },
   ],
 };
 
@@ -317,9 +317,12 @@ test("builds: newest must lead the list; bad numbers, repeats and extra keys fai
   assert.throws(bad((b) => (b.checked[1].build = 260001)), /twice|newest first/);
   assert.throws(bad((b) => (b.checked[0].build = -1)), /build/);
   assert.throws(bad((b) => (b.checked[0].count = 0)), /count/);
+  assert.throws(bad((b) => (b.checked[1].proven = -1)), /proven/);
+  assert.throws(bad((b) => (b.checked[1].text_only = 1.5)), /text_only/);
+  assert.throws(bad((b) => delete (b.checked[0] as Record<string, unknown>).proven), /proven/);
   assert.throws(() => parseAccuracy(withBuilds({ newest: null, checked: BUILDS.checked })), /newest/);
   assert.throws(() => parseAccuracy(withBuilds({ ...BUILDS, date: "2026-10-12" })), /date/);
-  assert.throws(() => parseAccuracy(withBuilds({ newest: 1, checked: [{ build: 1, count: 1, session: "x" }] })), /session/);
+  assert.throws(() => parseAccuracy(withBuilds({ newest: 1, checked: [{ build: 1, count: 1, proven: 0, text_only: 1, session: "x" }] })), /session/);
 });
 
 test("every cause id has a name and a one-line why in both languages", () => {
@@ -378,7 +381,10 @@ test("the builds block: newest build, the day, and each build's games", () => {
   assert.deepEqual(en.rows.map((r) => r.build), ["260001", "253216"]);
   assert.equal(en.rows[0].games, "3 games");
   assert.equal(en.rows[1].games, "150 games");
-  const one = buildsView({ newest: 5, checked: [{ build: 5, count: 1 }] }, data.date);
+  assert.equal(en.rows[1].proven, "212");
+  assert.equal(en.rows[1].textOnly, "428");
+  assert.equal(en.rows[0].proven, "0");
+  const one = buildsView({ newest: 5, checked: [{ build: 5, count: 1, proven: 0, text_only: 9 }] }, data.date);
   assert.equal(one.rows[0].games, "1 game");
   setLang("es");
   const es = buildsView(data.builds, data.date);

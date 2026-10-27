@@ -156,11 +156,14 @@ const version = at("page.version", {
         builds.rows.length > 0 && (
           <>
             <p class="data-note">{at("builds.desc")}</p>
+            <p class="data-note">{at("builds.proven")}</p>
             <table class="dtable">
               <thead>
                 <tr>
                   <th scope="col">{at("builds.col.build")}</th>
                   <th scope="col" class="num">{at("builds.col.games")}</th>
+                  <th scope="col" class="num">{at("builds.col.proven")}</th>
+                  <th scope="col" class="num">{at("builds.col.text")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -168,6 +171,8 @@ const version = at("page.version", {
                   <tr>
                     <td>{b.build}</td>
                     <td class="num">{b.games}</td>
+                    <td class="num">{b.proven}</td>
+                    <td class="num">{b.textOnly}</td>
                   </tr>
                 ))}
               </tbody>

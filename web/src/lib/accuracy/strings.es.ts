@@ -83,6 +83,9 @@ export const ES: Record<AccKey, string> = {
   "builds.none": "Aún no se ha leído ninguna versión del juego.",
   "builds.col.build": "Versión",
   "builds.col.games": "Partidas",
+  "builds.col.proven": "Cartas probadas",
+  "builds.col.text": "Solo por su texto",
+  "builds.proven": "Una carta está probada en una versión cuando el simulador repitió con ella un combate real, ataque a ataque, como lo jugó la partida, hasta el final. Las demás cartas que conoce el simulador se juegan solo por su texto.",
   "builds.row.one": "{count} partida",
   "builds.row.other": "{count} partidas",
 

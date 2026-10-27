@@ -9,7 +9,10 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
   "summons tokens that may have game-long buffs that are not known":
     "invoca fichas que pueden tener mejoras de toda la partida que no se conocen",
   "its numbers grow during the game; the base values are used": "sus números crecen durante la partida; se usan los de base",
-  "buffs the Deity, which is not on the board": "mejora a la Deidad, que no está en el tablero",
+  "buffs the Deity, whose stats this board does not show": "mejora a la Deidad, cuyas estadísticas este tablero no muestra",
+  "buffs the Deity by more for each Tavern spell cast this game":
+    "mejora a la Deidad más por cada hechizo de taberna lanzado en la partida",
+  "buffs the team's Deities; the teammate's is not known": "mejora a las Deidades del equipo; la del compañero no se conoce",
   "Blood Gems are played as +1/+1; their upgrades are not known": "las Gemas de sangre se juegan como +1/+1; sus mejoras no se conocen",
   "which minions it picks is not checked against the game yet": "aún no se ha comprobado con la partida a qué esbirros elige",
   "grows when another Eternal Knight dies; not played": "crece cuando muere otro Caballero eterno; no se juega",

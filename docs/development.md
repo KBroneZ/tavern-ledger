@@ -136,7 +136,7 @@ npm run installer
 
 It never signs anything. A release for players is built, signed for the app's updater and drafted by GitHub Actions from a `v*` tag, and published by hand: see [docs/release/checklist.md](release/checklist.md). `plugins.updater.pubkey` in `tauri.conf.json` is the release public key, so the installer a release builds asks GitHub for updates a minute after it starts and every six hours (turn "Check for updates automatically" off in Settings > Updates to stop it) and only accepts an installer signed by that key. A build whose key is not a real minisign public key has its updater off and never asks. So does every build you make yourself: a debug build (`cargo run`, `cargo test`) never checks, and neither does a release build from source (`target\release`, `npm run installer` on your PC), because it would replace your build with the published installer. Only a build made with the environment variable `TAVERN_LEDGER_OFFICIAL_BUILD=1`, which the release workflow sets and nothing else should, checks for updates. A build with updates off writes one line to the app log saying so, and Settings > Updates says automatic updates are not set up in this version. `cargo test -p desktop` runs the updater against a local test server with throwaway keys made in the tests.
 
-On its first run the CLI downloads, into `%LOCALAPPDATA%\tauri`: NSIS 3.11 and the `nsis_tauri_utils` 0.5.3 plugin from Tauri's GitHub releases (checked against hashes built into the CLI), and Microsoft's WebView2 bootstrapper (not hash-checked; `Get-AuthenticodeSignature "$env:LOCALAPPDATA\tauri\MicrosoftEdgeWebview2Setup.exe"` should say `Valid` and `CN=Microsoft Corporation`).
+On its first run the CLI downloads, into `%LOCALAPPDATA%\tauri`: NSIS 3.13 and the `nsis_tauri_utils` 0.5.3 plugin from Tauri's GitHub releases (checked against hashes built into the CLI), and Microsoft's WebView2 bootstrapper (not hash-checked; `Get-AuthenticodeSignature "$env:LOCALAPPDATA\tauri\MicrosoftEdgeWebview2Setup.exe"` should say `Valid` and `CN=Microsoft Corporation`).
 
 What the installer does:
 
@@ -194,7 +194,43 @@ Not covered: the toolchains themselves (Node.js in `web/.node-version`, Rust, Py
 
 A daily workflow (`.github/workflows/game-build-watch.yml`, also runnable by hand from the Actions tab) asks HearthstoneJSON, with one request, which game build it has card data for. If that build is newer than the newest one in `TESTED_BUILDS` (`crates/bg-parser/src/lib.rs`) and is not listed in `CLIENT_BUILDS` (next to it), it reads the card data of both builds and opens one issue, `New game build <N>`: the Battlegrounds cards added, changed and removed, the minions the simulator does not know and the ones it plays that changed, and a checklist (parser fixture and `TESTED_BUILDS`, simulator review, memory reader, card data). An issue with that title, open or closed, is never opened twice. The workflow can only read the repository and open issues. It does not read Blizzard's site; the issue links the official news page.
 
+For each minion added or changed it also gives the engine's status (exact, approximate, refused or not known, from `crates/combat-sim/data/card_status.json`) and whether the card was proven on real combats of the previous build (`crates/combat-sim/data/proven_cards.json`); a changed minion that was proven is listed as proven no more until a combat on the new build proves it, and each card to implement or review gets its own checklist line, done only with a test from a logged combat on the new build. `card_status.json` is kept current by a test (rewrite it with `CARD_STATUS_BLESS=1 cargo test -p combat-sim --test card_status`); refresh `proven_cards.json` from your own history with `cargo run --release -p combat-sim --features harness --bin combat-validate -- --history <games.jsonl> --cards <cards.json> --summary --proven-out crates/combat-sim/data/proven_cards.json`.
+
 To see what it would do without opening anything: `python tools/game_build_watch.py`. Add `--open-issue` (needs `gh` and a token) to open the issue. If the simulator has a `CHECKED_BUILDS` list in `crates/combat-sim/src`, the report says when it is behind. The listing can be ahead of the game's own patch day, so read the build number in the issue before acting on it. The listing numbers the client, but a game writes its own number to `Power.log` (`BuildNumber=`), and a client build can write an older one: the 255130 client writes 254477. `TESTED_BUILDS` and the simulator's `CHECKED_BUILDS` hold the number the logs write; `CLIENT_BUILDS` pairs a client build with the log build its games write, and a pair is added only after real games on that client were read clean (a test keeps its log build inside `TESTED_BUILDS`). To find a client's build: `.product.db` in the game folder, or `Hearthstone/<version>` in `Net.log`.
+
+### Expected-place features
+
+`crates/expected-place` turns a saved game into one row of numbers per combat: the state the player could see as that combat began (turn, health and how many players are left, the shop turn's tier, gold, rolls and buys, both boards' sizes, stats and keywords, the opponent's health), for the expected-place model. A value the record does not have is left empty (unknown), never 0. `place-features` writes the rows of a history as CSV for training, with a running game number, the build and the hero's card id, never a name, account or time:
+
+```
+cargo run --release -p expected-place -- --history "%APPDATA%\TavernLedger\games.jsonl" --out .local/features.csv
+```
+
+The rows' format is `expected_place::VERSION`; it goes up whenever a feature is added, removed or changes meaning.
+
+`place-train` trains the first model on a history (T-653): for Solo and Duos, a multinomial logistic regression over the places, each game weighing the same, cross-validated by game in 5 folds against two baselines (the place shares over all games, and per turn), with the L2 penalty chosen among a few by the lowest cross-validated log-loss. It writes `model-solo.json`, `model-duos.json` and a card for each (data, builds, log-loss, ranked probability score, mean distance to the real place, calibration). A model trained on fewer than `expected_place::model::MIN_GAMES` games of its mode is not shown to players:
+
+```
+cargo run --release -p expected-place --bin place-train -- --history "%APPDATA%\TavernLedger\games.jsonl" --out .local/model
+```
+
+### Simulator conformance corpus
+
+Every logged combat can become a frozen test case for the combat simulator. `combat-corpus` reads your own saved games and writes one JSON line per combat that has a result: the build, Solo or Duos, both sides' boards, kits and game-long values, the result and the saved combat replay. Names, the lobby, the session string, when the game was played and the shop are left out; a key outside a fixed list, or a string that is not a card id or a game word, stops the export instead of being written. No card data goes in the file: whoever reads it gives each combat the `cards.json` of its own build.
+
+```
+cargo run --release -p combat-sim --bin combat-corpus -- --history "%APPDATA%\TavernLedger\games.jsonl" --out .local/corpus.jsonl.gz
+```
+
+The file is gzip-compressed when its name ends in `.gz`. Keep it under `.local/` (never commit a corpus made from real games without the project owner's OK, as with real-game fixtures).
+
+`combat-conformance` plays every combat of a corpus through the engine, each with the `cards.json` of its own build, and compares it with a baseline. Per combat it records whether the engine gave odds, the most likely result against the real one, and the replay of the saved combat from the first attack to the end, whatever the odds said: how many attacks the engine played as the game did and where it first left the game (the attack, the rule and the card). Any combat that moved fails the run, listed as a regression (the replay leaves the game earlier, odds or a right result lost), an improvement or a change; a close combat (its two likeliest results within 10 points) whose likely result flips is listed but does not fail. When every change is meant, write the baseline again with `--bless` and commit it with the change, so the diff shows each combat it moved.
+
+```
+cargo run --release -p combat-sim --bin combat-conformance -- --corpus .local/corpus.jsonl.gz --cards 254477=.local/cards-254477.json --cards 253216=.local/cards-253216.json --baseline .local/conformance-baseline.json [--bless]
+```
+
+`cards.json` for a build comes from `https://api.hearthstonejson.com/v1/<build>/enUS/cards.json` (kept out of the repository). A small synthetic corpus and its baseline in `crates/combat-sim/tests/data/conformance/` run with `cargo test`; after a meant change, `CONFORMANCE_BLESS=1 cargo test -p combat-sim --test conformance` rewrites that baseline.
 
 ### Real-game fixtures
 

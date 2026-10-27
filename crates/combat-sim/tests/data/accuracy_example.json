@@ -1,8 +1,8 @@
 {
   "builds": {
     "checked": [
-      { "build": 260001, "count": 3 },
-      { "build": 253216, "count": 150 }
+      { "build": 260001, "count": 3, "proven": 0, "text_only": 640 },
+      { "build": 253216, "count": 150, "proven": 212, "text_only": 428 }
     ],
     "newest": 260001
   },
@@ -18,7 +18,7 @@
   ],
   "date": "2026-01-01",
   "engine_version": "0.4.0",
-  "format": 4,
+  "format": 5,
   "kits": {
     "combats": 40,
     "scored": 38,

@@ -26,7 +26,7 @@ tauri-plugin-autostart = "=2.7.0"
 tauri-plugin-global-shortcut = "=2.4.1"
 # Self-update from the project's signed GitHub releases (T-105b). Windows'
 # own TLS like the uploader; no zip (only for Tauri v1 update bundles).
-tauri-plugin-updater = { version = "=2.13.3", default-features = false, features = ["native-tls", "system-proxy"] }
+tauri-plugin-updater = { version = "=2.14.0", default-features = false, features = ["native-tls", "system-proxy"] }
 # The verifier the plugin uses; here only to tell a real public key from the
 # placeholder before the plugin is turned on.
 minisign-verify = "0.3"

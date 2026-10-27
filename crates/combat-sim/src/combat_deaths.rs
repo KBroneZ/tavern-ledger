@@ -146,6 +146,7 @@ impl Combat<'_> {
                 return;
             }
             self.count_dead_knights(&dead);
+            self.count_aberrations(&dead);
             self.kit_undead_died(&dead);
             self.count_friendly_deaths(&dead);
             for d in &dead {
@@ -182,6 +183,9 @@ impl Combat<'_> {
             for d in &dead {
                 self.avenge(d.side);
                 self.kit_avenge(d.side);
+            }
+            for side in [first, 1 - first] {
+                self.awaken(side);
             }
             for d in &dead {
                 if d.unit.kw.contains(Keywords::REBORN) {

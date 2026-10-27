@@ -7,7 +7,7 @@
 //! The JSON holds counts, shares, the date, the engine version and card ids
 //! only: no names, seats, heroes, games or rounds.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
 use serde_json::{json, Value};
@@ -18,12 +18,13 @@ use crate::harness::LoggedCombat;
 use crate::harness_duos::{team_of, DuosCombat};
 use crate::harness_logs::Replayed;
 use crate::harness_misses::{causes_by_id, Miss};
+use crate::harness_proven::text_only;
 use crate::model::{BoardError, Team, Warband};
 use crate::score::{score, Prediction, Report};
 use crate::trials::{simulate, simulate_teams, Coverage, Odds, Options, Verdict};
 
 /// Version of the JSON's shape; a reader checks it before reading.
-pub const FORMAT: u32 = 4;
+pub const FORMAT: u32 = 5;
 
 /// The cards that summon a minion from the hand: approximate since round 5
 /// (D-097), counted apart.
@@ -438,6 +439,8 @@ pub struct Checked<'a> {
     pub misses: &'a [Miss],
     pub replays: &'a [Replayed],
     pub builds: &'a BTreeMap<i64, u32>,
+    /// Build -> the modelled cards proven on its combats (T-646).
+    pub proven: &'a BTreeMap<i64, BTreeSet<String>>,
 }
 
 fn misses_json(c: &Checked) -> Value {
@@ -456,12 +459,24 @@ fn misses_json(c: &Checked) -> Value {
     json!({ "total": total, "causes": causes })
 }
 
-fn builds_json(builds: &BTreeMap<i64, u32>) -> Value {
+/// The builds checked, newest first, each with its games and how many of
+/// the modelled cards were proven on its combats or play from their text
+/// only (T-646).
+fn builds_json(builds: &BTreeMap<i64, u32>, proven: &BTreeMap<i64, BTreeSet<String>>) -> Value {
+    let none = BTreeSet::new();
     let checked: Vec<Value> = builds
         .iter()
         .rev()
         .take(EXPORT_BUILDS)
-        .map(|(build, games)| json!({ "build": build, "count": games }))
+        .map(|(build, games)| {
+            let cards = proven.get(build).unwrap_or(&none);
+            json!({
+                "build": build,
+                "count": games,
+                "proven": cards.len(),
+                "text_only": text_only(cards),
+            })
+        })
         .collect();
     json!({
         "newest": builds.keys().next_back(),
@@ -510,7 +525,7 @@ pub fn export_json(a: &Accuracy, options: &Options, date: &str, checked: &Checke
         "blocking_cards": blockers,
         "kits": kits_json(&a.kits),
         "misses": misses_json(checked),
-        "builds": builds_json(checked.builds),
+        "builds": builds_json(checked.builds, checked.proven),
     });
     let mut s = serde_json::to_string_pretty(&v).unwrap_or_default();
     s.push('\n');

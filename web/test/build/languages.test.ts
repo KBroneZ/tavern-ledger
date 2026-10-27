@@ -82,6 +82,8 @@ test("links stay in the page's language (the switch apart)", () => {
     const html = read(page).replace(/<a\b[^>]*data-lang-switch[^>]*>/g, "");
     const links = [...html.matchAll(/<(?:a|form)\b[^>]*\s(?:href|action)="(\/[^"]*)"/g)].map((m) => m[1]);
     for (const link of links) {
+      // Files (the press page's logo downloads, T-704) are the same in both languages.
+      if (/\.(?:svg|png)$/.test(link)) continue;
       if (page.startsWith("es/")) assert.match(link, /^\/es\//, `${page}: ${link}`);
       else assert.doesNotMatch(link, /^\/es\//, `${page}: ${link}`);
     }

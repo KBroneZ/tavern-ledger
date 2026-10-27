@@ -127,6 +127,9 @@ pub struct History {
     /// Game build number -> games read on it (Solo and Duos games; a game
     /// with no build is not counted).
     pub builds: BTreeMap<i64, u32>,
+    /// Each game's build (`None` when it has none), by game number minus
+    /// one, for the cards proven on each build (T-646).
+    pub game_builds: Vec<Option<i64>>,
 }
 
 /// The highest build number kept (a larger one is not a game build).
@@ -158,19 +161,21 @@ pub(crate) fn board_with_kit(entry: &Value, round: &Value, db: &CardDb) -> Optio
 
 pub(crate) use crate::saved::result;
 
-/// Reads the history: the last record of each game wins, as in the app.
-pub fn load_history(jsonl: &str, db: &CardDb) -> History {
+/// The report of each game in a history, the last record of a game
+/// winning as in the app, in the order the games first appear; and the
+/// number of lines that are not a game record.
+pub fn latest_reports(jsonl: &str) -> (Vec<Value>, usize) {
     let mut latest: Vec<((String, u64), Value)> = Vec::new();
-    let mut h = History::default();
+    let mut bad_lines = 0;
     for line in jsonl.lines().filter(|l| !l.trim().is_empty()) {
         let Ok(v) = serde_json::from_str::<Value>(line) else {
-            h.bad_lines += 1;
+            bad_lines += 1;
             continue;
         };
         let session = v.get("session").and_then(Value::as_str);
         let index = v.get("index").and_then(Value::as_u64);
         let (Some(session), Some(index), Some(report)) = (session, index, v.get("report")) else {
-            h.bad_lines += 1;
+            bad_lines += 1;
             continue;
         };
         let key = (session.to_string(), index);
@@ -180,15 +185,29 @@ pub fn load_history(jsonl: &str, db: &CardDb) -> History {
             None => latest.push((key, report)),
         }
     }
+    (latest.into_iter().map(|(_, r)| r).collect(), bad_lines)
+}
+
+/// Reads the history: the last record of each game wins, as in the app.
+pub fn load_history(jsonl: &str, db: &CardDb) -> History {
+    let (latest, bad_lines) = latest_reports(jsonl);
+    let mut h = History {
+        bad_lines,
+        ..History::default()
+    };
     h.games = latest.len();
-    for (game, (_, report)) in latest.iter().enumerate() {
+    for (game, report) in latest.iter().enumerate() {
+        let build = report
+            .get("build")
+            .and_then(Value::as_i64)
+            .filter(|b| (1..=MAX_BUILD).contains(b));
+        h.game_builds.push(build);
         let solo = match report.get("game_type").and_then(Value::as_str) {
             Some("GT_BATTLEGROUNDS") => true,
             Some("GT_BATTLEGROUNDS_DUO") => false,
             _ => continue,
         };
-        let build = report.get("build").and_then(Value::as_i64);
-        if let Some(build) = build.filter(|b| (1..=MAX_BUILD).contains(b)) {
+        if let Some(build) = build {
             *h.builds.entry(build).or_insert(0) += 1;
         }
         let duos = if solo {
@@ -267,7 +286,7 @@ pub fn load_history(jsonl: &str, db: &CardDb) -> History {
         }
         h.duos.extend(duos);
     }
-    h.reports = latest.into_iter().map(|(_, report)| report).collect();
+    h.reports = latest;
     h
 }
 
