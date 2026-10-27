@@ -109,6 +109,8 @@ pub(crate) fn game_values(v: Option<CombatValues>) -> GameValues {
         knights_dead: int(v.knights_dead),
         undead_attack: int(v.undead_attack),
         beetle: (int(v.beetle.0), int(v.beetle.1)),
+        // The Deity comes with parser revision 17 (T-671).
+        ..GameValues::default()
     }
 }
 

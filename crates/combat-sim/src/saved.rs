@@ -26,6 +26,10 @@ use crate::model::{BaseCard, GameValues, Keywords, Kit, KitCard, Minion, Team, T
 use crate::trials::Options;
 use crate::why::{explain, CombatFacts, Explained, Replayable};
 
+/// The largest card database id a saved report keeps (bg-parser's
+/// `MAX_DBF`): the Deity's.
+pub const MAX_DBF: i64 = 10_000_000;
+
 /// The largest game-long value a saved report keeps (bg-parser's
 /// `MAX_GAME_VALUE`; the harness tests check they agree).
 pub const MAX_GAME_VALUE: i64 = 99_999;
@@ -228,6 +232,17 @@ pub fn saved_values(v: Option<&Value>) -> GameValues {
         knights_dead: n("knights_dead"),
         undead_attack: n("undead_atk"),
         beetle: (n("beetle_atk"), n("beetle_health")),
+        deity: crate::model::Deity {
+            dbf: v
+                .and_then(|v| v.get("deity_dbf"))
+                .and_then(Value::as_i64)
+                .filter(|n| (1..=MAX_DBF).contains(n))
+                .map_or(0, |n| n as i32),
+            attack: n("deity_atk"),
+            health: n("deity_health"),
+            needed: n("deity_needed"),
+            progress: n("deity_progress"),
+        },
     }
 }
 

@@ -206,6 +206,28 @@ pub struct GameValues {
     pub undead_attack: i32,
     /// Attack and Health the side's Beetles have on top this game.
     pub beetle: (i32, i32),
+    /// The player's Deity, hidden until it awakens (T-671).
+    pub deity: Deity,
+}
+
+/// A player's Deity as the game keeps it for the combat (T-671): its
+/// database id (C'Thun or Y'Shaarj), its Attack and Health, and the friendly
+/// Aberration deaths this combat that awaken it, needed and counted. All 0
+/// when unknown: then no Deity awakens in the engine.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Deity {
+    pub dbf: i32,
+    pub attack: i32,
+    pub health: i32,
+    pub needed: i32,
+    pub progress: i32,
+}
+
+impl Deity {
+    /// Whether the board brings a Deity the engine can awaken.
+    pub fn known(&self) -> bool {
+        crate::cards::deity_card(self.dbf).is_some() && self.needed > 0
+    }
 }
 
 /// A hero power or trinket of a board's hero (T-628), by its card id.
