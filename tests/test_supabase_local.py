@@ -196,6 +196,9 @@ class LocalStackTests(unittest.TestCase):
                          {"hero_stats": False, "updated_at": None, "policy_version": None})
         self.assertEqual(doc["simulator_consent"],
                          {"improve_simulator": False, "updated_at": None, "policy_version": None})
+        # Training the expected-place model is on until the owner objects (T-651).
+        self.assertEqual(doc["training_choice"],
+                         {"train_model": True, "updated_at": None, "policy_version": None})
 
         # Opted in to the community hero stats: the choice goes with the account.
         status, on = self.api.request("POST", "/rest/v1/rpc/set_community_consent",
@@ -213,6 +216,10 @@ class LocalStackTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn(path, [f["storage_path"] for f in files],
                       "the owner's list has the opted-in game")
+        # And objects to the training (T-651): the choice goes with the account too.
+        status, on = self.api.request("POST", "/rest/v1/rpc/set_training_choice",
+                                      token=token, body={"p_train": False})
+        self.assertEqual((status, on), (200, False))
 
         status, result = self.api.request(
             "DELETE", "/functions/v1/delete-account", token=token)
@@ -229,6 +236,7 @@ class LocalStackTests(unittest.TestCase):
             " + (select count(*) from public.profiles where user_id = '{u}')"
             " + (select count(*) from public.community_consent where user_id = '{u}')"
             " + (select count(*) from public.simulator_consent where user_id = '{u}')"
+            " + (select count(*) from public.training_objection where user_id = '{u}')"
             " + (select count(*) from storage.objects where name like '{u}/%')"
             " + (select count(*) from auth.users where id = '{u}')"
             " + (select count(*) from auth.identities where user_id = '{u}')"

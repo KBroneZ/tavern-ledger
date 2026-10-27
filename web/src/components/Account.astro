@@ -46,6 +46,15 @@ import Captcha from "./Captcha.astro";
 <div id="signed-in" hidden>
   <p class="meta">{at("account.signedInAs.before")} <span id="account-email" class="mono"></span>.</p>
 
+  {/* One-time notice for accounts made before the training use (T-651); the script shows it. */}
+  <aside class="panel" id="training-notice" aria-label={at("account.training")} hidden>
+    <p>
+      {at("account.training.notice")}{" "}
+      <a href="#training-heading">{at("account.training.notice.link")}</a>.
+    </p>
+    <button class="tb tb-small" type="button" id="training-notice-dismiss">{at("account.training.notice.dismiss")}</button>
+  </aside>
+
   <div class="panels">
     <section class="panel" aria-labelledby="profile-heading">
       <h2 id="profile-heading">{at("account.profile")}</h2>
@@ -134,6 +143,33 @@ import Captcha from "./Captcha.astro";
         </div>
         <button class="tb tb-common" type="submit">{at("account.save")}</button>
         <p class="message" id="simulator-message" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="panel" aria-labelledby="training-heading">
+      <h2 id="training-heading">{at("account.training")}</h2>
+      <form id="training-form" novalidate>
+        <div class="check">
+          <input
+            class="toggle"
+            type="checkbox"
+            id="train-model"
+            name="train_model"
+            aria-describedby="train-model-hint"
+          />
+          <div>
+            <label for="train-model">{at("account.training.label")}</label>
+            <p class="hint" id="train-model-hint">{at("account.training.hint")}</p>
+            <More context={at("account.training")}>
+              <p>
+                {at("account.training.more")}{" "}
+                <a href={href("/privacy/#training-the-expected-place-model")}>{at("account.training.how")}</a>.
+              </p>
+            </More>
+          </div>
+        </div>
+        <button class="tb tb-common" type="submit">{at("account.save")}</button>
+        <p class="message" id="training-message" role="status" aria-live="polite"></p>
       </form>
     </section>
 

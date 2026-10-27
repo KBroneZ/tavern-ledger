@@ -751,6 +751,26 @@ test("accounts open: the account page has the simulator switch, off until read, 
   }
 });
 
+test("accounts open: the account page has the training switch and its notice, with the policy link (T-651)", { skip: !CONFIG }, () => {
+  const page = (p: string) => readFileSync(join(DIST, p), "utf8");
+  for (const [lang, file, privacy, label] of [
+    ["en", "account/index.html", "privacy/index.html", /Use my uploaded games to train the expected-place model/],
+    ["es", "es/account/index.html", "es/privacy/index.html", /Usar mis partidas subidas para entrenar el modelo de puesto esperado/],
+  ] as const) {
+    const account = page(file);
+    assert.match(account, /id="training-form"/, lang);
+    assert.match(account, /<input class="toggle" type="checkbox" id="train-model" name="train_model" aria-describedby="train-model-hint">/, lang);
+    assert.match(account, label, lang);
+    assert.match(account, new RegExp(`href="${lang === "es" ? "/es" : ""}/privacy/#training-the-expected-place-model"`), lang);
+    assert.match(account, /id="training-message" role="status" aria-live="polite"/, lang);
+    // The notice ships hidden: the script shows it to accounts made before the change.
+    assert.match(account, /<aside class="panel" id="training-notice"[^>]*hidden/, lang);
+    assert.match(account, /href="#training-heading"/, lang);
+    assert.match(page(privacy), /id="training-the-expected-place-model"/, lang);
+    assert.doesNotMatch(account, /[.,]<a href="(\/es)?\/privacy\//, lang);
+  }
+});
+
 test("accounts open: the leaderboards are a static frame with reserved room, linked from the menu", { skip: !CONFIG }, () => {
   const page = (p: string) => readFileSync(join(DIST, p), "utf8");
   const html = page("leaderboards/index.html");

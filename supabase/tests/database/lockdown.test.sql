@@ -65,6 +65,7 @@ create temporary table readable_allowed (relation text, role text);
 insert into readable_allowed values
   ('public.community_consent', 'authenticated'),
   ('public.simulator_consent', 'authenticated'),
+  ('public.training_objection', 'authenticated'),
   ('public.game_summaries', 'anon'),
   ('public.game_summaries', 'authenticated'),
   ('public.user_heroes', 'anon'),
@@ -146,7 +147,8 @@ insert into callable_allowed values
   ('public.leaderboard_refreshed_at()', 'anon'),
   ('public.leaderboard_refreshed_at()', 'authenticated'),
   ('public.set_community_consent(boolean)', 'authenticated'),
-  ('public.set_simulator_consent(boolean)', 'authenticated');
+  ('public.set_simulator_consent(boolean)', 'authenticated'),
+  ('public.set_training_choice(boolean)', 'authenticated');
 
 select is_empty(
   $$ select n.nspname || '.' || p.proname || '(' || oidvectortypes(p.proargtypes) || ') ' || r.role
