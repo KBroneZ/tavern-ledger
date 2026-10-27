@@ -29,6 +29,8 @@ mod cards_round8;
 mod cards_round8_pool;
 pub mod combat;
 #[cfg(feature = "harness")]
+pub mod conformance;
+#[cfg(feature = "harness")]
 pub mod corpus;
 pub mod gifts;
 pub mod kit;

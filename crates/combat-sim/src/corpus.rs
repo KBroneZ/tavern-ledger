@@ -166,7 +166,9 @@ fn check_level(v: &Value, path: &str, keys: &[&str]) -> Result<(), String> {
         .ok_or_else(|| format!("{path}: not an object"))?;
     map.iter().try_for_each(|(k, v)| {
         if !keys.contains(&k.as_str()) {
-            return Err(format!("{path}/{k}: a key that is not one a corpus line keeps"));
+            return Err(format!(
+                "{path}/{k}: a key that is not one a corpus line keeps"
+            ));
         }
         let here = format!("{path}/{k}");
         match k.as_str() {
@@ -187,7 +189,9 @@ fn check_tree(v: &Value, path: &str, key: &str) -> Result<(), String> {
         Value::Array(items) => items.iter().try_for_each(|i| check_tree(i, path, key)),
         Value::Object(map) => map.iter().try_for_each(|(k, v)| {
             if !ROUND_TREE_KEYS.contains(&k.as_str()) {
-                return Err(format!("{path}/{k}: a key that is not one a corpus line keeps"));
+                return Err(format!(
+                    "{path}/{k}: a key that is not one a corpus line keeps"
+                ));
             }
             check_tree(v, &format!("{path}/{k}"), k)
         }),

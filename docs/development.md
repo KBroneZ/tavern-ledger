@@ -206,6 +206,14 @@ cargo run --release -p combat-sim --bin combat-corpus -- --history "%APPDATA%\Ta
 
 The file is gzip-compressed when its name ends in `.gz`. Keep it under `.local/` (never commit a corpus made from real games without the project owner's OK, as with real-game fixtures).
 
+`combat-conformance` plays every combat of a corpus through the engine, each with the `cards.json` of its own build, and compares it with a baseline. Per combat it records whether the engine gave odds, the most likely result against the real one, and the replay of the saved combat from the first attack to the end, whatever the odds said: how many attacks the engine played as the game did and where it first left the game (the attack, the rule and the card). Any combat that moved fails the run, listed as a regression (the replay leaves the game earlier, odds or a right result lost), an improvement or a change; a close combat (its two likeliest results within 10 points) whose likely result flips is listed but does not fail. When every change is meant, write the baseline again with `--bless` and commit it with the change, so the diff shows each combat it moved.
+
+```
+cargo run --release -p combat-sim --bin combat-conformance -- --corpus .local/corpus.jsonl.gz --cards 254477=.local/cards-254477.json --cards 253216=.local/cards-253216.json --baseline .local/conformance-baseline.json [--bless]
+```
+
+`cards.json` for a build comes from `https://api.hearthstonejson.com/v1/<build>/enUS/cards.json` (kept out of the repository). A small synthetic corpus and its baseline in `crates/combat-sim/tests/data/conformance/` run with `cargo test`; after a meant change, `CONFORMANCE_BLESS=1 cargo test -p combat-sim --test conformance` rewrites that baseline.
+
 ### Real-game fixtures
 
 Copy the raw log into `.local/` (never commit it), build the parser and make one fixture per game; the script writes nothing if the log has a game played with the reconnect dev tool (D-043), if a name or id would be left, or if the fixture would read differently from the raw game:

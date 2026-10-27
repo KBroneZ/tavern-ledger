@@ -31,6 +31,11 @@ path = "src/combat_corpus.rs"
 required-features = ["harness"]
 
 [[bin]]
+name = "combat-conformance"
+path = "src/combat_conformance.rs"
+required-features = ["harness"]
+
+[[bin]]
 name = "combat-validate"
 path = "src/combat_validate.rs"
 required-features = ["harness"]
