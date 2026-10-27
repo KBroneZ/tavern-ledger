@@ -93,6 +93,10 @@ impl Combat<'_> {
                     self.buff(side, uid, attack, health);
                 }
             }
+            Action::BuffDeity { attack, health } => self.buff_deity(side, attack, health),
+            Action::SummonDeadAberrations { count } => {
+                self.summon_dead_aberrations(side, src, count)
+            }
             Action::GainStats { attack, health } => {
                 if let Some(uid) = me {
                     self.buff(side, uid, attack, health);

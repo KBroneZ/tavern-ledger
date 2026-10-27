@@ -135,6 +135,15 @@ impl Prepared {
                 prepare_token(&mut cards, &mut tokens, token);
             }
         }
+        // The Deities the boards bring can awaken (T-671).
+        let values = [first[0].values, first[1].values]
+            .into_iter()
+            .chain(second_values);
+        for v in values {
+            if let Some(id) = cards::deity_card(v.deity.dbf) {
+                prepare_token(&mut cards, &mut tokens, id);
+            }
+        }
         let mut i = 0;
         while i < cards.len() {
             for t in summoned_tokens(&cards[i].triggers) {
@@ -311,6 +320,11 @@ struct SideState {
     /// Friendly minions that died so far in this combat, both boards of a
     /// Duos team counted (T-616).
     deaths: u32,
+    /// The Aberrations (not Deities) that died this combat, in order: card,
+    /// Attack and Health as they died (T-671).
+    aberrations: Vec<(u16, i32, i32)>,
+    /// The awakened Deity on the board.
+    deity: Option<u32>,
 }
 
 impl SideState {
@@ -397,12 +411,14 @@ impl<'a> Combat<'a> {
                     next: 0,
                     values: p.values[0],
                     deaths: 0,
+                    ..SideState::default()
                 },
                 SideState {
                     units: p.start[1].clone(),
                     next: 0,
                     values: p.values[1],
                     deaths: 0,
+                    ..SideState::default()
                 },
             ],
             next_uid,
@@ -598,6 +614,11 @@ mod kit;
 #[path = "combat_copies.rs"]
 mod copies;
 
+#[path = "combat_deity.rs"]
+mod deity;
+#[cfg(test)]
+#[path = "combat_deity_tests.rs"]
+mod deity_tests;
 #[path = "combat_passive.rs"]
 mod passive;
 use duos::Legs;
