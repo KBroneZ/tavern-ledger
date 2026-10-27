@@ -13,6 +13,7 @@
 //!                 --cards <cards.json> [--summary] [--trials N] [--seed N]
 //!                 [--export <file.json>]
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -25,6 +26,7 @@ use combat_sim::harness_logs::{
     load_logs, power_logs, render_overlay_path, render_replays, replay_all,
 };
 use combat_sim::harness_misses::{duos_misses, render_misses, solo_misses};
+use combat_sim::harness_proven::proven_cards;
 use combat_sim::harness_soc::{render_start_of_combat, SocCombat};
 use combat_sim::harness_summary::{render_summary, Summary};
 use combat_sim::harness_why::tally;
@@ -127,6 +129,8 @@ fn real_main() -> Result<(), String> {
         }
     };
     let run = run(&history, &options);
+    // Only the saved replays line up with the history's games and builds.
+    let from_saved = from_logs.is_none();
     let (rows, unreadable, soc) = match from_logs {
         Some(r) => r,
         // The replays the app saved with the games (T-609).
@@ -171,10 +175,16 @@ fn real_main() -> Result<(), String> {
         }
     }
     if let Some(path) = args.export {
+        let proven = if from_saved {
+            proven_cards(&history.saved, &rows, &history.game_builds)
+        } else {
+            BTreeMap::new()
+        };
         let checked = Checked {
             misses: &misses,
             replays: &rows,
             builds: &history.builds,
+            proven: &proven,
         };
         let json = export_json(&acc, &options, &date_of_day(today()?), &checked);
         std::fs::write(&path, json).map_err(|e| format!("{path}: {e}"))?;

@@ -51,7 +51,7 @@
 - **Your dashboard** with your numbers per mode, a filterable games list and a full view of each game, combat replays included.
 - **Public profile, leaderboards and community hero stats**, each one opt-in and off until you turn it on. Leaderboards show display names and numbers from uploaded games, never ratings or BattleTags.
 - **[Combat simulator](https://tavernledger.net/simulator/)** in your browser: load a fight from one of your games (signed in) or set up both boards yourself, with each hero's powers and trinkets, and see the odds. It can play start of combat.
-- **[Accuracy page](https://tavernledger.net/accuracy/)**: how often the simulator's most likely result matched the real one, on the developer's own combats, with the share of combats it could not play.
+- **[Accuracy page](https://tavernledger.net/accuracy/)**: how often the simulator's most likely result matched the real one, on the developer's own combats, with the share of combats it could not play and, per game version, how many cards were proven on real combats.
 - English and Spanish.
 
 ![The website's home page: a painted tavern with "Pull up a stool. We kept your games." and a Download button marked "Beta for Windows"](docs/screenshots/web-home.webp)

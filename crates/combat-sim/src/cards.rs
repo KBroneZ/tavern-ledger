@@ -338,20 +338,37 @@ const PLAIN: CardRules = CardRules {
 
 /// The rules for a card id. `None`: not modelled.
 pub fn rules(card_id: &str) -> Option<CardRules> {
-    let all = EFFECTS
+    if let Some((_, rules)) = effects().find(|(id, _)| *id == card_id) {
+        return Some(*rules);
+    }
+    no_combat_effect().any(|id| id == card_id).then_some(PLAIN)
+}
+
+/// Every card id the engine models, once each, sorted (T-646).
+pub fn modelled_ids() -> Vec<&'static str> {
+    let ids: std::collections::BTreeSet<&'static str> = effects()
+        .map(|(id, _)| *id)
+        .chain(no_combat_effect())
+        .collect();
+    ids.into_iter().collect()
+}
+
+fn effects() -> impl Iterator<Item = &'static (&'static str, CardRules)> {
+    EFFECTS
         .iter()
         .chain(crate::cards_round2::EFFECTS_2)
         .chain(crate::cards_round3::EFFECTS_3)
         .chain(crate::cards_round4::EFFECTS_4)
         .chain(crate::cards_round5::EFFECTS_5)
         .chain(crate::cards_round7::EFFECTS_7)
-        .chain(crate::cards_round8::EFFECTS_8);
-    if let Some((_, rules)) = all.into_iter().find(|(id, _)| *id == card_id) {
-        return Some(*rules);
-    }
-    (NO_COMBAT_EFFECT.contains(&card_id)
-        || crate::cards_round8::NO_COMBAT_EFFECT_8.contains(&card_id))
-    .then_some(PLAIN)
+        .chain(crate::cards_round8::EFFECTS_8)
+}
+
+fn no_combat_effect() -> impl Iterator<Item = &'static str> {
+    NO_COMBAT_EFFECT
+        .iter()
+        .chain(crate::cards_round8::NO_COMBAT_EFFECT_8)
+        .copied()
 }
 
 /// The game builds the card rules were checked against: every modelled card

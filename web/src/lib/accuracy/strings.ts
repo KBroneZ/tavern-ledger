@@ -86,6 +86,9 @@ export const ACC_STRINGS = {
   "builds.none": "No game version has been read yet.",
   "builds.col.build": "Build",
   "builds.col.games": "Games",
+  "builds.col.proven": "Cards proven",
+  "builds.col.text": "From text only",
+  "builds.proven": "A card is proven on a build when the simulator replayed a real combat with it, attack by attack, as the game played it, to the end. The other cards the simulator knows play from their card text only.",
   "builds.row.one": "{count} game",
   "builds.row.other": "{count} games",
 
