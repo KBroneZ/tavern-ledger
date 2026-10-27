@@ -47,6 +47,15 @@ test("nothing to show is null, never a made-up curve", () => {
   assert.equal(placeView({ dash: null, points: [{ turn: 1, mean: null }], worst: null }), null);
 });
 
+test("Duos places stop at 4", () => {
+  I18n.setLang("en");
+  assert.equal(placeView(shown(null), false).last, 8);
+  assert.equal(placeView(shown(null), true), null, "a Duos place of 7 is not a place");
+  const duos = shown(null);
+  duos.points[2] = { turn: 3, mean: 3.5, low: 3, high: 4 };
+  assert.equal(placeView(duos, true).last, 4);
+});
+
 test("a shown curve keeps each point, says each turn and names what changed with the worst turn", () => {
   I18n.setLang("en");
   const v = placeView(shown({ index: 2, turn: 3, reason: "opponent_attack_sum" }));

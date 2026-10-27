@@ -809,15 +809,15 @@ function healthChart(points) {
 // Expected place after each combat (T-654): the model's place as a line, 1 at
 // the top, over the middle half of the places it gives; the turn that cost
 // the most marked. Until a model ships it is one quiet line saying why.
-function placePart(curve) {
-  const view = TLPlace.placeView(curve);
+function placePart(curve, duos) {
+  const view = TLPlace.placeView(curve, duos);
   if (!view) return [];
   if (view.kind === "dash") return [el("p", "empty place-dash", view.text)];
   const wrap = el("div", "chart");
   const width = 480, height = 120, pad = 16, padTop = 10, padBottom = 26;
   const last = Math.max(view.points.length - 1, 1);
   const x = (i) => pad + (i * (width - 2 * pad)) / last;
-  const y = (place) => padTop + ((place - 1) * (height - padTop - padBottom)) / (TLPlace.MAX_PLACE - 1);
+  const y = (place) => padTop + ((place - 1) * (height - padTop - padBottom)) / (view.last - 1);
   const chart = svg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", class: "place-chart" });
   chart.setAttribute("aria-label", view.said);
   let run = [];
@@ -1030,7 +1030,7 @@ function renderRecapNow(r, game) {
   renderRecapBar(r, game);
   updateTribesButton(game);
   const health = el("section", "recap-part");
-  health.append(withSource(el("h3", null, tl("win.recap.healthTitle")), r.health_source), healthChart(r.health), ...placePart(r.expected_place));
+  health.append(withSource(el("h3", null, tl("win.recap.healthTitle")), r.health_source), healthChart(r.health), ...placePart(r.expected_place, r.is_duos));
   const top = el("div", "recap-top");
   top.append(recapFacts(r), health);
   if (TLUnreadable.isUnreadable(r.status.value)) {

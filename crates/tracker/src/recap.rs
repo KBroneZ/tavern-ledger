@@ -641,6 +641,7 @@ pub fn recap(report: &Value) -> Recap {
         rounds_played: Sourced::log((!view.rounds.is_empty()).then_some(view.rounds.len())),
         health: own_health(&view),
         health_source: Source::log_if(!view.rounds.is_empty()),
+        // Every Skip is a game with nothing to draw, not a failure.
         expected_place: expected_place::encode(report)
             .ok()
             .map(|game| curve::to_json(&curve::curve(None, &game))),
