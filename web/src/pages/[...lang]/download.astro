@@ -8,12 +8,14 @@
 import Base from "../../layouts/Base.astro";
 import Button from "../../components/ui/Button.astro";
 import More from "../../components/ui/More.astro";
+import JsonLd from "../../components/minions/JsonLd.astro";
 import "../../styles/download.css";
 import { readConfig } from "../../lib/config.ts";
 import { dl } from "../../lib/download/strings.ts";
 import { dateFormat, href, langPaths, numberFormat, setLang } from "../../lib/i18n.ts";
 import { installerUrl, RELEASE, releasesUrl, repoUrl, sizeMb, sumsUrls } from "../../lib/site/release.ts";
 import { st } from "../../lib/site/strings.ts";
+import { appLd } from "../../lib/site/structured.ts";
 
 export const getStaticPaths = langPaths;
 // Every string below is drawn in the page's language (T-508).
@@ -35,10 +37,12 @@ const facts = [
 const steps = ([1, 2, 3, 4] as const).map((n) => ({ title: dl(`step${n}.title`), line: dl(`step${n}.line`), more: dl(`step${n}.more`) }));
 // Releases from v0.2.0 on carry a signed list of their files' hashes.
 const sums = sumsUrls();
+const pageUrl = new URL(href("/download/"), Astro.site).href;
 const reads = (["reads.1", "reads.2", "reads.3", "reads.4"] as const).map((key) => dl(key));
 ---
 
 <Base backdrop="hall" title={st("meta.download.title")} description={st("meta.download.description")}>
+  <JsonLd graph={[appLd(pageUrl, st("meta.download.description"))]} />
   <div class="dl">
     <header class="dl-head">
       <p class="kicker">{dl("page.kicker")}</p>

@@ -2,14 +2,17 @@
 // The combat simulator (T-606, D-089, D-090): /simulator/ and
 // /es/simulator/. The page has the site's policy like any other; only its
 // worker's script may compile WebAssembly (astro.config.mjs). Nothing on it
-// is about one account until the script runs, but what it loads is: kept
-// out of search engines.
+// is about one account until the script runs (a signed-in player's games
+// load only in the page), so with accounts open it is indexable, with its
+// structured data (T-703); the closed notice stays out of search engines.
 import Base from "../../layouts/Base.astro";
 import AccountsClosed from "../../components/AccountsClosed.astro";
 import Simulator from "../../components/sim/Simulator.astro";
+import JsonLd from "../../components/minions/JsonLd.astro";
 import { readConfig } from "../../lib/config.ts";
 import { sm } from "../../lib/sim/strings.ts";
-import { langPaths, setLang } from "../../lib/i18n.ts";
+import { href, langPaths, setLang } from "../../lib/i18n.ts";
+import { simulatorLd } from "../../lib/site/structured.ts";
 
 export const getStaticPaths = langPaths;
 // Every string below is drawn in the page's language (T-508).
@@ -17,8 +20,10 @@ setLang(Astro.props.lang);
 
 // With accounts closed the page shows a notice instead: no script.
 const accountsOpen = readConfig(import.meta.env) !== null;
+const url = new URL(href("/simulator/"), Astro.site).href;
 ---
 
-<Base backdrop="duel" title={sm("page.title")} description={sm("page.description")} noindex>
+<Base backdrop="duel" title={sm("meta.title")} description={sm("page.description")} noindex={!accountsOpen}>
+  {accountsOpen && <JsonLd graph={[simulatorLd(url, sm("meta.title"), sm("page.description"))]} />}
   {accountsOpen ? <Simulator /> : <AccountsClosed heading={sm("page.title")} />}
 </Base>

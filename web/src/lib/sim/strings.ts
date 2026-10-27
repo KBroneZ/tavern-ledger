@@ -6,6 +6,7 @@ import { ES } from "./strings.es.ts";
 
 export const SIM_STRINGS = {
   "page.title": "Combat simulator",
+  "meta.title": "Battlegrounds combat simulator",
   "page.description": "Try a Battlegrounds combat: load a round from one of your games or build the boards, then see the odds.",
   "page.kicker": "Try a combat",
   "page.lead": "Pick one of your games, pick a fight and see the odds. Or put the minions on both sides yourself.",
