@@ -47,10 +47,10 @@ export const SITE_STRINGS = {
   "offline.back": "Go to the home page",
 
   // Page titles and descriptions.
-  "meta.index.title": "Your Battlegrounds games, kept for you",
+  "meta.index.title": "Free Hearthstone Battlegrounds tracker for Windows",
   "meta.index.description":
     "Free, open-source Battlegrounds tracker for Windows that reads the game's log files, plus a website to follow your progress.",
-  "meta.download.title": "Download for Windows",
+  "meta.download.title": "Download the free Battlegrounds tracker for Windows",
   "meta.download.description":
     "Download the Tavern Ledger beta for Windows 10 and 11: a free app that keeps your Hearthstone Battlegrounds games. Four small steps to install it.",
   "meta.privacy.title": "Privacy",
