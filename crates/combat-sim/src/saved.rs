@@ -20,7 +20,7 @@ use std::cell::RefCell;
 
 use serde_json::Value;
 
-use crate::combat::replay::LoggedStep;
+use crate::combat::replay::{replay_teams, LoggedStep, Replay, Span};
 use crate::combat::CombatResult;
 use crate::model::{BaseCard, GameValues, Keywords, Kit, KitCard, Minion, Team, Tribes, Warband};
 use crate::trials::Options;
@@ -490,13 +490,18 @@ fn replay_steps(
     fits.then_some(steps).ok_or(true)
 }
 
-fn round_why(
-    round: &Value,
-    result: CombatResult,
-    solo: bool,
-    facts: &FactsOf,
-    options: &Options,
-) -> Why {
+/// A round's boards and saved replay, ready to play.
+struct Prepared {
+    teams: (Team, Team),
+    /// The saved replay as steps; `Err(false)` when none was saved,
+    /// `Err(true)` when it cannot be read into the round's boards.
+    steps: Result<Vec<LoggedStep>, bool>,
+}
+
+/// A round's teams and saved replay, or why it cannot be played: a card
+/// the card data lacks, or a side without its boards. [`round_why`] and
+/// [`round_replay`] share it, so both read a round alike.
+fn prepare(round: &Value, solo: bool, facts: &FactsOf) -> Result<Prepared, Box<Why>> {
     let entries: &[Value] = round
         .get("entries")
         .and_then(Value::as_array)
@@ -514,18 +519,36 @@ fn round_why(
         .zip(side_boards(entries, "opponent", solo, &checked));
     let lacking = lacking.into_inner();
     if !lacking.is_empty() {
-        return Why::NoCardData(lacking);
+        return Err(Box::new(Why::NoCardData(lacking)));
     }
     let Some((own, opponent)) = sides else {
-        return Why::NoBoards;
+        return Err(Box::new(Why::NoBoards));
     };
     let teams = (team(own), team(opponent));
     let steps = replay_steps(round, &teams, facts);
+    Ok(Prepared { teams, steps })
+}
+
+fn round_why(
+    round: &Value,
+    result: CombatResult,
+    solo: bool,
+    facts: &FactsOf,
+    options: &Options,
+) -> Why {
+    let Prepared { teams, steps } = match prepare(round, solo, facts) {
+        Ok(p) => p,
+        Err(why) => return *why,
+    };
     let replay = match &steps {
         Ok(s) => Replayable::Steps(s),
         Err(false) => Replayable::NotSaved,
         Err(true) => Replayable::Unreadable,
     };
+    let entries: &[Value] = round
+        .get("entries")
+        .and_then(Value::as_array)
+        .map_or(&[], Vec::as_slice);
     let gifts = unknown_gifts(entries);
     Why::Explained(explain(
         &CombatFacts {
@@ -536,6 +559,24 @@ fn round_why(
             unknown_gifts: &gifts,
         },
         options,
+    ))
+}
+
+/// The engine replayed against a round's saved replay from its first
+/// attack to the end, whatever its odds said (the conformance check,
+/// T-642: a combat whose likely result happened can still part from the
+/// game). `None` without a result, without both sides' boards, with a card
+/// the card data lacks, or without a readable saved replay.
+pub fn round_replay(round: &Value, solo: bool, facts: &FactsOf, seed: u64) -> Option<Replay> {
+    let result = result(round)?;
+    let Prepared { teams, steps } = prepare(round, solo, facts).ok()?;
+    let steps = steps.ok()?;
+    Some(replay_teams(
+        &teams.0,
+        &teams.1,
+        &steps,
+        Span::Whole(Some(result)),
+        seed,
     ))
 }
 
