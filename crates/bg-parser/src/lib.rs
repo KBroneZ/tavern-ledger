@@ -39,7 +39,7 @@ pub const PARSER_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Bump when a change makes the parser read the same log differently (new
 /// fields, fixed bugs). Saved with every game so `tavern-watch --reparse`
 /// and the server can tell which records an older parser wrote.
-pub const PARSER_REVISION: u32 = 16;
+pub const PARSER_REVISION: u32 = 17;
 
 /// Builds whose real logs this parser was checked against.
 pub const TESTED_BUILDS: &[i64] = &[253216, 254477];
@@ -813,6 +813,15 @@ fn summarize(mut base: GameReport, c: &Collector) -> GameReport {
         .collect();
     base.shop_tribes = count_tribes(c);
     base.rounds = rounds_of(c, &heroes, complete.then(|| hero_health(own)));
+    // The Deity is the local player's (T-671): a Duos teammate's board,
+    // read through the same player, does not have it.
+    for e in base.rounds.iter_mut().flat_map(|r| r.entries.iter_mut()) {
+        if e.side == report::Side::Own && e.player_id != Some(local_pid) {
+            if let Some(v) = e.values.as_mut() {
+                v.deity = report::Deity::default();
+            }
+        }
+    }
     base.opening = opening_of(c, &heroes);
     base.start_health = c.lobby_health.get(&0).cloned().unwrap_or_default();
     base.shop = Some(c.shop.record(&c.board, c.seats()));

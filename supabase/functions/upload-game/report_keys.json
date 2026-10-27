@@ -37,7 +37,7 @@
     "report.rounds[].entries[].kit.powers[]": ["card_id", "counters", "held", "slot", "target"],
     "report.rounds[].entries[].kit.powers[].held": ["atk", "card_id", "gifts", "golden", "health", "keywords"],
     "report.rounds[].entries[].kit.trinkets[]": ["card_id", "counters", "slot"],
-    "report.rounds[].entries[].values": ["beetle_atk", "beetle_health", "blood_gem_atk", "blood_gem_health", "knights_dead", "spell_atk", "spell_health", "undead_atk"],
+    "report.rounds[].entries[].values": ["beetle_atk", "beetle_health", "blood_gem_atk", "blood_gem_health", "deity_atk", "deity_dbf", "deity_health", "deity_needed", "deity_progress", "knights_dead", "spell_atk", "spell_health", "undead_atk"],
     "report.rounds[].entries[].board[]": ["atk", "buffs", "card_id", "gift_unknown", "gifts", "golden", "health", "keywords", "position"],
     "report.rounds[].entries[].board[].buffs[]": ["card_id", "count"],
     "report.rounds[].replay": ["beats", "complete", "events", "minions", "start"],

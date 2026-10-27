@@ -13,7 +13,8 @@ use crate::leaderboard::{is_leaderboard_tag, tag_order, LeaderboardTracker};
 use crate::power::{EntityRef, Packet, ParseError, Value};
 use crate::replay::{board_entities, minion_of, ReplayTracker, Sides};
 use crate::report::{
-    AttackSlot, CombatResult, CombatValues, DefenderSource, LoggedAttack, Minion, OpeningLeg, Side,
+    AttackSlot, CombatResult, CombatValues, DefenderSource, Deity, LoggedAttack, Minion,
+    OpeningLeg, Side,
 };
 use crate::shop::{Seats, ShopTracker};
 use crate::state::{Board, Entity, Players, Tags, MAX_TAGS};
@@ -631,7 +632,39 @@ impl Collector {
             knights_dead: enchant("BG25_008pe").0,
             undead_attack: enchant("BG25_011pe").0,
             beetle: enchant("BG31_808pe"),
+            deity: self.deity(side),
         }
+    }
+
+    /// The player's hidden Deity for this combat (T-671): the newest
+    /// "Secret Deity" entity (`BG_OldGod`) set aside under the player. The
+    /// game takes each combat's out of play when the combat ends, so an older
+    /// one is never set aside. The opponent's is not read: the log does not
+    /// show its numbers, and the one dummy player stands for every opponent,
+    /// so an entity under it could be another opponent's.
+    fn deity(&self, side: Side) -> Deity {
+        let pid = match side {
+            Side::Own => self.local_pid,
+            Side::Opponent => None,
+        };
+        let Some(pid) = pid else {
+            return Deity::default();
+        };
+        self.board
+            .iter()
+            .filter(|e| {
+                e.card_id.as_deref() == Some("BG_OldGod")
+                    && e.int("CONTROLLER") == pid
+                    && e.is("ZONE", "SETASIDE")
+            })
+            .max_by_key(|e| e.id)
+            .map_or_else(Deity::default, |e| Deity {
+                dbf: e.int("BACON_EVOLUTION_CARD_ID"),
+                attack: e.int("TAG_SCRIPT_DATA_NUM_2"),
+                health: e.int("TAG_SCRIPT_DATA_NUM_3"),
+                needed: e.int("TAG_SCRIPT_DATA_NUM_1"),
+                progress: e.int("QUEST_PROGRESS"),
+            })
     }
 
     fn close_unseen(&mut self, side: Side, round: i64) {

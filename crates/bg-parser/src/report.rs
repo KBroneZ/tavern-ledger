@@ -178,11 +178,42 @@ pub struct CombatValues {
     /// What the side's Beetles have on top this game: `BG31_808pe` ("Gives
     /// Beetle stats"), Attack and Health.
     pub beetle: (i64, i64),
+    /// The side's Deity, hidden until it awakens (T-671).
+    pub deity: Deity,
+}
+
+/// A side's Deity as the hidden "Secret Deity" entity (`BG_OldGod`) holds it
+/// for the combat (T-671, parser revision 17): the Deity's database id
+/// (`BACON_EVOLUTION_CARD_ID`), its Attack and Health (`TAG_SCRIPT_DATA_NUM_2`,
+/// `_3`), the friendly Aberration deaths that awaken it
+/// (`TAG_SCRIPT_DATA_NUM_1`) and the ones already counted (`QUEST_PROGRESS`).
+/// All 0 when the side has no Deity: none, or a game before them.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Deity {
+    pub dbf: i64,
+    pub attack: i64,
+    pub health: i64,
+    pub needed: i64,
+    pub progress: i64,
+}
+
+/// The largest card database id a saved report keeps (ids are about
+/// 140 000 today; upload-game's `MAX_DBF_ID`).
+pub const MAX_DBF: i64 = 10_000_000;
+
+/// The largest value a saved report keeps under `name`.
+fn max_of(name: &str) -> i64 {
+    if name == "deity_dbf" {
+        MAX_DBF
+    } else {
+        MAX_GAME_VALUE
+    }
 }
 
 impl CombatValues {
     /// Each value by the name the saved report gives it.
-    pub fn saved(&self) -> [(&'static str, i64); 8] {
+    pub fn saved(&self) -> [(&'static str, i64); 13] {
+        let d = self.deity;
         [
             ("blood_gem_atk", self.blood_gem.0),
             ("blood_gem_health", self.blood_gem.1),
@@ -192,13 +223,18 @@ impl CombatValues {
             ("undead_atk", self.undead_attack),
             ("beetle_atk", self.beetle.0),
             ("beetle_health", self.beetle.1),
+            ("deity_dbf", d.dbf),
+            ("deity_atk", d.attack),
+            ("deity_health", d.health),
+            ("deity_needed", d.needed),
+            ("deity_progress", d.progress),
         ]
     }
 
     fn kept(&self) -> impl Iterator<Item = (&'static str, i64)> {
         self.saved()
             .into_iter()
-            .filter(|(_, v)| (1..=MAX_GAME_VALUE).contains(v))
+            .filter(|(name, v)| (1..=max_of(name)).contains(v))
     }
 
     /// True when no value would be saved.
@@ -207,8 +243,8 @@ impl CombatValues {
     }
 
     /// The values as the saved report keeps them: one outside 1 to
-    /// [`MAX_GAME_VALUE`] is zero (unknown), so the overlay plays what the
-    /// saved game will.
+    /// [`MAX_GAME_VALUE`] ([`MAX_DBF`] for the Deity's id) is zero
+    /// (unknown), so the overlay plays what the saved game will.
     pub fn bounded(&self) -> CombatValues {
         let b = |v: i64| {
             if (1..=MAX_GAME_VALUE).contains(&v) {
@@ -223,6 +259,17 @@ impl CombatValues {
             knights_dead: b(self.knights_dead),
             undead_attack: b(self.undead_attack),
             beetle: (b(self.beetle.0), b(self.beetle.1)),
+            deity: Deity {
+                dbf: if (1..=MAX_DBF).contains(&self.deity.dbf) {
+                    self.deity.dbf
+                } else {
+                    0
+                },
+                attack: b(self.deity.attack),
+                health: b(self.deity.health),
+                needed: b(self.deity.needed),
+                progress: b(self.deity.progress),
+            },
         }
     }
 }
