@@ -6,12 +6,14 @@
 //! (files or folders, T-609). `--summary` prints only the aggregate summary
 //! (counts, shares, rules and card ids: no game or round), for any set of
 //! games. Reads only local files; never prints a name. `--export` also
-//! writes the accuracy numbers as a small JSON file for the website (T-607).
+//! writes the accuracy numbers as a small JSON file for the website (T-607);
+//! `--proven-out` the card ids proven on each build's combats, for the game
+//! build watcher (T-647; history input only).
 //!
 //! combat-validate (--history <games.jsonl> | --games <file or folder>... |
 //!                  --logs <Logs folder or Power.log>)
 //!                 --cards <cards.json> [--summary] [--trials N] [--seed N]
-//!                 [--export <file.json>]
+//!                 [--export <file.json>] [--proven-out <file.json>]
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -26,7 +28,7 @@ use combat_sim::harness_logs::{
     load_logs, power_logs, render_overlay_path, render_replays, replay_all,
 };
 use combat_sim::harness_misses::{duos_misses, render_misses, solo_misses};
-use combat_sim::harness_proven::proven_cards;
+use combat_sim::harness_proven::{proven_cards, proven_json};
 use combat_sim::harness_soc::{render_start_of_combat, SocCombat};
 use combat_sim::harness_summary::{render_summary, Summary};
 use combat_sim::harness_why::tally;
@@ -53,6 +55,7 @@ struct Args {
     input: Input,
     cards: String,
     export: Option<String>,
+    proven_out: Option<String>,
     summary: bool,
     options: Options,
 }
@@ -60,6 +63,7 @@ struct Args {
 fn parse_args() -> Result<Args, String> {
     let (mut history, mut logs, mut games) = (None, None, Vec::new());
     let (mut cards, mut export, mut summary) = (None, None, false);
+    let mut proven_out = None;
     let mut options = Options::default();
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
@@ -70,6 +74,7 @@ fn parse_args() -> Result<Args, String> {
             "--logs" => logs = Some(value()?),
             "--cards" => cards = Some(value()?),
             "--export" => export = Some(value()?),
+            "--proven-out" => proven_out = Some(value()?),
             "--summary" => summary = true,
             "--trials" => {
                 options.trials = value()?
@@ -100,6 +105,7 @@ fn parse_args() -> Result<Args, String> {
         input,
         cards: cards.ok_or("--cards <cards.json> is required")?,
         export,
+        proven_out,
         summary,
         options,
     })
@@ -174,12 +180,19 @@ fn real_main() -> Result<(), String> {
             print!("{}", render_kit_inventory(&soc));
         }
     }
+    let proven = if from_saved {
+        proven_cards(&history.saved, &rows, &history.game_builds)
+    } else {
+        BTreeMap::new()
+    };
+    if let Some(path) = args.proven_out {
+        if !from_saved {
+            return Err("--proven-out needs --history or --games".into());
+        }
+        std::fs::write(&path, proven_json(&proven)).map_err(|e| format!("{path}: {e}"))?;
+        println!("\nProven cards written to {path}.");
+    }
     if let Some(path) = args.export {
-        let proven = if from_saved {
-            proven_cards(&history.saved, &rows, &history.game_builds)
-        } else {
-            BTreeMap::new()
-        };
         let checked = Checked {
             misses: &misses,
             replays: &rows,

@@ -344,6 +344,20 @@ pub fn rules(card_id: &str) -> Option<CardRules> {
     no_combat_effect().any(|id| id == card_id).then_some(PLAIN)
 }
 
+/// How the engine plays a card (T-647): `None` when it does not know it,
+/// else "refused" (known, but a board taken after the start of combat no
+/// longer shows what it needs), "approximate" or "exact".
+pub fn status(card_id: &str) -> Option<&'static str> {
+    let rules = rules(card_id)?;
+    Some(if after_start_refusal(card_id).is_some() {
+        "refused"
+    } else if matches!(rules.fidelity, Fidelity::Approximate(_)) {
+        "approximate"
+    } else {
+        "exact"
+    })
+}
+
 /// Every card id the engine models, once each, sorted (T-646).
 pub fn modelled_ids() -> Vec<&'static str> {
     let ids: std::collections::BTreeSet<&'static str> = effects()

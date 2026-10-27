@@ -162,6 +162,45 @@ def simulator_card_ids(root: Path) -> set[str]:
     return ids
 
 
+STATUSES = frozenset({"exact", "approximate", "refused"})
+
+
+def _sim_data(root: Path, name: str) -> dict | None:
+    path = root / "crates" / "combat-sim" / "data" / name
+    if not path.is_file():
+        return None
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or data.get("format") != 1:
+        raise DataError(f"{name}: not format 1")
+    return data
+
+
+def engine_status(root: Path) -> dict[str, str]:
+    """How the engine plays each card it knows (`card_status.json`, kept by a test); empty without the file."""
+    data = _sim_data(root, "card_status.json")
+    if data is None:
+        return {}
+    cards = data.get("cards")
+    if not isinstance(cards, dict) or not all(
+            isinstance(k, str) and CARD_ID.fullmatch(k) and v in STATUSES for k, v in cards.items()):
+        raise DataError("card_status.json: cards is not card id -> exact, approximate or refused")
+    return dict(cards)
+
+
+def proven_cards(root: Path, build: int) -> set[str]:
+    """The cards proven on real combats of `build` (`proven_cards.json`); empty when none or without the file."""
+    data = _sim_data(root, "proven_cards.json")
+    if data is None:
+        return set()
+    builds = data.get("builds")
+    if not isinstance(builds, dict):
+        raise DataError("proven_cards.json: builds is not a map")
+    ids = builds.get(str(build), [])
+    if not isinstance(ids, list) or not all(isinstance(i, str) and CARD_ID.fullmatch(i) for i in ids):
+        raise DataError(f"proven_cards.json: build {build} is not a list of card ids")
+    return set(ids)
+
+
 def _bg_cards(data: object) -> dict[str, dict]:
     if not isinstance(data, list) or not all(isinstance(c, dict) for c in data):
         raise DataError("card data is not a list of cards")
@@ -206,8 +245,43 @@ def _section(title: str, cards: list[dict]) -> list[str]:
     return lines + [""]
 
 
+def _status_lines(build: int, previous: int, diff: Diff, sim_ids: set[str], status: dict[str, str],
+                  proven: set[str]) -> list[str]:
+    """Per added or changed minion: its engine status and whether it was proven; the proven ones that
+    changed; and one checklist line per card to implement or review (T-647)."""
+    added = [c for c in diff.added if c.get("type") == "MINION"]
+    changed = [c for c in diff.changed if c.get("type") == "MINION"]
+    lines = ["## Engine status of the added and changed minions", ""]
+    rows = [(c, "new") for c in added] + [(c, "changed") for c in changed]
+    for card, how in rows[:MAX_LISTED]:
+        engine = status.get(card["id"], "not known")
+        seen = "yes" if card["id"] in proven else "no"
+        lines.append(f"{_line(card)}: {how}; engine: {engine}; proven on {previous}: {seen}")
+    if len(rows) > MAX_LISTED:
+        lines.append(f"- … and {len(rows) - MAX_LISTED} more")
+    lines.append("")
+    lines += _section(f"Proven on {previous} and changed: no longer proven until a combat on {build} proves them again",
+                      [c for c in changed if c["id"] in proven])
+    todo = [c for c in added if c["id"] not in sim_ids] + [c for c in changed if c["id"] in sim_ids]
+    if todo:
+        lines += [
+            "## Cards to implement or review",
+            "",
+            f"Each one is done when a test from a logged combat on {build} proves it: a drafted rule is never "
+            "trusted without one.",
+            "",
+        ]
+        lines += [f"- [ ] {_line(c)[2:]}: draft or update its rules, then add a test from a logged combat on {build}"
+                  for c in todo[:MAX_LISTED]]
+        if len(todo) > MAX_LISTED:
+            lines.append(f"- … and {len(todo) - MAX_LISTED} more")
+        lines.append("")
+    return lines
+
+
 def render_report(build: int, previous: int, diff: Diff, sim_ids: set[str], parser_list: list[int],
-                  sim_list: list[int]) -> str:
+                  sim_list: list[int], status: dict[str, str] | None = None,
+                  proven: set[str] | None = None) -> str:
     minions = [c for c in diff.added + diff.changed if c.get("type") == "MINION"]
     unknown = [c for c in diff.added if c.get("type") == "MINION" and c["id"] not in sim_ids]
     review = [c for c in diff.changed if c.get("type") == "MINION" and c["id"] in sim_ids]
@@ -228,6 +302,8 @@ def render_report(build: int, previous: int, diff: Diff, sim_ids: set[str], pars
     lines += _section("Minions the simulator plays that changed, to review again", review)
     if sim_list and max(sim_list) < previous:
         lines += [f"The simulator's checked builds end at {max(sim_list)}.", ""]
+    if status:
+        lines += _status_lines(build, previous, diff, sim_ids, status, proven or set())
     lines += [
         "## Checklist",
         "",
@@ -288,7 +364,7 @@ def run(root: Path, get: Get, gh: Gh | None) -> int:
         if not before or not after or len(after) * 2 < len(before):
             raise DataError(f"build {newest} has {len(after)} Battlegrounds cards, build {previous} has {len(before)}")
         report = render_report(newest, previous, diff_cards(old, new), simulator_card_ids(root), tested,
-                               simulator_builds(root))
+                               simulator_builds(root), engine_status(root), proven_cards(root, previous))
         if gh is None:
             print(f"Build {newest} is new. Would open '{title}':\n\n{report}")
             return 0

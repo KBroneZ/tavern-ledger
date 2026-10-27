@@ -49,6 +49,20 @@ pub fn text_only(proven: &BTreeSet<String>) -> usize {
         .count()
 }
 
+/// The proven card ids of each build, for the game build watcher (T-647):
+/// `{"format": 1, "builds": {"<build>": [card ids, sorted]}}`. Card ids
+/// only, as in the accuracy export.
+pub fn proven_json(proven: &BTreeMap<i64, BTreeSet<String>>) -> String {
+    let builds: serde_json::Map<String, serde_json::Value> = proven
+        .iter()
+        .map(|(build, ids)| (build.to_string(), serde_json::json!(ids)))
+        .collect();
+    let v = serde_json::json!({ "format": 1, "builds": builds });
+    let mut text = serde_json::to_string_pretty(&v).unwrap_or_default();
+    text.push('\n');
+    text
+}
+
 /// Every card id on a board that fought: the boards before each attack. A
 /// Duos teammate's board that never came in is not there.
 fn card_ids(c: &LogCombat) -> impl Iterator<Item = &str> {

@@ -194,6 +194,55 @@ class Report(unittest.TestCase):
         self.assertIn("simulator", text)
         self.assertIn("253216", text)
 
+    def test_each_added_or_changed_minion_has_its_engine_status_and_whether_it_was_proven(self):
+        status = {"BG1_003": "approximate", "BG1_005": "exact"}
+        text = gbw.render_report(255000, 254477, self.diff(), {"BG1_003", "BG1_005"}, [254477], [],
+                                 status=status, proven={"BG1_003"})
+        self.assertIn("- `BG1_003` Buffed: changed; engine: approximate; proven on 254477: yes", text)
+        self.assertIn("- `BG1_004` Fresh: new; engine: not known; proven on 254477: no", text)
+        self.assertIn("- `BG1_005` Known: new; engine: exact; proven on 254477: no", text)
+
+    def test_a_changed_minion_that_was_proven_must_be_proven_again(self):
+        text = gbw.render_report(255000, 254477, self.diff(), {"BG1_003"}, [254477], [],
+                                 status={"BG1_003": "exact"}, proven={"BG1_003", "BG1_005"})
+        self.assertRegex(text, r"(?s)no longer proven.*`BG1_003`")
+        self.assertNotRegex(text, r"(?s)no longer proven[^#]*`BG1_005`")
+
+    def test_each_card_to_implement_or_review_has_its_own_checklist_line(self):
+        text = gbw.render_report(255000, 254477, self.diff(), {"BG1_003", "BG1_005"}, [254477], [],
+                                 status={"BG1_003": "exact", "BG1_005": "exact"}, proven=set())
+        self.assertRegex(text, r"- \[ \] `BG1_004` Fresh: .*test from a logged combat on 255000")
+        self.assertRegex(text, r"- \[ \] `BG1_003` Buffed: ")
+        self.assertNotIn("- [ ] `BG1_005`", text)
+        self.assertIn("never trusted without one", text)
+
+    def test_without_status_data_the_report_is_as_before(self):
+        text = gbw.render_report(255000, 254477, self.diff(), {"BG1_003"}, [254477], [])
+        self.assertNotIn("engine: ", text)
+
+    def test_status_and_proven_files_are_read_and_checked(self):
+        root = Path(tempfile.mkdtemp())
+        data = root / "crates/combat-sim/data"
+        data.mkdir(parents=True)
+        self.assertEqual(gbw.engine_status(root), {})
+        self.assertEqual(gbw.proven_cards(root, 254477), set())
+        (data / "card_status.json").write_text(json.dumps({"format": 1, "cards": {"BG1_003": "exact"}}), encoding="utf-8")
+        (data / "proven_cards.json").write_text(json.dumps({"format": 1, "builds": {"254477": ["BG1_003"]}}), encoding="utf-8")
+        self.assertEqual(gbw.engine_status(root), {"BG1_003": "exact"})
+        self.assertEqual(gbw.proven_cards(root, 254477), {"BG1_003"})
+        self.assertEqual(gbw.proven_cards(root, 253216), set())
+        (data / "card_status.json").write_text(json.dumps({"format": 1, "cards": {"BG1_003": "maybe"}}), encoding="utf-8")
+        with self.assertRaises(gbw.DataError):
+            gbw.engine_status(root)
+        (data / "proven_cards.json").write_text(json.dumps({"format": 2, "builds": {}}), encoding="utf-8")
+        with self.assertRaises(gbw.DataError):
+            gbw.proven_cards(root, 254477)
+
+    def test_the_repository_status_and_proven_files_read(self):
+        status = gbw.engine_status(gbw.ROOT)
+        self.assertGreater(len(status), 100)
+        self.assertIsInstance(gbw.proven_cards(gbw.ROOT, 254477), set)
+
 
 class Fake:
     """A stand-in for the network and the `gh` command."""
