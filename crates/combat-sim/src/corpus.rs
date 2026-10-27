@@ -58,7 +58,8 @@ const ROUND_TREE_KEYS: &[&str] = &[
     "powers", "trinkets", "slot", "target", "held",
     // game-long values
     "blood_gem_atk", "blood_gem_health", "spell_atk", "spell_health", "knights_dead",
-    "undead_atk", "beetle_atk", "beetle_health",
+    "undead_atk", "beetle_atk", "beetle_health", "deity_dbf", "deity_atk", "deity_health",
+    "deity_needed", "deity_progress",
     // replay
     "complete", "events", "minions", "start", "beats", "kind", "source", "trigger", "minion", "on",
     "amount", "attacker", "defender", "keyword", "how",
@@ -66,8 +67,9 @@ const ROUND_TREE_KEYS: &[&str] = &[
 /// Keys whose strings are card ids.
 const CARD_ID_KEYS: [&str; 3] = ["card_id", "hero", "gifts"];
 /// Keys whose numbers can be as big as a minion's stats (up to the 32-bit
-/// limit, D-144); every other number is at most [`MAX_SMALL`].
-const STAT_KEYS: [&str; 4] = ["atk", "health", "amount", "counters"];
+/// limit, D-144) or a card's database id (the Deity's, parser revision 17);
+/// every other number is at most [`MAX_SMALL`].
+const STAT_KEYS: [&str; 5] = ["atk", "health", "amount", "counters", "deity_dbf"];
 /// The largest number a key outside [`STAT_KEYS`] holds (the saved game's
 /// largest game-long value, `saved::MAX_GAME_VALUE`).
 const MAX_SMALL: i64 = 99_999;
