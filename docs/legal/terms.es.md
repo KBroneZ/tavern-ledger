@@ -4,7 +4,7 @@
 
 Última actualización: 27 de octubre de 2026
 
-**Qué cambió el 27 de octubre de 2026:** el apartado 5 ahora dice que las partidas que subes también pueden usarse para entrenar el modelo de puesto esperado, salvo que desactives «Usar mis partidas subidas para entrenar el modelo de puesto esperado» en la página de tu cuenta; solo se conservan el modelo y totales de todas las partidas usadas. Se aplica a partidas que no sean del responsable del proyecto solo 30 días después de que enviemos un correo a los usuarios registrados para avisarles.
+**Qué cambió el 27 de octubre de 2026:** el apartado 5 ahora dice que las partidas que subes también pueden usarse para entrenar el modelo de puesto esperado, salvo que desactives «Usar mis partidas subidas para entrenar el modelo de puesto esperado» en la página de tu cuenta; solo se conservan el modelo y totales de todas las partidas usadas. Se aplica desde el 27 de octubre de 2026, sin el aviso de 30 días del apartado 11, porque todas las cuentas actuales son de probadores beta a quienes avisamos directamente.
 
 **Qué cambió el 17 de octubre de 2026 (solo la aplicación de escritorio):** el apartado 9 ahora dice que, solo cuando pulsas Arreglar en el aviso de configuración de la aplicación, esta puede crear o completar los dos archivos de ajustes de registro de Hearthstone (`log.config` y `client.config`), guardando una copia `.bak` de cada archivo que cambia. Sigue leyendo solo los registros del juego y no escribe nada más en las carpetas del juego.
 
