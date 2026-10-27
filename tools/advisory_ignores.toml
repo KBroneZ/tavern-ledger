@@ -4,6 +4,10 @@
 # entry). For a crate, `absent_from` lists the builds the crate must not be
 # in: the check reads `cargo metadata` for each target (minus the `exclude`
 # workspace crates) and fails the moment the crate gets into one of them.
+# A crate that is built can only be let through with `used_only_by`, when the
+# advisory needs something only some callers could do: it lists, per crate,
+# every crate allowed to depend on it, and the check fails the moment another
+# crate depends on one of them in any build (Windows, Linux, wasm).
 #
 # Builds today: the desktop app ships for Windows only (x86_64-pc-windows-msvc,
 # also its CI tests); CI builds and tests the rest of the workspace on Linux
@@ -31,4 +35,15 @@ absent_from = [
   { target = "x86_64-pc-windows-msvc" },
   { target = "wasm32-unknown-unknown" },
   { target = "x86_64-unknown-linux-gnu", exclude = ["desktop"] },
+]
+
+[[ignore]]
+id = "GHSA-qwgh-2vcv-g2f7"
+package = "block-buffer"
+reason = "A panic inside the compress callback that digest_blocks calls, caught and followed by more use of the buffer, corrupts its cursor. block-buffer 0.10 is only reached through digest 0.10, whose only hash core here is sha2 0.10 (hmac and pbkdf2 are generic over it): SHA-2 block compression is fixed arithmetic with no panic path, so the callback never panics. The fix (0.12.1) needs digest 0.11; sha2 0.10 comes from wry 0.57.1 and tauri-codegen 2.7.3, the newest Tauri 2 releases, which both require sha2 ^0.10."
+evidence = "cargo metadata per target: block-buffer 0.10.4 <- digest 0.10.7 <- sha2 0.10.9, hmac 0.12.1, pbkdf2 0.12.2 on Windows, Linux and wasm; crates.io dependencies of wry 0.57.1 and tauri-codegen 2.7.3 both sha2 ^0.10 (2026-10-27)."
+review_by = 2027-01-27
+used_only_by = [
+  { package = "block-buffer", dependents = ["digest"] },
+  { package = "digest", dependents = ["sha2", "hmac", "pbkdf2"] },
 ]

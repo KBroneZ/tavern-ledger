@@ -72,8 +72,12 @@ GIT_TIMEOUT_SECONDS = 60
 # osv-scanner exits 0 with no advisory and 1 with some; anything else is an error.
 SCANNER_OK = (0, 1)
 IGNORE_FIELDS = ("id", "package", "reason", "evidence", "review_by")
-IGNORE_KEYS = frozenset({*IGNORE_FIELDS, "absent_from"})
+IGNORE_KEYS = frozenset({*IGNORE_FIELDS, "absent_from", "used_only_by"})
 BUILD_KEYS = frozenset({"target", "exclude"})
+USED_ONLY_BY_KEYS = frozenset({"package", "dependents"})
+# The builds a `used_only_by` entry is checked in: every target this
+# workspace is built for (see advisory_ignores.toml).
+BUILD_TARGETS = ("x86_64-pc-windows-msvc", "x86_64-unknown-linux-gnu", "wasm32-unknown-unknown")
 # Matched over the whole file, so an import split across lines is caught too.
 REMOTE_IMPORT_RE = re.compile(r"""\b(?:from|import)\s*\(?\s*["'`](npm:|jsr:|https?://)""", re.I)
 # Any dynamic import except of one relative path written out whole: a computed
@@ -256,6 +260,22 @@ def check_ignores(entries: list[dict], today: datetime.date) -> list[str]:
                 or not all(isinstance(name, str) for name in exclude)
             ):
                 problems.append(f"{label}: each absent_from item is {{ target = \"…\", exclude = [\"…\"] }}")
+        used = entry.get("used_only_by")
+        if used is not None:
+            items_ok = isinstance(used, list) and used and all(
+                isinstance(item, dict)
+                and not set(item) - USED_ONLY_BY_KEYS
+                and isinstance(item.get("package"), str)
+                and item["package"]
+                and isinstance(item.get("dependents"), list)
+                and item["dependents"]
+                and all(isinstance(name, str) and name for name in item["dependents"])
+                for item in used
+            )
+            if not items_ok:
+                problems.append(f"{label}: each used_only_by item is {{ package = \"…\", dependents = [\"…\"] }}")
+            elif entry["package"] not in [item["package"] for item in used]:
+                problems.append(f"{label}: used_only_by must name the ignored package itself")
     return problems
 
 
@@ -402,6 +422,41 @@ def run_scanner(scanner: str) -> dict:
     return _json(output, "osv-scanner")
 
 
+def dependents(metadata: dict, package: str) -> set[str]:
+    """Names of the packages that depend directly on any version of
+    `package`, from `cargo metadata --filter-platform` output."""
+    names = {pkg["id"]: pkg["name"] for pkg in metadata.get("packages") or []}
+    nodes = (metadata.get("resolve") or {}).get("nodes") or []
+    return {
+        names.get(node["id"], node["id"])
+        for node in nodes
+        for dep in node.get("deps") or []
+        if names.get(dep["pkg"]) == package
+    }
+
+
+def check_used_only_by(entry: dict, metadata_for=_cargo_metadata) -> list[str]:
+    """Problems when a crate an entry says only some crates use has another
+    user in one of the builds: the reason the advisory cannot be reached
+    (who calls into the crate) no longer holds."""
+    problems = []
+    items = entry.get("used_only_by") or []
+    if not isinstance(items, list):
+        return problems  # reported by check_ignores
+    for target in BUILD_TARGETS:
+        metadata = metadata_for(target)
+        for item in items:
+            if not isinstance(item, dict) or not isinstance(item.get("dependents"), list):
+                continue  # reported by check_ignores
+            others = dependents(metadata, item.get("package", "")) - set(item["dependents"])
+            if others:
+                problems.append(
+                    f"{entry['id']}: {item.get('package')} is now used by {', '.join(sorted(others))} "
+                    f"for {target}; the ignore no longer holds"
+                )
+    return problems
+
+
 def evaluate(advisories: list[Advisory], entries: list[dict]) -> tuple[list[str], list[str], list[dict], list[str]]:
     """Blocking advisories, let-through ones, the ignore entries used, and
     problems with how they were used."""
@@ -419,8 +474,11 @@ def evaluate(advisories: list[Advisory], entries: list[dict]) -> tuple[list[str]
             continue
         if not any(entry is e for e in used):
             used.append(entry)
-        if adv.lockfile == "Cargo.lock" and not entry.get("absent_from"):
-            problems.append(f"{text}: a crate's ignore needs absent_from, the builds it stays out of")
+        if adv.lockfile == "Cargo.lock" and not entry.get("absent_from") and not entry.get("used_only_by"):
+            problems.append(
+                f"{text}: a crate's ignore needs absent_from (the builds it stays out of) "
+                "or used_only_by (the only crates that call into it)"
+            )
         passed.append(f"{text}: ignored until {entry.get('review_by')} ({entry.get('reason')})")
     return blocking, passed, used, problems
 
@@ -445,7 +503,7 @@ def main(argv: list[str] | None = None) -> int:
         blocking, passed, used, use_problems = evaluate(advisories, entries)
         problems += scan_problems + use_problems + check_ignores(entries, args.today)
         for entry in used:
-            problems += check_absent(entry)
+            problems += check_absent(entry) + check_used_only_by(entry)
     except (OSError, tomllib.TOMLDecodeError, ScanError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 2
