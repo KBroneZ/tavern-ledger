@@ -5,6 +5,7 @@
 
 pub mod choices;
 pub mod client_build;
+pub mod counterfactual;
 pub mod damage;
 pub mod decisions;
 pub mod dev_reconnect;
