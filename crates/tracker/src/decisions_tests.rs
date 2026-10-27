@@ -12,9 +12,14 @@ fn act(ms: i64, turn: i64, kind: &str) -> Value {
 fn turn(n: i64, buys: &[&str], sells: &[&str], offers: Vec<Value>) -> Value {
     json!({
         "turn": n, "start_ms": n * 1000, "end_ms": n * 1000 + 999, "tier": 2, "gold": 5,
-        "gold_spent": 5, "rolls": 1, "free_rolls": 0, "buys": buys, "spell_buys": 0,
+        "gold_spent": 5, "rolls": 0, "free_rolls": 0, "buys": buys, "spell_buys": 0,
         "sells": sells, "freezes": 0, "actions": 0, "offers": offers,
     })
+}
+
+fn rolled(mut t: Value, rolls: u32) -> Value {
+    t["rolls"] = json!(rolls);
+    t
 }
 
 fn report(turns: Vec<Value>, actions: Vec<Value>, discovers: Vec<Value>) -> Value {
@@ -40,16 +45,19 @@ fn ids(v: &[Option<String>]) -> Vec<&str> {
 /// buys D and freezes what is left.
 fn one_turn() -> Value {
     report(
-        vec![turn(
+        vec![rolled(
+            turn(
+                1,
+                &["BG_A", "BG_D"],
+                &[],
+                vec![
+                    offer("BG_A", 0, false),
+                    offer("BG_B", 0, false),
+                    offer("BG_C", 1, false),
+                    offer("BG_D", 1, false),
+                ],
+            ),
             1,
-            &["BG_A", "BG_D"],
-            &[],
-            vec![
-                offer("BG_A", 0, false),
-                offer("BG_B", 0, false),
-                offer("BG_C", 1, false),
-                offer("BG_D", 1, false),
-            ],
         )],
         vec![
             act(1100, 1, "buy"),
@@ -226,4 +234,99 @@ fn moves_hero_powers_and_cards_played_are_not_shop_decisions() {
     );
 
     assert!(decisions(&r).unwrap().is_empty());
+}
+
+#[test]
+fn a_shop_refreshed_by_a_card_makes_the_turns_shop_decisions_inferred() {
+    // Two rolls recorded, one roll action: a refresh the actions do not show.
+    let r = report(
+        vec![rolled(
+            turn(
+                1,
+                &["BG_C"],
+                &[],
+                vec![offer("BG_A", 0, false), offer("BG_C", 1, false)],
+            ),
+            2,
+        )],
+        vec![act(1100, 1, "roll"), act(1200, 1, "buy")],
+        vec![],
+    );
+
+    let d = decisions(&r).unwrap();
+
+    assert!(d.iter().all(|d| d.inferred), "{d:?}");
+}
+
+#[test]
+fn more_minions_in_one_roll_than_a_shop_has_is_inferred() {
+    let offers = (0..8)
+        .map(|i| offer(&format!("BG_{i}"), 0, false))
+        .collect();
+    let r = report(
+        vec![turn(1, &["BG_0"], &[], offers)],
+        vec![act(1100, 1, "buy")],
+        vec![],
+    );
+
+    assert!(decisions(&r).unwrap()[0].inferred);
+}
+
+#[test]
+fn choices_that_do_not_match_their_actions_are_inferred() {
+    let discover = json!({"turn": 1, "source": null, "offered": [{"card_id": "BG_X", "gift": null}], "picked": [0]});
+    let r = report(
+        vec![turn(1, &[], &[], vec![])],
+        vec![act(1100, 1, "choose"), act(1200, 1, "choose")],
+        vec![discover],
+    );
+
+    let d = decisions(&r).unwrap();
+
+    assert_eq!(d.len(), 2);
+    assert!(d.iter().all(|d| d.inferred));
+}
+
+#[test]
+fn a_tier_up_without_its_record_is_inferred() {
+    let r = report(
+        vec![turn(1, &[], &[], vec![])],
+        vec![act(1100, 1, "tier_up")],
+        vec![],
+    );
+
+    let d = decisions(&r).unwrap();
+
+    assert_eq!(d[0].tier, None);
+    assert!(d[0].inferred);
+}
+
+#[test]
+fn a_buy_the_shop_did_not_show_does_not_hide_a_later_offer_of_that_card() {
+    let r = report(
+        vec![turn(
+            1,
+            &["BG_A", "BG_A"],
+            &[],
+            vec![offer("BG_A", 0, false)],
+        )],
+        vec![act(1100, 1, "buy"), act(1200, 1, "buy")],
+        vec![],
+    );
+
+    let d = decisions(&r).unwrap();
+
+    assert!(!d[0].inferred);
+    assert!(d[1].inferred);
+    assert!(d[1].offered.is_empty());
+}
+
+#[test]
+fn a_record_larger_than_the_parser_writes_or_unreadable_choices_are_not_read() {
+    let actions = vec![act(1100, 1, "move"); bg_parser::shop::MAX_ACTIONS + 1];
+    let big = report(vec![turn(1, &[], &[], vec![])], actions, vec![]);
+    assert_eq!(decisions(&big), Err(ShopState::NotAvailable));
+    let mut bad = report(vec![turn(1, &[], &[], vec![])], vec![], vec![]);
+    bad["discovers"] = json!([{"turn": "one"}]);
+    assert_eq!(decisions(&bad), Err(ShopState::NotAvailable));
 }
