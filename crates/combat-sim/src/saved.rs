@@ -561,6 +561,127 @@ fn counters_of(m: &Value) -> Option<[i32; 2]> {
     Some([at(0)?, at(1)?])
 }
 
+/// Teron's hero power: at the start of combat it destroys the friendly
+/// minion it names and resummons an exact copy once there is space.
+const RAPID_REANIMATION: &str = "BG25_HERO_103p";
+
+/// Gives the Rapid Reanimation on each side's first board the copy it still
+/// holds at the first attack (T-645): the boards read here are taken after
+/// start of combat, so a copy waiting for space is on none of them. The
+/// named minion is the replay start's minion at the kit's target; its copy
+/// waits when it died after the power acted and before the first attack,
+/// and no minion of its card was summoned on its side by then. Nothing
+/// without a replay or a kit.
+fn waiting_copies(round: &Value, teams: &mut (Team, Team), facts: &FactsOf) {
+    let Some(replay) = round.get("replay") else {
+        return;
+    };
+    let minions = replay
+        .get("minions")
+        .and_then(Value::as_array)
+        .map_or(&[][..], Vec::as_slice);
+    let start = replay
+        .get("start")
+        .and_then(Value::as_u64)
+        .and_then(|s| usize::try_from(s).ok())
+        .map_or(0, |s| s.min(minions.len()));
+    let events = replay
+        .get("events")
+        .and_then(Value::as_array)
+        .map_or(&[][..], Vec::as_slice);
+    let first_attack = events
+        .iter()
+        .position(|e| kind(e) == Some("attack"))
+        .unwrap_or(events.len());
+    let opening = Opening {
+        minions,
+        start,
+        events: &events[..first_attack],
+    };
+    for (side, band) in [
+        ("own", &mut teams.0.first),
+        ("opponent", &mut teams.1.first),
+    ] {
+        let Some(kit) = band.kit.as_mut() else {
+            continue;
+        };
+        for power in kit.powers.iter_mut() {
+            if power.card_id != RAPID_REANIMATION || power.held.is_some() {
+                continue;
+            }
+            if let Some(at) = power.target {
+                power.held = opening.waiting_copy(side, at, facts);
+            }
+        }
+    }
+}
+
+/// A saved replay up to its first attack: its minions, the ones before
+/// `start` the boards before start of combat.
+struct Opening<'a> {
+    minions: &'a [Value],
+    start: usize,
+    events: &'a [Value],
+}
+
+impl Opening<'_> {
+    /// The copy of `side`'s minion at board index `at` before start of
+    /// combat, with the stats it had when it died, if it died after the
+    /// power acted on that side and its card did not come back there.
+    fn waiting_copy(&self, side: &str, at: usize, facts: &FactsOf) -> Option<Minion> {
+        let position = i64::try_from(at + 1).ok()?;
+        let side_of = |m: &Value| m.get("side").and_then(Value::as_str) == Some(side);
+        let named = self.minions[..self.start].iter().position(|m| {
+            side_of(m) && m.get("position").and_then(Value::as_i64) == Some(position)
+        })?;
+        let card = self.minions[named].get("card_id")?.as_str()?;
+        let of = |e: &Value, what: &str| (kind(e) == Some(what)).then(|| event_minion(e)).flatten();
+        // Destroyed by the power: its death comes after the power acted
+        // (one that died before, to a trinket, is left alone).
+        let acted = self.events.iter().position(|e| {
+            kind(e) == Some("trigger")
+                && e.get("card_id").and_then(Value::as_str) == Some(RAPID_REANIMATION)
+                && side_of(e)
+        })?;
+        let died = self
+            .events
+            .iter()
+            .position(|e| of(e, "death") == Some(named))
+            .filter(|d| *d > acted)?;
+        let back = self.events.iter().any(|e| {
+            of(e, "summon")
+                .and_then(|i| self.minions.get(i))
+                .is_some_and(|m| {
+                    side_of(m) && m.get("card_id").and_then(Value::as_str) == Some(card)
+                })
+        });
+        if back {
+            return None;
+        }
+        let mut record = self.minions[named].clone();
+        let stats = self.events[..died]
+            .iter()
+            .rev()
+            .find(|e| of(e, "stats") == Some(named));
+        if let Some(s) = stats {
+            record["atk"] = s.get("atk")?.clone();
+            record["health"] = s.get("health")?.clone();
+        }
+        minion(&record, facts)
+    }
+}
+
+fn kind(e: &Value) -> Option<&str> {
+    e.get("kind").and_then(Value::as_str)
+}
+
+/// The replay minion an event is about.
+fn event_minion(e: &Value) -> Option<usize> {
+    e.get("minion")
+        .and_then(Value::as_u64)
+        .and_then(|n| usize::try_from(n).ok())
+}
+
 fn team(mut boards: Vec<Warband>) -> Team {
     let second = (boards.len() > 1).then(|| boards.remove(1));
     Team {
@@ -656,6 +777,7 @@ fn prepare(round: &Value, solo: bool, facts: &FactsOf) -> Result<Prepared, Box<W
     };
     let mut teams = (team(own), team(opponent));
     shown_counters(round, &mut teams);
+    waiting_copies(round, &mut teams, facts);
     let steps = replay_steps(round, &teams, facts);
     Ok(Prepared { teams, steps })
 }

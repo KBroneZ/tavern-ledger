@@ -17,6 +17,8 @@ pub(crate) struct KitUse {
     /// The uid of the friendly minion it names, from its index on the board
     /// as it was taken.
     pub target: Option<u32>,
+    /// That index itself, where Rapid Reanimation's copy comes back.
+    pub at: Option<usize>,
     /// The minion it holds, in the engine's form (its uid is not used).
     pub held: Option<Unit>,
     /// It acts this combat ([`kit_effects::acts`]; false when unknown).
@@ -62,6 +64,7 @@ pub(crate) fn kit_uses(
             counters: c.counters,
             play,
             target: c.target.and_then(|ix| board.get(ix)).map(|u| u.uid),
+            at: c.target,
             held: c.held.as_ref().map(|m| held(m, cards)),
             acts: kit_effects::acts(play, &c.counters, kit.round).unwrap_or(false),
             mark: kit_effects::mark(play).and_then(|m| mark_card(cards, m)),
@@ -240,6 +243,28 @@ impl Combat<'_> {
         let unit = u.clone();
         u.health = u.health.min(0);
         self.pending[side].push(Pending::Resummon { unit, at });
+    }
+
+    /// On boards taken after start of combat (T-645): the copy a Rapid
+    /// Reanimation destroyed at the start of combat and still holds, waiting
+    /// for space, comes back at the named minion's place once there is.
+    pub(super) fn waiting_copies(&mut self) {
+        if self.p.start_of_combat {
+            return;
+        }
+        for side in [0, 1] {
+            let waiting: Vec<Pending> = self.p.kits[side]
+                .iter()
+                .filter(|k| k.play.start.contains(&KitAction::DestroyTarget))
+                .filter_map(|k| {
+                    Some(Pending::Resummon {
+                        unit: k.held.clone()?,
+                        at: k.at?,
+                    })
+                })
+                .collect();
+            self.pending[side].extend(waiting);
+        }
     }
 
     /// Plays what waits for space on `side`, oldest first, while it has

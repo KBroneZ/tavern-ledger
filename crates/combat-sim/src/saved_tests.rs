@@ -439,6 +439,84 @@ fn a_saved_kit_that_cannot_be_read_refuses_the_boards() {
     assert_eq!(cause(&w[0]), &Cause::Matched);
 }
 
+/// A Teron's full board taken after start of combat: Rapid Reanimation
+/// destroyed its second minion (a 41/1 Eternal Summoner, 42/2 when it was
+/// destroyed) and an Eternal Knight took the place; `extra` events come
+/// before the first attack.
+fn teron_round(kit: Value, extra: &[Value]) -> Value {
+    let on = |side: &str, mut m: Value| {
+        m["side"] = json!(side);
+        m
+    };
+    let after: Vec<Value> = (1..=7)
+        .map(|p| bm(if p == 2 { "BG25_008" } else { PLAIN }, 1, 1, p))
+        .collect();
+    let mut before: Vec<Value> = (1..=7)
+        .map(|p| on("own", bm(if p == 2 { "BG25_009" } else { PLAIN }, 41, 1, p)))
+        .collect();
+    before.push(on("opponent", bm(PLAIN, 1, 1, 1)));
+    let mut minions = before;
+    minions.push(on("own", bm("BG25_008", 1, 1, 2)));
+    minions.push(on("own", bm("BG25_009", 42, 1, 2)));
+    let mut events = vec![
+        json!({"kind": "trigger", "card_id": "BG25_HERO_103p", "side": "own",
+               "trigger": "start_of_combat", "source": null}),
+        json!({"kind": "stats", "minion": 1, "atk": 42, "health": 2}),
+        json!({"kind": "death", "minion": 1}),
+        json!({"kind": "summon", "minion": 8}),
+    ];
+    events.extend(extra.iter().cloned());
+    events.push(json!({"kind": "attack", "attacker": 0, "defender": 7}));
+    json!({"number": 8, "result": "won",
+        "entries": [
+            {"side": "own", "player_id": 1, "board": after, "kit": kit},
+            {"side": "opponent", "player_id": 2, "board": [bm(PLAIN, 1, 1, 1)]},
+        ],
+        "replay": {"complete": true, "start": 8, "minions": minions, "events": events},
+    })
+}
+
+fn rapid_reanimation(target: i64) -> Value {
+    json!({"powers": [{"card_id": "BG25_HERO_103p", "slot": 0, "target": target}],
+           "trinkets": []})
+}
+
+fn held_copy(round: &Value) -> Option<Minion> {
+    let Ok(Prepared { teams, .. }) = prepare(round, true, &facts) else {
+        panic!("boards");
+    };
+    let kit = teams.0.first.kit.expect("a kit");
+    kit.powers[0].held.clone()
+}
+
+#[test]
+fn rapid_reanimations_copy_waiting_for_space_is_read_from_the_replay_start() {
+    // T-645: the board at the first attack is full; the copy, as the
+    // Summoner was when destroyed, waits for space.
+    let copy = held_copy(&teron_round(rapid_reanimation(2), &[])).expect("waiting");
+    assert_eq!(
+        (copy.card_id.as_str(), copy.attack, copy.health),
+        ("BG25_009", 42, 2)
+    );
+    // The copy came back before the first attack: nothing waits.
+    let back = json!({"kind": "summon", "minion": 9});
+    assert_eq!(held_copy(&teron_round(rapid_reanimation(2), &[back])), None);
+    // The named minion did not die at the start of combat: nothing waits.
+    assert_eq!(held_copy(&teron_round(rapid_reanimation(3), &[])), None);
+    // It died, but the power never acted: not its copy.
+    let mut silent = teron_round(rapid_reanimation(2), &[]);
+    silent["replay"]["events"]
+        .as_array_mut()
+        .expect("events")
+        .remove(0);
+    assert_eq!(held_copy(&silent), None);
+    // A record without a kit stays as it is.
+    let Ok(Prepared { teams, .. }) = prepare(&teron_round(Value::Null, &[]), true, &facts) else {
+        panic!("boards");
+    };
+    assert_eq!(teams.0.first.kit, None);
+}
+
 #[test]
 fn an_unmodelled_trinket_on_a_saved_board_blocks_the_odds() {
     let trinket = json!({"powers": [],
