@@ -34,6 +34,8 @@ export const ES: Record<DlKey, string> = {
   "step2.line": "Windows avisará: pulsa «Más información» → «Ejecutar de todas formas».",
   "step2.more":
     "Puede que Windows diga «Windows protegió su PC». Lo muestra porque el instalador aún no está firmado y lo han descargado pocas personas. Comprueba que el nombre del archivo coincide y hazlo solo con el archivo de esta página o de las versiones del proyecto en GitHub.",
+  "step2.sac":
+    "En Windows 11, el Control inteligente de aplicaciones puede bloquearlo, sin «Ejecutar de todas formas»: Windows no tiene forma de dejar pasar una aplicación sin firmar. Hasta que el instalador esté firmado, esta beta no se puede instalar en un PC con el Control inteligente de aplicaciones activado.",
   "step3.title": "Instálala",
   "step3.line": "Sigue el instalador; no pide permisos de administrador.",
   "step3.more":
