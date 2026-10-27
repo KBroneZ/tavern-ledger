@@ -12,7 +12,7 @@ This repo's own code is licensed AGPL-3.0-only since 12 October 2026 (D-101); ve
 | `actions/setup-python` v7.0.0 (`5fda3b9`) | [GitHub](https://github.com/actions/setup-python) | MIT | CI (tests) | 2026-10-08 |
 | `lycheeverse/lychee-action` v2.9.0 (`e747777`) with lychee v0.24.2 | [GitHub](https://github.com/lycheeverse/lychee-action) | Apache-2.0 (action); lychee: Apache-2.0 or MIT | CI: relative Markdown links (`--offline`) | 2026-10-08 |
 | `hslog` 1.20.0 | [PyPI](https://pypi.org/project/hslog/) · [GitHub](https://github.com/HearthSim/python-hslog) | MIT | `tools/parse_bg.py`: `Power.log` parser | 2026-10-08 |
-| `hearthstone` 9.21.1 | [PyPI](https://pypi.org/project/hearthstone/) · [GitHub](https://github.com/HearthSim/python-hearthstone) | MIT | `tools/parse_bg.py`: game enums (dependency of `hslog`) | 2026-10-08 |
+| `hearthstone` 9.22.0 | [PyPI](https://pypi.org/project/hearthstone/) · [GitHub](https://github.com/HearthSim/python-hearthstone) | MIT | `tools/parse_bg.py`: game enums (dependency of `hslog`) | 2026-10-27 |
 | `aniso8601` 10.0.1 | [PyPI](https://pypi.org/project/aniso8601/) | BSD-3-Clause | Dependency of `hslog` | 2026-10-08 |
 | `requests` 2.34.2 | [PyPI](https://pypi.org/project/requests/) | Apache-2.0 | Dependency of `hearthstone`; the prototype makes no network requests | 2026-10-08 |
 | `urllib3` 2.8.0 | [PyPI](https://pypi.org/project/urllib3/) | MIT | Dependency of `requests` | 2026-10-08 |
