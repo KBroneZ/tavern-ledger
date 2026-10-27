@@ -37,12 +37,14 @@ function files(dir: string): string[] {
 const ALL = existsSync(DIST) ? files(DIST) : [];
 const PAGES = ALL.filter((f) => f.endsWith(".html"));
 const name = (f: string) => relative(DIST, f).replaceAll("\\", "/");
-/** The minion pages (T-578, D-134): the only built pages with card art and structured data. */
+/** The minion pages (T-578, D-134): the only built pages with card art. */
 const isMinionPage = (f: string) => /^(?:es\/)?minions\//.test(name(f));
+// Pages with a structured-data block (T-578, T-703): a data block, never run.
+const hasJsonLd = (f: string) => isMinionPage(f) || /^(?:es\/)?(?:download|simulator)\/index\.html$/.test(name(f));
 /** Card art from HearthstoneJSON's image host (D-074), as the minion pages show it: lazy, with a local fallback. */
 const CARD_ART =
   /^<img src="https:\/\/art\.hearthstonejson\.com\/v1\/256x\/[A-Za-z0-9_]{1,64}\.jpg" data-fallback="\/placeholders\/card-\d\.svg" alt="" width="\d+" height="\d+" loading="lazy" decoding="async">$/;
-/** The minion pages' structured data: a data block, never run (minions.test.ts parses it). */
+/** Structured data: a data block, never run (minions.test.ts and structured.test.ts parse it). */
 const JSON_LD = /<script type="application\/ld\+json">[^<]*<\/script>/g;
 /** A page with the anti-robot check (T-562): its address is one of TURNSTILE_PAGES. */
 const isTurnstilePage = (f: string) => TURNSTILE_PAGES.includes(`/${name(f).replace(/index\.html$/, "")}`);
@@ -84,7 +86,7 @@ test("every page has the CSP as its first meta after the charset", () => {
 test("no inline script, style or event handler in any page", () => {
   for (const page of PAGES) {
     const raw = readFileSync(page, "utf8");
-    const html = isMinionPage(page) ? raw.replace(JSON_LD, "") : raw;
+    const html = hasJsonLd(page) ? raw.replace(JSON_LD, "") : raw;
     for (const tag of html.matchAll(/<script\b[^>]*>/g)) {
       // Our bundles, or the language script (public/lang.js, T-508) or the web app's (public/pwa.js, T-637).
       assert.match(tag[0], /\ssrc="(?:\/_astro\/[^"]+\.js|\/lang\.js|\/pwa\.js)"/, `${name(page)}: ${tag[0]}`);
@@ -225,10 +227,10 @@ test("the player profile page: noindex, and with accounts open a short privacy l
   }
 });
 
-test("the simulator page: noindex, its script and frame when accounts are open, the notice when closed", () => {
+test("the simulator page: indexable with its script and frame when accounts are open, the notice (noindex) when closed", () => {
   for (const file of SIMULATOR_FILES) {
     const html = readFileSync(join(DIST, file), "utf8");
-    assert.match(html, /<meta name="robots" content="noindex">/, file);
+    assert.equal(html.includes('<meta name="robots" content="noindex">'), !CONFIG, file);
     if (CONFIG) {
       for (const id of ["sim-load", "sim-table", "sim-opponent", "sim-player", "sim-result", "sim-mode"]) assert.match(html, new RegExp(`id="${id}"`), `${file}: ${id}`);
       assert.match(html, /state-loading/, "the loading blocks keep the room");
@@ -312,7 +314,8 @@ test("accounts closed: no form, no script and no backend anywhere", { skip: !!CO
   }
   for (const page of PAGES) {
     // The language switch links a notice page to its own twin (T-508); no other link to them.
-    const html = readFileSync(page, "utf8").replace(/<a\b[^>]*data-lang-switch[^>]*>/g, "");
+    const raw = readFileSync(page, "utf8").replace(/<a\b[^>]*data-lang-switch[^>]*>/g, "");
+    const html = hasJsonLd(page) ? raw.replace(JSON_LD, "") : raw;
     assert.doesNotMatch(html, /<script\b|<form\b|<input\b|href="(?:\/es)?\/(signin|account|forgot-password)\/"/, name(page));
   }
   // The one script is /sw.js, which only removes an older offline worker (T-637; pwa.test.ts checks it makes no request).
