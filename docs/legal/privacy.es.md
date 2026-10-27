@@ -152,6 +152,7 @@ Para tener una cuenta necesitamos tu correo electrónico y una contraseña; sin 
 
 **Dejar de participar.** Desactiva el interruptor en la página de tu cuenta. Desde ese momento tus partidas dejan de aparecer en la lista, así que ninguna medición posterior las usa. Una medición que ya esté en marcha cuando lo desactives termina con las copias que tiene, y se borran ese mismo día. Los totales ya calculados y las reglas ya corregidas se quedan, porque no permiten llegar hasta ti ni hasta tus partidas. Borrar tu cuenta funciona del mismo modo. Retirar tu consentimiento no cambia lo que se midió antes.
 
+<span id="training-the-expected-place-model"></span>
 ### Entrenar el modelo de puesto esperado
 
 **Qué es.** El puesto esperado es un número para cada turno de una partida: el puesto, del 1 al 8 en Solo o del 1 al 4 en Dúos, en el que suele acabar una partida en esa situación, con lo seguro que es ese número. El resumen de la aplicación y la página de la partida en la web lo muestran junto a tu vida, en tus propias partidas. Sale de un modelo pequeño entrenado con partidas reales: aprende cómo acabaron las partidas en una situación parecida.
