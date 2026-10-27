@@ -77,6 +77,15 @@ fn a_minion_summoned_during_the_combat_counts_too() {
 }
 
 #[test]
+fn a_teammates_board_that_never_came_in_is_not_proven() {
+    let mut c = combat(1, &["BGS_119"], &["BGS_119"], &["BGS_119"]);
+    c.player.second = Some(Warband::new(board(&["BG_ICC_026t"])));
+    let proven = proven_cards(&[c], &[replayed(1, true)], &[Some(254_477)]);
+
+    assert!(!proven[&254_477].contains("BG_ICC_026t"));
+}
+
+#[test]
 fn a_replay_that_leaves_the_game_proves_nothing() {
     let saved = [combat(1, &["BGS_119"], &["BG_ICC_026t"], &["BGS_119"])];
     let proven = proven_cards(&saved, &[replayed(1, false)], &[Some(254_477)]);

@@ -1,8 +1,11 @@
 //! Cards proven on real combats (T-646): a modelled card is proven on a game
-//! build when a combat of that build had it on a board (at the start, or
-//! summoned during the combat) and the engine replayed that combat as the
-//! game did, attack by attack, to the end. Every other modelled card plays
-//! from its text only on that build.
+//! build when a combat of that build had it on a board that fought (before
+//! some attack: at the start, summoned during the combat, or a Duos
+//! teammate's board once it came in) and the engine replayed that combat as
+//! the game did, attack by attack, to the end. An attack the engine matched
+//! only with another roll of its dice still counts (chance, not a rule:
+//! T-643), and so does a card with no combat effect, which is modelled as
+//! such. Every other modelled card plays from its text only on that build.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -46,15 +49,13 @@ pub fn text_only(proven: &BTreeSet<String>) -> usize {
         .count()
 }
 
-/// Every card id on the combat's boards: each team's boards and the boards
-/// before each attack.
+/// Every card id on a board that fought: the boards before each attack. A
+/// Duos teammate's board that never came in is not there.
 fn card_ids(c: &LogCombat) -> impl Iterator<Item = &str> {
-    let teams = [&c.player, &c.opponent]
-        .into_iter()
-        .flat_map(|t| std::iter::once(&t.first).chain(t.second.as_ref()))
-        .flat_map(|w| &w.minions);
-    let steps = c.steps.iter().flat_map(|s| s.before.iter().flatten());
-    teams.chain(steps).map(|m| m.card_id.as_str())
+    c.steps
+        .iter()
+        .flat_map(|s| s.before.iter().flatten())
+        .map(|m| m.card_id.as_str())
 }
 
 #[cfg(test)]

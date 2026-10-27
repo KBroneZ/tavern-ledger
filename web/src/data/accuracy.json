@@ -5,18 +5,6 @@
       "combats": 7
     },
     {
-      "card_id": "BG30_MagicItem_886",
-      "combats": 3
-    },
-    {
-      "card_id": "BG32_MagicItem_276",
-      "combats": 2
-    },
-    {
-      "card_id": "BG35_MagicItem_740",
-      "combats": 2
-    },
-    {
       "card_id": "TB_BaconShop_HERO_64_Buddy",
       "combats": 2
     },
@@ -29,136 +17,136 @@
     "checked": [
       {
         "build": 254477,
-        "count": 22,
-        "proven": 259,
-        "text_only": 482
+        "count": 18,
+        "proven": 254,
+        "text_only": 487
       },
       {
         "build": 253216,
         "count": 41,
-        "proven": 159,
-        "text_only": 582
+        "proven": 156,
+        "text_only": 585
       }
     ],
     "newest": 254477
   },
-  "date": "2026-10-27",
-  "engine_version": "0.18.0",
+  "date": "2026-10-19",
+  "engine_version": "0.16.0",
   "format": 5,
   "kits": {
-    "combats": 100,
-    "scored": 90,
+    "combats": 158,
+    "scored": 155,
     "with": {
-      "brier": 0.2568244751111112,
-      "mean_p_real": 0.8059944444444445,
-      "most_likely_right": 74
+      "brier": 0.2615585434838709,
+      "mean_p_real": 0.8049270967741937,
+      "most_likely_right": 129
     },
     "without": {
-      "brier": 0.24843284200000001,
-      "mean_p_real": 0.811808888888889,
-      "most_likely_right": 75
+      "brier": 0.2605685540645162,
+      "mean_p_real": 0.8045787096774193,
+      "most_likely_right": 129
     }
   },
   "misses": {
     "causes": [
       {
-        "cause": "missing_inputs",
-        "duos": 22,
-        "share": 0.2804878048780488,
-        "solo": 1
-      },
-      {
         "cause": "no_replay_approximate",
         "duos": 22,
-        "share": 0.2682926829268293,
+        "share": 0.2972972972972973,
         "solo": 0
+      },
+      {
+        "cause": "missing_inputs",
+        "duos": 17,
+        "share": 0.24324324324324326,
+        "solo": 1
       },
       {
         "cause": "chance",
         "duos": 12,
-        "share": 0.15853658536585366,
+        "share": 0.17567567567567569,
         "solo": 1
       },
       {
         "cause": "no_replay_exact",
         "duos": 10,
-        "share": 0.13414634146341464,
+        "share": 0.14864864864864866,
         "solo": 1
       },
       {
         "cause": "approximate_card",
-        "duos": 6,
-        "share": 0.10975609756097561,
+        "duos": 4,
+        "share": 0.0945945945945946,
         "solo": 3
-      },
-      {
-        "cause": "replay_minions",
-        "duos": 2,
-        "share": 0.024390243902439025,
-        "solo": 0
       },
       {
         "cause": "no_replay_not_modelled",
         "duos": 1,
-        "share": 0.012195121951219513,
+        "share": 0.013513513513513514,
+        "solo": 0
+      },
+      {
+        "cause": "replay_minions",
+        "duos": 1,
+        "share": 0.013513513513513514,
         "solo": 0
       },
       {
         "cause": "replay_stats",
         "duos": 1,
-        "share": 0.012195121951219513,
+        "share": 0.013513513513513514,
         "solo": 0
       }
     ],
-    "total": 82
+    "total": 74
   },
   "modes": {
     "duos": {
-      "blocked": 17,
-      "blocked_share": 0.038202247191011236,
-      "brier": 0.2571989500467291,
+      "blocked": 10,
+      "blocked_share": 0.025,
+      "brier": 0.26132386415384623,
       "calibration": [
         {
           "from": 0.0,
-          "happened": 0.05548387096774193,
-          "mean_said": 0.017120129032258062,
-          "predictions": 775,
+          "happened": 0.05649717514124294,
+          "mean_said": 0.017478389830508468,
+          "predictions": 708,
           "to": 0.2
         },
         {
           "from": 0.2,
-          "happened": 0.35064935064935066,
-          "mean_said": 0.30069740259740263,
-          "predictions": 77,
+          "happened": 0.35714285714285715,
+          "mean_said": 0.2998971428571429,
+          "predictions": 70,
           "to": 0.4
         },
         {
           "from": 0.4,
-          "happened": 0.4222222222222222,
-          "mean_said": 0.5042,
-          "predictions": 45,
+          "happened": 0.42105263157894735,
+          "mean_said": 0.50675,
+          "predictions": 38,
           "to": 0.6000000000000001
         },
         {
           "from": 0.6000000000000001,
-          "happened": 0.6222222222222222,
-          "mean_said": 0.7039222222222222,
-          "predictions": 45,
+          "happened": 0.6341463414634146,
+          "mean_said": 0.7047658536585367,
+          "predictions": 41,
           "to": 0.8
         },
         {
           "from": 0.8,
-          "happened": 0.9093567251461988,
-          "mean_said": 0.9860020467836255,
-          "predictions": 342,
+          "happened": 0.9041533546325878,
+          "mean_said": 0.9855610223642172,
+          "predictions": 313,
           "to": 1.0
         }
       ],
-      "combats_with_result": 445,
-      "mean_p_real": 0.8105053738317761,
-      "most_likely_right": 356,
+      "combats_with_result": 400,
+      "mean_p_real": 0.8090182051282058,
+      "most_likely_right": 324,
       "refused": 0,
-      "scored": 428
+      "scored": 390
     },
     "solo": {
       "blocked": 0,
