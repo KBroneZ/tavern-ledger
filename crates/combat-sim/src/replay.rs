@@ -5,10 +5,12 @@
 //!
 //! Random effects inside an attack (a random buff, a random neighbour) are
 //! rolled by the engine. When the boards after an attack part from the
-//! log's, the attack is played again with other rolls (T-643, up to
-//! [`REROLLS`]); if one gives the log's boards, the dice were all that
-//! differed: the replay keeps that roll and goes on, and counts it. So the
-//! first difference a replay names is one no roll of the engine explains.
+//! log's (with a Duos teammate's board come in), the attack is played again
+//! with other rolls (T-643, up to [`REROLLS`]); if one gives the log's
+//! boards, the dice were all that differed: the replay keeps that roll and
+//! goes on, and counts it. So the first difference a replay names is one
+//! no roll of the engine explains. The last attack is not rerolled: the end
+//! of the combat is checked as the first roll left it.
 
 use super::{Combat, KitCounts, Legs, Pending, Prepared, SideState, Unit};
 use crate::combat::CombatResult;
@@ -16,7 +18,7 @@ use crate::model::{Keywords, Minion, Team, Warband};
 use crate::rng::Rng;
 
 /// Other rolls tried for an attack whose boards part from the log's.
-pub const REROLLS: u64 = 64;
+pub const REROLLS: u64 = 512;
 
 /// One logged attack: who attacked (side 0 is the player, 1 the opponent;
 /// index from the left), whom (an index on the other side; `None` when the
@@ -180,40 +182,23 @@ fn replay_prepared(prepared: &Prepared, steps: &[LoggedStep], span: Span, seed: 
             out.difference = Some(d);
             return out;
         }
-        if let Some(next) = steps.get(k + 1) {
-            if !c.finished()
-                && c.compare_boards(k + 2, &next.before, next.all_keywords)
-                    .is_err()
-            {
-                if let Some(t) = c.reroll(k, step, next, &before, seed) {
-                    turn = t;
-                    out.rerolled += 1;
-                }
-            }
-        }
         out.matched = k + 1;
         if span == Span::FirstLeg && c.finished() {
             return out;
         }
-        let entered = if c.finished() {
-            c.enter_waiting()
-        } else {
-            [false; 2]
-        };
-        if entered != [false, false] {
-            out.boards_in += entered.iter().filter(|e| **e).count();
-            // Who attacks next is decided again, as at the start.
-            let first = c.first_by_count();
-            let side = first
-                .or(steps.get(k + 1).map(|s| s.attacker.0))
-                .unwrap_or(0);
-            turn = Turn {
-                first,
-                pending: c.pending_immediate(side, entered),
-                after_teammate: true,
-                ..Turn::default()
-            };
+        let mut entered = c.after_attack(k, steps, &mut turn);
+        if let Some(next) = steps.get(k + 1) {
+            if c.compare_boards(k + 2, &next.before, next.all_keywords)
+                .is_err()
+            {
+                if let Some((t, e)) = c.reroll(k, steps, &before, seed) {
+                    turn = t;
+                    entered = e;
+                    out.rerolled += 1;
+                }
+            }
         }
+        out.boards_in += entered;
     }
     out.difference = match span {
         Span::Whole(result) => c.check_end(steps.len(), result),
@@ -258,38 +243,65 @@ impl Combat<'_> {
         *self.rng = s.rng.clone();
     }
 
+    /// After attack `k`: a Duos teammate's board comes in when a board is
+    /// gone, and who attacks next is decided again, as at the start.
+    /// Returns how many boards came in.
+    fn after_attack(&mut self, k: usize, steps: &[LoggedStep], turn: &mut Turn) -> usize {
+        if !self.finished() {
+            return 0;
+        }
+        let entered = self.enter_waiting();
+        if entered == [false, false] {
+            return 0;
+        }
+        let first = self.first_by_count();
+        let side = first
+            .or(steps.get(k + 1).map(|s| s.attacker.0))
+            .unwrap_or(0);
+        *turn = Turn {
+            first,
+            pending: self.pending_immediate(side, entered),
+            after_teammate: true,
+            ..Turn::default()
+        };
+        entered.iter().filter(|e| **e).count()
+    }
+
     /// Plays attack `k` again from `before` with other rolls until the
-    /// boards match `next`'s; returns the turn to go on with. Without a
-    /// match the combat is left exactly as the first roll left it (same
-    /// dice), so the difference is then named as before.
+    /// boards match the next logged step's; returns the turn to go on with
+    /// and the boards that came in. Without a match the combat is left
+    /// exactly as the first roll left it (same dice), so the difference is
+    /// then named as before.
     fn reroll(
         &mut self,
         k: usize,
-        step: &LoggedStep,
-        next: &LoggedStep,
+        steps: &[LoggedStep],
         before: &(Snapshot, Turn),
         seed: u64,
-    ) -> Option<Turn> {
+    ) -> Option<(Turn, usize)> {
         let (snap, turn) = before;
+        let (step, next) = (&steps[k], &steps[k + 1]);
         for i in 1..=REROLLS {
             self.restore(snap);
             // A different roll per attack and try, the same on every run.
             *self.rng = Rng::new(seed ^ ((k as u64 + 1) << 32) ^ i);
             let mut t = turn.clone();
-            let played = self.check_step(k, step, &mut t).is_ok();
-            if played
-                && self
-                    .compare_boards(k + 2, &next.before, next.all_keywords)
-                    .is_ok()
-            {
-                return Some(t);
+            if self.check_step(k, step, &mut t).is_err() {
+                continue;
+            }
+            let entered = self.after_attack(k, steps, &mut t);
+            let same = self.compare_boards(k + 2, &next.before, next.all_keywords);
+            if same.is_ok() {
+                return Some((t, entered));
             }
         }
         self.restore(snap);
         let mut t = turn.clone();
         // The same step played with the same dice as the first time: it
-        // succeeded then, so it succeeds now.
-        let _ = self.check_step(k, step, &mut t);
+        // succeeded then, so it succeeds now and leaves the same state.
+        let again = self.check_step(k, step, &mut t);
+        debug_assert!(again.is_ok());
+        self.after_attack(k, steps, &mut t);
         None
     }
 }

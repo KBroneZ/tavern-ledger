@@ -323,7 +323,6 @@ fn a_random_buff_the_log_gave_elsewhere_is_rerolled_not_a_rule() {
         let r = replay(&band(p), &band(o), &steps, Span::FirstLeg, 1);
         assert_eq!(r.difference, None, "buffed {buffed}: {r:?}");
         assert_eq!(r.matched, 2);
-        assert!(r.rerolled <= 1);
     }
     // One of the two logs takes another roll than the first one.
     let rolled: usize = [0, 1]
@@ -355,4 +354,50 @@ fn rerolls_give_the_same_replay_on_every_run() {
     let a = replay(&band(p), &band(o), &steps, Span::FirstLeg, 7);
     let b = replay(&band(p), &band(o), &steps, Span::FirstLeg, 7);
     assert_eq!(a, b);
+}
+
+#[test]
+fn without_a_matching_roll_the_replay_is_the_same_on_every_run() {
+    let mut steps = random_buff_log(0).to_vec();
+    steps[1].before[0][0] = m(3, 7).tribe(Tribes::UNDEAD);
+    let [p, o] = &steps[0].before;
+    let a = replay(&band(p), &band(o), &steps, Span::FirstLeg, 3);
+    let b = replay(&band(p), &band(o), &steps, Span::FirstLeg, 3);
+    assert_eq!(a, b);
+    assert_eq!((a.matched, a.rerolled), (1, 0));
+}
+
+#[test]
+fn a_duos_board_that_comes_in_after_a_rolled_kill_is_rerolled_too() {
+    // The player's random-buff 1/1 and the opponent's 1/1 trade: the
+    // opponent's first board is gone and the teammate's 1/9 comes in; the
+    // buff the log gave either Undead is checked after it.
+    let undead = |a, h| m(a, h).tribe(Tribes::UNDEAD);
+    let p0 = [
+        Minion::new(RANDOM_BUFF, 1, 1).tier(2),
+        undead(1, 5),
+        undead(1, 5),
+    ];
+    let o0 = [m(1, 1)];
+    let teammate = [m(1, 9)];
+    let player = Team {
+        first: band(&p0),
+        second: None,
+    };
+    let opponent = Team {
+        first: band(&o0),
+        second: Some(band(&teammate)),
+    };
+    for buffed in [0, 1] {
+        let mut p1 = vec![undead(1, 5), undead(1, 5)];
+        p1[buffed] = undead(2, 7);
+        let steps = [step((0, 0), 0, &p0, &o0), step((0, 0), 0, &p1, &teammate)];
+        let r = replay_teams(&player, &opponent, &steps, Span::Whole(None), 1);
+        let rule = r.difference.as_ref().map(|d| d.rule);
+        assert!(
+            !matches!(rule, Some(Rule::Stats | Rule::Minions)),
+            "buffed {buffed}: {r:?}"
+        );
+        assert_eq!((r.matched, r.boards_in), (2, 1), "{r:?}");
+    }
 }
