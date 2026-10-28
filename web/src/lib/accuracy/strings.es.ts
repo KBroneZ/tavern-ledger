@@ -7,6 +7,8 @@ export const ES: Record<AccKey, string> = {
   "page.intro":
     "El simulador que da las probabilidades del overlay, comprobado con combates reales: para cada combate da la probabilidad de victoria, de empate y de derrota, y el registro del juego dice qué pasó de verdad.",
   "page.version": "Motor {version} · medido el {date} · {trials} pruebas por combate",
+  "page.calibration": "El puesto esperado tiene su propia comprobación:",
+  "page.calibration.link": "Calibración del puesto esperado",
 
   "mode.solo": "Solo",
   "mode.duos": "Dúos",

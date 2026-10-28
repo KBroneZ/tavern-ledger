@@ -439,3 +439,67 @@ fn a_board_that_comes_in_does_not_take_the_first_heros_waiting_power() {
         assert_eq!(stats(c, 1), [(0, 9)]);
     });
 }
+
+/// A board taken after start of combat (T-645): no start of combat played.
+fn taken_after_start(player: Warband, opponent: Vec<Minion>, f: impl FnOnce(&mut Combat)) {
+    let opponent = band(opponent, Vec::new(), 7);
+    let p = Prepared::new(&player, &opponent, false);
+    let mut rng = Rng::new(5);
+    let mut c = Combat::new(&p, &mut rng);
+    f(&mut c);
+}
+
+#[test]
+fn rapid_reanimations_waiting_copy_comes_back_on_a_board_taken_after_start_of_combat() {
+    // T-645: start of combat destroyed the third minion and its copy waits
+    // for space; the board taken after it is full without it.
+    let mut rr = power("BG25_HERO_103p", false);
+    rr.target = Some(2);
+    rr.held = Some(plain(7, 7));
+    let player = band(vec![plain(1, 1); MAX_BOARD], vec![rr], 3);
+    taken_after_start(player, vec![plain(0, 9)], |c| {
+        assert_eq!(c.pending[0].len(), 1, "waiting for space");
+        assert_eq!(c.sides[0].units.len(), MAX_BOARD);
+        kill(c, 0, 6);
+        assert_eq!(c.sides[0].units.len(), MAX_BOARD);
+        assert_eq!(stats(c, 0)[2], (7, 7), "back at its place");
+        assert!(c.pending[0].is_empty());
+    });
+}
+
+#[test]
+fn a_waiting_copy_on_a_board_with_space_comes_back_at_once() {
+    let mut rr = power("BG25_HERO_103p", false);
+    rr.target = Some(1);
+    rr.held = Some(plain(7, 7));
+    let player = band(vec![plain(1, 1), plain(2, 2)], vec![rr], 3);
+    taken_after_start(player, vec![plain(0, 9)], |c| {
+        assert!(c.pending[0].is_empty());
+        assert_eq!(stats(c, 0), [(1, 1), (7, 7), (2, 2)]);
+    });
+}
+
+#[test]
+fn a_held_copy_waits_for_nothing_on_a_board_taken_before_start_of_combat() {
+    // There the power plays its start of combat itself.
+    let mut rr = power("BG25_HERO_103p", false);
+    rr.target = Some(2);
+    rr.held = Some(plain(7, 7));
+    let player = band(vec![plain(1, 1); MAX_BOARD], vec![rr], 3);
+    let p = Prepared::new(&player, &band(vec![plain(0, 9)], Vec::new(), 3), true);
+    let mut rng = Rng::new(5);
+    let c = Combat::new(&p, &mut rng);
+    assert!(c.pending[0].is_empty());
+    assert_eq!(stats(&c, 0), vec![(1, 1); MAX_BOARD]);
+}
+
+#[test]
+fn without_a_waiting_copy_rapid_reanimation_does_nothing_after_start_of_combat() {
+    let mut rr = power("BG25_HERO_103p", false);
+    rr.target = Some(0);
+    let player = band(vec![plain(2, 2), plain(3, 3)], vec![rr], 3);
+    taken_after_start(player, vec![plain(0, 9)], |c| {
+        assert!(c.pending[0].is_empty());
+        assert_eq!(stats(c, 0), [(2, 2), (3, 3)]);
+    });
+}

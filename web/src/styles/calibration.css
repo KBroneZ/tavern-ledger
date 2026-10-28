@@ -1,0 +1,38 @@
+/* Expected-place calibration page (T-655), on the data pages' pieces
+   (data.css). Built at build time from the committed file: no data arrives
+   later. */
+
+.cal {
+  display: grid;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+.cal-intro,
+.cal .data-section > p {
+  max-width: var(--measure);
+}
+
+.cal-intro {
+  color: var(--text-2);
+}
+
+/* "No model is published yet": a state to read first, marked by its edge
+   and heading, not by colour alone. */
+.cal-status {
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-tile);
+  background: var(--surface-chart);
+  box-shadow:
+    inset 0 0 0 1px var(--bronze-lo),
+    inset 3px 0 0 var(--unknown),
+    0 10px 22px rgb(0 0 0 / 0.35);
+}
+
+.cal .dtable caption strong {
+  color: var(--text-1);
+}
+
+.cal .dtable td.is-unknown {
+  color: var(--text-3);
+}
