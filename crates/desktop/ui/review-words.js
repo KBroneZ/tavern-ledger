@@ -4,8 +4,9 @@
 // cost the most and says each result in plain words. It measures the next
 // fight only: a difference is never called the cost in final place, and the
 // expected place is shown only when a model gives one. A difference the
-// engine does not call clear is never ranked as costly. Plain data in, plain
-// data out (ui-tests/review-words.test.js); review.js draws it.
+// engine does not call clear is never ranked as costly, nor is a minion kept
+// whose sale's gold may have paid for something else that turn. Plain data
+// in, plain data out (ui-tests/review-words.test.js); review.js draws it.
 "use strict";
 
 (() => {
@@ -19,6 +20,9 @@
   const SIMULATED = ["buy", "choose", "sell"];
   const KINDS = ["roll", "buy", "buy_spell", "sell", "freeze", "unfreeze", "tier_up", "choose"];
   const TOP = 3;
+  // What an alternative takes as given that keeps it out of the ranking: it
+  // may not have been possible at all.
+  const UNRANKED = ["gold_maybe_short"];
   // Ties below this share are not worth a line.
   const TIE_SHOWN = 0.005;
 
@@ -63,6 +67,10 @@
       : null;
     return {
       card: card(a.card),
+      // For a sale: the minion bought after it, which the alternative
+      // skips; `skips` even when its id is out of shape (then unnamed).
+      insteadOf: card(a.instead_of),
+      skips: a.instead_of !== undefined && a.instead_of !== null,
       approx: (Array.isArray(a.approx) ? a.approx : []).map(variant).filter(Boolean),
       fight: "ok" in fight ? readFight(fight.ok) : null,
       gap: "err" in fight ? variant(fight.err) || "fallback" : null,
@@ -144,6 +152,7 @@
     d.rebuilt.alternatives.forEach((alt) => {
       const delta = alt.delta;
       if (!delta || !delta.clear || !(delta.score > 0)) return;
+      if (alt.approx.some((a) => UNRANKED.includes(a))) return;
       if (!best || delta.score > best.score) best = { alt, score: delta.score };
     });
     return best;
@@ -176,8 +185,9 @@
 
   // The board as it fought and the board with the alternative: the card
   // taken swapped for the alternative at its card data's stats, or the
-  // minion sold put back where it was with its stats then. A trinket leaves
-  // the board as it is. Null when the record has no board.
+  // minion sold put back where it was with its stats then, the minion
+  // bought after the sale taken off when the alternative skips it. A trinket
+  // leaves the board as it is. Null when the record has no board.
   function boards(report, d, alt, stats) {
     if (!d.rebuilt) return null;
     const saved = ownBoard(report, d.rebuilt.round);
@@ -189,6 +199,11 @@
       const at = earlier.findIndex((m) => m && m.card_id === alt.card);
       if (at < 0) return null;
       const after = before.slice();
+      if (alt.skips) {
+        const bought = alt.insteadOf ? after.findIndex((m) => m.card === alt.insteadOf) : -1;
+        if (bought < 0) return null;
+        after.splice(bought, 1);
+      }
       after.splice(Math.min(at, after.length), 0, minionOf(earlier[at]));
       return { before, after };
     }
@@ -217,11 +232,13 @@
 
   // Why a costly choice cost the next fight, in one sentence.
   function reasonLine(d, alt, nameOf) {
-    const kind = d.kind === "sell" ? "sell" : d.kind === "choose" ? "choose" : "buy";
+    const sold = d.kind === "sell" ? (alt.skips ? "sellBought" : "sell") : null;
+    const kind = sold || (d.kind === "choose" ? "choose" : "buy");
     return t(`review.why.${kind}`, {
       turn: turn(d),
       taken: named(d.taken, nameOf),
       alt: named(alt.card, nameOf),
+      bought: named(alt.insteadOf, nameOf),
       result: outcome("review.result", alt.fight, d.rebuilt.actual),
     });
   }
@@ -253,11 +270,11 @@
     return [...new Set(lines.concat(altNotes(alt, nameOf)))];
   }
 
-  // The cards the simulator plays with a known gap in an alternative's
-  // fight, and its fights that hit the turn limit.
+  // Why an alternative is not ranked, the cards the simulator plays with a
+  // known gap in its fight, and its fights that hit the turn limit.
   function altNotes(alt, nameOf) {
     if (!alt.fight) return [];
-    const out = [];
+    const out = alt.approx.filter((a) => UNRANKED.includes(a)).map((a) => t(`review.approx.${a}`));
     if (alt.fight.approximate.length) out.push(t("review.approximate", { cards: I18n.list(alt.fight.approximate.map((id) => named(id, nameOf))) }));
     if (alt.fight.stalled) out.push(I18n.plural("review.stalled", alt.fight.stalled));
     return out;
@@ -276,7 +293,8 @@
   // One alternative in the full list.
   function altLine(d, alt, nameOf) {
     const name = named(alt.card, nameOf);
-    const label = d.kind === "sell" ? t("review.keep", { card: name }) : name;
+    const keep = alt.skips ? t("review.keepInstead", { card: name, bought: named(alt.insteadOf, nameOf) }) : t("review.keep", { card: name });
+    const label = d.kind === "sell" ? keep : name;
     if (!alt.fight) return t("review.alt.gap", { card: label, why: words(`review.gap.${alt.gap}`) || t("review.gap.fallback") });
     const values = { card: label, result: outcome("review.alt.result", alt.fight, d.rebuilt.actual), trials: I18n.num(alt.fight.trials) };
     const delta = alt.delta;
@@ -294,8 +312,13 @@
     return words(`review.not.${why}`) || t("review.not.fallback");
   }
 
+  // A clear gain left out of the ranking, as the gold for it is not known.
+  const leftOut = (d) => Boolean(d.rebuilt) && d.rebuilt.alternatives.some((alt) =>
+    alt.delta && alt.delta.clear && alt.delta.score > 0 && alt.approx.some((a) => UNRANKED.includes(a)));
+
   // The lines above the costly choices: how many were simulated, a banner
-  // when the review stopped partway, and what to say when none cost a fight.
+  // when the review stopped partway, and what to say when none cost a fight
+  // (and that some were left out, when they were).
   function summary(view) {
     // Rolls, freezes and the like are never simulated: not counted, as in the progress.
     const total = view.decisions.filter((d) => SIMULATED.includes(d.kind)).length;
@@ -306,6 +329,7 @@
     if (!top(view.decisions).length) {
       if (!rebuilt && !partial) empty = t("review.noneRebuilt");
       else empty = partial ? t("review.nonePartial") : t("review.none");
+      if (view.decisions.some(leftOut)) empty = `${empty} ${t("review.leftOut")}`;
     }
     return { count: t("review.count", { rebuilt: I18n.num(rebuilt), total: I18n.num(total) }), banner, empty };
   }

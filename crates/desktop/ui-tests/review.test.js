@@ -94,3 +94,30 @@ test("done with nothing costly, or stopped partway, says so", () => {
   assert.match(text(partial), /Time ran out partway through/);
   assert.match(text(partial), /No choice reviewed in time/);
 });
+test("a sale weighed against the next buy shows that buy gone from the board after", () => {
+  I18n.setLang("en");
+  const sale = {
+    decision: { turn: 3, ms: 1, kind: "sell", taken: "BG_C", offered: [], source: null, tier: null, inferred: false },
+    rebuilt: { Ok: { round: 3, actual: fight(0.4), unknown_offers: 0, alternatives: [{ card: "BG_C", instead_of: "BG_B", approx: ["earlier_stats"], fight: { Ok: fight(0.6) }, delta: { score: 0.2, standard_error: 0.01, clear: true, place: null }, stop: "clear" }] } },
+  };
+  const own = (number, board) => ({ number, entries: [{ side: "own", player_id: 1, board }] });
+  const report = { local_player_id: 1, rounds: [own(2, [{ card_id: "BG_C", atk: 2, health: 2 }]), own(3, [{ card_id: "BG_B", atk: 3, health: 3 }])] };
+  const part = TLReview.section(ui, answer([sale]), tools({ report }));
+  const boards = find(part, "review-boards");
+  assert.match(text(boards), /Keeping BG_C instead of buying BG_B/);
+  assert.equal(boards.children[1].children[1].children.length, 1, "the same number of minions");
+  assert.match(text(boards.children[1]), /BG_C/);
+  assert.doesNotMatch(text(boards.children[1]), /BG_B 3\/3/);
+  assert.match(text(find(part, "fold")), /Keeping BG_C instead of buying BG_B: clearly better/);
+});
+
+test("a sale that may have been short of gold is listed with its note, never ranked", () => {
+  I18n.setLang("en");
+  const sale = {
+    decision: { turn: 3, ms: 1, kind: "sell", taken: "BG_C", offered: [], source: null, tier: null, inferred: false },
+    rebuilt: { Ok: { round: 3, actual: fight(0.4), unknown_offers: 0, alternatives: [{ card: "BG_C", instead_of: null, approx: ["earlier_stats", "gold_maybe_short"], fight: { Ok: fight(0.9) }, delta: { score: 0.5, standard_error: 0.01, clear: true, place: null }, stop: "clear" }] } },
+  };
+  const part = TLReview.section(ui, answer([sale]), tools());
+  assert.equal(find(part, "review-top"), undefined, "nothing ranked");
+  assert.match(text(find(part, "fold")), /the gold from the sale may have paid for that/);
+});

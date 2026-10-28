@@ -13,7 +13,9 @@
 //! - a choice of a trinket: each other trinket on offer takes its place in
 //!   the hero's kit;
 //! - a sale: the minion sold (the only copy on the board of the combat
-//!   before, none after) is put back where it was, with its stats then.
+//!   before, none after) is put back where it was, with its stats then;
+//!   when a minion was bought after the sale that turn, in place of the
+//!   first such buy, the sale's gold having paid for it (`sale.rs`).
 //!
 //! Everything else says why it is not rebuilt ([`NotRebuilt`]), never
 //! dropped: a roll, freeze, tier-up or spell would need shops and gold the
@@ -55,6 +57,7 @@ use crate::odds::Facts;
 use crate::shop::ShopState;
 
 mod game;
+mod sale;
 mod sim;
 
 pub use sim::{Gap, Stop};
@@ -122,6 +125,17 @@ pub enum NotRebuilt {
     Ambiguous,
     /// Keeping the minion sold would need an eighth place on the board.
     BoardFull,
+    /// The minion bought after the sale, which keeping the one sold would
+    /// have skipped, is not on the next combat's board (in hand, made
+    /// golden...), or the log does not name it.
+    NextBuyNotOnBoard,
+    /// The sale or a buy of its turn has no time in the log: whether the
+    /// sale's gold paid for a buy is not known.
+    OrderUnknown,
+    /// The minion bought after the sale was matched up rather than read as
+    /// the log has it ([`crate::decisions`]): which card it was is not
+    /// sure.
+    NextBuyUncertain,
     /// The card taken or sold acts at the start of combat, which the saved
     /// boards already show or can no longer play.
     StartOfCombat,
@@ -149,6 +163,10 @@ pub enum Approx {
     /// A card on the boards acts at the start of combat: it might have
     /// changed the card put in too.
     StartOfCombatOnBoard,
+    /// The minion is kept although gold was spent after its sale that turn
+    /// (a roll, a tier-up, a spell): the sale's gold may have paid for
+    /// that, so keeping it may not have been possible.
+    GoldMaybeShort,
 }
 
 /// The place the model expects for a board, or why there is no number.
@@ -230,6 +248,9 @@ pub struct Delta {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Alternative {
     pub card: String,
+    /// For a sale: the card id of the minion bought after it that turn,
+    /// which the alternative does not buy (the sale paid for it).
+    pub instead_of: Option<String>,
     pub approx: Vec<Approx>,
     pub fight: Result<Fight, Gap>,
     pub delta: Option<Delta>,
@@ -352,15 +373,15 @@ fn run(
     let mut left = list.iter().filter(|d| played(d)).count();
     let total = list.len();
     let mut reviewed = Vec::with_capacity(total);
-    for (i, decision) in list.into_iter().enumerate() {
+    for (i, decision) in list.iter().enumerate() {
         progress(i, total);
-        if played(&decision) {
+        if played(decision) {
             sims.start_decision(left);
             left -= 1;
         }
         reviewed.push(Reviewed {
-            rebuilt: game.rebuild(&decision, &mut sims),
-            decision,
+            rebuilt: game.rebuild(&list, i, &mut sims),
+            decision: decision.clone(),
         });
     }
     progress(total, total);
@@ -449,5 +470,7 @@ fn delta(actual: &Fight, actual_odds: &Odds, alt: &Fight, alt_odds: &Odds) -> De
 
 #[cfg(test)]
 mod budget_tests;
+#[cfg(test)]
+mod sale_tests;
 #[cfg(test)]
 mod tests;

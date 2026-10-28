@@ -7,6 +7,7 @@ use combat_sim::{Keywords, Team, Warband};
 use expected_place::model::{expected, Model};
 use serde_json::{json, Value};
 
+use super::sale::{after_sale, kept_instead, After};
 use super::sim::{Compared, Pair, Sims};
 use super::{delta, fight, Alternative, Approx, Gap, NotRebuilt, Place, Rebuilt};
 use crate::decisions::{Decision, DecisionKind};
@@ -206,10 +207,17 @@ impl<'a> Game<'a> {
         })
     }
 
-    pub(super) fn rebuild(&self, d: &Decision, sims: &mut Sims) -> Result<Rebuilt, NotRebuilt> {
+    /// The decision `list[at]` of the game's decisions `list`.
+    pub(super) fn rebuild(
+        &self,
+        list: &[Decision],
+        at: usize,
+        sims: &mut Sims,
+    ) -> Result<Rebuilt, NotRebuilt> {
+        let d = &list[at];
         match d.kind {
             DecisionKind::Buy | DecisionKind::Choose => self.swap(d, sims),
-            DecisionKind::Sell => self.keep(d, sims),
+            DecisionKind::Sell => self.keep(d, after_sale(list, at), sims),
             _ => Err(NotRebuilt::NeedsShopPlayout),
         }
     }
@@ -262,8 +270,9 @@ impl<'a> Game<'a> {
         self.play(&c, swapped, unknown_offers, sims)
     }
 
-    /// The minion sold, kept.
-    fn keep(&self, d: &Decision, sims: &mut Sims) -> Result<Rebuilt, NotRebuilt> {
+    /// The minion sold, kept: in place of the first minion bought after
+    /// the sale, if any (`sale.rs`).
+    fn keep(&self, d: &Decision, after: After, sims: &mut Sims) -> Result<Rebuilt, NotRebuilt> {
         let sold = d.taken.as_deref().ok_or(NotRebuilt::NoCardTaken)?;
         let c = self.combat(d.turn)?;
         let board = board_of(c.own);
@@ -279,6 +288,14 @@ impl<'a> Game<'a> {
         if minion_starts(&c.before[from]) {
             return Err(NotRebuilt::StartOfCombat);
         }
+        let first = match after {
+            After::Unknown => return Err(NotRebuilt::OrderUnknown),
+            After::Bought { buy, sold_again } => {
+                return self.keep_instead(&c, sold, from, buy, sold_again, sims)
+            }
+            After::Spent => vec![Approx::EarlierStats, Approx::GoldMaybeShort],
+            After::Nothing => vec![Approx::EarlierStats],
+        };
         if board.len() >= MAX_BOARD {
             return Err(NotRebuilt::BoardFull);
         }
@@ -288,8 +305,52 @@ impl<'a> Game<'a> {
         minions.insert(at, c.before[from].clone());
         own["board"] = Value::Array(minions);
         shift_targets(&mut own, at);
-        let noted = self.noted(&c, &[Approx::EarlierStats]);
+        let noted = self.noted(&c, &first);
         self.play(&c, vec![(sold, Ok((own, noted)))], 0, sims)
+    }
+
+    /// The minion sold (at `from` on the board before) kept in place of
+    /// `buy`, the first minion bought after the sale: the buy must be named
+    /// as the log has it, new on the next combat's board (one copy, none
+    /// before) and not sold again that turn.
+    fn keep_instead(
+        &self,
+        c: &Combat,
+        sold: &str,
+        from: usize,
+        buy: &Decision,
+        sold_again: bool,
+        sims: &mut Sims,
+    ) -> Result<Rebuilt, NotRebuilt> {
+        let bought = buy.taken.as_deref().ok_or(NotRebuilt::NextBuyNotOnBoard)?;
+        if buy.inferred {
+            return Err(NotRebuilt::NextBuyUncertain);
+        }
+        let board = board_of(c.own);
+        let (now, was) = (copies(board, bought), copies(c.before, bought));
+        if now == 0 {
+            return Err(NotRebuilt::NextBuyNotOnBoard);
+        }
+        if now != 1 || was != 0 || sold_again {
+            return Err(NotRebuilt::Ambiguous);
+        }
+        let at = board.iter().position(|m| card_of(m) == Some(bought));
+        let at = at.ok_or(NotRebuilt::NextBuyNotOnBoard)?;
+        if minion_starts(&board[at]) {
+            return Err(NotRebuilt::StartOfCombat);
+        }
+        let own = kept_instead(c.own, &c.before[from], from, at);
+        let noted = self.noted(c, &[Approx::EarlierStats, Approx::BattlecryNotPlayed]);
+        let r = self.play(c, vec![(sold, Ok((own, noted)))], 0, sims)?;
+        let alternatives = r
+            .alternatives
+            .into_iter()
+            .map(|a| Alternative {
+                instead_of: Some(bought.to_string()),
+                ..a
+            })
+            .collect();
+        Ok(Rebuilt { alternatives, ..r })
     }
 
     /// What every alternative of a combat takes as given: `first`, then a
@@ -442,6 +503,7 @@ impl<'a> Game<'a> {
             };
             Alternative {
                 card: card.to_string(),
+                instead_of: None,
                 approx,
                 fight,
                 delta,

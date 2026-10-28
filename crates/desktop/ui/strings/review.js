@@ -32,6 +32,8 @@
     ["review.nonePartial", "No choice reviewed in time clearly cost you the next fight.", "Ninguna de las decisiones revisadas a tiempo te costó claramente el siguiente combate."],
     ["review.noneRebuilt", "No choice of this game could be simulated again; “Show every turn” says why.",
       "No se pudo volver a simular ninguna decisión de esta partida; «Ver todos los turnos» explica por qué."],
+    ["review.leftOut", "Left out: minions kept after a sale whose gold may have paid for a roll, an upgrade or a spell that turn; “Show every turn” lists them.",
+      "Se dejan fuera los esbirros que te habrías quedado tras una venta cuyo oro quizá pagó un refresco, una mejora o un hechizo en ese turno; «Ver todos los turnos» los muestra."],
     ["review.all", "Show every turn", "Ver todos los turnos"],
     ["review.turn", "Turn {turn}", "Turno {turn}"],
     ["review.unnamed", "a card the log does not name", "una carta que el registro no nombra"],
@@ -56,6 +58,9 @@
       "{turn}: elegiste {taken}. Si hubieras elegido {alt}, en la simulación {result}."],
     ["review.why.sell", "{turn}: you sold {taken}. Had you kept it, {result}.",
       "{turn}: vendiste {taken}. Si te lo hubieras quedado, en la simulación {result}."],
+    // A sale followed by a buy the same turn: the gold of the sale paid for it.
+    ["review.why.sellBought", "{turn}: you sold {taken} and bought {bought}. Had you kept {taken} instead of buying {bought}, {result}.",
+      "{turn}: vendiste {taken} y compraste {bought}. Si te hubieras quedado {taken} en vez de comprar {bought}, en la simulación {result}."],
     ["review.result.won", "you win the next fight {alt} of the time in the simulation, instead of {actual}",
       "ganas el siguiente combate el {alt} de las veces en vez del {actual}"],
     ["review.result.lost", "you lose the next fight {alt} of the time in the simulation, instead of {actual}",
@@ -66,6 +71,7 @@
     ["review.before", "Your board", "Tu tablero"],
     ["review.after", "With {card}", "Con {card}"],
     ["review.afterKept", "Keeping {card}", "Quedándote {card}"],
+    ["review.afterKeptInstead", "Keeping {card} instead of buying {bought}", "Quedándote {card} en vez de comprar {bought}"],
     ["review.trinket", "Trinket: {alt} instead of {taken}; the board stays the same.", "Abalorio: {alt} en vez de {taken}; el tablero no cambia."],
 
     // What a simulated alternative takes as given (Approx).
@@ -82,6 +88,8 @@
       "{taken} se queda con sus estadísticas del combate anterior a la venta."],
     ["review.approx.start_of_combat_on_board", "A card on the boards acts at the start of combat, which is not simulated; it might have changed this.",
       "Una carta de los tableros actúa al inicio del combate, que no se simula; podría haber cambiado esto."],
+    ["review.approx.gold_maybe_short", "After this sale you rolled, upgraded the tavern or bought a spell that turn: the gold from the sale may have paid for that, so keeping the minion may have left you short. It is not ranked among the choices that cost the most.",
+      "Después de esta venta refrescaste, mejoraste la taberna o compraste un hechizo en ese mismo turno: puede que el oro de la venta pagara eso, así que quedarte el esbirro quizá te habría dejado sin oro suficiente. No cuenta entre las decisiones que más te costaron."],
     ["review.approx.fallback", "Simulated with a simplification this version of the app does not describe.",
       "Simulado con una simplificación que esta versión de la aplicación no describe."],
     ["review.approximate", "Simulated with a known gap: {cards}.", "Simulado con un fallo conocido: {cards}."],
@@ -90,6 +98,7 @@
 
     // Each alternative in the full list.
     ["review.keep", "Keeping {card}", "Quedarte {card}"],
+    ["review.keepInstead", "Keeping {card} instead of buying {bought}", "Quedarte {card} en vez de comprar {bought}"],
     ["review.alt.result.won", "{alt} won instead of {actual}", "{alt} de victorias en vez del {actual}"],
     ["review.alt.result.lost", "{alt} lost instead of {actual}", "{alt} de derrotas en vez del {actual}"],
     ["review.alt.better", "{card}: clearly better in the next fight, {result}.",
@@ -122,6 +131,12 @@
       "No simulada: el esbirro vendido no estaba en tu tablero en el combate anterior."],
     ["review.not.ambiguous", "Not simulated: with copies of the card on your board, it is not known which one it was.",
       "No simulada: con varias copias de la carta en tu tablero, no se sabe cuál era."],
+    ["review.not.next_buy_not_on_board", "Not simulated: the minion you bought after this sale was not on your board in the next fight (in hand, sold, made golden…), or the log does not name it.",
+      "No simulada: el esbirro que compraste después de esta venta no estaba en tu tablero en el siguiente combate (en la mano, vendido, dorado…), o el registro no lo nombra."],
+    ["review.not.next_buy_uncertain", "Not simulated: the log does not say for sure which minion you bought after this sale.",
+      "No simulada: el registro no deja claro qué esbirro compraste después de esta venta."],
+    ["review.not.order_unknown", "Not simulated: the log does not show whether you bought a minion with the gold from this sale.",
+      "No simulada: el registro no muestra si compraste un esbirro con el oro de esta venta."],
     ["review.not.board_full", "Not simulated: keeping it would need an eighth space on the board.", "No simulada: quedártelo necesitaría un octavo hueco en el tablero."],
     ["review.not.start_of_combat", "Not simulated: the card acts at the start of combat, which is not simulated.",
       "No simulada: la carta actúa al inicio del combate, que no se simula."],
