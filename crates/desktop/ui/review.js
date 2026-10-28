@@ -34,6 +34,13 @@
     return row;
   }
 
+  // The label of the board with the alternative.
+  function afterLabel(h, d, alt) {
+    const values = { card: h.cardName(alt.card), bought: alt.insteadOf ? h.cardName(alt.insteadOf) : null };
+    if (d.kind !== "sell") return t("review.after", values);
+    return alt.insteadOf ? t("review.afterKeptInstead", values) : t("review.afterKept", values);
+  }
+
   function costly(ui, h, view, c) {
     const d = c.decision;
     const li = ui.el("li", "review-costly");
@@ -43,7 +50,7 @@
     if (b && b.trinket) li.append(note(ui, t("review.trinket", { alt: h.cardName(c.alt.card), taken: h.cardName(d.taken) })));
     else if (b) {
       const boards = ui.el("div", "review-boards");
-      const after = d.kind === "sell" ? t("review.afterKept", { card: h.cardName(c.alt.card) }) : t("review.after", { card: h.cardName(c.alt.card) });
+      const after = afterLabel(h, d, c.alt);
       boards.append(boardRow(ui, h, t("review.before"), b.before), boardRow(ui, h, after, b.after));
       li.append(boards);
     }

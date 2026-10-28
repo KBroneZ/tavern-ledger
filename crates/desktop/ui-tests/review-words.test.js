@@ -207,3 +207,58 @@ test("the summary is honest about a review that stopped partway or found nothing
   assert.equal(W.progressLine({ done: 12, total: 40 }), "Reviewing… 12 of 40 choices simulated so far.");
   assert.equal(W.progressLine(null), null);
 });
+test("a sale that paid for the next buy is weighed against skipping that buy (English and Spanish)", () => {
+  // Turn 3: sold Gamma, then bought Beta.
+  const swap = alt("BG_C", 0.62, 0.44, { approx: ["earlier_stats", "battlecry_not_played"], instead_of: "BG_B" });
+  const sell = W.read(done([{ decision: decision(3, "sell", "BG_C", []), rebuilt: rebuilt(3, 0.44, [swap]) }])).decisions[0];
+  const a = sell.rebuilt.alternatives[0];
+  assert.equal(a.insteadOf, "BG_B");
+  I18n.setLang("en");
+  assert.equal(W.reasonLine(sell, a, nameOf), "Turn 3: you sold Gamma and bought Beta. Had you kept Gamma instead of buying Beta, you win the next fight 62% of the time in the simulation, instead of 44%.");
+  assert.equal(W.altLine(sell, a, nameOf), "Keeping Gamma instead of buying Beta: clearly better in the next fight, 62% won instead of 44%.");
+  assert.deepEqual(W.top([sell]).map((c) => c.decision.turn), [3], "skipping the buy is always affordable: it may be ranked");
+  I18n.setLang("es");
+  assert.equal(W.reasonLine(sell, a, nameOf), "Turno 3: vendiste Gamma y compraste Beta. Si te hubieras quedado Gamma en vez de comprar Beta, en la simulación ganas el siguiente combate el 62 % de las veces en vez del 44 %.");
+  assert.equal(W.altLine(sell, a, nameOf), "Quedarte Gamma en vez de comprar Beta: claramente mejor en el siguiente combate, 62 % de victorias en vez del 44 %.");
+  I18n.setLang("en");
+
+  // The after board: Gamma back where it was, Beta gone.
+  const soldReport = { local_player_id: 1, rounds: [round(2, [minion("BG_C", 2, 2), minion("BG_A", 1, 1)]), round(3, [minion("BG_A", 5, 6), minion("BG_B", 3, 3)])] };
+  const b = W.boards(soldReport, sell, a, {});
+  assert.deepEqual(b.before.map((m) => m.card), ["BG_A", "BG_B"]);
+  assert.deepEqual(b.after.map((m) => [m.card, m.atk]), [["BG_C", 2], ["BG_A", 5]], "the same number of minions, the buy gone");
+  const gone = { local_player_id: 1, rounds: [round(2, [minion("BG_C", 2, 2)]), round(3, [minion("BG_A", 5, 6)])] };
+  assert.equal(W.boards(gone, sell, a, {}), null, "the buy not on the board: no boards made up");
+});
+
+test("a sale whose gold may have paid for a roll or an upgrade is never ranked, and says why in the full list", () => {
+  const short = alt("BG_C", 0.9, 0.3, { approx: ["earlier_stats", "gold_maybe_short"] });
+  const plain = alt("BG_C", 0.5, 0.3, { approx: ["earlier_stats"] });
+  const read = W.read(done([
+    { decision: decision(3, "sell", "BG_C", []), rebuilt: rebuilt(3, 0.3, [short]) },
+    { decision: decision(4, "sell", "BG_C", []), rebuilt: rebuilt(4, 0.3, [plain]) },
+  ]));
+  const [maybe, kept] = read.decisions;
+  assert.equal(W.costOf(maybe), null, "however big, never among the costliest");
+  assert.deepEqual(W.top(read.decisions).map((c) => c.decision.turn), [4]);
+  I18n.setLang("en");
+  const a = maybe.rebuilt.alternatives[0];
+  assert.match(W.altLine(maybe, a, nameOf), /^Keeping Gamma: clearly better/, "still listed");
+  const note = "After this sale you rolled, upgraded the tavern, bought a spell or froze the shop that turn: the gold from the sale may have paid for that, so keeping the minion may have left you short. It is not ranked among the choices that cost the most.";
+  assert.deepEqual(W.altNotes(a, nameOf), [note], "with its note in the full list");
+  assert.deepEqual(W.altNotes(kept.rebuilt.alternatives[0], nameOf), []);
+  assert.ok(W.notes(maybe, a, nameOf).includes(note));
+  I18n.setLang("es");
+  assert.deepEqual(W.altNotes(a, nameOf), ["Después de esta venta refrescaste, mejoraste la taberna, compraste un hechizo o congelaste la tienda en ese mismo turno: puede que el oro de la venta pagara eso, así que quedarte el esbirro quizá te habría dejado sin oro suficiente. No cuenta entre las decisiones que más te costaron."]);
+  I18n.setLang("en");
+});
+
+test("a sale whose next buy cannot be told apart says why it was not simulated", () => {
+  I18n.setLang("en");
+  assert.equal(W.notLine({ notRebuilt: "next_buy_not_on_board" }), "Not simulated: the minion you bought after this sale was not on your board in the next fight (in hand, sold, made golden…), or the log does not name it.");
+  assert.equal(W.notLine({ notRebuilt: "order_unknown" }), "Not simulated: the log does not show whether you bought a minion with the gold from this sale.");
+  I18n.setLang("es");
+  assert.equal(W.notLine({ notRebuilt: "next_buy_not_on_board" }), "No simulada: el esbirro que compraste después de esta venta no estaba en tu tablero en el siguiente combate (en la mano, vendido, dorado…), o el registro no lo nombra.");
+  assert.equal(W.notLine({ notRebuilt: "order_unknown" }), "No simulada: el registro no muestra si compraste un esbirro con el oro de esta venta.");
+  I18n.setLang("en");
+});
