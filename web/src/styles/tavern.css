@@ -28,8 +28,8 @@
 
 .parchment,
 .layout-home .glass,
-.layout-home .yours li,
-.layout-home .news ul {
+.layout-home .yours ul,
+.layout-home .news-card {
   --frame-src: url("/art/home/panel-card.webp");
   --frame-slice: 22% 17%;
   border-style: solid;
@@ -109,7 +109,7 @@
 }
 
 .layout-home .yours li {
-  padding: 6px 8px 10px;
+  padding: 6px 18px 10px;
 }
 
 .layout-home .doors {
@@ -120,8 +120,8 @@
   color: var(--ink-mark);
 }
 
-/* What's new, written on a card. */
-.layout-home .news ul {
+/* What's new, written on a card; older lines fold on the same card. */
+.layout-home .news-card {
   padding: 4px clamp(8px, 2vw, 18px);
 }
 
@@ -135,6 +135,16 @@
 
 .layout-home .news time {
   color: var(--ink-mark);
+}
+
+/* The fold for older news sits on the parchment: ink, like the card's links. */
+.layout-home .news-card .more > summary,
+.layout-home .news-card .more > summary:hover {
+  color: var(--ink-link);
+}
+
+.layout-home .news-card .more-body {
+  color: var(--ink-soft);
 }
 
 .layout-home .news li span {
@@ -187,8 +197,8 @@
 @media (forced-colors: active) {
   .parchment,
   .layout-home .glass,
-  .layout-home .yours li,
-  .layout-home .news ul {
+  .layout-home .yours ul,
+  .layout-home .news-card {
     border: 1px solid CanvasText;
     border-image: none;
     background: Canvas;
