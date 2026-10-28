@@ -114,6 +114,20 @@ test("the plain reasons say what was measured: the next fight, in the simulation
   I18n.setLang("en");
 });
 
+test("when the wins do not move, the reasons name the losses instead of '0% instead of 0%'", () => {
+  const kept = alt("BG_C", 0, 0, { fight: { Ok: fight(0, { tied: 0.57, lost: 0.43 }) }, delta: delta(0.285) });
+  const sell = W.read(done([{ decision: decision(3, "sell", "BG_C", []), rebuilt: rebuilt(3, 0, [kept]) }])).decisions[0];
+  const a = sell.rebuilt.alternatives[0];
+  I18n.setLang("en");
+  assert.equal(W.reasonLine(sell, a, nameOf), "Turn 3: you sold Gamma. Had you kept it, you lose the next fight 43% of the time in the simulation, instead of 100%.");
+  assert.equal(W.altLine(sell, a, nameOf), "Keeping Gamma: clearly better in the next fight, 43% lost instead of 100%.");
+  assert.equal(W.tieLine(sell.rebuilt, a), "Ties: 57% instead of 0%.");
+  I18n.setLang("es");
+  assert.equal(W.reasonLine(sell, a, nameOf), "Turno 3: vendiste Gamma. Si te lo hubieras quedado, en la simulación pierdes el siguiente combate el 43 % de las veces en vez del 100 %.");
+  assert.equal(W.altLine(sell, a, nameOf), "Quedarte Gamma: claramente mejor en el siguiente combate, 43 % de derrotas en vez del 100 %.");
+  I18n.setLang("en");
+});
+
 test("ties and the expected place are shown only when there is something to show", () => {
   const withTies = alt("BG_B", 0.5, 0.4, { fight: { Ok: fight(0.5, { tied: 0.2, lost: 0.3, place: { expected: 3.4 } }) }, delta: delta(0.2, { place: -0.7 }) });
   const read = W.read(done([{ decision: decision(5, "buy", "BG_A", ["BG_A", "BG_B"]), rebuilt: rebuilt(5, 0.4, [withTies], { actual: fight(0.4, { place: { expected: 4.1 } }) }) }]));

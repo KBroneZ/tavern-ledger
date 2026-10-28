@@ -222,9 +222,16 @@
       turn: turn(d),
       taken: named(d.taken, nameOf),
       alt: named(alt.card, nameOf),
-      altWon: I18n.percent(alt.fight.won),
-      won: I18n.percent(d.rebuilt.actual.won),
+      result: outcome("review.result", alt.fight, d.rebuilt.actual),
     });
+  }
+
+  // The share that moved more, wins or losses: a change only in ties and
+  // losses must not read "0% instead of 0%".
+  function outcome(prefix, alt, actual) {
+    const lost = Math.abs(alt.lost - actual.lost) > Math.abs(alt.won - actual.won) + 1e-9;
+    const [a, b] = lost ? [alt.lost, actual.lost] : [alt.won, actual.won];
+    return t(`${prefix}.${lost ? "lost" : "won"}`, { alt: I18n.percent(a), actual: I18n.percent(b) });
   }
 
   function tieLine(rebuilt, alt) {
@@ -271,7 +278,7 @@
     const name = named(alt.card, nameOf);
     const label = d.kind === "sell" ? t("review.keep", { card: name }) : name;
     if (!alt.fight) return t("review.alt.gap", { card: label, why: words(`review.gap.${alt.gap}`) || t("review.gap.fallback") });
-    const values = { card: label, altWon: I18n.percent(alt.fight.won), won: I18n.percent(d.rebuilt.actual.won), trials: I18n.num(alt.fight.trials) };
+    const values = { card: label, result: outcome("review.alt.result", alt.fight, d.rebuilt.actual), trials: I18n.num(alt.fight.trials) };
     const delta = alt.delta;
     if (delta && delta.clear) return t(delta.score > 0 ? "review.alt.better" : "review.alt.worse", values);
     if (alt.stop === "close") return t("review.alt.close", values);
