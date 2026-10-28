@@ -2,7 +2,8 @@
 
 use super::sale::kept_instead;
 use super::tests::{
-    act, minion, reason, rebuilt, report, round, run, shop_turn, FILLER, FOE, OTHER, STRONG, WEAK,
+    act, minion, offer, reason, rebuilt, report, round, run, shop_turn, FILLER, FOE, OTHER, STRONG,
+    WEAK,
 };
 use super::{Approx, NotRebuilt};
 use crate::decisions::DecisionKind;
@@ -84,7 +85,7 @@ fn a_buy_before_the_sale_leaves_the_plain_keep() {
 
 #[test]
 fn a_sale_followed_only_by_gold_spent_otherwise_may_have_been_short() {
-    for after in [["roll"], ["tier_up"], ["freeze"], ["buy_spell"]] {
+    for after in [["roll"], ["tier_up"], ["buy_spell"]] {
         let g = sale_then(&after, &[], vec![minion(WEAK, 1, 1)]);
 
         let r = run(&g);
@@ -102,14 +103,17 @@ fn a_sale_followed_only_by_gold_spent_otherwise_may_have_been_short() {
 
 #[test]
 fn a_sale_with_nothing_after_it_keeps_the_plain_keep() {
-    // A pick from a discover costs no gold.
-    let g = sale_then(&[], &[], vec![minion(WEAK, 1, 1)]);
+    // Nothing after it, or only what costs no gold: a freeze, an unfreeze,
+    // a pick from a discover.
+    for after in [&[][..], &["freeze"], &["unfreeze"], &["choose"]] {
+        let g = sale_then(after, &[], vec![minion(WEAK, 1, 1)]);
 
-    let r = run(&g);
+        let r = run(&g);
 
-    let alt = &rebuilt(&r, 0).alternatives[0];
-    assert_eq!(alt.instead_of, None);
-    assert_eq!(alt.approx, [Approx::EarlierStats]);
+        let alt = &rebuilt(&r, 0).alternatives[0];
+        assert_eq!(alt.instead_of, None, "{after:?}");
+        assert_eq!(alt.approx, [Approx::EarlierStats], "{after:?}");
+    }
 }
 
 #[test]
@@ -134,6 +138,14 @@ fn a_buy_that_cannot_be_found_on_the_board_is_not_guessed() {
     // A buy the log does not name.
     let g = sale_then(&["buy"], &[], vec![minion(WEAK, 1, 1)]);
     assert_eq!(reason(&run(&g), 0), NotRebuilt::NextBuyNotOnBoard);
+
+    // A buy matched up rather than read as the log has it: a card that
+    // shop did not show.
+    let mut g = sale_then(&["buy"], &[WEAK], vec![minion(WEAK, 1, 1)]);
+    g["shop"]["turns"][1]["offers"] = json!([offer(OTHER), offer(FILLER)]);
+    let r = run(&g);
+    assert!(r.decisions[1].decision.inferred);
+    assert_eq!(reason(&r, 0), NotRebuilt::NextBuyUncertain);
 }
 
 #[test]

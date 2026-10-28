@@ -132,6 +132,10 @@ pub enum NotRebuilt {
     /// The sale or a buy of its turn has no time in the log: whether the
     /// sale's gold paid for a buy is not known.
     OrderUnknown,
+    /// The minion bought after the sale was matched up rather than read as
+    /// the log has it ([`crate::decisions`]): which card it was is not
+    /// sure.
+    NextBuyUncertain,
     /// The card taken or sold acts at the start of combat, which the saved
     /// boards already show or can no longer play.
     StartOfCombat,
@@ -160,8 +164,8 @@ pub enum Approx {
     /// changed the card put in too.
     StartOfCombatOnBoard,
     /// The minion is kept although gold was spent after its sale that turn
-    /// (a roll, a tier-up, a spell) or the shop frozen: the sale's gold may
-    /// have paid for that, so keeping it may not have been possible.
+    /// (a roll, a tier-up, a spell): the sale's gold may have paid for
+    /// that, so keeping it may not have been possible.
     GoldMaybeShort,
 }
 

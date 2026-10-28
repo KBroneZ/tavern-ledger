@@ -6,10 +6,11 @@
 //!   turn's combat): the alternative keeps the minion sold and skips the
 //!   first such buy, which always costs more than the sale gave and frees
 //!   the same place on the board;
-//! - gold spent otherwise after it (a roll, a tier-up, a spell) or the shop
-//!   frozen: the minion is kept as it is, noted as maybe short of gold
+//! - gold spent otherwise after it (a roll, a tier-up, a spell): the minion
+//!   is kept as it is, noted as maybe short of gold
 //!   ([`super::Approx::GoldMaybeShort`]);
-//! - nothing after it: the minion is kept as it is.
+//! - nothing that costs gold after it (a freeze is free): the minion is
+//!   kept as it is.
 //!
 //! A turn's timed decisions are in time order ([`crate::decisions`]); one
 //! without a time comes last, its place in the turn unknown.
@@ -19,14 +20,11 @@ use serde_json::{json, Value};
 use super::game::shift_targets;
 use crate::decisions::{Decision, DecisionKind};
 
-/// What spends gold, or uses the shop the gold was for, without buying a
-/// minion.
-const SPENT: [DecisionKind; 5] = [
+/// What spends gold without buying a minion; freezing the shop is free.
+const SPENT: [DecisionKind; 3] = [
     DecisionKind::Roll,
     DecisionKind::TierUp,
     DecisionKind::BuySpell,
-    DecisionKind::Freeze,
-    DecisionKind::Unfreeze,
 ];
 
 /// What the player did after a sale, in the same shop turn.
@@ -34,7 +32,7 @@ const SPENT: [DecisionKind; 5] = [
 pub(super) enum After<'d> {
     /// Nothing that spends gold.
     Nothing,
-    /// Gold spent, or the shop frozen, but no minion bought.
+    /// Gold spent, but no minion bought.
     Spent,
     /// The first minion bought after the sale; `sold_again` when a minion
     /// of its card was sold after it that turn.

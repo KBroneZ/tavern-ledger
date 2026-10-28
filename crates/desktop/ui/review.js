@@ -36,9 +36,9 @@
 
   // The label of the board with the alternative.
   function afterLabel(h, d, alt) {
-    const values = { card: h.cardName(alt.card), bought: alt.insteadOf ? h.cardName(alt.insteadOf) : null };
+    const values = { card: h.cardName(alt.card), bought: alt.insteadOf ? h.cardName(alt.insteadOf) : t("review.unnamed") };
     if (d.kind !== "sell") return t("review.after", values);
-    return alt.insteadOf ? t("review.afterKeptInstead", values) : t("review.afterKept", values);
+    return alt.skips ? t("review.afterKeptInstead", values) : t("review.afterKept", values);
   }
 
   function costly(ui, h, view, c) {

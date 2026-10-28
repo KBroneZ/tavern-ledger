@@ -310,9 +310,9 @@ impl<'a> Game<'a> {
     }
 
     /// The minion sold (at `from` on the board before) kept in place of
-    /// `buy`, the first minion bought after the sale: the buy must be new
-    /// on the next combat's board (one copy, none before) and not sold
-    /// again that turn.
+    /// `buy`, the first minion bought after the sale: the buy must be named
+    /// as the log has it, new on the next combat's board (one copy, none
+    /// before) and not sold again that turn.
     fn keep_instead(
         &self,
         c: &Combat,
@@ -323,6 +323,9 @@ impl<'a> Game<'a> {
         sims: &mut Sims,
     ) -> Result<Rebuilt, NotRebuilt> {
         let bought = buy.taken.as_deref().ok_or(NotRebuilt::NextBuyNotOnBoard)?;
+        if buy.inferred {
+            return Err(NotRebuilt::NextBuyUncertain);
+        }
         let board = board_of(c.own);
         let (now, was) = (copies(board, bought), copies(c.before, bought));
         if now == 0 {

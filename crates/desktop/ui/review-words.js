@@ -67,8 +67,10 @@
       : null;
     return {
       card: card(a.card),
-      // For a sale: the minion bought after it, which the alternative skips.
+      // For a sale: the minion bought after it, which the alternative
+      // skips; `skips` even when its id is out of shape (then unnamed).
       insteadOf: card(a.instead_of),
+      skips: a.instead_of !== undefined && a.instead_of !== null,
       approx: (Array.isArray(a.approx) ? a.approx : []).map(variant).filter(Boolean),
       fight: "ok" in fight ? readFight(fight.ok) : null,
       gap: "err" in fight ? variant(fight.err) || "fallback" : null,
@@ -197,8 +199,8 @@
       const at = earlier.findIndex((m) => m && m.card_id === alt.card);
       if (at < 0) return null;
       const after = before.slice();
-      if (alt.insteadOf) {
-        const bought = after.findIndex((m) => m.card === alt.insteadOf);
+      if (alt.skips) {
+        const bought = alt.insteadOf ? after.findIndex((m) => m.card === alt.insteadOf) : -1;
         if (bought < 0) return null;
         after.splice(bought, 1);
       }
@@ -230,7 +232,7 @@
 
   // Why a costly choice cost the next fight, in one sentence.
   function reasonLine(d, alt, nameOf) {
-    const sold = d.kind === "sell" ? (alt.insteadOf ? "sellBought" : "sell") : null;
+    const sold = d.kind === "sell" ? (alt.skips ? "sellBought" : "sell") : null;
     const kind = sold || (d.kind === "choose" ? "choose" : "buy");
     return t(`review.why.${kind}`, {
       turn: turn(d),
@@ -291,7 +293,7 @@
   // One alternative in the full list.
   function altLine(d, alt, nameOf) {
     const name = named(alt.card, nameOf);
-    const keep = alt.insteadOf ? t("review.keepInstead", { card: name, bought: named(alt.insteadOf, nameOf) }) : t("review.keep", { card: name });
+    const keep = alt.skips ? t("review.keepInstead", { card: name, bought: named(alt.insteadOf, nameOf) }) : t("review.keep", { card: name });
     const label = d.kind === "sell" ? keep : name;
     if (!alt.fight) return t("review.alt.gap", { card: label, why: words(`review.gap.${alt.gap}`) || t("review.gap.fallback") });
     const values = { card: label, result: outcome("review.alt.result", alt.fight, d.rebuilt.actual), trials: I18n.num(alt.fight.trials) };
@@ -310,8 +312,13 @@
     return words(`review.not.${why}`) || t("review.not.fallback");
   }
 
+  // A clear gain left out of the ranking, as the gold for it is not known.
+  const leftOut = (d) => Boolean(d.rebuilt) && d.rebuilt.alternatives.some((alt) =>
+    alt.delta && alt.delta.clear && alt.delta.score > 0 && alt.approx.some((a) => UNRANKED.includes(a)));
+
   // The lines above the costly choices: how many were simulated, a banner
-  // when the review stopped partway, and what to say when none cost a fight.
+  // when the review stopped partway, and what to say when none cost a fight
+  // (and that some were left out, when they were).
   function summary(view) {
     // Rolls, freezes and the like are never simulated: not counted, as in the progress.
     const total = view.decisions.filter((d) => SIMULATED.includes(d.kind)).length;
@@ -322,6 +329,7 @@
     if (!top(view.decisions).length) {
       if (!rebuilt && !partial) empty = t("review.noneRebuilt");
       else empty = partial ? t("review.nonePartial") : t("review.none");
+      if (view.decisions.some(leftOut)) empty = `${empty} ${t("review.leftOut")}`;
     }
     return { count: t("review.count", { rebuilt: I18n.num(rebuilt), total: I18n.num(total) }), banner, empty };
   }
