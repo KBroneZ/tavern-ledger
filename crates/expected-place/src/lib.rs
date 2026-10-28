@@ -138,9 +138,14 @@ fn opponent_seat(entries: &[Value]) -> Option<i64> {
         .and_then(|e| int(e, "player_id"))
 }
 
-/// Board features: minions, sums, maxima, golden and keyword counts. A
-/// minion without readable stats makes the sums unknown.
-fn board_values(board: &[Value]) -> [Option<f64>; 12] {
+/// Where the player's own board features ([`board_values`]) sit in a row.
+pub const OWN_BOARD: std::ops::Range<usize> = 9..21;
+
+/// Board features: minions, sums, maxima, golden and keyword counts, of a
+/// board as the record saves it. A minion without readable stats makes the
+/// sums unknown. Public for the counterfactual engine, which puts another
+/// board in a row's [`OWN_BOARD`] features.
+pub fn board_values(board: &[Value]) -> [Option<f64>; 12] {
     let stats: Option<Vec<(i64, i64)>> = board
         .iter()
         .map(|m| Some((int(m, "atk")?, int(m, "health")?)))
@@ -219,7 +224,7 @@ fn turn_row(report: &Value, rounds: &[Value], i: usize, solo: bool) -> Option<Tu
             .and_then(Value::as_array)
             .map(|b| b.len() as f64);
     }
-    v[9..21].copy_from_slice(&board_values(own));
+    v[OWN_BOARD].copy_from_slice(&board_values(own));
     if let Some(theirs) = board(entries, "opponent", None) {
         let b = board_values(theirs);
         v[21] = b[0];
