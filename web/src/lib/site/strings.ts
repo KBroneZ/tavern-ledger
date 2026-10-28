@@ -77,6 +77,9 @@ export const SITE_STRINGS = {
   "meta.accuracy.title": "Simulator accuracy",
   "meta.accuracy.description":
     "How often Tavern Ledger's combat odds are right, measured on real Battlegrounds combats, per mode, with the share of combats that got no odds shown beside every number.",
+  "meta.calibration.title": "Expected place calibration",
+  "meta.calibration.description":
+    "How close Tavern Ledger's expected place comes, checked on Battlegrounds games the model never saw, per mode and game version, with the games behind every number. No model is published yet.",
   "meta.signin.title": "Sign in",
   "meta.signin.description": "Sign in or create a Tavern Ledger account.",
   "meta.account.title": "Your account",

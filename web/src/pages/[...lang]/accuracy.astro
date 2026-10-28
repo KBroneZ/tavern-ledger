@@ -19,7 +19,7 @@ import rawNames from "../../data/accuracy-cards.json";
 import { MODES, parseAccuracy, parseCardNames } from "../../lib/accuracy/data.ts";
 import { at } from "../../lib/accuracy/strings.ts";
 import { blockingRows, buildsView, calibrationBars, causeRows, dayText, kitsNote, modeFigures } from "../../lib/accuracy/view.ts";
-import { langPaths, numberFormat, setLang } from "../../lib/i18n.ts";
+import { href, langPaths, numberFormat, setLang } from "../../lib/i18n.ts";
 import { st } from "../../lib/site/strings.ts";
 
 export const getStaticPaths = langPaths;
@@ -52,6 +52,9 @@ const version = at("page.version", {
         <h1>{at("page.title")}</h1>
         <p class="acc-intro">{at("page.intro")}</p>
         <p class="data-note">{version}</p>
+        <p class="data-note">
+          {at("page.calibration")} <a href={href("/calibration/")}>{at("page.calibration.link")}</a>
+        </p>
       </div>
       <div class="dash-switches">
         <Switch kind="detail" />
