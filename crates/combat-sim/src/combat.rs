@@ -436,6 +436,7 @@ impl<'a> Combat<'a> {
         };
         c.after_start_values([true, true]);
         c.lobster_values([true, true]);
+        c.waiting_copies();
         c
     }
 

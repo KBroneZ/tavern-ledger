@@ -22,9 +22,11 @@ use serde_json::Value;
 
 use crate::combat::replay::{replay_teams, LoggedStep, Replay, Span};
 use crate::combat::CombatResult;
-use crate::model::{BaseCard, GameValues, Keywords, Kit, KitCard, Minion, Team, Tribes, Warband};
+use crate::model::{
+    BaseCard, GameValues, Keywords, Kit, KitCard, Minion, Team, Tribes, Warband, MAX_BOARD,
+};
 use crate::trials::Options;
-use crate::why::{explain, CombatFacts, Explained, Replayable};
+use crate::why::{explain, CombatFacts, Explained, Replayable, Said};
 
 /// The largest card database id a saved report keeps (bg-parser's
 /// `MAX_DBF`): the Deity's.
@@ -435,10 +437,54 @@ pub struct CombatWhy {
     pub why: Why,
 }
 
+/// A combat entry's board with its hero's powers and trinkets in round
+/// `number` (T-630); the kit is `None` on a record from before parser
+/// revision 16 ("not recorded"), so those boards play as before. `None`
+/// when the board cannot be read, or when the entry has a kit that is not
+/// what the parser writes ([`saved_kit`]): never played without it.
+pub fn board_with_kit(entry: &Value, number: Option<u32>, facts: &FactsOf) -> Option<Warband> {
+    let band = board(entry, facts)?;
+    Some(Warband {
+        kit: saved_kit(entry, number, facts).ok()?,
+        ..band
+    })
+}
+
+/// A combat entry's kit as saved: `Ok(None)` when the record has none (an
+/// older parser, "not recorded"), `Err` when it has one that is not what
+/// the parser writes (T-645: such a board is refused, not played without
+/// its powers and trinkets).
+pub(crate) fn saved_kit(
+    entry: &Value,
+    number: Option<u32>,
+    facts: &FactsOf,
+) -> Result<Option<Kit>, ()> {
+    match entry.get("kit") {
+        None | Some(Value::Null) => Ok(None),
+        Some(_) => kit(entry, number, facts).map(Some).ok_or(()),
+    }
+}
+
+/// A saved round's number, as the kits read it; `None` when not saved.
+pub(crate) fn round_number(round: &Value) -> Option<u32> {
+    round
+        .get("number")
+        .and_then(Value::as_u64)
+        .and_then(|n| u32::try_from(n).ok())
+}
+
 /// One side's boards in a round in the order they came in, one per seat
-/// (two in Duos); `None` without a board, with a board that cannot be read,
-/// or, in Solo, with more than one.
-fn side_boards(entries: &[Value], side: &str, solo: bool, facts: &FactsOf) -> Option<Vec<Warband>> {
+/// (two in Duos), each with its hero's powers and trinkets in round
+/// `number` (T-645: the powers that act during combat, as Sprout It Out on
+/// the minions it summons); `None` without a board, with a board that
+/// cannot be read, or, in Solo, with more than one.
+fn side_boards(
+    entries: &[Value],
+    side: &str,
+    solo: bool,
+    number: Option<u32>,
+    facts: &FactsOf,
+) -> Option<Vec<Warband>> {
     let mut seats: Vec<Option<i64>> = Vec::new();
     let mut out = Vec::new();
     for e in entries {
@@ -453,7 +499,7 @@ fn side_boards(entries: &[Value], side: &str, solo: bool, facts: &FactsOf) -> Op
             continue;
         }
         seats.push(seat);
-        out.push(board(e, facts)?);
+        out.push(board_with_kit(e, number, facts)?);
     }
     let fits = if solo {
         out.len() == 1
@@ -515,6 +561,151 @@ fn counters_of(m: &Value) -> Option<[i32; 2]> {
     let n = m.get("counters")?.as_array().filter(|a| a.len() == 2)?;
     let at = |i: usize| n[i].as_i64().filter(|x| *x >= 0).and_then(to_i32);
     Some([at(0)?, at(1)?])
+}
+
+/// Teron's hero power: at the start of combat it destroys the friendly
+/// minion it names and resummons an exact copy once there is space.
+const RAPID_REANIMATION: &str = "BG25_HERO_103p";
+
+/// Gives the Rapid Reanimation on each side's first board the copy it still
+/// holds at the first attack (T-645): the boards read here are taken after
+/// start of combat, so a copy waiting for space is on none of them. The
+/// named minion is the replay start's minion at the kit's target; its copy
+/// waits when it died after the power acted and before the first attack,
+/// no minion of its card was summoned on its side after its death (its own
+/// Reborn aside), and its board is full at the first attack (with space,
+/// the copy would be back). Nothing without a complete replay or a kit.
+///
+/// The opponent's kit takes the copy too: it is a minion the replay shows
+/// on the board before start of combat, never one held in the hand, which
+/// stays unsaved and unread (D-164).
+fn waiting_copies(round: &Value, teams: &mut (Team, Team), facts: &FactsOf) {
+    let Some(replay) = round.get("replay") else {
+        return;
+    };
+    // An incomplete replay may lack the copy's summon: no copy is made up.
+    if replay.get("complete").and_then(Value::as_bool) != Some(true) {
+        return;
+    }
+    let minions = replay
+        .get("minions")
+        .and_then(Value::as_array)
+        .map_or(&[][..], Vec::as_slice);
+    let start = replay
+        .get("start")
+        .and_then(Value::as_u64)
+        .and_then(|s| usize::try_from(s).ok())
+        .map_or(0, |s| s.min(minions.len()));
+    let events = replay
+        .get("events")
+        .and_then(Value::as_array)
+        .map_or(&[][..], Vec::as_slice);
+    let first_attack = events
+        .iter()
+        .position(|e| kind(e) == Some("attack"))
+        .unwrap_or(events.len());
+    let opening = Opening {
+        minions,
+        start,
+        events: &events[..first_attack],
+    };
+    for (side, band) in [
+        ("own", &mut teams.0.first),
+        ("opponent", &mut teams.1.first),
+    ] {
+        if band.minions.len() < MAX_BOARD {
+            continue;
+        }
+        let Some(kit) = band.kit.as_mut() else {
+            continue;
+        };
+        for power in kit.powers.iter_mut() {
+            if power.card_id != RAPID_REANIMATION || power.held.is_some() {
+                continue;
+            }
+            if let Some(at) = power.target {
+                power.held = opening.waiting_copy(side, at, facts);
+            }
+        }
+    }
+}
+
+/// A saved replay up to its first attack: its minions, the ones before
+/// `start` the boards before start of combat.
+struct Opening<'a> {
+    minions: &'a [Value],
+    start: usize,
+    events: &'a [Value],
+}
+
+impl Opening<'_> {
+    /// The copy of `side`'s minion at board index `at` before start of
+    /// combat, with the stats it had when it died, if it died after the
+    /// power acted on that side and its card did not come back there.
+    ///
+    /// Approximations: a minion of the same card summoned on that side
+    /// after the death by another effect is taken for the copy (no copy
+    /// waits then); the copy has the Attack and Health of the last stats
+    /// event before the death, and the keywords and Dark Gifts the replay
+    /// start shows (a Divine Shield lost before the death is not followed).
+    fn waiting_copy(&self, side: &str, at: usize, facts: &FactsOf) -> Option<Minion> {
+        let position = i64::try_from(at + 1).ok()?;
+        let side_of = |m: &Value| m.get("side").and_then(Value::as_str) == Some(side);
+        let named = self.minions[..self.start].iter().position(|m| {
+            side_of(m) && m.get("position").and_then(Value::as_i64) == Some(position)
+        })?;
+        let card = self.minions[named].get("card_id")?.as_str()?;
+        let of = |e: &Value, what: &str| (kind(e) == Some(what)).then(|| event_minion(e)).flatten();
+        // Destroyed by the power: its death comes after the power acted
+        // (one that died before, to a trinket, is left alone).
+        let acted = self.events.iter().position(|e| {
+            kind(e) == Some("trigger")
+                && e.get("card_id").and_then(Value::as_str) == Some(RAPID_REANIMATION)
+                && side_of(e)
+        })?;
+        let died = self
+            .events
+            .iter()
+            .position(|e| of(e, "death") == Some(named))
+            .filter(|d| *d > acted)?;
+        // Summons of its card on its side after its death; the first is its
+        // own Reborn when it had Reborn, not the copy.
+        let mut summoned = self.events[died + 1..].iter().filter(|e| {
+            of(e, "summon")
+                .and_then(|i| self.minions.get(i))
+                .is_some_and(|m| {
+                    side_of(m) && m.get("card_id").and_then(Value::as_str) == Some(card)
+                })
+        });
+        let reborn = self.minions[named]
+            .get("keywords")
+            .and_then(Value::as_array)
+            .is_some_and(|k| k.iter().any(|w| w.as_str() == Some("reborn")));
+        if summoned.nth(usize::from(reborn)).is_some() {
+            return None;
+        }
+        let mut record = self.minions[named].clone();
+        let stats = self.events[..died]
+            .iter()
+            .rev()
+            .find(|e| of(e, "stats") == Some(named));
+        if let Some(s) = stats {
+            record["atk"] = s.get("atk")?.clone();
+            record["health"] = s.get("health")?.clone();
+        }
+        minion(&record, facts)
+    }
+}
+
+fn kind(e: &Value) -> Option<&str> {
+    e.get("kind").and_then(Value::as_str)
+}
+
+/// The replay minion an event is about.
+fn event_minion(e: &Value) -> Option<usize> {
+    e.get("minion")
+        .and_then(Value::as_u64)
+        .and_then(|n| usize::try_from(n).ok())
 }
 
 fn team(mut boards: Vec<Warband>) -> Team {
@@ -585,17 +776,34 @@ fn prepare(round: &Value, solo: bool, facts: &FactsOf) -> Result<Prepared, Box<W
         }
         f
     };
-    let sides = side_boards(entries, "own", solo, &checked)
-        .zip(side_boards(entries, "opponent", solo, &checked));
+    let number = round_number(round);
+    let sides = side_boards(entries, "own", solo, number, &checked)
+        .zip(side_boards(entries, "opponent", solo, number, &checked));
     let lacking = lacking.into_inner();
     if !lacking.is_empty() {
         return Err(Box::new(Why::NoCardData(lacking)));
+    }
+    // A saved kit that is not what the parser writes: the boards are
+    // refused, as the engine refuses a board it does not accept (T-645).
+    let bad_kit = entries.iter().any(|e| {
+        matches!(
+            e.get("side").and_then(Value::as_str),
+            Some("own" | "opponent")
+        ) && matches!(e.get("board"), Some(Value::Array(_)))
+            && saved_kit(e, number, facts).is_err()
+    });
+    if bad_kit {
+        return Err(Box::new(Why::Explained(Explained {
+            said: Said::BadBoard,
+            cause: None,
+        })));
     }
     let Some((own, opponent)) = sides else {
         return Err(Box::new(Why::NoBoards));
     };
     let mut teams = (team(own), team(opponent));
     shown_counters(round, &mut teams);
+    waiting_copies(round, &mut teams, facts);
     let steps = replay_steps(round, &teams, facts);
     Ok(Prepared { teams, steps })
 }

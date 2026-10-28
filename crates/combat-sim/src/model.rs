@@ -246,8 +246,9 @@ pub struct KitCard {
     /// The friendly minion it names, by its index on the board (0 is the
     /// left-most).
     pub target: Option<usize>,
-    /// The minion it holds off the board (Lock and Load); `None` when it
-    /// holds none or it is not shown.
+    /// The minion it holds off the board (Lock and Load; on a board taken
+    /// after start of combat, Rapid Reanimation's copy waiting for space,
+    /// T-645); `None` when it holds none or it is not shown.
     pub held: Option<Minion>,
 }
 

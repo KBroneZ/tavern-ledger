@@ -409,6 +409,12 @@ dialog pre {
 .health-chart .value-label { fill: var(--text); }
 .health-chart .unknown { fill: var(--dim); }
 .health-chart .dot { fill: var(--bg); stroke: var(--amber); stroke-width: 2; }
+.place-chart { display: block; width: 100%; min-width: 480px; height: auto; }
+.place-chart .band { stroke: var(--line-strong); stroke-width: 8; stroke-linecap: round; }
+.place-chart .line { fill: none; stroke: var(--text); stroke-width: 2; stroke-linejoin: round; }
+.place-chart .dot { fill: var(--bg); stroke: var(--text); stroke-width: 2; }
+.place-chart text { font: 600 11px/1 var(--font-body); fill: var(--dim); }
+.place-worst { margin: 4px 0; }
 
 table.record { width: 100%; border-collapse: collapse; }
 table.record th, table.record td { padding: 6px 8px; border-bottom: 1px solid var(--line-soft); text-align: left; vertical-align: top; }

@@ -13,6 +13,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use expected_place::curve;
 use serde::Serialize;
 use serde_json::Value;
 
@@ -150,6 +151,10 @@ pub struct Recap {
     /// Own health before the first combat and after each combat.
     pub health: Vec<HealthPoint>,
     pub health_source: Source,
+    /// The expected place per combat (T-654, `expected_place::curve::to_json`):
+    /// every turn a dash, with why, while no model ships with the app. None
+    /// when the game gives no rows (no final place, no combat, not Battlegrounds).
+    pub expected_place: Option<Value>,
     /// Each combat's hit as the game dealt it, where the record has it
     /// (T-540, from the log); a combat left out is not in the record.
     pub damage: Vec<crate::damage::CombatDamage>,
@@ -636,6 +641,10 @@ pub fn recap(report: &Value) -> Recap {
         rounds_played: Sourced::log((!view.rounds.is_empty()).then_some(view.rounds.len())),
         health: own_health(&view),
         health_source: Source::log_if(!view.rounds.is_empty()),
+        // Every Skip is a game with nothing to draw, not a failure.
+        expected_place: expected_place::encode(report)
+            .ok()
+            .map(|game| curve::to_json(&curve::curve(None, &game))),
         damage: crate::damage::game_damage(report),
         record: records
             .order
@@ -756,6 +765,27 @@ mod tests {
         );
         let three = r.record.iter().find(|o| o.seats == [3]).unwrap();
         assert!(three.boards.is_empty(), "no board in the log: none shown");
+    }
+
+    #[test]
+    fn a_finished_game_has_a_dash_for_its_expected_place_while_no_model_ships() {
+        let r = recap(&solo(&[(2, 35, 40), (3, 35, 31)]));
+        assert_eq!(
+            r.expected_place,
+            Some(json!({
+                "dash": "no_model",
+                "points": [{"turn": 1, "mean": null}, {"turn": 2, "mean": null}],
+                "worst": null,
+            }))
+        );
+    }
+
+    #[test]
+    fn a_game_without_a_place_or_combats_has_no_expected_place() {
+        let mut unfinished = solo(&[(2, 35, 40)]);
+        unfinished["final_place"] = Value::Null;
+        assert_eq!(recap(&unfinished).expected_place, None);
+        assert_eq!(recap(&solo(&[])).expected_place, None);
     }
 
     #[test]

@@ -11,7 +11,8 @@ description = "Follows Hearthstone's Power.log and stores finished Battlegrounds
 bg-parser = { path = "../bg-parser" }
 # The combat simulator (T-605), without the harness and its dependencies.
 combat-sim = { path = "../combat-sim", default-features = false, features = ["saved"] }
-# Expected place for the counterfactuals (T-657); serde_json only.
+# Expected place in the recap (T-654) and for the counterfactuals (T-657);
+# serde_json only.
 expected-place = { path = "../expected-place" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

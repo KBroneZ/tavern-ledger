@@ -903,6 +903,45 @@ function healthChart(points) {
   return wrap;
 }
 
+// Expected place after each combat (T-654): the model's place as a line, 1 at
+// the top, over the middle half of the places it gives; the turn that cost
+// the most marked. Until a model ships it is one quiet line saying why.
+function placePart(curve, duos) {
+  const view = TLPlace.placeView(curve, duos);
+  if (!view) return [];
+  if (view.kind === "dash") return [el("p", "empty place-dash", view.text)];
+  const wrap = el("div", "chart");
+  const width = 480, height = 120, pad = 16, padTop = 10, padBottom = 26;
+  const last = Math.max(view.points.length - 1, 1);
+  const x = (i) => pad + (i * (width - 2 * pad)) / last;
+  const y = (place) => padTop + ((place - 1) * (height - padTop - padBottom)) / (view.last - 1);
+  const chart = svg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", class: "place-chart" });
+  chart.setAttribute("aria-label", view.said);
+  let run = [];
+  const flush = () => {
+    if (run.length > 1) chart.append(svg("polyline", { points: run.join(" "), class: "line" }));
+    run = [];
+  };
+  view.points.forEach((p, i) => {
+    const turn = svg("text", { x: x(i), y: height - 8, "text-anchor": "middle", class: "round-label" });
+    turn.textContent = p.turn;
+    chart.append(turn);
+    if (p.mean === null) return flush();
+    chart.append(svg("line", { x1: x(i), y1: y(p.low), x2: x(i), y2: y(p.high), class: "band" }));
+    run.push(`${x(i)},${y(p.mean)}`);
+    const dot = svg("circle", { cx: x(i), cy: y(p.mean), r: 3, class: "dot" });
+    const tip = svg("title", {});
+    tip.textContent = TLPlace.pointSaid(p);
+    dot.append(tip);
+    chart.append(dot);
+  });
+  flush();
+  wrap.append(chart);
+  if (view.worst) wrap.append(el("p", "place-worst", view.worst));
+  wrap.append(TLCompact.about(SHOP_UI, "place-chart", tl("win.place.help"), tl("win.chart.howTo")));
+  return [el("h3", null, tl("win.place.title")), wrap];
+}
+
 function combatChip(c) {
   const word = outcomeWord(c.outcome);
   const chip = el("span", `chip chip-${c.outcome} src-${sourceOf(c.source)}`, tl("win.chip.text", { round: c.round, word }));
@@ -1088,7 +1127,7 @@ function renderRecapNow(r, game) {
   renderRecapBar(r, game);
   updateTribesButton(game);
   const health = el("section", "recap-part");
-  health.append(withSource(el("h3", null, tl("win.recap.healthTitle")), r.health_source), healthChart(r.health));
+  health.append(withSource(el("h3", null, tl("win.recap.healthTitle")), r.health_source), healthChart(r.health), ...placePart(r.expected_place, r.is_duos));
   const top = el("div", "recap-top");
   top.append(recapFacts(r), health);
   if (TLUnreadable.isUnreadable(r.status.value)) {

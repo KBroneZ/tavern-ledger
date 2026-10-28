@@ -3,6 +3,9 @@
 //! game and writes each model with its card: what it was trained on and
 //! how well it did against two baselines. Reads only local files; the
 //! card holds counts, builds and scores, never a name, account or time.
+//! It also writes `calibration.json`, the website's calibration file
+//! (T-655): totals only, copied to `web/src/data/` by hand when a model is
+//! published.
 //!
 //!     place-train --history <games.jsonl> --out <folder> [--folds N]
 
@@ -12,6 +15,7 @@ use std::fs;
 use std::path::Path;
 use std::process::ExitCode;
 
+use expected_place::calibration::{calibration_file, day_text};
 use expected_place::eval::{cross_validate, Report};
 use expected_place::model::{Model, Train};
 use expected_place::{encode, latest_reports, Game, VERSION};
@@ -100,15 +104,19 @@ fn card(model: &Model, report: Option<&Report>, games: &[Game], opts: &Train) ->
                 );
             }
             let _ = writeln!(out, "\n### Calibration\n");
-            let _ = writeln!(out, "| Expected place | Rows | Mean said | Mean real |");
-            let _ = writeln!(out, "|---|---|---|---|");
+            let _ = writeln!(
+                out,
+                "| Expected place | Rows | Games | Mean said | Mean real |"
+            );
+            let _ = writeln!(out, "|---|---|---|---|---|");
             for b in &r.calibration {
                 let _ = writeln!(
                     out,
-                    "| {}-{} | {} | {:.2} | {:.2} |",
+                    "| {}-{} | {} | {} | {:.2} | {:.2} |",
                     b.from,
                     b.from + 1,
                     b.rows,
+                    b.games,
                     b.said,
                     b.real
                 );
@@ -149,6 +157,15 @@ fn choose(games: &[Game], solo: bool, folds: usize) -> (Train, Option<Report>) {
     }
 }
 
+/// Days since 1970-01-01, UTC, from the system clock.
+fn today() -> Result<i64, String> {
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|_| "the system clock is before 1970")?
+        .as_secs();
+    i64::try_from(secs / 86_400).map_err(|_| "the system clock is out of range".into())
+}
+
 fn run() -> Result<(), String> {
     let (mut history, mut out, mut folds) = (None, None, 5usize);
     let mut args = std::env::args().skip(1);
@@ -180,6 +197,7 @@ fn run() -> Result<(), String> {
     let dir = Path::new(&out);
     fs::create_dir_all(dir).map_err(|e| format!("{out}: {e}"))?;
     let mut written = 0;
+    let mut reports: [Option<Report>; 2] = [None, None];
     for solo in [true, false] {
         let (opts, report) = choose(&games, solo, folds);
         let Some(model) = Model::train(&games, solo, &opts) else {
@@ -203,9 +221,26 @@ fn run() -> Result<(), String> {
             None => println!("{name}: {} games, too few to cross-validate", model.games),
         }
         written += 1;
+        reports[usize::from(!solo)] = report;
     }
     if written == 0 {
         return Err("no game with a final place and a combat; nothing written".into());
     }
+    for r in reports.iter().flatten() {
+        let bad = r.predictions.iter().filter(|p| !p.is_finite()).count();
+        if bad > 0 {
+            let name = if r.solo { "solo" } else { "duos" };
+            return Err(format!(
+                "{name}: {bad} held-out predictions are not a number; calibration.json not written"
+            ));
+        }
+    }
+    let file = calibration_file(
+        &day_text(today()?),
+        reports[0].as_ref(),
+        reports[1].as_ref(),
+    );
+    let json = serde_json::to_string_pretty(&file).map_err(|e| e.to_string())?;
+    fs::write(dir.join("calibration.json"), json + "\n").map_err(|e| e.to_string())?;
     Ok(())
 }

@@ -1,7 +1,8 @@
 //! Expected place (moonshot phase 3): how good a position was, turn by
 //! turn. This crate turns a saved game record (the report the app saves,
 //! T-104d) into one row of numbers per combat, the input of the model
-//! (T-652); the model and its training come next (T-653).
+//! (T-652); [`model`] is the model and its training (T-653), [`curve`] the
+//! expected place per turn that players see (T-654).
 //!
 //! A row is the state the player could see as combat `t` began: the turn,
 //! their health and the lobby's, their shop turn, both boards entering the
@@ -15,6 +16,8 @@
 
 use serde_json::Value;
 
+pub mod calibration;
+pub mod curve;
 pub mod eval;
 pub mod model;
 
