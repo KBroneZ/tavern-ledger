@@ -147,16 +147,8 @@ pub(crate) fn board(entry: &Value, db: &CardDb) -> Option<Warband> {
 /// round `round` (T-630); the kit is `None` on a record from before parser
 /// revision 16 ("not recorded"), so those boards play as before.
 pub(crate) fn board_with_kit(entry: &Value, round: &Value, db: &CardDb) -> Option<Warband> {
-    let facts = |id: &str| db.get(id).copied();
-    let band = crate::saved::board(entry, &facts)?;
-    let number = round
-        .get("number")
-        .and_then(Value::as_u64)
-        .and_then(|n| u32::try_from(n).ok());
-    Some(Warband {
-        kit: crate::saved::kit(entry, number, &facts),
-        ..band
-    })
+    let number = crate::saved::round_number(round);
+    crate::saved::board_with_kit(entry, number, &|id| db.get(id).copied())
 }
 
 pub(crate) use crate::saved::result;

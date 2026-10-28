@@ -25,7 +25,6 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
   "Blood Gems played on it in combat are not passed on": "las Gemas de sangre que recibe en combate no se transmiten",
   "Eternal Knights grow with the Knights that died this game, which is not known":
     "los Caballeros eternos crecen con los Caballeros muertos en la partida, dato que no se conoce",
-  "Undead summoned after it died do not get the Attack": "los no muertos invocados después de su muerte no reciben el Ataque",
   "its bonus grows during the game; the printed one is used": "su bonificación crece durante la partida; se usa la impresa",
   "its order with other summon effects is not checked yet": "aún no se ha comprobado su orden con otros efectos de invocación",
   "its Golem's card id is the one seen in real games for Jailbird Juggernaut":

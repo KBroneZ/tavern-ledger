@@ -350,6 +350,13 @@ impl Combat<'_> {
                 let s = &mut self.sides[side];
                 s.beast_attack = s.beast_attack.saturating_add(attack);
             }
+            Action::UndeadAttackThisGame(attack) => {
+                for f in self.friends(side, Tribes::UNDEAD, None) {
+                    self.buff(side, f, attack, 0);
+                }
+                let v = &mut self.sides[side].values;
+                v.undead_attack = v.undead_attack.saturating_add(attack);
+            }
             Action::DamageAllOthers(amount) => {
                 let Some(uid) = me else { return };
                 for s in [side, 1 - side] {

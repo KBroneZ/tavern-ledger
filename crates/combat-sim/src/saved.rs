@@ -24,7 +24,7 @@ use crate::combat::replay::{replay_teams, LoggedStep, Replay, Span};
 use crate::combat::CombatResult;
 use crate::model::{BaseCard, GameValues, Keywords, Kit, KitCard, Minion, Team, Tribes, Warband};
 use crate::trials::Options;
-use crate::why::{explain, CombatFacts, Explained, Replayable};
+use crate::why::{explain, CombatFacts, Explained, Replayable, Said};
 
 /// The largest card database id a saved report keeps (bg-parser's
 /// `MAX_DBF`): the Deity's.
@@ -435,10 +435,54 @@ pub struct CombatWhy {
     pub why: Why,
 }
 
+/// A combat entry's board with its hero's powers and trinkets in round
+/// `number` (T-630); the kit is `None` on a record from before parser
+/// revision 16 ("not recorded"), so those boards play as before. `None`
+/// when the board cannot be read, or when the entry has a kit that is not
+/// what the parser writes ([`saved_kit`]): never played without it.
+pub fn board_with_kit(entry: &Value, number: Option<u32>, facts: &FactsOf) -> Option<Warband> {
+    let band = board(entry, facts)?;
+    Some(Warband {
+        kit: saved_kit(entry, number, facts).ok()?,
+        ..band
+    })
+}
+
+/// A combat entry's kit as saved: `Ok(None)` when the record has none (an
+/// older parser, "not recorded"), `Err` when it has one that is not what
+/// the parser writes (T-645: such a board is refused, not played without
+/// its powers and trinkets).
+pub(crate) fn saved_kit(
+    entry: &Value,
+    number: Option<u32>,
+    facts: &FactsOf,
+) -> Result<Option<Kit>, ()> {
+    match entry.get("kit") {
+        None | Some(Value::Null) => Ok(None),
+        Some(_) => kit(entry, number, facts).map(Some).ok_or(()),
+    }
+}
+
+/// A saved round's number, as the kits read it; `None` when not saved.
+pub(crate) fn round_number(round: &Value) -> Option<u32> {
+    round
+        .get("number")
+        .and_then(Value::as_u64)
+        .and_then(|n| u32::try_from(n).ok())
+}
+
 /// One side's boards in a round in the order they came in, one per seat
-/// (two in Duos); `None` without a board, with a board that cannot be read,
-/// or, in Solo, with more than one.
-fn side_boards(entries: &[Value], side: &str, solo: bool, facts: &FactsOf) -> Option<Vec<Warband>> {
+/// (two in Duos), each with its hero's powers and trinkets in round
+/// `number` (T-645: the powers that act during combat, as Sprout It Out on
+/// the minions it summons); `None` without a board, with a board that
+/// cannot be read, or, in Solo, with more than one.
+fn side_boards(
+    entries: &[Value],
+    side: &str,
+    solo: bool,
+    number: Option<u32>,
+    facts: &FactsOf,
+) -> Option<Vec<Warband>> {
     let mut seats: Vec<Option<i64>> = Vec::new();
     let mut out = Vec::new();
     for e in entries {
@@ -453,7 +497,7 @@ fn side_boards(entries: &[Value], side: &str, solo: bool, facts: &FactsOf) -> Op
             continue;
         }
         seats.push(seat);
-        out.push(board(e, facts)?);
+        out.push(board_with_kit(e, number, facts)?);
     }
     let fits = if solo {
         out.len() == 1
@@ -585,11 +629,27 @@ fn prepare(round: &Value, solo: bool, facts: &FactsOf) -> Result<Prepared, Box<W
         }
         f
     };
-    let sides = side_boards(entries, "own", solo, &checked)
-        .zip(side_boards(entries, "opponent", solo, &checked));
+    let number = round_number(round);
+    let sides = side_boards(entries, "own", solo, number, &checked)
+        .zip(side_boards(entries, "opponent", solo, number, &checked));
     let lacking = lacking.into_inner();
     if !lacking.is_empty() {
         return Err(Box::new(Why::NoCardData(lacking)));
+    }
+    // A saved kit that is not what the parser writes: the boards are
+    // refused, as the engine refuses a board it does not accept (T-645).
+    let bad_kit = entries.iter().any(|e| {
+        matches!(
+            e.get("side").and_then(Value::as_str),
+            Some("own" | "opponent")
+        ) && matches!(e.get("board"), Some(Value::Array(_)))
+            && saved_kit(e, number, facts).is_err()
+    });
+    if bad_kit {
+        return Err(Box::new(Why::Explained(Explained {
+            said: Said::BadBoard,
+            cause: None,
+        })));
     }
     let Some((own, opponent)) = sides else {
         return Err(Box::new(Why::NoBoards));

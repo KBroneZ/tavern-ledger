@@ -63,6 +63,7 @@ export const ES: Record<GameStringKey, string> = {
   "turns.chartTitle": "Resultado y daño por turno",
   "turns.chartDesc": "Las barras hacia arriba son el daño que hiciste en un combate ganado; las barras hacia abajo, el daño que recibiste en uno perdido. La tabla de abajo tiene las mismas cifras.",
   "turns.chartDesc.visitor": "Las barras hacia arriba son el daño que hizo el jugador en un combate ganado; las barras hacia abajo, el daño que recibió en uno perdido. La tabla de abajo tiene las mismas cifras.",
+  "turns.place.dash": "El puesto esperado aparece cuando haya partidas suficientes para entrenar el modelo.",
   "turns.caption": "Resultados turno a turno",
   "turns.col.turn": "Turno",
   "turns.col.tier": "Nivel",
