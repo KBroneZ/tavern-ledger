@@ -67,6 +67,7 @@ export const GAME_STRINGS = {
   "turns.chartTitle": "Result and damage by turn",
   "turns.chartDesc": "Bars going up are the damage you dealt in a won combat, bars going down the damage you took in a lost one. The table below has the same numbers.",
   "turns.chartDesc.visitor": "Bars going up are the damage the player dealt in a won combat, bars going down the damage they took in a lost one. The table below has the same numbers.",
+  "turns.place.dash": "Expected place appears once enough games train the model.",
   "turns.caption": "Turn-by-turn results",
   "turns.col.turn": "Turn",
   "turns.col.tier": "Tier",
