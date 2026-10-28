@@ -11,6 +11,8 @@ pub const APP_COMMANDS: &[&str] = &[
     "status",
     "game_recap",
     "game_why",
+    "game_review",
+    "game_review_status",
     "preview_problem_report",
     "save_problem_report",
     "diagnostics_preview",

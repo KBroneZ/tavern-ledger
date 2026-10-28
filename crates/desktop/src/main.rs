@@ -29,6 +29,7 @@ mod preview;
 #[cfg(test)]
 mod process_checks;
 mod redact;
+mod review;
 mod saved_ratings;
 mod saved_tribes;
 mod screen_fit;
@@ -340,6 +341,97 @@ async fn game_why_of(
     .await
     .map_err(|_| failed())?
     .map_err(|_| failed())
+}
+
+/// The game review (T-658, D-176): each choice of a game in the history
+/// played again in the next fight. Post-game only: it answers "game on"
+/// while a Battlegrounds game is being played, and a game that starts stops
+/// it (`track_game_in_progress`). Up to the engine's budget (40 s) on a
+/// blocking thread, one review at a time; the window starts it with a
+/// button. Asked again for the game being reviewed, it says so instead.
+#[tauri::command]
+async fn game_review(
+    app: AppHandle,
+    session: String,
+    index: u64,
+) -> Result<serde_json::Value, String> {
+    game_review_of(app, review::GameRef { session, index })
+        .await
+        .logged("game_review")
+}
+
+/// Where the review of a game is: idle, reviewing (how far) or its last
+/// answer, kept in memory, for a window that opens or reloads its recap.
+#[tauri::command]
+fn game_review_status(
+    reviews: State<'_, Arc<review::Reviews>>,
+    session: String,
+    index: u64,
+) -> serde_json::Value {
+    reviews.status(&review::GameRef { session, index })
+}
+
+async fn game_review_of(
+    app: AppHandle,
+    game: review::GameRef,
+) -> Result<serde_json::Value, String> {
+    let report = {
+        let state = app.state::<Arc<AppState>>();
+        let games = state.games.lock().unwrap_or_else(|e| e.into_inner());
+        games
+            .iter()
+            .find(|g| g.session == game.session && g.index == game.index)
+            .map(|row| row.report.clone())
+            .ok_or_else(|| "That game is not in the history.".to_string())?
+    };
+    let reviews = app.state::<Arc<review::Reviews>>().inner().clone();
+    let ticket = match reviews.start(&game) {
+        review::Start::Started(ticket) => ticket,
+        review::Start::SameGame(p) => return Ok(review::reviewing(p)),
+        review::Start::Other => return Ok(serde_json::json!({"state": "busy"})),
+    };
+    let failed = || "This game could not be reviewed.".to_string();
+    tauri::async_runtime::spawn_blocking(move || {
+        let cards = app.state::<card_data::Cards>();
+        let state = app.state::<Arc<AppState>>();
+        let facts = |id: &str| card_data::combat_facts(&cards, id);
+        let game_on = || {
+            state
+                .in_progress
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .is_some()
+                || state
+                    .live
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .is_some()
+        };
+        let budget = tracker::counterfactual::Budget::default();
+        let answered = catch_unwind(AssertUnwindSafe(|| {
+            // The window's "Reviewing… 12 of 40", for this game only.
+            let mut progress = |p: review::Progress| {
+                ticket.progress(p);
+                let payload = serde_json::json!({
+                    "session": game.session, "index": game.index,
+                    "done": p.done, "total": p.total,
+                });
+                let _ = app.emit_to("main", review::PROGRESS, payload);
+            };
+            let cancel = ticket.cancel();
+            review::answer(&report, &facts, &game_on, &budget, cancel, &mut progress)
+        }))
+        .map_err(|_| failed())?;
+        let value = serde_json::to_value(&answered).map_err(|_| failed())?;
+        // "Game on" is not an answer to keep: the game can be reviewed later.
+        if !matches!(answered, review::ReviewAnswer::GameOn) {
+            ticket.finish(value.clone());
+            let _ = app.emit_to("main", review::DONE, &game);
+        }
+        Ok(value)
+    })
+    .await
+    .map_err(|_| failed())?
 }
 
 fn recap_of(state: &AppState, session: &str, index: u64) -> Result<Recap, String> {
@@ -1392,6 +1484,10 @@ fn track_game_in_progress(
         changed
     };
     if let Some(key) = now.as_ref().filter(|_| changed) {
+        // Post-game only (D-176): a review running stops before its next batch.
+        if let Some(reviews) = app.try_state::<Arc<review::Reviews>>() {
+            reviews.game_started();
+        }
         applog::info(
             "game",
             &format!("game {} started ({})", key.index, key.session),
@@ -1694,6 +1790,7 @@ fn main() {
         .manage(upload::Upload::default())
         .manage(card_data::Cards::default())
         .manage(log_commands::UiErrors::default())
+        .manage(Arc::new(review::Reviews::default()))
         .register_asynchronous_uri_scheme_protocol(card_data::SCHEME, card_data::protocol)
         .invoke_handler(tauri::generate_handler![
             list_games,
@@ -1702,6 +1799,8 @@ fn main() {
             status,
             game_recap,
             game_why,
+            game_review,
+            game_review_status,
             preview_problem_report,
             save_problem_report,
             diagnostics_preview,

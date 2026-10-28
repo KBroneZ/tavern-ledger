@@ -412,3 +412,13 @@
 .replay-minion.drawn.defender .replay-frame { filter: drop-shadow(0 0 5px var(--bad)); }
 .replay-minion.drawn.triggered .replay-frame { filter: drop-shadow(0 0 5px var(--info)); }
 .replay-minion.drawn.dying .replay-frame { filter: grayscale(1); }
+
+/* Game review (T-658): reasons, before-and-after boards, every turn. */
+.review-top { margin: 6px 0; padding-left: 20px; }
+.review-costly { margin: 10px 0; }
+.review-reason { margin: 4px 0; }
+.review-boards { margin: 6px 0; }
+.review-minion { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+.review-stats { font-variant-numeric: tabular-nums; color: var(--dim); }
+.review-notes, .review-alts, .review-all { margin: 4px 0; padding-left: 18px; }
+.review-banner { margin: 6px 0; font-weight: 600; }
