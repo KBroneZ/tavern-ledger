@@ -388,3 +388,64 @@ fn without_a_replay_board_minions_have_no_numbers() {
     };
     assert!(teams.0.first.minions.iter().all(|m| m.counters == [0, 0]));
 }
+
+#[test]
+fn a_saved_rounds_boards_bring_their_kits() {
+    // T-645: the powers and trinkets act in the saved combats as in the
+    // overlay (Sprout It Out on the minions a Greybough summons); a board
+    // without a saved kit plays as before.
+    let sprout = json!({"powers": [{"card_id": "TB_BaconShop_HP_107", "slot": 0}],
+                        "trinkets": []});
+    let round = json!({"number": 6, "result": "won", "entries": [
+        {"side": "own", "player_id": 1, "board": [bm(PLAIN, 3, 3, 1)], "kit": sprout},
+        {"side": "opponent", "player_id": 2, "board": [bm(PLAIN, 1, 1, 1)]},
+        {"side": "own", "player_id": 3, "board": [bm(PLAIN, 2, 2, 1)], "kit": sprout},
+    ]});
+    let Ok(Prepared { teams, .. }) = prepare(&round, false, &facts) else {
+        panic!("boards");
+    };
+    for band in [&teams.0.first, teams.0.second.as_ref().expect("teammate")] {
+        let kit = band.kit.as_ref().expect("a kit");
+        assert_eq!(kit.round, Some(6));
+        assert_eq!(kit.powers[0].card_id, "TB_BaconShop_HP_107");
+    }
+    assert_eq!(teams.1.first.kit, None);
+}
+
+/// One Solo round won by the player's 3/3, its board with `kit`.
+fn round_with_kit(kit: Value) -> Value {
+    game(
+        "GT_BATTLEGROUNDS",
+        json!([{"number": 2, "result": "won", "entries": [
+            {"side": "own", "player_id": 1, "board": [bm(PLAIN, 3, 3, 1)], "kit": kit},
+            {"side": "opponent", "player_id": 2, "board": [bm(PLAIN, 1, 1, 1)]},
+        ]}]),
+    )
+}
+
+#[test]
+fn a_saved_kit_that_cannot_be_read_refuses_the_boards() {
+    // T-645: never played as if the board had no powers or trinkets.
+    let bad = json!({"powers": [{"card_id": "TB_BaconShop_HP_107", "slot": 9}],
+                     "trinkets": []});
+    let w = whys(&round_with_kit(bad));
+    let Why::Explained(e) = &w[0].why else {
+        panic!("{:?}", w[0])
+    };
+    assert_eq!(e.said, Said::BadBoard);
+    assert_eq!(e.cause, None);
+    // A record without a kit ("not recorded") plays as before.
+    let w = whys(&round_with_kit(Value::Null));
+    assert_eq!(cause(&w[0]), &Cause::Matched);
+}
+
+#[test]
+fn an_unmodelled_trinket_on_a_saved_board_blocks_the_odds() {
+    let trinket = json!({"powers": [],
+                         "trinkets": [{"card_id": "BG99_MagicItem_1", "slot": 1}]});
+    let w = whys(&round_with_kit(trinket));
+    let Why::Explained(e) = &w[0].why else {
+        panic!("{:?}", w[0])
+    };
+    assert_eq!(e.said, Said::NotModelled(vec!["BG99_MagicItem_1".into()]));
+}

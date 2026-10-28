@@ -172,6 +172,11 @@ pub enum Action {
     /// Attack: those on the board now and those summoned later, even after
     /// the card is gone (Humming Bird; T-645).
     BeastAttackThisCombat(i32),
+    /// The side's Undead have this much more Attack this game, wherever they
+    /// are: those on the board gain it, and those summoned later in the
+    /// combat come with it, as the side's game-long Undead Attack
+    /// (Plaguerunner; T-645).
+    UndeadAttackThisGame(i32),
     /// Give a random other friendly Beast the side's Lobster buff, `times`
     /// over (2 for a golden Lobster), then improve the buff by +2/+1 (Tasty
     /// Lobster; T-645).
