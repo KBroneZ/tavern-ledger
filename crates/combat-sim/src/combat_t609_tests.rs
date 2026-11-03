@@ -123,11 +123,11 @@ fn without_values_blood_gems_give_one_one() {
 
 #[test]
 fn sanguine_refiner_upgrades_the_gems_played_after_it() {
-    // Its Rally gives gems +1/+2 more; the Camper's gem then gives +2/+3.
-    let refiner = Minion::new("BG33_885", 3, 8).tier(5);
+    // Its Rally gives gems +1/+1 more; the Camper's gem then gives +2/+2.
+    let refiner = Minion::new("BG33_885", 4, 9).tier(5);
     let camper = Minion::new("BG33_886", 1, 10).tier(1);
     let got = after_swing(vec![refiner, camper], GameValues::default(), &[0, 1]);
-    assert_eq!(got, vec![(3, 8), (3, 13)]);
+    assert_eq!(got, vec![(4, 9), (3, 12)]);
 }
 
 #[test]

@@ -71,8 +71,9 @@ fn glory_of_combat_gives_nothing_to_a_killer_that_died_too() {
 }
 
 #[test]
-fn jar_o_gems_plays_a_blood_gem_on_every_quilboar_every_second_attack() {
-    let boar = Minion::new("ZZ_BOAR", 1, 9).tribe(Tribes::QUILBOAR);
+fn jar_o_gems_plays_a_blood_gem_on_every_quilboar_once_a_quilboar_attacks() {
+    let boar_card = || Minion::new("ZZ_BOAR", 1, 9).tribe(Tribes::QUILBOAR);
+    let boar = boar_card();
     let mut player = kitted(
         vec![boar.clone(), boar, plain(1, 9)],
         &[],
@@ -83,15 +84,25 @@ fn jar_o_gems_plays_a_blood_gem_on_every_quilboar_every_second_attack() {
         ..GameValues::default()
     };
     with(player, vec![plain(0, 50)], false, |c| {
-        let a = uid(c, 0, 2);
-        c.swing(0, a);
+        // Another type attacking does nothing.
+        let other = uid(c, 0, 2);
+        c.swing(0, other);
         assert_eq!(stats(c, 0)[0], (1, 9));
-        c.swing(0, a);
+        let boar = uid(c, 0, 0);
+        c.swing(0, boar);
         // +1/+1 and the side's upgrades (+1/+2): on both Quilboar only.
         assert_eq!(stats(c, 0), [(3, 12), (3, 12), (1, 9)]);
-        c.swing(0, a);
-        c.swing(0, a);
-        assert_eq!(stats(c, 0)[0], (5, 15));
+        // Once per combat.
+        c.swing(0, boar);
+        assert_eq!(stats(c, 0)[0], (3, 12));
+    });
+    // The first attack is the Quilboar's: the gems come at once, with no
+    // second friendly attack needed.
+    let player = kitted(vec![boar_card()], &[], &["BG30_MagicItem_546"]);
+    with(player, vec![plain(0, 50)], false, |c| {
+        let boar = uid(c, 0, 0);
+        c.swing(0, boar);
+        assert_eq!(stats(c, 0)[0], (2, 10));
     });
 }
 
@@ -166,12 +177,18 @@ fn staff_and_beetle_band_avenge_friendly_deaths() {
         }
         assert!(c.sides[0].units[0].kw.contains(Keywords::REBORN));
     });
-    let player = kitted(vec![plain(1, 1); 7], &[], &["BG32_MagicItem_860t"]);
+    // Avenge (8): the Bonehead's Skeleton makes the eighth death possible.
+    let mut board = vec![plain(1, 1); 6];
+    board.insert(0, Minion::new("BG28_300", 1, 1).tribe(Tribes::UNDEAD));
+    let player = kitted(board, &[], &["BG32_MagicItem_860t"]);
     with(player, vec![plain(0, 50)], false, |c| {
         for _ in 0..7 {
             c.sides[0].units[0].health = 0;
             c.process_deaths(0);
         }
+        assert_eq!(stats(c, 0).len(), 1, "seven deaths: no Beetles yet");
+        c.sides[0].units[0].health = 0;
+        c.process_deaths(0);
         assert_eq!(stats(c, 0), [(2, 2), (2, 2)]);
         assert!(c.sides[0]
             .units
@@ -218,7 +235,7 @@ fn duos(first: Warband, second: Warband, opponent: Vec<Minion>, f: impl FnOnce(&
 #[test]
 fn a_duos_board_that_comes_in_counts_again_with_its_own_kit() {
     let boar = || Minion::new("ZZ_BOAR", 1, 9).tribe(Tribes::QUILBOAR);
-    // The first board attacks once with Jar o' Gems, then is gone.
+    // The first board's Quilboar attacks with Jar o' Gems, then it is gone.
     let first = kitted(vec![boar()], &[], &["BG30_MagicItem_546"]);
     let second = kitted(vec![boar(), plain(1, 9)], &[], &["BG30_MagicItem_546"]);
     duos(first, second, vec![plain(0, 50)], |c| {
@@ -226,10 +243,11 @@ fn a_duos_board_that_comes_in_counts_again_with_its_own_kit() {
         c.swing(0, a);
         c.sides[0].units.clear();
         c.bring_in_teammates();
-        // One attack of the second board: its count starts at 0, no gems.
+        // The second board's own Jar has not played its gems yet.
         let a = uid(c, 0, 1);
         c.swing(0, a);
         assert_eq!(stats(c, 0)[0], (1, 9));
+        let a = uid(c, 0, 0);
         c.swing(0, a);
         assert_eq!(stats(c, 0)[0], (2, 10));
     });

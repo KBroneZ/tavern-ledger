@@ -11,8 +11,8 @@ use crate::model::Tribes;
 /// combat (a Duos board that comes in starts again).
 #[derive(Clone, Debug, Default)]
 pub(crate) struct KitCounts {
-    /// Friendly attacks.
-    attacks: u32,
+    /// Jar o' Gems has played its Blood Gems.
+    gems_played: bool,
     /// Friendly deaths, for every Avenge (each fires on its multiples).
     deaths: u32,
     /// The first Deathrattle's extra trigger is used.
@@ -55,26 +55,20 @@ impl Combat<'_> {
         }
     }
 
-    /// After a friendly attack: Blood Gems every so many attacks.
-    pub(super) fn kit_after_attack(&mut self, side: usize) {
-        if self.passives_now(side).is_empty() {
+    /// After a friendly attack: Blood Gems, once per combat, when the
+    /// attacker is of the type the trinket asks for.
+    pub(super) fn kit_after_attack(&mut self, side: usize, attacker: Tribes) {
+        let fires = !self.kit_counts[side].gems_played
+            && self.passives_now(side).iter().any(
+                |t| matches!(*t, KitTrigger::GemsAfterFirstAttackOf(tribe) if attacker.is(tribe)),
+            );
+        if !fires {
             return;
         }
-        self.kit_counts[side].attacks += 1;
-        let done = self.kit_counts[side].attacks;
-        let every: Vec<u32> = self
-            .passives_now(side)
-            .iter()
-            .filter_map(|t| match *t {
-                KitTrigger::GemsEveryAttacks(n) if n > 0 && done.is_multiple_of(n) => Some(n),
-                _ => None,
-            })
-            .collect();
-        for _ in every {
-            let (attack, health) = self.gem_stats(side, 1);
-            for uid in self.friends(side, Tribes::QUILBOAR, None) {
-                self.buff(side, uid, attack, health);
-            }
+        self.kit_counts[side].gems_played = true;
+        let (attack, health) = self.gem_stats(side, 1);
+        for uid in self.friends(side, Tribes::QUILBOAR, None) {
+            self.buff(side, uid, attack, health);
         }
     }
 

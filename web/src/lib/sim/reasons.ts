@@ -61,6 +61,8 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
     "un hechizo que lanza puede activar cartas que siguen a los hechizos (Torrential Ruiner, Fleeing Fugitive, Abyssal Bruiser): no se juega",
   "what its maximum stats are is not checked: its Attack and full Health are used":
     "no se ha comprobado cuáles son sus estadísticas máximas: se usan su Ataque y su Salud completa",
+  "each Rally improves it by an amount not checked yet; the printed +10/+10 is used":
+    "cada Alentar lo mejora en una cantidad aún sin comprobar; se usa el +10/+10 impreso",
   "its bonus improves with the Tavern spells cast this game; the printed one is used":
     "su bonificación mejora con los hechizos de la Taberna lanzados en la partida; se usa la impresa",
   "it picks from every Deathrattle minion, not only the minion types in this game":

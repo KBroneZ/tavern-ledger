@@ -115,7 +115,7 @@ pub(crate) const POOL_TOKENS: &[Token] = &[
     // Leyline Surfacer
     tok("BG35_881", 4, 6, Tribes::ELEMENTAL, 4),
     // Sacrificial Wrathguard
-    tok("BG36_362", 5, 3, Tribes::DEMON, 4),
+    tok("BG36_362", 6, 3, Tribes::DEMON, 4),
     // Imp-lusionist
     tok("BG36_731", 4, 2, Tribes::DEMON, 4),
     // Shifty Snake
@@ -137,7 +137,7 @@ pub(crate) const POOL_TOKENS: &[Token] = &[
     // Shipwrecked Rascal
     tok("BG33_821", 5, 4, Tribes::PIRATE, 5),
     // Ship Master Eudora
-    tok("BG33_828", 8, 3, Tribes::PIRATE, 5),
+    tok("BG33_828", 10, 3, Tribes::PIRATE, 5),
     // Draconic Warden
     tok("BG34_633", 7, 4, Tribes::DRAGON, 5),
     // Sewer Lord
@@ -161,7 +161,7 @@ pub(crate) const POOL_TOKENS: &[Token] = &[
     // Nadina the Red
     tok("BGS_040", 8, 4, Tribes::NONE, 6),
     // Champion of Sargeras
-    tok("BG27_016", 8, 8, Tribes::DEMON, 7),
+    tok("BG27_016", 12, 12, Tribes::DEMON, 7),
     // Stitched Salvager
     tok("BG31_999", 16, 4, Tribes::UNDEAD, 7),
     // Highkeeper Ra

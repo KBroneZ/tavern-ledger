@@ -176,32 +176,32 @@ fn bonehead(id: &str) -> Minion {
 }
 
 #[test]
-fn stalwart_kodo_gives_summoned_minions_its_maximum_stats() {
-    // Bonehead's Deathrattle summons two 1/1 Skeletons: each gets the Kodo's
-    // Attack and its full Health (not what the Kodo has left).
+fn stalwart_kodo_gives_summoned_minions_double_its_maximum_stats() {
+    // Bonehead's Deathrattle summons two 1/1 Skeletons: each gets double the
+    // Kodo's Attack and its full Health (not what the Kodo has left).
     with(
-        vec![kodo("BG34_322", 16, 32), bonehead("BG28_300")],
+        vec![kodo("BG34_322", 15, 30), bonehead("BG28_300")],
         target(),
         |c| {
             let (kodo, by) = (uid_at(c, 0, 0), uid_at(c, 1, 0));
             c.damage(0, kodo, 20, Keywords::NONE, by);
             kill(c, &[1]);
-            assert_eq!(stats(c, 0), vec![(16, 12), (17, 33), (17, 33)]);
+            assert_eq!(stats(c, 0), vec![(15, 10), (31, 61), (31, 61)]);
         },
     );
 }
 
 #[test]
-fn golden_kodo_gives_double_and_only_three_times_per_combat() {
-    // Golden Bonehead summons four Skeletons: three get double stats.
+fn golden_kodo_gives_triple_and_only_three_times_per_combat() {
+    // Golden Bonehead summons four Skeletons: three get triple stats.
     with(
-        vec![kodo("BG34_322_G", 32, 64), bonehead("BG28_300_G")],
+        vec![kodo("BG34_322_G", 30, 60), bonehead("BG28_300_G")],
         target(),
         |c| {
             kill(c, &[1]);
             assert_eq!(
                 stats(c, 0),
-                vec![(32, 64), (65, 129), (65, 129), (65, 129), (1, 1)]
+                vec![(30, 60), (91, 181), (91, 181), (91, 181), (1, 1)]
             );
         },
     );
