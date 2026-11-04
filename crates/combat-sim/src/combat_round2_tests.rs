@@ -124,6 +124,18 @@ fn the_last_one_standing_gives_one_minion_of_each_type() {
         c.swing(0, l);
         // Alone, it is every type: eleven times +10/+10.
         assert_eq!(stats(c, 0), [(120, 120)]);
+        // The next Rally gives the improved +20/+20.
+        c.swing(0, l);
+        assert_eq!(stats(c, 0), [(340, 340)]);
+    });
+    // The numbers the board shows win over the printed ones. Golden: two
+    // passes, each improving (the user's log: 40, 50 and on to 60).
+    let mut golden = Minion::new("BG34_320_G", 20, 20).tribe(Tribes::ALL).tier(7);
+    golden.counters = [40, 40];
+    with(vec![golden], vec![plain(0, 5000)], |c| {
+        let l = uid(c, 0, 0);
+        c.swing(0, l);
+        assert_eq!(stats(c, 0), [(20 + 11 * 90, 20 + 11 * 90)]);
     });
 }
 

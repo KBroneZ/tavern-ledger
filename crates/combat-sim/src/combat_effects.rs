@@ -195,6 +195,23 @@ impl Combat<'_> {
             Action::BuffOnePerTribe { attack, health } => {
                 self.buff_one_per_tribe(side, attack, health)
             }
+            Action::BuffOnePerTribeImproving {
+                attack,
+                health,
+                step,
+            } => {
+                let Some(uid) = me else { return };
+                let own = self.unit(side, uid).map_or([0, 0], |u| u.counters);
+                let (attack, health) = if own == [0, 0] {
+                    (attack, health)
+                } else {
+                    (own[0], own[1])
+                };
+                self.buff_one_per_tribe(side, attack, health);
+                if let Some(unit) = self.unit_mut(side, uid) {
+                    unit.counters = [attack.saturating_add(step), health.saturating_add(step)];
+                }
+            }
             // Needs the reborn minion: played by `after_reborn`.
             Action::GiveRebornAttackToRightmost { .. } => {}
             Action::SummonWithStats {

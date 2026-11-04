@@ -365,18 +365,15 @@ fn cards_that_act_in_combat_carry_the_numbers_of_build_256589() {
         };
         assert_eq!(first(id), [gems], "{id}");
     }
-    // The Last One Standing: Rally: +10/+10 on a minion of each type, and it
-    // improves (by an amount the card data does not give: approximate).
-    let per_tribe = Action::BuffOnePerTribe {
+    // The Last One Standing: Rally: +10/+10 on a minion of each type, and +10
+    // more each pass (the user's log of the patch; golden: two passes).
+    let per_tribe = Action::BuffOnePerTribeImproving {
         attack: 10,
         health: 10,
+        step: 10,
     };
     assert_eq!(first("BG34_320"), [per_tribe]);
     assert_eq!(first("BG34_320_G"), [per_tribe, per_tribe]);
-    for id in ["BG34_320", "BG34_320_G"] {
-        let rules = rules(id).unwrap_or_else(|| panic!("{id} is not modelled"));
-        assert!(matches!(rules.fidelity, Fidelity::Approximate(_)), "{id}");
-    }
     // Stalwart Kodo: double its maximum stats (golden: triple), 3 times.
     for (id, factor) in [("BG34_322", 2), ("BG34_322_G", 3)] {
         let give = Action::GiveSummonedOwnStats { factor, times: 3 };
@@ -390,6 +387,32 @@ fn cards_that_act_in_combat_carry_the_numbers_of_build_256589() {
 fn murcules_has_no_combat_effect() {
     for id in ["BG27_023", "BG27_023_G"] {
         assert!(NO_COMBAT_EFFECT.contains(&id), "{id}");
+    }
+}
+
+/// Buddies and tokens that blocked the odds of the first games on the patch,
+/// though their text never acts in combat (their stats and Taunt are on the
+/// board).
+#[test]
+fn buddies_that_act_outside_combat_do_not_block_the_odds() {
+    for id in [
+        "BG21_HERO_010_Buddy",
+        "BG21_HERO_010_Buddy_G",
+        "TB_BaconShop_HERO_90_Buddy",
+        "TB_BaconShop_HERO_90_Buddy_G",
+        "BG32_HERO_001_Buddy",
+        "BG32_HERO_001_Buddy_G",
+        "TB_BaconShop_HERO_27_Buddy",
+        "TB_BaconShop_HERO_27_Buddy_G",
+        "TB_BaconShop_HERO_75_Buddy",
+        "TB_BaconShop_HERO_75_Buddy_G",
+        "BG23_HERO_201pt5",
+        "BG23_HERO_201pt6",
+    ] {
+        assert!(
+            rules(id).is_some() || NO_COMBAT_EFFECT.contains(&id),
+            "{id}"
+        );
     }
 }
 

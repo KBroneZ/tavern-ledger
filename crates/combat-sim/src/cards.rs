@@ -90,6 +90,9 @@ pub enum Action {
     /// For each minion type, give one random friendly minion of that type
     /// stats (the card itself can be picked).
     BuffOnePerTribe { attack: i32, health: i32 },
+    /// Like `BuffOnePerTribe`, by the minion's own numbers when the board
+    /// gives them (else the printed ones); then they grow by `step`.
+    BuffOnePerTribeImproving { attack: i32, health: i32, step: i32 },
     /// After a Reborn: give the right-most friendly minion of `tribe` stats
     /// equal to the reborn minion's Attack, `times` over.
     GiveRebornAttackToRightmost { tribe: Tribes, times: i32 },
@@ -412,9 +415,8 @@ fn no_combat_effect() -> impl Iterator<Item = &'static str> {
 /// 254477 changed now play with the new numbers; 255790's card data is
 /// byte-identical to 254477's. A board from another build is still played,
 /// with a warning (D-145). Every build here is also in the parser's
-/// `TESTED_BUILDS` (a test in the tracker keeps that). The rules already carry
-/// the numbers of 256589 (patch 37.0.2, compared with its card texts); it joins
-/// this list once a real game on it has been read.
+/// `TESTED_BUILDS` (a test in the tracker keeps that). The rules carry the
+/// numbers of patch 37.0.2, client 256589, whose games write 255790.
 pub const CHECKED_BUILDS: &[i64] = &[253216, 254477, 255790];
 
 /// The build of a board when the rules were not checked against it; `None`
@@ -896,6 +898,20 @@ pub const NO_COMBAT_EFFECT: &[&str] = &[
     "BG27_084",
     "BG27_084_G",
     "BG27_023",
+    // Buddies and tokens the first games on the patch brought: start or end
+    // of turn, a Discover, or stats and Taunt the board already shows.
+    "BG21_HERO_010_Buddy",
+    "BG21_HERO_010_Buddy_G",
+    "TB_BaconShop_HERO_90_Buddy",
+    "TB_BaconShop_HERO_90_Buddy_G",
+    "BG32_HERO_001_Buddy",
+    "BG32_HERO_001_Buddy_G",
+    "TB_BaconShop_HERO_27_Buddy",
+    "TB_BaconShop_HERO_27_Buddy_G",
+    "TB_BaconShop_HERO_75_Buddy",
+    "TB_BaconShop_HERO_75_Buddy_G",
+    "BG23_HERO_201pt5",
+    "BG23_HERO_201pt6",
     "BG27_016",
     "BG27_005",
     "BG27_005_G",

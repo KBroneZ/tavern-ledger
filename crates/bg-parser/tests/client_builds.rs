@@ -47,6 +47,22 @@ fn client_build_255130_writes_game_build_254477() {
     assert!(CLIENT_BUILDS.contains(&(255_130, 254_477)));
 }
 
+/// Patch 37.0.2's client still writes the build before it, with the patch's
+/// numbers on the cards, unlike the 255790 client, which wrote its own.
+#[test]
+fn client_build_256589_writes_game_build_255790() {
+    assert!(CLIENT_BUILDS.contains(&(256_589, 255_790)));
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/real/b255790_p37_duos.log");
+    let text = fs::read_to_string(path).expect("fixture");
+    let reports = bg_parser::parse_reader(text.as_bytes()).expect("in-memory read");
+    assert_eq!(reports.len(), 1, "one game in the fixture");
+    let report = &reports[0];
+    assert_eq!(report.build, Some(255_790));
+    assert_eq!(report.status, Status::Ok);
+    assert!(report.warnings.is_empty(), "{:?}", report.warnings);
+    assert!(report.problems.is_empty(), "{:?}", report.problems);
+}
+
 #[test]
 fn a_solo_game_on_the_255130_client_reads_clean() {
     let report = solo_game();
