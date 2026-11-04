@@ -5,7 +5,7 @@
 // the build.
 
 /** The Store listing's address, e.g. https://apps.microsoft.com/detail/9ABCDEFGHJKL, once live. */
-export const STORE_URL: string | null = null;
+export const STORE_URL: string | null = "https://apps.microsoft.com/detail/9NTCQ3TKWGM5";
 /** The winget package identifier, once winget-pkgs has merged it. */
 export const WINGET_ID: string | null = null;
 

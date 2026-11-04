@@ -4,10 +4,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { liveChannels, STORE_URL, WINGET_ID } from "../../src/lib/site/channels.ts";
 
-test("no channel is announced yet: the Store and winget listings are not live", () => {
-  assert.equal(STORE_URL, null);
+test("only the Store is announced: the winget package is not live", () => {
+  assert.equal(STORE_URL, "https://apps.microsoft.com/detail/9NTCQ3TKWGM5");
   assert.equal(WINGET_ID, null);
-  assert.deepEqual(liveChannels(), []);
+  assert.deepEqual(liveChannels(), [{ kind: "store", url: "https://apps.microsoft.com/detail/9NTCQ3TKWGM5" }]);
 });
 
 test("a live Store listing and winget package come out Store first, with the install command", () => {
