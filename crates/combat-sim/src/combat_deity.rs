@@ -109,7 +109,7 @@ impl Combat<'_> {
                 .map_or(crate::model::Keywords::NONE, |b| b.keywords);
             let unit = self.fresh(card, attack, health.max(1), kw);
             let uid = unit.uid;
-            if !self.sides[side].insert(at + k, unit) {
+            if !self.insert_summon(side, src, at + k, unit) {
                 break;
             }
             self.after_summon(side, uid);

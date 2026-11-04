@@ -141,6 +141,10 @@ pub enum Action {
     Gems { to: GemTo, count: i32 },
     /// Upgrade the side's Blood Gems for the rest of the game (T-609).
     UpgradeGems { attack: i32, health: i32 },
+    /// The side's Beetles have this much more for the rest of the game: the
+    /// ones on the board gain it, and those summoned later come with it, as
+    /// the side's game-long Beetle buff ([`crate::model::GameValues::beetle`]).
+    UpgradeBeetles { attack: i32, health: i32 },
     /// Cast a Tavern spell made of these buffs: each gives the side's spell
     /// upgrades on top ([`crate::model::GameValues::spell`]; T-609).
     Spell(&'static [Action]),

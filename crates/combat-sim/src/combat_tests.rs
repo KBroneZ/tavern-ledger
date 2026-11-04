@@ -811,3 +811,58 @@ fn two_runs_merged_add_up() {
     let dealt: u32 = a.damage_dealt.values().sum();
     assert_eq!(dealt, 2 * b.damage_dealt.values().sum::<u32>());
 }
+
+/// A board where the left-most minion dies with the side's turn pointer
+/// right of it: `last` is the side's last attacker (a uid; 99 for one that
+/// died before), `next` the pointer.
+fn kill_leftmost(left: Minion, last: u32, next: usize) -> (Vec<String>, Option<usize>) {
+    with_combat(
+        vec![left, plain(1, 50), plain(1, 50)],
+        vec![plain(0, 100)],
+        |c| {
+            c.sides[0].next = next;
+            c.sides[0].last_attacker = Some(last);
+            c.sides[0].units[0].health = 0;
+            c.process_deaths(1);
+            let ids = c.sides[0]
+                .units
+                .iter()
+                .map(|u| c.p.cards[u.card as usize].id.clone())
+                .collect();
+            (ids, c.attacker_index(0))
+        },
+    )
+}
+
+#[test]
+fn a_minion_back_where_one_died_after_its_turn_waits_for_the_next_attacker() {
+    // The user's logs (combats of the corpus): the first minion attacked,
+    // then the second, which died; the first dies on the opponent's turn and
+    // comes back with Reborn. The minion right of the second attacks next,
+    // not the Reborn copy.
+    let mut reborn = Minion::new("REBORN", 1, 1).with(Keywords::REBORN);
+    reborn.base = Some(BaseCard {
+        attack: 1,
+        health: 1,
+        keywords: Keywords::REBORN,
+    });
+    let (ids, next) = kill_leftmost(reborn.clone(), 99, 1);
+    assert_eq!(ids, ["REBORN", PLAIN, PLAIN]);
+    assert_eq!(
+        next,
+        Some(1),
+        "the minion after the Reborn copy attacks next"
+    );
+    // Summons in its place too: Harmless Bonehead's two Skeletons.
+    let bonehead = Minion::new("BG28_300", 1, 1).tier(1);
+    let (ids, next) = kill_leftmost(bonehead.clone(), 99, 1);
+    assert_eq!(ids, ["BG_ICC_026t", "BG_ICC_026t", PLAIN, PLAIN]);
+    assert_eq!(next, Some(2));
+    // The minion that attacked last: what comes back in its place attacks
+    // next (the corpus replays follow this; the other way most of them
+    // would part from the game).
+    let (_, next) = kill_leftmost(reborn, 1, 1);
+    assert_eq!(next, Some(0), "the Reborn copy attacks next");
+    let (_, next) = kill_leftmost(bonehead, 1, 1);
+    assert_eq!(next, Some(0), "the first Skeleton attacks next");
+}

@@ -201,6 +201,7 @@ impl Combat<'_> {
                     let src = Source::Dead {
                         uid: 0,
                         anchor: None,
+                        behind: false,
                         killer: None,
                         stats: (0, 0),
                     };

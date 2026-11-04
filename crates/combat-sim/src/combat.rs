@@ -394,6 +394,9 @@ struct SideState {
     /// Index of the next attacker (wraps to 0 past the end). Removals and
     /// summons to its left move it, so it keeps pointing at the same slot.
     next: usize,
+    /// The minion that attacked last, for where a minion that comes back
+    /// in a dead one's slot goes in the attack order.
+    last_attacker: Option<u32>,
     /// The game-long values of the board fighting now (T-609).
     values: GameValues,
     /// Friendly minions that died so far in this combat, both boards of a
@@ -425,11 +428,18 @@ impl SideState {
     }
 
     fn insert(&mut self, at: usize, unit: Unit) -> bool {
+        self.insert_behind(at, unit, false)
+    }
+
+    /// Inserts `unit`; with `behind`, one at the next attacker's slot goes
+    /// before it in the attack order too (a minion that comes back where one
+    /// died that had its turn already).
+    fn insert_behind(&mut self, at: usize, unit: Unit, behind: bool) -> bool {
         if self.units.len() >= MAX_BOARD {
             return false;
         }
         let at = at.min(self.units.len());
-        if at < self.next {
+        if at < self.next || (behind && at == self.next) {
             self.next += 1;
         }
         self.units.insert(at, unit);
@@ -445,6 +455,7 @@ enum Source {
     Dead {
         uid: u32,
         anchor: Option<u32>,
+        behind: bool,
         killer: Option<u32>,
         /// Its Attack and full Health when it died.
         stats: (i32, i32),
@@ -455,6 +466,8 @@ struct Dead {
     side: usize,
     unit: Unit,
     anchor: Option<u32>,
+    /// It was left of the next attacker and not the last one to attack.
+    behind: bool,
 }
 
 struct Combat<'a> {

@@ -193,17 +193,13 @@
     },
     "05b2c587d85183ce": {
       "build": 254477,
-      "close": false,
+      "close": true,
       "likely": "tie",
       "mode": "duos",
       "replay": {
         "attacks": 15,
-        "diverge": {
-          "attack": 6,
-          "card": "BG36_098",
-          "rule": "replay_attack_order"
-        },
-        "matched": 5,
+        "diverge": null,
+        "matched": 15,
         "rerolled": 0
       },
       "result": "tie",
@@ -536,11 +532,11 @@
       "replay": {
         "attacks": 27,
         "diverge": {
-          "attack": 7,
-          "card": "BG28_603t",
-          "rule": "replay_stats"
+          "attack": 17,
+          "card": "BG34_Giant_042",
+          "rule": "replay_minions"
         },
-        "matched": 6,
+        "matched": 16,
         "rerolled": 0
       },
       "result": "lost",
@@ -1027,12 +1023,8 @@
       "mode": "duos",
       "replay": {
         "attacks": 9,
-        "diverge": {
-          "attack": 6,
-          "card": "BG36_098",
-          "rule": "replay_attack_order"
-        },
-        "matched": 5,
+        "diverge": null,
+        "matched": 9,
         "rerolled": 0
       },
       "result": "lost",
@@ -1495,11 +1487,11 @@
       "replay": {
         "attacks": 13,
         "diverge": {
-          "attack": 6,
-          "card": "BG36_311",
-          "rule": "replay_attack_order"
+          "attack": 7,
+          "card": "BGFYM_011",
+          "rule": "replay_minions"
         },
-        "matched": 5,
+        "matched": 6,
         "rerolled": 0
       },
       "result": "lost",
@@ -1902,12 +1894,8 @@
       "mode": "duos",
       "replay": {
         "attacks": 13,
-        "diverge": {
-          "attack": 8,
-          "card": "BG28_603t",
-          "rule": "replay_stats"
-        },
-        "matched": 7,
+        "diverge": null,
+        "matched": 13,
         "rerolled": 0
       },
       "result": "won",
@@ -3312,8 +3300,8 @@
     },
     "80e8ed0751c33e65": {
       "build": 254477,
-      "close": false,
-      "likely": "lost",
+      "close": true,
+      "likely": "won",
       "mode": "solo",
       "replay": {
         "attacks": 8,
@@ -5160,7 +5148,7 @@
     },
     "c7dc7826367de8ee": {
       "build": 254477,
-      "close": false,
+      "close": true,
       "likely": "won",
       "mode": "duos",
       "replay": {
@@ -5351,7 +5339,7 @@
     },
     "ce9a803f54cf46cc": {
       "build": 253216,
-      "close": false,
+      "close": true,
       "likely": "won",
       "mode": "duos",
       "replay": {
@@ -5533,12 +5521,8 @@
       "mode": "duos",
       "replay": {
         "attacks": 26,
-        "diverge": {
-          "attack": 10,
-          "card": "BG36_701",
-          "rule": "replay_attack_order"
-        },
-        "matched": 9,
+        "diverge": null,
+        "matched": 26,
         "rerolled": 0
       },
       "result": "won",
@@ -6683,7 +6667,7 @@
       "said": "odds"
     }
   },
-  "engine": "0.23.0",
+  "engine": "0.25.0",
   "format": 1,
   "seed": 24301,
   "trials": 2000
