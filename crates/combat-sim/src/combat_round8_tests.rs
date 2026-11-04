@@ -505,12 +505,15 @@ fn timewarped_nalaa_buffs_one_minion_of_a_type_per_spell() {
 }
 
 #[test]
-fn timewarped_nalaa_is_approximate_only_beside_a_spell_the_engine_does_not_play() {
+fn timewarped_nalaa_stays_approximate_on_any_board() {
+    // Whether a Blood Gem played in combat triggers it is not checked, so a
+    // board without Seafloor Recruiter is not exact either.
     for id in ["BG34_Giant_205", "BG34_Giant_205_G"] {
         let nalaa = Minion::new(id, 2, 2).tier(4);
-        assert_eq!(reason(&coverage(vec![nalaa.clone()]), id), None, "{id}");
+        let why = reason(&coverage(vec![nalaa.clone()]), id);
+        assert_eq!(why, Some(crate::cards_round8::NALAA_SPELLS), "{id}");
         let recruiter = Minion::new("BG34_925", 2, 4).tribe(Tribes::NAGA).tier(2);
         let why = reason(&coverage(vec![nalaa, recruiter]), id);
-        assert_eq!(why, Some(crate::cards_round8::UNPLAYED_SPELLS), "{id}");
+        assert_eq!(why, Some(crate::cards_round8::NALAA_SPELLS), "{id}");
     }
 }

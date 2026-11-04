@@ -79,11 +79,10 @@ const ANY_DEATHRATTLE: &str =
     "it picks from every Deathrattle minion, not only the minion types in this game";
 const MADE_GOLDEN: &str = "how a minion made Golden in combat keeps its buffs, and that a minion already Golden is passed over for the next one to its left, are not checked against real games";
 const BATTLECRY_POOL: &str = "its Deathrattle summons a random Battlecry minion and the pool of Battlecry minions is not known: the summon is left out";
-/// Timewarped Nalaa's gap: the one card that casts a spell in combat
-/// without the engine playing that spell; a board without it has none.
-pub(crate) const UNPLAYED_SPELLS: &str = "a spell cast in combat by a card whose spell the simulator does not play (Seafloor Recruiter) does not trigger it";
-/// The cards whose spell in combat is not played ([`UNPLAYED_SPELLS`]).
-pub(crate) const SPELL_NOT_PLAYED: [&str; 2] = ["BG34_925", "BG34_925_G"];
+/// Timewarped Nalaa's gaps: its text says "a spell", and Blood Gems played in
+/// combat do not go through `cast_spell`; Seafloor Recruiter's spell is not
+/// played at all.
+pub(crate) const NALAA_SPELLS: &str = "whether a Blood Gem played in combat counts as a spell for it is not checked, and a spell cast by a card the simulator does not play (Seafloor Recruiter) does not trigger it";
 
 const fn summon(token: &'static str, count: u8) -> Action {
     Action::Summon { token, count }
@@ -344,11 +343,11 @@ pub const EFFECTS_8: &[(&str, CardRules)] = &[
     // Standing.
     (
         "BG34_Giant_205",
-        approx(UNPLAYED_SPELLS, &[Trigger::AfterFriendlySpell(NALAA_4_3)]),
+        approx(NALAA_SPELLS, &[Trigger::AfterFriendlySpell(NALAA_4_3)]),
     ),
     (
         "BG34_Giant_205_G",
-        approx(UNPLAYED_SPELLS, &[Trigger::AfterFriendlySpell(NALAA_8_6)]),
+        approx(NALAA_SPELLS, &[Trigger::AfterFriendlySpell(NALAA_8_6)]),
     ),
 ];
 
