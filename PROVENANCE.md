@@ -9,7 +9,7 @@ This repo's own code is licensed AGPL-3.0-only since 12 October 2026 (D-101); ve
 | Python (standard library) | [python.org](https://www.python.org/) | PSF-2.0 | `tools/check_logs.py`, `tools/leaderboard.py` (`urllib`, `gzip`/`zlib`, `json`), `tools/check_licenses.py` (`json`, `subprocess`, `re`) and their tests (no external dependencies) | 2026-10-08 |
 | GNU Affero General Public License v3 text (`LICENSE`, below a short copyright header) | [gnu.org/licenses/agpl-3.0.txt](https://www.gnu.org/licenses/agpl-3.0.txt), unmodified (SHA-256 `0d96a4ff…abcb0`) | Verbatim copying allowed by the FSF | This repo's license (D-101) | 2026-10-12 |
 | `actions/checkout` v7.0.1 (`3d3c42e`) | [GitHub](https://github.com/actions/checkout) | MIT | CI | 2026-10-08 |
-| `actions/setup-python` v7.0.0 (`5fda3b9`) | [GitHub](https://github.com/actions/setup-python) | MIT | CI (tests) | 2026-10-08 |
+| `actions/setup-python` v7.1.0 (`6d4fd22`) | [GitHub](https://github.com/actions/setup-python) | MIT | CI (tests) | 2026-10-08 |
 | `lycheeverse/lychee-action` v2.9.0 (`e747777`) with lychee v0.24.2 | [GitHub](https://github.com/lycheeverse/lychee-action) | Apache-2.0 (action); lychee: Apache-2.0 or MIT | CI: relative Markdown links (`--offline`) | 2026-10-08 |
 | `hslog` 1.20.0 | [PyPI](https://pypi.org/project/hslog/) · [GitHub](https://github.com/HearthSim/python-hslog) | MIT | `tools/parse_bg.py`: `Power.log` parser | 2026-10-08 |
 | `hearthstone` 9.22.0 | [PyPI](https://pypi.org/project/hearthstone/) · [GitHub](https://github.com/HearthSim/python-hearthstone) | MIT | `tools/parse_bg.py`: game enums (dependency of `hslog`) | 2026-10-27 |
