@@ -204,6 +204,13 @@ pub enum Action {
     /// Deal damage equal to the card's Attack (as it died, for a
     /// Deathrattle) to a random enemy minion, `times` over (Baneling).
     DamageRandomEnemyByAttack { times: u8 },
+    /// Make the `count` right-most living friendly minions Golden (Sr. Tomb
+    /// Diver): each becomes its golden card ([`golden_card`]) with that
+    /// card's rules and keeps its buffs, its stats raised by the normal
+    /// card's printed stats (kept as they are when those are not known). A
+    /// minion that is Golden already is passed over for the next one to its
+    /// left; one whose golden card is not modelled stays as it is.
+    MakeRightmostGolden { count: u8 },
 }
 
 /// Where Blood Gems go.
@@ -319,6 +326,9 @@ pub enum Trigger {
     /// Has this much more Attack for each friendly minion that died this
     /// combat (Rot Hide Gnoll; T-616).
     AttackPerFriendlyDeath(i32),
+    /// Whenever its side casts a spell in combat (Timewarped Nalaa): played
+    /// once the spell's buffs are given.
+    AfterFriendlySpell(&'static [Action]),
 }
 
 impl Trigger {
@@ -331,7 +341,8 @@ impl Trigger {
             | Trigger::StartOfCombat(a)
             | Trigger::AfterFriendlyReborn(a)
             | Trigger::FriendlyDeathrattle(a)
-            | Trigger::AfterFriendlyAttack(a) => a,
+            | Trigger::AfterFriendlyAttack(a)
+            | Trigger::AfterFriendlySpell(a) => a,
             Trigger::FriendlyAttacks { actions, .. }
             | Trigger::WheneverFriendlyAttacks { actions, .. }
             | Trigger::AfterFriendlyDealsDamage { actions, .. }
@@ -500,6 +511,51 @@ pub fn is_deity(id: &str) -> bool {
         id,
         "BGFYM_000" | "BGFYM_000_G" | "BGFYM_011" | "BGFYM_011_G"
     )
+}
+
+/// Cards the game lists in a golden form with another id pattern: normal
+/// id, golden id.
+pub const GOLDEN_TWINS: &[(&str, &str)] = &[
+    ("BGS_018", "TB_BaconUps_085"),
+    ("BGS_034", "TB_BaconUps_149"),
+    ("BGS_040", "TB_BaconUps_154"),
+    ("BGS_115", "TB_BaconUps_156"),
+    ("BGS_116", "TB_BaconUps_167"),
+    ("BGS_131", "TB_BaconUps_251"),
+    ("BGS_008", "TB_BaconUps_057"),
+    ("BGS_123", "TB_BaconUps_162"),
+];
+
+/// Whether a card id is a golden card's: `<id>_G`, a golden token
+/// (`BG19_010_Gt`) or an older `TB_BaconUps_…` id.
+pub fn is_golden_id(id: &str) -> bool {
+    id.ends_with("_G") || id.contains("_Gt") || id.starts_with("TB_BaconUps_")
+}
+
+/// The golden card of a normal card and its rules: the first of its possible
+/// ids the engine models, `<id>_G`, the older twin of [`GOLDEN_TWINS`], or a
+/// token's `<card>_Gt…` (`BG19_010t`: `BG19_010_Gt`). `None` when the card
+/// is golden already or no golden form of it is modelled.
+pub fn golden_card(id: &str) -> Option<(String, CardRules)> {
+    if is_golden_id(id) {
+        return None;
+    }
+    let mut ids = vec![format!("{id}_G")];
+    ids.extend(
+        GOLDEN_TWINS
+            .iter()
+            .filter(|(normal, _)| *normal == id)
+            .map(|(_, golden)| golden.to_string()),
+    );
+    if let Some((card, number)) = id.rsplit_once('_') {
+        let digits = number
+            .find('t')
+            .filter(|&t| t > 0 && number[..t].chars().all(|c| c.is_ascii_digit()));
+        if let Some(t) = digits {
+            ids.push(format!("{card}_{}_G{}", &number[..t], &number[t..]));
+        }
+    }
+    ids.into_iter().find_map(|g| rules(&g).map(|r| (g, r)))
 }
 
 pub fn token(id: &str) -> Option<&'static Token> {

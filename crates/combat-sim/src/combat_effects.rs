@@ -379,6 +379,7 @@ impl Combat<'_> {
                 let v = &mut self.sides[side].values;
                 v.undead_attack = v.undead_attack.saturating_add(attack);
             }
+            Action::MakeRightmostGolden { count } => self.make_rightmost_golden(side, count),
             Action::DamageAllOthers(amount) => {
                 let Some(uid) = me else { return };
                 for s in [side, 1 - side] {

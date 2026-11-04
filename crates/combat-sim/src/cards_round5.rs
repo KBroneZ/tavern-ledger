@@ -16,8 +16,10 @@ use crate::cards::{approx, exact, Action, CardRules, Trigger};
 
 /// The cards that summon a minion from the hand, which is not seen
 /// (section 10, question 4). They play as approximate, the summon left out
-/// (D-097); `BG34_Giant_017` summons from the hand on its Deathrattle.
-pub const HAND_SUMMONERS: [&str; 8] = [
+/// (D-097); `BG34_Giant_017` summons from the hand on its Deathrattle, and
+/// so does `BG26_350` Bassgill (engine 0.23.0, its rules in
+/// [`crate::cards_round8::EFFECTS_8`]).
+pub const HAND_SUMMONERS: [&str; 10] = [
     "BG34_140",
     "BG34_140_G",
     "BG31_835",
@@ -26,6 +28,8 @@ pub const HAND_SUMMONERS: [&str; 8] = [
     "BG21_HERO_030t_G",
     "BG34_Giant_017",
     "BG34_Giant_017_G",
+    "BG26_350",
+    "BG26_350_G",
 ];
 
 pub(crate) const FROM_HAND: &str =
@@ -39,7 +43,7 @@ const fn copy_leftmost(times: u8) -> Action {
     Action::CopyLeftmostDeathrattles { count: 2, times }
 }
 
-const HAND: CardRules = approx(FROM_HAND, &[]);
+pub(crate) const HAND: CardRules = approx(FROM_HAND, &[]);
 
 pub const EFFECTS_5: &[(&str, CardRules)] = &[
     // Expert Aviator (Rally), Deathly Striker (Avenge: get an Undead;

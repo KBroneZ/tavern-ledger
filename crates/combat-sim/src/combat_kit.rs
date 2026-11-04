@@ -85,6 +85,7 @@ fn mark_card(cards: &mut Vec<CardInfo>, mark: &str) -> Option<u16> {
         tier: None,
         tribes: Tribes::NONE,
         base: None,
+        golden: false,
     }))
 }
 

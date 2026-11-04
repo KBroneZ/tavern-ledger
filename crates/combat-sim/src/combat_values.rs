@@ -165,7 +165,8 @@ impl Combat<'_> {
         }
     }
 
-    /// A Tavern spell: its buffs, each with the side's spell upgrades.
+    /// A Tavern spell: its buffs, each with the side's spell upgrades; then
+    /// the side's minions that follow spells act.
     pub(super) fn cast_spell(
         &mut self,
         side: usize,
@@ -208,5 +209,6 @@ impl Combat<'_> {
             };
             self.act(side, src, target, attacker, &upgraded);
         }
+        self.after_friendly_spell(side);
     }
 }
