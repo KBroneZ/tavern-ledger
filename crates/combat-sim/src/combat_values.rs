@@ -10,7 +10,7 @@ use crate::model::Tribes;
 /// this game, wherever this is").
 const KNIGHTS: [(&str, i32, i32); 2] = [("BG25_008", 4, 2), ("BG25_008_G", 8, 4)];
 /// The Beetle and its golden card ("your Beetles have +N/+N this game").
-const BEETLES: [&str; 2] = ["BG28_603t", "BG28_603t_G"];
+pub(super) const BEETLES: [&str; 2] = ["BG28_603t", "BG28_603t_G"];
 
 impl Combat<'_> {
     /// What a minion summoned now has on top of its card's stats from the
