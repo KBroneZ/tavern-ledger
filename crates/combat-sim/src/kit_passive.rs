@@ -13,9 +13,9 @@ use crate::model::{Keywords, Tribes};
 pub enum KitTrigger {
     /// After a friendly minion kills an enemy, it gains `attack`.
     KillGainsAttack(i32),
-    /// After every `every` friendly attacks this combat, play a Blood Gem on
-    /// every friendly Quilboar.
-    GemsEveryAttacks(u32),
+    /// After the first attack this combat by a friendly minion of this type,
+    /// play a Blood Gem on every friendly Quilboar.
+    GemsAfterFirstAttackOf(Tribes),
     /// The side's first Deathrattle this combat triggers an extra time.
     FirstDeathrattleTwice,
     /// Minions the side summons in combat gain stats and keywords.
@@ -102,13 +102,16 @@ pub const PASSIVE: &[(&str, KitPassive)] = &[
         ),
     ),
     // Trinkets.
-    // Jar o' Gems (the user's logs, 37 combats' counts: its number goes 2,
-    // 1, then the gems and back to 2, every second friendly attack); like
-    // the Blood Gem cards, approximate while the side's gem upgrades are not
-    // given.
+    // Jar o' Gems: "After a friendly Quilboar attacks each combat" (text of
+    // build 256589, read as once per combat; no log of that build checked it
+    // yet); like the Blood Gem cards, approximate while the side's gem
+    // upgrades are not given.
     (
         "BG30_MagicItem_546",
-        approx(BLOOD_GEM, KitTrigger::GemsEveryAttacks(2)),
+        approx(
+            BLOOD_GEM,
+            KitTrigger::GemsAfterFirstAttackOf(Tribes::QUILBOAR),
+        ),
     ),
     // Deathly Phylactery (the user's logs: once per combat).
     (
@@ -205,7 +208,7 @@ pub const PASSIVE: &[(&str, KitPassive)] = &[
         approx(
             BEETLES_PLACE,
             KitTrigger::AvengeSummon {
-                n: 7,
+                n: 8,
                 token: "BG28_603t",
                 count: 2,
                 keywords: Keywords::TAUNT,

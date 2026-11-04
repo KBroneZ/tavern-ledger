@@ -14,20 +14,20 @@ pub const EFFECTS_7: &[(&str, CardRules)] = &[
     // to half its Attack", the Dragon next to the Poet got twice the
     // others' share. The normal Poet only keeps them after combat.
     ("BG29_813_G", exact(&[Trigger::DoublesAdjacentDragonGains])),
-    // Sanguine Refiner: Rally, your Blood Gems give an extra +1/+2 this game
-    // (golden +2/+4), so the gems played later in this combat give more.
+    // Sanguine Refiner: Rally, your Blood Gems give an extra +1/+1 this game
+    // (golden +2/+2), so the gems played later in this combat give more.
     (
         "BG33_885",
         exact(&[Trigger::Rally(&[Action::UpgradeGems {
             attack: 1,
-            health: 2,
+            health: 1,
         }])]),
     ),
     (
         "BG33_885_G",
         exact(&[Trigger::Rally(&[Action::UpgradeGems {
             attack: 2,
-            health: 4,
+            health: 2,
         }])]),
     ),
 ];

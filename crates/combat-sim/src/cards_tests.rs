@@ -293,15 +293,6 @@ fn cards_that_act_in_combat_carry_the_numbers_of_build_254477() {
         let rules = rules(id).unwrap_or_else(|| panic!("{id} is not modelled"));
         rules.triggers[0].actions().to_vec()
     };
-    let buff_all = |attack, health| Action::BuffAll {
-        attack,
-        health,
-        tribe: Tribes::NONE,
-        others: false,
-    };
-    // Ship Master Eudora: Deathrattle: give your minions +6/+6.
-    assert_eq!(first("BG33_828"), [buff_all(6, 6)]);
-    assert_eq!(first("BG33_828_G"), [buff_all(12, 12)]);
     // Hopebringer: Start of Combat: give your minions +4/+3 (printed; the
     // minion's own numbers when the board gives them, T-628).
     let hope = |attack, health| Action::BuffAllByCounters {
@@ -336,6 +327,69 @@ fn cards_that_act_in_combat_carry_the_numbers_of_build_254477() {
             panic!("{id} changed shape");
         };
         assert_eq!((attack, health), (n, n), "{id}");
+    }
+}
+
+/// The numbers build 256589 (patch 37.0.2, 2026-11-03) gives the cards that
+/// act in combat.
+#[test]
+fn cards_that_act_in_combat_carry_the_numbers_of_build_256589() {
+    let first = |id: &str| -> Vec<Action> {
+        let rules = rules(id).unwrap_or_else(|| panic!("{id} is not modelled"));
+        rules.triggers[0].actions().to_vec()
+    };
+    let buff_all = |attack, health| Action::BuffAll {
+        attack,
+        health,
+        tribe: Tribes::NONE,
+        others: false,
+    };
+    // Ship Master Eudora: Deathrattle: give your minions +8/+8.
+    assert_eq!(first("BG33_828"), [buff_all(8, 8)]);
+    assert_eq!(first("BG33_828_G"), [buff_all(16, 16)]);
+    // Ultraviolet Ascendant: Start of Combat: your other Elementals +4/+4.
+    for (id, n) in [("BG31_810", 4), ("BG31_810_G", 8)] {
+        let buff = Action::BuffAllByCounters {
+            attack: n,
+            health: n,
+            tribe: Tribes::ELEMENTAL,
+            others: true,
+        };
+        assert_eq!(first(id), [buff], "{id}");
+    }
+    // Sanguine Refiner: Rally: Blood Gems give an extra +1/+1.
+    for (id, n) in [("BG33_885", 1), ("BG33_885_G", 2)] {
+        let gems = Action::UpgradeGems {
+            attack: n,
+            health: n,
+        };
+        assert_eq!(first(id), [gems], "{id}");
+    }
+    // The Last One Standing: Rally: +10/+10 on a minion of each type, and it
+    // improves (by an amount the card data does not give: approximate).
+    let per_tribe = Action::BuffOnePerTribe {
+        attack: 10,
+        health: 10,
+    };
+    assert_eq!(first("BG34_320"), [per_tribe]);
+    assert_eq!(first("BG34_320_G"), [per_tribe, per_tribe]);
+    for id in ["BG34_320", "BG34_320_G"] {
+        let rules = rules(id).unwrap_or_else(|| panic!("{id} is not modelled"));
+        assert!(matches!(rules.fidelity, Fidelity::Approximate(_)), "{id}");
+    }
+    // Stalwart Kodo: double its maximum stats (golden: triple), 3 times.
+    for (id, factor) in [("BG34_322", 2), ("BG34_322_G", 3)] {
+        let give = Action::GiveSummonedOwnStats { factor, times: 3 };
+        assert_eq!(first(id), [give], "{id}");
+    }
+}
+
+/// Murcules came back to the pool in build 256589: what it gives goes to the
+/// hand, so nothing happens on the board.
+#[test]
+fn murcules_has_no_combat_effect() {
+    for id in ["BG27_023", "BG27_023_G"] {
+        assert!(NO_COMBAT_EFFECT.contains(&id), "{id}");
     }
 }
 

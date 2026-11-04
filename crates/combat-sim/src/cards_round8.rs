@@ -79,11 +79,11 @@ const fn summon(token: &'static str, count: u8) -> Action {
 }
 
 const KODO_1: &[Action] = &[Action::GiveSummonedOwnStats {
-    factor: 1,
+    factor: 2,
     times: 3,
 }];
 const KODO_2: &[Action] = &[Action::GiveSummonedOwnStats {
-    factor: 2,
+    factor: 3,
     times: 3,
 }];
 
@@ -149,8 +149,8 @@ pub const EFFECTS_8: &[(&str, CardRules)] = &[
         "BG19_010_G",
         exact(&[Trigger::Deathrattle(&[summon("BG19_010_Gt", 1)])]),
     ),
-    // Stalwart Kodo: after you summon a minion in combat, give it this
-    // minion's maximum stats, 3 times per combat (golden: double).
+    // Stalwart Kodo: after you summon a different minion in combat, give it
+    // double this minion's maximum stats, 3 times per combat (golden: triple).
     ("BG34_322", approx(MAXIMUM_STATS, &[kodo(KODO_1)])),
     ("BG34_322_G", approx(MAXIMUM_STATS, &[kodo(KODO_2)])),
     // Showy Cyclist: Deathrattle: give all your Naga +2/+1 (golden +4/+2).

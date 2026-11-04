@@ -156,8 +156,8 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
     (
         "BG33_828",
         exact(&[Trigger::Deathrattle(&[Action::BuffAll {
-            attack: 6,
-            health: 6,
+            attack: 8,
+            health: 8,
             tribe: ANY,
             others: false,
         }])]),
@@ -165,8 +165,8 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
     (
         "BG33_828_G",
         exact(&[Trigger::Deathrattle(&[Action::BuffAll {
-            attack: 12,
-            health: 12,
+            attack: 16,
+            health: 16,
             tribe: ANY,
             others: false,
         }])]),
@@ -649,7 +649,7 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
     // Ultraviolet Ascendant: your other Elementals gain its numbers (T-628).
     (
         "BG31_810",
-        exact(&[Trigger::StartOfCombat(&[ultraviolet(3)])]),
+        exact(&[Trigger::StartOfCombat(&[ultraviolet(4)])]),
     ),
     // Boom-in-a-Box: 3 damage to every other minion (golden: twice), T-628.
     (
@@ -665,7 +665,7 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
     ("BG34_142_G", exact(&[Trigger::StartOfCombatUnmodelled])),
     (
         "BG31_810_G",
-        exact(&[Trigger::StartOfCombat(&[ultraviolet(6)])]),
+        exact(&[Trigger::StartOfCombat(&[ultraviolet(8)])]),
     ),
     (
         "BG36_620_G",

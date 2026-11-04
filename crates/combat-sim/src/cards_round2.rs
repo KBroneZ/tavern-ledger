@@ -65,9 +65,11 @@ const fn rightmost_undead(times: i32) -> Action {
 }
 
 const PER_TRIBE: Action = Action::BuffOnePerTribe {
-    attack: 15,
-    health: 15,
+    attack: 10,
+    health: 10,
 };
+const LAST_ONE_IMPROVES: &str =
+    "each Rally improves it by an amount not checked yet; the printed +10/+10 is used";
 
 pub const EFFECTS_2: &[(&str, CardRules)] = &[
     // Crimson Vindicator: Rally: cast Mighty Dragonbreath (golden: twice).
@@ -171,11 +173,17 @@ pub const EFFECTS_2: &[(&str, CardRules)] = &[
         ),
     ),
     // The Last One Standing: Rally: give a friendly minion of each type
-    // +15/+15 (golden: twice).
-    ("BG34_320", exact(&[Trigger::Rally(&[PER_TRIBE])])),
+    // +10/+10 and improve this (golden: twice).
+    (
+        "BG34_320",
+        approx(LAST_ONE_IMPROVES, &[Trigger::Rally(&[PER_TRIBE])]),
+    ),
     (
         "BG34_320_G",
-        exact(&[Trigger::Rally(&[PER_TRIBE, PER_TRIBE])]),
+        approx(
+            LAST_ONE_IMPROVES,
+            &[Trigger::Rally(&[PER_TRIBE, PER_TRIBE])],
+        ),
     ),
     // Cage Gnawer: whenever a friendly Beast attacks, give your Beasts
     // +2/+1 (golden +4/+2).

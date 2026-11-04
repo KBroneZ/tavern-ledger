@@ -344,13 +344,13 @@ fn golden_forms_carry_their_own_numbers() {
     both_start(vec![boom], vec![plain(1, 9)], |c| {
         assert_eq!(stats(c, 1), [(1, 3)]);
     });
-    // Golden Ultraviolet Ascendant without its numbers: the printed +6/+6.
-    let uv = Minion::new("BG31_810_G", 6, 6)
+    // Golden Ultraviolet Ascendant without its numbers: the printed +8/+8.
+    let uv = Minion::new("BG31_810_G", 16, 16)
         .tribe(Tribes::ELEMENTAL)
         .tier(3);
     let elemental = of_type("BG32_236", Tribes::ELEMENTAL, 1, 1);
     both_start(vec![uv, elemental], vec![plain(0, 9)], |c| {
-        assert_eq!(stats(c, 0), [(6, 6), (7, 7)]);
+        assert_eq!(stats(c, 0), [(16, 16), (9, 9)]);
     });
 }
 

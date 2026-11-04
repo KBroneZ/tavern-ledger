@@ -34,11 +34,11 @@
     "BG36_MidGameEffect_000t4": {
       "en": {
         "name": "Incubation",
-        "text": "+4/+4; its stats double two turns later."
+        "text": "+6/+6; its stats double two turns later."
       },
       "es": {
         "name": "Incubación",
-        "text": "+4/+4; sus estadísticas se duplican dos turnos después."
+        "text": "+6/+6; sus estadísticas se duplican dos turnos después."
       }
     },
     "BG36_MidGameEffect_000t5": {
@@ -54,11 +54,11 @@
     "BG36_MidGameEffect_000t7": {
       "en": {
         "name": "Resistance",
-        "text": "Start of Combat: double its Health."
+        "text": "+15 Health. Start of Combat: double its Health."
       },
       "es": {
         "name": "Resistencia",
-        "text": "Inicio del combate: duplica su vida."
+        "text": "+15 de vida. Inicio del combate: duplica su vida."
       }
     },
     "BG36_MidGameEffect_000t9": {
@@ -344,11 +344,11 @@
     "BG36_MidGameEffect_000t71": {
       "en": {
         "name": "Hostility",
-        "text": "Start of Combat: double its Attack."
+        "text": "+15 Attack. Start of Combat: double its Attack."
       },
       "es": {
         "name": "Hostilidad",
-        "text": "Inicio del combate: duplica su ataque."
+        "text": "+15 de ataque. Inicio del combate: duplica su ataque."
       }
     },
     "BG36_MidGameEffect_000t72": {
@@ -384,11 +384,11 @@
     "BG36_MidGameEffect_000t75": {
       "en": {
         "name": "Toughened Shield",
-        "text": "+3 Health whenever you play a card."
+        "text": "+2 Health whenever you play a card."
       },
       "es": {
         "name": "Escudo reforzado",
-        "text": "+3 de vida cada vez que juegas una carta."
+        "text": "+2 de vida cada vez que juegas una carta."
       }
     },
     "BG36_MidGameEffect_000t78": {
@@ -444,11 +444,11 @@
     "BG36_MidGameEffect_000t88": {
       "en": {
         "name": "Desecration",
-        "text": "+3/+3 per card discarded this game."
+        "text": "+3/+2 per card discarded this game."
       },
       "es": {
         "name": "Profanación",
-        "text": "+3/+3 por cada carta descartada en la partida."
+        "text": "+3/+2 por cada carta descartada en la partida."
       }
     },
     "BG36_MidGameEffect_000t89": {

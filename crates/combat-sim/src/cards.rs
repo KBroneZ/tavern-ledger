@@ -412,7 +412,9 @@ fn no_combat_effect() -> impl Iterator<Item = &'static str> {
 /// 254477 changed now play with the new numbers; 255790's card data is
 /// byte-identical to 254477's. A board from another build is still played,
 /// with a warning (D-145). Every build here is also in the parser's
-/// `TESTED_BUILDS` (a test in the tracker keeps that).
+/// `TESTED_BUILDS` (a test in the tracker keeps that). The rules already carry
+/// the numbers of 256589 (patch 37.0.2, compared with its card texts); it joins
+/// this list once a real game on it has been read.
 pub const CHECKED_BUILDS: &[i64] = &[253216, 254477, 255790];
 
 /// The build of a board when the rules were not checked against it; `None`
@@ -893,6 +895,7 @@ pub const NO_COMBAT_EFFECT: &[&str] = &[
     "BG27_HERO_801_Buddy",
     "BG27_084",
     "BG27_084_G",
+    "BG27_023",
     "BG27_016",
     "BG27_005",
     "BG27_005_G",
@@ -961,6 +964,7 @@ pub const NO_COMBAT_EFFECT: &[&str] = &[
     "BG26_137",
     "BG34_Giant_082",
     "BG34_Giant_082_G",
+    "BG27_023_G",
     "BG27_016_G",
     "BG31_HERO_802pt7",
     "BG36_370_G",

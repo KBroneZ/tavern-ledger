@@ -118,12 +118,12 @@ fn eternal_tycoon_summons_a_knight_that_attacks_at_once() {
 
 #[test]
 fn the_last_one_standing_gives_one_minion_of_each_type() {
-    let last = Minion::new("BG34_320", 15, 15).tribe(Tribes::ALL).tier(7);
+    let last = Minion::new("BG34_320", 10, 10).tribe(Tribes::ALL).tier(7);
     with(vec![last], vec![plain(0, 500)], |c| {
         let l = uid(c, 0, 0);
         c.swing(0, l);
-        // Alone, it is every type: eleven times +15/+15.
-        assert_eq!(stats(c, 0), [(180, 180)]);
+        // Alone, it is every type: eleven times +10/+10.
+        assert_eq!(stats(c, 0), [(120, 120)]);
     });
 }
 

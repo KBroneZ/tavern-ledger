@@ -171,7 +171,7 @@ impl Combat<'_> {
             self.after_rally_attack(side);
         }
         self.after_friendly_attack(side);
-        self.kit_after_attack(side);
+        self.kit_after_attack(side, a_tribes);
         self.process_deaths(side);
     }
 
