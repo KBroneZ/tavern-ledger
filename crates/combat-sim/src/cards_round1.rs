@@ -7,6 +7,13 @@ use crate::model::{Keywords, Tribes};
 
 const ANY: Tribes = Tribes::NONE;
 
+const fn upgrade_beetles(n: i32) -> Action {
+    Action::UpgradeBeetles {
+        attack: n,
+        health: n,
+    }
+}
+
 const fn summon(token: &'static str, count: u8) -> Action {
     Action::Summon { token, count }
 }
@@ -543,18 +550,28 @@ pub const EFFECTS: &[(&str, CardRules)] = &[
             others: false,
         }])]),
     ),
+    // Deathrattle: your Beetles have +5/+5 this game (golden +10/+10), then
+    // summon a 2/2 Beetle (golden two). The upgrade is read from the user's
+    // logs (corpus combats on builds 253216 and 254477: the Beetles on the
+    // board gain +5/+5 before the new one comes, which has it too).
     (
         "BG31_809",
         approx(
             GAME_BUFFS,
-            &[Trigger::Deathrattle(&[summon("BG28_603t", 1)])],
+            &[Trigger::Deathrattle(&[
+                upgrade_beetles(5),
+                summon("BG28_603t", 1),
+            ])],
         ),
     ),
     (
         "BG31_809_G",
         approx(
             GAME_BUFFS,
-            &[Trigger::Deathrattle(&[summon("BG28_603t", 2)])],
+            &[Trigger::Deathrattle(&[
+                upgrade_beetles(10),
+                summon("BG28_603t", 2),
+            ])],
         ),
     ),
     (

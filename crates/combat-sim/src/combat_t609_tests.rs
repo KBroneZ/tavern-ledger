@@ -231,6 +231,33 @@ fn a_summoned_beetle_has_the_beetle_buffs() {
 }
 
 #[test]
+fn the_beetle_deathrattle_upgrades_the_beetles_before_summoning_one() {
+    // The user's logs: with Beetles at +5/+5 this game, a Beetle on the
+    // board goes from 7/7 to 12/12 and the new 2/2 Beetle comes as 12/12.
+    let card = Minion::new("BG31_809", 5, 5).tribe(Tribes::BEAST).tier(5);
+    let beetle = Minion::new("BG28_603t", 7, 7).tribe(Tribes::BEAST).tier(1);
+    let values = GameValues {
+        beetle: (5, 5),
+        ..GameValues::default()
+    };
+    let got = after_deaths(vec![card, beetle.clone()], values, &[0]);
+    assert_eq!(
+        got,
+        vec![
+            ("BG28_603t".to_string(), 12, 12),
+            ("BG28_603t".to_string(), 12, 12)
+        ]
+    );
+    // Golden: +10/+10 and two Beetles.
+    let golden = Minion::new("BG31_809_G", 10, 10)
+        .tribe(Tribes::BEAST)
+        .tier(5);
+    let got = after_deaths(vec![golden, beetle], values, &[0]);
+    let stats: Vec<(i32, i32)> = got.iter().map(|(_, a, h)| (*a, *h)).collect();
+    assert_eq!(stats, [(17, 17), (17, 17), (17, 17)]);
+}
+
+#[test]
 fn de_volition_ist_hits_the_highest_health_enemy_even_when_it_dies() {
     // The user's game 1 round 10: a 34/2 De-volition-ist attacks a 106/106,
     // dies, and its "after this attacks" still deals 34 to that minion.
