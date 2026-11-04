@@ -461,7 +461,9 @@ const GIFT_NOT_REVIEWED: &str = "the simulator has not reviewed this Dark Gift y
 
 /// True when the card's only gap is a game-long value its board brings
 /// (T-610): Blood Gem or Tavern spell upgrades above zero. Zero is unknown
-/// (a board without values), so the card stays approximate then.
+/// (a board without values), so the card stays approximate then. Also true
+/// when the gap cannot happen on this board (Timewarped Nalaa without a
+/// card whose spell is not played).
 fn played_with(why: &str, band: &Warband) -> bool {
     let values = &band.values;
     match why {
@@ -469,6 +471,12 @@ fn played_with(why: &str, band: &Warband) -> bool {
         w if w == crate::cards_round2::SPELL => values.spell != (0, 0),
         w if w == crate::cards_round1::DEITY => values.deity.known(),
         w if w == crate::cards_round1::LOBSTER => lobster_known(band),
+        // Timewarped Nalaa misses only the spells of a card the engine does
+        // not play; without one on the board it misses nothing.
+        w if w == crate::cards_round8::UNPLAYED_SPELLS => !band
+            .minions
+            .iter()
+            .any(|m| crate::cards_round8::SPELL_NOT_PLAYED.contains(&m.card_id.as_str())),
         _ => false,
     }
 }

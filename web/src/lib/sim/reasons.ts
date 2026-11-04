@@ -111,6 +111,12 @@ export const REASONS_ES: Readonly<Record<string, string>> = {
     "no se ha comprobado que elija entre los no muertos sin Renacer",
   "where its Beetles go on the board, and their game-long buffs, are not checked":
     "no se ha comprobado dónde quedan sus escarabajos en el tablero ni sus mejoras de toda la partida",
+  "how a minion made Golden in combat keeps its buffs, and that a minion already Golden is passed over for the next one to its left, are not checked against real games":
+    "no se ha comprobado con partidas reales cómo conserva sus mejoras un esbirro que se vuelve dorado en combate, ni que se salte a un esbirro ya dorado para tomar el siguiente a su izquierda",
+  "its Deathrattle summons a random Battlecry minion and the pool of Battlecry minions is not known: the summon is left out":
+    "su Último aliento invoca un esbirro con Grito de batalla al azar y no se conoce la lista de esos esbirros: la invocación se deja fuera",
+  "a spell cast in combat by a card whose spell the simulator does not play (Seafloor Recruiter) does not trigger it":
+    "un hechizo lanzado en combate por una carta cuyo hechizo el simulador no juega (Seafloor Recruiter) no lo activa",
 };
 
 /** The reason in the page's language, and whether it had to stay in English. */

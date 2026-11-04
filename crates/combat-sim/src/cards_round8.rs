@@ -9,6 +9,10 @@
 //! The Undead Creation cards stay refused, with the reason [`refusal`]
 //! gives; `BG31_999` is played only from a board taken before start of
 //! combat ([`BEFORE_START_ONLY`], T-628 round 3).
+//!
+//! Engine 0.23.0 adds five cards whose odds were refused, from their card
+//! texts: Lost Spirit, Bassgill, Sr. Tomb Diver, Brann's Epic Egg and
+//! Timewarped Nalaa (both forms of each).
 
 use crate::cards::{approx, exact, Action, CardRules, Trigger};
 use crate::model::Tribes;
@@ -73,6 +77,13 @@ const SPELL_COUNT: &str =
     "its bonus improves with the Tavern spells cast this game; the printed one is used";
 const ANY_DEATHRATTLE: &str =
     "it picks from every Deathrattle minion, not only the minion types in this game";
+const MADE_GOLDEN: &str = "how a minion made Golden in combat keeps its buffs, and that a minion already Golden is passed over for the next one to its left, are not checked against real games";
+const BATTLECRY_POOL: &str = "its Deathrattle summons a random Battlecry minion and the pool of Battlecry minions is not known: the summon is left out";
+/// Timewarped Nalaa's gap: the one card that casts a spell in combat
+/// without the engine playing that spell; a board without it has none.
+pub(crate) const UNPLAYED_SPELLS: &str = "a spell cast in combat by a card whose spell the simulator does not play (Seafloor Recruiter) does not trigger it";
+/// The cards whose spell in combat is not played ([`UNPLAYED_SPELLS`]).
+pub(crate) const SPELL_NOT_PLAYED: [&str; 2] = ["BG34_925", "BG34_925_G"];
 
 const fn summon(token: &'static str, count: u8) -> Action {
     Action::Summon { token, count }
@@ -105,6 +116,24 @@ const NAGAS_4_2: &[Action] = &[Action::BuffAll {
     health: 2,
     tribe: Tribes::NAGA,
     others: true,
+}];
+
+const fn your_minions(attack: i32) -> Action {
+    Action::BuffAll {
+        attack,
+        health: 0,
+        tribe: Tribes::NONE,
+        others: false,
+    }
+}
+
+const NALAA_4_3: &[Action] = &[Action::BuffOnePerTribe {
+    attack: 4,
+    health: 3,
+}];
+const NALAA_8_6: &[Action] = &[Action::BuffOnePerTribe {
+    attack: 8,
+    health: 6,
 }];
 
 pub const EFFECTS_8: &[(&str, CardRules)] = &[
@@ -269,6 +298,58 @@ pub const EFFECTS_8: &[(&str, CardRules)] = &[
     // (golden +2/+2). Combat-time gains by the others are not tracked.
     ("TB_BaconShop_HERO_29_Buddy", approx(TENTACLE, &[])),
     ("TB_BaconShop_HERO_29_Buddy_G", approx(TENTACLE, &[])),
+    // Engine 0.23.0. Lost Spirit: Deathrattle: give your minions +1 Attack
+    // (golden +2).
+    (
+        "BG26_GIL_513",
+        exact(&[Trigger::Deathrattle(&[your_minions(1)])]),
+    ),
+    (
+        "BG26_GIL_513_G",
+        exact(&[Trigger::Deathrattle(&[your_minions(2)])]),
+    ),
+    // Bassgill: Deathrattle: summon the highest-Health Murloc from your hand
+    // for this combat only (golden: the 2 highest). The hand is not seen: a
+    // hand summoner ([`crate::cards::HAND_SUMMONERS`]), the summon left out.
+    ("BG26_350", crate::cards_round5::HAND),
+    ("BG26_350_G", crate::cards_round5::HAND),
+    // Sr. Tomb Diver (a hero's Buddy): Deathrattle: make your right-most
+    // minion Golden (golden: the two right-most); its Taunt is on the board.
+    (
+        "TB_BaconShop_HERO_41_Buddy",
+        approx(
+            MADE_GOLDEN,
+            &[Trigger::Deathrattle(&[Action::MakeRightmostGolden {
+                count: 1,
+            }])],
+        ),
+    ),
+    (
+        "TB_BaconShop_HERO_41_Buddy_G",
+        approx(
+            MADE_GOLDEN,
+            &[Trigger::Deathrattle(&[Action::MakeRightmostGolden {
+                count: 2,
+            }])],
+        ),
+    ),
+    // Brann's Epic Egg (a hero's Buddy): Deathrattle: summon and get a random
+    // Battlecry minion (golden: 2). The engine has no Battlecry pool
+    // ([`DEATHRATTLE_POOL`] holds Deathrattle minions only), so the summon is
+    // left out; the card got goes to the hand. Its Taunt is on the board.
+    ("TB_BaconShop_HERO_43_Buddy", approx(BATTLECRY_POOL, &[])),
+    ("TB_BaconShop_HERO_43_Buddy_G", approx(BATTLECRY_POOL, &[])),
+    // Timewarped Nalaa: whenever you cast a spell, give a friendly minion of
+    // each type +4/+3 (golden +8/+6), picked at random as for The Last One
+    // Standing.
+    (
+        "BG34_Giant_205",
+        approx(UNPLAYED_SPELLS, &[Trigger::AfterFriendlySpell(NALAA_4_3)]),
+    ),
+    (
+        "BG34_Giant_205_G",
+        approx(UNPLAYED_SPELLS, &[Trigger::AfterFriendlySpell(NALAA_8_6)]),
+    ),
 ];
 
 /// Cards whose text works in the shop, the hand or the Tavern only, or whose

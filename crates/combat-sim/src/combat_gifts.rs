@@ -58,6 +58,7 @@ fn info(m: &Minion, known: &[&'static Gift], plain: usize) -> CardInfo {
             m.tribes
         },
         base: m.base,
+        golden: m.golden || gilded || cards::is_golden_id(&m.card_id),
     }
 }
 

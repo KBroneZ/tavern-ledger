@@ -45,6 +45,9 @@ pub(crate) struct CardInfo {
     pub tier: Option<u8>,
     pub tribes: Tribes,
     pub base: Option<BaseCard>,
+    /// The card is golden (its id, the board's word, or a gift that gilds
+    /// it), so it cannot be made Golden again.
+    pub golden: bool,
 }
 
 /// Both warbands turned into the engine's form once, then played many times.
@@ -78,6 +81,11 @@ pub(crate) struct Prepared {
     pub amalgam_followers: bool,
     /// Some card here doubles its neighbours' gains (T-609).
     pub gain_doublers: bool,
+    /// Card entry -> the entry of its golden card, for the minions a card
+    /// makes Golden in combat (Sr. Tomb Diver); filled only when some card
+    /// here does that. A normal card missing here has no modelled golden
+    /// form.
+    pub gilded: Vec<(u16, u16)>,
 }
 
 impl Prepared {
@@ -144,12 +152,26 @@ impl Prepared {
                 prepare_token(&mut cards, &mut tokens, id);
             }
         }
-        let mut i = 0;
-        while i < cards.len() {
-            for t in summoned_tokens(&cards[i].triggers) {
-                prepare_token(&mut cards, &mut tokens, t);
+        // The tokens every card can summon, and, when some card makes
+        // minions Golden, the golden card of each and what that summons.
+        let mut gilded: Vec<(u16, u16)> = Vec::new();
+        let (mut i, mut g) = (0, 0);
+        loop {
+            while i < cards.len() {
+                for t in summoned_tokens(&cards[i].triggers) {
+                    prepare_token(&mut cards, &mut tokens, t);
+                }
+                i += 1;
             }
-            i += 1;
+            if g == cards.len() || !cards.iter().any(|c| makes_golden(&c.triggers)) {
+                break;
+            }
+            while g < cards.len() {
+                if let Some(golden) = prepare_golden(&mut cards, &gilded, g) {
+                    gilded.push((g as u16, golden));
+                }
+                g += 1;
+            }
         }
         let [s0, s1] = &mut second;
         let boards = start.iter_mut().chain([s0, s1].into_iter().flatten());
@@ -173,6 +195,7 @@ impl Prepared {
         Prepared {
             amalgam_followers,
             gain_doublers,
+            gilded,
             cards,
             tokens,
             start,
@@ -210,8 +233,64 @@ fn prepare_token(cards: &mut Vec<CardInfo>, tokens: &mut Vec<(&'static str, u16)
             health: token.health,
             keywords: token.keywords,
         }),
+        golden: token.golden || cards::is_golden_id(token.id),
     });
     tokens.push((token.id, (cards.len() - 1) as u16));
+}
+
+/// Whether a card makes minions Golden in combat.
+fn makes_golden(triggers: &[Trigger]) -> bool {
+    triggers.iter().any(|t| {
+        t.actions()
+            .iter()
+            .any(|a| matches!(a, Action::MakeRightmostGolden { .. }))
+    })
+}
+
+/// Enters the golden card of entry `ix` (once per card and gifts): the
+/// golden card's rules, then the entry's gifts', its types and tier, and the
+/// golden card's printed facts (a token's from `cards::TOKENS`, else the
+/// normal card's doubled). `None` when the entry is golden already or its
+/// golden card is not modelled.
+fn prepare_golden(cards: &mut Vec<CardInfo>, gilded: &[(u16, u16)], ix: usize) -> Option<u16> {
+    let c = &cards[ix];
+    if c.golden {
+        return None;
+    }
+    let (id, rules) = cards::golden_card(&c.id)?;
+    let gifts = c.gifts.clone();
+    let mut triggers = rules.triggers.to_vec();
+    for g in gifts.iter().filter_map(|g| crate::gifts::gift(g)) {
+        triggers.extend_from_slice(g.triggers);
+    }
+    let base = cards::token(&id)
+        .map(|t| BaseCard {
+            attack: t.attack,
+            health: t.health,
+            keywords: t.keywords,
+        })
+        .or(c.base.map(|b| BaseCard {
+            attack: b.attack.saturating_mul(2),
+            health: b.health.saturating_mul(2),
+            keywords: b.keywords,
+        }));
+    let (tier, tribes, plain) = (c.tier, c.tribes, c.plain);
+    let next = cards.len() as u16;
+    // A gifted entry comes back with Reborn as the golden card without gifts.
+    let plain = gilded
+        .iter()
+        .find(|(n, _)| *n == plain && usize::from(plain) != ix)
+        .map_or(next, |(_, g)| *g);
+    Some(intern(cards, &id, &gifts, || CardInfo {
+        id: id.clone(),
+        gifts: gifts.clone(),
+        plain,
+        triggers,
+        tier,
+        tribes,
+        base,
+        golden: true,
+    }))
 }
 
 /// A board's played powers and trinkets that act during combat; one played

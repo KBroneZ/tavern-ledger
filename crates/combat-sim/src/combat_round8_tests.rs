@@ -281,3 +281,236 @@ fn tentacle_of_cthun_plays_as_its_printed_minion_and_is_named_approximate() {
         );
     }
 }
+
+// Engine 0.23.0: five cards whose odds were refused.
+
+fn printed(mut m: Minion, attack: i32, health: i32) -> Minion {
+    m.base = Some(crate::model::BaseCard {
+        attack,
+        health,
+        keywords: Keywords::NONE,
+    });
+    m
+}
+
+fn lost_spirit(id: &str, attack: i32, health: i32) -> Minion {
+    let spirit = Minion::new(id, attack, health)
+        .tribe(Tribes::UNDEAD)
+        .tier(1);
+    printed(spirit, 1, 1)
+}
+
+/// What the odds say is approximate, start of combat off.
+fn coverage(player: Vec<Minion>) -> crate::trials::Coverage {
+    use crate::trials::{simulate, Options, Verdict};
+    let options = Options {
+        trials: 50,
+        ..Options::default()
+    };
+    match simulate(&band(player), &band(target()), &options).expect("a valid board") {
+        Verdict::Odds(o) => o.coverage,
+        Verdict::NotModelled(c) => panic!("refused: {:?}", c.not_modelled),
+    }
+}
+
+fn reason(c: &crate::trials::Coverage, id: &str) -> Option<&'static str> {
+    c.approximate
+        .iter()
+        .find(|(c, _)| c == id)
+        .map(|(_, why)| *why)
+}
+
+// Lost Spirit: Deathrattle: give your minions +1 Attack (golden +2).
+
+#[test]
+fn lost_spirit_gives_the_minions_left_attack_when_it_dies() {
+    for (id, more) in [("BG26_GIL_513", 1), ("BG26_GIL_513_G", 2)] {
+        let other = Minion::new("BGS_034", 2, 5).tier(1);
+        with(
+            vec![lost_spirit(id, 1, 1), plain(1, 5), other],
+            target(),
+            |c| {
+                kill(c, &[0]);
+                assert_eq!(stats(c, 0), vec![(1 + more, 5), (2 + more, 5)], "{id}");
+            },
+        );
+        assert_eq!(reason(&coverage(vec![lost_spirit(id, 1, 1)]), id), None);
+    }
+}
+
+// Bassgill: Deathrattle: summon the highest-Health Murloc from your hand for
+// this combat only (golden: the 2 highest). The hand is not seen.
+
+#[test]
+fn bassgill_is_a_hand_summoner_whose_summon_is_left_out() {
+    for id in ["BG26_350", "BG26_350_G"] {
+        assert!(crate::cards::HAND_SUMMONERS.contains(&id), "{id}");
+        let bassgill = Minion::new(id, 7, 4).tribe(Tribes::MURLOC).tier(5);
+        with(vec![bassgill.clone(), plain(1, 5)], target(), |c| {
+            kill(c, &[0]);
+            assert_eq!(ids(c, 0), vec!["BGS_119"], "{id}: nothing is summoned");
+        });
+        let why = reason(&coverage(vec![bassgill]), id);
+        assert_eq!(why, Some(crate::cards_round5::FROM_HAND), "{id}");
+    }
+}
+
+// Sr. Tomb Diver: Taunt. Deathrattle: make your right-most minion Golden
+// (golden: the two right-most).
+
+fn tomb_diver(id: &str) -> Minion {
+    Minion::new(id, 4, 4).with(Keywords::TAUNT).tier(5)
+}
+
+#[test]
+fn sr_tomb_diver_makes_the_rightmost_minion_its_golden_card_with_its_buffs() {
+    // A 3/3 Lost Spirit (printed 1/1) becomes a 4/4 Golden Lost Spirit,
+    // whose Deathrattle then gives +2 Attack.
+    let diver = tomb_diver("TB_BaconShop_HERO_41_Buddy");
+    with(
+        vec![diver, plain(1, 5), lost_spirit("BG26_GIL_513", 3, 3)],
+        target(),
+        |c| {
+            kill(c, &[0]);
+            assert_eq!(ids(c, 0), vec!["BGS_119", "BG26_GIL_513_G"]);
+            assert_eq!(stats(c, 0), vec![(1, 5), (4, 4)]);
+            kill(c, &[1]);
+            assert_eq!(stats(c, 0), vec![(3, 5)]);
+        },
+    );
+}
+
+#[test]
+fn golden_sr_tomb_diver_passes_over_a_golden_minion() {
+    // Right to left: the plain minion has no modelled golden card and stays
+    // as it is, but counts; the Golden Spirit is passed over; the Spirit is
+    // made Golden.
+    let diver = tomb_diver("TB_BaconShop_HERO_41_Buddy_G");
+    let board = vec![
+        diver,
+        lost_spirit("BG26_GIL_513", 2, 2),
+        lost_spirit("BG26_GIL_513_G", 2, 2),
+        plain(1, 5),
+    ];
+    with(board, target(), |c| {
+        kill(c, &[0]);
+        let golden = "BG26_GIL_513_G";
+        assert_eq!(ids(c, 0), vec![golden, golden, "BGS_119"]);
+        assert_eq!(stats(c, 0), vec![(3, 3), (2, 2), (1, 5)]);
+    });
+}
+
+#[test]
+fn a_minion_made_golden_without_printed_stats_keeps_its_stats() {
+    let diver = tomb_diver("TB_BaconShop_HERO_41_Buddy");
+    let spirit = Minion::new("BG26_GIL_513", 3, 3).tier(1);
+    with(vec![diver, spirit], target(), |c| {
+        kill(c, &[0]);
+        assert_eq!(ids(c, 0), vec!["BG26_GIL_513_G"]);
+        assert_eq!(stats(c, 0), vec![(3, 3)]);
+    });
+}
+
+#[test]
+fn a_summoned_token_made_golden_plays_its_golden_card() {
+    // Sewer Lord's Rats are 3/2 tokens; the right-most becomes a 6/4 Golden
+    // Rat, whose Deathrattle summons the 4/6 golden Turtle.
+    let lord = Minion::new("BG35_604", 4, 6).tribe(Tribes::BEAST).tier(5);
+    let diver = tomb_diver("TB_BaconShop_HERO_41_Buddy");
+    with(vec![diver, lord], target(), |c| {
+        kill(c, &[1]);
+        kill(c, &[0]);
+        assert_eq!(ids(c, 0), vec!["BG19_010", "BG19_010_G"]);
+        assert_eq!(stats(c, 0), vec![(3, 2), (6, 4)]);
+        kill(c, &[1]);
+        assert_eq!(ids(c, 0), vec!["BG19_010", "BG19_010_Gt"]);
+        assert_eq!(stats(c, 0)[1], (4, 6));
+    });
+}
+
+#[test]
+fn golden_cards_are_entered_only_when_a_card_makes_minions_golden() {
+    let spirit = lost_spirit("BG26_GIL_513", 1, 1);
+    with(vec![spirit.clone()], target(), |c| {
+        assert!(c.p.gilded.is_empty())
+    });
+    let diver = tomb_diver("TB_BaconShop_HERO_41_Buddy");
+    with(vec![diver, spirit], target(), |c| {
+        assert!(!c.p.gilded.is_empty())
+    });
+}
+
+#[test]
+fn sr_tomb_diver_is_approximate_in_both_forms() {
+    for id in ["TB_BaconShop_HERO_41_Buddy", "TB_BaconShop_HERO_41_Buddy_G"] {
+        let why = reason(&coverage(vec![tomb_diver(id), plain(1, 1)]), id);
+        assert!(why.is_some_and(|w| w.contains("made Golden")), "{id}");
+    }
+}
+
+// Brann's Epic Egg: Taunt. Deathrattle: summon and get a random Battlecry
+// minion (golden: 2). No Battlecry pool: the summon is left out.
+
+#[test]
+fn branns_epic_egg_leaves_its_random_battlecry_minion_out() {
+    for id in ["TB_BaconShop_HERO_43_Buddy", "TB_BaconShop_HERO_43_Buddy_G"] {
+        let egg = Minion::new(id, 0, 3).with(Keywords::TAUNT).tier(3);
+        with(vec![egg.clone(), plain(1, 5)], target(), |c| {
+            kill(c, &[0]);
+            assert_eq!(ids(c, 0), vec!["BGS_119"], "{id}");
+        });
+        let why = reason(&coverage(vec![egg]), id);
+        assert!(why.is_some_and(|w| w.contains("Battlecry")), "{id}");
+    }
+}
+
+// Timewarped Nalaa: whenever you cast a spell, give a friendly minion of
+// each type +4/+3 (golden +8/+6).
+
+#[test]
+fn timewarped_nalaa_gives_one_minion_of_each_type_stats_after_a_spell() {
+    use super::Source;
+    for (id, (attack, health)) in [("BG34_Giant_205", (4, 3)), ("BG34_Giant_205_G", (8, 6))] {
+        let nalaa = Minion::new(id, 2, 2).tier(4);
+        let beast = plain(1, 1).tribe(Tribes::BEAST);
+        let murloc = Minion::new("BGS_034", 1, 1).tribe(Tribes::MURLOC).tier(1);
+        with(vec![nalaa, beast, murloc], target(), |c| {
+            let src = Source::Unit(uid_at(c, 0, 0));
+            c.cast_spell(0, src, None, None, &[]);
+            let grown = (1 + attack, 1 + health);
+            assert_eq!(stats(c, 0), vec![(2, 2), grown, grown], "{id}");
+        });
+    }
+}
+
+#[test]
+fn timewarped_nalaa_buffs_one_minion_of_a_type_per_spell() {
+    // Runic Arcanist casts Shiny Ring (+1/+1) twice: Nalaa follows each, on
+    // one of the two Beasts (the same card, so both are Beasts).
+    let arcanist = Minion::new("BG36_245", 1, 1).tier(4);
+    let nalaa = Minion::new("BG34_Giant_205", 2, 2).tier(4);
+    let board = vec![
+        arcanist,
+        nalaa,
+        plain(1, 1).tribe(Tribes::BEAST),
+        plain(1, 1),
+    ];
+    with(board, target(), |c| {
+        c.start_of_combat(0, [true, true]);
+        let s = stats(c, 0);
+        assert_eq!(&s[..2], &[(3, 3), (4, 4)]);
+        let gained: i32 = s[2..].iter().map(|(a, _)| a - 3).sum();
+        assert_eq!(gained, 8, "one Beast each time: {s:?}");
+    });
+}
+
+#[test]
+fn timewarped_nalaa_is_approximate_only_beside_a_spell_the_engine_does_not_play() {
+    for id in ["BG34_Giant_205", "BG34_Giant_205_G"] {
+        let nalaa = Minion::new(id, 2, 2).tier(4);
+        assert_eq!(reason(&coverage(vec![nalaa.clone()]), id), None, "{id}");
+        let recruiter = Minion::new("BG34_925", 2, 4).tribe(Tribes::NAGA).tier(2);
+        let why = reason(&coverage(vec![nalaa, recruiter]), id);
+        assert_eq!(why, Some(crate::cards_round8::UNPLAYED_SPELLS), "{id}");
+    }
+}

@@ -1,5 +1,7 @@
 //! Card round 8 (T-616): minions that grow with the side's deaths, give a
-//! summoned minion this one's stats, or summon random Deathrattle minions.
+//! summoned minion this one's stats, or summon random Deathrattle minions;
+//! since engine 0.23.0 also minions made Golden in combat (Sr. Tomb Diver)
+//! and minions that follow the side's spells (Timewarped Nalaa).
 
 use super::{Combat, Dead, Source, Unit};
 use crate::cards::{self, Trigger};
@@ -102,6 +104,53 @@ impl Combat<'_> {
                 break;
             }
             self.after_summon(side, uid);
+        }
+    }
+
+    /// Sr. Tomb Diver: the `count` right-most living minions of `side` that
+    /// are not Golden become their golden card, with its rules, and keep
+    /// their buffs: their stats grow by the normal card's printed stats (or
+    /// stay as they are when the board did not give those). A Golden minion
+    /// is passed over for the next one to its left; a minion whose golden
+    /// card is not modelled counts as made Golden and stays as it is.
+    pub(super) fn make_rightmost_golden(&mut self, side: usize, count: u8) {
+        let mut left = count;
+        let mut ix = self.sides[side].units.len();
+        while left > 0 && ix > 0 {
+            ix -= 1;
+            let unit = &self.sides[side].units[ix];
+            let info = &self.p.cards[unit.card as usize];
+            if !unit.alive() || info.golden {
+                continue;
+            }
+            left -= 1;
+            let Some(&(_, golden)) = self.p.gilded.iter().find(|(n, _)| *n == unit.card) else {
+                continue;
+            };
+            let (attack, health) = info.base.map_or((0, 0), |b| (b.attack, b.health));
+            let unit = &mut self.sides[side].units[ix];
+            unit.card = golden;
+            unit.attack = unit.attack.saturating_add(attack);
+            unit.health = unit.health.saturating_add(health);
+            unit.max_health = unit.max_health.saturating_add(health);
+        }
+    }
+
+    /// After `side` casts a spell in combat: each of its living minions that
+    /// follows spells acts (Timewarped Nalaa), left to right.
+    pub(super) fn after_friendly_spell(&mut self, side: usize) {
+        let uids: Vec<u32> = self.sides[side].units.iter().map(|u| u.uid).collect();
+        for uid in uids {
+            let Some(unit) = self.unit(side, uid).filter(|u| u.alive()) else {
+                continue;
+            };
+            for t in self.triggers(unit) {
+                if let Trigger::AfterFriendlySpell(actions) = t {
+                    for a in *actions {
+                        self.act(side, Source::Unit(uid), None, None, a);
+                    }
+                }
+            }
         }
     }
 }

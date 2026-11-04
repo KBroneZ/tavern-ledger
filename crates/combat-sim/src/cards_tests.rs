@@ -71,19 +71,6 @@ fn unknown_cards_are_not_modelled() {
     ));
 }
 
-/// Cards the game lists in a golden form with another id pattern: normal id,
-/// golden id.
-const OLD_STYLE_TWINS: &[(&str, &str)] = &[
-    ("BGS_018", "TB_BaconUps_085"),
-    ("BGS_034", "TB_BaconUps_149"),
-    ("BGS_040", "TB_BaconUps_154"),
-    ("BGS_115", "TB_BaconUps_156"),
-    ("BGS_116", "TB_BaconUps_167"),
-    ("BGS_131", "TB_BaconUps_251"),
-    ("BGS_008", "TB_BaconUps_057"),
-    ("BGS_123", "TB_BaconUps_162"),
-];
-
 fn is_listed(id: &str) -> bool {
     rules(id).is_some()
 }
@@ -135,8 +122,27 @@ fn a_normal_card_is_never_listed_without_its_golden_form() {
 }
 
 #[test]
+fn a_card_made_golden_finds_its_golden_card_in_each_naming() {
+    let golden = |id: &str| golden_card(id).map(|(g, _)| g);
+    assert_eq!(golden("BG26_GIL_513").as_deref(), Some("BG26_GIL_513_G"));
+    assert_eq!(golden("BGS_008").as_deref(), Some("TB_BaconUps_057"));
+    assert_eq!(golden("BG19_010t").as_deref(), Some("BG19_010_Gt"));
+    assert_eq!(golden("BG_ICC_026t").as_deref(), Some("BG_ICC_026t_G"));
+    // Golden already, or no golden form modelled.
+    for id in [
+        "BG26_GIL_513_G",
+        "TB_BaconUps_057",
+        "BG19_010_Gt",
+        "BGS_119",
+    ] {
+        assert_eq!(golden(id), None, "{id}");
+    }
+    assert!(is_golden_id("BG36_360_Gt4") && !is_golden_id("BG34_Giant_205"));
+}
+
+#[test]
 fn old_style_golden_cards_are_listed_with_their_normal_form() {
-    for (normal, golden) in OLD_STYLE_TWINS {
+    for (normal, golden) in GOLDEN_TWINS {
         assert!(is_listed(normal), "{normal} is not modelled");
         assert!(is_listed(golden), "{golden} is not modelled");
     }
