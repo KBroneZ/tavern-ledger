@@ -42,7 +42,7 @@ pub const PARSER_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const PARSER_REVISION: u32 = 17;
 
 /// Builds whose real logs this parser was checked against.
-pub const TESTED_BUILDS: &[i64] = &[253216, 254477];
+pub const TESTED_BUILDS: &[i64] = &[253216, 254477, 255790];
 /// Client builds (`.product.db`, HearthstoneJSON) whose games still write an
 /// older, tested `BuildNumber`: `(client build, build its games write)`. Only
 /// added after real games on that client were read clean. `tools/game_build_watch.py`
