@@ -3,6 +3,7 @@ import Base from "../../layouts/Base.astro";
 import SceneDepth from "../../components/home/SceneDepth.astro";
 import TavernBackdrop from "../../components/home/TavernBackdrop.astro";
 import Button from "../../components/ui/Button.astro";
+import More from "../../components/ui/More.astro";
 import "../../styles/home.css";
 import "../../styles/scene.css";
 import "../../styles/scene-details.css";
@@ -32,6 +33,10 @@ const count = (n: number) => numberFormat({ maximumFractionDigits: 0 }).format(n
 // "What's new" (D-089): the day in the page's language, "11 Oct 2026" / "11 oct 2026".
 const newsDay = (date: string) =>
   dateFormat({ day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }, "en-GB").format(new Date(`${date}T00:00:00Z`));
+// The latest few stay in view; older ones fold behind the site's Read more (D-130).
+const NEWS_SHOWN = 3;
+const newsLatest = NEWS.slice(0, NEWS_SHOWN);
+const newsEarlier = NEWS.slice(NEWS_SHOWN);
 ---
 
 <Base title={st("meta.index.title")} description={st("meta.index.description")} layout="home">
@@ -143,9 +148,10 @@ const newsDay = (date: string) =>
 
   <section class="sec news" aria-labelledby="news-heading">
     <h2 id="news-heading" class="sec-h">{st("news.title")}</h2>
+    <div class="news-card">
     <ul role="list">
       {
-        NEWS.map((item) => (
+        newsLatest.map((item) => (
           <li>
             <time datetime={item.date}>{newsDay(item.date)}</time>
             <span>
@@ -155,11 +161,28 @@ const newsDay = (date: string) =>
         ))
       }
     </ul>
+    {
+      newsEarlier.length > 0 && (
+        <More context={st("news.earlier")}>
+          <ul role="list">
+            {newsEarlier.map((item) => (
+              <li>
+                <time datetime={item.date}>{newsDay(item.date)}</time>
+                <span>
+                  {st(item.text)} <a href={href(item.href)}>{st(item.link)}</a>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </More>
+      )
+    }
+    </div>
   </section>
 
   <div class="sec">
     <aside class="doors glass" id="doors" aria-label={st("home.status.label")}>
-      <strong>{st("home.status.title")}</strong>
+      <strong>{st(accountsOpen ? "home.status.title.open" : "home.status.title")}</strong>
       <span>
         {st("home.status.body")}{" "}
         {accountsOpen ? st("home.status.testing") : st("home.status.closed")}
