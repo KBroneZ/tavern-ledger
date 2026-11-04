@@ -536,11 +536,11 @@
       "replay": {
         "attacks": 27,
         "diverge": {
-          "attack": 7,
-          "card": "BG28_603t",
-          "rule": "replay_stats"
+          "attack": 17,
+          "card": "BG34_Giant_042",
+          "rule": "replay_minions"
         },
-        "matched": 6,
+        "matched": 16,
         "rerolled": 0
       },
       "result": "lost",
@@ -1903,11 +1903,11 @@
       "replay": {
         "attacks": 13,
         "diverge": {
-          "attack": 8,
-          "card": "BG28_603t",
-          "rule": "replay_stats"
+          "attack": 13,
+          "card": "BG26_817",
+          "rule": "replay_attack_order"
         },
-        "matched": 7,
+        "matched": 12,
         "rerolled": 0
       },
       "result": "won",
@@ -6683,7 +6683,7 @@
       "said": "odds"
     }
   },
-  "engine": "0.22.0",
+  "engine": "0.23.0",
   "format": 1,
   "seed": 24301,
   "trials": 2000

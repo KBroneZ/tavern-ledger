@@ -274,6 +274,11 @@ impl Combat<'_> {
                 let gem = &mut self.sides[side].values.blood_gem;
                 *gem = (gem.0.saturating_add(attack), gem.1.saturating_add(health));
             }
+            Action::UpgradeBeetles { attack, health } => {
+                self.buff_cards(side, &super::values::BEETLES, attack, health);
+                let b = &mut self.sides[side].values.beetle;
+                *b = (b.0.saturating_add(attack), b.1.saturating_add(health));
+            }
             Action::Spell(actions) => self.cast_spell(side, src, target, attacker, actions),
             Action::SummonRandomDeathrattle { count } => {
                 self.summon_random_deathrattle(side, src, count)
