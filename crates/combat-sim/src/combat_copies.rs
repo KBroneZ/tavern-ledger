@@ -116,7 +116,7 @@ impl Combat<'_> {
         for (k, model) in kept.iter().filter(|m| m.alive()).enumerate() {
             let unit = self.copy_of(model);
             let new = unit.uid;
-            if !self.sides[side].insert(at + k, unit) {
+            if !self.insert_summon(side, src, at + k, unit) {
                 break;
             }
             self.after_summon(side, new);

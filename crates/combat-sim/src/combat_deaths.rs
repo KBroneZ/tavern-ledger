@@ -132,8 +132,15 @@ impl Combat<'_> {
                     }
                 }
                 for &(i, anchor) in found.iter().rev() {
+                    let s = &self.sides[side];
+                    let behind = i < s.next && s.last_attacker != Some(s.units[i].uid);
                     let unit = self.sides[side].remove(i);
-                    dead.push(Dead { side, unit, anchor });
+                    dead.push(Dead {
+                        side,
+                        unit,
+                        anchor,
+                        behind,
+                    });
                 }
                 // Removed right to left; put this side's dead back in order.
                 let start = dead.len() - found.len();
@@ -162,6 +169,7 @@ impl Combat<'_> {
                 let src = Source::Dead {
                     uid: d.unit.uid,
                     anchor: d.anchor,
+                    behind: d.behind,
                     killer: d.unit.hit_by,
                     stats: (d.unit.attack, d.unit.max_health),
                 };
@@ -232,8 +240,10 @@ impl Combat<'_> {
         }
         let unit = self.fresh(card, attack, health, kw.without(Keywords::REBORN));
         let uid = unit.uid;
+        // Where it died: before the next attacker in the attack order when it
+        // died left of it without being the last to attack.
         let at = self.anchor_pos(d.side, d.anchor);
-        if self.sides[d.side].insert(at, unit) {
+        if self.sides[d.side].insert_behind(at, unit, d.behind) {
             self.after_summon(d.side, uid);
             self.after_reborn(d.side, uid);
         }

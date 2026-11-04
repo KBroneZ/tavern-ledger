@@ -419,6 +419,7 @@ impl Combat<'_> {
             Some((s, u, left)) if s == side && u == uid => left,
             _ => {
                 self.sides[side].next = ix + 1;
+                self.sides[side].last_attacker = Some(uid);
                 swings_of(&self.sides[side].units[ix])
             }
         };

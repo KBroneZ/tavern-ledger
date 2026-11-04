@@ -54,7 +54,7 @@ impl Combat<'_> {
             kw,
         );
         let uid = unit.uid;
-        if !self.sides[side].insert(at, unit) {
+        if !self.insert_summon(side, src, at, unit) {
             return;
         }
         self.after_summon(side, uid);

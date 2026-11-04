@@ -409,7 +409,7 @@ impl Combat<'_> {
         for k in 0..usize::from(count) {
             let unit = self.fresh(card, attack, health, base.keywords);
             let uid = unit.uid;
-            if !self.sides[side].insert(at + k, unit) {
+            if !self.insert_summon(side, src, at + k, unit) {
                 break;
             }
             self.after_summon(side, uid);
@@ -422,6 +422,22 @@ impl Combat<'_> {
             Source::Unit(uid) => self.sides[side].pos(uid).map_or(0, |i| i + 1),
             Source::Dead { anchor, .. } => self.anchor_pos(side, anchor),
         }
+    }
+
+    /// Puts a minion `src` summons at `at`. One summoned in the slot of a
+    /// minion that died left of the next attacker, and was not the last to
+    /// attack, goes before the next attacker in the attack order too (the
+    /// user's logs: a Reborn copy there does not attack before it). The last
+    /// attacker's own summons attack next.
+    pub(super) fn insert_summon(
+        &mut self,
+        side: usize,
+        src: Source,
+        at: usize,
+        unit: Unit,
+    ) -> bool {
+        let behind = matches!(src, Source::Dead { behind: true, .. });
+        self.sides[side].insert_behind(at, unit, behind)
     }
 
     pub(super) fn anchor_pos(&self, side: usize, anchor: Option<u32>) -> usize {
